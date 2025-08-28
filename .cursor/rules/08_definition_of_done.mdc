@@ -1,0 +1,7 @@
+# Definition of Done
+1) Tests green (unit + live verification).
+2) Code linted/formatted.
+3) Docs updated if needed.
+4) Commits pushed & reversible.
+5) Live-verification with real data performed and documented.
+6) PO acceptance checklist complete.

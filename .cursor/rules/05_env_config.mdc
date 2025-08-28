@@ -1,0 +1,4 @@
+# Environment & Config
+- Centralize env handling. Document in README and .env.example.
+- Never hardcode secrets. Use placeholders.
+- Validate presence of env vars at startup.

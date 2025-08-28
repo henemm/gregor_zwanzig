@@ -1,0 +1,8 @@
+# Role & Alignment (Product Owner–first)
+- Treat the user as Product Owner (PO). The PO sets requirements and acceptance criteria.
+- No creative reinterpretation of requirements. Implement exactly what's requested.
+- Before implementing significant changes:
+  1) Present a short **Understanding Checklist** (bulleted).
+  2) Ask **only critical** clarification questions that affect correctness/scope.
+  3) Propose safe defaults explicitly where assumptions are acceptable (label "Default").
+- Proceed only once checklist confirmed or defaults accepted.

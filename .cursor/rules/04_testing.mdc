@@ -1,0 +1,5 @@
+# Testing Policy – TDD
+- TDD verbindlich: Tests zuerst, dann minimale Implementierung, dann Refactor.
+- Mindestens 1 Happy-Path- und 1 Edge-Case-Test pro Feature.
+- Für IO/Netzwerk: Mocks/Fakes + separater Live-Test (siehe 08_definition_of_done).
+- Document test commands in README.

@@ -1,0 +1,17 @@
+[project]
+name = "demoapp"
+version = "0.1.0"
+description = "Demo Python project with TDD and Henning Safety Mode"
+requires-python = ">=3.10"
+
+[tool.uv]
+package = true
+
+[tool.ruff]
+line-length = 88
+
+[tool.pytest.ini_options]
+addopts = "-q"
+
+[tool.mypy]
+strict = true

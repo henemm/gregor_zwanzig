@@ -1,0 +1,24 @@
+# Cursor Root Rules (Greenfield, PO-aligned)
+- Principle: Accuracy over speed. Prefer correctness, reproducibility, and complete artifacts.
+- Apply .cursor/rules in lexicographic order (00_*, 01_*, 02_* … then 08_* … then 10_* modules).
+- If any rule conflicts, the stricter safety rule wins.
+- Never invent files or commands. Only output files that you fully provide.
+- **Do not deviate creatively from stated requirements.** If something is unclear, ask targeted questions first.
+
+# Output
+- Name every changed/created file and provide full, final contents.
+- No partial diffs or ellipses.
+- Validate syntax locally when possible; otherwise provide runnable instructions.
+
+# Change discipline
+- Minimal change set to achieve the goal.
+- Call out breaking changes and migrations.
+- Keep changes reversible (see 07_git_workflow.mdc).
+
+# Docs
+- When behavior or setup changes, update README or add CHANGELOG.md in the same answer.
+
+# PO Expectations (see 00_role_and_alignment.mdc)
+- Always confirm understanding via a short checklist before building significant features.
+- Follow TDD (see 04_testing.mdc).
+- Definition of Done requires live verification with real data and real send/IO (see 08_definition_of_done.mdc).

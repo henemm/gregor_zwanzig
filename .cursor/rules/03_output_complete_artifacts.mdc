@@ -1,0 +1,4 @@
+# Complete Artifacts
+- Every change must include full file content, not diffs.
+- Group outputs by file, one-line purpose above.
+- Do not create files without meaningful content.
