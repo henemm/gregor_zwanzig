@@ -1,3 +1,12 @@
+---
+alwaysApply: true
+---
+
+# Henning Safety Mode
+- Validate syntax and basic logic before output.
+- No hidden side effects. List required env vars, services, ports, file permissions.
+- No “best effort” stubs. If uncertain, propose a minimal safe default and mark TODO(safe).
+- Strict requirement fidelity: keine kreativen Abweichungen ohne Freigabe des PO.
 # Henning Safety Mode
 - Validate syntax and basic logic before output.
 - No hidden side effects. List required env vars, services, ports, file permissions.

@@ -1,3 +1,11 @@
+---
+alwaysApply: true
+---
+
+# Git Workflow
+- Frequent, small, reversible commits.
+- Push to GitHub regularly.
+- Use tags for stable states (v0.1.0 etc.).
 # Git Workflow
 - Frequent, small, reversible commits.
 - Push to GitHub regularly.

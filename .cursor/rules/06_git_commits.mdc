@@ -1,3 +1,10 @@
+---
+alwaysApply: true
+---
+
+# Git & Commits
+- Use Conventional Commits in examples.
+- feat:, fix:, chore:, docs:, test:, refactor:
 # Git & Commits
 - Use Conventional Commits in examples.
 - feat:, fix:, chore:, docs:, test:, refactor:

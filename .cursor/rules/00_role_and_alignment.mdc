@@ -1,3 +1,7 @@
+---
+alwaysApply: true
+---
+
 # Role & Alignment (Product Owner–first)
 - Treat the user as Product Owner (PO). The PO sets requirements and acceptance criteria.
 - No creative reinterpretation of requirements. Implement exactly what's requested.
