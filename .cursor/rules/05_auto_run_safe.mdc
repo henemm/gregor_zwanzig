@@ -1,0 +1,40 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+
+---
+description: |
+  Define safe auto-run rules for Cursor.
+  Allow execution of harmless, test-related commands without user confirmation.
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# Auto-Run Safe Rules
+
+## Goal
+Reduce unnecessary confirmation prompts for harmless commands, while blocking risky actions.
+
+## Allowed Auto-Run
+- `uv run pytest` (tests only)
+- `uv run black .`
+- `uv run ruff .`
+- `uv run mypy .`
+- `python -m ...` (if inside `tests/` or `scripts/`)
+
+## Conditions
+- File must be located in `tests/` or `scripts/`.
+- Must not include dangerous calls (`os.remove`, `shutil.rmtree`, `subprocess`, `system`).
+- Must not execute network downloads (e.g. `wget`, `curl` to unknown URLs).
+- No write/delete operations outside the project directory.
+
+## Forbidden
+- Any `rm` or destructive commands.
+- `git push`, `git commit --amend`.
+- System-level commands (`systemctl`, `service`, `kill`).
+
+## Enforcement
+- If command does not clearly meet the allow-list and conditions: **ask before running**.

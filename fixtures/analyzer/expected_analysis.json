@@ -1,0 +1,33 @@
+
+
+{
+  "risks": [
+    {
+      "type": "thunderstorm",
+      "level": "high",
+      "from": "2025-08-27T15:00:00Z",
+      "details": {
+        "cape_jkg": 850,
+        "thunder_level": "MED"
+      }
+    },
+    {
+      "type": "wind",
+      "level": "moderate",
+      "from": "2025-08-27T12:00:00Z",
+      "details": {
+        "wind10m_kmh": 32,
+        "gust_kmh": 50
+      }
+    },
+    {
+      "type": "rain",
+      "level": "low",
+      "from": "2025-08-27T15:00:00Z",
+      "details": {
+        "precip_1h_mm": 0.2,
+        "pop_pct": 40
+      }
+    }
+  ]
+}

@@ -1,0 +1,79 @@
+.
+├── .cursor
+│   ├── README.md
+│   └── rules
+│       ├── 00_role_and_alignment.mdc
+│       ├── 00_scoping.mdc
+│       ├── 01_basics.mdc
+│       ├── 01_yolo_commands.mdc
+│       ├── 02_safety_henning_mode.mdc
+│       ├── 02_test_first.mdc
+│       ├── 03_output_complete_artifacts.mdc
+│       ├── 03_thorough_testing.mdc
+│       ├── 04_system.mdc
+│       ├── 04_testing.mdc
+│       ├── 05_auto_run_safe.mdc
+│       ├── 05_env_config.mdc
+│       ├── 06_git_commits.mdc
+│       ├── 06_provider_data_quality.mdc
+│       ├── 07_analysis_first.mdc
+│       ├── 07_git_workflow.mdc
+│       ├── 08_api_contract_guard.mdc
+│       ├── 08_definition_of_done.mdc
+│       └── INDEX.md
+├── .cursorrules
+├── .DS_Store
+├── .env.example
+├── .pytest_cache
+│   ├── .gitignore
+│   ├── CACHEDIR.TAG
+│   ├── README.md
+│   └── v
+│       └── cache
+├── config.ini
+├── docs
+│   ├── api_contract.md
+│   ├── architecture.md
+│   ├── backlog.md
+│   ├── cli_spec.md
+│   ├── context
+│   │   ├── 00_index.md
+│   │   └── repo_tree.txt
+│   ├── debug_format.md
+│   ├── decision_matrix.md
+│   ├── providers
+│   │   └── README.md
+│   ├── renderer_email_spec.md
+│   ├── scope.md
+│   ├── sms_format.md
+│   └── symbol_mapping.md
+├── fixtures
+│   ├── analyzer
+│   │   ├── expected_analysis.json
+│   │   └── input_series.json
+│   ├── providers
+│   │   ├── met_sample.json
+│   │   ├── mosmix_sample.json
+│   │   └── nowcastmix_sample.json
+│   └── renderer
+│       ├── expected_email.html
+│       └── expected_sms.txt
+├── pyproject.toml
+├── README.md
+├── schemas
+│   └── normalized_timeseries.schema.json
+├── src
+│   ├── __init__.py
+│   ├── .DS_Store
+│   └── app
+│       ├── __init__.py
+│       ├── cli.py
+│       ├── core.py
+│       └── debug.py
+├── tests
+│   ├── conftest.py
+│   ├── test_core.py
+│   └── test_debug.py
+└── uv.lock
+
+17 directories, 60 files

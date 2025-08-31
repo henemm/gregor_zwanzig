@@ -1,0 +1,72 @@
+
+
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gregor-zwanzig/schemas/normalized_timeseries.schema.json",
+  "title": "Gregor Zwanzig Normalized Forecast Timeseries",
+  "type": "object",
+  "required": ["meta", "data"],
+  "additionalProperties": false,
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": ["provider", "model", "run", "grid_res_km", "interp"],
+      "additionalProperties": true,
+      "properties": {
+        "provider": { "type": "string", "enum": ["MOSMIX", "MET", "NOWCASTMIX"] },
+        "model": { "type": "string" },
+        "run": { "type": "string", "format": "date-time" },
+        "grid_res_km": { "type": ["number", "string"] },
+        "interp": { "type": "string", "enum": ["nearest_station", "idw2", "point_grid"] },
+        "stations_used": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id"],
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "dist_km": { "type": "number", "minimum": 0 },
+              "elev_diff_m": { "type": "number" }
+            },
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    "data": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ts","t2m_c","wind10m_kmh","precip_rate_mmph","cloud_total_pct","symbol","thunder_level"],
+        "properties": {
+          "ts": { "type": "string", "format": "date-time" },
+          "t2m_c": { "type": "number" },
+          "wind10m_kmh": { "type": "number", "minimum": 0 },
+          "gust_kmh": { "type": "number", "minimum": 0 },
+          "precip_rate_mmph": { "type": "number", "minimum": 0 },
+          "precip_1h_mm": { "type": "number", "minimum": 0 },
+          "cloud_total_pct": { "type": "integer", "minimum": 0, "maximum": 100 },
+          "symbol": {
+            "type": "string",
+            "enum": [
+              "clearsky","partlycloudy","cloudy","fog",
+              "rain","lightrain","heavyrain",
+              "snow","lightsnow","heavysnow",
+              "sleet",
+              "thunderstorm","lightrainandthunder","heavyrainandthunder","snowandthunder","sleetandthunder"
+            ]
+          },
+          "thunder_level": { "type": "string", "enum": ["NONE","MED","HIGH"] },
+          "cape_jkg": { "type": "number", "minimum": 0 },
+          "pop_pct": { "type": ["integer","null"], "minimum": 0, "maximum": 100 },
+          "pressure_msl_hpa": { "type": "number" },
+          "humidity_pct": { "type": "integer", "minimum": 0, "maximum": 100 },
+          "dewpoint_c": { "type": "number" }
+        }
+      }
+    }
+  }
+}

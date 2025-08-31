@@ -1,0 +1,38 @@
+---
+description: |
+  Enforce thorough end-to-end testing before claiming success.
+  Verify SMS length, token consistency, debug completeness, and both morning/evening reports.
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# Thorough Testing Rule
+
+## Critical: No premature success claims
+- Never state "✅ works" or similar without full verification.
+- Always validate actual outputs, not just terminal logs or snippets.
+
+## Mandatory Checks
+- **SMS**: length after GSM-7 normalization ≤160 chars.
+- **E-Mail**: token line must be identical to SMS.
+- **Debug**: complete and not truncated; must follow `docs/debug_format.md`.
+- **Reports**: both morning and evening variants must be tested.
+- **All sections**: NIGHT, DAY, RAIN, WIND, GUST, THUNDERSTORM must appear if applicable.
+- **Email content**: match expectations including tables per stage point.
+
+## Checklist before success
+- [ ] Result format is correct
+- [ ] Debug block is complete
+- [ ] SMS length validated
+- [ ] SMS vs E-Mail token lines match 1:1
+- [ ] Morning and evening reports covered
+- [ ] Tables include all stage points
+- [ ] No error messages in output
+
+## Failure Handling
+- If violation occurs:
+  - Admit mistake immediately
+  - Fix systematically
+  - Re-run tests until green
+- No excuses, no shortcuts.

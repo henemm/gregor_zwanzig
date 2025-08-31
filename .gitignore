@@ -1,0 +1,24 @@
+
+
+
+# General
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.venv/
+
+# Testing / Tools
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node / JS (if any frontend/tools appear later)
+node_modules/
+
+# Cursor / Editor
+.cursorrules

@@ -12,6 +12,14 @@ line-length = 88
 
 [tool.pytest.ini_options]
 addopts = "-q"
+pythonpath = ["src"]
+testpaths = ["tests"]
 
 [tool.mypy]
 strict = true
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.1",
+    "jsonschema",
+]

@@ -1,0 +1,35 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+
+---
+description: |
+  Guard against API/schema drift.
+  Enforce strict adherence to defined contracts in docs/api_contract.md and schemas/.
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# API Contract Guard
+
+## Principle
+- The API contract (`docs/api_contract.md`) and JSON schemas (`schemas/*.json`) are the single source of truth.
+- No implementation may deviate from these definitions.
+
+## Rules
+- Before modifying implementation: check if schema or contract changes are required.
+- If yes: update contract/spec **first**, then update related tests/fixtures, then implementation.
+- Never introduce fields, enums, or symbols not defined in the contract.
+- Never silently change or drop existing fields.
+
+## Testing
+- All DTOs must validate successfully against `schemas/*.json`.
+- Unit tests must assert validation of fixtures against schemas.
+- Changes to contracts must include updated fixtures and tests.
+
+## Enforcement
+- Any deviation = stop and fix immediately.
+- If unsure: stop and ask before proceeding.

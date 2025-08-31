@@ -10,3 +10,67 @@ alwaysApply: true
 - Frequent, small, reversible commits.
 - Push to GitHub regularly.
 - Use tags for stable states (v0.1.0 etc.).
+
+---
+alwaysApply: true
+---
+
+# Git Workflow (Gregor Zwanzig)
+
+Small, reversible steps with a clean, linear history. Apply this to **every** change.
+
+## Branch Strategy
+- `main` is **stable** and always green.
+- Create short‑lived branches per task:
+  - `feat/<slug>` – new feature
+  - `fix/<slug>` – bugfix
+  - `chore/<slug>` – docs/rules/infra
+- Never commit directly to `main` (except version bump / release metadata).
+
+## Sync Policy (Keep History Linear)
+- Before starting:
+  ```bash
+  git fetch origin
+  git switch -c feat/<slug> origin/main
+  ```
+- Keep up to date without merge commits:
+  ```bash
+  git fetch origin
+  git rebase origin/main
+  ```
+- If conflicts: resolve, continue, **do not** switch to merge commits.
+
+## Commit & Push Cadence
+- Commit after each **green** step (tests pass):
+  ```bash
+  uv run pytest && git add -A && git commit -m "feat(scope): short, concrete change"
+  git push -u origin HEAD
+  ```
+- Use Conventional Commits; 1 logical change = 1 commit.
+
+## Release & Tagging
+- When `main` is green and ready:
+  ```bash
+  # bump version in pyproject.toml
+  git switch main && git pull --rebase
+  git merge --ff-only <branch>
+  git tag -a vX.Y.Z -m "release: vX.Y.Z"
+  git push origin main --tags
+  ```
+- Maintain CHANGELOG from Conventional Commits (optional tooling later).
+
+## Pre‑Push Checklist
+- ✅ Tests green: `uv run pytest`
+- ✅ Format/lint ok: `uv run black . && uv run ruff .`
+- ✅ No TODO/print leftovers
+- ✅ No scope creep (see `00_scoping.mdc`)
+
+## Hotfix Procedure
+- Critical fix:
+  ```bash
+  git switch -c fix/hotfix-x.y.z origin/main
+  # implement, test, commit
+  git switch main && git pull --rebase && git merge --ff-only fix/hotfix-x.y.z
+  git tag -a vx.y.z -m "hotfix: x.y.z"
+  git push origin main --tags
+  ```

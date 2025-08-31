@@ -1,0 +1,43 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+
+---
+description: |
+  Allowed and forbidden shell/system commands in YOLO mode.
+  Keep developer workflow safe, predictable, and uv-first.
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# YOLO Commands: Allowlist / Denylist
+
+## ✅ Allowed
+- `uv run pytest`
+- `uv run black .`
+- `uv run ruff .`
+- `uv run mypy .`
+- `git status`
+- `mkdir`
+- `tree`
+- `echo`
+- `cat`
+- `cp`
+- `mv`
+- `curl`
+- `python -m ...`
+
+## ❌ Forbidden
+- `rm` (any form)
+- `git push`
+- `wget`
+- `systemctl`
+- plain `pip install` (must use `uv pip install` if explicitly approved)
+
+## Notes
+- Only safe, read-only, or formatting commands may be auto-run.
+- Test commands (`pytest`, `ruff`, `mypy`) must always run via `uv run`.
+- New external packages: require explicit approval and `uv pip install`.

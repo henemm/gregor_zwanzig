@@ -1,0 +1,42 @@
+---
+description: |
+  Rules for handling incomplete or faulty provider data (MET, MOSMIX, NowcastMix).
+  Prevent misclassification of missing fields as API failure; enforce robust parsing.
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# Provider Data Quality Rules
+
+## Principle
+- Missing or invalid fields ≠ API failure.
+- Only treat as API failure if the provider responds with explicit error (HTTP 5xx, 4xx, or documented error code).
+
+## Handling Faulty Data
+- UNIX timestamps must be converted to local `HH:MM`.
+- All forecast entries must include readable time fields.
+- If values are `None`, `Unknown`, or `-`, they must be counted and reported.
+- Empty tables must not be emitted silently; must include a summary like:
+  ```
+  Entries: 4 (valid: 2, invalid: 2)
+  ```
+
+## Debug Rules
+- Debug output must show:
+  - Source provider + endpoint
+  - Position (lat/lon)
+  - Date of forecast
+  - Number of entries (valid vs invalid)
+- Tables must include a header line describing source and coverage.
+
+## Priority for Repairs
+1. Convert timestamps to local time.
+2. Ensure correct time alignment per stage point.
+3. Guarantee daily/hourly structure is consistent.
+4. Differentiate between API-originated nulls and parsing failures.
+5. Report alerts and risks in structured, non-ambiguous way.
+
+## Enforcement
+- Any violation = systematic fix required.
+- No assumption of API outage if data structure is present but incomplete.

@@ -1,0 +1,31 @@
+---
+description: |
+  Enforce test-driven development (TDD) workflow.
+  Always write tests first, then minimal code until green.
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# Test-First Playbook
+
+## Workflow
+1. **Write a failing unit test** for every new function or feature.
+2. Use `pytest`-compatible syntax only.
+3. **Implement just enough code** to make the test pass.
+4. **Refactor** only after tests are green, keeping all tests passing.
+5. Repeat until feature is fully covered by passing tests.
+
+## Rules
+- No production code without a failing test first.
+- No speculative mocks; only represent real cases.
+- Tests must cover at least:
+  - One positive (happy path) case
+  - One boundary or edge case (if applicable)
+- Use only Python standard library + `pytest`.
+- Each function must have at least one test.
+
+## Goal
+- Reduce tolerance for hidden errors early.
+- Prevent speculative APIs.
+- Enforce concrete verification before implementation.

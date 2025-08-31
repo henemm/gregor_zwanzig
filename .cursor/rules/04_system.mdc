@@ -1,0 +1,42 @@
+---
+description: |
+  System behavior and discipline rules for Cursor.
+  Enforce safe, explainable, and test-driven code generation.
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# System Behavior Rules
+
+## General Discipline
+- No code changes without clear reasoning and explanation.
+- No production code without tests first.
+- No speculative refactors or improvements outside scope.
+- Existing code must not be altered without justification in comments.
+
+## Libraries & Dependencies
+- No new external libraries without explicit approval.
+- Only `uv pip install` allowed, never plain `pip install`.
+- Use only approved libraries listed in `pyproject.toml`.
+
+## Execution Rules
+- Cursor may not execute shell/system commands except those explicitly allowed in `01_yolo_commands.mdc`.
+- Auto-run allowed only for safe commands in `tests/` or `scripts/` (see `05_auto_run_safe.mdc`).
+
+## Refactoring
+- Refactorings are only allowed if:
+  - Covered by a dedicated ticket/spec (`request.md`), or
+  - Guarded by tests proving no functional change.
+
+## Code Style & Quality
+- Code must remain maintainable, modular, and clear.
+- Functions: single responsibility, ≤50 LoC.
+- Names: English, snake_case for Python.
+- No magic numbers; constants must be named.
+- Minimal comments; prefer clear names and structure.
+
+## Enforcement
+- Always follow test-first workflow (`02_test_first.mdc`).
+- Always follow thorough testing checklist (`03_thorough_testing.mdc`).
+- Violations must be corrected immediately and systematically.

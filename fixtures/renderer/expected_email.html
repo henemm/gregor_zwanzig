@@ -1,0 +1,92 @@
+
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Monte – evening – Thunderstorm – D25 W22 G35 TH:M@14</title>
+  <style>
+    body { font-family: Arial, sans-serif; font-size: 14px; color: #333; }
+    h1 { font-size: 18px; margin-bottom: 6px; }
+    .tokens { font-family: Menlo, Consolas, monospace; background: #f6f8fa; padding: 8px; border-radius: 4px; }
+    .kv { margin: 10px 0; }
+    .kv dt { font-weight: bold; }
+    .debug { margin-top: 16px; font-size: 12px; color: #555; }
+    .muted { color: #777; }
+  </style>
+</head>
+<body>
+  <h1>Abendbericht – Monte</h1>
+
+  <!-- Compact token line mirrors the SMS exactly -->
+  <div class="tokens">Monte: N15 D25 R- PR20%@14 W22@14(28@16) G35@14(48@17) TH:M@14 DBG[MET MED]</div>
+
+  <!-- Human-readable summary, same data as tokens -->
+  <dl class="kv">
+    <dt>Temperatur</dt>
+    <dd>Nacht-Min: 15°C · Tages-Max: 25°C</dd>
+    <dt>Regen</dt>
+    <dd>Menge: – · Wahrscheinlichkeit: 20% @14 Uhr</dd>
+    <dt>Wind</dt>
+    <dd>Mittel: 22 km/h @14 Uhr · Böen: 35 km/h @14 Uhr (Peak 48 km/h @19 Uhr)</dd>
+    <dt>Gewitter</dt>
+    <dd>Level: M @14 Uhr</dd>
+  </dl>
+
+  <!-- Begin etap points table -->
+  <h2 style="margin-top:18px;">Etappenpunkte (Zeitwerte je Punkt)</h2>
+  <table style="border-collapse:collapse; width:100%; font-size:13px;">
+    <caption style="text-align:left; font-weight:bold; margin-bottom:6px;">Werte zu den Zeitfenstern der Etappenpunkte</caption>
+    <thead>
+      <tr>
+        <th style="border-bottom:1px solid #ddd; text-align:left; padding:4px 6px;">Time</th>
+        <th style="border-bottom:1px solid #ddd; text-align:left; padding:4px 6px;">Point</th>
+        <th style="border-bottom:1px solid #ddd; text-align:right; padding:4px 6px;">T (°C)</th>
+        <th style="border-bottom:1px solid #ddd; text-align:right; padding:4px 6px;">W (km/h)</th>
+        <th style="border-bottom:1px solid #ddd; text-align:right; padding:4px 6px;">G (km/h)</th>
+        <th style="border-bottom:1px solid #ddd; text-align:right; padding:4px 6px;">R (mm)</th>
+        <th style="border-bottom:1px solid #ddd; text-align:right; padding:4px 6px;">PR (%)</th>
+        <th style="border-bottom:1px solid #ddd; text-align:center; padding:4px 6px;">TH</th>
+        <th style="border-bottom:1px solid #ddd; text-align:left; padding:4px 6px;">Symbol</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="border-bottom:1px solid #eee; padding:4px 6px;">14:00</td>
+        <td style="border-bottom:1px solid #eee; padding:4px 6px;">Monte</td>
+        <td style="border-bottom:1px solid #eee; padding:4px 6px; text-align:right;">25</td>
+        <td style="border-bottom:1px solid #eee; padding:4px 6px; text-align:right;">22</td>
+        <td style="border-bottom:1px solid #eee; padding:4px 6px; text-align:right;">35</td>
+        <td style="border-bottom:1px solid #eee; padding:4px 6px; text-align:right;">0</td>
+        <td style="border-bottom:1px solid #eee; padding:4px 6px; text-align:right;">20</td>
+        <td style="border-bottom:1px solid #eee; padding:4px 6px; text-align:center;">M</td>
+        <td style="border-bottom:1px solid #eee; padding:4px 6px;">lightrain</td>
+      </tr>
+      <tr>
+        <td style="border-bottom:1px solid #eee; padding:4px 6px;">16:00</td>
+        <td style="border-bottom:1px solid #eee; padding:4px 6px;">Pass</td>
+        <td style="border-bottom:1px solid #eee; padding:4px 6px; text-align:right;">24</td>
+        <td style="border-bottom:1px solid #eee; padding:4px 6px; text-align:right;">28</td>
+        <td style="border-bottom:1px solid #eee; padding:4px 6px; text-align:right;">48</td>
+        <td style="border-bottom:1px solid #eee; padding:4px 6px; text-align:right;">0</td>
+        <td style="border-bottom:1px solid #eee; padding:4px 6px; text-align:right;">20</td>
+        <td style="border-bottom:1px solid #eee; padding:4px 6px; text-align:center;">M</td>
+        <td style="border-bottom:1px solid #eee; padding:4px 6px;">cloudy</td>
+      </tr>
+    </tbody>
+  </table>
+  <!-- End etap points table -->
+
+  <!-- Debug subset must be identical to SMS (plus may include a few extra lines) -->
+  <div class="debug">
+    <div><strong>Debug (subset):</strong></div>
+    <pre>DBG[MET MED]
+source.chosen: MET
+source.confidence: MED
+location: Monte
+tokens: N15 D25 R- PR20%@14 W22@14(28@16) G35@14(48@17) TH:M@14
+    </pre>
+    <div class="muted">Hinweis: Die Token-Zeile oben ist 1:1 zur SMS-Version.</div>
+  </div>
+</body>
+</html>

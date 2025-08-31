@@ -1,0 +1,47 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+
+---
+description: |
+  Hard scope & context limits to keep tasks LLM-fit and prevent overreach. Apply to every change step.
+  Small, verifiable increments only; stop early if limits would be exceeded.
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# SCOPING & CONTEXT LIMITS (LLM‑FIT)
+
+## Step Limits (per change)
+- Max **2 files** touched total.
+- Max **±250 LoC** changed combined (adds+mods+deletes).
+- No parallel refactors outside the ticket scope.
+
+## Function & Module Limits
+- Functions: **≤50 LoC**, **≤5 parameters**.
+- Modules: **≤400 LoC**; split if larger.
+- Public API per module: **≤8 exports**.
+
+## Allowed Context to Load
+- Target file(s) only.
+- The **specific** spec needed (e.g. `docs/*_spec.md`, `docs/api_contract.md`).
+- Relevant tests/fixtures only.
+- **Do not** auto-open unrelated files or scan the whole repo.
+
+## Process (Micro‑Steps)
+1. **Describe** the intended change in 1–2 sentences.
+2. **Plan** 3–5 micro‑steps (tests → minimal code → run tests).
+3. **Apply smallest step** that can turn a test from red → green.
+4. **Run tests** (unit only). Fix until green.
+5. **Commit** (1 change = 1 commit; Conventional Commits).
+
+## Stop & Ask
+- If limits would be exceeded (files, LoC, function size, exports), **STOP** and ask for approval with a concrete estimate.
+
+## Forbidden in Scope
+- Drive‑by refactors, renames, or API changes unrelated to the ticket.
+- Introducing new dependencies without explicit approval.
+- Large code moves / file splits without a prior refactor ticket.

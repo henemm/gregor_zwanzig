@@ -1,0 +1,45 @@
+---
+description: |
+  Enforce analysis-first approach before implementing solutions.
+  Prevent half-baked fixes and wasted time by requiring thorough root cause analysis first.
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# Analysis-First Rule
+
+## Problem
+Cursor often proposes solutions without full analysis, leading to incorrect fixes and wasted time.
+
+## Rule
+- Always perform a complete problem analysis before suggesting or implementing changes.
+- Identify the root cause clearly and verify it with data.
+- Do not attempt speculative fixes.
+
+## Allowed
+- Systematic investigation of all relevant code paths.
+- Comparison of debug output vs. final result.
+- Identification of inconsistencies and contradictions.
+- Verification of hypotheses with actual data.
+
+## Forbidden
+- Quick "fixes" without analysis.
+- Assumptions about causes without evidence.
+- Multiple failed attempts in sequence without root cause identified.
+
+## Process
+1. Perform full analysis of problem scope.
+2. List all possible causes and verify each.
+3. Identify the root cause with certainty.
+4. Only then implement a fix.
+5. Immediately test and validate.
+
+## Consequences
+- Time of the user is valuable.
+- Wrong solutions are unprofessional.
+- Systematic analysis saves time long-term.
+- Thorough analysis leads to correct, sustainable fixes.
+
+## Motto
+**"Analyse thoroughly, solve correctly, test immediately."**

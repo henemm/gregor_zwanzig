@@ -1,0 +1,13 @@
+{
+  "provider": "met",
+  "data": {
+    "id": "12345",
+    "name": "Sample MET Data",
+    "metrics": {
+      "temperature": 22.5,
+      "humidity": 56,
+      "pressure": 1013
+    },
+    "timestamp": "2024-04-27T12:00:00Z"
+  }
+}
