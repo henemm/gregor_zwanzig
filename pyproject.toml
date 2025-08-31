@@ -1,6 +1,6 @@
 [project]
 name = "demoapp"
-version = "0.1.0"
+version = "0.1.1"
 description = "Demo Python project with TDD and Henning Safety Mode"
 requires-python = ">=3.10"
 
