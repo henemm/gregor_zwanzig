@@ -10,6 +10,11 @@ from services.aggregation import (
     WaypointForecast,
 )
 from services.forecast import ForecastService
+from services.trip_forecast import (
+    StageForecastResult,
+    TripForecastResult,
+    TripForecastService,
+)
 
 __all__ = [
     "ForecastService",
@@ -17,4 +22,7 @@ __all__ = [
     "AggregatedSummary",
     "AggregatedValue",
     "WaypointForecast",
+    "TripForecastService",
+    "TripForecastResult",
+    "StageForecastResult",
 ]
