@@ -1,22 +1,59 @@
+# Documentation - Gregor Zwanzig
 
+Diese Dokumentation folgt der **OpenSpec-Struktur** fuer spec-first Entwicklung.
 
+## Struktur
 
-# Documentation – Gregor Zwanzig
+```
+docs/
+├── specs/              # Entity-Spezifikationen
+│   ├── modules/        # Modul-Specs (CLI, Provider, Engine, etc.)
+│   ├── functions/      # Einzelne Funktions-Specs
+│   └── _template.md    # Spec-Template
+│
+├── reference/          # Technische Referenz
+│   ├── api_contract.md # Datenstrukturen & DTOs
+│   ├── provider_mapping.md
+│   ├── decision_matrix.md
+│   ├── symbol_mapping.md
+│   ├── sms_format.md
+│   ├── debug_format.md
+│   └── renderer_email_spec.md
+│
+├── features/           # Feature-Dokumentation
+│   ├── scope.md        # Projektvision & Scope
+│   ├── architecture.md # Systemarchitektur
+│   └── cli_spec.md     # CLI-Spezifikation
+│
+└── project/            # Projekt-Management
+    └── backlog.md      # Backlog (PO-Ansicht)
+```
 
-This folder contains all specifications, contracts, and background docs for the project.
+## Workflow
 
-## Start Here
-- 👉 Begin with [`context/00_index.md`](./context/00_index.md) for the high-level overview.
-- Use [`architecture.md`](./architecture.md) for the system design.
-- Refer to [`api_contract.md`](./api_contract.md) for data structures and schema contracts.
+Dieses Projekt nutzt den **OpenSpec 4-Phasen-Workflow**:
 
-## Other Key Docs
-- [`decision_matrix.md`](./decision_matrix.md) → Rules for forecast source selection (MET vs MOSMIX).
-- [`sms_format.md`](./sms_format.md) → Compact SMS format specification (≤160 chars).
-- [`renderer_email_spec.md`](./renderer_email_spec.md) → Email renderer specification.
-- [`debug_format.md`](./debug_format.md) → Debug output format rules.
-- [`symbol_mapping.md`](./symbol_mapping.md) → Weather symbol normalization.
+1. `/analyse` - Request verstehen, Codebase recherchieren
+2. `/write-spec` - Spezifikation erstellen
+3. User: "approved" - Spec freigeben
+4. `/implement` - Implementieren nach Spec
+5. `/validate` - Validieren vor Commit
 
-## Notes
-- All docs are written to be **Cursor-ready**.
-- Specs and rules are the single source of truth; implementation must follow them.
+## Quick Links
+
+### Specs (Module)
+- [CLI](specs/modules/cli.md) - Einstiegspunkt
+- [SMTP Mailer](specs/modules/smtp_mailer.md) - E-Mail-Versand
+- [DebugBuffer](specs/modules/debug_buffer.md) - Debug-Sammlung
+- [Provider MET](specs/modules/provider_met.md) - MET Norway Adapter (draft)
+- [Provider MOSMIX](specs/modules/provider_mosmix.md) - DWD Adapter (draft)
+- [Risk Engine](specs/modules/risk_engine.md) - Risiko-Bewertung (draft)
+- [Report Formatter](specs/modules/report_formatter.md) - Report-Generierung (draft)
+
+### Reference
+- [API Contract](reference/api_contract.md) - Single Source of Truth fuer Datenformate
+- [Decision Matrix](reference/decision_matrix.md) - Provider-Auswahl-Regeln
+
+### Features
+- [Scope](features/scope.md) - Was ist Gregor Zwanzig?
+- [Architecture](features/architecture.md) - Wie ist es aufgebaut?
