@@ -11,8 +11,8 @@ API Documentation: https://dataset.api.hub.geosphere.at/v1/docs/
 from __future__ import annotations
 
 import math
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Tuple
+from datetime import datetime, timedelta, timezone
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 from urllib.parse import urlencode
 
 import httpx
@@ -24,6 +24,10 @@ from app.models import (
     PrecipType,
     Provider,
 )
+from providers.base import ProviderRequestError
+
+if TYPE_CHECKING:
+    from app.config import Location
 
 # API Configuration
 BASE_URL = "https://dataset.api.hub.geosphere.at/v1"
@@ -106,10 +110,55 @@ class GeoSphereProvider:
     - AROME (NWP) forecast: 60h ahead, 2.5km resolution
     - SNOWGRID: Current snow depth, 1km resolution
     - NOWCAST: 3h ahead, 1km resolution (optional)
+
+    Implements WeatherProvider protocol for use with ForecastService.
     """
 
     def __init__(self, client: Optional[httpx.Client] = None):
         self._client = client or httpx.Client(timeout=TIMEOUT)
+
+    @property
+    def name(self) -> str:
+        """Provider identifier."""
+        return "geosphere"
+
+    def fetch_forecast(
+        self,
+        location: "Location",
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
+    ) -> NormalizedTimeseries:
+        """
+        Fetch weather forecast for a location.
+
+        Implements WeatherProvider protocol. Delegates to fetch_combined()
+        which merges AROME forecast with SNOWGRID snow data.
+
+        Args:
+            location: Geographic location to query
+            start: Forecast start time (default: now)
+            end: Forecast end time (default: +60h)
+
+        Returns:
+            NormalizedTimeseries with forecast data
+
+        Raises:
+            ProviderRequestError: If the request fails
+        """
+        try:
+            return self.fetch_combined(
+                lat=location.latitude,
+                lon=location.longitude,
+                start=start,
+                end=end,
+                include_snow=True,
+            )
+        except httpx.HTTPStatusError as e:
+            raise ProviderRequestError(
+                self.name, f"HTTP {e.response.status_code}: {e.response.text}"
+            )
+        except httpx.RequestError as e:
+            raise ProviderRequestError(self.name, f"Request failed: {e}")
 
     def close(self) -> None:
         """Close the HTTP client."""
