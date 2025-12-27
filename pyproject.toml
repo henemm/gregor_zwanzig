@@ -1,8 +1,11 @@
 [project]
-name = "demoapp"
-version = "0.1.1"
-description = "Demo Python project with TDD and Henning Safety Mode"
+name = "gregor-zwanzig"
+version = "0.2.0"
+description = "Weather risk reports for outdoor activities"
 requires-python = ">=3.10"
+dependencies = [
+    "httpx>=0.27.0",
+]
 
 [tool.uv]
 package = true
