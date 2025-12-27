@@ -33,11 +33,11 @@ if TYPE_CHECKING:
 BASE_URL = "https://dataset.api.hub.geosphere.at/v1"
 TIMEOUT = 30.0
 
-# Endpoints
+# Endpoints - using timeseries for point queries (grid requires bbox)
 ENDPOINTS = {
-    "nwp": "/grid/forecast/nwp-v1-1h-2500m",
-    "snowgrid": "/grid/historical/snowgrid_cl-v2-1d-1km",
-    "nowcast": "/grid/forecast/nowcast-v1-15min-1km",
+    "nwp": "/timeseries/forecast/nwp-v1-1h-2500m",
+    "snowgrid": "/timeseries/historical/snowgrid_cl-v2-1d-1km",
+    "nowcast": "/timeseries/forecast/nowcast-v1-15min-1km",
 }
 
 # Parameter mappings for NWP (AROME)
@@ -179,10 +179,9 @@ class GeoSphereProvider:
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
     ) -> Dict[str, Any]:
-        """Make a request to the GeoSphere API."""
+        """Make a request to the GeoSphere timeseries API."""
         params: Dict[str, Any] = {
-            "lat": lat,
-            "lon": lon,
+            "lat_lon": f"{lat},{lon}",
             "parameters": ",".join(parameters),
             "output_format": "geojson",
         }
