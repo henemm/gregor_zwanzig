@@ -1,0 +1,43 @@
+{
+  "trip": {
+    "id": "stubai-skitour-2025",
+    "name": "Stubaier Skitour",
+    "stages": [
+      {
+        "id": "T1",
+        "name": "Aufstieg und Gipfel",
+        "date": "2025-01-15",
+        "waypoints": [
+          {
+            "id": "G1",
+            "name": "Dresdner Hütte",
+            "lat": 47.0753,
+            "lon": 11.1097,
+            "elevation_m": 2302,
+            "time_window": "08:00-10:00"
+          },
+          {
+            "id": "G2",
+            "name": "Schaufelspitze",
+            "lat": 47.0614,
+            "lon": 11.1211,
+            "elevation_m": 3333,
+            "time_window": "11:00-13:00"
+          },
+          {
+            "id": "G3",
+            "name": "Abfahrt",
+            "lat": 47.0753,
+            "lon": 11.1097,
+            "elevation_m": 2302,
+            "time_window": "14:00-16:00"
+          }
+        ]
+      }
+    ],
+    "avalanche_regions": ["AT-7"],
+    "aggregation": {
+      "profile": "wintersport"
+    }
+  }
+}

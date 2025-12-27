@@ -15,10 +15,13 @@ from typing import Optional
 
 from app.config import Settings
 from app.debug import DebugBuffer
+from app.loader import load_trip, LoaderError
 from app.models import NormalizedTimeseries
+from formatters.wintersport import WintersportFormatter
 from outputs.base import get_channel, OutputError
 from providers.base import get_provider, ProviderError
 from services.forecast import ForecastService
+from services.trip_forecast import TripForecastService
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -66,6 +69,17 @@ def create_parser() -> argparse.ArgumentParser:
         "--debug",
         choices=["info", "verbose"],
         help="Debug output level",
+    )
+    parser.add_argument(
+        "--trip",
+        type=str,
+        metavar="FILE",
+        help="Trip JSON file for multi-waypoint forecast",
+    )
+    parser.add_argument(
+        "--compact",
+        action="store_true",
+        help="Use compact SMS-style output for trip reports",
     )
     return parser
 
@@ -138,33 +152,22 @@ def main(argv: Optional[list[str]] = None) -> int:
     debug = DebugBuffer()
 
     debug.add(f"settings.provider: {settings.provider}")
-    debug.add(f"settings.location: {settings.location_name}")
     debug.add(f"settings.channel: {settings.channel}")
     debug.add(f"settings.dry_run: {settings.dry_run}")
 
     try:
-        # Create provider and service
+        # Create provider
         provider = get_provider(settings.provider)
-        service = ForecastService(provider, debug)
 
-        # Fetch forecast
-        location = settings.get_location()
-        forecast = service.get_forecast(location, hours_ahead=settings.forecast_hours)
-
-        # Format report
-        subject = f"GZ {settings.report_type.title()} Report - {settings.location_name}"
-        body = format_simple_report(forecast, debug)
-
-        # Output
-        if settings.dry_run:
-            channel = get_channel("console", settings)
+        # Trip-based or location-based report?
+        if args.trip:
+            return _run_trip_report(args, settings, provider, debug)
         else:
-            channel = get_channel(settings.channel, settings)
+            return _run_location_report(args, settings, provider, debug)
 
-        channel.send(subject, body)
-
-        return 0
-
+    except LoaderError as e:
+        print(f"Loader error: {e}", file=sys.stderr)
+        return 1
     except ProviderError as e:
         print(f"Provider error: {e}", file=sys.stderr)
         return 1
@@ -177,6 +180,60 @@ def main(argv: Optional[list[str]] = None) -> int:
             import traceback
             traceback.print_exc()
         return 1
+
+
+def _run_trip_report(args, settings: Settings, provider, debug: DebugBuffer) -> int:
+    """Run a trip-based multi-waypoint report."""
+    # Load trip from JSON
+    trip = load_trip(args.trip)
+    debug.add(f"trip: {trip.name}")
+    debug.add(f"trip.waypoints: {len(trip.all_waypoints)}")
+
+    # Fetch forecasts for all waypoints
+    service = TripForecastService(provider, debug)
+    result = service.get_trip_forecast(trip)
+
+    # Format report
+    formatter = WintersportFormatter()
+    if args.compact:
+        body = formatter.format_compact(result)
+        subject = body  # Compact format is the subject
+    else:
+        body = formatter.format(result, report_type=settings.report_type)
+        subject = f"GZ {settings.report_type.title()} - {trip.name}"
+
+    # Output
+    if settings.dry_run:
+        channel = get_channel("console", settings)
+    else:
+        channel = get_channel(settings.channel, settings)
+
+    channel.send(subject, body)
+    return 0
+
+
+def _run_location_report(args, settings: Settings, provider, debug: DebugBuffer) -> int:
+    """Run a single-location report."""
+    debug.add(f"settings.location: {settings.location_name}")
+
+    service = ForecastService(provider, debug)
+
+    # Fetch forecast
+    location = settings.get_location()
+    forecast = service.get_forecast(location, hours_ahead=settings.forecast_hours)
+
+    # Format report
+    subject = f"GZ {settings.report_type.title()} Report - {settings.location_name}"
+    body = format_simple_report(forecast, debug)
+
+    # Output
+    if settings.dry_run:
+        channel = get_channel("console", settings)
+    else:
+        channel = get_channel(settings.channel, settings)
+
+    channel.send(subject, body)
+    return 0
 
 
 if __name__ == "__main__":

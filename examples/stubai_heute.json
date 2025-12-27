@@ -1,0 +1,30 @@
+{
+  "trip": {
+    "id": "stubai-heute",
+    "name": "Stubaier Skitour",
+    "stages": [
+      {
+        "id": "T1",
+        "name": "Tagestour",
+        "date": "2025-12-28",
+        "waypoints": [
+          {
+            "id": "G1",
+            "name": "Dresdner Hütte",
+            "lat": 47.0753,
+            "lon": 11.1097,
+            "elevation_m": 2302
+          },
+          {
+            "id": "G2",
+            "name": "Schaufelspitze",
+            "lat": 47.0614,
+            "lon": 11.1211,
+            "elevation_m": 3333
+          }
+        ]
+      }
+    ],
+    "avalanche_regions": ["AT-7"]
+  }
+}
