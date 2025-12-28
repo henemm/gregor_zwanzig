@@ -29,7 +29,7 @@
 - [ ] `OPS-03` GitHub Actions (Lint/Test)
 
 ## 5. WebUI
-- [ ] `UI-01` **Trip Edit** - Bestehende Trips bearbeiten
+- [x] `UI-01` **Trip Edit** - Bestehende Trips bearbeiten
 - [ ] `UI-02` **Compare E-Mail** - Skigebiet-Vergleich per E-Mail mit Zeitfenster
 - [x] `UI-03` **Cloud Layers** - Wolkenhöhen (Low/Mid/High) via Open-Meteo
 
