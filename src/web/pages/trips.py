@@ -10,6 +10,7 @@ from nicegui import ui
 
 from app.loader import delete_trip, load_all_trips, save_trip
 from app.trip import Stage, Trip, Waypoint
+from web.utils import parse_dms_coordinates
 
 
 def render_header() -> None:
@@ -127,51 +128,75 @@ def render_trips() -> None:
 
                         with wp_container:
                             for wp_idx, wp in enumerate(stage["waypoints"]):
-                                with ui.row().classes("w-full gap-2 items-center"):
-                                    ui.label(wp["id"]).classes("w-8")
+                                with ui.column().classes("w-full mb-2 p-2 bg-white rounded"):
+                                    with ui.row().classes("w-full gap-2 items-center"):
+                                        ui.label(wp["id"]).classes("w-8 font-bold")
 
-                                    wp_name = ui.input(
-                                        "Name",
-                                        value=wp["name"],
-                                    ).classes("flex-1")
-                                    wp_name.on_value_change(
-                                        lambda e, w=wp: w.update({"name": e.value})
-                                    )
+                                        wp_name = ui.input(
+                                            "Name",
+                                            value=wp["name"],
+                                        ).classes("flex-1")
+                                        wp_name.on_value_change(
+                                            lambda e, w=wp: w.update({"name": e.value})
+                                        )
 
-                                    wp_lat = ui.number(
-                                        "Lat",
-                                        value=wp["lat"],
-                                        format="%.4f",
-                                    ).classes("w-24")
-                                    wp_lat.on_value_change(
-                                        lambda e, w=wp: w.update({"lat": float(e.value) if e.value else 0})
-                                    )
+                                        wp_elev = ui.number(
+                                            "Höhe (m)",
+                                            value=wp["elevation_m"],
+                                        ).classes("w-24")
+                                        wp_elev.on_value_change(
+                                            lambda e, w=wp: w.update({"elevation_m": int(e.value) if e.value else 0})
+                                        )
 
-                                    wp_lon = ui.number(
-                                        "Lon",
-                                        value=wp["lon"],
-                                        format="%.4f",
-                                    ).classes("w-24")
-                                    wp_lon.on_value_change(
-                                        lambda e, w=wp: w.update({"lon": float(e.value) if e.value else 0})
-                                    )
+                                        def remove_wp(s: Dict = stage, wi: int = wp_idx) -> None:
+                                            s["waypoints"].pop(wi)
+                                            render_stages()
 
-                                    wp_elev = ui.number(
-                                        "Höhe",
-                                        value=wp["elevation_m"],
-                                    ).classes("w-20")
-                                    wp_elev.on_value_change(
-                                        lambda e, w=wp: w.update({"elevation_m": int(e.value) if e.value else 0})
-                                    )
+                                        ui.button(
+                                            icon="close",
+                                            on_click=remove_wp,
+                                        ).props("flat dense round size=sm color=negative")
 
-                                    def remove_wp(s: Dict = stage, wi: int = wp_idx) -> None:
-                                        s["waypoints"].pop(wi)
-                                        render_stages()
+                                    # Koordinaten-Zeile mit DMS-Support
+                                    with ui.row().classes("w-full gap-2 items-center"):
+                                        wp_dms = ui.input(
+                                            "Google Maps",
+                                            placeholder="47°16'11\"N 11°50'50\"E",
+                                        ).classes("flex-1")
 
-                                    ui.button(
-                                        icon="close",
-                                        on_click=remove_wp,
-                                    ).props("flat dense round size=sm")
+                                        wp_lat = ui.number(
+                                            "Lat",
+                                            value=wp["lat"],
+                                            format="%.6f",
+                                        ).classes("w-28")
+                                        wp_lat.on_value_change(
+                                            lambda e, w=wp: w.update({"lat": float(e.value) if e.value else 0})
+                                        )
+
+                                        wp_lon = ui.number(
+                                            "Lon",
+                                            value=wp["lon"],
+                                            format="%.6f",
+                                        ).classes("w-28")
+                                        wp_lon.on_value_change(
+                                            lambda e, w=wp: w.update({"lon": float(e.value) if e.value else 0})
+                                        )
+
+                                        def make_dms_converter(w: Dict, lat_field, lon_field, dms_field):
+                                            def convert() -> None:
+                                                if not dms_field.value:
+                                                    return
+                                                result = parse_dms_coordinates(dms_field.value)
+                                                if result:
+                                                    lat_field.value = result[0]
+                                                    lon_field.value = result[1]
+                                                    w.update({"lat": result[0], "lon": result[1]})
+                                                    ui.notify("Koordinaten übernommen", type="positive")
+                                            return convert
+
+                                        converter = make_dms_converter(wp, wp_lat, wp_lon, wp_dms)
+                                        wp_dms.on("keydown.enter", lambda c=converter: c())
+                                        wp_dms.on("blur", lambda c=converter: c())
 
                         ui.button(
                             "Wegpunkt hinzufügen",

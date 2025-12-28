@@ -11,6 +11,7 @@ from app.loader import (
     save_location,
 )
 from app.user import SavedLocation
+from web.utils import parse_dms_coordinates
 
 
 def render_header() -> None:
@@ -49,16 +50,39 @@ def render_locations() -> None:
                     "Name",
                     placeholder="z.B. Stubaier Gletscher",
                 ).classes("w-full")
+
+                # DMS input from Google Maps
+                ui.label("Koordinaten von Google Maps:").classes("text-sm text-gray-600 mt-2")
+                dms_input = ui.input(
+                    "Google Maps Koordinaten",
+                    placeholder="47°16'11.1\"N 11°50'50.2\"E",
+                ).classes("w-full")
+
                 lat_input = ui.number(
                     "Breitengrad",
                     value=47.0,
-                    format="%.4f",
+                    format="%.6f",
                 ).classes("w-full")
                 lon_input = ui.number(
                     "Längengrad",
                     value=11.0,
-                    format="%.4f",
+                    format="%.6f",
                 ).classes("w-full")
+
+                def convert_dms() -> None:
+                    if not dms_input.value:
+                        return
+                    result = parse_dms_coordinates(dms_input.value)
+                    if result:
+                        lat_input.value = result[0]
+                        lon_input.value = result[1]
+                        ui.notify("Koordinaten übernommen", type="positive")
+                    else:
+                        ui.notify("Ungültiges Format", type="negative")
+
+                dms_input.on("keydown.enter", lambda: convert_dms())
+                dms_input.on("blur", lambda: convert_dms() if dms_input.value else None)
+
                 elev_input = ui.number(
                     "Höhe (m)",
                     value=2000,
