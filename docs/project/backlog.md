@@ -28,6 +28,11 @@
 - [ ] Logging/Rotation
 - [ ] GitHub Actions (Lint/Test)
 
+## 5. WebUI
+- [ ] **Trip Edit** - Bestehende Trips bearbeiten (Spec: `docs/specs/trip_edit.md`)
+- [ ] **Compare E-Mail** - Skigebiet-Vergleich per E-Mail mit Zeitfenster (Spec: `docs/specs/compare_email.md`)
+- [ ] **Cloud Layers** - Wolkenhoehen (Low/Mid/High) via Open-Meteo (Spec: `docs/specs/cloud_layers.md`)
+
 ## Definition of Done (jede Story)
 - TDD: Tests zuerst, dann Implementierung, dann Refactor.
 - README/Docs aktualisiert.
