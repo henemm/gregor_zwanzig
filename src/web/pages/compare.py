@@ -436,11 +436,9 @@ def render_results_table(results: List[Dict[str, Any]]) -> None:
                     "clouds": str(r["error"])[:30],
                 })
             else:
-                # Snow depth with source indicator
+                # Snow depth
                 snow_depth = r.get("snow_depth_cm")
-                snow_source = r.get("snow_source", "")
-                source_tag = " (B)" if snow_source == "bergfex" else " (S)" if snow_source == "snowgrid" else ""
-                snow_depth_str = f"{snow_depth:.0f} cm{source_tag}" if snow_depth else "n/a"
+                snow_depth_str = f"{snow_depth:.0f} cm" if snow_depth else "n/a"
 
                 # New snow
                 snow_cm = r.get("snow_new_cm", 0)
@@ -537,11 +535,11 @@ def render_results_table(results: List[Dict[str, Any]]) -> None:
             if r.get("error"):
                 continue
 
-            # Snowfall limit
-            sl_min = r.get("snowfall_limit_min")
-            sl_max = r.get("snowfall_limit_max")
-            if sl_min is not None and sl_max is not None:
-                sl_str = f"{sl_min}m - {sl_max}m" if sl_min != sl_max else f"{sl_min}m"
+            # Snowfall limit - show average, explain meaning
+            sl_avg = r.get("snowfall_limit_avg")
+            elevation = loc.elevation_m
+            if sl_avg is not None:
+                sl_str = f"~{sl_avg}m"
             else:
                 sl_str = "-"
 
@@ -550,9 +548,29 @@ def render_results_table(results: List[Dict[str, Any]]) -> None:
             hum_max = r.get("humidity_max")
             humidity_str = f"{hum_min}% / {hum_max}%" if hum_min is not None else "-"
 
-            # Precipitation
+            # Precipitation with snow/rain indicator
             precip = r.get("precip_mm")
-            precip_str = f"{precip:.1f} mm" if precip else "0 mm"
+            if precip and precip > 0:
+                # Determine if snow or rain based on snowfall limit vs elevation
+                if sl_avg is not None:
+                    if elevation >= sl_avg + 200:
+                        precip_type = "❄️"  # Clearly above snowfall limit → snow
+                    elif elevation <= sl_avg - 200:
+                        precip_type = "🌧️"  # Clearly below → rain
+                    else:
+                        precip_type = "❄️/🌧️"  # Mixed zone
+                else:
+                    # No snowfall limit data - guess from temperature
+                    temp_avg = r.get("temp_avg")
+                    if temp_avg is not None and temp_avg < 0:
+                        precip_type = "❄️"
+                    elif temp_avg is not None and temp_avg > 3:
+                        precip_type = "🌧️"
+                    else:
+                        precip_type = "?"
+                precip_str = f"{precip:.1f} mm {precip_type}"
+            else:
+                precip_str = "0 mm"
 
             # Pressure
             pres_min = r.get("pressure_min")
@@ -592,8 +610,8 @@ def render_results_table(results: List[Dict[str, Any]]) -> None:
                         details += f" | Sonne: ~{sunny}h"
                     ui.label(details).classes("text-gray-600")
 
-    # Note about snow depth sources
+    # Legend
     ui.label(
-        "Schneehöhe: (B) = Bergfex (gemessen), (S) = SNOWGRID (Modell). "
-        "Bergfex-Daten sind genauer für Skigebiete. Bergfex-Slug in Locations eintragen."
+        "Schneefallgrenze = Höhe, ab der Niederschlag als Schnee fällt. "
+        "❄️ = Schnee, 🌧️ = Regen, ❄️/🌧️ = Grenzbereich"
     ).classes("text-xs text-gray-400 mt-4")
