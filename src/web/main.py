@@ -1,0 +1,84 @@
+"""
+Main entry point for the Gregor Zwanzig Web UI.
+
+Run with: python -m src.web.main
+"""
+from __future__ import annotations
+
+from pathlib import Path
+
+from nicegui import app, ui
+
+# Data directory for user files
+DATA_DIR = Path("data/users/default")
+
+
+def ensure_data_dirs() -> None:
+    """Create data directories if they don't exist."""
+    (DATA_DIR / "trips").mkdir(parents=True, exist_ok=True)
+    (DATA_DIR / "locations").mkdir(parents=True, exist_ok=True)
+
+
+@ui.page("/")
+def dashboard_page() -> None:
+    """Dashboard with overview and quick links."""
+    from web.pages.dashboard import render_dashboard
+    render_dashboard()
+
+
+@ui.page("/locations")
+def locations_page() -> None:
+    """Location management page."""
+    from web.pages.locations import render_locations
+    render_locations()
+
+
+@ui.page("/trips")
+def trips_page() -> None:
+    """Trip management page."""
+    from web.pages.trips import render_trips
+    render_trips()
+
+
+@ui.page("/compare")
+def compare_page() -> None:
+    """Forecast comparison page."""
+    from web.pages.compare import render_compare
+    render_compare()
+
+
+@ui.page("/settings")
+def settings_page() -> None:
+    """Settings page."""
+    from web.pages.settings import render_settings
+    render_settings()
+
+
+def create_header() -> None:
+    """Create consistent navigation header."""
+    with ui.header().classes("items-center justify-between"):
+        ui.label("Gregor Zwanzig").classes("text-h6")
+        with ui.row():
+            ui.link("Dashboard", "/").classes("text-white mx-2")
+            ui.link("Locations", "/locations").classes("text-white mx-2")
+            ui.link("Trips", "/trips").classes("text-white mx-2")
+            ui.link("Vergleich", "/compare").classes("text-white mx-2")
+            ui.link("Settings", "/settings").classes("text-white mx-2")
+
+
+# Register header for all pages
+app.on_startup(ensure_data_dirs)
+
+
+def run() -> None:
+    """Start the web UI server."""
+    ui.run(
+        title="Gregor Zwanzig",
+        port=8080,
+        reload=False,
+        show=True,
+    )
+
+
+if __name__ == "__main__":
+    run()

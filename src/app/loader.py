@@ -1,7 +1,7 @@
 """
-JSON loaders for Trip and User configurations.
+JSON loaders and savers for Trip and User configurations.
 
-Provides functions to load Trip and User objects from JSON files
+Provides functions to load and save Trip and User objects from/to JSON files
 with validation and error handling.
 """
 from __future__ import annotations
@@ -214,3 +214,199 @@ def _parse_user(data: Dict[str, Any]) -> User:
         location_subscriptions=location_subs,
         trip_subscriptions=trip_subs,
     )
+
+
+# =============================================================================
+# Data Directory Helpers
+# =============================================================================
+
+def get_data_dir(user_id: str = "default") -> Path:
+    """Get the data directory for a user."""
+    return Path("data/users") / user_id
+
+
+def get_locations_dir(user_id: str = "default") -> Path:
+    """Get the locations directory for a user."""
+    return get_data_dir(user_id) / "locations"
+
+
+def get_trips_dir(user_id: str = "default") -> Path:
+    """Get the trips directory for a user."""
+    return get_data_dir(user_id) / "trips"
+
+
+# =============================================================================
+# Location CRUD
+# =============================================================================
+
+def load_all_locations(user_id: str = "default") -> List[SavedLocation]:
+    """
+    Load all locations for a user.
+
+    Args:
+        user_id: User identifier (default: "default")
+
+    Returns:
+        List of SavedLocation objects
+    """
+    locations_dir = get_locations_dir(user_id)
+    if not locations_dir.exists():
+        return []
+
+    locations = []
+    for path in locations_dir.glob("*.json"):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            locations.append(SavedLocation(
+                id=data.get("id", path.stem),
+                name=data["name"],
+                lat=data["lat"],
+                lon=data["lon"],
+                elevation_m=data["elevation_m"],
+                region=data.get("region"),
+            ))
+        except (json.JSONDecodeError, KeyError):
+            continue
+    return locations
+
+
+def save_location(location: SavedLocation, user_id: str = "default") -> Path:
+    """
+    Save a location to JSON file.
+
+    Args:
+        location: SavedLocation object to save
+        user_id: User identifier (default: "default")
+
+    Returns:
+        Path to the saved file
+    """
+    locations_dir = get_locations_dir(user_id)
+    locations_dir.mkdir(parents=True, exist_ok=True)
+
+    path = locations_dir / f"{location.id}.json"
+    data = {
+        "id": location.id,
+        "name": location.name,
+        "lat": location.lat,
+        "lon": location.lon,
+        "elevation_m": location.elevation_m,
+        "region": location.region,
+    }
+
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+    return path
+
+
+def delete_location(location_id: str, user_id: str = "default") -> None:
+    """
+    Delete a location file.
+
+    Args:
+        location_id: ID of the location to delete
+        user_id: User identifier (default: "default")
+    """
+    path = get_locations_dir(user_id) / f"{location_id}.json"
+    if path.exists():
+        path.unlink()
+
+
+# =============================================================================
+# Trip CRUD
+# =============================================================================
+
+def load_all_trips(user_id: str = "default") -> List[Trip]:
+    """
+    Load all trips for a user.
+
+    Args:
+        user_id: User identifier (default: "default")
+
+    Returns:
+        List of Trip objects
+    """
+    trips_dir = get_trips_dir(user_id)
+    if not trips_dir.exists():
+        return []
+
+    trips = []
+    for path in trips_dir.glob("*.json"):
+        try:
+            trips.append(load_trip(path))
+        except LoaderError:
+            continue
+    return trips
+
+
+def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
+    """Convert a Trip object to a dictionary for JSON serialization."""
+    stages_data = []
+    for stage in trip.stages:
+        waypoints_data = []
+        for wp in stage.waypoints:
+            wp_dict: Dict[str, Any] = {
+                "id": wp.id,
+                "name": wp.name,
+                "lat": wp.lat,
+                "lon": wp.lon,
+                "elevation_m": wp.elevation_m,
+            }
+            if wp.time_window:
+                wp_dict["time_window"] = str(wp.time_window)
+            waypoints_data.append(wp_dict)
+
+        stages_data.append({
+            "id": stage.id,
+            "name": stage.name,
+            "date": stage.date.isoformat(),
+            "waypoints": waypoints_data,
+        })
+
+    return {
+        "id": trip.id,
+        "name": trip.name,
+        "stages": stages_data,
+        "avalanche_regions": trip.avalanche_regions,
+        "aggregation": {
+            "profile": trip.aggregation.profile.value,
+        },
+    }
+
+
+def save_trip(trip: Trip, user_id: str = "default") -> Path:
+    """
+    Save a trip to JSON file.
+
+    Args:
+        trip: Trip object to save
+        user_id: User identifier (default: "default")
+
+    Returns:
+        Path to the saved file
+    """
+    trips_dir = get_trips_dir(user_id)
+    trips_dir.mkdir(parents=True, exist_ok=True)
+
+    path = trips_dir / f"{trip.id}.json"
+    data = _trip_to_dict(trip)
+
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+    return path
+
+
+def delete_trip(trip_id: str, user_id: str = "default") -> None:
+    """
+    Delete a trip file.
+
+    Args:
+        trip_id: ID of the trip to delete
+        user_id: User identifier (default: "default")
+    """
+    path = get_trips_dir(user_id) / f"{trip_id}.json"
+    if path.exists():
+        path.unlink()

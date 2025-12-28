@@ -1,11 +1,17 @@
 {
-  "current_phase": "implemented",
-  "feature_name": "Wintersport Extension",
-  "spec_file": "docs/specs/wintersport_extension.md",
+  "current_phase": "validated",
+  "feature_name": "Web UI - Konfigurationsoberfläche",
+  "spec_file": "docs/specs/web_ui.md",
   "spec_approved": true,
   "tasks_created": true,
   "implementation_done": true,
   "validation_done": true,
-  "phases_completed": ["analyse_done", "spec_written", "spec_approved", "implemented", "validated"],
-  "last_updated": "2025-12-27T10:30:00.000000"
+  "phases_completed": [
+    "analyse_done",
+    "spec_written",
+    "spec_approved",
+    "implemented",
+    "validated"
+  ],
+  "last_updated": "2025-12-28T10:50:00.000000"
 }
