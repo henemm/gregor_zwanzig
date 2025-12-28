@@ -8,13 +8,15 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime, timezone
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from nicegui import ui
 
-from app.config import Location
+from app.config import Location, Settings
 from app.loader import load_all_locations
 from app.user import SavedLocation
+from outputs.email import EmailOutput
+from outputs.base import OutputConfigError, OutputError
 from providers.geosphere import GeoSphereProvider
 from services.forecast import ForecastService
 from validation.ground_truth import BergfexScraper
@@ -113,6 +115,125 @@ def calculate_score(metrics: Dict[str, Any]) -> int:
             score += 5  # Excellent visibility
 
     return max(0, min(100, score))
+
+
+def format_compare_email(
+    results: List[Dict[str, Any]],
+    time_window: tuple[int, int],
+    forecast_hours: int,
+    hourly_data: List[Dict[str, Any]] | None = None,
+    top_n_details: int = 3,
+) -> str:
+    """
+    Format comparison results as plain-text email.
+
+    Args:
+        results: Sorted list of comparison results
+        time_window: Tuple of (start_hour, end_hour)
+        forecast_hours: Number of hours in forecast
+        hourly_data: Optional hourly data for detailed view
+        top_n_details: Number of top locations to show hourly details for
+
+    Returns:
+        Plain-text email body
+    """
+    from datetime import date, timedelta
+
+    lines = []
+    now = datetime.now()
+
+    # Header
+    lines.append("=" * 60)
+    lines.append("  SKIGEBIETE-VERGLEICH")
+    lines.append(f"  Datum: {now.strftime('%d.%m.%Y %H:%M')} | Forecast: {forecast_hours}h")
+    lines.append(f"  Aktivzeit: {time_window[0]:02d}:00-{time_window[1]:02d}:00")
+    lines.append("=" * 60)
+    lines.append("")
+
+    # Ranking table
+    lines.append(f"RANKING ({len(results)} Locations)")
+    lines.append("-" * 60)
+    lines.append(f" {'#':>2}  {'Location':<24} {'Score':>5}   {'Schnee':>8} {'Wind':>8} {'Temp':>6}")
+    lines.append("-" * 60)
+
+    for i, r in enumerate(results):
+        loc = r["location"]
+        if r.get("error"):
+            lines.append(f" {i+1:>2}  {loc.name:<24} {'Fehler':>5}")
+            continue
+
+        score = r.get("score", 0)
+        snow_cm = r.get("snow_new_cm", 0)
+        snow_str = f"+{snow_cm:.0f}cm" if snow_cm else "-"
+        wind_max = r.get("wind_max")
+        wind_str = f"{wind_max:.0f}km/h" if wind_max else "-"
+        temp_min = r.get("temp_min")
+        temp_str = f"{temp_min:.0f}C" if temp_min is not None else "-"
+
+        lines.append(f" {i+1:>2}  {loc.name:<24} {score:>5}   {snow_str:>8} {wind_str:>8} {temp_str:>6}")
+
+    lines.append("-" * 60)
+    lines.append("")
+
+    # Winner recommendation
+    if results and not results[0].get("error"):
+        winner = results[0]
+        loc = winner["location"]
+        lines.append(f"EMPFEHLUNG: {loc.name} (Score {winner.get('score', 0)})")
+
+        details = []
+        snow_depth = winner.get("snow_depth_cm")
+        if snow_depth:
+            details.append(f"Schneehoehe: {snow_depth:.0f}cm")
+        snow_new = winner.get("snow_new_cm", 0)
+        if snow_new:
+            details.append(f"Neuschnee: +{snow_new:.0f}cm")
+        sunny = winner.get("sunny_hours")
+        if sunny:
+            details.append(f"Sonne: ~{sunny}h")
+
+        if details:
+            lines.append(f"  {' | '.join(details)}")
+        lines.append("")
+
+    # Hourly details for top locations
+    if hourly_data:
+        for entry in hourly_data[:top_n_details]:
+            loc = entry["location"]
+            data_points = entry.get("data", [])
+            days_ahead = entry.get("days_ahead", 1)
+            target_date = date.today() + timedelta(days=days_ahead)
+
+            lines.append("-" * 60)
+            lines.append(f"STUNDEN-DETAILS: {loc.name}")
+            lines.append("-" * 60)
+            lines.append(target_date.strftime("%a %d.%m."))
+
+            for dp in data_points:
+                if dp.ts.date() != target_date:
+                    continue
+                if not (time_window[0] <= dp.ts.hour <= time_window[1]):
+                    continue
+
+                temp = dp.t2m_c
+                temp_str = f"{temp:.0f}C" if temp is not None else "?"
+                wind = dp.wind10m_kmh
+                wind_str = f"{wind:.0f}km/h" if wind is not None else "?"
+                cloud = dp.cloud_total_pct
+                cloud_str = f"{cloud}%" if cloud is not None else "?"
+                precip = dp.precip_1h_mm
+                precip_str = f"+{precip:.1f}mm" if precip and precip > 0 else "-"
+
+                lines.append(f"  {dp.ts.strftime('%H:%M')}   {temp_str:>5}   {wind_str:>8}   {cloud_str:>4}   {precip_str}")
+
+            lines.append("")
+
+    # Footer
+    lines.append("=" * 60)
+    lines.append("Generiert von Gregor Zwanzig")
+    lines.append("=" * 60)
+
+    return "\n".join(lines)
 
 
 def fetch_forecast_for_location(loc: SavedLocation, hours: int = 48) -> Dict[str, Any]:
@@ -434,11 +555,70 @@ def render_compare() -> None:
             state["loading"] = False
             results_ui.refresh()
 
-        ui.button(
-            "Vergleichen",
-            on_click=run_comparison,
-            icon="compare_arrows",
-        ).props("color=primary size=lg")
+        async def send_email() -> None:
+            """Send comparison results via email."""
+            if not state["results"]:
+                ui.notify("Bitte zuerst einen Vergleich durchführen", type="warning")
+                return
+
+            try:
+                settings = Settings()
+                if not settings.can_send_email():
+                    ui.notify(
+                        "SMTP nicht konfiguriert. Bitte in Settings oder .env konfigurieren.",
+                        type="negative",
+                    )
+                    return
+
+                # Format email
+                email_body = format_compare_email(
+                    results=state["results"],
+                    time_window=(state["time_start"], state["time_end"]),
+                    forecast_hours=state["forecast_hours"],
+                    hourly_data=state["hourly_data"],
+                )
+
+                # Send via SMTP
+                email_output = EmailOutput(settings)
+                subject = f"Skigebiete-Vergleich ({datetime.now().strftime('%d.%m.%Y')})"
+
+                await asyncio.get_event_loop().run_in_executor(
+                    None, lambda: email_output.send(subject, email_body)
+                )
+
+                ui.notify(f"E-Mail gesendet an {settings.mail_to}", type="positive")
+
+            except OutputConfigError as e:
+                ui.notify(f"SMTP-Konfigurationsfehler: {e}", type="negative")
+            except OutputError as e:
+                ui.notify(f"E-Mail-Versand fehlgeschlagen: {e}", type="negative")
+            except Exception as e:
+                ui.notify(f"Fehler: {e}", type="negative")
+
+        # Check if email is configured
+        settings = Settings()
+        can_email = settings.can_send_email()
+
+        with ui.row().classes("gap-2"):
+            ui.button(
+                "Vergleichen",
+                on_click=run_comparison,
+                icon="compare_arrows",
+            ).props("color=primary size=lg")
+
+            if can_email:
+                ui.button(
+                    "Per E-Mail senden",
+                    on_click=send_email,
+                    icon="email",
+                ).props("outline size=lg")
+            else:
+                ui.button(
+                    "E-Mail (nicht konfiguriert)",
+                    icon="email",
+                ).props("outline size=lg disabled").tooltip(
+                    "SMTP in .env konfigurieren: GZ_SMTP_HOST, GZ_SMTP_USER, GZ_SMTP_PASS, GZ_MAIL_TO"
+                )
 
 
 def get_weather_symbol(cloud_total: Optional[int], precip: Optional[float], temp: Optional[float]) -> str:

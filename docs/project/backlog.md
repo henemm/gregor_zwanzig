@@ -30,7 +30,7 @@
 
 ## 5. WebUI
 - [x] `UI-01` **Trip Edit** - Bestehende Trips bearbeiten
-- [ ] `UI-02` **Compare E-Mail** - Skigebiet-Vergleich per E-Mail mit Zeitfenster
+- [x] `UI-02` **Compare E-Mail** - Skigebiet-Vergleich per E-Mail mit Zeitfenster
 - [x] `UI-03` **Cloud Layers** - Wolkenhöhen (Low/Mid/High) via Open-Meteo
 
 ## Definition of Done (jede Story)
