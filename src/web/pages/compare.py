@@ -153,6 +153,9 @@ def fetch_forecast_for_location(loc: SavedLocation, hours: int = 48) -> Dict[str
 
         # Extract all available metrics from forecast data
         if forecast.data:
+            # Store raw data for hourly display
+            result["raw_data"] = forecast.data
+
             # Time range
             timestamps = [dp.ts for dp in forecast.data]
             if timestamps:
@@ -186,6 +189,17 @@ def fetch_forecast_for_location(loc: SavedLocation, hours: int = 48) -> Dict[str
                 result["cloud_min"] = min(clouds)
                 result["cloud_max"] = max(clouds)
                 result["cloud_avg"] = int(sum(clouds) / len(clouds))
+
+            # Cloud layers (from Open-Meteo)
+            cloud_low = [dp.cloud_low_pct for dp in forecast.data if dp.cloud_low_pct is not None]
+            cloud_mid = [dp.cloud_mid_pct for dp in forecast.data if dp.cloud_mid_pct is not None]
+            cloud_high = [dp.cloud_high_pct for dp in forecast.data if dp.cloud_high_pct is not None]
+            if cloud_low:
+                result["cloud_low_avg"] = int(sum(cloud_low) / len(cloud_low))
+            if cloud_mid:
+                result["cloud_mid_avg"] = int(sum(cloud_mid) / len(cloud_mid))
+            if cloud_high:
+                result["cloud_high_avg"] = int(sum(cloud_high) / len(cloud_high))
 
             # Precipitation
             precips = [dp.precip_1h_mm for dp in forecast.data if dp.precip_1h_mm is not None]
@@ -286,8 +300,11 @@ def render_compare() -> None:
     # State for the page
     state: Dict[str, Any] = {
         "results": [],
+        "hourly_data": [],  # Raw hourly data for time window view
         "loading": False,
         "forecast_hours": 48,
+        "time_start": 9,
+        "time_end": 16,
     }
 
     with ui.column().classes("w-full max-w-6xl mx-auto p-4"):
@@ -319,12 +336,32 @@ def render_compare() -> None:
             ).classes("w-full").props("use-chips")
 
             with ui.row().classes("items-center gap-4 mt-2"):
-                ui.label("Forecast-Zeitraum:")
-                hours_select = ui.select(
-                    options={24: "24 Stunden", 48: "48 Stunden", 72: "72 Stunden"},
-                    value=48,
-                    label="Stunden",
+                ui.label("Datum:")
+                date_options = {
+                    0: "Heute",
+                    1: "Morgen",
+                    2: "Übermorgen",
+                }
+                date_select = ui.select(
+                    options=date_options,
+                    value=1,
+                    label="Tag",
                 ).classes("w-32")
+
+            with ui.row().classes("items-center gap-4 mt-2"):
+                ui.label("Zeitfenster:")
+                hour_options = {h: f"{h:02d}:00" for h in range(6, 22)}
+                time_start_select = ui.select(
+                    options=hour_options,
+                    value=9,
+                    label="Von",
+                ).classes("w-28")
+                ui.label("bis")
+                time_end_select = ui.select(
+                    options=hour_options,
+                    value=16,
+                    label="Bis",
+                ).classes("w-28")
 
         # Results area with refreshable
         @ui.refreshable
@@ -339,6 +376,15 @@ def render_compare() -> None:
                 ui.label("Wähle Locations und klicke 'Vergleichen'").classes("text-gray-400 my-8")
                 return
 
+            # Render hourly table first (new!)
+            if state["hourly_data"]:
+                render_hourly_table(
+                    state["hourly_data"],
+                    state["time_start"],
+                    state["time_end"],
+                )
+
+            # Then render aggregate table
             render_results_table(state["results"])
 
         results_ui()
@@ -349,24 +395,42 @@ def render_compare() -> None:
                 return
 
             selected_locs = [loc for loc in locations if loc.id in select.value]
-            hours = hours_select.value or 48
+            days_ahead = date_select.value or 1
+            time_start = time_start_select.value or 9
+            time_end = time_end_select.value or 16
+
+            # Calculate hours needed (from now until end of selected day)
+            hours = (days_ahead + 1) * 24
 
             state["loading"] = True
             state["forecast_hours"] = hours
+            state["time_start"] = time_start
+            state["time_end"] = time_end
             results_ui.refresh()
 
             # Fetch forecasts (run in background to not block UI)
             results: List[Dict[str, Any]] = []
+            hourly_data: List[Dict[str, Any]] = []
+
             for loc in selected_locs:
                 result = await asyncio.get_event_loop().run_in_executor(
                     None, lambda l=loc: fetch_forecast_for_location(l, hours)
                 )
                 results.append(result)
 
+                # Extract hourly data for the selected day and time window
+                if "raw_data" in result:
+                    hourly_data.append({
+                        "location": loc,
+                        "data": result["raw_data"],
+                        "days_ahead": days_ahead,
+                    })
+
             # Sort by score (highest first)
             results.sort(key=lambda r: r.get("score", 0), reverse=True)
 
             state["results"] = results
+            state["hourly_data"] = hourly_data
             state["loading"] = False
             results_ui.refresh()
 
@@ -375,6 +439,116 @@ def render_compare() -> None:
             on_click=run_comparison,
             icon="compare_arrows",
         ).props("color=primary size=lg")
+
+
+def get_weather_symbol(cloud_total: Optional[int], precip: Optional[float], temp: Optional[float]) -> str:
+    """Get weather symbol based on conditions."""
+    if precip and precip > 0.5:
+        if temp is not None and temp < 0:
+            return "❄️"  # Snow
+        return "🌧️"  # Rain
+    if cloud_total is None:
+        return "?"
+    if cloud_total < 20:
+        return "☀️"  # Sunny
+    if cloud_total < 50:
+        return "⛅"  # Partly cloudy
+    if cloud_total < 80:
+        return "🌥️"  # Mostly cloudy
+    return "☁️"  # Overcast
+
+
+def render_hourly_table(
+    hourly_data: List[Dict[str, Any]],
+    time_start: int,
+    time_end: int,
+) -> None:
+    """Render hourly weather table for the selected time window."""
+    if not hourly_data:
+        return
+
+    from datetime import date, timedelta
+
+    with ui.card().classes("w-full mb-4"):
+        ui.label("Stündliche Übersicht").classes("text-subtitle1 font-medium mb-2")
+
+        # Build hours list
+        hours = list(range(time_start, time_end + 1))
+
+        # Build columns: Location + each hour
+        columns = [{"name": "location", "label": "Location", "field": "location"}]
+        for h in hours:
+            columns.append({
+                "name": f"h{h}",
+                "label": f"{h:02d}:00",
+                "field": f"h{h}",
+                "align": "center",
+            })
+
+        rows = []
+        for entry in hourly_data:
+            loc = entry["location"]
+            data_points = entry.get("data", [])
+            days_ahead = entry.get("days_ahead", 1)
+
+            # Calculate target date
+            target_date = date.today() + timedelta(days=days_ahead)
+
+            row = {"location": loc.name}
+
+            for h in hours:
+                # Find data point for this hour on target date
+                cell = "-"
+                for dp in data_points:
+                    if dp.ts.date() == target_date and dp.ts.hour == h:
+                        temp = dp.t2m_c
+                        cloud = dp.cloud_total_pct
+                        precip = dp.precip_1h_mm
+                        symbol = get_weather_symbol(cloud, precip, temp)
+                        temp_str = f"{temp:.0f}°" if temp is not None else "?"
+                        cell = f"{symbol} {temp_str}"
+                        break
+                row[f"h{h}"] = cell
+
+            rows.append(row)
+
+        if rows:
+            ui.table(columns=columns, rows=rows, row_key="location").classes("w-full")
+
+        # Cloud layer details (expandable)
+        with ui.expansion("Wolkenschichten Details", icon="cloud").classes("w-full mt-2"):
+            detail_cols = [{"name": "location", "label": "Location", "field": "location"}]
+            for h in hours:
+                detail_cols.append({
+                    "name": f"h{h}",
+                    "label": f"{h:02d}:00",
+                    "field": f"h{h}",
+                    "align": "center",
+                })
+
+            detail_rows = []
+            for entry in hourly_data:
+                loc = entry["location"]
+                data_points = entry.get("data", [])
+                days_ahead = entry.get("days_ahead", 1)
+                target_date = date.today() + timedelta(days=days_ahead)
+
+                row = {"location": loc.name}
+                for h in hours:
+                    cell = "-"
+                    for dp in data_points:
+                        if dp.ts.date() == target_date and dp.ts.hour == h:
+                            low = dp.cloud_low_pct
+                            mid = dp.cloud_mid_pct
+                            high = dp.cloud_high_pct
+                            if low is not None:
+                                cell = f"L{low}/M{mid}/H{high}"
+                            break
+                    row[f"h{h}"] = cell
+                detail_rows.append(row)
+
+            if detail_rows:
+                ui.table(columns=detail_cols, rows=detail_rows, row_key="location").classes("w-full text-xs")
 
 
 def format_time_range(result: Dict[str, Any]) -> str:
@@ -416,10 +590,10 @@ def render_results_table(results: List[Dict[str, Any]]) -> None:
             {"name": "rank", "label": "#", "field": "rank", "align": "center"},
             {"name": "location", "label": "Location", "field": "location"},
             {"name": "score", "label": "Score", "field": "score", "align": "center"},
-            {"name": "snow_depth", "label": "Schneehöhe aktuell", "field": "snow_depth", "align": "center"},
+            {"name": "snow_depth", "label": "Schneehöhe", "field": "snow_depth", "align": "center"},
             {"name": "snow_new", "label": "Neuschnee", "field": "snow_new", "align": "center"},
             {"name": "sunny", "label": "Sonne", "field": "sunny", "align": "center"},
-            {"name": "clouds", "label": "Wolken (min/avg/max)", "field": "clouds", "align": "center"},
+            {"name": "cloud_layers", "label": "Wolken (L/M/H)", "field": "cloud_layers", "align": "center"},
         ]
 
         rows = []
@@ -448,14 +622,16 @@ def render_results_table(results: List[Dict[str, Any]]) -> None:
                 sunny = r.get("sunny_hours")
                 sunny_str = f"~{sunny}h" if sunny is not None else "-"
 
-                # Clouds min/avg/max
-                cloud_min = r.get("cloud_min")
-                cloud_avg = r.get("cloud_avg")
-                cloud_max = r.get("cloud_max")
-                if cloud_avg is not None:
-                    cloud_str = f"{cloud_min}% / {cloud_avg}% / {cloud_max}%"
+                # Cloud layers (L/M/H)
+                cloud_low = r.get("cloud_low_avg")
+                cloud_mid = r.get("cloud_mid_avg")
+                cloud_high = r.get("cloud_high_avg")
+                if cloud_low is not None:
+                    cloud_str = f"{cloud_low}/{cloud_mid}/{cloud_high}%"
                 else:
-                    cloud_str = "-"
+                    # Fallback to total cloud
+                    cloud_avg = r.get("cloud_avg")
+                    cloud_str = f"{cloud_avg}%" if cloud_avg is not None else "-"
 
                 rows.append({
                     "rank": i + 1,
@@ -464,7 +640,7 @@ def render_results_table(results: List[Dict[str, Any]]) -> None:
                     "snow_depth": snow_depth_str,
                     "snow_new": snow_str,
                     "sunny": sunny_str,
-                    "clouds": cloud_str,
+                    "cloud_layers": cloud_str,
                 })
 
         ui.table(columns=columns, rows=rows, row_key="location").classes("w-full")

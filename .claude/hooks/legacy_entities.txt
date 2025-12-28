@@ -13,3 +13,6 @@ rawnwpdata
 savedlocation
 userpreferences
 user
+forecastdatapoint
+normalizedtimeseries
+forecastmeta

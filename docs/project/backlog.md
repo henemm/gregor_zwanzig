@@ -1,37 +1,37 @@
 # Gregor Zwanzig – Backlog (PO-Ansicht)
 
 ## 0. Setup & Infrastruktur
-- [x] Projekt-Skeleton (Tests, Mailer, Regeln)
-- [ ] CLI-Entry-Point mit Optionen (`--report`, `--channel`, `--dry-run`, `--config`, `--debug`)
-- [ ] Konfiguration: INI/TOML-Datei + ENV; Reihenfolge: CLI > ENV > Config-Datei
-- [ ] Logging/Debug-Architektur (gemeinsame Debug-Struktur für Console+E-Mail)
+- [x] `SETUP-01` Projekt-Skeleton (Tests, Mailer, Regeln)
+- [ ] `SETUP-02` CLI-Entry-Point mit Optionen (`--report`, `--channel`, `--dry-run`, `--config`, `--debug`)
+- [ ] `SETUP-03` Konfiguration: INI/TOML-Datei + ENV; Reihenfolge: CLI > ENV > Config-Datei
+- [ ] `SETUP-04` Logging/Debug-Architektur (gemeinsame Debug-Struktur für Console+E-Mail)
 
 ## 1. Weather Data (Provider)
-- [ ] Adapter MET Norway
-- [ ] Adapter DWD/MOSMIX (optional)
-- [ ] Normalisierung & Validierung
-- [ ] Fehlerfälle: Timeouts, leere Felder, Rate Limits
+- [ ] `WEATHER-01` Adapter MET Norway
+- [ ] `WEATHER-02` Adapter DWD/MOSMIX (optional)
+- [ ] `WEATHER-03` Normalisierung & Validierung
+- [ ] `WEATHER-04` Fehlerfälle: Timeouts, leere Felder, Rate Limits
 
 ## 2. Risk Logic
-- [ ] Gewitter-Risiko (CAPE/Blitze/Proxy)
-- [ ] Starkregen
-- [ ] Wind/Hitze
-- [ ] Schwellen/Heuristiken konfigurierbar
+- [ ] `RISK-01` Gewitter-Risiko (CAPE/Blitze/Proxy)
+- [ ] `RISK-02` Starkregen
+- [ ] `RISK-03` Wind/Hitze
+- [ ] `RISK-04` Schwellen/Heuristiken konfigurierbar
 
 ## 3. Reports & Versand
-- [ ] Berichtstypen: `evening`, `morning`, `alert`
-- [ ] Formatter (kurz, <160 Zeichen optional) + Debug-Anhang
-- [ ] SMTP Live-Test (echte E-Mail), alternative Kanäle später
+- [ ] `REPORT-01` Berichtstypen: `evening`, `morning`, `alert`
+- [ ] `REPORT-02` Formatter (kurz, <160 Zeichen optional) + Debug-Anhang
+- [ ] `REPORT-03` SMTP Live-Test (echte E-Mail), alternative Kanäle später
 
 ## 4. Ops
-- [ ] Fehlerbehandlung & Retries
-- [ ] Logging/Rotation
-- [ ] GitHub Actions (Lint/Test)
+- [ ] `OPS-01` Fehlerbehandlung & Retries
+- [ ] `OPS-02` Logging/Rotation
+- [ ] `OPS-03` GitHub Actions (Lint/Test)
 
 ## 5. WebUI
-- [ ] **Trip Edit** - Bestehende Trips bearbeiten (Spec: `docs/specs/trip_edit.md`)
-- [ ] **Compare E-Mail** - Skigebiet-Vergleich per E-Mail mit Zeitfenster (Spec: `docs/specs/compare_email.md`)
-- [ ] **Cloud Layers** - Wolkenhoehen (Low/Mid/High) via Open-Meteo (Spec: `docs/specs/cloud_layers.md`)
+- [ ] `UI-01` **Trip Edit** - Bestehende Trips bearbeiten
+- [ ] `UI-02` **Compare E-Mail** - Skigebiet-Vergleich per E-Mail mit Zeitfenster
+- [x] `UI-03` **Cloud Layers** - Wolkenhöhen (Low/Mid/High) via Open-Meteo
 
 ## Definition of Done (jede Story)
 - TDD: Tests zuerst, dann Implementierung, dann Refactor.

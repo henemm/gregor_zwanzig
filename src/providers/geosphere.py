@@ -265,6 +265,58 @@ class GeoSphereProvider:
         except httpx.HTTPStatusError:
             return None
 
+    def _fetch_openmeteo_clouds(
+        self, lat: float, lon: float, hours: int = 48
+    ) -> Dict[datetime, Tuple[Optional[int], Optional[int], Optional[int]]]:
+        """
+        Fetch cloud layer data from Open-Meteo API.
+
+        Args:
+            lat: Latitude
+            lon: Longitude
+            hours: Hours to fetch (default 48)
+
+        Returns:
+            Dict mapping datetime -> (cloud_low, cloud_mid, cloud_high) percentages
+        """
+        url = (
+            f"https://api.open-meteo.com/v1/forecast?"
+            f"latitude={lat}&longitude={lon}&"
+            f"hourly=cloud_cover_low,cloud_cover_mid,cloud_cover_high&"
+            f"timezone=Europe/Vienna&forecast_hours={hours}"
+        )
+
+        try:
+            response = self._client.get(url, timeout=10.0)
+            response.raise_for_status()
+            data = response.json()
+
+            hourly = data.get("hourly", {})
+            times = hourly.get("time", [])
+            cloud_low = hourly.get("cloud_cover_low", [])
+            cloud_mid = hourly.get("cloud_cover_mid", [])
+            cloud_high = hourly.get("cloud_cover_high", [])
+
+            result: Dict[datetime, Tuple[Optional[int], Optional[int], Optional[int]]] = {}
+            for i, time_str in enumerate(times):
+                # Parse time (format: "2025-12-28T09:00")
+                dt = datetime.fromisoformat(time_str)
+                # Make timezone-aware (Europe/Vienna)
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone(timedelta(hours=1)))
+
+                low = int(cloud_low[i]) if i < len(cloud_low) and cloud_low[i] is not None else None
+                mid = int(cloud_mid[i]) if i < len(cloud_mid) and cloud_mid[i] is not None else None
+                high = int(cloud_high[i]) if i < len(cloud_high) and cloud_high[i] is not None else None
+
+                result[dt] = (low, mid, high)
+
+            return result
+
+        except Exception:
+            # Silently fail - cloud layers are optional
+            return {}
+
     def fetch_combined(
         self,
         lat: float,
@@ -272,11 +324,12 @@ class GeoSphereProvider:
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
         include_snow: bool = True,
+        include_cloud_layers: bool = True,
     ) -> NormalizedTimeseries:
         """
-        Fetch combined forecast with optional snow data.
+        Fetch combined forecast with optional snow and cloud layer data.
 
-        Combines AROME forecast with current SNOWGRID snow depth.
+        Combines AROME forecast with SNOWGRID snow depth and Open-Meteo cloud layers.
 
         Args:
             lat: Latitude
@@ -284,6 +337,7 @@ class GeoSphereProvider:
             start: Start time
             end: End time
             include_snow: Whether to include SNOWGRID data
+            include_cloud_layers: Whether to include Open-Meteo cloud layers
 
         Returns:
             NormalizedTimeseries with all available data
@@ -299,6 +353,26 @@ class GeoSphereProvider:
                 for dp in ts.data:
                     dp.snow_depth_cm = snow_depth_cm
                     dp.swe_kgm2 = swe_kgm2
+
+        # Enrich with cloud layer data from Open-Meteo
+        if include_cloud_layers and ts.data:
+            hours = len(ts.data)
+            cloud_data = self._fetch_openmeteo_clouds(lat, lon, hours)
+            if cloud_data:
+                for dp in ts.data:
+                    # Find matching hour (ignore minutes/seconds)
+                    dp_hour = dp.ts.replace(minute=0, second=0, microsecond=0)
+                    # Try both with and without timezone for matching
+                    clouds = cloud_data.get(dp_hour)
+                    if clouds is None:
+                        # Try naive datetime match
+                        dp_naive = dp_hour.replace(tzinfo=None)
+                        for cloud_ts, cloud_vals in cloud_data.items():
+                            if cloud_ts.replace(tzinfo=None) == dp_naive:
+                                clouds = cloud_vals
+                                break
+                    if clouds:
+                        dp.cloud_low_pct, dp.cloud_mid_pct, dp.cloud_high_pct = clouds
 
         return ts
 

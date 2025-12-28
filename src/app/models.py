@@ -104,6 +104,11 @@ class ForecastDataPoint:
     wind_chill_c: Optional[float] = None
     visibility_m: Optional[int] = None
 
+    # Cloud layers (from Open-Meteo)
+    cloud_low_pct: Optional[int] = None   # 0-100%, bis 3km
+    cloud_mid_pct: Optional[int] = None   # 0-100%, 3-8km
+    cloud_high_pct: Optional[int] = None  # 0-100%, ab 8km
+
 
 @dataclass
 class NormalizedTimeseries:

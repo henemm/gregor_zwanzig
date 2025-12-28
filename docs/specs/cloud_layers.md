@@ -95,7 +95,30 @@ def fetch_combined(...) -> NormalizedTimeseries:
 
 ## UI-Integration
 
-### Compare-Page
+### Zeitfenster-Konfiguration (NEU)
+
+Statt Aggregatwerte für 24/48/72h: **Stündliche Anzeige für relevante Stunden**.
+
+**UI-Elemente:**
+```
+Zeitfenster: [09:00 ▼] bis [16:00 ▼]   Datum: [Morgen ▼]
+```
+
+**Stündliche Tabelle:**
+```
+| Location      | 09:00 | 10:00 | 11:00 | 12:00 | 13:00 | 14:00 | 15:00 | 16:00 |
+|---------------|-------|-------|-------|-------|-------|-------|-------|-------|
+| Hochfügen     | ☀️ -2° | ☀️ 0° | ⛅ 2° | ⛅ 3° | ⛅ 2° | ☀️ 1° | ☀️ 0° | ☀️ -1° |
+| Hintertux     | ☀️ -8° | ☀️ -6°| ☀️ -4°| ☀️ -3°| ☀️ -4°| ☀️ -5°| ☀️ -6°| ☀️ -7° |
+```
+
+**Pro Stunde anzeigen:**
+- Wetter-Symbol (Sonne/Wolken/Schnee)
+- Temperatur
+- Wind (optional, Tooltip)
+- Wolkenschichten (L/M/H %, Tooltip)
+
+### Compare-Page (Aggregat-Ansicht)
 Neue Spalte in Vergleichstabelle:
 ```
 | Location | Score | Wolken (L/M/H) | ... |
@@ -167,16 +190,21 @@ def calculate_cloud_score(
 
 ## Implementation Scope
 
-**Ticket 1 (MVP):** ~100 LoC
-- ForecastDataPoint erweitern
+**Ticket 1 (MVP):** ~150 LoC
+- ForecastDataPoint erweitern (+3 cloud layer Felder)
 - Open-Meteo Fetch in GeoSphere integrieren
-- Anzeige in Compare-Tabelle
+- Anzeige in Compare-Tabelle (Aggregat)
 
-**Ticket 2 (Follow-up):**
-- Scoring-Integration
+**Ticket 2 (Zeitfenster + Stündlich):** ~200 LoC
+- Zeitfenster-Selector (Start/End Uhrzeit, Datum)
+- Stündliche Tabelle mit Wetter pro Stunde
+- Wetter-Symbole basierend auf Wolken/Niederschlag
+
+**Ticket 3 (Follow-up):**
+- Scoring-Integration mit Cloud Layers
 - E-Mail-Report Erweiterung
-- Eigener OpenMeteoProvider (falls mehr Parameter gewuenscht)
 
 ## Changelog
 
+- 2025-12-28: Zeitfenster-Konfiguration + stündliche Anzeige ergänzt
 - 2025-12-28: Initial spec created after API research
