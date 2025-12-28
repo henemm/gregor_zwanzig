@@ -49,15 +49,22 @@ class BergfexScraper:
         Fetch snow report for a resort.
 
         Args:
-            resort_slug: Bergfex URL slug (e.g., "stubaier-gletscher")
+            resort_slug: Bergfex URL slug (e.g., "stubaier-gletscher", "hochfuegen")
 
         Returns:
             SnowReport with current snow data
         """
-        resort_info = get_resort(resort_slug)
-        resort_name = resort_info[0]
-        elevation_top = resort_info[3]
-        elevation_base = resort_info[4]
+        # Try to get from mapping first, otherwise use defaults
+        try:
+            resort_info = get_resort(resort_slug)
+            resort_name = resort_info[0]
+            elevation_top = resort_info[3]
+            elevation_base = resort_info[4]
+        except ValueError:
+            # Resort not in mapping - use slug as name, extract elevations from HTML
+            resort_name = resort_slug.replace("-", " ").title()
+            elevation_top = None
+            elevation_base = None
 
         # Use main page (not /schneebericht/) - has inline data
         url = f"{self.BASE_URL}/{resort_slug}/"
@@ -65,6 +72,12 @@ class BergfexScraper:
         response.raise_for_status()
 
         html = response.text
+
+        # Try to extract resort name from page title if not in mapping
+        if elevation_top is None:
+            title_match = re.search(r'<title>([^<|]+)', html)
+            if title_match:
+                resort_name = title_match.group(1).strip()
 
         return SnowReport(
             resort_name=resort_name,
