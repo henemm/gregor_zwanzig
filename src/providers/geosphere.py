@@ -233,7 +233,13 @@ class GeoSphereProvider:
             Tuple of (snow_depth_cm, swe_kgm2) or (None, None) if unavailable
         """
         try:
-            data = self._request(ENDPOINTS["snowgrid"], lat, lon, SNOWGRID_PARAMS)
+            # SNOWGRID requires start/end dates - fetch last 7 days
+            end = datetime.now(timezone.utc)
+            start = end - timedelta(days=7)
+            data = self._request(
+                ENDPOINTS["snowgrid"], lat, lon, SNOWGRID_PARAMS,
+                start=start, end=end
+            )
             return self._parse_snowgrid_response(data)
         except httpx.HTTPStatusError:
             return None, None

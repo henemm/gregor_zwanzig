@@ -1,0 +1,10 @@
+# Legacy Entities - No spec enforcement
+# These are either legacy code or internal tooling
+
+# Validation module (TDD helpers, not production code)
+groundtruthfetcher
+snowreport
+bergfexscraper
+geospherevalidator
+rawsnowgriddata
+rawnwpdata

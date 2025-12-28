@@ -19,6 +19,9 @@ line-length = 88
 addopts = "-q"
 pythonpath = ["src"]
 testpaths = ["tests"]
+markers = [
+    "tdd: TDD tests using external ground truth sources (may be slow)",
+]
 
 [tool.mypy]
 strict = true
