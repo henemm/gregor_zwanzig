@@ -98,18 +98,16 @@ def render_trips() -> None:
                                 "Name",
                                 value=stage["name"],
                             ).classes("flex-1")
-                            stage_name.on(
-                                "change",
-                                lambda e, s=stage: s.update({"name": e.value}),
+                            stage_name.on_value_change(
+                                lambda e, s=stage: s.update({"name": e.value})
                             )
 
                             stage_date_input = ui.input(
                                 "Datum",
                                 value=stage["date"],
                             ).classes("w-32")
-                            stage_date_input.on(
-                                "change",
-                                lambda e, s=stage: s.update({"date": e.value}),
+                            stage_date_input.on_value_change(
+                                lambda e, s=stage: s.update({"date": e.value})
                             )
 
                         # Waypoints
@@ -136,9 +134,8 @@ def render_trips() -> None:
                                         "Name",
                                         value=wp["name"],
                                     ).classes("flex-1")
-                                    wp_name.on(
-                                        "change",
-                                        lambda e, w=wp: w.update({"name": e.value}),
+                                    wp_name.on_value_change(
+                                        lambda e, w=wp: w.update({"name": e.value})
                                     )
 
                                     wp_lat = ui.number(
@@ -146,9 +143,8 @@ def render_trips() -> None:
                                         value=wp["lat"],
                                         format="%.4f",
                                     ).classes("w-24")
-                                    wp_lat.on(
-                                        "change",
-                                        lambda e, w=wp: w.update({"lat": float(e.value)}),
+                                    wp_lat.on_value_change(
+                                        lambda e, w=wp: w.update({"lat": float(e.value) if e.value else 0})
                                     )
 
                                     wp_lon = ui.number(
@@ -156,18 +152,16 @@ def render_trips() -> None:
                                         value=wp["lon"],
                                         format="%.4f",
                                     ).classes("w-24")
-                                    wp_lon.on(
-                                        "change",
-                                        lambda e, w=wp: w.update({"lon": float(e.value)}),
+                                    wp_lon.on_value_change(
+                                        lambda e, w=wp: w.update({"lon": float(e.value) if e.value else 0})
                                     )
 
                                     wp_elev = ui.number(
                                         "Höhe",
                                         value=wp["elevation_m"],
                                     ).classes("w-20")
-                                    wp_elev.on(
-                                        "change",
-                                        lambda e, w=wp: w.update({"elevation_m": int(e.value)}),
+                                    wp_elev.on_value_change(
+                                        lambda e, w=wp: w.update({"elevation_m": int(e.value) if e.value else 0})
                                     )
 
                                     def remove_wp(s: Dict = stage, wi: int = wp_idx) -> None:
