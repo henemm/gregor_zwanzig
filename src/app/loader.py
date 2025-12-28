@@ -265,6 +265,7 @@ def load_all_locations(user_id: str = "default") -> List[SavedLocation]:
                 lon=data["lon"],
                 elevation_m=data["elevation_m"],
                 region=data.get("region"),
+                bergfex_slug=data.get("bergfex_slug"),
             ))
         except (json.JSONDecodeError, KeyError):
             continue
@@ -293,6 +294,7 @@ def save_location(location: SavedLocation, user_id: str = "default") -> Path:
         "lon": location.lon,
         "elevation_m": location.elevation_m,
         "region": location.region,
+        "bergfex_slug": location.bergfex_slug,
     }
 
     with open(path, "w", encoding="utf-8") as f:

@@ -8,3 +8,8 @@ bergfexscraper
 geospherevalidator
 rawsnowgriddata
 rawnwpdata
+
+# Existing models (pre-spec era)
+savedlocation
+userpreferences
+user

@@ -49,6 +49,7 @@ class SavedLocation:
     lon: float
     elevation_m: int
     region: Optional[str] = None  # Avalanche region code (e.g., "AT-7")
+    bergfex_slug: Optional[str] = None  # Bergfex URL slug for snow data (e.g., "hochfuegen")
 
     def __str__(self) -> str:
         region_str = f" [{self.region}]" if self.region else ""
