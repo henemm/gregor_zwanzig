@@ -77,6 +77,9 @@ def run() -> None:
         port=8080,
         reload=False,
         show=True,
+        # Keep session alive for 4 hours when tab is in background
+        # Default is 3 seconds which causes reset when switching apps
+        reconnect_timeout=14400,
     )
 
 
