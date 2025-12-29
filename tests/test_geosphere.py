@@ -1,5 +1,4 @@
 """Tests for GeoSphere provider."""
-from datetime import datetime, timezone
 from unittest.mock import Mock, patch
 
 import pytest

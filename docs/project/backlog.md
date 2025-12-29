@@ -26,7 +26,7 @@
 ## 4. Ops
 - [ ] `OPS-01` Fehlerbehandlung & Retries
 - [ ] `OPS-02` Logging/Rotation
-- [ ] `OPS-03` GitHub Actions (Lint/Test)
+- [x] `OPS-03` GitHub Actions (Lint/Test)
 
 ## 5. WebUI
 - [x] `UI-01` **Trip Edit** - Bestehende Trips bearbeiten

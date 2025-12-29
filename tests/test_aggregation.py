@@ -1,11 +1,10 @@
 """Tests for aggregation service."""
 from datetime import datetime, timezone
 
-import pytest
 
 from app.models import ForecastDataPoint, ForecastMeta, NormalizedTimeseries, Provider
 from app.trip import AggregationConfig, AggregationFunc, Waypoint
-from services.aggregation import AggregatedSummary, AggregationService, WaypointForecast
+from services.aggregation import AggregationService, WaypointForecast
 
 
 class TestAggregationService:

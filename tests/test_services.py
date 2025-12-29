@@ -2,7 +2,6 @@
 from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
-import pytest
 
 from app.config import Location
 from app.debug import DebugBuffer

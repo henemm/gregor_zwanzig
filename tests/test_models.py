@@ -17,7 +17,6 @@ from app.models import (
     RiskAssessment,
     RiskLevel,
     RiskType,
-    ThunderLevel,
 )
 
 

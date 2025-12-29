@@ -7,9 +7,9 @@ with validation and error handling.
 from __future__ import annotations
 
 import json
-from datetime import date, time
+from datetime import date
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Union
 
 from app.trip import (
     ActivityProfile,

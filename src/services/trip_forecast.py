@@ -6,7 +6,7 @@ provides aggregated summaries.
 """
 from __future__ import annotations
 
-from datetime import datetime, time, timedelta, timezone
+from datetime import datetime, time, timezone
 from typing import TYPE_CHECKING, List, Optional
 
 from app.config import Location

@@ -11,7 +11,7 @@ from datetime import datetime
 from typing import Callable, Dict, List, Optional, Tuple
 
 from app.models import ForecastDataPoint, NormalizedTimeseries
-from app.trip import AggregationConfig, AggregationFunc, Trip, Waypoint
+from app.trip import AggregationConfig, AggregationFunc, Waypoint
 
 
 @dataclass

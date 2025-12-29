@@ -1,10 +1,8 @@
 """Tests for JSON loaders."""
 from datetime import date, time
 
-import pytest
 
 from app.loader import (
-    LoaderError,
     load_trip_from_dict,
     load_user_from_dict,
 )

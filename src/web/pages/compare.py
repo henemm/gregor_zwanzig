@@ -7,7 +7,7 @@ Compare multiple locations side-by-side with scoring.
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from nicegui import ui
@@ -535,7 +535,7 @@ def render_compare() -> None:
 
             for loc in selected_locs:
                 result = await asyncio.get_event_loop().run_in_executor(
-                    None, lambda l=loc: fetch_forecast_for_location(l, hours)
+                    None, lambda current_loc=loc: fetch_forecast_for_location(current_loc, hours)
                 )
                 results.append(result)
 

@@ -2,10 +2,9 @@
 from datetime import date, datetime, time, timezone
 from unittest.mock import MagicMock
 
-import pytest
 
 from app.models import ForecastDataPoint, ForecastMeta, NormalizedTimeseries, Provider
-from app.trip import AggregationConfig, Stage, TimeWindow, Trip, Waypoint
+from app.trip import Stage, TimeWindow, Trip, Waypoint
 from services.trip_forecast import (
     StageForecastResult,
     TripForecastResult,

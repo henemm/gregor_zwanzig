@@ -6,11 +6,9 @@ skiing, ski touring, and freeriding.
 """
 from __future__ import annotations
 
-from datetime import datetime
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, List
 
 if TYPE_CHECKING:
-    from app.trip import Trip, Waypoint
     from services.aggregation import AggregatedSummary, WaypointForecast
     from services.trip_forecast import TripForecastResult
 
@@ -164,7 +162,7 @@ class WintersportFormatter:
             if summary.precipitation.value > 0:
                 lines.append(f"  Niederschlag:   {summary.precipitation.value:.1f} mm")
             else:
-                lines.append(f"  Niederschlag:   -")
+                lines.append("  Niederschlag:   -")
 
         # Snow new
         if summary.snow_new.value is not None and summary.snow_new.value > 0:
@@ -236,7 +234,7 @@ class WintersportFormatter:
             if precip_parts:
                 lines.append(f"               Niederschlag: {', '.join(precip_parts)}")
             else:
-                lines.append(f"               trocken")
+                lines.append("               trocken")
 
         lines.append("")
         return lines

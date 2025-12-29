@@ -1,7 +1,6 @@
 """Tests for report formatters."""
 from datetime import date, datetime, time, timezone
 
-import pytest
 
 from app.models import ForecastDataPoint, ForecastMeta, NormalizedTimeseries, Provider
 from app.trip import Stage, TimeWindow, Trip, Waypoint

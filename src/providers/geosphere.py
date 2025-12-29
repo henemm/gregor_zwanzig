@@ -413,7 +413,6 @@ class GeoSphereProvider:
         # Build data points
         data_points: List[ForecastDataPoint] = []
         prev_rr = 0.0
-        prev_snow = 0.0
 
         for i, ts_str in enumerate(timestamps):
             ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
@@ -438,12 +437,6 @@ class GeoSphereProvider:
             # Precipitation rate (difference from previous accumulated)
             precip_1h = (rr or 0) - prev_rr
             prev_rr = rr or 0
-
-            # Snow accumulation (difference)
-            snow_new = (snow or 0) - prev_snow
-            prev_snow = snow or 0
-            # Convert kg/m² to cm (approximate: 10 kg/m² ≈ 1 cm fresh snow)
-            snow_new_cm = round(snow_new / 10, 1) if snow_new > 0 else 0
 
             # Wind chill
             wind_chill = None

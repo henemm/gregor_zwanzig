@@ -11,7 +11,6 @@ This is the core TDD validation:
 - Any difference = parsing bug
 """
 
-import math
 
 import pytest
 

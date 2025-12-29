@@ -30,4 +30,5 @@ strict = true
 dev = [
     "pytest>=8.4.1",
     "jsonschema",
+    "ruff>=0.8.0",
 ]
