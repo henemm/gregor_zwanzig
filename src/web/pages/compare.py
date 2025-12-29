@@ -547,19 +547,65 @@ def render_compare() -> None:
                         "days_ahead": days_ahead,
                     })
 
-                    # Recalculate sunny_hours for selected day + time window only
+                    # Recalculate all metrics for selected day + time window only
                     from datetime import date, timedelta
 
                     target_date = date.today() + timedelta(days=days_ahead)
-                    filtered_clouds = [
-                        dp.cloud_total_pct
+                    filtered_data = [
+                        dp
                         for dp in result["raw_data"]
                         if dp.ts.date() == target_date
                         and time_start <= dp.ts.hour <= time_end
-                        and dp.cloud_total_pct is not None
                     ]
-                    if filtered_clouds:
-                        result["sunny_hours"] = sum(1 for c in filtered_clouds if c < 30)
+
+                    if filtered_data:
+                        # Temperature
+                        temps = [dp.t2m_c for dp in filtered_data if dp.t2m_c is not None]
+                        if temps:
+                            result["temp_min"] = min(temps)
+                            result["temp_max"] = max(temps)
+
+                        # Wind
+                        winds = [dp.wind10m_kmh for dp in filtered_data if dp.wind10m_kmh is not None]
+                        if winds:
+                            result["wind_min"] = min(winds)
+                            result["wind_max"] = max(winds)
+
+                        # Gusts
+                        gusts = [dp.gust_kmh for dp in filtered_data if dp.gust_kmh is not None]
+                        if gusts:
+                            result["gust_max"] = max(gusts)
+
+                        # Wind chill
+                        wc = [dp.wind_chill_c for dp in filtered_data if dp.wind_chill_c is not None]
+                        if wc:
+                            result["wind_chill_min"] = min(wc)
+                            result["wind_chill_max"] = max(wc)
+
+                        # Clouds
+                        clouds = [dp.cloud_total_pct for dp in filtered_data if dp.cloud_total_pct is not None]
+                        if clouds:
+                            result["cloud_avg"] = int(sum(clouds) / len(clouds))
+                            result["sunny_hours"] = sum(1 for c in clouds if c < 30)
+
+                        # Cloud layers
+                        cl_low = [dp.cloud_low_pct for dp in filtered_data if dp.cloud_low_pct is not None]
+                        cl_mid = [dp.cloud_mid_pct for dp in filtered_data if dp.cloud_mid_pct is not None]
+                        cl_high = [dp.cloud_high_pct for dp in filtered_data if dp.cloud_high_pct is not None]
+                        if cl_low:
+                            result["cloud_low_avg"] = int(sum(cl_low) / len(cl_low))
+                        if cl_mid:
+                            result["cloud_mid_avg"] = int(sum(cl_mid) / len(cl_mid))
+                        if cl_high:
+                            result["cloud_high_avg"] = int(sum(cl_high) / len(cl_high))
+
+                        # Precipitation
+                        precips = [dp.precip_1h_mm for dp in filtered_data if dp.precip_1h_mm is not None]
+                        if precips:
+                            result["precip_mm"] = sum(precips)
+
+                        # Recalculate score with filtered data
+                        result["score"] = calculate_score(result)
 
             # Sort by score (highest first)
             results.sort(key=lambda r: r.get("score", 0), reverse=True)
