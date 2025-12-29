@@ -3,10 +3,15 @@ Settings page for SMTP and provider configuration.
 """
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 from typing import Dict
 
 from nicegui import ui
+
+from app.config import Settings
+from outputs.email import EmailOutput
+from outputs.base import OutputConfigError, OutputError
 
 
 ENV_FILE = Path(".env")
@@ -105,8 +110,8 @@ def render_settings() -> None:
             ui.label("Wetter-Provider").classes("text-h6 mb-2")
 
             provider = ui.select(
-                "Provider",
                 options=["geosphere"],
+                label="Provider",
                 value=settings.get("GZ_PROVIDER", "geosphere"),
             ).classes("w-full")
 
@@ -156,7 +161,38 @@ def render_settings() -> None:
             ).props("color=primary")
 
             async def test_email() -> None:
-                ui.notify("E-Mail-Test noch nicht implementiert", type="info")
+                # First save current settings
+                save()
+
+                try:
+                    # Reload settings from .env
+                    settings = Settings()
+
+                    if not settings.can_send_email():
+                        ui.notify(
+                            "SMTP nicht vollständig konfiguriert. Bitte alle Felder ausfüllen.",
+                            type="negative",
+                        )
+                        return
+
+                    ui.notify("Sende Test-E-Mail...", type="info")
+
+                    email_output = EmailOutput(settings)
+                    subject = "Gregor Zwanzig - Test"
+                    body = "Dies ist eine Test-E-Mail von Gregor Zwanzig.\n\nWenn du diese E-Mail erhältst, funktioniert die SMTP-Konfiguration!"
+
+                    await asyncio.get_event_loop().run_in_executor(
+                        None, lambda: email_output.send(subject, body)
+                    )
+
+                    ui.notify(f"Test-E-Mail gesendet an {settings.mail_to}!", type="positive")
+
+                except OutputConfigError as e:
+                    ui.notify(f"Konfigurationsfehler: {e}", type="negative")
+                except OutputError as e:
+                    ui.notify(f"Versand fehlgeschlagen: {e}", type="negative")
+                except Exception as e:
+                    ui.notify(f"Fehler: {e}", type="negative")
 
             ui.button(
                 "Test-Mail senden",
