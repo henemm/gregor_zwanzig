@@ -697,6 +697,9 @@ def render_hourly_table(
 
         # Cloud layer details (expandable)
         with ui.expansion("Wolkenschichten Details", icon="cloud").classes("w-full mt-2"):
+            ui.label("L = Low (0–3km) | M = Mid (3–8km) | H = High (>8km)").classes(
+                "text-xs text-gray-500 mb-2"
+            )
             detail_cols = [{"name": "location", "label": "Location", "field": "location"}]
             for h in hours:
                 detail_cols.append({
