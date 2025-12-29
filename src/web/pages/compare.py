@@ -153,7 +153,7 @@ def format_compare_email(
     # Ranking table
     lines.append(f"RANKING ({len(results)} Locations)")
     lines.append("-" * 60)
-    lines.append(f" {'#':>2}  {'Location':<24} {'Score':>5}   {'Schnee':>8} {'Wind':>8} {'Temp':>6}")
+    lines.append(f" {'#':>2}  {'Location':<24} {'Score':>5}   {'Schnee':>8} {'Wind':>8} {'Temp*':>6}")
     lines.append("-" * 60)
 
     for i, r in enumerate(results):
@@ -167,7 +167,8 @@ def format_compare_email(
         snow_str = f"+{snow_cm:.0f}cm" if snow_cm else "-"
         wind_max = r.get("wind_max")
         wind_str = f"{wind_max:.0f}km/h" if wind_max else "-"
-        temp_min = r.get("temp_min")
+        # Use wind chill (feels-like) temperature
+        temp_min = r.get("wind_chill_min") or r.get("temp_min")
         temp_str = f"{temp_min:.0f}C" if temp_min is not None else "-"
 
         lines.append(f" {i+1:>2}  {loc.name:<24} {score:>5}   {snow_str:>8} {wind_str:>8} {temp_str:>6}")
@@ -215,7 +216,8 @@ def format_compare_email(
                 if not (time_window[0] <= dp.ts.hour <= time_window[1]):
                     continue
 
-                temp = dp.t2m_c
+                # Use wind chill (feels-like) with fallback to actual temp
+                temp = dp.wind_chill_c if dp.wind_chill_c is not None else dp.t2m_c
                 temp_str = f"{temp:.0f}C" if temp is not None else "?"
                 wind = dp.wind10m_kmh
                 wind_str = f"{wind:.0f}km/h" if wind is not None else "?"
@@ -229,6 +231,8 @@ def format_compare_email(
             lines.append("")
 
     # Footer
+    lines.append("*Temp = gefuehlt (Wind Chill)")
+    lines.append("")
     lines.append("=" * 60)
     lines.append("Generiert von Gregor Zwanzig")
     lines.append("=" * 60)
