@@ -117,15 +117,75 @@ def calculate_score(metrics: Dict[str, Any]) -> int:
     return max(0, min(100, score))
 
 
+def _format_score_cell(score: int, plain: bool) -> str:
+    """Format score with or without emoji."""
+    if plain:
+        return str(score)
+    if score >= 80:
+        return f"🏆 {score}"
+    elif score >= 60:
+        return f"✅ {score}"
+    elif score >= 40:
+        return f"👌 {score}"
+    return f"⚠️ {score}"
+
+
+def _format_temp_cell(temp: float | None, plain: bool) -> str:
+    """Format temperature with or without emoji."""
+    if temp is None:
+        return "-"
+    temp_str = f"{temp:.0f}C"
+    if plain:
+        return temp_str
+    if temp < -15:
+        return f"🥶 {temp_str}"
+    elif temp < 0:
+        return f"❄️ {temp_str}"
+    elif temp < 10:
+        return f"🌡️ {temp_str}"
+    return f"☀️ {temp_str}"
+
+
+def _format_wind_cell(wind: float | None, plain: bool) -> str:
+    """Format wind with or without emoji."""
+    if wind is None:
+        return "-"
+    wind_str = f"{wind:.0f}km/h"
+    if plain:
+        return wind_str
+    if wind < 15:
+        return f"🍃 {wind_str}"
+    elif wind < 30:
+        return f"💨 {wind_str}"
+    elif wind < 50:
+        return f"🌬️ {wind_str}"
+    return f"💪 {wind_str}"
+
+
+def _format_snow_cell(snow_cm: float, plain: bool) -> str:
+    """Format snow with or without emoji."""
+    if not snow_cm:
+        return "-"
+    snow_str = f"+{snow_cm:.0f}cm"
+    if plain:
+        return snow_str
+    if snow_cm >= 20:
+        return f"❄️❄️ {snow_str}"
+    elif snow_cm >= 10:
+        return f"❄️ {snow_str}"
+    return snow_str
+
+
 def format_compare_email(
     results: List[Dict[str, Any]],
     time_window: tuple[int, int],
     forecast_hours: int,
     hourly_data: List[Dict[str, Any]] | None = None,
     top_n_details: int = 3,
+    plain_text: bool = True,
 ) -> str:
     """
-    Format comparison results as plain-text email.
+    Format comparison results as email.
 
     Args:
         results: Sorted list of comparison results
@@ -133,9 +193,10 @@ def format_compare_email(
         forecast_hours: Number of hours in forecast
         hourly_data: Optional hourly data for detailed view
         top_n_details: Number of top locations to show hourly details for
+        plain_text: If True, no emojis. If False, with emojis.
 
     Returns:
-        Plain-text email body
+        Email body (plain-text or with emojis)
     """
     from datetime import date, timedelta
 
@@ -143,44 +204,25 @@ def format_compare_email(
     now = datetime.now()
 
     # Header
-    lines.append("=" * 60)
-    lines.append("  SKIGEBIETE-VERGLEICH")
+    if plain_text:
+        lines.append("=" * 60)
+        lines.append("  SKIGEBIETE-VERGLEICH")
+    else:
+        lines.append("🎿 " + "=" * 54 + " 🏔️")
+        lines.append("  SKIGEBIETE-VERGLEICH")
     lines.append(f"  Datum: {now.strftime('%d.%m.%Y %H:%M')} | Forecast: {forecast_hours}h")
     lines.append(f"  Aktivzeit: {time_window[0]:02d}:00-{time_window[1]:02d}:00")
     lines.append("=" * 60)
     lines.append("")
 
-    # Ranking table
-    lines.append(f"RANKING ({len(results)} Locations)")
-    lines.append("-" * 60)
-    lines.append(f" {'#':>2}  {'Location':<24} {'Score':>5}   {'Schnee':>8} {'Wind':>8} {'Temp*':>6}")
-    lines.append("-" * 60)
-
-    for i, r in enumerate(results):
-        loc = r["location"]
-        if r.get("error"):
-            lines.append(f" {i+1:>2}  {loc.name:<24} {'Fehler':>5}")
-            continue
-
-        score = r.get("score", 0)
-        snow_cm = r.get("snow_new_cm", 0)
-        snow_str = f"+{snow_cm:.0f}cm" if snow_cm else "-"
-        wind_max = r.get("wind_max")
-        wind_str = f"{wind_max:.0f}km/h" if wind_max else "-"
-        # Use wind chill (feels-like) temperature
-        temp_min = r.get("wind_chill_min") or r.get("temp_min")
-        temp_str = f"{temp_min:.0f}C" if temp_min is not None else "-"
-
-        lines.append(f" {i+1:>2}  {loc.name:<24} {score:>5}   {snow_str:>8} {wind_str:>8} {temp_str:>6}")
-
-    lines.append("-" * 60)
-    lines.append("")
-
-    # Winner recommendation
+    # Winner recommendation FIRST (like in WebUI)
     if results and not results[0].get("error"):
         winner = results[0]
         loc = winner["location"]
-        lines.append(f"EMPFEHLUNG: {loc.name} (Score {winner.get('score', 0)})")
+        if plain_text:
+            lines.append(f"EMPFEHLUNG: {loc.name} (Score {winner.get('score', 0)})")
+        else:
+            lines.append(f"🏆 EMPFEHLUNG: {loc.name} (Score {winner.get('score', 0)})")
 
         details = []
         snow_depth = winner.get("snow_depth_cm")
@@ -197,6 +239,32 @@ def format_compare_email(
             lines.append(f"  {' | '.join(details)}")
         lines.append("")
 
+    # Ranking table
+    lines.append(f"RANKING ({len(results)} Locations)")
+    lines.append("-" * 60)
+    lines.append(f" {'#':>2}  {'Location':<24} {'Score':>8}   {'Schnee':>10} {'Wind':>10} {'Temp*':>8}")
+    lines.append("-" * 60)
+
+    for i, r in enumerate(results):
+        loc = r["location"]
+        if r.get("error"):
+            lines.append(f" {i+1:>2}  {loc.name:<24} {'Fehler':>8}")
+            continue
+
+        score = r.get("score", 0)
+        score_str = _format_score_cell(score, plain_text)
+        snow_cm = r.get("snow_new_cm", 0)
+        snow_str = _format_snow_cell(snow_cm, plain_text)
+        wind_max = r.get("wind_max")
+        wind_str = _format_wind_cell(wind_max, plain_text)
+        temp_min = r.get("wind_chill_min") or r.get("temp_min")
+        temp_str = _format_temp_cell(temp_min, plain_text)
+
+        lines.append(f" {i+1:>2}  {loc.name:<24} {score_str:>8}   {snow_str:>10} {wind_str:>10} {temp_str:>8}")
+
+    lines.append("-" * 60)
+    lines.append("")
+
     # Hourly details for top locations
     if hourly_data:
         for entry in hourly_data[:top_n_details]:
@@ -206,7 +274,10 @@ def format_compare_email(
             target_date = date.today() + timedelta(days=days_ahead)
 
             lines.append("-" * 60)
-            lines.append(f"STUNDEN-DETAILS: {loc.name}")
+            if plain_text:
+                lines.append(f"STUNDEN-DETAILS: {loc.name}")
+            else:
+                lines.append(f"📍 STUNDEN-DETAILS: {loc.name}")
             lines.append("-" * 60)
             lines.append(target_date.strftime("%a %d.%m."))
 
@@ -216,17 +287,21 @@ def format_compare_email(
                 if not (time_window[0] <= dp.ts.hour <= time_window[1]):
                     continue
 
-                # Use wind chill (feels-like) with fallback to actual temp
                 temp = dp.wind_chill_c if dp.wind_chill_c is not None else dp.t2m_c
-                temp_str = f"{temp:.0f}C" if temp is not None else "?"
+                temp_str = _format_temp_cell(temp, plain_text)
                 wind = dp.wind10m_kmh
-                wind_str = f"{wind:.0f}km/h" if wind is not None else "?"
+                wind_str = _format_wind_cell(wind, plain_text)
                 cloud = dp.cloud_total_pct
                 cloud_str = f"{cloud}%" if cloud is not None else "?"
                 precip = dp.precip_1h_mm
                 precip_str = f"+{precip:.1f}mm" if precip and precip > 0 else "-"
 
-                lines.append(f"  {dp.ts.strftime('%H:%M')}   {temp_str:>5}   {wind_str:>8}   {cloud_str:>4}   {precip_str}")
+                # Weather symbol only for emoji mode
+                if plain_text:
+                    lines.append(f"  {dp.ts.strftime('%H:%M')}   {temp_str:>8}   {wind_str:>10}   {cloud_str:>4}   {precip_str}")
+                else:
+                    symbol = get_weather_symbol(cloud, precip, dp.t2m_c)
+                    lines.append(f"  {dp.ts.strftime('%H:%M')} {symbol}  {temp_str:>8}   {wind_str:>10}   {cloud_str:>4}   {precip_str}")
 
             lines.append("")
 
@@ -234,7 +309,10 @@ def format_compare_email(
     lines.append("*Temp = gefuehlt (Wind Chill)")
     lines.append("")
     lines.append("=" * 60)
-    lines.append("Generiert von Gregor Zwanzig")
+    if plain_text:
+        lines.append("Generiert von Gregor Zwanzig")
+    else:
+        lines.append("🏔️ Generiert von Gregor Zwanzig")
     lines.append("=" * 60)
 
     return "\n".join(lines)
@@ -501,7 +579,7 @@ def render_compare() -> None:
                 ui.label("Wähle Locations und klicke 'Vergleichen'").classes("text-gray-400 my-8")
                 return
 
-            # Render hourly table first (new!)
+            # 1. Render hourly table first
             if state["hourly_data"]:
                 render_hourly_table(
                     state["hourly_data"],
@@ -509,7 +587,10 @@ def render_compare() -> None:
                     state["time_end"],
                 )
 
-            # Then render aggregate table
+            # 2. Render winner card (after hourly, before tables)
+            render_winner_card(state["results"])
+
+            # 3. Then render aggregate tables
             render_results_table(state["results"])
 
         results_ui()
@@ -634,12 +715,19 @@ def render_compare() -> None:
                     )
                     return
 
+                # Read plain_text setting from .env
+                from web.pages.settings import load_env_settings
+
+                env_settings = load_env_settings()
+                plain_text = env_settings.get("GZ_EMAIL_PLAIN_TEXT", "false").lower() == "true"
+
                 # Format email
                 email_body = format_compare_email(
                     results=state["results"],
                     time_window=(state["time_start"], state["time_end"]),
                     forecast_hours=state["forecast_hours"],
                     hourly_data=state["hourly_data"],
+                    plain_text=plain_text,
                 )
 
                 # Send via SMTP
@@ -834,6 +922,32 @@ def format_time_range(result: Dict[str, Any]) -> str:
     return f"{start_str} - {end_str}"
 
 
+def render_winner_card(results: List[Dict[str, Any]]) -> None:
+    """Render the winner recommendation card at the top."""
+    if not results or results[0].get("error"):
+        return
+
+    winner = results[0]
+    loc = winner["location"]
+    with ui.card().classes("w-full mb-4 bg-green-50"):
+        with ui.row().classes("items-center gap-4"):
+            ui.icon("emoji_events", color="amber", size="xl")
+            with ui.column().classes("gap-0"):
+                ui.label(f"Empfehlung: {loc.name}").classes("text-h6")
+                snow_depth = winner.get("snow_depth_cm")
+                snow_new = winner.get("snow_new_cm", 0)
+                sunny = winner.get("sunny_hours", 0)
+
+                details = f"Score: {winner.get('score', 0)}"
+                if snow_depth:
+                    details += f" | Schneehöhe: {snow_depth:.0f}cm"
+                if snow_new:
+                    details += f" | Neuschnee: +{snow_new:.0f}cm"
+                if sunny:
+                    details += f" | Sonne: ~{sunny}h"
+                ui.label(details).classes("text-gray-600")
+
+
 def render_results_table(results: List[Dict[str, Any]]) -> None:
     """Render the comparison results table with all available metrics."""
     if not results:
@@ -1023,28 +1137,6 @@ def render_results_table(results: List[Dict[str, Any]]) -> None:
 
         if detail_rows:
             ui.table(columns=detail_columns, rows=detail_rows, row_key="location").classes("w-full")
-
-    # Winner highlight
-    if results and not results[0].get("error"):
-        winner = results[0]
-        loc = winner["location"]
-        with ui.card().classes("w-full mt-4 bg-green-50"):
-            with ui.row().classes("items-center gap-4"):
-                ui.icon("emoji_events", color="amber", size="xl")
-                with ui.column().classes("gap-0"):
-                    ui.label(f"Empfehlung: {loc.name}").classes("text-h6")
-                    snow_depth = winner.get("snow_depth_cm")
-                    snow_new = winner.get("snow_new_cm", 0)
-                    sunny = winner.get("sunny_hours", 0)
-
-                    details = f"Score: {winner.get('score', 0)}"
-                    if snow_depth:
-                        details += f" | Schneehöhe: {snow_depth:.0f}cm"
-                    if snow_new:
-                        details += f" | Neuschnee: +{snow_new:.0f}cm"
-                    if sunny:
-                        details += f" | Sonne: ~{sunny}h"
-                    ui.label(details).classes("text-gray-600")
 
     # Legend
     ui.label(

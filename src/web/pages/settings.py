@@ -105,6 +105,11 @@ def render_settings() -> None:
                 placeholder="deine@email.com",
             ).classes("w-full")
 
+            email_plain_text = ui.checkbox(
+                "Einfache Text-E-Mail (ohne Emojis)",
+                value=settings.get("GZ_EMAIL_PLAIN_TEXT", "false").lower() == "true",
+            ).classes("mt-4")
+
         # Provider Settings
         with ui.card().classes("w-full mb-4"):
             ui.label("Wetter-Provider").classes("text-h6 mb-2")
@@ -145,6 +150,7 @@ def render_settings() -> None:
                 "GZ_SMTP_PASS": smtp_pass.value or "",
                 "GZ_MAIL_FROM": mail_from.value or "",
                 "GZ_MAIL_TO": mail_to.value or "",
+                "GZ_EMAIL_PLAIN_TEXT": "true" if email_plain_text.value else "false",
                 "GZ_PROVIDER": provider.value or "geosphere",
                 "GZ_LATITUDE": str(lat.value or 47.2692),
                 "GZ_LONGITUDE": str(lon.value or 11.4041),
