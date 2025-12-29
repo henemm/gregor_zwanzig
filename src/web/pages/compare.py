@@ -547,6 +547,20 @@ def render_compare() -> None:
                         "days_ahead": days_ahead,
                     })
 
+                    # Recalculate sunny_hours for selected day + time window only
+                    from datetime import date, timedelta
+
+                    target_date = date.today() + timedelta(days=days_ahead)
+                    filtered_clouds = [
+                        dp.cloud_total_pct
+                        for dp in result["raw_data"]
+                        if dp.ts.date() == target_date
+                        and time_start <= dp.ts.hour <= time_end
+                        and dp.cloud_total_pct is not None
+                    ]
+                    if filtered_clouds:
+                        result["sunny_hours"] = sum(1 for c in filtered_clouds if c < 30)
+
             # Sort by score (highest first)
             results.sort(key=lambda r: r.get("score", 0), reverse=True)
 
