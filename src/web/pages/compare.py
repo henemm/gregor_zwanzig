@@ -185,23 +185,17 @@ def format_compare_email(
     plain_text: bool = True,
 ) -> str:
     """
-    Format comparison results as email.
+    Format comparison results as email with transposed table layout.
 
-    Args:
-        results: Sorted list of comparison results
-        time_window: Tuple of (start_hour, end_hour)
-        forecast_hours: Number of hours in forecast
-        hourly_data: Optional hourly data for detailed view
-        top_n_details: Number of top locations to show hourly details for
-        plain_text: If True, no emojis. If False, with emojis.
-
-    Returns:
-        Email body (plain-text or with emojis)
+    Layout: Locations as columns, metrics as rows (same as WebUI).
     """
     from datetime import date, timedelta
 
     lines = []
     now = datetime.now()
+
+    # Filter valid results
+    valid_results = [r for r in results if not r.get("error")]
 
     # Header
     if plain_text:
@@ -215,9 +209,9 @@ def format_compare_email(
     lines.append("=" * 60)
     lines.append("")
 
-    # Winner recommendation FIRST (like in WebUI)
-    if results and not results[0].get("error"):
-        winner = results[0]
+    # Winner recommendation FIRST
+    if valid_results:
+        winner = valid_results[0]
         loc = winner["location"]
         if plain_text:
             lines.append(f"EMPFEHLUNG: {loc.name} (Score {winner.get('score', 0)})")
@@ -239,33 +233,95 @@ def format_compare_email(
             lines.append(f"  {' | '.join(details)}")
         lines.append("")
 
-    # Ranking table
-    lines.append(f"RANKING ({len(results)} Locations)")
-    lines.append("-" * 60)
-    lines.append(f" {'#':>2}  {'Location':<24} {'Score':>8}   {'Schnee':>10} {'Wind':>10} {'Temp*':>8}")
-    lines.append("-" * 60)
+    # Helper to find best index
+    def find_best(values: List, higher_is_better: bool = True) -> int:
+        valid = [(i, v) for i, v in enumerate(values) if v is not None]
+        if not valid:
+            return -1
+        if higher_is_better:
+            return max(valid, key=lambda x: x[1])[0]
+        return min(valid, key=lambda x: x[1])[0]
 
-    for i, r in enumerate(results):
-        loc = r["location"]
-        if r.get("error"):
-            lines.append(f" {i+1:>2}  {loc.name:<24} {'Fehler':>8}")
-            continue
+    # Extract data
+    locations = [r["location"].name for r in valid_results]
+    scores = [r.get("score", 0) for r in valid_results]
+    snow_depths = [r.get("snow_depth_cm") for r in valid_results]
+    snow_news = [r.get("snow_new_cm", 0) for r in valid_results]
+    winds = [r.get("wind_max") for r in valid_results]
+    wind_chills = [r.get("wind_chill_min") for r in valid_results]
+    sunny_hours = [r.get("sunny_hours") for r in valid_results]
+    clouds = [r.get("cloud_avg") for r in valid_results]
 
-        score = r.get("score", 0)
-        score_str = _format_score_cell(score, plain_text)
-        snow_cm = r.get("snow_new_cm", 0)
-        snow_str = _format_snow_cell(snow_cm, plain_text)
-        wind_max = r.get("wind_max")
-        wind_str = _format_wind_cell(wind_max, plain_text)
-        temp_min = r.get("wind_chill_min") or r.get("temp_min")
-        temp_str = _format_temp_cell(temp_min, plain_text)
+    # Find bests
+    best_score = find_best(scores, True)
+    best_snow_depth = find_best(snow_depths, True)
+    best_snow_new = find_best(snow_news, True)
+    best_wind = find_best(winds, False)
+    best_wc = find_best(wind_chills, True)
+    best_sunny = find_best(sunny_hours, True)
+    best_clouds = find_best(clouds, False)
 
-        lines.append(f" {i+1:>2}  {loc.name:<24} {score_str:>8}   {snow_str:>10} {wind_str:>10} {temp_str:>8}")
+    # Calculate column widths
+    loc_width = max(len(loc) for loc in locations) if locations else 10
+    loc_width = max(loc_width, 8)
+    col_width = max(loc_width + 2, 12)
 
-    lines.append("-" * 60)
+    # Build transposed table
+    lines.append("VERGLEICH")
+    lines.append("-" * (18 + col_width * len(locations)))
+
+    # Header row
+    header = f"{'':18}"
+    for i, loc in enumerate(locations):
+        rank = i + 1
+        header += f"#{rank} {loc:<{col_width-3}}"
+    lines.append(header)
+    lines.append("-" * (18 + col_width * len(locations)))
+
+    # Helper to format row
+    def fmt_row(label: str, values: List, best_idx: int, formatter) -> str:
+        row = f"{label:18}"
+        for i, val in enumerate(values):
+            cell = formatter(val)
+            if i == best_idx and not plain_text:
+                cell = "* " + cell
+            elif i == best_idx:
+                cell = "[" + cell + "]"
+            row += f"{cell:<{col_width}}"
+        return row
+
+    # Score row
+    lines.append(fmt_row("Score", scores, best_score,
+                         lambda v: str(v) if v else "-"))
+
+    # Snow depth row
+    lines.append(fmt_row("Schneehoehe", snow_depths, best_snow_depth,
+                         lambda v: f"{v:.0f}cm" if v else "n/a"))
+
+    # New snow row
+    lines.append(fmt_row("Neuschnee", snow_news, best_snow_new if any(s for s in snow_news) else -1,
+                         lambda v: f"+{v:.0f}cm" if v else "-"))
+
+    # Wind row
+    lines.append(fmt_row("Wind (max)", winds, best_wind,
+                         lambda v: f"{v:.0f}km/h" if v else "-"))
+
+    # Wind chill row
+    lines.append(fmt_row("Temp (gefuehlt)", wind_chills, best_wc,
+                         lambda v: f"{v:.0f}C" if v is not None else "-"))
+
+    # Sunny hours row
+    lines.append(fmt_row("Sonne", sunny_hours, best_sunny if any(s for s in sunny_hours) else -1,
+                         lambda v: f"~{v}h" if v else "-"))
+
+    # Clouds row
+    lines.append(fmt_row("Bewoelkung", clouds, best_clouds,
+                         lambda v: f"{v}%" if v is not None else "-"))
+
+    lines.append("-" * (18 + col_width * len(locations)))
     lines.append("")
 
-    # Hourly details for top locations
+    # Hourly details for top locations (compact)
     if hourly_data:
         for entry in hourly_data[:top_n_details]:
             loc = entry["location"]
@@ -273,12 +329,11 @@ def format_compare_email(
             days_ahead = entry.get("days_ahead", 1)
             target_date = date.today() + timedelta(days=days_ahead)
 
-            lines.append("-" * 60)
+            lines.append("-" * 50)
             if plain_text:
-                lines.append(f"STUNDEN-DETAILS: {loc.name}")
+                lines.append(f"STUNDEN: {loc.name}")
             else:
-                lines.append(f"📍 STUNDEN-DETAILS: {loc.name}")
-            lines.append("-" * 60)
+                lines.append(f"📍 STUNDEN: {loc.name}")
             lines.append(target_date.strftime("%a %d.%m."))
 
             for dp in data_points:
@@ -288,32 +343,32 @@ def format_compare_email(
                     continue
 
                 temp = dp.wind_chill_c if dp.wind_chill_c is not None else dp.t2m_c
-                temp_str = _format_temp_cell(temp, plain_text)
+                temp_str = f"{temp:.0f}C" if temp is not None else "?"
                 wind = dp.wind10m_kmh
-                wind_str = _format_wind_cell(wind, plain_text)
+                wind_str = f"{wind:.0f}km/h" if wind is not None else "?"
                 cloud = dp.cloud_total_pct
                 cloud_str = f"{cloud}%" if cloud is not None else "?"
-                precip = dp.precip_1h_mm
-                precip_str = f"+{precip:.1f}mm" if precip and precip > 0 else "-"
 
-                # Weather symbol only for emoji mode
                 if plain_text:
-                    lines.append(f"  {dp.ts.strftime('%H:%M')}   {temp_str:>8}   {wind_str:>10}   {cloud_str:>4}   {precip_str}")
+                    lines.append(f"  {dp.ts.strftime('%H:%M')}  {temp_str:>5}  {wind_str:>8}  {cloud_str:>4}")
                 else:
-                    symbol = get_weather_symbol(cloud, precip, dp.t2m_c)
-                    lines.append(f"  {dp.ts.strftime('%H:%M')} {symbol}  {temp_str:>8}   {wind_str:>10}   {cloud_str:>4}   {precip_str}")
+                    symbol = get_weather_symbol(cloud, dp.precip_1h_mm, dp.t2m_c)
+                    lines.append(f"  {dp.ts.strftime('%H:%M')} {symbol} {temp_str:>5}  {wind_str:>8}  {cloud_str:>4}")
 
             lines.append("")
 
     # Footer
-    lines.append("*Temp = gefuehlt (Wind Chill)")
+    if plain_text:
+        lines.append("[x] = bester Wert | Temp = gefuehlt (Wind Chill)")
+    else:
+        lines.append("* = bester Wert | Temp = gefuehlt (Wind Chill)")
     lines.append("")
-    lines.append("=" * 60)
+    lines.append("=" * 50)
     if plain_text:
         lines.append("Generiert von Gregor Zwanzig")
     else:
         lines.append("🏔️ Generiert von Gregor Zwanzig")
-    lines.append("=" * 60)
+    lines.append("=" * 50)
 
     return "\n".join(lines)
 
@@ -949,197 +1004,136 @@ def render_winner_card(results: List[Dict[str, Any]]) -> None:
 
 
 def render_results_table(results: List[Dict[str, Any]]) -> None:
-    """Render the comparison results table with all available metrics."""
+    """Render comparison table with locations as columns, metrics as rows."""
     if not results:
         ui.label("Keine Ergebnisse").classes("text-gray-500")
         return
 
-    ui.label("Ergebnisse (sortiert nach Score)").classes("text-h6 mb-2")
+    # Filter out error results for comparison
+    valid_results = [r for r in results if not r.get("error")]
+    if not valid_results:
+        ui.label("Alle Abfragen fehlgeschlagen").classes("text-red-500")
+        return
 
-    # Main comparison table - Snow & Conditions
+    # Helper to find best value index (for highlighting)
+    def find_best_idx(values: List, higher_is_better: bool = True) -> int:
+        """Find index of best value. Returns -1 if no valid values."""
+        valid = [(i, v) for i, v in enumerate(values) if v is not None]
+        if not valid:
+            return -1
+        if higher_is_better:
+            return max(valid, key=lambda x: x[1])[0]
+        return min(valid, key=lambda x: x[1])[0]
+
+    # Extract metrics for each location
+    locations = [r["location"].name for r in valid_results]
+    scores = [r.get("score", 0) for r in valid_results]
+    snow_depths = [r.get("snow_depth_cm") for r in valid_results]
+    snow_news = [r.get("snow_new_cm", 0) for r in valid_results]
+    winds = [r.get("wind_max") for r in valid_results]
+    wind_chills = [r.get("wind_chill_min") for r in valid_results]
+    sunny_hours = [r.get("sunny_hours") for r in valid_results]
+    clouds = [r.get("cloud_avg") for r in valid_results]
+
+    # Find best indices
+    best_score = find_best_idx(scores, higher_is_better=True)
+    best_snow_depth = find_best_idx(snow_depths, higher_is_better=True)
+    best_snow_new = find_best_idx(snow_news, higher_is_better=True)
+    best_wind = find_best_idx(winds, higher_is_better=False)  # Less wind = better
+    best_wind_chill = find_best_idx(wind_chills, higher_is_better=True)  # Warmer = better
+    best_sunny = find_best_idx(sunny_hours, higher_is_better=True)
+    best_clouds = find_best_idx(clouds, higher_is_better=False)  # Less clouds = better
+
     with ui.card().classes("w-full mb-4"):
-        ui.label("Schnee & Bedingungen").classes("text-subtitle1 font-medium mb-2")
+        ui.label("Vergleich").classes("text-subtitle1 font-medium mb-2")
 
-        columns = [
-            {"name": "rank", "label": "#", "field": "rank", "align": "center"},
-            {"name": "location", "label": "Location", "field": "location"},
-            {"name": "score", "label": "Score", "field": "score", "align": "center"},
-            {"name": "snow_depth", "label": "Schneehöhe", "field": "snow_depth", "align": "center"},
-            {"name": "snow_new", "label": "Neuschnee", "field": "snow_new", "align": "center"},
-            {"name": "sunny", "label": "Sonne", "field": "sunny", "align": "center"},
-            {"name": "cloud_layers", "label": "Wolken (L/M/H)", "field": "cloud_layers", "align": "center"},
-        ]
+        with ui.element("div").classes("overflow-x-auto"):
+            with ui.element("table").classes("w-full text-sm border-collapse"):
+                # Header row with location names
+                with ui.element("tr").classes("border-b-2 border-gray-300"):
+                    ui.element("th").classes("p-2 text-left font-medium bg-gray-50").text = ""
+                    for i, loc in enumerate(locations):
+                        rank = i + 1
+                        with ui.element("th").classes("p-2 text-center font-medium bg-gray-50 min-w-24"):
+                            ui.label(f"#{rank} {loc}").classes("text-xs" if len(loc) > 12 else "")
 
-        rows = []
-        for i, r in enumerate(results):
-            loc = r["location"]
-            if r.get("error"):
-                rows.append({
-                    "rank": i + 1,
-                    "location": loc.name,
-                    "score": "Fehler",
-                    "snow_depth": "-",
-                    "snow_new": "-",
-                    "sunny": "-",
-                    "clouds": str(r["error"])[:30],
-                })
-            else:
-                # Snow depth
-                snow_depth = r.get("snow_depth_cm")
-                snow_depth_str = f"{snow_depth:.0f} cm" if snow_depth else "n/a"
+                # Score row
+                with ui.element("tr").classes("border-b"):
+                    ui.element("td").classes("p-2 font-medium").text = "Score"
+                    for i, score in enumerate(scores):
+                        cell_class = "p-2 text-center"
+                        if i == best_score:
+                            cell_class += " bg-green-100 font-bold"
+                        with ui.element("td").classes(cell_class):
+                            ui.label(f"{'🏆 ' if i == best_score else ''}{score}")
 
-                # New snow
-                snow_cm = r.get("snow_new_cm", 0)
-                snow_str = f"+{snow_cm:.0f} cm" if snow_cm else "-"
+                # Snow depth row
+                with ui.element("tr").classes("border-b"):
+                    ui.element("td").classes("p-2 font-medium").text = "Schneehöhe"
+                    for i, depth in enumerate(snow_depths):
+                        cell_class = "p-2 text-center"
+                        if i == best_snow_depth:
+                            cell_class += " bg-green-100 font-bold"
+                        with ui.element("td").classes(cell_class):
+                            text = f"{depth:.0f}cm" if depth else "n/a"
+                            ui.label(text)
 
-                # Sunny hours
-                sunny = r.get("sunny_hours")
-                sunny_str = f"~{sunny}h" if sunny is not None else "-"
+                # New snow row
+                with ui.element("tr").classes("border-b"):
+                    ui.element("td").classes("p-2 font-medium").text = "Neuschnee"
+                    for i, snow in enumerate(snow_news):
+                        cell_class = "p-2 text-center"
+                        if i == best_snow_new and snow and snow > 0:
+                            cell_class += " bg-green-100 font-bold"
+                        with ui.element("td").classes(cell_class):
+                            text = f"+{snow:.0f}cm" if snow else "-"
+                            ui.label(text)
 
-                # Cloud layers (L/M/H)
-                cloud_low = r.get("cloud_low_avg")
-                cloud_mid = r.get("cloud_mid_avg")
-                cloud_high = r.get("cloud_high_avg")
-                if cloud_low is not None:
-                    cloud_str = f"{cloud_low}/{cloud_mid}/{cloud_high}%"
-                else:
-                    # Fallback to total cloud
-                    cloud_avg = r.get("cloud_avg")
-                    cloud_str = f"{cloud_avg}%" if cloud_avg is not None else "-"
+                # Wind row
+                with ui.element("tr").classes("border-b"):
+                    ui.element("td").classes("p-2 font-medium").text = "Wind (max)"
+                    for i, wind in enumerate(winds):
+                        cell_class = "p-2 text-center"
+                        if i == best_wind:
+                            cell_class += " bg-green-100 font-bold"
+                        with ui.element("td").classes(cell_class):
+                            text = f"{wind:.0f}km/h" if wind else "-"
+                            ui.label(text)
 
-                rows.append({
-                    "rank": i + 1,
-                    "location": loc.name,
-                    "score": r.get("score", 0),
-                    "snow_depth": snow_depth_str,
-                    "snow_new": snow_str,
-                    "sunny": sunny_str,
-                    "cloud_layers": cloud_str,
-                })
+                # Wind chill row
+                with ui.element("tr").classes("border-b"):
+                    ui.element("td").classes("p-2 font-medium").text = "Temperatur (gefühlt)"
+                    for i, wc in enumerate(wind_chills):
+                        cell_class = "p-2 text-center"
+                        if i == best_wind_chill:
+                            cell_class += " bg-green-100 font-bold"
+                        with ui.element("td").classes(cell_class):
+                            text = f"{wc:.0f}°C" if wc is not None else "-"
+                            ui.label(text)
 
-        ui.table(columns=columns, rows=rows, row_key="location").classes("w-full")
+                # Sunny hours row
+                with ui.element("tr").classes("border-b"):
+                    ui.element("td").classes("p-2 font-medium").text = "Sonne"
+                    for i, sunny in enumerate(sunny_hours):
+                        cell_class = "p-2 text-center"
+                        if i == best_sunny and sunny:
+                            cell_class += " bg-green-100 font-bold"
+                        with ui.element("td").classes(cell_class):
+                            text = f"~{sunny}h" if sunny is not None else "-"
+                            ui.label(text)
 
-    # Temperature & Wind table
-    with ui.card().classes("w-full mb-4"):
-        ui.label("Temperatur & Wind").classes("text-subtitle1 font-medium mb-2")
-
-        temp_columns = [
-            {"name": "location", "label": "Location", "field": "location"},
-            {"name": "temp", "label": "Temp (min/max)", "field": "temp", "align": "center"},
-            {"name": "wind_chill", "label": "Gefühlt (min/max)", "field": "wind_chill", "align": "center"},
-            {"name": "wind", "label": "Wind (min/max)", "field": "wind", "align": "center"},
-            {"name": "gust", "label": "Böen (max)", "field": "gust", "align": "center"},
-        ]
-
-        temp_rows = []
-        for r in results:
-            loc = r["location"]
-            if r.get("error"):
-                continue
-
-            # Temperature
-            temp_min = r.get("temp_min")
-            temp_max = r.get("temp_max")
-            temp_str = f"{temp_min:.0f}°C / {temp_max:.0f}°C" if temp_min is not None else "-"
-
-            # Wind chill
-            wc_min = r.get("wind_chill_min")
-            wc_max = r.get("wind_chill_max")
-            wc_str = f"{wc_min:.0f}°C / {wc_max:.0f}°C" if wc_min is not None else "-"
-
-            # Wind
-            wind_min = r.get("wind_min")
-            wind_max = r.get("wind_max")
-            wind_str = f"{wind_min:.0f} / {wind_max:.0f} km/h" if wind_min is not None else "-"
-
-            # Gusts
-            gust_max = r.get("gust_max")
-            gust_str = f"{gust_max:.0f} km/h" if gust_max else "-"
-
-            temp_rows.append({
-                "location": loc.name,
-                "temp": temp_str,
-                "wind_chill": wc_str,
-                "wind": wind_str,
-                "gust": gust_str,
-            })
-
-        if temp_rows:
-            ui.table(columns=temp_columns, rows=temp_rows, row_key="location").classes("w-full")
-
-    # Additional details table
-    with ui.card().classes("w-full mb-4"):
-        ui.label("Weitere Details").classes("text-subtitle1 font-medium mb-2")
-
-        detail_columns = [
-            {"name": "location", "label": "Location", "field": "location"},
-            {"name": "snowfall_limit", "label": "Schneefallgrenze", "field": "snowfall_limit", "align": "center"},
-            {"name": "humidity", "label": "Feuchte (min/max)", "field": "humidity", "align": "center"},
-            {"name": "precip", "label": "Niederschlag", "field": "precip", "align": "center"},
-            {"name": "pressure", "label": "Druck (min/max)", "field": "pressure", "align": "center"},
-        ]
-
-        detail_rows = []
-        for r in results:
-            loc = r["location"]
-            if r.get("error"):
-                continue
-
-            # Snowfall limit - show average, explain meaning
-            sl_avg = r.get("snowfall_limit_avg")
-            elevation = loc.elevation_m
-            if sl_avg is not None:
-                sl_str = f"~{sl_avg}m"
-            else:
-                sl_str = "-"
-
-            # Humidity
-            hum_min = r.get("humidity_min")
-            hum_max = r.get("humidity_max")
-            humidity_str = f"{hum_min}% / {hum_max}%" if hum_min is not None else "-"
-
-            # Precipitation with snow/rain indicator
-            precip = r.get("precip_mm")
-            if precip and precip > 0:
-                # Determine if snow or rain based on snowfall limit vs elevation
-                if sl_avg is not None:
-                    if elevation >= sl_avg + 200:
-                        precip_type = "❄️"  # Clearly above snowfall limit → snow
-                    elif elevation <= sl_avg - 200:
-                        precip_type = "🌧️"  # Clearly below → rain
-                    else:
-                        precip_type = "❄️/🌧️"  # Mixed zone
-                else:
-                    # No snowfall limit data - guess from temperature
-                    temp_avg = r.get("temp_avg")
-                    if temp_avg is not None and temp_avg < 0:
-                        precip_type = "❄️"
-                    elif temp_avg is not None and temp_avg > 3:
-                        precip_type = "🌧️"
-                    else:
-                        precip_type = "?"
-                precip_str = f"{precip:.1f} mm {precip_type}"
-            else:
-                precip_str = "0 mm"
-
-            # Pressure
-            pres_min = r.get("pressure_min")
-            pres_max = r.get("pressure_max")
-            pressure_str = f"{pres_min:.0f} / {pres_max:.0f} hPa" if pres_min else "-"
-
-            detail_rows.append({
-                "location": loc.name,
-                "snowfall_limit": sl_str,
-                "humidity": humidity_str,
-                "precip": precip_str,
-                "pressure": pressure_str,
-            })
-
-        if detail_rows:
-            ui.table(columns=detail_columns, rows=detail_rows, row_key="location").classes("w-full")
+                # Clouds row
+                with ui.element("tr").classes("border-b"):
+                    ui.element("td").classes("p-2 font-medium").text = "Bewölkung"
+                    for i, cloud in enumerate(clouds):
+                        cell_class = "p-2 text-center"
+                        if i == best_clouds:
+                            cell_class += " bg-green-100 font-bold"
+                        with ui.element("td").classes(cell_class):
+                            text = f"{cloud}%" if cloud is not None else "-"
+                            ui.label(text)
 
     # Legend
     ui.label(
-        "Schneefallgrenze = Höhe, ab der Niederschlag als Schnee fällt. "
-        "❄️ = Schnee, 🌧️ = Regen, ❄️/🌧️ = Grenzbereich"
-    ).classes("text-xs text-gray-400 mt-4")
+        "Grün = bester Wert | Temperatur = gefühlt (Wind Chill)"
+    ).classes("text-xs text-gray-400 mt-2")
