@@ -11,21 +11,36 @@
   "hooks": {
     "PreToolUse": [
       {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"/Users/hem/Documents/opt/gregor zwanzig/.claude/hooks/pre_commit_validation.py\"",
+            "timeout": 180
+          }
+        ]
+      },
+      {
         "matcher": "Edit|Write",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 /Users/hem/Documents/opt/gregor zwanzig/.claude/hooks/claude_md_protection.py",
+            "command": "python3 \"/Users/hem/Documents/opt/gregor zwanzig/.claude/hooks/claude_md_protection.py\"",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "python3 /Users/hem/Documents/opt/gregor zwanzig/.claude/hooks/spec_enforcement.py",
+            "command": "python3 \"/Users/hem/Documents/opt/gregor zwanzig/.claude/hooks/spec_enforcement.py\"",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "python3 /Users/hem/Documents/opt/gregor zwanzig/.claude/hooks/workflow_gate.py",
+            "command": "python3 \"/Users/hem/Documents/opt/gregor zwanzig/.claude/hooks/workflow_gate.py\"",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "python3 \"/Users/hem/Documents/opt/gregor zwanzig/.claude/hooks/track_changes.py\"",
             "timeout": 5
           }
         ]
@@ -36,7 +51,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 /Users/hem/Documents/opt/gregor zwanzig/.claude/hooks/notify_sound.py",
+            "command": "python3 \"/Users/hem/Documents/opt/gregor zwanzig/.claude/hooks/notify_sound.py\"",
             "timeout": 5
           }
         ]
@@ -47,7 +62,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 /Users/hem/Documents/opt/gregor zwanzig/.claude/hooks/workflow_state_updater.py",
+            "command": "python3 \"/Users/hem/Documents/opt/gregor zwanzig/.claude/hooks/workflow_state_updater.py\"",
             "timeout": 5
           }
         ]

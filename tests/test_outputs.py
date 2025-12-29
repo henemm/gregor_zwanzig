@@ -79,7 +79,14 @@ class TestEmailOutput:
 
     def test_email_requires_config(self):
         """EmailOutput raises if config incomplete."""
-        settings = Settings()  # No SMTP config
+        # Explicitly pass empty values to override .env file
+        settings = Settings(
+            smtp_host=None,
+            smtp_user=None,
+            smtp_pass=None,
+            mail_to=None,
+            _env_file=None,  # Disable .env file reading
+        )
         with pytest.raises(OutputConfigError) as exc_info:
             EmailOutput(settings)
         assert "SMTP" in str(exc_info.value)

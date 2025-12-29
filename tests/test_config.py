@@ -94,7 +94,14 @@ class TestSettings:
 
     def test_can_send_email_false_when_incomplete(self):
         """can_send_email returns False when SMTP config incomplete."""
-        settings = Settings()
+        # Explicitly pass empty values to override .env file
+        settings = Settings(
+            smtp_host=None,
+            smtp_user=None,
+            smtp_pass=None,
+            mail_to=None,
+            _env_file=None,  # Disable .env file reading
+        )
         assert settings.can_send_email() is False
 
     def test_can_send_email_true_when_complete(self):
