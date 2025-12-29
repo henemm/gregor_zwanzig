@@ -681,6 +681,14 @@ def render_compare() -> None:
                 )
 
 
+def _render_cloud_bar(pct: int, color: str, label: str) -> None:
+    """Render a small visual bar for cloud coverage."""
+    with ui.row().classes("gap-0.5 items-center"):
+        ui.label(label).classes("text-xs text-gray-400 w-3")
+        with ui.element("div").classes("h-2 w-10 bg-gray-200 rounded"):
+            ui.element("div").classes(f"h-2 bg-{color} rounded").style(f"width: {pct}%")
+
+
 def get_weather_symbol(cloud_total: Optional[int], precip: Optional[float], temp: Optional[float]) -> str:
     """Get weather symbol based on conditions."""
     if precip and precip > 0.5:
@@ -711,6 +719,7 @@ def render_hourly_table(
 
     with ui.card().classes("w-full mb-4"):
         ui.label("Stündliche Übersicht").classes("text-subtitle1 font-medium mb-2")
+        ui.label("Temperatur = tatsächlich (nicht gefühlt)").classes("text-xs text-gray-500 mb-2")
 
         # Build hours list
         hours = list(range(time_start, time_end + 1))
@@ -755,43 +764,54 @@ def render_hourly_table(
         if rows:
             ui.table(columns=columns, rows=rows, row_key="location").classes("w-full")
 
-        # Cloud layer details (expandable)
+        # Cloud layer details (expandable) - as visual bars
         with ui.expansion("Wolkenschichten Details", icon="cloud").classes("w-full mt-2"):
             ui.label("L = Low (0–3km) | M = Mid (3–8km) | H = High (>8km)").classes(
                 "text-xs text-gray-500 mb-2"
             )
-            detail_cols = [{"name": "location", "label": "Location", "field": "location"}]
-            for h in hours:
-                detail_cols.append({
-                    "name": f"h{h}",
-                    "label": f"{h:02d}:00",
-                    "field": f"h{h}",
-                    "align": "center",
-                })
 
-            detail_rows = []
-            for entry in hourly_data:
-                loc = entry["location"]
-                data_points = entry.get("data", [])
-                days_ahead = entry.get("days_ahead", 1)
-                target_date = date.today() + timedelta(days=days_ahead)
+            # Custom table with visual bars
+            with ui.element("div").classes("overflow-x-auto"):
+                with ui.element("table").classes("w-full text-xs"):
+                    # Header row
+                    with ui.element("tr").classes("border-b"):
+                        ui.element("th").classes("p-2 text-left").text = "Location"
+                        for h in hours:
+                            with ui.element("th").classes("p-2 text-center min-w-16"):
+                                ui.label(f"{h:02d}:00")
 
-                row = {"location": loc.name}
-                for h in hours:
-                    cell = "-"
-                    for dp in data_points:
-                        if dp.ts.date() == target_date and dp.ts.hour == h:
-                            low = dp.cloud_low_pct
-                            mid = dp.cloud_mid_pct
-                            high = dp.cloud_high_pct
-                            if low is not None:
-                                cell = f"L{low}/M{mid}/H{high}"
-                            break
-                    row[f"h{h}"] = cell
-                detail_rows.append(row)
+                    # Data rows
+                    for entry in hourly_data:
+                        loc = entry["location"]
+                        data_points = entry.get("data", [])
+                        days_ahead = entry.get("days_ahead", 1)
+                        target_date = date.today() + timedelta(days=days_ahead)
 
-            if detail_rows:
-                ui.table(columns=detail_cols, rows=detail_rows, row_key="location").classes("w-full text-xs")
+                        with ui.element("tr").classes("border-b"):
+                            ui.element("td").classes("p-2").text = loc.name
+
+                            for h in hours:
+                                with ui.element("td").classes("p-2 text-center"):
+                                    low, mid, high = 0, 0, 0
+                                    for dp in data_points:
+                                        if dp.ts.date() == target_date and dp.ts.hour == h:
+                                            low = dp.cloud_low_pct or 0
+                                            mid = dp.cloud_mid_pct or 0
+                                            high = dp.cloud_high_pct or 0
+                                            break
+
+                                    # Show ☀️ if all layers < 10%
+                                    if low < 10 and mid < 10 and high < 10:
+                                        ui.label("☀️").classes("text-base")
+                                    else:
+                                        # Visual bars for each layer
+                                        with ui.column().classes("gap-0.5"):
+                                            if high > 0:
+                                                _render_cloud_bar(high, "blue-200", "H")
+                                            if mid > 0:
+                                                _render_cloud_bar(mid, "blue-400", "M")
+                                            if low > 0:
+                                                _render_cloud_bar(low, "gray-500", "L")
 
 
 def format_time_range(result: Dict[str, Any]) -> str:
@@ -812,16 +832,6 @@ def render_results_table(results: List[Dict[str, Any]]) -> None:
     if not results:
         ui.label("Keine Ergebnisse").classes("text-gray-500")
         return
-
-    # Show time range info
-    first_result = results[0] if results else {}
-    time_range = format_time_range(first_result)
-    hours = first_result.get("forecast_hours", 48)
-    data_points = first_result.get("data_points", 0)
-
-    with ui.row().classes("items-center gap-4 mb-4"):
-        ui.icon("schedule", color="blue")
-        ui.label(f"Forecast: {time_range} ({hours}h, {data_points} Datenpunkte)").classes("text-gray-600")
 
     ui.label("Ergebnisse (sortiert nach Score)").classes("text-h6 mb-2")
 
