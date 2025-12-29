@@ -321,39 +321,77 @@ def format_compare_email(
     lines.append("-" * (18 + col_width * len(locations)))
     lines.append("")
 
-    # Hourly details for top locations (compact)
-    if hourly_data:
-        for entry in hourly_data[:top_n_details]:
-            loc = entry["location"]
-            data_points = entry.get("data", [])
-            days_ahead = entry.get("days_ahead", 1)
+    # Hourly details - TRANSPOSED (hours as rows, locations as columns)
+    if hourly_data and valid_results:
+        # Only show top locations
+        top_locations = [r["location"] for r in valid_results[:top_n_details]]
+        top_loc_ids = {loc.id for loc in top_locations}
+        top_hourly = [e for e in hourly_data if e["location"].id in top_loc_ids]
+
+        if top_hourly:
+            days_ahead = top_hourly[0].get("days_ahead", 1)
             target_date = date.today() + timedelta(days=days_ahead)
+            hours = list(range(time_window[0], time_window[1] + 1))
 
-            lines.append("-" * 50)
+            lines.append("-" * (18 + col_width * len(top_locations)))
             if plain_text:
-                lines.append(f"STUNDEN: {loc.name}")
+                lines.append("STUENDLICHE UEBERSICHT")
             else:
-                lines.append(f"📍 STUNDEN: {loc.name}")
+                lines.append("🕐 STUENDLICHE UEBERSICHT")
             lines.append(target_date.strftime("%a %d.%m."))
+            lines.append("")
 
-            for dp in data_points:
-                if dp.ts.date() != target_date:
-                    continue
-                if not (time_window[0] <= dp.ts.hour <= time_window[1]):
-                    continue
+            # Sort by ranking
+            sorted_entries = sorted(
+                top_hourly,
+                key=lambda e: next(
+                    (i for i, r in enumerate(valid_results) if r["location"].id == e["location"].id),
+                    999
+                )
+            )
 
-                temp = dp.wind_chill_c if dp.wind_chill_c is not None else dp.t2m_c
-                temp_str = f"{temp:.0f}C" if temp is not None else "?"
-                wind = dp.wind10m_kmh
-                wind_str = f"{wind:.0f}km/h" if wind is not None else "?"
-                cloud = dp.cloud_total_pct
-                cloud_str = f"{cloud}%" if cloud is not None else "?"
+            # Header row
+            header = f"{'':10}"
+            for i, entry in enumerate(sorted_entries):
+                loc = entry["location"]
+                rank = i + 1
+                header += f"#{rank} {loc.name:<{col_width-3}}"
+            lines.append(header)
+            lines.append("-" * (10 + col_width * len(sorted_entries)))
 
-                if plain_text:
-                    lines.append(f"  {dp.ts.strftime('%H:%M')}  {temp_str:>5}  {wind_str:>8}  {cloud_str:>4}")
-                else:
-                    symbol = get_weather_symbol(cloud, dp.precip_1h_mm, dp.t2m_c)
-                    lines.append(f"  {dp.ts.strftime('%H:%M')} {symbol} {temp_str:>5}  {wind_str:>8}  {cloud_str:>4}")
+            # Build data structure: hour -> location_id -> cell
+            hour_data: Dict[int, Dict[str, str]] = {h: {} for h in hours}
+
+            for entry in sorted_entries:
+                loc = entry["location"]
+                data_points = entry.get("data", [])
+
+                for dp in data_points:
+                    if dp.ts.date() != target_date:
+                        continue
+                    h = dp.ts.hour
+                    if h not in hours:
+                        continue
+
+                    temp = dp.wind_chill_c if dp.wind_chill_c is not None else dp.t2m_c
+                    temp_str = f"{temp:.0f}C" if temp is not None else "?"
+
+                    if plain_text:
+                        cell = temp_str
+                    else:
+                        symbol = get_weather_symbol(dp.cloud_total_pct, dp.precip_1h_mm, dp.t2m_c)
+                        cell = f"{symbol} {temp_str}"
+
+                    hour_data[h][loc.id] = cell
+
+            # Data rows
+            for h in hours:
+                row = f"{h:02d}:00     "
+                for entry in sorted_entries:
+                    loc = entry["location"]
+                    cell = hour_data[h].get(loc.id, "-")
+                    row += f"{cell:<{col_width}}"
+                lines.append(row)
 
             lines.append("")
 
@@ -634,19 +672,20 @@ def render_compare() -> None:
                 ui.label("Wähle Locations und klicke 'Vergleichen'").classes("text-gray-400 my-8")
                 return
 
-            # 1. Render hourly table first
+            # 1. Winner recommendation FIRST (answers "Welches Skigebiet?")
+            render_winner_card(state["results"])
+
+            # 2. Comparison table (explains WHY - Score, Snow, Wind, etc.)
+            render_results_table(state["results"])
+
+            # 3. Hourly details LAST (deep dive for each hour)
             if state["hourly_data"]:
                 render_hourly_table(
                     state["hourly_data"],
                     state["time_start"],
                     state["time_end"],
+                    state["results"],  # Pass results for ranking
                 )
-
-            # 2. Render winner card (after hourly, before tables)
-            render_winner_card(state["results"])
-
-            # 3. Then render aggregate tables
-            render_results_table(state["results"])
 
         results_ui()
 
@@ -857,12 +896,24 @@ def render_hourly_table(
     hourly_data: List[Dict[str, Any]],
     time_start: int,
     time_end: int,
+    results: List[Dict[str, Any]] | None = None,
 ) -> None:
-    """Render hourly weather table for the selected time window."""
+    """
+    Render hourly weather table with TRANSPOSED layout.
+
+    Layout: Hours as rows, Locations as columns (consistent with comparison table).
+    """
     if not hourly_data:
         return
 
     from datetime import date, timedelta
+
+    # Get ranking from results (sorted by score)
+    ranking = {}
+    if results:
+        for i, r in enumerate(results):
+            if not r.get("error"):
+                ranking[r["location"].id] = i + 1
 
     with ui.card().classes("w-full mb-4"):
         ui.label("Stündliche Übersicht").classes("text-subtitle1 font-medium mb-2")
@@ -871,76 +922,91 @@ def render_hourly_table(
         # Build hours list
         hours = list(range(time_start, time_end + 1))
 
-        # Build columns: Location + each hour
-        columns = [{"name": "location", "label": "Location", "field": "location"}]
-        for h in hours:
-            columns.append({
-                "name": f"h{h}",
-                "label": f"{h:02d}:00",
-                "field": f"h{h}",
-                "align": "center",
-            })
+        # Get target date from first entry
+        days_ahead = hourly_data[0].get("days_ahead", 1) if hourly_data else 1
+        target_date = date.today() + timedelta(days=days_ahead)
 
-        rows = []
+        # Build data structure: hour -> location -> cell_data
+        hour_data: Dict[int, Dict[str, str]] = {h: {} for h in hours}
+
         for entry in hourly_data:
             loc = entry["location"]
             data_points = entry.get("data", [])
-            days_ahead = entry.get("days_ahead", 1)
-
-            # Calculate target date
-            target_date = date.today() + timedelta(days=days_ahead)
-
-            row = {"location": loc.name}
 
             for h in hours:
-                # Find data point for this hour on target date
                 cell = "-"
                 for dp in data_points:
                     if dp.ts.date() == target_date and dp.ts.hour == h:
-                        temp = dp.t2m_c  # actual temp for weather symbol
-                        feels_like = dp.wind_chill_c  # display feels-like
+                        temp = dp.t2m_c
+                        feels_like = dp.wind_chill_c
                         cloud = dp.cloud_total_pct
                         precip = dp.precip_1h_mm
                         symbol = get_weather_symbol(cloud, precip, temp)
-                        # Show wind chill (feels-like), fall back to actual if not available
                         display_temp = feels_like if feels_like is not None else temp
                         temp_str = f"{display_temp:.0f}°" if display_temp is not None else "?"
                         cell = f"{symbol} {temp_str}"
                         break
-                row[f"h{h}"] = cell
+                hour_data[h][loc.id] = cell
 
-            rows.append(row)
+        # Render transposed table
+        with ui.element("div").classes("overflow-x-auto"):
+            with ui.element("table").classes("w-full text-sm border-collapse"):
+                # Header row with location names (sorted by ranking)
+                sorted_entries = sorted(
+                    hourly_data,
+                    key=lambda e: ranking.get(e["location"].id, 999)
+                )
 
-        if rows:
-            ui.table(columns=columns, rows=rows, row_key="location").classes("w-full")
+                with ui.element("tr").classes("border-b-2 border-gray-300"):
+                    with ui.element("th").classes("p-2 text-left font-medium"):
+                        ui.label(target_date.strftime("%a %d.%m.")).classes("text-gray-600")
+                    for entry in sorted_entries:
+                        loc = entry["location"]
+                        rank = ranking.get(loc.id, "")
+                        with ui.element("th").classes("p-2 text-center font-medium min-w-20"):
+                            label = f"#{rank} {loc.name}" if rank else loc.name
+                            ui.label(label).classes("text-xs" if len(loc.name) > 12 else "")
 
-        # Cloud layer details (expandable) - as visual bars
+                # Data rows (one per hour)
+                for h in hours:
+                    with ui.element("tr").classes("border-b"):
+                        with ui.element("td").classes("p-2 font-medium text-gray-600"):
+                            ui.label(f"{h:02d}:00")
+                        for entry in sorted_entries:
+                            loc = entry["location"]
+                            cell_text = hour_data[h].get(loc.id, "-")
+                            with ui.element("td").classes("p-2 text-center"):
+                                ui.label(cell_text)
+
+        # Cloud layer details (expandable) - ALSO transposed
         with ui.expansion("Wolkenschichten Details", icon="cloud").classes("w-full mt-2"):
             ui.label("L = Low (0–3km) | M = Mid (3–8km) | H = High (>8km)").classes(
                 "text-xs text-gray-500 mb-2"
             )
 
-            # Custom table with visual bars
+            # Transposed cloud layer table
             with ui.element("div").classes("overflow-x-auto"):
                 with ui.element("table").classes("w-full text-xs"):
-                    # Header row
+                    # Header row with locations
                     with ui.element("tr").classes("border-b"):
-                        ui.element("th").classes("p-2 text-left").text = "Location"
-                        for h in hours:
+                        ui.element("th").classes("p-2 text-left").text = ""
+                        for entry in sorted_entries:
+                            loc = entry["location"]
+                            rank = ranking.get(loc.id, "")
                             with ui.element("th").classes("p-2 text-center min-w-16"):
+                                label = f"#{rank} {loc.name}" if rank else loc.name
+                                ui.label(label)
+
+                    # Data rows (one per hour)
+                    for h in hours:
+                        with ui.element("tr").classes("border-b"):
+                            with ui.element("td").classes("p-2 font-medium"):
                                 ui.label(f"{h:02d}:00")
 
-                    # Data rows
-                    for entry in hourly_data:
-                        loc = entry["location"]
-                        data_points = entry.get("data", [])
-                        days_ahead = entry.get("days_ahead", 1)
-                        target_date = date.today() + timedelta(days=days_ahead)
+                            for entry in sorted_entries:
+                                loc = entry["location"]
+                                data_points = entry.get("data", [])
 
-                        with ui.element("tr").classes("border-b"):
-                            ui.element("td").classes("p-2").text = loc.name
-
-                            for h in hours:
                                 with ui.element("td").classes("p-2 text-center"):
                                     low, mid, high = 0, 0, 0
                                     for dp in data_points:
@@ -950,11 +1016,9 @@ def render_hourly_table(
                                             high = dp.cloud_high_pct or 0
                                             break
 
-                                    # Show ☀️ if all layers < 10%
                                     if low < 10 and mid < 10 and high < 10:
                                         ui.label("☀️").classes("text-base")
                                     else:
-                                        # Visual bars for each layer
                                         with ui.column().classes("gap-0.5"):
                                             if high > 0:
                                                 _render_cloud_bar(high, "blue-200", "H")
@@ -1061,20 +1125,20 @@ def render_results_table(results: List[Dict[str, Any]]) -> None:
                 with ui.element("tr").classes("border-b"):
                     ui.element("td").classes("p-2 font-medium").text = "Score"
                     for i, score in enumerate(scores):
-                        cell_class = "p-2 text-center"
-                        if i == best_score:
-                            cell_class += " bg-green-100 font-bold"
-                        with ui.element("td").classes(cell_class):
-                            ui.label(f"{'🏆 ' if i == best_score else ''}{score}")
+                        is_best = i == best_score
+                        with ui.element("td").classes("p-2 text-center").style(
+                            "background-color: #dcfce7; font-weight: bold" if is_best else ""
+                        ):
+                            ui.label(f"{'🏆 ' if is_best else ''}{score}")
 
                 # Snow depth row
                 with ui.element("tr").classes("border-b"):
                     ui.element("td").classes("p-2 font-medium").text = "Schneehöhe"
                     for i, depth in enumerate(snow_depths):
-                        cell_class = "p-2 text-center"
-                        if i == best_snow_depth:
-                            cell_class += " bg-green-100 font-bold"
-                        with ui.element("td").classes(cell_class):
+                        is_best = i == best_snow_depth
+                        with ui.element("td").classes("p-2 text-center").style(
+                            "background-color: #dcfce7; font-weight: bold" if is_best else ""
+                        ):
                             text = f"{depth:.0f}cm" if depth else "n/a"
                             ui.label(text)
 
@@ -1082,10 +1146,10 @@ def render_results_table(results: List[Dict[str, Any]]) -> None:
                 with ui.element("tr").classes("border-b"):
                     ui.element("td").classes("p-2 font-medium").text = "Neuschnee"
                     for i, snow in enumerate(snow_news):
-                        cell_class = "p-2 text-center"
-                        if i == best_snow_new and snow and snow > 0:
-                            cell_class += " bg-green-100 font-bold"
-                        with ui.element("td").classes(cell_class):
+                        is_best = i == best_snow_new and snow and snow > 0
+                        with ui.element("td").classes("p-2 text-center").style(
+                            "background-color: #dcfce7; font-weight: bold" if is_best else ""
+                        ):
                             text = f"+{snow:.0f}cm" if snow else "-"
                             ui.label(text)
 
@@ -1093,10 +1157,10 @@ def render_results_table(results: List[Dict[str, Any]]) -> None:
                 with ui.element("tr").classes("border-b"):
                     ui.element("td").classes("p-2 font-medium").text = "Wind (max)"
                     for i, wind in enumerate(winds):
-                        cell_class = "p-2 text-center"
-                        if i == best_wind:
-                            cell_class += " bg-green-100 font-bold"
-                        with ui.element("td").classes(cell_class):
+                        is_best = i == best_wind
+                        with ui.element("td").classes("p-2 text-center").style(
+                            "background-color: #dcfce7; font-weight: bold" if is_best else ""
+                        ):
                             text = f"{wind:.0f}km/h" if wind else "-"
                             ui.label(text)
 
@@ -1104,10 +1168,10 @@ def render_results_table(results: List[Dict[str, Any]]) -> None:
                 with ui.element("tr").classes("border-b"):
                     ui.element("td").classes("p-2 font-medium").text = "Temperatur (gefühlt)"
                     for i, wc in enumerate(wind_chills):
-                        cell_class = "p-2 text-center"
-                        if i == best_wind_chill:
-                            cell_class += " bg-green-100 font-bold"
-                        with ui.element("td").classes(cell_class):
+                        is_best = i == best_wind_chill
+                        with ui.element("td").classes("p-2 text-center").style(
+                            "background-color: #dcfce7; font-weight: bold" if is_best else ""
+                        ):
                             text = f"{wc:.0f}°C" if wc is not None else "-"
                             ui.label(text)
 
@@ -1115,10 +1179,10 @@ def render_results_table(results: List[Dict[str, Any]]) -> None:
                 with ui.element("tr").classes("border-b"):
                     ui.element("td").classes("p-2 font-medium").text = "Sonne"
                     for i, sunny in enumerate(sunny_hours):
-                        cell_class = "p-2 text-center"
-                        if i == best_sunny and sunny:
-                            cell_class += " bg-green-100 font-bold"
-                        with ui.element("td").classes(cell_class):
+                        is_best = i == best_sunny and sunny
+                        with ui.element("td").classes("p-2 text-center").style(
+                            "background-color: #dcfce7; font-weight: bold" if is_best else ""
+                        ):
                             text = f"~{sunny}h" if sunny is not None else "-"
                             ui.label(text)
 
@@ -1126,10 +1190,10 @@ def render_results_table(results: List[Dict[str, Any]]) -> None:
                 with ui.element("tr").classes("border-b"):
                     ui.element("td").classes("p-2 font-medium").text = "Bewölkung"
                     for i, cloud in enumerate(clouds):
-                        cell_class = "p-2 text-center"
-                        if i == best_clouds:
-                            cell_class += " bg-green-100 font-bold"
-                        with ui.element("td").classes(cell_class):
+                        is_best = i == best_clouds
+                        with ui.element("td").classes("p-2 text-center").style(
+                            "background-color: #dcfce7; font-weight: bold" if is_best else ""
+                        ):
                             text = f"{cloud}%" if cloud is not None else "-"
                             ui.label(text)
 
