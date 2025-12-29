@@ -719,7 +719,7 @@ def render_hourly_table(
 
     with ui.card().classes("w-full mb-4"):
         ui.label("Stündliche Übersicht").classes("text-subtitle1 font-medium mb-2")
-        ui.label("Temperatur = tatsächlich (nicht gefühlt)").classes("text-xs text-gray-500 mb-2")
+        ui.label("Temperatur = gefühlt (Wind Chill)").classes("text-xs text-gray-500 mb-2")
 
         # Build hours list
         hours = list(range(time_start, time_end + 1))
@@ -750,11 +750,14 @@ def render_hourly_table(
                 cell = "-"
                 for dp in data_points:
                     if dp.ts.date() == target_date and dp.ts.hour == h:
-                        temp = dp.t2m_c
+                        temp = dp.t2m_c  # actual temp for weather symbol
+                        feels_like = dp.wind_chill_c  # display feels-like
                         cloud = dp.cloud_total_pct
                         precip = dp.precip_1h_mm
                         symbol = get_weather_symbol(cloud, precip, temp)
-                        temp_str = f"{temp:.0f}°" if temp is not None else "?"
+                        # Show wind chill (feels-like), fall back to actual if not available
+                        display_temp = feels_like if feels_like is not None else temp
+                        temp_str = f"{display_temp:.0f}°" if display_temp is not None else "?"
                         cell = f"{symbol} {temp_str}"
                         break
                 row[f"h{h}"] = cell
