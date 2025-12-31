@@ -9,8 +9,12 @@ Defines user profiles with:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import date, datetime
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+
+if TYPE_CHECKING:
+    from app.models import ForecastDataPoint
 
 
 class SubscriptionType(str, Enum):
@@ -23,7 +27,7 @@ class Schedule(str, Enum):
     """Subscription schedules."""
     DAILY_MORNING = "daily_morning"
     DAILY_EVENING = "daily_evening"
-    WEEKLY_FRIDAY = "weekly_friday"
+    WEEKLY = "weekly"  # With configurable weekday
     BEFORE_TRIP = "before_trip"  # X days before trip
 
 
@@ -98,6 +102,79 @@ class TripSubscription:
     trip_file: str  # Path to trip JSON file
     trigger: TriggerTiming
     enabled: bool = True
+
+
+@dataclass
+class CompareSubscription:
+    """
+    Subscription for scheduled ski resort comparisons.
+
+    Sends email with ranking of configured locations
+    filtered by a time window (e.g., 9:00-16:00).
+    """
+    id: str
+    name: str
+    enabled: bool = True
+    locations: List[str] = field(default_factory=list)  # Location IDs, ["*"] = all
+    forecast_hours: int = 48  # 24, 48, or 72
+    time_window_start: int = 9   # Hour (0-23)
+    time_window_end: int = 16    # Hour (0-23)
+    schedule: Schedule = Schedule.WEEKLY
+    weekday: int = 4  # 0=Monday, 6=Sunday (default: Friday)
+    include_hourly: bool = True  # Include hourly details in email
+    top_n: int = 3  # Number of locations to show hourly details for
+
+
+@dataclass
+class LocationResult:
+    """
+    Result for a single location in a comparison.
+
+    Contains all metrics calculated for the time window.
+    Used by both Web UI and Email renderers.
+    """
+    location: SavedLocation
+    score: int = 0
+    snow_depth_cm: Optional[float] = None
+    snow_new_cm: Optional[float] = None
+    temp_min: Optional[float] = None
+    temp_max: Optional[float] = None
+    wind_max: Optional[float] = None
+    wind_direction_avg: Optional[int] = None  # Average wind direction (degrees, 0=N)
+    gust_max: Optional[float] = None  # Maximum gust speed
+    wind_chill_min: Optional[float] = None
+    cloud_avg: Optional[int] = None
+    cloud_low_avg: Optional[int] = None  # Low cloud layer for "Wolkenlage" analysis
+    cloud_mid_avg: Optional[int] = None  # Mid cloud layer for effective cloud calculation
+    cloud_high_avg: Optional[int] = None  # High cloud layer for effective cloud calculation
+    sunny_hours: Optional[int] = None
+    hourly_data: List["ForecastDataPoint"] = field(default_factory=list)
+    error: Optional[str] = None  # Error message if fetch failed
+
+
+@dataclass
+class ComparisonResult:
+    """
+    Result of a ski resort comparison.
+
+    Single source of truth for both Web UI and Email renderers.
+    Guarantees identical content across all output formats.
+    """
+    locations: List[LocationResult]  # Sorted by score (descending)
+    time_window: Tuple[int, int]     # (start_hour, end_hour)
+    target_date: date                # Forecast date
+    created_at: datetime = field(default_factory=datetime.now)
+
+    @property
+    def winner(self) -> Optional[LocationResult]:
+        """Get the top-ranked location."""
+        valid = [loc for loc in self.locations if loc.error is None]
+        return valid[0] if valid else None
+
+    @property
+    def valid_locations(self) -> List[LocationResult]:
+        """Get all locations without errors."""
+        return [loc for loc in self.locations if loc.error is None]
 
 
 @dataclass
