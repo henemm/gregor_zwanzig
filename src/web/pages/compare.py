@@ -20,6 +20,7 @@ from outputs.email import EmailOutput
 from outputs.base import OutputConfigError, OutputError
 from providers.geosphere import GeoSphereProvider
 from services.forecast import ForecastService
+from services.weather_metrics import CloudStatus, WeatherMetricsService
 from validation.ground_truth import BergfexScraper
 
 
@@ -190,26 +191,8 @@ def _degrees_to_compass(degrees: int | None) -> str:
     return directions[idx]
 
 
-def _calc_effective_cloud(
-    elevation: int | None,
-    cloud_total: int | None,
-    cloud_mid: int | None = None,
-    cloud_high: int | None = None,
-) -> int | None:
-    """
-    Calculate effective cloud cover based on elevation.
-
-    For high elevations (>=2500m), ignores low clouds and uses only mid+high.
-    This is consistent for weather symbols, Sonnenstunden, and Wolkenlage.
-
-    Returns cloud percentage (0-100) or None if no data.
-    """
-    if elevation and elevation >= 2500 and cloud_mid is not None and cloud_high is not None:
-        # High elevation: ignore low clouds, use only mid + high
-        return (cloud_mid + cloud_high) // 2
-    else:
-        # Normal: use total cloud cover
-        return cloud_total
+# REMOVED: _calc_effective_cloud - now in WeatherMetricsService
+# Use: WeatherMetricsService.calculate_effective_cloud()
 
 
 def _format_wind_direction_cell(degrees: int | None, plain: bool) -> str:
@@ -330,31 +313,10 @@ class ComparisonEngine:
                     if clouds:
                         metrics["cloud_avg"] = int(sum(clouds) / len(clouds))
 
-                    # Sonnenstunden: Combine API and Spec calculation
-                    # API sunshine_duration is best for normal elevations
-                    # But for high elevations (>= 2500m), we also calculate based on
-                    # effective cloud cover (ignoring low clouds) and take the maximum
-                    sunshine_seconds = [
-                        dp.sunshine_duration_s for dp in filtered_data
-                        if dp.sunshine_duration_s is not None
-                    ]
-                    api_sunny_hours = round(sum(sunshine_seconds) / 3600) if sunshine_seconds else 0
-
-                    # For high elevations: also calc based on effective cloud
-                    spec_sunny_hours = 0
-                    if loc.elevation_m and loc.elevation_m >= 2500:
-                        for dp in filtered_data:
-                            eff_cloud = _calc_effective_cloud(
-                                loc.elevation_m,
-                                dp.cloud_total_pct,
-                                dp.cloud_mid_pct,
-                                dp.cloud_high_pct,
-                            )
-                            if eff_cloud is not None and eff_cloud < 30:
-                                spec_sunny_hours += 1
-
-                    # Take the maximum (Hochlagen should not be penalized by low clouds)
-                    metrics["sunny_hours"] = max(api_sunny_hours, spec_sunny_hours)
+                    # Sonnenstunden: Use WeatherMetricsService (Single Source of Truth)
+                    metrics["sunny_hours"] = WeatherMetricsService.calculate_sunny_hours(
+                        filtered_data, loc.elevation_m
+                    )
 
                     # Cloud layers for "Wolkenlage" analysis
                     cloud_low = [dp.cloud_low_pct for dp in filtered_data if dp.cloud_low_pct is not None]
@@ -638,28 +600,17 @@ def render_comparison_html(result: ComparisonResult, top_n_details: int = 3) -> 
         html += f"                    {cell(v, lambda x: f'{x}%' if x is not None else '-', i == best_clouds)}\n"
     html += "                </tr>\n"
 
-    # Wolkenlage row - based on sunny_hours for consistency
-    # sunny_hours comes from API, so Wolkenlage must align with it
+    # Wolkenlage row - uses WeatherMetricsService (Single Source of Truth)
     html += "                <tr>\n                    <td class=\"label\">Wolkenlage</td>\n"
     time_window_hours = time_window[1] - time_window[0] + 1  # Total hours in window
     for i, (sunny, cloud_low, elev) in enumerate(zip(sunny_hours_list, cloud_lows, elevations)):
-        if sunny is None:
-            status = "-"
-            style = ""
-        elif elev and elev >= 2500 and cloud_low is not None and cloud_low > 30 and sunny >= 5:
-            # High elevation above low clouds with good sunshine
-            status = "☀️ über Wolken"
-            style = ' style="color: #2e7d32; font-weight: 600;"'
-        elif sunny >= time_window_hours * 0.75:  # >= 75% sunshine
-            status = "✨ klar"
-            style = ' style="color: #2e7d32;"'
-        elif sunny >= time_window_hours * 0.25:  # >= 25% sunshine
-            status = "🌤️ leicht"
-            style = ""
-        else:
-            status = "☁️ in Wolken"
-            style = ' style="color: #888;"'
-        html += f'                    <td{style}>{status}</td>\n'
+        cloud_status = WeatherMetricsService.calculate_cloud_status(
+            sunny, time_window_hours, elev, cloud_low
+        )
+        emoji = WeatherMetricsService.get_cloud_status_emoji(cloud_status)
+        text, style_str = WeatherMetricsService.format_cloud_status(cloud_status)
+        style = f' style="{style_str}"' if style_str else ''
+        html += f'                    <td{style}>{emoji} {text}</td>\n'
     html += "                </tr>\n"
 
     html += """            </table>
@@ -686,11 +637,11 @@ def render_comparison_html(result: ComparisonResult, top_n_details: int = 3) -> 
                 temp = dp.wind_chill_c if dp.wind_chill_c is not None else dp.t2m_c
                 temp_str = f"{temp:.0f}°C" if temp is not None else "?"
 
-                symbol = get_weather_symbol(
+                symbol = WeatherMetricsService.get_weather_symbol(
                     dp.cloud_total_pct, dp.precip_1h_mm, dp.t2m_c,
-                    elevation=loc_result.location.elevation_m,
-                    cloud_mid=dp.cloud_mid_pct,
-                    cloud_high=dp.cloud_high_pct,
+                    elevation_m=loc_result.location.elevation_m,
+                    cloud_mid_pct=dp.cloud_mid_pct,
+                    cloud_high_pct=dp.cloud_high_pct,
                 )
                 hour_data_map[h][idx] = (symbol, temp_str)
 
@@ -886,27 +837,10 @@ def fetch_forecast_for_location(loc: SavedLocation, hours: int = 48) -> Dict[str
                 result["visibility_max"] = max(visibility)
                 result["visibility_avg"] = int(sum(visibility) / len(visibility))
 
-            # Sunshine hours: Combine API and Spec calculation
-            sunshine_seconds = [
-                dp.sunshine_duration_s for dp in forecast.data
-                if dp.sunshine_duration_s is not None
-            ]
-            api_sunny_hours = round(sum(sunshine_seconds) / 3600) if sunshine_seconds else 0
-
-            # For high elevations: also calc based on effective cloud
-            spec_sunny_hours = 0
-            if loc.elevation_m and loc.elevation_m >= 2500:
-                for dp in forecast.data:
-                    eff_cloud = _calc_effective_cloud(
-                        loc.elevation_m,
-                        dp.cloud_total_pct,
-                        dp.cloud_mid_pct,
-                        dp.cloud_high_pct,
-                    )
-                    if eff_cloud is not None and eff_cloud < 30:
-                        spec_sunny_hours += 1
-
-            result["sunny_hours"] = max(api_sunny_hours, spec_sunny_hours)
+            # Sunny hours: Use WeatherMetricsService (Single Source of Truth)
+            result["sunny_hours"] = WeatherMetricsService.calculate_sunny_hours(
+                forecast.data, loc.elevation_m
+            )
 
         result["score"] = calculate_score(result)
 
@@ -1181,27 +1115,10 @@ def render_compare() -> None:
                         if clouds:
                             result["cloud_avg"] = int(sum(clouds) / len(clouds))
 
-                        # Sunny hours: Combine API and Spec calculation
-                        sunshine_seconds = [
-                            dp.sunshine_duration_s for dp in filtered_data
-                            if dp.sunshine_duration_s is not None
-                        ]
-                        api_sunny_hours = round(sum(sunshine_seconds) / 3600) if sunshine_seconds else 0
-
-                        # For high elevations: also calc based on effective cloud
-                        spec_sunny_hours = 0
-                        if loc.elevation_m and loc.elevation_m >= 2500:
-                            for dp in filtered_data:
-                                eff_cloud = _calc_effective_cloud(
-                                    loc.elevation_m,
-                                    dp.cloud_total_pct,
-                                    dp.cloud_mid_pct,
-                                    dp.cloud_high_pct,
-                                )
-                                if eff_cloud is not None and eff_cloud < 30:
-                                    spec_sunny_hours += 1
-
-                        result["sunny_hours"] = max(api_sunny_hours, spec_sunny_hours)
+                        # Sunny hours: Use WeatherMetricsService (Single Source of Truth)
+                        result["sunny_hours"] = WeatherMetricsService.calculate_sunny_hours(
+                            filtered_data, loc.elevation_m
+                        )
 
                         # Cloud layers
                         cl_low = [dp.cloud_low_pct for dp in filtered_data if dp.cloud_low_pct is not None]
@@ -1322,43 +1239,8 @@ def _render_cloud_bar(pct: int, color: str, label: str) -> None:
             ui.element("div").classes(f"h-2 bg-{color} rounded").style(f"width: {pct}%")
 
 
-def get_weather_symbol(
-    cloud_total: Optional[int],
-    precip: Optional[float],
-    temp: Optional[float],
-    elevation: Optional[int] = None,
-    cloud_mid: Optional[int] = None,
-    cloud_high: Optional[int] = None,
-) -> str:
-    """
-    Get weather symbol based on conditions.
-
-    For high elevations (>=2500m), uses effective cloud cover
-    that ignores low clouds (which are below the location).
-    """
-    # Precipitation takes priority
-    if precip and precip > 0.5:
-        if temp is not None and temp < 0:
-            return "❄️"  # Snow
-        return "🌧️"  # Rain
-
-    # Calculate effective cloud cover based on elevation
-    if elevation and elevation >= 2500 and cloud_mid is not None and cloud_high is not None:
-        # High elevation: ignore low clouds, use only mid + high
-        effective_clouds = (cloud_mid + cloud_high) // 2
-    else:
-        # Normal: use total cloud cover
-        effective_clouds = cloud_total
-
-    if effective_clouds is None:
-        return "?"
-    if effective_clouds < 20:
-        return "☀️"  # Sunny
-    if effective_clouds < 50:
-        return "⛅"  # Partly cloudy
-    if effective_clouds < 80:
-        return "🌥️"  # Mostly cloudy
-    return "☁️"  # Overcast
+# REMOVED: get_weather_symbol - now in WeatherMetricsService
+# Use: WeatherMetricsService.get_weather_symbol()
 
 
 def render_hourly_table(
@@ -1410,11 +1292,11 @@ def render_hourly_table(
                         feels_like = dp.wind_chill_c
                         cloud = dp.cloud_total_pct
                         precip = dp.precip_1h_mm
-                        symbol = get_weather_symbol(
+                        symbol = WeatherMetricsService.get_weather_symbol(
                             cloud, precip, temp,
-                            elevation=loc.elevation_m,
-                            cloud_mid=dp.cloud_mid_pct,
-                            cloud_high=dp.cloud_high_pct,
+                            elevation_m=loc.elevation_m,
+                            cloud_mid_pct=dp.cloud_mid_pct,
+                            cloud_high_pct=dp.cloud_high_pct,
                         )
                         display_temp = feels_like if feels_like is not None else temp
                         temp_str = f"{display_temp:.0f}°" if display_temp is not None else "?"
@@ -1701,23 +1583,31 @@ def render_results_table(results: List[Dict[str, Any]]) -> None:
                             text = f"{cloud}%" if cloud is not None else "-"
                             ui.label(text)
 
-                # Cloud situation row (above clouds indicator)
+                # Cloud situation row - uses WeatherMetricsService (Single Source of Truth)
                 cloud_lows = [r.get("cloud_low_avg") for r in valid_results]
+                sunny_hours_list = [r.get("sunny_hours") for r in valid_results]
                 elevations = [r["location"].elevation_m for r in valid_results]
+                # Calculate time window hours (default 8 if not available)
+                time_window_hours = 8  # Default: 09:00-16:00
                 with ui.element("tr").classes("border-b"):
                     with ui.element("td").classes("p-2 font-medium bg-gray-50"):
                         ui.label("Wolkenlage")
-                    for i, (cloud_low, elev) in enumerate(zip(cloud_lows, elevations)):
+                    for i, (sunny, cloud_low, elev) in enumerate(zip(sunny_hours_list, cloud_lows, elevations)):
                         with ui.element("td").classes("p-2 text-center"):
-                            # High elevation (>2500m) with low clouds = likely above clouds
-                            if elev and elev > 2500 and cloud_low is not None and cloud_low > 30:
-                                ui.label("☀️ über Wolken").classes("text-green-600 font-medium text-xs")
-                            elif cloud_low is not None and cloud_low > 50:
-                                ui.label("☁️ in Wolken").classes("text-gray-500 text-xs")
-                            elif cloud_low is not None and cloud_low < 20:
-                                ui.label("☀️ klar").classes("text-xs")
+                            cloud_status = WeatherMetricsService.calculate_cloud_status(
+                                sunny, time_window_hours, elev, cloud_low
+                            )
+                            emoji = WeatherMetricsService.get_cloud_status_emoji(cloud_status)
+                            text, _ = WeatherMetricsService.format_cloud_status(cloud_status)
+                            # Apply appropriate styling based on status
+                            if cloud_status == CloudStatus.ABOVE_CLOUDS:
+                                ui.label(f"{emoji} {text}").classes("text-green-600 font-medium text-xs")
+                            elif cloud_status == CloudStatus.CLEAR:
+                                ui.label(f"{emoji} {text}").classes("text-green-600 text-xs")
+                            elif cloud_status == CloudStatus.IN_CLOUDS:
+                                ui.label(f"{emoji} {text}").classes("text-gray-500 text-xs")
                             else:
-                                ui.label("-").classes("text-xs")
+                                ui.label(f"{emoji} {text}").classes("text-xs")
 
     # Legend
     ui.label(

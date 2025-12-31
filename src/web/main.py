@@ -54,6 +54,13 @@ def settings_page() -> None:
     render_settings()
 
 
+@ui.page("/subscriptions")
+def subscriptions_page() -> None:
+    """Compare subscriptions management page."""
+    from web.pages.subscriptions import render_subscriptions
+    render_subscriptions()
+
+
 def create_header() -> None:
     """Create consistent navigation header."""
     with ui.header().classes("items-center justify-between"):
@@ -63,11 +70,17 @@ def create_header() -> None:
             ui.link("Locations", "/locations").classes("text-white mx-2")
             ui.link("Trips", "/trips").classes("text-white mx-2")
             ui.link("Vergleich", "/compare").classes("text-white mx-2")
+            ui.link("Subscriptions", "/subscriptions").classes("text-white mx-2")
             ui.link("Settings", "/settings").classes("text-white mx-2")
 
 
-# Register header for all pages
+# Register startup handlers
 app.on_startup(ensure_data_dirs)
+
+# Initialize background scheduler for subscriptions
+from web.scheduler import init_scheduler, shutdown_scheduler
+app.on_startup(init_scheduler)
+app.on_shutdown(shutdown_scheduler)
 
 
 def run() -> None:

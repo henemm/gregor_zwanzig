@@ -26,6 +26,7 @@ def render_dashboard() -> None:
             ui.link("Locations", "/locations").classes("text-white mx-2")
             ui.link("Trips", "/trips").classes("text-white mx-2")
             ui.link("Vergleich", "/compare").classes("text-white mx-2")
+            ui.link("Subscriptions", "/subscriptions").classes("text-white mx-2")
             ui.link("Settings", "/settings").classes("text-white mx-2")
 
     with ui.column().classes("w-full max-w-4xl mx-auto p-4"):

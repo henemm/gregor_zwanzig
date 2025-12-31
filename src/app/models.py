@@ -110,9 +110,6 @@ class ForecastDataPoint:
     cloud_mid_pct: Optional[int] = None   # 0-100%, 3-8km
     cloud_high_pct: Optional[int] = None  # 0-100%, ab 8km
 
-    # Sunshine duration (from Open-Meteo) - seconds of sunshine per hour
-    sunshine_duration_s: Optional[int] = None
-
 
 @dataclass
 class NormalizedTimeseries:

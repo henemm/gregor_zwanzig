@@ -21,7 +21,7 @@
 ## 3. Reports & Versand
 - [ ] `REPORT-01` Berichtstypen: `evening`, `morning`, `alert`
 - [ ] `REPORT-02` Formatter (kurz, <160 Zeichen optional) + Debug-Anhang
-- [ ] `REPORT-03` SMTP Live-Test (echte E-Mail), alternative Kanäle später
+- [x] `REPORT-03` SMTP Live-Test (echte E-Mail), alternative Kanäle später
 
 ## 4. Ops
 - [ ] `OPS-01` Fehlerbehandlung & Retries

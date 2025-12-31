@@ -1,12 +1,14 @@
 """
 Email output channel.
 
-Sends weather reports via SMTP email.
+Sends weather reports via SMTP email (HTML or plain text).
 """
 from __future__ import annotations
 
+import re
 import smtplib
 from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from typing import TYPE_CHECKING
 
 from outputs.base import OutputConfigError, OutputError
@@ -19,12 +21,12 @@ class EmailOutput:
     """
     Email output channel using SMTP.
 
-    Sends plain-text emails with configurable SMTP settings.
+    Sends HTML emails with plain-text fallback.
     Requires complete SMTP configuration in Settings.
 
     Example:
         >>> output = EmailOutput(settings)
-        >>> output.send("Evening Report", "Temperature: 5C")
+        >>> output.send("Evening Report", "<h1>Weather</h1><p>5C</p>")
     """
 
     def __init__(self, settings: "Settings") -> None:
@@ -56,21 +58,47 @@ class EmailOutput:
         """Channel identifier."""
         return "email"
 
-    def send(self, subject: str, body: str) -> None:
+    def send(self, subject: str, body: str, html: bool = True) -> None:
         """
         Send email via SMTP.
 
         Args:
             subject: Email subject line
-            body: Email body (plain text)
+            body: Email body (HTML or plain text)
+            html: If True, send as HTML email with plain-text fallback
 
         Raises:
             OutputError: If sending fails
         """
-        msg = MIMEText(body)
-        msg["Subject"] = subject
-        msg["From"] = self._from
-        msg["To"] = self._to
+        if html:
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = subject
+            msg["From"] = self._from
+            msg["To"] = self._to
+
+            # Plain text fallback (strip HTML properly)
+            # 1. Remove <style>...</style> blocks completely
+            plain_text = re.sub(r'<style[^>]*>.*?</style>', '', body, flags=re.DOTALL | re.IGNORECASE)
+            # 2. Remove <head>...</head> blocks completely
+            plain_text = re.sub(r'<head[^>]*>.*?</head>', '', plain_text, flags=re.DOTALL | re.IGNORECASE)
+            # 3. Remove remaining HTML tags
+            plain_text = re.sub(r'<[^>]+>', '', plain_text)
+            # 4. Replace HTML entities
+            plain_text = plain_text.replace('&nbsp;', ' ').replace('&deg;', '°')
+            # 5. Clean up excessive whitespace
+            plain_text = re.sub(r'\n\s*\n\s*\n', '\n\n', plain_text)
+            plain_text = plain_text.strip()
+
+            part1 = MIMEText(plain_text, "plain", "utf-8")
+            part2 = MIMEText(body, "html", "utf-8")
+
+            msg.attach(part1)
+            msg.attach(part2)
+        else:
+            msg = MIMEText(body, "plain", "utf-8")
+            msg["Subject"] = subject
+            msg["From"] = self._from
+            msg["To"] = self._to
 
         try:
             with smtplib.SMTP(self._host, self._port) as server:

@@ -16,3 +16,18 @@ user
 forecastdatapoint
 normalizedtimeseries
 forecastmeta
+locationsubscription
+tripsubscription
+schedule
+
+# New entities with feature specs (not in modules/)
+comparesubscription
+comparisonresult
+locationresult
+comparisonengine
+
+# Test utilities (no spec needed)
+testemailoutput
+
+# Output channels (existing code)
+emailoutput

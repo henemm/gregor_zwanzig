@@ -54,6 +54,57 @@ Konfigurations-Prioritaet: CLI > ENV > config.ini
 uv run pytest
 ```
 
+## KEINE MOCKED TESTS! (KRITISCH!)
+
+**Mocked Tests sind VERBOTEN in diesem Projekt!**
+
+- Mocked Tests beweisen NICHTS - sie testen nicht das echte Verhalten
+- **E-Mail-Tests:** Echte E-Mail via Gmail SMTP senden, via IMAP abrufen, Inhalt pruefen
+- **API-Tests:** Echte API-Calls machen (Geosphere, etc.)
+- Siehe `tests/tdd/test_html_email.py::TestRealGmailE2E` als Referenz
+
+**NIEMALS `Mock()`, `patch()`, oder `MagicMock` fuer E-Mail/API Tests verwenden!**
+
+## ECHTE E2E TESTS (NOCH KRITISCHER!)
+
+**ICH (Claude) starte und restarte den Server - NICHT der User!**
+
+**E2E Test Workflow:**
+
+1. **ICH stoppe den alten Server** (falls laufend)
+2. **ICH starte den Server neu** mit aktuellem Code
+3. **ICH fuehre Browser-Test aus** mit Playwright
+4. **ICH pruefe Screenshot** visuell
+5. **ICH teste E-Mail** via SMTP senden + IMAP pruefen
+
+**Benutze den E2E Hook:**
+```bash
+# Browser Test
+uv run python3 .claude/hooks/e2e_browser_test.py browser --check "Feature" --action "compare"
+
+# Email Test
+uv run python3 .claude/hooks/e2e_browser_test.py email --check "Feature" --send-from-ui
+```
+
+**VERBOTEN:**
+- Python-Funktionen direkt aufrufen und als "E2E Test" bezeichnen
+- User bitten den Server zu starten
+- "E2E Test erfolgreich" sagen ohne gruenen Hook-Output
+
+## E-MAIL SPEC VALIDATOR (ZWINGEND!)
+
+**PFLICHT vor "E2E Test bestanden" bei E-Mail-Features:**
+
+```bash
+uv run python3 .claude/hooks/email_spec_validator.py
+```
+
+Prueft: Struktur, Location-Anzahl, Plausibilitaet, Format, Vollstaendigkeit.
+
+**NUR bei Exit 0 darfst du "E2E Test bestanden" sagen!**
+
+Einfache String-Checks beweisen NICHTS - sie pruefen nicht ob Daten SINNVOLL sind!
+
 ## Specs
 
 Alle Module benoetigen Specs vor Implementierung:
@@ -77,6 +128,32 @@ Alle Module benoetigen Specs vor Implementierung:
 - `docs/features/` - Feature-Dokumentation
 - `docs/reference/` - Technische Referenz
 - `docs/project/` - Projekt-Management (Backlog)
+
+## Pre-Test Validierung (PFLICHT!)
+
+**BEVOR du den User zum Testen aufforderst, MUSST du validieren!**
+
+```bash
+python3 .claude/validate.py
+```
+
+### Was wird geprueft:
+1. **Syntax-Check** auf alle geaenderten Python-Dateien
+2. **Import-Check** - Module lassen sich importieren
+3. **Server-Startup** - Web-UI startet fehlerfrei
+
+### Workflow:
+1. Code schreiben/aendern
+2. `python3 .claude/validate.py` ausfuehren
+3. Alle Checks gruen? -> User zum Testen auffordern
+4. Checks rot? -> Fehler beheben, erneut validieren
+
+### Nach erfolgreichem User-Test:
+```bash
+python3 .claude/validate.py --clear
+```
+
+**NIEMALS "teste es" oder "pruefe" sagen ohne vorherige Validierung!**
 
 ---
 

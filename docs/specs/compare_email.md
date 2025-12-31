@@ -160,19 +160,26 @@ Wetter-Symbol = basiert auf effektive_bewoelkung
 - cloud_mid = 0%, cloud_high = 0%
 - → effektive_bewoelkung = 0% → ☀️ Sonne
 
-### 6. Sonnenstunden-Berechnung (KONSISTENZ!)
+### 6. Sonnenstunden und Wolkenlage (Single Source of Truth)
 
-**Sonnenstunden MUSS die effektive Bewoelkung nutzen!**
+**ALLE Berechnungen erfolgen ueber `WeatherMetricsService`!**
 
+Siehe: `docs/specs/modules/weather_metrics.md`
+
+```python
+from services.weather_metrics import WeatherMetricsService, CloudStatus
+
+# Sonnenstunden berechnen
+sunny_hours = WeatherMetricsService.calculate_sunny_hours(data, elevation_m)
+
+# Wolkenlage bestimmen
+cloud_status = WeatherMetricsService.calculate_cloud_status(
+    sunny_hours, time_window_hours, elevation_m, cloud_low_avg
+)
 ```
-Fuer jede Stunde im Zeitfenster:
-  effektive_cloud = berechne_effektive_bewoelkung(elevation, cloud_low, cloud_mid, cloud_high, cloud_total)
-  wenn effektive_cloud < 30%: sunny_hour += 1
-```
 
-**WICHTIG:** Sonnenstunden und Wolkenlage muessen KONSISTENT sein!
-- Wenn Wolkenlage = "klar" (cloud_low < 20% bei Hochlage) → Sonnenstunden > 0
-- Wenn Wolkenlage = "in Wolken" → Sonnenstunden klein
+**WICHTIG:** Sonnenstunden und Wolkenlage sind KONSISTENT, weil beide
+aus demselben Service kommen. Keine lokalen Berechnungen erlaubt!
 
 ## E-Mail Format (HTML) - EXAKTE SPEZIFIKATION
 

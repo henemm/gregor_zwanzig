@@ -282,11 +282,14 @@ class GeoSphereProvider:
         except httpx.HTTPStatusError:
             return None
 
-    def _fetch_openmeteo_data(
+    def _fetch_openmeteo_clouds(
         self, lat: float, lon: float, hours: int = 48
-    ) -> Dict[datetime, Dict[str, Optional[int]]]:
+    ) -> Dict[datetime, Tuple[Optional[int], Optional[int], Optional[int]]]:
         """
-        Fetch cloud layer and sunshine data from Open-Meteo API.
+        Fetch cloud layer data from Open-Meteo API.
+
+        ONLY approved parameters: cloud_cover_low, cloud_cover_mid, cloud_cover_high
+        See docs/specs/data_sources.md for governance.
 
         Args:
             lat: Latitude
@@ -294,12 +297,12 @@ class GeoSphereProvider:
             hours: Hours to fetch (default 48)
 
         Returns:
-            Dict mapping datetime -> {cloud_low, cloud_mid, cloud_high, sunshine_seconds}
+            Dict mapping datetime -> (cloud_low, cloud_mid, cloud_high) percentages
         """
         url = (
             f"https://api.open-meteo.com/v1/forecast?"
             f"latitude={lat}&longitude={lon}&"
-            f"hourly=cloud_cover_low,cloud_cover_mid,cloud_cover_high,sunshine_duration&"
+            f"hourly=cloud_cover_low,cloud_cover_mid,cloud_cover_high&"
             f"timezone=Europe/Vienna&forecast_hours={hours}"
         )
 
@@ -313,9 +316,8 @@ class GeoSphereProvider:
             cloud_low = hourly.get("cloud_cover_low", [])
             cloud_mid = hourly.get("cloud_cover_mid", [])
             cloud_high = hourly.get("cloud_cover_high", [])
-            sunshine = hourly.get("sunshine_duration", [])
 
-            result: Dict[datetime, Dict[str, Optional[int]]] = {}
+            result: Dict[datetime, Tuple[Optional[int], Optional[int], Optional[int]]] = {}
             for i, time_str in enumerate(times):
                 # Parse time (format: "2025-12-28T09:00")
                 dt = datetime.fromisoformat(time_str)
@@ -323,17 +325,16 @@ class GeoSphereProvider:
                 if dt.tzinfo is None:
                     dt = dt.replace(tzinfo=timezone(timedelta(hours=1)))
 
-                result[dt] = {
-                    "cloud_low": int(cloud_low[i]) if i < len(cloud_low) and cloud_low[i] is not None else None,
-                    "cloud_mid": int(cloud_mid[i]) if i < len(cloud_mid) and cloud_mid[i] is not None else None,
-                    "cloud_high": int(cloud_high[i]) if i < len(cloud_high) and cloud_high[i] is not None else None,
-                    "sunshine_seconds": int(sunshine[i]) if i < len(sunshine) and sunshine[i] is not None else None,
-                }
+                low = int(cloud_low[i]) if i < len(cloud_low) and cloud_low[i] is not None else None
+                mid = int(cloud_mid[i]) if i < len(cloud_mid) and cloud_mid[i] is not None else None
+                high = int(cloud_high[i]) if i < len(cloud_high) and cloud_high[i] is not None else None
+
+                result[dt] = (low, mid, high)
 
             return result
 
         except Exception:
-            # Silently fail - this data is optional
+            # Silently fail - cloud layers are optional
             return {}
 
     def fetch_combined(
@@ -373,28 +374,25 @@ class GeoSphereProvider:
                     dp.snow_depth_cm = snow_depth_cm
                     dp.swe_kgm2 = swe_kgm2
 
-        # Enrich with cloud layer and sunshine data from Open-Meteo
+        # Enrich with cloud layer data from Open-Meteo (ONLY approved parameters)
         if include_cloud_layers and ts.data:
             hours = len(ts.data)
-            openmeteo_data = self._fetch_openmeteo_data(lat, lon, hours)
-            if openmeteo_data:
+            cloud_data = self._fetch_openmeteo_clouds(lat, lon, hours)
+            if cloud_data:
                 for dp in ts.data:
                     # Find matching hour (ignore minutes/seconds)
                     dp_hour = dp.ts.replace(minute=0, second=0, microsecond=0)
                     # Try both with and without timezone for matching
-                    meteo = openmeteo_data.get(dp_hour)
-                    if meteo is None:
+                    clouds = cloud_data.get(dp_hour)
+                    if clouds is None:
                         # Try naive datetime match
                         dp_naive = dp_hour.replace(tzinfo=None)
-                        for meteo_ts, meteo_vals in openmeteo_data.items():
-                            if meteo_ts.replace(tzinfo=None) == dp_naive:
-                                meteo = meteo_vals
+                        for cloud_ts, cloud_vals in cloud_data.items():
+                            if cloud_ts.replace(tzinfo=None) == dp_naive:
+                                clouds = cloud_vals
                                 break
-                    if meteo:
-                        dp.cloud_low_pct = meteo.get("cloud_low")
-                        dp.cloud_mid_pct = meteo.get("cloud_mid")
-                        dp.cloud_high_pct = meteo.get("cloud_high")
-                        dp.sunshine_duration_s = meteo.get("sunshine_seconds")
+                    if clouds:
+                        dp.cloud_low_pct, dp.cloud_mid_pct, dp.cloud_high_pct = clouds
 
         return ts
 

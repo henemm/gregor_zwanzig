@@ -21,6 +21,7 @@ from app.trip import (
     Waypoint,
 )
 from app.user import (
+    CompareSubscription,
     LocationSubscription,
     SavedLocation,
     Schedule,
@@ -412,3 +413,143 @@ def delete_trip(trip_id: str, user_id: str = "default") -> None:
     path = get_trips_dir(user_id) / f"{trip_id}.json"
     if path.exists():
         path.unlink()
+
+
+# =============================================================================
+# Compare Subscription CRUD
+# =============================================================================
+
+def get_compare_subscriptions_file(user_id: str = "default") -> Path:
+    """Get the compare subscriptions file path for a user."""
+    return get_data_dir(user_id) / "compare_subscriptions.json"
+
+
+def load_compare_subscriptions(user_id: str = "default") -> List[CompareSubscription]:
+    """
+    Load all compare subscriptions for a user.
+
+    Args:
+        user_id: User identifier (default: "default")
+
+    Returns:
+        List of CompareSubscription objects
+    """
+    path = get_compare_subscriptions_file(user_id)
+    if not path.exists():
+        return []
+
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except json.JSONDecodeError:
+        return []
+
+    subscriptions = []
+    for sub_data in data.get("subscriptions", []):
+        # Handle legacy "weekly_friday" -> "weekly" with weekday=4
+        schedule_str = sub_data.get("schedule", "weekly")
+        if schedule_str == "weekly_friday":
+            schedule_str = "weekly"
+            weekday = 4
+        else:
+            weekday = sub_data.get("weekday", 4)
+
+        subscriptions.append(CompareSubscription(
+            id=sub_data["id"],
+            name=sub_data["name"],
+            enabled=sub_data.get("enabled", True),
+            locations=sub_data.get("locations", []),
+            forecast_hours=sub_data.get("forecast_hours", 48),
+            time_window_start=sub_data.get("time_window_start", 9),
+            time_window_end=sub_data.get("time_window_end", 16),
+            schedule=Schedule(schedule_str),
+            weekday=weekday,
+            include_hourly=sub_data.get("include_hourly", True),
+            top_n=sub_data.get("top_n", 3),
+        ))
+    return subscriptions
+
+
+def save_compare_subscriptions(
+    subscriptions: List[CompareSubscription],
+    user_id: str = "default"
+) -> Path:
+    """
+    Save all compare subscriptions for a user.
+
+    Args:
+        subscriptions: List of CompareSubscription objects
+        user_id: User identifier (default: "default")
+
+    Returns:
+        Path to the saved file
+    """
+    path = get_compare_subscriptions_file(user_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    data = {
+        "subscriptions": [
+            {
+                "id": sub.id,
+                "name": sub.name,
+                "enabled": sub.enabled,
+                "locations": sub.locations,
+                "forecast_hours": sub.forecast_hours,
+                "time_window_start": sub.time_window_start,
+                "time_window_end": sub.time_window_end,
+                "schedule": sub.schedule.value,
+                "weekday": sub.weekday,
+                "include_hourly": sub.include_hourly,
+                "top_n": sub.top_n,
+            }
+            for sub in subscriptions
+        ]
+    }
+
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+    return path
+
+
+def save_compare_subscription(
+    subscription: CompareSubscription,
+    user_id: str = "default"
+) -> Path:
+    """
+    Save or update a single compare subscription.
+
+    Args:
+        subscription: CompareSubscription object to save
+        user_id: User identifier (default: "default")
+
+    Returns:
+        Path to the saved file
+    """
+    subs = load_compare_subscriptions(user_id)
+
+    # Update existing or add new
+    updated = False
+    for i, sub in enumerate(subs):
+        if sub.id == subscription.id:
+            subs[i] = subscription
+            updated = True
+            break
+
+    if not updated:
+        subs.append(subscription)
+
+    return save_compare_subscriptions(subs, user_id)
+
+
+def delete_compare_subscription(sub_id: str, user_id: str = "default") -> None:
+    """
+    Delete a compare subscription.
+
+    Args:
+        sub_id: ID of the subscription to delete
+        user_id: User identifier (default: "default")
+    """
+    subs = load_compare_subscriptions(user_id)
+    subs = [s for s in subs if s.id != sub_id]
+    save_compare_subscriptions(subs, user_id)
