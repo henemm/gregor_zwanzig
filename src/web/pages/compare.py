@@ -330,20 +330,31 @@ class ComparisonEngine:
                     if clouds:
                         metrics["cloud_avg"] = int(sum(clouds) / len(clouds))
 
-                    # Sonnenstunden: count hours with effective_cloud < 30%
-                    # Uses _calc_effective_cloud for consistency with weather symbols
-                    effective_clouds = [
-                        _calc_effective_cloud(
-                            loc.elevation_m,
-                            dp.cloud_total_pct,
-                            dp.cloud_mid_pct,
-                            dp.cloud_high_pct,
-                        )
-                        for dp in filtered_data
+                    # Sonnenstunden: Combine API and Spec calculation
+                    # API sunshine_duration is best for normal elevations
+                    # But for high elevations (>= 2500m), we also calculate based on
+                    # effective cloud cover (ignoring low clouds) and take the maximum
+                    sunshine_seconds = [
+                        dp.sunshine_duration_s for dp in filtered_data
+                        if dp.sunshine_duration_s is not None
                     ]
-                    valid_effective = [c for c in effective_clouds if c is not None]
-                    if valid_effective:
-                        metrics["sunny_hours"] = sum(1 for c in valid_effective if c < 30)
+                    api_sunny_hours = round(sum(sunshine_seconds) / 3600) if sunshine_seconds else 0
+
+                    # For high elevations: also calc based on effective cloud
+                    spec_sunny_hours = 0
+                    if loc.elevation_m and loc.elevation_m >= 2500:
+                        for dp in filtered_data:
+                            eff_cloud = _calc_effective_cloud(
+                                loc.elevation_m,
+                                dp.cloud_total_pct,
+                                dp.cloud_mid_pct,
+                                dp.cloud_high_pct,
+                            )
+                            if eff_cloud is not None and eff_cloud < 30:
+                                spec_sunny_hours += 1
+
+                    # Take the maximum (Hochlagen should not be penalized by low clouds)
+                    metrics["sunny_hours"] = max(api_sunny_hours, spec_sunny_hours)
 
                     # Cloud layers for "Wolkenlage" analysis
                     cloud_low = [dp.cloud_low_pct for dp in filtered_data if dp.cloud_low_pct is not None]
@@ -627,41 +638,27 @@ def render_comparison_html(result: ComparisonResult, top_n_details: int = 3) -> 
         html += f"                    {cell(v, lambda x: f'{x}%' if x is not None else '-', i == best_clouds)}\n"
     html += "                </tr>\n"
 
-    # Wolkenlage row (cloud situation based on elevation + effective cloud)
-    # MUST be consistent with sunny_hours calculation!
+    # Wolkenlage row - based on sunny_hours for consistency
+    # sunny_hours comes from API, so Wolkenlage must align with it
     html += "                <tr>\n                    <td class=\"label\">Wolkenlage</td>\n"
-    for i, (cloud_low, cloud_mid, cloud_high, cloud_total, elev) in enumerate(zip(cloud_lows, cloud_mids, cloud_highs, clouds, elevations)):
-        if cloud_total is None and cloud_low is None:
+    time_window_hours = time_window[1] - time_window[0] + 1  # Total hours in window
+    for i, (sunny, cloud_low, elev) in enumerate(zip(sunny_hours_list, cloud_lows, elevations)):
+        if sunny is None:
             status = "-"
             style = ""
-        elif elev and elev >= 2500:
-            # High elevation: use effective cloud (mid + high only, ignore low)
-            effective = _calc_effective_cloud(elev, cloud_total, cloud_mid, cloud_high)
-            if cloud_low is not None and cloud_low > 30 and effective is not None and effective < 30:
-                # Above low clouds, mid/high are clear = sunny above clouds
-                status = "☀️ über Wolken"
-                style = ' style="color: #2e7d32; font-weight: 600;"'
-            elif effective is not None and effective < 20:
-                status = "✨ klar"
-                style = ' style="color: #2e7d32;"'
-            elif effective is not None and effective > 50:
-                status = "☁️ in Wolken"
-                style = ' style="color: #888;"'
-            else:
-                status = "🌤️ leicht"
-                style = ""
+        elif elev and elev >= 2500 and cloud_low is not None and cloud_low > 30 and sunny >= 5:
+            # High elevation above low clouds with good sunshine
+            status = "☀️ über Wolken"
+            style = ' style="color: #2e7d32; font-weight: 600;"'
+        elif sunny >= time_window_hours * 0.75:  # >= 75% sunshine
+            status = "✨ klar"
+            style = ' style="color: #2e7d32;"'
+        elif sunny >= time_window_hours * 0.25:  # >= 25% sunshine
+            status = "🌤️ leicht"
+            style = ""
         else:
-            # Non-high elevation: use cloud_total (same as sunny_hours)
-            # This ensures Wolkenlage and Sonnenstunden are CONSISTENT
-            if cloud_total is not None and cloud_total > 50:
-                status = "☁️ in Wolken"
-                style = ' style="color: #888;"'
-            elif cloud_total is not None and cloud_total < 20:
-                status = "✨ klar"
-                style = ' style="color: #2e7d32;"'
-            else:
-                status = "🌤️ leicht"
-                style = ""
+            status = "☁️ in Wolken"
+            style = ' style="color: #888;"'
         html += f'                    <td{style}>{status}</td>\n'
     html += "                </tr>\n"
 
@@ -889,20 +886,27 @@ def fetch_forecast_for_location(loc: SavedLocation, hours: int = 48) -> Dict[str
                 result["visibility_max"] = max(visibility)
                 result["visibility_avg"] = int(sum(visibility) / len(visibility))
 
-            # Sunshine estimate: hours with effective cloud cover < 30%
-            # Uses effective cloud (ignores low clouds for high elevations)
-            effective_clouds = [
-                _calc_effective_cloud(
-                    loc.elevation_m,
-                    dp.cloud_total_pct,
-                    dp.cloud_mid_pct,
-                    dp.cloud_high_pct,
-                )
-                for dp in forecast.data
+            # Sunshine hours: Combine API and Spec calculation
+            sunshine_seconds = [
+                dp.sunshine_duration_s for dp in forecast.data
+                if dp.sunshine_duration_s is not None
             ]
-            valid_effective = [c for c in effective_clouds if c is not None]
-            if valid_effective:
-                result["sunny_hours"] = sum(1 for c in valid_effective if c < 30)
+            api_sunny_hours = round(sum(sunshine_seconds) / 3600) if sunshine_seconds else 0
+
+            # For high elevations: also calc based on effective cloud
+            spec_sunny_hours = 0
+            if loc.elevation_m and loc.elevation_m >= 2500:
+                for dp in forecast.data:
+                    eff_cloud = _calc_effective_cloud(
+                        loc.elevation_m,
+                        dp.cloud_total_pct,
+                        dp.cloud_mid_pct,
+                        dp.cloud_high_pct,
+                    )
+                    if eff_cloud is not None and eff_cloud < 30:
+                        spec_sunny_hours += 1
+
+            result["sunny_hours"] = max(api_sunny_hours, spec_sunny_hours)
 
         result["score"] = calculate_score(result)
 
@@ -1177,19 +1181,27 @@ def render_compare() -> None:
                         if clouds:
                             result["cloud_avg"] = int(sum(clouds) / len(clouds))
 
-                        # Sunny hours with effective cloud (ignores low clouds for high elevations)
-                        effective_clouds = [
-                            _calc_effective_cloud(
-                                loc.elevation_m,
-                                dp.cloud_total_pct,
-                                dp.cloud_mid_pct,
-                                dp.cloud_high_pct,
-                            )
-                            for dp in filtered_data
+                        # Sunny hours: Combine API and Spec calculation
+                        sunshine_seconds = [
+                            dp.sunshine_duration_s for dp in filtered_data
+                            if dp.sunshine_duration_s is not None
                         ]
-                        valid_effective = [c for c in effective_clouds if c is not None]
-                        if valid_effective:
-                            result["sunny_hours"] = sum(1 for c in valid_effective if c < 30)
+                        api_sunny_hours = round(sum(sunshine_seconds) / 3600) if sunshine_seconds else 0
+
+                        # For high elevations: also calc based on effective cloud
+                        spec_sunny_hours = 0
+                        if loc.elevation_m and loc.elevation_m >= 2500:
+                            for dp in filtered_data:
+                                eff_cloud = _calc_effective_cloud(
+                                    loc.elevation_m,
+                                    dp.cloud_total_pct,
+                                    dp.cloud_mid_pct,
+                                    dp.cloud_high_pct,
+                                )
+                                if eff_cloud is not None and eff_cloud < 30:
+                                    spec_sunny_hours += 1
+
+                        result["sunny_hours"] = max(api_sunny_hours, spec_sunny_hours)
 
                         # Cloud layers
                         cl_low = [dp.cloud_low_pct for dp in filtered_data if dp.cloud_low_pct is not None]

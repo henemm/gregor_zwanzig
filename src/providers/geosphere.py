@@ -68,6 +68,23 @@ def _vector_to_speed_kmh(u: float, v: float) -> float:
     return round(speed_ms * 3.6, 1)
 
 
+def _vector_to_direction(u: float, v: float) -> int:
+    """
+    Convert U/V wind components to meteorological direction (degrees).
+
+    Returns direction wind is coming FROM:
+    - 0° = North (wind from north)
+    - 90° = East (wind from east)
+    - 180° = South (wind from south)
+    - 270° = West (wind from west)
+    """
+    if u == 0 and v == 0:
+        return 0
+    # Meteorological convention: direction wind comes FROM
+    direction = (270 - math.atan2(v, u) * 180 / math.pi) % 360
+    return int(round(direction))
+
+
 def _calculate_wind_chill(temp_c: float, wind_kmh: float) -> float:
     """
     Calculate wind chill temperature using the North American formula.
@@ -265,11 +282,11 @@ class GeoSphereProvider:
         except httpx.HTTPStatusError:
             return None
 
-    def _fetch_openmeteo_clouds(
+    def _fetch_openmeteo_data(
         self, lat: float, lon: float, hours: int = 48
-    ) -> Dict[datetime, Tuple[Optional[int], Optional[int], Optional[int]]]:
+    ) -> Dict[datetime, Dict[str, Optional[int]]]:
         """
-        Fetch cloud layer data from Open-Meteo API.
+        Fetch cloud layer and sunshine data from Open-Meteo API.
 
         Args:
             lat: Latitude
@@ -277,12 +294,12 @@ class GeoSphereProvider:
             hours: Hours to fetch (default 48)
 
         Returns:
-            Dict mapping datetime -> (cloud_low, cloud_mid, cloud_high) percentages
+            Dict mapping datetime -> {cloud_low, cloud_mid, cloud_high, sunshine_seconds}
         """
         url = (
             f"https://api.open-meteo.com/v1/forecast?"
             f"latitude={lat}&longitude={lon}&"
-            f"hourly=cloud_cover_low,cloud_cover_mid,cloud_cover_high&"
+            f"hourly=cloud_cover_low,cloud_cover_mid,cloud_cover_high,sunshine_duration&"
             f"timezone=Europe/Vienna&forecast_hours={hours}"
         )
 
@@ -296,8 +313,9 @@ class GeoSphereProvider:
             cloud_low = hourly.get("cloud_cover_low", [])
             cloud_mid = hourly.get("cloud_cover_mid", [])
             cloud_high = hourly.get("cloud_cover_high", [])
+            sunshine = hourly.get("sunshine_duration", [])
 
-            result: Dict[datetime, Tuple[Optional[int], Optional[int], Optional[int]]] = {}
+            result: Dict[datetime, Dict[str, Optional[int]]] = {}
             for i, time_str in enumerate(times):
                 # Parse time (format: "2025-12-28T09:00")
                 dt = datetime.fromisoformat(time_str)
@@ -305,16 +323,17 @@ class GeoSphereProvider:
                 if dt.tzinfo is None:
                     dt = dt.replace(tzinfo=timezone(timedelta(hours=1)))
 
-                low = int(cloud_low[i]) if i < len(cloud_low) and cloud_low[i] is not None else None
-                mid = int(cloud_mid[i]) if i < len(cloud_mid) and cloud_mid[i] is not None else None
-                high = int(cloud_high[i]) if i < len(cloud_high) and cloud_high[i] is not None else None
-
-                result[dt] = (low, mid, high)
+                result[dt] = {
+                    "cloud_low": int(cloud_low[i]) if i < len(cloud_low) and cloud_low[i] is not None else None,
+                    "cloud_mid": int(cloud_mid[i]) if i < len(cloud_mid) and cloud_mid[i] is not None else None,
+                    "cloud_high": int(cloud_high[i]) if i < len(cloud_high) and cloud_high[i] is not None else None,
+                    "sunshine_seconds": int(sunshine[i]) if i < len(sunshine) and sunshine[i] is not None else None,
+                }
 
             return result
 
         except Exception:
-            # Silently fail - cloud layers are optional
+            # Silently fail - this data is optional
             return {}
 
     def fetch_combined(
@@ -354,25 +373,28 @@ class GeoSphereProvider:
                     dp.snow_depth_cm = snow_depth_cm
                     dp.swe_kgm2 = swe_kgm2
 
-        # Enrich with cloud layer data from Open-Meteo
+        # Enrich with cloud layer and sunshine data from Open-Meteo
         if include_cloud_layers and ts.data:
             hours = len(ts.data)
-            cloud_data = self._fetch_openmeteo_clouds(lat, lon, hours)
-            if cloud_data:
+            openmeteo_data = self._fetch_openmeteo_data(lat, lon, hours)
+            if openmeteo_data:
                 for dp in ts.data:
                     # Find matching hour (ignore minutes/seconds)
                     dp_hour = dp.ts.replace(minute=0, second=0, microsecond=0)
                     # Try both with and without timezone for matching
-                    clouds = cloud_data.get(dp_hour)
-                    if clouds is None:
+                    meteo = openmeteo_data.get(dp_hour)
+                    if meteo is None:
                         # Try naive datetime match
                         dp_naive = dp_hour.replace(tzinfo=None)
-                        for cloud_ts, cloud_vals in cloud_data.items():
-                            if cloud_ts.replace(tzinfo=None) == dp_naive:
-                                clouds = cloud_vals
+                        for meteo_ts, meteo_vals in openmeteo_data.items():
+                            if meteo_ts.replace(tzinfo=None) == dp_naive:
+                                meteo = meteo_vals
                                 break
-                    if clouds:
-                        dp.cloud_low_pct, dp.cloud_mid_pct, dp.cloud_high_pct = clouds
+                    if meteo:
+                        dp.cloud_low_pct = meteo.get("cloud_low")
+                        dp.cloud_mid_pct = meteo.get("cloud_mid")
+                        dp.cloud_high_pct = meteo.get("cloud_high")
+                        dp.sunshine_duration_s = meteo.get("sunshine_seconds")
 
         return ts
 
@@ -432,6 +454,7 @@ class GeoSphereProvider:
 
             # Calculate derived values
             wind_kmh = _vector_to_speed_kmh(u or 0, v or 0)
+            wind_dir = _vector_to_direction(u or 0, v or 0) if (u or v) else None
             gust_kmh = _vector_to_speed_kmh(ug or 0, vg or 0)
 
             # Precipitation rate (difference from previous accumulated)
@@ -453,6 +476,7 @@ class GeoSphereProvider:
                 ts=ts,
                 t2m_c=round(temp, 1) if temp is not None else None,
                 wind10m_kmh=wind_kmh,
+                wind_direction_deg=wind_dir,
                 gust_kmh=gust_kmh,
                 precip_1h_mm=round(precip_1h, 1) if precip_1h > 0 else 0,
                 precip_rate_mmph=round(precip_1h, 1) if precip_1h > 0 else 0,

@@ -81,6 +81,7 @@ class ForecastDataPoint:
     # Base fields (always present)
     t2m_c: Optional[float] = None
     wind10m_kmh: Optional[float] = None
+    wind_direction_deg: Optional[int] = None  # 0-360, 0=N, 90=E, 180=S, 270=W
     gust_kmh: Optional[float] = None
     precip_rate_mmph: Optional[float] = None
     precip_1h_mm: Optional[float] = None
@@ -108,6 +109,9 @@ class ForecastDataPoint:
     cloud_low_pct: Optional[int] = None   # 0-100%, bis 3km
     cloud_mid_pct: Optional[int] = None   # 0-100%, 3-8km
     cloud_high_pct: Optional[int] = None  # 0-100%, ab 8km
+
+    # Sunshine duration (from Open-Meteo) - seconds of sunshine per hour
+    sunshine_duration_s: Optional[int] = None
 
 
 @dataclass
