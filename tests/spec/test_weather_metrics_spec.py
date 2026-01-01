@@ -222,22 +222,22 @@ class TestWeatherSymbolSpec:
         assert symbol == "☀️"
 
     def test_partly_cloudy(self):
-        """20-50% clouds -> partly cloudy."""
+        """20-50% clouds -> partly cloudy (sun behind small cloud)."""
         symbol = WeatherMetricsService.get_weather_symbol(
             cloud_total_pct=35,
             precip_mm=0,
             temp_c=5,
         )
-        assert symbol == "⛅"
+        assert symbol == "🌤️"
 
     def test_mostly_cloudy(self):
-        """50-80% clouds -> mostly cloudy."""
+        """50-80% clouds -> mostly cloudy (sun behind cloud)."""
         symbol = WeatherMetricsService.get_weather_symbol(
             cloud_total_pct=65,
             precip_mm=0,
             temp_c=5,
         )
-        assert symbol == "🌥️"
+        assert symbol == "⛅"
 
     def test_overcast(self):
         """80%+ clouds -> overcast."""

@@ -668,8 +668,8 @@ def render_comparison_html(result: ComparisonResult, top_n_details: int = 3) -> 
             <p style="font-size: 11px; color: #888; margin-top: 8px;">
                 <strong>Legende:</strong>
                 ☀️ &lt;20% Wolken |
-                ⛅ 20-50% |
-                🌥️ 50-80% |
+                🌤️ 20-50% |
+                ⛅ 50-80% |
                 ☁️ &gt;80% |
                 🌧️ Regen |
                 ❄️ Schnee
@@ -1739,5 +1739,5 @@ def render_results_table(results: List[Dict[str, Any]]) -> None:
             "Grün = bester Wert | Temperatur = gefühlt (Wind Chill)"
         ).classes("text-xs text-gray-400")
         ui.label(
-            "☀️ <20% Wolken | ⛅ 20-50% | 🌥️ 50-80% | ☁️ >80% | 🌧️ Regen | ❄️ Schnee"
+            "☀️ <20% Wolken | 🌤️ 20-50% | ⛅ 50-80% | ☁️ >80% | 🌧️ Regen | ❄️ Schnee"
         ).classes("text-xs text-gray-400")

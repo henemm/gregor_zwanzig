@@ -261,8 +261,8 @@ Alle Renderer (E-Mail, Web-UI) zeigen eine Legende:
 | Symbol | Bedeutung | Bewoelkung |
 |--------|-----------|------------|
 | ☀️ | Sonnig | < 20% |
-| ⛅ | Teilweise bewoelkt | 20-50% |
-| 🌥️ | Ueberwiegend bewoelkt | 50-80% |
+| 🌤️ | Teilweise bewoelkt | 20-50% |
+| ⛅ | Ueberwiegend bewoelkt | 50-80% |
 | ☁️ | Bedeckt | > 80% |
 | 🌧️ | Regen | (Niederschlag > 0.5mm, Temp >= 0) |
 | ❄️ | Schnee | (Niederschlag > 0.5mm, Temp < 0) |

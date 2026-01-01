@@ -296,9 +296,9 @@ class WeatherMetricsService:
         if eff_cloud < 20:
             return "☀️"  # Sunny
         if eff_cloud < 50:
-            return "⛅"  # Partly cloudy
+            return "🌤️"  # Partly cloudy (sun behind small cloud)
         if eff_cloud < 80:
-            return "🌥️"  # Mostly cloudy
+            return "⛅"  # Mostly cloudy (sun behind cloud)
         return "☁️"  # Overcast
 
     @staticmethod
