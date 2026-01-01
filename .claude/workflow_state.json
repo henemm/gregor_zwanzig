@@ -1,11 +1,11 @@
 {
   "current_phase": "validated",
-  "feature_name": "Compare Email v4.2 - HourlyCell + Multipart",
-  "spec_file": "docs/specs/compare_email.md",
+  "feature_name": "sunny_hours_from_cloud_cover",
+  "spec_file": "docs/specs/modules/weather_metrics.md",
   "spec_approved": true,
   "tasks_created": true,
   "implementation_done": true,
   "validation_done": true,
-  "phases_completed": ["analyse", "spec_written", "spec_approved", "implemented", "validated"],
-  "last_updated": "2025-12-31T15:30:00.000000"
+  "phases_completed": ["analyse", "write-spec", "spec_approved", "implement", "validate"],
+  "last_updated": "2026-01-01T12:45:00.000000"
 }

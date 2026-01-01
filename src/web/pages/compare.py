@@ -665,6 +665,15 @@ def render_comparison_html(result: ComparisonResult, top_n_details: int = 3) -> 
             html += "                </tr>\n"
 
         html += """            </table>
+            <p style="font-size: 11px; color: #888; margin-top: 8px;">
+                <strong>Legende:</strong>
+                ☀️ &lt;20% Wolken |
+                ⛅ 20-50% |
+                🌥️ 50-80% |
+                ☁️ &gt;80% |
+                🌧️ Regen |
+                ❄️ Schnee
+            </p>
         </div>
 """
 
@@ -1725,6 +1734,10 @@ def render_results_table(results: List[Dict[str, Any]]) -> None:
                                 ui.label(f"{emoji} {text}").classes("text-xs")
 
     # Legend
-    ui.label(
-        "Grün = bester Wert | Temperatur = gefühlt (Wind Chill)"
-    ).classes("text-xs text-gray-400 mt-2")
+    with ui.column().classes("mt-2 gap-0"):
+        ui.label(
+            "Grün = bester Wert | Temperatur = gefühlt (Wind Chill)"
+        ).classes("text-xs text-gray-400")
+        ui.label(
+            "☀️ <20% Wolken | ⛅ 20-50% | 🌥️ 50-80% | ☁️ >80% | 🌧️ Regen | ❄️ Schnee"
+        ).classes("text-xs text-gray-400")

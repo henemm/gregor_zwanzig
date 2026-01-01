@@ -117,33 +117,39 @@ class WeatherMetricsService:
         elevation_m: int | None = None,
     ) -> int:
         """
-        Berechnet Sonnenstunden aus API-Daten.
+        Berechnet Sonnenstunden aus Wolkendecke.
 
-        Primaer: sunshine_duration_s aus Open-Meteo API
-        Fallback fuer Hochlagen: effective_cloud < 30%
+        DATENQUELLE: BERECHNET (nicht API!)
+        Siehe: docs/specs/data_sources.md (sunshine_duration = REJECTED)
+
+        Formel:
+            sunshine_pct = 100 - effective_cloud_pct
+            Summe aller Stunden / 100 = Sonnenstunden
+
+        Hochlagen (>= 2500m) ignorieren tiefe Wolken via calculate_effective_cloud().
 
         Returns:
-            Anzahl Sonnenstunden (gerundet)
+            Anzahl Sonnenstunden (gerundet auf ganze Stunden)
         """
-        # API-basiert (bevorzugt)
-        sunshine_seconds = [
-            dp.sunshine_duration_s for dp in data
-            if dp.sunshine_duration_s is not None
-        ]
-        api_hours = round(sum(sunshine_seconds) / 3600) if sunshine_seconds else 0
+        if not data:
+            return 0
 
-        # Spec-basiert fuer Hochlagen (Fallback)
-        spec_hours = 0
-        if elevation_m and elevation_m >= 2500:
-            for dp in data:
-                eff = WeatherMetricsService.calculate_effective_cloud(
-                    elevation_m, dp.cloud_total_pct,
-                    dp.cloud_mid_pct, dp.cloud_high_pct
-                )
-                if eff is not None and eff < 30:
-                    spec_hours += 1
+        total_sunshine_pct = 0.0
 
-        return max(api_hours, spec_hours)
+        for dp in data:
+            # Effektive Wolkendecke (elevation-aware)
+            eff_cloud = WeatherMetricsService.calculate_effective_cloud(
+                elevation_m, dp.cloud_total_pct,
+                dp.cloud_mid_pct, dp.cloud_high_pct
+            )
+
+            if eff_cloud is not None:
+                # Sonnenschein = Inverse der Bewoelkung
+                sunshine_pct = max(0, 100 - eff_cloud)
+                total_sunshine_pct += sunshine_pct
+
+        # Prozent -> Stunden (100% = 1h), gerundet
+        return round(total_sunshine_pct / 100.0)
 
     @staticmethod
     def calculate_cloud_status(
@@ -248,10 +254,58 @@ class WeatherMetricsService:
 | `compare.py` | Wolkenlage in `render_comparison_html()` | Durch `WeatherMetricsService.calculate_cloud_status()` ersetzen |
 | `compare.py` | Wolkenlage in `render_results_table()` | Durch `WeatherMetricsService.calculate_cloud_status()` ersetzen |
 
-### 4. Spec-Tests (Pflicht)
+### 4. Wetter-Symbol Legende
+
+Alle Renderer (E-Mail, Web-UI) zeigen eine Legende:
+
+| Symbol | Bedeutung | Bewoelkung |
+|--------|-----------|------------|
+| ☀️ | Sonnig | < 20% |
+| ⛅ | Teilweise bewoelkt | 20-50% |
+| 🌥️ | Ueberwiegend bewoelkt | 50-80% |
+| ☁️ | Bedeckt | > 80% |
+| 🌧️ | Regen | (Niederschlag > 0.5mm, Temp >= 0) |
+| ❄️ | Schnee | (Niederschlag > 0.5mm, Temp < 0) |
+
+### 5. Spec-Tests (Pflicht)
 
 ```python
 # tests/spec/test_weather_metrics_spec.py
+
+class TestSunnyHoursSpec:
+    """Tests fuer Sonnenstunden-Berechnung aus Wolkendecke."""
+
+    def test_clear_sky_full_sunshine(self):
+        """0% Wolken = 1h Sonnenschein pro Stunde."""
+        data = [
+            ForecastDataPoint(ts=datetime(2025,1,1,9), cloud_total_pct=0),
+            ForecastDataPoint(ts=datetime(2025,1,1,10), cloud_total_pct=0),
+        ]
+        assert WeatherMetricsService.calculate_sunny_hours(data) == 2
+
+    def test_partial_clouds(self):
+        """30% Wolken = 70% Sonnenschein = 0.7h pro Stunde."""
+        data = [
+            ForecastDataPoint(ts=datetime(2025,1,1,9), cloud_total_pct=30),
+            ForecastDataPoint(ts=datetime(2025,1,1,10), cloud_total_pct=30),
+            ForecastDataPoint(ts=datetime(2025,1,1,11), cloud_total_pct=30),
+        ]
+        # 3 * 70% = 210% = 2.1h -> gerundet = 2h
+        assert WeatherMetricsService.calculate_sunny_hours(data) == 2
+
+    def test_high_elevation_ignores_low_clouds(self):
+        """Hochlage ignoriert tiefe Wolken."""
+        data = [
+            ForecastDataPoint(
+                ts=datetime(2025,1,1,9),
+                cloud_total_pct=80,
+                cloud_mid_pct=10,
+                cloud_high_pct=10,
+            ),
+        ]
+        # Effektiv: (10+10)/2 = 10% -> 90% Sonnenschein -> 1h
+        assert WeatherMetricsService.calculate_sunny_hours(data, elevation_m=3000) == 1
+
 
 class TestCloudStatusSpec:
     """Tests gegen docs/specs/compare_email.md Zeile 212-216"""
@@ -317,4 +371,6 @@ Nach Implementation MUSS gelten:
 
 ## Changelog
 
+- 2026-01-01: Sonnenstunden-Berechnung auf wolkenbasierte Formel umgestellt (sunshine_duration_s war REJECTED)
+- 2026-01-01: Wetter-Symbol Legende fuer E-Mail und WebUI hinzugefuegt
 - 2025-12-31: Initial spec created nach Inkonsistenz-Bug zwischen E-Mail und Web-UI

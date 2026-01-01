@@ -113,13 +113,15 @@ class WeatherMetricsService:
         elevation_m: Optional[int] = None,
     ) -> int:
         """
-        Calculate sunny hours from forecast data.
+        Calculate sunny hours from cloud cover data.
 
-        Primary: Uses sunshine_duration_s from Open-Meteo API (most accurate)
-        Fallback for high elevations: effective_cloud < 30%
+        Formula: sunshine_pct = 100 - effective_cloud_pct
+        Sum all percentages, divide by 100 to get hours.
 
-        For high elevations, takes maximum of both methods to avoid
-        penalizing locations that are above low clouds.
+        High elevations (>= 2500m) ignore low clouds via calculate_effective_cloud().
+
+        DATA SOURCE: CALCULATED (not from API!)
+        See: docs/specs/data_sources.md (sunshine_duration = REJECTED)
 
         SPEC: docs/specs/modules/weather_metrics.md
 
@@ -133,29 +135,24 @@ class WeatherMetricsService:
         if not data:
             return 0
 
-        # Method 1: API-based (preferred, most accurate)
-        sunshine_seconds = [
-            dp.sunshine_duration_s for dp in data
-            if hasattr(dp, 'sunshine_duration_s') and dp.sunshine_duration_s is not None
-        ]
-        api_hours = round(sum(sunshine_seconds) / 3600) if sunshine_seconds else 0
+        total_sunshine_pct = 0.0
 
-        # Method 2: Spec-based for high elevations (fallback)
-        # High elevations should not be penalized by low clouds
-        spec_hours = 0
-        if elevation_m is not None and elevation_m >= WeatherMetricsService.HIGH_ELEVATION_THRESHOLD_M:
-            for dp in data:
-                eff_cloud = WeatherMetricsService.calculate_effective_cloud(
-                    elevation_m,
-                    dp.cloud_total_pct,
-                    getattr(dp, 'cloud_mid_pct', None),
-                    getattr(dp, 'cloud_high_pct', None),
-                )
-                if eff_cloud is not None and eff_cloud < WeatherMetricsService.SUNNY_HOUR_CLOUD_THRESHOLD_PCT:
-                    spec_hours += 1
+        for dp in data:
+            # Calculate effective cloud cover (elevation-aware)
+            eff_cloud = WeatherMetricsService.calculate_effective_cloud(
+                elevation_m,
+                dp.cloud_total_pct,
+                getattr(dp, 'cloud_mid_pct', None),
+                getattr(dp, 'cloud_high_pct', None),
+            )
 
-        # Take maximum to benefit high elevations
-        return max(api_hours, spec_hours)
+            if eff_cloud is not None:
+                # Sunshine = inverse of cloud cover
+                sunshine_pct = max(0, 100 - eff_cloud)
+                total_sunshine_pct += sunshine_pct
+
+        # Convert percentage sum to hours (100% = 1h), rounded
+        return round(total_sunshine_pct / 100.0)
 
     @staticmethod
     def calculate_cloud_status(

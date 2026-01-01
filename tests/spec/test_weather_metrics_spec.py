@@ -290,3 +290,119 @@ class TestCloudStatusFormatting:
         text, style = WeatherMetricsService.format_cloud_status(CloudStatus.CLEAR)
         assert "klar" in text
         assert "color:" in style or style == ""
+
+
+class TestSunnyHoursSpec:
+    """
+    Tests for sunny hours calculation from cloud cover.
+
+    SPEC: docs/specs/modules/weather_metrics.md
+    Formula: sunshine_pct = 100 - effective_cloud_pct
+    Sum all percentages, divide by 100 = hours.
+    """
+
+    def test_clear_sky_full_sunshine(self):
+        """0% clouds = 1h sunshine per hour."""
+        from datetime import datetime
+        from app.models import ForecastDataPoint
+
+        data = [
+            ForecastDataPoint(ts=datetime(2025, 1, 1, 9, 0), cloud_total_pct=0),
+            ForecastDataPoint(ts=datetime(2025, 1, 1, 10, 0), cloud_total_pct=0),
+        ]
+        result = WeatherMetricsService.calculate_sunny_hours(data)
+        assert result == 2  # 2 * 100% = 200% = 2h
+
+    def test_overcast_zero_sunshine(self):
+        """100% clouds = 0h sunshine."""
+        from datetime import datetime
+        from app.models import ForecastDataPoint
+
+        data = [
+            ForecastDataPoint(ts=datetime(2025, 1, 1, 9, 0), cloud_total_pct=100),
+            ForecastDataPoint(ts=datetime(2025, 1, 1, 10, 0), cloud_total_pct=100),
+        ]
+        result = WeatherMetricsService.calculate_sunny_hours(data)
+        assert result == 0  # 2 * 0% = 0% = 0h
+
+    def test_partial_clouds_proportional(self):
+        """30% clouds = 70% sunshine per hour."""
+        from datetime import datetime
+        from app.models import ForecastDataPoint
+
+        data = [
+            ForecastDataPoint(ts=datetime(2025, 1, 1, 9, 0), cloud_total_pct=30),
+            ForecastDataPoint(ts=datetime(2025, 1, 1, 10, 0), cloud_total_pct=30),
+            ForecastDataPoint(ts=datetime(2025, 1, 1, 11, 0), cloud_total_pct=30),
+        ]
+        result = WeatherMetricsService.calculate_sunny_hours(data)
+        # 3 * 70% = 210% = 2.1h -> rounded = 2h
+        assert result == 2
+
+    def test_mixed_conditions(self):
+        """Mixed cloud conditions sum correctly."""
+        from datetime import datetime
+        from app.models import ForecastDataPoint
+
+        data = [
+            ForecastDataPoint(ts=datetime(2025, 1, 1, 9, 0), cloud_total_pct=0),    # 100%
+            ForecastDataPoint(ts=datetime(2025, 1, 1, 10, 0), cloud_total_pct=50),  # 50%
+            ForecastDataPoint(ts=datetime(2025, 1, 1, 11, 0), cloud_total_pct=100), # 0%
+            ForecastDataPoint(ts=datetime(2025, 1, 1, 12, 0), cloud_total_pct=20),  # 80%
+        ]
+        result = WeatherMetricsService.calculate_sunny_hours(data)
+        # 100 + 50 + 0 + 80 = 230% = 2.3h -> rounded = 2h
+        assert result == 2
+
+    def test_high_elevation_ignores_low_clouds(self):
+        """High elevation uses effective cloud (ignores low clouds)."""
+        from datetime import datetime
+        from app.models import ForecastDataPoint
+
+        data = [
+            ForecastDataPoint(
+                ts=datetime(2025, 1, 1, 9, 0),
+                cloud_total_pct=80,  # High total (low clouds)
+                cloud_mid_pct=10,
+                cloud_high_pct=10,
+            ),
+        ]
+        result = WeatherMetricsService.calculate_sunny_hours(data, elevation_m=3000)
+        # Effective: (10 + 10) / 2 = 10% -> 90% sunshine -> 0.9h -> rounded = 1h
+        assert result == 1
+
+    def test_low_elevation_uses_total_cloud(self):
+        """Low elevation uses total cloud cover."""
+        from datetime import datetime
+        from app.models import ForecastDataPoint
+
+        data = [
+            ForecastDataPoint(
+                ts=datetime(2025, 1, 1, 9, 0),
+                cloud_total_pct=80,  # High total
+                cloud_mid_pct=10,
+                cloud_high_pct=10,
+            ),
+        ]
+        result = WeatherMetricsService.calculate_sunny_hours(data, elevation_m=1500)
+        # Uses total: 80% clouds -> 20% sunshine -> 0.2h -> rounded = 0h
+        assert result == 0
+
+    def test_empty_data_returns_zero(self):
+        """Empty data list returns 0 hours."""
+        result = WeatherMetricsService.calculate_sunny_hours([])
+        assert result == 0
+
+    def test_none_cloud_data_skipped(self):
+        """Hours with None cloud data are skipped."""
+        from datetime import datetime
+        from app.models import ForecastDataPoint
+
+        data = [
+            ForecastDataPoint(ts=datetime(2025, 1, 1, 9, 0), cloud_total_pct=0),     # 100%
+            ForecastDataPoint(ts=datetime(2025, 1, 1, 10, 0), cloud_total_pct=None), # skipped
+            ForecastDataPoint(ts=datetime(2025, 1, 1, 11, 0), cloud_total_pct=0),    # 100%
+        ]
+        result = WeatherMetricsService.calculate_sunny_hours(data)
+        # Only 2 valid hours: 2 * 100% = 200% = 2h
+        assert result == 2
