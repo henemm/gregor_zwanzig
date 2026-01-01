@@ -4,9 +4,9 @@ type: feature
 created: 2025-12-28
 updated: 2025-12-31
 status: approved
-version: "4.0"
+version: "4.2"
 tags: [ui, nicegui, compare, email, scheduler]
-entities: [comparesubscription, comparisonengine, comparisonresult, locationresult]
+entities: [comparesubscription, comparisonengine, comparisonresult, locationresult, hourlycell]
 ---
 
 # Compare Subscription Scheduler
@@ -181,6 +181,151 @@ cloud_status = WeatherMetricsService.calculate_cloud_status(
 **WICHTIG:** Sonnenstunden und Wolkenlage sind KONSISTENT, weil beide
 aus demselben Service kommen. Keine lokalen Berechnungen erlaubt!
 
+### 7. HourlyCell - Single Source of Truth fuer Stunden-Zellen
+
+**KRITISCH:** WebUI und E-Mail muessen IDENTISCHE Stunden-Daten anzeigen!
+
+Eine gemeinsame Dataclass und Formatter-Funktion garantieren Konsistenz:
+
+```python
+@dataclass
+class HourlyCell:
+    """Eine Stunden-Zelle - identisch fuer UI und Email."""
+    hour: int                    # 9, 10, 11, ...
+    symbol: str                  # "☀️", "🌤️", "⛅", "☁️"
+    temp_c: int                  # -5, 12, ...
+    precip_symbol: str           # "🌨️", "🌧️", ""
+    precip_amount: Optional[float]  # 2.5, None wenn kein Niederschlag
+    precip_unit: str             # "cm", "mm"
+    wind_kmh: int                # 15
+    gust_kmh: int                # 25
+    wind_dir: str                # "SW", "N", "NE"
+
+def format_hourly_cell(dp: ForecastDataPoint, elevation_m: int) -> HourlyCell:
+    """
+    Single Source of Truth fuer Stunden-Formatierung.
+
+    Wird von BEIDEN Renderern verwendet:
+    - render_comparison_html() fuer E-Mail
+    - render_hourly_table() fuer WebUI
+    """
+    # Effektive Bewoelkung berechnen (Hoehenkorrektur)
+    effective_cloud = WeatherMetricsService.calculate_effective_cloud(
+        dp.cloud_total, dp.cloud_low, dp.cloud_mid, dp.cloud_high, elevation_m
+    )
+    symbol = WeatherMetricsService.get_weather_symbol(effective_cloud, dp.precip)
+
+    # Niederschlagsart basierend auf Temperatur
+    if dp.precip and dp.precip > 0:
+        if dp.temp_c < 2:
+            precip_symbol = "🌨️"
+            precip_unit = "cm"
+            # mm Wasser -> cm Schnee (Faktor ~10)
+            precip_amount = round(dp.precip / 10, 1)
+        else:
+            precip_symbol = "🌧️"
+            precip_unit = "mm"
+            precip_amount = round(dp.precip, 1)
+    else:
+        precip_symbol = ""
+        precip_amount = None
+        precip_unit = ""
+
+    return HourlyCell(
+        hour=dp.ts.hour,
+        symbol=symbol,
+        temp_c=round(dp.temp_c),
+        precip_symbol=precip_symbol,
+        precip_amount=precip_amount,
+        precip_unit=precip_unit,
+        wind_kmh=round(dp.wind_kmh or 0),
+        gust_kmh=round(dp.gust_kmh or 0),
+        wind_dir=degrees_to_compass(dp.wind_direction or 0),
+    )
+
+def hourly_cell_to_compact(cell: HourlyCell) -> str:
+    """Kompakte String-Darstellung fuer Tabellen-Zelle."""
+    # Format: ☀️-5° 🌨️2cm 15/25SW
+    precip = f"{cell.precip_symbol}{cell.precip_amount}{cell.precip_unit}" if cell.precip_amount else "-"
+    return f"{cell.symbol}{cell.temp_c}° {precip} {cell.wind_kmh}/{cell.gust_kmh}{cell.wind_dir}"
+```
+
+**Location:** `src/services/weather_metrics.py`
+
+**Verwendung in beiden Renderern:**
+```python
+# In render_comparison_html() UND render_hourly_table():
+cell = format_hourly_cell(dp, location.elevation_m)
+cell_text = hourly_cell_to_compact(cell)
+```
+
+## E-Mail Format - Multipart (HTML + Plain-Text)
+
+E-Mails werden als **Multipart** versendet (HTML + Plain-Text Fallback).
+
+### MIME-Struktur
+
+```
+Content-Type: multipart/alternative
+├── text/plain (Fallback fuer alte Clients)
+└── text/html (Primaere Darstellung)
+```
+
+## E-Mail Format (Plain-Text) - EXAKTE SPEZIFIKATION
+
+Fuer E-Mail-Clients ohne HTML-Support.
+
+### Header-Bereich
+
+```
+⛷️ SKIGEBIETE-VERGLEICH
+========================
+📅 Forecast: [Wochentag, DD.MM.YYYY]
+🕐 Zeitfenster: [HH]:00 - [HH]:00
+📝 Erstellt: [DD.MM.YYYY HH:MM]
+```
+
+### Winner-Box
+
+```
+🏆 EMPFEHLUNG: [Location Name]
+   Score: [N] | ❄️ [N]cm Schnee | ☀️ ~[N]h Sonne
+```
+
+### Vergleichstabelle (Plain-Text)
+
+```
+#1 [Location Name]          #2 [Location Name]
+Score: [N]                  Score: [N]
+Schnee: [N]cm               Schnee: [N]cm
+Neuschnee: +[N]cm           Neuschnee: -
+Wind: 10/41 SW              Wind: 15/30 NE
+Temp: [N]°C                 Temp: [N]°C
+Sonne: ~[N]h                Sonne: ~[N]h
+Wolken: [N]%                Wolken: [N]%
+Lage: ☀️ ueber Wolken       Lage: ☁️ in Wolken
+```
+
+### Stunden-Tabelle (Plain-Text)
+
+```
+STUNDEN-DETAILS
+---------------
+Zeit  | #1 Location    | #2 Location    | #3 Location
+09:00 | ☀️-5° -  15/25SW | 🌤️-3° - 10/18N | ⛅-2° 🌨️1cm 8/12E
+10:00 | ☀️-4° -  12/20SW | 🌤️-2° - 8/15N  | ☁️-1° 🌨️2cm 10/15E
+...
+```
+
+**Spaltenbreite:** Max 16 Zeichen pro Location (inkl. Padding)
+
+### Footer
+
+```
+---
+Generiert von Gregor Zwanzig ⛷️
+```
+
 ## E-Mail Format (HTML) - EXAKTE SPEZIFIKATION
 
 **KRITISCH:** Es darf nur EINEN HTML-Renderer geben (`render_comparison_html`).
@@ -228,9 +373,25 @@ Für Top-N Locations (default: 3):
 
 | Zeit | #1 [Name] | #2 [Name] | #3 [Name] |
 |------|-----------|-----------|-----------|
-| 09:00 | [Symbol][Temp]°C | ... | ... |
-| 10:00 | ... | ... | ... |
+| 09:00 | ☀️-5° 🌨️2cm 15/25SW | ... | ... |
+| 10:00 | 🌤️-3° - 10/18SW | ... | ... |
 | ... | ... | ... | ... |
+
+**Pro Stunde werden angezeigt (kompakt, ohne Leerzeichen):**
+
+| Element | Format | Beispiele |
+|---------|--------|-----------|
+| Wetter-Symbol | Emoji | ☀️ 🌤️ ⛅ ☁️ 🌧️ 🌨️ |
+| Temperatur | `[N]°` | `-5°`, `12°` |
+| Niederschlag | `[Symbol][N]cm/mm` oder `-` | `🌨️2cm`, `🌧️3mm`, `-` |
+| Wind/Böen+Richtung | `[W]/[B][Dir]` | `15/25SW`, `8/12N` |
+
+**Niederschlagsregeln:**
+- Schnee (temp < 2°C): `🌨️[N]cm` - Menge als Schneehöhe
+- Regen (temp >= 2°C): `🌧️[N]mm` - Menge in mm
+- Kein Niederschlag: `-`
+
+**Beispiel-Zeile:** `☀️-5° 🌨️2cm 15/25SW` (ca. 18 Zeichen)
 
 **Wetter-Symbol basiert auf effektiver Bewölkung** (siehe Effektive Bewölkung).
 
@@ -276,6 +437,16 @@ Fuer spaetere Erweiterung:
 
 ## Changelog
 
+- 2025-12-31: v4.2 - HourlyCell + Multipart E-Mail
+  - NEU: `HourlyCell` Dataclass als Single Source of Truth
+  - NEU: `format_hourly_cell()` fuer konsistente Stunden-Formatierung
+  - NEU: Multipart E-Mail (HTML + Plain-Text Fallback)
+  - NEU: Plain-Text E-Mail Format spezifiziert
+  - WebUI und E-Mail verwenden dieselbe Formatter-Funktion
+- 2025-12-31: v4.1 - Erweiterte Stunden-Tabelle
+  - Stunden-Tabelle zeigt jetzt: Symbol, Temp, Niederschlag, Wind/Böen+Richtung
+  - Kompaktes Format ohne Leerzeichen: `☀️-5° 🌨️2cm 15/25SW`
+  - Niederschlag als Schneehöhe (cm) bei <2°C, sonst mm
 - 2025-12-31: v4.0 - Exakte E-Mail Spezifikation
   - BREAKING: Nur noch EIN Renderer (`render_comparison_html`)
   - `format_compare_email` muss entfernt werden (Code-Duplizierung)

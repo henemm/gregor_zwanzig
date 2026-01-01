@@ -25,6 +25,7 @@ comparesubscription
 comparisonresult
 locationresult
 comparisonengine
+hourlycell
 
 # Test utilities (no spec needed)
 testemailoutput

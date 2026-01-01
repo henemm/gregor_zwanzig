@@ -58,14 +58,24 @@ class EmailOutput:
         """Channel identifier."""
         return "email"
 
-    def send(self, subject: str, body: str, html: bool = True) -> None:
+    def send(
+        self,
+        subject: str,
+        body: str,
+        html: bool = True,
+        plain_text_body: str | None = None,
+    ) -> None:
         """
         Send email via SMTP.
+
+        SPEC: docs/specs/compare_email.md v4.2 - Multipart Email
 
         Args:
             subject: Email subject line
             body: Email body (HTML or plain text)
             html: If True, send as HTML email with plain-text fallback
+            plain_text_body: Optional explicit plain-text version.
+                             If not provided, plain-text is auto-generated from HTML.
 
         Raises:
             OutputError: If sending fails
@@ -76,18 +86,22 @@ class EmailOutput:
             msg["From"] = self._from
             msg["To"] = self._to
 
-            # Plain text fallback (strip HTML properly)
-            # 1. Remove <style>...</style> blocks completely
-            plain_text = re.sub(r'<style[^>]*>.*?</style>', '', body, flags=re.DOTALL | re.IGNORECASE)
-            # 2. Remove <head>...</head> blocks completely
-            plain_text = re.sub(r'<head[^>]*>.*?</head>', '', plain_text, flags=re.DOTALL | re.IGNORECASE)
-            # 3. Remove remaining HTML tags
-            plain_text = re.sub(r'<[^>]+>', '', plain_text)
-            # 4. Replace HTML entities
-            plain_text = plain_text.replace('&nbsp;', ' ').replace('&deg;', '°')
-            # 5. Clean up excessive whitespace
-            plain_text = re.sub(r'\n\s*\n\s*\n', '\n\n', plain_text)
-            plain_text = plain_text.strip()
+            # Use explicit plain-text if provided, otherwise auto-generate
+            if plain_text_body:
+                plain_text = plain_text_body
+            else:
+                # Plain text fallback (strip HTML properly)
+                # 1. Remove <style>...</style> blocks completely
+                plain_text = re.sub(r'<style[^>]*>.*?</style>', '', body, flags=re.DOTALL | re.IGNORECASE)
+                # 2. Remove <head>...</head> blocks completely
+                plain_text = re.sub(r'<head[^>]*>.*?</head>', '', plain_text, flags=re.DOTALL | re.IGNORECASE)
+                # 3. Remove remaining HTML tags
+                plain_text = re.sub(r'<[^>]+>', '', plain_text)
+                # 4. Replace HTML entities
+                plain_text = plain_text.replace('&nbsp;', ' ').replace('&deg;', '°')
+                # 5. Clean up excessive whitespace
+                plain_text = re.sub(r'\n\s*\n\s*\n', '\n\n', plain_text)
+                plain_text = plain_text.strip()
 
             part1 = MIMEText(plain_text, "plain", "utf-8")
             part2 = MIMEText(body, "html", "utf-8")

@@ -191,15 +191,16 @@ def render_subscription_card(
 
                     ui.notify(f"Fuehre '{subscription.name}' aus...", type="info")
                     try:
+                        # SPEC: docs/specs/compare_email.md v4.2 - Multipart Email
                         all_locs = load_all_locations()
-                        subject, body = await asyncio.get_event_loop().run_in_executor(
+                        subject, html_body, text_body = await asyncio.get_event_loop().run_in_executor(
                             None,
                             lambda: run_comparison_for_subscription(subscription, all_locs),
                         )
 
                         email_output = EmailOutput(settings)
                         await asyncio.get_event_loop().run_in_executor(
-                            None, lambda: email_output.send(subject, body)
+                            None, lambda: email_output.send(subject, html_body, plain_text_body=text_body)
                         )
 
                         ui.notify(f"E-Mail gesendet: {subject}", type="positive")

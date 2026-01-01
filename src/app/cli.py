@@ -297,15 +297,16 @@ def _run_subscriptions(settings: Settings, debug: DebugBuffer) -> int:
         # Run comparison
         print(f"Running subscription: {sub.name}")
         try:
-            subject, body = run_comparison_for_subscription(sub, all_locations)
+            # SPEC: docs/specs/compare_email.md v4.2 - Multipart Email
+            subject, html_body, text_body = run_comparison_for_subscription(sub, all_locations)
 
             if settings.dry_run:
                 print(f"\n=== DRY RUN: {subject} ===")
-                print(body)
+                print(html_body)
                 print("=== END DRY RUN ===\n")
             else:
                 email_output = EmailOutput(settings)
-                email_output.send(subject, body)
+                email_output.send(subject, html_body, plain_text_body=text_body)
                 print(f"Sent email for: {sub.name}")
 
             processed += 1

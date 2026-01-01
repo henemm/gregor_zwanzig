@@ -7,7 +7,7 @@
 # Project Information
 project:
   name: "gregor zwanzig"
-  base_path: "/Users/hem/Documents/opt/gregor zwanzig"  # Will be auto-detected if not set
+  # base_path: auto-detected from .git directory
 
 # Workflow Configuration
 workflow:

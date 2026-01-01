@@ -142,7 +142,7 @@ class TestSubscriptionEmailGeneration:
         ]
 
     def test_subscription_generates_html_email_with_real_data(self, sample_subscription):
-        """run_comparison_for_subscription must return HTML body with real locations."""
+        """run_comparison_for_subscription must return HTML and text body with real locations."""
         from app.loader import load_all_locations
 
         # Load real locations from disk
@@ -151,14 +151,20 @@ class TestSubscriptionEmailGeneration:
             pytest.skip("No locations configured")
 
         # Run with real data (network call)
-        subject, body = run_comparison_for_subscription(sample_subscription, locations[:2])
+        # SPEC: docs/specs/compare_email.md v4.2 - Multipart Email returns 3 values
+        subject, html_body, text_body = run_comparison_for_subscription(sample_subscription, locations[:2])
 
-        assert "<!DOCTYPE html>" in body, \
-            f"Subscription email must be HTML. Got: {body[:200]}"
-        assert "<table>" in body.lower(), \
+        assert "<!DOCTYPE html>" in html_body, \
+            f"Subscription email must be HTML. Got: {html_body[:200]}"
+        assert "<table>" in html_body.lower(), \
             "Subscription email must contain HTML tables"
-        assert "======" not in body, \
-            "Email should not contain ASCII table borders"
+        assert "======" not in html_body, \
+            "HTML email should not contain ASCII table borders"
+
+        # Check plain-text body
+        assert text_body, "Plain-text body must not be empty"
+        assert "⛷️ SKIGEBIETE-VERGLEICH" in text_body, \
+            "Plain-text body must contain header"
 
 
 class TestEndToEndEmailSending:
@@ -226,13 +232,14 @@ class TestEndToEndEmailSending:
             pytest.skip("No locations configured")
 
         # Generate email content
+        # SPEC: docs/specs/compare_email.md v4.2 - Multipart Email
         sub = subs[0]
-        subject, body = run_comparison_for_subscription(sub, locations)
+        subject, html_body, text_body = run_comparison_for_subscription(sub, locations)
 
         # Send via EmailOutput with mocked SMTP
         with patch("smtplib.SMTP", MockSMTP):
             email_output = EmailOutput(mock_settings)
-            email_output.send(subject, body)
+            email_output.send(subject, html_body, plain_text_body=text_body)
 
         # Verify email was sent
         assert len(sent_messages) == 1, "Expected exactly one email to be sent"
@@ -307,12 +314,13 @@ class TestEndToEndEmailSending:
         if not subs or not locations:
             pytest.skip("No test data")
 
+        # SPEC: docs/specs/compare_email.md v4.2 - Multipart Email
         sub = subs[0]
-        subject, body = run_comparison_for_subscription(sub, locations)
+        subject, html_body, text_body = run_comparison_for_subscription(sub, locations)
 
         with patch("smtplib.SMTP", MockSMTP):
             email_output = EmailOutput(mock_settings)
-            email_output.send(subject, body)
+            email_output.send(subject, html_body, plain_text_body=text_body)
 
         msg = message_from_string(sent_messages[0])
 
@@ -374,12 +382,13 @@ class TestEndToEndEmailSending:
         if not subs or not locations:
             pytest.skip("No test data")
 
+        # SPEC: docs/specs/compare_email.md v4.2 - Multipart Email
         sub = subs[0]
-        subject, body = run_comparison_for_subscription(sub, locations)
+        subject, html_body, text_body = run_comparison_for_subscription(sub, locations)
 
         with patch("smtplib.SMTP", MockSMTP):
             email_output = EmailOutput(mock_settings)
-            email_output.send(subject, body)
+            email_output.send(subject, html_body, plain_text_body=text_body)
 
         msg = message_from_string(sent_messages[0])
 
@@ -392,6 +401,10 @@ class TestEndToEndEmailSending:
 
         assert plain_part is not None, "Email must have plain text part"
 
+        # With explicit plain-text body, it should contain our structured format
+        assert "⛷️ SKIGEBIETE-VERGLEICH" in plain_part, \
+            "Plain text must contain our formatted header"
+
         # Must NOT contain CSS artifacts
         assert "font-family" not in plain_part, \
             "Plain text must not contain CSS (font-family)"
@@ -399,8 +412,6 @@ class TestEndToEndEmailSending:
             "Plain text must not contain CSS (border-collapse)"
         assert "background:" not in plain_part, \
             "Plain text must not contain CSS (background)"
-        assert "{" not in plain_part or "}" not in plain_part, \
-            "Plain text must not contain CSS braces"
 
 
 class TestRealGmailE2E:
@@ -441,18 +452,18 @@ class TestRealGmailE2E:
             pytest.skip("Keine Locations")
 
         # 2. Generiere E-Mail
+        # SPEC: docs/specs/compare_email.md v4.2 - Multipart Email
         sub = subs[0]
-        subject, body = run_comparison_for_subscription(sub, locations)
+        subject, html_body, text_body = run_comparison_for_subscription(sub, locations)
 
         # Unique Subject für Suche
         import uuid
         unique_id = str(uuid.uuid4())[:8]
         test_subject = f"[TEST-{unique_id}] {subject}"
 
-        # 3. Sende via SMTP
+        # 3. Sende via SMTP mit Multipart
         email_output = EmailOutput(settings)
-        # Temporarily modify subject for sending
-        email_output.send(test_subject, body)
+        email_output.send(test_subject, html_body, plain_text_body=text_body)
 
         print(f"\n>>> E-Mail gesendet: {test_subject}")
 

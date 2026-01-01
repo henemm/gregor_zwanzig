@@ -20,7 +20,7 @@ from outputs.email import EmailOutput
 from outputs.base import OutputConfigError, OutputError
 from providers.geosphere import GeoSphereProvider
 from services.forecast import ForecastService
-from services.weather_metrics import CloudStatus, WeatherMetricsService
+from services.weather_metrics import CloudStatus, HourlyCell, WeatherMetricsService
 from validation.ground_truth import BergfexScraper
 
 
@@ -619,14 +619,16 @@ def render_comparison_html(result: ComparisonResult, top_n_details: int = 3) -> 
 """
 
     # Hourly details for top N locations
+    # SPEC: docs/specs/compare_email.md v4.2 - HourlyCell Single Source of Truth
     top_locs = valid_locs[:top_n_details]
     if top_locs and any(loc.hourly_data for loc in top_locs):
         hours = list(range(time_window[0], time_window[1] + 1))
 
-        # Build data structure: hour -> location_idx -> cell
-        hour_data_map: Dict[int, Dict[int, tuple]] = {h: {} for h in hours}
+        # Build data structure: hour -> location_idx -> HourlyCell
+        hour_data_map: Dict[int, Dict[int, HourlyCell]] = {h: {} for h in hours}
 
         for idx, loc_result in enumerate(top_locs):
+            elevation_m = loc_result.location.elevation_m
             for dp in loc_result.hourly_data:
                 if dp.ts.date() != target_date:
                     continue
@@ -634,16 +636,9 @@ def render_comparison_html(result: ComparisonResult, top_n_details: int = 3) -> 
                 if h not in hours:
                     continue
 
-                temp = dp.wind_chill_c if dp.wind_chill_c is not None else dp.t2m_c
-                temp_str = f"{temp:.0f}°C" if temp is not None else "?"
-
-                symbol = WeatherMetricsService.get_weather_symbol(
-                    dp.cloud_total_pct, dp.precip_1h_mm, dp.t2m_c,
-                    elevation_m=loc_result.location.elevation_m,
-                    cloud_mid_pct=dp.cloud_mid_pct,
-                    cloud_high_pct=dp.cloud_high_pct,
-                )
-                hour_data_map[h][idx] = (symbol, temp_str)
+                # Use Single Source of Truth formatter
+                cell = WeatherMetricsService.format_hourly_cell(dp, elevation_m)
+                hour_data_map[h][idx] = cell
 
         html += f"""
         <div class="section">
@@ -660,10 +655,11 @@ def render_comparison_html(result: ComparisonResult, top_n_details: int = 3) -> 
         for h in hours:
             html += f"                <tr>\n                    <td class=\"label\">{h:02d}:00</td>\n"
             for idx in range(len(top_locs)):
-                data = hour_data_map[h].get(idx)
-                if data:
-                    symbol, temp = data
-                    html += f'                    <td><span class="weather">{symbol}</span> {temp}</td>\n'
+                cell = hour_data_map[h].get(idx)
+                if cell:
+                    # Use compact format from Single Source of Truth
+                    compact = WeatherMetricsService.hourly_cell_to_compact(cell)
+                    html += f'                    <td style="white-space: nowrap;">{compact}</td>\n'
                 else:
                     html += "                    <td>-</td>\n"
             html += "                </tr>\n"
@@ -683,6 +679,128 @@ def render_comparison_html(result: ComparisonResult, top_n_details: int = 3) -> 
 """
 
     return html
+
+
+def render_comparison_text(result: ComparisonResult, top_n_details: int = 3) -> str:
+    """
+    Render ComparisonResult as Plain-Text for email fallback.
+
+    SPEC: docs/specs/compare_email.md v4.2 Zeile 274-327
+
+    Uses HourlyCell Single Source of Truth for consistent formatting.
+
+    Args:
+        result: ComparisonResult from ComparisonEngine
+        top_n_details: Number of locations to show hourly details for
+
+    Returns:
+        Plain-text string for email
+    """
+    from datetime import date
+
+    time_window = result.time_window
+    target_date = result.target_date
+    created_at = result.created_at
+
+    # Filter valid locations
+    valid_locs = [loc for loc in result.locations if loc.score is not None]
+    if not valid_locs:
+        return "Keine Vergleichsdaten verfügbar."
+
+    lines = []
+
+    # Header
+    lines.append("⛷️ SKIGEBIETE-VERGLEICH")
+    lines.append("=" * 24)
+    lines.append(f"📅 Forecast: {target_date.strftime('%A, %d.%m.%Y')}")
+    lines.append(f"🕐 Zeitfenster: {time_window[0]:02d}:00 - {time_window[1]:02d}:00")
+    lines.append(f"📝 Erstellt: {created_at.strftime('%d.%m.%Y %H:%M')}")
+    lines.append("")
+
+    # Winner
+    winner = valid_locs[0]
+    lines.append(f"🏆 EMPFEHLUNG: {winner.location.name}")
+    snow = f"❄️ {winner.snow_depth_cm:.0f}cm" if winner.snow_depth_cm else "❄️ -"
+    sunny = f"☀️ ~{winner.sunny_hours}h" if winner.sunny_hours is not None else "☀️ -"
+    lines.append(f"   Score: {winner.score} | {snow} | {sunny}")
+    lines.append("")
+
+    # Comparison table (side by side, max 2 locations per row for readability)
+    lines.append("-" * 50)
+    for i, loc_result in enumerate(valid_locs):
+        loc = loc_result.location
+        lines.append(f"#{i+1} {loc.name}")
+        lines.append(f"   Score: {loc_result.score}")
+        lines.append(f"   Schnee: {loc_result.snow_depth_cm:.0f}cm" if loc_result.snow_depth_cm else "   Schnee: -")
+        if loc_result.snow_new_cm and loc_result.snow_new_cm > 0:
+            lines.append(f"   Neuschnee: +{loc_result.snow_new_cm:.0f}cm")
+        else:
+            lines.append("   Neuschnee: -")
+
+        # Wind
+        wind = loc_result.wind_max or 0
+        gust = loc_result.gust_max or wind
+        wind_dir = WeatherMetricsService.degrees_to_compass(loc_result.wind_direction_avg)
+        lines.append(f"   Wind: {wind:.0f}/{gust:.0f} {wind_dir}")
+
+        # Temperature
+        temp = loc_result.wind_chill_min if loc_result.wind_chill_min is not None else loc_result.temp_min
+        lines.append(f"   Temp: {temp:.0f}°C" if temp is not None else "   Temp: -")
+
+        # Sunny hours
+        sunny_h = loc_result.sunny_hours
+        lines.append(f"   Sonne: ~{sunny_h}h" if sunny_h is not None else "   Sonne: -")
+
+        # Cloud
+        cloud = loc_result.cloud_avg
+        lines.append(f"   Wolken: {cloud}%" if cloud is not None else "   Wolken: -")
+
+        # Cloud status
+        time_window_hours = time_window[1] - time_window[0]
+        cloud_status = WeatherMetricsService.calculate_cloud_status(
+            sunny_h, time_window_hours, loc.elevation_m, loc_result.cloud_low_avg
+        )
+        emoji = WeatherMetricsService.get_cloud_status_emoji(cloud_status)
+        text, _ = WeatherMetricsService.format_cloud_status(cloud_status)
+        lines.append(f"   Lage: {emoji} {text}")
+        lines.append("")
+
+    # Hourly details
+    top_locs = valid_locs[:top_n_details]
+    if top_locs and any(loc.hourly_data for loc in top_locs):
+        lines.append("STUNDEN-DETAILS")
+        lines.append("-" * 15)
+
+        hours = list(range(time_window[0], time_window[1] + 1))
+
+        # Header row
+        header = "Zeit  |"
+        for i, loc_result in enumerate(top_locs):
+            name = loc_result.location.name[:14]
+            header += f" #{i+1} {name:14} |"
+        lines.append(header)
+
+        # Data rows
+        for h in hours:
+            row = f"{h:02d}:00 |"
+            for loc_result in top_locs:
+                cell_text = "-"
+                elevation_m = loc_result.location.elevation_m
+                for dp in loc_result.hourly_data:
+                    if dp.ts.date() == target_date and dp.ts.hour == h:
+                        cell = WeatherMetricsService.format_hourly_cell(dp, elevation_m)
+                        cell_text = WeatherMetricsService.hourly_cell_to_compact(cell)
+                        break
+                row += f" {cell_text:16} |"
+            lines.append(row)
+
+        lines.append("")
+
+    # Footer
+    lines.append("---")
+    lines.append("Generiert von Gregor Zwanzig ⛷️")
+
+    return "\n".join(lines)
 
 
 def fetch_forecast_for_location(loc: SavedLocation, hours: int = 48) -> Dict[str, Any]:
@@ -854,11 +972,13 @@ def fetch_forecast_for_location(loc: SavedLocation, hours: int = 48) -> Dict[str
 def run_comparison_for_subscription(
     sub: CompareSubscription,
     all_locations: List[SavedLocation] | None = None,
-) -> tuple[str, str]:
+) -> tuple[str, str, str]:
     """
     Run a comparison for a subscription and generate email content.
 
-    Uses ComparisonEngine (single processor) and render_comparison_html
+    SPEC: docs/specs/compare_email.md v4.2 - Multipart Email
+
+    Uses ComparisonEngine (single processor) and both renderers
     to ensure identical content in Web UI and Email.
 
     Args:
@@ -866,7 +986,7 @@ def run_comparison_for_subscription(
         all_locations: Optional pre-loaded locations list
 
     Returns:
-        Tuple of (subject, body) for the email
+        Tuple of (subject, html_body, text_body) for the email
     """
     from datetime import date, datetime, timedelta
 
@@ -903,11 +1023,12 @@ def run_comparison_for_subscription(
         forecast_hours=actual_forecast_hours,
     )
 
-    # Use render_comparison_html (same renderer as Web UI will use)
-    body = render_comparison_html(result, top_n_details=sub.top_n)
+    # Use both renderers for Multipart Email (SPEC v4.2)
+    html_body = render_comparison_html(result, top_n_details=sub.top_n)
+    text_body = render_comparison_text(result, top_n_details=sub.top_n)
 
     subject = f"Skigebiete-Vergleich: {sub.name} ({now.strftime('%d.%m.%Y')})"
-    return subject, body
+    return subject, html_body, text_body
 
 
 def render_header() -> None:
@@ -1181,19 +1302,21 @@ def render_compare() -> None:
                     results_with_hourly.append(r_copy)
 
                 # Convert to ComparisonResult and use single renderer
+                # SPEC: docs/specs/compare_email.md v4.2 - Multipart Email
                 comparison_result = dict_to_comparison_result(
                     results=results_with_hourly,
                     time_window=(state["time_start"], state["time_end"]),
                     target_date=target_date,
                 )
-                email_body = render_comparison_html(comparison_result, top_n_details=3)
+                email_html = render_comparison_html(comparison_result, top_n_details=3)
+                email_text = render_comparison_text(comparison_result, top_n_details=3)
 
-                # Send via SMTP
+                # Send via SMTP with both HTML and Plain-Text
                 email_output = EmailOutput(settings)
                 subject = f"Skigebiete-Vergleich ({datetime.now().strftime('%d.%m.%Y')})"
 
                 await asyncio.get_event_loop().run_in_executor(
-                    None, lambda: email_output.send(subject, email_body)
+                    None, lambda: email_output.send(subject, email_html, plain_text_body=email_text)
                 )
 
                 ui.notify(f"E-Mail gesendet an {settings.mail_to}", type="positive")
@@ -1278,31 +1401,23 @@ def render_hourly_table(
         target_date = date.today() + timedelta(days=days_ahead)
 
         # Build data structure: hour -> location -> cell_data
+        # SPEC: docs/specs/compare_email.md v4.2 - HourlyCell Single Source of Truth
         hour_data: Dict[int, Dict[str, str]] = {h: {} for h in hours}
 
         for entry in hourly_data:
             loc = entry["location"]
             data_points = entry.get("data", [])
+            elevation_m = loc.elevation_m
 
             for h in hours:
-                cell = "-"
+                cell_text = "-"
                 for dp in data_points:
                     if dp.ts.date() == target_date and dp.ts.hour == h:
-                        temp = dp.t2m_c
-                        feels_like = dp.wind_chill_c
-                        cloud = dp.cloud_total_pct
-                        precip = dp.precip_1h_mm
-                        symbol = WeatherMetricsService.get_weather_symbol(
-                            cloud, precip, temp,
-                            elevation_m=loc.elevation_m,
-                            cloud_mid_pct=dp.cloud_mid_pct,
-                            cloud_high_pct=dp.cloud_high_pct,
-                        )
-                        display_temp = feels_like if feels_like is not None else temp
-                        temp_str = f"{display_temp:.0f}°" if display_temp is not None else "?"
-                        cell = f"{symbol} {temp_str}"
+                        # Use Single Source of Truth formatter
+                        cell = WeatherMetricsService.format_hourly_cell(dp, elevation_m)
+                        cell_text = WeatherMetricsService.hourly_cell_to_compact(cell)
                         break
-                hour_data[h][loc.id] = cell
+                hour_data[h][loc.id] = cell_text
 
         # Render transposed table
         with ui.element("div").classes("overflow-x-auto"):

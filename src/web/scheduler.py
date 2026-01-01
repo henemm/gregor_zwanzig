@@ -129,11 +129,12 @@ def _execute_subscription(sub: "CompareSubscription") -> None:
         all_locations = load_all_locations()
 
         # Generate email content
-        subject, body = run_comparison_for_subscription(sub, all_locations)
+        # SPEC: docs/specs/compare_email.md v4.2 - Multipart Email
+        subject, html_body, text_body = run_comparison_for_subscription(sub, all_locations)
 
-        # Send email
+        # Send email with both HTML and Plain-Text
         email_output = EmailOutput(settings)
-        email_output.send(subject, body)
+        email_output.send(subject, html_body, plain_text_body=text_body)
 
         logger.info(f"Email sent successfully for: {sub.name}")
 
