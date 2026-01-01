@@ -1012,17 +1012,26 @@ def run_comparison_for_subscription(
     if not selected_locs:
         raise ValueError("No locations found for subscription")
 
-    # Calculate minimum forecast hours needed to cover tomorrow's time window
+    from app.user import Schedule
+
     now = datetime.now()
-    hours_remaining_today = 24 - now.hour
-    hours_tomorrow_needed = sub.time_window_end + 1  # +1 to include the end hour
-    min_forecast_hours = hours_remaining_today + hours_tomorrow_needed
+
+    # Determine target date based on schedule type:
+    # - DAILY_MORNING (07:00): Forecast for TODAY
+    # - DAILY_EVENING (18:00) / WEEKLY: Forecast for TOMORROW
+    if sub.schedule == Schedule.DAILY_MORNING:
+        target_date = date.today()
+        # For today: need hours from now until end of time window
+        min_forecast_hours = max(0, sub.time_window_end - now.hour + 1)
+    else:
+        target_date = date.today() + timedelta(days=1)
+        # For tomorrow: need remaining hours today + hours into tomorrow
+        hours_remaining_today = 24 - now.hour
+        hours_tomorrow_needed = sub.time_window_end + 1
+        min_forecast_hours = hours_remaining_today + hours_tomorrow_needed
 
     # Use at least the configured hours, but ensure we have enough for the time window
     actual_forecast_hours = max(sub.forecast_hours, min_forecast_hours, 48)
-
-    # Target date is tomorrow
-    target_date = date.today() + timedelta(days=1)
 
     # Use ComparisonEngine (Single Processor Architecture)
     result = ComparisonEngine.run(
@@ -1066,7 +1075,12 @@ def render_compare() -> None:
         "time_start": 9,
         "time_end": 16,
         "target_date": None,  # The date we're forecasting for
+        "selected_locations": [],  # Safari fix: explicit state for select
     }
+
+    def on_location_change(e) -> None:
+        """Handle location selection change - Safari fix."""
+        state["selected_locations"] = e.value if e.value else []
 
     with ui.column().classes("w-full max-w-6xl mx-auto p-4"):
         ui.label("Forecast-Vergleich").classes("text-h4 mb-4")
@@ -1094,6 +1108,7 @@ def render_compare() -> None:
                 options=location_options,
                 multiple=True,
                 label="Locations (Mehrfachauswahl)",
+                on_change=on_location_change,
             ).classes("w-full").props("use-chips")
 
             with ui.row().classes("items-center gap-4 mt-2"):
@@ -1155,11 +1170,11 @@ def render_compare() -> None:
         results_ui()
 
         async def run_comparison() -> None:
-            if not select.value:
+            if not state["selected_locations"]:
                 ui.notify("Bitte mindestens eine Location auswählen", type="warning")
                 return
 
-            selected_locs = [loc for loc in locations if loc.id in select.value]
+            selected_locs = [loc for loc in locations if loc.id in state["selected_locations"]]
             days_ahead = date_select.value or 1
             time_start = time_start_select.value or 9
             time_end = time_end_select.value or 16
