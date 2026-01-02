@@ -2,10 +2,10 @@
 entity_id: scheduler
 type: module
 created: 2025-12-30
-updated: 2025-12-30
+updated: 2026-01-01
 status: draft
-version: "1.0"
-tags: [scheduler, email, background, apscheduler]
+version: "1.1"
+tags: [scheduler, email, background, apscheduler, bugfix]
 ---
 
 # Scheduler Module
@@ -143,7 +143,44 @@ app.on_startup(init_scheduler)
 | DAILY_MORNING | 07:00 | Feste Uhrzeit |
 | DAILY_EVENING | 18:00 | Feste Uhrzeit |
 | WEEKLY | 18:00 am Wochentag | Wochentag aus Subscription |
-| Timezone | Lokal (Server) | System-Timezone |
+| Timezone | Europe/Vienna | Explizit gesetzt (v1.1 Fix) |
+
+## v1.1 Bugfix: Timezone + Logging
+
+### Problem (01.01.2026)
+
+Scheduler triggerte nicht um 07:00 obwohl:
+- Server lief
+- Subscription existierte und enabled war
+- Manueller Test funktionierte
+
+### Ursache
+
+1. **Keine explizite Timezone** - CronTrigger nutzte System-Default
+2. **Mangelndes Logging** - Keine Bestaetigung dass Scheduler initialisiert wurde
+3. **Silent Failure** - Fehler wurden nicht sichtbar geloggt
+
+### Loesung
+
+```python
+from zoneinfo import ZoneInfo
+
+# Explizite Timezone
+TIMEZONE = ZoneInfo("Europe/Vienna")
+
+# CronTrigger mit Timezone
+CronTrigger(hour=7, minute=0, timezone=TIMEZONE)
+
+# Logging auf stdout
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    stream=sys.stdout,
+)
+
+# Startup-Bestaetigung
+logger.info(f"Scheduler gestartet: Morning 07:00, Evening 18:00 ({TIMEZONE})")
+```
 
 ## Expected Behavior
 
@@ -183,4 +220,5 @@ logger.error(f"Failed to send email for {sub.name}: {error}")
 
 ## Changelog
 
-- 2025-12-30: Initial spec created
+- 2026-01-01: v1.1 Bugfix - Explizite Timezone (Europe/Vienna), Logging auf stdout
+- 2025-12-30: v1.0 Initial spec created

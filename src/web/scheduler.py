@@ -2,15 +2,19 @@
 Background Scheduler for Compare Subscriptions.
 
 Automatically sends emails for subscriptions based on their schedule:
-- DAILY_MORNING: 07:00
-- DAILY_EVENING: 18:00
+- DAILY_MORNING: 07:00 Europe/Vienna
+- DAILY_EVENING: 18:00 Europe/Vienna
 - WEEKLY: 18:00 on configured weekday
+
+SPEC: docs/specs/modules/scheduler.md v1.1
 """
 from __future__ import annotations
 
 import logging
+import sys
 from datetime import datetime
 from typing import TYPE_CHECKING
+from zoneinfo import ZoneInfo
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -18,7 +22,16 @@ from apscheduler.triggers.cron import CronTrigger
 if TYPE_CHECKING:
     from app.user import CompareSubscription
 
+# Configure logging to stdout for visibility
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    stream=sys.stdout,
+)
 logger = logging.getLogger("scheduler")
+
+# Explicit timezone for all cron triggers (v1.1 fix)
+TIMEZONE = ZoneInfo("Europe/Vienna")
 
 # Global scheduler instance
 _scheduler: BackgroundScheduler | None = None
@@ -39,24 +52,24 @@ def init_scheduler() -> None:
 
     _scheduler = BackgroundScheduler()
 
-    # Morning subscriptions at 07:00
+    # Morning subscriptions at 07:00 Europe/Vienna
     _scheduler.add_job(
         run_morning_subscriptions,
-        CronTrigger(hour=7, minute=0),
+        CronTrigger(hour=7, minute=0, timezone=TIMEZONE),
         id="morning_subscriptions",
         name="Morning Subscriptions (07:00)",
     )
 
-    # Evening subscriptions at 18:00
+    # Evening subscriptions at 18:00 Europe/Vienna
     _scheduler.add_job(
         run_evening_subscriptions,
-        CronTrigger(hour=18, minute=0),
+        CronTrigger(hour=18, minute=0, timezone=TIMEZONE),
         id="evening_subscriptions",
         name="Evening Subscriptions (18:00)",
     )
 
     _scheduler.start()
-    logger.info("Scheduler started with 2 jobs (morning 07:00, evening 18:00)")
+    logger.info(f"Scheduler started: Morning 07:00, Evening 18:00 ({TIMEZONE})")
 
 
 def shutdown_scheduler() -> None:
