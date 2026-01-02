@@ -7,15 +7,27 @@ Provides access to Austrian weather data via the GeoSphere Data Hub API:
 - NOWCAST: Short-term forecast (1km, 3h)
 
 API Documentation: https://dataset.api.hub.geosphere.at/v1/docs/
+
+SPEC: docs/specs/modules/api_retry.md v1.0
+- Retry-Logik mit exponential backoff bei transienten Fehlern
+- 5 Versuche, 2-60 Sekunden Wartezeit
 """
 from __future__ import annotations
 
+import logging
 import math
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 from urllib.parse import urlencode
 
 import httpx
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception,
+    before_sleep_log,
+)
 
 from app.models import (
     ForecastDataPoint,
@@ -29,9 +41,27 @@ from providers.base import ProviderRequestError
 if TYPE_CHECKING:
     from app.config import Location
 
+# Logger for retry warnings
+logger = logging.getLogger("geosphere")
+
 # API Configuration
 BASE_URL = "https://dataset.api.hub.geosphere.at/v1"
 TIMEOUT = 30.0
+
+# Retry Configuration (SPEC: docs/specs/modules/api_retry.md)
+RETRY_ATTEMPTS = 5
+RETRY_WAIT_MIN = 2   # seconds
+RETRY_WAIT_MAX = 60  # seconds
+RETRY_STATUS_CODES = {502, 503, 504}
+
+
+def _is_retryable_error(exception: BaseException) -> bool:
+    """Check if exception is a retryable HTTP error (502, 503, 504) or connection error."""
+    if isinstance(exception, httpx.HTTPStatusError):
+        return exception.response.status_code in RETRY_STATUS_CODES
+    if isinstance(exception, (httpx.ConnectError, httpx.ReadTimeout)):
+        return True
+    return False
 
 # Endpoints - using timeseries for point queries (grid requires bbox)
 ENDPOINTS = {
@@ -187,6 +217,13 @@ class GeoSphereProvider:
     def __exit__(self, *args: Any) -> None:
         self.close()
 
+    @retry(
+        stop=stop_after_attempt(RETRY_ATTEMPTS),
+        wait=wait_exponential(multiplier=1, min=RETRY_WAIT_MIN, max=RETRY_WAIT_MAX),
+        retry=retry_if_exception(_is_retryable_error),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+        reraise=True,
+    )
     def _request(
         self,
         endpoint: str,
@@ -196,7 +233,13 @@ class GeoSphereProvider:
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
     ) -> Dict[str, Any]:
-        """Make a request to the GeoSphere timeseries API."""
+        """
+        Make a request to the GeoSphere timeseries API with retry logic.
+
+        SPEC: docs/specs/modules/api_retry.md
+        - Retries on 502, 503, 504 and connection errors
+        - 5 attempts with exponential backoff (2-60 seconds)
+        """
         params: Dict[str, Any] = {
             "lat_lon": f"{lat},{lon}",
             "parameters": ",".join(parameters),
@@ -209,7 +252,12 @@ class GeoSphereProvider:
 
         url = f"{BASE_URL}{endpoint}?{urlencode(params)}"
         response = self._client.get(url)
-        response.raise_for_status()
+
+        # Check for retryable status codes before raise_for_status
+        if response.status_code in RETRY_STATUS_CODES:
+            response.raise_for_status()  # Triggers retry via HTTPStatusError
+
+        response.raise_for_status()  # Non-retryable errors (4xx)
         return response.json()
 
     def fetch_nwp_forecast(

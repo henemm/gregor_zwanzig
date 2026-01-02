@@ -503,10 +503,10 @@ def render_comparison_html(result: ComparisonResult, top_n_details: int = 3) -> 
 <body>
     <div class="container">
         <div class="header">
-            <h1>⛷️ Skigebiete-Vergleich</h1>
-            <p>📅 Forecast für: <strong>{target_date.strftime('%A, %d.%m.%Y')}</strong></p>
-            <p>🕐 Zeitfenster: {time_window[0]:02d}:00 - {time_window[1]:02d}:00</p>
-            <p>📝 Erstellt: {now.strftime('%d.%m.%Y %H:%M')}</p>
+            <h1>⛷️ Ski Resort Comparison</h1>
+            <p>📅 Forecast for: <strong>{target_date.strftime('%A, %d.%m.%Y')}</strong></p>
+            <p>🕐 Time Window: {time_window[0]:02d}:00 - {time_window[1]:02d}:00</p>
+            <p>📝 Created: {now.strftime('%d.%m.%Y %H:%M')}</p>
         </div>
 """
 
@@ -515,16 +515,16 @@ def render_comparison_html(result: ComparisonResult, top_n_details: int = 3) -> 
     if winner:
         details = []
         if winner.snow_depth_cm:
-            details.append(f"❄️ {winner.snow_depth_cm:.0f}cm Schnee")
+            details.append(f"❄️ {winner.snow_depth_cm:.0f}cm snow")
         if winner.snow_new_cm:
-            details.append(f"🆕 +{winner.snow_new_cm:.0f}cm Neuschnee")
+            details.append(f"🆕 +{winner.snow_new_cm:.0f}cm new snow")
         if winner.sunny_hours:
-            details.append(f"☀️ ~{winner.sunny_hours}h Sonne")
+            details.append(f"☀️ ~{winner.sunny_hours}h sun")
 
         html += f"""
         <div class="winner">
-            <h2>🏆 Empfehlung: {winner.location.name}</h2>
-            <p>Score: <strong>{winner.score}</strong> | {' | '.join(details) if details else 'Keine Details'}</p>
+            <h2>🏆 Recommendation: {winner.location.name}</h2>
+            <p>Score: <strong>{winner.score}</strong> | {' | '.join(details) if details else 'No details'}</p>
         </div>
 """
 
@@ -537,10 +537,10 @@ def render_comparison_html(result: ComparisonResult, top_n_details: int = 3) -> 
     # Comparison table
     html += """
         <div class="section">
-            <h3>📊 Vergleich</h3>
+            <h3>📊 Comparison</h3>
             <table>
                 <tr>
-                    <th class="label">Metrik</th>
+                    <th class="label">Metric</th>
 """
     for i, name in enumerate(location_names):
         html += f'                    <th><span class="rank">#{i+1}</span> {name}</th>\n'
@@ -553,20 +553,20 @@ def render_comparison_html(result: ComparisonResult, top_n_details: int = 3) -> 
     html += "                </tr>\n"
 
     # Snow depth row
-    html += "                <tr>\n                    <td class=\"label\">Schneehöhe</td>\n"
+    html += "                <tr>\n                    <td class=\"label\">Snow Depth</td>\n"
     for i, v in enumerate(snow_depths):
         html += f"                    {cell(v, lambda x: f'{x:.0f}cm' if x else '-', i == best_snow_depth)}\n"
     html += "                </tr>\n"
 
     # New snow row
-    html += "                <tr>\n                    <td class=\"label\">Neuschnee</td>\n"
+    html += "                <tr>\n                    <td class=\"label\">New Snow</td>\n"
     for i, v in enumerate(snow_news):
         is_best = i == best_snow_new and v and v > 0
         html += f"                    {cell(v, lambda x: f'+{x:.0f}cm' if x else '-', is_best)}\n"
     html += "                </tr>\n"
 
     # Wind/Böen combined row: "10/41 SW"
-    html += "                <tr>\n                    <td class=\"label\">Wind/Böen</td>\n"
+    html += "                <tr>\n                    <td class=\"label\">Wind/Gusts</td>\n"
     for i, (wind, gust, direction) in enumerate(zip(winds, gusts, wind_directions)):
         compass = _degrees_to_compass(direction)
         if wind is not None and gust is not None:
@@ -581,13 +581,13 @@ def render_comparison_html(result: ComparisonResult, top_n_details: int = 3) -> 
     html += "                </tr>\n"
 
     # Wind chill row
-    html += "                <tr>\n                    <td class=\"label\">Temperatur (gefühlt)</td>\n"
+    html += "                <tr>\n                    <td class=\"label\">Temperature (felt)</td>\n"
     for i, v in enumerate(wind_chills):
         html += f"                    {cell(v, lambda x: f'{x:.0f}°C' if x is not None else '-', i == best_wc)}\n"
     html += "                </tr>\n"
 
     # Sunny hours row (0 shows "0h", not "~0h" per spec)
-    html += "                <tr>\n                    <td class=\"label\">Sonnenstunden</td>\n"
+    html += "                <tr>\n                    <td class=\"label\">Sunny Hours</td>\n"
     for i, v in enumerate(sunny_hours_list):
         is_best = i == best_sunny and v is not None and v > 0
         # Spec: "~[N]h" for N>0, "0h" for N=0, "-" for None
@@ -595,13 +595,13 @@ def render_comparison_html(result: ComparisonResult, top_n_details: int = 3) -> 
     html += "                </tr>\n"
 
     # Clouds row
-    html += "                <tr>\n                    <td class=\"label\">Bewölkung</td>\n"
+    html += "                <tr>\n                    <td class=\"label\">Cloud Cover</td>\n"
     for i, v in enumerate(clouds):
         html += f"                    {cell(v, lambda x: f'{x}%' if x is not None else '-', i == best_clouds)}\n"
     html += "                </tr>\n"
 
     # Wolkenlage row - uses WeatherMetricsService (Single Source of Truth)
-    html += "                <tr>\n                    <td class=\"label\">Wolkenlage</td>\n"
+    html += "                <tr>\n                    <td class=\"label\">Cloud Layer</td>\n"
     time_window_hours = time_window[1] - time_window[0] + 1  # Total hours in window
     for i, (sunny, cloud_low, elev) in enumerate(zip(sunny_hours_list, cloud_lows, elevations)):
         cloud_status = WeatherMetricsService.calculate_cloud_status(
@@ -614,7 +614,7 @@ def render_comparison_html(result: ComparisonResult, top_n_details: int = 3) -> 
     html += "                </tr>\n"
 
     html += """            </table>
-            <p style="font-size: 12px; color: #888;">🟢 Grün = bester Wert | Temperatur = gefühlt (Wind Chill)</p>
+            <p style="font-size: 12px; color: #888;">🟢 Green = best value | Temperature = felt (Wind Chill)</p>
         </div>
 """
 
@@ -666,13 +666,13 @@ def render_comparison_html(result: ComparisonResult, top_n_details: int = 3) -> 
 
         html += """            </table>
             <p style="font-size: 11px; color: #888; margin-top: 8px;">
-                <strong>Legende:</strong>
-                ☀️ &lt;20% Wolken |
+                <strong>Legend:</strong>
+                ☀️ &lt;20% clouds |
                 🌤️ 20-50% |
                 ⛅ 50-80% |
                 ☁️ &gt;80% |
-                🌧️ Regen |
-                ❄️ Schnee
+                🌧️ rain |
+                ❄️ snow
             </p>
         </div>
 """
@@ -714,21 +714,21 @@ def render_comparison_text(result: ComparisonResult, top_n_details: int = 3) -> 
     # Filter valid locations
     valid_locs = [loc for loc in result.locations if loc.score is not None]
     if not valid_locs:
-        return "Keine Vergleichsdaten verfügbar."
+        return "No comparison data available."
 
     lines = []
 
     # Header
-    lines.append("⛷️ SKIGEBIETE-VERGLEICH")
+    lines.append("⛷️ SKI RESORT COMPARISON")
     lines.append("=" * 24)
     lines.append(f"📅 Forecast: {target_date.strftime('%A, %d.%m.%Y')}")
-    lines.append(f"🕐 Zeitfenster: {time_window[0]:02d}:00 - {time_window[1]:02d}:00")
-    lines.append(f"📝 Erstellt: {created_at.strftime('%d.%m.%Y %H:%M')}")
+    lines.append(f"🕐 Time Window: {time_window[0]:02d}:00 - {time_window[1]:02d}:00")
+    lines.append(f"📝 Created: {created_at.strftime('%d.%m.%Y %H:%M')}")
     lines.append("")
 
     # Winner
     winner = valid_locs[0]
-    lines.append(f"🏆 EMPFEHLUNG: {winner.location.name}")
+    lines.append(f"🏆 RECOMMENDATION: {winner.location.name}")
     snow = f"❄️ {winner.snow_depth_cm:.0f}cm" if winner.snow_depth_cm else "❄️ -"
     sunny = f"☀️ ~{winner.sunny_hours}h" if winner.sunny_hours is not None else "☀️ -"
     lines.append(f"   Score: {winner.score} | {snow} | {sunny}")
@@ -740,11 +740,11 @@ def render_comparison_text(result: ComparisonResult, top_n_details: int = 3) -> 
         loc = loc_result.location
         lines.append(f"#{i+1} {loc.name}")
         lines.append(f"   Score: {loc_result.score}")
-        lines.append(f"   Schnee: {loc_result.snow_depth_cm:.0f}cm" if loc_result.snow_depth_cm else "   Schnee: -")
+        lines.append(f"   Snow: {loc_result.snow_depth_cm:.0f}cm" if loc_result.snow_depth_cm else "   Snow: -")
         if loc_result.snow_new_cm and loc_result.snow_new_cm > 0:
-            lines.append(f"   Neuschnee: +{loc_result.snow_new_cm:.0f}cm")
+            lines.append(f"   New Snow: +{loc_result.snow_new_cm:.0f}cm")
         else:
-            lines.append("   Neuschnee: -")
+            lines.append("   New Snow: -")
 
         # Wind
         wind = loc_result.wind_max or 0
@@ -758,11 +758,11 @@ def render_comparison_text(result: ComparisonResult, top_n_details: int = 3) -> 
 
         # Sunny hours
         sunny_h = loc_result.sunny_hours
-        lines.append(f"   Sonne: ~{sunny_h}h" if sunny_h is not None else "   Sonne: -")
+        lines.append(f"   Sun: ~{sunny_h}h" if sunny_h is not None else "   Sun: -")
 
         # Cloud
         cloud = loc_result.cloud_avg
-        lines.append(f"   Wolken: {cloud}%" if cloud is not None else "   Wolken: -")
+        lines.append(f"   Clouds: {cloud}%" if cloud is not None else "   Clouds: -")
 
         # Cloud status
         time_window_hours = time_window[1] - time_window[0]
@@ -771,19 +771,19 @@ def render_comparison_text(result: ComparisonResult, top_n_details: int = 3) -> 
         )
         emoji = WeatherMetricsService.get_cloud_status_emoji(cloud_status)
         text, _ = WeatherMetricsService.format_cloud_status(cloud_status)
-        lines.append(f"   Lage: {emoji} {text}")
+        lines.append(f"   Layer: {emoji} {text}")
         lines.append("")
 
     # Hourly details
     top_locs = valid_locs[:top_n_details]
     if top_locs and any(loc.hourly_data for loc in top_locs):
-        lines.append("STUNDEN-DETAILS")
+        lines.append("HOURLY DETAILS")
         lines.append("-" * 15)
 
         hours = list(range(time_window[0], time_window[1] + 1))
 
         # Header row
-        header = "Zeit  |"
+        header = "Time  |"
         for i, loc_result in enumerate(top_locs):
             name = loc_result.location.name[:14]
             header += f" #{i+1} {name:14} |"
@@ -807,7 +807,7 @@ def render_comparison_text(result: ComparisonResult, top_n_details: int = 3) -> 
 
     # Footer
     lines.append("---")
-    lines.append("Generiert von Gregor Zwanzig ⛷️")
+    lines.append("Generated by Gregor Zwanzig ⛷️")
 
     return "\n".join(lines)
 
@@ -1041,11 +1041,36 @@ def run_comparison_for_subscription(
         forecast_hours=actual_forecast_hours,
     )
 
+    # SPEC: docs/specs/modules/api_retry.md - Check for missing locations
+    successful_loc_ids = {r.location.id for r in result.locations if r.score is not None}
+    failed_locations = [loc for loc in selected_locs if loc.id not in successful_loc_ids]
+
     # Use both renderers for Multipart Email (SPEC v4.2)
     html_body = render_comparison_html(result, top_n_details=sub.top_n)
     text_body = render_comparison_text(result, top_n_details=sub.top_n)
 
-    subject = f"Skigebiete-Vergleich: {sub.name} ({now.strftime('%d.%m.%Y')})"
+    # Add warning banner if locations failed (API errors after retries)
+    if failed_locations:
+        failed_names = ", ".join(loc.name for loc in failed_locations[:3])
+        if len(failed_locations) > 3:
+            failed_names += f" (+{len(failed_locations) - 3} more)"
+
+        warning_html = f'''
+        <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px 16px; margin: 0 20px 16px 20px; border-radius: 4px;">
+            <strong>⚠️ Warning:</strong> {len(failed_locations)} location(s) unavailable due to API errors: {failed_names}
+        </div>
+'''
+        # Insert after header div
+        html_body = html_body.replace(
+            '</div>\n\n        <div class="winner">',
+            f'</div>\n{warning_html}\n        <div class="winner">'
+        )
+
+        warning_text = f"\n⚠️ WARNING: {len(failed_locations)} location(s) unavailable: {failed_names}\n"
+        # Insert after header in text version
+        text_body = text_body.replace("=" * 24, "=" * 24 + warning_text, 1)
+
+    subject = f"Ski Resort Comparison: {sub.name} ({now.strftime('%d.%m.%Y')})"
     return subject, html_body, text_body
 
 
@@ -1057,7 +1082,7 @@ def render_header() -> None:
             ui.link("Dashboard", "/").classes("text-white mx-2")
             ui.link("Locations", "/locations").classes("text-white mx-2")
             ui.link("Trips", "/trips").classes("text-white mx-2")
-            ui.link("Vergleich", "/compare").classes("text-white mx-2")
+            ui.link("Compare", "/compare").classes("text-white mx-2")
             ui.link("Subscriptions", "/subscriptions").classes("text-white mx-2")
             ui.link("Settings", "/settings").classes("text-white mx-2")
 
@@ -1083,60 +1108,60 @@ def render_compare() -> None:
         state["selected_locations"] = e.value if e.value else []
 
     with ui.column().classes("w-full max-w-6xl mx-auto p-4"):
-        ui.label("Forecast-Vergleich").classes("text-h4 mb-4")
-        ui.label("Welches Skigebiet hat die besten Bedingungen?").classes("text-gray-500 mb-4")
+        ui.label("Forecast Comparison").classes("text-h4 mb-4")
+        ui.label("Which ski resort has the best conditions?").classes("text-gray-500 mb-4")
 
         locations = load_all_locations()
 
         if not locations:
             ui.label(
-                "Keine Locations gespeichert. Bitte zuerst Locations anlegen."
+                "No locations saved. Please create locations first."
             ).classes("text-gray-500")
             ui.button(
-                "Locations verwalten",
+                "Manage Locations",
                 on_click=lambda: ui.navigate.to("/locations"),
             ).props("outline")
             return
 
         # Location selection
         with ui.card().classes("w-full mb-4"):
-            ui.label("Locations auswählen").classes("text-h6 mb-2")
+            ui.label("Select Locations").classes("text-h6 mb-2")
 
             location_options = {loc.id: f"{loc.name} ({loc.elevation_m}m)" for loc in locations}
 
             select = ui.select(
                 options=location_options,
                 multiple=True,
-                label="Locations (Mehrfachauswahl)",
+                label="Locations (multiple)",
                 on_change=on_location_change,
             ).classes("w-full").props("use-chips")
 
             with ui.row().classes("items-center gap-4 mt-2"):
-                ui.label("Datum:")
+                ui.label("Date:")
                 date_options = {
-                    0: "Heute",
-                    1: "Morgen",
-                    2: "Übermorgen",
+                    0: "Today",
+                    1: "Tomorrow",
+                    2: "Day after tomorrow",
                 }
                 date_select = ui.select(
                     options=date_options,
                     value=1,
-                    label="Tag",
+                    label="Day",
                 ).classes("w-32")
 
             with ui.row().classes("items-center gap-4 mt-2"):
-                ui.label("Zeitfenster:")
+                ui.label("Time Window:")
                 hour_options = {h: f"{h:02d}:00" for h in range(6, 22)}
                 time_start_select = ui.select(
                     options=hour_options,
                     value=9,
-                    label="Von",
+                    label="From",
                 ).classes("w-28")
-                ui.label("bis")
+                ui.label("to")
                 time_end_select = ui.select(
                     options=hour_options,
                     value=16,
-                    label="Bis",
+                    label="To",
                 ).classes("w-28")
 
         # Results area with refreshable
@@ -1145,11 +1170,11 @@ def render_compare() -> None:
             if state["loading"]:
                 with ui.row().classes("items-center gap-2 mb-4"):
                     ui.spinner("dots", size="lg")
-                    ui.label("Lade Forecasts...")
+                    ui.label("Loading Forecasts...")
                 return
 
             if not state["results"]:
-                ui.label("Wähle Locations und klicke 'Vergleichen'").classes("text-gray-400 my-8")
+                ui.label("Select locations and click 'Compare'").classes("text-gray-400 my-8")
                 return
 
             # 1. Winner recommendation FIRST (answers "Welches Skigebiet?")
@@ -1171,7 +1196,7 @@ def render_compare() -> None:
 
         async def run_comparison() -> None:
             if not state["selected_locations"]:
-                ui.notify("Bitte mindestens eine Location auswählen", type="warning")
+                ui.notify("Please select at least one location", type="warning")
                 return
 
             selected_locs = [loc for loc in locations if loc.id in state["selected_locations"]]
@@ -1295,7 +1320,7 @@ def render_compare() -> None:
         async def send_email() -> None:
             """Send comparison results via email using single renderer."""
             if not state["results"]:
-                ui.notify("Bitte zuerst einen Vergleich durchführen", type="warning")
+                ui.notify("Please run a comparison first", type="warning")
                 return
 
             try:
@@ -1337,7 +1362,7 @@ def render_compare() -> None:
 
                 # Send via SMTP with both HTML and Plain-Text
                 email_output = EmailOutput(settings)
-                subject = f"Skigebiete-Vergleich ({datetime.now().strftime('%d.%m.%Y')})"
+                subject = f"Ski Resort Comparison ({datetime.now().strftime('%d.%m.%Y')})"
 
                 await asyncio.get_event_loop().run_in_executor(
                     None, lambda: email_output.send(subject, email_html, plain_text_body=email_text)
@@ -1358,7 +1383,7 @@ def render_compare() -> None:
 
         with ui.row().classes("gap-2"):
             ui.button(
-                "Vergleichen",
+                "Compare",
                 on_click=run_comparison,
                 icon="compare_arrows",
             ).props("color=primary size=lg")
@@ -1414,8 +1439,8 @@ def render_hourly_table(
                 ranking[r["location"].id] = i + 1
 
     with ui.card().classes("w-full mb-4"):
-        ui.label("Stündliche Übersicht").classes("text-subtitle1 font-medium mb-2")
-        ui.label("Temperatur = gefühlt (Wind Chill)").classes("text-xs text-gray-500 mb-2")
+        ui.label("Hourly Overview").classes("text-subtitle1 font-medium mb-2")
+        ui.label("Temperature = felt (Wind Chill)").classes("text-xs text-gray-500 mb-2")
 
         # Build hours list
         hours = list(range(time_start, time_end + 1))
@@ -1477,7 +1502,7 @@ def render_hourly_table(
         with ui.card().classes("w-full mt-4"):
             with ui.row().classes("items-center gap-2 mb-2"):
                 ui.icon("cloud", color="gray")
-                ui.label("Wolkenschichten Details").classes("text-subtitle1 font-medium")
+                ui.label("Cloud Layers Details").classes("text-subtitle1 font-medium")
             ui.label("L = Low (0–3km) | M = Mid (3–8km) | H = High (>8km)").classes(
                 "text-xs text-gray-500 mb-2"
             )
@@ -1552,8 +1577,8 @@ def render_winner_card(results: List[Dict[str, Any]], target_date: Any = None) -
             ui.icon("emoji_events", color="amber", size="xl")
             with ui.column().classes("gap-1"):
                 # Show date in title
-                date_str = target_date.strftime('%A, %d.%m.%Y') if target_date else "Morgen"
-                ui.label(f"Empfehlung für {date_str}:").classes("text-sm text-green-700")
+                date_str = target_date.strftime('%A, %d.%m.%Y') if target_date else "Tomorrow"
+                ui.label(f"Recommendation for {date_str}:").classes("text-sm text-green-700")
                 ui.label(f"🏆 {loc.name}").classes("text-h6")
                 snow_depth = winner.get("snow_depth_cm")
                 snow_new = winner.get("snow_new_cm", 0)
@@ -1561,24 +1586,24 @@ def render_winner_card(results: List[Dict[str, Any]], target_date: Any = None) -
 
                 details = f"Score: {winner.get('score', 0)}"
                 if snow_depth:
-                    details += f" | Schneehöhe: {snow_depth:.0f}cm"
+                    details += f" | Snow Depth: {snow_depth:.0f}cm"
                 if snow_new:
-                    details += f" | Neuschnee: +{snow_new:.0f}cm"
+                    details += f" | New Snow: +{snow_new:.0f}cm"
                 if sunny:
-                    details += f" | Sonne: ~{sunny}h"
+                    details += f" | Sun: ~{sunny}h"
                 ui.label(details).classes("text-gray-600")
 
 
 def render_results_table(results: List[Dict[str, Any]]) -> None:
     """Render comparison table with locations as columns, metrics as rows."""
     if not results:
-        ui.label("Keine Ergebnisse").classes("text-gray-500")
+        ui.label("No results").classes("text-gray-500")
         return
 
     # Filter out error results for comparison
     valid_results = [r for r in results if not r.get("error")]
     if not valid_results:
-        ui.label("Alle Abfragen fehlgeschlagen").classes("text-red-500")
+        ui.label("All requests failed").classes("text-red-500")
         return
 
     # Helper to find best value index (for highlighting)
@@ -1614,7 +1639,7 @@ def render_results_table(results: List[Dict[str, Any]]) -> None:
     best_clouds = find_best_idx(clouds, higher_is_better=False)  # Less clouds = better
 
     with ui.card().classes("w-full mb-4"):
-        ui.label("Vergleich").classes("text-subtitle1 font-medium mb-2")
+        ui.label("Comparison").classes("text-subtitle1 font-medium mb-2")
 
         with ui.element("div").classes("overflow-x-auto"):
             with ui.element("table").classes("w-full text-sm border-collapse"):
@@ -1641,7 +1666,7 @@ def render_results_table(results: List[Dict[str, Any]]) -> None:
                 # Snow depth row
                 with ui.element("tr").classes("border-b"):
                     with ui.element("td").classes("p-2 font-medium bg-gray-50"):
-                        ui.label("Schneehöhe")
+                        ui.label("Snow Depth")
                     for i, depth in enumerate(snow_depths):
                         is_best = i == best_snow_depth
                         with ui.element("td").classes("p-2 text-center").style(
@@ -1653,7 +1678,7 @@ def render_results_table(results: List[Dict[str, Any]]) -> None:
                 # New snow row
                 with ui.element("tr").classes("border-b"):
                     with ui.element("td").classes("p-2 font-medium bg-gray-50"):
-                        ui.label("Neuschnee")
+                        ui.label("New Snow")
                     for i, snow in enumerate(snow_news):
                         is_best = i == best_snow_new and snow and snow > 0
                         with ui.element("td").classes("p-2 text-center").style(
@@ -1665,7 +1690,7 @@ def render_results_table(results: List[Dict[str, Any]]) -> None:
                 # Wind/Böen combined row: "10/41 SW"
                 with ui.element("tr").classes("border-b"):
                     with ui.element("td").classes("p-2 font-medium bg-gray-50"):
-                        ui.label("Wind/Böen")
+                        ui.label("Wind/Gusts")
                     for i, (wind, gust, wind_dir) in enumerate(zip(winds, gusts, wind_directions)):
                         is_best = i == best_wind
                         with ui.element("td").classes("p-2 text-center").style(
@@ -1683,7 +1708,7 @@ def render_results_table(results: List[Dict[str, Any]]) -> None:
                 # Wind chill row
                 with ui.element("tr").classes("border-b"):
                     with ui.element("td").classes("p-2 font-medium bg-gray-50"):
-                        ui.label("Temperatur (gefühlt)")
+                        ui.label("Temperature (felt)")
                     for i, wc in enumerate(wind_chills):
                         is_best = i == best_wind_chill
                         with ui.element("td").classes("p-2 text-center").style(
@@ -1695,7 +1720,7 @@ def render_results_table(results: List[Dict[str, Any]]) -> None:
                 # Sunny hours row (0 shows "0h", not "~0h" per spec)
                 with ui.element("tr").classes("border-b"):
                     with ui.element("td").classes("p-2 font-medium bg-gray-50"):
-                        ui.label("Sonnenstunden")
+                        ui.label("Sunny Hours")
                     for i, sunny in enumerate(sunny_hours):
                         is_best = i == best_sunny and sunny is not None and sunny > 0
                         with ui.element("td").classes("p-2 text-center").style(
@@ -1713,7 +1738,7 @@ def render_results_table(results: List[Dict[str, Any]]) -> None:
                 # Clouds row
                 with ui.element("tr").classes("border-b"):
                     with ui.element("td").classes("p-2 font-medium bg-gray-50"):
-                        ui.label("Bewölkung")
+                        ui.label("Cloud Cover")
                     for i, cloud in enumerate(clouds):
                         is_best = i == best_clouds
                         with ui.element("td").classes("p-2 text-center").style(
@@ -1730,7 +1755,7 @@ def render_results_table(results: List[Dict[str, Any]]) -> None:
                 time_window_hours = 8  # Default: 09:00-16:00
                 with ui.element("tr").classes("border-b"):
                     with ui.element("td").classes("p-2 font-medium bg-gray-50"):
-                        ui.label("Wolkenlage")
+                        ui.label("Cloud Layer")
                     for i, (sunny, cloud_low, elev) in enumerate(zip(sunny_hours_list, cloud_lows, elevations)):
                         with ui.element("td").classes("p-2 text-center"):
                             cloud_status = WeatherMetricsService.calculate_cloud_status(
@@ -1751,8 +1776,8 @@ def render_results_table(results: List[Dict[str, Any]]) -> None:
     # Legend
     with ui.column().classes("mt-2 gap-0"):
         ui.label(
-            "Grün = bester Wert | Temperatur = gefühlt (Wind Chill)"
+            "Green = best value | Temperature = felt (Wind Chill)"
         ).classes("text-xs text-gray-400")
         ui.label(
-            "☀️ <20% Wolken | 🌤️ 20-50% | ⛅ 50-80% | ☁️ >80% | 🌧️ Regen | ❄️ Schnee"
+            "☀️ <20% clouds | 🌤️ 20-50% | ⛅ 50-80% | ☁️ >80% | 🌧️ rain | ❄️ snow"
         ).classes("text-xs text-gray-400")
