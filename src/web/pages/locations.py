@@ -22,7 +22,7 @@ def render_header() -> None:
             ui.link("Dashboard", "/").classes("text-white mx-2")
             ui.link("Locations", "/locations").classes("text-white mx-2")
             ui.link("Trips", "/trips").classes("text-white mx-2")
-            ui.link("Vergleich", "/compare").classes("text-white mx-2")
+            ui.link("Compare", "/compare").classes("text-white mx-2")
             ui.link("Subscriptions", "/subscriptions").classes("text-white mx-2")
             ui.link("Settings", "/settings").classes("text-white mx-2")
 
@@ -42,22 +42,22 @@ def render_locations() -> None:
     def show_edit_dialog(loc: SavedLocation) -> None:
         """Show dialog to edit an existing location."""
         with ui.dialog() as dialog, ui.card().classes("w-96"):
-            ui.label(f"Location bearbeiten: {loc.name}").classes("text-h6 mb-4")
+            ui.label(f"Edit Location: {loc.name}").classes("text-h6 mb-4")
 
             name_input = ui.input("Name", value=loc.name).classes("w-full")
-            lat_input = ui.number("Breitengrad", value=loc.lat, format="%.6f").classes("w-full")
-            lon_input = ui.number("Längengrad", value=loc.lon, format="%.6f").classes("w-full")
-            elev_input = ui.number("Höhe (m)", value=loc.elevation_m).classes("w-full")
-            region_input = ui.input("Lawinenregion", value=loc.region or "").classes("w-full")
+            lat_input = ui.number("Latitude", value=loc.lat, format="%.6f").classes("w-full")
+            lon_input = ui.number("Longitude", value=loc.lon, format="%.6f").classes("w-full")
+            elev_input = ui.number("Elevation (m)", value=loc.elevation_m).classes("w-full")
+            region_input = ui.input("Avalanche Region", value=loc.region or "").classes("w-full")
             bergfex_input = ui.input(
-                "Bergfex-Slug",
+                "Bergfex Slug",
                 value=loc.bergfex_slug or "",
-                placeholder="z.B. hochfuegen",
+                placeholder="e.g. hochfuegen",
             ).classes("w-full")
-            ui.label("→ Aus bergfex.com/skigebiet/[SLUG]/schneewerte").classes("text-xs text-gray-400")
+            ui.label("→ From bergfex.com/skigebiet/[SLUG]/schneewerte").classes("text-xs text-gray-400")
 
             with ui.row().classes("w-full justify-end gap-2 mt-4"):
-                ui.button("Abbrechen", on_click=dialog.close).props("flat")
+                ui.button("Cancel", on_click=dialog.close).props("flat")
 
                 def save_edit() -> None:
                     updated = SavedLocation(
@@ -70,11 +70,11 @@ def render_locations() -> None:
                         bergfex_slug=bergfex_input.value or None,
                     )
                     save_location(updated)
-                    ui.notify(f"'{updated.name}' aktualisiert", type="positive")
+                    ui.notify(f"'{updated.name}' updated", type="positive")
                     dialog.close()
                     refresh_list()
 
-                ui.button("Speichern", on_click=save_edit).props("color=primary")
+                ui.button("Save", on_click=save_edit).props("color=primary")
 
         dialog.open()
 
@@ -84,27 +84,27 @@ def render_locations() -> None:
 
         def show_add_dialog() -> None:
             with ui.dialog() as dialog, ui.card().classes("w-96"):
-                ui.label("Neue Location").classes("text-h6 mb-4")
+                ui.label("New Location").classes("text-h6 mb-4")
 
                 name_input = ui.input(
                     "Name",
-                    placeholder="z.B. Stubaier Gletscher",
+                    placeholder="e.g. Stubaier Gletscher",
                 ).classes("w-full")
 
                 # DMS input from Google Maps
-                ui.label("Koordinaten von Google Maps:").classes("text-sm text-gray-600 mt-2")
+                ui.label("Coordinates from Google Maps:").classes("text-sm text-gray-600 mt-2")
                 dms_input = ui.input(
-                    "Google Maps Koordinaten",
+                    "Google Maps Coordinates",
                     placeholder="47°16'11.1\"N 11°50'50.2\"E",
                 ).classes("w-full")
 
                 lat_input = ui.number(
-                    "Breitengrad",
+                    "Latitude",
                     value=47.0,
                     format="%.6f",
                 ).classes("w-full")
                 lon_input = ui.number(
-                    "Längengrad",
+                    "Longitude",
                     value=11.0,
                     format="%.6f",
                 ).classes("w-full")
@@ -116,33 +116,33 @@ def render_locations() -> None:
                     if result:
                         lat_input.value = result[0]
                         lon_input.value = result[1]
-                        ui.notify("Koordinaten übernommen", type="positive")
+                        ui.notify("Coordinates applied", type="positive")
                     else:
-                        ui.notify("Ungültiges Format", type="negative")
+                        ui.notify("Invalid format", type="negative")
 
                 dms_input.on("keydown.enter", lambda: convert_dms())
                 dms_input.on("blur", lambda: convert_dms() if dms_input.value else None)
 
                 elev_input = ui.number(
-                    "Höhe (m)",
+                    "Elevation (m)",
                     value=2000,
                 ).classes("w-full")
                 region_input = ui.input(
-                    "Lawinenregion (optional)",
-                    placeholder="z.B. AT-7",
+                    "Avalanche Region (optional)",
+                    placeholder="e.g. AT-7",
                 ).classes("w-full")
                 bergfex_input = ui.input(
-                    "Bergfex-Slug (für Schneehöhen)",
-                    placeholder="z.B. hochfuegen, zillertal-arena",
+                    "Bergfex Slug (for snow depth)",
+                    placeholder="e.g. hochfuegen, zillertal-arena",
                 ).classes("w-full")
-                ui.label("→ Aus bergfex.com/skigebiet/[SLUG]/schneewerte").classes("text-xs text-gray-400")
+                ui.label("→ From bergfex.com/skigebiet/[SLUG]/schneewerte").classes("text-xs text-gray-400")
 
                 with ui.row().classes("w-full justify-end gap-2 mt-4"):
-                    ui.button("Abbrechen", on_click=dialog.close).props("flat")
+                    ui.button("Cancel", on_click=dialog.close).props("flat")
 
                     def save() -> None:
                         if not name_input.value:
-                            ui.notify("Name ist erforderlich", type="negative")
+                            ui.notify("Name is required", type="negative")
                             return
 
                         loc_id = name_input.value.lower().replace(" ", "-")
@@ -158,16 +158,16 @@ def render_locations() -> None:
                             bergfex_slug=bergfex_input.value or None,
                         )
                         save_location(location)
-                        ui.notify(f"Location '{location.name}' gespeichert", type="positive")
+                        ui.notify(f"Location '{location.name}' saved", type="positive")
                         dialog.close()
                         refresh_list()
 
-                    ui.button("Speichern", on_click=save).props("color=primary")
+                    ui.button("Save", on_click=save).props("color=primary")
 
             dialog.open()
 
         ui.button(
-            "Neue Location",
+            "New Location",
             on_click=show_add_dialog,
             icon="add_location",
         ).props("color=primary")
@@ -176,7 +176,7 @@ def render_locations() -> None:
         locations = load_all_locations()
 
         if not locations:
-            ui.label("Noch keine Locations gespeichert.").classes("text-gray-500 mt-4")
+            ui.label("No locations saved yet.").classes("text-gray-500 mt-4")
         else:
             ui.label(f"{len(locations)} Location(s)").classes("text-gray-500 mt-4 mb-2")
 
@@ -208,7 +208,7 @@ def render_locations() -> None:
                             def make_delete_handler(lid: str, lname: str):
                                 def do_delete() -> None:
                                     delete_location(lid)
-                                    ui.notify(f"'{lname}' gelöscht", type="warning")
+                                    ui.notify(f"'{lname}' deleted", type="warning")
                                     refresh_list()
                                 return do_delete
 

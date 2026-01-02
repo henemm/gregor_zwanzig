@@ -52,7 +52,7 @@ def render_header() -> None:
             ui.link("Dashboard", "/").classes("text-white mx-2")
             ui.link("Locations", "/locations").classes("text-white mx-2")
             ui.link("Trips", "/trips").classes("text-white mx-2")
-            ui.link("Vergleich", "/compare").classes("text-white mx-2")
+            ui.link("Compare", "/compare").classes("text-white mx-2")
             ui.link("Subscriptions", "/subscriptions").classes("text-white mx-2")
             ui.link("Settings", "/settings").classes("text-white mx-2")
 
@@ -68,12 +68,12 @@ def render_settings() -> None:
 
         # SMTP Settings
         with ui.card().classes("w-full mb-4"):
-            ui.label("E-Mail (SMTP)").classes("text-h6 mb-2")
+            ui.label("Email (SMTP)").classes("text-h6 mb-2")
 
             smtp_host = ui.input(
                 "SMTP Host",
                 value=settings.get("GZ_SMTP_HOST", ""),
-                placeholder="z.B. smtp.gmail.com",
+                placeholder="e.g. smtp.gmail.com",
             ).classes("w-full")
 
             smtp_port = ui.number(
@@ -82,38 +82,38 @@ def render_settings() -> None:
             ).classes("w-full")
 
             smtp_user = ui.input(
-                "SMTP Benutzer",
+                "SMTP User",
                 value=settings.get("GZ_SMTP_USER", ""),
-                placeholder="E-Mail-Adresse",
+                placeholder="Email address",
             ).classes("w-full")
 
             smtp_pass = ui.input(
-                "SMTP Passwort",
+                "SMTP Password",
                 value=settings.get("GZ_SMTP_PASS", ""),
                 password=True,
                 password_toggle_button=True,
             ).classes("w-full")
 
             mail_from = ui.input(
-                "Absender (From)",
+                "Sender (From)",
                 value=settings.get("GZ_MAIL_FROM", ""),
                 placeholder="noreply@example.com",
             ).classes("w-full")
 
             mail_to = ui.input(
-                "Empfänger (To)",
+                "Recipient (To)",
                 value=settings.get("GZ_MAIL_TO", ""),
-                placeholder="deine@email.com",
+                placeholder="your@email.com",
             ).classes("w-full")
 
             email_plain_text = ui.checkbox(
-                "Einfache Text-E-Mail (ohne Emojis)",
+                "Plain text email (no emojis)",
                 value=settings.get("GZ_EMAIL_PLAIN_TEXT", "false").lower() == "true",
             ).classes("mt-4")
 
         # Provider Settings
         with ui.card().classes("w-full mb-4"):
-            ui.label("Wetter-Provider").classes("text-h6 mb-2")
+            ui.label("Weather Provider").classes("text-h6 mb-2")
 
             provider = ui.select(
                 options=["geosphere"],
@@ -123,22 +123,22 @@ def render_settings() -> None:
 
         # Location Defaults
         with ui.card().classes("w-full mb-4"):
-            ui.label("Standard-Location").classes("text-h6 mb-2")
+            ui.label("Default Location").classes("text-h6 mb-2")
 
             lat = ui.number(
-                "Breitengrad",
+                "Latitude",
                 value=float(settings.get("GZ_LATITUDE", "47.2692")),
                 format="%.4f",
             ).classes("w-full")
 
             lon = ui.number(
-                "Längengrad",
+                "Longitude",
                 value=float(settings.get("GZ_LONGITUDE", "11.4041")),
                 format="%.4f",
             ).classes("w-full")
 
             location_name = ui.input(
-                "Ortsname",
+                "Location Name",
                 value=settings.get("GZ_LOCATION_NAME", "Innsbruck"),
             ).classes("w-full")
 
@@ -158,11 +158,11 @@ def render_settings() -> None:
                 "GZ_LOCATION_NAME": location_name.value or "Innsbruck",
             }
             save_env_settings(new_settings)
-            ui.notify("Settings gespeichert", type="positive")
+            ui.notify("Settings saved", type="positive")
 
         with ui.row().classes("gap-4"):
             ui.button(
-                "Speichern",
+                "Save",
                 on_click=save,
                 icon="save",
             ).props("color=primary")
@@ -177,32 +177,32 @@ def render_settings() -> None:
 
                     if not settings.can_send_email():
                         ui.notify(
-                            "SMTP nicht vollständig konfiguriert. Bitte alle Felder ausfüllen.",
+                            "SMTP not fully configured. Please fill all fields.",
                             type="negative",
                         )
                         return
 
-                    ui.notify("Sende Test-E-Mail...", type="info")
+                    ui.notify("Sending test email...", type="info")
 
                     email_output = EmailOutput(settings)
                     subject = "Gregor Zwanzig - Test"
-                    body = "Dies ist eine Test-E-Mail von Gregor Zwanzig.\n\nWenn du diese E-Mail erhältst, funktioniert die SMTP-Konfiguration!"
+                    body = "This is a test email from Gregor Zwanzig.\n\nIf you receive this, SMTP is configured correctly!"
 
                     await asyncio.get_event_loop().run_in_executor(
                         None, lambda: email_output.send(subject, body)
                     )
 
-                    ui.notify(f"Test-E-Mail gesendet an {settings.mail_to}!", type="positive")
+                    ui.notify(f"Test email sent to {settings.mail_to}!", type="positive")
 
                 except OutputConfigError as e:
-                    ui.notify(f"Konfigurationsfehler: {e}", type="negative")
+                    ui.notify(f"Configuration error: {e}", type="negative")
                 except OutputError as e:
-                    ui.notify(f"Versand fehlgeschlagen: {e}", type="negative")
+                    ui.notify(f"Send failed: {e}", type="negative")
                 except Exception as e:
-                    ui.notify(f"Fehler: {e}", type="negative")
+                    ui.notify(f"Error: {e}", type="negative")
 
             ui.button(
-                "Test-Mail senden",
+                "Send Test Email",
                 on_click=test_email,
                 icon="mail",
             ).props("outline")

@@ -25,7 +25,7 @@ def render_dashboard() -> None:
             ui.link("Dashboard", "/").classes("text-white mx-2")
             ui.link("Locations", "/locations").classes("text-white mx-2")
             ui.link("Trips", "/trips").classes("text-white mx-2")
-            ui.link("Vergleich", "/compare").classes("text-white mx-2")
+            ui.link("Compare", "/compare").classes("text-white mx-2")
             ui.link("Subscriptions", "/subscriptions").classes("text-white mx-2")
             ui.link("Settings", "/settings").classes("text-white mx-2")
 
@@ -39,7 +39,7 @@ def render_dashboard() -> None:
                 location_count = count_files(DATA_DIR / "locations")
                 ui.label(str(location_count)).classes("text-h3")
                 ui.button(
-                    "Verwalten",
+                    "Manage",
                     on_click=lambda: ui.navigate.to("/locations"),
                 ).props("flat")
 
@@ -48,28 +48,28 @@ def render_dashboard() -> None:
                 trip_count = count_files(DATA_DIR / "trips")
                 ui.label(str(trip_count)).classes("text-h3")
                 ui.button(
-                    "Verwalten",
+                    "Manage",
                     on_click=lambda: ui.navigate.to("/trips"),
                 ).props("flat")
 
         # Quick actions
-        ui.label("Schnellaktionen").classes("text-h5 mt-6 mb-2")
+        ui.label("Quick Actions").classes("text-h5 mt-6 mb-2")
 
         with ui.row().classes("gap-4"):
             ui.button(
-                "Forecast vergleichen",
+                "Compare Forecast",
                 on_click=lambda: ui.navigate.to("/compare"),
                 icon="compare",
             ).props("color=primary")
 
             ui.button(
-                "Neue Location",
+                "New Location",
                 on_click=lambda: ui.navigate.to("/locations"),
                 icon="add_location",
             ).props("color=secondary")
 
             ui.button(
-                "Neuer Trip",
+                "New Trip",
                 on_click=lambda: ui.navigate.to("/trips"),
                 icon="route",
             ).props("color=secondary")

@@ -21,7 +21,7 @@ def render_header() -> None:
             ui.link("Dashboard", "/").classes("text-white mx-2")
             ui.link("Locations", "/locations").classes("text-white mx-2")
             ui.link("Trips", "/trips").classes("text-white mx-2")
-            ui.link("Vergleich", "/compare").classes("text-white mx-2")
+            ui.link("Compare", "/compare").classes("text-white mx-2")
             ui.link("Subscriptions", "/subscriptions").classes("text-white mx-2")
             ui.link("Settings", "/settings").classes("text-white mx-2")
 
@@ -48,39 +48,39 @@ def render_trips() -> None:
 
             with ui.dialog() as dialog, ui.card().classes("w-full max-w-3xl max-h-screen"):
                 with ui.scroll_area().classes("w-full"):
-                    ui.label("Neuer Trip").classes("text-h6 mb-4")
+                    ui.label("New Trip").classes("text-h6 mb-4")
 
                     name_input = ui.input(
                         "Trip Name",
-                        placeholder="z.B. Stubaier Skitour",
+                        placeholder="e.g. Stubai Ski Tour",
                     ).classes("w-full")
 
                     regions_input = ui.input(
-                        "Lawinenregionen (kommagetrennt)",
-                        placeholder="z.B. AT-7, AT-5",
+                        "Avalanche Regions (comma-separated)",
+                        placeholder="e.g. AT-7, AT-5",
                     ).classes("w-full")
 
                     ui.separator().classes("my-4")
 
                     with ui.row().classes("items-center justify-between w-full"):
-                        ui.label("Etappen").classes("text-h6")
+                        ui.label("Stages").classes("text-h6")
 
                         def add_stage() -> None:
                             stage_idx = len(stages_data)
                             stage_date = date.today() + timedelta(days=stage_idx)
                             stages_data.append({
-                                "name": f"Etappe {stage_idx + 1}",
+                                "name": f"Stage {stage_idx + 1}",
                                 "date": stage_date.isoformat(),
                                 "waypoints": [],
                             })
                             stages_ui.refresh()
 
-                        ui.button("Etappe hinzufügen", on_click=add_stage, icon="add").props("outline size=sm")
+                        ui.button("Add Stage", on_click=add_stage, icon="add").props("outline size=sm")
 
                     @ui.refreshable
                     def stages_ui() -> None:
                         if not stages_data:
-                            ui.label("Noch keine Etappen. Klicke 'Etappe hinzufügen'.").classes("text-gray-400 my-4")
+                            ui.label("No stages yet. Click 'Add Stage'.").classes("text-gray-400 my-4")
                             return
 
                         for idx, stage in enumerate(stages_data):
@@ -100,7 +100,7 @@ def render_trips() -> None:
                                     ui.input("Name", value=stage["name"]).classes("flex-1").bind_value(stage, "name")
                                     ui.input("Datum (YYYY-MM-DD)", value=stage["date"]).classes("w-40").bind_value(stage, "date")
 
-                                ui.label("Wegpunkte:").classes("text-sm font-medium")
+                                ui.label("Waypoints:").classes("text-sm font-medium")
 
                                 # Waypoints for this stage
                                 for wp_idx, wp in enumerate(stage["waypoints"]):
@@ -108,7 +108,7 @@ def render_trips() -> None:
                                         with ui.row().classes("w-full gap-2 items-center"):
                                             ui.label(wp["id"]).classes("w-10 font-bold text-green-600")
                                             ui.input("Name", value=wp["name"]).classes("flex-1").bind_value(wp, "name")
-                                            ui.number("Höhe (m)", value=wp["elevation_m"]).classes("w-24").bind_value(wp, "elevation_m")
+                                            ui.number("Elevation (m)", value=wp["elevation_m"]).classes("w-24").bind_value(wp, "elevation_m")
 
                                             def make_remove_wp(s: Dict, wi: int):
                                                 def remove() -> None:
@@ -145,7 +145,7 @@ def render_trips() -> None:
                                         wp_idx = len(s["waypoints"])
                                         s["waypoints"].append({
                                             "id": f"G{wp_idx + 1}",
-                                            "name": f"Punkt {wp_idx + 1}",
+                                            "name": f"Point {wp_idx + 1}",
                                             "lat": 47.0,
                                             "lon": 11.0,
                                             "elevation_m": 2000,
@@ -153,22 +153,22 @@ def render_trips() -> None:
                                         stages_ui.refresh()
                                     return add
 
-                                ui.button("Wegpunkt hinzufügen", on_click=make_add_wp(stage), icon="add_location").props("flat dense size=sm").classes("mt-1")
+                                ui.button("Add Waypoint", on_click=make_add_wp(stage), icon="add_location").props("flat dense size=sm").classes("mt-1")
 
                     stages_ui()
 
                     ui.separator().classes("my-4")
 
                     with ui.row().classes("w-full justify-end gap-2"):
-                        ui.button("Abbrechen", on_click=dialog.close).props("flat")
+                        ui.button("Cancel", on_click=dialog.close).props("flat")
 
                         def save() -> None:
                             if not name_input.value:
-                                ui.notify("Name ist erforderlich", type="negative")
+                                ui.notify("Name is required", type="negative")
                                 return
 
                             if not stages_data:
-                                ui.notify("Mindestens eine Etappe erforderlich", type="negative")
+                                ui.notify("At least one stage required", type="negative")
                                 return
 
                             trip_id = name_input.value.lower().replace(" ", "-")
@@ -178,7 +178,7 @@ def render_trips() -> None:
                             stages = []
                             for idx, sd in enumerate(stages_data):
                                 if not sd["waypoints"]:
-                                    ui.notify(f"Etappe {idx + 1} braucht mindestens einen Wegpunkt", type="negative")
+                                    ui.notify(f"Stage {idx + 1} needs at least one waypoint", type="negative")
                                     return
 
                                 waypoints = [
@@ -195,7 +195,7 @@ def render_trips() -> None:
                                 try:
                                     stage_date = date.fromisoformat(sd["date"])
                                 except ValueError:
-                                    ui.notify(f"Ungültiges Datum in Etappe {idx + 1}", type="negative")
+                                    ui.notify(f"Invalid date in Stage {idx + 1}", type="negative")
                                     return
 
                                 stages.append(Stage(
@@ -218,17 +218,17 @@ def render_trips() -> None:
                             )
 
                             save_trip(trip)
-                            ui.notify(f"Trip '{trip.name}' gespeichert", type="positive")
+                            ui.notify(f"Trip '{trip.name}' saved", type="positive")
                             dialog.close()
                             refresh_list()
 
-                        ui.button("Speichern", on_click=save).props("color=primary")
+                        ui.button("Save", on_click=save).props("color=primary")
 
             dialog.open()
 
         def show_edit_dialog(trip: Trip) -> None:
-            """Edit-Dialog für bestehenden Trip."""
-            # Konvertiere Trip -> stages_data Dictionary
+            """Edit dialog for existing trip."""
+            # Convert Trip -> stages_data Dictionary
             stages_data: List[Dict[str, Any]] = []
             for stage in trip.stages:
                 stage_dict = {
@@ -249,42 +249,42 @@ def render_trips() -> None:
 
             with ui.dialog() as dialog, ui.card().classes("w-full max-w-3xl max-h-screen"):
                 with ui.scroll_area().classes("w-full"):
-                    ui.label("Trip bearbeiten").classes("text-h6 mb-4")
+                    ui.label("Edit Trip").classes("text-h6 mb-4")
 
                     name_input = ui.input(
                         "Trip Name",
                         value=trip.name,
-                        placeholder="z.B. Stubaier Skitour",
+                        placeholder="e.g. Stubai Ski Tour",
                     ).classes("w-full")
 
                     regions_value = ", ".join(trip.avalanche_regions) if trip.avalanche_regions else ""
                     regions_input = ui.input(
-                        "Lawinenregionen (kommagetrennt)",
+                        "Avalanche Regions (comma-separated)",
                         value=regions_value,
-                        placeholder="z.B. AT-7, AT-5",
+                        placeholder="e.g. AT-7, AT-5",
                     ).classes("w-full")
 
                     ui.separator().classes("my-4")
 
                     with ui.row().classes("items-center justify-between w-full"):
-                        ui.label("Etappen").classes("text-h6")
+                        ui.label("Stages").classes("text-h6")
 
                         def add_stage_edit() -> None:
                             stage_idx = len(stages_data)
                             stage_date = date.today() + timedelta(days=stage_idx)
                             stages_data.append({
-                                "name": f"Etappe {stage_idx + 1}",
+                                "name": f"Stage {stage_idx + 1}",
                                 "date": stage_date.isoformat(),
                                 "waypoints": [],
                             })
                             stages_ui_edit.refresh()
 
-                        ui.button("Etappe hinzufügen", on_click=add_stage_edit, icon="add").props("outline size=sm")
+                        ui.button("Add Stage", on_click=add_stage_edit, icon="add").props("outline size=sm")
 
                     @ui.refreshable
                     def stages_ui_edit() -> None:
                         if not stages_data:
-                            ui.label("Noch keine Etappen. Klicke 'Etappe hinzufügen'.").classes("text-gray-400 my-4")
+                            ui.label("No stages yet. Click 'Add Stage'.").classes("text-gray-400 my-4")
                             return
 
                         for idx, stage in enumerate(stages_data):
@@ -304,7 +304,7 @@ def render_trips() -> None:
                                     ui.input("Name", value=stage["name"]).classes("flex-1").bind_value(stage, "name")
                                     ui.input("Datum (YYYY-MM-DD)", value=stage["date"]).classes("w-40").bind_value(stage, "date")
 
-                                ui.label("Wegpunkte:").classes("text-sm font-medium")
+                                ui.label("Waypoints:").classes("text-sm font-medium")
 
                                 # Waypoints for this stage
                                 for wp_idx, wp in enumerate(stage["waypoints"]):
@@ -312,7 +312,7 @@ def render_trips() -> None:
                                         with ui.row().classes("w-full gap-2 items-center"):
                                             ui.label(wp["id"]).classes("w-10 font-bold text-green-600")
                                             ui.input("Name", value=wp["name"]).classes("flex-1").bind_value(wp, "name")
-                                            ui.number("Höhe (m)", value=wp["elevation_m"]).classes("w-24").bind_value(wp, "elevation_m")
+                                            ui.number("Elevation (m)", value=wp["elevation_m"]).classes("w-24").bind_value(wp, "elevation_m")
 
                                             def make_remove_wp_edit(s: Dict, wi: int):
                                                 def remove() -> None:
@@ -349,7 +349,7 @@ def render_trips() -> None:
                                         wp_idx = len(s["waypoints"])
                                         s["waypoints"].append({
                                             "id": f"G{wp_idx + 1}",
-                                            "name": f"Punkt {wp_idx + 1}",
+                                            "name": f"Point {wp_idx + 1}",
                                             "lat": 47.0,
                                             "lon": 11.0,
                                             "elevation_m": 2000,
@@ -357,32 +357,32 @@ def render_trips() -> None:
                                         stages_ui_edit.refresh()
                                     return add
 
-                                ui.button("Wegpunkt hinzufügen", on_click=make_add_wp_edit(stage), icon="add_location").props("flat dense size=sm").classes("mt-1")
+                                ui.button("Add Waypoint", on_click=make_add_wp_edit(stage), icon="add_location").props("flat dense size=sm").classes("mt-1")
 
                     stages_ui_edit()
 
                     ui.separator().classes("my-4")
 
                     with ui.row().classes("w-full justify-end gap-2"):
-                        ui.button("Abbrechen", on_click=dialog.close).props("flat")
+                        ui.button("Cancel", on_click=dialog.close).props("flat")
 
                         def save_edit() -> None:
                             if not name_input.value:
-                                ui.notify("Name ist erforderlich", type="negative")
+                                ui.notify("Name is required", type="negative")
                                 return
 
                             if not stages_data:
-                                ui.notify("Mindestens eine Etappe erforderlich", type="negative")
+                                ui.notify("At least one stage required", type="negative")
                                 return
 
-                            # Trip-ID bleibt unveraendert!
+                            # Trip ID remains unchanged!
                             trip_id = trip.id
 
                             # Build stages
                             stages = []
                             for idx, sd in enumerate(stages_data):
                                 if not sd["waypoints"]:
-                                    ui.notify(f"Etappe {idx + 1} braucht mindestens einen Wegpunkt", type="negative")
+                                    ui.notify(f"Stage {idx + 1} needs at least one waypoint", type="negative")
                                     return
 
                                 waypoints = [
@@ -399,7 +399,7 @@ def render_trips() -> None:
                                 try:
                                     stage_date = date.fromisoformat(sd["date"])
                                 except ValueError:
-                                    ui.notify(f"Ungültiges Datum in Etappe {idx + 1}", type="negative")
+                                    ui.notify(f"Invalid date in Stage {idx + 1}", type="negative")
                                     return
 
                                 stages.append(Stage(
@@ -422,16 +422,16 @@ def render_trips() -> None:
                             )
 
                             save_trip(updated_trip)
-                            ui.notify(f"Trip '{updated_trip.name}' aktualisiert", type="positive")
+                            ui.notify(f"Trip '{updated_trip.name}' updated", type="positive")
                             dialog.close()
                             refresh_list()
 
-                        ui.button("Änderungen speichern", on_click=save_edit).props("color=primary")
+                        ui.button("Save Changes", on_click=save_edit).props("color=primary")
 
             dialog.open()
 
         ui.button(
-            "Neuer Trip",
+            "New Trip",
             on_click=show_add_dialog,
             icon="route",
         ).props("color=primary")
@@ -440,7 +440,7 @@ def render_trips() -> None:
         trips = load_all_trips()
 
         if not trips:
-            ui.label("Noch keine Trips gespeichert.").classes("text-gray-500 mt-4")
+            ui.label("No trips saved yet.").classes("text-gray-500 mt-4")
         else:
             ui.label(f"{len(trips)} Trip(s)").classes("text-gray-500 mt-4 mb-2")
 
@@ -450,8 +450,8 @@ def render_trips() -> None:
                         with ui.column().classes("gap-0"):
                             ui.label(trip.name).classes("text-h6")
                             ui.label(
-                                f"{len(trip.stages)} Etappe(n), "
-                                f"{len(trip.all_waypoints)} Wegpunkte"
+                                f"{len(trip.stages)} stage(s), "
+                                f"{len(trip.all_waypoints)} waypoints"
                             ).classes("text-gray-500 text-sm")
 
                             with ui.row().classes("gap-1 mt-1"):
@@ -466,7 +466,7 @@ def render_trips() -> None:
                         def make_delete_handler(tid: str, tname: str):
                             def do_delete() -> None:
                                 delete_trip(tid)
-                                ui.notify(f"'{tname}' gelöscht", type="warning")
+                                ui.notify(f"'{tname}' deleted", type="warning")
                                 refresh_list()
                             return do_delete
 
