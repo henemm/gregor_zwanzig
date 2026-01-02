@@ -349,7 +349,12 @@ class WeatherMetricsService:
         # Get weather symbol based on effective cloud cover
         # ForecastDataPoint uses precip_1h_mm, t2m_c, wind10m_kmh, wind_direction_deg
         precip_mm = getattr(dp, 'precip_1h_mm', None) or getattr(dp, 'precip_mm', None) or 0
-        temp_c = getattr(dp, 't2m_c', None) or getattr(dp, 'temp_c', None) or 0
+        air_temp_c = getattr(dp, 't2m_c', None) or getattr(dp, 'temp_c', None) or 0
+
+        # v4.3: Wind Chill fuer konsistente gefuehlte Temperatur
+        # Vergleichs-Header zeigt auch Wind Chill - stundlich muss identisch sein
+        wind_chill_c = getattr(dp, 'wind_chill_c', None)
+        temp_c = wind_chill_c if wind_chill_c is not None else air_temp_c
 
         symbol = WeatherMetricsService.get_weather_symbol(
             cloud_total_pct=dp.cloud_total_pct,
@@ -361,9 +366,10 @@ class WeatherMetricsService:
         )
 
         # Determine precipitation type and amount
+        # Note: Use AIR temperature for precip type (physical reality), not wind chill
 
         if precip_mm > 0:
-            if temp_c < 2:
+            if air_temp_c < 2:
                 # Snow: mm water -> cm snow (factor ~10)
                 precip_symbol = "🌨️"
                 precip_unit = "cm"

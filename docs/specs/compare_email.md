@@ -2,9 +2,9 @@
 entity_id: compare_email
 type: feature
 created: 2025-12-28
-updated: 2025-12-31
+updated: 2026-01-02
 status: approved
-version: "4.2"
+version: "4.3"
 tags: [ui, nicegui, compare, email, scheduler]
 entities: [comparesubscription, comparisonengine, comparisonresult, locationresult, hourlycell]
 ---
@@ -193,7 +193,7 @@ class HourlyCell:
     """Eine Stunden-Zelle - identisch fuer UI und Email."""
     hour: int                    # 9, 10, 11, ...
     symbol: str                  # "☀️", "🌤️", "⛅", "☁️"
-    temp_c: int                  # -5, 12, ...
+    temp_c: int                  # Gefuehlte Temperatur (Wind Chill), Fallback: Lufttemp
     precip_symbol: str           # "🌨️", "🌧️", ""
     precip_amount: Optional[float]  # 2.5, None wenn kein Niederschlag
     precip_unit: str             # "cm", "mm"
@@ -231,10 +231,14 @@ def format_hourly_cell(dp: ForecastDataPoint, elevation_m: int) -> HourlyCell:
         precip_amount = None
         precip_unit = ""
 
+    # v4.3: Wind Chill fuer konsistente gefuehlte Temperatur
+    # Vergleichs-Header zeigt auch Wind Chill - stundlich muss identisch sein
+    felt_temp = dp.wind_chill_c if dp.wind_chill_c is not None else dp.temp_c
+
     return HourlyCell(
         hour=dp.ts.hour,
         symbol=symbol,
-        temp_c=round(dp.temp_c),
+        temp_c=round(felt_temp),
         precip_symbol=precip_symbol,
         precip_amount=precip_amount,
         precip_unit=precip_unit,
@@ -437,6 +441,10 @@ Fuer spaetere Erweiterung:
 
 ## Changelog
 
+- 2026-01-02: v4.3 - Konsistente gefuehlte Temperatur
+  - HourlyCell zeigt jetzt Wind Chill statt Lufttemperatur
+  - Konsistent mit Vergleichs-Header (der bereits Wind Chill zeigte)
+  - Fallback auf Lufttemperatur wenn Wind Chill nicht verfuegbar
 - 2025-12-31: v4.2 - HourlyCell + Multipart E-Mail
   - NEU: `HourlyCell` Dataclass als Single Source of Truth
   - NEU: `format_hourly_cell()` fuer konsistente Stunden-Formatierung
