@@ -22,3 +22,7 @@ node_modules/
 
 # Cursor / Editor
 .cursorrules
+
+# Claude Code (session state)
+.claude/validation_state.json
+.claude/workflow_state.json
