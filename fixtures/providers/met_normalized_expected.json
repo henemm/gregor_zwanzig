@@ -1,0 +1,76 @@
+{
+  "meta": {
+    "provider": "MET",
+    "model": "ECMWF",
+    "run": "2025-08-29T06:15:00Z",
+    "grid_res_km": 9,
+    "interp": "point_grid",
+    "stations_used": []
+  },
+  "data": [
+    {
+      "ts": "2025-08-29T12:00:00Z",
+      "t2m_c": 18.5,
+      "wind10m_kmh": 22.0,
+      "gust_kmh": 38.2,
+      "precip_rate_mmph": 0.4,
+      "precip_1h_mm": 0.4,
+      "cloud_total_pct": 85,
+      "symbol": "lightrain",
+      "thunder_level": "NONE",
+      "cape_jkg": null,
+      "pop_pct": null,
+      "pressure_msl_hpa": 1013.2,
+      "humidity_pct": 78,
+      "dewpoint_c": null
+    },
+    {
+      "ts": "2025-08-29T13:00:00Z",
+      "t2m_c": 19.2,
+      "wind10m_kmh": 27.0,
+      "gust_kmh": 44.3,
+      "precip_rate_mmph": 1.2,
+      "precip_1h_mm": 1.2,
+      "cloud_total_pct": 90,
+      "symbol": "lightrainandthunder",
+      "thunder_level": "HIGH",
+      "cape_jkg": null,
+      "pop_pct": null,
+      "pressure_msl_hpa": 1012.8,
+      "humidity_pct": 82,
+      "dewpoint_c": null
+    },
+    {
+      "ts": "2025-08-29T14:00:00Z",
+      "t2m_c": 17.8,
+      "wind10m_kmh": 32.0,
+      "gust_kmh": 54.7,
+      "precip_rate_mmph": 3.5,
+      "precip_1h_mm": 3.5,
+      "cloud_total_pct": 95,
+      "symbol": "heavyrain",
+      "thunder_level": "NONE",
+      "cape_jkg": null,
+      "pop_pct": null,
+      "pressure_msl_hpa": 1011.5,
+      "humidity_pct": 88,
+      "dewpoint_c": null
+    },
+    {
+      "ts": "2025-08-29T15:00:00Z",
+      "t2m_c": 16.5,
+      "wind10m_kmh": 19.8,
+      "gust_kmh": 33.1,
+      "precip_rate_mmph": 0.0,
+      "precip_1h_mm": 0.0,
+      "cloud_total_pct": 75,
+      "symbol": "partlycloudy",
+      "thunder_level": "NONE",
+      "cape_jkg": null,
+      "pop_pct": null,
+      "pressure_msl_hpa": 1011.0,
+      "humidity_pct": 80,
+      "dewpoint_c": null
+    }
+  ]
+}
