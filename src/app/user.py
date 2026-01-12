@@ -143,10 +143,11 @@ class LocationResult:
     wind_direction_avg: Optional[int] = None  # Average wind direction (degrees, 0=N)
     gust_max: Optional[float] = None  # Maximum gust speed
     wind_chill_min: Optional[float] = None
-    cloud_avg: Optional[int] = None
+    cloud_avg: Optional[int] = None  # Effective cloud cover (elevation-aware)
     cloud_low_avg: Optional[int] = None  # Low cloud layer for "Wolkenlage" analysis
     cloud_mid_avg: Optional[int] = None  # Mid cloud layer for effective cloud calculation
     cloud_high_avg: Optional[int] = None  # High cloud layer for effective cloud calculation
+    above_low_clouds: bool = False  # True if elevation >= 2500m (shows "*" marker)
     sunny_hours: Optional[int] = None
     hourly_data: List["ForecastDataPoint"] = field(default_factory=list)
     error: Optional[str] = None  # Error message if fetch failed

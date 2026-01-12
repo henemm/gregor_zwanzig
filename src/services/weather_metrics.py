@@ -44,14 +44,13 @@ class HourlyCell:
 
 class CloudStatus(str, Enum):
     """
-    Wolkenlage classification.
+    Cloud layer position classification (elevation-based only).
 
-    SPEC: docs/specs/compare_email.md Zeile 212-216
+    SPEC: docs/specs/cloud_layer_refactor.md
     """
-    ABOVE_CLOUDS = "above_clouds"  # High elevation above low clouds
-    CLEAR = "clear"                # >= 75% sunshine
-    LIGHT = "light"                # >= 25% sunshine
-    IN_CLOUDS = "in_clouds"        # < 25% sunshine
+    ABOVE_CLOUDS = "above_clouds"  # Location is above the cloud layer
+    IN_CLOUDS = "in_clouds"        # Location is within the cloud layer
+    NONE = "none"                  # No relevant cloud layer info
 
 
 class WeatherMetricsService:
@@ -70,10 +69,17 @@ class WeatherMetricsService:
     # Thresholds (configurable, but with sensible defaults)
     HIGH_ELEVATION_THRESHOLD_M = 2500
     SUNNY_HOUR_CLOUD_THRESHOLD_PCT = 30
-    CLEAR_SUNSHINE_RATIO = 0.75  # >= 75% = clear
-    LIGHT_SUNSHINE_RATIO = 0.25  # >= 25% = light
-    ABOVE_CLOUDS_MIN_SUNNY_HOURS = 5
-    ABOVE_CLOUDS_MIN_LOW_CLOUD_PCT = 30
+
+    # Cloud layer position thresholds (SPEC: docs/specs/cloud_layer_refactor.md)
+    # Elevation tiers
+    GLACIER_LEVEL_M = 3000               # >= 3000m: in mid-cloud zone
+    ALPINE_LEVEL_M = 2000                # 2000-3000m: top of low-cloud zone
+    # Cloud thresholds
+    ABOVE_CLOUDS_LOW_CLOUD_PCT = 20      # Min low cloud % to show "above clouds"
+    ABOVE_CLOUDS_MAX_MID_CLOUD_PCT = 30  # Max mid cloud % for "above clouds"
+    IN_CLOUDS_MID_PCT = 50               # Min mid cloud % for glacier "in clouds"
+    IN_CLOUDS_ALPINE_LOW_PCT = 50        # Min low cloud % for alpine "in clouds"
+    IN_CLOUDS_VALLEY_LOW_PCT = 60        # Min low cloud % for valley "in clouds"
 
     @staticmethod
     def calculate_effective_cloud(
@@ -156,100 +162,121 @@ class WeatherMetricsService:
 
     @staticmethod
     def calculate_cloud_status(
-        sunny_hours: Optional[int],
-        time_window_hours: int,
-        elevation_m: Optional[int] = None,
-        cloud_low_avg: Optional[int] = None,
+        elevation_m: Optional[int],
+        cloud_low_pct: Optional[int],
+        cloud_mid_pct: Optional[int] = None,
+        cloud_high_pct: Optional[int] = None,
     ) -> CloudStatus:
         """
-        Determine cloud status based on sunny hours.
+        Determine location position relative to cloud layer.
 
-        Rules (SPEC: docs/specs/compare_email.md Zeile 212-216):
-        1. High elevation (>= 2500m) + cloud_low > 30% + sunny >= 5h -> ABOVE_CLOUDS
-        2. sunny >= 75% of hours -> CLEAR
-        3. sunny >= 25% of hours -> LIGHT
-        4. Otherwise -> IN_CLOUDS
+        Cloud layer heights (Open-Meteo / WMO):
+        - Low:  0 - 2000m (WMO) / 0 - 3000m (Open-Meteo)
+        - Mid:  2000 - 4500m (WMO) / 3000 - 8000m (Open-Meteo)
+        - High: > 4500m (WMO) / > 8000m (Open-Meteo)
+
+        Key insight: A location at 3200m is IN the mid-cloud layer, not above it!
+
+        Rules by elevation tier (SPEC: docs/specs/cloud_layer_refactor.md):
+
+        1. Glacier level (>= 3000m) - in the mid-cloud zone:
+           - cloud_mid > 50% -> IN_CLOUDS (in mid-level clouds)
+           - cloud_low > 20% AND cloud_mid <= 30% -> ABOVE_CLOUDS (above low, clear mid)
+           - otherwise -> NONE
+
+        2. Alpine level (2000-3000m) - top of low-cloud zone:
+           - cloud_low > 50% -> IN_CLOUDS
+           - otherwise -> NONE
+
+        3. Valley level (< 2000m) - in low-cloud zone:
+           - cloud_low > 60% -> IN_CLOUDS
+           - otherwise -> NONE
 
         Args:
-            sunny_hours: Number of sunny hours in time window
-            time_window_hours: Total hours in time window (e.g., 8 for 09:00-16:00)
             elevation_m: Location elevation in meters
-            cloud_low_avg: Average low cloud cover (0-100%)
+            cloud_low_pct: Low cloud cover 0-3km (0-100%)
+            cloud_mid_pct: Mid cloud cover 3-8km (0-100%)
+            cloud_high_pct: High cloud cover >8km (0-100%) - reserved for future use
 
         Returns:
             CloudStatus enum value
         """
-        if sunny_hours is None:
+        if elevation_m is None:
+            return CloudStatus.NONE
+
+        low = cloud_low_pct or 0
+        mid = cloud_mid_pct or 0
+
+        # Tier 1: Glacier level (>= 3000m) - in the mid-cloud zone
+        if elevation_m >= WeatherMetricsService.GLACIER_LEVEL_M:
+            # In mid-level clouds?
+            if mid > WeatherMetricsService.IN_CLOUDS_MID_PCT:
+                return CloudStatus.IN_CLOUDS
+            # Above low clouds with clear mid layer?
+            if (low > WeatherMetricsService.ABOVE_CLOUDS_LOW_CLOUD_PCT
+                    and mid <= WeatherMetricsService.ABOVE_CLOUDS_MAX_MID_CLOUD_PCT):
+                return CloudStatus.ABOVE_CLOUDS
+            return CloudStatus.NONE
+
+        # Tier 2: Alpine level (2000-3000m) - top of low-cloud zone
+        if elevation_m >= WeatherMetricsService.ALPINE_LEVEL_M:
+            if low > WeatherMetricsService.IN_CLOUDS_ALPINE_LOW_PCT:
+                return CloudStatus.IN_CLOUDS
+            return CloudStatus.NONE
+
+        # Tier 3: Valley level (< 2000m) - in low-cloud zone
+        if low > WeatherMetricsService.IN_CLOUDS_VALLEY_LOW_PCT:
             return CloudStatus.IN_CLOUDS
 
-        # Rule 1: High elevation above low clouds
-        if (elevation_m is not None
-            and elevation_m >= WeatherMetricsService.HIGH_ELEVATION_THRESHOLD_M
-            and cloud_low_avg is not None
-            and cloud_low_avg > WeatherMetricsService.ABOVE_CLOUDS_MIN_LOW_CLOUD_PCT
-            and sunny_hours >= WeatherMetricsService.ABOVE_CLOUDS_MIN_SUNNY_HOURS):
-            return CloudStatus.ABOVE_CLOUDS
-
-        # Rules 2-4: Based on sunshine ratio
-        if time_window_hours > 0:
-            ratio = sunny_hours / time_window_hours
-            if ratio >= WeatherMetricsService.CLEAR_SUNSHINE_RATIO:
-                return CloudStatus.CLEAR
-            elif ratio >= WeatherMetricsService.LIGHT_SUNSHINE_RATIO:
-                return CloudStatus.LIGHT
-
-        return CloudStatus.IN_CLOUDS
+        return CloudStatus.NONE
 
     @staticmethod
     def format_cloud_status(status: CloudStatus, use_emoji: bool = True) -> Tuple[str, str]:
         """
         Format CloudStatus for display.
 
-        SPEC: docs/specs/compare_email.md Zeile 212-216
+        SPEC: docs/specs/cloud_layer_refactor.md
 
         Args:
             status: CloudStatus enum value
-            use_emoji: Whether to include emoji prefix
+            use_emoji: Whether to include emoji prefix (unused, kept for API compat)
 
         Returns:
             Tuple of (display_text, css_style)
         """
         mapping = {
             CloudStatus.ABOVE_CLOUDS: (
-                "ueber Wolken" if not use_emoji else "ueber Wolken",
+                "above clouds",
                 "color: #2e7d32; font-weight: 600;"
             ),
-            CloudStatus.CLEAR: (
-                "klar" if not use_emoji else "klar",
-                "color: #2e7d32;"
-            ),
-            CloudStatus.LIGHT: (
-                "leicht" if not use_emoji else "leicht",
-                ""
-            ),
             CloudStatus.IN_CLOUDS: (
-                "in Wolken" if not use_emoji else "in Wolken",
+                "in clouds",
                 "color: #888;"
             ),
+            CloudStatus.NONE: (
+                "",
+                ""
+            ),
         }
-        return mapping.get(status, ("-", ""))
+        return mapping.get(status, ("", ""))
 
     @staticmethod
     def get_cloud_status_emoji(status: CloudStatus) -> str:
         """
         Get emoji for CloudStatus.
 
+        SPEC: docs/specs/cloud_layer_refactor.md
+
         Args:
             status: CloudStatus enum value
 
         Returns:
-            Emoji string
+            Emoji string (empty for NONE)
         """
         mapping = {
             CloudStatus.ABOVE_CLOUDS: "☀️",
-            CloudStatus.CLEAR: "✨",
-            CloudStatus.LIGHT: "🌤️",
             CloudStatus.IN_CLOUDS: "☁️",
+            CloudStatus.NONE: "",
         }
         return mapping.get(status, "")
 

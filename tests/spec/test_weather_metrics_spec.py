@@ -3,7 +3,7 @@ Spec Tests for WeatherMetricsService.
 
 These tests verify that the implementation matches the spec.
 SPEC: docs/specs/modules/weather_metrics.md
-SPEC: docs/specs/compare_email.md (Wolkenlage rules)
+SPEC: docs/specs/cloud_layer_refactor.md (Cloud Layer rules)
 
 Run with: uv run pytest tests/spec/test_weather_metrics_spec.py -v
 """
@@ -14,132 +14,166 @@ from services.weather_metrics import CloudStatus, WeatherMetricsService
 
 class TestCloudStatusSpec:
     """
-    Tests against docs/specs/compare_email.md Zeile 212-216.
+    Tests against docs/specs/cloud_layer_refactor.md.
 
-    Wolkenlage-Werte:
-    - elevation >= 2500m AND cloud_low > 30% AND sunny >= 5h: "ueber Wolken"
-    - sunny >= 75% of time_window: "klar"
-    - sunny >= 25% of time_window: "leicht"
-    - Otherwise: "in Wolken"
+    Cloud Layer uses elevation tiers + relevant cloud layer:
+
+    Tier 1: Glacier (>= 3000m) - in mid-cloud zone
+    - cloud_mid > 50% -> IN_CLOUDS
+    - cloud_low > 20% AND cloud_mid <= 30% -> ABOVE_CLOUDS
+    - otherwise -> NONE
+
+    Tier 2: Alpine (2000-3000m) - top of low-cloud zone
+    - cloud_low > 50% -> IN_CLOUDS
+    - otherwise -> NONE
+
+    Tier 3: Valley (< 2000m) - in low-cloud zone
+    - cloud_low > 60% -> IN_CLOUDS
+    - otherwise -> NONE
     """
 
-    def test_above_clouds_high_elevation_with_low_clouds(self):
-        """High elevation (3000m) above low clouds (50%) with good sunshine (6h)."""
+    # --- Tier 1: Glacier level (>= 3000m) ---
+
+    def test_glacier_above_clouds_low_clouds_clear_mid(self):
+        """Glacier (3200m) with low clouds below and clear mid -> ABOVE_CLOUDS."""
         status = WeatherMetricsService.calculate_cloud_status(
-            sunny_hours=6,
-            time_window_hours=8,
-            elevation_m=3000,
-            cloud_low_avg=50,
+            elevation_m=3200,
+            cloud_low_pct=40,
+            cloud_mid_pct=10,
         )
         assert status == CloudStatus.ABOVE_CLOUDS
 
-    def test_above_clouds_requires_high_elevation(self):
-        """Low elevation should not get ABOVE_CLOUDS even with low clouds."""
+    def test_glacier_in_mid_clouds(self):
+        """Glacier (3200m) with high mid clouds -> IN_CLOUDS."""
         status = WeatherMetricsService.calculate_cloud_status(
-            sunny_hours=6,
-            time_window_hours=8,
-            elevation_m=2000,  # Below threshold
-            cloud_low_avg=50,
-        )
-        assert status != CloudStatus.ABOVE_CLOUDS
-        assert status == CloudStatus.CLEAR  # 6/8 = 75%
-
-    def test_above_clouds_requires_low_clouds(self):
-        """High elevation without low clouds should get CLEAR, not ABOVE_CLOUDS."""
-        status = WeatherMetricsService.calculate_cloud_status(
-            sunny_hours=6,
-            time_window_hours=8,
-            elevation_m=3000,
-            cloud_low_avg=20,  # Below threshold
-        )
-        assert status != CloudStatus.ABOVE_CLOUDS
-        assert status == CloudStatus.CLEAR
-
-    def test_above_clouds_requires_min_sunshine(self):
-        """High elevation needs at least 5h sunshine for ABOVE_CLOUDS."""
-        status = WeatherMetricsService.calculate_cloud_status(
-            sunny_hours=4,  # Below 5h threshold
-            time_window_hours=8,
-            elevation_m=3000,
-            cloud_low_avg=50,
-        )
-        assert status != CloudStatus.ABOVE_CLOUDS
-        assert status == CloudStatus.LIGHT  # 4/8 = 50%
-
-    def test_clear_75_percent_sunshine(self):
-        """75% or more sunshine hours -> CLEAR."""
-        # Exactly 75%: 6/8 = 0.75
-        status = WeatherMetricsService.calculate_cloud_status(
-            sunny_hours=6,
-            time_window_hours=8,
-            elevation_m=2000,
-            cloud_low_avg=10,
-        )
-        assert status == CloudStatus.CLEAR
-
-    def test_clear_above_75_percent(self):
-        """Above 75% sunshine -> CLEAR."""
-        # 7/8 = 87.5%
-        status = WeatherMetricsService.calculate_cloud_status(
-            sunny_hours=7,
-            time_window_hours=8,
-            elevation_m=2000,
-            cloud_low_avg=10,
-        )
-        assert status == CloudStatus.CLEAR
-
-    def test_light_25_to_75_percent(self):
-        """25% to 75% sunshine -> LIGHT."""
-        # 3/8 = 37.5%
-        status = WeatherMetricsService.calculate_cloud_status(
-            sunny_hours=3,
-            time_window_hours=8,
-            elevation_m=2000,
-            cloud_low_avg=30,
-        )
-        assert status == CloudStatus.LIGHT
-
-    def test_light_exactly_25_percent(self):
-        """Exactly 25% sunshine -> LIGHT."""
-        # 2/8 = 25%
-        status = WeatherMetricsService.calculate_cloud_status(
-            sunny_hours=2,
-            time_window_hours=8,
-            elevation_m=2000,
-            cloud_low_avg=30,
-        )
-        assert status == CloudStatus.LIGHT
-
-    def test_in_clouds_below_25_percent(self):
-        """Less than 25% sunshine -> IN_CLOUDS."""
-        # 1/8 = 12.5%
-        status = WeatherMetricsService.calculate_cloud_status(
-            sunny_hours=1,
-            time_window_hours=8,
-            elevation_m=2000,
-            cloud_low_avg=60,
+            elevation_m=3200,
+            cloud_low_pct=40,
+            cloud_mid_pct=60,  # In mid-level clouds
         )
         assert status == CloudStatus.IN_CLOUDS
 
-    def test_in_clouds_zero_sunshine(self):
-        """Zero sunshine -> IN_CLOUDS."""
+    def test_glacier_clear_sky(self):
+        """Glacier (3200m) with clear sky -> NONE."""
         status = WeatherMetricsService.calculate_cloud_status(
-            sunny_hours=0,
-            time_window_hours=8,
-            elevation_m=2000,
-            cloud_low_avg=80,
+            elevation_m=3200,
+            cloud_low_pct=5,
+            cloud_mid_pct=5,
+        )
+        assert status == CloudStatus.NONE
+
+    def test_glacier_requires_low_clouds_for_above(self):
+        """Glacier needs low clouds > 20% to show ABOVE_CLOUDS."""
+        status = WeatherMetricsService.calculate_cloud_status(
+            elevation_m=3200,
+            cloud_low_pct=20,  # At threshold, not above
+            cloud_mid_pct=10,
+        )
+        assert status == CloudStatus.NONE
+
+    def test_glacier_mid_clouds_at_threshold(self):
+        """Glacier with mid clouds at 30% threshold -> can still be ABOVE_CLOUDS."""
+        status = WeatherMetricsService.calculate_cloud_status(
+            elevation_m=3200,
+            cloud_low_pct=40,
+            cloud_mid_pct=30,  # At threshold
+        )
+        assert status == CloudStatus.ABOVE_CLOUDS
+
+    def test_glacier_mid_clouds_above_threshold_blocks_above(self):
+        """Glacier with mid clouds > 30% but < 50% -> NONE (not clear, not in clouds)."""
+        status = WeatherMetricsService.calculate_cloud_status(
+            elevation_m=3200,
+            cloud_low_pct=40,
+            cloud_mid_pct=40,  # Above 30% but below 50%
+        )
+        assert status == CloudStatus.NONE
+
+    # --- Tier 2: Alpine level (2000-3000m) ---
+
+    def test_alpine_in_clouds(self):
+        """Alpine (2500m) with high low clouds -> IN_CLOUDS."""
+        status = WeatherMetricsService.calculate_cloud_status(
+            elevation_m=2500,
+            cloud_low_pct=60,
+            cloud_mid_pct=10,
         )
         assert status == CloudStatus.IN_CLOUDS
 
-    def test_in_clouds_none_sunshine(self):
-        """None sunshine hours -> IN_CLOUDS."""
+    def test_alpine_moderate_clouds(self):
+        """Alpine (2500m) with moderate low clouds -> NONE."""
         status = WeatherMetricsService.calculate_cloud_status(
-            sunny_hours=None,
-            time_window_hours=8,
-            elevation_m=2000,
-            cloud_low_avg=50,
+            elevation_m=2500,
+            cloud_low_pct=50,  # At threshold, not above
+            cloud_mid_pct=10,
+        )
+        assert status == CloudStatus.NONE
+
+    def test_alpine_clear(self):
+        """Alpine (2200m) with clear sky -> NONE."""
+        status = WeatherMetricsService.calculate_cloud_status(
+            elevation_m=2200,
+            cloud_low_pct=20,
+            cloud_mid_pct=5,
+        )
+        assert status == CloudStatus.NONE
+
+    # --- Tier 3: Valley level (< 2000m) ---
+
+    def test_valley_in_clouds(self):
+        """Valley (1500m) with high low clouds -> IN_CLOUDS."""
+        status = WeatherMetricsService.calculate_cloud_status(
+            elevation_m=1500,
+            cloud_low_pct=70,
+            cloud_mid_pct=5,
         )
         assert status == CloudStatus.IN_CLOUDS
+
+    def test_valley_moderate_clouds(self):
+        """Valley (1500m) with moderate low clouds -> NONE."""
+        status = WeatherMetricsService.calculate_cloud_status(
+            elevation_m=1500,
+            cloud_low_pct=60,  # At threshold, not above
+            cloud_mid_pct=5,
+        )
+        assert status == CloudStatus.NONE
+
+    def test_valley_clear(self):
+        """Valley (1000m) with clear sky -> NONE."""
+        status = WeatherMetricsService.calculate_cloud_status(
+            elevation_m=1000,
+            cloud_low_pct=20,
+            cloud_mid_pct=5,
+        )
+        assert status == CloudStatus.NONE
+
+    # --- Edge cases ---
+
+    def test_none_missing_elevation(self):
+        """Missing elevation -> NONE."""
+        status = WeatherMetricsService.calculate_cloud_status(
+            elevation_m=None,
+            cloud_low_pct=50,
+            cloud_mid_pct=50,
+        )
+        assert status == CloudStatus.NONE
+
+    def test_none_missing_cloud_data(self):
+        """Missing cloud data treated as 0% -> NONE."""
+        status = WeatherMetricsService.calculate_cloud_status(
+            elevation_m=3200,
+            cloud_low_pct=None,
+            cloud_mid_pct=None,
+        )
+        assert status == CloudStatus.NONE
+
+    def test_glacier_missing_mid_data(self):
+        """Glacier with missing mid cloud data (treated as 0%) -> can be ABOVE_CLOUDS."""
+        status = WeatherMetricsService.calculate_cloud_status(
+            elevation_m=3200,
+            cloud_low_pct=40,
+            cloud_mid_pct=None,  # Treated as 0%
+        )
+        assert status == CloudStatus.ABOVE_CLOUDS
 
 
 class TestEffectiveCloudSpec:
@@ -263,33 +297,41 @@ class TestWeatherSymbolSpec:
 
 
 class TestCloudStatusFormatting:
-    """Tests for CloudStatus formatting."""
+    """Tests for CloudStatus formatting (SPEC: docs/specs/cloud_layer_refactor.md)."""
 
     def test_above_clouds_emoji(self):
         """ABOVE_CLOUDS has sun emoji."""
         emoji = WeatherMetricsService.get_cloud_status_emoji(CloudStatus.ABOVE_CLOUDS)
         assert emoji == "☀️"
 
-    def test_clear_emoji(self):
-        """CLEAR has sparkle emoji."""
-        emoji = WeatherMetricsService.get_cloud_status_emoji(CloudStatus.CLEAR)
-        assert emoji == "✨"
-
-    def test_light_emoji(self):
-        """LIGHT has sun behind cloud emoji."""
-        emoji = WeatherMetricsService.get_cloud_status_emoji(CloudStatus.LIGHT)
-        assert emoji == "🌤️"
-
     def test_in_clouds_emoji(self):
         """IN_CLOUDS has cloud emoji."""
         emoji = WeatherMetricsService.get_cloud_status_emoji(CloudStatus.IN_CLOUDS)
         assert emoji == "☁️"
 
-    def test_format_includes_style(self):
-        """format_cloud_status returns text and CSS style."""
-        text, style = WeatherMetricsService.format_cloud_status(CloudStatus.CLEAR)
-        assert "klar" in text
-        assert "color:" in style or style == ""
+    def test_none_emoji(self):
+        """NONE has no emoji."""
+        emoji = WeatherMetricsService.get_cloud_status_emoji(CloudStatus.NONE)
+        assert emoji == ""
+
+    def test_format_above_clouds(self):
+        """ABOVE_CLOUDS formats to 'above clouds' with green style."""
+        text, style = WeatherMetricsService.format_cloud_status(CloudStatus.ABOVE_CLOUDS)
+        assert text == "above clouds"
+        assert "color:" in style
+        assert "font-weight:" in style
+
+    def test_format_in_clouds(self):
+        """IN_CLOUDS formats to 'in clouds' with gray style."""
+        text, style = WeatherMetricsService.format_cloud_status(CloudStatus.IN_CLOUDS)
+        assert text == "in clouds"
+        assert "color:" in style
+
+    def test_format_none(self):
+        """NONE formats to empty string with no style."""
+        text, style = WeatherMetricsService.format_cloud_status(CloudStatus.NONE)
+        assert text == ""
+        assert style == ""
 
 
 class TestSunnyHoursSpec:

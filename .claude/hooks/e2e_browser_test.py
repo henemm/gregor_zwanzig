@@ -72,8 +72,8 @@ def run_browser_test(url: str, check_text: str, action: str = None) -> tuple[boo
                     page.keyboard.press('Escape')
                     time.sleep(0.5)
 
-                    # Click Vergleichen
-                    page.locator('button:has-text("VERGLEICHEN")').click(timeout=3000)
+                    # Click Compare button (English UI)
+                    page.locator('button:has-text("COMPARE")').click(timeout=3000)
                     time.sleep(8)  # Wait for API
 
                 except Exception as e:
@@ -141,8 +141,8 @@ def run_email_test(check_text: str, send_from_ui: bool = False) -> tuple[bool, s
                 page.keyboard.press('Escape')
                 time.sleep(0.5)
 
-                # Click Vergleichen
-                page.locator('button:has-text("VERGLEICHEN")').click(timeout=3000)
+                # Click Compare button (English UI)
+                page.locator('button:has-text("COMPARE")').click(timeout=3000)
                 time.sleep(8)
 
                 # Click "Per E-Mail senden"
