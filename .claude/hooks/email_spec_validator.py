@@ -107,22 +107,21 @@ def validate_structure(body: str) -> List[str]:
         errors.append(f"STRUKTUR: {len(tables)} Tabellen gefunden, erwartet: 2")
 
     # Check comparison table has correct rows
-    # SPEC: docs/specs/cloud_cover_simplification.md - Cloud Layer removed, English UI
     rows = extract_table_rows(body)
     expected_labels = [
-        "Metric",  # Header
+        "Metrik",  # Header
         "Score",
-        "Snow Depth",
-        "New Snow",
-        "Wind/Gusts",
-        "Temperature (felt)",
-        "Sunny Hours",
-        "Cloud Cover",
-        # Note: Cloud Layer row removed per cloud_cover_simplification.md
+        "Schneehöhe",
+        "Neuschnee",
+        "Wind/Böen",
+        "Temperatur (gefühlt)",
+        "Sonnenstunden",
+        "Bewölkung",
+        "Wolkenlage",
     ]
 
-    if len(rows) != 8:
-        errors.append(f"STRUKTUR: {len(rows)} Zeilen in Vergleichstabelle, erwartet: 8")
+    if len(rows) != 9:
+        errors.append(f"STRUKTUR: {len(rows)} Zeilen in Vergleichstabelle, erwartet: 9")
 
     for i, expected in enumerate(expected_labels):
         if i < len(rows):
@@ -130,15 +129,15 @@ def validate_structure(body: str) -> List[str]:
             if expected.lower() not in actual.lower():
                 errors.append(f"STRUKTUR: Zeile {i+1} ist '{actual}', erwartet: '{expected}'")
 
-    # Check for required sections (English/German UI)
+    # Check for required sections
     required_sections = [
-        (["Time Window", "Zeitfenster"], "Header mit Zeitfenster"),
-        (["Hourly", "Stündliche"], "Hourly Overview"),
-        (["Recommendation", "Empfehlung"], "Winner-Box"),
+        ("Zeitfenster", "Header mit Zeitfenster"),
+        ("Stündliche", "Stündliche Übersicht"),
+        ("Empfehlung", "Winner-Box"),
     ]
 
-    for keywords, name in required_sections:
-        if not any(kw in body for kw in keywords):
+    for keyword, name in required_sections:
+        if keyword not in body:
             errors.append(f"STRUKTUR: {name} fehlt")
 
     return errors
@@ -172,31 +171,35 @@ def validate_plausibility(body: str) -> List[str]:
             values = row[1:] if len(row) > 1 else []
             metrics[label] = values
 
-    # Check Cloud Cover has valid values (with optional * marker for high elevations)
-    # SPEC: docs/specs/cloud_cover_simplification.md
-    cloud_cover = metrics.get("cloud cover", [])
-    for i, val in enumerate(cloud_cover):
-        val = val.strip()
-        if val == "-":
-            continue
-        # Valid formats: "42%", "42%*" (with marker for above low clouds)
-        if not re.match(r'^\d+%\*?$', val):
+    # Check Sonnenstunden vs Wolkenlage consistency
+    sonnenstunden = metrics.get("sonnenstunden", [])
+    wolkenlage = metrics.get("wolkenlage", [])
+
+    for i, (sunny, wolke) in enumerate(zip(sonnenstunden, wolkenlage)):
+        sunny_val = sunny.strip().lower()
+        wolke_val = wolke.strip().lower()
+
+        # Parse Sonnenstunden value
+        sunny_hours = None
+        if sunny_val == "0h":
+            sunny_hours = 0
+        elif sunny_val.startswith("~") and sunny_val.endswith("h"):
+            try:
+                sunny_hours = int(sunny_val[1:-1])
+            except ValueError:
+                pass
+
+        # Check plausibility
+        if "klar" in wolke_val and sunny_hours == 0:
             errors.append(
-                f"PLAUSIBILITÄT: Location {i+1} - Cloud Cover '{val}' hat "
-                f"ungültiges Format. Erwartet: 'N%' oder 'N%*'"
+                f"PLAUSIBILITÄT: Location {i+1} - Wolkenlage ist 'klar' aber "
+                f"Sonnenstunden ist 0h. Das ist widersprüchlich!"
             )
 
-    # Check Sunny Hours has valid values
-    sunny_hours = metrics.get("sunny hours", [])
-    for i, val in enumerate(sunny_hours):
-        val = val.strip()
-        if val == "-":
-            continue
-        # Valid formats: "0h", "~Nh"
-        if not re.match(r'^(0h|~\d+h)$', val):
+        if "in wolken" in wolke_val and sunny_hours is not None and sunny_hours > 4:
             errors.append(
-                f"PLAUSIBILITÄT: Location {i+1} - Sunny Hours '{val}' hat "
-                f"ungültiges Format. Erwartet: '0h' oder '~Nh'"
+                f"PLAUSIBILITÄT: Location {i+1} - Wolkenlage ist 'in Wolken' aber "
+                f"Sonnenstunden ist {sunny_hours}h. Das ist widersprüchlich!"
             )
 
     return errors
@@ -207,9 +210,9 @@ def validate_format(body: str) -> List[str]:
     errors = []
     rows = extract_table_rows(body)
 
-    # Find Wind/Gusts row (English UI)
+    # Find Wind/Böen row
     for row in rows:
-        if row and "wind" in row[0].lower() and "gust" in row[0].lower():
+        if row and "wind" in row[0].lower() and "böen" in row[0].lower():
             for i, val in enumerate(row[1:]):
                 val = val.strip()
                 if val == "-":
@@ -227,9 +230,9 @@ def validate_format(body: str) -> List[str]:
                         f"Spec sagt: keine Gradangabe!"
                     )
 
-    # Find Sunny Hours row (English UI)
+    # Find Sonnenstunden row
     for row in rows:
-        if row and "sunny" in row[0].lower() and "hour" in row[0].lower():
+        if row and "sonnenstunden" in row[0].lower():
             for i, val in enumerate(row[1:]):
                 val = val.strip()
                 if val == "-":
