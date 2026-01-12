@@ -38,14 +38,23 @@ protected_paths:
     spec_type: "modules"
   - pattern: "tests/.*\\.py$"
     spec_type: "tests"
+  # E2E validators - MUST NOT be changed to "pass" broken code!
+  - pattern: "\\.claude/hooks/email_spec_validator\\.py$"
+    spec_type: "e2e_validators"
+  - pattern: "\\.claude/hooks/e2e_browser_test\\.py$"
+    spec_type: "e2e_validators"
 
 # Files that are ALWAYS allowed without workflow
 always_allowed:
-  - "\\.claude/"
+  - "\\.claude/workflow_state\\.json"  # State file needs frequent updates
+  - "\\.claude/session_"               # Session files
   - "docs/"
   - "\\.md$"
   - "\\.gitignore"
   - "README"
+
+# E2E Test validators are PROTECTED - require workflow to change!
+# This prevents "cheating" by adjusting tests to match broken code.
 
 # Specs Configuration
 specs:
