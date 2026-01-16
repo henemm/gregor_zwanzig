@@ -30,5 +30,17 @@ hourlycell
 # Test utilities (no spec needed)
 testemailoutput
 
+# E2E Tests for bug fixes (spec is in bugfix spec, not separate test specs)
+add_button_opens_dialog
+add_button_dialog_has_all_fields
+new_subscription_button_opens_dialog
+subscription_card_buttons_exist
+subscription_dialog_has_all_fields
+settings_save_button
+settings_test_email_button
+compare_location_select
+compare_button
+compare_email_button
+
 # Output channels (existing code)
 emailoutput

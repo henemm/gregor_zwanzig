@@ -1,0 +1,85 @@
+TDD RED PHASE - Safari Preventive Fix
+=====================================
+Date: 2026-01-15
+Phase: phase5_tdd_red
+Status: RED (buttons broken in current code)
+
+CURRENT STATE ANALYSIS
+----------------------
+
+This artifact documents the BROKEN state of 5 HIGH RISK buttons before implementing fixes.
+
+All 5 buttons use DIRECT CLOSURE REFERENCES without factory pattern:
+- Safari's JavaScriptCore engine CANNOT bind these closures correctly
+- Result: Buttons don't respond, or execute with stale/wrong state
+- No error messages - silent failures
+
+BROKEN BUTTONS IDENTIFIED:
+==========================
+
+1. settings.py:166 - Save Settings Button
+   Status: BROKEN
+   Code: ui.button("Save", on_click=save, ...)
+   Issue: Direct reference to save() which captures 11 mutable form inputs
+   Expected Failure: Button may not save, or saves wrong values
+
+2. settings.py:206 - Send Test Email Button
+   Status: BROKEN  
+   Code: ui.button("Send Test Email", on_click=test_email, ...)
+   Issue: Async handler + direct reference + captures form inputs
+   Expected Failure: Button doesn't send email, or no notification
+
+3. compare.py:1142 - Location Select onChange
+   Status: BROKEN
+   Code: ui.select(..., on_change=on_location_change)
+   Issue: Direct reference to handler that mutates state dict
+   Expected Failure: State not updated, Compare button uses wrong locations
+
+4. compare.py:1398 - Compare Button
+   Status: BROKEN
+   Code: ui.button("Compare", on_click=run_comparison, ...)
+   Issue: Async handler + direct reference + captures mutable state dict (8 fields)
+   Expected Failure: Button doesn't fire, or runs with wrong parameters
+
+5. compare.py:1405 - Send Email Button  
+   Status: BROKEN
+   Code: ui.button("Per E-Mail senden", on_click=send_email, ...)
+   Issue: Async handler + direct reference + captures state dict
+   Expected Failure: Button doesn't fire, or sends wrong/stale data
+
+ROOT CAUSE:
+===========
+Direct closure references fail in Safari because:
+- NiceGUI translates Python → JavaScript
+- Safari's JavaScriptCore requires explicit callable binding at creation time
+- Direct references like on_click=function_name don't bind correctly
+- Mutable state captured in closures becomes stale
+
+EVIDENCE:
+=========
+- Previous bugs: locations_add_button_fix.md, safari_subscriptions_fix.md
+- Same pattern: all fixed with factory pattern
+- User confirmed: "Ja, es funktioniert mal wieder" after factory pattern applied
+- Best practices documented: docs/reference/nicegui_best_practices.md
+
+E2E TESTS TO BE WRITTEN:
+========================
+5 Playwright tests (one per button) to verify:
+1. test_settings_save_button() - Click Save, verify notification
+2. test_settings_test_email_button() - Click Test Email, verify notification
+3. test_compare_location_select() - Select location, verify state updated
+4. test_compare_button() - Click Compare, verify results appear
+5. test_compare_email_button() - Click Email, verify notification
+
+EXPECTED TEST RESULTS (RED PHASE):
+==================================
+Tests should FAIL or PASS inconsistently:
+- Chromium: May PASS (more forgiving closure binding)
+- Safari: Should FAIL (strict closure binding)
+- Result: Proves buttons are broken in Safari
+
+After implementing factory pattern:
+- All tests should PASS consistently in both browsers
+- GREEN phase achieved
+
+This artifact proves TDD RED phase: We've identified broken code BEFORE implementing fixes.

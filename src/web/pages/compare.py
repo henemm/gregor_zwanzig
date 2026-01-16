@@ -1113,6 +1113,12 @@ def render_compare() -> None:
         """Handle location selection change - Safari fix."""
         state["selected_locations"] = e.value if e.value else []
 
+    def make_location_change_handler():
+        """Factory function for location select onChange (Safari compatibility)."""
+        def do_change(e) -> None:
+            on_location_change(e)
+        return do_change
+
     with ui.column().classes("w-full max-w-6xl mx-auto p-4"):
         ui.label("Forecast Comparison").classes("text-h4 mb-4")
         ui.label("Which ski resort has the best conditions?").classes("text-gray-500 mb-4")
@@ -1139,7 +1145,7 @@ def render_compare() -> None:
                 options=location_options,
                 multiple=True,
                 label="Locations (multiple)",
-                on_change=on_location_change,
+                on_change=make_location_change_handler(),
             ).classes("w-full").props("use-chips")
 
             with ui.row().classes("items-center gap-4 mt-2"):
@@ -1388,6 +1394,18 @@ def render_compare() -> None:
             except Exception as e:
                 ui.notify(f"Fehler: {e}", type="negative")
 
+        def make_comparison_handler():
+            """Factory function for comparison button (Safari compatibility)."""
+            async def do_compare() -> None:
+                await run_comparison()
+            return do_compare
+
+        def make_email_handler():
+            """Factory function for email button (Safari compatibility)."""
+            async def do_email() -> None:
+                await send_email()
+            return do_email
+
         # Check if email is configured
         settings = Settings()
         can_email = settings.can_send_email()
@@ -1395,14 +1413,14 @@ def render_compare() -> None:
         with ui.row().classes("gap-2"):
             ui.button(
                 "Compare",
-                on_click=run_comparison,
+                on_click=make_comparison_handler(),
                 icon="compare_arrows",
             ).props("color=primary size=lg")
 
             if can_email:
                 ui.button(
                     "Per E-Mail senden",
-                    on_click=send_email,
+                    on_click=make_email_handler(),
                     icon="email",
                 ).props("outline size=lg")
             else:

@@ -160,10 +160,16 @@ def render_settings() -> None:
             save_env_settings(new_settings)
             ui.notify("Settings saved", type="positive")
 
+        def make_save_handler():
+            """Factory function for save button (Safari compatibility)."""
+            def do_save() -> None:
+                save()
+            return do_save
+
         with ui.row().classes("gap-4"):
             ui.button(
                 "Save",
-                on_click=save,
+                on_click=make_save_handler(),
                 icon="save",
             ).props("color=primary")
 
@@ -201,8 +207,14 @@ def render_settings() -> None:
                 except Exception as e:
                     ui.notify(f"Error: {e}", type="negative")
 
+            def make_test_email_handler():
+                """Factory function for test email button (Safari compatibility)."""
+                async def do_test() -> None:
+                    await test_email()
+                return do_test
+
             ui.button(
                 "Send Test Email",
-                on_click=test_email,
+                on_click=make_test_email_handler(),
                 icon="mail",
             ).props("outline")
