@@ -18,6 +18,7 @@ class Provider(str, Enum):
     MET = "MET"
     NOWCASTMIX = "NOWCASTMIX"
     GEOSPHERE = "GEOSPHERE"
+    OPENMETEO = "OPENMETEO"
     SLF = "SLF"
     EUREGIO = "EUREGIO"
 

@@ -134,6 +134,12 @@ def _load_providers() -> None:
     except ImportError:
         pass
 
+    try:
+        from providers.openmeteo import OpenMeteoProvider
+        register_provider("openmeteo", OpenMeteoProvider)
+    except ImportError:
+        pass
+
     # Future providers:
     # from providers.met import METProvider
     # register_provider("met", METProvider)
