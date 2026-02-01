@@ -225,3 +225,163 @@ Lawinenlagebericht als eigenstaendiges Datenobjekt (nicht Teil von NormalizedTim
 | wind_chill     | >-10°C    | -10 bis -20°C| <-20°C   |
 | visibility     | >200 m    | 50-200 m    | <50 m     |
 | gust           | <50 km/h  | 50-80 km/h  | >80 km/h  |
+
+---
+
+## 8) GPX Trip Planning (Story 1, 2, 3)
+
+### Story 1: GPX Upload & Segment-Planung
+
+#### GPXTrack
+| Feld                 | Typ                   | Beschreibung                              |
+|----------------------|-----------------------|-------------------------------------------|
+| points               | list[GPXPoint]        | Track-Points (Koordinaten + Elevation)     |
+| waypoints            | list[GPXWaypoint]     | Optional Waypoints (Gipfel, Hütten)        |
+| total_distance_km    | float                 | Gesamt-Distanz der Route [km]              |
+| total_ascent_m       | float                 | Gesamt-Aufstieg [m]                        |
+| total_descent_m      | float                 | Gesamt-Abstieg [m]                         |
+
+#### GPXPoint
+| Feld                    | Typ            | Beschreibung                               |
+|-------------------------|----------------|--------------------------------------------|
+| lat                     | float          | Breitengrad                                 |
+| lon                     | float          | Längengrad                                  |
+| elevation_m             | float \| None  | Höhe über Meer [m]                          |
+| distance_from_start_km  | float          | Kumulative Distanz vom Start [km]           |
+
+#### GPXWaypoint
+| Feld         | Typ            | Beschreibung                  |
+|--------------|----------------|-------------------------------|
+| name         | str            | Name des Wegpunkts             |
+| lat          | float          | Breitengrad                    |
+| lon          | float          | Längengrad                     |
+| elevation_m  | float \| None  | Höhe über Meer [m]             |
+
+#### DetectedWaypoint
+| Feld         | Typ               | Beschreibung                                     |
+|--------------|-------------------|--------------------------------------------------|
+| type         | WaypointType      | GIPFEL, TAL, PASS                                 |
+| point        | GPXPoint          | Koordinaten + Elevation                           |
+| prominence_m | float             | Höhen-Prominenz [m]                               |
+| name         | str \| None       | Optional aus GPX-Waypoint                         |
+
+#### TripSegment
+| Feld         | Typ       | Beschreibung                                     |
+|--------------|-----------|--------------------------------------------------|
+| segment_id   | int       | Segment-Nummer (1-basiert)                        |
+| start_point  | GPXPoint  | Start-Koordinaten + Elevation                     |
+| end_point    | GPXPoint  | End-Koordinaten + Elevation                       |
+| start_time   | datetime  | Start-Zeit (berechnet)                            |
+| end_time     | datetime  | End-Zeit (berechnet)                              |
+| duration_hours | float   | Segment-Dauer [h]                                 |
+| distance_km  | float     | Segment-Distanz [km]                              |
+| ascent_m     | float     | Segment-Aufstieg [m]                              |
+| descent_m    | float     | Segment-Abstieg [m]                               |
+| adjusted_to_waypoint | bool | Hybrid-Segmentierung angewendet?            |
+| waypoint     | DetectedWaypoint \| None | Wegpunkt (falls angepasst)        |
+
+#### EtappenConfig
+| Feld               | Typ      | Beschreibung                                |
+|--------------------|----------|---------------------------------------------|
+| gpx_file           | str      | Pfad zur GPX-Datei                           |
+| start_time         | datetime | Start-Zeit der Etappe                        |
+| speed_flat_kmh     | float    | Gehgeschwindigkeit Ebene [km/h] (z.B. 4.0)   |
+| speed_ascent_mh    | float    | Steig-Geschwindigkeit [Hm/h] (z.B. 300)      |
+| speed_descent_mh   | float    | Abstiegs-Geschwindigkeit [Hm/h] (z.B. 500)   |
+
+---
+
+### Story 2: Wetter-Engine für Trip-Segmente
+
+#### SegmentWeatherData
+| Feld        | Typ                      | Beschreibung                               |
+|-------------|--------------------------|--------------------------------------------|
+| segment     | TripSegment              | Segment aus Story 1                        |
+| timeseries  | NormalizedTimeseries     | Volle stündliche Wetterdaten               |
+| aggregated  | SegmentWeatherSummary    | Aggregierte Werte (MIN/MAX/AVG)            |
+| fetched_at  | datetime                 | Zeitpunkt des API-Abrufs                   |
+| provider    | str                      | Verwendeter Provider (GEOSPHERE, etc.)     |
+
+#### SegmentWeatherSummary
+| Feld                  | Typ                  | Beschreibung                                    |
+|-----------------------|----------------------|-------------------------------------------------|
+| temp_min_c            | float \| None        | Minimale Temperatur im Segment [°C]              |
+| temp_max_c            | float \| None        | Maximale Temperatur im Segment [°C]              |
+| temp_avg_c            | float \| None        | Durchschnittstemperatur [°C]                     |
+| wind_max_kmh          | float \| None        | Maximale Windgeschwindigkeit [km/h]              |
+| gust_max_kmh          | float \| None        | Maximale Böengeschwindigkeit [km/h]              |
+| precip_sum_mm         | float \| None        | Gesamt-Niederschlag [mm]                         |
+| cloud_avg_pct         | int \| None          | Durchschnittliche Bewölkung [%]                  |
+| humidity_avg_pct      | int \| None          | Durchschnittliche Luftfeuchtigkeit [%]           |
+| thunder_level_max     | ThunderLevel \| None | Maximales Gewitter-Level (NONE, MED, HIGH)       |
+| visibility_min_m      | int \| None          | Minimale Sichtweite [m]                          |
+| dewpoint_avg_c        | float \| None        | Durchschnittlicher Taupunkt [°C]                 |
+| pressure_avg_hpa      | float \| None        | Durchschnittlicher Luftdruck [hPa]               |
+| wind_chill_min_c      | float \| None        | Minimale gefühlte Temperatur [°C]                |
+| snow_depth_cm         | float \| None        | Schneehöhe [cm] (optional, Winter)               |
+| freezing_level_m      | int \| None          | Nullgradgrenze [m] (optional, Winter)            |
+| aggregation_config    | dict[str, str]       | Metadata: Aggregations-Funktionen pro Metrik     |
+
+#### SegmentWeatherCache
+| Feld        | Typ                  | Beschreibung                         |
+|-------------|----------------------|--------------------------------------|
+| segment_id  | str                  | Eindeutige Segment-ID                 |
+| data        | SegmentWeatherData   | Gecachte Wetterdaten                  |
+| fetched_at  | datetime             | Zeitpunkt des Cache-Eintrags          |
+| ttl_seconds | int                  | Time-to-Live [s] (default: 3600)      |
+
+#### WeatherChange
+| Feld       | Typ    | Beschreibung                                      |
+|------------|--------|---------------------------------------------------|
+| metric     | str    | Metrik-Name (z.B. "temperature", "wind")           |
+| old_value  | float  | Alter Wert                                         |
+| new_value  | float  | Neuer Wert                                         |
+| delta      | float  | Absolute Änderung                                  |
+| threshold  | float  | Konfigurierbarer Schwellenwert                     |
+| severity   | str    | "minor", "moderate", "major"                       |
+| direction  | str    | "increase", "decrease"                             |
+
+#### TripWeatherConfig
+| Feld            | Typ           | Beschreibung                                |
+|-----------------|---------------|---------------------------------------------|
+| trip_id         | str           | Trip-Identifier                              |
+| enabled_metrics | list[str]     | Ausgewählte Metriken (Subset von 13)         |
+| updated_at      | datetime      | Zeitpunkt der letzten Änderung               |
+
+---
+
+### Story 3: Trip-Reports (Email/SMS)
+
+#### TripReport
+| Feld           | Typ                      | Beschreibung                                    |
+|----------------|--------------------------|-------------------------------------------------|
+| trip_id        | str                      | Trip-Identifier                                  |
+| trip_name      | str                      | Trip-Name (für Subject/Anzeige)                  |
+| report_type    | str                      | "morning", "evening", "alert"                    |
+| generated_at   | datetime                 | Generierungszeitpunkt                            |
+| segments       | list[SegmentWeatherData] | Alle Segmente mit Wetterdaten (Story 2)          |
+| email_subject  | str                      | E-Mail Subject-Zeile                             |
+| email_html     | str                      | HTML-Version des Reports                         |
+| email_plain    | str                      | Plain-Text-Version des Reports                   |
+| sms_text       | str \| None              | SMS-Text (≤160 chars)                            |
+| triggered_by   | str \| None              | "schedule" oder "change_detection"               |
+| changes        | list[WeatherChange]      | Liste der Änderungen (bei Alert)                 |
+
+#### TripReportConfig
+| Feld                      | Typ         | Beschreibung                                    |
+|---------------------------|-------------|-------------------------------------------------|
+| trip_id                   | str         | Trip-Identifier                                  |
+| enabled                   | bool        | Reports aktiv? (default: true)                   |
+| morning_time              | time        | Morgen-Report Zeit (default: 07:00)              |
+| evening_time              | time        | Abend-Report Zeit (default: 18:00)               |
+| timezone                  | str         | Zeitzone (default: "Europe/Vienna")              |
+| send_email                | bool        | E-Mail senden? (default: true)                   |
+| send_sms                  | bool        | SMS senden? (default: false)                     |
+| alert_on_changes          | bool        | Alerts bei Änderungen? (default: true)           |
+| change_threshold_temp_c   | float       | Temp-Änderungs-Schwelle [°C] (default: 5.0)      |
+| change_threshold_wind_kmh | float       | Wind-Änderungs-Schwelle [km/h] (default: 20.0)   |
+| change_threshold_precip_mm| float       | Niederschlags-Schwelle [mm] (default: 10.0)      |
+| include_metrics           | list[str]   | Anzuzeigende Metriken (default: 5 Basis-Metriken)|
+| updated_at                | datetime    | Zeitpunkt der letzten Config-Änderung            |
+
+---

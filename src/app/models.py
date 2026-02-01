@@ -213,3 +213,67 @@ class Risk:
 class RiskAssessment:
     """Collection of assessed risks for a forecast period."""
     risks: List[Risk] = field(default_factory=list)
+
+
+# --- GPX Trip Planning DTOs (Story 1, 2, 3) ---
+
+@dataclass
+class GPXPoint:
+    """Single point in a GPX track."""
+    lat: float  # Breitengrad
+    lon: float  # Längengrad
+    elevation_m: Optional[float] = None  # Höhe über Meer [m]
+    distance_from_start_km: float = 0.0  # Kumulative Distanz [km]
+
+
+@dataclass
+class TripSegment:
+    """Single segment of a trip (typically ~2 hours hiking)."""
+    segment_id: int  # 1-based
+    start_point: GPXPoint
+    end_point: GPXPoint
+    start_time: datetime  # UTC!
+    end_time: datetime  # UTC!
+    duration_hours: float
+    distance_km: float
+    ascent_m: float
+    descent_m: float
+    # Optional fields for Story 1 (Feature 1.5)
+    adjusted_to_waypoint: bool = False
+    waypoint: Optional["DetectedWaypoint"] = None
+
+
+@dataclass
+class SegmentWeatherSummary:
+    """Aggregated weather summary for segment duration."""
+    # Basis metrics (Feature 2.2a) - ALL None for Feature 2.1
+    temp_min_c: Optional[float] = None
+    temp_max_c: Optional[float] = None
+    temp_avg_c: Optional[float] = None
+    wind_max_kmh: Optional[float] = None
+    gust_max_kmh: Optional[float] = None
+    precip_sum_mm: Optional[float] = None
+    cloud_avg_pct: Optional[int] = None
+    humidity_avg_pct: Optional[int] = None
+    thunder_level_max: Optional[ThunderLevel] = None
+    visibility_min_m: Optional[int] = None
+
+    # Extended metrics (Feature 2.2b) - ALL None for Feature 2.1
+    dewpoint_avg_c: Optional[float] = None
+    pressure_avg_hpa: Optional[float] = None
+    wind_chill_min_c: Optional[float] = None
+    snow_depth_cm: Optional[float] = None
+    freezing_level_m: Optional[int] = None
+
+    # Metadata
+    aggregation_config: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class SegmentWeatherData:
+    """Weather data for a single trip segment."""
+    segment: TripSegment
+    timeseries: NormalizedTimeseries
+    aggregated: SegmentWeatherSummary  # Empty for Feature 2.1, populated by Feature 2.3
+    fetched_at: datetime
+    provider: str  # "geosphere", "openmeteo", etc.
