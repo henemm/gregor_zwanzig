@@ -17,6 +17,7 @@ from app.models import SegmentWeatherData, SegmentWeatherSummary, TripSegment
 
 if TYPE_CHECKING:
     from providers.base import WeatherProvider
+    from services.weather_cache import WeatherCacheService
 
 
 class SegmentWeatherService:
@@ -38,6 +39,7 @@ class SegmentWeatherService:
     def __init__(
         self,
         provider: "WeatherProvider",
+        cache: Optional["WeatherCacheService"] = None,
         debug: Optional[DebugBuffer] = None,
     ) -> None:
         """
@@ -45,10 +47,17 @@ class SegmentWeatherService:
 
         Args:
             provider: Weather data provider
+            cache: Optional weather cache (default: create new)
             debug: Optional debug buffer for logging
         """
         self._provider = provider
         self._debug = debug if debug is not None else DebugBuffer()
+        
+        # Initialize cache (Feature 2.4)
+        if cache is None:
+            from services.weather_cache import WeatherCacheService
+            cache = WeatherCacheService()
+        self._cache = cache
 
     @property
     def provider_name(self) -> str:
@@ -62,24 +71,34 @@ class SegmentWeatherService:
         """
         Fetch weather forecast for a trip segment.
 
-        Algorithm (from spec):
+        Algorithm (updated for Feature 2.4):
+        0. Check cache first (Feature 2.4)
         1. Validate segment time window (start < end)
         2. Extract coordinates from segment.start_point
         3. Create Location object
         4. Call provider.fetch_forecast(location, start, end)
-        5. Wrap in SegmentWeatherData with empty summary
-        6. Log debug information
+        5. Compute metrics (2.2a + 2.2b)
+        6. Store in cache (Feature 2.4)
+        7. Return SegmentWeatherData
 
         Args:
             segment: Trip segment with coordinates and time window
 
         Returns:
-            SegmentWeatherData with timeseries and empty summary
+            SegmentWeatherData with populated metrics
 
         Raises:
             ProviderRequestError: If the provider request fails
             ValueError: If segment time window is invalid
         """
+        # Step 0: Check cache first (Feature 2.4)
+        cached = self._cache.get(segment)
+        if cached is not None:
+            self._debug.add("weather.cache: HIT")
+            return cached
+        
+        self._debug.add("weather.cache: MISS - fetching from provider")
+        
         # Step 1: Validate time window
         self._validate_segment(segment)
 
@@ -124,13 +143,18 @@ class SegmentWeatherService:
         extended_summary = metrics_service.compute_extended_metrics(timeseries, basis_summary)
 
         # Step 7: Wrap in SegmentWeatherData
-        return SegmentWeatherData(
+        data = SegmentWeatherData(
             segment=segment,
             timeseries=timeseries,
             aggregated=extended_summary,
             fetched_at=datetime.now(timezone.utc),
             provider=self._provider.name,
         )
+        
+        # Step 8: Store in cache (Feature 2.4)
+        self._cache.put(segment, data)
+        
+        return data
 
     def _validate_segment(self, segment: TripSegment) -> None:
         """
