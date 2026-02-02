@@ -277,3 +277,37 @@ class SegmentWeatherData:
     aggregated: SegmentWeatherSummary  # Empty for Feature 2.1, populated by Feature 2.3
     fetched_at: datetime
     provider: str  # "geosphere", "openmeteo", etc.
+
+
+# --- Weather Change Detection DTOs (Feature 2.5) ---
+
+class ChangeSeverity(str, Enum):
+    """Severity classification for weather changes."""
+    MINOR = "minor"       # 10-50% over threshold (1.1x - 1.5x)
+    MODERATE = "moderate" # 50-100% over threshold (1.5x - 2.0x)
+    MAJOR = "major"       # >100% over threshold (>2.0x)
+
+
+@dataclass
+class WeatherChange:
+    """
+    Detected significant weather change.
+
+    Example:
+        WeatherChange(
+            metric="temp_max_c",
+            old_value=18.0,
+            new_value=25.0,
+            delta=+7.0,
+            threshold=5.0,
+            severity=ChangeSeverity.MODERATE,
+            direction="increase"
+        )
+    """
+    metric: str                    # e.g., "temp_max_c", "wind_max_kmh"
+    old_value: float               # Cached forecast value
+    new_value: float               # Fresh forecast value
+    delta: float                   # new_value - old_value (signed)
+    threshold: float               # Configured threshold
+    severity: ChangeSeverity       # minor/moderate/major
+    direction: str                 # "increase" or "decrease"

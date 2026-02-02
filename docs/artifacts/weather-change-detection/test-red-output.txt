@@ -1,0 +1,275 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.2, pytest-8.4.1, pluggy-1.6.0
+rootdir: /opt/gregor_zwanziger
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 10 items
+
+tests/unit/test_change_detection.py .FFFFF..FF                           [100%]
+
+=================================== FAILURES ===================================
+_______ TestWeatherChangeDetectionService.test_single_minor_change_temp ________
+
+self = <test_change_detection.TestWeatherChangeDetectionService object at 0x7f41b3a1f010>
+service = <services.weather_change_detection.WeatherChangeDetectionService object at 0x7f41b3a2b910>
+old_data = SegmentWeatherData(segment=TripSegment(segment_id=1, start_point=GPXPoint(lat=47.0, lon=11.0, elevation_m=1000, distan...g={}), fetched_at=datetime.datetime(2026, 2, 2, 7, 33, 38, 768449, tzinfo=datetime.timezone.utc), provider='geosphere')
+base_segment = TripSegment(segment_id=1, start_point=GPXPoint(lat=47.0, lon=11.0, elevation_m=1000, distance_from_start_km=0.0), end_...mezone.utc), duration_hours=2.0, distance_km=5.0, ascent_m=500, descent_m=0, adjusted_to_waypoint=False, waypoint=None)
+
+    def test_single_minor_change_temp(self, service, old_data, base_segment):
+        """
+        GIVEN: Temp changed from 18°C to 24°C (delta = +6°C, threshold = 5°C)
+        WHEN: detect_changes()
+        THEN: Returns 1 WeatherChange with MINOR severity (1.2x threshold)
+        """
+        new_summary = SegmentWeatherSummary(
+            temp_min_c=10.0,
+            temp_max_c=24.0,  # +6°C change
+            temp_avg_c=14.0,
+            wind_max_kmh=15.0,
+            gust_max_kmh=20.0,
+            precip_sum_mm=5.0,
+            cloud_avg_pct=30,
+            humidity_avg_pct=50,
+            visibility_min_m=5000,
+        )
+        new_data = SegmentWeatherData(
+            segment=base_segment,
+            timeseries=old_data.timeseries,
+            aggregated=new_summary,
+            fetched_at=datetime.now(timezone.utc),
+            provider="geosphere",
+        )
+    
+        changes = service.detect_changes(old_data, new_data)
+    
+>       assert len(changes) == 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+tests/unit/test_change_detection.py:135: AssertionError
+______ TestWeatherChangeDetectionService.test_single_moderate_change_wind ______
+
+self = <test_change_detection.TestWeatherChangeDetectionService object at 0x7f41b3a1f690>
+service = <services.weather_change_detection.WeatherChangeDetectionService object at 0x7f41b3a1f790>
+old_data = SegmentWeatherData(segment=TripSegment(segment_id=1, start_point=GPXPoint(lat=47.0, lon=11.0, elevation_m=1000, distan...g={}), fetched_at=datetime.datetime(2026, 2, 2, 7, 33, 38, 787899, tzinfo=datetime.timezone.utc), provider='geosphere')
+base_segment = TripSegment(segment_id=1, start_point=GPXPoint(lat=47.0, lon=11.0, elevation_m=1000, distance_from_start_km=0.0), end_...mezone.utc), duration_hours=2.0, distance_km=5.0, ascent_m=500, descent_m=0, adjusted_to_waypoint=False, waypoint=None)
+
+    def test_single_moderate_change_wind(self, service, old_data, base_segment):
+        """
+        GIVEN: Wind changed from 15 to 45 km/h (delta = +30, threshold = 20)
+        WHEN: detect_changes()
+        THEN: Returns 1 WeatherChange with MODERATE severity (1.5x threshold)
+        """
+        new_summary = SegmentWeatherSummary(
+            temp_min_c=10.0,
+            temp_max_c=18.0,
+            temp_avg_c=14.0,
+            wind_max_kmh=45.0,  # +30 km/h change
+            gust_max_kmh=20.0,
+            precip_sum_mm=5.0,
+            cloud_avg_pct=30,
+            humidity_avg_pct=50,
+            visibility_min_m=5000,
+        )
+        new_data = SegmentWeatherData(
+            segment=base_segment,
+            timeseries=old_data.timeseries,
+            aggregated=new_summary,
+            fetched_at=datetime.now(timezone.utc),
+            provider="geosphere",
+        )
+    
+        changes = service.detect_changes(old_data, new_data)
+    
+>       assert len(changes) == 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+tests/unit/test_change_detection.py:172: AssertionError
+______ TestWeatherChangeDetectionService.test_single_major_change_precip _______
+
+self = <test_change_detection.TestWeatherChangeDetectionService object at 0x7f41b3a1fd50>
+service = <services.weather_change_detection.WeatherChangeDetectionService object at 0x7f41b3aa8910>
+old_data = SegmentWeatherData(segment=TripSegment(segment_id=1, start_point=GPXPoint(lat=47.0, lon=11.0, elevation_m=1000, distan...g={}), fetched_at=datetime.datetime(2026, 2, 2, 7, 33, 38, 807296, tzinfo=datetime.timezone.utc), provider='geosphere')
+base_segment = TripSegment(segment_id=1, start_point=GPXPoint(lat=47.0, lon=11.0, elevation_m=1000, distance_from_start_km=0.0), end_...mezone.utc), duration_hours=2.0, distance_km=5.0, ascent_m=500, descent_m=0, adjusted_to_waypoint=False, waypoint=None)
+
+    def test_single_major_change_precip(self, service, old_data, base_segment):
+        """
+        GIVEN: Precip changed from 5 to 30 mm (delta = +25, threshold = 10)
+        WHEN: detect_changes()
+        THEN: Returns 1 WeatherChange with MAJOR severity (2.5x threshold)
+        """
+        new_summary = SegmentWeatherSummary(
+            temp_min_c=10.0,
+            temp_max_c=18.0,
+            temp_avg_c=14.0,
+            wind_max_kmh=15.0,
+            gust_max_kmh=20.0,
+            precip_sum_mm=30.0,  # +25 mm change
+            cloud_avg_pct=30,
+            humidity_avg_pct=50,
+            visibility_min_m=5000,
+        )
+        new_data = SegmentWeatherData(
+            segment=base_segment,
+            timeseries=old_data.timeseries,
+            aggregated=new_summary,
+            fetched_at=datetime.now(timezone.utc),
+            provider="geosphere",
+        )
+    
+        changes = service.detect_changes(old_data, new_data)
+    
+>       assert len(changes) == 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+tests/unit/test_change_detection.py:209: AssertionError
+___________ TestWeatherChangeDetectionService.test_multiple_changes ____________
+
+self = <test_change_detection.TestWeatherChangeDetectionService object at 0x7f41b3a28410>
+service = <services.weather_change_detection.WeatherChangeDetectionService object at 0x7f41b3a2a690>
+old_data = SegmentWeatherData(segment=TripSegment(segment_id=1, start_point=GPXPoint(lat=47.0, lon=11.0, elevation_m=1000, distan...g={}), fetched_at=datetime.datetime(2026, 2, 2, 7, 33, 38, 811534, tzinfo=datetime.timezone.utc), provider='geosphere')
+base_segment = TripSegment(segment_id=1, start_point=GPXPoint(lat=47.0, lon=11.0, elevation_m=1000, distance_from_start_km=0.0), end_...mezone.utc), duration_hours=2.0, distance_km=5.0, ascent_m=500, descent_m=0, adjusted_to_waypoint=False, waypoint=None)
+
+    def test_multiple_changes(self, service, old_data, base_segment):
+        """
+        GIVEN: Multiple metrics changed (temp +7°C, wind +25 km/h, precip +15 mm)
+        WHEN: detect_changes()
+        THEN: Returns 3 WeatherChange objects
+        """
+        new_summary = SegmentWeatherSummary(
+            temp_min_c=10.0,
+            temp_max_c=25.0,  # +7°C
+            temp_avg_c=14.0,
+            wind_max_kmh=40.0,  # +25 km/h
+            gust_max_kmh=20.0,
+            precip_sum_mm=20.0,  # +15 mm
+            cloud_avg_pct=30,
+            humidity_avg_pct=50,
+            visibility_min_m=5000,
+        )
+        new_data = SegmentWeatherData(
+            segment=base_segment,
+            timeseries=old_data.timeseries,
+            aggregated=new_summary,
+            fetched_at=datetime.now(timezone.utc),
+            provider="geosphere",
+        )
+    
+        changes = service.detect_changes(old_data, new_data)
+    
+>       assert len(changes) == 3
+E       assert 0 == 3
+E        +  where 0 = len([])
+
+tests/unit/test_change_detection.py:246: AssertionError
+________ TestWeatherChangeDetectionService.test_negative_delta_decrease ________
+
+self = <test_change_detection.TestWeatherChangeDetectionService object at 0x7f41b3a1fed0>
+service = <services.weather_change_detection.WeatherChangeDetectionService object at 0x7f41b5a72a90>
+old_data = SegmentWeatherData(segment=TripSegment(segment_id=1, start_point=GPXPoint(lat=47.0, lon=11.0, elevation_m=1000, distan...g={}), fetched_at=datetime.datetime(2026, 2, 2, 7, 33, 38, 815435, tzinfo=datetime.timezone.utc), provider='geosphere')
+base_segment = TripSegment(segment_id=1, start_point=GPXPoint(lat=47.0, lon=11.0, elevation_m=1000, distance_from_start_km=0.0), end_...mezone.utc), duration_hours=2.0, distance_km=5.0, ascent_m=500, descent_m=0, adjusted_to_waypoint=False, waypoint=None)
+
+    def test_negative_delta_decrease(self, service, old_data, base_segment):
+        """
+        GIVEN: Temp decreased from 18°C to 10°C (delta = -8°C)
+        WHEN: detect_changes()
+        THEN: Returns WeatherChange with direction="decrease"
+        """
+        new_summary = SegmentWeatherSummary(
+            temp_min_c=10.0,
+            temp_max_c=10.0,  # -8°C change
+            temp_avg_c=10.0,
+            wind_max_kmh=15.0,
+            gust_max_kmh=20.0,
+            precip_sum_mm=5.0,
+            cloud_avg_pct=30,
+            humidity_avg_pct=50,
+            visibility_min_m=5000,
+        )
+        new_data = SegmentWeatherData(
+            segment=base_segment,
+            timeseries=old_data.timeseries,
+            aggregated=new_summary,
+            fetched_at=datetime.now(timezone.utc),
+            provider="geosphere",
+        )
+    
+        changes = service.detect_changes(old_data, new_data)
+    
+>       assert len(changes) == 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+tests/unit/test_change_detection.py:277: AssertionError
+__ TestWeatherChangeDetectionService.test_severity_edge_case_exact_threshold ___
+
+self = <test_change_detection.TestWeatherChangeDetectionService object at 0x7f41b3a295d0>
+service = <services.weather_change_detection.WeatherChangeDetectionService object at 0x7f41b4495990>
+old_data = SegmentWeatherData(segment=TripSegment(segment_id=1, start_point=GPXPoint(lat=47.0, lon=11.0, elevation_m=1000, distan...g={}), fetched_at=datetime.datetime(2026, 2, 2, 7, 33, 38, 821508, tzinfo=datetime.timezone.utc), provider='geosphere')
+base_segment = TripSegment(segment_id=1, start_point=GPXPoint(lat=47.0, lon=11.0, elevation_m=1000, distance_from_start_km=0.0), end_...mezone.utc), duration_hours=2.0, distance_km=5.0, ascent_m=500, descent_m=0, adjusted_to_waypoint=False, waypoint=None)
+
+    def test_severity_edge_case_exact_threshold(self, service, old_data, base_segment):
+        """
+        GIVEN: Delta = exactly 1.5x threshold
+        WHEN: detect_changes()
+        THEN: Classified as MODERATE
+        """
+        new_summary = SegmentWeatherSummary(
+            temp_min_c=10.0,
+            temp_max_c=25.5,  # +7.5°C (exactly 1.5x threshold of 5°C)
+            temp_avg_c=14.0,
+            wind_max_kmh=15.0,
+            gust_max_kmh=20.0,
+            precip_sum_mm=5.0,
+            cloud_avg_pct=30,
+            humidity_avg_pct=50,
+            visibility_min_m=5000,
+        )
+        new_data = SegmentWeatherData(
+            segment=base_segment,
+            timeseries=old_data.timeseries,
+            aggregated=new_summary,
+            fetched_at=datetime.now(timezone.utc),
+            provider="geosphere",
+        )
+    
+        changes = service.detect_changes(old_data, new_data)
+    
+>       assert len(changes) == 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+tests/unit/test_change_detection.py:371: AssertionError
+__ TestWeatherChangeDetectionService.test_severity_classification_boundaries ___
+
+self = <test_change_detection.TestWeatherChangeDetectionService object at 0x7f41b3a29bd0>
+service = <services.weather_change_detection.WeatherChangeDetectionService object at 0x7f41b46c4a90>
+
+    def test_severity_classification_boundaries(self, service):
+        """
+        GIVEN: Various delta/threshold ratios
+        WHEN: _classify_severity()
+        THEN: Correct severity for each boundary
+        """
+        # MINOR: 1.1x threshold
+        assert service._classify_severity(5.5, 5.0) == ChangeSeverity.MINOR
+    
+        # MODERATE: 1.5x threshold
+>       assert service._classify_severity(7.5, 5.0) == ChangeSeverity.MODERATE
+E       AssertionError: assert <ChangeSeveri...INOR: 'minor'> == <ChangeSeveri...E: 'moderate'>
+E         
+E         - moderate
+E         + minor
+
+tests/unit/test_change_detection.py:384: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/test_change_detection.py::TestWeatherChangeDetectionService::test_single_minor_change_temp
+FAILED tests/unit/test_change_detection.py::TestWeatherChangeDetectionService::test_single_moderate_change_wind
+FAILED tests/unit/test_change_detection.py::TestWeatherChangeDetectionService::test_single_major_change_precip
+FAILED tests/unit/test_change_detection.py::TestWeatherChangeDetectionService::test_multiple_changes
+FAILED tests/unit/test_change_detection.py::TestWeatherChangeDetectionService::test_negative_delta_decrease
+FAILED tests/unit/test_change_detection.py::TestWeatherChangeDetectionService::test_severity_edge_case_exact_threshold
+FAILED tests/unit/test_change_detection.py::TestWeatherChangeDetectionService::test_severity_classification_boundaries
+========================= 7 failed, 3 passed in 0.18s ==========================

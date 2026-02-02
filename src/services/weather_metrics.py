@@ -24,6 +24,15 @@ class WeatherMetricsService:
     to populate SegmentWeatherSummary fields.
     """
 
+    # Cloud status constants (legacy - for compare.py compatibility)
+    GLACIER_LEVEL_M = 3000               # >= 3000m: in mid-cloud zone
+    ALPINE_LEVEL_M = 2000                # 2000-3000m: top of low-cloud zone
+    ABOVE_CLOUDS_LOW_CLOUD_PCT = 20      # Min low cloud % to show "above clouds"
+    ABOVE_CLOUDS_MAX_MID_CLOUD_PCT = 30  # Max mid cloud % for "above clouds"
+    IN_CLOUDS_MID_PCT = 50               # Min mid cloud % for glacier "in clouds"
+    IN_CLOUDS_ALPINE_LOW_PCT = 50        # Min low cloud % for alpine "in clouds"
+    IN_CLOUDS_VALLEY_LOW_PCT = 60        # Min low cloud % for valley "in clouds"
+
     def __init__(
         self,
         debug: Optional[DebugBuffer] = None,
@@ -35,6 +44,134 @@ class WeatherMetricsService:
             debug: Optional debug buffer for logging
         """
         self._debug = debug if debug is not None else DebugBuffer()
+
+    @staticmethod
+    def degrees_to_compass(degrees: int | None) -> str:
+        """
+        Convert wind direction in degrees (0-360) to compass direction.
+
+        Legacy static method for backward compatibility with compare.py.
+
+        Args:
+            degrees: Wind direction in degrees (0=N, 90=E, 180=S, 270=W)
+
+        Returns:
+            Compass direction string (N, NE, E, SE, S, SW, W, NW, or "-")
+        """
+        if degrees is None:
+            return "-"
+
+        # Normalize to 0-360
+        degrees = degrees % 360
+
+        # 8-point compass with 45° sectors
+        directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+        index = round(degrees / 45) % 8
+        return directions[index]
+
+    @staticmethod
+    def calculate_cloud_status(
+        elevation_m: Optional[int],
+        cloud_low_pct: Optional[int],
+        cloud_mid_pct: Optional[int] = None,
+        cloud_high_pct: Optional[int] = None,
+    ) -> "CloudStatus":
+        """
+        Determine location position relative to cloud layer.
+
+        Legacy static method for backward compatibility with compare.py.
+
+        Args:
+            elevation_m: Location elevation in meters
+            cloud_low_pct: Low cloud cover 0-3km (0-100%)
+            cloud_mid_pct: Mid cloud cover 3-8km (0-100%)
+            cloud_high_pct: High cloud cover >8km (0-100%)
+
+        Returns:
+            CloudStatus enum value
+        """
+        from services.weather_metrics import CloudStatus
+
+        if elevation_m is None:
+            return CloudStatus.NONE
+
+        low = cloud_low_pct or 0
+        mid = cloud_mid_pct or 0
+
+        # Glacier level (>= 3000m)
+        if elevation_m >= WeatherMetricsService.GLACIER_LEVEL_M:
+            if mid > WeatherMetricsService.IN_CLOUDS_MID_PCT:
+                return CloudStatus.IN_CLOUDS
+            if (low > WeatherMetricsService.ABOVE_CLOUDS_LOW_CLOUD_PCT
+                    and mid <= WeatherMetricsService.ABOVE_CLOUDS_MAX_MID_CLOUD_PCT):
+                return CloudStatus.ABOVE_CLOUDS
+            return CloudStatus.NONE
+
+        # Alpine level (2000-3000m)
+        if elevation_m >= WeatherMetricsService.ALPINE_LEVEL_M:
+            if low > WeatherMetricsService.IN_CLOUDS_ALPINE_LOW_PCT:
+                return CloudStatus.IN_CLOUDS
+            return CloudStatus.NONE
+
+        # Valley level (< 2000m)
+        if low > WeatherMetricsService.IN_CLOUDS_VALLEY_LOW_PCT:
+            return CloudStatus.IN_CLOUDS
+
+        return CloudStatus.NONE
+
+    @staticmethod
+    def format_cloud_status(status: "CloudStatus", use_emoji: bool = True) -> tuple[str, str]:
+        """
+        Format CloudStatus for display.
+
+        Legacy static method for backward compatibility with compare.py.
+
+        Args:
+            status: CloudStatus enum value
+            use_emoji: Whether to include emoji (kept for API compat)
+
+        Returns:
+            Tuple of (display_text, css_style)
+        """
+        from services.weather_metrics import CloudStatus
+
+        mapping = {
+            CloudStatus.ABOVE_CLOUDS: (
+                "above clouds",
+                "color: #2e7d32; font-weight: 600;"
+            ),
+            CloudStatus.IN_CLOUDS: (
+                "in clouds",
+                "color: #888;"
+            ),
+            CloudStatus.NONE: (
+                "",
+                ""
+            ),
+        }
+        return mapping.get(status, ("", ""))
+
+    @staticmethod
+    def get_cloud_status_emoji(status: "CloudStatus") -> str:
+        """
+        Get emoji for CloudStatus.
+
+        Legacy static method for backward compatibility with compare.py.
+
+        Args:
+            status: CloudStatus enum value
+
+        Returns:
+            Emoji string (empty for NONE)
+        """
+        from services.weather_metrics import CloudStatus
+
+        mapping = {
+            CloudStatus.ABOVE_CLOUDS: "☀️",
+            CloudStatus.IN_CLOUDS: "☁️",
+            CloudStatus.NONE: "",
+        }
+        return mapping.get(status, "")
 
     def compute_basis_metrics(
         self,
