@@ -1,0 +1,47 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.2, pytest-8.4.1, pluggy-1.6.0 -- /opt/gregor_zwanziger/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /tmp/claude-1001/-opt-gregor-zwanziger/9bcceeaf-c2a3-45d1-83b0-7f33d341fbf0/scratchpad/feature-3.1
+plugins: anyio-4.12.0
+collecting ... collected 2 items
+
+../../tmp/claude-1001/-opt-gregor-zwanziger/9bcceeaf-c2a3-45d1-83b0-7f33d341fbf0/scratchpad/feature-3.1/test_trip_report_formatter.py::test_trip_report_formatter_exists FAILED [ 50%]
+../../tmp/claude-1001/-opt-gregor-zwanziger/9bcceeaf-c2a3-45d1-83b0-7f33d341fbf0/scratchpad/feature-3.1/test_trip_report_formatter.py::test_format_email_generates_html FAILED [100%]
+
+=================================== FAILURES ===================================
+______________________ test_trip_report_formatter_exists _______________________
+
+    def test_trip_report_formatter_exists():
+        """
+        TDD RED: TripReportFormatter class should exist.
+    
+        GIVEN: Feature 3.1 spec
+        WHEN: Importing TripReportFormatter
+        THEN: Import succeeds
+    
+        EXPECTED: FAIL - TripReportFormatter doesn't exist yet
+        """
+>       from formatters.trip_report import TripReportFormatter
+E       ModuleNotFoundError: No module named 'formatters.trip_report'
+
+/tmp/claude-1001/-opt-gregor-zwanziger/9bcceeaf-c2a3-45d1-83b0-7f33d341fbf0/scratchpad/feature-3.1/test_trip_report_formatter.py:61: ModuleNotFoundError
+_______________________ test_format_email_generates_html _______________________
+
+    def test_format_email_generates_html():
+        """
+        TDD RED: format_email() should generate HTML email.
+    
+        GIVEN: Single segment with weather data
+        WHEN: Calling format_email()
+        THEN: Returns TripReport with HTML
+    
+        EXPECTED: FAIL - Method doesn't exist yet
+        """
+>       from formatters.trip_report import TripReportFormatter
+E       ModuleNotFoundError: No module named 'formatters.trip_report'
+
+/tmp/claude-1001/-opt-gregor-zwanziger/9bcceeaf-c2a3-45d1-83b0-7f33d341fbf0/scratchpad/feature-3.1/test_trip_report_formatter.py:76: ModuleNotFoundError
+=========================== short test summary info ============================
+FAILED ../../tmp/claude-1001/-opt-gregor-zwanziger/9bcceeaf-c2a3-45d1-83b0-7f33d341fbf0/scratchpad/feature-3.1/test_trip_report_formatter.py::test_trip_report_formatter_exists
+FAILED ../../tmp/claude-1001/-opt-gregor-zwanziger/9bcceeaf-c2a3-45d1-83b0-7f33d341fbf0/scratchpad/feature-3.1/test_trip_report_formatter.py::test_format_email_generates_html
+============================== 2 failed in 0.03s ===============================
