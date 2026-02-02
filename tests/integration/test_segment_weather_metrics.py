@@ -104,7 +104,7 @@ class TestSegmentWeatherMetricsGeoSphere:
             assert 0 <= summary.visibility_min_m <= 100000
 
         # Aggregation config
-        assert len(summary.aggregation_config) == 10
+        assert len(summary.aggregation_config) >= 10  # 10 basis + up to 5 extended
         assert summary.aggregation_config["temp_min_c"] == "min"
         assert summary.aggregation_config["precip_sum_mm"] == "sum"
 
@@ -165,7 +165,7 @@ class TestSegmentWeatherMetricsOpenMeteo:
         assert summary.humidity_avg_pct is not None
 
         # Aggregation config
-        assert len(summary.aggregation_config) == 10
+        assert len(summary.aggregation_config) >= 10  # 10 basis + up to 5 extended
 
 
 class TestE2EStory2Flow:
@@ -209,3 +209,101 @@ class TestE2EStory2Flow:
         assert weather_data.segment == segment
         assert len(weather_data.timeseries.data) > 0
         assert weather_data.provider == "geosphere"
+
+
+# ============================================================================
+# Feature 2.2b: Extended Metrics Integration Tests
+# ============================================================================
+
+
+class TestSegmentWeatherMetricsExtended:
+    """Test extended metrics computation with real API data."""
+
+    def test_geosphere_austria_extended_metrics(self):
+        """
+        GIVEN: Real GeoSphere provider and Austrian segment
+        WHEN: fetch_segment_weather with Feature 2.2b enabled
+        THEN: Extended metrics (dewpoint, pressure, wind-chill) populated
+        """
+        from services.segment_weather import SegmentWeatherService
+        from providers.base import get_provider
+
+        provider = get_provider("geosphere")
+        service = SegmentWeatherService(provider)
+
+        now = datetime.now(timezone.utc)
+        segment = TripSegment(
+            segment_id=1,
+            start_point=GPXPoint(lat=47.27, lon=11.40, elevation_m=800),
+            end_point=GPXPoint(lat=47.29, lon=11.42, elevation_m=1200),
+            start_time=now + timedelta(hours=2),
+            end_time=now + timedelta(hours=4),
+            duration_hours=2.0,
+            distance_km=5.2,
+            ascent_m=400,
+            descent_m=0,
+        )
+
+        result = service.fetch_segment_weather(segment)
+        summary = result.aggregated
+
+        # Extended metrics config should be present
+        assert "dewpoint_avg_c" in summary.aggregation_config
+        assert "pressure_avg_hpa" in summary.aggregation_config
+
+        # Check if extended metrics are populated (provider-dependent)
+        # Dewpoint and pressure may be None if provider doesn't provide them
+        if summary.dewpoint_avg_c is not None:
+            assert -50 <= summary.dewpoint_avg_c <= 40
+
+        if summary.pressure_avg_hpa is not None:
+            assert 800 <= summary.pressure_avg_hpa <= 1100
+
+        # Wind-chill may be None if provider doesn't provide it
+        if summary.wind_chill_min_c is not None:
+            assert -60 <= summary.wind_chill_min_c <= 30
+
+        # Winter fields likely None in summer
+        # (don't assert, just check if present)
+
+        # Aggregation config should have extended entries
+        assert "dewpoint_avg_c" in summary.aggregation_config
+        assert "pressure_avg_hpa" in summary.aggregation_config
+
+    def test_openmeteo_corsica_extended_no_winter(self):
+        """
+        GIVEN: Real Open-Meteo provider (Corsica)
+        WHEN: fetch_segment_weather with Feature 2.2b enabled
+        THEN: Core extended metrics populated, winter fields None
+        """
+        from services.segment_weather import SegmentWeatherService
+        from providers.base import get_provider
+
+        provider = get_provider("openmeteo")
+        service = SegmentWeatherService(provider)
+
+        now = datetime.now(timezone.utc)
+        segment = TripSegment(
+            segment_id=1,
+            start_point=GPXPoint(lat=42.39, lon=9.08, elevation_m=1200),
+            end_point=GPXPoint(lat=42.41, lon=9.10, elevation_m=1800),
+            start_time=now + timedelta(hours=2),
+            end_time=now + timedelta(hours=4),
+            duration_hours=2.0,
+            distance_km=6.0,
+            ascent_m=600,
+            descent_m=0,
+        )
+
+        result = service.fetch_segment_weather(segment)
+        summary = result.aggregated
+
+        # Extended metrics config present (values may be None if provider doesn't provide)
+        assert "dewpoint_avg_c" in summary.aggregation_config
+        assert "pressure_avg_hpa" in summary.aggregation_config
+
+        # Winter fields likely None (Mediterranean summer)
+        # (just verify no errors, don't assert values)
+
+        # Full config
+        assert len(summary.aggregation_config) >= 10  # At least basis metrics

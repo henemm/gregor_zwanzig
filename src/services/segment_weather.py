@@ -120,11 +120,14 @@ class SegmentWeatherService:
         metrics_service = WeatherMetricsService(debug=self._debug)
         basis_summary = metrics_service.compute_basis_metrics(timeseries)
 
+        # Step 6b: Compute extended metrics (Feature 2.2b)
+        extended_summary = metrics_service.compute_extended_metrics(timeseries, basis_summary)
+
         # Step 7: Wrap in SegmentWeatherData
         return SegmentWeatherData(
             segment=segment,
             timeseries=timeseries,
-            aggregated=basis_summary,
+            aggregated=extended_summary,
             fetched_at=datetime.now(timezone.utc),
             provider=self._provider.name,
         )

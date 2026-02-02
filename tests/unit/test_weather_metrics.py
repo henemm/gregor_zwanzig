@@ -460,3 +460,300 @@ class TestWeatherMetricsServiceEdgeCases:
         # (45 + 50 + 56) / 3 = 50.333... → rounds to 50
         assert isinstance(result.cloud_avg_pct, int)
         assert result.cloud_avg_pct == 50
+
+
+# ============================================================================
+# Feature 2.2b: Extended Metrics Tests
+# ============================================================================
+
+
+class TestWeatherMetricsServiceExtendedKnownValues:
+    """Test extended metrics computation with known synthetic values."""
+
+    @pytest.fixture
+    def service(self):
+        """WeatherMetricsService instance."""
+        return WeatherMetricsService()
+
+    @pytest.fixture
+    def basis_summary(self):
+        """Basis summary from Feature 2.2a."""
+        return SegmentWeatherSummary(
+            temp_min_c=10.0,
+            temp_max_c=20.0,
+            temp_avg_c=15.0,
+            wind_max_kmh=25.0,
+            gust_max_kmh=35.0,
+            precip_sum_mm=3.5,
+            cloud_avg_pct=50,
+            humidity_avg_pct=70,
+            thunder_level_max=ThunderLevel.MED,
+            visibility_min_m=3000,
+            aggregation_config={
+                "temp_min_c": "min",
+                "temp_max_c": "max",
+                "temp_avg_c": "avg",
+                "wind_max_kmh": "max",
+                "gust_max_kmh": "max",
+                "precip_sum_mm": "sum",
+                "cloud_avg_pct": "avg",
+                "humidity_avg_pct": "avg",
+                "thunder_level_max": "max",
+                "visibility_min_m": "min",
+            },
+        )
+
+    @pytest.fixture
+    def extended_timeseries(self):
+        """
+        Synthetic timeseries with extended fields.
+        
+        3 data points:
+        - dewpoint_c: 5.0, 8.0, 11.0 → avg=8.0
+        - pressure_msl_hpa: 1013.0, 1015.0, 1017.0 → avg=1015.0
+        - wind_chill_c: -5.0, -3.0, -1.0 → min=-5.0
+        - snow_depth_cm: 50, 60, 55 → max=60
+        - freezing_level_m: 2000, 2100, 2050 → avg=2050
+        """
+        meta = ForecastMeta(
+            provider=Provider.GEOSPHERE,
+            model="test",
+            run=datetime.now(timezone.utc),
+            grid_res_km=1.0,
+            interp="test",
+        )
+
+        data = [
+            ForecastDataPoint(
+                ts=datetime(2026, 2, 1, 10, 0, tzinfo=timezone.utc),
+                t2m_c=10.0,
+                dewpoint_c=5.0,
+                pressure_msl_hpa=1013.0,
+                wind_chill_c=-5.0,
+                snow_depth_cm=50.0,
+                freezing_level_m=2000,
+            ),
+            ForecastDataPoint(
+                ts=datetime(2026, 2, 1, 11, 0, tzinfo=timezone.utc),
+                t2m_c=15.0,
+                dewpoint_c=8.0,
+                pressure_msl_hpa=1015.0,
+                wind_chill_c=-3.0,
+                snow_depth_cm=60.0,
+                freezing_level_m=2100,
+            ),
+            ForecastDataPoint(
+                ts=datetime(2026, 2, 1, 12, 0, tzinfo=timezone.utc),
+                t2m_c=20.0,
+                dewpoint_c=11.0,
+                pressure_msl_hpa=1017.0,
+                wind_chill_c=-1.0,
+                snow_depth_cm=55.0,
+                freezing_level_m=2050,
+            ),
+        ]
+
+        return NormalizedTimeseries(meta=meta, data=data)
+
+    def test_compute_extended_metrics_known_values(
+        self, service, extended_timeseries, basis_summary
+    ):
+        """
+        GIVEN: Timeseries with known extended values
+        WHEN: compute_extended_metrics(timeseries, basis_summary)
+        THEN: All 5 extended metrics match expected calculations
+        """
+        result = service.compute_extended_metrics(extended_timeseries, basis_summary)
+
+        # Extended metrics
+        assert result.dewpoint_avg_c == 8.0
+        assert result.pressure_avg_hpa == 1015.0
+        assert result.wind_chill_min_c == -5.0
+        assert result.snow_depth_cm == 60.0
+        assert result.freezing_level_m == 2050
+
+    def test_extended_preserves_basis_metrics(
+        self, service, extended_timeseries, basis_summary
+    ):
+        """
+        GIVEN: Basis summary with 8 metrics populated
+        WHEN: compute_extended_metrics(timeseries, basis_summary)
+        THEN: All 8 basis metrics preserved unchanged
+        """
+        result = service.compute_extended_metrics(extended_timeseries, basis_summary)
+
+        # Basis metrics unchanged
+        assert result.temp_min_c == 10.0
+        assert result.temp_max_c == 20.0
+        assert result.temp_avg_c == 15.0
+        assert result.wind_max_kmh == 25.0
+        assert result.gust_max_kmh == 35.0
+        assert result.precip_sum_mm == 3.5
+        assert result.cloud_avg_pct == 50
+        assert result.humidity_avg_pct == 70
+        assert result.thunder_level_max == ThunderLevel.MED
+        assert result.visibility_min_m == 3000
+
+    def test_extended_aggregation_config_merged(
+        self, service, extended_timeseries, basis_summary
+    ):
+        """
+        GIVEN: Basis summary with 10 config entries
+        WHEN: compute_extended_metrics(timeseries, basis_summary)
+        THEN: aggregation_config has 15 entries (10 basis + 5 extended)
+        """
+        result = service.compute_extended_metrics(extended_timeseries, basis_summary)
+
+        assert len(result.aggregation_config) == 15
+
+        # Basis config preserved
+        assert result.aggregation_config["temp_min_c"] == "min"
+        assert result.aggregation_config["precip_sum_mm"] == "sum"
+
+        # Extended config added
+        assert result.aggregation_config["dewpoint_avg_c"] == "avg"
+        assert result.aggregation_config["pressure_avg_hpa"] == "avg"
+        assert result.aggregation_config["wind_chill_min_c"] == "min"
+        assert result.aggregation_config["snow_depth_cm"] == "max"
+        assert result.aggregation_config["freezing_level_m"] == "avg"
+
+
+class TestWeatherMetricsServiceExtendedOptional:
+    """Test extended metrics with optional/missing data."""
+
+    @pytest.fixture
+    def service(self):
+        return WeatherMetricsService()
+
+    @pytest.fixture
+    def basis_summary(self):
+        return SegmentWeatherSummary(
+            temp_min_c=10.0,
+            temp_max_c=20.0,
+            temp_avg_c=15.0,
+            aggregation_config={"temp_min_c": "min"},
+        )
+
+    def test_extended_no_winter_fields(self, service, basis_summary):
+        """
+        GIVEN: Timeseries WITHOUT snow_depth or freezing_level
+        WHEN: compute_extended_metrics(timeseries, basis_summary)
+        THEN: Snow/freezing fields = None, other extended metrics computed
+        """
+        meta = ForecastMeta(
+            provider=Provider.OPENMETEO,
+            model="test",
+            run=datetime.now(timezone.utc),
+            grid_res_km=1.0,
+            interp="test",
+        )
+
+        data = [
+            ForecastDataPoint(
+                ts=datetime(2026, 2, 1, 10, 0, tzinfo=timezone.utc),
+                t2m_c=15.0,
+                dewpoint_c=8.0,
+                pressure_msl_hpa=1015.0,
+                wind_chill_c=-2.0,
+                # No snow_depth_cm
+                # No freezing_level_m
+            ),
+            ForecastDataPoint(
+                ts=datetime(2026, 2, 1, 11, 0, tzinfo=timezone.utc),
+                t2m_c=18.0,
+                dewpoint_c=10.0,
+                pressure_msl_hpa=1016.0,
+                wind_chill_c=-1.0,
+            ),
+        ]
+
+        timeseries = NormalizedTimeseries(meta=meta, data=data)
+        result = service.compute_extended_metrics(timeseries, basis_summary)
+
+        # Core extended metrics computed
+        assert result.dewpoint_avg_c == 9.0  # (8+10)/2
+        assert result.pressure_avg_hpa == 1015.5  # (1015+1016)/2
+        assert result.wind_chill_min_c == -2.0
+
+        # Winter fields None
+        assert result.snow_depth_cm is None
+        assert result.freezing_level_m is None
+
+    def test_extended_all_none(self, service, basis_summary):
+        """
+        GIVEN: Timeseries with NO extended fields available
+        WHEN: compute_extended_metrics(timeseries, basis_summary)
+        THEN: All extended metrics = None, basis metrics preserved
+        """
+        meta = ForecastMeta(
+            provider=Provider.GEOSPHERE,
+            model="test",
+            run=datetime.now(timezone.utc),
+            grid_res_km=1.0,
+            interp="test",
+        )
+
+        data = [
+            ForecastDataPoint(
+                ts=datetime(2026, 2, 1, 10, 0, tzinfo=timezone.utc),
+                t2m_c=15.0,
+                # No extended fields
+            ),
+            ForecastDataPoint(
+                ts=datetime(2026, 2, 1, 11, 0, tzinfo=timezone.utc),
+                t2m_c=18.0,
+            ),
+        ]
+
+        timeseries = NormalizedTimeseries(meta=meta, data=data)
+        result = service.compute_extended_metrics(timeseries, basis_summary)
+
+        # All extended metrics None
+        assert result.dewpoint_avg_c is None
+        assert result.pressure_avg_hpa is None
+        assert result.wind_chill_min_c is None
+        assert result.snow_depth_cm is None
+        assert result.freezing_level_m is None
+
+        # Basis metrics preserved
+        assert result.temp_min_c == 10.0
+        assert result.temp_max_c == 20.0
+
+    def test_extended_sparse_data(self, service, basis_summary):
+        """
+        GIVEN: Timeseries with 50% None values for extended fields
+        WHEN: compute_extended_metrics(timeseries, basis_summary)
+        THEN: Metrics computed from available values only
+        """
+        meta = ForecastMeta(
+            provider=Provider.GEOSPHERE,
+            model="test",
+            run=datetime.now(timezone.utc),
+            grid_res_km=1.0,
+            interp="test",
+        )
+
+        data = [
+            ForecastDataPoint(
+                ts=datetime(2026, 2, 1, 10, 0, tzinfo=timezone.utc),
+                dewpoint_c=5.0,
+                pressure_msl_hpa=None,
+            ),
+            ForecastDataPoint(
+                ts=datetime(2026, 2, 1, 11, 0, tzinfo=timezone.utc),
+                dewpoint_c=None,
+                pressure_msl_hpa=1015.0,
+            ),
+            ForecastDataPoint(
+                ts=datetime(2026, 2, 1, 12, 0, tzinfo=timezone.utc),
+                dewpoint_c=11.0,
+                pressure_msl_hpa=1017.0,
+            ),
+        ]
+
+        timeseries = NormalizedTimeseries(meta=meta, data=data)
+        result = service.compute_extended_metrics(timeseries, basis_summary)
+
+        # Computed from available values only
+        assert result.dewpoint_avg_c == 8.0  # (5+11)/2
+        assert result.pressure_avg_hpa == 1016.0  # (1015+1017)/2

@@ -72,7 +72,7 @@ class TestSegmentWeatherServiceGeoSphere:
         assert result.aggregated.wind_max_kmh is not None
         assert result.aggregated.precip_sum_mm is not None
         # Aggregation config should be populated
-        assert len(result.aggregated.aggregation_config) == 10
+        assert len(result.aggregated.aggregation_config) >= 10  # 10 basis + up to 5 extended
 
 
 class TestSegmentWeatherServiceOpenMeteo:
@@ -138,7 +138,7 @@ class TestSegmentWeatherServiceOpenMeteo:
         # Verify populated summary (Feature 2.2a)
         assert result.aggregated.temp_min_c is not None
         assert result.aggregated.wind_max_kmh is not None
-        assert len(result.aggregated.aggregation_config) == 10
+        assert len(result.aggregated.aggregation_config) >= 10  # 10 basis + up to 5 extended
 
 
 class TestSegmentWeatherServiceValidation:

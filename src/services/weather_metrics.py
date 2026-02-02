@@ -319,6 +319,163 @@ class WeatherMetricsService:
 
 
 # ============================================================================
+
+    # ========================================================================
+    # Feature 2.2b: Extended Metrics
+    # ========================================================================
+
+    def compute_extended_metrics(
+        self,
+        timeseries: NormalizedTimeseries,
+        basis_summary: SegmentWeatherSummary,
+    ) -> SegmentWeatherSummary:
+        """
+        Compute 5 extended hiking metrics and merge with basis metrics.
+
+        Metrics computed:
+        1. Dewpoint: AVG from dewpoint_c
+        2. Pressure: AVG from pressure_msl_hpa
+        3. Wind-Chill: MIN from wind_chill_c
+        4. Snow-Depth: MAX from snow_depth_cm (optional, winter)
+        5. Freezing-Level: AVG from freezing_level_m (optional, winter)
+
+        Args:
+            timeseries: Weather timeseries from provider
+            basis_summary: Summary with basis metrics from compute_basis_metrics()
+
+        Returns:
+            SegmentWeatherSummary with 5 extended metrics added
+
+        Raises:
+            ValueError: If timeseries is empty
+        """
+        # Validate timeseries
+        if not timeseries.data:
+            raise ValueError("Cannot compute metrics from empty timeseries")
+
+        self._debug.add(f"extended_metrics: Computing from {len(timeseries.data)} data points")
+
+        # Compute extended metrics
+        dewpoint_avg = self._compute_dewpoint(timeseries)
+        pressure_avg = self._compute_pressure(timeseries)
+        wind_chill_min = self._compute_wind_chill(timeseries)
+        snow_depth = self._compute_snow_depth(timeseries)
+        freezing_level = self._compute_freezing_level(timeseries)
+
+        # Create new summary with basis + extended metrics
+        extended_summary = SegmentWeatherSummary(
+            # Copy basis metrics
+            temp_min_c=basis_summary.temp_min_c,
+            temp_max_c=basis_summary.temp_max_c,
+            temp_avg_c=basis_summary.temp_avg_c,
+            wind_max_kmh=basis_summary.wind_max_kmh,
+            gust_max_kmh=basis_summary.gust_max_kmh,
+            precip_sum_mm=basis_summary.precip_sum_mm,
+            cloud_avg_pct=basis_summary.cloud_avg_pct,
+            humidity_avg_pct=basis_summary.humidity_avg_pct,
+            thunder_level_max=basis_summary.thunder_level_max,
+            visibility_min_m=basis_summary.visibility_min_m,
+            # Add extended metrics
+            dewpoint_avg_c=dewpoint_avg,
+            pressure_avg_hpa=pressure_avg,
+            wind_chill_min_c=wind_chill_min,
+            snow_depth_cm=snow_depth,
+            freezing_level_m=freezing_level,
+            # Merge aggregation config
+            aggregation_config={
+                **basis_summary.aggregation_config,
+                "dewpoint_avg_c": "avg",
+                "pressure_avg_hpa": "avg",
+                "wind_chill_min_c": "min",
+                "snow_depth_cm": "max",
+                "freezing_level_m": "avg",
+            },
+        )
+
+        # Validate plausibility (extended metrics)
+        self._validate_extended_plausibility(extended_summary)
+
+        # Log extended metrics
+        self._debug.add(f"extended_metrics: dewpoint={dewpoint_avg}°C")
+        self._debug.add(f"extended_metrics: pressure={pressure_avg} hPa")
+        self._debug.add(f"extended_metrics: wind_chill={wind_chill_min}°C")
+
+        return extended_summary
+
+    def _compute_dewpoint(self, timeseries: NormalizedTimeseries) -> Optional[float]:
+        """Compute dewpoint AVG. Returns dewpoint_avg_c."""
+        dewpoints = [dp.dewpoint_c for dp in timeseries.data if dp.dewpoint_c is not None]
+        return sum(dewpoints) / len(dewpoints) if dewpoints else None
+
+    def _compute_pressure(self, timeseries: NormalizedTimeseries) -> Optional[float]:
+        """Compute pressure AVG. Returns pressure_avg_hpa."""
+        pressures = [
+            dp.pressure_msl_hpa for dp in timeseries.data if dp.pressure_msl_hpa is not None
+        ]
+        return sum(pressures) / len(pressures) if pressures else None
+
+    def _compute_wind_chill(self, timeseries: NormalizedTimeseries) -> Optional[float]:
+        """Compute wind-chill MIN. Returns wind_chill_min_c."""
+        wind_chills = [
+            dp.wind_chill_c for dp in timeseries.data if dp.wind_chill_c is not None
+        ]
+        return min(wind_chills) if wind_chills else None
+
+    def _compute_snow_depth(self, timeseries: NormalizedTimeseries) -> Optional[float]:
+        """Compute snow-depth MAX. Returns snow_depth_cm (optional, winter)."""
+        snow_depths = [
+            dp.snow_depth_cm for dp in timeseries.data if dp.snow_depth_cm is not None
+        ]
+        return max(snow_depths) if snow_depths else None
+
+    def _compute_freezing_level(self, timeseries: NormalizedTimeseries) -> Optional[int]:
+        """Compute freezing-level AVG. Returns freezing_level_m (optional, winter)."""
+        freezing_levels = [
+            dp.freezing_level_m for dp in timeseries.data if dp.freezing_level_m is not None
+        ]
+        return round(sum(freezing_levels) / len(freezing_levels)) if freezing_levels else None
+
+    def _validate_extended_plausibility(self, summary: SegmentWeatherSummary) -> None:
+        """
+        Validate extended metric plausibility and log warnings.
+
+        Checks (logs WARNING if out of range, does NOT raise):
+        - Dewpoint: -50°C to +40°C
+        - Pressure: 800 to 1100 hPa
+        - Wind-Chill: -60°C to +30°C
+        - Snow-Depth: 0 to 1000 cm
+        - Freezing-Level: 0 to 6000 m
+        """
+        if summary.dewpoint_avg_c is not None:
+            if not (-50 <= summary.dewpoint_avg_c <= 40):
+                self._debug.add(
+                    f"WARNING: dewpoint_avg_c={summary.dewpoint_avg_c}°C out of plausible range (-50..40)"
+                )
+
+        if summary.pressure_avg_hpa is not None:
+            if not (800 <= summary.pressure_avg_hpa <= 1100):
+                self._debug.add(
+                    f"WARNING: pressure_avg_hpa={summary.pressure_avg_hpa} hPa out of plausible range (800..1100)"
+                )
+
+        if summary.wind_chill_min_c is not None:
+            if not (-60 <= summary.wind_chill_min_c <= 30):
+                self._debug.add(
+                    f"WARNING: wind_chill_min_c={summary.wind_chill_min_c}°C out of plausible range (-60..30)"
+                )
+
+        if summary.snow_depth_cm is not None:
+            if not (0 <= summary.snow_depth_cm <= 1000):
+                self._debug.add(
+                    f"WARNING: snow_depth_cm={summary.snow_depth_cm} cm out of plausible range (0..1000)"
+                )
+
+        if summary.freezing_level_m is not None:
+            if not (0 <= summary.freezing_level_m <= 6000):
+                self._debug.add(
+                    f"WARNING: freezing_level_m={summary.freezing_level_m} m out of plausible range (0..6000)"
+                )
+
 # Legacy Classes (pre-Feature 2.2a)
 # Used by src/web/pages/compare.py - kept for backward compatibility
 # ============================================================================
