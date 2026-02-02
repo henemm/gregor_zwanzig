@@ -1,0 +1,10 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.2, pytest-8.4.1, pluggy-1.6.0
+rootdir: /opt/gregor_zwanziger
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 5 items
+
+tests/e2e/test_weather_config.py .....                                   [100%]
+
+============================== 5 passed in 26.28s ==============================

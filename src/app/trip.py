@@ -180,6 +180,7 @@ class Trip:
     stages: List[Stage]
     avalanche_regions: List[str] = field(default_factory=list)
     aggregation: AggregationConfig = field(default_factory=AggregationConfig)
+    weather_config: Optional["TripWeatherConfig"] = None  # Feature 2.6
 
     def __post_init__(self) -> None:
         if not self.stages:

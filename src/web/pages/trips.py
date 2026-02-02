@@ -10,6 +10,7 @@ from nicegui import ui
 
 from app.loader import delete_trip, load_all_trips, save_trip
 from app.trip import Stage, Trip, Waypoint
+from web.pages.weather_config import show_weather_config_dialog
 from web.utils import parse_dms_coordinates
 
 
@@ -470,7 +471,18 @@ def render_trips() -> None:
                                 refresh_list()
                             return do_delete
 
+                        def make_weather_config_handler(t: Trip):
+                            """Factory for weather config handler - Safari compatible!"""
+                            def do_show_weather_config() -> None:
+                                show_weather_config_dialog(t)
+                            return do_show_weather_config
+
                         with ui.row().classes("gap-1"):
+                            ui.button(
+                                "Wetter-Metriken",
+                                icon="settings",
+                                on_click=make_weather_config_handler(trip),
+                            ).props("flat color=primary")
                             ui.button(
                                 icon="edit",
                                 on_click=make_edit_handler(trip),

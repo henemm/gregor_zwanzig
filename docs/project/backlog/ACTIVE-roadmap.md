@@ -55,13 +55,13 @@ Features are added via `/feature` or `/user-story` commands.
 | Hybrid-Segmentierung | open | HIGH | Core | Segmentation Engine | Medium | GPX-Story1 |
 | Etappen-Config (WebUI) | open | HIGH | WebUI | Frontend, Config | Medium | GPX-Story1 |
 | Segment-Übersicht (WebUI) | open | HIGH | WebUI | Frontend | Simple | GPX-Story1 |
-| Segment-Wetter-Abfrage | open | HIGH | Services | Weather Engine | Medium | GPX-Story2 |
-| Basis-Metriken | open | HIGH | Services | Weather Engine | Simple | GPX-Story2 |
+| Segment-Wetter-Abfrage | done | HIGH | Services | Weather Engine | Medium | GPX-Story2 |
+| Basis-Metriken | in_progress | HIGH | Services | Weather Engine | Simple | GPX-Story2 |
 | Erweiterte Metriken | open | HIGH | Services | Weather Engine | Simple | GPX-Story2 |
 | Segment-Aggregation | open | HIGH | Services | Weather Engine | Medium | GPX-Story2 |
 | Wetter-Cache | open | HIGH | Services | Weather Engine | Simple | GPX-Story2 |
 | Change-Detection | open | HIGH | Services | Weather Engine | Medium | GPX-Story2 |
-| Wetter-Config (WebUI) | open | HIGH | WebUI | Frontend | Simple | GPX-Story2 |
+| Wetter-Config (WebUI) | done | HIGH | WebUI | Frontend | Simple | GPX-Story2 |
 | Email Trip-Formatter | open | HIGH | Formatter | Report Generation | Medium | GPX-Story3 |
 | SMS Compact Formatter | open | HIGH | Formatter | Report Generation | Simple | GPX-Story3 |
 | Report-Scheduler | open | HIGH | Services | Scheduler | Medium | GPX-Story3 |

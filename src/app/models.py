@@ -311,3 +311,25 @@ class WeatherChange:
     threshold: float               # Configured threshold
     severity: ChangeSeverity       # minor/moderate/major
     direction: str                 # "increase" or "decrease"
+
+
+# --- Trip Weather Config DTOs (Feature 2.6) ---
+
+@dataclass
+class TripWeatherConfig:
+    """
+    Weather metrics configuration per trip.
+
+    Stores which of the 13 available metrics the user wants
+    to see in their trip weather reports (Story 3).
+
+    Example:
+        TripWeatherConfig(
+            trip_id="gr20-etappe3",
+            enabled_metrics=["temp_max_c", "wind_max_kmh", "precip_sum_mm"],
+            updated_at=datetime.now(timezone.utc)
+        )
+    """
+    trip_id: str
+    enabled_metrics: list[str]  # Subset of 13 metric names
+    updated_at: datetime

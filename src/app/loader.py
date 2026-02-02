@@ -113,12 +113,25 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
                     else:
                         setattr(aggregation, key, AggregationFunc(value))
 
+    # Parse weather config if present (Feature 2.6)
+    weather_config = None
+    if "weather_config" in data:
+        from app.models import TripWeatherConfig
+        from datetime import datetime
+        wc_data = data["weather_config"]
+        weather_config = TripWeatherConfig(
+            trip_id=wc_data["trip_id"],
+            enabled_metrics=wc_data["enabled_metrics"],
+            updated_at=datetime.fromisoformat(wc_data["updated_at"])
+        )
+
     return Trip(
         id=data["id"],
         name=data["name"],
         stages=stages,
         avalanche_regions=data.get("avalanche_regions", []),
         aggregation=aggregation,
+        weather_config=weather_config,
     )
 
 
@@ -368,7 +381,7 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             "waypoints": waypoints_data,
         })
 
-    return {
+    data = {
         "id": trip.id,
         "name": trip.name,
         "stages": stages_data,
@@ -377,6 +390,16 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             "profile": trip.aggregation.profile.value,
         },
     }
+
+    # Serialize weather config (Feature 2.6)
+    if trip.weather_config:
+        data["weather_config"] = {
+            "trip_id": trip.weather_config.trip_id,
+            "enabled_metrics": trip.weather_config.enabled_metrics,
+            "updated_at": trip.weather_config.updated_at.isoformat()
+        }
+
+    return data
 
 
 def save_trip(trip: Trip, user_id: str = "default") -> Path:

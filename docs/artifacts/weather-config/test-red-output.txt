@@ -1,0 +1,6 @@
+============================================================
+E2E Test: Weather Config Button (Feature 2.6)
+Expected: TEST FAILS (RED) - Button not implemented yet
+============================================================
+
+❌ Test FAILED (expected - RED phase): Weather Config button not found on trips page. Feature 2.6 not implemented yet.
