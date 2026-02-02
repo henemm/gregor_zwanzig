@@ -66,11 +66,13 @@ class TestSegmentWeatherServiceGeoSphere:
         assert len(result.timeseries.data) > 0
         assert result.timeseries.meta.provider.value == "GEOSPHERE"
 
-        # Verify empty summary (Feature 2.1 does NOT populate)
-        assert result.aggregated.temp_min_c is None
-        assert result.aggregated.temp_max_c is None
-        assert result.aggregated.wind_max_kmh is None
-        assert result.aggregated.precip_sum_mm is None
+        # Verify populated summary (Feature 2.2a populates basis metrics)
+        assert result.aggregated.temp_min_c is not None
+        assert result.aggregated.temp_max_c is not None
+        assert result.aggregated.wind_max_kmh is not None
+        assert result.aggregated.precip_sum_mm is not None
+        # Aggregation config should be populated
+        assert len(result.aggregated.aggregation_config) == 10
 
 
 class TestSegmentWeatherServiceOpenMeteo:
@@ -133,9 +135,10 @@ class TestSegmentWeatherServiceOpenMeteo:
         assert len(result.timeseries.data) > 0
         assert result.timeseries.data[0].t2m_c is not None
 
-        # Verify empty summary
-        assert result.aggregated.temp_min_c is None
-        assert result.aggregated.wind_max_kmh is None
+        # Verify populated summary (Feature 2.2a)
+        assert result.aggregated.temp_min_c is not None
+        assert result.aggregated.wind_max_kmh is not None
+        assert len(result.aggregated.aggregation_config) == 10
 
 
 class TestSegmentWeatherServiceValidation:

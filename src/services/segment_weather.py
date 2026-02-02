@@ -114,14 +114,17 @@ class SegmentWeatherService:
         self._debug.add(f"forecast.points: {len(timeseries.data)}")
         self._debug.add(f"forecast.model: {timeseries.meta.model}")
 
-        # Step 6: Create empty summary (Feature 2.3 will populate)
-        empty_summary = SegmentWeatherSummary()
+        # Step 6: Compute basis metrics (Feature 2.2a)
+        from services.weather_metrics import WeatherMetricsService
+
+        metrics_service = WeatherMetricsService(debug=self._debug)
+        basis_summary = metrics_service.compute_basis_metrics(timeseries)
 
         # Step 7: Wrap in SegmentWeatherData
         return SegmentWeatherData(
             segment=segment,
             timeseries=timeseries,
-            aggregated=empty_summary,
+            aggregated=basis_summary,
             fetched_at=datetime.now(timezone.utc),
             provider=self._provider.name,
         )

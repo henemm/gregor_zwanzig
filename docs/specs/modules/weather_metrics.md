@@ -1,376 +1,270 @@
 ---
 entity_id: weather_metrics
 type: module
-created: 2025-12-31
-updated: 2025-12-31
-status: approved
+created: 2026-02-01
+updated: 2026-02-01
+status: draft
 version: "1.0"
-tags: [refactoring, architecture, single-source-of-truth]
-entities: [WeatherMetrics, CloudStatus, SunnyHours, WeatherSymbol]
+tags: [story-2, weather, metrics, aggregation]
 ---
 
-# Weather Metrics Service (Single Source of Truth)
+# Weather Metrics Service (Basis-Metriken)
 
 ## Approval
 
-- [x] Approved (2025-12-31)
-
-## Problem Statement
-
-Aktuell gibt es **3+ separate Implementierungen** fuer dieselben Berechnungen:
-
-| Metrik | Stellen im Code | Resultat |
-|--------|-----------------|----------|
-| Sonnenstunden | `ComparisonEngine.run()`, `fetch_forecast_for_location()`, `run_comparison()` | Inkonsistente Werte |
-| Wolkenlage | `render_comparison_html()`, `render_results_table()` | E-Mail zeigt "klar", Web-UI zeigt "in Wolken" |
-| Wetter-Symbol | `get_weather_symbol()` (nur 1x, aber nicht von allen genutzt) | - |
-
-**Konsequenz:** Spec und Code driften auseinander, weil Aenderungen an einer Stelle die anderen nicht betreffen.
+- [x] Approved
 
 ## Purpose
 
-Zentraler Service fuer alle Wetter-Metrik-Berechnungen. Garantiert identische Ergebnisse in Web-UI, E-Mail und CLI.
-
-**Architektur-Prinzip:** Eine Berechnung = Eine Funktion. Keine Duplikate.
+Computes 8 basic hiking weather metrics from timeseries data by aggregating hourly values (MIN/MAX/AVG/SUM) over segment duration. Populates SegmentWeatherSummary fields that Feature 2.1 leaves empty, enabling hikers to quickly assess conditions without parsing hourly data.
 
 ## Source
 
-- **File:** `src/services/weather_metrics.py` (NEU)
-- **Identifier:** `WeatherMetricsService` class
+- **File:** `src/services/weather_metrics.py` (NEW)
+- **Identifier:** `class WeatherMetricsService`
 
 ## Dependencies
 
+### Upstream Dependencies (what we USE)
+
 | Entity | Type | Purpose |
-|--------|------|---------|
-| `app.models.ForecastDataPoint` | dataclass | Input-Daten mit Wolken, Temperatur, etc. |
-| `app.user.SavedLocation` | dataclass | Location mit elevation_m |
+|--------|------|------------|
+| `NormalizedTimeseries` | DTO | Weather data format (src/app/models.py) |
+| `SegmentWeatherSummary` | DTO | Output structure (src/app/models.py) |
+| `ThunderLevel` | Enum | Thunder risk levels (src/app/models.py) |
+| `DebugBuffer` | Class | Logging utility (src/app/debug.py) |
 
-## Architecture
+### Downstream Dependencies (what USES us)
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    WeatherMetricsService                     │
-│  (Single Source of Truth fuer alle Wetter-Berechnungen)     │
-├─────────────────────────────────────────────────────────────┤
-│  calculate_sunny_hours(data, elevation) -> int              │
-│  calculate_cloud_status(sunny_hours, time_window, ...) -> CloudStatus │
-│  calculate_effective_cloud(elevation, clouds) -> int        │
-│  get_weather_symbol(cloud, precip, temp, elevation) -> str  │
-│  calculate_score(metrics) -> int                            │
-└─────────────────────────────────────────────────────────────┘
-                              │
-              ┌───────────────┼───────────────┐
-              ▼               ▼               ▼
-     ┌─────────────┐  ┌─────────────┐  ┌─────────────┐
-     │ E-Mail HTML │  │   Web-UI    │  │     CLI     │
-     │  Renderer   │  │  Renderer   │  │   Output    │
-     └─────────────┘  └─────────────┘  └─────────────┘
-```
+| Entity | Type | Purpose |
+|--------|------|------------|
+| `SegmentWeatherService` | Service | Calls compute_basis_metrics() to populate summary (src/services/segment_weather.py) |
+| Feature 2.2b (Extended Metrics) | Future | Will extend with dewpoint, pressure, wind-chill |
+| Feature 2.3 (Aggregation) | Future | May replace if redundant |
 
 ## Implementation Details
 
-### 1. CloudStatus Enum
-
-```python
-class CloudStatus(str, Enum):
-    """Wolkenlage-Klassifikation."""
-    ABOVE_CLOUDS = "above_clouds"  # "ueber Wolken"
-    CLEAR = "clear"                # "klar"
-    LIGHT = "light"                # "leicht bewoelkt"
-    IN_CLOUDS = "in_clouds"        # "in Wolken"
-```
-
-### 2. WeatherMetricsService
+### Class Structure
 
 ```python
 class WeatherMetricsService:
     """
-    Single Source of Truth fuer Wetter-Metriken.
+    Service for computing basic weather metrics from timeseries data.
 
-    WICHTIG: Alle Renderer (E-Mail, Web-UI, CLI) MUESSEN
-    diese Klasse verwenden. Keine lokalen Berechnungen!
+    Aggregates hourly weather values (MIN/MAX/AVG/SUM) over segment duration
+    to populate SegmentWeatherSummary fields.
     """
 
-    @staticmethod
-    def calculate_effective_cloud(
-        elevation_m: int | None,
-        cloud_total_pct: int | None,
-        cloud_mid_pct: int | None = None,
-        cloud_high_pct: int | None = None,
-    ) -> int | None:
+    def __init__(
+        self,
+        debug: Optional[DebugBuffer] = None,
+    ) -> None:
         """
-        Berechnet effektive Bewoelkung basierend auf Hoehe.
+        Initialize weather metrics service.
 
-        Hochlagen (>= 2500m) ignorieren tiefe Wolken.
+        Args:
+            debug: Optional debug buffer for logging
+        """
+        self._debug = debug if debug is not None else DebugBuffer()
+
+    def compute_basis_metrics(
+        self,
+        timeseries: NormalizedTimeseries,
+    ) -> SegmentWeatherSummary:
+        """
+        Compute 8 basic hiking metrics from timeseries.
+
+        Metrics computed:
+        1. Temperature: MIN/MAX/AVG from t2m_c
+        2. Wind: MAX from wind10m_kmh
+        3. Gust: MAX from gust_kmh
+        4. Precipitation: SUM from precip_1h_mm
+        5. Cloud Cover: AVG from cloud_total_pct
+        6. Humidity: AVG from humidity_pct
+        7. Thunder: MAX from thunder_level (NONE < MED < HIGH)
+        8. Visibility: MIN from visibility_m
+
+        Args:
+            timeseries: Weather timeseries from provider
 
         Returns:
-            Effektive Bewoelkung in % (0-100) oder None
+            SegmentWeatherSummary with 8 basis metrics populated
+
+        Raises:
+            ValueError: If timeseries is empty
         """
-        if elevation_m and elevation_m >= 2500:
-            if cloud_mid_pct is not None and cloud_high_pct is not None:
-                return (cloud_mid_pct + cloud_high_pct) // 2
-        return cloud_total_pct
 
-    @staticmethod
-    def calculate_sunny_hours(
-        data: List[ForecastDataPoint],
-        elevation_m: int | None = None,
-    ) -> int:
+    def _compute_temperature(
+        self,
+        timeseries: NormalizedTimeseries,
+    ) -> tuple[Optional[float], Optional[float], Optional[float]]:
+        """Compute temperature MIN/MAX/AVG. Returns (temp_min_c, temp_max_c, temp_avg_c)"""
+
+    def _compute_wind(self, timeseries: NormalizedTimeseries) -> Optional[float]:
+        """Compute wind MAX. Returns wind_max_kmh"""
+
+    def _compute_gust(self, timeseries: NormalizedTimeseries) -> Optional[float]:
+        """Compute gust MAX. Returns gust_max_kmh"""
+
+    def _compute_precipitation(self, timeseries: NormalizedTimeseries) -> Optional[float]:
+        """Compute precipitation SUM. Returns precip_sum_mm"""
+
+    def _compute_cloud_cover(self, timeseries: NormalizedTimeseries) -> Optional[int]:
+        """Compute cloud cover AVG. Returns cloud_avg_pct (rounded to int)"""
+
+    def _compute_humidity(self, timeseries: NormalizedTimeseries) -> Optional[int]:
+        """Compute humidity AVG. Returns humidity_avg_pct (rounded to int)"""
+
+    def _compute_thunder_level(self, timeseries: NormalizedTimeseries) -> Optional[ThunderLevel]:
+        """Compute thunder level MAX. Returns thunder_level_max (NONE < MED < HIGH)"""
+
+    def _compute_visibility(self, timeseries: NormalizedTimeseries) -> Optional[int]:
+        """Compute visibility MIN. Returns visibility_min_m"""
+
+    def _validate_plausibility(self, summary: SegmentWeatherSummary) -> None:
         """
-        Berechnet Sonnenstunden aus Wolkendecke.
-
-        DATENQUELLE: BERECHNET (nicht API!)
-        Siehe: docs/specs/data_sources.md (sunshine_duration = REJECTED)
-
-        Formel:
-            sunshine_pct = 100 - effective_cloud_pct
-            Summe aller Stunden / 100 = Sonnenstunden
-
-        Hochlagen (>= 2500m) ignorieren tiefe Wolken via calculate_effective_cloud().
-
-        Returns:
-            Anzahl Sonnenstunden (gerundet auf ganze Stunden)
+        Validate metric plausibility and log warnings.
+        Checks (logs WARNING if out of range, does NOT raise):
+        - Temperature: -50°C to +50°C
+        - Wind/Gust: 0 to 300 km/h
+        - Precipitation: 0 to 500 mm
+        - Cloud/Humidity: 0 to 100%
+        - Visibility: 0 to 100000 m
         """
-        if not data:
-            return 0
-
-        total_sunshine_pct = 0.0
-
-        for dp in data:
-            # Effektive Wolkendecke (elevation-aware)
-            eff_cloud = WeatherMetricsService.calculate_effective_cloud(
-                elevation_m, dp.cloud_total_pct,
-                dp.cloud_mid_pct, dp.cloud_high_pct
-            )
-
-            if eff_cloud is not None:
-                # Sonnenschein = Inverse der Bewoelkung
-                sunshine_pct = max(0, 100 - eff_cloud)
-                total_sunshine_pct += sunshine_pct
-
-        # Prozent -> Stunden (100% = 1h), gerundet
-        return round(total_sunshine_pct / 100.0)
-
-    @staticmethod
-    def calculate_cloud_status(
-        sunny_hours: int | None,
-        time_window_hours: int,
-        elevation_m: int | None = None,
-        cloud_low_avg: int | None = None,
-    ) -> CloudStatus:
-        """
-        Bestimmt Wolkenlage basierend auf Sonnenstunden.
-
-        Regeln (SPEC: docs/specs/compare_email.md):
-        1. Hochlage (>= 2500m) + cloud_low > 30% + sunny >= 5h -> ABOVE_CLOUDS
-        2. sunny >= 75% der Stunden -> CLEAR
-        3. sunny >= 25% der Stunden -> LIGHT
-        4. sonst -> IN_CLOUDS
-
-        Returns:
-            CloudStatus enum
-        """
-        if sunny_hours is None:
-            return CloudStatus.IN_CLOUDS
-
-        # Regel 1: Hochlage ueber den Wolken
-        if (elevation_m and elevation_m >= 2500
-            and cloud_low_avg is not None
-            and cloud_low_avg > 30
-            and sunny_hours >= 5):
-            return CloudStatus.ABOVE_CLOUDS
-
-        # Regel 2-4: Basierend auf Sonnenstunden-Anteil
-        if sunny_hours >= time_window_hours * 0.75:
-            return CloudStatus.CLEAR
-        elif sunny_hours >= time_window_hours * 0.25:
-            return CloudStatus.LIGHT
-        else:
-            return CloudStatus.IN_CLOUDS
-
-    @staticmethod
-    def format_cloud_status(status: CloudStatus) -> tuple[str, str]:
-        """
-        Formatiert CloudStatus fuer Anzeige.
-
-        Returns:
-            Tuple von (display_text, css_style)
-        """
-        mapping = {
-            CloudStatus.ABOVE_CLOUDS: ("ueber Wolken", "color: #2e7d32; font-weight: 600;"),
-            CloudStatus.CLEAR: ("klar", "color: #2e7d32;"),
-            CloudStatus.LIGHT: ("leicht", ""),
-            CloudStatus.IN_CLOUDS: ("in Wolken", "color: #888;"),
-        }
-        return mapping.get(status, ("-", ""))
-
-    @staticmethod
-    def get_weather_symbol(
-        cloud_total_pct: int | None,
-        precip_mm: float | None,
-        temp_c: float | None,
-        elevation_m: int | None = None,
-        cloud_mid_pct: int | None = None,
-        cloud_high_pct: int | None = None,
-    ) -> str:
-        """
-        Bestimmt Wetter-Symbol basierend auf Bedingungen.
-
-        Beruecksichtigt Hoehe fuer effektive Bewoelkung.
-
-        Returns:
-            Emoji-Symbol (str)
-        """
-        # Niederschlag hat Prioritaet
-        if precip_mm and precip_mm > 0.5:
-            if temp_c is not None and temp_c < 0:
-                return "snow"  # Schnee
-            return "rain"  # Regen
-
-        # Bewoelkung
-        eff_cloud = WeatherMetricsService.calculate_effective_cloud(
-            elevation_m, cloud_total_pct, cloud_mid_pct, cloud_high_pct
-        )
-
-        if eff_cloud is None:
-            return "?"
-        if eff_cloud < 20:
-            return "sunny"
-        if eff_cloud < 50:
-            return "partly_cloudy"
-        if eff_cloud < 80:
-            return "mostly_cloudy"
-        return "cloudy"
 ```
 
-### 3. Migration der bestehenden Stellen
+### Algorithm
 
-| Datei | Funktion | Aktion |
-|-------|----------|--------|
-| `compare.py` | `_calc_effective_cloud()` | LOESCHEN, durch `WeatherMetricsService.calculate_effective_cloud()` ersetzen |
-| `compare.py` | `get_weather_symbol()` | LOESCHEN, durch `WeatherMetricsService.get_weather_symbol()` ersetzen |
-| `compare.py` | Sonnenstunden in `ComparisonEngine.run()` | Durch `WeatherMetricsService.calculate_sunny_hours()` ersetzen |
-| `compare.py` | Sonnenstunden in `fetch_forecast_for_location()` | Durch `WeatherMetricsService.calculate_sunny_hours()` ersetzen |
-| `compare.py` | Wolkenlage in `render_comparison_html()` | Durch `WeatherMetricsService.calculate_cloud_status()` ersetzen |
-| `compare.py` | Wolkenlage in `render_results_table()` | Durch `WeatherMetricsService.calculate_cloud_status()` ersetzen |
-
-### 4. Wetter-Symbol Legende
-
-Alle Renderer (E-Mail, Web-UI) zeigen eine Legende:
-
-| Symbol | Bedeutung | Bewoelkung |
-|--------|-----------|------------|
-| ☀️ | Sonnig | < 20% |
-| 🌤️ | Teilweise bewoelkt | 20-50% |
-| ⛅ | Ueberwiegend bewoelkt | 50-80% |
-| ☁️ | Bedeckt | > 80% |
-| 🌧️ | Regen | (Niederschlag > 0.5mm, Temp >= 0) |
-| ❄️ | Schnee | (Niederschlag > 0.5mm, Temp < 0) |
-
-### 5. Spec-Tests (Pflicht)
-
-```python
-# tests/spec/test_weather_metrics_spec.py
-
-class TestSunnyHoursSpec:
-    """Tests fuer Sonnenstunden-Berechnung aus Wolkendecke."""
-
-    def test_clear_sky_full_sunshine(self):
-        """0% Wolken = 1h Sonnenschein pro Stunde."""
-        data = [
-            ForecastDataPoint(ts=datetime(2025,1,1,9), cloud_total_pct=0),
-            ForecastDataPoint(ts=datetime(2025,1,1,10), cloud_total_pct=0),
-        ]
-        assert WeatherMetricsService.calculate_sunny_hours(data) == 2
-
-    def test_partial_clouds(self):
-        """30% Wolken = 70% Sonnenschein = 0.7h pro Stunde."""
-        data = [
-            ForecastDataPoint(ts=datetime(2025,1,1,9), cloud_total_pct=30),
-            ForecastDataPoint(ts=datetime(2025,1,1,10), cloud_total_pct=30),
-            ForecastDataPoint(ts=datetime(2025,1,1,11), cloud_total_pct=30),
-        ]
-        # 3 * 70% = 210% = 2.1h -> gerundet = 2h
-        assert WeatherMetricsService.calculate_sunny_hours(data) == 2
-
-    def test_high_elevation_ignores_low_clouds(self):
-        """Hochlage ignoriert tiefe Wolken."""
-        data = [
-            ForecastDataPoint(
-                ts=datetime(2025,1,1,9),
-                cloud_total_pct=80,
-                cloud_mid_pct=10,
-                cloud_high_pct=10,
-            ),
-        ]
-        # Effektiv: (10+10)/2 = 10% -> 90% Sonnenschein -> 1h
-        assert WeatherMetricsService.calculate_sunny_hours(data, elevation_m=3000) == 1
-
-
-class TestCloudStatusSpec:
-    """Tests gegen docs/specs/compare_email.md Zeile 212-216"""
-
-    def test_above_clouds_high_elevation(self):
-        status = WeatherMetricsService.calculate_cloud_status(
-            sunny_hours=6, time_window_hours=8,
-            elevation_m=3000, cloud_low_avg=50
-        )
-        assert status == CloudStatus.ABOVE_CLOUDS
-
-    def test_clear_75_percent_sunshine(self):
-        status = WeatherMetricsService.calculate_cloud_status(
-            sunny_hours=6, time_window_hours=8,
-            elevation_m=2000, cloud_low_avg=10
-        )
-        assert status == CloudStatus.CLEAR
-
-    def test_light_25_percent_sunshine(self):
-        status = WeatherMetricsService.calculate_cloud_status(
-            sunny_hours=3, time_window_hours=8,
-            elevation_m=2000, cloud_low_avg=30
-        )
-        assert status == CloudStatus.LIGHT
-
-    def test_in_clouds_low_sunshine(self):
-        status = WeatherMetricsService.calculate_cloud_status(
-            sunny_hours=1, time_window_hours=8,
-            elevation_m=2000, cloud_low_avg=60
-        )
-        assert status == CloudStatus.IN_CLOUDS
 ```
+1. VALIDATE timeseries:
+   - IF timeseries.data is empty → ValueError
+
+2. FOR each metric:
+   a) Extract non-None values from timeseries:
+      temps = [dp.t2m_c for dp in timeseries.data if dp.t2m_c is not None]
+
+   b) Compute aggregation:
+      - MIN: min(temps) if temps else None
+      - MAX: max(temps) if temps else None
+      - AVG: sum(temps) / len(temps) if temps else None
+      - SUM: sum(vals) if vals else None
+
+   c) Special cases:
+      - Thunder: max(levels, key=lambda x: ["NONE", "MED", "HIGH"].index(x.value))
+      - Percentages: round(avg) to int
+      - Visibility: round(min) to int
+
+3. CREATE SegmentWeatherSummary with aggregation_config metadata
+
+4. VALIDATE plausibility (log warnings, don't raise)
+
+5. LOG debug info
+
+6. RETURN SegmentWeatherSummary
+```
+
+### Aggregation Functions
+
+| Metric | Source Field | Aggregation | Output Field | Type |
+|--------|--------------|-------------|--------------|------|
+| Temperature MIN | t2m_c | MIN | temp_min_c | float |
+| Temperature MAX | t2m_c | MAX | temp_max_c | float |
+| Temperature AVG | t2m_c | AVG | temp_avg_c | float |
+| Wind MAX | wind10m_kmh | MAX | wind_max_kmh | float |
+| Gust MAX | gust_kmh | MAX | gust_max_kmh | float |
+| Precipitation SUM | precip_1h_mm | SUM | precip_sum_mm | float |
+| Cloud Cover AVG | cloud_total_pct | AVG | cloud_avg_pct | int |
+| Humidity AVG | humidity_pct | AVG | humidity_avg_pct | int |
+| Thunder MAX | thunder_level | MAX | thunder_level_max | ThunderLevel |
+| Visibility MIN | visibility_m | MIN | visibility_min_m | int |
 
 ## Expected Behavior
 
-- **Input:** ForecastDataPoint-Listen, Location-Daten
-- **Output:** Konsistente Metriken (Sonnenstunden, Wolkenlage, Symbole)
-- **Side effects:** Keine
+### Input
+- **Type:** `NormalizedTimeseries`
+- **Required:** `data` list with at least 1 ForecastDataPoint
 
-## Validation
+### Output
+- **Type:** `SegmentWeatherSummary`
+- **Fields:** All 8 basis metrics populated (or None if no data)
 
-Nach Implementation MUSS gelten:
+## Test Scenarios
 
-1. `grep -r "sunny_hours\s*=" src/` zeigt NUR `WeatherMetricsService`
-2. `grep -r "cloud_status" src/` zeigt NUR `WeatherMetricsService`
-3. `grep -r "_calc_effective_cloud" src/` zeigt 0 Treffer (geloescht)
-4. Alle Spec-Tests gruen
+### Test 1: GeoSphere Austria (Real API)
+- **Given:** Real timeseries from GeoSphere
+- **When:** compute_basis_metrics(timeseries)
+- **Then:** All 8 metrics populated with plausible values
 
-## Scope
+### Test 2: Open-Meteo Corsica (Real API)
+- **Given:** Real timeseries from Open-Meteo AROME France
+- **When:** compute_basis_metrics(timeseries)
+- **Then:** aggregation_config has 10 entries
 
-**Dateien:** 4
-- `src/services/weather_metrics.py` (NEU, ~150 LoC)
-- `src/web/pages/compare.py` (AENDERN, ~-100 LoC durch Entfernen von Duplikaten)
-- `tests/spec/test_weather_metrics_spec.py` (NEU, ~50 LoC)
-- `docs/specs/compare_email.md` (UPDATE, Verweis auf weather_metrics)
+### Test 3: Sparse Data (Some None Values)
+- **Given:** 50% None values
+- **When:** compute_basis_metrics(timeseries)
+- **Then:** Metrics computed from available values only
 
-**LoC:** ~+100 netto (mehr Tests, weniger Duplikate)
+### Test 4: Empty Timeseries
+- **Given:** Empty data list
+- **When:** compute_basis_metrics(timeseries)
+- **Then:** ValueError raised
+
+### Test 5: Precipitation Sum
+- **Given:** precip_1h_mm = [2.5, 3.0, 1.5, 4.0]
+- **When:** compute_basis_metrics(timeseries)
+- **Then:** precip_sum_mm = 11.0 (SUM, not AVG)
+
+### Test 6: Thunder Level MAX
+- **Given:** thunder_level = [NONE, MED, HIGH, MED]
+- **When:** compute_basis_metrics(timeseries)
+- **Then:** thunder_level_max = HIGH
+
+### Test 7: Known Values (Unit Test)
+- **Given:** t2m_c = [10.0, 15.0, 20.0]
+- **When:** compute_basis_metrics(timeseries)
+- **Then:** temp_min=10.0, temp_max=20.0, temp_avg=15.0
 
 ## Known Limitations
 
-- Erfordert Update aller bestehenden Renderer
-- Spec-Tests muessen bei Spec-Aenderungen manuell aktualisiert werden
+1. **Feature 2.3 May Be Redundant** - Re-evaluate after 2.2b
+2. **No Statistical Validation** - No std dev, confidence intervals
+3. **No Interpolation** - Missing values skipped, not interpolated
+4. **No Time-Weighted Averages** - Assumes hourly spacing
+5. **No Correlation Analysis** - Risk engine will handle this
+
+## Integration Points
+
+### Feature 2.1 → Feature 2.2a
+
+**Before (Feature 2.1):**
+```python
+empty_summary = SegmentWeatherSummary()
+```
+
+**After (Feature 2.2a):**
+```python
+from services.weather_metrics import WeatherMetricsService
+metrics_service = WeatherMetricsService(debug=self._debug)
+basis_summary = metrics_service.compute_basis_metrics(timeseries)
+```
+
+## Standards Compliance
+
+- ✅ API Contracts (SegmentWeatherSummary in Section 8)
+- ✅ No Mocked Tests (Real GeoSphere/Open-Meteo data)
+- ✅ Provider Agnostic
+- ✅ Debug Consistency
+
+## Files to Change
+
+1. **src/services/weather_metrics.py** (CREATE, ~120 LOC)
+2. **src/services/segment_weather.py** (MODIFY, ~10 LOC)
+3. **tests/unit/test_weather_metrics.py** (CREATE, ~150 LOC)
+4. **tests/integration/test_segment_weather_metrics.py** (CREATE, ~80 LOC)
+
+**Total:** 4 files, ~360 LOC
 
 ## Changelog
 
-- 2026-01-01: Sonnenstunden-Berechnung auf wolkenbasierte Formel umgestellt (sunshine_duration_s war REJECTED)
-- 2026-01-01: Wetter-Symbol Legende fuer E-Mail und WebUI hinzugefuegt
-- 2025-12-31: Initial spec created nach Inkonsistenz-Bug zwischen E-Mail und Web-UI
+- 2026-02-01: Initial spec created for Feature 2.2a
