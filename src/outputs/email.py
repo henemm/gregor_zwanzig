@@ -5,8 +5,10 @@ Sends weather reports via SMTP email (HTML or plain text).
 """
 from __future__ import annotations
 
+import logging
 import re
 import smtplib
+import time
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import TYPE_CHECKING
@@ -15,6 +17,8 @@ from outputs.base import OutputConfigError, OutputError
 
 if TYPE_CHECKING:
     from app.config import Settings
+
+logger = logging.getLogger(__name__)
 
 
 class EmailOutput:
@@ -66,9 +70,14 @@ class EmailOutput:
         plain_text_body: str | None = None,
     ) -> None:
         """
-        Send email via SMTP.
+        Send email via SMTP with automatic retry on network errors.
+
+        Automatically retries up to 3 times with exponential backoff (5s, 15s, 30s)
+        on temporary network errors (DNS, connection issues). Permanent errors
+        (authentication) fail immediately without retry.
 
         SPEC: docs/specs/compare_email.md v4.2 - Multipart Email
+        SPEC: docs/specs/bugfix/email_retry_mechanism_spec.md v1.0 - Retry Mechanism
 
         Args:
             subject: Email subject line
@@ -78,8 +87,9 @@ class EmailOutput:
                              If not provided, plain-text is auto-generated from HTML.
 
         Raises:
-            OutputError: If sending fails
+            OutputError: If sending fails after all retry attempts
         """
+        # Build message once (outside retry loop)
         if html:
             msg = MIMEMultipart("alternative")
             msg["Subject"] = subject
@@ -114,12 +124,40 @@ class EmailOutput:
             msg["From"] = self._from
             msg["To"] = self._to
 
-        try:
-            with smtplib.SMTP(self._host, self._port) as server:
-                server.starttls()
-                server.login(self._user, self._password)
-                server.sendmail(self._from, [self._to], msg.as_string())
-        except smtplib.SMTPException as e:
-            raise OutputError("email", f"SMTP error: {e}")
-        except OSError as e:
-            raise OutputError("email", f"Connection error: {e}")
+        # Retry logic with exponential backoff
+        # max_attempts includes the first try, so 4 attempts = 3 retries
+        max_attempts = 4
+        backoff_base = 5
+
+        for attempt in range(max_attempts):
+            try:
+                with smtplib.SMTP(self._host, self._port) as server:
+                    server.starttls()
+                    server.login(self._user, self._password)
+                    server.sendmail(self._from, [self._to], msg.as_string())
+
+                # Success - log if this was after retry
+                if attempt > 0:
+                    logger.info(f"Email send succeeded after {attempt + 1} attempt(s)")
+                return
+
+            except smtplib.SMTPException as e:
+                # Permanent error (Auth) - no retry
+                raise OutputError("email", f"SMTP error: {e}")
+
+            except OSError as e:
+                # Temporary network error
+                if attempt < max_attempts - 1:
+                    # Retry with exponential backoff: 5s, 15s, 30s
+                    # Formula: backoff_base * (1, 3, 6) = (5, 15, 30)
+                    wait_multiplier = [1, 3, 6][attempt]
+                    wait = backoff_base * wait_multiplier
+                    logger.warning(
+                        f"Email send failed (attempt {attempt + 1}/{max_attempts}): {e}. "
+                        f"Retrying in {wait}s..."
+                    )
+                    time.sleep(wait)
+                else:
+                    # Last attempt failed
+                    logger.error(f"Email send failed after {max_attempts} attempts: {e}")
+                    raise OutputError("email", f"Connection error: {e}")

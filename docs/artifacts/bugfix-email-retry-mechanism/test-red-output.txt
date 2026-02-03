@@ -1,0 +1,185 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.2, pytest-8.4.1, pluggy-1.6.0 -- /opt/gregor_zwanziger/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /tmp/claude-1001/-opt-gregor-zwanziger/ad1a03d4-55ff-4dbf-a3d2-698209e287a5/scratchpad
+plugins: anyio-4.12.0
+collecting ... collected 2 items
+
+../../tmp/claude-1001/-opt-gregor-zwanziger/ad1a03d4-55ff-4dbf-a3d2-698209e287a5/scratchpad/test_email_retry_red.py::TestEmailRetryMechanism::test_temporary_dns_error_succeeds_after_retry FAILED [ 50%]
+../../tmp/claude-1001/-opt-gregor-zwanziger/ad1a03d4-55ff-4dbf-a3d2-698209e287a5/scratchpad/test_email_retry_red.py::TestEmailRetryMechanism::test_exponential_backoff_timing FAILED [100%]
+
+=================================== FAILURES ===================================
+____ TestEmailRetryMechanism.test_temporary_dns_error_succeeds_after_retry _____
+
+self = <test_email_retry_red.TestEmailRetryMechanism.test_temporary_dns_error_succeeds_after_retry.<locals>.MockSMTP object at 0x7ff680c6f750>
+host = 'smtp.test.com', port = 587
+
+    def __init__(self, host, port):
+        attempt_count[0] += 1
+        if attempt_count[0] <= 2:
+>           raise OSError(-5, "No address associated with hostname")
+E           OSError: [Errno -5] No address associated with hostname
+
+/tmp/claude-1001/-opt-gregor-zwanziger/ad1a03d4-55ff-4dbf-a3d2-698209e287a5/scratchpad/test_email_retry_red.py:44: OSError
+
+During handling of the above exception, another exception occurred:
+
+self = <test_email_retry_red.TestEmailRetryMechanism object at 0x7ff68165e450>
+mock_settings = <Mock id='140696709493712'>
+
+    def test_temporary_dns_error_succeeds_after_retry(self, mock_settings):
+        """
+        GIVEN: EmailOutput ohne Retry-Mechanismus
+        WHEN: send() stößt 2x auf DNS-Fehler, dann Erfolg
+        THEN: Sollte nach Retries erfolgreich sein
+        EXPECTED: FAIL (wird beim ersten Fehler abbrechen)
+        """
+        from outputs.email import EmailOutput
+    
+        attempt_count = [0]
+    
+        class MockSMTP:
+            def __init__(self, host, port):
+                attempt_count[0] += 1
+                if attempt_count[0] <= 2:
+                    raise OSError(-5, "No address associated with hostname")
+            def __enter__(self):
+                return self
+            def __exit__(self, *args):
+                pass
+            def starttls(self):
+                pass
+            def login(self, user, password):
+                pass
+            def sendmail(self, from_addr, to_addrs, msg):
+                pass
+    
+        with patch("smtplib.SMTP", MockSMTP):
+            with patch("time.sleep"):
+                email_output = EmailOutput(mock_settings)
+                # Should succeed after 2 retries (but will fail on first attempt)
+>               email_output.send("Test Subject", "Test Body")
+
+/tmp/claude-1001/-opt-gregor-zwanziger/ad1a03d4-55ff-4dbf-a3d2-698209e287a5/scratchpad/test_email_retry_red.py:60: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <outputs.email.EmailOutput object at 0x7ff680c2c850>
+subject = 'Test Subject', body = 'Test Body', html = True
+plain_text_body = None
+
+    def send(
+        self,
+        subject: str,
+        body: str,
+        html: bool = True,
+        plain_text_body: str | None = None,
+    ) -> None:
+        """
+        Send email via SMTP.
+    
+        SPEC: docs/specs/compare_email.md v4.2 - Multipart Email
+    
+        Args:
+            subject: Email subject line
+            body: Email body (HTML or plain text)
+            html: If True, send as HTML email with plain-text fallback
+            plain_text_body: Optional explicit plain-text version.
+                             If not provided, plain-text is auto-generated from HTML.
+    
+        Raises:
+            OutputError: If sending fails
+        """
+        if html:
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = subject
+            msg["From"] = self._from
+            msg["To"] = self._to
+    
+            # Use explicit plain-text if provided, otherwise auto-generate
+            if plain_text_body:
+                plain_text = plain_text_body
+            else:
+                # Plain text fallback (strip HTML properly)
+                # 1. Remove <style>...</style> blocks completely
+                plain_text = re.sub(r'<style[^>]*>.*?</style>', '', body, flags=re.DOTALL | re.IGNORECASE)
+                # 2. Remove <head>...</head> blocks completely
+                plain_text = re.sub(r'<head[^>]*>.*?</head>', '', plain_text, flags=re.DOTALL | re.IGNORECASE)
+                # 3. Remove remaining HTML tags
+                plain_text = re.sub(r'<[^>]+>', '', plain_text)
+                # 4. Replace HTML entities
+                plain_text = plain_text.replace('&nbsp;', ' ').replace('&deg;', '°')
+                # 5. Clean up excessive whitespace
+                plain_text = re.sub(r'\n\s*\n\s*\n', '\n\n', plain_text)
+                plain_text = plain_text.strip()
+    
+            part1 = MIMEText(plain_text, "plain", "utf-8")
+            part2 = MIMEText(body, "html", "utf-8")
+    
+            msg.attach(part1)
+            msg.attach(part2)
+        else:
+            msg = MIMEText(body, "plain", "utf-8")
+            msg["Subject"] = subject
+            msg["From"] = self._from
+            msg["To"] = self._to
+    
+        try:
+            with smtplib.SMTP(self._host, self._port) as server:
+                server.starttls()
+                server.login(self._user, self._password)
+                server.sendmail(self._from, [self._to], msg.as_string())
+        except smtplib.SMTPException as e:
+            raise OutputError("email", f"SMTP error: {e}")
+        except OSError as e:
+>           raise OutputError("email", f"Connection error: {e}")
+E           outputs.base.OutputError: [email] Connection error: [Errno -5] No address associated with hostname
+
+src/outputs/email.py:125: OutputError
+___________ TestEmailRetryMechanism.test_exponential_backoff_timing ____________
+
+self = <test_email_retry_red.TestEmailRetryMechanism object at 0x7ff680de4e10>
+mock_settings = <Mock id='140696696397200'>
+
+    def test_exponential_backoff_timing(self, mock_settings):
+        """
+        GIVEN: EmailOutput ohne Retry-Mechanismus
+        WHEN: send() schlägt mit Netzwerk-Fehlern fehl
+        THEN: Sollte 5s, 15s, 30s zwischen Versuchen warten
+        EXPECTED: FAIL (keine Wartezeiten, sofortiger Abbruch)
+        """
+        from outputs.email import EmailOutput
+        from outputs.base import OutputError
+    
+        sleep_calls = []
+    
+        class MockSMTP:
+            def __init__(self, host, port):
+                raise OSError(-5, "DNS error")
+    
+        with patch("smtplib.SMTP", MockSMTP):
+            with patch("time.sleep") as mock_sleep:
+                mock_sleep.side_effect = lambda x: sleep_calls.append(x)
+    
+                email_output = EmailOutput(mock_settings)
+                with pytest.raises(OutputError):
+                    email_output.send("Test Subject", "Test Body")
+    
+>       assert sleep_calls == [5, 15, 30], \
+            f"Expected backoff [5, 15, 30], got {sleep_calls}"
+E       AssertionError: Expected backoff [5, 15, 30], got []
+E       assert [] == [5, 15, 30]
+E         
+E         Right contains 3 more items, first extra item: 5
+E         
+E         Full diff:
+E         + []
+E         - [
+E         -     5,...
+E         
+E         ...Full output truncated (3 lines hidden), use '-vv' to show
+
+/tmp/claude-1001/-opt-gregor-zwanziger/ad1a03d4-55ff-4dbf-a3d2-698209e287a5/scratchpad/test_email_retry_red.py:89: AssertionError
+=========================== short test summary info ============================
+FAILED ../../tmp/claude-1001/-opt-gregor-zwanziger/ad1a03d4-55ff-4dbf-a3d2-698209e287a5/scratchpad/test_email_retry_red.py::TestEmailRetryMechanism::test_temporary_dns_error_succeeds_after_retry
+FAILED ../../tmp/claude-1001/-opt-gregor-zwanziger/ad1a03d4-55ff-4dbf-a3d2-698209e287a5/scratchpad/test_email_retry_red.py::TestEmailRetryMechanism::test_exponential_backoff_timing
+============================== 2 failed in 0.05s ===============================
