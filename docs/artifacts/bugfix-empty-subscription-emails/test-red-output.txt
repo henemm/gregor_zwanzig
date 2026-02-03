@@ -1,0 +1,127 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.2, pytest-8.4.1, pluggy-1.6.0
+rootdir: /opt/gregor_zwanziger
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 6 items
+
+tests/unit/test_weather_metrics_legacy.py FFFFFF                         [100%]
+
+=================================== FAILURES ===================================
+___________ TestHighElevationThresholdConstant.test_constant_exists ____________
+
+self = <test_weather_metrics_legacy.TestHighElevationThresholdConstant object at 0x7f1196fe5510>
+
+    def test_constant_exists(self):
+        """
+        GIVEN: WeatherMetricsService class
+        WHEN: Accessing HIGH_ELEVATION_THRESHOLD_M attribute
+        THEN: Constant exists and equals 2500
+    
+        Expected: FAIL - AttributeError (constant doesn't exist)
+        """
+>       assert hasattr(WeatherMetricsService, 'HIGH_ELEVATION_THRESHOLD_M')
+E       AssertionError: assert False
+E        +  where False = hasattr(WeatherMetricsService, 'HIGH_ELEVATION_THRESHOLD_M')
+
+tests/unit/test_weather_metrics_legacy.py:32: AssertionError
+________________ TestCalculateEffectiveCloud.test_method_exists ________________
+
+self = <test_weather_metrics_legacy.TestCalculateEffectiveCloud object at 0x7f1195b290d0>
+
+    def test_method_exists(self):
+        """
+        GIVEN: WeatherMetricsService class
+        WHEN: Checking for calculate_effective_cloud method
+        THEN: Method exists and is callable
+    
+        Expected: FAIL - AttributeError (method doesn't exist)
+        """
+>       assert hasattr(WeatherMetricsService, 'calculate_effective_cloud')
+E       AssertionError: assert False
+E        +  where False = hasattr(WeatherMetricsService, 'calculate_effective_cloud')
+
+tests/unit/test_weather_metrics_legacy.py:47: AssertionError
+______ TestCalculateEffectiveCloud.test_high_elevation_ignores_low_clouds ______
+
+self = <test_weather_metrics_legacy.TestCalculateEffectiveCloud object at 0x7f1195b296d0>
+
+    def test_high_elevation_ignores_low_clouds(self):
+        """
+        GIVEN: High elevation location (>=2500m) with cloud data
+        WHEN: Calculating effective cloud cover
+        THEN: Returns average of mid+high clouds, ignoring low clouds
+    
+        Expected: FAIL - AttributeError (method doesn't exist)
+        """
+>       eff = WeatherMetricsService.calculate_effective_cloud(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            elevation_m=2600,
+            cloud_total_pct=80,
+            cloud_mid_pct=40,
+            cloud_high_pct=20,
+        )
+E       AttributeError: type object 'WeatherMetricsService' has no attribute 'calculate_effective_cloud'
+
+tests/unit/test_weather_metrics_legacy.py:58: AttributeError
+__________________ TestCalculateSunnyHours.test_method_exists __________________
+
+self = <test_weather_metrics_legacy.TestCalculateSunnyHours object at 0x7f1195b29f90>
+
+    def test_method_exists(self):
+        """
+        GIVEN: WeatherMetricsService class
+        WHEN: Checking for calculate_sunny_hours method
+        THEN: Method exists and is callable
+    
+        Expected: FAIL - AttributeError (method doesn't exist)
+        """
+>       assert hasattr(WeatherMetricsService, 'calculate_sunny_hours')
+E       AssertionError: assert False
+E        +  where False = hasattr(WeatherMetricsService, 'calculate_sunny_hours')
+
+tests/unit/test_weather_metrics_legacy.py:78: AssertionError
+_____________ TestCalculateSunnyHours.test_empty_data_returns_zero _____________
+
+self = <test_weather_metrics_legacy.TestCalculateSunnyHours object at 0x7f1195b2a590>
+
+    def test_empty_data_returns_zero(self):
+        """
+        GIVEN: Empty forecast data list
+        WHEN: Calculating sunny hours
+        THEN: Returns 0
+    
+        Expected: FAIL - AttributeError (method doesn't exist)
+        """
+>       hours = WeatherMetricsService.calculate_sunny_hours([])
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: type object 'WeatherMetricsService' has no attribute 'calculate_sunny_hours'
+
+tests/unit/test_weather_metrics_legacy.py:89: AttributeError
+______________ TestCalculateSunnyHours.test_api_sunshine_duration ______________
+
+self = <test_weather_metrics_legacy.TestCalculateSunnyHours object at 0x7f1195b2ab90>
+
+    def test_api_sunshine_duration(self):
+        """
+        GIVEN: Forecast data with sunshine_duration_s from API
+        WHEN: Calculating sunny hours
+        THEN: Uses API data (sum seconds / 3600, rounded)
+    
+        Expected: FAIL - AttributeError (method doesn't exist)
+        """
+>       dp1 = ForecastDataPoint(
+            ts=datetime(2026, 2, 4, 9, 0),
+            sunshine_duration_s=3600,
+        )
+E       TypeError: ForecastDataPoint.__init__() got an unexpected keyword argument 'sunshine_duration_s'
+
+tests/unit/test_weather_metrics_legacy.py:100: TypeError
+=========================== short test summary info ============================
+FAILED tests/unit/test_weather_metrics_legacy.py::TestHighElevationThresholdConstant::test_constant_exists
+FAILED tests/unit/test_weather_metrics_legacy.py::TestCalculateEffectiveCloud::test_method_exists
+FAILED tests/unit/test_weather_metrics_legacy.py::TestCalculateEffectiveCloud::test_high_elevation_ignores_low_clouds
+FAILED tests/unit/test_weather_metrics_legacy.py::TestCalculateSunnyHours::test_method_exists
+FAILED tests/unit/test_weather_metrics_legacy.py::TestCalculateSunnyHours::test_empty_data_returns_zero
+FAILED tests/unit/test_weather_metrics_legacy.py::TestCalculateSunnyHours::test_api_sunshine_duration
+============================== 6 failed in 0.16s ===============================
