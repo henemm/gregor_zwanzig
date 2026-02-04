@@ -1,0 +1,65 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.2, pytest-8.4.1, pluggy-1.6.0 -- /opt/gregor_zwanziger/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /tmp/claude-1001/-opt-gregor-zwanziger/9bcceeaf-c2a3-45d1-83b0-7f33d341fbf0/scratchpad
+plugins: anyio-4.12.0
+collecting ... collected 3 items
+
+../../tmp/claude-1001/-opt-gregor-zwanziger/9bcceeaf-c2a3-45d1-83b0-7f33d341fbf0/scratchpad/test_sms_trip.py::test_sms_formatter_exists FAILED [ 33%]
+../../tmp/claude-1001/-opt-gregor-zwanziger/9bcceeaf-c2a3-45d1-83b0-7f33d341fbf0/scratchpad/test_sms_trip.py::test_format_sms_single_segment FAILED [ 66%]
+../../tmp/claude-1001/-opt-gregor-zwanziger/9bcceeaf-c2a3-45d1-83b0-7f33d341fbf0/scratchpad/test_sms_trip.py::test_format_sms_validates_length FAILED [100%]
+
+=================================== FAILURES ===================================
+__________________________ test_sms_formatter_exists ___________________________
+
+    def test_sms_formatter_exists():
+        """
+        TDD RED: SMSTripFormatter class should exist.
+    
+        GIVEN: Feature 3.2 spec
+        WHEN: Importing SMSTripFormatter
+        THEN: Import succeeds
+    
+        EXPECTED: FAIL - SMSTripFormatter doesn't exist yet
+        """
+>       from formatters.sms_trip import SMSTripFormatter
+E       ModuleNotFoundError: No module named 'formatters.sms_trip'
+
+/tmp/claude-1001/-opt-gregor-zwanziger/9bcceeaf-c2a3-45d1-83b0-7f33d341fbf0/scratchpad/test_sms_trip.py:69: ModuleNotFoundError
+________________________ test_format_sms_single_segment ________________________
+
+    def test_format_sms_single_segment():
+        """
+        TDD RED: format_sms() should format single segment.
+    
+        GIVEN: Single segment (T12/18, W30, R5mm)
+        WHEN: Calling format_sms()
+        THEN: Returns "E1:T12/18 W30 R5mm"
+    
+        EXPECTED: FAIL - Method doesn't exist yet
+        """
+>       from formatters.sms_trip import SMSTripFormatter
+E       ModuleNotFoundError: No module named 'formatters.sms_trip'
+
+/tmp/claude-1001/-opt-gregor-zwanziger/9bcceeaf-c2a3-45d1-83b0-7f33d341fbf0/scratchpad/test_sms_trip.py:84: ModuleNotFoundError
+_______________________ test_format_sms_validates_length _______________________
+
+    def test_format_sms_validates_length():
+        """
+        TDD RED: format_sms() should validate ≤160 chars.
+    
+        GIVEN: Any segments
+        WHEN: Calling format_sms()
+        THEN: Result length ≤160 chars
+    
+        EXPECTED: FAIL - Validation doesn't exist yet
+        """
+>       from formatters.sms_trip import SMSTripFormatter
+E       ModuleNotFoundError: No module named 'formatters.sms_trip'
+
+/tmp/claude-1001/-opt-gregor-zwanziger/9bcceeaf-c2a3-45d1-83b0-7f33d341fbf0/scratchpad/test_sms_trip.py:104: ModuleNotFoundError
+=========================== short test summary info ============================
+FAILED ../../tmp/claude-1001/-opt-gregor-zwanziger/9bcceeaf-c2a3-45d1-83b0-7f33d341fbf0/scratchpad/test_sms_trip.py::test_sms_formatter_exists
+FAILED ../../tmp/claude-1001/-opt-gregor-zwanziger/9bcceeaf-c2a3-45d1-83b0-7f33d341fbf0/scratchpad/test_sms_trip.py::test_format_sms_single_segment
+FAILED ../../tmp/claude-1001/-opt-gregor-zwanziger/9bcceeaf-c2a3-45d1-83b0-7f33d341fbf0/scratchpad/test_sms_trip.py::test_format_sms_validates_length
+============================== 3 failed in 0.04s ===============================

@@ -63,7 +63,7 @@ Features are added via `/feature` or `/user-story` commands.
 | Change-Detection | done | HIGH | Services | Weather Engine | Medium | GPX-Story2 |
 | Wetter-Config (WebUI) | done | HIGH | WebUI | Frontend | Simple | GPX-Story2 |
 | Email Trip-Formatter | done | HIGH | Formatter | Report Generation | Medium | GPX-Story3 |
-| SMS Compact Formatter | open | HIGH | Formatter | Report Generation | Simple | GPX-Story3 |
+| SMS Compact Formatter | done | HIGH | Formatter | Report Generation | Simple | GPX-Story3 |
 | Report-Scheduler | open | HIGH | Services | Scheduler | Medium | GPX-Story3 |
 | Alert bei Änderungen | open | HIGH | Services | Alert System | Simple | GPX-Story3 |
 | Report-Config (WebUI) | open | HIGH | WebUI | Frontend | Simple | GPX-Story3 |
