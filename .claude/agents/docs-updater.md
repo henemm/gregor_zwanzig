@@ -1,3 +1,8 @@
+---
+name: docs-updater
+description: Updates documentation after code changes to maintain consistency.
+---
+
 # Docs Updater Agent
 
 Updates documentation after code changes to maintain consistency.

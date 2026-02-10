@@ -1,3 +1,8 @@
+---
+name: spec-validator
+description: Validates entity specifications for completeness and correctness.
+---
+
 # Spec Validator Agent
 
 Validates entity specifications for completeness and correctness.

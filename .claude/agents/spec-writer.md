@@ -1,3 +1,8 @@
+---
+name: spec-writer
+description: Creates and updates entity specifications following the spec-first workflow.
+---
+
 # Spec Writer Agent
 
 Creates and updates entity specifications following the spec-first workflow.

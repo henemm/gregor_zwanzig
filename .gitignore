@@ -26,3 +26,7 @@ node_modules/
 # Claude Code (session state)
 .claude/validation_state.json
 .claude/workflow_state.json
+
+# Runtime data & secrets
+data/
+env.txt

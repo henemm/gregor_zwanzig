@@ -76,6 +76,11 @@ class TripAlertService:
             logger.error("SMTP not configured, cannot send alerts")
             return False
 
+        # 1b. Check if alerts are disabled for this trip
+        if trip.report_config and not trip.report_config.alert_on_changes:
+            logger.debug(f"Alerts disabled for trip {trip.id}")
+            return False
+
         # 1. Check throttle
         if self._is_throttled(trip.id):
             logger.debug(f"Alert throttled for trip {trip.id}")

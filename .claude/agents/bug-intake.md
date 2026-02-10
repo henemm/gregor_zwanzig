@@ -1,3 +1,8 @@
+---
+name: bug-intake
+description: Structured bug/feature intake for proper root cause analysis.
+---
+
 # Bug Intake Agent
 
 Structured bug/feature intake for proper root cause analysis.

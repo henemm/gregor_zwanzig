@@ -98,7 +98,7 @@ class TripReportFormatter:
         type_label = {
             "morning": "Morning Report",
             "evening": "Evening Report",
-            "alert": "Weather Alert",
+            "alert": "WETTER-ÄNDERUNG",
         }.get(report_type, report_type.title())
 
         date_str = date.strftime("%d.%m.%Y")
