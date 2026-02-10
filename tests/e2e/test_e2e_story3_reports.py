@@ -43,23 +43,23 @@ from formatters.trip_report import TripReportFormatter
 # ---------------------------------------------------------------------------
 
 TEST_TRIP_ID = "e2e-test-story3"
-TEST_TRIP_NAME = "E2E Story3 GR20"
+TEST_TRIP_NAME = "E2E Story3 Stubai"
 
-# Real GR20 coordinates (Corsica) for realistic weather data
-GR20_WAYPOINTS = [
+# Real Stubaier Höhenweg coordinates (Tyrol, Austria) - within GeoSphere bounds
+STUBAI_WAYPOINTS = [
     Waypoint(
-        id="G1", name="Calenzana", lat=42.5075, lon=8.8553,
-        elevation_m=275,
+        id="S1", name="Neustift", lat=47.1100, lon=11.3100,
+        elevation_m=993,
         time_window=TimeWindow(start=dt_time(7, 0), end=dt_time(9, 0)),
     ),
     Waypoint(
-        id="G2", name="Ortu di u Piobbu", lat=42.4833, lon=8.9167,
-        elevation_m=1520,
+        id="S2", name="Starkenburger Huette", lat=47.1000, lon=11.2700,
+        elevation_m=2237,
         time_window=TimeWindow(start=dt_time(10, 0), end=dt_time(12, 0)),
     ),
     Waypoint(
-        id="G3", name="Carrozzu", lat=42.4667, lon=8.9500,
-        elevation_m=1270,
+        id="S3", name="Franz-Senn-Huette", lat=47.0700, lon=11.2300,
+        elevation_m=2147,
         time_window=TimeWindow(start=dt_time(13, 0), end=dt_time(15, 0)),
     ),
 ]
@@ -67,13 +67,13 @@ GR20_WAYPOINTS = [
 
 @pytest.fixture
 def test_trip():
-    """Create a test trip with today's date and real GR20 coordinates."""
+    """Create a test trip with today's date and real Stubai coordinates."""
     today = date.today()
     stage = Stage(
         id="T1",
-        name="Etappe 1: Calenzana - Carrozzu",
+        name="Etappe 1: Neustift - Franz-Senn-Huette",
         date=today,
-        waypoints=GR20_WAYPOINTS,
+        waypoints=STUBAI_WAYPOINTS,
     )
     trip = Trip(
         id=TEST_TRIP_ID,
@@ -133,24 +133,24 @@ class TestTripCreationAndSegments:
 
         seg1 = segments_from_trip[0]
         assert seg1.segment_id == 1
-        assert seg1.start_point.lat == pytest.approx(42.5075, abs=0.01)
-        assert seg1.end_point.lat == pytest.approx(42.4833, abs=0.01)
-        assert seg1.ascent_m > 0  # Calenzana (275m) -> Ortu (1520m)
+        assert seg1.start_point.lat == pytest.approx(47.1100, abs=0.01)
+        assert seg1.end_point.lat == pytest.approx(47.1000, abs=0.01)
+        assert seg1.ascent_m > 0  # Neustift (993m) -> Starkenburger (2237m)
 
         seg2 = segments_from_trip[1]
         assert seg2.segment_id == 2
-        assert seg2.descent_m > 0  # Ortu (1520m) -> Carrozzu (1270m)
+        assert seg2.descent_m > 0  # Starkenburger (2237m) -> Franz-Senn (2147m)
 
     def test_segment_time_windows(self, segments_from_trip):
         """Segments have correct UTC time windows from waypoints."""
         seg1 = segments_from_trip[0]
-        assert seg1.start_time.hour == 7   # G1 start: 07:00
-        assert seg1.end_time.hour == 10    # G2 start: 10:00
+        assert seg1.start_time.hour == 7   # S1 start: 07:00
+        assert seg1.end_time.hour == 10    # S2 start: 10:00
         assert seg1.duration_hours == pytest.approx(3.0)
 
         seg2 = segments_from_trip[1]
-        assert seg2.start_time.hour == 10  # G2 start: 10:00
-        assert seg2.end_time.hour == 13    # G3 start: 13:00
+        assert seg2.start_time.hour == 10  # S2 start: 10:00
+        assert seg2.end_time.hour == 13    # S3 start: 13:00
         assert seg2.duration_hours == pytest.approx(3.0)
 
 
