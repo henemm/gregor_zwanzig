@@ -1,12 +1,13 @@
 """
-Background Scheduler for Compare Subscriptions.
+Background Scheduler for Compare Subscriptions and Trip Reports.
 
-Automatically sends emails for subscriptions based on their schedule:
+Automatically sends emails for subscriptions and trip reports based on schedule:
 - DAILY_MORNING: 07:00 Europe/Vienna
 - DAILY_EVENING: 18:00 Europe/Vienna
 - WEEKLY: 18:00 on configured weekday
 
 SPEC: docs/specs/modules/scheduler.md v1.1
+SPEC: docs/specs/modules/trip_report_scheduler.md v1.0 (Feature 3.3)
 """
 from __future__ import annotations
 
@@ -68,8 +69,24 @@ def init_scheduler() -> None:
         name="Evening Subscriptions (18:00)",
     )
 
+    # Trip Reports - Morning at 07:00 Europe/Vienna (Feature 3.3)
+    _scheduler.add_job(
+        run_morning_trip_reports,
+        CronTrigger(hour=7, minute=0, timezone=TIMEZONE),
+        id="morning_trip_reports",
+        name="Morning Trip Reports (07:00)",
+    )
+
+    # Trip Reports - Evening at 18:00 Europe/Vienna (Feature 3.3)
+    _scheduler.add_job(
+        run_evening_trip_reports,
+        CronTrigger(hour=18, minute=0, timezone=TIMEZONE),
+        id="evening_trip_reports",
+        name="Evening Trip Reports (18:00)",
+    )
+
     _scheduler.start()
-    logger.info(f"Scheduler started: Morning 07:00, Evening 18:00 ({TIMEZONE})")
+    logger.info(f"Scheduler started: Subscriptions + Trip Reports at 07:00/18:00 ({TIMEZONE})")
 
 
 def shutdown_scheduler() -> None:
@@ -96,6 +113,26 @@ def run_evening_subscriptions() -> None:
     logger.info("Running evening subscriptions...")
     _run_subscriptions_by_schedule(Schedule.DAILY_EVENING)
     _run_weekly_subscriptions()
+
+
+def run_morning_trip_reports() -> None:
+    """Run morning trip reports for all active trips (Feature 3.3)."""
+    from services.trip_report_scheduler import TripReportSchedulerService
+
+    logger.info("Running morning trip reports...")
+    service = TripReportSchedulerService()
+    count = service.send_reports("morning")
+    logger.info(f"Morning trip reports complete: {count} sent")
+
+
+def run_evening_trip_reports() -> None:
+    """Run evening trip reports for all active trips (Feature 3.3)."""
+    from services.trip_report_scheduler import TripReportSchedulerService
+
+    logger.info("Running evening trip reports...")
+    service = TripReportSchedulerService()
+    count = service.send_reports("evening")
+    logger.info(f"Evening trip reports complete: {count} sent")
 
 
 def _run_weekly_subscriptions() -> None:
