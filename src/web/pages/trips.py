@@ -11,6 +11,7 @@ from nicegui import ui
 from app.loader import delete_trip, load_all_trips, save_trip
 from app.trip import Stage, Trip, Waypoint
 from web.pages.weather_config import show_weather_config_dialog
+from web.pages.report_config import make_report_config_handler
 from web.utils import parse_dms_coordinates
 
 
@@ -482,6 +483,11 @@ def render_trips() -> None:
                                 "Wetter-Metriken",
                                 icon="settings",
                                 on_click=make_weather_config_handler(trip),
+                            ).props("flat color=primary")
+                            ui.button(
+                                "Reports",
+                                icon="schedule",
+                                on_click=make_report_config_handler(trip),
                             ).props("flat color=primary")
                             ui.button(
                                 icon="edit",

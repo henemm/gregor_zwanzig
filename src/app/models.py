@@ -7,7 +7,7 @@ See docs/reference/api_contract.md for full specification.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, time, timezone
 from enum import Enum
 from typing import List, Optional
 
@@ -373,3 +373,43 @@ class TripReport:
     # Metadata
     triggered_by: Optional[str] = None  # "schedule" or "change_detection"
     changes: list[WeatherChange] = field(default_factory=list)  # If alert
+
+
+# --- Trip Report Config DTO (Feature 3.5) ---
+
+@dataclass
+class TripReportConfig:
+    """
+    Configuration for trip weather reports (Feature 3.5).
+
+    Stores user preferences for scheduled reports and alerts.
+
+    Example:
+        TripReportConfig(
+            trip_id="gr20-etappe3",
+            morning_time=time(7, 0),
+            evening_time=time(18, 0),
+            send_email=True,
+            alert_on_changes=True,
+            change_threshold_temp_c=5.0,
+        )
+    """
+    trip_id: str
+    enabled: bool = True
+
+    # Schedule
+    morning_time: time = field(default_factory=lambda: time(7, 0))
+    evening_time: time = field(default_factory=lambda: time(18, 0))
+
+    # Channels
+    send_email: bool = True
+    send_sms: bool = False
+
+    # Alerts
+    alert_on_changes: bool = True
+    change_threshold_temp_c: float = 5.0
+    change_threshold_wind_kmh: float = 20.0
+    change_threshold_precip_mm: float = 10.0
+
+    # Metadata
+    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))

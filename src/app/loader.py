@@ -125,6 +125,26 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
             updated_at=datetime.fromisoformat(wc_data["updated_at"])
         )
 
+    # Parse report config if present (Feature 3.5)
+    report_config = None
+    if "report_config" in data:
+        from app.models import TripReportConfig
+        from datetime import datetime, time
+        rc_data = data["report_config"]
+        report_config = TripReportConfig(
+            trip_id=rc_data["trip_id"],
+            enabled=rc_data.get("enabled", True),
+            morning_time=time.fromisoformat(rc_data["morning_time"]),
+            evening_time=time.fromisoformat(rc_data["evening_time"]),
+            send_email=rc_data.get("send_email", True),
+            send_sms=rc_data.get("send_sms", False),
+            alert_on_changes=rc_data.get("alert_on_changes", True),
+            change_threshold_temp_c=rc_data.get("change_threshold_temp_c", 5.0),
+            change_threshold_wind_kmh=rc_data.get("change_threshold_wind_kmh", 20.0),
+            change_threshold_precip_mm=rc_data.get("change_threshold_precip_mm", 10.0),
+            updated_at=datetime.fromisoformat(rc_data["updated_at"]),
+        )
+
     return Trip(
         id=data["id"],
         name=data["name"],
@@ -132,6 +152,7 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
         avalanche_regions=data.get("avalanche_regions", []),
         aggregation=aggregation,
         weather_config=weather_config,
+        report_config=report_config,
     )
 
 
@@ -397,6 +418,22 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             "trip_id": trip.weather_config.trip_id,
             "enabled_metrics": trip.weather_config.enabled_metrics,
             "updated_at": trip.weather_config.updated_at.isoformat()
+        }
+
+    # Serialize report config (Feature 3.5)
+    if trip.report_config:
+        data["report_config"] = {
+            "trip_id": trip.report_config.trip_id,
+            "enabled": trip.report_config.enabled,
+            "morning_time": trip.report_config.morning_time.isoformat(),
+            "evening_time": trip.report_config.evening_time.isoformat(),
+            "send_email": trip.report_config.send_email,
+            "send_sms": trip.report_config.send_sms,
+            "alert_on_changes": trip.report_config.alert_on_changes,
+            "change_threshold_temp_c": trip.report_config.change_threshold_temp_c,
+            "change_threshold_wind_kmh": trip.report_config.change_threshold_wind_kmh,
+            "change_threshold_precip_mm": trip.report_config.change_threshold_precip_mm,
+            "updated_at": trip.report_config.updated_at.isoformat(),
         }
 
     return data
