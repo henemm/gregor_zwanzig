@@ -13,6 +13,7 @@ from app.models import (
     SegmentWeatherSummary,
     ThunderLevel,
     TripSegment,
+    TripWeatherConfig,
     NormalizedTimeseries,
 )
 
@@ -81,6 +82,108 @@ def test_format_email_generates_html():
     
     assert "<!DOCTYPE html>" in report.email_html
     assert "<table>" in report.email_html.lower()
+
+
+class TestMetricsFiltering:
+    """Test that trip_config.enabled_metrics filters table columns."""
+
+    def test_all_columns_when_no_config(self) -> None:
+        """Default: all metric columns shown when trip_config is None."""
+        from formatters.trip_report import TripReportFormatter
+
+        formatter = TripReportFormatter()
+        segments = [create_test_segment()]
+        report = formatter.format_email(segments, "Trip", "morning", trip_config=None)
+
+        assert "<th>Temp</th>" in report.email_html
+        assert "<th>Wind</th>" in report.email_html
+        assert "<th>Precip</th>" in report.email_html
+
+    def test_only_temp_column_with_config(self) -> None:
+        """Only Temp column when only temp metrics enabled."""
+        from formatters.trip_report import TripReportFormatter
+
+        formatter = TripReportFormatter()
+        segments = [create_test_segment()]
+        config = TripWeatherConfig(
+            trip_id="t",
+            enabled_metrics=["temp_max_c"],
+            updated_at=datetime.now(timezone.utc),
+        )
+        report = formatter.format_email(segments, "Trip", "morning", trip_config=config)
+
+        assert "<th>Temp</th>" in report.email_html
+        assert "<th>Wind</th>" not in report.email_html
+        assert "<th>Precip</th>" not in report.email_html
+
+    def test_wind_and_precip_without_temp(self) -> None:
+        """Wind + Precip visible, Temp hidden."""
+        from formatters.trip_report import TripReportFormatter
+
+        formatter = TripReportFormatter()
+        segments = [create_test_segment()]
+        config = TripWeatherConfig(
+            trip_id="t",
+            enabled_metrics=["wind_max_kmh", "precip_sum_mm"],
+            updated_at=datetime.now(timezone.utc),
+        )
+        report = formatter.format_email(segments, "Trip", "morning", trip_config=config)
+
+        assert "<th>Temp</th>" not in report.email_html
+        assert "<th>Wind</th>" in report.email_html
+        assert "<th>Precip</th>" in report.email_html
+
+    def test_summary_matches_visible_columns(self) -> None:
+        """Summary should only show metrics for visible columns."""
+        from formatters.trip_report import TripReportFormatter
+
+        formatter = TripReportFormatter()
+        segments = [create_test_segment()]
+        config = TripWeatherConfig(
+            trip_id="t",
+            enabled_metrics=["temp_max_c"],
+            updated_at=datetime.now(timezone.utc),
+        )
+        report = formatter.format_email(segments, "Trip", "morning", trip_config=config)
+
+        assert "Max Temperature" in report.email_html
+        assert "Max Wind" not in report.email_html
+        assert "Total Precipitation" not in report.email_html
+
+    def test_plain_text_respects_config(self) -> None:
+        """Plain-text version should also filter metrics."""
+        from formatters.trip_report import TripReportFormatter
+
+        formatter = TripReportFormatter()
+        segments = [create_test_segment()]
+        config = TripWeatherConfig(
+            trip_id="t",
+            enabled_metrics=["precip_sum_mm"],
+            updated_at=datetime.now(timezone.utc),
+        )
+        report = formatter.format_email(segments, "Trip", "morning", trip_config=config)
+
+        assert "Max Temp" not in report.email_plain
+        assert "Max Wind" not in report.email_plain
+        assert "Total Precip" in report.email_plain
+
+    def test_structural_columns_always_visible(self) -> None:
+        """Segment, Time, Duration, Risk are always shown."""
+        from formatters.trip_report import TripReportFormatter
+
+        formatter = TripReportFormatter()
+        segments = [create_test_segment()]
+        config = TripWeatherConfig(
+            trip_id="t",
+            enabled_metrics=["temp_max_c"],
+            updated_at=datetime.now(timezone.utc),
+        )
+        report = formatter.format_email(segments, "Trip", "morning", trip_config=config)
+
+        assert "<th>Segment</th>" in report.email_html
+        assert "<th>Time</th>" in report.email_html
+        assert "<th>Duration</th>" in report.email_html
+        assert "<th>Risk</th>" in report.email_html
 
 
 if __name__ == "__main__":

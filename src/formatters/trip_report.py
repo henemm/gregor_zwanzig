@@ -88,6 +88,18 @@ class TripReportFormatter:
             changes=changes if changes else [],
         )
 
+    def _get_visible_columns(self, trip_config: Optional[TripWeatherConfig]) -> dict[str, bool]:
+        """Determine which metric columns to show based on user config."""
+        if not trip_config:
+            return {"temp": True, "wind": True, "precip": True}
+
+        metrics = set(trip_config.enabled_metrics)
+        return {
+            "temp": bool(metrics & {"temp_min_c", "temp_max_c", "temp_avg_c"}),
+            "wind": bool(metrics & {"wind_max_kmh", "gust_max_kmh"}),
+            "precip": "precip_sum_mm" in metrics,
+        }
+
     def _generate_subject(self, trip_name: str, report_type: str, date: datetime) -> str:
         """
         Generate email subject line.
@@ -115,6 +127,7 @@ class TripReportFormatter:
         """Generate HTML email content."""
         # Compute summary
         summary = self._compute_summary(segments)
+        cols = self._get_visible_columns(trip_config)
 
         # Build segment table rows
         segment_rows = []
@@ -127,32 +140,28 @@ class TripReportFormatter:
             start_time = seg.start_time.strftime("%H:%M")
             end_time = seg.end_time.strftime("%H:%M")
 
-            # Format temperature
+            # Format metric values
             temp_str = ""
             if agg.temp_min_c is not None and agg.temp_max_c is not None:
                 temp_str = f"{agg.temp_min_c:.0f}-{agg.temp_max_c:.0f}°C"
-
-            # Format wind
             wind_str = ""
             if agg.wind_max_kmh is not None:
                 wind_str = f"{agg.wind_max_kmh:.0f} km/h"
-
-            # Format precip
             precip_str = ""
             if agg.precip_sum_mm is not None:
                 precip_str = f"{agg.precip_sum_mm:.1f} mm"
 
-            segment_rows.append(f"""
-                <tr>
-                    <td>#{seg.segment_id}</td>
-                    <td>{start_time} - {end_time}</td>
-                    <td>{seg.duration_hours:.1f}h</td>
-                    <td>{temp_str}</td>
-                    <td>{wind_str}</td>
-                    <td>{precip_str}</td>
-                    <td class="risk-{risk_level}">{risk_text}</td>
-                </tr>
-            """)
+            # Build row with only visible columns
+            row = f"<td>#{seg.segment_id}</td><td>{start_time} - {end_time}</td><td>{seg.duration_hours:.1f}h</td>"
+            if cols["temp"]:
+                row += f"<td>{temp_str}</td>"
+            if cols["wind"]:
+                row += f"<td>{wind_str}</td>"
+            if cols["precip"]:
+                row += f"<td>{precip_str}</td>"
+            row += f'<td class="risk-{risk_level}">{risk_text}</td>'
+
+            segment_rows.append(f"<tr>{row}</tr>")
 
         segments_html = "".join(segment_rows)
 
@@ -174,6 +183,37 @@ class TripReportFormatter:
                 </ul>
             </div>
             """
+
+        # Build table header with only visible columns
+        header = "<th>Segment</th><th>Time</th><th>Duration</th>"
+        if cols["temp"]:
+            header += "<th>Temp</th>"
+        if cols["wind"]:
+            header += "<th>Wind</th>"
+        if cols["precip"]:
+            header += "<th>Precip</th>"
+        header += "<th>Risk</th>"
+
+        # Build summary items with only visible columns
+        summary_items = ""
+        if cols["temp"]:
+            summary_items += f"""
+                <div class="summary-item">
+                    <strong>Max Temperature</strong>
+                    <span>{summary['max_temp_c']:.0f}°C</span>
+                </div>"""
+        if cols["wind"]:
+            summary_items += f"""
+                <div class="summary-item">
+                    <strong>Max Wind</strong>
+                    <span>{summary['max_wind_kmh']:.0f} km/h</span>
+                </div>"""
+        if cols["precip"]:
+            summary_items += f"""
+                <div class="summary-item">
+                    <strong>Total Precipitation</strong>
+                    <span>{summary['total_precip_mm']:.1f} mm</span>
+                </div>"""
 
         # Generate HTML
         report_date = segments[0].segment.start_time.strftime("%d.%m.%Y")
@@ -217,34 +257,14 @@ class TripReportFormatter:
         <div class="section">
             <h2>Segments</h2>
             <table>
-                <tr>
-                    <th>Segment</th>
-                    <th>Time</th>
-                    <th>Duration</th>
-                    <th>Temp</th>
-                    <th>Wind</th>
-                    <th>Precip</th>
-                    <th>Risk</th>
-                </tr>
+                <tr>{header}</tr>
                 {segments_html}
             </table>
         </div>
 
         <div class="section">
             <h2>Summary</h2>
-            <div class="summary-grid">
-                <div class="summary-item">
-                    <strong>Max Temperature</strong>
-                    <span>{summary['max_temp_c']:.0f}°C</span>
-                </div>
-                <div class="summary-item">
-                    <strong>Max Wind</strong>
-                    <span>{summary['max_wind_kmh']:.0f} km/h</span>
-                </div>
-                <div class="summary-item">
-                    <strong>Total Precipitation</strong>
-                    <span>{summary['total_precip_mm']:.1f} mm</span>
-                </div>
+            <div class="summary-grid">{summary_items}
             </div>
         </div>
 
@@ -268,6 +288,7 @@ class TripReportFormatter:
         changes: Optional[list[WeatherChange]],
     ) -> str:
         """Generate plain-text email content."""
+        cols = self._get_visible_columns(trip_config)
         lines = []
         lines.append(f"{trip_name} - {report_type.title()} Report")
         lines.append(f"{segments[0].segment.start_time.strftime('%d.%m.%Y')}")
@@ -283,23 +304,31 @@ class TripReportFormatter:
             start_time = seg.start_time.strftime("%H:%M")
             end_time = seg.end_time.strftime("%H:%M")
 
-            temp_str = f"{agg.temp_min_c:.0f}-{agg.temp_max_c:.0f}°C" if agg.temp_min_c else "N/A"
-            wind_str = f"{agg.wind_max_kmh:.0f} km/h" if agg.wind_max_kmh else "N/A"
-            precip_str = f"{agg.precip_sum_mm:.1f}mm" if agg.precip_sum_mm else "0mm"
+            parts = [f"#{seg.segment_id:2d}  {start_time}-{end_time} ({seg.duration_hours:.1f}h)"]
+            if cols["temp"]:
+                temp_str = f"{agg.temp_min_c:.0f}-{agg.temp_max_c:.0f}°C" if agg.temp_min_c else "N/A"
+                parts.append(f"{temp_str:12s}")
+            if cols["wind"]:
+                wind_str = f"{agg.wind_max_kmh:.0f} km/h" if agg.wind_max_kmh else "N/A"
+                parts.append(f"{wind_str:10s}")
+            if cols["precip"]:
+                precip_str = f"{agg.precip_sum_mm:.1f}mm" if agg.precip_sum_mm else "0mm"
+                parts.append(f"{precip_str:8s}")
+            parts.append(risk_text)
 
-            lines.append(
-                f"#{seg.segment_id:2d}  {start_time}-{end_time} ({seg.duration_hours:.1f}h)  "
-                f"{temp_str:12s}  {wind_str:10s}  {precip_str:8s}  {risk_text}"
-            )
+            lines.append("  ".join(parts))
 
         lines.append("")
         lines.append("SUMMARY")
         lines.append("=" * 60)
 
         summary = self._compute_summary(segments)
-        lines.append(f"Max Temp: {summary['max_temp_c']:.0f}°C")
-        lines.append(f"Max Wind: {summary['max_wind_kmh']:.0f} km/h")
-        lines.append(f"Total Precip: {summary['total_precip_mm']:.1f} mm")
+        if cols["temp"]:
+            lines.append(f"Max Temp: {summary['max_temp_c']:.0f}°C")
+        if cols["wind"]:
+            lines.append(f"Max Wind: {summary['max_wind_kmh']:.0f} km/h")
+        if cols["precip"]:
+            lines.append(f"Total Precip: {summary['total_precip_mm']:.1f} mm")
 
         if changes:
             lines.append("")
