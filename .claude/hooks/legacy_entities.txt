@@ -10,6 +10,7 @@ rawsnowgriddata
 rawnwpdata
 
 # Existing models (pre-spec era)
+trip
 savedlocation
 userpreferences
 user
@@ -44,3 +45,21 @@ compare_email_button
 
 # Output channels (existing code)
 emailoutput
+
+# E2E Tests Story 3 (spec is story-level, not per-test)
+trip_saved_to_disk
+trip_roundtrip
+segment_conversion
+segment_time_windows
+fetch_real_weather
+email_html_contains_trip_name
+email_html_contains_segments
+email_plain_text_fallback
+email_subject_format
+sms_format_compact
+sms_contains_temperature
+send_and_verify_report_email
+save_and_load_report_config
+trip_without_config_loads_none
+scheduler_finds_active_trip
+scheduler_send_reports
