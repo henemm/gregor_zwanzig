@@ -247,6 +247,15 @@ class GPXTrack:
 
 
 @dataclass
+class EtappenConfig:
+    """Configuration for hiking speed and segmentation."""
+    speed_flat_kmh: float = 4.0        # Gehgeschwindigkeit Ebene [km/h]
+    speed_ascent_mh: float = 300.0     # Steig-Geschwindigkeit [Hm/h]
+    speed_descent_mh: float = 500.0    # Abstiegs-Geschwindigkeit [Hm/h]
+    target_duration_hours: float = 2.0  # Ziel-Segment-Dauer [h]
+
+
+@dataclass
 class TripSegment:
     """Single segment of a trip (typically ~2 hours hiking)."""
     segment_id: int  # 1-based
