@@ -67,17 +67,19 @@ def render_trips() -> None:
                     with ui.row().classes("items-center justify-between w-full"):
                         ui.label("Stages").classes("text-h6")
 
-                        def add_stage() -> None:
-                            stage_idx = len(stages_data)
-                            stage_date = date.today() + timedelta(days=stage_idx)
-                            stages_data.append({
-                                "name": f"Stage {stage_idx + 1}",
-                                "date": stage_date.isoformat(),
-                                "waypoints": [],
-                            })
-                            stages_ui.refresh()
+                        def make_add_stage_handler():
+                            def do_add() -> None:
+                                stage_idx = len(stages_data)
+                                stage_date = date.today() + timedelta(days=stage_idx)
+                                stages_data.append({
+                                    "name": f"Stage {stage_idx + 1}",
+                                    "date": stage_date.isoformat(),
+                                    "waypoints": [],
+                                })
+                                stages_ui.refresh()
+                            return do_add
 
-                        ui.button("Add Stage", on_click=add_stage, icon="add").props("outline size=sm")
+                        ui.button("Add Stage", on_click=make_add_stage_handler(), icon="add").props("outline size=sm")
 
                     @ui.refreshable
                     def stages_ui() -> None:
@@ -164,67 +166,69 @@ def render_trips() -> None:
                     with ui.row().classes("w-full justify-end gap-2"):
                         ui.button("Cancel", on_click=dialog.close).props("flat")
 
-                        def save() -> None:
-                            if not name_input.value:
-                                ui.notify("Name is required", type="negative")
-                                return
-
-                            if not stages_data:
-                                ui.notify("At least one stage required", type="negative")
-                                return
-
-                            trip_id = name_input.value.lower().replace(" ", "-")
-                            trip_id = "".join(c for c in trip_id if c.isalnum() or c == "-")
-
-                            # Build stages
-                            stages = []
-                            for idx, sd in enumerate(stages_data):
-                                if not sd["waypoints"]:
-                                    ui.notify(f"Stage {idx + 1} needs at least one waypoint", type="negative")
+                        def make_save_handler():
+                            def do_save() -> None:
+                                if not name_input.value:
+                                    ui.notify("Name is required", type="negative")
                                     return
 
-                                waypoints = [
-                                    Waypoint(
-                                        id=wp["id"],
-                                        name=wp["name"],
-                                        lat=float(wp["lat"]),
-                                        lon=float(wp["lon"]),
-                                        elevation_m=int(wp["elevation_m"]),
-                                    )
-                                    for wp in sd["waypoints"]
-                                ]
-
-                                try:
-                                    stage_date = date.fromisoformat(sd["date"])
-                                except ValueError:
-                                    ui.notify(f"Invalid date in Stage {idx + 1}", type="negative")
+                                if not stages_data:
+                                    ui.notify("At least one stage required", type="negative")
                                     return
 
-                                stages.append(Stage(
-                                    id=f"T{idx + 1}",
-                                    name=sd["name"],
-                                    date=stage_date,
-                                    waypoints=waypoints,
-                                ))
+                                trip_id = name_input.value.lower().replace(" ", "-")
+                                trip_id = "".join(c for c in trip_id if c.isalnum() or c == "-")
 
-                            # Parse regions
-                            regions = []
-                            if regions_input.value:
-                                regions = [r.strip() for r in regions_input.value.split(",")]
+                                # Build stages
+                                stages = []
+                                for idx, sd in enumerate(stages_data):
+                                    if not sd["waypoints"]:
+                                        ui.notify(f"Stage {idx + 1} needs at least one waypoint", type="negative")
+                                        return
 
-                            trip = Trip(
-                                id=trip_id,
-                                name=name_input.value,
-                                stages=stages,
-                                avalanche_regions=regions,
-                            )
+                                    waypoints = [
+                                        Waypoint(
+                                            id=wp["id"],
+                                            name=wp["name"],
+                                            lat=float(wp["lat"]),
+                                            lon=float(wp["lon"]),
+                                            elevation_m=int(wp["elevation_m"]),
+                                        )
+                                        for wp in sd["waypoints"]
+                                    ]
 
-                            save_trip(trip)
-                            ui.notify(f"Trip '{trip.name}' saved", type="positive")
-                            dialog.close()
-                            refresh_list()
+                                    try:
+                                        stage_date = date.fromisoformat(sd["date"])
+                                    except ValueError:
+                                        ui.notify(f"Invalid date in Stage {idx + 1}", type="negative")
+                                        return
 
-                        ui.button("Save", on_click=save).props("color=primary")
+                                    stages.append(Stage(
+                                        id=f"T{idx + 1}",
+                                        name=sd["name"],
+                                        date=stage_date,
+                                        waypoints=waypoints,
+                                    ))
+
+                                # Parse regions
+                                regions = []
+                                if regions_input.value:
+                                    regions = [r.strip() for r in regions_input.value.split(",")]
+
+                                trip = Trip(
+                                    id=trip_id,
+                                    name=name_input.value,
+                                    stages=stages,
+                                    avalanche_regions=regions,
+                                )
+
+                                save_trip(trip)
+                                ui.notify(f"Trip '{trip.name}' saved", type="positive")
+                                dialog.close()
+                                refresh_list()
+                            return do_save
+
+                        ui.button("Save", on_click=make_save_handler()).props("color=primary")
 
             dialog.open()
 
@@ -271,17 +275,19 @@ def render_trips() -> None:
                     with ui.row().classes("items-center justify-between w-full"):
                         ui.label("Stages").classes("text-h6")
 
-                        def add_stage_edit() -> None:
-                            stage_idx = len(stages_data)
-                            stage_date = date.today() + timedelta(days=stage_idx)
-                            stages_data.append({
-                                "name": f"Stage {stage_idx + 1}",
-                                "date": stage_date.isoformat(),
-                                "waypoints": [],
-                            })
-                            stages_ui_edit.refresh()
+                        def make_add_stage_edit_handler():
+                            def do_add() -> None:
+                                stage_idx = len(stages_data)
+                                stage_date = date.today() + timedelta(days=stage_idx)
+                                stages_data.append({
+                                    "name": f"Stage {stage_idx + 1}",
+                                    "date": stage_date.isoformat(),
+                                    "waypoints": [],
+                                })
+                                stages_ui_edit.refresh()
+                            return do_add
 
-                        ui.button("Add Stage", on_click=add_stage_edit, icon="add").props("outline size=sm")
+                        ui.button("Add Stage", on_click=make_add_stage_edit_handler(), icon="add").props("outline size=sm")
 
                     @ui.refreshable
                     def stages_ui_edit() -> None:
@@ -368,73 +374,80 @@ def render_trips() -> None:
                     with ui.row().classes("w-full justify-end gap-2"):
                         ui.button("Cancel", on_click=dialog.close).props("flat")
 
-                        def save_edit() -> None:
-                            if not name_input.value:
-                                ui.notify("Name is required", type="negative")
-                                return
-
-                            if not stages_data:
-                                ui.notify("At least one stage required", type="negative")
-                                return
-
-                            # Trip ID remains unchanged!
-                            trip_id = trip.id
-
-                            # Build stages
-                            stages = []
-                            for idx, sd in enumerate(stages_data):
-                                if not sd["waypoints"]:
-                                    ui.notify(f"Stage {idx + 1} needs at least one waypoint", type="negative")
+                        def make_save_edit_handler():
+                            def do_save() -> None:
+                                if not name_input.value:
+                                    ui.notify("Name is required", type="negative")
                                     return
 
-                                waypoints = [
-                                    Waypoint(
-                                        id=wp["id"],
-                                        name=wp["name"],
-                                        lat=float(wp["lat"]),
-                                        lon=float(wp["lon"]),
-                                        elevation_m=int(wp["elevation_m"]),
-                                    )
-                                    for wp in sd["waypoints"]
-                                ]
-
-                                try:
-                                    stage_date = date.fromisoformat(sd["date"])
-                                except ValueError:
-                                    ui.notify(f"Invalid date in Stage {idx + 1}", type="negative")
+                                if not stages_data:
+                                    ui.notify("At least one stage required", type="negative")
                                     return
 
-                                stages.append(Stage(
-                                    id=f"T{idx + 1}",
-                                    name=sd["name"],
-                                    date=stage_date,
-                                    waypoints=waypoints,
-                                ))
+                                # Trip ID remains unchanged!
+                                trip_id = trip.id
 
-                            # Parse regions
-                            regions = []
-                            if regions_input.value:
-                                regions = [r.strip() for r in regions_input.value.split(",")]
+                                # Build stages
+                                stages = []
+                                for idx, sd in enumerate(stages_data):
+                                    if not sd["waypoints"]:
+                                        ui.notify(f"Stage {idx + 1} needs at least one waypoint", type="negative")
+                                        return
 
-                            updated_trip = Trip(
-                                id=trip_id,
-                                name=name_input.value,
-                                stages=stages,
-                                avalanche_regions=regions,
-                            )
+                                    waypoints = [
+                                        Waypoint(
+                                            id=wp["id"],
+                                            name=wp["name"],
+                                            lat=float(wp["lat"]),
+                                            lon=float(wp["lon"]),
+                                            elevation_m=int(wp["elevation_m"]),
+                                        )
+                                        for wp in sd["waypoints"]
+                                    ]
 
-                            save_trip(updated_trip)
-                            ui.notify(f"Trip '{updated_trip.name}' updated", type="positive")
-                            dialog.close()
-                            refresh_list()
+                                    try:
+                                        stage_date = date.fromisoformat(sd["date"])
+                                    except ValueError:
+                                        ui.notify(f"Invalid date in Stage {idx + 1}", type="negative")
+                                        return
 
-                        ui.button("Save Changes", on_click=save_edit).props("color=primary")
+                                    stages.append(Stage(
+                                        id=f"T{idx + 1}",
+                                        name=sd["name"],
+                                        date=stage_date,
+                                        waypoints=waypoints,
+                                    ))
+
+                                # Parse regions
+                                regions = []
+                                if regions_input.value:
+                                    regions = [r.strip() for r in regions_input.value.split(",")]
+
+                                updated_trip = Trip(
+                                    id=trip_id,
+                                    name=name_input.value,
+                                    stages=stages,
+                                    avalanche_regions=regions,
+                                )
+
+                                save_trip(updated_trip)
+                                ui.notify(f"Trip '{updated_trip.name}' updated", type="positive")
+                                dialog.close()
+                                refresh_list()
+                            return do_save
+
+                        ui.button("Save Changes", on_click=make_save_edit_handler()).props("color=primary")
 
             dialog.open()
 
+        def make_add_handler():
+            def do_add() -> None:
+                show_add_dialog()
+            return do_add
+
         ui.button(
             "New Trip",
-            on_click=show_add_dialog,
+            on_click=make_add_handler(),
             icon="route",
         ).props("color=primary")
 

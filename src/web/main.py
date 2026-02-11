@@ -74,6 +74,18 @@ def create_header() -> None:
             ui.link("Settings", "/settings").classes("text-white mx-2")
 
 
+# Prevent Safari from caching HTML pages (fixes dead WebSocket on revisit)
+# See: https://github.com/zauberzeug/nicegui/issues/5468
+@app.middleware("http")
+async def no_cache_headers(request, call_next):
+    response = await call_next(request)
+    if "text/html" in response.headers.get("content-type", ""):
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
+
+
 # Register startup handlers
 app.on_startup(ensure_data_dirs)
 

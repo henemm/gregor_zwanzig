@@ -59,22 +59,24 @@ def render_locations() -> None:
             with ui.row().classes("w-full justify-end gap-2 mt-4"):
                 ui.button("Cancel", on_click=dialog.close).props("flat")
 
-                def save_edit() -> None:
-                    updated = SavedLocation(
-                        id=loc.id,
-                        name=name_input.value or loc.name,
-                        lat=float(lat_input.value or loc.lat),
-                        lon=float(lon_input.value or loc.lon),
-                        elevation_m=int(elev_input.value or loc.elevation_m),
-                        region=region_input.value or None,
-                        bergfex_slug=bergfex_input.value or None,
-                    )
-                    save_location(updated)
-                    ui.notify(f"'{updated.name}' updated", type="positive")
-                    dialog.close()
-                    refresh_list()
+                def make_save_edit_handler():
+                    def do_save() -> None:
+                        updated = SavedLocation(
+                            id=loc.id,
+                            name=name_input.value or loc.name,
+                            lat=float(lat_input.value or loc.lat),
+                            lon=float(lon_input.value or loc.lon),
+                            elevation_m=int(elev_input.value or loc.elevation_m),
+                            region=region_input.value or None,
+                            bergfex_slug=bergfex_input.value or None,
+                        )
+                        save_location(updated)
+                        ui.notify(f"'{updated.name}' updated", type="positive")
+                        dialog.close()
+                        refresh_list()
+                    return do_save
 
-                ui.button("Save", on_click=save_edit).props("color=primary")
+                ui.button("Save", on_click=make_save_edit_handler()).props("color=primary")
 
         dialog.open()
 
@@ -140,35 +142,42 @@ def render_locations() -> None:
                 with ui.row().classes("w-full justify-end gap-2 mt-4"):
                     ui.button("Cancel", on_click=dialog.close).props("flat")
 
-                    def save() -> None:
-                        if not name_input.value:
-                            ui.notify("Name is required", type="negative")
-                            return
+                    def make_save_handler():
+                        def do_save() -> None:
+                            if not name_input.value:
+                                ui.notify("Name is required", type="negative")
+                                return
 
-                        loc_id = name_input.value.lower().replace(" ", "-")
-                        loc_id = "".join(c for c in loc_id if c.isalnum() or c == "-")
+                            loc_id = name_input.value.lower().replace(" ", "-")
+                            loc_id = "".join(c for c in loc_id if c.isalnum() or c == "-")
 
-                        location = SavedLocation(
-                            id=loc_id,
-                            name=name_input.value,
-                            lat=float(lat_input.value or 47.0),
-                            lon=float(lon_input.value or 11.0),
-                            elevation_m=int(elev_input.value or 2000),
-                            region=region_input.value or None,
-                            bergfex_slug=bergfex_input.value or None,
-                        )
-                        save_location(location)
-                        ui.notify(f"Location '{location.name}' saved", type="positive")
-                        dialog.close()
-                        refresh_list()
+                            location = SavedLocation(
+                                id=loc_id,
+                                name=name_input.value,
+                                lat=float(lat_input.value or 47.0),
+                                lon=float(lon_input.value or 11.0),
+                                elevation_m=int(elev_input.value or 2000),
+                                region=region_input.value or None,
+                                bergfex_slug=bergfex_input.value or None,
+                            )
+                            save_location(location)
+                            ui.notify(f"Location '{location.name}' saved", type="positive")
+                            dialog.close()
+                            refresh_list()
+                        return do_save
 
-                    ui.button("Save", on_click=save).props("color=primary")
+                    ui.button("Save", on_click=make_save_handler()).props("color=primary")
 
             dialog.open()
 
+        def make_add_handler():
+            def do_add() -> None:
+                show_add_dialog()
+            return do_add
+
         ui.button(
             "New Location",
-            on_click=show_add_dialog,
+            on_click=make_add_handler(),
             icon="add_location",
         ).props("color=primary")
 
