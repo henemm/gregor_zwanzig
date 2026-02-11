@@ -1,18 +1,24 @@
 """
-GPX Upload page (Feature 1.1).
+GPX Upload page (Feature 1.1 + 1.6).
 
-Upload-Widget fuer GPX-Dateien mit Validierung und Track-Zusammenfassung.
+Upload-Widget fuer GPX-Dateien mit Validierung, Track-Zusammenfassung,
+Etappen-Konfiguration und Segment-Vorschau.
 
-Spec: docs/specs/modules/gpx_upload.md
+Specs: docs/specs/modules/gpx_upload.md, etappen_config.md
 """
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import List
 
 from nicegui import events, ui
 
-from app.models import GPXTrack
+from app.models import EtappenConfig, GPXTrack, TripSegment
+from core.elevation_analysis import detect_waypoints
 from core.gpx_parser import GPXParseError, parse_gpx
+from core.hybrid_segmentation import optimize_segments
+from core.segment_builder import build_segments
 
 
 # Default upload directory
@@ -53,6 +59,29 @@ def process_gpx_upload(
         if saved_path.exists():
             saved_path.unlink()
         raise
+
+
+def compute_full_segmentation(
+    track: GPXTrack,
+    config: EtappenConfig,
+    start_time: datetime,
+) -> List[TripSegment]:
+    """Run complete segmentation pipeline.
+
+    Combines build_segments (1.4) + detect_waypoints (1.3) +
+    optimize_segments (1.5) into a single call.
+
+    Args:
+        track: Parsed GPX track.
+        config: Hiking speed and duration configuration.
+        start_time: Start time of the hike (UTC).
+
+    Returns:
+        List of optimized TripSegment objects.
+    """
+    segments = build_segments(track, config, start_time)
+    waypoints = detect_waypoints(track)
+    return optimize_segments(segments, waypoints, track, config)
 
 
 def render_gpx_upload() -> None:
@@ -128,7 +157,98 @@ def _show_track_summary(
                 ui.label("Waypoints:").classes("font-bold")
                 ui.label(str(len(track.waypoints)))
 
-        ui.button(
-            "Weiter zur Konfiguration",
-            icon="arrow_forward",
-        ).props("color=primary disable").classes("mt-4")
+        _show_config_and_segments(container, track)
+
+
+def _show_config_and_segments(parent_container, track: GPXTrack) -> None:
+    """Show configuration inputs and segment preview table."""
+    ui.separator().classes("my-4")
+    ui.label("Etappen-Konfiguration").classes("text-h5 mb-2")
+
+    with ui.card().classes("w-full"):
+        with ui.row().classes("w-full gap-4 items-end flex-wrap"):
+            start_hour = ui.number(
+                "Startzeit (Uhr)", value=8, min=0, max=23, step=1,
+            ).classes("w-32")
+            speed_flat = ui.number(
+                "Gehgeschw. (km/h)", value=4.0, min=1.0, max=8.0, step=0.5,
+            ).classes("w-40")
+            speed_ascent = ui.number(
+                "Aufstieg (Hm/h)", value=300, min=100, max=600, step=50,
+            ).classes("w-36")
+            speed_descent = ui.number(
+                "Abstieg (Hm/h)", value=500, min=200, max=800, step=50,
+            ).classes("w-36")
+
+    segment_container = ui.column().classes("w-full mt-4")
+
+    def make_compute_handler():
+        """Factory function (Safari compatibility)."""
+        def do_compute():
+            config = EtappenConfig(
+                speed_flat_kmh=float(speed_flat.value),
+                speed_ascent_mh=float(speed_ascent.value),
+                speed_descent_mh=float(speed_descent.value),
+            )
+            hour = int(start_hour.value)
+            start_time = datetime(2026, 1, 17, hour, 0, 0, tzinfo=timezone.utc)
+            segments = compute_full_segmentation(track, config, start_time)
+            _show_segment_table(segment_container, segments)
+            ui.notify(f"{len(segments)} Segmente berechnet", type="positive")
+        return do_compute
+
+    ui.button(
+        "Segmente berechnen",
+        on_click=make_compute_handler(),
+        icon="calculate",
+    ).props("color=primary").classes("mt-2")
+
+
+def _show_segment_table(container, segments: List[TripSegment]) -> None:
+    """Display segment preview as a table."""
+    container.clear()
+    with container:
+        columns = [
+            {"name": "nr", "label": "Seg", "field": "nr", "align": "center"},
+            {"name": "start", "label": "Start", "field": "start"},
+            {"name": "end", "label": "Ende", "field": "end"},
+            {"name": "duration", "label": "Dauer", "field": "duration"},
+            {"name": "distance", "label": "Distanz", "field": "distance"},
+            {"name": "ascent", "label": "Aufstieg", "field": "ascent"},
+            {"name": "descent", "label": "Abstieg", "field": "descent"},
+            {"name": "waypoint", "label": "Waypoint", "field": "waypoint"},
+        ]
+
+        rows = []
+        for s in segments:
+            wp_label = ""
+            if s.adjusted_to_waypoint and s.waypoint:
+                wp_label = s.waypoint.name or s.waypoint.type.value
+            rows.append({
+                "nr": s.segment_id,
+                "start": s.start_time.strftime("%H:%M"),
+                "end": s.end_time.strftime("%H:%M"),
+                "duration": f"{s.duration_hours:.1f}h",
+                "distance": f"{s.distance_km:.1f} km",
+                "ascent": f"{s.ascent_m:.0f} m",
+                "descent": f"{s.descent_m:.0f} m",
+                "waypoint": wp_label,
+            })
+
+        # Summary row
+        rows.append({
+            "nr": "Σ",
+            "start": "",
+            "end": "",
+            "duration": f"{sum(s.duration_hours for s in segments):.1f}h",
+            "distance": f"{sum(s.distance_km for s in segments):.1f} km",
+            "ascent": f"{sum(s.ascent_m for s in segments):.0f} m",
+            "descent": f"{sum(s.descent_m for s in segments):.0f} m",
+            "waypoint": "",
+        })
+
+        ui.table(
+            columns=columns,
+            rows=rows,
+            row_key="nr",
+        ).classes("w-full")
