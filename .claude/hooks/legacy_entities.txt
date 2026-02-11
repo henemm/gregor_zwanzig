@@ -63,3 +63,13 @@ save_and_load_report_config
 trip_without_config_loads_none
 scheduler_finds_active_trip
 scheduler_send_reports
+
+# Trip Report Formatter v1 tests (updated for v2 format)
+trip_report_formatter_exists
+format_email_generates_html
+all_columns_when_no_config
+only_temp_column_with_config
+wind_and_precip_without_temp
+summary_matches_visible_columns
+plain_text_respects_config
+structural_columns_always_visible
