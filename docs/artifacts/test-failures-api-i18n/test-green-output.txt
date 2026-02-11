@@ -1,0 +1,11 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.2, pytest-8.4.1, pluggy-1.6.0
+rootdir: /opt/gregor_zwanziger
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 5 items
+
+tests/e2e/test_e2e_story3_reports.py .                                   [ 20%]
+tests/tdd/test_html_email.py ....                                        [100%]
+
+============================== 5 passed in 37.36s ==============================

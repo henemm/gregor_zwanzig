@@ -518,7 +518,7 @@ def render_comparison_html(result: ComparisonResult, top_n_details: int = 3) -> 
 <body>
     <div class="container">
         <div class="header">
-            <h1>⛷️ Ski Resort Comparison</h1>
+            <h1>⛷️ Skigebiete-Vergleich</h1>
             <p>📅 Forecast for: <strong>{target_date.strftime('%A, %d.%m.%Y')}</strong></p>
             <p>🕐 Time Window: {time_window[0]:02d}:00 - {time_window[1]:02d}:00</p>
             <p>📝 Created: {now.strftime('%d.%m.%Y %H:%M')}</p>
@@ -530,16 +530,16 @@ def render_comparison_html(result: ComparisonResult, top_n_details: int = 3) -> 
     if winner:
         details = []
         if winner.snow_depth_cm:
-            details.append(f"❄️ {winner.snow_depth_cm:.0f}cm snow")
+            details.append(f"❄️ {winner.snow_depth_cm:.0f}cm Schnee")
         if winner.snow_new_cm:
-            details.append(f"🆕 +{winner.snow_new_cm:.0f}cm new snow")
+            details.append(f"🆕 +{winner.snow_new_cm:.0f}cm Neuschnee")
         if winner.sunny_hours:
-            details.append(f"☀️ ~{winner.sunny_hours}h sun")
+            details.append(f"☀️ ~{winner.sunny_hours}h Sonne")
 
         html += f"""
         <div class="winner">
-            <h2>🏆 Recommendation: {winner.location.name}</h2>
-            <p>Score: <strong>{winner.score}</strong> | {' | '.join(details) if details else 'No details'}</p>
+            <h2>🏆 Empfehlung: {winner.location.name}</h2>
+            <p>Score: <strong>{winner.score}</strong> | {' | '.join(details) if details else '-'}</p>
         </div>
 """
 
@@ -552,10 +552,10 @@ def render_comparison_html(result: ComparisonResult, top_n_details: int = 3) -> 
     # Comparison table
     html += """
         <div class="section">
-            <h3>📊 Comparison</h3>
+            <h3>📊 Vergleich</h3>
             <table>
                 <tr>
-                    <th class="label">Metric</th>
+                    <th class="label">Metrik</th>
 """
     for i, name in enumerate(location_names):
         html += f'                    <th><span class="rank">#{i+1}</span> {name}</th>\n'
@@ -568,20 +568,20 @@ def render_comparison_html(result: ComparisonResult, top_n_details: int = 3) -> 
     html += "                </tr>\n"
 
     # Snow depth row
-    html += "                <tr>\n                    <td class=\"label\">Snow Depth</td>\n"
+    html += "                <tr>\n                    <td class=\"label\">Schneehöhe</td>\n"
     for i, v in enumerate(snow_depths):
         html += f"                    {cell(v, lambda x: f'{x:.0f}cm' if x else '-', i == best_snow_depth)}\n"
     html += "                </tr>\n"
 
     # New snow row
-    html += "                <tr>\n                    <td class=\"label\">New Snow</td>\n"
+    html += "                <tr>\n                    <td class=\"label\">Neuschnee</td>\n"
     for i, v in enumerate(snow_news):
         is_best = i == best_snow_new and v and v > 0
         html += f"                    {cell(v, lambda x: f'+{x:.0f}cm' if x else '-', is_best)}\n"
     html += "                </tr>\n"
 
     # Wind/Böen combined row: "10/41 SW"
-    html += "                <tr>\n                    <td class=\"label\">Wind/Gusts</td>\n"
+    html += "                <tr>\n                    <td class=\"label\">Wind/Böen</td>\n"
     for i, (wind, gust, direction) in enumerate(zip(winds, gusts, wind_directions)):
         compass = _degrees_to_compass(direction)
         if wind is not None and gust is not None:
@@ -596,13 +596,13 @@ def render_comparison_html(result: ComparisonResult, top_n_details: int = 3) -> 
     html += "                </tr>\n"
 
     # Wind chill row
-    html += "                <tr>\n                    <td class=\"label\">Temperature (felt)</td>\n"
+    html += "                <tr>\n                    <td class=\"label\">Temperatur (gefühlt)</td>\n"
     for i, v in enumerate(wind_chills):
         html += f"                    {cell(v, lambda x: f'{x:.0f}°C' if x is not None else '-', i == best_wc)}\n"
     html += "                </tr>\n"
 
     # Sunny hours row (0 shows "0h", not "~0h" per spec)
-    html += "                <tr>\n                    <td class=\"label\">Sunny Hours</td>\n"
+    html += "                <tr>\n                    <td class=\"label\">Sonnenstunden</td>\n"
     for i, v in enumerate(sunny_hours_list):
         is_best = i == best_sunny and v is not None and v > 0
         # Spec: "~[N]h" for N>0, "0h" for N=0, "-" for None
@@ -611,14 +611,34 @@ def render_comparison_html(result: ComparisonResult, top_n_details: int = 3) -> 
 
     # Clouds row - SPEC: docs/specs/cloud_cover_simplification.md
     # Uses effective cloud (elevation-aware) with "*" marker for high elevations
-    html += "                <tr>\n                    <td class=\"label\">Cloud Cover</td>\n"
+    html += "                <tr>\n                    <td class=\"label\">Bewölkung</td>\n"
     for i, (v, above_low) in enumerate(zip(clouds, above_low_clouds_flags)):
         marker = "*" if above_low else ""
         html += f"                    {cell(v, lambda x, m=marker: f'{x}%{m}' if x is not None else '-', i == best_clouds)}\n"
     html += "                </tr>\n"
 
+    # Wolkenlage row - SPEC: docs/specs/compare_email.md Zeile 366-372
+    html += "                <tr>\n                    <td class=\"label\">Wolkenlage</td>\n"
+    for loc in valid_locs:
+        elev = loc.location.elevation_m or 0
+        cl = loc.cloud_low_avg
+        if elev >= 2500 and cl is not None and cl > 30:
+            wl = '☀️ über Wolken'
+            cls = ' class="best"'
+        elif cl is not None and cl > 50:
+            wl = '☁️ in Wolken'
+            cls = ''
+        elif cl is not None and cl < 20:
+            wl = '✨ klar'
+            cls = ' class="best"'
+        else:
+            wl = '🌤️ leicht'
+            cls = ''
+        html += f'                    <td{cls}>{wl}</td>\n'
+    html += "                </tr>\n"
+
     html += """            </table>
-            <p style="font-size: 12px; color: #888;">🟢 Green = best value | Temperature = felt (Wind Chill) | * lower clouds ignored</p>
+            <p style="font-size: 12px; color: #888;">🟢 Grün = bester Wert | Temperatur = gefühlt (Wind Chill) | * tiefe Wolken ignoriert</p>
         </div>
 """
 
@@ -646,7 +666,7 @@ def render_comparison_html(result: ComparisonResult, top_n_details: int = 3) -> 
 
         html += f"""
         <div class="section">
-            <h3>🕐 Hourly Overview</h3>
+            <h3>🕐 Stunden-Übersicht</h3>
             <p style="color: #666; margin-bottom: 12px;">📅 {target_date.strftime('%A, %d.%m.%Y')}</p>
             <table>
                 <tr>
@@ -723,7 +743,7 @@ def render_comparison_text(result: ComparisonResult, top_n_details: int = 3) -> 
     lines = []
 
     # Header
-    lines.append("⛷️ SKI RESORT COMPARISON")
+    lines.append("⛷️ SKIGEBIETE-VERGLEICH")
     lines.append("=" * 24)
     lines.append(f"📅 Forecast: {target_date.strftime('%A, %d.%m.%Y')}")
     lines.append(f"🕐 Time Window: {time_window[0]:02d}:00 - {time_window[1]:02d}:00")
@@ -732,7 +752,7 @@ def render_comparison_text(result: ComparisonResult, top_n_details: int = 3) -> 
 
     # Winner
     winner = valid_locs[0]
-    lines.append(f"🏆 RECOMMENDATION: {winner.location.name}")
+    lines.append(f"🏆 EMPFEHLUNG: {winner.location.name}")
     snow = f"❄️ {winner.snow_depth_cm:.0f}cm" if winner.snow_depth_cm else "❄️ -"
     sunny = f"☀️ ~{winner.sunny_hours}h" if winner.sunny_hours is not None else "☀️ -"
     lines.append(f"   Score: {winner.score} | {snow} | {sunny}")

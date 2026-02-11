@@ -1,0 +1,271 @@
+FFFFF                                                                    [100%]
+=================================== FAILURES ===================================
+_____________ TestSchedulerIntegration.test_scheduler_send_reports _____________
+
+self = <e2e.test_e2e_story3_reports.TestSchedulerIntegration object at 0x7fbc1476fb90>
+test_trip = Trip(id='e2e-test-story3', name='E2E Story3 Stubai', stages=[Stage(id='T1', name='Etappe 1: Neustift - Franz-Senn-Huet...evel=<AggregationFunc.MAX: 'MAX'>, thunderstorm=<AggregationFunc.MAX: 'MAX'>), weather_config=None, report_config=None)
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor...il.com', smtp_pass='dmptigibnbdnbjzv', mail_to='henningemmrich@icloud.com', mail_from='henning.emmrich+gr20@gmail.com')
+
+    def test_scheduler_send_reports(self, test_trip, settings):
+        """Scheduler sends report for test trip (full E2E)."""
+        if not settings.can_send_email():
+            pytest.skip("SMTP not configured")
+    
+        from services.trip_report_scheduler import TripReportSchedulerService
+        service = TripReportSchedulerService(settings)
+    
+        sent = service.send_reports("morning")
+>       assert sent >= 1, f"Expected at least 1 report sent, got {sent}"
+E       AssertionError: Expected at least 1 report sent, got 0
+E       assert 0 >= 1
+
+tests/e2e/test_e2e_story3_reports.py:416: AssertionError
+------------------------------ Captured log call -------------------------------
+ERROR    trip_report_scheduler:trip_report_scheduler.py:72 Failed to send report for trip e2e-test-story3: EmailOutput.send() got an unexpected keyword argument 'html_body'
+_______________ TestRealGmailE2E.test_real_gmail_e2e_html_email ________________
+
+self = <tdd.test_html_email.TestRealGmailE2E object at 0x7fbc133bf010>
+
+    def test_real_gmail_e2e_html_email(self):
+        """
+        Echter E2E Test:
+        1. Sende E-Mail via Gmail SMTP
+        2. Rufe E-Mail via Gmail IMAP aus "Gesendet" ab
+        3. Analysiere MIME-Struktur
+        4. Verifiziere HTML-Inhalt
+        """
+        import imaplib
+        import time
+        import email
+        from email.header import decode_header
+    
+        from app.config import Settings
+        from app.loader import load_all_locations, load_compare_subscriptions
+        from outputs.email import EmailOutput
+    
+        # 1. Lade echte Daten
+        settings = Settings()
+        if not settings.can_send_email():
+            pytest.skip("SMTP nicht konfiguriert")
+    
+        subs = load_compare_subscriptions()
+        if not subs:
+            pytest.skip("Keine Subscriptions")
+    
+        locations = load_all_locations()
+        if not locations:
+            pytest.skip("Keine Locations")
+    
+        # 2. Generiere E-Mail
+        # SPEC: docs/specs/compare_email.md v4.2 - Multipart Email
+        sub = subs[0]
+        subject, html_body, text_body = run_comparison_for_subscription(sub, locations)
+    
+        # Unique Subject für Suche
+        import uuid
+        unique_id = str(uuid.uuid4())[:8]
+        test_subject = f"[TEST-{unique_id}] {subject}"
+    
+        # 3. Sende via SMTP mit Multipart
+        email_output = EmailOutput(settings)
+        email_output.send(test_subject, html_body, plain_text_body=text_body)
+    
+        print(f"\n>>> E-Mail gesendet: {test_subject}")
+    
+        # 4. Warte auf Gmail-Sync
+        time.sleep(5)
+    
+        # 5. Verbinde via IMAP
+        imap = imaplib.IMAP4_SSL("imap.gmail.com")
+        imap.login(settings.smtp_user, settings.smtp_pass)
+    
+        # 6. Öffne Gesendet-Ordner (Google Mail auf Deutsch)
+        status, _ = imap.select('"[Google Mail]/Gesendet"')
+    
+        # 7. Suche nach der E-Mail
+        _, data = imap.search(None, f'SUBJECT "{unique_id}"')
+        msg_ids = data[0].split()
+    
+        assert len(msg_ids) > 0, f"E-Mail mit ID {unique_id} nicht in Gesendet gefunden!"
+    
+        # 8. Hole die neueste
+        latest_id = msg_ids[-1]
+        _, msg_data = imap.fetch(latest_id, "(RFC822)")
+    
+        # 9. Parse MIME
+        raw_email = msg_data[0][1]
+        msg = email.message_from_bytes(raw_email)
+    
+        # Speichere für Debugging
+>       with open("/tmp/gregor_email_test/imap_retrieved.eml", "wb") as f:
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/tmp/gregor_email_test/imap_retrieved.eml'
+
+tests/tdd/test_html_email.py:495: FileNotFoundError
+----------------------------- Captured stdout call -----------------------------
+
+>>> E-Mail gesendet: [TEST-4a46075a] Ski Resort Comparison: Hochkönig (18:00) (11.02.2026)
+_ TestSubscriptionEmailGeneration.test_subscription_generates_html_email_with_real_data _
+
+self = <tdd.test_html_email.TestSubscriptionEmailGeneration object at 0x7fbc133bfa50>
+sample_subscription = CompareSubscription(id='test-sub', name='Test Subscription', enabled=True, locations=['*'], forecast_hours=48, time_window_start=9, time_window_end=16, schedule='daily_morning', weekday=4, include_hourly=True, top_n=3)
+
+    def test_subscription_generates_html_email_with_real_data(self, sample_subscription):
+        """run_comparison_for_subscription must return HTML and text body with real locations."""
+        from app.loader import load_all_locations
+    
+        # Load real locations from disk
+        locations = load_all_locations()
+        if not locations:
+            pytest.skip("No locations configured")
+    
+        # Run with real data (network call)
+        # SPEC: docs/specs/compare_email.md v4.2 - Multipart Email returns 3 values
+        subject, html_body, text_body = run_comparison_for_subscription(sample_subscription, locations[:2])
+    
+        assert "<!DOCTYPE html>" in html_body, \
+            f"Subscription email must be HTML. Got: {html_body[:200]}"
+        assert "<table>" in html_body.lower(), \
+            "Subscription email must contain HTML tables"
+        assert "======" not in html_body, \
+            "HTML email should not contain ASCII table borders"
+    
+        # Check plain-text body
+        assert text_body, "Plain-text body must not be empty"
+>       assert "⛷️ SKIGEBIETE-VERGLEICH" in text_body, \
+            "Plain-text body must contain header"
+E       AssertionError: Plain-text body must contain header
+E       assert '⛷️ SKIGEBIETE-VERGLEICH' in '⛷️ SKI RESORT COMPARISON\n========================\n📅 Forecast: Wednesday, 11.02.2026\n🕐 Time Window: 09:00 - 16:00\n.../34W | ☁️2° 🌨️0.1cm 7/27NW |\n16:00 | ❄️-6° 🌨️0.1cm 19/37W | ☁️2° - 5/18NW    |\n\n---\nGenerated by Gregor Zwanzig ⛷️'
+
+tests/tdd/test_html_email.py:166: AssertionError
+__________ TestEndToEndEmailSending.test_e2e_email_contains_all_data ___________
+
+self = <tdd.test_html_email.TestEndToEndEmailSending object at 0x7fbc133ccb10>
+mock_settings = <Mock id='140445749280336'>
+
+    def test_e2e_email_contains_all_data(self, mock_settings):
+        """E2E: Verify email contains all expected data fields."""
+        from outputs.email import EmailOutput
+        from app.loader import load_all_locations, load_compare_subscriptions
+    
+        sent_messages = []
+    
+        class MockSMTP:
+            def __init__(self, host, port):
+                pass
+            def __enter__(self):
+                return self
+            def __exit__(self, *args):
+                pass
+            def starttls(self):
+                pass
+            def login(self, user, password):
+                pass
+            def sendmail(self, from_addr, to_addrs, msg):
+                sent_messages.append(msg)
+    
+        subs = load_compare_subscriptions()
+        locations = load_all_locations()
+    
+        if not subs or not locations:
+            pytest.skip("No test data")
+    
+        # SPEC: docs/specs/compare_email.md v4.2 - Multipart Email
+        sub = subs[0]
+        subject, html_body, text_body = run_comparison_for_subscription(sub, locations)
+    
+        with patch("smtplib.SMTP", MockSMTP):
+            email_output = EmailOutput(mock_settings)
+            email_output.send(subject, html_body, plain_text_body=text_body)
+    
+        msg = message_from_string(sent_messages[0])
+    
+        # Get HTML part
+        html_part = None
+        for part in msg.walk():
+            if part.get_content_type() == "text/html":
+                html_part = part.get_payload(decode=True).decode("utf-8")
+                break
+    
+        assert html_part is not None
+    
+        # Check for expected content
+>       assert "Empfehlung" in html_part or "empfehlung" in html_part.lower(), \
+            "Email must contain recommendation"
+E       AssertionError: Email must contain recommendation
+E       assert ('Empfehlung' in '<!DOCTYPE html>\n<html>\n<head>\n    <meta charset="utf-8">\n    <style>\n        body { font-family: -apple-system, ...">\n            <p>Generated by <strong>Gregor Zwanzig</strong> ⛷️</p>\n        </div>\n    </div>\n</body>\n</html>\n' or 'empfehlung' in '<!doctype html>\n<html>\n<head>\n    <meta charset="utf-8">\n    <style>\n        body { font-family: -apple-system, ...">\n            <p>generated by <strong>gregor zwanzig</strong> ⛷️</p>\n        </div>\n    </div>\n</body>\n</html>\n')
+E        +  where '<!doctype html>\n<html>\n<head>\n    <meta charset="utf-8">\n    <style>\n        body { font-family: -apple-system, ...">\n            <p>generated by <strong>gregor zwanzig</strong> ⛷️</p>\n        </div>\n    </div>\n</body>\n</html>\n' = <built-in method lower of str object at 0x358a96a0>()
+E        +    where <built-in method lower of str object at 0x358a96a0> = '<!DOCTYPE html>\n<html>\n<head>\n    <meta charset="utf-8">\n    <style>\n        body { font-family: -apple-system, ...">\n            <p>Generated by <strong>Gregor Zwanzig</strong> ⛷️</p>\n        </div>\n    </div>\n</body>\n</html>\n'.lower
+
+tests/tdd/test_html_email.py:337: AssertionError
+______ TestEndToEndEmailSending.test_e2e_plain_text_does_not_contain_css _______
+
+self = <tdd.test_html_email.TestEndToEndEmailSending object at 0x7fbc133cd210>
+mock_settings = <Mock id='140445752304272'>
+
+    def test_e2e_plain_text_does_not_contain_css(self, mock_settings):
+        """
+        Regression test: Plain text fallback must NOT contain CSS code.
+    
+        Bug: The regex only stripped tags but left CSS content between
+        <style>...</style> tags, resulting in garbage like:
+        'body { font-family: -apple-system...'
+        """
+        from outputs.email import EmailOutput
+        from app.loader import load_all_locations, load_compare_subscriptions
+    
+        sent_messages = []
+    
+        class MockSMTP:
+            def __init__(self, host, port):
+                pass
+            def __enter__(self):
+                return self
+            def __exit__(self, *args):
+                pass
+            def starttls(self):
+                pass
+            def login(self, user, password):
+                pass
+            def sendmail(self, from_addr, to_addrs, msg):
+                sent_messages.append(msg)
+    
+        subs = load_compare_subscriptions()
+        locations = load_all_locations()
+    
+        if not subs or not locations:
+            pytest.skip("No test data")
+    
+        # SPEC: docs/specs/compare_email.md v4.2 - Multipart Email
+        sub = subs[0]
+        subject, html_body, text_body = run_comparison_for_subscription(sub, locations)
+    
+        with patch("smtplib.SMTP", MockSMTP):
+            email_output = EmailOutput(mock_settings)
+            email_output.send(subject, html_body, plain_text_body=text_body)
+    
+        msg = message_from_string(sent_messages[0])
+    
+        # Get plain text part
+        plain_part = None
+        for part in msg.walk():
+            if part.get_content_type() == "text/plain":
+                plain_part = part.get_payload(decode=True).decode("utf-8")
+                break
+    
+        assert plain_part is not None, "Email must have plain text part"
+    
+        # With explicit plain-text body, it should contain our structured format
+>       assert "⛷️ SKIGEBIETE-VERGLEICH" in plain_part, \
+            "Plain text must contain our formatted header"
+E       AssertionError: Plain text must contain our formatted header
+E       assert '⛷️ SKIGEBIETE-VERGLEICH' in '⛷️ SKI RESORT COMPARISON\n========================\n📅 Forecast: Thursday, 12.02.2026\n🕐 Time Window: 09:00 - 16:00\n📝...0 | ☁️2° - 3/15W     | ☁️1° - 10/27W    | ☁️3° - 6/18SW    | ☁️6° - 6/10NW    |\n\n---\nGenerated by Gregor Zwanzig ⛷️'
+
+tests/tdd/test_html_email.py:405: AssertionError
+=========================== short test summary info ============================
+FAILED tests/e2e/test_e2e_story3_reports.py::TestSchedulerIntegration::test_scheduler_send_reports
+FAILED tests/tdd/test_html_email.py::TestRealGmailE2E::test_real_gmail_e2e_html_email
+FAILED tests/tdd/test_html_email.py::TestSubscriptionEmailGeneration::test_subscription_generates_html_email_with_real_data
+FAILED tests/tdd/test_html_email.py::TestEndToEndEmailSending::test_e2e_email_contains_all_data
+FAILED tests/tdd/test_html_email.py::TestEndToEndEmailSending::test_e2e_plain_text_does_not_contain_css
+5 failed in 40.98s
