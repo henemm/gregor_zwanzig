@@ -206,7 +206,7 @@ class TripReportSchedulerService:
         email_output = EmailOutput(self._settings)
         email_output.send(
             subject=report.email_subject,
-            html_body=report.email_html,
+            body=report.email_html,
             plain_text_body=report.email_plain,
         )
 

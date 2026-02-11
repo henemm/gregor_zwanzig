@@ -4,6 +4,7 @@ TDD-RED: Test that email output is proper HTML, not plain text.
 This test should FAIL if emails are being sent as plain text
 with space-aligned tables instead of proper HTML tables.
 """
+import os
 import pytest
 from datetime import datetime, date, timedelta
 from unittest.mock import MagicMock, patch, Mock
@@ -492,6 +493,7 @@ class TestRealGmailE2E:
         msg = email.message_from_bytes(raw_email)
 
         # Speichere für Debugging
+        os.makedirs("/tmp/gregor_email_test", exist_ok=True)
         with open("/tmp/gregor_email_test/imap_retrieved.eml", "wb") as f:
             f.write(raw_email)
 
