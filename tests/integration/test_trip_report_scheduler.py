@@ -12,7 +12,7 @@ from datetime import date, datetime, time, timedelta, timezone
 
 import pytest
 
-from app.models import GPXPoint, TripSegment
+from app.models import GPXPoint, TripReportConfig, TripSegment
 from app.trip import Stage, TimeWindow, Trip, Waypoint
 
 
@@ -127,28 +127,26 @@ class TestActiveTripFilter:
 class TestSchedulerIntegration:
     """Test scheduler integration."""
 
-    def test_scheduler_has_trip_report_jobs(self) -> None:
-        """Scheduler should have trip report jobs registered."""
+    def test_scheduler_has_hourly_trip_report_job(self) -> None:
+        """Scheduler should have hourly trip report job registered."""
         from web.scheduler import (
             init_scheduler,
             get_scheduler_status,
             shutdown_scheduler,
         )
 
-        # Initialize scheduler
         init_scheduler()
 
         try:
             status = get_scheduler_status()
             job_ids = [job["id"] for job in status["jobs"]]
 
-            assert "morning_trip_reports" in job_ids
-            assert "evening_trip_reports" in job_ids
+            assert "trip_reports_hourly" in job_ids
         finally:
             shutdown_scheduler()
 
-    def test_scheduler_job_names(self) -> None:
-        """Scheduler jobs should have descriptive names."""
+    def test_scheduler_hourly_job_name(self) -> None:
+        """Scheduler hourly job should have descriptive name."""
         from web.scheduler import (
             init_scheduler,
             get_scheduler_status,
@@ -161,10 +159,61 @@ class TestSchedulerIntegration:
             status = get_scheduler_status()
             jobs_by_id = {job["id"]: job for job in status["jobs"]}
 
-            assert "Morning Trip Reports" in jobs_by_id["morning_trip_reports"]["name"]
-            assert "Evening Trip Reports" in jobs_by_id["evening_trip_reports"]["name"]
+            assert "Trip Reports" in jobs_by_id["trip_reports_hourly"]["name"]
         finally:
             shutdown_scheduler()
+
+
+class TestPerTripTimes:
+    """Test per-trip configurable report times."""
+
+    def test_default_morning_hour_without_config(self) -> None:
+        """Trip without config should use default morning hour 7."""
+        from services.trip_report_scheduler import TripReportSchedulerService
+
+        service = TripReportSchedulerService()
+        trip = _create_test_trip(date.today())
+        trip.report_config = None
+
+        assert service._get_morning_hour(trip) == 7
+
+    def test_default_evening_hour_without_config(self) -> None:
+        """Trip without config should use default evening hour 18."""
+        from services.trip_report_scheduler import TripReportSchedulerService
+
+        service = TripReportSchedulerService()
+        trip = _create_test_trip(date.today())
+        trip.report_config = None
+
+        assert service._get_evening_hour(trip) == 18
+
+    def test_custom_morning_hour_with_config(self) -> None:
+        """Trip with config should use configured morning hour."""
+        from services.trip_report_scheduler import TripReportSchedulerService
+
+        service = TripReportSchedulerService()
+        trip = _create_test_trip(date.today())
+        trip.report_config = TripReportConfig(
+            trip_id=trip.id,
+            morning_time=time(6, 0),
+            evening_time=time(20, 0),
+        )
+
+        assert service._get_morning_hour(trip) == 6
+
+    def test_custom_evening_hour_with_config(self) -> None:
+        """Trip with config should use configured evening hour."""
+        from services.trip_report_scheduler import TripReportSchedulerService
+
+        service = TripReportSchedulerService()
+        trip = _create_test_trip(date.today())
+        trip.report_config = TripReportConfig(
+            trip_id=trip.id,
+            morning_time=time(6, 0),
+            evening_time=time(20, 0),
+        )
+
+        assert service._get_evening_hour(trip) == 20
 
 
 # --- Test Helpers ---

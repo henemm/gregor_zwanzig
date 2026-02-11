@@ -69,24 +69,16 @@ def init_scheduler() -> None:
         name="Evening Subscriptions (18:00)",
     )
 
-    # Trip Reports - Morning at 07:00 Europe/Vienna (Feature 3.3)
+    # Trip Reports - Hourly check for per-trip configured times (Feature 3.3 + 3.5)
     _scheduler.add_job(
-        run_morning_trip_reports,
-        CronTrigger(hour=7, minute=0, timezone=TIMEZONE),
-        id="morning_trip_reports",
-        name="Morning Trip Reports (07:00)",
-    )
-
-    # Trip Reports - Evening at 18:00 Europe/Vienna (Feature 3.3)
-    _scheduler.add_job(
-        run_evening_trip_reports,
-        CronTrigger(hour=18, minute=0, timezone=TIMEZONE),
-        id="evening_trip_reports",
-        name="Evening Trip Reports (18:00)",
+        run_trip_reports_check,
+        CronTrigger(minute=0, timezone=TIMEZONE),
+        id="trip_reports_hourly",
+        name="Trip Reports (hourly check)",
     )
 
     _scheduler.start()
-    logger.info(f"Scheduler started: Subscriptions + Trip Reports at 07:00/18:00 ({TIMEZONE})")
+    logger.info(f"Scheduler started: Subscriptions at 07:00/18:00, Trip Reports hourly ({TIMEZONE})")
 
 
 def shutdown_scheduler() -> None:
@@ -115,24 +107,17 @@ def run_evening_subscriptions() -> None:
     _run_weekly_subscriptions()
 
 
-def run_morning_trip_reports() -> None:
-    """Run morning trip reports for all active trips (Feature 3.3)."""
+def run_trip_reports_check() -> None:
+    """Check which trips need reports at this hour (Feature 3.3 + 3.5)."""
     from services.trip_report_scheduler import TripReportSchedulerService
 
-    logger.info("Running morning trip reports...")
+    now = datetime.now(TIMEZONE)
+    current_hour = now.hour
+
     service = TripReportSchedulerService()
-    count = service.send_reports("morning")
-    logger.info(f"Morning trip reports complete: {count} sent")
-
-
-def run_evening_trip_reports() -> None:
-    """Run evening trip reports for all active trips (Feature 3.3)."""
-    from services.trip_report_scheduler import TripReportSchedulerService
-
-    logger.info("Running evening trip reports...")
-    service = TripReportSchedulerService()
-    count = service.send_reports("evening")
-    logger.info(f"Evening trip reports complete: {count} sent")
+    count = service.send_reports_for_hour(current_hour)
+    if count > 0:
+        logger.info(f"Trip reports at {current_hour:02d}:00: {count} sent")
 
 
 def _run_weekly_subscriptions() -> None:

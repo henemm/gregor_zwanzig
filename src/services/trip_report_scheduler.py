@@ -74,6 +74,56 @@ class TripReportSchedulerService:
         logger.info(f"Sent {sent_count}/{len(active_trips)} {report_type} reports")
         return sent_count
 
+    def send_reports_for_hour(self, current_hour: int) -> int:
+        """
+        Send reports for trips whose configured time matches current_hour.
+
+        Called hourly by the scheduler. Checks both morning and evening
+        times per trip against the current hour.
+
+        Args:
+            current_hour: Current hour (0-23) in Europe/Vienna
+
+        Returns:
+            Number of reports successfully sent
+        """
+        if not self._settings.can_send_email():
+            return 0
+
+        sent = 0
+
+        # Check morning reports
+        for trip in self._get_active_trips("morning"):
+            if self._get_morning_hour(trip) == current_hour:
+                try:
+                    self._send_trip_report(trip, "morning")
+                    sent += 1
+                except Exception as e:
+                    logger.error(f"Failed morning report for {trip.id}: {e}")
+
+        # Check evening reports
+        for trip in self._get_active_trips("evening"):
+            if self._get_evening_hour(trip) == current_hour:
+                try:
+                    self._send_trip_report(trip, "evening")
+                    sent += 1
+                except Exception as e:
+                    logger.error(f"Failed evening report for {trip.id}: {e}")
+
+        return sent
+
+    def _get_morning_hour(self, trip: "Trip") -> int:
+        """Get configured morning hour for trip (default: 7)."""
+        if trip.report_config and trip.report_config.morning_time:
+            return trip.report_config.morning_time.hour
+        return 7
+
+    def _get_evening_hour(self, trip: "Trip") -> int:
+        """Get configured evening hour for trip (default: 18)."""
+        if trip.report_config and trip.report_config.evening_time:
+            return trip.report_config.evening_time.hour
+        return 18
+
     def _get_active_trips(self, report_type: str) -> List["Trip"]:
         """
         Get trips that are active for the given report type.
