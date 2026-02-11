@@ -227,6 +227,26 @@ class GPXPoint:
 
 
 @dataclass
+class GPXWaypoint:
+    """Named waypoint from GPX file (e.g. summit, hut)."""
+    name: str
+    lat: float
+    lon: float
+    elevation_m: Optional[float] = None
+
+
+@dataclass
+class GPXTrack:
+    """Parsed GPX track with computed metrics."""
+    name: str
+    points: List[GPXPoint]
+    waypoints: List["GPXWaypoint"]
+    total_distance_km: float
+    total_ascent_m: float
+    total_descent_m: float
+
+
+@dataclass
 class TripSegment:
     """Single segment of a trip (typically ~2 hours hiking)."""
     segment_id: int  # 1-based
