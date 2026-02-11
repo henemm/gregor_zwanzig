@@ -3,7 +3,7 @@ entity_id: alert_config_gaps
 type: bugfix
 created: 2026-02-10
 updated: 2026-02-10
-status: draft
+status: done
 version: "1.0"
 tags: [bugfix, story-3, feature-3.4, alert, config]
 ---
@@ -12,7 +12,7 @@ tags: [bugfix, story-3, feature-3.4, alert, config]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved
 
 ## Purpose
 

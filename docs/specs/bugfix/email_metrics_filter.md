@@ -3,7 +3,7 @@ entity_id: email_metrics_filter
 type: bugfix
 created: 2026-02-10
 updated: 2026-02-10
-status: draft
+status: done
 version: "1.0"
 tags: [bugfix, story-3, feature-3.1, email, config, metrics]
 ---
@@ -12,7 +12,7 @@ tags: [bugfix, story-3, feature-3.1, email, config, metrics]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved
 
 ## Purpose
 

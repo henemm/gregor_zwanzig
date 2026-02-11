@@ -1,6 +1,6 @@
 # Active Roadmap - Gregor Zwanziger
 
-**Last Updated:** 2026-02-01
+**Last Updated:** 2026-02-11
 
 This roadmap tracks all features across the project lifecycle.
 Features are added via `/feature` or `/user-story` commands.
@@ -64,19 +64,19 @@ Features are added via `/feature` or `/user-story` commands.
 | Wetter-Config (WebUI) | done | HIGH | WebUI | Frontend | Simple | GPX-Story2 |
 | Email Trip-Formatter | done | HIGH | Formatter | Report Generation | Medium | GPX-Story3 |
 | SMS Compact Formatter | done | HIGH | Formatter | Report Generation | Simple | GPX-Story3 |
-| Report-Scheduler | open | HIGH | Services | Scheduler | Medium | GPX-Story3 |
-| Alert bei Änderungen | open | HIGH | Services | Alert System | Simple | GPX-Story3 |
-| Report-Config (WebUI) | open | HIGH | WebUI | Frontend | Simple | GPX-Story3 |
+| Report-Scheduler | done | HIGH | Services | Scheduler | Medium | GPX-Story3 |
+| Alert bei Änderungen | done | HIGH | Services | Alert System | Simple | GPX-Story3 |
+| Report-Config (WebUI) | done | HIGH | WebUI | Frontend | Simple | GPX-Story3 |
 
 ## Completed Features (Last 5)
 
 | Feature | Completed | Category | Notes |
 |---------|-----------|----------|-------|
-| Cloud Layers | 2026-01 | WebUI | Open-Meteo cloud height integration |
-| Compare E-Mail | 2026-01 | WebUI | Ski resort comparison via email |
-| Trip Edit UI | 2026-01 | WebUI | Edit existing trips |
-| Open-Meteo Provider | 2026-01 | Provider | Regional model selection |
-| SMTP Mailer | 2025-12 | Channel | Gmail SMTP with real E2E tests |
+| Report-Config (WebUI) | 2026-02 | WebUI | Per-Trip Morning/Evening Zeiten, Metriken-Config |
+| Alert bei Änderungen | 2026-02 | Services | Wetter-Änderungserkennung mit dt. Subject + Config-Flag |
+| Report-Scheduler | 2026-02 | Services | Stündlicher Check mit per-Trip Zeiten |
+| Email Trip-Formatter | 2026-02 | Formatter | HTML/Plain-Text mit konfigurierbaren Metriken |
+| SMS Compact Formatter | 2026-02 | Formatter | ≤160 Zeichen Trip-Wetter-SMS |
 
 ## Blocked Features
 
