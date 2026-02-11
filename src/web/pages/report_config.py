@@ -43,14 +43,16 @@ def show_report_config_dialog(trip: Trip, user_id: str = "default") -> None:
         ui.label("Zeitplan").classes("text-subtitle1 q-mt-md")
 
         with ui.row().classes("w-full gap-4"):
-            morning_input = ui.time(
-                "Morgen",
-                value=config.morning_time.strftime("%H:%M")
-            ).classes("w-32")
-            evening_input = ui.time(
-                "Abend",
-                value=config.evening_time.strftime("%H:%M")
-            ).classes("w-32")
+            with ui.column():
+                ui.label("Morgen").classes("text-caption")
+                morning_input = ui.time(
+                    value=config.morning_time.strftime("%H:%M")
+                ).classes("w-32")
+            with ui.column():
+                ui.label("Abend").classes("text-caption")
+                evening_input = ui.time(
+                    value=config.evening_time.strftime("%H:%M")
+                ).classes("w-32")
 
         # Channels Section
         ui.label("Kanäle").classes("text-subtitle1 q-mt-md")

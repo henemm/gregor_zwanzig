@@ -2,7 +2,7 @@
 name = "gregor-zwanzig"
 version = "0.2.0"
 description = "Weather risk reports for outdoor activities"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.14"
 dependencies = [
     "httpx>=0.27.0",
     "pydantic-settings>=2.0.0",
