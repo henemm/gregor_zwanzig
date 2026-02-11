@@ -17,6 +17,7 @@ def ensure_data_dirs() -> None:
     """Create data directories if they don't exist."""
     (DATA_DIR / "trips").mkdir(parents=True, exist_ok=True)
     (DATA_DIR / "locations").mkdir(parents=True, exist_ok=True)
+    (DATA_DIR / "gpx").mkdir(parents=True, exist_ok=True)
 
 
 @ui.page("/")
@@ -61,6 +62,13 @@ def subscriptions_page() -> None:
     render_subscriptions()
 
 
+@ui.page("/gpx-upload")
+def gpx_upload_page() -> None:
+    """GPX upload and track analysis page."""
+    from web.pages.gpx_upload import render_gpx_upload
+    render_gpx_upload()
+
+
 def create_header() -> None:
     """Create consistent navigation header."""
     with ui.header().classes("items-center justify-between"):
@@ -69,6 +77,7 @@ def create_header() -> None:
             ui.link("Dashboard", "/").classes("text-white mx-2")
             ui.link("Locations", "/locations").classes("text-white mx-2")
             ui.link("Trips", "/trips").classes("text-white mx-2")
+            ui.link("GPX Upload", "/gpx-upload").classes("text-white mx-2")
             ui.link("Vergleich", "/compare").classes("text-white mx-2")
             ui.link("Subscriptions", "/subscriptions").classes("text-white mx-2")
             ui.link("Settings", "/settings").classes("text-white mx-2")
