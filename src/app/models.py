@@ -380,6 +380,27 @@ class TripWeatherConfig:
     updated_at: datetime
 
 
+# --- Email Display Config (Feature 3.1 v2) ---
+
+@dataclass
+class EmailReportDisplayConfig:
+    """User-configurable display preferences for email trip reports."""
+    show_temp_measured: bool = True
+    show_temp_felt: bool = True
+    temp_aggregation_day: str = "max"
+    temp_aggregation_night: str = "min"
+    show_wind: bool = True
+    show_gusts: bool = True
+    show_precipitation: bool = True
+    show_thunder: bool = True
+    show_snowfall_limit: bool = True
+    show_clouds: bool = False
+    show_humidity: bool = False
+    show_night_block: bool = True
+    night_interval_hours: int = 2
+    thunder_forecast_days: int = 2
+
+
 # --- Trip Report DTOs (Feature 3.1) ---
 
 @dataclass

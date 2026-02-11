@@ -1,10 +1,10 @@
 """
-Trip report formatter for email/SMS delivery.
+Trip report formatter v2 for email delivery.
 
-Feature 3.1: Email Trip-Formatter (Story 3)
-Formats trip segment weather data into HTML emails with tables and summaries.
+Feature 3.1 v2: Hourly segment tables, night block, thunder forecast.
+SPEC: docs/specs/modules/trip_report_formatter_v2.md
 
-SPEC: docs/specs/modules/trip_report_formatter.md v1.0
+Generates HTML + plain-text from one processor.
 """
 from __future__ import annotations
 
@@ -12,31 +12,22 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from app.models import (
+    EmailReportDisplayConfig,
+    ForecastDataPoint,
+    NormalizedTimeseries,
     SegmentWeatherData,
+    ThunderLevel,
     TripReport,
     TripWeatherConfig,
     WeatherChange,
-    ThunderLevel,
 )
+
+# Default display config if none provided
+_DEFAULT_DISPLAY = EmailReportDisplayConfig()
 
 
 class TripReportFormatter:
-    """
-    Formatter for trip weather reports (HTML email).
-
-    Generates responsive HTML emails with:
-    - Segment table (time, temp, wind, precip, risk)
-    - Aggregated summary (max temp, max wind, total precip)
-    - Plain-text fallback
-    - User-configurable metric columns
-    - Risk color-coding
-
-    Example:
-        >>> formatter = TripReportFormatter()
-        >>> report = formatter.format_email(segments, "GR20 Etappe 3", "morning")
-        >>> print(report.email_subject)
-        "[GR20 Etappe 3] Morning Report - 29.08.2026"
-    """
+    """Formatter for trip weather reports (HTML + plain-text email)."""
 
     def format_email(
         self,
@@ -44,35 +35,50 @@ class TripReportFormatter:
         trip_name: str,
         report_type: str,
         trip_config: Optional[TripWeatherConfig] = None,
+        display_config: Optional[EmailReportDisplayConfig] = None,
+        night_weather: Optional[NormalizedTimeseries] = None,
+        thunder_forecast: Optional[dict] = None,
         changes: Optional[list[WeatherChange]] = None,
+        stage_name: Optional[str] = None,
+        stage_stats: Optional[dict] = None,
     ) -> TripReport:
-        """
-        Format trip segments into HTML email.
-
-        Args:
-            segments: List of SegmentWeatherData from Story 2
-            trip_name: Trip name for subject/header
-            report_type: "morning", "evening", or "alert"
-            trip_config: User's metric selections (default: all 8 basis)
-            changes: Weather changes (for alert reports)
-
-        Returns:
-            TripReport with email_html, email_plain, email_subject
-        """
+        """Format trip segments into HTML + plain-text email."""
         if not segments:
             raise ValueError("Cannot format email with no segments")
 
-        # Determine trip_id from first segment
-        trip_id = f"{trip_name.lower().replace(' ', '-')}"
+        dc = display_config or _DEFAULT_DISPLAY
+        trip_id = trip_name.lower().replace(" ", "-")
+        trip_id = "".join(c for c in trip_id if c.isalnum() or c == "-")
 
-        # Generate formatted content
-        email_html = self._generate_html(
-            segments, trip_name, report_type, trip_config, changes
+        # Extract hourly data for each segment
+        seg_tables = [self._extract_hourly_rows(s, dc) for s in segments]
+
+        # Night rows (evening only)
+        night_rows = []
+        if report_type == "evening" and night_weather and dc.show_night_block:
+            last_seg = segments[-1]
+            arrival_hour = last_seg.segment.end_time.hour
+            night_rows = self._extract_night_rows(
+                night_weather, arrival_hour, dc.night_interval_hours,
+            )
+
+        # Highlights
+        highlights = self._compute_highlights(segments, seg_tables, night_rows)
+
+        # Generate both formats from same data
+        email_html = self._render_html(
+            segments, seg_tables, trip_name, report_type, dc,
+            night_rows, thunder_forecast, highlights, changes,
+            stage_name, stage_stats,
         )
-        email_plain = self._generate_plain_text(
-            segments, trip_name, report_type, trip_config, changes
+        email_plain = self._render_plain(
+            segments, seg_tables, trip_name, report_type, dc,
+            night_rows, thunder_forecast, highlights, changes,
+            stage_name, stage_stats,
         )
-        email_subject = self._generate_subject(trip_name, report_type, segments[0].segment.start_time)
+        email_subject = self._generate_subject(
+            trip_name, report_type, segments[0].segment.start_time,
+        )
 
         return TripReport(
             trip_id=trip_id,
@@ -83,281 +89,172 @@ class TripReportFormatter:
             email_subject=email_subject,
             email_html=email_html,
             email_plain=email_plain,
-            sms_text=None,  # Feature 3.2
+            sms_text=None,
             triggered_by="schedule" if not changes else "change_detection",
             changes=changes if changes else [],
         )
 
-    def _get_visible_columns(self, trip_config: Optional[TripWeatherConfig]) -> dict[str, bool]:
-        """Determine which metric columns to show based on user config."""
-        if not trip_config:
-            return {"temp": True, "wind": True, "precip": True}
+    # ------------------------------------------------------------------
+    # Data extraction (shared between HTML and plain-text)
+    # ------------------------------------------------------------------
 
-        metrics = set(trip_config.enabled_metrics)
-        return {
-            "temp": bool(metrics & {"temp_min_c", "temp_max_c", "temp_avg_c"}),
-            "wind": bool(metrics & {"wind_max_kmh", "gust_max_kmh"}),
-            "precip": "precip_sum_mm" in metrics,
-        }
+    def _extract_hourly_rows(
+        self, seg_data: SegmentWeatherData, dc: EmailReportDisplayConfig,
+    ) -> list[dict]:
+        """Extract hourly data points within segment time window."""
+        start_h = seg_data.segment.start_time.hour
+        end_h = seg_data.segment.end_time.hour
+        rows = []
+        for dp in seg_data.timeseries.data:
+            if start_h <= dp.ts.hour <= end_h:
+                rows.append(self._dp_to_row(dp, dc))
+        return rows
 
-    def _generate_subject(self, trip_name: str, report_type: str, date: datetime) -> str:
-        """
-        Generate email subject line.
+    def _extract_night_rows(
+        self,
+        night_weather: NormalizedTimeseries,
+        arrival_hour: int,
+        interval: int = 2,
+    ) -> list[dict]:
+        """Extract night data at given interval from arrival to 06:00."""
+        dc = _DEFAULT_DISPLAY
+        rows = []
+        first_date = night_weather.data[0].ts.date() if night_weather.data else None
+        for dp in night_weather.data:
+            h = dp.ts.hour
+            is_same_day = dp.ts.date() == first_date
+            is_next_day = first_date and dp.ts.date() > first_date
+            in_range = (is_same_day and h >= arrival_hour) or (is_next_day and h <= 6)
+            if in_range and h % interval == 0:
+                rows.append(self._dp_to_row(dp, dc))
+        return rows
 
-        Format: "[Trip Name] Report Type - DD.MM.YYYY"
-        Example: "[GR20 Etappe 3] Morning Report - 29.08.2026"
-        """
+    def _dp_to_row(self, dp: ForecastDataPoint, dc: EmailReportDisplayConfig) -> dict:
+        """Convert a single ForecastDataPoint to a row dict."""
+        row: dict = {"time": dp.ts.strftime("%H:%M")}
+        if dc.show_temp_measured:
+            row["temp"] = dp.t2m_c
+        if dc.show_temp_felt:
+            row["felt"] = dp.wind_chill_c
+        if dc.show_wind:
+            row["wind"] = dp.wind10m_kmh
+        if dc.show_gusts:
+            row["gust"] = dp.gust_kmh
+        if dc.show_precipitation:
+            row["precip"] = dp.precip_1h_mm
+        if dc.show_thunder:
+            row["thunder"] = dp.thunder_level
+        if dc.show_snowfall_limit:
+            row["snow_limit"] = dp.snowfall_limit_m
+        if dc.show_clouds:
+            row["cloud"] = dp.cloud_total_pct
+        if dc.show_humidity:
+            row["humidity"] = dp.humidity_pct
+        return row
+
+    # ------------------------------------------------------------------
+    # Column definitions
+    # ------------------------------------------------------------------
+
+    _COL_DEFS = [
+        ("temp", "Temperatur °C", "temp"),
+        ("felt", "Gefühlt °C", "felt"),
+        ("wind", "Wind km/h", "wind"),
+        ("gust", "Böen km/h", "gust"),
+        ("precip", "Regen mm", "precip"),
+        ("thunder", "Gewitter", "thunder"),
+        ("snow_limit", "Schneefallgr. m", "snow_limit"),
+        ("cloud", "Wolken %", "cloud"),
+        ("humidity", "Feuchte %", "humidity"),
+    ]
+
+    def _visible_cols(self, rows: list[dict]) -> list[tuple[str, str]]:
+        """Return (key, label) for columns present in rows."""
+        if not rows:
+            return []
+        keys = set(rows[0].keys()) - {"time"}
+        return [(k, label) for k, label, _ in self._COL_DEFS if k in keys]
+
+    # ------------------------------------------------------------------
+    # Highlights / Summary
+    # ------------------------------------------------------------------
+
+    def _compute_highlights(
+        self,
+        segments: list[SegmentWeatherData],
+        seg_tables: list[list[dict]],
+        night_rows: list[dict],
+    ) -> list[str]:
+        """Compute highlight lines (text, no HTML)."""
+        highlights = []
+
+        # Thunder
+        for i, seg_data in enumerate(segments):
+            for dp in seg_data.timeseries.data:
+                sh = seg_data.segment.start_time.hour
+                eh = seg_data.segment.end_time.hour
+                if sh <= dp.ts.hour <= eh and dp.thunder_level and dp.thunder_level != ThunderLevel.NONE:
+                    elev = int(seg_data.segment.start_point.elevation_m)
+                    highlights.append(
+                        f"⚡ Gewitter möglich ab {dp.ts.strftime('%H:%M')} "
+                        f"(Segment {seg_data.segment.segment_id}, >{elev}m)"
+                    )
+                    break
+
+        # Max gusts
+        max_gust = 0.0
+        max_gust_info = ""
+        for seg_data in segments:
+            if seg_data.aggregated.gust_max_kmh and seg_data.aggregated.gust_max_kmh > max_gust:
+                max_gust = seg_data.aggregated.gust_max_kmh
+                max_gust_info = f"Segment {seg_data.segment.segment_id}"
+        if max_gust > 60:
+            highlights.append(f"💨 Böen bis {max_gust:.0f} km/h ({max_gust_info})")
+
+        # Total precipitation
+        total_precip = sum(
+            s.aggregated.precip_sum_mm for s in segments
+            if s.aggregated.precip_sum_mm is not None
+        )
+        if total_precip > 0:
+            highlights.append(f"🌧 Regen gesamt: {total_precip:.1f} mm")
+
+        # Night min temp
+        if night_rows:
+            temps = [r["temp"] for r in night_rows if r.get("temp") is not None]
+            if temps:
+                min_t = min(temps)
+                min_row = next(r for r in night_rows if r.get("temp") == min_t)
+                highlights.append(f"🌡 Tiefste Nachttemperatur: {min_t:.1f} °C ({min_row['time']})")
+
+        # Max wind
+        max_wind = max(
+            (s.aggregated.wind_max_kmh or 0 for s in segments), default=0
+        )
+        if max_wind > 50:
+            highlights.append(f"💨 Wind bis {max_wind:.0f} km/h")
+
+        return highlights
+
+    # ------------------------------------------------------------------
+    # Subject
+    # ------------------------------------------------------------------
+
+    def _generate_subject(self, trip_name: str, report_type: str, dt: datetime) -> str:
         type_label = {
             "morning": "Morning Report",
             "evening": "Evening Report",
             "alert": "WETTER-ÄNDERUNG",
         }.get(report_type, report_type.title())
+        return f"[{trip_name}] {type_label} - {dt.strftime('%d.%m.%Y')}"
 
-        date_str = date.strftime("%d.%m.%Y")
-        return f"[{trip_name}] {type_label} - {date_str}"
-
-    def _generate_html(
-        self,
-        segments: list[SegmentWeatherData],
-        trip_name: str,
-        report_type: str,
-        trip_config: Optional[TripWeatherConfig],
-        changes: Optional[list[WeatherChange]],
-    ) -> str:
-        """Generate HTML email content."""
-        # Compute summary
-        summary = self._compute_summary(segments)
-        cols = self._get_visible_columns(trip_config)
-
-        # Build segment table rows
-        segment_rows = []
-        for seg_data in segments:
-            seg = seg_data.segment
-            agg = seg_data.aggregated
-            risk_level, risk_text = self._determine_risk(seg_data)
-
-            # Format time
-            start_time = seg.start_time.strftime("%H:%M")
-            end_time = seg.end_time.strftime("%H:%M")
-
-            # Format metric values
-            temp_str = ""
-            if agg.temp_min_c is not None and agg.temp_max_c is not None:
-                temp_str = f"{agg.temp_min_c:.0f}-{agg.temp_max_c:.0f}°C"
-            wind_str = ""
-            if agg.wind_max_kmh is not None:
-                wind_str = f"{agg.wind_max_kmh:.0f} km/h"
-            precip_str = ""
-            if agg.precip_sum_mm is not None:
-                precip_str = f"{agg.precip_sum_mm:.1f} mm"
-
-            # Build row with only visible columns
-            row = f"<td>#{seg.segment_id}</td><td>{start_time} - {end_time}</td><td>{seg.duration_hours:.1f}h</td>"
-            if cols["temp"]:
-                row += f"<td>{temp_str}</td>"
-            if cols["wind"]:
-                row += f"<td>{wind_str}</td>"
-            if cols["precip"]:
-                row += f"<td>{precip_str}</td>"
-            row += f'<td class="risk-{risk_level}">{risk_text}</td>'
-
-            segment_rows.append(f"<tr>{row}</tr>")
-
-        segments_html = "".join(segment_rows)
-
-        # Build changes section if alert
-        changes_html = ""
-        if changes:
-            change_items = []
-            for change in changes:
-                change_items.append(
-                    f"<li><strong>{change.metric}:</strong> "
-                    f"{change.old_value:.1f} → {change.new_value:.1f} "
-                    f"(Δ {abs(change.delta):.1f})</li>"
-                )
-            changes_html = f"""
-            <div class="section">
-                <h2>⚠️ Weather Changes Detected</h2>
-                <ul>
-                    {"".join(change_items)}
-                </ul>
-            </div>
-            """
-
-        # Build table header with only visible columns
-        header = "<th>Segment</th><th>Time</th><th>Duration</th>"
-        if cols["temp"]:
-            header += "<th>Temp</th>"
-        if cols["wind"]:
-            header += "<th>Wind</th>"
-        if cols["precip"]:
-            header += "<th>Precip</th>"
-        header += "<th>Risk</th>"
-
-        # Build summary items with only visible columns
-        summary_items = ""
-        if cols["temp"]:
-            summary_items += f"""
-                <div class="summary-item">
-                    <strong>Max Temperature</strong>
-                    <span>{summary['max_temp_c']:.0f}°C</span>
-                </div>"""
-        if cols["wind"]:
-            summary_items += f"""
-                <div class="summary-item">
-                    <strong>Max Wind</strong>
-                    <span>{summary['max_wind_kmh']:.0f} km/h</span>
-                </div>"""
-        if cols["precip"]:
-            summary_items += f"""
-                <div class="summary-item">
-                    <strong>Total Precipitation</strong>
-                    <span>{summary['total_precip_mm']:.1f} mm</span>
-                </div>"""
-
-        # Generate HTML
-        report_date = segments[0].segment.start_time.strftime("%d.%m.%Y")
-        html = f"""<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>
-        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }}
-        .container {{ max-width: 800px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }}
-        .header {{ background: linear-gradient(135deg, #1976d2, #42a5f5); color: white; padding: 24px; }}
-        .header h1 {{ margin: 0 0 8px 0; font-size: 24px; }}
-        .header p {{ margin: 4px 0; opacity: 0.9; font-size: 14px; }}
-        .section {{ padding: 0 20px; }}
-        .section h2 {{ color: #333; border-bottom: 2px solid #1976d2; padding-bottom: 8px; margin-top: 20px; }}
-        table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
-        th {{ background: #f5f5f5; padding: 12px 8px; text-align: center; font-weight: 600; border-bottom: 2px solid #ddd; font-size: 13px; }}
-        th.label {{ text-align: left; }}
-        td {{ padding: 10px 8px; text-align: center; border-bottom: 1px solid #eee; font-size: 14px; }}
-        td.label {{ text-align: left; }}
-        .risk-high {{ background: #ffebee; color: #c62828; font-weight: 600; }}
-        .risk-medium {{ background: #fff9c4; color: #f57f17; }}
-        .risk-none {{ color: #2e7d32; }}
-        .summary-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin: 20px 0; }}
-        .summary-item {{ background: #f5f5f5; padding: 16px; border-radius: 8px; }}
-        .summary-item strong {{ display: block; color: #555; font-size: 12px; margin-bottom: 4px; }}
-        .summary-item span {{ font-size: 24px; font-weight: 600; color: #1976d2; }}
-        .footer {{ background: #f5f5f5; padding: 16px; text-align: center; color: #888; font-size: 12px; border-top: 1px solid #ddd; }}
-        ul {{ padding-left: 20px; }}
-        li {{ margin: 8px 0; }}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>{trip_name}</h1>
-            <p>{report_type.title()} Report - {report_date}</p>
-        </div>
-
-        <div class="section">
-            <h2>Segments</h2>
-            <table>
-                <tr>{header}</tr>
-                {segments_html}
-            </table>
-        </div>
-
-        <div class="section">
-            <h2>Summary</h2>
-            <div class="summary-grid">{summary_items}
-            </div>
-        </div>
-
-        {changes_html}
-
-        <div class="footer">
-            <p>Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}</p>
-            <p>Data Provider: {segments[0].provider}</p>
-        </div>
-    </div>
-</body>
-</html>"""
-        return html
-
-    def _generate_plain_text(
-        self,
-        segments: list[SegmentWeatherData],
-        trip_name: str,
-        report_type: str,
-        trip_config: Optional[TripWeatherConfig],
-        changes: Optional[list[WeatherChange]],
-    ) -> str:
-        """Generate plain-text email content."""
-        cols = self._get_visible_columns(trip_config)
-        lines = []
-        lines.append(f"{trip_name} - {report_type.title()} Report")
-        lines.append(f"{segments[0].segment.start_time.strftime('%d.%m.%Y')}")
-        lines.append("")
-        lines.append("SEGMENTS")
-        lines.append("=" * 60)
-
-        for seg_data in segments:
-            seg = seg_data.segment
-            agg = seg_data.aggregated
-            risk_level, risk_text = self._determine_risk(seg_data)
-
-            start_time = seg.start_time.strftime("%H:%M")
-            end_time = seg.end_time.strftime("%H:%M")
-
-            parts = [f"#{seg.segment_id:2d}  {start_time}-{end_time} ({seg.duration_hours:.1f}h)"]
-            if cols["temp"]:
-                temp_str = f"{agg.temp_min_c:.0f}-{agg.temp_max_c:.0f}°C" if agg.temp_min_c else "N/A"
-                parts.append(f"{temp_str:12s}")
-            if cols["wind"]:
-                wind_str = f"{agg.wind_max_kmh:.0f} km/h" if agg.wind_max_kmh else "N/A"
-                parts.append(f"{wind_str:10s}")
-            if cols["precip"]:
-                precip_str = f"{agg.precip_sum_mm:.1f}mm" if agg.precip_sum_mm else "0mm"
-                parts.append(f"{precip_str:8s}")
-            parts.append(risk_text)
-
-            lines.append("  ".join(parts))
-
-        lines.append("")
-        lines.append("SUMMARY")
-        lines.append("=" * 60)
-
-        summary = self._compute_summary(segments)
-        if cols["temp"]:
-            lines.append(f"Max Temp: {summary['max_temp_c']:.0f}°C")
-        if cols["wind"]:
-            lines.append(f"Max Wind: {summary['max_wind_kmh']:.0f} km/h")
-        if cols["precip"]:
-            lines.append(f"Total Precip: {summary['total_precip_mm']:.1f} mm")
-
-        if changes:
-            lines.append("")
-            lines.append("WEATHER CHANGES DETECTED")
-            lines.append("=" * 60)
-            for change in changes:
-                lines.append(
-                    f"{change.metric}: {change.old_value:.1f} → {change.new_value:.1f} "
-                    f"(Δ {abs(change.delta):.1f})"
-                )
-
-        lines.append("")
-        lines.append("-" * 60)
-        lines.append(f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}")
-        lines.append(f"Data: {segments[0].provider}")
-
-        return "\n".join(lines)
+    # ------------------------------------------------------------------
+    # Risk (per segment, used for overview)
+    # ------------------------------------------------------------------
 
     def _determine_risk(self, segment: SegmentWeatherData) -> tuple[str, str]:
-        """
-        Determine risk level and description for segment.
-
-        Returns:
-            (level, text) where level is "high", "medium", "none"
-        """
         agg = segment.aggregated
-
-        # HIGH risk conditions
-        if agg.thunder_level_max and agg.thunder_level_max.value >= 2:  # HIGH
+        if agg.thunder_level_max and agg.thunder_level_max == ThunderLevel.HIGH:
             return ("high", "⚠️ Thunder")
         if agg.wind_max_kmh and agg.wind_max_kmh > 70:
             return ("high", "⚠️ Storm")
@@ -365,37 +262,288 @@ class TripReportFormatter:
             return ("high", "⚠️ Extreme Cold")
         if agg.visibility_min_m and agg.visibility_min_m < 100:
             return ("high", "⚠️ Low Visibility")
-
-        # MEDIUM risk conditions
         if agg.wind_max_kmh and agg.wind_max_kmh > 50:
             return ("medium", "⚠️ High Wind")
         if agg.precip_sum_mm and agg.precip_sum_mm > 20:
             return ("medium", "⚠️ Heavy Rain")
-        if agg.thunder_level_max and agg.thunder_level_max.value >= 1:  # MEDIUM
+        if agg.thunder_level_max and agg.thunder_level_max in (ThunderLevel.MED, ThunderLevel.HIGH):
             return ("medium", "⚠️ Thunder Risk")
-
         return ("none", "✓ OK")
 
-    def _compute_summary(self, segments: list[SegmentWeatherData]) -> dict:
-        """
-        Aggregate statistics across all segments.
+    # ------------------------------------------------------------------
+    # Value formatting helpers
+    # ------------------------------------------------------------------
 
-        Returns:
-            {
-                "max_temp_c": float,
-                "min_temp_c": float,
-                "max_wind_kmh": float,
-                "total_precip_mm": float,
-            }
-        """
-        temps_max = [s.aggregated.temp_max_c for s in segments if s.aggregated.temp_max_c is not None]
-        temps_min = [s.aggregated.temp_min_c for s in segments if s.aggregated.temp_min_c is not None]
-        winds = [s.aggregated.wind_max_kmh for s in segments if s.aggregated.wind_max_kmh is not None]
-        precips = [s.aggregated.precip_sum_mm for s in segments if s.aggregated.precip_sum_mm is not None]
+    def _fmt_val(self, key: str, val, html: bool = False) -> str:
+        """Format a single cell value."""
+        if val is None:
+            return "–"
+        if key == "thunder":
+            if val == ThunderLevel.HIGH:
+                t = "⚡⚡"
+                return f'<span style="color:#c62828;font-weight:600">{t}</span>' if html else t
+            if val == ThunderLevel.MED:
+                t = "⚡ mögl."
+                return f'<span style="color:#f57f17">{t}</span>' if html else t
+            return "–"
+        if key in ("temp", "felt"):
+            return f"{val:.1f}"
+        if key in ("wind", "gust"):
+            s = f"{val:.0f}"
+            if html and key == "gust":
+                if val and val >= 80:
+                    return f'<span style="background:#ffebee;color:#c62828;padding:2px 4px;border-radius:3px;font-weight:600">{s}</span>'
+                if val and val >= 50:
+                    return f'<span style="background:#fff9c4;color:#f57f17;padding:2px 4px;border-radius:3px">{s}</span>'
+            return s
+        if key == "precip":
+            s = f"{val:.1f}"
+            if html and val and val >= 5:
+                return f'<span style="background:#e3f2fd;color:#1565c0;padding:2px 4px;border-radius:3px">{s}</span>'
+            return s
+        if key == "snow_limit":
+            return f"{val}" if val else "–"
+        if key in ("cloud", "humidity"):
+            return f"{val}" if val is not None else "–"
+        return str(val)
 
-        return {
-            "max_temp_c": max(temps_max) if temps_max else 0,
-            "min_temp_c": min(temps_min) if temps_min else 0,
-            "max_wind_kmh": max(winds) if winds else 0,
-            "total_precip_mm": sum(precips) if precips else 0,
-        }
+    # ------------------------------------------------------------------
+    # HTML rendering
+    # ------------------------------------------------------------------
+
+    def _render_html(
+        self,
+        segments, seg_tables, trip_name, report_type, dc,
+        night_rows, thunder_forecast, highlights, changes,
+        stage_name, stage_stats,
+    ) -> str:
+        report_date = segments[0].segment.start_time.strftime("%d.%m.%Y")
+        sub_header = stage_name or ""
+        stats_line = ""
+        if stage_stats:
+            parts = []
+            if "distance_km" in stage_stats:
+                parts.append(f"{stage_stats['distance_km']:.1f} km")
+            if "ascent_m" in stage_stats:
+                parts.append(f"↑{stage_stats['ascent_m']:.0f}m")
+            if "descent_m" in stage_stats:
+                parts.append(f"↓{stage_stats['descent_m']:.0f}m")
+            stats_line = " | ".join([f"{len(segments)} Segmente"] + parts)
+
+        # Build segment tables HTML
+        seg_html_parts = []
+        for seg_data, rows in zip(segments, seg_tables):
+            seg = seg_data.segment
+            s_elev = int(seg.start_point.elevation_m)
+            e_elev = int(seg.end_point.elevation_m)
+            seg_html_parts.append(f"""
+            <div class="section">
+                <h3>Segment {seg.segment_id}: {s_elev}m → {e_elev}m | {seg.distance_km:.1f} km | {seg.start_time.strftime('%H:%M')}–{seg.end_time.strftime('%H:%M')}</h3>
+                {self._render_html_table(rows, dc)}
+            </div>""")
+
+        segments_html = "".join(seg_html_parts)
+
+        # Night block
+        night_html = ""
+        if night_rows:
+            last_seg = segments[-1].segment
+            night_html = f"""
+            <div class="section">
+                <h3>🌙 Nacht am Ziel ({int(last_seg.end_point.elevation_m)}m)</h3>
+                <p style="color:#666;font-size:13px">Ankunft {last_seg.end_time.strftime('%H:%M')} → Morgen 06:00</p>
+                {self._render_html_table(night_rows, dc)}
+            </div>"""
+
+        # Thunder forecast
+        thunder_html = ""
+        if thunder_forecast:
+            items = []
+            for key in ("+1", "+2"):
+                if key in thunder_forecast:
+                    fc = thunder_forecast[key]
+                    icon = "⚡ " if fc.get("level") and fc["level"] != ThunderLevel.NONE else ""
+                    items.append(f"<li>{fc['date']}: {icon}{fc['text']}</li>")
+            if items:
+                thunder_html = f"""
+            <div class="section">
+                <h3>⚡ Gewitter-Vorschau</h3>
+                <ul>{"".join(items)}</ul>
+            </div>"""
+
+        # Highlights
+        highlights_html = ""
+        if highlights:
+            hl_items = "".join(f"<li>{h}</li>" for h in highlights)
+            highlights_html = f"""
+            <div class="section">
+                <h3>Zusammenfassung</h3>
+                <ul>{hl_items}</ul>
+            </div>"""
+
+        # Changes
+        changes_html = ""
+        if changes:
+            ch_items = "".join(
+                f"<li><strong>{c.metric}:</strong> {c.old_value:.1f} → {c.new_value:.1f} (Δ {abs(c.delta):.1f})</li>"
+                for c in changes
+            )
+            changes_html = f"""
+            <div class="section">
+                <h3>⚠️ Wetteränderungen</h3>
+                <ul>{ch_items}</ul>
+            </div>"""
+
+        html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 16px; background: #f5f5f5; }}
+        .container {{ max-width: 800px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }}
+        .header {{ background: linear-gradient(135deg, #1976d2, #42a5f5); color: white; padding: 20px; }}
+        .header h1 {{ margin: 0 0 4px 0; font-size: 22px; }}
+        .header h2 {{ margin: 0 0 4px 0; font-size: 16px; font-weight: 400; opacity: 0.9; }}
+        .header p {{ margin: 2px 0; opacity: 0.85; font-size: 13px; }}
+        .section {{ padding: 0 16px; }}
+        .section h3 {{ color: #333; border-bottom: 2px solid #1976d2; padding-bottom: 6px; margin-top: 16px; font-size: 14px; }}
+        table {{ width: 100%; border-collapse: collapse; margin: 8px 0 16px 0; font-size: 13px; }}
+        th {{ background: #e3f2fd; padding: 8px 6px; text-align: center; font-weight: 600; border-bottom: 2px solid #90caf9; font-size: 12px; white-space: nowrap; }}
+        td {{ padding: 6px; text-align: center; border-bottom: 1px solid #eee; }}
+        .footer {{ background: #f5f5f5; padding: 12px; text-align: center; color: #888; font-size: 11px; border-top: 1px solid #ddd; }}
+        ul {{ padding-left: 20px; }}
+        li {{ margin: 4px 0; font-size: 14px; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>{trip_name}</h1>
+            {"<h2>" + sub_header + "</h2>" if sub_header else ""}
+            <p>{report_type.title()} Report – {report_date}{" | " + stats_line if stats_line else ""}</p>
+        </div>
+
+        {segments_html}
+        {night_html}
+        {thunder_html}
+        {highlights_html}
+        {changes_html}
+
+        <div class="footer">
+            Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')} | Data: {segments[0].provider}
+        </div>
+    </div>
+</body>
+</html>"""
+        return html
+
+    def _render_html_table(self, rows: list[dict], dc: EmailReportDisplayConfig) -> str:
+        """Render an HTML table from row dicts."""
+        if not rows:
+            return "<p>Keine Daten</p>"
+        cols = self._visible_cols(rows)
+        # Header
+        ths = "<th>Uhrzeit</th>" + "".join(f"<th>{label}</th>" for _, label in cols)
+        # Rows
+        trs = []
+        for r in rows:
+            tds = f"<td>{r['time']}</td>"
+            for key, _ in cols:
+                tds += f"<td>{self._fmt_val(key, r.get(key), html=True)}</td>"
+            trs.append(f"<tr>{tds}</tr>")
+        return f"<table><tr>{ths}</tr>{''.join(trs)}</table>"
+
+    # ------------------------------------------------------------------
+    # Plain-text rendering
+    # ------------------------------------------------------------------
+
+    def _render_plain(
+        self,
+        segments, seg_tables, trip_name, report_type, dc,
+        night_rows, thunder_forecast, highlights, changes,
+        stage_name, stage_stats,
+    ) -> str:
+        lines = []
+        report_date = segments[0].segment.start_time.strftime("%d.%m.%Y")
+        lines.append(f"{trip_name} - {report_type.title()} Report")
+        if stage_name:
+            lines.append(stage_name)
+        lines.append(report_date)
+        lines.append("")
+
+        # Segment tables
+        for seg_data, rows in zip(segments, seg_tables):
+            seg = seg_data.segment
+            s_elev = int(seg.start_point.elevation_m)
+            e_elev = int(seg.end_point.elevation_m)
+            lines.append(f"━━ Segment {seg.segment_id}: {s_elev}m → {e_elev}m | {seg.distance_km:.1f} km | {seg.start_time.strftime('%H:%M')}–{seg.end_time.strftime('%H:%M')} ━━")
+            lines.append(self._render_text_table(rows))
+            lines.append("")
+
+        # Night block
+        if night_rows:
+            last_seg = segments[-1].segment
+            lines.append(f"━━ Nacht am Ziel ({int(last_seg.end_point.elevation_m)}m) ━━")
+            lines.append(f"Ankunft {last_seg.end_time.strftime('%H:%M')} → Morgen 06:00")
+            lines.append(self._render_text_table(night_rows))
+            lines.append("")
+
+        # Thunder forecast
+        if thunder_forecast:
+            lines.append("━━ Gewitter-Vorschau ━━")
+            for key in ("+1", "+2"):
+                if key in thunder_forecast:
+                    fc = thunder_forecast[key]
+                    icon = "⚡ " if fc.get("level") and fc["level"] != ThunderLevel.NONE else ""
+                    lines.append(f"  {fc['date']}: {icon}{fc['text']}")
+            lines.append("")
+
+        # Highlights
+        if highlights:
+            lines.append("━━ Zusammenfassung ━━")
+            for h in highlights:
+                lines.append(f"  {h}")
+            lines.append("")
+
+        # Changes
+        if changes:
+            lines.append("━━ Wetteränderungen ━━")
+            for c in changes:
+                lines.append(f"  {c.metric}: {c.old_value:.1f} → {c.new_value:.1f} (Δ {abs(c.delta):.1f})")
+            lines.append("")
+
+        lines.append("-" * 60)
+        lines.append(f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}")
+        lines.append(f"Data: {segments[0].provider}")
+        return "\n".join(lines)
+
+    def _render_text_table(self, rows: list[dict]) -> str:
+        """Render a plain-text table from row dicts."""
+        if not rows:
+            return "  (keine Daten)"
+        cols = self._visible_cols(rows)
+        # Compute column widths
+        headers = [("Uhrzeit", "time")] + [(label, key) for key, label in cols]
+        widths = []
+        for label, key in headers:
+            w = len(label)
+            for r in rows:
+                val_str = self._fmt_val(key, r.get(key)) if key != "time" else r["time"]
+                w = max(w, len(val_str))
+            widths.append(w + 1)
+
+        # Header line
+        hdr = "  ".join(h[0].ljust(w) for h, w in zip(headers, widths))
+        sep = "  ".join("-" * w for w in widths)
+        lines = [f"  {hdr}", f"  {sep}"]
+
+        # Data rows
+        for r in rows:
+            parts = []
+            for (label, key), w in zip(headers, widths):
+                val_str = r["time"] if key == "time" else self._fmt_val(key, r.get(key))
+                parts.append(val_str.ljust(w))
+            lines.append(f"  {'  '.join(parts)}")
+
+        return "\n".join(lines)

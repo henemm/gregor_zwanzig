@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, List, Optional
 
 from app.config import Settings
 from app.loader import load_all_trips
-from app.models import GPXPoint, SegmentWeatherData, TripSegment
+from app.models import GPXPoint, NormalizedTimeseries, SegmentWeatherData, TripSegment
 from formatters.trip_report import TripReportFormatter
 from outputs.email import EmailOutput
 
@@ -194,15 +194,32 @@ class TripReportSchedulerService:
             logger.warning(f"No weather data for trip {trip.id}")
             return
 
-        # 3. Format report
+        # 3. Stage info for header
+        stage = trip.get_stage_for_date(target_date)
+        stage_name = stage.name if stage else None
+
+        # 4. Night weather (evening reports only)
+        night_weather = None
+        if report_type == "evening" and segment_weather:
+            night_weather = self._fetch_night_weather(segment_weather[-1])
+
+        # 5. Thunder forecast (+1/+2 days)
+        thunder_forecast = self._build_thunder_forecast(
+            segment_weather[-1], target_date,
+        )
+
+        # 6. Format report
         report = self._formatter.format_email(
             segments=segment_weather,
             trip_name=trip.name,
             report_type=report_type,
             trip_config=trip.weather_config,
+            night_weather=night_weather,
+            thunder_forecast=thunder_forecast,
+            stage_name=stage_name,
         )
 
-        # 4. Send email
+        # 7. Send email
         email_output = EmailOutput(self._settings)
         email_output.send(
             subject=report.email_subject,
@@ -329,14 +346,121 @@ class TripReportSchedulerService:
 
         service = SegmentWeatherService(provider)
 
+        # Fallback service for coordinates outside primary provider coverage
+        fallback_service = None
+        if provider.__class__.__name__ != "OpenMeteoProvider":
+            try:
+                fallback_service = SegmentWeatherService(get_provider("openmeteo"))
+            except Exception:
+                pass
+
         weather_data = []
         for segment in segments:
             try:
                 data = service.fetch_segment_weather(segment)
                 weather_data.append(data)
             except Exception as e:
-                logger.error(
-                    f"Failed to fetch weather for segment {segment.segment_id}: {e}"
-                )
+                if fallback_service:
+                    logger.warning(
+                        f"Primary provider failed for segment {segment.segment_id}, "
+                        f"trying OpenMeteo fallback: {e}"
+                    )
+                    try:
+                        data = fallback_service.fetch_segment_weather(segment)
+                        weather_data.append(data)
+                        continue
+                    except Exception as e2:
+                        logger.error(
+                            f"Fallback also failed for segment {segment.segment_id}: {e2}"
+                        )
+                else:
+                    logger.error(
+                        f"Failed to fetch weather for segment {segment.segment_id}: {e}"
+                    )
 
         return weather_data
+
+    def _fetch_night_weather(
+        self,
+        last_segment: SegmentWeatherData,
+    ) -> Optional["NormalizedTimeseries"]:
+        """
+        Get night weather data from the last segment's timeseries.
+
+        The provider typically returns data for the full day (0-23h).
+        The formatter extracts the relevant night rows.
+
+        Args:
+            last_segment: Weather data for the last segment of the day
+
+        Returns:
+            NormalizedTimeseries covering night hours, or None
+        """
+        from app.models import NormalizedTimeseries
+
+        if not last_segment.timeseries or not last_segment.timeseries.data:
+            return None
+
+        return last_segment.timeseries
+
+    def _build_thunder_forecast(
+        self,
+        last_segment: SegmentWeatherData,
+        target_date: date,
+    ) -> Optional[dict]:
+        """
+        Build thunder forecast for +1 and +2 days from timeseries data.
+
+        Scans the full provider timeseries for thunder levels on future days.
+
+        Args:
+            last_segment: Weather data with timeseries
+            target_date: Base date
+
+        Returns:
+            Dict with "+1" and "+2" entries, or None if no thunder data
+        """
+        from app.models import ThunderLevel
+
+        if not last_segment.timeseries or not last_segment.timeseries.data:
+            return None
+
+        # Check if timeseries extends beyond target_date
+        forecast = {}
+        for offset, key in [(1, "+1"), (2, "+2")]:
+            fc_date = target_date + timedelta(days=offset)
+            thunder_dps = [
+                dp for dp in last_segment.timeseries.data
+                if dp.ts.date() == fc_date and dp.thunder_level
+            ]
+            if not thunder_dps:
+                continue
+
+            max_level = max(
+                thunder_dps,
+                key=lambda dp: (
+                    0 if dp.thunder_level == ThunderLevel.NONE
+                    else 1 if dp.thunder_level == ThunderLevel.MED
+                    else 2
+                ),
+            )
+            if max_level.thunder_level == ThunderLevel.NONE:
+                forecast[key] = {
+                    "date": fc_date.strftime("%d.%m.%Y"),
+                    "level": ThunderLevel.NONE,
+                    "text": "Kein Gewitter erwartet",
+                }
+            elif max_level.thunder_level == ThunderLevel.MED:
+                forecast[key] = {
+                    "date": fc_date.strftime("%d.%m.%Y"),
+                    "level": ThunderLevel.MED,
+                    "text": f"Gewitter möglich ab {max_level.ts.strftime('%H:%M')}",
+                }
+            else:
+                forecast[key] = {
+                    "date": fc_date.strftime("%d.%m.%Y"),
+                    "level": ThunderLevel.HIGH,
+                    "text": f"Starkes Gewitter erwartet ab {max_level.ts.strftime('%H:%M')}",
+                }
+
+        return forecast if forecast else None
