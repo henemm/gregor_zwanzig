@@ -4,7 +4,7 @@ _____________ TestSchedulerIntegration.test_scheduler_send_reports _____________
 
 self = <e2e.test_e2e_story3_reports.TestSchedulerIntegration object at 0x7fbc1476fb90>
 test_trip = Trip(id='e2e-test-story3', name='E2E Story3 Stubai', stages=[Stage(id='T1', name='Etappe 1: Neustift - Franz-Senn-Huet...evel=<AggregationFunc.MAX: 'MAX'>, thunderstorm=<AggregationFunc.MAX: 'MAX'>), weather_config=None, report_config=None)
-settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor...il.com', smtp_pass='dmptigibnbdnbjzv', mail_to='henningemmrich@icloud.com', mail_from='henning.emmrich+gr20@gmail.com')
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor...il.com', smtp_pass='***REDACTED***', mail_to='henningemmrich@icloud.com', mail_from='henning.emmrich+gr20@gmail.com')
 
     def test_scheduler_send_reports(self, test_trip, settings):
         """Scheduler sends report for test trip (full E2E)."""
