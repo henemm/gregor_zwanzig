@@ -1,0 +1,6 @@
+GZ_SMTP_HOST="op://Private/Gregor Zwanzig SMTP/host"
+GZ_SMTP_PORT="op://Private/Gregor Zwanzig SMTP/port"
+GZ_SMTP_USER="op://Private/Gregor Zwanzig SMTP/username"
+GZ_SMTP_PASS="op://Private/Gregor Zwanzig SMTP/password"
+GZ_MAIL_FROM="op://Private/Gregor Zwanzig SMTP/mail_from"
+GZ_MAIL_TO="op://Private/Gregor Zwanzig SMTP/mail_to"

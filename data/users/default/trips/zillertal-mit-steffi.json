@@ -1,0 +1,40 @@
+{
+  "id": "zillertal-mit-steffi",
+  "name": "Zillertal mit Steffi",
+  "stages": [
+    {
+      "id": "T1",
+      "name": "Hochfügen",
+      "date": "2025-12-28",
+      "waypoints": [
+        {
+          "id": "G1",
+          "name": "Bergstation",
+          "lat": 47.26975,
+          "lon": 11.846056,
+          "elevation_m": 2000
+        }
+      ]
+    }
+  ],
+  "avalanche_regions": [
+    "AT-07-23-02",
+    "AT-07-23-02"
+  ],
+  "aggregation": {
+    "profile": "wintersport"
+  },
+  "report_config": {
+    "trip_id": "zillertal-mit-steffi",
+    "enabled": true,
+    "morning_time": "07:00:00",
+    "evening_time": "18:00:00",
+    "send_email": true,
+    "send_sms": false,
+    "alert_on_changes": true,
+    "change_threshold_temp_c": 5.0,
+    "change_threshold_wind_kmh": 20.0,
+    "change_threshold_precip_mm": 10.0,
+    "updated_at": "2026-02-11T08:04:38.601477+00:00"
+  }
+}

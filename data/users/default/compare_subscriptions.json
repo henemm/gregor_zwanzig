@@ -1,0 +1,18 @@
+{
+  "subscriptions": [
+    {
+      "id": "zillertal-t-glich",
+      "name": "Zillertal täglich",
+      "enabled": true,
+      "locations": [
+        "*"
+      ],
+      "forecast_hours": 24,
+      "time_window_start": 9,
+      "time_window_end": 16,
+      "schedule": "daily_evening",
+      "include_hourly": true,
+      "top_n": 3
+    }
+  ]
+}
