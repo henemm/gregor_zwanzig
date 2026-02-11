@@ -93,12 +93,14 @@ def render_subscriptions() -> None:
         subscription_list()
 
         # New subscription button
-        def open_new_dialog() -> None:
-            show_subscription_dialog(None, locations, subscription_list)
+        def make_new_handler():
+            def do_new() -> None:
+                show_subscription_dialog(None, locations, subscription_list)
+            return do_new
 
         ui.button(
             "New Subscription",
-            on_click=open_new_dialog,
+            on_click=make_new_handler(),
             icon="add",
         ).props("color=primary")
 
@@ -157,80 +159,88 @@ def render_subscription_card(
 
             with ui.row().classes("gap-1"):
                 # Toggle enable/disable
-                def toggle_enabled(subscription=sub) -> None:
-                    updated = CompareSubscription(
-                        id=subscription.id,
-                        name=subscription.name,
-                        enabled=not subscription.enabled,
-                        locations=subscription.locations,
-                        forecast_hours=subscription.forecast_hours,
-                        time_window_start=subscription.time_window_start,
-                        time_window_end=subscription.time_window_end,
-                        schedule=subscription.schedule,
-                        include_hourly=subscription.include_hourly,
-                        top_n=subscription.top_n,
-                    )
-                    save_compare_subscription(updated)
-                    refresh_fn.refresh()
+                def make_toggle_handler(subscription):
+                    def do_toggle() -> None:
+                        updated = CompareSubscription(
+                            id=subscription.id,
+                            name=subscription.name,
+                            enabled=not subscription.enabled,
+                            locations=subscription.locations,
+                            forecast_hours=subscription.forecast_hours,
+                            time_window_start=subscription.time_window_start,
+                            time_window_end=subscription.time_window_end,
+                            schedule=subscription.schedule,
+                            include_hourly=subscription.include_hourly,
+                            top_n=subscription.top_n,
+                        )
+                        save_compare_subscription(updated)
+                        refresh_fn.refresh()
+                    return do_toggle
 
                 ui.button(
                     icon="play_arrow" if not sub.enabled else "pause",
-                    on_click=toggle_enabled,
+                    on_click=make_toggle_handler(sub),
                 ).props("flat dense").tooltip(
                     "Enable" if not sub.enabled else "Disable"
                 )
 
                 # Run now
-                async def run_now(subscription=sub) -> None:
-                    from web.pages.compare import run_comparison_for_subscription
+                def make_run_now_handler(subscription):
+                    async def do_run_now() -> None:
+                        from web.pages.compare import run_comparison_for_subscription
 
-                    settings = Settings()
-                    if not settings.can_send_email():
-                        ui.notify("SMTP not configured", type="negative")
-                        return
+                        settings = Settings()
+                        if not settings.can_send_email():
+                            ui.notify("SMTP not configured", type="negative")
+                            return
 
-                    ui.notify(f"Running '{subscription.name}'...", type="info")
-                    try:
-                        # SPEC: docs/specs/compare_email.md v4.2 - Multipart Email
-                        all_locs = load_all_locations()
-                        subject, html_body, text_body = await asyncio.get_event_loop().run_in_executor(
-                            None,
-                            lambda: run_comparison_for_subscription(subscription, all_locs),
-                        )
+                        ui.notify(f"Running '{subscription.name}'...", type="info")
+                        try:
+                            # SPEC: docs/specs/compare_email.md v4.2 - Multipart Email
+                            all_locs = load_all_locations()
+                            subject, html_body, text_body = await asyncio.get_event_loop().run_in_executor(
+                                None,
+                                lambda: run_comparison_for_subscription(subscription, all_locs),
+                            )
 
-                        email_output = EmailOutput(settings)
-                        await asyncio.get_event_loop().run_in_executor(
-                            None, lambda: email_output.send(subject, html_body, plain_text_body=text_body)
-                        )
+                            email_output = EmailOutput(settings)
+                            await asyncio.get_event_loop().run_in_executor(
+                                None, lambda: email_output.send(subject, html_body, plain_text_body=text_body)
+                            )
 
-                        ui.notify(f"Email sent: {subject}", type="positive")
-                    except Exception as e:
-                        ui.notify(f"Error: {e}", type="negative")
+                            ui.notify(f"Email sent: {subject}", type="positive")
+                        except Exception as e:
+                            ui.notify(f"Error: {e}", type="negative")
+                    return do_run_now
 
                 ui.button(
                     icon="send",
-                    on_click=run_now,
+                    on_click=make_run_now_handler(sub),
                 ).props("flat dense").tooltip("Run now")
 
                 # Edit
-                def edit_sub(subscription=sub) -> None:
-                    locs = load_all_locations()
-                    show_subscription_dialog(subscription, locs, refresh_fn)
+                def make_edit_handler(subscription):
+                    def do_edit() -> None:
+                        locs = load_all_locations()
+                        show_subscription_dialog(subscription, locs, refresh_fn)
+                    return do_edit
 
                 ui.button(
                     icon="edit",
-                    on_click=edit_sub,
+                    on_click=make_edit_handler(sub),
                 ).props("flat dense")
 
                 # Delete
-                def delete_sub(subscription=sub) -> None:
-                    delete_compare_subscription(subscription.id)
-                    refresh_fn.refresh()
-                    ui.notify(f"Subscription '{subscription.name}' deleted", type="info")
+                def make_delete_handler(subscription):
+                    def do_delete() -> None:
+                        delete_compare_subscription(subscription.id)
+                        refresh_fn.refresh()
+                        ui.notify(f"Subscription '{subscription.name}' deleted", type="info")
+                    return do_delete
 
                 ui.button(
                     icon="delete",
-                    on_click=delete_sub,
+                    on_click=make_delete_handler(sub),
                 ).props("flat dense color=red")
 
 
@@ -343,45 +353,47 @@ def show_subscription_dialog(
         with ui.row().classes("w-full justify-end gap-2 mt-4"):
             ui.button("Cancel", on_click=dialog.close).props("flat")
 
-            def save() -> None:
-                if not name_input.value:
-                    ui.notify("Name is required", type="warning")
-                    return
+            def make_save_handler():
+                def do_save() -> None:
+                    if not name_input.value:
+                        ui.notify("Name is required", type="warning")
+                        return
 
-                # Generate ID from name if new
-                sub_id = (
-                    re.sub(r"[^a-z0-9]", "-", name_input.value.lower())
-                    if is_new
-                    else sub.id
-                )
+                    # Generate ID from name if new
+                    sub_id = (
+                        re.sub(r"[^a-z0-9]", "-", name_input.value.lower())
+                        if is_new
+                        else sub.id
+                    )
 
-                # Handle locations
-                selected_locs = list(location_select.value) if location_select.value else ["*"]
-                if "*" in selected_locs and len(selected_locs) > 1:
-                    selected_locs = ["*"]  # If "all" is selected, ignore others
+                    # Handle locations
+                    selected_locs = list(location_select.value) if location_select.value else ["*"]
+                    if "*" in selected_locs and len(selected_locs) > 1:
+                        selected_locs = ["*"]  # If "all" is selected, ignore others
 
-                new_sub = CompareSubscription(
-                    id=sub_id,
-                    name=name_input.value,
-                    enabled=enabled.value,
-                    locations=selected_locs,
-                    forecast_hours=forecast_select.value or 48,
-                    time_window_start=time_start.value or 9,
-                    time_window_end=time_end.value or 16,
-                    schedule=Schedule(schedule_select.value or "weekly"),
-                    weekday=weekday_select.value if weekday_select else 4,
-                    include_hourly=include_hourly.value,
-                    top_n=int(top_n.value or 3),
-                )
+                    new_sub = CompareSubscription(
+                        id=sub_id,
+                        name=name_input.value,
+                        enabled=enabled.value,
+                        locations=selected_locs,
+                        forecast_hours=forecast_select.value or 48,
+                        time_window_start=time_start.value or 9,
+                        time_window_end=time_end.value or 16,
+                        schedule=Schedule(schedule_select.value or "weekly"),
+                        weekday=weekday_select.value if weekday_select else 4,
+                        include_hourly=include_hourly.value,
+                        top_n=int(top_n.value or 3),
+                    )
 
-                save_compare_subscription(new_sub)
-                dialog.close()
-                refresh_fn.refresh()
-                ui.notify(
-                    f"Subscription '{new_sub.name}' saved",
-                    type="positive",
-                )
+                    save_compare_subscription(new_sub)
+                    dialog.close()
+                    refresh_fn.refresh()
+                    ui.notify(
+                        f"Subscription '{new_sub.name}' saved",
+                        type="positive",
+                    )
+                return do_save
 
-            ui.button("Save", on_click=save).props("color=primary")
+            ui.button("Save", on_click=make_save_handler()).props("color=primary")
 
     dialog.open()

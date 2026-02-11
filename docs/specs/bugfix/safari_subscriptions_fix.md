@@ -3,7 +3,7 @@ entity_id: safari_subscriptions_fix
 type: bugfix
 created: 2026-01-15
 updated: 2026-01-15
-status: draft
+status: superseded_by_safari_websocket_and_factory_fix
 version: "1.0"
 tags: [ui, bugfix, subscriptions, safari, nicegui, tdd]
 related_specs:
