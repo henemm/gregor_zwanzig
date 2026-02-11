@@ -1,20 +1,22 @@
 """
-GPX Upload page (Feature 1.1 + 1.6).
+GPX Upload page (Feature 1.1 + 1.6 + 1.7).
 
 Upload-Widget fuer GPX-Dateien mit Validierung, Track-Zusammenfassung,
-Etappen-Konfiguration und Segment-Vorschau.
+Etappen-Konfiguration, Segment-Vorschau und Trip-Speicherung.
 
 Specs: docs/specs/modules/gpx_upload.md, etappen_config.md
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, time, timezone
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from nicegui import events, ui
 
+from app.loader import save_trip
 from app.models import EtappenConfig, GPXTrack, TripSegment
+from app.trip import ActivityProfile, AggregationConfig, Stage, TimeWindow, Trip, Waypoint
 from core.elevation_analysis import detect_waypoints
 from core.gpx_parser import GPXParseError, parse_gpx
 from core.hybrid_segmentation import optimize_segments
@@ -84,10 +86,101 @@ def compute_full_segmentation(
     return optimize_segments(segments, waypoints, track, config)
 
 
+def segments_to_trip(
+    segments: List[TripSegment],
+    track: GPXTrack,
+    trip_date: date,
+    trip_name: Optional[str] = None,
+) -> Trip:
+    """Convert computed segments to a Trip object for weather/reports.
+
+    Creates N+1 Waypoints for N segments (one at each boundary).
+    Each waypoint gets a TimeWindow so the trip_report_scheduler
+    can create weather segments between consecutive waypoints.
+
+    Args:
+        segments: Computed TripSegment list.
+        track: Original GPX track (for name).
+        trip_date: Date of the hike.
+        trip_name: Optional override for trip name.
+
+    Returns:
+        Trip object ready for save_trip().
+    """
+    name = trip_name or track.name
+    trip_id = name.lower().replace(" ", "-")
+    trip_id = "".join(c for c in trip_id if c.isalnum() or c == "-")
+
+    waypoints: List[Waypoint] = []
+
+    for i, seg in enumerate(segments):
+        # Waypoint at segment start
+        wp_name = f"Seg {seg.segment_id} Start"
+        if i == 0:
+            wp_name = "Start"
+        elif seg.adjusted_to_waypoint and seg.waypoint:
+            wp_name = seg.waypoint.name or seg.waypoint.type.value
+
+        tw = TimeWindow(
+            start=seg.start_time.time(),
+            end=seg.start_time.time(),
+        )
+        waypoints.append(Waypoint(
+            id=f"G{i + 1}",
+            name=wp_name,
+            lat=seg.start_point.lat,
+            lon=seg.start_point.lon,
+            elevation_m=int(seg.start_point.elevation_m),
+            time_window=tw,
+        ))
+
+    # Last waypoint: end of last segment
+    last = segments[-1]
+    tw_end = TimeWindow(
+        start=last.end_time.time(),
+        end=last.end_time.time(),
+    )
+    waypoints.append(Waypoint(
+        id=f"G{len(segments) + 1}",
+        name="Ziel",
+        lat=last.end_point.lat,
+        lon=last.end_point.lon,
+        elevation_m=int(last.end_point.elevation_m),
+        time_window=tw_end,
+    ))
+
+    stage = Stage(
+        id="T1",
+        name=name,
+        date=trip_date,
+        waypoints=waypoints,
+    )
+
+    return Trip(
+        id=trip_id,
+        name=name,
+        stages=[stage],
+        aggregation=AggregationConfig.for_profile(ActivityProfile.SUMMER_TREKKING),
+    )
+
+
+def render_header() -> None:
+    """Render navigation header."""
+    with ui.header().classes("items-center justify-between"):
+        ui.label("Gregor Zwanzig").classes("text-h6")
+        with ui.row():
+            ui.link("Dashboard", "/").classes("text-white mx-2")
+            ui.link("Locations", "/locations").classes("text-white mx-2")
+            ui.link("Trips", "/trips").classes("text-white mx-2")
+            ui.link("GPX Upload", "/gpx-upload").classes("text-white mx-2")
+            ui.link("Vergleich", "/compare").classes("text-white mx-2")
+            ui.link("Subscriptions", "/subscriptions").classes("text-white mx-2")
+            ui.link("Settings", "/settings").classes("text-white mx-2")
+
+
 def render_gpx_upload() -> None:
     """Render the GPX upload page."""
-    from web.main import create_header
-    create_header()
+    render_header()
 
     container = ui.column().classes("w-full max-w-4xl mx-auto p-4")
 
@@ -103,9 +196,10 @@ def render_gpx_upload() -> None:
             """Factory function (Safari compatibility)."""
             async def do_upload(e: events.UploadEventArguments):
                 try:
-                    content = e.content.read()
-                    track = process_gpx_upload(content, e.name)
-                    _show_track_summary(summary_container, track, e.name)
+                    content = await e.file.read()
+                    filename = e.file.name
+                    track = process_gpx_upload(content, filename)
+                    _show_track_summary(summary_container, track, filename)
                     ui.notify(
                         f"GPX geladen: {track.name}",
                         type="positive",
@@ -165,8 +259,15 @@ def _show_config_and_segments(parent_container, track: GPXTrack) -> None:
     ui.separator().classes("my-4")
     ui.label("Etappen-Konfiguration").classes("text-h5 mb-2")
 
+    # Mutable state to hold computed segments for save button
+    state = {"segments": None, "track": track}
+
     with ui.card().classes("w-full"):
         with ui.row().classes("w-full gap-4 items-end flex-wrap"):
+            date_input = ui.input(
+                "Datum (YYYY-MM-DD)",
+                value=date.today().isoformat(),
+            ).classes("w-40")
             start_hour = ui.number(
                 "Startzeit (Uhr)", value=8, min=0, max=23, step=1,
             ).classes("w-32")
@@ -181,6 +282,7 @@ def _show_config_and_segments(parent_container, track: GPXTrack) -> None:
             ).classes("w-36")
 
     segment_container = ui.column().classes("w-full mt-4")
+    save_container = ui.column().classes("w-full mt-2")
 
     def make_compute_handler():
         """Factory function (Safari compatibility)."""
@@ -191,9 +293,22 @@ def _show_config_and_segments(parent_container, track: GPXTrack) -> None:
                 speed_descent_mh=float(speed_descent.value),
             )
             hour = int(start_hour.value)
-            start_time = datetime(2026, 1, 17, hour, 0, 0, tzinfo=timezone.utc)
+
+            try:
+                trip_date = date.fromisoformat(str(date_input.value))
+            except (ValueError, TypeError):
+                ui.notify("Ungueltiges Datum (YYYY-MM-DD)", type="negative")
+                return
+
+            start_time = datetime(
+                trip_date.year, trip_date.month, trip_date.day,
+                hour, 0, 0, tzinfo=timezone.utc,
+            )
             segments = compute_full_segmentation(track, config, start_time)
+            state["segments"] = segments
+            state["date"] = trip_date
             _show_segment_table(segment_container, segments)
+            _show_save_button(save_container, state)
             ui.notify(f"{len(segments)} Segmente berechnet", type="positive")
         return do_compute
 
@@ -252,3 +367,35 @@ def _show_segment_table(container, segments: List[TripSegment]) -> None:
             rows=rows,
             row_key="nr",
         ).classes("w-full")
+
+
+def _show_save_button(container, state: dict) -> None:
+    """Show 'Als Trip speichern' button after segment computation."""
+    container.clear()
+    with container:
+        def make_save_handler():
+            """Factory function (Safari compatibility)."""
+            def do_save():
+                segments = state.get("segments")
+                track = state.get("track")
+                trip_date = state.get("date")
+
+                if not segments or not track or not trip_date:
+                    ui.notify("Bitte zuerst Segmente berechnen", type="negative")
+                    return
+
+                trip = segments_to_trip(segments, track, trip_date)
+                save_trip(trip)
+                ui.notify(
+                    f"Trip '{trip.name}' gespeichert mit "
+                    f"{len(trip.all_waypoints)} Waypoints. "
+                    f"Oeffne /trips fuer Wetter & Reports.",
+                    type="positive",
+                )
+            return do_save
+
+        ui.button(
+            "Als Trip speichern",
+            on_click=make_save_handler(),
+            icon="save",
+        ).props("color=positive").classes("mt-2")
