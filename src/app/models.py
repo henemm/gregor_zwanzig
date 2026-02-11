@@ -217,6 +217,13 @@ class RiskAssessment:
 
 # --- GPX Trip Planning DTOs (Story 1, 2, 3) ---
 
+class WaypointType(str, Enum):
+    """Type of detected waypoint in elevation profile."""
+    GIPFEL = "GIPFEL"
+    TAL = "TAL"
+    PASS = "PASS"
+
+
 @dataclass
 class GPXPoint:
     """Single point in a GPX track."""
@@ -244,6 +251,15 @@ class GPXTrack:
     total_distance_km: float
     total_ascent_m: float
     total_descent_m: float
+
+
+@dataclass
+class DetectedWaypoint:
+    """Waypoint detected from elevation profile analysis."""
+    type: WaypointType
+    point: GPXPoint
+    prominence_m: float  # Height difference to surrounding terrain
+    name: Optional[str] = None  # From GPX waypoint if nearby
 
 
 @dataclass
