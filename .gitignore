@@ -1,6 +1,5 @@
 
 
-
 # General
 .DS_Store
 
@@ -27,6 +26,5 @@ node_modules/
 .claude/validation_state.json
 .claude/workflow_state.json
 
-# Runtime data & secrets
-data/
-env.txt
+# Secrets (Fallback .env for local dev without 1Password)
+.env
