@@ -1,0 +1,393 @@
+============================= test session starts ==============================
+collected 23 items / 11 deselected / 12 selected
+
+tests/tdd/test_weather_config_api_ui.py FFFFFFFFFFFF                     [100%]
+
+=================================== FAILURES ===================================
+___________ TestAdditionalMetricsCatalog.test_catalog_has_19_metrics ___________
+
+self = <tdd.test_weather_config_api_ui.TestAdditionalMetricsCatalog object at 0x7fe1149aff50>
+
+    def test_catalog_has_19_metrics(self):
+        """
+        GIVEN: MetricCatalog with additional metrics registered
+        WHEN: counting all metrics
+        THEN: exactly 19 metrics (15 base + 4 new)
+    
+        Expected RED: Currently 15 metrics, missing visibility/rain_probability/cape/freezing_level.
+        """
+        from app.metric_catalog import get_all_metrics
+        metrics = get_all_metrics()
+>       assert len(metrics) == 19, (
+            f"Expected 19 metrics (15 base + 4 new), got {len(metrics)}. "
+            "Missing: visibility, rain_probability, cape, freezing_level"
+        )
+E       AssertionError: Expected 19 metrics (15 base + 4 new), got 15. Missing: visibility, rain_probability, cape, freezing_level
+E       assert 15 == 19
+E        +  where 15 = len([MetricDefinition(id='temperature', label_de='Temperatur', unit='°C', dp_field='t2m_c', category='temperature', defaul...', col_key='thunder', col_label='Thund', providers={'openmeteo': True, 'geosphere': False}, default_enabled=True), ...])
+
+tests/tdd/test_weather_config_api_ui.py:462: AssertionError
+__________ TestAdditionalMetricsCatalog.test_visibility_metric_exists __________
+
+self = <tdd.test_weather_config_api_ui.TestAdditionalMetricsCatalog object at 0x7fe1149b8310>
+
+    def test_visibility_metric_exists(self):
+        """
+        GIVEN: MetricCatalog
+        WHEN: looking up 'visibility' metric
+        THEN: metric exists with correct properties
+    
+        Expected RED: 'visibility' not registered in catalog.
+        """
+        from app.metric_catalog import get_metric
+>       m = get_metric("visibility")
+            ^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_weather_config_api_ui.py:476: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+metric_id = 'visibility'
+
+    def get_metric(metric_id: str) -> MetricDefinition:
+        """Get metric definition by ID. Raises KeyError if not found."""
+>       return _METRICS_BY_ID[metric_id]
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'visibility'
+
+src/app/metric_catalog.py:165: KeyError
+_______ TestAdditionalMetricsCatalog.test_rain_probability_metric_exists _______
+
+self = <tdd.test_weather_config_api_ui.TestAdditionalMetricsCatalog object at 0x7fe1149b8650>
+
+    def test_rain_probability_metric_exists(self):
+        """
+        GIVEN: MetricCatalog
+        WHEN: looking up 'rain_probability' metric
+        THEN: metric exists with correct properties
+    
+        Expected RED: 'rain_probability' not registered in catalog.
+        """
+        from app.metric_catalog import get_metric
+>       m = get_metric("rain_probability")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_weather_config_api_ui.py:491: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+metric_id = 'rain_probability'
+
+    def get_metric(metric_id: str) -> MetricDefinition:
+        """Get metric definition by ID. Raises KeyError if not found."""
+>       return _METRICS_BY_ID[metric_id]
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'rain_probability'
+
+src/app/metric_catalog.py:165: KeyError
+_____________ TestAdditionalMetricsCatalog.test_cape_metric_exists _____________
+
+self = <tdd.test_weather_config_api_ui.TestAdditionalMetricsCatalog object at 0x7fe1149b8ad0>
+
+    def test_cape_metric_exists(self):
+        """
+        GIVEN: MetricCatalog
+        WHEN: looking up 'cape' metric
+        THEN: metric exists with correct properties
+    
+        Expected RED: 'cape' not registered in catalog.
+        """
+        from app.metric_catalog import get_metric
+>       m = get_metric("cape")
+            ^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_weather_config_api_ui.py:506: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+metric_id = 'cape'
+
+    def get_metric(metric_id: str) -> MetricDefinition:
+        """Get metric definition by ID. Raises KeyError if not found."""
+>       return _METRICS_BY_ID[metric_id]
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'cape'
+
+src/app/metric_catalog.py:165: KeyError
+________ TestAdditionalMetricsCatalog.test_freezing_level_metric_exists ________
+
+self = <tdd.test_weather_config_api_ui.TestAdditionalMetricsCatalog object at 0x7fe1149b90d0>
+
+    def test_freezing_level_metric_exists(self):
+        """
+        GIVEN: MetricCatalog
+        WHEN: looking up 'freezing_level' metric
+        THEN: metric exists with correct properties
+    
+        Expected RED: 'freezing_level' not registered in catalog.
+        """
+        from app.metric_catalog import get_metric
+>       m = get_metric("freezing_level")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_weather_config_api_ui.py:521: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+metric_id = 'freezing_level'
+
+    def get_metric(metric_id: str) -> MetricDefinition:
+        """Get metric definition by ID. Raises KeyError if not found."""
+>       return _METRICS_BY_ID[metric_id]
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'freezing_level'
+
+src/app/metric_catalog.py:165: KeyError
+___________ TestAdditionalMetricsCatalog.test_new_metrics_categories ___________
+
+self = <tdd.test_weather_config_api_ui.TestAdditionalMetricsCatalog object at 0x7fe1149b96d0>
+
+    def test_new_metrics_categories(self):
+        """
+        GIVEN: MetricCatalog with new metrics
+        WHEN: grouping by category
+        THEN: precipitation has +2, atmosphere has +1, winter has +1
+    
+        Expected RED: New metrics not in catalog yet.
+        """
+        from app.metric_catalog import get_metrics_by_category
+        precip = get_metrics_by_category("precipitation")
+        atmosphere = get_metrics_by_category("atmosphere")
+        winter = get_metrics_by_category("winter")
+    
+        precip_ids = [m.id for m in precip]
+>       assert "rain_probability" in precip_ids, "rain_probability missing from precipitation"
+E       AssertionError: rain_probability missing from precipitation
+E       assert 'rain_probability' in ['precipitation', 'thunder', 'snowfall_limit']
+
+tests/tdd/test_weather_config_api_ui.py:541: AssertionError
+____________ TestOpenMeteoNewParameters.test_provider_returns_cape _____________
+
+self = <tdd.test_weather_config_api_ui.TestOpenMeteoNewParameters object at 0x7fe1149b9e90>
+
+    def test_provider_returns_cape(self):
+        """
+        GIVEN: OpenMeteo provider fetching forecast
+        WHEN: parsing response with CAPE data
+        THEN: ForecastDataPoint.cape_jkg is NOT None
+    
+        Expected RED: cape_jkg is hardcoded to None in openmeteo.py line 295.
+        """
+        from providers.openmeteo import OpenMeteoProvider
+        from app.config import Location
+    
+        provider = OpenMeteoProvider()
+        loc = Location(
+            name="Innsbruck",
+            latitude=47.26,
+            longitude=11.39,
+            elevation_m=574,
+        )
+        ts = provider.fetch_forecast(loc)
+    
+        # Check at least some data points have CAPE values
+        cape_values = [dp.cape_jkg for dp in ts.data if dp.cape_jkg is not None]
+>       assert len(cape_values) > 0, (
+            "Expected at least some non-None cape_jkg values from OpenMeteo. "
+            "Currently hardcoded to None in openmeteo.py."
+        )
+E       AssertionError: Expected at least some non-None cape_jkg values from OpenMeteo. Currently hardcoded to None in openmeteo.py.
+E       assert 0 > 0
+E        +  where 0 = len([])
+
+tests/tdd/test_weather_config_api_ui.py:581: AssertionError
+_____________ TestOpenMeteoNewParameters.test_provider_returns_pop _____________
+
+self = <tdd.test_weather_config_api_ui.TestOpenMeteoNewParameters object at 0x7fe1149ba490>
+
+    def test_provider_returns_pop(self):
+        """
+        GIVEN: OpenMeteo provider fetching forecast
+        WHEN: parsing response with precipitation_probability data
+        THEN: ForecastDataPoint.pop_pct is NOT None
+    
+        Expected RED: pop_pct is hardcoded to None in openmeteo.py line 296.
+        """
+        from providers.openmeteo import OpenMeteoProvider
+        from app.config import Location
+    
+        provider = OpenMeteoProvider()
+        loc = Location(
+            name="Innsbruck",
+            latitude=47.26,
+            longitude=11.39,
+            elevation_m=574,
+        )
+        ts = provider.fetch_forecast(loc)
+    
+        pop_values = [dp.pop_pct for dp in ts.data if dp.pop_pct is not None]
+>       assert len(pop_values) > 0, (
+            "Expected at least some non-None pop_pct values from OpenMeteo. "
+            "Currently hardcoded to None in openmeteo.py."
+        )
+E       AssertionError: Expected at least some non-None pop_pct values from OpenMeteo. Currently hardcoded to None in openmeteo.py.
+E       assert 0 > 0
+E        +  where 0 = len([])
+
+tests/tdd/test_weather_config_api_ui.py:607: AssertionError
+_________ TestOpenMeteoNewParameters.test_provider_returns_visibility __________
+
+self = <tdd.test_weather_config_api_ui.TestOpenMeteoNewParameters object at 0x7fe1149baa90>
+
+    def test_provider_returns_visibility(self):
+        """
+        GIVEN: OpenMeteo provider fetching forecast
+        WHEN: parsing response with visibility data
+        THEN: ForecastDataPoint.visibility_m is NOT None
+    
+        Expected RED: visibility_m is hardcoded to None in openmeteo.py line 313.
+        """
+        from providers.openmeteo import OpenMeteoProvider
+        from app.config import Location
+    
+        provider = OpenMeteoProvider()
+        loc = Location(
+            name="Innsbruck",
+            latitude=47.26,
+            longitude=11.39,
+            elevation_m=574,
+        )
+        ts = provider.fetch_forecast(loc)
+    
+        vis_values = [dp.visibility_m for dp in ts.data if dp.visibility_m is not None]
+>       assert len(vis_values) > 0, (
+            "Expected at least some non-None visibility_m values from OpenMeteo. "
+            "Currently hardcoded to None in openmeteo.py."
+        )
+E       AssertionError: Expected at least some non-None visibility_m values from OpenMeteo. Currently hardcoded to None in openmeteo.py.
+E       assert 0 > 0
+E        +  where 0 = len([])
+
+tests/tdd/test_weather_config_api_ui.py:633: AssertionError
+_______ TestOpenMeteoNewParameters.test_provider_returns_freezing_level ________
+
+self = <tdd.test_weather_config_api_ui.TestOpenMeteoNewParameters object at 0x7fe1149bb0d0>
+
+    def test_provider_returns_freezing_level(self):
+        """
+        GIVEN: OpenMeteo provider fetching forecast
+        WHEN: parsing response with freezing_level_height data
+        THEN: ForecastDataPoint.freezing_level_m is NOT None
+    
+        Expected RED: freezing_level_m is hardcoded to None in openmeteo.py line 311.
+        """
+        from providers.openmeteo import OpenMeteoProvider
+        from app.config import Location
+    
+        provider = OpenMeteoProvider()
+        loc = Location(
+            name="Innsbruck",
+            latitude=47.26,
+            longitude=11.39,
+            elevation_m=574,
+        )
+        ts = provider.fetch_forecast(loc)
+    
+        fl_values = [dp.freezing_level_m for dp in ts.data if dp.freezing_level_m is not None]
+>       assert len(fl_values) > 0, (
+            "Expected at least some non-None freezing_level_m values from OpenMeteo. "
+            "Currently hardcoded to None in openmeteo.py."
+        )
+E       AssertionError: Expected at least some non-None freezing_level_m values from OpenMeteo. Currently hardcoded to None in openmeteo.py.
+E       assert 0 > 0
+E        +  where 0 = len([])
+
+tests/tdd/test_weather_config_api_ui.py:659: AssertionError
+_____________ TestUIMetricCount19.test_nineteen_metric_checkboxes ______________
+
+self = <tdd.test_weather_config_api_ui.TestUIMetricCount19 object at 0x7fe1149bb8d0>
+running_server = <Popen: returncode: None args: ['/opt/gregor_zwanziger/.venv/bin/python3', '...>
+
+    def test_nineteen_metric_checkboxes(self, running_server):
+        """
+        GIVEN: Weather config dialog with 19 MetricCatalog metrics
+        WHEN: counting checkboxes in dialog
+        THEN: exactly 19 checkboxes
+    
+        Expected RED: Currently 15 checkboxes (4 new metrics not in catalog yet).
+        """
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page(viewport={"width": 1400, "height": 1000})
+            page.goto(f"{SERVER_URL}/trips", timeout=10000)
+            time.sleep(2)
+    
+            page.locator('button:has-text("Wetter-Metriken")').first.click()
+            time.sleep(1)
+    
+            page.screenshot(path="/tmp/weather_config_19_metrics.png")
+    
+            checkboxes = page.locator("div.q-checkbox")
+            count = checkboxes.count()
+>           assert count == 19, (
+                f"Expected 19 metric checkboxes (15 base + 4 new), found {count}. "
+                "New metrics: Sichtweite, Regenwahrscheinlichkeit, CAPE, Nullgradgrenze"
+            )
+E           AssertionError: Expected 19 metric checkboxes (15 base + 4 new), found 15. New metrics: Sichtweite, Regenwahrscheinlichkeit, CAPE, Nullgradgrenze
+E           assert 15 == 19
+
+tests/tdd/test_weather_config_api_ui.py:694: AssertionError
+______________ TestUIMetricCount19.test_new_metric_labels_present ______________
+
+self = <tdd.test_weather_config_api_ui.TestUIMetricCount19 object at 0x7fe1149bbf10>
+running_server = <Popen: returncode: None args: ['/opt/gregor_zwanziger/.venv/bin/python3', '...>
+
+    def test_new_metric_labels_present(self, running_server):
+        """
+        GIVEN: Weather config dialog with 19 MetricCatalog metrics
+        WHEN: checking for new metric labels
+        THEN: all 4 new German labels are visible
+    
+        Expected RED: New metric labels not in catalog yet.
+        """
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page(viewport={"width": 1400, "height": 1000})
+            page.goto(f"{SERVER_URL}/trips", timeout=10000)
+            time.sleep(2)
+    
+            page.locator('button:has-text("Wetter-Metriken")').first.click()
+            time.sleep(1)
+    
+            new_labels = [
+                "Sichtweite",
+                "Regenwahrscheinlichkeit",
+                "Gewitterenergie (CAPE)",
+                "Nullgradgrenze",
+            ]
+            found = []
+            missing = []
+            for label in new_labels:
+                if page.locator(f"text={label}").count() > 0:
+                    found.append(label)
+                else:
+                    missing.append(label)
+    
+>           assert len(found) == 4, (
+                f"Found {len(found)}/4 new metric labels. Missing: {missing}"
+            )
+E           AssertionError: Found 0/4 new metric labels. Missing: ['Sichtweite', 'Regenwahrscheinlichkeit', 'Gewitterenergie (CAPE)', 'Nullgradgrenze']
+E           assert 0 == 4
+E            +  where 0 = len([])
+
+tests/tdd/test_weather_config_api_ui.py:732: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_weather_config_api_ui.py::TestAdditionalMetricsCatalog::test_catalog_has_19_metrics
+FAILED tests/tdd/test_weather_config_api_ui.py::TestAdditionalMetricsCatalog::test_visibility_metric_exists
+FAILED tests/tdd/test_weather_config_api_ui.py::TestAdditionalMetricsCatalog::test_rain_probability_metric_exists
+FAILED tests/tdd/test_weather_config_api_ui.py::TestAdditionalMetricsCatalog::test_cape_metric_exists
+FAILED tests/tdd/test_weather_config_api_ui.py::TestAdditionalMetricsCatalog::test_freezing_level_metric_exists
+FAILED tests/tdd/test_weather_config_api_ui.py::TestAdditionalMetricsCatalog::test_new_metrics_categories
+FAILED tests/tdd/test_weather_config_api_ui.py::TestOpenMeteoNewParameters::test_provider_returns_cape
+FAILED tests/tdd/test_weather_config_api_ui.py::TestOpenMeteoNewParameters::test_provider_returns_pop
+FAILED tests/tdd/test_weather_config_api_ui.py::TestOpenMeteoNewParameters::test_provider_returns_visibility
+FAILED tests/tdd/test_weather_config_api_ui.py::TestOpenMeteoNewParameters::test_provider_returns_freezing_level
+FAILED tests/tdd/test_weather_config_api_ui.py::TestUIMetricCount19::test_nineteen_metric_checkboxes
+FAILED tests/tdd/test_weather_config_api_ui.py::TestUIMetricCount19::test_new_metric_labels_present
+====================== 12 failed, 11 deselected in 10.12s ======================

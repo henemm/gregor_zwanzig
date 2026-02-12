@@ -4,7 +4,7 @@ type: module
 created: 2026-02-02
 updated: 2026-02-12
 status: draft
-version: "2.0"
+version: "2.2"
 tags: [story-2, story-3, webui, config, safari, email, formatter]
 ---
 
@@ -89,7 +89,7 @@ class MetricDefinition:
     default_enabled: bool = True     # Enabled by default in new configs
 ```
 
-**~15 metrics defined:**
+**~19 metrics defined:**
 
 | id | dp_field | category | providers (openmeteo/geosphere) |
 |----|----------|----------|---------------------------------|
@@ -100,6 +100,8 @@ class MetricDefinition:
 | precipitation | precip_1h_mm | precipitation | yes/yes |
 | thunder | thunder_level | precipitation | yes (weather_code)/no |
 | snowfall_limit | snowfall_limit_m | precipitation | no/yes |
+| rain_probability | pop_pct | precipitation | yes/no |
+| cape | cape_jkg | precipitation | yes/no |
 | cloud_total | cloud_total_pct | atmosphere | yes/yes |
 | cloud_low | cloud_low_pct | atmosphere | yes/no |
 | cloud_mid | cloud_mid_pct | atmosphere | yes/no |
@@ -107,7 +109,9 @@ class MetricDefinition:
 | humidity | humidity_pct | atmosphere | yes/yes |
 | dewpoint | dewpoint_c | atmosphere | yes/yes (computed) |
 | pressure | pressure_msl_hpa | atmosphere | yes/yes |
+| visibility | visibility_m | atmosphere | yes/no |
 | snow_depth | snow_depth_cm | winter | no/yes (SNOWGRID) |
+| freezing_level | freezing_level_m | winter | yes/no |
 
 **Key functions:**
 
@@ -234,22 +238,399 @@ report = self._formatter.format_email(
 
 ---
 
-## Phase 2: API-Aware UI (Specification Only)
+## Phase 2: API-Aware UI (MITTEL)
 
-### Weather Config Dialog Rewrite
+**Scope:** Rewrite weather config dialog to be API-aware with provider detection and metric availability.
 
-Dialog shows metrics grouped by category with provider-based availability:
+**Estimate:** ~240 LoC across 2 files.
 
-1. **Header:** Trip name, current provider info
-2. **Categories:** Temperature, Wind, Precipitation, Atmosphere, Winter
-3. **Per metric:**
-   - Checkbox (enabled/disabled)
-   - Grayed out if not available for trip's provider
-   - Aggregation dropdown (Min/Max/Avg/Sum) based on `default_aggregations`
-   - Tooltip with metric description
-4. **Footer:** Save/Cancel buttons (Factory Pattern!)
+### Overview
 
-Provider detection: Based on trip waypoint coordinates, determine which provider serves data (OpenMeteo always available, GeoSphere for Austria region).
+Replace hardcoded metric checkboxes with dynamic UI that:
+- Detects available providers from trip waypoint coordinates
+- Shows metrics grouped by 5 categories from MetricCatalog
+- Grays out unavailable metrics with tooltip
+- Provides per-metric aggregation selection (Min/Max/Avg/Sum)
+- Saves as UnifiedWeatherDisplayConfig (not legacy TripWeatherConfig)
+- Uses Safari Factory Pattern for all handlers
+
+### Provider Detection
+
+**Helper Function:** `get_available_providers_for_trip(trip: Trip) -> set[str]`
+
+```python
+def get_available_providers_for_trip(trip: Trip) -> set[str]:
+    """
+    Detect which weather providers can serve this trip based on waypoint coordinates.
+
+    Logic:
+    - OpenMeteo: Always available (global coverage)
+    - GeoSphere: Available if ANY waypoint is in Austria bounding box:
+      - Latitude: 46.0° to 49.0° N
+      - Longitude: 9.5° to 17.0° E
+
+    Args:
+        trip: Trip with stages containing waypoints
+
+    Returns:
+        Set of provider names: {"openmeteo"} or {"openmeteo", "geosphere"}
+    """
+    providers = {"openmeteo"}  # Always available
+
+    for stage in trip.stages:
+        for waypoint in stage.waypoints:
+            if 46.0 <= waypoint.lat <= 49.0 and 9.5 <= waypoint.lon <= 17.0:
+                providers.add("geosphere")
+                return providers  # Early exit once Austria detected
+
+    return providers
+```
+
+**Location:** `src/web/pages/weather_config.py` (top-level function)
+
+### Metric Availability Check
+
+**Per-Metric Logic:**
+
+```python
+available_providers = get_available_providers_for_trip(trip)
+metric_def = get_metric(metric_id)
+
+# Check if metric is available for at least one of trip's providers
+is_available = any(metric_def.providers.get(p, False) for p in available_providers)
+```
+
+**UI Rendering:**
+- Available: Normal checkbox + aggregation dropdown
+- Unavailable: Grayed-out checkbox (disabled) + tooltip "(Nicht verfügbar für diese Route)"
+
+### Dialog UI Structure
+
+**Layout:**
+
+```
+┌─────────────────────────────────────────────────────┐
+│ Wetter-Metriken konfigurieren                       │
+│                                                      │
+│ Trip: [Trip Name]                                   │
+│ Provider: OpenMeteo + GeoSphere                     │
+│                                                      │
+│ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
+│ Temperatur                                          │
+│ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
+│ ☑ Temperatur         [Min][Max][Avg]               │
+│ ☑ Gefühlte Temp      [Min]                          │
+│                                                      │
+│ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
+│ Wind                                                │
+│ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
+│ ☑ Wind               [Max]                          │
+│ ☑ Böen               [Max]                          │
+│                                                      │
+│ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
+│ Niederschlag                                        │
+│ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
+│ ☑ Niederschlag       [Sum]                          │
+│ ☑ Gewitter           [Max]                          │
+│ ☐ Schneefallgrenze   [Min][Max]  ⓘ (Grayed out)   │
+│                                                      │
+│ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
+│ Atmosphäre                                          │
+│ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
+│ ☑ Bewölkung          [Avg]                          │
+│ ☐ Luftfeuchtigkeit   [Avg]                          │
+│ ☐ Taupunkt           [Avg]                          │
+│ ... (more metrics)                                  │
+│                                                      │
+│ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
+│ Winter                                              │
+│ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
+│ ☐ Schneehöhe         [Max]  ⓘ (Grayed out)         │
+│                                                      │
+│                              [Abbrechen] [Speichern]│
+└─────────────────────────────────────────────────────┘
+```
+
+**Dialog Container:**
+- `ui.dialog()` + `ui.card()`
+- `.style("max-height: 80vh; overflow-y: auto")` for scrolling
+- `.style("min-width: 600px")` for consistent width
+
+### Category Grouping
+
+**German Labels:**
+
+```python
+CATEGORY_LABELS = {
+    "temperature": "Temperatur",
+    "wind": "Wind",
+    "precipitation": "Niederschlag",
+    "atmosphere": "Atmosphäre",
+    "winter": "Winter",
+}
+```
+
+**Rendering Order:**
+
+```python
+CATEGORY_ORDER = ["temperature", "wind", "precipitation", "atmosphere", "winter"]
+
+for category in CATEGORY_ORDER:
+    ui.separator()
+    ui.label(CATEGORY_LABELS[category]).classes("text-subtitle1 q-mt-md")
+
+    metrics = get_metrics_by_category(category)
+    for metric in metrics:
+        # Render metric row
+```
+
+### Per-Metric Row Structure
+
+**Component Structure:**
+
+```python
+with ui.row().classes("items-center q-mb-sm"):
+    # 1. Checkbox (enabled/disabled based on availability)
+    checkbox = ui.checkbox(
+        metric_def.label_de,
+        value=(metric_def.id in current_enabled_ids)
+    )
+
+    if not is_available:
+        checkbox.disable()
+        checkbox.tooltip("Nicht verfügbar für diese Route")
+
+    # 2. Aggregation multi-select dropdown
+    agg_select = ui.select(
+        options=["Min", "Max", "Avg", "Sum"],
+        value=current_aggregations,  # From existing config
+        multiple=True,
+    ).classes("q-ml-md").style("min-width: 150px")
+
+    # Filter options based on metric's default_aggregations
+    allowed_aggs = [a.capitalize() for a in metric_def.default_aggregations]
+    agg_select.options = allowed_aggs
+
+    if not is_available:
+        agg_select.disable()
+```
+
+**Data Storage:**
+
+```python
+# Track checkboxes and aggregation selects
+metric_widgets = {}  # {metric_id: {"checkbox": ui.checkbox, "agg_select": ui.select}}
+
+for metric in all_metrics:
+    metric_widgets[metric.id] = {
+        "checkbox": checkbox,
+        "agg_select": agg_select,
+        "available": is_available,
+    }
+```
+
+### Save Logic
+
+**Handler Function:** `make_save_handler(trip_id, metric_widgets, dialog, user_id)`
+
+```python
+def make_save_handler(trip_id: str, metric_widgets: dict, dialog, user_id: str):
+    """
+    Factory for save handler - Safari compatible!
+
+    Args:
+        trip_id: Trip identifier
+        metric_widgets: Dict mapping metric_id to {checkbox, agg_select, available}
+        dialog: Dialog to close after save
+        user_id: User identifier for loading/saving
+
+    Returns:
+        Save handler function
+    """
+    def do_save():
+        # 1. Build list of MetricConfig from UI state
+        metric_configs = []
+        for metric_id, widgets in metric_widgets.items():
+            checkbox = widgets["checkbox"]
+            agg_select = widgets["agg_select"]
+
+            # Convert UI aggregation labels to lowercase
+            aggregations = [a.lower() for a in agg_select.value]
+
+            metric_configs.append(MetricConfig(
+                metric_id=metric_id,
+                enabled=checkbox.value,
+                aggregations=aggregations,
+            ))
+
+        # 2. Validate: At least 1 metric enabled
+        enabled_count = sum(1 for mc in metric_configs if mc.enabled)
+        if enabled_count == 0:
+            ui.notify("Mindestens 1 Metrik muss ausgewählt sein!", color="negative")
+            return
+
+        # 3. Load trip, update display_config, save
+        trip_path = get_trips_dir(user_id) / f"{trip_id}.json"
+        trip = load_trip(trip_path)
+
+        # Preserve existing config values
+        old_config = trip.display_config
+
+        trip.display_config = UnifiedWeatherDisplayConfig(
+            trip_id=trip_id,
+            metrics=metric_configs,
+            show_night_block=old_config.show_night_block if old_config else True,
+            night_interval_hours=old_config.night_interval_hours if old_config else 2,
+            thunder_forecast_days=old_config.thunder_forecast_days if old_config else 2,
+            updated_at=datetime.now(timezone.utc),
+        )
+
+        save_trip(trip, user_id=user_id)
+
+        # 4. Success feedback
+        ui.notify(f"{enabled_count} Metriken gespeichert!", color="positive")
+        dialog.close()
+
+    return do_save
+```
+
+### All Factory Pattern Handlers
+
+**List of Required Factories:**
+
+1. **`make_save_handler(trip_id, metric_widgets, dialog, user_id)`**
+   - Purpose: Save metric configuration to trip
+   - Returns: `do_save()` function
+   - Used by: "Speichern" button
+
+2. **`make_cancel_handler(dialog)`**
+   - Purpose: Close dialog without saving
+   - Returns: `do_cancel()` function
+   - Used by: "Abbrechen" button
+
+**Implementation:**
+
+```python
+def make_cancel_handler(dialog):
+    """Factory for cancel button (Safari compatibility)."""
+    def do_cancel():
+        dialog.close()
+    return do_cancel
+
+# Usage:
+ui.button("Abbrechen", on_click=make_cancel_handler(dialog))
+ui.button("Speichern", on_click=make_save_handler(trip_id, metric_widgets, dialog, user_id))
+```
+
+### Main Function Signature
+
+```python
+def show_weather_config_dialog(trip: Trip, user_id: str = "default") -> None:
+    """
+    Show API-aware weather metrics configuration dialog.
+
+    Features:
+    - Provider detection from trip waypoints
+    - Grouped metrics by category (Temperature, Wind, etc.)
+    - Grayed-out unavailable metrics with tooltip
+    - Per-metric aggregation selection (Min/Max/Avg/Sum)
+    - Saves as UnifiedWeatherDisplayConfig
+
+    Safari Compatible:
+    - All handlers use make_<action>_handler() factory pattern
+    - Closures bind immutable trip_id and widget dict
+
+    Args:
+        trip: Trip to configure weather metrics for
+        user_id: User identifier for saving (default: "default")
+    """
+```
+
+### Load Current Config
+
+**Logic:**
+
+```python
+# Get current config or build default
+if trip.display_config:
+    # Use existing unified config
+    current_metric_configs = {mc.metric_id: mc for mc in trip.display_config.metrics}
+else:
+    # Build default from MetricCatalog
+    default_config = build_default_display_config(trip.id)
+    current_metric_configs = {mc.metric_id: mc for mc in default_config.metrics}
+
+# For each metric, determine initial state
+for metric in get_all_metrics():
+    metric_config = current_metric_configs.get(metric.id)
+
+    if metric_config:
+        initial_enabled = metric_config.enabled
+        initial_aggregations = metric_config.aggregations
+    else:
+        # Fallback to defaults if not in config
+        initial_enabled = metric.default_enabled
+        initial_aggregations = list(metric.default_aggregations)
+```
+
+### Aggregation Dropdown Details
+
+**Option Mapping:**
+
+```python
+# Map MetricDefinition.default_aggregations to UI labels
+AGG_LABELS = {
+    "min": "Min",
+    "max": "Max",
+    "avg": "Avg",
+    "sum": "Sum",
+}
+
+# For each metric, only show allowed aggregations
+allowed_options = [AGG_LABELS[agg] for agg in metric_def.default_aggregations]
+
+# Multi-select dropdown
+agg_select = ui.select(
+    options=allowed_options,
+    value=[AGG_LABELS[a] for a in initial_aggregations],
+    multiple=True,
+    label="Aggregationen",
+).style("min-width: 150px")
+```
+
+**Validation:**
+- At least 1 aggregation must be selected per enabled metric
+- Disabled metrics can have empty aggregations (ignored)
+
+### Files to Change (Phase 2)
+
+| # | File | Action | LoC |
+|---|------|--------|-----|
+| 1 | `src/web/pages/weather_config.py` | REWRITE | ~190 |
+| 2 | `tests/e2e/test_weather_config.py` | UPDATE | ~50 |
+
+**Total Phase 2:** ~240 LoC, 2 files
+
+### Import Changes
+
+**New Imports:**
+
+```python
+from app.metric_catalog import (
+    get_all_metrics,
+    get_metrics_by_category,
+    build_default_display_config,
+)
+from app.models import UnifiedWeatherDisplayConfig, MetricConfig
+```
+
+**Removed Imports:**
+
+```python
+# No longer needed:
+# BASIS_METRICS, EXTENDED_METRICS hardcoded dicts
+# TripWeatherConfig (replaced by UnifiedWeatherDisplayConfig)
+```
 
 ---
 
@@ -345,3 +726,5 @@ Provider detection: Based on trip waypoint coordinates, determine which provider
 
 - 2026-02-02: v1.0 - Initial spec for Feature 2.6 (UI only)
 - 2026-02-12: v2.0 - Rewrite: Unified config, MetricCatalog, formatter integration (3 phases)
+- 2026-02-12: v2.1 - Phase 2 fully specified: Provider detection, category grouping, aggregation UI, save logic
+- 2026-02-12: v2.2 - Metric table updated: 15 -> 19 metrics (visibility, rain_probability, cape, freezing_level)

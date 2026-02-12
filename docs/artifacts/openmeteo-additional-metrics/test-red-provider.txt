@@ -1,0 +1,149 @@
+============================= test session starts ==============================
+collected 23 items / 19 deselected / 4 selected
+
+tests/tdd/test_weather_config_api_ui.py FFFF                             [100%]
+
+=================================== FAILURES ===================================
+____________ TestOpenMeteoNewParameters.test_provider_returns_cape _____________
+
+self = <tdd.test_weather_config_api_ui.TestOpenMeteoNewParameters object at 0x7f076e7df6d0>
+
+    def test_provider_returns_cape(self):
+        """
+        GIVEN: OpenMeteo provider fetching forecast
+        WHEN: parsing response with CAPE data
+        THEN: ForecastDataPoint.cape_jkg is NOT None
+    
+        Expected RED: cape_jkg is hardcoded to None in openmeteo.py line 295.
+        """
+        from providers.openmeteo import OpenMeteoProvider
+        from app.config import Location
+    
+        provider = OpenMeteoProvider()
+        loc = Location(
+            name="Innsbruck",
+            latitude=47.26,
+            longitude=11.39,
+            elevation_m=574,
+        )
+        ts = provider.fetch_forecast(loc)
+    
+        # Check at least some data points have CAPE values
+        cape_values = [dp.cape_jkg for dp in ts.data if dp.cape_jkg is not None]
+>       assert len(cape_values) > 0, (
+            "Expected at least some non-None cape_jkg values from OpenMeteo. "
+            "Currently hardcoded to None in openmeteo.py."
+        )
+E       AssertionError: Expected at least some non-None cape_jkg values from OpenMeteo. Currently hardcoded to None in openmeteo.py.
+E       assert 0 > 0
+E        +  where 0 = len([])
+
+tests/tdd/test_weather_config_api_ui.py:581: AssertionError
+_____________ TestOpenMeteoNewParameters.test_provider_returns_pop _____________
+
+self = <tdd.test_weather_config_api_ui.TestOpenMeteoNewParameters object at 0x7f076e7dfb50>
+
+    def test_provider_returns_pop(self):
+        """
+        GIVEN: OpenMeteo provider fetching forecast
+        WHEN: parsing response with precipitation_probability data
+        THEN: ForecastDataPoint.pop_pct is NOT None
+    
+        Expected RED: pop_pct is hardcoded to None in openmeteo.py line 296.
+        """
+        from providers.openmeteo import OpenMeteoProvider
+        from app.config import Location
+    
+        provider = OpenMeteoProvider()
+        loc = Location(
+            name="Innsbruck",
+            latitude=47.26,
+            longitude=11.39,
+            elevation_m=574,
+        )
+        ts = provider.fetch_forecast(loc)
+    
+        pop_values = [dp.pop_pct for dp in ts.data if dp.pop_pct is not None]
+>       assert len(pop_values) > 0, (
+            "Expected at least some non-None pop_pct values from OpenMeteo. "
+            "Currently hardcoded to None in openmeteo.py."
+        )
+E       AssertionError: Expected at least some non-None pop_pct values from OpenMeteo. Currently hardcoded to None in openmeteo.py.
+E       assert 0 > 0
+E        +  where 0 = len([])
+
+tests/tdd/test_weather_config_api_ui.py:607: AssertionError
+_________ TestOpenMeteoNewParameters.test_provider_returns_visibility __________
+
+self = <tdd.test_weather_config_api_ui.TestOpenMeteoNewParameters object at 0x7f076e7dec50>
+
+    def test_provider_returns_visibility(self):
+        """
+        GIVEN: OpenMeteo provider fetching forecast
+        WHEN: parsing response with visibility data
+        THEN: ForecastDataPoint.visibility_m is NOT None
+    
+        Expected RED: visibility_m is hardcoded to None in openmeteo.py line 313.
+        """
+        from providers.openmeteo import OpenMeteoProvider
+        from app.config import Location
+    
+        provider = OpenMeteoProvider()
+        loc = Location(
+            name="Innsbruck",
+            latitude=47.26,
+            longitude=11.39,
+            elevation_m=574,
+        )
+        ts = provider.fetch_forecast(loc)
+    
+        vis_values = [dp.visibility_m for dp in ts.data if dp.visibility_m is not None]
+>       assert len(vis_values) > 0, (
+            "Expected at least some non-None visibility_m values from OpenMeteo. "
+            "Currently hardcoded to None in openmeteo.py."
+        )
+E       AssertionError: Expected at least some non-None visibility_m values from OpenMeteo. Currently hardcoded to None in openmeteo.py.
+E       assert 0 > 0
+E        +  where 0 = len([])
+
+tests/tdd/test_weather_config_api_ui.py:633: AssertionError
+_______ TestOpenMeteoNewParameters.test_provider_returns_freezing_level ________
+
+self = <tdd.test_weather_config_api_ui.TestOpenMeteoNewParameters object at 0x7f076e7f0390>
+
+    def test_provider_returns_freezing_level(self):
+        """
+        GIVEN: OpenMeteo provider fetching forecast
+        WHEN: parsing response with freezing_level_height data
+        THEN: ForecastDataPoint.freezing_level_m is NOT None
+    
+        Expected RED: freezing_level_m is hardcoded to None in openmeteo.py line 311.
+        """
+        from providers.openmeteo import OpenMeteoProvider
+        from app.config import Location
+    
+        provider = OpenMeteoProvider()
+        loc = Location(
+            name="Innsbruck",
+            latitude=47.26,
+            longitude=11.39,
+            elevation_m=574,
+        )
+        ts = provider.fetch_forecast(loc)
+    
+        fl_values = [dp.freezing_level_m for dp in ts.data if dp.freezing_level_m is not None]
+>       assert len(fl_values) > 0, (
+            "Expected at least some non-None freezing_level_m values from OpenMeteo. "
+            "Currently hardcoded to None in openmeteo.py."
+        )
+E       AssertionError: Expected at least some non-None freezing_level_m values from OpenMeteo. Currently hardcoded to None in openmeteo.py.
+E       assert 0 > 0
+E        +  where 0 = len([])
+
+tests/tdd/test_weather_config_api_ui.py:659: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_weather_config_api_ui.py::TestOpenMeteoNewParameters::test_provider_returns_cape
+FAILED tests/tdd/test_weather_config_api_ui.py::TestOpenMeteoNewParameters::test_provider_returns_pop
+FAILED tests/tdd/test_weather_config_api_ui.py::TestOpenMeteoNewParameters::test_provider_returns_visibility
+FAILED tests/tdd/test_weather_config_api_ui.py::TestOpenMeteoNewParameters::test_provider_returns_freezing_level
+======================= 4 failed, 19 deselected in 1.20s =======================
