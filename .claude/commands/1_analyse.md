@@ -2,24 +2,76 @@
 
 You are starting the **Analysis Phase** for a new feature or change.
 
-## Your Tasks:
+## Step 1: Determine Type
 
-1. **Understand the request** - What exactly does the user want?
-2. **Research the codebase** - Use Explore agent or Grep/Glob
-3. **Identify affected files** - Which files need changes?
-4. **Check existing specs** - Are there specs that will be affected?
-5. **Document findings** - Summarize what you found
+Is this a **Bug** or a **Feature**?
 
-## Update Workflow State:
+- **Bug** → Run bug-intake agent first (see Step 2b)
+- **Feature** → Skip to Step 2a
 
-After completing the analysis, update the workflow state:
+## Step 2a: Parallel Codebase Research (Features)
 
-```bash
-# Read current state
-cat .claude/workflow_state.json
+Launch **3 Explore agents in parallel** (all Haiku for speed):
 
-# Update to analyse_done phase
 ```
+Task(subagent_type="Explore", model="haiku", prompt="...")
+```
+
+**Agent 1 - Affected Files:**
+> Search the codebase for files related to [FEATURE]. Find all files that would need changes. Look for existing implementations, patterns, and code conventions used in similar areas. Report: file paths, key functions/classes, current behavior.
+
+**Agent 2 - Existing Specs:**
+> Search docs/specs/ for any specifications related to [FEATURE]. Also check docs/features/ and docs/reference/ for related documentation. Report: relevant spec paths, their status (draft/active), and any constraints they define.
+
+**Agent 3 - Dependencies & Imports:**
+> Trace the dependency chain for [AFFECTED AREA]. What modules import what? What external APIs are called? What data files are read? Report: dependency graph, external dependencies, data flow.
+
+**IMPORTANT:** Launch all 3 agents in a SINGLE message (parallel execution).
+
+## Step 2b: Bug Investigation
+
+Launch **bug-intake agent** instead:
+
+```
+Task(subagent_type="bug-intake", model="haiku", prompt="
+  Symptom: [USER'S BUG DESCRIPTION]
+  Investigate root cause autonomously.
+")
+```
+
+The bug-intake agent will spawn its own Explore sub-agents for investigation.
+
+## Step 3: Strategic Assessment
+
+After all research agents return, launch a **Plan agent** (Sonnet for quality):
+
+```
+Task(subagent_type="Plan", model="sonnet", prompt="
+  Based on this analysis for [FEATURE]:
+
+  [PASTE RESULTS FROM STEP 2]
+
+  Create an implementation strategy:
+  1. What architectural approach is best? Why?
+  2. What is the implementation order?
+  3. What are the risks?
+  4. How many files need changes? (flag if >4-5)
+  5. Estimated LoC changes? (flag if >250)
+")
+```
+
+## Step 4: Present to User
+
+Synthesize all results into:
+
+1. **Understanding Checklist** - Bullet points of what you understood
+2. **One clear recommendation** - Not multiple options
+3. **Scope estimate** - Files and LoC (flag if exceeding limits)
+4. **Risks** - Only if significant
+
+## Step 5: Update Workflow State
+
+After user confirms understanding:
 
 Update `.claude/workflow_state.json`:
 ```json
@@ -32,9 +84,8 @@ Update `.claude/workflow_state.json`:
 }
 ```
 
-## Next Step:
+## Next Step
 
-When analysis is complete, inform the user:
-> "Analysis complete. Next step: `/write-spec` to create the specification."
+> "Analyse abgeschlossen. Naechster Schritt: `/write-spec`"
 
-**IMPORTANT:** Do NOT start implementation without the user calling `/write-spec`!
+**IMPORTANT:** Do NOT start implementation without `/write-spec`!

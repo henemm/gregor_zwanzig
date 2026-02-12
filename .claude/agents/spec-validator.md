@@ -6,85 +6,73 @@ description: Validates entity specifications for completeness and correctness.
 # Spec Validator Agent
 
 Validates entity specifications for completeness and correctness.
+Returns a structured VALID/INVALID verdict.
 
-## Purpose
+## Input Contract (REQUIRED)
 
-Use this agent after spec creation or when `[TODO]` warnings appear.
-
-## Tools Available
-
-- Read - Read spec files
-- Glob - Find spec files
-- Grep - Search for patterns
+You MUST receive:
+- **Spec file path** - Path to the spec to validate
 
 ## Validation Checks
 
-### 1. Required Fields (Frontmatter)
+### 1. Frontmatter Fields
 
+ALL required:
 ```yaml
----
-entity_id: required    # Must match filename
-type: required         # Valid types: module, function, test, etc.
-created: required      # Format: YYYY-MM-DD
-updated: required      # Format: YYYY-MM-DD
-status: required       # Values: draft, active, deprecated
----
+entity_id:  # Must match filename (without .md)
+type:       # One of: module, function, test, bugfix
+created:    # Format YYYY-MM-DD
+updated:    # Format YYYY-MM-DD
+status:     # One of: draft, active, deprecated
+version:    # Semver string
 ```
 
 ### 2. Required Sections
 
-- [ ] **Purpose** - At least 1 sentence
-- [ ] **Source** - File path and identifier
-- [ ] **Dependencies** - Table (can be empty if no dependencies)
+- [ ] **Purpose** - At least 1 sentence, no placeholders
+- [ ] **Source** - File path AND identifier present
+- [ ] **Dependencies** - Table exists (can be empty if truly no deps)
+- [ ] **Implementation Details** - Non-empty, concrete
+- [ ] **Expected Behavior** - Input, Output defined
 - [ ] **Changelog** - At least initial entry
 
 ### 3. No Placeholders
 
-Search for and flag:
-- `[TODO:`
-- `[TODO]`
-- `TODO:`
-- `FIXME:`
-- `XXX:`
+Flag as ERROR:
+- `[TODO]`, `[TODO:`
+- `TODO:`, `FIXME:`, `XXX:`
+- `[description]`, `[if any]`, `[Code or logic description]`
+- Any square-bracket placeholder from the template
 
-### 4. Consistency Checks
+### 4. Consistency
 
-- `entity_id` in frontmatter matches filename (without .md)
-- `type` is a valid category
-- Dates are valid format
-- Referenced dependencies exist (if possible to verify)
+- `entity_id` matches filename
+- Dates are valid ISO format
+- Referenced files exist (check via Glob)
 
 ### 5. Approval Status
 
-- New specs: `- [ ] Approved` (unchecked)
-- After user approval: `- [x] Approved` (checked)
+- New/draft specs: `- [ ] Approved`
+- After approval: `- [x] Approved`
 
-## Output Format
-
-```
-SPEC VALIDATION REPORT
-======================
-
-File: docs/specs/modules/user_auth.md
-Status: VALID / INVALID
-
-Errors:
-- [ERROR] Missing required field: purpose
-- [ERROR] Contains [TODO] placeholder in Dependencies
-
-Warnings:
-- [WARN] Changelog has no entries after initial
-- [WARN] No test_targets defined
-
-Suggestions:
-- Consider adding expected behavior section
-- Add example usage if applicable
-```
-
-## Usage
+## Output Format (STRICT)
 
 ```
-Validate spec for: user_auth module
-Check: docs/specs/modules/user_auth.md
-Report any issues found.
+SPEC VALIDATION: VALID | INVALID
+================================
+File: [path]
+
+ERRORS (block approval):
+- [ERROR] description
+
+WARNINGS (should fix):
+- [WARN] description
+
+OK:
+- [OK] check description
 ```
+
+## Decision Rule
+
+- Any ERROR → verdict is `INVALID`
+- Only WARNINGS or OK → verdict is `VALID`
