@@ -1,18 +1,78 @@
 """
 Trip management page with nested Stage/Waypoint editing.
+
+Includes GPX import at stage level (Feature: gpx_import_in_trip_dialog).
 """
 from __future__ import annotations
 
-from datetime import date, timedelta
-from typing import Any, Dict, List
+from datetime import date, datetime, timedelta, timezone
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from nicegui import ui
 
 from app.loader import delete_trip, load_all_trips, save_trip
+from app.models import EtappenConfig
 from app.trip import Stage, Trip, Waypoint
+from web.pages.gpx_upload import (
+    compute_full_segmentation,
+    process_gpx_upload,
+    segments_to_trip,
+)
 from web.pages.weather_config import show_weather_config_dialog
 from web.pages.report_config import make_report_config_handler
 from web.utils import parse_dms_coordinates
+
+
+# Default upload directory for GPX files imported via trip dialog
+_GPX_UPLOAD_DIR = Path("data/users/default/gpx")
+
+
+def gpx_to_stage_data(
+    content: bytes,
+    filename: str,
+    stage_date: Optional[date] = None,
+    start_hour: int = 8,
+    upload_dir: Path = _GPX_UPLOAD_DIR,
+) -> dict:
+    """Parse GPX file and return a single stage dict for the trip dialog.
+
+    1 GPX file = 1 Stage with N Waypoints.
+
+    Args:
+        content: Raw GPX file bytes.
+        filename: Original filename (must end with .gpx).
+        stage_date: Date for the stage (defaults to today).
+        start_hour: Start hour of the hike (0-23).
+        upload_dir: Directory to save the GPX file.
+
+    Returns:
+        Dict with keys: name, date, waypoints[]
+    """
+    track = process_gpx_upload(content, filename, upload_dir=upload_dir)
+    d = stage_date or date.today()
+
+    config = EtappenConfig()
+    start_time = datetime(d.year, d.month, d.day, start_hour, 0, 0,
+                          tzinfo=timezone.utc)
+    segments = compute_full_segmentation(track, config, start_time)
+    trip = segments_to_trip(segments, track, d)
+
+    stage = trip.stages[0]  # 1 GPX = 1 Stage
+    return {
+        "name": stage.name,
+        "date": stage.date.isoformat(),
+        "waypoints": [
+            {
+                "id": wp.id,
+                "name": wp.name,
+                "lat": wp.lat,
+                "lon": wp.lon,
+                "elevation_m": wp.elevation_m,
+            }
+            for wp in stage.waypoints
+        ],
+    }
 
 
 def render_header() -> None:
@@ -79,12 +139,41 @@ def render_trips() -> None:
                                 stages_ui.refresh()
                             return do_add
 
-                        ui.button("Add Stage", on_click=make_add_stage_handler(), icon="add").props("outline size=sm")
+                        with ui.row().classes("gap-2"):
+                            ui.button("Add Stage", on_click=make_add_stage_handler(), icon="add").props("outline size=sm")
+
+                            def make_add_stage_gpx_handler():
+                                """Factory: add new stage from GPX file."""
+                                async def do_upload(e):
+                                    content = e.content.read()
+                                    filename = e.name
+                                    if stages_data:
+                                        last_date = date.fromisoformat(stages_data[-1]["date"])
+                                        stage_date = last_date + timedelta(days=1)
+                                    else:
+                                        stage_date = date.today()
+                                    try:
+                                        stage_dict = gpx_to_stage_data(content, filename, stage_date)
+                                        stages_data.append(stage_dict)
+                                        stages_ui.refresh()
+                                        n_wps = len(stage_dict["waypoints"])
+                                        ui.notify(f"Stage '{stage_dict['name']}' aus GPX: {n_wps} Waypoints",
+                                                  type="positive")
+                                    except Exception as err:
+                                        ui.notify(f"GPX-Fehler: {err}", type="negative")
+                                return do_upload
+
+                            ui.upload(
+                                on_upload=make_add_stage_gpx_handler(),
+                                auto_upload=True,
+                                max_files=1,
+                                label="Stage from GPX",
+                            ).props('accept=".gpx" flat dense').classes("w-44")
 
                     @ui.refreshable
                     def stages_ui() -> None:
                         if not stages_data:
-                            ui.label("No stages yet. Click 'Add Stage'.").classes("text-gray-400 my-4")
+                            ui.label("No stages yet. Click 'Add Stage' or upload GPX.").classes("text-gray-400 my-4")
                             return
 
                         for idx, stage in enumerate(stages_data):
@@ -157,7 +246,33 @@ def render_trips() -> None:
                                         stages_ui.refresh()
                                     return add
 
-                                ui.button("Add Waypoint", on_click=make_add_wp(stage), icon="add_location").props("flat dense size=sm").classes("mt-1")
+                                with ui.row().classes("gap-2 mt-1 items-center"):
+                                    ui.button("Add Waypoint", on_click=make_add_wp(stage), icon="add_location").props("flat dense size=sm")
+
+                                    def make_import_wp_gpx_handler(stage_dict):
+                                        """Factory: replace waypoints of existing stage from GPX."""
+                                        async def do_upload(e):
+                                            content = e.content.read()
+                                            filename = e.name
+                                            stage_date_val = date.fromisoformat(stage_dict["date"])
+                                            try:
+                                                imported = gpx_to_stage_data(content, filename, stage_date_val)
+                                                stage_dict["waypoints"] = imported["waypoints"]
+                                                if stage_dict["name"].startswith("Stage "):
+                                                    stage_dict["name"] = imported["name"]
+                                                stages_ui.refresh()
+                                                ui.notify(f"GPX importiert: {len(imported['waypoints'])} Waypoints",
+                                                          type="positive")
+                                            except Exception as err:
+                                                ui.notify(f"GPX-Fehler: {err}", type="negative")
+                                        return do_upload
+
+                                    ui.upload(
+                                        on_upload=make_import_wp_gpx_handler(stage),
+                                        auto_upload=True,
+                                        max_files=1,
+                                        label="GPX Import",
+                                    ).props('accept=".gpx" flat dense').classes("w-36")
 
                     stages_ui()
 
@@ -287,7 +402,36 @@ def render_trips() -> None:
                                 stages_ui_edit.refresh()
                             return do_add
 
-                        ui.button("Add Stage", on_click=make_add_stage_edit_handler(), icon="add").props("outline size=sm")
+                        with ui.row().classes("gap-2"):
+                            ui.button("Add Stage", on_click=make_add_stage_edit_handler(), icon="add").props("outline size=sm")
+
+                            def make_add_stage_gpx_edit_handler():
+                                """Factory: add new stage from GPX file (edit dialog)."""
+                                async def do_upload(e):
+                                    content = e.content.read()
+                                    filename = e.name
+                                    if stages_data:
+                                        last_date = date.fromisoformat(stages_data[-1]["date"])
+                                        stage_date = last_date + timedelta(days=1)
+                                    else:
+                                        stage_date = date.today()
+                                    try:
+                                        stage_dict = gpx_to_stage_data(content, filename, stage_date)
+                                        stages_data.append(stage_dict)
+                                        stages_ui_edit.refresh()
+                                        n_wps = len(stage_dict["waypoints"])
+                                        ui.notify(f"Stage '{stage_dict['name']}' aus GPX: {n_wps} Waypoints",
+                                                  type="positive")
+                                    except Exception as err:
+                                        ui.notify(f"GPX-Fehler: {err}", type="negative")
+                                return do_upload
+
+                            ui.upload(
+                                on_upload=make_add_stage_gpx_edit_handler(),
+                                auto_upload=True,
+                                max_files=1,
+                                label="Stage from GPX",
+                            ).props('accept=".gpx" flat dense').classes("w-44")
 
                     @ui.refreshable
                     def stages_ui_edit() -> None:
@@ -365,7 +509,33 @@ def render_trips() -> None:
                                         stages_ui_edit.refresh()
                                     return add
 
-                                ui.button("Add Waypoint", on_click=make_add_wp_edit(stage), icon="add_location").props("flat dense size=sm").classes("mt-1")
+                                with ui.row().classes("gap-2 mt-1 items-center"):
+                                    ui.button("Add Waypoint", on_click=make_add_wp_edit(stage), icon="add_location").props("flat dense size=sm")
+
+                                    def make_import_wp_gpx_edit_handler(stage_dict):
+                                        """Factory: replace waypoints of existing stage from GPX (edit dialog)."""
+                                        async def do_upload(e):
+                                            content = e.content.read()
+                                            filename = e.name
+                                            stage_date_val = date.fromisoformat(stage_dict["date"])
+                                            try:
+                                                imported = gpx_to_stage_data(content, filename, stage_date_val)
+                                                stage_dict["waypoints"] = imported["waypoints"]
+                                                if stage_dict["name"].startswith("Stage "):
+                                                    stage_dict["name"] = imported["name"]
+                                                stages_ui_edit.refresh()
+                                                ui.notify(f"GPX importiert: {len(imported['waypoints'])} Waypoints",
+                                                          type="positive")
+                                            except Exception as err:
+                                                ui.notify(f"GPX-Fehler: {err}", type="negative")
+                                        return do_upload
+
+                                    ui.upload(
+                                        on_upload=make_import_wp_gpx_edit_handler(stage),
+                                        auto_upload=True,
+                                        max_files=1,
+                                        label="GPX Import",
+                                    ).props('accept=".gpx" flat dense').classes("w-36")
 
                     stages_ui_edit()
 
