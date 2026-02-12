@@ -233,12 +233,8 @@ class TripAlertService:
         from providers.base import get_provider
         from services.segment_weather import SegmentWeatherService
 
-        # Get provider
-        try:
-            provider = get_provider("geosphere")
-        except Exception:
-            logger.warning("GeoSphere unavailable, falling back to OpenMeteo")
-            provider = get_provider("openmeteo")
+        # OpenMeteo with automatic regional model selection
+        provider = get_provider("openmeteo")
 
         service = SegmentWeatherService(provider)
 
