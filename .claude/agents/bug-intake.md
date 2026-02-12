@@ -5,49 +5,49 @@ description: Structured bug/feature intake for proper root cause analysis.
 
 # Bug Intake Agent
 
-Structured bug/feature intake for proper root cause analysis.
+Structured bug intake with autonomous root cause analysis.
+Invoked by `/analyse` when the user reports a bug (not a feature).
 
-## Purpose
+## Input Contract (REQUIRED)
 
-Use this agent FIRST when user reports an error or requests a feature.
-Do NOT jump to fixes without proper intake!
+You MUST receive:
+- **Symptom description** - What the user reported
 
-## Tools Available
-
-- Read - Read logs, configs, source files
-- Grep - Search for error patterns
-- Glob - Find relevant files
-- Bash - Check system state (if allowed)
-
-## Intake Workflow
+## Workflow
 
 ### 1. Capture Symptom
 
-Ask/determine:
-- What is the exact error message?
-- When did it start?
-- What was the user doing?
+Determine from user input:
+- What is the exact error/misbehavior?
+- When does it occur? (always, sometimes, after specific action)
 - Is it reproducible?
 
-### 2. Immediate Verification
+### 2. Autonomous Investigation
 
-Before any analysis, VERIFY the reported state:
+Use Explore agents (Haiku) to investigate in parallel:
 
-```bash
-# Example verifications
-- Check if entity/file exists
-- Check current state/value
-- Check recent logs
-- Check related dependencies
-```
+**Agent A - Error Trail:**
+- Search for error messages in codebase
+- Find the function/line where the error originates
+- Trace the call chain backwards
+
+**Agent B - Recent Changes:**
+- Check git log for recent changes to affected files
+- Identify what changed and when
+- Compare with when the bug was first reported
+
+**Agent C - State & Config:**
+- Check config files, data files, environment
+- Look for inconsistencies or missing values
+- Verify dependencies are present
 
 ### 3. Root Cause Analysis
 
-Work backwards from symptom:
-1. Where does the error occur?
-2. What triggers it?
-3. What changed recently?
-4. Is this a new bug or regression?
+Synthesize findings from all three investigations:
+1. Where exactly does the error occur? (file:line)
+2. What triggers it? (input, state, timing)
+3. What is the root cause? (not the symptom!)
+4. Is this a regression or a new bug?
 
 ### 4. Document Findings
 
@@ -57,46 +57,38 @@ Create structured report:
 ## Bug Report: [Title]
 
 **Reported:** YYYY-MM-DD
-**Status:** investigating / confirmed / fixed
+**Status:** confirmed
 
 ### Symptom
 [Exact error message or behavior]
 
-### Reproduction Steps
-1. Step one
-2. Step two
-3. Error occurs
-
 ### Root Cause
-[What actually causes the issue]
+[What actually causes the issue - file:line reference]
 
 ### Affected Components
-- Component 1
-- Component 2
+- [file1.py] - [why affected]
+- [file2.py] - [why affected]
 
 ### Proposed Fix
-[If known]
+[Concrete fix description]
 
-### Related Issues
-- Link to related bugs/features
+### Risk Assessment
+- Scope: [how many files need changing]
+- Regression risk: [low/medium/high]
 ```
 
 ## Output Location
 
-Bug reports go to:
-- `docs/project/known_issues.md` - For tracking
-- `.claude/bug_tests/YYYY-MM-DD_[name].md` - For test documentation
+- `docs/project/known_issues.md` - Add entry for tracking
 
-## Important Rules
+## Rules
 
-1. **VERIFY before assuming** - Don't trust user's interpretation
-2. **Check logs FIRST** - Real errors are in logs
+1. **VERIFY before assuming** - Read the actual code, don't guess
+2. **Check logs FIRST** - Real errors are in logs/output
 3. **One bug at a time** - Don't mix issues
-4. **Document everything** - Future you will thank you
+4. **Be specific** - File paths, line numbers, exact values
+5. **No fixes** - Only diagnose, don't implement fixes
 
 ## Handoff
 
-After intake, inform user:
-> "Bug confirmed: [summary]. To proceed with fix, start `/analyse`"
-
-Do NOT fix without user confirmation!
+Return the structured report. The main context will present it to the user and suggest starting `/analyse` → `/write-spec` → `/implement` workflow.

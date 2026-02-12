@@ -2,29 +2,57 @@
 
 You are starting the **Spec Writing Phase**.
 
-## Prerequisites:
+## Prerequisites
 
 Check `.claude/workflow_state.json`:
 - `current_phase` must be `analyse_done`
 
-## Your Tasks:
+If not, tell the user to run `/analyse` first.
 
-1. **Use the spec-writer agent** or create spec manually
-2. **Create spec in docs/specs/** using the template
-3. **Fill in all required fields:**
-   - entity_id (in frontmatter)
-   - Purpose (at least 1 sentence)
-   - Source (file + identifier)
-   - Dependencies (table with all source entities)
-4. **Set approval checkbox to `[ ]`** (not approved yet)
+## Step 1: Gather Context
 
-## Spec Template Location:
+Collect from the current conversation:
+- **Feature name** from workflow state
+- **Analysis results** from Phase 1 (affected files, dependencies, strategy)
+- **User requirements** from the original request
 
-`docs/specs/_template.md`
+## Step 2: Create Spec via Agent
 
-## Update Workflow State:
+Launch a **general-purpose agent** (Sonnet for writing quality):
 
-After creating the spec:
+```
+Task(subagent_type="general-purpose", model="sonnet", prompt="
+  You are a spec writer. Follow the instructions in .claude/agents/spec-writer.md exactly.
+
+  INPUT:
+  - Feature Name: [NAME]
+  - Analysis Summary: [PASTE ANALYSIS]
+  - Affected Files: [LIST]
+  - Dependencies: [LIST]
+
+  Read the template from docs/specs/_template.md first.
+  Read existing specs in docs/specs/ to match style.
+  Create the spec file. Return the file path when done.
+")
+```
+
+## Step 3: Validate Spec via Agent
+
+After the spec is created, launch a **spec-validator agent** (Haiku for speed):
+
+```
+Task(subagent_type="spec-validator", model="haiku", prompt="
+  Validate the spec at: [SPEC_PATH]
+  Follow the validation rules in .claude/agents/spec-validator.md.
+  Return VALID or INVALID with details.
+")
+```
+
+**If INVALID:** Fix the issues yourself (in main context), then re-validate.
+**If VALID:** Proceed to Step 4.
+
+## Step 4: Update Workflow State
+
 ```json
 {
   "current_phase": "spec_written",
@@ -35,11 +63,11 @@ After creating the spec:
 }
 ```
 
-## Next Step:
+## Step 5: Present to User
 
-Present the spec to the user and ask for approval:
-> "Spec created at `[path]`. Please review and confirm with 'approved' or 'freigabe'."
+Show the spec content to the user and ask:
+> "Spec erstellt: `[path]`. Bitte pruefen und mit 'approved' oder 'freigabe' bestaetigen."
 
-**IMPORTANT:** Do NOT implement until the user explicitly approves the spec!
+**IMPORTANT:** Do NOT implement until the user explicitly approves!
 
-The `workflow_state_updater` hook will automatically detect approval phrases and update the state.
+The `workflow_state_updater` hook will automatically detect approval phrases.

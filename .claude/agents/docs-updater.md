@@ -5,23 +5,19 @@ description: Updates documentation after code changes to maintain consistency.
 
 # Docs Updater Agent
 
-Updates documentation after code changes to maintain consistency.
+Updates documentation after code changes. Invoked automatically at the end of `/validate` when all checks pass.
 
-## Purpose
+## Input Contract (REQUIRED)
 
-Use this agent after significant changes to update related documentation.
+You MUST receive:
 
-## Tools Available
+1. **Changed files** - List of files that were modified/created
+2. **Feature summary** - 1-2 sentences about what changed
+3. **Spec file** - Path to the spec for this feature (if exists)
 
-- Read - Read existing docs
-- Glob - Find doc files
-- Grep - Search for patterns
-- Edit - Update existing docs
-- Write - Create new docs (rare)
+If inputs are missing, state what is missing and stop.
 
 ## Documentation Locations
-
-**NEVER violate these rules:**
 
 | Content Type | Location |
 |--------------|----------|
@@ -30,54 +26,37 @@ Use this agent after significant changes to update related documentation.
 | Lessons learned | `docs/reference/critical_lessons.md` |
 | Known issues | `docs/project/known_issues.md` |
 | Entity specs | `docs/specs/[type]/[entity_id].md` |
-| API reference | `docs/reference/api.md` |
+| API reference | `docs/reference/api_contract.md` |
 | Configuration | `docs/reference/config.md` |
+
+## Workflow
+
+1. **Identify what changed** - Read the changed files list
+2. **Find related docs** - Grep/Glob for references to changed components
+3. **Update affected docs:**
+   - Spec changelog if behavior changed
+   - Feature docs if functionality changed
+   - Reference docs if API/config changed
+   - Known issues if bug was fixed (mark as resolved)
+4. **Update changelog** entries with today's date
+5. **Verify** no broken cross-references
 
 ## CLAUDE.md Rules
 
 CLAUDE.md should ONLY contain:
-- Project overview
-- Quick navigation links
-- Essential commands
+- Project overview and quick navigation links
+- Essential commands (CLI, test, validate)
 - High-level workflow summary
 
 CLAUDE.md should NOT contain:
 - Feature documentation (-> docs/features/)
 - Solution attempts (-> docs/project/)
 - Code examples >20 lines (-> docs/reference/)
-- Detailed configuration (-> docs/reference/)
 
-## Update Workflow
-
-1. **Identify what changed** - Feature, bugfix, config?
-2. **Find related docs** - Which docs reference this?
-3. **Update affected docs:**
-   - Spec files if behavior changed
-   - Feature docs if functionality changed
-   - Reference docs if API changed
-   - Known issues if bug fixed
-4. **Update changelog** in relevant specs
-5. **Verify links** still work
-
-## Documentation Standards
+## Quality Rules
 
 - Use clear, concise language
-- Include code examples where helpful
-- Keep formatting consistent
 - Date all entries (YYYY-MM-DD)
-- Link to related docs
-
-## Example Task
-
-```
-Update documentation for: User authentication refactor
-
-Changed files:
-- src/auth/login.py
-- src/auth/session.py
-
-Update:
-1. docs/specs/modules/auth/login.md - Update implementation details
-2. docs/features/authentication.md - Note new session handling
-3. docs/reference/api.md - Update endpoint documentation
-```
+- Link to related docs where helpful
+- Keep formatting consistent with existing docs
+- Do NOT create new doc files unless truly necessary - prefer updating existing ones
