@@ -38,7 +38,7 @@ except ImportError:
 
 
 def load_state() -> dict:
-    """Load current workflow state."""
+    """Load current workflow state (supports both v1 and v2 multi-workflow format)."""
     state_file = get_state_file_path()
 
     if not state_file.exists():
@@ -52,7 +52,25 @@ def load_state() -> dict:
         }
 
     with open(state_file, 'r') as f:
-        return json.load(f)
+        state = json.load(f)
+
+    # Check for multi-workflow format (v2.0)
+    if state.get("version") == "2.0" and "workflows" in state:
+        active_workflow = state.get("active_workflow")
+        if active_workflow and active_workflow in state["workflows"]:
+            # Return active workflow data in old format for backward compatibility
+            workflow = state["workflows"][active_workflow]
+            return {
+                "current_phase": workflow.get("current_phase", "idle"),
+                "feature_name": active_workflow,
+                "spec_file": workflow.get("spec_file"),
+                "spec_approved": workflow.get("spec_approved", False),
+                "implementation_done": workflow.get("current_phase") in ["phase7_validate", "phase8_done"],
+                "validation_done": workflow.get("current_phase") == "phase8_done",
+            }
+
+    # Return as-is for old format (v1)
+    return state
 
 
 def is_always_allowed(file_path: str) -> bool:
@@ -78,68 +96,129 @@ def get_phase_error(state: dict, file_path: str) -> str | None:
     """Generate error message based on current state."""
     phase = state.get("current_phase", "idle")
 
-    if phase == "idle":
+    # Support both old (v1) and new (v2) phase names
+    if phase in ["idle", "phase0_idle"]:
         return """
-+======================================================================+
-|  WORKFLOW NOT STARTED!                                               |
-+======================================================================+
-|  You're trying to modify code without starting the workflow.         |
-|                                                                      |
-|  REQUIRED ORDER:                                                     |
-|  1. /analyse     - Understand the request, research codebase         |
-|  2. /write-spec  - Create specification                              |
-|  3. User says "approved" - Spec approval                             |
-|  4. /implement   - NOW you can implement!                            |
-|  5. /validate    - Validation before commit                          |
-|                                                                      |
-|  Start with: /analyse                                                |
-+======================================================================+
+╔══════════════════════════════════════════════════════════════════╗
+║  WORKFLOW NOT STARTED!                                           ║
+╠══════════════════════════════════════════════════════════════════╣
+║  You're trying to modify code without starting the workflow.     ║
+║                                                                  ║
+║  REQUIRED WORKFLOW:                                              ║
+║  ┌─────────────────────────────────────────────────────────────┐ ║
+║  │ /context    → Gather relevant context         (Phase 1)     │ ║
+║  │ /analyse    → Analyse requirements            (Phase 2)     │ ║
+║  │ /write-spec → Create specification            (Phase 3)     │ ║
+║  │ "approved"  → User approval                   (Phase 4)     │ ║
+║  │ /tdd-red    → Write FAILING tests             (Phase 5)     │ ║
+║  │ /implement  → Make tests GREEN                (Phase 6)     │ ║
+║  │ /validate   → Manual validation               (Phase 7)     │ ║
+║  └─────────────────────────────────────────────────────────────┘ ║
+║                                                                  ║
+║  START WITH: /context or /analyse                                ║
+╚══════════════════════════════════════════════════════════════════╝
 """
 
-    if phase == "analyse_done":
+    if phase in ["phase1_context"]:
         return """
-+======================================================================+
-|  SPEC MISSING!                                                       |
-+======================================================================+
-|  Analysis is complete, but no spec has been written.                 |
-|                                                                      |
-|  Next step: /write-spec                                              |
-|                                                                      |
-|  NO implementation without a spec!                                   |
-+======================================================================+
+╔══════════════════════════════════════════════════════════════════╗
+║  CONTEXT PHASE - Analysis Required                               ║
+╠══════════════════════════════════════════════════════════════════╣
+║  Context is being gathered, but analysis isn't complete.         ║
+║                                                                  ║
+║  NEXT: /analyse                                                  ║
+║                                                                  ║
+║  Complete the analysis before modifying code!                    ║
+╚══════════════════════════════════════════════════════════════════╝
 """
 
-    if phase == "spec_written" and not state.get("spec_approved"):
+    if phase in ["analyse_done", "phase2_analyse"]:
+        return """
+╔══════════════════════════════════════════════════════════════════╗
+║  SPEC MISSING!                                                   ║
+╠══════════════════════════════════════════════════════════════════╣
+║  Analysis is complete, but no spec has been written.             ║
+║                                                                  ║
+║  NEXT: /write-spec                                               ║
+║                                                                  ║
+║  The spec defines WHAT to build and HOW to test it.              ║
+║  NO implementation without a spec!                               ║
+╚══════════════════════════════════════════════════════════════════╝
+"""
+
+    if phase in ["spec_written", "phase3_spec"]:
         spec_file = state.get("spec_file", "unknown")
         return f"""
-+======================================================================+
-|  SPEC NOT APPROVED!                                                  |
-+======================================================================+
-|  Spec exists but user hasn't approved it.                            |
-|                                                                      |
-|  Spec file: {spec_file[:50]}
-|                                                                      |
-|  User must confirm with one of:                                      |
-|  - "approved"                                                        |
-|  - "freigabe"                                                        |
-|  - "spec ok"                                                         |
-|  - "lgtm"                                                            |
-|                                                                      |
-|  NO implementation without user approval!                            |
-+======================================================================+
+╔══════════════════════════════════════════════════════════════════╗
+║  SPEC NOT APPROVED!                                              ║
+╠══════════════════════════════════════════════════════════════════╣
+║  Spec exists but USER hasn't approved it yet.                    ║
+║                                                                  ║
+║  Spec: {spec_file[:55]:<55}║
+║                                                                  ║
+║  USER must confirm with one of:                                  ║
+║    "approved" | "freigabe" | "spec ok" | "lgtm"                  ║
+║                                                                  ║
+║  Claude CANNOT approve specs - only the user can!                ║
+╚══════════════════════════════════════════════════════════════════╝
 """
 
-    if phase == "implemented" and not state.get("validation_done"):
+    if phase in ["spec_approved", "phase4_approved"]:
+        red_done = state.get("red_test_done", False)
+        if not red_done:
+            return """
+╔══════════════════════════════════════════════════════════════════╗
+║  TDD RED PHASE REQUIRED!                                         ║
+╠══════════════════════════════════════════════════════════════════╣
+║  Spec is approved, but you must write FAILING tests first!       ║
+║                                                                  ║
+║  TDD = Test-Driven Development:                                  ║
+║  ┌─────────────────────────────────────────────────────────────┐ ║
+║  │  RED   → Write tests that FAIL (feature doesn't exist)      │ ║
+║  │  GREEN → Write code to make tests PASS                      │ ║
+║  │  REFACTOR → Clean up (optional)                             │ ║
+║  └─────────────────────────────────────────────────────────────┘ ║
+║                                                                  ║
+║  NEXT: /tdd-red                                                  ║
+║                                                                  ║
+║  Write tests, run them, capture the FAILURE as artifact!         ║
+╚══════════════════════════════════════════════════════════════════╝
+"""
+
+    if phase in ["phase5_tdd_red"]:
         return """
-+======================================================================+
-|  VALIDATION MISSING!                                                 |
-+======================================================================+
-|  Implementation is complete, but not validated.                      |
-|                                                                      |
-|  Next step: /validate                                                |
-|                                                                      |
-|  NO commit without validation!                                       |
-+======================================================================+
+╔══════════════════════════════════════════════════════════════════╗
+║  TDD RED PHASE - Capture Failure First!                          ║
+╠══════════════════════════════════════════════════════════════════╣
+║  You're in the RED phase but haven't captured test failure yet.  ║
+║                                                                  ║
+║  REQUIRED:                                                       ║
+║  1. Write tests for the new functionality                        ║
+║  2. Run tests - they MUST FAIL                                   ║
+║  3. Capture failure: /add-artifact                               ║
+║                                                                  ║
+║  Only after capturing RED failure can you implement!             ║
+╚══════════════════════════════════════════════════════════════════╝
+"""
+
+    if phase in ["phase6_implement"]:
+        # Allow writes during implementation phase (GREEN phase in TDD)
+        # This is where code is written to make tests pass
+        return None
+
+    if phase in ["implemented"]:
+        # Old phase name - treated as "implementation done, needs validation"
+        if not state.get("validation_done", False) and not state.get("green_test_done", False):
+            return """
+╔══════════════════════════════════════════════════════════════════╗
+║  VALIDATION REQUIRED!                                            ║
+╠══════════════════════════════════════════════════════════════════╣
+║  Implementation done, but not validated yet.                     ║
+║                                                                  ║
+║  NEXT: /validate                                                 ║
+║                                                                  ║
+║  Verify tests are GREEN and do manual testing!                   ║
+╚══════════════════════════════════════════════════════════════════╝
 """
 
     return None
