@@ -4,9 +4,11 @@
 
 Das Gregor Zwanzig Projekt nutzt den OpenSpec Framework Workflow, der aus 4 sequentiellen Phasen besteht. Jede Phase wird durch einen Skill-Command ausgelöst und delegiert Aufgaben an spezialisierte Sub-Agenten mit strategischer Model-Auswahl.
 
+**Command Naming:** Projekt nutzt die canonische OpenSpec-Namenskonvention mit Dashes (`/2-analyse`, `/3-write-spec`). Frühere Underscore-Varianten (`/1_analyse`, `/2_write-spec`) wurden im Februar 2026 gemerged und entfernt.
+
 ## Die 4 Phasen
 
-### 1. Analyse (`/analyse`)
+### 1. Analyse (`/2-analyse`)
 
 **Ziel:** Request verstehen, Codebase durchsuchen, Strategie entwickeln
 
@@ -24,7 +26,7 @@ Das Gregor Zwanzig Projekt nutzt den OpenSpec Framework Workflow, der aus 4 sequ
 3. **Strategic Planning:** Plan/sonnet synthethisiert Erkenntnisse
 4. **Output:** Analyse-Zusammenfassung + workflow_state.json Update
 
-### 2. Spec schreiben (`/write-spec`)
+### 2. Spec schreiben (`/3-write-spec`)
 
 **Ziel:** Vollständige, konkrete Spezifikation erstellen
 
@@ -41,7 +43,7 @@ Das Gregor Zwanzig Projekt nutzt den OpenSpec Framework Workflow, der aus 4 sequ
 - KEINE Placeholders (TBD, TODO, etc.)
 - Konsistenz zwischen Sections
 
-### 3. Implementieren (`/implement`)
+### 3. Implementieren (`/5-implement`)
 
 **Ziel:** Spec in Code umsetzen, Tests schreiben
 
@@ -54,7 +56,7 @@ Das Gregor Zwanzig Projekt nutzt den OpenSpec Framework Workflow, der aus 4 sequ
 4. **Integration:** Syntax-Check, workflow_state.json Update
 5. **Output:** Implementierte Dateien + Tests
 
-### 4. Validieren (`/validate`)
+### 4. Validieren (`/6-validate`)
 
 **Ziel:** Alles prüfen, Auto-Fix, Doku aktualisieren
 
@@ -85,7 +87,7 @@ Das Gregor Zwanzig Projekt nutzt den OpenSpec Framework Workflow, der aus 4 sequ
 
 **workflow_gate.py:**
 - Blockiert Edit/Write auf geschützte Dateien ohne korrekten workflow_state
-- Erzwingt sequentielle Phasen (kein `/implement` ohne approved spec)
+- Erzwingt sequentielle Phasen (kein `/5-implement` ohne approved spec)
 
 **spec_enforcement.py:**
 - Prüft ob Spec existiert vor Implementation
