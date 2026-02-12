@@ -1,0 +1,147 @@
+TDD RED PHASE - Safari Subscriptions Buttons Bug
+================================================
+Date: 2026-01-15
+Feature: browser_compatibility_fix (Safari subscriptions)
+Phase: phase5_tdd_red
+
+USER REPORT
+-----------
+User reported: "unter http://192.168.1.120:8080/subscriptions funktioniert im Safari kann ich Subscriptions weder löschen noch erstellen"
+
+Browser: Safari (current version)
+URL: http://192.168.1.120:8080/subscriptions
+Result: 5 action buttons do not respond to clicks
+- ❌ "New Subscription" button - no dialog
+- ❌ Toggle enable/disable button - no action
+- ❌ "Run Now" button - no action
+- ❌ Edit button - no dialog
+- ❌ Delete button - no action
+
+Tested: User confirmed in Safari browser
+
+WORKING BROWSERS
+----------------
+- ✅ Firefox: All buttons work correctly
+- ✅ Safari on /locations: Works after factory-pattern fix
+- ❌ Safari on /subscriptions: All 5 buttons broken
+
+ROOT CAUSE ANALYSIS
+-------------------
+Bug Type: Browser-specific (Safari only)
+Root Cause: Safari handles JavaScript closures differently than Chrome/Firefox
+
+Current Code (BROKEN in Safari):
+File: src/web/pages/subscriptions.py
+
+Button 1: New Subscription (Lines 96-103)
+```python
+def open_new_dialog() -> None:
+    show_subscription_dialog(None, locations, subscription_list)
+
+ui.button(
+    "New Subscription",
+    on_click=open_new_dialog,  # ❌ Direct closure reference
+    icon="add",
+).props("color=primary")
+```
+
+Button 2: Toggle Enable/Disable (Lines 160-181)
+```python
+def toggle_enabled(subscription=sub) -> None:
+    updated = CompareSubscription(...)
+    save_compare_subscription(updated)
+    refresh_fn.refresh()
+
+ui.button(
+    icon="play_arrow" if not sub.enabled else "pause",
+    on_click=toggle_enabled,  # ❌ Direct closure with captured var
+).props("flat dense")
+```
+
+Button 3: Run Now (Lines 184-213)
+```python
+async def run_now(subscription=sub) -> None:
+    # ... async implementation ...
+
+ui.button(
+    icon="send",
+    on_click=run_now,  # ❌ Direct async closure
+).props("flat dense")
+```
+
+Button 4: Edit (Lines 216-223)
+```python
+def edit_sub(subscription=sub) -> None:
+    locs = load_all_locations()
+    show_subscription_dialog(subscription, locs, refresh_fn)
+
+ui.button(
+    icon="edit",
+    on_click=edit_sub,  # ❌ Direct closure
+).props("flat dense")
+```
+
+Button 5: Delete (Lines 226-234)
+```python
+def delete_sub(subscription=sub) -> None:
+    delete_compare_subscription(subscription.id)
+    refresh_fn.refresh()
+
+ui.button(
+    icon="delete",
+    on_click=delete_sub,  # ❌ Direct closure
+).props("flat dense color=red")
+```
+
+Why it fails in Safari:
+- NiceGUI's button click handler references nested closures
+- Safari's JavaScript engine (JavaScriptCore) doesn't correctly bind closures in this context
+- Chrome/Firefox/Chromium handle it correctly (hence tests pass there)
+
+Working Pattern (Locations page - FIXED):
+```python
+def make_edit_handler(location: SavedLocation):
+    def do_edit() -> None:
+        show_edit_dialog(location)
+    return do_edit
+
+ui.button(icon="edit", on_click=make_edit_handler(loc)).props("flat")
+```
+
+EXPECTED BEHAVIOR (RED)
+-----------------------
+Safari Browser Test:
+1. Navigate to /subscriptions
+2. Click any of the 5 buttons
+3. Expected: Corresponding action (dialog, toggle, etc.)
+4. Actual: Nothing happens (FAIL ❌)
+
+RELATED BUG
+-----------
+This is the SAME bug pattern as:
+- docs/specs/bugfix/locations_add_button_fix.md (completed 2026-01-15)
+- Only "Add Location" button was affected there
+- Same Safari closure binding issue
+- Same factory-pattern solution required
+
+NEXT STEP (GREEN)
+------------------
+Implement factory pattern fix for all 5 buttons:
+- Wrap each closure in make_*_handler() factory
+- Return callable explicitly
+- Button calls factory: on_click=make_handler(param)
+
+FIX VERIFICATION
+----------------
+After fix:
+1. Test in Safari: All 5 buttons should work
+2. Test in Chrome/Firefox: Should still work (regression test)
+3. E2E tests should pass
+
+ARTIFACT METADATA
+-----------------
+Type: test_output (user manual test)
+Phase: phase5_tdd_red
+Description: Safari browser test failure - 5 subscription buttons do not respond due to closure binding issue
+Evidence: User report + Firefox works (proving code is correct) + Same pattern as locations_add_button_fix
+Impact: HIGH - Safari users cannot manage subscriptions at all

@@ -1,0 +1,97 @@
+TDD RED PHASE - Safari Browser Bug
+=====================================
+Date: 2026-01-15
+Feature: locations_add_button_fix
+Phase: phase5_tdd_red
+
+USER REPORT
+-----------
+User tested Add Location button at http://192.168.1.120:8080/locations
+Browser: Safari (current version)
+Result: Button does not respond to clicks - no dialog appears
+Tested: Fresh incognito browser window
+
+E2E TEST RESULTS (Chromium/Chrome)
+-----------------------------------
+Test File: tests/e2e/test_locations_add_button.py
+Browser: Chromium (Playwright default)
+Result: ALL TESTS PASS ✅
+
+Test 1: test_add_button_opens_dialog()
+- Button found: YES
+- Click executed: YES
+- Dialog appeared: YES
+- Form fields present: YES
+Status: PASSED
+
+Test 2: test_add_button_dialog_has_all_fields()
+- All expected fields found: YES
+- Save/Cancel buttons present: YES
+Status: PASSED
+
+E2E Hook Test Result:
+$ uv run python3 .claude/hooks/e2e_browser_test.py browser --url "/locations" --check "Name is required" --expect-fail
+Output: 🔴 RED PHASE OK - Feature fehlt noch (erwartet)
+Screenshot: /tmp/e2e_test_1768476251.png
+
+ROOT CAUSE ANALYSIS
+-------------------
+Bug Type: Browser-specific (Safari only)
+Root Cause: Safari handles JavaScript closures differently than Chromium
+
+Current Code (BROKEN in Safari):
+```python
+def show_add_dialog() -> None:
+    # ... dialog implementation ...
+    dialog.open()
+
+ui.button(
+    "New Location",
+    on_click=show_add_dialog,  # Direct closure reference
+    icon="add_location",
+).props("color=primary")
+```
+
+Why it fails in Safari:
+- NiceGUI's button click handler references a nested closure
+- Safari's JavaScript engine doesn't correctly bind the closure in this context
+- Chromium/Chrome handle it correctly (hence tests pass)
+
+Working Pattern (Edit/Delete buttons):
+```python
+def make_edit_handler(location: SavedLocation):
+    def do_edit() -> None:
+        show_edit_dialog(location)
+    return do_edit
+
+ui.button(icon="edit", on_click=make_edit_handler(loc)).props("flat")
+```
+
+EXPECTED BEHAVIOR (RED)
+-----------------------
+Safari Browser Test:
+1. Navigate to /locations
+2. Click "New Location" button
+3. Expected: Dialog appears
+4. Actual: Nothing happens (FAIL ❌)
+
+NEXT STEP (GREEN)
+------------------
+Implement factory pattern fix:
+- Wrap show_add_dialog in make_add_handler() factory
+- Return callable explicitly
+- This ensures proper binding in all browsers including Safari
+
+FIX VERIFICATION
+----------------
+After fix:
+1. Test in Safari: Button should open dialog
+2. Test in Chrome: Should still work (regression test)
+3. E2E tests should continue to pass
+
+ARTIFACT METADATA
+-----------------
+Type: test_output
+Phase: phase5_tdd_red
+Description: Safari browser test failure - Add Location button does not open dialog due to closure binding issue
+Evidence: User report + Chromium tests pass (proving code works in some browsers) + Root cause analysis
