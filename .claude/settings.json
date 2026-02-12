@@ -111,7 +111,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "afplay /System/Library/Sounds/Glass.aiff",
+            "command": "python3 .claude/hooks/notify_sound.py",
             "timeout": 5
           }
         ]
