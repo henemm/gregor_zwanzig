@@ -24,22 +24,35 @@ Determine from user input:
 
 ### 2. Autonomous Investigation
 
-Use Explore agents (Haiku) to investigate in parallel:
+Launch **3 Explore agents in parallel** (all Haiku for speed) in a SINGLE message:
 
 **Agent A - Error Trail:**
-- Search for error messages in codebase
-- Find the function/line where the error originates
-- Trace the call chain backwards
+```
+Task(subagent_type="Explore", model="haiku", prompt="
+  Search for error message: [ERROR_TEXT]
+  Find the function/line where the error originates.
+  Trace the call chain backwards to the root.
+  Report: file:line, call chain, triggering input.
+")
+```
 
 **Agent B - Recent Changes:**
-- Check git log for recent changes to affected files
-- Identify what changed and when
-- Compare with when the bug was first reported
+```
+Task(subagent_type="Explore", model="haiku", prompt="
+  Check git log for recent changes to files related to: [AFFECTED_AREA]
+  Identify what changed and when.
+  Report: changed files, dates, commit messages.
+")
+```
 
 **Agent C - State & Config:**
-- Check config files, data files, environment
-- Look for inconsistencies or missing values
-- Verify dependencies are present
+```
+Task(subagent_type="Explore", model="haiku", prompt="
+  Check config files, data files, and environment for: [AFFECTED_AREA]
+  Look for inconsistencies or missing values.
+  Report: config state, missing values, dependency issues.
+")
+```
 
 ### 3. Root Cause Analysis
 
