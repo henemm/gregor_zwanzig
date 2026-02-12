@@ -5,9 +5,11 @@ Run with: python -m src.web.main
 """
 from __future__ import annotations
 
+import uuid
 from pathlib import Path
 
 from nicegui import app, ui
+from starlette.responses import PlainTextResponse
 
 # Data directory for user files
 DATA_DIR = Path("data/users/default")
@@ -83,12 +85,26 @@ def create_header() -> None:
             ui.link("Settings", "/settings").classes("text-white mx-2")
 
 
-# Prevent Safari from caching HTML pages (fixes dead WebSocket on revisit)
+# Unique server instance ID - changes on every restart.
+# Client-side JS polls this to detect server restarts and auto-reload.
+SERVER_INSTANCE_ID = str(uuid.uuid4())
+
+
+@app.get("/_health")
+async def health_check():
+    return PlainTextResponse(SERVER_INSTANCE_ID)
+
+
+# Prevent Safari from caching responses (fixes dead WebSocket on revisit)
 # See: https://github.com/zauberzeug/nicegui/issues/5468
+# Applies to ALL responses EXCEPT NiceGUI's versioned static assets
+# (/_nicegui/X.Y.Z/static/... uses URL-based versioning and should stay cached)
 @app.middleware("http")
 async def no_cache_headers(request, call_next):
     response = await call_next(request)
-    if "text/html" in response.headers.get("content-type", ""):
+    url = str(request.url)
+    is_versioned_static = "/_nicegui/" in url and "/static/" in url
+    if not is_versioned_static:
         response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
         response.headers["Pragma"] = "no-cache"
         response.headers["Expires"] = "0"
@@ -96,13 +112,38 @@ async def no_cache_headers(request, call_next):
     return response
 
 
-# Safari BFCache auto-reload: when Safari restores a page from back-forward
-# cache (e.g. back button, tab switch), the WebSocket is dead but the page
-# looks normal. Detect this via pageshow event and force a real reload.
+# Measure 1: Meta cache-control tags (Safari sometimes respects meta when
+# it ignores HTTP headers)
+ui.add_head_html('''
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+''', shared=True)
+
+# Safari BFCache auto-reload + server restart detection
+# - BFCache: detects back-forward cache restore via pageshow event
+# - Instance check: polls /_health to detect server restarts, auto-reloads
 ui.add_head_html('''<script>
 window.addEventListener("pageshow", function(e) {
     if (e.persisted) { window.location.reload(); }
 });
+(function() {
+    var serverInstanceId = null;
+    function checkInstance() {
+        fetch("/_health", {cache: "no-store"})
+            .then(function(r) { return r.text(); })
+            .then(function(id) {
+                if (serverInstanceId === null) {
+                    serverInstanceId = id;
+                } else if (id !== serverInstanceId) {
+                    console.log("[safari-fix] Server restarted, reloading");
+                    window.location.reload();
+                }
+            })
+            .catch(function() {});
+    }
+    setInterval(checkInstance, 3000);
+})();
 </script>''', shared=True)
 
 

@@ -1,0 +1,100 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.2, pytest-8.4.1, pluggy-1.6.0
+rootdir: /opt/gregor_zwanziger
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 6 items
+
+tests/tdd/test_safari_cache_fix.py .FFFFF                                [100%]
+
+=================================== FAILURES ===================================
+__________ TestNoCacheMiddleware.test_non_html_response_has_no_cache ___________
+
+self = <tdd.test_safari_cache_fix.TestNoCacheMiddleware object at 0x7fa9d16da150>
+running_server = <Popen: returncode: None args: ['/opt/gregor_zwanziger/.venv/bin/python3', '...>
+
+    def test_non_html_response_has_no_cache(self, running_server):
+        """Non-HTML, non-versioned responses must also have no-cache headers."""
+        resp = httpx.get(
+            f"{SERVER_URL}/_nicegui_ws/socket.io/?EIO=4&transport=polling",
+            timeout=5,
+        )
+        cache_control = resp.headers.get("cache-control", "")
+>       assert "no-store" in cache_control or "no-cache" in cache_control, (
+            f"Non-versioned response missing no-cache: {cache_control}"
+        )
+E       AssertionError: Non-versioned response missing no-cache: 
+E       assert ('no-store' in '' or 'no-cache' in '')
+
+tests/tdd/test_safari_cache_fix.py:89: AssertionError
+_________________ TestMetaTags.test_meta_cache_control_present _________________
+
+self = <tdd.test_safari_cache_fix.TestMetaTags object at 0x7fa9d153ce50>
+running_server = <Popen: returncode: None args: ['/opt/gregor_zwanziger/.venv/bin/python3', '...>
+
+    def test_meta_cache_control_present(self, running_server):
+        """HTML must contain meta cache-control tags."""
+        resp = httpx.get(f"{SERVER_URL}/")
+>       assert '<meta http-equiv="Cache-Control"' in resp.text, (
+            "Missing meta Cache-Control tag"
+        )
+E       AssertionError: Missing meta Cache-Control tag
+E       assert '<meta http-equiv="Cache-Control"' in '<!DOCTYPE html>\n<html>\n  <head>\n    <title>NiceGUI</title>\n    <meta name="viewport" content="width=device-width,...link.js";\napp.component("nicegui-link", link);\n      \n\n      app.mount("#app");\n    </script>\n  </body>\n</html>'
+E        +  where '<!DOCTYPE html>\n<html>\n  <head>\n    <title>NiceGUI</title>\n    <meta name="viewport" content="width=device-width,...link.js";\napp.component("nicegui-link", link);\n      \n\n      app.mount("#app");\n    </script>\n  </body>\n</html>' = <Response [200 OK]>.text
+
+tests/tdd/test_safari_cache_fix.py:100: AssertionError
+____________________ TestMetaTags.test_meta_pragma_present _____________________
+
+self = <tdd.test_safari_cache_fix.TestMetaTags object at 0x7fa9d153d490>
+running_server = <Popen: returncode: None args: ['/opt/gregor_zwanziger/.venv/bin/python3', '...>
+
+    def test_meta_pragma_present(self, running_server):
+        """HTML must contain meta Pragma tag."""
+        resp = httpx.get(f"{SERVER_URL}/")
+>       assert '<meta http-equiv="Pragma"' in resp.text, (
+            "Missing meta Pragma tag"
+        )
+E       AssertionError: Missing meta Pragma tag
+E       assert '<meta http-equiv="Pragma"' in '<!DOCTYPE html>\n<html>\n  <head>\n    <title>NiceGUI</title>\n    <meta name="viewport" content="width=device-width,...link.js";\napp.component("nicegui-link", link);\n      \n\n      app.mount("#app");\n    </script>\n  </body>\n</html>'
+E        +  where '<!DOCTYPE html>\n<html>\n  <head>\n    <title>NiceGUI</title>\n    <meta name="viewport" content="width=device-width,...link.js";\napp.component("nicegui-link", link);\n      \n\n      app.mount("#app");\n    </script>\n  </body>\n</html>' = <Response [200 OK]>.text
+
+tests/tdd/test_safari_cache_fix.py:107: AssertionError
+__________ TestWebSocketHealthCheck.test_health_check_script_present ___________
+
+self = <tdd.test_safari_cache_fix.TestWebSocketHealthCheck object at 0x7fa9d153dc10>
+running_server = <Popen: returncode: None args: ['/opt/gregor_zwanziger/.venv/bin/python3', '...>
+
+    def test_health_check_script_present(self, running_server):
+        """HTML must contain the WebSocket health check script."""
+        resp = httpx.get(f"{SERVER_URL}/")
+>       assert "checkHealth" in resp.text, (
+            "Missing WebSocket health check script"
+        )
+E       AssertionError: Missing WebSocket health check script
+E       assert 'checkHealth' in '<!DOCTYPE html>\n<html>\n  <head>\n    <title>NiceGUI</title>\n    <meta name="viewport" content="width=device-width,...link.js";\napp.component("nicegui-link", link);\n      \n\n      app.mount("#app");\n    </script>\n  </body>\n</html>'
+E        +  where '<!DOCTYPE html>\n<html>\n  <head>\n    <title>NiceGUI</title>\n    <meta name="viewport" content="width=device-width,...link.js";\napp.component("nicegui-link", link);\n      \n\n      app.mount("#app");\n    </script>\n  </body>\n</html>' = <Response [200 OK]>.text
+
+tests/tdd/test_safari_cache_fix.py:118: AssertionError
+__________ TestWebSocketHealthCheck.test_disconnect_listener_present ___________
+
+self = <tdd.test_safari_cache_fix.TestWebSocketHealthCheck object at 0x7fa9d153e250>
+running_server = <Popen: returncode: None args: ['/opt/gregor_zwanziger/.venv/bin/python3', '...>
+
+    def test_disconnect_listener_present(self, running_server):
+        """Health check must listen for Socket.IO disconnect events."""
+        resp = httpx.get(f"{SERVER_URL}/")
+>       assert "disconnect" in resp.text, (
+            "Missing disconnect listener in health check"
+        )
+E       AssertionError: Missing disconnect listener in health check
+E       assert 'disconnect' in '<!DOCTYPE html>\n<html>\n  <head>\n    <title>NiceGUI</title>\n    <meta name="viewport" content="width=device-width,...link.js";\napp.component("nicegui-link", link);\n      \n\n      app.mount("#app");\n    </script>\n  </body>\n</html>'
+E        +  where '<!DOCTYPE html>\n<html>\n  <head>\n    <title>NiceGUI</title>\n    <meta name="viewport" content="width=device-width,...link.js";\napp.component("nicegui-link", link);\n      \n\n      app.mount("#app");\n    </script>\n  </body>\n</html>' = <Response [200 OK]>.text
+
+tests/tdd/test_safari_cache_fix.py:125: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_safari_cache_fix.py::TestNoCacheMiddleware::test_non_html_response_has_no_cache
+FAILED tests/tdd/test_safari_cache_fix.py::TestMetaTags::test_meta_cache_control_present
+FAILED tests/tdd/test_safari_cache_fix.py::TestMetaTags::test_meta_pragma_present
+FAILED tests/tdd/test_safari_cache_fix.py::TestWebSocketHealthCheck::test_health_check_script_present
+FAILED tests/tdd/test_safari_cache_fix.py::TestWebSocketHealthCheck::test_disconnect_listener_present
+========================= 5 failed, 1 passed in 1.52s ==========================
