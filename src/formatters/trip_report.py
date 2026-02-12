@@ -131,7 +131,7 @@ class TripReportFormatter:
 
     def _dp_to_row(self, dp: ForecastDataPoint, dc: EmailReportDisplayConfig) -> dict:
         """Convert a single ForecastDataPoint to a row dict."""
-        row: dict = {"time": dp.ts.strftime("%H:%M")}
+        row: dict = {"time": f"{dp.ts.hour:02d}"}
         if dc.show_temp_measured:
             row["temp"] = dp.t2m_c
         if dc.show_temp_felt:
@@ -157,15 +157,15 @@ class TripReportFormatter:
     # ------------------------------------------------------------------
 
     _COL_DEFS = [
-        ("temp", "Temperatur °C", "temp"),
-        ("felt", "Gefühlt °C", "felt"),
-        ("wind", "Wind km/h", "wind"),
-        ("gust", "Böen km/h", "gust"),
-        ("precip", "Regen mm", "precip"),
-        ("thunder", "Gewitter", "thunder"),
-        ("snow_limit", "Schneefallgr. m", "snow_limit"),
-        ("cloud", "Wolken %", "cloud"),
-        ("humidity", "Feuchte %", "humidity"),
+        ("temp", "Temp", "temp"),
+        ("felt", "Felt", "felt"),
+        ("wind", "Wind", "wind"),
+        ("gust", "Gust", "gust"),
+        ("precip", "Rain", "precip"),
+        ("thunder", "Thund", "thunder"),
+        ("snow_limit", "Snow", "snow_limit"),
+        ("cloud", "Clouds", "cloud"),
+        ("humidity", "Humid", "humidity"),
     ]
 
     def _visible_cols(self, rows: list[dict]) -> list[tuple[str, str]]:
@@ -328,6 +328,8 @@ class TripReportFormatter:
                 parts.append(f"↑{stage_stats['ascent_m']:.0f}m")
             if "descent_m" in stage_stats:
                 parts.append(f"↓{stage_stats['descent_m']:.0f}m")
+            if "max_elevation_m" in stage_stats:
+                parts.append(f"max. {stage_stats['max_elevation_m']}m")
             stats_line = " | ".join([f"{len(segments)} Segmente"] + parts)
 
         # Build segment tables HTML
@@ -338,7 +340,7 @@ class TripReportFormatter:
             e_elev = int(seg.end_point.elevation_m)
             seg_html_parts.append(f"""
             <div class="section">
-                <h3>Segment {seg.segment_id}: {s_elev}m → {e_elev}m | {seg.distance_km:.1f} km | {seg.start_time.strftime('%H:%M')}–{seg.end_time.strftime('%H:%M')}</h3>
+                <h3>Segment {seg.segment_id}: {seg.start_time.strftime('%H:%M')}–{seg.end_time.strftime('%H:%M')} | {seg.distance_km:.1f} km | ↑{s_elev}m → {e_elev}m</h3>
                 {self._render_html_table(rows, dc)}
             </div>""")
 
@@ -431,7 +433,7 @@ class TripReportFormatter:
         {changes_html}
 
         <div class="footer">
-            Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')} | Data: {segments[0].provider}
+            Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')} | Data: {segments[0].provider} ({segments[0].timeseries.meta.model})
         </div>
     </div>
 </body>
@@ -444,7 +446,7 @@ class TripReportFormatter:
             return "<p>Keine Daten</p>"
         cols = self._visible_cols(rows)
         # Header
-        ths = "<th>Uhrzeit</th>" + "".join(f"<th>{label}</th>" for _, label in cols)
+        ths = "<th>Time</th>" + "".join(f"<th>{label}</th>" for _, label in cols)
         # Rows
         trs = []
         for r in rows:
@@ -470,6 +472,17 @@ class TripReportFormatter:
         if stage_name:
             lines.append(stage_name)
         lines.append(report_date)
+        if stage_stats:
+            parts = []
+            if "distance_km" in stage_stats:
+                parts.append(f"{stage_stats['distance_km']:.1f} km")
+            if "ascent_m" in stage_stats:
+                parts.append(f"↑{stage_stats['ascent_m']:.0f}m")
+            if "descent_m" in stage_stats:
+                parts.append(f"↓{stage_stats['descent_m']:.0f}m")
+            if "max_elevation_m" in stage_stats:
+                parts.append(f"max. {stage_stats['max_elevation_m']}m")
+            lines.append(" | ".join(parts))
         lines.append("")
 
         # Segment tables
@@ -477,7 +490,7 @@ class TripReportFormatter:
             seg = seg_data.segment
             s_elev = int(seg.start_point.elevation_m)
             e_elev = int(seg.end_point.elevation_m)
-            lines.append(f"━━ Segment {seg.segment_id}: {s_elev}m → {e_elev}m | {seg.distance_km:.1f} km | {seg.start_time.strftime('%H:%M')}–{seg.end_time.strftime('%H:%M')} ━━")
+            lines.append(f"━━ Segment {seg.segment_id}: {seg.start_time.strftime('%H:%M')}–{seg.end_time.strftime('%H:%M')} | {seg.distance_km:.1f} km | ↑{s_elev}m → {e_elev}m ━━")
             lines.append(self._render_text_table(rows))
             lines.append("")
 
@@ -515,7 +528,7 @@ class TripReportFormatter:
 
         lines.append("-" * 60)
         lines.append(f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}")
-        lines.append(f"Data: {segments[0].provider}")
+        lines.append(f"Data: {segments[0].provider} ({segments[0].timeseries.meta.model})")
         return "\n".join(lines)
 
     def _render_text_table(self, rows: list[dict]) -> str:
@@ -524,7 +537,7 @@ class TripReportFormatter:
             return "  (keine Daten)"
         cols = self._visible_cols(rows)
         # Compute column widths
-        headers = [("Uhrzeit", "time")] + [(label, key) for key, label in cols]
+        headers = [("Time", "time")] + [(label, key) for key, label in cols]
         widths = []
         for label, key in headers:
             w = len(label)
