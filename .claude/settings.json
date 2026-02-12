@@ -11,21 +11,11 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 .claude/hooks/pre_commit_validation.py",
-            "timeout": 180
-          }
-        ]
-      },
-      {
         "matcher": "Edit|Write",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 .claude/hooks/claude_md_protection.py",
+            "command": "python3 .claude/hooks/workflow_gate.py",
             "timeout": 5
           },
           {
@@ -35,7 +25,42 @@
           },
           {
             "type": "command",
-            "command": "python3 .claude/hooks/workflow_gate.py",
+            "command": "python3 .claude/hooks/claude_md_protection.py",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/tdd_enforcement.py",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/red_test_gate.py",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/post_implementation_gate.py",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/scope_guard.py",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/plan_validator.py",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/ui_screenshot_gate.py",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/domain_pattern_guard.py",
             "timeout": 5
           },
           {
@@ -46,6 +71,36 @@
           {
             "type": "command",
             "command": "python3 .claude/hooks/track_changes.py",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/pre_commit_gate.py",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/pre_commit_validation.py",
+            "timeout": 180
+          },
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/secrets_guard.py",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/secrets_guard.py",
             "timeout": 5
           }
         ]

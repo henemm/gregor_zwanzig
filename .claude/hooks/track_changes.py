@@ -1,49 +1,145 @@
 #!/usr/bin/env python3
 """
-Track file changes for validation requirement.
+OpenSpec Framework - Track Changes Hook
 
-This hook runs on Edit/Write and records changed files.
+Records which files have been modified since last validation.
 Claude must validate before asking user to test.
 
+This enables the validation tool to know what changed.
+
+State File: .claude/validation_state.json
+Contains: {files_changed: [...], last_validation: timestamp}
+
 Exit Codes:
-- 0: Always passes (just records)
+- 0: Always (this hook only records, never blocks)
 """
 
 import json
+import os
 import sys
 from datetime import datetime
 from pathlib import Path
 
-STATE_FILE = Path(__file__).parent.parent / "validation_state.json"
+# Try to get project root
+try:
+    from config_loader import get_project_root
+except ImportError:
+    sys.path.insert(0, str(Path(__file__).parent))
+    try:
+        from config_loader import get_project_root
+    except ImportError:
+        def get_project_root():
+            cwd = Path.cwd()
+            for parent in [cwd] + list(cwd.parents):
+                if (parent / ".git").exists():
+                    return parent
+            return cwd
+
+
+def get_state_file() -> Path:
+    """Get path to validation state file."""
+    return get_project_root() / ".claude" / "validation_state.json"
 
 
 def load_state() -> dict:
-    if not STATE_FILE.exists():
+    """Load validation state."""
+    state_file = get_state_file()
+    if not state_file.exists():
         return {"files_changed": [], "last_validation": None}
-    with open(STATE_FILE, 'r') as f:
-        return json.load(f)
+    try:
+        with open(state_file, 'r') as f:
+            return json.load(f)
+    except (json.JSONDecodeError, Exception):
+        return {"files_changed": [], "last_validation": None}
 
 
 def save_state(state: dict):
-    with open(STATE_FILE, 'w') as f:
+    """Save validation state."""
+    state_file = get_state_file()
+    state_file.parent.mkdir(parents=True, exist_ok=True)
+    with open(state_file, 'w') as f:
         json.dump(state, f, indent=2)
 
 
+# File patterns to skip (not code)
+SKIP_PATTERNS = [
+    ".json",
+    "validation_state",
+    "__pycache__",
+    ".md",
+    ".txt",
+    ".gitignore",
+    ".claude/",
+    "node_modules/",
+    ".git/",
+]
+
+# Code file extensions to track
+CODE_EXTENSIONS = [
+    ".py",
+    ".js",
+    ".ts",
+    ".tsx",
+    ".jsx",
+    ".swift",
+    ".kt",
+    ".java",
+    ".go",
+    ".rs",
+    ".cpp",
+    ".c",
+    ".h",
+]
+
+
+def should_track(file_path: str) -> bool:
+    """Check if file should be tracked."""
+    # Skip patterns
+    for pattern in SKIP_PATTERNS:
+        if pattern in file_path:
+            return False
+
+    # Check if it's a code file
+    return any(file_path.endswith(ext) for ext in CODE_EXTENSIONS)
+
+
+def get_relative_path(file_path: str) -> str:
+    """Get relative path from project root."""
+    project_root = str(get_project_root())
+
+    if file_path.startswith(project_root):
+        return file_path[len(project_root):].lstrip("/")
+
+    # Try common patterns
+    for marker in ["/src/", "/lib/", "/app/"]:
+        if marker in file_path:
+            return file_path.split(marker, 1)[-1]
+
+    return Path(file_path).name
+
+
 def main():
+    # Get tool input
+    tool_input_str = os.environ.get("CLAUDE_TOOL_INPUT", "")
+
+    if not tool_input_str:
+        try:
+            data = json.load(sys.stdin)
+            tool_input_str = json.dumps(data.get("tool_input", {}))
+        except (json.JSONDecodeError, Exception):
+            sys.exit(0)
+
     try:
-        data = json.load(sys.stdin)
-    except Exception:
+        tool_input = json.loads(tool_input_str) if isinstance(tool_input_str, str) else tool_input_str
+    except json.JSONDecodeError:
         sys.exit(0)
 
-    # Get file path from tool input
-    file_path = data.get("tool_input", {}).get("file_path", "")
-
+    file_path = tool_input.get("file_path", "")
     if not file_path:
         sys.exit(0)
 
-    # Skip non-code files
-    skip_patterns = [".json", "validation_state", "__pycache__", ".md"]
-    if any(p in file_path for p in skip_patterns):
+    # Check if should track
+    if not should_track(file_path):
         sys.exit(0)
 
     # Record the change
@@ -51,12 +147,11 @@ def main():
     if "files_changed" not in state:
         state["files_changed"] = []
 
-    # Only track Python files
-    if file_path.endswith(".py"):
-        rel_path = file_path.split("/src/")[-1] if "/src/" in file_path else file_path.split("/")[-1]
-        if rel_path not in state["files_changed"]:
-            state["files_changed"].append(rel_path)
-            save_state(state)
+    rel_path = get_relative_path(file_path)
+    if rel_path not in state["files_changed"]:
+        state["files_changed"].append(rel_path)
+        state["last_change"] = datetime.now().isoformat()
+        save_state(state)
 
     sys.exit(0)
 
