@@ -1,6 +1,24 @@
 ============================= test session starts ==============================
-collected 23 items
+platform linux -- Python 3.11.2, pytest-8.4.1, pluggy-1.6.0
+rootdir: /opt/gregor_zwanziger
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 130 items
 
-tests/tdd/test_weather_config_api_ui.py .......................          [100%]
+tests/unit/test_change_detection.py ..........                           [  7%]
+tests/unit/test_elevation_analysis.py .......s                           [ 13%]
+tests/unit/test_etappen_config.py ....                                   [ 16%]
+tests/unit/test_gpx_import_in_trip_dialog.py .......                     [ 22%]
+tests/unit/test_gpx_parser.py ................                           [ 34%]
+tests/unit/test_gpx_upload_page.py ........                              [ 40%]
+tests/unit/test_hybrid_segmentation.py ........                          [ 46%]
+tests/unit/test_segment_builder.py .........                             [ 53%]
+tests/unit/test_settings_protection.py ....                              [ 56%]
+tests/unit/test_sms_trip.py ...                                          [ 59%]
+tests/unit/test_trip_report_formatter.py ........                        [ 65%]
+tests/unit/test_trip_report_formatter_v2.py ...............              [ 76%]
+tests/unit/test_weather_cache.py ........                                [ 83%]
+tests/unit/test_weather_metrics.py ................                      [ 95%]
+tests/unit/test_weather_metrics_legacy.py ......                         [100%]
 
-============================= 23 passed in 38.91s ==============================
+======================== 129 passed, 1 skipped in 4.54s ========================

@@ -69,6 +69,8 @@ class WeatherChangeDetectionService:
             "wind_chill_min_c": temp_threshold_c,
             "snow_depth_cm": 10.0,  # Default for snow
             "freezing_level_m": 200,  # Default for freezing level
+            "pop_max_pct": 20,  # ±20% change in rain probability
+            "cape_max_jkg": 500.0,  # ±500 J/kg change in convective energy
         }
 
     def detect_changes(

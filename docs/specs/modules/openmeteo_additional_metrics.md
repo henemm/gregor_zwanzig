@@ -4,30 +4,39 @@ type: module
 created: 2026-02-12
 updated: 2026-02-12
 status: draft
-version: "1.0"
-tags: [openmeteo, provider, metrics, catalog]
+version: "2.0"
+tags: [openmeteo, provider, metrics, catalog, aggregation, formatter]
 ---
 
-# OpenMeteo: Zusaetzliche Metriken
+# OpenMeteo: Zusaetzliche Metriken (Vollstaendige Pipeline-Integration)
 
 ## Approval
 
-- [x] Approved
+- [ ] Approved
 
 ## Purpose
 
-Der OpenMeteo-Provider setzt 4 verfuegbare API-Parameter auf `None`, obwohl die Daten abrufbar sind. Die entsprechenden `ForecastDataPoint`-Felder existieren bereits, werden aber nicht befuellt. Dieses Ticket aktiviert sie und registriert sie im MetricCatalog, damit sie automatisch in der Weather Config UI und in Reports erscheinen.
+4 OpenMeteo-Metriken (`visibility_m`, `pop_pct`, `cape_jkg`, `freezing_level_m`) vollstaendig in die Pipeline integrieren. Phase 1 (v1.0) hat Provider-Fetch und MetricCatalog-Registrierung abgedeckt. Phase 2 (v2.0) schliesst die fehlende Aggregation, Change Detection und Formatter-Formatierung ab.
 
-**Problem:** `visibility_m`, `pop_pct`, `cape_jkg`, `freezing_level_m` sind in `ForecastDataPoint` definiert, werden aber im OpenMeteo-Provider (Zeilen 295-313) explizit auf `None` gesetzt mit dem falschen Kommentar "Not available".
+**Ist-Zustand nach v1.0:**
+- Provider fetcht alle 4 Metriken ✓
+- MetricCatalog hat alle 4 registriert ✓
+- Weather Config Dialog zeigt alle 4 ✓
+- Stuendliche Email-Tabellen zeigen Rohwerte ✓
+- `visibility_m` und `freezing_level_m` sind bereits voll aggregiert ✓
 
-**UV-Index:** Nur als Tageswert (`uv_index_max`) bei OpenMeteo verfuegbar, nicht stuendlich. Wird daher **nicht** in diesem Ticket implementiert (separates Ticket fuer Daily-Metriken).
+**Problem (v2.0):**
+- `pop_pct` und `cape_jkg` werden NICHT aggregiert → fehlen in `SegmentWeatherSummary`
+- Change Detection hat keine Thresholds fuer `pop_max_pct` und `cape_max_jkg`
+- `_fmt_val()` im Formatter hat keine spezifische Formatierung fuer die 4 neuen col_keys → Rohwerte statt formatierte Anzeige
 
 ## Source
 
 - **Files:**
-  - `src/providers/openmeteo.py` (MODIFY) - 4 Parameter hinzufuegen + Mapping
-  - `src/app/metric_catalog.py` (MODIFY) - 4 MetricDefinition-Eintraege
-  - `src/app/models.py` (KEINE Aenderung - Felder existieren bereits)
+  - `src/app/models.py` (MODIFY) - 2 neue Felder in SegmentWeatherSummary
+  - `src/services/weather_metrics.py` (MODIFY) - 2 Compute-Methoden + Validation
+  - `src/services/weather_change_detection.py` (MODIFY) - 2 Threshold-Eintraege
+  - `src/formatters/trip_report.py` (MODIFY) - 4 Formatter-Cases in _fmt_val
 
 ## Dependencies
 
@@ -36,170 +45,245 @@ Der OpenMeteo-Provider setzt 4 verfuegbare API-Parameter auf `None`, obwohl die 
 | Entity | Type | Purpose |
 |--------|------|---------|
 | `ForecastDataPoint` | DTO | Felder `visibility_m`, `pop_pct`, `cape_jkg`, `freezing_level_m` existieren bereits |
-| `MetricCatalog` | Registry | Registrierung neuer Metriken |
-| OpenMeteo API | External | Stellt die Daten bereit |
+| `MetricCatalog` | Registry | Definiert Aggregationen (pop=max, cape=max) |
+| `SegmentWeatherSummary` | DTO | Ziel fuer aggregierte Werte |
+| `WeatherMetricsService` | Service | Berechnet Aggregationen |
 
 ### Downstream Dependencies
 
 | Entity | Type | Purpose |
 |--------|------|---------|
-| Weather Config Dialog | WebUI | Zeigt neue Metriken automatisch (kataloggesteuert) |
-| TripReportFormatter | Service | Rendert neue Spalten automatisch (`_dp_to_row` nutzt MetricCatalog) |
-| SMS Formatter | Service | Nutzt `compact_label` fuer neue Metriken |
+| `WeatherChangeDetectionService` | Service | Erkennt Aenderungen fuer pop/cape |
+| `TripReportFormatter._fmt_val()` | Formatter | Formatiert Zellwerte fuer Email |
+| Weather Config Dialog | WebUI | Keine Aenderung noetig (kataloggesteuert) |
 
 ## Implementation Details
 
-### 1. OpenMeteo Provider: HOURLY_PARAMS erweitern
+### Phase 1: Provider + Catalog (v1.0 - ERLEDIGT)
 
-**Datei:** `src/providers/openmeteo.py`, Zeilen 353-368
+Provider-Fetch und MetricCatalog-Registrierung sind bereits implementiert:
+- `src/providers/openmeteo.py`: 4 Parameter in HOURLY_PARAMS + Parsing
+- `src/app/metric_catalog.py`: 4 MetricDefinition-Eintraege
 
-**Aktuelle HOURLY_PARAMS (14 Parameter):**
-```
-temperature_2m, apparent_temperature, relative_humidity_2m, dewpoint_2m,
-pressure_msl, cloud_cover, cloud_cover_low, cloud_cover_mid, cloud_cover_high,
-wind_speed_10m, wind_direction_10m, wind_gusts_10m, precipitation, weather_code
-```
+### Phase 2: Pipeline-Integration (v2.0 - DIESES TICKET)
 
-**Neue Parameter (4 hinzufuegen):**
-```
-visibility, precipitation_probability, cape, freezing_level_height
-```
+#### 2.1 SegmentWeatherSummary: 2 neue Felder
 
-### 2. OpenMeteo Provider: Parsing erweitern
-
-**Datei:** `src/providers/openmeteo.py`, Zeilen 283-314 (`_parse_response`)
-
-**Aenderungen:**
+**Datei:** `src/app/models.py`, nach Zeile 311 (`freezing_level_m`)
 
 ```python
-# ALT (Zeile 295-296):
-cape_jkg=None,                    # Not available
-pop_pct=None,                     # Not available
-
-# NEU:
-cape_jkg=get_val(hourly, "cape", i),
-pop_pct=get_val(hourly, "precipitation_probability", i),
-
-# ALT (Zeile 311):
-freezing_level_m=None,
-
-# NEU:
-freezing_level_m=get_val(hourly, "freezing_level_height", i),
-
-# ALT (Zeile 313):
-visibility_m=None,
-
-# NEU:
-visibility_m=get_val(hourly, "visibility", i),
+# Additional metrics (OpenMeteo)
+pop_max_pct: Optional[int] = None
+cape_max_jkg: Optional[float] = None
 ```
 
-### 3. MetricCatalog: 4 neue MetricDefinitions
+**Begruendung:** `visibility_min_m` und `freezing_level_m` existieren bereits in SegmentWeatherSummary. Nur `pop_pct` und `cape_jkg` fehlen.
 
-**Datei:** `src/app/metric_catalog.py`
+#### 2.2 WeatherMetricsService: 2 Compute-Methoden
 
-**Einfuegen nach `pressure` (Zeile 145), vor `snow_depth`:**
+**Datei:** `src/services/weather_metrics.py`
+
+**Neue Methoden (nach `_compute_freezing_level`, Zeile 834):**
 
 ```python
-MetricDefinition(
-    id="visibility", label_de="Sichtweite", unit="m",
-    dp_field="visibility_m", category="atmosphere",
-    default_aggregations=("min",),
-    compact_label="V", col_key="visibility", col_label="Vis",
-    providers={"openmeteo": True, "geosphere": False},
-    default_enabled=False,
-),
-MetricDefinition(
-    id="rain_probability", label_de="Regenwahrscheinlichkeit", unit="%",
-    dp_field="pop_pct", category="precipitation",
-    default_aggregations=("max",),
-    compact_label="P%", col_key="pop", col_label="Pop",
-    providers={"openmeteo": True, "geosphere": False},
-    default_enabled=False,
-),
-MetricDefinition(
-    id="cape", label_de="Gewitterenergie (CAPE)", unit="J/kg",
-    dp_field="cape_jkg", category="precipitation",
-    default_aggregations=("max",),
-    compact_label="CE", col_key="cape", col_label="CAPE",
-    providers={"openmeteo": True, "geosphere": False},
-    default_enabled=False,
-),
-MetricDefinition(
-    id="freezing_level", label_de="Nullgradgrenze", unit="m",
-    dp_field="freezing_level_m", category="winter",
-    default_aggregations=("min", "max"),
-    compact_label="0G", col_key="freeze_lvl", col_label="0Gr",
-    providers={"openmeteo": True, "geosphere": False},
-    default_enabled=False,
-),
+def _compute_pop(self, timeseries: NormalizedTimeseries) -> Optional[int]:
+    """Compute precipitation probability MAX. Returns pop_max_pct."""
+    pop_vals = [dp.pop_pct for dp in timeseries.data if dp.pop_pct is not None]
+    return round(max(pop_vals)) if pop_vals else None
+
+def _compute_cape(self, timeseries: NormalizedTimeseries) -> Optional[float]:
+    """Compute CAPE MAX. Returns cape_max_jkg."""
+    cape_vals = [dp.cape_jkg for dp in timeseries.data if dp.cape_jkg is not None]
+    return max(cape_vals) if cape_vals else None
 ```
 
-### 4. Keine Aenderungen noetig
+**`compute_extended_metrics()` erweitern (Zeile 761):**
 
-- **models.py:** Felder existieren bereits (`visibility_m`, `pop_pct`, `cape_jkg`, `freezing_level_m`)
-- **trip_report.py:** `_dp_to_row()` nutzt MetricCatalog-Lookup, neue Metriken erscheinen automatisch
-- **weather_config.py:** Dialog liest aus MetricCatalog, neue Metriken erscheinen automatisch
-- **loader.py:** Keine Aenderung - Serialisierung nutzt MetricConfig mit metric_id
+```python
+# Bestehend:
+freezing_level = self._compute_freezing_level(timeseries)
+# NEU:
+pop_max = self._compute_pop(timeseries)
+cape_max = self._compute_cape(timeseries)
+```
 
-### 5. Kategorien-Zuordnung
+**SegmentWeatherSummary-Instanziierung erweitern (nach Zeile 781):**
 
-| Neue Metrik | Kategorie | Begruendung |
-|-------------|-----------|-------------|
-| Sichtweite | atmosphere | Atmosphaerische Bedingung |
-| Regenwahrscheinlichkeit | precipitation | Niederschlags-Indikator |
-| CAPE | precipitation | Gewitter-Energiepotenzial |
-| Nullgradgrenze | winter | Winter/Schnee-relevant |
+```python
+freezing_level_m=freezing_level,
+# NEU:
+pop_max_pct=pop_max,
+cape_max_jkg=cape_max,
+```
 
-### 6. Default-Werte
+**Aggregation-Config erweitern (nach Zeile 789):**
 
-Alle 4 neuen Metriken: `default_enabled=False` - sie erscheinen in der Weather Config UI, sind aber nicht standardmaessig aktiviert. User koennen sie manuell einschalten.
+```python
+"freezing_level_m": "avg",
+# NEU:
+"pop_max_pct": "max",
+"cape_max_jkg": "max",
+```
+
+**Plausibilitaets-Validation erweitern (`_validate_extended_plausibility`):**
+
+```python
+if summary.pop_max_pct is not None:
+    if not (0 <= summary.pop_max_pct <= 100):
+        self._debug.add(
+            f"WARNING: pop_max_pct={summary.pop_max_pct}% out of plausible range (0..100)"
+        )
+
+if summary.cape_max_jkg is not None:
+    if not (0 <= summary.cape_max_jkg <= 5000):
+        self._debug.add(
+            f"WARNING: cape_max_jkg={summary.cape_max_jkg} J/kg out of plausible range (0..5000)"
+        )
+```
+
+**Docstring aktualisieren:** "5 extended" → "7 extended" (+ pop, cape)
+
+#### 2.3 Change Detection: 2 Threshold-Eintraege
+
+**Datei:** `src/services/weather_change_detection.py`, `__init__` Methode
+
+**`_thresholds`-Dict erweitern (nach Zeile 71):**
+
+```python
+"freezing_level_m": 200,
+# NEU:
+"pop_max_pct": 20,       # ±20% Aenderung in Regenwahrscheinlichkeit
+"cape_max_jkg": 500.0,   # ±500 J/kg Aenderung in Gewitterenergie
+```
+
+Keine weiteren Code-Aenderungen noetig - `detect_changes()` iteriert bereits ueber alle numerischen Felder von `SegmentWeatherSummary` via `dataclasses.fields()`.
+
+#### 2.4 Formatter: _fmt_val fuer 4 neue col_keys
+
+**Datei:** `src/formatters/trip_report.py`, Methode `_fmt_val()` (Zeile 252-285)
+
+**Einfuegen vor Zeile 285 (`return str(val)`):**
+
+```python
+if key == "pop":
+    s = f"{val:.0f}"
+    if html and val is not None and val >= 80:
+        return f'<span style="background:#e3f2fd;color:#1565c0;padding:2px 4px;border-radius:3px">{s}</span>'
+    return s
+if key == "cape":
+    s = f"{val:.0f}"
+    if html and val is not None and val >= 1000:
+        return f'<span style="background:#fff9c4;color:#f57f17;padding:2px 4px;border-radius:3px">{s}</span>'
+    return s
+if key == "visibility":
+    if val >= 10000:
+        s = f"{val / 1000:.0f}k"
+    elif val >= 1000:
+        s = f"{val / 1000:.1f}k"
+    else:
+        s = f"{val:.0f}"
+    if html and val is not None and val < 500:
+        return f'<span style="background:#fff3e0;color:#e65100;padding:2px 4px;border-radius:3px">{s}</span>'
+    return s
+if key == "freeze_lvl":
+    return f"{val:.0f}"
+```
+
+**Formatierungsregeln:**
+
+| col_key | Format | Einheit | HTML-Highlighting |
+|---------|--------|---------|-------------------|
+| `pop` | Integer | % (implizit, Spaltenheader "Pop") | >= 80%: blau |
+| `cape` | Integer | J/kg (implizit) | >= 1000: gelb/orange (Gewitterwarnung) |
+| `visibility` | `>=10km: "10k"`, `>=1km: "1.5k"`, `<1km: "500"` | m/km | < 500m: orange (Sichtwarnung) |
+| `freeze_lvl` | Integer | m (implizit) | kein Highlighting |
 
 ## Expected Behavior
 
-### Neue Metriken in Weather Config UI
-- **Given:** Trip mit OpenMeteo-Provider
-- **When:** Weather Config Dialog oeffnen
-- **Then:** 4 neue Metriken sichtbar (unchecked), koennen aktiviert werden
+### Pop-Aggregation in SegmentWeatherSummary
+- **Given:** Timeseries mit pop_pct-Werten [20, 45, 80, 60]
+- **When:** compute_extended_metrics() aufgerufen
+- **Then:** pop_max_pct = 80
 
-### Metriken in Reports
-- **Given:** Trip mit aktivierter Sichtweite und Regenwahrscheinlichkeit
+### CAPE-Aggregation in SegmentWeatherSummary
+- **Given:** Timeseries mit cape_jkg-Werten [100.0, 500.0, 1200.0, 800.0]
+- **When:** compute_extended_metrics() aufgerufen
+- **Then:** cape_max_jkg = 1200.0
+
+### Formatter: Pop-Formatierung
+- **Given:** col_key="pop", val=75
+- **When:** _fmt_val("pop", 75, html=False)
+- **Then:** "75"
+- **When:** _fmt_val("pop", 85, html=True)
+- **Then:** `<span style="background:#e3f2fd;...">85</span>`
+
+### Formatter: CAPE-Formatierung
+- **Given:** col_key="cape", val=1200
+- **When:** _fmt_val("cape", 1200, html=True)
+- **Then:** `<span style="background:#fff9c4;...">1200</span>`
+
+### Formatter: Visibility-Formatierung
+- **Given:** col_key="visibility", val=48000
+- **When:** _fmt_val("visibility", 48000)
+- **Then:** "48k"
+- **Given:** col_key="visibility", val=1500
+- **Then:** "1.5k"
+- **Given:** col_key="visibility", val=300, html=True
+- **Then:** `<span style="background:#fff3e0;...">300</span>`
+
+### Formatter: Freezing-Level-Formatierung
+- **Given:** col_key="freeze_lvl", val=2800
+- **When:** _fmt_val("freeze_lvl", 2800)
+- **Then:** "2800"
+
+### Change Detection: Pop-Aenderung
+- **Given:** Alter Forecast pop_max_pct=30, neuer Forecast pop_max_pct=80
+- **When:** detect_changes() aufgerufen
+- **Then:** WeatherChange(metric="pop_max_pct", delta=50) erkannt (Threshold=20)
+
+### Change Detection: CAPE-Aenderung
+- **Given:** Alter Forecast cape_max_jkg=200, neuer Forecast cape_max_jkg=1500
+- **When:** detect_changes() aufgerufen
+- **Then:** WeatherChange(metric="cape_max_jkg", delta=1300) erkannt (Threshold=500)
+
+### Plausibilitaets-Validation
+- **Given:** pop_max_pct=150 (unmoeglich)
+- **When:** _validate_extended_plausibility() aufgerufen
+- **Then:** WARNING in DebugBuffer (kein Fehler, nur Warnung)
+
+### Backward-Kompatibilitaet
+- **Given:** Bestehender Trip ohne pop/cape in display_config
 - **When:** Report generiert
-- **Then:** Spalten "Vis" und "Pop" erscheinen in Email-Tabelle
-
-### Provider-Verfuegbarkeit
-- **Given:** Trip nur mit GeoSphere-Provider (Oesterreich)
-- **When:** Weather Config Dialog oeffnen
-- **Then:** Alle 4 neuen Metriken ausgegraut (nur OpenMeteo verfuegbar)
-
-### CAPE-Werte
-- **Given:** OpenMeteo liefert CAPE-Daten
-- **When:** CAPE > 0 in Forecast
-- **Then:** Wert in J/kg in der Tabelle, Aggregation=Max
+- **Then:** Identischer Output wie vorher (pop/cape default_enabled=False)
 
 ## Files to Change
 
 | # | File | Action | LoC |
 |---|------|--------|-----|
-| 1 | `src/providers/openmeteo.py` | MODIFY | ~15 |
-| 2 | `src/app/metric_catalog.py` | MODIFY | ~40 |
+| 1 | `src/app/models.py` | MODIFY - 2 Felder | ~5 |
+| 2 | `src/services/weather_metrics.py` | MODIFY - 2 Methoden + Integration + Validation | ~55 |
+| 3 | `src/services/weather_change_detection.py` | MODIFY - 2 Thresholds | ~4 |
+| 4 | `src/formatters/trip_report.py` | MODIFY - 4 _fmt_val Cases | ~30 |
 
-**Total:** ~55 LoC, 2 Dateien
+**Total:** ~94 LoC, 4 Dateien
 
 ## Risks
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| API-Antwort ohne neue Felder | LOW | `get_val()` gibt `None` zurueck bei fehlendem Feld |
-| Sichtweite in Metern statt km | LOW | Unit "m" korrekt, Formatter zeigt Rohwert |
-| CAPE-Werte unplausibel hoch | LOW | `default_enabled=False`, User aktiviert bewusst |
+| Pop/CAPE Werte sind None (Provider liefert nicht) | LOW | Optional-Types, None-Checks ueberall |
+| CAPE-Werte extrem hoch (>5000) | LOW | Plausibilitaets-Warnung im DebugBuffer |
+| Pop-Verwirrung (0-1 vs 0-100) | MEDIUM | OpenMeteo liefert 0-100, Tests validieren |
+| Visibility km/m Anzeige verwirrend | LOW | >=1000m als "Xk" formatieren, Spaltenheader "Vis" |
 
 ## Standards Compliance
 
 - Spec-first workflow (dieses Dokument)
-- Keine Mocked Tests
-- Safari kompatibel (keine UI-Aenderungen noetig)
-- Backward compatible (alle neuen Metriken disabled by default)
+- Keine Mocked Tests (echte API-Daten in Tests)
+- Safari kompatibel (keine UI-Aenderungen)
+- Backward compatible (pop/cape default_enabled=False)
 
 ## Changelog
 
-- 2026-02-12: v1.0 - Initial spec
+- 2026-02-12: v1.0 - Initial spec (Provider + Catalog)
+- 2026-02-12: v2.0 - Pipeline-Integration: Aggregation, Change Detection, Formatter

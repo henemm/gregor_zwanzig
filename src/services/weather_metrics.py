@@ -728,7 +728,7 @@ class WeatherMetricsService:
         basis_summary: SegmentWeatherSummary,
     ) -> SegmentWeatherSummary:
         """
-        Compute 5 extended hiking metrics and merge with basis metrics.
+        Compute 7 extended hiking metrics and merge with basis metrics.
 
         Metrics computed:
         1. Dewpoint: AVG from dewpoint_c
@@ -736,13 +736,15 @@ class WeatherMetricsService:
         3. Wind-Chill: MIN from wind_chill_c
         4. Snow-Depth: MAX from snow_depth_cm (optional, winter)
         5. Freezing-Level: AVG from freezing_level_m (optional, winter)
+        6. Rain Probability: MAX from pop_pct (OpenMeteo)
+        7. CAPE: MAX from cape_jkg (OpenMeteo)
 
         Args:
             timeseries: Weather timeseries from provider
             basis_summary: Summary with basis metrics from compute_basis_metrics()
 
         Returns:
-            SegmentWeatherSummary with 5 extended metrics added
+            SegmentWeatherSummary with 7 extended metrics added
 
         Raises:
             ValueError: If timeseries is empty
@@ -759,6 +761,8 @@ class WeatherMetricsService:
         wind_chill_min = self._compute_wind_chill(timeseries)
         snow_depth = self._compute_snow_depth(timeseries)
         freezing_level = self._compute_freezing_level(timeseries)
+        pop_max = self._compute_pop(timeseries)
+        cape_max = self._compute_cape(timeseries)
 
         # Create new summary with basis + extended metrics
         extended_summary = SegmentWeatherSummary(
@@ -779,6 +783,8 @@ class WeatherMetricsService:
             wind_chill_min_c=wind_chill_min,
             snow_depth_cm=snow_depth,
             freezing_level_m=freezing_level,
+            pop_max_pct=pop_max,
+            cape_max_jkg=cape_max,
             # Merge aggregation config
             aggregation_config={
                 **basis_summary.aggregation_config,
@@ -787,6 +793,8 @@ class WeatherMetricsService:
                 "wind_chill_min_c": "min",
                 "snow_depth_cm": "max",
                 "freezing_level_m": "avg",
+                "pop_max_pct": "max",
+                "cape_max_jkg": "max",
             },
         )
 
@@ -833,6 +841,16 @@ class WeatherMetricsService:
         ]
         return round(sum(freezing_levels) / len(freezing_levels)) if freezing_levels else None
 
+    def _compute_pop(self, timeseries: NormalizedTimeseries) -> Optional[int]:
+        """Compute precipitation probability MAX. Returns pop_max_pct."""
+        pop_vals = [dp.pop_pct for dp in timeseries.data if dp.pop_pct is not None]
+        return round(max(pop_vals)) if pop_vals else None
+
+    def _compute_cape(self, timeseries: NormalizedTimeseries) -> Optional[float]:
+        """Compute CAPE MAX. Returns cape_max_jkg."""
+        cape_vals = [dp.cape_jkg for dp in timeseries.data if dp.cape_jkg is not None]
+        return max(cape_vals) if cape_vals else None
+
     def _validate_extended_plausibility(self, summary: SegmentWeatherSummary) -> None:
         """
         Validate extended metric plausibility and log warnings.
@@ -872,6 +890,18 @@ class WeatherMetricsService:
             if not (0 <= summary.freezing_level_m <= 6000):
                 self._debug.add(
                     f"WARNING: freezing_level_m={summary.freezing_level_m} m out of plausible range (0..6000)"
+                )
+
+        if summary.pop_max_pct is not None:
+            if not (0 <= summary.pop_max_pct <= 100):
+                self._debug.add(
+                    f"WARNING: pop_max_pct={summary.pop_max_pct}% out of plausible range (0..100)"
+                )
+
+        if summary.cape_max_jkg is not None:
+            if not (0 <= summary.cape_max_jkg <= 5000):
+                self._debug.add(
+                    f"WARNING: cape_max_jkg={summary.cape_max_jkg} J/kg out of plausible range (0..5000)"
                 )
 
 # Legacy Classes (pre-Feature 2.2a)

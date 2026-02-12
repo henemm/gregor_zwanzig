@@ -282,6 +282,28 @@ class TripReportFormatter:
             return f"{val}" if val is not None else "–"
         if key == "pressure":
             return f"{val:.1f}" if val is not None else "–"
+        if key == "pop":
+            s = f"{val:.0f}"
+            if html and val is not None and val >= 80:
+                return f'<span style="background:#e3f2fd;color:#1565c0;padding:2px 4px;border-radius:3px">{s}</span>'
+            return s
+        if key == "cape":
+            s = f"{val:.0f}"
+            if html and val is not None and val >= 1000:
+                return f'<span style="background:#fff9c4;color:#f57f17;padding:2px 4px;border-radius:3px">{s}</span>'
+            return s
+        if key == "visibility":
+            if val >= 10000:
+                s = f"{val / 1000:.0f}k"
+            elif val >= 1000:
+                s = f"{val / 1000:.1f}k"
+            else:
+                s = f"{val:.0f}"
+            if html and val is not None and val < 500:
+                return f'<span style="background:#fff3e0;color:#e65100;padding:2px 4px;border-radius:3px">{s}</span>'
+            return s
+        if key == "freeze_lvl":
+            return f"{val:.0f}"
         return str(val)
 
     # ------------------------------------------------------------------

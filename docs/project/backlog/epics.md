@@ -116,28 +116,24 @@ Epics are large business initiatives that contain multiple user stories.
 
 **Business Value:** Weitwanderer können ihre Route detailliert planen und wissen genau, welches Wetter sie zu welcher Zeit an welchem Ort erwartet
 
-**Status:** Planned (Starting with Story 1)
+**Status:** COMPLETED
 
 **User Stories:**
-- [ ] Story 1: GPX Upload & Segment-Planung - PLANNED
+- [x] Story 1: GPX Upload & Segment-Planung - COMPLETED
   - Story doc: `stories/gpx-upload-segment-planung.md`
   - Features: GPX Upload (WebUI), Parser, Höhenprofil, Zeit-Segmente, Hybrid-Segmentierung, Config, Übersicht
-  - 7 Features, ~1000 LOC
-  - **MVP:** Nach Story 1 nutzbar (GPX-Upload + Segmente, ohne Wetter)
+  - 7 Features, ~1116 LOC
+  - **MVP:** GPX-Upload + Segmente funktionsfähig
 
-- [ ] Story 2: Wetter-Engine für Trip-Segmente - PLANNED
+- [x] Story 2: Wetter-Engine für Trip-Segmente - COMPLETED
   - Features: Wetter-Abfrage, Multi-Metrik, Aggregation, Cache, Change-Detection, Config
-  - 7 Features, ~1000 LOC
-  - **Wetter verfügbar** (noch keine automatischen Reports)
+  - 7 Features, alle implementiert und validiert
 
-- [ ] Story 3: Trip-Reports (Email/SMS) - PLANNED
+- [x] Story 3: Trip-Reports (Email/SMS) - COMPLETED
   - Features: Email Trip-Formatter, SMS Compact, Scheduler, Alerts, Config
-  - 5 Features, ~670 LOC
-  - **Komplett fertig** (Reports + Alerts)
+  - 5 Features, alle implementiert und validiert
 
-**Timeline:** Iterativ (Story 1 → nutzen → Story 2 → nutzen → Story 3)
-
-**Target Completion:** Q2 2026 (Story 1), Q3 2026 (Story 2+3)
+**Completed:** 2026-02
 
 ---
 

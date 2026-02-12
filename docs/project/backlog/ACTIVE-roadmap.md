@@ -1,6 +1,6 @@
 # Active Roadmap - Gregor Zwanziger
 
-**Last Updated:** 2026-02-11
+**Last Updated:** 2026-02-12
 
 This roadmap tracks all features across the project lifecycle.
 Features are added via `/feature` or `/user-story` commands.
@@ -28,33 +28,33 @@ Features are added via `/feature` or `/user-story` commands.
 | Feature | Status | Priority | Category | Affected Systems | Estimate | Story/Epic |
 |---------|--------|----------|----------|------------------|----------|------------|
 | CLI Entry Point | in_progress | HIGH | Core | CLI | Medium | SETUP-02 |
-| Config System (INI/ENV) | open | HIGH | Core | Config | Simple | SETUP-03 |
-| Debug Architecture | open | HIGH | Core | Debug | Medium | SETUP-04 |
+| Config System (INI/ENV) | in_progress | HIGH | Core | Config | Simple | SETUP-03 |
+| Debug Architecture | in_progress | HIGH | Core | Debug | Medium | SETUP-04 |
 | MET Norway Adapter | spec_ready | HIGH | Provider | Provider Layer | Medium | WEATHER-01 |
 | Open-Meteo Provider | done | MEDIUM | Provider | Provider Layer | Medium | - |
 | MOSMIX Adapter | open | MEDIUM | Provider | Provider Layer | Large | WEATHER-02 |
 | Data Normalization | open | HIGH | Provider | Normalizer | Medium | WEATHER-03 |
-| Provider Error Handling | open | MEDIUM | Provider | Provider Layer | Medium | WEATHER-04 |
+| Provider Error Handling | in_progress | MEDIUM | Provider | Provider Layer | Medium | WEATHER-04 |
 | Gewitter Risk Logic | open | HIGH | Risk Engine | Risk Engine | Medium | RISK-01 |
 | Starkregen Risk | open | MEDIUM | Risk Engine | Risk Engine | Simple | RISK-02 |
 | Wind/Hitze Risk | open | LOW | Risk Engine | Risk Engine | Simple | RISK-03 |
 | Configurable Thresholds | open | MEDIUM | Config | Risk Engine, Config | Simple | RISK-04 |
-| Report Types | open | HIGH | Formatter | Formatter, CLI | Medium | REPORT-01 |
-| Compact Formatter | open | MEDIUM | Formatter | Formatter | Simple | REPORT-02 |
+| Report Types | done | HIGH | Formatter | Formatter, CLI | Medium | REPORT-01 |
+| Compact Formatter | done | MEDIUM | Formatter | Formatter | Simple | REPORT-02 |
 | SMTP Mailer | done | HIGH | Channel | Channel Layer | Medium | REPORT-03 |
-| Retry Logic | open | MEDIUM | Core | All Layers | Medium | OPS-01 |
+| Retry Logic | in_progress | MEDIUM | Core | All Layers | Medium | OPS-01 |
 | Logging/Rotation | open | LOW | Core | Logging | Simple | OPS-02 |
 | GitHub Actions | done | LOW | Ops | CI/CD | Simple | OPS-03 |
 | Trip Edit UI | done | HIGH | WebUI | Frontend | Medium | UI-01 |
 | Compare E-Mail | done | MEDIUM | WebUI | Frontend, Email | Medium | UI-02 |
 | Cloud Layers | done | MEDIUM | WebUI | Frontend, Provider | Medium | UI-03 |
-| GPX Upload (WebUI) | open | HIGH | WebUI | Frontend | Simple | GPX-Story1 |
-| GPX Parser & Validation | open | HIGH | Core | GPX Parser | Medium | GPX-Story1 |
-| Höhenprofil-Analyse | open | HIGH | Core | Elevation Analysis | Medium | GPX-Story1 |
-| Zeit-Segment-Bildung | open | HIGH | Core | Segmentation Engine | Medium | GPX-Story1 |
-| Hybrid-Segmentierung | open | HIGH | Core | Segmentation Engine | Medium | GPX-Story1 |
-| Etappen-Config (WebUI) | open | HIGH | WebUI | Frontend, Config | Medium | GPX-Story1 |
-| Segment-Übersicht (WebUI) | open | HIGH | WebUI | Frontend | Simple | GPX-Story1 |
+| GPX Upload (WebUI) | done | HIGH | WebUI | Frontend | Simple | GPX-Story1 |
+| GPX Parser & Validation | done | HIGH | Core | GPX Parser | Medium | GPX-Story1 |
+| Höhenprofil-Analyse | done | HIGH | Core | Elevation Analysis | Medium | GPX-Story1 |
+| Zeit-Segment-Bildung | done | HIGH | Core | Segmentation Engine | Medium | GPX-Story1 |
+| Hybrid-Segmentierung | done | HIGH | Core | Segmentation Engine | Medium | GPX-Story1 |
+| Etappen-Config (WebUI) | done | HIGH | WebUI | Frontend, Config | Medium | GPX-Story1 |
+| Segment-Übersicht (WebUI) | done | HIGH | WebUI | Frontend | Simple | GPX-Story1 |
 | Segment-Wetter-Abfrage | done | HIGH | Services | Weather Engine | Medium | GPX-Story2 |
 | Basis-Metriken | done | HIGH | Services | Weather Engine | Simple | GPX-Story2 |
 | Erweiterte Metriken | done | HIGH | Services | Weather Engine | Simple | GPX-Story2 |
@@ -68,39 +68,43 @@ Features are added via `/feature` or `/user-story` commands.
 | Alert bei Änderungen | done | HIGH | Services | Alert System | Simple | GPX-Story3 |
 | Report-Config (WebUI) | done | HIGH | WebUI | Frontend | Simple | GPX-Story3 |
 
-## Completed Features (Last 5)
+## Completed Features (Last 10)
 
 | Feature | Completed | Category | Notes |
 |---------|-----------|----------|-------|
+| GPX Upload (WebUI) | 2026-02 | WebUI | Drag&Drop Upload, 401 LOC |
+| GPX Parser & Validation | 2026-02 | Core | gpxpy-basiert, 13 Tests mit echten GPX-Dateien |
+| Höhenprofil-Analyse | 2026-02 | Core | Sliding-Window Peak/Valley Detection |
+| Zeit-Segment-Bildung | 2026-02 | Core | Naismith's Rule, konfigurierbare Geschwindigkeiten |
+| Hybrid-Segmentierung | 2026-02 | Core | Waypoint-Snapping mit Prioritäten |
+| Etappen-Config (WebUI) | 2026-02 | WebUI | Datum, Startzeit, Geschwindigkeits-Parameter |
+| Segment-Übersicht (WebUI) | 2026-02 | WebUI | Tabelle + "Als Trip speichern" |
+| Report Types | 2026-02 | Formatter | evening/morning/alert via CLI, Scheduler, Alert-Service |
+| Compact Formatter | 2026-02 | Formatter | SMS ≤160 Zeichen mit harter Constraint |
 | Report-Config (WebUI) | 2026-02 | WebUI | Per-Trip Morning/Evening Zeiten, Metriken-Config |
-| Alert bei Änderungen | 2026-02 | Services | Wetter-Änderungserkennung mit dt. Subject + Config-Flag |
-| Report-Scheduler | 2026-02 | Services | Stündlicher Check mit per-Trip Zeiten |
-| Email Trip-Formatter | 2026-02 | Formatter | HTML/Plain-Text mit konfigurierbaren Metriken |
-| SMS Compact Formatter | 2026-02 | Formatter | ≤160 Zeichen Trip-Wetter-SMS |
 
 ## Blocked Features
 
 | Feature | Blocked By | Notes |
 |---------|------------|-------|
 | Data Normalization | MET Norway Adapter | Needs provider data structure |
-| Report Types | Compact Formatter | Needs formatter implementation |
 
 ## Upcoming (Next 3 Sprints)
 
 ### Sprint 1 (Current)
-- [ ] CLI Entry Point
-- [ ] Config System
-- [ ] Debug Architecture
+- [ ] CLI Entry Point (in_progress, --config fehlt)
+- [ ] Config System (in_progress, INI-Parsing fehlt)
+- [ ] Debug Architecture (in_progress, Email-Integration fehlt)
 
 ### Sprint 2
 - [ ] MET Norway Adapter (spec exists)
-- [ ] Data Normalization
-- [ ] Report Types
+- [ ] Data Normalization (blocked by MET)
+- [ ] Gewitter Risk Logic
 
 ### Sprint 3
-- [ ] Gewitter Risk Logic
-- [ ] Compact Formatter
-- [ ] Retry Logic
+- [ ] Starkregen Risk
+- [ ] MOSMIX Adapter
+- [ ] Logging/Rotation
 
 ## Feature Categories
 
@@ -114,13 +118,13 @@ Features are added via `/feature` or `/user-story` commands.
 - Gewitter Risk, Starkregen Risk, Wind/Hitze Risk, Configurable Thresholds
 
 ### Formatter (Report Generation)
-- Report Types, Compact Formatter
+- Report Types (done), Compact Formatter (done)
 
 ### Channel (Delivery)
 - SMTP Mailer (done)
 
 ### WebUI (Frontend)
-- Trip Edit (done), Compare E-Mail (done), Cloud Layers (done)
+- Trip Edit (done), Compare E-Mail (done), Cloud Layers (done), GPX Upload (done), Etappen-Config (done), Segment-Übersicht (done)
 
 ### Ops (Operations)
 - GitHub Actions (done), Logging/Rotation

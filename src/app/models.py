@@ -310,6 +310,10 @@ class SegmentWeatherSummary:
     snow_depth_cm: Optional[float] = None
     freezing_level_m: Optional[int] = None
 
+    # Additional metrics (OpenMeteo)
+    pop_max_pct: Optional[int] = None
+    cape_max_jkg: Optional[float] = None
+
     # Metadata
     aggregation_config: dict[str, str] = field(default_factory=dict)
 
