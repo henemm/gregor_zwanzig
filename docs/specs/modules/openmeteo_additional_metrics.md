@@ -4,8 +4,8 @@ type: module
 created: 2026-02-12
 updated: 2026-02-12
 status: draft
-version: "2.0"
-tags: [openmeteo, provider, metrics, catalog, aggregation, formatter]
+version: "2.1"
+tags: [openmeteo, provider, metrics, catalog, aggregation, formatter, highlights, risk]
 ---
 
 # OpenMeteo: Zusaetzliche Metriken (Vollstaendige Pipeline-Integration)
@@ -16,7 +16,7 @@ tags: [openmeteo, provider, metrics, catalog, aggregation, formatter]
 
 ## Purpose
 
-4 OpenMeteo-Metriken (`visibility_m`, `pop_pct`, `cape_jkg`, `freezing_level_m`) vollstaendig in die Pipeline integrieren. Phase 1 (v1.0) hat Provider-Fetch und MetricCatalog-Registrierung abgedeckt. Phase 2 (v2.0) schliesst die fehlende Aggregation, Change Detection und Formatter-Formatierung ab.
+4 OpenMeteo-Metriken (`visibility_m`, `pop_pct`, `cape_jkg`, `freezing_level_m`) vollstaendig in die Pipeline integrieren. Phase 1 (v1.0) hat Provider-Fetch und MetricCatalog-Registrierung abgedeckt. Phase 2 (v2.0) schliesst die fehlende Aggregation, Change Detection und Formatter-Formatierung ab. Phase 3 (v2.1) integriert pop/cape in Highlights und Risk Assessment.
 
 **Ist-Zustand nach v1.0:**
 - Provider fetcht alle 4 Metriken ✓
@@ -36,7 +36,7 @@ tags: [openmeteo, provider, metrics, catalog, aggregation, formatter]
   - `src/app/models.py` (MODIFY) - 2 neue Felder in SegmentWeatherSummary
   - `src/services/weather_metrics.py` (MODIFY) - 2 Compute-Methoden + Validation
   - `src/services/weather_change_detection.py` (MODIFY) - 2 Threshold-Eintraege
-  - `src/formatters/trip_report.py` (MODIFY) - 4 Formatter-Cases in _fmt_val
+  - `src/formatters/trip_report.py` (MODIFY) - 4 Formatter-Cases in _fmt_val + Highlights + Risk
 
 ## Dependencies
 
@@ -55,6 +55,8 @@ tags: [openmeteo, provider, metrics, catalog, aggregation, formatter]
 |--------|------|---------|
 | `WeatherChangeDetectionService` | Service | Erkennt Aenderungen fuer pop/cape |
 | `TripReportFormatter._fmt_val()` | Formatter | Formatiert Zellwerte fuer Email |
+| `TripReportFormatter._compute_highlights()` | Formatter | Zusammenfassungs-Zeilen in Email |
+| `TripReportFormatter._determine_risk()` | Formatter | Risiko-Klassifizierung pro Segment |
 | Weather Config Dialog | WebUI | Keine Aenderung noetig (kataloggesteuert) |
 
 ## Implementation Details
@@ -198,6 +200,76 @@ if key == "freeze_lvl":
 | `visibility` | `>=10km: "10k"`, `>=1km: "1.5k"`, `<1km: "500"` | m/km | < 500m: orange (Sichtwarnung) |
 | `freeze_lvl` | Integer | m (implizit) | kein Highlighting |
 
+### Phase 3: Highlights + Risk Assessment (v2.1 - DIESES TICKET)
+
+#### 3.1 _compute_highlights(): 2 neue Highlight-Zeilen
+
+**Datei:** `src/formatters/trip_report.py`, Methode `_compute_highlights()` (Zeile 157-212)
+
+**Einfuegen nach Zeile 211 (vor `return highlights`):**
+
+```python
+# High precipitation probability
+max_pop = 0
+max_pop_info = ""
+for seg_data in segments:
+    if seg_data.aggregated.pop_max_pct and seg_data.aggregated.pop_max_pct > max_pop:
+        max_pop = seg_data.aggregated.pop_max_pct
+        max_pop_info = f"Segment {seg_data.segment.segment_id}"
+if max_pop >= 80:
+    highlights.append(f"🌧 Regenwahrscheinlichkeit {max_pop}% ({max_pop_info})")
+
+# High CAPE (thunderstorm energy)
+max_cape = 0.0
+max_cape_info = ""
+for seg_data in segments:
+    if seg_data.aggregated.cape_max_jkg and seg_data.aggregated.cape_max_jkg > max_cape:
+        max_cape = seg_data.aggregated.cape_max_jkg
+        max_cape_info = f"Segment {seg_data.segment.segment_id}"
+if max_cape >= 1000:
+    highlights.append(f"⚡ Hohe Gewitterenergie: CAPE {max_cape:.0f} J/kg ({max_cape_info})")
+```
+
+**Logik:**
+- Pop ≥80%: Zeigt Segment mit hoechster Regenwahrscheinlichkeit
+- CAPE ≥1000 J/kg: Zeigt Segment mit hoechster Gewitterenergie
+- Beide nutzen gleichen Scan-Pattern wie bestehende `max_gust`-Highlight
+
+#### 3.2 _determine_risk(): 2 neue Risk-Bedingungen
+
+**Datei:** `src/formatters/trip_report.py`, Methode `_determine_risk()` (Zeile 230-246)
+
+**Einfuegen nach Zeile 244 (vor letztem `return ("none", "✓ OK")`):**
+
+```python
+if agg.cape_max_jkg and agg.cape_max_jkg >= 2000:
+    return ("high", "⚠️ Extreme Thunder Energy")
+if agg.cape_max_jkg and agg.cape_max_jkg >= 1000:
+    return ("medium", "⚠️ Thunder Energy")
+if agg.pop_max_pct and agg.pop_max_pct >= 80:
+    return ("medium", "⚠️ High Rain Probability")
+```
+
+**Logik (Prioritaetsreihenfolge in _determine_risk):**
+
+| Prioritaet | Bedingung | Level | Label |
+|------------|-----------|-------|-------|
+| bestehend | thunder_level_max == HIGH | high | Thunder |
+| bestehend | wind_max_kmh > 70 | high | Storm |
+| bestehend | wind_chill_min_c < -20 | high | Extreme Cold |
+| bestehend | visibility_min_m < 100 | high | Low Visibility |
+| **NEU** | **cape_max_jkg >= 2000** | **high** | **Extreme Thunder Energy** |
+| bestehend | wind_max_kmh > 50 | medium | High Wind |
+| bestehend | precip_sum_mm > 20 | medium | Heavy Rain |
+| bestehend | thunder_level_max in (MED, HIGH) | medium | Thunder Risk |
+| **NEU** | **cape_max_jkg >= 1000** | **medium** | **Thunder Energy** |
+| **NEU** | **pop_max_pct >= 80** | **medium** | **High Rain Probability** |
+| bestehend | default | none | OK |
+
+**Begruendung Einfuege-Position:**
+- CAPE ≥2000 als HIGH nach visibility (extreme Gewittergefahr)
+- CAPE ≥1000 und pop ≥80% als MEDIUM nach Thunder Risk (ergaenzende Risiko-Indikatoren)
+
 ## Expected Behavior
 
 ### Pop-Aggregation in SegmentWeatherSummary
@@ -251,6 +323,46 @@ if key == "freeze_lvl":
 - **When:** _validate_extended_plausibility() aufgerufen
 - **Then:** WARNING in DebugBuffer (kein Fehler, nur Warnung)
 
+### Highlight: Hohe Regenwahrscheinlichkeit
+- **Given:** Segment mit pop_max_pct=90
+- **When:** _compute_highlights() aufgerufen
+- **Then:** "🌧 Regenwahrscheinlichkeit 90% (Segment 1)" in highlights
+
+### Highlight: Hohe Gewitterenergie
+- **Given:** Segment mit cape_max_jkg=1500
+- **When:** _compute_highlights() aufgerufen
+- **Then:** "⚡ Hohe Gewitterenergie: CAPE 1500 J/kg (Segment 1)" in highlights
+
+### Highlight: Niedrige Pop kein Highlight
+- **Given:** Segment mit pop_max_pct=60
+- **When:** _compute_highlights() aufgerufen
+- **Then:** Kein Pop-Highlight in Liste
+
+### Highlight: Niedrige CAPE kein Highlight
+- **Given:** Segment mit cape_max_jkg=500
+- **When:** _compute_highlights() aufgerufen
+- **Then:** Kein CAPE-Highlight in Liste
+
+### Risk: Extreme CAPE = High Risk
+- **Given:** Segment mit cape_max_jkg=2500
+- **When:** _determine_risk() aufgerufen
+- **Then:** ("high", "⚠️ Extreme Thunder Energy")
+
+### Risk: Moderate CAPE = Medium Risk
+- **Given:** Segment mit cape_max_jkg=1200
+- **When:** _determine_risk() aufgerufen
+- **Then:** ("medium", "⚠️ Thunder Energy")
+
+### Risk: High Pop = Medium Risk
+- **Given:** Segment mit pop_max_pct=85
+- **When:** _determine_risk() aufgerufen
+- **Then:** ("medium", "⚠️ High Rain Probability")
+
+### Risk: Pop/CAPE None = keine Auswirkung
+- **Given:** Segment mit pop_max_pct=None, cape_max_jkg=None
+- **When:** _determine_risk() aufgerufen
+- **Then:** Kein Einfluss auf Risiko-Bewertung (bestehendes Verhalten)
+
 ### Backward-Kompatibilitaet
 - **Given:** Bestehender Trip ohne pop/cape in display_config
 - **When:** Report generiert
@@ -260,12 +372,13 @@ if key == "freeze_lvl":
 
 | # | File | Action | LoC |
 |---|------|--------|-----|
-| 1 | `src/app/models.py` | MODIFY - 2 Felder | ~5 |
-| 2 | `src/services/weather_metrics.py` | MODIFY - 2 Methoden + Integration + Validation | ~55 |
-| 3 | `src/services/weather_change_detection.py` | MODIFY - 2 Thresholds | ~4 |
-| 4 | `src/formatters/trip_report.py` | MODIFY - 4 _fmt_val Cases | ~30 |
+| 1 | `src/app/models.py` | MODIFY - 2 Felder (v2.0) | ~5 |
+| 2 | `src/services/weather_metrics.py` | MODIFY - 2 Methoden + Integration + Validation (v2.0) | ~55 |
+| 3 | `src/services/weather_change_detection.py` | MODIFY - 2 Thresholds (v2.0) | ~4 |
+| 4 | `src/formatters/trip_report.py` | MODIFY - 4 _fmt_val Cases (v2.0) + 2 Highlights + 3 Risk (v2.1) | ~50 |
 
-**Total:** ~94 LoC, 4 Dateien
+**Total v2.0:** ~94 LoC, 4 Dateien (ERLEDIGT)
+**Total v2.1:** ~20 LoC, 1 Datei (DIESES TICKET)
 
 ## Risks
 
@@ -287,3 +400,4 @@ if key == "freeze_lvl":
 
 - 2026-02-12: v1.0 - Initial spec (Provider + Catalog)
 - 2026-02-12: v2.0 - Pipeline-Integration: Aggregation, Change Detection, Formatter
+- 2026-02-12: v2.1 - Highlights + Risk Assessment: pop/cape in _compute_highlights() und _determine_risk()

@@ -352,3 +352,118 @@ class TestSegmentHeaders:
         # Should contain time range
         assert "08:00" in html
         assert "10:00" in html
+
+
+# ---------------------------------------------------------------------------
+# Tests: Highlights with Pop/CAPE (v2.1)
+# ---------------------------------------------------------------------------
+
+class TestHighlightsPopCape:
+    """Spec v2.1: Highlights include pop and cape when thresholds exceeded."""
+
+    def _make_seg_with_pop_cape(
+        self, seg_id=1, pop=None, cape=None, start_hour=8, end_hour=10,
+    ):
+        seg = _make_segment(seg_id, start_hour, end_hour)
+        ts = _make_timeseries(range(0, 24))
+        agg = SegmentWeatherSummary(
+            temp_min_c=14.0, temp_max_c=19.0, temp_avg_c=16.5,
+            wind_max_kmh=25.0, gust_max_kmh=40.0, precip_sum_mm=0.0,
+            cloud_avg_pct=60, humidity_avg_pct=55,
+            thunder_level_max=ThunderLevel.NONE, wind_chill_min_c=8.0,
+            pop_max_pct=pop, cape_max_jkg=cape,
+        )
+        return SegmentWeatherData(
+            segment=seg, timeseries=ts, aggregated=agg,
+            fetched_at=datetime.now(timezone.utc), provider="openmeteo",
+        )
+
+    def test_high_pop_highlight(self):
+        """GIVEN pop_max_pct=90, WHEN highlights computed, THEN pop highlight present."""
+        seg = self._make_seg_with_pop_cape(pop=90)
+        formatter = TripReportFormatter()
+        report = formatter.format_email([seg], "Test", "morning")
+        assert "Regenwahrscheinlichkeit 90%" in report.email_html
+        assert "Regenwahrscheinlichkeit 90%" in report.email_plain
+
+    def test_low_pop_no_highlight(self):
+        """GIVEN pop_max_pct=60, WHEN highlights computed, THEN no pop highlight."""
+        seg = self._make_seg_with_pop_cape(pop=60)
+        formatter = TripReportFormatter()
+        report = formatter.format_email([seg], "Test", "morning")
+        assert "Regenwahrscheinlichkeit" not in report.email_plain
+
+    def test_high_cape_highlight(self):
+        """GIVEN cape_max_jkg=1500, WHEN highlights computed, THEN cape highlight present."""
+        seg = self._make_seg_with_pop_cape(cape=1500.0)
+        formatter = TripReportFormatter()
+        report = formatter.format_email([seg], "Test", "morning")
+        assert "CAPE 1500 J/kg" in report.email_html
+        assert "CAPE 1500 J/kg" in report.email_plain
+
+    def test_low_cape_no_highlight(self):
+        """GIVEN cape_max_jkg=500, WHEN highlights computed, THEN no cape highlight."""
+        seg = self._make_seg_with_pop_cape(cape=500.0)
+        formatter = TripReportFormatter()
+        report = formatter.format_email([seg], "Test", "morning")
+        assert "CAPE" not in report.email_plain
+        assert "Gewitterenergie" not in report.email_plain
+
+    def test_none_pop_cape_no_highlight(self):
+        """GIVEN pop=None, cape=None, WHEN highlights computed, THEN no pop/cape highlights."""
+        seg = self._make_seg_with_pop_cape(pop=None, cape=None)
+        formatter = TripReportFormatter()
+        report = formatter.format_email([seg], "Test", "morning")
+        assert "Regenwahrscheinlichkeit" not in report.email_plain
+        assert "Gewitterenergie" not in report.email_plain
+
+
+class TestRiskPopCape:
+    """Spec v2.1: Risk assessment includes cape and pop thresholds."""
+
+    def _make_seg_with_risk(self, pop=None, cape=None):
+        seg = _make_segment(1, 8, 10)
+        ts = _make_timeseries(range(0, 24))
+        agg = SegmentWeatherSummary(
+            temp_min_c=14.0, temp_max_c=19.0, temp_avg_c=16.5,
+            wind_max_kmh=25.0, gust_max_kmh=40.0, precip_sum_mm=0.0,
+            cloud_avg_pct=60, humidity_avg_pct=55,
+            thunder_level_max=ThunderLevel.NONE, wind_chill_min_c=8.0,
+            pop_max_pct=pop, cape_max_jkg=cape,
+        )
+        return SegmentWeatherData(
+            segment=seg, timeseries=ts, aggregated=agg,
+            fetched_at=datetime.now(timezone.utc), provider="openmeteo",
+        )
+
+    def test_extreme_cape_high_risk(self):
+        """GIVEN cape=2500, WHEN risk determined, THEN high risk."""
+        seg = self._make_seg_with_risk(cape=2500.0)
+        formatter = TripReportFormatter()
+        level, label = formatter._determine_risk(seg)
+        assert level == "high"
+        assert "Extreme Thunder Energy" in label
+
+    def test_moderate_cape_medium_risk(self):
+        """GIVEN cape=1200, WHEN risk determined, THEN medium risk."""
+        seg = self._make_seg_with_risk(cape=1200.0)
+        formatter = TripReportFormatter()
+        level, label = formatter._determine_risk(seg)
+        assert level == "medium"
+        assert "Thunder Energy" in label
+
+    def test_high_pop_medium_risk(self):
+        """GIVEN pop=85, WHEN risk determined, THEN medium risk."""
+        seg = self._make_seg_with_risk(pop=85)
+        formatter = TripReportFormatter()
+        level, label = formatter._determine_risk(seg)
+        assert level == "medium"
+        assert "High Rain Probability" in label
+
+    def test_none_values_no_risk(self):
+        """GIVEN pop=None, cape=None, WHEN risk determined, THEN no risk."""
+        seg = self._make_seg_with_risk(pop=None, cape=None)
+        formatter = TripReportFormatter()
+        level, label = formatter._determine_risk(seg)
+        assert level == "none"
+        assert "OK" in label
