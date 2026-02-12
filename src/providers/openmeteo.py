@@ -292,8 +292,8 @@ class OpenMeteoProvider:
                     cloud_total_pct=get_int("cloud_cover", i),
                     symbol=None,  # Could map weather_code to symbol
                     thunder_level=self._parse_thunder_level(get_int("weather_code", i)),
-                    cape_jkg=None,  # Not available in Open-Meteo standard params
-                    pop_pct=None,  # Not available
+                    cape_jkg=get_val("cape", i),
+                    pop_pct=get_val("precipitation_probability", i),
                     pressure_msl_hpa=get_val("pressure_msl", i),
                     humidity_pct=get_int("relative_humidity_2m", i),
                     dewpoint_c=get_val("dewpoint_2m", i),
@@ -308,9 +308,9 @@ class OpenMeteoProvider:
                     snowfall_limit_m=None,
                     swe_kgm2=None,
                     precip_type=None,
-                    freezing_level_m=None,
+                    freezing_level_m=get_val("freezing_level_height", i),
                     wind_chill_c=get_val("apparent_temperature", i),
-                    visibility_m=None,
+                    visibility_m=get_val("visibility", i),
                 )
                 data_points.append(point)
 
@@ -365,6 +365,10 @@ class OpenMeteoProvider:
                 "wind_gusts_10m",
                 "precipitation",
                 "weather_code",
+                "visibility",
+                "precipitation_probability",
+                "cape",
+                "freezing_level_height",
             ]),
             "timezone": "UTC",
         }

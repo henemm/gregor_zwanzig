@@ -1,0 +1,79 @@
+============================= test session starts ==============================
+collected 4 items
+
+tests/tdd/test_weather_config_api_ui.py FFFF                             [100%]
+
+=================================== FAILURES ===================================
+__________________ TestProviderDetection.test_function_exists __________________
+tests/tdd/test_weather_config_api_ui.py:133: in test_function_exists
+    from web.pages.weather_config import get_available_providers_for_trip
+E   ImportError: cannot import name 'get_available_providers_for_trip' from 'web.pages.weather_config' (/opt/gregor_zwanziger/src/web/pages/weather_config.py)
+____________ TestProviderDetection.test_austria_trip_has_geosphere _____________
+tests/tdd/test_weather_config_api_ui.py:144: in test_austria_trip_has_geosphere
+    from web.pages.weather_config import get_available_providers_for_trip
+E   ImportError: cannot import name 'get_available_providers_for_trip' from 'web.pages.weather_config' (/opt/gregor_zwanziger/src/web/pages/weather_config.py)
+____________ TestProviderDetection.test_corsica_trip_only_openmeteo ____________
+tests/tdd/test_weather_config_api_ui.py:158: in test_corsica_trip_only_openmeteo
+    from web.pages.weather_config import get_available_providers_for_trip
+E   ImportError: cannot import name 'get_available_providers_for_trip' from 'web.pages.weather_config' (/opt/gregor_zwanziger/src/web/pages/weather_config.py)
+_________________ TestProviderDetection.test_returns_set_type __________________
+tests/tdd/test_weather_config_api_ui.py:172: in test_returns_set_type
+    from web.pages.weather_config import get_available_providers_for_trip
+E   ImportError: cannot import name 'get_available_providers_for_trip' from 'web.pages.weather_config' (/opt/gregor_zwanziger/src/web/pages/weather_config.py)
+=========================== short test summary info ============================
+FAILED tests/tdd/test_weather_config_api_ui.py::TestProviderDetection::test_function_exists
+FAILED tests/tdd/test_weather_config_api_ui.py::TestProviderDetection::test_austria_trip_has_geosphere
+FAILED tests/tdd/test_weather_config_api_ui.py::TestProviderDetection::test_corsica_trip_only_openmeteo
+FAILED tests/tdd/test_weather_config_api_ui.py::TestProviderDetection::test_returns_set_type
+============================== 4 failed in 0.76s ===============================
+============================= test session starts ==============================
+collected 11 items / 4 deselected / 7 selected
+
+tests/tdd/test_weather_config_api_ui.py FFFFFF.                          [100%]
+
+=================================== FAILURES ===================================
+______________ TestCategoryGrouping.test_category_headers_present ______________
+tests/tdd/test_weather_config_api_ui.py:211: in test_category_headers_present
+    assert found == 5, (
+E   AssertionError: Expected 5 category headers, found 3. Phase 2 requires: Temperatur, Wind, Niederschlag, Atmosphaere, Winter
+E   assert 3 == 5
+___________ TestCategoryGrouping.test_no_old_basis_extended_sections ___________
+tests/tdd/test_weather_config_api_ui.py:237: in test_no_old_basis_extended_sections
+    assert basis.count() == 0, "Old 'Basis-Metriken' header still present"
+E   AssertionError: Old 'Basis-Metriken' header still present
+E   assert 1 == 0
+E    +  where 1 = count()
+E    +    where count = <Locator frame=<Frame name= url='http://localhost:18092/trips'> selector='text=Basis-Metriken'>.count
+________________ TestMetricCount.test_fifteen_metric_checkboxes ________________
+tests/tdd/test_weather_config_api_ui.py:271: in test_fifteen_metric_checkboxes
+    assert count == 15, (
+E   AssertionError: Expected 15 metric checkboxes (from MetricCatalog), found 13. Phase 2 replaces 13 hardcoded metrics with 15 from MetricCatalog.
+E   assert 13 == 15
+_______________ TestMetricCount.test_metric_labels_from_catalog ________________
+tests/tdd/test_weather_config_api_ui.py:305: in test_metric_labels_from_catalog
+    assert found == len(new_labels), (
+E   AssertionError: Only 0/5 MetricCatalog labels found. Phase 2 should show all labels from MetricCatalog.
+E   assert 0 == 5
+E    +  where 5 = len(['Schneefallgrenze', 'Tiefe Wolken', 'Mittelhohe Wolken', 'Hohe Wolken', 'Schneehöhe'])
+__________ TestAggregationDropdowns.test_aggregation_selects_present ___________
+tests/tdd/test_weather_config_api_ui.py:342: in test_aggregation_selects_present
+    assert count >= 15, (
+E   AssertionError: Expected at least 15 aggregation dropdowns, found 0. Phase 2 requires per-metric aggregation selection.
+E   assert 0 >= 15
+__________________ TestProviderInfo.test_provider_info_shown ___________________
+tests/tdd/test_weather_config_api_ui.py:378: in test_provider_info_shown
+    assert provider_text.count() > 0 or openmeteo_text.count() > 0, (
+E   AssertionError: No provider info found in dialog header. Phase 2 shows available providers.
+E   assert (0 > 0 or 0 > 0)
+E    +  where 0 = count()
+E    +    where count = <Locator frame=<Frame name= url='http://localhost:18092/trips'> selector='text=Provider'>.count
+E    +  and   0 = count()
+E    +    where count = <Locator frame=<Frame name= url='http://localhost:18092/trips'> selector='text=OpenMeteo'>.count
+=========================== short test summary info ============================
+FAILED tests/tdd/test_weather_config_api_ui.py::TestCategoryGrouping::test_category_headers_present
+FAILED tests/tdd/test_weather_config_api_ui.py::TestCategoryGrouping::test_no_old_basis_extended_sections
+FAILED tests/tdd/test_weather_config_api_ui.py::TestMetricCount::test_fifteen_metric_checkboxes
+FAILED tests/tdd/test_weather_config_api_ui.py::TestMetricCount::test_metric_labels_from_catalog
+FAILED tests/tdd/test_weather_config_api_ui.py::TestAggregationDropdowns::test_aggregation_selects_present
+FAILED tests/tdd/test_weather_config_api_ui.py::TestProviderInfo::test_provider_info_shown
+================== 6 failed, 1 passed, 4 deselected in 30.53s ==================
