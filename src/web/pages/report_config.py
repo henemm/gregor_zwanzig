@@ -33,7 +33,7 @@ def show_report_config_dialog(trip: Trip, user_id: str = "default") -> None:
         trip: Trip to configure reports for
         user_id: User identifier for saving
     """
-    with ui.dialog() as dialog, ui.card().classes("w-96"):
+    with ui.dialog() as dialog, ui.card().classes("w-full max-w-lg"):
         ui.label("Report-Einstellungen").classes("text-h6")
 
         # Get current config or defaults

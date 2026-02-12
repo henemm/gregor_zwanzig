@@ -108,8 +108,8 @@ def render_trips() -> None:
             # State for stages and waypoints
             stages_data: List[Dict[str, Any]] = []
 
-            with ui.dialog() as dialog, ui.card().classes("w-full max-w-3xl max-h-screen"):
-                with ui.scroll_area().classes("w-full"):
+            with ui.dialog() as dialog, ui.card().classes("w-full max-w-5xl"):
+                with ui.scroll_area().classes("w-full").style("height: 80vh"):
                     ui.label("New Trip").classes("text-h6 mb-4")
 
                     name_input = ui.input(
@@ -368,8 +368,8 @@ def render_trips() -> None:
                 }
                 stages_data.append(stage_dict)
 
-            with ui.dialog() as dialog, ui.card().classes("w-full max-w-3xl max-h-screen"):
-                with ui.scroll_area().classes("w-full"):
+            with ui.dialog() as dialog, ui.card().classes("w-full max-w-5xl"):
+                with ui.scroll_area().classes("w-full").style("height: 80vh"):
                     ui.label("Edit Trip").classes("text-h6 mb-4")
 
                     name_input = ui.input(
