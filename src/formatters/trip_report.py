@@ -11,19 +11,16 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Optional
 
+from app.metric_catalog import build_default_display_config, get_col_defs, get_metric
 from app.models import (
-    EmailReportDisplayConfig,
     ForecastDataPoint,
     NormalizedTimeseries,
     SegmentWeatherData,
     ThunderLevel,
     TripReport,
-    TripWeatherConfig,
+    UnifiedWeatherDisplayConfig,
     WeatherChange,
 )
-
-# Default display config if none provided
-_DEFAULT_DISPLAY = EmailReportDisplayConfig()
 
 
 class TripReportFormatter:
@@ -34,8 +31,7 @@ class TripReportFormatter:
         segments: list[SegmentWeatherData],
         trip_name: str,
         report_type: str,
-        trip_config: Optional[TripWeatherConfig] = None,
-        display_config: Optional[EmailReportDisplayConfig] = None,
+        display_config: Optional[UnifiedWeatherDisplayConfig] = None,
         night_weather: Optional[NormalizedTimeseries] = None,
         thunder_forecast: Optional[dict] = None,
         changes: Optional[list[WeatherChange]] = None,
@@ -46,7 +42,7 @@ class TripReportFormatter:
         if not segments:
             raise ValueError("Cannot format email with no segments")
 
-        dc = display_config or _DEFAULT_DISPLAY
+        dc = display_config or build_default_display_config()
         trip_id = trip_name.lower().replace(" ", "-")
         trip_id = "".join(c for c in trip_id if c.isalnum() or c == "-")
 
@@ -59,7 +55,7 @@ class TripReportFormatter:
             last_seg = segments[-1]
             arrival_hour = last_seg.segment.end_time.hour
             night_rows = self._extract_night_rows(
-                night_weather, arrival_hour, dc.night_interval_hours,
+                night_weather, arrival_hour, dc.night_interval_hours, dc,
             )
 
         # Highlights
@@ -99,7 +95,7 @@ class TripReportFormatter:
     # ------------------------------------------------------------------
 
     def _extract_hourly_rows(
-        self, seg_data: SegmentWeatherData, dc: EmailReportDisplayConfig,
+        self, seg_data: SegmentWeatherData, dc: UnifiedWeatherDisplayConfig,
     ) -> list[dict]:
         """Extract hourly data points within segment time window."""
         start_h = seg_data.segment.start_time.hour
@@ -115,9 +111,10 @@ class TripReportFormatter:
         night_weather: NormalizedTimeseries,
         arrival_hour: int,
         interval: int = 2,
+        dc: Optional[UnifiedWeatherDisplayConfig] = None,
     ) -> list[dict]:
         """Extract night data at given interval from arrival to 06:00."""
-        dc = _DEFAULT_DISPLAY
+        dc = dc or build_default_display_config()
         rows = []
         first_date = night_weather.data[0].ts.date() if night_weather.data else None
         for dp in night_weather.data:
@@ -129,51 +126,29 @@ class TripReportFormatter:
                 rows.append(self._dp_to_row(dp, dc))
         return rows
 
-    def _dp_to_row(self, dp: ForecastDataPoint, dc: EmailReportDisplayConfig) -> dict:
-        """Convert a single ForecastDataPoint to a row dict."""
+    def _dp_to_row(self, dp: ForecastDataPoint, dc: UnifiedWeatherDisplayConfig) -> dict:
+        """Convert a single ForecastDataPoint to a row dict using MetricCatalog."""
         row: dict = {"time": f"{dp.ts.hour:02d}"}
-        if dc.show_temp_measured:
-            row["temp"] = dp.t2m_c
-        if dc.show_temp_felt:
-            row["felt"] = dp.wind_chill_c
-        if dc.show_wind:
-            row["wind"] = dp.wind10m_kmh
-        if dc.show_gusts:
-            row["gust"] = dp.gust_kmh
-        if dc.show_precipitation:
-            row["precip"] = dp.precip_1h_mm
-        if dc.show_thunder:
-            row["thunder"] = dp.thunder_level
-        if dc.show_snowfall_limit:
-            row["snow_limit"] = dp.snowfall_limit_m
-        if dc.show_clouds:
-            row["cloud"] = dp.cloud_total_pct
-        if dc.show_humidity:
-            row["humidity"] = dp.humidity_pct
+        for mc in dc.metrics:
+            if not mc.enabled:
+                continue
+            try:
+                metric_def = get_metric(mc.metric_id)
+            except KeyError:
+                continue
+            row[metric_def.col_key] = getattr(dp, metric_def.dp_field, None)
         return row
 
     # ------------------------------------------------------------------
     # Column definitions
     # ------------------------------------------------------------------
 
-    _COL_DEFS = [
-        ("temp", "Temp", "temp"),
-        ("felt", "Felt", "felt"),
-        ("wind", "Wind", "wind"),
-        ("gust", "Gust", "gust"),
-        ("precip", "Rain", "precip"),
-        ("thunder", "Thund", "thunder"),
-        ("snow_limit", "Snow", "snow_limit"),
-        ("cloud", "Clouds", "cloud"),
-        ("humidity", "Humid", "humidity"),
-    ]
-
     def _visible_cols(self, rows: list[dict]) -> list[tuple[str, str]]:
-        """Return (key, label) for columns present in rows."""
+        """Return (key, label) for columns present in rows, ordered by MetricCatalog."""
         if not rows:
             return []
         keys = set(rows[0].keys()) - {"time"}
-        return [(k, label) for k, label, _ in self._COL_DEFS if k in keys]
+        return [(k, label) for k, label, _ in get_col_defs() if k in keys]
 
     # ------------------------------------------------------------------
     # Highlights / Summary
@@ -286,7 +261,7 @@ class TripReportFormatter:
                 t = "⚡ mögl."
                 return f'<span style="color:#f57f17">{t}</span>' if html else t
             return "–"
-        if key in ("temp", "felt"):
+        if key in ("temp", "felt", "dewpoint"):
             return f"{val:.1f}"
         if key in ("wind", "gust"):
             s = f"{val:.0f}"
@@ -301,10 +276,12 @@ class TripReportFormatter:
             if html and val and val >= 5:
                 return f'<span style="background:#e3f2fd;color:#1565c0;padding:2px 4px;border-radius:3px">{s}</span>'
             return s
-        if key == "snow_limit":
+        if key in ("snow_limit", "snow_depth"):
             return f"{val}" if val else "–"
-        if key in ("cloud", "humidity"):
+        if key in ("cloud", "cloud_low", "cloud_mid", "cloud_high", "humidity"):
             return f"{val}" if val is not None else "–"
+        if key == "pressure":
+            return f"{val:.1f}" if val is not None else "–"
         return str(val)
 
     # ------------------------------------------------------------------
@@ -341,7 +318,7 @@ class TripReportFormatter:
             seg_html_parts.append(f"""
             <div class="section">
                 <h3>Segment {seg.segment_id}: {seg.start_time.strftime('%H:%M')}–{seg.end_time.strftime('%H:%M')} | {seg.distance_km:.1f} km | ↑{s_elev}m → {e_elev}m</h3>
-                {self._render_html_table(rows, dc)}
+                {self._render_html_table(rows)}
             </div>""")
 
         segments_html = "".join(seg_html_parts)
@@ -354,7 +331,7 @@ class TripReportFormatter:
             <div class="section">
                 <h3>🌙 Nacht am Ziel ({int(last_seg.end_point.elevation_m)}m)</h3>
                 <p style="color:#666;font-size:13px">Ankunft {last_seg.end_time.strftime('%H:%M')} → Morgen 06:00</p>
-                {self._render_html_table(night_rows, dc)}
+                {self._render_html_table(night_rows)}
             </div>"""
 
         # Thunder forecast
@@ -440,7 +417,7 @@ class TripReportFormatter:
 </html>"""
         return html
 
-    def _render_html_table(self, rows: list[dict], dc: EmailReportDisplayConfig) -> str:
+    def _render_html_table(self, rows: list[dict]) -> str:
         """Render an HTML table from row dicts."""
         if not rows:
             return "<p>Keine Daten</p>"

@@ -271,7 +271,7 @@ class TripAlertService:
             segments=weather,
             trip_name=trip.name,
             report_type="alert",
-            trip_config=trip.weather_config,
+            display_config=trip.display_config,
             changes=changes,
         )
 

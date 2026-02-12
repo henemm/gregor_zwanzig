@@ -2,13 +2,13 @@
 entity_id: weather_config
 type: module
 created: 2026-02-02
-updated: 2026-02-02
+updated: 2026-02-12
 status: draft
-version: "1.0"
-tags: [story-2, webui, config, safari]
+version: "2.0"
+tags: [story-2, story-3, webui, config, safari, email, formatter]
 ---
 
-# Weather Config UI
+# Unified Weather Metrics Configuration
 
 ## Approval
 
@@ -16,454 +16,332 @@ tags: [story-2, webui, config, safari]
 
 ## Purpose
 
-WebUI page for configuring which weather metrics are displayed per trip. Users can select from 13 available metrics (8 basis + 5 extended) via checkbox interface, with configuration persisted to trip JSON files for use in Story 3 weather reports.
+Unified configuration system that connects trip weather metric selection with email report output. Replaces two disconnected config systems (`TripWeatherConfig` for UI storage, `EmailReportDisplayConfig` for formatter defaults) with a single `UnifiedWeatherDisplayConfig` backed by a central `MetricCatalog`.
+
+**Problem solved:** Weather config dialog at `/trips` saves metrics that the email formatter ignores. `EmailReportDisplayConfig` has no UI and always uses hardcoded defaults. This spec unifies both.
 
 ## Source
 
-- **File:** `src/web/pages/weather_config.py` (NEW)
-- **Page:** Weather Metrics Configuration UI
+- **Files:**
+  - `src/app/metric_catalog.py` (NEW) - Central metric definitions
+  - `src/app/models.py` (MODIFY) - New DTOs
+  - `src/app/trip.py` (MODIFY) - New field on Trip
+  - `src/app/loader.py` (MODIFY) - Serialization + migration
+  - `src/formatters/trip_report.py` (MODIFY) - Consume unified config
+  - `src/services/trip_report_scheduler.py` (MODIFY) - Pass config
+  - `src/web/pages/weather_config.py` (MODIFY Phase 2) - API-aware UI
 
 ## Dependencies
 
 ### Upstream Dependencies (what we USE)
 
 | Entity | Type | Purpose |
-|--------|------|------------|
-| `Trip` | Model | Trip dataclass with weather_config field (src/app/trip.py) |
-| `TripWeatherConfig` | DTO | Config data structure (src/app/models.py) |
-| `load_trip` | Function | Load trip from JSON (src/app/loader.py) |
-| `save_trip` | Function | Save trip to JSON (src/app/loader.py) |
-| `SegmentWeatherSummary` | DTO | Defines all 13 metric names (src/app/models.py) |
+|--------|------|---------|
+| `Trip` | Model | Trip dataclass with display_config field (src/app/trip.py) |
+| `ForecastDataPoint` | DTO | Weather data fields (src/app/models.py) |
+| `load_trip` / `save_trip` | Function | Trip persistence (src/app/loader.py) |
+| `TripReportFormatter` | Class | Email report generation (src/formatters/trip_report.py) |
+| `TripReportSchedulerService` | Class | Report scheduling (src/services/trip_report_scheduler.py) |
 
 ### Downstream Dependencies (what USES us)
 
 | Entity | Type | Purpose |
-|--------|------|------------|
-| Story 3 Report Formatters | Service | Will filter metrics based on this config (future) |
-| Trip Details Page | WebUI | May display current config (future) |
+|--------|------|---------|
+| Weather Config Dialog | WebUI | Displays available metrics per trip (Phase 2) |
+| Future SMS Formatter | Service | Uses sms_metrics subset (Phase 3) |
+
+## Phasing
+
+### Phase 1: Foundation - Config Model + Formatter Fix (HOCH)
+
+Connect weather config to email reports. ~540 LoC, 7 files.
+
+### Phase 2: API-Aware UI (MITTEL)
+
+Dialog shows provider-based metric availability. ~250 LoC, 2 files.
+
+### Phase 3: Per-Report-Type + SMS (NIEDRIG)
+
+Morning/evening customization, SMS character counter. ~190 LoC, 2 files.
+
+---
 
 ## Implementation Details
 
-### DTO Structure
+### MetricCatalog (NEW: `src/app/metric_catalog.py`)
 
-**Add to `src/app/models.py`:**
+Single Source of Truth for all weather metrics.
+
+```python
+@dataclass(frozen=True)
+class MetricDefinition:
+    """Definition of a single weather metric."""
+    id: str                          # Unique key, e.g. "temperature"
+    label_de: str                    # UI label, e.g. "Temperatur"
+    unit: str                        # Unit, e.g. "°C"
+    dp_field: str                    # ForecastDataPoint field name, e.g. "t2m_c"
+    category: str                    # Grouping: temperature, wind, precipitation, atmosphere
+    default_aggregations: list[str]  # Default agg functions: ["min", "max", "avg"]
+    compact_label: str               # SMS short form, e.g. "T"
+    col_key: str                     # Column key for formatter row dicts
+    col_label: str                   # Column header label
+    providers: dict[str, bool]       # Provider availability
+    default_enabled: bool = True     # Enabled by default in new configs
+```
+
+**~15 metrics defined:**
+
+| id | dp_field | category | providers (openmeteo/geosphere) |
+|----|----------|----------|---------------------------------|
+| temperature | t2m_c | temperature | yes/yes |
+| wind_chill | wind_chill_c | temperature | yes/yes |
+| wind | wind10m_kmh | wind | yes/yes |
+| gust | gust_kmh | wind | yes/yes |
+| precipitation | precip_1h_mm | precipitation | yes/yes |
+| thunder | thunder_level | precipitation | yes (weather_code)/no |
+| snowfall_limit | snowfall_limit_m | precipitation | no/yes |
+| cloud_total | cloud_total_pct | atmosphere | yes/yes |
+| cloud_low | cloud_low_pct | atmosphere | yes/no |
+| cloud_mid | cloud_mid_pct | atmosphere | yes/no |
+| cloud_high | cloud_high_pct | atmosphere | yes/no |
+| humidity | humidity_pct | atmosphere | yes/yes |
+| dewpoint | dewpoint_c | atmosphere | yes/yes (computed) |
+| pressure | pressure_msl_hpa | atmosphere | yes/yes |
+| snow_depth | snow_depth_cm | winter | no/yes (SNOWGRID) |
+
+**Key functions:**
+
+```python
+def get_metric(metric_id: str) -> MetricDefinition
+def get_all_metrics() -> list[MetricDefinition]
+def get_metrics_by_category(category: str) -> list[MetricDefinition]
+def get_default_enabled_metrics() -> list[str]  # Returns metric IDs
+def build_default_display_config(trip_id: str) -> "UnifiedWeatherDisplayConfig"
+```
+
+### UnifiedWeatherDisplayConfig DTO (replaces TripWeatherConfig + EmailReportDisplayConfig)
 
 ```python
 @dataclass
-class TripWeatherConfig:
-    """
-    Weather metrics configuration per trip.
+class MetricConfig:
+    """Per-metric configuration."""
+    metric_id: str              # Reference to MetricDefinition.id
+    enabled: bool = True
+    aggregations: list[str] = field(default_factory=lambda: ["min", "max"])
+    # Phase 3: per-report-type overrides
+    morning_enabled: Optional[bool] = None   # None = follows global enabled
+    evening_enabled: Optional[bool] = None
 
-    Stores which of the 13 available metrics the user wants
-    to see in their trip weather reports.
-
-    Example:
-        TripWeatherConfig(
-            trip_id="gr20-etappe3",
-            enabled_metrics=["temp_max_c", "wind_max_kmh", "precip_sum_mm"],
-            updated_at=datetime.now(timezone.utc)
-        )
-    """
+@dataclass
+class UnifiedWeatherDisplayConfig:
+    """Unified weather display configuration per trip."""
     trip_id: str
-    enabled_metrics: list[str]  # Subset of 13 metric names
-    updated_at: datetime
+    metrics: list[MetricConfig]      # Per-metric config
+    show_night_block: bool = True
+    night_interval_hours: int = 2
+    thunder_forecast_days: int = 2
+    # Phase 3: SMS
+    sms_metrics: list[str] = field(default_factory=list)
+    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 ```
 
-**Extend `src/app/trip.py`:**
+**Helper methods on UnifiedWeatherDisplayConfig:**
+
+```python
+def is_metric_enabled(self, metric_id: str) -> bool
+    """Check if metric is enabled."""
+
+def get_enabled_metric_ids(self) -> list[str]
+    """Return list of enabled metric IDs."""
+
+def to_row_keys(self) -> list[str]
+    """Return ordered list of col_keys for enabled metrics (for formatter)."""
+```
+
+### Trip Model Change
 
 ```python
 @dataclass
 class Trip:
-    id: str
-    name: str
-    stages: List[Stage]
-    avalanche_regions: List[str] = field(default_factory=list)
-    aggregation: AggregationConfig = field(default_factory=AggregationConfig)
-    weather_config: Optional[TripWeatherConfig] = None  # NEW - Feature 2.6
+    # ... existing fields ...
+    weather_config: Optional["TripWeatherConfig"] = None  # KEPT for migration
+    display_config: Optional["UnifiedWeatherDisplayConfig"] = None  # NEW
+    report_config: Optional["TripReportConfig"] = None
 ```
 
-### Available Metrics (13 total)
+### Loader Migration
 
-**Basis Metrics (8) - Default: Checked**
-1. `temp_min_c` - Minimum temperature
-2. `temp_max_c` - Maximum temperature
-3. `temp_avg_c` - Average temperature
-4. `wind_max_kmh` - Maximum wind speed
-5. `gust_max_kmh` - Maximum wind gusts
-6. `precip_sum_mm` - Total precipitation
-7. `cloud_avg_pct` - Average cloud cover
-8. `humidity_avg_pct` - Average humidity
+When loading a trip JSON:
+1. If `display_config` key present → load as `UnifiedWeatherDisplayConfig`
+2. Else if `weather_config` key present → migrate old format:
+   - Map old metric names to new metric IDs:
+     - `temp_min_c` → metric_id `"temperature"`, aggregation `["min"]`
+     - `temp_max_c` → metric_id `"temperature"`, aggregation `["max"]`
+     - `temp_avg_c` → metric_id `"temperature"`, aggregation `["avg"]`
+     - `wind_max_kmh` → metric_id `"wind"`, aggregation `["max"]`
+     - `gust_max_kmh` → metric_id `"gust"`, aggregation `["max"]`
+     - `precip_sum_mm` → metric_id `"precipitation"`, aggregation `["sum"]`
+     - `cloud_avg_pct` → metric_id `"cloud_total"`, aggregation `["avg"]`
+     - `humidity_avg_pct` → metric_id `"humidity"`, aggregation `["avg"]`
+     - `thunder_level_max` → metric_id `"thunder"`, aggregation `["max"]`
+     - `visibility_min_m` → metric_id `"visibility"` (NOT in catalog, skipped)
+     - `dewpoint_avg_c` → metric_id `"dewpoint"`, aggregation `["avg"]`
+     - `pressure_avg_hpa` → metric_id `"pressure"`, aggregation `["avg"]`
+     - `wind_chill_min_c` → metric_id `"wind_chill"`, aggregation `["min"]`
+   - Build MetricConfig list from mapped entries
+   - Keep old `weather_config` in JSON for transition
+3. Else → no config, formatter uses defaults from MetricCatalog
 
-**Extended Metrics (5) - Default: Unchecked**
-9. `thunder_level_max` - Maximum thunderstorm risk
-10. `visibility_min_m` - Minimum visibility
-11. `dewpoint_avg_c` - Average dewpoint temperature
-12. `pressure_avg_hpa` - Average air pressure
-13. `wind_chill_min_c` - Minimum wind chill
+When saving: serialize `display_config` as new format. Old `weather_config` preserved if present.
 
-*Note: `snow_depth_cm` and `freezing_level_m` from SegmentWeatherSummary not included in v1.0 (winter-specific, not core hiking metrics)*
+### Formatter Changes (`src/formatters/trip_report.py`)
 
-### UI Structure
+**Current flow:** `_dp_to_row()` checks `dc.show_temp_measured`, `dc.show_wind`, etc. (hardcoded booleans)
+
+**New flow:** `_dp_to_row()` iterates over enabled metrics from `UnifiedWeatherDisplayConfig` using `MetricCatalog` to map metric_id → dp_field → col_key.
 
 ```python
-# src/web/pages/weather_config.py
-
-from datetime import datetime, timezone
-from typing import Dict
-
-from nicegui import ui
-from app.trip import Trip
-from app.models import TripWeatherConfig
-from app.loader import load_trip, save_trip
-
-
-# Metric definitions
-BASIS_METRICS = {
-    "temp_min_c": "Temperatur (Min)",
-    "temp_max_c": "Temperatur (Max)",
-    "temp_avg_c": "Temperatur (Durchschnitt)",
-    "wind_max_kmh": "Wind (Max)",
-    "gust_max_kmh": "Böen (Max)",
-    "precip_sum_mm": "Niederschlag (Summe)",
-    "cloud_avg_pct": "Bewölkung (Durchschnitt)",
-    "humidity_avg_pct": "Luftfeuchtigkeit (Durchschnitt)",
-}
-
-EXTENDED_METRICS = {
-    "thunder_level_max": "Gewitter (Max Stufe)",
-    "visibility_min_m": "Sichtweite (Min)",
-    "dewpoint_avg_c": "Taupunkt (Durchschnitt)",
-    "pressure_avg_hpa": "Luftdruck (Durchschnitt)",
-    "wind_chill_min_c": "Windchill (Min)",
-}
-
-
-def show_weather_config_dialog(trip: Trip) -> None:
-    """
-    Show weather metrics configuration dialog.
-
-    Factory Pattern (Safari compatible):
-    - All handlers use make_<action>_handler() pattern
-    - Closures bind immutable trip_id, not mutable checkbox dict
-
-    Args:
-        trip: Trip to configure weather metrics for
-    """
-    with ui.dialog() as dialog, ui.card():
-        ui.label("Wetter-Metriken konfigurieren").classes("text-h6")
-
-        # Get current config or use defaults
-        current_metrics = set()
-        if trip.weather_config:
-            current_metrics = set(trip.weather_config.enabled_metrics)
-        else:
-            # Default: all basis metrics checked
-            current_metrics = set(BASIS_METRICS.keys())
-
-        # Checkboxes dictionary
-        checkboxes: Dict[str, ui.checkbox] = {}
-
-        # Basis metrics section
-        ui.label("Basis-Metriken").classes("text-subtitle1 q-mt-md")
-        for metric_id, metric_label in BASIS_METRICS.items():
-            checkboxes[metric_id] = ui.checkbox(
-                metric_label,
-                value=(metric_id in current_metrics)
-            )
-
-        # Extended metrics section
-        ui.label("Erweiterte Metriken").classes("text-subtitle1 q-mt-md")
-        for metric_id, metric_label in EXTENDED_METRICS.items():
-            checkboxes[metric_id] = ui.checkbox(
-                metric_label,
-                value=(metric_id in current_metrics)
-            )
-
-        # Buttons (Factory Pattern!)
-        with ui.row():
-            ui.button("Abbrechen", on_click=dialog.close)
-            ui.button(
-                "Speichern",
-                on_click=make_save_handler(trip.id, checkboxes, dialog)
-            )
-
-    dialog.open()
-
-
-def make_save_handler(trip_id: str, checkboxes: Dict[str, ui.checkbox], dialog):
-    """
-    Factory for save handler - Safari compatible!
-
-    Pattern: make_<action>_handler() returns do_<action>()
-
-    Args:
-        trip_id: Immutable trip ID (safe for closure)
-        checkboxes: Checkbox dictionary (captured at factory time)
-        dialog: Dialog to close after save
-
-    Returns:
-        Save handler function
-    """
-    def do_save():
-        # Collect selected metrics
-        selected = [name for name, cb in checkboxes.items() if cb.value]
-
-        # Validation: Minimum 1 metric
-        if len(selected) == 0:
-            ui.notify(
-                "Mindestens 1 Metrik muss ausgewählt sein!",
-                color="negative"
-            )
-            return
-
-        # Load trip, update config, save
-        trip = load_trip(f"data/trips/{trip_id}.json")
-        trip.weather_config = TripWeatherConfig(
-            trip_id=trip_id,
-            enabled_metrics=selected,
-            updated_at=datetime.now(timezone.utc)
-        )
-        save_trip(trip, f"data/trips/{trip_id}.json")
-
-        # Success feedback
-        ui.notify(
-            f"{len(selected)} Metriken gespeichert!",
-            color="positive"
-        )
-        dialog.close()
-
-    return do_save
+def _dp_to_row(self, dp: ForecastDataPoint, config: UnifiedWeatherDisplayConfig) -> dict:
+    row = {"time": f"{dp.ts.hour:02d}"}
+    for mc in config.metrics:
+        if not mc.enabled:
+            continue
+        metric_def = get_metric(mc.metric_id)
+        value = getattr(dp, metric_def.dp_field, None)
+        row[metric_def.col_key] = value
+    return row
 ```
 
-### Loader Integration
+**Backward compatibility:** If no `UnifiedWeatherDisplayConfig` provided, build default from `MetricCatalog.build_default_display_config()` which produces identical output to current `_DEFAULT_DISPLAY`.
 
-**Modify `src/app/loader.py`:**
+**_COL_DEFS update:** Column definitions derived from MetricCatalog instead of hardcoded list.
+
+### Scheduler Changes
 
 ```python
-def _parse_trip(data: Dict[str, Any]) -> Trip:
-    """Parse trip data from dictionary."""
-    # ... existing stage parsing ...
-
-    # Parse weather config if present (Feature 2.6)
-    weather_config = None
-    if "weather_config" in data:
-        wc_data = data["weather_config"]
-        weather_config = TripWeatherConfig(
-            trip_id=wc_data["trip_id"],
-            enabled_metrics=wc_data["enabled_metrics"],
-            updated_at=datetime.fromisoformat(wc_data["updated_at"])
-        )
-
-    return Trip(
-        id=data["id"],
-        name=data["name"],
-        stages=stages,
-        avalanche_regions=data.get("avalanche_regions", []),
-        aggregation=aggregation,
-        weather_config=weather_config  # NEW
-    )
-
-
-def save_trip(trip: Trip, path: Union[str, Path]) -> None:
-    """Save a Trip to a JSON file."""
-    data = {
-        "id": trip.id,
-        "name": trip.name,
-        "stages": [...],  # existing serialization
-        "avalanche_regions": trip.avalanche_regions,
-        "aggregation": {...},  # existing serialization
-    }
-
-    # Serialize weather config (Feature 2.6)
-    if trip.weather_config:
-        data["weather_config"] = {
-            "trip_id": trip.weather_config.trip_id,
-            "enabled_metrics": trip.weather_config.enabled_metrics,
-            "updated_at": trip.weather_config.updated_at.isoformat()
-        }
-
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+# In _send_trip_report():
+report = self._formatter.format_email(
+    segments=segment_weather,
+    trip_name=trip.name,
+    report_type=report_type,
+    display_config=trip.display_config,  # NEW: pass unified config
+    night_weather=night_weather,
+    thunder_forecast=thunder_forecast,
+    stage_name=stage_name,
+    stage_stats=stage_stats,
+)
 ```
+
+---
+
+## Phase 2: API-Aware UI (Specification Only)
+
+### Weather Config Dialog Rewrite
+
+Dialog shows metrics grouped by category with provider-based availability:
+
+1. **Header:** Trip name, current provider info
+2. **Categories:** Temperature, Wind, Precipitation, Atmosphere, Winter
+3. **Per metric:**
+   - Checkbox (enabled/disabled)
+   - Grayed out if not available for trip's provider
+   - Aggregation dropdown (Min/Max/Avg/Sum) based on `default_aggregations`
+   - Tooltip with metric description
+4. **Footer:** Save/Cancel buttons (Factory Pattern!)
+
+Provider detection: Based on trip waypoint coordinates, determine which provider serves data (OpenMeteo always available, GeoSphere for Austria region).
+
+---
+
+## Phase 3: Per-Report-Type + SMS (Specification Only)
+
+### Morning/Evening Tabs
+
+- Tab control: "Alle" / "Morning" / "Evening"
+- "Alle" tab: global config (current behavior)
+- Morning/Evening tabs: override `morning_enabled`/`evening_enabled` per metric
+- Unconfigured overrides = follow global
+
+### SMS Metric Subset
+
+- Separate section: "SMS-Metriken"
+- Subset of enabled metrics for SMS channel
+- Live character counter (max 160)
+- Uses `compact_label` from MetricCatalog
+
+---
 
 ## Expected Behavior
 
-### Initial Load
-- **Given:** Trip without weather_config
-- **When:** Dialog opened
-- **Then:** All 8 basis metrics checked, 5 extended unchecked
+### Phase 1: Default Config (no display_config set)
 
-### Save Flow
-- **Given:** User selects 5 metrics
-- **When:** "Speichern" clicked
-- **Then:**
-  - Config saved to trip JSON file
-  - Notification: "5 Metriken gespeichert!"
-  - Dialog closes
+- **Given:** Trip without display_config
+- **When:** Report generated
+- **Then:** Default metrics from MetricCatalog used:
+  - temperature (as temp), wind_chill (as felt), wind, gust, precipitation, thunder, snowfall_limit, cloud_total, humidity (if show_humidity default=False in catalog)
+  - Output identical to current EmailReportDisplayConfig defaults
 
-### Reload Persistence
-- **Given:** Trip with saved config (3 metrics)
-- **When:** Dialog re-opened
-- **Then:** Previously saved 3 metrics checked, others unchecked
+### Phase 1: Custom Config
 
-### Validation
-- **Given:** User unchecks all metrics
-- **When:** "Speichern" clicked
-- **Then:**
-  - Error notification: "Mindestens 1 Metrik muss ausgewählt sein!"
-  - Dialog stays open
+- **Given:** Trip with display_config (temperature, wind, precipitation enabled)
+- **When:** Report generated
+- **Then:** Only Temp, Wind, Rain columns in email tables
 
-## Test Scenarios
+### Phase 1: Migration from old weather_config
 
-### E2E Browser Test (Safari Mandatory!)
+- **Given:** Trip JSON with old `weather_config.enabled_metrics: ["temp_max_c", "wind_max_kmh"]`
+- **When:** Trip loaded
+- **Then:** `display_config` created with temperature (max) + wind (max) enabled
 
-**File:** `tests/e2e/test_weather_config.py`
+### Phase 1: Night block respects config
 
-```python
-def test_weather_config_saves_and_loads(page):
-    """
-    GIVEN: Trip without weather config
-    WHEN: User selects metrics and saves
-    THEN: Config persists and reloads correctly
-
-    Safari test: Factory pattern ensures button works!
-    """
-    # Navigate to trips page
-    page.goto("http://localhost:8080/trips")
-
-    # Open weather config for test trip
-    page.click('button:has-text("Wetter-Metriken")')
-
-    # Verify default state (8 basis checked)
-    assert page.locator('input[type="checkbox"]:checked').count() == 8
-
-    # Uncheck 5 metrics, keep 3
-    page.click('text=Temperatur (Durchschnitt)')  # uncheck
-    page.click('text=Luftfeuchtigkeit')  # uncheck
-    page.click('text=Böen (Max)')  # uncheck
-    page.click('text=Bewölkung')  # uncheck
-    page.click('text=Gewitter')  # uncheck
-
-    # Save
-    page.click('button:has-text("Speichern")')
-
-    # Verify notification
-    assert page.locator('text=3 Metriken gespeichert!').is_visible()
-
-    # Reload page
-    page.reload()
-
-    # Re-open config
-    page.click('button:has-text("Wetter-Metriken")')
-
-    # Verify 3 metrics still checked
-    assert page.locator('input[type="checkbox"]:checked').count() == 3
-
-
-def test_weather_config_validation_minimum_one(page):
-    """
-    GIVEN: User unchecks all metrics
-    WHEN: Save clicked
-    THEN: Validation error shown, dialog stays open
-    """
-    page.goto("http://localhost:8080/trips")
-    page.click('button:has-text("Wetter-Metriken")')
-
-    # Uncheck all 8 basis metrics
-    for i in range(8):
-        checkboxes = page.locator('input[type="checkbox"]:checked')
-        checkboxes.first.click()
-
-    # Try to save
-    page.click('button:has-text("Speichern")')
-
-    # Verify error notification
-    assert page.locator('text=Mindestens 1 Metrik').is_visible()
-
-    # Dialog still open
-    assert page.locator('text=Wetter-Metriken konfigurieren').is_visible()
-```
+- **Given:** `show_night_block: false`
+- **When:** Evening report generated
+- **Then:** No night block in email
 
 ## Known Limitations
 
-1. **No Metric Descriptions** - Checkboxes show only names, no explanations
-2. **No Metric Grouping** - Could group by category (temp, wind, precip, etc.)
-3. **No Preview** - Can't see how selected metrics look in report
-4. **No Metric Reordering** - Display order is fixed
-5. **Winter Metrics Excluded** - snow_depth_cm and freezing_level_m not in v1.0 (can add later if needed)
+### Phase 1
+1. UI dialog still uses old checkbox format (Phase 2 rewrites it)
+2. No per-report-type customization (Phase 3)
+3. No SMS subset (Phase 3)
+4. Aggregation selection not yet in UI (stored in config, used by formatter)
 
-## Integration with Story 3
+### General
+1. Provider detection is static (based on catalog definition, not runtime API check)
+2. No metric reordering in UI
+3. No preview of report with selected metrics
 
-**Usage in Trip Report Formatters:**
+## Files to Change (Phase 1 Implementation)
 
-```python
-# Story 3: Email/SMS Trip-Formatter
-def format_trip_report(trip: Trip, segment_weather_data: List[SegmentWeatherData]):
-    # Get enabled metrics from config
-    enabled_metrics = set(trip.weather_config.enabled_metrics) if trip.weather_config else set(BASIS_METRICS.keys())
+| # | File | Action | LoC |
+|---|------|--------|-----|
+| 1 | `src/app/metric_catalog.py` | CREATE | ~120 |
+| 2 | `src/app/models.py` | MODIFY | ~50 |
+| 3 | `src/app/trip.py` | MODIFY | ~5 |
+| 4 | `src/app/loader.py` | MODIFY | ~50 |
+| 5 | `src/formatters/trip_report.py` | MODIFY | ~100 |
+| 6 | `src/services/trip_report_scheduler.py` | MODIFY | ~15 |
+| 7 | `docs/specs/modules/weather_config.md` | REWRITE | ~200 |
 
-    # Only include configured metrics in report
-    for segment_data in segment_weather_data:
-        summary = segment_data.aggregated
+**Total Phase 1:** ~540 LoC, 7 files
 
-        if "temp_max_c" in enabled_metrics:
-            report += f"Temp: {summary.temp_max_c}°C\n"
-        if "wind_max_kmh" in enabled_metrics:
-            report += f"Wind: {summary.wind_max_kmh} km/h\n"
-        # ... etc for all metrics
-```
+## Risks
 
-## Safari Compatibility
-
-**CRITICAL: Factory Pattern Mandatory!**
-
-All button handlers MUST use the factory pattern to avoid Safari closure binding bugs.
-
-**Pattern:**
-```python
-def make_<action>_handler(immutable_args...):
-    """Factory returns handler function."""
-    def do_<action>():
-        # Use immutable_args (safe in Safari)
-        pass
-    return do_<action>
-
-button = ui.button("Label", on_click=make_handler(...))
-```
-
-**Reference:** `docs/reference/nicegui_best_practices.md`
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| Formatter regression | HIGH | Default config produces identical output to current defaults |
+| Migration data loss | MEDIUM | Old weather_config preserved in JSON |
+| Safari UI bugs | MEDIUM | Factory Pattern, Safari-first testing (Phase 2) |
 
 ## Standards Compliance
 
-- ✅ Safari Compatible (Factory Pattern)
-- ✅ No Mocked Tests (Real browser E2E)
-- ✅ User Feedback (Notifications)
-- ✅ Validation (Minimum 1 metric)
-- ✅ Persistence (JSON file storage)
-- ✅ API Contract (TripWeatherConfig documented)
-
-## Files to Change
-
-1. **src/app/models.py** (MODIFY, +15 LOC)
-   - Add `TripWeatherConfig` dataclass
-
-2. **src/app/trip.py** (MODIFY, +10 LOC)
-   - Add `weather_config` field to `Trip`
-
-3. **src/app/loader.py** (MODIFY, +20 LOC)
-   - Parse/serialize `weather_config` in JSON
-
-4. **src/web/pages/weather_config.py** (CREATE, ~80 LOC)
-   - Weather config UI with checkboxes
-   - Factory pattern save handler
-
-5. **tests/e2e/test_weather_config.py** (CREATE, ~100 LOC)
-   - Safari browser test
-   - Save/load flow test
-   - Validation test
-
-**Total:** 5 files, ~225 LOC
+- Safari Compatible (Factory Pattern for Phase 2 UI)
+- No Mocked Tests (real E2E)
+- Spec-first workflow (this spec before code)
+- Backward compatible defaults
 
 ## Changelog
 
-- 2026-02-02: Initial spec created for Feature 2.6
+- 2026-02-02: v1.0 - Initial spec for Feature 2.6 (UI only)
+- 2026-02-12: v2.0 - Rewrite: Unified config, MetricCatalog, formatter integration (3 phases)

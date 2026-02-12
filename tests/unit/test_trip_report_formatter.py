@@ -7,8 +7,8 @@ from datetime import datetime, timezone
 
 import pytest
 
+from app.metric_catalog import build_default_display_config
 from app.models import (
-    EmailReportDisplayConfig,
     ForecastDataPoint,
     ForecastMeta,
     GPXPoint,
@@ -18,7 +18,17 @@ from app.models import (
     SegmentWeatherSummary,
     ThunderLevel,
     TripSegment,
+    UnifiedWeatherDisplayConfig,
 )
+
+
+def _config_with_disabled(*metric_ids: str) -> UnifiedWeatherDisplayConfig:
+    """Build default display config with specific metrics disabled."""
+    config = build_default_display_config()
+    for mc in config.metrics:
+        if mc.metric_id in metric_ids:
+            mc.enabled = False
+    return config
 
 
 def create_test_segment(segment_id: int = 1) -> SegmentWeatherData:
@@ -102,7 +112,7 @@ def test_format_email_generates_html():
 
 
 class TestMetricsFiltering:
-    """Test that EmailReportDisplayConfig filters table columns."""
+    """Test that UnifiedWeatherDisplayConfig filters table columns."""
 
     def test_all_columns_when_no_config(self) -> None:
         """Default: all default-visible metric columns shown when no config."""
@@ -123,12 +133,8 @@ class TestMetricsFiltering:
 
         formatter = TripReportFormatter()
         segments = [create_test_segment()]
-        config = EmailReportDisplayConfig(
-            show_wind=False,
-            show_gusts=False,
-            show_precipitation=False,
-            show_thunder=False,
-            show_snowfall_limit=False,
+        config = _config_with_disabled(
+            "wind", "gust", "precipitation", "thunder", "snowfall_limit",
         )
         report = formatter.format_email(segments, "Trip", "morning", display_config=config)
 
@@ -143,10 +149,7 @@ class TestMetricsFiltering:
 
         formatter = TripReportFormatter()
         segments = [create_test_segment()]
-        config = EmailReportDisplayConfig(
-            show_temp_measured=False,
-            show_temp_felt=False,
-        )
+        config = _config_with_disabled("temperature", "wind_chill")
         report = formatter.format_email(segments, "Trip", "morning", display_config=config)
 
         html = report.email_html
@@ -172,12 +175,7 @@ class TestMetricsFiltering:
 
         formatter = TripReportFormatter()
         segments = [create_test_segment()]
-        config = EmailReportDisplayConfig(
-            show_temp_measured=False,
-            show_temp_felt=False,
-            show_wind=False,
-            show_gusts=False,
-        )
+        config = _config_with_disabled("temperature", "wind_chill", "wind", "gust")
         report = formatter.format_email(segments, "Trip", "morning", display_config=config)
 
         plain = report.email_plain
@@ -191,10 +189,7 @@ class TestMetricsFiltering:
 
         formatter = TripReportFormatter()
         segments = [create_test_segment()]
-        config = EmailReportDisplayConfig(
-            show_temp_measured=False,
-            show_temp_felt=False,
-        )
+        config = _config_with_disabled("temperature", "wind_chill")
         report = formatter.format_email(segments, "Trip", "morning", display_config=config)
 
         html = report.email_html
