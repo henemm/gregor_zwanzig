@@ -383,22 +383,9 @@ class TripReportSchedulerService:
         from providers.base import get_provider
         from services.segment_weather import SegmentWeatherService
 
-        # Get default provider (uses fallback chain)
-        try:
-            provider = get_provider("geosphere")
-        except Exception:
-            logger.warning("GeoSphere unavailable, falling back to OpenMeteo")
-            provider = get_provider("openmeteo")
-
+        # OpenMeteo with automatic regional model selection (AROME, ICON-D2, ECMWF)
+        provider = get_provider("openmeteo")
         service = SegmentWeatherService(provider)
-
-        # Fallback service for coordinates outside primary provider coverage
-        fallback_service = None
-        if provider.__class__.__name__ != "OpenMeteoProvider":
-            try:
-                fallback_service = SegmentWeatherService(get_provider("openmeteo"))
-            except Exception:
-                pass
 
         weather_data = []
         for segment in segments:
@@ -406,23 +393,9 @@ class TripReportSchedulerService:
                 data = service.fetch_segment_weather(segment)
                 weather_data.append(data)
             except Exception as e:
-                if fallback_service:
-                    logger.warning(
-                        f"Primary provider failed for segment {segment.segment_id}, "
-                        f"trying OpenMeteo fallback: {e}"
-                    )
-                    try:
-                        data = fallback_service.fetch_segment_weather(segment)
-                        weather_data.append(data)
-                        continue
-                    except Exception as e2:
-                        logger.error(
-                            f"Fallback also failed for segment {segment.segment_id}: {e2}"
-                        )
-                else:
-                    logger.error(
-                        f"Failed to fetch weather for segment {segment.segment_id}: {e}"
-                    )
+                logger.error(
+                    f"Weather fetch failed for segment {segment.segment_id}: {e}"
+                )
 
         return weather_data
 
