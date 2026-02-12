@@ -41,7 +41,7 @@ def render_locations() -> None:
 
     def show_edit_dialog(loc: SavedLocation) -> None:
         """Show dialog to edit an existing location."""
-        with ui.dialog() as dialog, ui.card().classes("w-96"):
+        with ui.dialog() as dialog, ui.card().classes("w-full max-w-lg"):
             ui.label(f"Edit Location: {loc.name}").classes("text-h6 mb-4")
 
             name_input = ui.input("Name", value=loc.name).classes("w-full")
@@ -85,7 +85,7 @@ def render_locations() -> None:
         ui.label("Locations").classes("text-h4 mb-4")
 
         def show_add_dialog() -> None:
-            with ui.dialog() as dialog, ui.card().classes("w-96"):
+            with ui.dialog() as dialog, ui.card().classes("w-full max-w-lg"):
                 ui.label("New Location").classes("text-h6 mb-4")
 
                 name_input = ui.input(
