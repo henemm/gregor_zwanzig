@@ -22,6 +22,8 @@ Dieses Projekt nutzt den **OpenSpec 4-Phasen-Workflow**:
 
 **Hooks erzwingen diesen Workflow!** Edit/Write auf geschuetzte Dateien ist blockiert.
 
+**Subagent-Orchestrierung:** Workflow nutzt Task-Delegation mit model selection (haiku/sonnet/opus). Details: `docs/features/openspec_workflow.md`
+
 ## Architektur
 
 ```
@@ -115,6 +117,7 @@ Alle Module benoetigen Specs vor Implementierung:
 - `cli` - Einstiegspunkt
 - `smtp_mailer` - E-Mail-Versand
 - `debug_buffer` - Debug-Sammlung
+- `agent_orchestration` - Workflow-Skill-Commands mit Subagent-Delegation
 
 ### Geplante Module (draft)
 - `provider_met` - MET Norway Adapter
