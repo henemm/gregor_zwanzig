@@ -1,0 +1,93 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.2, pytest-8.4.1, pluggy-1.6.0
+rootdir: /opt/gregor_zwanziger
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 9 items
+
+tests/unit/test_trip_report_formatter_v2.py F.F..FFF.                    [100%]
+
+=================================== FAILURES ===================================
+________________ TestHighlightsPopCape.test_high_pop_highlight _________________
+
+self = <test_trip_report_formatter_v2.TestHighlightsPopCape object at 0x7fe645eb7710>
+
+    def test_high_pop_highlight(self):
+        """GIVEN pop_max_pct=90, WHEN highlights computed, THEN pop highlight present."""
+        seg = self._make_seg_with_pop_cape(pop=90)
+        formatter = TripReportFormatter()
+        report = formatter.format_email([seg], "Test", "morning")
+>       assert "Regenwahrscheinlichkeit 90%" in report.email_html
+E       assert 'Regenwahrscheinlichkeit 90%' in '<!DOCTYPE html>\n<html>\n<head>\n    <meta charset="utf-8">\n    <meta name="viewport" content="width=device-width, i...        Generated: 2026-02-12 19:16 UTC | Data: openmeteo (arome_france)\n        </div>\n    </div>\n</body>\n</html>'
+E        +  where '<!DOCTYPE html>\n<html>\n<head>\n    <meta charset="utf-8">\n    <meta name="viewport" content="width=device-width, i...        Generated: 2026-02-12 19:16 UTC | Data: openmeteo (arome_france)\n        </div>\n    </div>\n</body>\n</html>' = TripReport(trip_id='test', trip_name='Test', report_type='morning', generated_at=datetime.datetime(2026, 2, 12, 19, 16...\nGenerated: 2026-02-12 19:16 UTC\nData: openmeteo (arome_france)', sms_text=None, triggered_by='schedule', changes=[]).email_html
+
+tests/unit/test_trip_report_formatter_v2.py:386: AssertionError
+________________ TestHighlightsPopCape.test_high_cape_highlight ________________
+
+self = <test_trip_report_formatter_v2.TestHighlightsPopCape object at 0x7fe645d5bb90>
+
+    def test_high_cape_highlight(self):
+        """GIVEN cape_max_jkg=1500, WHEN highlights computed, THEN cape highlight present."""
+        seg = self._make_seg_with_pop_cape(cape=1500.0)
+        formatter = TripReportFormatter()
+        report = formatter.format_email([seg], "Test", "morning")
+>       assert "CAPE 1500 J/kg" in report.email_html
+E       assert 'CAPE 1500 J/kg' in '<!DOCTYPE html>\n<html>\n<head>\n    <meta charset="utf-8">\n    <meta name="viewport" content="width=device-width, i...        Generated: 2026-02-12 19:16 UTC | Data: openmeteo (arome_france)\n        </div>\n    </div>\n</body>\n</html>'
+E        +  where '<!DOCTYPE html>\n<html>\n<head>\n    <meta charset="utf-8">\n    <meta name="viewport" content="width=device-width, i...        Generated: 2026-02-12 19:16 UTC | Data: openmeteo (arome_france)\n        </div>\n    </div>\n</body>\n</html>' = TripReport(trip_id='test', trip_name='Test', report_type='morning', generated_at=datetime.datetime(2026, 2, 12, 19, 16...\nGenerated: 2026-02-12 19:16 UTC\nData: openmeteo (arome_france)', sms_text=None, triggered_by='schedule', changes=[]).email_html
+
+tests/unit/test_trip_report_formatter_v2.py:401: AssertionError
+_________________ TestRiskPopCape.test_extreme_cape_high_risk __________________
+
+self = <test_trip_report_formatter_v2.TestRiskPopCape object at 0x7fe645d6d0d0>
+
+    def test_extreme_cape_high_risk(self):
+        """GIVEN cape=2500, WHEN risk determined, THEN high risk."""
+        seg = self._make_seg_with_risk(cape=2500.0)
+        formatter = TripReportFormatter()
+        level, label = formatter._determine_risk(seg)
+>       assert level == "high"
+E       AssertionError: assert 'none' == 'high'
+E         
+E         - high
+E         + none
+
+tests/unit/test_trip_report_formatter_v2.py:444: AssertionError
+________________ TestRiskPopCape.test_moderate_cape_medium_risk ________________
+
+self = <test_trip_report_formatter_v2.TestRiskPopCape object at 0x7fe645d6d750>
+
+    def test_moderate_cape_medium_risk(self):
+        """GIVEN cape=1200, WHEN risk determined, THEN medium risk."""
+        seg = self._make_seg_with_risk(cape=1200.0)
+        formatter = TripReportFormatter()
+        level, label = formatter._determine_risk(seg)
+>       assert level == "medium"
+E       AssertionError: assert 'none' == 'medium'
+E         
+E         - medium
+E         + none
+
+tests/unit/test_trip_report_formatter_v2.py:452: AssertionError
+__________________ TestRiskPopCape.test_high_pop_medium_risk ___________________
+
+self = <test_trip_report_formatter_v2.TestRiskPopCape object at 0x7fe645d6de10>
+
+    def test_high_pop_medium_risk(self):
+        """GIVEN pop=85, WHEN risk determined, THEN medium risk."""
+        seg = self._make_seg_with_risk(pop=85)
+        formatter = TripReportFormatter()
+        level, label = formatter._determine_risk(seg)
+>       assert level == "medium"
+E       AssertionError: assert 'none' == 'medium'
+E         
+E         - medium
+E         + none
+
+tests/unit/test_trip_report_formatter_v2.py:460: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/test_trip_report_formatter_v2.py::TestHighlightsPopCape::test_high_pop_highlight
+FAILED tests/unit/test_trip_report_formatter_v2.py::TestHighlightsPopCape::test_high_cape_highlight
+FAILED tests/unit/test_trip_report_formatter_v2.py::TestRiskPopCape::test_extreme_cape_high_risk
+FAILED tests/unit/test_trip_report_formatter_v2.py::TestRiskPopCape::test_moderate_cape_medium_risk
+FAILED tests/unit/test_trip_report_formatter_v2.py::TestRiskPopCape::test_high_pop_medium_risk
+========================= 5 failed, 4 passed in 0.07s ==========================

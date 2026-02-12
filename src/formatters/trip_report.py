@@ -209,6 +209,26 @@ class TripReportFormatter:
         if max_wind > 50:
             highlights.append(f"💨 Wind bis {max_wind:.0f} km/h")
 
+        # High precipitation probability
+        max_pop = 0
+        max_pop_info = ""
+        for seg_data in segments:
+            if seg_data.aggregated.pop_max_pct and seg_data.aggregated.pop_max_pct > max_pop:
+                max_pop = seg_data.aggregated.pop_max_pct
+                max_pop_info = f"Segment {seg_data.segment.segment_id}"
+        if max_pop >= 80:
+            highlights.append(f"🌧 Regenwahrscheinlichkeit {max_pop}% ({max_pop_info})")
+
+        # High CAPE (thunderstorm energy)
+        max_cape = 0.0
+        max_cape_info = ""
+        for seg_data in segments:
+            if seg_data.aggregated.cape_max_jkg and seg_data.aggregated.cape_max_jkg > max_cape:
+                max_cape = seg_data.aggregated.cape_max_jkg
+                max_cape_info = f"Segment {seg_data.segment.segment_id}"
+        if max_cape >= 1000:
+            highlights.append(f"⚡ Hohe Gewitterenergie: CAPE {max_cape:.0f} J/kg ({max_cape_info})")
+
         return highlights
 
     # ------------------------------------------------------------------
@@ -243,6 +263,12 @@ class TripReportFormatter:
             return ("medium", "⚠️ Heavy Rain")
         if agg.thunder_level_max and agg.thunder_level_max in (ThunderLevel.MED, ThunderLevel.HIGH):
             return ("medium", "⚠️ Thunder Risk")
+        if agg.cape_max_jkg and agg.cape_max_jkg >= 2000:
+            return ("high", "⚠️ Extreme Thunder Energy")
+        if agg.cape_max_jkg and agg.cape_max_jkg >= 1000:
+            return ("medium", "⚠️ Thunder Energy")
+        if agg.pop_max_pct and agg.pop_max_pct >= 80:
+            return ("medium", "⚠️ High Rain Probability")
         return ("none", "✓ OK")
 
     # ------------------------------------------------------------------
