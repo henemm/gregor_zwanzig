@@ -19,8 +19,8 @@
 - [ ] `RISK-04` Schwellen/Heuristiken konfigurierbar
 
 ## 3. Reports & Versand
-- [ ] `REPORT-01` Berichtstypen: `evening`, `morning`, `alert`
-- [ ] `REPORT-02` Formatter (kurz, <160 Zeichen optional) + Debug-Anhang
+- [x] `REPORT-01` Berichtstypen: `evening`, `morning`, `alert`
+- [x] `REPORT-02` Formatter (kurz, <160 Zeichen optional) + Debug-Anhang
 - [x] `REPORT-03` SMTP Live-Test (echte E-Mail), alternative Kanäle später
 
 ## 4. Ops
