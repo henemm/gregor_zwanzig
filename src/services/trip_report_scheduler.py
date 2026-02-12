@@ -9,6 +9,7 @@ SPEC: docs/specs/modules/trip_report_scheduler.md v1.0
 from __future__ import annotations
 
 import logging
+import math
 from datetime import date, datetime, timedelta, timezone
 from typing import TYPE_CHECKING, List, Optional
 
@@ -22,6 +23,20 @@ if TYPE_CHECKING:
     from app.trip import Trip
 
 logger = logging.getLogger("trip_report_scheduler")
+
+
+def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Calculate great-circle distance between two points in km."""
+    R = 6371.0
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = (
+        math.sin(dlat / 2) ** 2
+        + math.cos(math.radians(lat1))
+        * math.cos(math.radians(lat2))
+        * math.sin(dlon / 2) ** 2
+    )
+    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
 class TripReportSchedulerService:
@@ -164,6 +179,34 @@ class TripReportSchedulerService:
         else:  # evening
             return today + timedelta(days=1)
 
+    def _compute_stage_stats(self, stage) -> dict:
+        """Compute aggregate stats for a stage from its waypoints."""
+        wps = stage.waypoints
+        if len(wps) < 2:
+            return {}
+
+        total_dist = 0.0
+        total_ascent = 0.0
+        total_descent = 0.0
+        max_elev = max(wp.elevation_m for wp in wps)
+
+        for i in range(len(wps) - 1):
+            total_dist += _haversine_km(
+                wps[i].lat, wps[i].lon, wps[i + 1].lat, wps[i + 1].lon,
+            )
+            diff = wps[i + 1].elevation_m - wps[i].elevation_m
+            if diff > 0:
+                total_ascent += diff
+            else:
+                total_descent += abs(diff)
+
+        return {
+            "distance_km": round(total_dist, 1),
+            "ascent_m": round(total_ascent),
+            "descent_m": round(total_descent),
+            "max_elevation_m": max_elev,
+        }
+
     def _send_trip_report(self, trip: "Trip", report_type: str) -> None:
         """
         Generate and send report for a single trip.
@@ -197,6 +240,7 @@ class TripReportSchedulerService:
         # 3. Stage info for header
         stage = trip.get_stage_for_date(target_date)
         stage_name = stage.name if stage else None
+        stage_stats = self._compute_stage_stats(stage) if stage else None
 
         # 4. Night weather (evening reports only)
         night_weather = None
@@ -217,6 +261,7 @@ class TripReportSchedulerService:
             night_weather=night_weather,
             thunder_forecast=thunder_forecast,
             stage_name=stage_name,
+            stage_stats=stage_stats,
         )
 
         # 7. Send email
@@ -291,10 +336,11 @@ class TripReportSchedulerService:
             # Calculate duration
             duration_hours = (end_dt - start_dt).total_seconds() / 3600
 
-            # Calculate ascent/descent
+            # Calculate distance and ascent/descent
             elev1 = wp1.elevation_m if wp1.elevation_m else 0
             elev2 = wp2.elevation_m if wp2.elevation_m else 0
             elev_diff = elev2 - elev1
+            dist_km = _haversine_km(wp1.lat, wp1.lon, wp2.lat, wp2.lon)
 
             segment = TripSegment(
                 segment_id=i + 1,
@@ -311,7 +357,7 @@ class TripReportSchedulerService:
                 start_time=start_dt,
                 end_time=end_dt,
                 duration_hours=duration_hours,
-                distance_km=0.0,  # Not available from Trip model
+                distance_km=round(dist_km, 1),
                 ascent_m=float(max(0, elev_diff)),
                 descent_m=float(max(0, -elev_diff)),
             )
@@ -383,25 +429,54 @@ class TripReportSchedulerService:
     def _fetch_night_weather(
         self,
         last_segment: SegmentWeatherData,
-    ) -> Optional["NormalizedTimeseries"]:
+    ) -> Optional[NormalizedTimeseries]:
         """
-        Get night weather data from the last segment's timeseries.
+        Fetch night weather from arrival until 06:00 next morning.
 
-        The provider typically returns data for the full day (0-23h).
-        The formatter extracts the relevant night rows.
+        Creates a temporary segment at the arrival point spanning two days
+        so the provider returns data for both evening and next morning.
 
         Args:
             last_segment: Weather data for the last segment of the day
 
         Returns:
-            NormalizedTimeseries covering night hours, or None
+            NormalizedTimeseries covering arrival hour through 06:00 next day
         """
-        from app.models import NormalizedTimeseries
+        from providers.base import get_provider
+        from services.segment_weather import SegmentWeatherService
 
-        if not last_segment.timeseries or not last_segment.timeseries.data:
+        seg = last_segment.segment
+        arrival = seg.end_time
+        next_morning = datetime.combine(
+            arrival.date() + timedelta(days=1),
+            datetime.min.time(),
+            tzinfo=timezone.utc,
+        ).replace(hour=6)
+
+        # Create a temporary segment spanning arrival → 06:00 next day
+        night_segment = TripSegment(
+            segment_id=999,
+            start_point=seg.end_point,
+            end_point=seg.end_point,
+            start_time=arrival,
+            end_time=next_morning,
+            duration_hours=(next_morning - arrival).total_seconds() / 3600,
+            distance_km=0.0,
+            ascent_m=0.0,
+            descent_m=0.0,
+        )
+
+        try:
+            provider = get_provider("openmeteo")
+            service = SegmentWeatherService(provider)
+            night_data = service.fetch_segment_weather(night_segment)
+            return night_data.timeseries
+        except Exception as e:
+            logger.warning(f"Failed to fetch night weather: {e}")
+            # Fallback: use last segment's timeseries (evening hours only)
+            if last_segment.timeseries and last_segment.timeseries.data:
+                return last_segment.timeseries
             return None
-
-        return last_segment.timeseries
 
     def _build_thunder_forecast(
         self,

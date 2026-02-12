@@ -34,7 +34,32 @@ def load_env_settings() -> Dict[str, str]:
 
 
 def save_env_settings(settings: Dict[str, str]) -> None:
-    """Save settings to .env file."""
+    """Save settings to .env file with automatic backup and validation."""
+    from datetime import datetime
+    import shutil
+
+    # CRITICAL: Validate before saving - block test values
+    smtp_host = settings.get("GZ_SMTP_HOST", "")
+    smtp_user = settings.get("GZ_SMTP_USER", "")
+
+    if smtp_host and (smtp_host.endswith(".test.com") or "test.com" in smtp_host):
+        raise ValueError(
+            f"Refusing to save test SMTP host '{smtp_host}'. "
+            "This prevents accidental overwrites during testing!"
+        )
+
+    if smtp_user and smtp_user == "test@example.com":
+        raise ValueError(
+            f"Refusing to save test email '{smtp_user}'. "
+            "This prevents accidental overwrites during testing!"
+        )
+
+    # CRITICAL: Create backup before overwriting
+    if ENV_FILE.exists():
+        backup_name = f".env.backup.{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        backup_path = ENV_FILE.parent / backup_name
+        shutil.copy2(ENV_FILE, backup_path)
+
     lines = []
     for key, value in settings.items():
         if value:

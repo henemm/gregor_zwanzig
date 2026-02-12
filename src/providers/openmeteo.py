@@ -309,7 +309,7 @@ class OpenMeteoProvider:
                     swe_kgm2=None,
                     precip_type=None,
                     freezing_level_m=None,
-                    wind_chill_c=None,
+                    wind_chill_c=get_val("apparent_temperature", i),
                     visibility_m=None,
                 )
                 data_points.append(point)
@@ -352,6 +352,7 @@ class OpenMeteoProvider:
             "model": model_id,  # Dynamic model selection!
             "hourly": ",".join([
                 "temperature_2m",
+                "apparent_temperature",
                 "relative_humidity_2m",
                 "dewpoint_2m",
                 "pressure_msl",

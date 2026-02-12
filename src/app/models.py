@@ -394,7 +394,7 @@ class EmailReportDisplayConfig:
     show_precipitation: bool = True
     show_thunder: bool = True
     show_snowfall_limit: bool = True
-    show_clouds: bool = False
+    show_clouds: bool = True
     show_humidity: bool = False
     show_night_block: bool = True
     night_interval_hours: int = 2
