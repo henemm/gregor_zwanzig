@@ -1,0 +1,199 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.2, pytest-8.4.1, pluggy-1.6.0
+rootdir: /opt/gregor_zwanziger
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 10 items
+
+tests/unit/test_weather_metrics.py FFFFFFFFFF                            [100%]
+
+=================================== FAILURES ===================================
+_ TestWeatherMetricsServiceKnownValues.test_compute_basis_metrics_known_values _
+
+self = <test_weather_metrics.TestWeatherMetricsServiceKnownValues object at 0x7f544f0b6c90>
+service = <services.weather_metrics.WeatherMetricsService object at 0x7f544e508a90>
+known_timeseries = NormalizedTimeseries(meta=ForecastMeta(provider=<Provider.GEOSPHERE: 'GEOSPHERE'>, model='test', run=datetime.datetime...zing_level_m=None, wind_chill_c=None, visibility_m=4000, cloud_low_pct=None, cloud_mid_pct=None, cloud_high_pct=None)])
+
+    def test_compute_basis_metrics_known_values(self, service, known_timeseries):
+        """
+        GIVEN: Timeseries with known values
+        WHEN: compute_basis_metrics(timeseries)
+        THEN: All 8 metrics match expected calculations
+        """
+>       result = service.compute_basis_metrics(known_timeseries)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'WeatherMetricsService' object has no attribute 'compute_basis_metrics'
+
+tests/unit/test_weather_metrics.py:97: AttributeError
+____ TestWeatherMetricsServiceKnownValues.test_aggregation_config_populated ____
+
+self = <test_weather_metrics.TestWeatherMetricsServiceKnownValues object at 0x7f544e50a910>
+service = <services.weather_metrics.WeatherMetricsService object at 0x7f544e517550>
+known_timeseries = NormalizedTimeseries(meta=ForecastMeta(provider=<Provider.GEOSPHERE: 'GEOSPHERE'>, model='test', run=datetime.datetime...zing_level_m=None, wind_chill_c=None, visibility_m=4000, cloud_low_pct=None, cloud_mid_pct=None, cloud_high_pct=None)])
+
+    def test_aggregation_config_populated(self, service, known_timeseries):
+        """
+        GIVEN: Timeseries
+        WHEN: compute_basis_metrics(timeseries)
+        THEN: aggregation_config has 10 entries with correct functions
+        """
+>       result = service.compute_basis_metrics(known_timeseries)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'WeatherMetricsService' object has no attribute 'compute_basis_metrics'
+
+tests/unit/test_weather_metrics.py:131: AttributeError
+______ TestWeatherMetricsServiceTemperature.test_temperature_min_max_avg _______
+
+self = <test_weather_metrics.TestWeatherMetricsServiceTemperature object at 0x7f544e50b010>
+service = <services.weather_metrics.WeatherMetricsService object at 0x7f544e5bcb10>
+
+    def test_temperature_min_max_avg(self, service):
+        """
+        GIVEN: Timeseries with varying temperatures
+        WHEN: compute_basis_metrics(timeseries)
+        THEN: MIN/MAX/AVG calculated correctly
+        """
+        meta = ForecastMeta(
+            provider=Provider.GEOSPHERE,
+            model="test",
+            run=datetime.now(timezone.utc),
+            grid_res_km=1.0,
+            interp="test",
+        )
+    
+        data = [
+            ForecastDataPoint(
+                ts=datetime(2026, 2, 1, 10, 0, tzinfo=timezone.utc), t2m_c=-5.0
+            ),
+            ForecastDataPoint(
+                ts=datetime(2026, 2, 1, 11, 0, tzinfo=timezone.utc), t2m_c=0.0
+            ),
+            ForecastDataPoint(
+                ts=datetime(2026, 2, 1, 12, 0, tzinfo=timezone.utc), t2m_c=5.0
+            ),
+            ForecastDataPoint(
+                ts=datetime(2026, 2, 1, 13, 0, tzinfo=timezone.utc), t2m_c=10.0
+            ),
+        ]
+    
+        timeseries = NormalizedTimeseries(meta=meta, data=data)
+>       result = service.compute_basis_metrics(timeseries)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'WeatherMetricsService' object has no attribute 'compute_basis_metrics'
+
+tests/unit/test_weather_metrics.py:183: AttributeError
+____ TestWeatherMetricsServicePrecipitation.test_precipitation_sum_not_avg _____
+
+self = <test_weather_metrics.TestWeatherMetricsServicePrecipitation object at 0x7f544e50b950>
+service = <services.weather_metrics.WeatherMetricsService object at 0x7f544e5c13d0>
+
+    def test_precipitation_sum_not_avg(self, service):
+        """
+        GIVEN: Timeseries with hourly precipitation
+        WHEN: compute_basis_metrics(timeseries)
+        THEN: precip_sum_mm is SUM of all values, not AVG
+        """
+        meta = ForecastMeta(
+            provider=Provider.GEOSPHERE,
+            model="test",
+            run=datetime.now(timezone.utc),
+            grid_res_km=1.0,
+            interp="test",
+        )
+    
+        data = [
+            ForecastDataPoint(
+                ts=datetime(2026, 2, 1, 10, 0, tzinfo=timezone.utc), precip_1h_mm=2.5
+            ),
+            ForecastDataPoint(
+                ts=datetime(2026, 2, 1, 11, 0, tzinfo=timezone.utc), precip_1h_mm=3.0
+            ),
+            ForecastDataPoint(
+                ts=datetime(2026, 2, 1, 12, 0, tzinfo=timezone.utc), precip_1h_mm=1.5
+            ),
+            ForecastDataPoint(
+                ts=datetime(2026, 2, 1, 13, 0, tzinfo=timezone.utc), precip_1h_mm=0.0
+            ),
+            ForecastDataPoint(
+                ts=datetime(2026, 2, 1, 14, 0, tzinfo=timezone.utc), precip_1h_mm=4.0
+            ),
+        ]
+    
+        timeseries = NormalizedTimeseries(meta=meta, data=data)
+>       result = service.compute_basis_metrics(timeseries)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'WeatherMetricsService' object has no attribute 'compute_basis_metrics'
+
+tests/unit/test_weather_metrics.py:230: AttributeError
+____ TestWeatherMetricsServiceThunderLevel.test_thunder_level_ordering_high ____
+
+self = <test_weather_metrics.TestWeatherMetricsServiceThunderLevel object at 0x7f544e514290>
+service = <services.weather_metrics.WeatherMetricsService object at 0x7f544e5b9550>
+
+    def test_thunder_level_ordering_high(self, service):
+        """
+        GIVEN: Timeseries with mixed thunder levels including HIGH
+        WHEN: compute_basis_metrics(timeseries)
+        THEN: thunder_level_max = HIGH
+        """
+        meta = ForecastMeta(
+            provider=Provider.GEOSPHERE,
+            model="test",
+            run=datetime.now(timezone.utc),
+            grid_res_km=1.0,
+            interp="test",
+        )
+    
+        data = [
+            ForecastDataPoint(
+                ts=datetime(2026, 2, 1, 10, 0, tzinfo=timezone.utc),
+                thunder_level=ThunderLevel.NONE,
+            ),
+            ForecastDataPoint(
+                ts=datetime(2026, 2, 1, 11, 0, tzinfo=timezone.utc),
+                thunder_level=ThunderLevel.MED,
+            ),
+            ForecastDataPoint(
+                ts=datetime(2026, 2, 1, 12, 0, tzinfo=timezone.utc),
+                thunder_level=ThunderLevel.NONE,
+            ),
+            ForecastDataPoint(
+                ts=datetime(2026, 2, 1, 13, 0, tzinfo=timezone.utc),
+                thunder_level=ThunderLevel.HIGH,
+            ),
+            ForecastDataPoint(
+                ts=datetime(2026, 2, 1, 14, 0, tzinfo=timezone.utc),
+                thunder_level=ThunderLevel.MED,
+            ),
+        ]
+    
+        timeseries = NormalizedTimeseries(meta=meta, data=data)
+>       result = service.compute_basis_metrics(timeseries)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'WeatherMetricsService' object has no attribute 'compute_basis_metrics'
+
+tests/unit/test_weather_metrics.py:281: AttributeError
+____ TestWeatherMetricsServiceThunderLevel.test_thunder_level_ordering_med _____
+
+self = <test_weather_metrics.TestWeatherMetricsServiceThunderLevel object at 0x7f544e5148d0>
+service = <services.weather_metrics.WeatherMetricsService object at 0x7f544e516790>
+
+    def test_thunder_level_ordering_med(self, service):
+        """
+        GIVEN: Timeseries with NONE and MED (no HIGH)
+        WHEN: compute_basis_metrics(timeseries)
+        THEN: thunder_level_max = MED
+        """
+        meta = ForecastMeta(
+            provider=Provider.GEOSPHERE,
+            model="test",
+            run=datetime.now(timezone.utc),
+            grid_res_km=1.0,
+            interp="test",
+        )
+    
+        data = [
+            ForecastDataPoint(
+                ts=datetime(2026, 2, 1, 10, 0, tzinfo=timezone.utc),
+                thunder_level=ThunderLevel.NONE,
+            ),

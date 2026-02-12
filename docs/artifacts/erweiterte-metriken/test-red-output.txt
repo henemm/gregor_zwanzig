@@ -1,0 +1,75 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.2, pytest-8.4.1, pluggy-1.6.0
+rootdir: /opt/gregor_zwanziger
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 3 items
+
+tests/unit/test_weather_metrics.py FFF                                   [100%]
+
+=================================== FAILURES ===================================
+_ TestWeatherMetricsServiceExtendedKnownValues.test_compute_extended_metrics_known_values _
+
+self = <test_weather_metrics.TestWeatherMetricsServiceExtendedKnownValues object at 0x7fe7c2ce15d0>
+service = <services.weather_metrics.WeatherMetricsService object at 0x7fe7c2dd7990>
+extended_timeseries = NormalizedTimeseries(meta=ForecastMeta(provider=<Provider.GEOSPHERE: 'GEOSPHERE'>, model='test', run=datetime.datetime...zing_level_m=2050, wind_chill_c=-1.0, visibility_m=None, cloud_low_pct=None, cloud_mid_pct=None, cloud_high_pct=None)])
+basis_summary = SegmentWeatherSummary(temp_min_c=10.0, temp_max_c=20.0, temp_avg_c=15.0, wind_max_kmh=25.0, gust_max_kmh=35.0, precip_..._mm': 'sum', 'cloud_avg_pct': 'avg', 'humidity_avg_pct': 'avg', 'thunder_level_max': 'max', 'visibility_min_m': 'min'})
+
+    def test_compute_extended_metrics_known_values(
+        self, service, extended_timeseries, basis_summary
+    ):
+        """
+        GIVEN: Timeseries with known extended values
+        WHEN: compute_extended_metrics(timeseries, basis_summary)
+        THEN: All 5 extended metrics match expected calculations
+        """
+>       result = service.compute_extended_metrics(extended_timeseries, basis_summary)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'WeatherMetricsService' object has no attribute 'compute_extended_metrics'
+
+tests/unit/test_weather_metrics.py:566: AttributeError
+_ TestWeatherMetricsServiceExtendedKnownValues.test_extended_preserves_basis_metrics _
+
+self = <test_weather_metrics.TestWeatherMetricsServiceExtendedKnownValues object at 0x7fe7c2513dd0>
+service = <services.weather_metrics.WeatherMetricsService object at 0x7fe7c2404290>
+extended_timeseries = NormalizedTimeseries(meta=ForecastMeta(provider=<Provider.GEOSPHERE: 'GEOSPHERE'>, model='test', run=datetime.datetime...zing_level_m=2050, wind_chill_c=-1.0, visibility_m=None, cloud_low_pct=None, cloud_mid_pct=None, cloud_high_pct=None)])
+basis_summary = SegmentWeatherSummary(temp_min_c=10.0, temp_max_c=20.0, temp_avg_c=15.0, wind_max_kmh=25.0, gust_max_kmh=35.0, precip_..._mm': 'sum', 'cloud_avg_pct': 'avg', 'humidity_avg_pct': 'avg', 'thunder_level_max': 'max', 'visibility_min_m': 'min'})
+
+    def test_extended_preserves_basis_metrics(
+        self, service, extended_timeseries, basis_summary
+    ):
+        """
+        GIVEN: Basis summary with 8 metrics populated
+        WHEN: compute_extended_metrics(timeseries, basis_summary)
+        THEN: All 8 basis metrics preserved unchanged
+        """
+>       result = service.compute_extended_metrics(extended_timeseries, basis_summary)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'WeatherMetricsService' object has no attribute 'compute_extended_metrics'
+
+tests/unit/test_weather_metrics.py:583: AttributeError
+_ TestWeatherMetricsServiceExtendedKnownValues.test_extended_aggregation_config_merged _
+
+self = <test_weather_metrics.TestWeatherMetricsServiceExtendedKnownValues object at 0x7fe7c251c490>
+service = <services.weather_metrics.WeatherMetricsService object at 0x7fe7c259a050>
+extended_timeseries = NormalizedTimeseries(meta=ForecastMeta(provider=<Provider.GEOSPHERE: 'GEOSPHERE'>, model='test', run=datetime.datetime...zing_level_m=2050, wind_chill_c=-1.0, visibility_m=None, cloud_low_pct=None, cloud_mid_pct=None, cloud_high_pct=None)])
+basis_summary = SegmentWeatherSummary(temp_min_c=10.0, temp_max_c=20.0, temp_avg_c=15.0, wind_max_kmh=25.0, gust_max_kmh=35.0, precip_..._mm': 'sum', 'cloud_avg_pct': 'avg', 'humidity_avg_pct': 'avg', 'thunder_level_max': 'max', 'visibility_min_m': 'min'})
+
+    def test_extended_aggregation_config_merged(
+        self, service, extended_timeseries, basis_summary
+    ):
+        """
+        GIVEN: Basis summary with 10 config entries
+        WHEN: compute_extended_metrics(timeseries, basis_summary)
+        THEN: aggregation_config has 15 entries (10 basis + 5 extended)
+        """
+>       result = service.compute_extended_metrics(extended_timeseries, basis_summary)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'WeatherMetricsService' object has no attribute 'compute_extended_metrics'
+
+tests/unit/test_weather_metrics.py:605: AttributeError
+=========================== short test summary info ============================
+FAILED tests/unit/test_weather_metrics.py::TestWeatherMetricsServiceExtendedKnownValues::test_compute_extended_metrics_known_values
+FAILED tests/unit/test_weather_metrics.py::TestWeatherMetricsServiceExtendedKnownValues::test_extended_preserves_basis_metrics
+FAILED tests/unit/test_weather_metrics.py::TestWeatherMetricsServiceExtendedKnownValues::test_extended_aggregation_config_merged
+============================== 3 failed in 0.22s ===============================
