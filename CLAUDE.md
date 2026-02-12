@@ -14,11 +14,13 @@ Dieses Projekt nutzt den **OpenSpec 4-Phasen-Workflow**:
 
 | Phase | Command | Purpose |
 |-------|---------|---------|
-| 1 | `/analyse` | Request verstehen, Codebase recherchieren |
-| 2 | `/write-spec` | Spezifikation erstellen |
+| 1 | `/2-analyse` | Request verstehen, Codebase recherchieren |
+| 2 | `/3-write-spec` | Spezifikation erstellen |
 | 3 | User: "approved" | Spec freigeben |
-| 4 | `/implement` | Implementieren nach Spec |
-| 5 | `/validate` | Validieren vor Commit |
+| 4 | `/5-implement` | Implementieren nach Spec |
+| 5 | `/6-validate` | Validieren vor Commit |
+
+**Commands:** Canonical dash-commands (z.B. `/2-analyse`). Alte underscore-commands (`/1_analyse`) wurden gemerged und entfernt.
 
 **Hooks erzwingen diesen Workflow!** Edit/Write auf geschuetzte Dateien ist blockiert.
 
@@ -118,6 +120,7 @@ Alle Module benoetigen Specs vor Implementierung:
 - `smtp_mailer` - E-Mail-Versand
 - `debug_buffer` - Debug-Sammlung
 - `agent_orchestration` - Workflow-Skill-Commands mit Subagent-Delegation
+- `command_set_merge` - Merge von Underscore- und Dash-Commands
 
 ### Geplante Module (draft)
 - `provider_met` - MET Norway Adapter

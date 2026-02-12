@@ -37,23 +37,35 @@ if w:
 "
 ```
 
-### 2. Read the Spec
+### 2. Load Context via Agent
 
-Open and follow the approved spec exactly:
-- Implementation details
-- Affected files
-- Expected behavior
+Launch an **Explore agent** (Haiku for speed) to prepare implementation context:
 
-### 3. Implement - Make Tests GREEN
-
-Write code to make tests pass:
-
-```python
-# Implement the minimal code to satisfy tests
-def feature_that_was_missing():
-    # Now it exists!
-    return expected_value
 ```
+Task(subagent_type="Explore", model="haiku", prompt="
+  Prepare implementation context for: [FEATURE_NAME]
+
+  1. Read the approved spec at: [SPEC_PATH]
+  2. Read all files listed in the spec's Source and Dependencies
+  3. Analyze code patterns: imports, naming, error handling style
+  4. Report back:
+     - Spec summary (key requirements)
+     - Code conventions found in target files
+     - Import patterns to follow
+     - Any existing tests in the same area
+")
+```
+
+### 3. Implement Core (Main Context = Opus)
+
+With the context from Step 2, implement the core functionality:
+
+1. **Follow the spec exactly** - No creative deviations
+2. **Implementation order:**
+   - Core functionality first
+   - Integration second
+3. **Validate after each file change** (syntax check)
+4. **Document deviations** - If you must deviate from spec, note why
 
 **TDD GREEN Rules:**
 - Only write code that makes a test pass
@@ -61,7 +73,41 @@ def feature_that_was_missing():
 - Don't optimize prematurely
 - Don't refactor yet
 
-### 4. Run Tests - MUST BE GREEN
+### 4. Parallel Side Tasks
+
+After core is done, launch **parallel agents** for independent work:
+
+```
+# Agent A: Write tests (Sonnet for code quality)
+Task(subagent_type="general-purpose", model="sonnet", prompt="
+  Write tests for: [FEATURE_NAME]
+  Spec: [SPEC_PATH]
+  Core implementation: [SUMMARY OF WHAT WAS IMPLEMENTED]
+
+  RULES from CLAUDE.md:
+  - NO mocks! No Mock(), patch(), MagicMock
+  - Real integration tests only
+  - Place tests in tests/ directory
+  - Use uv run pytest conventions
+")
+
+# Agent B: Update config/data if needed (Haiku for simple tasks)
+Task(subagent_type="general-purpose", model="haiku", prompt="
+  Update config/data files for: [FEATURE_NAME]
+  Changes needed: [SPECIFIC CHANGES]
+  Files: [data/*.json, config.ini, etc.]
+")
+```
+
+**Decision for Agent B:** Check the spec's Implementation Details section for config/data changes. Only launch Agent B if the spec explicitly mentions config, data, or environment changes.
+
+### 5. Integrate & Verify
+
+Back in main context:
+1. Review agent outputs (tests, config)
+2. Run quick syntax check on all changed files
+3. Ensure everything fits together
+4. Run tests to verify GREEN status:
 
 ```bash
 pytest tests/test_[feature].py -v
@@ -69,7 +115,7 @@ pytest tests/test_[feature].py -v
 
 **Expected:** All tests PASS.
 
-### 5. Capture GREEN Artifacts
+### 6. Capture Artifacts & Update State
 
 ```bash
 pytest tests/ -v > docs/artifacts/[workflow]/test-green-output.txt 2>&1
@@ -90,7 +136,7 @@ add_test_artifact(active, {
 "
 ```
 
-### 6. Update Workflow State
+Update workflow phase:
 
 ```bash
 python3 .claude/hooks/workflow_state_multi.py phase phase7_validate

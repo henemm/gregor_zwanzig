@@ -14,51 +14,53 @@ python3 .claude/hooks/workflow_state_multi.py status
 
 ## Your Tasks
 
-### 1. Create Specification
+### Step 1: Gather Context
 
-Use `docs/specs/_template.md` as base.
+Collect from the current conversation:
+- **Feature name** from workflow state
+- **Analysis results** from Phase 2 (affected files, dependencies, strategy)
+- **User requirements** from the original request
 
-Create spec at `docs/specs/[category]/[entity_id].md`:
+### Step 2: Create Spec via Agent
 
-```markdown
----
-entity_id: [unique-id]
-type: feature|bugfix|refactor
-created: [ISO date]
-status: draft
-workflow: [workflow-name]
----
+Launch a **general-purpose agent** (Sonnet for writing quality):
 
-# [Title]
+```
+Task(subagent_type="general-purpose", model="sonnet", prompt="
+  You are a spec writer. Follow the instructions in .claude/agents/spec-writer.md exactly.
 
-- [ ] Approved for implementation
+  INPUT:
+  - Feature Name: [NAME]
+  - Analysis Summary: [PASTE ANALYSIS]
+  - Affected Files: [LIST]
+  - Dependencies: [LIST]
 
-## Purpose
-[1-2 sentences: what and why]
-
-## Scope
-- Files: [list affected files]
-- Estimated: +[N]/-[N] LoC
-
-## Implementation Details
-[Technical approach from analysis]
-
-## Test Plan
-
-### Automated Tests (TDD RED)
-- [ ] Test 1: GIVEN... WHEN... THEN... (expected to FAIL initially)
-- [ ] Test 2: ...
-
-### Manual Tests
-- [ ] Manual test 1
-- [ ] Manual test 2
-
-## Acceptance Criteria
-- [ ] Criterion 1
-- [ ] Criterion 2
+  Read the template from docs/specs/_template.md first.
+  Read existing specs in docs/specs/ to match style.
+  Create the spec file. Return the file path when done.
+")
 ```
 
-### 2. Update Workflow State
+### Step 3: Validate Spec via Agent
+
+After the spec is created, launch a **spec-validator agent** (Haiku for speed):
+
+```
+Task(subagent_type="spec-validator", model="haiku", prompt="
+  Validate the spec at: [SPEC_PATH]
+  Follow the validation rules in .claude/agents/spec-validator.md.
+  Return VALID or INVALID with details.
+")
+```
+
+**If INVALID:**
+1. Fix the issues yourself (in main context)
+2. Re-run spec-validator/haiku to verify the fix
+3. Max 2 validation loops. If still INVALID after 2 attempts, present issues to user.
+
+**If VALID:** Proceed to Step 4.
+
+### Step 4: Update Workflow State
 
 ```bash
 # Update spec file path in workflow
@@ -76,17 +78,12 @@ if active:
 python3 .claude/hooks/workflow_state_multi.py phase phase3_spec
 ```
 
-## Next Step
+### Step 5: Present to User
 
-Present the spec and request approval:
+Show the spec content to the user and ask:
+> "Spec erstellt: `[path]`. Bitte pruefen und mit 'approved' oder 'freigabe' bestaetigen."
 
-> "Spec created: `docs/specs/[path]`
->
-> Please review:
-> - Scope: [N] files, ~[N] LoC
-> - Test plan: [N] automated, [N] manual tests
->
-> Confirm with 'approved', 'freigabe', or 'lgtm' to proceed."
+**IMPORTANT:** Do NOT implement until the user explicitly approves!
 
 ## After Approval
 

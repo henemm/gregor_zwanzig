@@ -149,5 +149,6 @@ Restructures the 4-phase workflow skill commands to explicitly use Task subagent
 
 ## Changelog
 
+- 2026-02-12: Command set merge completed (underscore files removed, dash files enhanced)
 - 2026-02-12: Implementation complete, marked as active
 - 2026-02-12: Initial spec created for agent orchestration restructuring

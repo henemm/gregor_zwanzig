@@ -20,9 +20,6 @@ Phase-based workflow for feature development:
 | 7 | `/6-validate` | Validate implementation |
 | 8 | `/7-deploy` | Deploy to production |
 
-**Alternative naming:**
-- `/1_analyse`, `/2_write-spec`, `/3_implement`, `/4_validate`, `/5_e2e-test`
-
 ### Planning Commands
 
 High-level planning before workflow:
@@ -88,11 +85,12 @@ High-level planning before workflow:
 # - Updates roadmap
 
 # 2. Follow workflow
-/analyse
-/write-spec
+/2-analyse
+/3-write-spec
 # User: "approved"
-/implement
-/validate
+/4-tdd-red
+/5-implement
+/6-validate
 ```
 
 ### For Bug
@@ -114,15 +112,16 @@ High-level planning before workflow:
 
 ## Command → Agent Mapping
 
-| Command | Invokes Agent | Location |
-|---------|---------------|----------|
+| Command | Invokes Agent(s) | Location |
+|---------|------------------|----------|
 | `/feature` | feature-planner | `.claude/agents/feature-planner.md` |
 | `/user-story` | user-story-planner | `.claude/agents/user-story-planner.md` |
 | `/bug` | bug-intake | `.claude/agents/bug-intake.md` |
 | `/1-context` | - | Direct workflow phase |
-| `/2-analyse` | - | Direct workflow phase |
-| `/3-write-spec` | spec-writer | `.claude/agents/spec-writer.md` |
-| `/6-validate` | implementation-validator | `.claude/agents/implementation-validator.md` |
+| `/2-analyse` | 3x Explore/haiku + Plan/sonnet | Parallel codebase research |
+| `/3-write-spec` | spec-writer/sonnet + spec-validator/haiku | `.claude/agents/spec-writer.md` |
+| `/5-implement` | Explore/haiku + general-purpose/sonnet | Context loading + parallel tests |
+| `/6-validate` | 4x parallel agents + docs-updater/sonnet | `.claude/agents/docs-updater.md` |
 
 ## Command Files Structure
 
