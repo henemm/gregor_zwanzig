@@ -4,7 +4,7 @@ type: module
 created: 2026-02-11
 updated: 2026-02-11
 status: draft
-version: "2.0"
+version: "2.1"
 tags: [formatter, email, trip-reports, hourly, configurable]
 supersedes: trip_report_formatter
 ---
@@ -63,11 +63,11 @@ No token line, no risk in subject (that's SMS-only per user decision).
 ```
 ━━ GR221 Mallorca ━━
 Tag 1: von Valldemossa nach Deià
-11.02.2026 | 3 Segmente | 9.6 km | ↑488m ↓751m
+Morning Report – 11.02.2026 | 3 Segmente | 9.6 km | ↑488m | ↓751m | max. 795m
 ```
 
-**Data source:** Trip name, stage name, stage date, segment count.
-Distance/elevation from segment totals.
+**Data source:** Trip name, stage name, report type, stage date, segment count.
+Distance/elevation from `stage_stats` (computed by scheduler via haversine from waypoints).
 
 ### 3) Per-Segment Hourly Tables
 
@@ -75,17 +75,16 @@ One table per segment. Each segment has a header and hourly rows.
 
 **Segment header:**
 ```
-━━ Segment 1: Start → Punkt 2 ━━
-410m → 795m | 4.2 km | 08:00–10:00
+━━ Segment 1: 08:00–10:00 | 4.2 km | ↑410m → 795m ━━
 ```
 
-**Hourly table (all columns full-width labels):**
+**Hourly table (compact English headers):**
 
-| Uhrzeit | Temperatur °C | Gefühlt °C | Wind km/h | Böen km/h | Regen mm | Gewitter | Schneefallgr. m | Wolken % |
-|---------|---------------|------------|-----------|-----------|----------|----------|-----------------|----------|
-| 08:00   | 16.7          | 12.3       | 15        | 75        | 0.0      | –        | –               | 49       |
-| 09:00   | 16.9          | 12.8       | 15        | 70        | 0.0      | –        | –               | 100      |
-| 10:00   | 17.4          | 13.1       | 16        | 73        | 0.0      | –        | –               | 88       |
+| Time | Temp | Felt | Wind | Gust | Rain | Thund | Snow | Clouds |
+|------|------|------|------|------|------|-------|------|--------|
+| 08   | 16.7 | 12.3 | 15   | 75   | 0.0  | –     | –    | 49     |
+| 09   | 16.9 | 12.8 | 15   | 70   | 0.0  | –     | –    | 100    |
+| 10   | 17.4 | 13.1 | 16   | 73   | 0.0  | –     | –    | 88     |
 
 **Data source per hour:** `ForecastDataPoint` from `SegmentWeatherData.timeseries.data[]`.
 Only hours within segment time window (start_time.hour through end_time.hour).
@@ -94,45 +93,48 @@ Only hours within segment time window (start_time.hour through end_time.hour).
 
 | Column Label | ForecastDataPoint field | Format | Configurable |
 |---|---|---|---|
-| Uhrzeit | `dp.ts` | `HH:MM` | always shown |
-| Temperatur °C | `dp.t2m_c` | `%.1f` | yes (temp_measured) |
-| Gefühlt °C | `dp.wind_chill_c` | `%.1f` | yes (temp_felt) |
-| Wind km/h | `dp.wind10m_kmh` | `%.0f` | yes |
-| Böen km/h | `dp.gust_kmh` | `%.0f` | yes |
-| Regen mm | `dp.precip_1h_mm` | `%.1f` | yes |
-| Gewitter | `dp.thunder_level` | NONE→"–", MED→"⚡ mögl.", HIGH→"⚡⚡" | yes |
-| Schneefallgr. m | `dp.snowfall_limit_m` | `%d` or "–" if None | yes |
-| Wolken % | `dp.cloud_total_pct` | `%d` | yes |
+| Time | `dp.ts` | `HH` (hour only, zero-padded) | always shown |
+| Temp | `dp.t2m_c` | `%.1f` | yes (temp_measured) |
+| Felt | `dp.wind_chill_c` (apparent_temperature from OpenMeteo) | `%.1f` | yes (temp_felt) |
+| Wind | `dp.wind10m_kmh` | `%.0f` | yes |
+| Gust | `dp.gust_kmh` | `%.0f` | yes |
+| Rain | `dp.precip_1h_mm` | `%.1f` | yes |
+| Thund | `dp.thunder_level` | NONE→"–", MED→"⚡ mögl.", HIGH→"⚡⚡" | yes |
+| Snow | `dp.snowfall_limit_m` | `%d` or "–" if None | yes |
+| Clouds | `dp.cloud_total_pct` | `%d` | yes |
 
 ### 4) Night Block (Evening Report Only)
 
 Shown **after the last segment**, at the last waypoint's location.
 2-hourly values from arrival time until 06:00 next morning.
+Uses same English column headers and hour-only time format as segment tables.
 
 ```
-━━ Nacht am Ziel: Deià (150m) ━━
-Ankunft 13:33 → Morgen 06:00
+━━ Nacht am Ziel (150m) ━━
+Ankunft 13:00 → Morgen 06:00
 
-| Uhrzeit | Temperatur °C | Gefühlt °C | Wind km/h | Böen km/h | Regen mm | Gewitter |
-|---------|---------------|------------|-----------|-----------|----------|----------|
-| 14:00   | 18.4          | 14.1       | 16        | 71        | 0.0      | –        |
-| 16:00   | 17.7          | 13.0       | 15        | 77        | 0.0      | –        |
-| 18:00   | 17.7          | 12.5       | 16        | 87        | 0.0      | –        |
-| 20:00   | 18.4          | 12.0       | 26        | 115       | 0.0      | –        |
-| 22:00   | 18.5          | 11.5       | 31        | 130       | 0.1      | –        |
-| 00:00   | ...           |            |           |           |          |          |
-| 02:00   | ...           |            |           |           |          |          |
-| 04:00   | ...           |            |           |           |          |          |
-| 06:00   | ...           |            |           |           |          |          |
-
-Tiefste Temperatur: -0.8 °C (04:00)
+| Time | Temp | Felt | Wind | Gust | Rain | Thund | Snow | Clouds |
+|------|------|------|------|------|------|-------|------|--------|
+| 14   | 18.4 | 14.1 | 16   | 71   | 0.0  | –     | –    | 49     |
+| 16   | 17.7 | 13.0 | 15   | 77   | 0.0  | –     | –    | 55     |
+| 18   | 17.7 | 12.5 | 16   | 87   | 0.0  | –     | –    | 60     |
+| 20   | 18.4 | 12.0 | 26   | 115  | 0.0  | –     | –    | 70     |
+| 22   | 18.5 | 11.5 | 31   | 130  | 0.1  | –     | –    | 80     |
+| 00   | ...  |      |      |      |      |       |      |        |
+| 02   | ...  |      |      |      |      |       |      |        |
+| 04   | ...  |      |      |      |      |       |      |        |
+| 06   | ...  |      |      |      |      |       |      |        |
 ```
 
 **Data source:** Separate weather fetch for last waypoint location, requesting
-data from arrival hour through 06:00 next day. Uses same provider as segments.
+data from arrival hour through 06:00 next day. Uses OpenMeteo provider.
 
-**Implementation:** The scheduler passes an extra `night_weather: NormalizedTimeseries`
-to the formatter for evening reports. The formatter filters to 2-hourly intervals.
+**Implementation:** The scheduler creates a temporary `TripSegment` spanning
+from arrival time to 06:00 next day at the last waypoint's location, fetches
+weather via `SegmentWeatherService`, and passes the resulting `NormalizedTimeseries`
+as `night_weather` to the formatter. This ensures the provider requests two
+calendar days of data (arrival day + next morning). The formatter filters to
+2-hourly intervals.
 
 ### 5) Thunder Forecast (+1/+2 Days)
 
@@ -167,8 +169,10 @@ No recommendations – just highlight what's essential:
 ### 7) Footer
 
 ```
-Generated: 2026-02-11 20:09 UTC | Data: Open-Meteo (AROME France)
+Generated: 2026-02-11 20:09 UTC | Data: openmeteo (arome_seamless_france)
 ```
+
+Shows provider name and the actual model name from `timeseries.meta.model`.
 
 ## HTML Enhancements
 
@@ -214,7 +218,7 @@ class EmailReportDisplayConfig:
     show_precipitation: bool = True
     show_thunder: bool = True
     show_snowfall_limit: bool = True
-    show_clouds: bool = False           # default off
+    show_clouds: bool = True            # default on
     show_humidity: bool = False          # default off
 
     # Night block
@@ -250,31 +254,33 @@ def format_email(
 
 ### Hourly Row Extraction
 
-```python
-def _extract_hourly_rows(
-    self,
-    seg_data: SegmentWeatherData,
-    display_config: EmailReportDisplayConfig,
-) -> list[dict]:
-    """Extract hourly data points within segment time window."""
-    start_hour = seg_data.segment.start_time.hour
-    end_hour = seg_data.segment.end_time.hour
+Uses `_dp_to_row()` to convert each `ForecastDataPoint` to a dict, respecting
+display config visibility flags. Time is formatted as hour-only (`f"{dp.ts.hour:02d}"`).
 
+```python
+def _extract_hourly_rows(self, seg_data, dc) -> list[dict]:
+    """Extract hourly data points within segment time window."""
+    start_h = seg_data.segment.start_time.hour
+    end_h = seg_data.segment.end_time.hour
     rows = []
     for dp in seg_data.timeseries.data:
-        if start_hour <= dp.ts.hour <= end_hour:
-            rows.append({
-                "time": dp.ts.strftime("%H:%M"),
-                "temp": dp.t2m_c,
-                "felt": dp.wind_chill_c,
-                "wind": dp.wind10m_kmh,
-                "gust": dp.gust_kmh,
-                "precip": dp.precip_1h_mm,
-                "thunder": dp.thunder_level,
-                "snow_limit": dp.snowfall_limit_m,
-                "cloud": dp.cloud_total_pct,
-            })
+        if start_h <= dp.ts.hour <= end_h:
+            rows.append(self._dp_to_row(dp, dc))
     return rows
+
+def _dp_to_row(self, dp, dc) -> dict:
+    """Convert ForecastDataPoint to row dict (only visible columns)."""
+    row = {"time": f"{dp.ts.hour:02d}"}
+    if dc.show_temp_measured:  row["temp"] = dp.t2m_c
+    if dc.show_temp_felt:      row["felt"] = dp.wind_chill_c
+    if dc.show_wind:           row["wind"] = dp.wind10m_kmh
+    if dc.show_gusts:          row["gust"] = dp.gust_kmh
+    if dc.show_precipitation:  row["precip"] = dp.precip_1h_mm
+    if dc.show_thunder:        row["thunder"] = dp.thunder_level
+    if dc.show_snowfall_limit: row["snow_limit"] = dp.snowfall_limit_m
+    if dc.show_clouds:         row["cloud"] = dp.cloud_total_pct
+    if dc.show_humidity:       row["humidity"] = dp.humidity_pct
+    return row
 ```
 
 ### Night Block Extraction
@@ -314,33 +320,43 @@ data extraction functions. They differ only in rendering (HTML tags vs ASCII).
 
 ## Scheduler Changes
 
-`trip_report_scheduler.py` needs to:
+`trip_report_scheduler.py` changes:
 
-1. **Fetch night weather** for evening reports:
-   - Get last waypoint of the stage
-   - Fetch 24h forecast for that location (arrival day + next morning)
-   - Pass as `night_weather` to formatter
+1. **Compute stage stats** via `_compute_stage_stats()`:
+   - Haversine distance from waypoint coordinates (`_haversine_km()`)
+   - Cumulative ascent/descent from elevation differences
+   - Max elevation across all waypoints
+   - Passed as `stage_stats` dict to formatter
 
-2. **Fetch thunder forecast** for +1/+2 days:
-   - Use trip center coordinate
+2. **Compute segment distance** in `_convert_trip_to_segments()`:
+   - Uses `_haversine_km()` for each waypoint pair
+   - Sets `distance_km` on each `TripSegment`
+
+3. **Fetch night weather** for evening reports via `_fetch_night_weather()`:
+   - Creates temporary `TripSegment` from arrival to 06:00 next day
+   - Fetches via `SegmentWeatherService` + OpenMeteo provider
+   - Returns `NormalizedTimeseries` spanning two calendar days
+   - Fallback: uses last segment's timeseries on error
+
+4. **Fetch thunder forecast** for +1/+2 days:
+   - Uses trip center coordinate
    - Get daily thunder_level aggregate for +1 and +2 days
    - Pass as `thunder_forecast` dict
 
-3. **Pass stage metadata:**
-   - `stage_name`, distance, ascent/descent totals
-
-**Estimated changes:** ~30 LoC additions to `_send_trip_report()`.
+5. **Pass stage metadata:**
+   - `stage_name`, `stage_stats` to formatter
 
 ## Affected Files
 
 | File | Change | LoC |
 |------|--------|-----|
-| `src/formatters/trip_report.py` | Major rewrite | ~+250/-150 |
-| `src/app/models.py` | Add `EmailReportDisplayConfig` | ~+25 |
-| `src/services/trip_report_scheduler.py` | Night/thunder fetch, pass to formatter | ~+40 |
+| `src/formatters/trip_report.py` | Major rewrite: hourly tables, night block, HTML/text | ~+250/-150 |
+| `src/app/models.py` | Add `EmailReportDisplayConfig`, `show_clouds=True` | ~+25 |
+| `src/services/trip_report_scheduler.py` | Night fetch, haversine, stage stats, distance calc | ~+80 |
+| `src/providers/openmeteo.py` | Add `apparent_temperature` → `wind_chill_c` | ~+2 |
 | `src/app/loader.py` | Serialize/deserialize `EmailReportDisplayConfig` | ~+15 |
 
-**Total:** ~+330/-150 LoC across 4 files.
+**Total:** ~+370/-150 LoC across 5 files.
 
 ## Test Plan
 
@@ -368,26 +384,31 @@ Tests in `tests/unit/test_trip_report_formatter_v2.py`:
 
 ## Acceptance Criteria
 
-- [ ] Hourly weather table per segment (not just aggregated row)
-- [ ] Full column labels (no abbreviations)
-- [ ] Night block in evening report (2-hourly, last segment location, arrival→06:00)
-- [ ] Thunder forecast +1/+2 days
-- [ ] Summary: highlights only, no recommendations
-- [ ] No token line in email (SMS only)
-- [ ] HTML + plain-text from same processor
-- [ ] HTML: color-coding for critical values, helpful icons/emojis
-- [ ] All columns user-configurable (on/off, temp measured/felt/both)
-- [ ] Responsive: readable on iPhone
-- [ ] Works with GR221 Mallorca test trip (4 stages, OpenMeteo data)
-- [ ] Backwards compatible: existing trips without display config use defaults
+- [x] Hourly weather table per segment (not just aggregated row)
+- [x] Compact English column headers (Time, Temp, Felt, Wind, Gust, Rain, Thund, Snow, Clouds)
+- [x] Hour-only time format (zero-padded: 08, 09, ... 22)
+- [x] Night block in evening report (2-hourly, last segment location, arrival→06:00 next day)
+- [x] Thunder forecast +1/+2 days
+- [x] Summary: highlights only, no recommendations
+- [x] No token line in email (SMS only)
+- [x] HTML + plain-text from same processor
+- [x] HTML: color-coding for critical values, helpful icons/emojis
+- [x] All columns user-configurable (on/off, temp measured/felt/both)
+- [x] Responsive: readable on iPhone
+- [x] Works with GR221 Mallorca test trip (4 stages, OpenMeteo data)
+- [x] Backwards compatible: existing trips without display config use defaults
+- [x] Stage stats in header (distance, ascent, descent, max elevation)
+- [x] Segment headers show time range, distance, elevation
+- [x] Footer shows provider + model name
+- [x] Felt temperature (apparent_temperature) from OpenMeteo
 
 ## Known Limitations
 
-1. **No wind_chill from OpenMeteo:** The `wind_chill_c` field may be None for OpenMeteo
-   data. "Gefühlt" column shows "–" when unavailable. GeoSphere provides it.
+1. **~~No wind_chill from OpenMeteo~~ RESOLVED:** OpenMeteo now provides `apparent_temperature`
+   mapped to `wind_chill_c`. Works for all locations.
 
 2. **Night weather = extra API call:** One additional forecast fetch per evening report.
-   Cached by provider for same coordinates/date.
+   Uses a temporary segment to trigger two-day data fetch. Cached by provider for same coordinates/date.
 
 3. **Thunder forecast = daily aggregate:** Uses max thunder_level per day.
    Not available from all providers.
@@ -398,7 +419,11 @@ Tests in `tests/unit/test_trip_report_formatter_v2.py`:
 5. **Plain-text table width:** Hourly tables with all columns may exceed 80 chars.
    Acceptable for email plain-text (not SMS).
 
+6. **Haversine distance:** Segment distances are great-circle approximations
+   from waypoint coordinates, not actual trail distance from GPX tracks.
+
 ## Changelog
 
+- 2026-02-11: v2.1 spec updated (English headers, hour-only time, apparent_temperature, stage stats, haversine distance, show_clouds=True, night fetch via temporary segment, model name in footer)
 - 2026-02-11: v2.0 spec created (hourly tables, night block, thunder forecast, configurable columns)
 - 2026-02-02: v1.0 initial spec (aggregated segment rows)
