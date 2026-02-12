@@ -92,7 +92,18 @@ async def no_cache_headers(request, call_next):
         response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
         response.headers["Pragma"] = "no-cache"
         response.headers["Expires"] = "0"
+        response.headers["Vary"] = "*"
     return response
+
+
+# Safari BFCache auto-reload: when Safari restores a page from back-forward
+# cache (e.g. back button, tab switch), the WebSocket is dead but the page
+# looks normal. Detect this via pageshow event and force a real reload.
+ui.add_head_html('''<script>
+window.addEventListener("pageshow", function(e) {
+    if (e.persisted) { window.location.reload(); }
+});
+</script>''', shared=True)
 
 
 # Register startup handlers
