@@ -113,9 +113,9 @@ class TestMetricsFiltering:
         report = formatter.format_email(segments, "Trip", "morning")
 
         html = report.email_html
-        assert "Temperatur" in html
-        assert "Wind km/h" in html
-        assert "Regen mm" in html
+        assert "Temp" in html
+        assert ">Wind<" in html
+        assert ">Rain<" in html
 
     def test_only_temp_column_with_config(self) -> None:
         """Only Temp column when wind/precip disabled."""
@@ -133,9 +133,9 @@ class TestMetricsFiltering:
         report = formatter.format_email(segments, "Trip", "morning", display_config=config)
 
         html = report.email_html
-        assert "Temperatur" in html
-        assert "Wind km/h" not in html
-        assert "Regen mm" not in html
+        assert "Temp" in html
+        assert "<th>Wind</th>" not in html
+        assert "<th>Rain</th>" not in html
 
     def test_wind_and_precip_without_temp(self) -> None:
         """Wind + Precip visible, Temp hidden."""
@@ -150,9 +150,9 @@ class TestMetricsFiltering:
         report = formatter.format_email(segments, "Trip", "morning", display_config=config)
 
         html = report.email_html
-        assert "Temperatur" not in html
-        assert "Wind km/h" in html
-        assert "Regen mm" in html
+        assert "<th>Temp</th>" not in html
+        assert ">Wind<" in html
+        assert ">Rain<" in html
 
     def test_summary_matches_visible_columns(self) -> None:
         """Summary highlights reflect actual weather data."""
@@ -181,12 +181,12 @@ class TestMetricsFiltering:
         report = formatter.format_email(segments, "Trip", "morning", display_config=config)
 
         plain = report.email_plain
-        assert "Temperatur" not in plain
-        assert "Wind km/h" not in plain
-        assert "Regen mm" in plain
+        assert "Temp" not in plain
+        assert "Wind" not in plain
+        assert "Rain" in plain
 
     def test_structural_columns_always_visible(self) -> None:
-        """Uhrzeit (time) column is always shown in v2 hourly tables."""
+        """Zeit (time) column is always shown in v2 hourly tables."""
         from formatters.trip_report import TripReportFormatter
 
         formatter = TripReportFormatter()
@@ -198,7 +198,7 @@ class TestMetricsFiltering:
         report = formatter.format_email(segments, "Trip", "morning", display_config=config)
 
         html = report.email_html
-        assert "<th>Uhrzeit</th>" in html
+        assert "<th>Time</th>" in html
         assert "Segment" in html  # segment header always shown
 
 

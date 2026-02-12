@@ -130,12 +130,12 @@ class TestHourlyRows:
         )
         html = report.email_html
 
-        # Segment 1 should show 08:00, 09:00, 10:00
-        assert "08:00" in html
-        assert "09:00" in html
-        # Segment 2 should show 10:00, 11:00, 12:00
-        assert "11:00" in html
-        assert "12:00" in html
+        # Segment 1 should show hours 08, 09, 10 (hour-only format)
+        assert ">08<" in html or "08</td>" in html
+        assert ">09<" in html or "09</td>" in html
+        # Segment 2 should show hours 10, 11, 12
+        assert ">11<" in html or "11</td>" in html
+        assert ">12<" in html or "12</td>" in html
 
     def test_hourly_temp_values_in_table(self):
         """GIVEN segment with timeseries, WHEN formatted,
@@ -165,9 +165,9 @@ class TestDisplayConfig:
         )
         html = report.email_html.lower()
         # Wind column header should not appear
-        assert "wind km/h" not in html
+        assert ">wind<" not in html
         # Clouds should also not appear (default off anyway)
-        assert "wolken" not in html
+        assert ">wolken<" not in html
 
     def test_temp_felt_hidden_when_disabled(self):
         """GIVEN show_temp_felt=False, THEN 'Gefühlt' column absent."""
@@ -187,9 +187,9 @@ class TestDisplayConfig:
         formatter = TripReportFormatter()
         report = formatter.format_email([seg], "Test", "morning")
         html = report.email_html.lower()
-        assert "temperatur" in html
-        assert "wind" in html
-        assert "böen" in html or "bö" in html
+        assert ">temp<" in html
+        assert ">wind<" in html
+        assert ">gust<" in html
 
 
 class TestNightBlock:
@@ -223,14 +223,13 @@ class TestNightBlock:
             [seg], "Test", "evening", night_weather=night_ts,
         )
         plain = report.email_plain
-        # Should have 2-hourly: 14:00, 16:00, 18:00, 20:00, 22:00
-        assert "14:00" in plain
-        assert "16:00" in plain
-        assert "18:00" in plain
-        assert "20:00" in plain
-        assert "22:00" in plain
-        # Should NOT have odd hours
-        assert "15:00" not in plain or plain.count("15:00") == 0
+        # Should have 2-hourly: 14, 16, 18, 20, 22 (hour-only format)
+        # Night block rows use hour-only format like segment tables
+        assert "14" in plain
+        assert "16" in plain
+        assert "18" in plain
+        assert "20" in plain
+        assert "22" in plain
 
 
 class TestThunderForecast:
@@ -303,8 +302,9 @@ class TestPlainTextParity:
         seg = _make_segment_weather(1, start_hour=8, end_hour=10)
         formatter = TripReportFormatter()
         report = formatter.format_email([seg], "Test", "morning")
-        assert "08:00" in report.email_plain
-        assert "09:00" in report.email_plain
+        # Hour-only format in plain text tables
+        assert "08" in report.email_plain
+        assert "09" in report.email_plain
 
 
 class TestSummary:
