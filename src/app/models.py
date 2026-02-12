@@ -401,6 +401,53 @@ class EmailReportDisplayConfig:
     thunder_forecast_days: int = 2
 
 
+# --- Unified Weather Display Config (Feature 2.6 v2) ---
+
+@dataclass
+class MetricConfig:
+    """Per-metric configuration within UnifiedWeatherDisplayConfig."""
+    metric_id: str
+    enabled: bool = True
+    aggregations: list[str] = field(default_factory=lambda: ["min", "max"])
+    # Phase 3: per-report-type overrides (None = follows global enabled)
+    morning_enabled: Optional[bool] = None
+    evening_enabled: Optional[bool] = None
+
+
+@dataclass
+class UnifiedWeatherDisplayConfig:
+    """
+    Unified weather display configuration per trip.
+
+    Replaces TripWeatherConfig (UI storage) + EmailReportDisplayConfig (formatter defaults)
+    with a single config backed by MetricCatalog.
+
+    SPEC: docs/specs/modules/weather_config.md v2.0
+    """
+    trip_id: str
+    metrics: list[MetricConfig] = field(default_factory=list)
+    show_night_block: bool = True
+    night_interval_hours: int = 2
+    thunder_forecast_days: int = 2
+    sms_metrics: list[str] = field(default_factory=list)  # Phase 3
+    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+
+    def is_metric_enabled(self, metric_id: str) -> bool:
+        """Check if a metric is enabled."""
+        for mc in self.metrics:
+            if mc.metric_id == metric_id:
+                return mc.enabled
+        return False
+
+    def get_enabled_metric_ids(self) -> list[str]:
+        """Return list of enabled metric IDs."""
+        return [mc.metric_id for mc in self.metrics if mc.enabled]
+
+    def get_enabled_metrics(self) -> list[MetricConfig]:
+        """Return list of enabled MetricConfig entries."""
+        return [mc for mc in self.metrics if mc.enabled]
+
+
 # --- Trip Report DTOs (Feature 3.1) ---
 
 @dataclass

@@ -7,8 +7,8 @@ from datetime import datetime, time, timezone
 
 import pytest
 
+from app.metric_catalog import build_default_display_config
 from app.models import (
-    EmailReportDisplayConfig,
     ForecastDataPoint,
     ForecastMeta,
     GPXPoint,
@@ -18,8 +18,18 @@ from app.models import (
     SegmentWeatherSummary,
     ThunderLevel,
     TripSegment,
+    UnifiedWeatherDisplayConfig,
 )
 from formatters.trip_report import TripReportFormatter
+
+
+def _config_with_disabled(*metric_ids: str) -> UnifiedWeatherDisplayConfig:
+    """Build default display config with specific metrics disabled."""
+    config = build_default_display_config()
+    for mc in config.metrics:
+        if mc.metric_id in metric_ids:
+            mc.enabled = False
+    return config
 
 
 # ---------------------------------------------------------------------------
@@ -158,7 +168,7 @@ class TestDisplayConfig:
         """GIVEN display_config with show_clouds=False and show_wind=False,
         WHEN formatted, THEN Wind and Wolken columns absent."""
         seg = _make_segment_weather()
-        config = EmailReportDisplayConfig(show_wind=False, show_clouds=False)
+        config = _config_with_disabled("wind", "cloud_total")
         formatter = TripReportFormatter()
         report = formatter.format_email(
             [seg], "Test", "morning", display_config=config,
@@ -172,7 +182,7 @@ class TestDisplayConfig:
     def test_temp_felt_hidden_when_disabled(self):
         """GIVEN show_temp_felt=False, THEN 'Gefühlt' column absent."""
         seg = _make_segment_weather()
-        config = EmailReportDisplayConfig(show_temp_felt=False)
+        config = _config_with_disabled("wind_chill")
         formatter = TripReportFormatter()
         report = formatter.format_email(
             [seg], "Test", "morning", display_config=config,

@@ -113,7 +113,7 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
                     else:
                         setattr(aggregation, key, AggregationFunc(value))
 
-    # Parse weather config if present (Feature 2.6)
+    # Parse weather config if present (Feature 2.6 legacy)
     weather_config = None
     if "weather_config" in data:
         from app.models import TripWeatherConfig
@@ -124,6 +124,13 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
             enabled_metrics=wc_data["enabled_metrics"],
             updated_at=datetime.fromisoformat(wc_data["updated_at"])
         )
+
+    # Parse unified display config (Feature 2.6 v2) or migrate from old weather_config
+    display_config = None
+    if "display_config" in data:
+        display_config = _parse_display_config(data["display_config"])
+    elif weather_config is not None:
+        display_config = _migrate_weather_config(weather_config)
 
     # Parse report config if present (Feature 3.5)
     report_config = None
@@ -152,7 +159,93 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
         avalanche_regions=data.get("avalanche_regions", []),
         aggregation=aggregation,
         weather_config=weather_config,
+        display_config=display_config,
         report_config=report_config,
+    )
+
+
+def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig":
+    """Parse UnifiedWeatherDisplayConfig from dict."""
+    from datetime import datetime as _dt
+    from app.models import MetricConfig, UnifiedWeatherDisplayConfig
+
+    metrics = []
+    for mc_data in data.get("metrics", []):
+        metrics.append(MetricConfig(
+            metric_id=mc_data["metric_id"],
+            enabled=mc_data.get("enabled", True),
+            aggregations=mc_data.get("aggregations", ["min", "max"]),
+            morning_enabled=mc_data.get("morning_enabled"),
+            evening_enabled=mc_data.get("evening_enabled"),
+        ))
+
+    return UnifiedWeatherDisplayConfig(
+        trip_id=data.get("trip_id", ""),
+        metrics=metrics,
+        show_night_block=data.get("show_night_block", True),
+        night_interval_hours=data.get("night_interval_hours", 2),
+        thunder_forecast_days=data.get("thunder_forecast_days", 2),
+        sms_metrics=data.get("sms_metrics", []),
+        updated_at=_dt.fromisoformat(data["updated_at"]) if "updated_at" in data else _dt.now(),
+    )
+
+
+# Migration map: old metric name -> (new metric_id, aggregation)
+_OLD_METRIC_MAP: Dict[str, tuple] = {
+    "temp_min_c": ("temperature", "min"),
+    "temp_max_c": ("temperature", "max"),
+    "temp_avg_c": ("temperature", "avg"),
+    "wind_max_kmh": ("wind", "max"),
+    "gust_max_kmh": ("gust", "max"),
+    "precip_sum_mm": ("precipitation", "sum"),
+    "cloud_avg_pct": ("cloud_total", "avg"),
+    "humidity_avg_pct": ("humidity", "avg"),
+    "thunder_level_max": ("thunder", "max"),
+    "dewpoint_avg_c": ("dewpoint", "avg"),
+    "pressure_avg_hpa": ("pressure", "avg"),
+    "wind_chill_min_c": ("wind_chill", "min"),
+}
+
+
+def _migrate_weather_config(old_config) -> "UnifiedWeatherDisplayConfig":
+    """
+    Migrate old TripWeatherConfig to UnifiedWeatherDisplayConfig.
+
+    Groups old metric names by new metric_id and builds MetricConfig entries.
+    Metrics not in old config are set to disabled.
+    """
+    from app.models import MetricConfig, UnifiedWeatherDisplayConfig
+    from app.metric_catalog import get_all_metrics
+
+    # Collect enabled metric IDs with their aggregations from old config
+    enabled_metrics: Dict[str, list] = {}
+    for old_name in old_config.enabled_metrics:
+        if old_name in _OLD_METRIC_MAP:
+            metric_id, agg = _OLD_METRIC_MAP[old_name]
+            if metric_id not in enabled_metrics:
+                enabled_metrics[metric_id] = []
+            enabled_metrics[metric_id].append(agg)
+
+    # Build MetricConfig list for all catalog metrics
+    metrics = []
+    for m in get_all_metrics():
+        if m.id in enabled_metrics:
+            metrics.append(MetricConfig(
+                metric_id=m.id,
+                enabled=True,
+                aggregations=enabled_metrics[m.id],
+            ))
+        else:
+            metrics.append(MetricConfig(
+                metric_id=m.id,
+                enabled=False,
+                aggregations=list(m.default_aggregations),
+            ))
+
+    return UnifiedWeatherDisplayConfig(
+        trip_id=old_config.trip_id,
+        metrics=metrics,
+        updated_at=old_config.updated_at,
     )
 
 
@@ -412,12 +505,32 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
         },
     }
 
-    # Serialize weather config (Feature 2.6)
+    # Serialize weather config (Feature 2.6 legacy, preserved for migration)
     if trip.weather_config:
         data["weather_config"] = {
             "trip_id": trip.weather_config.trip_id,
             "enabled_metrics": trip.weather_config.enabled_metrics,
             "updated_at": trip.weather_config.updated_at.isoformat()
+        }
+
+    # Serialize unified display config (Feature 2.6 v2)
+    if trip.display_config:
+        dc = trip.display_config
+        data["display_config"] = {
+            "trip_id": dc.trip_id,
+            "metrics": [
+                {
+                    "metric_id": mc.metric_id,
+                    "enabled": mc.enabled,
+                    "aggregations": mc.aggregations,
+                }
+                for mc in dc.metrics
+            ],
+            "show_night_block": dc.show_night_block,
+            "night_interval_hours": dc.night_interval_hours,
+            "thunder_forecast_days": dc.thunder_forecast_days,
+            "sms_metrics": dc.sms_metrics,
+            "updated_at": dc.updated_at.isoformat(),
         }
 
     # Serialize report config (Feature 3.5)

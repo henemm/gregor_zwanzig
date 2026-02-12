@@ -252,12 +252,12 @@ class TripReportSchedulerService:
             segment_weather[-1], target_date,
         )
 
-        # 6. Format report
+        # 6. Format report (uses unified display config from trip)
         report = self._formatter.format_email(
             segments=segment_weather,
             trip_name=trip.name,
             report_type=report_type,
-            trip_config=trip.weather_config,
+            display_config=trip.display_config,
             night_weather=night_weather,
             thunder_forecast=thunder_forecast,
             stage_name=stage_name,
