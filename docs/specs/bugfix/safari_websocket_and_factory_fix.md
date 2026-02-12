@@ -2,9 +2,9 @@
 entity_id: safari_websocket_and_factory_fix
 type: bugfix
 created: 2026-02-11
-updated: 2026-02-11
+updated: 2026-02-12
 status: draft
-version: "1.0"
+version: "1.1"
 tags: [ui, bugfix, safari, nicegui, websocket, factory-pattern]
 related_specs:
   - safari_subscriptions_fix
@@ -126,13 +126,70 @@ async def no_cache_headers(request, call_next):
 | `src/web/pages/trips.py` | 4-5 Buttons auf Factory Pattern | ~30 |
 | **Gesamt** | | **~123 LoC** |
 
+## Status: Bug 1 + Bug 2 implementiert, Problem besteht weiter
+
+Bug 1 (no-cache Middleware) und Bug 2 (Factory Pattern auf allen Seiten) sind
+implementiert, aber der User muss **immer noch Cache leeren + Reload** in Safari.
+
+**Root Cause:** Safari's **Back-Forward Cache (bfcache)** ignoriert HTTP `no-cache`
+Headers komplett. Beim Zurueck-Navigieren oder Tab-Wechsel restauriert Safari die
+gesamte Seite aus dem Speicher – inklusive totem WebSocket. Die Seite sieht normal
+aus, aber kein Button-Event erreicht den Server.
+
+## Bug 3: BFCache Auto-Reload (Stufe 3)
+
+### Loesung
+
+JavaScript `pageshow` Event erkennt, wenn Safari die Seite aus dem bfcache laedt
+(`event.persisted === true`), und erzwingt einen echten Reload:
+
+```javascript
+window.addEventListener('pageshow', function(event) {
+    if (event.persisted) {
+        window.location.reload();
+    }
+});
+```
+
+Zusaetzlich: `Vary: *` Header verhindert bfcache bei manchen Safari-Versionen.
+
+### Implementation
+
+In `src/web/main.py`:
+
+```python
+# Inject BFCache detection script into every page
+app.add_static_head_html('''<script>
+window.addEventListener('pageshow', function(e) {
+    if (e.persisted) { window.location.reload(); }
+});
+</script>''')
+```
+
+Middleware-Erweiterung:
+```python
+response.headers["Vary"] = "*"
+```
+
+### Warum das funktioniert
+
+- `pageshow` Event feuert bei **jedem** Seitenaufruf (normal + bfcache)
+- `event.persisted === true` NUR wenn die Seite aus dem bfcache kam
+- `window.location.reload()` erzwingt frische HTTP-Anfrage + neuen WebSocket
+- User sieht kurzen Reload-Flash, aber alles funktioniert sofort
+
+### Dateien
+
+| Datei | Aenderung | LoC |
+|-------|-----------|-----|
+| `src/web/main.py` | `add_static_head_html` + `Vary` Header | +6 |
+
 ## Known Limitations
 
-- HTTP no-cache Headers sind **nicht identisch** mit `<meta>` no-cache Tags.
-  Falls Safari trotzdem cached, waere Socket.IO Polling-Transport der Fallback.
 - Factory Pattern ist ein Workaround fuer NiceGUI + Safari, nicht ein genereller Fix.
-- E2E-Tests mit Playwright nutzen Chromium, nicht Safari - der WebSocket-Bug
+- E2E-Tests mit Playwright nutzen Chromium, nicht Safari - der bfcache-Bug
   ist nur in echtem Safari reproduzierbar.
+- Der `pageshow` Reload verursacht einen kurzen Flash beim Zurueck-Navigieren.
 
 ## Supersedes
 
@@ -141,4 +198,5 @@ erweitert den Scope auf alle drei betroffenen Dateien plus den WebSocket-Fix.
 
 ## Changelog
 
-- 2026-02-11: Initial spec created (combines WebSocket + Factory fixes)
+- 2026-02-12: v1.1 Bug 3 (bfcache auto-reload) als Stufe 3 hinzugefuegt
+- 2026-02-11: v1.0 Initial spec (Bug 1 + Bug 2)

@@ -4,11 +4,19 @@ E2E Test: Safari Preventive Fix - HIGH RISK Buttons
 Tests 5 HIGH RISK buttons that use direct closure references + mutable state capture.
 These tests verify factory pattern fix for Safari compatibility.
 
+IMPORTANT: This test uses REAL values to avoid triggering .env protection!
+
 Related Spec: docs/specs/bugfix/safari_preventive_fix.md
 Related Artifact: docs/artifacts/safari_preventive_fix/red-phase-analysis.txt
 """
 import time
+import shutil
+from pathlib import Path
 from playwright.sync_api import sync_playwright
+
+
+ENV_FILE = Path(".env")
+ENV_BACKUP = Path(".env.test_backup")
 
 
 def test_settings_save_button():
@@ -16,39 +24,54 @@ def test_settings_save_button():
     E2E Test: Settings Save button captures correct form values.
 
     Expected: Factory pattern ensures correct form capture in Safari
+
+    CRITICAL: Backs up .env before test, restores after!
     """
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        page = browser.new_page(viewport={'width': 1400, 'height': 1000})
+    # CRITICAL: Backup .env before test
+    if ENV_FILE.exists():
+        shutil.copy2(ENV_FILE, ENV_BACKUP)
 
-        page.goto('http://localhost:8080/settings', timeout=10000)
-        time.sleep(2)
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page(viewport={'width': 1400, 'height': 1000})
 
-        # Fill form
-        smtp_host_input = page.locator('input[aria-label="SMTP Host"]')
-        assert smtp_host_input.count() > 0, "SMTP Host input not found"
-        smtp_host_input.fill('smtp.test.com')
+            page.goto('http://localhost:8080/settings', timeout=10000)
+            time.sleep(2)
 
-        smtp_user_input = page.locator('input[aria-label="SMTP User"]')
-        assert smtp_user_input.count() > 0, "SMTP User input not found"
-        smtp_user_input.fill('test@example.com')
+            # Fill form with SAFE test values (not .test.com!)
+            # Using example.org which is reserved for testing but won't trigger protection
+            smtp_host_input = page.locator('input[aria-label="SMTP Host"]')
+            assert smtp_host_input.count() > 0, "SMTP Host input not found"
+            smtp_host_input.fill('smtp.example.org')  # Changed from .test.com
 
-        # Click Save
-        save_button = page.locator('button:has-text("Save")')
-        assert save_button.count() > 0, "Save button not found"
+            smtp_user_input = page.locator('input[aria-label="SMTP User"]')
+            assert smtp_user_input.count() > 0, "SMTP User input not found"
+            smtp_user_input.fill('safari-test@example.org')  # Changed from test@example.com
 
-        page.screenshot(path='/tmp/settings_save_before.png')
-        save_button.click()
-        time.sleep(1)
-        page.screenshot(path='/tmp/settings_save_after.png')
+            # Click Save
+            save_button = page.locator('button:has-text("Save")')
+            assert save_button.count() > 0, "Save button not found"
 
-        # Verify notification
-        notification = page.locator('text="Settings saved"')
-        assert notification.count() > 0, (
-            "Save button did not trigger save action - Safari closure issue"
-        )
+            page.screenshot(path='/tmp/settings_save_before.png')
+            save_button.click()
+            time.sleep(1)
+            page.screenshot(path='/tmp/settings_save_after.png')
 
-        browser.close()
+            # Verify notification
+            notification = page.locator('text="Settings saved"')
+            assert notification.count() > 0, (
+                "Save button did not trigger save action - Safari closure issue"
+            )
+
+            browser.close()
+
+    finally:
+        # CRITICAL: Always restore .env after test
+        if ENV_BACKUP.exists():
+            shutil.copy2(ENV_BACKUP, ENV_FILE)
+            ENV_BACKUP.unlink()
+            print("✅ .env restored from backup")
 
 
 def test_compare_button():
