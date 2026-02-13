@@ -4,18 +4,18 @@ Trip alert service - sends immediate alerts on significant weather changes.
 Feature 3.4: Alert bei Änderungen (Story 3)
 Detects significant weather changes and sends alert emails with throttling.
 
-SPEC: docs/specs/modules/trip_alert.md v1.0
+SPEC: docs/specs/modules/trip_alert.md v2.0
 """
 from __future__ import annotations
 
+import json
 import logging
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import TYPE_CHECKING, List, Optional
 
 from app.config import Settings
 from app.models import ChangeSeverity, SegmentWeatherData, WeatherChange
-from formatters.trip_report import TripReportFormatter
-from outputs.email import EmailOutput
 from services.weather_change_detection import WeatherChangeDetectionService
 
 if TYPE_CHECKING:
@@ -31,11 +31,16 @@ class TripAlertService:
     Detects significant weather changes and sends immediate alerts
     with throttling to prevent spam.
 
+    v2.0: Per-trip thresholds via from_trip_config(), file-based throttle persistence,
+    check_all_trips() for scheduler integration.
+
     Example:
         >>> service = TripAlertService()
         >>> sent = service.check_and_send_alerts(trip, cached_weather)
         >>> print(f"Alert sent: {sent}")
     """
+
+    THROTTLE_FILE = Path("data/users/default/alert_throttle.json")
 
     def __init__(
         self,
@@ -50,10 +55,9 @@ class TripAlertService:
             throttle_hours: Minimum hours between alerts per trip (default: 2)
         """
         self._settings = settings if settings else Settings()
-        self._formatter = TripReportFormatter()
         self._change_detector = WeatherChangeDetectionService()
         self._throttle_hours = throttle_hours
-        self._last_alert_times: dict[str, datetime] = {}
+        self._last_alert_times: dict[str, datetime] = self._load_throttle_times()
 
     def check_and_send_alerts(
         self,
@@ -75,6 +79,19 @@ class TripAlertService:
         if not self._settings.can_send_email():
             logger.error("SMTP not configured, cannot send alerts")
             return False
+
+        # 1a. Create change detector with per-trip thresholds
+        # Priority: display_config (per-metric) > report_config (legacy 3-slider) > catalog defaults
+        if trip.display_config and trip.display_config.get_alert_enabled_metrics():
+            self._change_detector = WeatherChangeDetectionService.from_display_config(
+                trip.display_config
+            )
+        elif trip.report_config:
+            self._change_detector = WeatherChangeDetectionService.from_trip_config(
+                trip.report_config
+            )
+        else:
+            self._change_detector = WeatherChangeDetectionService()
 
         # 1b. Check if alerts are disabled for this trip
         if trip.report_config and not trip.report_config.alert_on_changes:
@@ -115,10 +132,64 @@ class TripAlertService:
             logger.error(f"Failed to send alert for {trip.id}: {e}")
             return False
 
-        # 6. Update throttle (only on success)
+        # 6. Update throttle (only on success) + persist
         self._last_alert_times[trip.id] = datetime.now(timezone.utc)
+        self._save_throttle_times()
 
         return True
+
+    def check_all_trips(self) -> int:
+        """
+        Check all active trips for weather changes and send alerts.
+
+        Called by scheduler every 30 minutes.
+
+        Returns:
+            Number of alerts sent
+        """
+        from app.loader import load_all_trips
+
+        alerts_sent = 0
+        for trip in load_all_trips():
+            if not trip.report_config or not trip.report_config.alert_on_changes:
+                continue
+
+            # Skip if no cached weather available
+            cached = self._get_cached_weather(trip)
+            if not cached:
+                continue
+
+            try:
+                if self.check_and_send_alerts(trip, cached):
+                    alerts_sent += 1
+            except Exception as e:
+                logger.error(f"Alert check failed for trip {trip.id}: {e}")
+
+        return alerts_sent
+
+    def _get_cached_weather(self, trip: "Trip") -> Optional[List[SegmentWeatherData]]:
+        """
+        Get cached weather data for a trip from the weather cache.
+
+        Args:
+            trip: Trip to get cached weather for
+
+        Returns:
+            Cached weather data or None if not available
+        """
+        try:
+            from services.trip_report_scheduler import TripReportSchedulerService
+
+            scheduler = TripReportSchedulerService()
+            segments = scheduler._convert_trip_to_segments(trip)
+            if not segments:
+                return None
+
+            weather_data = scheduler._fetch_weather(segments, trip)
+            return weather_data if weather_data else None
+        except Exception as e:
+            logger.debug(f"No cached weather for trip {trip.id}: {e}")
+            return None
 
     def _is_throttled(self, trip_id: str) -> bool:
         """
@@ -168,7 +239,32 @@ class TripAlertService:
         """
         if trip_id in self._last_alert_times:
             del self._last_alert_times[trip_id]
+            self._save_throttle_times()
             logger.debug(f"Throttle cleared for trip {trip_id}")
+
+    # --- Throttle Persistence ---
+
+    def _load_throttle_times(self) -> dict[str, datetime]:
+        """Load throttle times from JSON file."""
+        if not self.THROTTLE_FILE.exists():
+            return {}
+        try:
+            data = json.loads(self.THROTTLE_FILE.read_text())
+            return {k: datetime.fromisoformat(v) for k, v in data.items()}
+        except (json.JSONDecodeError, ValueError, OSError) as e:
+            logger.warning(f"Failed to load throttle file: {e}")
+            return {}
+
+    def _save_throttle_times(self) -> None:
+        """Save throttle times to JSON file."""
+        try:
+            self.THROTTLE_FILE.parent.mkdir(parents=True, exist_ok=True)
+            data = {k: v.isoformat() for k, v in self._last_alert_times.items()}
+            self.THROTTLE_FILE.write_text(json.dumps(data, indent=2))
+        except OSError as e:
+            logger.error(f"Failed to save throttle file: {e}")
+
+    # --- Change Detection ---
 
     def _detect_all_changes(
         self,
@@ -260,28 +356,25 @@ class TripAlertService:
         changes: List[WeatherChange],
     ) -> None:
         """
-        Format and send alert email.
+        Delegate alert dispatch to AlertProcessor (multi-channel).
 
         Args:
             trip: Trip object
             weather: Current weather data
             changes: Detected changes to include
-        """
-        report = self._formatter.format_email(
-            segments=weather,
-            trip_name=trip.name,
-            report_type="alert",
-            display_config=trip.display_config,
-            changes=changes,
-        )
 
-        email_output = EmailOutput(self._settings)
-        email_output.send(
-            subject=report.email_subject,
-            html_body=report.email_html,
-            plain_text_body=report.email_plain,
-        )
+        Raises:
+            RuntimeError: If no channel delivered the alert
+        """
+        from services.alert_processor import AlertProcessor
+
+        processor = AlertProcessor(self._settings)
+        results = processor.process_alert(trip, weather, changes)
+
+        sent_channels = [ch for ch, ok in results.items() if ok]
+        if not sent_channels:
+            raise RuntimeError(f"No channel delivered alert for {trip.name}")
 
         logger.info(
-            f"Alert sent for trip {trip.name}: {len(changes)} changes detected"
+            f"Alert for {trip.name}: {len(changes)} changes via {', '.join(sent_channels)}"
         )

@@ -94,6 +94,7 @@ class ForecastDataPoint:
     pressure_msl_hpa: Optional[float] = None
     humidity_pct: Optional[int] = None
     dewpoint_c: Optional[float] = None
+    uv_index: Optional[float] = None
 
     # Wintersport fields (optional)
     snow_depth_cm: Optional[float] = None
@@ -314,6 +315,12 @@ class SegmentWeatherSummary:
     pop_max_pct: Optional[int] = None
     cape_max_jkg: Optional[float] = None
 
+    # Phase A: New metrics (v2.3)
+    uv_index_max: Optional[float] = None
+    snow_new_sum_cm: Optional[float] = None
+    wind_direction_avg_deg: Optional[int] = None
+    precip_type_dominant: Optional["PrecipType"] = None
+
     # Metadata
     aggregation_config: dict[str, str] = field(default_factory=dict)
 
@@ -417,6 +424,9 @@ class MetricConfig:
     morning_enabled: Optional[bool] = None
     evening_enabled: Optional[bool] = None
     use_friendly_format: bool = True
+    # Per-metric alert configuration (v2.3)
+    alert_enabled: bool = False
+    alert_threshold: Optional[float] = None  # None = MetricCatalog default
 
 
 @dataclass
@@ -451,6 +461,10 @@ class UnifiedWeatherDisplayConfig:
     def get_enabled_metrics(self) -> list[MetricConfig]:
         """Return list of enabled MetricConfig entries."""
         return [mc for mc in self.metrics if mc.enabled]
+
+    def get_alert_enabled_metrics(self) -> list[MetricConfig]:
+        """Return metrics with alert_enabled=True."""
+        return [mc for mc in self.metrics if mc.alert_enabled]
 
 
 # --- Trip Report DTOs (Feature 3.1) ---

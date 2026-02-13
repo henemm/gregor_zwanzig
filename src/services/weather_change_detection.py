@@ -4,16 +4,21 @@ Weather change detection service - detects significant weather changes.
 Feature 2.5: Change-Detection
 Compares cached vs fresh weather data and identifies changes exceeding thresholds.
 
-SPEC: docs/specs/modules/weather_change_detection.md v1.0
+SPEC: docs/specs/modules/weather_change_detection.md v2.0
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
-    from app.models import SegmentWeatherData
+    from app.models import SegmentWeatherData, TripReportConfig, UnifiedWeatherDisplayConfig
 
-from app.models import ChangeSeverity, WeatherChange
+from enum import Enum
+
+from app.models import ChangeSeverity, ThunderLevel, WeatherChange
+
+# Ordinal mapping for enum-type metrics (used for delta calculation)
+_THUNDER_ORDINAL = {ThunderLevel.NONE: 0, ThunderLevel.MED: 1, ThunderLevel.HIGH: 2}
 
 
 class WeatherChangeDetectionService:
@@ -22,6 +27,9 @@ class WeatherChangeDetectionService:
 
     Compares two SegmentWeatherSummary objects and identifies changes
     that exceed configured thresholds.
+
+    v2.0: Thresholds derived from MetricCatalog via get_change_detection_map().
+    User-configured overrides from TripReportConfig applied via from_trip_config().
 
     Example:
         >>> service = WeatherChangeDetectionService()
@@ -34,44 +42,85 @@ class WeatherChangeDetectionService:
 
     def __init__(
         self,
-        temp_threshold_c: float = 5.0,
-        wind_threshold_kmh: float = 20.0,
-        precip_threshold_mm: float = 10.0,
-        visibility_threshold_m: int = 1000,
-        cloud_threshold_pct: int = 30,
-        humidity_threshold_pct: int = 20,
-        pressure_threshold_hpa: float = 10.0,
+        thresholds: Optional[dict[str, float]] = None,
     ):
         """
-        Initialize with configurable thresholds.
+        Initialize with thresholds.
 
         Args:
-            temp_threshold_c: Temperature delta threshold (default: ±5°C)
-            wind_threshold_kmh: Wind speed delta threshold (default: ±20 km/h)
-            precip_threshold_mm: Precipitation delta threshold (default: ±10 mm)
-            visibility_threshold_m: Visibility delta threshold (default: ±1000 m)
-            cloud_threshold_pct: Cloud cover delta threshold (default: ±30%)
-            humidity_threshold_pct: Humidity delta threshold (default: ±20%)
-            pressure_threshold_hpa: Pressure delta threshold (default: ±10 hPa)
+            thresholds: Custom {field: threshold} dict.
+                        If None, uses get_change_detection_map() defaults from MetricCatalog.
         """
-        self._thresholds = {
-            "temp_min_c": temp_threshold_c,
-            "temp_max_c": temp_threshold_c,
-            "temp_avg_c": temp_threshold_c,
-            "wind_max_kmh": wind_threshold_kmh,
-            "gust_max_kmh": wind_threshold_kmh,
-            "precip_sum_mm": precip_threshold_mm,
-            "cloud_avg_pct": cloud_threshold_pct,
-            "humidity_avg_pct": humidity_threshold_pct,
-            "visibility_min_m": visibility_threshold_m,
-            "dewpoint_avg_c": temp_threshold_c,
-            "pressure_avg_hpa": pressure_threshold_hpa,
-            "wind_chill_min_c": temp_threshold_c,
-            "snow_depth_cm": 10.0,  # Default for snow
-            "freezing_level_m": 200,  # Default for freezing level
-            "pop_max_pct": 20,  # ±20% change in rain probability
-            "cape_max_jkg": 500.0,  # ±500 J/kg change in convective energy
-        }
+        if thresholds is None:
+            from app.metric_catalog import get_change_detection_map
+            self._thresholds = get_change_detection_map()
+        else:
+            self._thresholds = dict(thresholds)
+
+    @classmethod
+    def from_trip_config(cls, config: "TripReportConfig") -> "WeatherChangeDetectionService":
+        """
+        Factory: Create service with user-configured thresholds.
+
+        Starts with MetricCatalog defaults, then overrides
+        temp/wind/precip thresholds from TripReportConfig.
+
+        Args:
+            config: User's trip report configuration
+
+        Returns:
+            WeatherChangeDetectionService with merged thresholds
+        """
+        from app.metric_catalog import get_change_detection_map
+        thresholds = get_change_detection_map()
+
+        # Override temp-related fields
+        for field_name in ("temp_min_c", "temp_max_c", "temp_avg_c",
+                           "wind_chill_min_c", "dewpoint_avg_c"):
+            if field_name in thresholds:
+                thresholds[field_name] = config.change_threshold_temp_c
+
+        # Override wind-related fields
+        for field_name in ("wind_max_kmh", "gust_max_kmh"):
+            if field_name in thresholds:
+                thresholds[field_name] = config.change_threshold_wind_kmh
+
+        # Override precip-related fields
+        for field_name in ("precip_sum_mm",):
+            if field_name in thresholds:
+                thresholds[field_name] = config.change_threshold_precip_mm
+
+        return cls(thresholds=thresholds)
+
+    @classmethod
+    def from_display_config(cls, display_config: "UnifiedWeatherDisplayConfig") -> "WeatherChangeDetectionService":
+        """
+        Factory: Create service from per-metric alert settings.
+
+        Only metrics with alert_enabled=True are included in detection.
+        User-set alert_threshold overrides MetricCatalog default.
+
+        Args:
+            display_config: Unified weather display config with per-metric alert settings
+
+        Returns:
+            WeatherChangeDetectionService with filtered thresholds
+        """
+        from app.metric_catalog import get_metric
+        thresholds: dict[str, float] = {}
+        for mc in display_config.metrics:
+            if not mc.alert_enabled:
+                continue
+            try:
+                metric_def = get_metric(mc.metric_id)
+            except KeyError:
+                continue
+            if metric_def.default_change_threshold is None:
+                continue  # Enum metrics (thunder, precip_type) — skip
+            threshold = mc.alert_threshold if mc.alert_threshold is not None else metric_def.default_change_threshold
+            for field in metric_def.summary_fields.values():
+                thresholds[field] = threshold
+        return cls(thresholds=thresholds)
 
     def detect_changes(
         self,
@@ -104,10 +153,6 @@ class WeatherChangeDetectionService:
 
         # Compare all numeric metrics
         for metric, threshold in self._thresholds.items():
-            # Skip thunder_level_max (enum, special handling needed)
-            if metric == "thunder_level_max":
-                continue
-
             # Get old and new values
             old_value = getattr(old_summary, metric, None)
             new_value = getattr(new_summary, metric, None)
@@ -115,6 +160,11 @@ class WeatherChangeDetectionService:
             # Skip if either is None
             if old_value is None or new_value is None:
                 continue
+
+            # Convert enum values to ordinals for delta calculation
+            if isinstance(old_value, Enum):
+                old_value = _THUNDER_ORDINAL.get(old_value, 0)
+                new_value = _THUNDER_ORDINAL.get(new_value, 0)
 
             # Calculate delta
             delta = new_value - old_value

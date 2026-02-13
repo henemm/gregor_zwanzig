@@ -520,6 +520,152 @@ Output: "E1:T12/18 W125 R150mm RISK:Gewitter@08h RISK:Sturm@09h RISK:Wind@10h RI
 Length: 160 chars (truncated with ...)
 ```
 
+## Phase 5: Alert SMS Formatting (v1.1)
+
+### Purpose
+
+Neues `format_alert_sms()` fuer kompakte Alert-Nachrichten bei Wetteraenderungen.
+Nutzt MetricCatalog `compact_label` fuer kurze Bezeichner.
+
+### format_alert_sms Method
+
+```python
+def format_alert_sms(
+    self,
+    changes: list[WeatherChange],
+    trip_name: str,
+    max_length: int = 160,
+) -> str:
+    """
+    Format weather change alert as SMS.
+
+    Args:
+        changes: List of detected weather changes
+        trip_name: Trip name for header
+        max_length: Maximum SMS length (default 160)
+
+    Returns:
+        Alert SMS text (<=max_length chars)
+
+    Example:
+        >>> sms = formatter.format_alert_sms(changes, "GR20 E3")
+        >>> print(sms)
+        "[GR20 E3] ALERT: T+7C W+25kmh P+10mm"
+    """
+```
+
+### Format Specification
+
+```
+[{trip_name}] ALERT: {metric}{delta}{unit} {metric}{delta}{unit} ...
+```
+
+- **Header:** `[{trip_name}] ALERT: ` (fixed prefix)
+- **Changes:** Space-separated `{compact_label}{delta:+.0f}{compact_unit}`
+- **Mapping:** Uses MetricCatalog summary_fields reverse-lookup for compact_label
+- **Truncation:** If too long, include only most significant changes (MAJOR first)
+
+### Metric Compact Labels (from MetricCatalog)
+
+| metric field | compact_label | unit | Example |
+|-------------|---------------|------|---------|
+| temp_min_c, temp_max_c, temp_avg_c | T | C | T+7C |
+| wind_max_kmh | W | kmh | W+25kmh |
+| gust_max_kmh | G | kmh | G+30kmh |
+| precip_sum_mm | P | mm | P+10mm |
+| snow_sum_cm | S | cm | S+5cm |
+| cape_max_jkg | CAPE | jkg | CAPE+500jkg |
+
+### Implementation
+
+```python
+def format_alert_sms(
+    self,
+    changes: list["WeatherChange"],
+    trip_name: str,
+    max_length: int = 160,
+) -> str:
+    from app.metric_catalog import get_compact_label_for_field
+
+    if not changes:
+        return f"[{trip_name}] No changes"
+
+    # Sort: MAJOR first, then MODERATE
+    sorted_changes = sorted(
+        changes,
+        key=lambda c: (c.severity.value,),
+        reverse=True,
+    )
+
+    header = f"[{trip_name}] ALERT:"
+    parts = []
+
+    for change in sorted_changes:
+        label = get_compact_label_for_field(change.metric)
+        if label:
+            compact_label, unit = label
+            part = f"{compact_label}{change.delta:+.0f}{unit}"
+            parts.append(part)
+
+    # Fit within max_length
+    result = header
+    for part in parts:
+        candidate = result + " " + part
+        if len(candidate) <= max_length:
+            result = candidate
+        else:
+            break
+
+    return result
+```
+
+### New Helper: get_compact_label_for_field()
+
+**File:** `src/app/metric_catalog.py`
+
+```python
+def get_compact_label_for_field(summary_field: str) -> tuple[str, str] | None:
+    """
+    Reverse-lookup: summary_field -> (compact_label, unit).
+
+    Args:
+        summary_field: SegmentWeatherSummary field name (e.g. "temp_max_c")
+
+    Returns:
+        (compact_label, unit) or None if not found
+        Example: ("T", "C") for "temp_max_c"
+    """
+```
+
+### Files to Create/Modify
+
+| File | Action | LOC |
+|------|--------|-----|
+| `src/formatters/sms_trip.py` | MODIFY | +35 |
+| `src/app/metric_catalog.py` | MODIFY | +15 |
+
+**Total: ~50 LOC**
+
+### Test Plan
+
+```python
+def test_format_alert_sms_basic():
+    """Single change -> [Trip] ALERT: T+7C"""
+
+def test_format_alert_sms_multiple_changes():
+    """Multiple changes -> [Trip] ALERT: T+7C W+25kmh P+10mm"""
+
+def test_format_alert_sms_major_first():
+    """MAJOR changes listed before MODERATE."""
+
+def test_format_alert_sms_truncation():
+    """Too many changes -> fit within 160 chars."""
+
+def test_format_alert_sms_empty_changes():
+    """No changes -> [Trip] No changes"""
+```
+
 ## Version History
 
 - v1.0 (2026-02-03): Initial specification
+- v1.1 (2026-02-13): Phase 5 - Alert SMS formatting (format_alert_sms)

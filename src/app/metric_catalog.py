@@ -12,9 +12,9 @@ Defines all available weather metrics with:
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from app.models import UnifiedWeatherDisplayConfig
@@ -35,6 +35,8 @@ class MetricDefinition:
     providers: dict[str, bool]
     default_enabled: bool = True
     friendly_label: str = ""
+    summary_fields: dict[str, str] = field(default_factory=dict)
+    default_change_threshold: Optional[float] = None
 
     @property
     def has_friendly_format(self) -> bool:
@@ -50,6 +52,8 @@ _METRICS: list[MetricDefinition] = [
         default_aggregations=("min", "max", "avg"),
         compact_label="T", col_key="temp", col_label="Temp",
         providers={"openmeteo": True, "geosphere": True},
+        summary_fields={"min": "temp_min_c", "max": "temp_max_c", "avg": "temp_avg_c"},
+        default_change_threshold=5.0,
     ),
     MetricDefinition(
         id="wind_chill", label_de="Gefühlte Temperatur", unit="°C",
@@ -57,6 +61,8 @@ _METRICS: list[MetricDefinition] = [
         default_aggregations=("min",),
         compact_label="TF", col_key="felt", col_label="Feels",
         providers={"openmeteo": True, "geosphere": True},
+        summary_fields={"min": "wind_chill_min_c"},
+        default_change_threshold=5.0,
     ),
     MetricDefinition(
         id="wind", label_de="Wind", unit="km/h",
@@ -64,6 +70,8 @@ _METRICS: list[MetricDefinition] = [
         default_aggregations=("max",),
         compact_label="W", col_key="wind", col_label="Wind",
         providers={"openmeteo": True, "geosphere": True},
+        summary_fields={"max": "wind_max_kmh"},
+        default_change_threshold=20.0,
     ),
     MetricDefinition(
         id="gust", label_de="Böen", unit="km/h",
@@ -71,6 +79,8 @@ _METRICS: list[MetricDefinition] = [
         default_aggregations=("max",),
         compact_label="G", col_key="gust", col_label="Gust",
         providers={"openmeteo": True, "geosphere": True},
+        summary_fields={"max": "gust_max_kmh"},
+        default_change_threshold=20.0,
     ),
     MetricDefinition(
         id="precipitation", label_de="Niederschlag", unit="mm",
@@ -78,6 +88,8 @@ _METRICS: list[MetricDefinition] = [
         default_aggregations=("sum",),
         compact_label="R", col_key="precip", col_label="Rain",
         providers={"openmeteo": True, "geosphere": True},
+        summary_fields={"sum": "precip_sum_mm"},
+        default_change_threshold=10.0,
     ),
     MetricDefinition(
         id="thunder", label_de="Gewitter", unit="",
@@ -85,6 +97,9 @@ _METRICS: list[MetricDefinition] = [
         default_aggregations=("max",),
         compact_label="⚡", col_key="thunder", col_label="Thunder",
         providers={"openmeteo": True, "geosphere": False},
+        summary_fields={"max": "thunder_level_max"},
+        default_change_threshold=1.0,
+        friendly_label="⚡",
     ),
     MetricDefinition(
         id="snowfall_limit", label_de="Schneefallgrenze", unit="m",
@@ -92,6 +107,7 @@ _METRICS: list[MetricDefinition] = [
         default_aggregations=("min", "max"),
         compact_label="SG", col_key="snow_limit", col_label="SnowL",
         providers={"openmeteo": False, "geosphere": True},
+        # No summary_fields: not on SegmentWeatherSummary
     ),
     MetricDefinition(
         id="cloud_total", label_de="Bewölkung", unit="%",
@@ -100,6 +116,8 @@ _METRICS: list[MetricDefinition] = [
         compact_label="C", col_key="cloud", col_label="Cloud",
         providers={"openmeteo": True, "geosphere": True},
         friendly_label="\u2600\ufe0f\u26c5\u2601\ufe0f",
+        summary_fields={"avg": "cloud_avg_pct"},
+        default_change_threshold=30,
     ),
     MetricDefinition(
         id="cloud_low", label_de="Tiefe Wolken", unit="%",
@@ -109,6 +127,7 @@ _METRICS: list[MetricDefinition] = [
         providers={"openmeteo": True, "geosphere": False},
         default_enabled=False,
         friendly_label="\u2600\ufe0f\u26c5\u2601\ufe0f",
+        # No summary_fields: not on SegmentWeatherSummary
     ),
     MetricDefinition(
         id="cloud_mid", label_de="Mittelhohe Wolken", unit="%",
@@ -118,6 +137,7 @@ _METRICS: list[MetricDefinition] = [
         providers={"openmeteo": True, "geosphere": False},
         default_enabled=False,
         friendly_label="\u2600\ufe0f\u26c5\u2601\ufe0f",
+        # No summary_fields: not on SegmentWeatherSummary
     ),
     MetricDefinition(
         id="cloud_high", label_de="Hohe Wolken", unit="%",
@@ -127,6 +147,7 @@ _METRICS: list[MetricDefinition] = [
         providers={"openmeteo": True, "geosphere": False},
         default_enabled=False,
         friendly_label="\u2600\ufe0f\u26c5\u2601\ufe0f",
+        # No summary_fields: not on SegmentWeatherSummary
     ),
     MetricDefinition(
         id="humidity", label_de="Luftfeuchtigkeit", unit="%",
@@ -135,6 +156,8 @@ _METRICS: list[MetricDefinition] = [
         compact_label="H", col_key="humidity", col_label="Humid",
         providers={"openmeteo": True, "geosphere": True},
         default_enabled=False,
+        summary_fields={"avg": "humidity_avg_pct"},
+        default_change_threshold=20,
     ),
     MetricDefinition(
         id="dewpoint", label_de="Taupunkt", unit="°C",
@@ -143,6 +166,8 @@ _METRICS: list[MetricDefinition] = [
         compact_label="DP", col_key="dewpoint", col_label="Cond°",
         providers={"openmeteo": True, "geosphere": True},
         default_enabled=False,
+        summary_fields={"avg": "dewpoint_avg_c"},
+        default_change_threshold=5.0,
     ),
     MetricDefinition(
         id="pressure", label_de="Luftdruck", unit="hPa",
@@ -151,6 +176,8 @@ _METRICS: list[MetricDefinition] = [
         compact_label="P", col_key="pressure", col_label="hPa",
         providers={"openmeteo": True, "geosphere": True},
         default_enabled=False,
+        summary_fields={"avg": "pressure_avg_hpa"},
+        default_change_threshold=10.0,
     ),
     MetricDefinition(
         id="visibility", label_de="Sichtweite", unit="m",
@@ -160,6 +187,8 @@ _METRICS: list[MetricDefinition] = [
         providers={"openmeteo": True, "geosphere": False},
         default_enabled=False,
         friendly_label="good/fog",
+        summary_fields={"min": "visibility_min_m"},
+        default_change_threshold=1000,
     ),
     MetricDefinition(
         id="rain_probability", label_de="Regenwahrscheinlichkeit", unit="%",
@@ -168,6 +197,8 @@ _METRICS: list[MetricDefinition] = [
         compact_label="P%", col_key="pop", col_label="Rain%",
         providers={"openmeteo": True, "geosphere": False},
         default_enabled=False,
+        summary_fields={"max": "pop_max_pct"},
+        default_change_threshold=20,
     ),
     MetricDefinition(
         id="cape", label_de="Gewitterenergie (CAPE)", unit="J/kg",
@@ -177,6 +208,8 @@ _METRICS: list[MetricDefinition] = [
         providers={"openmeteo": True, "geosphere": False},
         default_enabled=False,
         friendly_label="\U0001f7e2\U0001f7e1\U0001f534",
+        summary_fields={"max": "cape_max_jkg"},
+        default_change_threshold=500.0,
     ),
     MetricDefinition(
         id="freezing_level", label_de="Nullgradgrenze", unit="m",
@@ -185,6 +218,9 @@ _METRICS: list[MetricDefinition] = [
         compact_label="0G", col_key="freeze_lvl", col_label="0°Line",
         providers={"openmeteo": True, "geosphere": False},
         default_enabled=False,
+        # Single field on SegmentWeatherSummary (not min/max split)
+        summary_fields={"min": "freezing_level_m"},
+        default_change_threshold=200,
     ),
     MetricDefinition(
         id="snow_depth", label_de="Schneehöhe", unit="cm",
@@ -193,6 +229,48 @@ _METRICS: list[MetricDefinition] = [
         compact_label="SD", col_key="snow_depth", col_label="SnowH",
         providers={"openmeteo": False, "geosphere": True},
         default_enabled=False,
+        summary_fields={"max": "snow_depth_cm"},
+        default_change_threshold=10.0,
+    ),
+    MetricDefinition(
+        id="uv_index", label_de="UV-Index", unit="",
+        dp_field="uv_index", category="atmosphere",
+        default_aggregations=("max",),
+        compact_label="UV", col_key="uv", col_label="UV",
+        providers={"openmeteo": True, "geosphere": False},
+        default_enabled=False,
+        summary_fields={"max": "uv_index_max"},
+        default_change_threshold=3.0,
+    ),
+    MetricDefinition(
+        id="fresh_snow", label_de="Neuschnee", unit="cm",
+        dp_field="snow_new_24h_cm", category="winter",
+        default_aggregations=("sum",),
+        compact_label="NS", col_key="fresh_snow", col_label="NewSn",
+        providers={"openmeteo": False, "geosphere": True},
+        default_enabled=False,
+        summary_fields={"sum": "snow_new_sum_cm"},
+        default_change_threshold=5.0,
+    ),
+    MetricDefinition(
+        id="wind_direction", label_de="Windrichtung", unit="°",
+        dp_field="wind_direction_deg", category="wind",
+        default_aggregations=("avg",),
+        compact_label="WD", col_key="wind_dir", col_label="WDir",
+        providers={"openmeteo": True, "geosphere": True},
+        default_enabled=False,
+        summary_fields={"avg": "wind_direction_avg_deg"},
+        # Circular mean: no numeric delta comparison for alerts
+    ),
+    MetricDefinition(
+        id="precip_type", label_de="Niederschlagsart", unit="",
+        dp_field="precip_type", category="precipitation",
+        default_aggregations=("max",),
+        compact_label="PT", col_key="precip_type", col_label="PType",
+        providers={"openmeteo": False, "geosphere": True},
+        default_enabled=False,
+        summary_fields={"max": "precip_type_dominant"},
+        # Enum type: no numeric delta comparison for alerts
     ),
 ]
 
@@ -237,12 +315,17 @@ def build_default_display_config(trip_id: str = "") -> "UnifiedWeatherDisplayCon
     """
     from app.models import MetricConfig, UnifiedWeatherDisplayConfig
 
+    # Core metrics that get alert_enabled=True by default
+    # (matches the old 3-slider behavior: temp, wind, gust, precip, wind_chill)
+    _DEFAULT_ALERT_METRICS = {"temperature", "wind", "gust", "precipitation", "wind_chill"}
+
     metrics = []
     for m in _METRICS:
         metrics.append(MetricConfig(
             metric_id=m.id,
             enabled=m.default_enabled,
             aggregations=list(m.default_aggregations),
+            alert_enabled=m.id in _DEFAULT_ALERT_METRICS,
         ))
 
     return UnifiedWeatherDisplayConfig(
@@ -253,6 +336,48 @@ def build_default_display_config(trip_id: str = "") -> "UnifiedWeatherDisplayCon
         thunder_forecast_days=2,
         updated_at=datetime.now(timezone.utc),
     )
+
+
+def get_change_detection_map() -> dict[str, float]:
+    """
+    Build {summary_field: threshold} from MetricCatalog.
+
+    Iterates all metrics, expands summary_fields, pairs each field
+    with default_change_threshold. Skips metrics with threshold=None.
+
+    Returns:
+        Dict mapping SegmentWeatherSummary field names to thresholds.
+        Example: {"temp_min_c": 5.0, "temp_max_c": 5.0, "wind_max_kmh": 20.0, ...}
+    """
+    result: dict[str, float] = {}
+    for m in _METRICS:
+        if m.default_change_threshold is None:
+            continue
+        for summary_field in m.summary_fields.values():
+            result[summary_field] = m.default_change_threshold
+    return result
+
+
+def get_compact_label_for_field(summary_field: str) -> tuple[str, str] | None:
+    """
+    Reverse-lookup: summary_field -> (compact_label, unit_short).
+
+    Finds the MetricDefinition that maps to this summary field
+    and returns compact label + short unit for SMS formatting.
+
+    Args:
+        summary_field: SegmentWeatherSummary field name (e.g. "temp_max_c")
+
+    Returns:
+        (compact_label, unit_short) or None if not found.
+        Example: ("T", "C") for "temp_max_c"
+    """
+    for m in _METRICS:
+        if summary_field in m.summary_fields.values():
+            # Derive short unit from full unit (remove special chars)
+            unit_short = m.unit.replace("°", "").replace("/", "").replace(" ", "")
+            return (m.compact_label, unit_short)
+    return None
 
 
 def get_col_defs() -> list[tuple[str, str, str]]:

@@ -68,34 +68,9 @@ def show_report_config_dialog(trip: Trip, user_id: str = "default") -> None:
             value=config.alert_on_changes
         )
 
-        ui.label("Schwellenwerte für Alerts:").classes("text-subtitle2 q-mt-sm")
-
-        # Temperature threshold
-        with ui.row().classes("w-full items-center"):
-            ui.label("Temperatur:").classes("w-24")
-            temp_slider = ui.slider(
-                min=1, max=10, step=1, value=config.change_threshold_temp_c
-            ).classes("w-40")
-            temp_label = ui.label(f"{config.change_threshold_temp_c:.0f}°C")
-            temp_slider.on("update:model-value", lambda e: temp_label.set_text(f"{e.args:.0f}°C"))
-
-        # Wind threshold
-        with ui.row().classes("w-full items-center"):
-            ui.label("Wind:").classes("w-24")
-            wind_slider = ui.slider(
-                min=5, max=50, step=5, value=config.change_threshold_wind_kmh
-            ).classes("w-40")
-            wind_label = ui.label(f"{config.change_threshold_wind_kmh:.0f} km/h")
-            wind_slider.on("update:model-value", lambda e: wind_label.set_text(f"{e.args:.0f} km/h"))
-
-        # Precipitation threshold
-        with ui.row().classes("w-full items-center"):
-            ui.label("Niederschlag:").classes("w-24")
-            precip_slider = ui.slider(
-                min=1, max=20, step=1, value=config.change_threshold_precip_mm
-            ).classes("w-40")
-            precip_label = ui.label(f"{config.change_threshold_precip_mm:.0f} mm")
-            precip_slider.on("update:model-value", lambda e: precip_label.set_text(f"{e.args:.0f} mm"))
+        ui.label(
+            "Alert-Schwellen pro Metrik unter 'Wetter-Metriken' konfigurieren."
+        ).classes("text-caption text-grey q-mt-sm")
 
         # Buttons (Factory Pattern!)
         with ui.row().classes("q-mt-md"):
@@ -109,9 +84,6 @@ def show_report_config_dialog(trip: Trip, user_id: str = "default") -> None:
                     email_checkbox,
                     sms_checkbox,
                     alert_checkbox,
-                    temp_slider,
-                    wind_slider,
-                    precip_slider,
                     dialog,
                     user_id
                 )
@@ -127,9 +99,6 @@ def make_save_handler(
     email_checkbox,
     sms_checkbox,
     alert_checkbox,
-    temp_slider,
-    wind_slider,
-    precip_slider,
     dialog,
     user_id: str
 ):
@@ -145,9 +114,6 @@ def make_save_handler(
         email_checkbox: Email channel checkbox
         sms_checkbox: SMS channel checkbox
         alert_checkbox: Alert enabled checkbox
-        temp_slider: Temperature threshold slider
-        wind_slider: Wind threshold slider
-        precip_slider: Precipitation threshold slider
         dialog: Dialog to close after save
         user_id: User identifier for loading/saving
 
@@ -167,7 +133,12 @@ def make_save_handler(
             )
             return
 
-        # Build config
+        # Load existing config to preserve threshold values (deprecated but kept for compatibility)
+        trip_path = get_trips_dir(user_id) / f"{trip_id}.json"
+        existing_trip = load_trip(trip_path)
+        old_rc = existing_trip.report_config
+
+        # Build config (preserve legacy threshold fields from existing config)
         config = TripReportConfig(
             trip_id=trip_id,
             enabled=True,
@@ -176,17 +147,15 @@ def make_save_handler(
             send_email=email_checkbox.value,
             send_sms=sms_checkbox.value,
             alert_on_changes=alert_checkbox.value,
-            change_threshold_temp_c=float(temp_slider.value),
-            change_threshold_wind_kmh=float(wind_slider.value),
-            change_threshold_precip_mm=float(precip_slider.value),
+            change_threshold_temp_c=old_rc.change_threshold_temp_c if old_rc else 5.0,
+            change_threshold_wind_kmh=old_rc.change_threshold_wind_kmh if old_rc else 20.0,
+            change_threshold_precip_mm=old_rc.change_threshold_precip_mm if old_rc else 10.0,
             updated_at=datetime.now(timezone.utc),
         )
 
-        # Load trip, update, save
-        trip_path = get_trips_dir(user_id) / f"{trip_id}.json"
-        trip = load_trip(trip_path)
-        trip.report_config = config
-        save_trip(trip, user_id=user_id)
+        # Update and save
+        existing_trip.report_config = config
+        save_trip(existing_trip, user_id=user_id)
 
         # Success feedback
         ui.notify("Report-Einstellungen gespeichert!", color="positive")

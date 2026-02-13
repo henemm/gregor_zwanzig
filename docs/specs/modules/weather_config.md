@@ -2,10 +2,10 @@
 entity_id: weather_config
 type: module
 created: 2026-02-02
-updated: 2026-02-12
+updated: 2026-02-13
 status: draft
-version: "2.2"
-tags: [story-2, story-3, webui, config, safari, email, formatter]
+version: "2.3"
+tags: [story-2, story-3, webui, config, safari, email, formatter, alerts]
 ---
 
 # Unified Weather Metrics Configuration
@@ -89,7 +89,7 @@ class MetricDefinition:
     default_enabled: bool = True     # Enabled by default in new configs
 ```
 
-**~19 metrics defined:**
+**~23 metrics defined:**
 
 | id | dp_field | category | providers (openmeteo/geosphere) |
 |----|----------|----------|---------------------------------|
@@ -112,6 +112,10 @@ class MetricDefinition:
 | visibility | visibility_m | atmosphere | yes/no |
 | snow_depth | snow_depth_cm | winter | no/yes (SNOWGRID) |
 | freezing_level | freezing_level_m | winter | yes/no |
+| uv_index | uv_index | atmosphere | yes/no |
+| fresh_snow | snow_new_24h_cm | winter | no/yes (SNOWGRID) |
+| wind_direction | wind_direction_deg | wind | yes/yes |
+| precip_type | precip_type | precipitation | no/yes |
 
 **Key functions:**
 
@@ -135,6 +139,10 @@ class MetricConfig:
     # Phase 3: per-report-type overrides
     morning_enabled: Optional[bool] = None   # None = follows global enabled
     evening_enabled: Optional[bool] = None
+    use_friendly_format: bool = True
+    # Per-metric alert configuration (v2.3)
+    alert_enabled: bool = False              # Metric triggers alerts when True
+    alert_threshold: Optional[float] = None  # None = use MetricCatalog default
 
 @dataclass
 class UnifiedWeatherDisplayConfig:
@@ -160,6 +168,9 @@ def get_enabled_metric_ids(self) -> list[str]
 
 def to_row_keys(self) -> list[str]
     """Return ordered list of col_keys for enabled metrics (for formatter)."""
+
+def get_alert_enabled_metrics(self) -> list[MetricConfig]
+    """Return metrics with alert_enabled=True."""
 ```
 
 ### Trip Model Change
@@ -728,3 +739,4 @@ from app.models import UnifiedWeatherDisplayConfig, MetricConfig
 - 2026-02-12: v2.0 - Rewrite: Unified config, MetricCatalog, formatter integration (3 phases)
 - 2026-02-12: v2.1 - Phase 2 fully specified: Provider detection, category grouping, aggregation UI, save logic
 - 2026-02-12: v2.2 - Metric table updated: 15 -> 19 metrics (visibility, rain_probability, cape, freezing_level)
+- 2026-02-13: v2.3 - Per-metric alert config: alert_enabled + alert_threshold on MetricConfig, 4 new metrics (uv_index, fresh_snow, wind_direction, precip_type), Alert-Spalte in Dialog UI, Slider aus Report Config entfernt

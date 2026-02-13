@@ -18,6 +18,7 @@ from nicegui import ui
 from app.loader import get_trips_dir, load_trip, save_trip
 from app.metric_catalog import (
     get_all_metrics,
+    get_metric,
     get_metrics_by_category,
     build_default_display_config,
 )
@@ -38,6 +39,21 @@ CATEGORY_LABELS = {
 
 # Aggregation UI labels
 AGG_LABELS = {"min": "Min", "max": "Max", "avg": "Avg", "sum": "Sum"}
+
+
+def _make_alert_vis_updater(level_sel, numeric_inp, alert_cb, friendly_toggle):
+    """Factory: compound visibility for alert threshold widgets (Safari safe)."""
+    def _update():
+        level_sel.visible = alert_cb.value and friendly_toggle.value
+        numeric_inp.visible = alert_cb.value and not friendly_toggle.value
+    return _update
+
+
+def _make_on_change(updater):
+    """Factory: on_value_change handler that calls updater (Safari safe)."""
+    def _handle(_event):
+        updater()
+    return _handle
 
 
 def get_available_providers_for_trip(trip: Trip) -> set[str]:
@@ -103,7 +119,7 @@ def show_weather_config_dialog(trip: Trip, user_id: str = "default") -> None:
     metric_widgets: dict = {}
 
     with ui.dialog() as dialog, ui.card().style(
-        "max-height: 80vh; overflow-y: auto; min-width: 600px"
+        "max-height: 90vh; overflow-y: auto; width: 95vw; max-width: 960px"
     ):
         ui.label("Wetter-Metriken konfigurieren").classes("text-h6")
 
@@ -112,10 +128,11 @@ def show_weather_config_dialog(trip: Trip, user_id: str = "default") -> None:
         ui.label(f"Provider: {provider_names}").classes("text-caption")
 
         # Table header
-        with ui.row().classes("items-center text-caption text-grey q-mb-xs"):
-            ui.label("Metrik").style("width: 260px; font-weight: 600")
-            ui.label("Wert").style("width: 160px; font-weight: 600")
-            ui.label("Label").style("width: 100px; font-weight: 600")
+        with ui.row().classes("items-center text-caption text-grey q-mb-xs").style("flex-wrap: nowrap"):
+            ui.label("Metrik").style("width: 240px; min-width: 240px; font-weight: 600")
+            ui.label("Wert").style("width: 150px; min-width: 150px; font-weight: 600")
+            ui.label("Label").style("width: 130px; min-width: 130px; font-weight: 600")
+            ui.label("Alert").style("width: 200px; min-width: 200px; font-weight: 600")
 
         # Render metrics grouped by category as table rows
         for category in CATEGORY_ORDER:
@@ -150,12 +167,12 @@ def show_weather_config_dialog(trip: Trip, user_id: str = "default") -> None:
                 allowed_options = [AGG_LABELS[a] for a in metric_def.default_aggregations
                                    if a in AGG_LABELS]
 
-                with ui.row().classes("items-center q-mb-xs"):
+                with ui.row().classes("items-center q-mb-xs").style("flex-wrap: nowrap"):
                     # Column 1: Metric checkbox
                     cb = ui.checkbox(
                         f"{metric_def.label_de} ({metric_def.col_label})",
                         value=initial_enabled,
-                    ).style("width: 260px")
+                    ).style("width: 240px; min-width: 240px")
                     if not is_available:
                         cb.disable()
                         cb.tooltip("Nicht verfügbar für diese Route")
@@ -166,7 +183,7 @@ def show_weather_config_dialog(trip: Trip, user_id: str = "default") -> None:
                         value=initial_aggs,
                         multiple=True,
                         label="Agg",
-                    ).style("width: 160px")
+                    ).style("width: 150px; min-width: 150px")
                     if not is_available:
                         agg_select.disable()
 
@@ -179,18 +196,93 @@ def show_weather_config_dialog(trip: Trip, user_id: str = "default") -> None:
                         friendly_toggle = ui.checkbox(
                             metric_def.friendly_label,
                             value=initial_friendly,
-                        ).style("width: 100px").tooltip(
+                        ).style("width: 130px; min-width: 130px").tooltip(
                             "Benutzerfreundliche Darstellung (Emoji/Stufen)"
                         )
                         if not is_available:
                             friendly_toggle.disable()
+                    else:
+                        # Spacer to keep alignment
+                        ui.label("").style("width: 130px; min-width: 130px")
 
-                metric_widgets[metric_def.id] = {
-                    "checkbox": cb,
-                    "agg_select": agg_select,
-                    "friendly_toggle": friendly_toggle,
-                    "available": is_available,
-                }
+                    # Column 4: Alert checkbox + threshold (only for metrics with numeric threshold)
+                    alert_cb = None
+                    alert_level_select = None
+                    alert_numeric_input = None
+                    if metric_def.default_change_threshold is not None:
+                        initial_alert = False
+                        initial_threshold = None
+                        if mc:
+                            initial_alert = mc.alert_enabled
+                            initial_threshold = mc.alert_threshold
+
+                        alert_cb = ui.checkbox(
+                            "",
+                            value=initial_alert,
+                        ).style("width: 30px; min-width: 30px").tooltip("Alert bei Änderung")
+                        if not is_available:
+                            alert_cb.disable()
+
+                        if metric_def.has_friendly_format:
+                            # Friendly metrics: BOTH level dropdown + numeric input
+                            # Level shown when friendly_toggle ON, numeric when OFF
+                            default_t = metric_def.default_change_threshold
+                            if initial_threshold is not None and default_t:
+                                initial_level = str(max(1, round(initial_threshold / default_t)))
+                            else:
+                                initial_level = "1"
+                            alert_level_select = ui.select(
+                                options={"1": "1 Stufe", "2": "2 Stufen", "3": "3 Stufen"},
+                                value=initial_level,
+                                label="Δ Stufen",
+                            ).style("width: 130px; min-width: 130px")
+                            if not is_available:
+                                alert_level_select.disable()
+
+                            alert_numeric_input = ui.number(
+                                label=f"Δ {metric_def.unit}" if metric_def.unit else "Δ",
+                                value=initial_threshold if initial_threshold is not None else default_t,
+                                format="%.1f",
+                                min=0.1,
+                                step=0.5,
+                            ).style("width: 130px; min-width: 130px").tooltip(
+                                f"Änderungs-Schwelle (Standard: {default_t})"
+                            )
+                            if not is_available:
+                                alert_numeric_input.disable()
+
+                            # Compound visibility: alert_cb AND friendly_toggle
+                            updater = _make_alert_vis_updater(
+                                alert_level_select, alert_numeric_input,
+                                alert_cb, friendly_toggle,
+                            )
+                            updater()  # Set initial state
+                            alert_cb.on_value_change(_make_on_change(updater))
+                            friendly_toggle.on_value_change(_make_on_change(updater))
+                        else:
+                            # Normal metrics: only numeric Δ input
+                            alert_numeric_input = ui.number(
+                                label=f"Δ {metric_def.unit}" if metric_def.unit else "Δ",
+                                value=initial_threshold if initial_threshold is not None else metric_def.default_change_threshold,
+                                format="%.1f",
+                                min=0.1,
+                                step=0.5,
+                            ).style("width: 130px; min-width: 130px").tooltip(
+                                f"Änderungs-Schwelle (Standard: {metric_def.default_change_threshold})"
+                            )
+                            alert_numeric_input.bind_visibility_from(alert_cb, "value")
+                            if not is_available:
+                                alert_numeric_input.disable()
+
+                    metric_widgets[metric_def.id] = {
+                        "checkbox": cb,
+                        "agg_select": agg_select,
+                        "friendly_toggle": friendly_toggle,
+                        "alert_cb": alert_cb,
+                        "alert_level_select": alert_level_select,
+                        "alert_numeric_input": alert_numeric_input,
+                        "available": is_available,
+                    }
 
         # Buttons (Factory Pattern!)
         with ui.row().classes("q-mt-md"):
@@ -239,11 +331,35 @@ def make_save_handler(trip_id: str, metric_widgets: dict, dialog, user_id: str):
             friendly_toggle = widgets.get("friendly_toggle")
             use_friendly = friendly_toggle.value if friendly_toggle else True
 
+            alert_cb = widgets.get("alert_cb")
+            alert_level_select = widgets.get("alert_level_select")
+            alert_numeric_input = widgets.get("alert_numeric_input")
+            alert_enabled = alert_cb.value if alert_cb else False
+            alert_threshold = None
+            if alert_enabled:
+                try:
+                    metric_def = get_metric(metric_id)
+                    if alert_level_select and use_friendly:
+                        # Level-based (friendly ON): "1" = 1x default, "2" = 2x, "3" = 3x
+                        level = int(alert_level_select.value)
+                        if level != 1:
+                            alert_threshold = metric_def.default_change_threshold * level
+                        # level==1 → None (use default)
+                    elif alert_numeric_input and alert_numeric_input.value is not None:
+                        # Numeric: only store if different from default
+                        user_val = float(alert_numeric_input.value)
+                        if user_val != metric_def.default_change_threshold:
+                            alert_threshold = user_val
+                except (KeyError, ValueError, TypeError):
+                    pass
+
             metric_configs.append(MetricConfig(
                 metric_id=metric_id,
                 enabled=cb.value,
                 aggregations=aggregations,
                 use_friendly_format=use_friendly,
+                alert_enabled=alert_enabled,
+                alert_threshold=alert_threshold,
             ))
             if cb.value:
                 enabled_count += 1

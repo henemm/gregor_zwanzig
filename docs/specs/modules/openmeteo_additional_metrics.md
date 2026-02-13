@@ -12,7 +12,7 @@ tags: [openmeteo, provider, metrics, catalog, aggregation, formatter, highlights
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved
 
 ## Purpose
 

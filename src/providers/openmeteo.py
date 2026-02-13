@@ -301,6 +301,8 @@ class OpenMeteoProvider:
                     cloud_low_pct=get_int("cloud_cover_low", i),
                     cloud_mid_pct=get_int("cloud_cover_mid", i),
                     cloud_high_pct=get_int("cloud_cover_high", i),
+                    # UV Index (Open-Meteo hourly)
+                    uv_index=get_val("uv_index", i),
                     # Wintersport fields (not available in Open-Meteo)
                     snow_depth_cm=None,
                     snow_new_24h_cm=None,
@@ -369,6 +371,7 @@ class OpenMeteoProvider:
                 "precipitation_probability",
                 "cape",
                 "freezing_level_height",
+                "uv_index",
             ]),
             "timezone": "UTC",
         }

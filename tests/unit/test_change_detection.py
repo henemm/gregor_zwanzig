@@ -2,12 +2,13 @@
 Unit tests for WeatherChangeDetectionService.
 
 Tests change detection with known values (NO MOCKS).
-TDD RED phase - tests should fail until implementation is complete.
+v2.0: Added catalog integration + from_trip_config() tests.
 """
 from datetime import datetime, timezone
 
 import pytest
 
+from app.metric_catalog import get_change_detection_map
 from app.models import (
     ChangeSeverity,
     ForecastDataPoint,
@@ -18,6 +19,7 @@ from app.models import (
     SegmentWeatherData,
     SegmentWeatherSummary,
     ThunderLevel,
+    TripReportConfig,
     TripSegment,
     WeatherChange,
 )
@@ -29,16 +31,8 @@ class TestWeatherChangeDetectionService:
 
     @pytest.fixture
     def service(self):
-        """Default service with standard thresholds."""
-        return WeatherChangeDetectionService(
-            temp_threshold_c=5.0,
-            wind_threshold_kmh=20.0,
-            precip_threshold_mm=10.0,
-            visibility_threshold_m=1000,
-            cloud_threshold_pct=30,
-            humidity_threshold_pct=20,
-            pressure_threshold_hpa=10.0,
-        )
+        """Default service with catalog-driven thresholds."""
+        return WeatherChangeDetectionService()
 
     @pytest.fixture
     def base_segment(self):
@@ -385,3 +379,127 @@ class TestWeatherChangeDetectionService:
 
         # MAJOR: 2.1x threshold
         assert service._classify_severity(10.5, 5.0) == ChangeSeverity.MAJOR
+
+
+class TestMetricCatalogIntegration:
+    """v2.0: Test catalog-driven thresholds and from_trip_config()."""
+
+    def test_get_change_detection_map_returns_19_entries(self):
+        """
+        GIVEN: MetricCatalog with 23 metrics (some threshold=None)
+        WHEN: get_change_detection_map()
+        THEN: Returns exactly 19 entries (skips snowfall_limit, cloud_low/mid/high, wind_direction, precip_type)
+        """
+        detection_map = get_change_detection_map()
+        assert len(detection_map) == 19
+
+    def test_get_change_detection_map_values_match_v2(self):
+        """
+        GIVEN: MetricCatalog with summary_fields + default_change_threshold
+        WHEN: get_change_detection_map()
+        THEN: Produces v1.0 thresholds + 2 new metrics (uv_index_max, snow_new_sum_cm)
+        """
+        expected = {
+            "temp_min_c": 5.0,
+            "temp_max_c": 5.0,
+            "temp_avg_c": 5.0,
+            "wind_chill_min_c": 5.0,
+            "wind_max_kmh": 20.0,
+            "gust_max_kmh": 20.0,
+            "precip_sum_mm": 10.0,
+            "cloud_avg_pct": 30,
+            "humidity_avg_pct": 20,
+            "dewpoint_avg_c": 5.0,
+            "pressure_avg_hpa": 10.0,
+            "visibility_min_m": 1000,
+            "pop_max_pct": 20,
+            "cape_max_jkg": 500.0,
+            "snow_depth_cm": 10.0,
+            "freezing_level_m": 200,
+            "uv_index_max": 3.0,
+            "snow_new_sum_cm": 5.0,
+            "thunder_level_max": 1.0,
+        }
+        detection_map = get_change_detection_map()
+        assert detection_map == expected
+
+    def test_default_constructor_uses_catalog(self):
+        """
+        GIVEN: No arguments to constructor
+        WHEN: WeatherChangeDetectionService()
+        THEN: _thresholds matches get_change_detection_map()
+        """
+        service = WeatherChangeDetectionService()
+        assert service._thresholds == get_change_detection_map()
+
+    def test_from_trip_config_overrides_temp(self):
+        """
+        GIVEN: TripReportConfig with change_threshold_temp_c=3.0
+        WHEN: from_trip_config(config)
+        THEN: All temp-related fields use 3.0
+        """
+        config = TripReportConfig(
+            trip_id="test",
+            change_threshold_temp_c=3.0,
+        )
+        service = WeatherChangeDetectionService.from_trip_config(config)
+
+        assert service._thresholds["temp_min_c"] == 3.0
+        assert service._thresholds["temp_max_c"] == 3.0
+        assert service._thresholds["temp_avg_c"] == 3.0
+        assert service._thresholds["wind_chill_min_c"] == 3.0
+        assert service._thresholds["dewpoint_avg_c"] == 3.0
+
+    def test_from_trip_config_overrides_wind(self):
+        """
+        GIVEN: TripReportConfig with change_threshold_wind_kmh=15.0
+        WHEN: from_trip_config(config)
+        THEN: Wind fields use 15.0
+        """
+        config = TripReportConfig(
+            trip_id="test",
+            change_threshold_wind_kmh=15.0,
+        )
+        service = WeatherChangeDetectionService.from_trip_config(config)
+
+        assert service._thresholds["wind_max_kmh"] == 15.0
+        assert service._thresholds["gust_max_kmh"] == 15.0
+
+    def test_from_trip_config_overrides_precip(self):
+        """
+        GIVEN: TripReportConfig with change_threshold_precip_mm=5.0
+        WHEN: from_trip_config(config)
+        THEN: Precip field uses 5.0
+        """
+        config = TripReportConfig(
+            trip_id="test",
+            change_threshold_precip_mm=5.0,
+        )
+        service = WeatherChangeDetectionService.from_trip_config(config)
+
+        assert service._thresholds["precip_sum_mm"] == 5.0
+
+    def test_from_trip_config_preserves_non_overridden(self):
+        """
+        GIVEN: TripReportConfig with custom temp/wind/precip
+        WHEN: from_trip_config(config)
+        THEN: cloud/humidity/pressure/cape/etc use catalog defaults
+        """
+        config = TripReportConfig(
+            trip_id="test",
+            change_threshold_temp_c=3.0,
+            change_threshold_wind_kmh=15.0,
+            change_threshold_precip_mm=5.0,
+        )
+        service = WeatherChangeDetectionService.from_trip_config(config)
+        defaults = get_change_detection_map()
+
+        # These should NOT be affected by TripReportConfig overrides
+        assert service._thresholds["cloud_avg_pct"] == defaults["cloud_avg_pct"]
+        assert service._thresholds["humidity_avg_pct"] == defaults["humidity_avg_pct"]
+        assert service._thresholds["pressure_avg_hpa"] == defaults["pressure_avg_hpa"]
+        assert service._thresholds["cape_max_jkg"] == defaults["cape_max_jkg"]
+        assert service._thresholds["visibility_min_m"] == defaults["visibility_min_m"]
+        assert service._thresholds["snow_depth_cm"] == defaults["snow_depth_cm"]
+        assert service._thresholds["freezing_level_m"] == defaults["freezing_level_m"]
+        assert service._thresholds["pop_max_pct"] == defaults["pop_max_pct"]
