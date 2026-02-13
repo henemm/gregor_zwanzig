@@ -33,7 +33,7 @@ Features are added via `/feature` or `/user-story` commands.
 | MET Norway Adapter | spec_ready | HIGH | Provider | Provider Layer | Medium | WEATHER-01 |
 | Open-Meteo Provider | done | MEDIUM | Provider | Provider Layer | Medium | - |
 | MOSMIX Adapter | open | MEDIUM | Provider | Provider Layer | Large | WEATHER-02 |
-| Data Normalization | open | HIGH | Provider | Normalizer | Medium | WEATHER-03 |
+| Data Normalization | done | HIGH | Provider | Normalizer | Medium | WEATHER-03 |
 | Provider Error Handling | in_progress | MEDIUM | Provider | Provider Layer | Medium | WEATHER-04 |
 | Model-Metric-Fallback | backlog | MEDIUM | Provider | Provider Layer, Cache | Medium | WEATHER-05 |
 | Gewitter Risk Logic | open | HIGH | Risk Engine | Risk Engine | Medium | RISK-01 |
@@ -88,7 +88,7 @@ Features are added via `/feature` or `/user-story` commands.
 
 | Feature | Blocked By | Notes |
 |---------|------------|-------|
-| Data Normalization | MET Norway Adapter | Needs provider data structure |
+| _(keine)_ | | |
 
 ## Upcoming (Next 3 Sprints)
 
@@ -99,7 +99,7 @@ Features are added via `/feature` or `/user-story` commands.
 
 ### Sprint 2
 - [ ] MET Norway Adapter (spec exists)
-- [ ] Data Normalization (blocked by MET)
+- [x] Data Normalization (done — Provider-Adapter-Pattern mit NormalizedTimeseries)
 - [ ] Gewitter Risk Logic
 
 ### Sprint 3
