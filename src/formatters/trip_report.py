@@ -11,7 +11,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Optional
 
-from app.metric_catalog import build_default_display_config, get_col_defs, get_metric
+from app.metric_catalog import build_default_display_config, get_col_defs, get_label_for_field, get_metric
 from app.models import (
     ForecastDataPoint,
     NormalizedTimeseries,
@@ -461,14 +461,22 @@ class TripReportFormatter:
         # Changes
         changes_html = ""
         if changes:
-            ch_items = "".join(
-                f"<li><strong>{c.metric}:</strong> {c.old_value:.1f} → {c.new_value:.1f} (Δ {abs(c.delta):.1f})</li>"
-                for c in changes
-            )
+            ch_items = []
+            for c in changes:
+                label_info = get_label_for_field(c.metric)
+                if label_info:
+                    name, agg, unit = label_info
+                    ch_items.append(
+                        f"<li><strong>{name} ({agg}):</strong> {c.old_value:.1f}{unit} → {c.new_value:.1f}{unit} ({c.delta:+.1f}{unit})</li>"
+                    )
+                else:
+                    ch_items.append(
+                        f"<li><strong>{c.metric}:</strong> {c.old_value:.1f} → {c.new_value:.1f} (Δ {abs(c.delta):.1f})</li>"
+                    )
             changes_html = f"""
             <div class="section">
                 <h3>⚠️ Wetteränderungen</h3>
-                <ul>{ch_items}</ul>
+                <ul>{"".join(ch_items)}</ul>
             </div>"""
 
         html = f"""<!DOCTYPE html>
@@ -501,11 +509,11 @@ class TripReportFormatter:
             <p>{report_type.title()} Report – {report_date}{" | " + stats_line if stats_line else ""}</p>
         </div>
 
+        {changes_html}
         {segments_html}
         {night_html}
         {thunder_html}
         {highlights_html}
-        {changes_html}
 
         <div class="footer">
             Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')} | Data: {segments[0].provider} ({segments[0].timeseries.meta.model})
@@ -560,6 +568,18 @@ class TripReportFormatter:
             lines.append(" | ".join(parts))
         lines.append("")
 
+        # Changes (before segments in alert emails)
+        if changes:
+            lines.append("━━ Wetteränderungen ━━")
+            for c in changes:
+                label_info = get_label_for_field(c.metric)
+                if label_info:
+                    name, agg, unit = label_info
+                    lines.append(f"  {name} ({agg}): {c.old_value:.1f}{unit} → {c.new_value:.1f}{unit} ({c.delta:+.1f}{unit})")
+                else:
+                    lines.append(f"  {c.metric}: {c.old_value:.1f} → {c.new_value:.1f} (Δ {abs(c.delta):.1f})")
+            lines.append("")
+
         # Segment tables
         for seg_data, rows in zip(segments, seg_tables):
             seg = seg_data.segment
@@ -592,13 +612,6 @@ class TripReportFormatter:
             lines.append("━━ Zusammenfassung ━━")
             for h in highlights:
                 lines.append(f"  {h}")
-            lines.append("")
-
-        # Changes
-        if changes:
-            lines.append("━━ Wetteränderungen ━━")
-            for c in changes:
-                lines.append(f"  {c.metric}: {c.old_value:.1f} → {c.new_value:.1f} (Δ {abs(c.delta):.1f})")
             lines.append("")
 
         lines.append("-" * 60)

@@ -380,6 +380,20 @@ def get_compact_label_for_field(summary_field: str) -> tuple[str, str] | None:
     return None
 
 
+def get_label_for_field(summary_field: str) -> tuple[str, str, str] | None:
+    """
+    Reverse-lookup: summary_field -> (label_de, aggregation, unit).
+
+    For human-readable display in alert emails.
+    Example: "temp_max_c" -> ("Temperatur", "max", "°C")
+    """
+    for m in _METRICS:
+        for agg, field in m.summary_fields.items():
+            if field == summary_field:
+                return (m.label_de, agg, m.unit)
+    return None
+
+
 def get_col_defs() -> list[tuple[str, str, str]]:
     """
     Get column definitions for formatter, ordered by catalog order.
