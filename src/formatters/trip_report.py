@@ -43,6 +43,7 @@ class TripReportFormatter:
             raise ValueError("Cannot format email with no segments")
 
         dc = display_config or build_default_display_config()
+        self._friendly_keys = self._build_friendly_keys(dc)
         trip_id = trip_name.lower().replace(" ", "-")
         trip_id = "".join(c for c in trip_id if c.isalnum() or c == "-")
 
@@ -275,10 +276,26 @@ class TripReportFormatter:
     # Value formatting helpers
     # ------------------------------------------------------------------
 
+    def _build_friendly_keys(self, dc: UnifiedWeatherDisplayConfig) -> set[str]:
+        """Build set of col_keys where user wants friendly formatting."""
+        keys = set()
+        for mc in dc.metrics:
+            if mc.use_friendly_format:
+                try:
+                    metric_def = get_metric(mc.metric_id)
+                    if metric_def.has_friendly_format:
+                        keys.add(metric_def.col_key)
+                except KeyError:
+                    pass
+        return keys
+
     def _fmt_val(self, key: str, val, html: bool = False) -> str:
-        """Format a single cell value."""
+        """Format a single cell value. Respects per-metric friendly format toggle."""
         if val is None:
             return "–"
+
+        friendly_keys = getattr(self, '_friendly_keys', None)
+        use_friendly = friendly_keys is None or key in friendly_keys
         if key == "thunder":
             if val == ThunderLevel.HIGH:
                 t = "⚡⚡"
@@ -305,6 +322,8 @@ class TripReportFormatter:
         if key in ("snow_limit", "snow_depth"):
             return f"{val}" if val else "–"
         if key in ("cloud", "cloud_low", "cloud_mid", "cloud_high"):
+            if not use_friendly:
+                return f"{val:.0f}"
             if val <= 10:
                 emoji = "☀️"
             elif val <= 30:
@@ -315,8 +334,6 @@ class TripReportFormatter:
                 emoji = "🌥️"
             else:
                 emoji = "☁️"
-            if html:
-                return f"{emoji} {val:.0f}"
             return emoji
         if key == "humidity":
             return f"{val}" if val is not None else "–"
@@ -328,6 +345,11 @@ class TripReportFormatter:
                 return f'<span style="background:#e3f2fd;color:#1565c0;padding:2px 4px;border-radius:3px">{s}</span>'
             return s
         if key == "cape":
+            if not use_friendly:
+                s = f"{val:.0f}"
+                if html and val is not None and val >= 1000:
+                    return f'<span style="background:#fff9c4;color:#f57f17;padding:2px 4px;border-radius:3px">{s}</span>'
+                return s
             if val <= 300:
                 emoji = "🟢"
             elif val <= 1000:
@@ -336,10 +358,18 @@ class TripReportFormatter:
                 emoji = "🟠"
             else:
                 emoji = "🔴"
-            if html:
-                return f"{emoji} {val:.0f}"
             return emoji
         if key == "visibility":
+            if not use_friendly:
+                if val >= 10000:
+                    return f"{val / 1000:.0f}k"
+                elif val >= 1000:
+                    return f"{val / 1000:.1f}k"
+                else:
+                    s = f"{val:.0f}"
+                    if html and val < 500:
+                        return f'<span style="background:#fff3e0;color:#e65100;padding:2px 4px;border-radius:3px">{s}</span>'
+                    return s
             if val >= 10000:
                 return "good"
             elif val >= 4000:

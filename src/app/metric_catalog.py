@@ -34,6 +34,11 @@ class MetricDefinition:
     col_label: str
     providers: dict[str, bool]
     default_enabled: bool = True
+    friendly_label: str = ""
+
+    @property
+    def has_friendly_format(self) -> bool:
+        return bool(self.friendly_label)
 
 
 # --- Metric Registry ---
@@ -94,6 +99,7 @@ _METRICS: list[MetricDefinition] = [
         default_aggregations=("avg",),
         compact_label="C", col_key="cloud", col_label="Cloud",
         providers={"openmeteo": True, "geosphere": True},
+        friendly_label="\u2600\ufe0f\u26c5\u2601\ufe0f",
     ),
     MetricDefinition(
         id="cloud_low", label_de="Tiefe Wolken", unit="%",
@@ -102,6 +108,7 @@ _METRICS: list[MetricDefinition] = [
         compact_label="CL", col_key="cloud_low", col_label="CldLow",
         providers={"openmeteo": True, "geosphere": False},
         default_enabled=False,
+        friendly_label="\u2600\ufe0f\u26c5\u2601\ufe0f",
     ),
     MetricDefinition(
         id="cloud_mid", label_de="Mittelhohe Wolken", unit="%",
@@ -110,6 +117,7 @@ _METRICS: list[MetricDefinition] = [
         compact_label="CM", col_key="cloud_mid", col_label="CldMid",
         providers={"openmeteo": True, "geosphere": False},
         default_enabled=False,
+        friendly_label="\u2600\ufe0f\u26c5\u2601\ufe0f",
     ),
     MetricDefinition(
         id="cloud_high", label_de="Hohe Wolken", unit="%",
@@ -118,6 +126,7 @@ _METRICS: list[MetricDefinition] = [
         compact_label="CH", col_key="cloud_high", col_label="CldHi",
         providers={"openmeteo": True, "geosphere": False},
         default_enabled=False,
+        friendly_label="\u2600\ufe0f\u26c5\u2601\ufe0f",
     ),
     MetricDefinition(
         id="humidity", label_de="Luftfeuchtigkeit", unit="%",
@@ -150,6 +159,7 @@ _METRICS: list[MetricDefinition] = [
         compact_label="V", col_key="visibility", col_label="Visib",
         providers={"openmeteo": True, "geosphere": False},
         default_enabled=False,
+        friendly_label="good/fog",
     ),
     MetricDefinition(
         id="rain_probability", label_de="Regenwahrscheinlichkeit", unit="%",
@@ -166,6 +176,7 @@ _METRICS: list[MetricDefinition] = [
         compact_label="CE", col_key="cape", col_label="Thndr%",
         providers={"openmeteo": True, "geosphere": False},
         default_enabled=False,
+        friendly_label="\U0001f7e2\U0001f7e1\U0001f534",
     ),
     MetricDefinition(
         id="freezing_level", label_de="Nullgradgrenze", unit="m",

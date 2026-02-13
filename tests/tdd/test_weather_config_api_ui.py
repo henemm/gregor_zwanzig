@@ -691,9 +691,9 @@ class TestUIMetricCount19:
 
             checkboxes = page.locator("div.q-checkbox")
             count = checkboxes.count()
-            assert count == 19, (
-                f"Expected 19 metric checkboxes (15 base + 4 new), found {count}. "
-                "New metrics: Sichtweite, Regenwahrscheinlichkeit, CAPE, Nullgradgrenze"
+            # 19 metric checkboxes + 6 friendly-format toggles = 25
+            assert count == 25, (
+                f"Expected 25 checkboxes (19 metrics + 6 friendly-format toggles), found {count}."
             )
 
             browser.close()
