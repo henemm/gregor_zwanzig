@@ -192,6 +192,7 @@ def render_trips() -> None:
                                 with ui.row().classes("w-full gap-2 mb-2"):
                                     ui.input("Name", value=stage["name"]).classes("flex-1").bind_value(stage, "name")
                                     ui.input("Datum (YYYY-MM-DD)", value=stage["date"]).classes("w-40").bind_value(stage, "date")
+                                    ui.input("Startzeit (HH:MM)", value=stage.get("start_time", "08:00")).classes("w-28").bind_value(stage, "start_time")
 
                                 ui.label("Waypoints:").classes("text-sm font-medium")
 
@@ -318,11 +319,23 @@ def render_trips() -> None:
                                         ui.notify(f"Invalid date in Stage {idx + 1}", type="negative")
                                         return
 
+                                    # Parse start_time
+                                    start_time_val = None
+                                    st_str = sd.get("start_time", "").strip()
+                                    if st_str and st_str != "08:00":
+                                        from datetime import time as _time
+                                        try:
+                                            start_time_val = _time.fromisoformat(st_str)
+                                        except ValueError:
+                                            ui.notify(f"Invalid start time in Stage {idx + 1}", type="negative")
+                                            return
+
                                     stages.append(Stage(
                                         id=f"T{idx + 1}",
                                         name=sd["name"],
                                         date=stage_date,
                                         waypoints=waypoints,
+                                        start_time=start_time_val,
                                     ))
 
                                 # Parse regions
@@ -355,6 +368,7 @@ def render_trips() -> None:
                 stage_dict = {
                     "name": stage.name,
                     "date": stage.date.isoformat(),
+                    "start_time": stage.start_time.strftime("%H:%M") if stage.start_time else "08:00",
                     "waypoints": [
                         {
                             "id": wp.id,
@@ -455,6 +469,7 @@ def render_trips() -> None:
                                 with ui.row().classes("w-full gap-2 mb-2"):
                                     ui.input("Name", value=stage["name"]).classes("flex-1").bind_value(stage, "name")
                                     ui.input("Datum (YYYY-MM-DD)", value=stage["date"]).classes("w-40").bind_value(stage, "date")
+                                    ui.input("Startzeit (HH:MM)", value=stage.get("start_time", "08:00")).classes("w-28").bind_value(stage, "start_time")
 
                                 ui.label("Waypoints:").classes("text-sm font-medium")
 
@@ -581,11 +596,23 @@ def render_trips() -> None:
                                         ui.notify(f"Invalid date in Stage {idx + 1}", type="negative")
                                         return
 
+                                    # Parse start_time
+                                    start_time_val = None
+                                    st_str = sd.get("start_time", "").strip()
+                                    if st_str and st_str != "08:00":
+                                        from datetime import time as _time
+                                        try:
+                                            start_time_val = _time.fromisoformat(st_str)
+                                        except ValueError:
+                                            ui.notify(f"Invalid start time in Stage {idx + 1}", type="negative")
+                                            return
+
                                     stages.append(Stage(
                                         id=f"T{idx + 1}",
                                         name=sd["name"],
                                         date=stage_date,
                                         waypoints=waypoints,
+                                        start_time=start_time_val,
                                     ))
 
                                 # Parse regions
@@ -661,6 +688,19 @@ def render_trips() -> None:
                                 show_weather_config_dialog(t)
                             return do_show_weather_config
 
+                        def make_test_report_handler(t: Trip, report_type: str):
+                            """Factory: sends test report (Safari-safe)."""
+                            def do_send() -> None:
+                                ui.notify(f"Sende {report_type} Test-Report...", type="info")
+                                try:
+                                    from services.trip_report_scheduler import TripReportSchedulerService
+                                    service = TripReportSchedulerService()
+                                    service.send_test_report(t, report_type)
+                                    ui.notify(f"{report_type.title()} Report gesendet!", type="positive")
+                                except Exception as e:
+                                    ui.notify(f"Fehler: {e}", type="negative")
+                            return do_send
+
                         with ui.row().classes("gap-1"):
                             ui.button(
                                 "Wetter-Metriken",
@@ -672,6 +712,16 @@ def render_trips() -> None:
                                 icon="schedule",
                                 on_click=make_report_config_handler(trip),
                             ).props("flat color=primary")
+                            ui.button(
+                                "Test Morning",
+                                icon="send",
+                                on_click=make_test_report_handler(trip, "morning"),
+                            ).props("flat color=primary size=sm")
+                            ui.button(
+                                "Test Evening",
+                                icon="send",
+                                on_click=make_test_report_handler(trip, "evening"),
+                            ).props("flat color=primary size=sm")
                             ui.button(
                                 icon="edit",
                                 on_click=make_edit_handler(trip),
