@@ -20,15 +20,15 @@ Phase-based workflow for feature development:
 | 7 | `/6-validate` | Validate implementation |
 | 8 | `/7-deploy` | Deploy to production |
 
-### Planning Commands
+### Planning Commands (Phase 0)
 
 High-level planning before workflow:
 
 | Command | Purpose | Agent | Output |
 |---------|---------|-------|--------|
-| `/user-story` | Plan large user need | user-story-planner | Story doc + features in roadmap |
-| `/feature` | Plan single feature | feature-planner | Feature brief + roadmap entry |
-| `/bug` | Analyze bug | bug-intake | Bug report + analysis |
+| `/0-user-story` | Plan large user need | user-story-planner | Story doc + features in roadmap |
+| `/0-feature` | Plan single feature | feature-planner | Feature brief + roadmap entry |
+| `/0-bug` | Analyze bug | bug-intake | Bug report + analysis |
 
 ### Utility Commands
 
@@ -44,7 +44,7 @@ High-level planning before workflow:
 
 ```bash
 # 1. Plan user story
-/user-story "Als Weitwanderer möchte ich SMS-Berichte..."
+/0-user-story "Als Weitwanderer möchte ich SMS-Berichte..."
 
 # User story planner:
 # - Breaks down into features
@@ -52,7 +52,7 @@ High-level planning before workflow:
 # - Creates story doc
 
 # 2. Start with first P0 feature
-/feature "SMS Channel Integration"
+/0-feature "SMS Channel Integration"
 
 # Feature planner:
 # - Analyzes scope
@@ -69,7 +69,7 @@ High-level planning before workflow:
 /6-validate
 
 # 4. Repeat for next feature in story
-/feature "SMS Compact Formatter"
+/0-feature "SMS Compact Formatter"
 # ... workflow ...
 ```
 
@@ -77,7 +77,7 @@ High-level planning before workflow:
 
 ```bash
 # 1. Plan feature
-/feature "HTML Tables in Email"
+/0-feature "HTML Tables in Email"
 
 # Feature planner:
 # - Analyzes scope
@@ -97,7 +97,7 @@ High-level planning before workflow:
 
 ```bash
 # 1. Analyze bug
-/bug
+/0-bug
 
 # Bug intake:
 # - Captures symptoms
@@ -114,9 +114,9 @@ High-level planning before workflow:
 
 | Command | Invokes Agent(s) | Location |
 |---------|------------------|----------|
-| `/feature` | feature-planner | `.claude/agents/feature-planner.md` |
-| `/user-story` | user-story-planner | `.claude/agents/user-story-planner.md` |
-| `/bug` | bug-intake | `.claude/agents/bug-intake.md` |
+| `/0-feature` | feature-planner | `.claude/agents/0-feature-planner.md` |
+| `/0-user-story` | user-story-planner | `.claude/agents/0-user-story-planner.md` |
+| `/0-bug` | bug-intake | `.claude/agents/0-bug-intake.md` |
 | `/1-context` | - | Direct workflow phase |
 | `/2-analyse` | 3x Explore/haiku + Plan/sonnet | Parallel codebase research |
 | `/3-write-spec` | spec-writer/sonnet + spec-validator/haiku | `.claude/agents/spec-writer.md` |
@@ -221,12 +221,12 @@ Multiple features can be in progress:
 
 ```bash
 # Start workflow 1
-/feature "Feature A"
+/0-feature "Feature A"
 /analyse
 
 # Switch to workflow 2
 /workflow switch "Feature B"
-/feature "Feature B"
+/0-feature "Feature B"
 /analyse
 
 # Check status
