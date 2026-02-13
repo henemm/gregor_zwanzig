@@ -89,6 +89,7 @@ class Stage:
     name: str
     date: date
     waypoints: List[Waypoint]
+    start_time: Optional[time] = None  # Startzeit der Etappe (default: 08:00 in Business Logic)
 
     def __post_init__(self) -> None:
         if not self.waypoints:

@@ -88,11 +88,18 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
             )
             waypoints.append(waypoint)
 
+        # Parse start_time if present
+        start_time_val = None
+        if "start_time" in stage_data:
+            from datetime import time as _time
+            start_time_val = _time.fromisoformat(stage_data["start_time"])
+
         stage = Stage(
             id=stage_data["id"],
             name=stage_data["name"],
             date=date.fromisoformat(stage_data["date"]),
             waypoints=waypoints,
+            start_time=start_time_val,
         )
         stages.append(stage)
 
@@ -488,12 +495,15 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
                 wp_dict["time_window"] = str(wp.time_window)
             waypoints_data.append(wp_dict)
 
-        stages_data.append({
+        stage_dict = {
             "id": stage.id,
             "name": stage.name,
             "date": stage.date.isoformat(),
             "waypoints": waypoints_data,
-        })
+        }
+        if stage.start_time is not None:
+            stage_dict["start_time"] = stage.start_time.isoformat()
+        stages_data.append(stage_dict)
 
     data = {
         "id": trip.id,

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 import math
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from typing import TYPE_CHECKING, List, Optional
 
 from app.config import Settings
@@ -207,6 +207,24 @@ class TripReportSchedulerService:
             "max_elevation_m": max_elev,
         }
 
+    def send_test_report(self, trip: "Trip", report_type: str) -> None:
+        """
+        Send a manual test report for a trip.
+
+        Public wrapper around _send_trip_report for UI-triggered sends.
+
+        Args:
+            trip: Trip object
+            report_type: "morning" or "evening"
+
+        Raises:
+            ValueError: If report_type is invalid
+            Exception: If email sending fails
+        """
+        if report_type not in ("morning", "evening"):
+            raise ValueError(f"Invalid report_type: {report_type}")
+        self._send_trip_report(trip, report_type)
+
     def _send_trip_report(self, trip: "Trip", report_type: str) -> None:
         """
         Generate and send report for a single trip.
@@ -302,27 +320,38 @@ class TripReportSchedulerService:
 
         segments = []
         waypoints = stage.waypoints
+        # Use stage.start_time as fallback for first waypoint without time_window
+        default_start = stage.start_time if stage.start_time else time(8, 0)
 
         for i in range(len(waypoints) - 1):
             wp1 = waypoints[i]
             wp2 = waypoints[i + 1]
 
-            # Get time windows (use defaults if not set)
-            if wp1.time_window is None or wp2.time_window is None:
-                logger.warning(
-                    f"Waypoint {wp1.id} or {wp2.id} missing time_window, skipping"
-                )
+            # Get time windows (use stage.start_time as fallback for first wp)
+            if wp1.time_window is None:
+                if i == 0:
+                    wp1_start = default_start
+                else:
+                    logger.warning(f"Waypoint {wp1.id} missing time_window, skipping")
+                    continue
+            else:
+                wp1_start = wp1.time_window.start
+
+            if wp2.time_window is None:
+                logger.warning(f"Waypoint {wp2.id} missing time_window, skipping")
                 continue
+
+            wp2_start = wp2.time_window.start
 
             # Convert time to datetime with UTC timezone
             start_dt = datetime.combine(
                 target_date,
-                wp1.time_window.start,
+                wp1_start,
                 tzinfo=timezone.utc
             )
             end_dt = datetime.combine(
                 target_date,
-                wp2.time_window.start,
+                wp2_start,
                 tzinfo=timezone.utc
             )
 
