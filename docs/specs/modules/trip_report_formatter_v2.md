@@ -166,6 +166,25 @@ No recommendations – just highlight what's essential:
 - Night cold: `temp_min < 5 °C` in night block
 - Extreme wind: `wind_max > 50 km/h`
 
+### 6b) Wetteränderungen (nur bei Alert-E-Mails)
+
+Wird NUR angezeigt wenn `report_type="alert"` und `changes` nicht leer.
+Steht DIREKT nach dem Header, VOR allen Segment-Tabellen.
+
+Reihenfolge bei Alert-E-Mails:
+  Header → Wetteränderungen → Segment-Tabellen → Nachtblock → Gewitter → Highlights → Footer
+
+Format pro Änderung:
+  [Label_de] ([Aggregation]): [old_value][unit] → [new_value][unit] ([+/-delta][unit])
+
+Beispiel:
+  Temperatur (max): 1.2°C → 13.2°C (+12.0°C)
+  Wind (max): 15 km/h → 45 km/h (+30 km/h)
+  Gewitter (max): 0 → 2 (+2)
+
+Label-Lookup: summary_field → MetricCatalog → label_de + Aggregation + unit
+Funktion: `get_label_for_field(summary_field)` in `metric_catalog.py`
+
 ### 7) Footer
 
 ```
