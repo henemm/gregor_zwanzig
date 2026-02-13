@@ -12,8 +12,10 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import List, Optional
 
+import math
+
 from app.debug import DebugBuffer
-from app.models import NormalizedTimeseries, SegmentWeatherSummary, ThunderLevel
+from app.models import NormalizedTimeseries, PrecipType, SegmentWeatherSummary, ThunderLevel
 
 
 class WeatherMetricsService:
@@ -763,6 +765,10 @@ class WeatherMetricsService:
         freezing_level = self._compute_freezing_level(timeseries)
         pop_max = self._compute_pop(timeseries)
         cape_max = self._compute_cape(timeseries)
+        uv_index_max = self._compute_uv_index(timeseries)
+        fresh_snow_sum = self._compute_fresh_snow(timeseries)
+        wind_dir_avg = self._compute_wind_direction(timeseries)
+        precip_type_dom = self._compute_precip_type(timeseries)
 
         # Create new summary with basis + extended metrics
         extended_summary = SegmentWeatherSummary(
@@ -785,6 +791,11 @@ class WeatherMetricsService:
             freezing_level_m=freezing_level,
             pop_max_pct=pop_max,
             cape_max_jkg=cape_max,
+            # New metrics (v2.3)
+            uv_index_max=uv_index_max,
+            snow_new_sum_cm=fresh_snow_sum,
+            wind_direction_avg_deg=wind_dir_avg,
+            precip_type_dominant=precip_type_dom,
             # Merge aggregation config
             aggregation_config={
                 **basis_summary.aggregation_config,
@@ -795,6 +806,10 @@ class WeatherMetricsService:
                 "freezing_level_m": "avg",
                 "pop_max_pct": "max",
                 "cape_max_jkg": "max",
+                "uv_index_max": "max",
+                "snow_new_sum_cm": "sum",
+                "wind_direction_avg_deg": "avg",
+                "precip_type_dominant": "max",
             },
         )
 
@@ -851,6 +866,53 @@ class WeatherMetricsService:
         cape_vals = [dp.cape_jkg for dp in timeseries.data if dp.cape_jkg is not None]
         return max(cape_vals) if cape_vals else None
 
+    def _compute_uv_index(self, timeseries: NormalizedTimeseries) -> Optional[float]:
+        """Compute UV-Index MAX. Returns uv_index_max (0-15 plausible)."""
+        uv_vals = [dp.uv_index for dp in timeseries.data if dp.uv_index is not None]
+        return max(uv_vals) if uv_vals else None
+
+    def _compute_fresh_snow(self, timeseries: NormalizedTimeseries) -> Optional[float]:
+        """Compute fresh snow SUM. Returns snow_new_sum_cm."""
+        snow_vals = [dp.snow_new_24h_cm for dp in timeseries.data if dp.snow_new_24h_cm is not None]
+        return sum(snow_vals) if snow_vals else None
+
+    def _compute_wind_direction(self, timeseries: NormalizedTimeseries) -> Optional[int]:
+        """
+        Compute wind direction circular mean. Returns wind_direction_avg_deg.
+
+        Uses atan2(mean(sin(rad)), mean(cos(rad))) to correctly average circular values.
+        """
+        dirs = [dp.wind_direction_deg for dp in timeseries.data if dp.wind_direction_deg is not None]
+        if not dirs:
+            return None
+        sin_sum = sum(math.sin(math.radians(d)) for d in dirs)
+        cos_sum = sum(math.cos(math.radians(d)) for d in dirs)
+        avg_rad = math.atan2(sin_sum / len(dirs), cos_sum / len(dirs))
+        avg_deg = math.degrees(avg_rad) % 360
+        return round(avg_deg)
+
+    def _compute_precip_type(self, timeseries: NormalizedTimeseries) -> Optional[PrecipType]:
+        """
+        Compute dominant precipitation type. Returns precip_type_dominant.
+
+        Most frequent PrecipType; on tie, "worst" wins:
+        FREEZING_RAIN > SNOW > MIXED > RAIN.
+        """
+        types = [dp.precip_type for dp in timeseries.data if dp.precip_type is not None]
+        if not types:
+            return None
+        # Severity ordering for tie-breaking (higher = worse)
+        severity = {
+            PrecipType.RAIN: 0,
+            PrecipType.MIXED: 1,
+            PrecipType.SNOW: 2,
+            PrecipType.FREEZING_RAIN: 3,
+        }
+        from collections import Counter
+        counts = Counter(types)
+        # Sort by (-count, -severity) so most frequent + worst wins
+        return max(counts, key=lambda t: (counts[t], severity.get(t, 0)))
+
     def _validate_extended_plausibility(self, summary: SegmentWeatherSummary) -> None:
         """
         Validate extended metric plausibility and log warnings.
@@ -902,6 +964,12 @@ class WeatherMetricsService:
             if not (0 <= summary.cape_max_jkg <= 5000):
                 self._debug.add(
                     f"WARNING: cape_max_jkg={summary.cape_max_jkg} J/kg out of plausible range (0..5000)"
+                )
+
+        if summary.uv_index_max is not None:
+            if not (0 <= summary.uv_index_max <= 15):
+                self._debug.add(
+                    f"WARNING: uv_index_max={summary.uv_index_max} out of plausible range (0..15)"
                 )
 
 # Legacy Classes (pre-Feature 2.2a)

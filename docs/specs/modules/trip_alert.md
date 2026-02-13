@@ -2,9 +2,9 @@
 entity_id: trip_alert
 type: module
 created: 2026-02-10
-updated: 2026-02-10
+updated: 2026-02-13
 status: draft
-version: "1.0"
+version: "2.0"
 tags: [alert, trip, weather, change-detection, story3]
 ---
 
@@ -255,12 +255,112 @@ def test_detect_and_send_alert():
     # Mocks only EmailOutput (or uses real SMTP in E2E)
 ```
 
+## Phase 3: Scheduler Integration + Persistent Throttle (v2.0)
+
+### Scheduler Job
+
+Neuer APScheduler-Job in `scheduler.py`:
+
+```python
+# Alert check every 30 minutes
+_scheduler.add_job(
+    run_alert_checks,
+    CronTrigger(minute="0,30", timezone=TIMEZONE),
+    id="alert_checks",
+    name="Alert Checks (every 30 min)",
+)
+```
+
+```python
+def run_alert_checks() -> None:
+    """Check all active trips for weather changes."""
+    from services.trip_alert import TripAlertService
+
+    service = TripAlertService()
+    count = service.check_all_trips()
+    if count > 0:
+        logger.info(f"Alert checks: {count} alerts sent")
+```
+
+### check_all_trips() Method
+
+```python
+def check_all_trips(self) -> int:
+    """
+    Check all active trips for weather changes and send alerts.
+
+    Returns:
+        Number of alerts sent
+    """
+    from app.loader import load_all_trips
+    from services.segment_weather import SegmentWeatherService
+
+    alerts_sent = 0
+    for trip in load_all_trips():
+        if not trip.report_config or not trip.report_config.alert_on_changes:
+            continue
+
+        # Get cached weather from last report run
+        cached = self._get_cached_weather(trip)
+        if not cached:
+            continue
+
+        if self.check_and_send_alerts(trip, cached):
+            alerts_sent += 1
+
+    return alerts_sent
+```
+
+### Persistent Throttle (File-Based)
+
+Replace in-memory `_last_alert_times: dict` with JSON file:
+
+**File:** `data/users/{user_id}/alert_throttle.json`
+
+```json
+{
+  "gr20-etappe3": "2026-02-13T10:30:00+00:00",
+  "mallorca-gr221": "2026-02-13T09:15:00+00:00"
+}
+```
+
+```python
+import json
+from pathlib import Path
+
+THROTTLE_FILE = Path("data/users/default/alert_throttle.json")
+
+def _load_throttle_times(self) -> dict[str, datetime]:
+    """Load throttle times from JSON file."""
+    if not THROTTLE_FILE.exists():
+        return {}
+    data = json.loads(THROTTLE_FILE.read_text())
+    return {k: datetime.fromisoformat(v) for k, v in data.items()}
+
+def _save_throttle_times(self) -> None:
+    """Save throttle times to JSON file."""
+    THROTTLE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    data = {k: v.isoformat() for k, v in self._last_alert_times.items()}
+    THROTTLE_FILE.write_text(json.dumps(data, indent=2))
+```
+
+**Lifecycle:**
+- `__init__`: Load from file
+- After successful alert: Save to file
+- `clear_throttle()`: Remove entry + save
+
+### Files to Change
+
+| File | Action | LoC |
+|------|--------|-----|
+| `src/web/scheduler.py` | MODIFY | +15 |
+| `src/services/trip_alert.py` | MODIFY | +50 |
+
 ## Known Limitations
 
-- Throttle ist in-memory (verloren bei Server-Restart)
-- Keine Persistenz der letzten Alert-Zeiten
-- Kein SMS-Versand (nur Email im MVP)
-- Keine User-Config fuer Throttle-Zeit (Feature 3.5)
+- Kein SMS-Versand (nur Email im MVP, Phase 4-6)
+- Keine User-Config fuer Throttle-Zeit (hardcoded 2h)
+- check_all_trips() braucht cached weather - aktuell kein zentraler Cache verfuegbar
 
 ## Error Handling
 
@@ -277,3 +377,4 @@ except Exception as e:
 ## Changelog
 
 - 2026-02-10: v1.0 Initial spec created (Feature 3.4)
+- 2026-02-13: v2.0 Phase 3: Scheduler integration, persistent throttle, check_all_trips(), from_trip_config() passthrough

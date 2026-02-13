@@ -2,9 +2,9 @@
 entity_id: report_config
 type: module
 created: 2026-02-10
-updated: 2026-02-10
+updated: 2026-02-13
 status: draft
-version: "1.0"
+version: "1.1"
 tags: [webui, config, report, nicegui, safari, story3]
 ---
 
@@ -16,8 +16,10 @@ tags: [webui, config, report, nicegui, safari, story3]
 
 ## Purpose
 
-WebUI Dialog fuer Trip-Report-Einstellungen: Schedule-Zeiten, Channels (Email/SMS), und Alert-Thresholds.
+WebUI Dialog fuer Trip-Report-Einstellungen: Schedule-Zeiten, Channels (Email/SMS), und globaler Alert-Schalter.
 Folgt dem Safari-kompatiblen Factory Pattern wie `weather_config.py`.
+
+**v1.1 Change:** Die 3 Schwellenwert-Slider (Temp/Wind/Precip) wurden entfernt. Per-Metrik-Schwellen werden jetzt im Weather Config Dialog konfiguriert (siehe `weather_config.md` v2.3). Der globale Alert-Schalter bleibt.
 
 ## Source
 
@@ -386,3 +388,4 @@ if not email_checkbox.value and not sms_checkbox.value:
 ## Changelog
 
 - 2026-02-10: v1.0 Initial spec created (Feature 3.5)
+- 2026-02-13: v1.1 Schwellenwert-Slider entfernt, per-Metrik-Alerts in weather_config.md

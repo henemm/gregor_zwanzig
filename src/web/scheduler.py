@@ -77,8 +77,16 @@ def init_scheduler() -> None:
         name="Trip Reports (hourly check)",
     )
 
+    # Alert Checks - Every 30 minutes for weather change alerts (Feature 3.4)
+    _scheduler.add_job(
+        run_alert_checks,
+        CronTrigger(minute="0,30", timezone=TIMEZONE),
+        id="alert_checks",
+        name="Alert Checks (every 30 min)",
+    )
+
     _scheduler.start()
-    logger.info(f"Scheduler started: Subscriptions at 07:00/18:00, Trip Reports hourly ({TIMEZONE})")
+    logger.info(f"Scheduler started: Subscriptions 07:00/18:00, Trip Reports hourly, Alert Checks every 30min ({TIMEZONE})")
 
 
 def shutdown_scheduler() -> None:
@@ -105,6 +113,16 @@ def run_evening_subscriptions() -> None:
     logger.info("Running evening subscriptions...")
     _run_subscriptions_by_schedule(Schedule.DAILY_EVENING)
     _run_weekly_subscriptions()
+
+
+def run_alert_checks() -> None:
+    """Check all active trips for weather changes (Feature 3.4)."""
+    from services.trip_alert import TripAlertService
+
+    service = TripAlertService()
+    count = service.check_all_trips()
+    if count > 0:
+        logger.info(f"Alert checks: {count} alerts sent")
 
 
 def run_trip_reports_check() -> None:

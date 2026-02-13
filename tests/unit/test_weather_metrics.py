@@ -600,11 +600,11 @@ class TestWeatherMetricsServiceExtendedKnownValues:
         """
         GIVEN: Basis summary with 10 config entries
         WHEN: compute_extended_metrics(timeseries, basis_summary)
-        THEN: aggregation_config has 17 entries (10 basis + 7 extended)
+        THEN: aggregation_config has 21 entries (10 basis + 7 extended + 4 new)
         """
         result = service.compute_extended_metrics(extended_timeseries, basis_summary)
 
-        assert len(result.aggregation_config) == 17
+        assert len(result.aggregation_config) == 21
 
         # Basis config preserved
         assert result.aggregation_config["temp_min_c"] == "min"

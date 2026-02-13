@@ -185,6 +185,8 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
             morning_enabled=mc_data.get("morning_enabled"),
             evening_enabled=mc_data.get("evening_enabled"),
             use_friendly_format=mc_data.get("use_friendly_format", True),
+            alert_enabled=mc_data.get("alert_enabled", False),
+            alert_threshold=mc_data.get("alert_threshold"),
         ))
 
     return UnifiedWeatherDisplayConfig(
@@ -535,6 +537,8 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
                     "enabled": mc.enabled,
                     "aggregations": mc.aggregations,
                     "use_friendly_format": mc.use_friendly_format,
+                    "alert_enabled": mc.alert_enabled,
+                    "alert_threshold": mc.alert_threshold,
                 }
                 for mc in dc.metrics
             ],

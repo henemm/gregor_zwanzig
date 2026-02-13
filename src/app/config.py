@@ -80,6 +80,12 @@ class Settings(BaseSettings):
     mail_to: Optional[str] = Field(default=None, description="Recipient email address")
     mail_from: Optional[str] = Field(default=None, description="Sender email address")
 
+    # SMS settings (for sms channel)
+    sms_gateway_url: Optional[str] = Field(default=None, description="SMS gateway HTTP endpoint")
+    sms_api_key: Optional[str] = Field(default=None, description="SMS gateway API key")
+    sms_from: Optional[str] = Field(default=None, description="SMS sender ID or number")
+    sms_to: Optional[str] = Field(default=None, description="SMS recipient phone number")
+
     def get_location(self) -> Location:
         """Create Location object from settings."""
         return Location(
@@ -96,4 +102,12 @@ class Settings(BaseSettings):
             self.smtp_user,
             self.smtp_pass,
             self.mail_to,
+        ])
+
+    def can_send_sms(self) -> bool:
+        """Check if SMS configuration is complete."""
+        return all([
+            self.sms_gateway_url,
+            self.sms_api_key,
+            self.sms_to,
         ])

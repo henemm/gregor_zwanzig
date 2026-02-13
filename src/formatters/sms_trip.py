@@ -4,13 +4,16 @@ SMS trip formatter for compact weather reports.
 Feature 3.2: SMS Compact Formatter (Story 3)
 Generates ≤160 character SMS summaries of trip segment weather.
 
-SPEC: docs/specs/modules/sms_trip_formatter.md v1.0
+SPEC: docs/specs/modules/sms_trip_formatter.md v1.1
 """
 from __future__ import annotations
 
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from app.models import SegmentWeatherData, ThunderLevel
+
+if TYPE_CHECKING:
+    from app.models import WeatherChange
 
 
 class SMSTripFormatter:
@@ -63,6 +66,60 @@ class SMSTripFormatter:
             )
 
         return sms
+
+    def format_alert_sms(
+        self,
+        changes: list["WeatherChange"],
+        trip_name: str,
+        max_length: int = 160,
+    ) -> str:
+        """
+        Format weather change alert as compact SMS.
+
+        Args:
+            changes: List of detected weather changes
+            trip_name: Trip name for header
+            max_length: Maximum SMS length (default 160)
+
+        Returns:
+            Alert SMS text (<=max_length chars)
+
+        Example:
+            >>> sms = formatter.format_alert_sms(changes, "GR20 E3")
+            >>> print(sms)
+            "[GR20 E3] ALERT: T+7C W+25kmh P+10mm"
+        """
+        from app.metric_catalog import get_compact_label_for_field
+
+        if not changes:
+            return f"[{trip_name}] No changes"
+
+        # Sort: MAJOR first, then MODERATE, then MINOR
+        _severity_order = {"major": 3, "moderate": 2, "minor": 1}
+        sorted_changes = sorted(
+            changes,
+            key=lambda c: _severity_order.get(c.severity.value, 0),
+            reverse=True,
+        )
+
+        header = f"[{trip_name}] ALERT:"
+        result = header
+
+        for change in sorted_changes:
+            label = get_compact_label_for_field(change.metric)
+            if label:
+                compact_label, unit = label
+                part = f"{compact_label}{change.delta:+.0f}{unit}"
+            else:
+                part = f"{change.metric}{change.delta:+.0f}"
+
+            candidate = result + " " + part
+            if len(candidate) <= max_length:
+                result = candidate
+            else:
+                break
+
+        return result
 
     def _format_segment(self, seg_data: SegmentWeatherData) -> str:
         """

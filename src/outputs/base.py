@@ -85,11 +85,14 @@ def get_channel(name: str, settings: "Settings") -> OutputChannel:
     # Import here to avoid circular imports
     from outputs.console import ConsoleOutput
     from outputs.email import EmailOutput
+    from outputs.sms import SMSOutput
 
     if name == "console":
         return ConsoleOutput()
     elif name == "email":
         return EmailOutput(settings)
+    elif name == "sms":
+        return SMSOutput(settings)
     elif name == "none":
         return NullOutput()
     else:
