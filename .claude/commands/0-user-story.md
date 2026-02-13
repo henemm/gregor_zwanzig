@@ -31,7 +31,7 @@ Use `/user-story` when:
 
 **Don't use for:**
 - ❌ Small, isolated features (use `/feature` directly)
-- ❌ Bug fixes (use `/bug`)
+- ❌ Bug fixes (use `/0-bug`)
 - ❌ Simple modifications (use `/feature` with ÄNDERUNG mode)
 
 ## Usage
