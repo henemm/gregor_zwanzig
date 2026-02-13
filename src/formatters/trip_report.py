@@ -304,7 +304,21 @@ class TripReportFormatter:
             return s
         if key in ("snow_limit", "snow_depth"):
             return f"{val}" if val else "–"
-        if key in ("cloud", "cloud_low", "cloud_mid", "cloud_high", "humidity"):
+        if key in ("cloud", "cloud_low", "cloud_mid", "cloud_high"):
+            if val <= 10:
+                emoji = "☀️"
+            elif val <= 30:
+                emoji = "🌤️"
+            elif val <= 70:
+                emoji = "⛅"
+            elif val <= 90:
+                emoji = "🌥️"
+            else:
+                emoji = "☁️"
+            if html:
+                return f"{emoji} {val:.0f}"
+            return emoji
+        if key == "humidity":
             return f"{val}" if val is not None else "–"
         if key == "pressure":
             return f"{val:.1f}" if val is not None else "–"
@@ -314,20 +328,26 @@ class TripReportFormatter:
                 return f'<span style="background:#e3f2fd;color:#1565c0;padding:2px 4px;border-radius:3px">{s}</span>'
             return s
         if key == "cape":
-            s = f"{val:.0f}"
-            if html and val is not None and val >= 1000:
-                return f'<span style="background:#fff9c4;color:#f57f17;padding:2px 4px;border-radius:3px">{s}</span>'
-            return s
+            if val <= 300:
+                emoji = "🟢"
+            elif val <= 1000:
+                emoji = "🟡"
+            elif val <= 2000:
+                emoji = "🟠"
+            else:
+                emoji = "🔴"
+            if html:
+                return f"{emoji} {val:.0f}"
+            return emoji
         if key == "visibility":
             if val >= 10000:
-                s = f"{val / 1000:.0f}k"
+                return "good"
+            elif val >= 4000:
+                return "fair"
             elif val >= 1000:
-                s = f"{val / 1000:.1f}k"
+                return "poor"
             else:
-                s = f"{val:.0f}"
-            if html and val is not None and val < 500:
-                return f'<span style="background:#fff3e0;color:#e65100;padding:2px 4px;border-radius:3px">{s}</span>'
-            return s
+                return "⚠️ fog"
         if key == "freeze_lvl":
             return f"{val:.0f}"
         return str(val)

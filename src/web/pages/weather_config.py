@@ -144,7 +144,7 @@ def show_weather_config_dialog(trip: Trip, user_id: str = "default") -> None:
                 with ui.row().classes("items-center q-mb-sm"):
                     # Checkbox
                     cb = ui.checkbox(
-                        metric_def.label_de,
+                        f"{metric_def.label_de} ({metric_def.col_label})",
                         value=initial_enabled,
                     )
                     if not is_available:

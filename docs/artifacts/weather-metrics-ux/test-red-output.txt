@@ -1,0 +1,588 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.2, pytest-8.4.1, pluggy-1.6.0
+rootdir: /opt/gregor_zwanziger
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 46 items
+
+tests/unit/test_weather_metrics_ux.py FFFFFFFFFFFFF.FFFFFFFFFFFFFF.FFFFF [ 73%]
+FF.FFFF.FFF.                                                             [100%]
+
+=================================== FAILURES ===================================
+_______________ TestColLabelUpdates.test_wind_chill_label_feels ________________
+
+self = <test_weather_metrics_ux.TestColLabelUpdates object at 0x7f38e727f790>
+
+    def test_wind_chill_label_feels(self):
+        m = get_metric("wind_chill")
+>       assert m.col_label == "Feels", f"Expected 'Feels', got '{m.col_label}'"
+E       AssertionError: Expected 'Feels', got 'Felt'
+E       assert 'Felt' == 'Feels'
+E         
+E         - Feels
+E         + Felt
+
+tests/unit/test_weather_metrics_ux.py:25: AssertionError
+________________ TestColLabelUpdates.test_thunder_label_thunder ________________
+
+self = <test_weather_metrics_ux.TestColLabelUpdates object at 0x7f38e68de310>
+
+    def test_thunder_label_thunder(self):
+        m = get_metric("thunder")
+>       assert m.col_label == "Thunder", f"Expected 'Thunder', got '{m.col_label}'"
+E       AssertionError: Expected 'Thunder', got 'Thund'
+E       assert 'Thund' == 'Thunder'
+E         
+E         - Thunder
+E         ?      --
+E         + Thund
+
+tests/unit/test_weather_metrics_ux.py:29: AssertionError
+_____________ TestColLabelUpdates.test_snowfall_limit_label_snowl ______________
+
+self = <test_weather_metrics_ux.TestColLabelUpdates object at 0x7f38e68dc250>
+
+    def test_snowfall_limit_label_snowl(self):
+        m = get_metric("snowfall_limit")
+>       assert m.col_label == "SnowL", f"Expected 'SnowL', got '{m.col_label}'"
+E       AssertionError: Expected 'SnowL', got 'Snow'
+E       assert 'Snow' == 'SnowL'
+E         
+E         - SnowL
+E         ?     -
+E         + Snow
+
+tests/unit/test_weather_metrics_ux.py:33: AssertionError
+_______________ TestColLabelUpdates.test_cloud_total_label_cloud _______________
+
+self = <test_weather_metrics_ux.TestColLabelUpdates object at 0x7f38e68cb290>
+
+    def test_cloud_total_label_cloud(self):
+        m = get_metric("cloud_total")
+>       assert m.col_label == "Cloud", f"Expected 'Cloud', got '{m.col_label}'"
+E       AssertionError: Expected 'Cloud', got 'Clouds'
+E       assert 'Clouds' == 'Cloud'
+E         
+E         - Cloud
+E         + Clouds
+E         ?      +
+
+tests/unit/test_weather_metrics_ux.py:37: AssertionError
+_______________ TestColLabelUpdates.test_cloud_low_label_cldlow ________________
+
+self = <test_weather_metrics_ux.TestColLabelUpdates object at 0x7f38e68cb010>
+
+    def test_cloud_low_label_cldlow(self):
+        m = get_metric("cloud_low")
+>       assert m.col_label == "CldLow", f"Expected 'CldLow', got '{m.col_label}'"
+E       AssertionError: Expected 'CldLow', got 'CLow'
+E       assert 'CLow' == 'CldLow'
+E         
+E         - CldLow
+E         ?  --
+E         + CLow
+
+tests/unit/test_weather_metrics_ux.py:41: AssertionError
+_______________ TestColLabelUpdates.test_cloud_mid_label_cldmid ________________
+
+self = <test_weather_metrics_ux.TestColLabelUpdates object at 0x7f38e68cbe50>
+
+    def test_cloud_mid_label_cldmid(self):
+        m = get_metric("cloud_mid")
+>       assert m.col_label == "CldMid", f"Expected 'CldMid', got '{m.col_label}'"
+E       AssertionError: Expected 'CldMid', got 'CMid'
+E       assert 'CMid' == 'CldMid'
+E         
+E         - CldMid
+E         ?  --
+E         + CMid
+
+tests/unit/test_weather_metrics_ux.py:45: AssertionError
+_______________ TestColLabelUpdates.test_cloud_high_label_cldhi ________________
+
+self = <test_weather_metrics_ux.TestColLabelUpdates object at 0x7f38e68cba50>
+
+    def test_cloud_high_label_cldhi(self):
+        m = get_metric("cloud_high")
+>       assert m.col_label == "CldHi", f"Expected 'CldHi', got '{m.col_label}'"
+E       AssertionError: Expected 'CldHi', got 'CHi'
+E       assert 'CHi' == 'CldHi'
+E         
+E         - CldHi
+E         ?  --
+E         + CHi
+
+tests/unit/test_weather_metrics_ux.py:49: AssertionError
+_________________ TestColLabelUpdates.test_dewpoint_label_cond _________________
+
+self = <test_weather_metrics_ux.TestColLabelUpdates object at 0x7f38e68c9490>
+
+    def test_dewpoint_label_cond(self):
+        m = get_metric("dewpoint")
+>       assert m.col_label == "Cond°", f"Expected 'Cond°', got '{m.col_label}'"
+E       AssertionError: Expected 'Cond°', got 'Dew'
+E       assert 'Dew' == 'Cond°'
+E         
+E         - Cond°
+E         + Dew
+
+tests/unit/test_weather_metrics_ux.py:53: AssertionError
+_______________ TestColLabelUpdates.test_visibility_label_visib ________________
+
+self = <test_weather_metrics_ux.TestColLabelUpdates object at 0x7f38e68c9690>
+
+    def test_visibility_label_visib(self):
+        m = get_metric("visibility")
+>       assert m.col_label == "Visib", f"Expected 'Visib', got '{m.col_label}'"
+E       AssertionError: Expected 'Visib', got 'Vis'
+E       assert 'Vis' == 'Visib'
+E         
+E         - Visib
+E         ?    --
+E         + Vis
+
+tests/unit/test_weather_metrics_ux.py:57: AssertionError
+___________ TestColLabelUpdates.test_rain_probability_label_rain_pct ___________
+
+self = <test_weather_metrics_ux.TestColLabelUpdates object at 0x7f38e68c9950>
+
+    def test_rain_probability_label_rain_pct(self):
+        m = get_metric("rain_probability")
+>       assert m.col_label == "Rain%", f"Expected 'Rain%', got '{m.col_label}'"
+E       AssertionError: Expected 'Rain%', got 'Pop'
+E       assert 'Pop' == 'Rain%'
+E         
+E         - Rain%
+E         + Pop
+
+tests/unit/test_weather_metrics_ux.py:61: AssertionError
+________________ TestColLabelUpdates.test_cape_label_thndr_pct _________________
+
+self = <test_weather_metrics_ux.TestColLabelUpdates object at 0x7f38e68ca750>
+
+    def test_cape_label_thndr_pct(self):
+        m = get_metric("cape")
+>       assert m.col_label == "Thndr%", f"Expected 'Thndr%', got '{m.col_label}'"
+E       AssertionError: Expected 'Thndr%', got 'CAPE'
+E       assert 'CAPE' == 'Thndr%'
+E         
+E         - Thndr%
+E         + CAPE
+
+tests/unit/test_weather_metrics_ux.py:65: AssertionError
+____________ TestColLabelUpdates.test_freezing_level_label_zeroline ____________
+
+self = <test_weather_metrics_ux.TestColLabelUpdates object at 0x7f38e68c8610>
+
+    def test_freezing_level_label_zeroline(self):
+        m = get_metric("freezing_level")
+>       assert m.col_label == "0°Line", f"Expected '0°Line', got '{m.col_label}'"
+E       AssertionError: Expected '0°Line', got '0Gr'
+E       assert '0Gr' == '0°Line'
+E         
+E         - 0°Line
+E         + 0Gr
+
+tests/unit/test_weather_metrics_ux.py:69: AssertionError
+_______________ TestColLabelUpdates.test_snow_depth_label_snowh ________________
+
+self = <test_weather_metrics_ux.TestColLabelUpdates object at 0x7f38e68c87d0>
+
+    def test_snow_depth_label_snowh(self):
+        m = get_metric("snow_depth")
+>       assert m.col_label == "SnowH", f"Expected 'SnowH', got '{m.col_label}'"
+E       AssertionError: Expected 'SnowH', got 'SnDp'
+E       assert 'SnDp' == 'SnowH'
+E         
+E         - SnowH
+E         + SnDp
+
+tests/unit/test_weather_metrics_ux.py:73: AssertionError
+_____________ TestColLabelUpdates.test_col_defs_contain_new_labels _____________
+
+self = <test_weather_metrics_ux.TestColLabelUpdates object at 0x7f38e68ca390>
+
+    def test_col_defs_contain_new_labels(self):
+        """get_col_defs() should return the new labels."""
+        col_defs = get_col_defs()
+        labels = {cd[0]: cd[1] for cd in col_defs}
+>       assert labels["felt"] == "Feels"
+E       AssertionError: assert 'Felt' == 'Feels'
+E         
+E         - Feels
+E         + Felt
+
+tests/unit/test_weather_metrics_ux.py:88: AssertionError
+_______________ TestCloudEmojiFormatting.test_cloud_clear_plain ________________
+
+self = <test_weather_metrics_ux.TestCloudEmojiFormatting object at 0x7f38e68c0190>
+formatter = <formatters.trip_report.TripReportFormatter object at 0x7f38e6860510>
+
+    def test_cloud_clear_plain(self, formatter):
+        """0-10% → ☀️"""
+        result = formatter._fmt_val("cloud", 5, html=False)
+>       assert "☀️" in result
+E       AssertionError: assert '☀️' in '5'
+
+tests/unit/test_weather_metrics_ux.py:113: AssertionError
+_______________ TestCloudEmojiFormatting.test_cloud_partly_plain _______________
+
+self = <test_weather_metrics_ux.TestCloudEmojiFormatting object at 0x7f38e68c3110>
+formatter = <formatters.trip_report.TripReportFormatter object at 0x7f38e68c9bd0>
+
+    def test_cloud_partly_plain(self, formatter):
+        """11-30% → 🌤️"""
+        result = formatter._fmt_val("cloud", 25, html=False)
+>       assert "🌤️" in result
+E       AssertionError: assert '🌤️' in '25'
+
+tests/unit/test_weather_metrics_ux.py:118: AssertionError
+________________ TestCloudEmojiFormatting.test_cloud_half_plain ________________
+
+self = <test_weather_metrics_ux.TestCloudEmojiFormatting object at 0x7f38e68c3190>
+formatter = <formatters.trip_report.TripReportFormatter object at 0x7f38e68fb850>
+
+    def test_cloud_half_plain(self, formatter):
+        """31-70% → ⛅"""
+        result = formatter._fmt_val("cloud", 50, html=False)
+>       assert "⛅" in result
+E       AssertionError: assert '⛅' in '50'
+
+tests/unit/test_weather_metrics_ux.py:123: AssertionError
+_______________ TestCloudEmojiFormatting.test_cloud_mostly_plain _______________
+
+self = <test_weather_metrics_ux.TestCloudEmojiFormatting object at 0x7f38e68c3e10>
+formatter = <formatters.trip_report.TripReportFormatter object at 0x7f38e683ef90>
+
+    def test_cloud_mostly_plain(self, formatter):
+        """71-90% → 🌥️"""
+        result = formatter._fmt_val("cloud", 85, html=False)
+>       assert "🌥️" in result
+E       AssertionError: assert '🌥️' in '85'
+
+tests/unit/test_weather_metrics_ux.py:128: AssertionError
+______________ TestCloudEmojiFormatting.test_cloud_overcast_plain ______________
+
+self = <test_weather_metrics_ux.TestCloudEmojiFormatting object at 0x7f38e68c1950>
+formatter = <formatters.trip_report.TripReportFormatter object at 0x7f38e68a6b10>
+
+    def test_cloud_overcast_plain(self, formatter):
+        """91-100% → ☁️"""
+        result = formatter._fmt_val("cloud", 95, html=False)
+>       assert "☁️" in result
+E       AssertionError: assert '☁️' in '95'
+
+tests/unit/test_weather_metrics_ux.py:133: AssertionError
+_________ TestCloudEmojiFormatting.test_cloud_html_has_emoji_and_value _________
+
+self = <test_weather_metrics_ux.TestCloudEmojiFormatting object at 0x7f38e68c1810>
+formatter = <formatters.trip_report.TripReportFormatter object at 0x7f38e6894c50>
+
+    def test_cloud_html_has_emoji_and_value(self, formatter):
+        """HTML should show emoji AND percentage."""
+        result = formatter._fmt_val("cloud", 25, html=True)
+>       assert "🌤️" in result
+E       AssertionError: assert '🌤️' in '25'
+
+tests/unit/test_weather_metrics_ux.py:140: AssertionError
+___________ TestCloudEmojiFormatting.test_cloud_boundary_10_is_clear ___________
+
+self = <test_weather_metrics_ux.TestCloudEmojiFormatting object at 0x7f38e68c2050>
+formatter = <formatters.trip_report.TripReportFormatter object at 0x7f38e68c9590>
+
+    def test_cloud_boundary_10_is_clear(self, formatter):
+        result = formatter._fmt_val("cloud", 10, html=False)
+>       assert "☀️" in result
+E       AssertionError: assert '☀️' in '10'
+
+tests/unit/test_weather_metrics_ux.py:147: AssertionError
+__________ TestCloudEmojiFormatting.test_cloud_boundary_11_is_partly ___________
+
+self = <test_weather_metrics_ux.TestCloudEmojiFormatting object at 0x7f38e68c27d0>
+formatter = <formatters.trip_report.TripReportFormatter object at 0x7f38e6860850>
+
+    def test_cloud_boundary_11_is_partly(self, formatter):
+        result = formatter._fmt_val("cloud", 11, html=False)
+>       assert "🌤️" in result
+E       AssertionError: assert '🌤️' in '11'
+
+tests/unit/test_weather_metrics_ux.py:151: AssertionError
+___________ TestCloudEmojiFormatting.test_cloud_boundary_70_is_half ____________
+
+self = <test_weather_metrics_ux.TestCloudEmojiFormatting object at 0x7f38e68c2d50>
+formatter = <formatters.trip_report.TripReportFormatter object at 0x7f38e6835e10>
+
+    def test_cloud_boundary_70_is_half(self, formatter):
+        result = formatter._fmt_val("cloud", 70, html=False)
+>       assert "⛅" in result
+E       AssertionError: assert '⛅' in '70'
+
+tests/unit/test_weather_metrics_ux.py:155: AssertionError
+_________ TestCloudEmojiFormatting.test_cloud_boundary_91_is_overcast __________
+
+self = <test_weather_metrics_ux.TestCloudEmojiFormatting object at 0x7f38e68c09d0>
+formatter = <formatters.trip_report.TripReportFormatter object at 0x7f38e68c8b10>
+
+    def test_cloud_boundary_91_is_overcast(self, formatter):
+        result = formatter._fmt_val("cloud", 91, html=False)
+>       assert "☁️" in result
+E       AssertionError: assert '☁️' in '91'
+
+tests/unit/test_weather_metrics_ux.py:159: AssertionError
+________________ TestCloudEmojiFormatting.test_cloud_low_emoji _________________
+
+self = <test_weather_metrics_ux.TestCloudEmojiFormatting object at 0x7f38e68c0b10>
+formatter = <formatters.trip_report.TripReportFormatter object at 0x7f38e6816010>
+
+    def test_cloud_low_emoji(self, formatter):
+        result = formatter._fmt_val("cloud_low", 50, html=False)
+>       assert "⛅" in result
+E       AssertionError: assert '⛅' in '50'
+
+tests/unit/test_weather_metrics_ux.py:165: AssertionError
+________________ TestCloudEmojiFormatting.test_cloud_mid_emoji _________________
+
+self = <test_weather_metrics_ux.TestCloudEmojiFormatting object at 0x7f38e68c1050>
+formatter = <formatters.trip_report.TripReportFormatter object at 0x7f38e6869050>
+
+    def test_cloud_mid_emoji(self, formatter):
+        result = formatter._fmt_val("cloud_mid", 5, html=False)
+>       assert "☀️" in result
+E       AssertionError: assert '☀️' in '5'
+
+tests/unit/test_weather_metrics_ux.py:169: AssertionError
+________________ TestCloudEmojiFormatting.test_cloud_high_emoji ________________
+
+self = <test_weather_metrics_ux.TestCloudEmojiFormatting object at 0x7f38e68b3b50>
+formatter = <formatters.trip_report.TripReportFormatter object at 0x7f38e6894b90>
+
+    def test_cloud_high_emoji(self, formatter):
+        result = formatter._fmt_val("cloud_high", 95, html=False)
+>       assert "☁️" in result
+E       AssertionError: assert '☁️' in '95'
+
+tests/unit/test_weather_metrics_ux.py:173: AssertionError
+_________________ TestCapeEmojiFormatting.test_cape_low_plain __________________
+
+self = <test_weather_metrics_ux.TestCapeEmojiFormatting object at 0x7f38e68b1a50>
+formatter = <formatters.trip_report.TripReportFormatter object at 0x7f38e695e110>
+
+    def test_cape_low_plain(self, formatter):
+        """0-300 J/kg → 🟢"""
+        result = formatter._fmt_val("cape", 200, html=False)
+>       assert "🟢" in result
+E       AssertionError: assert '🟢' in '200'
+
+tests/unit/test_weather_metrics_ux.py:193: AssertionError
+_______________ TestCapeEmojiFormatting.test_cape_moderate_plain _______________
+
+self = <test_weather_metrics_ux.TestCapeEmojiFormatting object at 0x7f38e68b2150>
+formatter = <formatters.trip_report.TripReportFormatter object at 0x7f38e6821bd0>
+
+    def test_cape_moderate_plain(self, formatter):
+        """301-1000 J/kg → 🟡"""
+        result = formatter._fmt_val("cape", 800, html=False)
+>       assert "🟡" in result
+E       AssertionError: assert '🟡' in '800'
+
+tests/unit/test_weather_metrics_ux.py:198: AssertionError
+_________________ TestCapeEmojiFormatting.test_cape_high_plain _________________
+
+self = <test_weather_metrics_ux.TestCapeEmojiFormatting object at 0x7f38e68b2fd0>
+formatter = <formatters.trip_report.TripReportFormatter object at 0x7f38e68a66d0>
+
+    def test_cape_high_plain(self, formatter):
+        """1001-2000 J/kg → 🟠"""
+        result = formatter._fmt_val("cape", 1500, html=False)
+>       assert "🟠" in result
+E       AssertionError: assert '🟠' in '1500'
+
+tests/unit/test_weather_metrics_ux.py:203: AssertionError
+_______________ TestCapeEmojiFormatting.test_cape_extreme_plain ________________
+
+self = <test_weather_metrics_ux.TestCapeEmojiFormatting object at 0x7f38e68b32d0>
+formatter = <formatters.trip_report.TripReportFormatter object at 0x7f38e686b950>
+
+    def test_cape_extreme_plain(self, formatter):
+        """>2000 J/kg → 🔴"""
+        result = formatter._fmt_val("cape", 2500, html=False)
+>       assert "🔴" in result
+E       AssertionError: assert '🔴' in '2500'
+
+tests/unit/test_weather_metrics_ux.py:208: AssertionError
+__________ TestCapeEmojiFormatting.test_cape_html_has_emoji_and_value __________
+
+self = <test_weather_metrics_ux.TestCapeEmojiFormatting object at 0x7f38e68b0e50>
+formatter = <formatters.trip_report.TripReportFormatter object at 0x7f38e6894c50>
+
+    def test_cape_html_has_emoji_and_value(self, formatter):
+        result = formatter._fmt_val("cape", 800, html=True)
+>       assert "🟡" in result
+E       AssertionError: assert '🟡' in '800'
+
+tests/unit/test_weather_metrics_ux.py:214: AssertionError
+____________ TestCapeEmojiFormatting.test_cape_boundary_300_is_low _____________
+
+self = <test_weather_metrics_ux.TestCapeEmojiFormatting object at 0x7f38e68b0ad0>
+formatter = <formatters.trip_report.TripReportFormatter object at 0x7f38e683da10>
+
+    def test_cape_boundary_300_is_low(self, formatter):
+        """Exactly 300 → 🟢 (spec says 0-300)"""
+        result = formatter._fmt_val("cape", 300, html=False)
+>       assert "🟢" in result
+E       AssertionError: assert '🟢' in '300'
+
+tests/unit/test_weather_metrics_ux.py:222: AssertionError
+__________ TestCapeEmojiFormatting.test_cape_boundary_301_is_moderate __________
+
+self = <test_weather_metrics_ux.TestCapeEmojiFormatting object at 0x7f38e68b0410>
+formatter = <formatters.trip_report.TripReportFormatter object at 0x7f38e695f910>
+
+    def test_cape_boundary_301_is_moderate(self, formatter):
+        result = formatter._fmt_val("cape", 301, html=False)
+>       assert "🟡" in result
+E       AssertionError: assert '🟡' in '301'
+
+tests/unit/test_weather_metrics_ux.py:226: AssertionError
+______________ TestVisibilityLevelFormatting.test_visibility_good ______________
+
+self = <test_weather_metrics_ux.TestVisibilityLevelFormatting object at 0x7f38e68b0890>
+formatter = <formatters.trip_report.TripReportFormatter object at 0x7f38e684f710>
+
+    def test_visibility_good(self, formatter):
+        """>10km → good"""
+        result = formatter._fmt_val("visibility", 12000, html=False)
+>       assert result == "good"
+E       AssertionError: assert '12k' == 'good'
+E         
+E         - good
+E         + 12k
+
+tests/unit/test_weather_metrics_ux.py:244: AssertionError
+______________ TestVisibilityLevelFormatting.test_visibility_fair ______________
+
+self = <test_weather_metrics_ux.TestVisibilityLevelFormatting object at 0x7f38e68b03d0>
+formatter = <formatters.trip_report.TripReportFormatter object at 0x7f38e686bd90>
+
+    def test_visibility_fair(self, formatter):
+        """4-10km → fair"""
+        result = formatter._fmt_val("visibility", 5000, html=False)
+>       assert result == "fair"
+E       AssertionError: assert '5.0k' == 'fair'
+E         
+E         - fair
+E         + 5.0k
+
+tests/unit/test_weather_metrics_ux.py:249: AssertionError
+______________ TestVisibilityLevelFormatting.test_visibility_poor ______________
+
+self = <test_weather_metrics_ux.TestVisibilityLevelFormatting object at 0x7f38e68b2c90>
+formatter = <formatters.trip_report.TripReportFormatter object at 0x7f38e6897b50>
+
+    def test_visibility_poor(self, formatter):
+        """1-4km → poor"""
+        result = formatter._fmt_val("visibility", 2000, html=False)
+>       assert result == "poor"
+E       AssertionError: assert '2.0k' == 'poor'
+E         
+E         - poor
+E         + 2.0k
+
+tests/unit/test_weather_metrics_ux.py:254: AssertionError
+______________ TestVisibilityLevelFormatting.test_visibility_fog _______________
+
+self = <test_weather_metrics_ux.TestVisibilityLevelFormatting object at 0x7f38e68b1b10>
+formatter = <formatters.trip_report.TripReportFormatter object at 0x7f38e68fad10>
+
+    def test_visibility_fog(self, formatter):
+        """<1km → ⚠️ fog"""
+        result = formatter._fmt_val("visibility", 500, html=False)
+>       assert "fog" in result
+E       AssertionError: assert 'fog' in '500'
+
+tests/unit/test_weather_metrics_ux.py:259: AssertionError
+_____ TestVisibilityLevelFormatting.test_visibility_boundary_10000_is_good _____
+
+self = <test_weather_metrics_ux.TestVisibilityLevelFormatting object at 0x7f38e694ced0>
+formatter = <formatters.trip_report.TripReportFormatter object at 0x7f38e695df10>
+
+    def test_visibility_boundary_10000_is_good(self, formatter):
+        result = formatter._fmt_val("visibility", 10000, html=False)
+>       assert result == "good"
+E       AssertionError: assert '10k' == 'good'
+E         
+E         - good
+E         + 10k
+
+tests/unit/test_weather_metrics_ux.py:271: AssertionError
+_____ TestVisibilityLevelFormatting.test_visibility_boundary_4000_is_fair ______
+
+self = <test_weather_metrics_ux.TestVisibilityLevelFormatting object at 0x7f38e694c790>
+formatter = <formatters.trip_report.TripReportFormatter object at 0x7f38e6895910>
+
+    def test_visibility_boundary_4000_is_fair(self, formatter):
+        result = formatter._fmt_val("visibility", 4000, html=False)
+>       assert result == "fair"
+E       AssertionError: assert '4.0k' == 'fair'
+E         
+E         - fair
+E         + 4.0k
+
+tests/unit/test_weather_metrics_ux.py:275: AssertionError
+_____ TestVisibilityLevelFormatting.test_visibility_boundary_1000_is_poor ______
+
+self = <test_weather_metrics_ux.TestVisibilityLevelFormatting object at 0x7f38e694d590>
+formatter = <formatters.trip_report.TripReportFormatter object at 0x7f38e6820cd0>
+
+    def test_visibility_boundary_1000_is_poor(self, formatter):
+        result = formatter._fmt_val("visibility", 1000, html=False)
+>       assert result == "poor"
+E       AssertionError: assert '1.0k' == 'poor'
+E         
+E         - poor
+E         + 1.0k
+
+tests/unit/test_weather_metrics_ux.py:279: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/test_weather_metrics_ux.py::TestColLabelUpdates::test_wind_chill_label_feels
+FAILED tests/unit/test_weather_metrics_ux.py::TestColLabelUpdates::test_thunder_label_thunder
+FAILED tests/unit/test_weather_metrics_ux.py::TestColLabelUpdates::test_snowfall_limit_label_snowl
+FAILED tests/unit/test_weather_metrics_ux.py::TestColLabelUpdates::test_cloud_total_label_cloud
+FAILED tests/unit/test_weather_metrics_ux.py::TestColLabelUpdates::test_cloud_low_label_cldlow
+FAILED tests/unit/test_weather_metrics_ux.py::TestColLabelUpdates::test_cloud_mid_label_cldmid
+FAILED tests/unit/test_weather_metrics_ux.py::TestColLabelUpdates::test_cloud_high_label_cldhi
+FAILED tests/unit/test_weather_metrics_ux.py::TestColLabelUpdates::test_dewpoint_label_cond
+FAILED tests/unit/test_weather_metrics_ux.py::TestColLabelUpdates::test_visibility_label_visib
+FAILED tests/unit/test_weather_metrics_ux.py::TestColLabelUpdates::test_rain_probability_label_rain_pct
+FAILED tests/unit/test_weather_metrics_ux.py::TestColLabelUpdates::test_cape_label_thndr_pct
+FAILED tests/unit/test_weather_metrics_ux.py::TestColLabelUpdates::test_freezing_level_label_zeroline
+FAILED tests/unit/test_weather_metrics_ux.py::TestColLabelUpdates::test_snow_depth_label_snowh
+FAILED tests/unit/test_weather_metrics_ux.py::TestColLabelUpdates::test_col_defs_contain_new_labels
+FAILED tests/unit/test_weather_metrics_ux.py::TestCloudEmojiFormatting::test_cloud_clear_plain
+FAILED tests/unit/test_weather_metrics_ux.py::TestCloudEmojiFormatting::test_cloud_partly_plain
+FAILED tests/unit/test_weather_metrics_ux.py::TestCloudEmojiFormatting::test_cloud_half_plain
+FAILED tests/unit/test_weather_metrics_ux.py::TestCloudEmojiFormatting::test_cloud_mostly_plain
+FAILED tests/unit/test_weather_metrics_ux.py::TestCloudEmojiFormatting::test_cloud_overcast_plain
+FAILED tests/unit/test_weather_metrics_ux.py::TestCloudEmojiFormatting::test_cloud_html_has_emoji_and_value
+FAILED tests/unit/test_weather_metrics_ux.py::TestCloudEmojiFormatting::test_cloud_boundary_10_is_clear
+FAILED tests/unit/test_weather_metrics_ux.py::TestCloudEmojiFormatting::test_cloud_boundary_11_is_partly
+FAILED tests/unit/test_weather_metrics_ux.py::TestCloudEmojiFormatting::test_cloud_boundary_70_is_half
+FAILED tests/unit/test_weather_metrics_ux.py::TestCloudEmojiFormatting::test_cloud_boundary_91_is_overcast
+FAILED tests/unit/test_weather_metrics_ux.py::TestCloudEmojiFormatting::test_cloud_low_emoji
+FAILED tests/unit/test_weather_metrics_ux.py::TestCloudEmojiFormatting::test_cloud_mid_emoji
+FAILED tests/unit/test_weather_metrics_ux.py::TestCloudEmojiFormatting::test_cloud_high_emoji
+FAILED tests/unit/test_weather_metrics_ux.py::TestCapeEmojiFormatting::test_cape_low_plain
+FAILED tests/unit/test_weather_metrics_ux.py::TestCapeEmojiFormatting::test_cape_moderate_plain
+FAILED tests/unit/test_weather_metrics_ux.py::TestCapeEmojiFormatting::test_cape_high_plain
+FAILED tests/unit/test_weather_metrics_ux.py::TestCapeEmojiFormatting::test_cape_extreme_plain
+FAILED tests/unit/test_weather_metrics_ux.py::TestCapeEmojiFormatting::test_cape_html_has_emoji_and_value
+FAILED tests/unit/test_weather_metrics_ux.py::TestCapeEmojiFormatting::test_cape_boundary_300_is_low
+FAILED tests/unit/test_weather_metrics_ux.py::TestCapeEmojiFormatting::test_cape_boundary_301_is_moderate
+FAILED tests/unit/test_weather_metrics_ux.py::TestVisibilityLevelFormatting::test_visibility_good
+FAILED tests/unit/test_weather_metrics_ux.py::TestVisibilityLevelFormatting::test_visibility_fair
+FAILED tests/unit/test_weather_metrics_ux.py::TestVisibilityLevelFormatting::test_visibility_poor
+FAILED tests/unit/test_weather_metrics_ux.py::TestVisibilityLevelFormatting::test_visibility_fog
+FAILED tests/unit/test_weather_metrics_ux.py::TestVisibilityLevelFormatting::test_visibility_boundary_10000_is_good
+FAILED tests/unit/test_weather_metrics_ux.py::TestVisibilityLevelFormatting::test_visibility_boundary_4000_is_fair
+FAILED tests/unit/test_weather_metrics_ux.py::TestVisibilityLevelFormatting::test_visibility_boundary_1000_is_poor
+========================= 41 failed, 5 passed in 0.24s =========================
