@@ -416,6 +416,7 @@ class MetricConfig:
     # Phase 3: per-report-type overrides (None = follows global enabled)
     morning_enabled: Optional[bool] = None
     evening_enabled: Optional[bool] = None
+    use_friendly_format: bool = True
 
 
 @dataclass

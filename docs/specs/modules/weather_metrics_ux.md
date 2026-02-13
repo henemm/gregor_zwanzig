@@ -4,7 +4,7 @@ type: module
 created: 2026-02-13
 updated: 2026-02-13
 status: draft
-version: "1.0"
+version: "1.1"
 tags: [formatter, ui, weather-config, trip-report]
 ---
 
@@ -16,312 +16,387 @@ tags: [formatter, ui, weather-config, trip-report]
 
 ## Purpose
 
-Improve weather metrics user experience with readable column labels, level-based formatting for technical values (cloud cover, CAPE, visibility), and col_label visibility in the weather config UI checkboxes.
+Improve weather metrics user experience:
+1. Readable English col_labels in table headers (v1.0 — DONE)
+2. Level-based formatting for Cloud/CAPE/Visibility (v1.0 — DONE)
+3. col_label visible in config UI checkboxes (v1.0 — DONE)
+4. **Per-metric toggle: raw values vs. friendly formatting** (v1.1 — THIS UPDATE)
 
 ## Source
 
 - **Files:**
-  - `src/app/metric_catalog.py` - MetricDefinition registry with col_label values
-  - `src/formatters/trip_report.py` - TripReportFormatter._fmt_val() method for value formatting
-  - `src/web/pages/weather_config.py` - Weather config dialog checkbox label rendering
+  - `src/app/models.py` - MetricConfig: new `use_friendly_format` field
+  - `src/app/metric_catalog.py` - MetricDefinition: new `has_friendly_format` flag
+  - `src/formatters/trip_report.py` - `_fmt_val()`: respect toggle; `format_email()`: store config
+  - `src/web/pages/weather_config.py` - Toggle widget per metric row
+  - `src/app/loader.py` - Serialize/deserialize `use_friendly_format`
 
 ## Dependencies
 
 | Entity | Type | Purpose |
 |--------|------|---------|
-| MetricCatalog | upstream | col_label values used by formatter table headers |
-| TripReportFormatter | consumer | Formats table cell values with _fmt_val() |
-| WeatherConfigUI | consumer | Shows metric labels in config dialog |
-| UnifiedWeatherDisplayConfig | data | MetricConfig determines which metrics are enabled |
+| MetricCatalog | upstream | `has_friendly_format` flag per MetricDefinition |
+| MetricConfig | data | `use_friendly_format` per-metric preference |
+| UnifiedWeatherDisplayConfig | data | Carries MetricConfig list to formatter |
+| TripReportFormatter | consumer | `_fmt_val()` reads toggle, switches format |
+| WeatherConfigUI | consumer | Shows toggle for eligible metrics |
+| Loader | persistence | Serialize/deserialize new field |
 
 ## Implementation Details
 
-### Change 1: Update col_label in MetricCatalog (13 metrics)
+### v1.0 Changes (ALREADY IMPLEMENTED)
 
-**File:** `src/app/metric_catalog.py`
+- 13 col_label updates in MetricCatalog
+- Cloud/CAPE/Visibility emoji/level formatting in `_fmt_val()`
+- col_label shown next to label_de in config UI checkboxes
 
-Update col_label values in _METRICS registry:
+### v1.1 Change 4: Per-Metric Friendly Format Toggle
 
-| metric_id | Current col_label | New col_label | Rationale |
-|-----------|-------------------|---------------|-----------|
-| wind_chill | Felt | Feels | More natural English |
-| thunder | Thund | Thunder | Full word fits |
-| snowfall_limit | Snow | SnowL | Disambiguate from snow_depth |
-| cloud_total | Clouds | Cloud | Singular, shorter |
-| cloud_low | CLow | CldLow | More readable abbreviation |
-| cloud_mid | CMid | CldMid | More readable abbreviation |
-| cloud_high | CHi | CldHi | More readable abbreviation |
-| dewpoint | Dew | Cond° | Represents condensation temperature |
-| visibility | Vis | Visib | More recognizable |
-| rain_probability | Pop | Rain% | Clearer meaning |
-| cape | CAPE | Thndr% | User-facing level indicator |
-| freezing_level | 0Gr | 0°Line | Clearer ski term |
-| snow_depth | SnDp | SnowH | Height more intuitive than depth |
+#### 4a) MetricDefinition: `friendly_label` field
 
-**Unchanged col_labels (6 metrics):**
-- temperature: Temp
-- wind: Wind
-- gust: Gust
-- precipitation: Rain
-- humidity: Humid
-- pressure: hPa
-
-**Code changes:**
+**File:** `src/app/metric_catalog.py`, line 36 (after `default_enabled`)
 
 ```python
-# Line 53: wind_chill
-col_label="Feels",  # was: "Felt"
-
-# Line 81: thunder
-col_label="Thunder",  # was: "Thund"
-
-# Line 88: snowfall_limit
-col_label="SnowL",  # was: "Snow"
-
-# Line 95: cloud_total
-col_label="Cloud",  # was: "Clouds"
-
-# Line 102: cloud_low
-col_label="CldLow",  # was: "CLow"
-
-# Line 110: cloud_mid
-col_label="CldMid",  # was: "CMid"
-
-# Line 118: cloud_high
-col_label="CldHi",  # was: "CHi"
-
-# Line 134: dewpoint
-col_label="Cond°",  # was: "Dew"
-
-# Line 150: visibility
-col_label="Visib",  # was: "Vis"
-
-# Line 158: rain_probability
-col_label="Rain%",  # was: "Pop"
-
-# Line 166: cape
-col_label="Thndr%",  # was: "CAPE"
-
-# Line 174: freezing_level
-col_label="0°Line",  # was: "0Gr"
-
-# Line 182: snow_depth
-col_label="SnowH",  # was: "SnDp"
+@dataclass(frozen=True)
+class MetricDefinition:
+    # ... existing fields ...
+    default_enabled: bool = True
+    friendly_label: str = ""  # NEW: toggle label in config UI; empty = no friendly format
 ```
 
-### Change 2: Level-based formatting in TripReportFormatter._fmt_val()
+**Derived property:** `has_friendly_format` = `bool(friendly_label)` (for backward compat in formatter/loader)
+
+**Set `friendly_label` on these 6 metrics:**
+
+| metric_id | col_key | friendly_label | Friendly format |
+|-----------|---------|---------------|----------------|
+| cloud_total | cloud | ☀️⛅☁️ | ☀️🌤️⛅🌥️☁️ |
+| cloud_low | cloud_low | ☀️⛅☁️ | ☀️🌤️⛅🌥️☁️ |
+| cloud_mid | cloud_mid | ☀️⛅☁️ | ☀️🌤️⛅🌥️☁️ |
+| cloud_high | cloud_high | ☀️⛅☁️ | ☀️🌤️⛅🌥️☁️ |
+| cape | cape | 🟢🟡🔴 | 🟢🟡🟠🔴 |
+| visibility | visibility | good/fog | good/fair/poor/fog |
+
+All other 13 metrics keep `friendly_label=""` (default).
+
+#### 4b) MetricConfig: `use_friendly_format` preference
+
+**File:** `src/app/models.py`, line 418 (after `evening_enabled`)
+
+```python
+@dataclass
+class MetricConfig:
+    metric_id: str
+    enabled: bool = True
+    aggregations: list[str] = field(default_factory=lambda: ["min", "max"])
+    morning_enabled: Optional[bool] = None
+    evening_enabled: Optional[bool] = None
+    use_friendly_format: bool = True  # NEW: True=emoji/levels, False=raw values
+```
+
+**Default `True`** — existing reports keep current emoji behavior. User must explicitly opt out.
+
+#### 4c) Loader: Serialize/Deserialize
+
+**File:** `src/app/loader.py`
+
+**Deserialization** (line 181-187, `_parse_display_config`):
+
+```python
+metrics.append(MetricConfig(
+    metric_id=mc_data["metric_id"],
+    enabled=mc_data.get("enabled", True),
+    aggregations=mc_data.get("aggregations", ["min", "max"]),
+    morning_enabled=mc_data.get("morning_enabled"),
+    evening_enabled=mc_data.get("evening_enabled"),
+    use_friendly_format=mc_data.get("use_friendly_format", True),  # NEW
+))
+```
+
+**Serialization** (line 531-537, `_trip_to_dict`):
+
+```python
+{
+    "metric_id": mc.metric_id,
+    "enabled": mc.enabled,
+    "aggregations": mc.aggregations,
+    "use_friendly_format": mc.use_friendly_format,  # NEW
+}
+```
+
+**Backward compatibility:** Old configs without `use_friendly_format` default to `True` via `.get("use_friendly_format", True)`.
+
+#### 4d) Formatter: Config-aware `_fmt_val()`
 
 **File:** `src/formatters/trip_report.py`
 
-Add level-based formatting for 3 metric groups in _fmt_val() method (lines 278-333).
+**Step 1: Store config on formatter instance** (in `format_email()`, line ~40)
 
-**2a) Cloud metrics (cloud_total, cloud_low, cloud_mid, cloud_high)**
+```python
+def format_email(self, segments, trip_name, report_type,
+                 display_config=None, ...):
+    dc = display_config or build_default_display_config()
+    self._friendly_keys = self._build_friendly_keys(dc)  # NEW
+    # ... rest unchanged
+```
 
-Replace current percentage formatting (line 307-308) with emoji-based levels:
+**Step 2: Helper to build set of col_keys that want friendly format**
 
+```python
+def _build_friendly_keys(self, dc: UnifiedWeatherDisplayConfig) -> set[str]:
+    """Build set of col_keys where user wants friendly formatting."""
+    from app.metric_catalog import get_metric
+    keys = set()
+    for mc in dc.metrics:
+        if mc.use_friendly_format:
+            try:
+                metric_def = get_metric(mc.metric_id)
+                if metric_def.has_friendly_format:
+                    keys.add(metric_def.col_key)
+            except KeyError:
+                pass
+    return keys
+```
+
+**Step 3: Update `_fmt_val()` signature** (line 278)
+
+```python
+def _fmt_val(self, key: str, val, html: bool = False) -> str:
+    """Format a single cell value. Respects per-metric friendly format toggle."""
+    if val is None:
+        return "–"
+
+    use_friendly = key in getattr(self, '_friendly_keys', set())
+
+    # ... rest of method
+```
+
+**Step 4: Conditional formatting for the 3 metric groups**
+
+Cloud (line 307):
 ```python
 if key in ("cloud", "cloud_low", "cloud_mid", "cloud_high"):
-    # Emoji based on percentage
-    if val <= 10:
-        emoji = "☀️"
-    elif val <= 30:
-        emoji = "🌤️"
-    elif val <= 70:
-        emoji = "⛅"
-    elif val <= 90:
-        emoji = "🌥️"
-    else:
-        emoji = "☁️"
-
-    if html:
-        return f"{emoji} {val:.0f}"
-    else:
-        return emoji
+    if not use_friendly:
+        return f"{val:.0f}"
+    # ... emoji logic → returns ONLY emoji (no numeric value, even in HTML)
+    return emoji
 ```
 
-**2b) CAPE (cape)**
-
-Replace current highlight logic (lines 316-320) with level-based emoji:
-
+CAPE (line 330):
 ```python
 if key == "cape":
-    # Level emoji based on J/kg value
-    if val < 300:
-        emoji = "🟢"
-        level = "low"
-    elif val < 1000:
-        emoji = "🟡"
-        level = "moderate"
-    elif val < 2000:
-        emoji = "🟠"
-        level = "high"
-    else:
-        emoji = "🔴"
-        level = "extreme"
-
-    if html:
-        return f"{emoji} {val:.0f}"
-    else:
-        return emoji
+    if not use_friendly:
+        s = f"{val:.0f}"
+        if html and val is not None and val >= 1000:
+            return f'<span style="background:#fff9c4;color:#f57f17;padding:2px 4px;border-radius:3px">{s}</span>'
+        return s
+    # ... emoji logic → returns ONLY emoji (no numeric value, even in HTML)
+    return emoji
 ```
 
-**2c) Visibility (visibility)**
+**Friendly format shows ONLY symbol/category, never the numeric value alongside it.**
 
-Replace current km suffix logic (lines 321-330) with text levels:
-
+Visibility (line 342):
 ```python
 if key == "visibility":
-    # Text level replacing raw value
-    if val >= 10000:
-        level_text = "good"
-    elif val >= 4000:
-        level_text = "fair"
-    elif val >= 1000:
-        level_text = "poor"
-    else:
-        level_text = "⚠️ fog"
-
-    # Same for HTML and plain-text
-    return level_text
+    if not use_friendly:
+        if val >= 10000:
+            return f"{val / 1000:.0f}k"
+        elif val >= 1000:
+            return f"{val / 1000:.1f}k"
+        else:
+            s = f"{val:.0f}"
+            if html and val < 500:
+                return f'<span style="background:#fff3e0;color:#e65100;padding:2px 4px;border-radius:3px">{s}</span>'
+            return s
+    # ... existing level logic unchanged
 ```
 
-**Note:** Humidity (line 307-308) remains unchanged - stays as raw percentage.
+**Raw format for CAPE/Visibility** restores the ORIGINAL formatting that existed before v1.0 (with HTML highlights).
 
-### Change 3: Show col_label in config UI checkbox labels
+**Call sites unchanged:** `_render_html_table` (line 500) and `_render_text_table` (line 590/603) still call `self._fmt_val(key, val, html)` — no signature change needed. The friendly-key lookup uses the instance variable `self._friendly_keys`.
+
+#### 4e) Config UI: Collapsible table layout with per-metric toggle
 
 **File:** `src/web/pages/weather_config.py`
 
-Update checkbox label rendering (line 146-147):
+Replace the current inline-row layout with a **collapsible table** per category.
+
+**Layout:** `ui.expansion` (initially collapsed) containing a table with 3 columns:
+
+| Column | Header | Content |
+|--------|--------|---------|
+| 1 | Metrik | Checkbox + metric name (label_de + col_label) |
+| 2 | Wert | Aggregation multi-select (Min/Max/Avg/Sum) |
+| 3 | Label | Friendly-format toggle (only for eligible metrics) |
+
+**Metric-specific toggle labels:**
+
+| metric_id | Toggle label | Tooltip |
+|-----------|-------------|---------|
+| cloud_total, cloud_low, cloud_mid, cloud_high | ☀️⛅☁️ | Emoji statt Prozent |
+| cape | 🟢🟡🔴 | Emoji statt J/kg |
+| visibility | good/fog | Stufen statt Meter |
+
+Metrics without `has_friendly_format` show no toggle in column 3.
+
+**MetricDefinition: `friendly_label` field**
+
+Add to `MetricDefinition` in `metric_catalog.py`:
 
 ```python
-# Current:
-cb = ui.checkbox(
-    metric_def.label_de,
-    value=initial_enabled,
-)
-
-# New:
-cb = ui.checkbox(
-    f"{metric_def.label_de} ({metric_def.col_label})",
-    value=initial_enabled,
-)
+friendly_label: str = ""  # Toggle label in config UI, empty = no friendly format
 ```
 
-This shows both German label and English column header, e.g.:
-- "Bewölkung (Cloud)"
-- "Gewitterenergie (CAPE) (Thndr%)"
-- "Regenwahrscheinlichkeit (Rain%)"
+Set on 6 metrics:
+
+| metric_id | friendly_label |
+|-----------|---------------|
+| cloud_total | ☀️⛅☁️ |
+| cloud_low | ☀️⛅☁️ |
+| cloud_mid | ☀️⛅☁️ |
+| cloud_high | ☀️⛅☁️ |
+| cape | 🟢🟡🔴 |
+| visibility | good/fog |
+
+`has_friendly_format` is then derived: `bool(friendly_label)` — no separate flag needed.
+
+**Widget structure:**
+
+```python
+for category in CATEGORY_ORDER:
+    metrics = get_metrics_by_category(category)
+    with ui.expansion(CATEGORY_LABELS[category], icon="cloud").classes("q-mb-sm"):
+        for metric_def in metrics:
+            with ui.row().classes("items-center q-mb-xs"):
+                cb = ui.checkbox(f"{metric_def.label_de} ({metric_def.col_label})", ...)
+                agg_select = ui.select(...)
+                friendly_toggle = None
+                if metric_def.friendly_label:
+                    friendly_toggle = ui.checkbox(metric_def.friendly_label, ...)
+                        .tooltip(...)
+```
+
+**Save handler** (unchanged logic):
+
+```python
+friendly_toggle = widgets.get("friendly_toggle")
+use_friendly = friendly_toggle.value if friendly_toggle else True
+
+metric_configs.append(MetricConfig(
+    metric_id=metric_id,
+    enabled=cb.value,
+    aggregations=aggregations,
+    use_friendly_format=use_friendly,
+))
+```
 
 ## Expected Behavior
 
-### Given: col_label changes applied
-**When:** User opens /trips and views weather table headers
-**Then:**
-- wind_chill column shows "Feels" (not "Felt")
-- thunder column shows "Thunder" (not "Thund")
-- snowfall_limit column shows "SnowL" (not "Snow")
-- cloud_total column shows "Cloud" (not "Clouds")
-- cloud_low column shows "CldLow" (not "CLow")
-- cloud_mid column shows "CldMid" (not "CMid")
-- cloud_high column shows "CldHi" (not "CHi")
-- dewpoint column shows "Cond°" (not "Dew")
-- visibility column shows "Visib" (not "Vis")
-- rain_probability column shows "Rain%" (not "Pop")
-- cape column shows "Thndr%" (not "CAPE")
-- freezing_level column shows "0°Line" (not "0Gr")
-- snow_depth column shows "SnowH" (not "SnDp")
+### v1.0 Behavior (ALREADY TESTED — 46 tests)
 
-### Given: Cloud formatting with value 25%
-**When:** _fmt_val("cloud", 25, html=False) called
-**Then:** Returns "🌤️" (emoji only)
+See Changelog v1.0.
 
-**When:** _fmt_val("cloud", 25, html=True) called
-**Then:** Returns "🌤️ 25" (emoji + percentage)
+### v1.1: Friendly format toggle
 
-### Given: Cloud formatting edge cases
-**When:** Value is 10% (boundary)
-**Then:** Returns "☀️" (0-10% range)
+#### Given: Cloud with use_friendly_format=True (default)
+**When:** _fmt_val("cloud", 50, html=False) called
+**Then:** Returns "⛅" (emoji — unchanged from v1.0)
 
-**When:** Value is 11% (boundary)
-**Then:** Returns "🌤️" (11-30% range)
+#### Given: Cloud with use_friendly_format=False
+**When:** _fmt_val("cloud", 50, html=False) called
+**Then:** Returns "50" (raw percentage)
 
-**When:** Value is 70% (boundary)
-**Then:** Returns "⛅" (31-70% range)
+**When:** _fmt_val("cloud", 50, html=True) called
+**Then:** Returns "50" (raw percentage, no emoji)
 
-**When:** Value is 91% (boundary)
-**Then:** Returns "☁️" (91-100% range)
-
-### Given: CAPE formatting with value 800 J/kg
+#### Given: CAPE with use_friendly_format=True (default)
 **When:** _fmt_val("cape", 800, html=False) called
-**Then:** Returns "🟡" (emoji only)
+**Then:** Returns "🟡" (emoji — unchanged from v1.0)
 
-**When:** _fmt_val("cape", 800, html=True) called
-**Then:** Returns "🟡 800" (emoji + value)
+#### Given: CAPE with use_friendly_format=False
+**When:** _fmt_val("cape", 800, html=False) called
+**Then:** Returns "800" (raw J/kg value)
 
-### Given: CAPE formatting edge cases
-**When:** Value is 300 (boundary)
-**Then:** Returns "🟡" (301-1000 range)
+**When:** _fmt_val("cape", 1200, html=True) called
+**Then:** Returns highlighted "1200" (original v1.0-pre HTML highlighting for >=1000)
 
-**When:** Value is 2500 (extreme)
-**Then:** Returns "🔴" (>2000 range)
-
-### Given: Visibility formatting with value 5000m
+#### Given: Visibility with use_friendly_format=True (default)
 **When:** _fmt_val("visibility", 5000, html=False) called
-**Then:** Returns "fair"
+**Then:** Returns "fair" (level text — unchanged from v1.0)
 
-**When:** _fmt_val("visibility", 5000, html=True) called
-**Then:** Returns "fair" (same for HTML)
+#### Given: Visibility with use_friendly_format=False
+**When:** _fmt_val("visibility", 5000, html=False) called
+**Then:** Returns "5.0k" (original km suffix format from before v1.0)
 
-### Given: Visibility formatting edge cases
-**When:** Value is 12000m
-**Then:** Returns "good" (>10km)
+**When:** _fmt_val("visibility", 300, html=True) called
+**Then:** Returns highlighted "300" (original HTML highlighting for <500m)
 
-**When:** Value is 500m
-**Then:** Returns "⚠️ fog" (<1km)
+#### Given: Metric without has_friendly_format (e.g. temperature)
+**When:** MetricConfig has use_friendly_format=False
+**Then:** No effect — temperature always shows raw value (no friendly format exists)
 
-**When:** Value is None
-**Then:** Returns "–" (unchanged null handling)
+#### Given: Old trip config without use_friendly_format field
+**When:** Trip loaded from JSON
+**Then:** use_friendly_format defaults to True — existing behavior preserved
 
-### Given: Config UI opened for trip
-**When:** User views weather config dialog
-**Then:**
-- Checkbox for cloud_total shows "Bewölkung (Cloud)"
-- Checkbox for cape shows "Gewitterenergie (CAPE) (Thndr%)"
-- Checkbox for rain_probability shows "Regenwahrscheinlichkeit (Rain%)"
-- All other metrics show "{label_de} ({col_label})" format
+#### Given: Config UI for cloud_total
+**When:** User opens "Atmosphäre" expansion
+**Then:** Row shows: [x] Bewölkung (Cloud) | [Avg] | [x] ☀️⛅☁️
+
+#### Given: Config UI for cape
+**When:** User opens "Niederschlag" expansion
+**Then:** Row shows: [x] Gewitterenergie (Thndr%) | [Max] | [x] 🟢🟡🔴
+
+#### Given: Config UI for visibility
+**When:** User opens "Atmosphäre" expansion
+**Then:** Row shows: [x] Sichtweite (Visib) | [Min] | [x] good/fog
+
+#### Given: Config UI for temperature
+**When:** User opens "Temperatur" expansion
+**Then:** Row shows: [x] Temperatur (Temp) | [Min][Max][Avg] | (no toggle — no friendly_label)
+
+#### Given: User unchecks friendly toggle for cloud and saves
+**When:** Test report sent
+**Then:** Cloud column shows raw "75" instead of "🌥️"
 
 ## Files to Change
 
-| File | LoC Changed | Type |
-|------|-------------|------|
-| src/app/metric_catalog.py | 13 | String updates (col_label values) |
-| src/formatters/trip_report.py | ~35 | New branches in _fmt_val() |
-| src/web/pages/weather_config.py | 1 | String interpolation |
-| tests/fixtures/renderer/expected_email.html | TBD | Update fixture if col_labels present |
+| # | File | Change | LoC |
+|---|------|--------|-----|
+| 1 | `src/app/metric_catalog.py` | Replace `has_friendly_format` with `friendly_label` field + set on 6 metrics | ~8 |
+| 2 | `src/app/models.py` | Add `use_friendly_format: bool = True` to MetricConfig | ~1 |
+| 3 | `src/app/loader.py` | Serialize + deserialize `use_friendly_format` | ~3 |
+| 4 | `src/formatters/trip_report.py` | `_build_friendly_keys()` + conditional in `_fmt_val()` for 3 groups | ~30 |
+| 5 | `src/web/pages/weather_config.py` | Collapsible table layout + metric-specific toggle labels + save handler | ~40 |
+| 6 | `tests/unit/test_weather_metrics_ux.py` | Tests for raw vs friendly toggle | ~40 |
 
-**Total:** ~50 LoC
+**Total v1.1:** ~97 LoC, 6 files
 
 ## Risks
 
 | Risk | Impact | Mitigation |
 |------|--------|-----------|
-| col_label changes break existing reports | LOW | col_label only affects table headers, not data |
-| Emoji rendering in email clients | MEDIUM | Test in Gmail, Outlook, Apple Mail |
-| Visibility text levels confuse users expecting numbers | MEDIUM | User feedback iteration |
-| CAPE/Cloud emoji not visible in plain-text | LOW | Plain-text shows emoji-only (intentional design) |
-| Test fixtures reference old col_labels | LOW | Update expected_email.html fixture |
+| Existing reports change behavior | NONE | Default True preserves current emoji behavior |
+| Old configs missing field | NONE | `.get("use_friendly_format", True)` defaults safely |
+| _fmt_val() signature change | NONE | No signature change — uses instance variable `_friendly_keys` |
+| Raw CAPE/Visibility format unclear | LOW | Restores original pre-v1.0 formatting (km suffix, HTML highlights) |
+| SMS formatter affected | NONE | SMS uses compact_label, not `_fmt_val()` |
 
 ## Related Specs
 
 - `docs/specs/modules/weather_config.md` (v2.2) - MetricDefinition structure
 - `docs/specs/modules/trip_report_formatter_v2.md` - _fmt_val() method spec
+- `docs/specs/modules/openmeteo_additional_metrics.md` - Original CAPE/Visibility formatting
 
 ## Known Limitations
 
-- SMS formatter uses compact_label (not affected by col_label changes)
-- Level-based formatting is hardcoded (no dynamic threshold configuration)
+- Toggle is per-metric, not per-report-type (morning/evening share same setting)
+- Only 6 metrics support friendly format (cloud x4, cape, visibility)
+- SMS formatter always uses compact format (unaffected by toggle)
 - Emoji rendering depends on email client font support
 
 ## Changelog
 
-- 2026-02-13: Initial spec created
+- 2026-02-13: v1.0 - col_label updates, emoji/level formatting, config UI col_label (IMPLEMENTED)
+- 2026-02-13: v1.1 - Per-metric friendly format toggle: MetricConfig.use_friendly_format, MetricDefinition.has_friendly_format, Config UI toggle, formatter respects setting

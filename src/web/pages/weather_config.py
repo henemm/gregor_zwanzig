@@ -111,14 +111,23 @@ def show_weather_config_dialog(trip: Trip, user_id: str = "default") -> None:
         ui.label(f"Trip: {trip.name}").classes("text-caption")
         ui.label(f"Provider: {provider_names}").classes("text-caption")
 
-        # Render metrics grouped by category
+        # Table header
+        with ui.row().classes("items-center text-caption text-grey q-mb-xs"):
+            ui.label("Metrik").style("width: 260px; font-weight: 600")
+            ui.label("Wert").style("width: 160px; font-weight: 600")
+            ui.label("Label").style("width: 100px; font-weight: 600")
+
+        # Render metrics grouped by category as table rows
         for category in CATEGORY_ORDER:
             metrics = get_metrics_by_category(category)
             if not metrics:
                 continue
 
+            # Category separator row
             ui.separator()
-            ui.label(CATEGORY_LABELS[category]).classes("text-subtitle1 q-mt-md")
+            ui.label(CATEGORY_LABELS[category]).classes(
+                "text-subtitle2 text-grey-8 q-mt-xs q-mb-xs"
+            )
 
             for metric_def in metrics:
                 # Check provider availability
@@ -141,29 +150,45 @@ def show_weather_config_dialog(trip: Trip, user_id: str = "default") -> None:
                 allowed_options = [AGG_LABELS[a] for a in metric_def.default_aggregations
                                    if a in AGG_LABELS]
 
-                with ui.row().classes("items-center q-mb-sm"):
-                    # Checkbox
+                with ui.row().classes("items-center q-mb-xs"):
+                    # Column 1: Metric checkbox
                     cb = ui.checkbox(
                         f"{metric_def.label_de} ({metric_def.col_label})",
                         value=initial_enabled,
-                    )
+                    ).style("width: 260px")
                     if not is_available:
                         cb.disable()
                         cb.tooltip("Nicht verfügbar für diese Route")
 
-                    # Aggregation dropdown
+                    # Column 2: Aggregation dropdown
                     agg_select = ui.select(
                         options=allowed_options,
                         value=initial_aggs,
                         multiple=True,
                         label="Agg",
-                    ).style("min-width: 150px")
+                    ).style("width: 160px")
                     if not is_available:
                         agg_select.disable()
+
+                    # Column 3: Friendly format toggle
+                    friendly_toggle = None
+                    if metric_def.friendly_label:
+                        initial_friendly = True
+                        if mc and hasattr(mc, 'use_friendly_format'):
+                            initial_friendly = mc.use_friendly_format
+                        friendly_toggle = ui.checkbox(
+                            metric_def.friendly_label,
+                            value=initial_friendly,
+                        ).style("width: 100px").tooltip(
+                            "Benutzerfreundliche Darstellung (Emoji/Stufen)"
+                        )
+                        if not is_available:
+                            friendly_toggle.disable()
 
                 metric_widgets[metric_def.id] = {
                     "checkbox": cb,
                     "agg_select": agg_select,
+                    "friendly_toggle": friendly_toggle,
                     "available": is_available,
                 }
 
@@ -211,10 +236,14 @@ def make_save_handler(trip_id: str, metric_widgets: dict, dialog, user_id: str):
             label_to_key = {v: k for k, v in AGG_LABELS.items()}
             aggregations = [label_to_key[a] for a in agg_values if a in label_to_key]
 
+            friendly_toggle = widgets.get("friendly_toggle")
+            use_friendly = friendly_toggle.value if friendly_toggle else True
+
             metric_configs.append(MetricConfig(
                 metric_id=metric_id,
                 enabled=cb.value,
                 aggregations=aggregations,
+                use_friendly_format=use_friendly,
             ))
             if cb.value:
                 enabled_count += 1
