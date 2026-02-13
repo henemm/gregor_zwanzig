@@ -35,6 +35,7 @@ Features are added via `/feature` or `/user-story` commands.
 | MOSMIX Adapter | open | MEDIUM | Provider | Provider Layer | Large | WEATHER-02 |
 | Data Normalization | open | HIGH | Provider | Normalizer | Medium | WEATHER-03 |
 | Provider Error Handling | in_progress | MEDIUM | Provider | Provider Layer | Medium | WEATHER-04 |
+| Model-Metric-Fallback | backlog | MEDIUM | Provider | Provider Layer, Cache | Medium | WEATHER-05 |
 | Gewitter Risk Logic | open | HIGH | Risk Engine | Risk Engine | Medium | RISK-01 |
 | Starkregen Risk | open | MEDIUM | Risk Engine | Risk Engine | Simple | RISK-02 |
 | Wind/Hitze Risk | open | LOW | Risk Engine | Risk Engine | Simple | RISK-03 |

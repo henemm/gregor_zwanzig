@@ -386,6 +386,13 @@ CATEGORY_LABELS = {
 ```python
 CATEGORY_ORDER = ["temperature", "wind", "precipitation", "atmosphere", "winter"]
 
+# Metric order within categories (v2.1):
+# temperature:    temperature, wind_chill, humidity, dewpoint
+# wind:           wind, gust, wind_direction
+# precipitation:  precipitation, rain_probability, thunder, cape, snowfall_limit, precip_type
+# atmosphere:     cloud_total, cloud_low, cloud_mid, cloud_high, visibility, uv_index, pressure
+# winter:         freezing_level, snow_depth, fresh_snow
+
 for category in CATEGORY_ORDER:
     ui.separator()
     ui.label(CATEGORY_LABELS[category]).classes("text-subtitle1 q-mt-md")

@@ -104,9 +104,8 @@ def show_weather_config_dialog(trip: Trip, user_id: str = "default") -> None:
     if trip_path.exists():
         trip = load_trip(trip_path)
 
-    # Detect available providers
+    # Detect available providers (used for metric availability check)
     available_providers = get_available_providers_for_trip(trip)
-    provider_names = ", ".join(sorted(p.capitalize() for p in available_providers))
 
     # Load current config or build default
     if trip.display_config:
@@ -123,9 +122,8 @@ def show_weather_config_dialog(trip: Trip, user_id: str = "default") -> None:
     ):
         ui.label("Wetter-Metriken konfigurieren").classes("text-h6")
 
-        # Trip + Provider info header
+        # Trip info header
         ui.label(f"Trip: {trip.name}").classes("text-caption")
-        ui.label(f"Provider: {provider_names}").classes("text-caption")
 
         # Table header
         with ui.row().classes("items-center text-caption text-grey q-mb-xs").style("flex-wrap: nowrap"):
