@@ -52,6 +52,8 @@ Epics are large business initiatives that contain multiple user stories.
   - Automatic provider selection based on location
   - Fallback chains
   - Decision matrix implementation
+  - **Model-Metric-Fallback (WEATHER-05):** Verfuegbarkeits-Probe + Fallback fuer fehlende Metriken
+    - Feature-Spec: `features/model-metric-fallback.md`
 
 **Target Completion:** Q2 2026
 
