@@ -46,6 +46,7 @@ class MetricDefinition:
 # --- Metric Registry ---
 
 _METRICS: list[MetricDefinition] = [
+    # === TEMPERATURE ===
     MetricDefinition(
         id="temperature", label_de="Temperatur", unit="°C",
         dp_field="t2m_c", category="temperature",
@@ -65,6 +66,27 @@ _METRICS: list[MetricDefinition] = [
         default_change_threshold=5.0,
     ),
     MetricDefinition(
+        id="humidity", label_de="Luftfeuchtigkeit", unit="%",
+        dp_field="humidity_pct", category="temperature",
+        default_aggregations=("avg",),
+        compact_label="H", col_key="humidity", col_label="Humid",
+        providers={"openmeteo": True, "geosphere": True},
+        default_enabled=False,
+        summary_fields={"avg": "humidity_avg_pct"},
+        default_change_threshold=20,
+    ),
+    MetricDefinition(
+        id="dewpoint", label_de="Taupunkt", unit="°C",
+        dp_field="dewpoint_c", category="temperature",
+        default_aggregations=("avg",),
+        compact_label="DP", col_key="dewpoint", col_label="Cond°",
+        providers={"openmeteo": True, "geosphere": True},
+        default_enabled=False,
+        summary_fields={"avg": "dewpoint_avg_c"},
+        default_change_threshold=5.0,
+    ),
+    # === WIND ===
+    MetricDefinition(
         id="wind", label_de="Wind", unit="km/h",
         dp_field="wind10m_kmh", category="wind",
         default_aggregations=("max",),
@@ -83,6 +105,17 @@ _METRICS: list[MetricDefinition] = [
         default_change_threshold=20.0,
     ),
     MetricDefinition(
+        id="wind_direction", label_de="Windrichtung", unit="°",
+        dp_field="wind_direction_deg", category="wind",
+        default_aggregations=("avg",),
+        compact_label="WD", col_key="wind_dir", col_label="WDir",
+        providers={"openmeteo": True, "geosphere": True},
+        default_enabled=False,
+        summary_fields={"avg": "wind_direction_avg_deg"},
+        # Circular mean: no numeric delta comparison for alerts
+    ),
+    # === PRECIPITATION ===
+    MetricDefinition(
         id="precipitation", label_de="Niederschlag", unit="mm",
         dp_field="precip_1h_mm", category="precipitation",
         default_aggregations=("sum",),
@@ -90,6 +123,16 @@ _METRICS: list[MetricDefinition] = [
         providers={"openmeteo": True, "geosphere": True},
         summary_fields={"sum": "precip_sum_mm"},
         default_change_threshold=10.0,
+    ),
+    MetricDefinition(
+        id="rain_probability", label_de="Regenwahrscheinlichkeit", unit="%",
+        dp_field="pop_pct", category="precipitation",
+        default_aggregations=("max",),
+        compact_label="P%", col_key="pop", col_label="Rain%",
+        providers={"openmeteo": True, "geosphere": False},
+        default_enabled=False,
+        summary_fields={"max": "pop_max_pct"},
+        default_change_threshold=20,
     ),
     MetricDefinition(
         id="thunder", label_de="Gewitter", unit="",
@@ -102,6 +145,17 @@ _METRICS: list[MetricDefinition] = [
         friendly_label="⚡",
     ),
     MetricDefinition(
+        id="cape", label_de="Gewitterenergie (CAPE)", unit="J/kg",
+        dp_field="cape_jkg", category="precipitation",
+        default_aggregations=("max",),
+        compact_label="CE", col_key="cape", col_label="Thndr%",
+        providers={"openmeteo": True, "geosphere": False},
+        default_enabled=False,
+        friendly_label="\U0001f7e2\U0001f7e1\U0001f534",
+        summary_fields={"max": "cape_max_jkg"},
+        default_change_threshold=500.0,
+    ),
+    MetricDefinition(
         id="snowfall_limit", label_de="Schneefallgrenze", unit="m",
         dp_field="snowfall_limit_m", category="precipitation",
         default_aggregations=("min", "max"),
@@ -109,6 +163,17 @@ _METRICS: list[MetricDefinition] = [
         providers={"openmeteo": False, "geosphere": True},
         # No summary_fields: not on SegmentWeatherSummary
     ),
+    MetricDefinition(
+        id="precip_type", label_de="Niederschlagsart", unit="",
+        dp_field="precip_type", category="precipitation",
+        default_aggregations=("max",),
+        compact_label="PT", col_key="precip_type", col_label="PType",
+        providers={"openmeteo": False, "geosphere": True},
+        default_enabled=False,
+        summary_fields={"max": "precip_type_dominant"},
+        # Enum type: no numeric delta comparison for alerts
+    ),
+    # === ATMOSPHERE ===
     MetricDefinition(
         id="cloud_total", label_de="Bewölkung", unit="%",
         dp_field="cloud_total_pct", category="atmosphere",
@@ -150,36 +215,6 @@ _METRICS: list[MetricDefinition] = [
         # No summary_fields: not on SegmentWeatherSummary
     ),
     MetricDefinition(
-        id="humidity", label_de="Luftfeuchtigkeit", unit="%",
-        dp_field="humidity_pct", category="atmosphere",
-        default_aggregations=("avg",),
-        compact_label="H", col_key="humidity", col_label="Humid",
-        providers={"openmeteo": True, "geosphere": True},
-        default_enabled=False,
-        summary_fields={"avg": "humidity_avg_pct"},
-        default_change_threshold=20,
-    ),
-    MetricDefinition(
-        id="dewpoint", label_de="Taupunkt", unit="°C",
-        dp_field="dewpoint_c", category="atmosphere",
-        default_aggregations=("avg",),
-        compact_label="DP", col_key="dewpoint", col_label="Cond°",
-        providers={"openmeteo": True, "geosphere": True},
-        default_enabled=False,
-        summary_fields={"avg": "dewpoint_avg_c"},
-        default_change_threshold=5.0,
-    ),
-    MetricDefinition(
-        id="pressure", label_de="Luftdruck", unit="hPa",
-        dp_field="pressure_msl_hpa", category="atmosphere",
-        default_aggregations=("avg",),
-        compact_label="P", col_key="pressure", col_label="hPa",
-        providers={"openmeteo": True, "geosphere": True},
-        default_enabled=False,
-        summary_fields={"avg": "pressure_avg_hpa"},
-        default_change_threshold=10.0,
-    ),
-    MetricDefinition(
         id="visibility", label_de="Sichtweite", unit="m",
         dp_field="visibility_m", category="atmosphere",
         default_aggregations=("min",),
@@ -191,26 +226,26 @@ _METRICS: list[MetricDefinition] = [
         default_change_threshold=1000,
     ),
     MetricDefinition(
-        id="rain_probability", label_de="Regenwahrscheinlichkeit", unit="%",
-        dp_field="pop_pct", category="precipitation",
+        id="uv_index", label_de="UV-Index", unit="",
+        dp_field="uv_index", category="atmosphere",
         default_aggregations=("max",),
-        compact_label="P%", col_key="pop", col_label="Rain%",
+        compact_label="UV", col_key="uv", col_label="UV",
         providers={"openmeteo": True, "geosphere": False},
         default_enabled=False,
-        summary_fields={"max": "pop_max_pct"},
-        default_change_threshold=20,
+        summary_fields={"max": "uv_index_max"},
+        default_change_threshold=3.0,
     ),
     MetricDefinition(
-        id="cape", label_de="Gewitterenergie (CAPE)", unit="J/kg",
-        dp_field="cape_jkg", category="precipitation",
-        default_aggregations=("max",),
-        compact_label="CE", col_key="cape", col_label="Thndr%",
-        providers={"openmeteo": True, "geosphere": False},
+        id="pressure", label_de="Luftdruck", unit="hPa",
+        dp_field="pressure_msl_hpa", category="atmosphere",
+        default_aggregations=("avg",),
+        compact_label="P", col_key="pressure", col_label="hPa",
+        providers={"openmeteo": True, "geosphere": True},
         default_enabled=False,
-        friendly_label="\U0001f7e2\U0001f7e1\U0001f534",
-        summary_fields={"max": "cape_max_jkg"},
-        default_change_threshold=500.0,
+        summary_fields={"avg": "pressure_avg_hpa"},
+        default_change_threshold=10.0,
     ),
+    # === WINTER ===
     MetricDefinition(
         id="freezing_level", label_de="Nullgradgrenze", unit="m",
         dp_field="freezing_level_m", category="winter",
@@ -233,16 +268,6 @@ _METRICS: list[MetricDefinition] = [
         default_change_threshold=10.0,
     ),
     MetricDefinition(
-        id="uv_index", label_de="UV-Index", unit="",
-        dp_field="uv_index", category="atmosphere",
-        default_aggregations=("max",),
-        compact_label="UV", col_key="uv", col_label="UV",
-        providers={"openmeteo": True, "geosphere": False},
-        default_enabled=False,
-        summary_fields={"max": "uv_index_max"},
-        default_change_threshold=3.0,
-    ),
-    MetricDefinition(
         id="fresh_snow", label_de="Neuschnee", unit="cm",
         dp_field="snow_new_24h_cm", category="winter",
         default_aggregations=("sum",),
@@ -251,26 +276,6 @@ _METRICS: list[MetricDefinition] = [
         default_enabled=False,
         summary_fields={"sum": "snow_new_sum_cm"},
         default_change_threshold=5.0,
-    ),
-    MetricDefinition(
-        id="wind_direction", label_de="Windrichtung", unit="°",
-        dp_field="wind_direction_deg", category="wind",
-        default_aggregations=("avg",),
-        compact_label="WD", col_key="wind_dir", col_label="WDir",
-        providers={"openmeteo": True, "geosphere": True},
-        default_enabled=False,
-        summary_fields={"avg": "wind_direction_avg_deg"},
-        # Circular mean: no numeric delta comparison for alerts
-    ),
-    MetricDefinition(
-        id="precip_type", label_de="Niederschlagsart", unit="",
-        dp_field="precip_type", category="precipitation",
-        default_aggregations=("max",),
-        compact_label="PT", col_key="precip_type", col_label="PType",
-        providers={"openmeteo": False, "geosphere": True},
-        default_enabled=False,
-        summary_fields={"max": "precip_type_dominant"},
-        # Enum type: no numeric delta comparison for alerts
     ),
 ]
 
