@@ -138,23 +138,42 @@ def _extract_night_rows(self, night_weather, arrival_hour, interval, dc):
         blocks.setdefault(block_hour, []).append(dp)
 
     for block_hour, dps in sorted(blocks.items()):
-        # Aggregiere: max(gust), max(wind), min(temp), sum(precip), ...
         row = self._aggregate_block(dps, dc)
         rows.append(row)
 ```
 
-Aggregationsregeln pro Metrik im 2h-Block:
+#### Aggregationsregeln
 
-| Metrik | Aggregation |
-|--------|-------------|
-| Temperatur | min |
-| Gefuehlte Temp | min |
-| Wind | max |
-| Boeen | max |
-| Niederschlag | sum |
-| Gewitter | max (Enum) |
-| Bewoelkung | avg |
-| Sichtweite | min |
+Einfache Konvention — **kein** extra Feld im MetricCatalog noetig:
+
+Jede Metrik nutzt ihre `default_aggregations` aus dem Catalog.
+Nur bei Metriken mit **mehreren** Aggregationen (min, max, avg) gilt:
+nachts `min` statt tags `max` (betrifft nur Temperatur und Nullgradgrenze).
+
+Konkret im Code:
+
+```python
+agg = metric_def.default_aggregations[0]  # z.B. "min" oder "max" oder "sum"
+# Sonderfall: Metriken mit min+max → nachts min
+if len(metric_def.default_aggregations) > 1 and "min" in metric_def.default_aggregations:
+    agg = "min"
+```
+
+| Metrik | default_agg | Nacht-Block | Regel |
+|--------|-------------|-------------|-------|
+| Temperatur | min, max, avg | **min** | multi-agg → min |
+| Nullgradgrenze | min, max | **min** | multi-agg → min |
+| Gefuehlte Temp | min | min | einzige agg |
+| Wind | max | max | einzige agg |
+| Boeen | max | max | einzige agg |
+| Niederschlag | sum | sum | einzige agg |
+| Gewitter | max | max | einzige agg |
+| Bewoelkung | avg | avg | einzige agg |
+| Sichtweite | min | min | einzige agg |
+
+**Kein extra Eintrag in Wetter-Metriken Konfig.**
+Transparenz-Hinweis in der Nacht-Tabelle:
+`"* Temperatur/Nullgradgrenze: Minimum im 2h-Block"`
 
 ## Affected Files
 
