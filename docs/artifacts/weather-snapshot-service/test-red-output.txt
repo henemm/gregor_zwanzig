@@ -1,0 +1,266 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.2, pytest-8.4.1, pluggy-1.6.0
+rootdir: /opt/gregor_zwanziger
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 16 items
+
+tests/integration/test_weather_snapshot.py FFFFFFFFFFFFFFFF              [100%]
+
+=================================== FAILURES ===================================
+_____________ TestSaveAndLoadRoundtrip.test_roundtrip_two_segments _____________
+
+self = <test_weather_snapshot.TestSaveAndLoadRoundtrip object at 0x7fb6441fe790>
+tmp_path = PosixPath('/tmp/pytest-of-haadmin/pytest-70/test_roundtrip_two_segments0')
+
+    def test_roundtrip_two_segments(self, tmp_path: Path) -> None:
+        """
+        GIVEN: Two SegmentWeatherData with filled aggregated summaries
+        WHEN: save() then load()
+        THEN: Loaded data matches (segment_id, times, aggregated values)
+        """
+>       from services.weather_snapshot import WeatherSnapshotService
+E       ModuleNotFoundError: No module named 'services.weather_snapshot'
+
+tests/integration/test_weather_snapshot.py:95: ModuleNotFoundError
+_____ TestSaveAndLoadRoundtrip.test_roundtrip_preserves_all_numeric_fields _____
+
+self = <test_weather_snapshot.TestSaveAndLoadRoundtrip object at 0x7fb6433cf910>
+tmp_path = PosixPath('/tmp/pytest-of-haadmin/pytest-70/test_roundtrip_preserves_all_n0')
+
+    def test_roundtrip_preserves_all_numeric_fields(self, tmp_path: Path) -> None:
+        """
+        GIVEN: SegmentWeatherSummary with ALL numeric fields set
+        WHEN: save() then load()
+        THEN: Every field value is preserved
+        """
+>       from services.weather_snapshot import WeatherSnapshotService
+E       ModuleNotFoundError: No module named 'services.weather_snapshot'
+
+tests/integration/test_weather_snapshot.py:139: ModuleNotFoundError
+______________ TestLoadMissingFile.test_missing_file_returns_none ______________
+
+self = <test_weather_snapshot.TestLoadMissingFile object at 0x7fb6433b2b50>
+tmp_path = PosixPath('/tmp/pytest-of-haadmin/pytest-70/test_missing_file_returns_none0')
+
+    def test_missing_file_returns_none(self, tmp_path: Path) -> None:
+        """
+        GIVEN: No snapshot file for trip_id
+        WHEN: load(trip_id)
+        THEN: Returns None, no exception
+        """
+>       from services.weather_snapshot import WeatherSnapshotService
+E       ModuleNotFoundError: No module named 'services.weather_snapshot'
+
+tests/integration/test_weather_snapshot.py:209: ModuleNotFoundError
+______________ TestLoadCorruptFile.test_invalid_json_returns_none ______________
+
+self = <test_weather_snapshot.TestLoadCorruptFile object at 0x7fb6433b0bd0>
+tmp_path = PosixPath('/tmp/pytest-of-haadmin/pytest-70/test_invalid_json_returns_none0')
+
+    def test_invalid_json_returns_none(self, tmp_path: Path) -> None:
+        """
+        GIVEN: Snapshot file with invalid JSON
+        WHEN: load(trip_id)
+        THEN: Returns None, no exception
+        """
+>       from services.weather_snapshot import WeatherSnapshotService
+E       ModuleNotFoundError: No module named 'services.weather_snapshot'
+
+tests/integration/test_weather_snapshot.py:231: ModuleNotFoundError
+__________ TestLoadCorruptFile.test_missing_segments_key_returns_none __________
+
+self = <test_weather_snapshot.TestLoadCorruptFile object at 0x7fb6433b0750>
+tmp_path = PosixPath('/tmp/pytest-of-haadmin/pytest-70/test_missing_segments_key_retu0')
+
+    def test_missing_segments_key_returns_none(self, tmp_path: Path) -> None:
+        """
+        GIVEN: Snapshot file with valid JSON but missing 'segments' key
+        WHEN: load(trip_id)
+        THEN: Returns None
+        """
+>       from services.weather_snapshot import WeatherSnapshotService
+E       ModuleNotFoundError: No module named 'services.weather_snapshot'
+
+tests/integration/test_weather_snapshot.py:248: ModuleNotFoundError
+___________ TestSaveFailure.test_save_to_readonly_dir_does_not_raise ___________
+
+self = <test_weather_snapshot.TestSaveFailure object at 0x7fb6433b0e50>
+tmp_path = PosixPath('/tmp/pytest-of-haadmin/pytest-70/test_save_to_readonly_dir_does0')
+
+    def test_save_to_readonly_dir_does_not_raise(self, tmp_path: Path) -> None:
+        """
+        GIVEN: Snapshots directory is not writable
+        WHEN: save()
+        THEN: No exception raised (graceful failure)
+        """
+>       from services.weather_snapshot import WeatherSnapshotService
+E       ModuleNotFoundError: No module named 'services.weather_snapshot'
+
+tests/integration/test_weather_snapshot.py:273: ModuleNotFoundError
+______________ TestEnumSerialization.test_thunder_level_roundtrip ______________
+
+self = <test_weather_snapshot.TestEnumSerialization object at 0x7fb6433b1dd0>
+tmp_path = PosixPath('/tmp/pytest-of-haadmin/pytest-70/test_thunder_level_roundtrip0')
+
+    def test_thunder_level_roundtrip(self, tmp_path: Path) -> None:
+        """
+        GIVEN: SegmentWeatherSummary with thunder_level_max=ThunderLevel.HIGH
+        WHEN: save() then load()
+        THEN: Loaded value is ThunderLevel.HIGH (enum, not string)
+        """
+>       from services.weather_snapshot import WeatherSnapshotService
+E       ModuleNotFoundError: No module named 'services.weather_snapshot'
+
+tests/integration/test_weather_snapshot.py:304: ModuleNotFoundError
+______ TestEnumSerialization.test_thunder_level_stored_as_string_in_json _______
+
+self = <test_weather_snapshot.TestEnumSerialization object at 0x7fb6433b2290>
+tmp_path = PosixPath('/tmp/pytest-of-haadmin/pytest-70/test_thunder_level_stored_as_s0')
+
+    def test_thunder_level_stored_as_string_in_json(self, tmp_path: Path) -> None:
+        """
+        GIVEN: Saved snapshot with ThunderLevel enum
+        WHEN: Read raw JSON
+        THEN: Value is string "MED", not enum
+        """
+>       from services.weather_snapshot import WeatherSnapshotService
+E       ModuleNotFoundError: No module named 'services.weather_snapshot'
+
+tests/integration/test_weather_snapshot.py:326: ModuleNotFoundError
+_______________ TestEnumSerialization.test_precip_type_roundtrip _______________
+
+self = <test_weather_snapshot.TestEnumSerialization object at 0x7fb6433b28d0>
+tmp_path = PosixPath('/tmp/pytest-of-haadmin/pytest-70/test_precip_type_roundtrip0')
+
+    def test_precip_type_roundtrip(self, tmp_path: Path) -> None:
+        """
+        GIVEN: SegmentWeatherSummary with precip_type_dominant=PrecipType.SNOW
+        WHEN: save() then load()
+        THEN: Loaded value is PrecipType.SNOW (enum, not string)
+        """
+>       from services.weather_snapshot import WeatherSnapshotService
+E       ModuleNotFoundError: No module named 'services.weather_snapshot'
+
+tests/integration/test_weather_snapshot.py:346: ModuleNotFoundError
+___________ TestNoneFieldHandling.test_none_fields_omitted_from_json ___________
+
+self = <test_weather_snapshot.TestNoneFieldHandling object at 0x7fb6433b2e50>
+tmp_path = PosixPath('/tmp/pytest-of-haadmin/pytest-70/test_none_fields_omitted_from_0')
+
+    def test_none_fields_omitted_from_json(self, tmp_path: Path) -> None:
+        """
+        GIVEN: SegmentWeatherSummary with visibility_min_m=None
+        WHEN: save()
+        THEN: JSON does NOT contain "visibility_min_m" key
+        """
+>       from services.weather_snapshot import WeatherSnapshotService
+E       ModuleNotFoundError: No module named 'services.weather_snapshot'
+
+tests/integration/test_weather_snapshot.py:376: ModuleNotFoundError
+___________ TestNoneFieldHandling.test_none_fields_restored_as_none ____________
+
+self = <test_weather_snapshot.TestNoneFieldHandling object at 0x7fb6433b3450>
+tmp_path = PosixPath('/tmp/pytest-of-haadmin/pytest-70/test_none_fields_restored_as_n0')
+
+    def test_none_fields_restored_as_none(self, tmp_path: Path) -> None:
+        """
+        GIVEN: Snapshot JSON without "visibility_min_m" key
+        WHEN: load()
+        THEN: Loaded summary has visibility_min_m=None
+        """
+>       from services.weather_snapshot import WeatherSnapshotService
+E       ModuleNotFoundError: No module named 'services.weather_snapshot'
+
+tests/integration/test_weather_snapshot.py:397: ModuleNotFoundError
+__________________ TestMultiUserIsolation.test_user_isolation __________________
+
+self = <test_weather_snapshot.TestMultiUserIsolation object at 0x7fb6433c0090>
+tmp_path = PosixPath('/tmp/pytest-of-haadmin/pytest-70/test_user_isolation0')
+
+    def test_user_isolation(self, tmp_path: Path) -> None:
+        """
+        GIVEN: Snapshots for user "alice" and user "bob"
+        WHEN: alice loads trip_id
+        THEN: Gets alice's data, not bob's
+        """
+>       from services.weather_snapshot import WeatherSnapshotService
+E       ModuleNotFoundError: No module named 'services.weather_snapshot'
+
+tests/integration/test_weather_snapshot.py:423: ModuleNotFoundError
+_________ TestJsonStructure.test_snapshot_has_required_top_level_keys __________
+
+self = <test_weather_snapshot.TestJsonStructure object at 0x7fb6433c0c10>
+tmp_path = PosixPath('/tmp/pytest-of-haadmin/pytest-70/test_snapshot_has_required_top0')
+
+    def test_snapshot_has_required_top_level_keys(self, tmp_path: Path) -> None:
+        """
+        GIVEN: Saved snapshot
+        WHEN: Read raw JSON
+        THEN: Has trip_id, target_date, snapshot_at, provider, segments
+        """
+>       from services.weather_snapshot import WeatherSnapshotService
+E       ModuleNotFoundError: No module named 'services.weather_snapshot'
+
+tests/integration/test_weather_snapshot.py:466: ModuleNotFoundError
+_______________ TestJsonStructure.test_segment_has_required_keys _______________
+
+self = <test_weather_snapshot.TestJsonStructure object at 0x7fb6433c1490>
+tmp_path = PosixPath('/tmp/pytest-of-haadmin/pytest-70/test_segment_has_required_keys0')
+
+    def test_segment_has_required_keys(self, tmp_path: Path) -> None:
+        """
+        GIVEN: Saved snapshot
+        WHEN: Read raw JSON segment
+        THEN: Has segment_id, start_time, end_time, aggregated
+        """
+>       from services.weather_snapshot import WeatherSnapshotService
+E       ModuleNotFoundError: No module named 'services.weather_snapshot'
+
+tests/integration/test_weather_snapshot.py:488: ModuleNotFoundError
+_______________ TestLoaderHelper.test_get_snapshots_dir_default ________________
+
+self = <test_weather_snapshot.TestLoaderHelper object at 0x7fb6433c1e90>
+
+    def test_get_snapshots_dir_default(self) -> None:
+        """
+        GIVEN: Default user_id
+        WHEN: get_snapshots_dir()
+        THEN: Returns Path("data/users/default/weather_snapshots")
+        """
+>       from app.loader import get_snapshots_dir
+E       ImportError: cannot import name 'get_snapshots_dir' from 'app.loader' (/opt/gregor_zwanziger/src/app/loader.py)
+
+tests/integration/test_weather_snapshot.py:518: ImportError
+_____________ TestLoaderHelper.test_get_snapshots_dir_custom_user ______________
+
+self = <test_weather_snapshot.TestLoaderHelper object at 0x7fb6433c2290>
+
+    def test_get_snapshots_dir_custom_user(self) -> None:
+        """
+        GIVEN: Custom user_id "alice"
+        WHEN: get_snapshots_dir("alice")
+        THEN: Returns Path("data/users/alice/weather_snapshots")
+        """
+>       from app.loader import get_snapshots_dir
+E       ImportError: cannot import name 'get_snapshots_dir' from 'app.loader' (/opt/gregor_zwanziger/src/app/loader.py)
+
+tests/integration/test_weather_snapshot.py:529: ImportError
+=========================== short test summary info ============================
+FAILED tests/integration/test_weather_snapshot.py::TestSaveAndLoadRoundtrip::test_roundtrip_two_segments
+FAILED tests/integration/test_weather_snapshot.py::TestSaveAndLoadRoundtrip::test_roundtrip_preserves_all_numeric_fields
+FAILED tests/integration/test_weather_snapshot.py::TestLoadMissingFile::test_missing_file_returns_none
+FAILED tests/integration/test_weather_snapshot.py::TestLoadCorruptFile::test_invalid_json_returns_none
+FAILED tests/integration/test_weather_snapshot.py::TestLoadCorruptFile::test_missing_segments_key_returns_none
+FAILED tests/integration/test_weather_snapshot.py::TestSaveFailure::test_save_to_readonly_dir_does_not_raise
+FAILED tests/integration/test_weather_snapshot.py::TestEnumSerialization::test_thunder_level_roundtrip
+FAILED tests/integration/test_weather_snapshot.py::TestEnumSerialization::test_thunder_level_stored_as_string_in_json
+FAILED tests/integration/test_weather_snapshot.py::TestEnumSerialization::test_precip_type_roundtrip
+FAILED tests/integration/test_weather_snapshot.py::TestNoneFieldHandling::test_none_fields_omitted_from_json
+FAILED tests/integration/test_weather_snapshot.py::TestNoneFieldHandling::test_none_fields_restored_as_none
+FAILED tests/integration/test_weather_snapshot.py::TestMultiUserIsolation::test_user_isolation
+FAILED tests/integration/test_weather_snapshot.py::TestJsonStructure::test_snapshot_has_required_top_level_keys
+FAILED tests/integration/test_weather_snapshot.py::TestJsonStructure::test_segment_has_required_keys
+FAILED tests/integration/test_weather_snapshot.py::TestLoaderHelper::test_get_snapshots_dir_default
+FAILED tests/integration/test_weather_snapshot.py::TestLoaderHelper::test_get_snapshots_dir_custom_user
+============================== 16 failed in 0.24s ==============================

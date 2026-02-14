@@ -169,7 +169,9 @@ class TripAlertService:
 
     def _get_cached_weather(self, trip: "Trip") -> Optional[List[SegmentWeatherData]]:
         """
-        Get cached weather data for a trip from the weather cache.
+        Get cached weather data for a trip from the weather snapshot.
+
+        Loads the persistent snapshot saved after the last report email.
 
         Args:
             trip: Trip to get cached weather for
@@ -178,15 +180,9 @@ class TripAlertService:
             Cached weather data or None if not available
         """
         try:
-            from services.trip_report_scheduler import TripReportSchedulerService
+            from services.weather_snapshot import WeatherSnapshotService
 
-            scheduler = TripReportSchedulerService()
-            segments = scheduler._convert_trip_to_segments(trip)
-            if not segments:
-                return None
-
-            weather_data = scheduler._fetch_weather(segments, trip)
-            return weather_data if weather_data else None
+            return WeatherSnapshotService().load(trip.id)
         except Exception as e:
             logger.debug(f"No cached weather for trip {trip.id}: {e}")
             return None

@@ -292,6 +292,13 @@ class TripReportSchedulerService:
 
         logger.info(f"Trip report sent: {trip.name} ({report_type})")
 
+        # 8. Save weather snapshot for alert comparison
+        try:
+            from services.weather_snapshot import WeatherSnapshotService
+            WeatherSnapshotService().save(trip.id, segment_weather, target_date)
+        except Exception as e:
+            logger.warning(f"Failed to save weather snapshot for {trip.id}: {e}")
+
     def _convert_trip_to_segments(
         self,
         trip: "Trip",
