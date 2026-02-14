@@ -373,6 +373,11 @@ def get_trips_dir(user_id: str = "default") -> Path:
     return get_data_dir(user_id) / "trips"
 
 
+def get_snapshots_dir(user_id: str = "default") -> Path:
+    """Get the weather snapshots directory for a user."""
+    return get_data_dir(user_id) / "weather_snapshots"
+
+
 # =============================================================================
 # Location CRUD
 # =============================================================================

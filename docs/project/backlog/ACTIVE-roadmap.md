@@ -67,6 +67,7 @@ Features are added via `/feature` or `/user-story` commands.
 | SMS Compact Formatter | done | HIGH | Formatter | Report Generation | Simple | GPX-Story3 |
 | Report-Scheduler | done | HIGH | Services | Scheduler | Medium | GPX-Story3 |
 | Alert bei Änderungen | done | HIGH | Services | Alert System | Simple | GPX-Story3 |
+| Weather Snapshot Service | open | HIGH | Services | Alert System, Scheduler | Medium | ALERT-01 |
 | Report-Config (WebUI) | done | HIGH | WebUI | Frontend | Simple | GPX-Story3 |
 
 ## Completed Features (Last 10)
