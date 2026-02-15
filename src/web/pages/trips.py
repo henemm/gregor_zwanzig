@@ -13,7 +13,7 @@ from nicegui import ui
 
 from app.loader import delete_trip, load_all_trips, save_trip
 from app.models import EtappenConfig
-from app.trip import Stage, Trip, Waypoint
+from app.trip import Stage, TimeWindow, Trip, Waypoint
 from web.pages.gpx_upload import (
     compute_full_segmentation,
     process_gpx_upload,
@@ -69,6 +69,7 @@ def gpx_to_stage_data(
                 "lat": wp.lat,
                 "lon": wp.lon,
                 "elevation_m": wp.elevation_m,
+                "time_window": str(wp.time_window) if wp.time_window else None,
             }
             for wp in stage.waypoints
         ],
@@ -309,6 +310,7 @@ def render_trips() -> None:
                                             lat=float(wp["lat"]),
                                             lon=float(wp["lon"]),
                                             elevation_m=int(wp["elevation_m"]),
+                                            time_window=TimeWindow.from_string(wp["time_window"]) if wp.get("time_window") else None,
                                         )
                                         for wp in sd["waypoints"]
                                     ]
@@ -376,6 +378,7 @@ def render_trips() -> None:
                             "lat": wp.lat,
                             "lon": wp.lon,
                             "elevation_m": wp.elevation_m,
+                            "time_window": str(wp.time_window) if wp.time_window else None,
                         }
                         for wp in stage.waypoints
                     ],
@@ -586,6 +589,7 @@ def render_trips() -> None:
                                             lat=float(wp["lat"]),
                                             lon=float(wp["lon"]),
                                             elevation_m=int(wp["elevation_m"]),
+                                            time_window=TimeWindow.from_string(wp["time_window"]) if wp.get("time_window") else None,
                                         )
                                         for wp in sd["waypoints"]
                                     ]
