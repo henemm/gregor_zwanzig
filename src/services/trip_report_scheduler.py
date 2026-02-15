@@ -299,6 +299,37 @@ class TripReportSchedulerService:
         except Exception as e:
             logger.warning(f"Failed to save weather snapshot for {trip.id}: {e}")
 
+    def _interpolate_arrival_time(
+        self,
+        from_wp,
+        to_wp,
+        base_time: time,
+    ) -> time:
+        """Estimate arrival time based on distance and elevation change.
+
+        Uses standard hiking speeds: 4 km/h flat, 300 Hm/h ascent, 500 Hm/h descent.
+        """
+        dist_km = _haversine_km(from_wp.lat, from_wp.lon, to_wp.lat, to_wp.lon)
+        elev_diff = (to_wp.elevation_m or 0) - (from_wp.elevation_m or 0)
+
+        # Hiking time from distance (flat terrain)
+        time_flat_h = dist_km / 4.0
+
+        # Hiking time from elevation
+        if elev_diff > 0:
+            time_elev_h = elev_diff / 300.0
+        else:
+            time_elev_h = abs(elev_diff) / 500.0
+
+        # Use the larger of flat vs elevation time (dominates hiking duration)
+        total_hours = max(time_flat_h, time_elev_h)
+        # Minimum 15 minutes between waypoints
+        total_hours = max(total_hours, 0.25)
+
+        base_dt = datetime.combine(date.today(), base_time)
+        arrival_dt = base_dt + timedelta(hours=total_hours)
+        return arrival_dt.time()
+
     def _convert_trip_to_segments(
         self,
         trip: "Trip",
@@ -329,26 +360,34 @@ class TripReportSchedulerService:
         waypoints = stage.waypoints
         # Use stage.start_time as fallback for first waypoint without time_window
         default_start = stage.start_time if stage.start_time else time(8, 0)
+        cumulative_time = default_start
 
         for i in range(len(waypoints) - 1):
             wp1 = waypoints[i]
             wp2 = waypoints[i + 1]
 
-            # Get time windows (use stage.start_time as fallback for first wp)
+            # Get wp1 start time (with interpolation fallback)
             if wp1.time_window is None:
                 if i == 0:
                     wp1_start = default_start
                 else:
-                    logger.warning(f"Waypoint {wp1.id} missing time_window, skipping")
-                    continue
+                    wp1_start = self._interpolate_arrival_time(
+                        waypoints[i - 1], wp1, cumulative_time,
+                    )
+                    logger.info(f"Interpolated time for {wp1.id}: {wp1_start}")
             else:
                 wp1_start = wp1.time_window.start
 
-            if wp2.time_window is None:
-                logger.warning(f"Waypoint {wp2.id} missing time_window, skipping")
-                continue
+            cumulative_time = wp1_start
 
-            wp2_start = wp2.time_window.start
+            # Get wp2 start time (with interpolation fallback)
+            if wp2.time_window is None:
+                wp2_start = self._interpolate_arrival_time(
+                    wp1, wp2, wp1_start,
+                )
+                logger.info(f"Interpolated time for {wp2.id}: {wp2_start}")
+            else:
+                wp2_start = wp2.time_window.start
 
             # Convert time to datetime with UTC timezone
             start_dt = datetime.combine(

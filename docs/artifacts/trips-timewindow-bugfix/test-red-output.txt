@@ -1,0 +1,286 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.2, pytest-8.4.1, pluggy-1.6.0
+rootdir: /opt/gregor_zwanziger
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 11 items
+
+tests/unit/test_trips_time_window_bugfix.py FFF.F.FFF.F                  [100%]
+
+=================================== FAILURES ===================================
+_ TestGpxToStageDataPreservesTimeWindow.test_gpx_stage_dict_includes_time_window _
+
+self = <test_trips_time_window_bugfix.TestGpxToStageDataPreservesTimeWindow object at 0x7f53caacd590>
+
+    def test_gpx_stage_dict_includes_time_window(self):
+        """
+        GIVEN a stage with waypoints that have time_window,
+        WHEN converted to dict (as gpx_to_stage_data does),
+        THEN each waypoint dict has a time_window field.
+        """
+        stage = _make_stage_with_time_windows()
+    
+        # Simulate current gpx_to_stage_data serialization (trips.py:65-75)
+        wp_dicts = [
+            {
+                "id": wp.id,
+                "name": wp.name,
+                "lat": wp.lat,
+                "lon": wp.lon,
+                "elevation_m": wp.elevation_m,
+            }
+            for wp in stage.waypoints
+        ]
+    
+        # BUG: time_window is NOT in the dict
+        for i, wp_dict in enumerate(wp_dicts):
+            wp = stage.waypoints[i]
+>           assert "time_window" in wp_dict, \
+                f"Waypoint {wp.id} has time_window={wp.time_window} but dict has no time_window key"
+E           AssertionError: Waypoint G1 has time_window=08:00-08:00 but dict has no time_window key
+E           assert 'time_window' in {'elevation_m': 410, 'id': 'G1', 'lat': 39.71, 'lon': 2.622, ...}
+
+tests/unit/test_trips_time_window_bugfix.py:85: AssertionError
+_ TestGpxToStageDataPreservesTimeWindow.test_gpx_stage_dict_time_window_is_string _
+
+self = <test_trips_time_window_bugfix.TestGpxToStageDataPreservesTimeWindow object at 0x7f53c9792550>
+
+    def test_gpx_stage_dict_time_window_is_string(self):
+        """
+        GIVEN a waypoint with time_window TimeWindow(08:00, 08:00),
+        WHEN serialized to stage dict,
+        THEN time_window is a string like "08:00-08:00".
+        """
+        stage = _make_stage_with_time_windows()
+        wp = stage.waypoints[0]
+        wp_dict = {
+            "id": wp.id,
+            "name": wp.name,
+            "lat": wp.lat,
+            "lon": wp.lon,
+            "elevation_m": wp.elevation_m,
+        }
+        # BUG: time_window not included
+>       assert wp_dict.get("time_window") == "08:00-08:00"
+E       AssertionError: assert None == '08:00-08:00'
+E        +  where None = <built-in method get of dict object at 0x7f53c98faf00>('time_window')
+E        +    where <built-in method get of dict object at 0x7f53c98faf00> = {'elevation_m': 410, 'id': 'G1', 'lat': 39.71, 'lon': 2.622, ...}.get
+
+tests/unit/test_trips_time_window_bugfix.py:104: AssertionError
+___ TestSaveHandlerReadsTimeWindow.test_waypoint_from_dict_with_time_window ____
+
+self = <test_trips_time_window_bugfix.TestSaveHandlerReadsTimeWindow object at 0x7f53c9791c50>
+
+    def test_waypoint_from_dict_with_time_window(self):
+        """
+        GIVEN a waypoint dict with time_window="10:00-10:00",
+        WHEN constructing a Waypoint from that dict (as save handler does),
+        THEN Waypoint.time_window is TimeWindow(10:00, 10:00).
+        """
+        wp_dict = {
+            "id": "G2",
+            "name": "Punkt 2",
+            "lat": 39.726,
+            "lon": 2.624,
+            "elevation_m": 795,
+            "time_window": "10:00-10:00",
+        }
+        # Current save handler code (trips.py:305-313) does NOT read time_window:
+        wp = Waypoint(
+            id=wp_dict["id"],
+            name=wp_dict["name"],
+            lat=float(wp_dict["lat"]),
+            lon=float(wp_dict["lon"]),
+            elevation_m=int(wp_dict["elevation_m"]),
+        )
+        # BUG: time_window is None because save handler doesn't read it
+>       assert wp.time_window is not None, "Save handler must read time_window from dict"
+E       AssertionError: Save handler must read time_window from dict
+E       assert None is not None
+E        +  where None = Waypoint(id='G2', name='Punkt 2', lat=39.726, lon=2.624, elevation_m=795, time_window=None).time_window
+
+tests/unit/test_trips_time_window_bugfix.py:137: AssertionError
+_ TestEditDialogPreservesTimeWindow.test_edit_dialog_trip_to_dict_preserves_time_window _
+
+self = <test_trips_time_window_bugfix.TestEditDialogPreservesTimeWindow object at 0x7f53c97931d0>
+
+    def test_edit_dialog_trip_to_dict_preserves_time_window(self):
+        """
+        GIVEN a Trip with waypoints that have time_window,
+        WHEN the edit dialog converts Trip→Dict,
+        THEN the dict includes time_window for each waypoint.
+        """
+        stage = _make_stage_with_time_windows()
+    
+        # Simulate current edit dialog conversion (trips.py:372-379)
+        stage_dict = {
+            "name": stage.name,
+            "date": stage.date.isoformat(),
+            "waypoints": [
+                {
+                    "id": wp.id,
+                    "name": wp.name,
+                    "lat": wp.lat,
+                    "lon": wp.lon,
+                    "elevation_m": wp.elevation_m,
+                }
+                for wp in stage.waypoints
+            ],
+        }
+    
+        # BUG: time_window missing in dict
+        for i, wp_dict in enumerate(stage_dict["waypoints"]):
+            original_wp = stage.waypoints[i]
+            if original_wp.time_window:
+>               assert "time_window" in wp_dict, \
+                    f"Edit dialog lost time_window for waypoint {wp_dict['id']}"
+E               AssertionError: Edit dialog lost time_window for waypoint G1
+E               assert 'time_window' in {'elevation_m': 410, 'id': 'G1', 'lat': 39.71, 'lon': 2.622, ...}
+
+tests/unit/test_trips_time_window_bugfix.py:199: AssertionError
+_ TestSchedulerInterpolation.test_scheduler_creates_segments_without_time_window _
+
+self = <test_trips_time_window_bugfix.TestSchedulerInterpolation object at 0x7f53c9790390>
+
+    def test_scheduler_creates_segments_without_time_window(self):
+        """
+        GIVEN a Trip with 4 waypoints WITHOUT time_window,
+        WHEN _convert_trip_to_segments is called,
+        THEN 3 segments are created (not 0).
+    
+        This is the core bug: currently returns 0 segments.
+        """
+        from services.trip_report_scheduler import TripReportSchedulerService
+    
+        stage = _make_stage_without_time_windows()
+        trip = Trip(id="gr221", name="GR221 Mallorca", stages=[stage])
+    
+        service = TripReportSchedulerService()
+        segments = service._convert_trip_to_segments(trip, date(2026, 2, 15))
+    
+        # BUG: Currently returns [] because all waypoints skip
+>       assert len(segments) == 3, \
+            f"Expected 3 segments, got {len(segments)}. " \
+            f"Scheduler must interpolate missing time_window."
+E       AssertionError: Expected 3 segments, got 0. Scheduler must interpolate missing time_window.
+E       assert 0 == 3
+E        +  where 0 = len([])
+
+tests/unit/test_trips_time_window_bugfix.py:255: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  trip_report_scheduler:trip_report_scheduler.py:348 Waypoint G2 missing time_window, skipping
+WARNING  trip_report_scheduler:trip_report_scheduler.py:342 Waypoint G2 missing time_window, skipping
+WARNING  trip_report_scheduler:trip_report_scheduler.py:342 Waypoint G3 missing time_window, skipping
+_ TestSchedulerInterpolation.test_scheduler_interpolated_times_are_sequential __
+
+self = <test_trips_time_window_bugfix.TestSchedulerInterpolation object at 0x7f53c97938d0>
+
+    def test_scheduler_interpolated_times_are_sequential(self):
+        """
+        GIVEN interpolated time_windows,
+        WHEN segments are created,
+        THEN each segment's start_time < end_time and segments are sequential.
+        """
+        from services.trip_report_scheduler import TripReportSchedulerService
+    
+        stage = _make_stage_without_time_windows()
+        trip = Trip(id="gr221", name="GR221 Mallorca", stages=[stage])
+    
+        service = TripReportSchedulerService()
+        segments = service._convert_trip_to_segments(trip, date(2026, 2, 15))
+    
+>       assert len(segments) > 0, "No segments created"
+E       AssertionError: No segments created
+E       assert 0 > 0
+E        +  where 0 = len([])
+
+tests/unit/test_trips_time_window_bugfix.py:273: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  trip_report_scheduler:trip_report_scheduler.py:348 Waypoint G2 missing time_window, skipping
+WARNING  trip_report_scheduler:trip_report_scheduler.py:342 Waypoint G2 missing time_window, skipping
+WARNING  trip_report_scheduler:trip_report_scheduler.py:342 Waypoint G3 missing time_window, skipping
+_ TestSchedulerInterpolation.test_scheduler_interpolation_uses_stage_start_time _
+
+self = <test_trips_time_window_bugfix.TestSchedulerInterpolation object at 0x7f53c9790050>
+
+    def test_scheduler_interpolation_uses_stage_start_time(self):
+        """
+        GIVEN a Stage with start_time=09:00 and waypoints without time_window,
+        WHEN segments are created,
+        THEN first segment starts at 09:00 (not default 08:00).
+        """
+        from services.trip_report_scheduler import TripReportSchedulerService
+    
+        stage = Stage(
+            id="T1", name="Test", date=date(2026, 2, 15),
+            waypoints=[
+                Waypoint(id="G1", name="Start", lat=39.710, lon=2.622, elevation_m=410),
+                Waypoint(id="G2", name="Ziel", lat=39.726, lon=2.624, elevation_m=795),
+            ],
+            start_time=time(9, 0),
+        )
+        trip = Trip(id="test", name="Test", stages=[stage])
+    
+        service = TripReportSchedulerService()
+        segments = service._convert_trip_to_segments(trip, date(2026, 2, 15))
+    
+>       assert len(segments) == 1, f"Expected 1 segment, got {len(segments)}"
+E       AssertionError: Expected 1 segment, got 0
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+tests/unit/test_trips_time_window_bugfix.py:304: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  trip_report_scheduler:trip_report_scheduler.py:348 Waypoint G2 missing time_window, skipping
+__ TestSchedulerInterpolation.test_scheduler_interpolation_respects_elevation __
+
+self = <test_trips_time_window_bugfix.TestSchedulerInterpolation object at 0x7f53c9790b10>
+
+    def test_scheduler_interpolation_respects_elevation(self):
+        """
+        GIVEN two waypoints with significant elevation difference,
+        WHEN interpolating time,
+        THEN steep segment takes longer than flat segment.
+        """
+        from services.trip_report_scheduler import TripReportSchedulerService
+    
+        stage_steep = Stage(
+            id="T1", name="Steep", date=date(2026, 2, 15),
+            waypoints=[
+                Waypoint(id="G1", name="Start", lat=39.710, lon=2.622, elevation_m=410),
+                Waypoint(id="G2", name="Top", lat=39.726, lon=2.624, elevation_m=795),
+            ],
+        )
+        stage_flat = Stage(
+            id="T1", name="Flat", date=date(2026, 2, 15),
+            waypoints=[
+                Waypoint(id="G1", name="Start", lat=39.710, lon=2.622, elevation_m=410),
+                Waypoint(id="G2", name="End", lat=39.726, lon=2.624, elevation_m=410),
+            ],
+        )
+    
+        service = TripReportSchedulerService()
+        segs_steep = service._convert_trip_to_segments(
+            Trip(id="steep", name="Steep", stages=[stage_steep]), date(2026, 2, 15))
+        segs_flat = service._convert_trip_to_segments(
+            Trip(id="flat", name="Flat", stages=[stage_flat]), date(2026, 2, 15))
+    
+>       assert len(segs_steep) == 1, "Steep segments missing"
+E       AssertionError: Steep segments missing
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+tests/unit/test_trips_time_window_bugfix.py:357: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  trip_report_scheduler:trip_report_scheduler.py:348 Waypoint G2 missing time_window, skipping
+WARNING  trip_report_scheduler:trip_report_scheduler.py:348 Waypoint G2 missing time_window, skipping
+=========================== short test summary info ============================
+FAILED tests/unit/test_trips_time_window_bugfix.py::TestGpxToStageDataPreservesTimeWindow::test_gpx_stage_dict_includes_time_window
+FAILED tests/unit/test_trips_time_window_bugfix.py::TestGpxToStageDataPreservesTimeWindow::test_gpx_stage_dict_time_window_is_string
+FAILED tests/unit/test_trips_time_window_bugfix.py::TestSaveHandlerReadsTimeWindow::test_waypoint_from_dict_with_time_window
+FAILED tests/unit/test_trips_time_window_bugfix.py::TestEditDialogPreservesTimeWindow::test_edit_dialog_trip_to_dict_preserves_time_window
+FAILED tests/unit/test_trips_time_window_bugfix.py::TestSchedulerInterpolation::test_scheduler_creates_segments_without_time_window
+FAILED tests/unit/test_trips_time_window_bugfix.py::TestSchedulerInterpolation::test_scheduler_interpolated_times_are_sequential
+FAILED tests/unit/test_trips_time_window_bugfix.py::TestSchedulerInterpolation::test_scheduler_interpolation_uses_stage_start_time
+FAILED tests/unit/test_trips_time_window_bugfix.py::TestSchedulerInterpolation::test_scheduler_interpolation_respects_elevation
+========================= 8 failed, 3 passed in 0.21s ==========================
