@@ -36,7 +36,7 @@ Features are added via `/feature` or `/user-story` commands.
 | Data Normalization | done | HIGH | Provider | Normalizer | Medium | WEATHER-03 |
 | Provider Error Handling | done | MEDIUM | Provider | Provider Layer | Medium | WEATHER-04 |
 | Model-Metric-Fallback | done | MEDIUM | Provider | Provider Layer, Cache | Medium | WEATHER-05 |
-| UV-Index via Air Quality API | open | MEDIUM | Provider | Provider Layer | Simple | WEATHER-06 |
+| UV-Index via Air Quality API | done | MEDIUM | Provider | Provider Layer | Simple | WEATHER-06 |
 | Gewitter Risk Logic | open | HIGH | Risk Engine | Risk Engine | Medium | RISK-01 |
 | Starkregen Risk | open | MEDIUM | Risk Engine | Risk Engine | Simple | RISK-02 |
 | Wind/Hitze Risk | open | LOW | Risk Engine | Risk Engine | Simple | RISK-03 |
@@ -70,7 +70,7 @@ Features are added via `/feature` or `/user-story` commands.
 | Alert bei Änderungen | done | HIGH | Services | Alert System | Simple | GPX-Story3 |
 | Weather Snapshot Service | done | HIGH | Services | Alert System, Scheduler | Medium | ALERT-01 |
 | Letzter Waypoint fehlt in Trip-Report | done | HIGH | Bugfix | Segment Weather, Scheduler | Simple | BUG-01 |
-| AROME: Visibility/UV nicht verfuegbar | → WEATHER-05 | LOW | Provider | Provider Layer | Medium | WEATHER-05 |
+| AROME: Visibility/UV nicht verfuegbar | done | LOW | Provider | Provider Layer | Medium | WEATHER-05 + WEATHER-06 |
 | Report-Config (WebUI) | done | HIGH | WebUI | Frontend | Simple | GPX-Story3 |
 
 ## Completed Features (Last 10)
@@ -93,8 +93,8 @@ Features are added via `/feature` or `/user-story` commands.
 
 | Bug | Severity | Location | Description |
 |-----|----------|----------|-------------|
-| BUG-01: Letzter Waypoint fehlt | HIGH | `segment_weather.py:116-123` | `SegmentWeatherService` nutzt nur `segment.start_point` fuer die Wetter-Abfrage. Bei 3 Waypoints (G1→G2→G3) wird G3 (Ziel) nie abgefragt. Der letzte Waypoint jeder Etappe fehlt im Report. Fix: Eigener Spec+Workflow noetig. |
-| BUG-02: AROME liefert kein Visibility/UV | LOW | AROME API | Visibility: geloest via WEATHER-05 (Fallback ICON-EU). UV-Index: kein Wettermodell liefert UV → WEATHER-06 (Air Quality API). |
+| ~~BUG-01: Letzter Waypoint fehlt~~ | ~~HIGH~~ | SOLVED | Geloest: `ff6a116` — Ziel-Segment wird jetzt als eigener Forecast abgefragt |
+| ~~BUG-02: AROME Visibility/UV~~ | ~~LOW~~ | SOLVED | Visibility: WEATHER-05 Fallback ICON-EU. UV: WEATHER-06 Air Quality API (CAMS) |
 
 ## Blocked Features
 
