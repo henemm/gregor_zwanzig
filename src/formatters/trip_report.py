@@ -268,7 +268,8 @@ class TripReportFormatter:
                     )
                     break
 
-        # Max gusts (full timeseries with timestamp)
+        # Max gusts (full timeseries with timestamp, catalog threshold)
+        gust_ht = get_metric("gust").highlight_threshold or 60.0
         max_gust_val = 0.0
         max_gust_ts = None
         max_gust_in_seg = True
@@ -282,7 +283,7 @@ class TripReportFormatter:
                     max_gust_val = dp.gust_kmh
                     max_gust_ts = dp.ts
                     max_gust_in_seg = sh <= dp.ts.hour <= eh
-        if max_gust_val > 60 and max_gust_ts:
+        if max_gust_val > gust_ht and max_gust_ts:
             time_label = max_gust_ts.strftime('%H:%M')
             if not max_gust_in_seg:
                 time_label += ", nachts"
@@ -304,7 +305,8 @@ class TripReportFormatter:
                 min_row = next(r for r in night_rows if r.get("temp") == min_t)
                 highlights.append(f"🌡 Tiefste Nachttemperatur: {min_t:.1f} °C ({min_row['time']})")
 
-        # Max wind (full timeseries with timestamp)
+        # Max wind (full timeseries with timestamp, catalog threshold)
+        wind_ht = get_metric("wind").highlight_threshold or 50.0
         max_wind_val = 0.0
         max_wind_ts = None
         max_wind_in_seg = True
@@ -318,7 +320,7 @@ class TripReportFormatter:
                     max_wind_val = dp.wind10m_kmh
                     max_wind_ts = dp.ts
                     max_wind_in_seg = sh <= dp.ts.hour <= eh
-        if max_wind_val > 50 and max_wind_ts:
+        if max_wind_val > wind_ht and max_wind_ts:
             time_label = max_wind_ts.strftime('%H:%M')
             if not max_wind_in_seg:
                 time_label += ", nachts"
@@ -331,7 +333,8 @@ class TripReportFormatter:
             if seg_data.aggregated.pop_max_pct and seg_data.aggregated.pop_max_pct > max_pop:
                 max_pop = seg_data.aggregated.pop_max_pct
                 max_pop_info = "am Ziel" if seg_data.segment.segment_id == "Ziel" else f"Segment {seg_data.segment.segment_id}"
-        if max_pop >= 80:
+        pop_ht = get_metric("rain_probability").highlight_threshold or 80.0
+        if max_pop >= pop_ht:
             highlights.append(f"🌧 Regenwahrscheinlichkeit {max_pop}% ({max_pop_info})")
 
         # High CAPE (segment-only)
@@ -341,7 +344,8 @@ class TripReportFormatter:
             if seg_data.aggregated.cape_max_jkg and seg_data.aggregated.cape_max_jkg > max_cape:
                 max_cape = seg_data.aggregated.cape_max_jkg
                 max_cape_info = "am Ziel" if seg_data.segment.segment_id == "Ziel" else f"Segment {seg_data.segment.segment_id}"
-        if max_cape >= 1000:
+        cape_ht = get_metric("cape").highlight_threshold or 1000.0
+        if max_cape >= cape_ht:
             highlights.append(f"⚡ Hohe Gewitterenergie: CAPE {max_cape:.0f} J/kg ({max_cape_info})")
 
         return highlights
@@ -363,27 +367,50 @@ class TripReportFormatter:
     # ------------------------------------------------------------------
 
     def _determine_risk(self, segment: SegmentWeatherData) -> tuple[str, str]:
+        """Determine segment risk level using catalog risk_thresholds."""
         agg = segment.aggregated
+
+        # Thunder is enum-based, no threshold lookup needed
         if agg.thunder_level_max and agg.thunder_level_max == ThunderLevel.HIGH:
             return ("high", "⚠️ Thunder")
-        if agg.wind_max_kmh and agg.wind_max_kmh > 70:
-            return ("high", "⚠️ Storm")
-        if agg.wind_chill_min_c and agg.wind_chill_min_c < -20:
-            return ("high", "⚠️ Extreme Cold")
-        if agg.visibility_min_m and agg.visibility_min_m < 100:
-            return ("high", "⚠️ Low Visibility")
-        if agg.wind_max_kmh and agg.wind_max_kmh > 50:
-            return ("medium", "⚠️ High Wind")
-        if agg.precip_sum_mm and agg.precip_sum_mm > 20:
-            return ("medium", "⚠️ Heavy Rain")
+
+        # Check all metrics with risk_thresholds from catalog
+        risk_checks = [
+            ("wind", agg.wind_max_kmh, "High Wind", "Storm"),
+            ("wind_chill", agg.wind_chill_min_c, "Extreme Cold", None),
+            ("visibility", agg.visibility_min_m, "Low Visibility", None),
+            ("precipitation", agg.precip_sum_mm, "Heavy Rain", None),
+        ]
+
+        for metric_id, value, med_label, high_label_override in risk_checks:
+            if value is None:
+                continue
+            rt = get_metric(metric_id).risk_thresholds
+            if not rt:
+                continue
+            if "high_lt" in rt and value < rt["high_lt"]:
+                return ("high", f"⚠️ {high_label_override or med_label}")
+            if "high" in rt and value > rt["high"]:
+                return ("high", f"⚠️ {high_label_override or med_label}")
+            if "medium" in rt and value > rt["medium"]:
+                return ("medium", f"⚠️ {med_label}")
+
+        # Thunder enum (medium risk)
         if agg.thunder_level_max and agg.thunder_level_max in (ThunderLevel.MED, ThunderLevel.HIGH):
             return ("medium", "⚠️ Thunder Risk")
-        if agg.cape_max_jkg and agg.cape_max_jkg >= 2000:
-            return ("high", "⚠️ Extreme Thunder Energy")
-        if agg.cape_max_jkg and agg.cape_max_jkg >= 1000:
-            return ("medium", "⚠️ Thunder Energy")
+
+        # CAPE risk from catalog
+        if agg.cape_max_jkg is not None:
+            rt = get_metric("cape").risk_thresholds
+            if rt.get("high") and agg.cape_max_jkg >= rt["high"]:
+                return ("high", "⚠️ Extreme Thunder Energy")
+            if rt.get("medium") and agg.cape_max_jkg >= rt["medium"]:
+                return ("medium", "⚠️ Thunder Energy")
+
+        # POP check (not in catalog risk_thresholds but used for risk)
         if agg.pop_max_pct and agg.pop_max_pct >= 80:
             return ("medium", "⚠️ High Rain Probability")
+
         return ("none", "✓ OK")
 
     # ------------------------------------------------------------------
@@ -423,14 +450,16 @@ class TripReportFormatter:
         if key in ("wind", "gust"):
             s = f"{val:.0f}"
             if html and key == "gust":
-                if val and val >= 80:
+                dt = get_metric("gust").display_thresholds
+                if val and dt.get("red") and val >= dt["red"]:
                     return f'<span style="background:#ffebee;color:#c62828;padding:2px 4px;border-radius:3px;font-weight:600">{s}</span>'
-                if val and val >= 50:
+                if val and dt.get("yellow") and val >= dt["yellow"]:
                     return f'<span style="background:#fff9c4;color:#f57f17;padding:2px 4px;border-radius:3px">{s}</span>'
             return s
         if key == "precip":
             s = f"{val:.1f}"
-            if html and val and val >= 5:
+            dt = get_metric("precipitation").display_thresholds
+            if html and val and dt.get("blue") and val >= dt["blue"]:
                 return f'<span style="background:#e3f2fd;color:#1565c0;padding:2px 4px;border-radius:3px">{s}</span>'
             return s
         if key in ("snow_limit", "snow_depth"):
@@ -455,13 +484,15 @@ class TripReportFormatter:
             return f"{val:.1f}" if val is not None else "–"
         if key == "pop":
             s = f"{val:.0f}"
-            if html and val is not None and val >= 80:
+            dt = get_metric("rain_probability").display_thresholds
+            if html and val is not None and dt.get("blue") and val >= dt["blue"]:
                 return f'<span style="background:#e3f2fd;color:#1565c0;padding:2px 4px;border-radius:3px">{s}</span>'
             return s
         if key == "cape":
             if not use_friendly:
                 s = f"{val:.0f}"
-                if html and val is not None and val >= 1000:
+                dt = get_metric("cape").display_thresholds
+                if html and val is not None and dt.get("yellow") and val >= dt["yellow"]:
                     return f'<span style="background:#fff9c4;color:#f57f17;padding:2px 4px;border-radius:3px">{s}</span>'
                 return s
             if val <= 300:
@@ -481,7 +512,8 @@ class TripReportFormatter:
                     return f"{val / 1000:.1f}k"
                 else:
                     s = f"{val:.0f}"
-                    if html and val < 500:
+                    dt = get_metric("visibility").display_thresholds
+                    if html and dt.get("orange_lt") and val < dt["orange_lt"]:
                         return f'<span style="background:#fff3e0;color:#e65100;padding:2px 4px;border-radius:3px">{s}</span>'
                     return s
             if val >= 10000:

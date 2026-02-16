@@ -37,6 +37,10 @@ class MetricDefinition:
     friendly_label: str = ""
     summary_fields: dict[str, str] = field(default_factory=dict)
     default_change_threshold: Optional[float] = None
+    # RISK-04: Configurable display/risk thresholds (catalog defaults)
+    display_thresholds: dict[str, float] = field(default_factory=dict)
+    highlight_threshold: Optional[float] = None
+    risk_thresholds: dict[str, float] = field(default_factory=dict)
 
     @property
     def has_friendly_format(self) -> bool:
@@ -64,6 +68,7 @@ _METRICS: list[MetricDefinition] = [
         providers={"openmeteo": True, "geosphere": True},
         summary_fields={"min": "wind_chill_min_c"},
         default_change_threshold=5.0,
+        risk_thresholds={"high_lt": -20.0},
     ),
     MetricDefinition(
         id="humidity", label_de="Luftfeuchtigkeit", unit="%",
@@ -94,6 +99,8 @@ _METRICS: list[MetricDefinition] = [
         providers={"openmeteo": True, "geosphere": True},
         summary_fields={"max": "wind_max_kmh"},
         default_change_threshold=20.0,
+        highlight_threshold=50.0,
+        risk_thresholds={"medium": 50.0, "high": 70.0},
     ),
     MetricDefinition(
         id="gust", label_de="Böen", unit="km/h",
@@ -103,6 +110,9 @@ _METRICS: list[MetricDefinition] = [
         providers={"openmeteo": True, "geosphere": True},
         summary_fields={"max": "gust_max_kmh"},
         default_change_threshold=20.0,
+        display_thresholds={"yellow": 50.0, "red": 80.0},
+        highlight_threshold=60.0,
+        risk_thresholds={"medium": 50.0, "high": 70.0},
     ),
     MetricDefinition(
         id="wind_direction", label_de="Windrichtung", unit="°",
@@ -123,6 +133,8 @@ _METRICS: list[MetricDefinition] = [
         providers={"openmeteo": True, "geosphere": True},
         summary_fields={"sum": "precip_sum_mm"},
         default_change_threshold=10.0,
+        display_thresholds={"blue": 5.0},
+        risk_thresholds={"medium": 20.0},
     ),
     MetricDefinition(
         id="rain_probability", label_de="Regenwahrscheinlichkeit", unit="%",
@@ -133,6 +145,8 @@ _METRICS: list[MetricDefinition] = [
         default_enabled=False,
         summary_fields={"max": "pop_max_pct"},
         default_change_threshold=20,
+        display_thresholds={"blue": 80.0},
+        highlight_threshold=80.0,
     ),
     MetricDefinition(
         id="thunder", label_de="Gewitter", unit="",
@@ -154,6 +168,9 @@ _METRICS: list[MetricDefinition] = [
         friendly_label="\U0001f7e2\U0001f7e1\U0001f534",
         summary_fields={"max": "cape_max_jkg"},
         default_change_threshold=500.0,
+        display_thresholds={"yellow": 1000.0},
+        highlight_threshold=1000.0,
+        risk_thresholds={"medium": 1000.0, "high": 2000.0},
     ),
     MetricDefinition(
         id="snowfall_limit", label_de="Schneefallgrenze", unit="m",
@@ -224,6 +241,8 @@ _METRICS: list[MetricDefinition] = [
         friendly_label="good/fog",
         summary_fields={"min": "visibility_min_m"},
         default_change_threshold=1000,
+        display_thresholds={"orange_lt": 500.0},
+        risk_thresholds={"high_lt": 100.0},
     ),
     MetricDefinition(
         id="uv_index", label_de="UV-Index", unit="",
