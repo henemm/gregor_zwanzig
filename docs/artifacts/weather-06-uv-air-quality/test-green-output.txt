@@ -1,0 +1,10 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.2, pytest-8.4.1, pluggy-1.6.0
+rootdir: /opt/gregor_zwanziger
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 8 items
+
+tests/unit/test_uv_air_quality.py ........                               [100%]
+
+============================== 8 passed in 1.76s ===============================
