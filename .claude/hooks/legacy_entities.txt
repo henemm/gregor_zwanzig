@@ -64,6 +64,9 @@ trip_without_config_loads_none
 scheduler_finds_active_trip
 scheduler_send_reports
 
+# E2E Tests friendly_format + alert_enabled config
+alert_enabled
+
 # Trip Report Formatter v1 tests (updated for v2 format)
 trip_report_formatter_exists
 format_email_generates_html
