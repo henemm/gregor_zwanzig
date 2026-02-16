@@ -14,6 +14,7 @@ Features are added via `/feature` or `/user-story` commands.
 | `in_progress` | Currently being implemented |
 | `done` | Completed and validated |
 | `blocked` | Blocked by dependencies or external factors |
+| `obsolete` | No longer needed (superseded by other solution) |
 
 ## Priority Legend
 
@@ -27,24 +28,24 @@ Features are added via `/feature` or `/user-story` commands.
 
 | Feature | Status | Priority | Category | Affected Systems | Estimate | Story/Epic |
 |---------|--------|----------|----------|------------------|----------|------------|
-| CLI Entry Point | in_progress | HIGH | Core | CLI | Medium | SETUP-02 |
-| Config System (INI/ENV) | in_progress | HIGH | Core | Config | Simple | SETUP-03 |
-| Debug Architecture | in_progress | HIGH | Core | Debug | Medium | SETUP-04 |
-| MET Norway Adapter | spec_ready | HIGH | Provider | Provider Layer | Medium | WEATHER-01 |
+| CLI Entry Point | done | HIGH | Core | CLI | Medium | SETUP-02 |
+| Config System (INI/ENV) | done | HIGH | Core | Config | Simple | SETUP-03 |
+| Debug Architecture | done | HIGH | Core | Debug | Medium | SETUP-04 |
+| ~~MET Norway Adapter~~ | obsolete | ~~HIGH~~ | Provider | Provider Layer | Medium | WEATHER-01 |
 | Open-Meteo Provider | done | MEDIUM | Provider | Provider Layer | Medium | - |
-| MOSMIX Adapter | open | MEDIUM | Provider | Provider Layer | Large | WEATHER-02 |
+| ~~MOSMIX Adapter~~ | obsolete | ~~MEDIUM~~ | Provider | Provider Layer | Large | WEATHER-02 |
 | Data Normalization | done | HIGH | Provider | Normalizer | Medium | WEATHER-03 |
 | Provider Error Handling | done | MEDIUM | Provider | Provider Layer | Medium | WEATHER-04 |
 | Model-Metric-Fallback | done | MEDIUM | Provider | Provider Layer, Cache | Medium | WEATHER-05 |
 | UV-Index via Air Quality API | done | MEDIUM | Provider | Provider Layer | Simple | WEATHER-06 |
-| Gewitter Risk Logic | open | HIGH | Risk Engine | Risk Engine | Medium | RISK-01 |
-| Starkregen Risk | open | MEDIUM | Risk Engine | Risk Engine | Simple | RISK-02 |
-| Wind/Hitze Risk | open | LOW | Risk Engine | Risk Engine | Simple | RISK-03 |
+| Gewitter Risk Logic | done | HIGH | Risk Engine | Risk Engine | Medium | RISK-01 |
+| Starkregen Risk | done | MEDIUM | Risk Engine | Risk Engine | Simple | RISK-02 |
+| Wind/Hitze Risk | done | LOW | Risk Engine | Risk Engine | Simple | RISK-03 |
 | Configurable Thresholds | open | MEDIUM | Config | Risk Engine, Config | Simple | RISK-04 |
 | Report Types | done | HIGH | Formatter | Formatter, CLI | Medium | REPORT-01 |
 | Compact Formatter | done | MEDIUM | Formatter | Formatter | Simple | REPORT-02 |
 | SMTP Mailer | done | HIGH | Channel | Channel Layer | Medium | REPORT-03 |
-| Retry Logic | in_progress | MEDIUM | Core | All Layers | Medium | OPS-01 |
+| Retry Logic | done | MEDIUM | Core | All Layers | Medium | OPS-01 |
 | Logging/Rotation | open | LOW | Core | Logging | Simple | OPS-02 |
 | GitHub Actions | done | LOW | Ops | CI/CD | Simple | OPS-03 |
 | Trip Edit UI | done | HIGH | WebUI | Frontend | Medium | UI-01 |
@@ -77,16 +78,15 @@ Features are added via `/feature` or `/user-story` commands.
 
 | Feature | Completed | Category | Notes |
 |---------|-----------|----------|-------|
+| UV-Index via Air Quality API | 2026-02-16 | Provider | CAMS Air Quality API, Timestamp-Merge in fetch_forecast() |
 | Model-Metric-Fallback | 2026-02-16 | Provider | Phase A: Empirischer Probe aller Modelle. Phase B: Automatischer Fallback-Call fuer fehlende Metriken (visibility, precip_prob, freezing_level via ICON-EU). |
-| Provider Error Handling | 2026-02-16 | Provider | Catches ProviderRequestError, renders error warnings in emails, service emails for SMS-only trips |
-| GPX Parser & Validation | 2026-02 | Core | gpxpy-basiert, 13 Tests mit echten GPX-Dateien |
-| Höhenprofil-Analyse | 2026-02 | Core | Sliding-Window Peak/Valley Detection |
-| Zeit-Segment-Bildung | 2026-02 | Core | Naismith's Rule, konfigurierbare Geschwindigkeiten |
-| Hybrid-Segmentierung | 2026-02 | Core | Waypoint-Snapping mit Prioritäten |
-| Etappen-Config (WebUI) | 2026-02 | WebUI | Datum, Startzeit, Geschwindigkeits-Parameter |
-| Segment-Übersicht (WebUI) | 2026-02 | WebUI | Tabelle + "Als Trip speichern" |
-| Report Types | 2026-02 | Formatter | evening/morning/alert via CLI, Scheduler, Alert-Service |
-| Compact Formatter | 2026-02 | Formatter | SMS ≤160 Zeichen mit harter Constraint |
+| CLI Entry Point | 2026-02-16 | Core | python -m src.app.cli, --report, --channel, --debug flags |
+| Debug Architecture | 2026-02-16 | Core | Debug-Buffer mit Email-Integration |
+| Retry Logic | 2026-02-16 | Core | tenacity-basiert, Provider + SMTP |
+| Gewitter Risk Logic | 2026-02-16 | Risk Engine | CAPE-basiert, _parse_thunder_level() in OpenMeteo |
+| Starkregen Risk | 2026-02-16 | Risk Engine | Niederschlags-Intensitaet in Formatter |
+| Wind/Hitze Risk | 2026-02-16 | Risk Engine | Windboeen + Hitze-Warnung in Formatter |
+| Provider Error Handling | 2026-02-16 | Provider | Catches ProviderRequestError, renders error warnings in emails |
 | Report-Config (WebUI) | 2026-02 | WebUI | Per-Trip Morning/Evening Zeiten, Metriken-Config |
 
 ## Known Bugs
@@ -105,30 +105,22 @@ Features are added via `/feature` or `/user-story` commands.
 ## Upcoming (Next 3 Sprints)
 
 ### Sprint 1 (Current)
-- [ ] CLI Entry Point (in_progress, --config fehlt)
-- [ ] Config System (in_progress, INI-Parsing fehlt)
-- [ ] Debug Architecture (in_progress, Email-Integration fehlt)
+- [ ] Configurable Thresholds (RISK-04, Config existiert aber nicht im Formatter verdrahtet)
+- [ ] Logging/Rotation (OPS-02)
 
 ### Sprint 2
-- [ ] MET Norway Adapter (spec exists)
-- [x] Data Normalization (done — Provider-Adapter-Pattern mit NormalizedTimeseries)
-- [ ] Gewitter Risk Logic
-
-### Sprint 3
-- [ ] Starkregen Risk
-- [ ] MOSMIX Adapter
-- [ ] Logging/Rotation
+- _(offen — abhaengig von naechsten User-Anforderungen)_
 
 ## Feature Categories
 
 ### Core (Infrastructure)
-- CLI Entry Point, Config System, Debug Architecture, Retry Logic, Logging
+- CLI Entry Point (done), Config System (done), Debug Architecture (done), Retry Logic (done), Logging
 
 ### Provider (Weather Data Sources)
-- MET Norway, MOSMIX, Open-Meteo (done), Data Normalization, Error Handling, Model-Metric-Fallback (done), UV via Air Quality API
+- ~~MET Norway~~ (obsolete), ~~MOSMIX~~ (obsolete), Open-Meteo (done), Data Normalization (done), Error Handling (done), Model-Metric-Fallback (done), UV via Air Quality API (done)
 
 ### Risk Engine (Weather Assessment)
-- Gewitter Risk, Starkregen Risk, Wind/Hitze Risk, Configurable Thresholds
+- Gewitter Risk (done), Starkregen Risk (done), Wind/Hitze Risk (done), Configurable Thresholds
 
 ### Formatter (Report Generation)
 - Report Types (done), Compact Formatter (done)
