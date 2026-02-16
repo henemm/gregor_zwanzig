@@ -236,6 +236,78 @@ class OpenMeteoProvider:
         logger.info("Probe complete. Cache saved to %s", AVAILABILITY_CACHE_PATH)
         return result
 
+    # --- Model-Metric-Fallback (WEATHER-05b) ---
+
+    # Mapping: OpenMeteo API param → ForecastDataPoint field
+    _PARAM_TO_FIELD = {
+        "temperature_2m": "t2m_c",
+        "apparent_temperature": "wind_chill_c",
+        "relative_humidity_2m": "humidity_pct",
+        "dewpoint_2m": "dewpoint_c",
+        "pressure_msl": "pressure_msl_hpa",
+        "cloud_cover": "cloud_total_pct",
+        "cloud_cover_low": "cloud_low_pct",
+        "cloud_cover_mid": "cloud_mid_pct",
+        "cloud_cover_high": "cloud_high_pct",
+        "wind_speed_10m": "wind10m_kmh",
+        "wind_direction_10m": "wind_direction_deg",
+        "wind_gusts_10m": "gust_kmh",
+        "precipitation": "precip_1h_mm",
+        "visibility": "visibility_m",
+        "precipitation_probability": "pop_pct",
+        "cape": "cape_jkg",
+        "freezing_level_height": "freezing_level_m",
+        "uv_index": "uv_index",
+    }
+
+    def _find_fallback_model(
+        self, primary_id: str, lat: float, lon: float, missing_params: List[str]
+    ) -> Optional[Tuple[str, float, str]]:
+        """Find best fallback model that covers the coordinates and has missing metrics."""
+        cache = self._load_availability_cache()
+        if cache is None:
+            return None
+
+        for model in sorted(REGIONAL_MODELS, key=lambda m: m["priority"]):
+            if model["id"] == primary_id:
+                continue
+            bounds = model["bounds"]
+            if not (bounds["min_lat"] <= lat <= bounds["max_lat"]
+                    and bounds["min_lon"] <= lon <= bounds["max_lon"]):
+                continue
+            model_info = cache["models"].get(model["id"])
+            if model_info is None:
+                continue
+            available = set(model_info.get("available", []))
+            if available & set(missing_params):
+                return model["id"], model["grid_res_km"], model["endpoint"]
+
+        return None
+
+    def _merge_fallback(
+        self, primary: "NormalizedTimeseries", fallback: "NormalizedTimeseries",
+        missing_params: List[str]
+    ) -> List[str]:
+        """Fill None fields in primary from fallback for missing_params only."""
+        fb_by_ts = {dp.ts: dp for dp in fallback.data}
+        filled: set = set()
+
+        for dp in primary.data:
+            fb_dp = fb_by_ts.get(dp.ts)
+            if fb_dp is None:
+                continue
+            for param in missing_params:
+                field_name = self._PARAM_TO_FIELD.get(param)
+                if field_name is None:
+                    continue
+                if getattr(dp, field_name, None) is None:
+                    fb_val = getattr(fb_dp, field_name, None)
+                    if fb_val is not None:
+                        setattr(dp, field_name, fb_val)
+                        filled.add(param)
+
+        return sorted(filled)
+
     def select_model(self, lat: float, lon: float) -> Tuple[str, float, str]:
         """
         Select best weather model based on coordinates.
@@ -506,5 +578,39 @@ class OpenMeteoProvider:
         # Make request with retry logic (dedicated endpoint per model)
         response_data = self._request(endpoint, params)
 
-        # Parse and return
-        return self._parse_response(response_data, model_id, grid_res_km)
+        # Parse primary result
+        timeseries = self._parse_response(response_data, model_id, grid_res_km)
+
+        # WEATHER-05b: Check for missing metrics and fetch fallback
+        cache = self._load_availability_cache()
+        if cache is not None:
+            primary_info = cache["models"].get(model_id)
+            if primary_info:
+                missing = primary_info.get("unavailable", [])
+                if missing:
+                    fallback = self._find_fallback_model(
+                        model_id, location.latitude, location.longitude, missing
+                    )
+                    if fallback:
+                        fb_id, fb_res, fb_endpoint = fallback
+                        fb_params = {
+                            "latitude": location.latitude,
+                            "longitude": location.longitude,
+                            "hourly": ",".join(missing),
+                            "timezone": "UTC",
+                        }
+                        if start and end:
+                            fb_params["start_date"] = start.strftime("%Y-%m-%d")
+                            fb_params["end_date"] = end.strftime("%Y-%m-%d")
+                        try:
+                            fb_data = self._request(fb_endpoint, fb_params)
+                            fb_ts = self._parse_response(fb_data, fb_id, fb_res)
+                            filled = self._merge_fallback(timeseries, fb_ts, missing)
+                            if filled:
+                                timeseries.meta.fallback_model = fb_id
+                                timeseries.meta.fallback_metrics = filled
+                                logger.info("Fallback %s filled: %s", fb_id, ", ".join(filled))
+                        except Exception as e:
+                            logger.warning("Fallback %s failed: %s", fb_id, e)
+
+        return timeseries
