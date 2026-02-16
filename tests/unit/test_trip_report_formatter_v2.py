@@ -101,6 +101,11 @@ def _make_segment_weather(
     """Create full SegmentWeatherData with timeseries."""
     seg = _make_segment(seg_id, start_hour, end_hour, day=day)
     ts = _make_timeseries(range(0, 24), day=day, thunder_level=thunder)
+    # Inject gust_max/precip into timeseries so highlights can find them
+    if gust_max > 60:
+        ts.data[start_hour].gust_kmh = gust_max
+    if precip_total > 0:
+        ts.data[start_hour].precip_1h_mm = precip_total
     agg = SegmentWeatherSummary(
         temp_min_c=14.0,
         temp_max_c=19.0,

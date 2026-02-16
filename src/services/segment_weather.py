@@ -133,14 +133,27 @@ class SegmentWeatherService:
         self._debug.add(f"forecast.points: {len(timeseries.data)}")
         self._debug.add(f"forecast.model: {timeseries.meta.model}")
 
-        # Step 6: Compute basis metrics (Feature 2.2a)
+        # Step 6: Filter timeseries to segment window for aggregation
+        # OpenMeteo returns full-day (24h) data; aggregation must use only
+        # segment hours. Unfiltered timeseries is kept for table display.
+        seg_start_h = segment.start_time.hour
+        seg_end_h = segment.end_time.hour
+        filtered_data = [
+            dp for dp in timeseries.data
+            if seg_start_h <= dp.ts.hour <= seg_end_h
+        ]
+        from app.models import NormalizedTimeseries as NTS
+        filtered_ts = NTS(meta=timeseries.meta, data=filtered_data)
+        self._debug.add(f"filtered.points: {len(filtered_data)} (of {len(timeseries.data)})")
+
+        # Step 6a: Compute basis metrics from FILTERED timeseries
         from services.weather_metrics import WeatherMetricsService
 
         metrics_service = WeatherMetricsService(debug=self._debug)
-        basis_summary = metrics_service.compute_basis_metrics(timeseries)
+        basis_summary = metrics_service.compute_basis_metrics(filtered_ts)
 
-        # Step 6b: Compute extended metrics (Feature 2.2b)
-        extended_summary = metrics_service.compute_extended_metrics(timeseries, basis_summary)
+        # Step 6b: Compute extended metrics from FILTERED timeseries
+        extended_summary = metrics_service.compute_extended_metrics(filtered_ts, basis_summary)
 
         # Step 7: Wrap in SegmentWeatherData
         data = SegmentWeatherData(

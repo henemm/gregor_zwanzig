@@ -1,6 +1,6 @@
 # Active Roadmap - Gregor Zwanziger
 
-**Last Updated:** 2026-02-12
+**Last Updated:** 2026-02-16
 
 This roadmap tracks all features across the project lifecycle.
 Features are added via `/feature` or `/user-story` commands.
@@ -68,6 +68,8 @@ Features are added via `/feature` or `/user-story` commands.
 | Report-Scheduler | done | HIGH | Services | Scheduler | Medium | GPX-Story3 |
 | Alert bei Änderungen | done | HIGH | Services | Alert System | Simple | GPX-Story3 |
 | Weather Snapshot Service | open | HIGH | Services | Alert System, Scheduler | Medium | ALERT-01 |
+| Letzter Waypoint fehlt in Trip-Report | open | HIGH | Bugfix | Segment Weather, Scheduler | Simple | BUG-01 |
+| AROME: Visibility/UV nicht verfuegbar | open | LOW | Provider | Provider Layer | Simple | BUG-02 |
 | Report-Config (WebUI) | done | HIGH | WebUI | Frontend | Simple | GPX-Story3 |
 
 ## Completed Features (Last 10)
@@ -84,6 +86,13 @@ Features are added via `/feature` or `/user-story` commands.
 | Report Types | 2026-02 | Formatter | evening/morning/alert via CLI, Scheduler, Alert-Service |
 | Compact Formatter | 2026-02 | Formatter | SMS ≤160 Zeichen mit harter Constraint |
 | Report-Config (WebUI) | 2026-02 | WebUI | Per-Trip Morning/Evening Zeiten, Metriken-Config |
+
+## Known Bugs
+
+| Bug | Severity | Location | Description |
+|-----|----------|----------|-------------|
+| BUG-01: Letzter Waypoint fehlt | HIGH | `segment_weather.py:116-123` | `SegmentWeatherService` nutzt nur `segment.start_point` fuer die Wetter-Abfrage. Bei 3 Waypoints (G1→G2→G3) wird G3 (Ziel) nie abgefragt. Der letzte Waypoint jeder Etappe fehlt im Report. Fix: Eigener Spec+Workflow noetig. |
+| BUG-02: AROME liefert kein Visibility/UV | LOW | AROME API | MeteoFrance AROME Endpoint liefert `visibility=None` und `uv_index=None`. Spalten erscheinen korrekt, zeigen aber `–`. Kein Code-Bug — AROME-Limitation. Workaround: ECMWF-Fallback fuer diese Felder oder anderen Provider. |
 
 ## Blocked Features
 

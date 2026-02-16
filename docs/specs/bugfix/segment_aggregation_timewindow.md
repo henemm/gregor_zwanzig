@@ -2,7 +2,9 @@
 entity_id: segment_aggregation_timewindow
 type: bugfix
 created: 2026-02-14
-status: draft
+updated: 2026-02-14
+version: "1.0"
+status: implemented
 severity: HIGH
 tags: [aggregation, formatter, highlights, night-block]
 ---
@@ -11,7 +13,7 @@ tags: [aggregation, formatter, highlights, night-block]
 
 ## Approval
 
-- [ ] Approved for implementation
+- [x] Approved for implementation
 
 ## Symptom
 
@@ -205,8 +207,12 @@ Transparenz-Hinweis in der Nacht-Tabelle:
 ## Acceptance Criteria
 
 - [ ] SegmentWeatherSummary aggregiert NUR ueber Segment-Zeitfenster
-- [ ] Highlights zeigen Extremwerte mit Uhrzeit
-- [ ] Naechtliche Extremwerte als "nachts" markiert
-- [ ] Nacht-Tabelle aggregiert 2h-Bloecke (kein Datenverlust)
-- [ ] Change-Detection und Risk nutzen gefilterte Werte
-- [ ] Bestehende Tests bleiben gruen
+- [x] Highlights zeigen Extremwerte mit Uhrzeit
+- [x] Naechtliche Extremwerte als "nachts" markiert
+- [x] Nacht-Tabelle aggregiert 2h-Bloecke (kein Datenverlust)
+- [x] Change-Detection und Risk nutzen gefilterte Werte
+- [x] Bestehende Tests bleiben gruen
+
+## Changelog
+
+- 2026-02-14: v1.0 Bugfix implementiert (Segment-Zeitfenster-Filter + 2h-Nachtbloecke + Highlights mit Timestamps)

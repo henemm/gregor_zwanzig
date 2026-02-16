@@ -72,6 +72,7 @@ REGIONAL_MODELS = [
     {
         "id": "meteofrance_arome",
         "name": "AROME France & Balearen (1.3 km)",
+        "endpoint": "/v1/meteofrance",  # Dedizierter Endpunkt!
         "bounds": {"min_lat": 38.0, "max_lat": 53.0, "min_lon": -8.0, "max_lon": 10.0},
         "grid_res_km": 1.3,
         "priority": 1  # Hoechste Prioritaet (hoechste Aufloesung)
@@ -79,6 +80,7 @@ REGIONAL_MODELS = [
     {
         "id": "icon_d2",
         "name": "ICON-D2 (2 km)",
+        "endpoint": "/v1/dwd-icon",
         "bounds": {"min_lat": 43.0, "max_lat": 56.0, "min_lon": 2.0, "max_lon": 18.0},
         "grid_res_km": 2.0,
         "priority": 2
@@ -86,6 +88,7 @@ REGIONAL_MODELS = [
     {
         "id": "metno_nordic",
         "name": "MetNo Nordic (1 km)",
+        "endpoint": "/v1/metno",
         "bounds": {"min_lat": 53.0, "max_lat": 72.0, "min_lon": 3.0, "max_lon": 35.0},
         "grid_res_km": 1.0,
         "priority": 3
@@ -93,6 +96,7 @@ REGIONAL_MODELS = [
     {
         "id": "icon_eu",
         "name": "ICON-EU (7 km)",
+        "endpoint": "/v1/dwd-icon",
         "bounds": {"min_lat": 29.0, "max_lat": 71.0, "min_lon": -24.0, "max_lon": 45.0},
         "grid_res_km": 7.0,
         "priority": 4
@@ -100,16 +104,18 @@ REGIONAL_MODELS = [
     {
         "id": "ecmwf_ifs04",
         "name": "ECMWF IFS (40 km)",
+        "endpoint": "/v1/ecmwf",
         "bounds": {"min_lat": -90.0, "max_lat": 90.0, "min_lon": -180.0, "max_lon": 180.0},
         "grid_res_km": 40.0,
         "priority": 5  # Global fallback
     }
 ]
 
-def select_model(lat: float, lon: float) -> str:
+def select_model(lat: float, lon: float) -> Tuple[str, float, str]:
     """
     Waehlt bestes Modell basierend auf Koordinaten.
     Iteriert nach Prioritaet (hoechste Aufloesung zuerst).
+    Gibt (model_id, grid_res_km, endpoint_path) zurueck.
 
     KRITISCH: MUSS immer ein gueltiges Modell zurueckgeben!
     ECMWF global fallback garantiert vollstaendige Abdeckung.
@@ -121,10 +127,8 @@ def select_model(lat: float, lon: float) -> str:
         bounds = model["bounds"]
         if (bounds["min_lat"] <= lat <= bounds["max_lat"] and
             bounds["min_lon"] <= lon <= bounds["max_lon"]):
-            return model["id"]
+            return model["id"], model["grid_res_km"], model["endpoint"]
 
-    # FAILSAFE: Sollte nie erreicht werden, da ECMWF global (-90 bis 90, -180 bis 180) ist
-    # Falls trotzdem kein Modell gefunden → kritischer Fehler in REGIONAL_MODELS Konfiguration
     raise ProviderError(
         f"CRITICAL: No model found for lat={lat}, lon={lon}. "
         f"ECMWF global fallback failed - check REGIONAL_MODELS configuration!"
@@ -134,15 +138,15 @@ def select_model(lat: float, lon: float) -> str:
 ### API Call Structure
 
 ```python
-BASE_URL = "https://api.open-meteo.com/v1/forecast"
+BASE_HOST = "https://api.open-meteo.com"  # Host only, no path!
 
 def fetch_forecast(self, location: Location, start: datetime, end: datetime) -> NormalizedTimeseries:
-    model_id = self.select_model(location.latitude, location.longitude)
+    model_id, grid_res_km, endpoint = self.select_model(location.latitude, location.longitude)
 
     params = {
         "latitude": location.latitude,
         "longitude": location.longitude,
-        "model": model_id,  # Dynamisch gewaehlt! (singular, not "models")
+        # No "model" param needed — dedicated endpoint determines model
         "hourly": ",".join([
             "temperature_2m",
             "relative_humidity_2m",
@@ -163,10 +167,11 @@ def fetch_forecast(self, location: Location, start: datetime, end: datetime) -> 
         "end_date": end.strftime("%Y-%m-%d")
     }
 
-    response = httpx.get(BASE_URL, params=params, timeout=30.0)
+    url = f"{BASE_HOST}{endpoint}"  # z.B. https://api.open-meteo.com/v1/meteofrance
+    response = httpx.get(url, params=params, timeout=30.0)
     response.raise_for_status()
 
-    return self._parse_response(response.json(), model_id)
+    return self._parse_response(response.json(), model_id, grid_res_km)
 ```
 
 ### Parameter Mapping
