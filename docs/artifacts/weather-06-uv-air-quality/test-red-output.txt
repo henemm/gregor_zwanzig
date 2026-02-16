@@ -1,0 +1,201 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.2, pytest-8.4.1, pluggy-1.6.0
+rootdir: /opt/gregor_zwanziger
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 8 items
+
+tests/unit/test_uv_air_quality.py FFFFFF.F                               [100%]
+
+=================================== FAILURES ===================================
+_____ TestRequestBaseHostOverride.test_request_signature_accepts_base_host _____
+
+self = <test_uv_air_quality.TestRequestBaseHostOverride object at 0x7f77156dc450>
+
+    def test_request_signature_accepts_base_host(self) -> None:
+        """_request() must accept a base_host keyword argument."""
+        from providers.openmeteo import OpenMeteoProvider
+    
+        provider = OpenMeteoProvider()
+        # Call with base_host=None should work (backward compat)
+>       result = provider._request(
+            "/v1/air-quality",
+            {"latitude": 50.0, "longitude": 10.0, "hourly": "uv_index", "timezone": "UTC"},
+            base_host=None,
+        )
+
+tests/unit/test_uv_air_quality.py:24: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.11/site-packages/tenacity/__init__.py:338: in wrapped_f
+    return copy(f, *args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.11/site-packages/tenacity/__init__.py:477: in __call__
+    do = self.iter(retry_state=retry_state)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.11/site-packages/tenacity/__init__.py:378: in iter
+    result = action(retry_state)
+             ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.11/site-packages/tenacity/__init__.py:400: in <lambda>
+    self._add_action_func(lambda rs: rs.outcome.result())
+                                     ^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.11/concurrent/futures/_base.py:449: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.11/concurrent/futures/_base.py:401: in __get_result
+    raise self._exception
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <Retrying object at 0x7f77148b4e90 (stop=<tenacity.stop.stop_after_attempt object at 0x7f77149fa8d0>, wait=<tenacity.w...0x7f77149fa950>, before=<function before_nothing at 0x7f7714972520>, after=<function after_nothing at 0x7f77149a14e0>)>
+fn = <function OpenMeteoProvider._request at 0x7f77149eb560>
+args = (<providers.openmeteo.OpenMeteoProvider object at 0x7f7714cc5fd0>, '/v1/air-quality', {'hourly': 'uv_index', 'latitude': 50.0, 'longitude': 10.0, 'timezone': 'UTC'})
+kwargs = {'base_host': None}
+retry_state = <RetryCallState 140149422509840: attempt #1; slept for 0.0; last result: failed (TypeError OpenMeteoProvider._request() got an unexpected keyword argument 'base_host')>
+do = <tenacity.DoAttempt object at 0x7f7715809c90>
+
+    def __call__(
+        self,
+        fn: t.Callable[..., WrappedFnReturnT],
+        *args: t.Any,
+        **kwargs: t.Any,
+    ) -> WrappedFnReturnT:
+        self.begin()
+    
+        retry_state = RetryCallState(retry_object=self, fn=fn, args=args, kwargs=kwargs)
+        while True:
+            do = self.iter(retry_state=retry_state)
+            if isinstance(do, DoAttempt):
+                try:
+>                   result = fn(*args, **kwargs)
+                             ^^^^^^^^^^^^^^^^^^^
+E                   TypeError: OpenMeteoProvider._request() got an unexpected keyword argument 'base_host'
+
+.venv/lib/python3.11/site-packages/tenacity/__init__.py:480: TypeError
+________ TestRequestBaseHostOverride.test_request_uses_custom_base_host ________
+
+self = <test_uv_air_quality.TestRequestBaseHostOverride object at 0x7f7714cd7990>
+
+    def test_request_uses_custom_base_host(self) -> None:
+        """_request() with base_host should call the AQ API, not weather API."""
+>       from providers.openmeteo import OpenMeteoProvider, AIR_QUALITY_HOST
+E       ImportError: cannot import name 'AIR_QUALITY_HOST' from 'providers.openmeteo' (/opt/gregor_zwanziger/src/providers/openmeteo.py)
+
+tests/unit/test_uv_air_quality.py:34: ImportError
+__________________ TestFetchUvData.test_fetch_uv_data_exists ___________________
+
+self = <test_uv_air_quality.TestFetchUvData object at 0x7f7714cd70d0>
+
+    def test_fetch_uv_data_exists(self) -> None:
+        """_fetch_uv_data() method must exist on OpenMeteoProvider."""
+        from providers.openmeteo import OpenMeteoProvider
+    
+        provider = OpenMeteoProvider()
+>       assert hasattr(provider, "_fetch_uv_data")
+E       AssertionError: assert False
+E        +  where False = hasattr(<providers.openmeteo.OpenMeteoProvider object at 0x7f77149fb990>, '_fetch_uv_data')
+
+tests/unit/test_uv_air_quality.py:56: AssertionError
+_______________ TestFetchUvData.test_fetch_uv_data_returns_dict ________________
+
+self = <test_uv_air_quality.TestFetchUvData object at 0x7f7714cd7ed0>
+
+    def test_fetch_uv_data_returns_dict(self) -> None:
+        """_fetch_uv_data() returns dict with hourly.uv_index for valid coords."""
+        from providers.openmeteo import OpenMeteoProvider
+    
+        provider = OpenMeteoProvider()
+        now = datetime.now(tz=timezone.utc)
+>       result = provider._fetch_uv_data(
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+            39.77, 2.71, now, now + timedelta(days=1),
+        )
+E       AttributeError: 'OpenMeteoProvider' object has no attribute '_fetch_uv_data'
+
+tests/unit/test_uv_air_quality.py:65: AttributeError
+_____________ TestFetchUvData.test_fetch_uv_data_values_plausible ______________
+
+self = <test_uv_air_quality.TestFetchUvData object at 0x7f7714cd43d0>
+
+    def test_fetch_uv_data_values_plausible(self) -> None:
+        """UV values from AQ API must be in WHO range 0-15."""
+        from providers.openmeteo import OpenMeteoProvider
+    
+        provider = OpenMeteoProvider()
+        now = datetime.now(tz=timezone.utc)
+>       result = provider._fetch_uv_data(39.77, 2.71, now, now + timedelta(days=1))
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'OpenMeteoProvider' object has no attribute '_fetch_uv_data'
+
+tests/unit/test_uv_air_quality.py:82: AttributeError
+__________ TestFetchForecastUvIntegration.test_forecast_has_uv_values __________
+
+self = <test_uv_air_quality.TestFetchForecastUvIntegration object at 0x7f7714cd48d0>
+
+    def test_forecast_has_uv_values(self) -> None:
+        """fetch_forecast() must return timeseries with UV populated from AQ API."""
+        from providers.openmeteo import OpenMeteoProvider
+        from app.config import Location
+    
+        provider = OpenMeteoProvider()
+        location = Location(latitude=39.77, longitude=2.71, name="Mallorca")
+        now = datetime.now(tz=timezone.utc)
+        start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        end = start + timedelta(days=1)
+    
+        timeseries = provider.fetch_forecast(location, start, end)
+    
+        uv_vals = [dp.uv_index for dp in timeseries.data if dp.uv_index is not None]
+>       assert len(uv_vals) > 0, "UV should be populated from Air Quality API"
+E       AssertionError: UV should be populated from Air Quality API
+E       assert 0 > 0
+E        +  where 0 = len([])
+
+tests/unit/test_uv_air_quality.py:108: AssertionError
+_ TestFetchForecastUvIntegration.test_weather_05b_fallback_still_works_with_uv _
+
+self = <test_uv_air_quality.TestFetchForecastUvIntegration object at 0x7f7714cd56d0>
+
+    def test_weather_05b_fallback_still_works_with_uv(self) -> None:
+        """WEATHER-05b fallback (visibility etc.) must still work alongside UV fetch."""
+        from providers.openmeteo import OpenMeteoProvider, AVAILABILITY_CACHE_PATH
+        from app.config import Location
+    
+        cache = {
+            "probe_date": datetime.now(tz=timezone.utc).strftime("%Y-%m-%d"),
+            "models": {
+                "meteofrance_arome": {
+                    "available": ["temperature_2m"],
+                    "unavailable": ["visibility"],
+                },
+                "icon_eu": {
+                    "available": ["temperature_2m", "visibility"],
+                    "unavailable": [],
+                },
+            },
+        }
+        AVAILABILITY_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        AVAILABILITY_CACHE_PATH.write_text(json.dumps(cache))
+    
+        provider = OpenMeteoProvider()
+        location = Location(latitude=39.77, longitude=2.71, name="Mallorca")
+        now = datetime.now(tz=timezone.utc)
+        start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        end = start + timedelta(days=1)
+    
+        timeseries = provider.fetch_forecast(location, start, end)
+    
+        uv_vals = [dp.uv_index for dp in timeseries.data if dp.uv_index is not None]
+>       assert len(uv_vals) > 0, "UV should still work alongside fallback"
+E       AssertionError: UV should still work alongside fallback
+E       assert 0 > 0
+E        +  where 0 = len([])
+
+tests/unit/test_uv_air_quality.py:157: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/test_uv_air_quality.py::TestRequestBaseHostOverride::test_request_signature_accepts_base_host
+FAILED tests/unit/test_uv_air_quality.py::TestRequestBaseHostOverride::test_request_uses_custom_base_host
+FAILED tests/unit/test_uv_air_quality.py::TestFetchUvData::test_fetch_uv_data_exists
+FAILED tests/unit/test_uv_air_quality.py::TestFetchUvData::test_fetch_uv_data_returns_dict
+FAILED tests/unit/test_uv_air_quality.py::TestFetchUvData::test_fetch_uv_data_values_plausible
+FAILED tests/unit/test_uv_air_quality.py::TestFetchForecastUvIntegration::test_forecast_has_uv_values
+FAILED tests/unit/test_uv_air_quality.py::TestFetchForecastUvIntegration::test_weather_05b_fallback_still_works_with_uv
+========================= 7 failed, 1 passed in 0.95s ==========================

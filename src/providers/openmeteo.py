@@ -52,6 +52,7 @@ logger = logging.getLogger("openmeteo")
 # BUGFIX: Dedicated endpoints per model family (not generic /v1/forecast)
 # See: docs/specs/bugfix/openmeteo_endpoint_routing.md
 BASE_HOST = "https://api.open-meteo.com"
+AIR_QUALITY_HOST = "https://air-quality-api.open-meteo.com"
 TIMEOUT = 30.0
 
 # Retry Configuration (per docs/specs/modules/api_retry.md)
@@ -355,7 +356,9 @@ class OpenMeteoProvider:
         before_sleep=before_sleep_log(logger, logging.WARNING),
         reraise=True,
     )
-    def _request(self, endpoint: str, params: Dict[str, Any]) -> Dict[str, Any]:
+    def _request(
+        self, endpoint: str, params: Dict[str, Any], base_host: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         Make HTTP request to Open-Meteo API with retry logic.
 
@@ -367,6 +370,7 @@ class OpenMeteoProvider:
         Args:
             endpoint: API endpoint path (e.g., "/v1/meteofrance")
             params: Query parameters
+            base_host: Override BASE_HOST (e.g., AIR_QUALITY_HOST)
 
         Returns:
             JSON response as dict
@@ -374,7 +378,8 @@ class OpenMeteoProvider:
         Raises:
             ProviderRequestError: On non-retryable errors or after max retries
         """
-        url = f"{BASE_HOST}{endpoint}"
+        host = base_host or BASE_HOST
+        url = f"{host}{endpoint}"
         try:
             response = self._client.get(url, params=params)
             response.raise_for_status()
@@ -405,6 +410,32 @@ class OpenMeteoProvider:
         if weather_code in THUNDER_CODES:
             return ThunderLevel.HIGH
         return ThunderLevel.NONE
+
+    def _fetch_uv_data(
+        self, lat: float, lon: float, start: datetime, end: datetime
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Fetch UV-Index from Air Quality API (CAMS).
+
+        UV is unavailable from all weather models; CAMS provides global hourly data.
+
+        Returns:
+            AQ API response dict with hourly.uv_index, or None on failure.
+        """
+        params = {
+            "latitude": lat,
+            "longitude": lon,
+            "hourly": "uv_index",
+            "timezone": "UTC",
+            "start_date": start.strftime("%Y-%m-%d"),
+            "end_date": end.strftime("%Y-%m-%d"),
+        }
+        try:
+            logger.debug("Fetching UV from Air Quality API (CAMS)")
+            return self._request("/v1/air-quality", params, base_host=AIR_QUALITY_HOST)
+        except Exception as e:
+            logger.warning("UV fetch from AQ API failed: %s", e)
+            return None
 
     def _parse_response(
         self, data: Dict[str, Any], model_id: str, grid_res_km: float
@@ -580,6 +611,25 @@ class OpenMeteoProvider:
 
         # Parse primary result
         timeseries = self._parse_response(response_data, model_id, grid_res_km)
+
+        # WEATHER-06: Fetch UV from Air Quality API (no weather model provides UV)
+        if start and end:
+            uv_data = self._fetch_uv_data(location.latitude, location.longitude, start, end)
+            if uv_data:
+                uv_times = uv_data.get("hourly", {}).get("time", [])
+                uv_values = uv_data.get("hourly", {}).get("uv_index", [])
+                uv_by_ts = {}
+                for t, v in zip(uv_times, uv_values):
+                    if v is not None:
+                        uv_by_ts[datetime.fromisoformat(t)] = v
+                filled_count = 0
+                for dp in timeseries.data:
+                    ts_naive = dp.ts.replace(tzinfo=None) if dp.ts.tzinfo else dp.ts
+                    if ts_naive in uv_by_ts:
+                        dp.uv_index = uv_by_ts[ts_naive]
+                        filled_count += 1
+                if filled_count:
+                    logger.info("UV merged from AQ API: %d values", filled_count)
 
         # WEATHER-05b: Check for missing metrics and fetch fallback
         cache = self._load_availability_cache()

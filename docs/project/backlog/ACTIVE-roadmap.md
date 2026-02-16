@@ -35,7 +35,8 @@ Features are added via `/feature` or `/user-story` commands.
 | MOSMIX Adapter | open | MEDIUM | Provider | Provider Layer | Large | WEATHER-02 |
 | Data Normalization | done | HIGH | Provider | Normalizer | Medium | WEATHER-03 |
 | Provider Error Handling | done | MEDIUM | Provider | Provider Layer | Medium | WEATHER-04 |
-| Model-Metric-Fallback | backlog | MEDIUM | Provider | Provider Layer, Cache | Medium | WEATHER-05 |
+| Model-Metric-Fallback | done | MEDIUM | Provider | Provider Layer, Cache | Medium | WEATHER-05 |
+| UV-Index via Air Quality API | open | MEDIUM | Provider | Provider Layer | Simple | WEATHER-06 |
 | Gewitter Risk Logic | open | HIGH | Risk Engine | Risk Engine | Medium | RISK-01 |
 | Starkregen Risk | open | MEDIUM | Risk Engine | Risk Engine | Simple | RISK-02 |
 | Wind/Hitze Risk | open | LOW | Risk Engine | Risk Engine | Simple | RISK-03 |
@@ -76,6 +77,7 @@ Features are added via `/feature` or `/user-story` commands.
 
 | Feature | Completed | Category | Notes |
 |---------|-----------|----------|-------|
+| Model-Metric-Fallback | 2026-02-16 | Provider | Phase A: Empirischer Probe aller Modelle. Phase B: Automatischer Fallback-Call fuer fehlende Metriken (visibility, precip_prob, freezing_level via ICON-EU). |
 | Provider Error Handling | 2026-02-16 | Provider | Catches ProviderRequestError, renders error warnings in emails, service emails for SMS-only trips |
 | GPX Parser & Validation | 2026-02 | Core | gpxpy-basiert, 13 Tests mit echten GPX-Dateien |
 | Höhenprofil-Analyse | 2026-02 | Core | Sliding-Window Peak/Valley Detection |
@@ -92,7 +94,7 @@ Features are added via `/feature` or `/user-story` commands.
 | Bug | Severity | Location | Description |
 |-----|----------|----------|-------------|
 | BUG-01: Letzter Waypoint fehlt | HIGH | `segment_weather.py:116-123` | `SegmentWeatherService` nutzt nur `segment.start_point` fuer die Wetter-Abfrage. Bei 3 Waypoints (G1→G2→G3) wird G3 (Ziel) nie abgefragt. Der letzte Waypoint jeder Etappe fehlt im Report. Fix: Eigener Spec+Workflow noetig. |
-| BUG-02: AROME liefert kein Visibility/UV | LOW | AROME API | AROME-Limitation, kein Code-Bug. Loesung: WEATHER-05 Model-Metric-Fallback. Feature-Brief: `features/model-metric-fallback.md` |
+| BUG-02: AROME liefert kein Visibility/UV | LOW | AROME API | Visibility: geloest via WEATHER-05 (Fallback ICON-EU). UV-Index: kein Wettermodell liefert UV → WEATHER-06 (Air Quality API). |
 
 ## Blocked Features
 
@@ -123,7 +125,7 @@ Features are added via `/feature` or `/user-story` commands.
 - CLI Entry Point, Config System, Debug Architecture, Retry Logic, Logging
 
 ### Provider (Weather Data Sources)
-- MET Norway, MOSMIX, Open-Meteo (done), Data Normalization, Error Handling
+- MET Norway, MOSMIX, Open-Meteo (done), Data Normalization, Error Handling, Model-Metric-Fallback (done), UV via Air Quality API
 
 ### Risk Engine (Weather Assessment)
 - Gewitter Risk, Starkregen Risk, Wind/Hitze Risk, Configurable Thresholds

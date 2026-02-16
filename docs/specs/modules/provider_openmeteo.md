@@ -195,6 +195,22 @@ Nach Genehmigung (siehe unten):
 | pressure_msl | pressure_msl_hpa | Direkt (hPa) |
 | weather_code | symbol | Via WMO-Code-Mapping |
 
+### UV-Index Integration (WEATHER-06)
+
+UV-Index ist bei ALLEN 5 Wettermodellen nicht verfuegbar (`uv_index` gibt null).
+OpenMeteo bietet UV ueber separate Air Quality API:
+
+- **Endpoint:** `https://air-quality-api.open-meteo.com/v1/air-quality`
+- **Parameter:** `uv_index` (hourly)
+- **Datenquelle:** CAMS (Copernicus Atmosphere Monitoring Service)
+- **Aufloesung:** 0.25° (~25km), stuendlich, global
+- **Merge-Strategie:** Nach Primary Fetch, vor Model-Fallback (WEATHER-05b)
+
+UV-Werte werden via Timestamp-Matching in `ForecastDataPoint.uv_index` eingefuegt.
+Graceful degradation: Bei AQ-API-Fehler bleibt UV `None` (keine Exception).
+
+Siehe: `docs/specs/modules/uv_air_quality.md`
+
 ### Thunder Logic
 
 Open-Meteo verwendet WMO Weather Codes:
