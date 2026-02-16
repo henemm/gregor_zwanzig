@@ -438,6 +438,33 @@ class TripReportSchedulerService:
             )
             segments.append(segment)
 
+        # Destination segment: weather at the final waypoint (Zielort)
+        if segments and waypoints:
+            last_wp = waypoints[-1]
+            arrival_time = segments[-1].end_time
+            elev = float(last_wp.elevation_m) if last_wp.elevation_m else 0.0
+
+            destination_segment = TripSegment(
+                segment_id="Ziel",
+                start_point=GPXPoint(
+                    lat=last_wp.lat,
+                    lon=last_wp.lon,
+                    elevation_m=elev,
+                ),
+                end_point=GPXPoint(
+                    lat=last_wp.lat,
+                    lon=last_wp.lon,
+                    elevation_m=elev,
+                ),
+                start_time=arrival_time,
+                end_time=arrival_time + timedelta(hours=2),
+                duration_hours=2.0,
+                distance_km=0.0,
+                ascent_m=0.0,
+                descent_m=0.0,
+            )
+            segments.append(destination_segment)
+
         return segments
 
     def _fetch_weather(

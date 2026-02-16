@@ -29,10 +29,13 @@ class TestTripToSegmentConversion:
         service = TripReportSchedulerService()
         segments = service._convert_trip_to_segments(trip, today)
 
-        assert len(segments) == 1
-        assert segments[0].segment_id == 1
-        assert segments[0].start_point.lat == 47.0
-        assert segments[0].end_point.lat == 47.1
+        normal = [s for s in segments if s.segment_id != "Ziel"]
+        assert len(normal) == 1
+        assert normal[0].segment_id == 1
+        assert normal[0].start_point.lat == 47.0
+        assert normal[0].end_point.lat == 47.1
+        # Destination segment added
+        assert segments[-1].segment_id == "Ziel"
 
     def test_convert_three_waypoints_to_two_segments(self) -> None:
         """Three waypoints should create two segments."""
@@ -44,9 +47,11 @@ class TestTripToSegmentConversion:
         service = TripReportSchedulerService()
         segments = service._convert_trip_to_segments(trip, today)
 
-        assert len(segments) == 2
-        assert segments[0].segment_id == 1
-        assert segments[1].segment_id == 2
+        normal = [s for s in segments if s.segment_id != "Ziel"]
+        assert len(normal) == 2
+        assert normal[0].segment_id == 1
+        assert normal[1].segment_id == 2
+        assert segments[-1].segment_id == "Ziel"
 
     def test_no_segments_for_wrong_date(self) -> None:
         """Trip should return no segments for a date without a stage."""

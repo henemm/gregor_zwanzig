@@ -1,0 +1,178 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.2, pytest-8.4.1, pluggy-1.6.0
+rootdir: /opt/gregor_zwanziger
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 7 items
+
+tests/unit/test_destination_segment.py F.FFFFF                           [100%]
+
+=================================== FAILURES ===================================
+__________ TestTripSegmentStringId.test_segment_id_type_allows_string __________
+
+self = <test_destination_segment.TestTripSegmentStringId object at 0x7f5fefb187d0>
+
+    def test_segment_id_type_allows_string(self):
+        """
+        GIVEN: TripSegment dataclass
+        WHEN: Checking type hints
+        THEN: segment_id accepts str (int | str)
+        """
+        from app.models import TripSegment
+        hints = get_type_hints(TripSegment)
+        seg_id_type = hints["segment_id"]
+        # Currently int, should be int | str or Union[int, str]
+>       assert str in (getattr(seg_id_type, "__args__", ()) or (seg_id_type,)), (
+            f"segment_id type is {seg_id_type}, should include str"
+        )
+E       AssertionError: segment_id type is <class 'int'>, should include str
+E       assert str in ((() or (<class 'int'>,)))
+E        +  where () = getattr(<class 'int'>, '__args__', ())
+
+tests/unit/test_destination_segment.py:90: AssertionError
+_______ TestSchedulerDestinationSegment.test_destination_segment_exists ________
+
+self = <test_destination_segment.TestSchedulerDestinationSegment object at 0x7f5fef097690>
+
+    def test_destination_segment_exists(self):
+        """
+        GIVEN: A stage with 3 waypoints (G1->G2->G3)
+        WHEN: _convert_trip_to_segments runs
+        THEN: Result contains a segment with segment_id="Ziel"
+        """
+        segments = self._load_trip_and_get_segments()
+        destination_segments = [s for s in segments if s.segment_id == "Ziel"]
+>       assert len(destination_segments) == 1, (
+            f"Expected 1 destination segment, got {len(destination_segments)}. "
+            f"Total segments: {len(segments)}, IDs: {[s.segment_id for s in segments]}"
+        )
+E       AssertionError: Expected 1 destination segment, got 0. Total segments: 2, IDs: [1, 2]
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+tests/unit/test_destination_segment.py:124: AssertionError
+_____ TestSchedulerDestinationSegment.test_destination_segment_coordinates _____
+
+self = <test_destination_segment.TestSchedulerDestinationSegment object at 0x7f5fef094910>
+
+    def test_destination_segment_coordinates(self):
+        """Destination segment start_point must match last waypoint (Soller)."""
+        segments = self._load_trip_and_get_segments()
+        dest = [s for s in segments if s.segment_id == "Ziel"]
+>       assert len(dest) == 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+tests/unit/test_destination_segment.py:133: AssertionError
+_____ TestSchedulerDestinationSegment.test_destination_segment_time_window _____
+
+self = <test_destination_segment.TestSchedulerDestinationSegment object at 0x7f5fef094850>
+
+    def test_destination_segment_time_window(self):
+        """Destination time window: [last_segment_end, last_segment_end + 2h]."""
+        segments = self._load_trip_and_get_segments()
+        normal_segments = [s for s in segments if s.segment_id != "Ziel"]
+        dest = [s for s in segments if s.segment_id == "Ziel"]
+>       assert len(dest) == 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+tests/unit/test_destination_segment.py:141: AssertionError
+_______ TestFormatterDestinationRendering.test_html_contains_ziel_label ________
+
+self = <test_destination_segment.TestFormatterDestinationRendering object at 0x7f5fef0945d0>
+
+    def test_html_contains_ziel_label(self):
+        """
+        GIVEN: SegmentWeatherData with segment_id="Ziel"
+        WHEN: TripReportFormatter.format_email() renders HTML
+        THEN: HTML contains "Ziel" destination marker
+        """
+        from formatters.trip_report import TripReportFormatter
+    
+>       seg_weather = self._make_seg_weather("Ziel", "Soller")
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/test_destination_segment.py:173: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/unit/test_destination_segment.py:158: in _make_seg_weather
+    ts = _make_timeseries(range(10, 12))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_destination_segment.py:45: in _make_timeseries
+    provider=Provider.OPEN_METEO,
+             ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <enum 'Provider'>, name = 'OPEN_METEO'
+
+    def __getattr__(cls, name):
+        """
+        Return the enum member matching `name`
+    
+        We use __getattr__ instead of descriptors or inserting into the enum
+        class' __dict__ in order to support `name` and `value` being both
+        properties for enum members (which live in the class' __dict__) and
+        enum members themselves.
+        """
+        if _is_dunder(name):
+            raise AttributeError(name)
+        try:
+            return cls._member_map_[name]
+        except KeyError:
+>           raise AttributeError(name) from None
+E           AttributeError: OPEN_METEO
+
+/usr/lib/python3.11/enum.py:789: AttributeError
+________ TestFormatterDestinationRendering.test_destination_no_distance ________
+
+self = <test_destination_segment.TestFormatterDestinationRendering object at 0x7f5fef094a10>
+
+    def test_destination_no_distance(self):
+        """
+        GIVEN: Destination segment with distance_km=0
+        WHEN: Rendered
+        THEN: No "0.0 km" in output
+        """
+        from formatters.trip_report import TripReportFormatter
+    
+>       seg_weather = self._make_seg_weather("Ziel", "Soller")
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/test_destination_segment.py:193: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/unit/test_destination_segment.py:158: in _make_seg_weather
+    ts = _make_timeseries(range(10, 12))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_destination_segment.py:45: in _make_timeseries
+    provider=Provider.OPEN_METEO,
+             ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <enum 'Provider'>, name = 'OPEN_METEO'
+
+    def __getattr__(cls, name):
+        """
+        Return the enum member matching `name`
+    
+        We use __getattr__ instead of descriptors or inserting into the enum
+        class' __dict__ in order to support `name` and `value` being both
+        properties for enum members (which live in the class' __dict__) and
+        enum members themselves.
+        """
+        if _is_dunder(name):
+            raise AttributeError(name)
+        try:
+            return cls._member_map_[name]
+        except KeyError:
+>           raise AttributeError(name) from None
+E           AttributeError: OPEN_METEO
+
+/usr/lib/python3.11/enum.py:789: AttributeError
+=========================== short test summary info ============================
+FAILED tests/unit/test_destination_segment.py::TestTripSegmentStringId::test_segment_id_type_allows_string
+FAILED tests/unit/test_destination_segment.py::TestSchedulerDestinationSegment::test_destination_segment_exists
+FAILED tests/unit/test_destination_segment.py::TestSchedulerDestinationSegment::test_destination_segment_coordinates
+FAILED tests/unit/test_destination_segment.py::TestSchedulerDestinationSegment::test_destination_segment_time_window
+FAILED tests/unit/test_destination_segment.py::TestFormatterDestinationRendering::test_html_contains_ziel_label
+FAILED tests/unit/test_destination_segment.py::TestFormatterDestinationRendering::test_destination_no_distance
+========================= 6 failed, 1 passed in 0.22s ==========================

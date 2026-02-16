@@ -258,7 +258,7 @@ class TripReportFormatter:
                     elev = int(seg_data.segment.start_point.elevation_m)
                     highlights.append(
                         f"⚡ Gewitter möglich ab {dp.ts.strftime('%H:%M')} "
-                        f"(Segment {seg_data.segment.segment_id}, >{elev}m)"
+                        f"({'am Ziel' if seg_data.segment.segment_id == 'Ziel' else f'Segment {seg_data.segment.segment_id}'}, >{elev}m)"
                     )
                     break
 
@@ -320,7 +320,7 @@ class TripReportFormatter:
         for seg_data in segments:
             if seg_data.aggregated.pop_max_pct and seg_data.aggregated.pop_max_pct > max_pop:
                 max_pop = seg_data.aggregated.pop_max_pct
-                max_pop_info = f"Segment {seg_data.segment.segment_id}"
+                max_pop_info = "am Ziel" if seg_data.segment.segment_id == "Ziel" else f"Segment {seg_data.segment.segment_id}"
         if max_pop >= 80:
             highlights.append(f"🌧 Regenwahrscheinlichkeit {max_pop}% ({max_pop_info})")
 
@@ -330,7 +330,7 @@ class TripReportFormatter:
         for seg_data in segments:
             if seg_data.aggregated.cape_max_jkg and seg_data.aggregated.cape_max_jkg > max_cape:
                 max_cape = seg_data.aggregated.cape_max_jkg
-                max_cape_info = f"Segment {seg_data.segment.segment_id}"
+                max_cape_info = "am Ziel" if seg_data.segment.segment_id == "Ziel" else f"Segment {seg_data.segment.segment_id}"
         if max_cape >= 1000:
             highlights.append(f"⚡ Hohe Gewitterenergie: CAPE {max_cape:.0f} J/kg ({max_cape_info})")
 
@@ -517,7 +517,14 @@ class TripReportFormatter:
             seg = seg_data.segment
             s_elev = int(seg.start_point.elevation_m)
             e_elev = int(seg.end_point.elevation_m)
-            seg_html_parts.append(f"""
+            if seg.segment_id == "Ziel":
+                seg_html_parts.append(f"""
+            <div class="section destination">
+                <h3>\U0001f3c1 Wetter am Ziel: {seg.start_time.strftime('%H:%M')}–{seg.end_time.strftime('%H:%M')} | {s_elev}m</h3>
+                {self._render_html_table(rows)}
+            </div>""")
+            else:
+                seg_html_parts.append(f"""
             <div class="section">
                 <h3>Segment {seg.segment_id}: {seg.start_time.strftime('%H:%M')}–{seg.end_time.strftime('%H:%M')} | {seg.distance_km:.1f} km | ↑{s_elev}m → {e_elev}m</h3>
                 {self._render_html_table(rows)}
@@ -693,7 +700,10 @@ class TripReportFormatter:
             seg = seg_data.segment
             s_elev = int(seg.start_point.elevation_m)
             e_elev = int(seg.end_point.elevation_m)
-            lines.append(f"━━ Segment {seg.segment_id}: {seg.start_time.strftime('%H:%M')}–{seg.end_time.strftime('%H:%M')} | {seg.distance_km:.1f} km | ↑{s_elev}m → {e_elev}m ━━")
+            if seg.segment_id == "Ziel":
+                lines.append(f"━━ \U0001f3c1 Wetter am Ziel: {seg.start_time.strftime('%H:%M')}–{seg.end_time.strftime('%H:%M')} | {s_elev}m ━━")
+            else:
+                lines.append(f"━━ Segment {seg.segment_id}: {seg.start_time.strftime('%H:%M')}–{seg.end_time.strftime('%H:%M')} | {seg.distance_km:.1f} km | ↑{s_elev}m → {e_elev}m ━━")
             lines.append(self._render_text_table(rows))
             lines.append("")
 
