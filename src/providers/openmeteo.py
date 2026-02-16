@@ -18,8 +18,10 @@ SPEC: docs/specs/modules/provider_openmeteo.md v1.0
 """
 from __future__ import annotations
 
+import json
 import logging
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 import httpx
@@ -104,6 +106,28 @@ REGIONAL_MODELS = [
     },
 ]
 
+# Metric Availability Probe (WEATHER-05a)
+AVAILABILITY_CACHE_PATH = Path("data/cache/model_availability.json")
+AVAILABILITY_CACHE_TTL_DAYS = 7
+
+PROBE_PARAMS = [
+    "temperature_2m", "apparent_temperature", "relative_humidity_2m",
+    "dewpoint_2m", "pressure_msl", "cloud_cover", "cloud_cover_low",
+    "cloud_cover_mid", "cloud_cover_high", "wind_speed_10m",
+    "wind_direction_10m", "wind_gusts_10m", "precipitation",
+    "weather_code", "visibility", "precipitation_probability",
+    "cape", "freezing_level_height", "uv_index",
+]
+
+# Reference coordinates per model (center of bounding box)
+_PROBE_COORDS = {
+    "meteofrance_arome": (45.5, 1.0),
+    "icon_d2": (49.5, 10.0),
+    "metno_nordic": (62.5, 19.0),
+    "icon_eu": (50.0, 10.5),
+    "ecmwf_ifs04": (0.0, 0.0),
+}
+
 # WMO Weather Code to Thunder Level mapping
 # https://open-meteo.com/en/docs#weathervariables
 THUNDER_CODES = {95, 96, 99}  # Thunderstorm codes
@@ -134,6 +158,83 @@ class OpenMeteoProvider:
     def name(self) -> str:
         """Provider identifier."""
         return "openmeteo"
+
+    # --- Metric Availability Probe (WEATHER-05a) ---
+
+    def _load_availability_cache(self) -> Optional[dict]:
+        """Load availability cache, return None if expired or missing."""
+        if not AVAILABILITY_CACHE_PATH.exists():
+            return None
+        try:
+            data = json.loads(AVAILABILITY_CACHE_PATH.read_text())
+            probe_date = date.fromisoformat(data["probe_date"])
+            if (date.today() - probe_date).days >= AVAILABILITY_CACHE_TTL_DAYS:
+                return None
+            return data
+        except (json.JSONDecodeError, KeyError, ValueError):
+            return None
+
+    def _save_availability_cache(self, result: dict) -> None:
+        """Save probe result as JSON cache."""
+        AVAILABILITY_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        AVAILABILITY_CACHE_PATH.write_text(json.dumps(result, indent=2))
+
+    def probe_model_availability(self) -> dict:
+        """
+        Probe all REGIONAL_MODELS for actual metric availability.
+
+        Makes one API call per model with reference coordinates (center of
+        bounding box), requesting all PROBE_PARAMS. Checks which hourly
+        arrays contain at least one non-null value.
+
+        Returns:
+            Dict with probe_date and per-model available/unavailable lists.
+        """
+        logger.info("Probing %d OpenMeteo models for metric availability...", len(REGIONAL_MODELS))
+        result: dict = {"probe_date": date.today().isoformat(), "models": {}}
+
+        tomorrow = (datetime.now(timezone.utc) + timedelta(days=1)).strftime("%Y-%m-%d")
+
+        for model in sorted(REGIONAL_MODELS, key=lambda m: m["priority"]):
+            model_id = model["id"]
+            coords = _PROBE_COORDS.get(model_id)
+            if not coords:
+                continue
+
+            params = {
+                "latitude": coords[0],
+                "longitude": coords[1],
+                "hourly": ",".join(PROBE_PARAMS),
+                "timezone": "UTC",
+                "start_date": tomorrow,
+                "end_date": tomorrow,
+            }
+
+            try:
+                data = self._request(model["endpoint"], params)
+                hourly = data.get("hourly", {})
+
+                available = []
+                unavailable = []
+                for param in PROBE_PARAMS:
+                    values = hourly.get(param, [])
+                    if any(v is not None for v in values):
+                        available.append(param)
+                    else:
+                        unavailable.append(param)
+
+                result["models"][model_id] = {
+                    "available": available,
+                    "unavailable": unavailable,
+                }
+                logger.info("  %s: %d available, %d unavailable", model_id, len(available), len(unavailable))
+
+            except Exception as e:
+                logger.warning("  %s: probe failed (%s), skipping", model_id, e)
+
+        self._save_availability_cache(result)
+        logger.info("Probe complete. Cache saved to %s", AVAILABILITY_CACHE_PATH)
+        return result
 
     def select_model(self, lat: float, lon: float) -> Tuple[str, float, str]:
         """
