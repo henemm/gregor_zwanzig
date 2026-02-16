@@ -239,8 +239,9 @@ class TestSchedulerInterpolation:
         segments = service._convert_trip_to_segments(trip, date(2026, 2, 15))
 
         # BUG: Currently returns [] because all waypoints skip
-        assert len(segments) == 3, \
-            f"Expected 3 segments, got {len(segments)}. " \
+        normal = [s for s in segments if s.segment_id != "Ziel"]
+        assert len(normal) == 3, \
+            f"Expected 3 normal segments, got {len(normal)}. " \
             f"Scheduler must interpolate missing time_window."
 
     def test_scheduler_interpolated_times_are_sequential(self):
@@ -288,9 +289,10 @@ class TestSchedulerInterpolation:
         service = TripReportSchedulerService()
         segments = service._convert_trip_to_segments(trip, date(2026, 2, 15))
 
-        assert len(segments) == 1, f"Expected 1 segment, got {len(segments)}"
-        assert segments[0].start_time.hour == 9, \
-            f"First segment should start at 09:00, got {segments[0].start_time}"
+        normal = [s for s in segments if s.segment_id != "Ziel"]
+        assert len(normal) == 1, f"Expected 1 normal segment, got {len(normal)}"
+        assert normal[0].start_time.hour == 9, \
+            f"First segment should start at 09:00, got {normal[0].start_time}"
 
     def test_scheduler_preserves_existing_time_windows(self):
         """
@@ -306,11 +308,12 @@ class TestSchedulerInterpolation:
         service = TripReportSchedulerService()
         segments = service._convert_trip_to_segments(trip, date(2026, 2, 15))
 
-        assert len(segments) == 3
-        assert segments[0].start_time.hour == 8
-        assert segments[0].end_time.hour == 10
-        assert segments[1].start_time.hour == 10
-        assert segments[1].end_time.hour == 12
+        normal = [s for s in segments if s.segment_id != "Ziel"]
+        assert len(normal) == 3
+        assert normal[0].start_time.hour == 8
+        assert normal[0].end_time.hour == 10
+        assert normal[1].start_time.hour == 10
+        assert normal[1].end_time.hour == 12
 
     def test_scheduler_interpolation_respects_elevation(self):
         """
@@ -341,8 +344,10 @@ class TestSchedulerInterpolation:
         segs_flat = service._convert_trip_to_segments(
             Trip(id="flat", name="Flat", stages=[stage_flat]), date(2026, 2, 15))
 
-        assert len(segs_steep) == 1, "Steep segments missing"
-        assert len(segs_flat) == 1, "Flat segments missing"
+        steep_normal = [s for s in segs_steep if s.segment_id != "Ziel"]
+        flat_normal = [s for s in segs_flat if s.segment_id != "Ziel"]
+        assert len(steep_normal) == 1, "Steep segments missing"
+        assert len(flat_normal) == 1, "Flat segments missing"
 
-        assert segs_steep[0].duration_hours > segs_flat[0].duration_hours, \
+        assert steep_normal[0].duration_hours > flat_normal[0].duration_hours, \
             "Steep segment should take longer than flat"

@@ -275,7 +275,7 @@ class EtappenConfig:
 @dataclass
 class TripSegment:
     """Single segment of a trip (typically ~2 hours hiking)."""
-    segment_id: int  # 1-based
+    segment_id: int | str  # 1-based, or "Ziel" for destination
     start_point: GPXPoint
     end_point: GPXPoint
     start_time: datetime  # UTC!

@@ -102,8 +102,9 @@ def segments_from_trip(test_trip):
     service = TripReportSchedulerService()
     today = date.today()
     segments = service._convert_trip_to_segments(test_trip, today)
-    assert len(segments) == 2, f"Expected 2 segments from 3 waypoints, got {len(segments)}"
-    return segments
+    normal = [s for s in segments if s.segment_id != "Ziel"]
+    assert len(normal) == 2, f"Expected 2 normal segments from 3 waypoints, got {len(normal)}"
+    return normal
 
 
 # ---------------------------------------------------------------------------
@@ -128,8 +129,9 @@ class TestTripCreationAndSegments:
         assert len(loaded.stages[0].waypoints) == 3
 
     def test_segment_conversion(self, segments_from_trip):
-        """3 waypoints produce 2 segments with correct coordinates."""
-        assert len(segments_from_trip) == 2
+        """3 waypoints produce 2 normal segments + 1 Ziel with correct coordinates."""
+        normal = [s for s in segments_from_trip if s.segment_id != "Ziel"]
+        assert len(normal) == 2
 
         seg1 = segments_from_trip[0]
         assert seg1.segment_id == 1
