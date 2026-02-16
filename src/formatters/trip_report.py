@@ -114,18 +114,98 @@ class TripReportFormatter:
         interval: int = 2,
         dc: Optional[UnifiedWeatherDisplayConfig] = None,
     ) -> list[dict]:
-        """Extract night data at given interval from arrival to 06:00."""
+        """Aggregate night data into 2h blocks from arrival to 06:00."""
         dc = dc or build_default_display_config()
-        rows = []
-        first_date = night_weather.data[0].ts.date() if night_weather.data else None
+        if not night_weather.data:
+            return []
+
+        first_date = night_weather.data[0].ts.date()
+
+        # Step 1: Filter to night range
+        night_dps: list[ForecastDataPoint] = []
         for dp in night_weather.data:
             h = dp.ts.hour
             is_same_day = dp.ts.date() == first_date
-            is_next_day = first_date and dp.ts.date() > first_date
+            is_next_day = dp.ts.date() > first_date
             in_range = (is_same_day and h >= arrival_hour) or (is_next_day and h <= 6)
-            if in_range and h % interval == 0:
-                rows.append(self._dp_to_row(dp, dc))
+            if in_range:
+                night_dps.append(dp)
+
+        if not night_dps:
+            return []
+
+        # Step 2: Group into 2h blocks
+        blocks: dict[tuple, list[ForecastDataPoint]] = {}
+        for dp in night_dps:
+            block_start = dp.ts.hour - (dp.ts.hour % interval)
+            block_key = (dp.ts.date(), block_start)
+            blocks.setdefault(block_key, []).append(dp)
+
+        # Step 3: Aggregate each block
+        rows = []
+        for block_key in sorted(blocks.keys()):
+            dps = blocks[block_key]
+            row = self._aggregate_night_block(dps, dc, interval)
+            rows.append(row)
+
         return rows
+
+    def _aggregate_night_block(
+        self,
+        dps: list[ForecastDataPoint],
+        dc: UnifiedWeatherDisplayConfig,
+        interval: int = 2,
+    ) -> dict:
+        """Aggregate data points in a 2h night block into a single row."""
+        block_hour = dps[0].ts.hour - (dps[0].ts.hour % interval)
+        row: dict = {"time": f"{block_hour:02d}"}
+
+        for mc in dc.metrics:
+            if not mc.enabled:
+                continue
+            try:
+                metric_def = get_metric(mc.metric_id)
+            except KeyError:
+                continue
+
+            # Collect non-None values
+            values = [
+                v for dp in dps
+                if (v := getattr(dp, metric_def.dp_field, None)) is not None
+            ]
+
+            if not values:
+                row[metric_def.col_key] = None
+                continue
+
+            # Special handling for enum types
+            if metric_def.dp_field == "thunder_level":
+                severity = {ThunderLevel.NONE: 0, ThunderLevel.MED: 1, ThunderLevel.HIGH: 2}
+                row[metric_def.col_key] = max(values, key=lambda v: severity.get(v, 0))
+                continue
+            if metric_def.dp_field == "precip_type":
+                row[metric_def.col_key] = values[-1]
+                continue
+
+            # Night aggregation rule:
+            # Multi-agg metrics with "min" → use min (Temperatur, Nullgradgrenze)
+            # All others → use their default_aggregations[0]
+            agg = metric_def.default_aggregations[0]
+            if len(metric_def.default_aggregations) > 1 and "min" in metric_def.default_aggregations:
+                agg = "min"
+
+            if agg == "min":
+                row[metric_def.col_key] = min(values)
+            elif agg == "max":
+                row[metric_def.col_key] = max(values)
+            elif agg == "sum":
+                row[metric_def.col_key] = sum(values)
+            elif agg == "avg":
+                row[metric_def.col_key] = sum(values) / len(values)
+            else:
+                row[metric_def.col_key] = values[0]
+
+        return row
 
     def _dp_to_row(self, dp: ForecastDataPoint, dc: UnifiedWeatherDisplayConfig) -> dict:
         """Convert a single ForecastDataPoint to a row dict using MetricCatalog."""
@@ -161,14 +241,19 @@ class TripReportFormatter:
         seg_tables: list[list[dict]],
         night_rows: list[dict],
     ) -> list[str]:
-        """Compute highlight lines (text, no HTML)."""
+        """Compute highlight lines (text, no HTML).
+
+        Gusts/wind: scanned from FULL timeseries (24h) with timestamp.
+        Values outside segment window are annotated with "nachts".
+        Precip/POP/CAPE: from segment-only aggregated values.
+        """
         highlights = []
 
-        # Thunder
-        for i, seg_data in enumerate(segments):
+        # Thunder (segment hours only)
+        for seg_data in segments:
+            sh = seg_data.segment.start_time.hour
+            eh = seg_data.segment.end_time.hour
             for dp in seg_data.timeseries.data:
-                sh = seg_data.segment.start_time.hour
-                eh = seg_data.segment.end_time.hour
                 if sh <= dp.ts.hour <= eh and dp.thunder_level and dp.thunder_level != ThunderLevel.NONE:
                     elev = int(seg_data.segment.start_point.elevation_m)
                     highlights.append(
@@ -177,17 +262,25 @@ class TripReportFormatter:
                     )
                     break
 
-        # Max gusts
-        max_gust = 0.0
-        max_gust_info = ""
+        # Max gusts (full timeseries with timestamp)
+        max_gust_val = 0.0
+        max_gust_ts = None
+        max_gust_in_seg = True
         for seg_data in segments:
-            if seg_data.aggregated.gust_max_kmh and seg_data.aggregated.gust_max_kmh > max_gust:
-                max_gust = seg_data.aggregated.gust_max_kmh
-                max_gust_info = f"Segment {seg_data.segment.segment_id}"
-        if max_gust > 60:
-            highlights.append(f"💨 Böen bis {max_gust:.0f} km/h ({max_gust_info})")
+            sh = seg_data.segment.start_time.hour
+            eh = seg_data.segment.end_time.hour
+            for dp in seg_data.timeseries.data:
+                if dp.gust_kmh is not None and dp.gust_kmh > max_gust_val:
+                    max_gust_val = dp.gust_kmh
+                    max_gust_ts = dp.ts
+                    max_gust_in_seg = sh <= dp.ts.hour <= eh
+        if max_gust_val > 60 and max_gust_ts:
+            time_label = max_gust_ts.strftime('%H:%M')
+            if not max_gust_in_seg:
+                time_label += ", nachts"
+            highlights.append(f"💨 Böen bis {max_gust_val:.0f} km/h ({time_label})")
 
-        # Total precipitation
+        # Total precipitation (segment-window only, from aggregated)
         total_precip = sum(
             s.aggregated.precip_sum_mm for s in segments
             if s.aggregated.precip_sum_mm is not None
@@ -203,14 +296,25 @@ class TripReportFormatter:
                 min_row = next(r for r in night_rows if r.get("temp") == min_t)
                 highlights.append(f"🌡 Tiefste Nachttemperatur: {min_t:.1f} °C ({min_row['time']})")
 
-        # Max wind
-        max_wind = max(
-            (s.aggregated.wind_max_kmh or 0 for s in segments), default=0
-        )
-        if max_wind > 50:
-            highlights.append(f"💨 Wind bis {max_wind:.0f} km/h")
+        # Max wind (full timeseries with timestamp)
+        max_wind_val = 0.0
+        max_wind_ts = None
+        max_wind_in_seg = True
+        for seg_data in segments:
+            sh = seg_data.segment.start_time.hour
+            eh = seg_data.segment.end_time.hour
+            for dp in seg_data.timeseries.data:
+                if dp.wind10m_kmh is not None and dp.wind10m_kmh > max_wind_val:
+                    max_wind_val = dp.wind10m_kmh
+                    max_wind_ts = dp.ts
+                    max_wind_in_seg = sh <= dp.ts.hour <= eh
+        if max_wind_val > 50 and max_wind_ts:
+            time_label = max_wind_ts.strftime('%H:%M')
+            if not max_wind_in_seg:
+                time_label += ", nachts"
+            highlights.append(f"💨 Wind bis {max_wind_val:.0f} km/h ({time_label})")
 
-        # High precipitation probability
+        # High precipitation probability (segment-only)
         max_pop = 0
         max_pop_info = ""
         for seg_data in segments:
@@ -220,7 +324,7 @@ class TripReportFormatter:
         if max_pop >= 80:
             highlights.append(f"🌧 Regenwahrscheinlichkeit {max_pop}% ({max_pop_info})")
 
-        # High CAPE (thunderstorm energy)
+        # High CAPE (segment-only)
         max_cape = 0.0
         max_cape_info = ""
         for seg_data in segments:
@@ -425,11 +529,15 @@ class TripReportFormatter:
         night_html = ""
         if night_rows:
             last_seg = segments[-1].segment
+            night_hint = ""
+            if any(mc.enabled and mc.metric_id in ("temperature", "freezing_level") for mc in dc.metrics):
+                night_hint = '<p style="color:#999;font-size:11px;margin-top:4px">* Temperatur/Nullgradgrenze: Minimum im 2h-Block</p>'
             night_html = f"""
             <div class="section">
                 <h3>🌙 Nacht am Ziel ({int(last_seg.end_point.elevation_m)}m)</h3>
                 <p style="color:#666;font-size:13px">Ankunft {last_seg.end_time.strftime('%H:%M')} → Morgen 06:00</p>
                 {self._render_html_table(night_rows)}
+                {night_hint}
             </div>"""
 
         # Thunder forecast
@@ -595,6 +703,8 @@ class TripReportFormatter:
             lines.append(f"━━ Nacht am Ziel ({int(last_seg.end_point.elevation_m)}m) ━━")
             lines.append(f"Ankunft {last_seg.end_time.strftime('%H:%M')} → Morgen 06:00")
             lines.append(self._render_text_table(night_rows))
+            if any(mc.enabled and mc.metric_id in ("temperature", "freezing_level") for mc in dc.metrics):
+                lines.append("  * Temperatur/Nullgradgrenze: Minimum im 2h-Block")
             lines.append("")
 
         # Thunder forecast

@@ -106,8 +106,17 @@ Only hours within segment time window (start_time.hour through end_time.hour).
 ### 4) Night Block (Evening Report Only)
 
 Shown **after the last segment**, at the last waypoint's location.
-2-hourly values from arrival time until 06:00 next morning.
+**2h aggregated blocks** from arrival time until 06:00 next morning.
 Uses same English column headers and hour-only time format as segment tables.
+
+**Aggregation (2h-Bloecke):** Statt ungerade Stunden wegzuwerfen, werden
+Zweistunden-Bloecke aggregiert: [20:00+21:00], [22:00+23:00], [00:00+01:00], etc.
+Aggregationsregel: Jede Metrik nutzt ihre `default_aggregations[0]` aus dem
+MetricCatalog. Sonderfall: Metriken mit mehreren Aggregationen UND "min"
+(Temperatur, Nullgradgrenze) → nachts `min` statt `max`.
+
+Transparenz-Hinweis unter der Nacht-Tabelle:
+`* Temperatur/Nullgradgrenze: Minimum im 2h-Block`
 
 ```
 ━━ Nacht am Ziel (150m) ━━
@@ -161,10 +170,14 @@ No recommendations – just highlight what's essential:
 
 **Rules for highlights (shown only when relevant):**
 - Thunder: any segment with `thunder_level != NONE`
-- Strong gusts: `gust_kmh > 60`
-- Heavy rain: `precip_sum > 5 mm` across all segments
+- Strong gusts: `gust_kmh > 60` — scanned from **full timeseries** (24h) mit Uhrzeit
+- Heavy rain: `precip_sum > 5 mm` across all segments (segment-window only)
 - Night cold: `temp_min < 5 °C` in night block
-- Extreme wind: `wind_max > 50 km/h`
+- Extreme wind: `wind_max > 50 km/h` — scanned from **full timeseries** (24h) mit Uhrzeit
+
+**Timestamp-Annotation:** Extremwerte aus der vollen Timeseries werden mit
+Uhrzeit angezeigt. Werte ausserhalb des Segment-Zeitfensters erhalten den
+Zusatz "nachts": `💨 Böen bis 126 km/h (03:00, nachts)`
 
 ### 6b) Wetteränderungen (nur bei Alert-E-Mails)
 
@@ -302,7 +315,7 @@ def _dp_to_row(self, dp, dc) -> dict:
     return row
 ```
 
-### Night Block Extraction
+### Night Block Extraction (2h Block Aggregation)
 
 ```python
 def _extract_night_rows(
@@ -310,17 +323,20 @@ def _extract_night_rows(
     night_weather: NormalizedTimeseries,
     arrival_hour: int,
     interval: int = 2,
+    dc: Optional[UnifiedWeatherDisplayConfig] = None,
 ) -> list[dict]:
-    """Extract 2-hourly night data from arrival to 06:00 next day."""
-    rows = []
-    for dp in night_weather.data:
-        hour = dp.ts.hour
-        # From arrival hour onwards, then 00:00-06:00 next day
-        in_evening = hour >= arrival_hour
-        in_morning = hour <= 6 and dp.ts.date() > night_weather.data[0].ts.date()
-        if (in_evening or in_morning) and hour % interval == 0:
-            rows.append(...)
+    """Aggregate night data into 2h blocks from arrival to 06:00."""
+    # 1. Filter to night range (arrival → 06:00 next day)
+    # 2. Group into 2h blocks: [20+21], [22+23], [00+01], ...
+    # 3. Aggregate each block via _aggregate_night_block()
+    #    → multi-agg metrics with "min" use min (Temperatur, Nullgradgrenze)
+    #    → all others use their default_aggregations[0]
     return rows
+
+def _aggregate_night_block(self, dps, dc, interval=2) -> dict:
+    """Aggregate data points in a 2h night block into a single row."""
+    # For each metric: collect values, apply night aggregation rule
+    # Special handling for ThunderLevel/PrecipType enums
 ```
 
 ### Single Processor for Text + HTML

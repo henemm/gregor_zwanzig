@@ -47,7 +47,9 @@ if TYPE_CHECKING:
 logger = logging.getLogger("openmeteo")
 
 # API Configuration
-BASE_URL = "https://api.open-meteo.com/v1/forecast"
+# BUGFIX: Dedicated endpoints per model family (not generic /v1/forecast)
+# See: docs/specs/bugfix/openmeteo_endpoint_routing.md
+BASE_HOST = "https://api.open-meteo.com"
 TIMEOUT = 30.0
 
 # Retry Configuration (per docs/specs/modules/api_retry.md)
@@ -63,6 +65,7 @@ REGIONAL_MODELS = [
     {
         "id": "meteofrance_arome",
         "name": "AROME France & Balearen (1.3 km)",
+        "endpoint": "/v1/meteofrance",
         "bounds": {"min_lat": 38.0, "max_lat": 53.0, "min_lon": -8.0, "max_lon": 10.0},
         "grid_res_km": 1.3,
         "priority": 1,  # Highest resolution first
@@ -70,6 +73,7 @@ REGIONAL_MODELS = [
     {
         "id": "icon_d2",
         "name": "ICON-D2 (2 km)",
+        "endpoint": "/v1/dwd-icon",
         "bounds": {"min_lat": 43.0, "max_lat": 56.0, "min_lon": 2.0, "max_lon": 18.0},
         "grid_res_km": 2.0,
         "priority": 2,
@@ -77,6 +81,7 @@ REGIONAL_MODELS = [
     {
         "id": "metno_nordic",
         "name": "MetNo Nordic (1 km)",
+        "endpoint": "/v1/metno",
         "bounds": {"min_lat": 53.0, "max_lat": 72.0, "min_lon": 3.0, "max_lon": 35.0},
         "grid_res_km": 1.0,
         "priority": 3,
@@ -84,6 +89,7 @@ REGIONAL_MODELS = [
     {
         "id": "icon_eu",
         "name": "ICON-EU (7 km)",
+        "endpoint": "/v1/dwd-icon",
         "bounds": {"min_lat": 29.0, "max_lat": 71.0, "min_lon": -24.0, "max_lon": 45.0},
         "grid_res_km": 7.0,
         "priority": 4,
@@ -91,6 +97,7 @@ REGIONAL_MODELS = [
     {
         "id": "ecmwf_ifs04",
         "name": "ECMWF IFS (40 km)",
+        "endpoint": "/v1/ecmwf",
         "bounds": {"min_lat": -90.0, "max_lat": 90.0, "min_lon": -180.0, "max_lon": 180.0},
         "grid_res_km": 40.0,
         "priority": 5,  # Global fallback - MANDATORY
@@ -128,12 +135,12 @@ class OpenMeteoProvider:
         """Provider identifier."""
         return "openmeteo"
 
-    def select_model(self, lat: float, lon: float) -> Tuple[str, float]:
+    def select_model(self, lat: float, lon: float) -> Tuple[str, float, str]:
         """
         Select best weather model based on coordinates.
 
         Iterates models by priority (highest resolution first) and returns
-        first match. ECMWF global model (-90/90, -180/180) guarantees coverage.
+        first match with dedicated API endpoint. ECMWF global model guarantees coverage.
 
         CRITICAL (APPROVAL CONDITION):
         - MUST always return a valid model
@@ -144,7 +151,7 @@ class OpenMeteoProvider:
             lon: Longitude (-180 to 180)
 
         Returns:
-            Tuple of (model_id, grid_res_km)
+            Tuple of (model_id, grid_res_km, endpoint_path)
 
         Raises:
             ProviderError: If no model found (critical config error)
@@ -157,9 +164,9 @@ class OpenMeteoProvider:
             ):
                 logger.debug(
                     f"Selected model '{model['id']}' ({model['grid_res_km']}km) "
-                    f"for lat={lat}, lon={lon}"
+                    f"endpoint='{model['endpoint']}' for lat={lat}, lon={lon}"
                 )
-                return model["id"], model["grid_res_km"]
+                return model["id"], model["grid_res_km"], model["endpoint"]
 
         # FAILSAFE: Should NEVER be reached (ECMWF is global)
         raise ProviderError(
@@ -175,7 +182,7 @@ class OpenMeteoProvider:
         before_sleep=before_sleep_log(logger, logging.WARNING),
         reraise=True,
     )
-    def _request(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def _request(self, endpoint: str, params: Dict[str, Any]) -> Dict[str, Any]:
         """
         Make HTTP request to Open-Meteo API with retry logic.
 
@@ -185,6 +192,7 @@ class OpenMeteoProvider:
         - Read timeouts
 
         Args:
+            endpoint: API endpoint path (e.g., "/v1/meteofrance")
             params: Query parameters
 
         Returns:
@@ -193,8 +201,9 @@ class OpenMeteoProvider:
         Raises:
             ProviderRequestError: On non-retryable errors or after max retries
         """
+        url = f"{BASE_HOST}{endpoint}"
         try:
-            response = self._client.get(BASE_URL, params=params)
+            response = self._client.get(url, params=params)
             response.raise_for_status()
             return response.json()
         except httpx.HTTPStatusError as e:
@@ -344,14 +353,13 @@ class OpenMeteoProvider:
             ProviderError: If model selection fails or response invalid
             ProviderRequestError: If API request fails
         """
-        # Select best model for location
-        model_id, grid_res_km = self.select_model(location.latitude, location.longitude)
+        # Select best model for location (includes dedicated API endpoint)
+        model_id, grid_res_km, endpoint = self.select_model(location.latitude, location.longitude)
 
-        # Build request parameters
+        # Build request parameters (no "model" param needed — endpoint determines model)
         params = {
             "latitude": location.latitude,
             "longitude": location.longitude,
-            "model": model_id,  # Dynamic model selection!
             "hourly": ",".join([
                 "temperature_2m",
                 "apparent_temperature",
@@ -390,11 +398,12 @@ class OpenMeteoProvider:
 
         logger.info(
             f"Fetching Open-Meteo forecast for {location.name or 'location'} "
-            f"({location.latitude}, {location.longitude}) using model '{model_id}'"
+            f"({location.latitude}, {location.longitude}) "
+            f"using model '{model_id}' via endpoint '{endpoint}'"
         )
 
-        # Make request with retry logic
-        response_data = self._request(params)
+        # Make request with retry logic (dedicated endpoint per model)
+        response_data = self._request(endpoint, params)
 
         # Parse and return
         return self._parse_response(response_data, model_id, grid_res_km)
