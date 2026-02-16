@@ -41,7 +41,7 @@ Features are added via `/feature` or `/user-story` commands.
 | Gewitter Risk Logic | done | HIGH | Risk Engine | Risk Engine | Medium | RISK-01 |
 | Starkregen Risk | done | MEDIUM | Risk Engine | Risk Engine | Simple | RISK-02 |
 | Wind/Hitze Risk | done | LOW | Risk Engine | Risk Engine | Simple | RISK-03 |
-| Configurable Thresholds | open | MEDIUM | Config | Risk Engine, Config | Simple | RISK-04 |
+| Configurable Thresholds | done | MEDIUM | Config | Risk Engine, Config | Simple | RISK-04 |
 | Report Types | done | HIGH | Formatter | Formatter, CLI | Medium | REPORT-01 |
 | Compact Formatter | done | MEDIUM | Formatter | Formatter | Simple | REPORT-02 |
 | SMTP Mailer | done | HIGH | Channel | Channel Layer | Medium | REPORT-03 |
@@ -73,6 +73,16 @@ Features are added via `/feature` or `/user-story` commands.
 | Letzter Waypoint fehlt in Trip-Report | done | HIGH | Bugfix | Segment Weather, Scheduler | Simple | BUG-01 |
 | AROME: Visibility/UV nicht verfuegbar | done | LOW | Provider | Provider Layer | Medium | WEATHER-05 + WEATHER-06 |
 | Report-Config (WebUI) | done | HIGH | WebUI | Frontend | Simple | GPX-Story3 |
+| Kompakt-Summary | open | HIGH | Formatter | Formatter, Email, SMS | Simple | F2 |
+| SMS-Kanal | open | HIGH | Channel | Channel Layer, Formatter | Medium | F1 |
+| Multi-Day Trend | open | MEDIUM | Formatter | Formatter, Provider | Simple | F3 |
+| Trip-Briefing (Kompakt-Tabelle) | open | MEDIUM | Formatter | Formatter, Scheduler | Medium | F4 |
+| Biwak-/Zelt-Modus | open | MEDIUM | Config | Config, Formatter, Night-Block | Simple-Medium | F5 |
+| Trip-Umplanung per Kommando | open | MEDIUM | Services | Scheduler, Email-Reply, SMS-Reply | Medium-Large | F6 |
+| Wind-Exposition (Grat-Erkennung) | open | LOW | Risk Engine | GPX Elevation, Risk Engine | Medium | F7 |
+| Risk Engine (Daten-Layer) | open | LOW | Risk Engine | Risk Engine, Formatter | Large | F8 |
+| Satellite Messenger (Garmin inReach) | open | LOW | Channel | Channel Layer, Formatter | Simple | F9 |
+| Lawinen-Integration (SLF/EAWS) | open | LOW | Provider | Provider Layer, Risk Engine | Large | F10 |
 
 ## Completed Features (Last 10)
 
@@ -104,12 +114,19 @@ Features are added via `/feature` or `/user-story` commands.
 
 ## Upcoming (Next 3 Sprints)
 
-### Sprint 1 (Current)
-- [ ] Configurable Thresholds (RISK-04, Config existiert aber nicht im Formatter verdrahtet)
+### Sprint 1 (Current) — Quick Wins
+- [ ] Kompakt-Summary (F2, Gering — enabler fuer SMS + Satellite)
+- [ ] Multi-Day Trend (F3, Gering — 3-5 Tage Trend im Evening-Report)
+- [ ] Biwak-/Zelt-Modus (F5, Gering-Mittel — erweiterter Night-Block)
+
+### Sprint 2 — SMS/Satellite-Kanal
+- [ ] SMS-Kanal (F1, Mittel — setzt F2 voraus)
+- [ ] Satellite Messenger / Garmin inReach (F9, Gering — setzt F2 voraus)
 - [ ] Logging/Rotation (OPS-02)
 
-### Sprint 2
-- _(offen — abhaengig von naechsten User-Anforderungen)_
+### Sprint 3 — Trip Intelligence
+- [ ] Trip-Briefing Kompakt-Tabelle (F4, Mittel)
+- [ ] Trip-Umplanung per Kommando (F6, Mittel-Hoch)
 
 ## Feature Categories
 
@@ -120,13 +137,19 @@ Features are added via `/feature` or `/user-story` commands.
 - ~~MET Norway~~ (obsolete), ~~MOSMIX~~ (obsolete), Open-Meteo (done), Data Normalization (done), Error Handling (done), Model-Metric-Fallback (done), UV via Air Quality API (done)
 
 ### Risk Engine (Weather Assessment)
-- Gewitter Risk (done), Starkregen Risk (done), Wind/Hitze Risk (done), Configurable Thresholds
+- Gewitter Risk (done), Starkregen Risk (done), Wind/Hitze Risk (done), Configurable Thresholds (done)
+- Risk Engine Daten-Layer (F8), Wind-Exposition (F7), Lawinen-Integration (F10)
 
 ### Formatter (Report Generation)
 - Report Types (done), Compact Formatter (done)
+- Kompakt-Summary (F2), Multi-Day Trend (F3), Trip-Briefing (F4), Biwak-/Zelt-Modus (F5)
 
 ### Channel (Delivery)
 - SMTP Mailer (done)
+- SMS-Kanal (F1), Satellite Messenger (F9)
+
+### Services (Trip Intelligence)
+- Trip-Umplanung per Kommando (F6)
 
 ### WebUI (Frontend)
 - Trip Edit (done), Compare E-Mail (done), Cloud Layers (done), GPX Upload (done), Etappen-Config (done), Segment-Übersicht (done)

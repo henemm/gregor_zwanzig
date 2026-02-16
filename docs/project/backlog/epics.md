@@ -20,14 +20,11 @@ Epics are large business initiatives that contain multiple user stories.
   - HTML email with tables
   - Gmail integration
 
-- [ ] SMS Reports - PLANNED
-  - Story doc: `stories/sms-berichte.md` (to be created)
-  - Features: SMS Channel Integration, SMS Compact Formatter, SMS Config, SMS Retry Logic
+- [ ] SMS Reports — Moved to Epic: Low-Connectivity Delivery (F1, F2, F9)
 
-- [ ] Push Notification Reports - FUTURE
-  - Not yet planned
+- [ ] Push Notification Reports - FUTURE (deprioritized)
 
-**Target Completion:** Q1 2026 (Email done, SMS planned)
+**Target Completion:** Q1 2026 (Email done) — SMS moved to dedicated epic
 
 ---
 
@@ -136,6 +133,108 @@ Epics are large business initiatives that contain multiple user stories.
   - 5 Features, alle implementiert und validiert
 
 **Completed:** 2026-02
+
+---
+
+### Epic: Low-Connectivity Delivery (SMS/Satellite)
+
+**Goal:** Wetter-Reports ueber SMS und Satellit zustellen — fuer Situationen ohne Internet
+
+**Business Value:** Auf GR20/GR221 oft nur GSM verfuegbar, kein Internet. SMS ist Game-Changer. Garmin inReach ermoeglicht Empfang ueber Baumgrenze.
+
+**Status:** Planned
+
+**Dependencies:** F2 (Kompakt-Summary) ist Enabler fuer alle Kanaele
+
+**User Stories:**
+- [ ] Kompakt-Summary (F2) — Prerequisite
+  - 3-5 Zeilen Kurzfassung, SMS-kompatibles Format
+  - Enabler fuer SMS + Satellite
+
+- [ ] SMS-Kanal (F1)
+  - SMS Gateway Integration (Twilio o.ae.)
+  - SMS Formatter (<=160 Zeichen)
+  - SMS Config pro Trip
+
+- [ ] Satellite Messenger / Garmin inReach (F9)
+  - Email-Bridge (160 Zeichen) an Garmin inReach
+  - Baut auf F2 Kompakt-Format auf
+
+**Target Completion:** Q2 2026
+
+---
+
+### Epic: Enhanced Trip Reports
+
+**Goal:** Reports mit mehr Kontext — Trends, Biwak-Details, Trip-Briefing
+
+**Business Value:** Mehrtages-Strategie und Ruhetag-Planung. Zelter bekommen relevante Nacht-Details. Trip-Briefing am Vorabend gibt Gesamtueberblick.
+
+**Status:** Planned
+
+**User Stories:**
+- [ ] Multi-Day Trend (F3)
+  - 3-5 Tage Trend-Block im Evening-Report
+  - Emoji-basiert: `Mo☀️18° Di🌤15° Mi🌧12°⚠️`
+
+- [ ] Biwak-/Zelt-Modus (F5)
+  - Uebernachtungstyp pro Etappe (Huette/Zelt/Biwak)
+  - Erweiterter Night-Block bei Zelt/Biwak
+
+- [ ] Trip-Briefing Kompakt-Tabelle (F4)
+  - Einmaliger Report am Vorabend
+  - Alle Etappen als Tabelle (Tag | Temp | Wind | Regen | Besonderheit)
+
+**Target Completion:** Q2 2026
+
+---
+
+### Epic: Asynchrone Trip-Steuerung
+
+**Goal:** Trip unterwegs per Kommando anpassen — ohne Web-UI
+
+**Business Value:** Innovativstes Feature. Asynchrone Steuerung per SMS/Email-Reply. Passt perfekt zum Low-Connectivity-Paradigma.
+
+**Status:** Planned
+
+**Dependencies:** F1 (SMS-Kanal) fuer SMS-Reply, Email-Reply als Einstieg
+
+**User Stories:**
+- [ ] Trip-Umplanung per Kommando (F6)
+  - "Ruhetag heute" → Folge-Etappen +1 Tag verschieben
+  - Email-Reply und SMS-Reply als Input-Kanal
+  - Bestaetigung per SMS/Email
+
+**Target Completion:** Q3 2026
+
+---
+
+### Epic: Advanced Risk & Terrain Analysis
+
+**Goal:** Risiko-Kategorisierung und terrain-bewusste Warnungen
+
+**Business Value:** Differenzierte Darstellung (low/med/high) pro Metrik. Wind-Exposition beruecksichtigt Gelaendef orm. Lawinen-Daten fuer Skitouren.
+
+**Status:** Planned
+
+**Dependencies:** F8 ist Enabler fuer F7
+
+**User Stories:**
+- [ ] Risk Engine Daten-Layer (F8)
+  - Risiko-Kategorisierung (low/med/high) pro Metrik
+  - OHNE Handlungsempfehlung — reine Daten
+  - Draft-Spec existiert
+
+- [ ] Wind-Exposition / Grat-Erkennung (F7)
+  - Aus GPX-Profil exponierte Abschnitte erkennen
+  - Wind-Warnung fuer Grat/Gipfel verschaerfen
+
+- [ ] Lawinen-Integration (F10)
+  - SLF/EAWS Adapter
+  - Datenmodell hat bereits `avalanche_regions`
+  - Naechste Wintersaison
+
+**Target Completion:** Q3 2026 (F8, F7), Winter 2026/27 (F10)
 
 ---
 
