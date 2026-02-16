@@ -87,6 +87,11 @@ def create_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Run scheduled compare subscriptions and send emails",
     )
+    parser.add_argument(
+        "--probe-models",
+        action="store_true",
+        help="Probe all OpenMeteo models for metric availability and update cache",
+    )
     return parser
 
 
@@ -162,6 +167,17 @@ def main(argv: Optional[list[str]] = None) -> int:
     debug.add(f"settings.dry_run: {settings.dry_run}")
 
     try:
+        # Probe models mode (WEATHER-05a)
+        if args.probe_models:
+            from providers.openmeteo import OpenMeteoProvider
+            provider = OpenMeteoProvider()
+            print("Probing OpenMeteo models for metric availability...")
+            result = provider.probe_model_availability()
+            for model_id, info in result["models"].items():
+                print(f"  {model_id}: {len(info['available'])} available, {len(info['unavailable'])} unavailable")
+            print(f"Cache saved: {result['probe_date']}")
+            return 0
+
         # Subscription runner mode?
         if args.run_subscriptions:
             return _run_subscriptions(settings, debug)

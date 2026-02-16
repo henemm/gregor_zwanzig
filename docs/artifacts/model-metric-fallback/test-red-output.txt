@@ -1,0 +1,135 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.2, pytest-8.4.1, pluggy-1.6.0
+rootdir: /opt/gregor_zwanziger
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 9 items
+
+tests/unit/test_metric_availability_probe.py FFFFFFFFF                   [100%]
+
+=================================== FAILURES ===================================
+________ TestProbeModelAvailability.test_probe_returns_dict_with_models ________
+
+self = <test_metric_availability_probe.TestProbeModelAvailability object at 0x7efc5d7b0150>
+
+    def test_probe_returns_dict_with_models(self) -> None:
+        """probe_model_availability must return dict with 'models' key."""
+        from providers.openmeteo import OpenMeteoProvider
+    
+        provider = OpenMeteoProvider()
+>       result = provider.probe_model_availability()
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'OpenMeteoProvider' object has no attribute 'probe_model_availability'
+
+tests/unit/test_metric_availability_probe.py:37: AttributeError
+___ TestProbeModelAvailability.test_each_model_has_available_and_unavailable ___
+
+self = <test_metric_availability_probe.TestProbeModelAvailability object at 0x7efc5d7b1f10>
+
+    def test_each_model_has_available_and_unavailable(self) -> None:
+        """Each model entry must have 'available' and 'unavailable' lists."""
+        from providers.openmeteo import OpenMeteoProvider
+    
+        provider = OpenMeteoProvider()
+>       result = provider.probe_model_availability()
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'OpenMeteoProvider' object has no attribute 'probe_model_availability'
+
+tests/unit/test_metric_availability_probe.py:49: AttributeError
+_______ TestProbeModelAvailability.test_ecmwf_has_most_params_available ________
+
+self = <test_metric_availability_probe.TestProbeModelAvailability object at 0x7efc5d7b1810>
+
+    def test_ecmwf_has_most_params_available(self) -> None:
+        """ECMWF IFS (global fallback) should have >= 18 params available."""
+        from providers.openmeteo import OpenMeteoProvider
+    
+        provider = OpenMeteoProvider()
+>       result = provider.probe_model_availability()
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'OpenMeteoProvider' object has no attribute 'probe_model_availability'
+
+tests/unit/test_metric_availability_probe.py:62: AttributeError
+______________ TestCacheWrite.test_cache_file_written_after_probe ______________
+
+self = <test_metric_availability_probe.TestCacheWrite object at 0x7efc5d7b1e50>
+tmp_path = PosixPath('/tmp/pytest-of-haadmin/pytest-88/test_cache_file_written_after_0')
+
+    def test_cache_file_written_after_probe(self, tmp_path: Path) -> None:
+        """Probe must write cache file."""
+>       from providers.openmeteo import OpenMeteoProvider, AVAILABILITY_CACHE_PATH
+E       ImportError: cannot import name 'AVAILABILITY_CACHE_PATH' from 'providers.openmeteo' (/opt/gregor_zwanziger/src/providers/openmeteo.py)
+
+tests/unit/test_metric_availability_probe.py:78: ImportError
+_______________ TestCacheLoad.test_load_returns_dict_when_valid ________________
+
+self = <test_metric_availability_probe.TestCacheLoad object at 0x7efc5d7b21d0>
+tmp_path = PosixPath('/tmp/pytest-of-haadmin/pytest-88/test_load_returns_dict_when_va0')
+
+    def test_load_returns_dict_when_valid(self, tmp_path: Path) -> None:
+        """Valid cache (< 7 days old) must return dict."""
+>       from providers.openmeteo import OpenMeteoProvider, AVAILABILITY_CACHE_PATH
+E       ImportError: cannot import name 'AVAILABILITY_CACHE_PATH' from 'providers.openmeteo' (/opt/gregor_zwanziger/src/providers/openmeteo.py)
+
+tests/unit/test_metric_availability_probe.py:96: ImportError
+______________ TestCacheLoad.test_load_returns_none_when_expired _______________
+
+self = <test_metric_availability_probe.TestCacheLoad object at 0x7efc5d7b24d0>
+tmp_path = PosixPath('/tmp/pytest-of-haadmin/pytest-88/test_load_returns_none_when_ex0')
+
+    def test_load_returns_none_when_expired(self, tmp_path: Path) -> None:
+        """Expired cache (>= 7 days old) must return None."""
+>       from providers.openmeteo import OpenMeteoProvider, AVAILABILITY_CACHE_PATH
+E       ImportError: cannot import name 'AVAILABILITY_CACHE_PATH' from 'providers.openmeteo' (/opt/gregor_zwanziger/src/providers/openmeteo.py)
+
+tests/unit/test_metric_availability_probe.py:114: ImportError
+______________ TestCacheLoad.test_load_returns_none_when_missing _______________
+
+self = <test_metric_availability_probe.TestCacheLoad object at 0x7efc5d7b2b90>
+
+    def test_load_returns_none_when_missing(self) -> None:
+        """Missing cache file must return None."""
+        from providers.openmeteo import OpenMeteoProvider
+    
+        provider = OpenMeteoProvider()
+        # Temporarily point to non-existent path
+>       result = provider._load_availability_cache()
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'OpenMeteoProvider' object has no attribute '_load_availability_cache'
+
+tests/unit/test_metric_availability_probe.py:136: AttributeError
+_______________ TestProbeErrorHandling.test_probe_method_exists ________________
+
+self = <test_metric_availability_probe.TestProbeErrorHandling object at 0x7efc5d7b3910>
+
+    def test_probe_method_exists(self) -> None:
+        """OpenMeteoProvider must have probe_model_availability method."""
+        from providers.openmeteo import OpenMeteoProvider
+    
+        provider = OpenMeteoProvider()
+>       assert hasattr(provider, 'probe_model_availability')
+E       AssertionError: assert False
+E        +  where False = hasattr(<providers.openmeteo.OpenMeteoProvider object at 0x7efc5d3ebdd0>, 'probe_model_availability')
+
+tests/unit/test_metric_availability_probe.py:155: AssertionError
+____________ TestProbeErrorHandling.test_cache_path_constant_exists ____________
+
+self = <test_metric_availability_probe.TestProbeErrorHandling object at 0x7efc5d7b3d10>
+
+    def test_cache_path_constant_exists(self) -> None:
+        """AVAILABILITY_CACHE_PATH must be defined."""
+>       from providers.openmeteo import AVAILABILITY_CACHE_PATH
+E       ImportError: cannot import name 'AVAILABILITY_CACHE_PATH' from 'providers.openmeteo' (/opt/gregor_zwanziger/src/providers/openmeteo.py)
+
+tests/unit/test_metric_availability_probe.py:160: ImportError
+=========================== short test summary info ============================
+FAILED tests/unit/test_metric_availability_probe.py::TestProbeModelAvailability::test_probe_returns_dict_with_models
+FAILED tests/unit/test_metric_availability_probe.py::TestProbeModelAvailability::test_each_model_has_available_and_unavailable
+FAILED tests/unit/test_metric_availability_probe.py::TestProbeModelAvailability::test_ecmwf_has_most_params_available
+FAILED tests/unit/test_metric_availability_probe.py::TestCacheWrite::test_cache_file_written_after_probe
+FAILED tests/unit/test_metric_availability_probe.py::TestCacheLoad::test_load_returns_dict_when_valid
+FAILED tests/unit/test_metric_availability_probe.py::TestCacheLoad::test_load_returns_none_when_expired
+FAILED tests/unit/test_metric_availability_probe.py::TestCacheLoad::test_load_returns_none_when_missing
+FAILED tests/unit/test_metric_availability_probe.py::TestProbeErrorHandling::test_probe_method_exists
+FAILED tests/unit/test_metric_availability_probe.py::TestProbeErrorHandling::test_cache_path_constant_exists
+============================== 9 failed in 0.26s ===============================
