@@ -72,6 +72,9 @@ class ForecastMeta:
     grid_res_km: float
     interp: str  # e.g., "point_grid", "nearest_station", "idw2"
     stations_used: List[StationInfo] = field(default_factory=list)
+    # WEATHER-05b: Fallback tracking
+    fallback_model: Optional[str] = None
+    fallback_metrics: List[str] = field(default_factory=list)
 
 
 @dataclass

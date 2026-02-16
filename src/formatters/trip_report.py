@@ -649,7 +649,7 @@ class TripReportFormatter:
         {highlights_html}
 
         <div class="footer">
-            Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')} | Data: {segments[0].provider} ({segments[0].timeseries.meta.model if segments[0].timeseries else 'n/a'})
+            Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')} | Data: {segments[0].provider} ({segments[0].timeseries.meta.model if segments[0].timeseries else 'n/a'}){(' | Fallback ' + ', '.join(segments[0].timeseries.meta.fallback_metrics) + ': ' + segments[0].timeseries.meta.fallback_model) if segments[0].timeseries and segments[0].timeseries.meta.fallback_model else ''}
         </div>
     </div>
 </body>
@@ -762,6 +762,9 @@ class TripReportFormatter:
         lines.append(f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}")
         model_name = segments[0].timeseries.meta.model if segments[0].timeseries else "n/a"
         lines.append(f"Data: {segments[0].provider} ({model_name})")
+        if segments[0].timeseries and segments[0].timeseries.meta.fallback_model:
+            fb = segments[0].timeseries.meta
+            lines.append(f"Fallback {', '.join(fb.fallback_metrics)}: {fb.fallback_model}")
         return "\n".join(lines)
 
     def _render_text_table(self, rows: list[dict]) -> str:
