@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, List, Optional
 
 from app.config import Settings
 from app.loader import load_all_trips
-from app.models import GPXPoint, NormalizedTimeseries, SegmentWeatherData, TripSegment
+from app.models import GPXPoint, NormalizedTimeseries, SegmentWeatherData, SegmentWeatherSummary, TripSegment
 from formatters.trip_report import TripReportFormatter
 from outputs.email import EmailOutput
 
@@ -292,7 +292,15 @@ class TripReportSchedulerService:
 
         logger.info(f"Trip report sent: {trip.name} ({report_type})")
 
-        # 8. Save weather snapshot for alert comparison
+        # 8. WEATHER-04: Service-E-Mail bei SMS-only + Fehler
+        errors = [s for s in segment_weather if s.has_error]
+        if errors:
+            config = trip.report_config
+            is_sms_only = config and config.send_sms and not config.send_email
+            if is_sms_only:
+                self._send_service_error_email(trip, errors, report_type)
+
+        # 9. Save weather snapshot for alert comparison
         try:
             from services.weather_snapshot import WeatherSnapshotService
             WeatherSnapshotService().save(trip.id, segment_weather, target_date)
@@ -498,6 +506,17 @@ class TripReportSchedulerService:
                 logger.error(
                     f"Weather fetch failed for segment {segment.segment_id}: {e}"
                 )
+                # WEATHER-04: Error-Placeholder statt auslassen
+                error_data = SegmentWeatherData(
+                    segment=segment,
+                    timeseries=None,
+                    aggregated=SegmentWeatherSummary(),
+                    fetched_at=datetime.now(timezone.utc),
+                    provider="unknown",
+                    has_error=True,
+                    error_message=str(e),
+                )
+                weather_data.append(error_data)
 
         return weather_data
 
@@ -614,3 +633,32 @@ class TripReportSchedulerService:
                 }
 
         return forecast if forecast else None
+
+    # WEATHER-04: Service email for SMS-only trips with provider errors
+    def _send_service_error_email(
+        self,
+        trip: "Trip",
+        errors: list[SegmentWeatherData],
+        report_type: str,
+    ) -> None:
+        """Service-E-Mail bei Provider-Fehler fuer SMS-only Trips."""
+        error_lines = "\n".join(
+            f"  - Segment {e.segment.segment_id}: {e.error_message}"
+            for e in errors
+        )
+        subject = f"[{trip.name}] Wetterdaten nicht verfuegbar"
+        body = (
+            f"<h3>Service-Benachrichtigung</h3>"
+            f"<p><b>Trip:</b> {trip.name}<br>"
+            f"<b>Report:</b> {report_type.title()}<br>"
+            f"<b>Problem:</b> Wetterdaten konnten nicht abgerufen werden.</p>"
+            f"<p><b>Betroffene Segmente:</b></p>"
+            f"<pre>{error_lines}</pre>"
+            f"<p><small>Diese E-Mail wurde automatisch gesendet, weil Ihr Trip "
+            f"nur SMS aktiviert hat und Anbieter-Fehler aufgetreten sind.</small></p>"
+        )
+        try:
+            EmailOutput(self._settings).send(subject=subject, body=body, html=True)
+            logger.info(f"Service error email sent for {trip.name}")
+        except Exception as e:
+            logger.error(f"Failed to send service error email: {e}")

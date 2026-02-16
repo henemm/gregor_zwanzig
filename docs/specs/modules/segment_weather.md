@@ -188,16 +188,19 @@ class TripSegment:
     waypoint: Optional["DetectedWaypoint"] = None
 ```
 
-#### SegmentWeatherData (Story 2.1)
+#### SegmentWeatherData (Story 2.1, updated WEATHER-04)
 ```python
 @dataclass
 class SegmentWeatherData:
     """Weather data for a single trip segment."""
     segment: TripSegment
-    timeseries: NormalizedTimeseries
+    timeseries: Optional[NormalizedTimeseries]  # None if provider error
     aggregated: "SegmentWeatherSummary"  # Empty for now, Feature 2.3 fills it
     fetched_at: datetime
     provider: str  # "GEOSPHERE", "OPENMETEO", etc.
+    # Error tracking (WEATHER-04)
+    has_error: bool = False
+    error_message: Optional[str] = None
 ```
 
 #### SegmentWeatherSummary (Story 2.2/2.3)
@@ -444,5 +447,6 @@ weather.aggregated = aggregated_summary
 
 ## Changelog
 
+- 2026-02-16: Updated with error handling (WEATHER-04) - SegmentWeatherData now includes has_error/error_message fields
 - 2026-02-01: Initial spec created for Feature 2.1 (Story 2: Wetter-Engine)
 - 2026-02-01: DTOs preempted from API Contract (Option B decision)

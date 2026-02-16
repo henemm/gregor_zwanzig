@@ -358,4 +358,5 @@ Fehler bei einem Trip blockieren NICHT die anderen Trips.
 
 ## Changelog
 
+- 2026-02-16: Updated with error handling (WEATHER-04) - handles error segments and sends service emails
 - 2026-02-09: v1.0 Initial spec created (Feature 3.3)

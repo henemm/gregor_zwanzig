@@ -185,5 +185,6 @@ retry_status_codes = 502,503,504
 
 ## Changelog
 
+- 2026-02-16: Extended by WEATHER-04 (Provider Error Handling) - handles failures after retry exhaustion
 - 2026-01-02: Initial spec created nach API-Ausfall am Morgen
 - 2026-01-02: Retry-Konfiguration angepasst (5 Versuche, max 60s Wartezeit)

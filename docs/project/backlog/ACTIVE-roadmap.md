@@ -34,7 +34,7 @@ Features are added via `/feature` or `/user-story` commands.
 | Open-Meteo Provider | done | MEDIUM | Provider | Provider Layer | Medium | - |
 | MOSMIX Adapter | open | MEDIUM | Provider | Provider Layer | Large | WEATHER-02 |
 | Data Normalization | done | HIGH | Provider | Normalizer | Medium | WEATHER-03 |
-| Provider Error Handling | in_progress | MEDIUM | Provider | Provider Layer | Medium | WEATHER-04 |
+| Provider Error Handling | done | MEDIUM | Provider | Provider Layer | Medium | WEATHER-04 |
 | Model-Metric-Fallback | backlog | MEDIUM | Provider | Provider Layer, Cache | Medium | WEATHER-05 |
 | Gewitter Risk Logic | open | HIGH | Risk Engine | Risk Engine | Medium | RISK-01 |
 | Starkregen Risk | open | MEDIUM | Risk Engine | Risk Engine | Simple | RISK-02 |
@@ -67,16 +67,16 @@ Features are added via `/feature` or `/user-story` commands.
 | SMS Compact Formatter | done | HIGH | Formatter | Report Generation | Simple | GPX-Story3 |
 | Report-Scheduler | done | HIGH | Services | Scheduler | Medium | GPX-Story3 |
 | Alert bei Änderungen | done | HIGH | Services | Alert System | Simple | GPX-Story3 |
-| Weather Snapshot Service | open | HIGH | Services | Alert System, Scheduler | Medium | ALERT-01 |
-| Letzter Waypoint fehlt in Trip-Report | open | HIGH | Bugfix | Segment Weather, Scheduler | Simple | BUG-01 |
-| AROME: Visibility/UV nicht verfuegbar | open | LOW | Provider | Provider Layer | Simple | BUG-02 |
+| Weather Snapshot Service | done | HIGH | Services | Alert System, Scheduler | Medium | ALERT-01 |
+| Letzter Waypoint fehlt in Trip-Report | done | HIGH | Bugfix | Segment Weather, Scheduler | Simple | BUG-01 |
+| AROME: Visibility/UV nicht verfuegbar | → WEATHER-05 | LOW | Provider | Provider Layer | Medium | WEATHER-05 |
 | Report-Config (WebUI) | done | HIGH | WebUI | Frontend | Simple | GPX-Story3 |
 
 ## Completed Features (Last 10)
 
 | Feature | Completed | Category | Notes |
 |---------|-----------|----------|-------|
-| GPX Upload (WebUI) | 2026-02 | WebUI | Drag&Drop Upload, 401 LOC |
+| Provider Error Handling | 2026-02-16 | Provider | Catches ProviderRequestError, renders error warnings in emails, service emails for SMS-only trips |
 | GPX Parser & Validation | 2026-02 | Core | gpxpy-basiert, 13 Tests mit echten GPX-Dateien |
 | Höhenprofil-Analyse | 2026-02 | Core | Sliding-Window Peak/Valley Detection |
 | Zeit-Segment-Bildung | 2026-02 | Core | Naismith's Rule, konfigurierbare Geschwindigkeiten |
@@ -92,7 +92,7 @@ Features are added via `/feature` or `/user-story` commands.
 | Bug | Severity | Location | Description |
 |-----|----------|----------|-------------|
 | BUG-01: Letzter Waypoint fehlt | HIGH | `segment_weather.py:116-123` | `SegmentWeatherService` nutzt nur `segment.start_point` fuer die Wetter-Abfrage. Bei 3 Waypoints (G1→G2→G3) wird G3 (Ziel) nie abgefragt. Der letzte Waypoint jeder Etappe fehlt im Report. Fix: Eigener Spec+Workflow noetig. |
-| BUG-02: AROME liefert kein Visibility/UV | LOW | AROME API | MeteoFrance AROME Endpoint liefert `visibility=None` und `uv_index=None`. Spalten erscheinen korrekt, zeigen aber `–`. Kein Code-Bug — AROME-Limitation. Workaround: ECMWF-Fallback fuer diese Felder oder anderen Provider. |
+| BUG-02: AROME liefert kein Visibility/UV | LOW | AROME API | AROME-Limitation, kein Code-Bug. Loesung: WEATHER-05 Model-Metric-Fallback. Feature-Brief: `features/model-metric-fallback.md` |
 
 ## Blocked Features
 

@@ -459,6 +459,7 @@ Tests in `tests/unit/test_trip_report_formatter_v2.py`:
 
 ## Changelog
 
+- 2026-02-16: Updated with error rendering (WEATHER-04) - displays error boxes for failed segments
 - 2026-02-11: v2.1 spec updated (English headers, hour-only time, apparent_temperature, stage stats, haversine distance, show_clouds=True, night fetch via temporary segment, model name in footer)
 - 2026-02-11: v2.0 spec created (hourly tables, night block, thunder forecast, configurable columns)
 - 2026-02-02: v1.0 initial spec (aggregated segment rows)

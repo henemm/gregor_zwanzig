@@ -99,6 +99,10 @@ class TripReportFormatter:
         self, seg_data: SegmentWeatherData, dc: UnifiedWeatherDisplayConfig,
     ) -> list[dict]:
         """Extract hourly data points within segment time window."""
+        # WEATHER-04: Error-Segment hat keine Timeseries
+        if seg_data.has_error or seg_data.timeseries is None:
+            return []
+
         start_h = seg_data.segment.start_time.hour
         end_h = seg_data.segment.end_time.hour
         rows = []
@@ -251,6 +255,8 @@ class TripReportFormatter:
 
         # Thunder (segment hours only)
         for seg_data in segments:
+            if seg_data.has_error or seg_data.timeseries is None:
+                continue
             sh = seg_data.segment.start_time.hour
             eh = seg_data.segment.end_time.hour
             for dp in seg_data.timeseries.data:
@@ -267,6 +273,8 @@ class TripReportFormatter:
         max_gust_ts = None
         max_gust_in_seg = True
         for seg_data in segments:
+            if seg_data.has_error or seg_data.timeseries is None:
+                continue
             sh = seg_data.segment.start_time.hour
             eh = seg_data.segment.end_time.hour
             for dp in seg_data.timeseries.data:
@@ -301,6 +309,8 @@ class TripReportFormatter:
         max_wind_ts = None
         max_wind_in_seg = True
         for seg_data in segments:
+            if seg_data.has_error or seg_data.timeseries is None:
+                continue
             sh = seg_data.segment.start_time.hour
             eh = seg_data.segment.end_time.hour
             for dp in seg_data.timeseries.data:
@@ -515,6 +525,14 @@ class TripReportFormatter:
         seg_html_parts = []
         for seg_data, rows in zip(segments, seg_tables):
             seg = seg_data.segment
+            # WEATHER-04: Error-Segment als Warn-Box rendern
+            if seg_data.has_error:
+                seg_html_parts.append(f"""
+            <div style="background:#fff3e0;border-left:4px solid #e65100;padding:12px;margin:8px 0;">
+                <strong style="color:#e65100;">Segment {seg.segment_id}: Wetterdaten nicht verfuegbar</strong>
+                <p style="margin:4px 0 0 0;color:#666;font-size:13px;">Anbieter-Fehler nach 5 Versuchen</p>
+            </div>""")
+                continue
             s_elev = int(seg.start_point.elevation_m)
             e_elev = int(seg.end_point.elevation_m)
             if seg.segment_id == "Ziel":
@@ -631,7 +649,7 @@ class TripReportFormatter:
         {highlights_html}
 
         <div class="footer">
-            Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')} | Data: {segments[0].provider} ({segments[0].timeseries.meta.model})
+            Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')} | Data: {segments[0].provider} ({segments[0].timeseries.meta.model if segments[0].timeseries else 'n/a'})
         </div>
     </div>
 </body>
@@ -698,6 +716,12 @@ class TripReportFormatter:
         # Segment tables
         for seg_data, rows in zip(segments, seg_tables):
             seg = seg_data.segment
+            # WEATHER-04: Error-Segment als Warnung rendern
+            if seg_data.has_error:
+                lines.append(f"━━ Segment {seg.segment_id}: WETTERDATEN NICHT VERFUEGBAR ━━")
+                lines.append("  Anbieter-Fehler nach 5 Versuchen")
+                lines.append("")
+                continue
             s_elev = int(seg.start_point.elevation_m)
             e_elev = int(seg.end_point.elevation_m)
             if seg.segment_id == "Ziel":
@@ -736,7 +760,8 @@ class TripReportFormatter:
 
         lines.append("-" * 60)
         lines.append(f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}")
-        lines.append(f"Data: {segments[0].provider} ({segments[0].timeseries.meta.model})")
+        model_name = segments[0].timeseries.meta.model if segments[0].timeseries else "n/a"
+        lines.append(f"Data: {segments[0].provider} ({model_name})")
         return "\n".join(lines)
 
     def _render_text_table(self, rows: list[dict]) -> str:
