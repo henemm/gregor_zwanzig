@@ -329,10 +329,13 @@ class SegmentWeatherSummary:
 class SegmentWeatherData:
     """Weather data for a single trip segment."""
     segment: TripSegment
-    timeseries: NormalizedTimeseries
+    timeseries: Optional[NormalizedTimeseries]  # None bei Provider-Fehler
     aggregated: SegmentWeatherSummary  # Empty for Feature 2.1, populated by Feature 2.3
     fetched_at: datetime
     provider: str  # "geosphere", "openmeteo", etc.
+    # Error tracking (WEATHER-04)
+    has_error: bool = False
+    error_message: Optional[str] = None
 
 
 # --- Weather Change Detection DTOs (Feature 2.5) ---

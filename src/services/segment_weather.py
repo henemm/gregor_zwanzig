@@ -11,9 +11,13 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional
 
+import logging
+
 from app.config import Location
 from app.debug import DebugBuffer
 from app.models import SegmentWeatherData, SegmentWeatherSummary, TripSegment
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from providers.base import WeatherProvider
@@ -122,12 +126,26 @@ class SegmentWeatherService:
             else None,
         )
 
-        # Step 4: Fetch weather data
-        timeseries = self._provider.fetch_forecast(
-            location,
-            start=segment.start_time,
-            end=segment.end_time,
-        )
+        # Step 4: Fetch weather data (WEATHER-04: catch provider errors)
+        from providers.base import ProviderRequestError
+        try:
+            timeseries = self._provider.fetch_forecast(
+                location,
+                start=segment.start_time,
+                end=segment.end_time,
+            )
+        except ProviderRequestError as e:
+            logger.error(f"Provider failed for segment {segment.segment_id}: {e}")
+            self._debug.add(f"provider.error: {e}")
+            return SegmentWeatherData(
+                segment=segment,
+                timeseries=None,
+                aggregated=SegmentWeatherSummary(),
+                fetched_at=datetime.now(timezone.utc),
+                provider=self._provider.name,
+                has_error=True,
+                error_message=str(e),
+            )
 
         # Step 5: Log provider response
         self._debug.add(f"forecast.points: {len(timeseries.data)}")

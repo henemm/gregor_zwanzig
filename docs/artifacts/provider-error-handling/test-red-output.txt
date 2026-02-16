@@ -1,0 +1,228 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.2, pytest-8.4.1, pluggy-1.6.0
+rootdir: /opt/gregor_zwanziger
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 8 items
+
+tests/unit/test_provider_error_handling.py FFFFFF.F                      [100%]
+
+=================================== FAILURES ===================================
+__________ TestSegmentWeatherDataErrorFields.test_error_fields_exist ___________
+
+self = <test_provider_error_handling.TestSegmentWeatherDataErrorFields object at 0x7f43dfbe34d0>
+
+    def test_error_fields_exist(self) -> None:
+        """SegmentWeatherData has has_error and error_message fields."""
+>       data = _make_weather_data(has_error=True, error_message="test error")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/test_provider_error_handling.py:113: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+segment_id = 1, has_error = True, error_message = 'test error'
+
+    def _make_weather_data(
+        segment_id: int = 1,
+        has_error: bool = False,
+        error_message: str | None = None,
+    ) -> SegmentWeatherData:
+        """Create a SegmentWeatherData, optionally with error flags."""
+        seg = _make_segment(segment_id)
+        if has_error:
+>           return SegmentWeatherData(
+                segment=seg,
+                timeseries=None,
+                aggregated=SegmentWeatherSummary(),
+                fetched_at=datetime.now(timezone.utc),
+                provider="openmeteo",
+                has_error=True,
+                error_message=error_message or "[openmeteo] API error: 503",
+            )
+E           TypeError: SegmentWeatherData.__init__() got an unexpected keyword argument 'has_error'
+
+tests/unit/test_provider_error_handling.py:83: TypeError
+_____ TestSegmentWeatherDataErrorFields.test_timeseries_optional_on_error ______
+
+self = <test_provider_error_handling.TestSegmentWeatherDataErrorFields object at 0x7f43dfbf4050>
+
+    def test_timeseries_optional_on_error(self) -> None:
+        """Error-flagged data can have timeseries=None."""
+>       data = _make_weather_data(has_error=True)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/test_provider_error_handling.py:119: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+segment_id = 1, has_error = True, error_message = None
+
+    def _make_weather_data(
+        segment_id: int = 1,
+        has_error: bool = False,
+        error_message: str | None = None,
+    ) -> SegmentWeatherData:
+        """Create a SegmentWeatherData, optionally with error flags."""
+        seg = _make_segment(segment_id)
+        if has_error:
+>           return SegmentWeatherData(
+                segment=seg,
+                timeseries=None,
+                aggregated=SegmentWeatherSummary(),
+                fetched_at=datetime.now(timezone.utc),
+                provider="openmeteo",
+                has_error=True,
+                error_message=error_message or "[openmeteo] API error: 503",
+            )
+E           TypeError: SegmentWeatherData.__init__() got an unexpected keyword argument 'has_error'
+
+tests/unit/test_provider_error_handling.py:83: TypeError
+_____ TestSegmentWeatherDataErrorFields.test_defaults_backward_compatible ______
+
+self = <test_provider_error_handling.TestSegmentWeatherDataErrorFields object at 0x7f43dfbf4650>
+
+    def test_defaults_backward_compatible(self) -> None:
+        """Normal data has has_error=False by default."""
+>       data = _make_weather_data(has_error=False)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/test_provider_error_handling.py:124: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/unit/test_provider_error_handling.py:94: in _make_weather_data
+    timeseries=_make_timeseries(),
+               ^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _make_timeseries() -> NormalizedTimeseries:
+        """Create a minimal valid timeseries with 2 data points."""
+        today = date.today()
+>       meta = ForecastMeta(
+            provider="openmeteo",
+            model="ecmwf_ifs025",
+            run_time=datetime(today.year, today.month, today.day, 0, 0, tzinfo=timezone.utc),
+        )
+E       TypeError: ForecastMeta.__init__() got an unexpected keyword argument 'run_time'
+
+tests/unit/test_provider_error_handling.py:57: TypeError
+_________ TestFormatterErrorRendering.test_html_contains_error_warning _________
+
+self = <test_provider_error_handling.TestFormatterErrorRendering object at 0x7f43dfbf4d90>
+
+    def test_html_contains_error_warning(self) -> None:
+        """HTML output must contain a visible warning for error segments."""
+        from formatters.trip_report import TripReportFormatter
+    
+        segments = [
+>           _make_weather_data(segment_id=1, has_error=False),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            _make_weather_data(segment_id=2, has_error=True, error_message="[openmeteo] 503"),
+        ]
+
+tests/unit/test_provider_error_handling.py:141: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/unit/test_provider_error_handling.py:94: in _make_weather_data
+    timeseries=_make_timeseries(),
+               ^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _make_timeseries() -> NormalizedTimeseries:
+        """Create a minimal valid timeseries with 2 data points."""
+        today = date.today()
+>       meta = ForecastMeta(
+            provider="openmeteo",
+            model="ecmwf_ifs025",
+            run_time=datetime(today.year, today.month, today.day, 0, 0, tzinfo=timezone.utc),
+        )
+E       TypeError: ForecastMeta.__init__() got an unexpected keyword argument 'run_time'
+
+tests/unit/test_provider_error_handling.py:57: TypeError
+______ TestFormatterErrorRendering.test_plain_text_contains_error_warning ______
+
+self = <test_provider_error_handling.TestFormatterErrorRendering object at 0x7f43dfbf5410>
+
+    def test_plain_text_contains_error_warning(self) -> None:
+        """Plain text output must contain a visible warning for error segments."""
+        from formatters.trip_report import TripReportFormatter
+    
+        segments = [
+>           _make_weather_data(segment_id=1, has_error=False),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            _make_weather_data(segment_id=2, has_error=True, error_message="[openmeteo] 503"),
+        ]
+
+tests/unit/test_provider_error_handling.py:155: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/unit/test_provider_error_handling.py:94: in _make_weather_data
+    timeseries=_make_timeseries(),
+               ^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _make_timeseries() -> NormalizedTimeseries:
+        """Create a minimal valid timeseries with 2 data points."""
+        today = date.today()
+>       meta = ForecastMeta(
+            provider="openmeteo",
+            model="ecmwf_ifs025",
+            run_time=datetime(today.year, today.month, today.day, 0, 0, tzinfo=timezone.utc),
+        )
+E       TypeError: ForecastMeta.__init__() got an unexpected keyword argument 'run_time'
+
+tests/unit/test_provider_error_handling.py:57: TypeError
+_ TestFormatterErrorRendering.test_extract_hourly_rows_handles_none_timeseries _
+
+self = <test_provider_error_handling.TestFormatterErrorRendering object at 0x7f43dfbf5ad0>
+
+    def test_extract_hourly_rows_handles_none_timeseries(self) -> None:
+        """_extract_hourly_rows must not crash when timeseries is None."""
+        from formatters.trip_report import TripReportFormatter
+    
+>       error_data = _make_weather_data(has_error=True)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/test_provider_error_handling.py:167: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+segment_id = 1, has_error = True, error_message = None
+
+    def _make_weather_data(
+        segment_id: int = 1,
+        has_error: bool = False,
+        error_message: str | None = None,
+    ) -> SegmentWeatherData:
+        """Create a SegmentWeatherData, optionally with error flags."""
+        seg = _make_segment(segment_id)
+        if has_error:
+>           return SegmentWeatherData(
+                segment=seg,
+                timeseries=None,
+                aggregated=SegmentWeatherSummary(),
+                fetched_at=datetime.now(timezone.utc),
+                provider="openmeteo",
+                has_error=True,
+                error_message=error_message or "[openmeteo] API error: 503",
+            )
+E           TypeError: SegmentWeatherData.__init__() got an unexpected keyword argument 'has_error'
+
+tests/unit/test_provider_error_handling.py:83: TypeError
+__________________ TestServiceEmailMethod.test_method_exists ___________________
+
+self = <test_provider_error_handling.TestServiceEmailMethod object at 0x7f43dfbf6ad0>
+
+    def test_method_exists(self) -> None:
+        """TripReportSchedulerService must have _send_service_error_email."""
+        from services.trip_report_scheduler import TripReportSchedulerService
+    
+        service = TripReportSchedulerService()
+>       assert hasattr(service, "_send_service_error_email")
+E       AssertionError: assert False
+E        +  where False = hasattr(<services.trip_report_scheduler.TripReportSchedulerService object at 0x7f43dfa65850>, '_send_service_error_email')
+
+tests/unit/test_provider_error_handling.py:208: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/test_provider_error_handling.py::TestSegmentWeatherDataErrorFields::test_error_fields_exist
+FAILED tests/unit/test_provider_error_handling.py::TestSegmentWeatherDataErrorFields::test_timeseries_optional_on_error
+FAILED tests/unit/test_provider_error_handling.py::TestSegmentWeatherDataErrorFields::test_defaults_backward_compatible
+FAILED tests/unit/test_provider_error_handling.py::TestFormatterErrorRendering::test_html_contains_error_warning
+FAILED tests/unit/test_provider_error_handling.py::TestFormatterErrorRendering::test_plain_text_contains_error_warning
+FAILED tests/unit/test_provider_error_handling.py::TestFormatterErrorRendering::test_extract_hourly_rows_handles_none_timeseries
+FAILED tests/unit/test_provider_error_handling.py::TestServiceEmailMethod::test_method_exists
+========================= 7 failed, 1 passed in 0.45s ==========================

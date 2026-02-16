@@ -297,10 +297,12 @@ Lawinenlagebericht als eigenstaendiges Datenobjekt (nicht Teil von NormalizedTim
 | Feld        | Typ                      | Beschreibung                               |
 |-------------|--------------------------|--------------------------------------------|
 | segment     | TripSegment              | Segment aus Story 1                        |
-| timeseries  | NormalizedTimeseries     | Volle stündliche Wetterdaten               |
+| timeseries  | NormalizedTimeseries \| None | Volle stündliche Wetterdaten (None bei Fehler) |
 | aggregated  | SegmentWeatherSummary    | Aggregierte Werte (MIN/MAX/AVG)            |
 | fetched_at  | datetime                 | Zeitpunkt des API-Abrufs                   |
 | provider    | str                      | Verwendeter Provider (GEOSPHERE, etc.)     |
+| has_error   | bool                     | True wenn Provider-Fehler nach Retry-Exhaustion (WEATHER-04) |
+| error_message | str \| None            | Fehlernachricht bei has_error=True (WEATHER-04) |
 
 #### SegmentWeatherSummary
 | Feld                  | Typ                  | Beschreibung                                    |
