@@ -270,7 +270,21 @@ class TripReportSchedulerService:
             segment_weather[-1], target_date,
         )
 
-        # 6. Format report (uses unified display config from trip)
+        # 6. Multi-day trend (evening only, +1 bis +5 Tage)
+        multi_day_trend = None
+        if report_type == "evening" and segment_weather:
+            dc = trip.display_config
+            show_trend = dc.show_multi_day_trend if dc else True
+            if show_trend:
+                trend_ts = self._fetch_multi_day_trend(
+                    segment_weather[-1], target_date,
+                )
+                if trend_ts:
+                    multi_day_trend = self._build_multi_day_trend(
+                        trend_ts, target_date,
+                    )
+
+        # 7. Format report (uses unified display config from trip)
         report = self._formatter.format_email(
             segments=segment_weather,
             trip_name=trip.name,
@@ -278,6 +292,7 @@ class TripReportSchedulerService:
             display_config=trip.display_config,
             night_weather=night_weather,
             thunder_forecast=thunder_forecast,
+            multi_day_trend=multi_day_trend,
             stage_name=stage_name,
             stage_stats=stage_stats,
         )
@@ -571,6 +586,153 @@ class TripReportSchedulerService:
             if last_segment.timeseries and last_segment.timeseries.data:
                 return last_segment.timeseries
             return None
+
+    def _fetch_multi_day_trend(
+        self,
+        last_segment: SegmentWeatherData,
+        target_date: date,
+    ) -> Optional[NormalizedTimeseries]:
+        """
+        Fetch 5-day forecast for multi-day trend at arrival location.
+
+        Separate provider call (like _fetch_night_weather).
+        Returns None on error (trend is optional, report still sends).
+
+        SPEC: docs/specs/modules/multi_day_trend.md v1.0
+        """
+        from providers.base import get_provider
+        from services.segment_weather import SegmentWeatherService
+
+        seg = last_segment.segment
+        start = datetime.combine(
+            target_date + timedelta(days=1),
+            time.min,
+            tzinfo=timezone.utc,
+        )
+        end = datetime.combine(
+            target_date + timedelta(days=5),
+            time(23, 0),
+            tzinfo=timezone.utc,
+        )
+
+        trend_segment = TripSegment(
+            segment_id=998,
+            start_point=seg.end_point,
+            end_point=seg.end_point,
+            start_time=start,
+            end_time=end,
+            duration_hours=(end - start).total_seconds() / 3600,
+            distance_km=0.0,
+            ascent_m=0.0,
+            descent_m=0.0,
+        )
+
+        try:
+            provider = get_provider("openmeteo")
+            service = SegmentWeatherService(provider)
+            trend_data = service.fetch_segment_weather(trend_segment)
+            return trend_data.timeseries
+        except Exception as e:
+            logger.warning(f"Failed to fetch multi-day trend: {e}")
+            return None
+
+    def _build_multi_day_trend(
+        self,
+        timeseries: NormalizedTimeseries,
+        target_date: date,
+    ) -> list[dict]:
+        """
+        Aggregate multi-day forecast into daily trend summaries.
+
+        Returns list of dicts with weekday, temp_max_c, cloud_emoji, warning.
+
+        SPEC: docs/specs/modules/multi_day_trend.md v1.0
+        """
+        from app.models import ThunderLevel
+
+        WEEKDAYS_DE = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
+
+        trend = []
+        for offset in range(1, 6):
+            day = target_date + timedelta(days=offset)
+            day_points = [dp for dp in timeseries.data if dp.ts.date() == day]
+
+            if not day_points:
+                continue
+
+            # Daytime max temperature (06:00-21:00)
+            day_temps = [
+                dp.t2m_c for dp in day_points
+                if dp.t2m_c is not None and 6 <= dp.ts.hour <= 21
+            ]
+            temp_max = max(day_temps) if day_temps else None
+
+            # Average cloud cover (daytime)
+            day_clouds = [
+                dp.cloud_total_pct for dp in day_points
+                if dp.cloud_total_pct is not None and 6 <= dp.ts.hour <= 21
+            ]
+            cloud_avg = (
+                sum(day_clouds) / len(day_clouds) if day_clouds else None
+            )
+
+            # Cloud → Emoji
+            cloud_emoji = self._cloud_to_emoji(cloud_avg)
+
+            # Warnings
+            warning = self._detect_day_warning(day_points)
+
+            trend.append({
+                "weekday": WEEKDAYS_DE[day.weekday()],
+                "date": day,
+                "temp_max_c": temp_max,
+                "cloud_avg_pct": cloud_avg,
+                "cloud_emoji": cloud_emoji,
+                "warning": warning,
+            })
+
+        return trend
+
+    @staticmethod
+    def _cloud_to_emoji(cloud_pct: Optional[float]) -> str:
+        """Map cloud coverage percentage to weather emoji."""
+        if cloud_pct is None:
+            return "?"
+        if cloud_pct <= 10:
+            return "☀️"
+        elif cloud_pct <= 30:
+            return "🌤"
+        elif cloud_pct <= 70:
+            return "⛅"
+        elif cloud_pct <= 90:
+            return "🌥"
+        else:
+            return "☁️"
+
+    @staticmethod
+    def _detect_day_warning(day_points) -> Optional[str]:
+        """Detect warnings for a day: thunder, heavy rain, or storm."""
+        from app.models import ThunderLevel
+
+        has_thunder = any(
+            dp.thunder_level in (ThunderLevel.MED, ThunderLevel.HIGH)
+            for dp in day_points
+        )
+        if has_thunder:
+            return "Gewitter"
+
+        precip_sum = sum(
+            dp.precip_1h_mm for dp in day_points
+            if dp.precip_1h_mm is not None
+        )
+        if precip_sum > 10:
+            return "Starkregen"
+
+        gusts = [dp.gust_kmh for dp in day_points if dp.gust_kmh is not None]
+        if gusts and max(gusts) > 70:
+            return "Sturm"
+
+        return None
 
     def _build_thunder_forecast(
         self,

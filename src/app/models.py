@@ -450,6 +450,7 @@ class UnifiedWeatherDisplayConfig:
     show_night_block: bool = True
     night_interval_hours: int = 2
     thunder_forecast_days: int = 2
+    show_multi_day_trend: bool = True  # F3: 5-Tage-Trend im Evening-Report
     sms_metrics: list[str] = field(default_factory=list)  # Phase 3
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
