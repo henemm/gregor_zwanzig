@@ -66,16 +66,21 @@ class TripReportFormatter:
         # Multi-day trend (respects config — scheduler already filters by report_type)
         effective_trend = multi_day_trend if multi_day_trend else None
 
+        # F2: Compact summary (natural-language per stage)
+        compact_summary = None
+        if dc.show_compact_summary:
+            compact_summary = self._generate_compact_summary(segments, stage_name, dc)
+
         # Generate both formats from same data
         email_html = self._render_html(
             segments, seg_tables, trip_name, report_type, dc,
             night_rows, thunder_forecast, highlights, changes,
-            stage_name, stage_stats, effective_trend,
+            stage_name, stage_stats, effective_trend, compact_summary,
         )
         email_plain = self._render_plain(
             segments, seg_tables, trip_name, report_type, dc,
             night_rows, thunder_forecast, highlights, changes,
-            stage_name, stage_stats, effective_trend,
+            stage_name, stage_stats, effective_trend, compact_summary,
         )
         email_subject = self._generate_subject(
             trip_name, report_type, segments[0].segment.start_time,
@@ -614,6 +619,23 @@ class TripReportFormatter:
         return str(val)
 
     # ------------------------------------------------------------------
+    # F2: Compact summary generation
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _generate_compact_summary(
+        segments: list[SegmentWeatherData],
+        stage_name: Optional[str],
+        dc: UnifiedWeatherDisplayConfig,
+    ) -> Optional[str]:
+        """Generate compact natural-language summary for the stage."""
+        if not segments or not stage_name:
+            return None
+        from formatters.compact_summary import CompactSummaryFormatter
+        formatter = CompactSummaryFormatter()
+        return formatter.format_stage_summary(segments, stage_name, dc)
+
+    # ------------------------------------------------------------------
     # HTML rendering
     # ------------------------------------------------------------------
 
@@ -622,6 +644,7 @@ class TripReportFormatter:
         segments, seg_tables, trip_name, report_type, dc,
         night_rows, thunder_forecast, highlights, changes,
         stage_name, stage_stats, multi_day_trend=None,
+        compact_summary=None,
     ) -> str:
         report_date = segments[0].segment.start_time.strftime("%d.%m.%Y")
         sub_header = stage_name or ""
@@ -737,6 +760,14 @@ class TripReportFormatter:
                 <ul>{hl_items}</ul>
             </div>"""
 
+        # F2: Compact summary
+        summary_html = ""
+        if compact_summary:
+            summary_html = f"""
+            <div class="section" style="background:#f0f7ff;border-left:4px solid #42a5f5;padding:12px;margin:8px 0;">
+                <p style="margin:0;font-size:14px;line-height:1.6;">{compact_summary}</p>
+            </div>"""
+
         # Changes
         changes_html = ""
         if changes:
@@ -792,6 +823,7 @@ class TripReportFormatter:
             <p>{report_type.title()} Report – {report_date}{" | " + stats_line if stats_line else ""}</p>
         </div>
 
+        {summary_html}
         {changes_html}
         {segments_html}
         {night_html}
@@ -833,6 +865,7 @@ class TripReportFormatter:
         segments, seg_tables, trip_name, report_type, dc,
         night_rows, thunder_forecast, highlights, changes,
         stage_name, stage_stats, multi_day_trend=None,
+        compact_summary=None,
     ) -> str:
         lines = []
         report_date = segments[0].segment.start_time.strftime("%d.%m.%Y")
@@ -852,6 +885,11 @@ class TripReportFormatter:
                 parts.append(f"max. {stage_stats['max_elevation_m']}m")
             lines.append(" | ".join(parts))
         lines.append("")
+
+        # F2: Compact summary
+        if compact_summary:
+            lines.append(compact_summary)
+            lines.append("")
 
         # Changes (before segments in alert emails)
         if changes:
