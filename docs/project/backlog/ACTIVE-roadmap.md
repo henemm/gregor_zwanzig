@@ -73,9 +73,9 @@ Features are added via `/feature` or `/user-story` commands.
 | Letzter Waypoint fehlt in Trip-Report | done | HIGH | Bugfix | Segment Weather, Scheduler | Simple | BUG-01 |
 | AROME: Visibility/UV nicht verfuegbar | done | LOW | Provider | Provider Layer | Medium | WEATHER-05 + WEATHER-06 |
 | Report-Config (WebUI) | done | HIGH | WebUI | Frontend | Simple | GPX-Story3 |
-| Kompakt-Summary | open | HIGH | Formatter | Formatter, Email, SMS | Simple | F2 |
+| Kompakt-Summary | done | HIGH | Formatter | Formatter, Email | Simple | F2 |
 | SMS-Kanal | open | HIGH | Channel | Channel Layer, Formatter | Medium | F1 |
-| Multi-Day Trend | open | MEDIUM | Formatter | Formatter, Provider | Simple | F3 |
+| Multi-Day Trend | done | MEDIUM | Formatter | Formatter, Provider | Simple | F3 |
 | Trip-Briefing (Kompakt-Tabelle) | open | MEDIUM | Formatter | Formatter, Scheduler | Medium | F4 |
 | Biwak-/Zelt-Modus | open | MEDIUM | Config | Config, Formatter, Night-Block | Simple-Medium | F5 |
 | Trip-Umplanung per Kommando | open | MEDIUM | Services | Scheduler, Email-Reply, SMS-Reply | Medium-Large | F6 |
@@ -98,6 +98,8 @@ Features are added via `/feature` or `/user-story` commands.
 | Wind/Hitze Risk | 2026-02-16 | Risk Engine | Windboeen + Hitze-Warnung in Formatter |
 | Provider Error Handling | 2026-02-16 | Provider | Catches ProviderRequestError, renders error warnings in emails |
 | Report-Config (WebUI) | 2026-02 | WebUI | Per-Trip Morning/Evening Zeiten, Metriken-Config |
+| Multi-Day Trend | 2026-02-17 | Formatter | Stage-basierter Etappen-Ausblick, Morning/Evening konfigurierbar |
+| Kompakt-Summary | 2026-02-17 | Formatter | Natural-language Wetter-Summary pro Etappe mit zeitlicher Qualifizierung (Peak/Start/Ende) |
 
 ## Known Bugs
 
@@ -115,8 +117,8 @@ Features are added via `/feature` or `/user-story` commands.
 ## Upcoming (Next 3 Sprints)
 
 ### Sprint 1 (Current) — Quick Wins
-- [ ] Kompakt-Summary (F2, Gering — enabler fuer SMS + Satellite)
-- [ ] Multi-Day Trend (F3, Gering — 3-5 Tage Trend im Evening-Report)
+- [x] Kompakt-Summary (F2, done — Natural-language Wetter-Summary mit zeitlicher Qualifizierung)
+- [x] Multi-Day Trend (F3, done — Etappen-Ausblick mit Stage-Aggregation, konfigurierbar Morning/Evening)
 - [ ] Biwak-/Zelt-Modus (F5, Gering-Mittel — erweiterter Night-Block)
 
 ### Sprint 2 — SMS/Satellite-Kanal

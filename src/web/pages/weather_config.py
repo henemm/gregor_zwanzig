@@ -282,10 +282,19 @@ def show_weather_config_dialog(trip: Trip, user_id: str = "default") -> None:
                         "available": is_available,
                     }
 
-        # Etappen-Ausblick config
+        # Report-Optionen
         ui.separator().classes("q-my-sm")
-        ui.label("Etappen-Ausblick").classes("text-subtitle2")
+        ui.label("Report-Optionen").classes("text-subtitle2")
         dc = trip.display_config
+
+        # F2: Kompakt-Summary toggle
+        compact_summary_cb = ui.checkbox(
+            "Kompakt-Summary (Zusammenfassung vor Tabellen)",
+            value=dc.show_compact_summary if dc else True,
+        )
+
+        # Etappen-Ausblick config
+        ui.label("Etappen-Ausblick").classes("text-caption q-mt-sm")
         trend_reports = dc.multi_day_trend_reports if dc else ["evening"]
         with ui.row().classes("items-center"):
             trend_morning_cb = ui.checkbox(
@@ -302,7 +311,7 @@ def show_weather_config_dialog(trip: Trip, user_id: str = "default") -> None:
                 "Speichern",
                 on_click=make_save_handler(
                     trip.id, metric_widgets, dialog, user_id,
-                    trend_morning_cb, trend_evening_cb,
+                    trend_morning_cb, trend_evening_cb, compact_summary_cb,
                 ),
             ).props("color=primary")
 
@@ -317,7 +326,8 @@ def make_cancel_handler(dialog):
 
 
 def make_save_handler(trip_id: str, metric_widgets: dict, dialog, user_id: str,
-                      trend_morning_cb=None, trend_evening_cb=None):
+                      trend_morning_cb=None, trend_evening_cb=None,
+                      compact_summary_cb=None):
     """
     Factory for save handler - Safari compatible!
 
@@ -418,6 +428,7 @@ def make_save_handler(trip_id: str, metric_widgets: dict, dialog, user_id: str,
         trip.display_config = UnifiedWeatherDisplayConfig(
             trip_id=trip_id,
             metrics=metric_configs,
+            show_compact_summary=compact_summary_cb.value if compact_summary_cb else True,
             show_night_block=old.show_night_block if old else True,
             night_interval_hours=old.night_interval_hours if old else 2,
             thunder_forecast_days=old.thunder_forecast_days if old else 2,

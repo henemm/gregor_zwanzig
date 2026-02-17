@@ -447,6 +447,7 @@ class UnifiedWeatherDisplayConfig:
     """
     trip_id: str
     metrics: list[MetricConfig] = field(default_factory=list)
+    show_compact_summary: bool = True  # F2: Kompakt-Summary vor Detail-Tabellen
     show_night_block: bool = True
     night_interval_hours: int = 2
     thunder_forecast_days: int = 2
