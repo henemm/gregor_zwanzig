@@ -99,7 +99,7 @@ class TestBuildFriendlyKeys:
         overrides = {
             "thunder": False, "cape": False, "cloud_total": False,
             "cloud_low": False, "cloud_mid": False, "cloud_high": False,
-            "visibility": False,
+            "visibility": False, "wind_direction": False,
         }
         dc = _make_display_config(overrides)
         fmt = TripReportFormatter()
@@ -293,3 +293,153 @@ class TestAlertEnabledConfig:
         )
         service = WeatherChangeDetectionService.from_display_config(dc_no_alerts)
         assert len(service._thresholds) == 0
+
+
+# =====================================================================
+# Part 4: Wind direction merge into wind column
+# =====================================================================
+
+
+def _make_wind_config(
+    wind_dir_enabled: bool = True,
+    wind_dir_friendly: bool = True,
+    wind_enabled: bool = True,
+) -> UnifiedWeatherDisplayConfig:
+    """Build config with wind + wind_direction settings."""
+    dc = build_default_display_config()
+    new_metrics = []
+    for mc in dc.metrics:
+        if mc.metric_id == "wind_direction":
+            new_metrics.append(MetricConfig(
+                metric_id="wind_direction",
+                enabled=wind_dir_enabled,
+                aggregations=mc.aggregations,
+                use_friendly_format=wind_dir_friendly,
+            ))
+        elif mc.metric_id == "wind":
+            new_metrics.append(MetricConfig(
+                metric_id="wind",
+                enabled=wind_enabled,
+                aggregations=mc.aggregations,
+            ))
+        else:
+            new_metrics.append(mc)
+    return UnifiedWeatherDisplayConfig(
+        trip_id="test", metrics=new_metrics,
+        show_night_block=dc.show_night_block,
+        night_interval_hours=dc.night_interval_hours,
+        thunder_forecast_days=dc.thunder_forecast_days,
+    )
+
+
+class TestShouldMergeWindDir:
+    """_should_merge_wind_dir() logic."""
+
+    def test_merge_when_both_enabled_friendly(self) -> None:
+        dc = _make_wind_config(wind_dir_enabled=True, wind_dir_friendly=True, wind_enabled=True)
+        assert TripReportFormatter._should_merge_wind_dir(dc) is True
+
+    def test_no_merge_when_friendly_off(self) -> None:
+        dc = _make_wind_config(wind_dir_enabled=True, wind_dir_friendly=False, wind_enabled=True)
+        assert TripReportFormatter._should_merge_wind_dir(dc) is False
+
+    def test_no_merge_when_wind_dir_disabled(self) -> None:
+        dc = _make_wind_config(wind_dir_enabled=False, wind_dir_friendly=True, wind_enabled=True)
+        assert TripReportFormatter._should_merge_wind_dir(dc) is False
+
+    def test_no_merge_when_wind_disabled(self) -> None:
+        dc = _make_wind_config(wind_dir_enabled=True, wind_dir_friendly=True, wind_enabled=False)
+        assert TripReportFormatter._should_merge_wind_dir(dc) is False
+
+
+class TestDegreesToCompass:
+    """_degrees_to_compass() 8-point conversion."""
+
+    def test_north(self) -> None:
+        assert TripReportFormatter._degrees_to_compass(0) == "N"
+        assert TripReportFormatter._degrees_to_compass(360) == "N"
+
+    def test_east(self) -> None:
+        assert TripReportFormatter._degrees_to_compass(90) == "E"
+
+    def test_south(self) -> None:
+        assert TripReportFormatter._degrees_to_compass(180) == "S"
+
+    def test_west(self) -> None:
+        assert TripReportFormatter._degrees_to_compass(270) == "W"
+
+    def test_northeast(self) -> None:
+        assert TripReportFormatter._degrees_to_compass(45) == "NE"
+
+    def test_southwest(self) -> None:
+        assert TripReportFormatter._degrees_to_compass(225) == "SW"
+
+    def test_none_returns_empty(self) -> None:
+        assert TripReportFormatter._degrees_to_compass(None) == ""
+
+
+class TestWindDirMergedFormatting:
+    """When merged, wind value gets compass appended (e.g. '20 NW')."""
+
+    def test_wind_with_compass_merged(self) -> None:
+        dc = _make_wind_config(wind_dir_enabled=True, wind_dir_friendly=True)
+        fmt = _make_formatter(dc)
+        row = {"wind": 20, "_wind_dir_deg": 315}
+        result = fmt._fmt_val("wind", 20, row=row)
+        assert result == "20 NW"
+
+    def test_wind_without_merge(self) -> None:
+        dc = _make_wind_config(wind_dir_enabled=True, wind_dir_friendly=False)
+        fmt = _make_formatter(dc)
+        row = {"wind": 20}
+        result = fmt._fmt_val("wind", 20, row=row)
+        assert result == "20"
+
+    def test_wind_dir_none_no_compass(self) -> None:
+        dc = _make_wind_config(wind_dir_enabled=True, wind_dir_friendly=True)
+        fmt = _make_formatter(dc)
+        row = {"wind": 20, "_wind_dir_deg": None}
+        result = fmt._fmt_val("wind", 20, row=row)
+        assert result == "20"
+
+    def test_separate_wind_dir_column(self) -> None:
+        """When wind_dir is separate (friendly=False), it shows compass."""
+        dc = _make_wind_config(wind_dir_enabled=True, wind_dir_friendly=False)
+        fmt = _make_formatter(dc)
+        result = fmt._fmt_val("wind_dir", 225)
+        assert result == "SW"
+
+    def test_dp_to_row_merged_skips_wind_dir_col(self) -> None:
+        """When merged, wind_dir column absent, _wind_dir_deg present."""
+        from datetime import datetime, timezone
+        from app.models import ForecastDataPoint
+
+        dc = _make_wind_config(wind_dir_enabled=True, wind_dir_friendly=True)
+        dp = ForecastDataPoint(
+            ts=datetime(2026, 3, 1, 10, 0, tzinfo=timezone.utc),
+            t2m_c=10.0, wind10m_kmh=20.0, gust_kmh=30.0,
+            precip_1h_mm=0.0, wind_direction_deg=270.0,
+        )
+        fmt = TripReportFormatter()
+        row = fmt._dp_to_row(dp, dc)
+        assert "wind_dir" not in row
+        assert "_wind_dir_deg" in row
+        assert row["_wind_dir_deg"] == 270.0
+        assert row["wind"] == 20.0
+
+    def test_dp_to_row_separate_has_wind_dir_col(self) -> None:
+        """When not merged, wind_dir column present."""
+        from datetime import datetime, timezone
+        from app.models import ForecastDataPoint
+
+        dc = _make_wind_config(wind_dir_enabled=True, wind_dir_friendly=False)
+        dp = ForecastDataPoint(
+            ts=datetime(2026, 3, 1, 10, 0, tzinfo=timezone.utc),
+            t2m_c=10.0, wind10m_kmh=20.0, gust_kmh=30.0,
+            precip_1h_mm=0.0, wind_direction_deg=270.0,
+        )
+        fmt = TripReportFormatter()
+        row = fmt._dp_to_row(dp, dc)
+        assert "wind_dir" in row
+        assert row["wind_dir"] == 270.0
+        assert "_wind_dir_deg" not in row
