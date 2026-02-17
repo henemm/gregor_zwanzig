@@ -700,27 +700,31 @@ class TripReportFormatter:
                 <ul>{"".join(items)}</ul>
             </div>"""
 
-        # Multi-day trend (F3)
+        # Multi-day trend (F3 v2.0 — per future stage)
         trend_html = ""
         if multi_day_trend:
             trend_rows = []
             for day in multi_day_trend:
                 temp_str = f"{day['temp_max_c']:.0f}°" if day.get("temp_max_c") is not None else "–"
+                precip_str = f"{day['precip_sum_mm']:.1f}mm" if day.get("precip_sum_mm") is not None else "–"
+                stage_name = self._shorten_stage_name(day.get("stage_name", ""))
                 warn_str = ""
                 if day.get("warning"):
                     warn_str = f'<span style="color:#c62828">⚠️ {day["warning"]}</span>'
                 trend_rows.append(
                     f'<tr>'
                     f'<td style="padding:4px 8px;font-weight:bold">{day["weekday"]}</td>'
+                    f'<td style="padding:4px 8px">{stage_name}</td>'
                     f'<td style="padding:4px 8px;text-align:center">{day["cloud_emoji"]}</td>'
                     f'<td style="padding:4px 8px;text-align:right">{temp_str}</td>'
+                    f'<td style="padding:4px 8px;text-align:right">{precip_str}</td>'
                     f'<td style="padding:4px 8px">{warn_str}</td>'
                     f'</tr>'
                 )
             trend_html = f"""
             <div style="margin:16px;padding:12px;background:#f5f5f5;border-radius:8px;">
-                <h3 style="margin:0 0 8px 0;font-size:14px;color:#333">🔮 5-Tage-Trend (Ankunftsort)</h3>
-                <table style="width:100%;border-collapse:collapse;font-size:14px">
+                <h3 style="margin:0 0 8px 0;font-size:14px;color:#333">🔮 Naechste Etappen</h3>
+                <table style="width:100%;border-collapse:collapse;font-size:13px">
                     {"".join(trend_rows)}
                 </table>
             </div>"""
@@ -901,13 +905,15 @@ class TripReportFormatter:
                     lines.append(f"  {fc['date']}: {icon}{fc['text']}")
             lines.append("")
 
-        # Multi-day trend (F3)
+        # Multi-day trend (F3 v2.0 — per future stage)
         if multi_day_trend:
-            lines.append("━━ 5-Tage-Trend (Ankunftsort) ━━")
+            lines.append("━━ Naechste Etappen ━━")
             for day in multi_day_trend:
                 temp_str = f"{day['temp_max_c']:.0f}°" if day.get("temp_max_c") is not None else " –"
+                precip_str = f"{day['precip_sum_mm']:.1f}mm" if day.get("precip_sum_mm") is not None else "  –"
+                stage_name = self._shorten_stage_name(day.get("stage_name", ""))
                 warn_str = f"  ⚠️ {day['warning']}" if day.get("warning") else ""
-                lines.append(f"  {day['weekday']}  {day['cloud_emoji']}  {temp_str}{warn_str}")
+                lines.append(f"  {day['weekday']}  {day['cloud_emoji']}  {temp_str}  {precip_str}  {stage_name}{warn_str}")
             lines.append("")
 
         # Highlights
@@ -930,6 +936,16 @@ class TripReportFormatter:
             fb = segments[0].timeseries.meta
             lines.append(f"Fallback {', '.join(fb.fallback_metrics)}: {fb.fallback_model}")
         return "\n".join(lines)
+
+    @staticmethod
+    def _shorten_stage_name(name: str, max_len: int = 25) -> str:
+        """Shorten stage name like 'Tag 3: von Sóller nach Tossals Verds' → 'Sóller → Tossals Verds'."""
+        import re
+        m = re.match(r"(?:Tag\s+\d+[:\s]*)?von\s+(.+?)\s+nach\s+(.+)", name, re.IGNORECASE)
+        if m:
+            short = f"{m.group(1)} → {m.group(2)}"
+            return short[:max_len] if len(short) > max_len else short
+        return name[:max_len] if len(name) > max_len else name
 
     def _render_text_table(self, rows: list[dict]) -> str:
         """Render a plain-text table from row dicts."""

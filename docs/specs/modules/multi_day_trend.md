@@ -2,14 +2,14 @@
 entity_id: multi_day_trend
 type: module
 created: 2026-02-16
-updated: 2026-02-16
+updated: 2026-02-17
 status: draft
-version: "1.0"
-tags: [formatter, email, trip-reports, multi-day, trend, evening]
+version: "2.0"
+tags: [weather-metrics, aggregation, trip-reports, trend, evening, sms, reusable]
 extends: trip_report_formatter_v2
 ---
 
-# F3: Multi-Day Trend (5-Tage-Ausblick)
+# F3: Multi-Day Trend — Etappen-Zusammenfassung (v2.0)
 
 ## Approval
 
@@ -17,276 +17,322 @@ extends: trip_report_formatter_v2
 
 ## Purpose
 
-Fuegt dem Evening-Report einen kompakten 5-Tage-Wetter-Ausblick hinzu. Zeigt pro Tag: Wochentag, Bewoelkungs-Emoji, Tages-Hoechsttemperatur, und optionale Warnung. Dient der Mehrtages-Strategie und Ruhetag-Planung auf Weitwanderungen.
+Stellt eine **wiederverwendbare Stage-Aggregation** bereit, die alle Segmente einer Etappe zu einer einzigen Zusammenfassung verdichtet. Darauf aufbauend zeigt der Evening-Report kompakte Trend-Zeilen fuer zukuenftige Etappen — mit Wetterdaten am jeweiligen Routenverlauf, nicht an einem einzelnen Punkt.
 
-**Ziel-Format (Plaintext):**
+**Kernbaustein:** `aggregate_stage()` in `weather_metrics.py` — Level-2-Aggregation ueber bestehende Segment-Summaries. Wird gebraucht fuer:
+1. **Trend-Block:** Kompakte Zeile pro zukuenftiger Etappe im Evening-Report
+2. **SMS-Output:** Kompakte Etappen-Zusammenfassung (<=160 Zeichen, spaeteres Feature)
+3. **Highlights:** Ersetzt heutige Ad-hoc-Aggregation im Formatter (spaeteres Refactoring)
+
+## Was v1.0 falsch machte
+
+v1.0 holte 5 Tage Wetter an **einem einzigen Punkt** (Ankunftsort der heutigen Etappe). Probleme:
+- Wanderer ist morgen schon woanders — Daten sind inhaltlich sinnlos
+- Zeigt Tage nach Trip-Ende (Phantomtage)
+- Keine Segment-Aggregation — nur eine API-Abfrage an einem Punkt
+
+## v2.0 Architektur
+
 ```
-━━ 5-Tage-Trend (Ankunftsort) ━━
-Di  ☀️  18°
-Mi  🌤  15°
-Do  🌧  12°  ⚠️ Gewitter
-Fr  ☀️  16°
-Sa  ⛅  14°
+Fuer jede zukuenftige Etappe:
+  Trip.get_future_stages(target_date)
+    │
+    ▼
+  _convert_trip_to_segments(trip, stage.date)     ← EXISTIERT
+    │
+    ▼
+  _fetch_weather(segments)                         ← EXISTIERT
+    │
+    ▼
+  List[SegmentWeatherData]  (pro Segment: .aggregated mit 22 Metriken)
+    │
+    ▼
+  aggregate_stage(segment_weather_list)            ← NEU (weather_metrics.py)
+    │
+    ▼
+  SegmentWeatherSummary  (eine Zusammenfassung fuer die gesamte Etappe)
 ```
+
+**Kein neues DTO noetig:** `SegmentWeatherSummary` hat die gleichen Felder — eine Stage-Summary ist strukturell identisch, nur eine Aggregations-Ebene hoeher.
 
 ## Source
 
-- **Files:**
-  - `src/services/trip_report_scheduler.py` — Daten-Fetch + Aggregation
-  - `src/formatters/trip_report.py` — Rendering (HTML + Plaintext)
-- **Neue Methoden:**
-  - `TripReportSchedulerService._fetch_multi_day_trend()`
-  - `TripReportSchedulerService._build_multi_day_trend()`
-  - `TripReportFormatter` — Rendering in `_render_html()` + `_render_plain()`
+- **Neue Funktion:** `src/services/weather_metrics.py` → `aggregate_stage()`
+- **Neue Methode:** `src/app/trip.py` → `Trip.get_future_stages()`
+- **Aenderung:** `src/services/trip_report_scheduler.py` → `_fetch_multi_day_trend()`, `_build_multi_day_trend()`, Aufruf in `_send_trip_report()`
+- **Aenderung:** `src/formatters/trip_report.py` → Trend-Rendering (HTML + Plaintext)
+- **Bugfix:** `src/app/loader.py` → `show_multi_day_trend` Persistenz
 
 ## Dependencies
 
 | Entity | Type | Purpose |
 |--------|------|---------|
-| TripReportFormatter v2 | Spec (extends) | Bestehende Email-Report-Logik |
-| OpenMeteoProvider | Provider | Liefert Forecast-Daten (7-16 Tage) |
-| NormalizedTimeseries | DTO | Hourly ForecastDataPoint-Liste |
-| ForecastDataPoint | DTO | Felder: t2m_c, cloud_total_pct, pop_pct, thunder_level, precip_1h_mm |
-| UnifiedWeatherDisplayConfig | DTO (models.py) | Konfigurierbar (show_multi_day_trend) |
-
-## Design-Entscheidungen
-
-### Separater Provider-Call (Option B)
-
-Der Multi-Day-Trend wird ueber einen **eigenen OpenMeteo-Call** abgerufen — nicht durch Erweiterung der Segment-Fetches.
-
-**Begruendung:**
-1. Folgt dem etablierten Pattern von `_fetch_night_weather()` (Zeilen 523-573 in scheduler)
-2. Verschmutzt nicht den Segment-Cache mit irrelevanten Zukunftsdaten
-3. Vorhersagbar und einfach zu debuggen
-4. OpenMeteo Free Tier (10.000 Calls/Tag) weit entfernt von Limit
-
-### Location: Ankunftsort des letzten Segments
-
-Der Trend wird fuer den **Ankunftsort** (end_point des letzten Segments) abgefragt — dort verbringt der Wanderer die Nacht und plant den naechsten Tag.
-
-### Nur Evening-Reports
-
-Multi-Day-Trend erscheint NUR im Evening-Report (wie Night-Block). Morgens ist der aktuelle Tag relevant, nicht die naechsten 5 Tage.
+| SegmentWeatherSummary | DTO (models.py) | Rueckgabetyp von aggregate_stage() — gleicher Typ wie Segment-Level |
+| SegmentWeatherData | DTO (models.py) | Input: Liste aller Segmente einer Etappe mit .aggregated |
+| WeatherMetricsService | Service | Bestehendes compute_basis_metrics/compute_extended_metrics (Level 1) |
+| TripReportSchedulerService | Service | Orchestriert Trend-Fetch pro zukuenftiger Etappe |
+| TripReportFormatter | Formatter | Rendert Trend-Block in HTML + Plaintext |
+| Trip / Stage | Model (trip.py) | get_future_stages() liefert Etappen nach target_date |
+| OpenMeteoProvider | Provider | Wetter-Daten pro Segment (existierend) |
 
 ## Implementation Details
 
-### 1) Daten-Fetch: `_fetch_multi_day_trend()`
+### 1) `aggregate_stage()` — Level-2-Aggregation (weather_metrics.py)
+
+**Standort:** `src/services/weather_metrics.py` — neben `compute_basis_metrics()` (Level 1)
 
 ```python
-def _fetch_multi_day_trend(
-    self,
-    last_segment: SegmentWeatherData,
-    target_date: date,
-) -> Optional[NormalizedTimeseries]:
+def aggregate_stage(
+    segments: list[SegmentWeatherData],
+) -> SegmentWeatherSummary:
     """
-    Fetch 5-day forecast for multi-day trend at arrival location.
+    Level-2-Aggregation: Verdichtet alle Segment-Summaries einer Etappe
+    zu einer einzigen Stage-Summary.
 
-    Separate provider call (like _fetch_night_weather).
-    Returns None on error (trend is optional, report still sends).
+    Nutzt die aggregation_config aus den Segment-Summaries um die
+    korrekte Regel pro Metrik anzuwenden (MAX ueber MAXe, MIN ueber
+    MINe, SUM ueber SUMe, AVG ueber AVGs).
+
+    Args:
+        segments: Alle SegmentWeatherData einer Etappe (mit .aggregated)
+
+    Returns:
+        SegmentWeatherSummary mit aggregierten Stage-Werten
+
+    Raises:
+        ValueError: Wenn segments leer ist
     """
-    try:
-        location = Location(
-            lat=last_segment.segment.end_point.lat,
-            lon=last_segment.segment.end_point.lon,
-        )
-        # Tag+1 bis Tag+5 (morgen bis in 5 Tagen)
-        start = datetime.combine(target_date + timedelta(days=1), time.min)
-        end = datetime.combine(target_date + timedelta(days=5), time(23, 0))
-
-        ts = self._provider.fetch_forecast(location, start, end)
-        return ts
-    except Exception as e:
-        logger.warning(f"Multi-day trend fetch failed: {e}")
-        return None
 ```
 
-### 2) Aggregation: `_build_multi_day_trend()`
+**Aggregationsregeln** (aus bestehender `aggregation_config`):
+
+| Regel | Metriken | Beispiel |
+|-------|----------|----------|
+| MAX ueber Segment-MAXe | temp_max_c, wind_max_kmh, gust_max_kmh, pop_max_pct, cape_max_jkg, uv_index_max, snow_depth_cm | S1:12°, S2:15°, S3:14° → **15°** |
+| MIN ueber Segment-MINe | temp_min_c, wind_chill_min_c, visibility_min_m | S1:8000m, S2:3000m, S3:5000m → **3000m** |
+| SUM ueber Segment-SUMe | precip_sum_mm, snow_new_sum_cm | S1:0.3mm, S2:1.2mm, S3:0.0mm → **1.5mm** |
+| AVG ueber Segment-AVGs | temp_avg_c, cloud_avg_pct, humidity_avg_pct, dewpoint_avg_c, pressure_avg_hpa, freezing_level_m | S1:60%, S2:80%, S3:40% → **60%** |
+| MAX (Enum-Severity) | thunder_level_max | S1:NONE, S2:MED, S3:NONE → **MED** |
+| AVG (Circular Mean) | wind_direction_avg_deg | S1:350°, S2:10°, S3:5° → **~2°** (nicht arithmetisch!) |
+| MAX (Dominant) | precip_type_dominant | Analog thunder: hoechste Severity gewinnt |
+
+**Algorithmus:**
 
 ```python
-def _build_multi_day_trend(
-    self,
-    timeseries: NormalizedTimeseries,
-    target_date: date,
-) -> list[dict]:
-    """
-    Aggregate multi-day forecast into daily trend summaries.
+# 1. Sammle alle .aggregated Summaries (ueberspringe Fehler-Segmente)
+summaries = [s.aggregated for s in segments if not s.has_error and s.aggregated]
 
-    Returns list of dicts:
-      [
-        {"weekday": "Di", "temp_max_c": 18.2, "cloud_avg_pct": 8,
-         "cloud_emoji": "☀️", "warning": None},
-        {"weekday": "Mi", "temp_max_c": 15.1, "cloud_avg_pct": 25,
-         "cloud_emoji": "🌤", "warning": "Gewitter"},
-        ...
-      ]
-    """
-    WEEKDAYS_DE = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
+# 2. Lese aggregation_config aus erster Summary (alle gleich)
+agg_config = summaries[0].aggregation_config
 
-    trend = []
-    for offset in range(1, 6):  # +1 bis +5
-        day = target_date + timedelta(days=offset)
-        day_points = [dp for dp in timeseries.data if dp.ts.date() == day]
-
-        if not day_points:
-            continue
-
-        # Tages-Hoechsttemperatur (06:00-21:00, Tagesstunden)
-        day_temps = [dp.t2m_c for dp in day_points
-                     if dp.t2m_c is not None and 6 <= dp.ts.hour <= 21]
-        temp_max = max(day_temps) if day_temps else None
-
-        # Durchschnittliche Bewoelkung (Tagesstunden)
-        day_clouds = [dp.cloud_total_pct for dp in day_points
-                      if dp.cloud_total_pct is not None and 6 <= dp.ts.hour <= 21]
-        cloud_avg = sum(day_clouds) / len(day_clouds) if day_clouds else None
-
-        # Cloud → Emoji Mapping (identisch mit _fmt_val in formatter)
-        cloud_emoji = _cloud_to_emoji(cloud_avg)
-
-        # Warnungen: Gewitter oder Starkregen
-        warning = _detect_day_warning(day_points)
-
-        trend.append({
-            "weekday": WEEKDAYS_DE[day.weekday()],
-            "date": day,
-            "temp_max_c": temp_max,
-            "cloud_avg_pct": cloud_avg,
-            "cloud_emoji": cloud_emoji,
-            "warning": warning,
-        })
-
-    return trend
+# 3. Fuer jedes Feld in SegmentWeatherSummary:
+for field_name, agg_rule in agg_config.items():
+    values = [getattr(s, field_name) for s in summaries if getattr(s, field_name) is not None]
+    if not values:
+        result = None
+    elif agg_rule == "max":
+        result = max(values)  # Enum: nach .value vergleichen
+    elif agg_rule == "min":
+        result = min(values)
+    elif agg_rule == "sum":
+        result = sum(values)
+    elif agg_rule == "avg":
+        # Sonderfall wind_direction_avg_deg: Circular Mean
+        if field_name == "wind_direction_avg_deg":
+            result = _circular_mean(values)
+        else:
+            result = sum(values) / len(values)
 ```
 
-### 3) Hilfsfunktionen
-
+**Circular Mean** fuer Windrichtung (existierendes Pattern aus `_aggregate_night_block`):
 ```python
-def _cloud_to_emoji(cloud_pct: Optional[float]) -> str:
-    """Map cloud coverage percentage to weather emoji."""
-    if cloud_pct is None:
-        return "?"
-    if cloud_pct <= 10:
-        return "☀️"
-    elif cloud_pct <= 30:
-        return "🌤"
-    elif cloud_pct <= 70:
-        return "⛅"
-    elif cloud_pct <= 90:
-        return "🌥"
-    else:
-        return "☁️"
-
-def _detect_day_warning(day_points: list[ForecastDataPoint]) -> Optional[str]:
-    """Detect warnings for a day: thunder or heavy rain."""
-    # Gewitter: thunder_level MED oder HIGH
-    has_thunder = any(
-        dp.thunder_level and dp.thunder_level.value >= ThunderLevel.MED.value
-        for dp in day_points
-        if dp.thunder_level is not None
-    )
-    if has_thunder:
-        return "Gewitter"
-
-    # Starkregen: Tagessumme > 10mm
-    precip_sum = sum(
-        dp.precip_1h_mm for dp in day_points
-        if dp.precip_1h_mm is not None
-    )
-    if precip_sum > 10:
-        return "Starkregen"
-
-    # Sturm: Boeen > 70 km/h
-    max_gust = max(
-        (dp.gust_kmh for dp in day_points if dp.gust_kmh is not None),
-        default=0,
-    )
-    if max_gust > 70:
-        return "Sturm"
-
-    return None
+def _circular_mean(degrees: list[float]) -> int:
+    rads = [math.radians(d) for d in degrees]
+    sin_avg = sum(math.sin(r) for r in rads) / len(rads)
+    cos_avg = sum(math.cos(r) for r in rads) / len(rads)
+    return round(math.degrees(math.atan2(sin_avg, cos_avg))) % 360
 ```
 
-### 4) Orchestrierung in `_send_trip_report()`
-
-Einfuegen nach Thunder-Forecast, vor Formatter-Aufruf:
+### 2) `Trip.get_future_stages()` (trip.py)
 
 ```python
-# Multi-day trend (evening only, +1 bis +5 Tage)
+def get_future_stages(self, from_date: date) -> list[Stage]:
+    """Get all stages strictly after from_date, sorted by date."""
+    return sorted(
+        [s for s in self.stages if s.date > from_date],
+        key=lambda s: s.date,
+    )
+```
+
+### 3) Refactored `_send_trip_report()` — Trend-Abschnitt (trip_report_scheduler.py)
+
+Ersetze Zeilen 273-285 (aktueller v1.0 Trend):
+
+```python
+# 6. Multi-day trend (evening only — pro zukuenftiger Etappe)
 multi_day_trend = None
 if report_type == "evening" and segment_weather:
-    trend_ts = self._fetch_multi_day_trend(segment_weather[-1], target_date)
-    if trend_ts:
-        multi_day_trend = self._build_multi_day_trend(trend_ts, target_date)
-
-# Format report
-report = self._formatter.format_email(
-    ...,
-    multi_day_trend=multi_day_trend,  # NEU
-)
+    dc = trip.display_config
+    show_trend = dc.show_multi_day_trend if dc else True
+    if show_trend:
+        multi_day_trend = self._build_stage_trend(trip, target_date)
 ```
 
-### 5) Formatter: `format_email()` Signatur-Update
+### 4) Neues `_build_stage_trend()` — ersetzt `_fetch_multi_day_trend()` + `_build_multi_day_trend()`
 
 ```python
-def format_email(
+def _build_stage_trend(
     self,
-    segments: list[SegmentWeatherData],
-    trip_name: str,
-    report_type: str,
-    display_config: Optional[UnifiedWeatherDisplayConfig] = None,
-    night_weather: Optional[NormalizedTimeseries] = None,
-    thunder_forecast: Optional[dict] = None,
-    multi_day_trend: Optional[list[dict]] = None,  # NEU
-    changes: Optional[list[WeatherChange]] = None,
-    stage_name: Optional[str] = None,
-    stage_stats: Optional[dict] = None,
-) -> TripReport:
+    trip: "Trip",
+    target_date: date,
+) -> Optional[list[dict]]:
+    """
+    Build trend rows for each future stage.
+
+    For each remaining stage:
+    1. Convert to segments (existing _convert_trip_to_segments)
+    2. Fetch weather per segment (existing _fetch_weather)
+    3. Aggregate all segments to one stage summary (NEW aggregate_stage)
+    4. Build compact trend row dict
+
+    Returns None if no future stages exist.
+    """
+    from services.weather_metrics import aggregate_stage
+
+    WEEKDAYS_DE = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
+
+    future_stages = trip.get_future_stages(target_date)
+    if not future_stages:
+        return None
+
+    trend = []
+    for stage in future_stages:
+        try:
+            # 1. Segments fuer diese Etappe (gleiche Pipeline wie Hauptreport)
+            segments = self._convert_trip_to_segments(trip, stage.date)
+            if not segments:
+                continue
+
+            # 2. Wetter holen (alle Waypoints, nicht nur ein Punkt)
+            seg_weather = self._fetch_weather(segments)
+            if not seg_weather:
+                continue
+
+            # 3. Stage-Aggregation (Level 2)
+            stage_summary = aggregate_stage(seg_weather)
+
+            # 4. Trend-Zeile bauen
+            cloud_emoji = self._cloud_to_emoji(stage_summary.cloud_avg_pct)
+            warning = self._detect_stage_warning(seg_weather)
+
+            trend.append({
+                "weekday": WEEKDAYS_DE[stage.date.weekday()],
+                "date": stage.date,
+                "stage_name": stage.name,
+                "temp_max_c": stage_summary.temp_max_c,
+                "precip_sum_mm": stage_summary.precip_sum_mm,
+                "cloud_avg_pct": stage_summary.cloud_avg_pct,
+                "cloud_emoji": cloud_emoji,
+                "warning": warning,
+            })
+        except Exception as e:
+            logger.warning(f"Failed to build trend for stage {stage.id}: {e}")
+            continue
+
+    return trend if trend else None
 ```
 
-### 6) HTML-Rendering
+**Hinweis zu `_detect_stage_warning()`:** Prueft ueber die Roh-Timeseries aller Segmente (nicht ueber aggregierte Werte), da Gewitter-Erkennung stundenweise Daten braucht. Nutzt die bestehende `_detect_day_warning()` Logik — sammelt alle Datenpunkte aller Segmente fuer den Tag und prueft auf Thunder/Starkregen/Sturm.
 
-Position: Nach Thunder-Forecast, vor Highlights/Zusammenfassung.
+### 5) Formatter: Trend-Rendering (trip_report.py)
+
+**Header-Aenderung:** "5-Tage-Trend (Ankunftsort)" → "Naechste Etappen"
+
+**HTML-Rendering:**
 
 ```html
-<div style="margin: 16px 0; padding: 12px; background: #f5f5f5; border-radius: 8px;">
-  <h3 style="margin: 0 0 8px 0; font-size: 14px;">🔮 5-Tage-Trend (Ankunftsort)</h3>
-  <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+<div style="margin:16px;padding:12px;background:#f5f5f5;border-radius:8px;">
+  <h3 style="margin:0 0 8px 0;font-size:14px;color:#333">🔮 Naechste Etappen</h3>
+  <table style="width:100%;border-collapse:collapse;font-size:13px">
     <tr>
-      <td style="padding: 4px 8px; font-weight: bold;">Di</td>
-      <td style="padding: 4px 8px; text-align: center;">☀️</td>
-      <td style="padding: 4px 8px; text-align: right;">18°</td>
-      <td style="padding: 4px 8px; color: #888;"></td>
+      <td style="padding:4px 8px;font-weight:bold">Mi</td>
+      <td style="padding:4px 8px">Soller → Tossals Verds</td>
+      <td style="padding:4px 8px;text-align:center">⛅</td>
+      <td style="padding:4px 8px;text-align:right">14°</td>
+      <td style="padding:4px 8px;text-align:right">1.5mm</td>
+      <td style="padding:4px 8px"></td>
     </tr>
     <tr>
-      <td style="padding: 4px 8px; font-weight: bold;">Mi</td>
-      <td style="padding: 4px 8px; text-align: center;">🌧</td>
-      <td style="padding: 4px 8px; text-align: right;">12°</td>
-      <td style="padding: 4px 8px; color: #c62828;">⚠️ Gewitter</td>
+      <td style="padding:4px 8px;font-weight:bold">Do</td>
+      <td style="padding:4px 8px">Tossals Verds → Lluc</td>
+      <td style="padding:4px 8px;text-align:center">🌤</td>
+      <td style="padding:4px 8px;text-align:right">16°</td>
+      <td style="padding:4px 8px;text-align:right">2.3mm</td>
+      <td style="padding:4px 8px"><span style="color:#c62828">⚠️ Gewitter</span></td>
     </tr>
-    ...
   </table>
 </div>
 ```
 
-**Stil:** Kompakte Tabelle ohne Rahmen. Warning-Text in Rot (#c62828). Hintergrund leicht grau (#f5f5f5) fuer visuelle Abgrenzung. Kein Header-Row — die Daten sind selbsterklaerend.
+**Spalten:** Wochentag | Etappen-Name | Cloud-Emoji | Temp Max | Niederschlag | Warnung
 
-### 7) Plaintext-Rendering
+**Etappen-Name Kuerzung:** Wenn `stage.name` Pattern "Tag N: von X nach Y" hat, extrahiere "X → Y". Sonst: vollstaendiger Name, abgeschnitten auf 30 Zeichen.
+
+**Plaintext-Rendering:**
 
 ```
-━━ 5-Tage-Trend (Ankunftsort) ━━
-Di  ☀️  18°
-Mi  🌤  15°
-Do  🌧  12°  ⚠️ Gewitter
-Fr  ☀️  16°
-Sa  ⛅  14°
+━━ Naechste Etappen ━━
+  Mi  ⛅  14°  1.5mm  Soller → Tossals Verds
+  Do  🌤  16°  2.3mm  Tossals Verds → Lluc  ⚠️ Gewitter
 ```
 
-Feste Spaltenbreiten fuer Alignment: Wochentag (2), Emoji (4), Temp (4), Warning (rest).
+### 6) Bugfix: `show_multi_day_trend` Persistenz (loader.py)
 
-## Report-Layout (Gesamtstruktur nach F3)
+**Problem:** Feld wird weder geladen noch gespeichert.
 
-Evening-Report Reihenfolge:
+**Fix 1 — Laden** (`_parse_display_config`, Zeile 192-200):
+```python
+return UnifiedWeatherDisplayConfig(
+    ...
+    thunder_forecast_days=data.get("thunder_forecast_days", 2),
+    show_multi_day_trend=data.get("show_multi_day_trend", True),  # NEU
+    sms_metrics=data.get("sms_metrics", []),
+    ...
+)
+```
+
+**Fix 2 — Speichern** (`_trip_to_dict`, Zeile 537-555):
+```python
+data["display_config"] = {
+    ...
+    "thunder_forecast_days": dc.thunder_forecast_days,
+    "show_multi_day_trend": dc.show_multi_day_trend,  # NEU
+    "sms_metrics": dc.sms_metrics,
+    ...
+}
+```
+
+### 7) Alte Methoden entfernen
+
+Folgende v1.0-Methoden werden **geloescht** (ersetzt durch `_build_stage_trend` + `aggregate_stage`):
+- `TripReportSchedulerService._fetch_multi_day_trend()` (Zeilen 590-637)
+- `TripReportSchedulerService._build_multi_day_trend()` (Zeilen 639-694)
+
+`_cloud_to_emoji()` und `_detect_day_warning()` bleiben erhalten — werden von `_build_stage_trend()` weiterverwendet.
+
+## Expected Behavior
+
+- **Input:** Evening-Report-Trigger, aktiver Trip mit verbleibenden Etappen
+- **Output:** Trend-Block mit einer kompakten Zeile pro zukuenftiger Etappe
+- **Keine zukuenftigen Etappen:** Kein Trend-Block (z.B. letzter Tag des Trips)
+- **Fehler bei einer Etappe:** Diese Etappe wird uebersprungen, restliche Etappen erscheinen
+- **Gesamt-Fehler:** Kein Trend-Block, Report sendet normal weiter
+- **Morning-Reports:** Kein Trend (wie bisher)
+- **`show_multi_day_trend=False`:** Kein Trend
+
+## Report-Layout (Gesamtstruktur nach v2.0)
+
+Evening-Report Reihenfolge (unveraendert):
 
 ```
 1. Header (Trip-Name, Stage, Datum, Stats)
@@ -294,78 +340,74 @@ Evening-Report Reihenfolge:
 3. Segment-Tabellen (hourly)
 4. Nacht-Block (2h-Bloecke, Ankunft → 06:00)
 5. Gewitter-Vorschau (+1/+2 Tage)
-6. ★ 5-Tage-Trend (+1 bis +5 Tage) ← NEU
+6. ★ Naechste Etappen (v2.0 — pro Stage aggregiert)
 7. Zusammenfassung (Highlights)
-8. Footer (Generated-at, Provider/Modell)
+8. Footer (Generated-at, Provider/Modell, Units-Legend)
 ```
-
-## Expected Behavior
-
-- **Input:** Evening-Report-Trigger, aktiver Trip mit Segmenten
-- **Output:** Email mit 5-Tage-Trend-Block nach Gewitter-Vorschau
-- **Fehlerfall:** Wenn Trend-Fetch fehlschlaegt → Block wird ausgelassen, Report sendet normal
-- **Kein Trend verfuegbar:** Kein Trend-Block gerendert (z.B. wenn OpenMeteo keine 5-Tage-Daten liefert)
-
-## Konfiguration
-
-**UnifiedWeatherDisplayConfig** (bestehendes DTO, aktueller Name im Code) erhaelt neues Feld:
-
-```python
-show_multi_day_trend: bool = True  # Default: an
-```
-
-Wenn `False` oder `report_type != "evening"` → kein Trend-Block.
-
-**Hinweis:** Die Spec v2 referenziert `EmailReportDisplayConfig`, im Code heisst das DTO
-aktuell `UnifiedWeatherDisplayConfig`. Diese Spec nutzt den **Code-Namen**.
 
 ## Affected Files
 
 | File | Change | LoC |
 |------|--------|-----|
-| `src/services/trip_report_scheduler.py` | `_fetch_multi_day_trend()`, `_build_multi_day_trend()`, Aufruf in `_send_trip_report()` | ~80 |
-| `src/formatters/trip_report.py` | Trend-Rendering in HTML + Plaintext, Signatur-Update | ~40 |
-| `src/app/models.py` | `show_multi_day_trend: bool = True` in `EmailReportDisplayConfig` | ~2 |
-| **Gesamt** | **3 Dateien** | **~120** |
+| `src/services/weather_metrics.py` | `aggregate_stage()` Funktion + `_circular_mean()` Helper | +45 |
+| `src/app/trip.py` | `Trip.get_future_stages()` Methode | +6 |
+| `src/services/trip_report_scheduler.py` | `_build_stage_trend()` neu, `_fetch/_build_multi_day_trend()` loeschen, Aufruf anpassen | +40, -60 |
+| `src/formatters/trip_report.py` | Trend-Rendering HTML + Plaintext (Stage-Name, Precip-Spalte) | ~25 geaendert |
+| `src/app/loader.py` | `show_multi_day_trend` Persistenz-Bugfix (load + save) | +2 |
+| **Gesamt** | **5 Dateien** | **~120 LoC netto** |
 
 ## Test Plan
 
-### Automatisierte Tests
+### Unit/Integration Tests
 
-- [ ] `test_build_multi_day_trend_aggregation`: Verify daily max temp and avg cloud calculation
-- [ ] `test_build_multi_day_trend_cloud_emoji`: Verify emoji mapping for all cloud ranges
-- [ ] `test_build_multi_day_trend_warnings`: Thunder, Starkregen, Sturm detection
-- [ ] `test_build_multi_day_trend_missing_data`: Graceful skip for days without data
-- [ ] `test_multi_day_trend_evening_only`: Trend appears in evening, absent in morning
-- [ ] `test_multi_day_trend_html_rendering`: HTML contains trend table with emojis
-- [ ] `test_multi_day_trend_plain_rendering`: Plaintext contains aligned trend block
-- [ ] `test_multi_day_trend_disabled`: No trend when `show_multi_day_trend=False`
+- [ ] `test_aggregate_stage_max`: MAX ueber Segment-MAXe (temp_max, wind, gust, pop, cape, uv)
+- [ ] `test_aggregate_stage_min`: MIN ueber Segment-MINe (temp_min, wind_chill, visibility)
+- [ ] `test_aggregate_stage_sum`: SUM ueber Segment-SUMe (precip, fresh_snow)
+- [ ] `test_aggregate_stage_avg`: AVG ueber Segment-AVGs (cloud, humidity, dewpoint, pressure)
+- [ ] `test_aggregate_stage_thunder_enum`: MAX-Severity fuer ThunderLevel (NONE < MED < HIGH)
+- [ ] `test_aggregate_stage_wind_direction_circular`: Circular Mean (350° + 10° → ~0°, nicht 180°)
+- [ ] `test_aggregate_stage_skips_errors`: Segmente mit has_error=True werden uebersprungen
+- [ ] `test_aggregate_stage_empty_raises`: Leere Liste wirft ValueError
+- [ ] `test_aggregate_stage_single_segment`: Ein Segment → Summary identisch mit Segment-Summary
+- [ ] `test_get_future_stages`: Liefert nur Stages nach target_date, sortiert
+- [ ] `test_get_future_stages_empty`: Keine zukuenftigen Stages → leere Liste
+- [ ] `test_build_stage_trend_uses_all_segments`: Trend nutzt alle Waypoints, nicht nur Ankunftspunkt
+- [ ] `test_build_stage_trend_no_future`: Kein Trend wenn keine zukuenftigen Etappen
+- [ ] `test_trend_rendering_html_stage_name`: HTML enthaelt Etappen-Name
+- [ ] `test_trend_rendering_html_precip`: HTML enthaelt Niederschlags-Spalte
+- [ ] `test_trend_rendering_plain_stage_name`: Plaintext enthaelt Etappen-Name
+- [ ] `test_show_multi_day_trend_persistence`: Feld wird korrekt geladen und gespeichert
 
 ### E2E Tests
 
-- [ ] Send real evening report for GR221, verify trend block in email
+- [ ] Evening-Report senden fuer GR221 (Test-Trip!)
+- [ ] Trend-Block enthaelt T3 (Soller→Tossals Verds) und T4 (Tossals Verds→Lluc)
+- [ ] Keine Tage nach Trip-Ende (kein 20.02, kein 21.02)
+- [ ] Temperatur/Niederschlag plausibel (nicht None, nicht 0 bei allen)
 - [ ] Email Spec Validator: `uv run python3 .claude/hooks/email_spec_validator.py`
 
 ## Acceptance Criteria
 
-- [ ] Evening-Report enthaelt 5-Tage-Trend-Block nach Gewitter-Vorschau
-- [ ] Jeder Tag zeigt: Wochentag (de), Bewoelkungs-Emoji, Hoechsttemperatur (gerundet)
-- [ ] Warnungen (Gewitter, Starkregen, Sturm) mit ⚠️ markiert
+- [ ] `aggregate_stage()` ist eine standalone-Funktion in weather_metrics.py (wiederverwendbar)
+- [ ] Trend zeigt Wetter entlang der gesamten Route jeder Etappe (nicht nur Ankunftspunkt)
+- [ ] Jede Trend-Zeile zeigt: Wochentag, Etappen-Name, Cloud-Emoji, Temp Max, Niederschlag, Warnung
+- [ ] Keine Phantomtage nach Trip-Ende
+- [ ] Fehler bei einer Etappe fuehrt nicht zum Abbruch des gesamten Trends
 - [ ] Morning-Reports zeigen keinen Trend
-- [ ] Trend-Fetch-Fehler fuehrt NICHT zum Abbruch des Reports
+- [ ] `show_multi_day_trend` wird korrekt geladen und gespeichert (Bugfix)
 - [ ] HTML und Plaintext enthalten den gleichen Inhalt
-- [ ] Konfigurierbar via `show_multi_day_trend` (Default: true)
 
 ## Known Limitations
 
-1. **Trend = Ankunftsort only:** Zeigt Wetter am letzten Waypoint, nicht entlang der Route. Fuer Mehrtages-Trips mit weit auseinanderliegenden Etappen kann das Wetter an spaeten Etappen stark abweichen.
+1. **Zusaetzliche API-Calls:** Pro zukuenftiger Etappe N Segment-Calls (wie beim Hauptreport). Bei 3 verbleibenden Etappen mit je 5 Waypoints = ~15 Extra-Calls. OpenMeteo Free Tier (10.000/Tag) ist weit entfernt.
 
-2. **Temperatur = Tages-Maximum (06-21h):** Keine Min/Max-Spanne. Bewusste Entscheidung fuer Kompaktheit.
+2. **Forecast-Genauigkeit:** Etappen 4-5 Tage in der Zukunft haben niedrigere Vorhersagegenauigkeit. Das ist inhaerent und kein Software-Problem.
 
-3. **Keine Niederschlagsmenge:** Nur Warnung bei >10mm. Genaue Menge waere zu detailliert fuer Trend.
+3. **AVG ueber AVGs:** Die Stage-AVG-Berechnung (z.B. Bewoelkung) ist ein ungewichteter Durchschnitt der Segment-Durchschnitte. Korrekt waere gewichteter Durchschnitt nach Segment-Dauer, aber der Unterschied ist fuer Wanderer vernachlaessigbar.
 
-4. **OpenMeteo Forecast-Reichweite:** Je nach Modell 7-16 Tage. Tag+5 sollte immer verfuegbar sein.
+4. **Kein UI-Toggle:** `show_multi_day_trend` hat keinen Toggle in der Web-UI (nur API/JSON). UI-Integration ist out-of-scope fuer v2.0.
 
 ## Changelog
 
-- 2026-02-16: v1.0 spec created
+- 2026-02-16: v1.0 spec created (Ankunftsort-only, 5 feste Tage)
+- 2026-02-17: v2.0 spec — Refactored: Stage-basierte Aggregation, wiederverwendbare `aggregate_stage()` Funktion, Etappen-Namen im Trend, Niederschlags-Spalte, Persistenz-Bugfix
