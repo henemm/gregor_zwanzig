@@ -282,12 +282,28 @@ def show_weather_config_dialog(trip: Trip, user_id: str = "default") -> None:
                         "available": is_available,
                     }
 
+        # Etappen-Ausblick config
+        ui.separator().classes("q-my-sm")
+        ui.label("Etappen-Ausblick").classes("text-subtitle2")
+        dc = trip.display_config
+        trend_reports = dc.multi_day_trend_reports if dc else ["evening"]
+        with ui.row().classes("items-center"):
+            trend_morning_cb = ui.checkbox(
+                "Morning Report", value="morning" in trend_reports,
+            )
+            trend_evening_cb = ui.checkbox(
+                "Evening Report", value="evening" in trend_reports,
+            )
+
         # Buttons (Factory Pattern!)
         with ui.row().classes("q-mt-md"):
             ui.button("Abbrechen", on_click=make_cancel_handler(dialog))
             ui.button(
                 "Speichern",
-                on_click=make_save_handler(trip.id, metric_widgets, dialog, user_id),
+                on_click=make_save_handler(
+                    trip.id, metric_widgets, dialog, user_id,
+                    trend_morning_cb, trend_evening_cb,
+                ),
             ).props("color=primary")
 
     dialog.open()
@@ -300,7 +316,8 @@ def make_cancel_handler(dialog):
     return do_cancel
 
 
-def make_save_handler(trip_id: str, metric_widgets: dict, dialog, user_id: str):
+def make_save_handler(trip_id: str, metric_widgets: dict, dialog, user_id: str,
+                      trend_morning_cb=None, trend_evening_cb=None):
     """
     Factory for save handler - Safari compatible!
 
@@ -391,12 +408,20 @@ def make_save_handler(trip_id: str, metric_widgets: dict, dialog, user_id: str):
         # Preserve existing config values or use defaults
         old = trip.display_config
 
+        # Build multi_day_trend_reports from checkboxes
+        trend_reports = []
+        if trend_morning_cb and trend_morning_cb.value:
+            trend_reports.append("morning")
+        if trend_evening_cb and trend_evening_cb.value:
+            trend_reports.append("evening")
+
         trip.display_config = UnifiedWeatherDisplayConfig(
             trip_id=trip_id,
             metrics=metric_configs,
             show_night_block=old.show_night_block if old else True,
             night_interval_hours=old.night_interval_hours if old else 2,
             thunder_forecast_days=old.thunder_forecast_days if old else 2,
+            multi_day_trend_reports=trend_reports,
             updated_at=datetime.now(timezone.utc),
         )
 

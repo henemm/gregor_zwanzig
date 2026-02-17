@@ -63,10 +63,8 @@ class TripReportFormatter:
         # Highlights
         highlights = self._compute_highlights(segments, seg_tables, night_rows)
 
-        # Multi-day trend (evening only, respects config)
-        effective_trend = None
-        if report_type == "evening" and multi_day_trend and dc.show_multi_day_trend:
-            effective_trend = multi_day_trend
+        # Multi-day trend (respects config — scheduler already filters by report_type)
+        effective_trend = multi_day_trend if multi_day_trend else None
 
         # Generate both formats from same data
         email_html = self._render_html(

@@ -11,7 +11,7 @@ v2.0 Changes:
 - Stage-based trend (not single-point)
 - Precipitation in trend rows
 - Stage name in trend rows
-- show_multi_day_trend persistence bugfix
+- multi_day_trend_reports persistence
 """
 from __future__ import annotations
 
@@ -495,8 +495,26 @@ class TestTrendRendering:
 
         assert "1.5" in report.email_plain, "Plaintext should contain precip value"
 
-    def test_morning_report_no_trend(self):
-        """Morning report should NOT contain trend block."""
+    def test_morning_report_no_trend_when_not_configured(self):
+        """Morning report without trend data should NOT contain trend block."""
+        from formatters.trip_report import TripReportFormatter
+
+        formatter = TripReportFormatter()
+        last_seg = self._make_last_segment()
+
+        # Scheduler passes multi_day_trend=None when morning not in config
+        report = formatter.format_email(
+            segments=[last_seg],
+            trip_name="GR221 Mallorca",
+            report_type="morning",
+            multi_day_trend=None,
+        )
+
+        assert "Etappen" not in report.email_html
+        assert "Etappen" not in report.email_plain
+
+    def test_morning_report_with_trend_when_configured(self):
+        """Morning report WITH trend data should contain trend block."""
         from formatters.trip_report import TripReportFormatter
 
         formatter = TripReportFormatter()
@@ -510,27 +528,28 @@ class TestTrendRendering:
             multi_day_trend=trend,
         )
 
-        assert "Etappen" not in report.email_html
-        assert "Etappen" not in report.email_plain
+        assert "Etappen" in report.email_html
+        assert "Etappen" in report.email_plain
 
     def test_trend_disabled_in_config(self):
-        """Trend should not appear when show_multi_day_trend=False."""
+        """Trend should not appear when multi_day_trend_reports excludes report type."""
         from app.metric_catalog import build_default_display_config
         from formatters.trip_report import TripReportFormatter
 
         dc = build_default_display_config()
-        dc.show_multi_day_trend = False
+        dc.multi_day_trend_reports = []  # Disabled for all report types
 
         formatter = TripReportFormatter()
-        trend = self._make_trend_data()
         last_seg = self._make_last_segment()
 
+        # Scheduler would not pass trend data when report_type not in list,
+        # so multi_day_trend=None
         report = formatter.format_email(
             segments=[last_seg],
             trip_name="GR221 Mallorca",
             report_type="evening",
             display_config=dc,
-            multi_day_trend=trend,
+            multi_day_trend=None,
         )
 
         assert "Etappen" not in report.email_html
@@ -538,14 +557,14 @@ class TestTrendRendering:
 
 
 # ===========================================================================
-# TEST: show_multi_day_trend persistence bugfix
+# TEST: multi_day_trend_reports persistence
 # ===========================================================================
 
-class TestShowMultiDayTrendPersistence:
-    """Test that show_multi_day_trend survives save/load round-trip."""
+class TestMultiDayTrendReportsPersistence:
+    """Test that multi_day_trend_reports survives save/load round-trip."""
 
     def test_persistence_round_trip(self):
-        """show_multi_day_trend=False persists through save and load."""
+        """multi_day_trend_reports persists through save and load."""
         import json
         import tempfile
         from pathlib import Path
@@ -558,7 +577,7 @@ class TestShowMultiDayTrendPersistence:
         stage = Stage(id="T1", name="Tag 1", date=date(2026, 2, 18), waypoints=[wp])
 
         dc = build_default_display_config()
-        dc.show_multi_day_trend = False  # Explicitly set to False
+        dc.multi_day_trend_reports = ["morning", "evening"]
 
         trip = Trip(
             id="persist-test", name="Persist Test", stages=[stage],
@@ -566,15 +585,39 @@ class TestShowMultiDayTrendPersistence:
             display_config=dc,
         )
 
-        # Save to temp file, then load back
         with tempfile.TemporaryDirectory() as tmpdir:
             path = Path(tmpdir) / "persist-test.json"
             data = _trip_to_dict(trip)
             with open(path, "w") as f:
                 json.dump(data, f, indent=2)
 
-            # Load back
             loaded = load_trip(path)
             assert loaded.display_config is not None
-            assert loaded.display_config.show_multi_day_trend is False, \
-                "show_multi_day_trend=False should persist through save/load"
+            assert loaded.display_config.multi_day_trend_reports == ["morning", "evening"], \
+                "multi_day_trend_reports should persist through save/load"
+
+    def test_migration_from_old_bool_field(self):
+        """Old show_multi_day_trend=False migrates to empty list."""
+        import json
+        import tempfile
+        from pathlib import Path
+        from app.loader import load_trip
+
+        old_json = {
+            "id": "migrate-test", "name": "Migrate Test",
+            "stages": [{"id": "T1", "name": "Tag 1", "date": "2026-02-18",
+                        "waypoints": [{"id": "G1", "name": "X", "lat": 39.0, "lon": 2.0, "elevation_m": 100}]}],
+            "display_config": {
+                "trip_id": "migrate-test", "metrics": [],
+                "show_night_block": True, "night_interval_hours": 2,
+                "thunder_forecast_days": 2, "show_multi_day_trend": False,
+                "sms_metrics": [], "updated_at": "2026-02-17T10:00:00+00:00",
+            }
+        }
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "migrate-test.json"
+            with open(path, "w") as f:
+                json.dump(old_json, f)
+            loaded = load_trip(path)
+            assert loaded.display_config.multi_day_trend_reports == [], \
+                "Old show_multi_day_trend=False should migrate to empty list"
