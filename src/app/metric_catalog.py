@@ -37,6 +37,7 @@ class MetricDefinition:
     friendly_label: str = ""
     summary_fields: dict[str, str] = field(default_factory=dict)
     default_change_threshold: Optional[float] = None
+    display_unit: str = ""  # Unit for legend if different from `unit` (e.g. "km" for visibility)
     # RISK-04: Configurable display/risk thresholds (catalog defaults)
     display_thresholds: dict[str, float] = field(default_factory=dict)
     highlight_threshold: Optional[float] = None
@@ -239,6 +240,7 @@ _METRICS: list[MetricDefinition] = [
         providers={"openmeteo": True, "geosphere": False},
         default_enabled=False,
         friendly_label="good/fog",
+        display_unit="km",
         summary_fields={"min": "visibility_min_m"},
         default_change_threshold=1000,
         display_thresholds={"orange_lt": 500.0},

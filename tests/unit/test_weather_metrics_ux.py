@@ -498,30 +498,30 @@ class TestFmtValFriendlyToggle:
     # --- Visibility: friendly OFF → raw formatted value ---
 
     def test_visibility_friendly_off_high_shows_km(self, formatter_raw):
-        """>=10000m → '10k' format"""
+        """>=10000m → '15' (km, no suffix)"""
         result = formatter_raw._fmt_val("visibility", 15000, html=False)
-        assert result == "15k"
+        assert result == "15"
 
     def test_visibility_friendly_off_mid_shows_km(self, formatter_raw):
-        """>=1000m, <10000m → '5.0k' format"""
+        """>=1000m, <10000m → '5.0' (km, no suffix)"""
         result = formatter_raw._fmt_val("visibility", 5000, html=False)
-        assert result == "5.0k"
+        assert result == "5.0"
 
-    def test_visibility_friendly_off_low_shows_meters(self, formatter_raw):
-        """<1000m → raw meters"""
+    def test_visibility_friendly_off_low_shows_km_decimal(self, formatter_raw):
+        """<1000m → '0.8' (km decimal)"""
         result = formatter_raw._fmt_val("visibility", 800, html=False)
-        assert result == "800"
+        assert result == "0.8"
 
     def test_visibility_friendly_off_html_fog_highlighted(self, formatter_raw):
-        """<500m should get HTML highlighting when raw."""
+        """<500m should get HTML highlighting when raw (km format)."""
         result = formatter_raw._fmt_val("visibility", 300, html=True)
-        assert "300" in result
+        assert "0.3" in result
         assert "background" in result
 
     def test_visibility_friendly_off_html_normal_plain(self, formatter_raw):
-        """>=500m should be plain number when raw."""
+        """>=500m should be plain number when raw (km format)."""
         result = formatter_raw._fmt_val("visibility", 5000, html=True)
-        assert result == "5.0k"
+        assert result == "5.0"
 
 
 class TestBuildFriendlyKeys:

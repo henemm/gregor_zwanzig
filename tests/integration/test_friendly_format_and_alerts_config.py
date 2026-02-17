@@ -134,15 +134,15 @@ class TestFmtValFriendlyVisibility:
 
     def test_friendly_disabled_large(self) -> None:
         fmt = _make_formatter(_make_display_config({"visibility": False}))
-        assert fmt._fmt_val("visibility", 15000) == "15k"
+        assert fmt._fmt_val("visibility", 15000) == "15"
 
     def test_friendly_disabled_medium(self) -> None:
         fmt = _make_formatter(_make_display_config({"visibility": False}))
-        assert fmt._fmt_val("visibility", 5000) == "5.0k"
+        assert fmt._fmt_val("visibility", 5000) == "5.0"
 
     def test_friendly_disabled_small(self) -> None:
         fmt = _make_formatter(_make_display_config({"visibility": False}))
-        assert fmt._fmt_val("visibility", 800) == "800"
+        assert fmt._fmt_val("visibility", 800) == "0.8"
 
     def test_friendly_disabled_small_html_orange(self) -> None:
         fmt = _make_formatter(_make_display_config({"visibility": False}))

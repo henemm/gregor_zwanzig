@@ -11,7 +11,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Optional
 
-from app.metric_catalog import build_default_display_config, get_col_defs, get_label_for_field, get_metric
+from app.metric_catalog import build_default_display_config, get_col_defs, get_label_for_field, get_metric, get_metric_by_col_key
 from app.models import (
     ForecastDataPoint,
     NormalizedTimeseries,
@@ -240,6 +240,31 @@ class TripReportFormatter:
             return []
         keys = set(rows[0].keys()) - {"time"}
         return [(k, label) for k, label, _ in get_col_defs() if k in keys]
+
+    def _build_units_legend(self, rows: list[dict]) -> str:
+        """Build grouped units legend from visible columns.
+
+        Groups metrics with the same unit, e.g. 'Temp, Feels °C · Wind, Gust km/h'.
+        Uses display_unit if set, otherwise unit. Skips metrics without unit.
+        """
+        cols = self._visible_cols(rows)
+        if not cols:
+            return ""
+        from collections import OrderedDict
+        groups: OrderedDict[str, list[str]] = OrderedDict()
+        for col_key, col_label in cols:
+            try:
+                m = get_metric_by_col_key(col_key)
+            except KeyError:
+                continue
+            unit = m.display_unit if m.display_unit else m.unit
+            if not unit:
+                continue
+            groups.setdefault(unit, []).append(col_label)
+        if not groups:
+            return ""
+        parts = [f"{', '.join(labels)} {unit}" for unit, labels in groups.items()]
+        return "Einheiten: " + " · ".join(parts)
 
     # ------------------------------------------------------------------
     # Highlights / Summary
@@ -513,15 +538,15 @@ class TripReportFormatter:
         if key == "visibility":
             if not use_friendly:
                 if val >= 10000:
-                    return f"{val / 1000:.0f}k"
+                    s = f"{val / 1000:.0f}"
                 elif val >= 1000:
-                    return f"{val / 1000:.1f}k"
+                    s = f"{val / 1000:.1f}"
                 else:
-                    s = f"{val:.0f}"
-                    dt = get_metric("visibility").display_thresholds
-                    if html and dt.get("orange_lt") and val < dt["orange_lt"]:
-                        return f'<span style="background:#fff3e0;color:#e65100;padding:2px 4px;border-radius:3px">{s}</span>'
-                    return s
+                    s = f"{val / 1000:.1f}"
+                dt = get_metric("visibility").display_thresholds
+                if html and dt.get("orange_lt") and val < dt["orange_lt"]:
+                    return f'<span style="background:#fff3e0;color:#e65100;padding:2px 4px;border-radius:3px">{s}</span>'
+                return s
             if val >= 10000:
                 return "good"
             elif val >= 4000:
@@ -675,6 +700,10 @@ class TripReportFormatter:
                 <ul>{"".join(ch_items)}</ul>
             </div>"""
 
+        # Units legend from all segment tables
+        all_rows = [r for tbl in seg_tables for r in tbl]
+        legend_text = self._build_units_legend(all_rows) if all_rows else ""
+
         html = f"""<!DOCTYPE html>
 <html>
 <head>
@@ -714,6 +743,7 @@ class TripReportFormatter:
 
         <div class="footer">
             Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')} | Data: {segments[0].provider} ({segments[0].timeseries.meta.model if segments[0].timeseries else 'n/a'}){(' | Fallback ' + ', '.join(segments[0].timeseries.meta.fallback_metrics) + ': ' + segments[0].timeseries.meta.fallback_model) if segments[0].timeseries and segments[0].timeseries.meta.fallback_model else ''}
+            {('<br><span style="font-size:10px;color:#999">' + legend_text + '</span>') if legend_text else ''}
         </div>
     </div>
 </body>
@@ -831,6 +861,11 @@ class TripReportFormatter:
                 lines.append(f"  {h}")
             lines.append("")
 
+        # Units legend
+        all_rows = [r for tbl in seg_tables for r in tbl]
+        legend_text = self._build_units_legend(all_rows) if all_rows else ""
+        if legend_text:
+            lines.append(legend_text)
         lines.append("-" * 60)
         lines.append(f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}")
         model_name = segments[0].timeseries.meta.model if segments[0].timeseries else "n/a"

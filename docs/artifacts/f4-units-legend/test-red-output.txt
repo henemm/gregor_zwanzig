@@ -1,0 +1,140 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.2, pytest-8.4.1, pluggy-1.6.0
+rootdir: /opt/gregor_zwanziger
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 8 items
+
+tests/integration/test_units_legend.py FFFFFF.F                          [100%]
+
+=================================== FAILURES ===================================
+______________ TestVisibilityFormatKm.test_visibility_no_k_suffix ______________
+
+self = <test_units_legend.TestVisibilityFormatKm object at 0x7fa724163cd0>
+
+    def test_visibility_no_k_suffix(self):
+        """Visibility >= 10km should be plain number without 'k'."""
+        f = TripReportFormatter()
+>       result = f._fmt_val("visibility", 15000, use_friendly=False)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: TripReportFormatter._fmt_val() got an unexpected keyword argument 'use_friendly'
+
+tests/integration/test_units_legend.py:84: TypeError
+_____________ TestVisibilityFormatKm.test_visibility_mid_range_km ______________
+
+self = <test_units_legend.TestVisibilityFormatKm object at 0x7fa724160c50>
+
+    def test_visibility_mid_range_km(self):
+        """Visibility 1-10km should be decimal without 'k'."""
+        f = TripReportFormatter()
+>       result = f._fmt_val("visibility", 5000, use_friendly=False)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: TripReportFormatter._fmt_val() got an unexpected keyword argument 'use_friendly'
+
+tests/integration/test_units_legend.py:91: TypeError
+________________ TestVisibilityFormatKm.test_visibility_sub_1km ________________
+
+self = <test_units_legend.TestVisibilityFormatKm object at 0x7fa724160f10>
+
+    def test_visibility_sub_1km(self):
+        """Visibility < 1km should be decimal km (e.g. 0.8)."""
+        f = TripReportFormatter()
+>       result = f._fmt_val("visibility", 800, use_friendly=False)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: TripReportFormatter._fmt_val() got an unexpected keyword argument 'use_friendly'
+
+tests/integration/test_units_legend.py:98: TypeError
+__________________ TestUnitsLegend.test_legend_in_html_footer __________________
+
+self = <test_units_legend.TestUnitsLegend object at 0x7fa724161910>
+
+    def test_legend_in_html_footer(self):
+        """HTML email should contain units legend in footer."""
+        f = TripReportFormatter()
+        seg = _make_segment_with_visibility()
+        dc = _dc_with_visibility()
+    
+        report = f.format_email(
+            segments=[seg],
+            trip_name="Test Trip",
+            report_type="morning",
+            display_config=dc,
+        )
+    
+        assert "Visib km" in report.email_html or "km" in report.email_html, \
+            "HTML footer should contain visibility unit 'km'"
+>       assert "°C" in report.email_html, "HTML footer should contain temperature unit"
+E       AssertionError: HTML footer should contain temperature unit
+E       assert '°C' in '<!DOCTYPE html>\n<html>\n<head>\n    <meta charset="utf-8">\n    <meta name="viewport" content="width=device-width, i...       Generated: 2026-02-17 06:39 UTC | Data: openmeteo (icon_seamless)\n        </div>\n    </div>\n</body>\n</html>'
+E        +  where '<!DOCTYPE html>\n<html>\n<head>\n    <meta charset="utf-8">\n    <meta name="viewport" content="width=device-width, i...       Generated: 2026-02-17 06:39 UTC | Data: openmeteo (icon_seamless)\n        </div>\n    </div>\n</body>\n</html>' = TripReport(trip_id='test-trip', trip_name='Test Trip', report_type='morning', generated_at=datetime.datetime(2026, 2, ...nGenerated: 2026-02-17 06:39 UTC\nData: openmeteo (icon_seamless)', sms_text=None, triggered_by='schedule', changes=[]).email_html
+
+tests/integration/test_units_legend.py:120: AssertionError
+_________________ TestUnitsLegend.test_legend_in_plain_footer __________________
+
+self = <test_units_legend.TestUnitsLegend object at 0x7fa724161ad0>
+
+    def test_legend_in_plain_footer(self):
+        """Plaintext email should contain units legend."""
+        f = TripReportFormatter()
+        seg = _make_segment_with_visibility()
+        dc = _dc_with_visibility()
+    
+        report = f.format_email(
+            segments=[seg],
+            trip_name="Test Trip",
+            report_type="morning",
+            display_config=dc,
+        )
+    
+>       assert "Einheiten:" in report.email_plain, \
+            "Plaintext should contain 'Einheiten:' legend line"
+E       AssertionError: Plaintext should contain 'Einheiten:' legend line
+E       assert 'Einheiten:' in 'Test Trip - Morning Report\n18.02.2026\n\n━━ Segment Seg1: 08:00–12:00 | 10.0 km | ↑1500m → 1500m ━━\n  Time   Temp  ...----------------------------------------------------\nGenerated: 2026-02-17 06:39 UTC\nData: openmeteo (icon_seamless)'
+E        +  where 'Test Trip - Morning Report\n18.02.2026\n\n━━ Segment Seg1: 08:00–12:00 | 10.0 km | ↑1500m → 1500m ━━\n  Time   Temp  ...----------------------------------------------------\nGenerated: 2026-02-17 06:39 UTC\nData: openmeteo (icon_seamless)' = TripReport(trip_id='test-trip', trip_name='Test Trip', report_type='morning', generated_at=datetime.datetime(2026, 2, ...nGenerated: 2026-02-17 06:39 UTC\nData: openmeteo (icon_seamless)', sms_text=None, triggered_by='schedule', changes=[]).email_plain
+
+tests/integration/test_units_legend.py:135: AssertionError
+________________ TestUnitsLegend.test_legend_groups_same_units _________________
+
+self = <test_units_legend.TestUnitsLegend object at 0x7fa72414bfd0>
+
+    def test_legend_groups_same_units(self):
+        """Metrics with same unit should be grouped."""
+        f = TripReportFormatter()
+        seg = _make_segment_with_visibility()
+        dc = _dc_with_visibility()
+    
+        report = f.format_email(
+            segments=[seg],
+            trip_name="Test Trip",
+            report_type="morning",
+            display_config=dc,
+        )
+    
+        plain = report.email_plain
+>       assert "km/h" in plain, "Legend should contain 'km/h' for wind metrics"
+E       AssertionError: Legend should contain 'km/h' for wind metrics
+E       assert 'km/h' in 'Test Trip - Morning Report\n18.02.2026\n\n━━ Segment Seg1: 08:00–12:00 | 10.0 km | ↑1500m → 1500m ━━\n  Time   Temp  ...----------------------------------------------------\nGenerated: 2026-02-17 06:39 UTC\nData: openmeteo (icon_seamless)'
+
+tests/integration/test_units_legend.py:154: AssertionError
+______________ TestUnitsLegend.test_display_unit_field_in_catalog ______________
+
+self = <test_units_legend.TestUnitsLegend object at 0x7fa724148e50>
+
+    def test_display_unit_field_in_catalog(self):
+        """Visibility metric should have display_unit='km'."""
+        m = get_metric_by_col_key("visibility")
+>       assert hasattr(m, "display_unit"), "MetricDefinition should have display_unit field"
+E       AssertionError: MetricDefinition should have display_unit field
+E       assert False
+E        +  where False = hasattr(MetricDefinition(id='visibility', label_de='Sichtweite', unit='m', dp_field='visibility_m', category='atmosphere', def..._threshold=1000, display_thresholds={'orange_lt': 500.0}, highlight_threshold=None, risk_thresholds={'high_lt': 100.0}), 'display_unit')
+
+tests/integration/test_units_legend.py:181: AssertionError
+=========================== short test summary info ============================
+FAILED tests/integration/test_units_legend.py::TestVisibilityFormatKm::test_visibility_no_k_suffix
+FAILED tests/integration/test_units_legend.py::TestVisibilityFormatKm::test_visibility_mid_range_km
+FAILED tests/integration/test_units_legend.py::TestVisibilityFormatKm::test_visibility_sub_1km
+FAILED tests/integration/test_units_legend.py::TestUnitsLegend::test_legend_in_html_footer
+FAILED tests/integration/test_units_legend.py::TestUnitsLegend::test_legend_in_plain_footer
+FAILED tests/integration/test_units_legend.py::TestUnitsLegend::test_legend_groups_same_units
+FAILED tests/integration/test_units_legend.py::TestUnitsLegend::test_display_unit_field_in_catalog
+========================= 7 failed, 1 passed in 0.07s ==========================
