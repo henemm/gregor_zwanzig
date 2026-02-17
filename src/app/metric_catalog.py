@@ -123,6 +123,7 @@ _METRICS: list[MetricDefinition] = [
         providers={"openmeteo": True, "geosphere": True},
         default_enabled=False,
         summary_fields={"avg": "wind_direction_avg_deg"},
+        friendly_label="N/S/W/E",
         # Circular mean: no numeric delta comparison for alerts
     ),
     # === PRECIPITATION ===

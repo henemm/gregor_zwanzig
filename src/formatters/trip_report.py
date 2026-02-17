@@ -169,9 +169,12 @@ class TripReportFormatter:
         """Aggregate data points in a 2h night block into a single row."""
         block_hour = dps[0].ts.hour - (dps[0].ts.hour % interval)
         row: dict = {"time": f"{block_hour:02d}"}
+        merge_wind_dir = self._should_merge_wind_dir(dc)
 
         for mc in dc.metrics:
             if not mc.enabled:
+                continue
+            if mc.metric_id == "wind_direction" and merge_wind_dir:
                 continue
             try:
                 metric_def = get_metric(mc.metric_id)
@@ -215,19 +218,40 @@ class TripReportFormatter:
             else:
                 row[metric_def.col_key] = values[0]
 
+        if merge_wind_dir and "wind" in row:
+            import math
+            dirs = [dp.wind_direction_deg for dp in dps if dp.wind_direction_deg is not None]
+            if dirs:
+                sin_sum = sum(math.sin(math.radians(d)) for d in dirs)
+                cos_sum = sum(math.cos(math.radians(d)) for d in dirs)
+                avg_deg = round(math.degrees(math.atan2(sin_sum / len(dirs), cos_sum / len(dirs))) % 360)
+                row["_wind_dir_deg"] = avg_deg
+            else:
+                row["_wind_dir_deg"] = None
+
         return row
 
     def _dp_to_row(self, dp: ForecastDataPoint, dc: UnifiedWeatherDisplayConfig) -> dict:
-        """Convert a single ForecastDataPoint to a row dict using MetricCatalog."""
+        """Convert a single ForecastDataPoint to a row dict using MetricCatalog.
+
+        Wind direction merging: When wind_direction has friendly format ON
+        and wind is also enabled, the compass direction is appended to the
+        wind value (e.g. "20 NW") instead of creating a separate column.
+        """
         row: dict = {"time": f"{dp.ts.hour:02d}"}
+        merge_wind_dir = self._should_merge_wind_dir(dc)
         for mc in dc.metrics:
             if not mc.enabled:
                 continue
+            if mc.metric_id == "wind_direction" and merge_wind_dir:
+                continue  # Merged into wind column below
             try:
                 metric_def = get_metric(mc.metric_id)
             except KeyError:
                 continue
             row[metric_def.col_key] = getattr(dp, metric_def.dp_field, None)
+        if merge_wind_dir and "wind" in row:
+            row["_wind_dir_deg"] = getattr(dp, "wind_direction_deg", None)
         return row
 
     # ------------------------------------------------------------------
@@ -448,6 +472,31 @@ class TripReportFormatter:
     # Value formatting helpers
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _should_merge_wind_dir(dc: UnifiedWeatherDisplayConfig) -> bool:
+        """Check if wind_direction should be merged into wind column.
+
+        Returns True when wind_direction is enabled with friendly format ON
+        and wind is also enabled.
+        """
+        wind_enabled = False
+        wdir_enabled_friendly = False
+        for mc in dc.metrics:
+            if mc.metric_id == "wind" and mc.enabled:
+                wind_enabled = True
+            if mc.metric_id == "wind_direction" and mc.enabled and mc.use_friendly_format:
+                wdir_enabled_friendly = True
+        return wind_enabled and wdir_enabled_friendly
+
+    @staticmethod
+    def _degrees_to_compass(degrees: int | float | None) -> str:
+        """Convert wind direction degrees to 8-point compass (N/NE/E/SE/S/SW/W/NW)."""
+        if degrees is None:
+            return ""
+        degrees = int(degrees) % 360
+        directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+        return directions[round(degrees / 45) % 8]
+
     def _build_friendly_keys(self, dc: UnifiedWeatherDisplayConfig) -> set[str]:
         """Build set of col_keys where user wants friendly formatting."""
         keys = set()
@@ -461,7 +510,7 @@ class TripReportFormatter:
                     pass
         return keys
 
-    def _fmt_val(self, key: str, val, html: bool = False) -> str:
+    def _fmt_val(self, key: str, val, html: bool = False, row: dict | None = None) -> str:
         """Format a single cell value. Respects per-metric friendly format toggle."""
         if val is None:
             return "–"
@@ -480,6 +529,11 @@ class TripReportFormatter:
             return f"{val:.1f}"
         if key in ("wind", "gust"):
             s = f"{val:.0f}"
+            # Append compass direction to wind when merged
+            if key == "wind" and row and "_wind_dir_deg" in row:
+                compass = self._degrees_to_compass(row["_wind_dir_deg"])
+                if compass:
+                    s = f"{s} {compass}"
             if html and key == "gust":
                 dt = get_metric("gust").display_thresholds
                 if val and dt.get("red") and val >= dt["red"]:
@@ -557,6 +611,8 @@ class TripReportFormatter:
                 return "⚠️ fog"
         if key == "freeze_lvl":
             return f"{val:.0f}"
+        if key == "wind_dir":
+            return self._degrees_to_compass(val) or str(val)
         return str(val)
 
     # ------------------------------------------------------------------
@@ -762,7 +818,7 @@ class TripReportFormatter:
         for r in rows:
             tds = f"<td>{r['time']}</td>"
             for key, _ in cols:
-                tds += f"<td>{self._fmt_val(key, r.get(key), html=True)}</td>"
+                tds += f"<td>{self._fmt_val(key, r.get(key), html=True, row=r)}</td>"
             trs.append(f"<tr>{tds}</tr>")
         return f"<table><tr>{ths}</tr>{''.join(trs)}</table>"
 
@@ -886,7 +942,7 @@ class TripReportFormatter:
         for label, key in headers:
             w = len(label)
             for r in rows:
-                val_str = self._fmt_val(key, r.get(key)) if key != "time" else r["time"]
+                val_str = self._fmt_val(key, r.get(key), row=r) if key != "time" else r["time"]
                 w = max(w, len(val_str))
             widths.append(w + 1)
 
@@ -899,7 +955,7 @@ class TripReportFormatter:
         for r in rows:
             parts = []
             for (label, key), w in zip(headers, widths):
-                val_str = r["time"] if key == "time" else self._fmt_val(key, r.get(key))
+                val_str = r["time"] if key == "time" else self._fmt_val(key, r.get(key), row=r)
                 parts.append(val_str.ljust(w))
             lines.append(f"  {'  '.join(parts)}")
 
