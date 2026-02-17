@@ -1,0 +1,753 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.2, pytest-8.4.1, pluggy-1.6.0
+rootdir: /opt/gregor_zwanziger
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 690 items
+
+tests/e2e/test_e2e_friendly_format_config.py F                           [  0%]
+tests/e2e/test_e2e_story3_reports.py ......FF...F....                    [  2%]
+tests/e2e/test_locations_add_button.py ..                                [  2%]
+tests/e2e/test_safari_preventive_fix.py ..                               [  3%]
+tests/e2e/test_subscriptions_safari.py .                                 [  3%]
+tests/e2e/test_trips_start_time_buttons.py .....                         [  3%]
+tests/e2e/test_weather_config.py .FFFF                                   [  4%]
+tests/integration/test_alert_snapshot_pipeline.py ss                     [  4%]
+tests/integration/test_friendly_format_and_alerts_config.py .........FFF [  6%]
+.................                                                        [  9%]
+tests/integration/test_friendly_format_email_and_alerts.py .....F....F.. [ 11%]
+..............................                                           [ 15%]
+tests/integration/test_multi_day_trend.py ......                         [ 16%]
+tests/integration/test_report_config.py .......                          [ 17%]
+tests/integration/test_segment_weather_cache.py ..                       [ 17%]
+tests/integration/test_segment_weather_metrics.py .....                  [ 18%]
+tests/integration/test_trip_alert.py .............F.                     [ 20%]
+tests/integration/test_trip_report_scheduler.py ..............           [ 22%]
+tests/integration/test_trip_segment_weather.py .............             [ 24%]
+tests/integration/test_units_legend.py ........                          [ 25%]
+tests/integration/test_weather_snapshot.py ................              [ 27%]
+tests/tdd/test_geosphere_parsing.py .......                              [ 28%]
+tests/tdd/test_html_email.py .............                               [ 30%]
+tests/tdd/test_safari_cache_fix.py ......                                [ 31%]
+tests/tdd/test_snowgrid.py X..s                                          [ 32%]
+tests/tdd/test_weather_config_api_ui.py .........F.F.........F.          [ 35%]
+tests/test_aggregation.py ..........                                     [ 36%]
+tests/test_config.py ...........                                         [ 38%]
+tests/test_core.py .                                                     [ 38%]
+tests/test_debug.py .                                                    [ 38%]
+tests/test_formatters.py .........                                       [ 40%]
+tests/test_geosphere.py ........                                         [ 41%]
+tests/test_loader.py .........                                           [ 42%]
+tests/test_models.py ......                                              [ 43%]
+tests/test_outputs.py ..............                                     [ 45%]
+tests/test_providers_base.py .........                                   [ 46%]
+tests/test_services.py ......                                            [ 47%]
+tests/test_trip.py ...................                                   [ 50%]
+tests/test_trip_forecast.py .........                                    [ 51%]
+tests/test_user.py ............                                          [ 53%]
+tests/unit/test_change_detection.py .................                    [ 55%]
+tests/unit/test_configurable_thresholds.py ...........................   [ 59%]
+tests/unit/test_destination_segment.py .......                           [ 60%]
+tests/unit/test_elevation_analysis.py .......s                           [ 62%]
+tests/unit/test_etappen_config.py ....                                   [ 62%]
+tests/unit/test_gpx_import_in_trip_dialog.py .......                     [ 63%]
+tests/unit/test_gpx_parser.py ................                           [ 65%]
+tests/unit/test_gpx_upload_page.py ........                              [ 67%]
+tests/unit/test_hybrid_segmentation.py ........                          [ 68%]
+tests/unit/test_metric_availability_probe.py .........                   [ 69%]
+tests/unit/test_model_metric_fallback.py .........                       [ 70%]
+tests/unit/test_openmeteo_endpoint_routing.py ...........                [ 72%]
+tests/unit/test_provider_error_handling.py ........                      [ 73%]
+tests/unit/test_segment_builder.py .........                             [ 74%]
+tests/unit/test_settings_protection.py ....                              [ 75%]
+tests/unit/test_sms_trip.py ...                                          [ 75%]
+tests/unit/test_trip_report_formatter.py ........                        [ 77%]
+tests/unit/test_trip_report_formatter_v2.py ........................     [ 80%]
+tests/unit/test_trips_start_time.py .......                              [ 81%]
+tests/unit/test_trips_time_window_bugfix.py ...........                  [ 83%]
+tests/unit/test_uv_air_quality.py ........                               [ 84%]
+tests/unit/test_weather_cache.py ........                                [ 85%]
+tests/unit/test_weather_metrics.py ................                      [ 87%]
+tests/unit/test_weather_metrics_legacy.py ......                         [ 88%]
+tests/unit/test_weather_metrics_ux.py .................................. [ 93%]
+....................................FFFFF...                             [100%]
+
+=================================== FAILURES ===================================
+______________________________ test_alert_enabled ______________________________
+
+    def test_alert_enabled():
+        """Test alert_enabled directly on the change detection pipeline."""
+        print(f'\n{"="*60}')
+        print("TEST: alert_enabled steuert Change Detection")
+        print(f'{"="*60}')
+    
+        from services.weather_change_detection import WeatherChangeDetectionService
+        import importlib
+        import app.loader
+    
+        # A: cape alert=true, wind alert=false
+>       modify_metric_config("cape", alert_enabled=True)
+
+tests/e2e/test_e2e_friendly_format_config.py:283: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+metric_id = 'cape', kwargs = {'alert_enabled': True}
+f = <_io.TextIOWrapper name='/opt/gregor_zwanziger/data/users/default/trips/gr221-mallorca.json' mode='r' encoding='UTF-8'>
+data = {'aggregation': {'profile': 'wintersport'}, 'avalanche_regions': [], 'id': 'gr221-mallorca', 'name': 'GR221 Mallorca', ...}
+
+    def modify_metric_config(metric_id: str, **kwargs):
+        """Modify a metric's config in the trip JSON."""
+        with open(TRIP_JSON) as f:
+            data = json.load(f)
+>       for mc in data["display_config"]["metrics"]:
+                  ^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'display_config'
+
+tests/e2e/test_e2e_friendly_format_config.py:47: KeyError
+----------------------------- Captured stdout call -----------------------------
+
+============================================================
+TEST: alert_enabled steuert Change Detection
+============================================================
+____________ TestReportFormatting.test_email_html_contains_segments ____________
+
+self = <e2e.test_e2e_story3_reports.TestReportFormatting object at 0x7fd11edb5910>
+segments_from_trip = [TripSegment(segment_id=1, start_point=GPXPoint(lat=47.11, lon=11.31, elevation_m=993.0, distance_from_start_km=0.0), ...ne.utc), duration_hours=3.0, distance_km=4.5, ascent_m=0.0, descent_m=90.0, adjusted_to_waypoint=False, waypoint=None)]
+
+    def test_email_html_contains_segments(self, segments_from_trip):
+        """HTML email contains segment table with real data."""
+        weather = self._get_weather_data(segments_from_trip)
+        formatter = TripReportFormatter()
+        report = formatter.format_email(weather, TEST_TRIP_NAME, "morning")
+    
+        # Must have segment IDs
+        assert "#1" in report.email_html
+>       assert "#2" in report.email_html
+E       assert '#2' in '<!DOCTYPE html>\n<html>\n<head>\n    <meta charset="utf-8">\n    <meta name="viewport" content="width=device-width, i...n: Temp, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud %</span>\n        </div>\n    </div>\n</body>\n</html>'
+E        +  where '<!DOCTYPE html>\n<html>\n<head>\n    <meta charset="utf-8">\n    <meta name="viewport" content="width=device-width, i...n: Temp, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud %</span>\n        </div>\n    </div>\n</body>\n</html>' = TripReport(trip_id='e2e-story3-stubai', trip_name='E2E Story3 Stubai', report_type='morning', generated_at=datetime.da...-----\nGenerated: 2026-02-17 06:41 UTC\nData: openmeteo (icon_d2)', sms_text=None, triggered_by='schedule', changes=[]).email_html
+
+tests/e2e/test_e2e_story3_reports.py:220: AssertionError
+_____________ TestReportFormatting.test_email_plain_text_fallback ______________
+
+self = <e2e.test_e2e_story3_reports.TestReportFormatting object at 0x7fd11edb6010>
+segments_from_trip = [TripSegment(segment_id=1, start_point=GPXPoint(lat=47.11, lon=11.31, elevation_m=993.0, distance_from_start_km=0.0), ...ne.utc), duration_hours=3.0, distance_km=4.5, ascent_m=0.0, descent_m=90.0, adjusted_to_waypoint=False, waypoint=None)]
+
+    def test_email_plain_text_fallback(self, segments_from_trip):
+        """Plain text email is also generated."""
+        weather = self._get_weather_data(segments_from_trip)
+        formatter = TripReportFormatter()
+        report = formatter.format_email(weather, TEST_TRIP_NAME, "morning")
+    
+        assert report.email_plain is not None
+        assert len(report.email_plain) > 100
+>       assert "SEGMENTS" in report.email_plain
+E       AssertionError: assert 'SEGMENTS' in 'E2E Story3 Stubai - Morning Report\n17.02.2026\n\n━━ Segment 1: 07:00–10:00 | 3.2 km | ↑993m → 2237m ━━\n  Time   Tem...----------------------------------------------------------\nGenerated: 2026-02-17 06:41 UTC\nData: openmeteo (icon_d2)'
+E        +  where 'E2E Story3 Stubai - Morning Report\n17.02.2026\n\n━━ Segment 1: 07:00–10:00 | 3.2 km | ↑993m → 2237m ━━\n  Time   Tem...----------------------------------------------------------\nGenerated: 2026-02-17 06:41 UTC\nData: openmeteo (icon_d2)' = TripReport(trip_id='e2e-story3-stubai', trip_name='E2E Story3 Stubai', report_type='morning', generated_at=datetime.da...-----\nGenerated: 2026-02-17 06:41 UTC\nData: openmeteo (icon_d2)', sms_text=None, triggered_by='schedule', changes=[]).email_plain
+
+tests/e2e/test_e2e_story3_reports.py:237: AssertionError
+_____________ TestEmailDelivery.test_send_and_verify_report_email ______________
+
+self = <e2e.test_e2e_story3_reports.TestEmailDelivery object at 0x7fd11edb7d50>
+segments_from_trip = [TripSegment(segment_id=1, start_point=GPXPoint(lat=47.11, lon=11.31, elevation_m=993.0, distance_from_start_km=0.0), ...ne.utc), duration_hours=3.0, distance_km=4.5, ascent_m=0.0, descent_m=90.0, adjusted_to_waypoint=False, waypoint=None)]
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor...d.com', mail_from='henning.emmrich+gr20@gmail.com', sms_gateway_url=None, sms_api_key=None, sms_from=None, sms_to=None)
+
+    def test_send_and_verify_report_email(self, segments_from_trip, settings):
+        """Full flow: weather -> format -> SMTP send -> IMAP receive."""
+        if not settings.can_send_email():
+            pytest.skip("SMTP not configured")
+    
+        # 1. Fetch weather
+        from services.trip_report_scheduler import TripReportSchedulerService
+        service = TripReportSchedulerService(settings)
+        weather = service._fetch_weather(segments_from_trip)
+        assert len(weather) > 0, "No weather data"
+    
+        # 2. Format email
+        formatter = TripReportFormatter()
+        report = formatter.format_email(weather, TEST_TRIP_NAME, "morning")
+    
+        # 3. Send via SMTP
+        from outputs.email import EmailOutput
+        email_out = EmailOutput(settings)
+        email_out.send(
+            subject=report.email_subject,
+            body=report.email_html,
+            plain_text_body=report.email_plain,
+        )
+    
+        # 4. Wait for delivery
+        time.sleep(8)
+    
+        # 5. Verify via IMAP
+        imap = imaplib.IMAP4_SSL("imap.gmail.com")
+        imap.login(settings.smtp_user, settings.smtp_pass)
+        imap.select('"[Google Mail]/Gesendet"')
+    
+        _, data = imap.search(None, "ALL")
+        all_ids = data[0].split()
+        assert len(all_ids) > 0, "No emails in sent folder"
+    
+        # Get latest email
+        _, msg_data = imap.fetch(all_ids[-1], "(RFC822)")
+        msg = email.message_from_bytes(msg_data[0][1])
+    
+        subject = msg.get("Subject", "")
+        imap.close()
+        imap.logout()
+    
+        # 6. Validate subject contains trip name
+        assert TEST_TRIP_NAME in subject, (
+            f"Trip name '{TEST_TRIP_NAME}' not in subject: {subject}"
+        )
+        assert "Morning Report" in subject, (
+            f"'Morning Report' not in subject: {subject}"
+        )
+    
+        # 7. Validate HTML body content
+        body_html = ""
+        for part in msg.walk():
+            if part.get_content_type() == "text/html":
+                body_html = part.get_payload(decode=True).decode("utf-8")
+                break
+    
+        assert TEST_TRIP_NAME in body_html, "Trip name missing from email body"
+        assert "#1" in body_html, "Segment #1 missing from email"
+>       assert "#2" in body_html, "Segment #2 missing from email"
+E       AssertionError: Segment #2 missing from email
+E       assert '#2' in '<!DOCTYPE html>\n<html>\n<head>\n    <meta charset="utf-8">\n    <meta name="viewport" content="width=device-width, i...n: Temp, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud %</span>\n        </div>\n    </div>\n</body>\n</html>'
+
+tests/e2e/test_e2e_story3_reports.py:340: AssertionError
+_______________ test_weather_config_dialog_opens_with_checkboxes _______________
+
+    def test_weather_config_dialog_opens_with_checkboxes():
+        """
+        E2E Test: Click "Wetter-Metriken" button, dialog with checkboxes appears.
+    
+        Expected Result (RED): Dialog doesn't exist yet
+        Expected Result (GREEN): Dialog opens with 13 metric checkboxes
+        """
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page(viewport={'width': 1400, 'height': 1000})
+    
+            # Navigate to trips page
+            page.goto('http://localhost:8080/trips', timeout=10000)
+            time.sleep(2)
+    
+            # Click weather config button
+            weather_button = page.locator('button:has-text("Wetter-Metriken")')
+>           weather_button.click()
+
+tests/e2e/test_weather_config.py:63: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.11/site-packages/playwright/sync_api/_generated.py:15637: in click
+    self._sync(
+.venv/lib/python3.11/site-packages/playwright/_impl/_locator.py:162: in click
+    return await self._frame._click(self._selector, strict=True, **params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.11/site-packages/playwright/_impl/_frame.py:566: in _click
+    await self._channel.send("click", self._timeout, locals_to_params(locals()))
+.venv/lib/python3.11/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <playwright._impl._connection.Connection object at 0x7fd11cc83bd0>
+cb = <function Channel.send.<locals>.<lambda> at 0x7fd11770d9e0>
+is_internal = False, title = None
+
+    async def wrap_api_call(
+        self, cb: Callable[[], Any], is_internal: bool = False, title: str = None
+    ) -> Any:
+        if self._api_zone.get():
+            return await cb()
+        task = asyncio.current_task(self._loop)
+        st: List[inspect.FrameInfo] = getattr(
+            task, "__pw_stack__", None
+        ) or inspect.stack(0)
+    
+        parsed_st = _extract_stack_trace_information_from_stack(st, is_internal, title)
+        self._api_zone.set(parsed_st)
+        try:
+            return await cb()
+        except Exception as error:
+>           raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E           playwright._impl._errors.Error: Locator.click: Error: strict mode violation: locator("button:has-text(\"Wetter-Metriken\")") resolved to 3 elements:
+E               1) <button id="c24" tabindex="0" type="button" class="q-btn q-btn-item non-selectable no-outline q-btn--flat q-btn--rectangle text-primary q-btn--actionable q-focusable q-hoverable">…</button> aka get_by_role("button", name="Wetter-Metriken").first
+E               2) <button id="c37" tabindex="0" type="button" class="q-btn q-btn-item non-selectable no-outline q-btn--flat q-btn--rectangle text-primary q-btn--actionable q-focusable q-hoverable">…</button> aka get_by_role("button", name="Wetter-Metriken").nth(1)
+E               3) <button id="c52" tabindex="0" type="button" class="q-btn q-btn-item non-selectable no-outline q-btn--flat q-btn--rectangle text-primary q-btn--actionable q-focusable q-hoverable">…</button> aka get_by_role("button", name="Wetter-Metriken").nth(2)
+E           
+E           Call log:
+E             - waiting for locator("button:has-text(\"Wetter-Metriken\")")
+
+.venv/lib/python3.11/site-packages/playwright/_impl/_connection.py:559: Error
+______________________ test_weather_config_default_state _______________________
+
+    def test_weather_config_default_state():
+        """
+        E2E Test: Default state shows 8 basis metrics checked, 5 extended unchecked.
+    
+        Expected Result (RED): Default state not implemented
+        Expected Result (GREEN): 8 checkboxes checked initially
+        """
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page(viewport={'width': 1400, 'height': 1000})
+    
+            # Navigate and open dialog
+            page.goto('http://localhost:8080/trips', timeout=10000)
+            time.sleep(2)
+>           page.locator('button:has-text("Wetter-Metriken")').click()
+
+tests/e2e/test_weather_config.py:102: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.11/site-packages/playwright/sync_api/_generated.py:15637: in click
+    self._sync(
+.venv/lib/python3.11/site-packages/playwright/_impl/_locator.py:162: in click
+    return await self._frame._click(self._selector, strict=True, **params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.11/site-packages/playwright/_impl/_frame.py:566: in _click
+    await self._channel.send("click", self._timeout, locals_to_params(locals()))
+.venv/lib/python3.11/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <playwright._impl._connection.Connection object at 0x7fd11cc4a7d0>
+cb = <function Channel.send.<locals>.<lambda> at 0x7fd11c141e40>
+is_internal = False, title = None
+
+    async def wrap_api_call(
+        self, cb: Callable[[], Any], is_internal: bool = False, title: str = None
+    ) -> Any:
+        if self._api_zone.get():
+            return await cb()
+        task = asyncio.current_task(self._loop)
+        st: List[inspect.FrameInfo] = getattr(
+            task, "__pw_stack__", None
+        ) or inspect.stack(0)
+    
+        parsed_st = _extract_stack_trace_information_from_stack(st, is_internal, title)
+        self._api_zone.set(parsed_st)
+        try:
+            return await cb()
+        except Exception as error:
+>           raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E           playwright._impl._errors.Error: Locator.click: Error: strict mode violation: locator("button:has-text(\"Wetter-Metriken\")") resolved to 3 elements:
+E               1) <button id="c24" tabindex="0" type="button" class="q-btn q-btn-item non-selectable no-outline q-btn--flat q-btn--rectangle text-primary q-btn--actionable q-focusable q-hoverable">…</button> aka get_by_role("button", name="Wetter-Metriken").first
+E               2) <button id="c37" tabindex="0" type="button" class="q-btn q-btn-item non-selectable no-outline q-btn--flat q-btn--rectangle text-primary q-btn--actionable q-focusable q-hoverable">…</button> aka get_by_role("button", name="Wetter-Metriken").nth(1)
+E               3) <button id="c52" tabindex="0" type="button" class="q-btn q-btn-item non-selectable no-outline q-btn--flat q-btn--rectangle text-primary q-btn--actionable q-focusable q-hoverable">…</button> aka get_by_role("button", name="Wetter-Metriken").nth(2)
+E           
+E           Call log:
+E             - waiting for locator("button:has-text(\"Wetter-Metriken\")")
+
+.venv/lib/python3.11/site-packages/playwright/_impl/_connection.py:559: Error
+____________ test_weather_config_save_button_validates_minimum_one _____________
+
+    def test_weather_config_save_button_validates_minimum_one():
+        """
+        E2E Test: Validation - cannot save with 0 metrics selected.
+    
+        Expected Result (RED): Validation not implemented
+        Expected Result (GREEN): Error notification appears, dialog stays open
+        """
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page(viewport={'width': 1400, 'height': 1000})
+    
+            # Navigate and open dialog
+            page.goto('http://localhost:8080/trips', timeout=10000)
+            time.sleep(2)
+>           page.locator('button:has-text("Wetter-Metriken")').click()
+
+tests/e2e/test_weather_config.py:132: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.11/site-packages/playwright/sync_api/_generated.py:15637: in click
+    self._sync(
+.venv/lib/python3.11/site-packages/playwright/_impl/_locator.py:162: in click
+    return await self._frame._click(self._selector, strict=True, **params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.11/site-packages/playwright/_impl/_frame.py:566: in _click
+    await self._channel.send("click", self._timeout, locals_to_params(locals()))
+.venv/lib/python3.11/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <playwright._impl._connection.Connection object at 0x7fd11772b950>
+cb = <function Channel.send.<locals>.<lambda> at 0x7fd11c1aa700>
+is_internal = False, title = None
+
+    async def wrap_api_call(
+        self, cb: Callable[[], Any], is_internal: bool = False, title: str = None
+    ) -> Any:
+        if self._api_zone.get():
+            return await cb()
+        task = asyncio.current_task(self._loop)
+        st: List[inspect.FrameInfo] = getattr(
+            task, "__pw_stack__", None
+        ) or inspect.stack(0)
+    
+        parsed_st = _extract_stack_trace_information_from_stack(st, is_internal, title)
+        self._api_zone.set(parsed_st)
+        try:
+            return await cb()
+        except Exception as error:
+>           raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E           playwright._impl._errors.Error: Locator.click: Error: strict mode violation: locator("button:has-text(\"Wetter-Metriken\")") resolved to 3 elements:
+E               1) <button id="c24" tabindex="0" type="button" class="q-btn q-btn-item non-selectable no-outline q-btn--flat q-btn--rectangle text-primary q-btn--actionable q-focusable q-hoverable">…</button> aka get_by_role("button", name="Wetter-Metriken").first
+E               2) <button id="c37" tabindex="0" type="button" class="q-btn q-btn-item non-selectable no-outline q-btn--flat q-btn--rectangle text-primary q-btn--actionable q-focusable q-hoverable">…</button> aka get_by_role("button", name="Wetter-Metriken").nth(1)
+E               3) <button id="c52" tabindex="0" type="button" class="q-btn q-btn-item non-selectable no-outline q-btn--flat q-btn--rectangle text-primary q-btn--actionable q-focusable q-hoverable">…</button> aka get_by_role("button", name="Wetter-Metriken").nth(2)
+E           
+E           Call log:
+E             - waiting for locator("button:has-text(\"Wetter-Metriken\")")
+
+.venv/lib/python3.11/site-packages/playwright/_impl/_connection.py:559: Error
+____________________ test_weather_config_saves_and_persists ____________________
+
+    def test_weather_config_saves_and_persists():
+        """
+        E2E Test: Select metrics, save, reload page, verify persistence.
+    
+        Expected Result (RED): Persistence not implemented
+        Expected Result (GREEN): Selected metrics saved and reload correctly
+    
+        Safari Test: Factory pattern ensures save button works!
+        """
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page(viewport={'width': 1400, 'height': 1000})
+    
+            # Navigate and open dialog
+            page.goto('http://localhost:8080/trips', timeout=10000)
+            time.sleep(2)
+>           page.locator('button:has-text("Wetter-Metriken")').click()
+
+tests/e2e/test_weather_config.py:185: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.11/site-packages/playwright/sync_api/_generated.py:15637: in click
+    self._sync(
+.venv/lib/python3.11/site-packages/playwright/_impl/_locator.py:162: in click
+    return await self._frame._click(self._selector, strict=True, **params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.11/site-packages/playwright/_impl/_frame.py:566: in _click
+    await self._channel.send("click", self._timeout, locals_to_params(locals()))
+.venv/lib/python3.11/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <playwright._impl._connection.Connection object at 0x7fd11c103ed0>
+cb = <function Channel.send.<locals>.<lambda> at 0x7fd11c159d00>
+is_internal = False, title = None
+
+    async def wrap_api_call(
+        self, cb: Callable[[], Any], is_internal: bool = False, title: str = None
+    ) -> Any:
+        if self._api_zone.get():
+            return await cb()
+        task = asyncio.current_task(self._loop)
+        st: List[inspect.FrameInfo] = getattr(
+            task, "__pw_stack__", None
+        ) or inspect.stack(0)
+    
+        parsed_st = _extract_stack_trace_information_from_stack(st, is_internal, title)
+        self._api_zone.set(parsed_st)
+        try:
+            return await cb()
+        except Exception as error:
+>           raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E           playwright._impl._errors.Error: Locator.click: Error: strict mode violation: locator("button:has-text(\"Wetter-Metriken\")") resolved to 3 elements:
+E               1) <button id="c24" tabindex="0" type="button" class="q-btn q-btn-item non-selectable no-outline q-btn--flat q-btn--rectangle text-primary q-btn--actionable q-focusable q-hoverable">…</button> aka get_by_role("button", name="Wetter-Metriken").first
+E               2) <button id="c37" tabindex="0" type="button" class="q-btn q-btn-item non-selectable no-outline q-btn--flat q-btn--rectangle text-primary q-btn--actionable q-focusable q-hoverable">…</button> aka get_by_role("button", name="Wetter-Metriken").nth(1)
+E               3) <button id="c52" tabindex="0" type="button" class="q-btn q-btn-item non-selectable no-outline q-btn--flat q-btn--rectangle text-primary q-btn--actionable q-focusable q-hoverable">…</button> aka get_by_role("button", name="Wetter-Metriken").nth(2)
+E           
+E           Call log:
+E             - waiting for locator("button:has-text(\"Wetter-Metriken\")")
+
+.venv/lib/python3.11/site-packages/playwright/_impl/_connection.py:559: Error
+__________ TestFmtValFriendlyVisibility.test_friendly_disabled_large ___________
+
+self = <test_friendly_format_and_alerts_config.TestFmtValFriendlyVisibility object at 0x7fd11e737710>
+
+    def test_friendly_disabled_large(self) -> None:
+        fmt = _make_formatter(_make_display_config({"visibility": False}))
+>       assert fmt._fmt_val("visibility", 15000) == "15k"
+E       AssertionError: assert '15' == '15k'
+E         
+E         - 15k
+E         ?   -
+E         + 15
+
+tests/integration/test_friendly_format_and_alerts_config.py:137: AssertionError
+__________ TestFmtValFriendlyVisibility.test_friendly_disabled_medium __________
+
+self = <test_friendly_format_and_alerts_config.TestFmtValFriendlyVisibility object at 0x7fd11e737d10>
+
+    def test_friendly_disabled_medium(self) -> None:
+        fmt = _make_formatter(_make_display_config({"visibility": False}))
+>       assert fmt._fmt_val("visibility", 5000) == "5.0k"
+E       AssertionError: assert '5.0' == '5.0k'
+E         
+E         - 5.0k
+E         ?    -
+E         + 5.0
+
+tests/integration/test_friendly_format_and_alerts_config.py:141: AssertionError
+__________ TestFmtValFriendlyVisibility.test_friendly_disabled_small ___________
+
+self = <test_friendly_format_and_alerts_config.TestFmtValFriendlyVisibility object at 0x7fd11e738350>
+
+    def test_friendly_disabled_small(self) -> None:
+        fmt = _make_formatter(_make_display_config({"visibility": False}))
+>       assert fmt._fmt_val("visibility", 800) == "800"
+E       AssertionError: assert '0.8' == '800'
+E         
+E         - 800
+E         + 0.8
+
+tests/integration/test_friendly_format_and_alerts_config.py:145: AssertionError
+_____ TestEmailFriendlyVsRawFormatting.test_all_raw_visibility_km_in_html ______
+
+self = <test_friendly_format_email_and_alerts.TestEmailFriendlyVsRawFormatting object at 0x7fd11e75cc90>
+
+    def test_all_raw_visibility_km_in_html(self):
+        """Visibility 5000m → '5.0k' when friendly OFF."""
+        dc = self._make_config(False, False, False)
+        report = self._generate_report(dc, visibility=5000.0)
+        html = report.email_html
+        assert "fair" not in html
+>       assert "5.0k" in html
+E       assert '5.0k' in '<!DOCTYPE html>\n<html>\n<head>\n    <meta charset="utf-8">\n    <meta name="viewport" content="width=device-width, i...Einheiten: Temp °C · Wind km/h · Thndr% J/kg · Cloud % · Visib km</span>\n        </div>\n    </div>\n</body>\n</html>'
+
+tests/integration/test_friendly_format_email_and_alerts.py:262: AssertionError
+__ TestEmailFriendlyVsRawFormatting.test_visibility_fog_raw_html_highlighted ___
+
+self = <test_friendly_format_email_and_alerts.TestEmailFriendlyVsRawFormatting object at 0x7fd11e75e050>
+
+    def test_visibility_fog_raw_html_highlighted(self):
+        """Visibility < 500m gets HTML highlighting when raw."""
+        dc = self._make_config(False, False, False)
+        report = self._generate_report(dc, visibility=300.0)
+        html = report.email_html
+>       assert "300" in html
+E       assert '300' in '<!DOCTYPE html>\n<html>\n<head>\n    <meta charset="utf-8">\n    <meta name="viewport" content="width=device-width, i...Einheiten: Temp °C · Wind km/h · Thndr% J/kg · Cloud % · Visib km</span>\n        </div>\n    </div>\n</body>\n</html>'
+
+tests/integration/test_friendly_format_email_and_alerts.py:302: AssertionError
+_________ TestAlertOnChangesConfig.test_alerts_enabled_does_not_block __________
+
+self = <test_trip_alert.TestAlertOnChangesConfig object at 0x7fd11e48c890>
+
+    def test_alerts_enabled_does_not_block(self) -> None:
+        """Should not block when alert_on_changes is True."""
+        from services.trip_alert import TripAlertService
+    
+        service = TripAlertService()
+        trip = _create_test_trip()
+        trip.report_config = TripReportConfig(
+            trip_id=trip.id, alert_on_changes=True
+        )
+    
+        # With no fresh weather provided and no real API, this will
+        # fail at weather fetch — but NOT at the config check
+        cached = [_create_segment_weather(segment_id=1, temp_max=15.0)]
+        # The method should proceed past the config check
+        # (may return False for other reasons like no fresh weather)
+        result = service.check_and_send_alerts(trip, cached)
+        # Key assertion: it didn't return False due to config block
+        # (it returned False due to no fresh weather or no changes)
+>       assert result is False  # Expected: fails later, not at config check
+        ^^^^^^^^^^^^^^^^^^^^^^
+E       assert True is False
+
+tests/integration/test_trip_alert.py:233: AssertionError
+__________________ TestProviderInfo.test_provider_info_shown ___________________
+
+self = <tdd.test_weather_config_api_ui.TestProviderInfo object at 0x7fd11d173610>
+running_server = <Popen: returncode: None args: ['/opt/gregor_zwanziger/.venv/bin/python3', '...>
+
+    def test_provider_info_shown(self, running_server):
+        """
+        GIVEN: Weather config dialog is open
+        WHEN: inspecting dialog header
+        THEN: provider name(s) are displayed
+    
+        Expected RED: Current dialog has no provider info.
+        """
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page(viewport={"width": 1400, "height": 1000})
+            page.goto(f"{SERVER_URL}/trips", timeout=10000)
+            time.sleep(2)
+    
+            page.locator('button:has-text("Wetter-Metriken")').first.click()
+            time.sleep(1)
+    
+            page.screenshot(path="/tmp/weather_config_provider_info.png")
+    
+            provider_text = page.locator("text=Provider")
+            openmeteo_text = page.locator("text=OpenMeteo")
+>           assert provider_text.count() > 0 or openmeteo_text.count() > 0, (
+                "No provider info found in dialog header. "
+                "Phase 2 shows available providers."
+            )
+E           AssertionError: No provider info found in dialog header. Phase 2 shows available providers.
+E           assert (0 > 0 or 0 > 0)
+E            +  where 0 = count()
+E            +    where count = <Locator frame=<Frame name= url='http://localhost:18092/trips'> selector='text=Provider'>.count
+E            +  and   0 = count()
+E            +    where count = <Locator frame=<Frame name= url='http://localhost:18092/trips'> selector='text=OpenMeteo'>.count
+
+tests/tdd/test_weather_config_api_ui.py:380: AssertionError
+___________ TestAdditionalMetricsCatalog.test_catalog_has_19_metrics ___________
+
+self = <tdd.test_weather_config_api_ui.TestAdditionalMetricsCatalog object at 0x7fd11d17c690>
+
+    def test_catalog_has_19_metrics(self):
+        """
+        GIVEN: MetricCatalog with additional metrics registered
+        WHEN: counting all metrics
+        THEN: exactly 19 metrics (15 base + 4 new)
+    
+        Expected RED: Currently 15 metrics, missing visibility/rain_probability/cape/freezing_level.
+        """
+        from app.metric_catalog import get_all_metrics
+        metrics = get_all_metrics()
+>       assert len(metrics) == 19, (
+            f"Expected 19 metrics (15 base + 4 new), got {len(metrics)}. "
+            "Missing: visibility, rain_probability, cape, freezing_level"
+        )
+E       AssertionError: Expected 19 metrics (15 base + 4 new), got 23. Missing: visibility, rain_probability, cape, freezing_level
+E       assert 23 == 19
+E        +  where 23 = len([MetricDefinition(id='temperature', label_de='Temperatur', unit='°C', dp_field='t2m_c', category='temperature', defaul...resholds={'yellow': 50.0, 'red': 80.0}, highlight_threshold=60.0, risk_thresholds={'medium': 50.0, 'high': 70.0}), ...])
+
+tests/tdd/test_weather_config_api_ui.py:462: AssertionError
+_____________ TestUIMetricCount19.test_nineteen_metric_checkboxes ______________
+
+self = <tdd.test_weather_config_api_ui.TestUIMetricCount19 object at 0x7fd11d17ef90>
+running_server = <Popen: returncode: None args: ['/opt/gregor_zwanziger/.venv/bin/python3', '...>
+
+    def test_nineteen_metric_checkboxes(self, running_server):
+        """
+        GIVEN: Weather config dialog with 19 MetricCatalog metrics
+        WHEN: counting checkboxes in dialog
+        THEN: exactly 19 checkboxes
+    
+        Expected RED: Currently 15 checkboxes (4 new metrics not in catalog yet).
+        """
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page(viewport={"width": 1400, "height": 1000})
+            page.goto(f"{SERVER_URL}/trips", timeout=10000)
+            time.sleep(2)
+    
+            page.locator('button:has-text("Wetter-Metriken")').first.click()
+            time.sleep(1)
+    
+            page.screenshot(path="/tmp/weather_config_19_metrics.png")
+    
+            checkboxes = page.locator("div.q-checkbox")
+            count = checkboxes.count()
+            # 19 metric checkboxes + 6 friendly-format toggles = 25
+>           assert count == 25, (
+                f"Expected 25 checkboxes (19 metrics + 6 friendly-format toggles), found {count}."
+            )
+E           AssertionError: Expected 25 checkboxes (19 metrics + 6 friendly-format toggles), found 47.
+E           assert 47 == 25
+
+tests/tdd/test_weather_config_api_ui.py:695: AssertionError
+_____ TestFmtValFriendlyToggle.test_visibility_friendly_off_high_shows_km ______
+
+self = <test_weather_metrics_ux.TestFmtValFriendlyToggle object at 0x7fd11ce72cd0>
+formatter_raw = <formatters.trip_report.TripReportFormatter object at 0x7fd1175d5e50>
+
+    def test_visibility_friendly_off_high_shows_km(self, formatter_raw):
+        """>=10000m → '10k' format"""
+        result = formatter_raw._fmt_val("visibility", 15000, html=False)
+>       assert result == "15k"
+E       AssertionError: assert '15' == '15k'
+E         
+E         - 15k
+E         ?   -
+E         + 15
+
+tests/unit/test_weather_metrics_ux.py:503: AssertionError
+______ TestFmtValFriendlyToggle.test_visibility_friendly_off_mid_shows_km ______
+
+self = <test_weather_metrics_ux.TestFmtValFriendlyToggle object at 0x7fd11ce72750>
+formatter_raw = <formatters.trip_report.TripReportFormatter object at 0x7fd117778710>
+
+    def test_visibility_friendly_off_mid_shows_km(self, formatter_raw):
+        """>=1000m, <10000m → '5.0k' format"""
+        result = formatter_raw._fmt_val("visibility", 5000, html=False)
+>       assert result == "5.0k"
+E       AssertionError: assert '5.0' == '5.0k'
+E         
+E         - 5.0k
+E         ?    -
+E         + 5.0
+
+tests/unit/test_weather_metrics_ux.py:508: AssertionError
+____ TestFmtValFriendlyToggle.test_visibility_friendly_off_low_shows_meters ____
+
+self = <test_weather_metrics_ux.TestFmtValFriendlyToggle object at 0x7fd11ce71150>
+formatter_raw = <formatters.trip_report.TripReportFormatter object at 0x7fd1175bd990>
+
+    def test_visibility_friendly_off_low_shows_meters(self, formatter_raw):
+        """<1000m → raw meters"""
+        result = formatter_raw._fmt_val("visibility", 800, html=False)
+>       assert result == "800"
+E       AssertionError: assert '0.8' == '800'
+E         
+E         - 800
+E         + 0.8
+
+tests/unit/test_weather_metrics_ux.py:513: AssertionError
+__ TestFmtValFriendlyToggle.test_visibility_friendly_off_html_fog_highlighted __
+
+self = <test_weather_metrics_ux.TestFmtValFriendlyToggle object at 0x7fd11ce73650>
+formatter_raw = <formatters.trip_report.TripReportFormatter object at 0x7fd117787510>
+
+    def test_visibility_friendly_off_html_fog_highlighted(self, formatter_raw):
+        """<500m should get HTML highlighting when raw."""
+        result = formatter_raw._fmt_val("visibility", 300, html=True)
+>       assert "300" in result
+E       assert '300' in '<span style="background:#fff3e0;color:#e65100;padding:2px 4px;border-radius:3px">0.3</span>'
+
+tests/unit/test_weather_metrics_ux.py:518: AssertionError
+___ TestFmtValFriendlyToggle.test_visibility_friendly_off_html_normal_plain ____
+
+self = <test_weather_metrics_ux.TestFmtValFriendlyToggle object at 0x7fd11ce73c90>
+formatter_raw = <formatters.trip_report.TripReportFormatter object at 0x7fd117755890>
+
+    def test_visibility_friendly_off_html_normal_plain(self, formatter_raw):
+        """>=500m should be plain number when raw."""
+        result = formatter_raw._fmt_val("visibility", 5000, html=True)
+>       assert result == "5.0k"
+E       AssertionError: assert '5.0' == '5.0k'
+E         
+E         - 5.0k
+E         ?    -
+E         + 5.0
+
+tests/unit/test_weather_metrics_ux.py:524: AssertionError
+=========================== short test summary info ============================
+FAILED tests/e2e/test_e2e_friendly_format_config.py::test_alert_enabled - Key...
+FAILED tests/e2e/test_e2e_story3_reports.py::TestReportFormatting::test_email_html_contains_segments
+FAILED tests/e2e/test_e2e_story3_reports.py::TestReportFormatting::test_email_plain_text_fallback
+FAILED tests/e2e/test_e2e_story3_reports.py::TestEmailDelivery::test_send_and_verify_report_email
+FAILED tests/e2e/test_weather_config.py::test_weather_config_dialog_opens_with_checkboxes
+FAILED tests/e2e/test_weather_config.py::test_weather_config_default_state - ...
+FAILED tests/e2e/test_weather_config.py::test_weather_config_save_button_validates_minimum_one
+FAILED tests/e2e/test_weather_config.py::test_weather_config_saves_and_persists
+FAILED tests/integration/test_friendly_format_and_alerts_config.py::TestFmtValFriendlyVisibility::test_friendly_disabled_large
+FAILED tests/integration/test_friendly_format_and_alerts_config.py::TestFmtValFriendlyVisibility::test_friendly_disabled_medium
+FAILED tests/integration/test_friendly_format_and_alerts_config.py::TestFmtValFriendlyVisibility::test_friendly_disabled_small
+FAILED tests/integration/test_friendly_format_email_and_alerts.py::TestEmailFriendlyVsRawFormatting::test_all_raw_visibility_km_in_html
+FAILED tests/integration/test_friendly_format_email_and_alerts.py::TestEmailFriendlyVsRawFormatting::test_visibility_fog_raw_html_highlighted
+FAILED tests/integration/test_trip_alert.py::TestAlertOnChangesConfig::test_alerts_enabled_does_not_block
+FAILED tests/tdd/test_weather_config_api_ui.py::TestProviderInfo::test_provider_info_shown
+FAILED tests/tdd/test_weather_config_api_ui.py::TestAdditionalMetricsCatalog::test_catalog_has_19_metrics
+FAILED tests/tdd/test_weather_config_api_ui.py::TestUIMetricCount19::test_nineteen_metric_checkboxes
+FAILED tests/unit/test_weather_metrics_ux.py::TestFmtValFriendlyToggle::test_visibility_friendly_off_high_shows_km
+FAILED tests/unit/test_weather_metrics_ux.py::TestFmtValFriendlyToggle::test_visibility_friendly_off_mid_shows_km
+FAILED tests/unit/test_weather_metrics_ux.py::TestFmtValFriendlyToggle::test_visibility_friendly_off_low_shows_meters
+FAILED tests/unit/test_weather_metrics_ux.py::TestFmtValFriendlyToggle::test_visibility_friendly_off_html_fog_highlighted
+FAILED tests/unit/test_weather_metrics_ux.py::TestFmtValFriendlyToggle::test_visibility_friendly_off_html_normal_plain
+======= 22 failed, 663 passed, 4 skipped, 1 xpassed in 334.78s (0:05:34) =======
