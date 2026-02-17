@@ -270,12 +270,12 @@ class TripReportSchedulerService:
             segment_weather[-1], target_date,
         )
 
-        # 6. Multi-day trend (evening only — per future stage)
+        # 6. Multi-day trend (configurable per report type)
         multi_day_trend = None
-        if report_type == "evening" and segment_weather:
+        if segment_weather:
             dc = trip.display_config
-            show_trend = dc.show_multi_day_trend if dc else True
-            if show_trend:
+            trend_reports = dc.multi_day_trend_reports if dc else ["evening"]
+            if report_type in trend_reports:
                 multi_day_trend = self._build_stage_trend(trip, target_date)
 
         # 7. Format report (uses unified display config from trip)
