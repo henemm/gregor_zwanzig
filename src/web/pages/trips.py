@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional
 
 from nicegui import ui
 
-from app.loader import delete_trip, load_all_trips, save_trip
+from app.loader import delete_trip, get_trips_dir, load_all_trips, load_trip, save_trip
 from app.models import EtappenConfig
 from app.trip import Stage, TimeWindow, Trip, Waypoint
 from web.pages.gpx_upload import (
@@ -624,11 +624,20 @@ def render_trips() -> None:
                                 if regions_input.value:
                                     regions = [r.strip() for r in regions_input.value.split(",")]
 
+                                # BUG-FIX: Preserve display_config, weather_config,
+                                # report_config from existing trip on disk
+                                existing = load_trip(
+                                    get_trips_dir() / f"{trip_id}.json"
+                                )
+
                                 updated_trip = Trip(
                                     id=trip_id,
                                     name=name_input.value,
                                     stages=stages,
                                     avalanche_regions=regions,
+                                    display_config=existing.display_config,
+                                    weather_config=existing.weather_config,
+                                    report_config=existing.report_config,
                                 )
 
                                 save_trip(updated_trip)

@@ -314,6 +314,16 @@ def make_save_handler(trip_id: str, metric_widgets: dict, dialog, user_id: str):
         Save handler function
     """
     def do_save():
+        # Load saved config to preserve values for fields without UI widgets
+        trip_path = get_trips_dir(user_id) / f"{trip_id}.json"
+        saved_configs: dict = {}
+        if trip_path.exists():
+            saved_trip = load_trip(trip_path)
+            if saved_trip.display_config:
+                saved_configs = {
+                    mc.metric_id: mc for mc in saved_trip.display_config.metrics
+                }
+
         # Build MetricConfig list from UI state
         metric_configs = []
         enabled_count = 0
@@ -327,7 +337,11 @@ def make_save_handler(trip_id: str, metric_widgets: dict, dialog, user_id: str):
             aggregations = [label_to_key[a] for a in agg_values if a in label_to_key]
 
             friendly_toggle = widgets.get("friendly_toggle")
-            use_friendly = friendly_toggle.value if friendly_toggle else True
+            # BUG-FIX: Preserve saved value when no UI widget exists (metric has no friendly_label)
+            saved_mc = saved_configs.get(metric_id)
+            use_friendly = friendly_toggle.value if friendly_toggle else (
+                saved_mc.use_friendly_format if saved_mc else True
+            )
 
             alert_cb = widgets.get("alert_cb")
             alert_level_select = widgets.get("alert_level_select")
