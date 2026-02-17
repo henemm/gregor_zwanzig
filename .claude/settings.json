@@ -132,6 +132,18 @@
           }
         ]
       }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/auto_restart_server.py",
+            "timeout": 30
+          }
+        ]
+      }
     ]
   }
 }
