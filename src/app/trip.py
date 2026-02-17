@@ -221,6 +221,13 @@ class Trip:
                 return stage
         return None
 
+    def get_future_stages(self, from_date: date) -> List[Stage]:
+        """Get all stages strictly after from_date, sorted by date."""
+        return sorted(
+            [s for s in self.stages if s.date > from_date],
+            key=lambda s: s.date,
+        )
+
     def __str__(self) -> str:
         dates = f"{self.start_date}" if self.start_date == self.end_date else f"{self.start_date} - {self.end_date}"
         return f"{self.name} ({dates}): {len(self.stages)} stages, {len(self.all_waypoints)} waypoints"

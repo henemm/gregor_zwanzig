@@ -270,19 +270,13 @@ class TripReportSchedulerService:
             segment_weather[-1], target_date,
         )
 
-        # 6. Multi-day trend (evening only, +1 bis +5 Tage)
+        # 6. Multi-day trend (evening only — per future stage)
         multi_day_trend = None
         if report_type == "evening" and segment_weather:
             dc = trip.display_config
             show_trend = dc.show_multi_day_trend if dc else True
             if show_trend:
-                trend_ts = self._fetch_multi_day_trend(
-                    segment_weather[-1], target_date,
-                )
-                if trend_ts:
-                    multi_day_trend = self._build_multi_day_trend(
-                        trend_ts, target_date,
-                    )
+                multi_day_trend = self._build_stage_trend(trip, target_date)
 
         # 7. Format report (uses unified display config from trip)
         report = self._formatter.format_email(
@@ -587,111 +581,76 @@ class TripReportSchedulerService:
                 return last_segment.timeseries
             return None
 
-    def _fetch_multi_day_trend(
+    def _build_stage_trend(
         self,
-        last_segment: SegmentWeatherData,
+        trip,
         target_date: date,
-    ) -> Optional[NormalizedTimeseries]:
+    ) -> Optional[list[dict]]:
         """
-        Fetch 5-day forecast for multi-day trend at arrival location.
+        Build trend rows for each future stage.
 
-        Separate provider call (like _fetch_night_weather).
-        Returns None on error (trend is optional, report still sends).
+        For each remaining stage:
+        1. Convert to segments (existing _convert_trip_to_segments)
+        2. Fetch weather per segment (existing _fetch_weather)
+        3. Aggregate all segments to one stage summary (aggregate_stage)
+        4. Build compact trend row dict
 
-        SPEC: docs/specs/modules/multi_day_trend.md v1.0
+        Returns None if no future stages exist.
+
+        SPEC: docs/specs/modules/multi_day_trend.md v2.0
         """
-        from providers.base import get_provider
-        from services.segment_weather import SegmentWeatherService
-
-        seg = last_segment.segment
-        start = datetime.combine(
-            target_date + timedelta(days=1),
-            time.min,
-            tzinfo=timezone.utc,
-        )
-        end = datetime.combine(
-            target_date + timedelta(days=5),
-            time(23, 0),
-            tzinfo=timezone.utc,
-        )
-
-        trend_segment = TripSegment(
-            segment_id=998,
-            start_point=seg.end_point,
-            end_point=seg.end_point,
-            start_time=start,
-            end_time=end,
-            duration_hours=(end - start).total_seconds() / 3600,
-            distance_km=0.0,
-            ascent_m=0.0,
-            descent_m=0.0,
-        )
-
-        try:
-            provider = get_provider("openmeteo")
-            service = SegmentWeatherService(provider)
-            trend_data = service.fetch_segment_weather(trend_segment)
-            return trend_data.timeseries
-        except Exception as e:
-            logger.warning(f"Failed to fetch multi-day trend: {e}")
-            return None
-
-    def _build_multi_day_trend(
-        self,
-        timeseries: NormalizedTimeseries,
-        target_date: date,
-    ) -> list[dict]:
-        """
-        Aggregate multi-day forecast into daily trend summaries.
-
-        Returns list of dicts with weekday, temp_max_c, cloud_emoji, warning.
-
-        SPEC: docs/specs/modules/multi_day_trend.md v1.0
-        """
-        from app.models import ThunderLevel
+        from services.weather_metrics import aggregate_stage
 
         WEEKDAYS_DE = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
 
-        trend = []
-        for offset in range(1, 6):
-            day = target_date + timedelta(days=offset)
-            day_points = [dp for dp in timeseries.data if dp.ts.date() == day]
+        future_stages = trip.get_future_stages(target_date)
+        if not future_stages:
+            return None
 
-            if not day_points:
+        trend = []
+        for stage in future_stages:
+            try:
+                # 1. Segments for this stage (same pipeline as main report)
+                segments = self._convert_trip_to_segments(trip, stage.date)
+                if not segments:
+                    continue
+
+                # 2. Fetch weather (all waypoints, not just one point)
+                seg_weather = self._fetch_weather(segments)
+                if not seg_weather:
+                    continue
+
+                # 3. Stage aggregation (Level 2)
+                stage_summary = aggregate_stage(seg_weather)
+
+                # 4. Build trend row
+                cloud_emoji = self._cloud_to_emoji(stage_summary.cloud_avg_pct)
+
+                # Warning: collect all timeseries datapoints for the day
+                all_day_points = []
+                for sw in seg_weather:
+                    if sw.timeseries and sw.timeseries.data:
+                        all_day_points.extend([
+                            dp for dp in sw.timeseries.data
+                            if dp.ts.date() == stage.date
+                        ])
+                warning = self._detect_day_warning(all_day_points) if all_day_points else None
+
+                trend.append({
+                    "weekday": WEEKDAYS_DE[stage.date.weekday()],
+                    "date": stage.date,
+                    "stage_name": stage.name,
+                    "temp_max_c": stage_summary.temp_max_c,
+                    "precip_sum_mm": stage_summary.precip_sum_mm,
+                    "cloud_avg_pct": stage_summary.cloud_avg_pct,
+                    "cloud_emoji": cloud_emoji,
+                    "warning": warning,
+                })
+            except Exception as e:
+                logger.warning(f"Failed to build trend for stage {stage.id}: {e}")
                 continue
 
-            # Daytime max temperature (06:00-21:00)
-            day_temps = [
-                dp.t2m_c for dp in day_points
-                if dp.t2m_c is not None and 6 <= dp.ts.hour <= 21
-            ]
-            temp_max = max(day_temps) if day_temps else None
-
-            # Average cloud cover (daytime)
-            day_clouds = [
-                dp.cloud_total_pct for dp in day_points
-                if dp.cloud_total_pct is not None and 6 <= dp.ts.hour <= 21
-            ]
-            cloud_avg = (
-                sum(day_clouds) / len(day_clouds) if day_clouds else None
-            )
-
-            # Cloud → Emoji
-            cloud_emoji = self._cloud_to_emoji(cloud_avg)
-
-            # Warnings
-            warning = self._detect_day_warning(day_points)
-
-            trend.append({
-                "weekday": WEEKDAYS_DE[day.weekday()],
-                "date": day,
-                "temp_max_c": temp_max,
-                "cloud_avg_pct": cloud_avg,
-                "cloud_emoji": cloud_emoji,
-                "warning": warning,
-            })
-
-        return trend
+        return trend if trend else None
 
     @staticmethod
     def _cloud_to_emoji(cloud_pct: Optional[float]) -> str:

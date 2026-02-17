@@ -996,6 +996,96 @@ class HourlyCell:
     wind_dir: str  # "SW", "N", "NE"
 
 
+# ===========================================================================
+# Level-2 Aggregation: Stage-level (across segments)
+# SPEC: docs/specs/modules/multi_day_trend.md v2.0
+# ===========================================================================
+
+def aggregate_stage(
+    segments: list,
+) -> SegmentWeatherSummary:
+    """
+    Level-2 aggregation: Combine all segment summaries of a stage
+    into a single stage-level summary.
+
+    Applies the same aggregation rule per metric (MAX over MAXes,
+    MIN over MINs, SUM over SUMs, AVG over AVGs) using each
+    segment's aggregation_config.
+
+    Args:
+        segments: All SegmentWeatherData of one stage (with .aggregated)
+
+    Returns:
+        SegmentWeatherSummary with stage-level aggregated values
+
+    Raises:
+        ValueError: If segments is empty or all segments have errors
+    """
+    if not segments:
+        raise ValueError("Cannot aggregate empty segment list")
+
+    # Filter out error segments
+    summaries = [
+        s.aggregated for s in segments
+        if not s.has_error and s.aggregated
+    ]
+    if not summaries:
+        raise ValueError("All segments have errors, cannot aggregate")
+
+    # Get aggregation config from first valid summary
+    agg_config = summaries[0].aggregation_config
+
+    # Build result dict by applying aggregation rules
+    result_fields: dict = {}
+    for field_name, agg_rule in agg_config.items():
+        values = [
+            getattr(s, field_name) for s in summaries
+            if getattr(s, field_name, None) is not None
+        ]
+        if not values:
+            result_fields[field_name] = None
+            continue
+
+        if agg_rule == "max":
+            if hasattr(values[0], "value"):
+                # Enum severity ordering (e.g. NONE=0, MED=1, HIGH=2)
+                _ENUM_ORDER = {
+                    ThunderLevel.NONE: 0, ThunderLevel.MED: 1, ThunderLevel.HIGH: 2,
+                    PrecipType.RAIN: 0, PrecipType.SNOW: 1, PrecipType.MIXED: 2,
+                }
+                result_fields[field_name] = max(values, key=lambda v: _ENUM_ORDER.get(v, 0))
+            else:
+                result_fields[field_name] = max(values)
+        elif agg_rule == "min":
+            result_fields[field_name] = min(values)
+        elif agg_rule == "sum":
+            result_fields[field_name] = sum(values)
+        elif agg_rule == "avg":
+            if field_name == "wind_direction_avg_deg":
+                result_fields[field_name] = _circular_mean_deg(values)
+            else:
+                avg_val = sum(values) / len(values)
+                if isinstance(values[0], int):
+                    result_fields[field_name] = round(avg_val)
+                else:
+                    result_fields[field_name] = avg_val
+        else:
+            result_fields[field_name] = values[0]
+
+    return SegmentWeatherSummary(
+        **{k: v for k, v in result_fields.items() if k != "aggregation_config"},
+        aggregation_config=agg_config,
+    )
+
+
+def _circular_mean_deg(degrees: list) -> int:
+    """Circular mean for wind direction in degrees."""
+    rads = [math.radians(float(d)) for d in degrees]
+    sin_avg = sum(math.sin(r) for r in rads) / len(rads)
+    cos_avg = sum(math.cos(r) for r in rads) / len(rads)
+    return round(math.degrees(math.atan2(sin_avg, cos_avg))) % 360
+
+
 class CloudStatus(str, Enum):
     """
     Cloud layer position classification (elevation-based).

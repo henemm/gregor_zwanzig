@@ -195,6 +195,7 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
         show_night_block=data.get("show_night_block", True),
         night_interval_hours=data.get("night_interval_hours", 2),
         thunder_forecast_days=data.get("thunder_forecast_days", 2),
+        show_multi_day_trend=data.get("show_multi_day_trend", True),
         sms_metrics=data.get("sms_metrics", []),
         updated_at=_dt.fromisoformat(data["updated_at"]) if "updated_at" in data else _dt.now(),
     )
@@ -550,6 +551,7 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             "show_night_block": dc.show_night_block,
             "night_interval_hours": dc.night_interval_hours,
             "thunder_forecast_days": dc.thunder_forecast_days,
+            "show_multi_day_trend": dc.show_multi_day_trend,
             "sms_metrics": dc.sms_metrics,
             "updated_at": dc.updated_at.isoformat(),
         }
