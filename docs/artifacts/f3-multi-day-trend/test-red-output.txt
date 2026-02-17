@@ -1,0 +1,127 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.2, pytest-8.4.1, pluggy-1.6.0
+rootdir: /opt/gregor_zwanziger
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 6 items
+
+tests/integration/test_multi_day_trend.py FFFFFF                         [100%]
+
+=================================== FAILURES ===================================
+_____________ TestMultiDayTrendFetch.test_fetch_returns_timeseries _____________
+
+self = <test_multi_day_trend.TestMultiDayTrendFetch object at 0x7f1a8e58ee90>
+
+    def test_fetch_returns_timeseries(self):
+        """Fetch multi-day trend returns NormalizedTimeseries with 5 days of data."""
+        service = TripReportSchedulerService()
+        last_seg = _make_last_segment()
+        target_date = date.today() + timedelta(days=1)
+    
+>       result = service._fetch_multi_day_trend(last_seg, target_date)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'TripReportSchedulerService' object has no attribute '_fetch_multi_day_trend'
+
+tests/integration/test_multi_day_trend.py:65: AttributeError
+____________ TestMultiDayTrendBuild.test_build_returns_list_of_days ____________
+
+self = <test_multi_day_trend.TestMultiDayTrendBuild object at 0x7f1a8d01d290>
+
+    def test_build_returns_list_of_days(self):
+        """Build trend returns list with weekday, temp, emoji, warning."""
+        service = TripReportSchedulerService()
+        last_seg = _make_last_segment()
+        target_date = date.today() + timedelta(days=1)
+    
+>       ts = service._fetch_multi_day_trend(last_seg, target_date)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'TripReportSchedulerService' object has no attribute '_fetch_multi_day_trend'
+
+tests/integration/test_multi_day_trend.py:85: AttributeError
+____________ TestMultiDayTrendBuild.test_build_temp_is_daytime_max _____________
+
+self = <test_multi_day_trend.TestMultiDayTrendBuild object at 0x7f1a8d01d890>
+
+    def test_build_temp_is_daytime_max(self):
+        """Trend temp should be the daytime max (06:00-21:00)."""
+        service = TripReportSchedulerService()
+        last_seg = _make_last_segment()
+        target_date = date.today() + timedelta(days=1)
+    
+>       ts = service._fetch_multi_day_trend(last_seg, target_date)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'TripReportSchedulerService' object has no attribute '_fetch_multi_day_trend'
+
+tests/integration/test_multi_day_trend.py:107: AttributeError
+_________ TestMultiDayTrendInReport.test_evening_report_contains_trend _________
+
+self = <test_multi_day_trend.TestMultiDayTrendInReport object at 0x7f1a8d01e150>
+
+    def test_evening_report_contains_trend(self):
+        """Evening report HTML and plaintext should contain trend block."""
+        from formatters.trip_report import TripReportFormatter
+    
+        service = TripReportSchedulerService()
+        last_seg = _make_last_segment()
+        target_date = date.today() + timedelta(days=1)
+    
+        # Fetch and build trend
+>       ts = service._fetch_multi_day_trend(last_seg, target_date)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'TripReportSchedulerService' object has no attribute '_fetch_multi_day_trend'
+
+tests/integration/test_multi_day_trend.py:129: AttributeError
+____________ TestMultiDayTrendInReport.test_morning_report_no_trend ____________
+
+self = <test_multi_day_trend.TestMultiDayTrendInReport object at 0x7f1a8d01e790>
+
+    def test_morning_report_no_trend(self):
+        """Morning report should NOT contain trend block."""
+        from formatters.trip_report import TripReportFormatter
+    
+        formatter = TripReportFormatter()
+        last_seg = _make_last_segment()
+    
+        # Even if trend data is passed, morning reports should not show it
+>       report = formatter.format_email(
+            segments=[last_seg],
+            trip_name="Test Trip",
+            report_type="morning",
+            multi_day_trend=[{"weekday": "Mo", "temp_max_c": 18, "cloud_emoji": "☀️", "warning": None}],
+        )
+E       TypeError: TripReportFormatter.format_email() got an unexpected keyword argument 'multi_day_trend'
+
+tests/integration/test_multi_day_trend.py:159: TypeError
+___________ TestMultiDayTrendInReport.test_trend_disabled_in_config ____________
+
+self = <test_multi_day_trend.TestMultiDayTrendInReport object at 0x7f1a8d01d050>
+
+    def test_trend_disabled_in_config(self):
+        """Trend should not appear when show_multi_day_trend=False."""
+        from app.metric_catalog import build_default_display_config
+        from formatters.trip_report import TripReportFormatter
+    
+        dc = build_default_display_config()
+        dc.show_multi_day_trend = False
+    
+        formatter = TripReportFormatter()
+        last_seg = _make_last_segment()
+    
+>       report = formatter.format_email(
+            segments=[last_seg],
+            trip_name="Test Trip",
+            report_type="evening",
+            display_config=dc,
+            multi_day_trend=[{"weekday": "Mo", "temp_max_c": 18, "cloud_emoji": "☀️", "warning": None}],
+        )
+E       TypeError: TripReportFormatter.format_email() got an unexpected keyword argument 'multi_day_trend'
+
+tests/integration/test_multi_day_trend.py:180: TypeError
+=========================== short test summary info ============================
+FAILED tests/integration/test_multi_day_trend.py::TestMultiDayTrendFetch::test_fetch_returns_timeseries
+FAILED tests/integration/test_multi_day_trend.py::TestMultiDayTrendBuild::test_build_returns_list_of_days
+FAILED tests/integration/test_multi_day_trend.py::TestMultiDayTrendBuild::test_build_temp_is_daytime_max
+FAILED tests/integration/test_multi_day_trend.py::TestMultiDayTrendInReport::test_evening_report_contains_trend
+FAILED tests/integration/test_multi_day_trend.py::TestMultiDayTrendInReport::test_morning_report_no_trend
+FAILED tests/integration/test_multi_day_trend.py::TestMultiDayTrendInReport::test_trend_disabled_in_config
+============================== 6 failed in 0.18s ===============================

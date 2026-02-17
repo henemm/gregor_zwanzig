@@ -34,6 +34,7 @@ class TripReportFormatter:
         display_config: Optional[UnifiedWeatherDisplayConfig] = None,
         night_weather: Optional[NormalizedTimeseries] = None,
         thunder_forecast: Optional[dict] = None,
+        multi_day_trend: Optional[list[dict]] = None,
         changes: Optional[list[WeatherChange]] = None,
         stage_name: Optional[str] = None,
         stage_stats: Optional[dict] = None,
@@ -62,16 +63,21 @@ class TripReportFormatter:
         # Highlights
         highlights = self._compute_highlights(segments, seg_tables, night_rows)
 
+        # Multi-day trend (evening only, respects config)
+        effective_trend = None
+        if report_type == "evening" and multi_day_trend and dc.show_multi_day_trend:
+            effective_trend = multi_day_trend
+
         # Generate both formats from same data
         email_html = self._render_html(
             segments, seg_tables, trip_name, report_type, dc,
             night_rows, thunder_forecast, highlights, changes,
-            stage_name, stage_stats,
+            stage_name, stage_stats, effective_trend,
         )
         email_plain = self._render_plain(
             segments, seg_tables, trip_name, report_type, dc,
             night_rows, thunder_forecast, highlights, changes,
-            stage_name, stage_stats,
+            stage_name, stage_stats, effective_trend,
         )
         email_subject = self._generate_subject(
             trip_name, report_type, segments[0].segment.start_time,
@@ -536,7 +542,7 @@ class TripReportFormatter:
         self,
         segments, seg_tables, trip_name, report_type, dc,
         night_rows, thunder_forecast, highlights, changes,
-        stage_name, stage_stats,
+        stage_name, stage_stats, multi_day_trend=None,
     ) -> str:
         report_date = segments[0].segment.start_time.strftime("%d.%m.%Y")
         sub_header = stage_name or ""
@@ -613,6 +619,31 @@ class TripReportFormatter:
                 <ul>{"".join(items)}</ul>
             </div>"""
 
+        # Multi-day trend (F3)
+        trend_html = ""
+        if multi_day_trend:
+            trend_rows = []
+            for day in multi_day_trend:
+                temp_str = f"{day['temp_max_c']:.0f}°" if day.get("temp_max_c") is not None else "–"
+                warn_str = ""
+                if day.get("warning"):
+                    warn_str = f'<span style="color:#c62828">⚠️ {day["warning"]}</span>'
+                trend_rows.append(
+                    f'<tr>'
+                    f'<td style="padding:4px 8px;font-weight:bold">{day["weekday"]}</td>'
+                    f'<td style="padding:4px 8px;text-align:center">{day["cloud_emoji"]}</td>'
+                    f'<td style="padding:4px 8px;text-align:right">{temp_str}</td>'
+                    f'<td style="padding:4px 8px">{warn_str}</td>'
+                    f'</tr>'
+                )
+            trend_html = f"""
+            <div style="margin:16px;padding:12px;background:#f5f5f5;border-radius:8px;">
+                <h3 style="margin:0 0 8px 0;font-size:14px;color:#333">🔮 5-Tage-Trend (Ankunftsort)</h3>
+                <table style="width:100%;border-collapse:collapse;font-size:14px">
+                    {"".join(trend_rows)}
+                </table>
+            </div>"""
+
         # Highlights
         highlights_html = ""
         if highlights:
@@ -678,6 +709,7 @@ class TripReportFormatter:
         {segments_html}
         {night_html}
         {thunder_html}
+        {trend_html}
         {highlights_html}
 
         <div class="footer">
@@ -712,7 +744,7 @@ class TripReportFormatter:
         self,
         segments, seg_tables, trip_name, report_type, dc,
         night_rows, thunder_forecast, highlights, changes,
-        stage_name, stage_stats,
+        stage_name, stage_stats, multi_day_trend=None,
     ) -> str:
         lines = []
         report_date = segments[0].segment.start_time.strftime("%d.%m.%Y")
@@ -781,6 +813,15 @@ class TripReportFormatter:
                     fc = thunder_forecast[key]
                     icon = "⚡ " if fc.get("level") and fc["level"] != ThunderLevel.NONE else ""
                     lines.append(f"  {fc['date']}: {icon}{fc['text']}")
+            lines.append("")
+
+        # Multi-day trend (F3)
+        if multi_day_trend:
+            lines.append("━━ 5-Tage-Trend (Ankunftsort) ━━")
+            for day in multi_day_trend:
+                temp_str = f"{day['temp_max_c']:.0f}°" if day.get("temp_max_c") is not None else " –"
+                warn_str = f"  ⚠️ {day['warning']}" if day.get("warning") else ""
+                lines.append(f"  {day['weekday']}  {day['cloud_emoji']}  {temp_str}{warn_str}")
             lines.append("")
 
         # Highlights
