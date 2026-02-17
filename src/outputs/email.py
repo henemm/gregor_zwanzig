@@ -56,6 +56,7 @@ class EmailOutput:
         self._password = settings.smtp_pass
         self._to = settings.mail_to
         self._from = settings.mail_from or settings.smtp_user
+        self._reply_to = settings.get_inbound_address()
 
     @property
     def name(self) -> str:
@@ -90,11 +91,16 @@ class EmailOutput:
             OutputError: If sending fails after all retry attempts
         """
         # Build message once (outside retry loop)
+        # Use inbound address as From if set (Gmail supports plus-addresses)
+        from_addr = self._reply_to or self._from
+
         if html:
             msg = MIMEMultipart("alternative")
             msg["Subject"] = subject
-            msg["From"] = self._from
+            msg["From"] = from_addr
             msg["To"] = self._to
+            if self._reply_to:
+                msg["Reply-To"] = self._reply_to
 
             # Use explicit plain-text if provided, otherwise auto-generate
             if plain_text_body:
@@ -121,8 +127,10 @@ class EmailOutput:
         else:
             msg = MIMEText(body, "plain", "utf-8")
             msg["Subject"] = subject
-            msg["From"] = self._from
+            msg["From"] = from_addr
             msg["To"] = self._to
+            if self._reply_to:
+                msg["Reply-To"] = self._reply_to
 
         # Retry logic with exponential backoff
         # max_attempts includes the first try, so 4 attempts = 3 retries
@@ -134,7 +142,7 @@ class EmailOutput:
                 with smtplib.SMTP(self._host, self._port) as server:
                     server.starttls()
                     server.login(self._user, self._password)
-                    server.sendmail(self._from, [self._to], msg.as_string())
+                    server.sendmail(from_addr, [self._to], msg.as_string())
 
                 # Success - log if this was after retry
                 if attempt > 0:

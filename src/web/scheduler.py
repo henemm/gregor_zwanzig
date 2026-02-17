@@ -85,8 +85,16 @@ def init_scheduler() -> None:
         name="Alert Checks (every 30 min)",
     )
 
+    # Inbound Command Poll - Every 5 minutes for email commands (Feature 6)
+    _scheduler.add_job(
+        run_inbound_command_poll,
+        CronTrigger(minute="*/5", timezone=TIMEZONE),
+        id="inbound_command_poll",
+        name="Inbound Command Poll (every 5min)",
+    )
+
     _scheduler.start()
-    logger.info(f"Scheduler started: Subscriptions 07:00/18:00, Trip Reports hourly, Alert Checks every 30min ({TIMEZONE})")
+    logger.info(f"Scheduler started: Subscriptions 07:00/18:00, Trip Reports hourly, Alert Checks every 30min, Inbound Commands every 5min ({TIMEZONE})")
 
 
 def shutdown_scheduler() -> None:
@@ -136,6 +144,21 @@ def run_trip_reports_check() -> None:
     count = service.send_reports_for_hour(current_hour)
     if count > 0:
         logger.info(f"Trip reports at {current_hour:02d}:00: {count} sent")
+
+
+def run_inbound_command_poll() -> None:
+    """Poll inbound channels for trip commands (Feature 6)."""
+    from app.config import Settings
+    from services.inbound_email_reader import InboundEmailReader
+
+    settings = Settings()
+    if not settings.smtp_user or not settings.smtp_pass:
+        return
+
+    reader = InboundEmailReader()
+    count = reader.poll_and_process(settings)
+    if count > 0:
+        logger.info(f"Inbound commands processed: {count}")
 
 
 def _run_weekly_subscriptions() -> None:

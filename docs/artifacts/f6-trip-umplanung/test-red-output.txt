@@ -1,0 +1,274 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.2, pytest-8.4.1, pluggy-1.6.0
+rootdir: /opt/gregor_zwanziger
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 26 items
+
+tests/tdd/test_trip_command_processor.py FFFFFFFFFFFFFFFFFFFFFFFFFF      [100%]
+
+=================================== FAILURES ===================================
+________________ TestImports.test_import_trip_command_processor ________________
+
+self = <tdd.test_trip_command_processor.TestImports object at 0x7fdd9e6c3c10>
+
+    def test_import_trip_command_processor(self):
+>       from src.services.trip_command_processor import TripCommandProcessor
+E       ModuleNotFoundError: No module named 'src'
+
+tests/tdd/test_trip_command_processor.py:18: ModuleNotFoundError
+___________________ TestImports.test_import_inbound_message ____________________
+
+self = <tdd.test_trip_command_processor.TestImports object at 0x7fdd9e6c3ed0>
+
+    def test_import_inbound_message(self):
+>       from src.services.trip_command_processor import InboundMessage
+E       ModuleNotFoundError: No module named 'src'
+
+tests/tdd/test_trip_command_processor.py:22: ModuleNotFoundError
+____________________ TestImports.test_import_command_result ____________________
+
+self = <tdd.test_trip_command_processor.TestImports object at 0x7fdd9e6c2010>
+
+    def test_import_command_result(self):
+>       from src.services.trip_command_processor import CommandResult
+E       ModuleNotFoundError: No module named 'src'
+
+tests/tdd/test_trip_command_processor.py:26: ModuleNotFoundError
+_____________________ TestImports.test_import_stage_shift ______________________
+
+self = <tdd.test_trip_command_processor.TestImports object at 0x7fdd9e6c1710>
+
+    def test_import_stage_shift(self):
+>       from src.services.trip_command_processor import StageShift
+E       ModuleNotFoundError: No module named 'src'
+
+tests/tdd/test_trip_command_processor.py:30: ModuleNotFoundError
+________________ TestCommandParsing.test_parse_ruhetag_no_value ________________
+
+self = <tdd.test_trip_command_processor.TestCommandParsing object at 0x7fdd9e6c1e90>
+
+    def test_parse_ruhetag_no_value(self):
+>       from src.services.trip_command_processor import TripCommandProcessor
+E       ModuleNotFoundError: No module named 'src'
+
+tests/tdd/test_trip_command_processor.py:73: ModuleNotFoundError
+_______________ TestCommandParsing.test_parse_ruhetag_with_value _______________
+
+self = <tdd.test_trip_command_processor.TestCommandParsing object at 0x7fdd9e6c2510>
+
+    def test_parse_ruhetag_with_value(self):
+>       from src.services.trip_command_processor import TripCommandProcessor
+E       ModuleNotFoundError: No module named 'src'
+
+tests/tdd/test_trip_command_processor.py:80: ModuleNotFoundError
+_________________ TestCommandParsing.test_parse_report_morning _________________
+
+self = <tdd.test_trip_command_processor.TestCommandParsing object at 0x7fdd9e6c2ad0>
+
+    def test_parse_report_morning(self):
+>       from src.services.trip_command_processor import TripCommandProcessor
+E       ModuleNotFoundError: No module named 'src'
+
+tests/tdd/test_trip_command_processor.py:87: ModuleNotFoundError
+___________________ TestCommandParsing.test_parse_startdatum ___________________
+
+self = <tdd.test_trip_command_processor.TestCommandParsing object at 0x7fdd9e6c0910>
+
+    def test_parse_startdatum(self):
+>       from src.services.trip_command_processor import TripCommandProcessor
+E       ModuleNotFoundError: No module named 'src'
+
+tests/tdd/test_trip_command_processor.py:94: ModuleNotFoundError
+____________________ TestCommandParsing.test_parse_abbruch _____________________
+
+self = <tdd.test_trip_command_processor.TestCommandParsing object at 0x7fdd9e6c0b90>
+
+    def test_parse_abbruch(self):
+>       from src.services.trip_command_processor import TripCommandProcessor
+E       ModuleNotFoundError: No module named 'src'
+
+tests/tdd/test_trip_command_processor.py:101: ModuleNotFoundError
+________________ TestCommandParsing.test_parse_case_insensitive ________________
+
+self = <tdd.test_trip_command_processor.TestCommandParsing object at 0x7fdd9e6c1190>
+
+    def test_parse_case_insensitive(self):
+>       from src.services.trip_command_processor import TripCommandProcessor
+E       ModuleNotFoundError: No module named 'src'
+
+tests/tdd/test_trip_command_processor.py:108: ModuleNotFoundError
+__________ TestCommandParsing.test_parse_ignores_leading_blank_lines ___________
+
+self = <tdd.test_trip_command_processor.TestCommandParsing object at 0x7fdd9e6aff90>
+
+    def test_parse_ignores_leading_blank_lines(self):
+>       from src.services.trip_command_processor import TripCommandProcessor
+E       ModuleNotFoundError: No module named 'src'
+
+tests/tdd/test_trip_command_processor.py:114: ModuleNotFoundError
+____________ TestCommandParsing.test_parse_no_command_returns_none _____________
+
+self = <tdd.test_trip_command_processor.TestCommandParsing object at 0x7fdd9e6acb10>
+
+    def test_parse_no_command_returns_none(self):
+>       from src.services.trip_command_processor import TripCommandProcessor
+E       ModuleNotFoundError: No module named 'src'
+
+tests/tdd/test_trip_command_processor.py:121: ModuleNotFoundError
+____________________ TestRuhetag.test_shifts_future_stages _____________________
+
+self = <tdd.test_trip_command_processor.TestRuhetag object at 0x7fdd9e6ad2d0>
+tmp_path = PosixPath('/tmp/pytest-of-haadmin/pytest-116/test_shifts_future_stages0')
+
+    def test_shifts_future_stages(self, tmp_path):
+>       from src.services.trip_command_processor import TripCommandProcessor
+E       ModuleNotFoundError: No module named 'src'
+
+tests/tdd/test_trip_command_processor.py:134: ModuleNotFoundError
+________________________ TestRuhetag.test_shift_n_days _________________________
+
+self = <tdd.test_trip_command_processor.TestRuhetag object at 0x7fdd9e6ade50>
+
+    def test_shift_n_days(self):
+>       from src.services.trip_command_processor import TripCommandProcessor
+E       ModuleNotFoundError: No module named 'src'
+
+tests/tdd/test_trip_command_processor.py:144: ModuleNotFoundError
+____________________ TestRuhetag.test_today_stage_unchanged ____________________
+
+self = <tdd.test_trip_command_processor.TestRuhetag object at 0x7fdd9e6aed90>
+
+    def test_today_stage_unchanged(self):
+>       from src.services.trip_command_processor import TripCommandProcessor
+E       ModuleNotFoundError: No module named 'src'
+
+tests/tdd/test_trip_command_processor.py:155: ModuleNotFoundError
+________________ TestRuhetag.test_confirmation_contains_details ________________
+
+self = <tdd.test_trip_command_processor.TestRuhetag object at 0x7fdd9e6ae090>
+
+    def test_confirmation_contains_details(self):
+>       from src.services.trip_command_processor import TripCommandProcessor
+E       ModuleNotFoundError: No module named 'src'
+
+tests/tdd/test_trip_command_processor.py:166: ModuleNotFoundError
+________________ TestRuhetag.test_idempotency_blocks_duplicate _________________
+
+self = <tdd.test_trip_command_processor.TestRuhetag object at 0x7fdd9e6aeed0>
+
+    def test_idempotency_blocks_duplicate(self):
+>       from src.services.trip_command_processor import TripCommandProcessor
+E       ModuleNotFoundError: No module named 'src'
+
+tests/tdd/test_trip_command_processor.py:174: ModuleNotFoundError
+________________ TestRuhetag.test_all_past_stages_returns_error ________________
+
+self = <tdd.test_trip_command_processor.TestRuhetag object at 0x7fdd9e6c1650>
+
+    def test_all_past_stages_returns_error(self):
+>       from src.services.trip_command_processor import TripCommandProcessor
+E       ModuleNotFoundError: No module named 'src'
+
+tests/tdd/test_trip_command_processor.py:184: ModuleNotFoundError
+_______________ TestRuhetag.test_snapshot_deleted_after_ruhetag ________________
+
+self = <tdd.test_trip_command_processor.TestRuhetag object at 0x7fdd9e6ae250>
+tmp_path = PosixPath('/tmp/pytest-of-haadmin/pytest-116/test_snapshot_deleted_after_ru0')
+
+    def test_snapshot_deleted_after_ruhetag(self, tmp_path):
+>       from src.services.trip_command_processor import TripCommandProcessor
+E       ModuleNotFoundError: No module named 'src'
+
+tests/tdd/test_trip_command_processor.py:193: ModuleNotFoundError
+____________________ TestStartdatum.test_shifts_all_stages _____________________
+
+self = <tdd.test_trip_command_processor.TestStartdatum object at 0x7fdd9e6afd10>
+
+    def test_shifts_all_stages(self):
+>       from src.services.trip_command_processor import TripCommandProcessor
+E       ModuleNotFoundError: No module named 'src'
+
+tests/tdd/test_trip_command_processor.py:207: ModuleNotFoundError
+________________ TestStartdatum.test_invalid_date_returns_error ________________
+
+self = <tdd.test_trip_command_processor.TestStartdatum object at 0x7fdd9e6ae190>
+
+    def test_invalid_date_returns_error(self):
+>       from src.services.trip_command_processor import TripCommandProcessor
+E       ModuleNotFoundError: No module named 'src'
+
+tests/tdd/test_trip_command_processor.py:216: ModuleNotFoundError
+_______________ TestStartdatum.test_missing_value_returns_error ________________
+
+self = <tdd.test_trip_command_processor.TestStartdatum object at 0x7fdd9e6af810>
+
+    def test_missing_value_returns_error(self):
+>       from src.services.trip_command_processor import TripCommandProcessor
+E       ModuleNotFoundError: No module named 'src'
+
+tests/tdd/test_trip_command_processor.py:224: ModuleNotFoundError
+___________ TestStartdatum.test_confirmation_shows_old_and_new_dates ___________
+
+self = <tdd.test_trip_command_processor.TestStartdatum object at 0x7fdd9e6ac1d0>
+
+    def test_confirmation_shows_old_and_new_dates(self):
+>       from src.services.trip_command_processor import TripCommandProcessor
+E       ModuleNotFoundError: No module named 'src'
+
+tests/tdd/test_trip_command_processor.py:231: ModuleNotFoundError
+___________________ TestAbbruch.test_disables_report_config ____________________
+
+self = <tdd.test_trip_command_processor.TestAbbruch object at 0x7fdd9e6ac490>
+
+    def test_disables_report_config(self):
+>       from src.services.trip_command_processor import TripCommandProcessor
+E       ModuleNotFoundError: No module named 'src'
+
+tests/tdd/test_trip_command_processor.py:244: ModuleNotFoundError
+_________________ TestErrors.test_unknown_command_returns_help _________________
+
+self = <tdd.test_trip_command_processor.TestErrors object at 0x7fdd9e6a1890>
+
+    def test_unknown_command_returns_help(self):
+>       from src.services.trip_command_processor import TripCommandProcessor
+E       ModuleNotFoundError: No module named 'src'
+
+tests/tdd/test_trip_command_processor.py:259: ModuleNotFoundError
+________________ TestErrors.test_no_command_prefix_returns_help ________________
+
+self = <tdd.test_trip_command_processor.TestErrors object at 0x7fdd9e6a1f50>
+
+    def test_no_command_prefix_returns_help(self):
+>       from src.services.trip_command_processor import TripCommandProcessor
+E       ModuleNotFoundError: No module named 'src'
+
+tests/tdd/test_trip_command_processor.py:267: ModuleNotFoundError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_trip_command_processor.py::TestImports::test_import_trip_command_processor
+FAILED tests/tdd/test_trip_command_processor.py::TestImports::test_import_inbound_message
+FAILED tests/tdd/test_trip_command_processor.py::TestImports::test_import_command_result
+FAILED tests/tdd/test_trip_command_processor.py::TestImports::test_import_stage_shift
+FAILED tests/tdd/test_trip_command_processor.py::TestCommandParsing::test_parse_ruhetag_no_value
+FAILED tests/tdd/test_trip_command_processor.py::TestCommandParsing::test_parse_ruhetag_with_value
+FAILED tests/tdd/test_trip_command_processor.py::TestCommandParsing::test_parse_report_morning
+FAILED tests/tdd/test_trip_command_processor.py::TestCommandParsing::test_parse_startdatum
+FAILED tests/tdd/test_trip_command_processor.py::TestCommandParsing::test_parse_abbruch
+FAILED tests/tdd/test_trip_command_processor.py::TestCommandParsing::test_parse_case_insensitive
+FAILED tests/tdd/test_trip_command_processor.py::TestCommandParsing::test_parse_ignores_leading_blank_lines
+FAILED tests/tdd/test_trip_command_processor.py::TestCommandParsing::test_parse_no_command_returns_none
+FAILED tests/tdd/test_trip_command_processor.py::TestRuhetag::test_shifts_future_stages
+FAILED tests/tdd/test_trip_command_processor.py::TestRuhetag::test_shift_n_days
+FAILED tests/tdd/test_trip_command_processor.py::TestRuhetag::test_today_stage_unchanged
+FAILED tests/tdd/test_trip_command_processor.py::TestRuhetag::test_confirmation_contains_details
+FAILED tests/tdd/test_trip_command_processor.py::TestRuhetag::test_idempotency_blocks_duplicate
+FAILED tests/tdd/test_trip_command_processor.py::TestRuhetag::test_all_past_stages_returns_error
+FAILED tests/tdd/test_trip_command_processor.py::TestRuhetag::test_snapshot_deleted_after_ruhetag
+FAILED tests/tdd/test_trip_command_processor.py::TestStartdatum::test_shifts_all_stages
+FAILED tests/tdd/test_trip_command_processor.py::TestStartdatum::test_invalid_date_returns_error
+FAILED tests/tdd/test_trip_command_processor.py::TestStartdatum::test_missing_value_returns_error
+FAILED tests/tdd/test_trip_command_processor.py::TestStartdatum::test_confirmation_shows_old_and_new_dates
+FAILED tests/tdd/test_trip_command_processor.py::TestAbbruch::test_disables_report_config
+FAILED tests/tdd/test_trip_command_processor.py::TestErrors::test_unknown_command_returns_help
+FAILED tests/tdd/test_trip_command_processor.py::TestErrors::test_no_command_prefix_returns_help
+============================== 26 failed in 0.15s ==============================

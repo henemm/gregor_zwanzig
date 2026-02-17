@@ -79,6 +79,7 @@ class Settings(BaseSettings):
     smtp_pass: Optional[str] = Field(default=None, description="SMTP password")
     mail_to: Optional[str] = Field(default=None, description="Recipient email address")
     mail_from: Optional[str] = Field(default=None, description="Sender email address")
+    inbound_address: Optional[str] = Field(default=None, description="Plus-address for inbound commands (e.g. user+gregor@gmail.com)")
 
     # SMS settings (for sms channel)
     sms_gateway_url: Optional[str] = Field(default=None, description="SMS gateway HTTP endpoint")
@@ -103,6 +104,10 @@ class Settings(BaseSettings):
             self.smtp_pass,
             self.mail_to,
         ])
+
+    def get_inbound_address(self) -> str | None:
+        """Get inbound command address (plus-address or smtp_user fallback)."""
+        return self.inbound_address or self.smtp_user
 
     def can_send_sms(self) -> bool:
         """Check if SMS configuration is complete."""
