@@ -248,7 +248,15 @@ class TripReportSchedulerService:
 
         logger.debug(f"Created {len(segments)} segments for {trip.id}")
 
-        # 2. Fetch weather for each segment
+        # 2. Wind exposition detection (before weather fetch, needs TripSegments)
+        from services.wind_exposition import WindExpositionService
+        try:
+            exposed_sections = WindExpositionService().detect_exposed_from_segments(segments)
+        except Exception as e:
+            logger.warning(f"Wind exposition detection failed for {trip.id}: {e}")
+            exposed_sections = []
+
+        # 3. Fetch weather for each segment
         segment_weather = self._fetch_weather(segments)
 
         if not segment_weather:
@@ -278,7 +286,7 @@ class TripReportSchedulerService:
             if report_type in trend_reports:
                 multi_day_trend = self._build_stage_trend(trip, target_date)
 
-        # 7. Format report (uses unified display config from trip)
+        # 8. Format report (uses unified display config from trip)
         report = self._formatter.format_email(
             segments=segment_weather,
             trip_name=trip.name,
@@ -289,6 +297,7 @@ class TripReportSchedulerService:
             multi_day_trend=multi_day_trend,
             stage_name=stage_name,
             stage_stats=stage_stats,
+            exposed_sections=exposed_sections,
         )
 
         # 7. Send email
@@ -378,6 +387,7 @@ class TripReportSchedulerService:
         # Use stage.start_time as fallback for first waypoint without time_window
         default_start = stage.start_time if stage.start_time else time(8, 0)
         cumulative_time = default_start
+        cumulative_dist_km = 0.0  # F7b: Track cumulative distance for wind exposition
 
         for i in range(len(waypoints) - 1):
             wp1 = waypoints[i]
@@ -440,11 +450,13 @@ class TripReportSchedulerService:
                     lat=wp1.lat,
                     lon=wp1.lon,
                     elevation_m=float(elev1),
+                    distance_from_start_km=cumulative_dist_km,
                 ),
                 end_point=GPXPoint(
                     lat=wp2.lat,
                     lon=wp2.lon,
                     elevation_m=float(elev2),
+                    distance_from_start_km=cumulative_dist_km + round(dist_km, 1),
                 ),
                 start_time=start_dt,
                 end_time=end_dt,
@@ -453,6 +465,7 @@ class TripReportSchedulerService:
                 ascent_m=float(max(0, elev_diff)),
                 descent_m=float(max(0, -elev_diff)),
             )
+            cumulative_dist_km += round(dist_km, 1)  # F7b: accumulate
             segments.append(segment)
 
         # Destination segment: weather at the final waypoint (Zielort)
@@ -467,11 +480,13 @@ class TripReportSchedulerService:
                     lat=last_wp.lat,
                     lon=last_wp.lon,
                     elevation_m=elev,
+                    distance_from_start_km=cumulative_dist_km,
                 ),
                 end_point=GPXPoint(
                     lat=last_wp.lat,
                     lon=last_wp.lon,
                     elevation_m=elev,
+                    distance_from_start_km=cumulative_dist_km,
                 ),
                 start_time=arrival_time,
                 end_time=arrival_time + timedelta(hours=2),
