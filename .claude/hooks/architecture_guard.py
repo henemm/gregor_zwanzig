@@ -19,6 +19,7 @@ from pathlib import Path
 ALLOWED_FILES = {
     "weather_metrics.py",  # The Single Source of Truth
     "test_weather_metrics_spec.py",  # Tests for the service
+    "test_weather_emoji_dni.py",  # Tests for DNI-based emoji (spec: weather_emoji_dni.md)
     "test_architecture_violations.py",  # Architecture tests
     "architecture_guard.py",  # This file
 }

@@ -5,6 +5,7 @@ Feature 2.2a: Basis-Metriken
 Aggregates hourly weather values (MIN/MAX/AVG/SUM) over segment duration.
 
 SPEC: docs/specs/modules/weather_metrics.md v1.0
+SPEC: docs/specs/modules/weather_emoji_dni.md v1.0 (DNI-based emoji)
 """
 from __future__ import annotations
 
@@ -16,6 +17,129 @@ import math
 
 from app.debug import DebugBuffer
 from app.models import NormalizedTimeseries, PrecipType, SegmentWeatherSummary, ThunderLevel
+
+
+# =============================================================================
+# DNI-based Weather Emoji (SPEC: weather_emoji_dni.md v1.0)
+# =============================================================================
+
+# DNI thresholds (W/m²) — based on WMO sunshine definition (DNI > 120)
+_DNI_FULL_SUN = 600
+_DNI_MOSTLY_SUNNY = 300
+_DNI_PARTLY_SUNNY = 120
+
+# Cloud% thresholds (unified for all fallback sites)
+_CLOUD_CLEAR = 20
+_CLOUD_MOSTLY_CLEAR = 40
+_CLOUD_PARTLY_CLOUDY = 70
+_CLOUD_MOSTLY_CLOUDY = 90
+
+# WMO precipitation/fog/thunder codes → emoji (priority 1)
+_WMO_PRECIP_EMOJI: dict[int, str] = {
+    45: "🌫️", 48: "🌫️",                       # Fog
+    51: "🌦️", 53: "🌦️", 55: "🌧️",           # Drizzle
+    56: "🌧️", 57: "🌧️",                       # Freezing drizzle
+    61: "🌧️", 63: "🌧️", 65: "🌧️",           # Rain
+    66: "🌨️", 67: "🌨️",                       # Freezing rain
+    71: "❄️", 73: "❄️", 75: "❄️", 77: "❄️",   # Snow
+    80: "🌦️", 81: "🌧️", 82: "🌧️",           # Rain showers
+    85: "🌨️", 86: "🌨️",                       # Snow showers
+    95: "⛈️", 96: "⛈️", 99: "⛈️",             # Thunderstorm
+}
+
+# WMO severity ranking for aggregation (highest value wins)
+_WMO_SEVERITY: dict[int, int] = {
+    0: 0, 1: 1, 2: 2, 3: 3,
+    45: 10, 48: 11,
+    51: 20, 53: 21, 55: 22, 56: 23, 57: 24,
+    61: 30, 63: 31, 65: 32, 66: 33, 67: 34,
+    71: 35, 73: 36, 75: 37, 77: 38,
+    80: 40, 81: 41, 82: 42, 85: 43, 86: 44,
+    95: 50, 96: 51, 99: 52,
+}
+
+
+def get_weather_emoji(
+    *,
+    is_day: Optional[int] = None,
+    dni_wm2: Optional[float] = None,
+    wmo_code: Optional[int] = None,
+    cloud_pct: Optional[int] = None,
+) -> str:
+    """
+    Central weather emoji function. Single Source of Truth.
+
+    Priority:
+    1. WMO precipitation/fog/thunder codes — always take precedence
+    2. Night (is_day=0) → moon emojis based on cloud%
+    3. Day with DNI → DNI-based sun emoji
+    4. Fallback: cloud%-based emoji
+    """
+    # 1. WMO precipitation/fog/thunder always wins
+    if wmo_code is not None and wmo_code in _WMO_PRECIP_EMOJI:
+        return _WMO_PRECIP_EMOJI[wmo_code]
+    # 2. Night
+    if is_day is not None and is_day == 0:
+        return _night_emoji(cloud_pct)
+    # 3. Day with DNI
+    if is_day == 1 and dni_wm2 is not None:
+        return _dni_emoji(dni_wm2)
+    # 4. Fallback (is_day unknown or DNI missing)
+    return _cloud_pct_emoji(cloud_pct)
+
+
+def _night_emoji(cloud_pct: Optional[int]) -> str:
+    """Night emoji based on cloud cover."""
+    if cloud_pct is None or cloud_pct < 40:
+        return "🌙"
+    if cloud_pct < 80:
+        return "🌙☁️"
+    return "☁️"
+
+
+def _dni_emoji(dni_wm2: float) -> str:
+    """Day emoji based on Direct Normal Irradiance."""
+    if dni_wm2 >= _DNI_FULL_SUN:
+        return "☀️"
+    if dni_wm2 >= _DNI_MOSTLY_SUNNY:
+        return "🌤️"
+    if dni_wm2 >= _DNI_PARTLY_SUNNY:
+        return "⛅"
+    if dni_wm2 > 0:
+        return "🌥️"
+    return "☁️"
+
+
+def _cloud_pct_emoji(cloud_pct: Optional[int]) -> str:
+    """Fallback emoji from cloud% (unified thresholds)."""
+    if cloud_pct is None:
+        return "?"
+    if cloud_pct < _CLOUD_CLEAR:
+        return "☀️"
+    if cloud_pct < _CLOUD_MOSTLY_CLEAR:
+        return "🌤️"
+    if cloud_pct < _CLOUD_PARTLY_CLOUDY:
+        return "⛅"
+    if cloud_pct < _CLOUD_MOSTLY_CLOUDY:
+        return "🌥️"
+    return "☁️"
+
+
+def compute_dominant_wmo(data) -> Optional[int]:
+    """Most severe WMO code from hourly data points."""
+    codes = [dp.wmo_code for dp in data if getattr(dp, 'wmo_code', None) is not None]
+    if not codes:
+        return None
+    return max(codes, key=lambda c: _WMO_SEVERITY.get(c, 0))
+
+
+def compute_dni_day_avg(data) -> Optional[float]:
+    """Average DNI over daytime hours only (is_day=1)."""
+    day_dni = [dp.dni_wm2 for dp in data
+               if getattr(dp, 'is_day', None) == 1 and getattr(dp, 'dni_wm2', None) is not None]
+    if not day_dni:
+        return None
+    return sum(day_dni) / len(day_dni)
 
 
 class WeatherMetricsService:
@@ -478,6 +602,10 @@ class WeatherMetricsService:
         thunder_max = self._compute_thunder_level(timeseries)
         visibility_min = self._compute_visibility(timeseries)
 
+        # DNI-based emoji aggregation (SPEC: weather_emoji_dni.md)
+        dominant_wmo = compute_dominant_wmo(timeseries.data)
+        dni_avg = compute_dni_day_avg(timeseries.data)
+
         # Create summary with aggregation config
         summary = SegmentWeatherSummary(
             temp_min_c=temp_min,
@@ -490,6 +618,8 @@ class WeatherMetricsService:
             humidity_avg_pct=humidity_avg,
             thunder_level_max=thunder_max,
             visibility_min_m=visibility_min,
+            dominant_wmo_code=dominant_wmo,
+            dni_avg_wm2=dni_avg,
             aggregation_config={
                 "temp_min_c": "min",
                 "temp_max_c": "max",
@@ -501,6 +631,8 @@ class WeatherMetricsService:
                 "humidity_avg_pct": "avg",
                 "thunder_level_max": "max",
                 "visibility_min_m": "min",
+                "dominant_wmo_code": "max_wmo_severity",
+                "dni_avg_wm2": "avg",
             },
         )
 
@@ -1056,6 +1188,9 @@ def aggregate_stage(
                 result_fields[field_name] = max(values, key=lambda v: _ENUM_ORDER.get(v, 0))
             else:
                 result_fields[field_name] = max(values)
+        elif agg_rule == "max_wmo_severity":
+            # WMO code aggregation: pick most severe code by _WMO_SEVERITY ranking
+            result_fields[field_name] = max(values, key=lambda c: _WMO_SEVERITY.get(c, 0))
         elif agg_rule == "min":
             result_fields[field_name] = min(values)
         elif agg_rule == "sum":

@@ -115,6 +115,11 @@ class ForecastDataPoint:
     cloud_mid_pct: Optional[int] = None   # 0-100%, 3-8km
     cloud_high_pct: Optional[int] = None  # 0-100%, ab 8km
 
+    # DNI-based weather emoji fields (SPEC: weather_emoji_dni.md)
+    wmo_code: Optional[int] = None        # WMO weather code (0-99)
+    is_day: Optional[int] = None           # 1=Tag, 0=Nacht (von OpenMeteo)
+    dni_wm2: Optional[float] = None        # Direct Normal Irradiance (W/m²)
+
 
 @dataclass
 class NormalizedTimeseries:
@@ -323,6 +328,10 @@ class SegmentWeatherSummary:
     snow_new_sum_cm: Optional[float] = None
     wind_direction_avg_deg: Optional[int] = None
     precip_type_dominant: Optional["PrecipType"] = None
+
+    # DNI-based weather emoji aggregation (SPEC: weather_emoji_dni.md)
+    dominant_wmo_code: Optional[int] = None  # Schwerster WMO-Code im Segment
+    dni_avg_wm2: Optional[float] = None      # Durchschnittliche DNI (nur Tagesstunden)
 
     # Metadata
     aggregation_config: dict[str, str] = field(default_factory=dict)

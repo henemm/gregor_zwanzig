@@ -126,11 +126,11 @@ class TestWeatherMetricsServiceKnownValues:
         """
         GIVEN: Timeseries
         WHEN: compute_basis_metrics(timeseries)
-        THEN: aggregation_config has 10 entries with correct functions
+        THEN: aggregation_config has 12 entries with correct functions
         """
         result = service.compute_basis_metrics(known_timeseries)
 
-        assert len(result.aggregation_config) == 10
+        assert len(result.aggregation_config) == 12
         assert result.aggregation_config["temp_min_c"] == "min"
         assert result.aggregation_config["temp_max_c"] == "max"
         assert result.aggregation_config["temp_avg_c"] == "avg"
@@ -141,6 +141,8 @@ class TestWeatherMetricsServiceKnownValues:
         assert result.aggregation_config["humidity_avg_pct"] == "avg"
         assert result.aggregation_config["thunder_level_max"] == "max"
         assert result.aggregation_config["visibility_min_m"] == "min"
+        assert result.aggregation_config["dominant_wmo_code"] == "max_wmo_severity"
+        assert result.aggregation_config["dni_avg_wm2"] == "avg"
 
 
 class TestWeatherMetricsServiceTemperature:
