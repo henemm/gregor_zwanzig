@@ -28,8 +28,11 @@ def main():
         return
 
     # Check if command was a git commit
+    # Handle both "git commit" and "git -C /path commit" patterns
     command = hook_input.get("tool_input", {}).get("command", "")
-    if "git commit" not in command:
+    has_git = "git " in command or "git\n" in command
+    has_commit = " commit " in command or " commit\n" in command or command.endswith(" commit")
+    if not (has_git and has_commit):
         return
 
     # Check if commit clearly failed — restart is the default
