@@ -32,11 +32,15 @@ def main():
     if "git commit" not in command:
         return
 
-    # Check if commit succeeded (exit code 0 in response)
+    # Check if commit clearly failed — restart is the default
+    # tool_response structure varies, so extract stdout robustly
     tool_response = hook_input.get("tool_response", {})
-    # stdout contains the commit output — if it has "create mode" or commit hash, it worked
-    stdout = tool_response.get("stdout", "")
-    if not stdout or "nothing to commit" in stdout:
+    response_text = ""
+    if isinstance(tool_response, str):
+        response_text = tool_response
+    elif isinstance(tool_response, dict):
+        response_text = tool_response.get("stdout", "") or tool_response.get("content", "") or str(tool_response)
+    if "nothing to commit" in response_text:
         return
 
     # --- Server restart ---
