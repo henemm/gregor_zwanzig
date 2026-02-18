@@ -149,6 +149,7 @@ _METRICS: list[MetricDefinition] = [
         default_change_threshold=20,
         display_thresholds={"blue": 80.0},
         highlight_threshold=80.0,
+        risk_thresholds={"medium": 80},
     ),
     MetricDefinition(
         id="thunder", label_de="Gewitter", unit="",

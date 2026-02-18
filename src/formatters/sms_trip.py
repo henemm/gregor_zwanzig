@@ -10,10 +10,23 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional
 
-from app.models import SegmentWeatherData, ThunderLevel
+from app.models import RiskLevel, RiskType, SegmentWeatherData
+from services.risk_engine import RiskEngine
 
 if TYPE_CHECKING:
     from app.models import WeatherChange
+
+# RiskType → SMS risk label (German, ultra-compact)
+_SMS_RISK_LABELS: dict[tuple[RiskType, RiskLevel], str] = {
+    (RiskType.THUNDERSTORM, RiskLevel.HIGH): "Gewitter",
+    (RiskType.THUNDERSTORM, RiskLevel.MODERATE): "Gewitter",
+    (RiskType.WIND, RiskLevel.HIGH): "Sturm",
+    (RiskType.WIND, RiskLevel.MODERATE): "Wind",
+    (RiskType.RAIN, RiskLevel.HIGH): "Regen",
+    (RiskType.RAIN, RiskLevel.MODERATE): "Regen",
+    (RiskType.WIND_CHILL, RiskLevel.HIGH): "Kaelte",
+    (RiskType.POOR_VISIBILITY, RiskLevel.HIGH): "Nebel",
+}
 
 
 class SMSTripFormatter:
@@ -159,43 +172,17 @@ class SMSTripFormatter:
         self,
         seg_data: SegmentWeatherData
     ) -> tuple[Optional[str], Optional[str]]:
-        """
-        Detect weather risk and return label + time.
-
-        Args:
-            seg_data: SegmentWeatherData with aggregated metrics
-
-        Returns:
-            (risk_label, time_str) or (None, None) if no risk
-            risk_label: "Gewitter", "Sturm", "Wind", "Regen"
-            time_str: "08h", "14h", etc.
-        """
-        agg = seg_data.aggregated
-        seg = seg_data.segment
-
-        # HIGH risks (critical conditions)
-        if agg.thunder_level_max and agg.thunder_level_max == ThunderLevel.HIGH:
-            time = seg.start_time.strftime("%Hh")
-            return ("Gewitter", time)
-
-        if agg.wind_max_kmh and agg.wind_max_kmh > 70:
-            time = seg.start_time.strftime("%Hh")
-            return ("Sturm", time)
-
-        # MEDIUM risks (caution conditions)
-        if agg.thunder_level_max and agg.thunder_level_max == ThunderLevel.MED:
-            time = seg.start_time.strftime("%Hh")
-            return ("Gewitter", time)
-
-        if agg.wind_max_kmh and agg.wind_max_kmh > 50:
-            time = seg.start_time.strftime("%Hh")
-            return ("Wind", time)
-
-        if agg.precip_sum_mm and agg.precip_sum_mm > 20:
-            time = seg.start_time.strftime("%Hh")
-            return ("Regen", time)
-
-        return (None, None)
+        """Detect segment risk via RiskEngine (F8 v2.0)."""
+        engine = RiskEngine()
+        assessment = engine.assess_segment(seg_data)
+        if not assessment.risks:
+            return (None, None)
+        top = assessment.risks[0]
+        label = _SMS_RISK_LABELS.get(
+            (top.type, top.level), top.type.value.title()
+        )
+        time_str = seg_data.segment.start_time.strftime("%Hh")
+        return (label, time_str)
 
     def _truncate_to_fit(
         self,
