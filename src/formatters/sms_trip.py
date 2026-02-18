@@ -26,6 +26,8 @@ _SMS_RISK_LABELS: dict[tuple[RiskType, RiskLevel], str] = {
     (RiskType.RAIN, RiskLevel.MODERATE): "Regen",
     (RiskType.WIND_CHILL, RiskLevel.HIGH): "Kaelte",
     (RiskType.POOR_VISIBILITY, RiskLevel.HIGH): "Nebel",
+    (RiskType.WIND_EXPOSITION, RiskLevel.HIGH): "GratSturm",
+    (RiskType.WIND_EXPOSITION, RiskLevel.MODERATE): "GratWind",
 }
 
 

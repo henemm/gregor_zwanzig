@@ -193,6 +193,7 @@ class RiskType(str, Enum):
     WIND_CHILL = "wind_chill"
     POOR_VISIBILITY = "poor_visibility"
     FREEZING_RAIN = "freezing_rain"
+    WIND_EXPOSITION = "wind_exposition"
 
 
 class RiskLevel(str, Enum):
@@ -222,6 +223,15 @@ class Risk:
 class RiskAssessment:
     """Collection of assessed risks for a forecast period."""
     risks: List[Risk] = field(default_factory=list)
+
+
+@dataclass
+class ExposedSection:
+    """An exposed ridge/pass section on the track."""
+    start_km: float          # Distance from start where exposure begins
+    end_km: float            # Distance from start where exposure ends
+    max_elevation_m: float   # Highest point in section
+    exposition_type: str     # "GRAT" | "PASS"
 
 
 # --- GPX Trip Planning DTOs (Story 1, 2, 3) ---

@@ -449,6 +449,8 @@ class TripReportFormatter:
         (RiskType.RAIN, RiskLevel.MODERATE): "⚠️ Heavy Rain",
         (RiskType.WIND_CHILL, RiskLevel.HIGH): "⚠️ Extreme Cold",
         (RiskType.POOR_VISIBILITY, RiskLevel.HIGH): "⚠️ Low Visibility",
+        (RiskType.WIND_EXPOSITION, RiskLevel.HIGH): "⚠️ Exposed Ridge/Storm",
+        (RiskType.WIND_EXPOSITION, RiskLevel.MODERATE): "⚠️ Exposed Ridge/Wind",
     }
 
     def _determine_risk(self, segment: SegmentWeatherData) -> tuple[str, str]:
