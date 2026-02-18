@@ -1,17 +1,15 @@
 """
-Tests for F3: Multi-Day Trend v2.0 — Stage-basierte Aggregation.
+Tests for F3: Multi-Day Trend v3.0 — Einheitlicher Summary-Algorithmus.
 
-SPEC: docs/specs/modules/multi_day_trend.md v2.0
+SPEC: docs/specs/modules/multi_day_trend.md v3.0
 
 Tests real OpenMeteo API calls — NO mocking!
 
-v2.0 Changes:
-- aggregate_stage() function (Level-2 aggregation)
-- Trip.get_future_stages() method
-- Stage-based trend (not single-point)
-- Precipitation in trend rows
-- Stage name in trend rows
-- multi_day_trend_reports persistence
+v3.0 Changes:
+- _build_stage_trend() uses CompactSummaryFormatter (same as F2)
+- Trend dict has 'summary' field instead of individual fields
+- _cloud_to_emoji() and _detect_day_warning() deleted
+- HTML and plain-text use 2-line layout (stage name + summary)
 """
 from __future__ import annotations
 
@@ -366,30 +364,22 @@ class TestGetFutureStages:
 # ===========================================================================
 
 class TestTrendRendering:
-    """Test trend block rendering in HTML and plaintext."""
+    """Test trend block rendering in HTML and plaintext — v3.0 summary format."""
 
     def _make_trend_data(self) -> list[dict]:
-        """Create trend data in v2.0 format (with stage_name and precip)."""
+        """Create trend data in v3.0 format (with summary string)."""
         return [
             {
                 "weekday": "Mi",
                 "date": date(2026, 2, 18),
                 "stage_name": "Tag 3: von Soller nach Tossals Verds",
-                "temp_max_c": 14.0,
-                "precip_sum_mm": 1.5,
-                "cloud_avg_pct": 55,
-                "cloud_emoji": "⛅",
-                "warning": None,
+                "summary": "Soller → Tossals Verds: 6–14°C, ⛅, trocken bis 13:00 dann 1.5mm, mäßiger Wind NW 25 km/h",
             },
             {
                 "weekday": "Do",
                 "date": date(2026, 2, 19),
                 "stage_name": "Tag 4: von Tossals Verds nach Lluc",
-                "temp_max_c": 16.0,
-                "precip_sum_mm": 2.3,
-                "cloud_avg_pct": 25,
-                "cloud_emoji": "🌤",
-                "warning": "Gewitter",
+                "summary": "Tossals Verds → Lluc: 4–16°C, ☀️, trocken, schwacher Wind W",
             },
         ]
 
@@ -413,8 +403,18 @@ class TestTrendRendering:
             provider="openmeteo",
         )
 
-    def test_html_contains_stage_name(self):
-        """HTML trend block shows stage names, not just weekdays."""
+    def test_trend_dict_has_summary_field(self):
+        """v3.0: Trend dict has 'summary' instead of temp_max_c/precip_sum_mm/warning."""
+        trend = self._make_trend_data()
+        for row in trend:
+            assert "summary" in row, "Trend row must have 'summary' field"
+            assert "temp_max_c" not in row, "v3.0 removes temp_max_c"
+            assert "precip_sum_mm" not in row, "v3.0 removes precip_sum_mm"
+            assert "cloud_emoji" not in row, "v3.0 removes cloud_emoji"
+            assert "warning" not in row, "v3.0 removes warning"
+
+    def test_trend_rendering_html_two_lines(self):
+        """v3.0: HTML uses 2-line layout (stage name div + summary div)."""
         from formatters.trip_report import TripReportFormatter
 
         formatter = TripReportFormatter()
@@ -428,18 +428,16 @@ class TestTrendRendering:
             multi_day_trend=trend,
         )
 
-        # Should contain "Etappen" header (v2.0), not "5-Tage-Trend"
-        assert "Etappen" in report.email_html, \
-            "HTML should contain 'Etappen' header"
-        # Should NOT contain old v1.0 header
-        assert "Ankunftsort" not in report.email_html, \
-            "HTML should not contain old v1.0 'Ankunftsort' header"
-        # Should contain stage route info
-        assert "Tossals Verds" in report.email_html, \
-            "HTML should contain stage destination"
+        assert "Etappen" in report.email_html
+        # v3.0: 2-line layout with stage name in bold div and summary in secondary div
+        assert "Soller" in report.email_html
+        assert "Tossals Verds" in report.email_html
+        # Summary line should appear in HTML
+        assert "6–14°C" in report.email_html
+        assert "mäßiger Wind" in report.email_html
 
-    def test_html_contains_precipitation(self):
-        """HTML trend block includes precipitation column."""
+    def test_trend_rendering_plain_two_lines(self):
+        """v3.0: Plain-text uses 2-line layout (weekday+name, then indented summary)."""
         from formatters.trip_report import TripReportFormatter
 
         formatter = TripReportFormatter()
@@ -453,60 +451,24 @@ class TestTrendRendering:
             multi_day_trend=trend,
         )
 
-        assert "1.5mm" in report.email_html or "1.5" in report.email_html, \
-            "HTML should contain precipitation value"
-        assert "2.3mm" in report.email_html or "2.3" in report.email_html, \
-            "HTML should contain second stage precipitation"
+        assert "Etappen" in report.email_plain
+        # Stage name on first line
+        assert "Tossals Verds" in report.email_plain
+        # Summary on indented second line
+        assert "6–14°C" in report.email_plain
+        assert "mäßiger Wind" in report.email_plain
 
-    def test_plain_contains_stage_name(self):
-        """Plaintext trend block shows stage names."""
+    def test_trend_no_future_stages(self):
+        """No trend block when multi_day_trend is None."""
         from formatters.trip_report import TripReportFormatter
 
         formatter = TripReportFormatter()
-        trend = self._make_trend_data()
         last_seg = self._make_last_segment()
 
         report = formatter.format_email(
             segments=[last_seg],
             trip_name="GR221 Mallorca",
             report_type="evening",
-            multi_day_trend=trend,
-        )
-
-        assert "Etappen" in report.email_plain, \
-            "Plaintext should contain 'Etappen' header"
-        assert "Tossals Verds" in report.email_plain, \
-            "Plaintext should contain stage destination"
-
-    def test_plain_contains_precipitation(self):
-        """Plaintext trend block includes precipitation values."""
-        from formatters.trip_report import TripReportFormatter
-
-        formatter = TripReportFormatter()
-        trend = self._make_trend_data()
-        last_seg = self._make_last_segment()
-
-        report = formatter.format_email(
-            segments=[last_seg],
-            trip_name="GR221 Mallorca",
-            report_type="evening",
-            multi_day_trend=trend,
-        )
-
-        assert "1.5" in report.email_plain, "Plaintext should contain precip value"
-
-    def test_morning_report_no_trend_when_not_configured(self):
-        """Morning report without trend data should NOT contain trend block."""
-        from formatters.trip_report import TripReportFormatter
-
-        formatter = TripReportFormatter()
-        last_seg = self._make_last_segment()
-
-        # Scheduler passes multi_day_trend=None when morning not in config
-        report = formatter.format_email(
-            segments=[last_seg],
-            trip_name="GR221 Mallorca",
-            report_type="morning",
             multi_day_trend=None,
         )
 
@@ -537,13 +499,11 @@ class TestTrendRendering:
         from formatters.trip_report import TripReportFormatter
 
         dc = build_default_display_config()
-        dc.multi_day_trend_reports = []  # Disabled for all report types
+        dc.multi_day_trend_reports = []
 
         formatter = TripReportFormatter()
         last_seg = self._make_last_segment()
 
-        # Scheduler would not pass trend data when report_type not in list,
-        # so multi_day_trend=None
         report = formatter.format_email(
             segments=[last_seg],
             trip_name="GR221 Mallorca",

@@ -587,21 +587,18 @@ class TripReportSchedulerService:
         target_date: date,
     ) -> Optional[list[dict]]:
         """
-        Build trend rows for each future stage.
+        Build trend rows for each future stage using CompactSummaryFormatter.
 
-        For each remaining stage:
-        1. Convert to segments (existing _convert_trip_to_segments)
-        2. Fetch weather per segment (existing _fetch_weather)
-        3. Aggregate all segments to one stage summary (aggregate_stage)
-        4. Build compact trend row dict
+        Same algorithm as the daily compact summary (F2) — DRY principle.
 
-        Returns None if no future stages exist.
-
-        SPEC: docs/specs/modules/multi_day_trend.md v2.0
+        SPEC: docs/specs/modules/multi_day_trend.md v3.0
         """
-        from services.weather_metrics import aggregate_stage
+        from formatters.compact_summary import CompactSummaryFormatter
+        from app.metric_catalog import build_default_display_config
 
         WEEKDAYS_DE = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
+        formatter = CompactSummaryFormatter()
+        dc = trip.display_config or build_default_display_config()
 
         future_stages = trip.get_future_stages(target_date)
         if not future_stages:
@@ -610,88 +607,27 @@ class TripReportSchedulerService:
         trend = []
         for stage in future_stages:
             try:
-                # 1. Segments for this stage (same pipeline as main report)
                 segments = self._convert_trip_to_segments(trip, stage.date)
                 if not segments:
                     continue
 
-                # 2. Fetch weather (all waypoints, not just one point)
                 seg_weather = self._fetch_weather(segments)
                 if not seg_weather:
                     continue
 
-                # 3. Stage aggregation (Level 2)
-                stage_summary = aggregate_stage(seg_weather)
-
-                # 4. Build trend row
-                cloud_emoji = self._cloud_to_emoji(stage_summary.cloud_avg_pct)
-
-                # Warning: collect all timeseries datapoints for the day
-                all_day_points = []
-                for sw in seg_weather:
-                    if sw.timeseries and sw.timeseries.data:
-                        all_day_points.extend([
-                            dp for dp in sw.timeseries.data
-                            if dp.ts.date() == stage.date
-                        ])
-                warning = self._detect_day_warning(all_day_points) if all_day_points else None
+                summary = formatter.format_stage_summary(seg_weather, stage.name, dc)
 
                 trend.append({
                     "weekday": WEEKDAYS_DE[stage.date.weekday()],
                     "date": stage.date,
                     "stage_name": stage.name,
-                    "temp_max_c": stage_summary.temp_max_c,
-                    "precip_sum_mm": stage_summary.precip_sum_mm,
-                    "cloud_avg_pct": stage_summary.cloud_avg_pct,
-                    "cloud_emoji": cloud_emoji,
-                    "warning": warning,
+                    "summary": summary,
                 })
             except Exception as e:
                 logger.warning(f"Failed to build trend for stage {stage.id}: {e}")
                 continue
 
         return trend if trend else None
-
-    @staticmethod
-    def _cloud_to_emoji(cloud_pct: Optional[float]) -> str:
-        """Map cloud coverage percentage to weather emoji."""
-        if cloud_pct is None:
-            return "?"
-        if cloud_pct <= 10:
-            return "☀️"
-        elif cloud_pct <= 30:
-            return "🌤"
-        elif cloud_pct <= 70:
-            return "⛅"
-        elif cloud_pct <= 90:
-            return "🌥"
-        else:
-            return "☁️"
-
-    @staticmethod
-    def _detect_day_warning(day_points) -> Optional[str]:
-        """Detect warnings for a day: thunder, heavy rain, or storm."""
-        from app.models import ThunderLevel
-
-        has_thunder = any(
-            dp.thunder_level in (ThunderLevel.MED, ThunderLevel.HIGH)
-            for dp in day_points
-        )
-        if has_thunder:
-            return "Gewitter"
-
-        precip_sum = sum(
-            dp.precip_1h_mm for dp in day_points
-            if dp.precip_1h_mm is not None
-        )
-        if precip_sum > 10:
-            return "Starkregen"
-
-        gusts = [dp.gust_kmh for dp in day_points if dp.gust_kmh is not None]
-        if gusts and max(gusts) > 70:
-            return "Sturm"
-
-        return None
 
     def _build_thunder_forecast(
         self,
