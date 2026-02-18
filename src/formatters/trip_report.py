@@ -743,25 +743,20 @@ class TripReportFormatter:
                 <ul>{"".join(items)}</ul>
             </div>"""
 
-        # Multi-day trend (F3 v2.0 — per future stage)
+        # Multi-day trend (F3 v3.0 — 2-line layout with summary)
         trend_html = ""
         if multi_day_trend:
             trend_rows = []
             for day in multi_day_trend:
-                temp_str = f"{day['temp_max_c']:.0f}°" if day.get("temp_max_c") is not None else "–"
-                precip_str = f"{day['precip_sum_mm']:.1f}mm" if day.get("precip_sum_mm") is not None else "–"
-                stage_name = self._shorten_stage_name(day.get("stage_name", ""))
-                warn_str = ""
-                if day.get("warning"):
-                    warn_str = f'<span style="color:#c62828">⚠️ {day["warning"]}</span>'
+                stage_name_short = self._shorten_stage_name(day.get("stage_name", ""))
+                summary = day.get("summary", "")
                 trend_rows.append(
                     f'<tr>'
-                    f'<td style="padding:4px 8px;font-weight:bold">{day["weekday"]}</td>'
-                    f'<td style="padding:4px 8px">{stage_name}</td>'
-                    f'<td style="padding:4px 8px;text-align:center">{day["cloud_emoji"]}</td>'
-                    f'<td style="padding:4px 8px;text-align:right">{temp_str}</td>'
-                    f'<td style="padding:4px 8px;text-align:right">{precip_str}</td>'
-                    f'<td style="padding:4px 8px">{warn_str}</td>'
+                    f'<td style="vertical-align:top;font-weight:bold;padding:6px 8px">{day["weekday"]}</td>'
+                    f'<td style="padding:6px 8px">'
+                    f'<div style="font-weight:600">{stage_name_short}</div>'
+                    f'<div style="color:#555;font-size:12px">{summary}</div>'
+                    f'</td>'
                     f'</tr>'
                 )
             trend_html = f"""
@@ -963,15 +958,14 @@ class TripReportFormatter:
                     lines.append(f"  {fc['date']}: {icon}{fc['text']}")
             lines.append("")
 
-        # Multi-day trend (F3 v2.0 — per future stage)
+        # Multi-day trend (F3 v3.0 — 2-line layout with summary)
         if multi_day_trend:
             lines.append("━━ Naechste Etappen ━━")
             for day in multi_day_trend:
-                temp_str = f"{day['temp_max_c']:.0f}°" if day.get("temp_max_c") is not None else " –"
-                precip_str = f"{day['precip_sum_mm']:.1f}mm" if day.get("precip_sum_mm") is not None else "  –"
-                stage_name = self._shorten_stage_name(day.get("stage_name", ""))
-                warn_str = f"  ⚠️ {day['warning']}" if day.get("warning") else ""
-                lines.append(f"  {day['weekday']}  {day['cloud_emoji']}  {temp_str}  {precip_str}  {stage_name}{warn_str}")
+                stage_name_short = self._shorten_stage_name(day.get("stage_name", ""))
+                summary = day.get("summary", "")
+                lines.append(f"  {day['weekday']}  {stage_name_short}")
+                lines.append(f"      {summary}")
             lines.append("")
 
         # Highlights
