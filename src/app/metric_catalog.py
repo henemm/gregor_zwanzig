@@ -42,6 +42,7 @@ class MetricDefinition:
     display_thresholds: dict[str, float] = field(default_factory=dict)
     highlight_threshold: Optional[float] = None
     risk_thresholds: dict[str, float] = field(default_factory=dict)
+    exposition_risk_thresholds: dict[str, float] = field(default_factory=dict)
 
     @property
     def has_friendly_format(self) -> bool:
@@ -102,6 +103,7 @@ _METRICS: list[MetricDefinition] = [
         default_change_threshold=20.0,
         highlight_threshold=50.0,
         risk_thresholds={"medium": 50.0, "high": 70.0},
+        exposition_risk_thresholds={"medium": 30, "high": 50},
     ),
     MetricDefinition(
         id="gust", label_de="Böen", unit="km/h",
@@ -114,6 +116,7 @@ _METRICS: list[MetricDefinition] = [
         display_thresholds={"yellow": 50.0, "red": 80.0},
         highlight_threshold=60.0,
         risk_thresholds={"medium": 50.0, "high": 70.0},
+        exposition_risk_thresholds={"medium": 40, "high": 60},
     ),
     MetricDefinition(
         id="wind_direction", label_de="Windrichtung", unit="°",
