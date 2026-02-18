@@ -248,6 +248,16 @@ _METRICS: list[MetricDefinition] = [
         risk_thresholds={"high_lt": 100.0},
     ),
     MetricDefinition(
+        id="sunshine", label_de="Sonnenschein (DNI)", unit="W/m²",
+        dp_field="dni_wm2", category="atmosphere",
+        default_aggregations=("avg",),
+        compact_label="☀", col_key="sunshine", col_label="Sun",
+        providers={"openmeteo": True, "geosphere": False},
+        default_enabled=True,
+        friendly_label="☀️🌙☁️",
+        summary_fields={"avg": "dni_avg_wm2"},
+    ),
+    MetricDefinition(
         id="uv_index", label_de="UV-Index", unit="",
         dp_field="uv_index", category="atmosphere",
         default_aggregations=("max",),

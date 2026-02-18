@@ -232,6 +232,14 @@ class TripReportFormatter:
             else:
                 row["_wind_dir_deg"] = None
 
+        # DNI-based emoji fields — use last data point's is_day, avg DNI, worst WMO
+        row["_is_day"] = dps[-1].is_day if hasattr(dps[-1], 'is_day') else None
+        dni_vals = [dp.dni_wm2 for dp in dps if getattr(dp, 'dni_wm2', None) is not None]
+        row["_dni_wm2"] = sum(dni_vals) / len(dni_vals) if dni_vals else None
+        from services.weather_metrics import _WMO_SEVERITY
+        wmo_vals = [dp.wmo_code for dp in dps if getattr(dp, 'wmo_code', None) is not None]
+        row["_wmo_code"] = max(wmo_vals, key=lambda c: _WMO_SEVERITY.get(c, 0)) if wmo_vals else None
+
         return row
 
     def _dp_to_row(self, dp: ForecastDataPoint, dc: UnifiedWeatherDisplayConfig) -> dict:
@@ -255,6 +263,10 @@ class TripReportFormatter:
             row[metric_def.col_key] = getattr(dp, metric_def.dp_field, None)
         if merge_wind_dir and "wind" in row:
             row["_wind_dir_deg"] = getattr(dp, "wind_direction_deg", None)
+        # DNI-based emoji fields (SPEC: weather_emoji_dni.md)
+        row["_is_day"] = getattr(dp, "is_day", None)
+        row["_dni_wm2"] = getattr(dp, "dni_wm2", None)
+        row["_wmo_code"] = getattr(dp, "wmo_code", None)
         return row
 
     # ------------------------------------------------------------------
@@ -566,6 +578,16 @@ class TripReportFormatter:
             else:
                 emoji = "☁️"
             return emoji
+        if key == "sunshine":
+            if not use_friendly:
+                return f"{val:.0f}"
+            from services.weather_metrics import get_weather_emoji
+            return get_weather_emoji(
+                is_day=row.get("_is_day") if row else None,
+                dni_wm2=val,
+                wmo_code=row.get("_wmo_code") if row else None,
+                cloud_pct=round(row.get("cloud")) if row and row.get("cloud") is not None else None,
+            )
         if key == "humidity":
             return f"{val}" if val is not None else "–"
         if key == "pressure":

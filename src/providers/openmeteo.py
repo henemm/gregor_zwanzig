@@ -503,8 +503,11 @@ class OpenMeteoProvider:
                     precip_rate_mmph=None,  # Not available (Open-Meteo provides hourly totals, not rates)
                     precip_1h_mm=get_val("precipitation", i),
                     cloud_total_pct=get_int("cloud_cover", i),
-                    symbol=None,  # Could map weather_code to symbol
+                    symbol=None,
                     thunder_level=self._parse_thunder_level(get_int("weather_code", i)),
+                    wmo_code=get_int("weather_code", i),
+                    is_day=get_int("is_day", i),
+                    dni_wm2=get_val("direct_normal_irradiance", i),
                     cape_jkg=get_val("cape", i),
                     pop_pct=get_val("precipitation_probability", i),
                     pressure_msl_hpa=get_val("pressure_msl", i),
@@ -584,6 +587,8 @@ class OpenMeteoProvider:
                 "cape",
                 "freezing_level_height",
                 "uv_index",
+                "direct_normal_irradiance",
+                "is_day",
             ]),
             "timezone": "UTC",
         }
