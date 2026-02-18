@@ -15,12 +15,15 @@ from app.metric_catalog import build_default_display_config, get_col_defs, get_l
 from app.models import (
     ForecastDataPoint,
     NormalizedTimeseries,
+    RiskLevel,
+    RiskType,
     SegmentWeatherData,
     ThunderLevel,
     TripReport,
     UnifiedWeatherDisplayConfig,
     WeatherChange,
 )
+from services.risk_engine import RiskEngine
 
 
 class TripReportFormatter:
@@ -436,52 +439,29 @@ class TripReportFormatter:
     # Risk (per segment, used for overview)
     # ------------------------------------------------------------------
 
+    # Risk labels for RiskEngine → formatter display
+    _RISK_LABELS: dict[tuple[RiskType, RiskLevel], str] = {
+        (RiskType.THUNDERSTORM, RiskLevel.HIGH): "⚠️ Thunder",
+        (RiskType.THUNDERSTORM, RiskLevel.MODERATE): "⚠️ Thunder Risk",
+        (RiskType.WIND, RiskLevel.HIGH): "⚠️ Storm",
+        (RiskType.WIND, RiskLevel.MODERATE): "⚠️ High Wind",
+        (RiskType.RAIN, RiskLevel.HIGH): "⚠️ Heavy Rain",
+        (RiskType.RAIN, RiskLevel.MODERATE): "⚠️ Heavy Rain",
+        (RiskType.WIND_CHILL, RiskLevel.HIGH): "⚠️ Extreme Cold",
+        (RiskType.POOR_VISIBILITY, RiskLevel.HIGH): "⚠️ Low Visibility",
+    }
+
     def _determine_risk(self, segment: SegmentWeatherData) -> tuple[str, str]:
-        """Determine segment risk level using catalog risk_thresholds."""
-        agg = segment.aggregated
-
-        # Thunder is enum-based, no threshold lookup needed
-        if agg.thunder_level_max and agg.thunder_level_max == ThunderLevel.HIGH:
-            return ("high", "⚠️ Thunder")
-
-        # Check all metrics with risk_thresholds from catalog
-        risk_checks = [
-            ("wind", agg.wind_max_kmh, "High Wind", "Storm"),
-            ("wind_chill", agg.wind_chill_min_c, "Extreme Cold", None),
-            ("visibility", agg.visibility_min_m, "Low Visibility", None),
-            ("precipitation", agg.precip_sum_mm, "Heavy Rain", None),
-        ]
-
-        for metric_id, value, med_label, high_label_override in risk_checks:
-            if value is None:
-                continue
-            rt = get_metric(metric_id).risk_thresholds
-            if not rt:
-                continue
-            if "high_lt" in rt and value < rt["high_lt"]:
-                return ("high", f"⚠️ {high_label_override or med_label}")
-            if "high" in rt and value > rt["high"]:
-                return ("high", f"⚠️ {high_label_override or med_label}")
-            if "medium" in rt and value > rt["medium"]:
-                return ("medium", f"⚠️ {med_label}")
-
-        # Thunder enum (medium risk)
-        if agg.thunder_level_max and agg.thunder_level_max in (ThunderLevel.MED, ThunderLevel.HIGH):
-            return ("medium", "⚠️ Thunder Risk")
-
-        # CAPE risk from catalog
-        if agg.cape_max_jkg is not None:
-            rt = get_metric("cape").risk_thresholds
-            if rt.get("high") and agg.cape_max_jkg >= rt["high"]:
-                return ("high", "⚠️ Extreme Thunder Energy")
-            if rt.get("medium") and agg.cape_max_jkg >= rt["medium"]:
-                return ("medium", "⚠️ Thunder Energy")
-
-        # POP check (not in catalog risk_thresholds but used for risk)
-        if agg.pop_max_pct and agg.pop_max_pct >= 80:
-            return ("medium", "⚠️ High Rain Probability")
-
-        return ("none", "✓ OK")
+        """Determine segment risk level via RiskEngine (F8 v2.0)."""
+        engine = RiskEngine()
+        assessment = engine.assess_segment(segment)
+        if not assessment.risks:
+            return ("none", "✓ OK")
+        top = assessment.risks[0]  # Sorted: HIGH first
+        label = self._RISK_LABELS.get(
+            (top.type, top.level), f"⚠️ {top.type.value.title()}"
+        )
+        return (top.level.value, label)
 
     # ------------------------------------------------------------------
     # Value formatting helpers
