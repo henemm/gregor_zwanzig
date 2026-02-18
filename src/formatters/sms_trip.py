@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional
 
-from app.models import RiskLevel, RiskType, SegmentWeatherData
+from app.models import ExposedSection, RiskLevel, RiskType, SegmentWeatherData
 from services.risk_engine import RiskEngine
 
 if TYPE_CHECKING:
@@ -50,7 +50,8 @@ class SMSTripFormatter:
     def format_sms(
         self,
         segments: list[SegmentWeatherData],
-        max_length: int = 160
+        max_length: int = 160,
+        exposed_sections: Optional[list[ExposedSection]] = None,
     ) -> str:
         """
         Generate SMS text from trip segments.
@@ -67,6 +68,8 @@ class SMSTripFormatter:
         """
         if not segments:
             raise ValueError("Cannot format SMS with no segments")
+
+        self._exposed_sections = exposed_sections
 
         # Format each segment
         segment_strs = [self._format_segment(seg) for seg in segments]
@@ -176,7 +179,10 @@ class SMSTripFormatter:
     ) -> tuple[Optional[str], Optional[str]]:
         """Detect segment risk via RiskEngine (F8 v2.0)."""
         engine = RiskEngine()
-        assessment = engine.assess_segment(seg_data)
+        assessment = engine.assess_segment(
+            seg_data,
+            exposed_sections=getattr(self, '_exposed_sections', None),
+        )
         if not assessment.risks:
             return (None, None)
         top = assessment.risks[0]

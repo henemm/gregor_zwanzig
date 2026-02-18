@@ -91,3 +91,14 @@ risk_engine_low_wind_no_exposition_risk
 risk_engine_without_exposed_sections_unchanged
 trip_report_wind_exposition_labels
 sms_trip_wind_exposition_labels
+
+# F7b Pipeline Integration tests (spec: wind_exposition_pipeline.md)
+cumulative_distance_set
+exposed_sections_passed_to_engine
+no_exposition_below_threshold
+low_wind_no_exposition_risk
+exposition_moderate_risk
+exposition_high_risk
+sms_formatter_accepts_exposed_sections
+sms_grat_wind_label
+exposition_service_exception_handled

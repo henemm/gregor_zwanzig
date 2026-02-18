@@ -13,6 +13,7 @@ from typing import Optional
 
 from app.metric_catalog import build_default_display_config, get_col_defs, get_label_for_field, get_metric, get_metric_by_col_key
 from app.models import (
+    ExposedSection,
     ForecastDataPoint,
     NormalizedTimeseries,
     RiskLevel,
@@ -41,12 +42,14 @@ class TripReportFormatter:
         changes: Optional[list[WeatherChange]] = None,
         stage_name: Optional[str] = None,
         stage_stats: Optional[dict] = None,
+        exposed_sections: Optional[list[ExposedSection]] = None,
     ) -> TripReport:
         """Format trip segments into HTML + plain-text email."""
         if not segments:
             raise ValueError("Cannot format email with no segments")
 
         dc = display_config or build_default_display_config()
+        self._exposed_sections = exposed_sections
         self._friendly_keys = self._build_friendly_keys(dc)
         trip_id = trip_name.lower().replace(" ", "-")
         trip_id = "".join(c for c in trip_id if c.isalnum() or c == "-")
@@ -456,7 +459,10 @@ class TripReportFormatter:
     def _determine_risk(self, segment: SegmentWeatherData) -> tuple[str, str]:
         """Determine segment risk level via RiskEngine (F8 v2.0)."""
         engine = RiskEngine()
-        assessment = engine.assess_segment(segment)
+        assessment = engine.assess_segment(
+            segment,
+            exposed_sections=getattr(self, '_exposed_sections', None),
+        )
         if not assessment.risks:
             return ("none", "✓ OK")
         top = assessment.risks[0]  # Sorted: HIGH first
