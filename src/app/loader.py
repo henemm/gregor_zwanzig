@@ -145,6 +145,7 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
         from app.models import TripReportConfig
         from datetime import datetime, time
         rc_data = data["report_config"]
+        dc_data = data.get("display_config", {})
         report_config = TripReportConfig(
             trip_id=rc_data["trip_id"],
             enabled=rc_data.get("enabled", True),
@@ -157,6 +158,14 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
             change_threshold_wind_kmh=rc_data.get("change_threshold_wind_kmh", 20.0),
             change_threshold_precip_mm=rc_data.get("change_threshold_precip_mm", 10.0),
             wind_exposition_min_elevation_m=rc_data.get("wind_exposition_min_elevation_m"),
+            show_compact_summary=rc_data.get(
+                "show_compact_summary",
+                dc_data.get("show_compact_summary", True),
+            ),
+            multi_day_trend_reports=rc_data.get(
+                "multi_day_trend_reports",
+                dc_data.get("multi_day_trend_reports", ["evening"]),
+            ),
             updated_at=datetime.fromisoformat(rc_data["updated_at"]),
         )
 
@@ -571,6 +580,8 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             "change_threshold_wind_kmh": trip.report_config.change_threshold_wind_kmh,
             "change_threshold_precip_mm": trip.report_config.change_threshold_precip_mm,
             "wind_exposition_min_elevation_m": trip.report_config.wind_exposition_min_elevation_m,
+            "show_compact_summary": trip.report_config.show_compact_summary,
+            "multi_day_trend_reports": trip.report_config.multi_day_trend_reports,
             "updated_at": trip.report_config.updated_at.isoformat(),
         }
 

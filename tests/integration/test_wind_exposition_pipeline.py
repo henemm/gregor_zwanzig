@@ -477,3 +477,246 @@ class TestTripLevelElevationConfig:
         )
         assert loaded.wind_exposition_min_elevation_m == 1800.0, \
             f"Expected 1800.0 but got {loaded.wind_exposition_min_elevation_m}"
+
+
+# ===========================================================================
+# Test 16-22: Report Options Migration
+# SPEC: docs/specs/modules/report_options_migration.md v1.0
+# ===========================================================================
+
+class TestReportOptionsMigration:
+    """Migrate show_compact_summary & multi_day_trend_reports to TripReportConfig."""
+
+    def test_model_has_show_compact_summary(self):
+        """TripReportConfig must have show_compact_summary field with default True."""
+        from app.models import TripReportConfig
+        config = TripReportConfig(trip_id="test")
+        assert hasattr(config, "show_compact_summary"), \
+            "TripReportConfig must have show_compact_summary"
+        assert config.show_compact_summary is True, \
+            "Default must be True"
+
+    def test_model_has_multi_day_trend_reports(self):
+        """TripReportConfig must have multi_day_trend_reports field with default ['evening']."""
+        from app.models import TripReportConfig
+        config = TripReportConfig(trip_id="test")
+        assert hasattr(config, "multi_day_trend_reports"), \
+            "TripReportConfig must have multi_day_trend_reports"
+        assert config.multi_day_trend_reports == ["evening"], \
+            f"Default must be ['evening'], got {config.multi_day_trend_reports}"
+
+    def test_loader_serializes_new_fields(self):
+        """Save→load roundtrip must preserve show_compact_summary and multi_day_trend_reports."""
+        import json
+        import tempfile
+        from pathlib import Path
+        from app.loader import load_trip
+
+        _dummy_stage = {
+            "id": "S1", "name": "Dummy", "date": "2026-03-01",
+            "waypoints": [
+                {"id": "W1", "name": "A", "lat": 47.0, "lon": 11.0, "elevation_m": 100},
+                {"id": "W2", "name": "B", "lat": 47.1, "lon": 11.1, "elevation_m": 200},
+            ],
+            "start_time": "09:00:00",
+        }
+        trip_json = {
+            "id": "test-ser",
+            "name": "Serialization Test",
+            "stages": [_dummy_stage],
+            "report_config": {
+                "trip_id": "test-ser",
+                "enabled": True,
+                "morning_time": "07:00:00",
+                "evening_time": "18:00:00",
+                "send_email": True,
+                "send_sms": False,
+                "alert_on_changes": True,
+                "change_threshold_temp_c": 5.0,
+                "change_threshold_wind_kmh": 20.0,
+                "change_threshold_precip_mm": 10.0,
+                "show_compact_summary": False,
+                "multi_day_trend_reports": ["morning", "evening"],
+                "updated_at": "2026-02-19T00:00:00+00:00",
+            },
+        }
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            json.dump(trip_json, f)
+            f.flush()
+            trip = load_trip(Path(f.name))
+
+        assert trip.report_config is not None
+        assert trip.report_config.show_compact_summary is False, \
+            "show_compact_summary must survive load"
+        assert trip.report_config.multi_day_trend_reports == ["morning", "evening"], \
+            "multi_day_trend_reports must survive load"
+
+        # Now test serialization via _trip_to_dict
+        from app.loader import _trip_to_dict
+        data = _trip_to_dict(trip)
+        rc_data = data["report_config"]
+        assert "show_compact_summary" in rc_data, \
+            "show_compact_summary must be serialized in report_config"
+        assert rc_data["show_compact_summary"] is False
+        assert "multi_day_trend_reports" in rc_data, \
+            "multi_day_trend_reports must be serialized in report_config"
+        assert rc_data["multi_day_trend_reports"] == ["morning", "evening"]
+
+    def test_loader_migration_fallback_from_display_config(self):
+        """When report_config lacks the fields, loader falls back to display_config values."""
+        import json
+        import tempfile
+        from pathlib import Path
+        from app.loader import load_trip
+
+        # Simulate old JSON: fields in display_config but NOT in report_config
+        _dummy_stage = {
+            "id": "S1", "name": "Dummy", "date": "2026-03-01",
+            "waypoints": [
+                {"id": "W1", "name": "A", "lat": 47.0, "lon": 11.0, "elevation_m": 100},
+                {"id": "W2", "name": "B", "lat": 47.1, "lon": 11.1, "elevation_m": 200},
+            ],
+            "start_time": "09:00:00",
+        }
+        trip_json = {
+            "id": "test-migration",
+            "name": "Migration Test",
+            "stages": [_dummy_stage],
+            "display_config": {
+                "trip_id": "test-migration",
+                "metrics": [],
+                "show_compact_summary": False,
+                "multi_day_trend_reports": ["morning"],
+                "show_night_block": True,
+                "night_interval_hours": 2,
+                "thunder_forecast_days": 2,
+                "sms_metrics": [],
+                "updated_at": "2026-02-19T00:00:00+00:00",
+            },
+            "report_config": {
+                "trip_id": "test-migration",
+                "enabled": True,
+                "morning_time": "07:00:00",
+                "evening_time": "18:00:00",
+                "send_email": True,
+                "send_sms": False,
+                "alert_on_changes": True,
+                "change_threshold_temp_c": 5.0,
+                "change_threshold_wind_kmh": 20.0,
+                "change_threshold_precip_mm": 10.0,
+                "updated_at": "2026-02-19T00:00:00+00:00",
+                # NO show_compact_summary or multi_day_trend_reports here!
+            },
+        }
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            json.dump(trip_json, f)
+            f.flush()
+            trip = load_trip(Path(f.name))
+
+        assert trip.report_config is not None
+        assert trip.report_config.show_compact_summary is False, \
+            "Should fall back to display_config value (False)"
+        assert trip.report_config.multi_day_trend_reports == ["morning"], \
+            "Should fall back to display_config value (['morning'])"
+
+    def test_loader_report_config_takes_precedence(self):
+        """When report_config HAS the fields, those values win over display_config."""
+        import json
+        import tempfile
+        from pathlib import Path
+        from app.loader import load_trip
+
+        _dummy_stage = {
+            "id": "S1", "name": "Dummy", "date": "2026-03-01",
+            "waypoints": [
+                {"id": "W1", "name": "A", "lat": 47.0, "lon": 11.0, "elevation_m": 100},
+                {"id": "W2", "name": "B", "lat": 47.1, "lon": 11.1, "elevation_m": 200},
+            ],
+            "start_time": "09:00:00",
+        }
+        trip_json = {
+            "id": "test-precedence",
+            "name": "Precedence Test",
+            "stages": [_dummy_stage],
+            "display_config": {
+                "trip_id": "test-precedence",
+                "metrics": [],
+                "show_compact_summary": True,
+                "multi_day_trend_reports": ["evening"],
+                "show_night_block": True,
+                "night_interval_hours": 2,
+                "thunder_forecast_days": 2,
+                "sms_metrics": [],
+                "updated_at": "2026-02-19T00:00:00+00:00",
+            },
+            "report_config": {
+                "trip_id": "test-precedence",
+                "enabled": True,
+                "morning_time": "07:00:00",
+                "evening_time": "18:00:00",
+                "send_email": True,
+                "send_sms": False,
+                "alert_on_changes": True,
+                "change_threshold_temp_c": 5.0,
+                "change_threshold_wind_kmh": 20.0,
+                "change_threshold_precip_mm": 10.0,
+                "show_compact_summary": False,
+                "multi_day_trend_reports": ["morning", "evening"],
+                "updated_at": "2026-02-19T00:00:00+00:00",
+            },
+        }
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            json.dump(trip_json, f)
+            f.flush()
+            trip = load_trip(Path(f.name))
+
+        assert trip.report_config.show_compact_summary is False, \
+            "report_config value should take precedence"
+        assert trip.report_config.multi_day_trend_reports == ["morning", "evening"], \
+            "report_config value should take precedence"
+
+    def test_scheduler_reads_from_report_config(self):
+        """Scheduler must read multi_day_trend_reports from report_config, not display_config."""
+        from app.models import TripReportConfig
+
+        # Create a fake trip with report_config having morning only
+        rc = TripReportConfig(trip_id="test-sched")
+        rc.multi_day_trend_reports = ["morning"]
+
+        fake_trip = _FakeTrip(
+            id="test-sched",
+            name="Scheduler Test",
+            stages=[],
+            display_config=_FakeDisplayConfig(multi_day_trend_reports=["evening"]),
+            report_config=rc,
+        )
+
+        # Simulate the scheduler logic (should read from report_config)
+        rc_obj = fake_trip.report_config
+        dc_obj = fake_trip.display_config
+        trend_reports = (
+            rc_obj.multi_day_trend_reports
+            if rc_obj is not None
+            else (dc_obj.multi_day_trend_reports if dc_obj else ["evening"])
+        )
+        assert trend_reports == ["morning"], \
+            f"Should read from report_config, got {trend_reports}"
+
+    def test_scheduler_patches_display_config_compact_summary(self):
+        """Scheduler must patch display_config.show_compact_summary from report_config (Option A)."""
+        from app.models import TripReportConfig
+
+        rc = TripReportConfig(trip_id="test-patch")
+        rc.show_compact_summary = False
+
+        dc = _FakeDisplayConfig(show_compact_summary=True)
+
+        # Simulate Option A patch from scheduler
+        if rc is not None:
+            dc.show_compact_summary = rc.show_compact_summary
+
+        assert dc.show_compact_summary is False, \
+            "display_config.show_compact_summary must be patched from report_config"

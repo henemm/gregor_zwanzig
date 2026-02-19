@@ -466,11 +466,11 @@ class UnifiedWeatherDisplayConfig:
     """
     trip_id: str
     metrics: list[MetricConfig] = field(default_factory=list)
-    show_compact_summary: bool = True  # F2: Kompakt-Summary vor Detail-Tabellen
+    show_compact_summary: bool = True  # DEPRECATED: use TripReportConfig.show_compact_summary
     show_night_block: bool = True
     night_interval_hours: int = 2
     thunder_forecast_days: int = 2
-    multi_day_trend_reports: list[str] = field(default_factory=lambda: ["evening"])  # F3: Etappen-Ausblick
+    multi_day_trend_reports: list[str] = field(default_factory=lambda: ["evening"])  # DEPRECATED: use TripReportConfig.multi_day_trend_reports
     sms_metrics: list[str] = field(default_factory=list)  # Phase 3
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -572,6 +572,12 @@ class TripReportConfig:
 
     # Wind-Exposition (F7c)
     wind_exposition_min_elevation_m: Optional[float] = None  # None = global default (1500m)
+
+    # Report-Optionen (migrated from UnifiedWeatherDisplayConfig)
+    show_compact_summary: bool = True           # F2: Kompakt-Summary vor Detail-Tabellen
+    multi_day_trend_reports: list[str] = field(
+        default_factory=lambda: ["evening"]
+    )                                           # F3: Etappen-Ausblick morning/evening
 
     # Metadata
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))

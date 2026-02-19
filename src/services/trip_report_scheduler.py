@@ -283,13 +283,22 @@ class TripReportSchedulerService:
             segment_weather[-1], target_date,
         )
 
-        # 6. Multi-day trend (configurable per report type)
+        # 6. Multi-day trend (configurable per report type — read from report_config with fallback)
         multi_day_trend = None
         if segment_weather:
+            rc = trip.report_config
             dc = trip.display_config
-            trend_reports = dc.multi_day_trend_reports if dc else ["evening"]
+            trend_reports = (
+                rc.multi_day_trend_reports
+                if rc is not None
+                else (dc.multi_day_trend_reports if dc else ["evening"])
+            )
             if report_type in trend_reports:
                 multi_day_trend = self._build_stage_trend(trip, target_date)
+
+        # Option A: patch display_config.show_compact_summary from report_config
+        if trip.display_config and trip.report_config:
+            trip.display_config.show_compact_summary = trip.report_config.show_compact_summary
 
         # 8. Format report (uses unified display config from trip)
         report = self._formatter.format_email(
