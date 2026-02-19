@@ -575,6 +575,7 @@ class TripReportConfig:
 
     # Report-Optionen (migrated from UnifiedWeatherDisplayConfig)
     show_compact_summary: bool = True           # F2: Kompakt-Summary vor Detail-Tabellen
+    show_daylight: bool = True                  # F11: Effektives Tageslicht (Ohne Stirnlampe)
     multi_day_trend_reports: list[str] = field(
         default_factory=lambda: ["evening"]
     )                                           # F3: Etappen-Ausblick morning/evening

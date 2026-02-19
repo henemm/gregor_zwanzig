@@ -24,6 +24,7 @@ from app.models import (
     UnifiedWeatherDisplayConfig,
     WeatherChange,
 )
+from services.daylight_service import DaylightWindow
 from services.risk_engine import RiskEngine
 
 
@@ -43,6 +44,7 @@ class TripReportFormatter:
         stage_name: Optional[str] = None,
         stage_stats: Optional[dict] = None,
         exposed_sections: Optional[list[ExposedSection]] = None,
+        daylight: Optional[DaylightWindow] = None,
     ) -> TripReport:
         """Format trip segments into HTML + plain-text email."""
         if not segments:
@@ -82,11 +84,13 @@ class TripReportFormatter:
             segments, seg_tables, trip_name, report_type, dc,
             night_rows, thunder_forecast, highlights, changes,
             stage_name, stage_stats, effective_trend, compact_summary,
+            daylight,
         )
         email_plain = self._render_plain(
             segments, seg_tables, trip_name, report_type, dc,
             night_rows, thunder_forecast, highlights, changes,
             stage_name, stage_stats, effective_trend, compact_summary,
+            daylight,
         )
         email_subject = self._generate_subject(
             trip_name, report_type, segments[0].segment.start_time,
@@ -649,12 +653,86 @@ class TripReportFormatter:
     # HTML rendering
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _format_daylight_html(dl: DaylightWindow) -> str:
+        """Render daylight banner as HTML."""
+        hours = dl.duration_minutes // 60
+        mins = dl.duration_minutes % 60
+        headline = (
+            f"\U0001f304 Ohne Stirnlampe: {dl.usable_start.strftime('%H:%M')} "
+            f"– {dl.usable_end.strftime('%H:%M')} ({hours}h {mins:02d}m)"
+        )
+        explanation_parts = []
+        # Morning explanation
+        if dl.terrain_dawn_penalty_min or dl.weather_dawn_penalty_min:
+            parts = [f"Dämmerung {dl.civil_dawn.strftime('%H:%M')}"]
+            if dl.terrain_dawn_penalty_min:
+                parts.append(f"+ {dl.terrain_dawn_penalty_min}min (Tal)")
+            if dl.weather_dawn_penalty_min:
+                parts.append(f"+ {dl.weather_dawn_penalty_min}min (Wolken)")
+            parts.append(f"= {dl.usable_start.strftime('%H:%M')}")
+            explanation_parts.append(" ".join(parts))
+        # Evening explanation
+        if dl.terrain_dusk_penalty_min or dl.weather_dusk_penalty_min:
+            parts = [f"Sonnenuntergang {dl.sunset.strftime('%H:%M')}"]
+            if dl.terrain_dusk_penalty_min:
+                parts.append(f"– {dl.terrain_dusk_penalty_min}min (Tal)")
+            if dl.weather_dusk_penalty_min:
+                parts.append(f"– {dl.weather_dusk_penalty_min}min (Wolken)")
+            parts.append(f"= {dl.usable_end.strftime('%H:%M')}")
+            explanation_parts.append(" ".join(parts))
+
+        explanation_html = ""
+        if explanation_parts:
+            lines = "<br>".join(
+                f'<span style="font-size:12px;color:#666">{p}</span>'
+                for p in explanation_parts
+            )
+            explanation_html = f"<div style=\"margin-top:4px\">{lines}</div>"
+
+        return (
+            f'<div style="background:#fffde7;border-left:4px solid #f9a825;'
+            f'padding:12px;margin:8px 16px;">'
+            f'<strong style="font-size:14px">{headline}</strong>'
+            f'{explanation_html}'
+            f'</div>'
+        )
+
+    @staticmethod
+    def _format_daylight_plain(dl: DaylightWindow) -> str:
+        """Render daylight block as plain text."""
+        hours = dl.duration_minutes // 60
+        mins = dl.duration_minutes % 60
+        lines = [
+            f"\U0001f304 Ohne Stirnlampe: {dl.usable_start.strftime('%H:%M')} "
+            f"– {dl.usable_end.strftime('%H:%M')} ({hours}h {mins:02d}m)"
+        ]
+        # Morning explanation
+        if dl.terrain_dawn_penalty_min or dl.weather_dawn_penalty_min:
+            parts = [f"Dämmerung {dl.civil_dawn.strftime('%H:%M')}"]
+            if dl.terrain_dawn_penalty_min:
+                parts.append(f"+ {dl.terrain_dawn_penalty_min}min (Tal)")
+            if dl.weather_dawn_penalty_min:
+                parts.append(f"+ {dl.weather_dawn_penalty_min}min (Wolken)")
+            parts.append(f"= {dl.usable_start.strftime('%H:%M')}")
+            lines.append(f"   {' '.join(parts)}")
+        # Evening explanation
+        if dl.terrain_dusk_penalty_min or dl.weather_dusk_penalty_min:
+            parts = [f"Sonnenuntergang {dl.sunset.strftime('%H:%M')}"]
+            if dl.terrain_dusk_penalty_min:
+                parts.append(f"– {dl.terrain_dusk_penalty_min}min (Tal)")
+            if dl.weather_dusk_penalty_min:
+                parts.append(f"– {dl.weather_dusk_penalty_min}min (Wolken)")
+            parts.append(f"= {dl.usable_end.strftime('%H:%M')}")
+            lines.append(f"   {' '.join(parts)}")
+        return "\n".join(lines)
+
     def _render_html(
         self,
         segments, seg_tables, trip_name, report_type, dc,
         night_rows, thunder_forecast, highlights, changes,
         stage_name, stage_stats, multi_day_trend=None,
-        compact_summary=None,
+        compact_summary=None, daylight=None,
     ) -> str:
         report_date = segments[0].segment.start_time.strftime("%d.%m.%Y")
         sub_header = stage_name or ""
@@ -773,6 +851,11 @@ class TripReportFormatter:
                 <p style="margin:0;font-size:14px;line-height:1.6;">{compact_summary}</p>
             </div>"""
 
+        # F11: Daylight
+        daylight_html = ""
+        if daylight:
+            daylight_html = self._format_daylight_html(daylight)
+
         # Changes
         changes_html = ""
         if changes:
@@ -829,6 +912,7 @@ class TripReportFormatter:
         </div>
 
         {summary_html}
+        {daylight_html}
         {changes_html}
         {segments_html}
         {night_html}
@@ -870,7 +954,7 @@ class TripReportFormatter:
         segments, seg_tables, trip_name, report_type, dc,
         night_rows, thunder_forecast, highlights, changes,
         stage_name, stage_stats, multi_day_trend=None,
-        compact_summary=None,
+        compact_summary=None, daylight=None,
     ) -> str:
         lines = []
         report_date = segments[0].segment.start_time.strftime("%d.%m.%Y")
@@ -894,6 +978,11 @@ class TripReportFormatter:
         # F2: Compact summary
         if compact_summary:
             lines.append(compact_summary)
+            lines.append("")
+
+        # F11: Daylight
+        if daylight:
+            lines.append(self._format_daylight_plain(daylight))
             lines.append("")
 
         # Changes (before segments in alert emails)
