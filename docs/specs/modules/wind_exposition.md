@@ -237,7 +237,7 @@ assessment = engine.assess_segment(segment, exposed_sections=exposed)
 
 ## Known Limitations
 
-- **min_elevation_m = 2000m** ist ein sinnvoller Default fuer die Alpen, aber nicht universal
+- ~~**min_elevation_m = 2000m** ist ein sinnvoller Default fuer die Alpen, aber nicht universal~~ **[RESOLVED in F7c]** Jetzt pro Trip konfigurierbar mit verbessertem 1500m Global-Default
 - **radius_km = 0.3** ist eine Approximation; echte Grat-Laenge variiert stark
 - Grat-Erkennung basiert auf Gipfeln/Paessen, nicht auf der echten Topografie
 - Trips ohne GPX-Track (nur Waypoints) bekommen keine Exposition-Analyse
@@ -245,3 +245,4 @@ assessment = engine.assess_segment(segment, exposed_sections=exposed)
 ## Changelog
 
 - 2026-02-18: Initial spec v1.0 created
+- 2026-02-18: F7c (Wind-Exposition Config) resolved min_elevation_m limitation — now per-trip configurable, global default reduced to 1500m
