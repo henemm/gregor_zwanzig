@@ -36,8 +36,10 @@ def show_report_config_dialog(trip: Trip, user_id: str = "default") -> None:
     with ui.dialog() as dialog, ui.card().classes("w-full max-w-lg"):
         ui.label("Report-Einstellungen").classes("text-h6")
 
-        # Get current config or defaults
-        config = trip.report_config or TripReportConfig(trip_id=trip.id)
+        # Load fresh from disk to avoid stale in-memory state
+        trip_path = get_trips_dir(user_id) / f"{trip.id}.json"
+        fresh_trip = load_trip(trip_path)
+        config = fresh_trip.report_config or TripReportConfig(trip_id=trip.id)
 
         # Schedule Section
         ui.label("Zeitplan").classes("text-subtitle1 q-mt-md")
