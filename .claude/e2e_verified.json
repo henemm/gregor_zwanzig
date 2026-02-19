@@ -1,9 +1,8 @@
 {
-  "verified_at": "2026-02-18T14:58:00.000000+00:00",
+  "verified_at": "2026-02-19T06:57:41.307911+00:00",
   "server_restarted": true,
   "test_trip_created": true,
   "emails_checked": true,
   "test_trip_cleaned": true,
-  "feature": "F3 Multi-Day Trend v3.0 — CompactSummaryFormatter",
-  "note": "E2E verified: test trip e2e-trend-v3, evening report sent, IMAP checked (all 6 checks PASS), test trip deleted"
+  "feature": "Report Options Migration (display_config \u2192 report_config)"
 }

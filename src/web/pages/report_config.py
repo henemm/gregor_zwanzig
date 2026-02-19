@@ -86,6 +86,24 @@ def show_report_config_dialog(trip: Trip, user_id: str = "default") -> None:
             step=100,
         ).classes("w-48")
 
+        # Report-Optionen Section (migrated from weather_config)
+        ui.label("Report-Optionen").classes("text-subtitle1 q-mt-md")
+
+        compact_summary_cb = ui.checkbox(
+            "Kompakt-Summary (Zusammenfassung vor Tabellen)",
+            value=config.show_compact_summary,
+        )
+
+        ui.label("Etappen-Ausblick").classes("text-caption q-mt-sm")
+        trend_reports = config.multi_day_trend_reports
+        with ui.row().classes("items-center"):
+            trend_morning_cb = ui.checkbox(
+                "Morning Report", value="morning" in trend_reports,
+            )
+            trend_evening_cb = ui.checkbox(
+                "Evening Report", value="evening" in trend_reports,
+            )
+
         # Buttons (Factory Pattern!)
         with ui.row().classes("q-mt-md"):
             ui.button("Abbrechen", on_click=dialog.close)
@@ -99,6 +117,9 @@ def show_report_config_dialog(trip: Trip, user_id: str = "default") -> None:
                     sms_checkbox,
                     alert_checkbox,
                     elev_input,
+                    compact_summary_cb,
+                    trend_morning_cb,
+                    trend_evening_cb,
                     dialog,
                     user_id
                 )
@@ -115,6 +136,9 @@ def make_save_handler(
     sms_checkbox,
     alert_checkbox,
     elev_input,
+    compact_summary_cb,
+    trend_morning_cb,
+    trend_evening_cb,
     dialog,
     user_id: str
 ):
@@ -131,6 +155,9 @@ def make_save_handler(
         sms_checkbox: SMS channel checkbox
         alert_checkbox: Alert enabled checkbox
         elev_input: Wind exposition min elevation input (F7c)
+        compact_summary_cb: Kompakt-Summary checkbox
+        trend_morning_cb: Morning trend report checkbox
+        trend_evening_cb: Evening trend report checkbox
         dialog: Dialog to close after save
         user_id: User identifier for loading/saving
 
@@ -158,6 +185,13 @@ def make_save_handler(
         # Wind exposition elevation (F7c): None if empty
         min_elev = float(elev_input.value) if elev_input.value else None
 
+        # Build multi_day_trend_reports from checkboxes
+        trend_reports = []
+        if trend_morning_cb.value:
+            trend_reports.append("morning")
+        if trend_evening_cb.value:
+            trend_reports.append("evening")
+
         # Build config (preserve legacy threshold fields from existing config)
         config = TripReportConfig(
             trip_id=trip_id,
@@ -171,6 +205,8 @@ def make_save_handler(
             change_threshold_wind_kmh=old_rc.change_threshold_wind_kmh if old_rc else 20.0,
             change_threshold_precip_mm=old_rc.change_threshold_precip_mm if old_rc else 10.0,
             wind_exposition_min_elevation_m=min_elev,
+            show_compact_summary=compact_summary_cb.value,
+            multi_day_trend_reports=trend_reports,
             updated_at=datetime.now(timezone.utc),
         )
 
