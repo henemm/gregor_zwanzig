@@ -702,7 +702,7 @@ class TripReportFormatter:
 
         return (
             f'<div style="background:#fffde7;border-left:4px solid #f9a825;'
-            f'padding:12px;margin:8px 16px;">'
+            f'padding:12px;margin:8px 0;">'
             f'<strong style="font-size:14px">{headline}</strong>'
             f'{explanation_html}'
             f'</div>'
