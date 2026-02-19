@@ -251,7 +251,12 @@ class TripReportSchedulerService:
         # 2. Wind exposition detection (before weather fetch, needs TripSegments)
         from services.wind_exposition import WindExpositionService
         try:
-            exposed_sections = WindExpositionService().detect_exposed_from_segments(segments)
+            min_elev_kwargs = {}
+            if trip.report_config and trip.report_config.wind_exposition_min_elevation_m is not None:
+                min_elev_kwargs["min_elevation_m"] = trip.report_config.wind_exposition_min_elevation_m
+            exposed_sections = WindExpositionService().detect_exposed_from_segments(
+                segments, **min_elev_kwargs
+            )
         except Exception as e:
             logger.warning(f"Wind exposition detection failed for {trip.id}: {e}")
             exposed_sections = []

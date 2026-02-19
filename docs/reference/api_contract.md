@@ -370,20 +370,25 @@ Lawinenlagebericht als eigenstaendiges Datenobjekt (nicht Teil von NormalizedTim
 | changes        | list[WeatherChange]      | Liste der Änderungen (bei Alert)                 |
 
 #### TripReportConfig
-| Feld                      | Typ         | Beschreibung                                    |
-|---------------------------|-------------|-------------------------------------------------|
-| trip_id                   | str         | Trip-Identifier                                  |
-| enabled                   | bool        | Reports aktiv? (default: true)                   |
-| morning_time              | time        | Morgen-Report Zeit (default: 07:00)              |
-| evening_time              | time        | Abend-Report Zeit (default: 18:00)               |
-| timezone                  | str         | Zeitzone (default: "Europe/Vienna")              |
-| send_email                | bool        | E-Mail senden? (default: true)                   |
-| send_sms                  | bool        | SMS senden? (default: false)                     |
-| alert_on_changes          | bool        | Alerts bei Änderungen? (default: true)           |
-| change_threshold_temp_c   | float       | Temp-Änderungs-Schwelle [°C] (default: 5.0)      |
-| change_threshold_wind_kmh | float       | Wind-Änderungs-Schwelle [km/h] (default: 20.0)   |
-| change_threshold_precip_mm| float       | Niederschlags-Schwelle [mm] (default: 10.0)      |
-| include_metrics           | list[str]   | Anzuzeigende Metriken (default: 5 Basis-Metriken)|
-| updated_at                | datetime    | Zeitpunkt der letzten Config-Änderung            |
+| Feld                            | Typ         | Beschreibung                                          |
+|---------------------------------|-------------|-------------------------------------------------------|
+| trip_id                         | str         | Trip-Identifier                                        |
+| enabled                         | bool        | Reports aktiv? (default: true)                         |
+| morning_time                    | time        | Morgen-Report Zeit (default: 07:00)                    |
+| evening_time                    | time        | Abend-Report Zeit (default: 18:00)                     |
+| timezone                        | str         | Zeitzone (default: "Europe/Vienna")                    |
+| send_email                      | bool        | E-Mail senden? (default: true)                         |
+| send_sms                        | bool        | SMS senden? (default: false)                           |
+| alert_on_changes                | bool        | Alerts bei Änderungen? (default: true)                 |
+| change_threshold_temp_c         | float       | Temp-Änderungs-Schwelle [°C] (default: 5.0)            |
+| change_threshold_wind_kmh       | float       | Wind-Änderungs-Schwelle [km/h] (default: 20.0)         |
+| change_threshold_precip_mm      | float       | Niederschlags-Schwelle [mm] (default: 10.0)            |
+| include_metrics                 | list[str]   | Anzuzeigende Metriken (default: 5 Basis-Metriken)      |
+| wind_exposition_min_elevation_m | float/null  | Wind-Exposition Höhen-Schwelle [m]; null = 1500m (F7c)|
+| updated_at                      | datetime    | Zeitpunkt der letzten Config-Änderung                  |
 
 ---
+
+## Changelog
+
+- 2026-02-18: Added `TripReportConfig.wind_exposition_min_elevation_m` (F7c Wind-Exposition Config) — per-trip configurable elevation threshold for wind exposition detection. Default null uses global 1500m threshold (lowered from 2000m).

@@ -24,7 +24,7 @@ class WindExpositionService:
         self,
         track: GPXTrack,
         radius_km: float = 0.3,
-        min_elevation_m: float = 2000.0,
+        min_elevation_m: float = 1500.0,
     ) -> list[ExposedSection]:
         """Find exposed sections near detected peaks/passes.
 
@@ -59,7 +59,7 @@ class WindExpositionService:
     def detect_exposed_from_segments(
         self,
         segments: list[TripSegment],
-        min_elevation_m: float = 2000.0,
+        min_elevation_m: float = 1500.0,
     ) -> list[ExposedSection]:
         """Detect exposed sections from segment elevation data.
 

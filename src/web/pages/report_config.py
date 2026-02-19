@@ -72,6 +72,18 @@ def show_report_config_dialog(trip: Trip, user_id: str = "default") -> None:
             "Alert-Schwellen pro Metrik unter 'Wetter-Metriken' konfigurieren."
         ).classes("text-caption text-grey q-mt-sm")
 
+        # Wind-Exposition Section (F7c)
+        ui.label("Wind-Exposition").classes("text-subtitle1 q-mt-md")
+
+        elev_input = ui.number(
+            label="Wind-Exposition ab Höhe (m)",
+            value=config.wind_exposition_min_elevation_m,
+            placeholder="1500",
+            min=500,
+            max=4000,
+            step=100,
+        ).classes("w-48")
+
         # Buttons (Factory Pattern!)
         with ui.row().classes("q-mt-md"):
             ui.button("Abbrechen", on_click=dialog.close)
@@ -84,6 +96,7 @@ def show_report_config_dialog(trip: Trip, user_id: str = "default") -> None:
                     email_checkbox,
                     sms_checkbox,
                     alert_checkbox,
+                    elev_input,
                     dialog,
                     user_id
                 )
@@ -99,6 +112,7 @@ def make_save_handler(
     email_checkbox,
     sms_checkbox,
     alert_checkbox,
+    elev_input,
     dialog,
     user_id: str
 ):
@@ -114,6 +128,7 @@ def make_save_handler(
         email_checkbox: Email channel checkbox
         sms_checkbox: SMS channel checkbox
         alert_checkbox: Alert enabled checkbox
+        elev_input: Wind exposition min elevation input (F7c)
         dialog: Dialog to close after save
         user_id: User identifier for loading/saving
 
@@ -138,6 +153,9 @@ def make_save_handler(
         existing_trip = load_trip(trip_path)
         old_rc = existing_trip.report_config
 
+        # Wind exposition elevation (F7c): None if empty
+        min_elev = float(elev_input.value) if elev_input.value else None
+
         # Build config (preserve legacy threshold fields from existing config)
         config = TripReportConfig(
             trip_id=trip_id,
@@ -150,6 +168,7 @@ def make_save_handler(
             change_threshold_temp_c=old_rc.change_threshold_temp_c if old_rc else 5.0,
             change_threshold_wind_kmh=old_rc.change_threshold_wind_kmh if old_rc else 20.0,
             change_threshold_precip_mm=old_rc.change_threshold_precip_mm if old_rc else 10.0,
+            wind_exposition_min_elevation_m=min_elev,
             updated_at=datetime.now(timezone.utc),
         )
 

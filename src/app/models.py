@@ -570,5 +570,8 @@ class TripReportConfig:
     change_threshold_wind_kmh: float = 20.0
     change_threshold_precip_mm: float = 10.0
 
+    # Wind-Exposition (F7c)
+    wind_exposition_min_elevation_m: Optional[float] = None  # None = global default (1500m)
+
     # Metadata
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))

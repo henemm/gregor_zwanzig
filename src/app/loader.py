@@ -156,6 +156,7 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
             change_threshold_temp_c=rc_data.get("change_threshold_temp_c", 5.0),
             change_threshold_wind_kmh=rc_data.get("change_threshold_wind_kmh", 20.0),
             change_threshold_precip_mm=rc_data.get("change_threshold_precip_mm", 10.0),
+            wind_exposition_min_elevation_m=rc_data.get("wind_exposition_min_elevation_m"),
             updated_at=datetime.fromisoformat(rc_data["updated_at"]),
         )
 
@@ -569,6 +570,7 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             "change_threshold_temp_c": trip.report_config.change_threshold_temp_c,
             "change_threshold_wind_kmh": trip.report_config.change_threshold_wind_kmh,
             "change_threshold_precip_mm": trip.report_config.change_threshold_precip_mm,
+            "wind_exposition_min_elevation_m": trip.report_config.wind_exposition_min_elevation_m,
             "updated_at": trip.report_config.updated_at.isoformat(),
         }
 

@@ -1,0 +1,38 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.2, pytest-8.4.1, pluggy-1.6.0
+rootdir: /opt/gregor_zwanziger
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 6 items
+
+tests/integration/test_wind_exposition_pipeline.py .F.FFF                [100%]
+
+=================================== FAILURES ===================================
+_________ TestTripLevelElevationConfig.test_default_min_elevation_1500 _________
+tests/integration/test_wind_exposition_pipeline.py:403: in test_default_min_elevation_1500
+    assert len(exposed) > 0, "1600m segment should be exposed with default 1500m"
+E   AssertionError: 1600m segment should be exposed with default 1500m
+E   assert 0 > 0
+E    +  where 0 = len([])
+______ TestTripLevelElevationConfig.test_none_config_uses_service_default ______
+tests/integration/test_wind_exposition_pipeline.py:424: in test_none_config_uses_service_default
+    assert len(exposed) > 0, "None config should use default 1500m, 1600m should be exposed"
+E   AssertionError: None config should use default 1500m, 1600m should be exposed
+E   assert 0 > 0
+E    +  where 0 = len([])
+___________ TestTripLevelElevationConfig.test_model_has_config_field ___________
+tests/integration/test_wind_exposition_pipeline.py:430: in test_model_has_config_field
+    assert hasattr(config, 'wind_exposition_min_elevation_m'), \
+E   AssertionError: TripReportConfig must have wind_exposition_min_elevation_m field
+E   assert False
+E    +  where False = hasattr(TripReportConfig(trip_id='test', enabled=True, morning_time=datetime.time(7, 0), evening_time=datetime.time(18, 0), se...e_threshold_precip_mm=10.0, updated_at=datetime.datetime(2026, 2, 18, 21, 1, 33, 990447, tzinfo=datetime.timezone.utc)), 'wind_exposition_min_elevation_m')
+______________ TestTripLevelElevationConfig.test_loader_roundtrip ______________
+tests/integration/test_wind_exposition_pipeline.py:464: in test_loader_roundtrip
+    loaded = TripReportConfig(
+E   TypeError: TripReportConfig.__init__() got an unexpected keyword argument 'wind_exposition_min_elevation_m'
+=========================== short test summary info ============================
+FAILED tests/integration/test_wind_exposition_pipeline.py::TestTripLevelElevationConfig::test_default_min_elevation_1500
+FAILED tests/integration/test_wind_exposition_pipeline.py::TestTripLevelElevationConfig::test_none_config_uses_service_default
+FAILED tests/integration/test_wind_exposition_pipeline.py::TestTripLevelElevationConfig::test_model_has_config_field
+FAILED tests/integration/test_wind_exposition_pipeline.py::TestTripLevelElevationConfig::test_loader_roundtrip
+========================= 4 failed, 2 passed in 0.17s ==========================

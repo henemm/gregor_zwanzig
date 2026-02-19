@@ -359,3 +359,121 @@ class TestExpositionExceptionHandling:
         assert len(report.email_html) > 0
         # No WIND_EXPOSITION risk
         assert "Exposed Ridge" not in report.email_html
+
+
+# ===========================================================================
+# Test 10-15: F7c Trip-Level min_elevation_m Config
+# SPEC: docs/specs/modules/wind_exposition_config.md v1.0
+# ===========================================================================
+
+class TestTripLevelElevationConfig:
+    """Trip-level wind_exposition_min_elevation_m config."""
+
+    def test_custom_min_elevation_used(self):
+        """Segment at 1600m, min_elevation_m=1500 → exposed section detected."""
+        from services.wind_exposition import WindExpositionService
+
+        seg_data = _make_segment(1, 0.0, 3.0, 1600.0, 1600.0, wind_max=35.0, gust_max=40.0)
+        svc = WindExpositionService()
+        exposed = svc.detect_exposed_from_segments(
+            [seg_data.segment], min_elevation_m=1500.0
+        )
+        assert len(exposed) > 0, "1600m segment should be exposed with min_elevation_m=1500"
+
+        # Now verify risk engine picks it up
+        from formatters.trip_report import TripReportFormatter
+        formatter = TripReportFormatter()
+        formatter.format_email(
+            segments=[seg_data],
+            trip_name="Test",
+            report_type="morning",
+            exposed_sections=exposed,
+        )
+        level, label = formatter._determine_risk(seg_data)
+        assert "Exposed Ridge" in label
+
+    def test_default_min_elevation_1500(self):
+        """Global default is now 1500m (not 2000m). Segment at 1600m → detected."""
+        from services.wind_exposition import WindExpositionService
+
+        seg_data = _make_segment(1, 0.0, 3.0, 1600.0, 1600.0)
+        svc = WindExpositionService()
+        # Call WITHOUT explicit min_elevation_m — should use new default 1500
+        exposed = svc.detect_exposed_from_segments([seg_data.segment])
+        assert len(exposed) > 0, "1600m segment should be exposed with default 1500m"
+
+    def test_segment_below_custom_elevation(self):
+        """Segment at 900m, Config min=1500 → no exposed section."""
+        from services.wind_exposition import WindExpositionService
+
+        seg_data = _make_segment(1, 0.0, 3.0, 900.0, 900.0)
+        svc = WindExpositionService()
+        exposed = svc.detect_exposed_from_segments(
+            [seg_data.segment], min_elevation_m=1500.0
+        )
+        assert len(exposed) == 0, "900m segment should NOT be exposed with min=1500"
+
+    def test_none_config_uses_service_default(self):
+        """wind_exposition_min_elevation_m=None → service default (1500m) applies."""
+        from services.wind_exposition import WindExpositionService
+
+        seg_data = _make_segment(1, 0.0, 3.0, 1600.0, 1600.0)
+        svc = WindExpositionService()
+        # None config → no override → default 1500m
+        exposed = svc.detect_exposed_from_segments([seg_data.segment])
+        assert len(exposed) > 0, "None config should use default 1500m, 1600m should be exposed"
+
+    def test_model_has_config_field(self):
+        """TripReportConfig has wind_exposition_min_elevation_m field."""
+        from app.models import TripReportConfig
+        config = TripReportConfig(trip_id="test")
+        assert hasattr(config, 'wind_exposition_min_elevation_m'), \
+            "TripReportConfig must have wind_exposition_min_elevation_m field"
+        assert config.wind_exposition_min_elevation_m is None, \
+            "Default should be None"
+
+    def test_loader_roundtrip(self):
+        """wind_exposition_min_elevation_m survives save→load roundtrip."""
+        import json
+        import tempfile
+        from pathlib import Path
+        from app.models import TripReportConfig
+
+        # Create a minimal trip JSON with report_config including new field
+        config = TripReportConfig(trip_id="test-roundtrip")
+        config.wind_exposition_min_elevation_m = 1800.0
+
+        # Serialize manually (mimicking loader.save_trip)
+        rc_dict = {
+            "trip_id": config.trip_id,
+            "enabled": config.enabled,
+            "morning_time": config.morning_time.isoformat(),
+            "evening_time": config.evening_time.isoformat(),
+            "send_email": config.send_email,
+            "send_sms": config.send_sms,
+            "alert_on_changes": config.alert_on_changes,
+            "change_threshold_temp_c": config.change_threshold_temp_c,
+            "change_threshold_wind_kmh": config.change_threshold_wind_kmh,
+            "change_threshold_precip_mm": config.change_threshold_precip_mm,
+            "updated_at": config.updated_at.isoformat(),
+            "wind_exposition_min_elevation_m": config.wind_exposition_min_elevation_m,
+        }
+
+        # Deserialize (mimicking loader.load_trip)
+        from datetime import time as _time, datetime as _dt
+        loaded = TripReportConfig(
+            trip_id=rc_dict["trip_id"],
+            enabled=rc_dict.get("enabled", True),
+            morning_time=_time.fromisoformat(rc_dict["morning_time"]),
+            evening_time=_time.fromisoformat(rc_dict["evening_time"]),
+            send_email=rc_dict.get("send_email", True),
+            send_sms=rc_dict.get("send_sms", False),
+            alert_on_changes=rc_dict.get("alert_on_changes", True),
+            change_threshold_temp_c=rc_dict.get("change_threshold_temp_c", 5.0),
+            change_threshold_wind_kmh=rc_dict.get("change_threshold_wind_kmh", 20.0),
+            change_threshold_precip_mm=rc_dict.get("change_threshold_precip_mm", 10.0),
+            updated_at=_dt.fromisoformat(rc_dict["updated_at"]),
+            wind_exposition_min_elevation_m=rc_dict.get("wind_exposition_min_elevation_m"),
+        )
+        assert loaded.wind_exposition_min_elevation_m == 1800.0, \
+            f"Expected 1800.0 but got {loaded.wind_exposition_min_elevation_m}"

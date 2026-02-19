@@ -1,6 +1,6 @@
 # Active Roadmap - Gregor Zwanziger
 
-**Last Updated:** 2026-02-16
+**Last Updated:** 2026-02-18
 
 This roadmap tracks all features across the project lifecycle.
 Features are added via `/feature` or `/user-story` commands.
@@ -79,7 +79,9 @@ Features are added via `/feature` or `/user-story` commands.
 | Trip-Briefing (Kompakt-Tabelle) | open | MEDIUM | Formatter | Formatter, Scheduler | Medium | F4 |
 | Biwak-/Zelt-Modus | open | MEDIUM | Config | Config, Formatter, Night-Block | Simple-Medium | F5 |
 | Trip-Umplanung per Kommando | open | MEDIUM | Services | Scheduler, Email-Reply, SMS-Reply | Medium-Large | F6 |
-| Wind-Exposition (Grat-Erkennung) | open | LOW | Risk Engine | GPX Elevation, Risk Engine | Medium | F7 |
+| Wind-Exposition (Grat-Erkennung) | done | LOW | Risk Engine | GPX Elevation, Risk Engine | Medium | F7 |
+| Wind-Exposition Pipeline-Integration | done | LOW | Risk Engine | Risk Engine, Formatter, Scheduler | Medium | F7b |
+| Wind-Exposition Config (per-Trip) | done | LOW | Config | TripReportConfig, UI | Simple | F7c |
 | Risk Engine (Daten-Layer) | open | LOW | Risk Engine | Risk Engine, Formatter | Large | F8 |
 | Satellite Messenger (Garmin inReach) | open | LOW | Channel | Channel Layer, Formatter | Simple | F9 |
 | Lawinen-Integration (SLF/EAWS) | open | LOW | Provider | Provider Layer, Risk Engine | Large | F10 |
@@ -88,18 +90,16 @@ Features are added via `/feature` or `/user-story` commands.
 
 | Feature | Completed | Category | Notes |
 |---------|-----------|----------|-------|
-| UV-Index via Air Quality API | 2026-02-16 | Provider | CAMS Air Quality API, Timestamp-Merge in fetch_forecast() |
-| Model-Metric-Fallback | 2026-02-16 | Provider | Phase A: Empirischer Probe aller Modelle. Phase B: Automatischer Fallback-Call fuer fehlende Metriken (visibility, precip_prob, freezing_level via ICON-EU). |
-| CLI Entry Point | 2026-02-16 | Core | python -m src.app.cli, --report, --channel, --debug flags |
-| Debug Architecture | 2026-02-16 | Core | Debug-Buffer mit Email-Integration |
-| Retry Logic | 2026-02-16 | Core | tenacity-basiert, Provider + SMTP |
-| Gewitter Risk Logic | 2026-02-16 | Risk Engine | CAPE-basiert, _parse_thunder_level() in OpenMeteo |
-| Starkregen Risk | 2026-02-16 | Risk Engine | Niederschlags-Intensitaet in Formatter |
-| Wind/Hitze Risk | 2026-02-16 | Risk Engine | Windboeen + Hitze-Warnung in Formatter |
-| Provider Error Handling | 2026-02-16 | Provider | Catches ProviderRequestError, renders error warnings in emails |
-| Report-Config (WebUI) | 2026-02 | WebUI | Per-Trip Morning/Evening Zeiten, Metriken-Config |
+| Wind-Exposition Config (per-Trip) | 2026-02-18 | Config | `TripReportConfig.wind_exposition_min_elevation_m`, UI input, global default 2000→1500m |
+| Wind-Exposition Pipeline-Integration | 2026-02-18 | Risk Engine | Kumulierte Distanz in Segmenten, `detect_exposed_from_segments()` call, exposed_sections an Formatter |
+| Wind-Exposition (Grat-Erkennung) | 2026-02-18 | Risk Engine | `WindExpositionService`, Rule 9 (WIND_EXPOSITION), Grat-Erkennung mit Elevation-Analyse |
 | Multi-Day Trend | 2026-02-17 | Formatter | Stage-basierter Etappen-Ausblick, Morning/Evening konfigurierbar |
 | Kompakt-Summary | 2026-02-17 | Formatter | Natural-language Wetter-Summary pro Etappe mit zeitlicher Qualifizierung (Peak/Start/Ende) |
+| Report-Config (WebUI) | 2026-02 | WebUI | Per-Trip Morning/Evening Zeiten, Metriken-Config |
+| Provider Error Handling | 2026-02-16 | Provider | Catches ProviderRequestError, renders error warnings in emails |
+| Wind/Hitze Risk | 2026-02-16 | Risk Engine | Windboeen + Hitze-Warnung in Formatter |
+| Starkregen Risk | 2026-02-16 | Risk Engine | Niederschlags-Intensitaet in Formatter |
+| Gewitter Risk Logic | 2026-02-16 | Risk Engine | CAPE-basiert, _parse_thunder_level() in OpenMeteo |
 
 ## Known Bugs
 
