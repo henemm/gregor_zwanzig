@@ -1,6 +1,6 @@
 # Active Roadmap - Gregor Zwanziger
 
-**Last Updated:** 2026-02-18
+**Last Updated:** 2026-02-19
 
 This roadmap tracks all features across the project lifecycle.
 Features are added via `/feature` or `/user-story` commands.
@@ -82,7 +82,7 @@ Features are added via `/feature` or `/user-story` commands.
 | Wind-Exposition (Grat-Erkennung) | done | LOW | Risk Engine | GPX Elevation, Risk Engine | Medium | F7 |
 | Wind-Exposition Pipeline-Integration | done | LOW | Risk Engine | Risk Engine, Formatter, Scheduler | Medium | F7b |
 | Wind-Exposition Config (per-Trip) | done | LOW | Config | TripReportConfig, UI | Simple | F7c |
-| Risk Engine (Daten-Layer) | open | LOW | Risk Engine | Risk Engine, Formatter | Large | F8 |
+| Risk Engine (Daten-Layer) | done | LOW | Risk Engine | Risk Engine, Formatter | Large | F8 |
 | Satellite Messenger (Garmin inReach) | open | LOW | Channel | Channel Layer, Formatter | Simple | F9 |
 | Lawinen-Integration (SLF/EAWS) | open | LOW | Provider | Provider Layer, Risk Engine | Large | F10 |
 
@@ -90,6 +90,7 @@ Features are added via `/feature` or `/user-story` commands.
 
 | Feature | Completed | Category | Notes |
 |---------|-----------|----------|-------|
+| Risk Engine (Daten-Layer) | 2026-02-18 | Risk Engine | Zentralisierte Risikobewertung via MetricCatalog, commit `9a7af10` |
 | Wind-Exposition Config (per-Trip) | 2026-02-18 | Config | `TripReportConfig.wind_exposition_min_elevation_m`, UI input, global default 2000→1500m |
 | Wind-Exposition Pipeline-Integration | 2026-02-18 | Risk Engine | Kumulierte Distanz in Segmenten, `detect_exposed_from_segments()` call, exposed_sections an Formatter |
 | Wind-Exposition (Grat-Erkennung) | 2026-02-18 | Risk Engine | `WindExpositionService`, Rule 9 (WIND_EXPOSITION), Grat-Erkennung mit Elevation-Analyse |
@@ -140,7 +141,7 @@ Features are added via `/feature` or `/user-story` commands.
 
 ### Risk Engine (Weather Assessment)
 - Gewitter Risk (done), Starkregen Risk (done), Wind/Hitze Risk (done), Configurable Thresholds (done)
-- Risk Engine Daten-Layer (F8), Wind-Exposition (F7), Lawinen-Integration (F10)
+- Risk Engine Daten-Layer (F8, done), Wind-Exposition (F7, done), Lawinen-Integration (F10)
 
 ### Formatter (Report Generation)
 - Report Types (done), Compact Formatter (done)
