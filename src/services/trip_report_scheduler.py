@@ -296,6 +296,31 @@ class TripReportSchedulerService:
             if report_type in trend_reports:
                 multi_day_trend = self._build_stage_trend(trip, target_date)
 
+        # 7. Usable daylight (F11) — respects report_config toggle
+        daylight_window = None
+        show_daylight = trip.report_config.show_daylight if trip.report_config else True
+        if show_daylight:
+            try:
+                from services.daylight_service import compute_usable_daylight
+                first_seg = segments[0]
+                # Route max elevation from all waypoints in stage
+                route_max_elev = stage_stats.get("max_elevation_m", first_seg.start_point.elevation_m) if stage_stats else first_seg.start_point.elevation_m
+                # Collect all forecast data points for weather corrections
+                all_forecast_data = []
+                for sw in segment_weather:
+                    if sw.timeseries and sw.timeseries.data:
+                        all_forecast_data.extend(sw.timeseries.data)
+                daylight_window = compute_usable_daylight(
+                    lat=first_seg.start_point.lat,
+                    lon=first_seg.start_point.lon,
+                    target_date=target_date,
+                    elevation_m=first_seg.start_point.elevation_m,
+                    route_max_elevation_m=float(route_max_elev),
+                    forecast_data=all_forecast_data,
+                )
+            except Exception as e:
+                logger.warning(f"Daylight computation failed for {trip.id}: {e}")
+
         # Option A: patch display_config.show_compact_summary from report_config
         if trip.display_config and trip.report_config:
             trip.display_config.show_compact_summary = trip.report_config.show_compact_summary
@@ -312,6 +337,7 @@ class TripReportSchedulerService:
             stage_name=stage_name,
             stage_stats=stage_stats,
             exposed_sections=exposed_sections,
+            daylight=daylight_window,
         )
 
         # 7. Send email

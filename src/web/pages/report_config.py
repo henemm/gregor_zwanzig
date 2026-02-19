@@ -94,6 +94,11 @@ def show_report_config_dialog(trip: Trip, user_id: str = "default") -> None:
             value=config.show_compact_summary,
         )
 
+        daylight_cb = ui.checkbox(
+            "Tageslicht-Fenster (Ohne Stirnlampe)",
+            value=config.show_daylight,
+        )
+
         ui.label("Etappen-Ausblick").classes("text-caption q-mt-sm")
         trend_reports = config.multi_day_trend_reports
         with ui.row().classes("items-center"):
@@ -118,6 +123,7 @@ def show_report_config_dialog(trip: Trip, user_id: str = "default") -> None:
                     alert_checkbox,
                     elev_input,
                     compact_summary_cb,
+                    daylight_cb,
                     trend_morning_cb,
                     trend_evening_cb,
                     dialog,
@@ -137,6 +143,7 @@ def make_save_handler(
     alert_checkbox,
     elev_input,
     compact_summary_cb,
+    daylight_cb,
     trend_morning_cb,
     trend_evening_cb,
     dialog,
@@ -156,6 +163,7 @@ def make_save_handler(
         alert_checkbox: Alert enabled checkbox
         elev_input: Wind exposition min elevation input (F7c)
         compact_summary_cb: Kompakt-Summary checkbox
+        daylight_cb: Tageslicht-Fenster checkbox (F11)
         trend_morning_cb: Morning trend report checkbox
         trend_evening_cb: Evening trend report checkbox
         dialog: Dialog to close after save
@@ -206,6 +214,7 @@ def make_save_handler(
             change_threshold_precip_mm=old_rc.change_threshold_precip_mm if old_rc else 10.0,
             wind_exposition_min_elevation_m=min_elev,
             show_compact_summary=compact_summary_cb.value,
+            show_daylight=daylight_cb.value,
             multi_day_trend_reports=trend_reports,
             updated_at=datetime.now(timezone.utc),
         )
