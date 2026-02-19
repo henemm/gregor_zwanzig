@@ -116,6 +116,29 @@ Task(subagent_type="docs-updater", model="sonnet", prompt="
 ")
 ```
 
+## Step 3b: Roadmap Update
+
+After docs are updated, launch a **Haiku agent** to mark the feature as `done` in the roadmap:
+
+```
+Task(subagent_type="general-purpose", model="haiku", prompt="
+  Update the roadmap after successful validation.
+
+  1. Read `.claude/workflow_state.json` to get the current feature_name
+  2. Open `docs/project/backlog/ACTIVE-roadmap.md`
+  3. Find the entry matching the feature name
+  4. Set its status to `done`
+  5. Set the completion date to today's date (YYYY-MM-DD)
+  6. If there is a Notes column, add a brief note (e.g. 'validated & committed')
+  7. If the feature is NOT found in the roadmap, skip silently — not all work items have roadmap entries
+
+  Rules:
+  - Only change the ONE matching row, nothing else
+  - Preserve all existing formatting
+  - If workflow_state.json is missing or has no feature_name, skip silently
+")
+```
+
 ## Step 4: Present Results
 
 Show the user:
