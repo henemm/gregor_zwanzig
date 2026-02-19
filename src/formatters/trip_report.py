@@ -662,33 +662,43 @@ class TripReportFormatter:
             f"\U0001f304 Ohne Stirnlampe: {dl.usable_start.strftime('%H:%M')} "
             f"– {dl.usable_end.strftime('%H:%M')} ({hours}h {mins:02d}m)"
         )
+        has_corrections = (
+            dl.terrain_dawn_penalty_min or dl.weather_dawn_penalty_min
+            or dl.terrain_dusk_penalty_min or dl.weather_dusk_penalty_min
+        )
         explanation_parts = []
-        # Morning explanation
-        if dl.terrain_dawn_penalty_min or dl.weather_dawn_penalty_min:
-            parts = [f"Dämmerung {dl.civil_dawn.strftime('%H:%M')}"]
-            if dl.terrain_dawn_penalty_min:
-                parts.append(f"+ {dl.terrain_dawn_penalty_min}min (Tal)")
-            if dl.weather_dawn_penalty_min:
-                parts.append(f"+ {dl.weather_dawn_penalty_min}min (Wolken)")
-            parts.append(f"= {dl.usable_start.strftime('%H:%M')}")
-            explanation_parts.append(" ".join(parts))
-        # Evening explanation
-        if dl.terrain_dusk_penalty_min or dl.weather_dusk_penalty_min:
-            parts = [f"Sonnenuntergang {dl.sunset.strftime('%H:%M')}"]
-            if dl.terrain_dusk_penalty_min:
-                parts.append(f"– {dl.terrain_dusk_penalty_min}min (Tal)")
-            if dl.weather_dusk_penalty_min:
-                parts.append(f"– {dl.weather_dusk_penalty_min}min (Wolken)")
-            parts.append(f"= {dl.usable_end.strftime('%H:%M')}")
-            explanation_parts.append(" ".join(parts))
-
-        explanation_html = ""
-        if explanation_parts:
-            lines = "<br>".join(
-                f'<span style="font-size:12px;color:#666">{p}</span>'
-                for p in explanation_parts
+        if has_corrections:
+            # Morning with corrections
+            if dl.terrain_dawn_penalty_min or dl.weather_dawn_penalty_min:
+                parts = [f"Dämmerung {dl.civil_dawn.strftime('%H:%M')}"]
+                if dl.terrain_dawn_penalty_min:
+                    parts.append(f"+ {dl.terrain_dawn_penalty_min}min (Tal)")
+                if dl.weather_dawn_penalty_min:
+                    parts.append(f"+ {dl.weather_dawn_penalty_min}min (Wolken)")
+                parts.append(f"= {dl.usable_start.strftime('%H:%M')}")
+                explanation_parts.append(" ".join(parts))
+            # Evening with corrections
+            if dl.terrain_dusk_penalty_min or dl.weather_dusk_penalty_min:
+                parts = [f"Sonnenuntergang {dl.sunset.strftime('%H:%M')}"]
+                if dl.terrain_dusk_penalty_min:
+                    parts.append(f"– {dl.terrain_dusk_penalty_min}min (Tal)")
+                if dl.weather_dusk_penalty_min:
+                    parts.append(f"– {dl.weather_dusk_penalty_min}min (Wolken)")
+                parts.append(f"= {dl.usable_end.strftime('%H:%M')}")
+                explanation_parts.append(" ".join(parts))
+        else:
+            # No corrections — show base times for transparency
+            explanation_parts.append(
+                f"Dämmerung {dl.civil_dawn.strftime('%H:%M')} · "
+                f"Sonnenaufgang {dl.sunrise.strftime('%H:%M')} · "
+                f"Sonnenuntergang {dl.sunset.strftime('%H:%M')}"
             )
-            explanation_html = f"<div style=\"margin-top:4px\">{lines}</div>"
+
+        lines = "<br>".join(
+            f'<span style="font-size:12px;color:#666">{p}</span>'
+            for p in explanation_parts
+        )
+        explanation_html = f"<div style=\"margin-top:4px\">{lines}</div>"
 
         return (
             f'<div style="background:#fffde7;border-left:4px solid #f9a825;'
@@ -707,24 +717,36 @@ class TripReportFormatter:
             f"\U0001f304 Ohne Stirnlampe: {dl.usable_start.strftime('%H:%M')} "
             f"– {dl.usable_end.strftime('%H:%M')} ({hours}h {mins:02d}m)"
         ]
-        # Morning explanation
-        if dl.terrain_dawn_penalty_min or dl.weather_dawn_penalty_min:
-            parts = [f"Dämmerung {dl.civil_dawn.strftime('%H:%M')}"]
-            if dl.terrain_dawn_penalty_min:
-                parts.append(f"+ {dl.terrain_dawn_penalty_min}min (Tal)")
-            if dl.weather_dawn_penalty_min:
-                parts.append(f"+ {dl.weather_dawn_penalty_min}min (Wolken)")
-            parts.append(f"= {dl.usable_start.strftime('%H:%M')}")
-            lines.append(f"   {' '.join(parts)}")
-        # Evening explanation
-        if dl.terrain_dusk_penalty_min or dl.weather_dusk_penalty_min:
-            parts = [f"Sonnenuntergang {dl.sunset.strftime('%H:%M')}"]
-            if dl.terrain_dusk_penalty_min:
-                parts.append(f"– {dl.terrain_dusk_penalty_min}min (Tal)")
-            if dl.weather_dusk_penalty_min:
-                parts.append(f"– {dl.weather_dusk_penalty_min}min (Wolken)")
-            parts.append(f"= {dl.usable_end.strftime('%H:%M')}")
-            lines.append(f"   {' '.join(parts)}")
+        has_corrections = (
+            dl.terrain_dawn_penalty_min or dl.weather_dawn_penalty_min
+            or dl.terrain_dusk_penalty_min or dl.weather_dusk_penalty_min
+        )
+        if has_corrections:
+            # Morning with corrections
+            if dl.terrain_dawn_penalty_min or dl.weather_dawn_penalty_min:
+                parts = [f"Dämmerung {dl.civil_dawn.strftime('%H:%M')}"]
+                if dl.terrain_dawn_penalty_min:
+                    parts.append(f"+ {dl.terrain_dawn_penalty_min}min (Tal)")
+                if dl.weather_dawn_penalty_min:
+                    parts.append(f"+ {dl.weather_dawn_penalty_min}min (Wolken)")
+                parts.append(f"= {dl.usable_start.strftime('%H:%M')}")
+                lines.append(f"   {' '.join(parts)}")
+            # Evening with corrections
+            if dl.terrain_dusk_penalty_min or dl.weather_dusk_penalty_min:
+                parts = [f"Sonnenuntergang {dl.sunset.strftime('%H:%M')}"]
+                if dl.terrain_dusk_penalty_min:
+                    parts.append(f"– {dl.terrain_dusk_penalty_min}min (Tal)")
+                if dl.weather_dusk_penalty_min:
+                    parts.append(f"– {dl.weather_dusk_penalty_min}min (Wolken)")
+                parts.append(f"= {dl.usable_end.strftime('%H:%M')}")
+                lines.append(f"   {' '.join(parts)}")
+        else:
+            # No corrections — show base times for transparency
+            lines.append(
+                f"   Dämmerung {dl.civil_dawn.strftime('%H:%M')} · "
+                f"Sonnenaufgang {dl.sunrise.strftime('%H:%M')} · "
+                f"Sonnenuntergang {dl.sunset.strftime('%H:%M')}"
+            )
         return "\n".join(lines)
 
     def _render_html(
