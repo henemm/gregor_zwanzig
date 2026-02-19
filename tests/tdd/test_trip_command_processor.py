@@ -169,6 +169,27 @@ class TestCommandParsing:
         assert key is None
         assert val is None
 
+    # --- v2.1 BUGFIX: Doppelpunkt optional (Leerzeichen als Trenner) ---
+
+    def test_parse_startdatum_space_separator(self):
+        """Bug B: ### startdatum 2026-02-18 (Leerzeichen statt Doppelpunkt) muss matchen."""
+        key, val = self.p._parse_command('### startdatum 2026-02-18')
+        assert key == 'startdatum'
+        assert val == '2026-02-18'
+
+    def test_parse_ruhetag_space_separator(self):
+        """Bug B: ### ruhetag 3 (Leerzeichen statt Doppelpunkt) muss matchen."""
+        key, val = self.p._parse_command('### ruhetag 3')
+        assert key == 'ruhetag'
+        assert val == '3'
+
+    def test_parse_report_space_separator(self):
+        """Bug B: ### report morning (Leerzeichen statt Doppelpunkt) muss matchen."""
+        key, val = self.p._parse_command('### report morning')
+        assert key == 'report'
+        assert val == 'morning'
+
+
 
 # ---------------------------------------------------------------------------
 # 2. Ruhetag Command
@@ -315,3 +336,4 @@ class TestErrors:
         result = p.process(msg)
         assert result.success is False
         assert "###" in result.confirmation_body
+
