@@ -2,9 +2,9 @@
 entity_id: trip_command_processor
 type: module
 created: 2026-02-17
-updated: 2026-02-17
+updated: 2026-02-19
 status: draft
-version: "2.0"
+version: "2.1"
 tags: [f6, trip, command, rescheduling, channel-agnostic]
 ---
 
@@ -102,7 +102,7 @@ Angelehnt an das `weather_email_autobot` Projekt. Erste nicht-leere Zeile
 des Nachrichtentexts muss dem Format entsprechen:
 
 ```python
-_COMMAND_PATTERN = re.compile(r"^###\s+(\S+?)(?::\s*(.*))?$")
+_COMMAND_PATTERN = re.compile(r"^###\s+(\S+?)(?:[:\s]\s*(.+))?$")
 
 def _parse_command(body: str) -> tuple[str | None, str | None]:
     """
@@ -118,6 +118,18 @@ def _parse_command(body: str) -> tuple[str | None, str | None]:
         return None, None
     return match.group(1).lower(), (match.group(2) or "").strip() or None
 ```
+
+**Doppelpunkt ist optional.** Alle folgenden Formen sind gueltig:
+
+```
+### ruhetag                    (kein Wert)
+### ruhetag: 2                 (Doppelpunkt + Wert)
+### startdatum: 2026-03-01     (Doppelpunkt als Trenner)
+### startdatum 2026-03-01      (Leerzeichen als Trenner)
+```
+
+Der Separator `[:\s]` akzeptiert Doppelpunkt ODER Leerzeichen. Value-Gruppe
+`(.+)` erfordert mindestens ein Zeichen (kein leerer Value bei Leerzeichen-Trenner).
 
 ### 3. Command-Whitelist
 
@@ -423,5 +435,6 @@ Kein Fehler darf den APScheduler-Thread zum Absturz bringen.
 
 ## Changelog
 
+- 2026-02-19: v2.1 BUGFIX: Doppelpunkt-Separator optional (`[:\s]` statt nur `:`). Regex akzeptiert jetzt `### startdatum 2026-03-01` (Leerzeichen) zusaetzlich zu `### startdatum: 2026-03-01` (Doppelpunkt)
 - 2026-02-17: v2.0 Generisches ### key: value Framework, channel-agnostisch, 4 Befehle
 - 2026-02-17: v1.0 Initial spec (nur RUHETAG, Email-only)

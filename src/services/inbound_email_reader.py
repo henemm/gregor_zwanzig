@@ -5,7 +5,7 @@ Polls IMAP inbox for unread emails, extracts trip context from Subject,
 delegates to TripCommandProcessor, and sends confirmation reply on
 the same channel (email).
 
-SPEC: docs/specs/modules/inbound_command_channels.md v1.0
+SPEC: docs/specs/modules/inbound_command_channels.md v1.1
 """
 from __future__ import annotations
 
@@ -95,22 +95,48 @@ class InboundEmailReader:
             imap.store(uid, "+FLAGS", "\\Seen")
             return 0
 
-        # 2. Extract trip name from Subject
+        # 2. Extract trip name from Subject — error reply if missing
         subject = msg.get("Subject", "")
         trip_name = self._extract_trip_name(subject)
         if not trip_name:
+            result = CommandResult(
+                success=False, command="parse_error",
+                confirmation_subject="Befehl nicht erkannt",
+                confirmation_body=(
+                    "Kein Trip-Name im Betreff gefunden.\n"
+                    "Betreff muss [Trip Name] enthalten, z.B.:\n"
+                    "  Re: [GR221 Mallorca] Morning Report\n\n"
+                    "Befehlsformat im Text:\n"
+                    "  ### ruhetag\n"
+                    "  ### startdatum 2026-03-01"
+                ),
+            )
+            if settings.can_send_email():
+                self._send_email_reply(result, settings)
             imap.store(uid, "+FLAGS", "\\Seen")
             return 0
 
+        # 3. Find trip — error reply if not found
         trip_id = self._find_trip_id(trip_name)
         if not trip_id:
+            result = CommandResult(
+                success=False, command="trip_not_found",
+                confirmation_subject=f"[{trip_name}] Trip nicht gefunden",
+                confirmation_body=(
+                    f"Kein Trip mit Name '{trip_name}' gefunden.\n"
+                    "Bitte pruefen ob der Trip-Name korrekt ist."
+                ),
+                trip_name=trip_name,
+            )
+            if settings.can_send_email():
+                self._send_email_reply(result, settings)
             imap.store(uid, "+FLAGS", "\\Seen")
             return 0
 
-        # 3. Extract body
+        # 4. Extract body
         body = self._extract_plain_body(msg)
 
-        # 4. Delegate to processor
+        # 5. Delegate to processor
         inbound = InboundMessage(
             trip_name=trip_name,
             body=body,
@@ -121,11 +147,11 @@ class InboundEmailReader:
         processor = TripCommandProcessor()
         result = processor.process(inbound)
 
-        # 5. Reply on same channel (email)
-        if result and settings.can_send_email():
+        # 6. Reply on same channel — ALWAYS send (success and error)
+        if settings.can_send_email():
             self._send_email_reply(result, settings)
 
-        # 6. Mark as read
+        # 7. Mark as read
         imap.store(uid, "+FLAGS", "\\Seen")
         return 1
 

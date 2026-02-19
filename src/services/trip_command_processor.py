@@ -5,7 +5,7 @@ Processes remote trip commands via `### key: value` syntax from any inbound
 channel (Email, SMS). Returns CommandResult with confirmation text for the
 caller to send back on the same channel.
 
-SPEC: docs/specs/modules/trip_command_processor.md v2.0
+SPEC: docs/specs/modules/trip_command_processor.md v2.1
 """
 from __future__ import annotations
 
@@ -60,7 +60,7 @@ class CommandResult:
 # Command Parsing
 # ---------------------------------------------------------------------------
 
-_COMMAND_PATTERN = re.compile(r"^###\s+(\S+?)(?::\s*(.*))?$")
+_COMMAND_PATTERN = re.compile(r"^###\s+(\S+?)(?:[:\s]\s*(.+))?$")
 
 _VALID_COMMANDS = {"ruhetag", "report", "startdatum", "abbruch"}
 

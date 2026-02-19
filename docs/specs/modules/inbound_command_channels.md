@@ -2,9 +2,9 @@
 entity_id: inbound_command_channels
 type: module
 created: 2026-02-17
-updated: 2026-02-17
+updated: 2026-02-19
 status: draft
-version: "1.0"
+version: "1.1"
 tags: [f6, inbound, email, sms, imap, polling, channel]
 ---
 
@@ -151,28 +151,54 @@ def _process_single(
     _, msg_data = imap.fetch(uid, "(RFC822)")
     msg = email.message_from_bytes(msg_data[0][1])
 
-    # 1. Sender pruefen
+    # 1. Sender pruefen (stumm bei Fehler — Sicherheit)
     from_addr = self._parse_sender(msg.get("From", ""))
     if not self._authorize(from_addr, settings):
         imap.store(uid, "+FLAGS", "\\Seen")
         return 0
 
-    # 2. Trip aus Subject extrahieren
+    # 2. Trip aus Subject extrahieren — Fehler-Email bei fehlendem [Trip Name]
     subject = msg.get("Subject", "")
     trip_name = self._extract_trip_name(subject)
     if not trip_name:
+        result = CommandResult(
+            success=False, command="parse_error",
+            confirmation_subject="Befehl nicht erkannt",
+            confirmation_body=(
+                "Kein Trip-Name im Betreff gefunden.\n"
+                "Betreff muss [Trip Name] enthalten, z.B.:\n"
+                "  Re: [GR221 Mallorca] Morning Report\n\n"
+                "Befehlsformat im Text:\n"
+                "  ### ruhetag\n"
+                "  ### startdatum 2026-03-01"
+            ),
+        )
+        if settings.can_send_email():
+            self._send_email_reply(result, settings)
         imap.store(uid, "+FLAGS", "\\Seen")
         return 0
 
+    # 3. Trip-ID nachschlagen — Fehler-Email wenn nicht gefunden
     trip_id = self._find_trip_id(trip_name)
     if not trip_id:
+        result = CommandResult(
+            success=False, command="trip_not_found",
+            confirmation_subject=f"[{trip_name}] Trip nicht gefunden",
+            confirmation_body=(
+                f"Kein Trip mit Name '{trip_name}' gefunden.\n"
+                "Bitte pruefen ob der Trip-Name korrekt ist."
+            ),
+            trip_name=trip_name,
+        )
+        if settings.can_send_email():
+            self._send_email_reply(result, settings)
         imap.store(uid, "+FLAGS", "\\Seen")
         return 0
 
-    # 3. Body extrahieren
+    # 4. Body extrahieren
     body = self._extract_plain_body(msg)
 
-    # 4. An Processor delegieren
+    # 5. An Processor delegieren
     inbound = InboundMessage(
         trip_name=trip_name,
         body=body,
@@ -183,11 +209,11 @@ def _process_single(
     processor = TripCommandProcessor()
     result = processor.process(inbound)
 
-    # 5. Bestaetigung auf gleichem Kanal (Email)
-    if result and settings.can_send_email():
+    # 6. Bestaetigung auf gleichem Kanal (Email) — IMMER senden (auch bei Fehler)
+    if settings.can_send_email():
         self._send_email_reply(result, settings)
 
-    # 6. Als gelesen markieren
+    # 7. Als gelesen markieren
     imap.store(uid, "+FLAGS", "\\Seen")
     return 1
 ```
@@ -367,15 +393,33 @@ Wenn `GZ_INBOUND_ADDRESS` gesetzt (z.B. `henning.emmrich+gregor-zwanzig@gmail.co
   - Bestaetigungs-Email via SMTP
   - Alle Trip-Modifikationen durch TripCommandProcessor
 
-### Filterlogik (Email wird ignoriert wenn):
+### Filterlogik
 
 | Bedingung | Verhalten |
 |-----------|-----------|
-| Absender != mail_to | SEEN markieren, debug-log |
-| Kein `[Trip Name]` im Betreff | SEEN markieren, weiter |
-| Trip-Name nicht gefunden | SEEN markieren, warning-log |
+| Absender != mail_to | SEEN markieren, debug-log, **kein Reply** (Sicherheit: kein Adress-Leak) |
+| Kein `[Trip Name]` im Betreff | **Fehler-Email senden**, SEEN markieren |
+| Trip-Name nicht gefunden | **Fehler-Email senden**, SEEN markieren |
 | IMAP-Verbindungsfehler | Poll-Zyklus abbrechen, error-log |
 | Fehler bei einzelner Email | Diese Email ueberspringen, error-log |
+
+### Fehler-Antworten (Gate-Fehler) — NEU in v1.1
+
+Wenn ein autorisierter Absender eine Email schickt die nicht verarbeitet werden kann,
+bekommt er eine hilfreiche Fehler-Email zurueck (statt stiller Verwerfung).
+
+| Gate-Fehler | confirmation_subject | confirmation_body (Auszug) |
+|-------------|---------------------|---------------------------|
+| Kein `[Trip Name]` im Betreff | `Befehl nicht erkannt` | Kein Trip-Name im Betreff gefunden. Betreff muss [Trip Name] enthalten. |
+| Trip nicht gefunden | `[Name] Trip nicht gefunden` | Kein Trip mit Name 'X' gefunden. |
+
+**Ausnahme:** Autorisierungsfehler (unbekannter Absender) bleiben stumm — Sicherheit
+hat Vorrang (kein Leak dass die Adresse existiert/aktiv ist).
+
+**Bestaetigungen bei Processor-Fehlern:** Auch wenn `TripCommandProcessor.process()`
+ein `CommandResult(success=False)` zurueckgibt (z.B. "Unbekannter Befehl", "Ungueltiges Datum"),
+wird die Fehler-Antwort an den User gesendet. Der User erhaelt IMMER eine Rueckmeldung
+wenn er autorisiert ist.
 
 ### Bestaetigungs-Beispiel (Email-Kanal):
 
@@ -428,6 +472,7 @@ def test_imap_failure_does_not_crash_scheduler()
 - SMS-Channel noch nicht implementiert (benoetigt F1)
 - Kein Retry bei IMAP-Fehler (naechster Poll-Zyklus versucht erneut)
 - App-Passwort erforderlich bei Gmail mit 2FA
+- Bestaetigungen gehen immer an `GZ_MAIL_TO`, nicht an den konkreten Absender-Header. Bei Single-User-Setup (GZ_MAIL_TO == Absender) kein Problem.
 
 ## Error Handling
 
@@ -443,4 +488,5 @@ Kein Fehler darf den APScheduler-Thread zum Absturz bringen.
 
 ## Changelog
 
+- 2026-02-19: v1.1 BUGFIX: Fehler-Antworten statt stiller Verwerfung bei fehlendem [Trip Name] und unbekanntem Trip. Filterlogik-Tabelle aktualisiert. Bestaetigungen auch bei Processor-Fehlern (success=False) senden.
 - 2026-02-17: v1.0 Initial spec — Email-Channel mit Reply-Bestaetigung, SMS vorbereitet
