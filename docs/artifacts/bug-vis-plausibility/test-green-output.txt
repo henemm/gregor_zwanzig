@@ -1,0 +1,13 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.2, pytest-8.4.1, pluggy-1.6.0
+rootdir: /opt/gregor_zwanziger
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 45 items
+
+tests/integration/test_snapshot_plausibility.py ...................      [ 42%]
+tests/unit/test_metric_availability_probe.py .........                   [ 62%]
+tests/unit/test_model_metric_fallback.py .........                       [ 82%]
+tests/unit/test_uv_air_quality.py ........                               [100%]
+
+============================== 45 passed in 3.26s ==============================

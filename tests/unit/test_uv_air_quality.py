@@ -125,9 +125,13 @@ class TestFetchForecastUvIntegration:
             if dp.uv_index is not None:
                 assert 0.0 <= dp.uv_index <= 15.0, f"UV {dp.uv_index} out of range at {dp.ts}"
 
-    def test_weather_05b_fallback_still_works_with_uv(self) -> None:
+    def test_weather_05b_fallback_still_works_with_uv(self, tmp_path, monkeypatch) -> None:
         """WEATHER-05b fallback (visibility etc.) must still work alongside UV fetch."""
-        from providers.openmeteo import OpenMeteoProvider, AVAILABILITY_CACHE_PATH
+        import providers.openmeteo as om
+        fake_cache = tmp_path / "model_availability.json"
+        monkeypatch.setattr(om, "AVAILABILITY_CACHE_PATH", fake_cache)
+
+        from providers.openmeteo import OpenMeteoProvider
         from app.config import Location
 
         cache = {
@@ -143,8 +147,7 @@ class TestFetchForecastUvIntegration:
                 },
             },
         }
-        AVAILABILITY_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
-        AVAILABILITY_CACHE_PATH.write_text(json.dumps(cache))
+        fake_cache.write_text(json.dumps(cache))
 
         provider = OpenMeteoProvider()
         location = Location(latitude=39.77, longitude=2.71, name="Mallorca")
