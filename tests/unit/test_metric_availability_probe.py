@@ -73,15 +73,18 @@ class TestProbeModelAvailability:
 class TestCacheWrite:
     """Cache must be written after successful probe."""
 
-    def test_cache_file_written_after_probe(self, tmp_path: Path) -> None:
+    def test_cache_file_written_after_probe(self, tmp_path: Path, monkeypatch) -> None:
         """Probe must write cache file."""
-        from providers.openmeteo import OpenMeteoProvider, AVAILABILITY_CACHE_PATH
+        import providers.openmeteo as om
+        fake_cache = tmp_path / "model_availability.json"
+        monkeypatch.setattr(om, "AVAILABILITY_CACHE_PATH", fake_cache)
+
+        from providers.openmeteo import OpenMeteoProvider
 
         provider = OpenMeteoProvider()
-        # Probe writes to AVAILABILITY_CACHE_PATH
         provider.probe_model_availability()
 
-        assert AVAILABILITY_CACHE_PATH.exists(), "Cache file not written after probe"
+        assert fake_cache.exists(), "Cache file not written after probe"
 
 
 # ---------------------------------------------------------------------------
@@ -91,17 +94,20 @@ class TestCacheWrite:
 class TestCacheLoad:
     """Cache loading with TTL logic."""
 
-    def test_load_returns_dict_when_valid(self, tmp_path: Path) -> None:
+    def test_load_returns_dict_when_valid(self, tmp_path: Path, monkeypatch) -> None:
         """Valid cache (< 7 days old) must return dict."""
-        from providers.openmeteo import OpenMeteoProvider, AVAILABILITY_CACHE_PATH
+        import providers.openmeteo as om
+        fake_cache = tmp_path / "model_availability.json"
+        monkeypatch.setattr(om, "AVAILABILITY_CACHE_PATH", fake_cache)
+
+        from providers.openmeteo import OpenMeteoProvider
 
         # Write a fresh cache manually
         cache_data = {
             "probe_date": date.today().isoformat(),
             "models": {"test_model": {"available": ["temperature_2m"], "unavailable": []}}
         }
-        AVAILABILITY_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
-        AVAILABILITY_CACHE_PATH.write_text(json.dumps(cache_data))
+        fake_cache.write_text(json.dumps(cache_data))
 
         provider = OpenMeteoProvider()
         result = provider._load_availability_cache()
@@ -109,9 +115,13 @@ class TestCacheLoad:
         assert result is not None
         assert result["probe_date"] == date.today().isoformat()
 
-    def test_load_returns_none_when_expired(self, tmp_path: Path) -> None:
+    def test_load_returns_none_when_expired(self, tmp_path: Path, monkeypatch) -> None:
         """Expired cache (>= 7 days old) must return None."""
-        from providers.openmeteo import OpenMeteoProvider, AVAILABILITY_CACHE_PATH
+        import providers.openmeteo as om
+        fake_cache = tmp_path / "model_availability.json"
+        monkeypatch.setattr(om, "AVAILABILITY_CACHE_PATH", fake_cache)
+
+        from providers.openmeteo import OpenMeteoProvider
 
         # Write an expired cache
         old_date = (date.today() - timedelta(days=8)).isoformat()
@@ -119,8 +129,7 @@ class TestCacheLoad:
             "probe_date": old_date,
             "models": {"test_model": {"available": ["temperature_2m"], "unavailable": []}}
         }
-        AVAILABILITY_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
-        AVAILABILITY_CACHE_PATH.write_text(json.dumps(cache_data))
+        fake_cache.write_text(json.dumps(cache_data))
 
         provider = OpenMeteoProvider()
         result = provider._load_availability_cache()

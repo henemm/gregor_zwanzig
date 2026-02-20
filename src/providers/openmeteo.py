@@ -638,6 +638,12 @@ class OpenMeteoProvider:
 
         # WEATHER-05b: Check for missing metrics and fetch fallback
         cache = self._load_availability_cache()
+        if cache is None:
+            try:
+                logger.info("Availability cache missing/expired — auto-probing...")
+                cache = self.probe_model_availability()
+            except Exception as e:
+                logger.warning("Auto-probe failed: %s", e)
         if cache is not None:
             primary_info = cache["models"].get(model_id)
             if primary_info:

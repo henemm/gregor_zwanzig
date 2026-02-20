@@ -1,0 +1,14 @@
+=== SNAPSHOT PLAUSIBILITY - TDD RED EVIDENCE ===
+visibility_min_m: None
+fallback_model: None
+temp_min_c: 11.9
+wind_max_kmh: 12.2
+gust_max_kmh: 24.3
+
+=== ASSERTIONS (must ALL FAIL for RED) ===
+FAIL: visibility_min_m is None — WEATHER-05b fallback broken
+FAIL: fallback_model is None — no fallback activated
+
+Total failures: 2
+Cache file exists: False
+TDD RED: CONFIRMED — tests would fail as expected

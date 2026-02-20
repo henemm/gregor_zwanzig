@@ -96,9 +96,13 @@ class TestForecastMetaFallbackFields:
 class TestFindFallbackModel:
     """_find_fallback_model must select the right fallback."""
 
-    def test_finds_fallback_for_arome_coords(self) -> None:
+    def test_finds_fallback_for_arome_coords(self, tmp_path, monkeypatch) -> None:
         """AROME at Mallorca should fall back to ICON-EU or ECMWF."""
-        from providers.openmeteo import OpenMeteoProvider, AVAILABILITY_CACHE_PATH
+        import providers.openmeteo as om
+        fake_cache = tmp_path / "model_availability.json"
+        monkeypatch.setattr(om, "AVAILABILITY_CACHE_PATH", fake_cache)
+
+        from providers.openmeteo import OpenMeteoProvider
 
         # Write a fake cache with AROME missing cape, icon_eu having it
         cache = {
@@ -109,8 +113,7 @@ class TestFindFallbackModel:
                 "ecmwf_ifs04": {"available": ["temperature_2m", "cape"], "unavailable": ["visibility"]},
             }
         }
-        AVAILABILITY_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
-        AVAILABILITY_CACHE_PATH.write_text(json.dumps(cache))
+        fake_cache.write_text(json.dumps(cache))
 
         provider = OpenMeteoProvider()
         result = provider._find_fallback_model("meteofrance_arome", 39.7, 2.6, ["cape", "visibility"])
@@ -120,13 +123,13 @@ class TestFindFallbackModel:
         # Should pick icon_eu (has both cape AND visibility, lower priority than ecmwf)
         assert fb_model_id == "icon_eu"
 
-    def test_returns_none_without_cache(self) -> None:
+    def test_returns_none_without_cache(self, tmp_path, monkeypatch) -> None:
         """No cache → no fallback."""
-        from providers.openmeteo import OpenMeteoProvider, AVAILABILITY_CACHE_PATH
+        import providers.openmeteo as om
+        # Point to non-existent file — no .unlink() on real path!
+        monkeypatch.setattr(om, "AVAILABILITY_CACHE_PATH", tmp_path / "model_availability.json")
 
-        # Remove cache if exists
-        if AVAILABILITY_CACHE_PATH.exists():
-            AVAILABILITY_CACHE_PATH.unlink()
+        from providers.openmeteo import OpenMeteoProvider
 
         provider = OpenMeteoProvider()
         result = provider._find_fallback_model("meteofrance_arome", 39.7, 2.6, ["cape"])
