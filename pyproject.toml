@@ -12,6 +12,7 @@ dependencies = [
     "tenacity>=8.2.0",
     "gpxpy>=1.6.2",
     "astral>=3.2",
+    "timezonefinder>=8.2.0",
 ]
 
 [tool.uv]

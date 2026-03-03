@@ -248,6 +248,10 @@ class TripReportSchedulerService:
 
         logger.debug(f"Created {len(segments)} segments for {trip.id}")
 
+        # 1b. Compute local timezone from coordinates for display
+        from utils.timezone import tz_for_coords
+        trip_tz = tz_for_coords(segments[0].start_point.lat, segments[0].start_point.lon)
+
         # 2. Wind exposition detection (before weather fetch, needs TripSegments)
         from services.wind_exposition import WindExpositionService
         try:
@@ -280,7 +284,7 @@ class TripReportSchedulerService:
 
         # 5. Thunder forecast (+1/+2 days)
         thunder_forecast = self._build_thunder_forecast(
-            segment_weather[-1], target_date,
+            segment_weather[-1], target_date, tz=trip_tz,
         )
 
         # 6. Multi-day trend (configurable per report type — read from report_config with fallback)
@@ -294,7 +298,7 @@ class TripReportSchedulerService:
                 else (dc.multi_day_trend_reports if dc else ["evening"])
             )
             if report_type in trend_reports:
-                multi_day_trend = self._build_stage_trend(trip, target_date)
+                multi_day_trend = self._build_stage_trend(trip, target_date, tz=trip_tz)
 
         # 7. Usable daylight (F11) — respects report_config toggle
         daylight_window = None
@@ -338,6 +342,7 @@ class TripReportSchedulerService:
             stage_stats=stage_stats,
             exposed_sections=exposed_sections,
             daylight=daylight_window,
+            tz=trip_tz,
         )
 
         # 7. Send email
@@ -640,6 +645,7 @@ class TripReportSchedulerService:
         self,
         trip,
         target_date: date,
+        tz=None,
     ) -> Optional[list[dict]]:
         """
         Build trend rows for each future stage using CompactSummaryFormatter.
@@ -670,7 +676,7 @@ class TripReportSchedulerService:
                 if not seg_weather:
                     continue
 
-                summary = formatter.format_stage_summary(seg_weather, stage.name, dc)
+                summary = formatter.format_stage_summary(seg_weather, stage.name, dc, tz=tz)
 
                 trend.append({
                     "weekday": WEEKDAYS_DE[stage.date.weekday()],
@@ -688,6 +694,7 @@ class TripReportSchedulerService:
         self,
         last_segment: SegmentWeatherData,
         target_date: date,
+        tz=None,
     ) -> Optional[dict]:
         """
         Build thunder forecast for +1 and +2 days from timeseries data.
@@ -735,13 +742,13 @@ class TripReportSchedulerService:
                 forecast[key] = {
                     "date": fc_date.strftime("%d.%m.%Y"),
                     "level": ThunderLevel.MED,
-                    "text": f"Gewitter möglich ab {max_level.ts.strftime('%H:%M')}",
+                    "text": f"Gewitter möglich ab {max_level.ts.astimezone(tz).strftime('%H:%M') if tz else max_level.ts.strftime('%H:%M')}",
                 }
             else:
                 forecast[key] = {
                     "date": fc_date.strftime("%d.%m.%Y"),
                     "level": ThunderLevel.HIGH,
-                    "text": f"Starkes Gewitter erwartet ab {max_level.ts.strftime('%H:%M')}",
+                    "text": f"Starkes Gewitter erwartet ab {max_level.ts.astimezone(tz).strftime('%H:%M') if tz else max_level.ts.strftime('%H:%M')}",
                 }
 
         return forecast if forecast else None
