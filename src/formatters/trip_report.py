@@ -10,6 +10,9 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Optional
+from zoneinfo import ZoneInfo
+
+from utils.timezone import local_fmt, local_hour
 
 from app.metric_catalog import build_default_display_config, get_col_defs, get_label_for_field, get_metric, get_metric_by_col_key
 from app.models import (
@@ -31,6 +34,8 @@ from services.risk_engine import RiskEngine
 class TripReportFormatter:
     """Formatter for trip weather reports (HTML + plain-text email)."""
 
+    _tz: ZoneInfo = ZoneInfo("UTC")
+
     def format_email(
         self,
         segments: list[SegmentWeatherData],
@@ -45,12 +50,14 @@ class TripReportFormatter:
         stage_stats: Optional[dict] = None,
         exposed_sections: Optional[list[ExposedSection]] = None,
         daylight: Optional[DaylightWindow] = None,
+        tz: Optional[ZoneInfo] = None,
     ) -> TripReport:
         """Format trip segments into HTML + plain-text email."""
         if not segments:
             raise ValueError("Cannot format email with no segments")
 
         dc = display_config or build_default_display_config()
+        self._tz = tz or ZoneInfo("UTC")
         self._exposed_sections = exposed_sections
         self._friendly_keys = self._build_friendly_keys(dc)
         trip_id = trip_name.lower().replace(" ", "-")
@@ -142,14 +149,15 @@ class TripReportFormatter:
         if not night_weather.data:
             return []
 
-        first_date = night_weather.data[0].ts.date()
+        first_date = night_weather.data[0].ts.astimezone(self._tz).date()
 
         # Step 1: Filter to night range
         night_dps: list[ForecastDataPoint] = []
         for dp in night_weather.data:
-            h = dp.ts.hour
-            is_same_day = dp.ts.date() == first_date
-            is_next_day = dp.ts.date() > first_date
+            local_dt = dp.ts.astimezone(self._tz)
+            h = local_dt.hour
+            is_same_day = local_dt.date() == first_date
+            is_next_day = local_dt.date() > first_date
             in_range = (is_same_day and h >= arrival_hour) or (is_next_day and h <= 6)
             if in_range:
                 night_dps.append(dp)
@@ -160,8 +168,9 @@ class TripReportFormatter:
         # Step 2: Group into 2h blocks
         blocks: dict[tuple, list[ForecastDataPoint]] = {}
         for dp in night_dps:
-            block_start = dp.ts.hour - (dp.ts.hour % interval)
-            block_key = (dp.ts.date(), block_start)
+            local_dt = dp.ts.astimezone(self._tz)
+            block_start = local_dt.hour - (local_dt.hour % interval)
+            block_key = (local_dt.date(), block_start)
             blocks.setdefault(block_key, []).append(dp)
 
         # Step 3: Aggregate each block
@@ -180,7 +189,8 @@ class TripReportFormatter:
         interval: int = 2,
     ) -> dict:
         """Aggregate data points in a 2h night block into a single row."""
-        block_hour = dps[0].ts.hour - (dps[0].ts.hour % interval)
+        h = local_hour(dps[0].ts, self._tz)
+        block_hour = h - (h % interval)
         row: dict = {"time": f"{block_hour:02d}"}
         merge_wind_dir = self._should_merge_wind_dir(dc)
 
@@ -259,7 +269,7 @@ class TripReportFormatter:
         and wind is also enabled, the compass direction is appended to the
         wind value (e.g. "20 NW") instead of creating a separate column.
         """
-        row: dict = {"time": f"{dp.ts.hour:02d}"}
+        row: dict = {"time": f"{local_hour(dp.ts, self._tz):02d}"}
         merge_wind_dir = self._should_merge_wind_dir(dc)
         for mc in dc.metrics:
             if not mc.enabled:
@@ -343,7 +353,7 @@ class TripReportFormatter:
                 if sh <= dp.ts.hour <= eh and dp.thunder_level and dp.thunder_level != ThunderLevel.NONE:
                     elev = int(seg_data.segment.start_point.elevation_m)
                     highlights.append(
-                        f"⚡ Gewitter möglich ab {dp.ts.strftime('%H:%M')} "
+                        f"⚡ Gewitter möglich ab {local_fmt(dp.ts, self._tz)} "
                         f"({'am Ziel' if seg_data.segment.segment_id == 'Ziel' else f'Segment {seg_data.segment.segment_id}'}, >{elev}m)"
                     )
                     break
@@ -364,7 +374,7 @@ class TripReportFormatter:
                     max_gust_ts = dp.ts
                     max_gust_in_seg = sh <= dp.ts.hour <= eh
         if max_gust_val > gust_ht and max_gust_ts:
-            time_label = max_gust_ts.strftime('%H:%M')
+            time_label = local_fmt(max_gust_ts, self._tz)
             if not max_gust_in_seg:
                 time_label += ", nachts"
             highlights.append(f"💨 Böen bis {max_gust_val:.0f} km/h ({time_label})")
@@ -401,7 +411,7 @@ class TripReportFormatter:
                     max_wind_ts = dp.ts
                     max_wind_in_seg = sh <= dp.ts.hour <= eh
         if max_wind_val > wind_ht and max_wind_ts:
-            time_label = max_wind_ts.strftime('%H:%M')
+            time_label = local_fmt(max_wind_ts, self._tz)
             if not max_wind_in_seg:
                 time_label += ", nachts"
             highlights.append(f"💨 Wind bis {max_wind_val:.0f} km/h ({time_label})")
@@ -636,8 +646,8 @@ class TripReportFormatter:
     # F2: Compact summary generation
     # ------------------------------------------------------------------
 
-    @staticmethod
     def _generate_compact_summary(
+        self,
         segments: list[SegmentWeatherData],
         stage_name: Optional[str],
         dc: UnifiedWeatherDisplayConfig,
@@ -647,20 +657,20 @@ class TripReportFormatter:
             return None
         from formatters.compact_summary import CompactSummaryFormatter
         formatter = CompactSummaryFormatter()
-        return formatter.format_stage_summary(segments, stage_name, dc)
+        return formatter.format_stage_summary(segments, stage_name, dc, tz=self._tz)
 
     # ------------------------------------------------------------------
     # HTML rendering
     # ------------------------------------------------------------------
 
-    @staticmethod
-    def _format_daylight_html(dl: DaylightWindow) -> str:
+    def _format_daylight_html(self, dl: DaylightWindow) -> str:
         """Render daylight banner as HTML."""
+        tz = self._tz
         hours = dl.duration_minutes // 60
         mins = dl.duration_minutes % 60
         headline = (
-            f"\U0001f304 Ohne Stirnlampe: {dl.usable_start.strftime('%H:%M')} "
-            f"– {dl.usable_end.strftime('%H:%M')} ({hours}h {mins:02d}m)"
+            f"\U0001f304 Ohne Stirnlampe: {local_fmt(dl.usable_start, tz)} "
+            f"– {local_fmt(dl.usable_end, tz)} ({hours}h {mins:02d}m)"
         )
         has_corrections = (
             dl.terrain_dawn_penalty_min or dl.weather_dawn_penalty_min
@@ -670,28 +680,28 @@ class TripReportFormatter:
         if has_corrections:
             # Morning with corrections
             if dl.terrain_dawn_penalty_min or dl.weather_dawn_penalty_min:
-                parts = [f"Dämmerung {dl.civil_dawn.strftime('%H:%M')}"]
+                parts = [f"Dämmerung {local_fmt(dl.civil_dawn, tz)}"]
                 if dl.terrain_dawn_penalty_min:
                     parts.append(f"+ {dl.terrain_dawn_penalty_min}min (Tal)")
                 if dl.weather_dawn_penalty_min:
                     parts.append(f"+ {dl.weather_dawn_penalty_min}min (Wolken)")
-                parts.append(f"= {dl.usable_start.strftime('%H:%M')}")
+                parts.append(f"= {local_fmt(dl.usable_start, tz)}")
                 explanation_parts.append(" ".join(parts))
             # Evening with corrections
             if dl.terrain_dusk_penalty_min or dl.weather_dusk_penalty_min:
-                parts = [f"Sonnenuntergang {dl.sunset.strftime('%H:%M')}"]
+                parts = [f"Sonnenuntergang {local_fmt(dl.sunset, tz)}"]
                 if dl.terrain_dusk_penalty_min:
                     parts.append(f"– {dl.terrain_dusk_penalty_min}min (Tal)")
                 if dl.weather_dusk_penalty_min:
                     parts.append(f"– {dl.weather_dusk_penalty_min}min (Wolken)")
-                parts.append(f"= {dl.usable_end.strftime('%H:%M')}")
+                parts.append(f"= {local_fmt(dl.usable_end, tz)}")
                 explanation_parts.append(" ".join(parts))
         else:
             # No corrections — show base times for transparency
             explanation_parts.append(
-                f"Dämmerung {dl.civil_dawn.strftime('%H:%M')} · "
-                f"Sonnenaufgang {dl.sunrise.strftime('%H:%M')} · "
-                f"Sonnenuntergang {dl.sunset.strftime('%H:%M')}"
+                f"Dämmerung {local_fmt(dl.civil_dawn, tz)} · "
+                f"Sonnenaufgang {local_fmt(dl.sunrise, tz)} · "
+                f"Sonnenuntergang {local_fmt(dl.sunset, tz)}"
             )
 
         lines = "<br>".join(
@@ -708,14 +718,14 @@ class TripReportFormatter:
             f'</div>'
         )
 
-    @staticmethod
-    def _format_daylight_plain(dl: DaylightWindow) -> str:
+    def _format_daylight_plain(self, dl: DaylightWindow) -> str:
         """Render daylight block as plain text."""
+        tz = self._tz
         hours = dl.duration_minutes // 60
         mins = dl.duration_minutes % 60
         lines = [
-            f"\U0001f304 Ohne Stirnlampe: {dl.usable_start.strftime('%H:%M')} "
-            f"– {dl.usable_end.strftime('%H:%M')} ({hours}h {mins:02d}m)"
+            f"\U0001f304 Ohne Stirnlampe: {local_fmt(dl.usable_start, tz)} "
+            f"– {local_fmt(dl.usable_end, tz)} ({hours}h {mins:02d}m)"
         ]
         has_corrections = (
             dl.terrain_dawn_penalty_min or dl.weather_dawn_penalty_min
@@ -724,28 +734,28 @@ class TripReportFormatter:
         if has_corrections:
             # Morning with corrections
             if dl.terrain_dawn_penalty_min or dl.weather_dawn_penalty_min:
-                parts = [f"Dämmerung {dl.civil_dawn.strftime('%H:%M')}"]
+                parts = [f"Dämmerung {local_fmt(dl.civil_dawn, tz)}"]
                 if dl.terrain_dawn_penalty_min:
                     parts.append(f"+ {dl.terrain_dawn_penalty_min}min (Tal)")
                 if dl.weather_dawn_penalty_min:
                     parts.append(f"+ {dl.weather_dawn_penalty_min}min (Wolken)")
-                parts.append(f"= {dl.usable_start.strftime('%H:%M')}")
+                parts.append(f"= {local_fmt(dl.usable_start, tz)}")
                 lines.append(f"   {' '.join(parts)}")
             # Evening with corrections
             if dl.terrain_dusk_penalty_min or dl.weather_dusk_penalty_min:
-                parts = [f"Sonnenuntergang {dl.sunset.strftime('%H:%M')}"]
+                parts = [f"Sonnenuntergang {local_fmt(dl.sunset, tz)}"]
                 if dl.terrain_dusk_penalty_min:
                     parts.append(f"– {dl.terrain_dusk_penalty_min}min (Tal)")
                 if dl.weather_dusk_penalty_min:
                     parts.append(f"– {dl.weather_dusk_penalty_min}min (Wolken)")
-                parts.append(f"= {dl.usable_end.strftime('%H:%M')}")
+                parts.append(f"= {local_fmt(dl.usable_end, tz)}")
                 lines.append(f"   {' '.join(parts)}")
         else:
             # No corrections — show base times for transparency
             lines.append(
-                f"   Dämmerung {dl.civil_dawn.strftime('%H:%M')} · "
-                f"Sonnenaufgang {dl.sunrise.strftime('%H:%M')} · "
-                f"Sonnenuntergang {dl.sunset.strftime('%H:%M')}"
+                f"   Dämmerung {local_fmt(dl.civil_dawn, tz)} · "
+                f"Sonnenaufgang {local_fmt(dl.sunrise, tz)} · "
+                f"Sonnenuntergang {local_fmt(dl.sunset, tz)}"
             )
         return "\n".join(lines)
 

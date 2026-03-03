@@ -10,6 +10,9 @@ from __future__ import annotations
 
 import re
 from typing import Optional
+from zoneinfo import ZoneInfo
+
+from utils.timezone import local_hour
 
 from app.models import (
     ForecastDataPoint,
@@ -31,8 +34,10 @@ class CompactSummaryFormatter:
         segments: list[SegmentWeatherData],
         stage_name: str,
         dc: UnifiedWeatherDisplayConfig,
+        tz: Optional[ZoneInfo] = None,
     ) -> str:
         """Generate 1-2 line summary for a stage."""
+        self._tz = tz or ZoneInfo("UTC")
         short_name = self._shorten_stage_name(stage_name)
         summary = self._aggregate(segments)
         hourly = self._collect_hourly_data(segments)
@@ -197,7 +202,7 @@ class CompactSummaryFormatter:
 
         for dp in hourly:
             p = dp.precip_1h_mm if dp.precip_1h_mm is not None else 0.0
-            h = dp.ts.hour
+            h = local_hour(dp.ts, self._tz)
             if p >= self._RAIN_DETECT:
                 rain_hours.append(h)
                 if p > peak_val:
@@ -209,7 +214,7 @@ class CompactSummaryFormatter:
         if not rain_hours:
             return None
 
-        all_hours = sorted(set(dp.ts.hour for dp in hourly))
+        all_hours = sorted(set(local_hour(dp.ts, self._tz) for dp in hourly))
         first_rain = min(rain_hours)
         last_rain = max(rain_hours)
         first_hour = min(all_hours)
@@ -289,8 +294,7 @@ class CompactSummaryFormatter:
 
         return f"{adj}{compass}{speed_str}{gust_part}"
 
-    @staticmethod
-    def _find_wind_peak(hourly: list[ForecastDataPoint]) -> Optional[dict]:
+    def _find_wind_peak(self, hourly: list[ForecastDataPoint]) -> Optional[dict]:
         if not hourly:
             return None
         peak_hour = None
@@ -299,7 +303,7 @@ class CompactSummaryFormatter:
             g = dp.gust_kmh if dp.gust_kmh is not None else 0.0
             if g > peak_val:
                 peak_val = g
-                peak_hour = dp.ts.hour
+                peak_hour = local_hour(dp.ts, self._tz)
         if peak_hour is not None and peak_val > 0:
             return {"hour": peak_hour, "gust_kmh": peak_val}
         return None
@@ -308,8 +312,8 @@ class CompactSummaryFormatter:
     # Thunder with time window
     # ------------------------------------------------------------------
 
-    @staticmethod
     def _format_thunder(
+        self,
         summary: Optional[SegmentWeatherSummary],
         hourly: list[ForecastDataPoint],
         friendly: bool,
@@ -320,7 +324,7 @@ class CompactSummaryFormatter:
         thunder_hours = []
         for dp in hourly:
             if dp.thunder_level and dp.thunder_level != ThunderLevel.NONE:
-                thunder_hours.append(dp.ts.hour)
+                thunder_hours.append(local_hour(dp.ts, self._tz))
 
         if not thunder_hours:
             if friendly:

@@ -1,8 +1,9 @@
 {
-  "verified_at": "2026-02-19T06:57:41.307911+00:00",
+  "verified_at": "2026-03-03T08:55:00+00:00",
   "server_restarted": true,
   "test_trip_created": true,
   "emails_checked": true,
   "test_trip_cleaned": true,
-  "feature": "Report Options Migration (display_config \u2192 report_config)"
+  "feature": "BUG-UTC-LOCALTIME: Report-Zeiten in Lokalzeit statt UTC",
+  "details": "Server restarted PID 2166422, e2e-tz-test trip created (Mallorca, today), morning report sent via TripReportSchedulerService, IMAP confirmed: Stirnlampe 07:17 CET (not 06:13 UTC), hourly table hours 08-13 CET, wind highlight 14:00 CET, segment headers 08:00 unchanged. Test trip cleaned up."
 }

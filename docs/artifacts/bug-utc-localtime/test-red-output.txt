@@ -1,0 +1,220 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.2, pytest-8.4.1, pluggy-1.6.0
+rootdir: /opt/gregor_zwanziger
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 10 items
+
+tests/tdd/test_utc_localtime.py FFFFFFFFFF                               [100%]
+
+=================================== FAILURES ===================================
+_________ TestTimezoneUtility.test_tz_for_coords_mallorca_returns_cet __________
+
+self = <tdd.test_utc_localtime.TestTimezoneUtility object at 0x7fe6365af350>
+
+    def test_tz_for_coords_mallorca_returns_cet(self):
+        """
+        GIVEN: Coordinates for Sóller, Mallorca (39.77°N, 2.72°E)
+        WHEN: tz_for_coords is called
+        THEN: Returns Europe/Madrid timezone
+        """
+>       from utils.timezone import tz_for_coords
+E       ModuleNotFoundError: No module named 'utils'
+
+tests/tdd/test_utc_localtime.py:30: ModuleNotFoundError
+________ TestTimezoneUtility.test_tz_for_coords_austria_returns_vienna _________
+
+self = <tdd.test_utc_localtime.TestTimezoneUtility object at 0x7fe636178e50>
+
+    def test_tz_for_coords_austria_returns_vienna(self):
+        """
+        GIVEN: Coordinates for Innsbruck, Austria (47.26°N, 11.39°E)
+        WHEN: tz_for_coords is called
+        THEN: Returns Europe/Vienna timezone
+        """
+>       from utils.timezone import tz_for_coords
+E       ModuleNotFoundError: No module named 'utils'
+
+tests/tdd/test_utc_localtime.py:41: ModuleNotFoundError
+____________ TestTimezoneUtility.test_tz_for_coords_fallback_to_utc ____________
+
+self = <tdd.test_utc_localtime.TestTimezoneUtility object at 0x7fe636179590>
+
+    def test_tz_for_coords_fallback_to_utc(self):
+        """
+        GIVEN: Coordinates in the middle of the ocean (0°N, 0°E)
+        WHEN: tz_for_coords is called
+        THEN: Falls back to UTC
+        """
+>       from utils.timezone import tz_for_coords
+E       ModuleNotFoundError: No module named 'utils'
+
+tests/tdd/test_utc_localtime.py:52: ModuleNotFoundError
+__________ TestTimezoneUtility.test_local_hour_converts_utc_to_local ___________
+
+self = <tdd.test_utc_localtime.TestTimezoneUtility object at 0x7fe636179b50>
+
+    def test_local_hour_converts_utc_to_local(self):
+        """
+        GIVEN: A UTC datetime at 06:00 UTC
+        WHEN: local_hour is called with CET timezone (UTC+1)
+        THEN: Returns 7 (not 6)
+        """
+>       from utils.timezone import local_hour
+E       ModuleNotFoundError: No module named 'utils'
+
+tests/tdd/test_utc_localtime.py:63: ModuleNotFoundError
+_______ TestTimezoneUtility.test_local_fmt_converts_utc_to_local_string ________
+
+self = <tdd.test_utc_localtime.TestTimezoneUtility object at 0x7fe63617a950>
+
+    def test_local_fmt_converts_utc_to_local_string(self):
+        """
+        GIVEN: A UTC datetime at 06:13 UTC
+        WHEN: local_fmt is called with CET timezone
+        THEN: Returns "07:13" (not "06:13")
+        """
+>       from utils.timezone import local_fmt
+E       ModuleNotFoundError: No module named 'utils'
+
+tests/tdd/test_utc_localtime.py:75: ModuleNotFoundError
+________________ TestTimezoneUtility.test_local_fmt_summer_time ________________
+
+self = <tdd.test_utc_localtime.TestTimezoneUtility object at 0x7fe63617ae10>
+
+    def test_local_fmt_summer_time(self):
+        """
+        GIVEN: A UTC datetime in July (CEST = UTC+2)
+        WHEN: local_fmt is called with Europe/Madrid
+        THEN: Returns time shifted by +2 hours
+        """
+>       from utils.timezone import local_fmt
+E       ModuleNotFoundError: No module named 'utils'
+
+tests/tdd/test_utc_localtime.py:87: ModuleNotFoundError
+_______ TestDaylightBannerLocalTime.test_daylight_html_shows_local_times _______
+
+self = <tdd.test_utc_localtime.TestDaylightBannerLocalTime object at 0x7fe63617b0d0>
+
+    def test_daylight_html_shows_local_times(self):
+        """
+        GIVEN: DaylightWindow with UTC times for Sóller (CET=UTC+1 in March)
+        WHEN: _format_daylight_html renders with CET timezone
+        THEN: All times are shifted +1h from UTC values
+        """
+        from services.daylight_service import DaylightWindow
+        from formatters.trip_report import TripReportFormatter
+    
+        dl = DaylightWindow(
+            civil_dawn=datetime(2026, 3, 3, 5, 51, tzinfo=timezone.utc),
+            civil_dusk=datetime(2026, 3, 3, 17, 42, tzinfo=timezone.utc),
+            sunrise=datetime(2026, 3, 3, 6, 18, tzinfo=timezone.utc),
+            sunset=datetime(2026, 3, 3, 17, 15, tzinfo=timezone.utc),
+            usable_start=datetime(2026, 3, 3, 6, 6, tzinfo=timezone.utc),
+            usable_end=datetime(2026, 3, 3, 17, 27, tzinfo=timezone.utc),
+            duration_minutes=681,
+            terrain_dawn_penalty_min=15,
+            terrain_dusk_penalty_min=15,
+        )
+    
+        formatter = TripReportFormatter()
+        formatter._tz = ZoneInfo("Europe/Madrid")
+        html = formatter._format_daylight_html(dl)
+    
+        # Must show CET times (UTC+1), NOT UTC
+>       assert "07:06" in html, f"usable_start should be 07:06 CET, got: {html}"
+E       AssertionError: usable_start should be 07:06 CET, got: <div style="background:#fffde7;border-left:4px solid #f9a825;padding:12px;margin:8px 0;"><strong style="font-size:14px">🌄 Ohne Stirnlampe: 06:06 – 17:27 (11h 21m)</strong><div style="margin-top:4px"><span style="font-size:12px;color:#666">Dämmerung 05:51 + 15min (Tal) = 06:06</span><br><span style="font-size:12px;color:#666">Sonnenuntergang 17:15 – 15min (Tal) = 17:27</span></div></div>
+E       assert '07:06' in '<div style="background:#fffde7;border-left:4px solid #f9a825;padding:12px;margin:8px 0;"><strong style="font-size:14p...06:06</span><br><span style="font-size:12px;color:#666">Sonnenuntergang 17:15 – 15min (Tal) = 17:27</span></div></div>'
+
+tests/tdd/test_utc_localtime.py:126: AssertionError
+______ TestDaylightBannerLocalTime.test_daylight_plain_shows_local_times _______
+
+self = <tdd.test_utc_localtime.TestDaylightBannerLocalTime object at 0x7fe63617b690>
+
+    def test_daylight_plain_shows_local_times(self):
+        """
+        GIVEN: DaylightWindow with UTC times
+        WHEN: _format_daylight_plain renders with CET timezone
+        THEN: Plain-text version also uses local times
+        """
+        from services.daylight_service import DaylightWindow
+        from formatters.trip_report import TripReportFormatter
+    
+        dl = DaylightWindow(
+            civil_dawn=datetime(2026, 3, 3, 5, 51, tzinfo=timezone.utc),
+            civil_dusk=datetime(2026, 3, 3, 17, 42, tzinfo=timezone.utc),
+            sunrise=datetime(2026, 3, 3, 6, 18, tzinfo=timezone.utc),
+            sunset=datetime(2026, 3, 3, 17, 15, tzinfo=timezone.utc),
+            usable_start=datetime(2026, 3, 3, 6, 6, tzinfo=timezone.utc),
+            usable_end=datetime(2026, 3, 3, 17, 27, tzinfo=timezone.utc),
+            duration_minutes=681,
+            terrain_dawn_penalty_min=15,
+            terrain_dusk_penalty_min=15,
+        )
+    
+        formatter = TripReportFormatter()
+        formatter._tz = ZoneInfo("Europe/Madrid")
+        plain = formatter._format_daylight_plain(dl)
+    
+>       assert "07:06" in plain, f"usable_start should be 07:06 CET, got: {plain}"
+E       AssertionError: usable_start should be 07:06 CET, got: 🌄 Ohne Stirnlampe: 06:06 – 17:27 (11h 21m)
+E            Dämmerung 05:51 + 15min (Tal) = 06:06
+E            Sonnenuntergang 17:15 – 15min (Tal) = 17:27
+E       assert '07:06' in '🌄 Ohne Stirnlampe: 06:06 – 17:27 (11h 21m)\n   Dämmerung 05:51 + 15min (Tal) = 06:06\n   Sonnenuntergang 17:15 – 15min (Tal) = 17:27'
+
+tests/tdd/test_utc_localtime.py:155: AssertionError
+____________ TestHourlyTableLocalTime.test_hourly_row_time_is_local ____________
+
+self = <tdd.test_utc_localtime.TestHourlyTableLocalTime object at 0x7fe63616b010>
+
+    def test_hourly_row_time_is_local(self):
+        """
+        GIVEN: A ForecastDataPoint with ts=09:00 UTC
+        WHEN: Rendered in hourly table with CET timezone (UTC+1)
+        THEN: Time column shows "10" (not "09")
+        """
+        from app.models import ForecastDataPoint
+        from formatters.trip_report import TripReportFormatter
+    
+>       dp = ForecastDataPoint(
+            ts=datetime(2026, 3, 3, 9, 0, tzinfo=timezone.utc),
+            temp_c=12.0,
+        )
+E       TypeError: ForecastDataPoint.__init__() got an unexpected keyword argument 'temp_c'
+
+tests/tdd/test_utc_localtime.py:174: TypeError
+_________ TestCompactSummaryLocalTime.test_rain_pattern_hour_is_local __________
+
+self = <tdd.test_utc_localtime.TestCompactSummaryLocalTime object at 0x7fe63616b490>
+
+    def test_rain_pattern_hour_is_local(self):
+        """
+        GIVEN: Rain starting at 14:00 UTC
+        WHEN: Compact summary generated with CET timezone
+        THEN: Shows "15:00" (not "14:00")
+        """
+        from app.models import ForecastDataPoint
+        from formatters.compact_summary import CompactSummaryFormatter
+    
+        data = []
+        for h in range(8, 18):
+>           dp = ForecastDataPoint(
+                ts=datetime(2026, 3, 3, h, 0, tzinfo=timezone.utc),
+                temp_c=10.0,
+                precip_1h_mm=2.5 if h >= 14 else 0.0,
+            )
+E           TypeError: ForecastDataPoint.__init__() got an unexpected keyword argument 'temp_c'
+
+tests/tdd/test_utc_localtime.py:203: TypeError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_utc_localtime.py::TestTimezoneUtility::test_tz_for_coords_mallorca_returns_cet
+FAILED tests/tdd/test_utc_localtime.py::TestTimezoneUtility::test_tz_for_coords_austria_returns_vienna
+FAILED tests/tdd/test_utc_localtime.py::TestTimezoneUtility::test_tz_for_coords_fallback_to_utc
+FAILED tests/tdd/test_utc_localtime.py::TestTimezoneUtility::test_local_hour_converts_utc_to_local
+FAILED tests/tdd/test_utc_localtime.py::TestTimezoneUtility::test_local_fmt_converts_utc_to_local_string
+FAILED tests/tdd/test_utc_localtime.py::TestTimezoneUtility::test_local_fmt_summer_time
+FAILED tests/tdd/test_utc_localtime.py::TestDaylightBannerLocalTime::test_daylight_html_shows_local_times
+FAILED tests/tdd/test_utc_localtime.py::TestDaylightBannerLocalTime::test_daylight_plain_shows_local_times
+FAILED tests/tdd/test_utc_localtime.py::TestHourlyTableLocalTime::test_hourly_row_time_is_local
+FAILED tests/tdd/test_utc_localtime.py::TestCompactSummaryLocalTime::test_rain_pattern_hour_is_local
+============================== 10 failed in 0.20s ==============================
