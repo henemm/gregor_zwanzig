@@ -190,22 +190,18 @@ Fixed Bugs: `docs/specs/bugfix/locations_add_button_fix.md`, `safari_subscriptio
 
 ## Deployment & Infrastruktur
 
-- **Server:** 178.104.143.19 (Hetzner VServer)
+Globale Server-Infos und Monitoring-Anleitung stehen in `~/.claude/CLAUDE.md`.
+
 - **URL:** https://gregor20.henemm.com
 - **Service:** Systemd (`gregor_zwanzig.service`), Auto-Restart bei Absturz
-- **Reverse Proxy:** Nginx mit SSL (Let's Encrypt)
 - **Infrastruktur-Repo:** `henemm/henemm-infra` (Nginx-Config, Systemd-Service)
 
-## Monitoring (BetterStack)
+## Heartbeats (BetterStack)
 
-- **Uptime-Check:** https://gregor20.henemm.com (alle 5 Min)
-- **Heartbeat Morning Report:** `https://uptime.betterstack.com/api/v1/heartbeat/f4GBDxFQHxuu73FdRt5wjGsQ`
-- **Heartbeat Evening Report:** `https://uptime.betterstack.com/api/v1/heartbeat/5Cc4vmiEDgrSr7qsBa2k2av4`
+- **Morning Report:** `https://uptime.betterstack.com/api/v1/heartbeat/f4GBDxFQHxuu73FdRt5wjGsQ`
+- **Evening Report:** `https://uptime.betterstack.com/api/v1/heartbeat/5Cc4vmiEDgrSr7qsBa2k2av4`
 
-**TODO:** Heartbeat-Pings in `src/web/scheduler.py` einbauen. Nach erfolgreichem Morning/Evening Report jeweils die Heartbeat-URL per `httpx.get()` pingen. Beispiel:
-```python
-httpx.get("https://uptime.betterstack.com/api/v1/heartbeat/URL_HIER", timeout=5)
-```
+**TODO:** Heartbeat-Pings in `src/web/scheduler.py` einbauen. Nach erfolgreichem Morning/Evening Report per `httpx.get()` pingen.
 
 ---
 
