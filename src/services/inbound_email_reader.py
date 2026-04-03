@@ -31,7 +31,6 @@ logger = logging.getLogger(__name__)
 class InboundEmailReader:
     """Polls IMAP inbox and processes trip commands from email replies."""
 
-    DEFAULT_IMAP_HOST = "imap.gmail.com"
     DEFAULT_IMAP_PORT = 993
 
     _SUBJECT_TRIP_RE = re.compile(r"\[(.+?)\]")
@@ -50,8 +49,8 @@ class InboundEmailReader:
         imap = None
         processed = 0
         try:
-            imap_host = settings.imap_host or self.DEFAULT_IMAP_HOST
-            imap_port = settings.imap_port or self.DEFAULT_IMAP_PORT
+            imap_host = settings.imap_host or settings.smtp_host
+            imap_port = settings.imap_port
             imap = imaplib.IMAP4_SSL(imap_host, imap_port)
             imap.login(settings.smtp_user, settings.smtp_pass)
             imap.select("INBOX")
@@ -190,10 +189,13 @@ class InboundEmailReader:
         return addr.lower()
 
     def _authorize(self, sender: str, settings: Settings) -> bool:
-        """Single-user: sender must match mail_to or smtp_user."""
+        """Single-user: sender must match mail_to, inbound_address, or mail_from."""
         allowed = {settings.mail_to.lower()}
-        if settings.smtp_user:
-            allowed.add(settings.smtp_user.lower())
+        inbound = settings.get_inbound_address()
+        if inbound:
+            allowed.add(inbound.lower())
+        if settings.mail_from:
+            allowed.add(settings.mail_from.lower())
         authorized = sender in allowed
         if not authorized:
             logger.debug(f"Ignoring email from: {sender!r}")
