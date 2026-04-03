@@ -31,8 +31,8 @@ logger = logging.getLogger(__name__)
 class InboundEmailReader:
     """Polls IMAP inbox and processes trip commands from email replies."""
 
-    IMAP_HOST = "imap.gmail.com"
-    IMAP_PORT = 993
+    DEFAULT_IMAP_HOST = "imap.gmail.com"
+    DEFAULT_IMAP_PORT = 993
 
     _SUBJECT_TRIP_RE = re.compile(r"\[(.+?)\]")
     _REPLY_PREFIXES = re.compile(
@@ -50,7 +50,9 @@ class InboundEmailReader:
         imap = None
         processed = 0
         try:
-            imap = imaplib.IMAP4_SSL(self.IMAP_HOST, self.IMAP_PORT)
+            imap_host = settings.imap_host or self.DEFAULT_IMAP_HOST
+            imap_port = settings.imap_port or self.DEFAULT_IMAP_PORT
+            imap = imaplib.IMAP4_SSL(imap_host, imap_port)
             imap.login(settings.smtp_user, settings.smtp_pass)
             imap.select("INBOX")
 

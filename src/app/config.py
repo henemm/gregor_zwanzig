@@ -80,6 +80,8 @@ class Settings(BaseSettings):
     mail_to: Optional[str] = Field(default=None, description="Recipient email address")
     mail_from: Optional[str] = Field(default=None, description="Sender email address")
     inbound_address: Optional[str] = Field(default=None, description="Plus-address for inbound commands (e.g. user+gregor@gmail.com)")
+    imap_host: Optional[str] = Field(default=None, description="IMAP server host (default: smtp_host)")
+    imap_port: int = Field(default=993, description="IMAP server port")
 
     # SMS settings (for sms channel)
     sms_gateway_url: Optional[str] = Field(default=None, description="SMS gateway HTTP endpoint")
