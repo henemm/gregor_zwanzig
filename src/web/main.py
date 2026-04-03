@@ -160,6 +160,7 @@ def run() -> None:
     """Start the web UI server."""
     ui.run(
         title="Gregor Zwanzig",
+        host="127.0.0.1",
         port=8080,
         reload=False,
         show=True,
