@@ -12,7 +12,7 @@ tags: [monitoring, betterstack, heartbeat]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved
 
 ## Purpose
 
