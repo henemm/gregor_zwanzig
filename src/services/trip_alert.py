@@ -16,6 +16,8 @@ from typing import TYPE_CHECKING, List, Optional
 
 from app.config import Settings
 from app.models import ChangeSeverity, SegmentWeatherData, WeatherChange
+from formatters.trip_report import TripReportFormatter
+from outputs.email import EmailOutput
 from services.weather_change_detection import WeatherChangeDetectionService
 
 if TYPE_CHECKING:
@@ -55,6 +57,7 @@ class TripAlertService:
             throttle_hours: Minimum hours between alerts per trip (default: 2)
         """
         self._settings = settings if settings else Settings()
+        self._formatter = TripReportFormatter()
         self._change_detector = WeatherChangeDetectionService()
         self._throttle_hours = throttle_hours
         self._last_alert_times: dict[str, datetime] = self._load_throttle_times()
@@ -352,25 +355,28 @@ class TripAlertService:
         changes: List[WeatherChange],
     ) -> None:
         """
-        Delegate alert dispatch to AlertProcessor (multi-channel).
+        Format and send alert email.
 
         Args:
             trip: Trip object
             weather: Current weather data
             changes: Detected changes to include
-
-        Raises:
-            RuntimeError: If no channel delivered the alert
         """
-        from services.alert_processor import AlertProcessor
+        report = self._formatter.format_email(
+            segments=weather,
+            trip_name=trip.name,
+            report_type="alert",
+            display_config=trip.display_config,
+            changes=changes,
+        )
 
-        processor = AlertProcessor(self._settings)
-        results = processor.process_alert(trip, weather, changes)
-
-        sent_channels = [ch for ch, ok in results.items() if ok]
-        if not sent_channels:
-            raise RuntimeError(f"No channel delivered alert for {trip.name}")
+        email_output = EmailOutput(self._settings)
+        email_output.send(
+            subject=report.email_subject,
+            html_body=report.email_html,
+            plain_text_body=report.email_plain,
+        )
 
         logger.info(
-            f"Alert for {trip.name}: {len(changes)} changes via {', '.join(sent_channels)}"
+            f"Alert sent for trip {trip.name}: {len(changes)} changes detected"
         )
