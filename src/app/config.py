@@ -89,6 +89,11 @@ class Settings(BaseSettings):
     sms_from: Optional[str] = Field(default=None, description="SMS sender ID or number")
     sms_to: Optional[str] = Field(default=None, description="SMS recipient phone number")
 
+    # Signal settings (for signal channel via Callmebot)
+    signal_phone: str = Field(default="", description="Signal recipient phone (E.164 format)")
+    signal_api_key: str = Field(default="", description="Callmebot API key")
+    signal_api_url: str = Field(default="", description="Callmebot API URL (default built-in)")
+
     def get_location(self) -> Location:
         """Create Location object from settings."""
         return Location(
@@ -118,3 +123,7 @@ class Settings(BaseSettings):
             self.sms_api_key,
             self.sms_to,
         ])
+
+    def can_send_signal(self) -> bool:
+        """Check if Signal configuration is complete."""
+        return bool(self.signal_phone and self.signal_api_key)

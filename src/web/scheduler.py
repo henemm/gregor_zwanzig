@@ -231,6 +231,15 @@ def _execute_subscription(sub: "CompareSubscription") -> None:
 
         logger.info(f"Email sent successfully for: {sub.name}")
 
+        # Send Signal if configured
+        if settings.can_send_signal():
+            try:
+                from outputs.signal import SignalOutput
+                SignalOutput(settings).send(subject, text_body)
+                logger.info(f"Signal sent for: {sub.name}")
+            except Exception as e:
+                logger.error(f"Signal failed for {sub.name}: {e}")
+
     except Exception as e:
         logger.error(f"Failed to execute subscription {sub.name}: {e}")
 

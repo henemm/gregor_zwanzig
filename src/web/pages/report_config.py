@@ -60,6 +60,7 @@ def show_report_config_dialog(trip: Trip, user_id: str = "default") -> None:
         ui.label("Kanäle").classes("text-subtitle1 q-mt-md")
 
         email_checkbox = ui.checkbox("E-Mail senden", value=config.send_email)
+        signal_checkbox = ui.checkbox("Signal senden", value=config.send_signal)
         sms_checkbox = ui.checkbox("SMS senden (coming soon)", value=config.send_sms)
 
         # Alerts Section
@@ -119,6 +120,7 @@ def show_report_config_dialog(trip: Trip, user_id: str = "default") -> None:
                     morning_input,
                     evening_input,
                     email_checkbox,
+                    signal_checkbox,
                     sms_checkbox,
                     alert_checkbox,
                     elev_input,
@@ -139,6 +141,7 @@ def make_save_handler(
     morning_input,
     evening_input,
     email_checkbox,
+    signal_checkbox,
     sms_checkbox,
     alert_checkbox,
     elev_input,
@@ -207,6 +210,7 @@ def make_save_handler(
             morning_time=morning,
             evening_time=evening,
             send_email=email_checkbox.value,
+            send_signal=signal_checkbox.value,
             send_sms=sms_checkbox.value,
             alert_on_changes=alert_checkbox.value,
             change_threshold_temp_c=old_rc.change_threshold_temp_c if old_rc else 5.0,

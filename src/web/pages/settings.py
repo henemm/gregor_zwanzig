@@ -136,6 +136,21 @@ def render_settings() -> None:
                 value=settings.get("GZ_EMAIL_PLAIN_TEXT", "false").lower() == "true",
             ).classes("mt-4")
 
+        # Signal Settings
+        with ui.card().classes("w-full mb-4"):
+            ui.label("Signal (Callmebot)").classes("text-h6 mb-2")
+
+            signal_phone = ui.input(
+                "Phone (E.164)",
+                value=settings.get("GZ_SIGNAL_PHONE", ""),
+                placeholder="+43...",
+            ).classes("w-full")
+
+            signal_api_key = ui.input(
+                "Callmebot API Key",
+                value=settings.get("GZ_SIGNAL_API_KEY", ""),
+            ).classes("w-full").props("type=password")
+
         # Provider Settings
         with ui.card().classes("w-full mb-4"):
             ui.label("Weather Provider").classes("text-h6 mb-2")
@@ -177,6 +192,8 @@ def render_settings() -> None:
                 "GZ_MAIL_FROM": mail_from.value or "",
                 "GZ_MAIL_TO": mail_to.value or "",
                 "GZ_EMAIL_PLAIN_TEXT": "true" if email_plain_text.value else "false",
+                "GZ_SIGNAL_PHONE": signal_phone.value or "",
+                "GZ_SIGNAL_API_KEY": signal_api_key.value or "",
                 "GZ_PROVIDER": provider.value or "geosphere",
                 "GZ_LATITUDE": str(lat.value or 47.2692),
                 "GZ_LONGITUDE": str(lon.value or 11.4041),
@@ -242,4 +259,39 @@ def render_settings() -> None:
                 "Send Test Email",
                 on_click=make_test_email_handler(),
                 icon="mail",
+            ).props("outline")
+
+            async def test_signal() -> None:
+                save()
+                try:
+                    from outputs.signal import SignalOutput
+                    settings = Settings()
+                    if not settings.can_send_signal():
+                        ui.notify(
+                            "Signal not configured. Please fill Phone and API Key.",
+                            type="negative",
+                        )
+                        return
+                    ui.notify("Sending test Signal message...", type="info")
+                    output = SignalOutput(settings)
+                    await asyncio.get_event_loop().run_in_executor(
+                        None, lambda: output.send(
+                            "Gregor Zwanzig - Test",
+                            "Signal-Channel funktioniert!",
+                        )
+                    )
+                    ui.notify("Test Signal message sent!", type="positive")
+                except Exception as e:
+                    ui.notify(f"Signal error: {e}", type="negative")
+
+            def make_test_signal_handler():
+                """Factory function for test signal button (Safari compatibility)."""
+                async def do_test() -> None:
+                    await test_signal()
+                return do_test
+
+            ui.button(
+                "Send Test Signal",
+                on_click=make_test_signal_handler(),
+                icon="send",
             ).props("outline")

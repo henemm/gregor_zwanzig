@@ -377,6 +377,16 @@ class TripAlertService:
             plain_text_body=report.email_plain,
         )
 
+        if self._settings.can_send_signal():
+            try:
+                from outputs.signal import SignalOutput
+                SignalOutput(self._settings).send(
+                    subject=report.email_subject,
+                    body=report.email_plain,
+                )
+            except Exception as e:
+                logger.error(f"Signal alert failed for {trip.name}: {e}")
+
         logger.info(
             f"Alert sent for trip {trip.name}: {len(changes)} changes detected"
         )
