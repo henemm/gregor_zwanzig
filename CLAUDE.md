@@ -6,7 +6,7 @@
 
 - **Zielgruppe:** Weitwanderer (z.B. GR20), eingeschraenkte Konnektivitaet
 - **Stack:** Python, uv, pytest
-- **Channels:** E-Mail (MVP), spaeter SMS/Push
+- **Channels:** E-Mail (MVP), spaeter SMS/Push, Signal (verfügbar via Callmebot)
 
 ## Workflow
 
@@ -202,6 +202,13 @@ Globale Server-Infos und Monitoring-Anleitung stehen in `~/.claude/CLAUDE.md`.
 - **Evening Report:** `https://uptime.betterstack.com/api/v1/heartbeat/5Cc4vmiEDgrSr7qsBa2k2av4`
 
 **TODO:** Heartbeat-Pings in `src/web/scheduler.py` einbauen. Nach erfolgreichem Morning/Evening Report per `httpx.get()` pingen.
+
+## Signal als Channel (Feature-Idee)
+
+Signal-Benachrichtigungen sind als zusätzlicher Channel neben E-Mail und SMS verfügbar. Infrastruktur steht bereit:
+- Callmebot API: `https://signal.callmebot.com/signal/send.php?phone=PHONE&apikey=KEY&text=MSG`
+- Credentials in `/home/hem/henemm-infra/.env` (CALLMEBOT_PHONE, CALLMEBOT_APIKEY)
+- Referenz-Implementierung: `oebb-nightjet-monitor/notify.go` (Go) oder `henemm-infra/scripts/notify-signal.sh` (Bash)
 
 ---
 
