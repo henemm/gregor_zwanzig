@@ -55,7 +55,7 @@ def get_approval_file() -> Path:
 
 
 # Default settings (can be overridden in config.yaml)
-BATCH_WINDOW_MINUTES = 5
+BATCH_WINDOW_MINUTES = 15
 
 # Default protected paths (override in config.yaml)
 DEFAULT_PROTECTED_PATHS = [
@@ -201,7 +201,6 @@ def main():
             'files': [file_path],
             'first_change': now,
             'last_change': now,
-            'user_approved': False,
             'requires_validation': True,
         }
         save_lock(new_lock)
