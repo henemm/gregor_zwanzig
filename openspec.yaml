@@ -23,6 +23,8 @@ workflow:
   # Phrases that trigger spec approval (case-insensitive)
   approval_phrases:
     - "approved"
+    - "validated"
+    - "test ok"
     - "freigabe"
     - "spec ok"
     - "lgtm"
