@@ -563,6 +563,7 @@ class TripReportConfig:
     # Channels
     send_email: bool = True
     send_sms: bool = False
+    send_signal: bool = False
 
     # Alerts
     alert_on_changes: bool = True

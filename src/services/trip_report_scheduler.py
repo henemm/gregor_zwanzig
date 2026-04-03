@@ -353,6 +353,18 @@ class TripReportSchedulerService:
             plain_text_body=report.email_plain,
         )
 
+        # 7b. Send Signal if configured
+        config = trip.report_config
+        if config and config.send_signal and self._settings.can_send_signal():
+            try:
+                from outputs.signal import SignalOutput
+                SignalOutput(self._settings).send(
+                    subject=report.email_subject,
+                    body=report.email_plain,
+                )
+            except Exception as e:
+                logger.error(f"Signal send failed for {trip.name}: {e}")
+
         logger.info(f"Trip report sent: {trip.name} ({report_type})")
 
         # 8. WEATHER-04: Service-E-Mail bei SMS-only + Fehler
