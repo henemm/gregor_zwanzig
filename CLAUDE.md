@@ -201,7 +201,7 @@ Globale Server-Infos und Monitoring-Anleitung stehen in `~/.claude/CLAUDE.md`.
 - **Morning Report:** `https://uptime.betterstack.com/api/v1/heartbeat/f4GBDxFQHxuu73FdRt5wjGsQ`
 - **Evening Report:** `https://uptime.betterstack.com/api/v1/heartbeat/5Cc4vmiEDgrSr7qsBa2k2av4`
 
-**TODO:** Heartbeat-Pings in `src/web/scheduler.py` einbauen. Nach erfolgreichem Morning/Evening Report per `httpx.get()` pingen.
+Heartbeat-Pings sind in `src/web/scheduler.py` implementiert. Nach erfolgreichem Morning/Evening Report wird per `httpx.get()` gepingt.
 
 ## Signal als Channel (Feature-Idee)
 
