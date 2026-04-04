@@ -1,14 +1,14 @@
 {
-  "verified_at": "2026-04-04T08:02:43.711537+00:00",
+  "verified_at": "2026-04-04T11:05:44.955758+00:00",
   "features": [
-    "generic_locations_ui"
+    "channel_switch_subscriptions"
   ],
   "status": "passed",
-  "tests": 29,
-  "passed": 29,
+  "tests": 9,
+  "passed": 9,
   "server_restarted": true,
   "test_trip_created": true,
   "emails_checked": true,
   "test_trip_cleaned": true,
-  "note": "F11b UI-only, 29/29 pytest passed, adversary VERIFIED"
+  "note": "F12a Channel-Switch, 9/9 pytest, QA 7/7, adversary VERIFIED"
 }

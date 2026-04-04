@@ -203,42 +203,41 @@ def _run_subscriptions_by_schedule(schedule: "Schedule") -> None:
 
 
 def _execute_subscription(sub: "CompareSubscription") -> None:
-    """Execute a single subscription and send email."""
+    """Execute a single subscription and send via selected channels."""
     from app.config import Settings
     from app.loader import load_all_locations
-    from outputs.email import EmailOutput
     from web.pages.compare import run_comparison_for_subscription
 
     logger.info(f"Executing subscription: {sub.name}")
 
     try:
         settings = Settings()
-
-        if not settings.can_send_email():
-            logger.error(f"SMTP not configured, cannot send email for: {sub.name}")
-            return
-
-        # Load locations
         all_locations = load_all_locations()
 
-        # Generate email content
-        # SPEC: docs/specs/compare_email.md v4.2 - Multipart Email
         subject, html_body, text_body = run_comparison_for_subscription(sub, all_locations)
 
-        # Send email with both HTML and Plain-Text
-        email_output = EmailOutput(settings)
-        email_output.send(subject, html_body, plain_text_body=text_body)
+        if not sub.send_email and not sub.send_signal:
+            logger.warning(f"No channels configured for subscription: {sub.name}")
+            return
 
-        logger.info(f"Email sent successfully for: {sub.name}")
+        if sub.send_email:
+            if settings.can_send_email():
+                from outputs.email import EmailOutput
+                EmailOutput(settings).send(subject, html_body, plain_text_body=text_body)
+                logger.info(f"Email sent for: {sub.name}")
+            else:
+                logger.error(f"Email requested but SMTP not configured: {sub.name}")
 
-        # Send Signal if configured
-        if settings.can_send_signal():
-            try:
-                from outputs.signal import SignalOutput
-                SignalOutput(settings).send(subject, text_body)
-                logger.info(f"Signal sent for: {sub.name}")
-            except Exception as e:
-                logger.error(f"Signal failed for {sub.name}: {e}")
+        if sub.send_signal:
+            if settings.can_send_signal():
+                try:
+                    from outputs.signal import SignalOutput
+                    SignalOutput(settings).send(subject, text_body)
+                    logger.info(f"Signal sent for: {sub.name}")
+                except Exception as e:
+                    logger.error(f"Signal failed for {sub.name}: {e}")
+            else:
+                logger.warning(f"Signal requested but not configured: {sub.name}")
 
     except Exception as e:
         logger.error(f"Failed to execute subscription {sub.name}: {e}")

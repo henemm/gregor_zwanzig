@@ -708,6 +708,8 @@ def load_compare_subscriptions(user_id: str = "default") -> List[CompareSubscrip
             weekday=weekday,
             include_hourly=sub_data.get("include_hourly", True),
             top_n=sub_data.get("top_n", 3),
+            send_email=sub_data.get("send_email", True),
+            send_signal=sub_data.get("send_signal", False),
         ))
     return subscriptions
 
@@ -743,6 +745,8 @@ def save_compare_subscriptions(
                 "weekday": sub.weekday,
                 "include_hourly": sub.include_hourly,
                 "top_n": sub.top_n,
+                "send_email": sub.send_email,
+                "send_signal": sub.send_signal,
             }
             for sub in subscriptions
         ]
