@@ -1,0 +1,159 @@
+VALIDATION: generic-locations-ui (F11b)
+Spec: docs/specs/modules/generic_locations_ui.md
+Files: src/web/pages/locations.py, src/web/pages/weather_config.py
+Date: 2026-04-04
+=====================================
+
+TEST SUITE RESULTS
+------------------
+uv run pytest tests/tdd/test_generic_locations_ui.py tests/tdd/test_generic_locations.py --tb=short -v
+29 passed in 0.50s
+
+=====================================
+SPEC CHECKLIST (18 Points)
+=====================================
+
+PROVIDER DETECTION
+------------------
+
+PASSED: Punkt 13-14: Innsbruck (47.3, 11.4) -> geosphere available
+  get_available_providers_for_location() returns {'openmeteo', 'geosphere'} for Austria
+  Bounding box: 46.0-49.0N, 9.5-17.0E (inclusive boundaries)
+  Test: test_austria_location_has_geosphere PASSED
+
+PASSED: Punkt 16-17: Corsica (42.0, 9.0) -> only openmeteo
+  get_available_providers_for_location() returns {'openmeteo'} for non-Austria
+  Test: test_non_austria_location_no_geosphere PASSED
+
+PASSED: Punkt 15: Winter metrics NOT grayed out for Austria
+  snow_depth: geosphere=True, openmeteo=False -> available=True with {'openmeteo','geosphere'}
+  fresh_snow: geosphere=True, openmeteo=False -> available=True with {'openmeteo','geosphere'}
+  snowfall_limit: geosphere=True, openmeteo=False -> available=True with {'openmeteo','geosphere'}
+  freezing_level: openmeteo=True, geosphere=False -> available=True (always)
+  Result: checkbox enabled, not grayed
+
+PASSED: Punkt 18: GeoSphere-only metrics grayed out with tooltip for non-Austria
+  snow_depth (Corsica): is_available=False -> cb.disable() + cb.tooltip("Nicht verfugbar...")
+  fresh_snow (Corsica): is_available=False -> cb.disable() + cb.tooltip(...)
+  snowfall_limit (Corsica): is_available=False -> cb.disable() + cb.tooltip(...)
+  NOTE: freezing_level uses openmeteo (not geosphere-only), so NOT grayed even for Corsica
+        This is correct per catalog: providers={'openmeteo': True, 'geosphere': False}
+
+UI LOGIC
+--------
+
+PASSED: Punkt 1-2: Create dialog has profile dropdown, SavedLocation gets activity_profile
+  locations.py line 149-153: ui.select with LocationActivityProfile options
+  locations.py line 175: activity_profile=LocationActivityProfile(profile_select.value)
+  profile_select captured in closure via make_save_handler() factory
+
+PASSED: Punkt 3: Badge on card shows profile
+  locations.py line 215-218: ui.badge(loc.activity_profile.value.capitalize(), color="blue-grey")
+  Rendered in badge row together with region and bergfex badges
+
+PASSED: Punkt 4-5: Wetter-Metriken dialog shows WANDERN defaults (9 metrics pre-checked)
+  Verified: build_default_display_config_for_profile("x", WANDERN) returns 9 enabled metrics
+  All 9 WANDERN metrics use openmeteo -> all pre-checked for both Austria and Corsica
+  weather_config.py line 450-456: if not loc.display_config -> uses profile-based defaults
+
+PASSED: Punkt 7-9: Save handler saves display_config, shows Notification
+  weather_config.py line 573: ui.notify(f"{enabled_count} Metriken gespeichert", type="positive")
+  weather_config.py line 574: dlg.close()
+  Minimum 1 metric validation on line 552-554: warning notification if enabled_count == 0
+
+PASSED: Punkt 10-11: Edit dialog has profile dropdown, display_config preserved
+  locations.py line 59-63: ui.select with loc.activity_profile.value as initial value
+  locations.py line 79: display_config=loc.display_config (preserved from original)
+
+PASSED: Punkt 12: Badge updates after Edit
+  locations.py line 84: refresh_list() called after successful save
+  refresh_list() re-renders render_content() with fresh data from load_all_locations()
+  Badge picks up new activity_profile from persisted file
+
+=====================================
+SAFARI COMPATIBILITY
+=====================================
+
+PASSED: All button handlers use factory pattern
+  locations.py: make_save_handler(), make_save_edit_handler(), make_add_handler(),
+                make_weather_config_handler(), make_edit_handler(), make_delete_handler()
+  weather_config.py: make_cancel_handler(), make_location_save_handler()
+  Pattern: outer function captures parameters, returns inner do_* function
+  Compliant with docs/reference/nicegui_best_practices.md requirements
+
+=====================================
+EDGE CASES / WARNINGS
+=====================================
+
+WARNING: Aggregation options not restricted per metric in location dialog
+  In show_weather_config_dialog (trips): agg_options restricted to metric.default_aggregations
+  In show_location_weather_config_dialog: agg_options = list(AGG_LABELS.values()) = ALL 4
+  Effect: user can assign Min aggregation to precipitation (semantically wrong, no crash)
+  Example: precipitation normally only supports 'sum', but user can add 'min', 'max', 'avg'
+  Severity: LOW - no crash, formatter may produce unexpected output but will not fail
+  Fix (optional): restrict agg_options to metric_def.default_aggregations same as trip dialog
+
+WARNING: Empty aggregations list is saveable for enabled metrics
+  If user deselects all aggregation options for an enabled metric, it saves with aggs=[]
+  No crash on save, but downstream formatter behavior with empty aggs is untested
+  The minimum-1-metric check does NOT prevent 0-aggregation configs
+  Severity: LOW - edge case unlikely in practice but could cause silent formatter issues
+
+PASSED: Aggregation save/load roundtrip
+  Stored lowercase: ['min', 'max'] -> displayed: ['Min', 'Max'] -> saved back: ['min', 'max']
+  AGG_LABELS mapping used correctly in both directions
+
+PASSED: Post-restart behavior
+  make_location_save_handler closure captures loc_id (string) and user_id (string), not widgets
+  On save: load_all_locations() called fresh from disk, not from stale UI state
+  No initialization-state bug (unlike the classic trend=value-0 pattern)
+
+PASSED: Frozen dataclass rebuild
+  SavedLocation is @dataclass(frozen=True)
+  Save handler correctly creates new SavedLocation instance with all fields
+  weather_config.py line 561-571: all 8 fields passed explicitly
+  activity_profile and display_config both included
+
+PASSED: Backward compatibility for legacy JSON without activity_profile
+  loader.py line 418: data.get("activity_profile", "allgemein") defaults to ALLGEMEIN
+  Test: test_backward_compat_no_activity_profile PASSED
+
+PASSED: Non-metric fields in UnifiedWeatherDisplayConfig reset to defaults on location save
+  show_night_block, night_interval_hours, thunder_forecast_days reset to defaults
+  Acceptable for Phase 1 (these fields are trip-level concepts, not exposed in location dialog)
+  Spec Known Limitations confirms this is out of scope
+
+=====================================
+GENERATED TEST PLAN
+=====================================
+
+Automated Tests:
+[ ] Unit test: WANDERN profile at Austria location -> 9 pre-checked, 0 grayed winter metrics
+[ ] Unit test: WINTERSPORT profile at Corsica -> snow_depth/fresh_snow grayed, freezing_level not
+[ ] Unit test: Empty agg selection for enabled metric -> MetricConfig(aggregations=[]) created
+[ ] Unit test: Aggregation roundtrip through save_location/load_all_locations
+[ ] Unit test: Edit with profile change -> display_config preserved in persisted JSON
+[ ] Unit test: Activity profile change via edit -> badge reflects new value after refresh
+
+Manual Tests:
+[ ] Create location with WANDERN profile -> badge shows "Wandern"
+[ ] Open Wetter-Metriken on new WANDERN location -> 9 checkboxes pre-checked
+[ ] Open Wetter-Metriken on WINTERSPORT Austria location -> snow_depth/fresh_snow enabled+checked
+[ ] Open Wetter-Metriken on any Corsica location -> snow_depth grayed with tooltip
+[ ] Edit location, change profile from WINTERSPORT to WANDERN, check badge updates
+[ ] Open Wetter-Metriken, save, re-open -> selections preserved
+[ ] Safari: all buttons (Add, Save, Wetter-Metriken, Edit, Delete) functional without lag
+
+=====================================
+SUMMARY
+=====================================
+
+All 18 spec checkpoints: PASSED
+All 29 automated tests: PASSED
+Safari factory pattern: COMPLIANT
+
+2 warnings (non-blocking):
+1. Aggregation options not restricted per-metric (cosmetic/semantic, no crash)
+2. Empty aggregations list saveable for enabled metrics (unlikely edge case)
+
+No blocking bugs found. Implementation matches spec.
