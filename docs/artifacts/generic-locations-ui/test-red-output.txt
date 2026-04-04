@@ -1,0 +1,160 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 9 items
+
+tests/tdd/test_generic_locations_ui.py FFFFFFFFF                         [100%]
+
+=================================== FAILURES ===================================
+____________ TestProviderDetectionForLocations.test_function_exists ____________
+
+self = <tdd.test_generic_locations_ui.TestProviderDetectionForLocations object at 0x73cd404dfd40>
+
+    def test_function_exists(self):
+        """
+        GIVEN: weather_config module
+        WHEN: importing get_available_providers_for_location
+        THEN: import succeeds
+        """
+>       from web.pages.weather_config import get_available_providers_for_location
+E       ImportError: cannot import name 'get_available_providers_for_location' from 'web.pages.weather_config' (/home/hem/gregor_zwanzig/src/web/pages/weather_config.py)
+
+tests/tdd/test_generic_locations_ui.py:28: ImportError
+____ TestProviderDetectionForLocations.test_austria_location_has_geosphere _____
+
+self = <tdd.test_generic_locations_ui.TestProviderDetectionForLocations object at 0x73cd404dee40>
+
+    def test_austria_location_has_geosphere(self):
+        """
+        GIVEN: Location in Austria (Innsbruck: lat=47.3, lon=11.4)
+        WHEN: detecting available providers
+        THEN: both openmeteo and geosphere available
+        """
+        from app.user import SavedLocation
+>       from web.pages.weather_config import get_available_providers_for_location
+E       ImportError: cannot import name 'get_available_providers_for_location' from 'web.pages.weather_config' (/home/hem/gregor_zwanzig/src/web/pages/weather_config.py)
+
+tests/tdd/test_generic_locations_ui.py:38: ImportError
+___ TestProviderDetectionForLocations.test_non_austria_location_no_geosphere ___
+
+self = <tdd.test_generic_locations_ui.TestProviderDetectionForLocations object at 0x73cd404df1d0>
+
+    def test_non_austria_location_no_geosphere(self):
+        """
+        GIVEN: Location outside Austria (Corsica: lat=42.0, lon=9.0)
+        WHEN: detecting available providers
+        THEN: only openmeteo available, no geosphere
+        """
+        from app.user import SavedLocation
+>       from web.pages.weather_config import get_available_providers_for_location
+E       ImportError: cannot import name 'get_available_providers_for_location' from 'web.pages.weather_config' (/home/hem/gregor_zwanzig/src/web/pages/weather_config.py)
+
+tests/tdd/test_generic_locations_ui.py:54: ImportError
+________ TestProviderDetectionForLocations.test_austria_boundary_south _________
+
+self = <tdd.test_generic_locations_ui.TestProviderDetectionForLocations object at 0x73cd404df1a0>
+
+    def test_austria_boundary_south(self):
+        """
+        GIVEN: Location at south boundary of Austria box (lat=46.0)
+        WHEN: detecting available providers
+        THEN: geosphere available (inclusive boundary)
+        """
+        from app.user import SavedLocation
+>       from web.pages.weather_config import get_available_providers_for_location
+E       ImportError: cannot import name 'get_available_providers_for_location' from 'web.pages.weather_config' (/home/hem/gregor_zwanzig/src/web/pages/weather_config.py)
+
+tests/tdd/test_generic_locations_ui.py:70: ImportError
+_______ TestProviderDetectionForLocations.test_austria_boundary_outside ________
+
+self = <tdd.test_generic_locations_ui.TestProviderDetectionForLocations object at 0x73cd404df050>
+
+    def test_austria_boundary_outside(self):
+        """
+        GIVEN: Location just south of Austria box (lat=45.9)
+        WHEN: detecting available providers
+        THEN: no geosphere
+        """
+        from app.user import SavedLocation
+>       from web.pages.weather_config import get_available_providers_for_location
+E       ImportError: cannot import name 'get_available_providers_for_location' from 'web.pages.weather_config' (/home/hem/gregor_zwanzig/src/web/pages/weather_config.py)
+
+tests/tdd/test_generic_locations_ui.py:85: ImportError
+_____________ TestLocationWeatherConfigDialog.test_function_exists _____________
+
+self = <tdd.test_generic_locations_ui.TestLocationWeatherConfigDialog object at 0x73cd404de390>
+
+    def test_function_exists(self):
+        """
+        GIVEN: weather_config module
+        WHEN: importing show_location_weather_config_dialog
+        THEN: import succeeds
+        """
+>       from web.pages.weather_config import show_location_weather_config_dialog
+E       ImportError: cannot import name 'show_location_weather_config_dialog' from 'web.pages.weather_config' (/home/hem/gregor_zwanzig/src/web/pages/weather_config.py)
+
+tests/tdd/test_generic_locations_ui.py:107: ImportError
+___________ TestLocationWeatherConfigDialog.test_function_signature ____________
+
+self = <tdd.test_generic_locations_ui.TestLocationWeatherConfigDialog object at 0x73cd41000110>
+
+    def test_function_signature(self):
+        """
+        GIVEN: show_location_weather_config_dialog function
+        WHEN: inspecting its signature
+        THEN: accepts location and optional user_id parameters
+        """
+        import inspect
+>       from web.pages.weather_config import show_location_weather_config_dialog
+E       ImportError: cannot import name 'show_location_weather_config_dialog' from 'web.pages.weather_config' (/home/hem/gregor_zwanzig/src/web/pages/weather_config.py)
+
+tests/tdd/test_generic_locations_ui.py:117: ImportError
+________ TestLocationsPageImports.test_locations_module_imports_profile ________
+
+self = <tdd.test_generic_locations_ui.TestLocationsPageImports object at 0x73cd4023d730>
+
+    def test_locations_module_imports_profile(self):
+        """
+        GIVEN: locations page module
+        WHEN: checking if LocationActivityProfile is used
+        THEN: the module can access LocationActivityProfile
+        """
+        from web.pages import locations
+        from app.user import LocationActivityProfile
+    
+        # The module should use LocationActivityProfile
+        source = open(locations.__file__).read()
+>       assert "LocationActivityProfile" in source
+E       assert 'LocationActivityProfile' in '"""\nLocation management page.\n"""\nfrom __future__ import annotations\n\nfrom nicegui import ui\n\nfrom app.loader ...elete_handler(loc.id, loc.name),\n                            ).props("flat color=negative")\n\n    render_content()\n'
+
+tests/tdd/test_generic_locations_ui.py:143: AssertionError
+____ TestLocationsPageImports.test_locations_module_imports_weather_config _____
+
+self = <tdd.test_generic_locations_ui.TestLocationsPageImports object at 0x73cd4023c110>
+
+    def test_locations_module_imports_weather_config(self):
+        """
+        GIVEN: locations page module
+        WHEN: checking if weather config dialog is imported
+        THEN: show_location_weather_config_dialog is imported
+        """
+        from web.pages import locations
+    
+        source = open(locations.__file__).read()
+>       assert "show_location_weather_config_dialog" in source
+E       assert 'show_location_weather_config_dialog' in '"""\nLocation management page.\n"""\nfrom __future__ import annotations\n\nfrom nicegui import ui\n\nfrom app.loader ...elete_handler(loc.id, loc.name),\n                            ).props("flat color=negative")\n\n    render_content()\n'
+
+tests/tdd/test_generic_locations_ui.py:154: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_generic_locations_ui.py::TestProviderDetectionForLocations::test_function_exists
+FAILED tests/tdd/test_generic_locations_ui.py::TestProviderDetectionForLocations::test_austria_location_has_geosphere
+FAILED tests/tdd/test_generic_locations_ui.py::TestProviderDetectionForLocations::test_non_austria_location_no_geosphere
+FAILED tests/tdd/test_generic_locations_ui.py::TestProviderDetectionForLocations::test_austria_boundary_south
+FAILED tests/tdd/test_generic_locations_ui.py::TestProviderDetectionForLocations::test_austria_boundary_outside
+FAILED tests/tdd/test_generic_locations_ui.py::TestLocationWeatherConfigDialog::test_function_exists
+FAILED tests/tdd/test_generic_locations_ui.py::TestLocationWeatherConfigDialog::test_function_signature
+FAILED tests/tdd/test_generic_locations_ui.py::TestLocationsPageImports::test_locations_module_imports_profile
+FAILED tests/tdd/test_generic_locations_ui.py::TestLocationsPageImports::test_locations_module_imports_weather_config
+============================== 9 failed in 0.54s ===============================

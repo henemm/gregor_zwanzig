@@ -15,15 +15,17 @@ from datetime import datetime, timezone
 
 from nicegui import ui
 
-from app.loader import get_trips_dir, load_trip, save_trip
+from app.loader import get_trips_dir, load_all_locations, load_trip, save_location, save_trip
 from app.metric_catalog import (
     get_all_metrics,
     get_metric,
     get_metrics_by_category,
     build_default_display_config,
+    build_default_display_config_for_profile,
 )
 from app.models import MetricConfig, UnifiedWeatherDisplayConfig
 from app.trip import Trip
+from app.user import SavedLocation
 
 
 # Category display order and German labels
@@ -413,3 +415,170 @@ def make_save_handler(trip_id: str, metric_widgets: dict, dialog, user_id: str):
         dialog.close()
 
     return do_save
+
+
+# =============================================================================
+# Location Weather Config (F11b)
+# =============================================================================
+
+
+def get_available_providers_for_location(location: SavedLocation) -> set[str]:
+    """Detect which weather providers can serve this location based on coordinates."""
+    providers = {"openmeteo"}
+    if 46.0 <= location.lat <= 49.0 and 9.5 <= location.lon <= 17.0:
+        providers.add("geosphere")
+    return providers
+
+
+def show_location_weather_config_dialog(
+    location: SavedLocation,
+    user_id: str = "default",
+) -> None:
+    """
+    Show weather metrics configuration dialog for a saved location.
+
+    Safari Compatible: all button handlers use factory pattern.
+    """
+    # Reload location from disk to get latest config
+    locations = load_all_locations(user_id)
+    loc = next((l for l in locations if l.id == location.id), location)
+
+    # Detect available providers
+    available_providers = get_available_providers_for_location(loc)
+
+    # Initialize config: existing or profile-based defaults
+    if loc.display_config and loc.display_config.metrics:
+        current_configs = {mc.metric_id: mc for mc in loc.display_config.metrics}
+    else:
+        default_config = build_default_display_config_for_profile(
+            loc.id, loc.activity_profile
+        )
+        current_configs = {mc.metric_id: mc for mc in default_config.metrics}
+
+    with ui.dialog() as dialog, ui.card().classes("w-full").style(
+        "max-height: 90vh; overflow-y: auto; width: 95vw; max-width: 800px;"
+    ):
+        ui.label(f"Wetter-Metriken: {loc.name}").classes("text-h6")
+        ui.label(f"Profil: {loc.activity_profile.value.capitalize()}").classes(
+            "text-caption text-grey"
+        )
+
+        # Header row
+        with ui.row().classes("w-full items-center gap-2 mt-2"):
+            ui.label("Metrik").classes("text-bold").style("width: 240px;")
+            ui.label("Aggregation").classes("text-bold").style("width: 200px;")
+
+        ui.separator()
+
+        # Track widgets for save handler
+        metric_widgets: dict[str, dict] = {}
+
+        for category in CATEGORY_ORDER:
+            metrics = get_metrics_by_category(category)
+            if not metrics:
+                continue
+
+            ui.separator()
+            ui.label(CATEGORY_LABELS.get(category, category)).classes(
+                "text-subtitle2 text-grey-8 mt-1"
+            )
+
+            for metric_def in metrics:
+                mc = current_configs.get(metric_def.id)
+                is_available = any(
+                    metric_def.providers.get(p, False) for p in available_providers
+                )
+                is_enabled = mc.enabled if mc else False
+
+                with ui.row().classes("w-full items-center gap-2").style(
+                    "flex-wrap: nowrap;"
+                ):
+                    # Checkbox
+                    cb = ui.checkbox(
+                        f"{metric_def.label_de} ({metric_def.col_label})",
+                        value=is_enabled and is_available,
+                    ).style("width: 240px;")
+                    if not is_available:
+                        cb.disable()
+                        cb.tooltip("Nicht verfügbar für diesen Standort")
+
+                    # Aggregation select
+                    current_aggs = mc.aggregations if mc else list(metric_def.default_aggregations)
+                    agg_options = list(AGG_LABELS.values())
+                    agg_values = [AGG_LABELS.get(a, a.capitalize()) for a in current_aggs]
+
+                    agg_sel = ui.select(
+                        options=agg_options,
+                        value=agg_values,
+                        multiple=True,
+                        label="",
+                    ).style("width: 200px;").props("dense")
+
+                metric_widgets[metric_def.id] = {
+                    "checkbox": cb,
+                    "agg": agg_sel,
+                }
+
+        ui.separator()
+
+        # Buttons
+        with ui.row().classes("w-full justify-end gap-2 mt-2"):
+
+            def make_cancel_handler(dlg):
+                def do_cancel():
+                    dlg.close()
+                return do_cancel
+
+            ui.button("Abbrechen", on_click=make_cancel_handler(dialog)).props("flat")
+
+            def make_location_save_handler(loc_id, mw, dlg, uid):
+                def do_save():
+                    locs = load_all_locations(uid)
+                    current_loc = next((l for l in locs if l.id == loc_id), None)
+                    if not current_loc:
+                        ui.notify("Location nicht gefunden", type="negative")
+                        return
+
+                    metrics = []
+                    for mid, widgets in mw.items():
+                        agg_vals = widgets["agg"].value or []
+                        aggs = [a.lower() for a in agg_vals]
+                        metrics.append(MetricConfig(
+                            metric_id=mid,
+                            enabled=widgets["checkbox"].value,
+                            aggregations=aggs,
+                        ))
+
+                    enabled_count = sum(1 for m in metrics if m.enabled)
+                    if enabled_count == 0:
+                        ui.notify("Mindestens 1 Metrik aktivieren!", type="warning")
+                        return
+
+                    new_config = UnifiedWeatherDisplayConfig(
+                        trip_id=loc_id,
+                        metrics=metrics,
+                    )
+                    updated = SavedLocation(
+                        id=current_loc.id,
+                        name=current_loc.name,
+                        lat=current_loc.lat,
+                        lon=current_loc.lon,
+                        elevation_m=current_loc.elevation_m,
+                        region=current_loc.region,
+                        bergfex_slug=current_loc.bergfex_slug,
+                        activity_profile=current_loc.activity_profile,
+                        display_config=new_config,
+                    )
+                    save_location(updated, uid)
+                    ui.notify(f"{enabled_count} Metriken gespeichert", type="positive")
+                    dlg.close()
+                return do_save
+
+            ui.button(
+                "Speichern",
+                on_click=make_location_save_handler(
+                    loc.id, metric_widgets, dialog, user_id
+                ),
+            ).props("color=primary")
+
+    dialog.open()

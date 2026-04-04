@@ -10,7 +10,8 @@ from app.loader import (
     load_all_locations,
     save_location,
 )
-from app.user import SavedLocation
+from app.user import LocationActivityProfile, SavedLocation
+from web.pages.weather_config import show_location_weather_config_dialog
 from web.utils import parse_dms_coordinates
 
 
@@ -55,6 +56,11 @@ def render_locations() -> None:
                 placeholder="e.g. hochfuegen",
             ).classes("w-full")
             ui.label("→ From bergfex.com/skigebiet/[SLUG]/schneewerte").classes("text-xs text-gray-400")
+            profile_select = ui.select(
+                options={p.value: p.value.capitalize() for p in LocationActivityProfile},
+                value=loc.activity_profile.value,
+                label="Aktivitätsprofil",
+            ).classes("w-full")
 
             with ui.row().classes("w-full justify-end gap-2 mt-4"):
                 ui.button("Cancel", on_click=dialog.close).props("flat")
@@ -69,7 +75,7 @@ def render_locations() -> None:
                             elevation_m=int(elev_input.value or loc.elevation_m),
                             region=region_input.value or None,
                             bergfex_slug=bergfex_input.value or None,
-                            activity_profile=loc.activity_profile,
+                            activity_profile=LocationActivityProfile(profile_select.value),
                             display_config=loc.display_config,
                         )
                         save_location(updated)
@@ -140,6 +146,11 @@ def render_locations() -> None:
                     placeholder="e.g. hochfuegen, zillertal-arena",
                 ).classes("w-full")
                 ui.label("→ From bergfex.com/skigebiet/[SLUG]/schneewerte").classes("text-xs text-gray-400")
+                profile_select = ui.select(
+                    options={p.value: p.value.capitalize() for p in LocationActivityProfile},
+                    value=LocationActivityProfile.ALLGEMEIN.value,
+                    label="Aktivitätsprofil",
+                ).classes("w-full")
 
                 with ui.row().classes("w-full justify-end gap-2 mt-4"):
                     ui.button("Cancel", on_click=dialog.close).props("flat")
@@ -161,6 +172,7 @@ def render_locations() -> None:
                                 elevation_m=int(elev_input.value or 2000),
                                 region=region_input.value or None,
                                 bergfex_slug=bergfex_input.value or None,
+                                activity_profile=LocationActivityProfile(profile_select.value),
                             )
                             save_location(location)
                             ui.notify(f"Location '{location.name}' saved", type="positive")
@@ -200,12 +212,27 @@ def render_locations() -> None:
                                 f"{loc.lat:.4f}°N, {loc.lon:.4f}°E, {loc.elevation_m}m"
                             ).classes("text-gray-500 text-sm")
                             with ui.row().classes("gap-2"):
+                                ui.badge(
+                                    loc.activity_profile.value.capitalize(),
+                                    color="blue-grey",
+                                )
                                 if loc.region:
                                     ui.badge(loc.region).props("color=blue")
                                 if loc.bergfex_slug:
                                     ui.badge(f"bergfex: {loc.bergfex_slug}").props("color=green")
 
                         with ui.row().classes("gap-1"):
+                            def make_weather_config_handler(l: SavedLocation):
+                                def do_show():
+                                    show_location_weather_config_dialog(l)
+                                return do_show
+
+                            ui.button(
+                                "Wetter-Metriken",
+                                icon="settings",
+                                on_click=make_weather_config_handler(loc),
+                            ).props("flat color=primary")
+
                             def make_edit_handler(location: SavedLocation):
                                 def do_edit() -> None:
                                     show_edit_dialog(location)

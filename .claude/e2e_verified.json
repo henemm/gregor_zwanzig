@@ -1,14 +1,14 @@
 {
-  "verified_at": "2026-04-04T07:09:09.880792+00:00",
+  "verified_at": "2026-04-04T08:02:43.711537+00:00",
   "features": [
-    "generic_locations_core"
+    "generic_locations_ui"
   ],
   "status": "passed",
-  "tests": 41,
-  "passed": 41,
+  "tests": 29,
+  "passed": 29,
   "server_restarted": true,
   "test_trip_created": true,
   "emails_checked": true,
   "test_trip_cleaned": true,
-  "note": "Core/Model-only change (F11a), no UI - 41/41 pytest passed"
+  "note": "F11b UI-only, 29/29 pytest passed, adversary VERIFIED"
 }
