@@ -1,0 +1,200 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 9 items
+
+tests/tdd/test_subscription_metrics.py FFFFFFFFF                         [100%]
+
+=================================== FAILURES ===================================
+________ TestSubscriptionDisplayConfig.test_default_display_config_none ________
+
+self = <tdd.test_subscription_metrics.TestSubscriptionDisplayConfig object at 0x71ced7288b60>
+
+    def test_default_display_config_none(self):
+        """
+        GIVEN: CompareSubscription without display_config
+        WHEN: accessing display_config
+        THEN: defaults to None
+        """
+        from app.user import CompareSubscription
+        sub = CompareSubscription(id="test", name="Test")
+>       assert sub.display_config is None
+               ^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'CompareSubscription' object has no attribute 'display_config'
+
+tests/tdd/test_subscription_metrics.py:22: AttributeError
+__________ TestSubscriptionDisplayConfig.test_explicit_display_config __________
+
+self = <tdd.test_subscription_metrics.TestSubscriptionDisplayConfig object at 0x71ced72caba0>
+
+    def test_explicit_display_config(self):
+        """
+        GIVEN: CompareSubscription with display_config
+        WHEN: accessing display_config
+        THEN: returns the config
+        """
+        from app.user import CompareSubscription
+        from app.metric_catalog import build_default_display_config
+        config = build_default_display_config("test-sub")
+>       sub = CompareSubscription(id="test", name="Test", display_config=config)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: CompareSubscription.__init__() got an unexpected keyword argument 'display_config'
+
+tests/tdd/test_subscription_metrics.py:33: TypeError
+__________ TestSubscriptionDisplayConfig.test_display_config_mutable ___________
+
+self = <tdd.test_subscription_metrics.TestSubscriptionDisplayConfig object at 0x71ced72cb950>
+
+    def test_display_config_mutable(self):
+        """
+        GIVEN: CompareSubscription (non-frozen dataclass)
+        WHEN: assigning display_config
+        THEN: mutation works (unlike SavedLocation which is frozen)
+        """
+        from app.user import CompareSubscription
+        from app.metric_catalog import build_default_display_config
+        sub = CompareSubscription(id="test", name="Test")
+>       assert sub.display_config is None
+               ^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'CompareSubscription' object has no attribute 'display_config'
+
+tests/tdd/test_subscription_metrics.py:46: AttributeError
+__ TestSubscriptionMetricsLoaderRoundTrip.test_save_load_with_display_config ___
+
+self = <tdd.test_subscription_metrics.TestSubscriptionMetricsLoaderRoundTrip object at 0x71ced72cb620>
+
+    def test_save_load_with_display_config(self):
+        """
+        GIVEN: CompareSubscription with display_config
+        WHEN: saved and loaded
+        THEN: display_config round-trips with metrics
+        """
+        from app.user import CompareSubscription
+        from app.metric_catalog import build_default_display_config
+        from app.loader import save_compare_subscription, load_compare_subscriptions
+    
+        config = build_default_display_config("metrics-test")
+>       sub = CompareSubscription(
+            id="metrics-test", name="Metrics Test", display_config=config,
+        )
+E       TypeError: CompareSubscription.__init__() got an unexpected keyword argument 'display_config'
+
+tests/tdd/test_subscription_metrics.py:65: TypeError
+_ TestSubscriptionMetricsLoaderRoundTrip.test_save_load_without_display_config _
+
+self = <tdd.test_subscription_metrics.TestSubscriptionMetricsLoaderRoundTrip object at 0x71ced72cb410>
+
+    def test_save_load_without_display_config(self):
+        """
+        GIVEN: CompareSubscription without display_config
+        WHEN: saved and loaded
+        THEN: display_config is None
+        """
+        from app.user import CompareSubscription
+        from app.loader import save_compare_subscription, load_compare_subscriptions
+    
+        sub = CompareSubscription(id="no-dc-test", name="No DC")
+        save_compare_subscription(sub, user_id="__test_sub_nodc__")
+        loaded = load_compare_subscriptions(user_id="__test_sub_nodc__")
+    
+        found = [s for s in loaded if s.id == "no-dc-test"]
+        assert len(found) == 1
+>       assert found[0].display_config is None
+               ^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'CompareSubscription' object has no attribute 'display_config'
+
+tests/tdd/test_subscription_metrics.py:91: AttributeError
+___ TestSubscriptionMetricsLoaderRoundTrip.test_backward_compat_legacy_json ____
+
+self = <tdd.test_subscription_metrics.TestSubscriptionMetricsLoaderRoundTrip object at 0x71ced72cb560>
+
+    def test_backward_compat_legacy_json(self):
+        """
+        GIVEN: Legacy subscription JSON without display_config
+        WHEN: loaded
+        THEN: display_config is None, no error
+        """
+        from app.loader import load_compare_subscriptions, get_compare_subscriptions_file
+    
+        path = get_compare_subscriptions_file("__test_sub_legacy__")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        legacy = {
+            "subscriptions": [{
+                "id": "legacy", "name": "Legacy",
+                "enabled": True, "locations": ["*"],
+                "forecast_hours": 48, "schedule": "weekly",
+            }]
+        }
+        with open(path, "w") as f:
+            json.dump(legacy, f)
+    
+        loaded = load_compare_subscriptions(user_id="__test_sub_legacy__")
+        assert len(loaded) == 1
+>       assert loaded[0].display_config is None
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'CompareSubscription' object has no attribute 'display_config'
+
+tests/tdd/test_subscription_metrics.py:115: AttributeError
+___ TestSubscriptionMetricsLoaderRoundTrip.test_json_contains_display_config ___
+
+self = <tdd.test_subscription_metrics.TestSubscriptionMetricsLoaderRoundTrip object at 0x71ced72cb2c0>
+
+    def test_json_contains_display_config(self):
+        """
+        GIVEN: CompareSubscription with display_config
+        WHEN: saved
+        THEN: JSON contains display_config with metrics
+        """
+        from app.user import CompareSubscription
+        from app.metric_catalog import build_default_display_config
+        from app.loader import save_compare_subscription, get_compare_subscriptions_file
+    
+        config = build_default_display_config("json-test")
+>       sub = CompareSubscription(
+            id="json-test", name="JSON Test", display_config=config,
+        )
+E       TypeError: CompareSubscription.__init__() got an unexpected keyword argument 'display_config'
+
+tests/tdd/test_subscription_metrics.py:128: TypeError
+___________ TestSubscriptionWeatherConfigDialog.test_function_exists ___________
+
+self = <tdd.test_subscription_metrics.TestSubscriptionWeatherConfigDialog object at 0x71ced72cb140>
+
+    def test_function_exists(self):
+        """
+        GIVEN: weather_config module
+        WHEN: importing show_subscription_weather_config_dialog
+        THEN: import succeeds
+        """
+>       from web.pages.weather_config import show_subscription_weather_config_dialog
+E       ImportError: cannot import name 'show_subscription_weather_config_dialog' from 'web.pages.weather_config' (/home/hem/gregor_zwanzig/src/web/pages/weather_config.py)
+
+tests/tdd/test_subscription_metrics.py:151: ImportError
+_________ TestSubscriptionWeatherConfigDialog.test_function_signature __________
+
+self = <tdd.test_subscription_metrics.TestSubscriptionWeatherConfigDialog object at 0x71ced72cb0b0>
+
+    def test_function_signature(self):
+        """
+        GIVEN: show_subscription_weather_config_dialog
+        WHEN: inspecting signature
+        THEN: accepts subscription and user_id
+        """
+        import inspect
+>       from web.pages.weather_config import show_subscription_weather_config_dialog
+E       ImportError: cannot import name 'show_subscription_weather_config_dialog' from 'web.pages.weather_config' (/home/hem/gregor_zwanzig/src/web/pages/weather_config.py)
+
+tests/tdd/test_subscription_metrics.py:161: ImportError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_subscription_metrics.py::TestSubscriptionDisplayConfig::test_default_display_config_none
+FAILED tests/tdd/test_subscription_metrics.py::TestSubscriptionDisplayConfig::test_explicit_display_config
+FAILED tests/tdd/test_subscription_metrics.py::TestSubscriptionDisplayConfig::test_display_config_mutable
+FAILED tests/tdd/test_subscription_metrics.py::TestSubscriptionMetricsLoaderRoundTrip::test_save_load_with_display_config
+FAILED tests/tdd/test_subscription_metrics.py::TestSubscriptionMetricsLoaderRoundTrip::test_save_load_without_display_config
+FAILED tests/tdd/test_subscription_metrics.py::TestSubscriptionMetricsLoaderRoundTrip::test_backward_compat_legacy_json
+FAILED tests/tdd/test_subscription_metrics.py::TestSubscriptionMetricsLoaderRoundTrip::test_json_contains_display_config
+FAILED tests/tdd/test_subscription_metrics.py::TestSubscriptionWeatherConfigDialog::test_function_exists
+FAILED tests/tdd/test_subscription_metrics.py::TestSubscriptionWeatherConfigDialog::test_function_signature
+============================== 9 failed in 0.52s ===============================

@@ -134,6 +134,7 @@ class CompareSubscription:
     top_n: int = 3  # Number of locations to show hourly details for
     send_email: bool = True
     send_signal: bool = False
+    display_config: Optional["UnifiedWeatherDisplayConfig"] = None
 
 
 @dataclass

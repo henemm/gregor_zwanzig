@@ -88,6 +88,8 @@ Features are added via `/feature` or `/user-story` commands.
 | Generische Locations (Metrik-Auswahl) | done | HIGH | WebUI | Locations UI, User Model, Loader, Formatter | Medium | F11 |
 | Versandweg-Auswahl (Channel-Switch) | open | HIGH | WebUI | Locations UI, Trips UI, User Model, Settings | Medium | F12 |
 | Multi-User mit Login | open | HIGH | Core | Auth, Web Main, Loader, alle Pages | Large | F13 |
+| Subscription Metriken-Auswahl (Model+UI) | open | HIGH | WebUI | CompareSubscription, Loader, Subscriptions UI | Medium | F14a |
+| Subscription Metriken-Auswahl (Renderer) | open | HIGH | Formatter | compare.py HTML+Plaintext Renderer | Medium | F14b |
 
 ## Completed Features (Last 10)
 
