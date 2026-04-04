@@ -85,6 +85,9 @@ Features are added via `/feature` or `/user-story` commands.
 | Risk Engine (Daten-Layer) | done | LOW | Risk Engine | Risk Engine, Formatter | Large | F8 |
 | Satellite Messenger (Garmin inReach) | open | LOW | Channel | Channel Layer, Formatter | Simple | F9 |
 | Lawinen-Integration (SLF/EAWS) | open | LOW | Provider | Provider Layer, Risk Engine | Large | F10 |
+| Generische Locations (Metrik-Auswahl) | done | HIGH | WebUI | Locations UI, User Model, Loader, Formatter | Medium | F11 |
+| Versandweg-Auswahl (Channel-Switch) | open | HIGH | WebUI | Locations UI, Trips UI, User Model, Settings | Medium | F12 |
+| Multi-User mit Login | open | HIGH | Core | Auth, Web Main, Loader, alle Pages | Large | F13 |
 
 ## Completed Features (Last 10)
 
@@ -122,12 +125,19 @@ Features are added via `/feature` or `/user-story` commands.
 - [x] Multi-Day Trend (F3, done — Etappen-Ausblick mit Stage-Aggregation, konfigurierbar Morning/Evening)
 - [ ] Biwak-/Zelt-Modus (F5, Gering-Mittel — erweiterter Night-Block)
 
-### Sprint 2 — SMS/Satellite-Kanal
+### Sprint 2 — Generische Locations & Channel-Switch
+- [ ] Generische Locations (F11, Mittel — Locations aktivitäts-unabhängig machen, Metrik-Auswahl)
+- [ ] Versandweg-Auswahl (F12, Mittel — Channel-Switch für Locations + Trips)
+
+### Sprint 3 — Multi-User & Sicherheit
+- [ ] Multi-User mit Login (F13, Groß — Auth-System, User-Isolation, Session-Management)
+
+### Sprint 4 — SMS/Satellite-Kanal
 - [ ] SMS-Kanal (F1, Mittel — setzt F2 voraus)
 - [ ] Satellite Messenger / Garmin inReach (F9, Gering — setzt F2 voraus)
 - [ ] Logging/Rotation (OPS-02)
 
-### Sprint 3 — Trip Intelligence
+### Sprint 5 — Trip Intelligence
 - [ ] Trip-Briefing Kompakt-Tabelle (F4, Mittel)
 - [ ] Trip-Umplanung per Kommando (F6, Mittel-Hoch)
 
@@ -135,6 +145,7 @@ Features are added via `/feature` or `/user-story` commands.
 
 ### Core (Infrastructure)
 - CLI Entry Point (done), Config System (done), Debug Architecture (done), Retry Logic (done), Logging
+- Multi-User mit Login (F13)
 
 ### Provider (Weather Data Sources)
 - ~~MET Norway~~ (obsolete), ~~MOSMIX~~ (obsolete), Open-Meteo (done), Data Normalization (done), Error Handling (done), Model-Metric-Fallback (done), UV via Air Quality API (done)
@@ -156,6 +167,7 @@ Features are added via `/feature` or `/user-story` commands.
 
 ### WebUI (Frontend)
 - Trip Edit (done), Compare E-Mail (done), Cloud Layers (done), GPX Upload (done), Etappen-Config (done), Segment-Übersicht (done)
+- Generische Locations (F11), Versandweg-Auswahl (F12)
 
 ### Ops (Operations)
 - GitHub Actions (done), Logging/Rotation

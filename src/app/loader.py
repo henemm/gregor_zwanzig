@@ -414,6 +414,10 @@ def load_all_locations(user_id: str = "default") -> List[SavedLocation]:
         try:
             with open(path, "r", encoding="utf-8") as f:
                 data = json.load(f)
+            from app.user import LocationActivityProfile
+            activity_profile_str = data.get("activity_profile", "allgemein")
+            display_config_data = data.get("display_config")
+            display_config = _parse_display_config(display_config_data) if display_config_data else None
             locations.append(SavedLocation(
                 id=data.get("id", path.stem),
                 name=data["name"],
@@ -422,8 +426,10 @@ def load_all_locations(user_id: str = "default") -> List[SavedLocation]:
                 elevation_m=data["elevation_m"],
                 region=data.get("region"),
                 bergfex_slug=data.get("bergfex_slug"),
+                activity_profile=LocationActivityProfile(activity_profile_str),
+                display_config=display_config,
             ))
-        except (json.JSONDecodeError, KeyError):
+        except (json.JSONDecodeError, KeyError, ValueError):
             continue
     return locations
 
@@ -451,7 +457,30 @@ def save_location(location: SavedLocation, user_id: str = "default") -> Path:
         "elevation_m": location.elevation_m,
         "region": location.region,
         "bergfex_slug": location.bergfex_slug,
+        "activity_profile": location.activity_profile.value,
     }
+    if location.display_config is not None:
+        dc = location.display_config
+        data["display_config"] = {
+            "trip_id": dc.trip_id,
+            "metrics": [
+                {
+                    "metric_id": mc.metric_id,
+                    "enabled": mc.enabled,
+                    "aggregations": mc.aggregations,
+                    "use_friendly_format": mc.use_friendly_format,
+                    "alert_enabled": mc.alert_enabled,
+                    "alert_threshold": mc.alert_threshold,
+                }
+                for mc in dc.metrics
+            ],
+            "show_night_block": dc.show_night_block,
+            "night_interval_hours": dc.night_interval_hours,
+            "thunder_forecast_days": dc.thunder_forecast_days,
+            "multi_day_trend_reports": dc.multi_day_trend_reports,
+            "sms_metrics": dc.sms_metrics,
+            "updated_at": dc.updated_at.isoformat(),
+        }
 
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
