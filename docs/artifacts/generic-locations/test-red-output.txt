@@ -1,0 +1,317 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 20 items
+
+tests/tdd/test_generic_locations.py FFFFFFFFFFFFFFFFFFFF                 [100%]
+
+=================================== FAILURES ===================================
+_________________ TestLocationActivityProfile.test_enum_exists _________________
+
+self = <tdd.test_generic_locations.TestLocationActivityProfile object at 0x7aae037c0da0>
+
+    def test_enum_exists(self):
+        """
+        GIVEN: src/app/user.py module
+        WHEN: importing LocationActivityProfile
+        THEN: import succeeds without error
+        """
+>       from app.user import LocationActivityProfile
+E       ImportError: cannot import name 'LocationActivityProfile' from 'app.user' (/home/hem/gregor_zwanzig/src/app/user.py)
+
+tests/tdd/test_generic_locations.py:29: ImportError
+_________________ TestLocationActivityProfile.test_enum_values _________________
+
+self = <tdd.test_generic_locations.TestLocationActivityProfile object at 0x7aae02f3c440>
+
+    def test_enum_values(self):
+        """
+        GIVEN: LocationActivityProfile enum
+        WHEN: accessing values
+        THEN: WINTERSPORT, WANDERN, ALLGEMEIN exist with correct string values
+        """
+>       from app.user import LocationActivityProfile
+E       ImportError: cannot import name 'LocationActivityProfile' from 'app.user' (/home/hem/gregor_zwanzig/src/app/user.py)
+
+tests/tdd/test_generic_locations.py:38: ImportError
+______________ TestLocationActivityProfile.test_enum_is_str_mixin ______________
+
+self = <tdd.test_generic_locations.TestLocationActivityProfile object at 0x7aae02f45490>
+
+    def test_enum_is_str_mixin(self):
+        """
+        GIVEN: LocationActivityProfile enum
+        WHEN: used as string
+        THEN: behaves like str (for JSON serialization)
+        """
+>       from app.user import LocationActivityProfile
+E       ImportError: cannot import name 'LocationActivityProfile' from 'app.user' (/home/hem/gregor_zwanzig/src/app/user.py)
+
+tests/tdd/test_generic_locations.py:49: ImportError
+___________ TestSavedLocationExtended.test_default_activity_profile ____________
+
+self = <tdd.test_generic_locations.TestSavedLocationExtended object at 0x7aae023d64e0>
+
+    def test_default_activity_profile(self):
+        """
+        GIVEN: SavedLocation created without activity_profile
+        WHEN: accessing activity_profile
+        THEN: defaults to ALLGEMEIN
+        """
+>       from app.user import SavedLocation, LocationActivityProfile
+E       ImportError: cannot import name 'LocationActivityProfile' from 'app.user' (/home/hem/gregor_zwanzig/src/app/user.py)
+
+tests/tdd/test_generic_locations.py:68: ImportError
+___________ TestSavedLocationExtended.test_explicit_activity_profile ___________
+
+self = <tdd.test_generic_locations.TestSavedLocationExtended object at 0x7aae023d78f0>
+
+    def test_explicit_activity_profile(self):
+        """
+        GIVEN: SavedLocation created with activity_profile=WANDERN
+        WHEN: accessing activity_profile
+        THEN: returns WANDERN
+        """
+>       from app.user import SavedLocation, LocationActivityProfile
+E       ImportError: cannot import name 'LocationActivityProfile' from 'app.user' (/home/hem/gregor_zwanzig/src/app/user.py)
+
+tests/tdd/test_generic_locations.py:80: ImportError
+________ TestSavedLocationExtended.test_default_display_config_is_none _________
+
+self = <tdd.test_generic_locations.TestSavedLocationExtended object at 0x7aae023d7b90>
+
+    def test_default_display_config_is_none(self):
+        """
+        GIVEN: SavedLocation created without display_config
+        WHEN: accessing display_config
+        THEN: returns None
+        """
+        from app.user import SavedLocation
+        loc = SavedLocation(
+            id="test", name="Test", lat=47.0, lon=11.0, elevation_m=2000
+        )
+>       assert loc.display_config is None
+               ^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'SavedLocation' object has no attribute 'display_config'
+
+tests/tdd/test_generic_locations.py:97: AttributeError
+____________ TestSavedLocationExtended.test_explicit_display_config ____________
+
+self = <tdd.test_generic_locations.TestSavedLocationExtended object at 0x7aae023d7e90>
+
+    def test_explicit_display_config(self):
+        """
+        GIVEN: SavedLocation created with a UnifiedWeatherDisplayConfig
+        WHEN: accessing display_config
+        THEN: returns the config object
+        """
+>       from app.user import SavedLocation, LocationActivityProfile
+E       ImportError: cannot import name 'LocationActivityProfile' from 'app.user' (/home/hem/gregor_zwanzig/src/app/user.py)
+
+tests/tdd/test_generic_locations.py:105: ImportError
+____________ TestSavedLocationExtended.test_frozen_with_new_fields _____________
+
+self = <tdd.test_generic_locations.TestSavedLocationExtended object at 0x7aae023d7b30>
+
+    def test_frozen_with_new_fields(self):
+        """
+        GIVEN: SavedLocation with activity_profile and display_config
+        WHEN: trying to mutate activity_profile
+        THEN: raises FrozenInstanceError
+        """
+>       from app.user import SavedLocation, LocationActivityProfile
+E       ImportError: cannot import name 'LocationActivityProfile' from 'app.user' (/home/hem/gregor_zwanzig/src/app/user.py)
+
+tests/tdd/test_generic_locations.py:123: ImportError
+___________ TestSavedLocationExtended.test_existing_fields_unchanged ___________
+
+self = <tdd.test_generic_locations.TestSavedLocationExtended object at 0x7aae023d7c50>
+
+    def test_existing_fields_unchanged(self):
+        """
+        GIVEN: SavedLocation with all fields
+        WHEN: accessing bergfex_slug and region
+        THEN: still works as before
+        """
+>       from app.user import SavedLocation, LocationActivityProfile
+E       ImportError: cannot import name 'LocationActivityProfile' from 'app.user' (/home/hem/gregor_zwanzig/src/app/user.py)
+
+tests/tdd/test_generic_locations.py:137: ImportError
+________________ TestProfileDefaultMetrics.test_function_exists ________________
+
+self = <tdd.test_generic_locations.TestProfileDefaultMetrics object at 0x7aae023d7860>
+
+    def test_function_exists(self):
+        """
+        GIVEN: metric_catalog module
+        WHEN: importing build_default_display_config_for_profile
+        THEN: import succeeds
+        """
+>       from app.metric_catalog import build_default_display_config_for_profile
+E       ImportError: cannot import name 'build_default_display_config_for_profile' from 'app.metric_catalog' (/home/hem/gregor_zwanzig/src/app/metric_catalog.py)
+
+tests/tdd/test_generic_locations.py:160: ImportError
+_____________ TestProfileDefaultMetrics.test_wintersport_defaults ______________
+
+self = <tdd.test_generic_locations.TestProfileDefaultMetrics object at 0x7aae023d79e0>
+
+    def test_wintersport_defaults(self):
+        """
+        GIVEN: profile=WINTERSPORT
+        WHEN: building default display config
+        THEN: winter-specific metrics are enabled (snow_depth, fresh_snow, wind_chill, etc.)
+        """
+>       from app.user import LocationActivityProfile
+E       ImportError: cannot import name 'LocationActivityProfile' from 'app.user' (/home/hem/gregor_zwanzig/src/app/user.py)
+
+tests/tdd/test_generic_locations.py:169: ImportError
+_______________ TestProfileDefaultMetrics.test_wandern_defaults ________________
+
+self = <tdd.test_generic_locations.TestProfileDefaultMetrics object at 0x7aae023d7a70>
+
+    def test_wandern_defaults(self):
+        """
+        GIVEN: profile=WANDERN
+        WHEN: building default display config
+        THEN: hiking metrics enabled, winter metrics disabled
+        """
+>       from app.user import LocationActivityProfile
+E       ImportError: cannot import name 'LocationActivityProfile' from 'app.user' (/home/hem/gregor_zwanzig/src/app/user.py)
+
+tests/tdd/test_generic_locations.py:187: ImportError
+______________ TestProfileDefaultMetrics.test_allgemein_defaults _______________
+
+self = <tdd.test_generic_locations.TestProfileDefaultMetrics object at 0x7aae023d7590>
+
+    def test_allgemein_defaults(self):
+        """
+        GIVEN: profile=ALLGEMEIN
+        WHEN: building default display config
+        THEN: only basic metrics enabled
+        """
+>       from app.user import LocationActivityProfile
+E       ImportError: cannot import name 'LocationActivityProfile' from 'app.user' (/home/hem/gregor_zwanzig/src/app/user.py)
+
+tests/tdd/test_generic_locations.py:207: ImportError
+________ TestProfileDefaultMetrics.test_returns_unified_display_config _________
+
+self = <tdd.test_generic_locations.TestProfileDefaultMetrics object at 0x7aae023d7410>
+
+    def test_returns_unified_display_config(self):
+        """
+        GIVEN: any profile
+        WHEN: building default display config
+        THEN: returns UnifiedWeatherDisplayConfig with correct trip_id (=location_id)
+        """
+>       from app.user import LocationActivityProfile
+E       ImportError: cannot import name 'LocationActivityProfile' from 'app.user' (/home/hem/gregor_zwanzig/src/app/user.py)
+
+tests/tdd/test_generic_locations.py:227: ImportError
+__________ TestProfileDefaultMetrics.test_all_catalog_metrics_present __________
+
+self = <tdd.test_generic_locations.TestProfileDefaultMetrics object at 0x7aae023d75c0>
+
+    def test_all_catalog_metrics_present(self):
+        """
+        GIVEN: any profile
+        WHEN: building default display config
+        THEN: all MetricCatalog metrics are present (some enabled, some disabled)
+        """
+>       from app.user import LocationActivityProfile
+E       ImportError: cannot import name 'LocationActivityProfile' from 'app.user' (/home/hem/gregor_zwanzig/src/app/user.py)
+
+tests/tdd/test_generic_locations.py:243: ImportError
+___________ TestLoaderRoundTrip.test_save_load_with_activity_profile ___________
+
+self = <tdd.test_generic_locations.TestLoaderRoundTrip object at 0x7aae023d7110>
+
+    def test_save_load_with_activity_profile(self):
+        """
+        GIVEN: SavedLocation with activity_profile=WANDERN
+        WHEN: saved to JSON and loaded back
+        THEN: activity_profile round-trips correctly
+        """
+>       from app.user import SavedLocation, LocationActivityProfile
+E       ImportError: cannot import name 'LocationActivityProfile' from 'app.user' (/home/hem/gregor_zwanzig/src/app/user.py)
+
+tests/tdd/test_generic_locations.py:270: ImportError
+____________ TestLoaderRoundTrip.test_save_load_with_display_config ____________
+
+self = <tdd.test_generic_locations.TestLoaderRoundTrip object at 0x7aae023d6f00>
+
+    def test_save_load_with_display_config(self):
+        """
+        GIVEN: SavedLocation with display_config
+        WHEN: saved to JSON and loaded back
+        THEN: display_config round-trips with correct metrics
+        """
+>       from app.user import SavedLocation, LocationActivityProfile
+E       ImportError: cannot import name 'LocationActivityProfile' from 'app.user' (/home/hem/gregor_zwanzig/src/app/user.py)
+
+tests/tdd/test_generic_locations.py:291: ImportError
+_________ TestLoaderRoundTrip.test_backward_compat_no_activity_profile _________
+
+self = <tdd.test_generic_locations.TestLoaderRoundTrip object at 0x7aae02f47f80>
+
+    def test_backward_compat_no_activity_profile(self):
+        """
+        GIVEN: Legacy location JSON without activity_profile field
+        WHEN: loaded via load_all_locations
+        THEN: defaults to ALLGEMEIN, no error
+        """
+>       from app.user import LocationActivityProfile
+E       ImportError: cannot import name 'LocationActivityProfile' from 'app.user' (/home/hem/gregor_zwanzig/src/app/user.py)
+
+tests/tdd/test_generic_locations.py:319: ImportError
+___________ TestLoaderRoundTrip.test_json_contains_activity_profile ____________
+
+self = <tdd.test_generic_locations.TestLoaderRoundTrip object at 0x7aae023d7d70>
+
+    def test_json_contains_activity_profile(self):
+        """
+        GIVEN: SavedLocation with activity_profile=WINTERSPORT
+        WHEN: saved to JSON
+        THEN: JSON file contains "activity_profile": "wintersport"
+        """
+>       from app.user import SavedLocation, LocationActivityProfile
+E       ImportError: cannot import name 'LocationActivityProfile' from 'app.user' (/home/hem/gregor_zwanzig/src/app/user.py)
+
+tests/tdd/test_generic_locations.py:349: ImportError
+____________ TestLoaderRoundTrip.test_json_contains_display_config _____________
+
+self = <tdd.test_generic_locations.TestLoaderRoundTrip object at 0x7aae023d70e0>
+
+    def test_json_contains_display_config(self):
+        """
+        GIVEN: SavedLocation with display_config
+        WHEN: saved to JSON
+        THEN: JSON file contains "display_config" with metrics list
+        """
+>       from app.user import SavedLocation, LocationActivityProfile
+E       ImportError: cannot import name 'LocationActivityProfile' from 'app.user' (/home/hem/gregor_zwanzig/src/app/user.py)
+
+tests/tdd/test_generic_locations.py:369: ImportError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_generic_locations.py::TestLocationActivityProfile::test_enum_exists
+FAILED tests/tdd/test_generic_locations.py::TestLocationActivityProfile::test_enum_values
+FAILED tests/tdd/test_generic_locations.py::TestLocationActivityProfile::test_enum_is_str_mixin
+FAILED tests/tdd/test_generic_locations.py::TestSavedLocationExtended::test_default_activity_profile
+FAILED tests/tdd/test_generic_locations.py::TestSavedLocationExtended::test_explicit_activity_profile
+FAILED tests/tdd/test_generic_locations.py::TestSavedLocationExtended::test_default_display_config_is_none
+FAILED tests/tdd/test_generic_locations.py::TestSavedLocationExtended::test_explicit_display_config
+FAILED tests/tdd/test_generic_locations.py::TestSavedLocationExtended::test_frozen_with_new_fields
+FAILED tests/tdd/test_generic_locations.py::TestSavedLocationExtended::test_existing_fields_unchanged
+FAILED tests/tdd/test_generic_locations.py::TestProfileDefaultMetrics::test_function_exists
+FAILED tests/tdd/test_generic_locations.py::TestProfileDefaultMetrics::test_wintersport_defaults
+FAILED tests/tdd/test_generic_locations.py::TestProfileDefaultMetrics::test_wandern_defaults
+FAILED tests/tdd/test_generic_locations.py::TestProfileDefaultMetrics::test_allgemein_defaults
+FAILED tests/tdd/test_generic_locations.py::TestProfileDefaultMetrics::test_returns_unified_display_config
+FAILED tests/tdd/test_generic_locations.py::TestProfileDefaultMetrics::test_all_catalog_metrics_present
+FAILED tests/tdd/test_generic_locations.py::TestLoaderRoundTrip::test_save_load_with_activity_profile
+FAILED tests/tdd/test_generic_locations.py::TestLoaderRoundTrip::test_save_load_with_display_config
+FAILED tests/tdd/test_generic_locations.py::TestLoaderRoundTrip::test_backward_compat_no_activity_profile
+FAILED tests/tdd/test_generic_locations.py::TestLoaderRoundTrip::test_json_contains_activity_profile
+FAILED tests/tdd/test_generic_locations.py::TestLoaderRoundTrip::test_json_contains_display_config
+============================== 20 failed in 0.10s ==============================

@@ -379,6 +379,46 @@ def build_default_display_config(trip_id: str = "") -> "UnifiedWeatherDisplayCon
     )
 
 
+PROFILE_METRIC_IDS: dict[str, list[str]] = {
+    "wintersport": [
+        "temperature", "wind", "gust", "wind_chill",
+        "precipitation", "cloud_total", "sunshine",
+        "snow_depth", "fresh_snow", "snowfall_limit",
+    ],
+    "wandern": [
+        "temperature", "wind", "gust",
+        "precipitation", "thunder", "cloud_total", "sunshine",
+        "rain_probability", "visibility",
+    ],
+    "allgemein": [
+        "temperature", "wind", "gust",
+        "precipitation", "cloud_total", "sunshine",
+    ],
+}
+
+
+def build_default_display_config_for_profile(
+    location_id: str,
+    profile: "LocationActivityProfile",
+) -> "UnifiedWeatherDisplayConfig":
+    """Build a UnifiedWeatherDisplayConfig with metrics enabled for the given profile."""
+    from app.models import MetricConfig, UnifiedWeatherDisplayConfig
+
+    enabled_ids = set(PROFILE_METRIC_IDS.get(profile.value, PROFILE_METRIC_IDS["allgemein"]))
+    metrics = []
+    for metric_def in get_all_metrics():
+        metrics.append(MetricConfig(
+            metric_id=metric_def.id,
+            enabled=metric_def.id in enabled_ids,
+            aggregations=list(metric_def.default_aggregations),
+        ))
+    return UnifiedWeatherDisplayConfig(
+        trip_id=location_id,
+        metrics=metrics,
+        updated_at=datetime.now(timezone.utc),
+    )
+
+
 def get_change_detection_map() -> dict[str, float]:
     """
     Build {summary_field: threshold} from MetricCatalog.

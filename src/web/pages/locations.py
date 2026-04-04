@@ -69,6 +69,8 @@ def render_locations() -> None:
                             elevation_m=int(elev_input.value or loc.elevation_m),
                             region=region_input.value or None,
                             bergfex_slug=bergfex_input.value or None,
+                            activity_profile=loc.activity_profile,
+                            display_config=loc.display_config,
                         )
                         save_location(updated)
                         ui.notify(f"'{updated.name}' updated", type="positive")

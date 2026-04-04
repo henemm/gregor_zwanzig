@@ -14,7 +14,14 @@ from enum import Enum
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 if TYPE_CHECKING:
-    from app.models import ForecastDataPoint
+    from app.models import ForecastDataPoint, UnifiedWeatherDisplayConfig
+
+
+class LocationActivityProfile(str, Enum):
+    """Activity profile for locations — drives default metric selection."""
+    WINTERSPORT = "wintersport"
+    WANDERN = "wandern"
+    ALLGEMEIN = "allgemein"
 
 
 class SubscriptionType(str, Enum):
@@ -54,6 +61,8 @@ class SavedLocation:
     elevation_m: int
     region: Optional[str] = None  # Avalanche region code (e.g., "AT-7")
     bergfex_slug: Optional[str] = None  # Bergfex URL slug for snow data (e.g., "hochfuegen")
+    activity_profile: LocationActivityProfile = LocationActivityProfile.ALLGEMEIN
+    display_config: Optional["UnifiedWeatherDisplayConfig"] = None
 
     def __str__(self) -> str:
         region_str = f" [{self.region}]" if self.region else ""
