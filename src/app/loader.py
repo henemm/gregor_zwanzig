@@ -710,6 +710,7 @@ def load_compare_subscriptions(user_id: str = "default") -> List[CompareSubscrip
             top_n=sub_data.get("top_n", 3),
             send_email=sub_data.get("send_email", True),
             send_signal=sub_data.get("send_signal", False),
+            display_config=_parse_display_config(sub_data["display_config"]) if sub_data.get("display_config") else None,
         ))
     return subscriptions
 
@@ -731,26 +732,43 @@ def save_compare_subscriptions(
     path = get_compare_subscriptions_file(user_id)
     path.parent.mkdir(parents=True, exist_ok=True)
 
-    data = {
-        "subscriptions": [
-            {
-                "id": sub.id,
-                "name": sub.name,
-                "enabled": sub.enabled,
-                "locations": sub.locations,
-                "forecast_hours": sub.forecast_hours,
-                "time_window_start": sub.time_window_start,
-                "time_window_end": sub.time_window_end,
-                "schedule": sub.schedule.value,
-                "weekday": sub.weekday,
-                "include_hourly": sub.include_hourly,
-                "top_n": sub.top_n,
-                "send_email": sub.send_email,
-                "send_signal": sub.send_signal,
+    sub_list = []
+    for sub in subscriptions:
+        sub_dict = {
+            "id": sub.id,
+            "name": sub.name,
+            "enabled": sub.enabled,
+            "locations": sub.locations,
+            "forecast_hours": sub.forecast_hours,
+            "time_window_start": sub.time_window_start,
+            "time_window_end": sub.time_window_end,
+            "schedule": sub.schedule.value,
+            "weekday": sub.weekday,
+            "include_hourly": sub.include_hourly,
+            "top_n": sub.top_n,
+            "send_email": sub.send_email,
+            "send_signal": sub.send_signal,
+        }
+        if sub.display_config is not None:
+            dc = sub.display_config
+            sub_dict["display_config"] = {
+                "trip_id": dc.trip_id,
+                "metrics": [
+                    {
+                        "metric_id": mc.metric_id,
+                        "enabled": mc.enabled,
+                        "aggregations": mc.aggregations,
+                        "use_friendly_format": mc.use_friendly_format,
+                        "alert_enabled": mc.alert_enabled,
+                        "alert_threshold": mc.alert_threshold,
+                    }
+                    for mc in dc.metrics
+                ],
+                "updated_at": dc.updated_at.isoformat(),
             }
-            for sub in subscriptions
-        ]
-    }
+        sub_list.append(sub_dict)
+
+    data = {"subscriptions": sub_list}
 
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)

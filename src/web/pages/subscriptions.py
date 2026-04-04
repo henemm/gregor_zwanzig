@@ -23,6 +23,7 @@ from app.loader import (
 from app.user import CompareSubscription, Schedule
 from outputs.email import EmailOutput
 from outputs.base import OutputConfigError, OutputError
+from web.pages.weather_config import show_subscription_weather_config_dialog
 
 
 def render_header() -> None:
@@ -161,20 +162,24 @@ def render_subscription_card(
                 # Toggle enable/disable
                 def make_toggle_handler(subscription):
                     def do_toggle() -> None:
+                        # Read fresh from disk to avoid stale closure
+                        current_subs = load_compare_subscriptions()
+                        current = next((s for s in current_subs if s.id == subscription.id), subscription)
                         updated = CompareSubscription(
-                            id=subscription.id,
-                            name=subscription.name,
-                            enabled=not subscription.enabled,
-                            locations=subscription.locations,
-                            forecast_hours=subscription.forecast_hours,
-                            time_window_start=subscription.time_window_start,
-                            time_window_end=subscription.time_window_end,
-                            schedule=subscription.schedule,
-                            weekday=subscription.weekday,
-                            include_hourly=subscription.include_hourly,
-                            top_n=subscription.top_n,
-                            send_email=subscription.send_email,
-                            send_signal=subscription.send_signal,
+                            id=current.id,
+                            name=current.name,
+                            enabled=not current.enabled,
+                            locations=current.locations,
+                            forecast_hours=current.forecast_hours,
+                            time_window_start=current.time_window_start,
+                            time_window_end=current.time_window_end,
+                            schedule=current.schedule,
+                            weekday=current.weekday,
+                            include_hourly=current.include_hourly,
+                            top_n=current.top_n,
+                            send_email=current.send_email,
+                            send_signal=current.send_signal,
+                            display_config=current.display_config,
                         )
                         save_compare_subscription(updated)
                         refresh_fn.refresh()
@@ -228,6 +233,18 @@ def render_subscription_card(
                     icon="send",
                     on_click=make_run_now_handler(sub),
                 ).props("flat dense").tooltip("Run now")
+
+                # Wetter-Metriken
+                def make_metrics_handler(subscription):
+                    def do_show():
+                        show_subscription_weather_config_dialog(subscription)
+                    return do_show
+
+                ui.button(
+                    "Wetter-Metriken",
+                    icon="settings",
+                    on_click=make_metrics_handler(sub),
+                ).props("flat color=primary dense")
 
                 # Edit
                 def make_edit_handler(subscription):
@@ -408,6 +425,12 @@ def show_subscription_dialog(
                         send_email=send_email_cb.value,
                         send_signal=send_signal_cb.value,
                     )
+                    # Preserve display_config from disk (not stale closure)
+                    if not is_new:
+                        current_subs = load_compare_subscriptions()
+                        current = next((s for s in current_subs if s.id == sub_id), None)
+                        if current and current.display_config:
+                            new_sub.display_config = current.display_config
 
                     save_compare_subscription(new_sub)
                     dialog.close()

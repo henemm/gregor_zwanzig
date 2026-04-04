@@ -15,7 +15,10 @@ from datetime import datetime, timezone
 
 from nicegui import ui
 
-from app.loader import get_trips_dir, load_all_locations, load_trip, save_location, save_trip
+from app.loader import (
+    get_trips_dir, load_all_locations, load_compare_subscriptions,
+    load_trip, save_compare_subscription, save_location, save_trip,
+)
 from app.metric_catalog import (
     get_all_metrics,
     get_metric,
@@ -25,7 +28,7 @@ from app.metric_catalog import (
 )
 from app.models import MetricConfig, UnifiedWeatherDisplayConfig
 from app.trip import Trip
-from app.user import SavedLocation
+from app.user import CompareSubscription, SavedLocation
 
 
 # Category display order and German labels
@@ -578,6 +581,135 @@ def show_location_weather_config_dialog(
                 "Speichern",
                 on_click=make_location_save_handler(
                     loc.id, metric_widgets, dialog, user_id
+                ),
+            ).props("color=primary")
+
+    dialog.open()
+
+
+# =============================================================================
+# Subscription Weather Config (F14a)
+# =============================================================================
+
+
+def show_subscription_weather_config_dialog(
+    subscription: CompareSubscription,
+    user_id: str = "default",
+) -> None:
+    """Show weather metrics configuration dialog for a subscription."""
+    subs = load_compare_subscriptions(user_id)
+    sub = next((s for s in subs if s.id == subscription.id), subscription)
+
+    if sub.display_config and sub.display_config.metrics:
+        current_configs = {mc.metric_id: mc for mc in sub.display_config.metrics}
+    else:
+        default_config = build_default_display_config(sub.id)
+        current_configs = {mc.metric_id: mc for mc in default_config.metrics}
+
+    # All providers available (subscriptions span multiple locations)
+    available_providers = {"openmeteo", "geosphere"}
+
+    with ui.dialog() as dialog, ui.card().classes("w-full").style(
+        "max-height: 90vh; overflow-y: auto; width: 95vw; max-width: 800px;"
+    ):
+        ui.label(f"Wetter-Metriken: {sub.name}").classes("text-h6")
+        ui.label("Subscription-Vergleich").classes("text-caption text-grey")
+
+        with ui.row().classes("w-full items-center gap-2 mt-2"):
+            ui.label("Metrik").classes("text-bold").style("width: 240px;")
+            ui.label("Aggregation").classes("text-bold").style("width: 200px;")
+
+        ui.separator()
+
+        metric_widgets: dict[str, dict] = {}
+
+        for category in CATEGORY_ORDER:
+            metrics = get_metrics_by_category(category)
+            if not metrics:
+                continue
+
+            ui.separator()
+            ui.label(CATEGORY_LABELS.get(category, category)).classes(
+                "text-subtitle2 text-grey-8 mt-1"
+            )
+
+            for metric_def in metrics:
+                mc = current_configs.get(metric_def.id)
+                is_available = any(
+                    metric_def.providers.get(p, False) for p in available_providers
+                )
+                is_enabled = mc.enabled if mc else False
+
+                with ui.row().classes("w-full items-center gap-2").style(
+                    "flex-wrap: nowrap;"
+                ):
+                    cb = ui.checkbox(
+                        f"{metric_def.label_de} ({metric_def.col_label})",
+                        value=is_enabled and is_available,
+                    ).style("width: 240px;")
+                    if not is_available:
+                        cb.disable()
+                        cb.tooltip("Nicht verfügbar")
+
+                    current_aggs = mc.aggregations if mc else list(metric_def.default_aggregations)
+                    agg_values = [AGG_LABELS.get(a, a.capitalize()) for a in current_aggs]
+
+                    agg_sel = ui.select(
+                        options=list(AGG_LABELS.values()),
+                        value=agg_values,
+                        multiple=True,
+                        label="",
+                    ).style("width: 200px;").props("dense")
+
+                metric_widgets[metric_def.id] = {"checkbox": cb, "agg": agg_sel}
+
+        ui.separator()
+
+        with ui.row().classes("w-full justify-end gap-2 mt-2"):
+
+            def make_cancel_handler(dlg):
+                def do_cancel():
+                    dlg.close()
+                return do_cancel
+
+            ui.button("Abbrechen", on_click=make_cancel_handler(dialog)).props("flat")
+
+            def make_subscription_save_handler(sub_id, mw, dlg, uid):
+                def do_save():
+                    all_subs = load_compare_subscriptions(uid)
+                    target = next((s for s in all_subs if s.id == sub_id), None)
+                    if not target:
+                        ui.notify("Subscription nicht gefunden", type="negative")
+                        return
+
+                    metrics = [
+                        MetricConfig(
+                            metric_id=mid,
+                            enabled=widgets["checkbox"].value,
+                            aggregations=[a.lower() for a in (widgets["agg"].value or [])],
+                        )
+                        for mid, widgets in mw.items()
+                    ]
+
+                    if sum(1 for m in metrics if m.enabled) == 0:
+                        ui.notify("Mindestens 1 Metrik!", type="warning")
+                        return
+
+                    target.display_config = UnifiedWeatherDisplayConfig(
+                        trip_id=sub_id, metrics=metrics,
+                    )
+                    save_compare_subscription(target, uid)
+                    ui.notify(
+                        f"{sum(1 for m in metrics if m.enabled)} Metriken gespeichert",
+                        type="positive",
+                    )
+                    dlg.close()
+                return do_save
+
+            ui.button(
+                "Speichern",
+                on_click=make_subscription_save_handler(
+                    sub.id, metric_widgets, dialog, user_id
                 ),
             ).props("color=primary")
 
