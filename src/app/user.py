@@ -132,6 +132,8 @@ class CompareSubscription:
     weekday: int = 4  # 0=Monday, 6=Sunday (default: Friday)
     include_hourly: bool = True  # Include hourly details in email
     top_n: int = 3  # Number of locations to show hourly details for
+    send_email: bool = True
+    send_signal: bool = False
 
 
 @dataclass

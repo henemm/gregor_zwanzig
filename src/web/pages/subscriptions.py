@@ -170,8 +170,11 @@ def render_subscription_card(
                             time_window_start=subscription.time_window_start,
                             time_window_end=subscription.time_window_end,
                             schedule=subscription.schedule,
+                            weekday=subscription.weekday,
                             include_hourly=subscription.include_hourly,
                             top_n=subscription.top_n,
+                            send_email=subscription.send_email,
+                            send_signal=subscription.send_signal,
                         )
                         save_compare_subscription(updated)
                         refresh_fn.refresh()
@@ -190,25 +193,33 @@ def render_subscription_card(
                         from web.pages.compare import run_comparison_for_subscription
 
                         settings = Settings()
-                        if not settings.can_send_email():
-                            ui.notify("SMTP not configured", type="negative")
-                            return
-
                         ui.notify(f"Running '{subscription.name}'...", type="info")
                         try:
-                            # SPEC: docs/specs/compare_email.md v4.2 - Multipart Email
                             all_locs = load_all_locations()
                             subject, html_body, text_body = await asyncio.get_event_loop().run_in_executor(
                                 None,
                                 lambda: run_comparison_for_subscription(subscription, all_locs),
                             )
 
-                            email_output = EmailOutput(settings)
-                            await asyncio.get_event_loop().run_in_executor(
-                                None, lambda: email_output.send(subject, html_body, plain_text_body=text_body)
-                            )
+                            sent = []
+                            if subscription.send_email and settings.can_send_email():
+                                email_output = EmailOutput(settings)
+                                await asyncio.get_event_loop().run_in_executor(
+                                    None, lambda: email_output.send(subject, html_body, plain_text_body=text_body)
+                                )
+                                sent.append("Email")
 
-                            ui.notify(f"Email sent: {subject}", type="positive")
+                            if subscription.send_signal and settings.can_send_signal():
+                                from outputs.signal import SignalOutput
+                                await asyncio.get_event_loop().run_in_executor(
+                                    None, lambda: SignalOutput(settings).send(subject, text_body)
+                                )
+                                sent.append("Signal")
+
+                            if sent:
+                                ui.notify(f"{', '.join(sent)} sent: {subject}", type="positive")
+                            else:
+                                ui.notify("Kein Kanal konfiguriert oder aktiviert", type="warning")
                         except Exception as e:
                             ui.notify(f"Error: {e}", type="negative")
                     return do_run_now
@@ -349,6 +360,17 @@ def show_subscription_dialog(
             value=True if is_new else sub.enabled,
         )
 
+        ui.label("Kanäle").classes("text-subtitle2 q-mt-sm")
+        with ui.row().classes("gap-4"):
+            send_email_cb = ui.checkbox(
+                "E-Mail",
+                value=True if is_new else sub.send_email,
+            )
+            send_signal_cb = ui.checkbox(
+                "Signal",
+                value=False if is_new else sub.send_signal,
+            )
+
         # Actions
         with ui.row().classes("w-full justify-end gap-2 mt-4"):
             ui.button("Cancel", on_click=dialog.close).props("flat")
@@ -383,6 +405,8 @@ def show_subscription_dialog(
                         weekday=weekday_select.value if weekday_select else 4,
                         include_hourly=include_hourly.value,
                         top_n=int(top_n.value or 3),
+                        send_email=send_email_cb.value,
+                        send_signal=send_signal_cb.value,
                     )
 
                     save_compare_subscription(new_sub)

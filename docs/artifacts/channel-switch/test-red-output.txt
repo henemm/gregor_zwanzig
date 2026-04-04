@@ -1,0 +1,208 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 9 items
+
+tests/tdd/test_channel_switch_subscription.py FFFFFFFFF                  [100%]
+
+=================================== FAILURES ===================================
+______ TestCompareSubscriptionChannelFields.test_default_send_email_true _______
+
+self = <tdd.test_channel_switch_subscription.TestCompareSubscriptionChannelFields object at 0x7ecc3ec13e00>
+
+    def test_default_send_email_true(self):
+        """
+        GIVEN: CompareSubscription created without send_email
+        WHEN: accessing send_email
+        THEN: defaults to True
+        """
+        from app.user import CompareSubscription
+        sub = CompareSubscription(id="test", name="Test")
+>       assert sub.send_email is True
+               ^^^^^^^^^^^^^^
+E       AttributeError: 'CompareSubscription' object has no attribute 'send_email'
+
+tests/tdd/test_channel_switch_subscription.py:29: AttributeError
+_____ TestCompareSubscriptionChannelFields.test_default_send_signal_false ______
+
+self = <tdd.test_channel_switch_subscription.TestCompareSubscriptionChannelFields object at 0x7ecc3e0cef00>
+
+    def test_default_send_signal_false(self):
+        """
+        GIVEN: CompareSubscription created without send_signal
+        WHEN: accessing send_signal
+        THEN: defaults to False
+        """
+        from app.user import CompareSubscription
+        sub = CompareSubscription(id="test", name="Test")
+>       assert sub.send_signal is False
+               ^^^^^^^^^^^^^^^
+E       AttributeError: 'CompareSubscription' object has no attribute 'send_signal'
+
+tests/tdd/test_channel_switch_subscription.py:39: AttributeError
+________ TestCompareSubscriptionChannelFields.test_explicit_signal_true ________
+
+self = <tdd.test_channel_switch_subscription.TestCompareSubscriptionChannelFields object at 0x7ecc3e0cfe60>
+
+    def test_explicit_signal_true(self):
+        """
+        GIVEN: CompareSubscription with send_signal=True
+        WHEN: accessing send_signal
+        THEN: returns True
+        """
+        from app.user import CompareSubscription
+>       sub = CompareSubscription(id="test", name="Test", send_signal=True)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: CompareSubscription.__init__() got an unexpected keyword argument 'send_signal'
+
+tests/tdd/test_channel_switch_subscription.py:48: TypeError
+________ TestCompareSubscriptionChannelFields.test_explicit_email_false ________
+
+self = <tdd.test_channel_switch_subscription.TestCompareSubscriptionChannelFields object at 0x7ecc3e0cfda0>
+
+    def test_explicit_email_false(self):
+        """
+        GIVEN: CompareSubscription with send_email=False
+        WHEN: accessing send_email
+        THEN: returns False
+        """
+        from app.user import CompareSubscription
+>       sub = CompareSubscription(id="test", name="Test", send_email=False)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: CompareSubscription.__init__() got an unexpected keyword argument 'send_email'
+
+tests/tdd/test_channel_switch_subscription.py:58: TypeError
+_______ TestCompareSubscriptionChannelFields.test_both_channels_enabled ________
+
+self = <tdd.test_channel_switch_subscription.TestCompareSubscriptionChannelFields object at 0x7ecc3e0cfcb0>
+
+    def test_both_channels_enabled(self):
+        """
+        GIVEN: CompareSubscription with both channels enabled
+        WHEN: accessing both fields
+        THEN: both are True
+        """
+        from app.user import CompareSubscription
+>       sub = CompareSubscription(
+            id="test", name="Test", send_email=True, send_signal=True
+        )
+E       TypeError: CompareSubscription.__init__() got an unexpected keyword argument 'send_email'
+
+tests/tdd/test_channel_switch_subscription.py:68: TypeError
+____________ TestLoaderChannelRoundTrip.test_save_load_with_signal _____________
+
+self = <tdd.test_channel_switch_subscription.TestLoaderChannelRoundTrip object at 0x7ecc3e0cfc20>
+
+    def test_save_load_with_signal(self):
+        """
+        GIVEN: CompareSubscription with send_signal=True
+        WHEN: saved and loaded back
+        THEN: send_signal round-trips correctly
+        """
+        from app.user import CompareSubscription
+        from app.loader import save_compare_subscription, load_compare_subscriptions
+    
+>       sub = CompareSubscription(
+            id="channel-test", name="Channel Test",
+            send_email=True, send_signal=True,
+        )
+E       TypeError: CompareSubscription.__init__() got an unexpected keyword argument 'send_email'
+
+tests/tdd/test_channel_switch_subscription.py:91: TypeError
+_____________ TestLoaderChannelRoundTrip.test_save_load_email_only _____________
+
+self = <tdd.test_channel_switch_subscription.TestLoaderChannelRoundTrip object at 0x7ecc3e0cf8f0>
+
+    def test_save_load_email_only(self):
+        """
+        GIVEN: CompareSubscription with default channels (email only)
+        WHEN: saved and loaded back
+        THEN: send_email=True, send_signal=False
+        """
+        from app.user import CompareSubscription
+        from app.loader import save_compare_subscription, load_compare_subscriptions
+    
+        sub = CompareSubscription(
+            id="email-only-test", name="Email Only",
+        )
+        save_compare_subscription(sub, user_id="__test_email_only__")
+        loaded = load_compare_subscriptions(user_id="__test_email_only__")
+    
+        found = [s for s in loaded if s.id == "email-only-test"]
+        assert len(found) == 1
+>       assert found[0].send_email is True
+               ^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'CompareSubscription' object has no attribute 'send_email'
+
+tests/tdd/test_channel_switch_subscription.py:120: AttributeError
+______ TestLoaderChannelRoundTrip.test_backward_compat_no_channel_fields _______
+
+self = <tdd.test_channel_switch_subscription.TestLoaderChannelRoundTrip object at 0x7ecc3e0cf7d0>
+
+    def test_backward_compat_no_channel_fields(self):
+        """
+        GIVEN: Legacy JSON without send_email/send_signal fields
+        WHEN: loaded via load_compare_subscriptions
+        THEN: defaults to send_email=True, send_signal=False
+        """
+        from app.loader import load_compare_subscriptions, get_compare_subscriptions_file
+    
+        # Write legacy JSON directly
+        path = get_compare_subscriptions_file("__test_legacy_ch__")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        legacy = {
+            "subscriptions": [{
+                "id": "legacy-sub",
+                "name": "Legacy Sub",
+                "enabled": True,
+                "locations": ["*"],
+                "forecast_hours": 48,
+                "time_window_start": 9,
+                "time_window_end": 16,
+                "schedule": "weekly",
+                "weekday": 4,
+            }]
+        }
+        with open(path, "w") as f:
+            json.dump(legacy, f)
+    
+        loaded = load_compare_subscriptions(user_id="__test_legacy_ch__")
+        assert len(loaded) == 1
+>       assert loaded[0].send_email is True
+               ^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'CompareSubscription' object has no attribute 'send_email'
+
+tests/tdd/test_channel_switch_subscription.py:152: AttributeError
+_________ TestLoaderChannelRoundTrip.test_json_contains_channel_fields _________
+
+self = <tdd.test_channel_switch_subscription.TestLoaderChannelRoundTrip object at 0x7ecc3e0cf980>
+
+    def test_json_contains_channel_fields(self):
+        """
+        GIVEN: CompareSubscription with send_signal=True
+        WHEN: saved to JSON
+        THEN: JSON contains send_email and send_signal keys
+        """
+        from app.user import CompareSubscription
+        from app.loader import save_compare_subscription, get_compare_subscriptions_file
+    
+>       sub = CompareSubscription(
+            id="json-check", name="JSON Check",
+            send_email=False, send_signal=True,
+        )
+E       TypeError: CompareSubscription.__init__() got an unexpected keyword argument 'send_email'
+
+tests/tdd/test_channel_switch_subscription.py:164: TypeError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_channel_switch_subscription.py::TestCompareSubscriptionChannelFields::test_default_send_email_true
+FAILED tests/tdd/test_channel_switch_subscription.py::TestCompareSubscriptionChannelFields::test_default_send_signal_false
+FAILED tests/tdd/test_channel_switch_subscription.py::TestCompareSubscriptionChannelFields::test_explicit_signal_true
+FAILED tests/tdd/test_channel_switch_subscription.py::TestCompareSubscriptionChannelFields::test_explicit_email_false
+FAILED tests/tdd/test_channel_switch_subscription.py::TestCompareSubscriptionChannelFields::test_both_channels_enabled
+FAILED tests/tdd/test_channel_switch_subscription.py::TestLoaderChannelRoundTrip::test_save_load_with_signal
+FAILED tests/tdd/test_channel_switch_subscription.py::TestLoaderChannelRoundTrip::test_save_load_email_only
+FAILED tests/tdd/test_channel_switch_subscription.py::TestLoaderChannelRoundTrip::test_backward_compat_no_channel_fields
+FAILED tests/tdd/test_channel_switch_subscription.py::TestLoaderChannelRoundTrip::test_json_contains_channel_fields
+============================== 9 failed in 0.06s ===============================
