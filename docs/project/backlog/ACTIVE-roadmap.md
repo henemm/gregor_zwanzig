@@ -1,240 +1,69 @@
-# Active Roadmap - Gregor Zwanziger
+# Active Roadmap - Gregor Zwanziger (Archiv)
 
 **Last Updated:** 2026-04-08
 
-> **Offene Features sind jetzt auf GitHub Issues:** https://github.com/henemm/gregor_zwanzig/issues
+> **Offene Features, Bugs und Migration-Tasks sind auf GitHub Issues:**
+> https://github.com/henemm/gregor_zwanzig/issues
 >
-> Diese Datei dient als Archiv fuer erledigte Features. Neue Features werden als GitHub Issues angelegt.
+> Diese Datei dient nur noch als **Archiv fuer erledigte Features**.
+> Neue Features werden als GitHub Issues angelegt.
 
-This roadmap tracks all features across the project lifecycle.
-Features are added via `/feature` or `/user-story` commands.
-
-## Status Legend
-
-| Status | Meaning |
-|--------|---------|
-| `open` | Planned, not started yet |
-| `spec_ready` | Specification approved, ready for implementation |
-| `in_progress` | Currently being implemented |
-| `done` | Completed and validated |
-| `blocked` | Blocked by dependencies or external factors |
-| `obsolete` | No longer needed (superseded by other solution) |
-
-## Priority Legend
-
-| Priority | Meaning |
-|----------|---------|
-| `HIGH` | Critical for MVP or user-requested |
-| `MEDIUM` | Important but not urgent |
-| `LOW` | Nice-to-have, can wait |
-
-## Features
-
-| Feature | Status | Priority | Category | Affected Systems | Estimate | Story/Epic |
-|---------|--------|----------|----------|------------------|----------|------------|
-| CLI Entry Point | done | HIGH | Core | CLI | Medium | SETUP-02 |
-| Config System (INI/ENV) | done | HIGH | Core | Config | Simple | SETUP-03 |
-| Debug Architecture | done | HIGH | Core | Debug | Medium | SETUP-04 |
-| ~~MET Norway Adapter~~ | obsolete | ~~HIGH~~ | Provider | Provider Layer | Medium | WEATHER-01 |
-| Open-Meteo Provider | done | MEDIUM | Provider | Provider Layer | Medium | - |
-| ~~MOSMIX Adapter~~ | obsolete | ~~MEDIUM~~ | Provider | Provider Layer | Large | WEATHER-02 |
-| Data Normalization | done | HIGH | Provider | Normalizer | Medium | WEATHER-03 |
-| Provider Error Handling | done | MEDIUM | Provider | Provider Layer | Medium | WEATHER-04 |
-| Model-Metric-Fallback | done | MEDIUM | Provider | Provider Layer, Cache | Medium | WEATHER-05 |
-| UV-Index via Air Quality API | done | MEDIUM | Provider | Provider Layer | Simple | WEATHER-06 |
-| Gewitter Risk Logic | done | HIGH | Risk Engine | Risk Engine | Medium | RISK-01 |
-| Starkregen Risk | done | MEDIUM | Risk Engine | Risk Engine | Simple | RISK-02 |
-| Wind/Hitze Risk | done | LOW | Risk Engine | Risk Engine | Simple | RISK-03 |
-| Configurable Thresholds | done | MEDIUM | Config | Risk Engine, Config | Simple | RISK-04 |
-| Report Types | done | HIGH | Formatter | Formatter, CLI | Medium | REPORT-01 |
-| Compact Formatter | done | MEDIUM | Formatter | Formatter | Simple | REPORT-02 |
-| SMTP Mailer | done | HIGH | Channel | Channel Layer | Medium | REPORT-03 |
-| Retry Logic | done | MEDIUM | Core | All Layers | Medium | OPS-01 |
-| Logging/Rotation | open | LOW | Core | Logging | Simple | OPS-02 |
-| GitHub Actions | done | LOW | Ops | CI/CD | Simple | OPS-03 |
-| Trip Edit UI | done | HIGH | WebUI | Frontend | Medium | UI-01 |
-| Compare E-Mail | done | MEDIUM | WebUI | Frontend, Email | Medium | UI-02 |
-| Cloud Layers | done | MEDIUM | WebUI | Frontend, Provider | Medium | UI-03 |
-| GPX Upload (WebUI) | done | HIGH | WebUI | Frontend | Simple | GPX-Story1 |
-| GPX Parser & Validation | done | HIGH | Core | GPX Parser | Medium | GPX-Story1 |
-| Höhenprofil-Analyse | done | HIGH | Core | Elevation Analysis | Medium | GPX-Story1 |
-| Zeit-Segment-Bildung | done | HIGH | Core | Segmentation Engine | Medium | GPX-Story1 |
-| Hybrid-Segmentierung | done | HIGH | Core | Segmentation Engine | Medium | GPX-Story1 |
-| Etappen-Config (WebUI) | done | HIGH | WebUI | Frontend, Config | Medium | GPX-Story1 |
-| Segment-Übersicht (WebUI) | done | HIGH | WebUI | Frontend | Simple | GPX-Story1 |
-| Segment-Wetter-Abfrage | done | HIGH | Services | Weather Engine | Medium | GPX-Story2 |
-| Basis-Metriken | done | HIGH | Services | Weather Engine | Simple | GPX-Story2 |
-| Erweiterte Metriken | done | HIGH | Services | Weather Engine | Simple | GPX-Story2 |
-| Segment-Aggregation | done | HIGH | Services | Weather Engine | Medium | GPX-Story2 |
-| Wetter-Cache | done | HIGH | Services | Weather Engine | Simple | GPX-Story2 |
-| Change-Detection | done | HIGH | Services | Weather Engine | Medium | GPX-Story2 |
-| Wetter-Config (WebUI) | done | HIGH | WebUI | Frontend | Simple | GPX-Story2 |
-| Email Trip-Formatter | done | HIGH | Formatter | Report Generation | Medium | GPX-Story3 |
-| SMS Compact Formatter | done | HIGH | Formatter | Report Generation | Simple | GPX-Story3 |
-| Report-Scheduler | done | HIGH | Services | Scheduler | Medium | GPX-Story3 |
-| Alert bei Änderungen | done | HIGH | Services | Alert System | Simple | GPX-Story3 |
-| Weather Snapshot Service | done | HIGH | Services | Alert System, Scheduler | Medium | ALERT-01 |
-| Letzter Waypoint fehlt in Trip-Report | done | HIGH | Bugfix | Segment Weather, Scheduler | Simple | BUG-01 |
-| AROME: Visibility/UV nicht verfuegbar | done | LOW | Provider | Provider Layer | Medium | WEATHER-05 + WEATHER-06 |
-| Report-Config (WebUI) | done | HIGH | WebUI | Frontend | Simple | GPX-Story3 |
-| Kompakt-Summary | done | HIGH | Formatter | Formatter, Email | Simple | F2 |
-| SMS-Kanal | open | HIGH | Channel | Channel Layer, Formatter | Medium | F1 |
-| Multi-Day Trend | done | MEDIUM | Formatter | Formatter, Provider | Simple | F3 |
-| Trip-Briefing (Kompakt-Tabelle) | open | MEDIUM | Formatter | Formatter, Scheduler | Medium | F4 |
-| Biwak-/Zelt-Modus | open | MEDIUM | Config | Config, Formatter, Night-Block | Simple-Medium | F5 |
-| Trip-Umplanung per Kommando | open | MEDIUM | Services | Scheduler, Email-Reply, SMS-Reply | Medium-Large | F6 |
-| Wind-Exposition (Grat-Erkennung) | done | LOW | Risk Engine | GPX Elevation, Risk Engine | Medium | F7 |
-| Wind-Exposition Pipeline-Integration | done | LOW | Risk Engine | Risk Engine, Formatter, Scheduler | Medium | F7b |
-| Wind-Exposition Config (per-Trip) | done | LOW | Config | TripReportConfig, UI | Simple | F7c |
-| Risk Engine (Daten-Layer) | done | LOW | Risk Engine | Risk Engine, Formatter | Large | F8 |
-| Satellite Messenger (Garmin inReach) | open | LOW | Channel | Channel Layer, Formatter | Simple | F9 |
-| Lawinen-Integration (SLF/EAWS) | open | LOW | Provider | Provider Layer, Risk Engine | Large | F10 |
-| Generische Locations (Metrik-Auswahl) | done | HIGH | WebUI | Locations UI, User Model, Loader, Formatter | Medium | F11 |
-| Versandweg-Auswahl (Channel-Switch) | open | HIGH | WebUI | Locations UI, Trips UI, User Model, Settings | Medium | F12 |
-| Multi-User mit Login | open | HIGH | Core | Auth, Web Main, Loader, alle Pages | Large | F13 |
-| Subscription Metriken-Auswahl (Model+UI) | open | HIGH | WebUI | CompareSubscription, Loader, Subscriptions UI | Medium | F14a |
-| Subscription Metriken-Auswahl (Renderer) | open | HIGH | Formatter | compare.py HTML+Plaintext Renderer | Medium | F14b |
-| **SvelteKit-Migration: Go-Backend Setup** | open | HIGH | Migration | Go Modul, Chi Router, REST API Design | Medium | M1 |
-| **SvelteKit-Migration: Provider portieren** | open | HIGH | Migration | OpenMeteo Provider in Go | Medium | M2 |
-| **SvelteKit-Migration: Risk Engine portieren** | open | HIGH | Migration | Normalizer + Risk Engine in Go | Medium | M3 |
-| **SvelteKit-Migration: Formatter portieren** | open | HIGH | Migration | Email/SMS Formatter + Scheduler in Go | Large | M4 |
-| **SvelteKit-Migration: Frontend Setup** | open | HIGH | Migration | SvelteKit + Auth (Lucia) + UI Library | Medium | M5 |
-| **SvelteKit-Migration: Frontend Pages** | open | HIGH | Migration | Trips, Locations, Weather, Config Pages | Large | M6 |
-| **SvelteKit-Migration: Cutover** | open | HIGH | Migration | DNS, Systemd, Cleanup, E2E-Tests | Medium | M7 |
-| **Backlog → GitHub Issues migrieren** | open | MEDIUM | Ops | Backlog, Epics, Known Issues | Simple | OPS-04 |
-
-## Completed Features (Last 10)
+## Completed Features
 
 | Feature | Completed | Category | Notes |
 |---------|-----------|----------|-------|
-| Risk Engine (Daten-Layer) | 2026-02-18 | Risk Engine | Zentralisierte Risikobewertung via MetricCatalog, commit `9a7af10` |
-| Wind-Exposition Config (per-Trip) | 2026-02-18 | Config | `TripReportConfig.wind_exposition_min_elevation_m`, UI input, global default 2000→1500m |
-| Wind-Exposition Pipeline-Integration | 2026-02-18 | Risk Engine | Kumulierte Distanz in Segmenten, `detect_exposed_from_segments()` call, exposed_sections an Formatter |
-| Wind-Exposition (Grat-Erkennung) | 2026-02-18 | Risk Engine | `WindExpositionService`, Rule 9 (WIND_EXPOSITION), Grat-Erkennung mit Elevation-Analyse |
-| Multi-Day Trend | 2026-02-17 | Formatter | Stage-basierter Etappen-Ausblick, Morning/Evening konfigurierbar |
-| Kompakt-Summary | 2026-02-17 | Formatter | Natural-language Wetter-Summary pro Etappe mit zeitlicher Qualifizierung (Peak/Start/Ende) |
-| Report-Config (WebUI) | 2026-02 | WebUI | Per-Trip Morning/Evening Zeiten, Metriken-Config |
-| Provider Error Handling | 2026-02-16 | Provider | Catches ProviderRequestError, renders error warnings in emails |
-| Wind/Hitze Risk | 2026-02-16 | Risk Engine | Windboeen + Hitze-Warnung in Formatter |
-| Starkregen Risk | 2026-02-16 | Risk Engine | Niederschlags-Intensitaet in Formatter |
-| Gewitter Risk Logic | 2026-02-16 | Risk Engine | CAPE-basiert, _parse_thunder_level() in OpenMeteo |
+| CLI Entry Point | 2025-12 | Core | SETUP-02 |
+| Config System (INI/ENV) | 2025-12 | Core | SETUP-03 |
+| Debug Architecture | 2025-12 | Core | SETUP-04 |
+| Open-Meteo Provider | 2026-01 | Provider | Regional Models (AROME, ICON-EU) |
+| Data Normalization | 2026-01 | Provider | WEATHER-03 |
+| Gewitter Risk Logic | 2026-02-16 | Risk Engine | CAPE-basiert, `_parse_thunder_level()` |
+| Starkregen Risk | 2026-02-16 | Risk Engine | Niederschlags-Intensitaet |
+| Wind/Hitze Risk | 2026-02-16 | Risk Engine | Windboeen + Hitze-Warnung |
+| Provider Error Handling | 2026-02-16 | Provider | ProviderRequestError, Warnings in Emails |
+| Configurable Thresholds | 2026-02 | Config | Risk Engine Schwellen konfigurierbar |
+| Report Types | 2026-01 | Formatter | Morning, Evening, Alert |
+| Compact Formatter | 2026-01 | Formatter | <=160 Zeichen |
+| SMTP Mailer | 2025-12 | Channel | Gmail SMTP, E2E getestet |
+| Retry Logic | 2026-02 | Core | Tenacity-basiert |
+| GitHub Actions | 2026-01 | Ops | Lint + Test CI |
+| Trip Edit UI | 2026-01 | WebUI | NiceGUI CRUD |
+| Compare E-Mail | 2026-01 | WebUI | Skigebiet-Vergleich |
+| Cloud Layers | 2026-01 | WebUI | Low/Mid/High Wolkenhoehen |
+| GPX Upload (WebUI) | 2026-02 | WebUI | Drag & Drop Upload |
+| GPX Parser & Validation | 2026-02 | Core | Komoot GPX 1.0/1.1 |
+| Hoehenprofil-Analyse | 2026-02 | Core | Peak/Valley Detection |
+| Zeit-Segment-Bildung | 2026-02 | Core | Naismith's Rule |
+| Hybrid-Segmentierung | 2026-02 | Core | Snap to Peaks/Valleys |
+| Etappen-Config (WebUI) | 2026-02 | WebUI | Segment-Uebersicht |
+| Segment-Wetter-Abfrage | 2026-02 | Services | Multi-Segment Forecast |
+| Basis-Metriken | 2026-02 | Services | Temp, Wind, Regen |
+| Erweiterte Metriken | 2026-02 | Services | UV, Wolken, Sicht |
+| Segment-Aggregation | 2026-02 | Services | MIN/MAX/AVG/SUM |
+| Wetter-Cache | 2026-02 | Services | API Response Cache |
+| Change-Detection | 2026-02 | Services | Delta-Vergleich |
+| Wetter-Config (WebUI) | 2026-02 | WebUI | Metrik-Auswahl |
+| Email Trip-Formatter | 2026-02 | Formatter | HTML + Plaintext |
+| SMS Compact Formatter | 2026-02 | Formatter | <=160 Zeichen Trip |
+| Report-Scheduler | 2026-02 | Services | APScheduler Cron |
+| Alert bei Aenderungen | 2026-02 | Services | Threshold-basiert |
+| Weather Snapshot Service | 2026-02 | Services | Forecast State Capture |
+| Report-Config (WebUI) | 2026-02 | WebUI | Morning/Evening Zeiten |
+| Kompakt-Summary | 2026-02-17 | Formatter | Natural-language Summary |
+| Multi-Day Trend | 2026-02-17 | Formatter | Etappen-Ausblick |
+| Wind-Exposition (Grat-Erkennung) | 2026-02-18 | Risk Engine | `WindExpositionService` |
+| Wind-Exposition Pipeline | 2026-02-18 | Risk Engine | `detect_exposed_from_segments()` |
+| Wind-Exposition Config | 2026-02-18 | Config | Per-Trip min_elevation_m |
+| Risk Engine (Daten-Layer) | 2026-02-18 | Risk Engine | MetricCatalog, Risiko-Kategorisierung |
+| Model-Metric-Fallback | 2026-02 | Provider | WEATHER-05, Verfuegbarkeits-Probe |
+| UV-Index via Air Quality API | 2026-02 | Provider | CAMS, WEATHER-06 |
+| Generische Locations (Metrik-Auswahl) | 2026-03 | WebUI | F11, Profil-Dropdown |
+| Subscription Metriken-Auswahl (Model+UI) | 2026-04 | WebUI | F14a, Display-Config Dialog |
+| Channel-Switch fuer Subscriptions | 2026-04 | WebUI | F12a, Email/Signal |
 
-## Known Bugs
+## Solved Bugs
 
-| Bug | Severity | Location | Description |
-|-----|----------|----------|-------------|
-| ~~BUG-01: Letzter Waypoint fehlt~~ | ~~HIGH~~ | SOLVED | Geloest: `ff6a116` — Ziel-Segment wird jetzt als eigener Forecast abgefragt |
-| ~~BUG-02: AROME Visibility/UV~~ | ~~LOW~~ | SOLVED | Visibility: WEATHER-05 Fallback ICON-EU. UV: WEATHER-06 Air Quality API (CAMS) |
-
-## Blocked Features
-
-| Feature | Blocked By | Notes |
-|---------|------------|-------|
-| _(keine)_ | | |
-
-## Upcoming (Next 3 Sprints)
-
-### Sprint 1 (Current) — Quick Wins
-- [x] Kompakt-Summary (F2, done — Natural-language Wetter-Summary mit zeitlicher Qualifizierung)
-- [x] Multi-Day Trend (F3, done — Etappen-Ausblick mit Stage-Aggregation, konfigurierbar Morning/Evening)
-- [ ] Biwak-/Zelt-Modus (F5, Gering-Mittel — erweiterter Night-Block)
-
-### Sprint 2 — Generische Locations & Channel-Switch
-- [ ] Generische Locations (F11, Mittel — Locations aktivitäts-unabhängig machen, Metrik-Auswahl)
-- [ ] Versandweg-Auswahl (F12, Mittel — Channel-Switch für Locations + Trips)
-
-### Sprint 3 — Multi-User & Sicherheit
-- [ ] Multi-User mit Login (F13, Groß — Auth-System, User-Isolation, Session-Management)
-
-### Sprint 4 — SvelteKit Migration (Backend)
-- [ ] Go-Backend Setup (M1 — Chi Router, REST API Design, CI/CD)
-- [ ] Provider portieren (M2 — OpenMeteo in Go, inkl. BUG-TZ-01 Fix)
-- [ ] Risk Engine portieren (M3 — Normalizer + Risk Engine in Go)
-- [ ] Formatter portieren (M4 — Email/SMS Formatter + Scheduler)
-
-### Sprint 5 — SvelteKit Migration (Frontend + Cutover)
-- [ ] Frontend Setup (M5 — SvelteKit + Auth + UI Library, loest F13)
-- [ ] Frontend Pages (M6 — Trips, Locations, Weather, Config)
-- [ ] Cutover (M7 — DNS, Systemd, Cleanup, E2E-Tests)
-
-### Sprint 6 — Post-Migration Features
-- [ ] SMS-Kanal (F1, Mittel — jetzt als Go-Service)
-- [ ] Satellite Messenger / Garmin inReach (F9, Gering)
-- [ ] Trip-Briefing Kompakt-Tabelle (F4, Mittel)
-- [ ] Trip-Umplanung per Kommando (F6, Mittel-Hoch)
-
-## Feature Categories
-
-### Core (Infrastructure)
-- CLI Entry Point (done), Config System (done), Debug Architecture (done), Retry Logic (done), Logging
-- Multi-User mit Login (F13)
-
-### Provider (Weather Data Sources)
-- ~~MET Norway~~ (obsolete), ~~MOSMIX~~ (obsolete), Open-Meteo (done), Data Normalization (done), Error Handling (done), Model-Metric-Fallback (done), UV via Air Quality API (done)
-
-### Risk Engine (Weather Assessment)
-- Gewitter Risk (done), Starkregen Risk (done), Wind/Hitze Risk (done), Configurable Thresholds (done)
-- Risk Engine Daten-Layer (F8, done), Wind-Exposition (F7, done), Lawinen-Integration (F10)
-
-### Formatter (Report Generation)
-- Report Types (done), Compact Formatter (done)
-- Kompakt-Summary (F2), Multi-Day Trend (F3), Trip-Briefing (F4), Biwak-/Zelt-Modus (F5)
-
-### Channel (Delivery)
-- SMTP Mailer (done)
-- SMS-Kanal (F1), Satellite Messenger (F9)
-
-### Services (Trip Intelligence)
-- Trip-Umplanung per Kommando (F6)
-
-### WebUI (Frontend)
-- Trip Edit (done), Compare E-Mail (done), Cloud Layers (done), GPX Upload (done), Etappen-Config (done), Segment-Übersicht (done)
-- Generische Locations (F11), Versandweg-Auswahl (F12)
-
-### Ops (Operations)
-- GitHub Actions (done), Logging/Rotation
-
-## How to Add Features
-
-### New Feature
-```bash
-# Use feature command for single, scoped feature
-/feature "Your Feature Name"
-```
-
-The feature-planner agent will:
-1. Analyze and scope the feature
-2. Create entry in this roadmap
-3. Create feature brief in `features/[name].md`
-4. Hand off to workflow
-
-### User Story (Multiple Features)
-```bash
-# Use user-story command for larger initiatives
-/user-story "Als [X] möchte ich [Y], damit [Z]"
-```
-
-The user-story-planner agent will:
-1. Break down story into features
-2. Add all features to this roadmap
-3. Create story document in `stories/[name].md`
-4. Prioritize and sequence features
-
-## Roadmap Maintenance
-
-**Auto-updated by:**
-- `/feature` command (adds new features)
-- `/user-story` command (adds multiple features)
-- Workflow state changes (status updates)
-
-**Manual updates:**
-- Change priority when business needs shift
-- Mark features as blocked when dependencies discovered
-- Move features to "Upcoming" when planning sprints
-
-## Notes
-
-- **Scoping Limits:** Each feature should be ≤5 files, ≤250 LOC
-- **MVP Focus:** Prioritize HIGH priority features in Core, Provider, Risk Engine categories
-- **WebUI:** Separate track, already functional
-- **Testing:** All features require real E2E tests (no mocking!)
+| Bug | Solved | Notes |
+|-----|--------|-------|
+| BUG-01: Letzter Waypoint fehlt | 2026-02 | Commit `ff6a116` |
+| BUG-02: AROME Visibility/UV | 2026-02 | Fallback ICON-EU + CAMS |

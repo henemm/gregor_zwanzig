@@ -122,18 +122,29 @@ Alle Module benoetigen Specs vor Implementierung:
 - `agent_orchestration` - Workflow-Skill-Commands mit Subagent-Delegation
 - `command_set_merge` - Merge von Underscore- und Dash-Commands
 
-### Geplante Module (draft)
-- `provider_met` - MET Norway Adapter
-- `provider_mosmix` - DWD MOSMIX Adapter
-- `risk_engine` - Risiko-Bewertung
-- `report_formatter` - Report-Generierung
+### Geplante Module
+Siehe GitHub Issues: https://github.com/henemm/gregor_zwanzig/issues
 
 ## Dokumentation
 
 - `docs/specs/` - Entity-Spezifikationen
 - `docs/features/` - Feature-Dokumentation
 - `docs/reference/` - Technische Referenz
-- `docs/project/` - Projekt-Management (Backlog)
+- `docs/project/` - Projekt-Management (Archiv)
+
+## Backlog & Issue-Tracking
+
+**GitHub Issues ist die Single Source of Truth fuer offene Arbeit:**
+https://github.com/henemm/gregor_zwanzig/issues
+
+- **Neue Features** → GitHub Issue mit Label `enhancement` erstellen
+- **Neue Bugs** → GitHub Issue mit Label `bug` erstellen
+- **Fortschritt** → Issue schliessen wenn fertig
+- **Erledigte Features (Archiv)** → `docs/project/backlog/ACTIVE-roadmap.md`
+- **Root-Cause-Analysen** → `docs/project/known_issues.md`
+- **Strategische Entscheidungen** → `docs/project/strategic-directions.md`
+
+**NICHT MEHR in Markdown-Dateien planen!** Offene Features, Bugs und Sprint-Planung gehoeren auf GitHub Issues.
 
 ## Pre-Test Validierung (PFLICHT!)
 
