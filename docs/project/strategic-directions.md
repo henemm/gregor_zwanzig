@@ -75,6 +75,18 @@ F6 Trip-Umplanung ───→ F7 Wind-Exposition
 
 ---
 
+## Strategische Entscheidung: Tech Stack Migration (2026-04-08)
+
+**Entscheidung:** Migration von Python/NiceGUI auf Go (Backend) + SvelteKit (Frontend)
+
+**Treiber:** AI-gestuetzte Entwicklung mit Python produziert zu viele Fehler (dynamische Typen, NiceGUI-Magie, Import-Probleme). Go's Compile-Time Safety und SvelteKit's konsistente Trainingsdaten reduzieren die Fehlerrate signifikant.
+
+**Details:** `docs/project/backlog/stories/sveltekit-migration.md`
+
+**Epic:** `docs/project/backlog/epics.md` → "Tech Stack Migration"
+
+---
+
 ## Kern-Erkenntnis
 
 Gregor Zwanzig differenziert sich nicht durch MEHR Daten oder durch Empfehlungen, sondern durch **die richtige Information im richtigen Moment ueber den richtigen Kanal**:
