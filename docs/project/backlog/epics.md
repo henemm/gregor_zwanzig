@@ -238,6 +238,33 @@ Epics are large business initiatives that contain multiple user stories.
 
 ---
 
+### Epic: Tech Stack Migration (Python/NiceGUI → Go/SvelteKit)
+
+**Goal:** Tech-Stack von Python/NiceGUI auf Go (Backend) + SvelteKit (Frontend) migrieren fuer hoehere AI-Entwicklungsqualitaet und schnellere Feature-Delivery
+
+**Business Value:** AI-gestuetzte Entwicklung produziert mit Go signifikant weniger Fehler (Compile-Time Safety, konsistente Trainingsdaten). SvelteKit loest Multi-User (F13) als Nebenprodukt. Weniger Fix-Iterationen pro Feature = schnellerer Fortschritt.
+
+**Status:** Draft
+
+**Story:** `stories/sveltekit-migration.md`
+
+**Dependencies:** Keine — laeuft parallel zum bestehenden Python-Stack bis Cutover
+
+**Phases:**
+- [ ] Phase 0: Parallel-Setup (Go-Modul, SvelteKit-Projekt, REST API Design)
+- [ ] Phase 1: Backend-Kern portieren (Config → Provider → Normalizer → Risk Engine → Formatter → Scheduler)
+- [ ] Phase 2: Frontend portieren (Auth/Login, Trips, Locations, Weather, Config Pages)
+- [ ] Phase 3: Cutover & Cleanup (DNS, Systemd, Python entfernen, E2E-Tests)
+
+**Loest direkt:**
+- F13 (Multi-User) — via SvelteKit Auth (Lucia)
+- BUG-TZ-01 (Timezone) — beim Provider-Port direkt fixen
+- F12 (Channel-Switch) — als SvelteKit-Page
+
+**Target Completion:** Q3 2026
+
+---
+
 ## Completed Epics
 
 ### Epic: MVP Foundation

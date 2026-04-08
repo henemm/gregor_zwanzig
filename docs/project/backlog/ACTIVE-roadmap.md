@@ -90,6 +90,13 @@ Features are added via `/feature` or `/user-story` commands.
 | Multi-User mit Login | open | HIGH | Core | Auth, Web Main, Loader, alle Pages | Large | F13 |
 | Subscription Metriken-Auswahl (Model+UI) | open | HIGH | WebUI | CompareSubscription, Loader, Subscriptions UI | Medium | F14a |
 | Subscription Metriken-Auswahl (Renderer) | open | HIGH | Formatter | compare.py HTML+Plaintext Renderer | Medium | F14b |
+| **SvelteKit-Migration: Go-Backend Setup** | open | HIGH | Migration | Go Modul, Chi Router, REST API Design | Medium | M1 |
+| **SvelteKit-Migration: Provider portieren** | open | HIGH | Migration | OpenMeteo Provider in Go | Medium | M2 |
+| **SvelteKit-Migration: Risk Engine portieren** | open | HIGH | Migration | Normalizer + Risk Engine in Go | Medium | M3 |
+| **SvelteKit-Migration: Formatter portieren** | open | HIGH | Migration | Email/SMS Formatter + Scheduler in Go | Large | M4 |
+| **SvelteKit-Migration: Frontend Setup** | open | HIGH | Migration | SvelteKit + Auth (Lucia) + UI Library | Medium | M5 |
+| **SvelteKit-Migration: Frontend Pages** | open | HIGH | Migration | Trips, Locations, Weather, Config Pages | Large | M6 |
+| **SvelteKit-Migration: Cutover** | open | HIGH | Migration | DNS, Systemd, Cleanup, E2E-Tests | Medium | M7 |
 
 ## Completed Features (Last 10)
 
@@ -134,12 +141,20 @@ Features are added via `/feature` or `/user-story` commands.
 ### Sprint 3 — Multi-User & Sicherheit
 - [ ] Multi-User mit Login (F13, Groß — Auth-System, User-Isolation, Session-Management)
 
-### Sprint 4 — SMS/Satellite-Kanal
-- [ ] SMS-Kanal (F1, Mittel — setzt F2 voraus)
-- [ ] Satellite Messenger / Garmin inReach (F9, Gering — setzt F2 voraus)
-- [ ] Logging/Rotation (OPS-02)
+### Sprint 4 — SvelteKit Migration (Backend)
+- [ ] Go-Backend Setup (M1 — Chi Router, REST API Design, CI/CD)
+- [ ] Provider portieren (M2 — OpenMeteo in Go, inkl. BUG-TZ-01 Fix)
+- [ ] Risk Engine portieren (M3 — Normalizer + Risk Engine in Go)
+- [ ] Formatter portieren (M4 — Email/SMS Formatter + Scheduler)
 
-### Sprint 5 — Trip Intelligence
+### Sprint 5 — SvelteKit Migration (Frontend + Cutover)
+- [ ] Frontend Setup (M5 — SvelteKit + Auth + UI Library, loest F13)
+- [ ] Frontend Pages (M6 — Trips, Locations, Weather, Config)
+- [ ] Cutover (M7 — DNS, Systemd, Cleanup, E2E-Tests)
+
+### Sprint 6 — Post-Migration Features
+- [ ] SMS-Kanal (F1, Mittel — jetzt als Go-Service)
+- [ ] Satellite Messenger / Garmin inReach (F9, Gering)
 - [ ] Trip-Briefing Kompakt-Tabelle (F4, Mittel)
 - [ ] Trip-Umplanung per Kommando (F6, Mittel-Hoch)
 
