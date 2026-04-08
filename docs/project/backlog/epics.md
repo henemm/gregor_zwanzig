@@ -3,15 +3,15 @@
 > **Epics werden kuenftig als GitHub Milestones gefuehrt:**
 > https://github.com/henemm/gregor_zwanzig/milestones
 >
-> Die folgenden Milestones muessen noch manuell auf GitHub erstellt werden:
+> **TODO (naechste Session mit GitHub MCP-Tools):** 5 Epic-Issues anlegen:
 >
-> | Milestone | Issues |
+> | Epic-Issue Titel | Feature-Issues verlinken |
 > |---|---|
-> | Low-Connectivity Delivery | #10 (F1), #18 (F9) |
-> | Enhanced Trip Reports | #15 (F4), #16 (F5) |
-> | Asynchrone Trip-Steuerung | #17 (F6) |
-> | Advanced Risk & Terrain | #19 (F10) |
-> | Tech Stack Migration | #12 (F13), #22-#28 (M1-M7) |
+> | Epic: Low-Connectivity Delivery | #10 (F1), #18 (F9) |
+> | Epic: Enhanced Trip Reports | #15 (F4), #16 (F5) |
+> | Epic: Asynchrone Trip-Steuerung | #17 (F6) |
+> | Epic: Advanced Risk & Terrain | #19 (F10) |
+> | Epic: Tech Stack Migration | #12 (F13), #21 (BUG-TZ-01), #22-#28 (M1-M7) |
 
 ## Completed Epics
 
