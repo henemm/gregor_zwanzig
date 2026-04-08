@@ -97,6 +97,7 @@ Features are added via `/feature` or `/user-story` commands.
 | **SvelteKit-Migration: Frontend Setup** | open | HIGH | Migration | SvelteKit + Auth (Lucia) + UI Library | Medium | M5 |
 | **SvelteKit-Migration: Frontend Pages** | open | HIGH | Migration | Trips, Locations, Weather, Config Pages | Large | M6 |
 | **SvelteKit-Migration: Cutover** | open | HIGH | Migration | DNS, Systemd, Cleanup, E2E-Tests | Medium | M7 |
+| **Backlog → GitHub Issues migrieren** | open | MEDIUM | Ops | Backlog, Epics, Known Issues | Simple | OPS-04 |
 
 ## Completed Features (Last 10)
 
