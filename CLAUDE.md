@@ -144,20 +144,6 @@ https://github.com/henemm/gregor_zwanzig/issues
 - **Root-Cause-Analysen** → `docs/project/known_issues.md`
 - **Strategische Entscheidungen** → `docs/project/strategic-directions.md`
 
-### OFFENE AUFGABE: Issues den Milestones zuweisen
-
-**Bei Session-Start pruefen und ausfuehren, wenn GitHub MCP-Tools (mcp__github__issue_write) verfuegbar sind!**
-
-Issues den 5 Milestones zuweisen (falls noch nicht geschehen):
-
-1. **Low-Connectivity Delivery** → #10 (F1), #18 (F9)
-2. **Enhanced Trip Reports** → #15 (F4), #16 (F5)
-3. **Asynchrone Trip-Steuerung** → #17 (F6)
-4. **Advanced Risk & Terrain** → #19 (F10)
-5. **Tech Stack Migration** → #12 (F13), #21 (BUG-TZ-01), #22-#28 (M1-M7)
-
-**Nach Erledigung diesen Abschnitt aus CLAUDE.md entfernen!**
-
 **NICHT MEHR in Markdown-Dateien planen!** Offene Features, Bugs und Sprint-Planung gehoeren auf GitHub Issues.
 
 ## Pre-Test Validierung (PFLICHT!)
