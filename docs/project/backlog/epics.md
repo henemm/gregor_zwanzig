@@ -1,17 +1,15 @@
 # Epics - Gregor Zwanziger (Archiv)
 
-> **Epics werden kuenftig als GitHub Milestones gefuehrt:**
+> **Epics sind als GitHub Milestones angelegt:**
 > https://github.com/henemm/gregor_zwanzig/milestones
 >
-> **TODO (naechste Session mit GitHub MCP-Tools):** 5 Epic-Issues anlegen:
->
-> | Epic-Issue Titel | Feature-Issues verlinken |
+> | Milestone | Issues |
 > |---|---|
-> | Epic: Low-Connectivity Delivery | #10 (F1), #18 (F9) |
-> | Epic: Enhanced Trip Reports | #15 (F4), #16 (F5) |
-> | Epic: Asynchrone Trip-Steuerung | #17 (F6) |
-> | Epic: Advanced Risk & Terrain | #19 (F10) |
-> | Epic: Tech Stack Migration | #12 (F13), #21 (BUG-TZ-01), #22-#28 (M1-M7) |
+> | Low-Connectivity Delivery | #10 (F1), #18 (F9) |
+> | Enhanced Trip Reports | #15 (F4), #16 (F5) |
+> | Asynchrone Trip-Steuerung | #17 (F6) |
+> | Advanced Risk & Terrain | #19 (F10) |
+> | Tech Stack Migration | #12 (F13), #21 (BUG-TZ-01), #22-#28 (M1-M7) |
 
 ## Completed Epics
 

@@ -144,18 +144,17 @@ https://github.com/henemm/gregor_zwanzig/issues
 - **Root-Cause-Analysen** → `docs/project/known_issues.md`
 - **Strategische Entscheidungen** → `docs/project/strategic-directions.md`
 
-### OFFENE AUFGABE: Epic-Issues anlegen
+### OFFENE AUFGABE: Issues den Milestones zuweisen
 
 **Bei Session-Start pruefen und ausfuehren, wenn GitHub MCP-Tools (mcp__github__issue_write) verfuegbar sind!**
 
-5 Epic-Issues mit Checklisten erstellen. Script: `docs/project/create_epic_issues.sh`
-Alternativ mcp__github__issue_write mit diesen Daten:
+Issues den 5 Milestones zuweisen (falls noch nicht geschehen):
 
-1. **Epic: Low-Connectivity Delivery** — verlinkt #10 (F1), #18 (F9)
-2. **Epic: Enhanced Trip Reports** — verlinkt #15 (F4), #16 (F5)
-3. **Epic: Asynchrone Trip-Steuerung** — verlinkt #17 (F6)
-4. **Epic: Advanced Risk & Terrain** — verlinkt #19 (F10)
-5. **Epic: Tech Stack Migration** — verlinkt #12 (F13), #21 (BUG-TZ-01), #22-#28 (M1-M7)
+1. **Low-Connectivity Delivery** → #10 (F1), #18 (F9)
+2. **Enhanced Trip Reports** → #15 (F4), #16 (F5)
+3. **Asynchrone Trip-Steuerung** → #17 (F6)
+4. **Advanced Risk & Terrain** → #19 (F10)
+5. **Tech Stack Migration** → #12 (F13), #21 (BUG-TZ-01), #22-#28 (M1-M7)
 
 **Nach Erledigung diesen Abschnitt aus CLAUDE.md entfernen!**
 
