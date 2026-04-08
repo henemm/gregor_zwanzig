@@ -72,6 +72,11 @@
             "type": "command",
             "command": "python3 .claude/hooks/track_changes.py",
             "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/backlog_guard.py",
+            "timeout": 5
           }
         ]
       },
