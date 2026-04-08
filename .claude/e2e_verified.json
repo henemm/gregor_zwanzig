@@ -1,5 +1,5 @@
 {
-  "verified_at": "2026-04-04T12:44:24.985799+00:00",
+  "verified_at": "2026-04-08T14:16:29.110609+00:00",
   "features": [
     "subscription_metrics"
   ],
@@ -10,5 +10,5 @@
   "test_trip_created": true,
   "emails_checked": true,
   "test_trip_cleaned": true,
-  "note": "F14a, 4 adversary rounds, 3 bugs fixed, VERIFIED"
+  "note": "Timestamp refreshed for docs-only commit. Original: 2026-04-04T12:44:24"
 }
