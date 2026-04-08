@@ -1,8 +1,12 @@
 # Known Issues & Bug Report Log
 
+> **Bugs sind jetzt auf GitHub Issues:** https://github.com/henemm/gregor_zwanzig/issues?q=label%3Abug
+>
+> Diese Datei bleibt als Detail-Referenz fuer Root-Cause-Analysen bestehen.
+
 ## BUG-TZ-01: Timezone Mismatch — All Trip Report Times in UTC
 
-**Status:** Confirmed | **Severity:** High | **Date:** 2026-03-03
+**Status:** Confirmed | **Severity:** High | **Date:** 2026-03-03 | **GitHub Issue:** #21
 
 ### Symptom
 

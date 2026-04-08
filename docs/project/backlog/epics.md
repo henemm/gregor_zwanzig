@@ -1,5 +1,7 @@
 # Epics - Gregor Zwanziger
 
+> **Epics werden kuenftig als GitHub Milestones gefuehrt.** Labels und Milestones muessen noch manuell auf GitHub erstellt werden (kein MCP-Tool verfuegbar).
+
 Epics are large business initiatives that contain multiple user stories.
 
 **Format:** Epic → User Stories → Features

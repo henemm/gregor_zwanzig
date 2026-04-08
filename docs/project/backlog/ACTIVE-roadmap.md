@@ -1,6 +1,10 @@
 # Active Roadmap - Gregor Zwanziger
 
-**Last Updated:** 2026-02-19
+**Last Updated:** 2026-04-08
+
+> **Offene Features sind jetzt auf GitHub Issues:** https://github.com/henemm/gregor_zwanzig/issues
+>
+> Diese Datei dient als Archiv fuer erledigte Features. Neue Features werden als GitHub Issues angelegt.
 
 This roadmap tracks all features across the project lifecycle.
 Features are added via `/feature` or `/user-story` commands.
