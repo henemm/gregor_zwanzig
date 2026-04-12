@@ -10,17 +10,23 @@
 
 ## Workflow
 
-Dieses Projekt nutzt den **OpenSpec 4-Phasen-Workflow**:
+Dieses Projekt nutzt den **OpenSpec 8-Phasen-Workflow** mit Adversary Verification:
 
 | Phase | Command | Purpose |
 |-------|---------|---------|
-| 1 | `/2-analyse` | Request verstehen, Codebase recherchieren |
-| 2 | `/3-write-spec` | Spezifikation erstellen |
-| 3 | User: "approved" | Spec freigeben |
-| 4 | `/5-implement` | Implementieren nach Spec |
-| 5 | `/6-validate` | Validieren vor Commit |
+| 1 | `/1-context` | Kontext sammeln |
+| 2 | `/2-analyse` | Request verstehen, Codebase recherchieren |
+| 3 | `/3-write-spec` | Spezifikation erstellen |
+| 4 | User: "approved" | Spec freigeben |
+| 5 | `/4-tdd-red` | Fehlschlagende Tests schreiben (RED) |
+| 6 | `/5-implement` | Implementieren (GREEN) + User sagt "go" |
+| 6b | Adversary Dialog | QA-Agent versucht Implementierung zu brechen |
+| 7 | `/6-validate` | Validieren vor Commit |
+| 8 | `/7-deploy` | Deployment |
 
-**Commands:** Canonical dash-commands (z.B. `/2-analyse`). Alte underscore-commands (`/1_analyse`) wurden gemerged und entfernt.
+**Adversary Verification:** Nach Implementation fuehrt ein unabhaengiger `implementation-validator` Agent (Sonnet) einen strukturierten Dialog, um die Implementierung aktiv zu brechen. Tri-State Verdict: VERIFIED / BROKEN / AMBIGUOUS. Details: `docs/features/openspec_workflow.md`
+
+**Fresh Eyes:** Bei UI-Aenderungen prueft zusaetzlich ein `fresh-eyes-inspector` Agent Screenshots OHNE Bug-Kontext (verhindert Confirmation Bias).
 
 **Hooks erzwingen diesen Workflow!** Edit/Write auf geschuetzte Dateien ist blockiert.
 

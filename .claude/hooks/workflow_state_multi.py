@@ -54,6 +54,7 @@ PHASES = [
     "phase4_approved",
     "phase5_tdd_red",
     "phase6_implement",
+    "phase6b_adversary",
     "phase7_validate",
     "phase8_complete",
 ]
@@ -67,6 +68,7 @@ PHASE_NAMES = {
     "phase4_approved": "Spec Approved",
     "phase5_tdd_red": "TDD RED - Write Failing Tests",
     "phase6_implement": "Implementation (TDD GREEN)",
+    "phase6b_adversary": "Adversary Verification",
     "phase7_validate": "Validation",
     "phase8_complete": "Complete",
 }
@@ -92,6 +94,7 @@ PHASE_TO_BACKLOG_STATUS = {
     "phase4_approved": "spec_ready",
     "phase5_tdd_red": "in_progress",
     "phase6_implement": "in_progress",
+    "phase6b_adversary": "in_progress",
     "phase7_validate": "in_progress",
     "phase8_complete": "done",
 }
@@ -113,7 +116,7 @@ PAUSE_PHRASES = [
 ]
 
 # Phases that allow code modification
-CODE_MODIFY_PHASES = ["phase6_implement", "phase7_validate", "phase8_complete"]
+CODE_MODIFY_PHASES = ["phase6_implement", "phase6b_adversary", "phase7_validate", "phase8_complete"]
 
 # Phases that require test artifacts
 TEST_REQUIRED_PHASES = ["phase6_implement", "phase7_validate"]
@@ -221,6 +224,9 @@ def create_workflow(name: str) -> dict:
         "analysis_findings": None,
         # Phases completed history
         "phases_completed": [],
+        # Adversary verification (v2.2)
+        "adversary_verdict": None,  # VERIFIED / BROKEN / AMBIGUOUS
+        "green_approved": False,  # User approved GREEN test results
         # Backlog status (v2.1) - separate from phase
         # open | spec_ready | in_progress | done | blocked
         "backlog_status": "open",
@@ -355,6 +361,7 @@ def get_workflow_status(name: str = None) -> str:
         f"Spec: {workflow.get('spec_file') or 'Not created'}",
         f"Approved: {'Yes' if workflow.get('spec_approved') else 'No'}",
         f"Test Artifacts: {len(workflow.get('test_artifacts', []))}",
+        f"Adversary Verdict: {workflow.get('adversary_verdict') or 'Not yet'}",
     ]
 
     return "\n".join(lines)
@@ -401,7 +408,7 @@ def can_modify_code(workflow_name: str = None) -> tuple[bool, str]:
     phase = workflow["current_phase"]
 
     if phase not in CODE_MODIFY_PHASES:
-        return False, f"Current phase is {PHASE_NAMES.get(phase, phase)}. Code modification requires phase6_implement or later."
+        return False, f"Current phase is {PHASE_NAMES.get(phase, phase)}. Code modification requires phase6_implement or later (incl. phase6b_adversary)."
 
     # Check for test artifacts in TDD phases
     if phase in TEST_REQUIRED_PHASES:
@@ -484,11 +491,11 @@ def mark_green_test_done(workflow_name: str = None, result: str = None) -> bool:
     workflow["green_test_result"] = result
     workflow["last_updated"] = datetime.now().isoformat()
 
-    # Auto-advance to phase7 if in phase6
+    # Auto-advance to phase6b_adversary if in phase6
     if workflow["current_phase"] == "phase6_implement":
-        workflow["current_phase"] = "phase7_validate"
-        if "phase7_validate" not in workflow.get("phases_completed", []):
-            workflow.setdefault("phases_completed", []).append("phase7_validate")
+        workflow["current_phase"] = "phase6b_adversary"
+        if "phase6b_adversary" not in workflow.get("phases_completed", []):
+            workflow.setdefault("phases_completed", []).append("phase6b_adversary")
 
     save_state(state)
     return True
@@ -714,5 +721,25 @@ if __name__ == "__main__":
     elif cmd == "pause":
         success, message = pause_workflow()
         print(message)
+    elif cmd == "set-field" and len(sys.argv) > 3:
+        field = sys.argv[2]
+        value = sys.argv[3]
+        # Convert special string values
+        if value.lower() == "true":
+            value = True
+        elif value.lower() == "false":
+            value = False
+        elif value.lower() == "none" or value.lower() == "null":
+            value = None
+        state = load_state()
+        active = state.get("active_workflow")
+        if active and active in state["workflows"]:
+            state["workflows"][active][field] = value
+            state["workflows"][active]["last_updated"] = datetime.now().isoformat()
+            save_state(state)
+            print(f"Set {field} = {value}")
+        else:
+            print("No active workflow")
     else:
         print(f"Unknown command: {cmd}")
+        print("Commands: status, list, start <name>, switch <name>, advance, phase <phase>, backlog <status>, pause, set-field <key> <value>")

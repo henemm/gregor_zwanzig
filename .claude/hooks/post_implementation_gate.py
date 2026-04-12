@@ -157,6 +157,45 @@ def check_user_approval() -> bool:
     return get_approval_file().exists()
 
 
+def get_current_phase() -> str | None:
+    """Get the current workflow phase."""
+    state_file = get_project_root() / ".claude" / "workflow_state.json"
+    if not state_file.exists():
+        return None
+    try:
+        with open(state_file, 'r') as f:
+            state = json.load(f)
+        active = state.get("active_workflow")
+        if not active:
+            return None
+        workflow = state.get("workflows", {}).get(active, {})
+        return workflow.get("current_phase")
+    except (json.JSONDecodeError, Exception):
+        return None
+
+
+def is_workflow_complete() -> bool:
+    """
+    Check if the active workflow has reached phase8_complete.
+
+    E2E verification + phase8_complete implies user validated the work,
+    so the lock should no longer block further edits.
+    """
+    return get_current_phase() == "phase8_complete"
+
+
+def is_adversary_fix_phase() -> bool:
+    """
+    Check if in phase6b_adversary where fixes are explicitly allowed.
+
+    In the external validator flow, the user starts a separate validator
+    session and comes back with "fix needed: [findings]". This user
+    instruction is the authorization for further edits. The batch window
+    should not block adversary-driven fixes.
+    """
+    return get_current_phase() == "phase6b_adversary"
+
+
 def is_within_batch_window(lock: dict) -> bool:
     """Check if still within batch window."""
     try:
@@ -210,6 +249,24 @@ def main():
     if check_user_approval():
         # User approved - clear lock and allow
         clear_lock()
+        sys.exit(0)
+
+    # Lock exists - check if active workflow completed (E2E verified)
+    if is_workflow_complete():
+        clear_lock()
+        sys.exit(0)
+
+    # Lock exists - check if in adversary fix phase
+    # In phase6b_adversary, the external validator (started by user) found
+    # issues. The user's "fix needed" instruction authorizes further edits.
+    # Reset the batch window so the fix gets a fresh window.
+    if is_adversary_fix_phase():
+        files = lock.get('files', [])
+        if file_path not in files:
+            files.append(file_path)
+        lock['files'] = files
+        lock['last_change'] = datetime.now().isoformat()
+        save_lock(lock)
         sys.exit(0)
 
     # Lock exists - check if within batch window

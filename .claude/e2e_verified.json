@@ -1,14 +1,19 @@
 {
-  "verified_at": "2026-04-12T07:26:26.529685+00:00",
-  "features": [
-    "compare-provider-routing"
-  ],
-  "status": "passed",
-  "tests": 8,
-  "passed": 8,
+  "verified_at": "2026-04-12T12:36:40.490022+00:00",
   "server_restarted": true,
   "test_trip_created": true,
+  "reports_sent": [
+    "morning",
+    "evening"
+  ],
   "emails_checked": true,
   "test_trip_cleaned": true,
-  "note": "External Validator VERIFIED on live server: Mallorca, Alps, Corsica, Mixed all working. No trip/email changes in this bugfix."
+  "feature_checks": [
+    "Snapshot-JSON enthaelt start_lat/start_lon/start_elevation_m/end_lat/end_lon/end_elevation_m",
+    "Snapshot-Load gibt echte Koordinaten zurueck (47.0/11.0, nicht 0.0/0.0)",
+    "IMAP-Login mit neuen Credentials (gregor_zwanzig) erfolgreich",
+    "Evening Report fuer Test-Trip gesendet ohne Crash",
+    "Formatter: kein int(None) TypeError bei elevation_m",
+    "M1: Nur neue Dateien (api/), bestehender Stack unver\u00e4ndert, NiceGUI Health OK"
+  ]
 }

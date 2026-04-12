@@ -1,0 +1,23 @@
+=== RUN   TestHealthWithPythonUp
+2026/04/12 13:06:54 "GET http://example.com/api/health HTTP/1.1" from 192.0.2.1:1234 - 200 53B in 731.622µs
+--- PASS: TestHealthWithPythonUp (0.00s)
+=== RUN   TestHealthWithPythonDown
+2026/04/12 13:06:54 "GET http://example.com/api/health HTTP/1.1" from 192.0.2.1:1234 - 200 68B in 194.262µs
+--- PASS: TestHealthWithPythonDown (0.00s)
+=== RUN   TestConfigProxy
+2026/04/12 13:06:54 "GET http://example.com/api/config HTTP/1.1" from 192.0.2.1:1234 - 200 57B in 540.696µs
+--- PASS: TestConfigProxy (0.00s)
+=== RUN   TestConfigProxyPythonDown
+2026/04/12 13:06:54 "GET http://example.com/api/config HTTP/1.1" from 192.0.2.1:1234 - 503 28B in 96.797µs
+--- PASS: TestConfigProxyPythonDown (0.00s)
+=== RUN   TestForecastProxy
+2026/04/12 13:06:54 "GET http://example.com/api/forecast?lat=47.27&lon=11.40&hours=24 HTTP/1.1" from 192.0.2.1:1234 - 200 60B in 218.559µs
+--- PASS: TestForecastProxy (0.00s)
+=== RUN   TestForecastProxyValidationError
+2026/04/12 13:06:54 "GET http://example.com/api/forecast HTTP/1.1" from 192.0.2.1:1234 - 422 33B in 196.546µs
+--- PASS: TestForecastProxyValidationError (0.00s)
+=== RUN   TestForecastProxyPythonDown
+2026/04/12 13:06:54 "GET http://example.com/api/forecast?lat=47.27&lon=11.40&hours=24 HTTP/1.1" from 192.0.2.1:1234 - 503 28B in 55.173µs
+--- PASS: TestForecastProxyPythonDown (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api	0.007s
