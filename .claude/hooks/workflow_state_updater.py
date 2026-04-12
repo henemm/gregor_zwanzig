@@ -74,6 +74,39 @@ def is_approval_message(message: str) -> bool:
     return False
 
 
+# Phrases that indicate user approves GREEN test results
+GREEN_APPROVAL_PHRASES = [
+    "go", "green ok", "tests ok", "weiter",
+    "gruen ok", "grün ok", "passt", "sieht gut aus",
+]
+
+# Phrases that indicate workflow is complete (phase7_validate -> phase8_complete)
+COMPLETION_PHRASES = [
+    "deployed", "fertig", "done", "complete",
+    "abgeschlossen", "erledigt", "ship it",
+]
+
+
+def is_green_approval(message: str) -> bool:
+    """Check if message approves GREEN test results."""
+    message_lower = message.lower().strip()
+    for phrase in GREEN_APPROVAL_PHRASES:
+        pattern = r'\b' + re.escape(phrase) + r'\b'
+        if re.search(pattern, message_lower):
+            return True
+    return False
+
+
+def is_completion_message(message: str) -> bool:
+    """Check if message signals workflow completion."""
+    message_lower = message.lower().strip()
+    for phrase in COMPLETION_PHRASES:
+        pattern = r'\b' + re.escape(phrase) + r'\b'
+        if re.search(pattern, message_lower):
+            return True
+    return False
+
+
 def main():
     # Get user input from environment or stdin
     try:
@@ -85,30 +118,81 @@ def main():
     if not user_message:
         sys.exit(0)
 
-    # Check if this is an approval message
-    if not is_approval_message(user_message):
+    is_approval = is_approval_message(user_message)
+    is_green = is_green_approval(user_message)
+    is_complete = is_completion_message(user_message)
+
+    if not is_approval and not is_green and not is_complete:
         sys.exit(0)
 
-    # Load current state
+    # Handle post-implementation validation approval
+    # Create marker file so post_implementation_gate.py unblocks
+    if is_approval:
+        approval_file = get_state_file_path().parent / "user_approved_validation"
+        pending_file = get_state_file_path().parent / "pending_validation.json"
+        if pending_file.exists():
+            approval_file.touch()
+            print("Validation approved! Further edits are now unblocked.")
+
+    # Load current state (supports v2 multi-workflow)
     state = load_state()
 
-    # Only process if we're in spec_written phase
-    if state.get("current_phase") != "spec_written":
-        sys.exit(0)
+    # Handle v2 multi-workflow format
+    if state.get("version") == "2.0" and "workflows" in state:
+        active_name = state.get("active_workflow")
+        if active_name and active_name in state["workflows"]:
+            workflow = state["workflows"][active_name]
 
-    # Update state to approved
-    state["spec_approved"] = True
-    state["current_phase"] = "spec_approved"
+            # Handle spec approval (phase3_spec -> phase4_approved)
+            if is_approval and workflow.get("current_phase") == "phase3_spec":
+                workflow["spec_approved"] = True
+                workflow["current_phase"] = "phase4_approved"
+                workflow.setdefault("phases_completed", [])
+                if "phase4_approved" not in workflow["phases_completed"]:
+                    workflow["phases_completed"].append("phase4_approved")
+                workflow["last_updated"] = datetime.now().isoformat()
+                save_state(state)
+                print("Spec approved! You may now run /tdd-red")
 
-    if "phases_completed" not in state:
-        state["phases_completed"] = []
-    if "spec_approved" not in state["phases_completed"]:
-        state["phases_completed"].append("spec_approved")
+            # Handle GREEN approval (phase6_implement -> green_approved)
+            elif is_green and workflow.get("current_phase") == "phase6_implement":
+                workflow["green_approved"] = True
+                workflow["last_updated"] = datetime.now().isoformat()
+                save_state(state)
+                print("GREEN tests approved! Adversary verification next.")
 
-    save_state(state)
+            # Handle workflow completion (phase7_validate -> phase8_complete)
+            elif is_complete and workflow.get("current_phase") == "phase7_validate":
+                # Import complete_workflow from workflow_state_multi
+                try:
+                    from workflow_state_multi import complete_workflow
+                    complete_workflow(active_name)
+                    print(f"Workflow '{active_name}' completed! Phase set to phase8_complete.")
+                except ImportError:
+                    # Fallback: do it inline
+                    workflow["current_phase"] = "phase8_complete"
+                    workflow["backlog_status"] = "done"
+                    workflow["last_updated"] = datetime.now().isoformat()
+                    # Clear active workflow, pick next incomplete
+                    remaining = [n for n in state["workflows"] if n != active_name and
+                                state["workflows"][n]["current_phase"] != "phase8_complete"]
+                    state["active_workflow"] = remaining[0] if remaining else None
+                    save_state(state)
+                    print(f"Workflow '{active_name}' completed! Phase set to phase8_complete.")
 
-    # Output confirmation (shown as hook output)
-    print(f"Spec approved! You may now run /implement")
+    else:
+        # Handle v1 format (spec_written -> spec_approved)
+        if is_approval and state.get("current_phase") == "spec_written":
+            state["spec_approved"] = True
+            state["current_phase"] = "spec_approved"
+
+            if "phases_completed" not in state:
+                state["phases_completed"] = []
+            if "spec_approved" not in state["phases_completed"]:
+                state["phases_completed"].append("spec_approved")
+
+            save_state(state)
+            print("Spec approved! You may now run /implement")
 
     sys.exit(0)
 

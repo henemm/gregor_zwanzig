@@ -23,7 +23,7 @@ line-length = 88
 
 [tool.pytest.ini_options]
 addopts = "-q"
-pythonpath = ["src"]
+pythonpath = ["src", "."]
 testpaths = ["tests"]
 markers = [
     "tdd: TDD tests using external ground truth sources (may be slow)",

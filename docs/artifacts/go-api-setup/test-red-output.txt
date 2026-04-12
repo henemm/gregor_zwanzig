@@ -1,0 +1,137 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 9 items
+
+tests/tdd/test_go_api_setup.py FFFFFFFFF                                 [100%]
+
+=================================== FAILURES ===================================
+_________________________ test_fastapi_app_importable __________________________
+
+    def test_fastapi_app_importable():
+        """
+        GIVEN: The api package exists
+        WHEN: Importing the FastAPI app
+        THEN: Import succeeds and app is a FastAPI instance
+        """
+>       from api.main import app
+E       ModuleNotFoundError: No module named 'api'
+
+tests/tdd/test_go_api_setup.py:22: ModuleNotFoundError
+_____________________________ test_health_endpoint _____________________________
+
+    def test_health_endpoint():
+        """
+        GIVEN: The FastAPI app is running
+        WHEN: GET /health
+        THEN: Returns 200 with status=ok and version
+        """
+        from fastapi.testclient import TestClient
+>       from api.main import app
+E       ModuleNotFoundError: No module named 'api'
+
+tests/tdd/test_go_api_setup.py:38: ModuleNotFoundError
+____________________ test_config_endpoint_returns_settings _____________________
+
+    def test_config_endpoint_returns_settings():
+        """
+        GIVEN: The FastAPI app is running with valid .env
+        WHEN: GET /config
+        THEN: Returns 200 with non-sensitive settings fields
+        """
+        from fastapi.testclient import TestClient
+>       from api.main import app
+E       ModuleNotFoundError: No module named 'api'
+
+tests/tdd/test_go_api_setup.py:60: ModuleNotFoundError
+____________________ test_config_endpoint_excludes_secrets _____________________
+
+    def test_config_endpoint_excludes_secrets():
+        """
+        GIVEN: The FastAPI app is running
+        WHEN: GET /config
+        THEN: Response does NOT contain SMTP passwords or API keys
+        """
+        from fastapi.testclient import TestClient
+>       from api.main import app
+E       ModuleNotFoundError: No module named 'api'
+
+tests/tdd/test_go_api_setup.py:80: ModuleNotFoundError
+__________________ test_forecast_endpoint_returns_timeseries ___________________
+
+    def test_forecast_endpoint_returns_timeseries():
+        """
+        GIVEN: The FastAPI app is running
+        WHEN: GET /forecast?lat=47.27&lon=11.40&hours=24
+        THEN: Returns 200 with meta + data array
+        """
+        from fastapi.testclient import TestClient
+>       from api.main import app
+E       ModuleNotFoundError: No module named 'api'
+
+tests/tdd/test_go_api_setup.py:104: ModuleNotFoundError
+_____________________ test_forecast_meta_has_provider_info _____________________
+
+    def test_forecast_meta_has_provider_info():
+        """
+        GIVEN: A successful forecast response
+        WHEN: Checking the meta block
+        THEN: Contains provider, model, run datetime
+        """
+        from fastapi.testclient import TestClient
+>       from api.main import app
+E       ModuleNotFoundError: No module named 'api'
+
+tests/tdd/test_go_api_setup.py:128: ModuleNotFoundError
+____________________ test_forecast_data_has_correct_fields _____________________
+
+    def test_forecast_data_has_correct_fields():
+        """
+        GIVEN: A successful forecast response
+        WHEN: Checking a data point
+        THEN: Contains ts and t2m_c at minimum
+        """
+        from fastapi.testclient import TestClient
+>       from api.main import app
+E       ModuleNotFoundError: No module named 'api'
+
+tests/tdd/test_go_api_setup.py:151: ModuleNotFoundError
+__________________ test_forecast_enums_serialized_as_strings ___________________
+
+    def test_forecast_enums_serialized_as_strings():
+        """
+        GIVEN: A forecast response with thunder_level present
+        WHEN: Checking enum serialization
+        THEN: Enums are strings (e.g. "NONE") not integers
+        """
+        from fastapi.testclient import TestClient
+>       from api.main import app
+E       ModuleNotFoundError: No module named 'api'
+
+tests/tdd/test_go_api_setup.py:173: ModuleNotFoundError
+___________________ test_forecast_missing_params_returns_422 ___________________
+
+    def test_forecast_missing_params_returns_422():
+        """
+        GIVEN: The FastAPI app is running
+        WHEN: GET /forecast without required lat/lon
+        THEN: Returns 422 validation error
+        """
+        from fastapi.testclient import TestClient
+>       from api.main import app
+E       ModuleNotFoundError: No module named 'api'
+
+tests/tdd/test_go_api_setup.py:200: ModuleNotFoundError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_go_api_setup.py::test_fastapi_app_importable - ModuleNo...
+FAILED tests/tdd/test_go_api_setup.py::test_health_endpoint - ModuleNotFoundE...
+FAILED tests/tdd/test_go_api_setup.py::test_config_endpoint_returns_settings
+FAILED tests/tdd/test_go_api_setup.py::test_config_endpoint_excludes_secrets
+FAILED tests/tdd/test_go_api_setup.py::test_forecast_endpoint_returns_timeseries
+FAILED tests/tdd/test_go_api_setup.py::test_forecast_meta_has_provider_info
+FAILED tests/tdd/test_go_api_setup.py::test_forecast_data_has_correct_fields
+FAILED tests/tdd/test_go_api_setup.py::test_forecast_enums_serialized_as_strings
+FAILED tests/tdd/test_go_api_setup.py::test_forecast_missing_params_returns_422
+============================== 9 failed in 0.36s ===============================
