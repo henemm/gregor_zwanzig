@@ -1,0 +1,22 @@
+# github.com/henemm/gregor-api/internal/config [github.com/henemm/gregor-api/internal/config.test]
+internal/config/config_test.go:13:14: undefined: Load
+internal/config/config_test.go:43:14: undefined: Load
+FAIL	github.com/henemm/gregor-api/internal/config [build failed]
+# github.com/henemm/gregor-api/internal/store [github.com/henemm/gregor-api/internal/store.test]
+internal/store/store_test.go:15:7: undefined: New
+internal/store/store_test.go:47:7: undefined: New
+internal/store/store_test.go:63:7: undefined: New
+internal/store/store_test.go:91:7: undefined: New
+internal/store/store_test.go:117:7: undefined: New
+# github.com/henemm/gregor-api/internal/handler [github.com/henemm/gregor-api/internal/handler.test]
+internal/handler/handler_test.go:46:7: undefined: HealthHandler
+internal/handler/handler_test.go:70:7: undefined: HealthHandler
+internal/handler/handler_test.go:94:7: undefined: ProxyHandler
+internal/handler/handler_test.go:112:7: undefined: ProxyHandler
+internal/handler/handler_test.go:126:7: undefined: ProxyHandler
+internal/handler/handler_test.go:147:13: undefined: store.New
+internal/handler/handler_test.go:150:7: undefined: LocationsHandler
+FAIL	github.com/henemm/gregor-api/internal/handler [build failed]
+?   	github.com/henemm/gregor-api/internal/model	[no test files]
+FAIL	github.com/henemm/gregor-api/internal/store [build failed]
+FAIL

@@ -1,0 +1,34 @@
+=== RUN   TestLoadDefaults
+--- PASS: TestLoadDefaults (0.00s)
+=== RUN   TestLoadFromEnv
+--- PASS: TestLoadFromEnv (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/config	(cached)
+?   	github.com/henemm/gregor-api/internal/model	[no test files]
+=== RUN   TestHealthHandlerPythonUp
+--- PASS: TestHealthHandlerPythonUp (0.00s)
+=== RUN   TestHealthHandlerPythonDown
+--- PASS: TestHealthHandlerPythonDown (0.00s)
+=== RUN   TestProxyHandlerSuccess
+--- PASS: TestProxyHandlerSuccess (0.00s)
+=== RUN   TestProxyHandlerPythonDown
+--- PASS: TestProxyHandlerPythonDown (0.00s)
+=== RUN   TestProxyHandlerForwardsQueryParams
+--- PASS: TestProxyHandlerForwardsQueryParams (0.00s)
+=== RUN   TestLocationsHandler
+--- PASS: TestLocationsHandler (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/handler	(cached)
+=== RUN   TestLoadLocationsFromRealData
+--- PASS: TestLoadLocationsFromRealData (0.00s)
+=== RUN   TestLoadLocationsEmptyDir
+--- PASS: TestLoadLocationsEmptyDir (0.00s)
+=== RUN   TestLoadLocationsDirNotExist
+--- PASS: TestLoadLocationsDirNotExist (0.00s)
+=== RUN   TestLoadLocationsSkipsBadJSON
+2026/04/12 14:14:52 skip bad.json: json error: invalid character 'n' looking for beginning of object key string
+--- PASS: TestLoadLocationsSkipsBadJSON (0.00s)
+=== RUN   TestLoadLocationsSortedByName
+--- PASS: TestLoadLocationsSortedByName (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/store	(cached)
