@@ -1,0 +1,14 @@
+# github.com/henemm/gregor-api/internal/store [github.com/henemm/gregor-api/internal/store.test]
+internal/store/store_trip_test.go:13:18: s.LoadTrips undefined (type *Store has no field or method LoadTrips)
+internal/store/store_trip_test.go:55:18: s.LoadTrips undefined (type *Store has no field or method LoadTrips)
+internal/store/store_trip_test.go:78:18: s.LoadTrips undefined (type *Store has no field or method LoadTrips)
+internal/store/store_trip_test.go:103:17: s.LoadTrip undefined (type *Store has no field or method LoadTrip)
+internal/store/store_trip_test.go:124:17: s.LoadTrip undefined (type *Store has no field or method LoadTrip)
+FAIL	github.com/henemm/gregor-api/internal/store [build failed]
+# github.com/henemm/gregor-api/internal/handler [github.com/henemm/gregor-api/internal/handler.test]
+internal/handler/trip_test.go:5:2: "net/http" imported and not used
+internal/handler/trip_test.go:16:7: undefined: TripsHandler
+internal/handler/trip_test.go:43:27: undefined: TripHandler
+internal/handler/trip_test.go:66:27: undefined: TripHandler
+FAIL	github.com/henemm/gregor-api/internal/handler [build failed]
+FAIL
