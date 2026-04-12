@@ -61,6 +61,7 @@ python3 .claude/hooks/workflow_state_multi.py phase phase4_approved
 | `phase4_approved` | Approved | User approved spec |
 | `phase5_tdd_red` | TDD RED | Writing failing tests |
 | `phase6_implement` | Implementation | Writing code (TDD GREEN) |
+| `phase6b_adversary` | Adversary Verification | QA-Agent tries to break implementation |
 | `phase7_validate` | Validation | Manual testing |
 | `phase8_complete` | Complete | Ready for commit |
 
@@ -72,7 +73,7 @@ Separate from workflow phase - tracks the overall feature status for project pla
 |--------|---------|----------|
 | `open` | Work not started or in early phases | phase0-3 |
 | `spec_ready` | Spec approved, implementation pending | phase4 or on pause |
-| `in_progress` | Active implementation | phase5-7 |
+| `in_progress` | Active implementation | phase5-7 (incl. phase6b) |
 | `done` | Feature complete | phase8 |
 | `blocked` | Cannot proceed (manual) | Set explicitly |
 
@@ -125,6 +126,7 @@ You can work on multiple features simultaneously:
 
 Code files can only be modified in:
 - `phase6_implement`
+- `phase6b_adversary`
 - `phase7_validate`
 - `phase8_complete`
 
@@ -133,10 +135,32 @@ And only if:
 - Artifacts are valid (real files, not placeholders)
 - At least one artifact shows test failure
 
+## Adversary Verification (phase6b)
+
+After implementation, a QA-Agent (implementation-validator/sonnet) actively tries to break the code:
+
+```bash
+# Parse spec for Expected Behavior checklist
+python3 .claude/hooks/adversary_dialog.py parse <spec-path>
+
+# Validate dialog artifact
+python3 .claude/hooks/adversary_dialog.py validate docs/artifacts/<workflow>/adversary-dialog.md
+
+# QA Gate: validate test output + set verdict
+python3 .claude/hooks/qa_gate.py docs/artifacts/<workflow>/test-output.txt \
+    --checklist docs/artifacts/<workflow>/adversary-dialog.md
+
+# Set adversary verdict manually
+python3 .claude/hooks/workflow_state_multi.py set-field adversary_verdict "VERIFIED:all tests passed"
+```
+
+**Verdicts:** VERIFIED (proceed) / BROKEN (fix + retry, max 3x) / AMBIGUOUS (user review)
+
 ## Automatic Phase Detection
 
 Some phase transitions happen automatically:
 - User says "approved" → `phase4_approved`
+- User says "go"/"green ok" → sets `green_approved` on active workflow
 - `/context` completed → `phase1_context`
 - `/analyse` completed → `phase2_analyse`
 - `/write-spec` completed → `phase3_spec`

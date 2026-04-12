@@ -45,6 +45,11 @@ protected_paths:
     spec_type: "e2e_validators"
   - pattern: "\\.claude/hooks/e2e_browser_test\\.py$"
     spec_type: "e2e_validators"
+  # External Validator - MUST NOT be weakened by implementer session!
+  - pattern: "\\.claude/agents/external-validator\\.md$"
+    spec_type: "e2e_validators"
+  - pattern: "\\.claude/validate-external\\.sh$"
+    spec_type: "e2e_validators"
 
 # Files that are ALWAYS allowed without workflow
 always_allowed:

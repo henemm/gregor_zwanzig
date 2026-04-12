@@ -1,0 +1,20 @@
+# TDD RED Output — go-proxy-binary
+# Date: 2026-04-12
+
+$ cd cmd/gregor-api && go test -v
+
+# github.com/henemm/gregor-api [github.com/henemm/gregor-api.test]
+./main_test.go:15:9: undefined: setupRouter
+FAIL	github.com/henemm/gregor-api [build failed]
+
+## Summary
+7 tests written, ALL FAIL (build error):
+- TestHealthWithPythonUp
+- TestHealthWithPythonDown
+- TestConfigProxy
+- TestConfigProxyPythonDown
+- TestForecastProxy
+- TestForecastProxyValidationError
+- TestForecastProxyPythonDown
+
+Root cause: setupRouter() function does not exist — main.go not yet created.

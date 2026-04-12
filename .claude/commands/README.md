@@ -16,7 +16,8 @@ Phase-based workflow for feature development:
 | 3 | `/3-write-spec` | Create specification |
 | 4 | User: "approved" | Approve specification |
 | 5 | `/4-tdd-red` | Write failing tests (RED) |
-| 6 | `/5-implement` | Implement feature (GREEN) |
+| 6 | `/5-implement` | Implement feature (GREEN) + User: "go" |
+| 6b | Adversary Dialog | QA-Agent tries to break implementation |
 | 7 | `/6-validate` | Validate implementation |
 | 8 | `/7-deploy` | Deploy to production |
 
@@ -120,8 +121,8 @@ High-level planning before workflow:
 | `/1-context` | - | Direct workflow phase |
 | `/2-analyse` | 3x Explore/haiku + Plan/sonnet | Parallel codebase research |
 | `/3-write-spec` | spec-writer/sonnet + spec-validator/haiku | `.claude/agents/spec-writer.md` |
-| `/5-implement` | Explore/haiku + general-purpose/sonnet | Context loading + parallel tests |
-| `/6-validate` | 4x parallel agents + docs-updater/sonnet | `.claude/agents/docs-updater.md` |
+| `/5-implement` | Explore/haiku + general-purpose/sonnet + implementation-validator/sonnet | Context loading + parallel tests + adversary dialog |
+| `/6-validate` | 4x parallel agents + docs-updater/sonnet | `.claude/agents/docs-updater.md` (requires adversary verdict) |
 
 ## Command Files Structure
 
@@ -189,8 +190,8 @@ Commands interact with workflow state:
 - `/3-write-spec` - Advance to phase3_spec
 - User "approved" - Advance to phase4_approved
 - `/4-tdd-red` - Advance to phase5_tdd_red
-- `/5-implement` - Advance to phase6_implement
-- `/6-validate` - Advance to phase7_validate
+- `/5-implement` - Advance to phase6_implement → User "go" → phase6b_adversary
+- `/6-validate` - Advance to phase7_validate (requires adversary VERIFIED/AMBIGUOUS)
 - Deploy complete - Advance to phase8_complete
 
 ## Command Best Practices

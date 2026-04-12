@@ -1,0 +1,9 @@
+{
+  "files": [
+    "/home/hem/gregor_zwanzig/src/services/weather_snapshot.py",
+    "/home/hem/gregor_zwanzig/src/formatters/trip_report.py"
+  ],
+  "first_change": "2026-04-12T09:09:11.724815",
+  "last_change": "2026-04-12T09:09:49.370042",
+  "requires_validation": true
+}

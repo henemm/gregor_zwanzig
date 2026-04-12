@@ -136,11 +136,99 @@ add_test_artifact(active, {
 "
 ```
 
-Update workflow phase:
+### 7. User-Freigabe der GREEN-Ergebnisse (PFLICHT)
 
+**STOP! Du darfst NICHT weitermachen ohne User-Freigabe!**
+
+Praesentiere dem User eine verstaendliche Zusammenfassung:
+
+```markdown
+## TDD GREEN Ergebnisse
+
+### Was wurde getestet?
+- [Feature/Bug in User-Sprache beschreiben]
+
+### Test-Ergebnisse
+- Tests: [N] bestanden, [N] fehlgeschlagen
+
+### Auffaelligkeiten / Warnungen
+- [Alles was aufgefallen ist]
+
+Sage "go" wenn du mit den Ergebnissen zufrieden bist.
+```
+
+**WICHTIG:**
+- Du darfst NICHT selbst entscheiden ob Auffaelligkeiten relevant sind
+- Du darfst NICHT "go" simulieren oder die Freigabe umgehen
+- Der User gibt frei mit: "go", "weiter", "tests ok", "green ok"
+
+### 8. Update Workflow State to Adversary Phase
+
+```bash
+python3 .claude/hooks/workflow_state_multi.py phase phase6b_adversary
+```
+
+### 9. STOP — External Validator (MANDATORY)
+
+**Du (Implementierer) startest den Validator NICHT selbst. Du sagst STOP.**
+
+Das Kernproblem: Wenn die Implementierer-Session den Adversary startet, promptet und dessen Ergebnis interpretiert, ist das wie wenn der Angeklagte seinen eigenen Richter bestellt.
+
+#### 9a. Uebergabe an User
+
+Praesentiere dem User:
+
+```markdown
+## Bereit fuer External Validation
+
+**Spec:** [SPEC_PATH]
+**Server:** https://gregor20.henemm.com (laeuft)
+
+### Naechster Schritt (DU, nicht ich):
+
+Oeffne ein neues Terminal und starte das Validator-Script:
+
+\`\`\`bash
+.claude/validate-external.sh [SPEC_PATH]
+\`\`\`
+
+**Wichtig:** Benutze das Script, nicht den claude-Befehl direkt!
+Das Script haertet die Isolation (ignoriert CLAUDE.md-Einfluss, Artifacts, etc.).
+Der Validator schreibt seinen Report nach `docs/artifacts/<workflow>/validator-report.md`.
+
+Danach: Komm zurueck und sage mir:
+- **"go"** → ich committe/pushe
+- **"fix needed: [Findings]"** → ich fixe die Probleme
+- **"broken"** → ich muss nochmal ran
+```
+
+**STOP HIER. Warte auf den User.**
+
+#### 9b. User kommt zurueck
+
+Der User teilt dir das Ergebnis der externen Validierung mit:
+
+- **"go"** → Weiter zu Phase 7 (`/validate`)
+- **"fix needed"** + Findings → Zurueck zu Step 3, Findings fixen, dann erneut Step 9
+- **"broken"** → Zurueck zu Step 3, komplette Ueberarbeitung
+
+**Circuit Breaker (max 3 Iterationen):**
+Wenn nach 3 Fix-Loops immer noch Probleme: Eskalation mit allen Findings.
+
+**Wenn "go":**
 ```bash
 python3 .claude/hooks/workflow_state_multi.py phase phase7_validate
 ```
+
+#### Warum extern?
+
+- Neue Session = kein Conversation-History der Implementierung
+- Validator kennt die Implementierungsentscheidungen nicht
+- Kann nicht von Rationalisierungen beeinflusst werden
+- Sieht nur: Spec + laufende App
+- Prompt ist geschuetzt in openspec.yaml (kann von Implementierer nicht geaendert werden)
+
+**Bei UI-Aenderungen:** Der User kann zusaetzlich den `fresh-eyes-inspector` in der Validator-Session nutzen.
 
 ## Implementation Constraints
 
@@ -152,12 +240,14 @@ Follow scoping limits:
 
 ## Next Step
 
-After implementation:
-> "Implementation complete. All [N] tests pass. Ready for `/validate` for manual testing."
+After adversary verification:
+> "Implementation complete. Adversary verified. Ready for `/validate`."
 
 ## Common Mistakes
 
-❌ **Adding unrequested features** → Scope creep
-❌ **Skipping tests** → Not TDD
-❌ **Large functions** → Hard to test/maintain
-❌ **Not running tests** → Might still be RED
+- **Adding unrequested features** → Scope creep
+- **Skipping tests** → Not TDD
+- **Large functions** → Hard to test/maintain
+- **Not running tests** → Might still be RED
+- **Skipping adversary** → Commit will be BLOCKED
+- **Skipping User-Freigabe** → Validation BLOCKED without user approval
