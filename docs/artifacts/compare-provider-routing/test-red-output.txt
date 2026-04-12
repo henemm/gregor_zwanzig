@@ -1,0 +1,148 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 8 items
+
+tests/tdd/test_compare_provider_routing.py FFFFFFF.                      [100%]
+
+=================================== FAILURES ===================================
+________ TestSelectProviderForLocation.test_alpenraum_returns_geosphere ________
+
+self = <tdd.test_compare_provider_routing.TestSelectProviderForLocation object at 0x787cd4e32c30>
+
+    def test_alpenraum_returns_geosphere(self):
+        """
+        GIVEN: Coordinates in the Alps (Innsbruck, 47.3N, 11.4E)
+        WHEN: _select_provider_for_location is called
+        THEN: Returns GeoSphereProvider instance
+        """
+        from providers.geosphere import GeoSphereProvider
+>       from web.pages.compare import _select_provider_for_location
+E       ImportError: cannot import name '_select_provider_for_location' from 'web.pages.compare' (/home/hem/gregor_zwanzig/src/web/pages/compare.py)
+
+tests/tdd/test_compare_provider_routing.py:29: ImportError
+________ TestSelectProviderForLocation.test_mallorca_returns_openmeteo _________
+
+self = <tdd.test_compare_provider_routing.TestSelectProviderForLocation object at 0x787cd4d54440>
+
+    def test_mallorca_returns_openmeteo(self):
+        """
+        GIVEN: Coordinates on Mallorca (Valdemossa, 39.7N, 2.6E)
+        WHEN: _select_provider_for_location is called
+        THEN: Returns OpenMeteoProvider instance
+        """
+        from providers.openmeteo import OpenMeteoProvider
+>       from web.pages.compare import _select_provider_for_location
+E       ImportError: cannot import name '_select_provider_for_location' from 'web.pages.compare' (/home/hem/gregor_zwanzig/src/web/pages/compare.py)
+
+tests/tdd/test_compare_provider_routing.py:42: ImportError
+___ TestSelectProviderForLocation.test_boundary_lower_left_returns_geosphere ___
+
+self = <tdd.test_compare_provider_routing.TestSelectProviderForLocation object at 0x787cd4d2eae0>
+
+    def test_boundary_lower_left_returns_geosphere(self):
+        """
+        GIVEN: Coordinates exactly on lower-left GeoSphere bound (45.0N, 8.0E)
+        WHEN: _select_provider_for_location is called
+        THEN: Returns GeoSphereProvider (inclusive bounds)
+        """
+        from providers.geosphere import GeoSphereProvider
+>       from web.pages.compare import _select_provider_for_location
+E       ImportError: cannot import name '_select_provider_for_location' from 'web.pages.compare' (/home/hem/gregor_zwanzig/src/web/pages/compare.py)
+
+tests/tdd/test_compare_provider_routing.py:54: ImportError
+__ TestSelectProviderForLocation.test_boundary_upper_right_returns_geosphere ___
+
+self = <tdd.test_compare_provider_routing.TestSelectProviderForLocation object at 0x787cd4f71610>
+
+    def test_boundary_upper_right_returns_geosphere(self):
+        """
+        GIVEN: Coordinates exactly on upper-right GeoSphere bound (50.0N, 18.0E)
+        WHEN: _select_provider_for_location is called
+        THEN: Returns GeoSphereProvider (inclusive bounds)
+        """
+        from providers.geosphere import GeoSphereProvider
+>       from web.pages.compare import _select_provider_for_location
+E       ImportError: cannot import name '_select_provider_for_location' from 'web.pages.compare' (/home/hem/gregor_zwanzig/src/web/pages/compare.py)
+
+tests/tdd/test_compare_provider_routing.py:67: ImportError
+_______ TestSelectProviderForLocation.test_scandinavia_returns_openmeteo _______
+
+self = <tdd.test_compare_provider_routing.TestSelectProviderForLocation object at 0x787cd4d92330>
+
+    def test_scandinavia_returns_openmeteo(self):
+        """
+        GIVEN: Coordinates in Scandinavia (Oslo, 59.9N, 10.8E)
+        WHEN: _select_provider_for_location is called
+        THEN: Returns OpenMeteoProvider (outside GeoSphere bounds)
+        """
+        from providers.openmeteo import OpenMeteoProvider
+>       from web.pages.compare import _select_provider_for_location
+E       ImportError: cannot import name '_select_provider_for_location' from 'web.pages.compare' (/home/hem/gregor_zwanzig/src/web/pages/compare.py)
+
+tests/tdd/test_compare_provider_routing.py:80: ImportError
+____________ TestFetchForecastMallorca.test_valdemossa_returns_data ____________
+
+self = <tdd.test_compare_provider_routing.TestFetchForecastMallorca object at 0x787cd4d93bc0>
+
+    def test_valdemossa_returns_data(self):
+        """
+        GIVEN: Valdemossa location (Mallorca, 39.71N, 2.63E)
+        WHEN: fetch_forecast_for_location is called
+        THEN: Returns valid weather data (no error, raw_data present)
+        """
+        from app.loader import SavedLocation
+        from web.pages.compare import fetch_forecast_for_location
+    
+        loc = SavedLocation(
+            id="test-valdemossa",
+            name="Valdemossa",
+            lat=39.71,
+            lon=2.63,
+            elevation_m=600,
+        )
+        result = fetch_forecast_for_location(loc, hours=48)
+    
+>       assert result["error"] is None, f"Expected no error, got: {result['error']}"
+E       AssertionError: Expected no error, got: [geosphere] HTTP 400: {"detail":"Requested point 39.71,2.63 is outside of dataset bounds!"}
+E       assert '[geosphere] HTTP 400: {"detail":"Requested point 39.71,2.63 is outside of dataset bounds!"}' is None
+
+tests/tdd/test_compare_provider_routing.py:111: AssertionError
+_____________ TestFetchForecastMallorca.test_pollenca_returns_data _____________
+
+self = <tdd.test_compare_provider_routing.TestFetchForecastMallorca object at 0x787cd4d935c0>
+
+    def test_pollenca_returns_data(self):
+        """
+        GIVEN: Pollenca location (Mallorca, 39.9N, 3.08E)
+        WHEN: fetch_forecast_for_location is called
+        THEN: Returns valid weather data
+        """
+        from app.loader import SavedLocation
+        from web.pages.compare import fetch_forecast_for_location
+    
+        loc = SavedLocation(
+            id="test-pollenca",
+            name="Pollenca",
+            lat=39.90,
+            lon=3.08,
+            elevation_m=10,
+        )
+        result = fetch_forecast_for_location(loc, hours=48)
+    
+>       assert result["error"] is None, f"Expected no error, got: {result['error']}"
+E       AssertionError: Expected no error, got: [geosphere] HTTP 400: {"detail":"Requested point 39.9,3.08 is outside of dataset bounds!"}
+E       assert '[geosphere] HTTP 400: {"detail":"Requested point 39.9,3.08 is outside of dataset bounds!"}' is None
+
+tests/tdd/test_compare_provider_routing.py:134: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_compare_provider_routing.py::TestSelectProviderForLocation::test_alpenraum_returns_geosphere
+FAILED tests/tdd/test_compare_provider_routing.py::TestSelectProviderForLocation::test_mallorca_returns_openmeteo
+FAILED tests/tdd/test_compare_provider_routing.py::TestSelectProviderForLocation::test_boundary_lower_left_returns_geosphere
+FAILED tests/tdd/test_compare_provider_routing.py::TestSelectProviderForLocation::test_boundary_upper_right_returns_geosphere
+FAILED tests/tdd/test_compare_provider_routing.py::TestSelectProviderForLocation::test_scandinavia_returns_openmeteo
+FAILED tests/tdd/test_compare_provider_routing.py::TestFetchForecastMallorca::test_valdemossa_returns_data
+FAILED tests/tdd/test_compare_provider_routing.py::TestFetchForecastMallorca::test_pollenca_returns_data
+========================= 7 failed, 1 passed in 2.07s ==========================

@@ -1,14 +1,14 @@
 {
-  "verified_at": "2026-04-08T14:26:56.139857+00:00",
+  "verified_at": "2026-04-12T07:26:26.529685+00:00",
   "features": [
-    "subscription_metrics"
+    "compare-provider-routing"
   ],
   "status": "passed",
-  "tests": 18,
-  "passed": 18,
+  "tests": 8,
+  "passed": 8,
   "server_restarted": true,
   "test_trip_created": true,
   "emails_checked": true,
   "test_trip_cleaned": true,
-  "note": "Timestamp refreshed for docs-only commit. Original: 2026-04-04T12:44:24"
+  "note": "External Validator VERIFIED on live server: Mallorca, Alps, Corsica, Mixed all working. No trip/email changes in this bugfix."
 }

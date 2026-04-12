@@ -838,6 +838,24 @@ def render_comparison_text(result: ComparisonResult, top_n_details: int = 3) -> 
     return "\n".join(lines)
 
 
+def _select_provider_for_location(lat: float, lon: float):
+    """Select provider based on location coordinates.
+
+    GeoSphere for Alps (SNOWGRID benefit), OpenMeteo for everything else.
+    """
+    from providers.base import get_provider
+
+    GEOSPHERE_BOUNDS = {
+        "min_lat": 45.0, "max_lat": 50.0,
+        "min_lon": 8.0, "max_lon": 18.0,
+    }
+
+    if (GEOSPHERE_BOUNDS["min_lat"] <= lat <= GEOSPHERE_BOUNDS["max_lat"]
+            and GEOSPHERE_BOUNDS["min_lon"] <= lon <= GEOSPHERE_BOUNDS["max_lon"]):
+        return GeoSphereProvider()
+    return get_provider("openmeteo")
+
+
 def fetch_forecast_for_location(loc: SavedLocation, hours: int = 48) -> Dict[str, Any]:
     """Fetch forecast for a location and extract all available metrics."""
     result: Dict[str, Any] = {
@@ -848,7 +866,7 @@ def fetch_forecast_for_location(loc: SavedLocation, hours: int = 48) -> Dict[str
     }
 
     try:
-        provider = GeoSphereProvider()
+        provider = _select_provider_for_location(loc.lat, loc.lon)
         service = ForecastService(provider)
 
         location = Location(
@@ -859,7 +877,8 @@ def fetch_forecast_for_location(loc: SavedLocation, hours: int = 48) -> Dict[str
         )
 
         forecast = service.get_forecast(location, hours_ahead=hours)
-        provider.close()
+        if hasattr(provider, "close"):
+            provider.close()
 
         # Fetch snow data from Bergfex if slug is available
         if loc.bergfex_slug:
