@@ -1,5 +1,5 @@
 {
-  "verified_at": "2026-04-12T12:36:40.490022+00:00",
+  "verified_at": "2026-04-12T17:36:42.073242+00:00",
   "server_restarted": true,
   "test_trip_created": true,
   "reports_sent": [
@@ -9,11 +9,10 @@
   "emails_checked": true,
   "test_trip_cleaned": true,
   "feature_checks": [
-    "Snapshot-JSON enthaelt start_lat/start_lon/start_elevation_m/end_lat/end_lon/end_elevation_m",
-    "Snapshot-Load gibt echte Koordinaten zurueck (47.0/11.0, nicht 0.0/0.0)",
-    "IMAP-Login mit neuen Credentials (gregor_zwanzig) erfolgreich",
-    "Evening Report fuer Test-Trip gesendet ohne Crash",
-    "Formatter: kein int(None) TypeError bei elevation_m",
-    "M1: Nur neue Dateien (api/), bestehender Stack unver\u00e4ndert, NiceGUI Health OK"
+    "Go API: GET /api/locations liefert JSON Array mit 15+ Locations",
+    "Go API: GET /api/health zeigt python_core=ok",
+    "Go API: Production unter gregor20.henemm.com/api/* erreichbar",
+    "Python: Trip Reports morning+evening erfolgreich gesendet (2/2)",
+    "Python: Server startet fehlerfrei auf Port 8080"
   ]
 }
