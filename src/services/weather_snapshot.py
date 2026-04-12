@@ -64,6 +64,12 @@ class WeatherSnapshotService:
                         "segment_id": seg.segment.segment_id,
                         "start_time": seg.segment.start_time.isoformat(),
                         "end_time": seg.segment.end_time.isoformat(),
+                        "start_lat": seg.segment.start_point.lat,
+                        "start_lon": seg.segment.start_point.lon,
+                        "start_elevation_m": seg.segment.start_point.elevation_m,
+                        "end_lat": seg.segment.end_point.lat,
+                        "end_lon": seg.segment.end_point.lon,
+                        "end_elevation_m": seg.segment.end_point.elevation_m,
                         "aggregated": _serialize_summary(seg.aggregated),
                     }
                     for seg in segments
@@ -138,11 +144,20 @@ def _deserialize_summary(data: dict) -> SegmentWeatherSummary:
 
 def _reconstruct_segment(seg_data: dict) -> TripSegment:
     """Reconstruct minimal TripSegment from snapshot data."""
-    dummy_point = GPXPoint(lat=0.0, lon=0.0)
+    start_point = GPXPoint(
+        lat=seg_data.get("start_lat", 0.0),
+        lon=seg_data.get("start_lon", 0.0),
+        elevation_m=seg_data.get("start_elevation_m"),
+    )
+    end_point = GPXPoint(
+        lat=seg_data.get("end_lat", 0.0),
+        lon=seg_data.get("end_lon", 0.0),
+        elevation_m=seg_data.get("end_elevation_m"),
+    )
     return TripSegment(
         segment_id=seg_data["segment_id"],
-        start_point=dummy_point,
-        end_point=dummy_point,
+        start_point=start_point,
+        end_point=end_point,
         start_time=datetime.fromisoformat(seg_data["start_time"]),
         end_time=datetime.fromisoformat(seg_data["end_time"]),
         duration_hours=0.0,

@@ -1,0 +1,120 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 5 items
+
+tests/tdd/test_snapshot_coordinates.py FF...                             [100%]
+
+=================================== FAILURES ===================================
+___ TestSnapshotCoordinateRoundTrip.test_saved_snapshot_contains_coordinates ___
+
+self = <tdd.test_snapshot_coordinates.TestSnapshotCoordinateRoundTrip object at 0x7049f0f2f410>
+tmp_path = PosixPath('/tmp/pytest-of-hem/pytest-14/test_saved_snapshot_contains_c0')
+
+    def test_saved_snapshot_contains_coordinates(self, tmp_path):
+        """
+        GIVEN: SegmentWeatherData mit echten Koordinaten
+        WHEN: Snapshot wird gespeichert
+        THEN: JSON enthaelt start_lat, start_lon, start_elevation_m, end_lat, end_lon, end_elevation_m
+        """
+        from app.models import (
+            GPXPoint,
+            SegmentWeatherData,
+            SegmentWeatherSummary,
+            TripSegment,
+        )
+        from services.weather_snapshot import WeatherSnapshotService
+    
+        segment = TripSegment(
+            segment_id=1,
+            start_point=GPXPoint(lat=39.710564, lon=2.62293, elevation_m=410.0),
+            end_point=GPXPoint(lat=39.747657, lon=2.648606, elevation_m=149.0),
+            start_time=datetime(2026, 4, 5, 7, 0, tzinfo=timezone.utc),
+            end_time=datetime(2026, 4, 5, 9, 0, tzinfo=timezone.utc),
+            duration_hours=2.0,
+            distance_km=8.0,
+            ascent_m=500.0,
+            descent_m=300.0,
+        )
+        seg_weather = SegmentWeatherData(
+            segment=segment,
+            timeseries=None,
+            aggregated=SegmentWeatherSummary(),
+            fetched_at=datetime.now(timezone.utc),
+            provider="openmeteo",
+        )
+    
+        service = WeatherSnapshotService()
+        service._snapshots_dir = tmp_path
+    
+        service.save("test-trip", [seg_weather], date(2026, 4, 5))
+    
+        snapshot_file = tmp_path / "test-trip.json"
+        data = json.loads(snapshot_file.read_text())
+        seg_data = data["segments"][0]
+    
+>       assert seg_data["start_lat"] == 39.710564
+               ^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'start_lat'
+
+tests/tdd/test_snapshot_coordinates.py:63: KeyError
+__ TestSnapshotCoordinateRoundTrip.test_loaded_snapshot_has_real_coordinates ___
+
+self = <tdd.test_snapshot_coordinates.TestSnapshotCoordinateRoundTrip object at 0x7049f0f2f590>
+tmp_path = PosixPath('/tmp/pytest-of-hem/pytest-14/test_loaded_snapshot_has_real_0')
+
+    def test_loaded_snapshot_has_real_coordinates(self, tmp_path):
+        """
+        GIVEN: Snapshot mit Koordinaten gespeichert
+        WHEN: Snapshot wird geladen
+        THEN: Rekonstruierte Segmente haben echte Koordinaten (nicht 0.0)
+        """
+        from app.models import (
+            GPXPoint,
+            SegmentWeatherData,
+            SegmentWeatherSummary,
+            TripSegment,
+        )
+        from services.weather_snapshot import WeatherSnapshotService
+    
+        segment = TripSegment(
+            segment_id=1,
+            start_point=GPXPoint(lat=39.710564, lon=2.62293, elevation_m=410.0),
+            end_point=GPXPoint(lat=39.747657, lon=2.648606, elevation_m=149.0),
+            start_time=datetime(2026, 4, 5, 7, 0, tzinfo=timezone.utc),
+            end_time=datetime(2026, 4, 5, 9, 0, tzinfo=timezone.utc),
+            duration_hours=2.0,
+            distance_km=8.0,
+            ascent_m=500.0,
+            descent_m=300.0,
+        )
+        seg_weather = SegmentWeatherData(
+            segment=segment,
+            timeseries=None,
+            aggregated=SegmentWeatherSummary(),
+            fetched_at=datetime.now(timezone.utc),
+            provider="openmeteo",
+        )
+    
+        service = WeatherSnapshotService()
+        service._snapshots_dir = tmp_path
+    
+        service.save("test-trip", [seg_weather], date(2026, 4, 5))
+        loaded = service.load("test-trip")
+    
+        assert loaded is not None
+        seg = loaded[0].segment
+>       assert seg.start_point.lat == pytest.approx(39.710564)
+E       assert 0.0 == 39.710564 ± 4.0e-05
+E         
+E         comparison failed
+E         Obtained: 0.0
+E         Expected: 39.710564 ± 4.0e-05
+
+tests/tdd/test_snapshot_coordinates.py:111: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_snapshot_coordinates.py::TestSnapshotCoordinateRoundTrip::test_saved_snapshot_contains_coordinates
+FAILED tests/tdd/test_snapshot_coordinates.py::TestSnapshotCoordinateRoundTrip::test_loaded_snapshot_has_real_coordinates
+========================= 2 failed, 3 passed in 0.19s ==========================

@@ -159,7 +159,9 @@ def run_inbound_command_poll() -> None:
     from services.inbound_email_reader import InboundEmailReader
 
     settings = Settings()
-    if not settings.smtp_user or not settings.smtp_pass:
+    imap_user = settings.imap_user or settings.smtp_user
+    imap_pass = settings.imap_pass or settings.smtp_pass
+    if not imap_user or not imap_pass:
         return
 
     reader = InboundEmailReader()

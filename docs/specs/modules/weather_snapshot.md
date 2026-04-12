@@ -148,6 +148,12 @@ class WeatherSnapshotService:
        "segment_id": segment.segment.segment_id,
        "start_time": segment.segment.start_time.isoformat(),
        "end_time": segment.segment.end_time.isoformat(),
+       "start_lat": segment.segment.start_point.lat,
+       "start_lon": segment.segment.start_point.lon,
+       "start_elevation_m": segment.segment.start_point.elevation_m,
+       "end_lat": segment.segment.end_point.lat,
+       "end_lon": segment.segment.end_point.lon,
+       "end_elevation_m": segment.segment.end_point.elevation_m,
        "aggregated": _serialize_summary(segment.aggregated)
      }
    - segments.append(segment_dict)
@@ -228,16 +234,17 @@ def _reconstruct_segment(seg_data: dict) -> TripSegment:
     """
     Reconstruct minimal TripSegment from snapshot data.
 
-    Only populates fields needed for segment matching:
+    Populates fields needed for segment matching and alert API calls:
     - segment_id
-    - start_time
-    - end_time
+    - start_time, end_time
+    - start_point (lat, lon, elevation_m) — real coordinates from snapshot
+    - end_point (lat, lon, elevation_m) — real coordinates from snapshot
 
-    Creates dummy GPXPoints (lat=0, lon=0) since coordinates
-    are not needed for change detection.
+    Falls back to 0.0/None for old snapshots that predate coordinate storage
+    (backwards compatible via .get(..., 0.0)).
 
     Returns:
-        TripSegment with minimal data
+        TripSegment with real coordinates if available, 0.0 fallback otherwise
     """
 ```
 
@@ -254,6 +261,12 @@ def _reconstruct_segment(seg_data: dict) -> TripSegment:
       "segment_id": 1,
       "start_time": "2026-02-14T08:00:00+00:00",
       "end_time": "2026-02-14T10:00:00+00:00",
+      "start_lat": 39.706,
+      "start_lon": 2.616,
+      "start_elevation_m": 412.0,
+      "end_lat": 39.732,
+      "end_lon": 2.684,
+      "end_elevation_m": 285.0,
       "aggregated": {
         "temp_max_c": 9.8,
         "temp_min_c": 5.2,
@@ -269,6 +282,12 @@ def _reconstruct_segment(seg_data: dict) -> TripSegment:
       "segment_id": 2,
       "start_time": "2026-02-14T10:00:00+00:00",
       "end_time": "2026-02-14T12:00:00+00:00",
+      "start_lat": 39.732,
+      "start_lon": 2.684,
+      "start_elevation_m": 285.0,
+      "end_lat": 39.795,
+      "end_lon": 2.716,
+      "end_elevation_m": 156.0,
       "aggregated": {
         "temp_max_c": 12.5,
         "temp_min_c": 8.0,
@@ -443,12 +462,13 @@ def get_snapshots_dir(user_id: str = "default") -> Path:
 **Impact:** Cannot compare current weather to reports from 2+ runs ago.
 **Future Enhancement:** Could add timestamp to filename: `{trip_id}_{date}.json`
 
-### Limitation 3: Minimal TripSegment Reconstruction
+### Limitation 3: Partial TripSegment Reconstruction
 
-**Description:** Loaded TripSegment has dummy GPXPoints (lat=0, lon=0), distance_km=0, etc.
-**Reason:** Only segment_id, start_time, end_time needed for segment matching in change detection.
-**Impact:** Loaded segments cannot be used for distance/elevation calculations.
+**Description:** Loaded TripSegment has real coordinates (lat/lon/elevation_m) but distance_km=0, ascent_m=0, descent_m=0.
+**Reason:** Only coordinates and time bounds are stored; route geometry is not needed for alert API calls.
+**Impact:** Loaded segments cannot be used for distance/elevation route calculations.
 **Workaround:** If full segment data needed, reconstruct from trip.get_stage_for_date().
+**Note (2026-04-12):** Prior to the snapshot_missing_coordinates bugfix, GPXPoints were always dummy (lat=0, lon=0). Old snapshots without coordinate keys fall back to 0.0 via `.get(..., 0.0)`.
 
 ### Limitation 4: No Locking
 
@@ -558,3 +578,4 @@ return WeatherSnapshotService().load(trip.id)
 ## Changelog
 
 - 2026-02-14: v1.0 Initial spec created (ALERT-01)
+- 2026-04-12: v1.1 Bugfix snapshot_missing_coordinates — save() now persists lat/lon/elevation_m per segment endpoint; _reconstruct_segment() reads real coordinates with 0.0 fallback for old snapshots; trip_report.py guards int(elevation_m) with `or 0`
