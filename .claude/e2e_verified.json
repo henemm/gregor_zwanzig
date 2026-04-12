@@ -1,5 +1,5 @@
 {
-  "verified_at": "2026-04-12T17:36:42.073242+00:00",
+  "verified_at": "2026-04-12T20:19:44.928655+00:00",
   "server_restarted": true,
   "test_trip_created": true,
   "reports_sent": [
@@ -9,10 +9,10 @@
   "emails_checked": true,
   "test_trip_cleaned": true,
   "feature_checks": [
-    "Go API: GET /api/locations liefert JSON Array mit 15+ Locations",
-    "Go API: GET /api/health zeigt python_core=ok",
-    "Go API: Production unter gregor20.henemm.com/api/* erreichbar",
-    "Python: Trip Reports morning+evening erfolgreich gesendet (2/2)",
-    "Python: Server startet fehlerfrei auf Port 8080"
+    "Go API: GET /api/trips liefert 4 Trips als JSON Array",
+    "Go API: GET /api/trips/gr221-mallorca liefert Trip mit 4 Stages",
+    "Go API: GET /api/trips/nonexistent liefert 404",
+    "Go API: Production unter gregor20.henemm.com/api/trips erreichbar",
+    "External Validator: VERIFIED"
   ]
 }

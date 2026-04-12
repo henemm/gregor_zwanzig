@@ -26,6 +26,8 @@ func main() {
 	r.Get("/api/config", handler.ProxyHandler(cfg.PythonCoreURL, "/config"))
 	r.Get("/api/forecast", handler.ProxyHandler(cfg.PythonCoreURL, "/forecast"))
 	r.Get("/api/locations", handler.LocationsHandler(s))
+	r.Get("/api/trips", handler.TripsHandler(s))
+	r.Get("/api/trips/{id}", handler.TripHandler(s))
 
 	log.Printf("Go API listening on :%s, proxying to %s", cfg.Port, cfg.PythonCoreURL)
 	http.ListenAndServe(":"+cfg.Port, r)
