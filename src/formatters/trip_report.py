@@ -351,7 +351,7 @@ class TripReportFormatter:
             eh = seg_data.segment.end_time.hour
             for dp in seg_data.timeseries.data:
                 if sh <= dp.ts.hour <= eh and dp.thunder_level and dp.thunder_level != ThunderLevel.NONE:
-                    elev = int(seg_data.segment.start_point.elevation_m)
+                    elev = int(seg_data.segment.start_point.elevation_m or 0)
                     highlights.append(
                         f"⚡ Gewitter möglich ab {local_fmt(dp.ts, self._tz)} "
                         f"({'am Ziel' if seg_data.segment.segment_id == 'Ziel' else f'Segment {seg_data.segment.segment_id}'}, >{elev}m)"
@@ -793,8 +793,8 @@ class TripReportFormatter:
                 <p style="margin:4px 0 0 0;color:#666;font-size:13px;">Anbieter-Fehler nach 5 Versuchen</p>
             </div>""")
                 continue
-            s_elev = int(seg.start_point.elevation_m)
-            e_elev = int(seg.end_point.elevation_m)
+            s_elev = int(seg.start_point.elevation_m or 0)
+            e_elev = int(seg.end_point.elevation_m or 0)
             if seg.segment_id == "Ziel":
                 seg_html_parts.append(f"""
             <div class="section destination">
@@ -819,7 +819,7 @@ class TripReportFormatter:
                 night_hint = '<p style="color:#999;font-size:11px;margin-top:4px">* Temperatur/Nullgradgrenze: Minimum im 2h-Block</p>'
             night_html = f"""
             <div class="section">
-                <h3>🌙 Nacht am Ziel ({int(last_seg.end_point.elevation_m)}m)</h3>
+                <h3>🌙 Nacht am Ziel ({int(last_seg.end_point.elevation_m or 0)}m)</h3>
                 <p style="color:#666;font-size:13px">Ankunft {last_seg.end_time.strftime('%H:%M')} → Morgen 06:00</p>
                 {self._render_html_table(night_rows)}
                 {night_hint}
@@ -1038,8 +1038,8 @@ class TripReportFormatter:
                 lines.append("  Anbieter-Fehler nach 5 Versuchen")
                 lines.append("")
                 continue
-            s_elev = int(seg.start_point.elevation_m)
-            e_elev = int(seg.end_point.elevation_m)
+            s_elev = int(seg.start_point.elevation_m or 0)
+            e_elev = int(seg.end_point.elevation_m or 0)
             if seg.segment_id == "Ziel":
                 lines.append(f"━━ \U0001f3c1 Wetter am Ziel: {seg.start_time.strftime('%H:%M')}–{seg.end_time.strftime('%H:%M')} | {s_elev}m ━━")
             else:
@@ -1050,7 +1050,7 @@ class TripReportFormatter:
         # Night block
         if night_rows:
             last_seg = segments[-1].segment
-            lines.append(f"━━ Nacht am Ziel ({int(last_seg.end_point.elevation_m)}m) ━━")
+            lines.append(f"━━ Nacht am Ziel ({int(last_seg.end_point.elevation_m or 0)}m) ━━")
             lines.append(f"Ankunft {last_seg.end_time.strftime('%H:%M')} → Morgen 06:00")
             lines.append(self._render_text_table(night_rows))
             if any(mc.enabled and mc.metric_id in ("temperature", "freezing_level") for mc in dc.metrics):

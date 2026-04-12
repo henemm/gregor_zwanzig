@@ -43,7 +43,9 @@ class InboundEmailReader:
         Read UNSEEN emails, process commands, send confirmations.
         Returns: number of processed commands.
         """
-        if not settings.smtp_user or not settings.smtp_pass:
+        imap_user = settings.imap_user or settings.smtp_user
+        imap_pass = settings.imap_pass or settings.smtp_pass
+        if not imap_user or not imap_pass:
             return 0
 
         imap = None
@@ -52,7 +54,7 @@ class InboundEmailReader:
             imap_host = settings.imap_host or settings.smtp_host
             imap_port = settings.imap_port
             imap = imaplib.IMAP4_SSL(imap_host, imap_port)
-            imap.login(settings.smtp_user, settings.smtp_pass)
+            imap.login(imap_user, imap_pass)
             imap.select("INBOX")
 
             # Use TO filter if inbound_address is configured (plus-addressing)

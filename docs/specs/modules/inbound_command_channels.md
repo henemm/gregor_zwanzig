@@ -2,7 +2,7 @@
 entity_id: inbound_command_channels
 type: module
 created: 2026-02-17
-updated: 2026-02-19
+updated: 2026-04-12
 status: draft
 version: "1.1"
 tags: [f6, inbound, email, sms, imap, polling, channel]
@@ -488,5 +488,6 @@ Kein Fehler darf den APScheduler-Thread zum Absturz bringen.
 
 ## Changelog
 
+- 2026-04-12: v1.2 BUGFIX (BUG-IMAP-01): `inbound_email_reader.py` nutzt jetzt `imap_user`/`imap_pass` aus config statt `smtp_user`/`smtp_pass`. `config.py` und `scheduler.py` entsprechend angepasst. Siehe `docs/project/known_issues.md` → BUG-IMAP-01.
 - 2026-02-19: v1.1 BUGFIX: Fehler-Antworten statt stiller Verwerfung bei fehlendem [Trip Name] und unbekanntem Trip. Filterlogik-Tabelle aktualisiert. Bestaetigungen auch bei Processor-Fehlern (success=False) senden.
 - 2026-02-17: v1.0 Initial spec — Email-Channel mit Reply-Bestaetigung, SMS vorbereitet

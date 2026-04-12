@@ -1,6 +1,6 @@
 # Active Roadmap - Gregor Zwanziger (Archiv)
 
-**Last Updated:** 2026-04-08
+**Last Updated:** 2026-04-12
 
 > **Offene Features, Bugs und Migration-Tasks sind auf GitHub Issues:**
 > https://github.com/henemm/gregor_zwanzig/issues
@@ -22,6 +22,7 @@
 | Wind/Hitze Risk | 2026-02-16 | Risk Engine | Windboeen + Hitze-Warnung |
 | Provider Error Handling | 2026-02-16 | Provider | ProviderRequestError, Warnings in Emails |
 | Configurable Thresholds | 2026-02 | Config | Risk Engine Schwellen konfigurierbar |
+| Snapshot Coordinates Fix | 2026-04-12 | Bugfix | Trip reports no longer crash on missing start/end coords |
 | Report Types | 2026-01 | Formatter | Morning, Evening, Alert |
 | Compact Formatter | 2026-01 | Formatter | <=160 Zeichen |
 | SMTP Mailer | 2025-12 | Channel | Gmail SMTP, E2E getestet |
@@ -67,3 +68,5 @@
 |-----|--------|-------|
 | BUG-01: Letzter Waypoint fehlt | 2026-02 | Commit `ff6a116` |
 | BUG-02: AROME Visibility/UV | 2026-02 | Fallback ICON-EU + CAMS |
+| BUG-SNAP-01: Snapshot-Koordinaten fehlten | 2026-04-12 | Alert-API-Calls gingen an (0.0, 0.0); Formatter crashte bei elevation_m=None |
+| BUG-IMAP-01: IMAP nutzte SMTP-Credentials | 2026-04-12 | inbound_email_reader.py las smtp_user/smtp_pass statt imap_user/imap_pass |

@@ -82,6 +82,8 @@ class Settings(BaseSettings):
     inbound_address: Optional[str] = Field(default=None, description="Plus-address for inbound commands (e.g. user+gregor@gmail.com)")
     imap_host: Optional[str] = Field(default=None, description="IMAP server host (default: smtp_host)")
     imap_port: int = Field(default=993, description="IMAP server port")
+    imap_user: Optional[str] = Field(default=None, description="IMAP username (default: smtp_user)")
+    imap_pass: Optional[str] = Field(default=None, description="IMAP password (default: smtp_pass)")
 
     # SMS settings (for sms channel)
     sms_gateway_url: Optional[str] = Field(default=None, description="SMS gateway HTTP endpoint")
