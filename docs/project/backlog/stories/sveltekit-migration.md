@@ -1,141 +1,155 @@
-# User Story: SvelteKit-Migration
+# User Story: Hybrid-Migration (Go API + SvelteKit Frontend)
 
 **Epic:** Tech Stack Migration
 **Erstellt:** 2026-04-08
+**Aktualisiert:** 2026-04-12
 **Status:** Draft
 
 ## Story
 
-Als PO moechte ich den Tech-Stack von Python/NiceGUI auf Go (Backend) + SvelteKit (Frontend) migrieren, damit die AI-gestuetzte Entwicklung weniger Fehler produziert und Features schneller produktionsreif werden.
+Als PO moechte ich das Frontend von NiceGUI auf SvelteKit migrieren und eine Go REST API als Verbindungsschicht einbauen, damit die AI-gestuetzte Entwicklung weniger Fehler produziert — ohne funktionierenden Python-Core unnoetig neu zu schreiben.
 
 ## Motivation
 
 ### Problem
 
-- AI (Claude) macht mit Python signifikant mehr Fehler als mit Go (dynamische Typen, Import-System, NiceGUI-Magie)
-- NiceGUI ist Nische — wenig Trainingsdaten, subtile Bugs (Safari-Closures, Session-Isolation)
+- AI (Claude) macht mit NiceGUI signifikant mehr Fehler (Safari-Closures, Session-Isolation, wenig Trainingsdaten)
 - Multi-User (F13) ist in NiceGUI extrem aufwaendig
-- Jeder Feature-Zyklus hat zu viele Iterationen (Code → Test → Fix → Test → Fix)
+- Jeder UI-Feature-Zyklus hat zu viele Iterationen
 
-### Ziel-Stack
+### Was NICHT das Problem ist
 
-| Komponente | Aktuell | Neu | Warum |
-|---|---|---|---|
-| Backend | Python + httpx | **Go + Chi** | Compile-Time Safety, explizites Error Handling, Single Binary |
-| Frontend | NiceGUI (Python) | **SvelteKit** | Stabile Trainingsdaten, fertige UI-Komponenten (Skeleton UI / shadcn-svelte), eingebaute Auth |
-| API | Intern (Python-Funktionsaufrufe) | **REST API** | Klare Trennung Backend/Frontend |
-| Deploy | Python venv + systemd | **Go Binary + Node/SvelteKit** | Einfacher, zuverlaessiger |
-| Tests | pytest + Playwright | **go test + Playwright** | Go-Tests sind schneller und expliziter |
+- Die Weather-Pipeline (Provider, Normalizer, Risk Engine) funktioniert zuverlaessig
+- GPX-Parsing mit gpxpy/numpy ist stabil und hat keine Go-Aequivalente gleicher Qualitaet
+- Formatter und Output-Channels sind solide
+- Services (Forecast, Aggregation, Caching) sind ausgereift (~5000 LOC)
 
-### Bewertung der Frontend-Alternativen
+### Entscheidung: Hybrid-Ansatz
 
-| Framework | Trainingsdaten Menge | Trainingsdaten Qualitaet | UI-Komponenten | Stabilitaet |
-|---|---|---|---|---|
-| React | Riesig | Schlecht — veraltete Patterns, Paradigmenwechsel (Classes→Hooks→Server Components) | Sehr viele | Mittel (churn) |
-| Svelte/SvelteKit | Mittel | Gut — wenig Paradigmenwechsel, konsistente Patterns | Gut (Skeleton UI, shadcn-svelte) | Hoch (Vercel-backed) |
-| Vue | Mittel | Gut | Viele | Hoch |
-| HTMX + Templ | Klein (HTMX) / Sehr klein (Templ) | Gut, aber duenn | Keine — alles selbst bauen | Mittel (Templ ist jung) |
+**Nur ersetzen, was kaputt ist.** NiceGUI und das Web-Layer sind das Problem — nicht die Datenverarbeitung.
 
-**Entscheidung: SvelteKit** — beste Balance aus Trainingsdaten-Qualitaet, UI-Oekosystem und Stabilitaet.
+## Architektur nach Migration
 
-## Scope & Phasen
+```
+┌─────────────────────────────────────────────────┐
+│  SvelteKit Frontend (neu)                       │
+│  - Ersetzt NiceGUI komplett                     │
+│  - Auth / Multi-User (Lucia)                    │
+│  - UI-Komponenten (shadcn-svelte o.ae.)         │
+└──────────────────┬──────────────────────────────┘
+                   │ REST API (JSON)
+┌──────────────────▼──────────────────────────────┐
+│  Go REST API (neu)                              │
+│  - Chi Router, Auth-Middleware, Session          │
+│  - Duenne Schicht: HTTP → Python-Core → JSON    │
+│  - Scheduler (Cron fuer Morning/Evening Reports) │
+└──────────────────┬──────────────────────────────┘
+                   │ Python-Subprocess / HTTP
+┌──────────────────▼──────────────────────────────┐
+│  Python Core (bleibt)                           │
+│  - providers/ (OpenMeteo, GeoSphere)  ~1450 LOC │
+│  - services/ (Risk, Forecast, etc.)   ~5000 LOC │
+│  - formatters/ (Email, SMS, Trip)     ~2000 LOC │
+│  - core/ (GPX, Segmentation)           ~700 LOC │
+│  - outputs/ (Email, Signal)             ~470 LOC │
+│  - app/ (Config, Models, Loader)      ~2900 LOC │
+│  Gesamt: ~12500 LOC bewahrt                     │
+└─────────────────────────────────────────────────┘
+```
 
-### Phase 0: Parallel-Setup (Grundlage)
+### Go-Python Anbindung
 
-**Ziel:** Go-Backend + SvelteKit-Frontend neben bestehendem Python-Stack aufsetzen. Kein Feature-Freeze.
+Optionen (Entscheidung in M1):
 
-| Task | Beschreibung | Aufwand |
+| Option | Vorteil | Nachteil |
 |---|---|---|
-| Go-Modul initialisieren | `go mod init`, Chi Router, Projektstruktur | Gering |
-| SvelteKit-Projekt aufsetzen | Vite, Skeleton UI / shadcn-svelte, Auth-Setup (Lucia) | Gering |
-| REST API Design | OpenAPI-Spec fuer Trip/Location/Weather Endpoints | Mittel |
-| CI/CD erweitern | GitHub Actions fuer Go + SvelteKit Build/Test | Gering |
+| **Python als HTTP-Microservice** | Saubere Trennung, unabhaengig deploybar | Zwei Prozesse, Latenz |
+| **Python CLI aufrufen** | Einfachste Loesung, CLI existiert bereits | Kein Streaming, Startup-Overhead |
+| **Shared SQLite/JSON** | Go schreibt Requests, Python pollt & verarbeitet | Komplexer, Polling-Delay |
 
-### Phase 1: Backend-Kern portieren (Go)
+**Tendenz:** Python als interner HTTP-Service auf localhost (FastAPI/Litestar Wrapper um bestehenden Core).
 
-**Ziel:** Weather-Pipeline in Go. Python-Frontend laeuft noch parallel.
+## Scope — Was wird ersetzt
 
-| Modul | Python LOC (ca.) | Prioritaet | Abhaengigkeiten |
+| Komponente | Aktuell | Neu | LOC |
 |---|---|---|---|
-| Config & DTOs | 500 | P0 | — |
-| Provider (OpenMeteo) | 800 | P0 | Config |
-| Normalizer | 300 | P0 | Provider |
-| Risk Engine | 600 | P1 | Normalizer |
-| Formatter (Email/SMS) | 1500 | P1 | Risk Engine |
-| Scheduler | 400 | P1 | Formatter |
-| GPX Parser | 500 | P1 | — |
-| Segment Builder | 400 | P1 | GPX Parser |
+| Frontend | NiceGUI (`src/web/`) | **SvelteKit** | ~5500 → neu |
+| API-Layer | Python-Funktionsaufrufe | **Go REST API** | neu |
+| Scheduler | `src/web/scheduler.py` | **Go Cron** | ~200 → Go |
+| Auth | Keins | **Go Middleware + Lucia** | neu |
 
-**Reihenfolge:** Config → Provider → Normalizer → Risk Engine → Formatter → Scheduler
+## Scope — Was bleibt in Python
 
-**Validierung pro Modul:** Gleicher Output wie Python-Version (Regressions-Check).
+| Komponente | LOC | Grund |
+|---|---|---|
+| Weather Provider | ~1450 | httpx funktioniert, API-Anbindung stabil |
+| Services (Risk, Forecast, etc.) | ~5000 | Komplexe Business-Logik, ausgereift |
+| Formatter | ~2000 | HTML-Templates, SMS-Logik — kein Vorteil durch Go |
+| Core (GPX, Segmentation) | ~700 | gpxpy/numpy haben keine Go-Aequivalente |
+| Outputs (Email, Signal) | ~470 | Resend/Callmebot-Anbindung stabil |
+| App (Config, Models) | ~2900 | Datenmodelle bleiben gleich |
 
-### Phase 2: Frontend portieren (SvelteKit)
+## Meilensteine
 
-**Ziel:** NiceGUI komplett ersetzen. Multi-User (F13) direkt einbauen.
+### M1: Go API Setup
+Go-Modul initialisieren, Chi Router, REST API Design (OpenAPI-Spec), Python-Core als interner HTTP-Service wrappen.
 
-| Page | Python LOC (ca.) | Prioritaet | Anmerkung |
-|---|---|---|---|
-| Login / Auth | — | P0 | Neu (Lucia Auth) — loest F13 |
-| Trips (CRUD) | 800 | P0 | Kernfunktionalitaet |
-| Locations (CRUD) | 600 | P0 | Inkl. Metrik-Auswahl |
-| Weather-Tabelle | 500 | P0 | HTMX-artige Live-Updates via SvelteKit |
-| GPX Upload | 400 | P1 | Drag & Drop |
-| Etappen-Config | 500 | P1 | Segment-Uebersicht |
-| Subscriptions | 300 | P1 | Compare-Emails |
-| Report-Config | 200 | P1 | Morning/Evening Zeiten |
-| Settings | 200 | P2 | Channel-Switch (F12) |
+### M2: Auth + Multi-User
+Go Auth-Middleware, Session-Management, User-Isolation in Python-Core.
 
-### Phase 3: Cutover & Cleanup
+### M3: SvelteKit Frontend Setup
+Vite, UI-Library, Auth-Integration, erste Page (Dashboard).
 
-| Task | Beschreibung |
-|---|---|
-| DNS/Reverse Proxy | Nginx auf Go+SvelteKit umstellen |
-| Python-Code entfernen | `src/` + NiceGUI komplett loeschen |
-| Systemd-Service anpassen | Go Binary als Service |
-| E2E-Tests migrieren | Playwright gegen neues Frontend |
-| Monitoring | BetterStack Heartbeats auf Go umstellen |
+### M4: Frontend Pages portieren
+Trips, Locations, Weather, Subscriptions, Settings — alle NiceGUI-Pages als SvelteKit-Pages.
+
+### M5: Scheduler nach Go
+Morning/Evening Report Cron, BetterStack Heartbeats, Trip-Alerts.
+
+### M6: Cutover
+DNS/Nginx umstellen, NiceGUI-Code (`src/web/`) entfernen, Systemd-Services anpassen.
+
+## Was NICHT portiert wird
+
+- `src/providers/` — bleibt Python
+- `src/services/` — bleibt Python
+- `src/formatters/` — bleibt Python
+- `src/core/` — bleibt Python
+- `src/outputs/` — bleibt Python
+- `src/app/` — bleibt Python (wird um HTTP-API-Wrapper ergaenzt)
 
 ## Risiken
 
 | Risiko | Schwere | Mitigation |
 |---|---|---|
-| Feature-Freeze waehrend Migration | Hoch | Phasen-Ansatz: Python laeuft parallel bis Cutover |
-| SvelteKit-Paradigmenwechsel (Svelte 5→6) | Niedrig | Vercel investiert in Stabilitaet, Migration Guides |
-| Go-Libraries fuer Spezialfaelle (astral, gpxpy) | Mittel | Go-Alternativen pruefen: go-sunrise, go-gpx |
-| Zwei Stacks gleichzeitig warten | Mittel | Phase 1+2 zuegig durchziehen, kein Langzeit-Parallel-Betrieb |
-| Templ/HTMX vs SvelteKit Fehlentscheidung | Niedrig | SvelteKit hat groesseres Oekosystem, einfacher rueckgaengig |
+| Go-Python Kommunikation fragil | Mittel | Klare API-Contracts, Integration Tests |
+| Zwei Prozesse in Produktion | Niedrig | Systemd: Go-Service depends-on Python-Service |
+| Feature-Freeze waehrend Migration | Hoch | Phasen-Ansatz, Python laeuft parallel bis Cutover |
+| SvelteKit-Paradigmenwechsel | Niedrig | Vercel-backed, stabile Migration Guides |
 
 ## Abhaengigkeiten zu bestehenden Features
 
 | Feature | Auswirkung |
 |---|---|
-| F13 (Multi-User) | Wird durch SvelteKit Auth (Lucia) direkt geloest |
-| F12 (Channel-Switch) | In Phase 2 als SvelteKit-Page implementieren |
-| F14a/b (Subscription Metriken) | In Phase 2 als SvelteKit-Page implementieren |
-| F1 (SMS-Kanal) | In Phase 1 als Go-Service implementieren |
-| BUG-TZ-01 (Timezone) | In Phase 1 beim Provider-Port direkt fixen |
+| F13 (Multi-User) | Wird durch Auth-Layer in M2 direkt geloest |
+| F12 (Channel-Switch) | In M4 als SvelteKit-Page |
+| F14a/b (Subscription Metriken) | In M4 als SvelteKit-Page |
+| BUG-TZ-01 (Timezone) | Im Python-Core fixen, unabhaengig von Migration |
 
 ## Erfolgskriterien
 
-1. **Gleicher Feature-Umfang** wie Python-Version nach Cutover
-2. **Multi-User funktional** (Login, User-Isolation, Session-Management)
-3. **AI-Fehlerrate messbar reduziert** (weniger Fix-Iterationen pro Feature)
-4. **Alle E2E-Tests gruen** (Playwright gegen SvelteKit-Frontend)
-5. **Deploy ist einfacher** (Go Binary + SvelteKit Static/Node)
-
-## Nicht-Ziele
-
-- Keine neuen Features waehrend der Migration (ausser F13 Multi-User, das durch Auth direkt abfaellt)
-- Kein Over-Engineering: REST API nur so komplex wie noetig
-- Kein Microservice-Schnitt: Go-Backend bleibt ein Monolith
+1. **NiceGUI komplett ersetzt** — `src/web/` geloescht
+2. **Python-Core unveraendert funktional** — alle bestehenden Tests gruen
+3. **Multi-User funktional** (Login, User-Isolation)
+4. **E2E-Tests gruen** (Playwright gegen SvelteKit)
+5. **Kein unnoetig portierter Code** — Python-Core bleibt Python
 
 ## Offene Entscheidungen
 
 | Frage | Optionen | Status |
 |---|---|---|
-| SvelteKit Deploy-Modus | Node-Server vs. Static Adapter + Go serves files | Offen |
+| Go-Python Anbindung | HTTP-Service vs. CLI vs. Shared State | Offen |
+| SvelteKit Deploy-Modus | Node-Server vs. Static Adapter | Offen |
 | Auth-Library | Lucia vs. eigene Session-Middleware | Offen |
-| UI-Component-Library | Skeleton UI vs. shadcn-svelte vs. Flowbite Svelte | Offen |
-| Go-GPX-Library | tkrajina/gpxgo vs. eigener Parser | Offen |
-| Parallel-Betrieb Dauer | Max 4 Wochen vs. "bis fertig" | Offen |
+| UI-Component-Library | Skeleton UI vs. shadcn-svelte | Offen |
+| Python HTTP-Framework | FastAPI vs. Litestar vs. Flask | Offen |

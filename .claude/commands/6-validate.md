@@ -1,12 +1,32 @@
-# Phase 4: Validation
+# Phase 7: Validation
 
 You are starting the **Validation Phase**.
 
 ## Prerequisites
 
-Check `.claude/workflow_state.json`:
-- `current_phase` must be `implemented`
-- `implementation_done` must be `true`
+Check workflow status:
+```bash
+python3 .claude/hooks/workflow_state_multi.py status
+```
+
+- `current_phase` must be `phase7_validate` (or `phase6b_adversary` completed)
+- Adversary Dialog must be **VERIFIED** or **AMBIGUOUS** (with user OK)
+
+### External Validator Prerequisite
+
+**Du MUSST pruefen, dass der External Validator Report existiert und von einer ANDEREN Session stammt:**
+
+```bash
+# Pruefe ob Report existiert
+ls docs/artifacts/*/validator-report.md 2>/dev/null
+
+# Pruefe Verdict im Report
+grep -E "^## Verdict:" docs/artifacts/*/validator-report.md
+```
+
+**Wenn kein Report existiert:** Zurueck zu `/implement` Step 9 — User muss externe Validator-Session starten.
+**Akzeptierte Verdicts:** **VERIFIED** oder **AMBIGUOUS** (mit User-OK nach Pruefung der Findings).
+**BROKEN:** Zurueck zu `/implement` Step 3 zum Fixen.
 
 ## Step 1: Parallel Validation (4 agents)
 
@@ -147,35 +167,20 @@ Show the user:
 2. **Auto-fix results** - If any fixes were attempted
 3. **Docs updated** - What documentation was changed
 
-## Step 5: Update Workflow State
+## Step 5: Commit & Complete
 
 After successful validation:
-```json
-{
-  "current_phase": "validated",
-  "validation_done": true,
-  "last_updated": "[ISO timestamp]"
-}
-```
+
+1. **Commit** the changes (ask user for confirmation)
+2. **Tell the user** validation is complete
+3. **User says** "deployed", "fertig", "done", or "erledigt"
+4. The `workflow_state_updater.py` hook automatically transitions to `phase8_complete`
+
+**DO NOT manually edit workflow_state.json!** The hook handles the transition.
 
 ## On Failure
 
 If validation fails and auto-fix didn't work:
-1. Do NOT update state to validated
+1. Do NOT commit
 2. Report specific failures to user
 3. Go back to implementation: run `/implement` again
-
-## After Commit
-
-Reset workflow:
-```json
-{
-  "current_phase": "idle",
-  "feature_name": null,
-  "spec_file": null,
-  "spec_approved": false,
-  "implementation_done": false,
-  "validation_done": false,
-  "phases_completed": []
-}
-```

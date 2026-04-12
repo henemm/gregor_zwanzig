@@ -201,9 +201,9 @@ def get_phase_error(state: dict, file_path: str) -> str | None:
 ╚══════════════════════════════════════════════════════════════════╝
 """
 
-    if phase in ["phase6_implement"]:
-        # Allow writes during implementation phase (GREEN phase in TDD)
-        # This is where code is written to make tests pass
+    if phase in ["phase6_implement", "phase6b_adversary"]:
+        # Allow writes during implementation and adversary phase
+        # phase6b allows fixes found during adversary verification
         return None
 
     if phase in ["implemented"]:
@@ -256,8 +256,9 @@ def main():
     state = load_state()
     phase = state.get("current_phase", "idle")
 
-    # Allowed phases for implementation
-    allowed_phases = ["spec_approved", "implemented", "validated"]
+    # Allowed phases for implementation (includes TDD RED for writing tests)
+    allowed_phases = ["spec_approved", "implemented", "validated",
+                      "phase5_tdd_red", "phase6_implement", "phase6b_adversary", "phase7_validate", "phase8_complete"]
 
     if phase in allowed_phases:
         sys.exit(0)  # Workflow correct, allow through

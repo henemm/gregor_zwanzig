@@ -102,3 +102,14 @@ exposition_high_risk
 sms_formatter_accepts_exposed_sections
 sms_grat_wind_label
 exposition_service_exception_handled
+
+# M1: Go API Setup tests (spec: go_api_setup.md, module-level spec)
+fastapi_app_importable
+health_endpoint
+config_endpoint_returns_settings
+config_endpoint_excludes_secrets
+forecast_endpoint_returns_timeseries
+forecast_meta_has_provider_info
+forecast_data_has_correct_fields
+forecast_enums_serialized_as_strings
+forecast_missing_params_returns_422
