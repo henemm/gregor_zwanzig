@@ -1,0 +1,20 @@
+# github.com/henemm/gregor-api/internal/store [github.com/henemm/gregor-api/internal/store.test]
+internal/store/store_location_write_test.go:20:14: s.SaveLocation undefined (type *Store has no field or method SaveLocation)
+internal/store/store_location_write_test.go:24:19: s.LoadLocation undefined (type *Store has no field or method LoadLocation)
+internal/store/store_location_write_test.go:41:4: s.SaveLocation undefined (type *Store has no field or method SaveLocation)
+internal/store/store_location_write_test.go:43:14: s.DeleteLocation undefined (type *Store has no field or method DeleteLocation)
+internal/store/store_location_write_test.go:47:17: s.LoadLocation undefined (type *Store has no field or method LoadLocation)
+internal/store/store_location_write_test.go:59:11: s.DeleteLocation undefined (type *Store has no field or method DeleteLocation)
+internal/store/store_location_write_test.go:72:16: s.LoadLocation undefined (type *Store has no field or method LoadLocation)
+internal/store/store_location_write_test.go:90:16: s.LoadLocation undefined (type *Store has no field or method LoadLocation)
+FAIL	github.com/henemm/gregor-api/internal/store [build failed]
+# github.com/henemm/gregor-api/internal/handler [github.com/henemm/gregor-api/internal/handler.test]
+internal/handler/location_write_test.go:16:4: s.SaveLocation undefined (type *store.Store has no field or method SaveLocation)
+internal/handler/location_write_test.go:24:7: undefined: CreateLocationHandler
+internal/handler/location_write_test.go:45:7: undefined: CreateLocationHandler
+internal/handler/location_write_test.go:60:7: undefined: CreateLocationHandler
+internal/handler/location_write_test.go:77:31: undefined: UpdateLocationHandler
+internal/handler/location_write_test.go:94:31: undefined: UpdateLocationHandler
+internal/handler/location_write_test.go:110:34: undefined: DeleteLocationHandler
+FAIL	github.com/henemm/gregor-api/internal/handler [build failed]
+FAIL

@@ -1,5 +1,5 @@
 {
-  "verified_at": "2026-04-13T04:41:04.715657+00:00",
+  "verified_at": "2026-04-13T06:01:06.753484+00:00",
   "server_restarted": true,
   "test_trip_created": true,
   "reports_sent": [
@@ -9,12 +9,9 @@
   "emails_checked": true,
   "test_trip_cleaned": true,
   "feature_checks": [
-    "Go API: POST /api/trips 201 mit gueltigem Trip",
-    "Go API: POST /api/trips 400 bei fehlender Validierung (name, stages, coords)",
-    "Go API: PUT /api/trips/{id} 200 + 404",
-    "Go API: DELETE /api/trips/{id} 204 idempotent",
-    "Go API: Zero-Coords Waypoint korrekt abgelehnt (400)",
-    "External Validator: VERIFIED (Runde 2)",
-    "30 Go-Tests gruen"
+    "Go API: POST/PUT/DELETE /api/locations funktioniert",
+    "Go API: Validierung (id, name, coords) korrekt",
+    "Go API: 41 Go-Tests gruen",
+    "External Validator: VERIFIED"
   ]
 }
