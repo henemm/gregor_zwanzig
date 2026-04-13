@@ -1,0 +1,12 @@
+# github.com/henemm/gregor-api/internal/middleware [github.com/henemm/gregor-api/internal/middleware.test]
+internal/middleware/auth_test.go:27:10: undefined: UserIDFromContext
+internal/middleware/auth_test.go:43:13: undefined: AuthMiddleware
+internal/middleware/auth_test.go:61:13: undefined: AuthMiddleware
+internal/middleware/auth_test.go:80:13: undefined: AuthMiddleware
+internal/middleware/auth_test.go:99:13: undefined: AuthMiddleware
+internal/middleware/auth_test.go:124:14: undefined: AuthMiddleware
+internal/middleware/auth_test.go:139:13: undefined: AuthMiddleware
+internal/middleware/auth_test.go:158:13: undefined: AuthMiddleware
+internal/middleware/auth_test.go:172:9: undefined: UserIDFromContext
+FAIL	github.com/henemm/gregor-api/internal/middleware [build failed]
+FAIL
