@@ -129,3 +129,26 @@ func (s *Store) LoadTrip(id string) (*model.Trip, error) {
 
 	return &trip, nil
 }
+
+func (s *Store) SaveTrip(trip model.Trip) error {
+	dir := s.TripsDir()
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+
+	data, err := json.MarshalIndent(trip, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(filepath.Join(dir, trip.ID+".json"), data, 0644)
+}
+
+func (s *Store) DeleteTrip(id string) error {
+	path := filepath.Join(s.TripsDir(), id+".json")
+	err := os.Remove(path)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	return err
+}
