@@ -1,0 +1,39 @@
+=== RUN   TestLoadAvailabilityCache_MissingFile_ReturnsNil
+--- PASS: TestLoadAvailabilityCache_MissingFile_ReturnsNil (0.00s)
+=== RUN   TestSaveAndLoadAvailabilityCache_Roundtrip
+--- PASS: TestSaveAndLoadAvailabilityCache_Roundtrip (0.00s)
+=== RUN   TestLoadAvailabilityCache_ExpiredCache_ReturnsNil
+--- PASS: TestLoadAvailabilityCache_ExpiredCache_ReturnsNil (0.00s)
+=== RUN   TestSelectModel_Mallorca_ReturnsAROME
+--- PASS: TestSelectModel_Mallorca_ReturnsAROME (0.00s)
+=== RUN   TestSelectModel_Innsbruck_ReturnsICOND2
+--- PASS: TestSelectModel_Innsbruck_ReturnsICOND2 (0.00s)
+=== RUN   TestSelectModel_Oslo_ReturnsMetNo
+--- PASS: TestSelectModel_Oslo_ReturnsMetNo (0.00s)
+=== RUN   TestSelectModel_Athens_ReturnsICONEU
+--- PASS: TestSelectModel_Athens_ReturnsICONEU (0.00s)
+=== RUN   TestSelectModel_Tokyo_ReturnsECMWF
+--- PASS: TestSelectModel_Tokyo_ReturnsECMWF (0.00s)
+=== RUN   TestFetchForecast_Mallorca48h_ReturnsTimeseries
+    provider_test.go:87: skipping integration test in short mode
+--- SKIP: TestFetchForecast_Mallorca48h_ReturnsTimeseries (0.00s)
+=== RUN   TestFetchForecast_SetsTimezoneCorrectly
+    provider_test.go:133: skipping integration test in short mode
+--- SKIP: TestFetchForecast_SetsTimezoneCorrectly (0.00s)
+=== RUN   TestThunderLevel_WMO95_ReturnsHigh
+--- PASS: TestThunderLevel_WMO95_ReturnsHigh (0.00s)
+=== RUN   TestThunderLevel_WMO61_ReturnsNone
+--- PASS: TestThunderLevel_WMO61_ReturnsNone (0.00s)
+=== RUN   TestTimezoneForCoords_Vienna_ReturnsEuropeVienna
+--- PASS: TestTimezoneForCoords_Vienna_ReturnsEuropeVienna (0.45s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/provider/openmeteo	0.470s
+=== RUN   TestForecastHandler_ValidRequest_Returns200
+    forecast_test.go:16: skipping integration test in short mode
+--- SKIP: TestForecastHandler_ValidRequest_Returns200 (0.00s)
+=== RUN   TestForecastHandler_MissingLat_Returns400
+--- PASS: TestForecastHandler_MissingLat_Returns400 (0.00s)
+=== RUN   TestForecastHandler_InvalidLat_Returns400
+--- PASS: TestForecastHandler_InvalidLat_Returns400 (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/handler	0.003s

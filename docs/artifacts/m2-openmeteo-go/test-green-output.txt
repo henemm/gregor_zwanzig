@@ -1,0 +1,129 @@
+=== RUN   TestLoadDefaults
+--- PASS: TestLoadDefaults (0.00s)
+=== RUN   TestLoadFromEnv
+--- PASS: TestLoadFromEnv (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/config	0.005s
+=== RUN   TestForecastHandler_ValidRequest_Returns200
+2026/04/13 07:09:28 DEBUG: Selected model meteofrance_arome (1.3km) for 39.7000, 3.0000
+--- PASS: TestForecastHandler_ValidRequest_Returns200 (0.59s)
+=== RUN   TestForecastHandler_MissingLat_Returns400
+--- PASS: TestForecastHandler_MissingLat_Returns400 (0.00s)
+=== RUN   TestForecastHandler_InvalidLat_Returns400
+--- PASS: TestForecastHandler_InvalidLat_Returns400 (0.00s)
+=== RUN   TestHealthHandlerPythonUp
+--- PASS: TestHealthHandlerPythonUp (0.00s)
+=== RUN   TestHealthHandlerPythonDown
+--- PASS: TestHealthHandlerPythonDown (0.00s)
+=== RUN   TestProxyHandlerSuccess
+--- PASS: TestProxyHandlerSuccess (0.00s)
+=== RUN   TestProxyHandlerPythonDown
+--- PASS: TestProxyHandlerPythonDown (0.00s)
+=== RUN   TestProxyHandlerForwardsQueryParams
+--- PASS: TestProxyHandlerForwardsQueryParams (0.00s)
+=== RUN   TestLocationsHandler
+--- PASS: TestLocationsHandler (0.00s)
+=== RUN   TestCreateLocationHandler
+--- PASS: TestCreateLocationHandler (0.00s)
+=== RUN   TestCreateLocationHandlerInvalidName
+--- PASS: TestCreateLocationHandlerInvalidName (0.00s)
+=== RUN   TestCreateLocationHandlerZeroCoords
+--- PASS: TestCreateLocationHandlerZeroCoords (0.00s)
+=== RUN   TestUpdateLocationHandler
+--- PASS: TestUpdateLocationHandler (0.00s)
+=== RUN   TestUpdateLocationHandlerNotFound
+--- PASS: TestUpdateLocationHandlerNotFound (0.00s)
+=== RUN   TestDeleteLocationHandler
+--- PASS: TestDeleteLocationHandler (0.00s)
+=== RUN   TestTripsHandler
+--- PASS: TestTripsHandler (0.00s)
+=== RUN   TestTripHandlerFound
+--- PASS: TestTripHandlerFound (0.00s)
+=== RUN   TestTripHandlerNotFound
+--- PASS: TestTripHandlerNotFound (0.00s)
+=== RUN   TestCreateTripHandler
+--- PASS: TestCreateTripHandler (0.00s)
+=== RUN   TestCreateTripHandlerInvalid
+--- PASS: TestCreateTripHandlerInvalid (0.00s)
+=== RUN   TestCreateTripHandlerZeroCoords
+--- PASS: TestCreateTripHandlerZeroCoords (0.00s)
+=== RUN   TestUpdateTripHandler
+--- PASS: TestUpdateTripHandler (0.00s)
+=== RUN   TestUpdateTripHandlerNotFound
+--- PASS: TestUpdateTripHandlerNotFound (0.00s)
+=== RUN   TestDeleteTripHandler
+--- PASS: TestDeleteTripHandler (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/handler	0.620s
+?   	github.com/henemm/gregor-api/internal/model	[no test files]
+?   	github.com/henemm/gregor-api/internal/provider	[no test files]
+=== RUN   TestLoadAvailabilityCache_MissingFile_ReturnsNil
+--- PASS: TestLoadAvailabilityCache_MissingFile_ReturnsNil (0.00s)
+=== RUN   TestSaveAndLoadAvailabilityCache_Roundtrip
+--- PASS: TestSaveAndLoadAvailabilityCache_Roundtrip (0.00s)
+=== RUN   TestLoadAvailabilityCache_ExpiredCache_ReturnsNil
+--- PASS: TestLoadAvailabilityCache_ExpiredCache_ReturnsNil (0.00s)
+=== RUN   TestSelectModel_Mallorca_ReturnsAROME
+--- PASS: TestSelectModel_Mallorca_ReturnsAROME (0.00s)
+=== RUN   TestSelectModel_Innsbruck_ReturnsICOND2
+--- PASS: TestSelectModel_Innsbruck_ReturnsICOND2 (0.00s)
+=== RUN   TestSelectModel_Oslo_ReturnsMetNo
+--- PASS: TestSelectModel_Oslo_ReturnsMetNo (0.00s)
+=== RUN   TestSelectModel_Athens_ReturnsICONEU
+--- PASS: TestSelectModel_Athens_ReturnsICONEU (0.00s)
+=== RUN   TestSelectModel_Tokyo_ReturnsECMWF
+--- PASS: TestSelectModel_Tokyo_ReturnsECMWF (0.00s)
+=== RUN   TestFetchForecast_Mallorca48h_ReturnsTimeseries
+2026/04/13 07:09:29 DEBUG: Selected model meteofrance_arome (1.3km) for 39.7000, 3.0000
+--- PASS: TestFetchForecast_Mallorca48h_ReturnsTimeseries (0.56s)
+=== RUN   TestFetchForecast_SetsTimezoneCorrectly
+2026/04/13 07:09:29 DEBUG: Selected model meteofrance_arome (1.3km) for 39.7000, 3.0000
+--- PASS: TestFetchForecast_SetsTimezoneCorrectly (0.01s)
+=== RUN   TestThunderLevel_WMO95_ReturnsHigh
+--- PASS: TestThunderLevel_WMO95_ReturnsHigh (0.00s)
+=== RUN   TestThunderLevel_WMO61_ReturnsNone
+--- PASS: TestThunderLevel_WMO61_ReturnsNone (0.00s)
+=== RUN   TestTimezoneForCoords_Vienna_ReturnsEuropeVienna
+--- PASS: TestTimezoneForCoords_Vienna_ReturnsEuropeVienna (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/provider/openmeteo	0.590s
+=== RUN   TestSaveLocationAndLoad
+--- PASS: TestSaveLocationAndLoad (0.00s)
+=== RUN   TestDeleteLocation
+--- PASS: TestDeleteLocation (0.00s)
+=== RUN   TestDeleteLocationNotFound
+--- PASS: TestDeleteLocationNotFound (0.00s)
+=== RUN   TestLoadLocation
+--- PASS: TestLoadLocation (0.00s)
+=== RUN   TestLoadLocationNotFound
+--- PASS: TestLoadLocationNotFound (0.00s)
+=== RUN   TestLoadLocationsFromRealData
+--- PASS: TestLoadLocationsFromRealData (0.00s)
+=== RUN   TestLoadLocationsEmptyDir
+--- PASS: TestLoadLocationsEmptyDir (0.00s)
+=== RUN   TestLoadLocationsDirNotExist
+--- PASS: TestLoadLocationsDirNotExist (0.00s)
+=== RUN   TestLoadLocationsSkipsBadJSON
+2026/04/13 07:09:29 skip bad.json: json error: invalid character 'n' looking for beginning of object key string
+--- PASS: TestLoadLocationsSkipsBadJSON (0.00s)
+=== RUN   TestLoadLocationsSortedByName
+--- PASS: TestLoadLocationsSortedByName (0.00s)
+=== RUN   TestLoadTripsFromRealData
+--- PASS: TestLoadTripsFromRealData (0.00s)
+=== RUN   TestLoadTripsEmptyDir
+--- PASS: TestLoadTripsEmptyDir (0.00s)
+=== RUN   TestLoadTripsBadJSON
+2026/04/13 07:09:29 skip bad.json: json error: invalid character 'b' looking for beginning of object key string
+--- PASS: TestLoadTripsBadJSON (0.00s)
+=== RUN   TestLoadTripByID
+--- PASS: TestLoadTripByID (0.00s)
+=== RUN   TestLoadTripNotFound
+--- PASS: TestLoadTripNotFound (0.00s)
+=== RUN   TestSaveTripAndLoad
+--- PASS: TestSaveTripAndLoad (0.00s)
+=== RUN   TestDeleteTrip
+--- PASS: TestDeleteTrip (0.00s)
+=== RUN   TestDeleteTripNotFound
+--- PASS: TestDeleteTripNotFound (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/store	0.011s

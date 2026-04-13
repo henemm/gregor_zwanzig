@@ -1,0 +1,19 @@
+# github.com/henemm/gregor-api/internal/provider/openmeteo [github.com/henemm/gregor-api/internal/provider/openmeteo.test]
+internal/provider/openmeteo/cache_test.go:20:16: undefined: LoadAvailabilityCache
+internal/provider/openmeteo/cache_test.go:36:15: undefined: AvailabilityCache
+internal/provider/openmeteo/cache_test.go:38:22: undefined: ModelAvailability
+internal/provider/openmeteo/cache_test.go:46:9: undefined: SaveAvailabilityCache
+internal/provider/openmeteo/cache_test.go:51:17: undefined: LoadAvailabilityCache
+internal/provider/openmeteo/cache_test.go:80:16: undefined: LoadAvailabilityCache
+internal/provider/openmeteo/provider_test.go:15:16: undefined: SelectModel
+internal/provider/openmeteo/provider_test.go:31:16: undefined: SelectModel
+internal/provider/openmeteo/provider_test.go:44:16: undefined: SelectModel
+internal/provider/openmeteo/provider_test.go:57:16: undefined: SelectModel
+internal/provider/openmeteo/provider_test.go:57:16: too many errors
+FAIL	github.com/henemm/gregor-api/internal/provider/openmeteo [build failed]
+# github.com/henemm/gregor-api/internal/handler [github.com/henemm/gregor-api/internal/handler.test]
+internal/handler/forecast_test.go:21:7: undefined: ForecastHandler
+internal/handler/forecast_test.go:51:7: undefined: ForecastHandler
+internal/handler/forecast_test.go:75:7: undefined: ForecastHandler
+FAIL	github.com/henemm/gregor-api/internal/handler [build failed]
+FAIL
