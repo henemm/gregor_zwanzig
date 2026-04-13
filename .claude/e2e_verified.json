@@ -1,5 +1,5 @@
 {
-  "verified_at": "2026-04-13T06:01:06.753484+00:00",
+  "verified_at": "2026-04-13T06:16:11.397691+00:00",
   "server_restarted": true,
   "test_trip_created": true,
   "reports_sent": [
@@ -9,9 +9,8 @@
   "emails_checked": true,
   "test_trip_cleaned": true,
   "feature_checks": [
-    "Go API: POST/PUT/DELETE /api/locations funktioniert",
-    "Go API: Validierung (id, name, coords) korrekt",
-    "Go API: 41 Go-Tests gruen",
-    "External Validator: VERIFIED"
+    "OpenAPI Spec: YAML valid, 7 paths, 12 operations, 7 schemas",
+    "Alle Endpoints dokumentiert: health, config, forecast, locations CRUD, trips CRUD",
+    "Schemas matchen Go Structs (Location, Trip, Stage, Waypoint)"
   ]
 }
