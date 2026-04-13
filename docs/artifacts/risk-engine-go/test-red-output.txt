@@ -1,0 +1,14 @@
+# github.com/henemm/gregor-api/internal/risk [github.com/henemm/gregor-api/internal/risk.test]
+internal/risk/engine_test.go:13:26: undefined: model.SegmentWeatherSummary
+internal/risk/engine_test.go:14:15: undefined: model.SegmentWeatherSummary
+internal/risk/engine_test.go:27:12: undefined: Assess
+internal/risk/engine_test.go:34:13: undefined: model.SegmentWeatherSummary
+internal/risk/engine_test.go:35:12: undefined: Assess
+internal/risk/engine_test.go:191:29: undefined: model.Risk
+internal/risk/engine_test.go:191:44: undefined: model.RiskType
+internal/risk/engine_test.go:191:61: undefined: model.Risk
+internal/risk/engine_test.go:200:34: undefined: model.Risk
+internal/risk/engine_test.go:200:49: undefined: model.RiskType
+internal/risk/engine_test.go:35:12: too many errors
+FAIL	github.com/henemm/gregor-api/internal/risk [build failed]
+FAIL

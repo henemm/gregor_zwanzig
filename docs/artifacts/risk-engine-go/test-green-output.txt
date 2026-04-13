@@ -1,0 +1,38 @@
+=== RUN   TestAssess_NoRisks_CalmWeather
+--- PASS: TestAssess_NoRisks_CalmWeather (0.00s)
+=== RUN   TestAssess_ThunderHigh
+--- PASS: TestAssess_ThunderHigh (0.00s)
+=== RUN   TestAssess_ThunderMedium
+--- PASS: TestAssess_ThunderMedium (0.00s)
+=== RUN   TestAssess_WindHigh
+--- PASS: TestAssess_WindHigh (0.00s)
+=== RUN   TestAssess_WindModerate
+--- PASS: TestAssess_WindModerate (0.00s)
+=== RUN   TestAssess_GustOverridesWind
+--- PASS: TestAssess_GustOverridesWind (0.00s)
+=== RUN   TestAssess_PrecipitationModerate
+--- PASS: TestAssess_PrecipitationModerate (0.00s)
+=== RUN   TestAssess_VisibilityInverted
+--- PASS: TestAssess_VisibilityInverted (0.00s)
+=== RUN   TestAssess_WindChillInverted
+--- PASS: TestAssess_WindChillInverted (0.00s)
+=== RUN   TestAssess_MultipleRisksSorted
+--- PASS: TestAssess_MultipleRisksSorted (0.00s)
+=== RUN   TestAssess_Deduplication
+--- PASS: TestAssess_Deduplication (0.00s)
+=== RUN   TestAssess_NoneValuesSkipped
+--- PASS: TestAssess_NoneValuesSkipped (0.00s)
+=== RUN   TestAssess_CapeHigh
+--- PASS: TestAssess_CapeHigh (0.00s)
+=== RUN   TestAssess_CapeModerate
+--- PASS: TestAssess_CapeModerate (0.00s)
+=== RUN   TestAssessWithExposition_ModerateWind
+--- PASS: TestAssessWithExposition_ModerateWind (0.00s)
+=== RUN   TestAssessWithExposition_HighWind
+--- PASS: TestAssessWithExposition_HighWind (0.00s)
+=== RUN   TestAssessWithExposition_NoOverlap
+--- PASS: TestAssessWithExposition_NoOverlap (0.00s)
+=== RUN   TestAssessWithExposition_LowWind_NoRisk
+--- PASS: TestAssessWithExposition_LowWind_NoRisk (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/risk	0.002s
