@@ -12,6 +12,9 @@ type Config struct {
 	OpenMeteoTimeout  int    `envconfig:"OPENMETEO_TIMEOUT" default:"30"`
 	OpenMeteoRetries  int    `envconfig:"OPENMETEO_RETRIES" default:"5"`
 	CacheDir          string `envconfig:"CACHE_DIR" default:"data/cache"`
+	SessionSecret     string `envconfig:"SESSION_SECRET" default:"dev-secret-change-me"`
+	AuthUser          string `envconfig:"AUTH_USER" default:"admin"`
+	AuthPass          string `envconfig:"AUTH_PASS" default:""`
 }
 
 func Load() (*Config, error) {
