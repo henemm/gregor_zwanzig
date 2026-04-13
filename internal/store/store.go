@@ -152,3 +152,45 @@ func (s *Store) DeleteTrip(id string) error {
 	}
 	return err
 }
+
+func (s *Store) LoadLocation(id string) (*model.Location, error) {
+	path := filepath.Join(s.LocationsDir(), id+".json")
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	var loc model.Location
+	if err := json.Unmarshal(data, &loc); err != nil {
+		return nil, err
+	}
+
+	return &loc, nil
+}
+
+func (s *Store) SaveLocation(loc model.Location) error {
+	dir := s.LocationsDir()
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+
+	data, err := json.MarshalIndent(loc, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(filepath.Join(dir, loc.ID+".json"), data, 0644)
+}
+
+func (s *Store) DeleteLocation(id string) error {
+	path := filepath.Join(s.LocationsDir(), id+".json")
+	err := os.Remove(path)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	return err
+}
