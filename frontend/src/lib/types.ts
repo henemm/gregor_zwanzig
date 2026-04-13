@@ -48,3 +48,36 @@ export interface ApiError {
 	error: string;
 	detail?: string;
 }
+
+export type ThunderLevel = 'NONE' | 'MED' | 'HIGH';
+
+export interface ForecastDataPoint {
+	ts: string;
+	t2m_c?: number | null;
+	wind10m_kmh?: number | null;
+	wind_direction_deg?: number | null;
+	gust_kmh?: number | null;
+	precip_1h_mm?: number | null;
+	cloud_total_pct?: number | null;
+	wmo_code?: number | null;
+	thunder_level?: ThunderLevel | null;
+	visibility_m?: number | null;
+	wind_chill_c?: number | null;
+	humidity_pct?: number | null;
+	pop_pct?: number | null;
+	is_day?: number | null;
+	dni_wm2?: number | null;
+	uv_index?: number | null;
+}
+
+export interface ForecastMeta {
+	provider: string;
+	model: string;
+	grid_res_km: number;
+}
+
+export interface ForecastResponse {
+	timezone: string;
+	meta: ForecastMeta;
+	data: ForecastDataPoint[];
+}

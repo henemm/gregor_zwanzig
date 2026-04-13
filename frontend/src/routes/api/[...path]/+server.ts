@@ -3,8 +3,8 @@ import type { RequestHandler } from './$types.js';
 
 const API = () => env.GZ_API_BASE ?? 'http://localhost:8090';
 
-const handler: RequestHandler = async ({ request, params, cookies }) => {
-	const url = `${API()}/api/${params.path}`;
+const handler: RequestHandler = async ({ request, params, cookies, url: reqUrl }) => {
+	const url = `${API()}/api/${params.path}${reqUrl.search}`;
 	const headers = new Headers(request.headers);
 
 	const session = cookies.get('gz_session');
