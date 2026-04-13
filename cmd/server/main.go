@@ -28,6 +28,9 @@ func main() {
 	r.Get("/api/locations", handler.LocationsHandler(s))
 	r.Get("/api/trips", handler.TripsHandler(s))
 	r.Get("/api/trips/{id}", handler.TripHandler(s))
+	r.Post("/api/trips", handler.CreateTripHandler(s))
+	r.Put("/api/trips/{id}", handler.UpdateTripHandler(s))
+	r.Delete("/api/trips/{id}", handler.DeleteTripHandler(s))
 
 	log.Printf("Go API listening on :%s, proxying to %s", cfg.Port, cfg.PythonCoreURL)
 	http.ListenAndServe(":"+cfg.Port, r)

@@ -3,7 +3,7 @@
     {
       "id": "zillertal-t-glich",
       "name": "Zillertal täglich",
-      "enabled": true,
+      "enabled": false,
       "locations": [
         "*"
       ],
@@ -11,8 +11,529 @@
       "time_window_start": 9,
       "time_window_end": 16,
       "schedule": "daily_evening",
+      "weekday": 4,
       "include_hourly": true,
-      "top_n": 3
+      "top_n": 3,
+      "send_email": true,
+      "send_signal": false,
+      "display_config": {
+        "trip_id": "zillertal-t-glich",
+        "metrics": [
+          {
+            "metric_id": "temperature",
+            "enabled": true,
+            "aggregations": [
+              "min",
+              "max",
+              "avg"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "wind_chill",
+            "enabled": true,
+            "aggregations": [
+              "min"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "humidity",
+            "enabled": true,
+            "aggregations": [
+              "avg"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "dewpoint",
+            "enabled": false,
+            "aggregations": [
+              "avg"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "wind",
+            "enabled": true,
+            "aggregations": [
+              "max"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "gust",
+            "enabled": true,
+            "aggregations": [
+              "max"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "wind_direction",
+            "enabled": true,
+            "aggregations": [
+              "avg"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "precipitation",
+            "enabled": true,
+            "aggregations": [
+              "sum"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "rain_probability",
+            "enabled": true,
+            "aggregations": [
+              "max"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "thunder",
+            "enabled": true,
+            "aggregations": [
+              "max"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "cape",
+            "enabled": false,
+            "aggregations": [
+              "max"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "snowfall_limit",
+            "enabled": false,
+            "aggregations": [
+              "min",
+              "max"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "precip_type",
+            "enabled": false,
+            "aggregations": [
+              "max"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "cloud_total",
+            "enabled": true,
+            "aggregations": [
+              "avg"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "cloud_low",
+            "enabled": false,
+            "aggregations": [
+              "avg"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "cloud_mid",
+            "enabled": false,
+            "aggregations": [
+              "avg"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "cloud_high",
+            "enabled": false,
+            "aggregations": [
+              "avg"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "visibility",
+            "enabled": false,
+            "aggregations": [
+              "min"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "sunshine",
+            "enabled": true,
+            "aggregations": [
+              "avg"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "uv_index",
+            "enabled": true,
+            "aggregations": [
+              "max"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "pressure",
+            "enabled": false,
+            "aggregations": [
+              "avg"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "freezing_level",
+            "enabled": false,
+            "aggregations": [
+              "min",
+              "max"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "snow_depth",
+            "enabled": false,
+            "aggregations": [
+              "max"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "fresh_snow",
+            "enabled": false,
+            "aggregations": [
+              "sum"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          }
+        ],
+        "updated_at": "2026-04-06T06:32:10.739999+00:00"
+      }
+    },
+    {
+      "id": "mallorca-",
+      "name": "Mallorca ",
+      "enabled": true,
+      "locations": [
+        "valdemossa",
+        "pollença"
+      ],
+      "forecast_hours": 48,
+      "time_window_start": 9,
+      "time_window_end": 16,
+      "schedule": "daily_morning",
+      "weekday": 4,
+      "include_hourly": true,
+      "top_n": 3,
+      "send_email": true,
+      "send_signal": false,
+      "display_config": {
+        "trip_id": "mallorca-",
+        "metrics": [
+          {
+            "metric_id": "temperature",
+            "enabled": true,
+            "aggregations": [
+              "min",
+              "max",
+              "avg"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "wind_chill",
+            "enabled": true,
+            "aggregations": [
+              "min"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "humidity",
+            "enabled": true,
+            "aggregations": [
+              "avg"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "dewpoint",
+            "enabled": true,
+            "aggregations": [
+              "avg"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "wind",
+            "enabled": true,
+            "aggregations": [
+              "max"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "gust",
+            "enabled": true,
+            "aggregations": [
+              "max"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "wind_direction",
+            "enabled": true,
+            "aggregations": [
+              "avg"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "precipitation",
+            "enabled": true,
+            "aggregations": [
+              "sum"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "rain_probability",
+            "enabled": true,
+            "aggregations": [
+              "max"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "thunder",
+            "enabled": true,
+            "aggregations": [
+              "max"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "cape",
+            "enabled": false,
+            "aggregations": [
+              "max"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "snowfall_limit",
+            "enabled": true,
+            "aggregations": [
+              "min",
+              "max"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "precip_type",
+            "enabled": false,
+            "aggregations": [
+              "max"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "cloud_total",
+            "enabled": true,
+            "aggregations": [
+              "avg"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "cloud_low",
+            "enabled": false,
+            "aggregations": [
+              "avg"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "cloud_mid",
+            "enabled": false,
+            "aggregations": [
+              "avg"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "cloud_high",
+            "enabled": false,
+            "aggregations": [
+              "avg"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "visibility",
+            "enabled": true,
+            "aggregations": [
+              "min"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "sunshine",
+            "enabled": true,
+            "aggregations": [
+              "avg"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "uv_index",
+            "enabled": true,
+            "aggregations": [
+              "max"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "pressure",
+            "enabled": false,
+            "aggregations": [
+              "avg"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "freezing_level",
+            "enabled": false,
+            "aggregations": [
+              "min",
+              "max"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "snow_depth",
+            "enabled": false,
+            "aggregations": [
+              "max"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          },
+          {
+            "metric_id": "fresh_snow",
+            "enabled": false,
+            "aggregations": [
+              "sum"
+            ],
+            "use_friendly_format": true,
+            "alert_enabled": false,
+            "alert_threshold": null
+          }
+        ],
+        "updated_at": "2026-04-12T17:54:01.019267+00:00"
+      }
     }
   ]
 }

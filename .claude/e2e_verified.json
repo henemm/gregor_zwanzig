@@ -1,5 +1,5 @@
 {
-  "verified_at": "2026-04-12T20:19:44.928655+00:00",
+  "verified_at": "2026-04-13T04:41:04.715657+00:00",
   "server_restarted": true,
   "test_trip_created": true,
   "reports_sent": [
@@ -9,10 +9,12 @@
   "emails_checked": true,
   "test_trip_cleaned": true,
   "feature_checks": [
-    "Go API: GET /api/trips liefert 4 Trips als JSON Array",
-    "Go API: GET /api/trips/gr221-mallorca liefert Trip mit 4 Stages",
-    "Go API: GET /api/trips/nonexistent liefert 404",
-    "Go API: Production unter gregor20.henemm.com/api/trips erreichbar",
-    "External Validator: VERIFIED"
+    "Go API: POST /api/trips 201 mit gueltigem Trip",
+    "Go API: POST /api/trips 400 bei fehlender Validierung (name, stages, coords)",
+    "Go API: PUT /api/trips/{id} 200 + 404",
+    "Go API: DELETE /api/trips/{id} 204 idempotent",
+    "Go API: Zero-Coords Waypoint korrekt abgelehnt (400)",
+    "External Validator: VERIFIED (Runde 2)",
+    "30 Go-Tests gruen"
   ]
 }

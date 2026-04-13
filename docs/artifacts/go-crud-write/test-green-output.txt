@@ -1,0 +1,69 @@
+=== RUN   TestLoadDefaults
+--- PASS: TestLoadDefaults (0.00s)
+=== RUN   TestLoadFromEnv
+--- PASS: TestLoadFromEnv (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/config	(cached)
+?   	github.com/henemm/gregor-api/internal/model	[no test files]
+=== RUN   TestHealthHandlerPythonUp
+--- PASS: TestHealthHandlerPythonUp (0.00s)
+=== RUN   TestHealthHandlerPythonDown
+--- PASS: TestHealthHandlerPythonDown (0.00s)
+=== RUN   TestProxyHandlerSuccess
+--- PASS: TestProxyHandlerSuccess (0.00s)
+=== RUN   TestProxyHandlerPythonDown
+--- PASS: TestProxyHandlerPythonDown (0.00s)
+=== RUN   TestProxyHandlerForwardsQueryParams
+--- PASS: TestProxyHandlerForwardsQueryParams (0.00s)
+=== RUN   TestLocationsHandler
+--- PASS: TestLocationsHandler (0.00s)
+=== RUN   TestTripsHandler
+--- PASS: TestTripsHandler (0.00s)
+=== RUN   TestTripHandlerFound
+--- PASS: TestTripHandlerFound (0.00s)
+=== RUN   TestTripHandlerNotFound
+--- PASS: TestTripHandlerNotFound (0.00s)
+=== RUN   TestCreateTripHandler
+--- PASS: TestCreateTripHandler (0.00s)
+=== RUN   TestCreateTripHandlerInvalid
+--- PASS: TestCreateTripHandlerInvalid (0.00s)
+=== RUN   TestCreateTripHandlerZeroCoords
+--- PASS: TestCreateTripHandlerZeroCoords (0.00s)
+=== RUN   TestUpdateTripHandler
+--- PASS: TestUpdateTripHandler (0.00s)
+=== RUN   TestUpdateTripHandlerNotFound
+--- PASS: TestUpdateTripHandlerNotFound (0.00s)
+=== RUN   TestDeleteTripHandler
+--- PASS: TestDeleteTripHandler (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/handler	0.011s
+=== RUN   TestLoadLocationsFromRealData
+--- PASS: TestLoadLocationsFromRealData (0.00s)
+=== RUN   TestLoadLocationsEmptyDir
+--- PASS: TestLoadLocationsEmptyDir (0.00s)
+=== RUN   TestLoadLocationsDirNotExist
+--- PASS: TestLoadLocationsDirNotExist (0.00s)
+=== RUN   TestLoadLocationsSkipsBadJSON
+2026/04/13 04:41:11 skip bad.json: json error: invalid character 'n' looking for beginning of object key string
+--- PASS: TestLoadLocationsSkipsBadJSON (0.00s)
+=== RUN   TestLoadLocationsSortedByName
+--- PASS: TestLoadLocationsSortedByName (0.00s)
+=== RUN   TestLoadTripsFromRealData
+--- PASS: TestLoadTripsFromRealData (0.00s)
+=== RUN   TestLoadTripsEmptyDir
+--- PASS: TestLoadTripsEmptyDir (0.00s)
+=== RUN   TestLoadTripsBadJSON
+2026/04/13 04:41:11 skip bad.json: json error: invalid character 'b' looking for beginning of object key string
+--- PASS: TestLoadTripsBadJSON (0.00s)
+=== RUN   TestLoadTripByID
+--- PASS: TestLoadTripByID (0.00s)
+=== RUN   TestLoadTripNotFound
+--- PASS: TestLoadTripNotFound (0.00s)
+=== RUN   TestSaveTripAndLoad
+--- PASS: TestSaveTripAndLoad (0.00s)
+=== RUN   TestDeleteTrip
+--- PASS: TestDeleteTrip (0.00s)
+=== RUN   TestDeleteTripNotFound
+--- PASS: TestDeleteTripNotFound (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/store	0.007s
