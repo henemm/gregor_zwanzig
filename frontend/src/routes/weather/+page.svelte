@@ -101,7 +101,7 @@
 				<Table.Header>
 					<Table.Row>
 						<Table.Head>Zeit</Table.Head>
-						<Table.Head></Table.Head>
+						<Table.Head>Symbol</Table.Head>
 						<Table.Head>Temp</Table.Head>
 						<Table.Head>Precip</Table.Head>
 						<Table.Head>Wind</Table.Head>
@@ -125,9 +125,9 @@
 							<Table.Cell class="text-sm">{formatTime(dp.ts)}</Table.Cell>
 							<Table.Cell>{weatherEmoji(dp.wmo_code, dp.is_day, dp.dni_wm2, dp.cloud_total_pct)}</Table.Cell>
 							<Table.Cell class="text-sm">{dp.t2m_c != null ? dp.t2m_c.toFixed(1) + '°' : '—'}</Table.Cell>
-							<Table.Cell class="text-sm">{dp.precip_1h_mm != null && dp.precip_1h_mm > 0 ? dp.precip_1h_mm.toFixed(1) : '—'}</Table.Cell>
-							<Table.Cell class="text-sm">{dp.wind10m_kmh != null ? Math.round(dp.wind10m_kmh) : '—'}</Table.Cell>
-							<Table.Cell class="text-sm">{dp.gust_kmh != null ? Math.round(dp.gust_kmh) : '—'}</Table.Cell>
+							<Table.Cell class="text-sm">{dp.precip_1h_mm != null && dp.precip_1h_mm > 0 ? dp.precip_1h_mm.toFixed(1) + ' mm' : '—'}</Table.Cell>
+							<Table.Cell class="text-sm">{dp.wind10m_kmh != null ? Math.round(dp.wind10m_kmh) + ' km/h' : '—'}</Table.Cell>
+							<Table.Cell class="text-sm">{dp.gust_kmh != null ? Math.round(dp.gust_kmh) + ' km/h' : '—'}</Table.Cell>
 							<Table.Cell class="text-sm">{degToCardinal(dp.wind_direction_deg)}</Table.Cell>
 							<Table.Cell class="text-sm">{dp.cloud_total_pct != null ? dp.cloud_total_pct + '%' : '—'}</Table.Cell>
 						</Table.Row>
