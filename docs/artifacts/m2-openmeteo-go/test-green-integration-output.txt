@@ -1,0 +1,8 @@
+=== RUN   TestFetchForecast_Mallorca48h_ReturnsTimeseries
+2026/04/13 07:09:03 DEBUG: Selected model meteofrance_arome (1.3km) for 39.7000, 3.0000
+--- PASS: TestFetchForecast_Mallorca48h_ReturnsTimeseries (0.53s)
+=== RUN   TestFetchForecast_SetsTimezoneCorrectly
+2026/04/13 07:09:04 DEBUG: Selected model meteofrance_arome (1.3km) for 39.7000, 3.0000
+--- PASS: TestFetchForecast_SetsTimezoneCorrectly (0.01s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/provider/openmeteo	0.562s
