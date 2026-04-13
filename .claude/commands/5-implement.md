@@ -168,45 +168,44 @@ Sage "go" wenn du mit den Ergebnissen zufrieden bist.
 python3 .claude/hooks/workflow_state_multi.py phase phase6b_adversary
 ```
 
-### 9. STOP — External Validator (MANDATORY)
+### 9. External Validator (MANDATORY)
 
-**Du (Implementierer) startest den Validator NICHT selbst. Du sagst STOP.**
+**Ich (Implementierer) starte den Validator per Bash — der Output ist fuer den User sichtbar.**
 
-Das Kernproblem: Wenn die Implementierer-Session den Adversary startet, promptet und dessen Ergebnis interpretiert, ist das wie wenn der Angeklagte seinen eigenen Richter bestellt.
+Der Validator laeuft als **isolierte Claude-Instanz** via `claude --print`:
+- Eigene Session, kein Zugriff auf Konversationskontext
+- Kennt nur: Spec + laufende App
+- Prompt ist fest im Script (nicht manipulierbar)
+- Output kommt ungefiltert als Tool-Result zurueck — User sieht alles
 
-#### 9a. Uebergabe an User
+#### 9a. Validator starten
 
-Praesentiere dem User:
+```bash
+bash .claude/validate-external.sh [SPEC_PATH]
+```
+
+**WICHTIG fuer den User:** Du siehst den kompletten Bash-Befehl UND den vollstaendigen Output. Nichts wird gefiltert oder zusammengefasst.
+
+#### 9b. Ergebnis praesentieren
+
+Zeige dem User das Verdict und frage:
 
 ```markdown
-## Bereit fuer External Validation
+## External Validator Ergebnis
 
+**Verdict:** [VERIFIED / BROKEN / AMBIGUOUS]
 **Spec:** [SPEC_PATH]
-**Server:** https://gregor20.henemm.com (laeuft)
 
-### Naechster Schritt (DU, nicht ich):
+[Validator-Output ist oben im Bash-Result vollstaendig sichtbar]
 
-Oeffne ein neues Terminal und starte das Validator-Script:
-
-\`\`\`bash
-.claude/validate-external.sh [SPEC_PATH]
-\`\`\`
-
-**Wichtig:** Benutze das Script, nicht den claude-Befehl direkt!
-Das Script haertet die Isolation (ignoriert CLAUDE.md-Einfluss, Artifacts, etc.).
-Der Validator schreibt seinen Report nach `docs/artifacts/<workflow>/validator-report.md`.
-
-Danach: Komm zurueck und sage mir:
 - **"go"** → ich committe/pushe
-- **"fix needed: [Findings]"** → ich fixe die Probleme
+- **"fix needed"** → ich fixe die Probleme
 - **"broken"** → ich muss nochmal ran
 ```
 
-**STOP HIER. Warte auf den User.**
+**Warte auf User-Antwort!**
 
-#### 9b. User kommt zurueck
-
-Der User teilt dir das Ergebnis der externen Validierung mit:
+#### 9c. Nach User-Antwort
 
 - **"go"** → Weiter zu Phase 7 (`/validate`)
 - **"fix needed"** + Findings → Zurueck zu Step 3, Findings fixen, dann erneut Step 9
@@ -220,13 +219,14 @@ Wenn nach 3 Fix-Loops immer noch Probleme: Eskalation mit allen Findings.
 python3 .claude/hooks/workflow_state_multi.py phase phase7_validate
 ```
 
-#### Warum extern?
+#### Warum ist das trotzdem unabhaengig?
 
-- Neue Session = kein Conversation-History der Implementierung
+- Isolierte `claude --print` Session = kein Conversation-History
 - Validator kennt die Implementierungsentscheidungen nicht
 - Kann nicht von Rationalisierungen beeinflusst werden
 - Sieht nur: Spec + laufende App
-- Prompt ist geschuetzt in openspec.yaml (kann von Implementierer nicht geaendert werden)
+- Prompt ist geschuetzt in openspec.yaml
+- **User sieht den vollstaendigen Output** — Implementierer kann nichts filtern
 
 **Bei UI-Aenderungen:** Der User kann zusaetzlich den `fresh-eyes-inspector` in der Validator-Session nutzen.
 
