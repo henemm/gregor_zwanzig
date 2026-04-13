@@ -99,10 +99,28 @@ def check_verification() -> tuple[bool, str]:
     return True, f"E2E verifiziert vor {int(age.total_seconds() / 60)} Minuten."
 
 
+def check_user_override() -> bool:
+    """Check if user has explicitly overridden the gate."""
+    project_root = find_project_root()
+    verified_path = project_root / ".claude" / "e2e_verified.json"
+    if not verified_path.exists():
+        return False
+    try:
+        with open(verified_path) as f:
+            data = json.load(f)
+        return bool(data.get("user_override"))
+    except Exception:
+        return False
+
+
 def main():
     tool_input = get_tool_input()
 
     if not is_git_commit(tool_input):
+        sys.exit(0)
+
+    if check_user_override():
+        print("E2E Gate: User override aktiv — Gate uebersprungen.", file=sys.stderr)
         sys.exit(0)
 
     ok, message = check_verification()
