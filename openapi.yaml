@@ -1,0 +1,419 @@
+openapi: "3.1.0"
+info:
+  title: Gregor Zwanzig API
+  description: Go REST API for weather risk reports for long-distance hiking.
+  version: "0.1.0"
+  contact:
+    name: Henning Emmrich
+
+servers:
+  - url: https://gregor20.henemm.com
+    description: Production
+  - url: http://localhost:8090
+    description: Local development
+
+paths:
+  /api/health:
+    get:
+      summary: Health check
+      description: Returns Go API status and Python core availability.
+      operationId: getHealth
+      tags: [system]
+      responses:
+        "200":
+          description: Health status (always 200, even if Python is down)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /api/config:
+    get:
+      summary: Get config (proxy)
+      description: Proxied to Python FastAPI backend.
+      operationId: getConfig
+      tags: [proxy]
+      responses:
+        "200":
+          description: Config from Python core
+        "503":
+          description: Python core unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/forecast:
+    get:
+      summary: Get forecast (proxy)
+      description: Proxied to Python FastAPI backend.
+      operationId: getForecast
+      tags: [proxy]
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: number
+            format: double
+            example: 47.27
+        - name: lon
+          in: query
+          required: true
+          schema:
+            type: number
+            format: double
+            example: 11.40
+        - name: hours
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 48
+            example: 24
+      responses:
+        "200":
+          description: Forecast data from Python core
+        "422":
+          description: Validation error (from Python)
+        "503":
+          description: Python core unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/locations:
+    get:
+      summary: List all locations
+      operationId: listLocations
+      tags: [locations]
+      responses:
+        "200":
+          description: Array of all locations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Location"
+    post:
+      summary: Create a location
+      operationId: createLocation
+      tags: [locations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Location"
+      responses:
+        "201":
+          description: Location created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Location"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+
+  /api/locations/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          example: hochfuegen
+    put:
+      summary: Update a location
+      operationId: updateLocation
+      tags: [locations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Location"
+      responses:
+        "200":
+          description: Location updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Location"
+        "404":
+          description: Location not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+    delete:
+      summary: Delete a location
+      operationId: deleteLocation
+      tags: [locations]
+      responses:
+        "204":
+          description: Location deleted (idempotent)
+
+  /api/trips:
+    get:
+      summary: List all trips
+      operationId: listTrips
+      tags: [trips]
+      responses:
+        "200":
+          description: Array of all trips
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Trip"
+    post:
+      summary: Create a trip
+      operationId: createTrip
+      tags: [trips]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Trip"
+      responses:
+        "201":
+          description: Trip created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Trip"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+
+  /api/trips/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          example: gr221-mallorca
+    get:
+      summary: Get a trip by ID
+      operationId: getTrip
+      tags: [trips]
+      responses:
+        "200":
+          description: Trip found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Trip"
+        "404":
+          description: Trip not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    put:
+      summary: Update a trip
+      operationId: updateTrip
+      tags: [trips]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Trip"
+      responses:
+        "200":
+          description: Trip updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Trip"
+        "404":
+          description: Trip not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+    delete:
+      summary: Delete a trip
+      operationId: deleteTrip
+      tags: [trips]
+      responses:
+        "204":
+          description: Trip deleted (idempotent)
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status, version, python_core]
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+        version:
+          type: string
+          example: "0.1.0"
+        python_core:
+          type: string
+          enum: [ok, unavailable]
+
+    Location:
+      type: object
+      required: [id, name, lat, lon]
+      properties:
+        id:
+          type: string
+          example: hochfuegen
+        name:
+          type: string
+          example: Hochfuegen
+        lat:
+          type: number
+          format: double
+          example: 47.067
+        lon:
+          type: number
+          format: double
+          example: 11.667
+        elevation_m:
+          type: integer
+          example: 2300
+        region:
+          type: string
+          example: AT-07-23-02
+        bergfex_slug:
+          type: string
+          example: hochfuegen
+        activity_profile:
+          type: string
+          enum: [wintersport, wandern, allgemein]
+          example: wintersport
+        display_config:
+          type: object
+          description: Opaque weather display configuration
+
+    Waypoint:
+      type: object
+      required: [id, name, lat, lon, elevation_m]
+      properties:
+        id:
+          type: string
+          example: W1
+        name:
+          type: string
+          example: Start
+        lat:
+          type: number
+          format: double
+          example: 47.0
+        lon:
+          type: number
+          format: double
+          example: 11.0
+        elevation_m:
+          type: integer
+          example: 1200
+        time_window:
+          type: string
+          description: "Format: HH:MM-HH:MM"
+          example: "08:00-10:00"
+
+    Stage:
+      type: object
+      required: [id, name, date, waypoints]
+      properties:
+        id:
+          type: string
+          example: S1
+        name:
+          type: string
+          example: "Tag 1"
+        date:
+          type: string
+          format: date
+          example: "2026-04-13"
+        waypoints:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/Waypoint"
+        start_time:
+          type: string
+          description: "Format: HH:MM:SS"
+          example: "09:00:00"
+
+    Trip:
+      type: object
+      required: [id, name, stages]
+      properties:
+        id:
+          type: string
+          example: gr221-mallorca
+        name:
+          type: string
+          example: GR221 Mallorca
+        stages:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/Stage"
+        avalanche_regions:
+          type: array
+          items:
+            type: string
+        aggregation:
+          type: object
+          description: Aggregation configuration
+        weather_config:
+          type: object
+          description: Legacy weather config (opaque)
+        display_config:
+          type: object
+          description: Weather display configuration (opaque)
+        report_config:
+          type: object
+          description: Report scheduling configuration (opaque)
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          example: not_found
+
+    ValidationError:
+      type: object
+      required: [error, detail]
+      properties:
+        error:
+          type: string
+          example: validation_error
+        detail:
+          type: string
+          example: name required
