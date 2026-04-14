@@ -195,7 +195,7 @@ def render_subscription_card(
                 # Run now
                 def make_run_now_handler(subscription):
                     async def do_run_now() -> None:
-                        from web.pages.compare import run_comparison_for_subscription
+                        from services.compare_subscription import run_comparison_for_subscription
 
                         settings = Settings()
                         ui.notify(f"Running '{subscription.name}'...", type="info")

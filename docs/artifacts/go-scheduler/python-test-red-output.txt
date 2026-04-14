@@ -1,0 +1,184 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 10 items
+
+tests/tdd/test_scheduler_triggers.py FFFFFFFFFF                          [100%]
+
+=================================== FAILURES ===================================
+___ TestSchedulerTriggerEndpoints.test_morning_subscriptions_endpoint_exists ___
+
+self = <tdd.test_scheduler_triggers.TestSchedulerTriggerEndpoints object at 0x7a9a29754410>
+client = <starlette.testclient.TestClient object at 0x7a9a29972ed0>
+
+    def test_morning_subscriptions_endpoint_exists(self, client):
+        """
+        GIVEN: FastAPI app running
+        WHEN: POST /api/scheduler/morning-subscriptions
+        THEN: Returns 200 with status field
+        """
+        resp = client.post("/api/scheduler/morning-subscriptions")
+>       assert resp.status_code == 200
+E       assert 404 == 200
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+tests/tdd/test_scheduler_triggers.py:34: AssertionError
+___ TestSchedulerTriggerEndpoints.test_evening_subscriptions_endpoint_exists ___
+
+self = <tdd.test_scheduler_triggers.TestSchedulerTriggerEndpoints object at 0x7a9a28a86c00>
+client = <starlette.testclient.TestClient object at 0x7a9a288cb440>
+
+    def test_evening_subscriptions_endpoint_exists(self, client):
+        """
+        GIVEN: FastAPI app running
+        WHEN: POST /api/scheduler/evening-subscriptions
+        THEN: Returns 200 with status field
+        """
+        resp = client.post("/api/scheduler/evening-subscriptions")
+>       assert resp.status_code == 200
+E       assert 404 == 200
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+tests/tdd/test_scheduler_triggers.py:45: AssertionError
+_______ TestSchedulerTriggerEndpoints.test_trip_reports_endpoint_exists ________
+
+self = <tdd.test_scheduler_triggers.TestSchedulerTriggerEndpoints object at 0x7a9a28a865a0>
+client = <starlette.testclient.TestClient object at 0x7a9a288c9eb0>
+
+    def test_trip_reports_endpoint_exists(self, client):
+        """
+        GIVEN: FastAPI app running
+        WHEN: POST /api/scheduler/trip-reports
+        THEN: Returns 200 with status and count fields
+        """
+        resp = client.post("/api/scheduler/trip-reports")
+>       assert resp.status_code == 200
+E       assert 404 == 200
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+tests/tdd/test_scheduler_triggers.py:56: AssertionError
+_______ TestSchedulerTriggerEndpoints.test_trip_reports_with_hour_param ________
+
+self = <tdd.test_scheduler_triggers.TestSchedulerTriggerEndpoints object at 0x7a9a28a86d50>
+client = <starlette.testclient.TestClient object at 0x7a9a28a87410>
+
+    def test_trip_reports_with_hour_param(self, client):
+        """
+        GIVEN: FastAPI app running
+        WHEN: POST /api/scheduler/trip-reports?hour=7
+        THEN: Returns 200, uses specified hour
+        """
+        resp = client.post("/api/scheduler/trip-reports?hour=7")
+>       assert resp.status_code == 200
+E       assert 404 == 200
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+tests/tdd/test_scheduler_triggers.py:68: AssertionError
+_______ TestSchedulerTriggerEndpoints.test_alert_checks_endpoint_exists ________
+
+self = <tdd.test_scheduler_triggers.TestSchedulerTriggerEndpoints object at 0x7a9a28a86ed0>
+client = <starlette.testclient.TestClient object at 0x7a9a288ca180>
+
+    def test_alert_checks_endpoint_exists(self, client):
+        """
+        GIVEN: FastAPI app running
+        WHEN: POST /api/scheduler/alert-checks
+        THEN: Returns 200 with status field
+        """
+        resp = client.post("/api/scheduler/alert-checks")
+>       assert resp.status_code == 200
+E       assert 404 == 200
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+tests/tdd/test_scheduler_triggers.py:79: AssertionError
+_____ TestSchedulerTriggerEndpoints.test_inbound_commands_endpoint_exists ______
+
+self = <tdd.test_scheduler_triggers.TestSchedulerTriggerEndpoints object at 0x7a9a28a87050>
+client = <starlette.testclient.TestClient object at 0x7a9a288cb350>
+
+    def test_inbound_commands_endpoint_exists(self, client):
+        """
+        GIVEN: FastAPI app running
+        WHEN: POST /api/scheduler/inbound-commands
+        THEN: Returns 200 with status field
+        """
+        resp = client.post("/api/scheduler/inbound-commands")
+>       assert resp.status_code == 200
+E       assert 404 == 200
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+tests/tdd/test_scheduler_triggers.py:90: AssertionError
+____ TestSchedulerTriggerEndpoints.test_inbound_commands_skips_without_imap ____
+
+self = <tdd.test_scheduler_triggers.TestSchedulerTriggerEndpoints object at 0x7a9a28a871d0>
+client = <starlette.testclient.TestClient object at 0x7a9a28902420>
+
+    def test_inbound_commands_skips_without_imap(self, client):
+        """
+        GIVEN: IMAP not configured
+        WHEN: POST /api/scheduler/inbound-commands
+        THEN: Returns 200 with status=skipped
+        """
+        resp = client.post("/api/scheduler/inbound-commands")
+>       assert resp.status_code == 200
+E       assert 404 == 200
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+tests/tdd/test_scheduler_triggers.py:101: AssertionError
+_________ TestCompareSubscriptionExtraction.test_import_from_services __________
+
+self = <tdd.test_scheduler_triggers.TestCompareSubscriptionExtraction object at 0x7a9a28a87200>
+
+    def test_import_from_services(self):
+        """
+        GIVEN: compare_subscription module exists in services
+        WHEN: Import run_comparison_for_subscription
+        THEN: Import succeeds, function is callable
+        """
+>       from services.compare_subscription import run_comparison_for_subscription
+E       ModuleNotFoundError: No module named 'services.compare_subscription'
+
+tests/tdd/test_scheduler_triggers.py:115: ModuleNotFoundError
+__________ TestCompareSubscriptionExtraction.test_function_signature ___________
+
+self = <tdd.test_scheduler_triggers.TestCompareSubscriptionExtraction object at 0x7a9a28a87110>
+
+    def test_function_signature(self):
+        """
+        GIVEN: run_comparison_for_subscription imported from services
+        WHEN: Check function signature
+        THEN: Accepts (sub, all_locations) parameters
+        """
+        import inspect
+>       from services.compare_subscription import run_comparison_for_subscription
+E       ModuleNotFoundError: No module named 'services.compare_subscription'
+
+tests/tdd/test_scheduler_triggers.py:125: ModuleNotFoundError
+_____________ TestCompareSubscriptionExtraction.test_returns_tuple _____________
+
+self = <tdd.test_scheduler_triggers.TestCompareSubscriptionExtraction object at 0x7a9a28a86bd0>
+
+    def test_returns_tuple(self):
+        """
+        GIVEN: A valid CompareSubscription
+        WHEN: run_comparison_for_subscription(sub, locations)
+        THEN: Returns (subject, html_body, text_body) tuple
+        """
+>       from services.compare_subscription import run_comparison_for_subscription
+E       ModuleNotFoundError: No module named 'services.compare_subscription'
+
+tests/tdd/test_scheduler_triggers.py:137: ModuleNotFoundError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_scheduler_triggers.py::TestSchedulerTriggerEndpoints::test_morning_subscriptions_endpoint_exists
+FAILED tests/tdd/test_scheduler_triggers.py::TestSchedulerTriggerEndpoints::test_evening_subscriptions_endpoint_exists
+FAILED tests/tdd/test_scheduler_triggers.py::TestSchedulerTriggerEndpoints::test_trip_reports_endpoint_exists
+FAILED tests/tdd/test_scheduler_triggers.py::TestSchedulerTriggerEndpoints::test_trip_reports_with_hour_param
+FAILED tests/tdd/test_scheduler_triggers.py::TestSchedulerTriggerEndpoints::test_alert_checks_endpoint_exists
+FAILED tests/tdd/test_scheduler_triggers.py::TestSchedulerTriggerEndpoints::test_inbound_commands_endpoint_exists
+FAILED tests/tdd/test_scheduler_triggers.py::TestSchedulerTriggerEndpoints::test_inbound_commands_skips_without_imap
+FAILED tests/tdd/test_scheduler_triggers.py::TestCompareSubscriptionExtraction::test_import_from_services
+FAILED tests/tdd/test_scheduler_triggers.py::TestCompareSubscriptionExtraction::test_function_signature
+FAILED tests/tdd/test_scheduler_triggers.py::TestCompareSubscriptionExtraction::test_returns_tuple
+============================== 10 failed in 0.34s ==============================

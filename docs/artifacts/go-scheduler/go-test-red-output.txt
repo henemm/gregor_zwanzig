@@ -1,0 +1,2 @@
+FAIL	github.com/henemm/gregor-api/internal/scheduler [build failed]
+FAIL

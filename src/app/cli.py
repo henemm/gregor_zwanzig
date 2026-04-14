@@ -265,7 +265,7 @@ def _run_location_report(args, settings: Settings, provider, debug: DebugBuffer)
 def _run_subscriptions(settings: Settings, debug: DebugBuffer) -> int:
     """Run scheduled compare subscriptions."""
     from datetime import datetime
-    from web.pages.compare import run_comparison_for_subscription
+    from services.compare_subscription import run_comparison_for_subscription
     from outputs.email import EmailOutput
 
     # Check if email is configured

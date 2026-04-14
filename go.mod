@@ -11,6 +11,7 @@ require (
 	github.com/paulmach/orb v0.12.0 // indirect
 	github.com/ringsaturn/tzf v1.0.4 // indirect
 	github.com/ringsaturn/tzf-rel-lite v0.0.2026-a // indirect
+	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/tidwall/geoindex v1.7.0 // indirect
 	github.com/tidwall/geojson v1.4.6 // indirect
 	github.com/tidwall/rtree v1.10.0 // indirect

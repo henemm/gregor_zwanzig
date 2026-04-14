@@ -1,0 +1,43 @@
+=== RUN   TestNew_ValidTimezone
+--- PASS: TestNew_ValidTimezone (0.00s)
+=== RUN   TestNew_InvalidTimezone
+--- PASS: TestNew_InvalidTimezone (0.00s)
+=== RUN   TestTriggerEndpoint_Success
+2026/04/14 14:13:47 [scheduler] /api/scheduler/morning-subscriptions → 200
+--- PASS: TestTriggerEndpoint_Success (0.00s)
+=== RUN   TestTriggerEndpoint_PythonDown
+--- PASS: TestTriggerEndpoint_PythonDown (0.00s)
+=== RUN   TestTriggerEndpoint_PythonError
+--- PASS: TestTriggerEndpoint_PythonError (0.00s)
+=== RUN   TestPingHeartbeat_Success
+2026/04/14 14:13:47 [scheduler] Heartbeat ping OK: .../morning
+--- PASS: TestPingHeartbeat_Success (0.00s)
+=== RUN   TestPingHeartbeat_Failure
+2026/04/14 14:13:47 [scheduler] Heartbeat ping failed: Get "http://localhost:19999/heartbeat/nope": dial tcp [::1]:19999: connect: connection refused
+--- PASS: TestPingHeartbeat_Failure (0.00s)
+=== RUN   TestPingHeartbeat_EmptyURL
+--- PASS: TestPingHeartbeat_EmptyURL (0.00s)
+=== RUN   TestStatus
+2026/04/14 14:13:47 [scheduler] Started: 5 jobs, timezone Europe/Vienna
+2026/04/14 14:13:47 [scheduler] Stopped
+--- PASS: TestStatus (0.00s)
+=== RUN   TestMorningSubscriptions_TriggersEndpointAndHeartbeat
+2026/04/14 14:13:47 [scheduler] Running morning subscriptions...
+2026/04/14 14:13:47 [scheduler] /api/scheduler/morning-subscriptions → 200
+2026/04/14 14:13:47 [scheduler] Heartbeat ping OK: .../morning
+--- PASS: TestMorningSubscriptions_TriggersEndpointAndHeartbeat (0.00s)
+=== RUN   TestEveningSubscriptions_TriggersEndpointAndHeartbeat
+2026/04/14 14:13:47 [scheduler] Running evening subscriptions...
+2026/04/14 14:13:47 [scheduler] /api/scheduler/evening-subscriptions → 200
+2026/04/14 14:13:47 [scheduler] Heartbeat ping OK: .../evening
+--- PASS: TestEveningSubscriptions_TriggersEndpointAndHeartbeat (0.00s)
+=== RUN   TestMorningSubscriptions_FailedTrigger_SkipsHeartbeat
+2026/04/14 14:13:47 [scheduler] Running morning subscriptions...
+2026/04/14 14:13:47 [scheduler] Morning subscriptions failed: HTTP 500: {"error":"boom"}
+--- PASS: TestMorningSubscriptions_FailedTrigger_SkipsHeartbeat (0.00s)
+=== RUN   TestStatus_JSONSerializable
+2026/04/14 14:13:47 [scheduler] Started: 5 jobs, timezone Europe/Vienna
+2026/04/14 14:13:47 [scheduler] Stopped
+--- PASS: TestStatus_JSONSerializable (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/scheduler	0.009s

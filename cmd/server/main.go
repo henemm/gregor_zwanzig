@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/henemm/gregor-api/internal/handler"
 	authmw "github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/provider/openmeteo"
+	"github.com/henemm/gregor-api/internal/scheduler"
 	"github.com/henemm/gregor-api/internal/store"
 )
 
@@ -57,6 +59,19 @@ func main() {
 	r.Get("/api/subscriptions/{id}/weather-config", handler.GetSubscriptionWeatherConfigHandler(s))
 	r.Put("/api/subscriptions/{id}/weather-config", handler.PutSubscriptionWeatherConfigHandler(s))
 	r.Post("/api/gpx/parse", handler.GpxProxyHandler(cfg.PythonCoreURL))
+
+	// Scheduler
+	sched, err := scheduler.New(cfg)
+	if err != nil {
+		log.Fatalf("scheduler error: %v", err)
+	}
+	sched.Start()
+	defer sched.Stop()
+
+	r.Get("/api/scheduler/status", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(sched.Status())
+	})
 
 	log.Printf("Go API listening on :%s, proxying to %s", cfg.Port, cfg.PythonCoreURL)
 	http.ListenAndServe(":"+cfg.Port, r)

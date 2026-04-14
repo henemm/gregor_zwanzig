@@ -25,6 +25,12 @@ type jobResult struct {
 	Error  string    `json:"error,omitempty"`
 }
 
+// jobMeta holds the human-readable identity of a cron job.
+type jobMeta struct {
+	id   string
+	name string
+}
+
 // Scheduler wraps robfig/cron and triggers Python services via HTTP.
 type Scheduler struct {
 	cron             *cron.Cron
@@ -34,6 +40,7 @@ type Scheduler struct {
 	client           *http.Client
 	mu               sync.RWMutex
 	lastRuns         map[string]*jobResult
+	entryMap         map[cron.EntryID]jobMeta // maps cron EntryID → job identity
 }
 
 // New creates a Scheduler from config. Returns error if timezone is invalid.
@@ -50,18 +57,27 @@ func New(cfg *config.Config) (*Scheduler, error) {
 		heartbeatEvening: cfg.HeartbeatEvening,
 		client:           &http.Client{Timeout: 120 * time.Second},
 		lastRuns:         make(map[string]*jobResult),
+		entryMap:         make(map[cron.EntryID]jobMeta),
 	}
 
-	// Morning subscriptions at 07:00
-	s.cron.AddFunc("0 7 * * *", s.morningSubscriptions)
-	// Evening subscriptions at 18:00
-	s.cron.AddFunc("0 18 * * *", s.eveningSubscriptions)
-	// Trip reports hourly at :00
-	s.cron.AddFunc("0 * * * *", s.tripReports)
-	// Alert checks every 30 minutes
-	s.cron.AddFunc("0,30 * * * *", s.alertChecks)
-	// Inbound commands every 5 minutes
-	s.cron.AddFunc("*/5 * * * *", s.inboundCommands)
+	// Register jobs and store EntryID → jobMeta mapping
+	type jobDef struct {
+		expr string
+		fn   func()
+		id   string
+		name string
+	}
+	jobs := []jobDef{
+		{"0 7 * * *", s.morningSubscriptions, "morning_subscriptions", "Morning Subscriptions (07:00)"},
+		{"0 18 * * *", s.eveningSubscriptions, "evening_subscriptions", "Evening Subscriptions (18:00)"},
+		{"0 * * * *", s.tripReports, "trip_reports_hourly", "Trip Reports (hourly check)"},
+		{"0,30 * * * *", s.alertChecks, "alert_checks", "Alert Checks (every 30 min)"},
+		{"*/5 * * * *", s.inboundCommands, "inbound_command_poll", "Inbound Command Poll (every 5min)"},
+	}
+	for _, j := range jobs {
+		eid, _ := s.cron.AddFunc(j.expr, j.fn)
+		s.entryMap[eid] = jobMeta{id: j.id, name: j.name}
+	}
 
 	return s, nil
 }
@@ -177,18 +193,6 @@ func (s *Scheduler) pingHeartbeat(url string) {
 	log.Printf("[scheduler] Heartbeat ping OK: ...%s", url[len(url)-8:])
 }
 
-// jobNames maps cron entry indices to human-readable job identifiers.
-var jobNames = []struct {
-	id   string
-	name string
-}{
-	{"morning_subscriptions", "Morning Subscriptions (07:00)"},
-	{"evening_subscriptions", "Evening Subscriptions (18:00)"},
-	{"trip_reports_hourly", "Trip Reports (hourly check)"},
-	{"alert_checks", "Alert Checks (every 30 min)"},
-	{"inbound_command_poll", "Inbound Command Poll (every 5min)"},
-}
-
 // Status returns current scheduler state for API exposure.
 func (s *Scheduler) Status() map[string]any {
 	s.mu.RLock()
@@ -196,14 +200,14 @@ func (s *Scheduler) Status() map[string]any {
 
 	entries := s.cron.Entries()
 	jobs := make([]map[string]any, 0, len(entries))
-	for i, e := range entries {
+	for _, e := range entries {
 		job := map[string]any{
 			"next_run": e.Next.Format(time.RFC3339),
 		}
-		if i < len(jobNames) {
-			job["id"] = jobNames[i].id
-			job["name"] = jobNames[i].name
-			if lr, ok := s.lastRuns[jobNames[i].id]; ok {
+		if meta, ok := s.entryMap[e.ID]; ok {
+			job["id"] = meta.id
+			job["name"] = meta.name
+			if lr, ok := s.lastRuns[meta.id]; ok {
 				job["last_run"] = map[string]any{
 					"time":   lr.Time.Format(time.RFC3339),
 					"status": lr.Status,
