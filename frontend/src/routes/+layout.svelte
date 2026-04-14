@@ -9,8 +9,7 @@
 		{ href: '/', label: 'Dashboard' },
 		{ href: '/trips', label: 'Trips' },
 		{ href: '/locations', label: 'Locations' },
-		{ href: '/weather', label: 'Wetter' },
-		{ href: '/settings', label: 'Settings' }
+		{ href: '/weather', label: 'Wetter' }
 	];
 
 	const isLogin = $derived(page.url.pathname === '/login');
