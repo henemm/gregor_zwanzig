@@ -1,0 +1,183 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 6 items
+
+tests/tdd/test_imap_stalwart_migration.py FFFFFF                         [100%]
+
+=================================== FAILURES ===================================
+____________ TestNoHardcodedGmail.test_no_hardcoded_gmail_imap_host ____________
+
+self = <tdd.test_imap_stalwart_migration.TestNoHardcodedGmail object at 0x793bf0781940>
+
+    def test_no_hardcoded_gmail_imap_host(self):
+        """
+        GIVEN: 6 files that previously used imap.gmail.com
+        WHEN: reading their source code
+        THEN: none should contain the string 'imap.gmail.com'
+        """
+        violations = []
+        for f in self.AFFECTED_FILES:
+            content = self._read(f)
+            if "imap.gmail.com" in content:
+                violations.append(f)
+>       assert not violations, (
+            f"Hardcoded 'imap.gmail.com' found in: {violations}"
+        )
+E       AssertionError: Hardcoded 'imap.gmail.com' found in: ['.claude/hooks/e2e_browser_test.py', '.claude/hooks/email_spec_validator.py', '.claude/tools/output_validator.py', 'tests/tdd/test_html_email.py', 'tests/e2e/test_e2e_story3_reports.py', 'tests/e2e/test_e2e_friendly_format_config.py']
+E       assert not ['.claude/hooks/e2e_browser_test.py', '.claude/hooks/email_spec_validator.py', '.claude/tools/output_validator.py', 'tests/tdd/test_html_email.py', 'tests/e2e/test_e2e_story3_reports.py', 'tests/e2e/test_e2e_friendly_format_config.py']
+
+tests/tdd/test_imap_stalwart_migration.py:43: AssertionError
+_____________ TestNoHardcodedGmail.test_no_gmail_folder_references _____________
+
+self = <tdd.test_imap_stalwart_migration.TestNoHardcodedGmail object at 0x793bf0674350>
+
+    def test_no_gmail_folder_references(self):
+        """
+        GIVEN: 6 files that previously used Gmail folder names
+        WHEN: reading their source code
+        THEN: none should contain '[Google Mail]' folder references
+        """
+        violations = []
+        for f in self.AFFECTED_FILES:
+            content = self._read(f)
+            if "[Google Mail]" in content:
+                violations.append(f)
+>       assert not violations, (
+            f"Gmail folder '[Google Mail]' found in: {violations}"
+        )
+E       AssertionError: Gmail folder '[Google Mail]' found in: ['.claude/hooks/e2e_browser_test.py', '.claude/hooks/email_spec_validator.py', 'tests/tdd/test_html_email.py', 'tests/e2e/test_e2e_story3_reports.py', 'tests/e2e/test_e2e_friendly_format_config.py']
+E       assert not ['.claude/hooks/e2e_browser_test.py', '.claude/hooks/email_spec_validator.py', 'tests/tdd/test_html_email.py', 'tests/e2e/test_e2e_story3_reports.py', 'tests/e2e/test_e2e_friendly_format_config.py']
+
+tests/tdd/test_imap_stalwart_migration.py:58: AssertionError
+_________ TestNoHardcodedGmail.test_no_smtp_credentials_for_imap_login _________
+
+self = <tdd.test_imap_stalwart_migration.TestNoHardcodedGmail object at 0x793bf05df9e0>
+
+    def test_no_smtp_credentials_for_imap_login(self):
+        """
+        GIVEN: files that connect to IMAP
+        WHEN: reading their IMAP login calls
+        THEN: none should use smtp_user/smtp_pass for IMAP login
+              (must use imap_user/imap_pass or GZ_IMAP_USER/GZ_IMAP_PASS)
+        """
+        # Pattern: imap.login(settings.smtp_user, settings.smtp_pass)
+        # or imap.login(smtp_user, smtp_pass) where smtp vars come from settings
+        pattern = re.compile(r"imap\.login\(.*smtp_(?:user|pass)")
+        violations = []
+        for f in self.AFFECTED_FILES:
+            content = self._read(f)
+            if pattern.search(content):
+                violations.append(f)
+>       assert not violations, (
+            f"SMTP credentials used for IMAP login in: {violations}"
+        )
+E       AssertionError: SMTP credentials used for IMAP login in: ['.claude/hooks/e2e_browser_test.py', '.claude/hooks/email_spec_validator.py', 'tests/tdd/test_html_email.py', 'tests/e2e/test_e2e_story3_reports.py']
+E       assert not ['.claude/hooks/e2e_browser_test.py', '.claude/hooks/email_spec_validator.py', 'tests/tdd/test_html_email.py', 'tests/e2e/test_e2e_story3_reports.py']
+
+tests/tdd/test_imap_stalwart_migration.py:77: AssertionError
+_____ TestNoHardcodedGmail.test_e2e_friendly_format_uses_correct_env_vars ______
+
+self = <tdd.test_imap_stalwart_migration.TestNoHardcodedGmail object at 0x793bf05dfb30>
+
+    def test_e2e_friendly_format_uses_correct_env_vars(self):
+        """
+        GIVEN: test_e2e_friendly_format_config.py
+        WHEN: reading its IMAP configuration
+        THEN: should use GZ_IMAP_USER, not GZ_SMTP_USER for IMAP
+        """
+        content = self._read("tests/e2e/test_e2e_friendly_format_config.py")
+        # Should NOT have GZ_SMTP_USER for IMAP
+>       assert 'GZ_SMTP_USER' not in content or 'IMAP_USER' not in content, (
+            "test_e2e_friendly_format_config.py uses GZ_SMTP_USER for IMAP_USER"
+        )
+E       AssertionError: test_e2e_friendly_format_config.py uses GZ_SMTP_USER for IMAP_USER
+E       assert ('GZ_SMTP_USER' not in '"""\nE2E Te...al else 1)\n'
+E         
+E         'GZ_SMTP_USER' is contained here:
+E           s.getenv("GZ_SMTP_USER")
+E           IMAP_PASS = os.getenv("GZ_SMTP_PASS")
+E           
+E           
+E           # =====================================================================...
+E         
+E         ...Full output truncated (322 lines hidden), use '-vv' to show or 'IMAP_USER' not in '"""\nE2E Te...al else 1)\n'
+E         
+E         'IMAP_USER' is contained here:
+E           mail.com"
+E           IMAP_USER = os.getenv("GZ_SMTP_USER")
+E         ? +++++++++
+E           IMAP_PASS = os.getenv("GZ_SMTP_PASS")
+E           ...
+E         
+E         ...Full output truncated (324 lines hidden), use '-vv' to show)
+
+tests/tdd/test_imap_stalwart_migration.py:89: AssertionError
+________ TestNoHardcodedGmail.test_e2e_browser_test_uses_settings_imap _________
+
+self = <tdd.test_imap_stalwart_migration.TestNoHardcodedGmail object at 0x793bf0339100>
+
+    def test_e2e_browser_test_uses_settings_imap(self):
+        """
+        GIVEN: e2e_browser_test.py
+        WHEN: reading its IMAP connection setup
+        THEN: should reference imap_host/imap_user/imap_pass from settings
+        """
+        content = self._read(".claude/hooks/e2e_browser_test.py")
+        assert "settings.imap_host" in content or "imap_host" in content, (
+            "e2e_browser_test.py does not use settings-based imap_host"
+        )
+        # Must NOT have hardcoded IMAP4_SSL('imap.gmail.com')
+>       assert "IMAP4_SSL('imap.gmail.com')" not in content, (
+            "e2e_browser_test.py still has hardcoded Gmail IMAP"
+        )
+E       AssertionError: e2e_browser_test.py still has hardcoded Gmail IMAP
+E       assert "IMAP4_SSL('....gmail.com')" not in '#!/usr/bin/...    main()\n'
+E         
+E         "IMAP4_SSL('imap.gmail.com')" is contained here:
+E           = imaplib.IMAP4_SSL('imap.gmail.com')
+E                   imap.login(settings.smtp_user, settings.smtp_pass)
+E                   imap.select('"[Google Mail]/Gesendet"')
+E           
+E                   # Get latest email...
+E         
+E         ...Full output truncated (99 lines hidden), use '-vv' to show
+
+tests/tdd/test_imap_stalwart_migration.py:104: AssertionError
+_________ TestNoHardcodedGmail.test_output_validator_no_gmail_default __________
+
+self = <tdd.test_imap_stalwart_migration.TestNoHardcodedGmail object at 0x793bf0338380>
+
+    def test_output_validator_no_gmail_default(self):
+        """
+        GIVEN: output_validator.py
+        WHEN: reading its IMAP fallback config
+        THEN: should not default to imap.gmail.com
+        """
+        content = self._read(".claude/tools/output_validator.py")
+>       assert "imap.gmail.com" not in content, (
+            "output_validator.py still defaults to imap.gmail.com"
+        )
+E       AssertionError: output_validator.py still defaults to imap.gmail.com
+E       assert 'imap.gmail.com' not in '#!/usr/bin/...    main()\n'
+E         
+E         'imap.gmail.com' is contained here:
+E           ("host", "imap.gmail.com")
+E               user = imap_config.get("user")
+E               password = imap_config.get("password")
+E               folder = imap_config.get("folder", "INBOX")
+E           ...
+E         
+E         ...Full output truncated (256 lines hidden), use '-vv' to show
+
+tests/tdd/test_imap_stalwart_migration.py:115: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_imap_stalwart_migration.py::TestNoHardcodedGmail::test_no_hardcoded_gmail_imap_host
+FAILED tests/tdd/test_imap_stalwart_migration.py::TestNoHardcodedGmail::test_no_gmail_folder_references
+FAILED tests/tdd/test_imap_stalwart_migration.py::TestNoHardcodedGmail::test_no_smtp_credentials_for_imap_login
+FAILED tests/tdd/test_imap_stalwart_migration.py::TestNoHardcodedGmail::test_e2e_friendly_format_uses_correct_env_vars
+FAILED tests/tdd/test_imap_stalwart_migration.py::TestNoHardcodedGmail::test_e2e_browser_test_uses_settings_imap
+FAILED tests/tdd/test_imap_stalwart_migration.py::TestNoHardcodedGmail::test_output_validator_no_gmail_default
+============================== 6 failed in 0.04s ===============================

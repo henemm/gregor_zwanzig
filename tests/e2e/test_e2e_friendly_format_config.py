@@ -31,9 +31,9 @@ from dotenv import load_dotenv
 load_dotenv(PROJECT_ROOT / ".env")
 
 TRIP_JSON = PROJECT_ROOT / "data" / "users" / "default" / "trips" / "gr221-mallorca.json"
-IMAP_HOST = "imap.gmail.com"
-IMAP_USER = os.getenv("GZ_SMTP_USER")
-IMAP_PASS = os.getenv("GZ_SMTP_PASS")
+IMAP_HOST = os.getenv("GZ_IMAP_HOST", "mail.henemm.com")
+IMAP_USER = os.getenv("GZ_IMAP_USER")
+IMAP_PASS = os.getenv("GZ_IMAP_PASS")
 
 
 # =====================================================================
@@ -67,11 +67,11 @@ def send_report():
 
 
 def get_latest_email_html():
-    """Get HTML of the latest GR221 email from Gmail Sent folder."""
+    """Get HTML of the latest GR221 email from Stalwart INBOX."""
     time.sleep(4)
-    imap = imaplib.IMAP4_SSL(IMAP_HOST)
+    imap = imaplib.IMAP4_SSL(IMAP_HOST, int(os.getenv("GZ_IMAP_PORT", "993")))
     imap.login(IMAP_USER, IMAP_PASS)
-    imap.select('"[Google Mail]/Gesendet"')
+    imap.select('INBOX')
     today = datetime.now(timezone.utc)
     since = today.strftime("%d-%b-%Y")
     s, data = imap.search(None, f'SUBJECT "GR221 Mallorca" SINCE {since}')
@@ -328,7 +328,7 @@ def test_alert_enabled():
 
 if __name__ == "__main__":
     if not IMAP_USER or not IMAP_PASS:
-        print("FEHLER: GZ_SMTP_USER und GZ_SMTP_PASS muessen in .env gesetzt sein.")
+        print("FEHLER: GZ_IMAP_USER und GZ_IMAP_PASS muessen in .env gesetzt sein.")
         sys.exit(1)
 
     with open(TRIP_JSON) as f:

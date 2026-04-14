@@ -304,9 +304,12 @@ class TestEmailDelivery:
         time.sleep(8)
 
         # 5. Verify via IMAP
-        imap = imaplib.IMAP4_SSL("imap.gmail.com")
-        imap.login(settings.smtp_user, settings.smtp_pass)
-        imap.select('"[Google Mail]/Gesendet"')
+        imap_host = settings.imap_host or settings.smtp_host
+        imap_user = settings.imap_user or settings.smtp_user
+        imap_pass = settings.imap_pass or settings.smtp_pass
+        imap = imaplib.IMAP4_SSL(imap_host, settings.imap_port)
+        imap.login(imap_user, imap_pass)
+        imap.select('INBOX')
 
         _, data = imap.search(None, "ALL")
         all_ids = data[0].split()
