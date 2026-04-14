@@ -443,7 +443,88 @@ Leitet GPX-Upload vom SvelteKit-Frontend via Go-Proxy an Python FastAPI weiter. 
 
 ---
 
+---
+
+## 10) Subscriptions CRUD Endpoints (M5b)
+
+**Handler:** `internal/handler/subscription.go` | **Store:** `internal/store/store.go` | **Model:** `internal/model/subscription.go`
+
+**Pfad-Prefix:** `/api/subscriptions`
+
+### CompareSubscription DTO
+
+```go
+type CompareSubscription struct {
+    ID              string                 `json:"id"`
+    Name            string                 `json:"name"`
+    Enabled         bool                   `json:"enabled"`
+    Locations       []string               `json:"locations"`
+    ForecastHours   int                    `json:"forecast_hours"`
+    TimeWindowStart int                    `json:"time_window_start"`
+    TimeWindowEnd   int                    `json:"time_window_end"`
+    Schedule        string                 `json:"schedule"`
+    Weekday         int                    `json:"weekday"`
+    IncludeHourly   bool                   `json:"include_hourly"`
+    TopN            int                    `json:"top_n"`
+    SendEmail       bool                   `json:"send_email"`
+    SendSignal      bool                   `json:"send_signal"`
+    DisplayConfig   map[string]interface{} `json:"display_config,omitempty"`
+}
+```
+
+### Endpoints
+
+| Method | Path | Status | Description |
+|--------|------|--------|-------------|
+| GET | `/api/subscriptions` | 200 | Liste aller Subscriptions (`[]` bei leer, nie `null`) |
+| GET | `/api/subscriptions/{id}` | 200 / 404 | Einzelne Subscription |
+| POST | `/api/subscriptions` | 201 / 400 / 409 | Neue Subscription erstellen |
+| PUT | `/api/subscriptions/{id}` | 200 / 400 / 404 | Subscription aktualisieren (Pfad-ID massgeblich) |
+| DELETE | `/api/subscriptions/{id}` | 204 / 404 | Subscription loeschen |
+
+### Validierungsregeln (POST/PUT)
+
+| Feld | Constraint |
+|------|-----------|
+| `id` | nicht leer |
+| `name` | nicht leer |
+| `forecast_hours` | in `{24, 48, 72}` |
+| `schedule` | in `{"daily_morning", "daily_evening", "weekly"}` |
+| `time_window_start` | 0–23 |
+| `time_window_end` | 1–23 |
+| — | `time_window_start < time_window_end` |
+| `top_n` | 1–10 |
+| `weekday` | 0–6 |
+
+### Error Responses
+
+| Status | Body | Szenario |
+|--------|------|----------|
+| 400 | `{"error":"validation_error","detail":"..."}` | Pflichtfeld fehlt oder Wertebereich verletzt |
+| 400 | `{"error":"bad_request"}` | JSON nicht dekodierbar |
+| 404 | `{"error":"not_found"}` | ID nicht gefunden (GET/PUT/DELETE) |
+| 409 | `{"error":"already_exists"}` | Duplikat-ID bei POST |
+
+### Storage
+
+- Datei: `data/users/{userID}/compare_subscriptions.json`
+- Format: `{"subscriptions": [...]}`
+- Legacy-Migration: `schedule:"weekly_friday"` → `schedule:"weekly"` + `weekday:4` (beim Laden)
+- V1: `userID` hardcodiert auf `"default"`
+
+### Source Files
+
+| Datei | Aenderung |
+|-------|-----------|
+| `internal/model/subscription.go` | NEU — `CompareSubscription` Struct |
+| `internal/store/store.go` | +`LoadSubscriptions`, `SaveSubscriptions`, `DeleteSubscription` |
+| `internal/handler/subscription.go` | NEU — 5 HTTP-Handler |
+| `cmd/server/main.go` | +5 Route-Registrierungen |
+
+---
+
 ## Changelog
 
+- 2026-04-14: Added section 10 — Subscriptions CRUD Endpoints (M5b): 5 REST-Endpoints fuer CompareSubscription, Single-File Storage, Validierung, Legacy-Migration.
 - 2026-04-14: Added section 9 — GPX Proxy Endpoint (M5a): POST /api/gpx/parse, Go-to-Python Multipart Proxy, Stage+Waypoints Response DTO.
 - 2026-02-18: Added `TripReportConfig.wind_exposition_min_elevation_m` (F7c Wind-Exposition Config) — per-trip configurable elevation threshold for wind exposition detection. Default null uses global 1500m threshold (lowered from 2000m).
