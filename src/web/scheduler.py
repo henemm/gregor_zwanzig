@@ -17,6 +17,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 from zoneinfo import ZoneInfo
 
+import httpx
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
@@ -33,6 +34,11 @@ logger = logging.getLogger("scheduler")
 
 # Explicit timezone for all cron triggers (v1.1 fix)
 TIMEZONE = ZoneInfo("Europe/Vienna")
+
+# BetterStack Heartbeat URLs (pinged after successful report runs)
+# Note: Go scheduler also pings these. During parallel phase, both ping.
+HEARTBEAT_MORNING = "https://uptime.betterstack.com/api/v1/heartbeat/f4GBDxFQHxuu73FdRt5wjGsQ"
+HEARTBEAT_EVENING = "https://uptime.betterstack.com/api/v1/heartbeat/5Cc4vmiEDgrSr7qsBa2k2av4"
 
 # Global scheduler instance
 _scheduler: BackgroundScheduler | None = None
@@ -134,6 +140,7 @@ def run_morning_subscriptions() -> None:
         logger.info("Running morning subscriptions...")
         _run_subscriptions_by_schedule(Schedule.DAILY_MORNING)
     _record_run("morning_subscriptions", _do)
+    _ping_heartbeat(HEARTBEAT_MORNING)
 
 
 def run_evening_subscriptions() -> None:
@@ -144,6 +151,7 @@ def run_evening_subscriptions() -> None:
         _run_subscriptions_by_schedule(Schedule.DAILY_EVENING)
         _run_weekly_subscriptions()
     _record_run("evening_subscriptions", _do)
+    _ping_heartbeat(HEARTBEAT_EVENING)
 
 
 def run_alert_checks() -> None:
@@ -185,6 +193,16 @@ def run_inbound_command_poll() -> None:
         if count > 0:
             logger.info(f"Inbound commands processed: {count}")
     _record_run("inbound_command_poll", _do)
+
+
+def _ping_heartbeat(url: str) -> None:
+    """Ping BetterStack heartbeat URL. Fire-and-forget with logging."""
+    try:
+        response = httpx.get(url, timeout=5)
+        response.raise_for_status()
+        logger.info(f"Heartbeat ping OK: {url[-8:]}")
+    except Exception as e:
+        logger.warning(f"Heartbeat ping failed: {e}")
 
 
 def _run_weekly_subscriptions() -> None:
