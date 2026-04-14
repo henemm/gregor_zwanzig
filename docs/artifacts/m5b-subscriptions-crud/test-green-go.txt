@@ -1,0 +1,22 @@
+=== RUN   TestSubscriptionsHandler
+--- PASS: TestSubscriptionsHandler (0.00s)
+=== RUN   TestSubscriptionHandlerFound
+--- PASS: TestSubscriptionHandlerFound (0.00s)
+=== RUN   TestSubscriptionHandlerNotFound
+--- PASS: TestSubscriptionHandlerNotFound (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/handler	0.005s
+=== RUN   TestCreateSubscriptionHandler
+--- PASS: TestCreateSubscriptionHandler (0.00s)
+=== RUN   TestCreateSubscriptionHandlerInvalid
+--- PASS: TestCreateSubscriptionHandlerInvalid (0.00s)
+=== RUN   TestCreateSubscriptionHandlerDuplicateID
+--- PASS: TestCreateSubscriptionHandlerDuplicateID (0.00s)
+=== RUN   TestUpdateSubscriptionHandler
+--- PASS: TestUpdateSubscriptionHandler (0.00s)
+=== RUN   TestUpdateSubscriptionHandlerNotFound
+--- PASS: TestUpdateSubscriptionHandlerNotFound (0.00s)
+=== RUN   TestDeleteSubscriptionHandler
+--- PASS: TestDeleteSubscriptionHandler (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/handler	0.007s

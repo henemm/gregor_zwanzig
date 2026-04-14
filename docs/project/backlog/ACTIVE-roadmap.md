@@ -1,6 +1,6 @@
 # Active Roadmap - Gregor Zwanziger (Archiv)
 
-**Last Updated:** 2026-04-14
+**Last Updated:** 2026-04-14 (M5b Subscriptions CRUD)
 
 > **Offene Features, Bugs und Migration-Tasks sind auf GitHub Issues:**
 > https://github.com/henemm/gregor_zwanzig/issues
@@ -62,6 +62,7 @@
 | Subscription Metriken-Auswahl (Model+UI) | 2026-04 | WebUI | F14a, Display-Config Dialog |
 | Channel-Switch fuer Subscriptions | 2026-04 | WebUI | F12a, Email/Signal |
 | GPX Proxy (Go + FastAPI) | 2026-04-14 | API | M5a: GpxProxyHandler leitet Multipart-Upload an Python weiter, gpx_to_stage_data() liefert Stage+Waypoints |
+| Subscriptions CRUD (Go) | 2026-04-14 | API | M5b: 5 REST-Endpoints fuer CompareSubscription, Single-File Storage, Validierung, Legacy-Migration, 409 Duplicate Check |
 
 ## Solved Bugs
 

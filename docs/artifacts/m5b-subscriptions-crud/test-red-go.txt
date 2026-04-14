@@ -1,0 +1,14 @@
+# github.com/henemm/gregor-api/internal/handler [github.com/henemm/gregor-api/internal/handler.test]
+internal/handler/subscription_test.go:23:7: undefined: SubscriptionsHandler
+internal/handler/subscription_test.go:50:35: undefined: SubscriptionHandler
+internal/handler/subscription_test.go:73:35: undefined: SubscriptionHandler
+internal/handler/subscription_test.go:99:7: undefined: CreateSubscriptionHandler
+internal/handler/subscription_test.go:121:7: undefined: CreateSubscriptionHandler
+internal/handler/subscription_test.go:136:7: undefined: CreateSubscriptionHandler
+internal/handler/subscription_test.go:160:8: undefined: CreateSubscriptionHandler
+internal/handler/subscription_test.go:169:35: undefined: UpdateSubscriptionHandler
+internal/handler/subscription_test.go:192:35: undefined: UpdateSubscriptionHandler
+internal/handler/subscription_test.go:208:8: undefined: CreateSubscriptionHandler
+internal/handler/subscription_test.go:208:8: too many errors
+FAIL	github.com/henemm/gregor-api/internal/handler [build failed]
+FAIL
