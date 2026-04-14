@@ -1,0 +1,172 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 7 items
+
+tests/tdd/test_gpx_proxy.py FFFFFFF                                      [100%]
+
+=================================== FAILURES ===================================
+__________________________ test_gpx_router_registered __________________________
+
+    def test_gpx_router_registered():
+        """
+        GIVEN: The FastAPI app with all routers
+        WHEN: Checking registered routes
+        THEN: POST /api/gpx/parse exists
+        """
+        from api.main import app
+    
+        routes = [r.path for r in app.routes if hasattr(r, "path")]
+>       assert "/api/gpx/parse" in routes, (
+            f"POST /api/gpx/parse not found in routes: {routes}"
+        )
+E       AssertionError: POST /api/gpx/parse not found in routes: ['/openapi.json', '/docs', '/docs/oauth2-redirect', '/redoc', '/health', '/config', '/forecast']
+E       assert '/api/gpx/parse' in ['/openapi.json', '/docs', '/docs/oauth2-redirect', '/redoc', '/health', '/config', ...]
+
+tests/tdd/test_gpx_proxy.py:29: AssertionError
+_________________ test_gpx_parse_returns_stage_with_waypoints __________________
+
+    def test_gpx_parse_returns_stage_with_waypoints():
+        """
+        GIVEN: A valid GPX file (real Komoot export)
+        WHEN: POST /api/gpx/parse with the file as multipart
+        THEN: Returns 200 with name, date, and non-empty waypoints[]
+        """
+        from fastapi.testclient import TestClient
+        from api.main import app
+    
+        client = TestClient(app)
+    
+        assert _SAMPLE_GPX.exists(), f"Sample GPX not found: {_SAMPLE_GPX}"
+        with open(_SAMPLE_GPX, "rb") as f:
+            response = client.post(
+                "/api/gpx/parse",
+                files={"file": ("test.gpx", f, "application/gpx+xml")},
+            )
+    
+>       assert response.status_code == 200
+E       assert 404 == 200
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+tests/tdd/test_gpx_proxy.py:56: AssertionError
+______________________ test_gpx_parse_waypoint_structure _______________________
+
+    def test_gpx_parse_waypoint_structure():
+        """
+        GIVEN: A successful GPX parse response
+        WHEN: Checking a waypoint in the response
+        THEN: Has id, name, lat, lon, elevation_m, time_window
+        """
+        from fastapi.testclient import TestClient
+        from api.main import app
+    
+        client = TestClient(app)
+        with open(_SAMPLE_GPX, "rb") as f:
+            response = client.post(
+                "/api/gpx/parse",
+                files={"file": ("test.gpx", f, "application/gpx+xml")},
+            )
+    
+>       assert response.status_code == 200
+E       assert 404 == 200
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+tests/tdd/test_gpx_proxy.py:85: AssertionError
+________________________ test_gpx_parse_with_stage_date ________________________
+
+    def test_gpx_parse_with_stage_date():
+        """
+        GIVEN: A valid GPX file
+        WHEN: POST /api/gpx/parse?stage_date=2026-06-15&start_hour=7
+        THEN: Returns stage with date=2026-06-15
+        """
+        from fastapi.testclient import TestClient
+        from api.main import app
+    
+        client = TestClient(app)
+        with open(_SAMPLE_GPX, "rb") as f:
+            response = client.post(
+                "/api/gpx/parse?stage_date=2026-06-15&start_hour=7",
+                files={"file": ("test.gpx", f, "application/gpx+xml")},
+            )
+    
+>       assert response.status_code == 200
+E       assert 404 == 200
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+tests/tdd/test_gpx_proxy.py:119: AssertionError
+______________________ test_gpx_parse_no_file_returns_422 ______________________
+
+    def test_gpx_parse_no_file_returns_422():
+        """
+        GIVEN: The FastAPI endpoint is available
+        WHEN: POST /api/gpx/parse without file field
+        THEN: Returns 422 (FastAPI validation error)
+        """
+        from fastapi.testclient import TestClient
+        from api.main import app
+    
+        client = TestClient(app)
+        response = client.post("/api/gpx/parse")
+    
+>       assert response.status_code == 422
+E       assert 404 == 422
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+tests/tdd/test_gpx_proxy.py:140: AssertionError
+__________________ test_gpx_parse_invalid_content_returns_400 __________________
+
+    def test_gpx_parse_invalid_content_returns_400():
+        """
+        GIVEN: A file that is not valid GPX XML
+        WHEN: POST /api/gpx/parse with that file
+        THEN: Returns 400 with error detail
+        """
+        from fastapi.testclient import TestClient
+        from api.main import app
+    
+        client = TestClient(app)
+        response = client.post(
+            "/api/gpx/parse",
+            files={"file": ("bad.gpx", b"this is not gpx xml", "application/gpx+xml")},
+        )
+    
+>       assert response.status_code == 400
+E       assert 404 == 400
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+tests/tdd/test_gpx_proxy.py:162: AssertionError
+________________ test_gpx_parse_invalid_start_hour_returns_422 _________________
+
+    def test_gpx_parse_invalid_start_hour_returns_422():
+        """
+        GIVEN: A valid GPX file
+        WHEN: POST /api/gpx/parse?start_hour=25
+        THEN: Returns 422 (validation: ge=0, le=23)
+        """
+        from fastapi.testclient import TestClient
+        from api.main import app
+    
+        client = TestClient(app)
+        with open(_SAMPLE_GPX, "rb") as f:
+            response = client.post(
+                "/api/gpx/parse?start_hour=25",
+                files={"file": ("test.gpx", f, "application/gpx+xml")},
+            )
+    
+>       assert response.status_code == 422
+E       assert 404 == 422
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+tests/tdd/test_gpx_proxy.py:187: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_gpx_proxy.py::test_gpx_router_registered - AssertionErr...
+FAILED tests/tdd/test_gpx_proxy.py::test_gpx_parse_returns_stage_with_waypoints
+FAILED tests/tdd/test_gpx_proxy.py::test_gpx_parse_waypoint_structure - asser...
+FAILED tests/tdd/test_gpx_proxy.py::test_gpx_parse_with_stage_date - assert 4...
+FAILED tests/tdd/test_gpx_proxy.py::test_gpx_parse_no_file_returns_422 - asse...
+FAILED tests/tdd/test_gpx_proxy.py::test_gpx_parse_invalid_content_returns_400
+FAILED tests/tdd/test_gpx_proxy.py::test_gpx_parse_invalid_start_hour_returns_422
+============================== 7 failed in 0.27s ===============================

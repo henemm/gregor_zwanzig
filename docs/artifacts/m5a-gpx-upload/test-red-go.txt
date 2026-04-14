@@ -1,0 +1,7 @@
+# github.com/henemm/gregor-api/internal/handler [github.com/henemm/gregor-api/internal/handler.test]
+internal/handler/gpx_proxy_test.go:64:7: undefined: GpxProxyHandler
+internal/handler/gpx_proxy_test.go:102:7: undefined: GpxProxyHandler
+internal/handler/gpx_proxy_test.go:128:7: undefined: GpxProxyHandler
+internal/handler/gpx_proxy_test.go:162:7: undefined: GpxProxyHandler
+FAIL	github.com/henemm/gregor-api/internal/handler [build failed]
+FAIL
