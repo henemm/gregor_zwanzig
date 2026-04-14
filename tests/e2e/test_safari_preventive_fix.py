@@ -9,6 +9,10 @@ IMPORTANT: This test uses REAL values to avoid triggering .env protection!
 Related Spec: docs/specs/bugfix/safari_preventive_fix.md
 Related Artifact: docs/artifacts/safari_preventive_fix/red-phase-analysis.txt
 """
+import pytest
+
+pytestmark = pytest.mark.skip(reason="NiceGUI E2E tests — decommissioned in M4b cutover")
+
 import time
 import shutil
 from pathlib import Path

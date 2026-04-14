@@ -5,6 +5,10 @@ Tests that the "Add Location" button on /locations page opens a dialog.
 
 This is a REAL browser test using Playwright - NO MOCKS!
 """
+import pytest
+
+pytestmark = pytest.mark.skip(reason="NiceGUI E2E tests — decommissioned in M4b cutover")
+
 import time
 from playwright.sync_api import sync_playwright, expect
 

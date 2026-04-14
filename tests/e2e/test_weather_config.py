@@ -10,6 +10,10 @@ Expected GREEN: After implementation, all tests pass in Safari.
 Feature: Story 2, Feature 2.6 - Wetter-Config (WebUI)
 SPEC: docs/specs/modules/weather_config.md
 """
+import pytest
+
+pytestmark = pytest.mark.skip(reason="NiceGUI E2E tests — decommissioned in M4b cutover")
+
 import time
 from playwright.sync_api import sync_playwright
 
