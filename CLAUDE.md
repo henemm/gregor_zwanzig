@@ -213,12 +213,17 @@ Globale Server-Infos und Monitoring-Anleitung stehen in `~/.claude/CLAUDE.md`.
 - **Service:** Systemd (`gregor_zwanzig.service`), Auto-Restart bei Absturz
 - **Infrastruktur-Repo:** `henemm/henemm-infra` (Nginx-Config, Systemd-Service)
 
-## Heartbeats (BetterStack)
+## Monitoring
 
-- **Morning Report:** `https://uptime.betterstack.com/api/v1/heartbeat/f4GBDxFQHxuu73FdRt5wjGsQ`
-- **Evening Report:** `https://uptime.betterstack.com/api/v1/heartbeat/5Cc4vmiEDgrSr7qsBa2k2av4`
+Heartbeat-Pings wurden entfernt (April 2026). Monitoring laeuft jetzt extern ueber `henemm-infra/check-gregor20.sh`.
 
-Heartbeat-Pings sind in `src/web/scheduler.py` implementiert. Nach erfolgreichem Morning/Evening Report wird per `httpx.get()` gepingt.
+**Status-Endpoints:**
+- Python: `/_scheduler_status` (NiceGUI, Port 8080)
+- Go: `/api/scheduler/status` (gregor-api, Port 8090)
+
+Beide liefern pro Job: `next_run` + `last_run` (time, status ok/error, error message). Der externe Health-Check kann damit erkennen ob Jobs tatsaechlich erfolgreich laufen.
+
+**PFLICHT bei neuen Services/Schedulern:** Jeder neue Hintergrund-Job oder Service MUSS `last_run`-Tracking im Status-Endpoint haben, damit das externe Monitoring Fehler erkennen kann. Kein Job ohne Observability!
 
 ## Signal als Channel (Feature-Idee)
 

@@ -17,7 +17,6 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 from zoneinfo import ZoneInfo
 
-import httpx
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
@@ -35,12 +34,11 @@ logger = logging.getLogger("scheduler")
 # Explicit timezone for all cron triggers (v1.1 fix)
 TIMEZONE = ZoneInfo("Europe/Vienna")
 
-# BetterStack Heartbeat URLs (pinged after successful report runs)
-HEARTBEAT_MORNING = "https://uptime.betterstack.com/api/v1/heartbeat/f4GBDxFQHxuu73FdRt5wjGsQ"
-HEARTBEAT_EVENING = "https://uptime.betterstack.com/api/v1/heartbeat/5Cc4vmiEDgrSr7qsBa2k2av4"
-
 # Global scheduler instance
 _scheduler: BackgroundScheduler | None = None
+
+# Tracks last run result per job: {job_id: {"time": iso_str, "status": "ok"|"error", "error": str|None}}
+_job_results: dict[str, dict] = {}
 
 
 def init_scheduler() -> None:
@@ -111,73 +109,82 @@ def shutdown_scheduler() -> None:
         logger.info("Scheduler shutdown complete")
 
 
+def _record_run(job_id: str, func, *args, **kwargs) -> None:
+    """Run a job function and record its result (time, status, error)."""
+    try:
+        func(*args, **kwargs)
+        _job_results[job_id] = {
+            "time": datetime.now(TIMEZONE).isoformat(),
+            "status": "ok",
+            "error": None,
+        }
+    except Exception as e:
+        _job_results[job_id] = {
+            "time": datetime.now(TIMEZONE).isoformat(),
+            "status": "error",
+            "error": str(e),
+        }
+        raise
+
+
 def run_morning_subscriptions() -> None:
     """Run all DAILY_MORNING subscriptions."""
-    from app.user import Schedule
-
-    logger.info("Running morning subscriptions...")
-    _run_subscriptions_by_schedule(Schedule.DAILY_MORNING)
-    _ping_heartbeat(HEARTBEAT_MORNING)
+    def _do():
+        from app.user import Schedule
+        logger.info("Running morning subscriptions...")
+        _run_subscriptions_by_schedule(Schedule.DAILY_MORNING)
+    _record_run("morning_subscriptions", _do)
 
 
 def run_evening_subscriptions() -> None:
     """Run DAILY_EVENING and matching WEEKLY subscriptions."""
-    from app.user import Schedule
-
-    logger.info("Running evening subscriptions...")
-    _run_subscriptions_by_schedule(Schedule.DAILY_EVENING)
-    _run_weekly_subscriptions()
-    _ping_heartbeat(HEARTBEAT_EVENING)
+    def _do():
+        from app.user import Schedule
+        logger.info("Running evening subscriptions...")
+        _run_subscriptions_by_schedule(Schedule.DAILY_EVENING)
+        _run_weekly_subscriptions()
+    _record_run("evening_subscriptions", _do)
 
 
 def run_alert_checks() -> None:
     """Check all active trips for weather changes (Feature 3.4)."""
-    from services.trip_alert import TripAlertService
-
-    service = TripAlertService()
-    count = service.check_all_trips()
-    if count > 0:
-        logger.info(f"Alert checks: {count} alerts sent")
+    def _do():
+        from services.trip_alert import TripAlertService
+        service = TripAlertService()
+        count = service.check_all_trips()
+        if count > 0:
+            logger.info(f"Alert checks: {count} alerts sent")
+    _record_run("alert_checks", _do)
 
 
 def run_trip_reports_check() -> None:
     """Check which trips need reports at this hour (Feature 3.3 + 3.5)."""
-    from services.trip_report_scheduler import TripReportSchedulerService
-
-    now = datetime.now(TIMEZONE)
-    current_hour = now.hour
-
-    service = TripReportSchedulerService()
-    count = service.send_reports_for_hour(current_hour)
-    if count > 0:
-        logger.info(f"Trip reports at {current_hour:02d}:00: {count} sent")
+    def _do():
+        from services.trip_report_scheduler import TripReportSchedulerService
+        now = datetime.now(TIMEZONE)
+        current_hour = now.hour
+        service = TripReportSchedulerService()
+        count = service.send_reports_for_hour(current_hour)
+        if count > 0:
+            logger.info(f"Trip reports at {current_hour:02d}:00: {count} sent")
+    _record_run("trip_reports_hourly", _do)
 
 
 def run_inbound_command_poll() -> None:
     """Poll inbound channels for trip commands (Feature 6)."""
-    from app.config import Settings
-    from services.inbound_email_reader import InboundEmailReader
-
-    settings = Settings()
-    imap_user = settings.imap_user or settings.smtp_user
-    imap_pass = settings.imap_pass or settings.smtp_pass
-    if not imap_user or not imap_pass:
-        return
-
-    reader = InboundEmailReader()
-    count = reader.poll_and_process(settings)
-    if count > 0:
-        logger.info(f"Inbound commands processed: {count}")
-
-
-def _ping_heartbeat(url: str) -> None:
-    """Ping BetterStack heartbeat URL. Fire-and-forget with logging."""
-    try:
-        response = httpx.get(url, timeout=5)
-        response.raise_for_status()
-        logger.info(f"Heartbeat ping OK: {url[-8:]}")
-    except Exception as e:
-        logger.warning(f"Heartbeat ping failed: {e}")
+    def _do():
+        from app.config import Settings
+        from services.inbound_email_reader import InboundEmailReader
+        settings = Settings()
+        imap_user = settings.imap_user or settings.smtp_user
+        imap_pass = settings.imap_pass or settings.smtp_pass
+        if not imap_user or not imap_pass:
+            return
+        reader = InboundEmailReader()
+        count = reader.poll_and_process(settings)
+        if count > 0:
+            logger.info(f"Inbound commands processed: {count}")
+    _record_run("inbound_command_poll", _do)
 
 
 def _run_weekly_subscriptions() -> None:
@@ -208,7 +215,7 @@ def _execute_subscription(sub: "CompareSubscription") -> None:
     """Execute a single subscription and send via selected channels."""
     from app.config import Settings
     from app.loader import load_all_locations
-    from web.pages.compare import run_comparison_for_subscription
+    from services.compare_subscription import run_comparison_for_subscription
 
     logger.info(f"Executing subscription: {sub.name}")
 
@@ -252,10 +259,12 @@ def get_scheduler_status() -> dict:
 
     jobs = []
     for job in _scheduler.get_jobs():
+        last_run = _job_results.get(job.id)
         jobs.append({
             "id": job.id,
             "name": job.name,
             "next_run": job.next_run_time.isoformat() if job.next_run_time else None,
+            "last_run": last_run,
         })
 
     return {

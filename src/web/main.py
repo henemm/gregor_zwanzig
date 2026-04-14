@@ -9,7 +9,7 @@ import uuid
 from pathlib import Path
 
 from nicegui import app, ui
-from starlette.responses import PlainTextResponse
+from starlette.responses import JSONResponse, PlainTextResponse
 
 # Data directory for user files
 DATA_DIR = Path("data/users/default")
@@ -93,6 +93,12 @@ SERVER_INSTANCE_ID = str(uuid.uuid4())
 @app.get("/_health")
 async def health_check():
     return PlainTextResponse(SERVER_INSTANCE_ID)
+
+
+@app.get("/_scheduler_status")
+async def scheduler_status():
+    from web.scheduler import get_scheduler_status
+    return JSONResponse(get_scheduler_status())
 
 
 # Prevent Safari from caching responses (fixes dead WebSocket on revisit)
