@@ -9,6 +9,10 @@ This is a REAL browser test using Playwright - NO MOCKS!
 
 SPEC: docs/specs/modules/trips_test_reports_start_times.md v1.0
 """
+import pytest
+
+pytestmark = pytest.mark.skip(reason="NiceGUI E2E tests — decommissioned in M4b cutover")
+
 import time
 
 from playwright.sync_api import sync_playwright
