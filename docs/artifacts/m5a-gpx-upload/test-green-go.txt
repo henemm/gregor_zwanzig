@@ -1,0 +1,10 @@
+=== RUN   TestGpxProxyHandlerSuccess
+--- PASS: TestGpxProxyHandlerSuccess (0.00s)
+=== RUN   TestGpxProxyHandlerForwardsQueryParams
+--- PASS: TestGpxProxyHandlerForwardsQueryParams (0.00s)
+=== RUN   TestGpxProxyHandlerPythonDown
+--- PASS: TestGpxProxyHandlerPythonDown (0.00s)
+=== RUN   TestGpxProxyHandlerContentTypeForwarded
+--- PASS: TestGpxProxyHandlerContentTypeForwarded (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/handler	0.005s

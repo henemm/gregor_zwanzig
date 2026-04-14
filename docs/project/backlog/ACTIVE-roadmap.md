@@ -1,6 +1,6 @@
 # Active Roadmap - Gregor Zwanziger (Archiv)
 
-**Last Updated:** 2026-04-12
+**Last Updated:** 2026-04-14
 
 > **Offene Features, Bugs und Migration-Tasks sind auf GitHub Issues:**
 > https://github.com/henemm/gregor_zwanzig/issues
@@ -61,6 +61,7 @@
 | Generische Locations (Metrik-Auswahl) | 2026-03 | WebUI | F11, Profil-Dropdown |
 | Subscription Metriken-Auswahl (Model+UI) | 2026-04 | WebUI | F14a, Display-Config Dialog |
 | Channel-Switch fuer Subscriptions | 2026-04 | WebUI | F12a, Email/Signal |
+| GPX Proxy (Go + FastAPI) | 2026-04-14 | API | M5a: GpxProxyHandler leitet Multipart-Upload an Python weiter, gpx_to_stage_data() liefert Stage+Waypoints |
 
 ## Solved Bugs
 

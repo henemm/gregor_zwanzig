@@ -63,3 +63,36 @@ func ProxyHandler(pythonURL, path string) http.HandlerFunc {
 		io.Copy(w, resp.Body)
 	}
 }
+
+func GpxProxyHandler(pythonURL string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		client := &http.Client{Timeout: 30 * time.Second}
+
+		url := pythonURL + "/api/gpx/parse"
+		if r.URL.RawQuery != "" {
+			url += "?" + r.URL.RawQuery
+		}
+
+		req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, url, r.Body)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(500)
+			w.Write([]byte(`{"error":"proxy_error"}`))
+			return
+		}
+		req.Header.Set("Content-Type", r.Header.Get("Content-Type"))
+
+		resp, err := client.Do(req)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(503)
+			w.Write([]byte(`{"error":"core_unavailable"}`))
+			return
+		}
+		defer resp.Body.Close()
+
+		w.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
+		w.WriteHeader(resp.StatusCode)
+		io.Copy(w, resp.Body)
+	}
+}

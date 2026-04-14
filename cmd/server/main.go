@@ -45,6 +45,7 @@ func main() {
 	r.Post("/api/trips", handler.CreateTripHandler(s))
 	r.Put("/api/trips/{id}", handler.UpdateTripHandler(s))
 	r.Delete("/api/trips/{id}", handler.DeleteTripHandler(s))
+	r.Post("/api/gpx/parse", handler.GpxProxyHandler(cfg.PythonCoreURL))
 
 	log.Printf("Go API listening on :%s, proxying to %s", cfg.Port, cfg.PythonCoreURL)
 	http.ListenAndServe(":"+cfg.Port, r)

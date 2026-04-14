@@ -389,6 +389,61 @@ Lawinenlagebericht als eigenstaendiges Datenobjekt (nicht Teil von NormalizedTim
 
 ---
 
+---
+
+## 9) GPX Proxy Endpoint (M5a)
+
+### POST /api/gpx/parse
+
+Leitet GPX-Upload vom SvelteKit-Frontend via Go-Proxy an Python FastAPI weiter. Die Python-Seite ruft `gpx_to_stage_data()` auf und gibt Stage-Daten mit Waypoints zurueck.
+
+**Pfad:** Go (:8090) → Python FastAPI (:8000), beide unter `/api/gpx/parse`
+
+#### Request
+
+- Content-Type: `multipart/form-data`
+- Body field `file`: GPX-Datei (`.gpx`)
+- Query-Param `stage_date` (optional): `YYYY-MM-DD`
+- Query-Param `start_hour` (optional): Integer 0–23, default `8`
+
+#### Response 200
+
+```json
+{
+  "name": "Tag 1: von Valldemossa nach Deià",
+  "date": "2026-04-14",
+  "waypoints": [
+    {
+      "id": "G1",
+      "name": "Puig des Teix",
+      "lat": 39.752,
+      "lon": 2.785,
+      "elevation_m": 1064,
+      "time_window": "08:00-10:00"
+    }
+  ]
+}
+```
+
+#### Error Responses
+
+| Status | Body | Szenario |
+|--------|------|----------|
+| 400 | `{"error":"invalid_gpx","detail":"..."}` | Kein `file`-Field oder GPX nicht parsebar |
+| 503 | `{"error":"core_unavailable"}` | Python-Backend nicht erreichbar oder Timeout (>30s) |
+
+#### Source Files
+
+| Datei | Aenderung |
+|-------|-----------|
+| `api/routers/gpx.py` | NEU — FastAPI Router mit `parse_gpx()` |
+| `api/main.py` | +`app.include_router(gpx.router)` |
+| `internal/handler/proxy.go` | +`GpxProxyHandler` — Multipart+Query-Param Forwarding, 30s Timeout |
+| `cmd/server/main.go` | +`r.Post("/api/gpx/parse", handler.GpxProxyHandler(...))` |
+
+---
+
 ## Changelog
 
+- 2026-04-14: Added section 9 — GPX Proxy Endpoint (M5a): POST /api/gpx/parse, Go-to-Python Multipart Proxy, Stage+Waypoints Response DTO.
 - 2026-02-18: Added `TripReportConfig.wind_exposition_min_elevation_m` (F7c Wind-Exposition Config) — per-trip configurable elevation threshold for wind exposition detection. Default null uses global 1500m threshold (lowered from 2000m).

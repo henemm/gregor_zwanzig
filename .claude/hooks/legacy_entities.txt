@@ -113,3 +113,12 @@ forecast_meta_has_provider_info
 forecast_data_has_correct_fields
 forecast_enums_serialized_as_strings
 forecast_missing_params_returns_422
+
+# M5a GPX Proxy tests (spec: docs/specs/modules/gpx_proxy.md)
+gpx_router_registered
+gpx_parse_returns_stage_with_waypoints
+gpx_parse_waypoint_structure
+gpx_parse_with_stage_date
+gpx_parse_no_file_returns_422
+gpx_parse_invalid_content_returns_400
+gpx_parse_invalid_start_hour_returns_422
