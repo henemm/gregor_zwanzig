@@ -1,0 +1,20 @@
+=== RUN   TestGetTripWeatherConfigFound
+--- PASS: TestGetTripWeatherConfigFound (0.00s)
+=== RUN   TestGetTripWeatherConfigNotFound
+--- PASS: TestGetTripWeatherConfigNotFound (0.00s)
+=== RUN   TestPutTripWeatherConfig
+--- PASS: TestPutTripWeatherConfig (0.00s)
+=== RUN   TestPutTripWeatherConfigNotFound
+--- PASS: TestPutTripWeatherConfigNotFound (0.00s)
+=== RUN   TestPutTripWeatherConfigBadJSON
+--- PASS: TestPutTripWeatherConfigBadJSON (0.00s)
+=== RUN   TestGetLocationWeatherConfigNotFound
+--- PASS: TestGetLocationWeatherConfigNotFound (0.00s)
+=== RUN   TestPutLocationWeatherConfig
+--- PASS: TestPutLocationWeatherConfig (0.00s)
+=== RUN   TestGetSubscriptionWeatherConfigNotFound
+--- PASS: TestGetSubscriptionWeatherConfigNotFound (0.00s)
+=== RUN   TestPutSubscriptionWeatherConfig
+--- PASS: TestPutSubscriptionWeatherConfig (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/handler	0.006s

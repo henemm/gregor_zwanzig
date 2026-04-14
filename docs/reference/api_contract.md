@@ -523,8 +523,65 @@ type CompareSubscription struct {
 
 ---
 
+---
+
+## 11) Weather Config Endpoints (M5c)
+
+Convenience-Layer ueber die bestehenden CRUD-Handler. Erlaubt gezieltes Lesen und Ersetzen des `display_config`-Subfelds auf Trip-, Location- und Subscription-Entitaeten ohne Uebertragung des gesamten Objekts.
+
+**Handler:** `internal/handler/weather_config.go` (NEU) | **Routing:** `cmd/server/main.go`
+
+### Endpoints
+
+| Method | Path | Status | Description |
+|--------|------|--------|-------------|
+| GET | `/api/trips/{id}/weather-config` | 200 / 404 | `display_config` eines Trips lesen |
+| PUT | `/api/trips/{id}/weather-config` | 200 / 400 / 404 | `display_config` eines Trips setzen |
+| GET | `/api/locations/{id}/weather-config` | 200 / 404 | `display_config` einer Location lesen |
+| PUT | `/api/locations/{id}/weather-config` | 200 / 400 / 404 | `display_config` einer Location setzen |
+| GET | `/api/subscriptions/{id}/weather-config` | 200 / 404 | `display_config` einer Subscription lesen |
+| PUT | `/api/subscriptions/{id}/weather-config` | 200 / 400 / 404 | `display_config` einer Subscription setzen |
+
+### Response Format
+
+**GET 200 (config vorhanden):**
+```json
+{"show_precipitation": true, "show_wind": false}
+```
+
+**GET 200 (config nicht gesetzt):**
+```json
+null
+```
+
+**PUT Request Body:** Beliebiges gueltiges JSON-Objekt (opaque, kein Schema). Response: gespeichertes `display_config`.
+
+### Error Responses
+
+| Status | Body | Szenario |
+|--------|------|----------|
+| 400 | `{"error":"bad_request"}` | Request-Body ist kein gueltiges JSON (PUT) |
+| 404 | `{"error":"not_found"}` | Parent-Entitaet nicht gefunden |
+
+### Notes
+
+- `display_config` wird als `map[string]interface{}` ohne Schema-Validierung round-getrippt (opaque JSON)
+- Subscription-Handler laedt alle Subscriptions + lineare Suche (kein `LoadSubscription(id)`-Singleton)
+- `userID` hardcodiert auf `"default"` (V1)
+- Kein File-Locking: Race Conditions bei parallelen PUT-Requests akzeptiert (Single-User V1)
+
+### Source Files
+
+| Datei | Aenderung |
+|-------|-----------|
+| `internal/handler/weather_config.go` | NEU — 6 HTTP-Handler (Get/Put fuer Trip, Location, Subscription) |
+| `cmd/server/main.go` | +6 Route-Registrierungen |
+
+---
+
 ## Changelog
 
+- 2026-04-14: Added section 11 — Weather Config Endpoints (M5c): 6 GET/PUT-Endpoints fuer display_config auf Trip, Location und Subscription als opaque JSON.
 - 2026-04-14: Added section 10 — Subscriptions CRUD Endpoints (M5b): 5 REST-Endpoints fuer CompareSubscription, Single-File Storage, Validierung, Legacy-Migration.
 - 2026-04-14: Added section 9 — GPX Proxy Endpoint (M5a): POST /api/gpx/parse, Go-to-Python Multipart Proxy, Stage+Waypoints Response DTO.
 - 2026-02-18: Added `TripReportConfig.wind_exposition_min_elevation_m` (F7c Wind-Exposition Config) — per-trip configurable elevation threshold for wind exposition detection. Default null uses global 1500m threshold (lowered from 2000m).

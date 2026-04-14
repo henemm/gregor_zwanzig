@@ -1,6 +1,6 @@
 # Active Roadmap - Gregor Zwanziger (Archiv)
 
-**Last Updated:** 2026-04-14 (M5b Subscriptions CRUD)
+**Last Updated:** 2026-04-14 (M5c Weather Config Endpoints)
 
 > **Offene Features, Bugs und Migration-Tasks sind auf GitHub Issues:**
 > https://github.com/henemm/gregor_zwanzig/issues
@@ -63,6 +63,7 @@
 | Channel-Switch fuer Subscriptions | 2026-04 | WebUI | F12a, Email/Signal |
 | GPX Proxy (Go + FastAPI) | 2026-04-14 | API | M5a: GpxProxyHandler leitet Multipart-Upload an Python weiter, gpx_to_stage_data() liefert Stage+Waypoints |
 | Subscriptions CRUD (Go) | 2026-04-14 | API | M5b: 5 REST-Endpoints fuer CompareSubscription, Single-File Storage, Validierung, Legacy-Migration, 409 Duplicate Check |
+| Weather Config Endpoints (Go) | 2026-04-14 | API | M5c: 6 GET/PUT-Endpoints fuer display_config auf Trip, Location und Subscription als opaque JSON |
 
 ## Solved Bugs
 
