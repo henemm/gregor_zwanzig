@@ -103,7 +103,7 @@ def fetch_content_imap(imap_config: dict) -> str:
     import imaplib
     import email as email_lib
 
-    host = imap_config.get("host", "imap.gmail.com")
+    host = imap_config.get("host")
     user = imap_config.get("user")
     password = imap_config.get("password")
     folder = imap_config.get("folder", "INBOX")
@@ -111,13 +111,17 @@ def fetch_content_imap(imap_config: dict) -> str:
     if not user or not password:
         # Try to load from environment or settings
         import os
-        user = user or os.environ.get("IMAP_USER")
-        password = password or os.environ.get("IMAP_PASSWORD")
+        user = user or os.environ.get("GZ_IMAP_USER")
+        password = password or os.environ.get("GZ_IMAP_PASS")
+    if not host:
+        import os
+        host = os.environ.get("GZ_IMAP_HOST", "mail.henemm.com")
 
     if not user or not password:
         raise ValueError("IMAP credentials not configured")
 
-    imap = imaplib.IMAP4_SSL(host)
+    port = imap_config.get("port", 993)
+    imap = imaplib.IMAP4_SSL(host, port)
     imap.login(user, password)
     imap.select(folder)
 

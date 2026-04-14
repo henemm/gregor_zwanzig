@@ -468,15 +468,18 @@ class TestRealGmailE2E:
 
         print(f"\n>>> E-Mail gesendet: {test_subject}")
 
-        # 4. Warte auf Gmail-Sync
+        # 4. Warte auf E-Mail-Zustellung
         time.sleep(5)
 
-        # 5. Verbinde via IMAP
-        imap = imaplib.IMAP4_SSL("imap.gmail.com")
-        imap.login(settings.smtp_user, settings.smtp_pass)
+        # 5. Verbinde via IMAP (Stalwart)
+        imap_host = settings.imap_host or settings.smtp_host
+        imap_user = settings.imap_user or settings.smtp_user
+        imap_pass = settings.imap_pass or settings.smtp_pass
+        imap = imaplib.IMAP4_SSL(imap_host, settings.imap_port)
+        imap.login(imap_user, imap_pass)
 
-        # 6. Öffne Gesendet-Ordner (Google Mail auf Deutsch)
-        status, _ = imap.select('"[Google Mail]/Gesendet"')
+        # 6. Öffne Posteingang
+        status, _ = imap.select('INBOX')
 
         # 7. Suche nach der E-Mail
         _, data = imap.search(None, f'SUBJECT "{unique_id}"')

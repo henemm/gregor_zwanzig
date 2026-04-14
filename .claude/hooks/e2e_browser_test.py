@@ -116,8 +116,11 @@ def run_email_test(check_text: str, send_from_ui: bool = False) -> tuple[bool, s
     except Exception as e:
         return False, f"Settings laden fehlgeschlagen: {e}"
 
-    if not settings.smtp_user or not settings.smtp_pass:
-        return False, "SMTP nicht konfiguriert"
+    imap_host = settings.imap_host or settings.smtp_host
+    imap_user = settings.imap_user or settings.smtp_user
+    imap_pass = settings.imap_pass or settings.smtp_pass
+    if not imap_user or not imap_pass:
+        return False, "IMAP nicht konfiguriert (GZ_IMAP_USER/GZ_IMAP_PASS oder GZ_SMTP_USER/GZ_SMTP_PASS)"
 
     # Step 1: Send email from UI if requested
     if send_from_ui:
@@ -160,9 +163,9 @@ def run_email_test(check_text: str, send_from_ui: bool = False) -> tuple[bool, s
 
     # Step 3: Check IMAP
     try:
-        imap = imaplib.IMAP4_SSL('imap.gmail.com')
-        imap.login(settings.smtp_user, settings.smtp_pass)
-        imap.select('"[Google Mail]/Gesendet"')
+        imap = imaplib.IMAP4_SSL(imap_host, settings.imap_port)
+        imap.login(imap_user, imap_pass)
+        imap.select('INBOX')
 
         # Get latest email
         _, data = imap.search(None, 'ALL')

@@ -32,12 +32,15 @@ def fetch_latest_email() -> str:
     from app.config import Settings
     settings = Settings()
 
-    if not settings.smtp_user or not settings.smtp_pass:
-        raise ValueError("SMTP nicht konfiguriert")
+    imap_host = settings.imap_host or settings.smtp_host
+    imap_user = settings.imap_user or settings.smtp_user
+    imap_pass = settings.imap_pass or settings.smtp_pass
+    if not imap_user or not imap_pass:
+        raise ValueError("IMAP nicht konfiguriert (GZ_IMAP_USER/GZ_IMAP_PASS)")
 
-    imap = imaplib.IMAP4_SSL('imap.gmail.com')
-    imap.login(settings.smtp_user, settings.smtp_pass)
-    imap.select('"[Google Mail]/Gesendet"')
+    imap = imaplib.IMAP4_SSL(imap_host, settings.imap_port)
+    imap.login(imap_user, imap_pass)
+    imap.select('INBOX')
 
     _, data = imap.search(None, 'ALL')
     all_ids = data[0].split()
