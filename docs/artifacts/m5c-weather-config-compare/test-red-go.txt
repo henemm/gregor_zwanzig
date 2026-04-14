@@ -1,0 +1,12 @@
+# github.com/henemm/gregor-api/internal/handler [github.com/henemm/gregor-api/internal/handler.test]
+internal/handler/weather_config_test.go:23:42: undefined: GetTripWeatherConfigHandler
+internal/handler/weather_config_test.go:38:42: undefined: GetTripWeatherConfigHandler
+internal/handler/weather_config_test.go:54:42: undefined: PutTripWeatherConfigHandler
+internal/handler/weather_config_test.go:76:42: undefined: PutTripWeatherConfigHandler
+internal/handler/weather_config_test.go:92:42: undefined: PutTripWeatherConfigHandler
+internal/handler/weather_config_test.go:111:46: undefined: GetLocationWeatherConfigHandler
+internal/handler/weather_config_test.go:129:46: undefined: PutLocationWeatherConfigHandler
+internal/handler/weather_config_test.go:154:50: undefined: GetSubscriptionWeatherConfigHandler
+internal/handler/weather_config_test.go:175:50: undefined: PutSubscriptionWeatherConfigHandler
+FAIL	github.com/henemm/gregor-api/internal/handler [build failed]
+FAIL

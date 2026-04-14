@@ -50,6 +50,12 @@ func main() {
 	r.Post("/api/subscriptions", handler.CreateSubscriptionHandler(s))
 	r.Put("/api/subscriptions/{id}", handler.UpdateSubscriptionHandler(s))
 	r.Delete("/api/subscriptions/{id}", handler.DeleteSubscriptionHandler(s))
+	r.Get("/api/trips/{id}/weather-config", handler.GetTripWeatherConfigHandler(s))
+	r.Put("/api/trips/{id}/weather-config", handler.PutTripWeatherConfigHandler(s))
+	r.Get("/api/locations/{id}/weather-config", handler.GetLocationWeatherConfigHandler(s))
+	r.Put("/api/locations/{id}/weather-config", handler.PutLocationWeatherConfigHandler(s))
+	r.Get("/api/subscriptions/{id}/weather-config", handler.GetSubscriptionWeatherConfigHandler(s))
+	r.Put("/api/subscriptions/{id}/weather-config", handler.PutSubscriptionWeatherConfigHandler(s))
 	r.Post("/api/gpx/parse", handler.GpxProxyHandler(cfg.PythonCoreURL))
 
 	log.Printf("Go API listening on :%s, proxying to %s", cfg.Port, cfg.PythonCoreURL)
