@@ -59,6 +59,7 @@ func main() {
 	r.Get("/api/subscriptions/{id}/weather-config", handler.GetSubscriptionWeatherConfigHandler(s))
 	r.Put("/api/subscriptions/{id}/weather-config", handler.PutSubscriptionWeatherConfigHandler(s))
 	r.Post("/api/gpx/parse", handler.GpxProxyHandler(cfg.PythonCoreURL))
+	r.Get("/api/compare", handler.CompareProxyHandler(cfg.PythonCoreURL))
 
 	// Scheduler
 	sched, err := scheduler.New(cfg)
