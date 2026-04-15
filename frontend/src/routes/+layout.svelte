@@ -10,6 +10,7 @@
 		{ href: '/trips', label: 'Trips' },
 		{ href: '/locations', label: 'Locations' },
 		{ href: '/subscriptions', label: 'Subscriptions' },
+		{ href: '/compare', label: 'Vergleich' },
 		{ href: '/weather', label: 'Wetter' },
 		{ href: '/settings', label: 'Settings' }
 	];

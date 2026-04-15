@@ -64,6 +64,36 @@ func ProxyHandler(pythonURL, path string) http.HandlerFunc {
 	}
 }
 
+// CompareProxyHandler proxies /api/compare to Python with a long timeout (60s)
+// because the comparison fetches weather data for multiple locations.
+func CompareProxyHandler(pythonURL string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		client := &http.Client{Timeout: 60 * time.Second}
+
+		url := pythonURL + "/api/compare"
+		if r.URL.RawQuery != "" {
+			url += "?" + r.URL.RawQuery
+		}
+
+		resp, err := client.Get(url)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(503)
+			w.Write([]byte(`{"error":"core_unavailable"}`))
+			return
+		}
+		defer resp.Body.Close()
+
+		for k, vals := range resp.Header {
+			for _, v := range vals {
+				w.Header().Set(k, v)
+			}
+		}
+		w.WriteHeader(resp.StatusCode)
+		io.Copy(w, resp.Body)
+	}
+}
+
 func GpxProxyHandler(pythonURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		client := &http.Client{Timeout: 30 * time.Second}
