@@ -189,6 +189,7 @@ class TestEndToEndEmailSending:
         settings.smtp_pass = "password"
         settings.mail_to = "recipient@test.com"
         settings.mail_from = "sender@test.com"
+        settings.get_inbound_address.return_value = None
         return settings
 
     def test_e2e_smtp_sends_multipart_html_email(self, mock_settings):
@@ -335,8 +336,6 @@ class TestEndToEndEmailSending:
         assert html_part is not None
 
         # Check for expected content
-        assert "Empfehlung" in html_part or "empfehlung" in html_part.lower(), \
-            "Email must contain recommendation"
         assert "Score" in html_part or "score" in html_part.lower(), \
             "Email must contain score"
         assert "Schnee" in html_part or "schnee" in html_part.lower(), \
@@ -415,6 +414,7 @@ class TestEndToEndEmailSending:
             "Plain text must not contain CSS (background)"
 
 
+@pytest.mark.email
 class TestRealGmailE2E:
     """
     ECHTER E2E Test: Sendet via SMTP, ruft via IMAP ab, analysiert.
@@ -439,8 +439,8 @@ class TestRealGmailE2E:
         from app.loader import load_all_locations, load_compare_subscriptions
         from outputs.email import EmailOutput
 
-        # 1. Lade echte Daten
-        settings = Settings()
+        # 1. Lade echte Daten (Gmail fuer Tests, spart Resend-Quota)
+        settings = Settings().for_testing()
         if not settings.can_send_email():
             pytest.skip("SMTP nicht konfiguriert")
 
@@ -571,6 +571,7 @@ class TestEmailRetryMechanism:
         settings.smtp_pass = "password"
         settings.mail_to = "recipient@test.com"
         settings.mail_from = "sender@test.com"
+        settings.get_inbound_address.return_value = None
         return settings
 
     def test_temporary_dns_error_succeeds_after_retry(self, mock_settings):

@@ -90,8 +90,8 @@ def test_trip():
 
 @pytest.fixture
 def settings():
-    """Load real settings (needs .env with SMTP config)."""
-    return Settings()
+    """Load real settings with Gmail SMTP for tests (saves Resend quota)."""
+    return Settings().for_testing()
 
 
 @pytest.fixture
@@ -273,6 +273,7 @@ class TestReportFormatting:
 # Phase 4: Real email send + IMAP verify
 # ---------------------------------------------------------------------------
 
+@pytest.mark.email
 class TestEmailDelivery:
     """Send REAL email and verify via IMAP. Requires SMTP config."""
 
@@ -395,6 +396,7 @@ class TestReportConfigPersistence:
 # Phase 6: Full scheduler integration
 # ---------------------------------------------------------------------------
 
+@pytest.mark.email
 class TestSchedulerIntegration:
     """Test the scheduler service with a real trip."""
 

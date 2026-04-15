@@ -47,6 +47,7 @@ def _get_active_trip():
     return None, None
 
 
+@pytest.mark.email
 class TestManipulatedSnapshotTriggersAlert:
     """
     Full pipeline test:
@@ -182,7 +183,7 @@ class TestManipulatedSnapshotTriggersAlert:
         from services.trip_report_scheduler import TripReportSchedulerService
         from services.weather_snapshot import WeatherSnapshotService
 
-        settings = Settings()
+        settings = Settings().for_testing()
         if not settings.can_send_email():
             pytest.skip("SMTP not configured — cannot send alert email")
 
