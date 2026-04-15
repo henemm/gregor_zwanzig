@@ -9,6 +9,7 @@
 		{ href: '/', label: 'Dashboard' },
 		{ href: '/trips', label: 'Trips' },
 		{ href: '/locations', label: 'Locations' },
+		{ href: '/subscriptions', label: 'Subscriptions' },
 		{ href: '/weather', label: 'Wetter' }
 	];
 

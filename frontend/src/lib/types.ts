@@ -38,6 +38,23 @@ export interface Trip {
 	report_config?: Record<string, unknown>;
 }
 
+export interface Subscription {
+	id: string;
+	name: string;
+	enabled: boolean;
+	locations: string[];
+	forecast_hours: number;
+	time_window_start: number;
+	time_window_end: number;
+	schedule: 'daily_morning' | 'daily_evening' | 'weekly';
+	weekday: number;
+	include_hourly: boolean;
+	top_n: number;
+	send_email: boolean;
+	send_signal: boolean;
+	display_config?: Record<string, unknown>;
+}
+
 export interface HealthResponse {
 	status: 'ok' | 'degraded';
 	version: string;
