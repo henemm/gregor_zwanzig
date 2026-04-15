@@ -87,9 +87,26 @@ def run_comparison_for_subscription(
     successful_loc_ids = {r.location.id for r in result.locations if r.score is not None}
     failed_locations = [loc for loc in selected_locs if loc.id not in successful_loc_ids]
 
+    # Extract enabled metrics from display_config (if configured)
+    enabled_metrics = None
+    if hasattr(sub, 'display_config') and sub.display_config:
+        dc = sub.display_config
+        # display_config can be a dict with "metrics" list or a UnifiedWeatherDisplayConfig
+        metrics_list = None
+        if isinstance(dc, dict) and "metrics" in dc:
+            metrics_list = dc["metrics"]
+        elif hasattr(dc, 'metrics'):
+            metrics_list = dc.metrics
+        if metrics_list:
+            enabled_metrics = {
+                m["metric_id"] if isinstance(m, dict) else m.metric_id
+                for m in metrics_list
+                if (m.get("enabled", True) if isinstance(m, dict) else getattr(m, 'enabled', True))
+            }
+
     # Use both renderers for Multipart Email
-    html_body = render_comparison_html(result, top_n_details=sub.top_n)
-    text_body = render_comparison_text(result, top_n_details=sub.top_n)
+    html_body = render_comparison_html(result, top_n_details=sub.top_n, enabled_metrics=enabled_metrics)
+    text_body = render_comparison_text(result, top_n_details=sub.top_n, enabled_metrics=enabled_metrics)
 
     # Add warning banner if locations failed
     if failed_locations:

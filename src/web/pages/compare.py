@@ -436,11 +436,12 @@ def dict_to_comparison_result(
     )
 
 
-def render_comparison_html(result: ComparisonResult, top_n_details: int = 3) -> str:
+def render_comparison_html(result: ComparisonResult, top_n_details: int = 3, enabled_metrics: set | None = None) -> str:
     """
     Render ComparisonResult as HTML for email.
 
     This is the single HTML renderer - used by both direct email and subscriptions.
+    If enabled_metrics is provided, only rows for those metric_ids are rendered.
     Guarantees identical output for identical ComparisonResult.
 
     Args:
@@ -561,27 +562,38 @@ def render_comparison_html(result: ComparisonResult, top_n_details: int = 3) -> 
         html += f'                    <th><span class="rank">#{i+1}</span> {name}</th>\n'
     html += "                </tr>\n"
 
-    # Score row
+    # Helper: check if metric should be rendered based on display_config
+    def show(metric_id: str) -> bool:
+        if enabled_metrics is None:
+            return True
+        return metric_id in enabled_metrics
+
+    # Score row (always shown)
     html += "                <tr>\n                    <td class=\"label\">Score</td>\n"
     for i, v in enumerate(scores):
         html += f"                    {cell(v, lambda x: str(x) if x else '-', i == best_score)}\n"
     html += "                </tr>\n"
 
     # Snow depth row
-    html += "                <tr>\n                    <td class=\"label\">Schneehöhe</td>\n"
-    for i, v in enumerate(snow_depths):
-        html += f"                    {cell(v, lambda x: f'{x:.0f}cm' if x else '-', i == best_snow_depth)}\n"
-    html += "                </tr>\n"
+    if show("snow_depth"):
+        html += "                <tr>\n                    <td class=\"label\">Schneehöhe</td>\n"
+        for i, v in enumerate(snow_depths):
+            html += f"                    {cell(v, lambda x: f'{x:.0f}cm' if x else '-', i == best_snow_depth)}\n"
+        html += "                </tr>\n"
 
     # New snow row
-    html += "                <tr>\n                    <td class=\"label\">Neuschnee</td>\n"
-    for i, v in enumerate(snow_news):
-        is_best = i == best_snow_new and v and v > 0
-        html += f"                    {cell(v, lambda x: f'+{x:.0f}cm' if x else '-', is_best)}\n"
-    html += "                </tr>\n"
+    if show("fresh_snow"):
+        html += "                <tr>\n                    <td class=\"label\">Neuschnee</td>\n"
+        for i, v in enumerate(snow_news):
+            is_best = i == best_snow_new and v and v > 0
+            html += f"                    {cell(v, lambda x: f'+{x:.0f}cm' if x else '-', is_best)}\n"
+        html += "                </tr>\n"
 
     # Wind/Böen combined row: "10/41 SW"
-    html += "                <tr>\n                    <td class=\"label\">Wind/Böen</td>\n"
+    if not show("wind") and not show("gust"):
+        pass  # skip entire row if both wind and gust disabled
+    elif True:  # wind row
+        html += "                <tr>\n                    <td class=\"label\">Wind/Böen</td>\n"
     for i, (wind, gust, direction) in enumerate(zip(winds, gusts, wind_directions)):
         compass = _degrees_to_compass(direction)
         if wind is not None and gust is not None:
@@ -596,29 +608,32 @@ def render_comparison_html(result: ComparisonResult, top_n_details: int = 3) -> 
     html += "                </tr>\n"
 
     # Wind chill row
-    html += "                <tr>\n                    <td class=\"label\">Temperatur (gefühlt)</td>\n"
-    for i, v in enumerate(wind_chills):
-        html += f"                    {cell(v, lambda x: f'{x:.0f}°C' if x is not None else '-', i == best_wc)}\n"
-    html += "                </tr>\n"
+    if show("wind_chill"):
+        html += "                <tr>\n                    <td class=\"label\">Temperatur (gefühlt)</td>\n"
+        for i, v in enumerate(wind_chills):
+            html += f"                    {cell(v, lambda x: f'{x:.0f}°C' if x is not None else '-', i == best_wc)}\n"
+        html += "                </tr>\n"
 
     # Sunny hours row (0 shows "0h", not "~0h" per spec)
-    html += "                <tr>\n                    <td class=\"label\">Sonnenstunden</td>\n"
-    for i, v in enumerate(sunny_hours_list):
-        is_best = i == best_sunny and v is not None and v > 0
-        # Spec: "~[N]h" for N>0, "0h" for N=0, "-" for None
-        html += f"                    {cell(v, lambda x: '0h' if x == 0 else f'~{x}h' if x is not None else '-', is_best)}\n"
-    html += "                </tr>\n"
+    if show("sunshine"):
+        html += "                <tr>\n                    <td class=\"label\">Sonnenstunden</td>\n"
+        for i, v in enumerate(sunny_hours_list):
+            is_best = i == best_sunny and v is not None and v > 0
+            # Spec: "~[N]h" for N>0, "0h" for N=0, "-" for None
+            html += f"                    {cell(v, lambda x: '0h' if x == 0 else f'~{x}h' if x is not None else '-', is_best)}\n"
+        html += "                </tr>\n"
 
     # Clouds row - SPEC: docs/specs/cloud_cover_simplification.md
-    # Uses effective cloud (elevation-aware) with "*" marker for high elevations
-    html += "                <tr>\n                    <td class=\"label\">Bewölkung</td>\n"
-    for i, (v, above_low) in enumerate(zip(clouds, above_low_clouds_flags)):
-        marker = "*" if above_low else ""
-        html += f"                    {cell(v, lambda x, m=marker: f'{x}%{m}' if x is not None else '-', i == best_clouds)}\n"
-    html += "                </tr>\n"
+    if show("cloud_total"):
+        html += "                <tr>\n                    <td class=\"label\">Bewölkung</td>\n"
+        for i, (v, above_low) in enumerate(zip(clouds, above_low_clouds_flags)):
+            marker = "*" if above_low else ""
+            html += f"                    {cell(v, lambda x, m=marker: f'{x}%{m}' if x is not None else '-', i == best_clouds)}\n"
+        html += "                </tr>\n"
 
     # Wolkenlage row - SPEC: docs/specs/compare_email.md Zeile 366-372
-    html += "                <tr>\n                    <td class=\"label\">Wolkenlage</td>\n"
+    if show("cloud_low"):
+        html += "                <tr>\n                    <td class=\"label\">Wolkenlage</td>\n"
     for loc in valid_locs:
         elev = loc.location.elevation_m or 0
         cl = loc.cloud_low_avg
@@ -714,9 +729,10 @@ def render_comparison_html(result: ComparisonResult, top_n_details: int = 3) -> 
     return html
 
 
-def render_comparison_text(result: ComparisonResult, top_n_details: int = 3) -> str:
+def render_comparison_text(result: ComparisonResult, top_n_details: int = 3, enabled_metrics: set | None = None) -> str:
     """
     Render ComparisonResult as Plain-Text for email fallback.
+    If enabled_metrics is provided, only metrics in the set are rendered.
 
     SPEC: docs/specs/compare_email.md v4.2 Zeile 274-327
 
