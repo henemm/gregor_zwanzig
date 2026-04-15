@@ -102,20 +102,7 @@ class InboundEmailReader:
         subject = msg.get("Subject", "")
         trip_name = self._extract_trip_name(subject)
         if not trip_name:
-            result = CommandResult(
-                success=False, command="parse_error",
-                confirmation_subject="Befehl nicht erkannt",
-                confirmation_body=(
-                    "Kein Trip-Name im Betreff gefunden.\n"
-                    "Betreff muss [Trip Name] enthalten, z.B.:\n"
-                    "  Re: [GR221 Mallorca] Morning Report\n\n"
-                    "Befehlsformat im Text:\n"
-                    "  ### ruhetag\n"
-                    "  ### startdatum 2026-03-01"
-                ),
-            )
-            if settings.can_send_email():
-                self._send_email_reply(result, settings)
+            logger.debug(f"Ignoring email without trip brackets: {subject!r}")
             imap.store(uid, "+FLAGS", "\\Seen")
             return 0
 
