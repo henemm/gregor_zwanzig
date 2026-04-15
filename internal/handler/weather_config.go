@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/store"
 )
 
@@ -12,6 +13,7 @@ import (
 
 func GetTripWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
 		trip, err := s.LoadTrip(id)
 		if err != nil {
@@ -33,6 +35,7 @@ func GetTripWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 
 func PutTripWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
 		trip, err := s.LoadTrip(id)
 		if err != nil {
@@ -70,6 +73,7 @@ func PutTripWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 
 func GetLocationWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
 		loc, err := s.LoadLocation(id)
 		if err != nil {
@@ -91,6 +95,7 @@ func GetLocationWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 
 func PutLocationWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
 		loc, err := s.LoadLocation(id)
 		if err != nil {
@@ -128,6 +133,7 @@ func PutLocationWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 
 func GetSubscriptionWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
 		sub, err := s.LoadSubscription(id)
 		if err != nil {
@@ -149,6 +155,7 @@ func GetSubscriptionWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 
 func PutSubscriptionWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
 		sub, err := s.LoadSubscription(id)
 		if err != nil {

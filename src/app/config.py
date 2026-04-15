@@ -103,6 +103,10 @@ class Settings(BaseSettings):
     signal_api_key: str = Field(default="", description="Callmebot API key")
     signal_api_url: str = Field(default="", description="Callmebot API URL (default built-in)")
 
+    # Telegram settings (for telegram channel via Bot API)
+    telegram_bot_token: str = Field(default="", description="Telegram Bot API token from @BotFather")
+    telegram_chat_id: str = Field(default="", description="Telegram chat ID of recipient")
+
     def get_location(self) -> Location:
         """Create Location object from settings."""
         return Location(
@@ -152,3 +156,7 @@ class Settings(BaseSettings):
     def can_send_signal(self) -> bool:
         """Check if Signal configuration is complete."""
         return bool(self.signal_phone and self.signal_api_key)
+
+    def can_send_telegram(self) -> bool:
+        """Check if Telegram configuration is complete."""
+        return bool(self.telegram_bot_token and self.telegram_chat_id)

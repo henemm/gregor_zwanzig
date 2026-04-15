@@ -1,0 +1,8 @@
+# github.com/henemm/gregor-api/internal/store [github.com/henemm/gregor-api/internal/store.test]
+internal/store/with_user_test.go:16:14: s.WithUser undefined (type *Store has no field or method WithUser)
+internal/store/with_user_test.go:32:14: s.WithUser undefined (type *Store has no field or method WithUser)
+internal/store/with_user_test.go:45:14: s.WithUser undefined (type *Store has no field or method WithUser)
+internal/store/with_user_test.go:59:21: base.WithUser undefined (type *Store has no field or method WithUser)
+internal/store/with_user_test.go:66:19: base.WithUser undefined (type *Store has no field or method WithUser)
+FAIL	github.com/henemm/gregor-api/internal/store [build failed]
+FAIL

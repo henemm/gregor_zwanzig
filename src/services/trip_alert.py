@@ -370,14 +370,19 @@ class TripAlertService:
             changes=changes,
         )
 
-        email_output = EmailOutput(self._settings)
-        email_output.send(
-            subject=report.email_subject,
-            body=report.email_html,
-            plain_text_body=report.email_plain,
-        )
+        config = trip.report_config
 
-        if self._settings.can_send_signal():
+        # Email (bugfix: respect per-trip send_email flag)
+        if not config or config.send_email:
+            email_output = EmailOutput(self._settings)
+            email_output.send(
+                subject=report.email_subject,
+                body=report.email_html,
+                plain_text_body=report.email_plain,
+            )
+
+        # Signal (bugfix: respect per-trip send_signal flag)
+        if config and config.send_signal and self._settings.can_send_signal():
             try:
                 from outputs.signal import SignalOutput
                 SignalOutput(self._settings).send(
@@ -386,6 +391,17 @@ class TripAlertService:
                 )
             except Exception as e:
                 logger.error(f"Signal alert failed for {trip.name}: {e}")
+
+        # Telegram
+        if config and config.send_telegram and self._settings.can_send_telegram():
+            try:
+                from outputs.telegram import TelegramOutput
+                TelegramOutput(self._settings).send(
+                    subject=report.email_subject,
+                    body=report.email_plain,
+                )
+            except Exception as e:
+                logger.error(f"Telegram alert failed for {trip.name}: {e}")
 
         logger.info(
             f"Alert sent for trip {trip.name}: {len(changes)} changes detected"

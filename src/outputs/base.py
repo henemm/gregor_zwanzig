@@ -96,6 +96,9 @@ def get_channel(name: str, settings: "Settings") -> OutputChannel:
     elif name == "signal":
         from outputs.signal import SignalOutput
         return SignalOutput(settings)
+    elif name == "telegram":
+        from outputs.telegram import TelegramOutput
+        return TelegramOutput(settings)
     elif name == "none":
         return NullOutput()
     else:

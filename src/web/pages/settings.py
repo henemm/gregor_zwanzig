@@ -151,6 +151,22 @@ def render_settings() -> None:
                 value=settings.get("GZ_SIGNAL_API_KEY", ""),
             ).classes("w-full").props("type=password")
 
+        # Telegram Settings
+        with ui.card().classes("w-full mb-4"):
+            ui.label("Telegram (Bot API)").classes("text-h6 mb-2")
+
+            telegram_bot_token = ui.input(
+                "Bot Token",
+                value=settings.get("GZ_TELEGRAM_BOT_TOKEN", ""),
+                placeholder="123456:ABC-DEF...",
+            ).classes("w-full").props("type=password")
+
+            telegram_chat_id = ui.input(
+                "Chat ID",
+                value=settings.get("GZ_TELEGRAM_CHAT_ID", ""),
+                placeholder="987654321",
+            ).classes("w-full")
+
         # Provider Settings
         with ui.card().classes("w-full mb-4"):
             ui.label("Weather Provider").classes("text-h6 mb-2")
@@ -194,6 +210,8 @@ def render_settings() -> None:
                 "GZ_EMAIL_PLAIN_TEXT": "true" if email_plain_text.value else "false",
                 "GZ_SIGNAL_PHONE": signal_phone.value or "",
                 "GZ_SIGNAL_API_KEY": signal_api_key.value or "",
+                "GZ_TELEGRAM_BOT_TOKEN": telegram_bot_token.value or "",
+                "GZ_TELEGRAM_CHAT_ID": telegram_chat_id.value or "",
                 "GZ_PROVIDER": provider.value or "geosphere",
                 "GZ_LATITUDE": str(lat.value or 47.2692),
                 "GZ_LONGITUDE": str(lon.value or 11.4041),
@@ -294,4 +312,39 @@ def render_settings() -> None:
                 "Send Test Signal",
                 on_click=make_test_signal_handler(),
                 icon="send",
+            ).props("outline")
+
+            async def test_telegram() -> None:
+                save()
+                try:
+                    from outputs.telegram import TelegramOutput
+                    settings = Settings()
+                    if not settings.can_send_telegram():
+                        ui.notify(
+                            "Telegram not configured. Please fill Bot Token and Chat ID.",
+                            type="negative",
+                        )
+                        return
+                    ui.notify("Sending test Telegram message...", type="info")
+                    output = TelegramOutput(settings)
+                    await asyncio.get_event_loop().run_in_executor(
+                        None, lambda: output.send(
+                            "Gregor Zwanzig - Test",
+                            "Telegram-Channel funktioniert!",
+                        )
+                    )
+                    ui.notify("Test Telegram message sent!", type="positive")
+                except Exception as e:
+                    ui.notify(f"Telegram error: {e}", type="negative")
+
+            def make_test_telegram_handler():
+                """Factory function for test telegram button (Safari compatibility)."""
+                async def do_test() -> None:
+                    await test_telegram()
+                return do_test
+
+            ui.button(
+                "Send Test Telegram",
+                on_click=make_test_telegram_handler(),
+                icon="telegram",
             ).props("outline")

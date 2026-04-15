@@ -345,16 +345,19 @@ class TripReportSchedulerService:
             tz=trip_tz,
         )
 
-        # 7. Send email
-        email_output = EmailOutput(self._settings)
-        email_output.send(
-            subject=report.email_subject,
-            body=report.email_html,
-            plain_text_body=report.email_plain,
-        )
+        # 7. Send via configured channels
+        config = trip.report_config
+
+        # 7a. Email (bugfix: respect send_email flag)
+        if not config or config.send_email:
+            email_output = EmailOutput(self._settings)
+            email_output.send(
+                subject=report.email_subject,
+                body=report.email_html,
+                plain_text_body=report.email_plain,
+            )
 
         # 7b. Send Signal if configured
-        config = trip.report_config
         if config and config.send_signal and self._settings.can_send_signal():
             try:
                 from outputs.signal import SignalOutput
@@ -364,6 +367,17 @@ class TripReportSchedulerService:
                 )
             except Exception as e:
                 logger.error(f"Signal send failed for {trip.name}: {e}")
+
+        # 7c. Send Telegram if configured
+        if config and config.send_telegram and self._settings.can_send_telegram():
+            try:
+                from outputs.telegram import TelegramOutput
+                TelegramOutput(self._settings).send(
+                    subject=report.email_subject,
+                    body=report.email_plain,
+                )
+            except Exception as e:
+                logger.error(f"Telegram send failed for {trip.name}: {e}")
 
         logger.info(f"Trip report sent: {trip.name} ({report_type})")
 

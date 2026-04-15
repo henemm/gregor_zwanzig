@@ -1,0 +1,309 @@
+=== RUN   TestLoadDefaults
+--- PASS: TestLoadDefaults (0.00s)
+=== RUN   TestLoadFromEnv
+--- PASS: TestLoadFromEnv (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/config	0.003s
+=== RUN   TestForecastHandler_ValidRequest_Returns200
+2026/04/15 15:45:53 DEBUG: Selected model meteofrance_arome (1.3km) for 39.7000, 3.0000
+    forecast_test.go:38: expected 200, got 502: {"detail":"HTTP 429: {\"reason\":\"Daily API request limit exceeded. Please try again tomorrow.\",\"error\":true}","error":"provider_error"}
+    forecast_test.go:46: expected 'meta' key in response
+    forecast_test.go:49: expected 'data' key in response
+    forecast_test.go:52: expected 'timezone' key in response
+--- FAIL: TestForecastHandler_ValidRequest_Returns200 (0.03s)
+=== RUN   TestForecastHandler_MissingLat_Returns400
+--- PASS: TestForecastHandler_MissingLat_Returns400 (0.00s)
+=== RUN   TestForecastHandler_InvalidLat_Returns400
+--- PASS: TestForecastHandler_InvalidLat_Returns400 (0.00s)
+=== RUN   TestGpxProxyHandlerSuccess
+--- PASS: TestGpxProxyHandlerSuccess (0.00s)
+=== RUN   TestGpxProxyHandlerForwardsQueryParams
+--- PASS: TestGpxProxyHandlerForwardsQueryParams (0.00s)
+=== RUN   TestGpxProxyHandlerPythonDown
+--- PASS: TestGpxProxyHandlerPythonDown (0.00s)
+=== RUN   TestGpxProxyHandlerContentTypeForwarded
+--- PASS: TestGpxProxyHandlerContentTypeForwarded (0.00s)
+=== RUN   TestHealthHandlerPythonUp
+--- PASS: TestHealthHandlerPythonUp (0.00s)
+=== RUN   TestHealthHandlerPythonDown
+--- PASS: TestHealthHandlerPythonDown (0.00s)
+=== RUN   TestProxyHandlerSuccess
+--- PASS: TestProxyHandlerSuccess (0.00s)
+=== RUN   TestProxyHandlerPythonDown
+--- PASS: TestProxyHandlerPythonDown (0.00s)
+=== RUN   TestProxyHandlerForwardsQueryParams
+--- PASS: TestProxyHandlerForwardsQueryParams (0.00s)
+=== RUN   TestLocationsHandler
+--- PASS: TestLocationsHandler (0.00s)
+=== RUN   TestCreateLocationHandler
+--- PASS: TestCreateLocationHandler (0.00s)
+=== RUN   TestCreateLocationHandlerInvalidName
+--- PASS: TestCreateLocationHandlerInvalidName (0.00s)
+=== RUN   TestCreateLocationHandlerZeroCoords
+--- PASS: TestCreateLocationHandlerZeroCoords (0.00s)
+=== RUN   TestUpdateLocationHandler
+--- PASS: TestUpdateLocationHandler (0.00s)
+=== RUN   TestUpdateLocationHandlerNotFound
+--- PASS: TestUpdateLocationHandlerNotFound (0.00s)
+=== RUN   TestDeleteLocationHandler
+--- PASS: TestDeleteLocationHandler (0.00s)
+=== RUN   TestSubscriptionsHandler
+--- PASS: TestSubscriptionsHandler (0.00s)
+=== RUN   TestSubscriptionHandlerFound
+--- PASS: TestSubscriptionHandlerFound (0.00s)
+=== RUN   TestSubscriptionHandlerNotFound
+--- PASS: TestSubscriptionHandlerNotFound (0.00s)
+=== RUN   TestCreateSubscriptionHandler
+--- PASS: TestCreateSubscriptionHandler (0.00s)
+=== RUN   TestCreateSubscriptionHandlerInvalid
+--- PASS: TestCreateSubscriptionHandlerInvalid (0.00s)
+=== RUN   TestCreateSubscriptionHandlerDuplicateID
+--- PASS: TestCreateSubscriptionHandlerDuplicateID (0.00s)
+=== RUN   TestUpdateSubscriptionHandler
+--- PASS: TestUpdateSubscriptionHandler (0.00s)
+=== RUN   TestUpdateSubscriptionHandlerNotFound
+--- PASS: TestUpdateSubscriptionHandlerNotFound (0.00s)
+=== RUN   TestDeleteSubscriptionHandler
+--- PASS: TestDeleteSubscriptionHandler (0.00s)
+=== RUN   TestTripsHandler
+--- PASS: TestTripsHandler (0.00s)
+=== RUN   TestTripHandlerFound
+    trip_test.go:49: expected 200, got 404
+--- FAIL: TestTripHandlerFound (0.00s)
+=== RUN   TestTripHandlerNotFound
+--- PASS: TestTripHandlerNotFound (0.00s)
+=== RUN   TestCreateTripHandler
+--- PASS: TestCreateTripHandler (0.00s)
+=== RUN   TestCreateTripHandlerInvalid
+--- PASS: TestCreateTripHandlerInvalid (0.00s)
+=== RUN   TestCreateTripHandlerZeroCoords
+--- PASS: TestCreateTripHandlerZeroCoords (0.00s)
+=== RUN   TestUpdateTripHandler
+--- PASS: TestUpdateTripHandler (0.00s)
+=== RUN   TestUpdateTripHandlerNotFound
+--- PASS: TestUpdateTripHandlerNotFound (0.00s)
+=== RUN   TestDeleteTripHandler
+--- PASS: TestDeleteTripHandler (0.00s)
+=== RUN   TestLocationsHandlerUsesContextUserId
+--- PASS: TestLocationsHandlerUsesContextUserId (0.00s)
+=== RUN   TestCreateLocationHandlerWritesToUserDir
+--- PASS: TestCreateLocationHandlerWritesToUserDir (0.00s)
+=== RUN   TestTripsHandlerUsesContextUserId
+--- PASS: TestTripsHandlerUsesContextUserId (0.00s)
+=== RUN   TestDeleteTripHandlerUsesContextUserId
+--- PASS: TestDeleteTripHandlerUsesContextUserId (0.00s)
+=== RUN   TestGetTripWeatherConfigFound
+    weather_config_test.go:30: expected 200, got 404
+--- FAIL: TestGetTripWeatherConfigFound (0.00s)
+=== RUN   TestGetTripWeatherConfigNotFound
+--- PASS: TestGetTripWeatherConfigNotFound (0.00s)
+=== RUN   TestPutTripWeatherConfig
+--- PASS: TestPutTripWeatherConfig (0.00s)
+=== RUN   TestPutTripWeatherConfigNotFound
+--- PASS: TestPutTripWeatherConfigNotFound (0.00s)
+=== RUN   TestPutTripWeatherConfigBadJSON
+--- PASS: TestPutTripWeatherConfigBadJSON (0.00s)
+=== RUN   TestGetLocationWeatherConfigNotFound
+--- PASS: TestGetLocationWeatherConfigNotFound (0.00s)
+=== RUN   TestPutLocationWeatherConfig
+--- PASS: TestPutLocationWeatherConfig (0.00s)
+=== RUN   TestGetSubscriptionWeatherConfigNotFound
+--- PASS: TestGetSubscriptionWeatherConfigNotFound (0.00s)
+=== RUN   TestPutSubscriptionWeatherConfig
+--- PASS: TestPutSubscriptionWeatherConfig (0.00s)
+FAIL
+FAIL	github.com/henemm/gregor-api/internal/handler	0.069s
+=== RUN   TestValidCookie_Returns200
+--- PASS: TestValidCookie_Returns200 (0.00s)
+=== RUN   TestNoCookie_Returns401
+--- PASS: TestNoCookie_Returns401 (0.00s)
+=== RUN   TestExpiredCookie_Returns401
+--- PASS: TestExpiredCookie_Returns401 (0.00s)
+=== RUN   TestTamperedHMAC_Returns401
+--- PASS: TestTamperedHMAC_Returns401 (0.00s)
+=== RUN   TestMalformedCookie_Returns401
+--- PASS: TestMalformedCookie_Returns401 (0.00s)
+=== RUN   TestHealthEndpoint_NoAuthRequired
+--- PASS: TestHealthEndpoint_NoAuthRequired (0.00s)
+=== RUN   TestWrongSecret_Returns401
+--- PASS: TestWrongSecret_Returns401 (0.00s)
+=== RUN   TestUserIDFromContext_EmptyWithoutMiddleware
+--- PASS: TestUserIDFromContext_EmptyWithoutMiddleware (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/middleware	0.003s
+?   	github.com/henemm/gregor-api/internal/model	[no test files]
+?   	github.com/henemm/gregor-api/internal/provider	[no test files]
+=== RUN   TestLoadAvailabilityCache_MissingFile_ReturnsNil
+--- PASS: TestLoadAvailabilityCache_MissingFile_ReturnsNil (0.00s)
+=== RUN   TestSaveAndLoadAvailabilityCache_Roundtrip
+--- PASS: TestSaveAndLoadAvailabilityCache_Roundtrip (0.00s)
+=== RUN   TestLoadAvailabilityCache_ExpiredCache_ReturnsNil
+--- PASS: TestLoadAvailabilityCache_ExpiredCache_ReturnsNil (0.00s)
+=== RUN   TestSelectModel_Mallorca_ReturnsAROME
+--- PASS: TestSelectModel_Mallorca_ReturnsAROME (0.00s)
+=== RUN   TestSelectModel_Innsbruck_ReturnsICOND2
+--- PASS: TestSelectModel_Innsbruck_ReturnsICOND2 (0.00s)
+=== RUN   TestSelectModel_Oslo_ReturnsMetNo
+--- PASS: TestSelectModel_Oslo_ReturnsMetNo (0.00s)
+=== RUN   TestSelectModel_Athens_ReturnsICONEU
+--- PASS: TestSelectModel_Athens_ReturnsICONEU (0.00s)
+=== RUN   TestSelectModel_Tokyo_ReturnsECMWF
+--- PASS: TestSelectModel_Tokyo_ReturnsECMWF (0.00s)
+=== RUN   TestFetchForecast_Mallorca48h_ReturnsTimeseries
+2026/04/13 08:19:02 DEBUG: Selected model meteofrance_arome (1.3km) for 39.7000, 3.0000
+--- PASS: TestFetchForecast_Mallorca48h_ReturnsTimeseries (0.61s)
+=== RUN   TestFetchForecast_SetsTimezoneCorrectly
+2026/04/13 08:19:02 DEBUG: Selected model meteofrance_arome (1.3km) for 39.7000, 3.0000
+--- PASS: TestFetchForecast_SetsTimezoneCorrectly (0.01s)
+=== RUN   TestThunderLevel_WMO95_ReturnsHigh
+--- PASS: TestThunderLevel_WMO95_ReturnsHigh (0.00s)
+=== RUN   TestThunderLevel_WMO61_ReturnsNone
+--- PASS: TestThunderLevel_WMO61_ReturnsNone (0.00s)
+=== RUN   TestTimezoneForCoords_Vienna_ReturnsEuropeVienna
+--- PASS: TestTimezoneForCoords_Vienna_ReturnsEuropeVienna (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/provider/openmeteo	(cached)
+=== RUN   TestAssess_NoRisks_CalmWeather
+--- PASS: TestAssess_NoRisks_CalmWeather (0.00s)
+=== RUN   TestAssess_ThunderHigh
+--- PASS: TestAssess_ThunderHigh (0.00s)
+=== RUN   TestAssess_ThunderMedium
+--- PASS: TestAssess_ThunderMedium (0.00s)
+=== RUN   TestAssess_WindHigh
+--- PASS: TestAssess_WindHigh (0.00s)
+=== RUN   TestAssess_WindModerate
+--- PASS: TestAssess_WindModerate (0.00s)
+=== RUN   TestAssess_GustOverridesWind
+--- PASS: TestAssess_GustOverridesWind (0.00s)
+=== RUN   TestAssess_PrecipitationModerate
+--- PASS: TestAssess_PrecipitationModerate (0.00s)
+=== RUN   TestAssess_VisibilityInverted
+--- PASS: TestAssess_VisibilityInverted (0.00s)
+=== RUN   TestAssess_WindChillInverted
+--- PASS: TestAssess_WindChillInverted (0.00s)
+=== RUN   TestAssess_MultipleRisksSorted
+--- PASS: TestAssess_MultipleRisksSorted (0.00s)
+=== RUN   TestAssess_Deduplication
+--- PASS: TestAssess_Deduplication (0.00s)
+=== RUN   TestAssess_NoneValuesSkipped
+--- PASS: TestAssess_NoneValuesSkipped (0.00s)
+=== RUN   TestAssess_CapeHigh
+--- PASS: TestAssess_CapeHigh (0.00s)
+=== RUN   TestAssess_CapeModerate
+--- PASS: TestAssess_CapeModerate (0.00s)
+=== RUN   TestAssessWithExposition_ModerateWind
+--- PASS: TestAssessWithExposition_ModerateWind (0.00s)
+=== RUN   TestAssessWithExposition_HighWind
+--- PASS: TestAssessWithExposition_HighWind (0.00s)
+=== RUN   TestAssessWithExposition_NoOverlap
+--- PASS: TestAssessWithExposition_NoOverlap (0.00s)
+=== RUN   TestAssessWithExposition_LowWind_NoRisk
+--- PASS: TestAssessWithExposition_LowWind_NoRisk (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/risk	(cached)
+=== RUN   TestNew_ValidTimezone
+--- PASS: TestNew_ValidTimezone (0.00s)
+=== RUN   TestNew_InvalidTimezone
+--- PASS: TestNew_InvalidTimezone (0.00s)
+=== RUN   TestTriggerEndpoint_Success
+2026/04/15 15:45:53 [scheduler] /api/scheduler/morning-subscriptions → 200
+--- PASS: TestTriggerEndpoint_Success (0.00s)
+=== RUN   TestTriggerEndpoint_PythonDown
+--- PASS: TestTriggerEndpoint_PythonDown (0.00s)
+=== RUN   TestTriggerEndpoint_PythonError
+--- PASS: TestTriggerEndpoint_PythonError (0.00s)
+=== RUN   TestStatus
+2026/04/15 15:45:53 [scheduler] Started: 5 jobs, timezone Europe/Vienna
+2026/04/15 15:45:53 [scheduler] Stopped
+--- PASS: TestStatus (0.00s)
+=== RUN   TestRecordRun_Success
+--- PASS: TestRecordRun_Success (0.00s)
+=== RUN   TestRecordRun_Failure
+2026/04/15 15:45:53 [scheduler] test_job failed: boom
+--- PASS: TestRecordRun_Failure (0.00s)
+=== RUN   TestMorningSubscriptions_RecordsRun
+2026/04/15 15:45:53 [scheduler] Running morning subscriptions...
+2026/04/15 15:45:53 [scheduler] /api/scheduler/morning-subscriptions → 200
+--- PASS: TestMorningSubscriptions_RecordsRun (0.00s)
+=== RUN   TestMorningSubscriptions_FailedTrigger_RecordsError
+2026/04/15 15:45:53 [scheduler] Running morning subscriptions...
+2026/04/15 15:45:53 [scheduler] morning_subscriptions failed: HTTP 500: {"error":"boom"}
+--- PASS: TestMorningSubscriptions_FailedTrigger_RecordsError (0.00s)
+=== RUN   TestPingHeartbeat_Success
+2026/04/15 15:45:53 [scheduler] Heartbeat ping OK: .../morning
+--- PASS: TestPingHeartbeat_Success (0.00s)
+=== RUN   TestPingHeartbeat_Failure
+2026/04/15 15:45:53 [scheduler] Heartbeat ping failed: Get "http://localhost:19999/heartbeat/nope": dial tcp [::1]:19999: connect: connection refused
+--- PASS: TestPingHeartbeat_Failure (0.00s)
+=== RUN   TestPingHeartbeat_EmptyURL
+--- PASS: TestPingHeartbeat_EmptyURL (0.00s)
+=== RUN   TestMorningSubscriptions_TriggersHeartbeat
+2026/04/15 15:45:53 [scheduler] Running morning subscriptions...
+2026/04/15 15:45:53 [scheduler] /api/scheduler/morning-subscriptions → 200
+2026/04/15 15:45:53 [scheduler] Heartbeat ping OK: .../morning
+--- PASS: TestMorningSubscriptions_TriggersHeartbeat (0.00s)
+=== RUN   TestMorningSubscriptions_FailedTrigger_SkipsHeartbeat
+2026/04/15 15:45:53 [scheduler] Running morning subscriptions...
+2026/04/15 15:45:53 [scheduler] morning_subscriptions failed: HTTP 500: {"error":"boom"}
+--- PASS: TestMorningSubscriptions_FailedTrigger_SkipsHeartbeat (0.00s)
+=== RUN   TestStatus_JSONSerializable
+2026/04/15 15:45:53 [scheduler] Started: 5 jobs, timezone Europe/Vienna
+2026/04/15 15:45:53 [scheduler] Stopped
+--- PASS: TestStatus_JSONSerializable (0.00s)
+=== RUN   TestStatus_IncludesLastRun
+2026/04/15 15:45:53 [scheduler] Started: 5 jobs, timezone Europe/Vienna
+2026/04/15 15:45:53 [scheduler] Running morning subscriptions...
+2026/04/15 15:45:53 [scheduler] /api/scheduler/morning-subscriptions → 200
+2026/04/15 15:45:53 [scheduler] Stopped
+--- PASS: TestStatus_IncludesLastRun (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/scheduler	0.011s
+=== RUN   TestSaveLocationAndLoad
+--- PASS: TestSaveLocationAndLoad (0.00s)
+=== RUN   TestDeleteLocation
+--- PASS: TestDeleteLocation (0.00s)
+=== RUN   TestDeleteLocationNotFound
+--- PASS: TestDeleteLocationNotFound (0.00s)
+=== RUN   TestLoadLocation
+--- PASS: TestLoadLocation (0.00s)
+=== RUN   TestLoadLocationNotFound
+--- PASS: TestLoadLocationNotFound (0.00s)
+=== RUN   TestLoadLocationsFromRealData
+--- PASS: TestLoadLocationsFromRealData (0.00s)
+=== RUN   TestLoadLocationsEmptyDir
+--- PASS: TestLoadLocationsEmptyDir (0.00s)
+=== RUN   TestLoadLocationsDirNotExist
+--- PASS: TestLoadLocationsDirNotExist (0.00s)
+=== RUN   TestLoadLocationsSkipsBadJSON
+2026/04/15 15:45:53 skip bad.json: json error: invalid character 'n' looking for beginning of object key string
+--- PASS: TestLoadLocationsSkipsBadJSON (0.00s)
+=== RUN   TestLoadLocationsSortedByName
+--- PASS: TestLoadLocationsSortedByName (0.00s)
+=== RUN   TestLoadTripsFromRealData
+--- PASS: TestLoadTripsFromRealData (0.00s)
+=== RUN   TestLoadTripsEmptyDir
+--- PASS: TestLoadTripsEmptyDir (0.00s)
+=== RUN   TestLoadTripsBadJSON
+2026/04/15 15:45:53 skip bad.json: json error: invalid character 'b' looking for beginning of object key string
+--- PASS: TestLoadTripsBadJSON (0.00s)
+=== RUN   TestLoadTripByID
+--- PASS: TestLoadTripByID (0.00s)
+=== RUN   TestLoadTripNotFound
+--- PASS: TestLoadTripNotFound (0.00s)
+=== RUN   TestSaveTripAndLoad
+--- PASS: TestSaveTripAndLoad (0.00s)
+=== RUN   TestDeleteTrip
+--- PASS: TestDeleteTrip (0.00s)
+=== RUN   TestDeleteTripNotFound
+--- PASS: TestDeleteTripNotFound (0.00s)
+=== RUN   TestWithUserReturnsNewStoreWithDifferentUserID
+--- PASS: TestWithUserReturnsNewStoreWithDifferentUserID (0.00s)
+=== RUN   TestWithUserEmptyStringIsNoop
+--- PASS: TestWithUserEmptyStringIsNoop (0.00s)
+=== RUN   TestWithUserPreservesDataDir
+--- PASS: TestWithUserPreservesDataDir (0.00s)
+=== RUN   TestWithUserIsolatesFilePaths
+--- PASS: TestWithUserIsolatesFilePaths (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/store	0.010s
+FAIL

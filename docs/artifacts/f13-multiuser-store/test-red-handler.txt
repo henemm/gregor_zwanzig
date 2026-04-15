@@ -1,0 +1,4 @@
+# github.com/henemm/gregor-api/internal/handler [github.com/henemm/gregor-api/internal/handler.test]
+internal/handler/user_scoped_test.go:24:20: undefined: middleware.ContextWithUserID
+FAIL	github.com/henemm/gregor-api/internal/handler [build failed]
+FAIL

@@ -564,6 +564,7 @@ class TripReportConfig:
     send_email: bool = True
     send_sms: bool = False
     send_signal: bool = False
+    send_telegram: bool = False
 
     # Alerts
     alert_on_changes: bool = True

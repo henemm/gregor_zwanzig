@@ -179,6 +179,7 @@ def render_subscription_card(
                             top_n=current.top_n,
                             send_email=current.send_email,
                             send_signal=current.send_signal,
+                            send_telegram=current.send_telegram,
                             display_config=current.display_config,
                         )
                         save_compare_subscription(updated)
@@ -220,6 +221,13 @@ def render_subscription_card(
                                     None, lambda: SignalOutput(settings).send(subject, text_body)
                                 )
                                 sent.append("Signal")
+
+                            if subscription.send_telegram and settings.can_send_telegram():
+                                from outputs.telegram import TelegramOutput
+                                await asyncio.get_event_loop().run_in_executor(
+                                    None, lambda: TelegramOutput(settings).send(subject, text_body)
+                                )
+                                sent.append("Telegram")
 
                             if sent:
                                 ui.notify(f"{', '.join(sent)} sent: {subject}", type="positive")
@@ -387,6 +395,10 @@ def show_subscription_dialog(
                 "Signal",
                 value=False if is_new else sub.send_signal,
             )
+            send_telegram_cb = ui.checkbox(
+                "Telegram",
+                value=False if is_new else sub.send_telegram,
+            )
 
         # Actions
         with ui.row().classes("w-full justify-end gap-2 mt-4"):
@@ -424,6 +436,7 @@ def show_subscription_dialog(
                         top_n=int(top_n.value or 3),
                         send_email=send_email_cb.value,
                         send_signal=send_signal_cb.value,
+                        send_telegram=send_telegram_cb.value,
                     )
                     # Preserve display_config from disk (not stale closure)
                     if not is_new:

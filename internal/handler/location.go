@@ -6,12 +6,14 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/model"
 	"github.com/henemm/gregor-api/internal/store"
 )
 
 func LocationsHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
 		locations, err := s.LoadLocations()
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -40,6 +42,7 @@ func validateLocation(loc model.Location) error {
 
 func CreateLocationHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
 		var loc model.Location
 		if err := json.NewDecoder(r.Body).Decode(&loc); err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -73,6 +76,7 @@ func CreateLocationHandler(s *store.Store) http.HandlerFunc {
 
 func UpdateLocationHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
 
 		existing, err := s.LoadLocation(id)
@@ -123,6 +127,7 @@ func UpdateLocationHandler(s *store.Store) http.HandlerFunc {
 
 func DeleteLocationHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
 
 		if err := s.DeleteLocation(id); err != nil {
