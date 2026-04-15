@@ -156,10 +156,11 @@ window.addEventListener("pageshow", function(e) {
 # Register startup handlers
 app.on_startup(ensure_data_dirs)
 
-# Initialize background scheduler for subscriptions
-from web.scheduler import init_scheduler, shutdown_scheduler
-app.on_startup(init_scheduler)
-app.on_shutdown(shutdown_scheduler)
+# APScheduler disabled — Go scheduler (port 8090) is now the sole scheduler.
+# See: docs/specs/modules/go_scheduler.md Phase "Go Only"
+# from web.scheduler import init_scheduler, shutdown_scheduler
+# app.on_startup(init_scheduler)
+# app.on_shutdown(shutdown_scheduler)
 
 
 def run() -> None:

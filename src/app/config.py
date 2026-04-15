@@ -85,6 +85,13 @@ class Settings(BaseSettings):
     imap_user: Optional[str] = Field(default=None, description="IMAP username (default: smtp_user)")
     imap_pass: Optional[str] = Field(default=None, description="IMAP password (default: smtp_pass)")
 
+    # Google SMTP settings (for tests — avoids burning Resend quota)
+    google_smtp_host: Optional[str] = Field(default=None, description="Gmail SMTP host for tests")
+    google_smtp_port: int = Field(default=587, description="Gmail SMTP port for tests")
+    google_smtp_user: Optional[str] = Field(default=None, description="Gmail SMTP user for tests")
+    google_smtp_pass: Optional[str] = Field(default=None, description="Gmail SMTP password for tests")
+    google_mail_from: Optional[str] = Field(default=None, description="Gmail sender for tests")
+
     # SMS settings (for sms channel)
     sms_gateway_url: Optional[str] = Field(default=None, description="SMS gateway HTTP endpoint")
     sms_api_key: Optional[str] = Field(default=None, description="SMS gateway API key")
@@ -117,6 +124,22 @@ class Settings(BaseSettings):
     def get_inbound_address(self) -> str | None:
         """Get inbound command address (plus-address or smtp_user fallback)."""
         return self.inbound_address or self.smtp_user
+
+    def for_testing(self) -> "Settings":
+        """Return a copy with Google SMTP credentials for test email sending.
+
+        Falls back to regular SMTP if Google credentials are not configured.
+        Preserves IMAP and mail_to settings.
+        """
+        if not self.google_smtp_host or not self.google_smtp_user:
+            return self
+        return self.model_copy(update={
+            "smtp_host": self.google_smtp_host,
+            "smtp_port": self.google_smtp_port,
+            "smtp_user": self.google_smtp_user,
+            "smtp_pass": self.google_smtp_pass,
+            "mail_from": self.google_mail_from or self.google_smtp_user,
+        })
 
     def can_send_sms(self) -> bool:
         """Check if SMS configuration is complete."""
