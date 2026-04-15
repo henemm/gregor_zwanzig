@@ -17,6 +17,7 @@ import time
 import httpx
 import pytest
 
+pytestmark = pytest.mark.skip(reason="NiceGUI tests — decommissioned in M4b cutover")
 
 SERVER_PORT = 18091
 SERVER_URL = f"http://localhost:{SERVER_PORT}"
