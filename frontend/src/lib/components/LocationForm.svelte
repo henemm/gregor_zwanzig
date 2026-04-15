@@ -23,6 +23,26 @@
 	let name = $state(location?.name ?? '');
 	let lat = $state(location?.lat ?? 47.0);
 	let lon = $state(location?.lon ?? 11.0);
+	let dmsInput = $state('');
+
+	function parseDMS(input: string): { lat: number; lon: number } | null {
+		const pattern = /(\d+)°(\d+)'([\d.]+)"([NS])\s+(\d+)°(\d+)'([\d.]+)"([EW])/;
+		const m = input.match(pattern);
+		if (!m) return null;
+		let parsedLat = +m[1] + +m[2] / 60 + +m[3] / 3600;
+		if (m[4] === 'S') parsedLat = -parsedLat;
+		let parsedLon = +m[5] + +m[6] / 60 + +m[7] / 3600;
+		if (m[8] === 'W') parsedLon = -parsedLon;
+		return { lat: Math.round(parsedLat * 10000) / 10000, lon: Math.round(parsedLon * 10000) / 10000 };
+	}
+
+	function handleDmsInput() {
+		const result = parseDMS(dmsInput);
+		if (result) {
+			lat = result.lat;
+			lon = result.lon;
+		}
+	}
 	let elevationM = $state(location?.elevation_m ?? 2000);
 	let region = $state(location?.region ?? '');
 	let bergfexSlug = $state(location?.bergfex_slug ?? '');
@@ -63,6 +83,17 @@
 	{#if error}
 		<p class="text-sm text-destructive">{error}</p>
 	{/if}
+
+	<div>
+		<Label for="location-dms">Google Maps Koordinaten (DMS)</Label>
+		<Input
+			id="location-dms"
+			name="location-dms"
+			placeholder='z.B. 47°16&apos;11.1"N 11°50&apos;50.2"E'
+			bind:value={dmsInput}
+			oninput={handleDmsInput}
+		/>
+	</div>
 
 	<div class="grid grid-cols-2 gap-3">
 		<div>

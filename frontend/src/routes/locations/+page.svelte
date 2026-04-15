@@ -13,6 +13,7 @@
 	let dialogMode: 'create' | 'edit' | null = $state(null);
 	let editTarget: Location | null = $state(null);
 	let deleteTarget: Location | null = $state(null);
+	let weatherTarget: Location | null = $state(null);
 	let error: string | null = $state(null);
 
 	async function handleSave(loc: Location) {
@@ -105,6 +106,7 @@
 							{/if}
 						</Table.Cell>
 						<Table.Cell class="text-right">
+							<Button variant="ghost" size="sm" onclick={() => (weatherTarget = loc)}>Wetter</Button>
 							<Button variant="ghost" size="sm" onclick={() => openEdit(loc)}>Bearbeiten</Button>
 							<Button variant="ghost" size="sm" onclick={() => (deleteTarget = loc)}>Löschen</Button>
 						</Table.Cell>
@@ -131,6 +133,24 @@
 				oncancel={closeDialog}
 			/>
 		{/if}
+	</Dialog.Content>
+</Dialog.Root>
+
+<!-- Weather Config Dialog -->
+<Dialog.Root
+	open={weatherTarget !== null}
+	onOpenChange={(open) => { if (!open) weatherTarget = null; }}
+>
+	<Dialog.Content>
+		<Dialog.Header>
+			<Dialog.Title>Wetter-Konfiguration</Dialog.Title>
+			<Dialog.Description>
+				Wetter-Metriken für {weatherTarget?.name} konfigurieren — Coming soon
+			</Dialog.Description>
+		</Dialog.Header>
+		<Dialog.Footer>
+			<Button variant="outline" onclick={() => (weatherTarget = null)}>Schließen</Button>
+		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>
 
