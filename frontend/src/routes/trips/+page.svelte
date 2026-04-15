@@ -6,6 +6,7 @@
 	import * as Table from '$lib/components/ui/table/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import TripForm from '$lib/components/TripForm.svelte';
+	import WeatherConfigDialog from '$lib/components/WeatherConfigDialog.svelte';
 
 	let { data } = $props();
 
@@ -192,6 +193,20 @@
 				?? 'Fehler beim Auslösen des Test-Reports';
 		} finally {
 			testReportRunning = false;
+		}
+	}
+
+	async function handleWeatherSave(config: Record<string, unknown>) {
+		if (!weatherConfigTarget) return;
+		error = null;
+		try {
+			await api.put(`/api/trips/${weatherConfigTarget.id}/weather-config`, config);
+			trips = await api.get<Trip[]>('/api/trips');
+			weatherConfigTarget = null;
+		} catch (e: unknown) {
+			error = (e as { error?: string; detail?: string })?.detail
+				?? (e as { error?: string })?.error
+				?? 'Fehler beim Speichern der Wetter-Konfiguration';
 		}
 	}
 </script>
@@ -437,23 +452,13 @@
 </Dialog.Root>
 
 <!-- Weather Config Dialog -->
-<Dialog.Root
+<WeatherConfigDialog
 	open={weatherConfigTarget !== null}
-	onOpenChange={(open) => { if (!open) weatherConfigTarget = null; }}
->
-	<Dialog.Content class="max-w-sm">
-		<Dialog.Header>
-			<Dialog.Title>Wetter-Metriken — {weatherConfigTarget?.name}</Dialog.Title>
-			<Dialog.Description>Wetter-Metriken konfigurieren — Coming soon</Dialog.Description>
-		</Dialog.Header>
-		<div class="py-4 text-sm text-muted-foreground">
-			Die Konfiguration der angezeigten Wetter-Metriken ist in Vorbereitung.
-		</div>
-		<Dialog.Footer>
-			<Button onclick={() => (weatherConfigTarget = null)}>Schließen</Button>
-		</Dialog.Footer>
-	</Dialog.Content>
-</Dialog.Root>
+	entityName={weatherConfigTarget?.name ?? ''}
+	currentConfig={weatherConfigTarget?.display_config}
+	onsave={handleWeatherSave}
+	onclose={() => (weatherConfigTarget = null)}
+/>
 
 <!-- Test Report Result Dialog -->
 <Dialog.Root
