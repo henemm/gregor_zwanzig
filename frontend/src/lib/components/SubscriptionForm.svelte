@@ -40,6 +40,7 @@
 	let selectedLocations = $state<string[]>(
 		subscription?.locations?.filter((l) => l !== '*') ?? []
 	);
+	let activityProfile = $state<string>(subscription?.activity_profile ?? 'allgemein');
 	let error = $state('');
 
 	function toggleLocation(id: string) {
@@ -83,7 +84,8 @@
 			send_email: sendEmail,
 			send_signal: sendSignal,
 			locations: allLocations ? ['*'] : selectedLocations,
-			...(subscription?.display_config && { display_config: subscription.display_config })
+			...(subscription?.display_config && { display_config: subscription.display_config }),
+			activity_profile: activityProfile as Subscription['activity_profile']
 		};
 		onsave(result);
 	}
@@ -141,6 +143,17 @@
 			</select>
 		</div>
 	{/if}
+
+	<!-- Activity Profile -->
+	<div>
+		<Label for="sub-profile">Aktivitätsprofil</Label>
+		<select id="sub-profile" bind:value={activityProfile}
+			class="flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-base transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3">
+			<option value="allgemein">Allgemein</option>
+			<option value="wintersport">Wintersport</option>
+			<option value="wandern">Wandern</option>
+		</select>
+	</div>
 
 	<!-- Time Window -->
 	<div class="grid grid-cols-2 gap-3">

@@ -666,6 +666,17 @@ def get_compare_subscriptions_file(user_id: str = "default") -> Path:
     return get_data_dir(user_id) / "compare_subscriptions.json"
 
 
+def _parse_activity_profile(value: str | None):
+    """Parse activity_profile string to enum, returns None if missing/invalid."""
+    if not value:
+        return None
+    from app.user import LocationActivityProfile
+    try:
+        return LocationActivityProfile(value)
+    except ValueError:
+        return None
+
+
 def load_compare_subscriptions(user_id: str = "default") -> List[CompareSubscription]:
     """
     Load all compare subscriptions for a user.
@@ -711,6 +722,7 @@ def load_compare_subscriptions(user_id: str = "default") -> List[CompareSubscrip
             send_email=sub_data.get("send_email", True),
             send_signal=sub_data.get("send_signal", False),
             display_config=_parse_display_config(sub_data["display_config"]) if sub_data.get("display_config") else None,
+            activity_profile=_parse_activity_profile(sub_data.get("activity_profile")),
         ))
     return subscriptions
 
@@ -749,6 +761,8 @@ def save_compare_subscriptions(
             "send_email": sub.send_email,
             "send_signal": sub.send_signal,
         }
+        if sub.activity_profile is not None:
+            sub_dict["activity_profile"] = sub.activity_profile.value
         if sub.display_config is not None:
             dc = sub.display_config
             sub_dict["display_config"] = {

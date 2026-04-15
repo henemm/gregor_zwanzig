@@ -81,6 +81,7 @@ def run_comparison_for_subscription(
         time_window=(sub.time_window_start, sub.time_window_end),
         target_date=target_date,
         forecast_hours=actual_forecast_hours,
+        profile=getattr(sub, 'activity_profile', None),
     )
 
     # Check for missing locations
@@ -127,5 +128,5 @@ def run_comparison_for_subscription(
         warning_text = f"\n⚠️ WARNING: {len(failed_locations)} location(s) unavailable: {failed_names}\n"
         text_body = text_body.replace("=" * 24, "=" * 24 + warning_text, 1)
 
-    subject = f"Ski Resort Comparison: {sub.name} ({now.strftime('%d.%m.%Y')})"
+    subject = f"Wetter-Vergleich: {sub.name} ({now.strftime('%d.%m.%Y')})"
     return subject, html_body, text_body

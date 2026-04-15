@@ -14,6 +14,7 @@
 	let twStart = $state(9);
 	let twEnd = $state(16);
 	let forecastHours = $state(48);
+	let activityProfile = $state('allgemein');
 	let loading = $state(false);
 	let error = $state('');
 	let result: CompareResult | null = $state(null);
@@ -115,7 +116,8 @@
 				target_date: targetDate,
 				time_window_start: String(twStart),
 				time_window_end: String(twEnd),
-				forecast_hours: String(forecastHours)
+				forecast_hours: String(forecastHours),
+				activity_profile: activityProfile
 			});
 			const res = await fetch(`/api/compare?${params}`);
 			if (!res.ok) {
@@ -198,6 +200,17 @@
 						<option value={72}>72h</option>
 					</select>
 				</div>
+			</div>
+
+			<!-- Activity Profile -->
+			<div>
+				<label for="cmp-profile" class="text-sm font-medium">Aktivitätsprofil</label>
+				<select id="cmp-profile" bind:value={activityProfile}
+					class="mt-1 block w-full rounded-md border px-3 py-2 text-sm">
+					<option value="allgemein">Allgemein</option>
+					<option value="wintersport">Wintersport</option>
+					<option value="wandern">Wandern</option>
+				</select>
 			</div>
 
 			<Button onclick={runComparison} disabled={loading}>

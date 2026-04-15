@@ -15,4 +15,5 @@ type CompareSubscription struct {
 	SendEmail       bool                   `json:"send_email"`
 	SendSignal      bool                   `json:"send_signal"`
 	DisplayConfig   map[string]interface{} `json:"display_config,omitempty"`
+	ActivityProfile *string                `json:"activity_profile,omitempty"`
 }
