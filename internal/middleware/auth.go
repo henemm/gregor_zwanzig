@@ -47,6 +47,12 @@ func UserIDFromContext(ctx context.Context) string {
 	return uid
 }
 
+// ContextWithUserID returns a new context with the given userId set.
+// Used by AuthMiddleware internally and by tests to simulate authenticated requests.
+func ContextWithUserID(ctx context.Context, userId string) context.Context {
+	return context.WithValue(ctx, userIDContextKey, userId)
+}
+
 func validateSession(value, secret string) (string, bool) {
 	parts := strings.SplitN(value, ".", 3)
 	if len(parts) != 3 {

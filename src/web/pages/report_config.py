@@ -61,6 +61,7 @@ def show_report_config_dialog(trip: Trip, user_id: str = "default") -> None:
 
         email_checkbox = ui.checkbox("E-Mail senden", value=config.send_email)
         signal_checkbox = ui.checkbox("Signal senden", value=config.send_signal)
+        telegram_checkbox = ui.checkbox("Telegram senden", value=config.send_telegram)
         sms_checkbox = ui.checkbox("SMS senden (coming soon)", value=config.send_sms)
 
         # Alerts Section
@@ -122,6 +123,7 @@ def show_report_config_dialog(trip: Trip, user_id: str = "default") -> None:
                     email_checkbox,
                     signal_checkbox,
                     sms_checkbox,
+                    telegram_checkbox,
                     alert_checkbox,
                     elev_input,
                     compact_summary_cb,
@@ -143,6 +145,7 @@ def make_save_handler(
     email_checkbox,
     signal_checkbox,
     sms_checkbox,
+    telegram_checkbox,
     alert_checkbox,
     elev_input,
     compact_summary_cb,
@@ -212,6 +215,7 @@ def make_save_handler(
             send_email=email_checkbox.value,
             send_signal=signal_checkbox.value,
             send_sms=sms_checkbox.value,
+            send_telegram=telegram_checkbox.value,
             alert_on_changes=alert_checkbox.value,
             change_threshold_temp_c=old_rc.change_threshold_temp_c if old_rc else 5.0,
             change_threshold_wind_kmh=old_rc.change_threshold_wind_kmh if old_rc else 20.0,

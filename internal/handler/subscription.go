@@ -6,12 +6,14 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/model"
 	"github.com/henemm/gregor-api/internal/store"
 )
 
 func SubscriptionsHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
 		subs, err := s.LoadSubscriptions()
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -27,6 +29,7 @@ func SubscriptionsHandler(s *store.Store) http.HandlerFunc {
 
 func SubscriptionHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
 
 		sub, err := s.LoadSubscription(id)
@@ -87,6 +90,7 @@ func validateSubscription(sub model.CompareSubscription) error {
 
 func CreateSubscriptionHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
 		var sub model.CompareSubscription
 		if err := json.NewDecoder(r.Body).Decode(&sub); err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -141,6 +145,7 @@ func CreateSubscriptionHandler(s *store.Store) http.HandlerFunc {
 
 func UpdateSubscriptionHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
 
 		existing, err := s.LoadSubscription(id)
@@ -195,6 +200,7 @@ func UpdateSubscriptionHandler(s *store.Store) http.HandlerFunc {
 
 func DeleteSubscriptionHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
 
 		existing, err := s.LoadSubscription(id)

@@ -1581,6 +1581,17 @@ def render_compare() -> None:
 
                 ui.notify(f"E-Mail gesendet an {settings.mail_to}", type="positive")
 
+                # Also send via Telegram if configured
+                if settings.can_send_telegram():
+                    try:
+                        from outputs.telegram import TelegramOutput
+                        await asyncio.get_event_loop().run_in_executor(
+                            None, lambda: TelegramOutput(settings).send(subject, email_text)
+                        )
+                        ui.notify("Telegram gesendet", type="positive")
+                    except Exception as tg_err:
+                        logger.error(f"Telegram failed: {tg_err}")
+
             except OutputConfigError as e:
                 ui.notify(f"SMTP-Konfigurationsfehler: {e}", type="negative")
             except OutputError as e:

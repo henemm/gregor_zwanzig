@@ -5,6 +5,8 @@ import (
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/henemm/gregor-api/internal/middleware"
 )
 
 const version = "0.1.0"
@@ -71,8 +73,9 @@ func CompareProxyHandler(pythonURL string) http.HandlerFunc {
 		client := &http.Client{Timeout: 60 * time.Second}
 
 		url := pythonURL + "/api/compare"
-		if r.URL.RawQuery != "" {
-			url += "?" + r.URL.RawQuery
+		query := appendUserID(r.URL.RawQuery, middleware.UserIDFromContext(r.Context()))
+		if query != "" {
+			url += "?" + query
 		}
 
 		resp, err := client.Get(url)
@@ -100,8 +103,9 @@ func ProxyPostHandler(pythonURL, path string) http.HandlerFunc {
 		client := &http.Client{Timeout: 120 * time.Second}
 
 		url := pythonURL + path
-		if r.URL.RawQuery != "" {
-			url += "?" + r.URL.RawQuery
+		query := appendUserID(r.URL.RawQuery, middleware.UserIDFromContext(r.Context()))
+		if query != "" {
+			url += "?" + query
 		}
 
 		resp, err := client.Post(url, "application/json", nil)
@@ -119,13 +123,25 @@ func ProxyPostHandler(pythonURL, path string) http.HandlerFunc {
 	}
 }
 
+// appendUserID adds user_id to a query string if userId is non-empty.
+func appendUserID(rawQuery, userID string) string {
+	if userID == "" {
+		return rawQuery
+	}
+	if rawQuery == "" {
+		return "user_id=" + userID
+	}
+	return rawQuery + "&user_id=" + userID
+}
+
 func GpxProxyHandler(pythonURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		client := &http.Client{Timeout: 30 * time.Second}
 
 		url := pythonURL + "/api/gpx/parse"
-		if r.URL.RawQuery != "" {
-			url += "?" + r.URL.RawQuery
+		query := appendUserID(r.URL.RawQuery, middleware.UserIDFromContext(r.Context()))
+		if query != "" {
+			url += "?" + query
 		}
 
 		req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, url, r.Body)

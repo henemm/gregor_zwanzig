@@ -3,159 +3,379 @@ platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
 rootdir: /home/hem/gregor_zwanzig
 configfile: pyproject.toml
 plugins: anyio-4.12.0
-collected 9 items
+collected 15 items
 
-tests/tdd/test_channel_switch_subscription.py FFFFFFFFF                  [100%]
+tests/tdd/test_telegram_output.py FFFFFFFFFFFFFFF                        [100%]
 
 =================================== FAILURES ===================================
-______ TestCompareSubscriptionChannelFields.test_default_send_email_true _______
+_________________________ test_telegram_output_import __________________________
 
-self = <tdd.test_channel_switch_subscription.TestCompareSubscriptionChannelFields object at 0x7ecc3ec13e00>
+    def test_telegram_output_import():
+        """GIVEN outputs package WHEN importing TelegramOutput THEN class exists."""
+>       from outputs.telegram import TelegramOutput
+E       ModuleNotFoundError: No module named 'outputs.telegram'
 
-    def test_default_send_email_true(self):
-        """
-        GIVEN: CompareSubscription created without send_email
-        WHEN: accessing send_email
-        THEN: defaults to True
-        """
-        from app.user import CompareSubscription
-        sub = CompareSubscription(id="test", name="Test")
->       assert sub.send_email is True
-               ^^^^^^^^^^^^^^
-E       AttributeError: 'CompareSubscription' object has no attribute 'send_email'
+tests/tdd/test_telegram_output.py:20: ModuleNotFoundError
+___________________ test_telegram_output_implements_protocol ___________________
 
-tests/tdd/test_channel_switch_subscription.py:29: AttributeError
-_____ TestCompareSubscriptionChannelFields.test_default_send_signal_false ______
+    def test_telegram_output_implements_protocol():
+        """GIVEN TelegramOutput WHEN checking protocol THEN satisfies OutputChannel."""
+        from outputs.base import OutputChannel
+>       from outputs.telegram import TelegramOutput
+E       ModuleNotFoundError: No module named 'outputs.telegram'
 
-self = <tdd.test_channel_switch_subscription.TestCompareSubscriptionChannelFields object at 0x7ecc3e0cef00>
+tests/tdd/test_telegram_output.py:27: ModuleNotFoundError
+__________________________ test_telegram_output_name ___________________________
 
-    def test_default_send_signal_false(self):
-        """
-        GIVEN: CompareSubscription created without send_signal
-        WHEN: accessing send_signal
-        THEN: defaults to False
-        """
-        from app.user import CompareSubscription
-        sub = CompareSubscription(id="test", name="Test")
->       assert sub.send_signal is False
-               ^^^^^^^^^^^^^^^
-E       AttributeError: 'CompareSubscription' object has no attribute 'send_signal'
+    def test_telegram_output_name():
+        """GIVEN TelegramOutput WHEN accessing .name THEN returns telegram."""
+>       from outputs.telegram import TelegramOutput
+E       ModuleNotFoundError: No module named 'outputs.telegram'
 
-tests/tdd/test_channel_switch_subscription.py:39: AttributeError
-________ TestCompareSubscriptionChannelFields.test_explicit_signal_true ________
+tests/tdd/test_telegram_output.py:36: ModuleNotFoundError
+_________________________ test_telegram_config_fields __________________________
 
-self = <tdd.test_channel_switch_subscription.TestCompareSubscriptionChannelFields object at 0x7ecc3e0cfe60>
-
-    def test_explicit_signal_true(self):
-        """
-        GIVEN: CompareSubscription with send_signal=True
-        WHEN: accessing send_signal
-        THEN: returns True
-        """
-        from app.user import CompareSubscription
->       sub = CompareSubscription(id="test", name="Test", send_signal=True)
-              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-E       TypeError: CompareSubscription.__init__() got an unexpected keyword argument 'send_signal'
-
-tests/tdd/test_channel_switch_subscription.py:48: TypeError
-________ TestCompareSubscriptionChannelFields.test_explicit_email_false ________
-
-self = <tdd.test_channel_switch_subscription.TestCompareSubscriptionChannelFields object at 0x7ecc3e0cfda0>
-
-    def test_explicit_email_false(self):
-        """
-        GIVEN: CompareSubscription with send_email=False
-        WHEN: accessing send_email
-        THEN: returns False
-        """
-        from app.user import CompareSubscription
->       sub = CompareSubscription(id="test", name="Test", send_email=False)
-              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-E       TypeError: CompareSubscription.__init__() got an unexpected keyword argument 'send_email'
-
-tests/tdd/test_channel_switch_subscription.py:58: TypeError
-_______ TestCompareSubscriptionChannelFields.test_both_channels_enabled ________
-
-self = <tdd.test_channel_switch_subscription.TestCompareSubscriptionChannelFields object at 0x7ecc3e0cfcb0>
-
-    def test_both_channels_enabled(self):
-        """
-        GIVEN: CompareSubscription with both channels enabled
-        WHEN: accessing both fields
-        THEN: both are True
-        """
-        from app.user import CompareSubscription
->       sub = CompareSubscription(
-            id="test", name="Test", send_email=True, send_signal=True
+    def test_telegram_config_fields():
+        """GIVEN Settings WHEN creating with telegram fields THEN accessible."""
+        from app.config import Settings
+        settings = Settings(
+            telegram_bot_token="123456:ABC-DEF",
+            telegram_chat_id="987654321",
         )
-E       TypeError: CompareSubscription.__init__() got an unexpected keyword argument 'send_email'
+>       assert settings.telegram_bot_token == "123456:ABC-DEF"
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-tests/tdd/test_channel_switch_subscription.py:68: TypeError
-____________ TestLoaderChannelRoundTrip.test_save_load_with_signal _____________
+tests/tdd/test_telegram_output.py:55: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = <tdd.test_channel_switch_subscription.TestLoaderChannelRoundTrip object at 0x7ecc3e0cfc20>
+self = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor...rom=None, sms_to=None, signal_phone='365a2c91-2d6c-4bb5-aff7-b04365744ac3', signal_api_key='241852', signal_api_url='')
+item = 'telegram_bot_token'
 
-    def test_save_load_with_signal(self):
+    def __getattr__(self, item: str) -> Any:
+        private_attributes = object.__getattribute__(self, '__private_attributes__')
+        if item in private_attributes:
+            attribute = private_attributes[item]
+            if hasattr(attribute, '__get__'):
+                return attribute.__get__(self, type(self))  # type: ignore
+    
+            try:
+                # Note: self.__pydantic_private__ cannot be None if self.__private_attributes__ has items
+                return self.__pydantic_private__[item]  # type: ignore
+            except KeyError as exc:
+                raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}') from exc
+        else:
+            # `__pydantic_extra__` can fail to be set if the model is not yet fully initialized.
+            # See `BaseModel.__repr_args__` for more details
+            try:
+                pydantic_extra = object.__getattribute__(self, '__pydantic_extra__')
+            except AttributeError:
+                pydantic_extra = None
+    
+            if pydantic_extra and item in pydantic_extra:
+                return pydantic_extra[item]
+            else:
+                if hasattr(self.__class__, item):
+                    return super().__getattribute__(item)  # Raises AttributeError if appropriate
+                else:
+                    # this is the current error
+>                   raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+E                   AttributeError: 'Settings' object has no attribute 'telegram_bot_token'
+
+.venv/lib/python3.12/site-packages/pydantic/main.py:1026: AttributeError
+_________________________ test_telegram_can_send_true __________________________
+
+    def test_telegram_can_send_true():
+        """GIVEN Settings with token and chat_id WHEN can_send_telegram THEN True."""
+        from app.config import Settings
+        settings = Settings(telegram_bot_token="123:ABC", telegram_chat_id="12345")
+>       assert settings.can_send_telegram() is True
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_telegram_output.py:63: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor...rom=None, sms_to=None, signal_phone='365a2c91-2d6c-4bb5-aff7-b04365744ac3', signal_api_key='241852', signal_api_url='')
+item = 'can_send_telegram'
+
+    def __getattr__(self, item: str) -> Any:
+        private_attributes = object.__getattribute__(self, '__private_attributes__')
+        if item in private_attributes:
+            attribute = private_attributes[item]
+            if hasattr(attribute, '__get__'):
+                return attribute.__get__(self, type(self))  # type: ignore
+    
+            try:
+                # Note: self.__pydantic_private__ cannot be None if self.__private_attributes__ has items
+                return self.__pydantic_private__[item]  # type: ignore
+            except KeyError as exc:
+                raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}') from exc
+        else:
+            # `__pydantic_extra__` can fail to be set if the model is not yet fully initialized.
+            # See `BaseModel.__repr_args__` for more details
+            try:
+                pydantic_extra = object.__getattribute__(self, '__pydantic_extra__')
+            except AttributeError:
+                pydantic_extra = None
+    
+            if pydantic_extra and item in pydantic_extra:
+                return pydantic_extra[item]
+            else:
+                if hasattr(self.__class__, item):
+                    return super().__getattribute__(item)  # Raises AttributeError if appropriate
+                else:
+                    # this is the current error
+>                   raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+E                   AttributeError: 'Settings' object has no attribute 'can_send_telegram'
+
+.venv/lib/python3.12/site-packages/pydantic/main.py:1026: AttributeError
+____________________ test_telegram_can_send_false_no_token _____________________
+
+    def test_telegram_can_send_false_no_token():
+        """GIVEN Settings without token WHEN can_send_telegram THEN False."""
+        from app.config import Settings
+        settings = Settings(telegram_bot_token="", telegram_chat_id="12345")
+>       assert settings.can_send_telegram() is False
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_telegram_output.py:70: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor...rom=None, sms_to=None, signal_phone='365a2c91-2d6c-4bb5-aff7-b04365744ac3', signal_api_key='241852', signal_api_url='')
+item = 'can_send_telegram'
+
+    def __getattr__(self, item: str) -> Any:
+        private_attributes = object.__getattribute__(self, '__private_attributes__')
+        if item in private_attributes:
+            attribute = private_attributes[item]
+            if hasattr(attribute, '__get__'):
+                return attribute.__get__(self, type(self))  # type: ignore
+    
+            try:
+                # Note: self.__pydantic_private__ cannot be None if self.__private_attributes__ has items
+                return self.__pydantic_private__[item]  # type: ignore
+            except KeyError as exc:
+                raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}') from exc
+        else:
+            # `__pydantic_extra__` can fail to be set if the model is not yet fully initialized.
+            # See `BaseModel.__repr_args__` for more details
+            try:
+                pydantic_extra = object.__getattribute__(self, '__pydantic_extra__')
+            except AttributeError:
+                pydantic_extra = None
+    
+            if pydantic_extra and item in pydantic_extra:
+                return pydantic_extra[item]
+            else:
+                if hasattr(self.__class__, item):
+                    return super().__getattribute__(item)  # Raises AttributeError if appropriate
+                else:
+                    # this is the current error
+>                   raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+E                   AttributeError: 'Settings' object has no attribute 'can_send_telegram'
+
+.venv/lib/python3.12/site-packages/pydantic/main.py:1026: AttributeError
+___________________ test_telegram_can_send_false_no_chat_id ____________________
+
+    def test_telegram_can_send_false_no_chat_id():
+        """GIVEN Settings without chat_id WHEN can_send_telegram THEN False."""
+        from app.config import Settings
+        settings = Settings(telegram_bot_token="123:ABC", telegram_chat_id="")
+>       assert settings.can_send_telegram() is False
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_telegram_output.py:77: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor...rom=None, sms_to=None, signal_phone='365a2c91-2d6c-4bb5-aff7-b04365744ac3', signal_api_key='241852', signal_api_url='')
+item = 'can_send_telegram'
+
+    def __getattr__(self, item: str) -> Any:
+        private_attributes = object.__getattribute__(self, '__private_attributes__')
+        if item in private_attributes:
+            attribute = private_attributes[item]
+            if hasattr(attribute, '__get__'):
+                return attribute.__get__(self, type(self))  # type: ignore
+    
+            try:
+                # Note: self.__pydantic_private__ cannot be None if self.__private_attributes__ has items
+                return self.__pydantic_private__[item]  # type: ignore
+            except KeyError as exc:
+                raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}') from exc
+        else:
+            # `__pydantic_extra__` can fail to be set if the model is not yet fully initialized.
+            # See `BaseModel.__repr_args__` for more details
+            try:
+                pydantic_extra = object.__getattribute__(self, '__pydantic_extra__')
+            except AttributeError:
+                pydantic_extra = None
+    
+            if pydantic_extra and item in pydantic_extra:
+                return pydantic_extra[item]
+            else:
+                if hasattr(self.__class__, item):
+                    return super().__getattribute__(item)  # Raises AttributeError if appropriate
+                else:
+                    # this is the current error
+>                   raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+E                   AttributeError: 'Settings' object has no attribute 'can_send_telegram'
+
+.venv/lib/python3.12/site-packages/pydantic/main.py:1026: AttributeError
+_________________________ test_telegram_output_factory _________________________
+
+    def test_telegram_output_factory():
+        """GIVEN get_channel WHEN requesting telegram THEN returns TelegramOutput."""
+        from outputs.base import get_channel
+        from app.config import Settings
+        settings = Settings(telegram_bot_token="123:ABC", telegram_chat_id="12345")
+>       channel = get_channel("telegram", settings)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_telegram_output.py:90: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'telegram'
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor...rom=None, sms_to=None, signal_phone='365a2c91-2d6c-4bb5-aff7-b04365744ac3', signal_api_key='241852', signal_api_url='')
+
+    def get_channel(name: str, settings: "Settings") -> OutputChannel:
         """
-        GIVEN: CompareSubscription with send_signal=True
+        Factory function to create output channel instances.
+    
+        Args:
+            name: Channel identifier (e.g., "console", "email")
+            settings: Application settings for channel configuration
+    
+        Returns:
+            OutputChannel instance
+    
+        Raises:
+            ValueError: If channel is not known
+            OutputConfigError: If channel configuration is incomplete
+    
+        Example:
+            >>> channel = get_channel("email", settings)
+            >>> channel.send("Report", "Content here...")
+        """
+        # Import here to avoid circular imports
+        from outputs.console import ConsoleOutput
+        from outputs.email import EmailOutput
+    
+        if name == "console":
+            return ConsoleOutput()
+        elif name == "email":
+            return EmailOutput(settings)
+        elif name == "sms":
+            from outputs.sms import SMSOutput
+            return SMSOutput(settings)
+        elif name == "signal":
+            from outputs.signal import SignalOutput
+            return SignalOutput(settings)
+        elif name == "none":
+            return NullOutput()
+        else:
+>           raise ValueError(f"Unknown output channel: {name}")
+E           ValueError: Unknown output channel: telegram
+
+src/outputs/base.py:102: ValueError
+______________________ test_telegram_trip_config_default _______________________
+
+    def test_telegram_trip_config_default():
+        """GIVEN TripReportConfig WHEN created without send_telegram THEN False."""
+        from app.models import TripReportConfig
+        config = TripReportConfig(trip_id="test")
+>       assert config.send_telegram is False
+               ^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'TripReportConfig' object has no attribute 'send_telegram'
+
+tests/tdd/test_telegram_output.py:103: AttributeError
+______________________ test_telegram_trip_config_explicit ______________________
+
+    def test_telegram_trip_config_explicit():
+        """GIVEN TripReportConfig WHEN send_telegram=True THEN True."""
+        from app.models import TripReportConfig
+>       config = TripReportConfig(trip_id="test", send_telegram=True)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: TripReportConfig.__init__() got an unexpected keyword argument 'send_telegram'
+
+tests/tdd/test_telegram_output.py:109: TypeError
+______________________ test_telegram_subscription_default ______________________
+
+    def test_telegram_subscription_default():
+        """GIVEN CompareSubscription WHEN created without send_telegram THEN False."""
+        from app.user import CompareSubscription
+        sub = CompareSubscription(id="test", name="Test")
+>       assert sub.send_telegram is False
+               ^^^^^^^^^^^^^^^^^
+E       AttributeError: 'CompareSubscription' object has no attribute 'send_telegram'
+
+tests/tdd/test_telegram_output.py:117: AttributeError
+_____________________ test_telegram_subscription_explicit ______________________
+
+    def test_telegram_subscription_explicit():
+        """GIVEN CompareSubscription WHEN send_telegram=True THEN True."""
+        from app.user import CompareSubscription
+>       sub = CompareSubscription(id="test", name="Test", send_telegram=True)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: CompareSubscription.__init__() got an unexpected keyword argument 'send_telegram'
+
+tests/tdd/test_telegram_output.py:123: TypeError
+_______ TestLoaderTelegramRoundTrip.test_subscription_save_load_telegram _______
+
+self = <tdd.test_telegram_output.TestLoaderTelegramRoundTrip object at 0x72cca0cd8d40>
+
+    def test_subscription_save_load_telegram(self):
+        """
+        GIVEN: CompareSubscription with send_telegram=True
         WHEN: saved and loaded back
-        THEN: send_signal round-trips correctly
+        THEN: send_telegram round-trips correctly
         """
         from app.user import CompareSubscription
         from app.loader import save_compare_subscription, load_compare_subscriptions
     
 >       sub = CompareSubscription(
-            id="channel-test", name="Channel Test",
-            send_email=True, send_signal=True,
+            id="telegram-test", name="Telegram Test",
+            send_email=True, send_signal=False, send_telegram=True,
         )
-E       TypeError: CompareSubscription.__init__() got an unexpected keyword argument 'send_email'
+E       TypeError: CompareSubscription.__init__() got an unexpected keyword argument 'send_telegram'
 
-tests/tdd/test_channel_switch_subscription.py:91: TypeError
-_____________ TestLoaderChannelRoundTrip.test_save_load_email_only _____________
+tests/tdd/test_telegram_output.py:144: TypeError
+__ TestLoaderTelegramRoundTrip.test_subscription_json_contains_send_telegram ___
 
-self = <tdd.test_channel_switch_subscription.TestLoaderChannelRoundTrip object at 0x7ecc3e0cf8f0>
+self = <tdd.test_telegram_output.TestLoaderTelegramRoundTrip object at 0x72cca0cd8e30>
 
-    def test_save_load_email_only(self):
+    def test_subscription_json_contains_send_telegram(self):
         """
-        GIVEN: CompareSubscription with default channels (email only)
-        WHEN: saved and loaded back
-        THEN: send_email=True, send_signal=False
+        GIVEN: CompareSubscription with send_telegram=True
+        WHEN: saved to JSON
+        THEN: JSON contains send_telegram key
         """
         from app.user import CompareSubscription
-        from app.loader import save_compare_subscription, load_compare_subscriptions
+        from app.loader import save_compare_subscription, get_compare_subscriptions_file
     
-        sub = CompareSubscription(
-            id="email-only-test", name="Email Only",
+>       sub = CompareSubscription(
+            id="tg-json-check", name="TG JSON Check",
+            send_telegram=True,
         )
-        save_compare_subscription(sub, user_id="__test_email_only__")
-        loaded = load_compare_subscriptions(user_id="__test_email_only__")
-    
-        found = [s for s in loaded if s.id == "email-only-test"]
-        assert len(found) == 1
->       assert found[0].send_email is True
-               ^^^^^^^^^^^^^^^^^^^
-E       AttributeError: 'CompareSubscription' object has no attribute 'send_email'
+E       TypeError: CompareSubscription.__init__() got an unexpected keyword argument 'send_telegram'
 
-tests/tdd/test_channel_switch_subscription.py:120: AttributeError
-______ TestLoaderChannelRoundTrip.test_backward_compat_no_channel_fields _______
+tests/tdd/test_telegram_output.py:166: TypeError
+______ TestLoaderTelegramRoundTrip.test_backward_compat_no_telegram_field ______
 
-self = <tdd.test_channel_switch_subscription.TestLoaderChannelRoundTrip object at 0x7ecc3e0cf7d0>
+self = <tdd.test_telegram_output.TestLoaderTelegramRoundTrip object at 0x72cca0cda210>
 
-    def test_backward_compat_no_channel_fields(self):
+    def test_backward_compat_no_telegram_field(self):
         """
-        GIVEN: Legacy JSON without send_email/send_signal fields
+        GIVEN: Legacy JSON without send_telegram field
         WHEN: loaded via load_compare_subscriptions
-        THEN: defaults to send_email=True, send_signal=False
+        THEN: defaults to send_telegram=False
         """
         from app.loader import load_compare_subscriptions, get_compare_subscriptions_file
     
-        # Write legacy JSON directly
-        path = get_compare_subscriptions_file("__test_legacy_ch__")
+        path = get_compare_subscriptions_file("__test_legacy_tg__")
         path.parent.mkdir(parents=True, exist_ok=True)
         legacy = {
             "subscriptions": [{
-                "id": "legacy-sub",
-                "name": "Legacy Sub",
+                "id": "legacy-tg",
+                "name": "Legacy No Telegram",
                 "enabled": True,
                 "locations": ["*"],
                 "forecast_hours": 48,
@@ -163,46 +383,34 @@ self = <tdd.test_channel_switch_subscription.TestLoaderChannelRoundTrip object a
                 "time_window_end": 16,
                 "schedule": "weekly",
                 "weekday": 4,
+                "send_email": True,
+                "send_signal": False,
             }]
         }
         with open(path, "w") as f:
             json.dump(legacy, f)
     
-        loaded = load_compare_subscriptions(user_id="__test_legacy_ch__")
+        loaded = load_compare_subscriptions(user_id="__test_legacy_tg__")
         assert len(loaded) == 1
->       assert loaded[0].send_email is True
-               ^^^^^^^^^^^^^^^^^^^^
-E       AttributeError: 'CompareSubscription' object has no attribute 'send_email'
+>       assert loaded[0].send_telegram is False
+               ^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'CompareSubscription' object has no attribute 'send_telegram'
 
-tests/tdd/test_channel_switch_subscription.py:152: AttributeError
-_________ TestLoaderChannelRoundTrip.test_json_contains_channel_fields _________
-
-self = <tdd.test_channel_switch_subscription.TestLoaderChannelRoundTrip object at 0x7ecc3e0cf980>
-
-    def test_json_contains_channel_fields(self):
-        """
-        GIVEN: CompareSubscription with send_signal=True
-        WHEN: saved to JSON
-        THEN: JSON contains send_email and send_signal keys
-        """
-        from app.user import CompareSubscription
-        from app.loader import save_compare_subscription, get_compare_subscriptions_file
-    
->       sub = CompareSubscription(
-            id="json-check", name="JSON Check",
-            send_email=False, send_signal=True,
-        )
-E       TypeError: CompareSubscription.__init__() got an unexpected keyword argument 'send_email'
-
-tests/tdd/test_channel_switch_subscription.py:164: TypeError
+tests/tdd/test_telegram_output.py:211: AttributeError
 =========================== short test summary info ============================
-FAILED tests/tdd/test_channel_switch_subscription.py::TestCompareSubscriptionChannelFields::test_default_send_email_true
-FAILED tests/tdd/test_channel_switch_subscription.py::TestCompareSubscriptionChannelFields::test_default_send_signal_false
-FAILED tests/tdd/test_channel_switch_subscription.py::TestCompareSubscriptionChannelFields::test_explicit_signal_true
-FAILED tests/tdd/test_channel_switch_subscription.py::TestCompareSubscriptionChannelFields::test_explicit_email_false
-FAILED tests/tdd/test_channel_switch_subscription.py::TestCompareSubscriptionChannelFields::test_both_channels_enabled
-FAILED tests/tdd/test_channel_switch_subscription.py::TestLoaderChannelRoundTrip::test_save_load_with_signal
-FAILED tests/tdd/test_channel_switch_subscription.py::TestLoaderChannelRoundTrip::test_save_load_email_only
-FAILED tests/tdd/test_channel_switch_subscription.py::TestLoaderChannelRoundTrip::test_backward_compat_no_channel_fields
-FAILED tests/tdd/test_channel_switch_subscription.py::TestLoaderChannelRoundTrip::test_json_contains_channel_fields
-============================== 9 failed in 0.06s ===============================
+FAILED tests/tdd/test_telegram_output.py::test_telegram_output_import - Modul...
+FAILED tests/tdd/test_telegram_output.py::test_telegram_output_implements_protocol
+FAILED tests/tdd/test_telegram_output.py::test_telegram_output_name - ModuleN...
+FAILED tests/tdd/test_telegram_output.py::test_telegram_config_fields - Attri...
+FAILED tests/tdd/test_telegram_output.py::test_telegram_can_send_true - Attri...
+FAILED tests/tdd/test_telegram_output.py::test_telegram_can_send_false_no_token
+FAILED tests/tdd/test_telegram_output.py::test_telegram_can_send_false_no_chat_id
+FAILED tests/tdd/test_telegram_output.py::test_telegram_output_factory - Valu...
+FAILED tests/tdd/test_telegram_output.py::test_telegram_trip_config_default
+FAILED tests/tdd/test_telegram_output.py::test_telegram_trip_config_explicit
+FAILED tests/tdd/test_telegram_output.py::test_telegram_subscription_default
+FAILED tests/tdd/test_telegram_output.py::test_telegram_subscription_explicit
+FAILED tests/tdd/test_telegram_output.py::TestLoaderTelegramRoundTrip::test_subscription_save_load_telegram
+FAILED tests/tdd/test_telegram_output.py::TestLoaderTelegramRoundTrip::test_subscription_json_contains_send_telegram
+FAILED tests/tdd/test_telegram_output.py::TestLoaderTelegramRoundTrip::test_backward_compat_no_telegram_field
+============================== 15 failed in 0.27s ==============================

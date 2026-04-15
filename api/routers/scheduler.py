@@ -159,3 +159,15 @@ def _send_subscription(sub, subject: str, html_body: str, text_body: str, settin
                 logger.error(f"Signal failed for {sub.name}: {e}")
         else:
             logger.warning(f"Signal requested but not configured: {sub.name}")
+
+    if sub.send_telegram:
+        if settings.can_send_telegram():
+            try:
+                from outputs.telegram import TelegramOutput
+
+                TelegramOutput(settings).send(subject, text_body)
+                logger.info(f"Telegram sent for: {sub.name}")
+            except Exception as e:
+                logger.error(f"Telegram failed for {sub.name}: {e}")
+        else:
+            logger.warning(f"Telegram requested but not configured: {sub.name}")

@@ -243,7 +243,7 @@ def _execute_subscription(sub: "CompareSubscription") -> None:
 
         subject, html_body, text_body = run_comparison_for_subscription(sub, all_locations)
 
-        if not sub.send_email and not sub.send_signal:
+        if not sub.send_email and not sub.send_signal and not sub.send_telegram:
             logger.warning(f"No channels configured for subscription: {sub.name}")
             return
 
@@ -265,6 +265,17 @@ def _execute_subscription(sub: "CompareSubscription") -> None:
                     logger.error(f"Signal failed for {sub.name}: {e}")
             else:
                 logger.warning(f"Signal requested but not configured: {sub.name}")
+
+        if sub.send_telegram:
+            if settings.can_send_telegram():
+                try:
+                    from outputs.telegram import TelegramOutput
+                    TelegramOutput(settings).send(subject, text_body)
+                    logger.info(f"Telegram sent for: {sub.name}")
+                except Exception as e:
+                    logger.error(f"Telegram failed for {sub.name}: {e}")
+            else:
+                logger.warning(f"Telegram requested but not configured: {sub.name}")
 
     except Exception as e:
         logger.error(f"Failed to execute subscription {sub.name}: {e}")
