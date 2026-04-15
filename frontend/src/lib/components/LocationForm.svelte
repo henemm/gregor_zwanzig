@@ -26,7 +26,7 @@
 	let dmsInput = $state('');
 
 	function parseDMS(input: string): { lat: number; lon: number } | null {
-		const pattern = /(\d+)°(\d+)'([\d.]+)"([NS])\s+(\d+)°(\d+)'([\d.]+)"([EW])/;
+		const pattern = /(\d+)°(\d+)'([\d.]+)"([NS])[,\s]+(\d+)°(\d+)'([\d.]+)"([EW])/;
 		const m = input.match(pattern);
 		if (!m) return null;
 		let parsedLat = +m[1] + +m[2] / 60 + +m[3] / 3600;
@@ -64,7 +64,7 @@
 			name: name.trim(),
 			lat: Number(lat),
 			lon: Number(lon),
-			elevation_m: Number(elevationM) || undefined,
+			elevation_m: elevationM !== '' ? Number(elevationM) : undefined,
 			region: region.trim() || undefined,
 			bergfex_slug: bergfexSlug.trim() || undefined,
 			activity_profile: (activityProfile as Location['activity_profile']) || undefined,

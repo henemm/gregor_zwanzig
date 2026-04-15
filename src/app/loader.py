@@ -147,10 +147,10 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
         rc_data = data["report_config"]
         dc_data = data.get("display_config", {})
         report_config = TripReportConfig(
-            trip_id=rc_data["trip_id"],
+            trip_id=rc_data.get("trip_id", data["id"]),
             enabled=rc_data.get("enabled", True),
-            morning_time=time.fromisoformat(rc_data["morning_time"]),
-            evening_time=time.fromisoformat(rc_data["evening_time"]),
+            morning_time=time.fromisoformat(rc_data.get("morning_time", "07:00:00")),
+            evening_time=time.fromisoformat(rc_data.get("evening_time", "18:00:00")),
             send_email=rc_data.get("send_email", True),
             send_sms=rc_data.get("send_sms", False),
             send_signal=rc_data.get("send_signal", False),
@@ -168,7 +168,7 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
                 "multi_day_trend_reports",
                 dc_data.get("multi_day_trend_reports", ["evening"]),
             ),
-            updated_at=datetime.fromisoformat(rc_data["updated_at"]),
+            updated_at=datetime.fromisoformat(rc_data["updated_at"]) if "updated_at" in rc_data else datetime.now(),
         )
 
     return Trip(
