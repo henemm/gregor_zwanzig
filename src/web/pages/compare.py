@@ -42,22 +42,35 @@ def filter_data_by_hours(
     return [dp for dp in data if start_hour <= dp.ts.hour < end_hour]
 
 
-def calculate_score(metrics: Dict[str, Any]) -> int:
+def calculate_score(
+    metrics: Dict[str, Any],
+    profile: Optional["LocationActivityProfile"] = None,
+) -> int:
     """
-    Calculate a score for ski conditions (higher = better).
+    Calculate a weather score based on activity profile (higher = better).
 
-    Factors considered:
-    - Schneehöhe: Basis für gutes Skifahren
-    - Neuschnee: Frischer Powder
-    - Sonnenstunden: Gute Sicht, angenehm
-    - Wind/Böen: Liftbetrieb, Komfort
-    - Wolken: Sicht, Stimmung
-    - Temperatur: Ideale Kälte für guten Schnee
-    - Niederschlag: Regen ist schlecht
+    SPEC: docs/specs/modules/sport_aware_comparison.md v1.0
+
+    Dispatches to profile-specific scorer:
+    - wintersport: Snow, powder, cold temps rewarded
+    - wandern: Thunder/rain penalized, sunshine/visibility rewarded
+    - allgemein: Balanced, no snow keys
     """
-    score = 50  # Base score
+    from app.user import LocationActivityProfile
 
-    # Snow depth bonus (max +15)
+    effective = profile or LocationActivityProfile.ALLGEMEIN
+    if effective == LocationActivityProfile.WINTERSPORT:
+        return _score_wintersport(metrics)
+    elif effective == LocationActivityProfile.WANDERN:
+        return _score_wandern(metrics)
+    else:
+        return _score_allgemein(metrics)
+
+
+def _score_wintersport(metrics: Dict[str, Any]) -> int:
+    """Ski/wintersport scoring — rewards snow, penalizes rain and wind."""
+    score = 50
+
     snow_depth = metrics.get("snow_depth_cm")
     if snow_depth:
         if snow_depth >= 100:
@@ -67,13 +80,10 @@ def calculate_score(metrics: Dict[str, Any]) -> int:
         elif snow_depth >= 30:
             score += 5
 
-    # New snow bonus (max +25)
     snow_cm = metrics.get("snow_new_cm", 0)
     if snow_cm:
-        snow_bonus = min(25, int(snow_cm * 2))
-        score += snow_bonus
+        score += min(25, int(snow_cm * 2))
 
-    # Sunny hours bonus (max +15)
     sunny_hours = metrics.get("sunny_hours")
     if sunny_hours is not None:
         if sunny_hours >= 6:
@@ -83,7 +93,6 @@ def calculate_score(metrics: Dict[str, Any]) -> int:
         elif sunny_hours >= 2:
             score += 5
 
-    # Wind penalty (max -20)
     wind_max = metrics.get("wind_max")
     if wind_max:
         if wind_max > 60:
@@ -93,7 +102,6 @@ def calculate_score(metrics: Dict[str, Any]) -> int:
         elif wind_max > 25:
             score -= 5
 
-    # Gust penalty (max -10)
     gust_max = metrics.get("gust_max")
     if gust_max:
         if gust_max > 80:
@@ -101,7 +109,6 @@ def calculate_score(metrics: Dict[str, Any]) -> int:
         elif gust_max > 60:
             score -= 5
 
-    # Cloud penalty (max -10)
     cloud_avg = metrics.get("cloud_avg")
     if cloud_avg is not None:
         if cloud_avg > 80:
@@ -109,30 +116,151 @@ def calculate_score(metrics: Dict[str, Any]) -> int:
         elif cloud_avg > 60:
             score -= 5
 
-    # Temperature (ideal: -5 to -10)
     temp_min = metrics.get("temp_min")
     if temp_min is not None:
         if temp_min < -20:
-            score -= 10  # Too cold
+            score -= 10
         elif temp_min > 5:
-            score -= 10  # Too warm for good snow
+            score -= 10
         elif -10 <= temp_min <= -3:
-            score += 5  # Ideal powder temperature
+            score += 5
 
-    # Precipitation penalty (rain during skiing)
     precip_mm = metrics.get("precip_mm", 0)
     if precip_mm > 0 and temp_min and temp_min > 0:
-        score -= 15  # Rain is bad
+        score -= 15
 
-    # Visibility bonus/penalty
     visibility_min = metrics.get("visibility_min")
     if visibility_min is not None:
         if visibility_min < 500:
-            score -= 10  # Very poor visibility
+            score -= 10
         elif visibility_min < 1000:
-            score -= 5  # Poor visibility
+            score -= 5
         elif visibility_min >= 10000:
-            score += 5  # Excellent visibility
+            score += 5
+
+    return max(0, min(100, score))
+
+
+def _score_wandern(metrics: Dict[str, Any]) -> int:
+    """Hiking scoring — thunder/rain critical, sunshine/visibility important."""
+    score = 50
+
+    # Thunder (max -25)
+    thunder = metrics.get("thunder_level")
+    if thunder == "HIGH":
+        score -= 25
+    elif thunder == "MED":
+        score -= 15
+
+    # Precipitation (max -20)
+    precip_mm = metrics.get("precip_mm", 0)
+    if precip_mm > 5:
+        score -= 20
+    elif precip_mm > 1:
+        score -= 10
+
+    # Rain probability (max -10)
+    pop = metrics.get("pop_max_pct")
+    if pop is not None:
+        if pop > 80:
+            score -= 10
+
+    # Visibility
+    visibility_min = metrics.get("visibility_min")
+    if visibility_min is not None:
+        if visibility_min < 200:
+            score -= 20
+        elif visibility_min < 1000:
+            score -= 10
+        elif visibility_min >= 5000:
+            score += 5
+
+    # Wind (max -20)
+    wind_max = metrics.get("wind_max")
+    if wind_max:
+        if wind_max > 60:
+            score -= 20
+        elif wind_max > 40:
+            score -= 10
+
+    # Clouds (max -5)
+    cloud_avg = metrics.get("cloud_avg")
+    if cloud_avg is not None and cloud_avg > 90:
+        score -= 5
+
+    # Sunshine (max +20)
+    sunny_hours = metrics.get("sunny_hours")
+    if sunny_hours is not None:
+        if sunny_hours >= 7:
+            score += 20
+        elif sunny_hours >= 5:
+            score += 12
+        elif sunny_hours >= 3:
+            score += 5
+
+    # Temperature (ideal 10-20°C)
+    temp_min = metrics.get("temp_min")
+    if temp_min is not None:
+        if 10 <= temp_min <= 20:
+            score += 10
+        elif 5 <= temp_min < 10:
+            score += 5
+        elif temp_min < 0:
+            score -= 10
+
+    return max(0, min(100, score))
+
+
+def _score_allgemein(metrics: Dict[str, Any]) -> int:
+    """Balanced generic outdoor scoring — no snow, moderate weights."""
+    score = 55
+
+    # Rain (max -20)
+    precip_mm = metrics.get("precip_mm", 0)
+    if precip_mm > 5:
+        score -= 20
+    elif precip_mm > 1:
+        score -= 8
+
+    # Thunder (max -20)
+    thunder = metrics.get("thunder_level")
+    if thunder == "HIGH":
+        score -= 20
+    elif thunder == "MED":
+        score -= 10
+
+    # Wind (max -15)
+    wind_max = metrics.get("wind_max")
+    if wind_max:
+        if wind_max > 50:
+            score -= 15
+        elif wind_max > 30:
+            score -= 6
+
+    # Clouds (max -6)
+    cloud_avg = metrics.get("cloud_avg")
+    if cloud_avg is not None and cloud_avg > 80:
+        score -= 6
+
+    # Temperature
+    temp_min = metrics.get("temp_min")
+    if temp_min is not None:
+        if temp_min < -10:
+            score -= 8
+        elif temp_min > 30:
+            score -= 6
+        elif 5 <= temp_min <= 25:
+            score += 5
+
+    # Sunshine (max +15)
+    sunny_hours = metrics.get("sunny_hours")
+    if sunny_hours is not None:
+        if sunny_hours >= 6:
+            score += 15
+        elif sunny_hours >= 4:
+            score += 8
+        elif sunny_hours >= 2:
+            score += 4
 
     return max(0, min(100, score))
 
@@ -233,6 +361,7 @@ class ComparisonEngine:
         time_window: tuple[int, int],
         target_date: "date",
         forecast_hours: int = 48,
+        profile: Optional["LocationActivityProfile"] = None,
     ) -> ComparisonResult:
         """
         Run comparison for given locations and time window.
@@ -351,8 +480,18 @@ class ComparisonEngine:
                 metrics["snow_depth_cm"] = snow_depth
                 metrics["snow_new_cm"] = snow_new
 
-                # Calculate score
-                score = calculate_score(metrics)
+                # Thunder/CAPE/PoP for wandern scoring
+                thunder_levels = [dp.thunder_level for dp in filtered_data if dp.thunder_level is not None]
+                if thunder_levels:
+                    level_rank = {"NONE": 0, "MED": 1, "HIGH": 2}
+                    metrics["thunder_level"] = max(thunder_levels, key=lambda x: level_rank.get(x, 0))
+                pops = [dp.pop_pct for dp in filtered_data if dp.pop_pct is not None]
+                if pops:
+                    metrics["pop_max_pct"] = max(pops)
+
+                # Calculate score (profile-aware)
+                effective_profile = profile or getattr(loc, 'activity_profile', None)
+                score = calculate_score(metrics, profile=effective_profile)
 
                 results.append(LocationResult(
                     location=loc,
@@ -1030,7 +1169,7 @@ def fetch_forecast_for_location(loc: SavedLocation, hours: int = 48) -> Dict[str
                 forecast.data, loc.elevation_m
             )
 
-        result["score"] = calculate_score(result)
+        result["score"] = calculate_score(result, profile=getattr(loc, 'activity_profile', None) if 'loc' in dir() else None)
 
     except Exception as e:
         result["error"] = str(e)
@@ -1379,7 +1518,7 @@ def render_compare() -> None:
                             result["precip_mm"] = sum(precips)
 
                         # Recalculate score with filtered data
-                        result["score"] = calculate_score(result)
+                        result["score"] = calculate_score(result, profile=getattr(loc, 'activity_profile', None) if 'loc' in dir() else None)
 
             # Sort by score (highest first)
             results.sort(key=lambda r: r.get("score", 0), reverse=True)

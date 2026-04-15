@@ -135,6 +135,7 @@ class CompareSubscription:
     send_email: bool = True
     send_signal: bool = False
     display_config: Optional["UnifiedWeatherDisplayConfig"] = None
+    activity_profile: Optional[LocationActivityProfile] = None
 
 
 @dataclass

@@ -53,6 +53,7 @@ export interface Subscription {
 	send_email: boolean;
 	send_signal: boolean;
 	display_config?: Record<string, unknown>;
+	activity_profile?: 'wintersport' | 'wandern' | 'allgemein';
 }
 
 export interface HealthResponse {

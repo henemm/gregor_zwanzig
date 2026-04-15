@@ -15,8 +15,10 @@ def run_comparison(
     time_window_start: int = Query(9),
     time_window_end: int = Query(16),
     forecast_hours: int = Query(48),
+    activity_profile: Optional[str] = Query(None, description="Activity profile: wintersport, wandern, allgemein"),
 ):
     from app.loader import load_all_locations
+    from app.user import LocationActivityProfile
     from web.pages.compare import ComparisonEngine
 
     all_locations = load_all_locations()
@@ -41,11 +43,19 @@ def run_comparison(
             from datetime import timedelta
             td = date.today() + timedelta(days=1)
 
+    profile = None
+    if activity_profile:
+        try:
+            profile = LocationActivityProfile(activity_profile)
+        except ValueError:
+            pass  # Invalid profile → default to allgemein
+
     result = ComparisonEngine.run(
         locations=selected,
         time_window=(time_window_start, time_window_end),
         target_date=td,
         forecast_hours=forecast_hours,
+        profile=profile,
     )
 
     # Convert to JSON-serializable dict
