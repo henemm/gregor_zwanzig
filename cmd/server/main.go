@@ -37,6 +37,7 @@ func main() {
 
 	r.Get("/api/health", handler.HealthHandler(cfg.PythonCoreURL))
 	r.Get("/api/config", handler.ProxyHandler(cfg.PythonCoreURL, "/config"))
+	r.Get("/api/metrics", handler.ProxyHandler(cfg.PythonCoreURL, "/metrics"))
 	r.Get("/api/forecast", handler.ForecastHandler(omProvider))
 	r.Get("/api/locations", handler.LocationsHandler(s))
 	r.Post("/api/locations", handler.CreateLocationHandler(s))

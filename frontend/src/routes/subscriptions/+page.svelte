@@ -6,6 +6,7 @@
 	import * as Table from '$lib/components/ui/table/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import SubscriptionForm from '$lib/components/SubscriptionForm.svelte';
+	import WeatherConfigDialog from '$lib/components/WeatherConfigDialog.svelte';
 
 	let { data } = $props();
 
@@ -16,6 +17,7 @@
 	let dialogMode: 'create' | 'edit' | null = $state(null);
 	let editTarget: Subscription | null = $state(null);
 	let deleteTarget: Subscription | null = $state(null);
+	let weatherTarget: Subscription | null = $state(null);
 	let error: string | null = $state(null);
 
 	function scheduleLabel(sub: Subscription): string {
@@ -91,6 +93,20 @@
 		editTarget = null;
 		error = null;
 	}
+
+	async function handleWeatherSave(config: Record<string, unknown>) {
+		if (!weatherTarget) return;
+		error = null;
+		try {
+			await api.put(`/api/subscriptions/${weatherTarget.id}/weather-config`, config);
+			subscriptions = await api.get<Subscription[]>('/api/subscriptions');
+			weatherTarget = null;
+		} catch (e: unknown) {
+			error = (e as { error?: string; detail?: string })?.detail
+				?? (e as { error?: string })?.error
+				?? 'Fehler beim Speichern der Wetter-Konfiguration';
+		}
+	}
 </script>
 
 <div class="space-y-4">
@@ -157,6 +173,7 @@
 							</Button>
 						</Table.Cell>
 						<Table.Cell class="text-right">
+							<Button variant="ghost" size="sm" onclick={() => (weatherTarget = sub)}>Wetter</Button>
 							<Button variant="ghost" size="sm" onclick={() => openEdit(sub)}>Bearbeiten</Button>
 							<Button variant="ghost" size="sm" onclick={() => (deleteTarget = sub)}>Löschen</Button>
 						</Table.Cell>
@@ -205,3 +222,12 @@
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>
+
+<!-- Weather Config Dialog -->
+<WeatherConfigDialog
+	open={weatherTarget !== null}
+	entityName={weatherTarget?.name ?? ''}
+	currentConfig={weatherTarget?.display_config}
+	onsave={handleWeatherSave}
+	onclose={() => (weatherTarget = null)}
+/>

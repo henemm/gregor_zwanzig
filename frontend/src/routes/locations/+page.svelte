@@ -6,6 +6,7 @@
 	import * as Table from '$lib/components/ui/table/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import LocationForm from '$lib/components/LocationForm.svelte';
+	import WeatherConfigDialog from '$lib/components/WeatherConfigDialog.svelte';
 
 	let { data } = $props();
 
@@ -61,6 +62,20 @@
 		dialogMode = null;
 		editTarget = null;
 		error = null;
+	}
+
+	async function handleWeatherSave(config: Record<string, unknown>) {
+		if (!weatherTarget) return;
+		error = null;
+		try {
+			await api.put(`/api/locations/${weatherTarget.id}/weather-config`, config);
+			locations = await api.get<Location[]>('/api/locations');
+			weatherTarget = null;
+		} catch (e: unknown) {
+			error = (e as { error?: string; detail?: string })?.detail
+				?? (e as { error?: string })?.error
+				?? 'Fehler beim Speichern der Wetter-Konfiguration';
+		}
 	}
 </script>
 
@@ -137,22 +152,13 @@
 </Dialog.Root>
 
 <!-- Weather Config Dialog -->
-<Dialog.Root
+<WeatherConfigDialog
 	open={weatherTarget !== null}
-	onOpenChange={(open) => { if (!open) weatherTarget = null; }}
->
-	<Dialog.Content>
-		<Dialog.Header>
-			<Dialog.Title>Wetter-Konfiguration</Dialog.Title>
-			<Dialog.Description>
-				Wetter-Metriken für {weatherTarget?.name} konfigurieren — Coming soon
-			</Dialog.Description>
-		</Dialog.Header>
-		<Dialog.Footer>
-			<Button variant="outline" onclick={() => (weatherTarget = null)}>Schließen</Button>
-		</Dialog.Footer>
-	</Dialog.Content>
-</Dialog.Root>
+	entityName={weatherTarget?.name ?? ''}
+	currentConfig={weatherTarget?.display_config}
+	onsave={handleWeatherSave}
+	onclose={() => (weatherTarget = null)}
+/>
 
 <!-- Delete Confirmation Dialog -->
 <Dialog.Root
