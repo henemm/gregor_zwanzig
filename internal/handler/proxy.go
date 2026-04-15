@@ -94,6 +94,31 @@ func CompareProxyHandler(pythonURL string) http.HandlerFunc {
 	}
 }
 
+// ProxyPostHandler proxies POST requests to Python with query string forwarding.
+func ProxyPostHandler(pythonURL, path string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		client := &http.Client{Timeout: 120 * time.Second}
+
+		url := pythonURL + path
+		if r.URL.RawQuery != "" {
+			url += "?" + r.URL.RawQuery
+		}
+
+		resp, err := client.Post(url, "application/json", nil)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(503)
+			w.Write([]byte(`{"error":"core_unavailable"}`))
+			return
+		}
+		defer resp.Body.Close()
+
+		w.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
+		w.WriteHeader(resp.StatusCode)
+		io.Copy(w, resp.Body)
+	}
+}
+
 func GpxProxyHandler(pythonURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		client := &http.Client{Timeout: 30 * time.Second}

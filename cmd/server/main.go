@@ -74,6 +74,13 @@ func main() {
 		json.NewEncoder(w).Encode(sched.Status())
 	})
 
+	// Scheduler trigger proxies (frontend → Go → Python)
+	r.Post("/api/scheduler/trip-reports", handler.ProxyPostHandler(cfg.PythonCoreURL, "/api/scheduler/trip-reports"))
+	r.Post("/api/scheduler/morning-subscriptions", handler.ProxyPostHandler(cfg.PythonCoreURL, "/api/scheduler/morning-subscriptions"))
+	r.Post("/api/scheduler/evening-subscriptions", handler.ProxyPostHandler(cfg.PythonCoreURL, "/api/scheduler/evening-subscriptions"))
+	r.Post("/api/scheduler/alert-checks", handler.ProxyPostHandler(cfg.PythonCoreURL, "/api/scheduler/alert-checks"))
+	r.Post("/api/scheduler/inbound-commands", handler.ProxyPostHandler(cfg.PythonCoreURL, "/api/scheduler/inbound-commands"))
+
 	log.Printf("Go API listening on :%s, proxying to %s", cfg.Port, cfg.PythonCoreURL)
 	http.ListenAndServe(":"+cfg.Port, r)
 }
