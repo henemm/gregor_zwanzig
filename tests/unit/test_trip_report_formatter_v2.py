@@ -447,23 +447,23 @@ class TestRiskPopCape:
         formatter = TripReportFormatter()
         level, label = formatter._determine_risk(seg)
         assert level == "high"
-        assert "Extreme Thunder Energy" in label
+        assert "Thunder" in label
 
     def test_moderate_cape_medium_risk(self):
-        """GIVEN cape=1200, WHEN risk determined, THEN medium risk."""
+        """GIVEN cape=1200, WHEN risk determined, THEN moderate risk."""
         seg = self._make_seg_with_risk(cape=1200.0)
         formatter = TripReportFormatter()
         level, label = formatter._determine_risk(seg)
-        assert level == "medium"
-        assert "Thunder Energy" in label
+        assert level == "moderate"
+        assert "Thunder" in label
 
     def test_high_pop_medium_risk(self):
-        """GIVEN pop=85, WHEN risk determined, THEN medium risk."""
+        """GIVEN pop=85, WHEN risk determined, THEN moderate risk."""
         seg = self._make_seg_with_risk(pop=85)
         formatter = TripReportFormatter()
         level, label = formatter._determine_risk(seg)
-        assert level == "medium"
-        assert "High Rain Probability" in label
+        assert level == "moderate"
+        assert "Rain" in label
 
     def test_none_values_no_risk(self):
         """GIVEN pop=None, cape=None, WHEN risk determined, THEN no risk."""

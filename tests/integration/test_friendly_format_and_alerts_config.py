@@ -99,7 +99,7 @@ class TestBuildFriendlyKeys:
         overrides = {
             "thunder": False, "cape": False, "cloud_total": False,
             "cloud_low": False, "cloud_mid": False, "cloud_high": False,
-            "visibility": False, "wind_direction": False,
+            "visibility": False, "wind_direction": False, "sunshine": False,
         }
         dc = _make_display_config(overrides)
         fmt = TripReportFormatter()
