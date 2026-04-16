@@ -208,7 +208,7 @@
 		</nav>
 
 		<!-- Main content: add top padding on mobile for the top bar -->
-		<main class="flex-1 overflow-auto p-4 pt-16 md:p-6 md:pt-6">
+		<main class="flex-1 overflow-auto bg-muted/20 p-4 pt-16 md:p-6 md:pt-6">
 			{@render children()}
 		</main>
 	</div>
