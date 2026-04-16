@@ -1,0 +1,237 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 10 items
+
+tests/tdd/test_register_page.py FFFFFFFFFF                               [100%]
+
+=================================== FAILURES ===================================
+____________ TestRegisterPageExists.test_register_route_returns_200 ____________
+
+self = <tdd.test_register_page.TestRegisterPageExists object at 0x7667d47e50d0>
+
+    def test_register_route_returns_200(self):
+        """
+        GIVEN: No authentication
+        WHEN: GET /register
+        THEN: Returns 200 with HTML form
+        """
+        resp = httpx.get(f"{SVELTE_BASE}/register", follow_redirects=False)
+>       assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
+E       AssertionError: Expected 200, got 302
+E       assert 302 == 200
+E        +  where 302 = <Response [302 Found]>.status_code
+
+tests/tdd/test_register_page.py:34: AssertionError
+__________ TestRegisterPageExists.test_register_page_has_form_fields ___________
+
+self = <tdd.test_register_page.TestRegisterPageExists object at 0x7667d452ad80>
+
+    def test_register_page_has_form_fields(self):
+        """
+        GIVEN: Register page loaded
+        WHEN: Inspecting HTML
+        THEN: Contains username, password, confirmPassword fields
+        """
+        resp = httpx.get(f"{SVELTE_BASE}/register", follow_redirects=False)
+>       assert resp.status_code == 200
+E       assert 302 == 200
+E        +  where 302 = <Response [302 Found]>.status_code
+
+tests/tdd/test_register_page.py:43: AssertionError
+_________ TestRegisterPageExists.test_register_page_has_submit_button __________
+
+self = <tdd.test_register_page.TestRegisterPageExists object at 0x7667d42f1280>
+
+    def test_register_page_has_submit_button(self):
+        """
+        GIVEN: Register page loaded
+        WHEN: Inspecting HTML
+        THEN: Contains a submit button with German text
+        """
+        resp = httpx.get(f"{SVELTE_BASE}/register", follow_redirects=False)
+>       assert resp.status_code == 200
+E       assert 302 == 200
+E        +  where 302 = <Response [302 Found]>.status_code
+
+tests/tdd/test_register_page.py:56: AssertionError
+___________ TestRegisterPageExists.test_register_page_links_to_login ___________
+
+self = <tdd.test_register_page.TestRegisterPageExists object at 0x7667d42f04d0>
+
+    def test_register_page_links_to_login(self):
+        """
+        GIVEN: Register page loaded
+        WHEN: Inspecting HTML
+        THEN: Contains link to /login
+        """
+        resp = httpx.get(f"{SVELTE_BASE}/register", follow_redirects=False)
+>       assert resp.status_code == 200
+E       assert 302 == 200
+E        +  where 302 = <Response [302 Found]>.status_code
+
+tests/tdd/test_register_page.py:68: AssertionError
+____ TestRegisterFormAction.test_successful_registration_redirects_to_login ____
+
+self = <tdd.test_register_page.TestRegisterFormAction object at 0x7667d42f1160>
+
+    def test_successful_registration_redirects_to_login(self):
+        """
+        GIVEN: Valid username and matching passwords
+        WHEN: POST /register
+        THEN: Redirects to /login?registered=1
+        """
+        username = unique_username()
+        resp = httpx.post(
+            f"{SVELTE_BASE}/register",
+            data={
+                "username": username,
+                "password": "testpass123",
+                "confirmPassword": "testpass123",
+            },
+            follow_redirects=False,
+        )
+>       assert resp.status_code in (302, 303), f"Expected redirect, got {resp.status_code}"
+E       AssertionError: Expected redirect, got 403
+E       assert 403 in (302, 303)
+E        +  where 403 = <Response [403 Forbidden]>.status_code
+
+tests/tdd/test_register_page.py:91: AssertionError
+__________ TestRegisterFormAction.test_password_mismatch_shows_error ___________
+
+self = <tdd.test_register_page.TestRegisterFormAction object at 0x7667d42f0e00>
+
+    def test_password_mismatch_shows_error(self):
+        """
+        GIVEN: Passwords don't match
+        WHEN: POST /register
+        THEN: Returns form with German error message
+        """
+        resp = httpx.post(
+            f"{SVELTE_BASE}/register",
+            data={
+                "username": unique_username(),
+                "password": "testpass123",
+                "confirmPassword": "different456",
+            },
+            follow_redirects=False,
+        )
+        # SvelteKit form actions return 200 with form data on fail()
+>       assert resp.status_code == 200
+E       assert 403 == 200
+E        +  where 403 = <Response [403 Forbidden]>.status_code
+
+tests/tdd/test_register_page.py:112: AssertionError
+__________ TestRegisterFormAction.test_duplicate_username_shows_error __________
+
+self = <tdd.test_register_page.TestRegisterFormAction object at 0x7667d42f08f0>
+
+    def test_duplicate_username_shows_error(self):
+        """
+        GIVEN: Username already taken
+        WHEN: POST /register with same username
+        THEN: Returns form with 'bereits vergeben' error
+        """
+        username = unique_username()
+        # First: register via Go API directly
+        go_resp = httpx.post(
+            f"{GO_BASE}/api/auth/register",
+            json={"username": username, "password": "testpass123"},
+        )
+        assert go_resp.status_code == 201, f"Setup failed: {go_resp.status_code}"
+    
+        # Then: try to register same username via SvelteKit form
+        resp = httpx.post(
+            f"{SVELTE_BASE}/register",
+            data={
+                "username": username,
+                "password": "testpass123",
+                "confirmPassword": "testpass123",
+            },
+            follow_redirects=False,
+        )
+>       assert resp.status_code == 200
+E       assert 403 == 200
+E        +  where 403 = <Response [403 Forbidden]>.status_code
+
+tests/tdd/test_register_page.py:139: AssertionError
+____________ TestRegisterFormAction.test_short_password_shows_error ____________
+
+self = <tdd.test_register_page.TestRegisterFormAction object at 0x7667d42f0dd0>
+
+    def test_short_password_shows_error(self):
+        """
+        GIVEN: Password too short (< 8 chars)
+        WHEN: POST /register
+        THEN: Returns form with validation error
+        """
+        resp = httpx.post(
+            f"{SVELTE_BASE}/register",
+            data={
+                "username": unique_username(),
+                "password": "short",
+                "confirmPassword": "short",
+            },
+            follow_redirects=False,
+        )
+>       assert resp.status_code == 200
+E       assert 403 == 200
+E        +  where 403 = <Response [403 Forbidden]>.status_code
+
+tests/tdd/test_register_page.py:157: AssertionError
+__________ TestLoginPageIntegration.test_login_page_has_register_link __________
+
+self = <tdd.test_register_page.TestLoginPageIntegration object at 0x7667d42f0bc0>
+
+    def test_login_page_has_register_link(self):
+        """
+        GIVEN: Login page loaded
+        WHEN: Inspecting HTML
+        THEN: Contains link to /register
+        """
+        resp = httpx.get(f"{SVELTE_BASE}/login")
+        assert resp.status_code == 200
+>       assert '/register' in resp.text, "Missing register link on login page"
+E       AssertionError: Missing register link on login page
+E       assert '/register' in '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n'
+E        +  where '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n' = <Response [200 OK]>.text
+
+tests/tdd/test_register_page.py:173: AssertionError
+________ TestLoginPageIntegration.test_login_page_shows_success_banner _________
+
+self = <tdd.test_register_page.TestLoginPageIntegration object at 0x7667d42f0800>
+
+    def test_login_page_shows_success_banner(self):
+        """
+        GIVEN: Login page with ?registered=1
+        WHEN: Page loads
+        THEN: Shows success message about account creation
+        """
+        resp = httpx.get(f"{SVELTE_BASE}/login?registered=1")
+        assert resp.status_code == 200
+>       assert "erfolgreich" in resp.text.lower() or "erstellt" in resp.text.lower(), \
+            "Missing success banner on login page"
+E       AssertionError: Missing success banner on login page
+E       assert ('erfolgreich' in '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n' or 'erstellt' in '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n')
+E        +  where '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n' = <built-in method lower of str object at 0x13554b90>()
+E        +    where <built-in method lower of str object at 0x13554b90> = '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n'.lower
+E        +      where '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n' = <Response [200 OK]>.text
+E        +  and   '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n' = <built-in method lower of str object at 0x13554b90>()
+E        +    where <built-in method lower of str object at 0x13554b90> = '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n'.lower
+E        +      where '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n' = <Response [200 OK]>.text
+
+tests/tdd/test_register_page.py:183: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_register_page.py::TestRegisterPageExists::test_register_route_returns_200
+FAILED tests/tdd/test_register_page.py::TestRegisterPageExists::test_register_page_has_form_fields
+FAILED tests/tdd/test_register_page.py::TestRegisterPageExists::test_register_page_has_submit_button
+FAILED tests/tdd/test_register_page.py::TestRegisterPageExists::test_register_page_links_to_login
+FAILED tests/tdd/test_register_page.py::TestRegisterFormAction::test_successful_registration_redirects_to_login
+FAILED tests/tdd/test_register_page.py::TestRegisterFormAction::test_password_mismatch_shows_error
+FAILED tests/tdd/test_register_page.py::TestRegisterFormAction::test_duplicate_username_shows_error
+FAILED tests/tdd/test_register_page.py::TestRegisterFormAction::test_short_password_shows_error
+FAILED tests/tdd/test_register_page.py::TestLoginPageIntegration::test_login_page_has_register_link
+FAILED tests/tdd/test_register_page.py::TestLoginPageIntegration::test_login_page_shows_success_banner
+============================== 10 failed in 0.35s ==============================
