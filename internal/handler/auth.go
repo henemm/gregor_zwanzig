@@ -117,6 +117,26 @@ func LoginHandler(s *store.Store, secret string) http.HandlerFunc {
 	}
 }
 
+func LogoutHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		cookie, err := r.Cookie("gz_session")
+		if err == nil && cookie.Value != "" {
+			middleware.BlacklistSession(cookie.Value)
+		}
+
+		http.SetCookie(w, &http.Cookie{
+			Name:     "gz_session",
+			Value:    "",
+			Path:     "/",
+			HttpOnly: true,
+			MaxAge:   -1,
+		})
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"status":"ok"}`))
+	}
+}
+
 // profileResponse is the public view of a User (no password_hash).
 type profileResponse struct {
 	ID             string `json:"id"`

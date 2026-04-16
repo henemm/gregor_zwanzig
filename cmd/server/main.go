@@ -53,6 +53,7 @@ func main() {
 	// Auth endpoints (register/login exempt from AuthMiddleware)
 	r.Post("/api/auth/register", handler.RegisterHandler(s, bcrypt.DefaultCost))
 	r.Post("/api/auth/login", handler.LoginHandler(s, cfg.SessionSecret))
+	r.Post("/api/auth/logout", handler.LogoutHandler())
 	r.Get("/api/auth/profile", handler.GetProfileHandler(s))
 	r.Put("/api/auth/profile", handler.UpdateProfileHandler(s))
 

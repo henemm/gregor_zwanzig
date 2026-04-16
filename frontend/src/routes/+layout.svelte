@@ -40,6 +40,9 @@
 			{/each}
 			<div class="mt-auto pt-6 text-xs text-muted-foreground">
 				{data.userId ?? ''}
+				<form method="POST" action="/logout" class="mt-2">
+					<button type="submit" class="hover:text-foreground">Logout</button>
+				</form>
 			</div>
 		</nav>
 		<main class="flex-1 overflow-auto p-6">

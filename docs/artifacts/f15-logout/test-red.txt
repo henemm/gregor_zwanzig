@@ -1,0 +1,8 @@
+# github.com/henemm/gregor-api/internal/handler [github.com/henemm/gregor-api/internal/handler.test]
+internal/handler/logout_test.go:14:7: undefined: LogoutHandler
+internal/handler/logout_test.go:46:16: undefined: middleware.IsBlacklisted
+internal/handler/logout_test.go:50:7: undefined: LogoutHandler
+internal/handler/logout_test.go:57:17: undefined: middleware.IsBlacklisted
+internal/handler/logout_test.go:63:7: undefined: LogoutHandler
+FAIL	github.com/henemm/gregor-api/internal/handler [build failed]
+FAIL

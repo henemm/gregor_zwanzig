@@ -9,8 +9,20 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
+
+var sessionBlacklist sync.Map
+
+func BlacklistSession(token string) {
+	sessionBlacklist.Store(token, struct{}{})
+}
+
+func IsBlacklisted(token string) bool {
+	_, ok := sessionBlacklist.Load(token)
+	return ok
+}
 
 type contextKey string
 
@@ -20,7 +32,8 @@ func AuthMiddleware(secret string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.URL.Path == "/api/health" || r.URL.Path == "/api/scheduler/status" ||
-				r.URL.Path == "/api/auth/register" || r.URL.Path == "/api/auth/login" {
+				r.URL.Path == "/api/auth/register" || r.URL.Path == "/api/auth/login" ||
+				r.URL.Path == "/api/auth/logout" {
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -32,7 +45,7 @@ func AuthMiddleware(secret string) func(http.Handler) http.Handler {
 			}
 
 			userId, ok := validateSession(cookie.Value, secret)
-			if !ok {
+			if !ok || IsBlacklisted(cookie.Value) {
 				http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
 				return
 			}
