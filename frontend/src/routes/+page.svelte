@@ -35,7 +35,7 @@
 
 		<Card.Root data-testid="stat-health">
 			<Card.Header>
-				<Card.Title>System Status</Card.Title>
+				<Card.Title>System-Status</Card.Title>
 			</Card.Header>
 			<Card.Content>
 				<div class="space-y-1">

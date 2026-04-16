@@ -33,7 +33,7 @@
 {:else}
 	<div class="flex h-screen">
 		<!-- Mobile top bar -->
-		<div class="fixed top-0 left-0 right-0 z-40 flex items-center gap-3 border-b bg-background px-4 py-3 md:hidden">
+		<div class="fixed top-0 left-0 right-0 z-[60] flex items-center gap-3 border-b bg-background px-4 py-3 md:hidden">
 			<button
 				onclick={() => mobileMenuOpen = !mobileMenuOpen}
 				class="rounded-md p-1.5 hover:bg-accent"
