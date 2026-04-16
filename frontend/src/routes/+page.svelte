@@ -6,7 +6,7 @@
 </script>
 
 <div class="space-y-6">
-	<h1 class="text-2xl font-bold">Dashboard</h1>
+	<h1 class="text-2xl font-bold">Übersicht</h1>
 
 	<div class="grid grid-cols-1 gap-4 md:grid-cols-3">
 		<Card.Root data-testid="stat-trips">
