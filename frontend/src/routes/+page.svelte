@@ -1,6 +1,9 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
+	import MapIcon from '@lucide/svelte/icons/map';
+	import MapPinIcon from '@lucide/svelte/icons/map-pin';
+	import ActivityIcon from '@lucide/svelte/icons/activity';
 
 	let { data } = $props();
 </script>
@@ -12,6 +15,7 @@
 		<Card.Root data-testid="stat-trips">
 			<Card.Header>
 				<Card.Title>Trips</Card.Title>
+				<Card.Action><MapIcon class="size-8 text-muted-foreground/30" /></Card.Action>
 			</Card.Header>
 			<Card.Content>
 				<span class="text-3xl font-bold" data-testid="stat-value">{data.tripCount}</span>
@@ -24,6 +28,7 @@
 		<Card.Root data-testid="stat-locations">
 			<Card.Header>
 				<Card.Title>Locations</Card.Title>
+				<Card.Action><MapPinIcon class="size-8 text-muted-foreground/30" /></Card.Action>
 			</Card.Header>
 			<Card.Content>
 				<span class="text-3xl font-bold" data-testid="stat-value">{data.locationCount}</span>
@@ -36,6 +41,7 @@
 		<Card.Root data-testid="stat-health">
 			<Card.Header>
 				<Card.Title>System-Status</Card.Title>
+				<Card.Action><ActivityIcon class="size-8 text-muted-foreground/30" /></Card.Action>
 			</Card.Header>
 			<Card.Content>
 				<div class="space-y-1">
