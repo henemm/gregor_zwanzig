@@ -95,13 +95,14 @@
 			<Button variant="outline" class="mt-4" onclick={openCreate}>Erste Location erstellen</Button>
 		</div>
 	{:else}
+		<div class="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
 		<Table.Root>
 			<Table.Header>
 				<Table.Row>
 					<Table.Head>Name</Table.Head>
-					<Table.Head>Koordinaten</Table.Head>
-					<Table.Head>Höhe</Table.Head>
-					<Table.Head>Profil</Table.Head>
+					<Table.Head class="hidden sm:table-cell">Koordinaten</Table.Head>
+					<Table.Head class="hidden sm:table-cell">Höhe</Table.Head>
+					<Table.Head class="hidden md:table-cell">Profil</Table.Head>
 					<Table.Head class="text-right">Aktionen</Table.Head>
 				</Table.Row>
 			</Table.Header>
@@ -109,13 +110,13 @@
 				{#each locations as loc}
 					<Table.Row>
 						<Table.Cell class="font-medium">{loc.name}</Table.Cell>
-						<Table.Cell class="text-sm text-muted-foreground">
+						<Table.Cell class="hidden sm:table-cell text-sm text-muted-foreground">
 							{loc.lat.toFixed(4)}, {loc.lon.toFixed(4)}
 						</Table.Cell>
-						<Table.Cell class="text-sm">
+						<Table.Cell class="hidden sm:table-cell text-sm">
 							{loc.elevation_m != null ? `${loc.elevation_m} m` : '—'}
 						</Table.Cell>
-						<Table.Cell>
+						<Table.Cell class="hidden md:table-cell">
 							{#if loc.activity_profile}
 								<Badge variant="secondary">{loc.activity_profile}</Badge>
 							{/if}
@@ -123,12 +124,13 @@
 						<Table.Cell class="text-right">
 							<Button variant="ghost" size="sm" onclick={() => (weatherTarget = loc)}>Wetter</Button>
 							<Button variant="ghost" size="sm" onclick={() => openEdit(loc)}>Bearbeiten</Button>
-							<Button variant="ghost" size="sm" onclick={() => (deleteTarget = loc)}>Löschen</Button>
+							<Button variant="ghost" size="sm" class="hidden sm:inline-flex" onclick={() => (deleteTarget = loc)}>Löschen</Button>
 						</Table.Cell>
 					</Table.Row>
 				{/each}
 			</Table.Body>
 		</Table.Root>
+		</div>
 	{/if}
 </div>
 

@@ -125,15 +125,16 @@
 			<Button variant="outline" class="mt-4" onclick={openCreate}>Erste Subscription erstellen</Button>
 		</div>
 	{:else}
+		<div class="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
 		<Table.Root>
 			<Table.Header>
 				<Table.Row>
 					<Table.Head>Name</Table.Head>
 					<Table.Head>Zeitplan</Table.Head>
-					<Table.Head>Zeitfenster</Table.Head>
-					<Table.Head>Locations</Table.Head>
-					<Table.Head>Kanäle</Table.Head>
-					<Table.Head>Status</Table.Head>
+					<Table.Head class="hidden sm:table-cell">Zeitfenster</Table.Head>
+					<Table.Head class="hidden md:table-cell">Locations</Table.Head>
+					<Table.Head class="hidden sm:table-cell">Kanäle</Table.Head>
+					<Table.Head class="hidden md:table-cell">Status</Table.Head>
 					<Table.Head class="text-right">Aktionen</Table.Head>
 				</Table.Row>
 			</Table.Header>
@@ -147,13 +148,13 @@
 							{/if}
 						</Table.Cell>
 						<Table.Cell class="text-sm">{scheduleLabel(sub)}</Table.Cell>
-						<Table.Cell class="text-sm text-muted-foreground">
+						<Table.Cell class="hidden sm:table-cell text-sm text-muted-foreground">
 							{sub.time_window_start}:00 – {sub.time_window_end}:00
 						</Table.Cell>
-						<Table.Cell class="text-sm text-muted-foreground max-w-[180px] truncate">
+						<Table.Cell class="hidden md:table-cell text-sm text-muted-foreground max-w-[180px] truncate">
 							{locationsLabel(sub)}
 						</Table.Cell>
-						<Table.Cell>
+						<Table.Cell class="hidden sm:table-cell">
 							<div class="flex gap-1">
 								{#if sub.send_email}
 									<Badge variant="outline">E-Mail</Badge>
@@ -166,7 +167,7 @@
 								{/if}
 							</div>
 						</Table.Cell>
-						<Table.Cell>
+						<Table.Cell class="hidden md:table-cell">
 							<Button
 								variant="ghost"
 								size="sm"
@@ -184,6 +185,7 @@
 				{/each}
 			</Table.Body>
 		</Table.Root>
+		</div>
 	{/if}
 </div>
 
