@@ -18,31 +18,26 @@ logger = logging.getLogger("scheduler.trigger")
 
 
 @router.post("/morning-subscriptions")
-def trigger_morning():
+def trigger_morning(user_id: str = "default"):
     """Trigger morning subscription reports."""
-    from app.loader import load_all_locations, load_compare_subscriptions
     from app.user import Schedule
-    from services.compare_subscription import run_comparison_for_subscription
 
-    count = _run_subscriptions_by_schedule(Schedule.DAILY_MORNING)
+    count = _run_subscriptions_by_schedule(Schedule.DAILY_MORNING, user_id)
     return {"status": "ok", "count": count}
 
 
 @router.post("/evening-subscriptions")
-def trigger_evening():
+def trigger_evening(user_id: str = "default"):
     """Trigger evening + weekly subscription reports."""
-    from datetime import datetime
-
-    from app.loader import load_compare_subscriptions
     from app.user import Schedule
 
-    count = _run_subscriptions_by_schedule(Schedule.DAILY_EVENING)
-    count += _run_weekly_subscriptions()
+    count = _run_subscriptions_by_schedule(Schedule.DAILY_EVENING, user_id)
+    count += _run_weekly_subscriptions(user_id)
     return {"status": "ok", "count": count}
 
 
 @router.post("/trip-reports")
-def trigger_trip_reports(hour: Optional[int] = None):
+def trigger_trip_reports(hour: Optional[int] = None, user_id: str = "default"):
     """Trigger trip reports for current or specified hour."""
     from datetime import datetime
     from zoneinfo import ZoneInfo
@@ -52,17 +47,17 @@ def trigger_trip_reports(hour: Optional[int] = None):
     tz = ZoneInfo("Europe/Vienna")
     current_hour = hour if hour is not None else datetime.now(tz).hour
 
-    service = TripReportSchedulerService()
+    service = TripReportSchedulerService(user_id=user_id)
     count = service.send_reports_for_hour(current_hour)
     return {"status": "ok", "count": count}
 
 
 @router.post("/alert-checks")
-def trigger_alert_checks():
+def trigger_alert_checks(user_id: str = "default"):
     """Trigger weather change alert checks."""
     from services.trip_alert import TripAlertService
 
-    service = TripAlertService()
+    service = TripAlertService(user_id=user_id)
     count = service.check_all_trips()
     return {"status": "ok", "count": count}
 
@@ -84,7 +79,7 @@ def trigger_inbound():
     return {"status": "ok", "count": count}
 
 
-def _run_subscriptions_by_schedule(schedule) -> int:
+def _run_subscriptions_by_schedule(schedule, user_id: str = "default") -> int:
     """Run all subscriptions matching the given schedule. Returns count."""
     from app.config import Settings
     from app.loader import load_all_locations, load_compare_subscriptions
@@ -92,9 +87,9 @@ def _run_subscriptions_by_schedule(schedule) -> int:
 
     count = 0
     settings = Settings()
-    all_locations = load_all_locations()
+    all_locations = load_all_locations(user_id=user_id)
 
-    for sub in load_compare_subscriptions():
+    for sub in load_compare_subscriptions(user_id=user_id):
         if sub.enabled and sub.schedule == schedule:
             try:
                 subject, html_body, text_body = run_comparison_for_subscription(
@@ -108,7 +103,7 @@ def _run_subscriptions_by_schedule(schedule) -> int:
     return count
 
 
-def _run_weekly_subscriptions() -> int:
+def _run_weekly_subscriptions(user_id: str = "default") -> int:
     """Run WEEKLY subscriptions if today matches the weekday. Returns count."""
     from datetime import datetime
 
@@ -120,9 +115,9 @@ def _run_weekly_subscriptions() -> int:
     current_weekday = datetime.now().weekday()
     count = 0
     settings = Settings()
-    all_locations = load_all_locations()
+    all_locations = load_all_locations(user_id=user_id)
 
-    for sub in load_compare_subscriptions():
+    for sub in load_compare_subscriptions(user_id=user_id):
         if sub.enabled and sub.schedule == Schedule.WEEKLY:
             if sub.weekday == current_weekday:
                 try:

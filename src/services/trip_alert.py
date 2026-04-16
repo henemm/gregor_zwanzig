@@ -42,12 +42,11 @@ class TripAlertService:
         >>> print(f"Alert sent: {sent}")
     """
 
-    THROTTLE_FILE = Path("data/users/default/alert_throttle.json")
-
     def __init__(
         self,
         settings: Optional[Settings] = None,
         throttle_hours: int = 2,
+        user_id: str = "default",
     ) -> None:
         """
         Initialize the alert service.
@@ -55,11 +54,14 @@ class TripAlertService:
         Args:
             settings: App settings (default: load from config)
             throttle_hours: Minimum hours between alerts per trip (default: 2)
+            user_id: User identifier for data scoping
         """
         self._settings = settings if settings else Settings()
         self._formatter = TripReportFormatter()
         self._change_detector = WeatherChangeDetectionService()
         self._throttle_hours = throttle_hours
+        self._user_id = user_id
+        self.THROTTLE_FILE = Path(f"data/users/{user_id}/alert_throttle.json")
         self._last_alert_times: dict[str, datetime] = self._load_throttle_times()
 
     def check_and_send_alerts(
@@ -153,7 +155,7 @@ class TripAlertService:
         from app.loader import load_all_trips
 
         alerts_sent = 0
-        for trip in load_all_trips():
+        for trip in load_all_trips(user_id=self._user_id):
             if not trip.report_config or not trip.report_config.alert_on_changes:
                 continue
 
@@ -185,7 +187,7 @@ class TripAlertService:
         try:
             from services.weather_snapshot import WeatherSnapshotService
 
-            return WeatherSnapshotService().load(trip.id)
+            return WeatherSnapshotService(user_id=self._user_id).load(trip.id)
         except Exception as e:
             logger.debug(f"No cached weather for trip {trip.id}: {e}")
             return None

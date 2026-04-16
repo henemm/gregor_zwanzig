@@ -51,15 +51,17 @@ class TripReportSchedulerService:
         >>> service.send_reports("morning")  # Send reports for today's trips
     """
 
-    def __init__(self, settings: Optional[Settings] = None) -> None:
+    def __init__(self, settings: Optional[Settings] = None, user_id: str = "default") -> None:
         """
         Initialize the service.
 
         Args:
             settings: App settings (default: load from config)
+            user_id: User identifier for data scoping
         """
         self._settings = settings if settings else Settings()
         self._formatter = TripReportFormatter()
+        self._user_id = user_id
 
     def send_reports(self, report_type: str) -> int:
         """
@@ -152,7 +154,7 @@ class TripReportSchedulerService:
         Returns:
             List of active Trip objects
         """
-        all_trips = load_all_trips()
+        all_trips = load_all_trips(user_id=self._user_id)
         target_date = self._get_target_date(report_type)
 
         active = [
