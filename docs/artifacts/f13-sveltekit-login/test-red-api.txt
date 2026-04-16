@@ -1,0 +1,5 @@
+{"error":"invalid credentials"}
+HTTP_STATUS: 401
+---CURRENT LOGIN ACTION---
+5
+Login action still uses ENV credentials (hardcoded userId=default)
