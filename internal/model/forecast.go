@@ -48,6 +48,7 @@ type ForecastDataPoint struct {
 	WindDirectionDeg *float64     `json:"wind_direction_deg,omitempty"`
 	GustKmh          *float64     `json:"gust_kmh,omitempty"`
 	Precip1hMm       *float64     `json:"precip_1h_mm,omitempty"`
+	PrecipRateMmph   *float64     `json:"precip_rate_mmph,omitempty"`
 	CloudTotalPct    *int         `json:"cloud_total_pct,omitempty"`
 	CloudLowPct      *int         `json:"cloud_low_pct,omitempty"`
 	CloudMidPct      *int         `json:"cloud_mid_pct,omitempty"`
@@ -65,14 +66,23 @@ type ForecastDataPoint struct {
 	IsDay            *int         `json:"is_day,omitempty"`
 	DniWm2           *float64     `json:"dni_wm2,omitempty"`
 	UvIndex          *float64     `json:"uv_index,omitempty"`
+	SnowDepthCm      *float64     `json:"snow_depth_cm,omitempty"`
+	SnowNew24hCm     *float64     `json:"snow_new_24h_cm,omitempty"`
+	SnowNewAccCm     *float64     `json:"snow_new_acc_cm,omitempty"`
+	SnowfallLimitM   *int         `json:"snowfall_limit_m,omitempty"`
+	SweKgm2          *float64     `json:"swe_kgm2,omitempty"`
+	PrecipType       *string      `json:"precip_type,omitempty"`
 }
 
 type ForecastMeta struct {
-	Provider        string   `json:"provider"`
-	Model           string   `json:"model"`
-	GridResKm       float64  `json:"grid_res_km"`
-	FallbackModel   string   `json:"fallback_model,omitempty"`
-	FallbackMetrics []string `json:"fallback_metrics,omitempty"`
+	Provider        string                   `json:"provider"`
+	Model           string                   `json:"model"`
+	Run             *string                  `json:"run,omitempty"`
+	GridResKm       float64                  `json:"grid_res_km"`
+	Interp          string                   `json:"interp,omitempty"`
+	StationsUsed    []map[string]interface{} `json:"stations_used,omitempty"`
+	FallbackModel   string                   `json:"fallback_model,omitempty"`
+	FallbackMetrics []string                 `json:"fallback_metrics,omitempty"`
 }
 
 type Timeseries struct {
