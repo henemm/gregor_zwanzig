@@ -233,12 +233,13 @@
 			<Button variant="outline" class="mt-4" onclick={openCreate}>Ersten Trip erstellen</Button>
 		</div>
 	{:else}
+		<div class="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
 		<Table.Root>
 			<Table.Header>
 				<Table.Row>
 					<Table.Head>Name</Table.Head>
-					<Table.Head>Etappen</Table.Head>
-					<Table.Head>Zeitraum</Table.Head>
+					<Table.Head class="hidden sm:table-cell">Etappen</Table.Head>
+					<Table.Head class="hidden sm:table-cell">Zeitraum</Table.Head>
 					<Table.Head class="text-right">Aktionen</Table.Head>
 				</Table.Row>
 			</Table.Header>
@@ -246,24 +247,25 @@
 				{#each trips as trip}
 					<Table.Row>
 						<Table.Cell class="font-medium">{trip.name}</Table.Cell>
-						<Table.Cell>
+						<Table.Cell class="hidden sm:table-cell">
 							<Badge variant="secondary">{trip.stages.length} Etappen</Badge>
 						</Table.Cell>
-						<Table.Cell class="text-sm text-muted-foreground">{dateRange(trip)}</Table.Cell>
+						<Table.Cell class="hidden sm:table-cell text-sm text-muted-foreground">{dateRange(trip)}</Table.Cell>
 						<Table.Cell class="text-right">
 							<div class="inline-flex flex-wrap justify-end gap-1">
 								<Button variant="outline" size="sm" onclick={() => openReportConfig(trip)}>Reports</Button>
 								<Button variant="outline" size="sm" onclick={() => (weatherConfigTarget = trip)}>Wetter</Button>
-								<Button variant="outline" size="sm" onclick={() => runTestReport(trip, 7)}>Test Morgen</Button>
-								<Button variant="outline" size="sm" onclick={() => runTestReport(trip, 18)}>Test Abend</Button>
+								<Button variant="outline" size="sm" class="hidden sm:inline-flex" onclick={() => runTestReport(trip, 7)}>Test Morgen</Button>
+								<Button variant="outline" size="sm" class="hidden sm:inline-flex" onclick={() => runTestReport(trip, 18)}>Test Abend</Button>
 								<Button variant="ghost" size="sm" onclick={() => openEdit(trip)}>Bearbeiten</Button>
-								<Button variant="ghost" size="sm" onclick={() => (deleteTarget = trip)}>Löschen</Button>
+								<Button variant="ghost" size="sm" class="hidden sm:inline-flex" onclick={() => (deleteTarget = trip)}>Löschen</Button>
 							</div>
 						</Table.Cell>
 					</Table.Row>
 				{/each}
 			</Table.Body>
 		</Table.Root>
+		</div>
 	{/if}
 </div>
 
