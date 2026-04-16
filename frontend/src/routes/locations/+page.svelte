@@ -2,15 +2,21 @@
 	import type { Location } from '$lib/types.js';
 	import { api } from '$lib/api.js';
 	import { Button } from '$lib/components/ui/button/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import LocationForm from '$lib/components/LocationForm.svelte';
 	import WeatherConfigDialog from '$lib/components/WeatherConfigDialog.svelte';
+	import SearchIcon from '@lucide/svelte/icons/search';
 
 	let { data } = $props();
 
 	let locations: Location[] = $state(data.locations);
+	let search = $state('');
+	let filteredLocations = $derived(
+		locations.filter(l => l.name.toLowerCase().includes(search.toLowerCase()))
+	);
 	let dialogMode: 'create' | 'edit' | null = $state(null);
 	let editTarget: Location | null = $state(null);
 	let deleteTarget: Location | null = $state(null);
@@ -95,6 +101,10 @@
 			<Button variant="outline" class="mt-4" onclick={openCreate}>Erste Location erstellen</Button>
 		</div>
 	{:else}
+		<div class="relative mb-3 max-w-xs">
+			<SearchIcon class="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+			<Input placeholder="Suchen..." class="pl-8" bind:value={search} />
+		</div>
 		<div class="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
 		<Table.Root>
 			<Table.Header>
@@ -107,7 +117,7 @@
 				</Table.Row>
 			</Table.Header>
 			<Table.Body>
-				{#each locations as loc}
+				{#each filteredLocations as loc}
 					<Table.Row>
 						<Table.Cell class="font-medium">{loc.name}</Table.Cell>
 						<Table.Cell class="hidden sm:table-cell text-sm text-muted-foreground">
