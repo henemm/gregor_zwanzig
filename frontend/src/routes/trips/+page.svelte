@@ -19,6 +19,12 @@
 	let { data } = $props();
 
 	let trips: Trip[] = $state(data.trips);
+	let refetching = $state(false);
+	async function refetchTrips() {
+		refetching = true;
+		try { await refetchTrips(); }
+		finally { refetching = false; }
+	}
 	let search = $state('');
 	let filteredTrips = $derived(
 		trips.filter(t => t.name.toLowerCase().includes(search.toLowerCase()))
@@ -76,7 +82,7 @@
 			} else {
 				await api.put<Trip>(`/api/trips/${trip.id}`, trip);
 			}
-			trips = await api.get<Trip[]>('/api/trips');
+			await refetchTrips();
 			dialogMode = null;
 			editTarget = null;
 		} catch (e: unknown) {
@@ -175,7 +181,7 @@
 				...full,
 				report_config: reportConfig
 			});
-			trips = await api.get<Trip[]>('/api/trips');
+			await refetchTrips();
 			reportConfigTarget = null;
 		} catch (e: unknown) {
 			reportConfigError = (e as { error?: string; detail?: string })?.detail
@@ -219,7 +225,7 @@
 		error = null;
 		try {
 			await api.put(`/api/trips/${weatherConfigTarget.id}/weather-config`, config);
-			trips = await api.get<Trip[]>('/api/trips');
+			await refetchTrips();
 			weatherConfigTarget = null;
 		} catch (e: unknown) {
 			error = (e as { error?: string; detail?: string })?.detail
@@ -251,6 +257,13 @@
 			<SearchIcon class="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
 			<Input placeholder="Suchen..." class="pl-8" bind:value={search} />
 		</div>
+		{#if refetching}
+			<div class="space-y-3">
+				{#each Array(3) as _}
+					<div class="h-12 w-full animate-pulse rounded-lg bg-muted"></div>
+				{/each}
+			</div>
+		{:else}
 		<div class="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
 		<Table.Root>
 			<Table.Header>
@@ -284,6 +297,7 @@
 			</Table.Body>
 		</Table.Root>
 		</div>
+		{/if}
 	{/if}
 </div>
 
