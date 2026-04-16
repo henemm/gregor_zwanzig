@@ -1,0 +1,12 @@
+# github.com/henemm/gregor-api/internal/handler [github.com/henemm/gregor-api/internal/handler.test]
+internal/handler/password_reset_test.go:28:7: undefined: ForgotPasswordHandler
+internal/handler/password_reset_test.go:48:7: undefined: ForgotPasswordHandler
+internal/handler/password_reset_test.go:73:22: undefined: model.PasswordResetToken
+internal/handler/password_reset_test.go:80:7: undefined: ResetPasswordHandler
+internal/handler/password_reset_test.go:114:22: undefined: model.PasswordResetToken
+internal/handler/password_reset_test.go:121:7: undefined: ResetPasswordHandler
+internal/handler/password_reset_test.go:140:22: undefined: model.PasswordResetToken
+internal/handler/password_reset_test.go:147:7: undefined: ResetPasswordHandler
+internal/handler/password_reset_test.go:161:7: undefined: ResetPasswordHandler
+FAIL	github.com/henemm/gregor-api/internal/handler [build failed]
+FAIL

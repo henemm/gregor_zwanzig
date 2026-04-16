@@ -12,3 +12,8 @@ type User struct {
 	SignalAPIKey   string    `json:"signal_api_key,omitempty"`
 	TelegramChatID string    `json:"telegram_chat_id,omitempty"`
 }
+
+type PasswordResetToken struct {
+	TokenHash string    `json:"token_hash"`
+	ExpiresAt time.Time `json:"expires_at"`
+}

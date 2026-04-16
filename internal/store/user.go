@@ -58,6 +58,43 @@ func (s *Store) ProvisionUserDirs(id string) error {
 	return nil
 }
 
+func (s *Store) SaveResetToken(userId string, token model.PasswordResetToken) error {
+	dir := s.UserDir(userId)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+	data, err := json.MarshalIndent(token, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(dir, "password_reset.json"), data, 0644)
+}
+
+func (s *Store) LoadResetToken(userId string) (*model.PasswordResetToken, error) {
+	path := filepath.Join(s.UserDir(userId), "password_reset.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	var token model.PasswordResetToken
+	if err := json.Unmarshal(data, &token); err != nil {
+		return nil, err
+	}
+	return &token, nil
+}
+
+func (s *Store) DeleteResetToken(userId string) error {
+	path := filepath.Join(s.UserDir(userId), "password_reset.json")
+	err := os.Remove(path)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	return err
+}
+
 func (s *Store) UserExists(id string) bool {
 	path := filepath.Join(s.UserDir(id), "user.json")
 	_, err := os.Stat(path)
