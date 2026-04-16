@@ -1,0 +1,67 @@
+{
+  "id": "gr221-mallorca",
+  "name": "GR221 Mallorca",
+  "stages": [
+    {
+      "id": "",
+      "name": "Tag 1: von Valldemossa nach Deià",
+      "date": "2026-01-17",
+      "waypoints": [
+        {
+          "id": "G1",
+          "name": "Start",
+          "lat": 39.710564,
+          "lon": 2.62293,
+          "elevation_m": 410,
+          "time_window": "08:00-08:00"
+        },
+        {
+          "id": "G2",
+          "name": "Seg 2 Start",
+          "lat": 39.726177,
+          "lon": 2.624463,
+          "elevation_m": 795,
+          "time_window": "10:00-10:00"
+        },
+        {
+          "id": "G3",
+          "name": "Seg 3 Start",
+          "lat": 39.738988,
+          "lon": 2.635933,
+          "elevation_m": 457,
+          "time_window": "12:01-12:01"
+        },
+        {
+          "id": "G4",
+          "name": "Ziel",
+          "lat": 39.747657,
+          "lon": 2.648606,
+          "elevation_m": 149,
+          "time_window": "13:33-13:33"
+        }
+      ]
+    }
+  ],
+  "aggregation": {
+    "profile": "wintersport"
+  },
+  "report_config": {
+    "alert_on_changes": false,
+    "change_threshold_precip_mm": 10,
+    "change_threshold_temp_c": 5,
+    "change_threshold_wind_kmh": 20,
+    "evening_time": "18:00:00",
+    "morning_time": "06:00:00",
+    "multi_day_trend_reports": [
+      "morning",
+      "evening"
+    ],
+    "send_email": false,
+    "send_signal": false,
+    "send_sms": false,
+    "send_telegram": true,
+    "show_compact_summary": true,
+    "show_daylight": true,
+    "wind_exposition_min_elevation_m": 2000
+  }
+}

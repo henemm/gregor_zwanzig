@@ -137,7 +137,17 @@ class TripAlertService:
             logger.error(f"Failed to send alert for {trip.id}: {e}")
             return False
 
-        # 6. Update throttle (only on success) + persist
+        # 6. Update snapshot so next alert compares against THIS weather
+        try:
+            from services.weather_snapshot import WeatherSnapshotService
+            snapshot_date = fresh_weather[0].segment.start_time.date()
+            WeatherSnapshotService(user_id=self._user_id).save(
+                trip.id, fresh_weather, snapshot_date,
+            )
+        except Exception as e:
+            logger.warning(f"Failed to update snapshot after alert for {trip.id}: {e}")
+
+        # 7. Update throttle (only on success) + persist
         self._last_alert_times[trip.id] = datetime.now(timezone.utc)
         self._save_throttle_times()
 
