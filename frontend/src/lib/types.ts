@@ -52,6 +52,7 @@ export interface Subscription {
 	top_n: number;
 	send_email: boolean;
 	send_signal: boolean;
+	send_telegram: boolean;
 	display_config?: Record<string, unknown>;
 	activity_profile?: 'wintersport' | 'wandern' | 'allgemein';
 }

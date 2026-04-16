@@ -34,6 +34,7 @@
 	let includeHourly = $state(subscription?.include_hourly ?? false);
 	let sendEmail = $state(subscription?.send_email ?? true);
 	let sendSignal = $state(subscription?.send_signal ?? false);
+	let sendTelegram = $state(subscription?.send_telegram ?? false);
 	let allLocations = $state(
 		!subscription || !subscription.locations || subscription.locations[0] === '*'
 	);
@@ -83,6 +84,7 @@
 			include_hourly: includeHourly,
 			send_email: sendEmail,
 			send_signal: sendSignal,
+			send_telegram: sendTelegram,
 			locations: allLocations ? ['*'] : selectedLocations,
 			...(subscription?.display_config && { display_config: subscription.display_config }),
 			activity_profile: activityProfile as Subscription['activity_profile']
@@ -240,6 +242,15 @@
 				class="h-4 w-4 rounded border-input"
 			/>
 			<Label for="sub-signal">Signal</Label>
+		</div>
+		<div class="flex items-center gap-3">
+			<input
+				id="sub-telegram"
+				type="checkbox"
+				bind:checked={sendTelegram}
+				class="h-4 w-4 rounded border-input"
+			/>
+			<Label for="sub-telegram">Telegram</Label>
 		</div>
 	</div>
 
