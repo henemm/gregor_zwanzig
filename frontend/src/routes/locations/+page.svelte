@@ -9,6 +9,10 @@
 	import LocationForm from '$lib/components/LocationForm.svelte';
 	import WeatherConfigDialog from '$lib/components/WeatherConfigDialog.svelte';
 	import SearchIcon from '@lucide/svelte/icons/search';
+	import MapPinIcon from '@lucide/svelte/icons/map-pin';
+	import CloudSunIcon from '@lucide/svelte/icons/cloud-sun';
+	import PencilIcon from '@lucide/svelte/icons/pencil';
+	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 
 	let { data } = $props();
 
@@ -96,8 +100,10 @@
 	{/if}
 
 	{#if locations.length === 0}
-		<div data-testid="empty-state" class="rounded-lg border border-dashed p-8 text-center">
-			<p class="text-muted-foreground">Keine Locations vorhanden</p>
+		<div data-testid="empty-state" class="rounded-lg border border-dashed p-10 text-center">
+			<MapPinIcon class="mx-auto mb-3 size-10 text-muted-foreground/40" />
+			<p class="font-medium">Keine Locations vorhanden</p>
+			<p class="mt-1 text-sm text-muted-foreground">Fuege Orte hinzu, um Wetter-Daten abzurufen und zu vergleichen.</p>
 			<Button variant="outline" class="mt-4" onclick={openCreate}>Erste Location erstellen</Button>
 		</div>
 	{:else}
@@ -132,9 +138,11 @@
 							{/if}
 						</Table.Cell>
 						<Table.Cell class="text-right">
-							<Button variant="ghost" size="sm" onclick={() => (weatherTarget = loc)}>Wetter</Button>
-							<Button variant="ghost" size="sm" onclick={() => openEdit(loc)}>Bearbeiten</Button>
-							<Button variant="ghost" size="sm" class="hidden sm:inline-flex" onclick={() => (deleteTarget = loc)}>Löschen</Button>
+							<div class="inline-flex gap-0.5">
+								<Button variant="ghost" size="icon-sm" title="Wetter" onclick={() => (weatherTarget = loc)}><CloudSunIcon class="size-3.5" /></Button>
+								<Button variant="ghost" size="icon-sm" title="Bearbeiten" onclick={() => openEdit(loc)}><PencilIcon class="size-3.5" /></Button>
+								<Button variant="ghost" size="icon-sm" class="hidden sm:inline-flex" title="Löschen" onclick={() => (deleteTarget = loc)}><Trash2Icon class="size-3.5" /></Button>
+							</div>
 						</Table.Cell>
 					</Table.Row>
 				{/each}

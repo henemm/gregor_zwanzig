@@ -9,6 +9,12 @@
 	import TripForm from '$lib/components/TripForm.svelte';
 	import WeatherConfigDialog from '$lib/components/WeatherConfigDialog.svelte';
 	import SearchIcon from '@lucide/svelte/icons/search';
+	import RouteIcon from '@lucide/svelte/icons/route';
+	import BellIcon from '@lucide/svelte/icons/bell';
+	import CloudSunIcon from '@lucide/svelte/icons/cloud-sun';
+	import PlayIcon from '@lucide/svelte/icons/play';
+	import PencilIcon from '@lucide/svelte/icons/pencil';
+	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 
 	let { data } = $props();
 
@@ -234,8 +240,10 @@
 	{/if}
 
 	{#if trips.length === 0}
-		<div data-testid="empty-state" class="rounded-lg border border-dashed p-8 text-center">
-			<p class="text-muted-foreground">Keine Trips vorhanden</p>
+		<div data-testid="empty-state" class="rounded-lg border border-dashed p-10 text-center">
+			<RouteIcon class="mx-auto mb-3 size-10 text-muted-foreground/40" />
+			<p class="font-medium">Keine Trips vorhanden</p>
+			<p class="mt-1 text-sm text-muted-foreground">Erstelle deinen ersten Trip und konfiguriere Wetter-Reports.</p>
 			<Button variant="outline" class="mt-4" onclick={openCreate}>Ersten Trip erstellen</Button>
 		</div>
 	{:else}
@@ -262,13 +270,13 @@
 						</Table.Cell>
 						<Table.Cell class="hidden sm:table-cell text-sm text-muted-foreground">{dateRange(trip)}</Table.Cell>
 						<Table.Cell class="text-right">
-							<div class="inline-flex flex-wrap justify-end gap-1">
-								<Button variant="outline" size="sm" onclick={() => openReportConfig(trip)}>Reports</Button>
-								<Button variant="outline" size="sm" onclick={() => (weatherConfigTarget = trip)}>Wetter</Button>
-								<Button variant="outline" size="sm" class="hidden sm:inline-flex" onclick={() => runTestReport(trip, 7)}>Test Morgen</Button>
-								<Button variant="outline" size="sm" class="hidden sm:inline-flex" onclick={() => runTestReport(trip, 18)}>Test Abend</Button>
-								<Button variant="ghost" size="sm" onclick={() => openEdit(trip)}>Bearbeiten</Button>
-								<Button variant="ghost" size="sm" class="hidden sm:inline-flex" onclick={() => (deleteTarget = trip)}>Löschen</Button>
+							<div class="inline-flex flex-wrap justify-end gap-0.5">
+								<Button variant="outline" size="icon-sm" title="Report-Konfiguration" onclick={() => openReportConfig(trip)}><BellIcon class="size-3.5" /></Button>
+								<Button variant="outline" size="icon-sm" title="Wetter-Konfiguration" onclick={() => (weatherConfigTarget = trip)}><CloudSunIcon class="size-3.5" /></Button>
+								<Button variant="outline" size="icon-sm" class="hidden sm:inline-flex" title="Test Morgen-Report" onclick={() => runTestReport(trip, 7)}><PlayIcon class="size-3.5" /></Button>
+								<Button variant="outline" size="icon-sm" class="hidden sm:inline-flex" title="Test Abend-Report" onclick={() => runTestReport(trip, 18)}><PlayIcon class="size-3.5" /></Button>
+								<Button variant="ghost" size="icon-sm" title="Bearbeiten" onclick={() => openEdit(trip)}><PencilIcon class="size-3.5" /></Button>
+								<Button variant="ghost" size="icon-sm" class="hidden sm:inline-flex" title="Löschen" onclick={() => (deleteTarget = trip)}><Trash2Icon class="size-3.5" /></Button>
 							</div>
 						</Table.Cell>
 					</Table.Row>

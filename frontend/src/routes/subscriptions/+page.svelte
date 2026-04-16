@@ -9,6 +9,10 @@
 	import SubscriptionForm from '$lib/components/SubscriptionForm.svelte';
 	import WeatherConfigDialog from '$lib/components/WeatherConfigDialog.svelte';
 	import SearchIcon from '@lucide/svelte/icons/search';
+	import BellIcon from '@lucide/svelte/icons/bell';
+	import CloudSunIcon from '@lucide/svelte/icons/cloud-sun';
+	import PencilIcon from '@lucide/svelte/icons/pencil';
+	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 
 	let { data } = $props();
 
@@ -126,8 +130,10 @@
 	{/if}
 
 	{#if subscriptions.length === 0}
-		<div data-testid="empty-state" class="rounded-lg border border-dashed p-8 text-center">
-			<p class="text-muted-foreground">Keine Abos vorhanden</p>
+		<div data-testid="empty-state" class="rounded-lg border border-dashed p-10 text-center">
+			<BellIcon class="mx-auto mb-3 size-10 text-muted-foreground/40" />
+			<p class="font-medium">Keine Abos vorhanden</p>
+			<p class="mt-1 text-sm text-muted-foreground">Erstelle dein erstes Abo fuer automatische Wetter-Vergleiche.</p>
 			<Button variant="outline" class="mt-4" onclick={openCreate}>Erstes Abo erstellen</Button>
 		</div>
 	{:else}
@@ -187,9 +193,11 @@
 							</Button>
 						</Table.Cell>
 						<Table.Cell class="text-right">
-							<Button variant="ghost" size="sm" onclick={() => (weatherTarget = sub)}>Wetter</Button>
-							<Button variant="ghost" size="sm" onclick={() => openEdit(sub)}>Bearbeiten</Button>
-							<Button variant="ghost" size="sm" onclick={() => (deleteTarget = sub)}>Löschen</Button>
+							<div class="inline-flex gap-0.5">
+								<Button variant="ghost" size="icon-sm" title="Wetter-Konfiguration" onclick={() => (weatherTarget = sub)}><CloudSunIcon class="size-3.5" /></Button>
+								<Button variant="ghost" size="icon-sm" title="Bearbeiten" onclick={() => openEdit(sub)}><PencilIcon class="size-3.5" /></Button>
+								<Button variant="ghost" size="icon-sm" title="Löschen" onclick={() => (deleteTarget = sub)}><Trash2Icon class="size-3.5" /></Button>
+							</div>
 						</Table.Cell>
 					</Table.Row>
 				{/each}
