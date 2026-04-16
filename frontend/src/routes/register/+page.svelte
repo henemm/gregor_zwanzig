@@ -1,23 +1,15 @@
 <script lang="ts">
-	import { page } from '$app/stores';
 	import type { ActionData } from './$types.js';
 
 	let { form }: { form: ActionData } = $props();
-	const registered = $derived($page.url.searchParams.get('registered') === '1');
 </script>
 
 <div class="flex min-h-screen items-center justify-center bg-background">
 	<div class="w-full max-w-sm space-y-6 p-6">
 		<div class="space-y-2 text-center">
-			<h1 class="text-2xl font-bold">Gregor 20</h1>
-			<p class="text-muted-foreground text-sm">Anmelden um fortzufahren</p>
+			<h1 class="text-2xl font-bold">Konto erstellen</h1>
+			<p class="text-muted-foreground text-sm">Benutzerdaten eingeben</p>
 		</div>
-
-		{#if registered}
-			<div class="rounded-md border border-green-300 bg-green-50 p-3 text-sm text-green-800">
-				Konto erfolgreich erstellt. Bitte melde dich an.
-			</div>
-		{/if}
 
 		{#if form?.error}
 			<div class="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
@@ -49,20 +41,26 @@
 				/>
 			</div>
 
+			<div class="space-y-2">
+				<label for="confirmPassword" class="text-sm font-medium">Passwort bestätigen</label>
+				<input
+					id="confirmPassword"
+					name="confirmPassword"
+					type="password"
+					required
+					class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+				/>
+			</div>
+
 			<button
 				type="submit"
 				class="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground ring-offset-background hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 			>
-				Anmelden
+				Konto erstellen
 			</button>
 		</form>
-		<div class="space-y-2">
-			<a href="/register" class="block text-center text-sm text-muted-foreground hover:underline">
-				Noch kein Konto? Konto erstellen
-			</a>
-			<a href="/forgot-password" class="block text-center text-sm text-muted-foreground hover:underline">
-				Passwort vergessen?
-			</a>
-		</div>
+		<a href="/login" class="block text-center text-sm text-muted-foreground hover:underline">
+			Bereits registriert? Anmelden
+		</a>
 	</div>
 </div>
