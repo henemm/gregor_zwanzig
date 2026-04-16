@@ -2,11 +2,41 @@ package store
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/henemm/gregor-api/internal/model"
 )
+
+// ListUserIDs returns the IDs of all registered users.
+// A valid user directory must contain a user.json file.
+// Returns an empty slice if the users directory does not exist.
+func (s *Store) ListUserIDs() ([]string, error) {
+	usersDir := filepath.Join(s.DataDir, "users")
+	entries, err := os.ReadDir(usersDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []string{}, nil
+		}
+		return nil, fmt.Errorf("read users dir: %w", err)
+	}
+
+	var ids []string
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		userJSON := filepath.Join(usersDir, e.Name(), "user.json")
+		if _, err := os.Stat(userJSON); err == nil {
+			ids = append(ids, e.Name())
+		}
+	}
+	if ids == nil {
+		ids = []string{}
+	}
+	return ids, nil
+}
 
 // UserDir returns the directory for a specific user.
 // Uses explicit id parameter, NOT s.UserID — user records are global.

@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/henemm/gregor-api/internal/config"
+	"github.com/henemm/gregor-api/internal/store"
 	"github.com/robfig/cron/v3"
 )
 
@@ -38,13 +39,14 @@ type Scheduler struct {
 	heartbeatMorning string
 	heartbeatEvening string
 	client           *http.Client
+	store            *store.Store
 	mu               sync.RWMutex
 	lastRuns         map[string]*jobResult
 	entryMap         map[cron.EntryID]jobMeta // maps cron EntryID → job identity
 }
 
-// New creates a Scheduler from config. Returns error if timezone is invalid.
-func New(cfg *config.Config) (*Scheduler, error) {
+// New creates a Scheduler from config and store. Returns error if timezone is invalid.
+func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 	loc, err := time.LoadLocation(cfg.SchedulerTimezone)
 	if err != nil {
 		return nil, fmt.Errorf("invalid timezone %q: %w", cfg.SchedulerTimezone, err)
@@ -56,6 +58,7 @@ func New(cfg *config.Config) (*Scheduler, error) {
 		heartbeatMorning: cfg.HeartbeatMorning,
 		heartbeatEvening: cfg.HeartbeatEvening,
 		client:           &http.Client{Timeout: 120 * time.Second},
+		store:            st,
 		lastRuns:         make(map[string]*jobResult),
 		entryMap:         make(map[cron.EntryID]jobMeta),
 	}
@@ -95,12 +98,36 @@ func (s *Scheduler) Stop() {
 	log.Println("[scheduler] Stopped")
 }
 
+// runForAllUsers iterates over all registered users and triggers the endpoint
+// for each. Returns nil only if all users succeeded.
+func (s *Scheduler) runForAllUsers(jobID, path string) error {
+	userIDs, err := s.store.ListUserIDs()
+	if err != nil {
+		return fmt.Errorf("list users: %w", err)
+	}
+	if len(userIDs) == 0 {
+		log.Printf("[scheduler] %s: no users registered, skipping", jobID)
+		return nil
+	}
+
+	var firstErr error
+	for _, uid := range userIDs {
+		if err := s.triggerEndpointForUser(path, uid); err != nil {
+			log.Printf("[scheduler] %s: user %s failed: %v", jobID, uid, err)
+			if firstErr == nil {
+				firstErr = err
+			}
+			// continue — do not stop other users
+		}
+	}
+	return firstErr
+}
+
 func (s *Scheduler) morningSubscriptions() {
 	log.Println("[scheduler] Running morning subscriptions...")
 	s.recordRun("morning_subscriptions", func() error {
-		return s.triggerEndpoint("/api/scheduler/morning-subscriptions")
+		return s.runForAllUsers("morning_subscriptions", "/api/scheduler/morning-subscriptions")
 	})
-	// Ping heartbeat only on success
 	s.mu.RLock()
 	lr := s.lastRuns["morning_subscriptions"]
 	s.mu.RUnlock()
@@ -112,9 +139,8 @@ func (s *Scheduler) morningSubscriptions() {
 func (s *Scheduler) eveningSubscriptions() {
 	log.Println("[scheduler] Running evening subscriptions...")
 	s.recordRun("evening_subscriptions", func() error {
-		return s.triggerEndpoint("/api/scheduler/evening-subscriptions")
+		return s.runForAllUsers("evening_subscriptions", "/api/scheduler/evening-subscriptions")
 	})
-	// Ping heartbeat only on success
 	s.mu.RLock()
 	lr := s.lastRuns["evening_subscriptions"]
 	s.mu.RUnlock()
@@ -125,19 +151,19 @@ func (s *Scheduler) eveningSubscriptions() {
 
 func (s *Scheduler) tripReports() {
 	s.recordRun("trip_reports_hourly", func() error {
-		return s.triggerEndpoint("/api/scheduler/trip-reports")
+		return s.runForAllUsers("trip_reports_hourly", "/api/scheduler/trip-reports")
 	})
 }
 
 func (s *Scheduler) alertChecks() {
 	s.recordRun("alert_checks", func() error {
-		return s.triggerEndpoint("/api/scheduler/alert-checks")
+		return s.runForAllUsers("alert_checks", "/api/scheduler/alert-checks")
 	})
 }
 
 func (s *Scheduler) inboundCommands() {
 	s.recordRun("inbound_command_poll", func() error {
-		return s.triggerEndpoint("/api/scheduler/inbound-commands")
+		return s.runForAllUsers("inbound_command_poll", "/api/scheduler/inbound-commands")
 	})
 }
 
@@ -161,9 +187,9 @@ func (s *Scheduler) recordRun(jobID string, fn func() error) {
 	}
 }
 
-// triggerEndpoint sends a POST to the Python FastAPI trigger endpoint.
-func (s *Scheduler) triggerEndpoint(path string) error {
-	url := s.pythonURL + path
+// triggerEndpointForUser sends a POST to the Python trigger endpoint for a specific user.
+func (s *Scheduler) triggerEndpointForUser(path, userID string) error {
+	url := s.pythonURL + path + "?user_id=" + userID
 	resp, err := s.client.Post(url, "application/json", nil)
 	if err != nil {
 		return fmt.Errorf("HTTP error: %w", err)
@@ -174,7 +200,7 @@ func (s *Scheduler) triggerEndpoint(path string) error {
 	if resp.StatusCode >= 400 {
 		return fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(body))
 	}
-	log.Printf("[scheduler] %s → %d", path, resp.StatusCode)
+	log.Printf("[scheduler] %s?user_id=%s → %d", path, userID, resp.StatusCode)
 	return nil
 }
 

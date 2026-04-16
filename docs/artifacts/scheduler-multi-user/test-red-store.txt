@@ -1,0 +1,7 @@
+# github.com/henemm/gregor-api/internal/store [github.com/henemm/gregor-api/internal/store.test]
+internal/store/list_users_test.go:24:16: s.ListUserIDs undefined (type *Store has no field or method ListUserIDs)
+internal/store/list_users_test.go:50:16: s.ListUserIDs undefined (type *Store has no field or method ListUserIDs)
+internal/store/list_users_test.go:68:16: s.ListUserIDs undefined (type *Store has no field or method ListUserIDs)
+internal/store/list_users_test.go:85:16: s.ListUserIDs undefined (type *Store has no field or method ListUserIDs)
+FAIL	github.com/henemm/gregor-api/internal/store [build failed]
+FAIL

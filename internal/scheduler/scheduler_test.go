@@ -5,11 +5,26 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/henemm/gregor-api/internal/config"
+	"github.com/henemm/gregor-api/internal/store"
 )
+
+func testStore(t *testing.T) *store.Store {
+	t.Helper()
+	tmpDir := t.TempDir()
+	s := store.New(tmpDir, "default")
+	// Create default user so jobs have at least one user to iterate
+	s.ProvisionUserDirs("default")
+	os.MkdirAll(filepath.Join(tmpDir, "users", "default"), 0755)
+	os.WriteFile(filepath.Join(tmpDir, "users", "default", "user.json"),
+		[]byte(`{"id":"default"}`), 0644)
+	return s
+}
 
 // --- Test: New with valid timezone ---
 
@@ -19,7 +34,7 @@ func TestNew_ValidTimezone(t *testing.T) {
 		SchedulerTimezone: "Europe/Vienna",
 	}
 
-	sched, err := New(cfg)
+	sched, err := New(cfg, testStore(t))
 	if err != nil {
 		t.Fatalf("New() returned error for valid timezone: %v", err)
 	}
@@ -39,7 +54,7 @@ func TestNew_InvalidTimezone(t *testing.T) {
 		SchedulerTimezone: "Invalid/Timezone",
 	}
 
-	sched, err := New(cfg)
+	sched, err := New(cfg, testStore(t))
 	if err == nil {
 		t.Fatal("New() should return error for invalid timezone")
 	}
@@ -67,12 +82,12 @@ func TestTriggerEndpoint_Success(t *testing.T) {
 		PythonCoreURL:     server.URL,
 		SchedulerTimezone: "Europe/Vienna",
 	}
-	sched, err := New(cfg)
+	sched, err := New(cfg, testStore(t))
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
 
-	err = sched.triggerEndpoint("/api/scheduler/morning-subscriptions")
+	err = sched.triggerEndpointForUser("/api/scheduler/morning-subscriptions", "default")
 	if err != nil {
 		t.Fatalf("triggerEndpoint() returned error: %v", err)
 	}
@@ -85,14 +100,14 @@ func TestTriggerEndpoint_PythonDown(t *testing.T) {
 		PythonCoreURL:     "http://localhost:19999", // nothing listening
 		SchedulerTimezone: "Europe/Vienna",
 	}
-	sched, err := New(cfg)
+	sched, err := New(cfg, testStore(t))
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
 	// Use short timeout so test doesn't hang
 	sched.client = &http.Client{Timeout: 1 * time.Second}
 
-	err = sched.triggerEndpoint("/api/scheduler/trip-reports")
+	err = sched.triggerEndpointForUser("/api/scheduler/trip-reports", "default")
 	if err == nil {
 		t.Fatal("triggerEndpoint() should return error when Python is down")
 	}
@@ -111,12 +126,12 @@ func TestTriggerEndpoint_PythonError(t *testing.T) {
 		PythonCoreURL:     server.URL,
 		SchedulerTimezone: "Europe/Vienna",
 	}
-	sched, err := New(cfg)
+	sched, err := New(cfg, testStore(t))
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
 
-	err = sched.triggerEndpoint("/api/scheduler/alert-checks")
+	err = sched.triggerEndpointForUser("/api/scheduler/alert-checks", "default")
 	if err == nil {
 		t.Fatal("triggerEndpoint() should return error for HTTP 500")
 	}
@@ -132,7 +147,7 @@ func TestStatus(t *testing.T) {
 		PythonCoreURL:     "http://localhost:8000",
 		SchedulerTimezone: "Europe/Vienna",
 	}
-	sched, err := New(cfg)
+	sched, err := New(cfg, testStore(t))
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -184,7 +199,7 @@ func TestRecordRun_Success(t *testing.T) {
 		PythonCoreURL:     "http://localhost:8000",
 		SchedulerTimezone: "Europe/Vienna",
 	}
-	sched, err := New(cfg)
+	sched, err := New(cfg, testStore(t))
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -214,7 +229,7 @@ func TestRecordRun_Failure(t *testing.T) {
 		PythonCoreURL:     "http://localhost:8000",
 		SchedulerTimezone: "Europe/Vienna",
 	}
-	sched, err := New(cfg)
+	sched, err := New(cfg, testStore(t))
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -250,7 +265,7 @@ func TestMorningSubscriptions_RecordsRun(t *testing.T) {
 		PythonCoreURL:     server.URL,
 		SchedulerTimezone: "Europe/Vienna",
 	}
-	sched, err := New(cfg)
+	sched, err := New(cfg, testStore(t))
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -281,7 +296,7 @@ func TestMorningSubscriptions_FailedTrigger_RecordsError(t *testing.T) {
 		PythonCoreURL:     server.URL,
 		SchedulerTimezone: "Europe/Vienna",
 	}
-	sched, err := New(cfg)
+	sched, err := New(cfg, testStore(t))
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -317,7 +332,7 @@ func TestPingHeartbeat_Success(t *testing.T) {
 		HeartbeatMorning:  server.URL + "/heartbeat/morning",
 		SchedulerTimezone: "Europe/Vienna",
 	}
-	sched, err := New(cfg)
+	sched, err := New(cfg, testStore(t))
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -336,7 +351,7 @@ func TestPingHeartbeat_Failure(t *testing.T) {
 		HeartbeatMorning:  "http://localhost:19999/heartbeat/nope",
 		SchedulerTimezone: "Europe/Vienna",
 	}
-	sched, err := New(cfg)
+	sched, err := New(cfg, testStore(t))
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -352,7 +367,7 @@ func TestPingHeartbeat_EmptyURL(t *testing.T) {
 		PythonCoreURL:     "http://localhost:8000",
 		SchedulerTimezone: "Europe/Vienna",
 	}
-	sched, err := New(cfg)
+	sched, err := New(cfg, testStore(t))
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -378,7 +393,7 @@ func TestMorningSubscriptions_TriggersHeartbeat(t *testing.T) {
 		HeartbeatEvening:  server.URL + "/heartbeat/evening",
 		SchedulerTimezone: "Europe/Vienna",
 	}
-	sched, err := New(cfg)
+	sched, err := New(cfg, testStore(t))
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -417,7 +432,7 @@ func TestMorningSubscriptions_FailedTrigger_SkipsHeartbeat(t *testing.T) {
 		HeartbeatMorning:  heartbeatServer.URL + "/heartbeat/morning",
 		SchedulerTimezone: "Europe/Vienna",
 	}
-	sched, err := New(cfg)
+	sched, err := New(cfg, testStore(t))
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -436,7 +451,7 @@ func TestStatus_JSONSerializable(t *testing.T) {
 		PythonCoreURL:     "http://localhost:8000",
 		SchedulerTimezone: "Europe/Vienna",
 	}
-	sched, err := New(cfg)
+	sched, err := New(cfg, testStore(t))
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
@@ -466,7 +481,7 @@ func TestStatus_IncludesLastRun(t *testing.T) {
 		PythonCoreURL:     server.URL,
 		SchedulerTimezone: "Europe/Vienna",
 	}
-	sched, err := New(cfg)
+	sched, err := New(cfg, testStore(t))
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
