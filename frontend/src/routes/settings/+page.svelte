@@ -21,24 +21,29 @@
 	}
 
 	const configLabels: Record<string, string> = {
-		latitude: 'Latitude',
-		longitude: 'Longitude',
-		location_name: 'Location',
-		provider: 'Provider',
-		report_type: 'Report Type',
-		channel: 'Channel',
-		debug_level: 'Debug Level',
-		forecast_hours: 'Forecast Hours'
+		latitude: 'Breitengrad',
+		longitude: 'Längengrad',
+		location_name: 'Standort',
+		provider: 'Wetter-Provider',
+		report_type: 'Report-Typ',
+		channel: 'Kanal',
+		debug_level: 'Debug-Level',
+		forecast_hours: 'Vorhersage (Stunden)'
 	};
+
+	// Keys die auf der Settings-Seite nicht angezeigt werden sollen
+	const hiddenConfigKeys = new Set([
+		'elevation_m', 'dry_run', 'include_snow'
+	]);
 </script>
 
 <div class="space-y-6">
-	<h1 class="text-2xl font-bold">Settings</h1>
+	<h1 class="text-2xl font-bold">Einstellungen</h1>
 
 	<!-- Scheduler Status -->
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Scheduler Status</Card.Title>
+			<Card.Title>Zeitplaner</Card.Title>
 			<Card.Description>Geplante Jobs und deren letzter Ausführungsstatus</Card.Description>
 		</Card.Header>
 		<Card.Content>
@@ -102,7 +107,7 @@
 	<!-- System Config -->
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>System Config</Card.Title>
+			<Card.Title>Konfiguration</Card.Title>
 			<Card.Description>Aktive Konfiguration des Backends</Card.Description>
 		</Card.Header>
 		<Card.Content>
@@ -117,12 +122,12 @@
 						</Table.Row>
 					</Table.Header>
 					<Table.Body>
-						{#each Object.entries(data.config) as [key, value]}
+						{#each Object.entries(data.config).filter(([k]) => !hiddenConfigKeys.has(k)) as [key, value]}
 							<Table.Row>
 								<Table.Cell class="font-medium text-muted-foreground">
 									{configLabels[key] ?? key}
 								</Table.Cell>
-								<Table.Cell class="font-mono text-sm">{value}</Table.Cell>
+								<Table.Cell class="font-mono text-sm">{value ?? '—'}</Table.Cell>
 							</Table.Row>
 						{/each}
 					</Table.Body>
@@ -134,7 +139,7 @@
 	<!-- Service Health -->
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Service Health</Card.Title>
+			<Card.Title>System-Status</Card.Title>
 			<Card.Description>Aktueller Zustand aller Systemkomponenten</Card.Description>
 		</Card.Header>
 		<Card.Content>

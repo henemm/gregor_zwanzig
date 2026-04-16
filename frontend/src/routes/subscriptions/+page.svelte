@@ -111,8 +111,8 @@
 
 <div class="space-y-4">
 	<div class="flex items-center justify-between">
-		<h1 class="text-2xl font-bold">Subscriptions</h1>
-		<Button onclick={openCreate}>Neue Subscription</Button>
+		<h1 class="text-2xl font-bold">Abos</h1>
+		<Button onclick={openCreate}>Neues Abo</Button>
 	</div>
 
 	{#if error}
@@ -121,8 +121,8 @@
 
 	{#if subscriptions.length === 0}
 		<div data-testid="empty-state" class="rounded-lg border border-dashed p-8 text-center">
-			<p class="text-muted-foreground">Keine Subscriptions vorhanden</p>
-			<Button variant="outline" class="mt-4" onclick={openCreate}>Erste Subscription erstellen</Button>
+			<p class="text-muted-foreground">Keine Abos vorhanden</p>
+			<Button variant="outline" class="mt-4" onclick={openCreate}>Erstes Abo erstellen</Button>
 		</div>
 	{:else}
 		<div class="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
@@ -196,7 +196,7 @@
 >
 	<Dialog.Content class="max-h-[80vh] max-w-lg overflow-y-auto">
 		<Dialog.Header>
-			<Dialog.Title>{dialogMode === 'create' ? 'Neue Subscription' : 'Subscription bearbeiten'}</Dialog.Title>
+			<Dialog.Title>{dialogMode === 'create' ? 'Neues Abo' : 'Abo bearbeiten'}</Dialog.Title>
 		</Dialog.Header>
 		{#if dialogMode}
 			<SubscriptionForm

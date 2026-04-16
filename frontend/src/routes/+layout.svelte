@@ -8,13 +8,13 @@
 	let mobileMenuOpen = $state(false);
 
 	const nav = [
-		{ href: '/', label: 'Dashboard' },
+		{ href: '/', label: 'Übersicht' },
 		{ href: '/trips', label: 'Trips' },
 		{ href: '/locations', label: 'Locations' },
-		{ href: '/subscriptions', label: 'Subscriptions' },
+		{ href: '/subscriptions', label: 'Abos' },
 		{ href: '/compare', label: 'Vergleich' },
 		{ href: '/weather', label: 'Wetter' },
-		{ href: '/settings', label: 'Settings' }
+		{ href: '/settings', label: 'Einstellungen' }
 	];
 
 	const isLogin = $derived(page.url.pathname === '/login');
