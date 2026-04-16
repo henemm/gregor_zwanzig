@@ -47,6 +47,17 @@ func (s *Store) SaveUser(user model.User) error {
 	return os.WriteFile(filepath.Join(dir, "user.json"), data, 0644)
 }
 
+// ProvisionUserDirs creates the standard subdirectories for a new user.
+func (s *Store) ProvisionUserDirs(id string) error {
+	base := s.UserDir(id)
+	for _, sub := range []string{"locations", "trips", "gpx", "weather_snapshots"} {
+		if err := os.MkdirAll(filepath.Join(base, sub), 0755); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (s *Store) UserExists(id string) bool {
 	path := filepath.Join(s.UserDir(id), "user.json")
 	_, err := os.Stat(path)

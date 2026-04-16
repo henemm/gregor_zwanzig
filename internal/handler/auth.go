@@ -67,6 +67,8 @@ func RegisterHandler(s *store.Store, bcryptCost int) http.HandlerFunc {
 			return
 		}
 
+		s.ProvisionUserDirs(req.Username)
+
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(201)
 		json.NewEncoder(w).Encode(map[string]string{"id": req.Username})
@@ -112,5 +114,95 @@ func LoginHandler(s *store.Store, secret string) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"id": req.Username})
+	}
+}
+
+// profileResponse is the public view of a User (no password_hash).
+type profileResponse struct {
+	ID             string `json:"id"`
+	Email          string `json:"email,omitempty"`
+	MailTo         string `json:"mail_to,omitempty"`
+	SignalPhone    string `json:"signal_phone,omitempty"`
+	TelegramChatID string `json:"telegram_chat_id,omitempty"`
+	CreatedAt      string `json:"created_at"`
+}
+
+func toProfileResponse(u *model.User) profileResponse {
+	return profileResponse{
+		ID:             u.ID,
+		Email:          u.Email,
+		MailTo:         u.MailTo,
+		SignalPhone:    u.SignalPhone,
+		TelegramChatID: u.TelegramChatID,
+		CreatedAt:      u.CreatedAt.Format(time.RFC3339),
+	}
+}
+
+func GetProfileHandler(s *store.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userId := middleware.UserIDFromContext(r.Context())
+		user, err := s.LoadUser(userId)
+		if err != nil || user == nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(404)
+			w.Write([]byte(`{"error":"not_found"}`))
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(toProfileResponse(user))
+	}
+}
+
+func UpdateProfileHandler(s *store.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userId := middleware.UserIDFromContext(r.Context())
+		user, err := s.LoadUser(userId)
+		if err != nil || user == nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(404)
+			w.Write([]byte(`{"error":"not_found"}`))
+			return
+		}
+
+		var update struct {
+			Email          *string `json:"email"`
+			MailTo         *string `json:"mail_to"`
+			SignalPhone    *string `json:"signal_phone"`
+			SignalAPIKey   *string `json:"signal_api_key"`
+			TelegramChatID *string `json:"telegram_chat_id"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&update); err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(400)
+			w.Write([]byte(`{"error":"invalid request"}`))
+			return
+		}
+
+		if update.Email != nil {
+			user.Email = *update.Email
+		}
+		if update.MailTo != nil {
+			user.MailTo = *update.MailTo
+		}
+		if update.SignalPhone != nil {
+			user.SignalPhone = *update.SignalPhone
+		}
+		if update.SignalAPIKey != nil {
+			user.SignalAPIKey = *update.SignalAPIKey
+		}
+		if update.TelegramChatID != nil {
+			user.TelegramChatID = *update.TelegramChatID
+		}
+
+		if err := s.SaveUser(*user); err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(500)
+			w.Write([]byte(`{"error":"store_error"}`))
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(toProfileResponse(user))
 	}
 }
