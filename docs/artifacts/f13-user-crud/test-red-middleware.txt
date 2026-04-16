@@ -1,0 +1,6 @@
+# github.com/henemm/gregor-api/internal/middleware [github.com/henemm/gregor-api/internal/middleware.test]
+internal/middleware/sign_session_test.go:16:11: undefined: SignSession
+internal/middleware/sign_session_test.go:34:11: undefined: SignSession
+internal/middleware/sign_session_test.go:50:11: undefined: SignSession
+FAIL	github.com/henemm/gregor-api/internal/middleware [build failed]
+FAIL

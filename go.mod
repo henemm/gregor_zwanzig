@@ -1,6 +1,6 @@
 module github.com/henemm/gregor-api
 
-go 1.25
+go 1.25.0
 
 require github.com/kelseyhightower/envconfig v1.4.0
 
@@ -17,5 +17,6 @@ require (
 	github.com/tidwall/rtree v1.10.0 // indirect
 	github.com/twpayne/go-polyline v1.1.1 // indirect
 	go.mongodb.org/mongo-driver v1.11.4 // indirect
+	golang.org/x/crypto v0.50.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )

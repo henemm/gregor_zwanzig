@@ -4,12 +4,16 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/henemm/gregor-api/internal/config"
 	"github.com/henemm/gregor-api/internal/handler"
 	authmw "github.com/henemm/gregor-api/internal/middleware"
+	"github.com/henemm/gregor-api/internal/model"
 	"github.com/henemm/gregor-api/internal/provider/openmeteo"
 	"github.com/henemm/gregor-api/internal/scheduler"
 	"github.com/henemm/gregor-api/internal/store"
@@ -23,6 +27,17 @@ func main() {
 
 	s := store.New(cfg.DataDir, cfg.UserID)
 
+	// Seed default user from ENV credentials on first run
+	if !s.UserExists(cfg.UserID) && cfg.AuthPass != "" {
+		hash, _ := bcrypt.GenerateFromPassword([]byte(cfg.AuthPass), bcrypt.DefaultCost)
+		s.SaveUser(model.User{
+			ID:           cfg.UserID,
+			PasswordHash: string(hash),
+			CreatedAt:    time.Now(),
+		})
+		log.Printf("Seed user '%s' created", cfg.UserID)
+	}
+
 	omProvider := openmeteo.NewProvider(openmeteo.ProviderConfig{
 		BaseURL:    cfg.OpenMeteoBaseURL,
 		AQURL:      cfg.OpenMeteoAQURL,
@@ -34,6 +49,10 @@ func main() {
 	r := chi.NewRouter()
 	r.Use(chimw.Logger)
 	r.Use(authmw.AuthMiddleware(cfg.SessionSecret))
+
+	// Auth endpoints (exempt from AuthMiddleware)
+	r.Post("/api/auth/register", handler.RegisterHandler(s, bcrypt.DefaultCost))
+	r.Post("/api/auth/login", handler.LoginHandler(s, cfg.SessionSecret))
 
 	r.Get("/api/health", handler.HealthHandler(cfg.PythonCoreURL))
 	r.Get("/api/config", handler.ProxyHandler(cfg.PythonCoreURL, "/config"))

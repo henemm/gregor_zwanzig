@@ -1,0 +1,38 @@
+=== RUN   TestSaveUserCreatesFile
+--- PASS: TestSaveUserCreatesFile (0.00s)
+=== RUN   TestLoadUserReturnsUser
+--- PASS: TestLoadUserReturnsUser (0.00s)
+=== RUN   TestLoadUserNotFoundReturnsNil
+--- PASS: TestLoadUserNotFoundReturnsNil (0.00s)
+=== RUN   TestUserExistsTrue
+--- PASS: TestUserExistsTrue (0.00s)
+=== RUN   TestUserExistsFalse
+--- PASS: TestUserExistsFalse (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/store	(cached)
+=== RUN   TestSignSessionFormat
+--- PASS: TestSignSessionFormat (0.00s)
+=== RUN   TestSignSessionValidateRoundtrip
+--- PASS: TestSignSessionValidateRoundtrip (0.00s)
+=== RUN   TestSignSessionInvalidWithWrongSecret
+--- PASS: TestSignSessionInvalidWithWrongSecret (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/middleware	(cached)
+=== RUN   TestRegisterHandlerSuccess
+--- PASS: TestRegisterHandlerSuccess (0.00s)
+=== RUN   TestRegisterHandlerDuplicateUser
+--- PASS: TestRegisterHandlerDuplicateUser (0.00s)
+=== RUN   TestRegisterHandlerShortUsername
+--- PASS: TestRegisterHandlerShortUsername (0.00s)
+=== RUN   TestRegisterHandlerShortPassword
+--- PASS: TestRegisterHandlerShortPassword (0.00s)
+=== RUN   TestLoginHandlerSuccess
+--- PASS: TestLoginHandlerSuccess (0.00s)
+=== RUN   TestLoginHandlerWrongPassword
+--- PASS: TestLoginHandlerWrongPassword (0.00s)
+=== RUN   TestLoginHandlerUserNotFound
+--- PASS: TestLoginHandlerUserNotFound (0.00s)
+=== RUN   TestLoginHandlerMalformedJSON
+--- PASS: TestLoginHandlerMalformedJSON (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/handler	(cached)
