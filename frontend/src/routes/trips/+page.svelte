@@ -24,6 +24,7 @@
 	let reportConfig = $state({
 		morning_time: '07:00:00',
 		evening_time: '18:00:00',
+		enabled: true,
 		send_email: true,
 		send_sms: false,
 		send_signal: false,
@@ -34,8 +35,8 @@
 		change_threshold_precip_mm: 10,
 		show_compact_summary: true,
 		show_daylight: true,
-		wind_exposition_min_elevation_m: 2000,
-		multi_day_trend_reports: ['morning', 'evening'] as string[]
+		wind_exposition_min_elevation_m: null as number | null,
+		multi_day_trend_reports: ['evening'] as string[]
 	});
 
 	// Weather Config Dialog
@@ -112,6 +113,7 @@
 				reportConfig = {
 					morning_time: rc.morning_time ?? '07:00:00',
 					evening_time: rc.evening_time ?? '18:00:00',
+					enabled: rc.enabled ?? true,
 					send_email: rc.send_email ?? true,
 					send_sms: rc.send_sms ?? false,
 					send_signal: rc.send_signal ?? false,
@@ -122,13 +124,14 @@
 					change_threshold_precip_mm: rc.change_threshold_precip_mm ?? 10,
 					show_compact_summary: rc.show_compact_summary ?? true,
 					show_daylight: rc.show_daylight ?? true,
-					wind_exposition_min_elevation_m: rc.wind_exposition_min_elevation_m ?? 2000,
-					multi_day_trend_reports: rc.multi_day_trend_reports ?? ['morning', 'evening']
+					wind_exposition_min_elevation_m: rc.wind_exposition_min_elevation_m ?? null,
+					multi_day_trend_reports: rc.multi_day_trend_reports ?? ['evening']
 				};
 			} else {
 				reportConfig = {
 					morning_time: '07:00:00',
 					evening_time: '18:00:00',
+					enabled: true,
 					send_email: true,
 					send_sms: false,
 					send_signal: false,
@@ -139,8 +142,8 @@
 					change_threshold_precip_mm: 10,
 					show_compact_summary: true,
 					show_daylight: true,
-					wind_exposition_min_elevation_m: 2000,
-					multi_day_trend_reports: ['morning', 'evening']
+					wind_exposition_min_elevation_m: null as number | null,
+					multi_day_trend_reports: ['evening'] as string[]
 				};
 			}
 		} catch (e: unknown) {
@@ -349,6 +352,18 @@
 							{/each}
 						</select>
 					</div>
+				</div>
+
+				<!-- Enabled -->
+				<div class="flex items-center gap-3">
+					<label class="flex items-center gap-2 text-sm font-medium">
+						<input
+							type="checkbox"
+							class="rounded border-input"
+							bind:checked={reportConfig.enabled}
+						/>
+						Reports aktiv
+					</label>
 				</div>
 
 				<!-- Channels -->

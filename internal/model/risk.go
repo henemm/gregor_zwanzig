@@ -28,10 +28,14 @@ const (
 type Risk struct {
 	Type        RiskType  `json:"type"`
 	Level       RiskLevel `json:"level"`
+	FromTime    *string   `json:"from_time,omitempty"`
 	AmountMm    *float64  `json:"amount_mm,omitempty"`
+	AmountCm    *float64  `json:"amount_cm,omitempty"`
 	GustKmh     *float64  `json:"gust_kmh,omitempty"`
 	FeelsLikeC  *float64  `json:"feels_like_c,omitempty"`
 	VisibilityM *float64  `json:"visibility_m,omitempty"`
+	DangerLevel *int      `json:"danger_level,omitempty"`
+	Problems    []string  `json:"problems,omitempty"`
 }
 
 // RiskAssessment holds all risks for a segment.
