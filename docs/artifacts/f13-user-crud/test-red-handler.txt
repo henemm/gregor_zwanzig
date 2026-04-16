@@ -1,0 +1,5 @@
+# github.com/henemm/gregor-api/internal/handler
+internal/handler/auth_test.go:12:2: missing go.sum entry for module providing package golang.org/x/crypto/bcrypt (imported by github.com/henemm/gregor-api/internal/handler); to add:
+	go get -t github.com/henemm/gregor-api/internal/handler
+FAIL	github.com/henemm/gregor-api/internal/handler [setup failed]
+FAIL

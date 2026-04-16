@@ -1,0 +1,9 @@
+# github.com/henemm/gregor-api/internal/store [github.com/henemm/gregor-api/internal/store.test]
+internal/store/user_test.go:19:16: undefined: model.User
+internal/store/user_test.go:20:11: s.SaveUser undefined (type *Store has no field or method SaveUser)
+internal/store/user_test.go:43:17: s.LoadUser undefined (type *Store has no field or method LoadUser)
+internal/store/user_test.go:66:17: s.LoadUser undefined (type *Store has no field or method LoadUser)
+internal/store/user_test.go:86:8: s.UserExists undefined (type *Store has no field or method UserExists)
+internal/store/user_test.go:97:7: s.UserExists undefined (type *Store has no field or method UserExists)
+FAIL	github.com/henemm/gregor-api/internal/store [build failed]
+FAIL

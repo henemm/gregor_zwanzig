@@ -19,7 +19,8 @@ const userIDContextKey contextKey = "userId"
 func AuthMiddleware(secret string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.URL.Path == "/api/health" || r.URL.Path == "/api/scheduler/status" {
+			if r.URL.Path == "/api/health" || r.URL.Path == "/api/scheduler/status" ||
+				r.URL.Path == "/api/auth/register" || r.URL.Path == "/api/auth/login" {
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -45,6 +46,16 @@ func AuthMiddleware(secret string) func(http.Handler) http.Handler {
 func UserIDFromContext(ctx context.Context) string {
 	uid, _ := ctx.Value(userIDContextKey).(string)
 	return uid
+}
+
+// SignSession creates a signed session token compatible with SvelteKit validation.
+// Format: {userId}.{timestamp}.{hmacSig}
+func SignSession(userId, secret string) string {
+	ts := time.Now().Unix()
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write([]byte(fmt.Sprintf("%s:%d", userId, ts)))
+	sig := hex.EncodeToString(mac.Sum(nil))
+	return fmt.Sprintf("%s.%d.%s", userId, ts, sig)
 }
 
 // ContextWithUserID returns a new context with the given userId set.
