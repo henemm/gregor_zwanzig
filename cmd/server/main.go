@@ -56,6 +56,7 @@ func main() {
 	r.Post("/api/auth/logout", handler.LogoutHandler())
 	r.Post("/api/auth/forgot-password", handler.ForgotPasswordHandler(s, bcrypt.DefaultCost))
 	r.Post("/api/auth/reset-password", handler.ResetPasswordHandler(s, bcrypt.DefaultCost))
+	r.Delete("/api/auth/account", handler.DeleteAccountHandler(s))
 	r.Get("/api/auth/profile", handler.GetProfileHandler(s))
 	r.Put("/api/auth/profile", handler.UpdateProfileHandler(s))
 
