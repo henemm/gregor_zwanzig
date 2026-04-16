@@ -1,0 +1,143 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 8 items
+
+tests/tdd/test_account_page.py FFFFF.FF                                  [100%]
+
+=================================== FAILURES ===================================
+_____________ TestAccountPageExists.test_account_route_returns_200 _____________
+
+self = <tdd.test_account_page.TestAccountPageExists object at 0x71e4123f45c0>
+session_cookie = 'default.1776354015.ee4ea60ebb55e370ec77b774f34bd3996c4ba48ae20e9b030908f7a2514acc0a'
+
+    def test_account_route_returns_200(self, session_cookie):
+        """
+        GIVEN: Authenticated user
+        WHEN: GET /account
+        THEN: Returns 200
+        """
+        resp = authed_get("/account", session_cookie)
+>       assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
+E       AssertionError: Expected 200, got 404
+E       assert 404 == 200
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+tests/tdd/test_account_page.py:62: AssertionError
+____________ TestAccountPageExists.test_account_page_shows_username ____________
+
+self = <tdd.test_account_page.TestAccountPageExists object at 0x71e412649d60>
+session_cookie = 'default.1776354015.ee4ea60ebb55e370ec77b774f34bd3996c4ba48ae20e9b030908f7a2514acc0a'
+
+    def test_account_page_shows_username(self, session_cookie):
+        """
+        GIVEN: Account page loaded
+        WHEN: Inspecting HTML
+        THEN: Shows the username (read-only)
+        """
+        resp = authed_get("/account", session_cookie)
+>       assert resp.status_code == 200
+E       assert 404 == 200
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+tests/tdd/test_account_page.py:71: AssertionError
+_________ TestAccountPageExists.test_account_page_has_editable_fields __________
+
+self = <tdd.test_account_page.TestAccountPageExists object at 0x71e412197da0>
+session_cookie = 'default.1776354015.ee4ea60ebb55e370ec77b774f34bd3996c4ba48ae20e9b030908f7a2514acc0a'
+
+    def test_account_page_has_editable_fields(self, session_cookie):
+        """
+        GIVEN: Account page loaded
+        WHEN: Inspecting HTML
+        THEN: Contains mail_to, signal_phone, telegram_chat_id input fields
+        """
+        resp = authed_get("/account", session_cookie)
+>       assert resp.status_code == 200
+E       assert 404 == 200
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+tests/tdd/test_account_page.py:81: AssertionError
+___________ TestAccountPageExists.test_account_page_has_save_button ____________
+
+self = <tdd.test_account_page.TestAccountPageExists object at 0x71e4121970b0>
+session_cookie = 'default.1776354015.ee4ea60ebb55e370ec77b774f34bd3996c4ba48ae20e9b030908f7a2514acc0a'
+
+    def test_account_page_has_save_button(self, session_cookie):
+        """
+        GIVEN: Account page loaded
+        WHEN: Inspecting HTML
+        THEN: Contains a save button with German text
+        """
+        resp = authed_get("/account", session_cookie)
+>       assert resp.status_code == 200
+E       assert 404 == 200
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+tests/tdd/test_account_page.py:94: AssertionError
+__________ TestAccountPageExists.test_account_page_shows_member_since __________
+
+self = <tdd.test_account_page.TestAccountPageExists object at 0x71e412240170>
+session_cookie = 'default.1776354015.ee4ea60ebb55e370ec77b774f34bd3996c4ba48ae20e9b030908f7a2514acc0a'
+
+    def test_account_page_shows_member_since(self, session_cookie):
+        """
+        GIVEN: Account page loaded
+        WHEN: Inspecting HTML
+        THEN: Shows member-since date
+        """
+        resp = authed_get("/account", session_cookie)
+>       assert resp.status_code == 200
+E       assert 404 == 200
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+tests/tdd/test_account_page.py:104: AssertionError
+___________________ TestNavigation.test_nav_has_account_link ___________________
+
+self = <tdd.test_account_page.TestNavigation object at 0x71e412240290>
+session_cookie = 'default.1776354015.ee4ea60ebb55e370ec77b774f34bd3996c4ba48ae20e9b030908f7a2514acc0a'
+
+    def test_nav_has_account_link(self, session_cookie):
+        """
+        GIVEN: Authenticated user on any page
+        WHEN: Inspecting navigation HTML
+        THEN: Contains link to /account
+        """
+        resp = authed_get("/", session_cookie)
+        assert resp.status_code == 200
+>       assert '/account' in resp.text, "Missing /account link in navigation"
+E       AssertionError: Missing /account link in navigation
+E       assert '/account' in '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n'
+E        +  where '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n' = <Response [200 OK]>.text
+
+tests/tdd/test_account_page.py:136: AssertionError
+__________________ TestNavigation.test_nav_shows_konto_label ___________________
+
+self = <tdd.test_account_page.TestNavigation object at 0x71e412240710>
+session_cookie = 'default.1776354015.ee4ea60ebb55e370ec77b774f34bd3996c4ba48ae20e9b030908f7a2514acc0a'
+
+    def test_nav_shows_konto_label(self, session_cookie):
+        """
+        GIVEN: Authenticated user on any page
+        WHEN: Inspecting navigation HTML
+        THEN: Shows 'Konto' label for account link
+        """
+        resp = authed_get("/", session_cookie)
+        assert resp.status_code == 200
+>       assert 'Konto' in resp.text, "Missing 'Konto' label in navigation"
+E       AssertionError: Missing 'Konto' label in navigation
+E       assert 'Konto' in '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n'
+E        +  where '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n' = <Response [200 OK]>.text
+
+tests/tdd/test_account_page.py:146: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_account_page.py::TestAccountPageExists::test_account_route_returns_200
+FAILED tests/tdd/test_account_page.py::TestAccountPageExists::test_account_page_shows_username
+FAILED tests/tdd/test_account_page.py::TestAccountPageExists::test_account_page_has_editable_fields
+FAILED tests/tdd/test_account_page.py::TestAccountPageExists::test_account_page_has_save_button
+FAILED tests/tdd/test_account_page.py::TestAccountPageExists::test_account_page_shows_member_since
+FAILED tests/tdd/test_account_page.py::TestNavigation::test_nav_has_account_link
+FAILED tests/tdd/test_account_page.py::TestNavigation::test_nav_shows_konto_label
+========================= 7 failed, 1 passed in 0.34s ==========================

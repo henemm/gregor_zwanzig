@@ -1,6 +1,6 @@
 # Active Roadmap - Gregor Zwanziger (Archiv)
 
-**Last Updated:** 2026-04-16 (F62 Registrierungsseite)
+**Last Updated:** 2026-04-16 (F61 Account-Seite)
 
 > **Offene Features, Bugs und Migration-Tasks sind auf GitHub Issues:**
 > https://github.com/henemm/gregor_zwanzig/issues
@@ -65,6 +65,7 @@
 | Subscriptions CRUD (Go) | 2026-04-14 | API | M5b: 5 REST-Endpoints fuer CompareSubscription, Single-File Storage, Validierung, Legacy-Migration, 409 Duplicate Check |
 | Weather Config Endpoints (Go) | 2026-04-14 | API | M5c: 6 GET/PUT-Endpoints fuer display_config auf Trip, Location und Subscription als opaque JSON |
 | Registrierungsseite (SvelteKit) | 2026-04-16 | Auth | F62: /register Route, Form Action, hooks update, Login-Erfolgsbanner. Nutzer-Selbstregistrierung via Go API. |
+| Account-Seite (SvelteKit) | 2026-04-16 | Auth | F61: /account Route, Profil laden via Server Load, Kanal-Einstellungen (E-Mail, Signal, Telegram) editierbar, Konto-Link in Nav. GitHub Issue #61. |
 
 ## Solved Bugs
 

@@ -65,6 +65,7 @@
 	import GitCompare from '@lucide/svelte/icons/git-compare';
 	import CloudSun from '@lucide/svelte/icons/cloud-sun';
 	import SettingsIcon from '@lucide/svelte/icons/settings';
+	import UserIcon from '@lucide/svelte/icons/user';
 
 	const navGroups = [
 		{
@@ -82,6 +83,7 @@
 				{ href: '/compare', label: 'Vergleich', icon: GitCompare },
 				{ href: '/weather', label: 'Wetter', icon: CloudSun },
 				{ href: '/settings', label: 'Einstellungen', icon: SettingsIcon },
+				{ href: '/account', label: 'Konto', icon: UserIcon },
 			]
 		}
 	];
