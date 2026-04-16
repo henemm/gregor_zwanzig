@@ -50,9 +50,11 @@ func main() {
 	r.Use(chimw.Logger)
 	r.Use(authmw.AuthMiddleware(cfg.SessionSecret))
 
-	// Auth endpoints (exempt from AuthMiddleware)
+	// Auth endpoints (register/login exempt from AuthMiddleware)
 	r.Post("/api/auth/register", handler.RegisterHandler(s, bcrypt.DefaultCost))
 	r.Post("/api/auth/login", handler.LoginHandler(s, cfg.SessionSecret))
+	r.Get("/api/auth/profile", handler.GetProfileHandler(s))
+	r.Put("/api/auth/profile", handler.UpdateProfileHandler(s))
 
 	r.Get("/api/health", handler.HealthHandler(cfg.PythonCoreURL))
 	r.Get("/api/config", handler.ProxyHandler(cfg.PythonCoreURL, "/config"))
