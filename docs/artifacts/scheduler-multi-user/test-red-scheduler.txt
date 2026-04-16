@@ -1,0 +1,20 @@
+# github.com/henemm/gregor-api/internal/scheduler [github.com/henemm/gregor-api/internal/scheduler.test]
+internal/scheduler/multi_user_test.go:39:25: too many arguments in call to New
+	have (*config.Config, *store.Store)
+	want (*config.Config)
+internal/scheduler/multi_user_test.go:45:11: sched.store undefined (type *Scheduler has no field or method store)
+internal/scheduler/multi_user_test.go:66:23: too many arguments in call to New
+	have (*config.Config, *store.Store)
+	want (*config.Config)
+internal/scheduler/multi_user_test.go:69:15: sched.triggerEndpointForUser undefined (type *Scheduler has no field or method triggerEndpointForUser)
+internal/scheduler/multi_user_test.go:103:23: too many arguments in call to New
+	have (*config.Config, *store.Store)
+	want (*config.Config)
+internal/scheduler/multi_user_test.go:150:23: too many arguments in call to New
+	have (*config.Config, *store.Store)
+	want (*config.Config)
+internal/scheduler/multi_user_test.go:177:23: too many arguments in call to New
+	have (*config.Config, *store.Store)
+	want (*config.Config)
+FAIL	github.com/henemm/gregor-api/internal/scheduler [build failed]
+FAIL

@@ -88,7 +88,7 @@ func main() {
 	r.Get("/api/compare", handler.CompareProxyHandler(cfg.PythonCoreURL))
 
 	// Scheduler
-	sched, err := scheduler.New(cfg)
+	sched, err := scheduler.New(cfg, s)
 	if err != nil {
 		log.Fatalf("scheduler error: %v", err)
 	}
