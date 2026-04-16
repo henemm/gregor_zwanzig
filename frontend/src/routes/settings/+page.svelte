@@ -53,11 +53,11 @@
 				<div class="mb-4 flex items-center gap-4 text-sm">
 					<span>
 						Status:
-						<span
-							class="font-medium"
+						<span class="inline-flex items-center gap-1.5 font-medium"
 							class:text-green-600={data.scheduler.running}
 							class:text-red-600={!data.scheduler.running}
 						>
+							<span class="inline-block size-2 rounded-full" class:bg-green-500={data.scheduler.running} class:bg-red-400={!data.scheduler.running}></span>
 							{data.scheduler.running ? 'Läuft' : 'Gestoppt'}
 						</span>
 					</span>
@@ -83,15 +83,21 @@
 										{job.last_run?.time ? formatDate(job.last_run.time) : 'Noch nie'}
 									</Table.Cell>
 									<Table.Cell>
-										{#if !job.last_run?.time}
-											<Badge variant="secondary">never</Badge>
-										{:else if job.last_run?.status === 'ok'}
-											<Badge variant="default" class="bg-green-600 text-white">ok</Badge>
-										{:else if job.last_run?.status === 'error'}
-											<Badge variant="destructive">error</Badge>
-										{:else}
-											<Badge variant="secondary">{job.last_run?.status ?? '—'}</Badge>
-										{/if}
+										<span class="inline-flex items-center gap-1.5 text-sm">
+											{#if !job.last_run?.time}
+												<span class="inline-block size-2 rounded-full bg-gray-300"></span>
+												<span class="text-muted-foreground">nie</span>
+											{:else if job.last_run?.status === 'ok'}
+												<span class="inline-block size-2 rounded-full bg-green-500"></span>
+												ok
+											{:else if job.last_run?.status === 'error'}
+												<span class="inline-block size-2 rounded-full bg-red-500"></span>
+												<span class="text-destructive">Fehler</span>
+											{:else}
+												<span class="inline-block size-2 rounded-full bg-gray-400"></span>
+												{job.last_run?.status ?? '—'}
+											{/if}
+										</span>
 									</Table.Cell>
 								</Table.Row>
 							{/each}

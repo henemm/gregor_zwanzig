@@ -2,15 +2,21 @@
 	import type { Trip } from '$lib/types.js';
 	import { api } from '$lib/api.js';
 	import { Button } from '$lib/components/ui/button/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import TripForm from '$lib/components/TripForm.svelte';
 	import WeatherConfigDialog from '$lib/components/WeatherConfigDialog.svelte';
+	import SearchIcon from '@lucide/svelte/icons/search';
 
 	let { data } = $props();
 
 	let trips: Trip[] = $state(data.trips);
+	let search = $state('');
+	let filteredTrips = $derived(
+		trips.filter(t => t.name.toLowerCase().includes(search.toLowerCase()))
+	);
 	let dialogMode: 'create' | 'edit' | null = $state(null);
 	let editTarget: Trip | null = $state(null);
 	let deleteTarget: Trip | null = $state(null);
@@ -233,6 +239,10 @@
 			<Button variant="outline" class="mt-4" onclick={openCreate}>Ersten Trip erstellen</Button>
 		</div>
 	{:else}
+		<div class="relative mb-3 max-w-xs">
+			<SearchIcon class="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+			<Input placeholder="Suchen..." class="pl-8" bind:value={search} />
+		</div>
 		<div class="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
 		<Table.Root>
 			<Table.Header>
@@ -244,7 +254,7 @@
 				</Table.Row>
 			</Table.Header>
 			<Table.Body>
-				{#each trips as trip}
+				{#each filteredTrips as trip}
 					<Table.Row>
 						<Table.Cell class="font-medium">{trip.name}</Table.Cell>
 						<Table.Cell class="hidden sm:table-cell">
