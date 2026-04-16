@@ -200,7 +200,8 @@
 
 	<!-- Top N -->
 	<div>
-		<Label for="sub-topn">Top N Locations</Label>
+		<Label for="sub-topn">Top Locations</Label>
+		<p class="text-xs text-muted-foreground">Anzahl Locations mit stündlichen Details im Report</p>
 		<Input
 			id="sub-topn"
 			name="sub-topn"
