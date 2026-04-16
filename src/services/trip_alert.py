@@ -56,7 +56,7 @@ class TripAlertService:
             throttle_hours: Minimum hours between alerts per trip (default: 2)
             user_id: User identifier for data scoping
         """
-        self._settings = settings if settings else Settings()
+        self._settings = settings if settings else Settings().with_user_profile(user_id)
         self._formatter = TripReportFormatter()
         self._change_detector = WeatherChangeDetectionService()
         self._throttle_hours = throttle_hours
@@ -148,15 +148,24 @@ class TripAlertService:
         Check all active trips for weather changes and send alerts.
 
         Called by scheduler every 30 minutes.
+        Only checks trips that have at least one stage today or in the future.
 
         Returns:
             Number of alerts sent
         """
+        from datetime import date as date_type
+
         from app.loader import load_all_trips
 
+        today = date_type.today()
         alerts_sent = 0
         for trip in load_all_trips(user_id=self._user_id):
             if not trip.report_config or not trip.report_config.alert_on_changes:
+                continue
+
+            # Skip expired trips (all stages in the past)
+            if trip.end_date < today:
+                logger.debug(f"Skipping expired trip {trip.id} (ended {trip.end_date})")
                 continue
 
             # Skip if no cached weather available

@@ -59,7 +59,7 @@ class TripReportSchedulerService:
             settings: App settings (default: load from config)
             user_id: User identifier for data scoping
         """
-        self._settings = settings if settings else Settings()
+        self._settings = settings if settings else Settings().with_user_profile(user_id)
         self._formatter = TripReportFormatter()
         self._user_id = user_id
 
