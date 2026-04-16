@@ -1,0 +1,7 @@
+# github.com/henemm/gregor-api/internal/handler [github.com/henemm/gregor-api/internal/handler.test]
+internal/handler/delete_account_test.go:24:7: undefined: DeleteAccountHandler
+internal/handler/delete_account_test.go:48:7: undefined: DeleteAccountHandler
+internal/handler/delete_account_test.go:51:17: undefined: http
+internal/handler/delete_account_test.go:80:7: undefined: DeleteAccountHandler
+FAIL	github.com/henemm/gregor-api/internal/handler [build failed]
+FAIL

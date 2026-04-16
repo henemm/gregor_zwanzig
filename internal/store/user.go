@@ -95,6 +95,11 @@ func (s *Store) DeleteResetToken(userId string) error {
 	return err
 }
 
+func (s *Store) DeleteUser(id string) error {
+	dir := s.UserDir(id)
+	return os.RemoveAll(dir)
+}
+
 func (s *Store) UserExists(id string) bool {
 	path := filepath.Join(s.UserDir(id), "user.json")
 	_, err := os.Stat(path)

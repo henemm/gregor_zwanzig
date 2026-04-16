@@ -120,6 +120,38 @@ func LoginHandler(s *store.Store, secret string) http.HandlerFunc {
 	}
 }
 
+func DeleteAccountHandler(s *store.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userId := middleware.UserIDFromContext(r.Context())
+		user, err := s.LoadUser(userId)
+		if err != nil || user == nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(404)
+			w.Write([]byte(`{"error":"not_found"}`))
+			return
+		}
+
+		if err := s.DeleteUser(userId); err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(500)
+			w.Write([]byte(`{"error":"store_error"}`))
+			return
+		}
+
+		// Blacklist session + clear cookie (like logout)
+		cookie, err := r.Cookie("gz_session")
+		if err == nil && cookie.Value != "" {
+			middleware.BlacklistSession(cookie.Value)
+		}
+		http.SetCookie(w, &http.Cookie{
+			Name: "gz_session", Value: "", Path: "/", HttpOnly: true, MaxAge: -1,
+		})
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"status":"deleted"}`))
+	}
+}
+
 func ForgotPasswordHandler(s *store.Store, bcryptCost int) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
