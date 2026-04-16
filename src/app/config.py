@@ -145,6 +145,40 @@ class Settings(BaseSettings):
             "mail_from": self.google_mail_from or self.google_smtp_user,
         })
 
+    def with_user_profile(self, user_id: str) -> "Settings":
+        """Return a copy with recipient settings from user profile.
+
+        Loads data/users/{user_id}/user.json and overrides recipient fields.
+        SMTP/Signal/Telegram infrastructure stays global.
+        Falls back to global settings if profile doesn't exist or fields are empty.
+        """
+        import json
+        from pathlib import Path
+
+        profile_path = Path(f"data/users/{user_id}/user.json")
+        if not profile_path.exists():
+            return self
+
+        try:
+            profile = json.loads(profile_path.read_text())
+        except (json.JSONDecodeError, OSError):
+            return self
+
+        overrides = {}
+        if profile.get("mail_to"):
+            overrides["mail_to"] = profile["mail_to"]
+        if profile.get("signal_phone"):
+            overrides["signal_phone"] = profile["signal_phone"]
+        if profile.get("signal_api_key"):
+            overrides["signal_api_key"] = profile["signal_api_key"]
+        if profile.get("telegram_chat_id"):
+            overrides["telegram_chat_id"] = profile["telegram_chat_id"]
+
+        if not overrides:
+            return self
+
+        return self.model_copy(update=overrides)
+
     def can_send_sms(self) -> bool:
         """Check if SMS configuration is complete."""
         return all([

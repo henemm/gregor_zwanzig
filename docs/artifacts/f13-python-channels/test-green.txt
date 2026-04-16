@@ -1,0 +1,4 @@
+PASS: nonexistent user → fallback to global
+PASS: default user → mail_to=gregor_zwanzig@henemm.com
+PASS: Services import and init OK with user_id
+PASS: Scheduler router imports OK

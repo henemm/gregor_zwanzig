@@ -86,7 +86,7 @@ def _run_subscriptions_by_schedule(schedule, user_id: str = "default") -> int:
     from services.compare_subscription import run_comparison_for_subscription
 
     count = 0
-    settings = Settings()
+    settings = Settings().with_user_profile(user_id)
     all_locations = load_all_locations(user_id=user_id)
 
     for sub in load_compare_subscriptions(user_id=user_id):
