@@ -114,14 +114,32 @@
 		localStorage.setItem('gz-theme', id);
 	}
 
-	const nav = [
-		{ href: '/', label: 'Übersicht' },
-		{ href: '/trips', label: 'Trips' },
-		{ href: '/locations', label: 'Locations' },
-		{ href: '/subscriptions', label: 'Abos' },
-		{ href: '/compare', label: 'Vergleich' },
-		{ href: '/weather', label: 'Wetter' },
-		{ href: '/settings', label: 'Einstellungen' }
+	import LayoutDashboard from '@lucide/svelte/icons/layout-dashboard';
+	import RouteIcon from '@lucide/svelte/icons/route';
+	import MapPin from '@lucide/svelte/icons/map-pin';
+	import Bell from '@lucide/svelte/icons/bell';
+	import GitCompare from '@lucide/svelte/icons/git-compare';
+	import CloudSun from '@lucide/svelte/icons/cloud-sun';
+	import SettingsIcon from '@lucide/svelte/icons/settings';
+
+	const navGroups = [
+		{
+			label: 'Daten',
+			items: [
+				{ href: '/', label: 'Übersicht', icon: LayoutDashboard },
+				{ href: '/trips', label: 'Trips', icon: RouteIcon },
+				{ href: '/locations', label: 'Locations', icon: MapPin },
+				{ href: '/subscriptions', label: 'Abos', icon: Bell },
+			]
+		},
+		{
+			label: 'System',
+			items: [
+				{ href: '/compare', label: 'Vergleich', icon: GitCompare },
+				{ href: '/weather', label: 'Wetter', icon: CloudSun },
+				{ href: '/settings', label: 'Einstellungen', icon: SettingsIcon },
+			]
+		}
 	];
 
 	const isLogin = $derived(page.url.pathname === '/login');
@@ -172,16 +190,21 @@
 			{mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}"
 		>
 			<h1 class="mb-6 text-lg font-bold">Gregor 20</h1>
-			{#each nav as item}
-				<a
-					href={item.href}
-					class="block rounded-md px-3 py-2 text-sm hover:bg-sidebar-accent"
-					class:bg-sidebar-accent={page.url.pathname === item.href}
-					class:font-medium={page.url.pathname === item.href}
-					onclick={closeMobileMenu}
-				>
-					{item.label}
-				</a>
+			{#each navGroups as group, gi}
+				{#if gi > 0}<div class="mt-4"></div>{/if}
+				<p class="mb-1 px-3 text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground/60">{group.label}</p>
+				{#each group.items as item}
+					<a
+						href={item.href}
+						class="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-sidebar-accent"
+						class:bg-sidebar-accent={page.url.pathname === item.href}
+						class:font-medium={page.url.pathname === item.href}
+						onclick={closeMobileMenu}
+					>
+						<svelte:component this={item.icon} class="size-4 shrink-0 opacity-70" />
+						{item.label}
+					</a>
+				{/each}
 			{/each}
 			<!-- Theme Switcher -->
 			<div class="mt-6 mb-4">
