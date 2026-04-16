@@ -27,6 +27,7 @@
 		send_email: true,
 		send_sms: false,
 		send_signal: false,
+		send_telegram: false,
 		alert_on_changes: true,
 		change_threshold_temp_c: 5,
 		change_threshold_wind_kmh: 20,
@@ -114,6 +115,7 @@
 					send_email: rc.send_email ?? true,
 					send_sms: rc.send_sms ?? false,
 					send_signal: rc.send_signal ?? false,
+					send_telegram: rc.send_telegram ?? false,
 					alert_on_changes: rc.alert_on_changes ?? true,
 					change_threshold_temp_c: rc.change_threshold_temp_c ?? 5,
 					change_threshold_wind_kmh: rc.change_threshold_wind_kmh ?? 20,
@@ -130,6 +132,7 @@
 					send_email: true,
 					send_sms: false,
 					send_signal: false,
+					send_telegram: false,
 					alert_on_changes: true,
 					change_threshold_temp_c: 5,
 					change_threshold_wind_kmh: 20,
@@ -367,6 +370,14 @@
 								bind:checked={reportConfig.send_signal}
 							/>
 							Signal senden
+						</label>
+						<label class="flex items-center gap-2 text-sm">
+							<input
+								type="checkbox"
+								class="rounded border-input"
+								bind:checked={reportConfig.send_telegram}
+							/>
+							Telegram senden
 						</label>
 					</div>
 				</div>

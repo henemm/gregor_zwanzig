@@ -161,6 +161,9 @@
 								{#if sub.send_signal}
 									<Badge variant="outline">Signal</Badge>
 								{/if}
+								{#if sub.send_telegram}
+									<Badge variant="outline">Telegram</Badge>
+								{/if}
 							</div>
 						</Table.Cell>
 						<Table.Cell>
