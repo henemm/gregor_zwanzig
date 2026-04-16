@@ -33,7 +33,8 @@ func AuthMiddleware(secret string) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.URL.Path == "/api/health" || r.URL.Path == "/api/scheduler/status" ||
 				r.URL.Path == "/api/auth/register" || r.URL.Path == "/api/auth/login" ||
-				r.URL.Path == "/api/auth/logout" {
+				r.URL.Path == "/api/auth/logout" ||
+				r.URL.Path == "/api/auth/forgot-password" || r.URL.Path == "/api/auth/reset-password" {
 				next.ServeHTTP(w, r)
 				return
 			}

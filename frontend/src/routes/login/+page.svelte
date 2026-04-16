@@ -48,5 +48,8 @@
 				Sign in
 			</button>
 		</form>
+		<a href="/forgot-password" class="block text-center text-sm text-muted-foreground hover:underline">
+			Passwort vergessen?
+		</a>
 	</div>
 </div>

@@ -3,7 +3,8 @@ import { env } from '$env/dynamic/private';
 import { verifySession } from '$lib/auth.js';
 
 export const handle: Handle = async ({ event, resolve }) => {
-	if (event.url.pathname === '/login' || event.url.pathname === '/logout') {
+	const publicPaths = ['/login', '/logout', '/forgot-password', '/reset-password'];
+	if (publicPaths.includes(event.url.pathname)) {
 		return resolve(event);
 	}
 
