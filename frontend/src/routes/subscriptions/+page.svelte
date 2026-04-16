@@ -19,6 +19,12 @@
 	const WEEKDAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
 
 	let subscriptions: Subscription[] = $state(data.subscriptions);
+	let refetching = $state(false);
+	async function refetchSubs() {
+		refetching = true;
+		try { subscriptions = await api.get<Subscription[]>('/api/subscriptions'); }
+		finally { refetching = false; }
+	}
 	let search = $state('');
 	let filteredSubs = $derived(
 		subscriptions.filter(s => s.name.toLowerCase().includes(search.toLowerCase()))
@@ -54,7 +60,7 @@
 			} else {
 				await api.put<Subscription>(`/api/subscriptions/${sub.id}`, sub);
 			}
-			subscriptions = await api.get<Subscription[]>('/api/subscriptions');
+			await refetchSubs();
 			dialogMode = null;
 			editTarget = null;
 		} catch (e: unknown) {
@@ -109,7 +115,7 @@
 		error = null;
 		try {
 			await api.put(`/api/subscriptions/${weatherTarget.id}/weather-config`, config);
-			subscriptions = await api.get<Subscription[]>('/api/subscriptions');
+			await refetchSubs();
 			weatherTarget = null;
 		} catch (e: unknown) {
 			error = (e as { error?: string; detail?: string })?.detail
@@ -141,6 +147,13 @@
 			<SearchIcon class="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
 			<Input placeholder="Suchen..." class="pl-8" bind:value={search} />
 		</div>
+		{#if refetching}
+			<div class="space-y-3">
+				{#each Array(3) as _}
+					<div class="h-12 w-full animate-pulse rounded-lg bg-muted"></div>
+				{/each}
+			</div>
+		{:else}
 		<div class="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
 		<Table.Root>
 			<Table.Header>
@@ -204,6 +217,7 @@
 			</Table.Body>
 		</Table.Root>
 		</div>
+		{/if}
 	{/if}
 </div>
 
