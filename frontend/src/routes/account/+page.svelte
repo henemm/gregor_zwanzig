@@ -6,9 +6,11 @@
 
 	let mailTo = $state(data.profile?.mail_to ?? '');
 	let signalPhone = $state(data.profile?.signal_phone ?? '');
+	let signalApiKey = $state('');
 	let telegramChatId = $state(data.profile?.telegram_chat_id ?? '');
 	let successMsg = $state<string | null>(null);
 	let errorMsg = $state<string | null>(null);
+	let deleteErrorMsg = $state<string | null>(null);
 
 	function formatDate(iso: string | null | undefined): string {
 		if (!iso) return '—';
@@ -27,16 +29,36 @@
 		errorMsg = null;
 		successMsg = null;
 		try {
-			await api.put('/api/auth/profile', {
+			const payload: Record<string, string> = {
 				mail_to: mailTo,
 				signal_phone: signalPhone,
 				telegram_chat_id: telegramChatId,
-			});
+			};
+			if (signalApiKey !== '') {
+				payload.signal_api_key = signalApiKey;
+			}
+			await api.put('/api/auth/profile', payload);
+			signalApiKey = '';
 			successMsg = 'Profil gespeichert';
 			setTimeout(() => (successMsg = null), 4000);
 		} catch (e: unknown) {
 			const body = e as { detail?: string; error?: string };
 			errorMsg = body?.detail ?? body?.error ?? 'Speichern fehlgeschlagen';
+		}
+	}
+
+	async function deleteAccount() {
+		const confirmed = window.confirm(
+			'Bist du sicher? Alle deine Daten werden unwiderruflich gelöscht.'
+		);
+		if (!confirmed) return;
+
+		try {
+			await api.del('/api/auth/account');
+			window.location.href = '/login';
+		} catch (e: unknown) {
+			const body = e as { detail?: string; error?: string };
+			deleteErrorMsg = body?.detail ?? body?.error ?? 'Löschen fehlgeschlagen';
 		}
 	}
 </script>
@@ -103,6 +125,19 @@
 			</div>
 
 			<div class="space-y-2">
+				<label for="signalApiKey" class="text-sm font-medium">Signal API Key</label>
+				<input
+					id="signalApiKey"
+					name="signal_api_key"
+					type="password"
+					bind:value={signalApiKey}
+					placeholder="Callmebot API Key"
+					class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+				/>
+				<p class="text-xs text-muted-foreground">Callmebot API Key für Signal-Benachrichtigungen</p>
+			</div>
+
+			<div class="space-y-2">
 				<label for="telegramChatId" class="text-sm font-medium">Telegram-ID</label>
 				<input
 					id="telegramChatId"
@@ -120,6 +155,26 @@
 			>
 				Speichern
 			</button>
+		</Card.Content>
+	</Card.Root>
+
+	<Card.Root class="border-red-200">
+		<Card.Header>
+			<Card.Title class="text-red-700">Gefahrenzone</Card.Title>
+		</Card.Header>
+		<Card.Content>
+			<p class="mb-4 text-sm text-muted-foreground">
+				Das Löschen deines Accounts ist unwiderruflich. Alle deine Daten werden permanent gelöscht.
+			</p>
+			<button
+				onclick={deleteAccount}
+				class="inline-flex h-10 items-center justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white ring-offset-background hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+			>
+				Account löschen
+			</button>
+			{#if deleteErrorMsg}
+				<p class="mt-2 text-sm text-red-600">{deleteErrorMsg}</p>
+			{/if}
 		</Card.Content>
 	</Card.Root>
 </div>
