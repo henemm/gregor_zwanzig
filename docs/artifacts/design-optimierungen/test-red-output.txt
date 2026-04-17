@@ -1,0 +1,248 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 8 items
+
+tests/tdd/test_design_optimierungen.py FFFFFFFF                          [100%]
+
+=================================== FAILURES ===================================
+___________ TestSidebarBorderRemoved.test_nav_has_no_border_r_class ____________
+
+self = <tdd.test_design_optimierungen.TestSidebarBorderRemoved object at 0x73d13ab631a0>
+browser_context = <BrowserContext browser=<Browser type=<BrowserType name=chromium executable_path=/home/hem/.cache/ms-playwright/chromium-1200/chrome-linux64/chrome> version=143.0.7499.4>>
+
+    def test_nav_has_no_border_r_class(self, browser_context):
+        """
+        GIVEN: The SvelteKit dashboard is loaded
+        WHEN: Inspecting the sidebar nav element
+        THEN: The nav should NOT contain 'border-r' in its class list
+        """
+        page = browser_context.new_page()
+        page.goto(f"{FRONTEND_URL}/")
+        page.wait_for_timeout(2000)
+    
+        nav = page.locator("nav").first
+        classes = nav.get_attribute("class") or ""
+        page.close()
+    
+        # RED: Currently border-r IS present → this assertion will FAIL
+>       assert "border-r" not in classes, (
+            f"Sidebar nav still has 'border-r' class: {classes}"
+        )
+E       AssertionError: Sidebar nav still has 'border-r' class: fixed z-50 h-full w-60 border-r bg-sidebar text-sidebar-foreground p-4 transition-transform duration-200 md:static md:translate-x-0
+E         			-translate-x-full
+E       assert 'border-r' not in 'fixed z-50 ...slate-x-full'
+E         
+E         'border-r' is contained here:
+E           fixed z-50 h-full w-60 border-r bg-sidebar text-sidebar-foreground p-4 transition-transform duration-200 md:static md:translate-x-0
+E         ?                        ++++++++
+E           			-translate-x-full
+
+tests/tdd/test_design_optimierungen.py:80: AssertionError
+______________ TestWhiteBackground.test_background_is_pure_white _______________
+
+self = <tdd.test_design_optimierungen.TestWhiteBackground object at 0x73d139cefe90>
+browser_context = <BrowserContext browser=<Browser type=<BrowserType name=chromium executable_path=/home/hem/.cache/ms-playwright/chromium-1200/chrome-linux64/chrome> version=143.0.7499.4>>
+
+    def test_background_is_pure_white(self, browser_context):
+        """
+        GIVEN: The dashboard in light mode
+        WHEN: Checking the computed background color of the body
+        THEN: It should be pure white (rgb(255, 255, 255))
+        """
+        page = browser_context.new_page()
+        page.goto(f"{FRONTEND_URL}/")
+        page.wait_for_timeout(2000)
+    
+        bg_color = page.evaluate(
+            "window.getComputedStyle(document.body).backgroundColor"
+        )
+        page.close()
+    
+        # RED: Currently oklch(0.985 0 0) ≈ rgb(251,251,251), not pure white
+>       assert bg_color == "rgb(255, 255, 255)", (
+            f"Body background is not pure white: {bg_color}"
+        )
+E       AssertionError: Body background is not pure white: oklch(0.985 0 0)
+E       assert 'oklch(0.985 0 0)' == 'rgb(255, 255, 255)'
+E         
+E         - rgb(255, 255, 255)
+E         + oklch(0.985 0 0)
+
+tests/tdd/test_design_optimierungen.py:104: AssertionError
+________________ TestWhiteBackground.test_main_has_no_muted_bg _________________
+
+self = <tdd.test_design_optimierungen.TestWhiteBackground object at 0x73d139d83ef0>
+browser_context = <BrowserContext browser=<Browser type=<BrowserType name=chromium executable_path=/home/hem/.cache/ms-playwright/chromium-1200/chrome-linux64/chrome> version=143.0.7499.4>>
+
+    def test_main_has_no_muted_bg(self, browser_context):
+        """
+        GIVEN: The dashboard is loaded
+        WHEN: Inspecting the main content element
+        THEN: It should NOT have the bg-muted/20 class
+        """
+        page = browser_context.new_page()
+        page.goto(f"{FRONTEND_URL}/")
+        page.wait_for_timeout(2000)
+    
+        main_el = page.locator("main").first
+        classes = main_el.get_attribute("class") or ""
+        page.close()
+    
+        # RED: Currently bg-muted/20 IS present
+>       assert "bg-muted" not in classes, (
+            f"Main element still has muted background class: {classes}"
+        )
+E       AssertionError: Main element still has muted background class: flex-1 overflow-auto bg-muted/20 p-4 pt-16 md:p-6 md:pt-6
+E       assert 'bg-muted' not in 'flex-1 over...:p-6 md:pt-6'
+E         
+E         'bg-muted' is contained here:
+E           flex-1 overflow-auto bg-muted/20 p-4 pt-16 md:p-6 md:pt-6
+E         ?                      ++++++++
+
+tests/tdd/test_design_optimierungen.py:123: AssertionError
+______________ TestAccountFooter.test_footer_has_border_separator ______________
+
+self = <tdd.test_design_optimierungen.TestAccountFooter object at 0x73d1399440b0>
+browser_context = <BrowserContext browser=<Browser type=<BrowserType name=chromium executable_path=/home/hem/.cache/ms-playwright/chromium-1200/chrome-linux64/chrome> version=143.0.7499.4>>
+
+    def test_footer_has_border_separator(self, browser_context):
+        """
+        GIVEN: The dashboard with sidebar visible
+        WHEN: Looking at the account footer area
+        THEN: There should be a border-t separator element wrapping the user info
+        """
+        page = browser_context.new_page()
+        page.goto(f"{FRONTEND_URL}/")
+        page.wait_for_timeout(2000)
+    
+        # Look for a div with border-t inside the nav (the styled footer)
+        footer_with_border = page.locator("nav div.border-t").first
+        is_visible = footer_with_border.is_visible() if footer_with_border.count() > 0 else False
+        page.close()
+    
+        # RED: Currently no border-t element exists in the sidebar
+>       assert is_visible, "Sidebar footer does not have a border-t separator"
+E       AssertionError: Sidebar footer does not have a border-t separator
+E       assert False
+
+tests/tdd/test_design_optimierungen.py:147: AssertionError
+_________________ TestAccountFooter.test_footer_has_user_icon __________________
+
+self = <tdd.test_design_optimierungen.TestAccountFooter object at 0x73d139944200>
+browser_context = <BrowserContext browser=<Browser type=<BrowserType name=chromium executable_path=/home/hem/.cache/ms-playwright/chromium-1200/chrome-linux64/chrome> version=143.0.7499.4>>
+
+    def test_footer_has_user_icon(self, browser_context):
+        """
+        GIVEN: The dashboard with sidebar visible
+        WHEN: Looking at the account footer
+        THEN: There should be a user icon (SVG) near the username
+        """
+        page = browser_context.new_page()
+        page.goto(f"{FRONTEND_URL}/")
+        page.wait_for_timeout(2000)
+    
+        # Look for an SVG icon inside the footer area (border-t div)
+        user_icon = page.locator("nav div.border-t svg").first
+        has_icon = user_icon.count() > 0 if user_icon else False
+        page.close()
+    
+        # RED: Currently no styled footer with icon exists
+>       assert has_icon, "Sidebar footer does not contain a user icon"
+E       AssertionError: Sidebar footer does not contain a user icon
+E       assert False
+
+tests/tdd/test_design_optimierungen.py:165: AssertionError
+_______________ TestSettingsRenamed.test_nav_shows_system_status _______________
+
+self = <tdd.test_design_optimierungen.TestSettingsRenamed object at 0x73d139944380>
+browser_context = <BrowserContext browser=<Browser type=<BrowserType name=chromium executable_path=/home/hem/.cache/ms-playwright/chromium-1200/chrome-linux64/chrome> version=143.0.7499.4>>
+
+    def test_nav_shows_system_status(self, browser_context):
+        """
+        GIVEN: The dashboard with sidebar visible
+        WHEN: Looking at the navigation items
+        THEN: There should be a 'System-Status' link, not 'Einstellungen'
+        """
+        page = browser_context.new_page()
+        page.goto(f"{FRONTEND_URL}/")
+        page.wait_for_timeout(2000)
+    
+        # Check that "System-Status" appears in nav
+        system_link = page.locator("nav a", has_text="System-Status")
+        has_system = system_link.count() > 0
+        page.close()
+    
+        # RED: Currently the nav says "Einstellungen"
+>       assert has_system, "Nav should show 'System-Status' but it doesn't"
+E       AssertionError: Nav should show 'System-Status' but it doesn't
+E       assert False
+
+tests/tdd/test_design_optimierungen.py:187: AssertionError
+___________ TestSettingsRenamed.test_nav_does_not_show_einstellungen ___________
+
+self = <tdd.test_design_optimierungen.TestSettingsRenamed object at 0x73d1399444d0>
+browser_context = <BrowserContext browser=<Browser type=<BrowserType name=chromium executable_path=/home/hem/.cache/ms-playwright/chromium-1200/chrome-linux64/chrome> version=143.0.7499.4>>
+
+    def test_nav_does_not_show_einstellungen(self, browser_context):
+        """
+        GIVEN: The dashboard with sidebar visible
+        WHEN: Looking at the navigation items
+        THEN: 'Einstellungen' should NOT appear as a nav link
+        """
+        page = browser_context.new_page()
+        page.goto(f"{FRONTEND_URL}/")
+        page.wait_for_timeout(2000)
+    
+        einstellungen_link = page.locator("nav a", has_text="Einstellungen")
+        has_old_label = einstellungen_link.count() > 0
+        page.close()
+    
+        # RED: Currently "Einstellungen" IS in the nav
+>       assert not has_old_label, "Nav still shows 'Einstellungen' — should be renamed"
+E       AssertionError: Nav still shows 'Einstellungen' — should be renamed
+E       assert not True
+
+tests/tdd/test_design_optimierungen.py:204: AssertionError
+________________ TestSettingsRenamed.test_settings_page_heading ________________
+
+self = <tdd.test_design_optimierungen.TestSettingsRenamed object at 0x73d139944620>
+browser_context = <BrowserContext browser=<Browser type=<BrowserType name=chromium executable_path=/home/hem/.cache/ms-playwright/chromium-1200/chrome-linux64/chrome> version=143.0.7499.4>>
+
+    def test_settings_page_heading(self, browser_context):
+        """
+        GIVEN: The settings page is loaded
+        WHEN: Looking at the page heading
+        THEN: It should say 'System-Status' not 'Einstellungen'
+        """
+        page = browser_context.new_page()
+        page.goto(f"{FRONTEND_URL}/settings")
+        page.wait_for_timeout(2000)
+    
+        heading = page.locator("main h1").first
+        text = heading.text_content() or ""
+        page.close()
+    
+        # RED: Currently says "Einstellungen"
+>       assert text.strip() == "System-Status", (
+            f"Settings page heading is '{text.strip()}', expected 'System-Status'"
+        )
+E       AssertionError: Settings page heading is 'Einstellungen', expected 'System-Status'
+E       assert 'Einstellungen' == 'System-Status'
+E         
+E         - System-Status
+E         + Einstellungen
+
+tests/tdd/test_design_optimierungen.py:221: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_design_optimierungen.py::TestSidebarBorderRemoved::test_nav_has_no_border_r_class
+FAILED tests/tdd/test_design_optimierungen.py::TestWhiteBackground::test_background_is_pure_white
+FAILED tests/tdd/test_design_optimierungen.py::TestWhiteBackground::test_main_has_no_muted_bg
+FAILED tests/tdd/test_design_optimierungen.py::TestAccountFooter::test_footer_has_border_separator
+FAILED tests/tdd/test_design_optimierungen.py::TestAccountFooter::test_footer_has_user_icon
+FAILED tests/tdd/test_design_optimierungen.py::TestSettingsRenamed::test_nav_shows_system_status
+FAILED tests/tdd/test_design_optimierungen.py::TestSettingsRenamed::test_nav_does_not_show_einstellungen
+FAILED tests/tdd/test_design_optimierungen.py::TestSettingsRenamed::test_settings_page_heading
+============================== 8 failed in 17.10s ==============================

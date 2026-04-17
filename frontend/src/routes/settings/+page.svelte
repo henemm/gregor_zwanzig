@@ -38,7 +38,7 @@
 </script>
 
 <div class="space-y-6">
-	<h1 class="text-2xl font-bold">Einstellungen</h1>
+	<h1 class="text-2xl font-bold">System-Status</h1>
 
 	<!-- Scheduler Status -->
 	<Card.Root>
