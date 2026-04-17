@@ -64,8 +64,20 @@
 	import Bell from '@lucide/svelte/icons/bell';
 	import GitCompare from '@lucide/svelte/icons/git-compare';
 	import CloudSun from '@lucide/svelte/icons/cloud-sun';
-	import SettingsIcon from '@lucide/svelte/icons/settings';
+	import MonitorIcon from '@lucide/svelte/icons/monitor';
 	import UserIcon from '@lucide/svelte/icons/user';
+	import ChevronUp from '@lucide/svelte/icons/chevron-up';
+	import LogOut from '@lucide/svelte/icons/log-out';
+
+	let userMenuOpen = $state(false);
+
+	function closeUserMenu() {
+		userMenuOpen = false;
+	}
+
+	function userInitial(id: string | null | undefined): string {
+		return (id ?? '?').charAt(0).toUpperCase();
+	}
 
 	const navGroups = [
 		{
@@ -82,8 +94,6 @@
 			items: [
 				{ href: '/compare', label: 'Vergleich', icon: GitCompare },
 				{ href: '/weather', label: 'Wetter', icon: CloudSun },
-				{ href: '/settings', label: 'Einstellungen', icon: SettingsIcon },
-				{ href: '/account', label: 'Konto', icon: UserIcon },
 			]
 		}
 	];
@@ -133,7 +143,7 @@
 		{/if}
 
 		<!-- Sidebar: hidden on mobile, slide-in when open -->
-		<nav class="fixed z-50 h-full w-60 border-r bg-sidebar text-sidebar-foreground p-4 transition-transform duration-200 md:static md:translate-x-0
+		<nav class="fixed z-50 flex h-full w-60 flex-col bg-sidebar text-sidebar-foreground p-4 transition-transform duration-200 md:static md:translate-x-0
 			{mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}"
 		>
 			<h1 class="mb-6 text-lg font-bold">Gregor 20</h1>
@@ -153,32 +163,73 @@
 					</a>
 				{/each}
 			{/each}
-			<!-- Dark Mode Toggle -->
-			<div class="mt-6 mb-4 px-3">
+
+			<!-- Sidebar Footer — Avatar Badge with Dropdown -->
+			<div class="mt-auto border-t border-border/50 pt-3 relative">
 				<button
-					onclick={toggleDark}
-					class="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
-					title={darkMode ? 'Light Mode' : 'Dark Mode'}
+					onclick={() => userMenuOpen = !userMenuOpen}
+					class="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm hover:bg-sidebar-accent transition-colors"
 				>
-					{#if darkMode}
-						<SunIcon class="size-3.5" />
-						Light Mode
-					{:else}
-						<MoonIcon class="size-3.5" />
-						Dark Mode
-					{/if}
+					<span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+						{userInitial(data.userId)}
+					</span>
+					<span class="truncate">{data.userId ?? ''}</span>
+					<ChevronUp class="ml-auto size-4 text-muted-foreground transition-transform {userMenuOpen ? '' : 'rotate-180'}" />
 				</button>
-			</div>
-			<div class="mt-auto pt-2 text-xs text-muted-foreground">
-				{data.userId ?? ''}
-				<form method="POST" action="/logout" class="mt-2">
-					<button type="submit" class="hover:text-foreground">Logout</button>
-				</form>
+
+				{#if userMenuOpen}
+					<!-- Backdrop to close on outside click -->
+					<!-- svelte-ignore a11y_no_static_element_interactions -->
+					<div
+						class="fixed inset-0 z-[70]"
+						onclick={closeUserMenu}
+						onkeydown={(e) => e.key === 'Escape' && closeUserMenu()}
+					></div>
+
+					<!-- Dropdown -->
+					<div class="absolute bottom-full left-2 right-2 z-[80] mb-1 rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+						<a
+							href="/account"
+							class="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+							onclick={() => { closeUserMenu(); closeMobileMenu(); }}
+						>
+							<UserIcon class="size-4 opacity-70" />
+							Konto
+						</a>
+						<a
+							href="/settings"
+							class="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+							onclick={() => { closeUserMenu(); closeMobileMenu(); }}
+						>
+							<MonitorIcon class="size-4 opacity-70" />
+							System-Status
+						</a>
+						<button
+							onclick={() => { toggleDark(); closeUserMenu(); }}
+							class="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+						>
+							{#if darkMode}
+								<SunIcon class="size-4 opacity-70" />
+								Light Mode
+							{:else}
+								<MoonIcon class="size-4 opacity-70" />
+								Dark Mode
+							{/if}
+						</button>
+						<div class="my-1 h-px bg-border"></div>
+						<form method="POST" action="/logout">
+							<button type="submit" class="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10 transition-colors">
+								<LogOut class="size-4 opacity-70" />
+								Abmelden
+							</button>
+						</form>
+					</div>
+				{/if}
 			</div>
 		</nav>
 
 		<!-- Main content: add top padding on mobile for the top bar -->
-		<main class="flex-1 overflow-auto bg-muted/20 p-4 pt-16 md:p-6 md:pt-6">
+		<main class="flex-1 overflow-auto p-4 pt-16 md:p-6 md:pt-6">
 			{@render children()}
 		</main>
 	</div>
