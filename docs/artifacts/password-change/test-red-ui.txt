@@ -1,0 +1,98 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 4 items
+
+tests/tdd/test_change_password.py FFFF                                   [100%]
+
+=================================== FAILURES ===================================
+________ TestPasswordChangeUI.test_account_has_password_change_section _________
+
+self = <tdd.test_change_password.TestPasswordChangeUI object at 0x75ed61a97f20>
+session_cookie = 'default.1776402442.ee72f92f3a40d6c17ac0dd3ec5e42496d63edc1d8e3ea73e91546abc6f9bfdab'
+
+    def test_account_has_password_change_section(self, session_cookie):
+        """
+        GIVEN: Account page loaded
+        WHEN: Inspecting HTML
+        THEN: Contains 'Passwort ändern' section
+        """
+        resp = authed_get("/account", session_cookie)
+        assert resp.status_code == 200
+        html = resp.text.lower()
+>       assert "passwort ändern" in html or "passwort aendern" in html, \
+            "Missing password change section"
+E       AssertionError: Missing password change section
+E       assert ('passwort ändern' in '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n' or 'passwort aendern' in '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n')
+
+tests/tdd/test_change_password.py:49: AssertionError
+___________ TestPasswordChangeUI.test_account_has_old_password_field ___________
+
+self = <tdd.test_change_password.TestPasswordChangeUI object at 0x75ed617ecc50>
+session_cookie = 'default.1776402442.ee72f92f3a40d6c17ac0dd3ec5e42496d63edc1d8e3ea73e91546abc6f9bfdab'
+
+    def test_account_has_old_password_field(self, session_cookie):
+        """
+        GIVEN: Account page loaded
+        WHEN: Inspecting HTML
+        THEN: Contains old password input field
+        """
+        resp = authed_get("/account", session_cookie)
+        assert resp.status_code == 200
+        html = resp.text.lower()
+>       assert "aktuelles passwort" in html or "altes passwort" in html, \
+            "Missing old password field label"
+E       AssertionError: Missing old password field label
+E       assert ('aktuelles passwort' in '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n' or 'altes passwort' in '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n')
+
+tests/tdd/test_change_password.py:61: AssertionError
+__________ TestPasswordChangeUI.test_account_has_new_password_fields ___________
+
+self = <tdd.test_change_password.TestPasswordChangeUI object at 0x75ed617ef7a0>
+session_cookie = 'default.1776402442.ee72f92f3a40d6c17ac0dd3ec5e42496d63edc1d8e3ea73e91546abc6f9bfdab'
+
+    def test_account_has_new_password_fields(self, session_cookie):
+        """
+        GIVEN: Account page loaded
+        WHEN: Inspecting HTML
+        THEN: Contains new password and confirm fields
+        """
+        resp = authed_get("/account", session_cookie)
+        assert resp.status_code == 200
+        html = resp.text.lower()
+>       assert "neues passwort" in html, "Missing new password field"
+E       AssertionError: Missing new password field
+E       assert 'neues passwort' in '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n'
+
+tests/tdd/test_change_password.py:73: AssertionError
+_______ TestPasswordChangeEndpoint.test_change_password_endpoint_exists ________
+
+self = <tdd.test_change_password.TestPasswordChangeEndpoint object at 0x75ed617ef890>
+session_cookie = 'default.1776402442.ee72f92f3a40d6c17ac0dd3ec5e42496d63edc1d8e3ea73e91546abc6f9bfdab'
+
+    def test_change_password_endpoint_exists(self, session_cookie):
+        """
+        GIVEN: Authenticated user
+        WHEN: PUT /api/auth/password with valid data
+        THEN: Returns 200 (not 404)
+        """
+        resp = httpx.put(
+            f"{GO_BASE}/api/auth/password",
+            json={"old_password": "wrong", "new_password": "testtest123"},
+            cookies={"gz_session": session_cookie},
+        )
+        # 403 (wrong password) or 200 is acceptable — NOT 404
+>       assert resp.status_code != 404, f"Endpoint not found: {resp.status_code}"
+E       AssertionError: Endpoint not found: 404
+E       assert 404 != 404
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+tests/tdd/test_change_password.py:93: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_change_password.py::TestPasswordChangeUI::test_account_has_password_change_section
+FAILED tests/tdd/test_change_password.py::TestPasswordChangeUI::test_account_has_old_password_field
+FAILED tests/tdd/test_change_password.py::TestPasswordChangeUI::test_account_has_new_password_fields
+FAILED tests/tdd/test_change_password.py::TestPasswordChangeEndpoint::test_change_password_endpoint_exists
+============================== 4 failed in 0.24s ===============================

@@ -380,3 +380,55 @@ func UpdateProfileHandler(s *store.Store) http.HandlerFunc {
 		json.NewEncoder(w).Encode(toProfileResponse(user))
 	}
 }
+
+func ChangePasswordHandler(s *store.Store, bcryptCost int) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userId := middleware.UserIDFromContext(r.Context())
+		w.Header().Set("Content-Type", "application/json")
+
+		var req struct {
+			OldPassword string `json:"old_password"`
+			NewPassword string `json:"new_password"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			w.WriteHeader(400)
+			w.Write([]byte(`{"error":"invalid request"}`))
+			return
+		}
+
+		if len(req.NewPassword) < 8 {
+			w.WriteHeader(400)
+			w.Write([]byte(`{"error":"validation failed"}`))
+			return
+		}
+
+		user, err := s.LoadUser(userId)
+		if err != nil || user == nil {
+			w.WriteHeader(500)
+			w.Write([]byte(`{"error":"internal error"}`))
+			return
+		}
+
+		if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.OldPassword)); err != nil {
+			w.WriteHeader(403)
+			w.Write([]byte(`{"error":"wrong password"}`))
+			return
+		}
+
+		newHash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcryptCost)
+		if err != nil {
+			w.WriteHeader(500)
+			w.Write([]byte(`{"error":"internal error"}`))
+			return
+		}
+
+		user.PasswordHash = string(newHash)
+		if err := s.SaveUser(*user); err != nil {
+			w.WriteHeader(500)
+			w.Write([]byte(`{"error":"internal error"}`))
+			return
+		}
+
+		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	}
+}
