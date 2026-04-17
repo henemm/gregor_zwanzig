@@ -12,6 +12,41 @@
 	let errorMsg = $state<string | null>(null);
 	let deleteErrorMsg = $state<string | null>(null);
 
+	let oldPassword = $state('');
+	let newPassword = $state('');
+	let confirmNewPassword = $state('');
+	let pwSuccessMsg = $state<string | null>(null);
+	let pwErrorMsg = $state<string | null>(null);
+
+	async function changePassword() {
+		pwSuccessMsg = null;
+		pwErrorMsg = null;
+
+		if (newPassword !== confirmNewPassword) {
+			pwErrorMsg = 'Die neuen Passwörter stimmen nicht überein';
+			return;
+		}
+
+		try {
+			await api.put('/api/auth/password', {
+				old_password: oldPassword,
+				new_password: newPassword,
+			});
+			pwSuccessMsg = 'Passwort geändert';
+			oldPassword = '';
+			newPassword = '';
+			confirmNewPassword = '';
+			setTimeout(() => (pwSuccessMsg = null), 4000);
+		} catch (e: unknown) {
+			const body = e as { error?: string };
+			if (body?.error === 'wrong password') {
+				pwErrorMsg = 'Aktuelles Passwort ist falsch';
+			} else {
+				pwErrorMsg = body?.error ?? 'Passwort ändern fehlgeschlagen';
+			}
+		}
+	}
+
 	function formatDate(iso: string | null | undefined): string {
 		if (!iso) return '—';
 		try {
@@ -154,6 +189,62 @@
 				class="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground ring-offset-background hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 			>
 				Speichern
+			</button>
+		</Card.Content>
+	</Card.Root>
+
+	<Card.Root>
+		<Card.Header>
+			<Card.Title>Passwort ändern</Card.Title>
+		</Card.Header>
+		<Card.Content class="space-y-4">
+			<div class="space-y-2">
+				<label for="oldPassword" class="text-sm font-medium">Aktuelles Passwort</label>
+				<input
+					id="oldPassword"
+					type="password"
+					bind:value={oldPassword}
+					class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+				/>
+			</div>
+
+			<div class="space-y-2">
+				<label for="newPassword" class="text-sm font-medium">Neues Passwort</label>
+				<input
+					id="newPassword"
+					type="password"
+					bind:value={newPassword}
+					class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+				/>
+			</div>
+
+			<div class="space-y-2">
+				<label for="confirmNewPassword" class="text-sm font-medium">Neues Passwort bestätigen</label>
+				<input
+					id="confirmNewPassword"
+					type="password"
+					bind:value={confirmNewPassword}
+					class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+				/>
+			</div>
+
+			{#if pwSuccessMsg}
+				<div class="rounded-md border border-green-300 bg-green-50 p-3 text-sm text-green-800">
+					{pwSuccessMsg}
+				</div>
+			{/if}
+
+			{#if pwErrorMsg}
+				<div class="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
+					{pwErrorMsg}
+				</div>
+			{/if}
+
+			<button
+				onclick={changePassword}
+				class="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground ring-offset-background hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+			>
+				Passwort ändern
 			</button>
 		</Card.Content>
 	</Card.Root>

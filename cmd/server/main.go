@@ -59,6 +59,7 @@ func main() {
 	r.Delete("/api/auth/account", handler.DeleteAccountHandler(s))
 	r.Get("/api/auth/profile", handler.GetProfileHandler(s))
 	r.Put("/api/auth/profile", handler.UpdateProfileHandler(s))
+	r.Put("/api/auth/password", handler.ChangePasswordHandler(s, bcrypt.DefaultCost))
 
 	r.Get("/api/health", handler.HealthHandler(cfg.PythonCoreURL))
 	r.Get("/api/config", handler.ProxyHandler(cfg.PythonCoreURL, "/config"))

@@ -1,0 +1,6 @@
+# github.com/henemm/gregor-api/internal/handler [github.com/henemm/gregor-api/internal/handler.test]
+internal/handler/change_password_test.go:40:2: undefined: ChangePasswordHandler
+internal/handler/change_password_test.go:66:2: undefined: ChangePasswordHandler
+internal/handler/change_password_test.go:86:2: undefined: ChangePasswordHandler
+FAIL	github.com/henemm/gregor-api/internal/handler [build failed]
+FAIL
