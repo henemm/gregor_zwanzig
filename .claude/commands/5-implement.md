@@ -1,10 +1,12 @@
 # Phase 6: Implementation (TDD GREEN)
 
-You are in **Phase 6 - Implementation / TDD GREEN Phase**.
+You are the **Product Owner / Orchestrierer** in Phase 6.
+
+**DU SCHREIBST KEINEN CODE!** Du delegierst die Implementierung an den Developer Agent und koordinierst das Ergebnis mit dem User und dem QA Agent.
 
 ## Purpose
 
-Write the **minimal code** to make failing tests pass. No more, no less.
+Orchestriere die Implementierung: Developer Agent schreibt Code, du praesentierst Ergebnisse, User gibt frei, QA Agent validiert.
 
 ## Prerequisites
 
@@ -17,7 +19,7 @@ Check status:
 python3 .claude/hooks/workflow_state_multi.py status
 ```
 
-**If TDD RED artifacts are missing, the `tdd_enforcement` hook will BLOCK your edits!**
+**If TDD RED artifacts are missing, the `tdd_enforcement` hook will BLOCK edits!**
 
 ## Your Tasks
 
@@ -42,7 +44,7 @@ if w:
 Launch an **Explore agent** (Haiku for speed) to prepare implementation context:
 
 ```
-Task(subagent_type="Explore", model="haiku", prompt="
+Agent(subagent_type="Explore", model="haiku", prompt="
   Prepare implementation context for: [FEATURE_NAME]
 
   1. Read the approved spec at: [SPEC_PATH]
@@ -56,69 +58,48 @@ Task(subagent_type="Explore", model="haiku", prompt="
 ")
 ```
 
-### 3. Implement Core (Main Context = Opus)
+### 3. Delegate to Developer Agent (Opus, Worktree)
 
-With the context from Step 2, implement the core functionality:
-
-1. **Follow the spec exactly** - No creative deviations
-2. **Implementation order:**
-   - Core functionality first
-   - Integration second
-3. **Validate after each file change** (syntax check)
-4. **Document deviations** - If you must deviate from spec, note why
-
-**TDD GREEN Rules:**
-- Only write code that makes a test pass
-- Don't add features not covered by tests
-- Don't optimize prematurely
-- Don't refactor yet
-
-### 4. Parallel Side Tasks
-
-After core is done, launch **parallel agents** for independent work:
+**DU implementierst NICHT selbst!** Spawne den Developer Agent:
 
 ```
-# Agent A: Write tests (Sonnet for code quality)
-Task(subagent_type="general-purpose", model="sonnet", prompt="
-  Write tests for: [FEATURE_NAME]
-  Spec: [SPEC_PATH]
-  Core implementation: [SUMMARY OF WHAT WAS IMPLEMENTED]
+Agent(subagent_type="developer", isolation="worktree", prompt="
+  Implementiere [FEATURE_NAME] nach Spec.
 
-  RULES from CLAUDE.md:
-  - NO mocks! No Mock(), patch(), MagicMock
-  - Real integration tests only
-  - Place tests in tests/ directory
-  - Use uv run pytest conventions
-")
+  ## Spec
+  Pfad: [SPEC_PATH]
 
-# Agent B: Update config/data if needed (Haiku for simple tasks)
-Task(subagent_type="general-purpose", model="haiku", prompt="
-  Update config/data files for: [FEATURE_NAME]
-  Changes needed: [SPECIFIC CHANGES]
-  Files: [data/*.json, config.ini, etc.]
+  ## Context (aus Step 2)
+  [CONTEXT_SUMMARY: Code-Konventionen, Import-Patterns, betroffene Dateien]
+
+  ## RED-Artifacts
+  Diese Tests muessen gruen werden:
+  [LISTE DER FEHLSCHLAGENDEN TESTS]
+
+  ## Regeln
+  - TDD GREEN: Nur Code der Tests gruen macht
+  - Max 4-5 Dateien, +/-250 LoC, Funktionen <=50 LoC
+  - KEINE Mocks! Echte Integration-Tests
+  - Safari: Factory Pattern fuer NiceGUI Button-Handler
+  - Fuehre am Ende `uv run pytest --tb=short -q` aus
+
+  Melde zurueck: geaenderte Dateien, Test-Ergebnisse, Auffaelligkeiten.
 ")
 ```
 
-**Decision for Agent B:** Check the spec's Implementation Details section for config/data changes. Only launch Agent B if the spec explicitly mentions config, data, or environment changes.
+### 4. Review Developer-Ergebnis
 
-### 5. Integrate & Verify
+Wenn der Developer Agent zurueckmeldet:
+1. **Pruefe den Bericht** — Welche Dateien geaendert? Tests gruen?
+2. **Pruefe auf Abweichungen** — Hat er von der Spec abgewichen? Warum?
+3. **Pruefe Scoping** — Max 4-5 Dateien, +/-250 LoC eingehalten?
 
-Back in main context:
-1. Review agent outputs (tests, config)
-2. Run quick syntax check on all changed files
-3. Ensure everything fits together
-4. Run tests to verify GREEN status:
+**Bei Problemen:** Gib dem Developer Agent Feedback und lass ihn nochmal ran (max 3 Iterationen).
 
-```bash
-pytest tests/test_[feature].py -v
-```
-
-**Expected:** All tests PASS.
-
-### 6. Capture Artifacts & Update State
+### 5. Capture Artifacts & Update State
 
 ```bash
-pytest tests/ -v > docs/artifacts/[workflow]/test-green-output.txt 2>&1
+uv run pytest tests/ -v > docs/artifacts/[workflow]/test-green-output.txt 2>&1
 
 python3 -c "
 import sys; sys.path.insert(0, '.claude/hooks')
@@ -130,13 +111,13 @@ active = state['active_workflow']
 add_test_artifact(active, {
     'type': 'test_output',
     'path': 'docs/artifacts/[workflow]/test-green-output.txt',
-    'description': 'All tests PASSED: 5 passed in 0.3s',
+    'description': 'All tests PASSED: [N] passed in [T]s',
     'phase': 'phase6_implement'
 })
 "
 ```
 
-### 7. User-Freigabe der GREEN-Ergebnisse (PFLICHT)
+### 6. User-Freigabe der GREEN-Ergebnisse (PFLICHT)
 
 **STOP! Du darfst NICHT weitermachen ohne User-Freigabe!**
 
@@ -145,14 +126,18 @@ Praesentiere dem User eine verstaendliche Zusammenfassung:
 ```markdown
 ## TDD GREEN Ergebnisse
 
-### Was wurde getestet?
+### Was wurde implementiert?
 - [Feature/Bug in User-Sprache beschreiben]
+
+### Was hat der Developer Agent gemacht?
+- [Geaenderte Dateien auflisten]
+- [Kurze Beschreibung der Aenderungen]
 
 ### Test-Ergebnisse
 - Tests: [N] bestanden, [N] fehlgeschlagen
 
 ### Auffaelligkeiten / Warnungen
-- [Alles was aufgefallen ist]
+- [Alles was aufgefallen ist, inkl. Abweichungen von Spec]
 
 Sage "go" wenn du mit den Ergebnissen zufrieden bist.
 ```
@@ -162,15 +147,15 @@ Sage "go" wenn du mit den Ergebnissen zufrieden bist.
 - Du darfst NICHT "go" simulieren oder die Freigabe umgehen
 - Der User gibt frei mit: "go", "weiter", "tests ok", "green ok"
 
-### 8. Update Workflow State to Adversary Phase
+### 7. Update Workflow State to Adversary Phase
 
 ```bash
 python3 .claude/hooks/workflow_state_multi.py phase phase6b_adversary
 ```
 
-### 9. External Validator (MANDATORY)
+### 8. External Validator (MANDATORY)
 
-**Ich (Implementierer) starte den Validator per Bash — der Output ist fuer den User sichtbar.**
+**Du startest den Validator per Bash — der Output ist fuer den User sichtbar.**
 
 Der Validator laeuft als **isolierte Claude-Instanz** via `claude --print`:
 - Eigene Session, kein Zugriff auf Konversationskontext
@@ -178,15 +163,13 @@ Der Validator laeuft als **isolierte Claude-Instanz** via `claude --print`:
 - Prompt ist fest im Script (nicht manipulierbar)
 - Output kommt ungefiltert als Tool-Result zurueck — User sieht alles
 
-#### 9a. Validator starten
+#### 8a. Validator starten
 
 ```bash
 bash .claude/validate-external.sh [SPEC_PATH]
 ```
 
-**WICHTIG fuer den User:** Du siehst den kompletten Bash-Befehl UND den vollstaendigen Output. Nichts wird gefiltert oder zusammengefasst.
-
-#### 9b. Ergebnis praesentieren
+#### 8b. Ergebnis praesentieren
 
 Zeige dem User das Verdict und frage:
 
@@ -199,20 +182,20 @@ Zeige dem User das Verdict und frage:
 [Validator-Output ist oben im Bash-Result vollstaendig sichtbar]
 
 - **"go"** → ich committe/pushe
-- **"fix needed"** → ich fixe die Probleme
-- **"broken"** → ich muss nochmal ran
+- **"fix needed"** → Developer Agent fixt die Probleme
+- **"broken"** → Developer Agent muss nochmal ran
 ```
 
 **Warte auf User-Antwort!**
 
-#### 9c. Nach User-Antwort
+#### 8c. Nach User-Antwort
 
 - **"go"** → Weiter zu Phase 7 (`/validate`)
-- **"fix needed"** + Findings → Zurueck zu Step 3, Findings fixen, dann erneut Step 9
-- **"broken"** → Zurueck zu Step 3, komplette Ueberarbeitung
+- **"fix needed"** + Findings → Developer Agent erneut spawnen mit Findings, dann erneut Step 8
+- **"broken"** → Developer Agent erneut spawnen, komplette Ueberarbeitung
 
 **Circuit Breaker (max 3 Iterationen):**
-Wenn nach 3 Fix-Loops immer noch Probleme: Eskalation mit allen Findings.
+Wenn nach 3 Fix-Loops immer noch Probleme: Eskalation mit allen Findings an den User.
 
 **Wenn "go":**
 ```bash
@@ -226,17 +209,19 @@ python3 .claude/hooks/workflow_state_multi.py phase phase7_validate
 - Kann nicht von Rationalisierungen beeinflusst werden
 - Sieht nur: Spec + laufende App
 - Prompt ist geschuetzt in openspec.yaml
-- **User sieht den vollstaendigen Output** — Implementierer kann nichts filtern
+- **User sieht den vollstaendigen Output** — Orchestrierer kann nichts filtern
 
 **Bei UI-Aenderungen:** Der User kann zusaetzlich den `fresh-eyes-inspector` in der Validator-Session nutzen.
 
-## Implementation Constraints
+## Deine Rolle als Orchestrierer
 
-Follow scoping limits:
-- **Max 4-5 files** per change
-- **Max +/-250 LoC** total
-- **Functions ≤50 LoC**
-- **No side effects** outside spec scope
+| Du TUST | Du tust NICHT |
+|---------|---------------|
+| Developer Agent spawnen und briefen | Code schreiben oder editieren |
+| Ergebnisse pruefen und dem User praesentieren | Technische Entscheidungen treffen |
+| Bei Konflikten zwischen Developer und QA vermitteln | Tests schreiben |
+| User-Freigabe einholen | Architektur-Entscheidungen treffen |
+| Workflow State aktualisieren | Spec aendern |
 
 ## Next Step
 
@@ -245,9 +230,7 @@ After adversary verification:
 
 ## Common Mistakes
 
-- **Adding unrequested features** → Scope creep
-- **Skipping tests** → Not TDD
-- **Large functions** → Hard to test/maintain
-- **Not running tests** → Might still be RED
-- **Skipping adversary** → Commit will be BLOCKED
-- **Skipping User-Freigabe** → Validation BLOCKED without user approval
+- **Selbst Code schreiben** → Du bist Product Owner, nicht Developer!
+- **Developer-Ergebnis nicht pruefen** → Blindes Vertrauen ist kein QA
+- **User-Freigabe umgehen** → Validation BLOCKED without user approval
+- **Mehr als 3 Fix-Iterationen** → Eskaliere an den User

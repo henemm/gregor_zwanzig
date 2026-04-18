@@ -30,7 +30,21 @@ Dieses Projekt nutzt den **OpenSpec 8-Phasen-Workflow** mit Adversary Verificati
 
 **Hooks erzwingen diesen Workflow!** Edit/Write auf geschuetzte Dateien ist blockiert.
 
-**Subagent-Orchestrierung:** Workflow nutzt Task-Delegation mit model selection (haiku/sonnet/opus). Details: `docs/features/openspec_workflow.md`
+**Product Owner Pattern:** Main Context (Opus) ist reiner Orchestrierer und schreibt KEINEN Code. Implementierung wird an den Developer Agent (Opus, Worktree-Isolation) delegiert. Agent Teams ist aktiviert fuer direkte Inter-Agent-Kommunikation.
+
+**Agenten-Rollen und Modelle:**
+
+| Agent | Modell | Rolle |
+|-------|--------|-------|
+| `developer` | Opus | Implementiert Code in Worktree-Isolation |
+| `bug-intake` | Sonnet | Bug-Analyse mit User-Perspektive |
+| `feature-planner` | Sonnet | Use-Case-Denken, Feature-Planung |
+| `implementation-validator` | Sonnet | Adversary QA Testing |
+| `spec-writer` | Sonnet | Spezifikationen schreiben |
+| `fresh-eyes-inspector` | Sonnet | UI-Screenshots neutral bewerten |
+| `docs-updater` | Haiku | Dokumentation aktualisieren |
+| `spec-validator` | Haiku | Spec-Checklisten pruefen |
+| Explore-Agents | Haiku | Codebase durchsuchen |
 
 ## Architektur
 
