@@ -1,0 +1,462 @@
+
+Running 16 tests using 1 worker
+
+  ✘   1 e2e/system-status.spec.ts:12:2 › F75: System-Status → Mein Service › shows "Deine Reports" section (30.0s)
+  ✘   2 e2e/system-status.spec.ts:16:2 › F75: System-Status → Mein Service › shows next morning report time (30.0s)
+  ✘   3 e2e/system-status.spec.ts:20:2 › F75: System-Status → Mein Service › shows next evening report time (30.0s)
+  ✘   4 e2e/system-status.spec.ts:24:2 › F75: System-Status → Mein Service › shows trip checks status (30.0s)
+  ✘   5 e2e/system-status.spec.ts:28:2 › F75: System-Status → Mein Service › does NOT show internal job names (30.0s)
+  ✘   6 e2e/system-status.spec.ts:35:2 › F75: System-Status → Mein Service › shows "Dein Account" section (30.1s)
+  ✘   7 e2e/system-status.spec.ts:39:2 › F75: System-Status → Mein Service › shows trip count with link (30.1s)
+  ✘   8 e2e/system-status.spec.ts:45:2 › F75: System-Status → Mein Service › shows subscription count with link (30.0s)
+  ✘   9 e2e/system-status.spec.ts:51:2 › F75: System-Status → Mein Service › shows location count with link (1.1s)
+  ✘  10 e2e/system-status.spec.ts:57:2 › F75: System-Status → Mein Service › shows notification channels (1.1s)
+  ✘  11 e2e/system-status.spec.ts:64:2 › F75: System-Status → Mein Service › shows weather model per location (1.1s)
+  ✘  12 e2e/system-status.spec.ts:74:2 › F75: System-Status → Mein Service › shows "Verfügbarkeit" section with single status indicator (1.1s)
+  ✘  13 e2e/system-status.spec.ts:80:2 › F75: System-Status → Mein Service › shows version number (1.1s)
+  ✘  14 e2e/system-status.spec.ts:86:2 › F75: System-Status → Mein Service › does NOT show old config table (1.1s)
+  ✘  15 e2e/system-status.spec.ts:92:2 › F75: System-Status → Mein Service › does NOT show Go/Python health split (1.1s)
+  ✘  16 e2e/system-status.spec.ts:97:2 › F75: System-Status → Mein Service › does NOT show old "Zeitplaner" heading (1.1s)
+
+
+  1) e2e/system-status.spec.ts:12:2 › F75: System-Status → Mein Service › shows "Deine Reports" section 
+
+    [31mTest timeout of 30000ms exceeded while running "beforeEach" hook.[39m
+
+      3 |
+      4 | test.describe('F75: System-Status → Mein Service', () => {
+    > 5 | 	test.beforeEach(async ({ page }) => {
+        | 	     ^
+      6 | 		await login(page);
+      7 | 		await page.goto('/settings');
+      8 | 	});
+        at /home/hem/gregor_zwanzig/frontend/e2e/system-status.spec.ts:5:7
+
+    Error: page.waitForURL: Test timeout of 30000ms exceeded.
+    =========================== logs ===========================
+    waiting for navigation to "/" until "load"
+      navigated to "http://localhost:4173/login"
+    ============================================================
+
+       at helpers.ts:12
+
+      10 | 	await page.fill('input[name="password"]', 'test1234');
+      11 | 	await page.click('button[type="submit"]');
+    > 12 | 	await page.waitForURL('/');
+         | 	           ^
+      13 | }
+      14 |
+        at login (/home/hem/gregor_zwanzig/frontend/e2e/helpers.ts:12:13)
+        at /home/hem/gregor_zwanzig/frontend/e2e/system-status.spec.ts:6:3
+
+    Error Context: test-results/system-status-F75-System-S-e5e7b-shows-Deine-Reports-section/error-context.md
+
+  2) e2e/system-status.spec.ts:16:2 › F75: System-Status → Mein Service › shows next morning report time 
+
+    [31mTest timeout of 30000ms exceeded while running "beforeEach" hook.[39m
+
+      3 |
+      4 | test.describe('F75: System-Status → Mein Service', () => {
+    > 5 | 	test.beforeEach(async ({ page }) => {
+        | 	     ^
+      6 | 		await login(page);
+      7 | 		await page.goto('/settings');
+      8 | 	});
+        at /home/hem/gregor_zwanzig/frontend/e2e/system-status.spec.ts:5:7
+
+    Error: page.waitForURL: Test timeout of 30000ms exceeded.
+    =========================== logs ===========================
+    waiting for navigation to "/" until "load"
+      navigated to "http://localhost:4173/login"
+    ============================================================
+
+       at helpers.ts:12
+
+      10 | 	await page.fill('input[name="password"]', 'test1234');
+      11 | 	await page.click('button[type="submit"]');
+    > 12 | 	await page.waitForURL('/');
+         | 	           ^
+      13 | }
+      14 |
+        at login (/home/hem/gregor_zwanzig/frontend/e2e/helpers.ts:12:13)
+        at /home/hem/gregor_zwanzig/frontend/e2e/system-status.spec.ts:6:3
+
+    Error Context: test-results/system-status-F75-System-S-1201b-ws-next-morning-report-time/error-context.md
+
+  3) e2e/system-status.spec.ts:20:2 › F75: System-Status → Mein Service › shows next evening report time 
+
+    [31mTest timeout of 30000ms exceeded while running "beforeEach" hook.[39m
+
+      3 |
+      4 | test.describe('F75: System-Status → Mein Service', () => {
+    > 5 | 	test.beforeEach(async ({ page }) => {
+        | 	     ^
+      6 | 		await login(page);
+      7 | 		await page.goto('/settings');
+      8 | 	});
+        at /home/hem/gregor_zwanzig/frontend/e2e/system-status.spec.ts:5:7
+
+    Error: page.waitForURL: Test timeout of 30000ms exceeded.
+    =========================== logs ===========================
+    waiting for navigation to "/" until "load"
+      navigated to "http://localhost:4173/login"
+    ============================================================
+
+       at helpers.ts:12
+
+      10 | 	await page.fill('input[name="password"]', 'test1234');
+      11 | 	await page.click('button[type="submit"]');
+    > 12 | 	await page.waitForURL('/');
+         | 	           ^
+      13 | }
+      14 |
+        at login (/home/hem/gregor_zwanzig/frontend/e2e/helpers.ts:12:13)
+        at /home/hem/gregor_zwanzig/frontend/e2e/system-status.spec.ts:6:3
+
+    Error Context: test-results/system-status-F75-System-S-41cc0-ws-next-evening-report-time/error-context.md
+
+  4) e2e/system-status.spec.ts:24:2 › F75: System-Status → Mein Service › shows trip checks status ─
+
+    [31mTest timeout of 30000ms exceeded while running "beforeEach" hook.[39m
+
+      3 |
+      4 | test.describe('F75: System-Status → Mein Service', () => {
+    > 5 | 	test.beforeEach(async ({ page }) => {
+        | 	     ^
+      6 | 		await login(page);
+      7 | 		await page.goto('/settings');
+      8 | 	});
+        at /home/hem/gregor_zwanzig/frontend/e2e/system-status.spec.ts:5:7
+
+    Error: page.waitForURL: Test timeout of 30000ms exceeded.
+    =========================== logs ===========================
+    waiting for navigation to "/" until "load"
+      navigated to "http://localhost:4173/login"
+    ============================================================
+
+       at helpers.ts:12
+
+      10 | 	await page.fill('input[name="password"]', 'test1234');
+      11 | 	await page.click('button[type="submit"]');
+    > 12 | 	await page.waitForURL('/');
+         | 	           ^
+      13 | }
+      14 |
+        at login (/home/hem/gregor_zwanzig/frontend/e2e/helpers.ts:12:13)
+        at /home/hem/gregor_zwanzig/frontend/e2e/system-status.spec.ts:6:3
+
+    Error Context: test-results/system-status-F75-System-S-5174c-ce-shows-trip-checks-status/error-context.md
+
+  5) e2e/system-status.spec.ts:28:2 › F75: System-Status → Mein Service › does NOT show internal job names 
+
+    [31mTest timeout of 30000ms exceeded while running "beforeEach" hook.[39m
+
+      3 |
+      4 | test.describe('F75: System-Status → Mein Service', () => {
+    > 5 | 	test.beforeEach(async ({ page }) => {
+        | 	     ^
+      6 | 		await login(page);
+      7 | 		await page.goto('/settings');
+      8 | 	});
+        at /home/hem/gregor_zwanzig/frontend/e2e/system-status.spec.ts:5:7
+
+    Error: page.waitForURL: Test timeout of 30000ms exceeded.
+    =========================== logs ===========================
+    waiting for navigation to "/" until "load"
+      navigated to "http://localhost:4173/login"
+    ============================================================
+
+       at helpers.ts:12
+
+      10 | 	await page.fill('input[name="password"]', 'test1234');
+      11 | 	await page.click('button[type="submit"]');
+    > 12 | 	await page.waitForURL('/');
+         | 	           ^
+      13 | }
+      14 |
+        at login (/home/hem/gregor_zwanzig/frontend/e2e/helpers.ts:12:13)
+        at /home/hem/gregor_zwanzig/frontend/e2e/system-status.spec.ts:6:3
+
+    Error Context: test-results/system-status-F75-System-S-b25bb-NOT-show-internal-job-names/error-context.md
+
+  6) e2e/system-status.spec.ts:35:2 › F75: System-Status → Mein Service › shows "Dein Account" section 
+
+    [31mTest timeout of 30000ms exceeded while running "beforeEach" hook.[39m
+
+      3 |
+      4 | test.describe('F75: System-Status → Mein Service', () => {
+    > 5 | 	test.beforeEach(async ({ page }) => {
+        | 	     ^
+      6 | 		await login(page);
+      7 | 		await page.goto('/settings');
+      8 | 	});
+        at /home/hem/gregor_zwanzig/frontend/e2e/system-status.spec.ts:5:7
+
+    Error: page.waitForURL: Test timeout of 30000ms exceeded.
+    =========================== logs ===========================
+    waiting for navigation to "/" until "load"
+      navigated to "http://localhost:4173/login"
+    ============================================================
+
+       at helpers.ts:12
+
+      10 | 	await page.fill('input[name="password"]', 'test1234');
+      11 | 	await page.click('button[type="submit"]');
+    > 12 | 	await page.waitForURL('/');
+         | 	           ^
+      13 | }
+      14 |
+        at login (/home/hem/gregor_zwanzig/frontend/e2e/helpers.ts:12:13)
+        at /home/hem/gregor_zwanzig/frontend/e2e/system-status.spec.ts:6:3
+
+    Error Context: test-results/system-status-F75-System-S-c8c1e--shows-Dein-Account-section/error-context.md
+
+  7) e2e/system-status.spec.ts:39:2 › F75: System-Status → Mein Service › shows trip count with link 
+
+    [31mTest timeout of 30000ms exceeded while running "beforeEach" hook.[39m
+
+      3 |
+      4 | test.describe('F75: System-Status → Mein Service', () => {
+    > 5 | 	test.beforeEach(async ({ page }) => {
+        | 	     ^
+      6 | 		await login(page);
+      7 | 		await page.goto('/settings');
+      8 | 	});
+        at /home/hem/gregor_zwanzig/frontend/e2e/system-status.spec.ts:5:7
+
+    Error: page.waitForURL: Test timeout of 30000ms exceeded.
+    =========================== logs ===========================
+    waiting for navigation to "/" until "load"
+      navigated to "http://localhost:4173/login"
+    ============================================================
+
+       at helpers.ts:12
+
+      10 | 	await page.fill('input[name="password"]', 'test1234');
+      11 | 	await page.click('button[type="submit"]');
+    > 12 | 	await page.waitForURL('/');
+         | 	           ^
+      13 | }
+      14 |
+        at login (/home/hem/gregor_zwanzig/frontend/e2e/helpers.ts:12:13)
+        at /home/hem/gregor_zwanzig/frontend/e2e/system-status.spec.ts:6:3
+
+    Error Context: test-results/system-status-F75-System-S-2d814--shows-trip-count-with-link/error-context.md
+
+  8) e2e/system-status.spec.ts:45:2 › F75: System-Status → Mein Service › shows subscription count with link 
+
+    [31mTest timeout of 30000ms exceeded while running "beforeEach" hook.[39m
+
+      3 |
+      4 | test.describe('F75: System-Status → Mein Service', () => {
+    > 5 | 	test.beforeEach(async ({ page }) => {
+        | 	     ^
+      6 | 		await login(page);
+      7 | 		await page.goto('/settings');
+      8 | 	});
+        at /home/hem/gregor_zwanzig/frontend/e2e/system-status.spec.ts:5:7
+
+    Error: page.waitForURL: Test timeout of 30000ms exceeded.
+    =========================== logs ===========================
+    waiting for navigation to "/" until "load"
+      navigated to "http://localhost:4173/login"
+    ============================================================
+
+       at helpers.ts:12
+
+      10 | 	await page.fill('input[name="password"]', 'test1234');
+      11 | 	await page.click('button[type="submit"]');
+    > 12 | 	await page.waitForURL('/');
+         | 	           ^
+      13 | }
+      14 |
+        at login (/home/hem/gregor_zwanzig/frontend/e2e/helpers.ts:12:13)
+        at /home/hem/gregor_zwanzig/frontend/e2e/system-status.spec.ts:6:3
+
+    Error Context: test-results/system-status-F75-System-S-e2592-ubscription-count-with-link/error-context.md
+
+  9) e2e/system-status.spec.ts:51:2 › F75: System-Status → Mein Service › shows location count with link 
+
+    Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:4173/login
+    Call log:
+    [2m  - navigating to "http://localhost:4173/login", waiting until "load"[22m
+
+
+       at helpers.ts:8
+
+       6 |  */
+       7 | export async function login(page: Page) {
+    >  8 | 	await page.goto('/login');
+         | 	           ^
+       9 | 	await page.fill('input[name="username"]', 'admin');
+      10 | 	await page.fill('input[name="password"]', 'test1234');
+      11 | 	await page.click('button[type="submit"]');
+        at login (/home/hem/gregor_zwanzig/frontend/e2e/helpers.ts:8:13)
+        at /home/hem/gregor_zwanzig/frontend/e2e/system-status.spec.ts:6:9
+
+    Error Context: test-results/system-status-F75-System-S-d14b9-ws-location-count-with-link/error-context.md
+
+  10) e2e/system-status.spec.ts:57:2 › F75: System-Status → Mein Service › shows notification channels 
+
+    Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:4173/login
+    Call log:
+    [2m  - navigating to "http://localhost:4173/login", waiting until "load"[22m
+
+
+       at helpers.ts:8
+
+       6 |  */
+       7 | export async function login(page: Page) {
+    >  8 | 	await page.goto('/login');
+         | 	           ^
+       9 | 	await page.fill('input[name="username"]', 'admin');
+      10 | 	await page.fill('input[name="password"]', 'test1234');
+      11 | 	await page.click('button[type="submit"]');
+        at login (/home/hem/gregor_zwanzig/frontend/e2e/helpers.ts:8:13)
+        at /home/hem/gregor_zwanzig/frontend/e2e/system-status.spec.ts:6:9
+
+    Error Context: test-results/system-status-F75-System-S-0a46a-shows-notification-channels/error-context.md
+
+  11) e2e/system-status.spec.ts:64:2 › F75: System-Status → Mein Service › shows weather model per location 
+
+    Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:4173/login
+    Call log:
+    [2m  - navigating to "http://localhost:4173/login", waiting until "load"[22m
+
+
+       at helpers.ts:8
+
+       6 |  */
+       7 | export async function login(page: Page) {
+    >  8 | 	await page.goto('/login');
+         | 	           ^
+       9 | 	await page.fill('input[name="username"]', 'admin');
+      10 | 	await page.fill('input[name="password"]', 'test1234');
+      11 | 	await page.click('button[type="submit"]');
+        at login (/home/hem/gregor_zwanzig/frontend/e2e/helpers.ts:8:13)
+        at /home/hem/gregor_zwanzig/frontend/e2e/system-status.spec.ts:6:9
+
+    Error Context: test-results/system-status-F75-System-S-59a39--weather-model-per-location/error-context.md
+
+  12) e2e/system-status.spec.ts:74:2 › F75: System-Status → Mein Service › shows "Verfügbarkeit" section with single status indicator 
+
+    Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:4173/login
+    Call log:
+    [2m  - navigating to "http://localhost:4173/login", waiting until "load"[22m
+
+
+       at helpers.ts:8
+
+       6 |  */
+       7 | export async function login(page: Page) {
+    >  8 | 	await page.goto('/login');
+         | 	           ^
+       9 | 	await page.fill('input[name="username"]', 'admin');
+      10 | 	await page.fill('input[name="password"]', 'test1234');
+      11 | 	await page.click('button[type="submit"]');
+        at login (/home/hem/gregor_zwanzig/frontend/e2e/helpers.ts:8:13)
+        at /home/hem/gregor_zwanzig/frontend/e2e/system-status.spec.ts:6:9
+
+    Error Context: test-results/system-status-F75-System-S-3d976-ith-single-status-indicator/error-context.md
+
+  13) e2e/system-status.spec.ts:80:2 › F75: System-Status → Mein Service › shows version number ────
+
+    Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:4173/login
+    Call log:
+    [2m  - navigating to "http://localhost:4173/login", waiting until "load"[22m
+
+
+       at helpers.ts:8
+
+       6 |  */
+       7 | export async function login(page: Page) {
+    >  8 | 	await page.goto('/login');
+         | 	           ^
+       9 | 	await page.fill('input[name="username"]', 'admin');
+      10 | 	await page.fill('input[name="password"]', 'test1234');
+      11 | 	await page.click('button[type="submit"]');
+        at login (/home/hem/gregor_zwanzig/frontend/e2e/helpers.ts:8:13)
+        at /home/hem/gregor_zwanzig/frontend/e2e/system-status.spec.ts:6:9
+
+    Error Context: test-results/system-status-F75-System-S-77080-ervice-shows-version-number/error-context.md
+
+  14) e2e/system-status.spec.ts:86:2 › F75: System-Status → Mein Service › does NOT show old config table 
+
+    Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:4173/login
+    Call log:
+    [2m  - navigating to "http://localhost:4173/login", waiting until "load"[22m
+
+
+       at helpers.ts:8
+
+       6 |  */
+       7 | export async function login(page: Page) {
+    >  8 | 	await page.goto('/login');
+         | 	           ^
+       9 | 	await page.fill('input[name="username"]', 'admin');
+      10 | 	await page.fill('input[name="password"]', 'test1234');
+      11 | 	await page.click('button[type="submit"]');
+        at login (/home/hem/gregor_zwanzig/frontend/e2e/helpers.ts:8:13)
+        at /home/hem/gregor_zwanzig/frontend/e2e/system-status.spec.ts:6:9
+
+    Error Context: test-results/system-status-F75-System-S-73c98-s-NOT-show-old-config-table/error-context.md
+
+  15) e2e/system-status.spec.ts:92:2 › F75: System-Status → Mein Service › does NOT show Go/Python health split 
+
+    Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:4173/login
+    Call log:
+    [2m  - navigating to "http://localhost:4173/login", waiting until "load"[22m
+
+
+       at helpers.ts:8
+
+       6 |  */
+       7 | export async function login(page: Page) {
+    >  8 | 	await page.goto('/login');
+         | 	           ^
+       9 | 	await page.fill('input[name="username"]', 'admin');
+      10 | 	await page.fill('input[name="password"]', 'test1234');
+      11 | 	await page.click('button[type="submit"]');
+        at login (/home/hem/gregor_zwanzig/frontend/e2e/helpers.ts:8:13)
+        at /home/hem/gregor_zwanzig/frontend/e2e/system-status.spec.ts:6:9
+
+    Error Context: test-results/system-status-F75-System-S-920f1-show-Go-Python-health-split/error-context.md
+
+  16) e2e/system-status.spec.ts:97:2 › F75: System-Status → Mein Service › does NOT show old "Zeitplaner" heading 
+
+    Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:4173/login
+    Call log:
+    [2m  - navigating to "http://localhost:4173/login", waiting until "load"[22m
+
+
+       at helpers.ts:8
+
+       6 |  */
+       7 | export async function login(page: Page) {
+    >  8 | 	await page.goto('/login');
+         | 	           ^
+       9 | 	await page.fill('input[name="username"]', 'admin');
+      10 | 	await page.fill('input[name="password"]', 'test1234');
+      11 | 	await page.click('button[type="submit"]');
+        at login (/home/hem/gregor_zwanzig/frontend/e2e/helpers.ts:8:13)
+        at /home/hem/gregor_zwanzig/frontend/e2e/system-status.spec.ts:6:9
+
+    Error Context: test-results/system-status-F75-System-S-5466a-show-old-Zeitplaner-heading/error-context.md
+
+  16 failed
+    e2e/system-status.spec.ts:12:2 › F75: System-Status → Mein Service › shows "Deine Reports" section 
+    e2e/system-status.spec.ts:16:2 › F75: System-Status → Mein Service › shows next morning report time 
+    e2e/system-status.spec.ts:20:2 › F75: System-Status → Mein Service › shows next evening report time 
+    e2e/system-status.spec.ts:24:2 › F75: System-Status → Mein Service › shows trip checks status ──
+    e2e/system-status.spec.ts:28:2 › F75: System-Status → Mein Service › does NOT show internal job names 
+    e2e/system-status.spec.ts:35:2 › F75: System-Status → Mein Service › shows "Dein Account" section 
+    e2e/system-status.spec.ts:39:2 › F75: System-Status → Mein Service › shows trip count with link 
+    e2e/system-status.spec.ts:45:2 › F75: System-Status → Mein Service › shows subscription count with link 
+    e2e/system-status.spec.ts:51:2 › F75: System-Status → Mein Service › shows location count with link 
+    e2e/system-status.spec.ts:57:2 › F75: System-Status → Mein Service › shows notification channels 
+    e2e/system-status.spec.ts:64:2 › F75: System-Status → Mein Service › shows weather model per location 
+    e2e/system-status.spec.ts:74:2 › F75: System-Status → Mein Service › shows "Verfügbarkeit" section with single status indicator 
+    e2e/system-status.spec.ts:80:2 › F75: System-Status → Mein Service › shows version number ──────
+    e2e/system-status.spec.ts:86:2 › F75: System-Status → Mein Service › does NOT show old config table 
+    e2e/system-status.spec.ts:92:2 › F75: System-Status → Mein Service › does NOT show Go/Python health split 
+    e2e/system-status.spec.ts:97:2 › F75: System-Status → Mein Service › does NOT show old "Zeitplaner" heading 
