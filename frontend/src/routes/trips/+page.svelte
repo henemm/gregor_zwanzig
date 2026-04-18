@@ -1,12 +1,12 @@
 <script lang="ts">
 	import type { Trip } from '$lib/types.js';
 	import { api } from '$lib/api.js';
+	import { goto } from '$app/navigation';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import TripForm from '$lib/components/TripForm.svelte';
 	import WeatherConfigDialog from '$lib/components/WeatherConfigDialog.svelte';
 	import SearchIcon from '@lucide/svelte/icons/search';
 	import RouteIcon from '@lucide/svelte/icons/route';
@@ -22,15 +22,13 @@
 	let refetching = $state(false);
 	async function refetchTrips() {
 		refetching = true;
-		try { await refetchTrips(); }
+		try { trips = await api.get<Trip[]>('/api/trips'); }
 		finally { refetching = false; }
 	}
 	let search = $state('');
 	let filteredTrips = $derived(
 		trips.filter(t => t.name.toLowerCase().includes(search.toLowerCase()))
 	);
-	let dialogMode: 'create' | 'edit' | null = $state(null);
-	let editTarget: Trip | null = $state(null);
 	let deleteTarget: Trip | null = $state(null);
 	let error: string | null = $state(null);
 
@@ -74,24 +72,6 @@
 		return `${dates[0]} — ${dates[dates.length - 1]}`;
 	}
 
-	async function handleSave(trip: Trip) {
-		error = null;
-		try {
-			if (dialogMode === 'create') {
-				await api.post<Trip>('/api/trips', trip);
-			} else {
-				await api.put<Trip>(`/api/trips/${trip.id}`, trip);
-			}
-			await refetchTrips();
-			dialogMode = null;
-			editTarget = null;
-		} catch (e: unknown) {
-			error = (e as { error?: string; detail?: string })?.detail
-				?? (e as { error?: string })?.error
-				?? 'Fehler beim Speichern';
-		}
-	}
-
 	async function handleDelete() {
 		if (!deleteTarget) return;
 		error = null;
@@ -105,19 +85,11 @@
 	}
 
 	function openCreate() {
-		editTarget = null;
-		dialogMode = 'create';
+		goto('/trips/new');
 	}
 
 	function openEdit(trip: Trip) {
-		editTarget = trip;
-		dialogMode = 'edit';
-	}
-
-	function closeDialog() {
-		dialogMode = null;
-		editTarget = null;
-		error = null;
+		goto(`/trips/${trip.id}/edit`);
 	}
 
 	async function openReportConfig(trip: Trip) {
@@ -238,7 +210,7 @@
 <div class="space-y-4">
 	<div class="flex items-center justify-between">
 		<h1 class="text-2xl font-bold">Trips</h1>
-		<Button onclick={openCreate}>Neuer Trip</Button>
+		<Button onclick={() => goto('/trips/new')}>Neuer Trip</Button>
 	</div>
 
 	{#if error}
@@ -250,7 +222,7 @@
 			<RouteIcon class="mx-auto mb-3 size-10 text-muted-foreground/40" />
 			<p class="font-medium">Keine Trips vorhanden</p>
 			<p class="mt-1 text-sm text-muted-foreground">Erstelle deinen ersten Trip und konfiguriere Wetter-Reports.</p>
-			<Button variant="outline" class="mt-4" onclick={openCreate}>Ersten Trip erstellen</Button>
+			<Button variant="outline" class="mt-4" onclick={() => goto('/trips/new')}>Ersten Trip erstellen</Button>
 		</div>
 	{:else}
 		<div class="relative mb-3 max-w-xs">
@@ -288,7 +260,7 @@
 								<Button variant="outline" size="icon-sm" title="Wetter-Konfiguration" onclick={() => (weatherConfigTarget = trip)}><CloudSunIcon class="size-3.5" /></Button>
 								<Button variant="outline" size="icon-sm" class="hidden sm:inline-flex" title="Test Morgen-Report" onclick={() => runTestReport(trip, 7)}><PlayIcon class="size-3.5" /></Button>
 								<Button variant="outline" size="icon-sm" class="hidden sm:inline-flex" title="Test Abend-Report" onclick={() => runTestReport(trip, 18)}><PlayIcon class="size-3.5" /></Button>
-								<Button variant="ghost" size="icon-sm" title="Bearbeiten" onclick={() => openEdit(trip)}><PencilIcon class="size-3.5" /></Button>
+								<Button data-testid="trip-edit-btn" variant="ghost" size="icon-sm" title="Bearbeiten" onclick={() => openEdit(trip)}><PencilIcon class="size-3.5" /></Button>
 								<Button variant="ghost" size="icon-sm" class="hidden sm:inline-flex" title="Löschen" onclick={() => (deleteTarget = trip)}><Trash2Icon class="size-3.5" /></Button>
 							</div>
 						</Table.Cell>
@@ -300,25 +272,6 @@
 		{/if}
 	{/if}
 </div>
-
-<!-- Create/Edit Dialog -->
-<Dialog.Root
-	open={dialogMode !== null}
-	onOpenChange={(open) => { if (!open) closeDialog(); }}
->
-	<Dialog.Content class="max-h-[80vh] max-w-2xl overflow-y-auto">
-		<Dialog.Header>
-			<Dialog.Title>{dialogMode === 'create' ? 'Neuer Trip' : 'Trip bearbeiten'}</Dialog.Title>
-		</Dialog.Header>
-		{#if dialogMode}
-			<TripForm
-				trip={editTarget ?? undefined}
-				onsave={handleSave}
-				oncancel={closeDialog}
-			/>
-		{/if}
-	</Dialog.Content>
-</Dialog.Root>
 
 <!-- Delete Confirmation Dialog -->
 <Dialog.Root

@@ -1,0 +1,80 @@
+  ✘   1 e2e/trip-wizard.spec.ts:11:2 › Trip Wizard W1 › wizard create route exists at /trips/new (405ms)
+  ✘   2 e2e/trip-wizard.spec.ts:21:2 › Trip Wizard W1 › wizard shows 4-step stepper with Route as active (5.3s)
+  ✘   3 e2e/trip-wizard.spec.ts:35:2 › Trip Wizard W1 › stepper labels are Route, Etappen, Wetter, Reports (5.3s)
+  ✘   4 e2e/trip-wizard.spec.ts:46:2 › Trip Wizard W1 › step 1 shows GPX upload zone (5.3s)
+  ✘   5 e2e/trip-wizard.spec.ts:52:2 › Trip Wizard W1 › step 1 shows trip name input (5.3s)
+  ✘   6 e2e/trip-wizard.spec.ts:58:2 › Trip Wizard W1 › step 1 has manual create button (5.3s)
+  ✘   7 e2e/trip-wizard.spec.ts:64:2 › Trip Wizard W1 › step 1 weiter button is disabled without trip name (5.3s)
+  ✘   8 e2e/trip-wizard.spec.ts:71:2 › Trip Wizard W1 › step 1 weiter button enabled after entering trip name and adding stage (30.0s)
+  ✘   9 e2e/trip-wizard.spec.ts:89:2 › Trip Wizard W1 › step 2 shows stages from step 1 (30.0s)
+  ✘  10 e2e/trip-wizard.spec.ts:104:2 › Trip Wizard W1 › step 2 allows adding waypoints (30.0s)
+  ✘  11 e2e/trip-wizard.spec.ts:121:2 › Trip Wizard W1 › step 2 allows adding more stages (30.0s)
+  ✘  12 e2e/trip-wizard.spec.ts:139:2 › Trip Wizard W1 › back button on step 2 returns to step 1 (30.0s)
+  ✘  13 e2e/trip-wizard.spec.ts:158:2 › Trip Wizard W1 › cancel button navigates to /trips (30.0s)
+  ✘  14 e2e/trip-wizard.spec.ts:165:2 › Trip Wizard W1 › step 1 has no back button but wizard is visible (5.3s)
+  ✘  15 e2e/trip-wizard.spec.ts:176:2 › Trip Wizard W1 › steps 3 and 4 show placeholder content (30.0s)
+  ✘  16 e2e/trip-wizard.spec.ts:202:2 › Trip Wizard W1 › save button visible on last step (30.0s)
+  -  17 e2e/trip-wizard.spec.ts:224:2 › Trip Wizard W1 › trips page edit button navigates to wizard
+  -  18 e2e/trip-wizard.spec.ts:241:2 › Trip Wizard W1 › edit mode pre-fills trip name
+  ✘  19 e2e/trip-wizard.spec.ts:261:2 › Trip Wizard W1 › trips page "Neuer Trip" navigates to /trips/new (5.3s)
+  1) e2e/trip-wizard.spec.ts:11:2 › Trip Wizard W1 › wizard create route exists at /trips/new ──────
+        at /home/hem/gregor_zwanzig/frontend/e2e/trip-wizard.spec.ts:14:29
+  2) e2e/trip-wizard.spec.ts:21:2 › Trip Wizard W1 › wizard shows 4-step stepper with Route as active 
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+        at /home/hem/gregor_zwanzig/frontend/e2e/trip-wizard.spec.ts:24:25
+  3) e2e/trip-wizard.spec.ts:35:2 › Trip Wizard W1 › stepper labels are Route, Etappen, Wetter, Reports 
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+        at /home/hem/gregor_zwanzig/frontend/e2e/trip-wizard.spec.ts:38:47
+  4) e2e/trip-wizard.spec.ts:46:2 › Trip Wizard W1 › step 1 shows GPX upload zone ──────────────────
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+        at /home/hem/gregor_zwanzig/frontend/e2e/trip-wizard.spec.ts:49:26
+  5) e2e/trip-wizard.spec.ts:52:2 › Trip Wizard W1 › step 1 shows trip name input ──────────────────
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+        at /home/hem/gregor_zwanzig/frontend/e2e/trip-wizard.spec.ts:55:27
+  6) e2e/trip-wizard.spec.ts:58:2 › Trip Wizard W1 › step 1 has manual create button ───────────────
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+        at /home/hem/gregor_zwanzig/frontend/e2e/trip-wizard.spec.ts:61:27
+  7) e2e/trip-wizard.spec.ts:64:2 › Trip Wizard W1 › step 1 weiter button is disabled without trip name 
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+        at /home/hem/gregor_zwanzig/frontend/e2e/trip-wizard.spec.ts:67:27
+  8) e2e/trip-wizard.spec.ts:71:2 › Trip Wizard W1 › step 1 weiter button enabled after entering trip name and adding stage 
+        at /home/hem/gregor_zwanzig/frontend/e2e/trip-wizard.spec.ts:76:19
+  9) e2e/trip-wizard.spec.ts:89:2 › Trip Wizard W1 › step 2 shows stages from step 1 ───────────────
+        at /home/hem/gregor_zwanzig/frontend/e2e/trip-wizard.spec.ts:93:57
+  10) e2e/trip-wizard.spec.ts:104:2 › Trip Wizard W1 › step 2 allows adding waypoints ──────────────
+        at /home/hem/gregor_zwanzig/frontend/e2e/trip-wizard.spec.ts:108:57
+  11) e2e/trip-wizard.spec.ts:121:2 › Trip Wizard W1 › step 2 allows adding more stages ────────────
+        at /home/hem/gregor_zwanzig/frontend/e2e/trip-wizard.spec.ts:125:57
+  12) e2e/trip-wizard.spec.ts:139:2 › Trip Wizard W1 › back button on step 2 returns to step 1 ─────
+        at /home/hem/gregor_zwanzig/frontend/e2e/trip-wizard.spec.ts:143:57
+  13) e2e/trip-wizard.spec.ts:158:2 › Trip Wizard W1 › cancel button navigates to /trips ───────────
+        at /home/hem/gregor_zwanzig/frontend/e2e/trip-wizard.spec.ts:161:19
+  14) e2e/trip-wizard.spec.ts:165:2 › Trip Wizard W1 › step 1 has no back button but wizard is visible 
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+        at /home/hem/gregor_zwanzig/frontend/e2e/trip-wizard.spec.ts:168:61
+  15) e2e/trip-wizard.spec.ts:176:2 › Trip Wizard W1 › steps 3 and 4 show placeholder content ──────
+        at /home/hem/gregor_zwanzig/frontend/e2e/trip-wizard.spec.ts:180:57
+  16) e2e/trip-wizard.spec.ts:202:2 › Trip Wizard W1 › save button visible on last step ────────────
+        at /home/hem/gregor_zwanzig/frontend/e2e/trip-wizard.spec.ts:206:57
+  17) e2e/trip-wizard.spec.ts:261:2 › Trip Wizard W1 › trips page "Neuer Trip" navigates to /trips/new 
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+        at /home/hem/gregor_zwanzig/frontend/e2e/trip-wizard.spec.ts:264:24
+  17 failed
+    e2e/trip-wizard.spec.ts:11:2 › Trip Wizard W1 › wizard create route exists at /trips/new ───────
+    e2e/trip-wizard.spec.ts:21:2 › Trip Wizard W1 › wizard shows 4-step stepper with Route as active 
+    e2e/trip-wizard.spec.ts:35:2 › Trip Wizard W1 › stepper labels are Route, Etappen, Wetter, Reports 
+    e2e/trip-wizard.spec.ts:46:2 › Trip Wizard W1 › step 1 shows GPX upload zone ───────────────────
+    e2e/trip-wizard.spec.ts:52:2 › Trip Wizard W1 › step 1 shows trip name input ───────────────────
+    e2e/trip-wizard.spec.ts:58:2 › Trip Wizard W1 › step 1 has manual create button ────────────────
+    e2e/trip-wizard.spec.ts:64:2 › Trip Wizard W1 › step 1 weiter button is disabled without trip name 
+    e2e/trip-wizard.spec.ts:71:2 › Trip Wizard W1 › step 1 weiter button enabled after entering trip name and adding stage 
+    e2e/trip-wizard.spec.ts:89:2 › Trip Wizard W1 › step 2 shows stages from step 1 ────────────────
+    e2e/trip-wizard.spec.ts:104:2 › Trip Wizard W1 › step 2 allows adding waypoints ────────────────
+    e2e/trip-wizard.spec.ts:121:2 › Trip Wizard W1 › step 2 allows adding more stages ──────────────
+    e2e/trip-wizard.spec.ts:139:2 › Trip Wizard W1 › back button on step 2 returns to step 1 ───────
+    e2e/trip-wizard.spec.ts:158:2 › Trip Wizard W1 › cancel button navigates to /trips ─────────────
+    e2e/trip-wizard.spec.ts:165:2 › Trip Wizard W1 › step 1 has no back button but wizard is visible 
+    e2e/trip-wizard.spec.ts:176:2 › Trip Wizard W1 › steps 3 and 4 show placeholder content ────────
+    e2e/trip-wizard.spec.ts:202:2 › Trip Wizard W1 › save button visible on last step ──────────────
+    e2e/trip-wizard.spec.ts:261:2 › Trip Wizard W1 › trips page "Neuer Trip" navigates to /trips/new 
+  2 skipped

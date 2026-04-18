@@ -22,59 +22,62 @@ test.describe('Trips Page (M3a)', () => {
 		await expect(createBtn).toBeVisible();
 	});
 
-	test('create trip dialog opens', async ({ page }) => {
+	test('create trip navigates to wizard', async ({ page }) => {
 		await page.goto('/trips');
 		const createBtn = page.getByRole('button', { name: 'Neuer Trip' });
 		await createBtn.click();
 
-		// Dialog should be open with a trip name input
-		const dialog = page.locator('[role="dialog"]');
-		await expect(dialog).toBeVisible();
-		const nameInput = dialog.locator('input[name="trip-name"], input[placeholder*="Name"]');
+		// Should navigate to wizard page
+		await page.waitForURL('/trips/new');
+		await expect(page.locator('[data-testid="trip-wizard"]')).toBeVisible();
+
+		// Wizard should show trip name input
+		const nameInput = page.locator('[data-testid="trip-name-input"]');
 		await expect(nameInput).toBeVisible();
 	});
 
-	test('create trip with stage and waypoint', async ({ page }) => {
-		await page.goto('/trips');
-		const createBtn = page.getByRole('button', { name: 'Neuer Trip' });
-		await createBtn.click();
-
-		const dialog = page.locator('[role="dialog"]');
+	test('create trip via wizard', async ({ page }) => {
+		await page.goto('/trips/new');
 
 		// Fill trip name
-		const nameInput = dialog.locator('input[name="trip-name"], input[placeholder*="Name"]');
+		const nameInput = page.locator('[data-testid="trip-name-input"]');
 		await nameInput.fill('E2E Test Trip');
 
-		// Add a stage
-		const addStageBtn = dialog.locator('button', { hasText: /Etappe|Stage/i });
-		await addStageBtn.click();
+		// Add a manual stage
+		const manualBtn = page.locator('button', { hasText: /[Mm]anuell/ });
+		await manualBtn.click();
 
-		// Add a waypoint to the stage
-		const addWpBtn = dialog.locator('button', { hasText: /Wegpunkt|Waypoint/i });
+		// Navigate to step 2
+		await page.locator('[data-testid="wizard-next"]').click();
+
+		// Add a waypoint
+		const addWpBtn = page.locator('button', { hasText: /[Ww]egpunkt/ });
 		await addWpBtn.click();
 
-		// Fill waypoint name
-		const wpNameInput = dialog.locator('input[name="waypoint-name"]').first();
-		if (await wpNameInput.isVisible()) {
-			await wpNameInput.fill('Testpunkt');
-		}
+		// Fill waypoint coordinates
+		await page.locator('input[name="lat"]').first().fill('47.0');
+		await page.locator('input[name="lon"]').first().fill('11.0');
+
+		// Navigate to step 3 and 4
+		await page.locator('[data-testid="wizard-next"]').click();
+		await page.locator('[data-testid="wizard-next"]').click();
 
 		// Save
-		const saveBtn = dialog.locator('button', { hasText: /Speichern|Save/i });
+		const saveBtn = page.locator('[data-testid="wizard-save"]');
 		await saveBtn.click();
 
-		// Dialog should close
-		await expect(dialog).not.toBeVisible({ timeout: 5000 });
+		// Should navigate back to trips list
+		await page.waitForURL('/trips', { timeout: 5000 });
 
 		// Trip should appear in the list
 		await expect(page.locator('text=E2E Test Trip')).toBeVisible();
 	});
 
-	test('edit trip opens pre-filled dialog', async ({ page }) => {
+	test('edit trip navigates to wizard with pre-filled name', async ({ page }) => {
 		await page.goto('/trips');
 
 		// Find first edit button in the table
-		const editBtn = page.locator('button[aria-label="Edit"], button:has-text("Edit"), button:has-text("Bearbeiten")').first();
+		const editBtn = page.locator('[data-testid="trip-edit-btn"]').first();
 		// Skip if no trips exist
 		if (!(await editBtn.isVisible({ timeout: 3000 }).catch(() => false))) {
 			test.skip();
@@ -83,11 +86,12 @@ test.describe('Trips Page (M3a)', () => {
 
 		await editBtn.click();
 
-		const dialog = page.locator('[role="dialog"]');
-		await expect(dialog).toBeVisible();
+		// Should navigate to edit wizard
+		await expect(page).toHaveURL(/\/trips\/[^/]+\/edit/);
+		await expect(page.locator('[data-testid="trip-wizard"]')).toBeVisible();
 
 		// Name input should be pre-filled (not empty)
-		const nameInput = dialog.locator('input[name="trip-name"]');
+		const nameInput = page.locator('[data-testid="trip-name-input"]');
 		const value = await nameInput.inputValue();
 		expect(value.length).toBeGreaterThan(0);
 	});
