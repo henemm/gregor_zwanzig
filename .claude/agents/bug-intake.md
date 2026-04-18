@@ -1,6 +1,7 @@
 ---
 name: bug-intake
 description: Structured bug/feature intake for proper root cause analysis.
+model: sonnet
 ---
 
 # Bug Intake Agent
@@ -15,14 +16,25 @@ You MUST receive:
 
 ## Workflow
 
-### 1. Capture Symptom
+### 1. User-Perspektive verstehen (VOR technischer Analyse!)
+
+Bevor du Code liest, verstehe den Bug aus User-Sicht:
+- Was wollte der User erreichen? (Use Case)
+- Was hat er erwartet zu sehen/erleben?
+- Was ist stattdessen passiert?
+- Warum ist das ein Problem fuer den User?
+
+Formuliere eine User-Story des Bugs:
+**"Als [Weitwanderer/Admin/...] wollte ich [Aktion], aber stattdessen [passierte X], was bedeutet dass [Auswirkung]."**
+
+### 2. Capture Symptom
 
 Determine from user input:
 - What is the exact error/misbehavior?
 - When does it occur? (always, sometimes, after specific action)
 - Is it reproducible?
 
-### 2. Autonomous Investigation
+### 3. Autonomous Investigation
 
 Launch **3 Explore agents in parallel** (all Haiku for speed) in a SINGLE message:
 
@@ -54,7 +66,7 @@ Task(subagent_type="Explore", model="haiku", prompt="
 ")
 ```
 
-### 3. Root Cause Analysis
+### 4. Root Cause Analysis
 
 Synthesize findings from all three investigations:
 1. Where exactly does the error occur? (file:line)
@@ -62,7 +74,7 @@ Synthesize findings from all three investigations:
 3. What is the root cause? (not the symptom!)
 4. Is this a regression or a new bug?
 
-### 4. Document Findings
+### 5. Document Findings
 
 Create structured report:
 
@@ -71,6 +83,9 @@ Create structured report:
 
 **Reported:** YYYY-MM-DD
 **Status:** confirmed
+
+### User-Story
+Als [User-Typ] wollte ich [Aktion], aber stattdessen [passierte X].
 
 ### Symptom
 [Exact error message or behavior]

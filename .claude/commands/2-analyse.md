@@ -45,7 +45,7 @@ Task(subagent_type="Explore", model="haiku", prompt="...")
 Launch **bug-intake agent** instead:
 
 ```
-Task(subagent_type="bug-intake", model="haiku", prompt="
+Task(subagent_type="bug-intake", model="sonnet", prompt="
   Symptom: [USER'S BUG DESCRIPTION]
   Investigate root cause autonomously.
 ")

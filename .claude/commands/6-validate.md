@@ -121,10 +121,10 @@ After auto-fix: Re-run Agent 1 (Bash) to verify. If still failing, report to use
 
 ## Step 3: Documentation Update
 
-If all validations pass, launch **docs-updater** (Sonnet for quality):
+If all validations pass, launch **docs-updater** (Haiku — sufficient for markdown updates):
 
 ```
-Task(subagent_type="docs-updater", model="sonnet", prompt="
+Task(subagent_type="docs-updater", model="haiku", prompt="
   Follow the instructions in .claude/agents/docs-updater.md.
 
   INPUT:
