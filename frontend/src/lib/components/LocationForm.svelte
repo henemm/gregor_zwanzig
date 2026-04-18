@@ -6,11 +6,14 @@
 
 	interface Props {
 		location?: Location;
+		locations?: Location[];
 		onsave: (loc: Location) => void;
 		oncancel: () => void;
 	}
 
-	let { location, onsave, oncancel }: Props = $props();
+	let { location, locations = [], onsave, oncancel }: Props = $props();
+
+	const existingGroups = [...new Set(locations.flatMap(l => l.group ? [l.group] : []))].sort();
 
 	function toKebab(s: string): string {
 		return s
@@ -44,10 +47,10 @@
 		}
 	}
 	let elevationM = $state(location?.elevation_m ?? 2000);
-	let group = $state(location?.group ?? '');
 	let region = $state(location?.region ?? '');
 	let bergfexSlug = $state(location?.bergfex_slug ?? '');
 	let activityProfile = $state(location?.activity_profile ?? '');
+	let group = $state(location?.group ?? '');
 	let error = $state('');
 
 	function save() {
@@ -80,11 +83,6 @@
 	<div>
 		<Label for="location-name">Name</Label>
 		<Input id="location-name" name="location-name" placeholder="Name der Location" bind:value={name} />
-	</div>
-
-	<div>
-		<Label for="loc-group">Gruppe (optional)</Label>
-		<Input id="loc-group" name="loc-group" placeholder="z.B. Skigebiete Tirol" bind:value={group} />
 	</div>
 
 	{#if error}
@@ -141,6 +139,23 @@
 			<option value="wandern">Wandern</option>
 			<option value="allgemein">Allgemein</option>
 		</select>
+	</div>
+
+	<div>
+		<Label for="group">Gruppe (optional)</Label>
+		<input
+			id="group"
+			name="group"
+			list="group-options"
+			bind:value={group}
+			placeholder="z.B. Ski Alpin"
+			class="flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-base transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3"
+		/>
+		<datalist id="group-options">
+			{#each existingGroups as g}
+				<option value={g} />
+			{/each}
+		</datalist>
 	</div>
 
 	<div class="flex justify-end gap-2 pt-2">

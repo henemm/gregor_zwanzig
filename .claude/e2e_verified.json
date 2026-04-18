@@ -1,11 +1,11 @@
 {
-  "verified_at": "2026-04-18T15:50:01.396355+00:00",
+  "verified_at": "2026-04-18T16:46:04.493115+00:00",
   "server_restarted": true,
   "test_trip_created": true,
   "emails_checked": true,
   "test_trip_cleaned": true,
   "feature_checks": [
-    "F76B: Startseite Kachel-\u00dcbersicht \u2014 7/7 E2E Tests gr\u00fcn",
+    "F76C2: Orts-Gruppen \u2014 5/5 E2E Tests gr\u00fcn, 16 bestehende Tests gr\u00fcn",
     "Adversary Verdict: VERIFIED (4 findings, 0 blockers)"
   ]
 }
