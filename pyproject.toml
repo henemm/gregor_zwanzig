@@ -22,11 +22,12 @@ package = true
 line-length = 88
 
 [tool.pytest.ini_options]
-addopts = "-q"
+addopts = "-q -m 'not email'"
 pythonpath = ["src", "."]
 testpaths = ["tests"]
 markers = [
     "tdd: TDD tests using external ground truth sources (may be slow)",
+    "email: Tests that send real emails via SMTP (run with: pytest -m email)",
 ]
 
 [tool.mypy]

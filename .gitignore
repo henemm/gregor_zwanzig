@@ -26,5 +26,35 @@ node_modules/
 .claude/validation_state.json
 .claude/workflow_state.json
 
-# Secrets (Fallback .env for local dev without 1Password)
+# Claude Code (transient)
+.claude/worktrees/
+.claude/ui_screenshot_lock.json
+.claude/pending_validation.json
+.claude/user_approved_validation
+
+# Data (runtime / user-uploaded)
+data/cache/
+data/*.gpx
+data/users/__test_*/
+data/users/test_*/
+data/users/csrf_test_*/
+data/users/val_test_*/
+data/users/valtest_*/
+data/users/validator_test/
+data/users/design_*/
+data/users/usability-test/
+data/users/viz_test/
+data/users/admin/
+
+# Go binaries
+gregor-api
+gregor_zwanzig
+server
+
+# Frontend build / test artifacts
+frontend/test-results/
+test-results/
+
+# Secrets
 .env
+.env.backup.*

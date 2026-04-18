@@ -1,5 +1,5 @@
 {
-  "verified_at": "2026-04-13T06:16:11.397691+00:00",
+  "verified_at": "2026-04-18T14:27:58.357974+00:00",
   "server_restarted": true,
   "test_trip_created": true,
   "reports_sent": [
@@ -11,6 +11,7 @@
   "feature_checks": [
     "OpenAPI Spec: YAML valid, 7 paths, 12 operations, 7 schemas",
     "Alle Endpoints dokumentiert: health, config, forecast, locations CRUD, trips CRUD",
-    "Schemas matchen Go Structs (Location, Trip, Stage, Waypoint)"
+    "Schemas matchen Go Structs (Location, Trip, Stage, Waypoint)",
+    "F75: System-Status Seite redesigned, Validator 14/18 PASS, UTC-Fix deployed"
   ]
 }
