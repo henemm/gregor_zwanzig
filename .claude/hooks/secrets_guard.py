@@ -70,18 +70,21 @@ DEFAULT_SENSITIVE_PATTERNS = [
     r'\.env',
     r'credentials\.json',
     r'service[_-]?account.*\.json',
-    r'_key',
-    r'_secret',
+    r'private[_.]key',
+    r'[_.]secret\.',
     r'\.pem$',
     r'\.key$',
 ]
 
 # Patterns that are ALWAYS blocked (even in staging)
+# Note: patterns match against file paths and command strings.
+# Use word boundaries or file-extension anchors to avoid false positives
+# on Go struct field names like "signal_api_key" in commit messages.
 DEFAULT_ALWAYS_BLOCKED = [
     r'credentials\.json',
     r'service[_-]?account.*\.json',
-    r'_key',
-    r'_secret',
+    r'private[_.]key',     # matches private_key, private.key (actual key files)
+    r'[_.]secret\.',       # matches .secret.json etc. (files with "secret" in name)
     r'\.pem$',
     r'\.key$',
 ]

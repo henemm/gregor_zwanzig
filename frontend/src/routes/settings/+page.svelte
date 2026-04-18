@@ -15,13 +15,22 @@
 		return `vor ${days} Tag${days > 1 ? 'en' : ''}`;
 	}
 
-	function formatDate(iso: string | null | undefined): string {
+	function formatNextRun(iso: string | null | undefined): string {
 		if (!iso) return '—';
 		try {
-			return new Date(iso).toLocaleString('de-AT', {
-				day: '2-digit', month: '2-digit',
-				hour: '2-digit', minute: '2-digit'
-			});
+			const date = new Date(iso);
+			const now = new Date();
+			const today = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Vienna' }));
+			const target = new Date(date.toLocaleString('en-US', { timeZone: 'Europe/Vienna' }));
+			const time = date.toLocaleString('de-AT', { timeZone: 'Europe/Vienna', hour: '2-digit', minute: '2-digit' });
+
+			const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+			const targetDate = new Date(target.getFullYear(), target.getMonth(), target.getDate());
+			const diffDays = Math.round((targetDate.getTime() - todayDate.getTime()) / 86400000);
+
+			if (diffDays === 0) return `heute um ${time}`;
+			if (diffDays === 1) return `morgen um ${time}`;
+			return date.toLocaleString('de-AT', { timeZone: 'Europe/Vienna', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 		} catch { return iso; }
 	}
 
@@ -61,7 +70,7 @@
 								<span class="font-medium">{userJobs[job.id]}</span>
 							</div>
 							<div class="flex items-center gap-4 text-sm text-muted-foreground">
-								<span>Nächster: {formatDate(job.next_run)}</span>
+								<span>Nächster: {formatNextRun(job.next_run)}</span>
 								<span>Zuletzt: {job.last_run?.time ? timeAgo(job.last_run.time) : '—'}</span>
 							</div>
 						</div>
@@ -85,11 +94,11 @@
 			<!-- Zähler -->
 			<div class="space-y-2 mb-4">
 				<div class="flex items-center justify-between text-sm">
-					<span>Trips</span>
+					<span>Aktive Trips</span>
 					<a href="/trips" class="font-medium hover:underline">{data.trips.length}</a>
 				</div>
 				<div class="flex items-center justify-between text-sm">
-					<span>Abos</span>
+					<span>Aktive Abos</span>
 					<a href="/subscriptions" class="font-medium hover:underline">{data.subscriptions.filter((s: any) => s.enabled).length}</a>
 				</div>
 				<div class="flex items-center justify-between text-sm">

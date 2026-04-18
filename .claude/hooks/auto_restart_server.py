@@ -47,6 +47,33 @@ def main():
         return
 
     # --- Server restart ---
+    # Check if systemd service is managing the server
+    systemd_active = False
+    try:
+        result = subprocess.run(
+            ["systemctl", "is-active", "--quiet", "gregor_zwanzig.service"],
+            capture_output=True, timeout=5,
+        )
+        systemd_active = result.returncode == 0
+    except Exception:
+        pass
+
+    if systemd_active:
+        # systemd owns the server — let it handle the restart
+        try:
+            result = subprocess.run(
+                ["sudo", "systemctl", "restart", "gregor_zwanzig.service"],
+                capture_output=True, timeout=15,
+            )
+            if result.returncode == 0:
+                print("SERVER AUTO-RESTARTED via systemctl after commit", file=sys.stderr)
+            else:
+                print(f"WARNING: systemctl restart failed: {result.stderr.decode().strip()}", file=sys.stderr)
+        except Exception as e:
+            print(f"WARNING: systemctl restart failed: {e}", file=sys.stderr)
+        return
+
+    # No systemd service — manual restart (interactive dev session)
     project_dir = os.environ.get("CLAUDE_PROJECT_DIR", "/opt/gregor_zwanziger")
 
     # Kill existing server on port 8080
