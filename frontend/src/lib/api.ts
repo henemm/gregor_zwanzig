@@ -1,4 +1,4 @@
-import type { ApiError } from './types.js';
+import type { ApiError, Stage } from './types.js';
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
 	const opts: RequestInit = {
@@ -23,3 +23,21 @@ export const api = {
 	put: <T>(path: string, body: unknown) => request<T>('PUT', path, body),
 	del: (path: string) => request<void>('DELETE', path)
 };
+
+export async function uploadGpx(
+	file: File,
+	stageDate: string,
+	startHour: number
+): Promise<Stage> {
+	const form = new FormData();
+	form.append('file', file);
+	form.append('stage_date', stageDate);
+	form.append('start_hour', String(startHour));
+
+	const res = await fetch('/api/gpx/parse', { method: 'POST', body: form });
+	if (!res.ok) {
+		const detail = await res.text();
+		throw new Error(`GPX parse failed: ${detail}`);
+	}
+	return res.json() as Promise<Stage>;
+}
