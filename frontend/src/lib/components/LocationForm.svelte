@@ -44,6 +44,7 @@
 		}
 	}
 	let elevationM = $state(location?.elevation_m ?? 2000);
+	let group = $state(location?.group ?? '');
 	let region = $state(location?.region ?? '');
 	let bergfexSlug = $state(location?.bergfex_slug ?? '');
 	let activityProfile = $state(location?.activity_profile ?? '');
@@ -68,6 +69,7 @@
 			region: region.trim() || undefined,
 			bergfex_slug: bergfexSlug.trim() || undefined,
 			activity_profile: (activityProfile as Location['activity_profile']) || undefined,
+			group: group.trim() || undefined,
 			...(location?.display_config && { display_config: location.display_config })
 		};
 		onsave(result);
@@ -78,6 +80,11 @@
 	<div>
 		<Label for="location-name">Name</Label>
 		<Input id="location-name" name="location-name" placeholder="Name der Location" bind:value={name} />
+	</div>
+
+	<div>
+		<Label for="loc-group">Gruppe (optional)</Label>
+		<Input id="loc-group" name="loc-group" placeholder="z.B. Skigebiete Tirol" bind:value={group} />
 	</div>
 
 	{#if error}

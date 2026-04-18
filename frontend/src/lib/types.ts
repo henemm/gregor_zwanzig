@@ -7,6 +7,7 @@ export interface Location {
 	region?: string;
 	bergfex_slug?: string;
 	activity_profile?: 'wintersport' | 'wandern' | 'allgemein';
+	group?: string;
 	display_config?: Record<string, unknown>;
 }
 
