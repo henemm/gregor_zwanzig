@@ -71,9 +71,9 @@ test.describe('Weather Table (M3c)', () => {
 		await expect(meta).toContainText(/OPENMETEO|openmeteo/i);
 	});
 
-	test('sidebar has Wetter navigation link', async ({ page }) => {
-		await page.goto('/');
-		const wetterLink = page.locator('nav a[href="/weather"]');
-		await expect(wetterLink).toBeVisible();
+	test('weather page is still accessible via direct URL', async ({ page }) => {
+		// F76: Wetter removed from sidebar nav, but page still accessible
+		await page.goto('/weather');
+		await expect(page.getByRole('heading', { name: 'Wetter' })).toBeVisible();
 	});
 });
