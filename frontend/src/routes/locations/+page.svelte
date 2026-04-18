@@ -98,7 +98,7 @@
 <div class="space-y-4">
 	<div class="flex items-center justify-between">
 		<h1 class="text-2xl font-bold">Locations</h1>
-		<Button onclick={openCreate}>Neue Location</Button>
+		<Button onclick={openCreate}>Neuer Ort</Button>
 	</div>
 
 	{#if error}
@@ -178,6 +178,7 @@
 		{#if dialogMode}
 			<LocationForm
 				location={editTarget ?? undefined}
+				{locations}
 				onsave={handleSave}
 				oncancel={closeDialog}
 			/>
