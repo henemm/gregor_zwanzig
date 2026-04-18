@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Location } from '$lib/types.js';
+	import type { Location, Subscription } from '$lib/types.js';
 	import { api } from '$lib/api.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
@@ -11,7 +11,22 @@
 	let { data } = $props();
 
 	let locations: Location[] = $state(data.locations);
+	let subscriptions: Subscription[] = $state(data.subscriptions ?? []);
 	let selectedIds = $state<string[]>(locations.map((l) => l.id));
+
+	const WEEKDAYS = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+
+	function scheduleLabel(sub: Subscription): string {
+		if (sub.schedule === 'daily_morning') return 'Täglich 07:00';
+		if (sub.schedule === 'daily_evening') return 'Täglich 18:00';
+		if (sub.schedule === 'weekly') return `Wöchentlich ${WEEKDAYS[sub.weekday ?? 0]}`;
+		return sub.schedule;
+	}
+
+	function locationsLabel(sub: Subscription): string {
+		if (!sub.locations || sub.locations.length === 0) return 'Alle Orte';
+		return `${sub.locations.length} Orte`;
+	}
 	let allSelected = $state(true);
 	let targetDate = $state(new Date().toISOString().slice(0, 10));
 	let twStart = $state(9);
@@ -259,6 +274,35 @@
 			</Button>
 		</Card.Content>
 	</Card.Root>
+
+	<!-- Auto-Reports: show when no comparison active -->
+	{#if !result && !loading}
+		<div class="space-y-3">
+			<div class="flex items-center justify-between">
+				<h2 class="text-lg font-semibold">Deine Auto-Reports</h2>
+				<a href="/subscriptions" class="text-sm text-primary hover:underline">Verwalten &rarr;</a>
+			</div>
+			{#if subscriptions.length > 0}
+				{#each subscriptions as sub}
+					<Card.Root data-testid="auto-report-card">
+						<Card.Content class="flex items-center justify-between py-3">
+							<div>
+								<p class="font-medium">{sub.name}</p>
+								<p class="text-sm text-muted-foreground">
+									{scheduleLabel(sub)} &middot; {locationsLabel(sub)}
+								</p>
+							</div>
+							<Badge variant={sub.enabled ? 'default' : 'secondary'}>
+								{sub.enabled ? 'An' : 'Aus'}
+							</Badge>
+						</Card.Content>
+					</Card.Root>
+				{/each}
+			{:else}
+				<p class="text-sm text-muted-foreground">Noch keine Auto-Reports konfiguriert.</p>
+			{/if}
+		</div>
+	{/if}
 
 	{#if error}
 		<p class="text-sm text-destructive">{error}</p>
