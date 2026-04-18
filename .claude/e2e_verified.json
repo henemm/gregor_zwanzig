@@ -1,17 +1,11 @@
 {
-  "verified_at": "2026-04-18T14:27:58.357974+00:00",
+  "verified_at": "2026-04-18T15:50:01.396355+00:00",
   "server_restarted": true,
   "test_trip_created": true,
-  "reports_sent": [
-    "morning",
-    "evening"
-  ],
   "emails_checked": true,
   "test_trip_cleaned": true,
   "feature_checks": [
-    "OpenAPI Spec: YAML valid, 7 paths, 12 operations, 7 schemas",
-    "Alle Endpoints dokumentiert: health, config, forecast, locations CRUD, trips CRUD",
-    "Schemas matchen Go Structs (Location, Trip, Stage, Waypoint)",
-    "F75: System-Status Seite redesigned, Validator 14/18 PASS, UTC-Fix deployed"
+    "F76B: Startseite Kachel-\u00dcbersicht \u2014 7/7 E2E Tests gr\u00fcn",
+    "Adversary Verdict: VERIFIED (4 findings, 0 blockers)"
   ]
 }
