@@ -8,21 +8,16 @@ export const load: PageServerLoad = async ({ cookies }) => {
 	const headers: Record<string, string> = { 'Content-Type': 'application/json' };
 	if (session) headers['Cookie'] = `gz_session=${session}`;
 
-	const [tripsRes, locsRes, healthRes] = await Promise.all([
+	const [tripsRes, subsRes] = await Promise.all([
 		fetch(`${API()}/api/trips`, { headers }).catch(() => null),
-		fetch(`${API()}/api/locations`, { headers }).catch(() => null),
-		fetch(`${API()}/api/health`).catch(() => null)
+		fetch(`${API()}/api/subscriptions`, { headers }).catch(() => null)
 	]);
 
 	const trips = tripsRes?.ok ? await tripsRes.json() : [];
-	const locations = locsRes?.ok ? await locsRes.json() : [];
-	const health = healthRes?.ok
-		? await healthRes.json()
-		: { status: 'degraded', version: 'unknown', python_core: 'unavailable' };
+	const subscriptions = subsRes?.ok ? await subsRes.json() : [];
 
 	return {
-		tripCount: Array.isArray(trips) ? trips.length : 0,
-		locationCount: Array.isArray(locations) ? locations.length : 0,
-		health
+		trips: Array.isArray(trips) ? trips : [],
+		subscriptions: Array.isArray(subscriptions) ? subscriptions : []
 	};
 };
