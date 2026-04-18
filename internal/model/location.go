@@ -9,5 +9,6 @@ type Location struct {
 	Region          *string                `json:"region,omitempty"`
 	BergfexSlug     *string                `json:"bergfex_slug,omitempty"`
 	ActivityProfile *string                `json:"activity_profile,omitempty"`
+	Group           *string                `json:"group,omitempty"`
 	DisplayConfig   map[string]interface{} `json:"display_config,omitempty"`
 }

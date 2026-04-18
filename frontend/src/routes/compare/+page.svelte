@@ -166,6 +166,48 @@
 	// Computed: valid locations (no error, sorted by score)
 	let validLocs = $derived(result?.locations.filter((l) => !l.error) ?? []);
 	let errorLocs = $derived(result?.locations.filter((l) => l.error) ?? []);
+
+	// Grouped locations for sidebar
+	let groupedLocations = $derived.by(() => {
+		const groups = new Map<string, Location[]>();
+		const ungrouped: Location[] = [];
+		for (const loc of locations) {
+			if (loc.group) {
+				const list = groups.get(loc.group) ?? [];
+				list.push(loc);
+				groups.set(loc.group, list);
+			} else {
+				ungrouped.push(loc);
+			}
+		}
+		return { groups, ungrouped };
+	});
+
+	let openGroups = $state<Set<string>>(new Set(
+		locations.filter((l) => l.group).map((l) => l.group!)
+	));
+
+	function toggleGroup(groupName: string) {
+		const next = new Set(openGroups);
+		if (next.has(groupName)) {
+			next.delete(groupName);
+		} else {
+			next.add(groupName);
+		}
+		openGroups = next;
+	}
+
+	function toggleGroupSelection(groupName: string) {
+		const groupLocs = groupedLocations.groups.get(groupName) ?? [];
+		const allInGroup = groupLocs.every((l) => selectedIds.includes(l.id));
+		if (allInGroup) {
+			selectedIds = selectedIds.filter((id) => !groupLocs.some((l) => l.id === id));
+		} else {
+			const newIds = groupLocs.map((l) => l.id).filter((id) => !selectedIds.includes(id));
+			selectedIds = [...selectedIds, ...newIds];
+		}
+		allSelected = selectedIds.length === locations.length;
+	}
 </script>
 
 <div class="flex gap-6">
@@ -178,7 +220,42 @@
 			Alle ({locations.length})
 		</label>
 		<div class="space-y-1">
-			{#each locations as loc}
+			{#if groupedLocations.groups.size > 0}
+				{#each [...groupedLocations.groups.entries()].sort((a, b) => a[0].localeCompare(b[0])) as [groupName, groupLocs]}
+					{@const isOpen = openGroups.has(groupName)}
+					{@const allInGroup = groupLocs.every((l) => selectedIds.includes(l.id))}
+					<div>
+						<div class="flex items-center gap-1">
+							<button
+								data-testid="group-header"
+								class="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground"
+								onclick={() => toggleGroup(groupName)}
+							>
+								<span class="inline-block w-3 text-xs">{isOpen ? '\u25BC' : '\u25B6'}</span>
+							</button>
+							<label class="flex items-center gap-1.5 text-sm font-medium">
+								<input type="checkbox" checked={allInGroup}
+									onchange={() => toggleGroupSelection(groupName)}
+									class="h-3.5 w-3.5 rounded border-input" />
+								{groupName}
+							</label>
+						</div>
+						{#if isOpen}
+							<div class="ml-4 space-y-0.5">
+								{#each groupLocs as loc}
+									<label class="flex items-center gap-1.5 text-sm">
+										<input type="checkbox" checked={selectedIds.includes(loc.id)}
+											onchange={() => toggleLocation(loc.id)}
+											class="h-3.5 w-3.5 rounded border-input" />
+										{loc.name}
+									</label>
+								{/each}
+							</div>
+						{/if}
+					</div>
+				{/each}
+			{/if}
+			{#each groupedLocations.ungrouped as loc}
 				<label class="flex items-center gap-1.5 text-sm">
 					<input type="checkbox" checked={selectedIds.includes(loc.id)}
 						onchange={() => toggleLocation(loc.id)}

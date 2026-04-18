@@ -4,12 +4,23 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/model"
 	"github.com/henemm/gregor-api/internal/store"
 )
+
+var nonAlphaNum = regexp.MustCompile(`[^a-z0-9]+`)
+
+func toKebab(s string) string {
+	s = strings.TrimSpace(strings.ToLower(s))
+	s = nonAlphaNum.ReplaceAllString(s, "-")
+	s = strings.Trim(s, "-")
+	return s
+}
 
 func LocationsHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -49,6 +60,11 @@ func CreateLocationHandler(s *store.Store) http.HandlerFunc {
 			w.WriteHeader(400)
 			w.Write([]byte(`{"error":"bad_request"}`))
 			return
+		}
+
+		// Auto-generate ID from name if not provided
+		if loc.ID == "" && loc.Name != "" {
+			loc.ID = toKebab(loc.Name)
 		}
 
 		if err := validateLocation(loc); err != nil {
