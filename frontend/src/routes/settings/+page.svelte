@@ -1,205 +1,168 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card/index.js';
-	import * as Table from '$lib/components/ui/table/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 
 	let { data } = $props();
+
+	function timeAgo(iso: string): string {
+		const diff = Date.now() - new Date(iso).getTime();
+		const mins = Math.floor(diff / 60000);
+		if (mins < 1) return 'gerade eben';
+		if (mins < 60) return `vor ${mins} Min`;
+		const hours = Math.floor(mins / 60);
+		if (hours < 24) return `vor ${hours} Std`;
+		const days = Math.floor(hours / 24);
+		return `vor ${days} Tag${days > 1 ? 'en' : ''}`;
+	}
 
 	function formatDate(iso: string | null | undefined): string {
 		if (!iso) return '—';
 		try {
 			return new Date(iso).toLocaleString('de-AT', {
-				year: 'numeric',
-				month: '2-digit',
-				day: '2-digit',
-				hour: '2-digit',
-				minute: '2-digit'
+				day: '2-digit', month: '2-digit',
+				hour: '2-digit', minute: '2-digit'
 			});
-		} catch {
-			return iso;
-		}
+		} catch { return iso; }
 	}
 
-	const configLabels: Record<string, string> = {
-		latitude: 'Breitengrad',
-		longitude: 'Längengrad',
-		location_name: 'Standort',
-		provider: 'Wetter-Provider',
-		report_type: 'Report-Typ',
-		channel: 'Kanal',
-		debug_level: 'Debug-Level',
-		forecast_hours: 'Vorhersage (Stunden)'
-	};
+	function getProvider(lat: number, lon: number): string {
+		return (lat >= 45 && lat <= 50 && lon >= 8 && lon <= 18)
+			? 'GeoSphere (Alpen)' : 'OpenMeteo';
+	}
 
-	// Keys die auf der Settings-Seite nicht angezeigt werden sollen
-	const hiddenConfigKeys = new Set([
-		'elevation_m', 'dry_run', 'include_snow'
-	]);
+	const userJobs: Record<string, string> = {
+		morning_subscriptions: 'Morgen-Report',
+		evening_subscriptions: 'Abend-Report',
+		trip_reports_hourly: 'Trip-Checks',
+	};
 </script>
 
 <div class="space-y-6">
-	<h1 class="text-2xl font-bold">System-Status</h1>
+	<h1 class="text-2xl font-bold">Mein Service</h1>
 
-	<!-- Scheduler Status -->
+	<!-- Sektion 1: Deine Reports -->
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Zeitplaner</Card.Title>
-			<Card.Description>Geplante Jobs und deren letzter Ausführungsstatus</Card.Description>
+			<Card.Title>Deine Reports</Card.Title>
 		</Card.Header>
 		<Card.Content>
 			{#if data.scheduler === null}
-				<p class="text-sm text-muted-foreground">Scheduler nicht erreichbar.</p>
-			{:else}
-				<div class="mb-4 flex items-center gap-4 text-sm">
-					<span>
-						Status:
-						<span class="inline-flex items-center gap-1.5 font-medium"
-							class:text-green-600={data.scheduler.running}
-							class:text-red-600={!data.scheduler.running}
-						>
-							<span class="inline-block size-2 rounded-full" class:bg-green-500={data.scheduler.running} class:bg-red-400={!data.scheduler.running}></span>
-							{data.scheduler.running ? 'Läuft' : 'Gestoppt'}
-						</span>
-					</span>
-					<span class="text-muted-foreground">Zeitzone: {data.scheduler.timezone ?? '—'}</span>
-				</div>
-
-				{#if data.scheduler.jobs && data.scheduler.jobs.length > 0}
-					<Table.Root>
-						<Table.Header>
-							<Table.Row>
-								<Table.Head>Job</Table.Head>
-								<Table.Head>Nächster Lauf</Table.Head>
-								<Table.Head>Letzter Lauf</Table.Head>
-								<Table.Head>Status</Table.Head>
-							</Table.Row>
-						</Table.Header>
-						<Table.Body>
-							{#each data.scheduler.jobs as job}
-								<Table.Row>
-									<Table.Cell class="font-medium">{job.name ?? job.id}</Table.Cell>
-									<Table.Cell class="text-sm">{formatDate(job.next_run)}</Table.Cell>
-									<Table.Cell class="text-sm text-muted-foreground">
-										{job.last_run?.time ? formatDate(job.last_run.time) : 'Noch nie'}
-									</Table.Cell>
-									<Table.Cell>
-										<span class="inline-flex items-center gap-1.5 text-sm">
-											{#if !job.last_run?.time}
-												<span class="inline-block size-2 rounded-full bg-gray-300"></span>
-												<span class="text-muted-foreground">nie</span>
-											{:else if job.last_run?.status === 'ok'}
-												<span class="inline-block size-2 rounded-full bg-green-500"></span>
-												ok
-											{:else if job.last_run?.status === 'error'}
-												<span class="inline-block size-2 rounded-full bg-red-500"></span>
-												<span class="text-destructive">Fehler</span>
-											{:else}
-												<span class="inline-block size-2 rounded-full bg-gray-400"></span>
-												{job.last_run?.status ?? '—'}
-											{/if}
-										</span>
-									</Table.Cell>
-								</Table.Row>
-							{/each}
-						</Table.Body>
-					</Table.Root>
-				{:else}
-					<p class="text-sm text-muted-foreground">Keine Jobs konfiguriert.</p>
-				{/if}
-			{/if}
-		</Card.Content>
-	</Card.Root>
-
-	<!-- System Config -->
-	<Card.Root>
-		<Card.Header>
-			<Card.Title>Konfiguration</Card.Title>
-			<Card.Description>Aktive Konfiguration des Backends</Card.Description>
-		</Card.Header>
-		<Card.Content>
-			{#if data.config === null}
-				<p class="text-sm text-muted-foreground">Konfiguration nicht erreichbar.</p>
-			{:else}
-				<Table.Root>
-					<Table.Header>
-						<Table.Row>
-							<Table.Head class="w-1/3">Parameter</Table.Head>
-							<Table.Head>Wert</Table.Head>
-						</Table.Row>
-					</Table.Header>
-					<Table.Body>
-						{#each Object.entries(data.config).filter(([k]) => !hiddenConfigKeys.has(k)) as [key, value]}
-							<Table.Row>
-								<Table.Cell class="font-medium text-muted-foreground">
-									{configLabels[key] ?? key}
-								</Table.Cell>
-								<Table.Cell class="font-mono text-sm">{value ?? '—'}</Table.Cell>
-							</Table.Row>
-						{/each}
-					</Table.Body>
-				</Table.Root>
-			{/if}
-		</Card.Content>
-	</Card.Root>
-
-	<!-- Service Health -->
-	<Card.Root>
-		<Card.Header>
-			<Card.Title>System-Status</Card.Title>
-			<Card.Description>Aktueller Zustand aller Systemkomponenten</Card.Description>
-		</Card.Header>
-		<Card.Content>
-			{#if data.health === null}
-				<p class="text-sm text-destructive">Health-Endpoint nicht erreichbar.</p>
-			{:else}
-				<Table.Root>
-					<Table.Header>
-						<Table.Row>
-							<Table.Head class="w-1/3">Komponente</Table.Head>
-							<Table.Head>Status</Table.Head>
-						</Table.Row>
-					</Table.Header>
-					<Table.Body>
-						<Table.Row>
-							<Table.Cell class="font-medium">API (Go)</Table.Cell>
-							<Table.Cell>
-								{#if data.health.status === 'ok'}
-									<Badge variant="default" class="bg-green-600 text-white">ok</Badge>
-								{:else if data.health.status === 'degraded'}
-									<Badge variant="secondary" class="bg-yellow-500 text-white">degraded</Badge>
-								{:else}
-									<Badge variant="destructive">{data.health.status}</Badge>
-								{/if}
-							</Table.Cell>
-						</Table.Row>
-						<Table.Row>
-							<Table.Cell class="font-medium">Python Core</Table.Cell>
-							<Table.Cell>
-								{#if data.health.python_core === 'ok'}
-									<Badge variant="default" class="bg-green-600 text-white">ok</Badge>
-								{:else if data.health.python_core === 'unavailable'}
-									<Badge variant="destructive">unavailable</Badge>
-								{:else}
-									<Badge variant="secondary">{data.health.python_core ?? '—'}</Badge>
-								{/if}
-							</Table.Cell>
-						</Table.Row>
-						{#if data.health.version}
-							<Table.Row>
-								<Table.Cell class="font-medium">Version</Table.Cell>
-								<Table.Cell class="font-mono text-sm text-muted-foreground">
-									v{data.health.version}
-								</Table.Cell>
-							</Table.Row>
+				<p class="text-sm text-muted-foreground">Report-Zeitplan nicht verfügbar.</p>
+			{:else if data.scheduler.jobs && data.scheduler.jobs.length > 0}
+				<div class="space-y-3">
+					{#each data.scheduler.jobs.filter((j: any) => j.id in userJobs) as job}
+						<div class="flex items-center justify-between">
+							<div class="flex items-center gap-2">
+								<span class="inline-block size-2 rounded-full"
+									class:bg-green-500={job.last_run?.status === 'ok'}
+									class:bg-red-500={job.last_run?.status === 'error'}
+									class:bg-gray-300={!job.last_run?.time}
+								></span>
+								<span class="font-medium">{userJobs[job.id]}</span>
+							</div>
+							<div class="flex items-center gap-4 text-sm text-muted-foreground">
+								<span>Nächster: {formatDate(job.next_run)}</span>
+								<span>Zuletzt: {job.last_run?.time ? timeAgo(job.last_run.time) : '—'}</span>
+							</div>
+						</div>
+						{#if job.last_run?.status === 'error'}
+							<p class="ml-4 text-sm text-destructive">Letzter Lauf fehlgeschlagen{job.last_run?.error ? `: ${job.last_run.error}` : ''}</p>
 						{/if}
-						{#each Object.entries(data.health).filter(([k]) => !['status', 'python_core', 'version'].includes(k)) as [key, value]}
-							<Table.Row>
-								<Table.Cell class="font-medium text-muted-foreground">{key}</Table.Cell>
-								<Table.Cell class="font-mono text-sm">{value}</Table.Cell>
-							</Table.Row>
+					{/each}
+				</div>
+			{:else}
+				<p class="text-sm text-muted-foreground">Keine Reports konfiguriert.</p>
+			{/if}
+		</Card.Content>
+	</Card.Root>
+
+	<!-- Sektion 2: Dein Account -->
+	<Card.Root data-testid="account-section">
+		<Card.Header>
+			<Card.Title>Dein Account</Card.Title>
+		</Card.Header>
+		<Card.Content>
+			<!-- Zähler -->
+			<div class="space-y-2 mb-4">
+				<div class="flex items-center justify-between text-sm">
+					<span>Trips</span>
+					<a href="/trips" class="font-medium hover:underline">{data.trips.length}</a>
+				</div>
+				<div class="flex items-center justify-between text-sm">
+					<span>Abos</span>
+					<a href="/subscriptions" class="font-medium hover:underline">{data.subscriptions.filter((s: any) => s.enabled).length}</a>
+				</div>
+				<div class="flex items-center justify-between text-sm">
+					<span>Locations</span>
+					<a href="/locations" class="font-medium hover:underline">{data.locations.length}</a>
+				</div>
+			</div>
+
+			<!-- Benachrichtigungskanäle -->
+			<div data-testid="channels" class="mb-4">
+				<p class="text-sm font-medium mb-2">Benachrichtigungen</p>
+				{#if data.profile && (data.profile.mail_to || data.profile.signal_phone || data.profile.telegram_chat_id)}
+					<div class="flex flex-wrap gap-2">
+						{#if data.profile.mail_to}
+							<Badge variant="secondary">E-Mail: {data.profile.mail_to}</Badge>
+						{/if}
+						{#if data.profile.signal_phone}
+							<Badge variant="secondary">Signal: {data.profile.signal_phone}</Badge>
+						{/if}
+						{#if data.profile.telegram_chat_id}
+							<Badge variant="secondary">Telegram: {data.profile.telegram_chat_id}</Badge>
+						{/if}
+					</div>
+				{:else}
+					<p class="text-sm text-muted-foreground">
+						Keine Benachrichtigungen konfiguriert — <a href="/account" class="underline hover:text-foreground">einrichten</a>
+					</p>
+				{/if}
+			</div>
+
+			<!-- Wetter-Modelle -->
+			<div data-testid="weather-models">
+				<p class="text-sm font-medium mb-2">Wetter-Modelle</p>
+				{#if data.locations.length > 0}
+					<div class="space-y-1">
+						{#each data.locations as loc}
+							<p class="text-sm text-muted-foreground">
+								{loc.name} → {getProvider(loc.lat, loc.lon)}
+							</p>
 						{/each}
-					</Table.Body>
-				</Table.Root>
+					</div>
+				{:else}
+					<p class="text-sm text-muted-foreground">
+						Noch keine Locations angelegt — <a href="/locations" class="underline hover:text-foreground">anlegen</a>
+					</p>
+				{/if}
+			</div>
+		</Card.Content>
+	</Card.Root>
+
+	<!-- Sektion 3: Verfügbarkeit -->
+	<Card.Root>
+		<Card.Header>
+			<Card.Title>Verfügbarkeit</Card.Title>
+		</Card.Header>
+		<Card.Content>
+			<div class="flex items-center gap-2">
+				{#if data.health === null}
+					<span class="inline-block size-3 rounded-full bg-red-500"></span>
+					<span class="font-medium">Nicht erreichbar</span>
+				{:else if data.health.status === 'ok'}
+					<span class="inline-block size-3 rounded-full bg-green-500"></span>
+					<span class="font-medium">System läuft</span>
+				{:else if data.health.status === 'degraded'}
+					<span class="inline-block size-3 rounded-full bg-yellow-500"></span>
+					<span class="font-medium">Eingeschränkt</span>
+				{:else}
+					<span class="inline-block size-3 rounded-full bg-red-500"></span>
+					<span class="font-medium">Nicht erreichbar</span>
+				{/if}
+			</div>
+			{#if data.health?.version}
+				<p class="mt-1 text-sm text-muted-foreground">v{data.health.version}</p>
 			{/if}
 		</Card.Content>
 	</Card.Root>
