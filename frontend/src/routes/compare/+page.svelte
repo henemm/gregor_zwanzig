@@ -1,9 +1,12 @@
 <script lang="ts">
 	import type { Location } from '$lib/types.js';
+	import { api } from '$lib/api.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
+	import * as Dialog from '$lib/components/ui/dialog/index.js';
+	import LocationForm from '$lib/components/LocationForm.svelte';
 
 	let { data } = $props();
 
@@ -18,6 +21,19 @@
 	let loading = $state(false);
 	let error = $state('');
 	let result: CompareResult | null = $state(null);
+	let showNewLocDialog = $state(false);
+
+	async function handleNewLocSave(loc: Location) {
+		try {
+			await api.post<Location>('/api/locations', loc);
+			locations = [...locations, loc];
+			selectedIds = [...selectedIds, loc.id];
+			allSelected = selectedIds.length === locations.length;
+			showNewLocDialog = false;
+		} catch (e: unknown) {
+			// LocationForm handles its own errors
+		}
+	}
 
 	interface CompareLocation {
 		id: string;
@@ -137,8 +153,33 @@
 	let errorLocs = $derived(result?.locations.filter((l) => l.error) ?? []);
 </script>
 
-<div class="space-y-6">
-	<h1 class="text-2xl font-bold">Vergleich</h1>
+<div class="flex gap-6">
+	<!-- Sidebar: Desktop only -->
+	<aside class="hidden w-60 shrink-0 space-y-4 border-r pr-4 md:block">
+		<h2 class="text-sm font-semibold">Meine Orte</h2>
+		<label class="flex items-center gap-2 text-sm">
+			<input type="checkbox" checked={allSelected} onchange={toggleAll}
+				class="h-4 w-4 rounded border-input" />
+			Alle ({locations.length})
+		</label>
+		<div class="space-y-1">
+			{#each locations as loc}
+				<label class="flex items-center gap-1.5 text-sm">
+					<input type="checkbox" checked={selectedIds.includes(loc.id)}
+						onchange={() => toggleLocation(loc.id)}
+						class="h-3.5 w-3.5 rounded border-input" />
+					{loc.name}
+				</label>
+			{/each}
+		</div>
+		<Button variant="outline" size="sm" class="w-full" onclick={() => showNewLocDialog = true}>
+			Neuer Ort
+		</Button>
+	</aside>
+
+	<!-- Content -->
+	<div class="min-w-0 flex-1 space-y-6">
+	<h1 class="text-2xl font-bold">Orts-Vergleich</h1>
 
 	<!-- Controls -->
 	<Card.Root>
@@ -146,8 +187,8 @@
 			<Card.Title>Einstellungen</Card.Title>
 		</Card.Header>
 		<Card.Content class="space-y-4">
-			<!-- Location Selection -->
-			<div>
+			<!-- Location Selection: Mobile only -->
+			<div class="md:hidden">
 				<p class="mb-2 text-sm font-medium">Locations</p>
 				<label class="mb-1 flex items-center gap-2 text-sm">
 					<input type="checkbox" checked={allSelected} onchange={toggleAll}
@@ -376,4 +417,23 @@
 			</Card.Root>
 		{/if}
 	{/if}
+	</div>
 </div>
+
+<!-- New Location Dialog -->
+<Dialog.Root
+	open={showNewLocDialog}
+	onOpenChange={(open) => { if (!open) showNewLocDialog = false; }}
+>
+	<Dialog.Content class="max-h-[80vh] max-w-lg overflow-y-auto">
+		<Dialog.Header>
+			<Dialog.Title>Neue Location</Dialog.Title>
+		</Dialog.Header>
+		{#if showNewLocDialog}
+			<LocationForm
+				onsave={handleNewLocSave}
+				oncancel={() => showNewLocDialog = false}
+			/>
+		{/if}
+	</Dialog.Content>
+</Dialog.Root>
