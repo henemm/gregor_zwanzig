@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Location, Subscription } from '$lib/types.js';
+	import type { Location, Subscription, ForecastResponse } from '$lib/types.js';
 	import { api } from '$lib/api.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
@@ -7,6 +7,8 @@
 	import * as Table from '$lib/components/ui/table/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import LocationForm from '$lib/components/LocationForm.svelte';
+	import CloudSunIcon from '@lucide/svelte/icons/cloud-sun';
+	import { weatherEmoji, degToCardinal } from '$lib/utils/weatherEmoji.js';
 
 	let { data } = $props();
 
@@ -37,6 +39,39 @@
 	let error = $state('');
 	let result: CompareResult | null = $state(null);
 	let showNewLocDialog = $state(false);
+	let weatherLocationId: string | null = $state(null);
+	let weatherForecast: ForecastResponse | null = $state(null);
+	let weatherLoading = $state(false);
+	let weatherHours = $state('48');
+
+	function formatTime(ts: string): string {
+		return new Date(ts).toLocaleTimeString('de-AT', { hour: '2-digit', minute: '2-digit' });
+	}
+
+	function formatDate(ts: string): string {
+		return new Date(ts).toLocaleDateString('de-AT', { weekday: 'short', day: '2-digit', month: '2-digit' });
+	}
+
+	async function showWeather(locId: string) {
+		weatherLocationId = locId;
+		weatherForecast = null;
+		weatherLoading = true;
+		const loc = locations.find(l => l.id === locId);
+		if (!loc) { weatherLoading = false; return; }
+		try {
+			weatherForecast = await api.get<ForecastResponse>(
+				`/api/forecast?lat=${loc.lat}&lon=${loc.lon}&hours=${weatherHours}`
+			);
+		} catch {
+			weatherForecast = null;
+		} finally {
+			weatherLoading = false;
+		}
+	}
+
+	let weatherLocationName = $derived(
+		weatherLocationId ? locations.find(l => l.id === weatherLocationId)?.name ?? '' : ''
+	);
 
 	async function handleNewLocSave(loc: Location) {
 		try {
@@ -243,12 +278,15 @@
 						{#if isOpen}
 							<div class="ml-4 space-y-0.5">
 								{#each groupLocs as loc}
-									<label class="flex items-center gap-1.5 text-sm">
+									<div class="flex items-center gap-1.5 text-sm">
 										<input type="checkbox" checked={selectedIds.includes(loc.id)}
 											onchange={() => toggleLocation(loc.id)}
 											class="h-3.5 w-3.5 rounded border-input" />
-										{loc.name}
-									</label>
+										<span class="flex-1">{loc.name}</span>
+										<button data-testid="weather-btn" title="Wetter anzeigen" onclick={() => showWeather(loc.id)} class="opacity-40 hover:opacity-100">
+											<CloudSunIcon class="size-3.5" />
+										</button>
+									</div>
 								{/each}
 							</div>
 						{/if}
@@ -256,12 +294,15 @@
 				{/each}
 			{/if}
 			{#each groupedLocations.ungrouped as loc}
-				<label class="flex items-center gap-1.5 text-sm">
+				<div class="flex items-center gap-1.5 text-sm">
 					<input type="checkbox" checked={selectedIds.includes(loc.id)}
 						onchange={() => toggleLocation(loc.id)}
 						class="h-3.5 w-3.5 rounded border-input" />
-					{loc.name}
-				</label>
+					<span class="flex-1">{loc.name}</span>
+					<button data-testid="weather-btn" title="Wetter anzeigen" onclick={() => showWeather(loc.id)} class="opacity-40 hover:opacity-100">
+						<CloudSunIcon class="size-3.5" />
+					</button>
+				</div>
 			{/each}
 		</div>
 		<Button variant="outline" size="sm" class="w-full" onclick={() => showNewLocDialog = true}>
@@ -352,8 +393,81 @@
 		</Card.Content>
 	</Card.Root>
 
+	<!-- Weather Drill-Down -->
+	{#if weatherLocationId}
+		<Card.Root>
+			<Card.Header>
+				<Card.Title>Wetter: {weatherLocationName}</Card.Title>
+			</Card.Header>
+			<Card.Content class="space-y-4">
+				<div class="flex items-center gap-3">
+					<select bind:value={weatherHours} class="flex h-8 w-24 rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm">
+						<option value="24">24h</option>
+						<option value="48">48h</option>
+						<option value="72">72h</option>
+						<option value="120">120h</option>
+					</select>
+					<Button size="sm" onclick={() => showWeather(weatherLocationId!)} disabled={weatherLoading}>
+						{weatherLoading ? 'Lädt…' : 'Laden'}
+					</Button>
+					<Button variant="ghost" size="sm" onclick={() => { weatherLocationId = null; weatherForecast = null; }}>
+						← Zurück
+					</Button>
+				</div>
+
+				{#if weatherLoading}
+					<p class="text-sm text-muted-foreground">Wetterdaten werden geladen…</p>
+				{/if}
+
+				{#if weatherForecast && !weatherLoading}
+					<div class="overflow-x-auto">
+						<Table.Root>
+							<Table.Header>
+								<Table.Row>
+									<Table.Head>Zeit</Table.Head>
+									<Table.Head></Table.Head>
+									<Table.Head>Temp</Table.Head>
+									<Table.Head>Wind</Table.Head>
+									<Table.Head>Böen</Table.Head>
+									<Table.Head>Regen</Table.Head>
+									<Table.Head>Wolken</Table.Head>
+								</Table.Row>
+							</Table.Header>
+							<Table.Body>
+								{@const rows = weatherForecast.hourly ?? []}
+								{#each rows as row, i}
+									{@const dateStr = formatDate(row.ts)}
+									{@const prevDateStr = i > 0 ? formatDate(rows[i - 1].ts) : ''}
+									{#if dateStr !== prevDateStr}
+										<Table.Row>
+											<Table.Cell colspan={7} class="bg-muted/50 py-1 text-xs font-medium">{dateStr}</Table.Cell>
+										</Table.Row>
+									{/if}
+									<Table.Row>
+										<Table.Cell class="text-xs">{formatTime(row.ts)}</Table.Cell>
+										<Table.Cell>{weatherEmoji(row.wmo_code, row.is_day)}</Table.Cell>
+										<Table.Cell class="text-xs">{row.t2m_c != null ? `${row.t2m_c.toFixed(1)}°` : '-'}</Table.Cell>
+										<Table.Cell class="text-xs">{row.wind10m_kmh != null ? `${Math.round(row.wind10m_kmh)}` : '-'}</Table.Cell>
+										<Table.Cell class="text-xs">{row.gust_kmh != null ? `${Math.round(row.gust_kmh)}` : '-'}</Table.Cell>
+										<Table.Cell class="text-xs">{row.precip_1h_mm != null && row.precip_1h_mm > 0 ? `${row.precip_1h_mm.toFixed(1)}` : '-'}</Table.Cell>
+										<Table.Cell class="text-xs">{row.cloud_total_pct != null ? `${row.cloud_total_pct}%` : '-'}</Table.Cell>
+									</Table.Row>
+								{/each}
+							</Table.Body>
+						</Table.Root>
+					</div>
+					{#if weatherForecast.meta}
+						<p class="text-xs text-muted-foreground" data-testid="forecast-meta">
+							{weatherForecast.meta.provider} · {weatherForecast.meta.model}
+						</p>
+					{/if}
+				{/if}
+			</Card.Content>
+		</Card.Root>
+	{/if}
+
 	<!-- Auto-Reports: show when no comparison active -->
-	{#if !result && !loading}
+	{#if !result && !loading && !weatherLocationId}
 		<div class="space-y-3">
 			<div class="flex items-center justify-between">
 				<h2 class="text-lg font-semibold">Deine Auto-Reports</h2>
