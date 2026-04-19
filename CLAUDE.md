@@ -46,6 +46,10 @@ Dieses Projekt nutzt den **OpenSpec 8-Phasen-Workflow** mit Adversary Verificati
 | `spec-validator` | Haiku | Spec-Checklisten pruefen |
 | Explore-Agents | Haiku | Codebase durchsuchen |
 
+## Developer Agent Timeout
+
+Wenn ein Developer Agent >10 Minuten ohne gruene Tests laeuft: Abbrechen (`TaskStop`) und neu starten mit praeziserem Briefing. Max 2 Versuche pro Feature, danach Eskalation an den User.
+
 ## Architektur
 
 ```
