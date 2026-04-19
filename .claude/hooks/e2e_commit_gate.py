@@ -87,8 +87,11 @@ def check_verification() -> tuple[bool, str]:
     except (ValueError, TypeError) as e:
         return False, f"Timestamp in e2e_verified.json ungueltig: {e}"
 
-    # Check required fields
-    required = ["server_restarted", "test_trip_created", "emails_checked", "test_trip_cleaned"]
+    # Check required fields — ui_only features have fewer requirements
+    if data.get("feature_type") == "ui_only":
+        required = ["server_restarted"]
+    else:
+        required = ["server_restarted", "test_trip_created", "emails_checked", "test_trip_cleaned"]
     missing = [f for f in required if not data.get(f)]
     if missing:
         return False, (
