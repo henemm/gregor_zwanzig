@@ -1,5 +1,5 @@
 {
-  "verified_at": "2026-04-19T14:04:40.747039+00:00",
+  "verified_at": "2026-04-19T18:17:12.053706+00:00",
   "server_restarted": true,
   "test_trip_created": true,
   "reports_sent": [
@@ -8,6 +8,6 @@
   "emails_checked": true,
   "test_trip_cleaned": true,
   "feature_checks": [
-    "W2 Weather Template: Server laeuft mit neuem Code, Evening Report gesendet und via IMAP verifiziert (Subject, HTML-Body, Wetterdaten-Tabelle, plausible Werte). Morning konnte nicht gesendet werden (keine Night-Daten fuer zukuenftiges Datum - erwartetes Verhalten)."
+    "W3 Report Config: Server mit neuem Code, Evening Report gesendet, via IMAP verifiziert (6232 Zeichen HTML, Tabelle + Temperatur vorhanden, Timestamp frisch)"
   ]
 }

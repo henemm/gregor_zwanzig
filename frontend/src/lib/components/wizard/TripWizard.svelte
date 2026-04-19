@@ -7,6 +7,7 @@
 	import WizardStep1Route from './WizardStep1Route.svelte';
 	import WizardStep2Stages from './WizardStep2Stages.svelte';
 	import WizardStep3Weather from './WizardStep3Weather.svelte';
+	import WizardStep4ReportConfig from './WizardStep4ReportConfig.svelte';
 
 	interface Props {
 		mode: 'create' | 'edit';
@@ -23,6 +24,7 @@
 		existingTrip ? JSON.parse(JSON.stringify(existingTrip.stages)) : []
 	);
 	let displayConfig: Record<string, unknown> | undefined = $state(existingTrip?.display_config);
+	let reportConfig: Record<string, unknown> | undefined = $state(existingTrip?.report_config);
 	let saveError: string | null = $state(null);
 	let saving = $state(false);
 
@@ -56,11 +58,11 @@
 			name: tripName.trim(),
 			stages,
 			display_config: displayConfig,
+			report_config: reportConfig,
 			...(existingTrip && {
 				avalanche_regions: existingTrip.avalanche_regions,
 				aggregation: existingTrip.aggregation,
 				weather_config: existingTrip.weather_config,
-				report_config: existingTrip.report_config
 			})
 		};
 		try {
@@ -97,9 +99,7 @@
 		{:else if currentStep === 3}
 			<WizardStep3Weather bind:displayConfig {mode} />
 		{:else if currentStep === 4}
-			<div class="flex items-center justify-center h-48 text-muted-foreground">
-				<p>Kommt in W3 -- Report-Konfiguration</p>
-			</div>
+			<WizardStep4ReportConfig bind:reportConfig {mode} />
 		{/if}
 	</div>
 

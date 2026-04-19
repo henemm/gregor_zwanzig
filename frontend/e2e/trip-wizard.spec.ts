@@ -281,13 +281,13 @@ test.describe('Trip Wizard W1', () => {
 		await expect(select.locator('option[value="__custom__"]')).toHaveText(/[Bb]enutzerdefiniert/);
 	});
 
-	// --- Step 4 Placeholder ---
+	// --- Step 4: Report Configuration (W3) ---
 
-	test('step 4 shows placeholder content', async ({ page }) => {
+	test('step 4 shows report config container', async ({ page }) => {
 		await page.goto('/trips/new');
 
 		// Navigate to step 4
-		await page.locator('[data-testid="trip-name-input"]').fill('Step4 Test');
+		await page.locator('[data-testid="trip-name-input"]').fill('Report Test');
 		await page.locator('button', { hasText: /[Mm]anuell/ }).click();
 		await page.locator('[data-testid="wizard-next"]').click();
 		await page.locator('button', { hasText: /[Ww]egpunkt/ }).click();
@@ -295,7 +295,92 @@ test.describe('Trip Wizard W1', () => {
 		await page.locator('input[name="lon"]').first().fill('11.0');
 		await page.locator('[data-testid="wizard-next"]').click(); // step 3
 		await page.locator('[data-testid="wizard-next"]').click(); // step 4
-		await expect(page.locator('text=/[Kk]ommt.*W3/')).toBeVisible();
+
+		await expect(page.locator('[data-testid="wizard-step4-report"]')).toBeVisible();
+	});
+
+	test('step 4 has schedule with default times', async ({ page }) => {
+		await page.goto('/trips/new');
+
+		// Navigate to step 4
+		await page.locator('[data-testid="trip-name-input"]').fill('Report Test');
+		await page.locator('button', { hasText: /[Mm]anuell/ }).click();
+		await page.locator('[data-testid="wizard-next"]').click();
+		await page.locator('button', { hasText: /[Ww]egpunkt/ }).click();
+		await page.locator('input[name="lat"]').first().fill('47.0');
+		await page.locator('input[name="lon"]').first().fill('11.0');
+		await page.locator('[data-testid="wizard-next"]').click(); // step 3
+		await page.locator('[data-testid="wizard-next"]').click(); // step 4
+
+		const reportEnabled = page.locator('[data-testid="report-enabled"]');
+		await expect(reportEnabled).toBeVisible();
+		await expect(reportEnabled).toBeChecked();
+
+		const morningTime = page.locator('[data-testid="report-morning-time"]');
+		await expect(morningTime).toHaveValue('07:00');
+
+		const eveningTime = page.locator('[data-testid="report-evening-time"]');
+		await expect(eveningTime).toHaveValue('18:00');
+	});
+
+	test('step 4 channel checkboxes with email checked by default', async ({ page }) => {
+		await page.goto('/trips/new');
+
+		// Navigate to step 4
+		await page.locator('[data-testid="trip-name-input"]').fill('Report Test');
+		await page.locator('button', { hasText: /[Mm]anuell/ }).click();
+		await page.locator('[data-testid="wizard-next"]').click();
+		await page.locator('button', { hasText: /[Ww]egpunkt/ }).click();
+		await page.locator('input[name="lat"]').first().fill('47.0');
+		await page.locator('input[name="lon"]').first().fill('11.0');
+		await page.locator('[data-testid="wizard-next"]').click(); // step 3
+		await page.locator('[data-testid="wizard-next"]').click(); // step 4
+
+		await expect(page.locator('[data-testid="report-send-email"]')).toBeChecked();
+		await expect(page.locator('[data-testid="report-send-signal"]')).not.toBeChecked();
+		await expect(page.locator('[data-testid="report-send-telegram"]')).not.toBeChecked();
+	});
+
+	test('step 4 alert section with threshold inputs', async ({ page }) => {
+		await page.goto('/trips/new');
+
+		// Navigate to step 4
+		await page.locator('[data-testid="trip-name-input"]').fill('Report Test');
+		await page.locator('button', { hasText: /[Mm]anuell/ }).click();
+		await page.locator('[data-testid="wizard-next"]').click();
+		await page.locator('button', { hasText: /[Ww]egpunkt/ }).click();
+		await page.locator('input[name="lat"]').first().fill('47.0');
+		await page.locator('input[name="lon"]').first().fill('11.0');
+		await page.locator('[data-testid="wizard-next"]').click(); // step 3
+		await page.locator('[data-testid="wizard-next"]').click(); // step 4
+
+		await expect(page.locator('[data-testid="report-alert-changes"]')).toBeChecked();
+
+		// At least 3 number inputs in the alert section
+		const alertInputs = page.locator('[data-testid="report-alert-changes"]')
+			.locator('..').locator('..').locator('input[type="number"]');
+		const count = await alertInputs.count();
+		expect(count).toBeGreaterThanOrEqual(3);
+	});
+
+	test('step 4 advanced section expandable', async ({ page }) => {
+		await page.goto('/trips/new');
+
+		// Navigate to step 4
+		await page.locator('[data-testid="trip-name-input"]').fill('Report Test');
+		await page.locator('button', { hasText: /[Mm]anuell/ }).click();
+		await page.locator('[data-testid="wizard-next"]').click();
+		await page.locator('button', { hasText: /[Ww]egpunkt/ }).click();
+		await page.locator('input[name="lat"]').first().fill('47.0');
+		await page.locator('input[name="lon"]').first().fill('11.0');
+		await page.locator('[data-testid="wizard-next"]').click(); // step 3
+		await page.locator('[data-testid="wizard-next"]').click(); // step 4
+
+		// Click to expand advanced section
+		await page.locator('[data-testid="report-show-advanced"]').click();
+
+		await expect(page.locator('[data-testid="report-compact-summary"]')).toBeVisible();
+		await expect(page.locator('[data-testid="report-wind-exposition"]')).toBeVisible();
 	});
 
 	// --- Save (Create) ---
