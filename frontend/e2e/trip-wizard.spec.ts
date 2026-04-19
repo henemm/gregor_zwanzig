@@ -171,29 +171,130 @@ test.describe('Trip Wizard W1', () => {
 		await expect(backBtn).not.toBeVisible();
 	});
 
-	// --- Placeholder Steps 3+4 ---
+	// --- Step 3: Weather Templates (W2) ---
 
-	test('steps 3 and 4 show placeholder content', async ({ page }) => {
+	test('step 3 shows weather template selector', async ({ page }) => {
 		await page.goto('/trips/new');
 
-		// Go through steps 1 and 2
-		await page.locator('[data-testid="trip-name-input"]').fill('Placeholder Test');
+		// Navigate to step 3
+		await page.locator('[data-testid="trip-name-input"]').fill('Weather Test');
 		await page.locator('button', { hasText: /[Mm]anuell/ }).click();
 		await page.locator('[data-testid="wizard-next"]').click();
-
-		// Add waypoint to pass step 2 validation
 		await page.locator('button', { hasText: /[Ww]egpunkt/ }).click();
-		const latInput = page.locator('input[name="lat"]').first();
-		await latInput.fill('47.0');
-		const lonInput = page.locator('input[name="lon"]').first();
-		await lonInput.fill('11.0');
-
-		// Go to step 3
+		await page.locator('input[name="lat"]').first().fill('47.0');
+		await page.locator('input[name="lon"]').first().fill('11.0');
 		await page.locator('[data-testid="wizard-next"]').click();
-		await expect(page.locator('text=/[Kk]ommt.*W2/')).toBeVisible();
 
-		// Go to step 4
+		// Step 3 container should be visible
+		await expect(page.locator('[data-testid="wizard-step3-weather"]')).toBeVisible();
+	});
+
+	test('step 3 has template dropdown with 7 options', async ({ page }) => {
+		await page.goto('/trips/new');
+
+		// Navigate to step 3
+		await page.locator('[data-testid="trip-name-input"]').fill('Template Test');
+		await page.locator('button', { hasText: /[Mm]anuell/ }).click();
 		await page.locator('[data-testid="wizard-next"]').click();
+		await page.locator('button', { hasText: /[Ww]egpunkt/ }).click();
+		await page.locator('input[name="lat"]').first().fill('47.0');
+		await page.locator('input[name="lon"]').first().fill('11.0');
+		await page.locator('[data-testid="wizard-next"]').click();
+
+		const select = page.locator('[data-testid="weather-template-select"]');
+		await expect(select).toBeVisible();
+
+		// Should have 7 template options + "Kein Profil"
+		const options = select.locator('option');
+		await expect(options).toHaveCount(8); // 7 templates + 1 "Kein Profil"
+	});
+
+	test('step 3 shows metric checkboxes grouped by category', async ({ page }) => {
+		await page.goto('/trips/new');
+
+		// Navigate to step 3
+		await page.locator('[data-testid="trip-name-input"]').fill('Metrics Test');
+		await page.locator('button', { hasText: /[Mm]anuell/ }).click();
+		await page.locator('[data-testid="wizard-next"]').click();
+		await page.locator('button', { hasText: /[Ww]egpunkt/ }).click();
+		await page.locator('input[name="lat"]').first().fill('47.0');
+		await page.locator('input[name="lon"]').first().fill('11.0');
+		await page.locator('[data-testid="wizard-next"]').click();
+
+		// Should show category headings
+		await expect(page.getByRole('heading', { name: 'Temperatur' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Wind' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Niederschlag' })).toBeVisible();
+
+		// Should show metric checkboxes
+		const checkboxes = page.locator('[data-testid^="metric-checkbox-"]');
+		const count = await checkboxes.count();
+		expect(count).toBeGreaterThan(10); // at least 10 metrics visible
+	});
+
+	test('step 3 template selection pre-fills metrics', async ({ page }) => {
+		await page.goto('/trips/new');
+
+		// Navigate to step 3
+		await page.locator('[data-testid="trip-name-input"]').fill('Prefill Test');
+		await page.locator('button', { hasText: /[Mm]anuell/ }).click();
+		await page.locator('[data-testid="wizard-next"]').click();
+		await page.locator('button', { hasText: /[Ww]egpunkt/ }).click();
+		await page.locator('input[name="lat"]').first().fill('47.0');
+		await page.locator('input[name="lon"]').first().fill('11.0');
+		await page.locator('[data-testid="wizard-next"]').click();
+
+		// Select "Alpen-Trekking" template
+		const select = page.locator('[data-testid="weather-template-select"]');
+		await select.selectOption('alpen-trekking');
+
+		// Alpen-Trekking should enable freezing_level and cape
+		const freezingCheckbox = page.locator('[data-testid="metric-checkbox-freezing_level"]');
+		await expect(freezingCheckbox).toBeChecked();
+		const capeCheckbox = page.locator('[data-testid="metric-checkbox-cape"]');
+		await expect(capeCheckbox).toBeChecked();
+	});
+
+	test('step 3 manual override shows "Benutzerdefiniert"', async ({ page }) => {
+		await page.goto('/trips/new');
+
+		// Navigate to step 3
+		await page.locator('[data-testid="trip-name-input"]').fill('Override Test');
+		await page.locator('button', { hasText: /[Mm]anuell/ }).click();
+		await page.locator('[data-testid="wizard-next"]').click();
+		await page.locator('button', { hasText: /[Ww]egpunkt/ }).click();
+		await page.locator('input[name="lat"]').first().fill('47.0');
+		await page.locator('input[name="lon"]').first().fill('11.0');
+		await page.locator('[data-testid="wizard-next"]').click();
+
+		// Select a template first
+		const select = page.locator('[data-testid="weather-template-select"]');
+		await select.selectOption('allgemein');
+
+		// Uncheck a metric that's part of the template
+		const tempCheckbox = page.locator('[data-testid="metric-checkbox-temperature"]');
+		await tempCheckbox.uncheck();
+
+		// Dropdown should show "Benutzerdefiniert" as the selected option
+		await expect(select).toHaveValue('__custom__');
+		// Verify the custom option text is visible in the dropdown
+		await expect(select.locator('option[value="__custom__"]')).toHaveText(/[Bb]enutzerdefiniert/);
+	});
+
+	// --- Step 4 Placeholder ---
+
+	test('step 4 shows placeholder content', async ({ page }) => {
+		await page.goto('/trips/new');
+
+		// Navigate to step 4
+		await page.locator('[data-testid="trip-name-input"]').fill('Step4 Test');
+		await page.locator('button', { hasText: /[Mm]anuell/ }).click();
+		await page.locator('[data-testid="wizard-next"]').click();
+		await page.locator('button', { hasText: /[Ww]egpunkt/ }).click();
+		await page.locator('input[name="lat"]').first().fill('47.0');
+		await page.locator('input[name="lon"]').first().fill('11.0');
+		await page.locator('[data-testid="wizard-next"]').click(); // step 3
+		await page.locator('[data-testid="wizard-next"]').click(); // step 4
 		await expect(page.locator('text=/[Kk]ommt.*W3/')).toBeVisible();
 	});
 
