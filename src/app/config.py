@@ -145,24 +145,34 @@ class Settings(BaseSettings):
             "mail_from": self.google_mail_from or self.google_smtp_user,
         })
 
+    @staticmethod
+    def _is_test_user(user_id: str) -> bool:
+        """Detect test user IDs by naming pattern."""
+        uid = user_id.lower()
+        return "test" in uid or "tdd" in uid
+
     def with_user_profile(self, user_id: str) -> "Settings":
         """Return a copy with recipient settings from user profile.
 
         Loads data/users/{user_id}/user.json and overrides recipient fields.
         SMTP/Signal/Telegram infrastructure stays global.
+        Test users automatically use Gmail SMTP instead of Resend.
         Falls back to global settings if profile doesn't exist or fields are empty.
         """
         import json
         from pathlib import Path
 
+        # Test users use Gmail to avoid burning Resend quota
+        base = self.for_testing() if self._is_test_user(user_id) else self
+
         profile_path = Path(f"data/users/{user_id}/user.json")
         if not profile_path.exists():
-            return self
+            return base
 
         try:
             profile = json.loads(profile_path.read_text())
         except (json.JSONDecodeError, OSError):
-            return self
+            return base
 
         overrides = {}
         if profile.get("mail_to"):
@@ -175,9 +185,9 @@ class Settings(BaseSettings):
             overrides["telegram_chat_id"] = profile["telegram_chat_id"]
 
         if not overrides:
-            return self
+            return base
 
-        return self.model_copy(update=overrides)
+        return base.model_copy(update=overrides)
 
     def can_send_sms(self) -> bool:
         """Check if SMS configuration is complete."""
