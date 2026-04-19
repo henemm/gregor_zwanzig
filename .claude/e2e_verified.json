@@ -1,11 +1,13 @@
 {
-  "verified_at": "2026-04-18T16:46:04.493115+00:00",
+  "verified_at": "2026-04-19T14:04:40.747039+00:00",
   "server_restarted": true,
   "test_trip_created": true,
+  "reports_sent": [
+    "evening"
+  ],
   "emails_checked": true,
   "test_trip_cleaned": true,
   "feature_checks": [
-    "F76C2: Orts-Gruppen \u2014 5/5 E2E Tests gr\u00fcn, 16 bestehende Tests gr\u00fcn",
-    "Adversary Verdict: VERIFIED (4 findings, 0 blockers)"
+    "W2 Weather Template: Server laeuft mit neuem Code, Evening Report gesendet und via IMAP verifiziert (Subject, HTML-Body, Wetterdaten-Tabelle, plausible Werte). Morning konnte nicht gesendet werden (keine Night-Daten fuer zukuenftiges Datum - erwartetes Verhalten)."
   ]
 }
