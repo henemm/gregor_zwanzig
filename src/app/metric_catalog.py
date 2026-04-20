@@ -379,22 +379,72 @@ def build_default_display_config(trip_id: str = "") -> "UnifiedWeatherDisplayCon
     )
 
 
-PROFILE_METRIC_IDS: dict[str, list[str]] = {
-    "wintersport": [
-        "temperature", "wind", "gust", "wind_chill",
-        "precipitation", "cloud_total", "sunshine",
-        "snow_depth", "fresh_snow", "snowfall_limit",
-    ],
-    "wandern": [
-        "temperature", "wind", "gust",
-        "precipitation", "thunder", "cloud_total", "sunshine",
-        "rain_probability", "visibility",
-    ],
-    "allgemein": [
-        "temperature", "wind", "gust",
-        "precipitation", "cloud_total", "sunshine",
-    ],
+WEATHER_TEMPLATES: dict[str, dict] = {
+    "alpen-trekking": {
+        "label": "Alpen-Trekking",
+        "metrics": [
+            "temperature", "wind_chill", "wind", "gust", "precipitation",
+            "thunder", "cape", "rain_probability", "snowfall_limit",
+            "freezing_level", "cloud_total", "cloud_low", "visibility", "uv_index",
+        ],
+    },
+    "wandern": {
+        "label": "Wandern",
+        "metrics": [
+            "temperature", "humidity", "wind", "gust", "precipitation",
+            "rain_probability", "cloud_total", "sunshine", "uv_index",
+        ],
+    },
+    "skitouren": {
+        "label": "Skitouren",
+        "metrics": [
+            "temperature", "wind_chill", "wind", "gust", "precipitation",
+            "fresh_snow", "snow_depth", "snowfall_limit", "freezing_level",
+            "cloud_total", "cloud_low", "visibility",
+        ],
+    },
+    "wintersport": {
+        "label": "Wintersport",
+        "metrics": [
+            "temperature", "wind_chill", "wind", "gust", "precipitation",
+            "fresh_snow", "snow_depth", "cloud_total", "sunshine", "visibility",
+        ],
+    },
+    "radtour": {
+        "label": "Radtour",
+        "metrics": [
+            "temperature", "wind", "wind_direction", "gust", "precipitation",
+            "rain_probability", "thunder", "cape", "cloud_total", "sunshine", "uv_index",
+        ],
+    },
+    "wassersport": {
+        "label": "Wassersport",
+        "metrics": [
+            "temperature", "wind", "gust", "wind_direction", "precipitation",
+            "rain_probability", "thunder", "cape", "cloud_total", "visibility",
+        ],
+    },
+    "allgemein": {
+        "label": "Allgemein",
+        "metrics": [
+            "temperature", "wind", "gust", "precipitation",
+            "rain_probability", "cloud_total", "sunshine",
+        ],
+    },
 }
+
+
+def get_all_templates() -> list[dict]:
+    """Return all weather templates as a list of structured dicts.
+
+    Returns:
+        List of {"id": str, "label": str, "metrics": list[str]}
+        in insertion order (alpen-trekking first, allgemein last).
+    """
+    return [
+        {"id": tid, "label": tdata["label"], "metrics": tdata["metrics"]}
+        for tid, tdata in WEATHER_TEMPLATES.items()
+    ]
 
 
 def build_default_display_config_for_profile(
@@ -404,7 +454,8 @@ def build_default_display_config_for_profile(
     """Build a UnifiedWeatherDisplayConfig with metrics enabled for the given profile."""
     from app.models import MetricConfig, UnifiedWeatherDisplayConfig
 
-    enabled_ids = set(PROFILE_METRIC_IDS.get(profile.value, PROFILE_METRIC_IDS["allgemein"]))
+    template = WEATHER_TEMPLATES.get(profile.value, WEATHER_TEMPLATES["allgemein"])
+    enabled_ids = set(template["metrics"])
     metrics = []
     for metric_def in get_all_metrics():
         metrics.append(MetricConfig(

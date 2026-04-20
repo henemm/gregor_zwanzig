@@ -33,7 +33,14 @@
 
 	const CATEGORY_ORDER = ['temperature', 'wind', 'precipitation', 'atmosphere', 'winter'];
 
+	interface Template {
+		id: string;
+		label: string;
+		metrics: string[];
+	}
+
 	let catalog: MetricCatalog = $state({});
+	let templates: Template[] = $state([]);
 	let loading = $state(false);
 	let saving = $state(false);
 	let errorMsg: string | null = $state(null);
@@ -70,13 +77,32 @@
 		loading = true;
 		errorMsg = null;
 		try {
-			catalog = await api.get<MetricCatalog>('/api/metrics');
+			const [catalogData, templateData] = await Promise.all([
+				api.get<MetricCatalog>('/api/metrics'),
+				api.get<Template[]>('/api/templates').catch(() => [] as Template[]),
+			]);
+			catalog = catalogData;
+			templates = templateData;
 			enabledMap = buildEnabledMap(catalog, currentConfig);
 		} catch (e: unknown) {
 			errorMsg = (e as { error?: string })?.error ?? 'Fehler beim Laden der Metriken';
 		} finally {
 			loading = false;
 		}
+	}
+
+	function applyTemplate(event: Event) {
+		const templateId = (event.target as HTMLSelectElement).value;
+		if (!templateId) return;
+		const tpl = templates.find(t => t.id === templateId);
+		if (!tpl) return;
+		const newMap: Record<string, boolean> = {};
+		for (const metrics of Object.values(catalog)) {
+			for (const m of metrics) {
+				newMap[m.id] = tpl.metrics.includes(m.id);
+			}
+		}
+		enabledMap = newMap;
 	}
 
 	function handleSave() {
@@ -115,6 +141,21 @@
 		{:else if errorMsg}
 			<p class="py-4 text-sm text-destructive">{errorMsg}</p>
 		{:else}
+			{#if templates.length > 0}
+				<div class="py-2">
+					<label for="template-select" class="block text-sm font-medium mb-1">Template laden</label>
+					<select
+						id="template-select"
+						class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+						onchange={applyTemplate}
+					>
+						<option value="">-- Kein Template --</option>
+						{#each templates as t}
+							<option value={t.id}>{t.label}</option>
+						{/each}
+					</select>
+				</div>
+			{/if}
 			<div class="space-y-5 py-2">
 				{#each sortedCategories() as cat}
 					<div class="space-y-2">

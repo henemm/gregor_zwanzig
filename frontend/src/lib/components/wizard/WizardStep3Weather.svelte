@@ -18,36 +18,13 @@
 	}
 	let { displayConfig = $bindable(), mode = 'create' }: Props = $props();
 
-	const TEMPLATES: Record<string, { label: string; metrics: string[] }> = {
-		'alpen-trekking': {
-			label: 'Alpen-Trekking',
-			metrics: ['temperature', 'wind_chill', 'wind', 'gust', 'precipitation', 'thunder', 'cape', 'rain_probability', 'snowfall_limit', 'freezing_level', 'cloud_total', 'cloud_low', 'visibility', 'uv_index']
-		},
-		'wandern': {
-			label: 'Wandern',
-			metrics: ['temperature', 'humidity', 'wind', 'gust', 'precipitation', 'rain_probability', 'cloud_total', 'sunshine', 'uv_index']
-		},
-		'skitouren': {
-			label: 'Skitouren',
-			metrics: ['temperature', 'wind_chill', 'wind', 'gust', 'precipitation', 'fresh_snow', 'snow_depth', 'snowfall_limit', 'freezing_level', 'cloud_total', 'cloud_low', 'visibility']
-		},
-		'wintersport': {
-			label: 'Wintersport (Piste)',
-			metrics: ['temperature', 'wind_chill', 'wind', 'gust', 'precipitation', 'fresh_snow', 'snow_depth', 'cloud_total', 'sunshine', 'visibility']
-		},
-		'radtour': {
-			label: 'Radtour / Bikepacking',
-			metrics: ['temperature', 'wind', 'wind_direction', 'gust', 'precipitation', 'rain_probability', 'thunder', 'cape', 'cloud_total', 'sunshine', 'uv_index']
-		},
-		'wassersport': {
-			label: 'Wassersport',
-			metrics: ['temperature', 'wind', 'gust', 'wind_direction', 'precipitation', 'rain_probability', 'thunder', 'cape', 'cloud_total', 'visibility']
-		},
-		'allgemein': {
-			label: 'Allgemein',
-			metrics: ['temperature', 'wind', 'gust', 'precipitation', 'rain_probability', 'cloud_total', 'sunshine']
-		}
-	};
+	interface Template {
+		id: string;
+		label: string;
+		metrics: string[];
+	}
+
+	let templates: Template[] = $state([]);
 
 	const CATEGORY_LABELS: Record<string, string> = {
 		temperature: 'Temperatur',
@@ -79,7 +56,7 @@
 	}
 
 	function matchesTemplate(key: string): boolean {
-		const tmpl = TEMPLATES[key];
+		const tmpl = templates.find(t => t.id === key);
 		if (!tmpl) return false;
 		const ids = allMetricIds();
 		return ids.every(id => enabledMap[id] === tmpl.metrics.includes(id));
@@ -101,7 +78,7 @@
 		lastAppliedTemplate = tmplKey;
 		showCustom = false;
 		if (!tmplKey) return;
-		const tmpl = TEMPLATES[tmplKey];
+		const tmpl = templates.find(t => t.id === tmplKey);
 		if (!tmpl) return;
 		const newMap: Record<string, boolean> = {};
 		for (const id of allMetricIds()) {
@@ -132,7 +109,12 @@
 
 	onMount(async () => {
 		try {
-			catalog = await api.get<MetricCatalog>('/api/metrics');
+			const [catalogData, templateData] = await Promise.all([
+				api.get<MetricCatalog>('/api/metrics'),
+				api.get<Template[]>('/api/templates').catch(() => [] as Template[]),
+			]);
+			catalog = catalogData;
+			templates = templateData;
 
 			if (displayConfig?.metrics) {
 				const metrics = displayConfig.metrics as { metric_id: string; enabled: boolean }[];
@@ -146,10 +128,10 @@
 					}
 				}
 				enabledMap = newMap;
-				for (const key of Object.keys(TEMPLATES)) {
-					if (matchesTemplate(key)) {
-						lastAppliedTemplate = key;
-						selectedTemplate = key;
+				for (const t of templates) {
+					if (matchesTemplate(t.id)) {
+						lastAppliedTemplate = t.id;
+						selectedTemplate = t.id;
 						break;
 					}
 				}
@@ -180,8 +162,8 @@
 			bind:value={selectedTemplate}
 		>
 			<option value="">Kein Profil</option>
-			{#each Object.entries(TEMPLATES) as [key, tmpl]}
-				<option value={key}>{tmpl.label}</option>
+			{#each templates as t}
+				<option value={t.id}>{t.label}</option>
 			{/each}
 			{#if showCustom}
 				<option value="__custom__" disabled>Benutzerdefiniert</option>
