@@ -493,6 +493,38 @@ class UnifiedWeatherDisplayConfig:
         """Return metrics with alert_enabled=True."""
         return [mc for mc in self.metrics if mc.alert_enabled]
 
+    def get_metrics_for_report_type(self, report_type: str) -> list[MetricConfig]:
+        """Return metrics relevant for a given report type.
+
+        For "morning"/"evening", the per-type flag overrides global enabled:
+          - True  -> include (even if enabled=False)
+          - False -> exclude (even if enabled=True)
+          - None  -> fall back to global enabled
+        For other report_types: return only globally enabled metrics.
+        """
+        result = []
+        for mc in self.metrics:
+            if report_type == "morning":
+                if mc.morning_enabled is True:
+                    result.append(mc)
+                elif mc.morning_enabled is False:
+                    pass
+                else:
+                    if mc.enabled:
+                        result.append(mc)
+            elif report_type == "evening":
+                if mc.evening_enabled is True:
+                    result.append(mc)
+                elif mc.evening_enabled is False:
+                    pass
+                else:
+                    if mc.enabled:
+                        result.append(mc)
+            else:
+                if mc.enabled:
+                    result.append(mc)
+        return result
+
 
 # --- Trip Report DTOs (Feature 3.1) ---
 

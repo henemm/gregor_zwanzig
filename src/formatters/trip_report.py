@@ -8,6 +8,7 @@ Generates HTML + plain-text from one processor.
 """
 from __future__ import annotations
 
+import dataclasses
 from datetime import datetime, timezone
 from typing import Optional
 from zoneinfo import ZoneInfo
@@ -57,6 +58,11 @@ class TripReportFormatter:
             raise ValueError("Cannot format email with no segments")
 
         dc = display_config or build_default_display_config()
+        if report_type in ("morning", "evening"):
+            active_metrics = dc.get_metrics_for_report_type(report_type)
+            # Force enabled=True on all active metrics so downstream guards don't skip them
+            active_metrics = [dataclasses.replace(mc, enabled=True) for mc in active_metrics]
+            dc = dataclasses.replace(dc, metrics=active_metrics)
         self._tz = tz or ZoneInfo("UTC")
         self._exposed_sections = exposed_sections
         self._friendly_keys = self._build_friendly_keys(dc)

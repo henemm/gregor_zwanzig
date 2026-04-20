@@ -1,0 +1,197 @@
+F......FF.....sssssssssssssss........................................... [  6%]
+........................................................................ [ 13%]
+........................................................................ [ 19%]
+........................................................................ [ 26%]
+......................FF........................................F....... [ 32%]
+.......................F................................................ [ 39%]
+.....................ssssss.......................xF.s.................. [ 45%]
+................................................................sssssss. [ 52%]
+.........ss............................................................. [ 58%]
+........................................................................ [ 65%]
+........................................................................ [ 71%]
+.......................................FFF.........s.................... [ 78%]
+........................................................................ [ 84%]
+............................................................F........... [ 91%]
+........................................................................ [ 97%]
+..........................                                               [100%]
+=================================== FAILURES ===================================
+______________________________ test_alert_enabled ______________________________
+tests/e2e/test_e2e_friendly_format_config.py:283: in test_alert_enabled
+    modify_metric_config("cape", alert_enabled=True)
+tests/e2e/test_e2e_friendly_format_config.py:47: in modify_metric_config
+    for mc in data["display_config"]["metrics"]:
+              ^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'display_config'
+----------------------------- Captured stdout call -----------------------------
+
+============================================================
+TEST: alert_enabled steuert Change Detection
+============================================================
+____________ TestReportFormatting.test_email_html_contains_segments ____________
+tests/e2e/test_e2e_story3_reports.py:220: in test_email_html_contains_segments
+    assert "#2" in report.email_html
+E   assert '#2' in '<!DOCTYPE html>\n<html>\n<head>\n    <meta charset="utf-8">\n    <meta name="viewport" content="width=device-width, i...els °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun W/m²</span>\n        </div>\n    </div>\n</body>\n</html>'
+E    +  where '<!DOCTYPE html>\n<html>\n<head>\n    <meta charset="utf-8">\n    <meta name="viewport" content="width=device-width, i...els °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun W/m²</span>\n        </div>\n    </div>\n</body>\n</html>' = TripReport(trip_id='e2e-story3-stubai', trip_name='E2E Story3 Stubai', report_type='morning', generated_at=datetime.da...-----\nGenerated: 2026-04-20 14:00 UTC\nData: openmeteo (icon_d2)', sms_text=None, triggered_by='schedule', changes=[]).email_html
+_____________ TestReportFormatting.test_email_plain_text_fallback ______________
+tests/e2e/test_e2e_story3_reports.py:237: in test_email_plain_text_fallback
+    assert "SEGMENTS" in report.email_plain
+E   AssertionError: assert 'SEGMENTS' in 'E2E Story3 Stubai - Morning Report\n20.04.2026\n\n━━ Segment 1: 07:00–10:00 | 3.2 km | ↑993m → 2237m ━━\n  Time   Tem...----------------------------------------------------------\nGenerated: 2026-04-20 14:00 UTC\nData: openmeteo (icon_d2)'
+E    +  where 'E2E Story3 Stubai - Morning Report\n20.04.2026\n\n━━ Segment 1: 07:00–10:00 | 3.2 km | ↑993m → 2237m ━━\n  Time   Tem...----------------------------------------------------------\nGenerated: 2026-04-20 14:00 UTC\nData: openmeteo (icon_d2)' = TripReport(trip_id='e2e-story3-stubai', trip_name='E2E Story3 Stubai', report_type='morning', generated_at=datetime.da...-----\nGenerated: 2026-04-20 14:00 UTC\nData: openmeteo (icon_d2)', sms_text=None, triggered_by='schedule', changes=[]).email_plain
+___________________ TestNavigation.test_nav_has_account_link ___________________
+tests/tdd/test_account_page.py:136: in test_nav_has_account_link
+    assert '/account' in resp.text, "Missing /account link in navigation"
+E   AssertionError: Missing /account link in navigation
+E   assert '/account' in '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n'
+E    +  where '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n' = <Response [200 OK]>.text
+__________________ TestNavigation.test_nav_shows_konto_label ___________________
+tests/tdd/test_account_page.py:146: in test_nav_shows_konto_label
+    assert 'Konto' in resp.text, "Missing 'Konto' label in navigation"
+E   AssertionError: Missing 'Konto' label in navigation
+E   assert 'Konto' in '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n'
+E    +  where '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n' = <Response [200 OK]>.text
+________________ TestSettingsRenamed.test_settings_page_heading ________________
+tests/tdd/test_design_optimierungen.py:225: in test_settings_page_heading
+    assert text.strip() == "System-Status", (
+E   AssertionError: Settings page heading is 'Mein Service', expected 'System-Status'
+E   assert 'Mein Service' == 'System-Status'
+E     
+E     - System-Status
+E     + Mein Service
+_____________ TestSnowgridParsing.test_snowgrid_multiple_locations _____________
+tests/tdd/test_geosphere_parsing.py:58: in test_snowgrid_multiple_locations
+    result = validator.validate_snowgrid_parsing(lat, lon)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/validation/geosphere_validator.py:164: in validate_snowgrid_parsing
+    raw = self.fetch_raw_snowgrid(lat, lon)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/validation/geosphere_validator.py:74: in fetch_raw_snowgrid
+    response.raise_for_status()
+.venv/lib/python3.12/site-packages/httpx/_models.py:829: in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+E   httpx.HTTPStatusError: Client error '429 Too Many Requests' for url 'https://dataset.api.hub.geosphere.at/v1/timeseries/historical/snowgrid_cl-v2-1d-1km?lat_lon=47.07%2C12.69&parameters=snow_depth%2Cswe_tot&output_format=geojson&start=2026-04-13T14%3A01&end=2026-04-20T14%3A01'
+E   For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429
+_____________ TestSnowgridPlausibility.test_all_resorts_have_data ______________
+tests/tdd/test_snowgrid.py:105: in test_all_resorts_have_data
+    assert success_rate >= 0.8, (
+E   AssertionError: Only 60% of resorts have data from both sources. Results: {'stubaier-gletscher': {'bergfex': 300, 'snowgrid': 28.0}, 'axamer-lizum': {'bergfex': 120, 'snowgrid': 4.0}, 'obergurgl-hochgurgl': {'bergfex': 96, 'snowgrid': None}, 'soelden': {'bergfex': 147, 'snowgrid': None}, 'ischgl': {'bergfex': 85, 'snowgrid': 12.0}}
+E   assert 0.6 >= 0.8
+_______ TestSchedulerDestinationSegment.test_destination_segment_exists ________
+tests/unit/test_destination_segment.py:89: in test_destination_segment_exists
+    segments = self._load_trip_and_get_segments()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_destination_segment.py:83: in _load_trip_and_get_segments
+    target_date = trip.stages[1].date
+                  ^^^^^^^^^^^^^^
+E   IndexError: list index out of range
+_____ TestSchedulerDestinationSegment.test_destination_segment_coordinates _____
+tests/unit/test_destination_segment.py:97: in test_destination_segment_coordinates
+    segments = self._load_trip_and_get_segments()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_destination_segment.py:83: in _load_trip_and_get_segments
+    target_date = trip.stages[1].date
+                  ^^^^^^^^^^^^^^
+E   IndexError: list index out of range
+_____ TestSchedulerDestinationSegment.test_destination_segment_time_window _____
+tests/unit/test_destination_segment.py:103: in test_destination_segment_time_window
+    segments = self._load_trip_and_get_segments()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_destination_segment.py:83: in _load_trip_and_get_segments
+    target_date = trip.stages[1].date
+                  ^^^^^^^^^^^^^^
+E   IndexError: list index out of range
+__________ TestFetchForecastUvIntegration.test_forecast_uv_plausible ___________
+.venv/lib/python3.12/site-packages/httpx/_transports/default.py:101: in map_httpcore_exceptions
+    yield
+.venv/lib/python3.12/site-packages/httpx/_transports/default.py:250: in handle_request
+    resp = self._pool.handle_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/httpcore/_sync/connection_pool.py:256: in handle_request
+    raise exc from None
+.venv/lib/python3.12/site-packages/httpcore/_sync/connection_pool.py:236: in handle_request
+    response = connection.handle_request(
+.venv/lib/python3.12/site-packages/httpcore/_sync/connection.py:101: in handle_request
+    raise exc
+.venv/lib/python3.12/site-packages/httpcore/_sync/connection.py:78: in handle_request
+    stream = self._connect(request)
+             ^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/httpcore/_sync/connection.py:156: in _connect
+    stream = stream.start_tls(**kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/httpcore/_backends/sync.py:154: in start_tls
+    with map_exceptions(exc_map):
+/usr/lib/python3.12/contextlib.py:158: in __exit__
+    self.gen.throw(value)
+.venv/lib/python3.12/site-packages/httpcore/_exceptions.py:14: in map_exceptions
+    raise to_exc(exc) from exc
+E   httpcore.ConnectTimeout: _ssl.c:983: The handshake operation timed out
+
+The above exception was the direct cause of the following exception:
+src/providers/openmeteo.py:384: in _request
+    response = self._client.get(url, params=params)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/httpx/_client.py:1053: in get
+    return self.request(
+.venv/lib/python3.12/site-packages/httpx/_client.py:825: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/httpx/_client.py:914: in send
+    response = self._send_handling_auth(
+.venv/lib/python3.12/site-packages/httpx/_client.py:942: in _send_handling_auth
+    response = self._send_handling_redirects(
+.venv/lib/python3.12/site-packages/httpx/_client.py:979: in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/httpx/_client.py:1014: in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/httpx/_transports/default.py:249: in handle_request
+    with map_httpcore_exceptions():
+/usr/lib/python3.12/contextlib.py:158: in __exit__
+    self.gen.throw(value)
+.venv/lib/python3.12/site-packages/httpx/_transports/default.py:118: in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+E   httpx.ConnectTimeout: _ssl.c:983: The handshake operation timed out
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_uv_air_quality.py:122: in test_forecast_uv_plausible
+    timeseries = provider.fetch_forecast(location, start, end)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/providers/openmeteo.py:615: in fetch_forecast
+    response_data = self._request(endpoint, params)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:338: in wrapped_f
+    return copy(f, *args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:477: in __call__
+    do = self.iter(retry_state=retry_state)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:378: in iter
+    result = action(retry_state)
+             ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:400: in <lambda>
+    self._add_action_func(lambda rs: rs.outcome.result())
+                                     ^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/concurrent/futures/_base.py:449: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/concurrent/futures/_base.py:401: in __get_result
+    raise self._exception
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:480: in __call__
+    result = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+src/providers/openmeteo.py:393: in _request
+    raise ProviderRequestError("openmeteo", f"Request failed: {e}") from e
+E   providers.base.ProviderRequestError: [openmeteo] Request failed: _ssl.c:983: The handshake operation timed out
+=========================== short test summary info ============================
+FAILED tests/e2e/test_e2e_friendly_format_config.py::test_alert_enabled - Key...
+FAILED tests/e2e/test_e2e_story3_reports.py::TestReportFormatting::test_email_html_contains_segments
+FAILED tests/e2e/test_e2e_story3_reports.py::TestReportFormatting::test_email_plain_text_fallback
+FAILED tests/tdd/test_account_page.py::TestNavigation::test_nav_has_account_link
+FAILED tests/tdd/test_account_page.py::TestNavigation::test_nav_shows_konto_label
+FAILED tests/tdd/test_design_optimierungen.py::TestSettingsRenamed::test_settings_page_heading
+FAILED tests/tdd/test_geosphere_parsing.py::TestSnowgridParsing::test_snowgrid_multiple_locations
+FAILED tests/tdd/test_snowgrid.py::TestSnowgridPlausibility::test_all_resorts_have_data
+FAILED tests/unit/test_destination_segment.py::TestSchedulerDestinationSegment::test_destination_segment_exists
+FAILED tests/unit/test_destination_segment.py::TestSchedulerDestinationSegment::test_destination_segment_coordinates
+FAILED tests/unit/test_destination_segment.py::TestSchedulerDestinationSegment::test_destination_segment_time_window
+FAILED tests/unit/test_uv_air_quality.py::TestFetchForecastUvIntegration::test_forecast_uv_plausible
