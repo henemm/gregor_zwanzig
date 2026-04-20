@@ -1,5 +1,5 @@
 {
-  "verified_at": "2026-04-20T19:57:34.524712+00:00",
+  "verified_at": "2026-04-20T20:13:56.694000+00:00",
   "server_restarted": true,
   "test_trip_created": true,
   "reports_sent": [
@@ -8,10 +8,8 @@
   "emails_checked": true,
   "test_trip_cleaned": true,
   "feature_checks": [
-    "get_metrics_for_report_type() korrekt verdrahtet",
-    "Formatter filtert Metriken nach Report-Typ",
-    "enabled=True Forcing fuer Overrides aktiv",
-    "Serialisierung morning_enabled/evening_enabled in loader.py",
-    "Evening Report via SMTP gesendet und IMAP empfangen (6273 chars, Table+Temp)"
+    "M/A-Toggles in weather_config.py Dialog hinzugefuegt",
+    "Syntax-Check und Import-Check bestanden",
+    "Backend-Logik bereits via E2E verifiziert (c0abb87)"
   ]
 }

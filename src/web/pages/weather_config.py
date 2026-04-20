@@ -136,6 +136,8 @@ def show_weather_config_dialog(trip: Trip, user_id: str = "default") -> None:
             ui.label("Wert").style("width: 150px; min-width: 150px; font-weight: 600")
             ui.label("Label").style("width: 130px; min-width: 130px; font-weight: 600")
             ui.label("Alert").style("width: 200px; min-width: 200px; font-weight: 600")
+            ui.label("M").style("width: 30px; min-width: 30px; font-weight: 600").tooltip("Morgen-Report")
+            ui.label("A").style("width: 30px; min-width: 30px; font-weight: 600").tooltip("Abend-Report")
 
         # Render metrics grouped by category as table rows
         for category in CATEGORY_ORDER:
@@ -277,6 +279,17 @@ def show_weather_config_dialog(trip: Trip, user_id: str = "default") -> None:
                             if not is_available:
                                 alert_numeric_input.disable()
 
+                    # M/A checkboxes (per-report-type override)
+                    mc = current_configs.get(metric_def.id)
+                    initial_morning = mc.morning_enabled if mc and mc.morning_enabled is not None else True
+                    initial_evening = mc.evening_enabled if mc and mc.evening_enabled is not None else True
+
+                    morning_cb = ui.checkbox("", value=initial_morning).style("width: 30px; min-width: 30px").tooltip("Im Morgen-Report anzeigen")
+                    evening_cb = ui.checkbox("", value=initial_evening).style("width: 30px; min-width: 30px").tooltip("Im Abend-Report anzeigen")
+                    if not is_available:
+                        morning_cb.disable()
+                        evening_cb.disable()
+
                     metric_widgets[metric_def.id] = {
                         "checkbox": cb,
                         "agg_select": agg_select,
@@ -284,6 +297,8 @@ def show_weather_config_dialog(trip: Trip, user_id: str = "default") -> None:
                         "alert_cb": alert_cb,
                         "alert_level_select": alert_level_select,
                         "alert_numeric_input": alert_numeric_input,
+                        "morning_cb": morning_cb,
+                        "evening_cb": evening_cb,
                         "available": is_available,
                     }
 
@@ -372,10 +387,18 @@ def make_save_handler(trip_id: str, metric_widgets: dict, dialog, user_id: str):
                 except (KeyError, ValueError, TypeError):
                     pass
 
+            morning_cb = widgets.get("morning_cb")
+            evening_cb = widgets.get("evening_cb")
+            # None = inherit (both checked), False = exclude
+            morning_val = None if (morning_cb and morning_cb.value) else False
+            evening_val = None if (evening_cb and evening_cb.value) else False
+
             metric_configs.append(MetricConfig(
                 metric_id=metric_id,
                 enabled=cb.value,
                 aggregations=aggregations,
+                morning_enabled=morning_val,
+                evening_enabled=evening_val,
                 use_friendly_format=use_friendly,
                 alert_enabled=alert_enabled,
                 alert_threshold=alert_threshold,
