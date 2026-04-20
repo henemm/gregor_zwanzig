@@ -191,8 +191,8 @@ class TestProfileDefaultMetrics:
             "test-loc", LocationActivityProfile.WANDERN
         )
         enabled_ids = {mc.metric_id for mc in config.metrics if mc.enabled}
-        assert "thunder" in enabled_ids
-        assert "visibility" in enabled_ids
+        assert "humidity" in enabled_ids
+        assert "uv_index" in enabled_ids
         assert "temperature" in enabled_ids
         # Winter metrics should NOT be enabled for hiking
         assert "snow_depth" not in enabled_ids

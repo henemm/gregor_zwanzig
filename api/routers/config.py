@@ -20,6 +20,13 @@ def get_config():
     return {k: v for k, v in full.items() if k in SAFE_FIELDS}
 
 
+@router.get("/templates")
+def get_templates() -> list[dict]:
+    """Return all weather activity templates."""
+    from app.metric_catalog import get_all_templates
+    return get_all_templates()
+
+
 @router.get("/metrics")
 def get_metrics():
     from app.metric_catalog import get_all_metrics

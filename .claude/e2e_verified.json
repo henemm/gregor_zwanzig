@@ -1,5 +1,5 @@
 {
-  "verified_at": "2026-04-19T18:17:12.053706+00:00",
+  "verified_at": "2026-04-20T11:58:11.282614+00:00",
   "server_restarted": true,
   "test_trip_created": true,
   "reports_sent": [
@@ -8,6 +8,10 @@
   "emails_checked": true,
   "test_trip_cleaned": true,
   "feature_checks": [
-    "W3 Report Config: Server mit neuem Code, Evening Report gesendet, via IMAP verifiziert (6232 Zeichen HTML, Tabelle + Temperatur vorhanden, Timestamp frisch)"
+    "WEATHER_TEMPLATES registry mit 7 Templates in metric_catalog.py",
+    "GET /api/templates Endpoint liefert 7 Templates",
+    "Evening Report mit Tabelle + Temperatur + Wind erfolgreich gesendet und via IMAP empfangen",
+    "E-Mail Subject enth\u00e4lt Trip-Name und Report-Typ",
+    "HTML-Body 6349 Zeichen mit Wetterdaten-Tabelle"
   ]
 }

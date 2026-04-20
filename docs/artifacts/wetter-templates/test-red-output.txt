@@ -1,0 +1,294 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 18 items
+
+tests/tdd/test_weather_templates.py FFFFFFFFFFFFFFFFFF                   [100%]
+
+=================================== FAILURES ===================================
+__________ TestWeatherTemplatesRegistry.test_weather_templates_exists __________
+
+self = <tdd.test_weather_templates.TestWeatherTemplatesRegistry object at 0x7c270d274560>
+
+    def test_weather_templates_exists(self):
+        """GIVEN metric_catalog module
+        WHEN importing WEATHER_TEMPLATES
+        THEN it should be a dict with 7 entries."""
+>       from app.metric_catalog import WEATHER_TEMPLATES
+E       ImportError: cannot import name 'WEATHER_TEMPLATES' from 'app.metric_catalog' (/home/hem/gregor_zwanzig/src/app/metric_catalog.py)
+
+tests/tdd/test_weather_templates.py:25: ImportError
+__________ TestWeatherTemplatesRegistry.test_all_template_ids_present __________
+
+self = <tdd.test_weather_templates.TestWeatherTemplatesRegistry object at 0x7c270c6cede0>
+
+    def test_all_template_ids_present(self):
+        """GIVEN WEATHER_TEMPLATES
+        WHEN checking keys
+        THEN all 7 template IDs are present."""
+>       from app.metric_catalog import WEATHER_TEMPLATES
+E       ImportError: cannot import name 'WEATHER_TEMPLATES' from 'app.metric_catalog' (/home/hem/gregor_zwanzig/src/app/metric_catalog.py)
+
+tests/tdd/test_weather_templates.py:34: ImportError
+____ TestWeatherTemplatesRegistry.test_each_template_has_label_and_metrics _____
+
+self = <tdd.test_weather_templates.TestWeatherTemplatesRegistry object at 0x7c270c494710>
+
+    def test_each_template_has_label_and_metrics(self):
+        """GIVEN WEATHER_TEMPLATES
+        WHEN iterating entries
+        THEN each has 'label' (str) and 'metrics' (list[str])."""
+>       from app.metric_catalog import WEATHER_TEMPLATES
+E       ImportError: cannot import name 'WEATHER_TEMPLATES' from 'app.metric_catalog' (/home/hem/gregor_zwanzig/src/app/metric_catalog.py)
+
+tests/tdd/test_weather_templates.py:46: ImportError
+____________ TestWeatherTemplatesRegistry.test_all_metric_ids_valid ____________
+
+self = <tdd.test_weather_templates.TestWeatherTemplatesRegistry object at 0x7c270c496090>
+
+    def test_all_metric_ids_valid(self):
+        """GIVEN WEATHER_TEMPLATES
+        WHEN checking each template's metric IDs
+        THEN all IDs exist in the MetricCatalog."""
+>       from app.metric_catalog import WEATHER_TEMPLATES, get_all_metrics
+E       ImportError: cannot import name 'WEATHER_TEMPLATES' from 'app.metric_catalog' (/home/hem/gregor_zwanzig/src/app/metric_catalog.py)
+
+tests/tdd/test_weather_templates.py:59: ImportError
+_______ TestWeatherTemplatesRegistry.test_alpen_trekking_has_14_metrics ________
+
+self = <tdd.test_weather_templates.TestWeatherTemplatesRegistry object at 0x7c270c495df0>
+
+    def test_alpen_trekking_has_14_metrics(self):
+        """GIVEN alpen-trekking template
+        WHEN counting metrics
+        THEN it has 14 metrics including freezing_level, cape, wind_chill."""
+>       from app.metric_catalog import WEATHER_TEMPLATES
+E       ImportError: cannot import name 'WEATHER_TEMPLATES' from 'app.metric_catalog' (/home/hem/gregor_zwanzig/src/app/metric_catalog.py)
+
+tests/tdd/test_weather_templates.py:72: ImportError
+__________ TestWeatherTemplatesRegistry.test_allgemein_has_7_metrics ___________
+
+self = <tdd.test_weather_templates.TestWeatherTemplatesRegistry object at 0x7c270c495ac0>
+
+    def test_allgemein_has_7_metrics(self):
+        """GIVEN allgemein template
+        WHEN counting metrics
+        THEN it has 7 basic metrics."""
+>       from app.metric_catalog import WEATHER_TEMPLATES
+E       ImportError: cannot import name 'WEATHER_TEMPLATES' from 'app.metric_catalog' (/home/hem/gregor_zwanzig/src/app/metric_catalog.py)
+
+tests/tdd/test_weather_templates.py:84: ImportError
+_________ TestWeatherTemplatesRegistry.test_profile_metric_ids_removed _________
+
+self = <tdd.test_weather_templates.TestWeatherTemplatesRegistry object at 0x7c270c495b20>
+
+    def test_profile_metric_ids_removed(self):
+        """GIVEN metric_catalog module
+        WHEN checking for old PROFILE_METRIC_IDS
+        THEN it should no longer exist (replaced by WEATHER_TEMPLATES)."""
+        import app.metric_catalog as mc
+    
+>       assert not hasattr(mc, "PROFILE_METRIC_IDS"), (
+            "PROFILE_METRIC_IDS should be replaced by WEATHER_TEMPLATES"
+        )
+E       AssertionError: PROFILE_METRIC_IDS should be replaced by WEATHER_TEMPLATES
+E       assert not True
+E        +  where True = hasattr(<module 'app.metric_catalog' from '/home/hem/gregor_zwanzig/src/app/metric_catalog.py'>, 'PROFILE_METRIC_IDS')
+
+tests/tdd/test_weather_templates.py:95: AssertionError
+____________________ TestGetAllTemplates.test_returns_list _____________________
+
+self = <tdd.test_weather_templates.TestGetAllTemplates object at 0x7c270c495ca0>
+
+    def test_returns_list(self):
+        """GIVEN metric_catalog
+        WHEN calling get_all_templates()
+        THEN it returns a list."""
+>       from app.metric_catalog import get_all_templates
+E       ImportError: cannot import name 'get_all_templates' from 'app.metric_catalog' (/home/hem/gregor_zwanzig/src/app/metric_catalog.py)
+
+tests/tdd/test_weather_templates.py:112: ImportError
+_________________ TestGetAllTemplates.test_returns_7_templates _________________
+
+self = <tdd.test_weather_templates.TestGetAllTemplates object at 0x7c270c495700>
+
+    def test_returns_7_templates(self):
+        """GIVEN metric_catalog
+        WHEN calling get_all_templates()
+        THEN 7 templates are returned."""
+>       from app.metric_catalog import get_all_templates
+E       ImportError: cannot import name 'get_all_templates' from 'app.metric_catalog' (/home/hem/gregor_zwanzig/src/app/metric_catalog.py)
+
+tests/tdd/test_weather_templates.py:121: ImportError
+_________________ TestGetAllTemplates.test_template_structure __________________
+
+self = <tdd.test_weather_templates.TestGetAllTemplates object at 0x7c270c495970>
+
+    def test_template_structure(self):
+        """GIVEN get_all_templates() result
+        WHEN inspecting each entry
+        THEN it has id (str), label (str), metrics (list[str])."""
+>       from app.metric_catalog import get_all_templates
+E       ImportError: cannot import name 'get_all_templates' from 'app.metric_catalog' (/home/hem/gregor_zwanzig/src/app/metric_catalog.py)
+
+tests/tdd/test_weather_templates.py:130: ImportError
+__________ TestGetAllTemplates.test_first_template_is_alpen_trekking ___________
+
+self = <tdd.test_weather_templates.TestGetAllTemplates object at 0x7c270c495820>
+
+    def test_first_template_is_alpen_trekking(self):
+        """GIVEN get_all_templates()
+        WHEN checking first entry
+        THEN it is 'alpen-trekking' (insertion order preserved)."""
+>       from app.metric_catalog import get_all_templates
+E       ImportError: cannot import name 'get_all_templates' from 'app.metric_catalog' (/home/hem/gregor_zwanzig/src/app/metric_catalog.py)
+
+tests/tdd/test_weather_templates.py:144: ImportError
+_ TestBuildDefaultDisplayConfigUpdated.test_wandern_profile_uses_weather_templates _
+
+self = <tdd.test_weather_templates.TestBuildDefaultDisplayConfigUpdated object at 0x7c270c4959a0>
+
+    def test_wandern_profile_uses_weather_templates(self):
+        """GIVEN a 'wandern' profile
+        WHEN building display config
+        THEN enabled metrics match WEATHER_TEMPLATES['wandern']."""
+>       from app.metric_catalog import (
+            WEATHER_TEMPLATES,
+            build_default_display_config_for_profile,
+        )
+E       ImportError: cannot import name 'WEATHER_TEMPLATES' from 'app.metric_catalog' (/home/hem/gregor_zwanzig/src/app/metric_catalog.py)
+
+tests/tdd/test_weather_templates.py:163: ImportError
+_ TestBuildDefaultDisplayConfigUpdated.test_wintersport_profile_uses_weather_templates _
+
+self = <tdd.test_weather_templates.TestBuildDefaultDisplayConfigUpdated object at 0x7c270c495730>
+
+    def test_wintersport_profile_uses_weather_templates(self):
+        """GIVEN a 'wintersport' profile
+        WHEN building display config
+        THEN enabled metrics match WEATHER_TEMPLATES['wintersport']."""
+>       from app.metric_catalog import (
+            WEATHER_TEMPLATES,
+            build_default_display_config_for_profile,
+        )
+E       ImportError: cannot import name 'WEATHER_TEMPLATES' from 'app.metric_catalog' (/home/hem/gregor_zwanzig/src/app/metric_catalog.py)
+
+tests/tdd/test_weather_templates.py:180: ImportError
+_ TestBuildDefaultDisplayConfigUpdated.test_allgemein_profile_uses_weather_templates _
+
+self = <tdd.test_weather_templates.TestBuildDefaultDisplayConfigUpdated object at 0x7c270c4953d0>
+
+    def test_allgemein_profile_uses_weather_templates(self):
+        """GIVEN an 'allgemein' profile
+        WHEN building display config
+        THEN enabled metrics match WEATHER_TEMPLATES['allgemein']."""
+>       from app.metric_catalog import (
+            WEATHER_TEMPLATES,
+            build_default_display_config_for_profile,
+        )
+E       ImportError: cannot import name 'WEATHER_TEMPLATES' from 'app.metric_catalog' (/home/hem/gregor_zwanzig/src/app/metric_catalog.py)
+
+tests/tdd/test_weather_templates.py:197: ImportError
+_______________ TestTemplatesEndpoint.test_endpoint_returns_200 ________________
+
+self = <tdd.test_weather_templates.TestTemplatesEndpoint object at 0x7c270c495040>
+
+    def test_endpoint_returns_200(self):
+        """GIVEN the FastAPI app
+        WHEN calling GET /templates
+        THEN it returns 200."""
+        from fastapi.testclient import TestClient
+        from api.main import app
+    
+        client = TestClient(app)
+        response = client.get("/templates")
+>       assert response.status_code == 200
+E       assert 404 == 200
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+tests/tdd/test_weather_templates.py:228: AssertionError
+____________ TestTemplatesEndpoint.test_endpoint_returns_list_of_7 _____________
+
+self = <tdd.test_weather_templates.TestTemplatesEndpoint object at 0x7c270c4951c0>
+
+    def test_endpoint_returns_list_of_7(self):
+        """GIVEN GET /templates
+        WHEN parsing response
+        THEN it contains 7 templates."""
+        from fastapi.testclient import TestClient
+        from api.main import app
+    
+        client = TestClient(app)
+        response = client.get("/templates")
+        data = response.json()
+>       assert isinstance(data, list)
+E       AssertionError: assert False
+E        +  where False = isinstance({'detail': 'Not Found'}, list)
+
+tests/tdd/test_weather_templates.py:240: AssertionError
+____________ TestTemplatesEndpoint.test_endpoint_template_structure ____________
+
+self = <tdd.test_weather_templates.TestTemplatesEndpoint object at 0x7c270c495310>
+
+    def test_endpoint_template_structure(self):
+        """GIVEN GET /templates response
+        WHEN inspecting first template
+        THEN it has id, label, metrics keys."""
+        from fastapi.testclient import TestClient
+        from api.main import app
+    
+        client = TestClient(app)
+        response = client.get("/templates")
+>       first = response.json()[0]
+                ^^^^^^^^^^^^^^^^^^
+E       KeyError: 0
+
+tests/tdd/test_weather_templates.py:252: KeyError
+__________ TestTemplatesEndpoint.test_endpoint_alpen_trekking_metrics __________
+
+self = <tdd.test_weather_templates.TestTemplatesEndpoint object at 0x7c270c69fe60>
+
+    def test_endpoint_alpen_trekking_metrics(self):
+        """GIVEN GET /templates response
+        WHEN finding alpen-trekking
+        THEN it has 14 metrics including freezing_level."""
+        from fastapi.testclient import TestClient
+        from api.main import app
+    
+        client = TestClient(app)
+        data = client.get("/templates").json()
+>       alpen = next(t for t in data if t["id"] == "alpen-trekking")
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_weather_templates.py:266: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+.0 = <dict_keyiterator object at 0x7c270b833510>
+
+>   alpen = next(t for t in data if t["id"] == "alpen-trekking")
+                                    ^^^^^^^
+E   TypeError: string indices must be integers, not 'str'
+
+tests/tdd/test_weather_templates.py:266: TypeError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_weather_templates.py::TestWeatherTemplatesRegistry::test_weather_templates_exists
+FAILED tests/tdd/test_weather_templates.py::TestWeatherTemplatesRegistry::test_all_template_ids_present
+FAILED tests/tdd/test_weather_templates.py::TestWeatherTemplatesRegistry::test_each_template_has_label_and_metrics
+FAILED tests/tdd/test_weather_templates.py::TestWeatherTemplatesRegistry::test_all_metric_ids_valid
+FAILED tests/tdd/test_weather_templates.py::TestWeatherTemplatesRegistry::test_alpen_trekking_has_14_metrics
+FAILED tests/tdd/test_weather_templates.py::TestWeatherTemplatesRegistry::test_allgemein_has_7_metrics
+FAILED tests/tdd/test_weather_templates.py::TestWeatherTemplatesRegistry::test_profile_metric_ids_removed
+FAILED tests/tdd/test_weather_templates.py::TestGetAllTemplates::test_returns_list
+FAILED tests/tdd/test_weather_templates.py::TestGetAllTemplates::test_returns_7_templates
+FAILED tests/tdd/test_weather_templates.py::TestGetAllTemplates::test_template_structure
+FAILED tests/tdd/test_weather_templates.py::TestGetAllTemplates::test_first_template_is_alpen_trekking
+FAILED tests/tdd/test_weather_templates.py::TestBuildDefaultDisplayConfigUpdated::test_wandern_profile_uses_weather_templates
+FAILED tests/tdd/test_weather_templates.py::TestBuildDefaultDisplayConfigUpdated::test_wintersport_profile_uses_weather_templates
+FAILED tests/tdd/test_weather_templates.py::TestBuildDefaultDisplayConfigUpdated::test_allgemein_profile_uses_weather_templates
+FAILED tests/tdd/test_weather_templates.py::TestTemplatesEndpoint::test_endpoint_returns_200
+FAILED tests/tdd/test_weather_templates.py::TestTemplatesEndpoint::test_endpoint_returns_list_of_7
+FAILED tests/tdd/test_weather_templates.py::TestTemplatesEndpoint::test_endpoint_template_structure
+FAILED tests/tdd/test_weather_templates.py::TestTemplatesEndpoint::test_endpoint_alpen_trekking_metrics
+============================== 18 failed in 0.45s ==============================
