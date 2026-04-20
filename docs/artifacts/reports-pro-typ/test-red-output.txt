@@ -1,0 +1,262 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 14 items
+
+tests/tdd/test_reports_pro_typ.py FFFFFFFFFF.FFF                         [100%]
+
+=================================== FAILURES ===================================
+________________ TestGetMetricsForReportType.test_method_exists ________________
+
+self = <tdd.test_reports_pro_typ.TestGetMetricsForReportType object at 0x7c7406173ad0>
+
+    def test_method_exists(self):
+        """GIVEN UnifiedWeatherDisplayConfig
+        WHEN calling get_metrics_for_report_type
+        THEN it should exist and be callable."""
+        dc = _build_dc([("temperature", True, None, None)])
+>       result = dc.get_metrics_for_report_type("morning")
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'UnifiedWeatherDisplayConfig' object has no attribute 'get_metrics_for_report_type'
+
+tests/tdd/test_reports_pro_typ.py:51: AttributeError
+______ TestGetMetricsForReportType.test_none_inherits_global_enabled_true ______
+
+self = <tdd.test_reports_pro_typ.TestGetMetricsForReportType object at 0x7c7406172420>
+
+    def test_none_inherits_global_enabled_true(self):
+        """GIVEN metric with enabled=True, morning_enabled=None
+        WHEN getting metrics for morning
+        THEN metric is included (inherits global)."""
+        dc = _build_dc([("temperature", True, None, None)])
+>       ids = [mc.metric_id for mc in dc.get_metrics_for_report_type("morning")]
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'UnifiedWeatherDisplayConfig' object has no attribute 'get_metrics_for_report_type'
+
+tests/tdd/test_reports_pro_typ.py:59: AttributeError
+_____ TestGetMetricsForReportType.test_none_inherits_global_enabled_false ______
+
+self = <tdd.test_reports_pro_typ.TestGetMetricsForReportType object at 0x7c7405f38950>
+
+    def test_none_inherits_global_enabled_false(self):
+        """GIVEN metric with enabled=False, morning_enabled=None
+        WHEN getting metrics for morning
+        THEN metric is excluded (inherits global)."""
+        dc = _build_dc([("temperature", False, None, None)])
+>       ids = [mc.metric_id for mc in dc.get_metrics_for_report_type("morning")]
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'UnifiedWeatherDisplayConfig' object has no attribute 'get_metrics_for_report_type'
+
+tests/tdd/test_reports_pro_typ.py:67: AttributeError
+_____ TestGetMetricsForReportType.test_morning_false_overrides_global_true _____
+
+self = <tdd.test_reports_pro_typ.TestGetMetricsForReportType object at 0x7c7405f39130>
+
+    def test_morning_false_overrides_global_true(self):
+        """GIVEN metric with enabled=True, morning_enabled=False
+        WHEN getting metrics for morning
+        THEN metric is excluded (override)."""
+        dc = _build_dc([("wind", True, False, None)])
+>       ids = [mc.metric_id for mc in dc.get_metrics_for_report_type("morning")]
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'UnifiedWeatherDisplayConfig' object has no attribute 'get_metrics_for_report_type'
+
+tests/tdd/test_reports_pro_typ.py:75: AttributeError
+_____ TestGetMetricsForReportType.test_morning_true_overrides_global_false _____
+
+self = <tdd.test_reports_pro_typ.TestGetMetricsForReportType object at 0x7c7405f39910>
+
+    def test_morning_true_overrides_global_false(self):
+        """GIVEN metric with enabled=False, morning_enabled=True
+        WHEN getting metrics for morning
+        THEN metric is included (override)."""
+        dc = _build_dc([("uv_index", False, True, None)])
+>       ids = [mc.metric_id for mc in dc.get_metrics_for_report_type("morning")]
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'UnifiedWeatherDisplayConfig' object has no attribute 'get_metrics_for_report_type'
+
+tests/tdd/test_reports_pro_typ.py:83: AttributeError
+_____ TestGetMetricsForReportType.test_evening_false_overrides_global_true _____
+
+self = <tdd.test_reports_pro_typ.TestGetMetricsForReportType object at 0x7c7405f39970>
+
+    def test_evening_false_overrides_global_true(self):
+        """GIVEN metric with enabled=True, evening_enabled=False
+        WHEN getting metrics for evening
+        THEN metric is excluded."""
+        dc = _build_dc([("wind", True, None, False)])
+>       ids = [mc.metric_id for mc in dc.get_metrics_for_report_type("evening")]
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'UnifiedWeatherDisplayConfig' object has no attribute 'get_metrics_for_report_type'
+
+tests/tdd/test_reports_pro_typ.py:91: AttributeError
+_____ TestGetMetricsForReportType.test_evening_true_overrides_global_false _____
+
+self = <tdd.test_reports_pro_typ.TestGetMetricsForReportType object at 0x7c7405f398b0>
+
+    def test_evening_true_overrides_global_false(self):
+        """GIVEN metric with enabled=False, evening_enabled=True
+        WHEN getting metrics for evening
+        THEN metric is included."""
+        dc = _build_dc([("freezing_level", False, None, True)])
+>       ids = [mc.metric_id for mc in dc.get_metrics_for_report_type("evening")]
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'UnifiedWeatherDisplayConfig' object has no attribute 'get_metrics_for_report_type'
+
+tests/tdd/test_reports_pro_typ.py:99: AttributeError
+______ TestGetMetricsForReportType.test_different_sets_morning_vs_evening ______
+
+self = <tdd.test_reports_pro_typ.TestGetMetricsForReportType object at 0x7c7405f3a780>
+
+    def test_different_sets_morning_vs_evening(self):
+        """GIVEN metrics configured differently for morning vs evening
+        WHEN getting metrics for each type
+        THEN different sets are returned."""
+        dc = _build_dc([
+            # temp: both (global enabled)
+            ("temperature", True, None, None),
+            # uv: morning only
+            ("uv_index", True, True, False),
+            # freezing_level: evening only
+            ("freezing_level", True, False, True),
+        ])
+>       morning_ids = {mc.metric_id for mc in dc.get_metrics_for_report_type("morning")}
+                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'UnifiedWeatherDisplayConfig' object has no attribute 'get_metrics_for_report_type'
+
+tests/tdd/test_reports_pro_typ.py:114: AttributeError
+_________ TestGetMetricsForReportType.test_alert_type_uses_global_only _________
+
+self = <tdd.test_reports_pro_typ.TestGetMetricsForReportType object at 0x7c7405f3ade0>
+
+    def test_alert_type_uses_global_only(self):
+        """GIVEN metric with morning_enabled=False but enabled=True
+        WHEN getting metrics for 'alert'
+        THEN it uses global enabled (ignores morning/evening flags)."""
+        dc = _build_dc([("wind", True, False, False)])
+>       ids = [mc.metric_id for mc in dc.get_metrics_for_report_type("alert")]
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'UnifiedWeatherDisplayConfig' object has no attribute 'get_metrics_for_report_type'
+
+tests/tdd/test_reports_pro_typ.py:129: AttributeError
+______ TestGetMetricsForReportType.test_all_none_returns_same_as_enabled _______
+
+self = <tdd.test_reports_pro_typ.TestGetMetricsForReportType object at 0x7c7405f39310>
+
+    def test_all_none_returns_same_as_enabled(self):
+        """GIVEN all morning_enabled/evening_enabled are None
+        WHEN getting metrics for morning
+        THEN result matches global enabled set (regression protection)."""
+        dc = _build_dc([
+            ("temperature", True, None, None),
+            ("wind", True, None, None),
+            ("snow_depth", False, None, None),
+        ])
+>       morning_ids = {mc.metric_id for mc in dc.get_metrics_for_report_type("morning")}
+                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'UnifiedWeatherDisplayConfig' object has no attribute 'get_metrics_for_report_type'
+
+tests/tdd/test_reports_pro_typ.py:141: AttributeError
+____ TestSerializationRoundtrip.test_trip_to_dict_includes_morning_evening _____
+
+self = <tdd.test_reports_pro_typ.TestSerializationRoundtrip object at 0x7c7405f39550>
+
+    def test_trip_to_dict_includes_morning_evening(self):
+        """GIVEN a Trip with per-type metric flags
+        WHEN calling _trip_to_dict()
+        THEN the output dict contains morning_enabled/evening_enabled."""
+        from app.loader import _trip_to_dict
+        from app.trip import Trip, Stage, Waypoint
+        from datetime import date, time as dtime
+    
+        dc = _build_dc([
+            ("temperature", True, True, False),
+        ])
+    
+        trip = Trip(
+            id="test-rpt",
+            name="Test Trip",
+            stages=[Stage(
+                id="S1", name="Stage 1", date=date(2026, 5, 1),
+                waypoints=[
+                    Waypoint(id="W1", name="Start", lat=47.0, lon=11.0, elevation_m=500),
+                    Waypoint(id="W2", name="End", lat=47.1, lon=11.1, elevation_m=800),
+                ],
+                start_time=dtime(9, 0),
+            )],
+            display_config=dc,
+        )
+        result = _trip_to_dict(trip)
+    
+        # Check that morning_enabled is in the serialized metrics
+        metrics_list = result.get("display_config", {}).get("metrics", [])
+        assert len(metrics_list) > 0
+        temp_dict = metrics_list[0]
+>       assert "morning_enabled" in temp_dict, (
+            "_trip_to_dict must serialize morning_enabled"
+        )
+E       AssertionError: _trip_to_dict must serialize morning_enabled
+E       assert 'morning_enabled' in {'aggregations': ['min', 'max'], 'alert_enabled': False, 'alert_threshold': None, 'enabled': True, ...}
+
+tests/tdd/test_reports_pro_typ.py:233: AssertionError
+_ TestFormatterPerTypeFiltering.test_morning_report_excludes_evening_only_metric _
+
+self = <tdd.test_reports_pro_typ.TestFormatterPerTypeFiltering object at 0x7c7405f39250>
+
+    def test_morning_report_excludes_evening_only_metric(self):
+        """GIVEN display_config with freezing_level as evening-only
+        WHEN formatting a morning report
+        THEN freezing_level column is absent from email."""
+        from app.models import MetricConfig, UnifiedWeatherDisplayConfig
+        from formatters.trip_report import TripReportFormatter
+        from app.metric_catalog import get_metric
+    
+        dc = _build_dc([
+            ("temperature", True, None, None),
+            ("freezing_level", True, False, True),  # evening only
+        ])
+    
+        formatter = TripReportFormatter()
+        # We need real segment data — use a minimal approach
+        # The formatter should filter metrics BEFORE rendering
+        # Test via get_metrics_for_report_type on dc
+>       morning_ids = {mc.metric_id for mc in dc.get_metrics_for_report_type("morning")}
+                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'UnifiedWeatherDisplayConfig' object has no attribute 'get_metrics_for_report_type'
+
+tests/tdd/test_reports_pro_typ.py:268: AttributeError
+_ TestFormatterPerTypeFiltering.test_evening_report_includes_evening_only_metric _
+
+self = <tdd.test_reports_pro_typ.TestFormatterPerTypeFiltering object at 0x7c7405f38740>
+
+    def test_evening_report_includes_evening_only_metric(self):
+        """GIVEN display_config with freezing_level as evening-only
+        WHEN formatting an evening report
+        THEN freezing_level is included."""
+        dc = _build_dc([
+            ("temperature", True, None, None),
+            ("freezing_level", True, False, True),  # evening only
+        ])
+    
+>       evening_ids = {mc.metric_id for mc in dc.get_metrics_for_report_type("evening")}
+                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'UnifiedWeatherDisplayConfig' object has no attribute 'get_metrics_for_report_type'
+
+tests/tdd/test_reports_pro_typ.py:281: AttributeError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_reports_pro_typ.py::TestGetMetricsForReportType::test_method_exists
+FAILED tests/tdd/test_reports_pro_typ.py::TestGetMetricsForReportType::test_none_inherits_global_enabled_true
+FAILED tests/tdd/test_reports_pro_typ.py::TestGetMetricsForReportType::test_none_inherits_global_enabled_false
+FAILED tests/tdd/test_reports_pro_typ.py::TestGetMetricsForReportType::test_morning_false_overrides_global_true
+FAILED tests/tdd/test_reports_pro_typ.py::TestGetMetricsForReportType::test_morning_true_overrides_global_false
+FAILED tests/tdd/test_reports_pro_typ.py::TestGetMetricsForReportType::test_evening_false_overrides_global_true
+FAILED tests/tdd/test_reports_pro_typ.py::TestGetMetricsForReportType::test_evening_true_overrides_global_false
+FAILED tests/tdd/test_reports_pro_typ.py::TestGetMetricsForReportType::test_different_sets_morning_vs_evening
+FAILED tests/tdd/test_reports_pro_typ.py::TestGetMetricsForReportType::test_alert_type_uses_global_only
+FAILED tests/tdd/test_reports_pro_typ.py::TestGetMetricsForReportType::test_all_none_returns_same_as_enabled
+FAILED tests/tdd/test_reports_pro_typ.py::TestSerializationRoundtrip::test_trip_to_dict_includes_morning_evening
+FAILED tests/tdd/test_reports_pro_typ.py::TestFormatterPerTypeFiltering::test_morning_report_excludes_evening_only_metric
+FAILED tests/tdd/test_reports_pro_typ.py::TestFormatterPerTypeFiltering::test_evening_report_includes_evening_only_metric
+========================= 13 failed, 1 passed in 0.19s =========================
