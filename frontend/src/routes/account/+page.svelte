@@ -106,19 +106,6 @@
 		}
 	}
 
-	function formatDate(iso: string | null | undefined): string {
-		if (!iso) return '—';
-		try {
-			return new Date(iso).toLocaleDateString('de-AT', {
-				year: 'numeric',
-				month: '2-digit',
-				day: '2-digit',
-			});
-		} catch {
-			return iso;
-		}
-	}
-
 	// --- System-Status helpers (migrated from settings) ---
 
 	function timeAgo(iso: string): string {

@@ -7,6 +7,7 @@
 	import * as Table from '$lib/components/ui/table/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import LocationForm from '$lib/components/LocationForm.svelte';
+	import SubscriptionForm from '$lib/components/SubscriptionForm.svelte';
 	import CloudSunIcon from '@lucide/svelte/icons/cloud-sun';
 	import { weatherEmoji, degToCardinal } from '$lib/utils/weatherEmoji.js';
 
@@ -39,6 +40,38 @@
 	let error = $state('');
 	let result: CompareResult | null = $state(null);
 	let showNewLocDialog = $state(false);
+	let showSaveAsSubDialog = $state(false);
+	let saveSubError = $state<string | null>(null);
+
+	let prefilledSub = $derived({
+		id: '',
+		name: '',
+		enabled: true,
+		schedule: 'daily_morning' as const,
+		weekday: 0,
+		time_window_start: twStart,
+		time_window_end: twEnd,
+		forecast_hours: forecastHours,
+		top_n: 3,
+		include_hourly: false,
+		send_email: true,
+		send_signal: false,
+		send_telegram: false,
+		locations: allSelected ? ['*'] : selectedIds,
+		activity_profile: activityProfile,
+	});
+
+	async function handleSaveAsSub(sub: Subscription) {
+		saveSubError = null;
+		try {
+			await api.post('/api/subscriptions', sub);
+			subscriptions = [...subscriptions, sub];
+			showSaveAsSubDialog = false;
+		} catch (e: unknown) {
+			const body = e as { detail?: string; error?: string };
+			saveSubError = body?.detail ?? body?.error ?? 'Fehler beim Speichern';
+		}
+	}
 	let weatherLocationId: string | null = $state(null);
 	let weatherForecast: ForecastResponse | null = $state(null);
 	let weatherLoading = $state(false);
@@ -651,6 +684,18 @@
 				</Card.Content>
 			</Card.Root>
 		{/if}
+
+		<!-- Save as Subscription Button -->
+		{#if !showSaveAsSubDialog}
+		<div class="flex justify-end mt-4">
+			<button
+				onclick={() => showSaveAsSubDialog = true}
+				class="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+			>
+				Als Auto-Report speichern
+			</button>
+		</div>
+		{/if}
 	{/if}
 	</div>
 </div>
@@ -668,6 +713,26 @@
 			<LocationForm
 				onsave={handleNewLocSave}
 				oncancel={() => showNewLocDialog = false}
+			/>
+		{/if}
+	</Dialog.Content>
+</Dialog.Root>
+
+<!-- Save as Subscription Dialog -->
+<Dialog.Root open={showSaveAsSubDialog} onOpenChange={(open) => { if (!open) { showSaveAsSubDialog = false; saveSubError = null; } }}>
+	<Dialog.Content class="max-h-[80vh] max-w-lg overflow-y-auto">
+		<Dialog.Header>
+			<Dialog.Title>Als Auto-Report speichern</Dialog.Title>
+		</Dialog.Header>
+		{#if saveSubError}
+			<p class="text-sm text-destructive mb-2">{saveSubError}</p>
+		{/if}
+		{#if showSaveAsSubDialog}
+			<SubscriptionForm
+				subscription={prefilledSub}
+				{locations}
+				onsave={handleSaveAsSub}
+				oncancel={() => { showSaveAsSubDialog = false; saveSubError = null; }}
 			/>
 		{/if}
 	</Dialog.Content>

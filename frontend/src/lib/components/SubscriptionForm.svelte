@@ -72,7 +72,7 @@
 		}
 
 		const result: Subscription = {
-			id: subscription?.id ?? toKebab(name),
+			id: subscription?.id || toKebab(name),
 			name: name.trim(),
 			enabled,
 			schedule,
