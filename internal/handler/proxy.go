@@ -98,6 +98,7 @@ func CompareProxyHandler(pythonURL string) http.HandlerFunc {
 }
 
 // ProxyPostHandler proxies POST requests to Python with query string forwarding.
+// Forwards the original request body and Content-Type header.
 func ProxyPostHandler(pythonURL, path string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		client := &http.Client{Timeout: 120 * time.Second}
@@ -108,7 +109,16 @@ func ProxyPostHandler(pythonURL, path string) http.HandlerFunc {
 			url += "?" + query
 		}
 
-		resp, err := client.Post(url, "application/json", nil)
+		req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, url, r.Body)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(500)
+			w.Write([]byte(`{"error":"proxy_error"}`))
+			return
+		}
+		req.Header.Set("Content-Type", r.Header.Get("Content-Type"))
+
+		resp, err := client.Do(req)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(503)

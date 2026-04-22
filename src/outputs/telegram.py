@@ -4,6 +4,7 @@ import logging
 import httpx
 
 from app.config import Settings
+from outputs.base import OutputError
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +51,10 @@ class TelegramOutput:
                     response.status_code,
                     response.text[:200],
                 )
+                raise OutputError(f"Telegram API returned status {response.status_code}")
         except httpx.TimeoutException:
             logger.error("Telegram send timed out after %ds (subject=%r)", self._timeout, subject)
+            raise OutputError(f"Telegram send timed out after {self._timeout}s")
         except httpx.HTTPError as exc:
             logger.error("Telegram send failed: %s", exc)
+            raise OutputError(f"Telegram send failed: {exc}") from exc
