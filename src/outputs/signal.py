@@ -5,6 +5,7 @@ import urllib.parse
 import httpx
 
 from app.config import Settings
+from outputs.base import OutputError
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +48,10 @@ class SignalOutput:
                     response.status_code,
                     response.text[:200],
                 )
+                raise OutputError(f"Callmebot returned status {response.status_code}")
         except httpx.TimeoutException:
             logger.error("Signal send timed out after %ds (subject=%r)", self._timeout, subject)
+            raise OutputError(f"Signal send timed out after {self._timeout}s")
         except httpx.HTTPError as exc:
             logger.error("Signal send failed: %s", exc)
+            raise OutputError(f"Signal send failed: {exc}") from exc
