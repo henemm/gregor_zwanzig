@@ -209,9 +209,9 @@ class TestSettingsRenamed:
 
     def test_settings_page_heading(self, browser_context):
         """
-        GIVEN: The settings page is loaded
+        GIVEN: /settings is visited (301 redirect to /account since F76 settings-merge)
         WHEN: Looking at the page heading
-        THEN: It should say 'System-Status' not 'Einstellungen'
+        THEN: It should say 'Mein Konto' (settings content merged into account page)
         """
         page = browser_context.new_page()
         page.goto(f"{FRONTEND_URL}/settings")
@@ -221,7 +221,6 @@ class TestSettingsRenamed:
         text = heading.text_content() or ""
         page.close()
 
-        # RED: Currently says "Einstellungen"
-        assert text.strip() == "System-Status", (
-            f"Settings page heading is '{text.strip()}', expected 'System-Status'"
+        assert text.strip() == "Mein Konto", (
+            f"Settings redirect destination heading is '{text.strip()}', expected 'Mein Konto'"
         )

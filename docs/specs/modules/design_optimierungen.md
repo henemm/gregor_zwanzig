@@ -2,10 +2,10 @@
 entity_id: design_optimierungen
 type: module
 created: 2026-04-17
-updated: 2026-04-17
+updated: 2026-04-22
 status: draft
 version: "1.0"
-tags: [sveltekit, frontend, ui, design, f74]
+tags: [sveltekit, frontend, ui, design, f74, f76]
 ---
 
 # F74 — Design-Optimierungen (Sidebar, Hintergrund, Footer, Navigation)
@@ -22,8 +22,10 @@ Verbessert die visuelle Qualitaet des SvelteKit-Frontends in vier gezielten Punk
 
 - **File:** `frontend/src/routes/+layout.svelte` **(EDIT, ~15 LoC)**
 - **File:** `frontend/src/app.css` **(EDIT, 1 LoC)**
-- **File:** `frontend/src/routes/settings/+page.svelte` **(EDIT, 1 LoC)**
-- **Identifier:** `<nav>` (Sidebar), `<main>`, Account-Footer-Block, Nav-Item-Label
+- **File:** `frontend/src/routes/account/+page.svelte` **(EDIT, system-status section)**
+- **File:** `frontend/src/routes/account/+page.server.ts` **(EDIT, loads scheduler, health, templates, trips, subscriptions, locations)**
+- **File:** `frontend/src/routes/settings/+page.server.ts` **(DELETED as original page, now 301-redirect to /account)**
+- **Identifier:** `<nav>` (Sidebar), `<main>`, Account-Footer-Block, Nav-Item-Label, `id="system-status"` anchor on account page
 
 ## Dependencies
 
@@ -86,21 +88,22 @@ Der Nav-Eintrag "Konto" entfaellt aus der Hauptnavigation — Zugang erfolgt ueb
 
 Neue Imports: `ChevronUp`, `LogOut` aus `@lucide/svelte`.
 
-### Aenderung 4: "Einstellungen" → "System-Status"
+### Aenderung 4: "Einstellungen" → "System-Status" + Route-Merge
 
 **Datei 4a:** `frontend/src/routes/+layout.svelte`
 
 - Import: `SettingsIcon` ersetzt durch `MonitorIcon` aus `@lucide/svelte/icons/monitor`
 - "Einstellungen" wird aus der Sidebar-Navigation entfernt
 - Zugang zu System-Status erfolgt ueber das User-Dropdown im Footer
-- Route `/settings` bleibt unveraendert — kein Dateisystem-Rename.
+- Nav-Link zeigt jetzt auf `/account#system-status` statt `/settings`
 
-**Datei 4b:** `frontend/src/routes/settings/+page.svelte`, Zeile 41
+**Datei 4b:** `frontend/src/routes/account/+page.svelte`
 
-```diff
-- <h1 ...>Einstellungen</h1>
-+ <h1 ...>System-Status</h1>
-```
+System-Status-Inhalte sind jetzt direkt in die Account-Page integriert unter der Sektion mit `id="system-status"`. Das Seiten-Heading bleibt "Mein Konto".
+
+**Datei 4c:** `frontend/src/routes/settings/+page.server.ts`
+
+Traegt jetzt nur noch einen 301-Redirect zu `/account` aus (Backward-Kompatibilitaet). Die urspruengliche `+page.svelte` wurde geloescht.
 
 ## Expected Behavior
 
@@ -110,7 +113,9 @@ Neue Imports: `ChevronUp`, `LogOut` aus `@lucide/svelte`.
   - Inhaltsbereich erscheint im Light Mode auf reinem Weiss (`#ffffff`) statt leicht grauem Hintergrund
   - Sidebar-Footer zeigt Avatar-Badge (Initiale + Username + Chevron) mit Dropdown-Menue (Konto, System-Status, Dark Mode, Abmelden)
   - "Konto" und "System-Status" sind nur noch ueber das User-Dropdown erreichbar, nicht mehr als Sidebar-Nav-Eintraege
-  - Seiten-Heading auf `/settings` lautet "System-Status"
+  - Besuch von `/settings` wird zu `/account` redirected (301)
+  - System-Status ist unter `/account#system-status` (Anker) erreichbar
+  - Seiten-Heading auf `/account` lautet "Mein Konto"
 - **Side effects:** Keine. Dark Mode, Mobile Layout (unveraendertes Spacing), Session-Handling und alle Backend-Calls bleiben unberuehrt.
 
 ### Nicht-Ziele
@@ -126,4 +131,5 @@ Neue Imports: `ChevronUp`, `LogOut` aus `@lucide/svelte`.
 
 ## Changelog
 
+- 2026-04-22: F76 Nav Redesign | Settings page merged into /account; /settings now 301-redirects; account page loads scheduler, health, templates, trips, subscriptions, locations in parallel; system-status section now under id="system-status" anchor
 - 2026-04-17: Initial spec (F74 Design-Optimierungen, GitHub Issue #74)

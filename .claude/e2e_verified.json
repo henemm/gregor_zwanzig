@@ -1,5 +1,5 @@
 {
-  "verified_at": "2026-04-20T20:36:16.589508+00:00",
+  "verified_at": "2026-04-23T12:48:13.767690+00:00",
   "server_restarted": true,
   "test_trip_created": true,
   "reports_sent": [
@@ -8,9 +8,11 @@
   "emails_checked": true,
   "test_trip_cleaned": true,
   "feature_checks": [
-    "5x 301 Redirects in SvelteKit (locations, subscriptions, weather, gpx-upload, settings)",
-    "NiceGUI legacy routes + header entfernt",
-    "Server startet fehlerfrei mit neuem main.py",
-    "Report-Pipeline funktioniert weiterhin (Evening Report gesendet + empfangen)"
+    "Evening Report: E-Mail empfangen (6206 Zeichen HTML, 4 Tabellen, 0 N/A)",
+    "/settings \u2192 /account: 301-Redirect OK",
+    "Account-Page H1: Mein Konto OK",
+    "#system-status Section vorhanden",
+    "Nav-Link /account#system-status im Footer-Dropdown OK",
+    "Frontend neu gebaut und deployed (port 3000)"
   ]
 }
