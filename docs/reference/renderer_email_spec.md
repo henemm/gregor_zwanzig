@@ -26,9 +26,14 @@ Note: "Gregor Zwanzig" appears as the sender name and does not need to be repeat
 ### 2) Token Line
 - First block of the body.
 - Exact 1:1 copy of the SMS token line.
-- Example:  
+- **Format-Definition:** siehe [`docs/reference/sms_format.md`](sms_format.md) (v2.0) — Single Source of Truth.
+- Beispiel (mit Vigilance-Block und Fire-Block für Korsika):
   ```
-  Monte: N15 D25 R- PR20%@14 W22@14(28@16) G35@14(48@17) TH:M@14 DBG[MET MED]
+  Paliri: N8 D24 R0.2@6(1.4@16) PR20%@11(100%@17) W10@11(15@17) G20@11(30@17) TH:M@16(H@18) TH+:M@14(H@17) HR:M@17TH:H@17 Z:HIGH208 M:24
+  ```
+- Beispiel (ohne Vigilance/Fire, internationaler Trip):
+  ```
+  Monte: N15 D25 R- PR20%@14 W22@14(28@16) G35@14(48@17) TH:M@14 TH+:- DBG[MET MED]
   ```
 
 ### 3) Human-Friendly Summary
