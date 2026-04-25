@@ -221,19 +221,25 @@ TA_30MIN_MEAN (°C) -> t2m_c
 
 ## 5. SMS-Token Erweiterung
 
-Neue Tokens fuer Wintersport:
+> 📌 **Token-Definitionen sind in der zentralen Spec dokumentiert:**
+> [`docs/reference/sms_format.md`](../reference/sms_format.md) §3.6 (Wintersport-Tokens).
+> Diese Sektion hier dient nur als Übersicht — die Reihenfolge, Null-Handling,
+> Truncation-Strategie und Datenquellen-Mapping sind ausschließlich in der
+> zentralen Spec geregelt.
+
+Wintersport-spezifische Tokens (optional, nur bei `trip.profile == "wintersport"`):
 
 ```
 SN{cm}         # Schneehoehe gesamt
-SN24{cm}       # Neuschnee 24h
+SN24+{cm}      # Neuschnee 24h
 SFL{m}         # Schneefallgrenze
 AV{1-5}        # Lawinenstufe
 WC{temp}       # Wind Chill
 ```
 
-**Beispiel:**
+**Beispiel (gemäß sms_format.md v2.0 Reihenfolge):**
 ```
-Arlberg: D-5 N-12 SN180 SN24+25 SFL1800 AV3 W45@12 G78@14 WC-22
+Arlberg: N-12 D-5 SN180 SN24+25 SFL1800 AV3 W45@12 G78@14(85@16) WC-22
 ```
 
 ---

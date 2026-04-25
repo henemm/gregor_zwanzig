@@ -2,11 +2,33 @@
 entity_id: sms_trip_formatter
 type: feature
 created: 2026-02-03
-status: draft
+updated: 2026-04-25
+status: deprecated
 workflow: Feature 3.2: SMS Compact Formatter
+deprecated_reason: "Format weicht von kanonischer Spec ab"
+superseded_by: docs/reference/sms_format.md
 ---
 
 # SMS Trip Formatter
+
+> ⚠️ **DEPRECATED — diese Spec ist überholt.**
+>
+> Das hier beschriebene Format `E1:T12/18 W30 R5mm | E2:...` widerspricht der
+> kanonischen Token-Zeilen-Spezifikation in
+> [`docs/reference/sms_format.md`](../../reference/sms_format.md) (v2.0).
+>
+> Die kanonische Spec ist die **Single Source of Truth** für alle kompakten
+> Wetter-Repräsentationen (SMS, Satellit, E-Mail-Subject, Push). Eine
+> Re-Implementierung des Formatters auf Basis von `sms_format.md` v2.0 wird
+> in einem separaten Issue erfasst.
+>
+> Der bestehende Code unter `src/formatters/sms_trip.py` ist nicht aktiv
+> eingebunden (`TripReport.sms_text=None`) und wird im Rahmen der
+> Re-Implementierung entweder abgelöst oder migriert.
+>
+> Inhalt unten bleibt als Referenz/Historie erhalten.
+
+---
 
 ## Approval
 
