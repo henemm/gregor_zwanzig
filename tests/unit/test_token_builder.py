@@ -295,3 +295,29 @@ def test_determinism():
     line_a = _build_default_line()
     line_b = _build_default_line()
     assert line_a.render(160) == line_b.render(160)
+
+
+def test_stage_name_umlauts_replaced():
+    """
+    sms_format.md §1/§3.1: Stage-Name darf keine Umlaute enthalten.
+    'Übergangsjoch' (12 Zeichen mit Umlaut) muss zu 'Uebergangsj' werden:
+    ERST Umlaut-Ersatz (Ü→Ue, 13 Zeichen), DANN Truncate auf 10
+    -> 'Uebergangs' + 'j' = 'Uebergangsj'.
+    """
+    line = _build_default_line(stage_name="Übergangsjoch")
+    rendered = line.render(160)
+    assert rendered.startswith("Uebergangsj:"), (
+        f"Stage-Name nicht korrekt sanitized; expected 'Uebergangsj:' prefix in {rendered!r}"
+    )
+
+
+def test_stage_name_truncated_to_ten_chars():
+    """
+    sms_format.md §1/§3.1: Stage-Name max 10 Zeichen.
+    'VeryLongStageName' (17 Zeichen, ASCII) -> 'VeryLongSt'.
+    """
+    line = _build_default_line(stage_name="VeryLongStageName")
+    rendered = line.render(160)
+    assert rendered.startswith("VeryLongSt:"), (
+        f"Stage-Name nicht auf 10 Zeichen gekuerzt; expected 'VeryLongSt:' prefix in {rendered!r}"
+    )
