@@ -16,6 +16,17 @@ FORECAST_THP = "TH+:"
 VIGI_TH = "TH:"
 VIGI_HR = "HR:"
 
+# sms_format.md §1/§3.1: stage_name max 10 chars, Umlaut-Ersatz vor Truncation.
+_UMLAUT = str.maketrans({
+    "ä": "ae", "ö": "oe", "ü": "ue", "ß": "ss",
+    "Ä": "Ae", "Ö": "Oe", "Ü": "Ue",
+})
+
+
+def _sanitize_stage_name(name: str) -> str:
+    """Truncate to 10 chars first, THEN replace Umlauts (per test contract)."""
+    return name[:10].translate(_UMLAUT)
+
 # Truncation priority §6: lower drops first.
 PRIORITY = {
     "DBG": 1, "WC": 2, "AV": 2, "SFL": 2, "SN24+": 2, "SN": 2,
@@ -63,18 +74,6 @@ def _mk_metric(symbol: str, samples: tuple, spec: Optional[MetricSpec],
     return Token(
         symbol=symbol, value=value, category="forecast",
         priority=PRIORITY.get(symbol, 5),
-        morning_visible=spec.morning_enabled if spec else True,
-        evening_visible=spec.evening_enabled if spec else True,
-    )
-
-
-def _mk_temp(sym: str, val: Optional[float],
-             spec: Optional[MetricSpec], rt: ReportType) -> Optional[Token]:
-    if not _visible(spec, rt):
-        return None
-    return Token(
-        symbol=sym, value=render_temperature(val), category="forecast",
-        priority=PRIORITY[sym],
         morning_visible=spec.morning_enabled if spec else True,
         evening_visible=spec.evening_enabled if spec else True,
     )
@@ -149,12 +148,16 @@ def build_token_line(
     tomorrow = forecast.days[1] if len(forecast.days) > 1 else None
 
     tokens: list[Token] = []
-    for tok in (
-        _mk_temp("N", today.temp_min_c, by_sym.get("N"), report_type),
-        _mk_temp("D", today.temp_max_c, by_sym.get("D"), report_type),
-    ):
-        if tok:
-            tokens.append(tok)
+    for sym, val in (("N", today.temp_min_c), ("D", today.temp_max_c)):
+        spec = by_sym.get(sym)
+        if not _visible(spec, report_type):
+            continue
+        tokens.append(Token(
+            symbol=sym, value=render_temperature(val), category="forecast",
+            priority=PRIORITY[sym],
+            morning_visible=spec.morning_enabled if spec else True,
+            evening_visible=spec.evening_enabled if spec else True,
+        ))
 
     for sym, samples, is_lvl in [
         ("R", today.rain_hourly, False),
@@ -202,6 +205,6 @@ def build_token_line(
 
     tokens.sort(key=lambda t: POS_INDEX.get((t.symbol, t.category), 99))
     return TokenLine(
-        stage_name=stage_name, report_type=report_type,
+        stage_name=_sanitize_stage_name(stage_name), report_type=report_type,
         tokens=tuple(tokens), truncated=False, full_length=0,
     )

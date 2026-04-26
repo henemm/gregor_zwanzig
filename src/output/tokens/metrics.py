@@ -56,5 +56,4 @@ def render_temperature(value: Optional[float]) -> str:
     return "-" if value is None else f"{int(round(value))}"
 
 
-def render_int(value: Optional[float]) -> str:
-    return "-" if value is None else f"{int(round(value))}"
+render_int = render_temperature

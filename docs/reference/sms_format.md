@@ -72,7 +72,7 @@ Name-Truncation: bei >10 Zeichen abschneiden, Umlaute zuerst ersetzen.
 | `PR{p}%@{h}({max}%@{h})` / `PR-` | Regenwahrscheinlichkeit Threshold + Peak | Hourly `pop_pct`, Threshold aus `config.rain_probability_threshold` | `PR20%@11(100%@17)` |
 | `W{v}@{h}({max}@{h})` / `W-` | Wind km/h Threshold + Peak | Hourly `wind10m_kmh`, Threshold aus `config.wind_speed_threshold` | `W10@11(15@17)` |
 | `G{v}@{h}({max}@{h})` / `G-` | Böen km/h Threshold + Peak | Hourly `gust_kmh`, Threshold aus `config.wind_gust_threshold` | `G20@11(30@17)` |
-| `TH:{level}@{h}({max}@{h})` / `TH-` | Gewitter-Forecast heute (L/M/H) | Hourly `thunder_level` | `TH:M@16(H@18)` |
+| `TH:{level}@{h}({max}@{h})` / `TH:-` | Gewitter-Forecast heute (L/M/H) | Hourly `thunder_level` | `TH:M@16(H@18)` |
 | `TH+:{level}@{h}({max}@{h})` / `TH+:-` | Gewitter-Forecast morgen | Folgetag, Hourly `thunder_level` | `TH+:M@14(H@17)` |
 
 Levels für `TH`/`TH+`:
@@ -165,7 +165,7 @@ Nur in Dry-Run / Debug-Modus angehängt, ansonsten weggelassen.
 | `N` / `D` | `N-` / `D-` | Bei fehlenden Temperaturen |
 | `R` / `PR` | `R-` / `PR-` | Bei fehlendem oder Sub-Threshold-Niederschlag |
 | `W` / `G` | `W-` / `G-` | Bei fehlendem oder Sub-Threshold-Wind |
-| `TH` / `TH+` | `TH-` / `TH+:-` | Bei fehlendem oder Sub-Threshold-Gewitter |
+| `TH` / `TH+` | `TH:-` / `TH+:-` | Bei fehlendem oder Sub-Threshold-Gewitter |
 | `HR` / `TH` (Vigilance) | `HR:-TH:-` | Bei keiner Vigilance-Warnung; immer paarweise |
 | `Z` / `M` (Fire) | komplett weglassen | Kein `Z:-`, einfach Block entfernen |
 | `SN`/`SN24`/`SFL`/`AV`/`WC` | komplett weglassen | Wintersport-Tokens nicht zwingend |
@@ -216,7 +216,7 @@ Wenn die zusammengesetzte Token-Zeile >160 Zeichen ist, werden Tokens in dieser 
 
 - `{Name}:` ist immer im Output.
 - Mindestens **ein** Wert-/Risk-Token ist Pflicht (z.B. `TH:M@14`, `W22@14`, `R0.2@6` oder `HR:M@17`).
-- Reine Null-Zeilen (`Ballone: N- D- R- PR- W- G- TH- TH+:-`) sind erlaubt und zeigen "alles ruhig".
+- Reine Null-Zeilen (`Ballone: N- D- R- PR- W- G- TH:- TH+:-`) sind erlaubt und zeigen "alles ruhig".
 
 ---
 
@@ -226,7 +226,7 @@ Alle Beispiele sind ≤160 Zeichen.
 
 ### 8.1 Morning Report (Forecast, kein Risiko)
 ```
-Ballone: N9 D16 R- PR10%@14(20%@17) W- G- TH- TH+:-
+Ballone: N9 D16 R- PR10%@14(20%@17) W- G- TH:- TH+:-
 ```
 **Länge:** 51 Zeichen.
 
@@ -262,7 +262,7 @@ Monte: N15 D25 R- PR20%@14 W22@14(28@16) G35@14(48@17) TH:M@14 TH+:- DBG[MET MED
 
 ### 8.7 Alles ruhig (alle Null)
 ```
-Ballone: N9 D16 R- PR- W- G- TH- TH+:-
+Ballone: N9 D16 R- PR- W- G- TH:- TH+:-
 ```
 **Länge:** 38 Zeichen.
 
