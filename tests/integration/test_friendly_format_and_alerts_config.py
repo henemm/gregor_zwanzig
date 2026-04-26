@@ -212,15 +212,10 @@ class TestAlertEnabledConfig:
     """alert_enabled must control which metrics are in change detection."""
 
     def test_default_alert_metrics(self) -> None:
-        """Default config has 5 alert-enabled metrics."""
+        """Per Bug #89 v1.1: default config has zero alert-enabled metrics — opt-in only."""
         dc = build_default_display_config()
         alert_metrics = dc.get_alert_enabled_metrics()
-        alert_ids = {mc.metric_id for mc in alert_metrics}
-        assert "temperature" in alert_ids
-        assert "wind" in alert_ids
-        assert "gust" in alert_ids
-        assert "precipitation" in alert_ids
-        assert "wind_chill" in alert_ids
+        assert alert_metrics == []
 
     def test_cape_not_alert_by_default(self) -> None:
         """Cape is NOT alert-enabled by default."""
@@ -258,16 +253,34 @@ class TestAlertEnabledConfig:
         assert "wind" not in alert_ids
 
     def test_change_detection_uses_alert_config(self) -> None:
-        """WeatherChangeDetectionService.from_display_config() respects alert_enabled."""
+        """WeatherChangeDetectionService.from_display_config() respects alert_enabled.
+
+        Bug #89 v1.1 default: zero alert metrics → zero thresholds. Once we opt-in
+        a few metrics, those thresholds appear in the service.
+        """
         from services.weather_change_detection import WeatherChangeDetectionService
 
         dc = build_default_display_config()
-        service = WeatherChangeDetectionService.from_display_config(dc)
-        # Default: temperature, wind, gust, precipitation, wind_chill
-        # Thresholds use summary field names (e.g. temp_min_c, wind_max_kmh)
-        assert len(service._thresholds) >= 5
-        # Verify some expected summary fields are present
-        threshold_keys = set(service._thresholds.keys())
+        service_default = WeatherChangeDetectionService.from_display_config(dc)
+        assert len(service_default._thresholds) == 0
+
+        opted_in = {"temperature", "wind", "gust"}
+        new_metrics = [
+            MetricConfig(
+                metric_id=mc.metric_id, enabled=mc.enabled,
+                aggregations=mc.aggregations,
+                alert_enabled=mc.metric_id in opted_in,
+            )
+            for mc in dc.metrics
+        ]
+        dc_opt_in = UnifiedWeatherDisplayConfig(
+            trip_id="test", metrics=new_metrics,
+            show_night_block=dc.show_night_block,
+            night_interval_hours=dc.night_interval_hours,
+            thunder_forecast_days=dc.thunder_forecast_days,
+        )
+        service_opt = WeatherChangeDetectionService.from_display_config(dc_opt_in)
+        threshold_keys = set(service_opt._thresholds.keys())
         assert any("temp" in k for k in threshold_keys)
         assert any("wind" in k for k in threshold_keys)
         assert any("gust" in k for k in threshold_keys)

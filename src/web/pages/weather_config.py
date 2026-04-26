@@ -1,34 +1,45 @@
 """
-Weather Config UI - Feature 2.6 Phase 2 (Story 2)
+Weather Config UI - Trip Weather Metrics Dialog
 
-API-aware weather metrics configuration dialog.
+API-aware weather metrics configuration dialog for Trips.
 Shows metrics from MetricCatalog grouped by category with provider-based availability.
+
+REFACTOR Bug #89 (v1.1): Cleanup nach F76-Routen-Aufraeumen
+- Location/Subscription Dialoge entfernt (UI-tot seit F76: /locations und
+  /subscriptions sind 301 -> /compare). Nur noch Trip-Dialog uebrig.
+- _DialogStrategy.full_columns entfernt (nur noch ein Consumer = Trip = full).
+- Render-Funktion zeigt unkonditional alle 6 Spalten (Metrik · Wert · Label
+  · Alert · M · A).
 
 IMPORTANT: Safari Compatibility
 - All ui.button() handlers MUST use factory pattern
 - Pattern: make_<action>_handler() returns do_<action>()
 - See: docs/reference/nicegui_best_practices.md
 
+SPEC: docs/specs/modules/weather_metrics_dialog_unification.md v1.1
 SPEC: docs/specs/modules/weather_config.md v2.1
 """
+from __future__ import annotations
+
+from dataclasses import dataclass
 from datetime import datetime, timezone
+from typing import Callable
 
 from nicegui import ui
 
 from app.loader import (
-    get_trips_dir, load_all_locations, load_compare_subscriptions,
-    load_trip, save_compare_subscription, save_location, save_trip,
+    get_trips_dir,
+    load_trip,
+    save_trip,
 )
 from app.metric_catalog import (
-    get_all_metrics,
     get_metric,
     get_metrics_by_category,
     build_default_display_config,
-    build_default_display_config_for_profile,
 )
 from app.models import MetricConfig, UnifiedWeatherDisplayConfig
 from app.trip import Trip
-from app.user import CompareSubscription, SavedLocation
+from app.user import SavedLocation
 
 
 # Category display order and German labels
@@ -46,6 +57,36 @@ CATEGORY_LABELS = {
 AGG_LABELS = {"min": "Min", "max": "Max", "avg": "Avg", "sum": "Sum"}
 
 
+# =============================================================================
+# Strategy Dataclass (Bug #89 v1.1: Trip-only, no full_columns)
+# =============================================================================
+
+
+@dataclass
+class _DialogStrategy:
+    """Container holding entity-specific configuration for the trip dialog renderer.
+
+    Spec §2: docs/specs/modules/weather_metrics_dialog_unification.md v1.1
+
+    Fields:
+        title: Dialog header text
+        subtitle: Subtitle line (e.g. "Trip: ...")
+        available_providers: Provider set used for metric availability greying
+        current_configs: metric_id -> current MetricConfig
+        save_fn: Closure called by Save-button with metric_configs list
+    """
+    title: str
+    subtitle: str
+    available_providers: set[str]
+    current_configs: dict[str, MetricConfig]
+    save_fn: Callable
+
+
+# =============================================================================
+# Safari-safe Factory Helpers
+# =============================================================================
+
+
 def _make_alert_vis_updater(level_sel, numeric_inp, alert_cb, friendly_toggle):
     """Factory: compound visibility for alert threshold widgets (Safari safe)."""
     def _update():
@@ -61,6 +102,104 @@ def _make_on_change(updater):
     return _handle
 
 
+def make_cancel_handler(dialog):
+    """Factory for cancel button (Safari compatibility)."""
+    def do_cancel():
+        dialog.close()
+    return do_cancel
+
+
+def make_save_handler(save_fn: Callable, metric_widgets: dict, dialog):
+    """Generic Safari-safe save handler.
+
+    Builds the MetricConfig list from widget state, validates that at least
+    one metric is enabled, then delegates persistence to ``save_fn``.
+
+    Args:
+        save_fn: Callable(metric_configs: list[MetricConfig]) -> bool
+                 Returns True on success (dialog closes), False on validation
+                 failure (dialog stays open).
+        metric_widgets: Dict mapping metric_id to widget references.
+        dialog: ui.dialog instance to close on success.
+    """
+    def do_save():
+        metric_configs: list[MetricConfig] = []
+        enabled_count = 0
+        label_to_key = {v: k for k, v in AGG_LABELS.items()}
+
+        for metric_id, widgets in metric_widgets.items():
+            cb = widgets["checkbox"]
+            agg_select = widgets["agg_select"]
+
+            agg_values = agg_select.value if agg_select.value else []
+            aggregations = [label_to_key[a] for a in agg_values if a in label_to_key]
+
+            friendly_toggle = widgets.get("friendly_toggle")
+            saved_mc = widgets.get("saved_mc")
+            use_friendly = friendly_toggle.value if friendly_toggle else (
+                saved_mc.use_friendly_format if saved_mc else True
+            )
+
+            alert_cb = widgets.get("alert_cb")
+            alert_level_select = widgets.get("alert_level_select")
+            alert_numeric_input = widgets.get("alert_numeric_input")
+            alert_enabled = alert_cb.value if alert_cb else False
+            alert_threshold = None
+            if alert_enabled:
+                try:
+                    metric_def = get_metric(metric_id)
+                    if alert_level_select and use_friendly:
+                        level = int(alert_level_select.value)
+                        if level != 1:
+                            alert_threshold = metric_def.default_change_threshold * level
+                    elif alert_numeric_input and alert_numeric_input.value is not None:
+                        user_val = float(alert_numeric_input.value)
+                        if user_val != metric_def.default_change_threshold:
+                            alert_threshold = user_val
+                except (KeyError, ValueError, TypeError):
+                    pass
+
+            morning_cb = widgets.get("morning_cb")
+            evening_cb = widgets.get("evening_cb")
+            morning_val = None if (morning_cb and morning_cb.value) else (False if morning_cb else None)
+            evening_val = None if (evening_cb and evening_cb.value) else (False if evening_cb else None)
+
+            metric_configs.append(MetricConfig(
+                metric_id=metric_id,
+                enabled=cb.value,
+                aggregations=aggregations,
+                morning_enabled=morning_val,
+                evening_enabled=evening_val,
+                use_friendly_format=use_friendly,
+                alert_enabled=alert_enabled,
+                alert_threshold=alert_threshold,
+            ))
+            if cb.value:
+                enabled_count += 1
+
+        if enabled_count == 0:
+            ui.notify(
+                "Mindestens 1 Metrik muss ausgewählt sein!",
+                color="negative",
+            )
+            return
+
+        ok = save_fn(metric_configs)
+        if ok:
+            ui.notify(
+                f"{enabled_count} Metriken gespeichert!",
+                color="positive",
+            )
+            dialog.close()
+
+    return do_save
+
+
+# =============================================================================
+# Provider detection helpers
+# =============================================================================
+
+
 def get_available_providers_for_trip(trip: Trip) -> set[str]:
     """
     Detect which weather providers can serve this trip based on waypoint coordinates.
@@ -68,12 +207,6 @@ def get_available_providers_for_trip(trip: Trip) -> set[str]:
     - OpenMeteo: Always available (global coverage)
     - GeoSphere: Available if ANY waypoint is in Austria bounding box
       (46.0-49.0 N, 9.5-17.0 E)
-
-    Args:
-        trip: Trip with stages containing waypoints
-
-    Returns:
-        Set of provider names, e.g. {"openmeteo"} or {"openmeteo", "geosphere"}
     """
     providers = {"openmeteo"}
 
@@ -81,83 +214,78 @@ def get_available_providers_for_trip(trip: Trip) -> set[str]:
         for waypoint in stage.waypoints:
             if 46.0 <= waypoint.lat <= 49.0 and 9.5 <= waypoint.lon <= 17.0:
                 providers.add("geosphere")
-                return providers  # Early exit
+                return providers
 
     return providers
 
 
-def show_weather_config_dialog(trip: Trip, user_id: str = "default") -> None:
+def get_available_providers_for_location(location: SavedLocation) -> set[str]:
+    """Detect which weather providers can serve this location based on coordinates.
+
+    Kept for backwards-compat — used by SvelteKit/Go-API persistence layer.
     """
-    Show API-aware weather metrics configuration dialog.
+    providers = {"openmeteo"}
+    if 46.0 <= location.lat <= 49.0 and 9.5 <= location.lon <= 17.0:
+        providers.add("geosphere")
+    return providers
 
-    Features:
-    - Provider detection from trip waypoints
-    - Grouped metrics by category (Temperatur, Wind, etc.)
-    - Grayed-out unavailable metrics with tooltip
-    - Per-metric aggregation selection (Min/Max/Avg/Sum)
-    - Saves as UnifiedWeatherDisplayConfig
 
-    Safari Compatible:
-    - All handlers use make_<action>_handler() factory pattern
+# =============================================================================
+# Render Function (Bug #89 v1.1 — Trip-only, full 6-column layout)
+# =============================================================================
+
+
+def _render_weather_config_dialog(strategy: _DialogStrategy) -> None:
+    """Render the unified weather metrics configuration dialog (Trip).
+
+    Spec §2: docs/specs/modules/weather_metrics_dialog_unification.md v1.1
+
+    Always renders the full 6-column layout (Metrik · Wert · Label · Alert · M · A).
+    Issue #89 fixes:
+      - Dialog max-width reduced from 960px to 820px
+      - Label column has fixed width: 130px (no min-width) to avoid gaps
+        for metrics without friendly_label
 
     Args:
-        trip: Trip to configure weather metrics for
-        user_id: User identifier for saving (default: "default")
+        strategy: _DialogStrategy with title, subtitle, available_providers,
+                  current_configs and save_fn.
     """
-    # Reload trip from disk to get latest saved config
-    trip_path = get_trips_dir(user_id) / f"{trip.id}.json"
-    if trip_path.exists():
-        trip = load_trip(trip_path)
+    available_providers = strategy.available_providers
+    current_configs = strategy.current_configs
 
-    # Detect available providers (used for metric availability check)
-    available_providers = get_available_providers_for_trip(trip)
-
-    # Load current config or build default
-    if trip.display_config:
-        current_configs = {mc.metric_id: mc for mc in trip.display_config.metrics}
-    else:
-        default_config = build_default_display_config(trip.id)
-        current_configs = {mc.metric_id: mc for mc in default_config.metrics}
-
-    # Widget tracking: {metric_id: {"checkbox": ..., "agg_select": ..., "available": bool}}
     metric_widgets: dict = {}
 
     with ui.dialog() as dialog, ui.card().style(
-        "max-height: 90vh; overflow-y: auto; width: 95vw; max-width: 960px"
+        "max-height: 90vh; overflow-y: auto; width: 95vw; max-width: 820px"
     ):
-        ui.label("Wetter-Metriken konfigurieren").classes("text-h6")
-
-        # Trip info header
-        ui.label(f"Trip: {trip.name}").classes("text-caption")
+        ui.label(strategy.title).classes("text-h6")
+        if strategy.subtitle:
+            ui.label(strategy.subtitle).classes("text-caption")
 
         # Table header
         with ui.row().classes("items-center text-caption text-grey q-mb-xs").style("flex-wrap: nowrap"):
             ui.label("Metrik").style("width: 240px; min-width: 240px; font-weight: 600")
             ui.label("Wert").style("width: 150px; min-width: 150px; font-weight: 600")
-            ui.label("Label").style("width: 130px; min-width: 130px; font-weight: 600")
+            ui.label("Label").style("width: 130px; font-weight: 600")
             ui.label("Alert").style("width: 200px; min-width: 200px; font-weight: 600")
             ui.label("M").style("width: 30px; min-width: 30px; font-weight: 600").tooltip("Morgen-Report")
             ui.label("A").style("width: 30px; min-width: 30px; font-weight: 600").tooltip("Abend-Report")
 
-        # Render metrics grouped by category as table rows
         for category in CATEGORY_ORDER:
             metrics = get_metrics_by_category(category)
             if not metrics:
                 continue
 
-            # Category separator row
             ui.separator()
             ui.label(CATEGORY_LABELS[category]).classes(
                 "text-subtitle2 text-grey-8 q-mt-xs q-mb-xs"
             )
 
             for metric_def in metrics:
-                # Check provider availability
                 is_available = any(
                     metric_def.providers.get(p, False) for p in available_providers
                 )
 
-                # Get current state from config
                 mc = current_configs.get(metric_def.id)
                 if mc:
                     initial_enabled = mc.enabled and is_available
@@ -168,7 +296,6 @@ def show_weather_config_dialog(trip: Trip, user_id: str = "default") -> None:
                     initial_aggs = [AGG_LABELS[a] for a in metric_def.default_aggregations
                                     if a in AGG_LABELS]
 
-                # Allowed aggregation options for this metric
                 allowed_options = [AGG_LABELS[a] for a in metric_def.default_aggregations
                                    if a in AGG_LABELS]
 
@@ -180,7 +307,7 @@ def show_weather_config_dialog(trip: Trip, user_id: str = "default") -> None:
                     ).style("width: 240px; min-width: 240px")
                     if not is_available:
                         cb.disable()
-                        cb.tooltip("Nicht verfügbar für diese Route")
+                        cb.tooltip("Nicht verfügbar")
 
                     # Column 2: Aggregation dropdown
                     agg_select = ui.select(
@@ -192,8 +319,15 @@ def show_weather_config_dialog(trip: Trip, user_id: str = "default") -> None:
                     if not is_available:
                         agg_select.disable()
 
-                    # Column 3: Friendly format toggle
                     friendly_toggle = None
+                    alert_cb = None
+                    alert_level_select = None
+                    alert_numeric_input = None
+                    morning_cb = None
+                    evening_cb = None
+
+                    # Column 3: Friendly format toggle
+                    # Issue #89: width fixed at 130px, NO min-width to avoid gaps
                     if metric_def.friendly_label:
                         initial_friendly = True
                         if mc and hasattr(mc, 'use_friendly_format'):
@@ -201,19 +335,18 @@ def show_weather_config_dialog(trip: Trip, user_id: str = "default") -> None:
                         friendly_toggle = ui.checkbox(
                             metric_def.friendly_label,
                             value=initial_friendly,
-                        ).style("width: 130px; min-width: 130px").tooltip(
+                        ).style("width: 130px").tooltip(
                             "Benutzerfreundliche Darstellung (Emoji/Stufen)"
                         )
                         if not is_available:
                             friendly_toggle.disable()
                     else:
-                        # Spacer to keep alignment
-                        ui.label("").style("width: 130px; min-width: 130px")
+                        # Empty spacer (width only, no min-width) so the
+                        # following Alert column stays aligned without
+                        # producing a visible gap.
+                        ui.element('div').style("width: 130px")
 
-                    # Column 4: Alert checkbox + threshold (only for metrics with numeric threshold)
-                    alert_cb = None
-                    alert_level_select = None
-                    alert_numeric_input = None
+                    # Column 4: Alert checkbox + threshold
                     if metric_def.default_change_threshold is not None:
                         initial_alert = False
                         initial_threshold = None
@@ -229,8 +362,6 @@ def show_weather_config_dialog(trip: Trip, user_id: str = "default") -> None:
                             alert_cb.disable()
 
                         if metric_def.has_friendly_format:
-                            # Friendly metrics: BOTH level dropdown + numeric input
-                            # Level shown when friendly_toggle ON, numeric when OFF
                             default_t = metric_def.default_change_threshold
                             if initial_threshold is not None and default_t:
                                 initial_level = str(max(1, round(initial_threshold / default_t)))
@@ -256,16 +387,15 @@ def show_weather_config_dialog(trip: Trip, user_id: str = "default") -> None:
                             if not is_available:
                                 alert_numeric_input.disable()
 
-                            # Compound visibility: alert_cb AND friendly_toggle
                             updater = _make_alert_vis_updater(
                                 alert_level_select, alert_numeric_input,
                                 alert_cb, friendly_toggle,
                             )
-                            updater()  # Set initial state
+                            updater()
                             alert_cb.on_value_change(_make_on_change(updater))
-                            friendly_toggle.on_value_change(_make_on_change(updater))
+                            if friendly_toggle is not None:
+                                friendly_toggle.on_value_change(_make_on_change(updater))
                         else:
-                            # Normal metrics: only numeric Δ input
                             alert_numeric_input = ui.number(
                                 label=f"Δ {metric_def.unit}" if metric_def.unit else "Δ",
                                 value=initial_threshold if initial_threshold is not None else metric_def.default_change_threshold,
@@ -279,8 +409,7 @@ def show_weather_config_dialog(trip: Trip, user_id: str = "default") -> None:
                             if not is_available:
                                 alert_numeric_input.disable()
 
-                    # M/A checkboxes (per-report-type override)
-                    mc = current_configs.get(metric_def.id)
+                    # M/A checkboxes
                     initial_morning = mc.morning_enabled if mc and mc.morning_enabled is not None else True
                     initial_evening = mc.evening_enabled if mc and mc.evening_enabled is not None else True
 
@@ -300,127 +429,45 @@ def show_weather_config_dialog(trip: Trip, user_id: str = "default") -> None:
                         "morning_cb": morning_cb,
                         "evening_cb": evening_cb,
                         "available": is_available,
+                        "saved_mc": mc,
                     }
 
         # Buttons (Factory Pattern!)
-        with ui.row().classes("q-mt-md"):
-            ui.button("Abbrechen", on_click=make_cancel_handler(dialog))
+        with ui.row().classes("q-mt-md justify-end gap-2"):
+            ui.button("Abbrechen", on_click=make_cancel_handler(dialog)).props("flat")
             ui.button(
                 "Speichern",
-                on_click=make_save_handler(
-                    trip.id, metric_widgets, dialog, user_id,
-                ),
+                on_click=make_save_handler(strategy.save_fn, metric_widgets, dialog),
             ).props("color=primary")
 
     dialog.open()
 
 
-def make_cancel_handler(dialog):
-    """Factory for cancel button (Safari compatibility)."""
-    def do_cancel():
-        dialog.close()
-    return do_cancel
+# =============================================================================
+# Save Factories (Bug #89 v1.1 — Trip-only)
+# =============================================================================
 
 
-def make_save_handler(trip_id: str, metric_widgets: dict, dialog, user_id: str):
-    """
-    Factory for save handler - Safari compatible!
+def _make_trip_save_fn(trip_id: str, user_id: str, dialog) -> Callable:
+    """Build save closure for trip dialogs.
+
+    Preserves Trip-specific fields (`show_compact_summary`, `show_night_block`,
+    `night_interval_hours`, `thunder_forecast_days`, `multi_day_trend_reports`)
+    from the existing `display_config` before saving.
 
     Args:
-        trip_id: Immutable trip ID (safe for closure)
-        metric_widgets: Dict mapping metric_id to {checkbox, agg_select, available}
-        dialog: Dialog to close after save
-        user_id: User identifier for loading/saving
+        trip_id: Trip ID (immutable, safe to capture in closure).
+        user_id: User identifier for loader/saver.
+        dialog: Dialog instance (currently unused for trip; kept for signature parity).
 
     Returns:
-        Save handler function
+        Callable(metric_configs: list[MetricConfig]) -> bool
     """
-    def do_save():
-        # Load saved config to preserve values for fields without UI widgets
-        trip_path = get_trips_dir(user_id) / f"{trip_id}.json"
-        saved_configs: dict = {}
-        if trip_path.exists():
-            saved_trip = load_trip(trip_path)
-            if saved_trip.display_config:
-                saved_configs = {
-                    mc.metric_id: mc for mc in saved_trip.display_config.metrics
-                }
-
-        # Build MetricConfig list from UI state
-        metric_configs = []
-        enabled_count = 0
-        for metric_id, widgets in metric_widgets.items():
-            cb = widgets["checkbox"]
-            agg_select = widgets["agg_select"]
-
-            # Convert UI labels back to lowercase keys
-            agg_values = agg_select.value if agg_select.value else []
-            label_to_key = {v: k for k, v in AGG_LABELS.items()}
-            aggregations = [label_to_key[a] for a in agg_values if a in label_to_key]
-
-            friendly_toggle = widgets.get("friendly_toggle")
-            # BUG-FIX: Preserve saved value when no UI widget exists (metric has no friendly_label)
-            saved_mc = saved_configs.get(metric_id)
-            use_friendly = friendly_toggle.value if friendly_toggle else (
-                saved_mc.use_friendly_format if saved_mc else True
-            )
-
-            alert_cb = widgets.get("alert_cb")
-            alert_level_select = widgets.get("alert_level_select")
-            alert_numeric_input = widgets.get("alert_numeric_input")
-            alert_enabled = alert_cb.value if alert_cb else False
-            alert_threshold = None
-            if alert_enabled:
-                try:
-                    metric_def = get_metric(metric_id)
-                    if alert_level_select and use_friendly:
-                        # Level-based (friendly ON): "1" = 1x default, "2" = 2x, "3" = 3x
-                        level = int(alert_level_select.value)
-                        if level != 1:
-                            alert_threshold = metric_def.default_change_threshold * level
-                        # level==1 → None (use default)
-                    elif alert_numeric_input and alert_numeric_input.value is not None:
-                        # Numeric: only store if different from default
-                        user_val = float(alert_numeric_input.value)
-                        if user_val != metric_def.default_change_threshold:
-                            alert_threshold = user_val
-                except (KeyError, ValueError, TypeError):
-                    pass
-
-            morning_cb = widgets.get("morning_cb")
-            evening_cb = widgets.get("evening_cb")
-            # None = inherit (both checked), False = exclude
-            morning_val = None if (morning_cb and morning_cb.value) else False
-            evening_val = None if (evening_cb and evening_cb.value) else False
-
-            metric_configs.append(MetricConfig(
-                metric_id=metric_id,
-                enabled=cb.value,
-                aggregations=aggregations,
-                morning_enabled=morning_val,
-                evening_enabled=evening_val,
-                use_friendly_format=use_friendly,
-                alert_enabled=alert_enabled,
-                alert_threshold=alert_threshold,
-            ))
-            if cb.value:
-                enabled_count += 1
-
-        # Validation: minimum 1 metric
-        if enabled_count == 0:
-            ui.notify(
-                "Mindestens 1 Metrik muss ausgewählt sein!",
-                color="negative",
-            )
-            return
-
-        # Load trip, update display_config, save
+    def save(metric_configs: list[MetricConfig]) -> bool:
         trip_path = get_trips_dir(user_id) / f"{trip_id}.json"
         trip = load_trip(trip_path)
 
-        # Preserve existing config values or use defaults
         old = trip.display_config
-
         trip.display_config = UnifiedWeatherDisplayConfig(
             trip_id=trip_id,
             metrics=metric_configs,
@@ -433,307 +480,35 @@ def make_save_handler(trip_id: str, metric_widgets: dict, dialog, user_id: str):
         )
 
         save_trip(trip, user_id=user_id)
+        return True
 
-        ui.notify(
-            f"{enabled_count} Metriken gespeichert!",
-            color="positive",
-        )
-        dialog.close()
-
-    return do_save
+    return save
 
 
 # =============================================================================
-# Location Weather Config (F11b)
+# Public Dialog Entrypoint (Trip-only, Bug #89 v1.1)
 # =============================================================================
 
 
-def get_available_providers_for_location(location: SavedLocation) -> set[str]:
-    """Detect which weather providers can serve this location based on coordinates."""
-    providers = {"openmeteo"}
-    if 46.0 <= location.lat <= 49.0 and 9.5 <= location.lon <= 17.0:
-        providers.add("geosphere")
-    return providers
+def show_weather_config_dialog(trip: Trip, user_id: str = "default") -> None:
+    """Show API-aware weather metrics configuration dialog for a Trip."""
+    trip_path = get_trips_dir(user_id) / f"{trip.id}.json"
+    if trip_path.exists():
+        trip = load_trip(trip_path)
 
+    available_providers = get_available_providers_for_trip(trip)
 
-def show_location_weather_config_dialog(
-    location: SavedLocation,
-    user_id: str = "default",
-) -> None:
-    """
-    Show weather metrics configuration dialog for a saved location.
-
-    Safari Compatible: all button handlers use factory pattern.
-    """
-    # Reload location from disk to get latest config
-    locations = load_all_locations(user_id)
-    loc = next((l for l in locations if l.id == location.id), location)
-
-    # Detect available providers
-    available_providers = get_available_providers_for_location(loc)
-
-    # Initialize config: existing or profile-based defaults
-    if loc.display_config and loc.display_config.metrics:
-        current_configs = {mc.metric_id: mc for mc in loc.display_config.metrics}
+    if trip.display_config:
+        current_configs = {mc.metric_id: mc for mc in trip.display_config.metrics}
     else:
-        default_config = build_default_display_config_for_profile(
-            loc.id, loc.activity_profile
-        )
+        default_config = build_default_display_config(trip.id)
         current_configs = {mc.metric_id: mc for mc in default_config.metrics}
 
-    with ui.dialog() as dialog, ui.card().classes("w-full").style(
-        "max-height: 90vh; overflow-y: auto; width: 95vw; max-width: 800px;"
-    ):
-        ui.label(f"Wetter-Metriken: {loc.name}").classes("text-h6")
-        ui.label(f"Profil: {loc.activity_profile.value.capitalize()}").classes(
-            "text-caption text-grey"
-        )
-
-        # Header row
-        with ui.row().classes("w-full items-center gap-2 mt-2"):
-            ui.label("Metrik").classes("text-bold").style("width: 240px;")
-            ui.label("Aggregation").classes("text-bold").style("width: 200px;")
-
-        ui.separator()
-
-        # Track widgets for save handler
-        metric_widgets: dict[str, dict] = {}
-
-        for category in CATEGORY_ORDER:
-            metrics = get_metrics_by_category(category)
-            if not metrics:
-                continue
-
-            ui.separator()
-            ui.label(CATEGORY_LABELS.get(category, category)).classes(
-                "text-subtitle2 text-grey-8 mt-1"
-            )
-
-            for metric_def in metrics:
-                mc = current_configs.get(metric_def.id)
-                is_available = any(
-                    metric_def.providers.get(p, False) for p in available_providers
-                )
-                is_enabled = mc.enabled if mc else False
-
-                with ui.row().classes("w-full items-center gap-2").style(
-                    "flex-wrap: nowrap;"
-                ):
-                    # Checkbox
-                    cb = ui.checkbox(
-                        f"{metric_def.label_de} ({metric_def.col_label})",
-                        value=is_enabled and is_available,
-                    ).style("width: 240px;")
-                    if not is_available:
-                        cb.disable()
-                        cb.tooltip("Nicht verfügbar für diesen Standort")
-
-                    # Aggregation select
-                    current_aggs = mc.aggregations if mc else list(metric_def.default_aggregations)
-                    agg_options = list(AGG_LABELS.values())
-                    agg_values = [AGG_LABELS.get(a, a.capitalize()) for a in current_aggs]
-
-                    agg_sel = ui.select(
-                        options=agg_options,
-                        value=agg_values,
-                        multiple=True,
-                        label="",
-                    ).style("width: 200px;").props("dense")
-
-                metric_widgets[metric_def.id] = {
-                    "checkbox": cb,
-                    "agg": agg_sel,
-                }
-
-        ui.separator()
-
-        # Buttons
-        with ui.row().classes("w-full justify-end gap-2 mt-2"):
-
-            def make_cancel_handler(dlg):
-                def do_cancel():
-                    dlg.close()
-                return do_cancel
-
-            ui.button("Abbrechen", on_click=make_cancel_handler(dialog)).props("flat")
-
-            def make_location_save_handler(loc_id, mw, dlg, uid):
-                def do_save():
-                    locs = load_all_locations(uid)
-                    current_loc = next((l for l in locs if l.id == loc_id), None)
-                    if not current_loc:
-                        ui.notify("Location nicht gefunden", type="negative")
-                        return
-
-                    metrics = []
-                    for mid, widgets in mw.items():
-                        agg_vals = widgets["agg"].value or []
-                        aggs = [a.lower() for a in agg_vals]
-                        metrics.append(MetricConfig(
-                            metric_id=mid,
-                            enabled=widgets["checkbox"].value,
-                            aggregations=aggs,
-                        ))
-
-                    enabled_count = sum(1 for m in metrics if m.enabled)
-                    if enabled_count == 0:
-                        ui.notify("Mindestens 1 Metrik aktivieren!", type="warning")
-                        return
-
-                    new_config = UnifiedWeatherDisplayConfig(
-                        trip_id=loc_id,
-                        metrics=metrics,
-                    )
-                    updated = SavedLocation(
-                        id=current_loc.id,
-                        name=current_loc.name,
-                        lat=current_loc.lat,
-                        lon=current_loc.lon,
-                        elevation_m=current_loc.elevation_m,
-                        region=current_loc.region,
-                        bergfex_slug=current_loc.bergfex_slug,
-                        activity_profile=current_loc.activity_profile,
-                        display_config=new_config,
-                    )
-                    save_location(updated, uid)
-                    ui.notify(f"{enabled_count} Metriken gespeichert", type="positive")
-                    dlg.close()
-                return do_save
-
-            ui.button(
-                "Speichern",
-                on_click=make_location_save_handler(
-                    loc.id, metric_widgets, dialog, user_id
-                ),
-            ).props("color=primary")
-
-    dialog.open()
-
-
-# =============================================================================
-# Subscription Weather Config (F14a)
-# =============================================================================
-
-
-def show_subscription_weather_config_dialog(
-    subscription: CompareSubscription,
-    user_id: str = "default",
-) -> None:
-    """Show weather metrics configuration dialog for a subscription."""
-    subs = load_compare_subscriptions(user_id)
-    sub = next((s for s in subs if s.id == subscription.id), subscription)
-
-    if sub.display_config and sub.display_config.metrics:
-        current_configs = {mc.metric_id: mc for mc in sub.display_config.metrics}
-    else:
-        default_config = build_default_display_config(sub.id)
-        current_configs = {mc.metric_id: mc for mc in default_config.metrics}
-
-    # All providers available (subscriptions span multiple locations)
-    available_providers = {"openmeteo", "geosphere"}
-
-    with ui.dialog() as dialog, ui.card().classes("w-full").style(
-        "max-height: 90vh; overflow-y: auto; width: 95vw; max-width: 800px;"
-    ):
-        ui.label(f"Wetter-Metriken: {sub.name}").classes("text-h6")
-        ui.label("Subscription-Vergleich").classes("text-caption text-grey")
-
-        with ui.row().classes("w-full items-center gap-2 mt-2"):
-            ui.label("Metrik").classes("text-bold").style("width: 240px;")
-            ui.label("Aggregation").classes("text-bold").style("width: 200px;")
-
-        ui.separator()
-
-        metric_widgets: dict[str, dict] = {}
-
-        for category in CATEGORY_ORDER:
-            metrics = get_metrics_by_category(category)
-            if not metrics:
-                continue
-
-            ui.separator()
-            ui.label(CATEGORY_LABELS.get(category, category)).classes(
-                "text-subtitle2 text-grey-8 mt-1"
-            )
-
-            for metric_def in metrics:
-                mc = current_configs.get(metric_def.id)
-                is_available = any(
-                    metric_def.providers.get(p, False) for p in available_providers
-                )
-                is_enabled = mc.enabled if mc else False
-
-                with ui.row().classes("w-full items-center gap-2").style(
-                    "flex-wrap: nowrap;"
-                ):
-                    cb = ui.checkbox(
-                        f"{metric_def.label_de} ({metric_def.col_label})",
-                        value=is_enabled and is_available,
-                    ).style("width: 240px;")
-                    if not is_available:
-                        cb.disable()
-                        cb.tooltip("Nicht verfügbar")
-
-                    current_aggs = mc.aggregations if mc else list(metric_def.default_aggregations)
-                    agg_values = [AGG_LABELS.get(a, a.capitalize()) for a in current_aggs]
-
-                    agg_sel = ui.select(
-                        options=list(AGG_LABELS.values()),
-                        value=agg_values,
-                        multiple=True,
-                        label="",
-                    ).style("width: 200px;").props("dense")
-
-                metric_widgets[metric_def.id] = {"checkbox": cb, "agg": agg_sel}
-
-        ui.separator()
-
-        with ui.row().classes("w-full justify-end gap-2 mt-2"):
-
-            def make_cancel_handler(dlg):
-                def do_cancel():
-                    dlg.close()
-                return do_cancel
-
-            ui.button("Abbrechen", on_click=make_cancel_handler(dialog)).props("flat")
-
-            def make_subscription_save_handler(sub_id, mw, dlg, uid):
-                def do_save():
-                    all_subs = load_compare_subscriptions(uid)
-                    target = next((s for s in all_subs if s.id == sub_id), None)
-                    if not target:
-                        ui.notify("Subscription nicht gefunden", type="negative")
-                        return
-
-                    metrics = [
-                        MetricConfig(
-                            metric_id=mid,
-                            enabled=widgets["checkbox"].value,
-                            aggregations=[a.lower() for a in (widgets["agg"].value or [])],
-                        )
-                        for mid, widgets in mw.items()
-                    ]
-
-                    if sum(1 for m in metrics if m.enabled) == 0:
-                        ui.notify("Mindestens 1 Metrik!", type="warning")
-                        return
-
-                    target.display_config = UnifiedWeatherDisplayConfig(
-                        trip_id=sub_id, metrics=metrics,
-                    )
-                    save_compare_subscription(target, uid)
-                    ui.notify(
-                        f"{sum(1 for m in metrics if m.enabled)} Metriken gespeichert",
-                        type="positive",
-                    )
-                    dlg.close()
-                return do_save
-
-            ui.button(
-                "Speichern",
-                on_click=make_subscription_save_handler(
-                    sub.id, metric_widgets, dialog, user_id
-                ),
-            ).props("color=primary")
-
-    dialog.open()
+    strategy = _DialogStrategy(
+        title="Wetter-Metriken konfigurieren",
+        subtitle=f"Trip: {trip.name}",
+        available_providers=available_providers,
+        current_configs=current_configs,
+        save_fn=_make_trip_save_fn(trip.id, user_id, None),
+    )
+    _render_weather_config_dialog(strategy)

@@ -139,27 +139,8 @@ class TestSubscriptionMetricsLoaderRoundTrip:
         assert "metrics" in found[0]["display_config"]
 
 
-class TestSubscriptionWeatherConfigDialog:
-    """show_subscription_weather_config_dialog() exists."""
-
-    def test_function_exists(self):
-        """
-        GIVEN: weather_config module
-        WHEN: importing show_subscription_weather_config_dialog
-        THEN: import succeeds
-        """
-        from web.pages.weather_config import show_subscription_weather_config_dialog
-        assert callable(show_subscription_weather_config_dialog)
-
-    def test_function_signature(self):
-        """
-        GIVEN: show_subscription_weather_config_dialog
-        WHEN: inspecting signature
-        THEN: accepts subscription and user_id
-        """
-        import inspect
-        from web.pages.weather_config import show_subscription_weather_config_dialog
-        sig = inspect.signature(show_subscription_weather_config_dialog)
-        params = list(sig.parameters.keys())
-        assert "subscription" in params
-        assert "user_id" in params
+# TestSubscriptionWeatherConfigDialog entfernt (Bug #89 v1.1):
+# show_subscription_weather_config_dialog ist UI-tot seit F76
+# (/subscriptions -> 301 -> /compare) und wurde aus weather_config.py entfernt.
+# Loader-Roundtrip-Tests in TestSubscriptionMetricsLoaderRoundTrip bleiben
+# als Regression-Anker fuer den Persistenz-Layer (SvelteKit/Go-API).
