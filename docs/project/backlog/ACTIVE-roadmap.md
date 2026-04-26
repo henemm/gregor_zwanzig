@@ -67,6 +67,7 @@
 | Registrierungsseite (SvelteKit) | 2026-04-16 | Auth | F62: /register Route, Form Action, hooks update, Login-Erfolgsbanner. Nutzer-Selbstregistrierung via Go API. |
 | Account-Seite (SvelteKit) | 2026-04-16 | Auth | F61: /account Route, Profil laden via Server Load, Kanal-Einstellungen (E-Mail, Signal, Telegram) editierbar, Konto-Link in Nav. GitHub Issue #61. |
 | Scheduler Multi-User Iteration | 2026-04-16 | Services | #63: Go scheduler iteriert ueber alle registrierten User, sendet ?user_id=X je Cron-Job, Continue-on-error. ListUserIDs() in store, triggerEndpointForUser() in scheduler. |
+| Token Builder (output_token_builder) | 2026-04-26 | Formatter | β1: SMS-konforme TokenLine gemäß sms_format.md v2.0, 18/18 tests GREEN, 490 LoC, adversary VERIFIED, validated & ready to commit. |
 
 ## Solved Bugs
 
