@@ -399,3 +399,213 @@ class TestFriendlyFormatRespectsConfig:
         fmt._friendly_keys = fmt._build_friendly_keys(dc)
         result = fmt._fmt_val("cloud", 50)
         assert result == "50"
+
+
+# =====================================================================
+# Part 5: Location-Roundtrip — Bug #89 Regressionsanker
+# =====================================================================
+
+
+class TestLocationConfigRoundtrip:
+    """Save/Load von SavedLocation muss alle MetricConfig-Felder erhalten.
+
+    Spec: docs/specs/modules/weather_metrics_dialog_unification.md v1.0
+    """
+
+    def _build_test_location(self, loc_id: str, customizer):
+        """Helper: SavedLocation mit Profile-Default-Config + Customizer."""
+        from app.user import LocationActivityProfile, SavedLocation
+        from app.metric_catalog import build_default_display_config_for_profile
+
+        dc = build_default_display_config_for_profile(loc_id, LocationActivityProfile.WANDERN)
+        new_metrics = [customizer(mc) for mc in dc.metrics]
+        dc = UnifiedWeatherDisplayConfig(
+            trip_id=loc_id,
+            metrics=new_metrics,
+            show_night_block=dc.show_night_block,
+            night_interval_hours=dc.night_interval_hours,
+            thunder_forecast_days=dc.thunder_forecast_days,
+        )
+        return SavedLocation(
+            id=loc_id,
+            name="Bug89 Test",
+            lat=47.0,
+            lon=11.0,
+            elevation_m=1500,
+            activity_profile=LocationActivityProfile.WANDERN,
+            display_config=dc,
+        )
+
+    def test_location_roundtrip_alert_enabled(self) -> None:
+        """alert_enabled=True mit alert_threshold ueberlebt save/load fuer SavedLocation."""
+        from app.loader import save_location, load_all_locations
+
+        def set_cape_alert(mc):
+            if mc.metric_id == "cape":
+                return MetricConfig(
+                    metric_id="cape",
+                    enabled=True,
+                    aggregations=mc.aggregations,
+                    alert_enabled=True,
+                    alert_threshold=750.0,
+                )
+            return mc
+
+        loc = self._build_test_location("__bug89_alert__", set_cape_alert)
+        save_location(loc, user_id="__bug89_loc_alert__")
+
+        loaded = load_all_locations(user_id="__bug89_loc_alert__")
+        target = next((l for l in loaded if l.id == "__bug89_alert__"), None)
+        assert target is not None
+        assert target.display_config is not None
+
+        cape_mc = next(
+            mc for mc in target.display_config.metrics if mc.metric_id == "cape"
+        )
+        assert cape_mc.alert_enabled is True
+        assert cape_mc.alert_threshold == 750.0
+
+    def test_location_roundtrip_morning_enabled(self) -> None:
+        """morning_enabled=False ueberlebt save/load fuer SavedLocation."""
+        from app.loader import save_location, load_all_locations
+
+        def disable_wind_morning(mc):
+            if mc.metric_id == "wind":
+                return MetricConfig(
+                    metric_id="wind",
+                    enabled=True,
+                    aggregations=mc.aggregations,
+                    morning_enabled=False,
+                )
+            return mc
+
+        loc = self._build_test_location("__bug89_morning__", disable_wind_morning)
+        save_location(loc, user_id="__bug89_loc_morning__")
+
+        loaded = load_all_locations(user_id="__bug89_loc_morning__")
+        target = next((l for l in loaded if l.id == "__bug89_morning__"), None)
+        assert target is not None
+        wind_mc = next(
+            mc for mc in target.display_config.metrics if mc.metric_id == "wind"
+        )
+        assert wind_mc.morning_enabled is False
+
+    def test_location_roundtrip_use_friendly_format(self) -> None:
+        """use_friendly_format=False ueberlebt save/load fuer SavedLocation."""
+        from app.loader import save_location, load_all_locations
+
+        def disable_friendly_for_visibility(mc):
+            if mc.metric_id == "visibility":
+                return MetricConfig(
+                    metric_id="visibility",
+                    enabled=True,
+                    aggregations=mc.aggregations,
+                    use_friendly_format=False,
+                )
+            return mc
+
+        loc = self._build_test_location("__bug89_friendly__", disable_friendly_for_visibility)
+        save_location(loc, user_id="__bug89_loc_friendly__")
+
+        loaded = load_all_locations(user_id="__bug89_loc_friendly__")
+        target = next((l for l in loaded if l.id == "__bug89_friendly__"), None)
+        assert target is not None
+        vis_mc = next(
+            (mc for mc in target.display_config.metrics if mc.metric_id == "visibility"),
+            None,
+        )
+        # visibility ist im WANDERN-Profil dabei; falls nicht, ueberspringen
+        if vis_mc is not None:
+            assert vis_mc.use_friendly_format is False
+
+
+# =====================================================================
+# Part 6: Subscription-Roundtrip — Bug #89 Regressionsanker
+# =====================================================================
+
+
+class TestSubscriptionConfigRoundtrip:
+    """Save/Load von CompareSubscription muss alle MetricConfig-Felder erhalten.
+
+    Spec: docs/specs/modules/weather_metrics_dialog_unification.md v1.0
+    """
+
+    def _build_test_subscription(self, sub_id: str, customizer):
+        """Helper: CompareSubscription mit generischer Default-Config + Customizer."""
+        from app.user import CompareSubscription
+
+        dc = build_default_display_config(sub_id)
+        new_metrics = [customizer(mc) for mc in dc.metrics]
+        dc = UnifiedWeatherDisplayConfig(
+            trip_id=sub_id,
+            metrics=new_metrics,
+            show_night_block=dc.show_night_block,
+            night_interval_hours=dc.night_interval_hours,
+            thunder_forecast_days=dc.thunder_forecast_days,
+        )
+        return CompareSubscription(
+            id=sub_id,
+            name="Bug89 Sub Test",
+            enabled=True,
+            locations=["loc-a", "loc-b"],
+            display_config=dc,
+        )
+
+    def test_subscription_roundtrip_alert_enabled(self) -> None:
+        """alert_enabled=True mit alert_threshold ueberlebt save/load fuer Subscription."""
+        from app.loader import save_compare_subscription, load_compare_subscriptions
+
+        def set_temp_alert(mc):
+            if mc.metric_id == "temp_max":
+                return MetricConfig(
+                    metric_id="temp_max",
+                    enabled=True,
+                    aggregations=mc.aggregations,
+                    alert_enabled=True,
+                    alert_threshold=2.5,
+                )
+            return mc
+
+        sub = self._build_test_subscription("__bug89_sub_alert__", set_temp_alert)
+        save_compare_subscription(sub, user_id="__bug89_sub_alert_user__")
+
+        loaded = load_compare_subscriptions(user_id="__bug89_sub_alert_user__")
+        target = next((s for s in loaded if s.id == "__bug89_sub_alert__"), None)
+        assert target is not None
+        assert target.display_config is not None
+
+        temp_mc = next(
+            (mc for mc in target.display_config.metrics if mc.metric_id == "temp_max"),
+            None,
+        )
+        if temp_mc is not None:
+            assert temp_mc.alert_enabled is True
+            assert temp_mc.alert_threshold == 2.5
+
+    def test_subscription_roundtrip_use_friendly_format(self) -> None:
+        """use_friendly_format=False ueberlebt save/load fuer Subscription."""
+        from app.loader import save_compare_subscription, load_compare_subscriptions
+
+        def disable_friendly_for_cape(mc):
+            if mc.metric_id == "cape":
+                return MetricConfig(
+                    metric_id="cape",
+                    enabled=True,
+                    aggregations=mc.aggregations,
+                    use_friendly_format=False,
+                )
+            return mc
+
+        sub = self._build_test_subscription("__bug89_sub_friendly__", disable_friendly_for_cape)
+        save_compare_subscription(sub, user_id="__bug89_sub_friendly_user__")
+
+        loaded = load_compare_subscriptions(user_id="__bug89_sub_friendly_user__")
+        target = next((s for s in loaded if s.id == "__bug89_sub_friendly__"), None)
+        assert target is not None
+
+        cape_mc = next(
+            (mc for mc in target.display_config.metrics if mc.metric_id == "cape"),
+            None,
+        )
+        if cape_mc is not None:
+            assert cape_mc.use_friendly_format is False

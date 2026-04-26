@@ -1,0 +1,110 @@
+F......FF.....sssssssssssssss........................................... [  6%]
+........................................................................ [ 12%]
+...................................................FFF.FF............... [ 19%]
+..................................F..................................... [ 25%]
+.....................EEEEE.EEEEEEEE......EEEE.............F........F.... [ 31%]
+.................................FFFFFFF..........FFF..F................ [ 38%]
+.................................ssssss.......................xF.s...... [ 44%]
+........................................................................ [ 51%]
+....sssssss..........ss................................................. [ 57%]
+........................................................................ [ 63%]
+........................................................................ [ 70%]
+...................................................FFF..FFFFFFFFFFFFFFFF [ 76%]
+F..FFFFFFFFFFFF...FFF...FFFFFFFFFFF..................................... [ 82%]
+...FFFFFF............................................................... [ 89%]
+........................................................................ [ 95%]
+.................................................                        [100%]
+=========================== short test summary info ============================
+FAILED tests/e2e/test_e2e_friendly_format_config.py::test_alert_enabled - Key...
+FAILED tests/e2e/test_e2e_story3_reports.py::TestReportFormatting::test_email_html_contains_segments
+FAILED tests/e2e/test_e2e_story3_reports.py::TestReportFormatting::test_email_plain_text_fallback
+FAILED tests/integration/test_segment_weather_cache.py::TestSegmentWeatherCacheIntegration::test_cache_reduces_api_calls
+FAILED tests/integration/test_segment_weather_cache.py::TestSegmentWeatherCacheIntegration::test_different_segments_cached_separately
+FAILED tests/integration/test_segment_weather_metrics.py::TestSegmentWeatherMetricsGeoSphere::test_geosphere_austria_basis_metrics
+FAILED tests/integration/test_segment_weather_metrics.py::TestE2EStory2Flow::test_e2e_segment_to_metrics
+FAILED tests/integration/test_segment_weather_metrics.py::TestSegmentWeatherMetricsExtended::test_geosphere_austria_extended_metrics
+FAILED tests/integration/test_trip_segment_weather.py::TestSegmentWeatherServiceGeoSphere::test_fetch_segment_weather_austria
+FAILED tests/tdd/test_channel_test_button.py::test_notify_test_email_returns_ok
+FAILED tests/tdd/test_compare_provider_routing.py::TestFetchForecastAlpsRegression::test_innsbruck_returns_data
+FAILED tests/tdd/test_geosphere_parsing.py::TestSnowgridParsing::test_snowgrid_depth_conversion
+FAILED tests/tdd/test_geosphere_parsing.py::TestSnowgridParsing::test_snowgrid_multiple_locations
+FAILED tests/tdd/test_geosphere_parsing.py::TestNwpParsing::test_nwp_temperature_passthrough
+FAILED tests/tdd/test_geosphere_parsing.py::TestNwpParsing::test_nwp_wind_vector_conversion
+FAILED tests/tdd/test_geosphere_parsing.py::TestNwpParsing::test_nwp_cloud_cover_conversion
+FAILED tests/tdd/test_geosphere_parsing.py::TestNwpParsing::test_nwp_pressure_conversion
+FAILED tests/tdd/test_geosphere_parsing.py::TestNwpParsing::test_nwp_all_conversions
+FAILED tests/tdd/test_gpx_proxy.py::test_gpx_parse_returns_stage_with_waypoints
+FAILED tests/tdd/test_gpx_proxy.py::test_gpx_parse_waypoint_structure - FileN...
+FAILED tests/tdd/test_gpx_proxy.py::test_gpx_parse_with_stage_date - FileNotF...
+FAILED tests/tdd/test_gpx_proxy.py::test_gpx_parse_invalid_start_hour_returns_422
+FAILED tests/tdd/test_snowgrid.py::TestSnowgridPlausibility::test_all_resorts_have_data
+FAILED tests/unit/test_destination_segment.py::TestSchedulerDestinationSegment::test_destination_segment_exists
+FAILED tests/unit/test_destination_segment.py::TestSchedulerDestinationSegment::test_destination_segment_coordinates
+FAILED tests/unit/test_destination_segment.py::TestSchedulerDestinationSegment::test_destination_segment_time_window
+FAILED tests/unit/test_elevation_analysis.py::TestDetectPeaks::test_tag4_has_peak
+FAILED tests/unit/test_elevation_analysis.py::TestDetectPeaks::test_tag4_highest_peak_around_1200m
+FAILED tests/unit/test_elevation_analysis.py::TestDetectValleys::test_tag4_has_valley
+FAILED tests/unit/test_elevation_analysis.py::TestRouteComparison::test_flat_route_fewer_waypoints
+FAILED tests/unit/test_elevation_analysis.py::TestProminenceFilter::test_all_above_min_prominence
+FAILED tests/unit/test_elevation_analysis.py::TestDistanceFilter::test_min_distance_between_waypoints
+FAILED tests/unit/test_elevation_analysis.py::TestThresholdEffect::test_higher_threshold_fewer_results
+FAILED tests/unit/test_elevation_analysis.py::TestWaypointNameMatch::test_gpx_waypoint_name_matched
+FAILED tests/unit/test_etappen_config.py::TestSegmentCount::test_produces_segments
+FAILED tests/unit/test_etappen_config.py::TestWaypointAdjustment::test_has_adjusted_segment
+FAILED tests/unit/test_etappen_config.py::TestDistanceConsistency::test_distance_sum
+FAILED tests/unit/test_etappen_config.py::TestSeamlessTimes::test_times_seamless
+FAILED tests/unit/test_gpx_import_in_trip_dialog.py::TestGpxToStageData::test_returns_dict_with_required_keys
+FAILED tests/unit/test_gpx_import_in_trip_dialog.py::TestGpxToStageData::test_waypoints_have_required_fields
+FAILED tests/unit/test_gpx_import_in_trip_dialog.py::TestGpxToStageData::test_name_from_gpx_track
+FAILED tests/unit/test_gpx_import_in_trip_dialog.py::TestGpxToStageDataCustomDate::test_uses_provided_date
+FAILED tests/unit/test_gpx_import_in_trip_dialog.py::TestGpxToStageDataCustomDate::test_default_date_is_today
+FAILED tests/unit/test_gpx_parser.py::TestParseGpxBasic::test_tag1_point_count
+FAILED tests/unit/test_gpx_parser.py::TestParseGpxBasic::test_tag1_name - cor...
+FAILED tests/unit/test_gpx_parser.py::TestParseGpxBasic::test_tag1_distance_positive
+FAILED tests/unit/test_gpx_parser.py::TestParseGpxWaypoints::test_tag3_point_count
+FAILED tests/unit/test_gpx_parser.py::TestParseGpxWaypoints::test_tag3_waypoint_extracted
+FAILED tests/unit/test_gpx_parser.py::TestParseGpxWaypoints::test_tag3_waypoint_name
+FAILED tests/unit/test_gpx_parser.py::TestParseAllFiles::test_parses_successfully[ von Valldemossa nach Dei\xe0]
+FAILED tests/unit/test_gpx_parser.py::TestParseAllFiles::test_parses_successfully[ von Dei\xe0 nach S\xf3ller]
+FAILED tests/unit/test_gpx_parser.py::TestParseAllFiles::test_parses_successfully[ von S\xf3ller nach Tossals Verds]
+FAILED tests/unit/test_gpx_parser.py::TestParseAllFiles::test_parses_successfully[ von Tossals Verds nach Lluc]
+FAILED tests/unit/test_gpx_parser.py::TestCumulativeDistance::test_last_point_distance_equals_total
+FAILED tests/unit/test_gpx_parser.py::TestElevationPlausibility::test_ascent_descent_ratio
+FAILED tests/unit/test_gpx_parser.py::TestElevationThreshold::test_threshold_reduces_elevation_gain
+FAILED tests/unit/test_gpx_upload_page.py::TestValidGPX::test_returns_track_with_name
+FAILED tests/unit/test_gpx_upload_page.py::TestFileSaved::test_file_saved - F...
+FAILED tests/unit/test_gpx_upload_page.py::TestSegmentsToTrip::test_creates_trip_with_waypoints
+FAILED tests/unit/test_gpx_upload_page.py::TestSegmentsToTrip::test_all_waypoints_have_time_window
+FAILED tests/unit/test_gpx_upload_page.py::TestSegmentsToTrip::test_time_windows_are_monotonic
+FAILED tests/unit/test_hybrid_segmentation.py::TestTag4Optimization::test_seg2_adjusted_to_peak
+FAILED tests/unit/test_hybrid_segmentation.py::TestAdjustedFlag::test_at_least_one_adjusted
+FAILED tests/unit/test_hybrid_segmentation.py::TestWaypointReference::test_waypoint_set_on_adjusted
+FAILED tests/unit/test_hybrid_segmentation.py::TestDurationConstraints::test_durations_in_range
+FAILED tests/unit/test_hybrid_segmentation.py::TestDistanceConsistency::test_distance_sum
+FAILED tests/unit/test_hybrid_segmentation.py::TestSeamlessTimes::test_no_time_gaps
+FAILED tests/unit/test_hybrid_segmentation.py::TestFlatRoute::test_tag2_segment_count_unchanged
+FAILED tests/unit/test_hybrid_segmentation.py::TestEmptyWaypoints::test_no_waypoints_no_change
+FAILED tests/unit/test_segment_builder.py::TestBuildSegmentsRealData::test_tag1_segment_count
+FAILED tests/unit/test_segment_builder.py::TestBuildSegmentsRealData::test_tag3_more_segments
+FAILED tests/unit/test_segment_builder.py::TestSegmentConsistency::test_distance_sum_equals_total
+FAILED tests/unit/test_segment_builder.py::TestSeamlessTimes::test_no_time_gaps
+FAILED tests/unit/test_segment_builder.py::TestShortRoute::test_single_segment
+FAILED tests/unit/test_segment_builder.py::TestConfigEffect::test_slow_config_more_segments
+ERROR tests/tdd/test_account_page.py::TestAccountPageExists::test_account_route_returns_200
+ERROR tests/tdd/test_account_page.py::TestAccountPageExists::test_account_page_shows_username
+ERROR tests/tdd/test_account_page.py::TestAccountPageExists::test_account_page_has_editable_fields
+ERROR tests/tdd/test_account_page.py::TestAccountPageExists::test_account_page_has_save_button
+ERROR tests/tdd/test_account_page.py::TestAccountPageExists::test_account_page_shows_member_since
+ERROR tests/tdd/test_account_page.py::TestNavigation::test_nav_has_account_link
+ERROR tests/tdd/test_account_page.py::TestNavigation::test_nav_shows_konto_label
+ERROR tests/tdd/test_account_page_extend.py::TestSignalApiKeyField::test_account_page_has_signal_api_key_field
+ERROR tests/tdd/test_account_page_extend.py::TestSignalApiKeyField::test_signal_api_key_has_password_type
+ERROR tests/tdd/test_account_page_extend.py::TestSignalApiKeyField::test_signal_api_key_placeholder
+ERROR tests/tdd/test_account_page_extend.py::TestAccountDeletion::test_account_page_has_danger_zone
+ERROR tests/tdd/test_account_page_extend.py::TestAccountDeletion::test_account_page_has_delete_button
+ERROR tests/tdd/test_account_page_extend.py::TestAccountDeletion::test_danger_zone_has_warning_text
+ERROR tests/tdd/test_change_password.py::TestPasswordChangeUI::test_account_has_password_change_section
+ERROR tests/tdd/test_change_password.py::TestPasswordChangeUI::test_account_has_old_password_field
+ERROR tests/tdd/test_change_password.py::TestPasswordChangeUI::test_account_has_new_password_fields
+ERROR tests/tdd/test_change_password.py::TestPasswordChangeEndpoint::test_change_password_endpoint_exists
+75 failed, 1005 passed, 31 skipped, 6 deselected, 1 xfailed, 17 errors in 30.36s

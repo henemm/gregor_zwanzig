@@ -356,17 +356,16 @@ def build_default_display_config(trip_id: str = "") -> "UnifiedWeatherDisplayCon
     """
     from app.models import MetricConfig, UnifiedWeatherDisplayConfig
 
-    # Core metrics that get alert_enabled=True by default
-    # (matches the old 3-slider behavior: temp, wind, gust, precip, wind_chill)
-    _DEFAULT_ALERT_METRICS = {"temperature", "wind", "gust", "precipitation", "wind_chill"}
-
+    # Issue #89: Alerts are explicit opt-ins per sms_format.md v2.0.
+    # default_change_threshold from MetricDefinition serves as the Δ-default
+    # WHEN the user activates the alert — not as an activation trigger.
     metrics = []
     for m in _METRICS:
         metrics.append(MetricConfig(
             metric_id=m.id,
             enabled=m.default_enabled,
             aggregations=list(m.default_aggregations),
-            alert_enabled=m.id in _DEFAULT_ALERT_METRICS,
+            alert_enabled=False,
         ))
 
     return UnifiedWeatherDisplayConfig(

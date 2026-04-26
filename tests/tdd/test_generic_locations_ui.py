@@ -1,13 +1,12 @@
 """
-TDD RED tests for F11b: Generic Locations UI.
+Tests fuer F11b: Generic Locations UI.
 
-Tests the UI-layer additions:
-- Provider detection for locations
-- Location weather config dialog existence
-- Profile dropdown integration
-- Wetter-Metriken button handler pattern
+v1.1 (Bug #89): Location-Dialog-Tests entfernt — die Funktionen
+`show_location_weather_config_dialog` und das Modul `web.pages.locations`
+wurden entfernt (UI-tot seit F76: /locations -> 301 -> /compare).
 
-All tests MUST FAIL before implementation (TDD RED phase).
+Verbleibende Tests: Provider-Detection (lat/lon-basiert) bleibt fuer den
+Loader / SvelteKit-Frontend / Go-API relevant.
 """
 import pytest
 
@@ -89,66 +88,3 @@ class TestProviderDetectionForLocations:
         )
         providers = get_available_providers_for_location(loc)
         assert "geosphere" not in providers
-
-
-# =============================================================================
-# Test 2: Location Weather Config Dialog exists
-# =============================================================================
-
-class TestLocationWeatherConfigDialog:
-    """show_location_weather_config_dialog() function."""
-
-    def test_function_exists(self):
-        """
-        GIVEN: weather_config module
-        WHEN: importing show_location_weather_config_dialog
-        THEN: import succeeds
-        """
-        from web.pages.weather_config import show_location_weather_config_dialog
-        assert callable(show_location_weather_config_dialog)
-
-    def test_function_signature(self):
-        """
-        GIVEN: show_location_weather_config_dialog function
-        WHEN: inspecting its signature
-        THEN: accepts location and optional user_id parameters
-        """
-        import inspect
-        from web.pages.weather_config import show_location_weather_config_dialog
-
-        sig = inspect.signature(show_location_weather_config_dialog)
-        params = list(sig.parameters.keys())
-        assert "location" in params
-        assert "user_id" in params
-
-
-# =============================================================================
-# Test 3: Locations page imports LocationActivityProfile
-# =============================================================================
-
-class TestLocationsPageImports:
-    """Locations page must import LocationActivityProfile for dropdown."""
-
-    def test_locations_module_imports_profile(self):
-        """
-        GIVEN: locations page module
-        WHEN: checking if LocationActivityProfile is used
-        THEN: the module can access LocationActivityProfile
-        """
-        from web.pages import locations
-        from app.user import LocationActivityProfile
-
-        # The module should use LocationActivityProfile
-        source = open(locations.__file__).read()
-        assert "LocationActivityProfile" in source
-
-    def test_locations_module_imports_weather_config(self):
-        """
-        GIVEN: locations page module
-        WHEN: checking if weather config dialog is imported
-        THEN: show_location_weather_config_dialog is imported
-        """
-        from web.pages import locations
-
-        source = open(locations.__file__).read()
-        assert "show_location_weather_config_dialog" in source
