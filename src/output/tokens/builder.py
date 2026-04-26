@@ -24,8 +24,8 @@ _UMLAUT = str.maketrans({
 
 
 def _sanitize_stage_name(name: str) -> str:
-    """Truncate to 10 chars first, THEN replace Umlauts (per test contract)."""
-    return name[:10].translate(_UMLAUT)
+    """Replace Umlauts FIRST, then truncate to 10 chars (sms_format.md SSOT)."""
+    return name.translate(_UMLAUT)[:10]
 
 # Truncation priority §6: lower drops first.
 PRIORITY = {

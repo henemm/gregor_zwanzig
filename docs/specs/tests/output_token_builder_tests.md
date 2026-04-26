@@ -41,7 +41,7 @@ function name (without the `test_` prefix) to the behaviour it asserts.
 | render_truncation_priority | §6 order: DBG -> Wintersport -> Fire -> Peaks -> PR -> D/N |
 | empty_forecast_raises | empty forecast -> `ValueError` |
 | determinism | identical inputs -> identical render |
-| stage_name_umlauts_replaced | Umlauts (ä/ö/ü/ß/Ä/Ö/Ü) ersetzt vor Truncate; `Übergangsjoch` -> `Uebergangsj` |
+| stage_name_umlauts_replaced | Umlauts ersetzt VOR Truncate; `Übergangsjoch` -> `Uebergangsjoch`[:10] -> `Uebergangs` |
 | stage_name_truncated_to_ten_chars | Stage-Name max 10 Chars; `VeryLongStageName` -> `VeryLongSt` |
 
 ### Golden / Conformance (`tests/golden/test_sms_golden.py`)

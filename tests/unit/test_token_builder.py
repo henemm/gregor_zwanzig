@@ -299,15 +299,15 @@ def test_determinism():
 
 def test_stage_name_umlauts_replaced():
     """
-    sms_format.md §1/§3.1: Stage-Name darf keine Umlaute enthalten.
-    'Übergangsjoch' (12 Zeichen mit Umlaut) muss zu 'Uebergangsj' werden:
-    ERST Umlaut-Ersatz (Ü→Ue, 13 Zeichen), DANN Truncate auf 10
-    -> 'Uebergangs' + 'j' = 'Uebergangsj'.
+    sms_format.md §1/§3.1 SSOT: max 10 Chars hart.
+    'Übergangsjoch' -> translate (Ü→Ue) -> 'Uebergangsjoch' (14)
+                    -> truncate[:10] -> 'Uebergangs' (10).
+    Reihenfolge translate->truncate stellt sicher, dass Resultat <=10 ist.
     """
     line = _build_default_line(stage_name="Übergangsjoch")
     rendered = line.render(160)
-    assert rendered.startswith("Uebergangsj:"), (
-        f"Stage-Name nicht korrekt sanitized; expected 'Uebergangsj:' prefix in {rendered!r}"
+    assert rendered.startswith("Uebergangs:"), (
+        f"Stage-Name nicht korrekt sanitized; expected 'Uebergangs:' prefix in {rendered!r}"
     )
 
 
