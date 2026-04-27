@@ -90,16 +90,22 @@ def _build_skeleton(
     stage_name: str,
     report_de: str,
     risk_de: str | None,
+    has_tokens: bool,
 ) -> str:
     """Build the non-token prefix: '[trip] stage — report — risk'.
 
-    If risk is None, the risk segment is omitted but the trailing dash stays
-    so the subject reads '... — Update — D...' (per golden test).
+    If risk is None and tokens follow, the trailing dash stays so the subject
+    reads '... — Update — D...' (per golden ``test_golden_gr221_short_update``).
+
+    If risk is None AND no tokens follow, the trailing dash is dropped to avoid
+    a dangling em-dash like '... — Abend —' (validator finding 2026-04-27).
     """
     head = f"[{trip_name}] {stage_name}" if trip_name else stage_name
     if risk_de:
         return f"{head} {_DASH} {report_de} {_DASH} {risk_de}"
-    return f"{head} {_DASH} {report_de} {_DASH}"
+    if has_tokens:
+        return f"{head} {_DASH} {report_de} {_DASH}"
+    return f"{head} {_DASH} {report_de}"
 
 
 def _join_with_tokens(skeleton: str, token_strs: list[str]) -> str:
@@ -169,12 +175,6 @@ def build_email_subject(
     ]
     last: str = ""
     for step in truncation_steps:
-        skeleton = _build_skeleton(
-            trip_name=token_line.trip_name if step["trip"] else None,
-            stage_name=token_line.stage_name,
-            report_de=report_de,
-            risk_de=risk_de,
-        )
         token_strs = _build_token_strings(
             fc_map,
             vigilance_block,
@@ -182,6 +182,13 @@ def build_email_subject(
             keep_w=step["w"],
             keep_g=step["g"],
             keep_vigilance=step["v"],
+        )
+        skeleton = _build_skeleton(
+            trip_name=token_line.trip_name if step["trip"] else None,
+            stage_name=token_line.stage_name,
+            report_de=report_de,
+            risk_de=risk_de,
+            has_tokens=bool(token_strs),
         )
         candidate = _join_with_tokens(skeleton, token_strs)
         last = candidate

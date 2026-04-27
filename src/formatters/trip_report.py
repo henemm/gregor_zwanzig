@@ -105,9 +105,13 @@ class TripReportFormatter:
             stage_name, stage_stats, effective_trend, compact_summary,
             daylight,
         )
+        first_agg = segments[0].aggregated
         email_subject = self._generate_subject(
             trip_name, report_type, segments[0].segment.start_time,
             stage_name=stage_name,
+            temp_max_c=first_agg.temp_max_c,
+            wind_max_kmh=first_agg.wind_max_kmh,
+            gust_max_kmh=first_agg.gust_max_kmh,
         )
 
         return TripReport(
@@ -458,26 +462,45 @@ class TripReportFormatter:
         dt: datetime,
         *,
         stage_name: Optional[str] = None,
+        temp_max_c: Optional[float] = None,
+        wind_max_kmh: Optional[float] = None,
+        gust_max_kmh: Optional[float] = None,
     ) -> str:
         """Generate §11-konformes E-Mail-Subject via output.subject filter.
 
         β2: Migrated from inline format to build_email_subject(token_line).
+        Fix-Iteration 1 (2026-04-27): D/W/G Wetter-Tokens aus aggregated
+        Segment-Werten befuellen — vorher endete das Subject bei `Abend —`.
+
         Spec: docs/specs/modules/output_subject_filter.md v1.0
 
         Wenn stage_name nicht gesetzt ist, wird das Datum als Stage-Substitut
         verwendet, damit Multi-Tag-Reports im Postfach unterscheidbar bleiben.
         """
         from output.subject import build_email_subject
-        from output.tokens.dto import TokenLine
+        from output.tokens.dto import Token, TokenLine
 
         # 'alert' wird auf 'update' gemappt — semantisch identisch (Wetteränderung).
         rt = "update" if report_type == "alert" else report_type
         # Stage-Name = explizite Stage falls vorhanden, sonst Datum als Diskriminator.
         stage = stage_name or dt.strftime("%d.%m.%Y")
+
+        # Build D/W/G tokens from segment aggregates (whitelist for subject §11).
+        tokens: list[Token] = []
+        if temp_max_c is not None:
+            tokens.append(Token(symbol="D", value=str(int(temp_max_c)),
+                                category="forecast", priority=4))
+        if wind_max_kmh is not None:
+            tokens.append(Token(symbol="W", value=str(int(wind_max_kmh)),
+                                category="forecast", priority=4))
+        if gust_max_kmh is not None:
+            tokens.append(Token(symbol="G", value=str(int(gust_max_kmh)),
+                                category="forecast", priority=4))
+
         line = TokenLine(
             stage_name=stage,
             report_type=rt,  # type: ignore[arg-type]
-            tokens=(),
+            tokens=tuple(tokens),
             trip_name=trip_name,
         )
         return build_email_subject(line)

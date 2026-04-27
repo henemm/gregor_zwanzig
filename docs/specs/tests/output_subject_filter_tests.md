@@ -41,6 +41,8 @@ function name (without the `test_` prefix) to the behaviour it asserts.
 | subject_truncation_to_78_drops_weather_first | Wetter-Tokens fallen vor Etappe/Trip; ≤78 Zeichen |
 | subject_truncation_keeps_stage_name_intact | Etappen-Name niemals gekürzt; ggf. Trip-Präfix gestrichen |
 | subject_no_trip_prefix_when_trip_name_none | `trip_name=None` → kein `[…]`-Präfix |
+| subject_no_trailing_dash_when_no_risk_and_no_tokens | `main_risk=None` + `tokens=()` → kein dangling ` — ` am Subject-Ende (Validator-Finding 2026-04-27) |
+| trip_report_subject_includes_dwg_tokens | TripReportFormatter.format_email mit aggregierten Wetter-Daten → Subject enthält `D{temp_max} W{wind_max} G{gust_max}` (Validator-Finding 2026-04-27) |
 
 ### Golden (`tests/golden/test_subject_golden.py`)
 

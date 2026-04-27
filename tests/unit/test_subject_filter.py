@@ -250,3 +250,35 @@ def test_subject_no_trip_prefix_when_trip_name_none():
         f"subject must not have trip prefix when trip_name=None, got {subject!r}"
     )
     assert subject.startswith("Tag 1"), f"subject must start with stage_name, got {subject!r}"
+
+
+# ---------------------------------------------------------------------------
+# Validator-Finding HIGH (2026-04-27): trailing dangling " — "
+# ---------------------------------------------------------------------------
+
+
+def test_subject_no_trailing_dash_when_no_risk_and_no_tokens():
+    """
+    GIVEN: TokenLine with main_risk=None AND tokens=()
+    WHEN: build_email_subject is called
+    THEN: Subject must NOT end with a dangling em-dash ' — '
+          (validator finding 2026-04-27, mail_712.eml)
+    """
+    line = TokenLine(
+        stage_name="Tag 1: Pollença → Lluc",
+        report_type="evening",
+        tokens=(),
+        main_risk=None,
+        trip_name="VALIDATOR β2 Test",
+    )
+    subject = build_email_subject(line)
+
+    assert not subject.endswith(" —"), (
+        f"subject must not end with dangling em-dash, got {subject!r}"
+    )
+    assert not subject.endswith("— "), (
+        f"subject must not end with em-dash + space, got {subject!r}"
+    )
+    assert subject.endswith("Abend"), (
+        f"subject should end with the report type label when no risk/tokens, got {subject!r}"
+    )
