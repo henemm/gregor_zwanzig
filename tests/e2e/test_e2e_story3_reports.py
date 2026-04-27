@@ -238,13 +238,15 @@ class TestReportFormatting:
         assert "SUMMARY" in report.email_plain
 
     def test_email_subject_format(self, segments_from_trip):
-        """Subject line follows format: [Trip Name] Type - DD.MM.YYYY."""
+        """Subject line follows §11-konformes Schema: [Trip] Stage — Morgen — ..."""
         weather = self._get_weather_data(segments_from_trip)
         formatter = TripReportFormatter()
         report = formatter.format_email(weather, TEST_TRIP_NAME, "morning")
 
         assert report.email_subject.startswith(f"[{TEST_TRIP_NAME}]")
-        assert "Morning Report" in report.email_subject
+        # β2: Subject nutzt deutschen ReportType-Label "Morgen" statt "Morning Report"
+        assert "Morgen" in report.email_subject
+        # Datum als Stage-Substitut wenn keine Stage-Bezeichnung verfügbar
         assert date.today().strftime("%d.%m.%Y") in report.email_subject
 
     def test_sms_format_compact(self, segments_from_trip):
@@ -324,12 +326,12 @@ class TestEmailDelivery:
         imap.close()
         imap.logout()
 
-        # 6. Validate subject contains trip name
+        # 6. Validate subject contains trip name (β2: Schema [Trip] Stage — Morgen — ...)
         assert TEST_TRIP_NAME in subject, (
             f"Trip name '{TEST_TRIP_NAME}' not in subject: {subject}"
         )
-        assert "Morning Report" in subject, (
-            f"'Morning Report' not in subject: {subject}"
+        assert "Morgen" in subject, (
+            f"'Morgen' (German report type) not in subject: {subject}"
         )
 
         # 7. Validate HTML body content
