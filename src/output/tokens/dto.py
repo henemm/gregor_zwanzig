@@ -90,6 +90,8 @@ class TokenLine:
     tokens: tuple[Token, ...] = field(default_factory=tuple)
     truncated: bool = False
     full_length: int = 0
+    main_risk: str | None = None  # β2: Top-Risk-Label aus RiskEngine (English; subject.py übersetzt zu DE)
+    trip_name: str | None = None  # β2: Optional, für Subject-Präfix [{trip_name}]
 
     def render(self, max_length: int = 160) -> str:
         from src.output.tokens.render import render_line

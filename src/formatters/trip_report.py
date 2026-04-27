@@ -107,6 +107,7 @@ class TripReportFormatter:
         )
         email_subject = self._generate_subject(
             trip_name, report_type, segments[0].segment.start_time,
+            stage_name=stage_name,
         )
 
         return TripReport(
@@ -450,13 +451,36 @@ class TripReportFormatter:
     # Subject
     # ------------------------------------------------------------------
 
-    def _generate_subject(self, trip_name: str, report_type: str, dt: datetime) -> str:
-        type_label = {
-            "morning": "Morning Report",
-            "evening": "Evening Report",
-            "alert": "WETTER-ÄNDERUNG",
-        }.get(report_type, report_type.title())
-        return f"[{trip_name}] {type_label} - {dt.strftime('%d.%m.%Y')}"
+    def _generate_subject(
+        self,
+        trip_name: str,
+        report_type: str,
+        dt: datetime,
+        *,
+        stage_name: Optional[str] = None,
+    ) -> str:
+        """Generate §11-konformes E-Mail-Subject via output.subject filter.
+
+        β2: Migrated from inline format to build_email_subject(token_line).
+        Spec: docs/specs/modules/output_subject_filter.md v1.0
+
+        Wenn stage_name nicht gesetzt ist, wird das Datum als Stage-Substitut
+        verwendet, damit Multi-Tag-Reports im Postfach unterscheidbar bleiben.
+        """
+        from output.subject import build_email_subject
+        from output.tokens.dto import TokenLine
+
+        # 'alert' wird auf 'update' gemappt — semantisch identisch (Wetteränderung).
+        rt = "update" if report_type == "alert" else report_type
+        # Stage-Name = explizite Stage falls vorhanden, sonst Datum als Diskriminator.
+        stage = stage_name or dt.strftime("%d.%m.%Y")
+        line = TokenLine(
+            stage_name=stage,
+            report_type=rt,  # type: ignore[arg-type]
+            tokens=(),
+            trip_name=trip_name,
+        )
+        return build_email_subject(line)
 
     # ------------------------------------------------------------------
     # Risk (per segment, used for overview)

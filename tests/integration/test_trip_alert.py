@@ -180,17 +180,21 @@ class TestDetectAllChanges:
 
 
 class TestAlertSubjectGerman:
-    """Test that alert subject uses German language."""
+    """Test that alert subject uses German language (β2: §11-Schema)."""
 
     def test_alert_subject_is_german(self) -> None:
-        """Alert subject must use German 'WETTER-ÄNDERUNG'."""
+        """Alert-Subject nutzt §11-konformes Schema mit deutschem ReportType.
+
+        β2: 'WETTER-ÄNDERUNG' wurde durch das §11-Schema ersetzt; 'alert'
+        wird auf 'Update' gemappt (semantisch identisch: Wetter-Update).
+        """
         from formatters.trip_report import TripReportFormatter
 
         formatter = TripReportFormatter()
         segments = [_create_segment_weather(segment_id=1)]
         report = formatter.format_email(segments, "TestTrip", "alert")
 
-        assert "WETTER-ÄNDERUNG" in report.email_subject
+        assert "Update" in report.email_subject
         assert "Weather Alert" not in report.email_subject
 
 
