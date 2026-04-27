@@ -1,0 +1,69 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 2 items
+
+tests/unit/test_subject_filter.py F                                      [ 50%]
+tests/unit/test_trip_report_subject_tokens.py F                          [100%]
+
+=================================== FAILURES ===================================
+___________ test_subject_no_trailing_dash_when_no_risk_and_no_tokens ___________
+
+    def test_subject_no_trailing_dash_when_no_risk_and_no_tokens():
+        """
+        GIVEN: TokenLine with main_risk=None AND tokens=()
+        WHEN: build_email_subject is called
+        THEN: Subject must NOT end with a dangling em-dash ' — '
+              (validator finding 2026-04-27, mail_712.eml)
+        """
+        line = TokenLine(
+            stage_name="Tag 1: Pollença → Lluc",
+            report_type="evening",
+            tokens=(),
+            main_risk=None,
+            trip_name="VALIDATOR β2 Test",
+        )
+        subject = build_email_subject(line)
+    
+>       assert not subject.endswith(" —"), (
+            f"subject must not end with dangling em-dash, got {subject!r}"
+        )
+E       AssertionError: subject must not end with dangling em-dash, got '[VALIDATOR β2 Test] Tag 1: Pollença → Lluc — Abend —'
+E       assert not True
+E        +  where True = <built-in method endswith of str object at 0x78b21e3b9b00>(' —')
+E        +    where <built-in method endswith of str object at 0x78b21e3b9b00> = '[VALIDATOR β2 Test] Tag 1: Pollença → Lluc — Abend —'.endswith
+
+tests/unit/test_subject_filter.py:276: AssertionError
+_________________ test_trip_report_subject_includes_dwg_tokens _________________
+
+    def test_trip_report_subject_includes_dwg_tokens():
+        """
+        GIVEN: TripReportFormatter mit Segment, das aggregierte temp/wind/gust hat
+        WHEN: format_email() wird aufgerufen
+        THEN: report.email_subject enthaelt Wetter-Tokens D{temp} W{wind} G{gust}
+              (Validator-Finding 2026-04-27 — mail_712.eml endete mit `Abend —`)
+        """
+        seg = _segment_weather_with_aggregated(
+            temp_max_c=21.0, wind_max_kmh=17.0, gust_max_kmh=38.0,
+        )
+        formatter = TripReportFormatter()
+        report = formatter.format_email(
+            [seg],
+            trip_name="VALIDATOR β2 Test",
+            report_type="evening",
+            stage_name="Tag 1: Pollença → Lluc",
+        )
+    
+        subj = report.email_subject
+    
+>       assert "D21" in subj, f"expected 'D21' in subject, got {subj!r}"
+E       AssertionError: expected 'D21' in subject, got '[VALIDATOR β2 Test] Tag 1: Pollença → Lluc — Abend —'
+E       assert 'D21' in '[VALIDATOR β2 Test] Tag 1: Pollença → Lluc — Abend —'
+
+tests/unit/test_trip_report_subject_tokens.py:105: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/test_subject_filter.py::test_subject_no_trailing_dash_when_no_risk_and_no_tokens
+FAILED tests/unit/test_trip_report_subject_tokens.py::test_trip_report_subject_includes_dwg_tokens
+============================== 2 failed in 0.14s ===============================
