@@ -281,4 +281,5 @@ Kein Feature-Flag nötig, da das alte Subject-Format ohnehin §11 verletzt und k
 
 ## Changelog
 
+- 2026-04-27: β2 Validator-Findings Fixed — Trailing dangling em-dash when `main_risk=None` + `tokens=()` (HIGH), missing D/W/G tokens from aggregated segment data in TripReportFormatter (CRITICAL). Spec aligned with A5 §4 (no trailing dash without risk/tokens), TripReportFormatter now passes aggregated max/min temps to TokenLine for subject rendering.
 - 2026-04-26: Initial spec created (β2 Output Subject Filter, Phase 2 abgeschlossen, Approval pending)
