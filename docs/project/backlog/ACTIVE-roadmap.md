@@ -68,6 +68,7 @@
 | Account-Seite (SvelteKit) | 2026-04-16 | Auth | F61: /account Route, Profil laden via Server Load, Kanal-Einstellungen (E-Mail, Signal, Telegram) editierbar, Konto-Link in Nav. GitHub Issue #61. |
 | Scheduler Multi-User Iteration | 2026-04-16 | Services | #63: Go scheduler iteriert ueber alle registrierten User, sendet ?user_id=X je Cron-Job, Continue-on-error. ListUserIDs() in store, triggerEndpointForUser() in scheduler. |
 | Token Builder (output_token_builder) | 2026-04-26 | Formatter | β1: SMS-konforme TokenLine gemäß sms_format.md v2.0, 18/18 tests GREEN, 490 LoC, adversary VERIFIED, validated & ready to commit. |
+| Output Subject Filter (§11 Subject Rendering) | 2026-04-27 | Formatter | β2: build_email_subject() from TokenLine, [Trip] Etappe — ReportType — MainRisk D/W/G tokens, 78-char truncation. Validator-Findings Fixed: trailing em-dash (HIGH), missing D/W/G aggregates (CRITICAL). 14/14 tests GREEN. |
 
 ## Solved Bugs
 

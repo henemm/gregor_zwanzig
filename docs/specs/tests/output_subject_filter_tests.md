@@ -61,4 +61,5 @@ function name (without the `test_` prefix) to the behaviour it asserts.
 
 ## Changelog
 
+- 2026-04-27: All 14 tests GREEN. Fixed: (1) trailing dangling em-dash when `main_risk=None` + no tokens via `_build_skeleton()` conditional, (2) missing D/W/G from aggregated segment data via TripReportFormatter passing max/min temps to TokenLine. Both validator findings resolved.
 - 2026-04-26: Initial test manifest (TDD RED for β2)
