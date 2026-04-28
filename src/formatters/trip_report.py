@@ -4,7 +4,13 @@ Trip report formatter v2 for email delivery.
 Feature 3.1 v2: Hourly segment tables, night block, thunder forecast.
 SPEC: docs/specs/modules/trip_report_formatter_v2.md
 
-Generates HTML + plain-text from one processor.
+Generates HTML + plain-text via the channel renderer (β3 Adapter).
+
+DEPRECATION (β3, render-pipeline-consolidation): This class is now a thin
+Adapter that delegates RENDER to src.output.renderers.email.render_email().
+Domain logic (highlights, compact_summary, RiskEngine, subject building)
+stays here. β6 will remove this Adapter when all callers move to the
+renderer directly. SPEC: docs/specs/modules/output_channel_renderers.md §A8.
 """
 from __future__ import annotations
 
@@ -30,6 +36,8 @@ from app.models import (
 )
 from services.daylight_service import DaylightWindow
 from services.risk_engine import RiskEngine
+from src.output.renderers.email import render_email
+from src.output.tokens.dto import TokenLine
 
 
 class TripReportFormatter:
@@ -92,18 +100,31 @@ class TripReportFormatter:
         if dc.show_compact_summary:
             compact_summary = self._generate_compact_summary(segments, stage_name, dc)
 
-        # Generate both formats from same data
-        email_html = self._render_html(
-            segments, seg_tables, trip_name, report_type, dc,
-            night_rows, thunder_forecast, highlights, changes,
-            stage_name, stage_stats, effective_trend, compact_summary,
-            daylight,
+        # β3 Adapter (§A2/§A6): RENDER an pure renderer delegieren.
+        # Domain-Werte (highlights, compact_summary) sind oben berechnet; tz,
+        # exposed_sections, friendly_keys werden als explizite kwargs übergeben.
+        token_line = TokenLine(
+            stage_name=stage_name or trip_name,
+            report_type=report_type,  # type: ignore[arg-type]
+            trip_name=trip_name,
         )
-        email_plain = self._render_plain(
-            segments, seg_tables, trip_name, report_type, dc,
-            night_rows, thunder_forecast, highlights, changes,
-            stage_name, stage_stats, effective_trend, compact_summary,
-            daylight,
+        email_html, email_plain = render_email(
+            token_line,
+            segments=segments,
+            seg_tables=seg_tables,
+            display_config=dc,
+            night_rows=night_rows,
+            thunder_forecast=thunder_forecast,
+            multi_day_trend=effective_trend,
+            changes=changes,
+            stage_name=stage_name,
+            stage_stats=stage_stats,
+            highlights=highlights,
+            compact_summary=compact_summary,
+            daylight=daylight,
+            tz=self._tz,
+            exposed_sections=exposed_sections,
+            friendly_keys=self._friendly_keys,
         )
         first_agg = segments[0].aggregated
         email_subject = self._generate_subject(

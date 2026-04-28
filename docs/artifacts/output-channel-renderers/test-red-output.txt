@@ -1,0 +1,129 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 18 items
+
+tests/golden/email/test_email_plain_golden.py FFFFF                      [ 27%]
+tests/unit/test_renderers_email.py FFFFFF                                [ 61%]
+tests/unit/test_renderers_sms.py FFF                                     [ 77%]
+tests/unit/test_sms_trip.py .F.F                                         [100%]
+
+=================================== FAILURES ===================================
+_________________ test_email_plain_golden_gr20_summer_evening __________________
+tests/golden/email/test_email_plain_golden.py:186: in test_email_plain_golden_gr20_summer_evening
+    _assert_plain_matches_golden("gr20-summer-evening", report.email_plain)
+tests/golden/email/test_email_plain_golden.py:162: in _assert_plain_matches_golden
+    expected = _read_golden(stem)
+               ^^^^^^^^^^^^^^^^^^
+tests/golden/email/test_email_plain_golden.py:49: in _read_golden
+    pytest.fail(
+E   Failed: Plain-Text-Golden fehlt: /home/hem/gregor_zwanzig/tests/golden/email/gr20-summer-evening-plain.txt
+E   Spec §A7 verlangt 5 Goldens vor Migration. In Phase 6 (Implement) friert der Developer den heutigen format_email().email_plain Output in diese Datei ein.
+_________________ test_email_plain_golden_gr20_spring_morning __________________
+tests/golden/email/test_email_plain_golden.py:202: in test_email_plain_golden_gr20_spring_morning
+    _assert_plain_matches_golden("gr20-spring-morning", report.email_plain)
+tests/golden/email/test_email_plain_golden.py:162: in _assert_plain_matches_golden
+    expected = _read_golden(stem)
+               ^^^^^^^^^^^^^^^^^^
+tests/golden/email/test_email_plain_golden.py:49: in _read_golden
+    pytest.fail(
+E   Failed: Plain-Text-Golden fehlt: /home/hem/gregor_zwanzig/tests/golden/email/gr20-spring-morning-plain.txt
+E   Spec §A7 verlangt 5 Goldens vor Migration. In Phase 6 (Implement) friert der Developer den heutigen format_email().email_plain Output in diese Datei ein.
+________________ test_email_plain_golden_gr221_mallorca_evening ________________
+tests/golden/email/test_email_plain_golden.py:218: in test_email_plain_golden_gr221_mallorca_evening
+    _assert_plain_matches_golden("gr221-mallorca-evening", report.email_plain)
+tests/golden/email/test_email_plain_golden.py:162: in _assert_plain_matches_golden
+    expected = _read_golden(stem)
+               ^^^^^^^^^^^^^^^^^^
+tests/golden/email/test_email_plain_golden.py:49: in _read_golden
+    pytest.fail(
+E   Failed: Plain-Text-Golden fehlt: /home/hem/gregor_zwanzig/tests/golden/email/gr221-mallorca-evening-plain.txt
+E   Spec §A7 verlangt 5 Goldens vor Migration. In Phase 6 (Implement) friert der Developer den heutigen format_email().email_plain Output in diese Datei ein.
+________________ test_email_plain_golden_arlberg_winter_morning ________________
+tests/golden/email/test_email_plain_golden.py:237: in test_email_plain_golden_arlberg_winter_morning
+    _assert_plain_matches_golden("arlberg-winter-morning", report.email_plain)
+tests/golden/email/test_email_plain_golden.py:162: in _assert_plain_matches_golden
+    expected = _read_golden(stem)
+               ^^^^^^^^^^^^^^^^^^
+tests/golden/email/test_email_plain_golden.py:49: in _read_golden
+    pytest.fail(
+E   Failed: Plain-Text-Golden fehlt: /home/hem/gregor_zwanzig/tests/golden/email/arlberg-winter-morning-plain.txt
+E   Spec §A7 verlangt 5 Goldens vor Migration. In Phase 6 (Implement) friert der Developer den heutigen format_email().email_plain Output in diese Datei ein.
+__________________ test_email_plain_golden_corsica_vigilance ___________________
+tests/golden/email/test_email_plain_golden.py:255: in test_email_plain_golden_corsica_vigilance
+    _assert_plain_matches_golden("corsica-vigilance", report.email_plain)
+tests/golden/email/test_email_plain_golden.py:162: in _assert_plain_matches_golden
+    expected = _read_golden(stem)
+               ^^^^^^^^^^^^^^^^^^
+tests/golden/email/test_email_plain_golden.py:49: in _read_golden
+    pytest.fail(
+E   Failed: Plain-Text-Golden fehlt: /home/hem/gregor_zwanzig/tests/golden/email/corsica-vigilance-plain.txt
+E   Spec §A7 verlangt 5 Goldens vor Migration. In Phase 6 (Implement) friert der Developer den heutigen format_email().email_plain Output in diese Datei ein.
+________________ test_render_email_returns_html_and_plain_tuple ________________
+tests/unit/test_renderers_email.py:148: in test_render_email_returns_html_and_plain_tuple
+    from src.output.renderers.email import render_email  # noqa: F401
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   ModuleNotFoundError: No module named 'src.output.renderers'
+________________ test_render_email_html_contains_segment_table _________________
+tests/unit/test_renderers_email.py:165: in test_render_email_html_contains_segment_table
+    from src.output.renderers.email import render_email
+E   ModuleNotFoundError: No module named 'src.output.renderers'
+__________________ test_render_email_plain_matches_html_data ___________________
+tests/unit/test_renderers_email.py:180: in test_render_email_plain_matches_html_data
+    from src.output.renderers.email import render_email
+E   ModuleNotFoundError: No module named 'src.output.renderers'
+______________ test_render_email_with_changes_renders_alert_block ______________
+tests/unit/test_renderers_email.py:196: in test_render_email_with_changes_renders_alert_block
+    from src.output.renderers.email import render_email
+E   ModuleNotFoundError: No module named 'src.output.renderers'
+_________________ test_render_email_no_night_rows_when_morning _________________
+tests/unit/test_renderers_email.py:222: in test_render_email_no_night_rows_when_morning
+    from src.output.renderers.email import render_email
+E   ModuleNotFoundError: No module named 'src.output.renderers'
+_______________________ test_render_email_pure_function ________________________
+tests/unit/test_renderers_email.py:240: in test_render_email_pure_function
+    from src.output.renderers.email import render_email
+E   ModuleNotFoundError: No module named 'src.output.renderers'
+____________________ test_render_sms_delegates_to_tokenline ____________________
+tests/unit/test_renderers_sms.py:77: in test_render_sms_delegates_to_tokenline
+    from src.output.renderers.sms import render_sms  # noqa: F401
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   ModuleNotFoundError: No module named 'src.output.renderers'
+_____________________ test_render_sms_respects_max_length ______________________
+tests/unit/test_renderers_sms.py:90: in test_render_sms_respects_max_length
+    from src.output.renderers.sms import render_sms
+E   ModuleNotFoundError: No module named 'src.output.renderers'
+__________________________ test_render_sms_v2_format ___________________________
+tests/unit/test_renderers_sms.py:104: in test_render_sms_v2_format
+    from src.output.renderers.sms import render_sms
+E   ModuleNotFoundError: No module named 'src.output.renderers'
+______________________ test_format_sms_single_segment_v2 _______________________
+tests/unit/test_sms_trip.py:103: in test_format_sms_single_segment_v2
+    assert "N12" in sms, f"v2.0 erwartet 'N12' (Tag-Min): {sms!r}"
+E   AssertionError: v2.0 erwartet 'N12' (Tag-Min): 'E1:T12/18 W30 R5mm'
+E   assert 'N12' in 'E1:T12/18 W30 R5mm'
+________________________ test_format_sms_v2_wire_format ________________________
+tests/unit/test_sms_trip.py:142: in test_format_sms_v2_wire_format
+    sms = formatter.format_sms(segments, stage_name="GR20 E1")
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: SMSTripFormatter.format_sms() got an unexpected keyword argument 'stage_name'
+=========================== short test summary info ============================
+FAILED tests/golden/email/test_email_plain_golden.py::test_email_plain_golden_gr20_summer_evening
+FAILED tests/golden/email/test_email_plain_golden.py::test_email_plain_golden_gr20_spring_morning
+FAILED tests/golden/email/test_email_plain_golden.py::test_email_plain_golden_gr221_mallorca_evening
+FAILED tests/golden/email/test_email_plain_golden.py::test_email_plain_golden_arlberg_winter_morning
+FAILED tests/golden/email/test_email_plain_golden.py::test_email_plain_golden_corsica_vigilance
+FAILED tests/unit/test_renderers_email.py::test_render_email_returns_html_and_plain_tuple
+FAILED tests/unit/test_renderers_email.py::test_render_email_html_contains_segment_table
+FAILED tests/unit/test_renderers_email.py::test_render_email_plain_matches_html_data
+FAILED tests/unit/test_renderers_email.py::test_render_email_with_changes_renders_alert_block
+FAILED tests/unit/test_renderers_email.py::test_render_email_no_night_rows_when_morning
+FAILED tests/unit/test_renderers_email.py::test_render_email_pure_function - ...
+FAILED tests/unit/test_renderers_sms.py::test_render_sms_delegates_to_tokenline
+FAILED tests/unit/test_renderers_sms.py::test_render_sms_respects_max_length
+FAILED tests/unit/test_renderers_sms.py::test_render_sms_v2_format - ModuleNo...
+FAILED tests/unit/test_sms_trip.py::test_format_sms_single_segment_v2 - Asser...
+FAILED tests/unit/test_sms_trip.py::test_format_sms_v2_wire_format - TypeErro...
+========================= 16 failed, 2 passed in 0.20s =========================

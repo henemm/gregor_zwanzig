@@ -16,7 +16,13 @@ Gregor Zwanzig ist ein Headless-Dienst (kein UI), der in drei Ebenen strukturier
    - **Report Formatter**: erzeugt kurze Texte + Debug-Anhang
    - **DebugBuffer**: gemeinsame Quelle für Console + E-Mail-Debug
 
-3. **Channels**
+3. **Render-Pipeline**
+   - **Channel Renderers** (`src/output/renderers/`) – β3: Pure-Function Renderer für E-Mail + SMS
+   - `render_email()` – HTML + Plain-Text Körper (aus Token-Zeilen)
+   - `render_sms()` – Kompaktes Format ≤160 Zeichen (v2.0 Wire-Format)
+   - Schnittstelle: TokenLine (aus Report Formatter) → Channel-spezifischer Output
+
+4. **Channels**
    - **SMTP-Mailer** (`src/app/core.py`) – einziger aktiver Kanal im MVP
    - Weitere Kanäle (SMS, Push, Garmin-Mail) später möglich
 
@@ -31,11 +37,14 @@ Normalisierung
   ↓  
 Risk Engine  
   ↓  
-Formatter  
+Formatter → TokenLine  
   ↓  
-DebugBuffer  
+Channel Renderers  
+  ├─→ render_email() → (HTML, Plain)  
+  ├─→ render_sms() → Wire-Format ≤160 Zeichen  
+  └─→ DebugBuffer  
   ↓  
-Channel (E-Mail / Console)
+Channel (E-Mail / Console / SMS)
 
 ## Debug-Prinzip
 - Alle Schritte schreiben standardisierte Debug-Zeilen in den DebugBuffer

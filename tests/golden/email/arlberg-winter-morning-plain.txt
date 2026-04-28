@@ -1,0 +1,23 @@
+Arlberg Winter - Morning Report
+Arlberg
+11.07.2026
+
+Arlberg: -12–-4°C, 🌥️, trocken, starker Wind 45 km/h, Böen bis 110 km/h ab 8:00
+
+━━ Segment 1: 08:00–13:00 | 4.2 km | ↑1500m → 2300m ━━
+  Time   Temp   Feels   Wind   Gust   Rain   Thunder   SnowL   Cloud   Sun 
+  -----  -----  ------  -----  -----  -----  --------  ------  ------  ----
+  08     17.4   11.6    16     110    0.0    –         –       ⛅       –   
+  09     17.7   11.8    16     39     0.0    –         –       ⛅       –   
+  10     18.0   12.0    17     40     0.0    –         –       ⛅       –   
+  11     18.3   12.2    18     41     0.0    –         –       ⛅       –   
+  12     18.6   12.4    18     42     0.0    –         –       ⛅       –   
+  13     18.9   12.6    18     43     0.0    –         –       ⛅       –   
+
+━━ Zusammenfassung ━━
+  💨 Böen bis 110 km/h (08:00)
+
+Einheiten: Temp, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun W/m²
+------------------------------------------------------------
+Generated: 2026-04-28 12:00 UTC
+Data: openmeteo (arome_france)
