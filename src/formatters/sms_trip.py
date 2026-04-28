@@ -1,10 +1,16 @@
 """
-SMS trip formatter for compact weather reports.
+SMS trip formatter — Adapter (β3 Channel-Renderer-Split).
 
-Feature 3.2: SMS Compact Formatter (Story 3)
-Generates ≤160 character SMS summaries of trip segment weather.
+SPEC: docs/specs/modules/output_channel_renderers.md §A3 (Adapter)
+WIRE: docs/specs/modules/sms_format.md v2.0 §2/§3 (POSITIONAL)
 
-SPEC: docs/specs/modules/sms_trip_formatter.md v1.1
+Adapter-Vertrag (§A3):
+  SMSTripFormatter bleibt importierbar, format_sms() delegiert intern an
+  render_sms() (TokenLine-Pipeline). Output ist v2.0 (N12 D18 ..., Stage-
+  Prefix '{Name}: '), kein Legacy 'E1:T12/18 | E2:...' mehr.
+
+Domain-Logik (RiskEngine, Risk-Labels) bleibt für format_alert_sms() und
+_detect_risk() erhalten (§A4 - Alert-Pfad nicht migriert in β3).
 """
 from __future__ import annotations
 
@@ -12,11 +18,16 @@ from typing import TYPE_CHECKING, Optional
 
 from app.models import ExposedSection, RiskLevel, RiskType, SegmentWeatherData
 from services.risk_engine import RiskEngine
+from src.output.renderers.sms import render_sms
+from src.output.tokens.builder import build_token_line
+from src.output.tokens.dto import (
+    DailyForecast, HourlyValue, NormalizedForecast,
+)
 
 if TYPE_CHECKING:
     from app.models import WeatherChange
 
-# RiskType → SMS risk label (German, ultra-compact)
+# RiskType → SMS risk label (German, ultra-compact). Used by format_alert_sms.
 _SMS_RISK_LABELS: dict[tuple[RiskType, RiskLevel], str] = {
     (RiskType.THUNDERSTORM, RiskLevel.HIGH): "Gewitter",
     (RiskType.THUNDERSTORM, RiskLevel.MODERATE): "Gewitter",
@@ -31,20 +42,55 @@ _SMS_RISK_LABELS: dict[tuple[RiskType, RiskLevel], str] = {
 }
 
 
-class SMSTripFormatter:
+def _segments_to_normalized_forecast(
+    segments: list[SegmentWeatherData],
+) -> NormalizedForecast:
+    """Aggregate trip segments into a single-day NormalizedForecast.
+
+    Pre-β3 the SMS used per-segment min/max; v2.0 uses one Tag-Min (N) /
+    Tag-Max (D) for the whole day. We aggregate across all segments.
+    Hourly samples are derived from segment aggregates (synthetic peaks
+    placed at segment-start-hour) so the render_threshold_peak_value()
+    path of the builder produces the right '{val}@{hour}h' tokens.
     """
-    Formatter for SMS trip weather reports.
+    if not segments:
+        raise ValueError("Cannot build forecast: no segments")
 
-    Generates ultra-compact ≤160 character summaries.
-    Format: E{N}:T{min}/{max} W{wind} R{precip}mm | E{N+1}:...
+    temps_min = [s.aggregated.temp_min_c for s in segments
+                 if s.aggregated.temp_min_c is not None]
+    temps_max = [s.aggregated.temp_max_c for s in segments
+                 if s.aggregated.temp_max_c is not None]
+    day_min = min(temps_min) if temps_min else None
+    day_max = max(temps_max) if temps_max else None
 
-    Example:
-        >>> formatter = SMSTripFormatter()
-        >>> sms = formatter.format_sms(segments)
-        >>> print(sms)
-        "E1:T12/18 W30 R5mm | E2:T15/20 W15 R2mm"
-        >>> len(sms)
-        42
+    rain_samples: list[HourlyValue] = []
+    wind_samples: list[HourlyValue] = []
+    gust_samples: list[HourlyValue] = []
+    for seg in segments:
+        agg = seg.aggregated
+        hour = seg.segment.start_time.hour
+        if agg.precip_sum_mm is not None and agg.precip_sum_mm > 0:
+            rain_samples.append(HourlyValue(hour, float(agg.precip_sum_mm)))
+        if agg.wind_max_kmh is not None and agg.wind_max_kmh > 0:
+            wind_samples.append(HourlyValue(hour, float(agg.wind_max_kmh)))
+        if agg.gust_max_kmh is not None and agg.gust_max_kmh > 0:
+            gust_samples.append(HourlyValue(hour, float(agg.gust_max_kmh)))
+
+    today = DailyForecast(
+        temp_min_c=day_min,
+        temp_max_c=day_max,
+        rain_hourly=tuple(rain_samples),
+        wind_hourly=tuple(wind_samples),
+        gust_hourly=tuple(gust_samples),
+    )
+    return NormalizedForecast(days=(today,))
+
+
+class SMSTripFormatter:
+    """SMS trip-report formatter (Adapter, β3).
+
+    format_sms() delegiert nach β3 an render_sms(); Output ist sms_format.md
+    v2.0-konform. format_alert_sms() bleibt unverändert (§A4).
     """
 
     def format_sms(
@@ -52,38 +98,35 @@ class SMSTripFormatter:
         segments: list[SegmentWeatherData],
         max_length: int = 160,
         exposed_sections: Optional[list[ExposedSection]] = None,
+        *,
+        stage_name: Optional[str] = None,
     ) -> str:
-        """
-        Generate SMS text from trip segments.
+        """Generate v2.0 SMS via TokenLine pipeline.
 
         Args:
-            segments: List of SegmentWeatherData (from Story 2)
-            max_length: Maximum SMS length (default 160)
+            segments: SegmentWeatherData list (Story 2)
+            max_length: max SMS length (sms_format.md §1, default 160)
+            exposed_sections: kept for API parity (Risk-Pfad rebuild)
+            stage_name: prefix '{Name}: ' (v2.0 §2). Default: 'Etappe'.
 
         Returns:
-            SMS text string (≤max_length chars)
+            v2.0 wire-format string, ≤ max_length chars.
 
         Raises:
-            ValueError: If no segments or impossible to fit
+            ValueError: empty segments.
         """
         if not segments:
             raise ValueError("Cannot format SMS with no segments")
-
         self._exposed_sections = exposed_sections
 
-        # Format each segment
-        segment_strs = [self._format_segment(seg) for seg in segments]
-
-        # Truncate to fit
-        sms = self._truncate_to_fit(segment_strs, max_length)
-
-        # Validate length
-        if len(sms) > max_length:
-            raise ValueError(
-                f"SMS exceeds max length: {len(sms)} > {max_length}"
-            )
-
-        return sms
+        forecast = _segments_to_normalized_forecast(segments)
+        token_line = build_token_line(
+            forecast,
+            None,
+            report_type="evening",
+            stage_name=stage_name or "Etappe",
+        )
+        return render_sms(token_line, max_length=max_length)
 
     def format_alert_sms(
         self,
@@ -91,28 +134,12 @@ class SMSTripFormatter:
         trip_name: str,
         max_length: int = 160,
     ) -> str:
-        """
-        Format weather change alert as compact SMS.
-
-        Args:
-            changes: List of detected weather changes
-            trip_name: Trip name for header
-            max_length: Maximum SMS length (default 160)
-
-        Returns:
-            Alert SMS text (<=max_length chars)
-
-        Example:
-            >>> sms = formatter.format_alert_sms(changes, "GR20 E3")
-            >>> print(sms)
-            "[GR20 E3] ALERT: T+7C W+25kmh P+10mm"
-        """
+        """Format weather change alert as compact SMS (§A4 — unchanged)."""
         from app.metric_catalog import get_compact_label_for_field
 
         if not changes:
             return f"[{trip_name}] No changes"
 
-        # Sort: MAJOR first, then MODERATE, then MINOR
         _severity_order = {"major": 3, "moderate": 2, "minor": 1}
         sorted_changes = sorted(
             changes,
@@ -139,49 +166,15 @@ class SMSTripFormatter:
 
         return result
 
-    def _format_segment(self, seg_data: SegmentWeatherData) -> str:
-        """
-        Format single segment to compact string.
-
-        Args:
-            seg_data: SegmentWeatherData with aggregated metrics
-
-        Returns:
-            Formatted segment string
-            Example: "E1:T12/18 W30 R5mm RISK:Gewitter@14h"
-        """
-        seg = seg_data.segment
-        agg = seg_data.aggregated
-
-        # Base format (always included)
-        parts = [f"E{seg.segment_id}:T{agg.temp_min_c:.0f}/{agg.temp_max_c:.0f}"]
-
-        # Wind (optional, only if present)
-        if agg.wind_max_kmh and agg.wind_max_kmh > 0:
-            parts.append(f"W{agg.wind_max_kmh:.0f}")
-
-        # Precipitation (optional, only if present and > 0)
-        if agg.precip_sum_mm and agg.precip_sum_mm > 0:
-            parts.append(f"R{agg.precip_sum_mm:.0f}mm")
-
-        result = " ".join(parts)
-
-        # Add risk if HIGH or MEDIUM
-        risk_label, risk_time = self._detect_risk(seg_data)
-        if risk_label:
-            result += f" RISK:{risk_label}@{risk_time}"
-
-        return result
-
     def _detect_risk(
         self,
-        seg_data: SegmentWeatherData
+        seg_data: SegmentWeatherData,
     ) -> tuple[Optional[str], Optional[str]]:
-        """Detect segment risk via RiskEngine (F8 v2.0)."""
+        """Detect segment risk via RiskEngine. Kept for legacy callers."""
         engine = RiskEngine()
         assessment = engine.assess_segment(
             seg_data,
-            exposed_sections=getattr(self, '_exposed_sections', None),
+            exposed_sections=getattr(self, "_exposed_sections", None),
         )
         if not assessment.risks:
             return (None, None)
@@ -191,48 +184,3 @@ class SMSTripFormatter:
         )
         time_str = seg_data.segment.start_time.strftime("%Hh")
         return (label, time_str)
-
-    def _truncate_to_fit(
-        self,
-        segment_strs: list[str],
-        max_length: int
-    ) -> str:
-        """
-        Join segments and truncate to fit max_length.
-
-        Strategy:
-        1. Join all segments with " | "
-        2. If too long, remove last segment (oldest)
-        3. Repeat until fits or only 1 segment left
-        4. If 1 segment still too long, truncate with "..."
-
-        Args:
-            segment_strs: List of formatted segment strings
-            max_length: Maximum allowed length
-
-        Returns:
-            Truncated SMS text (≤max_length)
-
-        Raises:
-            ValueError: If impossible to fit
-        """
-        working_segments = segment_strs.copy()
-
-        while working_segments:
-            sms = " | ".join(working_segments)
-
-            if len(sms) <= max_length:
-                return sms
-
-            if len(working_segments) == 1:
-                # Only 1 segment left, must truncate it
-                if max_length < 10:
-                    raise ValueError(
-                        f"Cannot fit segment in {max_length} chars"
-                    )
-                return sms[:max_length - 3] + "..."
-
-            # Remove oldest (last in list)
-            working_segments.pop()
-
-        raise ValueError("Cannot create SMS: no segments")

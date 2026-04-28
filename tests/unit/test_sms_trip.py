@@ -1,7 +1,21 @@
 """
-Unit tests for SMSTripFormatter (Feature 3.2) - TDD RED Phase.
+Unit tests for SMSTripFormatter — v2.0 Migration (β3 — TDD RED Phase).
 
-Tests should FAIL because SMSTripFormatter doesn't exist yet.
+SPEC: docs/specs/modules/output_channel_renderers.md §A3 (Adapter)
+TESTS-SPEC: docs/specs/tests/output_channel_renderers_tests.md
+EPIC: render-pipeline-consolidation (#96), Phase β3
+
+Adapter-Vertrag (§A3):
+  SMSTripFormatter bleibt importierbar. format_sms() delegiert nach β3
+  intern an render_sms() (TokenLine-Pipeline) und produziert sms_format.md
+  v2.0 Output (kein Legacy 'E1:T12/18').
+
+RED-Zustand (jetzt):
+  Adapter delegiert noch nicht — Output ist Legacy 'E1:T12/18 W30 R5mm'.
+  Die v2.0-Assertions (N12 D18, kein E1:, kein |) schlagen fehl.
+
+GREEN-Zustand (nach β3-Implementation):
+  format_sms() ruft intern render_sms() auf und liefert v2.0-konformen Output.
 """
 from datetime import datetime, timezone
 
@@ -58,28 +72,27 @@ def create_test_segment(
 
 def test_sms_formatter_exists():
     """
-    TDD RED: SMSTripFormatter class should exist.
+    Adapter (§A3): SMSTripFormatter bleibt importierbar.
 
-    GIVEN: Feature 3.2 spec
-    WHEN: Importing SMSTripFormatter
-    THEN: Import succeeds
-
-    EXPECTED: FAIL - SMSTripFormatter doesn't exist yet
+    GIVEN: β3-Migration
+    WHEN:  Importing SMSTripFormatter
+    THEN:  Import succeeds (Adapter bleibt für Rückwärtskompatibilität).
     """
     from formatters.sms_trip import SMSTripFormatter
 
     assert SMSTripFormatter is not None
 
 
-def test_format_sms_single_segment():
+def test_format_sms_single_segment_v2():
     """
-    TDD RED: format_sms() should format single segment.
+    v2.0 Wire-Format (§A3, sms_format.md v2.0 §2/§3).
 
-    GIVEN: Single segment (T12/18, W30, R5mm)
-    WHEN: Calling format_sms()
-    THEN: Returns "E1:T12/18 W30 R5mm"
+    GIVEN: Single segment (T12/18, W30, R5mm).
+    WHEN:  format_sms() aufgerufen.
+    THEN:  Output enthält N12 + D18 (Tag-Min/Tag-Max),
+           NICHT Legacy 'E1:T12/18', kein '|'-Trenner.
 
-    EXPECTED: FAIL - Method doesn't exist yet
+    RED: Legacy-Adapter liefert noch 'E1:T12/18 W30 R5mm'.
     """
     from formatters.sms_trip import SMSTripFormatter
 
@@ -87,19 +100,21 @@ def test_format_sms_single_segment():
     formatter = SMSTripFormatter()
     sms = formatter.format_sms(segments)
 
-    assert sms == "E1:T12/18 W30 R5mm"
+    assert "N12" in sms, f"v2.0 erwartet 'N12' (Tag-Min): {sms!r}"
+    assert "D18" in sms, f"v2.0 erwartet 'D18' (Tag-Max): {sms!r}"
+    assert "T12/18" not in sms, f"Legacy 'T12/18' verboten in v2.0: {sms!r}"
+    assert "E1:" not in sms, f"Legacy 'E1:' Etappen-Prefix verboten in v2.0: {sms!r}"
+    assert "|" not in sms, f"v2.0 §3: kein '|'-Trenner erlaubt: {sms!r}"
     assert len(sms) <= 160
 
 
 def test_format_sms_validates_length():
     """
-    TDD RED: format_sms() should validate ≤160 chars.
+    sms_format.md §1: Output ≤160 Zeichen.
 
-    GIVEN: Any segments
-    WHEN: Calling format_sms()
-    THEN: Result length ≤160 chars
-
-    EXPECTED: FAIL - Validation doesn't exist yet
+    GIVEN: Any segments.
+    WHEN:  Calling format_sms().
+    THEN:  len(sms) <= 160.
     """
     from formatters.sms_trip import SMSTripFormatter
 
@@ -108,6 +123,29 @@ def test_format_sms_validates_length():
     sms = formatter.format_sms(segments)
 
     assert len(sms) <= 160
+
+
+def test_format_sms_v2_wire_format():
+    """
+    v2.0 Wire-Format: Stage-Prefix '{Name}: ' am Anfang, genau eine Zeile.
+
+    GIVEN: Single segment + stage_name.
+    WHEN:  format_sms(..., stage_name=...) aufgerufen.
+    THEN:  Output beginnt mit '{Name}: ', enthält weder '\\n' noch '|'.
+
+    RED: Legacy-Adapter ignoriert stage_name und liefert 'E1:...'.
+    """
+    from formatters.sms_trip import SMSTripFormatter
+
+    segments = [create_test_segment(1, temp_min=12, temp_max=18, wind_max=30, precip_sum=5)]
+    formatter = SMSTripFormatter()
+    sms = formatter.format_sms(segments, stage_name="GR20 E1")
+
+    assert sms.startswith("GR20 E1: "), (
+        f"v2.0 §2: Stage-Prefix 'GR20 E1: ' erwartet: {sms!r}"
+    )
+    assert "\n" not in sms, f"v2.0 §3: keine Newlines erlaubt: {sms!r}"
+    assert "|" not in sms, f"v2.0 §3: kein '|'-Trenner erlaubt: {sms!r}"
 
 
 if __name__ == "__main__":

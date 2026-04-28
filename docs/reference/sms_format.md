@@ -4,13 +4,14 @@ type: reference
 version: "2.0"
 status: active
 created: 2025-12-27
-updated: 2026-04-25
+updated: 2026-04-28
 tags: [sms, compact, tokens, single-source-of-truth]
 ---
 
 ## Approval
 
 - [x] Approved (v2.0 am 2026-04-25)
+- [x] Implementiert in SMS-Adapter via `src/output/renderers/sms/` (β3, 2026-04-28)
 
 # SMS / Kompakt-Format Specification (v2.0)
 

@@ -1,0 +1,24 @@
+GR20 - Morning Report
+GR20 E1
+11.07.2026
+
+GR20 E1: 2–9°C, 🌥️, trocken, Regen ab 6:00, mäßiger Wind 35 km/h, Böen bis 70 km/h ab 6:00, ⚡ möglich 0:00–24:00
+
+━━ Segment 1: 06:00–10:00 | 4.2 km | ↑400m → 1200m ━━
+  Time   Temp   Feels   Wind   Gust   Rain   Thunder   SnowL   Cloud   Sun 
+  -----  -----  ------  -----  -----  -----  --------  ------  ------  ----
+  06     16.8   11.2    15     70     18.5   ⚡ mögl.   –       ⛅       –   
+  07     17.1   11.4    16     37     0.0    ⚡ mögl.   –       ⛅       –   
+  08     17.4   11.6    16     38     0.0    ⚡ mögl.   –       ⛅       –   
+  09     17.7   11.8    16     39     0.0    ⚡ mögl.   –       ⛅       –   
+  10     18.0   12.0    17     40     0.0    ⚡ mögl.   –       ⛅       –   
+
+━━ Zusammenfassung ━━
+  ⚡ Gewitter möglich ab 06:00 (Segment 1, >400m)
+  💨 Böen bis 70 km/h (06:00)
+  🌧 Regen gesamt: 18.5 mm
+
+Einheiten: Temp, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun W/m²
+------------------------------------------------------------
+Generated: 2026-04-28 12:00 UTC
+Data: openmeteo (arome_france)

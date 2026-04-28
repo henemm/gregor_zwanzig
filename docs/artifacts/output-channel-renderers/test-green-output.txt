@@ -1,0 +1,13 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 18 items
+
+tests/golden/email/test_email_plain_golden.py .....                      [ 27%]
+tests/unit/test_renderers_email.py ......                                [ 61%]
+tests/unit/test_renderers_sms.py ...                                     [ 77%]
+tests/unit/test_sms_trip.py ....                                         [100%]
+
+============================== 18 passed in 0.16s ==============================

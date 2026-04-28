@@ -146,6 +146,7 @@ Alle Module benoetigen Specs vor Implementierung:
 - `agent_orchestration` - Workflow-Skill-Commands mit Subagent-Delegation
 - `command_set_merge` - Merge von Underscore- und Dash-Commands
 - `output_token_builder` - SMS-konforme Token aus NormalizedForecast (sms_format.md v2.0)
+- `output_channel_renderers` - Pure-Function Renderer für E-Mail + SMS Channels (β3)
 
 ### Geplante Module
 Siehe GitHub Issues: https://github.com/henemm/gregor_zwanzig/issues
