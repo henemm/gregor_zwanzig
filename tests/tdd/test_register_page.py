@@ -9,11 +9,12 @@ Requires:
 - Go API server on localhost:8090
 """
 import json
+import os
 import pytest
 import httpx
 import uuid
 
-SVELTE_BASE = "https://gregor20.henemm.com"
+SVELTE_BASE = os.environ.get("GZ_SVELTE_BASE", "https://gregor20.henemm.com")
 GO_BASE = "http://localhost:8090"
 
 # SvelteKit CSRF requires Origin header matching the server
