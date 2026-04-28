@@ -5,6 +5,19 @@
 Du MUSST jeden Schritt vollstaendig ausfuehren. Kein Schritt darf uebersprungen werden.
 Am Ende schreibst du `.claude/e2e_verified.json` — ohne diese Datei blockiert der Pre-Commit-Hook.
 
+## Optional: Staging-Umgebung
+
+Eine Staging-Umgebung steht unter https://staging.gregor20.henemm.com bereit (Auto-Deploy alle 5 Min via Cron auf push to main; siehe henemm/henemm-infra#52).
+
+TDD-Tests koennen via ENV gegen Staging laufen:
+```bash
+GZ_SVELTE_BASE=https://staging.gregor20.henemm.com uv run pytest tests/tdd/
+```
+
+`validate-external.sh` akzeptiert ebenfalls `GZ_VALIDATION_URL` als ENV-Variable.
+
+**Wichtig:** Diese Production-Verification (Schritte 1–6 unten) bleibt produktiv (gregor20.henemm.com). Staging ersetzt sie nicht.
+
 ## Schritt 1: Server neu starten
 
 ```bash
