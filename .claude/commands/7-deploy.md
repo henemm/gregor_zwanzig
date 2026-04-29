@@ -1,106 +1,76 @@
 # Deploy to Production
 
-Deploy the current main branch to production.
-
-**CUSTOMIZE THIS FILE for your project's deployment setup!**
+Deploy current main to production via henemm-infra deploy script.
 
 ## Pre-Flight Checks
 
-Before deploying, verify:
-
 ```bash
-# Current branch
-git branch --show-current
-
-# Uncommitted changes?
-git status --porcelain
-
-# Main is up to date with remote?
+git branch --show-current        # muss "main" sein
+git status --porcelain           # muss leer sein
 git fetch origin main
-git log HEAD..origin/main --oneline
+git log HEAD..origin/main --oneline  # zeigt was deployt wird
 ```
 
-**STOP if:**
-- Uncommitted changes exist -> Commit or stash first
-- Main is behind origin -> Run `git pull` first
-- Tests are failing -> Fix tests first
+**STOP wenn:**
+- Branch != main → erst checkout main
+- Uncommitted Changes → erst committen oder stashen
+- Tests rot → erst fixen
 
-## Deployment Steps
+## Staging-Validierung (Pflicht!)
 
-### Option A: Git-based Deployment
+Staging deployt automatisch (Cron alle 5min, `auto-deploy-gregor-staging.sh`).
 
 ```bash
-# Ensure on main
-git checkout main
-
-# Push to main (if not already)
-git push origin main
-
-# Merge to production branch
-git checkout production
-git merge main --no-edit
-git push origin production
-
-# Return to main
-git checkout main
+# Staging-Status prüfen
+curl -s https://staging.gregor20.henemm.com/api/health
+# Manuell im Browser: https://staging.gregor20.henemm.com
 ```
 
-### Option B: Direct Deployment (customize for your platform)
+**Erst weitermachen wenn Staging die geänderte Funktionalität korrekt zeigt.**
 
-**For Vercel:**
+## Production-Deploy
+
 ```bash
-vercel --prod
+bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh
 ```
 
-**For Google Cloud Run:**
-```bash
-gcloud builds submit --config=cloudbuild.yaml
-```
-
-**For AWS:**
-```bash
-aws ecs update-service --cluster <cluster> --service <service> --force-new-deployment
-```
-
-**For Heroku:**
-```bash
-git push heroku main
-```
+Was das Skript macht:
+1. Pre-Flight (Branch, Uncommitted Changes)
+2. `git pull origin main`
+3. `go build -o gregor-api ./cmd/server`
+4. `npm install && npm run build` im Frontend
+5. `systemctl restart gregor-python` → `gregor-api` → `gregor-frontend` (in dieser Reihenfolge mit Sleeps)
+6. Smoke-Test gegen `https://gregor20.henemm.com/`
+7. Live-Commit-Hash ausgeben
 
 ## Post-Deployment Verification
 
-1. **Check deployment status** (platform-specific)
-2. **Verify application is running:**
-   - Open production URL
-   - Check health endpoint
-   - Verify key functionality
-
-3. **Monitor logs for errors:**
+1. **Healthcheck:**
    ```bash
-   # Example for various platforms
-   # vercel logs
-   # gcloud run services logs read <service>
-   # heroku logs --tail
+   curl https://gregor20.henemm.com/api/health
+   bash /home/hem/henemm-infra/scripts/check-gregor20.sh  # alert bei Code-Drift
    ```
 
-## Rollback (if needed)
+2. **Browser-Test:** Geänderte Funktionalität öffnen und prüfen.
+
+3. **Logs überwachen:**
+   ```bash
+   journalctl -u gregor-api -u gregor-python -u gregor-frontend -f --since "5 minutes ago"
+   ```
+
+## Rollback
 
 ```bash
-# Git-based rollback
-git checkout production
+cd /home/hem/gregor_zwanzig
 git revert HEAD
-git push origin production
+git push origin main
+bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh
 ```
 
-## Configuration
+## Drift-Detection
 
-Customize this template by updating:
-- Deployment commands for your platform
-- Production URL
-- Health check endpoints
-- Log viewing commands
-- Rollback procedures
+`check-gregor20.sh` (cron alle 5min) vergleicht Binary-mtime mit `origin/main`-Commit-Zeit. Bei Drift > 1h → BetterStack-Alert via Telegram. Selbst wenn der Deploy vergessen wird, fängt das Monitoring es.
 
----
+## Konvention
 
-**Note:** This is a template. Copy to your project and customize for your specific deployment setup.
+**Nach jedem Feature/Bug der live gehen soll:** Dieses Skill ausführen. Sonst rennt Production hinter Staging her.
