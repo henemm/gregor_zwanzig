@@ -147,6 +147,8 @@ Alle Module benoetigen Specs vor Implementierung:
 - `command_set_merge` - Merge von Underscore- und Dash-Commands
 - `output_token_builder` - SMS-konforme Token aus NormalizedForecast (sms_format.md v2.0)
 - `output_channel_renderers` - Pure-Function Renderer für E-Mail + SMS Channels (β3)
+- `output_text_report_renderer` - Text-Report Renderer für Wintersport + generische Sportarten (β4)
+- `trip_result_adapter` - Konvertiert TripForecastResult zu NormalizedForecast für Pipeline-Kompatibilität
 
 ### Geplante Module
 Siehe GitHub Issues: https://github.com/henemm/gregor_zwanzig/issues

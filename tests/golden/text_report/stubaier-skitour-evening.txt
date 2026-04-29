@@ -1,0 +1,35 @@
+============================================================
+  STUBAIER SKITOUR - 2026-01-15
+  Evening Report
+============================================================
+
+Stubaier: N-15 D-5 R- PR- W45@12 G70@12 TH:- SN180 SN24+25 SFL1800 AV3 WC-28
+
+ZUSAMMENFASSUNG
+--------------------------------------------
+  Temperatur:     -15.0 bis -5.0°C (Gipfel)
+  Wind Chill:     -28.0°C (Gipfel)
+  Wind:           45 km/h (Gipfel)
+  Böen:           70 km/h (Gipfel)
+  Schneehöhe:     180 cm (Gipfel)
+  Neuschnee:      25 cm
+  Schneefallgr.:  1800 m
+
+WEGPUNKT-DETAILS
+--------------------------------------------
+  08:00-10:00 G1 Start (1700m)
+               -5.0°C
+               Wind 15 km/h
+               trocken
+
+  11:00-13:00 G2 Gipfel (3200m)
+               -15.0°C (gefühlt -28.0°C)
+               Wind 45 km/h (Böen 70)
+               trocken
+
+LAWINENREGIONEN
+--------------------------------------------
+  Region: AT-7
+  (Lawinendaten noch nicht implementiert)
+
+============================================================

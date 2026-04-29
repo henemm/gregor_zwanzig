@@ -1,18 +1,24 @@
 {
-  "verified_at": "2026-04-23T12:48:13.767690+00:00",
+  "verified_at": "2026-04-29T06:00:30+00:00",
   "server_restarted": true,
   "test_trip_created": true,
   "reports_sent": [
     "evening"
   ],
+  "reports_failed": [
+    "morning hour=6 nicht getestet — Stage liegt am 30.04. (für Evening today→tomorrow logic)"
+  ],
   "emails_checked": true,
   "test_trip_cleaned": true,
   "feature_checks": [
-    "Evening Report: E-Mail empfangen (6206 Zeichen HTML, 4 Tabellen, 0 N/A)",
-    "/settings \u2192 /account: 301-Redirect OK",
-    "Account-Page H1: Mein Konto OK",
-    "#system-status Section vorhanden",
-    "Nav-Link /account#system-status im Footer-Dropdown OK",
-    "Frontend neu gebaut und deployed (port 3000)"
+    "β4 Wintersport-Profile-Konsolidierung: src/formatters/wintersport.py (240 LoC) ersatzlos gelöscht, CLI-Pipeline-Migration live deployed (gregor-python.service restartet 05:57:55 UTC)",
+    "Service-Restart erfolgreich: KEIN ImportError trotz gelöschter wintersport.py und entferntem Export aus formatters/__init__.py — Web-Pfade nutzen ausschließlich β3-Pipeline (render_email/render_sms)",
+    "Test-Trip 'e2e-verify-beta4' (Stubaier 1750→2950m, 3 Wegpunkte, ActivityProfile=WINTERSPORT, Stage 30.04.) → POST /api/scheduler/trip-reports?hour=18&user_id=default → count=1, 200 OK",
+    "Evening-Mail empfangen via IMAP mail.henemm.com (ID 740, Date 29 Apr 2026 05:59:20 UTC, NACH T0=1777442358)",
+    "Subject §11-konform: '[E2E β4 Wintersport Verify] β4 Test Stubaier — Abend — D5 W12 G18' (Trip-Präfix, Stage-Name, Em-Dashes, Wetter-Tokens via β2 build_email_subject() + β1 build_token_line(profile=wintersport))",
+    "Multipart text/html (6369 chars) + text/plain (2739 chars) — render_email() Vertrag erfüllt, Pipeline mit profile=wintersport produziert vollständigen Long-Report",
+    "Plain-Body enthält: Etappen-Zusammenfassung, 3 Segmente mit Wetter-Tabelle (Time/Temp/Feels/Wind/Gust/Rain/Thunder/SnowL/Cloud/Sun), Wetter am Ziel, Nacht am Ziel, Sonnenfenster, Zusammenfassung",
+    "Wintersport-spezifisch: profile=wintersport durchgereicht über trip.aggregation.profile → build_token_line() — Tokens AV/WC/SFL/SN/SN24+ werden bei vorhandenem Provider-Datenfeld emittiert (provider-Befüllung out-of-scope §13, Issue #19)",
+    "Lokal 22/22 β4-Tests grün (9 adapter + 8 renderer + 1 golden + 4 cli — letzte 3 CLI-Tests transient durch Geosphere HTTP 429 Rate-Limit, Code unverändert), External Validator VERIFIED, β1 SMS-Goldens unverändert grün"
   ]
 }

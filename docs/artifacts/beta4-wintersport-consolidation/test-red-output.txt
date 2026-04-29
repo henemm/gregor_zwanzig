@@ -1,0 +1,430 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 22 items
+
+tests/unit/test_trip_result_adapter.py FFFFFFFFF                         [ 40%]
+tests/unit/test_renderers_text_report.py FFFFFFFF                        [ 77%]
+tests/golden/text_report/test_text_report_golden.py F                    [ 81%]
+tests/integration/test_cli_wintersport.py FFFF                           [100%]
+
+=================================== FAILURES ===================================
+__________________ test_adapter_produces_normalized_forecast ___________________
+
+    def test_adapter_produces_normalized_forecast():
+        """
+        GIVEN: TripForecastResult mit befüllter AggregatedSummary.
+        WHEN:  _trip_result_to_normalized(result) aufgerufen.
+        THEN:  Rückgabe ist NormalizedForecast; days[0] enthält
+               temp_min_c, temp_max_c, wind_chill_c, snow_depth_cm,
+               snow_new_24h_cm, snowfall_limit_m aus summary befüllt.
+    
+        Spec §5.1 Adapter-Verantwortung.
+        """
+>       from src.output.adapters.trip_result import _trip_result_to_normalized
+E       ModuleNotFoundError: No module named 'src.output.adapters'
+
+tests/unit/test_trip_result_adapter.py:183: ModuleNotFoundError
+____________________ test_adapter_handles_all_none_summary _____________________
+
+    def test_adapter_handles_all_none_summary():
+        """
+        GIVEN: Summary mit allen AggregatedValue.value=None.
+        WHEN:  _trip_result_to_normalized(result) aufgerufen.
+        THEN:  Keine Exception; daily.temp_min_c, snow_depth_cm, etc. == None.
+    
+        Spec §7 Fehlerbehandlung — All-None → DailyForecast-Defaults.
+        """
+>       from src.output.adapters.trip_result import _trip_result_to_normalized
+E       ModuleNotFoundError: No module named 'src.output.adapters'
+
+tests/unit/test_trip_result_adapter.py:208: ModuleNotFoundError
+__________________________ test_adapter_pure_function __________________________
+
+    def test_adapter_pure_function():
+        """
+        GIVEN: Zwei Aufrufe mit identischem TripForecastResult.
+        WHEN:  _trip_result_to_normalized(result) zweimal aufgerufen.
+        THEN:  Beide Ergebnisse sind ==.
+    
+        Pure function — Determinismus gemäß Spec §3.3.
+        """
+>       from src.output.adapters.trip_result import _trip_result_to_normalized
+E       ModuleNotFoundError: No module named 'src.output.adapters'
+
+tests/unit/test_trip_result_adapter.py:232: ModuleNotFoundError
+_____________________ test_adapter_avalanche_level_is_none _____________________
+
+    def test_adapter_avalanche_level_is_none():
+        """
+        GIVEN: AggregatedSummary hat kein avalanche_level-Feld (out-of-scope).
+        WHEN:  _trip_result_to_normalized(result) aufgerufen.
+        THEN:  daily.avalanche_level is None.
+    
+        Spec §5.1 Tabellenzeile 'avalanche_level' + §13 Out-of-Scope.
+        """
+>       from src.output.adapters.trip_result import _trip_result_to_normalized
+E       ModuleNotFoundError: No module named 'src.output.adapters'
+
+tests/unit/test_trip_result_adapter.py:248: ModuleNotFoundError
+________________ test_adapter_hourly_samples_anchor_at_hour_12 _________________
+
+    def test_adapter_hourly_samples_anchor_at_hour_12():
+        """
+        GIVEN: summary.wind.value=45.
+        WHEN:  _trip_result_to_normalized(result) aufgerufen.
+        THEN:  daily.wind_hourly == (HourlyValue(12, 45.0),) — Default-Anker.
+    
+        Spec §5.1 'als Single-Sample bei Stunde 12 (Default-Stunde, da
+        AggregatedSummary keine Stunde kennt)'.
+        """
+>       from src.output.adapters.trip_result import _trip_result_to_normalized
+E       ModuleNotFoundError: No module named 'src.output.adapters'
+
+tests/unit/test_trip_result_adapter.py:265: ModuleNotFoundError
+________ test_waypoint_to_detail_extracts_id_name_elevation_timewindow _________
+
+    def test_waypoint_to_detail_extracts_id_name_elevation_timewindow():
+        """
+        GIVEN: WaypointForecast mit Waypoint(id='G2', name='Gipfel',
+               elevation_m=3200, time_window=...).
+        WHEN:  _waypoint_to_detail(wf) aufgerufen.
+        THEN:  Rückgabe WaypointDetail mit id, name, elevation_m, time_window
+               befüllt.
+    
+        Spec §4.2 WaypointDetail-Dataclass.
+        """
+>       from src.output.adapters.trip_result import (
+            WaypointDetail,
+            _waypoint_to_detail,
+        )
+E       ModuleNotFoundError: No module named 'src.output.adapters'
+
+tests/unit/test_trip_result_adapter.py:284: ModuleNotFoundError
+________________ test_summary_to_rows_formats_temperature_range ________________
+
+    def test_summary_to_rows_formats_temperature_range():
+        """
+        GIVEN: summary.temp_min.value=-15 (source=Gipfel),
+               summary.temp_max.value=-5 (source=Start).
+        WHEN:  _summary_to_rows(summary) aufgerufen.
+        THEN:  Output enthält Tupel ('Temperatur', '-15.0 bis -5.0°C (Gipfel)').
+    
+        Spec §A4 + §5.3 Schritt 3: Adapter erzeugt formatierte Zeilen
+        analog WintersportFormatter._format_summary().
+        """
+>       from src.output.adapters.trip_result import _summary_to_rows
+E       ModuleNotFoundError: No module named 'src.output.adapters'
+
+tests/unit/test_trip_result_adapter.py:312: ModuleNotFoundError
+____________________ test_summary_to_rows_omits_none_fields ____________________
+
+    def test_summary_to_rows_omits_none_fields():
+        """
+        GIVEN: summary.snow_depth.value = None.
+        WHEN:  _summary_to_rows(summary) aufgerufen.
+        THEN:  Es gibt keine Zeile mit Label 'Schneehöhe' im Output.
+    
+        Spec §A4: Adapter unterdrückt Felder ohne Wert.
+        """
+>       from src.output.adapters.trip_result import _summary_to_rows
+E       ModuleNotFoundError: No module named 'src.output.adapters'
+
+tests/unit/test_trip_result_adapter.py:333: ModuleNotFoundError
+__________ test_wintersport_default_config_enables_av_wc_sn_sn24_sfl ___________
+
+    def test_wintersport_default_config_enables_av_wc_sn_sn24_sfl():
+        """
+        GIVEN: Aufruf von _wintersport_default_config().
+        WHEN:  Rückgabewert inspiziert.
+        THEN:  Liste enthält MetricSpec für AV, WC, SN, SN24+, SFL — alle
+               enabled=True.
+    
+        Spec §4.1 Compact-Pfad: 'config = _wintersport_default_config()
+        produziert die Standard-MetricSpec-Liste für Wintersport (alle
+        Wintersport-Tokens enabled, keine Friendly-Form)'.
+        """
+>       from src.output.adapters.trip_result import _wintersport_default_config
+E       ModuleNotFoundError: No module named 'src.output.adapters'
+
+tests/unit/test_trip_result_adapter.py:354: ModuleNotFoundError
+____________________ test_renders_header_summary_waypoints _____________________
+
+    def test_renders_header_summary_waypoints():
+        """
+        GIVEN: TokenLine + Stubaier-Trip-Daten.
+        WHEN:  render_text_report(token_line, ...) aufgerufen.
+        THEN:  Output enthält Trip-Name (UPPERCASE), start_date, report_type
+               als Titel, 'ZUSAMMENFASSUNG', 'WEGPUNKT-DETAILS'.
+    
+        Spec §A4 — Long-Report-Inhaltserhalt.
+        """
+>       from src.output.renderers.text_report import render_text_report
+E       ModuleNotFoundError: No module named 'src.output.renderers.text_report'
+
+tests/unit/test_renderers_text_report.py:163: ModuleNotFoundError
+______________ test_renders_avalanche_block_when_regions_present _______________
+
+    def test_renders_avalanche_block_when_regions_present():
+        """
+        GIVEN: avalanche_regions=('AT-7',).
+        WHEN:  render_text_report(token_line, ...) aufgerufen.
+        THEN:  Output enthält 'LAWINENREGIONEN' und 'AT-7'.
+    
+        Spec §A4 — Lawinen-Block.
+        """
+>       from src.output.renderers.text_report import render_text_report
+E       ModuleNotFoundError: No module named 'src.output.renderers.text_report'
+
+tests/unit/test_renderers_text_report.py:185: ModuleNotFoundError
+________________ test_omits_avalanche_block_when_regions_empty _________________
+
+    def test_omits_avalanche_block_when_regions_empty():
+        """
+        GIVEN: avalanche_regions=().
+        WHEN:  render_text_report(token_line, ...) aufgerufen.
+        THEN:  Output enthält **kein** 'LAWINENREGIONEN'.
+    
+        Spec §7 Fehlerbehandlung — leere Regionen → Block weglassen.
+        """
+>       from src.output.renderers.text_report import render_text_report
+E       ModuleNotFoundError: No module named 'src.output.renderers.text_report'
+
+tests/unit/test_renderers_text_report.py:204: ModuleNotFoundError
+_________________ test_renders_token_line_from_token_line_arg __________________
+
+    def test_renders_token_line_from_token_line_arg():
+        """
+        GIVEN: token_line mit Wintersport-Tokens (Stage-Prefix 'Stubaier:').
+        WHEN:  render_text_report(token_line, ...) aufgerufen.
+        THEN:  Output enthält die Token-Zeile (Stage-Prefix sichtbar).
+    
+        Spec §A4: 'Token-Zeile (NEU): Am Anfang oder Ende des Reports steht
+        das render_sms(token_line)-Output'. Position ist Implementation-Detail,
+        Test prüft nur Vorhandensein.
+        """
+>       from src.output.renderers.text_report import render_text_report
+E       ModuleNotFoundError: No module named 'src.output.renderers.text_report'
+
+tests/unit/test_renderers_text_report.py:226: ModuleNotFoundError
+____________________________ test_is_pure_function _____________________________
+
+    def test_is_pure_function():
+        """
+        GIVEN: Zwei Aufrufe mit identischen Inputs.
+        WHEN:  render_text_report(...) zweimal aufgerufen.
+        THEN:  Outputs sind ==.
+    
+        Pure Function — Determinismus gemäß Spec §3.3 / §A5.
+        """
+>       from src.output.renderers.text_report import render_text_report
+E       ModuleNotFoundError: No module named 'src.output.renderers.text_report'
+
+tests/unit/test_renderers_text_report.py:244: ModuleNotFoundError
+___________________________ test_is_profile_agnostic ___________________________
+
+    def test_is_profile_agnostic():
+        """
+        GIVEN: token_line aus profile='standard' (keine Wintersport-Tokens).
+        WHEN:  render_text_report(token_line, ...) aufgerufen.
+        THEN:  Renderer crasht nicht; Output enthält Trip-Name + Header.
+    
+        Spec §A5 — Renderer fragt nicht nach profile; nimmt was in token_line ist.
+        """
+>       from src.output.renderers.text_report import render_text_report
+E       ModuleNotFoundError: No module named 'src.output.renderers.text_report'
+
+tests/unit/test_renderers_text_report.py:260: ModuleNotFoundError
+______________________ test_omits_summary_rows_when_empty ______________________
+
+    def test_omits_summary_rows_when_empty():
+        """
+        GIVEN: summary_rows=[].
+        WHEN:  render_text_report(...) aufgerufen.
+        THEN:  Output enthält 'ZUSAMMENFASSUNG' Header (oder Block leer ohne
+               Crash).
+    
+        Spec §7 Fehlerbehandlung.
+        """
+>       from src.output.renderers.text_report import render_text_report
+E       ModuleNotFoundError: No module named 'src.output.renderers.text_report'
+
+tests/unit/test_renderers_text_report.py:287: ModuleNotFoundError
+____________________ test_omits_waypoint_details_when_empty ____________________
+
+    def test_omits_waypoint_details_when_empty():
+        """
+        GIVEN: waypoint_details=[].
+        WHEN:  render_text_report(...) aufgerufen.
+        THEN:  Output enthält 'WEGPUNKT-DETAILS' Header, Body-Sektion leer
+               ohne Crash.
+    
+        Spec §7 Fehlerbehandlung — leere Wegpunkte.
+        """
+>       from src.output.renderers.text_report import render_text_report
+E       ModuleNotFoundError: No module named 'src.output.renderers.text_report'
+
+tests/unit/test_renderers_text_report.py:309: ModuleNotFoundError
+_____________________ test_golden_stubaier_skitour_evening _____________________
+
+    def test_golden_stubaier_skitour_evening():
+        """Stubaier Skitour Evening: Wintersport-Long-Report bit-identisch.
+    
+        Golden wird in Phase 6 vom Developer eingefroren — nicht aus altem
+        WintersportFormatter kopiert (Spec §8.2).
+        """
+>       from src.output.renderers.text_report import render_text_report
+E       ModuleNotFoundError: No module named 'src.output.renderers.text_report'
+
+tests/golden/text_report/test_text_report_golden.py:122: ModuleNotFoundError
+________________________ test_cli_compact_uses_pipeline ________________________
+
+wintersport_trip_file = PosixPath('/tmp/pytest-of-hem/pytest-292/test_cli_compact_uses_pipeline0/stubaier.json')
+
+    def test_cli_compact_uses_pipeline(wintersport_trip_file: Path):
+        """
+        GIVEN: Wintersport-Trip-Fixture.
+        WHEN:  CLI mit `--trip <fixture> --compact --dry-run` aufgerufen.
+        THEN:  CLI importiert `_trip_result_to_normalized` aus dem neuen Adapter
+               (Pipeline ist gewired), Output enthält Stage-Prefix `Stubaier:`,
+               Länge ≤160, NIEMALS Legacy-Form `T-15/-5`.
+    
+        Spec §A3 — Compact-Pfad bit-identisch durch Pipeline.
+    
+        Adversary-Härtung: Test prüft *strukturell*, dass CLI das neue
+        Adapter-Modul importiert. Reine Output-Asserts greifen in RED nicht,
+        weil die Trip-Fixture ohne Provider-Key leeren Forecast liefert und
+        der Header-Trip-Name `Stubaier` fälschlicherweise die Body-Asserts
+        erfüllt. Erst der Pipeline-Wiring-Check macht den Test echt RED.
+        """
+        cli_source = (PROJECT_ROOT / "src" / "app" / "cli.py").read_text(
+            encoding="utf-8",
+        )
+>       assert "from src.output.adapters.trip_result import" in cli_source or \
+               "from output.adapters.trip_result import" in cli_source, (
+            "CLI muss `_trip_result_to_normalized` aus "
+            "src.output.adapters.trip_result importieren — Pipeline noch nicht "
+            "gewired (Spec §A3)."
+        )
+E       AssertionError: CLI muss `_trip_result_to_normalized` aus src.output.adapters.trip_result importieren — Pipeline noch nicht gewired (Spec §A3).
+E       assert ('from src.output.adapters.trip_result import' in '"""\nCLI entry point for Gregor Zwanzig.\n\nThin layer that wires together configuration, services, and outputs.\nBus... print(f"Processed {processed} subscription(s)")\n    return 0\n\n\nif __name__ == "__main__":\n    sys.exit(main())\n' or 'from output.adapters.trip_result import' in '"""\nCLI entry point for Gregor Zwanzig.\n\nThin layer that wires together configuration, services, and outputs.\nBus... print(f"Processed {processed} subscription(s)")\n    return 0\n\n\nif __name__ == "__main__":\n    sys.exit(main())\n')
+
+tests/integration/test_cli_wintersport.py:94: AssertionError
+__________________ test_cli_long_report_contains_all_sections __________________
+
+wintersport_trip_file = PosixPath('/tmp/pytest-of-hem/pytest-292/test_cli_long_report_contains_0/stubaier.json')
+
+    def test_cli_long_report_contains_all_sections(wintersport_trip_file: Path):
+        """
+        GIVEN: Wintersport-Trip-Fixture mit avalanche_regions.
+        WHEN:  CLI ohne --compact aufgerufen.
+        THEN:  CLI importiert `render_text_report` aus neuem Renderer (Pipeline
+               gewired); Output enthält 'ZUSAMMENFASSUNG', 'WEGPUNKT-DETAILS',
+               'LAWINENREGIONEN', Trip-Name UPPERCASE, Token-Zeile sichtbar.
+    
+        Spec §A4 — Long-Report-Inhaltserhalt.
+        """
+        cli_source = (PROJECT_ROOT / "src" / "app" / "cli.py").read_text(
+            encoding="utf-8",
+        )
+>       assert "render_text_report" in cli_source, (
+            "CLI muss `render_text_report` aus "
+            "src.output.renderers.text_report importieren — Long-Report-Renderer "
+            "noch nicht gewired (Spec §A4)."
+        )
+E       AssertionError: CLI muss `render_text_report` aus src.output.renderers.text_report importieren — Long-Report-Renderer noch nicht gewired (Spec §A4).
+E       assert 'render_text_report' in '"""\nCLI entry point for Gregor Zwanzig.\n\nThin layer that wires together configuration, services, and outputs.\nBus... print(f"Processed {processed} subscription(s)")\n    return 0\n\n\nif __name__ == "__main__":\n    sys.exit(main())\n'
+
+tests/integration/test_cli_wintersport.py:152: AssertionError
+___________________ test_cli_no_wintersport_formatter_import ___________________
+
+    def test_cli_no_wintersport_formatter_import():
+        """
+        GIVEN: gesamter Codebaum (src/ + tests/).
+        WHEN:  grep -r 'from formatters.wintersport' und 'import WintersportFormatter'.
+        THEN:  Null Treffer (Adversary-Test, prüft Big-Bang-Streichung §A1).
+    
+        Spec §A1 — wintersport.py ist gelöscht; kein Import mehr.
+        """
+        for needle in (
+            "from formatters.wintersport",
+            "import WintersportFormatter",
+            "from src.formatters.wintersport",
+        ):
+            proc = subprocess.run(
+                ["grep", "-rE", needle, "src", "tests"],
+                cwd=str(PROJECT_ROOT),
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            # grep returncode 1 = no match, 0 = match found
+>           assert proc.returncode != 0, (
+                f"Big-Bang-Streichung verletzt: '{needle}' noch im Code:\n"
+                f"{proc.stdout}"
+            )
+E           AssertionError: Big-Bang-Streichung verletzt: 'from formatters.wintersport' noch im Code:
+E             src/app/cli.py:from formatters.wintersport import WintersportFormatter
+E             src/formatters/__init__.py:from formatters.wintersport import WintersportFormatter
+E             tests/integration/test_cli_wintersport.py:    assert "from formatters.wintersport import WintersportFormatter" \
+E             tests/integration/test_cli_wintersport.py:    WHEN:  grep -r 'from formatters.wintersport' und 'import WintersportFormatter'.
+E             tests/integration/test_cli_wintersport.py:        "from formatters.wintersport",
+E             tests/test_formatters.py:from formatters.wintersport import WintersportFormatter
+E             
+E           assert 0 != 0
+E            +  where 0 = CompletedProcess(args=['grep', '-rE', 'from formatters.wintersport', 'src', 'tests'], returncode=0, stdout='src/app/cl... stderr='grep: tests/integration/__pycache__/test_cli_wintersport.cpython-312-pytest-8.4.1.pyc: binary file matches\n').returncode
+
+tests/integration/test_cli_wintersport.py:207: AssertionError
+____________________ test_cli_long_report_subject_unchanged ____________________
+
+wintersport_trip_file = PosixPath('/tmp/pytest-of-hem/pytest-292/test_cli_long_report_subject_u0/stubaier.json')
+tmp_path = PosixPath('/tmp/pytest-of-hem/pytest-292/test_cli_long_report_subject_u0')
+
+    def test_cli_long_report_subject_unchanged(
+        wintersport_trip_file: Path, tmp_path: Path,
+    ):
+        """
+        GIVEN: CLI ohne --compact.
+        WHEN:  CLI aufgerufen mit Wintersport-Trip + --report evening.
+        THEN:  CLI nutzt `render_text_report` (Pipeline gewired); Subject bleibt
+               `f"GZ Evening - {trip.name}"` (wie heute).
+    
+        Spec §5.3 Schritt 5: Subject im Long-Report-Pfad bleibt unverändert.
+        """
+        cli_source = (PROJECT_ROOT / "src" / "app" / "cli.py").read_text(
+            encoding="utf-8",
+        )
+>       assert "render_text_report" in cli_source, (
+            "CLI muss `render_text_report` importieren — Long-Report-Pipeline "
+            "noch nicht gewired (Spec §5.3 Schritt 5)."
+        )
+E       AssertionError: CLI muss `render_text_report` importieren — Long-Report-Pipeline noch nicht gewired (Spec §5.3 Schritt 5).
+E       assert 'render_text_report' in '"""\nCLI entry point for Gregor Zwanzig.\n\nThin layer that wires together configuration, services, and outputs.\nBus... print(f"Processed {processed} subscription(s)")\n    return 0\n\n\nif __name__ == "__main__":\n    sys.exit(main())\n'
+
+tests/integration/test_cli_wintersport.py:227: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/test_trip_result_adapter.py::test_adapter_produces_normalized_forecast
+FAILED tests/unit/test_trip_result_adapter.py::test_adapter_handles_all_none_summary
+FAILED tests/unit/test_trip_result_adapter.py::test_adapter_pure_function - M...
+FAILED tests/unit/test_trip_result_adapter.py::test_adapter_avalanche_level_is_none
+FAILED tests/unit/test_trip_result_adapter.py::test_adapter_hourly_samples_anchor_at_hour_12
+FAILED tests/unit/test_trip_result_adapter.py::test_waypoint_to_detail_extracts_id_name_elevation_timewindow
+FAILED tests/unit/test_trip_result_adapter.py::test_summary_to_rows_formats_temperature_range
+FAILED tests/unit/test_trip_result_adapter.py::test_summary_to_rows_omits_none_fields
+FAILED tests/unit/test_trip_result_adapter.py::test_wintersport_default_config_enables_av_wc_sn_sn24_sfl
+FAILED tests/unit/test_renderers_text_report.py::test_renders_header_summary_waypoints
+FAILED tests/unit/test_renderers_text_report.py::test_renders_avalanche_block_when_regions_present
+FAILED tests/unit/test_renderers_text_report.py::test_omits_avalanche_block_when_regions_empty
+FAILED tests/unit/test_renderers_text_report.py::test_renders_token_line_from_token_line_arg
+FAILED tests/unit/test_renderers_text_report.py::test_is_pure_function - Modu...
+FAILED tests/unit/test_renderers_text_report.py::test_is_profile_agnostic - M...
+FAILED tests/unit/test_renderers_text_report.py::test_omits_summary_rows_when_empty
+FAILED tests/unit/test_renderers_text_report.py::test_omits_waypoint_details_when_empty
+FAILED tests/golden/text_report/test_text_report_golden.py::test_golden_stubaier_skitour_evening
+FAILED tests/integration/test_cli_wintersport.py::test_cli_compact_uses_pipeline
+FAILED tests/integration/test_cli_wintersport.py::test_cli_long_report_contains_all_sections
+FAILED tests/integration/test_cli_wintersport.py::test_cli_no_wintersport_formatter_import
+FAILED tests/integration/test_cli_wintersport.py::test_cli_long_report_subject_unchanged
+============================== 22 failed in 0.28s ==============================
