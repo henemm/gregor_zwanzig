@@ -18,6 +18,16 @@ GZ_SVELTE_BASE=https://staging.gregor20.henemm.com uv run pytest tests/tdd/
 
 **Wichtig:** Diese Production-Verification (Schritte 1–6 unten) bleibt produktiv (gregor20.henemm.com). Staging ersetzt sie nicht.
 
+## Schritt 0: Import-Smoke (Pre-Restart-Gate)
+
+**PFLICHT bevor Schritt 1 ausgefuehrt wird.** Faengt ImportError ab, bevor der Prod-Service durch `systemctl restart` kippt.
+
+```bash
+cd /home/hem/gregor_zwanzig && uv run python3 -c "from api.main import app; print('IMPORT_OK')"
+```
+
+**STOP wenn:** Output enthaelt nicht `IMPORT_OK` oder Exit-Code != 0. Code reparieren, dann erneut. Service NICHT restarten — Prod bleibt unangetastet.
+
 ## Schritt 1: Server neu starten
 
 ```bash
