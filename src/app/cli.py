@@ -18,11 +18,20 @@ from app.debug import DebugBuffer
 from app.loader import load_trip, LoaderError, load_compare_subscriptions, load_all_locations
 from app.user import Schedule
 from app.models import NormalizedTimeseries
-from formatters.wintersport import WintersportFormatter
 from outputs.base import get_channel, OutputError
 from providers.base import get_provider, ProviderError
 from services.forecast import ForecastService
 from services.trip_forecast import TripForecastService
+
+from src.output.adapters.trip_result import (
+    _summary_to_rows,
+    _trip_result_to_normalized,
+    _waypoint_to_detail,
+    _wintersport_default_config,
+)
+from src.output.renderers.sms import render_sms
+from src.output.renderers.text_report import render_text_report
+from src.output.tokens.builder import build_token_line
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -219,13 +228,34 @@ def _run_trip_report(args, settings: Settings, provider, debug: DebugBuffer) -> 
     service = TripForecastService(provider, debug)
     result = service.get_trip_forecast(trip)
 
-    # Format report
-    formatter = WintersportFormatter()
+    # Build the canonical TokenLine via the β1 pipeline (Spec §5.2 / §5.3).
+    forecast = _trip_result_to_normalized(result)
+    config = _wintersport_default_config()
+    token_line = build_token_line(
+        forecast,
+        config,
+        report_type=settings.report_type,
+        stage_name=trip.name,
+        profile="wintersport",
+    )
+
     if args.compact:
-        body = formatter.format_compact(result)
+        body = render_sms(token_line, max_length=160)
         subject = body  # Compact format is the subject
     else:
-        body = formatter.format(result, report_type=settings.report_type)
+        waypoint_details = [
+            _waypoint_to_detail(wf) for wf in result.waypoint_forecasts
+        ]
+        summary_rows = _summary_to_rows(result.summary)
+        body = render_text_report(
+            token_line,
+            waypoint_details=waypoint_details,
+            summary_rows=summary_rows,
+            avalanche_regions=tuple(trip.avalanche_regions),
+            report_type=settings.report_type,
+            trip_name=trip.name,
+            trip_date=str(trip.start_date),
+        )
         subject = f"GZ {settings.report_type.title()} - {trip.name}"
 
     # Output
