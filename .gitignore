@@ -31,10 +31,17 @@ node_modules/
 .claude/ui_screenshot_lock.json
 .claude/pending_validation.json
 .claude/user_approved_validation
+.claude/scheduled_tasks.lock
+.claude/e2e_verified.json
+
+# Schema-rework backups (BUG-DATALOSS-GR221, Issue #102)
+.backups/
 
 # Data (runtime / user-uploaded)
 data/cache/
 data/*.gpx
+data/users/default/user.json
+data/users/default/weather_snapshots/
 data/users/__test_*/
 data/users/test_*/
 data/users/csrf_test_*/

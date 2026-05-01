@@ -80,6 +80,11 @@
             "type": "command",
             "command": "python3 /home/hem/gregor_zwanzig/.claude/hooks/backlog_guard.py",
             "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "python3 /home/hem/gregor_zwanzig/.claude/hooks/data_schema_backup.py",
+            "timeout": 35
           }
         ]
       },
