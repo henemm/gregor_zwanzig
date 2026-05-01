@@ -1,0 +1,28 @@
+=== RUN   TestUpdateTripHandlerPreservesAggregation
+    trip_write_test.go:187: aggregation was deleted by minimal-body PUT (expected to be preserved)
+--- FAIL: TestUpdateTripHandlerPreservesAggregation (0.00s)
+=== RUN   TestUpdateTripHandlerPreservesReportConfig
+    trip_write_test.go:204: report_config was deleted by minimal-body PUT
+--- FAIL: TestUpdateTripHandlerPreservesReportConfig (0.00s)
+=== RUN   TestUpdateTripHandlerPreservesWeatherConfig
+    trip_write_test.go:221: weather_config was deleted by minimal-body PUT
+--- FAIL: TestUpdateTripHandlerPreservesWeatherConfig (0.00s)
+=== RUN   TestUpdateTripHandlerPreservesDisplayConfig
+    trip_write_test.go:238: display_config was deleted by minimal-body PUT
+--- FAIL: TestUpdateTripHandlerPreservesDisplayConfig (0.00s)
+=== RUN   TestUpdateTripHandlerPreservesAvalancheRegions
+    trip_write_test.go:255: avalanche_regions was emptied by minimal-body PUT
+--- FAIL: TestUpdateTripHandlerPreservesAvalancheRegions (0.00s)
+=== RUN   TestUpdateTripHandlerReplacesAggregationWhenSent
+    trip_write_test.go:277: report_config lost when only aggregation was sent
+--- FAIL: TestUpdateTripHandlerReplacesAggregationWhenSent (0.00s)
+=== RUN   TestUpdateTripHandlerKeepsAllConfigsOnNameOnlyUpdate
+    trip_write_test.go:294: aggregation lost
+    trip_write_test.go:297: report_config lost
+    trip_write_test.go:300: weather_config lost
+    trip_write_test.go:303: display_config lost
+    trip_write_test.go:306: avalanche_regions lost
+--- FAIL: TestUpdateTripHandlerKeepsAllConfigsOnNameOnlyUpdate (0.00s)
+FAIL
+FAIL	github.com/henemm/gregor-api/internal/handler	0.010s
+FAIL
