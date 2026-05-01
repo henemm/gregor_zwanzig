@@ -9,7 +9,6 @@ Spec: docs/specs/modules/hybrid_segmentation.md
 from datetime import datetime, timezone
 from pathlib import Path
 
-import pytest
 
 from app.models import EtappenConfig, WaypointType
 from core.elevation_analysis import detect_waypoints

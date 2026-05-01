@@ -5,8 +5,7 @@ TDD RED - Tests for catalog-driven thresholds in MetricCatalog + TripReportForma
 All tests use REAL MetricCatalog and TripReportFormatter instances (no mocks!).
 """
 
-import pytest
-from app.metric_catalog import get_metric, MetricDefinition
+from app.metric_catalog import get_metric
 
 
 # =====================================================================

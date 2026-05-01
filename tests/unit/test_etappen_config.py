@@ -9,7 +9,6 @@ Spec: docs/specs/modules/etappen_config.md
 from datetime import datetime, timezone
 from pathlib import Path
 
-import pytest
 
 from app.models import EtappenConfig
 from core.gpx_parser import parse_gpx

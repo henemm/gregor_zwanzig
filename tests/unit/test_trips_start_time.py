@@ -7,7 +7,7 @@ from datetime import date, time
 
 import pytest
 
-from app.trip import Stage, Waypoint, TimeWindow, Trip, AggregationConfig
+from app.trip import Stage, Waypoint, Trip
 from app.loader import _parse_trip, _trip_to_dict
 
 

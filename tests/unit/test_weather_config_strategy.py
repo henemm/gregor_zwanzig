@@ -10,7 +10,6 @@ v1.1: Cleanup nach F76-Routen-Aufraeumen
 """
 from __future__ import annotations
 
-import pytest
 
 
 # =====================================================================

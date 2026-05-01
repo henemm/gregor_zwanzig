@@ -384,7 +384,7 @@ class TestLoaderUseFriendlyFormat:
         """Serialization should include use_friendly_format."""
         import json
         from datetime import date
-        from app.loader import save_trip, load_trip, get_trips_dir
+        from app.loader import save_trip, get_trips_dir
         from app.models import MetricConfig, UnifiedWeatherDisplayConfig
         from app.trip import Trip, Stage, Waypoint
 

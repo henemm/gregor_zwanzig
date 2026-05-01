@@ -19,7 +19,7 @@ import os
 import subprocess
 import sys
 import time
-from datetime import date, time as dt_time
+from datetime import date
 from pathlib import Path
 
 import httpx
@@ -29,7 +29,7 @@ from playwright.sync_api import sync_playwright
 # Add src to path for direct imports
 sys.path.insert(0, "/opt/gregor_zwanziger/src")
 
-from app.trip import Trip, Stage, Waypoint, TimeWindow
+from app.trip import Trip, Stage, Waypoint
 
 
 SERVER_PORT = 18092
@@ -285,7 +285,6 @@ class TestMetricCount:
 
         Expected RED: Labels are hardcoded old format.
         """
-        from app.metric_catalog import get_all_metrics
 
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)

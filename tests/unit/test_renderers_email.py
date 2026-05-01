@@ -17,7 +17,6 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
-import pytest
 
 from app.metric_catalog import build_default_display_config
 from app.models import (

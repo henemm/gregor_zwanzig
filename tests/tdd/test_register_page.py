@@ -10,7 +10,6 @@ Requires:
 """
 import json
 import os
-import pytest
 import httpx
 import uuid
 
@@ -110,8 +109,8 @@ class TestRegisterFormAction:
         assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
         data = parse_sveltekit_response(resp)
         assert data.get("type") == "redirect", f"Expected redirect, got {data}"
-        assert "/login" in data.get("location", ""), f"Expected /login in location"
-        assert "registered=1" in data.get("location", ""), f"Expected ?registered=1"
+        assert "/login" in data.get("location", ""), "Expected /login in location"
+        assert "registered=1" in data.get("location", ""), "Expected ?registered=1"
 
     def test_password_mismatch_shows_error(self):
         """

@@ -6,7 +6,6 @@ Tests for:
 3. Formatter uses per-report-type filtering
 """
 
-import pytest
 from datetime import datetime, timezone
 
 
@@ -155,8 +154,7 @@ class TestSerializationRoundtrip:
         """GIVEN a trip with morning_enabled/evening_enabled set on MetricConfig
         WHEN saving to JSON and loading back
         THEN morning_enabled/evening_enabled are preserved."""
-        from app.models import MetricConfig, UnifiedWeatherDisplayConfig
-        from app.loader import _trip_to_dict, _parse_display_config
+        from app.loader import _parse_display_config
 
         dc = _build_dc([
             ("temperature", True, True, False),

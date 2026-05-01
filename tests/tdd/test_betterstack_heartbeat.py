@@ -7,7 +7,6 @@ Tests verify that heartbeat pings are sent after morning/evening report runs.
 """
 import inspect
 
-import pytest
 
 
 class TestHeartbeatConstants:

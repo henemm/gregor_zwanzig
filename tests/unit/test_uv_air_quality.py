@@ -7,9 +7,7 @@ All tests use REAL API calls (no mocks!) per CLAUDE.md.
 
 import json
 from datetime import datetime, timezone, timedelta
-from pathlib import Path
 
-import pytest
 
 
 class TestRequestBaseHostOverride:

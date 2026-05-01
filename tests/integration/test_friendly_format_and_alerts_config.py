@@ -9,8 +9,7 @@ Verifies that:
 NO MOCKS — uses real TripReportFormatter, MetricCatalog, and WeatherChangeDetectionService.
 """
 
-import pytest
-from app.metric_catalog import get_metric, build_default_display_config
+from app.metric_catalog import build_default_display_config
 from app.models import MetricConfig, UnifiedWeatherDisplayConfig
 from formatters.trip_report import TripReportFormatter
 

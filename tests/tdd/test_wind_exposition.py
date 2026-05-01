@@ -15,7 +15,6 @@ Tests:
 
 from datetime import datetime, timezone
 
-import pytest
 
 
 # --- 1. DTO & Enum ---
@@ -104,7 +103,7 @@ def test_detect_exposed_sections_below_threshold():
 
 def test_detect_exposed_from_segments():
     """Segment-based detection: high-elevation segments are exposed."""
-    from app.models import ExposedSection, GPXPoint, SegmentWeatherData, SegmentWeatherSummary, TripSegment
+    from app.models import GPXPoint, TripSegment
     from services.wind_exposition import WindExpositionService
 
     high_seg = TripSegment(

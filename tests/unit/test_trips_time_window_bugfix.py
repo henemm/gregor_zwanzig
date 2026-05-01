@@ -7,11 +7,10 @@ Tests cover:
 - Fix 1: trips.py preserves time_window in gpx_to_stage_data, save handlers, edit dialog
 - Fix 2: Scheduler interpolates missing time_window instead of skipping
 """
-from datetime import date, time, datetime, timezone, timedelta
+from datetime import date, time
 
-import pytest
 
-from app.trip import Stage, Waypoint, TimeWindow, Trip, AggregationConfig
+from app.trip import Stage, Waypoint, TimeWindow, Trip
 
 
 # ---------------------------------------------------------------------------

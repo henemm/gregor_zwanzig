@@ -8,11 +8,10 @@ SPEC: docs/specs/modules/trip_report_scheduler.md v1.0
 """
 from __future__ import annotations
 
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import date, time, timedelta, timezone
 
-import pytest
 
-from app.models import GPXPoint, TripReportConfig, TripSegment
+from app.models import TripReportConfig
 from app.trip import Stage, TimeWindow, Trip, Waypoint
 
 

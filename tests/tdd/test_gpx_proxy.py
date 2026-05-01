@@ -6,7 +6,6 @@ gpx_to_stage_data() for the SvelteKit frontend via Go proxy.
 
 SPEC: docs/specs/modules/gpx_proxy.md
 """
-import pytest
 from pathlib import Path
 
 # Sample GPX file for testing (real Komoot GPX from data/)

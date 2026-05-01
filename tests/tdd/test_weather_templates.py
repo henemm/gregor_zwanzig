@@ -7,7 +7,6 @@ Tests for:
 4. GET /templates API endpoint
 """
 
-import pytest
 
 
 # ---------------------------------------------------------------------------

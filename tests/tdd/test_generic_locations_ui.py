@@ -8,7 +8,6 @@ wurden entfernt (UI-tot seit F76: /locations -> 301 -> /compare).
 Verbleibende Tests: Provider-Detection (lat/lon-basiert) bleibt fuer den
 Loader / SvelteKit-Frontend / Go-API relevant.
 """
-import pytest
 
 
 # =============================================================================

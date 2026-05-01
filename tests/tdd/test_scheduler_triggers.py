@@ -7,7 +7,6 @@ Python services (subscriptions, trip reports, alerts, inbound commands).
 SPEC: docs/specs/modules/go_scheduler.md v1.0
 """
 import pytest
-import httpx
 
 # FastAPI app for test client
 from api.main import app

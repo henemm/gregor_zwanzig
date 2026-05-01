@@ -134,7 +134,7 @@ def test_golden_stubaier_skitour_evening():
 
     expected = _read_golden("stubaier-skitour-evening")
     assert body == expected, (
-        f"Long-Report-Drift gegen Golden.\n"
-        f"Bit-Vergleich gegen tests/golden/text_report/stubaier-skitour-evening.txt "
-        f"fehlgeschlagen."
+        "Long-Report-Drift gegen Golden.\n"
+        "Bit-Vergleich gegen tests/golden/text_report/stubaier-skitour-evening.txt "
+        "fehlgeschlagen."
     )

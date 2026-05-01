@@ -7,14 +7,12 @@ Tests real formatter behavior — NO mocking!
 """
 from __future__ import annotations
 
-import pytest
 from datetime import date, datetime, time, timedelta, timezone
 
 from app.models import (
     ForecastDataPoint,
     ForecastMeta,
     GPXPoint,
-    MetricConfig,
     NormalizedTimeseries,
     Provider,
     SegmentWeatherData,

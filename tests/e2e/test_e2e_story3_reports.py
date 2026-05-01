@@ -22,7 +22,7 @@ import email
 import imaplib
 import sys
 import time
-from datetime import date, datetime, time as dt_time, timezone
+from datetime import date, time as dt_time
 from pathlib import Path
 
 import pytest
@@ -32,7 +32,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from app.config import Settings
 from app.loader import delete_trip, get_trips_dir, load_trip, save_trip
-from app.models import GPXPoint, SegmentWeatherData, TripReportConfig, TripSegment
+from app.models import TripReportConfig
 from app.trip import Stage, TimeWindow, Trip, Waypoint
 from formatters.sms_trip import SMSTripFormatter
 from formatters.trip_report import TripReportFormatter

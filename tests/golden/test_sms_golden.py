@@ -27,7 +27,6 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-import pytest
 
 # GREEN: src/output/tokens is now implemented.
 from src.output.tokens import (
@@ -35,7 +34,6 @@ from src.output.tokens import (
     HourlyValue,
     MetricSpec,
     NormalizedForecast,
-    Token,
     TokenLine,
     build_token_line,
 )

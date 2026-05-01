@@ -24,7 +24,6 @@ from src.output.tokens import (
     HourlyValue,
     MetricSpec,
     NormalizedForecast,
-    Token,
     TokenLine,
     build_token_line,
 )
@@ -197,7 +196,7 @@ def test_friendly_format_uses_friendly_label():
     line = _build_default_line()
     rendered = line.render(160)
     assert "Niesel" in rendered, (
-        f"Friendly label 'Niesel' missing — use_friendly_format not honoured."
+        "Friendly label 'Niesel' missing — use_friendly_format not honoured."
     )
 
 

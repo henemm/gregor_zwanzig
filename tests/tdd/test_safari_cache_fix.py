@@ -11,7 +11,6 @@ These tests start a real NiceGUI server and make real HTTP requests.
 
 import os
 import subprocess
-import sys
 import time
 
 import httpx
