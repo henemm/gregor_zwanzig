@@ -406,41 +406,7 @@ test.describe('Trip Wizard W1', () => {
 	});
 
 	// --- Edit Mode ---
-
-	test('trips page edit button navigates to wizard', async ({ page }) => {
-		await page.goto('/trips');
-
-		// Find first edit button
-		const editBtn = page.locator('[data-testid="trip-edit-btn"]').first();
-		if (!(await editBtn.isVisible({ timeout: 3000 }).catch(() => false))) {
-			test.skip();
-			return;
-		}
-
-		await editBtn.click();
-
-		// Should navigate to /trips/{id}/edit
-		await expect(page).toHaveURL(/\/trips\/[^/]+\/edit/);
-		await expect(page.locator('[data-testid="trip-wizard"]')).toBeVisible();
-	});
-
-	test('edit mode pre-fills trip name', async ({ page }) => {
-		await page.goto('/trips');
-
-		const editBtn = page.locator('[data-testid="trip-edit-btn"]').first();
-		if (!(await editBtn.isVisible({ timeout: 3000 }).catch(() => false))) {
-			test.skip();
-			return;
-		}
-
-		await editBtn.click();
-		await page.waitForURL(/\/trips\/[^/]+\/edit/);
-
-		// Trip name should be pre-filled
-		const nameInput = page.locator('[data-testid="trip-name-input"]');
-		const value = await nameInput.inputValue();
-		expect(value.length).toBeGreaterThan(0);
-	});
+	// Edit mode tests have been moved to trip-edit.spec.ts (Issue #91 — TripEditView replaces TripWizard for /trips/{id}/edit).
 
 	// --- Trips Page Integration ---
 
