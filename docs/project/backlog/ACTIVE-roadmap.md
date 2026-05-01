@@ -70,6 +70,7 @@
 | Token Builder (output_token_builder) | 2026-04-26 | Formatter | β1: SMS-konforme TokenLine gemäß sms_format.md v2.0, 18/18 tests GREEN, 490 LoC, adversary VERIFIED, validated & ready to commit. |
 | Output Subject Filter (§11 Subject Rendering) | 2026-04-27 | Formatter | β2: build_email_subject() from TokenLine, [Trip] Etappe — ReportType — MainRisk D/W/G tokens, 78-char truncation. Validator-Findings Fixed: trailing em-dash (HIGH), missing D/W/G aggregates (CRITICAL). 14/14 tests GREEN. |
 | Wintersport Profile Consolidation | 2026-04-29 | Formatter | β4: `src/formatters/wintersport.py` (240 LoC) gelöscht; CLI `--compact` + Long-Report nutzen β1/β3-Pipeline mit `profile="wintersport"`. Neuer `output_text_report_renderer` + `trip_result_adapter`. Wintersport-Tokens AV/WC/SFL/SN/SN24+ erhalten. Extensible: neue Sportarten = neuer Profile-Literal + Token-Set, kein neuer Renderer. Validated & committed (Issue #96 β4) |
+| ActivityProfile Harmonisierung | 2026-05-01 | Refactor | #98 PR1: Kanonischer Enum in `src/app/profile.py` (4 Werte), Backward-Compat-Aliase in trip.py/user.py, Verifikations-Skript, 12 neue Tests all GREEN. Spec active. Two-PR migration. |
 
 ## Solved Bugs
 

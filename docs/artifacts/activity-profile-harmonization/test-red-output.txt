@@ -1,0 +1,242 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 12 items
+
+tests/tdd/test_activity_profile_harmonization.py FFFFFFFFFFFF            [100%]
+
+=================================== FAILURES ===================================
+_____________ TestCanonicalActivityProfile.test_module_importable ______________
+
+self = <tdd.test_activity_profile_harmonization.TestCanonicalActivityProfile object at 0x766ed3099340>
+
+    def test_module_importable(self):
+        """
+        GIVEN: src/app/profile.py
+        WHEN: importing ActivityProfile from app.profile
+        THEN: import succeeds (modul existiert)
+        """
+>       from app.profile import ActivityProfile
+E       ModuleNotFoundError: No module named 'app.profile'
+
+tests/tdd/test_activity_profile_harmonization.py:43: ModuleNotFoundError
+____________ TestCanonicalActivityProfile.test_has_all_four_values _____________
+
+self = <tdd.test_activity_profile_harmonization.TestCanonicalActivityProfile object at 0x766ed30992b0>
+
+    def test_has_all_four_values(self):
+        """
+        GIVEN: ActivityProfile in app.profile
+        WHEN: accessing canonical values
+        THEN: WINTERSPORT, WANDERN, SUMMER_TREKKING, ALLGEMEIN existieren
+        """
+>       from app.profile import ActivityProfile
+E       ModuleNotFoundError: No module named 'app.profile'
+
+tests/tdd/test_activity_profile_harmonization.py:52: ModuleNotFoundError
+____________ TestCanonicalActivityProfile.test_exactly_four_members ____________
+
+self = <tdd.test_activity_profile_harmonization.TestCanonicalActivityProfile object at 0x766ed30992e0>
+
+    def test_exactly_four_members(self):
+        """
+        GIVEN: ActivityProfile
+        WHEN: counting members
+        THEN: genau 4 Werte (kein CUSTOM, kein zusätzlicher Wert)
+        """
+>       from app.profile import ActivityProfile
+E       ModuleNotFoundError: No module named 'app.profile'
+
+tests/tdd/test_activity_profile_harmonization.py:65: ModuleNotFoundError
+______________ TestCanonicalActivityProfile.test_no_custom_value _______________
+
+self = <tdd.test_activity_profile_harmonization.TestCanonicalActivityProfile object at 0x766ed3099370>
+
+    def test_no_custom_value(self):
+        """
+        GIVEN: kanonischer Enum hat kein CUSTOM
+        WHEN: ActivityProfile("custom") aufgerufen
+        THEN: ValueError (Wert ist nicht mehr gültig)
+        """
+>       from app.profile import ActivityProfile
+E       ModuleNotFoundError: No module named 'app.profile'
+
+tests/tdd/test_activity_profile_harmonization.py:75: ModuleNotFoundError
+________________ TestCanonicalActivityProfile.test_string_mixin ________________
+
+self = <tdd.test_activity_profile_harmonization.TestCanonicalActivityProfile object at 0x766ed3099130>
+
+    def test_string_mixin(self):
+        """
+        GIVEN: ActivityProfile ist (str, Enum) für JSON-Serialisierung
+        WHEN: Wert in str-Vergleich verwendet
+        THEN: gleichgesetzt mit String-Wert
+        """
+>       from app.profile import ActivityProfile
+E       ModuleNotFoundError: No module named 'app.profile'
+
+tests/tdd/test_activity_profile_harmonization.py:86: ModuleNotFoundError
+______ TestBackwardCompatAliases.test_trip_activity_profile_is_canonical _______
+
+self = <tdd.test_activity_profile_harmonization.TestBackwardCompatAliases object at 0x766ed3099010>
+
+    def test_trip_activity_profile_is_canonical(self):
+        """
+        GIVEN: src/app/trip.py
+        WHEN: ActivityProfile aus app.trip importiert
+        THEN: ist exakt dieselbe Klasse wie app.profile.ActivityProfile
+        """
+>       from app.profile import ActivityProfile as Canonical
+E       ModuleNotFoundError: No module named 'app.profile'
+
+tests/tdd/test_activity_profile_harmonization.py:105: ModuleNotFoundError
+________ TestBackwardCompatAliases.test_location_activity_profile_alias ________
+
+self = <tdd.test_activity_profile_harmonization.TestBackwardCompatAliases object at 0x766ed3098e60>
+
+    def test_location_activity_profile_alias(self):
+        """
+        GIVEN: src/app/user.py
+        WHEN: LocationActivityProfile aus app.user importiert (PR 1 Alias)
+        THEN: ist exakt dieselbe Klasse wie ActivityProfile
+        """
+>       from app.profile import ActivityProfile as Canonical
+E       ModuleNotFoundError: No module named 'app.profile'
+
+tests/tdd/test_activity_profile_harmonization.py:116: ModuleNotFoundError
+___ TestBackwardCompatAliases.test_existing_location_test_imports_still_work ___
+
+self = <tdd.test_activity_profile_harmonization.TestBackwardCompatAliases object at 0x766ed3098c20>
+
+    def test_existing_location_test_imports_still_work(self):
+        """
+        GIVEN: bestehende Tests importieren LocationActivityProfile.WINTERSPORT etc.
+        WHEN: Werte werden via Alias zugegriffen
+        THEN: liefern dieselben Enum-Member wie der Canonical
+        """
+>       from app.profile import ActivityProfile
+E       ModuleNotFoundError: No module named 'app.profile'
+
+tests/tdd/test_activity_profile_harmonization.py:127: ModuleNotFoundError
+_____ TestBackwardCompatAliases.test_existing_trip_test_imports_still_work _____
+
+self = <tdd.test_activity_profile_harmonization.TestBackwardCompatAliases object at 0x766ed3098d40>
+
+    def test_existing_trip_test_imports_still_work(self):
+        """
+        GIVEN: bestehende Tests importieren ActivityProfile.SUMMER_TREKKING aus app.trip
+        WHEN: Wert via Alias zugegriffen
+        THEN: liefert denselben Enum-Member wie Canonical
+        """
+>       from app.profile import ActivityProfile
+E       ModuleNotFoundError: No module named 'app.profile'
+
+tests/tdd/test_activity_profile_harmonization.py:140: ModuleNotFoundError
+________________ TestVerificationScript.test_script_file_exists ________________
+
+self = <tdd.test_activity_profile_harmonization.TestVerificationScript object at 0x766ed30989e0>
+
+    def test_script_file_exists(self):
+        """
+        GIVEN: Spec §6.3 fordert scripts/verify_activity_profile_migration.py
+        WHEN: Datei geprüft
+        THEN: existiert
+        """
+>       assert self.SCRIPT_PATH.exists(), (
+            f"Verifikations-Skript fehlt: {self.SCRIPT_PATH}"
+        )
+E       AssertionError: Verifikations-Skript fehlt: /home/hem/gregor_zwanzig/scripts/verify_activity_profile_migration.py
+E       assert False
+E        +  where False = exists()
+E        +    where exists = PosixPath('/home/hem/gregor_zwanzig/scripts/verify_activity_profile_migration.py').exists
+E        +      where PosixPath('/home/hem/gregor_zwanzig/scripts/verify_activity_profile_migration.py') = <tdd.test_activity_profile_harmonization.TestVerificationScript object at 0x766ed30989e0>.SCRIPT_PATH
+
+tests/tdd/test_activity_profile_harmonization.py:162: AssertionError
+__________ TestVerificationScript.test_script_runs_clean_on_real_data __________
+
+self = <tdd.test_activity_profile_harmonization.TestVerificationScript object at 0x766ed3098b60>
+
+    def test_script_runs_clean_on_real_data(self):
+        """
+        GIVEN: data/users/default/ enthält nur valide Profile-Werte (wintersport)
+        WHEN: Verifikations-Skript läuft
+        THEN: Exit 0, kein Fehler
+        """
+        result = subprocess.run(
+            [sys.executable, str(self.SCRIPT_PATH)],
+            cwd=str(REPO_ROOT),
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+>       assert result.returncode == 0, (
+            f"Skript-Fehler:\nstdout={result.stdout}\nstderr={result.stderr}"
+        )
+E       AssertionError: Skript-Fehler:
+E         stdout=
+E         stderr=/home/hem/gregor_zwanzig/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/scripts/verify_activity_profile_migration.py': [Errno 2] No such file or directory
+E         
+E       assert 2 == 0
+E        +  where 2 = CompletedProcess(args=['/home/hem/gregor_zwanzig/.venv/bin/python', '/home/hem/gregor_zwanzig/scripts/verify_activity_...n file '/home/hem/gregor_zwanzig/scripts/verify_activity_profile_migration.py': [Errno 2] No such file or directory\n").returncode
+
+tests/tdd/test_activity_profile_harmonization.py:179: AssertionError
+___________ TestVerificationScript.test_script_rejects_unknown_value ___________
+
+self = <tdd.test_activity_profile_harmonization.TestVerificationScript object at 0x766ed30981d0>
+tmp_path = PosixPath('/tmp/pytest-of-hem/pytest-333/test_script_rejects_unknown_va0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x766ed3101310>
+
+    def test_script_rejects_unknown_value(self, tmp_path, monkeypatch):
+        """
+        GIVEN: Test-Verzeichnis mit Trip-JSON, das einen unbekannten Profile-Wert hat
+        WHEN: Verifikations-Skript läuft (gegen Test-Verzeichnis)
+        THEN: Exit != 0, Fehler mit Dateipfad in Output
+        """
+        users_dir = tmp_path / "data" / "users" / "default" / "trips"
+        users_dir.mkdir(parents=True)
+        bad_trip = users_dir / "bad-trip.json"
+        bad_trip.write_text(json.dumps({
+            "id": "bad",
+            "name": "Bad Trip",
+            "stages": [],
+            "aggregation": {"profile": "klettern"},
+        }))
+    
+        env_data_dir = tmp_path / "data" / "users"
+        result = subprocess.run(
+            [sys.executable, str(self.SCRIPT_PATH), "--data-dir", str(env_data_dir)],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    
+        assert result.returncode != 0, (
+            f"Erwartet Exit != 0 bei unbekanntem Wert. "
+            f"Stattdessen: {result.returncode}\nstdout={result.stdout}"
+        )
+        combined = result.stdout + result.stderr
+>       assert "klettern" in combined or "bad-trip" in combined, (
+            f"Erwartet Hinweis auf Wert/Pfad in Output:\n{combined}"
+        )
+E       AssertionError: Erwartet Hinweis auf Wert/Pfad in Output:
+E         /home/hem/gregor_zwanzig/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/scripts/verify_activity_profile_migration.py': [Errno 2] No such file or directory
+E         
+E       assert ('klettern' in "/home/hem/gregor_zwanzig/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/scripts/verify_activity_profile_migration.py': [Errno 2] No such file or directory\n" or 'bad-trip' in "/home/hem/gregor_zwanzig/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/scripts/verify_activity_profile_migration.py': [Errno 2] No such file or directory\n")
+
+tests/tdd/test_activity_profile_harmonization.py:212: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_activity_profile_harmonization.py::TestCanonicalActivityProfile::test_module_importable
+FAILED tests/tdd/test_activity_profile_harmonization.py::TestCanonicalActivityProfile::test_has_all_four_values
+FAILED tests/tdd/test_activity_profile_harmonization.py::TestCanonicalActivityProfile::test_exactly_four_members
+FAILED tests/tdd/test_activity_profile_harmonization.py::TestCanonicalActivityProfile::test_no_custom_value
+FAILED tests/tdd/test_activity_profile_harmonization.py::TestCanonicalActivityProfile::test_string_mixin
+FAILED tests/tdd/test_activity_profile_harmonization.py::TestBackwardCompatAliases::test_trip_activity_profile_is_canonical
+FAILED tests/tdd/test_activity_profile_harmonization.py::TestBackwardCompatAliases::test_location_activity_profile_alias
+FAILED tests/tdd/test_activity_profile_harmonization.py::TestBackwardCompatAliases::test_existing_location_test_imports_still_work
+FAILED tests/tdd/test_activity_profile_harmonization.py::TestBackwardCompatAliases::test_existing_trip_test_imports_still_work
+FAILED tests/tdd/test_activity_profile_harmonization.py::TestVerificationScript::test_script_file_exists
+FAILED tests/tdd/test_activity_profile_harmonization.py::TestVerificationScript::test_script_runs_clean_on_real_data
+FAILED tests/tdd/test_activity_profile_harmonization.py::TestVerificationScript::test_script_rejects_unknown_value
+============================== 12 failed in 0.09s ==============================
