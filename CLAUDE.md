@@ -200,6 +200,40 @@ python3 .claude/validate.py --clear
 
 **NIEMALS "teste es" oder "pruefe" sagen ohne vorherige Validierung!**
 
+## Daten-Schema-Reworks (PFLICHT!)
+
+**Bei Aenderungen an Persistenz-Strukturen MUESSEN Bestandsdaten erhalten bleiben.**
+
+Hintergrund: BUG-DATALOSS-GR221 (Issue #102). Bei einem frueheren Refactor gingen 3 von 4 Stages des GR221-Trips verloren — das Recovery war nur moeglich, weil GPX-Dateien zufaellig in einem Stash ueberlebt haben.
+
+### Schema-relevante Dateien
+
+`src/app/models.py`, `src/app/trip.py`, `src/app/loader.py`, `internal/model/*.go`, `internal/store/store.go`
+
+### Pflicht-Workflow
+
+1. **Pre-Snapshot:** Hook `data_schema_backup.py` erstellt automatisch ein tar.gz von `data/users/` nach `.backups/data-pre-rework-<ts>.tar.gz` bevor eine Schema-Datei editiert wird (Retention: 20 Stueck).
+2. **Migration mit Test:** Bei Feldumbenennung/-removal: Migration-Skript schreiben + Roundtrip-Test (load alt → migrate → load neu → assert keine Daten-Diff)
+3. **Post-Verifikation:** Nach Deploy alle Trips/Locations/Subscriptions im Frontend laden, Stage-/Waypoint-Counts gegen Pre-Snapshot vergleichen
+4. **Bei Datenverlust:** Sofortiges Rollback aus `.backups/`, Root-Cause in `docs/project/known_issues.md` dokumentieren
+
+### Anti-Pattern (verboten)
+
+```python
+# Edit-Handler baut neues Objekt aus UI-State und ueberschreibt Persistenz
+updated = Trip(id=tid, name=name_input.value, stages=ui_stages)
+save_trip(updated)  # Felder die UI nicht kennt sind weg!
+```
+
+```go
+// Backend Replace statt Merge
+var trip model.Trip
+json.Decode(r.Body, &trip)
+store.SaveTrip(trip)  // existing.aggregation, .display_config etc. weg!
+```
+
+**Korrekt:** Read-Modify-Write mit Merge — bestehendes Objekt laden, nur explizit veraenderte Felder ueberschreiben, Rest erhalten.
+
 ## NiceGUI Safari-Kompatibilitaet (KRITISCH!)
 
 **Safari ist STRENGER als Chrome/Firefox!** NiceGUI's Python→JavaScript-Uebersetzung hat **Closure-Binding-Probleme in Safari**.
