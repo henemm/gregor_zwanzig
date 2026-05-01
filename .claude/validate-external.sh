@@ -24,6 +24,8 @@ fi
 
 cd "$(dirname "$0")/.."
 
+VALIDATION_URL="${GZ_VALIDATION_URL:-https://gregor20.henemm.com}"
+
 # Fester Prompt — nicht vom Implementierer beeinflussbar
 PROMPT="Du bist der External Validator. Deine Anweisungen stehen in .claude/agents/external-validator.md — lies und befolge sie EXAKT.
 
@@ -35,7 +37,7 @@ KRITISCHE ISOLATION:
 - Du darfst NICHT git log oder git diff lesen — das sind Implementierer-Spuren.
 
 Spec: ${SPEC_PATH}
-Server: https://gregor20.henemm.com
+Server: ${VALIDATION_URL}
 
 Beginne jetzt mit der Validierung."
 
@@ -44,7 +46,7 @@ echo "  External Validator — Isolierte QA-Session"
 echo "================================================"
 echo ""
 echo "  Spec:   $SPEC_PATH"
-echo "  Server: https://gregor20.henemm.com"
+echo "  Server: $VALIDATION_URL"
 echo ""
 echo "  Diese Session ist isoliert vom Implementierer."
 echo "  Der Validator kennt nur: Spec + laufende App."

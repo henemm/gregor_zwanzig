@@ -109,6 +109,20 @@ func CreateTripHandler(s *store.Store) http.HandlerFunc {
 	}
 }
 
+// tripUpdateRequest is the PUT /api/trips/{id} input DTO. Pointer fields let the
+// JSON decoder distinguish "absent in body" (nil) from "explicitly sent" (non-nil),
+// so optional configs are merged into the existing trip instead of being silently
+// dropped. See docs/specs/bugfix/update_trip_handler_merge.md (Issue #99).
+type tripUpdateRequest struct {
+	Name             *string                 `json:"name"`
+	Stages           *[]model.Stage          `json:"stages"`
+	AvalancheRegions *[]string               `json:"avalanche_regions,omitempty"`
+	Aggregation      *map[string]interface{} `json:"aggregation,omitempty"`
+	WeatherConfig    *map[string]interface{} `json:"weather_config,omitempty"`
+	DisplayConfig    *map[string]interface{} `json:"display_config,omitempty"`
+	ReportConfig     *map[string]interface{} `json:"report_config,omitempty"`
+}
+
 func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
@@ -128,17 +142,38 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 
-		var trip model.Trip
-		if err := json.NewDecoder(r.Body).Decode(&trip); err != nil {
+		var req tripUpdateRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(400)
 			w.Write([]byte(`{"error":"bad_request"}`))
 			return
 		}
 
-		trip.ID = id
+		if req.Name != nil {
+			existing.Name = *req.Name
+		}
+		if req.Stages != nil {
+			existing.Stages = *req.Stages
+		}
+		if req.AvalancheRegions != nil {
+			existing.AvalancheRegions = *req.AvalancheRegions
+		}
+		if req.Aggregation != nil {
+			existing.Aggregation = *req.Aggregation
+		}
+		if req.WeatherConfig != nil {
+			existing.WeatherConfig = *req.WeatherConfig
+		}
+		if req.DisplayConfig != nil {
+			existing.DisplayConfig = *req.DisplayConfig
+		}
+		if req.ReportConfig != nil {
+			existing.ReportConfig = *req.ReportConfig
+		}
+		existing.ID = id
 
-		if err := validateTrip(trip); err != nil {
+		if err := validateTrip(*existing); err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(400)
 			json.NewEncoder(w).Encode(map[string]string{
@@ -148,7 +183,7 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 
-		if err := s.SaveTrip(trip); err != nil {
+		if err := s.SaveTrip(*existing); err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(500)
 			w.Write([]byte(`{"error":"store_error"}`))
@@ -156,7 +191,7 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(trip)
+		json.NewEncoder(w).Encode(existing)
 	}
 }
 

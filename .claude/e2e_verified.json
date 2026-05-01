@@ -1,17 +1,20 @@
 {
-  "verified_at": "2026-04-29T17:24:30+00:00",
+  "verified_at": "2026-04-30T17:55:30.128937+00:00",
   "server_restarted": true,
   "test_trip_created": true,
   "reports_sent": [
+    "morning",
     "evening"
   ],
   "emails_checked": true,
   "test_trip_cleaned": true,
   "feature_checks": [
-    "Skill-Patch /e2e-verify Schritt 0 (Import-Smoke vor Service-Restart): pre-restart 'from api.main import app' liefert IMPORT_OK, Service-Restart erfolgreich, /health=200",
-    "Test-Trip 'e2e-verify-skill-patch' (profile=wintersport, Stage 30.04.) -> POST /api/scheduler/trip-reports?hour=18 -> count=1, 200 OK",
-    "Evening-Mail empfangen via IMAP mail.henemm.com (ID 742, ts=1777483462 NACH T0=1777483459), Subject §11-konform '[E2E Skill-Patch Verify] Skill-Patch Test - Abend - D5 W12 G21' mit Em-Dashes",
-    "Plain-Body 2416 chars, Long-Report-Pipeline (β1+β2+β3+β4 text_report) durchlaeuft fuer profile=wintersport vollstaendig",
-    "Test-Trip aufgeraeumt"
+    "WIP-Commit pre-check fuer Issue #99 (Backend UpdateTripHandler Merge)",
+    "Server-Restart erfolgreich (PID 3764890, HTTP 200)",
+    "Test-Trips: e2e-verify-test (Stages 2026-05-01/02), e2e-verify-morning (Stage today)",
+    "Morning-Mail: [E2E Morning Test] Today Stage Morgen D11 W8 G12 \u2014 plausibel, Tabelle, \u00b0C/km/h, keine NA",
+    "Evening-Mail: [E2E Verify Test] Stage 1 Abend D13 W11 G22 \u2014 plausibel, Tabelle, \u00b0C/km/h, keine NA",
+    "Test-Trips entfernt",
+    "Code-Aenderung des Issues betrifft Go-Backend (internal/handler/trip.go), nicht Email/Reports"
   ]
 }
