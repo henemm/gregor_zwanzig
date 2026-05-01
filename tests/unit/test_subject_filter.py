@@ -19,7 +19,6 @@ Critical rules from spec (A1-A6):
 """
 from __future__ import annotations
 
-import pytest
 
 from src.output.tokens.dto import Token, TokenLine
 

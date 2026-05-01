@@ -6,12 +6,10 @@ Scheduler → Formatter → RiskEngine
 
 SPEC: docs/specs/modules/wind_exposition_pipeline.md v1.0
 """
-import math
-from datetime import datetime, time, timedelta, timezone
+from datetime import datetime, time, timezone
 from dataclasses import dataclass, field
 from typing import Optional
 
-import pytest
 
 from app.models import (
     ExposedSection,
@@ -20,7 +18,6 @@ from app.models import (
     GPXPoint,
     NormalizedTimeseries,
     Provider,
-    RiskType,
     SegmentWeatherData,
     SegmentWeatherSummary,
     TripSegment,
@@ -434,9 +431,6 @@ class TestTripLevelElevationConfig:
 
     def test_loader_roundtrip(self):
         """wind_exposition_min_elevation_m survives save→load roundtrip."""
-        import json
-        import tempfile
-        from pathlib import Path
         from app.models import TripReportConfig
 
         # Create a minimal trip JSON with report_config including new field

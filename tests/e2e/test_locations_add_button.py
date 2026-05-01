@@ -10,7 +10,7 @@ import pytest
 pytestmark = pytest.mark.skip(reason="NiceGUI E2E tests — decommissioned in M4b cutover")
 
 import time
-from playwright.sync_api import sync_playwright, expect
+from playwright.sync_api import sync_playwright
 
 
 def test_add_button_opens_dialog():

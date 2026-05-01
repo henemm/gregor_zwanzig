@@ -7,8 +7,6 @@ profile-based default metric configs, and loader round-trip.
 All tests MUST FAIL before implementation (TDD RED phase).
 """
 import json
-import tempfile
-from pathlib import Path
 
 import pytest
 

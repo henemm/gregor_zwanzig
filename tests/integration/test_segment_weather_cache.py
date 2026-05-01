@@ -6,7 +6,6 @@ NO MOCKS - uses real providers and cache.
 """
 from datetime import datetime, timedelta, timezone
 
-import pytest
 
 from app.models import GPXPoint, TripSegment
 from providers.base import get_provider

@@ -146,7 +146,7 @@ if __name__ == "__main__":
         try:
             test_func()
             passed += 1
-            print(f"✅ PASSED")
+            print("✅ PASSED")
         except AssertionError as e:
             print(f"❌ FAILED: {e}")
             failed += 1

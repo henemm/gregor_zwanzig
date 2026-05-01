@@ -5,10 +5,9 @@ All report times must display in LOCAL timezone, not UTC.
 Spec: docs/specs/bugfix/utc_localtime_display.md
 """
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
-import pytest
 
 
 # ── Test 1: Timezone Utility exists and works ──────────────────────────
@@ -121,7 +120,7 @@ class TestDaylightBannerLocalTime:
         # Must show CET times (UTC+1), NOT UTC
         assert "07:06" in html, f"usable_start should be 07:06 CET, got: {html}"
         assert "18:27" in html, f"usable_end should be 18:27 CET, got: {html}"
-        assert "06:06" not in html, f"Should not show UTC time 06:06"
+        assert "06:06" not in html, "Should not show UTC time 06:06"
 
     def test_daylight_plain_shows_local_times(self):
         """
@@ -149,7 +148,7 @@ class TestDaylightBannerLocalTime:
         plain = formatter._format_daylight_plain(dl)
 
         assert "07:06" in plain, f"usable_start should be 07:06 CET, got: {plain}"
-        assert "06:06" not in plain, f"Should not show UTC time 06:06"
+        assert "06:06" not in plain, "Should not show UTC time 06:06"
 
 
 # ── Test 3: Hourly table shows local hours ──────────────────────────

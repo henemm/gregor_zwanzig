@@ -11,14 +11,12 @@ These tests MUST FAIL until the bugfix is implemented.
 SPEC: docs/specs/modules/inbound_command_channels.md v1.1
 """
 from datetime import date, timedelta
-from unittest.mock import MagicMock
 
 import pytest
 
 from app.loader import get_trips_dir, save_trip
 from app.trip import Stage, Trip, Waypoint
 from services.inbound_email_reader import InboundEmailReader
-from services.trip_command_processor import CommandResult
 
 
 # ---------------------------------------------------------------------------

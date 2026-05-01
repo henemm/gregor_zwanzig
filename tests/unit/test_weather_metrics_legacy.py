@@ -6,7 +6,6 @@ These tests MUST FAIL initially (TDD RED phase) because methods don't exist yet.
 
 Related Spec: docs/specs/bugfix/empty_subscription_emails.md
 """
-import pytest
 import sys
 from pathlib import Path
 from datetime import datetime

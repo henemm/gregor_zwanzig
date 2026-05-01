@@ -9,7 +9,6 @@ Fix: _select_provider_for_location() waehlt GeoSphere fuer Alpen,
 
 Spec: docs/specs/bugfix/compare_provider_routing.md
 """
-import pytest
 
 
 # ---------------------------------------------------------------------------

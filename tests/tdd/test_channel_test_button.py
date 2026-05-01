@@ -8,7 +8,6 @@ ALLE Tests muessen FEHLSCHLAGEN, weil:
 - api/routers/notify.py existiert noch nicht
 - Der Endpoint POST /api/notify/test existiert noch nicht
 """
-import pytest
 from fastapi.testclient import TestClient
 
 

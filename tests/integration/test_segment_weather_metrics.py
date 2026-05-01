@@ -24,7 +24,6 @@ class TestSegmentWeatherMetricsGeoSphere:
     @pytest.fixture
     def service(self):
         """SegmentWeatherService with GeoSphere provider."""
-        from services.segment_weather import SegmentWeatherService
         provider = get_provider("geosphere")
         return SegmentWeatherService(provider)
 
@@ -115,7 +114,6 @@ class TestSegmentWeatherMetricsOpenMeteo:
     @pytest.fixture
     def service(self):
         """SegmentWeatherService with Open-Meteo provider."""
-        from services.segment_weather import SegmentWeatherService
         provider = get_provider("openmeteo")
         return SegmentWeatherService(provider)
 
@@ -193,7 +191,6 @@ class TestE2EStory2Flow:
         )
 
         # Story 2.1: Fetch weather
-        from services.segment_weather import SegmentWeatherService
         from providers.base import get_provider
 
         provider = get_provider("geosphere")
@@ -225,7 +222,6 @@ class TestSegmentWeatherMetricsExtended:
         WHEN: fetch_segment_weather with Feature 2.2b enabled
         THEN: Extended metrics (dewpoint, pressure, wind-chill) populated
         """
-        from services.segment_weather import SegmentWeatherService
         from providers.base import get_provider
 
         provider = get_provider("geosphere")
@@ -276,7 +272,6 @@ class TestSegmentWeatherMetricsExtended:
         WHEN: fetch_segment_weather with Feature 2.2b enabled
         THEN: Core extended metrics populated, winter fields None
         """
-        from services.segment_weather import SegmentWeatherService
         from providers.base import get_provider
 
         provider = get_provider("openmeteo")

@@ -8,7 +8,6 @@ Requires:
 - SvelteKit frontend on gregor20.henemm.com
 - Go API server on localhost:8090
 """
-import json
 import os
 import re
 import pytest

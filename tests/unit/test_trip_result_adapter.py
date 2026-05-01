@@ -18,7 +18,6 @@ from __future__ import annotations
 
 from datetime import date, datetime, time, timezone
 
-import pytest
 
 from app.models import (
     ForecastDataPoint,

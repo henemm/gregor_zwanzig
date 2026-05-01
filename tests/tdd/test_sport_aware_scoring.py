@@ -220,7 +220,6 @@ class TestMetricExtraction:
         WHEN: Called with profile parameter
         THEN: Does not raise TypeError
         """
-        from app.user import LocationActivityProfile
         from web.pages.compare import ComparisonEngine
         import inspect
 
