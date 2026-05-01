@@ -17,11 +17,8 @@ if TYPE_CHECKING:
     from app.models import ForecastDataPoint, UnifiedWeatherDisplayConfig
 
 
-class LocationActivityProfile(str, Enum):
-    """Activity profile for locations — drives default metric selection."""
-    WINTERSPORT = "wintersport"
-    WANDERN = "wandern"
-    ALLGEMEIN = "allgemein"
+from app.profile import ActivityProfile  # noqa: E402,F401
+LocationActivityProfile = ActivityProfile  # backward-compat alias (PR 1) — entfernt in PR 2
 
 
 class SubscriptionType(str, Enum):

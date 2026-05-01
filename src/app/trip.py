@@ -26,11 +26,7 @@ class AggregationFunc(str, Enum):
     AT_LOWEST = "AT_LOWEST"    # Value at lowest elevation point
 
 
-class ActivityProfile(str, Enum):
-    """Pre-defined activity profiles with default aggregation rules."""
-    WINTERSPORT = "wintersport"
-    SUMMER_TREKKING = "summer_trekking"
-    CUSTOM = "custom"
+from app.profile import ActivityProfile  # noqa: E402,F401  # re-export — siehe docs/specs/modules/activity_profile.md
 
 
 @dataclass(frozen=True)

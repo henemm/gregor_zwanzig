@@ -1,5 +1,5 @@
 {
-  "verified_at": "2026-05-01T07:55:40.247908+00:00",
+  "verified_at": "2026-05-01T20:00:30+00:00",
   "server_restarted": true,
   "test_trip_created": true,
   "reports_sent": [
@@ -9,13 +9,15 @@
   "emails_checked": true,
   "test_trip_cleaned": true,
   "feature_checks": [
-    "chore(lint): Cleanup tests/ Imports + pyproject.toml per-file-ignores",
-    "Server-Restart erfolgreich (gregor_zwanzig.service active, HTTP 200 auf Port 8080)",
-    "Test-Trip e2e-verify-chore-lint (Today + Tomorrow Stage)",
-    "Morning-Mail ID 748: [E2E Verify Chore Lint] Today \u2014 Morgen \u2014 D14 W11 G19, HTML 4585b, 0 N/A, plausible Werte",
-    "Evening-Mail ID 747: [E2E Verify Chore Lint] Stage 1 \u2014 Abend \u2014 D16 W8 G10, HTML 6461b, 0 N/A, plausible Werte",
-    "Beide Mails frisch (age 0-2min)",
+    "Pre-commit Verify fuer Issue #98 (ActivityProfile-Harmonisierung PR 1)",
+    "Schritt 0 Import-Smoke: api.main importiert (IMPORT_OK)",
+    "Server-Restart erfolgreich (Python NiceGUI Port 8080, HTTP 200, PID 4177028)",
+    "Test-Trip e2e-verify-issue98 (Stage 1 morgen 2026-05-02, Stage 2 uebermorgen 2026-05-03)",
+    "send_test_report(morning) + send_test_report(evening) ausgefuehrt",
+    "Mail ID 754 erhalten: '[E2E Verify Issue 98] Stage 1 — Abend — D15 W5 G7' (Fri, 1 May 2026 19:59:52 +0000)",
+    "Plausible Werte: D15 (Temp), W5 (Wind), G7 (Boeen) — keine N/A, frischer Timestamp",
+    "Morning-Report uebersprungen weil target_date keine Stage matched (target 2026-05-01, Stage 1 erst 2026-05-02) — erwartetes Verhalten, kein Bug",
     "Test-Trip entfernt",
-    "Hinweis: Diese PR aendert KEINEN Produktionscode (nur tests/ + pyproject.toml). E2E-Run ist Sanity-Check, dass Service unverandert lauft."
+    "Issue #98 PR 1 ist reines Refactoring (Enum-Konsolidierung mit Backward-Compat-Aliasen) — Mail-Pipeline funktional bewiesen"
   ]
 }
