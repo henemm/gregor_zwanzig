@@ -73,28 +73,7 @@ test.describe('Trips Page (M3a)', () => {
 		await expect(page.locator('text=E2E Test Trip')).toBeVisible();
 	});
 
-	test('edit trip navigates to wizard with pre-filled name', async ({ page }) => {
-		await page.goto('/trips');
-
-		// Find first edit button in the table
-		const editBtn = page.locator('[data-testid="trip-edit-btn"]').first();
-		// Skip if no trips exist
-		if (!(await editBtn.isVisible({ timeout: 3000 }).catch(() => false))) {
-			test.skip();
-			return;
-		}
-
-		await editBtn.click();
-
-		// Should navigate to edit wizard
-		await expect(page).toHaveURL(/\/trips\/[^/]+\/edit/);
-		await expect(page.locator('[data-testid="trip-wizard"]')).toBeVisible();
-
-		// Name input should be pre-filled (not empty)
-		const nameInput = page.locator('[data-testid="trip-name-input"]');
-		const value = await nameInput.inputValue();
-		expect(value.length).toBeGreaterThan(0);
-	});
+	// 'edit trip navigates to wizard with pre-filled name' moved to trip-edit.spec.ts (Issue #91 — TripEditView replaces TripWizard for edit).
 
 	test('delete trip with confirmation', async ({ page }) => {
 		await page.goto('/trips');
