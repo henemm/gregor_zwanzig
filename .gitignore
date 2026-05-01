@@ -53,6 +53,7 @@ server
 
 # Frontend build / test artifacts
 frontend/test-results/
+frontend/playwright/
 frontend/build/
 frontend/.svelte-kit/
 frontend/node_modules/

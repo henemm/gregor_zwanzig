@@ -6,12 +6,26 @@ export default defineConfig({
 	retries: 0,
 	use: {
 		baseURL: 'http://localhost:4173',
-		headless: true
+		headless: true,
 	},
+	projects: [
+		{
+			name: 'setup',
+			testMatch: /global\.setup\.ts/,
+		},
+		{
+			name: 'tests',
+			testIgnore: /global\.setup\.ts/,
+			dependencies: ['setup'],
+			use: {
+				storageState: 'playwright/.auth/admin.json',
+			},
+		},
+	],
 	webServer: {
 		command: 'bash e2e/start-preview.sh',
 		port: 4173,
 		reuseExistingServer: true,
 		timeout: 120_000,
-	}
+	},
 });
