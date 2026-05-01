@@ -18,7 +18,6 @@ Renderer-Tests gemäß §A5 (profile-agnostisch).
 """
 from __future__ import annotations
 
-import pytest
 
 from src.output.tokens.builder import build_token_line
 from src.output.tokens.dto import (

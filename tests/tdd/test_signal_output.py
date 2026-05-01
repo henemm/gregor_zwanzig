@@ -5,7 +5,6 @@ These tests MUST FAIL until SignalOutput is implemented.
 Spec: docs/specs/modules/signal_output.md
 GitHub Issue: #4
 """
-import pytest
 
 
 def test_signal_output_import():

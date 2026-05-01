@@ -1,5 +1,5 @@
 {
-  "verified_at": "2026-04-30T17:55:30.128937+00:00",
+  "verified_at": "2026-05-01T07:55:40.247908+00:00",
   "server_restarted": true,
   "test_trip_created": true,
   "reports_sent": [
@@ -9,12 +9,13 @@
   "emails_checked": true,
   "test_trip_cleaned": true,
   "feature_checks": [
-    "WIP-Commit pre-check fuer Issue #99 (Backend UpdateTripHandler Merge)",
-    "Server-Restart erfolgreich (PID 3764890, HTTP 200)",
-    "Test-Trips: e2e-verify-test (Stages 2026-05-01/02), e2e-verify-morning (Stage today)",
-    "Morning-Mail: [E2E Morning Test] Today Stage Morgen D11 W8 G12 \u2014 plausibel, Tabelle, \u00b0C/km/h, keine NA",
-    "Evening-Mail: [E2E Verify Test] Stage 1 Abend D13 W11 G22 \u2014 plausibel, Tabelle, \u00b0C/km/h, keine NA",
-    "Test-Trips entfernt",
-    "Code-Aenderung des Issues betrifft Go-Backend (internal/handler/trip.go), nicht Email/Reports"
+    "chore(lint): Cleanup tests/ Imports + pyproject.toml per-file-ignores",
+    "Server-Restart erfolgreich (gregor_zwanzig.service active, HTTP 200 auf Port 8080)",
+    "Test-Trip e2e-verify-chore-lint (Today + Tomorrow Stage)",
+    "Morning-Mail ID 748: [E2E Verify Chore Lint] Today \u2014 Morgen \u2014 D14 W11 G19, HTML 4585b, 0 N/A, plausible Werte",
+    "Evening-Mail ID 747: [E2E Verify Chore Lint] Stage 1 \u2014 Abend \u2014 D16 W8 G10, HTML 6461b, 0 N/A, plausible Werte",
+    "Beide Mails frisch (age 0-2min)",
+    "Test-Trip entfernt",
+    "Hinweis: Diese PR aendert KEINEN Produktionscode (nur tests/ + pyproject.toml). E2E-Run ist Sanity-Check, dass Service unverandert lauft."
   ]
 }

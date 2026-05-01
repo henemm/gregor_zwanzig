@@ -12,10 +12,9 @@ TDD RED: All tests MUST FAIL before implementation.
 from __future__ import annotations
 
 import sys
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 
-import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
@@ -29,7 +28,6 @@ from app.models import (
     SegmentWeatherSummary,
     TripSegment,
 )
-from providers.base import ProviderRequestError
 
 
 # ---------------------------------------------------------------------------

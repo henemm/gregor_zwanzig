@@ -5,7 +5,6 @@ Tests display_config on CompareSubscription, loader round-trip,
 and weather config dialog existence.
 """
 import json
-import pytest
 
 
 class TestSubscriptionDisplayConfig:

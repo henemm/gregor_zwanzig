@@ -9,8 +9,7 @@ Key feature: Temporal qualification (peak times, rain start/end, gust peaks).
 """
 from __future__ import annotations
 
-import pytest
-from datetime import datetime, time, timedelta, timezone
+from datetime import datetime, timezone
 
 from app.models import (
     ForecastDataPoint,

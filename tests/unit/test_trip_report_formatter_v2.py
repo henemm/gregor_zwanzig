@@ -3,9 +3,8 @@ Tests for TripReportFormatter v2 – hourly segment tables.
 
 SPEC: docs/specs/modules/trip_report_formatter_v2.md
 """
-from datetime import datetime, time, timezone
+from datetime import datetime, timezone
 
-import pytest
 
 from app.metric_catalog import build_default_display_config
 from app.models import (

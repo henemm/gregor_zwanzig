@@ -14,7 +14,6 @@ import json
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-import pytest
 
 from app.models import (
     GPXPoint,

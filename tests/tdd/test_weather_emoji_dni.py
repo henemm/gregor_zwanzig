@@ -2,7 +2,6 @@
 TDD tests for weather_emoji_dni spec.
 SPEC: docs/specs/modules/weather_emoji_dni.md v1.0
 """
-import pytest
 from services.weather_metrics import (
     get_weather_emoji,
     _dni_emoji,

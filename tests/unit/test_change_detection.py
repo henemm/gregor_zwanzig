@@ -11,7 +11,6 @@ import pytest
 from app.metric_catalog import get_change_detection_map
 from app.models import (
     ChangeSeverity,
-    ForecastDataPoint,
     ForecastMeta,
     GPXPoint,
     NormalizedTimeseries,
@@ -21,7 +20,6 @@ from app.models import (
     ThunderLevel,
     TripReportConfig,
     TripSegment,
-    WeatherChange,
 )
 from services.weather_change_detection import WeatherChangeDetectionService
 

@@ -8,7 +8,6 @@ All tests MUST FAIL before implementation (TDD RED phase).
 """
 import json
 
-import pytest
 
 
 # =============================================================================
