@@ -13,12 +13,10 @@ v3.0 Changes:
 """
 from __future__ import annotations
 
-import math
 import pytest
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import date, datetime, timezone
 
 from app.models import (
-    ForecastDataPoint,
     ForecastMeta,
     GPXPoint,
     NormalizedTimeseries,
@@ -28,7 +26,6 @@ from app.models import (
     SegmentWeatherSummary,
     ThunderLevel,
     TripSegment,
-    UnifiedWeatherDisplayConfig,
 )
 
 

@@ -10,7 +10,6 @@ from __future__ import annotations
 
 from datetime import datetime, time, timedelta, timezone
 
-import pytest
 
 from app.models import (
     ChangeSeverity,

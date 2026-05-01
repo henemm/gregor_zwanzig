@@ -14,7 +14,6 @@ short update, FR-vigilance trip with HR/TH fusion.
 """
 from __future__ import annotations
 
-import pytest
 
 from src.output.tokens.dto import Token, TokenLine
 

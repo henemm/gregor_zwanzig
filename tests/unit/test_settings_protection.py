@@ -8,7 +8,6 @@ Related: src/web/pages/settings.py
 import pytest
 import sys
 from pathlib import Path
-import shutil
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))

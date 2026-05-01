@@ -5,7 +5,6 @@ test that needs it and cleaned up afterwards.
 """
 import json
 from datetime import date, datetime, timedelta, timezone
-from pathlib import Path
 
 import pytest
 

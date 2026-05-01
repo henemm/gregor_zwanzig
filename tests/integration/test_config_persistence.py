@@ -9,15 +9,12 @@ Tests real loader, formatter, and config objects — NO mocking!
 from __future__ import annotations
 
 import json
-import tempfile
-from copy import deepcopy
 from datetime import date, datetime, time, timezone
 from pathlib import Path
 
-import pytest
 
-from app.loader import load_trip, save_trip, _trip_to_dict, _parse_display_config
-from app.metric_catalog import build_default_display_config, get_metric
+from app.loader import load_trip, _trip_to_dict
+from app.metric_catalog import build_default_display_config
 from app.models import (
     ForecastDataPoint,
     MetricConfig,

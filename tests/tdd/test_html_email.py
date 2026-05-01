@@ -6,8 +6,8 @@ with space-aligned tables instead of proper HTML tables.
 """
 import os
 import pytest
-from datetime import datetime, date, timedelta
-from unittest.mock import MagicMock, patch, Mock
+from datetime import datetime, date
+from unittest.mock import patch, Mock
 from email import message_from_string
 
 from app.user import SavedLocation, CompareSubscription, ComparisonResult, LocationResult
@@ -31,7 +31,6 @@ class TestHTMLEmailFormat:
     @pytest.fixture
     def sample_comparison_result(self, sample_location) -> ComparisonResult:
         """Create sample ComparisonResult for testing."""
-        from datetime import date, datetime
         loc_result = LocationResult(
             location=sample_location,
             score=75,
@@ -433,7 +432,6 @@ class TestRealGmailE2E:
         import imaplib
         import time
         import email
-        from email.header import decode_header
 
         from app.config import Settings
         from app.loader import load_all_locations, load_compare_subscriptions

@@ -14,7 +14,6 @@ GREEN-Zustand (nach β3-Implementation):
 """
 from __future__ import annotations
 
-import pytest
 
 from src.output.tokens.builder import build_token_line
 from src.output.tokens.dto import (

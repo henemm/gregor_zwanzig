@@ -10,11 +10,9 @@ DTOs and real MetricCatalog.
 
 from datetime import datetime, timezone
 
-import pytest
 
 from app.models import (
     GPXPoint,
-    Risk,
     RiskAssessment,
     RiskLevel,
     RiskType,
