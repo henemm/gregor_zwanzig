@@ -138,8 +138,9 @@ SMS Retry Logic (needs Provider + Config)
 1. **User Story Document:**
    `docs/project/backlog/stories/[story-name].md`
 
-2. **Roadmap Entries:**
-   All features added to `docs/project/backlog/ACTIVE-roadmap.md`
+2. **GitHub Issues:**
+   Pro Feature ein eigenes GitHub Issue mit Label `enhancement` (`gh issue create`).
+   (Die fruehere `ACTIVE-roadmap.md` ist seit Issue #114 stillgelegt.)
 
 3. **Epic Tracking:**
    Story linked to epic in `docs/project/backlog/epics.md` (if applicable)
@@ -182,8 +183,8 @@ damit [Value]
 2. Feature 2 (depends on 1)
 3. Feature 3 (integration)
 
-## Roadmap Status
-✅ All features added to ACTIVE-roadmap.md
+## Tracking Status
+✅ Pro Feature ein GitHub Issue erstellt
 ✅ Story document created
 
 ## Estimated Effort

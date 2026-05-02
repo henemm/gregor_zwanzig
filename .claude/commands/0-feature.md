@@ -72,12 +72,11 @@ The feature-planner agent automatically detects the mode:
 
 **MANDATORY outputs:**
 
-1. **Roadmap Entry** in `docs/project/backlog/ACTIVE-roadmap.md`
-   ```markdown
-   | Feature | Status | Priority | Category | Affected Systems |
-   |---------|--------|----------|----------|------------------|
-   | SMS Channel | open | HIGH | Channel | Formatter, Config |
-   ```
+1. **GitHub Issue** mit Label `enhancement` (`gh issue create`):
+   - Titel: kurz und beschreibend (z. B. "SMS Channel mit 160-Zeichen-Formatter")
+   - Body: Problem/Motivation, Loesungsskizze, Akzeptanzkriterien, betroffene Systeme
+   - Label: `enhancement` und ggf. `priority:high|medium|low`, `type:feature`
+   - (Die fruehere `ACTIVE-roadmap.md` ist seit Issue #114 stillgelegt.)
 
 2. **Feature Spec** via workflow:
    - Start with `/analyse` (or let feature-planner do it)

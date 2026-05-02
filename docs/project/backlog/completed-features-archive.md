@@ -1,12 +1,15 @@
-# Active Roadmap - Gregor Zwanziger (Archiv)
+# Completed Features Archive — Gregor Zwanzig
 
-**Last Updated:** 2026-04-16 (Scheduler Multi-User #63)
+**Stillgelegt:** 2026-05-02
 
-> **Offene Features, Bugs und Migration-Tasks sind auf GitHub Issues:**
-> https://github.com/henemm/gregor_zwanzig/issues
+> Diese Datei wird **nicht mehr aktualisiert**. Sie dient ausschliesslich als
+> historisches Archiv fuer Features, die VOR dem 2026-05-02 abgeschlossen wurden.
 >
-> Diese Datei dient nur noch als **Archiv fuer erledigte Features**.
-> Neue Features werden als GitHub Issues angelegt.
+> **Aktuelle Quellen fuer abgeschlossene Arbeit:**
+> - GitHub Issues (closed): https://github.com/henemm/gregor_zwanzig/issues?q=is%3Aclosed
+> - GitHub Pull Requests (merged): https://github.com/henemm/gregor_zwanzig/pulls?q=is%3Amerged
+>
+> Frueher hiess diese Datei `ACTIVE-roadmap.md` (Issue #114).
 
 ## Completed Features
 

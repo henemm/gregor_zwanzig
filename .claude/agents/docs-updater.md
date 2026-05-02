@@ -29,7 +29,7 @@ If inputs are missing, state what is missing and stop.
 | Entity specs | `docs/specs/[type]/[entity_id].md` |
 | API reference | `docs/reference/api_contract.md` |
 | Configuration | `docs/reference/config.md` |
-| **Roadmap** | `docs/project/backlog/ACTIVE-roadmap.md` |
+| **Erledigte Features** | GitHub Issues (closed) — `gh issue close <n> --comment "..."` |
 
 ## Workflow
 
@@ -40,7 +40,7 @@ If inputs are missing, state what is missing and stop.
    - Feature docs if functionality changed
    - Reference docs if API/config changed
    - Known issues if bug was fixed (mark as resolved)
-   - **Roadmap** (`docs/project/backlog/ACTIVE-roadmap.md`) — mark the feature as `done` with today's date
+   - **NICHT mehr:** Roadmap-Datei (Issue #114, stillgelegt 2026-05-02). Erledigte Features werden im GitHub Issue dokumentiert.
 4. **Update changelog** entries with today's date
 5. **Verify** no broken cross-references
 

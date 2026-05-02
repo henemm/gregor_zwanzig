@@ -1,5 +1,11 @@
 # Testing the New Workflows
 
+> **Hinweis (2026-05-02, Issue #114):** Diese Anleitung referenziert noch die
+> stillgelegte Datei `ACTIVE-roadmap.md`. Tracking erfolgt jetzt komplett ueber
+> GitHub Issues — wo unten von "Eintrag in ACTIVE-roadmap.md" die Rede ist,
+> ist heute "GitHub Issue erstellt/aktualisiert" gemeint. Die Beispiel-
+> Workflows funktionieren ansonsten unveraendert.
+
 This guide demonstrates how to test the new feature and user-story commands.
 
 ## Quick Test: Feature Command

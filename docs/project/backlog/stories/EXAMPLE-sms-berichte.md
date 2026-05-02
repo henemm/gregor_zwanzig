@@ -1,5 +1,9 @@
 # User Story: SMS-Berichte für Weitwanderer
 
+> **Hinweis (2026-05-02, Issue #114):** Beispiel-Datei. "Roadmap Status: Added
+> to ACTIVE-roadmap.md" Eintraege weiter unten sind historisch — heute waere
+> stattdessen pro Feature ein GitHub Issue zu erstellen.
+
 **Status:** open
 **Created:** 2026-02-01
 **Epic:** Multi-Channel Report Delivery
