@@ -150,6 +150,7 @@ Alle Module benoetigen Specs vor Implementierung:
 - `output_text_report_renderer` - Text-Report Renderer für Wintersport + generische Sportarten (β4)
 - `trip_result_adapter` - Konvertiert TripForecastResult zu NormalizedForecast für Pipeline-Kompatibilität
 - `activity_profile` - Kanonischer Enum für Aktivitätsprofile (Wintersport, Wandern, Summer-Trekking, Allgemein)
+- `worktree_state_routing` - Hooks erkennen git Worktrees und schreiben workflow_state.json zentral ins Hauptrepo
 
 ### Geplante Module
 Siehe GitHub Issues: https://github.com/henemm/gregor_zwanzig/issues

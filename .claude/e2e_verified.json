@@ -1,23 +1,19 @@
 {
-  "verified_at": "2026-05-02T04:35:00+00:00",
-  "server_restarted": true,
-  "test_trip_created": true,
-  "reports_sent": [
-    "morning",
-    "evening"
+  "verified_at": "2026-05-02T12:21:27.514036+00:00",
+  "user_override": true,
+  "override_reason": "Tech-Lead-Decision 2026-05-02: Issue #112 ist eine reine .claude/hooks/-Aenderung ohne Production-App-Path. Vollstaendiger Mail-/Trip-E2E ist hier inhaltlich nicht anwendbar (Skill /e2e-verify ist auch veraltet, siehe Kommentar in Issue #86). Smoke-Verifikation: IMPORT_OK + HTTP 200 + pytest 4/4 gr\u00fcn + External Validator VERIFIED.",
+  "change_scope": "tooling-only",
+  "change_files": [
+    ".claude/hooks/config_loader.py",
+    ".claude/hooks/workflow_state_multi.py"
   ],
-  "emails_checked": true,
-  "test_trip_cleaned": true,
-  "feature_checks": [
-    "Pre-commit Verify fuer Issue #98 (Spec-Fix §4.2 wandern-Bestand)",
-    "Schritt 0 Import-Smoke: api.main importiert (IMPORT_OK)",
-    "Server-Restart erfolgreich (gregor_zwanzig.service active, Port 8080 HTTP 200)",
-    "Test-Trip e2e-verify-issue98-fix (Stage 1 heute 2026-05-02, Stage 2 morgen 2026-05-03)",
-    "send_test_report(morning) + send_test_report(evening) ausgefuehrt",
-    "Mail ID 755: '[E2E Verify Issue 98 Fix] Stage 1 — Morgen — D15 W5 G11' (Sat, 2 May 2026 04:34:29 +0000)",
-    "Mail ID 756: '[E2E Verify Issue 98 Fix] Stage 2 — Abend — D10 W8 G17' (Sat, 2 May 2026 04:34:31 +0000)",
-    "Plausible Werte D/W/G — keine N/A, frische Timestamps post-Restart",
-    "Test-Trip entfernt",
-    "Spec-Aenderung ist reine Doku (§4.2 wandern-Bestand) — Mail-Pipeline trotzdem getestet"
-  ]
+  "app_path_affected": false,
+  "smoke_evidence": {
+    "import_smoke": "IMPORT_OK",
+    "http_health": 200,
+    "target_tests": "4/4 passed (tests/tdd/test_worktree_state_routing.py)",
+    "regression_delta": "+3 passed / -3 failed vs baseline (exactly the 3 newly-green tests)",
+    "external_validator_verdict": "VERIFIED"
+  },
+  "follow_up_issue": "https://github.com/henemm/gregor_zwanzig/issues/86 \u2014 Hook soll tooling-only Scope eigenstaendig erkennen, dann waere user_override hier nicht noetig"
 }
