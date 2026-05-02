@@ -247,7 +247,7 @@ When adding/modifying commands:
 1. Update this README
 2. Update command file itself
 3. Update agent file (if applicable)
-4. Update ACTIVE-roadmap.md (if planning command)
+4. (frueher: ACTIVE-roadmap.md aktualisieren — entfaellt seit Issue #114)
 5. Test command workflow
 
 ## References
@@ -256,4 +256,4 @@ When adding/modifying commands:
 - Hooks: `.claude/hooks/`
 - Agents: `.claude/agents/`
 - Standards: `.claude/standards/`
-- Roadmap: `docs/project/backlog/ACTIVE-roadmap.md`
+- Backlog: GitHub Issues (https://github.com/henemm/gregor_zwanzig/issues)

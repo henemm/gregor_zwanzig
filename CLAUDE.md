@@ -170,7 +170,7 @@ https://github.com/henemm/gregor_zwanzig/issues
 - **Neue Features** → GitHub Issue mit Label `enhancement` erstellen
 - **Neue Bugs** → GitHub Issue mit Label `bug` erstellen
 - **Fortschritt** → Issue schliessen wenn fertig
-- **Erledigte Features (Archiv)** → `docs/project/backlog/ACTIVE-roadmap.md`
+- **Erledigte Features** → GitHub Issues/PRs (closed). Historisches Archiv (vor 2026-05-02): `docs/project/backlog/completed-features-archive.md` (stillgelegt)
 - **Root-Cause-Analysen** → `docs/project/known_issues.md`
 - **Strategische Entscheidungen** → `docs/project/strategic-directions.md`
 

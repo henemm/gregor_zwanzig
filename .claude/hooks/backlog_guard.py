@@ -31,7 +31,7 @@ BLOCKED_NEW_FILE_DIRS = [
 
 # Files that may only be edited to REMOVE content (archive cleanup), not to add tasks
 ARCHIVE_ONLY_FILES = [
-    "docs/project/backlog/ACTIVE-roadmap.md",
+    "docs/project/backlog/completed-features-archive.md",  # frueher: ACTIVE-roadmap.md, stillgelegt 2026-05-02 (Issue #114)
     "docs/project/backlog/epics.md",
     "docs/project/known_issues.md",
 ]

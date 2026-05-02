@@ -347,20 +347,18 @@ damit ich auch ohne Internet-Zugang Wetterinfos bekomme
 - 160-char limit is strict constraint
 ```
 
-**MANDATORY Output 2: Roadmap Entries**
+**MANDATORY Output 2: GitHub Issues (eines pro Feature)**
 
-Update: `docs/project/backlog/ACTIVE-roadmap.md`
+Erstelle pro Feature ein eigenes GitHub Issue per `gh issue create`:
 
-Add ALL features:
-
-```markdown
-| Feature | Status | Priority | Category | Affected Systems | Estimate | Story |
-|---------|--------|----------|----------|------------------|----------|-------|
-| SMS Channel Integration | open | HIGH | Channel | Channel Layer | Medium | SMS-Berichte |
-| SMS Compact Formatter | open | HIGH | Formatter | Formatter Layer | Simple | SMS-Berichte |
-| SMS Channel Config | open | HIGH | Config | Config Layer | Simple | SMS-Berichte |
-| SMS Retry Logic | open | MEDIUM | Channel | Channel Layer | Medium | SMS-Berichte |
+```bash
+gh issue create --repo henemm/gregor_zwanzig \
+  --title "[Feature-Name]" \
+  --label "enhancement,priority:high|medium|low,type:feature" \
+  --body "Story: <Story-Name>\n## Affected Systems ... ## Akzeptanzkriterien ..."
 ```
+
+Status (open/spec_ready/in_progress/done) wird ueber GitHub-Labels und Issue-State (open/closed) abgebildet. Die fruehere `ACTIVE-roadmap.md` ist seit Issue #114 stillgelegt.
 
 **MANDATORY Output 3: Epic Link (if applicable)**
 
@@ -424,8 +422,8 @@ Als [Persona] möchte ich [Goal], damit [Value]
 2. [Second feature] (depends on 1)
 ...
 
-## Roadmap Status
-✅ All features added to ACTIVE-roadmap.md
+## Tracking Status
+✅ Pro Feature ein GitHub Issue erstellt
 ✅ Story document created at docs/project/backlog/stories/[name].md
 
 ## Estimated Effort

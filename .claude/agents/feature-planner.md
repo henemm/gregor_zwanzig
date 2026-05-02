@@ -143,27 +143,18 @@ Split into:
 
 ### Phase 4: Documentation
 
-**MANDATORY Output 1: Roadmap Entry**
+**MANDATORY Output 1: GitHub Issue**
 
-File: `docs/project/backlog/ACTIVE-roadmap.md`
+Erstelle das Tracking-Issue per `gh issue create`:
 
-```markdown
-| Feature | Status | Priority | Category | Affected Systems | Estimate |
-|---------|--------|----------|----------|------------------|----------|
-| SMS Channel | open | HIGH | Channel | Formatter, Config, Channel | Medium |
+```bash
+gh issue create --repo henemm/gregor_zwanzig \
+  --title "[Feature-Name]" \
+  --label "enhancement,priority:high|medium|low,type:feature" \
+  --body "## Problem ... ## Loesung ... ## Akzeptanzkriterien ..."
 ```
 
-**Status values:**
-- `open` - Planned, not started
-- `spec_ready` - Spec approved, ready for implementation
-- `in_progress` - Currently implementing
-- `done` - Completed
-- `blocked` - Blocked by dependencies
-
-**Priority:**
-- `HIGH` - Critical for MVP / user-requested
-- `MEDIUM` - Important but not urgent
-- `LOW` - Nice-to-have
+Alle Status-/Prioritaets-Felder werden ueber GitHub-Labels und Issue-State (open/closed) abgebildet. Die fruehere `ACTIVE-roadmap.md` ist seit Issue #114 stillgelegt.
 
 **MANDATORY Output 2: Feature Brief**
 
@@ -215,7 +206,7 @@ After documentation complete:
 ## Feature Planning Complete ✓
 
 **Feature:** [Name]
-**Roadmap:** Updated in docs/project/backlog/ACTIVE-roadmap.md
+**GitHub Issue:** Created — `gh issue view <n>`
 **Brief:** Created at docs/project/backlog/features/[feature-name].md
 
 **Next Steps:**
@@ -350,8 +341,8 @@ Provide clear, structured output:
 - **Complexity:** Medium
 - **Within limits:** ✅ YES / ❌ NO (needs split)
 
-## 📚 Roadmap Status
-✅ Entry created in ACTIVE-roadmap.md
+## 📚 Tracking Status
+✅ GitHub Issue created (`gh issue view <n>`)
 ✅ Feature brief created
 
 ## ➡️ Next Steps

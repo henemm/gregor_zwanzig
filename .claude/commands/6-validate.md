@@ -136,28 +136,11 @@ Task(subagent_type="docs-updater", model="haiku", prompt="
 ")
 ```
 
-## Step 3b: Roadmap Update
+## Step 3b: Issue Tracking (GitHub)
 
-After docs are updated, launch a **Haiku agent** to mark the feature as `done` in the roadmap:
-
-```
-Task(subagent_type="general-purpose", model="haiku", prompt="
-  Update the roadmap after successful validation.
-
-  1. Read `.claude/workflow_state.json` to get the current feature_name
-  2. Open `docs/project/backlog/ACTIVE-roadmap.md`
-  3. Find the entry matching the feature name
-  4. Set its status to `done`
-  5. Set the completion date to today's date (YYYY-MM-DD)
-  6. If there is a Notes column, add a brief note (e.g. 'validated & committed')
-  7. If the feature is NOT found in the roadmap, skip silently — not all work items have roadmap entries
-
-  Rules:
-  - Only change the ONE matching row, nothing else
-  - Preserve all existing formatting
-  - If workflow_state.json is missing or has no feature_name, skip silently
-")
-```
+Erledigte Features werden direkt im GitHub Issue dokumentiert (Kommentar +
+`gh issue close`). Die fruehere Datei `ACTIVE-roadmap.md` ist seit 2026-05-02
+stillgelegt (Issue #114) — kein Roadmap-Update-Schritt mehr noetig.
 
 ## Step 4: Present Results
 

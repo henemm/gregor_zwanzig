@@ -1,18 +1,20 @@
 # Backlog Structure
 
-This directory contains project planning and tracking documents.
+Dieses Verzeichnis enthaelt Planungs-Dokumente fuer das Projekt. **Tracking
+selbst (Status, Prioritaet, Status-Uebergaenge) findet komplett auf GitHub
+Issues statt** — siehe https://github.com/henemm/gregor_zwanzig/issues.
 
 ## Directory Structure
 
 ```
 backlog/
-├── README.md                    # This file
-├── ACTIVE-roadmap.md            # Main feature tracking (auto-updated)
-├── epics.md                     # Epic tracking (large initiatives)
-├── stories/                     # User story documents
-│   └── [story-name].md         # Individual story with feature breakdown
-└── features/                    # Feature brief documents
-    └── [feature-name].md       # Individual feature planning
+├── README.md                          # Diese Datei
+├── completed-features-archive.md      # Historisches Archiv (stillgelegt 2026-05-02, Issue #114)
+├── epics.md                           # Epic-Tracking (grosse Initiativen, optional)
+├── stories/                           # User-Story-Dokumente (Detail-Planung)
+│   └── [story-name].md
+└── features/                          # Feature-Briefs (Detail-Planung)
+    └── [feature-name].md
 ```
 
 ## Hierarchy
@@ -24,199 +26,91 @@ Epic (months)
           └─ Tasks (hours)
 ```
 
+## Tracking-Quelle
+
+| Was | Wo |
+|---|---|
+| Offene Features / Bugs | GitHub Issues (open) |
+| In Arbeit | GitHub Issue mit Label `in-progress` oder verlinktem PR |
+| Erledigt | GitHub Issue closed + zugehoeriger PR merged |
+| Historisches Archiv (vor 2026-05-02) | `completed-features-archive.md` (read-only) |
+
+Der frueher hier dokumentierte Status-Workflow (`open → spec_ready → in_progress → done`)
+ist 1:1 ueber GitHub-Labels und Issue-State abbildbar:
+- `open` = GitHub Issue open, noch keine Spec
+- `spec_ready` = Issue open, Spec im Repo, Label `spec_ready`
+- `in_progress` = Issue open, Workflow gestartet, ggf. Label `in-progress`
+- `done` = Issue closed
+- `blocked` = Issue open, Label `blocked`
+
 ## Documents Explained
 
-### ACTIVE-roadmap.md
+### completed-features-archive.md
 
-**Purpose:** Single source of truth for all features across the project
-
-**Updated by:**
-- `/feature` command (adds new features)
-- `/user-story` command (adds multiple features from a story)
-- Workflow state changes (status updates)
-- Manual updates (priority changes, blocking)
-
-**Contains:**
-- All features with status, priority, category
-- Upcoming sprints
-- Completed features
-- Blocked features
-
-**View it to:**
-- See what's planned
-- Check feature status
-- Plan next sprint
-- Understand project scope
+**Status:** Stillgelegt seit 2026-05-02 (Issue #114). Read-only, nur Historie
+(Features VOR diesem Datum). Neue Eintraege gehoeren ins jeweilige GitHub Issue.
 
 ### epics.md
 
-**Purpose:** Track large business initiatives containing multiple stories
-
-**Updated by:**
-- Manual updates when starting/completing epics
-- Links to user stories
-
-**Contains:**
-- Active epics with goals and user stories
-- Completed epics
-- Epic lifecycle and status
-
-**Use it when:**
-- Planning multi-month initiatives
-- Grouping related user stories
-- Communicating strategic goals
+**Purpose:** Tracking grosser, mehrwoechiger Initiativen mit mehreren Stories.
+Wird manuell gepflegt, wenn die Granularitaet von GitHub-Issues nicht reicht.
 
 ### stories/[story-name].md
 
-**Purpose:** Individual user story with feature breakdown
-
-**Created by:**
-- `/user-story` command via user-story-planner agent
-
-**Contains:**
-- Story in "Als/möchte/damit" format
-- Acceptance criteria
-- Feature breakdown with priorities (P0/P1/P2)
-- Dependencies and implementation order
-- Effort estimates
-
-**Example:**
-```
-stories/
-└── sms-berichte.md              # SMS Reports story
-    Features: SMS Channel, SMS Formatter, SMS Config, SMS Retry
-```
+**Purpose:** Detail-Dokument zu einer User Story. Wird vom `/user-story` Skill
+angelegt. Enthaelt Acceptance Criteria, Feature-Breakdown mit Prioritaeten,
+Implementierungs-Reihenfolge, Effort-Schaetzung. Verweist auf die zugehoerigen
+GitHub Issues.
 
 ### features/[feature-name].md
 
-**Purpose:** Individual feature brief with planning details
+**Purpose:** Detail-Brief zu einem einzelnen Feature. Wird vom `/0-feature`
+Skill angelegt. Enthaelt Scoping (Files/LOC), Dependencies, Naechste Schritte.
+Verweist auf das zugehoerige GitHub Issue.
 
-**Created by:**
-- `/feature` command via feature-planner agent
+## Workflows
 
-**Contains:**
-- Feature summary (what, why, for whom)
-- Affected systems
-- Scoping (files, LOC, complexity)
-- Dependencies
-- Next steps (workflow handoff)
+### Grosser Bedarf (User Story)
 
-**Example:**
-```
-features/
-└── sms-channel-integration.md   # SMS Channel feature
-    Brief for implementing SMS sending
-```
+1. User beschreibt: "Als Weitwanderer moechte ich SMS-Berichte..."
+2. `/user-story "..."` → user-story-planner agent erstellt:
+   - `stories/sms-berichte.md`
+   - **Pro Feature ein eigenes GitHub Issue** mit Label `enhancement`
+   - Optional: Epic-Eintrag in `epics.md`
+3. User waehlt erstes Feature → `/0-feature "SMS Channel Integration"`
+4. feature-planner agent erstellt `features/sms-channel-integration.md` und
+   verlinkt das GitHub Issue.
+5. Workflow: `/2-analyse → /3-write-spec → approve → /5-implement → /6-validate → /7-deploy`
+6. Nach Abschluss: `gh issue close <n>` mit Kommentar; PR-Merge dokumentiert die Aenderung.
 
-## Workflow
+### Einzelnes Feature
 
-### For Large User Needs (User Story)
-
-1. **User describes need:**
-   ```
-   "Als Weitwanderer möchte ich SMS-Berichte, damit ich offline Wetter sehe"
-   ```
-
-2. **Run user story command:**
-   ```bash
-   /user-story "Als Weitwanderer möchte ich SMS-Berichte..."
-   ```
-
-3. **Agent creates:**
-   - `stories/sms-berichte.md` (story document)
-   - Entries in `ACTIVE-roadmap.md` (all features)
-   - Updates `epics.md` if part of epic
-
-4. **User picks first feature:**
-   ```bash
-   /feature "SMS Channel Integration"
-   ```
-
-5. **Agent creates:**
-   - `features/sms-channel-integration.md` (feature brief)
-   - Entry in `ACTIVE-roadmap.md` (if not already there)
-
-6. **User follows workflow:**
-   ```bash
-   /analyse → /write-spec → approve → /implement → /validate
-   ```
-
-7. **Repeat for next feature** in the story
-
-### For Single Features
-
-1. **User describes feature:**
-   ```
-   "Erweitere E-Mail-Formatter um HTML-Tabellen"
-   ```
-
-2. **Run feature command:**
-   ```bash
-   /feature "HTML Tables in Email Formatter"
-   ```
-
-3. **Agent creates:**
-   - `features/html-tables-email.md` (feature brief)
-   - Entry in `ACTIVE-roadmap.md`
-
-4. **User follows workflow:**
-   ```bash
-   /analyse → /write-spec → approve → /implement → /validate
-   ```
-
-## Status Tracking
-
-Features move through these statuses:
-
-```
-open → spec_ready → in_progress → done
-   ↓
-blocked (when dependencies found)
-```
-
-**Status meanings:**
-- `open` - Planned, not started
-- `spec_ready` - Spec approved, ready to implement
-- `in_progress` - Currently implementing
-- `done` - Completed and validated
-- `blocked` - Blocked by dependencies
-
-## Priority Levels
-
-**HIGH:** Critical for MVP or user-requested
-**MEDIUM:** Important but not urgent
-**LOW:** Nice-to-have, can wait
+1. `/0-feature "HTML Tables in Email Formatter"`
+2. feature-planner agent erstellt Feature-Brief + GitHub Issue.
+3. Workflow durchlaufen.
+4. Issue schliessen.
 
 ## Scoping Limits
 
-Each feature must stay within:
-- **Max 4-5 files** changed
-- **Max ±250 lines** of code
+Pro Feature:
+- Max 4-5 Dateien geaendert
+- Max ±250 LoC
 
-If larger → split into multiple features
+Wenn groesser → in mehrere Issues aufteilen.
 
 ## Related Commands
 
 | Command | Purpose | Creates |
 |---------|---------|---------|
-| `/user-story` | Plan large user need | Story doc + roadmap entries |
-| `/feature` | Plan single feature | Feature brief + roadmap entry |
-| `/bug` | Analyze bug | Bug report |
-| `/workflow` | Manage workflows | - |
+| `/0-user-story` | Grosse User Need planen | Story-Doc + GitHub Issues |
+| `/0-feature` | Einzelnes Feature planen | Feature-Brief + GitHub Issue |
+| `/0-bug` | Bug analysieren | Bug-Report (+ optional GitHub Issue) |
+| `/workflow` | Workflow-Status verwalten | - |
 
 ## Maintenance
 
-**Weekly:**
-- Review `ACTIVE-roadmap.md`
-- Update feature statuses
-- Identify blocked features
-
-**Monthly:**
-- Review `epics.md`
-- Update epic progress
-- Plan next sprint
-
-**After Feature Completion:**
-- Move feature to "Completed" section in roadmap
-- Update story progress if part of larger story
-- Check if story is now complete
+- **Wartung der GitHub Issues:** Labels aktuell halten, geschlossene Issues
+  ggf. mit Verweis auf den umsetzenden PR/Commit kommentieren.
+- **`epics.md`:** Manuell pflegen, wenn ein Epic startet/endet.
+- **`completed-features-archive.md`:** **NICHT mehr aendern** — historisches
+  Read-only-Dokument.
