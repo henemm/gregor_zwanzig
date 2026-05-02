@@ -1,0 +1,20 @@
+
+fake_worktree = (PosixPath('/tmp/pytest-of-hem/pytest-363/test_workflow_state_multi_get_0/main_repo'), PosixPath('/tmp/pytest-of-hem/pytest-363/test_workflow_state_multi_get_0/worktree'))
+hooks_on_path = None
+
+    def test_workflow_state_multi_get_state_file_in_worktree_routes_to_main(fake_worktree, hooks_on_path):
+        main_repo, _ = fake_worktree
+    
+        import workflow_state_multi  # type: ignore
+        expected = main_repo / ".claude" / "workflow_state.json"
+>       assert workflow_state_multi.get_state_file() == expected
+E       AssertionError: assert PosixPath('/tmp/pytest-of-hem/pytest-363/test_workflow_state_multi_get_0/worktree/.claude/workflow_state.json') == PosixPath('/tmp/pytest-of-hem/pytest-363/test_workflow_state_multi_get_0/main_repo/.claude/workflow_state.json')
+E        +  where PosixPath('/tmp/pytest-of-hem/pytest-363/test_workflow_state_multi_get_0/worktree/.claude/workflow_state.json') = <function get_state_file at 0x7ea2dcb2af20>()
+E        +    where <function get_state_file at 0x7ea2dcb2af20> = <module 'workflow_state_multi' from '/home/hem/gregor_zwanzig/.claude/hooks/workflow_state_multi.py'>.get_state_file
+
+/home/hem/gregor_zwanzig/tests/tdd/test_worktree_state_routing.py:75: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_worktree_state_routing.py::test_find_project_root_in_worktree_returns_main_repo
+FAILED tests/tdd/test_worktree_state_routing.py::test_get_state_file_path_in_worktree_routes_to_main
+FAILED tests/tdd/test_worktree_state_routing.py::test_workflow_state_multi_get_state_file_in_worktree_routes_to_main
+========================= 3 failed, 1 passed in 0.05s ==========================
