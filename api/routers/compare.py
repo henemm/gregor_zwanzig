@@ -18,7 +18,7 @@ def run_comparison(
     activity_profile: Optional[str] = Query(None, description="Activity profile: wintersport, wandern, allgemein"),
 ):
     from app.loader import load_all_locations
-    from app.user import LocationActivityProfile
+    from app.profile import ActivityProfile
     from web.pages.compare import ComparisonEngine
 
     all_locations = load_all_locations()
@@ -46,7 +46,7 @@ def run_comparison(
     profile = None
     if activity_profile:
         try:
-            profile = LocationActivityProfile(activity_profile)
+            profile = ActivityProfile(activity_profile)
         except ValueError:
             pass  # Invalid profile → default to allgemein
 

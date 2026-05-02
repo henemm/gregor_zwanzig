@@ -163,10 +163,10 @@ class TestBuildDefaultDisplayConfigUpdated:
             WEATHER_TEMPLATES,
             build_default_display_config_for_profile,
         )
-        from app.user import LocationActivityProfile
+        from app.profile import ActivityProfile
 
         dc = build_default_display_config_for_profile(
-            "test-loc", LocationActivityProfile.WANDERN
+            "test-loc", ActivityProfile.WANDERN
         )
         enabled = dc.get_enabled_metric_ids()
         expected = set(WEATHER_TEMPLATES["wandern"]["metrics"])
@@ -180,10 +180,10 @@ class TestBuildDefaultDisplayConfigUpdated:
             WEATHER_TEMPLATES,
             build_default_display_config_for_profile,
         )
-        from app.user import LocationActivityProfile
+        from app.profile import ActivityProfile
 
         dc = build_default_display_config_for_profile(
-            "test-loc", LocationActivityProfile.WINTERSPORT
+            "test-loc", ActivityProfile.WINTERSPORT
         )
         enabled = dc.get_enabled_metric_ids()
         expected = set(WEATHER_TEMPLATES["wintersport"]["metrics"])
@@ -197,10 +197,10 @@ class TestBuildDefaultDisplayConfigUpdated:
             WEATHER_TEMPLATES,
             build_default_display_config_for_profile,
         )
-        from app.user import LocationActivityProfile
+        from app.profile import ActivityProfile
 
         dc = build_default_display_config_for_profile(
-            "test-loc", LocationActivityProfile.ALLGEMEIN
+            "test-loc", ActivityProfile.ALLGEMEIN
         )
         enabled = dc.get_enabled_metric_ids()
         expected = set(WEATHER_TEMPLATES["allgemein"]["metrics"])

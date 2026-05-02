@@ -44,7 +44,7 @@ def filter_data_by_hours(
 
 def calculate_score(
     metrics: Dict[str, Any],
-    profile: Optional["LocationActivityProfile"] = None,
+    profile: Optional["ActivityProfile"] = None,
 ) -> int:
     """
     Calculate a weather score based on activity profile (higher = better).
@@ -56,12 +56,12 @@ def calculate_score(
     - wandern: Thunder/rain penalized, sunshine/visibility rewarded
     - allgemein: Balanced, no snow keys
     """
-    from app.user import LocationActivityProfile
+    from app.profile import ActivityProfile
 
-    effective = profile or LocationActivityProfile.ALLGEMEIN
-    if effective == LocationActivityProfile.WINTERSPORT:
+    effective = profile or ActivityProfile.ALLGEMEIN
+    if effective == ActivityProfile.WINTERSPORT:
         return _score_wintersport(metrics)
-    elif effective == LocationActivityProfile.WANDERN:
+    elif effective == ActivityProfile.WANDERN:
         return _score_wandern(metrics)
     else:
         return _score_allgemein(metrics)
@@ -361,7 +361,7 @@ class ComparisonEngine:
         time_window: tuple[int, int],
         target_date: "date",
         forecast_hours: int = 48,
-        profile: Optional["LocationActivityProfile"] = None,
+        profile: Optional["ActivityProfile"] = None,
     ) -> ComparisonResult:
         """
         Run comparison for given locations and time window.

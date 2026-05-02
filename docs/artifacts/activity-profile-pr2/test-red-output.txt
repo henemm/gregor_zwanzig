@@ -1,0 +1,130 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 5 items
+
+tests/tdd/test_activity_profile_pr2.py F.FFF                             [100%]
+
+=================================== FAILURES ===================================
+_____________________ TestAliasRemoved.test_import_raises ______________________
+
+self = <tdd.test_activity_profile_pr2.TestAliasRemoved object at 0x77bf5df1be60>
+
+    def test_import_raises(self):
+        """
+        GIVEN: PR 2 entfernt den Alias aus app.user
+        WHEN: from app.user import LocationActivityProfile
+        THEN: ImportError
+        """
+>       with pytest.raises(ImportError):
+E       Failed: DID NOT RAISE <class 'ImportError'>
+
+tests/tdd/test_activity_profile_pr2.py:37: Failed
+_______________ TestProductionImports.test_no_references_in_src ________________
+
+self = <tdd.test_activity_profile_pr2.TestProductionImports object at 0x77bf5dd383e0>
+
+    def test_no_references_in_src(self):
+        """
+        GIVEN: PR 2 hat alle Production-Verwendungen migriert
+        WHEN: grep -rn LocationActivityProfile src/
+        THEN: keine Treffer
+        """
+        hits = self._grep("src/")
+>       assert hits == [], f"Verbleibende Verwendungen in src/:\n" + "\n".join(hits)
+E       AssertionError: Verbleibende Verwendungen in src/:
+E         src/web/pages/compare.py:47:    profile: Optional["LocationActivityProfile"] = None,
+E         src/web/pages/compare.py:59:    from app.user import LocationActivityProfile
+E         src/web/pages/compare.py:61:    effective = profile or LocationActivityProfile.ALLGEMEIN
+E         src/web/pages/compare.py:62:    if effective == LocationActivityProfile.WINTERSPORT:
+E         src/web/pages/compare.py:64:    elif effective == LocationActivityProfile.WANDERN:
+E         src/web/pages/compare.py:364:        profile: Optional["LocationActivityProfile"] = None,
+E         src/app/user.py:21:LocationActivityProfile = ActivityProfile  # backward-compat alias (PR 1) — entfernt in PR 2
+E         src/app/user.py:61:    activity_profile: LocationActivityProfile = LocationActivityProfile.ALLGEMEIN
+E         src/app/user.py:136:    activity_profile: Optional[LocationActivityProfile] = None
+E         src/app/metric_catalog.py:451:    profile: "LocationActivityProfile",
+E         src/app/loader.py:418:            from app.user import LocationActivityProfile
+E         src/app/loader.py:430:                activity_profile=LocationActivityProfile(activity_profile_str),
+E         src/app/loader.py:679:    from app.user import LocationActivityProfile
+E         src/app/loader.py:681:        return LocationActivityProfile(value)
+E       assert ['src/web/pag...= None,', ...] == []
+E         
+E         Left contains 14 more items, first extra item: 'src/web/pages/compare.py:47:    profile: Optional["LocationActivityProfile"] = None,'
+E         Use -v to get more diff
+
+tests/tdd/test_activity_profile_pr2.py:84: AssertionError
+_______________ TestProductionImports.test_no_references_in_api ________________
+
+self = <tdd.test_activity_profile_pr2.TestProductionImports object at 0x77bf5dadc230>
+
+    def test_no_references_in_api(self):
+        """
+        GIVEN: PR 2 hat alle API-Router migriert
+        WHEN: grep -rn LocationActivityProfile api/
+        THEN: keine Treffer
+        """
+        hits = self._grep("api/")
+>       assert hits == [], f"Verbleibende Verwendungen in api/:\n" + "\n".join(hits)
+E       AssertionError: Verbleibende Verwendungen in api/:
+E         api/routers/compare.py:21:    from app.user import LocationActivityProfile
+E         api/routers/compare.py:49:            profile = LocationActivityProfile(activity_profile)
+E       assert ['api/routers...ity_profile)'] == []
+E         
+E         Left contains 2 more items, first extra item: 'api/routers/compare.py:21:    from app.user import LocationActivityProfile'
+E         Use -v to get more diff
+
+tests/tdd/test_activity_profile_pr2.py:93: AssertionError
+_________________ TestTestImports.test_no_references_in_tests __________________
+
+self = <tdd.test_activity_profile_pr2.TestTestImports object at 0x77bf5dadcec0>
+
+    def test_no_references_in_tests(self):
+        """
+        GIVEN: PR 2 hat tests/ mechanisch migriert
+        WHEN: grep -rn LocationActivityProfile tests/
+        THEN: nur diese Datei selbst taucht auf
+        """
+        try:
+            result = subprocess.run(
+                ["grep", "-rln", "--include=*.py", "LocationActivityProfile", "tests/"],
+                cwd=REPO_ROOT,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+        except FileNotFoundError:
+            pytest.skip("grep not available")
+        if result.returncode not in (0, 1):
+            pytest.fail(f"grep failed: {result.stderr}")
+        files = {l.strip() for l in result.stdout.splitlines() if l.strip()}
+        rel_self = SELF.relative_to(REPO_ROOT).as_posix()
+        forbidden = files - {rel_self}
+>       assert forbidden == set(), (
+            "Verbleibende Test-Verwendungen (PR 2 nicht abgeschlossen):\n"
+            + "\n".join(sorted(forbidden))
+        )
+E       AssertionError: Verbleibende Test-Verwendungen (PR 2 nicht abgeschlossen):
+E         tests/integration/test_config_persistence.py
+E         tests/tdd/test_activity_profile_harmonization.py
+E         tests/tdd/test_generic_locations.py
+E         tests/tdd/test_sport_aware_scoring.py
+E         tests/tdd/test_weather_templates.py
+E       assert {'tests/integ...templates.py'} == set()
+E         
+E         Extra items in the left set:
+E         'tests/tdd/test_weather_templates.py'
+E         'tests/tdd/test_activity_profile_harmonization.py'
+E         'tests/integration/test_config_persistence.py'
+E         'tests/tdd/test_sport_aware_scoring.py'
+E         'tests/tdd/test_generic_locations.py'
+E         Use -v to get more diff
+
+tests/tdd/test_activity_profile_pr2.py:124: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_activity_profile_pr2.py::TestAliasRemoved::test_import_raises
+FAILED tests/tdd/test_activity_profile_pr2.py::TestProductionImports::test_no_references_in_src
+FAILED tests/tdd/test_activity_profile_pr2.py::TestProductionImports::test_no_references_in_api
+FAILED tests/tdd/test_activity_profile_pr2.py::TestTestImports::test_no_references_in_tests
+========================= 4 failed, 1 passed in 0.06s ==========================
