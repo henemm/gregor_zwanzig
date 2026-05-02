@@ -166,8 +166,20 @@ Der Validator laeuft als **isolierte Claude-Instanz** via `claude --print`:
 #### 8a. Validator starten
 
 ```bash
+# Default: gegen Production (gregor20.henemm.com)
 bash .claude/validate-external.sh [SPEC_PATH]
+
+# Pre-Push gegen Staging (sinnvoll wenn der neue Code noch nicht auf Prod ist):
+GZ_VALIDATION_URL=https://staging.gregor20.henemm.com bash .claude/validate-external.sh [SPEC_PATH]
 ```
+
+**Wichtig (Issue #113):** Vor dem Push ist Production noch beim alten Stand —
+ein Validator-Lauf gegen Production prueft also alten Code. Die ehrliche Variante:
+- **Pre-Push:** Validator gegen `localhost` (laufender Dev-Server) oder `staging` (nach manuellem Auto-Deploy-Trigger).
+- **Post-Push + nach Auto-Staging-Deploy:** Validator gegen `staging.gregor20.henemm.com`.
+- **Nach `deploy-gregor-prod.sh`:** Validator gegen `gregor20.henemm.com` (final).
+
+Issue #110 (External Validator braucht App-Zugangsdaten) muss fuer Mail-/Trip-Verifikationen vorher erledigt sein, sonst ist der Validator fuer eingeloggte Features blind.
 
 #### 8b. Ergebnis praesentieren
 

@@ -267,9 +267,38 @@ Fixed Bugs: `docs/specs/bugfix/locations_add_button_fix.md`, `safari_subscriptio
 
 Globale Server-Infos und Monitoring-Anleitung stehen in `~/.claude/CLAUDE.md`.
 
-- **URL:** https://gregor20.henemm.com
-- **Service:** Systemd (`gregor_zwanzig.service`), Auto-Restart bei Absturz
-- **Infrastruktur-Repo:** `henemm/henemm-infra` (Nginx-Config, Systemd-Service)
+- **Production:** https://gregor20.henemm.com — Systemd (`gregor_zwanzig.service`, `gregor-api`, `gregor-frontend`)
+- **Staging:** https://staging.gregor20.henemm.com — Systemd (`gregor-python-staging`, `gregor-api-staging`, `gregor-frontend-staging`)
+- **Infrastruktur-Repo:** `henemm/henemm-infra` (Nginx-Config, Systemd-Service, Deploy-Scripts)
+
+### Post-Push-Workflow (PFLICHT)
+
+**Nach jedem `git push origin main`** in dieser Reihenfolge:
+
+| Schritt | Was | Wie |
+|---|---|---|
+| 1 | Push | `git push origin main` |
+| 2 | Auto-Deploy auf Staging abwarten (~5 Min) | Cron `*/5` ruft `auto-deploy-gregor-staging.sh` |
+| 3 | Staging-Validierung | siehe Definition unten |
+| 4 | Prod-Deploy | `bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh` |
+
+`systemctl restart` allein **reicht nie** — `deploy-gregor-prod.sh` macht `git pull → Go-Binary bauen → Frontend bauen → alle 3 Services restarten → Smoke-Test`. Ohne diesen vollen Lauf entsteht Code-Drift, den `check-gregor20.sh` als BetterStack-Alert meldet (siehe Issue #113).
+
+### Was zaehlt als „Staging-validiert"?
+
+Mindestens diese Checks gegen `https://staging.gregor20.henemm.com`:
+- HTTP-Smoke: `/` antwortet `200` oder `302`, `/api/health` antwortet `200`
+- Eine geaenderte Funktion manuell durchgeklickt (oder via Playwright fuer UI-Features)
+- Bei Mail-Aenderungen: Test-Mail via `/_scheduler_status`-Trigger und IMAP-Verifikation
+- Bei Scheduler-Aenderungen: `last_run`-Status im Endpoint geprueft
+
+### Ausnahme: Reine Doku-/Tooling-Aenderungen
+
+Wenn der Push **ausschliesslich** `.md`-Dateien, `docs/`, `.claude/`-Inhalte (Hooks/Agents/Commands), `.gitignore` o. ae. veraendert hat — **keinen Code in `src/`, `api/`, `internal/`, `frontend/`, `cmd/`** — dann:
+- Schritt 3 (Staging-Validierung) entfaellt
+- Schritt 4 (Prod-Deploy) entfaellt, **wenn** der Code-Drift-Monitor (`check-gregor20.sh`) noch keinen Alert ausloest (Drift-Schwelle > 1h gegenueber `mtime(gregor-api)`)
+
+Im Zweifel: trotzdem deployen, dann ist der Drift-Monitor auf jeden Fall ruhig.
 
 ## Monitoring
 
