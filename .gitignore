@@ -42,6 +42,9 @@ data/cache/
 data/*.gpx
 data/users/default/user.json
 data/users/default/weather_snapshots/
+data/users/default/alert_throttle.json
+data/users/default/command_log.json
+data/users/default/gpx/
 data/users/__test_*/
 data/users/test_*/
 data/users/csrf_test_*/
