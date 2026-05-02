@@ -1,5 +1,5 @@
 {
-  "verified_at": "2026-05-01T20:00:30+00:00",
+  "verified_at": "2026-05-02T04:35:00+00:00",
   "server_restarted": true,
   "test_trip_created": true,
   "reports_sent": [
@@ -9,15 +9,15 @@
   "emails_checked": true,
   "test_trip_cleaned": true,
   "feature_checks": [
-    "Pre-commit Verify fuer Issue #98 (ActivityProfile-Harmonisierung PR 1)",
+    "Pre-commit Verify fuer Issue #98 (Spec-Fix §4.2 wandern-Bestand)",
     "Schritt 0 Import-Smoke: api.main importiert (IMPORT_OK)",
-    "Server-Restart erfolgreich (Python NiceGUI Port 8080, HTTP 200, PID 4177028)",
-    "Test-Trip e2e-verify-issue98 (Stage 1 morgen 2026-05-02, Stage 2 uebermorgen 2026-05-03)",
+    "Server-Restart erfolgreich (gregor_zwanzig.service active, Port 8080 HTTP 200)",
+    "Test-Trip e2e-verify-issue98-fix (Stage 1 heute 2026-05-02, Stage 2 morgen 2026-05-03)",
     "send_test_report(morning) + send_test_report(evening) ausgefuehrt",
-    "Mail ID 754 erhalten: '[E2E Verify Issue 98] Stage 1 — Abend — D15 W5 G7' (Fri, 1 May 2026 19:59:52 +0000)",
-    "Plausible Werte: D15 (Temp), W5 (Wind), G7 (Boeen) — keine N/A, frischer Timestamp",
-    "Morning-Report uebersprungen weil target_date keine Stage matched (target 2026-05-01, Stage 1 erst 2026-05-02) — erwartetes Verhalten, kein Bug",
+    "Mail ID 755: '[E2E Verify Issue 98 Fix] Stage 1 — Morgen — D15 W5 G11' (Sat, 2 May 2026 04:34:29 +0000)",
+    "Mail ID 756: '[E2E Verify Issue 98 Fix] Stage 2 — Abend — D10 W8 G17' (Sat, 2 May 2026 04:34:31 +0000)",
+    "Plausible Werte D/W/G — keine N/A, frische Timestamps post-Restart",
     "Test-Trip entfernt",
-    "Issue #98 PR 1 ist reines Refactoring (Enum-Konsolidierung mit Backward-Compat-Aliasen) — Mail-Pipeline funktional bewiesen"
+    "Spec-Aenderung ist reine Doku (§4.2 wandern-Bestand) — Mail-Pipeline trotzdem getestet"
   ]
 }
