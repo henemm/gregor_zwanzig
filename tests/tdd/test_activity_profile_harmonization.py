@@ -1,18 +1,15 @@
 """
-TDD RED tests for #98: ActivityProfile-Harmonisierung.
+Tests for #98: ActivityProfile-Harmonisierung.
 
 Spec: docs/specs/modules/activity_profile.md
 
-Drei Test-Gruppen, die ALLE vor PR 1 fehlschlagen müssen:
+Drei Test-Gruppen:
 
-1. TestCanonicalActivityProfile  — neuer Enum in src/app/profile.py mit 4 Werten
-2. TestBackwardCompatAliases     — PR 1 Aliase: alte Importe bleiben funktional
+1. TestCanonicalActivityProfile  — kanonischer Enum in src/app/profile.py mit 4 Werten
+2. TestBackwardCompatAliases     — app.trip.ActivityProfile bleibt Re-Export des Canonical
 3. TestVerificationScript        — scripts/verify_activity_profile_migration.py
 
-Alle Tests sind RED weil:
-- src/app/profile.py existiert noch nicht
-- scripts/verify_activity_profile_migration.py existiert noch nicht
-- LocationActivityProfile.SUMMER_TREKKING (über Alias) existiert noch nicht
+PR 2: der ursprüngliche Location-Alias in app.user wurde entfernt — siehe test_activity_profile_pr2.py.
 """
 from __future__ import annotations
 
@@ -94,7 +91,7 @@ class TestCanonicalActivityProfile:
 # =============================================================================
 
 class TestBackwardCompatAliases:
-    """PR 1: alte Importe funktionieren weiter, sind aber Aliase auf den Canonical."""
+    """app.trip.ActivityProfile bleibt Re-Export des Canonical (Trip-Code nutzt es nativ)."""
 
     def test_trip_activity_profile_is_canonical(self):
         """
@@ -106,30 +103,6 @@ class TestBackwardCompatAliases:
         from app.trip import ActivityProfile as TripAlias
 
         assert TripAlias is Canonical
-
-    def test_location_activity_profile_alias(self):
-        """
-        GIVEN: src/app/user.py
-        WHEN: LocationActivityProfile aus app.user importiert (PR 1 Alias)
-        THEN: ist exakt dieselbe Klasse wie ActivityProfile
-        """
-        from app.profile import ActivityProfile as Canonical
-        from app.user import LocationActivityProfile
-
-        assert LocationActivityProfile is Canonical
-
-    def test_existing_location_test_imports_still_work(self):
-        """
-        GIVEN: bestehende Tests importieren LocationActivityProfile.WINTERSPORT etc.
-        WHEN: Werte werden via Alias zugegriffen
-        THEN: liefern dieselben Enum-Member wie der Canonical
-        """
-        from app.profile import ActivityProfile
-        from app.user import LocationActivityProfile
-
-        assert LocationActivityProfile.WINTERSPORT is ActivityProfile.WINTERSPORT
-        assert LocationActivityProfile.WANDERN is ActivityProfile.WANDERN
-        assert LocationActivityProfile.ALLGEMEIN is ActivityProfile.ALLGEMEIN
 
     def test_existing_trip_test_imports_still_work(self):
         """

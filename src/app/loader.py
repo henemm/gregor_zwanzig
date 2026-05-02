@@ -415,7 +415,7 @@ def load_all_locations(user_id: str = "default") -> List[SavedLocation]:
         try:
             with open(path, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            from app.user import LocationActivityProfile
+            from app.profile import ActivityProfile
             activity_profile_str = data.get("activity_profile", "allgemein")
             display_config_data = data.get("display_config")
             display_config = _parse_display_config(display_config_data) if display_config_data else None
@@ -427,7 +427,7 @@ def load_all_locations(user_id: str = "default") -> List[SavedLocation]:
                 elevation_m=data["elevation_m"],
                 region=data.get("region"),
                 bergfex_slug=data.get("bergfex_slug"),
-                activity_profile=LocationActivityProfile(activity_profile_str),
+                activity_profile=ActivityProfile(activity_profile_str),
                 display_config=display_config,
             ))
         except (json.JSONDecodeError, KeyError, ValueError):
@@ -676,9 +676,9 @@ def _parse_activity_profile(value: str | None):
     """Parse activity_profile string to enum, returns None if missing/invalid."""
     if not value:
         return None
-    from app.user import LocationActivityProfile
+    from app.profile import ActivityProfile
     try:
-        return LocationActivityProfile(value)
+        return ActivityProfile(value)
     except ValueError:
         return None
 

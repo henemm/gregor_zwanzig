@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from app.models import UnifiedWeatherDisplayConfig
+    from app.profile import ActivityProfile
 
 
 @dataclass(frozen=True)
@@ -448,7 +449,7 @@ def get_all_templates() -> list[dict]:
 
 def build_default_display_config_for_profile(
     location_id: str,
-    profile: "LocationActivityProfile",
+    profile: "ActivityProfile",
 ) -> "UnifiedWeatherDisplayConfig":
     """Build a UnifiedWeatherDisplayConfig with metrics enabled for the given profile."""
     from app.models import MetricConfig, UnifiedWeatherDisplayConfig

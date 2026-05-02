@@ -1,0 +1,15 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 87 items
+
+tests/tdd/test_activity_profile_pr2.py .....                             [  5%]
+tests/tdd/test_activity_profile_harmonization.py ..........              [ 17%]
+tests/tdd/test_generic_locations.py ....................                 [ 40%]
+tests/tdd/test_sport_aware_scoring.py ...............                    [ 57%]
+tests/tdd/test_weather_templates.py ..................                   [ 78%]
+tests/integration/test_config_persistence.py ...................         [100%]
+
+============================= 87 passed in 10.99s ==============================

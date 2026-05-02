@@ -18,7 +18,6 @@ if TYPE_CHECKING:
 
 
 from app.profile import ActivityProfile  # noqa: E402,F401
-LocationActivityProfile = ActivityProfile  # backward-compat alias (PR 1) — entfernt in PR 2
 
 
 class SubscriptionType(str, Enum):
@@ -58,7 +57,7 @@ class SavedLocation:
     elevation_m: int
     region: Optional[str] = None  # Avalanche region code (e.g., "AT-7")
     bergfex_slug: Optional[str] = None  # Bergfex URL slug for snow data (e.g., "hochfuegen")
-    activity_profile: LocationActivityProfile = LocationActivityProfile.ALLGEMEIN
+    activity_profile: ActivityProfile = ActivityProfile.ALLGEMEIN
     display_config: Optional["UnifiedWeatherDisplayConfig"] = None
 
     def __str__(self) -> str:
@@ -133,7 +132,7 @@ class CompareSubscription:
     send_signal: bool = False
     send_telegram: bool = False
     display_config: Optional["UnifiedWeatherDisplayConfig"] = None
-    activity_profile: Optional[LocationActivityProfile] = None
+    activity_profile: Optional[ActivityProfile] = None
 
 
 @dataclass

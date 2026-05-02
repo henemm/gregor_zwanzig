@@ -21,12 +21,12 @@ class TestScoringProfileDispatch:
         WHEN: Called with profile parameter
         THEN: Does not raise TypeError
         """
-        from app.user import LocationActivityProfile
+        from app.profile import ActivityProfile
         from web.pages.compare import calculate_score
 
         metrics = {"sunny_hours": 6, "wind_max": 10, "cloud_avg": 30}
         # Must accept profile parameter without error
-        score = calculate_score(metrics, profile=LocationActivityProfile.WANDERN)
+        score = calculate_score(metrics, profile=ActivityProfile.WANDERN)
         assert isinstance(score, int)
 
     def test_profile_none_defaults_allgemein(self):
@@ -55,7 +55,7 @@ class TestWintersportScoring:
         WHEN: Scored as wintersport
         THEN: Score > 80
         """
-        from app.user import LocationActivityProfile
+        from app.profile import ActivityProfile
         from web.pages.compare import calculate_score
 
         metrics = {
@@ -66,7 +66,7 @@ class TestWintersportScoring:
             "cloud_avg": 20,
             "temp_min": -5,
         }
-        score = calculate_score(metrics, profile=LocationActivityProfile.WINTERSPORT)
+        score = calculate_score(metrics, profile=ActivityProfile.WINTERSPORT)
         assert score > 80, f"Deep snow + sunshine should score >80, got {score}"
 
     def test_wintersport_unchanged_from_current(self):
@@ -75,7 +75,7 @@ class TestWintersportScoring:
         WHEN: Scored as wintersport
         THEN: Score matches current calculate_score() without profile
         """
-        from app.user import LocationActivityProfile
+        from app.profile import ActivityProfile
         from web.pages.compare import calculate_score
 
         metrics = {
@@ -87,7 +87,7 @@ class TestWintersportScoring:
             "cloud_avg": 40,
             "temp_min": -8,
         }
-        score_with_profile = calculate_score(metrics, profile=LocationActivityProfile.WINTERSPORT)
+        score_with_profile = calculate_score(metrics, profile=ActivityProfile.WINTERSPORT)
         # Wintersport scoring must remain identical to the current logic
         assert isinstance(score_with_profile, int)
         assert 0 <= score_with_profile <= 100
@@ -102,7 +102,7 @@ class TestWandernScoring:
         WHEN: Scored as wandern
         THEN: Score < 30 (dangerous conditions)
         """
-        from app.user import LocationActivityProfile
+        from app.profile import ActivityProfile
         from web.pages.compare import calculate_score
 
         metrics = {
@@ -113,7 +113,7 @@ class TestWandernScoring:
             "cloud_avg": 95,
             "temp_min": 12,
         }
-        score = calculate_score(metrics, profile=LocationActivityProfile.WANDERN)
+        score = calculate_score(metrics, profile=ActivityProfile.WANDERN)
         assert score < 30, f"Thunderstorm should score <30 for hiking, got {score}"
 
     def test_clear_sunny_high_score(self):
@@ -122,7 +122,7 @@ class TestWandernScoring:
         WHEN: Scored as wandern
         THEN: Score > 75 (excellent hiking conditions)
         """
-        from app.user import LocationActivityProfile
+        from app.profile import ActivityProfile
         from web.pages.compare import calculate_score
 
         metrics = {
@@ -135,7 +135,7 @@ class TestWandernScoring:
             "temp_min": 15,
             "visibility_min": 20000,
         }
-        score = calculate_score(metrics, profile=LocationActivityProfile.WANDERN)
+        score = calculate_score(metrics, profile=ActivityProfile.WANDERN)
         assert score > 75, f"Perfect hiking day should score >75, got {score}"
 
     def test_wandern_ignores_snow(self):
@@ -144,14 +144,14 @@ class TestWandernScoring:
         WHEN: Scored as wandern
         THEN: Snow has no effect on score
         """
-        from app.user import LocationActivityProfile
+        from app.profile import ActivityProfile
         from web.pages.compare import calculate_score
 
         base = {"sunny_hours": 5, "wind_max": 15, "temp_min": 12}
         with_snow = {**base, "snow_depth_cm": 200, "snow_new_cm": 30}
 
-        score_base = calculate_score(base, profile=LocationActivityProfile.WANDERN)
-        score_snow = calculate_score(with_snow, profile=LocationActivityProfile.WANDERN)
+        score_base = calculate_score(base, profile=ActivityProfile.WANDERN)
+        score_snow = calculate_score(with_snow, profile=ActivityProfile.WANDERN)
         assert score_base == score_snow, "Snow should not affect wandern score"
 
     def test_wandern_uses_thunder_metric(self):
@@ -160,13 +160,13 @@ class TestWandernScoring:
         WHEN: Scored as wandern
         THEN: Thunder HIGH penalizes more than MED
         """
-        from app.user import LocationActivityProfile
+        from app.profile import ActivityProfile
         from web.pages.compare import calculate_score
 
         base = {"sunny_hours": 5, "wind_max": 10, "temp_min": 15}
-        score_none = calculate_score({**base, "thunder_level": "NONE"}, profile=LocationActivityProfile.WANDERN)
-        score_med = calculate_score({**base, "thunder_level": "MED"}, profile=LocationActivityProfile.WANDERN)
-        score_high = calculate_score({**base, "thunder_level": "HIGH"}, profile=LocationActivityProfile.WANDERN)
+        score_none = calculate_score({**base, "thunder_level": "NONE"}, profile=ActivityProfile.WANDERN)
+        score_med = calculate_score({**base, "thunder_level": "MED"}, profile=ActivityProfile.WANDERN)
+        score_high = calculate_score({**base, "thunder_level": "HIGH"}, profile=ActivityProfile.WANDERN)
 
         assert score_none > score_med > score_high, \
             f"Thunder severity order wrong: NONE={score_none}, MED={score_med}, HIGH={score_high}"
@@ -181,14 +181,14 @@ class TestAllgemeinScoring:
         WHEN: Scored as allgemein
         THEN: Snow has no effect
         """
-        from app.user import LocationActivityProfile
+        from app.profile import ActivityProfile
         from web.pages.compare import calculate_score
 
         base = {"sunny_hours": 5, "wind_max": 15}
         with_snow = {**base, "snow_depth_cm": 200}
 
-        score_base = calculate_score(base, profile=LocationActivityProfile.ALLGEMEIN)
-        score_snow = calculate_score(with_snow, profile=LocationActivityProfile.ALLGEMEIN)
+        score_base = calculate_score(base, profile=ActivityProfile.ALLGEMEIN)
+        score_snow = calculate_score(with_snow, profile=ActivityProfile.ALLGEMEIN)
         assert score_base == score_snow
 
     def test_allgemein_moderate_penalties(self):
@@ -197,7 +197,7 @@ class TestAllgemeinScoring:
         WHEN: Scored as allgemein
         THEN: Score is low but not zero (moderate penalties)
         """
-        from app.user import LocationActivityProfile
+        from app.profile import ActivityProfile
         from web.pages.compare import calculate_score
 
         metrics = {
@@ -207,7 +207,7 @@ class TestAllgemeinScoring:
             "sunny_hours": 0,
             "temp_min": -15,
         }
-        score = calculate_score(metrics, profile=LocationActivityProfile.ALLGEMEIN)
+        score = calculate_score(metrics, profile=ActivityProfile.ALLGEMEIN)
         assert 5 <= score <= 30, f"Bad weather allgemein should be 5-30, got {score}"
 
 
@@ -237,16 +237,17 @@ class TestDataModel:
         WHEN: Instantiated with activity_profile
         THEN: Field is accessible
         """
-        from app.user import CompareSubscription, LocationActivityProfile, Schedule
+        from app.profile import ActivityProfile
+        from app.user import CompareSubscription, Schedule
 
         sub = CompareSubscription(
             id="test",
             name="Test",
             locations=["*"],
             schedule=Schedule.DAILY_MORNING,
-            activity_profile=LocationActivityProfile.WANDERN,
+            activity_profile=ActivityProfile.WANDERN,
         )
-        assert sub.activity_profile == LocationActivityProfile.WANDERN
+        assert sub.activity_profile == ActivityProfile.WANDERN
 
     def test_subscription_default_none(self):
         """

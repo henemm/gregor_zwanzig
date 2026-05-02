@@ -411,10 +411,11 @@ class TestLocationConfigRoundtrip:
 
     def _build_test_location(self, loc_id: str, customizer):
         """Helper: SavedLocation mit Profile-Default-Config + Customizer."""
-        from app.user import LocationActivityProfile, SavedLocation
+        from app.profile import ActivityProfile
+        from app.user import SavedLocation
         from app.metric_catalog import build_default_display_config_for_profile
 
-        dc = build_default_display_config_for_profile(loc_id, LocationActivityProfile.WANDERN)
+        dc = build_default_display_config_for_profile(loc_id, ActivityProfile.WANDERN)
         new_metrics = [customizer(mc) for mc in dc.metrics]
         dc = UnifiedWeatherDisplayConfig(
             trip_id=loc_id,
@@ -429,7 +430,7 @@ class TestLocationConfigRoundtrip:
             lat=47.0,
             lon=11.0,
             elevation_m=1500,
-            activity_profile=LocationActivityProfile.WANDERN,
+            activity_profile=ActivityProfile.WANDERN,
             display_config=dc,
         )
 
