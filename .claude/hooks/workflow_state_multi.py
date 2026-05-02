@@ -123,13 +123,18 @@ TEST_REQUIRED_PHASES = ["phase6_implement", "phase7_validate"]
 
 
 def get_state_file() -> Path:
-    """Get the path to the workflow state file."""
-    # Try to find project root via .git
-    cwd = Path.cwd()
-    for parent in [cwd] + list(cwd.parents):
-        if (parent / ".git").exists():
-            return parent / ".claude" / "workflow_state.json"
-    return cwd / ".claude" / "workflow_state.json"
+    """Get the path to the workflow state file.
+
+    Delegates to `config_loader.get_state_file_path()` so that worktree
+    routing (Issue #112) is handled in a single place.
+    """
+    try:
+        from config_loader import get_state_file_path
+    except ImportError:
+        import sys
+        sys.path.insert(0, str(Path(__file__).parent))
+        from config_loader import get_state_file_path
+    return get_state_file_path()
 
 
 def load_state() -> dict:

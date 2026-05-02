@@ -23,10 +23,51 @@ CONFIG_NAMES = ["openspec.yaml", "config.yaml", ".openspec.yaml"]
 LOCAL_OVERRIDE_NAMES = ["settings.local.json", ".settings.local.json"]
 
 
+def find_main_repo_from_worktree(start: Path) -> Path | None:
+    """If `start` is inside a git worktree, return the linked main repo root.
+
+    Git worktrees place a `.git` *file* (not directory) inside the worktree
+    pointing at the main repo via `gitdir: <main>/.git/worktrees/<name>`.
+    Returns None if `start` is not in a worktree.
+    """
+    current = start
+    while current != current.parent:
+        git_marker = current / ".git"
+        if git_marker.is_file():
+            try:
+                content = git_marker.read_text(errors="ignore").strip()
+            except OSError:
+                return None
+            for line in content.splitlines():
+                line = line.strip()
+                if line.startswith("gitdir:"):
+                    gitdir = Path(line[len("gitdir:"):].strip())
+                    if not gitdir.is_absolute():
+                        gitdir = (current / gitdir).resolve()
+                    walker = gitdir
+                    while walker.name != ".git" and walker != walker.parent:
+                        walker = walker.parent
+                    if walker.name == ".git":
+                        return walker.parent
+            return None
+        if git_marker.is_dir():
+            return None
+        current = current.parent
+    return None
+
+
 @lru_cache(maxsize=1)
 def find_project_root() -> Path:
-    """Find project root by looking for config file or .git directory."""
+    """Find project root by looking for config file or .git directory.
+
+    If invoked from inside a git worktree, transparently returns the linked
+    main repo root so that workflow state is written centrally (Issue #112).
+    """
     current = Path.cwd()
+
+    main_repo = find_main_repo_from_worktree(current)
+    if main_repo is not None:
+        return main_repo
 
     while current != current.parent:
         # Check for config files
