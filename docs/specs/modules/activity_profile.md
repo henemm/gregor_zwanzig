@@ -91,18 +91,23 @@ semantisch `ALLGEMEIN`.
 
 ### §4.2 Persistierte Werte (aktueller Bestand)
 
-Vor PR 1: Verifikations-Skript läuft gegen `data/users/default/` und dokumentiert den
-Bestand. Bekannte Werte in Produktion:
+Vor PR 1: Verifikations-Skript läuft gegen `data/users/` (alle User-Verzeichnisse) und
+dokumentiert den Bestand. Stand 2026-05-01 (Skript-Lauf nach PR 1, post-deploy):
 
-| Datei | Feld | Aktueller Wert |
-|-------|------|----------------|
+| Pfad | Feld | Aktuelle Werte |
+|------|------|----------------|
 | `data/users/default/trips/gr221-mallorca.json` | `aggregation.profile` | `"wintersport"` |
 | `data/users/default/trips/zillertal-mit-steffi.json` | `aggregation.profile` | `"wintersport"` |
 | `data/users/default/locations/*.json` | `activity_profile` | (Feld nicht persistiert) |
 | `data/users/default/compare_subscriptions.json` | `activity_profile` | (unbekannt, Skript klärt) |
+| `data/users/__bug89_*` und `__test_*` (Test-Fixtures) | `activity_profile` | gemischt `"wandern"` + `"wintersport"` |
+
+**Skript-Resultat:** 454 Dateien gescannt, 10 Profile-Werte gefunden — davon 4× `wintersport`
+und 6× `wandern`. Werte `summer_trekking` und `allgemein` sind aktuell in keiner Datei
+persistiert (semantisch valide, aber ungenutzt).
 
 Alle 4 Enum-Werte (`wintersport`, `wandern`, `summer_trekking`, `allgemein`) sind weiterhin
-gültig — keine Wert-Umbenennung, keine Migration der persitsierten Strings nötig.
+gültig — keine Wert-Umbenennung, keine Migration der persistierten Strings nötig.
 
 ## §5 Dependencies
 
