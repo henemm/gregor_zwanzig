@@ -179,7 +179,7 @@ ein Validator-Lauf gegen Production prueft also alten Code. Die ehrliche Variant
 - **Post-Push + nach Auto-Staging-Deploy:** Validator gegen `staging.gregor20.henemm.com`.
 - **Nach `deploy-gregor-prod.sh`:** Validator gegen `gregor20.henemm.com` (final).
 
-Issue #110 (External Validator braucht App-Zugangsdaten) muss fuer Mail-/Trip-Verifikationen vorher erledigt sein, sonst ist der Validator fuer eingeloggte Features blind.
+**Setup (einmalig):** `cp .claude/validator.env.example .claude/validator.env`, Passwort eintragen, dann `bash scripts/setup-validator-user.sh`. Der Launcher loggt sich danach automatisch ein und uebergibt dem Validator das Cookie.
 
 #### 8b. Ergebnis praesentieren
 

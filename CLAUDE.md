@@ -145,6 +145,7 @@ Alle Module benoetigen Specs vor Implementierung:
 - `debug_buffer` - Debug-Sammlung
 - `agent_orchestration` - Workflow-Skill-Commands mit Subagent-Delegation
 - `command_set_merge` - Merge von Underscore- und Dash-Commands
+- `external_validator_auth` - Login-basierte Auth für External Validator (Issue #110, Spec: `docs/specs/modules/external_validator_auth.md`)
 - `output_token_builder` - SMS-konforme Token aus NormalizedForecast (sms_format.md v2.0)
 - `output_channel_renderers` - Pure-Function Renderer für E-Mail + SMS Channels (β3)
 - `output_text_report_renderer` - Text-Report Renderer für Wintersport + generische Sportarten (β4)

@@ -1,0 +1,80 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 8 items
+
+tests/tdd/test_external_validator_auth.py FFFFFFss                       [100%]
+
+=================================== FAILURES ===================================
+_____________ test_validator_env_example_exists_with_required_keys _____________
+tests/tdd/test_external_validator_auth.py:37: in test_validator_env_example_exists_with_required_keys
+    assert template.exists(), f"Template fehlt: {template}"
+E   AssertionError: Template fehlt: /home/hem/gregor_zwanzig/.claude/validator.env.example
+E   assert False
+E    +  where False = exists()
+E    +    where exists = PosixPath('/home/hem/gregor_zwanzig/.claude/validator.env.example').exists
+____________________ test_gitignore_excludes_validator_env _____________________
+tests/tdd/test_external_validator_auth.py:52: in test_gitignore_excludes_validator_env
+    assert ".claude/validator.env" in lines, (
+E   AssertionError: Eintrag '.claude/validator.env' fehlt in .gitignore — Credentials koennten ins Repo committed werden
+E   assert '.claude/validator.env' in ['', '', '# General', '.DS_Store', '', '# Python', ...]
+__________________ test_setup_script_exists_and_is_executable __________________
+tests/tdd/test_external_validator_auth.py:65: in test_setup_script_exists_and_is_executable
+    assert script.exists(), f"Setup-Skript fehlt: {script}"
+E   AssertionError: Setup-Skript fehlt: /home/hem/gregor_zwanzig/scripts/setup-validator-user.sh
+E   assert False
+E    +  where False = exists()
+E    +    where exists = PosixPath('/home/hem/gregor_zwanzig/scripts/setup-validator-user.sh').exists
+________ test_external_validator_agent_documents_authenticated_requests ________
+tests/tdd/test_external_validator_auth.py:81: in test_external_validator_agent_documents_authenticated_requests
+    assert "## Authenticated Requests" in content, (
+E   AssertionError: Abschnitt '## Authenticated Requests' fehlt in external-validator.md
+E   assert '## Authenticated Requests' in '# External Validator\n\nDu bist ein unabhaengiger QA-Pruefer. Du hast den Code NICHT geschrieben.\nDie Implementierer..._NAME>.md\n```\n\n**NIEMALS den claude-Befehl manuell tippen** — der Implementierer koennte den Prompt manipulieren.\n'
+_________________ test_validate_external_supports_dry_run_mode _________________
+tests/tdd/test_external_validator_auth.py:105: in test_validate_external_supports_dry_run_mode
+    result = subprocess.run(
+/usr/lib/python3.12/subprocess.py:550: in run
+    stdout, stderr = process.communicate(input, timeout=timeout)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/subprocess.py:1209: in communicate
+    stdout, stderr = self._communicate(input, endtime, timeout)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/subprocess.py:2116: in _communicate
+    self._check_timeout(endtime, orig_timeout, stdout, stderr)
+/usr/lib/python3.12/subprocess.py:1253: in _check_timeout
+    raise TimeoutExpired(
+E   subprocess.TimeoutExpired: Command '['bash', '/home/hem/gregor_zwanzig/.claude/validate-external.sh', '/home/hem/gregor_zwanzig/docs/specs/modules/external_validator_auth.md']' timed out after 15 seconds
+_______________ test_validate_external_warns_when_no_credentials _______________
+tests/tdd/test_external_validator_auth.py:134: in test_validate_external_warns_when_no_credentials
+    result = subprocess.run(
+/usr/lib/python3.12/subprocess.py:550: in run
+    stdout, stderr = process.communicate(input, timeout=timeout)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/subprocess.py:1209: in communicate
+    stdout, stderr = self._communicate(input, endtime, timeout)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/subprocess.py:2116: in _communicate
+    self._check_timeout(endtime, orig_timeout, stdout, stderr)
+/usr/lib/python3.12/subprocess.py:1253: in _check_timeout
+    raise TimeoutExpired(
+E   subprocess.TimeoutExpired: Command '['bash', '/home/hem/gregor_zwanzig/.claude/validate-external.sh', '/home/hem/gregor_zwanzig/docs/specs/modules/external_validator_auth.md']' timed out after 15 seconds
+=============================== warnings summary ===============================
+tests/tdd/test_external_validator_auth.py:149
+  /home/hem/gregor_zwanzig/tests/tdd/test_external_validator_auth.py:149: PytestUnknownMarkWarning: Unknown pytest.mark.integration - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.integration
+
+tests/tdd/test_external_validator_auth.py:184
+  /home/hem/gregor_zwanzig/tests/tdd/test_external_validator_auth.py:184: PytestUnknownMarkWarning: Unknown pytest.mark.integration - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.integration
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/tdd/test_external_validator_auth.py::test_validator_env_example_exists_with_required_keys
+FAILED tests/tdd/test_external_validator_auth.py::test_gitignore_excludes_validator_env
+FAILED tests/tdd/test_external_validator_auth.py::test_setup_script_exists_and_is_executable
+FAILED tests/tdd/test_external_validator_auth.py::test_external_validator_agent_documents_authenticated_requests
+FAILED tests/tdd/test_external_validator_auth.py::test_validate_external_supports_dry_run_mode
+FAILED tests/tdd/test_external_validator_auth.py::test_validate_external_warns_when_no_credentials
+================== 6 failed, 2 skipped, 2 warnings in 30.15s ===================

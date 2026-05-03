@@ -86,6 +86,8 @@ Das Gregor Zwanzig Projekt nutzt den OpenSpec Framework Workflow, der aus 8 sequ
 
 **Context Isolation:** Der QA-Tester bekommt NUR die Spec und Test-Outputs, NICHT die Reasoning-Chain des Implementierers. Das verhindert Confirmation Bias.
 
+**Authenticated Requests:** Der External Validator authentifiziert sich automatisch über `POST /api/auth/login` mit Credentials aus `.claude/validator.env` und holt das `gz_session`-Cookie (Issue #110, Spec: `docs/specs/modules/external_validator_auth.md`). Damit können eingeloggte `/api/*`-Routen geprüft werden, ohne dass im Production-Code ein Auth-Bypass entsteht.
+
 **Ablauf:**
 1. **Spec parsen:** `adversary_dialog.py parse <spec>` extrahiert Expected-Behavior-Checkliste
 2. **Dialog führen:** implementation-validator Agent prüft jeden Punkt
