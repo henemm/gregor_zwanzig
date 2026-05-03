@@ -138,6 +138,15 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
         display_config = _parse_display_config(data["display_config"])
     elif weather_config is not None:
         display_config = _migrate_weather_config(weather_config)
+    else:
+        # Issue #111: kein display_config + kein weather_config -> profil-abhaengiger Default
+        from app.metric_catalog import build_default_display_config_for_profile
+        profile = (
+            aggregation.profile
+            if aggregation is not None and getattr(aggregation, "profile", None) is not None
+            else ActivityProfile.ALLGEMEIN
+        )
+        display_config = build_default_display_config_for_profile(data["id"], profile)
 
     # Parse report config if present (Feature 3.5)
     report_config = None

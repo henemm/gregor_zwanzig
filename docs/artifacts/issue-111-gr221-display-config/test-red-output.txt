@@ -1,0 +1,191 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 8 items
+
+tests/tdd/test_loader_display_config_default.py FFFF.FFF                 [100%]
+
+=================================== FAILURES ===================================
+_ TestLoaderDisplayConfigDefault.test_trip_without_display_config_or_weather_config_gets_default _
+
+self = <tdd.test_loader_display_config_default.TestLoaderDisplayConfigDefault object at 0x7f37b656a8d0>
+
+    def test_trip_without_display_config_or_weather_config_gets_default(self):
+        """GIVEN Trip ohne display_config + ohne weather_config
+        WHEN  load_trip_from_dict
+        THEN  trip.display_config ist nicht None und hat Metric-Liste."""
+        data = _minimal_trip(aggregation={"profile": "wintersport"})
+    
+        trip = load_trip_from_dict(data)
+    
+>       assert trip.display_config is not None, (
+            "Loader sollte Default-display_config injizieren statt None"
+        )
+E       AssertionError: Loader sollte Default-display_config injizieren statt None
+E       assert None is not None
+E        +  where None = Trip(id='test-trip', name='Test Trip', stages=[Stage(id='T1', name='Day 1', date=datetime.date(2026, 5, 15), waypoints....MAX: 'MAX'>, thunderstorm=<AggregationFunc.MAX: 'MAX'>), weather_config=None, display_config=None, report_config=None).display_config
+
+tests/tdd/test_loader_display_config_default.py:59: AssertionError
+_ TestLoaderDisplayConfigDefault.test_wintersport_profile_uses_wintersport_template _
+
+self = <tdd.test_loader_display_config_default.TestLoaderDisplayConfigDefault object at 0x7f37b6234d10>
+
+    def test_wintersport_profile_uses_wintersport_template(self):
+        """Profile 'wintersport' → Default enthaelt typische Wintersport-Metriken."""
+        data = _minimal_trip(aggregation={"profile": "wintersport"})
+    
+        trip = load_trip_from_dict(data)
+    
+>       enabled_ids = {m.metric_id for m in trip.display_config.metrics if m.enabled}
+                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'NoneType' object has no attribute 'metrics'
+
+tests/tdd/test_loader_display_config_default.py:72: AttributeError
+_ TestLoaderDisplayConfigDefault.test_trip_without_aggregation_uses_allgemein_fallback _
+
+self = <tdd.test_loader_display_config_default.TestLoaderDisplayConfigDefault object at 0x7f37b66717c0>
+
+    def test_trip_without_aggregation_uses_allgemein_fallback(self):
+        """GIVEN Trip ohne aggregation-Block
+        THEN  Default nutzt ALLGEMEIN-Template (nicht crashen)."""
+        data = _minimal_trip()
+    
+        trip = load_trip_from_dict(data)
+    
+>       assert trip.display_config is not None
+E       AssertionError: assert None is not None
+E        +  where None = Trip(id='test-trip', name='Test Trip', stages=[Stage(id='T1', name='Day 1', date=datetime.date(2026, 5, 15), waypoints....MAX: 'MAX'>, thunderstorm=<AggregationFunc.MAX: 'MAX'>), weather_config=None, display_config=None, report_config=None).display_config
+
+tests/tdd/test_loader_display_config_default.py:87: AssertionError
+_ TestLoaderDisplayConfigDefault.test_trip_with_unknown_profile_falls_back_to_allgemein _
+
+self = <tdd.test_loader_display_config_default.TestLoaderDisplayConfigDefault object at 0x7f37b66a68a0>
+
+    def test_trip_with_unknown_profile_falls_back_to_allgemein(self):
+        """Unbekanntes Profile → ALLGEMEIN-Fallback (kein Crash)."""
+        data = _minimal_trip(aggregation={"profile": "summer_trekking"})
+    
+        trip = load_trip_from_dict(data)
+    
+>       assert trip.display_config is not None
+E       AssertionError: assert None is not None
+E        +  where None = Trip(id='test-trip', name='Test Trip', stages=[Stage(id='T1', name='Day 1', date=datetime.date(2026, 5, 15), waypoints....MAX: 'MAX'>, thunderstorm=<AggregationFunc.MAX: 'MAX'>), weather_config=None, display_config=None, report_config=None).display_config
+
+tests/tdd/test_loader_display_config_default.py:99: AssertionError
+_ TestLoaderDisplayConfigDefault.test_legacy_weather_config_still_takes_precedence_over_default _
+
+self = <tdd.test_loader_display_config_default.TestLoaderDisplayConfigDefault object at 0x7f37b6256300>
+
+    def test_legacy_weather_config_still_takes_precedence_over_default(self):
+        """GIVEN Trip mit Legacy weather_config
+        THEN  Loader migriert das Legacy-Format, nicht den Catalog-Default."""
+        data = _minimal_trip(
+            weather_config={
+                "trip_id": "test-trip",
+                "enabled_metrics": ["temperature_min"],
+                "updated_at": "2026-01-01T00:00:00",
+            }
+        )
+    
+        trip = load_trip_from_dict(data)
+    
+        assert trip.display_config is not None
+        # Legacy-Migration setzt enabled basierend auf der alten Liste —
+        # nur 'temperature' ist enabled, nicht das volle wintersport-Template.
+        enabled_ids = {m.metric_id for m in trip.display_config.metrics if m.enabled}
+>       assert enabled_ids == {"temperature"}, (
+            f"Legacy-Migration darf nicht durch Default ueberschrieben werden. "
+            f"Enabled: {enabled_ids}"
+        )
+E       AssertionError: Legacy-Migration darf nicht durch Default ueberschrieben werden. Enabled: set()
+E       assert set() == {'temperature'}
+E         
+E         Extra items in the right set:
+E         'temperature'
+E         Use -v to get more diff
+
+tests/tdd/test_loader_display_config_default.py:141: AssertionError
+_ TestLoaderDisplayConfigDefaultRealFiles.test_gr221_real_file_loads_with_non_none_display_config _
+
+self = <tdd.test_loader_display_config_default.TestLoaderDisplayConfigDefaultRealFiles object at 0x7f37b62559d0>
+
+    def test_gr221_real_file_loads_with_non_none_display_config(self):
+        """Issue #111: gr221-mallorca.json hat keinen display_config-Block.
+        Nach dem Fix MUSS Loader trotzdem ein gueltiges display_config liefern."""
+        if not GR221_TRIP_FILE.exists():
+            pytest.skip(f"GR221 trip file fehlt: {GR221_TRIP_FILE}")
+    
+        with open(GR221_TRIP_FILE) as f:
+            data = json.load(f)
+    
+        # Sicherstellen, dass das File wirklich keinen display_config hat —
+        # sonst testen wir die falsche Edge-Case.
+        assert "display_config" not in data, (
+            "Test-Voraussetzung: GR221 JSON hat (noch) keinen display_config — "
+            "wenn das File angefasst wurde, Test anpassen."
+        )
+    
+        trip = load_trip_from_dict(data)
+    
+>       assert trip.display_config is not None, (
+            "Loader muss bei gr221-mallorca.json ein Default-display_config "
+            "injizieren — sonst crasht test_alert_enabled in test_e2e_friendly_format_config.py"
+        )
+E       AssertionError: Loader muss bei gr221-mallorca.json ein Default-display_config injizieren — sonst crasht test_alert_enabled in test_e2e_friendly_format_config.py
+E       assert None is not None
+E        +  where None = Trip(id='gr221-mallorca', name='GR221 Mallorca', stages=[Stage(id='', name='Tag 1: von Valldemossa nach Deià', date=da...ylight=True, multi_day_trend_reports=['morning', 'evening'], updated_at=datetime.datetime(2026, 5, 3, 7, 3, 4, 15281))).display_config
+
+tests/tdd/test_loader_display_config_default.py:168: AssertionError
+_ TestWeatherChangeDetectionIntegrationWithDefault.test_change_detection_service_consumes_default_display_config _
+
+self = <tdd.test_loader_display_config_default.TestWeatherChangeDetectionIntegrationWithDefault object at 0x7f37b6254740>
+
+    def test_change_detection_service_consumes_default_display_config(self):
+        """from_display_config() darf nicht crashen bei Default-Config."""
+        from services.weather_change_detection import WeatherChangeDetectionService
+    
+        data = _minimal_trip(aggregation={"profile": "wintersport"})
+        trip = load_trip_from_dict(data)
+    
+        # Darf nicht crashen — vorher: AttributeError 'NoneType' has no attribute 'metrics'
+>       svc = WeatherChangeDetectionService.from_display_config(trip.display_config)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_loader_display_config_default.py:186: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'services.weather_change_detection.WeatherChangeDetectionService'>
+display_config = None
+
+    @classmethod
+    def from_display_config(cls, display_config: "UnifiedWeatherDisplayConfig") -> "WeatherChangeDetectionService":
+        """
+        Factory: Create service from per-metric alert settings.
+    
+        Only metrics with alert_enabled=True are included in detection.
+        User-set alert_threshold overrides MetricCatalog default.
+    
+        Args:
+            display_config: Unified weather display config with per-metric alert settings
+    
+        Returns:
+            WeatherChangeDetectionService with filtered thresholds
+        """
+        from app.metric_catalog import get_metric
+        thresholds: dict[str, float] = {}
+>       for mc in display_config.metrics:
+                  ^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'NoneType' object has no attribute 'metrics'
+
+src/services/weather_change_detection.py:111: AttributeError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_loader_display_config_default.py::TestLoaderDisplayConfigDefault::test_trip_without_display_config_or_weather_config_gets_default
+FAILED tests/tdd/test_loader_display_config_default.py::TestLoaderDisplayConfigDefault::test_wintersport_profile_uses_wintersport_template
+FAILED tests/tdd/test_loader_display_config_default.py::TestLoaderDisplayConfigDefault::test_trip_without_aggregation_uses_allgemein_fallback
+FAILED tests/tdd/test_loader_display_config_default.py::TestLoaderDisplayConfigDefault::test_trip_with_unknown_profile_falls_back_to_allgemein
+FAILED tests/tdd/test_loader_display_config_default.py::TestLoaderDisplayConfigDefault::test_legacy_weather_config_still_takes_precedence_over_default
+FAILED tests/tdd/test_loader_display_config_default.py::TestLoaderDisplayConfigDefaultRealFiles::test_gr221_real_file_loads_with_non_none_display_config
+FAILED tests/tdd/test_loader_display_config_default.py::TestWeatherChangeDetectionIntegrationWithDefault::test_change_detection_service_consumes_default_display_config
+========================= 7 failed, 1 passed in 0.18s ==========================
