@@ -1,0 +1,82 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 7 items
+
+tests/tdd/test_internal_loaded_endpoint.py EEEEEEE                       [100%]
+
+==================================== ERRORS ====================================
+_ ERROR at setup of TestLoadedTripEndpoint.test_existing_trip_returns_200_with_display_config _
+
+    @pytest.fixture
+    def client():
+        """Build a test FastAPI app with only the internal router mounted."""
+>       from api.routers import internal
+E       ImportError: cannot import name 'internal' from 'api.routers' (/home/hem/gregor_zwanzig/api/routers/__init__.py)
+
+tests/tdd/test_internal_loaded_endpoint.py:17: ImportError
+_ ERROR at setup of TestLoadedTripEndpoint.test_display_config_has_metrics_list _
+
+    @pytest.fixture
+    def client():
+        """Build a test FastAPI app with only the internal router mounted."""
+>       from api.routers import internal
+E       ImportError: cannot import name 'internal' from 'api.routers' (/home/hem/gregor_zwanzig/api/routers/__init__.py)
+
+tests/tdd/test_internal_loaded_endpoint.py:17: ImportError
+____ ERROR at setup of TestLoadedTripEndpoint.test_unknown_trip_returns_404 ____
+
+    @pytest.fixture
+    def client():
+        """Build a test FastAPI app with only the internal router mounted."""
+>       from api.routers import internal
+E       ImportError: cannot import name 'internal' from 'api.routers' (/home/hem/gregor_zwanzig/api/routers/__init__.py)
+
+tests/tdd/test_internal_loaded_endpoint.py:17: ImportError
+______ ERROR at setup of TestLoadedTripEndpoint.test_cross_user_isolation ______
+
+    @pytest.fixture
+    def client():
+        """Build a test FastAPI app with only the internal router mounted."""
+>       from api.routers import internal
+E       ImportError: cannot import name 'internal' from 'api.routers' (/home/hem/gregor_zwanzig/api/routers/__init__.py)
+
+tests/tdd/test_internal_loaded_endpoint.py:17: ImportError
+__ ERROR at setup of TestLoadedTripEndpoint.test_missing_user_id_returns_422 ___
+
+    @pytest.fixture
+    def client():
+        """Build a test FastAPI app with only the internal router mounted."""
+>       from api.routers import internal
+E       ImportError: cannot import name 'internal' from 'api.routers' (/home/hem/gregor_zwanzig/api/routers/__init__.py)
+
+tests/tdd/test_internal_loaded_endpoint.py:17: ImportError
+_ ERROR at setup of TestLoadedTripEndpoint.test_response_includes_stages_and_aggregation _
+
+    @pytest.fixture
+    def client():
+        """Build a test FastAPI app with only the internal router mounted."""
+>       from api.routers import internal
+E       ImportError: cannot import name 'internal' from 'api.routers' (/home/hem/gregor_zwanzig/api/routers/__init__.py)
+
+tests/tdd/test_internal_loaded_endpoint.py:17: ImportError
+_ ERROR at setup of TestLoadedTripEndpoint.test_datetime_serialized_as_isoformat _
+
+    @pytest.fixture
+    def client():
+        """Build a test FastAPI app with only the internal router mounted."""
+>       from api.routers import internal
+E       ImportError: cannot import name 'internal' from 'api.routers' (/home/hem/gregor_zwanzig/api/routers/__init__.py)
+
+tests/tdd/test_internal_loaded_endpoint.py:17: ImportError
+=========================== short test summary info ============================
+ERROR tests/tdd/test_internal_loaded_endpoint.py::TestLoadedTripEndpoint::test_existing_trip_returns_200_with_display_config
+ERROR tests/tdd/test_internal_loaded_endpoint.py::TestLoadedTripEndpoint::test_display_config_has_metrics_list
+ERROR tests/tdd/test_internal_loaded_endpoint.py::TestLoadedTripEndpoint::test_unknown_trip_returns_404
+ERROR tests/tdd/test_internal_loaded_endpoint.py::TestLoadedTripEndpoint::test_cross_user_isolation
+ERROR tests/tdd/test_internal_loaded_endpoint.py::TestLoadedTripEndpoint::test_missing_user_id_returns_422
+ERROR tests/tdd/test_internal_loaded_endpoint.py::TestLoadedTripEndpoint::test_response_includes_stages_and_aggregation
+ERROR tests/tdd/test_internal_loaded_endpoint.py::TestLoadedTripEndpoint::test_datetime_serialized_as_isoformat
+============================== 7 errors in 0.29s ===============================

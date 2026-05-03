@@ -89,6 +89,7 @@ func main() {
 	r.Post("/api/gpx/parse", handler.GpxProxyHandler(cfg.PythonCoreURL))
 	r.Post("/api/notify/test", handler.ProxyPostHandler(cfg.PythonCoreURL, "/api/notify/test"))
 	r.Get("/api/compare", handler.CompareProxyHandler(cfg.PythonCoreURL))
+	r.Get("/api/_internal/trip/{id}/loaded", handler.LoadedTripProxyHandler(cfg.PythonCoreURL))
 
 	// Scheduler
 	sched, err := scheduler.New(cfg, s)
