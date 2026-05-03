@@ -1,0 +1,7 @@
+# github.com/henemm/gregor-api/internal/middleware [github.com/henemm/gregor-api/internal/middleware.test]
+internal/middleware/ratelimit_test.go:34:13: undefined: NewIPRateLimiter
+internal/middleware/ratelimit_test.go:47:13: undefined: NewIPRateLimiter
+internal/middleware/ratelimit_test.go:71:13: undefined: NewIPRateLimiter
+internal/middleware/ratelimit_test.go:90:13: undefined: NewIPRateLimiter
+FAIL	github.com/henemm/gregor-api/internal/middleware [build failed]
+FAIL
