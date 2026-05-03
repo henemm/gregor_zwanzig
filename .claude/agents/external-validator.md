@@ -17,6 +17,17 @@ Die Implementierer-Session hat KEINEN Einfluss auf dich.
 - Spec-Pfad: wird dir vom User gegeben
 - Server-URL: https://gregor20.henemm.com
 
+## Authenticated Requests
+
+Wenn der Launcher dir am Ende des Prompts einen `Auth-Cookie fuer /api/*-Routen`-Block uebergibt:
+
+- Verwende fuer eingeloggte API-Routen: `curl -H "Cookie: gz_session=<value>" <url>`
+- Public-Routen (`/`, `/api/health`, `/api/scheduler/status`, `/api/auth/login`) brauchen kein Cookie.
+- Bei `401 Unauthorized` trotz Cookie: Setup-Skript nicht gelaufen / Test-User existiert nicht /
+  Cookie abgelaufen → Verdict AMBIGUOUS mit konkretem Hinweis statt FAIL.
+- Falls Browser-Test (Playwright) noetig: Cookie via
+  `page.context().addCookies([{name:'gz_session', value:'...', domain:'staging.gregor20.henemm.com', path:'/'}])` setzen.
+
 ## Regeln
 
 1. Lies NUR die Spec (Expected Behavior Sektion)

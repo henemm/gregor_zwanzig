@@ -1,0 +1,20 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 8 items
+
+tests/tdd/test_external_validator_auth.py ......ss                       [100%]
+
+=============================== warnings summary ===============================
+tests/tdd/test_external_validator_auth.py:149
+  /home/hem/gregor_zwanzig/tests/tdd/test_external_validator_auth.py:149: PytestUnknownMarkWarning: Unknown pytest.mark.integration - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.integration
+
+tests/tdd/test_external_validator_auth.py:184
+  /home/hem/gregor_zwanzig/tests/tdd/test_external_validator_auth.py:184: PytestUnknownMarkWarning: Unknown pytest.mark.integration - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.integration
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=================== 6 passed, 2 skipped, 2 warnings in 0.03s ===================
