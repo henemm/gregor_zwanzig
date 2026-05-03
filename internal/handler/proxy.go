@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/henemm/gregor-api/internal/middleware"
 )
 
@@ -142,6 +144,36 @@ func appendUserID(rawQuery, userID string) string {
 		return "user_id=" + userID
 	}
 	return rawQuery + "&user_id=" + userID
+}
+
+// LoadedTripProxyHandler proxies GET /api/_internal/trip/{id}/loaded to the
+// Python core. The trip ID is extracted via chi.URLParam, and the user ID
+// from the auth context is appended as ?user_id=... query param.
+// Spec: docs/specs/modules/validator_internal_loaded_endpoint.md (Issue #115).
+func LoadedTripProxyHandler(pythonURL string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+		query := appendUserID("", middleware.UserIDFromContext(r.Context()))
+		url := pythonURL + "/api/_internal/trip/" + id + "/loaded?" + query
+
+		client := &http.Client{Timeout: 10 * time.Second}
+		resp, err := client.Get(url)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadGateway)
+			w.Write([]byte(`{"error":"upstream unreachable"}`))
+			return
+		}
+		defer resp.Body.Close()
+
+		ct := resp.Header.Get("Content-Type")
+		if ct == "" {
+			ct = "application/json"
+		}
+		w.Header().Set("Content-Type", ct)
+		w.WriteHeader(resp.StatusCode)
+		io.Copy(w, resp.Body)
+	}
 }
 
 func GpxProxyHandler(pythonURL string) http.HandlerFunc {

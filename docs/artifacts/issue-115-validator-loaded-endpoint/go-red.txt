@@ -1,0 +1,7 @@
+# github.com/henemm/gregor-api/internal/handler [github.com/henemm/gregor-api/internal/handler.test]
+internal/handler/loaded_trip_proxy_test.go:51:7: undefined: LoadedTripProxyHandler
+internal/handler/loaded_trip_proxy_test.go:69:7: undefined: LoadedTripProxyHandler
+internal/handler/loaded_trip_proxy_test.go:87:7: undefined: LoadedTripProxyHandler
+internal/handler/loaded_trip_proxy_test.go:98:7: undefined: LoadedTripProxyHandler
+FAIL	github.com/henemm/gregor-api/internal/handler [build failed]
+FAIL
