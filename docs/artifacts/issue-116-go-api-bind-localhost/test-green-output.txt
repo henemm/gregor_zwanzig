@@ -1,0 +1,10 @@
+=== RUN   TestLoadDefaults
+--- PASS: TestLoadDefaults (0.00s)
+=== RUN   TestLoadDefaults_HostIsLocalhost
+--- PASS: TestLoadDefaults_HostIsLocalhost (0.00s)
+=== RUN   TestLoadFromEnv_HostOverride
+--- PASS: TestLoadFromEnv_HostOverride (0.00s)
+=== RUN   TestLoadFromEnv
+--- PASS: TestLoadFromEnv (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/config	0.003s
