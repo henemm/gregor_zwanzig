@@ -1,0 +1,7 @@
+# github.com/henemm/gregor-api/internal/config [github.com/henemm/gregor-api/internal/config.test]
+internal/config/config_test.go:46:9: cfg.Host undefined (type *Config has no field or method Host)
+internal/config/config_test.go:47:59: cfg.Host undefined (type *Config has no field or method Host)
+internal/config/config_test.go:65:9: cfg.Host undefined (type *Config has no field or method Host)
+internal/config/config_test.go:66:49: cfg.Host undefined (type *Config has no field or method Host)
+FAIL	github.com/henemm/gregor-api/internal/config [build failed]
+FAIL

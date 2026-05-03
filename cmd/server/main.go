@@ -111,6 +111,6 @@ func main() {
 	r.Post("/api/scheduler/alert-checks", handler.ProxyPostHandler(cfg.PythonCoreURL, "/api/scheduler/alert-checks"))
 	r.Post("/api/scheduler/inbound-commands", handler.ProxyPostHandler(cfg.PythonCoreURL, "/api/scheduler/inbound-commands"))
 
-	log.Printf("Go API listening on :%s, proxying to %s", cfg.Port, cfg.PythonCoreURL)
-	http.ListenAndServe(":"+cfg.Port, r)
+	log.Printf("Go API listening on %s:%s, proxying to %s", cfg.Host, cfg.Port, cfg.PythonCoreURL)
+	http.ListenAndServe(cfg.Host+":"+cfg.Port, r)
 }

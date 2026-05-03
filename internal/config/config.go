@@ -3,6 +3,7 @@ package config
 import "github.com/kelseyhightower/envconfig"
 
 type Config struct {
+	Host              string `envconfig:"HOST" default:"127.0.0.1"`
 	Port              string `envconfig:"PORT" default:"8090"`
 	PythonCoreURL     string `envconfig:"PYTHON_CORE_URL" default:"http://localhost:8000"`
 	DataDir           string `envconfig:"DATA_DIR" default:"data"`
