@@ -51,7 +51,11 @@ func main() {
 	r.Use(authmw.AuthMiddleware(cfg.SessionSecret))
 
 	// Auth endpoints (register/login exempt from AuthMiddleware)
-	r.Post("/api/auth/register", handler.RegisterHandler(s, bcrypt.DefaultCost))
+	// Rate-limit register: 5 attempts per IP per hour (Issue #117).
+	registerLimiter := authmw.NewIPRateLimiter(5, time.Hour)
+	r.Post("/api/auth/register",
+		registerLimiter.Middleware(handler.RegisterHandler(s, bcrypt.DefaultCost)).ServeHTTP,
+	)
 	r.Post("/api/auth/login", handler.LoginHandler(s, cfg.SessionSecret))
 	r.Post("/api/auth/logout", handler.LogoutHandler())
 	r.Post("/api/auth/forgot-password", handler.ForgotPasswordHandler(s, bcrypt.DefaultCost))
