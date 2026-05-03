@@ -103,11 +103,23 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
         )
         stages.append(stage)
 
-    # Parse aggregation config if present
-    aggregation = AggregationConfig()
+    # Parse aggregation config if present.
+    # Default (kein aggregation-Block im JSON) ist ALLGEMEIN — Spec
+    # docs/specs/modules/loader_display_config_default.md. Wir nutzen NICHT
+    # den DTO-Default `AggregationConfig()` (= WINTERSPORT), weil dann der
+    # else-Branch fuer den display_config-Default unten faelschlicherweise
+    # ein wintersport-Template waehlen wuerde.
+    aggregation = AggregationConfig.for_profile(ActivityProfile.ALLGEMEIN)
     if "aggregation" in data:
         agg_data = data["aggregation"]
-        profile = ActivityProfile(agg_data.get("profile", "wintersport"))
+        # Issue #111 Validator-Finding: agg_data.get("profile") kann None sein
+        # (Key vorhanden, aber Wert null). Defensiv auf ALLGEMEIN mappen.
+        profile_str = agg_data.get("profile") or "allgemein"
+        try:
+            profile = ActivityProfile(profile_str)
+        except ValueError:
+            # Unbekannter Profile-String -> ALLGEMEIN-Fallback (kein Crash)
+            profile = ActivityProfile.ALLGEMEIN
         aggregation = AggregationConfig.for_profile(profile)
 
         # Apply overrides
@@ -535,7 +547,16 @@ def load_all_trips(user_id: str = "default") -> List[Trip]:
     for path in trips_dir.glob("*.json"):
         try:
             trips.append(load_trip(path))
-        except LoaderError:
+        except Exception as e:
+            # Issue #111 Validator-Finding: ein einzelner kaputter Trip darf
+            # NICHT den gesamten Load fuer alle anderen Trips desselben Users
+            # blockieren. Frueher fing das `except LoaderError:` nur einen Teil
+            # ab — generische Exceptions (z.B. ValueError aus
+            # ActivityProfile(None)) propagierten als HTTP 500.
+            import logging
+            logging.getLogger(__name__).warning(
+                "Skipping corrupt trip %s: %s", path.name, e
+            )
             continue
     return trips
 
