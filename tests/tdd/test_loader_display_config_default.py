@@ -79,25 +79,60 @@ class TestLoaderDisplayConfigDefault:
 
     def test_trip_without_aggregation_uses_allgemein_fallback(self):
         """GIVEN Trip ohne aggregation-Block
-        THEN  Default nutzt ALLGEMEIN-Template (nicht crashen)."""
+        THEN  Default nutzt ALLGEMEIN-Template (NICHT wintersport)."""
         data = _minimal_trip()
 
         trip = load_trip_from_dict(data)
 
         assert trip.display_config is not None
         enabled_ids = {m.metric_id for m in trip.display_config.metrics if m.enabled}
+        # Issue #111 Validator-Finding: vorher lieferte der Loader den
+        # DTO-Default AggregationConfig() = WINTERSPORT, dadurch wurden
+        # snow-Metriken faelschlich enabled. ALLGEMEIN-Template hat KEINE
+        # snow-Metriken. (`temperature` waere ein zu schwacher Check, da
+        # in beiden Templates enthalten.)
+        assert "fresh_snow" not in enabled_ids, (
+            f"ALLGEMEIN-Fallback darf KEINE wintersport-spezifischen Metriken "
+            f"enthalten. Enabled: {enabled_ids}"
+        )
+        assert "snow_depth" not in enabled_ids, (
+            f"ALLGEMEIN-Fallback darf KEINE wintersport-spezifischen Metriken "
+            f"enthalten. Enabled: {enabled_ids}"
+        )
         assert "temperature" in enabled_ids, (
             f"ALLGEMEIN-Template sollte temperature enthalten. Enabled: {enabled_ids}"
         )
 
+    def test_trip_with_null_profile_uses_allgemein_fallback(self):
+        """Issue #111 Validator-Finding (CRITICAL): aggregation.profile=null
+        darf NICHT crashen. Vorher: ActivityProfile(None) -> ValueError -> HTTP 500.
+        Jetzt: defensiv auf ALLGEMEIN gemappt."""
+        data = _minimal_trip(aggregation={"profile": None})
+
+        # Darf nicht crashen
+        trip = load_trip_from_dict(data)
+
+        assert trip.display_config is not None
+        enabled_ids = {m.metric_id for m in trip.display_config.metrics if m.enabled}
+        assert "fresh_snow" not in enabled_ids, (
+            f"null-Profile soll auf ALLGEMEIN fallen, nicht wintersport. "
+            f"Enabled: {enabled_ids}"
+        )
+
     def test_trip_with_unknown_profile_falls_back_to_allgemein(self):
         """Unbekanntes Profile → ALLGEMEIN-Fallback (kein Crash)."""
-        data = _minimal_trip(aggregation={"profile": "summer_trekking"})
+        # 'summer_trekking' ist ein gueltiges Profile — fuer den Unknown-Test
+        # brauchen wir einen String, der definitiv nicht im ActivityProfile-Enum
+        # existiert.
+        data = _minimal_trip(aggregation={"profile": "completely_unknown_profile"})
 
         trip = load_trip_from_dict(data)
 
         assert trip.display_config is not None
         assert len(trip.display_config.metrics) > 0
+        enabled_ids = {m.metric_id for m in trip.display_config.metrics if m.enabled}
+        # ALLGEMEIN-Fallback bei unbekanntem String
+        assert "fresh_snow" not in enabled_ids
 
     def test_explicit_display_config_is_not_overridden_by_default(self):
         """GIVEN Trip mit eigenem display_config
@@ -170,6 +205,52 @@ class TestLoaderDisplayConfigDefaultRealFiles:
             "Backfill-Voraussetzung: GR221 JSON braucht display_config-Block direkt im File, "
             "weil test_alert_enabled das File direkt mutiert (am Loader vorbei)."
         )
+
+
+class TestLoadAllTripsResilience:
+    """Issue #111 Validator-Finding (HIGH): ein einzelner kaputter Trip darf
+    NICHT andere Trips desselben Users blockieren."""
+
+    def test_load_all_trips_skips_corrupt_files(self, tmp_path, monkeypatch):
+        """GIVEN ein User-Verzeichnis mit 1 OK-Trip + 1 broken Trip
+        WHEN  load_all_trips
+        THEN  OK-Trip wird geliefert, broken Trip wird einfach uebersprungen."""
+        from app import loader as loader_mod
+
+        user_dir = tmp_path / "data" / "users" / "default"
+        trips_dir = user_dir / "trips"
+        trips_dir.mkdir(parents=True)
+
+        # OK-Trip
+        ok_trip = _minimal_trip()
+        ok_trip["id"] = "ok-trip"
+        (trips_dir / "ok-trip.json").write_text(json.dumps(ok_trip))
+
+        # Broken-Trip: invalid JSON
+        (trips_dir / "broken-json.json").write_text("{not valid json")
+
+        # Broken-Trip: valid JSON aber crasht im _parse_trip
+        # (date=invalid wirft ValueError aus date.fromisoformat)
+        bad_data = _minimal_trip()
+        bad_data["id"] = "bad-date"
+        bad_data["stages"][0]["date"] = "not-a-date"
+        (trips_dir / "bad-date.json").write_text(json.dumps(bad_data))
+
+        # Pfad-Helper auf tmp_path umbiegen
+        monkeypatch.setattr(
+            loader_mod,
+            "get_trips_dir",
+            lambda user_id="default": trips_dir,
+        )
+
+        trips = loader_mod.load_all_trips(user_id="default")
+
+        # Genau 1 Trip (der OK-Trip) — broken Files uebersprungen, kein Crash.
+        assert len(trips) == 1, (
+            f"Erwartet: nur OK-Trip geladen. Gefunden: "
+            f"{[t.id for t in trips]}"
+        )
+        assert trips[0].id == "ok-trip"
 
 
 class TestWeatherChangeDetectionIntegrationWithDefault:
