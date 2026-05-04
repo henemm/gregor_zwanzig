@@ -1,0 +1,217 @@
+=== RUN   TestValidCookie_Returns200
+--- PASS: TestValidCookie_Returns200 (0.00s)
+=== RUN   TestNoCookie_Returns401
+--- PASS: TestNoCookie_Returns401 (0.00s)
+=== RUN   TestExpiredCookie_Returns401
+--- PASS: TestExpiredCookie_Returns401 (0.00s)
+=== RUN   TestTamperedHMAC_Returns401
+--- PASS: TestTamperedHMAC_Returns401 (0.00s)
+=== RUN   TestMalformedCookie_Returns401
+--- PASS: TestMalformedCookie_Returns401 (0.00s)
+=== RUN   TestHealthEndpoint_NoAuthRequired
+--- PASS: TestHealthEndpoint_NoAuthRequired (0.00s)
+=== RUN   TestWrongSecret_Returns401
+--- PASS: TestWrongSecret_Returns401 (0.00s)
+=== RUN   TestUserIDFromContext_EmptyWithoutMiddleware
+--- PASS: TestUserIDFromContext_EmptyWithoutMiddleware (0.00s)
+=== RUN   TestIPRateLimiter_AllowsBurst
+--- PASS: TestIPRateLimiter_AllowsBurst (0.00s)
+=== RUN   TestIPRateLimiter_BlocksSixth
+--- PASS: TestIPRateLimiter_BlocksSixth (0.00s)
+=== RUN   TestIPRateLimiter_DifferentIPsIndependent
+--- PASS: TestIPRateLimiter_DifferentIPsIndependent (0.00s)
+=== RUN   TestIPRateLimiter_PrefersXRealIP
+--- PASS: TestIPRateLimiter_PrefersXRealIP (0.00s)
+=== RUN   TestSignSessionFormat
+--- PASS: TestSignSessionFormat (0.00s)
+=== RUN   TestSignSessionValidateRoundtrip
+--- PASS: TestSignSessionValidateRoundtrip (0.00s)
+=== RUN   TestSignSessionInvalidWithWrongSecret
+--- PASS: TestSignSessionInvalidWithWrongSecret (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/middleware	(cached)
+=== RUN   TestRegisterHandlerSuccess
+--- PASS: TestRegisterHandlerSuccess (0.00s)
+=== RUN   TestRegisterHandlerDuplicateUser
+--- PASS: TestRegisterHandlerDuplicateUser (0.00s)
+=== RUN   TestRegisterHandlerShortUsername
+--- PASS: TestRegisterHandlerShortUsername (0.00s)
+=== RUN   TestRegisterHandlerShortPassword
+--- PASS: TestRegisterHandlerShortPassword (0.00s)
+=== RUN   TestLoginHandlerSuccess
+--- PASS: TestLoginHandlerSuccess (0.00s)
+=== RUN   TestLoginHandlerWrongPassword
+--- PASS: TestLoginHandlerWrongPassword (0.00s)
+=== RUN   TestLoginHandlerUserNotFound
+--- PASS: TestLoginHandlerUserNotFound (0.00s)
+=== RUN   TestLoginHandlerMalformedJSON
+--- PASS: TestLoginHandlerMalformedJSON (0.00s)
+=== RUN   TestChangePasswordHandler_Success
+--- PASS: TestChangePasswordHandler_Success (0.00s)
+=== RUN   TestChangePasswordHandler_WrongOldPassword
+--- PASS: TestChangePasswordHandler_WrongOldPassword (0.00s)
+=== RUN   TestChangePasswordHandler_NewPasswordTooShort
+--- PASS: TestChangePasswordHandler_NewPasswordTooShort (0.00s)
+=== RUN   TestDeleteAccountSuccess
+--- PASS: TestDeleteAccountSuccess (0.00s)
+=== RUN   TestDeleteAccountClearsCookie
+--- PASS: TestDeleteAccountClearsCookie (0.00s)
+=== RUN   TestDeleteAccountUserNotFound
+--- PASS: TestDeleteAccountUserNotFound (0.00s)
+=== RUN   TestForecastHandler_ValidRequest_Returns200
+2026/05/04 07:32:03 DEBUG: Selected model meteofrance_arome (1.3km) for 39.7000, 3.0000
+--- PASS: TestForecastHandler_ValidRequest_Returns200 (0.53s)
+=== RUN   TestForecastHandler_MissingLat_Returns400
+--- PASS: TestForecastHandler_MissingLat_Returns400 (0.00s)
+=== RUN   TestForecastHandler_InvalidLat_Returns400
+--- PASS: TestForecastHandler_InvalidLat_Returns400 (0.00s)
+=== RUN   TestGpxProxyHandlerSuccess
+--- PASS: TestGpxProxyHandlerSuccess (0.00s)
+=== RUN   TestGpxProxyHandlerForwardsQueryParams
+--- PASS: TestGpxProxyHandlerForwardsQueryParams (0.00s)
+=== RUN   TestGpxProxyHandlerPythonDown
+--- PASS: TestGpxProxyHandlerPythonDown (0.00s)
+=== RUN   TestGpxProxyHandlerContentTypeForwarded
+--- PASS: TestGpxProxyHandlerContentTypeForwarded (0.00s)
+=== RUN   TestHealthHandlerPythonUp
+--- PASS: TestHealthHandlerPythonUp (0.00s)
+=== RUN   TestHealthHandlerPythonDown
+--- PASS: TestHealthHandlerPythonDown (0.00s)
+=== RUN   TestProxyHandlerSuccess
+--- PASS: TestProxyHandlerSuccess (0.00s)
+=== RUN   TestProxyHandlerPythonDown
+--- PASS: TestProxyHandlerPythonDown (0.00s)
+=== RUN   TestProxyHandlerForwardsQueryParams
+--- PASS: TestProxyHandlerForwardsQueryParams (0.00s)
+=== RUN   TestLocationsHandler
+--- PASS: TestLocationsHandler (0.00s)
+=== RUN   TestLoadedTripProxyHandlerForwardsToPython
+--- PASS: TestLoadedTripProxyHandlerForwardsToPython (0.00s)
+=== RUN   TestLoadedTripProxyHandlerPropagatesPythonBody
+--- PASS: TestLoadedTripProxyHandlerPropagatesPythonBody (0.00s)
+=== RUN   TestLoadedTripProxyHandlerPropagates404
+--- PASS: TestLoadedTripProxyHandlerPropagates404 (0.00s)
+=== RUN   TestLoadedTripProxyHandlerExtractsTripIDFromPath
+--- PASS: TestLoadedTripProxyHandlerExtractsTripIDFromPath (0.00s)
+=== RUN   TestCreateLocationHandler
+--- PASS: TestCreateLocationHandler (0.00s)
+=== RUN   TestCreateLocationHandlerInvalidName
+--- PASS: TestCreateLocationHandlerInvalidName (0.00s)
+=== RUN   TestCreateLocationHandlerZeroCoords
+--- PASS: TestCreateLocationHandlerZeroCoords (0.00s)
+=== RUN   TestUpdateLocationHandler
+--- PASS: TestUpdateLocationHandler (0.00s)
+=== RUN   TestUpdateLocationHandlerNotFound
+--- PASS: TestUpdateLocationHandlerNotFound (0.00s)
+=== RUN   TestDeleteLocationHandler
+--- PASS: TestDeleteLocationHandler (0.00s)
+=== RUN   TestLogoutHandlerClearsCookie
+--- PASS: TestLogoutHandlerClearsCookie (0.00s)
+=== RUN   TestLogoutBlacklistsSession
+--- PASS: TestLogoutBlacklistsSession (0.00s)
+=== RUN   TestLogoutWithoutCookieStillReturns200
+--- PASS: TestLogoutWithoutCookieStillReturns200 (0.00s)
+=== RUN   TestForgotPasswordReturns200ForExistingUser
+2026/05/04 07:32:03 Password reset link: /reset-password?user=alice&token=d6d5177cc610db67c05af85f459fe2bec2088227798550f98e0298018f79067a
+--- PASS: TestForgotPasswordReturns200ForExistingUser (0.00s)
+=== RUN   TestForgotPasswordReturns200ForNonExistentUser
+--- PASS: TestForgotPasswordReturns200ForNonExistentUser (0.00s)
+=== RUN   TestResetPasswordSuccess
+--- PASS: TestResetPasswordSuccess (0.01s)
+=== RUN   TestResetPasswordExpiredToken
+--- PASS: TestResetPasswordExpiredToken (0.00s)
+=== RUN   TestResetPasswordWrongToken
+--- PASS: TestResetPasswordWrongToken (0.00s)
+=== RUN   TestResetPasswordShortPassword
+--- PASS: TestResetPasswordShortPassword (0.00s)
+=== RUN   TestGetProfileHandler
+--- PASS: TestGetProfileHandler (0.00s)
+=== RUN   TestGetProfileHandlerNotFound
+--- PASS: TestGetProfileHandlerNotFound (0.00s)
+=== RUN   TestUpdateProfileHandler
+--- PASS: TestUpdateProfileHandler (0.00s)
+=== RUN   TestUpdateProfilePreservesPasswordHash
+--- PASS: TestUpdateProfilePreservesPasswordHash (0.00s)
+=== RUN   TestRegisterCreatesUserDirs
+--- PASS: TestRegisterCreatesUserDirs (0.00s)
+=== RUN   TestSubscriptionsHandler
+--- PASS: TestSubscriptionsHandler (0.00s)
+=== RUN   TestSubscriptionHandlerFound
+--- PASS: TestSubscriptionHandlerFound (0.00s)
+=== RUN   TestSubscriptionHandlerNotFound
+--- PASS: TestSubscriptionHandlerNotFound (0.00s)
+=== RUN   TestCreateSubscriptionHandler
+--- PASS: TestCreateSubscriptionHandler (0.00s)
+=== RUN   TestCreateSubscriptionHandlerInvalid
+--- PASS: TestCreateSubscriptionHandlerInvalid (0.00s)
+=== RUN   TestCreateSubscriptionHandlerDuplicateID
+--- PASS: TestCreateSubscriptionHandlerDuplicateID (0.00s)
+=== RUN   TestUpdateSubscriptionHandler
+--- PASS: TestUpdateSubscriptionHandler (0.00s)
+=== RUN   TestUpdateSubscriptionHandlerNotFound
+--- PASS: TestUpdateSubscriptionHandlerNotFound (0.00s)
+=== RUN   TestDeleteSubscriptionHandler
+--- PASS: TestDeleteSubscriptionHandler (0.00s)
+=== RUN   TestTripsHandler
+--- PASS: TestTripsHandler (0.00s)
+=== RUN   TestTripHandlerFound
+    trip_test.go:49: expected 200, got 404
+--- FAIL: TestTripHandlerFound (0.00s)
+=== RUN   TestTripHandlerNotFound
+--- PASS: TestTripHandlerNotFound (0.00s)
+=== RUN   TestCreateTripHandler
+--- PASS: TestCreateTripHandler (0.00s)
+=== RUN   TestCreateTripHandlerInvalid
+--- PASS: TestCreateTripHandlerInvalid (0.00s)
+=== RUN   TestCreateTripHandlerZeroCoords
+--- PASS: TestCreateTripHandlerZeroCoords (0.00s)
+=== RUN   TestUpdateTripHandler
+--- PASS: TestUpdateTripHandler (0.00s)
+=== RUN   TestUpdateTripHandlerNotFound
+--- PASS: TestUpdateTripHandlerNotFound (0.00s)
+=== RUN   TestDeleteTripHandler
+--- PASS: TestDeleteTripHandler (0.00s)
+=== RUN   TestUpdateTripHandlerPreservesAggregation
+--- PASS: TestUpdateTripHandlerPreservesAggregation (0.00s)
+=== RUN   TestUpdateTripHandlerPreservesReportConfig
+--- PASS: TestUpdateTripHandlerPreservesReportConfig (0.00s)
+=== RUN   TestUpdateTripHandlerPreservesWeatherConfig
+--- PASS: TestUpdateTripHandlerPreservesWeatherConfig (0.00s)
+=== RUN   TestUpdateTripHandlerPreservesDisplayConfig
+--- PASS: TestUpdateTripHandlerPreservesDisplayConfig (0.00s)
+=== RUN   TestUpdateTripHandlerPreservesAvalancheRegions
+--- PASS: TestUpdateTripHandlerPreservesAvalancheRegions (0.00s)
+=== RUN   TestUpdateTripHandlerReplacesAggregationWhenSent
+--- PASS: TestUpdateTripHandlerReplacesAggregationWhenSent (0.00s)
+=== RUN   TestUpdateTripHandlerKeepsAllConfigsOnNameOnlyUpdate
+--- PASS: TestUpdateTripHandlerKeepsAllConfigsOnNameOnlyUpdate (0.00s)
+=== RUN   TestLocationsHandlerUsesContextUserId
+--- PASS: TestLocationsHandlerUsesContextUserId (0.00s)
+=== RUN   TestCreateLocationHandlerWritesToUserDir
+--- PASS: TestCreateLocationHandlerWritesToUserDir (0.00s)
+=== RUN   TestTripsHandlerUsesContextUserId
+--- PASS: TestTripsHandlerUsesContextUserId (0.00s)
+=== RUN   TestDeleteTripHandlerUsesContextUserId
+--- PASS: TestDeleteTripHandlerUsesContextUserId (0.00s)
+=== RUN   TestGetTripWeatherConfigFound
+    weather_config_test.go:30: expected 200, got 404
+--- FAIL: TestGetTripWeatherConfigFound (0.00s)
+=== RUN   TestGetTripWeatherConfigNotFound
+--- PASS: TestGetTripWeatherConfigNotFound (0.00s)
+=== RUN   TestPutTripWeatherConfig
+--- PASS: TestPutTripWeatherConfig (0.00s)
+=== RUN   TestPutTripWeatherConfigNotFound
+--- PASS: TestPutTripWeatherConfigNotFound (0.00s)
+=== RUN   TestPutTripWeatherConfigBadJSON
+--- PASS: TestPutTripWeatherConfigBadJSON (0.00s)
+=== RUN   TestGetLocationWeatherConfigNotFound
+--- PASS: TestGetLocationWeatherConfigNotFound (0.00s)
+=== RUN   TestPutLocationWeatherConfig
+--- PASS: TestPutLocationWeatherConfig (0.00s)
+=== RUN   TestGetSubscriptionWeatherConfigNotFound
+--- PASS: TestGetSubscriptionWeatherConfigNotFound (0.00s)
+=== RUN   TestPutSubscriptionWeatherConfig
+--- PASS: TestPutSubscriptionWeatherConfig (0.00s)
+FAIL
+FAIL	github.com/henemm/gregor-api/internal/handler	0.610s
+FAIL
