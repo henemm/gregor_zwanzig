@@ -1,0 +1,38 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 3 items
+
+tests/tdd/test_ssr_cache_headers.py F..                                  [100%]
+
+=================================== FAILURES ===================================
+____________________ test_html_response_has_no_cache_header ____________________
+
+    def test_html_response_has_no_cache_header() -> None:
+        """
+        GIVEN: Eine SSR-HTML-Page (z.B. /login, oeffentlich erreichbar)
+        WHEN:  GET-Request gegen den deployed Frontend-Server
+        THEN:  Response-Header `cache-control` enthaelt `no-cache`
+        """
+        r = _fetch("/login")
+        assert r.status_code == 200
+        ct = r.headers.get("content-type", "")
+        assert "text/html" in ct, f"Erwartet text/html, bekam: {ct!r}"
+    
+        cache_control = r.headers.get("cache-control", "")
+>       assert "no-cache" in cache_control.lower(), (
+            f"SSR-HTML-Response muss `cache-control: no-cache` enthalten, "
+            f"tatsaechlicher Header: {cache_control!r}. "
+            f"Ohne diesen Header cached Safari heuristisch (Issue #125)."
+        )
+E       AssertionError: SSR-HTML-Response muss `cache-control: no-cache` enthalten, tatsaechlicher Header: ''. Ohne diesen Header cached Safari heuristisch (Issue #125).
+E       assert 'no-cache' in ''
+E        +  where '' = <built-in method lower of str object at 0xb3b3f0>()
+E        +    where <built-in method lower of str object at 0xb3b3f0> = ''.lower
+
+tests/tdd/test_ssr_cache_headers.py:44: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_ssr_cache_headers.py::test_html_response_has_no_cache_header
+========================= 1 failed, 2 passed in 0.16s ==========================
