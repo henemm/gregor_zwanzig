@@ -14,6 +14,7 @@ from nicegui import ui
 from app.loader import delete_trip, get_trips_dir, load_all_trips, load_trip, save_trip
 from app.models import EtappenConfig
 from app.trip import Stage, TimeWindow, Trip, Waypoint
+from core.natural_sort import natural_sort_key
 from web.pages.gpx_upload import (
     compute_full_segmentation,
     process_gpx_upload,
@@ -76,6 +77,107 @@ def gpx_to_stage_data(
     }
 
 
+def compute_default_start_date(stages_data: list[dict]) -> date:
+    """Default start date for a Multi-GPX-Upload commit row.
+
+    Returns last_stage_date + 1 day if stages exist, otherwise date.today().
+    Used by the Multi-Upload-UI to pre-fill the date picker.
+
+    Spec: docs/specs/modules/gpx_multi_import.md
+    """
+    if not stages_data:
+        return date.today()
+    try:
+        last = date.fromisoformat(stages_data[-1]["date"])
+    except (KeyError, TypeError, ValueError):
+        return date.today()
+    return last + timedelta(days=1)
+
+
+def process_bulk_gpx_uploads(
+    files: list[tuple[str, bytes]],
+    start_date: date,
+    upload_dir: Path = _GPX_UPLOAD_DIR,
+) -> list[dict]:
+    """Process multiple uploaded GPX files in natural-sort order.
+
+    Behavior (per spec docs/specs/modules/gpx_multi_import.md):
+        1. Filenames are sorted via natural_sort_key (numeric-aware).
+        2. Each file is parsed individually via gpx_to_stage_data().
+        3. Dates are propagated sequentially: first valid stage gets
+           start_date, second gets start_date+1, etc.
+        4. Corrupt files are SKIPPED — they do not consume a date slot.
+           Valid files following a corrupt one still get gapless dates.
+
+    Args:
+        files: List of (filename, content_bytes) tuples as collected
+            from the multi-upload buffer (browser FileList order).
+        start_date: First valid stage's date.
+        upload_dir: Directory to save the GPX file copies.
+
+    Returns:
+        List of stage dicts (same shape as gpx_to_stage_data output),
+        in natural-sort order, with sequential gapless dates.
+
+    Note: Pure function — no ui.notify, no UI side effects. The caller
+    handles user-facing messages based on the return value.
+    """
+    sorted_files = sorted(files, key=lambda t: natural_sort_key(t[0]))
+
+    stages: list[dict] = []
+    for filename, content in sorted_files:
+        stage_date = start_date + timedelta(days=len(stages))
+        try:
+            stage_dict = gpx_to_stage_data(
+                content, filename, stage_date, upload_dir=upload_dir,
+            )
+            stages.append(stage_dict)
+        except Exception:
+            # Corrupt / unsupported file — skip, do not consume a date slot.
+            continue
+    return stages
+
+
+def make_commit_bulk_gpx_handler(
+    date_input,
+    pending_ref: list,
+    stages_data: list,
+    refresh_commit,
+    refresh_stages,
+):
+    """Safari-Factory: commit buffered GPX uploads as stages.
+
+    Reads start_date from the picker, calls the pure
+    process_bulk_gpx_uploads(), updates dialog state, refreshes both
+    the commit row and the stage list, and emits a user-facing notify.
+    Used by both New-Trip and Edit-Trip dialogs (Spec #127).
+    """
+    def do_commit_bulk_gpx() -> None:
+        if not pending_ref:
+            return
+        try:
+            start_date = date.fromisoformat(date_input.value or "")
+        except (TypeError, ValueError):
+            ui.notify("Bitte Startdatum wählen", type="negative")
+            return
+        files = list(pending_ref)
+        new_stages = process_bulk_gpx_uploads(files, start_date)
+        added = len(new_stages)
+        skipped = len(files) - added
+        stages_data.extend(new_stages)
+        pending_ref.clear()
+        refresh_commit()
+        refresh_stages()
+        if added:
+            msg = f"{added} Etappe(n) angelegt ab {start_date.isoformat()}"
+            if skipped:
+                msg += f" ({skipped} übersprungen)"
+            ui.notify(msg, type="positive")
+        elif skipped:
+            ui.notify(f"{skipped} Datei(en) übersprungen", type="warning")
+    return do_commit_bulk_gpx
+
+
 def render_header() -> None:
     """Render navigation header."""
     with ui.header().classes("items-center justify-between"):
@@ -125,6 +227,10 @@ def render_trips() -> None:
 
                     ui.separator().classes("my-4")
 
+                    # Closure-buffer for multi-upload (Spec #127):
+                    # collected (filename, bytes) tuples until user commits.
+                    pending_gpx: List[tuple[str, bytes]] = []
+
                     with ui.row().classes("items-center justify-between w-full"):
                         ui.label("Stages").classes("text-h6")
 
@@ -143,33 +249,46 @@ def render_trips() -> None:
                         with ui.row().classes("gap-2"):
                             ui.button("Add Stage", on_click=make_add_stage_handler(), icon="add").props("outline size=sm")
 
-                            def make_add_stage_gpx_handler():
-                                """Factory: add new stage from GPX file."""
-                                async def do_upload(e):
+                            def make_buffer_gpx_handler():
+                                """Factory: buffer uploaded GPX files until user commits."""
+                                async def do_buffer(e):
                                     content = e.content.read()
-                                    filename = e.name
-                                    if stages_data:
-                                        last_date = date.fromisoformat(stages_data[-1]["date"])
-                                        stage_date = last_date + timedelta(days=1)
-                                    else:
-                                        stage_date = date.today()
-                                    try:
-                                        stage_dict = gpx_to_stage_data(content, filename, stage_date)
-                                        stages_data.append(stage_dict)
-                                        stages_ui.refresh()
-                                        n_wps = len(stage_dict["waypoints"])
-                                        ui.notify(f"Stage '{stage_dict['name']}' aus GPX: {n_wps} Waypoints",
-                                                  type="positive")
-                                    except Exception as err:
-                                        ui.notify(f"GPX-Fehler: {err}", type="negative")
-                                return do_upload
+                                    pending_gpx.append((e.name, content))
+                                    commit_row.refresh()
+                                return do_buffer
 
                             ui.upload(
-                                on_upload=make_add_stage_gpx_handler(),
+                                on_upload=make_buffer_gpx_handler(),
                                 auto_upload=True,
-                                max_files=1,
-                                label="Stage from GPX",
-                            ).props('accept=".gpx" flat dense').classes("w-44")
+                                max_files=-1,
+                                label="Add Stage from GPX",
+                            ).props('accept=".gpx" flat dense multiple').classes("w-44")
+
+                    @ui.refreshable
+                    def commit_row() -> None:
+                        """Render commit row when buffer has files; empty when not."""
+                        if not pending_gpx:
+                            return
+                        default_date = compute_default_start_date(stages_data).isoformat()
+                        with ui.row().classes("items-center gap-2 w-full mt-2"):
+                            ui.label(f"{len(pending_gpx)} Datei(en) bereit").classes("text-sm")
+                            date_input = ui.input(
+                                "Startdatum",
+                                value=default_date,
+                            ).props("dense type=date").classes("w-44")
+                            ui.button(
+                                f"{len(pending_gpx)} Etappen anlegen",
+                                on_click=make_commit_bulk_gpx_handler(
+                                    date_input,
+                                    pending_gpx,
+                                    stages_data,
+                                    commit_row.refresh,
+                                    stages_ui.refresh,
+                                ),
+                                icon="check",
+                            ).props("color=primary size=sm")
+
+                    commit_row()
 
                     @ui.refreshable
                     def stages_ui() -> None:
@@ -404,6 +523,10 @@ def render_trips() -> None:
 
                     ui.separator().classes("my-4")
 
+                    # Closure-buffer for multi-upload (Spec #127):
+                    # collected (filename, bytes) tuples until user commits.
+                    pending_gpx_edit: List[tuple[str, bytes]] = []
+
                     with ui.row().classes("items-center justify-between w-full"):
                         ui.label("Stages").classes("text-h6")
 
@@ -422,33 +545,46 @@ def render_trips() -> None:
                         with ui.row().classes("gap-2"):
                             ui.button("Add Stage", on_click=make_add_stage_edit_handler(), icon="add").props("outline size=sm")
 
-                            def make_add_stage_gpx_edit_handler():
-                                """Factory: add new stage from GPX file (edit dialog)."""
-                                async def do_upload(e):
+                            def make_buffer_gpx_edit_handler():
+                                """Factory: buffer uploaded GPX files until user commits."""
+                                async def do_buffer(e):
                                     content = e.content.read()
-                                    filename = e.name
-                                    if stages_data:
-                                        last_date = date.fromisoformat(stages_data[-1]["date"])
-                                        stage_date = last_date + timedelta(days=1)
-                                    else:
-                                        stage_date = date.today()
-                                    try:
-                                        stage_dict = gpx_to_stage_data(content, filename, stage_date)
-                                        stages_data.append(stage_dict)
-                                        stages_ui_edit.refresh()
-                                        n_wps = len(stage_dict["waypoints"])
-                                        ui.notify(f"Stage '{stage_dict['name']}' aus GPX: {n_wps} Waypoints",
-                                                  type="positive")
-                                    except Exception as err:
-                                        ui.notify(f"GPX-Fehler: {err}", type="negative")
-                                return do_upload
+                                    pending_gpx_edit.append((e.name, content))
+                                    commit_row_edit.refresh()
+                                return do_buffer
 
                             ui.upload(
-                                on_upload=make_add_stage_gpx_edit_handler(),
+                                on_upload=make_buffer_gpx_edit_handler(),
                                 auto_upload=True,
-                                max_files=1,
-                                label="Stage from GPX",
-                            ).props('accept=".gpx" flat dense').classes("w-44")
+                                max_files=-1,
+                                label="Add Stage from GPX",
+                            ).props('accept=".gpx" flat dense multiple').classes("w-44")
+
+                    @ui.refreshable
+                    def commit_row_edit() -> None:
+                        """Render commit row when buffer has files; empty when not."""
+                        if not pending_gpx_edit:
+                            return
+                        default_date = compute_default_start_date(stages_data).isoformat()
+                        with ui.row().classes("items-center gap-2 w-full mt-2"):
+                            ui.label(f"{len(pending_gpx_edit)} Datei(en) bereit").classes("text-sm")
+                            date_input = ui.input(
+                                "Startdatum",
+                                value=default_date,
+                            ).props("dense type=date").classes("w-44")
+                            ui.button(
+                                f"{len(pending_gpx_edit)} Etappen anlegen",
+                                on_click=make_commit_bulk_gpx_handler(
+                                    date_input,
+                                    pending_gpx_edit,
+                                    stages_data,
+                                    commit_row_edit.refresh,
+                                    stages_ui_edit.refresh,
+                                ),
+                                icon="check",
+                            ).props("color=primary size=sm")
+
+                    commit_row_edit()
 
                     @ui.refreshable
                     def stages_ui_edit() -> None:
