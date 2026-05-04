@@ -1,0 +1,243 @@
+[1A[2K[2m[WebServer] [22m[33m4:22:52 PM [vite-plugin-svelte] src/routes/trips/+page.svelte:12:28 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+
+[1A[2K[2m[WebServer] [22m10:   let { data } = $props();
+[2m[WebServer] [22m11: 
+[2m[WebServer] [22m12:   let trips: Trip[] = $state(data.trips);
+[2m[WebServer] [22m                                     ^
+[2m[WebServer] [22m13:   let dialogMode: 'create' | 'edit' | null = $state(null);
+[2m[WebServer] [22m14:   let editTarget: Trip | null = $state(null);
+
+[1A[2K[2m[WebServer] [22m[33m4:22:52 PM [vite-plugin-svelte] src/lib/components/TripForm.svelte:19:23 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m17:   const today = () => new Date().toISOString().slice(0, 10);
+[2m[WebServer] [22m18: 
+[2m[WebServer] [22m19:   let tripName = $state(trip?.name ?? '');
+[2m[WebServer] [22m                                ^
+[2m[WebServer] [22m20:   let tripId = $state(trip?.id ?? '');
+[2m[WebServer] [22m21:   let stages: Stage[] = $state(
+[2m[WebServer] [22m[33m4:22:52 PM [vite-plugin-svelte] src/lib/components/TripForm.svelte:20:21 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m18: 
+[2m[WebServer] [22m19:   let tripName = $state(trip?.name ?? '');
+[2m[WebServer] [22m20:   let tripId = $state(trip?.id ?? '');
+[2m[WebServer] [22m                              ^
+[2m[WebServer] [22m21:   let stages: Stage[] = $state(
+[2m[WebServer] [22m22:     trip ? JSON.parse(JSON.stringify(trip.stages)) : []
+[2m[WebServer] [22m[33m4:22:52 PM [vite-plugin-svelte] src/lib/components/TripForm.svelte:22:2 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m20:   let tripId = $state(trip?.id ?? '');
+[2m[WebServer] [22m21:   let stages: Stage[] = $state(
+[2m[WebServer] [22m22:     trip ? JSON.parse(JSON.stringify(trip.stages)) : []
+[2m[WebServer] [22m            ^
+[2m[WebServer] [22m23:   );
+[2m[WebServer] [22m24:   let error = $state('');
+[2m[WebServer] [22m[33m4:22:52 PM [vite-plugin-svelte] src/lib/components/TripForm.svelte:22:35 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m20:   let tripId = $state(trip?.id ?? '');
+[2m[WebServer] [22m21:   let stages: Stage[] = $state(
+[2m[WebServer] [22m22:     trip ? JSON.parse(JSON.stringify(trip.stages)) : []
+[2m[WebServer] [22m                                             ^
+[2m[WebServer] [22m23:   );
+[2m[WebServer] [22m24:   let error = $state('');
+
+[1A[2K[2m[WebServer] [22m[33m4:22:54 PM [vite-plugin-svelte] src/routes/trips/+page.svelte:12:28 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m10:   let { data } = $props();
+[2m[WebServer] [22m11: 
+[2m[WebServer] [22m12:   let trips: Trip[] = $state(data.trips);
+[2m[WebServer] [22m                                     ^
+[2m[WebServer] [22m13:   let dialogMode: 'create' | 'edit' | null = $state(null);
+[2m[WebServer] [22m14:   let editTarget: Trip | null = $state(null);
+
+[1A[2K[2m[WebServer] [22m[33m4:22:54 PM [vite-plugin-svelte] src/lib/components/TripForm.svelte:19:23 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m17:   const today = () => new Date().toISOString().slice(0, 10);
+[2m[WebServer] [22m18: 
+[2m[WebServer] [22m19:   let tripName = $state(trip?.name ?? '');
+[2m[WebServer] [22m                                ^
+[2m[WebServer] [22m20:   let tripId = $state(trip?.id ?? '');
+[2m[WebServer] [22m21:   let stages: Stage[] = $state(
+[2m[WebServer] [22m[33m4:22:54 PM [vite-plugin-svelte] src/lib/components/TripForm.svelte:20:21 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+
+[1A[2K[2m[WebServer] [22m18: 
+[2m[WebServer] [22m19:   let tripName = $state(trip?.name ?? '');
+[2m[WebServer] [22m20:   let tripId = $state(trip?.id ?? '');
+[2m[WebServer] [22m                              ^
+[2m[WebServer] [22m21:   let stages: Stage[] = $state(
+[2m[WebServer] [22m22:     trip ? JSON.parse(JSON.stringify(trip.stages)) : []
+[2m[WebServer] [22m[33m4:22:54 PM [vite-plugin-svelte] src/lib/components/TripForm.svelte:22:2 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m20:   let tripId = $state(trip?.id ?? '');
+[2m[WebServer] [22m21:   let stages: Stage[] = $state(
+[2m[WebServer] [22m22:     trip ? JSON.parse(JSON.stringify(trip.stages)) : []
+[2m[WebServer] [22m            ^
+[2m[WebServer] [22m23:   );
+[2m[WebServer] [22m24:   let error = $state('');
+[2m[WebServer] [22m[33m4:22:54 PM [vite-plugin-svelte] src/lib/components/TripForm.svelte:22:35 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m20:   let tripId = $state(trip?.id ?? '');
+[2m[WebServer] [22m21:   let stages: Stage[] = $state(
+[2m[WebServer] [22m22:     trip ? JSON.parse(JSON.stringify(trip.stages)) : []
+[2m[WebServer] [22m                                             ^
+[2m[WebServer] [22m23:   );
+[2m[WebServer] [22m24:   let error = $state('');
+
+[1A[2K[2m[WebServer] [22m[33m[33m[PLUGIN_TIMINGS] Warning:[0m Your build spent significant time in plugins. Here is a breakdown:
+[2m[WebServer] [22m  - vite-plugin-sveltekit-guard (83%)
+[2m[WebServer] [22m  - vite-plugin-svelte:compile (9%)
+[2m[WebServer] [22m  - vite-plugin-svelte:preprocess (4%)
+[2m[WebServer] [22mSee https://rolldown.rs/options/checks#plugintimings for more details.
+[2m[WebServer] [22m[39m
+
+
+Running 8 tests using 1 worker
+
+[1A[2K[1/8] e2e/locations.spec.ts:9:2 › Locations Page (M3b) › locations page loads and shows table or empty state
+[1A[2K[2m[WebServer] [22m
+[2m[WebServer] [22m[1;31m[404] GET /locations[0m
+
+[1A[2K  1) e2e/locations.spec.ts:9:2 › Locations Page (M3b) › locations page loads and shows table or empty state 
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected[39m[2m) // Object.is equality[22m
+
+    Expected: [32mtrue[39m
+    Received: [31mfalse[39m
+
+      14 | 			(await table.isVisible().catch(() => false)) ||
+      15 | 			(await emptyState.isVisible().catch(() => false));
+    > 16 | 		expect(visible).toBe(true);
+         | 		                ^
+      17 | 	});
+      18 |
+      19 | 	test('has create location button', async ({ page }) => {
+        at /home/hem/gregor_zwanzig/frontend/e2e/locations.spec.ts:16:19
+
+    Error Context: test-results/locations-Locations-Page-M-17b3b--shows-table-or-empty-state/error-context.md
+
+
+[1A[2K[2/8] e2e/locations.spec.ts:19:2 › Locations Page (M3b) › has create location button
+[1A[2K[2m[WebServer] [22m
+[2m[WebServer] [22m[1;31m[404] GET /locations[0m
+
+[1A[2K  2) e2e/locations.spec.ts:19:2 › Locations Page (M3b) › has create location button ────────────────
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByRole('button', { name: 'Neue Location' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for getByRole('button', { name: 'Neue Location' })[22m
+
+
+      20 | 		await page.goto('/locations');
+      21 | 		const createBtn = page.getByRole('button', { name: 'Neue Location' });
+    > 22 | 		await expect(createBtn).toBeVisible();
+         | 		                        ^
+      23 | 	});
+      24 |
+      25 | 	test('create location dialog opens', async ({ page }) => {
+        at /home/hem/gregor_zwanzig/frontend/e2e/locations.spec.ts:22:27
+
+    Error Context: test-results/locations-Locations-Page-M3b-has-create-location-button/error-context.md
+
+
+[1A[2K[3/8] e2e/locations.spec.ts:25:2 › Locations Page (M3b) › create location dialog opens
+[1A[2K[2m[WebServer] [22m
+[2m[WebServer] [22m[1;31m[404] GET /locations[0m
+
+[1A[2K  3) e2e/locations.spec.ts:25:2 › Locations Page (M3b) › create location dialog opens ──────────────
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+    [2m  - waiting for getByRole('button', { name: 'Neue Location' })[22m
+
+
+      25 | 	test('create location dialog opens', async ({ page }) => {
+      26 | 		await page.goto('/locations');
+    > 27 | 		await page.getByRole('button', { name: 'Neue Location' }).click();
+         | 		                                                          ^
+      28 |
+      29 | 		const dialog = page.locator('[role="dialog"]');
+      30 | 		await expect(dialog).toBeVisible();
+        at /home/hem/gregor_zwanzig/frontend/e2e/locations.spec.ts:27:61
+
+    Error Context: test-results/locations-Locations-Page-M3b-create-location-dialog-opens/error-context.md
+
+
+[1A[2K[4/8] e2e/locations.spec.ts:35:2 › Locations Page (M3b) › create location with coordinates
+[1A[2K[2m[WebServer] [22m
+[2m[WebServer] [22m[1;31m[404] GET /locations[0m
+
+[1A[2K  4) e2e/locations.spec.ts:35:2 › Locations Page (M3b) › create location with coordinates ──────────
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+    [2m  - waiting for getByRole('button', { name: 'Neue Location' })[22m
+
+
+      35 | 	test('create location with coordinates', async ({ page }) => {
+      36 | 		await page.goto('/locations');
+    > 37 | 		await page.getByRole('button', { name: 'Neue Location' }).click();
+         | 		                                                          ^
+      38 |
+      39 | 		const dialog = page.locator('[role="dialog"]');
+      40 |
+        at /home/hem/gregor_zwanzig/frontend/e2e/locations.spec.ts:37:61
+
+    Error Context: test-results/locations-Locations-Page-M-b84c2-e-location-with-coordinates/error-context.md
+
+
+[1A[2K[5/8] e2e/locations.spec.ts:57:2 › Locations Page (M3b) › edit location opens pre-filled dialog
+[1A[2K[2m[WebServer] [22m
+[2m[WebServer] [22m[1;31m[404] GET /locations[0m
+
+[1A[2K[6/8] e2e/locations.spec.ts:77:2 › Locations Page (M3b) › delete location with confirmation
+[1A[2K[2m[WebServer] [22m
+[2m[WebServer] [22m[1;31m[404] GET /locations[0m
+
+[1A[2K[7/8] e2e/locations.spec.ts:105:2 › Locations Page (M3b) › table shows coordinates and elevation
+[1A[2K[2m[WebServer] [22m
+[2m[WebServer] [22m[1;31m[404] GET /locations[0m
+
+[1A[2K[8/8] e2e/locations.spec.ts:120:2 › Locations Page (M3b) › activity profile badge shown after selection
+[1A[2K[2m[WebServer] [22m
+[2m[WebServer] [22m[1;31m[404] GET /locations[0m
+
+[1A[2K  5) e2e/locations.spec.ts:120:2 › Locations Page (M3b) › activity profile badge shown after selection 
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+    [2m  - waiting for getByRole('button', { name: 'Neue Location' })[22m
+
+
+      120 | 	test('activity profile badge shown after selection', async ({ page }) => {
+      121 | 		await page.goto('/locations');
+    > 122 | 		await page.getByRole('button', { name: 'Neue Location' }).click();
+          | 		                                                          ^
+      123 |
+      124 | 		const dialog = page.locator('[role="dialog"]');
+      125 | 		await dialog.locator('input[name="location-name"]').fill('Profil Test');
+        at /home/hem/gregor_zwanzig/frontend/e2e/locations.spec.ts:122:61
+
+    Error Context: test-results/locations-Locations-Page-M-107b9-badge-shown-after-selection/error-context.md
+
+
+[1A[2K  5 failed
+    e2e/locations.spec.ts:9:2 › Locations Page (M3b) › locations page loads and shows table or empty state 
+    e2e/locations.spec.ts:19:2 › Locations Page (M3b) › has create location button ─────────────────
+    e2e/locations.spec.ts:25:2 › Locations Page (M3b) › create location dialog opens ───────────────
+    e2e/locations.spec.ts:35:2 › Locations Page (M3b) › create location with coordinates ───────────
+    e2e/locations.spec.ts:120:2 › Locations Page (M3b) › activity profile badge shown after selection 
+  3 skipped

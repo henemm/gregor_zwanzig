@@ -1,0 +1,20 @@
+    [2m  - Expect "toBeVisible" with timeout 30000ms[22m
+    [2m  - waiting for getByRole('button', { name: /auto-report speichern/i })[22m
+
+
+      65 |
+      66 | 		const saveButton = page.getByRole('button', { name: /auto-report speichern/i });
+    > 67 | 		await expect(saveButton).toBeVisible({ timeout: 30000 });
+         | 		                         ^
+      68 | 		await saveButton.click();
+      69 |
+      70 | 		// Zeitfenster sollte vorausgefuellt sein (nicht leer/default)
+        at /home/hem/gregor_zwanzig/frontend/e2e/adhoc-to-abo.spec.ts:67:28
+
+    Error Context: test-results/adhoc-to-abo-F76-Ad-hoc-→--28041-orm-with-compare-parameters/error-context.md
+
+
+[1A[2K  3 failed
+    e2e/adhoc-to-abo.spec.ts:10:2 › F76 Ad-hoc → Abo: Compare-Ergebnis als Auto-Report speichern › shows "Als Auto-Report speichern" button after compare results 
+    e2e/adhoc-to-abo.spec.ts:31:2 › F76 Ad-hoc → Abo: Compare-Ergebnis als Auto-Report speichern › opens subscription dialog when "Als Auto-Report speichern" clicked 
+    e2e/adhoc-to-abo.spec.ts:54:2 › F76 Ad-hoc → Abo: Compare-Ergebnis als Auto-Report speichern › pre-fills subscription form with compare parameters 

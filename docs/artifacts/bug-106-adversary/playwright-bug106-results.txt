@@ -1,0 +1,43 @@
+
+Running 3 tests using 1 worker
+
+  ✓  1 [setup] › e2e/global.setup.ts:5:1 › authenticate (399ms)
+  ✘  2 [tests] › e2e/trip-wizard.spec.ts:437:2 › Trip Wizard W1 — Bug #106 Mobile Waypoint Layout › all 4 waypoint inputs visible with width > 40px on mobile (30.1s)
+  ✓  3 [tests] › e2e/trip-wizard.spec.ts:453:2 › Trip Wizard W1 — Bug #106 Mobile Waypoint Layout › mobile trash button has touch target >= 44x44px (519ms)
+
+
+  1) [tests] › e2e/trip-wizard.spec.ts:437:2 › Trip Wizard W1 — Bug #106 Mobile Waypoint Layout › all 4 waypoint inputs visible with width > 40px on mobile 
+
+    [31mTest timeout of 30000ms exceeded while running "beforeEach" hook.[39m
+
+      425 | 	test.use({ viewport: { width: 375, height: 667 } }); // iPhone SE
+      426 |
+    > 427 | 	test.beforeEach(async ({ page }) => {
+          | 	     ^
+      428 | 		await login(page);
+      429 | 		await page.goto('/trips/new');
+      430 | 		await page.locator('[data-testid="trip-name-input"]').fill('Mobile Bug 106');
+        at /home/hem/gregor_zwanzig/.claude/worktrees/agent-a655e326/frontend/e2e/trip-wizard.spec.ts:427:7
+
+    Error: page.waitForURL: Test timeout of 30000ms exceeded.
+    =========================== logs ===========================
+    waiting for navigation to "/" until "load"
+      navigated to "http://localhost:4173/login"
+    ============================================================
+
+       at helpers.ts:12
+
+      10 | 	await page.fill('input[name="password"]', 'test1234');
+      11 | 	await page.click('button[type="submit"]');
+    > 12 | 	await page.waitForURL('/');
+         | 	           ^
+      13 | }
+      14 |
+        at login (/home/hem/gregor_zwanzig/.claude/worktrees/agent-a655e326/frontend/e2e/helpers.ts:12:13)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/agent-a655e326/frontend/e2e/trip-wizard.spec.ts:428:3
+
+    Error Context: test-results/trip-wizard-Trip-Wizard-W1-6adf7-e-with-width-40px-on-mobile-tests/error-context.md
+
+  1 failed
+    [tests] › e2e/trip-wizard.spec.ts:437:2 › Trip Wizard W1 — Bug #106 Mobile Waypoint Layout › all 4 waypoint inputs visible with width > 40px on mobile 
+  2 passed (32.9s)

@@ -1,0 +1,334 @@
+Delivered-To: gregor_zwanzig@henemm.com
+X-Spam-Status: No
+Received: from a3-26.smtp-out.eu-west-1.amazonses.com (a3-26.smtp-out.eu-west-1.amazonses.com [54.240.3.26] (AS16509 Amazon.com, Inc., US))
+	(using TLSv1.3 with cipher TLS13_AES_256_GCM_SHA384)
+	by mail.henemm.com (Stalwart SMTP) with ESMTPS id 43847436B609802;
+	Mon, 27 Apr 2026 06:48:28 +0000
+Authentication-Results: mail.henemm.com;
+	dkim=pass header.d=henemm.com header.s=resend header.b=UEkQvv+C;
+	dkim=pass header.d=amazonses.com header.s=shh3fegwg5fppqsuzphvschd53n6ihuv header.b=Q2Z4SeoY;
+	spf=none (mail.henemm.com: no SPF records found for postmaster@a3-26.smtp-out.eu-west-1.amazonses.com) smtp.helo=a3-26.smtp-out.eu-west-1.amazonses.com;
+	spf=pass (mail.henemm.com: domain of 0102019dcdb24ebb-7aa3249d-57e2-43e0-a4cb-deaf5c2f0db1-000000@send.henemm.com designates 54.240.3.26 as permitted sender) smtp.mailfrom=0102019dcdb24ebb-7aa3249d-57e2-43e0-a4cb-deaf5c2f0db1-000000@send.henemm.com;
+	iprev=pass policy.iprev=54.240.3.26;
+	dmarc=pass header.from=henemm.com policy.dmarc=quarantine
+Received-SPF: pass (mail.henemm.com: domain of 0102019dcdb24ebb-7aa3249d-57e2-43e0-a4cb-deaf5c2f0db1-000000@send.henemm.com designates 54.240.3.26 as permitted sender)
+	receiver=mail.henemm.com; client-ip=54.240.3.26; envelope-from="0102019dcdb24ebb-7aa3249d-57e2-43e0-a4cb-deaf5c2f0db1-000000@send.henemm.com"; helo=a3-26.smtp-out.eu-west-1.amazonses.com;
+X-Spam-Result: DMARC_POLICY_ALLOW (-0.50),
+	DKIM_ALLOW (-0.20),
+	RWL_MAILSPIKE_VERYGOOD (-0.20),
+	SPF_ALLOW (-0.20),
+	ARC_NA (0.00),
+	DBL_BLOCKED_OPENRESOLVER (0.00),
+	DKIM_SIGNED (0.00),
+	DNSWL_BLOCKED (0.00),
+	DWL_DNSWL_BLOCKED (0.00),
+	FROM_NEQ_ENV_FROM (0.00),
+	FROM_NO_DN (0.00),
+	HAS_REPLYTO (0.00),
+	HTML_SHORT_1 (0.00),
+	RBL_SENDERSCORE_REPUT_BLOCKED (0.00),
+	RBL_SPAMHAUS_BLOCKED_OPENRESOLVER (0.00),
+	RCPT_COUNT_ONE (0.00),
+	RCVD_TLS_LAST (0.00),
+	REPLYTO_EQ_FROM (0.00),
+	SOURCE_ASN_16509 (0.00),
+	TO_DN_NONE (0.00),
+	TO_EQ_FROM (0.00),
+	TO_MATCH_ENVRCPT_ALL (0.00),
+	URIBL_BLOCKED (0.00),
+	RCVD_COUNT_ZERO (0.10),
+	FORGED_SENDER (0.30),
+	MIXED_CHARSET (2.00)
+X-Spam-Score: ham, score=1.30
+Return-Path: <0102019dcdb24ebb-7aa3249d-57e2-43e0-a4cb-deaf5c2f0db1-000000@send.henemm.com>
+DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/simple; s=resend;
+	d=henemm.com; t=1777272508;
+	h=From:To:Reply-To:Subject:Message-ID:Date:MIME-Version:Content-Type;
+	bh=zIiSAPQA+SpjBgCEXfYaEcMvVC0RSXAj4qN3J4nkOgg=;
+	b=UEkQvv+CXbS+5lsIcPvFncBHysGGU+uiMBz4ivwHMUIjh1Y5fOPGekWT2npHpxzf
+	bQdy4a13sxWki1JIu8SF9CEurnxW4K02rJssGeRzqauPwxP3OMkrog+cMe5mv0UFLso
+	zEWzedkqCa9coc43N6j908jcWu8NaTtCS8YC086c=
+DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/simple;
+	s=shh3fegwg5fppqsuzphvschd53n6ihuv; d=amazonses.com; t=1777272508;
+	h=From:To:Reply-To:Subject:Message-ID:Date:MIME-Version:Content-Type:Feedback-ID;
+	bh=zIiSAPQA+SpjBgCEXfYaEcMvVC0RSXAj4qN3J4nkOgg=;
+	b=Q2Z4SeoYQJ6fMCHCZmOiJMaPJLlcYO747AX53ccQSlZpJzpA6jCp9jv01n418Aod
+	RVHzPOgjz+snMzCdhczil9Y50sqJ1JZqHXgfpzYADynGTLhviSK6TgyFa2h3rnaH0pP
+	tIf3AXSjbudp2m1d5tcNI5x/AG+IR8DNtA33DHHk=
+From: gregor_zwanzig@henemm.com
+To: gregor_zwanzig@henemm.com
+Reply-To: gregor_zwanzig@henemm.com
+Subject: =?UTF-8?Q?=5BVALIDATOR_=CE=B22_Test=5D_Tag_1=3A_Po?=
+ =?UTF-8?Q?llen=C3=A7a_=E2=86=92_Lluc_=E2=80=94_Abe?=
+ =?UTF-8?Q?nd_=E2=80=94?=
+Message-ID: <0102019dcdb24ebb-7aa3249d-57e2-43e0-a4cb-deaf5c2f0db1-000000@eu-west-1.amazonses.com>
+Date: Mon, 27 Apr 2026 06:48:28 +0000
+MIME-Version: 1.0
+Content-Type: multipart/alternative;
+ boundary="--_NmP-3fc3f41720ac86b3-Part_1"
+Feedback-ID: :1.eu-west-1.GsFbdI8orN5fGne5ow7WxbSc9xsuV2LCJl1M0X1egdOsvTBJFFB0rfsVxvpqxPeVYzVB5GgebAu0rYXX4XaBTIK1XEc7umk7GXsTJA5A5AvIvQIHO7nV9SL1JmwAq/Zr6lbknzd6wvuYpjHtP4nymyw9m8aerpfeLgWSAlw62xw=:1.eu-west-1.xc5b6Z4+0WlftYwtQHAHsTtsfYdZQImSOXWypZD9BdY=:AmazonSES
+X-SES-Outgoing: 2026.04.27-54.240.3.26
+
+----_NmP-3fc3f41720ac86b3-Part_1
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+VALIDATOR =CE=B22 Test - Evening Report
+Tag 1: Pollen=C3=A7a =E2=86=92 Lluc
+28.04.2026
+13.6 km | =E2=86=91550m | =E2=86=93120m | max. 600m
+
+Tag 1: Pollen=C3=A7a =E2=86=92 Lluc: 18=E2=80=9321=C2=B0C, =
+=F0=9F=8C=A5=EF=B8=8F, trocken, m=C3=A4=C3=9Figer Wind 17 km/h, B=C3=B6en =
+bis 38 km/h ab 19:00
+
+=F0=9F=8C=84 Ohne Stirnlampe: 06:32 =E2=80=93 20:30 =
+(13h 57m)
+   D=C3=A4mmerung 06:21 + 11min (Tal) =3D 06:32
+   Sonnenuntergang 20:40 =E2=80=93 11min (Tal) =E2=80=93 29min (Wolken) =3D=
+ 20:30
+
+=E2=94=81=E2=94=81 Segment 1: 08:00=E2=80=9311:00 | 9.8 km | =
+=E2=86=9150m =E2=86=92 600m =E2=94=81=E2=94=81
+  Time   Temp   Feels   Wind=
+   Gust   Rain   Thunder   SnowL   Cloud   Sun=20
+  -----  -----  ------  =
+-----  -----  -----  --------  ------  ------  ----
+  10     17.9   18.3    6      16     0.0    =E2=80=93         =E2=80=93   =
+    =E2=98=80=EF=B8=8F      =F0=9F=8C=A4=EF=B8=8F =20
+  11     20.1   19.2    9      22     0.0    =E2=80=93         =E2=80=93   =
+    =E2=98=80=EF=B8=8F      =E2=98=80=EF=B8=8F =20
+  12     20.9   19.8    =
+11     26     0.0    =E2=80=93         =E2=80=93       =E2=98=80=EF=B8=8F  =
+    =E2=98=80=EF=B8=8F =20
+  13     21.1   20.0    12     28     0.0    =
+=E2=80=93         =E2=80=93       =E2=98=81=EF=B8=8F      =
+=E2=98=80=EF=B8=8F =20
+
+=E2=94=81=E2=94=81 Segment 2: 11:00=E2=80=9315:00 |=
+ 3.8 km | =E2=86=91600m =E2=86=92 480m =E2=94=81=E2=94=81
+  Time   Temp   Feels   Wind   Gust   Rain   Thunder   SnowL   Cloud   =
+Sun=20
+  -----  -----  ------  -----  -----  -----  --------  ------  =
+------  ----
+  13     20.0   17.6    7      24     0.0    =E2=80=93        =
+ =E2=80=93       =E2=98=81=EF=B8=8F      =E2=98=80=EF=B8=8F =20
+  14     20.4   17.9    8      26     0.0    =E2=80=93         =E2=80=93   =
+    =E2=98=81=EF=B8=8F      =E2=98=80=EF=B8=8F =20
+  15     20.6   17.8    =
+11     31     0.0    =E2=80=93         =E2=80=93       =E2=98=81=EF=B8=8F  =
+    =F0=9F=8C=A4=EF=B8=8F =20
+  16     20.3   17.2    15     36     0.0    =
+=E2=80=93         =E2=80=93       =E2=98=81=EF=B8=8F      =
+=F0=9F=8C=A4=EF=B8=8F =20
+  17     20.2   16.7    17     38     0.0    =
+=E2=80=93         =E2=80=93       =E2=98=81=EF=B8=8F      =
+=F0=9F=8C=A4=EF=B8=8F =20
+
+=E2=94=81=E2=94=81 =F0=9F=8F=81 Wetter am Ziel: =
+15:00=E2=80=9317:00 | 480m =E2=94=81=E2=94=81
+  Time   Temp   Feels   Wind =
+  Gust   Rain   Thunder   SnowL   Cloud   Sun=20
+  -----  -----  ------  =
+-----  -----  -----  --------  ------  ------  ----
+  17     19.2   17.0    12     33     0.0    =E2=80=93         =E2=80=93   =
+    =E2=98=81=EF=B8=8F      =F0=9F=8C=A4=EF=B8=8F =20
+  18     18.3   15.7    13     32     0.0    =E2=80=93         =E2=80=93   =
+    =E2=98=81=EF=B8=8F      =E2=9B=85  =20
+  19     17.7   15.5    13     =
+33     0.0    =E2=80=93         =E2=80=93       =E2=98=81=EF=B8=8F      =
+=F0=9F=8C=A4=EF=B8=8F =20
+
+=E2=94=81=E2=94=81 Nacht am Ziel (480m) =
+=E2=94=81=E2=94=81
+Ankunft 17:00 =E2=86=92 Morgen 06:00
+  Time   Temp   Feels   Wind   Gust   Rain   Thunder   SnowL   Cloud   =
+Sun=20
+  -----  -----  ------  -----  -----  -----  --------  ------  =
+------  ----
+  16     19.2   17.0    12     33     0.0    =E2=80=93        =
+ =E2=80=93       =E2=98=81=EF=B8=8F      =F0=9F=8C=A4=EF=B8=8F =20
+  18     17.7   15.5    13     33     0.0    =E2=80=93         =E2=80=93   =
+    =E2=98=81=EF=B8=8F      =F0=9F=8C=A4=EF=B8=8F =20
+  20     16.3   13.6    12     31     0.0    =E2=80=93         =E2=80=93   =
+    =E2=98=81=EF=B8=8F      =E2=98=81=EF=B8=8F =20
+  22     15.7   13.5    =
+12     28     0.0    =E2=80=93         =E2=80=93       =E2=98=81=EF=B8=8F  =
+    =E2=98=81=EF=B8=8F =20
+  00     15.0   13.9    11     27     0.0    =
+=E2=80=93         =E2=80=93       =E2=98=81=EF=B8=8F      =
+=E2=98=81=EF=B8=8F =20
+  * Temperatur/Nullgradgrenze: Minimum im 2h-Block
+
+=E2=94=81=E2=94=81 Zusammenfassung =E2=94=81=E2=94=81
+  =F0=9F=8C=A1 Tiefste Nachttemperatur: 15.0 =C2=B0C (00)
+
+Einheiten: Temp, Feels =C2=B0C =C2=B7 Wind, Gust km/h =C2=B7 Rain mm =C2=B7=
+ SnowL m =C2=B7 Cloud % =C2=B7 Sun W/m=C2=B2
+------------------------------=
+------------------------------
+Generated: 2026-04-27 06:48 UTC
+Data: openmeteo (meteofrance_arome)
+Fallback freezing_level_height, =
+precipitation_probability, visibility: icon_eu
+----_NmP-3fc3f41720ac86b3-Part_1
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset=3D"utf-8">
+    <meta name=3D"viewport" content=3D"width=3Ddevice-width, =
+initial-scale=3D1">
+    <style>
+        body { font-family: -apple-system, =
+BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: =
+16px; background: #f5f5f5; }
+        .container { max-width: 800px; margin:=
+ 0 auto; background: white; border-radius: 12px; overflow: hidden; =
+box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .header { background: =
+linear-gradient(135deg, #1976d2, #42a5f5); color: white; padding: 20px; }
+        .header h1 { margin: 0 0 4px 0; font-size: 22px; }
+        .header h2 { margin: 0 0 4px 0; font-size: 16px; font-weight: 400; =
+opacity: 0.9; }
+        .header p { margin: 2px 0; opacity: 0.85; =
+font-size: 13px; }
+        .section { padding: 0 16px; }
+        .section h3 { color: #333; border-bottom: 2px solid #1976d2; =
+padding-bottom: 6px; margin-top: 16px; font-size: 14px; }
+        table { width: 100%; border-collapse: collapse; margin: 8px 0 16px =
+0; font-size: 13px; }
+        th { background: #e3f2fd; padding: 8px 6px; =
+text-align: center; font-weight: 600; border-bottom: 2px solid #90caf9; =
+font-size: 12px; white-space: nowrap; }
+        td { padding: 6px; =
+text-align: center; border-bottom: 1px solid #eee; }
+        .footer { background: #f5f5f5; padding: 12px; text-align: center; =
+color: #888; font-size: 11px; border-top: 1px solid #ddd; }
+        ul { padding-left: 20px; }
+        li { margin: 4px 0; font-size: =
+14px; }
+    </style>
+</head>
+<body>
+    <div class=3D"container">
+        <div class=3D"header">
+            <h1>VALIDATOR =CE=B22 Test</h1>
+            <h2>Tag 1: Pollen=C3=A7a =E2=86=92 Lluc</h2>
+            <p>Evening Report =E2=80=93 28.04.2026 | 3 Segmente | 13.6 km |=
+ =E2=86=91550m | =E2=86=93120m | max. 600m</p>
+        </div>
+
+       =20
+            <div class=3D"section" style=3D"background:#f0f7ff;border-left:=
+4px solid #42a5f5;padding:12px;margin:8px 0;">
+                <p =
+style=3D"margin:0;font-size:14px;line-height:1.6;">Tag 1: Pollen=C3=A7a =
+=E2=86=92 Lluc: 18=E2=80=9321=C2=B0C, =F0=9F=8C=A5=EF=B8=8F, trocken, =
+m=C3=A4=C3=9Figer Wind 17 km/h, B=C3=B6en bis 38 km/h ab 19:00</p>
+            </div>
+        <div style=3D"background:#fffde7;border-left:4px=
+ solid #f9a825;padding:12px;margin:8px 0;"><strong style=3D"font-size:14px"=
+>=F0=9F=8C=84 Ohne Stirnlampe: 06:32 =E2=80=93 20:30 (13h 57m)</strong><div=
+ style=3D"margin-top:4px"><span style=3D"font-size:12px;color:#666">D=C3=A4=
+mmerung 06:21 + 11min (Tal) =3D 06:32</span><br><span =
+style=3D"font-size:12px;color:#666">Sonnenuntergang 20:40 =E2=80=93 11min =
+(Tal) =E2=80=93 29min (Wolken) =3D 20:30</span></div></div>
+       =20
+       =20
+            <div class=3D"section">
+                <h3>Segment =
+1: 08:00=E2=80=9311:00 | 9.8 km | =E2=86=9150m =E2=86=92 600m</h3>
+                <table><tr><th>Time</th><th>Temp</th><th>Feels</th><th>Wind=
+</th><th>Gust</th><th>Rain</th><th>Thunder</th><th>SnowL</th><th>Cloud</th>=
+<th>Sun</th></tr><tr><td>10</td><td>17.9</td><td>18.=
+3</td><td>6</td><td>16</td><td>0.0</td><td>=E2=80=93</td><td>=E2=80=93</td>=
+<td>=E2=98=80=EF=B8=8F</td><td>=F0=9F=8C=A4=EF=B8=8F</td></tr><tr><td>11</t=
+d><td>20.1</td><td>19.2</td><td>9</td><td>22</td><td>0.=
+0</td><td>=E2=80=93</td><td>=E2=80=93</td><td>=E2=98=80=EF=B8=8F</td><td>=
+=E2=98=80=EF=B8=8F</td></tr><tr><td>12</td><td>20.9</td><td>19.=
+8</td><td>11</td><td>26</td><td>0.0</td><td>=E2=80=93</td><td>=E2=80=93</td=
+><td>=E2=98=80=EF=B8=8F</td><td>=E2=98=80=EF=B8=8F</td></tr><tr><td>13</td>=
+<td>21.1</td><td>20.0</td><td>12</td><td>28</td><td>0.=
+0</td><td>=E2=80=93</td><td>=E2=80=93</td><td>=E2=98=81=EF=B8=8F</td><td>=
+=E2=98=80=EF=B8=8F</td></tr></table>
+            </div>
+            <div class=3D"section">
+                <h3>Segment 2: =
+11:00=E2=80=9315:00 | 3.8 km | =E2=86=91600m =E2=86=92 480m</h3>
+                <table><tr><th>Time</th><th>Temp</th><th>Feels</th><th>Wind=
+</th><th>Gust</th><th>Rain</th><th>Thunder</th><th>SnowL</th><th>Cloud</th>=
+<th>Sun</th></tr><tr><td>13</td><td>20.0</td><td>17.=
+6</td><td>7</td><td>24</td><td>0.0</td><td>=E2=80=93</td><td>=E2=80=93</td>=
+<td>=E2=98=81=EF=B8=8F</td><td>=E2=98=80=EF=B8=8F</td></tr><tr><td>14</td><=
+td>20.4</td><td>17.9</td><td>8</td><td>26</td><td>0.=
+0</td><td>=E2=80=93</td><td>=E2=80=93</td><td>=E2=98=81=EF=B8=8F</td><td>=
+=E2=98=80=EF=B8=8F</td></tr><tr><td>15</td><td>20.6</td><td>17.=
+8</td><td>11</td><td>31</td><td>0.0</td><td>=E2=80=93</td><td>=E2=80=93</td=
+><td>=E2=98=81=EF=B8=8F</td><td>=F0=9F=8C=A4=EF=B8=8F</td></tr><tr><td>16</=
+td><td>20.3</td><td>17.2</td><td>15</td><td>36</td><td>0.=
+0</td><td>=E2=80=93</td><td>=E2=80=93</td><td>=E2=98=81=EF=B8=8F</td><td>=
+=F0=9F=8C=A4=EF=B8=8F</td></tr><tr><td>17</td><td>20.2</td><td>16.=
+7</td><td>17</td><td>38</td><td>0.0</td><td>=E2=80=93</td><td>=E2=80=93</td=
+><td>=E2=98=81=EF=B8=8F</td><td>=F0=9F=8C=A4=EF=B8=8F</td></tr></table>
+            </div>
+            <div class=3D"section destination">
+                <h3>=F0=9F=8F=81 Wetter am Ziel: 15:00=E2=80=9317:00 | =
+480m</h3>
+                <table><tr><th>Time</th><th>Temp</th><th>Feels</t=
+h><th>Wind</th><th>Gust</th><th>Rain</th><th>Thunder</th><th>SnowL</th><th>=
+Cloud</th><th>Sun</th></tr><tr><td>17</td><td>19.2</td><td>17.=
+0</td><td>12</td><td>33</td><td>0.0</td><td>=E2=80=93</td><td>=E2=80=93</td=
+><td>=E2=98=81=EF=B8=8F</td><td>=F0=9F=8C=A4=EF=B8=8F</td></tr><tr><td>18</=
+td><td>18.3</td><td>15.7</td><td>13</td><td>32</td><td>0.=
+0</td><td>=E2=80=93</td><td>=E2=80=93</td><td>=E2=98=81=EF=B8=8F</td><td>=
+=E2=9B=85</td></tr><tr><td>19</td><td>17.7</td><td>15.=
+5</td><td>13</td><td>33</td><td>0.0</td><td>=E2=80=93</td><td>=E2=80=93</td=
+><td>=E2=98=81=EF=B8=8F</td><td>=F0=9F=8C=A4=EF=B8=8F</td></tr></table>
+            </div>
+       =20
+            <div class=3D"section">
+                <h3>=F0=9F=8C=99 Nacht am Ziel (480m)</h3>
+                <p style=3D"color:#666;font-size:13px">Ankunft 17:00 =
+=E2=86=92 Morgen 06:00</p>
+                <table><tr><th>Time</th><th>Temp=
+</th><th>Feels</th><th>Wind</th><th>Gust</th><th>Rain</th><th>Thunder</th><=
+th>SnowL</th><th>Cloud</th><th>Sun</th></tr><tr><td>16</td><td>19.=
+2</td><td>17.0</td><td>12</td><td>33</td><td>0.0</td><td>=E2=80=93</td><td>=
+=E2=80=93</td><td>=E2=98=81=EF=B8=8F</td><td>=F0=9F=8C=A4=EF=B8=8F</td></tr=
+><tr><td>18</td><td>17.7</td><td>15.5</td><td>13</td><td>33</td><td>0.=
+0</td><td>=E2=80=93</td><td>=E2=80=93</td><td>=E2=98=81=EF=B8=8F</td><td>=
+=F0=9F=8C=A4=EF=B8=8F</td></tr><tr><td>20</td><td>16.3</td><td>13.=
+6</td><td>12</td><td>31</td><td>0.0</td><td>=E2=80=93</td><td>=E2=80=93</td=
+><td>=E2=98=81=EF=B8=8F</td><td>=E2=98=81=EF=B8=8F</td></tr><tr><td>22</td>=
+<td>15.7</td><td>13.5</td><td>12</td><td>28</td><td>0.=
+0</td><td>=E2=80=93</td><td>=E2=80=93</td><td>=E2=98=81=EF=B8=8F</td><td>=
+=E2=98=81=EF=B8=8F</td></tr><tr><td>00</td><td>15.0</td><td>13.=
+9</td><td>11</td><td>27</td><td>0.0</td><td>=E2=80=93</td><td>=E2=80=93</td=
+><td>=E2=98=81=EF=B8=8F</td><td>=E2=98=81=EF=B8=8F</td></tr></table>
+                <p style=3D"color:#999;font-size:11px;margin-top:4px">* =
+Temperatur/Nullgradgrenze: Minimum im 2h-Block</p>
+            </div>
+       =20
+       =20
+       =20
+            <div class=3D"section">
+                <h3>Zusammenfassung</h3>
+                =
+<ul><li>=F0=9F=8C=A1 Tiefste Nachttemperatur: 15.0 =C2=B0C (00)</li></ul>
+            </div>
+
+        <div class=3D"footer">
+            Generated: =
+2026-04-27 06:48 UTC | Data: openmeteo (meteofrance_arome) | Fallback =
+freezing_level_height, precipitation_probability, visibility: icon_eu
+            <br><span style=3D"font-size:10px;color:#999">Einheiten: Temp, =
+Feels =C2=B0C =C2=B7 Wind, Gust km/h =C2=B7 Rain mm =C2=B7 SnowL m =C2=B7 =
+Cloud % =C2=B7 Sun W/m=C2=B2</span>
+        </div>
+    </div>
+</body>
+</html>
+----_NmP-3fc3f41720ac86b3-Part_1--

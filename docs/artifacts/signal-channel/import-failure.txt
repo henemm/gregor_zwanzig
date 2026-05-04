@@ -1,0 +1,11 @@
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+ModuleNotFoundError: No module named 'outputs.signal'
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+  File "/home/hem/gregor_zwanzig/.venv/lib/python3.12/site-packages/pydantic/main.py", line 1026, in __getattr__
+    raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+AttributeError: 'Settings' object has no attribute 'can_send_signal'. Did you mean: 'can_send_email'?
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+TypeError: TripReportConfig.__init__() missing 1 required positional argument: 'trip_id'

@@ -1,0 +1,23 @@
+================================================
+  External Validator — Isolierte QA-Session
+================================================
+
+  Spec:   docs/specs/bugfix/go_api_bind_localhost.md
+  Server: https://staging.gregor20.henemm.com
+
+  Diese Session ist isoliert vom Implementierer.
+  Der Validator kennt nur: Spec + laufende App.
+================================================
+
+## Verdict: VERIFIED
+
+Spec `docs/specs/bugfix/go_api_bind_localhost.md` — Go-API Bind auf Localhost — auf Staging + Prod validiert.
+
+**Beweise (alle Black-Box):**
+- `curl http://178.104.143.19:8090/` → exit 7 (Connection refused)
+- `curl http://178.104.143.19:8091/` → exit 7 (Connection refused)
+- `ss -tulnH`: `127.0.0.1:8090` und `127.0.0.1:8091` (kein `*:…` mehr)
+- `https://gregor20.henemm.com/api/health` → HTTP 200
+- `https://staging.gregor20.henemm.com/api/health` → HTTP 200
+
+Keine Findings, keine Funktionsregression. Report: `docs/artifacts/go-api-bind-localhost/validator-report.md`.

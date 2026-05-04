@@ -1,0 +1,41 @@
+F......FF.....sssssssssssssss........................................... [  6%]
+........................................................................ [ 12%]
+..............................................FFF.FF.................... [ 19%]
+.............................F.......................................... [ 25%]
+......................FF......................................F.......F. [ 32%]
+............................FFFFFFF..................................... [ 38%]
+............................ssssss.......................xF.s........... [ 45%]
+.......................................................................s [ 51%]
+ssssss..........ss...................................................... [ 58%]
+........................................................................ [ 64%]
+........................................................................ [ 71%]
+..............................................FFF.........s............. [ 77%]
+........................................................................ [ 84%]
+........................................................................ [ 90%]
+........................................................................ [ 97%]
+.................................                                        [100%]
+=========================== short test summary info ============================
+FAILED tests/e2e/test_e2e_friendly_format_config.py::test_alert_enabled - Key...
+FAILED tests/e2e/test_e2e_story3_reports.py::TestReportFormatting::test_email_html_contains_segments
+FAILED tests/e2e/test_e2e_story3_reports.py::TestReportFormatting::test_email_plain_text_fallback
+FAILED tests/integration/test_segment_weather_cache.py::TestSegmentWeatherCacheIntegration::test_cache_reduces_api_calls
+FAILED tests/integration/test_segment_weather_cache.py::TestSegmentWeatherCacheIntegration::test_different_segments_cached_separately
+FAILED tests/integration/test_segment_weather_metrics.py::TestSegmentWeatherMetricsGeoSphere::test_geosphere_austria_basis_metrics
+FAILED tests/integration/test_segment_weather_metrics.py::TestE2EStory2Flow::test_e2e_segment_to_metrics
+FAILED tests/integration/test_segment_weather_metrics.py::TestSegmentWeatherMetricsExtended::test_geosphere_austria_extended_metrics
+FAILED tests/integration/test_trip_segment_weather.py::TestSegmentWeatherServiceGeoSphere::test_fetch_segment_weather_austria
+FAILED tests/tdd/test_account_page.py::TestNavigation::test_nav_has_account_link
+FAILED tests/tdd/test_account_page.py::TestNavigation::test_nav_shows_konto_label
+FAILED tests/tdd/test_compare_provider_routing.py::TestFetchForecastAlpsRegression::test_innsbruck_returns_data
+FAILED tests/tdd/test_design_optimierungen.py::TestSettingsRenamed::test_settings_page_heading
+FAILED tests/tdd/test_geosphere_parsing.py::TestSnowgridParsing::test_snowgrid_depth_conversion
+FAILED tests/tdd/test_geosphere_parsing.py::TestSnowgridParsing::test_snowgrid_multiple_locations
+FAILED tests/tdd/test_geosphere_parsing.py::TestNwpParsing::test_nwp_temperature_passthrough
+FAILED tests/tdd/test_geosphere_parsing.py::TestNwpParsing::test_nwp_wind_vector_conversion
+FAILED tests/tdd/test_geosphere_parsing.py::TestNwpParsing::test_nwp_cloud_cover_conversion
+FAILED tests/tdd/test_geosphere_parsing.py::TestNwpParsing::test_nwp_pressure_conversion
+FAILED tests/tdd/test_geosphere_parsing.py::TestNwpParsing::test_nwp_all_conversions
+FAILED tests/tdd/test_snowgrid.py::TestSnowgridPlausibility::test_all_resorts_have_data
+FAILED tests/unit/test_destination_segment.py::TestSchedulerDestinationSegment::test_destination_segment_exists
+FAILED tests/unit/test_destination_segment.py::TestSchedulerDestinationSegment::test_destination_segment_coordinates
+FAILED tests/unit/test_destination_segment.py::TestSchedulerDestinationSegment::test_destination_segment_time_window

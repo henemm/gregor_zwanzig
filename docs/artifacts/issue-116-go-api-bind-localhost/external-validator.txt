@@ -1,0 +1,28 @@
+================================================
+  External Validator — Isolierte QA-Session
+================================================
+
+  Spec:   docs/specs/bugfix/go_api_bind_localhost.md
+  Server: https://staging.gregor20.henemm.com
+
+  Diese Session ist isoliert vom Implementierer.
+  Der Validator kennt nur: Spec + laufende App.
+================================================
+
+## Verdict: **BROKEN**
+
+Der Fix ist nur teilweise deployed:
+
+| Check | Ergebnis |
+|---|---|
+| Extern `:8091` (Staging) | Connection refused ✅ |
+| Extern `:8090` (Prod) | **HTTP 401 + HTTP 200 auf `/api/health` direkt von 178.104.143.19** ❌ |
+| `ss` Listen-Sockets | `127.0.0.1:8091` ✅, `*:8090` ❌ |
+| Nginx `/api/health` Prod | 200 ✅ |
+| Nginx `/api/health` Staging | 200 ✅ |
+
+Die in der Spec adressierte HIGH-Lücke (CVSS 7.5, henemm-security#70) ist auf **Production unverändert offen** — das Go-Backend antwortet direkt an die öffentliche IP, ohne Nginx-Layer. `/api/health` liefert komplette Response ohne Auth.
+
+Was fehlt zum VERIFIED: Prod-Deploy des Fixes, sodass `ss` auf `127.0.0.1:8090` zeigt und `curl http://178.104.143.19:8090/...` Connection refused liefert.
+
+Report: `docs/artifacts/go_api_bind_localhost/validator-report.md`

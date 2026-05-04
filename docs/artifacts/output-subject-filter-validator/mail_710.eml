@@ -1,0 +1,404 @@
+Delivered-To: gregor_zwanzig@henemm.com
+X-Spam-Status: No
+Received: from a3-15.smtp-out.eu-west-1.amazonses.com (a3-15.smtp-out.eu-west-1.amazonses.com [54.240.3.15] (AS16509 Amazon.com, Inc., US))
+	(using TLSv1.3 with cipher TLS13_AES_256_GCM_SHA384)
+	by mail.henemm.com (Stalwart SMTP) with ESMTPS id 438425C92809402;
+	Mon, 27 Apr 2026 06:05:38 +0000
+Authentication-Results: mail.henemm.com;
+	dkim=pass header.d=henemm.com header.s=resend header.b=oyTnZenK;
+	dkim=pass header.d=amazonses.com header.s=shh3fegwg5fppqsuzphvschd53n6ihuv header.b=apsQoKFP;
+	spf=none (mail.henemm.com: no SPF records found for postmaster@a3-15.smtp-out.eu-west-1.amazonses.com) smtp.helo=a3-15.smtp-out.eu-west-1.amazonses.com;
+	spf=pass (mail.henemm.com: domain of 0102019dcd8b17fd-cbe56017-6372-4912-a4db-91f5885a7aa1-000000@send.henemm.com designates 54.240.3.15 as permitted sender) smtp.mailfrom=0102019dcd8b17fd-cbe56017-6372-4912-a4db-91f5885a7aa1-000000@send.henemm.com;
+	iprev=pass policy.iprev=54.240.3.15;
+	dmarc=pass header.from=henemm.com policy.dmarc=quarantine
+Received-SPF: pass (mail.henemm.com: domain of 0102019dcd8b17fd-cbe56017-6372-4912-a4db-91f5885a7aa1-000000@send.henemm.com designates 54.240.3.15 as permitted sender)
+	receiver=mail.henemm.com; client-ip=54.240.3.15; envelope-from="0102019dcd8b17fd-cbe56017-6372-4912-a4db-91f5885a7aa1-000000@send.henemm.com"; helo=a3-15.smtp-out.eu-west-1.amazonses.com;
+X-Spam-Result: DMARC_POLICY_ALLOW (-0.50),
+	DKIM_ALLOW (-0.20),
+	RWL_MAILSPIKE_VERYGOOD (-0.20),
+	SPF_ALLOW (-0.20),
+	ARC_NA (0.00),
+	DBL_BLOCKED_OPENRESOLVER (0.00),
+	DKIM_SIGNED (0.00),
+	DNSWL_BLOCKED (0.00),
+	DWL_DNSWL_BLOCKED (0.00),
+	FROM_NEQ_ENV_FROM (0.00),
+	FROM_NO_DN (0.00),
+	HAS_REPLYTO (0.00),
+	HTML_SHORT_1 (0.00),
+	RBL_SENDERSCORE_REPUT_BLOCKED (0.00),
+	RBL_SPAMHAUS_BLOCKED_OPENRESOLVER (0.00),
+	RCPT_COUNT_ONE (0.00),
+	RCVD_TLS_LAST (0.00),
+	REPLYTO_EQ_FROM (0.00),
+	SOURCE_ASN_16509 (0.00),
+	TO_DN_NONE (0.00),
+	TO_EQ_FROM (0.00),
+	TO_MATCH_ENVRCPT_ALL (0.00),
+	URIBL_BLOCKED (0.00),
+	RCVD_COUNT_ZERO (0.10),
+	FORGED_SENDER (0.30),
+	PARTS_DIFFER (1.00)
+X-Spam-Score: ham, score=0.30
+Return-Path: <0102019dcd8b17fd-cbe56017-6372-4912-a4db-91f5885a7aa1-000000@send.henemm.com>
+DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/simple; s=resend;
+	d=henemm.com; t=1777269938;
+	h=From:To:Reply-To:Subject:Message-ID:Date:MIME-Version:Content-Type;
+	bh=sfMX702oMyrtmMY2kwD1iVKB2RGTSysumdHVL3+Aav8=;
+	b=oyTnZenKWzV5DUUG8TMhq5r2UZiZnCq3PY64bGkjaIbVYgyBeK1cuwQrctmnHjIu
+	fMdfzLm9iM/ncb54+15JkRrSL4vqtHIidmdPetohatUnz9zRmqRL4TAoBXSC0RRHRX9
+	M+GzHOR/v7Iukdr/Vryps3AFsab7uIqG2T4Ny8Jk=
+DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/simple;
+	s=shh3fegwg5fppqsuzphvschd53n6ihuv; d=amazonses.com; t=1777269938;
+	h=From:To:Reply-To:Subject:Message-ID:Date:MIME-Version:Content-Type:Feedback-ID;
+	bh=sfMX702oMyrtmMY2kwD1iVKB2RGTSysumdHVL3+Aav8=;
+	b=apsQoKFPjRnr7O2WuKsaa6dktlPYSJ8zjx71/Xyoqi3MVlFOyEe5A6cA9vAcKPbs
+	jdqa1TlVoZsSqObQbhFxpX2RfWWJbD5wJ4r/DurL0TXp6/Bm88wLRNbF8jQIWJeUI/s
+	9rBthPp0MzZ7jzKMBXhhv4uYw1T6kjK/08nbvZlE=
+From: gregor_zwanzig@henemm.com
+To: gregor_zwanzig@henemm.com
+Reply-To: gregor_zwanzig@henemm.com
+Subject: Ski Resort Comparison (27.04.2026)
+Message-ID: <0102019dcd8b17fd-cbe56017-6372-4912-a4db-91f5885a7aa1-000000@eu-west-1.amazonses.com>
+Date: Mon, 27 Apr 2026 06:05:38 +0000
+MIME-Version: 1.0
+Content-Type: multipart/alternative;
+ boundary="--_NmP-aa17f710f8ad8fbb-Part_1"
+Feedback-ID: :1.eu-west-1.GsFbdI8orN5fGne5ow7WxbSc9xsuV2LCJl1M0X1egdOsvTBJFFB0rfsVxvpqxPeVYzVB5GgebAu0rYXX4XaBTIK1XEc7umk7GXsTJA5A5AvIvQIHO7nV9SL1JmwAq/Zr6lbknzd6wvuYpjHtP4nymyw9m8aerpfeLgWSAlw62xw=:1.eu-west-1.xc5b6Z4+0WlftYwtQHAHsTtsfYdZQImSOXWypZD9BdY=:AmazonSES
+X-SES-Outgoing: 2026.04.27-54.240.3.15
+
+----_NmP-aa17f710f8ad8fbb-Part_1
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+=E2=9B=B7=EF=B8=8F SKIGEBIETE-VERGLEICH
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D
+=F0=9F=93=85 Forecast: Tuesday, 28.=
+04.2026
+=F0=9F=95=90 Time Window: 09:00 - 16:00
+=F0=9F=93=9D Created: 27.04=
+.2026 06:05
+
+=F0=9F=8F=86 EMPFEHLUNG: GR20 Corsica Test
+   Score: 65 | =E2=9D=84=EF=B8=8F - | =E2=98=80=EF=B8=8F ~0h
+
+--------------------------------------------------
+#1 GR20 Corsica Test
+   Score: 65
+   Snow: -
+   New Snow: -
+   Wind: 8/21 NE
+   Temp: 9=C2=B0C
+   Sun: ~0h
+   Clouds: 54%
+   Layer: -
+
+#2 Hochk=C3=B6nig/Sonnberg
+   Score: 54
+   Snow: -
+   New Snow: -
+   Wind: 5/15 SE
+   Temp: 11=C2=B0C
+   Sun: ~0h
+   Clouds: 98%
+   Layer: -
+
+#3 =C3=9Cbergangsjoch (Zillertal =
+Arena)
+   Score: 41
+   Snow: 163cm
+   New Snow: -
+   Wind: 9/21 W
+   Temp: 4=C2=B0C
+   Sun: ~0h
+   Clouds: 100%
+   Layer: -
+
+HOURLY DETAILS
+---------------
+Time  | #1 GR20 Corsica T | #2 Hochk=C3=B6nig/Sonn | #3 =
+=C3=9Cbergangsjoch  |
+09:00 | =F0=9F=8C=A5=EF=B8=8F11=C2=B0 - 7/17NE   | =
+=E2=98=81=EF=B8=8F11=C2=B0 - 3/13SE   | =E2=98=81=EF=B8=8F7=C2=B0 - 5/10W  =
+   |
+10:00 | =F0=9F=8C=A5=EF=B8=8F12=C2=B0 - 7/19NE   | =
+=E2=98=81=EF=B8=8F12=C2=B0 - 3/14SE   | =E2=98=81=EF=B8=8F7=C2=B0 - 5/12W  =
+   |
+11:00 | =E2=98=81=EF=B8=8F12=C2=B0 - 7/20NE   | =
+=E2=98=81=EF=B8=8F12=C2=B0 - 2/10SE   | =E2=98=81=EF=B8=8F7=C2=B0 - 6/14W  =
+   |
+12:00 | =E2=98=81=EF=B8=8F13=C2=B0 - 8/21NE   | =
+=E2=98=81=EF=B8=8F13=C2=B0 - 3/14W    | =E2=98=81=EF=B8=8F8=C2=B0 - 7/18W  =
+   |
+13:00 | =E2=98=81=EF=B8=8F13=C2=B0 - 4/14NE   | =
+=E2=98=81=EF=B8=8F13=C2=B0 - 4/12SE   | =E2=98=81=EF=B8=8F7=C2=B0 - 9/21W  =
+   |
+14:00 | =E2=98=80=EF=B8=8F13=C2=B0 - 4/12N    | =
+=E2=98=81=EF=B8=8F13=C2=B0 - 2/15SE   | =E2=98=81=EF=B8=8F7=C2=B0 - 5/20W  =
+   |
+15:00 | =E2=98=80=EF=B8=8F12=C2=B0 - 4/11N    | =
+=E2=98=81=EF=B8=8F12=C2=B0 - 1/9SW    | =E2=98=81=EF=B8=8F6=C2=B0 =
+=F0=9F=8C=A7=EF=B8=8F0.3mm 1/13SW |
+16:00 | =E2=98=80=EF=B8=8F12=C2=B0 - =
+3/13NW   | =E2=98=81=EF=B8=8F11=C2=B0 - 5/11E    | =F0=9F=8C=A7=EF=B8=8F5=
+=C2=B0 =F0=9F=8C=A7=EF=B8=8F2mm 6/6NE |
+
+---
+Generated by Gregor Zwanzig =
+=E2=9B=B7=EF=B8=8F
+----_NmP-aa17f710f8ad8fbb-Part_1
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset=3D"utf-8">
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', =
+Roboto, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; =
+border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.=
+1); }
+        .header { background: linear-gradient(135deg, #1976d2, =
+#42a5f5); color: white; padding: 24px; }
+        .header h1 { margin: 0 0 =
+8px 0; font-size: 24px; }
+        .header p { margin: 4px 0; opacity: 0.9; =
+font-size: 14px; }
+        .winner { background: #e8f5e9; padding: 20px; =
+border-left: 4px solid #4caf50; margin: 20px; border-radius: 8px; }
+        .winner h2 { margin: 0 0 8px 0; color: #2e7d32; font-size: 18px; }
+        .winner p { margin: 0; color: #555; }
+        table { width: 100%; =
+border-collapse: collapse; margin: 20px 0; }
+        th { background: =
+#f5f5f5; padding: 12px 8px; text-align: center; font-weight: 600; =
+border-bottom: 2px solid #ddd; }
+        th.label { text-align: left; =
+width: 140px; }
+        td { padding: 10px 8px; text-align: center; =
+border-bottom: 1px solid #eee; }
+        td.label { text-align: left; =
+font-weight: 500; color: #555; }
+        td.best { background: #e8f5e9; =
+font-weight: 600; color: #2e7d32; }
+        .section { padding: 0 20px; }
+        .section h3 { color: #333; border-bottom: 2px solid #1976d2; =
+padding-bottom: 8px; }
+        .footer { background: #f5f5f5; padding: =
+16px; text-align: center; color: #888; font-size: 12px; }
+        .rank { background: #1976d2; color: white; border-radius: 4px; =
+padding: 2px 6px; font-size: 11px; margin-right: 4px; }
+        .weather { font-size: 16px; }
+    </style>
+</head>
+<body>
+    <div class=3D"container">
+        <div class=3D"header">
+            <h1>=E2=9B=B7=EF=B8=8F Skigebiete-Vergleich</h1>
+            <p>=F0=9F=93=85 Forecast for: <strong>Tuesday, 28.04.=
+2026</strong></p>
+            <p>=F0=9F=95=90 Time Window: 09:00 - =
+16:00</p>
+            <p>=F0=9F=93=9D Created: 27.04.2026 06:05</p>
+        </div>
+
+        <div class=3D"winner">
+            <h2>=F0=9F=8F=86=
+ Empfehlung: GR20 Corsica Test</h2>
+            <p>Score: =
+<strong>65</strong> | -</p>
+        </div>
+
+        <div class=3D"section">
+            <h3>=F0=9F=93=8A Vergleich</h3>
+            <table>
+                <tr>
+                    <th class=3D"label">Metrik</th>
+                    <th><span class=3D"rank">#1</span> GR20 Corsica =
+Test</th>
+                    <th><span class=3D"rank">#2</span> =
+Hochk=C3=B6nig/Sonnberg</th>
+                    <th><span =
+class=3D"rank">#3</span> =C3=9Cbergangsjoch (Zillertal Arena)</th>
+                </tr>
+                <tr>
+                    <td =
+class=3D"label">Score</td>
+                    <td class=3D"best">65</td>
+                    <td>54</td>
+                    <td>41</td>
+                </tr>
+                <tr>
+                    <td =
+class=3D"label">Schneeh=C3=B6he</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td =
+class=3D"best">163cm</td>
+                </tr>
+                <tr>
+                    <td class=3D"label">Neuschnee</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                </tr>
+                <tr>
+                    <td class=3D"label">Wind/B=C3=B6en</td>
+                    <td>8/21 NO</td>
+                    <td =
+class=3D"best">5/15 SO</td>
+                    <td>9/21 W</td>
+                </tr>
+                <tr>
+                    <td =
+class=3D"label">Temperatur (gef=C3=BChlt)</td>
+                    =
+<td>9=C2=B0C</td>
+                    <td class=3D"best">11=C2=B0C</td>
+                    <td>4=C2=B0C</td>
+                </tr>
+                <tr>
+                    <td class=3D"label">Sonnenstunden<=
+/td>
+                    <td>0h</td>
+                    <td>0h</td>
+                    <td>0h</td>
+                </tr>
+                <tr>
+                    <td class=3D"label">Bew=C3=B6lkung</td>
+                    <td class=3D"best">54%</td>
+                    =
+<td>98%</td>
+                    <td>100%</td>
+                </tr>
+                <tr>
+                    <td class=3D"label">Wolkenlage</td=
+>
+                    <td class=3D"best">=E2=9C=A8 klar</td>
+                    <td>=F0=9F=8C=A4=EF=B8=8F leicht</td>
+                    <td>=F0=9F=8C=A4=EF=B8=8F leicht</td>
+                </tr>
+            </table>
+            <p =
+style=3D"font-size: 12px; color: #888;">=F0=9F=9F=A2 Gr=C3=BCn =3D bester =
+Wert | Temperatur =3D gef=C3=BChlt (Wind Chill) | * tiefe Wolken =
+ignoriert</p>
+        </div>
+
+        <div class=3D"section">
+            <h3>=F0=9F=95=90 Stunden-=C3=9Cbersicht</h3>
+            <p style=3D"color: #666; margin-bottom: 12px;">=F0=9F=93=85 =
+Tuesday, 28.04.2026</p>
+            <table>
+                <tr>
+                    <th class=3D"label">Time</th>
+                    =
+<th><span class=3D"rank">#1</span> GR20 Corsica Test</th>
+                    <th><span class=3D"rank">#2</span> =
+Hochk=C3=B6nig/Sonnberg</th>
+                    <th><span =
+class=3D"rank">#3</span> =C3=9Cbergangsjoch (Zillertal Arena)</th>
+                </tr>
+                <tr>
+                    <td =
+class=3D"label">09:00</td>
+                    <td style=3D"white-space: =
+nowrap;">=F0=9F=8C=A5=EF=B8=8F11=C2=B0 - 7/17NE</td>
+                    <td style=3D"white-space: nowrap;">=E2=98=81=EF=B8=8F11=
+=C2=B0 - 3/13SE</td>
+                    <td style=3D"white-space: =
+nowrap;">=E2=98=81=EF=B8=8F7=C2=B0 - 5/10W</td>
+                </tr>
+                <tr>
+                    <td class=3D"label">10:00</td>
+                    <td style=3D"white-space: nowrap;">=F0=9F=8C=A5=
+=EF=B8=8F12=C2=B0 - 7/19NE</td>
+                    <td =
+style=3D"white-space: nowrap;">=E2=98=81=EF=B8=8F12=C2=B0 - 3/14SE</td>
+                    <td style=3D"white-space: nowrap;">=E2=98=81=EF=B8=8F7=
+=C2=B0 - 5/12W</td>
+                </tr>
+                <tr>
+                    <td class=3D"label">11:00</td>
+                    <td =
+style=3D"white-space: nowrap;">=E2=98=81=EF=B8=8F12=C2=B0 - 7/20NE</td>
+                    <td style=3D"white-space: nowrap;">=E2=98=81=EF=B8=8F12=
+=C2=B0 - 2/10SE</td>
+                    <td style=3D"white-space: =
+nowrap;">=E2=98=81=EF=B8=8F7=C2=B0 - 6/14W</td>
+                </tr>
+                <tr>
+                    <td class=3D"label">12:00</td>
+                    <td style=3D"white-space: nowrap;">=E2=98=81=EF=B8=8F13=
+=C2=B0 - 8/21NE</td>
+                    <td style=3D"white-space: =
+nowrap;">=E2=98=81=EF=B8=8F13=C2=B0 - 3/14W</td>
+                    <td =
+style=3D"white-space: nowrap;">=E2=98=81=EF=B8=8F8=C2=B0 - 7/18W</td>
+                </tr>
+                <tr>
+                    <td =
+class=3D"label">13:00</td>
+                    <td style=3D"white-space: =
+nowrap;">=E2=98=81=EF=B8=8F13=C2=B0 - 4/14NE</td>
+                    <td =
+style=3D"white-space: nowrap;">=E2=98=81=EF=B8=8F13=C2=B0 - 4/12SE</td>
+                    <td style=3D"white-space: nowrap;">=E2=98=81=EF=B8=8F7=
+=C2=B0 - 9/21W</td>
+                </tr>
+                <tr>
+                    <td class=3D"label">14:00</td>
+                    <td =
+style=3D"white-space: nowrap;">=E2=98=80=EF=B8=8F13=C2=B0 - 4/12N</td>
+                    <td style=3D"white-space: nowrap;">=E2=98=81=EF=B8=8F13=
+=C2=B0 - 2/15SE</td>
+                    <td style=3D"white-space: =
+nowrap;">=E2=98=81=EF=B8=8F7=C2=B0 - 5/20W</td>
+                </tr>
+                <tr>
+                    <td class=3D"label">15:00</td>
+                    <td style=3D"white-space: nowrap;">=E2=98=80=EF=B8=8F12=
+=C2=B0 - 4/11N</td>
+                    <td style=3D"white-space: =
+nowrap;">=E2=98=81=EF=B8=8F12=C2=B0 - 1/9SW</td>
+                    <td =
+style=3D"white-space: nowrap;">=E2=98=81=EF=B8=8F6=C2=B0 =
+=F0=9F=8C=A7=EF=B8=8F0.3mm 1/13SW</td>
+                </tr>
+                <tr>
+                    <td class=3D"label">16:00</td>
+                    <td style=3D"white-space: nowrap;">=E2=98=80=EF=B8=8F12=
+=C2=B0 - 3/13NW</td>
+                    <td style=3D"white-space: =
+nowrap;">=E2=98=81=EF=B8=8F11=C2=B0 - 5/11E</td>
+                    <td =
+style=3D"white-space: nowrap;">=F0=9F=8C=A7=EF=B8=8F5=C2=B0 =
+=F0=9F=8C=A7=EF=B8=8F2mm 6/6NE</td>
+                </tr>
+            </table>
+            <p style=3D"font-size: 11px; color: #888; =
+margin-top: 8px;">
+                <strong>Legend:</strong>
+                =E2=98=80=EF=B8=8F &lt;20% clouds |
+                =F0=9F=8C=A4=EF=B8=8F 20-50% |
+                =E2=9B=85 =
+50-80% |
+                =E2=98=81=EF=B8=8F &gt;80% |
+                =F0=9F=8C=A7=EF=B8=8F rain |
+                =
+=E2=9D=84=EF=B8=8F snow
+            </p>
+        </div>
+
+        <div class=3D"footer">
+            <p>Generated by <strong>Gregor =
+Zwanzig</strong> =E2=9B=B7=EF=B8=8F</p>
+        </div>
+    </div>
+</body>
+</html>
+
+----_NmP-aa17f710f8ad8fbb-Part_1--

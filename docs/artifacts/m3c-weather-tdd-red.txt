@@ -1,0 +1,330 @@
+[1A[2K[2m[WebServer] [22m[33m6:20:39 PM [vite-plugin-svelte] src/routes/locations/+page.svelte:12:36 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m10:   let { data } = $props();
+[2m[WebServer] [22m11: 
+[2m[WebServer] [22m12:   let locations: Location[] = $state(data.locations);
+[2m[WebServer] [22m                                             ^
+[2m[WebServer] [22m13:   let dialogMode: 'create' | 'edit' | null = $state(null);
+[2m[WebServer] [22m14:   let editTarget: Location | null = $state(null);
+
+[1A[2K[2m[WebServer] [22m[33m6:20:39 PM [vite-plugin-svelte] src/routes/trips/+page.svelte:12:28 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+
+[1A[2K[2m[WebServer] [22m10:   let { data } = $props();
+[2m[WebServer] [22m11: 
+[2m[WebServer] [22m12:   let trips: Trip[] = $state(data.trips);
+[2m[WebServer] [22m                                     ^
+[2m[WebServer] [22m13:   let dialogMode: 'create' | 'edit' | null = $state(null);
+[2m[WebServer] [22m14:   let editTarget: Trip | null = $state(null);
+
+[1A[2K[2m[WebServer] [22m[33m6:20:39 PM [vite-plugin-svelte] src/lib/components/TripForm.svelte:19:23 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+
+[1A[2K[2m[WebServer] [22m17:   const today = () => new Date().toISOString().slice(0, 10);
+[2m[WebServer] [22m18: 
+[2m[WebServer] [22m19:   let tripName = $state(trip?.name ?? '');
+[2m[WebServer] [22m                                ^
+[2m[WebServer] [22m20:   let tripId = $state(trip?.id ?? '');
+[2m[WebServer] [22m21:   let stages: Stage[] = $state(
+[2m[WebServer] [22m[33m6:20:39 PM [vite-plugin-svelte] src/lib/components/TripForm.svelte:20:21 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m18: 
+[2m[WebServer] [22m19:   let tripName = $state(trip?.name ?? '');
+[2m[WebServer] [22m20:   let tripId = $state(trip?.id ?? '');
+[2m[WebServer] [22m                              ^
+[2m[WebServer] [22m21:   let stages: Stage[] = $state(
+[2m[WebServer] [22m22:     trip ? JSON.parse(JSON.stringify(trip.stages)) : []
+[2m[WebServer] [22m[33m6:20:39 PM [vite-plugin-svelte] src/lib/components/TripForm.svelte:22:2 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m20:   let tripId = $state(trip?.id ?? '');
+[2m[WebServer] [22m21:   let stages: Stage[] = $state(
+[2m[WebServer] [22m22:     trip ? JSON.parse(JSON.stringify(trip.stages)) : []
+[2m[WebServer] [22m            ^
+[2m[WebServer] [22m23:   );
+[2m[WebServer] [22m24:   let error = $state('');
+[2m[WebServer] [22m[33m6:20:39 PM [vite-plugin-svelte] src/lib/components/TripForm.svelte:22:35 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m20:   let tripId = $state(trip?.id ?? '');
+[2m[WebServer] [22m21:   let stages: Stage[] = $state(
+[2m[WebServer] [22m22:     trip ? JSON.parse(JSON.stringify(trip.stages)) : []
+[2m[WebServer] [22m                                             ^
+[2m[WebServer] [22m23:   );
+[2m[WebServer] [22m24:   let error = $state('');
+
+[1A[2K[2m[WebServer] [22m[33m6:20:39 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:23:19 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+
+[1A[2K[2m[WebServer] [22m21:   }
+[2m[WebServer] [22m22: 
+[2m[WebServer] [22m23:   let name = $state(location?.name ?? '');
+[2m[WebServer] [22m                                ^
+[2m[WebServer] [22m24:   let lat = $state(location?.lat ?? 47.0);
+[2m[WebServer] [22m25:   let lon = $state(location?.lon ?? 11.0);
+[2m[WebServer] [22m[33m6:20:39 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:24:18 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m22: 
+[2m[WebServer] [22m23:   let name = $state(location?.name ?? '');
+[2m[WebServer] [22m24:   let lat = $state(location?.lat ?? 47.0);
+[2m[WebServer] [22m                               ^
+[2m[WebServer] [22m25:   let lon = $state(location?.lon ?? 11.0);
+[2m[WebServer] [22m26:   let elevationM = $state(location?.elevation_m ?? 2000);
+[2m[WebServer] [22m[33m6:20:39 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:25:18 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m23:   let name = $state(location?.name ?? '');
+[2m[WebServer] [22m24:   let lat = $state(location?.lat ?? 47.0);
+[2m[WebServer] [22m25:   let lon = $state(location?.lon ?? 11.0);
+[2m[WebServer] [22m                               ^
+[2m[WebServer] [22m26:   let elevationM = $state(location?.elevation_m ?? 2000);
+[2m[WebServer] [22m27:   let region = $state(location?.region ?? '');
+[2m[WebServer] [22m[33m6:20:39 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:26:25 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m24:   let lat = $state(location?.lat ?? 47.0);
+[2m[WebServer] [22m25:   let lon = $state(location?.lon ?? 11.0);
+[2m[WebServer] [22m26:   let elevationM = $state(location?.elevation_m ?? 2000);
+[2m[WebServer] [22m                                      ^
+[2m[WebServer] [22m27:   let region = $state(location?.region ?? '');
+[2m[WebServer] [22m28:   let bergfexSlug = $state(location?.bergfex_slug ?? '');
+[2m[WebServer] [22m[33m6:20:39 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:27:21 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m25:   let lon = $state(location?.lon ?? 11.0);
+[2m[WebServer] [22m26:   let elevationM = $state(location?.elevation_m ?? 2000);
+[2m[WebServer] [22m27:   let region = $state(location?.region ?? '');
+[2m[WebServer] [22m                                  ^
+[2m[WebServer] [22m28:   let bergfexSlug = $state(location?.bergfex_slug ?? '');
+[2m[WebServer] [22m29:   let activityProfile = $state(location?.activity_profile ?? '');
+[2m[WebServer] [22m[33m6:20:39 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:28:26 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m26:   let elevationM = $state(location?.elevation_m ?? 2000);
+[2m[WebServer] [22m27:   let region = $state(location?.region ?? '');
+[2m[WebServer] [22m28:   let bergfexSlug = $state(location?.bergfex_slug ?? '');
+[2m[WebServer] [22m                                       ^
+[2m[WebServer] [22m29:   let activityProfile = $state(location?.activity_profile ?? '');
+[2m[WebServer] [22m30:   let error = $state('');
+[2m[WebServer] [22m[33m6:20:39 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:29:30 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m27:   let region = $state(location?.region ?? '');
+[2m[WebServer] [22m28:   let bergfexSlug = $state(location?.bergfex_slug ?? '');
+[2m[WebServer] [22m29:   let activityProfile = $state(location?.activity_profile ?? '');
+[2m[WebServer] [22m                                           ^
+[2m[WebServer] [22m30:   let error = $state('');
+[2m[WebServer] [22m31: 
+
+[1A[2K[2m[WebServer] [22m[33m6:20:41 PM [vite-plugin-svelte] src/routes/trips/+page.svelte:12:28 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m10:   let { data } = $props();
+[2m[WebServer] [22m11: 
+[2m[WebServer] [22m12:   let trips: Trip[] = $state(data.trips);
+[2m[WebServer] [22m                                     ^
+[2m[WebServer] [22m13:   let dialogMode: 'create' | 'edit' | null = $state(null);
+[2m[WebServer] [22m14:   let editTarget: Trip | null = $state(null);
+
+[1A[2K[2m[WebServer] [22m[33m6:20:41 PM [vite-plugin-svelte] src/routes/locations/+page.svelte:12:36 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m10:   let { data } = $props();
+[2m[WebServer] [22m11: 
+[2m[WebServer] [22m12:   let locations: Location[] = $state(data.locations);
+[2m[WebServer] [22m                                             ^
+[2m[WebServer] [22m13:   let dialogMode: 'create' | 'edit' | null = $state(null);
+[2m[WebServer] [22m14:   let editTarget: Location | null = $state(null);
+
+[1A[2K[2m[WebServer] [22m[33m6:20:41 PM [vite-plugin-svelte] src/lib/components/TripForm.svelte:19:23 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m17:   const today = () => new Date().toISOString().slice(0, 10);
+[2m[WebServer] [22m18: 
+[2m[WebServer] [22m19:   let tripName = $state(trip?.name ?? '');
+[2m[WebServer] [22m                                ^
+[2m[WebServer] [22m20:   let tripId = $state(trip?.id ?? '');
+[2m[WebServer] [22m21:   let stages: Stage[] = $state(
+
+[1A[2K[2m[WebServer] [22m[33m6:20:41 PM [vite-plugin-svelte] src/lib/components/TripForm.svelte:20:21 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m18: 
+[2m[WebServer] [22m19:   let tripName = $state(trip?.name ?? '');
+[2m[WebServer] [22m20:   let tripId = $state(trip?.id ?? '');
+[2m[WebServer] [22m                              ^
+[2m[WebServer] [22m21:   let stages: Stage[] = $state(
+[2m[WebServer] [22m22:     trip ? JSON.parse(JSON.stringify(trip.stages)) : []
+[2m[WebServer] [22m[33m6:20:41 PM [vite-plugin-svelte] src/lib/components/TripForm.svelte:22:2 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m20:   let tripId = $state(trip?.id ?? '');
+[2m[WebServer] [22m21:   let stages: Stage[] = $state(
+[2m[WebServer] [22m22:     trip ? JSON.parse(JSON.stringify(trip.stages)) : []
+[2m[WebServer] [22m            ^
+[2m[WebServer] [22m23:   );
+[2m[WebServer] [22m24:   let error = $state('');
+[2m[WebServer] [22m[33m6:20:41 PM [vite-plugin-svelte] src/lib/components/TripForm.svelte:22:35 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m20:   let tripId = $state(trip?.id ?? '');
+[2m[WebServer] [22m21:   let stages: Stage[] = $state(
+[2m[WebServer] [22m22:     trip ? JSON.parse(JSON.stringify(trip.stages)) : []
+[2m[WebServer] [22m                                             ^
+[2m[WebServer] [22m23:   );
+[2m[WebServer] [22m24:   let error = $state('');
+
+[1A[2K[2m[WebServer] [22m[33m6:20:41 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:23:19 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m21:   }
+[2m[WebServer] [22m22: 
+[2m[WebServer] [22m23:   let name = $state(location?.name ?? '');
+[2m[WebServer] [22m                                ^
+[2m[WebServer] [22m24:   let lat = $state(location?.lat ?? 47.0);
+[2m[WebServer] [22m25:   let lon = $state(location?.lon ?? 11.0);
+
+[1A[2K[2m[WebServer] [22m[33m6:20:41 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:24:18 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m22: 
+[2m[WebServer] [22m23:   let name = $state(location?.name ?? '');
+[2m[WebServer] [22m24:   let lat = $state(location?.lat ?? 47.0);
+[2m[WebServer] [22m                               ^
+[2m[WebServer] [22m25:   let lon = $state(location?.lon ?? 11.0);
+[2m[WebServer] [22m26:   let elevationM = $state(location?.elevation_m ?? 2000);
+[2m[WebServer] [22m[33m6:20:41 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:25:18 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m23:   let name = $state(location?.name ?? '');
+[2m[WebServer] [22m24:   let lat = $state(location?.lat ?? 47.0);
+[2m[WebServer] [22m25:   let lon = $state(location?.lon ?? 11.0);
+[2m[WebServer] [22m                               ^
+[2m[WebServer] [22m26:   let elevationM = $state(location?.elevation_m ?? 2000);
+[2m[WebServer] [22m27:   let region = $state(location?.region ?? '');
+[2m[WebServer] [22m[33m6:20:41 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:26:25 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m24:   let lat = $state(location?.lat ?? 47.0);
+[2m[WebServer] [22m25:   let lon = $state(location?.lon ?? 11.0);
+[2m[WebServer] [22m26:   let elevationM = $state(location?.elevation_m ?? 2000);
+[2m[WebServer] [22m                                      ^
+[2m[WebServer] [22m27:   let region = $state(location?.region ?? '');
+[2m[WebServer] [22m28:   let bergfexSlug = $state(location?.bergfex_slug ?? '');
+[2m[WebServer] [22m[33m6:20:41 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:27:21 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m25:   let lon = $state(location?.lon ?? 11.0);
+[2m[WebServer] [22m26:   let elevationM = $state(location?.elevation_m ?? 2000);
+[2m[WebServer] [22m27:   let region = $state(location?.region ?? '');
+[2m[WebServer] [22m                                  ^
+[2m[WebServer] [22m28:   let bergfexSlug = $state(location?.bergfex_slug ?? '');
+[2m[WebServer] [22m29:   let activityProfile = $state(location?.activity_profile ?? '');
+[2m[WebServer] [22m[33m6:20:41 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:28:26 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m26:   let elevationM = $state(location?.elevation_m ?? 2000);
+[2m[WebServer] [22m27:   let region = $state(location?.region ?? '');
+[2m[WebServer] [22m28:   let bergfexSlug = $state(location?.bergfex_slug ?? '');
+[2m[WebServer] [22m                                       ^
+[2m[WebServer] [22m29:   let activityProfile = $state(location?.activity_profile ?? '');
+[2m[WebServer] [22m30:   let error = $state('');
+[2m[WebServer] [22m[33m6:20:41 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:29:30 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m27:   let region = $state(location?.region ?? '');
+[2m[WebServer] [22m28:   let bergfexSlug = $state(location?.bergfex_slug ?? '');
+[2m[WebServer] [22m29:   let activityProfile = $state(location?.activity_profile ?? '');
+[2m[WebServer] [22m                                           ^
+[2m[WebServer] [22m30:   let error = $state('');
+[2m[WebServer] [22m31: 
+
+[1A[2K[2m[WebServer] [22m[33m[33m[PLUGIN_TIMINGS] Warning:[0m Your build spent significant time in plugins. Here is a breakdown:
+[2m[WebServer] [22m  - vite-plugin-sveltekit-guard (79%)
+[2m[WebServer] [22m  - vite-plugin-sveltekit-virtual-modules (8%)
+[2m[WebServer] [22m  - vite-plugin-svelte:compile (4%)
+[2m[WebServer] [22mSee https://rolldown.rs/options/checks#plugintimings for more details.
+[2m[WebServer] [22m[39m
+
+
+Running 6 tests using 1 worker
+
+[1A[2K[1/6] e2e/weather.spec.ts:9:2 › Weather Table (M3c) › weather page loads with location selector and button
+[1A[2K[2m[WebServer] [22m
+[2m[WebServer] [22m[1;31m[404] GET /weather[0m
+
+[1A[2K  1) e2e/weather.spec.ts:9:2 › Weather Table (M3c) › weather page loads with location selector and button 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: locator('select[name="location-select"]')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for locator('select[name="location-select"]')[22m
+
+
+      10 | 		await page.goto('/weather');
+      11 | 		const selector = page.locator('select[name="location-select"]');
+    > 12 | 		await expect(selector).toBeVisible();
+         | 		                       ^
+      13 | 		const loadBtn = page.getByRole('button', { name: 'Laden' });
+      14 | 		await expect(loadBtn).toBeVisible();
+      15 | 	});
+        at /home/hem/gregor_zwanzig/frontend/e2e/weather.spec.ts:12:26
+
+    Error Context: test-results/weather-Weather-Table-M3c--55af1-ocation-selector-and-button/error-context.md
+
+
+[1A[2K[2/6] e2e/weather.spec.ts:17:2 › Weather Table (M3c) › shows error when no location selected
+[1A[2K[2m[WebServer] [22m
+[2m[WebServer] [22m[1;31m[404] GET /weather[0m
+
+[1A[2K  2) e2e/weather.spec.ts:17:2 › Weather Table (M3c) › shows error when no location selected ────────
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+    [2m  - waiting for getByRole('button', { name: 'Laden' })[22m
+
+
+      17 | 	test('shows error when no location selected', async ({ page }) => {
+      18 | 		await page.goto('/weather');
+    > 19 | 		await page.getByRole('button', { name: 'Laden' }).click();
+         | 		                                                  ^
+      20 | 		const error = page.locator('.text-destructive');
+      21 | 		await expect(error).toBeVisible();
+      22 | 	});
+        at /home/hem/gregor_zwanzig/frontend/e2e/weather.spec.ts:19:53
+
+    Error Context: test-results/weather-Weather-Table-M3c--7c175-r-when-no-location-selected/error-context.md
+
+
+[1A[2K[3/6] e2e/weather.spec.ts:24:2 › Weather Table (M3c) › loads forecast table after selecting location
+[1A[2K[2m[WebServer] [22m
+[2m[WebServer] [22m[1;31m[404] GET /weather[0m
+
+[1A[2K[4/6] e2e/weather.spec.ts:45:2 › Weather Table (M3c) › forecast table has 8 columns
+[1A[2K[2m[WebServer] [22m
+[2m[WebServer] [22m[1;31m[404] GET /weather[0m
+
+[1A[2K[5/6] e2e/weather.spec.ts:60:2 › Weather Table (M3c) › shows meta info after loading forecast
+[1A[2K[2m[WebServer] [22m
+[2m[WebServer] [22m[1;31m[404] GET /weather[0m
+
+[1A[2K[6/6] e2e/weather.spec.ts:74:2 › Weather Table (M3c) › sidebar has Wetter navigation link
+[1A[2K  3) e2e/weather.spec.ts:74:2 › Weather Table (M3c) › sidebar has Wetter navigation link ───────────
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: locator('nav a[href="/weather"]')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for locator('nav a[href="/weather"]')[22m
+
+
+      75 | 		await page.goto('/');
+      76 | 		const wetterLink = page.locator('nav a[href="/weather"]');
+    > 77 | 		await expect(wetterLink).toBeVisible();
+         | 		                         ^
+      78 | 	});
+      79 | });
+      80 |
+        at /home/hem/gregor_zwanzig/frontend/e2e/weather.spec.ts:77:28
+
+    Error Context: test-results/weather-Weather-Table-M3c-sidebar-has-Wetter-navigation-link/error-context.md
+
+
+[1A[2K  3 failed
+    e2e/weather.spec.ts:9:2 › Weather Table (M3c) › weather page loads with location selector and button 
+    e2e/weather.spec.ts:17:2 › Weather Table (M3c) › shows error when no location selected ─────────
+    e2e/weather.spec.ts:74:2 › Weather Table (M3c) › sidebar has Wetter navigation link ────────────
+  3 skipped

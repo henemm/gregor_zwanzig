@@ -1,0 +1,727 @@
+{
+  "id": "5f534011",
+  "name": "KHW 403",
+  "stages": [
+    {
+      "id": "",
+      "name": "KHW_00a: Von Troblach Bhf nach Helmhotel",
+      "date": "2026-05-04",
+      "waypoints": [
+        {
+          "id": "G1",
+          "name": "Start",
+          "lat": 46.724754,
+          "lon": 12.225424,
+          "elevation_m": 1211,
+          "time_window": "08:00-08:00"
+        },
+        {
+          "id": "G2",
+          "name": "GIPFEL",
+          "lat": 46.727633,
+          "lon": 12.286008,
+          "elevation_m": 1210,
+          "time_window": "10:00-10:00"
+        },
+        {
+          "id": "G3",
+          "name": "Seg 3 Start",
+          "lat": 46.717835,
+          "lon": 12.326463,
+          "elevation_m": 1413,
+          "time_window": "11:40-11:40"
+        },
+        {
+          "id": "G4",
+          "name": "Ziel",
+          "lat": 46.73042,
+          "lon": 12.321643,
+          "elevation_m": 1144,
+          "time_window": "12:45-12:45"
+        }
+      ]
+    },
+    {
+      "id": "",
+      "name": "KHW_11: von Dolinza Alm nach Nötsch im Gailtal",
+      "date": "2026-05-04",
+      "waypoints": [
+        {
+          "id": "G1",
+          "name": "Start",
+          "lat": 46.56405,
+          "lon": 13.479157,
+          "elevation_m": 1467,
+          "time_window": "08:00-08:00"
+        },
+        {
+          "id": "G2",
+          "name": "Seg 2 Start",
+          "lat": 46.565197,
+          "lon": 13.516713,
+          "elevation_m": 1583,
+          "time_window": "10:00-10:00"
+        },
+        {
+          "id": "G3",
+          "name": "Seg 3 Start",
+          "lat": 46.57174,
+          "lon": 13.560195,
+          "elevation_m": 1057,
+          "time_window": "12:02-12:02"
+        },
+        {
+          "id": "G4",
+          "name": "Seg 4 Start",
+          "lat": 46.573423,
+          "lon": 13.603504,
+          "elevation_m": 587,
+          "time_window": "14:02-14:02"
+        },
+        {
+          "id": "G5",
+          "name": "Ziel",
+          "lat": 46.590793,
+          "lon": 13.622754,
+          "elevation_m": 559,
+          "time_window": "14:52-14:52"
+        }
+      ]
+    },
+    {
+      "id": "",
+      "name": "KHW_10: von Egger Alm nach Dolinza Alm",
+      "date": "2026-05-04",
+      "waypoints": [
+        {
+          "id": "G1",
+          "name": "Start",
+          "lat": 46.585705,
+          "lon": 13.380183,
+          "elevation_m": 1408,
+          "time_window": "08:00-08:00"
+        },
+        {
+          "id": "G2",
+          "name": "Seg 2 Start",
+          "lat": 46.579878,
+          "lon": 13.433487,
+          "elevation_m": 1473,
+          "time_window": "09:47-09:47"
+        },
+        {
+          "id": "G3",
+          "name": "Seg 3 Start",
+          "lat": 46.568596,
+          "lon": 13.452098,
+          "elevation_m": 1663,
+          "time_window": "12:01-12:01"
+        },
+        {
+          "id": "G4",
+          "name": "Seg 4 Start",
+          "lat": 46.561912,
+          "lon": 13.477061,
+          "elevation_m": 1528,
+          "time_window": "14:01-14:01"
+        },
+        {
+          "id": "G5",
+          "name": "Ziel",
+          "lat": 46.56405,
+          "lon": 13.479157,
+          "elevation_m": 1483,
+          "time_window": "14:12-14:12"
+        }
+      ]
+    },
+    {
+      "id": "",
+      "name": "KHW_09: von Nassfeld nach Egger Alm",
+      "date": "2026-05-04",
+      "waypoints": [
+        {
+          "id": "G1",
+          "name": "Start",
+          "lat": 46.557622,
+          "lon": 13.278523,
+          "elevation_m": 1532,
+          "time_window": "08:00-08:00"
+        },
+        {
+          "id": "G2",
+          "name": "TAL",
+          "lat": 46.564779,
+          "lon": 13.299734,
+          "elevation_m": 1832,
+          "time_window": "09:37-09:37"
+        },
+        {
+          "id": "G3",
+          "name": "Seg 3 Start",
+          "lat": 46.563468,
+          "lon": 13.351792,
+          "elevation_m": 1356,
+          "time_window": "11:55-11:55"
+        },
+        {
+          "id": "G4",
+          "name": "Seg 4 Start",
+          "lat": 46.585242,
+          "lon": 13.374237,
+          "elevation_m": 1409,
+          "time_window": "14:01-14:01"
+        },
+        {
+          "id": "G5",
+          "name": "Ziel",
+          "lat": 46.585705,
+          "lon": 13.380183,
+          "elevation_m": 1395,
+          "time_window": "14:14-14:14"
+        }
+      ]
+    },
+    {
+      "id": "",
+      "name": "KHW_08: von Straniger Alm nach Nassfeld/LIVIO",
+      "date": "2026-05-04",
+      "waypoints": [
+        {
+          "id": "G1",
+          "name": "Start",
+          "lat": 46.595711,
+          "lon": 13.134396,
+          "elevation_m": 1515,
+          "time_window": "08:00-08:00"
+        },
+        {
+          "id": "G2",
+          "name": "Seg 2 Start",
+          "lat": 46.582082,
+          "lon": 13.156547,
+          "elevation_m": 1607,
+          "time_window": "10:00-10:00"
+        },
+        {
+          "id": "G3",
+          "name": "Seg 3 Start",
+          "lat": 46.566406,
+          "lon": 13.190198,
+          "elevation_m": 1687,
+          "time_window": "12:00-12:00"
+        },
+        {
+          "id": "G4",
+          "name": "Seg 4 Start",
+          "lat": 46.559846,
+          "lon": 13.231311,
+          "elevation_m": 1943,
+          "time_window": "14:00-14:00"
+        },
+        {
+          "id": "G5",
+          "name": "Seg 5 Start",
+          "lat": 46.555591,
+          "lon": 13.267791,
+          "elevation_m": 1655,
+          "time_window": "16:01-16:01"
+        },
+        {
+          "id": "G6",
+          "name": "Ziel",
+          "lat": 46.557622,
+          "lon": 13.278523,
+          "elevation_m": 1522,
+          "time_window": "16:32-16:32"
+        }
+      ]
+    },
+    {
+      "id": "",
+      "name": "KHW_07: von Zollnersee Hütte nach Straniger Alm",
+      "date": "2026-05-04",
+      "waypoints": [
+        {
+          "id": "G1",
+          "name": "Start",
+          "lat": 46.605388,
+          "lon": 13.070643,
+          "elevation_m": 1728,
+          "time_window": "08:00-08:00"
+        },
+        {
+          "id": "G2",
+          "name": "Seg 2 Start",
+          "lat": 46.598349,
+          "lon": 13.122431,
+          "elevation_m": 1717,
+          "time_window": "10:01-10:01"
+        },
+        {
+          "id": "G3",
+          "name": "Ziel",
+          "lat": 46.595669,
+          "lon": 13.13447,
+          "elevation_m": 1504,
+          "time_window": "10:46-10:46"
+        }
+      ]
+    },
+    {
+      "id": "",
+      "name": "KHW_06: von Almgasthof Valentinalm nach Zollnersee Hütte",
+      "date": "2026-05-04",
+      "waypoints": [
+        {
+          "id": "G1",
+          "name": "Start",
+          "lat": 46.622848,
+          "lon": 12.930569,
+          "elevation_m": 1190,
+          "time_window": "08:00-08:00"
+        },
+        {
+          "id": "G2",
+          "name": "Seg 2 Start",
+          "lat": 46.616084,
+          "lon": 12.966588,
+          "elevation_m": 1317,
+          "time_window": "10:00-10:00"
+        },
+        {
+          "id": "G3",
+          "name": "Seg 3 Start",
+          "lat": 46.61667,
+          "lon": 12.984084,
+          "elevation_m": 1774,
+          "time_window": "12:01-12:01"
+        },
+        {
+          "id": "G4",
+          "name": "Seg 4 Start",
+          "lat": 46.610474,
+          "lon": 13.013098,
+          "elevation_m": 1958,
+          "time_window": "14:03-14:03"
+        },
+        {
+          "id": "G5",
+          "name": "TAL",
+          "lat": 46.600705,
+          "lon": 13.030034,
+          "elevation_m": 1759,
+          "time_window": "16:04-16:04"
+        },
+        {
+          "id": "G6",
+          "name": "Seg 6 Start",
+          "lat": 46.609655,
+          "lon": 13.057547,
+          "elevation_m": 1569,
+          "time_window": "17:58-17:58"
+        },
+        {
+          "id": "G7",
+          "name": "Ziel",
+          "lat": 46.605382,
+          "lon": 13.070653,
+          "elevation_m": 1750,
+          "time_window": "18:56-18:56"
+        }
+      ]
+    },
+    {
+      "id": "",
+      "name": "KHW_05: von Wolayersee-Hütte nach Almgasthof Valentinalm",
+      "date": "2026-05-04",
+      "waypoints": [
+        {
+          "id": "G1",
+          "name": "Start",
+          "lat": 46.612406,
+          "lon": 12.867044,
+          "elevation_m": 1949,
+          "time_window": "08:00-08:00"
+        },
+        {
+          "id": "G2",
+          "name": "Seg 2 Start",
+          "lat": 46.617958,
+          "lon": 12.896364,
+          "elevation_m": 1727,
+          "time_window": "10:01-10:01"
+        },
+        {
+          "id": "G3",
+          "name": "Ziel",
+          "lat": 46.622848,
+          "lon": 12.930569,
+          "elevation_m": 1199,
+          "time_window": "11:54-11:54"
+        }
+      ]
+    },
+    {
+      "id": "",
+      "name": "KHW_04: von Hochweißsteinhaus nach Wolayersee-Hütte",
+      "date": "2026-05-04",
+      "waypoints": [
+        {
+          "id": "G1",
+          "name": "Start",
+          "lat": 46.643014,
+          "lon": 12.740327,
+          "elevation_m": 1867,
+          "time_window": "08:00-08:00"
+        },
+        {
+          "id": "G2",
+          "name": "Seg 2 Start",
+          "lat": 46.634326,
+          "lon": 12.778344,
+          "elevation_m": 1514,
+          "time_window": "10:16-10:16"
+        },
+        {
+          "id": "G3",
+          "name": "TAL",
+          "lat": 46.6283,
+          "lon": 12.802254,
+          "elevation_m": 1857,
+          "time_window": "12:00-12:00"
+        },
+        {
+          "id": "G4",
+          "name": "Seg 4 Start",
+          "lat": 46.629281,
+          "lon": 12.842644,
+          "elevation_m": 1671,
+          "time_window": "14:11-14:11"
+        },
+        {
+          "id": "G5",
+          "name": "Seg 5 Start",
+          "lat": 46.61195,
+          "lon": 12.864361,
+          "elevation_m": 1932,
+          "time_window": "16:01-16:01"
+        },
+        {
+          "id": "G6",
+          "name": "Ziel",
+          "lat": 46.61229,
+          "lon": 12.867169,
+          "elevation_m": 1952,
+          "time_window": "16:09-16:09"
+        }
+      ]
+    },
+    {
+      "id": "",
+      "name": "KHW_03: von Porzehütte nach Hochweißsteinhaus",
+      "date": "2026-05-04",
+      "waypoints": [
+        {
+          "id": "G1",
+          "name": "Start",
+          "lat": 46.659721,
+          "lon": 12.582203,
+          "elevation_m": 1949,
+          "time_window": "08:00-08:00"
+        },
+        {
+          "id": "G2",
+          "name": "TAL",
+          "lat": 46.656054,
+          "lon": 12.604374,
+          "elevation_m": 2369,
+          "time_window": "10:04-10:04"
+        },
+        {
+          "id": "G3",
+          "name": "GIPFEL",
+          "lat": 46.650848,
+          "lon": 12.64762,
+          "elevation_m": 2210,
+          "time_window": "12:07-12:07"
+        },
+        {
+          "id": "G4",
+          "name": "Seg 4 Start",
+          "lat": 46.656829,
+          "lon": 12.690287,
+          "elevation_m": 2454,
+          "time_window": "14:29-14:29"
+        },
+        {
+          "id": "G5",
+          "name": "Seg 5 Start",
+          "lat": 46.653577,
+          "lon": 12.721031,
+          "elevation_m": 2080,
+          "time_window": "16:01-16:01"
+        },
+        {
+          "id": "G6",
+          "name": "Seg 6 Start",
+          "lat": 46.644502,
+          "lon": 12.740383,
+          "elevation_m": 1813,
+          "time_window": "18:01-18:01"
+        },
+        {
+          "id": "G7",
+          "name": "Ziel",
+          "lat": 46.643014,
+          "lon": 12.740327,
+          "elevation_m": 1815,
+          "time_window": "18:04-18:04"
+        }
+      ]
+    },
+    {
+      "id": "",
+      "name": "KHW_02: von Obstansersee-Hütte nach Porzehütte",
+      "date": "2026-05-04",
+      "waypoints": [
+        {
+          "id": "G1",
+          "name": "Start",
+          "lat": 46.68427,
+          "lon": 12.493688,
+          "elevation_m": 2297,
+          "time_window": "08:00-08:00"
+        },
+        {
+          "id": "G2",
+          "name": "Seg 2 Start",
+          "lat": 46.680574,
+          "lon": 12.502503,
+          "elevation_m": 2594,
+          "time_window": "09:30-09:30"
+        },
+        {
+          "id": "G3",
+          "name": "Seg 3 Start",
+          "lat": 46.66622,
+          "lon": 12.548347,
+          "elevation_m": 2057,
+          "time_window": "12:00-12:00"
+        },
+        {
+          "id": "G4",
+          "name": "Seg 4 Start",
+          "lat": 46.656533,
+          "lon": 12.572911,
+          "elevation_m": 1965,
+          "time_window": "14:01-14:01"
+        },
+        {
+          "id": "G5",
+          "name": "Ziel",
+          "lat": 46.659721,
+          "lon": 12.582203,
+          "elevation_m": 1929,
+          "time_window": "14:23-14:23"
+        }
+      ]
+    },
+    {
+      "id": "",
+      "name": "KHW_01: Sillianer Hütte nach Obstansersee-Hütte",
+      "date": "2026-05-04",
+      "waypoints": [
+        {
+          "id": "G1",
+          "name": "Start",
+          "lat": 46.706067,
+          "lon": 12.406272,
+          "elevation_m": 2441,
+          "time_window": "08:00-08:00"
+        },
+        {
+          "id": "G2",
+          "name": "Seg 2 Start",
+          "lat": 46.68987,
+          "lon": 12.451147,
+          "elevation_m": 2545,
+          "time_window": "10:00-10:00"
+        },
+        {
+          "id": "G3",
+          "name": "Ziel",
+          "lat": 46.68427,
+          "lon": 12.493688,
+          "elevation_m": 2312,
+          "time_window": "11:59-11:59"
+        }
+      ]
+    },
+    {
+      "id": "",
+      "name": "KHW_00b: Von Helmhotel nach Sillianer Hütte",
+      "date": "2026-05-04",
+      "waypoints": [
+        {
+          "id": "G1",
+          "name": "Start",
+          "lat": 46.73042,
+          "lon": 12.321643,
+          "elevation_m": 1142,
+          "time_window": "08:00-08:00"
+        },
+        {
+          "id": "G2",
+          "name": "Seg 2 Start",
+          "lat": 46.715522,
+          "lon": 12.336089,
+          "elevation_m": 1500,
+          "time_window": "10:00-10:00"
+        },
+        {
+          "id": "G3",
+          "name": "Seg 3 Start",
+          "lat": 46.714237,
+          "lon": 12.356389,
+          "elevation_m": 1866,
+          "time_window": "12:00-12:00"
+        },
+        {
+          "id": "G4",
+          "name": "Seg 4 Start",
+          "lat": 46.712507,
+          "lon": 12.383926,
+          "elevation_m": 2236,
+          "time_window": "14:02-14:02"
+        },
+        {
+          "id": "G5",
+          "name": "Ziel",
+          "lat": 46.706056,
+          "lon": 12.406271,
+          "elevation_m": 2377,
+          "time_window": "15:02-15:02"
+        }
+      ]
+    }
+  ],
+  "display_config": {
+    "metrics": [
+      {
+        "enabled": true,
+        "metric_id": "temperature"
+      },
+      {
+        "enabled": true,
+        "metric_id": "wind_chill"
+      },
+      {
+        "enabled": false,
+        "metric_id": "humidity"
+      },
+      {
+        "enabled": false,
+        "metric_id": "dewpoint"
+      },
+      {
+        "enabled": true,
+        "metric_id": "wind"
+      },
+      {
+        "enabled": true,
+        "metric_id": "gust"
+      },
+      {
+        "enabled": true,
+        "metric_id": "wind_direction"
+      },
+      {
+        "enabled": true,
+        "metric_id": "precipitation"
+      },
+      {
+        "enabled": true,
+        "metric_id": "rain_probability"
+      },
+      {
+        "enabled": true,
+        "metric_id": "thunder"
+      },
+      {
+        "enabled": true,
+        "metric_id": "cape"
+      },
+      {
+        "enabled": true,
+        "metric_id": "snowfall_limit"
+      },
+      {
+        "enabled": false,
+        "metric_id": "precip_type"
+      },
+      {
+        "enabled": true,
+        "metric_id": "cloud_total"
+      },
+      {
+        "enabled": true,
+        "metric_id": "cloud_low"
+      },
+      {
+        "enabled": false,
+        "metric_id": "cloud_mid"
+      },
+      {
+        "enabled": false,
+        "metric_id": "cloud_high"
+      },
+      {
+        "enabled": true,
+        "metric_id": "visibility"
+      },
+      {
+        "enabled": false,
+        "metric_id": "sunshine"
+      },
+      {
+        "enabled": true,
+        "metric_id": "uv_index"
+      },
+      {
+        "enabled": false,
+        "metric_id": "pressure"
+      },
+      {
+        "enabled": true,
+        "metric_id": "freezing_level"
+      },
+      {
+        "enabled": false,
+        "metric_id": "snow_depth"
+      },
+      {
+        "enabled": false,
+        "metric_id": "fresh_snow"
+      }
+    ]
+  },
+  "report_config": {
+    "alert_on_changes": true,
+    "change_threshold_precip_mm": 10,
+    "change_threshold_temp_c": 5,
+    "change_threshold_wind_kmh": 20,
+    "enabled": true,
+    "evening_time": "18:00",
+    "morning_time": "07:00",
+    "multi_day_trend_reports": [
+      "evening"
+    ],
+    "send_email": true,
+    "send_signal": false,
+    "send_telegram": false,
+    "show_compact_summary": true,
+    "show_daylight": true,
+    "wind_exposition_min_elevation_m": null
+  }
+}

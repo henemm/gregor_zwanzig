@@ -1,0 +1,903 @@
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/routes/account/+page.svelte:7:21 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m 5:   let { data } = $props();
+[2m[WebServer] [22m 6: 
+[2m[WebServer] [22m 7:   let mailTo = $state(data.profile?.mail_to ?? '');
+[2m[WebServer] [22m                              ^
+[2m[WebServer] [22m 8:   let signalPhone = $state(data.profile?.signal_phone ?? '');
+[2m[WebServer] [22m 9:   let signalApiKey = $state('');
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/routes/account/+page.svelte:8:26 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m 6: 
+[2m[WebServer] [22m 7:   let mailTo = $state(data.profile?.mail_to ?? '');
+[2m[WebServer] [22m 8:   let signalPhone = $state(data.profile?.signal_phone ?? '');
+[2m[WebServer] [22m                                   ^
+[2m[WebServer] [22m 9:   let signalApiKey = $state('');
+[2m[WebServer] [22m10:   let telegramChatId = $state(data.profile?.telegram_chat_id ?? '');
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/routes/account/+page.svelte:10:29 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m 8:   let signalPhone = $state(data.profile?.signal_phone ?? '');
+[2m[WebServer] [22m 9:   let signalApiKey = $state('');
+[2m[WebServer] [22m10:   let telegramChatId = $state(data.profile?.telegram_chat_id ?? '');
+[2m[WebServer] [22m                                      ^
+[2m[WebServer] [22m11:   let successMsg = $state<string | null>(null);
+[2m[WebServer] [22m12:   let errorMsg = $state<string | null>(null);
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/routes/+layout.svelte:52:6 This reference only captures the initial value of `darkMode`. Did you mean to reference it inside a closure instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m50:   if (browser) {
+[2m[WebServer] [22m51:     darkMode = localStorage.getItem('gz-dark') === '1';
+[2m[WebServer] [22m52:     if (darkMode) applyDarkMode(true);
+[2m[WebServer] [22m                    ^
+[2m[WebServer] [22m53:   }
+[2m[WebServer] [22m54: 
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/routes/+layout.svelte:142:5 `<svelte:component>` is deprecated in runes mode — components are dynamic by default
+[2m[WebServer] [22mhttps://svelte.dev/e/svelte_component_deprecated[39m
+[2m[WebServer] [22m140:           onclick={closeMobileMenu}
+[2m[WebServer] [22m141:         >
+[2m[WebServer] [22m142:           <svelte:component this={item.icon} class="size-4 shrink-0 opacity-70" />
+[2m[WebServer] [22m                                                                                       ^
+[2m[WebServer] [22m143:           {item.label}
+[2m[WebServer] [22m144:         </a>
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/routes/compare/+page.svelte:15:36 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m13:   let { data } = $props();
+[2m[WebServer] [22m14: 
+[2m[WebServer] [22m15:   let locations: Location[] = $state(data.locations);
+[2m[WebServer] [22m                                             ^
+[2m[WebServer] [22m16:   let subscriptions: Subscription[] = $state(data.subscriptions ?? []);
+[2m[WebServer] [22m17:   let selectedIds = $state<string[]>(locations.map((l) => l.id));
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/routes/compare/+page.svelte:16:44 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m14: 
+[2m[WebServer] [22m15:   let locations: Location[] = $state(data.locations);
+[2m[WebServer] [22m16:   let subscriptions: Subscription[] = $state(data.subscriptions ?? []);
+[2m[WebServer] [22m                                                     ^
+[2m[WebServer] [22m17:   let selectedIds = $state<string[]>(locations.map((l) => l.id));
+[2m[WebServer] [22m18: 
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/routes/compare/+page.svelte:17:36 This reference only captures the initial value of `locations`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m15:   let locations: Location[] = $state(data.locations);
+[2m[WebServer] [22m16:   let subscriptions: Subscription[] = $state(data.subscriptions ?? []);
+[2m[WebServer] [22m17:   let selectedIds = $state<string[]>(locations.map((l) => l.id));
+[2m[WebServer] [22m                                                  ^
+[2m[WebServer] [22m18: 
+[2m[WebServer] [22m19:   const WEEKDAYS = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/routes/compare/+page.svelte:222:2 This reference only captures the initial value of `locations`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m220: 
+[2m[WebServer] [22m221:   let openGroups = $state<Set<string>>(new Set(
+[2m[WebServer] [22m222:     locations.filter((l) => l.group).map((l) => l.group!)
+[2m[WebServer] [22m                  ^
+[2m[WebServer] [22m223:   ));
+[2m[WebServer] [22m224: 
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/routes/subscriptions/+page.svelte:21:44 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m19:   const WEEKDAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+[2m[WebServer] [22m20: 
+[2m[WebServer] [22m21:   let subscriptions: Subscription[] = $state(data.subscriptions);
+[2m[WebServer] [22m                                                     ^
+[2m[WebServer] [22m22:   let refetching = $state(false);
+[2m[WebServer] [22m23:   async function refetchSubs() {
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/routes/subscriptions/+page.svelte:32:36 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m30:     subscriptions.filter(s => s.name.toLowerCase().includes(search.toLowerCase()))
+[2m[WebServer] [22m31:   );
+[2m[WebServer] [22m32:   let locations: Location[] = $state(data.locations);
+[2m[WebServer] [22m                                             ^
+[2m[WebServer] [22m33:   let dialogMode: 'create' | 'edit' | null = $state(null);
+[2m[WebServer] [22m34:   let editTarget: Subscription | null = $state(null);
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/routes/locations/+page.svelte:19:36 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m17:   let { data } = $props();
+[2m[WebServer] [22m18: 
+[2m[WebServer] [22m19:   let locations: Location[] = $state(data.locations);
+[2m[WebServer] [22m                                             ^
+[2m[WebServer] [22m20:   let refetching = $state(false);
+[2m[WebServer] [22m21:   async function refetchLocations() {
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/routes/trips/+page.svelte:21:28 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m19:   let { data } = $props();
+[2m[WebServer] [22m20: 
+[2m[WebServer] [22m21:   let trips: Trip[] = $state(data.trips);
+[2m[WebServer] [22m                                     ^
+[2m[WebServer] [22m22:   let refetching = $state(false);
+[2m[WebServer] [22m23:   async function refetchTrips() {
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/routes/weather/+page.svelte:10:36 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m 8:   let { data } = $props();
+[2m[WebServer] [22m 9: 
+[2m[WebServer] [22m10:   let locations: Location[] = $state(data.locations);
+[2m[WebServer] [22m                                             ^
+[2m[WebServer] [22m11:   let selectedId = $state('');
+[2m[WebServer] [22m12:   let hours = $state('48');
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/lib/components/wizard/TripWizard.svelte:20:23 This reference only captures the initial value of `existingTrip`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m18: 
+[2m[WebServer] [22m19:   let currentStep = $state(1);
+[2m[WebServer] [22m20:   let tripName = $state(existingTrip?.name ?? '');
+[2m[WebServer] [22m                                        ^
+[2m[WebServer] [22m21:   let tripId = $state(existingTrip?.id ?? '');
+[2m[WebServer] [22m22:   let stages: Stage[] = $state(
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/lib/components/wizard/TripWizard.svelte:21:21 This reference only captures the initial value of `existingTrip`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m19:   let currentStep = $state(1);
+[2m[WebServer] [22m20:   let tripName = $state(existingTrip?.name ?? '');
+[2m[WebServer] [22m21:   let tripId = $state(existingTrip?.id ?? '');
+[2m[WebServer] [22m                                      ^
+[2m[WebServer] [22m22:   let stages: Stage[] = $state(
+[2m[WebServer] [22m23:     existingTrip ? JSON.parse(JSON.stringify(existingTrip.stages)) : []
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/lib/components/wizard/TripWizard.svelte:23:2 This reference only captures the initial value of `existingTrip`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m21:   let tripId = $state(existingTrip?.id ?? '');
+[2m[WebServer] [22m22:   let stages: Stage[] = $state(
+[2m[WebServer] [22m23:     existingTrip ? JSON.parse(JSON.stringify(existingTrip.stages)) : []
+[2m[WebServer] [22m                    ^
+[2m[WebServer] [22m24:   );
+[2m[WebServer] [22m25:   let displayConfig: Record<string, unknown> | undefined = $state(existingTrip?.display_config);
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/lib/components/wizard/TripWizard.svelte:23:43 This reference only captures the initial value of `existingTrip`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m21:   let tripId = $state(existingTrip?.id ?? '');
+[2m[WebServer] [22m22:   let stages: Stage[] = $state(
+[2m[WebServer] [22m23:     existingTrip ? JSON.parse(JSON.stringify(existingTrip.stages)) : []
+[2m[WebServer] [22m                                                             ^
+[2m[WebServer] [22m24:   );
+[2m[WebServer] [22m25:   let displayConfig: Record<string, unknown> | undefined = $state(existingTrip?.display_config);
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/lib/components/wizard/TripWizard.svelte:25:65 This reference only captures the initial value of `existingTrip`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m23:     existingTrip ? JSON.parse(JSON.stringify(existingTrip.stages)) : []
+[2m[WebServer] [22m24:   );
+[2m[WebServer] [22m25:   let displayConfig: Record<string, unknown> | undefined = $state(existingTrip?.display_config);
+[2m[WebServer] [22m                                                                                  ^
+[2m[WebServer] [22m26:   let saveError: string | null = $state(null);
+[2m[WebServer] [22m27:   let saving = $state(false);
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:26:19 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m24:   }
+[2m[WebServer] [22m25: 
+[2m[WebServer] [22m26:   let name = $state(subscription?.name ?? '');
+[2m[WebServer] [22m                                    ^
+[2m[WebServer] [22m27:   let enabled = $state(subscription?.enabled ?? true);
+[2m[WebServer] [22m28:   let schedule = $state<Subscription['schedule']>(subscription?.schedule ?? 'daily_morning');
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:27:22 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m25: 
+[2m[WebServer] [22m26:   let name = $state(subscription?.name ?? '');
+[2m[WebServer] [22m27:   let enabled = $state(subscription?.enabled ?? true);
+[2m[WebServer] [22m                                       ^
+[2m[WebServer] [22m28:   let schedule = $state<Subscription['schedule']>(subscription?.schedule ?? 'daily_morning');
+[2m[WebServer] [22m29:   let weekday = $state(subscription?.weekday ?? 0);
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:28:49 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m26:   let name = $state(subscription?.name ?? '');
+[2m[WebServer] [22m27:   let enabled = $state(subscription?.enabled ?? true);
+[2m[WebServer] [22m28:   let schedule = $state<Subscription['schedule']>(subscription?.schedule ?? 'daily_morning');
+[2m[WebServer] [22m                                                                  ^
+[2m[WebServer] [22m29:   let weekday = $state(subscription?.weekday ?? 0);
+[2m[WebServer] [22m30:   let timeWindowStart = $state(subscription?.time_window_start ?? 6);
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:29:22 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m27:   let enabled = $state(subscription?.enabled ?? true);
+[2m[WebServer] [22m28:   let schedule = $state<Subscription['schedule']>(subscription?.schedule ?? 'daily_morning');
+[2m[WebServer] [22m29:   let weekday = $state(subscription?.weekday ?? 0);
+[2m[WebServer] [22m                                       ^
+[2m[WebServer] [22m30:   let timeWindowStart = $state(subscription?.time_window_start ?? 6);
+[2m[WebServer] [22m31:   let timeWindowEnd = $state(subscription?.time_window_end ?? 20);
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:30:30 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m28:   let schedule = $state<Subscription['schedule']>(subscription?.schedule ?? 'daily_morning');
+[2m[WebServer] [22m29:   let weekday = $state(subscription?.weekday ?? 0);
+[2m[WebServer] [22m30:   let timeWindowStart = $state(subscription?.time_window_start ?? 6);
+[2m[WebServer] [22m                                               ^
+[2m[WebServer] [22m31:   let timeWindowEnd = $state(subscription?.time_window_end ?? 20);
+[2m[WebServer] [22m32:   let forecastHours = $state(subscription?.forecast_hours ?? 24);
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:31:28 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m29:   let weekday = $state(subscription?.weekday ?? 0);
+[2m[WebServer] [22m30:   let timeWindowStart = $state(subscription?.time_window_start ?? 6);
+[2m[WebServer] [22m31:   let timeWindowEnd = $state(subscription?.time_window_end ?? 20);
+[2m[WebServer] [22m                                             ^
+[2m[WebServer] [22m32:   let forecastHours = $state(subscription?.forecast_hours ?? 24);
+[2m[WebServer] [22m33:   let topN = $state(subscription?.top_n ?? 3);
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:32:28 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m30:   let timeWindowStart = $state(subscription?.time_window_start ?? 6);
+[2m[WebServer] [22m31:   let timeWindowEnd = $state(subscription?.time_window_end ?? 20);
+[2m[WebServer] [22m32:   let forecastHours = $state(subscription?.forecast_hours ?? 24);
+[2m[WebServer] [22m                                             ^
+[2m[WebServer] [22m33:   let topN = $state(subscription?.top_n ?? 3);
+[2m[WebServer] [22m34:   let includeHourly = $state(subscription?.include_hourly ?? false);
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:33:19 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m31:   let timeWindowEnd = $state(subscription?.time_window_end ?? 20);
+[2m[WebServer] [22m32:   let forecastHours = $state(subscription?.forecast_hours ?? 24);
+[2m[WebServer] [22m33:   let topN = $state(subscription?.top_n ?? 3);
+[2m[WebServer] [22m                                    ^
+[2m[WebServer] [22m34:   let includeHourly = $state(subscription?.include_hourly ?? false);
+[2m[WebServer] [22m35:   let sendEmail = $state(subscription?.send_email ?? true);
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:34:28 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m32:   let forecastHours = $state(subscription?.forecast_hours ?? 24);
+[2m[WebServer] [22m33:   let topN = $state(subscription?.top_n ?? 3);
+[2m[WebServer] [22m34:   let includeHourly = $state(subscription?.include_hourly ?? false);
+[2m[WebServer] [22m                                             ^
+[2m[WebServer] [22m35:   let sendEmail = $state(subscription?.send_email ?? true);
+[2m[WebServer] [22m36:   let sendSignal = $state(subscription?.send_signal ?? false);
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:35:24 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m33:   let topN = $state(subscription?.top_n ?? 3);
+[2m[WebServer] [22m34:   let includeHourly = $state(subscription?.include_hourly ?? false);
+[2m[WebServer] [22m35:   let sendEmail = $state(subscription?.send_email ?? true);
+[2m[WebServer] [22m                                         ^
+[2m[WebServer] [22m36:   let sendSignal = $state(subscription?.send_signal ?? false);
+[2m[WebServer] [22m37:   let sendTelegram = $state(subscription?.send_telegram ?? false);
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:36:25 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m34:   let includeHourly = $state(subscription?.include_hourly ?? false);
+[2m[WebServer] [22m35:   let sendEmail = $state(subscription?.send_email ?? true);
+[2m[WebServer] [22m36:   let sendSignal = $state(subscription?.send_signal ?? false);
+[2m[WebServer] [22m                                          ^
+[2m[WebServer] [22m37:   let sendTelegram = $state(subscription?.send_telegram ?? false);
+[2m[WebServer] [22m38:   let allLocations = $state(
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:37:27 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m35:   let sendEmail = $state(subscription?.send_email ?? true);
+[2m[WebServer] [22m36:   let sendSignal = $state(subscription?.send_signal ?? false);
+[2m[WebServer] [22m37:   let sendTelegram = $state(subscription?.send_telegram ?? false);
+[2m[WebServer] [22m                                            ^
+[2m[WebServer] [22m38:   let allLocations = $state(
+[2m[WebServer] [22m39:     !subscription || !subscription.locations || subscription.locations[0] === '*'
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:39:3 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m37:   let sendTelegram = $state(subscription?.send_telegram ?? false);
+[2m[WebServer] [22m38:   let allLocations = $state(
+[2m[WebServer] [22m39:     !subscription || !subscription.locations || subscription.locations[0] === '*'
+[2m[WebServer] [22m                     ^
+[2m[WebServer] [22m40:   );
+[2m[WebServer] [22m41:   let selectedLocations = $state<string[]>(
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:39:20 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m37:   let sendTelegram = $state(subscription?.send_telegram ?? false);
+[2m[WebServer] [22m38:   let allLocations = $state(
+[2m[WebServer] [22m39:     !subscription || !subscription.locations || subscription.locations[0] === '*'
+[2m[WebServer] [22m                                      ^
+[2m[WebServer] [22m40:   );
+[2m[WebServer] [22m41:   let selectedLocations = $state<string[]>(
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:39:46 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m37:   let sendTelegram = $state(subscription?.send_telegram ?? false);
+[2m[WebServer] [22m38:   let allLocations = $state(
+[2m[WebServer] [22m39:     !subscription || !subscription.locations || subscription.locations[0] === '*'
+[2m[WebServer] [22m                                                                ^
+[2m[WebServer] [22m40:   );
+[2m[WebServer] [22m41:   let selectedLocations = $state<string[]>(
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:42:2 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m40:   );
+[2m[WebServer] [22m41:   let selectedLocations = $state<string[]>(
+[2m[WebServer] [22m42:     subscription?.locations?.filter((l) => l !== '*') ?? []
+[2m[WebServer] [22m                    ^
+[2m[WebServer] [22m43:   );
+[2m[WebServer] [22m44:   let activityProfile = $state<string>(subscription?.activity_profile ?? 'allgemein');
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:44:38 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m42:     subscription?.locations?.filter((l) => l !== '*') ?? []
+[2m[WebServer] [22m43:   );
+[2m[WebServer] [22m44:   let activityProfile = $state<string>(subscription?.activity_profile ?? 'allgemein');
+[2m[WebServer] [22m                                                       ^
+[2m[WebServer] [22m45:   let error = $state('');
+[2m[WebServer] [22m46: 
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:16:36 This reference only captures the initial value of `locations`. Did you mean to reference it inside a closure instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m14:   let { location, locations = [], onsave, oncancel }: Props = $props();
+[2m[WebServer] [22m15: 
+[2m[WebServer] [22m16:   const existingGroups = [...new Set(locations.flatMap(l => l.group ? [l.group] : []))].sort();
+[2m[WebServer] [22m                                                  ^
+[2m[WebServer] [22m17: 
+[2m[WebServer] [22m18:   function toKebab(s: string): string {
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:26:19 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m24:   }
+[2m[WebServer] [22m25: 
+[2m[WebServer] [22m26:   let name = $state(location?.name ?? '');
+[2m[WebServer] [22m                                ^
+[2m[WebServer] [22m27:   let lat = $state(location?.lat ?? 47.0);
+[2m[WebServer] [22m28:   let lon = $state(location?.lon ?? 11.0);
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:27:18 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m25: 
+[2m[WebServer] [22m26:   let name = $state(location?.name ?? '');
+[2m[WebServer] [22m27:   let lat = $state(location?.lat ?? 47.0);
+[2m[WebServer] [22m                               ^
+[2m[WebServer] [22m28:   let lon = $state(location?.lon ?? 11.0);
+[2m[WebServer] [22m29:   let dmsInput = $state('');
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:28:18 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m26:   let name = $state(location?.name ?? '');
+[2m[WebServer] [22m27:   let lat = $state(location?.lat ?? 47.0);
+[2m[WebServer] [22m28:   let lon = $state(location?.lon ?? 11.0);
+[2m[WebServer] [22m                               ^
+[2m[WebServer] [22m29:   let dmsInput = $state('');
+[2m[WebServer] [22m30: 
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:49:25 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m47:     }
+[2m[WebServer] [22m48:   }
+[2m[WebServer] [22m49:   let elevationM = $state(location?.elevation_m ?? 2000);
+[2m[WebServer] [22m                                      ^
+[2m[WebServer] [22m50:   let region = $state(location?.region ?? '');
+[2m[WebServer] [22m51:   let bergfexSlug = $state(location?.bergfex_slug ?? '');
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:50:21 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m48:   }
+[2m[WebServer] [22m49:   let elevationM = $state(location?.elevation_m ?? 2000);
+[2m[WebServer] [22m50:   let region = $state(location?.region ?? '');
+[2m[WebServer] [22m                                  ^
+[2m[WebServer] [22m51:   let bergfexSlug = $state(location?.bergfex_slug ?? '');
+[2m[WebServer] [22m52:   let activityProfile = $state(location?.activity_profile ?? '');
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:51:26 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m49:   let elevationM = $state(location?.elevation_m ?? 2000);
+[2m[WebServer] [22m50:   let region = $state(location?.region ?? '');
+[2m[WebServer] [22m51:   let bergfexSlug = $state(location?.bergfex_slug ?? '');
+[2m[WebServer] [22m                                       ^
+[2m[WebServer] [22m52:   let activityProfile = $state(location?.activity_profile ?? '');
+[2m[WebServer] [22m53:   let group = $state(location?.group ?? '');
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:52:30 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m50:   let region = $state(location?.region ?? '');
+[2m[WebServer] [22m51:   let bergfexSlug = $state(location?.bergfex_slug ?? '');
+[2m[WebServer] [22m52:   let activityProfile = $state(location?.activity_profile ?? '');
+[2m[WebServer] [22m                                           ^
+[2m[WebServer] [22m53:   let group = $state(location?.group ?? '');
+[2m[WebServer] [22m54:   let error = $state('');
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:53:20 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m51:   let bergfexSlug = $state(location?.bergfex_slug ?? '');
+[2m[WebServer] [22m52:   let activityProfile = $state(location?.activity_profile ?? '');
+[2m[WebServer] [22m53:   let group = $state(location?.group ?? '');
+[2m[WebServer] [22m                                 ^
+[2m[WebServer] [22m54:   let error = $state('');
+[2m[WebServer] [22m55: 
+[2m[WebServer] [22m[33m4:00:22 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:156:4 Self-closing HTML tags for non-void elements are ambiguous — use `<option ...></option>` rather than `<option ... />`
+[2m[WebServer] [22mhttps://svelte.dev/e/element_invalid_self_closing_tag[39m
+[2m[WebServer] [22m154:     <datalist id="group-options">
+[2m[WebServer] [22m155:       {#each existingGroups as g}
+[2m[WebServer] [22m156:         <option value={g} />
+[2m[WebServer] [22m                                 ^
+[2m[WebServer] [22m157:       {/each}
+[2m[WebServer] [22m158:     </datalist>
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/routes/account/+page.svelte:7:21 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m 5:   let { data } = $props();
+[2m[WebServer] [22m 6: 
+[2m[WebServer] [22m 7:   let mailTo = $state(data.profile?.mail_to ?? '');
+[2m[WebServer] [22m                              ^
+[2m[WebServer] [22m 8:   let signalPhone = $state(data.profile?.signal_phone ?? '');
+[2m[WebServer] [22m 9:   let signalApiKey = $state('');
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/routes/account/+page.svelte:8:26 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m 6: 
+[2m[WebServer] [22m 7:   let mailTo = $state(data.profile?.mail_to ?? '');
+[2m[WebServer] [22m 8:   let signalPhone = $state(data.profile?.signal_phone ?? '');
+[2m[WebServer] [22m                                   ^
+[2m[WebServer] [22m 9:   let signalApiKey = $state('');
+[2m[WebServer] [22m10:   let telegramChatId = $state(data.profile?.telegram_chat_id ?? '');
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/routes/account/+page.svelte:10:29 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m 8:   let signalPhone = $state(data.profile?.signal_phone ?? '');
+[2m[WebServer] [22m 9:   let signalApiKey = $state('');
+[2m[WebServer] [22m10:   let telegramChatId = $state(data.profile?.telegram_chat_id ?? '');
+[2m[WebServer] [22m                                      ^
+[2m[WebServer] [22m11:   let successMsg = $state<string | null>(null);
+[2m[WebServer] [22m12:   let errorMsg = $state<string | null>(null);
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/routes/+layout.svelte:52:6 This reference only captures the initial value of `darkMode`. Did you mean to reference it inside a closure instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m50:   if (browser) {
+[2m[WebServer] [22m51:     darkMode = localStorage.getItem('gz-dark') === '1';
+[2m[WebServer] [22m52:     if (darkMode) applyDarkMode(true);
+[2m[WebServer] [22m                    ^
+[2m[WebServer] [22m53:   }
+[2m[WebServer] [22m54: 
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/routes/+layout.svelte:142:5 `<svelte:component>` is deprecated in runes mode — components are dynamic by default
+[2m[WebServer] [22mhttps://svelte.dev/e/svelte_component_deprecated[39m
+[2m[WebServer] [22m140:           onclick={closeMobileMenu}
+[2m[WebServer] [22m141:         >
+[2m[WebServer] [22m142:           <svelte:component this={item.icon} class="size-4 shrink-0 opacity-70" />
+[2m[WebServer] [22m                                                                                       ^
+[2m[WebServer] [22m143:           {item.label}
+[2m[WebServer] [22m144:         </a>
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/routes/locations/+page.svelte:19:36 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m17:   let { data } = $props();
+[2m[WebServer] [22m18: 
+[2m[WebServer] [22m19:   let locations: Location[] = $state(data.locations);
+[2m[WebServer] [22m                                             ^
+[2m[WebServer] [22m20:   let refetching = $state(false);
+[2m[WebServer] [22m21:   async function refetchLocations() {
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/routes/weather/+page.svelte:10:36 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m 8:   let { data } = $props();
+[2m[WebServer] [22m 9: 
+[2m[WebServer] [22m10:   let locations: Location[] = $state(data.locations);
+[2m[WebServer] [22m                                             ^
+[2m[WebServer] [22m11:   let selectedId = $state('');
+[2m[WebServer] [22m12:   let hours = $state('48');
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/routes/trips/+page.svelte:21:28 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m19:   let { data } = $props();
+[2m[WebServer] [22m20: 
+[2m[WebServer] [22m21:   let trips: Trip[] = $state(data.trips);
+[2m[WebServer] [22m                                     ^
+[2m[WebServer] [22m22:   let refetching = $state(false);
+[2m[WebServer] [22m23:   async function refetchTrips() {
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/routes/compare/+page.svelte:15:36 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m13:   let { data } = $props();
+[2m[WebServer] [22m14: 
+[2m[WebServer] [22m15:   let locations: Location[] = $state(data.locations);
+[2m[WebServer] [22m                                             ^
+[2m[WebServer] [22m16:   let subscriptions: Subscription[] = $state(data.subscriptions ?? []);
+[2m[WebServer] [22m17:   let selectedIds = $state<string[]>(locations.map((l) => l.id));
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/routes/compare/+page.svelte:16:44 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m14: 
+[2m[WebServer] [22m15:   let locations: Location[] = $state(data.locations);
+[2m[WebServer] [22m16:   let subscriptions: Subscription[] = $state(data.subscriptions ?? []);
+[2m[WebServer] [22m                                                     ^
+[2m[WebServer] [22m17:   let selectedIds = $state<string[]>(locations.map((l) => l.id));
+[2m[WebServer] [22m18: 
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/routes/compare/+page.svelte:17:36 This reference only captures the initial value of `locations`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m15:   let locations: Location[] = $state(data.locations);
+[2m[WebServer] [22m16:   let subscriptions: Subscription[] = $state(data.subscriptions ?? []);
+[2m[WebServer] [22m17:   let selectedIds = $state<string[]>(locations.map((l) => l.id));
+[2m[WebServer] [22m                                                  ^
+[2m[WebServer] [22m18: 
+[2m[WebServer] [22m19:   const WEEKDAYS = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/routes/compare/+page.svelte:222:2 This reference only captures the initial value of `locations`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m220: 
+[2m[WebServer] [22m221:   let openGroups = $state<Set<string>>(new Set(
+[2m[WebServer] [22m222:     locations.filter((l) => l.group).map((l) => l.group!)
+[2m[WebServer] [22m                  ^
+[2m[WebServer] [22m223:   ));
+[2m[WebServer] [22m224: 
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/routes/subscriptions/+page.svelte:21:44 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m19:   const WEEKDAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+[2m[WebServer] [22m20: 
+[2m[WebServer] [22m21:   let subscriptions: Subscription[] = $state(data.subscriptions);
+[2m[WebServer] [22m                                                     ^
+[2m[WebServer] [22m22:   let refetching = $state(false);
+[2m[WebServer] [22m23:   async function refetchSubs() {
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/routes/subscriptions/+page.svelte:32:36 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m30:     subscriptions.filter(s => s.name.toLowerCase().includes(search.toLowerCase()))
+[2m[WebServer] [22m31:   );
+[2m[WebServer] [22m32:   let locations: Location[] = $state(data.locations);
+[2m[WebServer] [22m                                             ^
+[2m[WebServer] [22m33:   let dialogMode: 'create' | 'edit' | null = $state(null);
+[2m[WebServer] [22m34:   let editTarget: Subscription | null = $state(null);
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:26:19 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m24:   }
+[2m[WebServer] [22m25: 
+[2m[WebServer] [22m26:   let name = $state(subscription?.name ?? '');
+[2m[WebServer] [22m                                    ^
+[2m[WebServer] [22m27:   let enabled = $state(subscription?.enabled ?? true);
+[2m[WebServer] [22m28:   let schedule = $state<Subscription['schedule']>(subscription?.schedule ?? 'daily_morning');
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:27:22 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m25: 
+[2m[WebServer] [22m26:   let name = $state(subscription?.name ?? '');
+[2m[WebServer] [22m27:   let enabled = $state(subscription?.enabled ?? true);
+[2m[WebServer] [22m                                       ^
+[2m[WebServer] [22m28:   let schedule = $state<Subscription['schedule']>(subscription?.schedule ?? 'daily_morning');
+[2m[WebServer] [22m29:   let weekday = $state(subscription?.weekday ?? 0);
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:28:49 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m26:   let name = $state(subscription?.name ?? '');
+[2m[WebServer] [22m27:   let enabled = $state(subscription?.enabled ?? true);
+[2m[WebServer] [22m28:   let schedule = $state<Subscription['schedule']>(subscription?.schedule ?? 'daily_morning');
+[2m[WebServer] [22m                                                                  ^
+[2m[WebServer] [22m29:   let weekday = $state(subscription?.weekday ?? 0);
+[2m[WebServer] [22m30:   let timeWindowStart = $state(subscription?.time_window_start ?? 6);
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:29:22 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m27:   let enabled = $state(subscription?.enabled ?? true);
+[2m[WebServer] [22m28:   let schedule = $state<Subscription['schedule']>(subscription?.schedule ?? 'daily_morning');
+[2m[WebServer] [22m29:   let weekday = $state(subscription?.weekday ?? 0);
+[2m[WebServer] [22m                                       ^
+[2m[WebServer] [22m30:   let timeWindowStart = $state(subscription?.time_window_start ?? 6);
+[2m[WebServer] [22m31:   let timeWindowEnd = $state(subscription?.time_window_end ?? 20);
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:30:30 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m28:   let schedule = $state<Subscription['schedule']>(subscription?.schedule ?? 'daily_morning');
+[2m[WebServer] [22m29:   let weekday = $state(subscription?.weekday ?? 0);
+[2m[WebServer] [22m30:   let timeWindowStart = $state(subscription?.time_window_start ?? 6);
+[2m[WebServer] [22m                                               ^
+[2m[WebServer] [22m31:   let timeWindowEnd = $state(subscription?.time_window_end ?? 20);
+[2m[WebServer] [22m32:   let forecastHours = $state(subscription?.forecast_hours ?? 24);
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:31:28 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m29:   let weekday = $state(subscription?.weekday ?? 0);
+[2m[WebServer] [22m30:   let timeWindowStart = $state(subscription?.time_window_start ?? 6);
+[2m[WebServer] [22m31:   let timeWindowEnd = $state(subscription?.time_window_end ?? 20);
+[2m[WebServer] [22m                                             ^
+[2m[WebServer] [22m32:   let forecastHours = $state(subscription?.forecast_hours ?? 24);
+[2m[WebServer] [22m33:   let topN = $state(subscription?.top_n ?? 3);
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:32:28 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m30:   let timeWindowStart = $state(subscription?.time_window_start ?? 6);
+[2m[WebServer] [22m31:   let timeWindowEnd = $state(subscription?.time_window_end ?? 20);
+[2m[WebServer] [22m32:   let forecastHours = $state(subscription?.forecast_hours ?? 24);
+[2m[WebServer] [22m                                             ^
+[2m[WebServer] [22m33:   let topN = $state(subscription?.top_n ?? 3);
+[2m[WebServer] [22m34:   let includeHourly = $state(subscription?.include_hourly ?? false);
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:33:19 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m31:   let timeWindowEnd = $state(subscription?.time_window_end ?? 20);
+[2m[WebServer] [22m32:   let forecastHours = $state(subscription?.forecast_hours ?? 24);
+[2m[WebServer] [22m33:   let topN = $state(subscription?.top_n ?? 3);
+[2m[WebServer] [22m                                    ^
+[2m[WebServer] [22m34:   let includeHourly = $state(subscription?.include_hourly ?? false);
+[2m[WebServer] [22m35:   let sendEmail = $state(subscription?.send_email ?? true);
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:34:28 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m32:   let forecastHours = $state(subscription?.forecast_hours ?? 24);
+[2m[WebServer] [22m33:   let topN = $state(subscription?.top_n ?? 3);
+[2m[WebServer] [22m34:   let includeHourly = $state(subscription?.include_hourly ?? false);
+[2m[WebServer] [22m                                             ^
+[2m[WebServer] [22m35:   let sendEmail = $state(subscription?.send_email ?? true);
+[2m[WebServer] [22m36:   let sendSignal = $state(subscription?.send_signal ?? false);
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:35:24 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m33:   let topN = $state(subscription?.top_n ?? 3);
+[2m[WebServer] [22m34:   let includeHourly = $state(subscription?.include_hourly ?? false);
+[2m[WebServer] [22m35:   let sendEmail = $state(subscription?.send_email ?? true);
+[2m[WebServer] [22m                                         ^
+[2m[WebServer] [22m36:   let sendSignal = $state(subscription?.send_signal ?? false);
+[2m[WebServer] [22m37:   let sendTelegram = $state(subscription?.send_telegram ?? false);
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:36:25 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m34:   let includeHourly = $state(subscription?.include_hourly ?? false);
+[2m[WebServer] [22m35:   let sendEmail = $state(subscription?.send_email ?? true);
+[2m[WebServer] [22m36:   let sendSignal = $state(subscription?.send_signal ?? false);
+[2m[WebServer] [22m                                          ^
+[2m[WebServer] [22m37:   let sendTelegram = $state(subscription?.send_telegram ?? false);
+[2m[WebServer] [22m38:   let allLocations = $state(
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:37:27 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m35:   let sendEmail = $state(subscription?.send_email ?? true);
+[2m[WebServer] [22m36:   let sendSignal = $state(subscription?.send_signal ?? false);
+[2m[WebServer] [22m37:   let sendTelegram = $state(subscription?.send_telegram ?? false);
+[2m[WebServer] [22m                                            ^
+[2m[WebServer] [22m38:   let allLocations = $state(
+[2m[WebServer] [22m39:     !subscription || !subscription.locations || subscription.locations[0] === '*'
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:39:3 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m37:   let sendTelegram = $state(subscription?.send_telegram ?? false);
+[2m[WebServer] [22m38:   let allLocations = $state(
+[2m[WebServer] [22m39:     !subscription || !subscription.locations || subscription.locations[0] === '*'
+[2m[WebServer] [22m                     ^
+[2m[WebServer] [22m40:   );
+[2m[WebServer] [22m41:   let selectedLocations = $state<string[]>(
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:39:20 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m37:   let sendTelegram = $state(subscription?.send_telegram ?? false);
+[2m[WebServer] [22m38:   let allLocations = $state(
+[2m[WebServer] [22m39:     !subscription || !subscription.locations || subscription.locations[0] === '*'
+[2m[WebServer] [22m                                      ^
+[2m[WebServer] [22m40:   );
+[2m[WebServer] [22m41:   let selectedLocations = $state<string[]>(
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:39:46 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m37:   let sendTelegram = $state(subscription?.send_telegram ?? false);
+[2m[WebServer] [22m38:   let allLocations = $state(
+[2m[WebServer] [22m39:     !subscription || !subscription.locations || subscription.locations[0] === '*'
+[2m[WebServer] [22m                                                                ^
+[2m[WebServer] [22m40:   );
+[2m[WebServer] [22m41:   let selectedLocations = $state<string[]>(
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:42:2 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m40:   );
+[2m[WebServer] [22m41:   let selectedLocations = $state<string[]>(
+[2m[WebServer] [22m42:     subscription?.locations?.filter((l) => l !== '*') ?? []
+[2m[WebServer] [22m                    ^
+[2m[WebServer] [22m43:   );
+[2m[WebServer] [22m44:   let activityProfile = $state<string>(subscription?.activity_profile ?? 'allgemein');
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:44:38 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m42:     subscription?.locations?.filter((l) => l !== '*') ?? []
+[2m[WebServer] [22m43:   );
+[2m[WebServer] [22m44:   let activityProfile = $state<string>(subscription?.activity_profile ?? 'allgemein');
+[2m[WebServer] [22m                                                       ^
+[2m[WebServer] [22m45:   let error = $state('');
+[2m[WebServer] [22m46: 
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:16:36 This reference only captures the initial value of `locations`. Did you mean to reference it inside a closure instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m14:   let { location, locations = [], onsave, oncancel }: Props = $props();
+[2m[WebServer] [22m15: 
+[2m[WebServer] [22m16:   const existingGroups = [...new Set(locations.flatMap(l => l.group ? [l.group] : []))].sort();
+[2m[WebServer] [22m                                                  ^
+[2m[WebServer] [22m17: 
+[2m[WebServer] [22m18:   function toKebab(s: string): string {
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:26:19 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m24:   }
+[2m[WebServer] [22m25: 
+[2m[WebServer] [22m26:   let name = $state(location?.name ?? '');
+[2m[WebServer] [22m                                ^
+[2m[WebServer] [22m27:   let lat = $state(location?.lat ?? 47.0);
+[2m[WebServer] [22m28:   let lon = $state(location?.lon ?? 11.0);
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:27:18 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m25: 
+[2m[WebServer] [22m26:   let name = $state(location?.name ?? '');
+[2m[WebServer] [22m27:   let lat = $state(location?.lat ?? 47.0);
+[2m[WebServer] [22m                               ^
+[2m[WebServer] [22m28:   let lon = $state(location?.lon ?? 11.0);
+[2m[WebServer] [22m29:   let dmsInput = $state('');
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:28:18 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m26:   let name = $state(location?.name ?? '');
+[2m[WebServer] [22m27:   let lat = $state(location?.lat ?? 47.0);
+[2m[WebServer] [22m28:   let lon = $state(location?.lon ?? 11.0);
+[2m[WebServer] [22m                               ^
+[2m[WebServer] [22m29:   let dmsInput = $state('');
+[2m[WebServer] [22m30: 
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:49:25 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m47:     }
+[2m[WebServer] [22m48:   }
+[2m[WebServer] [22m49:   let elevationM = $state(location?.elevation_m ?? 2000);
+[2m[WebServer] [22m                                      ^
+[2m[WebServer] [22m50:   let region = $state(location?.region ?? '');
+[2m[WebServer] [22m51:   let bergfexSlug = $state(location?.bergfex_slug ?? '');
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:50:21 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m48:   }
+[2m[WebServer] [22m49:   let elevationM = $state(location?.elevation_m ?? 2000);
+[2m[WebServer] [22m50:   let region = $state(location?.region ?? '');
+[2m[WebServer] [22m                                  ^
+[2m[WebServer] [22m51:   let bergfexSlug = $state(location?.bergfex_slug ?? '');
+[2m[WebServer] [22m52:   let activityProfile = $state(location?.activity_profile ?? '');
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:51:26 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m49:   let elevationM = $state(location?.elevation_m ?? 2000);
+[2m[WebServer] [22m50:   let region = $state(location?.region ?? '');
+[2m[WebServer] [22m51:   let bergfexSlug = $state(location?.bergfex_slug ?? '');
+[2m[WebServer] [22m                                       ^
+[2m[WebServer] [22m52:   let activityProfile = $state(location?.activity_profile ?? '');
+[2m[WebServer] [22m53:   let group = $state(location?.group ?? '');
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:52:30 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m50:   let region = $state(location?.region ?? '');
+[2m[WebServer] [22m51:   let bergfexSlug = $state(location?.bergfex_slug ?? '');
+[2m[WebServer] [22m52:   let activityProfile = $state(location?.activity_profile ?? '');
+[2m[WebServer] [22m                                           ^
+[2m[WebServer] [22m53:   let group = $state(location?.group ?? '');
+[2m[WebServer] [22m54:   let error = $state('');
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:53:20 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m51:   let bergfexSlug = $state(location?.bergfex_slug ?? '');
+[2m[WebServer] [22m52:   let activityProfile = $state(location?.activity_profile ?? '');
+[2m[WebServer] [22m53:   let group = $state(location?.group ?? '');
+[2m[WebServer] [22m                                 ^
+[2m[WebServer] [22m54:   let error = $state('');
+[2m[WebServer] [22m55: 
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:156:4 Self-closing HTML tags for non-void elements are ambiguous — use `<option ...></option>` rather than `<option ... />`
+[2m[WebServer] [22mhttps://svelte.dev/e/element_invalid_self_closing_tag[39m
+[2m[WebServer] [22m154:     <datalist id="group-options">
+[2m[WebServer] [22m155:       {#each existingGroups as g}
+[2m[WebServer] [22m156:         <option value={g} />
+[2m[WebServer] [22m                                 ^
+[2m[WebServer] [22m157:       {/each}
+[2m[WebServer] [22m158:     </datalist>
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/lib/components/wizard/TripWizard.svelte:20:23 This reference only captures the initial value of `existingTrip`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m18: 
+[2m[WebServer] [22m19:   let currentStep = $state(1);
+[2m[WebServer] [22m20:   let tripName = $state(existingTrip?.name ?? '');
+[2m[WebServer] [22m                                        ^
+[2m[WebServer] [22m21:   let tripId = $state(existingTrip?.id ?? '');
+[2m[WebServer] [22m22:   let stages: Stage[] = $state(
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/lib/components/wizard/TripWizard.svelte:21:21 This reference only captures the initial value of `existingTrip`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m19:   let currentStep = $state(1);
+[2m[WebServer] [22m20:   let tripName = $state(existingTrip?.name ?? '');
+[2m[WebServer] [22m21:   let tripId = $state(existingTrip?.id ?? '');
+[2m[WebServer] [22m                                      ^
+[2m[WebServer] [22m22:   let stages: Stage[] = $state(
+[2m[WebServer] [22m23:     existingTrip ? JSON.parse(JSON.stringify(existingTrip.stages)) : []
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/lib/components/wizard/TripWizard.svelte:23:2 This reference only captures the initial value of `existingTrip`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m21:   let tripId = $state(existingTrip?.id ?? '');
+[2m[WebServer] [22m22:   let stages: Stage[] = $state(
+[2m[WebServer] [22m23:     existingTrip ? JSON.parse(JSON.stringify(existingTrip.stages)) : []
+[2m[WebServer] [22m                    ^
+[2m[WebServer] [22m24:   );
+[2m[WebServer] [22m25:   let displayConfig: Record<string, unknown> | undefined = $state(existingTrip?.display_config);
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/lib/components/wizard/TripWizard.svelte:23:43 This reference only captures the initial value of `existingTrip`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m21:   let tripId = $state(existingTrip?.id ?? '');
+[2m[WebServer] [22m22:   let stages: Stage[] = $state(
+[2m[WebServer] [22m23:     existingTrip ? JSON.parse(JSON.stringify(existingTrip.stages)) : []
+[2m[WebServer] [22m                                                             ^
+[2m[WebServer] [22m24:   );
+[2m[WebServer] [22m25:   let displayConfig: Record<string, unknown> | undefined = $state(existingTrip?.display_config);
+[2m[WebServer] [22m[33m4:00:24 PM [vite-plugin-svelte] src/lib/components/wizard/TripWizard.svelte:25:65 This reference only captures the initial value of `existingTrip`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m23:     existingTrip ? JSON.parse(JSON.stringify(existingTrip.stages)) : []
+[2m[WebServer] [22m24:   );
+[2m[WebServer] [22m25:   let displayConfig: Record<string, unknown> | undefined = $state(existingTrip?.display_config);
+[2m[WebServer] [22m                                                                                  ^
+[2m[WebServer] [22m26:   let saveError: string | null = $state(null);
+[2m[WebServer] [22m27:   let saving = $state(false);
+[2m[WebServer] [22m[33m[33m[PLUGIN_TIMINGS] Warning:[0m Your build spent significant time in plugins. Here is a breakdown:
+[2m[WebServer] [22m  - vite-plugin-sveltekit-guard (84%)
+[2m[WebServer] [22m  - vite-plugin-svelte:load-custom (5%)
+[2m[WebServer] [22m  - vite-plugin-svelte:compile (5%)
+[2m[WebServer] [22mSee https://rolldown.rs/options/checks#plugintimings for more details.
+[2m[WebServer] [22m[39m
+
+Running 28 tests using 1 worker
+
+  ✓   1 e2e/trip-wizard.spec.ts:11:2 › Trip Wizard W1 › wizard create route exists at /trips/new (394ms)
+  ✓   2 e2e/trip-wizard.spec.ts:21:2 › Trip Wizard W1 › wizard shows 4-step stepper with Route as active (308ms)
+  ✓   3 e2e/trip-wizard.spec.ts:35:2 › Trip Wizard W1 › stepper labels are Route, Etappen, Wetter, Reports (300ms)
+  ✓   4 e2e/trip-wizard.spec.ts:46:2 › Trip Wizard W1 › step 1 shows GPX upload zone (293ms)
+  ✓   5 e2e/trip-wizard.spec.ts:52:2 › Trip Wizard W1 › step 1 shows trip name input (294ms)
+  ✓   6 e2e/trip-wizard.spec.ts:58:2 › Trip Wizard W1 › step 1 has manual create button (295ms)
+  ✓   7 e2e/trip-wizard.spec.ts:64:2 › Trip Wizard W1 › step 1 weiter button is disabled without trip name (284ms)
+  ✓   8 e2e/trip-wizard.spec.ts:71:2 › Trip Wizard W1 › step 1 weiter button enabled after entering trip name and adding stage (341ms)
+  ✓   9 e2e/trip-wizard.spec.ts:89:2 › Trip Wizard W1 › step 2 shows stages from step 1 (386ms)
+  ✓  10 e2e/trip-wizard.spec.ts:104:2 › Trip Wizard W1 › step 2 allows adding waypoints (415ms)
+  ✓  11 e2e/trip-wizard.spec.ts:121:2 › Trip Wizard W1 › step 2 allows adding more stages (424ms)
+  ✓  12 e2e/trip-wizard.spec.ts:139:2 › Trip Wizard W1 › back button on step 2 returns to step 1 (429ms)
+  ✓  13 e2e/trip-wizard.spec.ts:158:2 › Trip Wizard W1 › cancel button navigates to /trips (318ms)
+  ✓  14 e2e/trip-wizard.spec.ts:165:2 › Trip Wizard W1 › step 1 has no back button but wizard is visible (267ms)
+  ✓  15 e2e/trip-wizard.spec.ts:176:2 › Trip Wizard W1 › step 3 shows weather template selector (446ms)
+  ✓  16 e2e/trip-wizard.spec.ts:192:2 › Trip Wizard W1 › step 3 has template dropdown with 7 options (476ms)
+  ✓  17 e2e/trip-wizard.spec.ts:212:2 › Trip Wizard W1 › step 3 shows metric checkboxes grouped by category (590ms)
+  ✓  18 e2e/trip-wizard.spec.ts:235:2 › Trip Wizard W1 › step 3 template selection pre-fills metrics (471ms)
+  ✓  19 e2e/trip-wizard.spec.ts:258:2 › Trip Wizard W1 › step 3 manual override shows "Benutzerdefiniert" (511ms)
+  ✘  20 e2e/trip-wizard.spec.ts:286:2 › Trip Wizard W1 › step 4 shows report config container (5.5s)
+  ✘  21 e2e/trip-wizard.spec.ts:302:2 › Trip Wizard W1 › step 4 has schedule with default times (5.6s)
+  ✘  22 e2e/trip-wizard.spec.ts:326:2 › Trip Wizard W1 › step 4 channel checkboxes with email checked by default (5.6s)
+  ✘  23 e2e/trip-wizard.spec.ts:344:2 › Trip Wizard W1 › step 4 alert section with threshold inputs (5.6s)
+  ✘  24 e2e/trip-wizard.spec.ts:366:2 › Trip Wizard W1 › step 4 advanced section expandable (30.0s)
+  ✓  25 e2e/trip-wizard.spec.ts:388:2 › Trip Wizard W1 › save button visible on last step (594ms)
+  -  26 e2e/trip-wizard.spec.ts:410:2 › Trip Wizard W1 › trips page edit button navigates to wizard
+  -  27 e2e/trip-wizard.spec.ts:427:2 › Trip Wizard W1 › edit mode pre-fills trip name
+  ✓  28 e2e/trip-wizard.spec.ts:447:2 › Trip Wizard W1 › trips page "Neuer Trip" navigates to /trips/new (347ms)
+
+
+  1) e2e/trip-wizard.spec.ts:286:2 › Trip Wizard W1 › step 4 shows report config container ─────────
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: locator('[data-testid="wizard-step4-report"]')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for locator('[data-testid="wizard-step4-report"]')[22m
+
+
+      297 | 		await page.locator('[data-testid="wizard-next"]').click(); // step 4
+      298 |
+    > 299 | 		await expect(page.locator('[data-testid="wizard-step4-report"]')).toBeVisible();
+          | 		                                                                  ^
+      300 | 	});
+      301 |
+      302 | 	test('step 4 has schedule with default times', async ({ page }) => {
+        at /home/hem/gregor_zwanzig/frontend/e2e/trip-wizard.spec.ts:299:69
+
+    Error Context: test-results/trip-wizard-Trip-Wizard-W1-a721e-ows-report-config-container/error-context.md
+
+  2) e2e/trip-wizard.spec.ts:302:2 › Trip Wizard W1 › step 4 has schedule with default times ───────
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: locator('[data-testid="report-enabled"]')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for locator('[data-testid="report-enabled"]')[22m
+
+
+      314 |
+      315 | 		const reportEnabled = page.locator('[data-testid="report-enabled"]');
+    > 316 | 		await expect(reportEnabled).toBeVisible();
+          | 		                            ^
+      317 | 		await expect(reportEnabled).toBeChecked();
+      318 |
+      319 | 		const morningTime = page.locator('[data-testid="report-morning-time"]');
+        at /home/hem/gregor_zwanzig/frontend/e2e/trip-wizard.spec.ts:316:31
+
+    Error Context: test-results/trip-wizard-Trip-Wizard-W1-3a561-schedule-with-default-times/error-context.md
+
+  3) e2e/trip-wizard.spec.ts:326:2 › Trip Wizard W1 › step 4 channel checkboxes with email checked by default 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeChecked[2m([22m[2m)[22m failed
+
+    Locator: locator('[data-testid="report-send-email"]')
+    Expected: checked
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeChecked" with timeout 5000ms[22m
+    [2m  - waiting for locator('[data-testid="report-send-email"]')[22m
+
+
+      337 | 		await page.locator('[data-testid="wizard-next"]').click(); // step 4
+      338 |
+    > 339 | 		await expect(page.locator('[data-testid="report-send-email"]')).toBeChecked();
+          | 		                                                                ^
+      340 | 		await expect(page.locator('[data-testid="report-send-signal"]')).not.toBeChecked();
+      341 | 		await expect(page.locator('[data-testid="report-send-telegram"]')).not.toBeChecked();
+      342 | 	});
+        at /home/hem/gregor_zwanzig/frontend/e2e/trip-wizard.spec.ts:339:67
+
+    Error Context: test-results/trip-wizard-Trip-Wizard-W1-b691a-th-email-checked-by-default/error-context.md
+
+  4) e2e/trip-wizard.spec.ts:344:2 › Trip Wizard W1 › step 4 alert section with threshold inputs ───
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeChecked[2m([22m[2m)[22m failed
+
+    Locator: locator('[data-testid="report-alert-changes"]')
+    Expected: checked
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeChecked" with timeout 5000ms[22m
+    [2m  - waiting for locator('[data-testid="report-alert-changes"]')[22m
+
+
+      355 | 		await page.locator('[data-testid="wizard-next"]').click(); // step 4
+      356 |
+    > 357 | 		await expect(page.locator('[data-testid="report-alert-changes"]')).toBeChecked();
+          | 		                                                                   ^
+      358 |
+      359 | 		// At least 3 number inputs in the alert section
+      360 | 		const alertInputs = page.locator('[data-testid="report-alert-changes"]')
+        at /home/hem/gregor_zwanzig/frontend/e2e/trip-wizard.spec.ts:357:70
+
+    Error Context: test-results/trip-wizard-Trip-Wizard-W1-ad3d5-ction-with-threshold-inputs/error-context.md
+
+  5) e2e/trip-wizard.spec.ts:366:2 › Trip Wizard W1 › step 4 advanced section expandable ───────────
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('[data-testid="report-show-advanced"]')[22m
+
+
+      378 |
+      379 | 		// Click to expand advanced section
+    > 380 | 		await page.locator('[data-testid="report-show-advanced"]').click();
+          | 		                                                           ^
+      381 |
+      382 | 		await expect(page.locator('[data-testid="report-compact-summary"]')).toBeVisible();
+      383 | 		await expect(page.locator('[data-testid="report-wind-exposition"]')).toBeVisible();
+        at /home/hem/gregor_zwanzig/frontend/e2e/trip-wizard.spec.ts:380:62
+
+    Error Context: test-results/trip-wizard-Trip-Wizard-W1-319d4-advanced-section-expandable/error-context.md
+
+  5 failed
+    e2e/trip-wizard.spec.ts:286:2 › Trip Wizard W1 › step 4 shows report config container ──────────
+    e2e/trip-wizard.spec.ts:302:2 › Trip Wizard W1 › step 4 has schedule with default times ────────
+    e2e/trip-wizard.spec.ts:326:2 › Trip Wizard W1 › step 4 channel checkboxes with email checked by default 
+    e2e/trip-wizard.spec.ts:344:2 › Trip Wizard W1 › step 4 alert section with threshold inputs ────
+    e2e/trip-wizard.spec.ts:366:2 › Trip Wizard W1 › step 4 advanced section expandable ────────────
+  2 skipped
+  21 passed (1.2m)

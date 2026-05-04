@@ -1,0 +1,109 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 16 items
+
+tests/tdd/test_scheduler_triggers.py ..........                          [ 62%]
+tests/tdd/test_betterstack_heartbeat.py FFFFFF                           [100%]
+
+=================================== FAILURES ===================================
+________ TestHeartbeatConstants.test_heartbeat_morning_constant_exists _________
+
+self = <tdd.test_betterstack_heartbeat.TestHeartbeatConstants object at 0x7049294f7740>
+
+    def test_heartbeat_morning_constant_exists(self):
+        """
+        GIVEN: scheduler module
+        WHEN: accessing HEARTBEAT_MORNING constant
+        THEN: it should be the correct BetterStack URL
+        """
+>       from web.scheduler import HEARTBEAT_MORNING
+E       ImportError: cannot import name 'HEARTBEAT_MORNING' from 'web.scheduler' (/home/hem/gregor_zwanzig/src/web/scheduler.py)
+
+tests/tdd/test_betterstack_heartbeat.py:22: ImportError
+________ TestHeartbeatConstants.test_heartbeat_evening_constant_exists _________
+
+self = <tdd.test_betterstack_heartbeat.TestHeartbeatConstants object at 0x7049294f78f0>
+
+    def test_heartbeat_evening_constant_exists(self):
+        """
+        GIVEN: scheduler module
+        WHEN: accessing HEARTBEAT_EVENING constant
+        THEN: it should be the correct BetterStack URL
+        """
+>       from web.scheduler import HEARTBEAT_EVENING
+E       ImportError: cannot import name 'HEARTBEAT_EVENING' from 'web.scheduler' (/home/hem/gregor_zwanzig/src/web/scheduler.py)
+
+tests/tdd/test_betterstack_heartbeat.py:32: ImportError
+________ TestPingHeartbeatFunction.test_ping_heartbeat_function_exists _________
+
+self = <tdd.test_betterstack_heartbeat.TestPingHeartbeatFunction object at 0x7049294f7ad0>
+
+    def test_ping_heartbeat_function_exists(self):
+        """
+        GIVEN: scheduler module
+        WHEN: accessing _ping_heartbeat function
+        THEN: it should be callable
+        """
+>       from web.scheduler import _ping_heartbeat
+E       ImportError: cannot import name '_ping_heartbeat' from 'web.scheduler' (/home/hem/gregor_zwanzig/src/web/scheduler.py)
+
+tests/tdd/test_betterstack_heartbeat.py:46: ImportError
+____ TestPingHeartbeatFunction.test_ping_heartbeat_invalid_url_no_exception ____
+
+self = <tdd.test_betterstack_heartbeat.TestPingHeartbeatFunction object at 0x7049294f7c50>
+
+    def test_ping_heartbeat_invalid_url_no_exception(self):
+        """
+        GIVEN: an invalid URL
+        WHEN: calling _ping_heartbeat
+        THEN: it should NOT raise an exception (fire-and-forget)
+        """
+>       from web.scheduler import _ping_heartbeat
+E       ImportError: cannot import name '_ping_heartbeat' from 'web.scheduler' (/home/hem/gregor_zwanzig/src/web/scheduler.py)
+
+tests/tdd/test_betterstack_heartbeat.py:56: ImportError
+_____ TestHeartbeatIntegration.test_morning_subscriptions_calls_heartbeat ______
+
+self = <tdd.test_betterstack_heartbeat.TestHeartbeatIntegration object at 0x7049294f7e60>
+
+    def test_morning_subscriptions_calls_heartbeat(self):
+        """
+        GIVEN: run_morning_subscriptions function
+        WHEN: inspecting source code
+        THEN: it should contain a call to _ping_heartbeat with HEARTBEAT_MORNING
+        """
+        from web.scheduler import run_morning_subscriptions
+    
+        source = inspect.getsource(run_morning_subscriptions)
+>       assert "_ping_heartbeat" in source
+E       assert '_ping_heartbeat' in 'def run_morning_subscriptions() -> None:\n    """Run all DAILY_MORNING subscriptions."""\n    def _do():\n        fro......")\n        _run_subscriptions_by_schedule(Schedule.DAILY_MORNING)\n    _record_run("morning_subscriptions", _do)\n'
+
+tests/tdd/test_betterstack_heartbeat.py:74: AssertionError
+_____ TestHeartbeatIntegration.test_evening_subscriptions_calls_heartbeat ______
+
+self = <tdd.test_betterstack_heartbeat.TestHeartbeatIntegration object at 0x7049294f7e00>
+
+    def test_evening_subscriptions_calls_heartbeat(self):
+        """
+        GIVEN: run_evening_subscriptions function
+        WHEN: inspecting source code
+        THEN: it should contain a call to _ping_heartbeat with HEARTBEAT_EVENING
+        """
+        from web.scheduler import run_evening_subscriptions
+    
+        source = inspect.getsource(run_evening_subscriptions)
+>       assert "_ping_heartbeat" in source
+E       assert '_ping_heartbeat' in 'def run_evening_subscriptions() -> None:\n    """Run DAILY_EVENING and matching WEEKLY subscriptions."""\n    def _do...schedule(Schedule.DAILY_EVENING)\n        _run_weekly_subscriptions()\n    _record_run("evening_subscriptions", _do)\n'
+
+tests/tdd/test_betterstack_heartbeat.py:86: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_betterstack_heartbeat.py::TestHeartbeatConstants::test_heartbeat_morning_constant_exists
+FAILED tests/tdd/test_betterstack_heartbeat.py::TestHeartbeatConstants::test_heartbeat_evening_constant_exists
+FAILED tests/tdd/test_betterstack_heartbeat.py::TestPingHeartbeatFunction::test_ping_heartbeat_function_exists
+FAILED tests/tdd/test_betterstack_heartbeat.py::TestPingHeartbeatFunction::test_ping_heartbeat_invalid_url_no_exception
+FAILED tests/tdd/test_betterstack_heartbeat.py::TestHeartbeatIntegration::test_morning_subscriptions_calls_heartbeat
+FAILED tests/tdd/test_betterstack_heartbeat.py::TestHeartbeatIntegration::test_evening_subscriptions_calls_heartbeat
+========================= 6 failed, 10 passed in 3.38s =========================

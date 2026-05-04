@@ -1,0 +1,8 @@
+{
+  "id": "profil-test",
+  "name": "Profil Test",
+  "lat": 47,
+  "lon": 11,
+  "elevation_m": 2000,
+  "activity_profile": "wandern"
+}

@@ -136,3 +136,28 @@ telegram_trip_config_default
 telegram_trip_config_explicit
 telegram_subscription_default
 telegram_subscription_explicit
+
+# Epic #96 β1: Output Token Builder (spec: docs/specs/modules/output_token_builder.md)
+build_token_line_returns_tokenline
+token_order_thunderstorm_first
+friendly_format_uses_friendly_label
+threshold_peak_format
+morning_filter_excludes_evening_only
+wintersport_profile_adds_sn_token
+render_max_length_truncates
+render_truncation_priority
+empty_forecast_raises
+determinism
+golden_gr20_summer_evening
+golden_gr20_spring_morning
+golden_gr221_mallorca_evening
+golden_arlberg_winter_morning
+golden_corsica_vigilance
+new_builder_matches_sms_trip_today
+
+# Output Token Builder beta1 — DTOs documented in docs/specs/modules/output_token_builder.md
+token
+tokenline
+normalizedforecast
+hourpoint
+dayaggregate

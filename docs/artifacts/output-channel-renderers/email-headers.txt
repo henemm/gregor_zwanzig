@@ -1,0 +1,70 @@
+Delivered-To: gregor_zwanzig@henemm.com
+X-Spam-Status: No
+Received: from a3-16.smtp-out.eu-west-1.amazonses.com (a3-16.smtp-out.eu-west-1.amazonses.com [54.240.3.16] (AS16509 Amazon.com, Inc., US))
+	(using TLSv1.3 with cipher TLS13_AES_256_GCM_SHA384)
+	by mail.henemm.com (Stalwart SMTP) with ESMTPS id 438DEDDFB801202;
+	Tue, 28 Apr 2026 04:53:12 +0000
+Authentication-Results: mail.henemm.com;
+	dkim=pass header.d=henemm.com header.s=resend header.b=RC5ZbKx5;
+	dkim=pass header.d=amazonses.com header.s=shh3fegwg5fppqsuzphvschd53n6ihuv header.b=XPj4v2QC;
+	spf=none (mail.henemm.com: no SPF records found for postmaster@a3-16.smtp-out.eu-west-1.amazonses.com) smtp.helo=a3-16.smtp-out.eu-west-1.amazonses.com;
+	spf=pass (mail.henemm.com: domain of 0102019dd26f230b-628f8abf-165b-44b8-b2e0-125cdf9efada-000000@send.henemm.com designates 54.240.3.16 as permitted sender) smtp.mailfrom=0102019dd26f230b-628f8abf-165b-44b8-b2e0-125cdf9efada-000000@send.henemm.com;
+	iprev=pass policy.iprev=54.240.3.16;
+	dmarc=pass header.from=henemm.com policy.dmarc=quarantine
+Received-SPF: pass (mail.henemm.com: domain of 0102019dd26f230b-628f8abf-165b-44b8-b2e0-125cdf9efada-000000@send.henemm.com designates 54.240.3.16 as permitted sender)
+	receiver=mail.henemm.com; client-ip=54.240.3.16; envelope-from="0102019dd26f230b-628f8abf-165b-44b8-b2e0-125cdf9efada-000000@send.henemm.com"; helo=a3-16.smtp-out.eu-west-1.amazonses.com;
+X-Spam-Result: DMARC_POLICY_ALLOW (-0.50),
+	DKIM_ALLOW (-0.20),
+	RWL_MAILSPIKE_VERYGOOD (-0.20),
+	SPF_ALLOW (-0.20),
+	ARC_NA (0.00),
+	DBL_BLOCKED_OPENRESOLVER (0.00),
+	DKIM_SIGNED (0.00),
+	DNSWL_BLOCKED (0.00),
+	DWL_DNSWL_BLOCKED (0.00),
+	FROM_NEQ_ENV_FROM (0.00),
+	FROM_NO_DN (0.00),
+	HAS_REPLYTO (0.00),
+	HTML_SHORT_1 (0.00),
+	RBL_SENDERSCORE_REPUT_BLOCKED (0.00),
+	RBL_SPAMHAUS_BLOCKED_OPENRESOLVER (0.00),
+	RCPT_COUNT_ONE (0.00),
+	RCVD_TLS_LAST (0.00),
+	REPLYTO_EQ_FROM (0.00),
+	SOURCE_ASN_16509 (0.00),
+	TO_DN_NONE (0.00),
+	TO_EQ_FROM (0.00),
+	TO_MATCH_ENVRCPT_ALL (0.00),
+	URIBL_BLOCKED (0.00),
+	RCVD_COUNT_ZERO (0.10),
+	FORGED_SENDER (0.30),
+	MIXED_CHARSET (2.00)
+X-Spam-Score: ham, score=1.30
+Return-Path: <0102019dd26f230b-628f8abf-165b-44b8-b2e0-125cdf9efada-000000@send.henemm.com>
+DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/simple; s=resend;
+	d=henemm.com; t=1777351992;
+	h=From:To:Reply-To:Subject:Message-ID:Date:MIME-Version:Content-Type;
+	bh=n2LSxkt6xLpKN4wqIdxObdl0fgqTQgtCvIObygP1fsQ=;
+	b=RC5ZbKx5ASHjxFYUiMIHt0gs84fBOXdz4CO1SG70LAMshfcLB90/kaMkdkF6BTvp
+	1kVlSBUkZMYPA1m5feAtMToMDsIm7DqJMWanyMDFYNvrPhpaKdK0JFPWFT3/Pru00dJ
+	W8LvkMGhVm1uKqHOilTq4+SoFgGdopmeFInsv3rk=
+DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/simple;
+	s=shh3fegwg5fppqsuzphvschd53n6ihuv; d=amazonses.com; t=1777351992;
+	h=From:To:Reply-To:Subject:Message-ID:Date:MIME-Version:Content-Type:Feedback-ID;
+	bh=n2LSxkt6xLpKN4wqIdxObdl0fgqTQgtCvIObygP1fsQ=;
+	b=XPj4v2QCxmbPG/FLPE7+WvxG/PTSvJUlwwPlEYARTGy4QIEc5A3RF378mdCFVbTW
+	XU02DdlIbgst804hWiOhGpz5JDcY/aUVyW+BRHLy5m1FJ7xiWGdPKIoqFN0B8Hl7FYQ
+	0FirnGy6v1eCIOWEf+NKFyOJIdeWJ3t/NmRKQwuE=
+From: gregor_zwanzig@henemm.com
+To: gregor_zwanzig@henemm.com
+Reply-To: gregor_zwanzig@henemm.com
+Subject: =?UTF-8?Q?=5BVALIDATOR_=CE=B23_Renderer-Split=5D_T?=
+ =?UTF-8?Q?ag_1=3A_Validator-Test_=E2=80=94_Morgen_?=
+ =?UTF-8?Q?=E2=80=94_D22_W15_G31?=
+Message-ID: <0102019dd26f230b-628f8abf-165b-44b8-b2e0-125cdf9efada-000000@eu-west-1.amazonses.com>
+Date: Tue, 28 Apr 2026 04:53:12 +0000
+MIME-Version: 1.0
+Content-Type: multipart/alternative;
+ boundary="--_NmP-8efeb9449b0291a3-Part_1"
+Feedback-ID: :1.eu-west-1.GsFbdI8orN5fGne5ow7WxbSc9xsuV2LCJl1M0X1egdOsvTBJFFB0rfsVxvpqxPeVYzVB5GgebAu0rYXX4XaBTIK1XEc7umk7GXsTJA5A5AvIvQIHO7nV9SL1JmwAq/Zr6lbknzd6wvuYpjHtP4nymyw9m8aerpfeLgWSAlw62xw=:1.eu-west-1.xc5b6Z4+0WlftYwtQHAHsTtsfYdZQImSOXWypZD9BdY=:AmazonSES
+X-SES-Outgoing: 2026.04.28-54.240.3.16

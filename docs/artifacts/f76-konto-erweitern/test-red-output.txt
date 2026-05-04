@@ -1,0 +1,139 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 6 items
+
+tests/tdd/test_channel_test_button.py FFFFFF                             [100%]
+
+=================================== FAILURES ===================================
+_______________________ test_notify_router_module_exists _______________________
+
+    def test_notify_router_module_exists():
+        """
+        GIVEN: Die Codebase
+        WHEN: api.routers.notify wird importiert
+        THEN: Das Modul existiert und hat einen router
+        """
+>       from api.routers import notify
+E       ImportError: cannot import name 'notify' from 'api.routers' (/home/hem/gregor_zwanzig/api/routers/__init__.py)
+
+tests/tdd/test_channel_test_button.py:23: ImportError
+_____________________ test_notify_router_registered_in_app _____________________
+
+    def test_notify_router_registered_in_app():
+        """
+        GIVEN: Die FastAPI-App
+        WHEN: POST /api/notify/test aufgerufen wird
+        THEN: Die Route existiert (nicht 404)
+        """
+        from api.main import app
+        client = TestClient(app)
+        resp = client.post("/api/notify/test", params={"user_id": "default"})
+>       assert resp.status_code != 404, (
+            f"Route /api/notify/test nicht registriert (404). Status: {resp.status_code}"
+        )
+E       AssertionError: Route /api/notify/test nicht registriert (404). Status: 404
+E       assert 404 != 404
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+tests/tdd/test_channel_test_button.py:38: AssertionError
+______________________ test_notify_test_requires_channel _______________________
+
+    def test_notify_test_requires_channel():
+        """
+        GIVEN: Die FastAPI-App mit registriertem notify-Router
+        WHEN: POST /api/notify/test ohne Body aufgerufen wird
+        THEN: 422 Validation Error (channel fehlt)
+        """
+        from api.main import app
+        client = TestClient(app)
+        resp = client.post("/api/notify/test", params={"user_id": "default"})
+>       assert resp.status_code == 422, (
+            f"Erwarte 422 bei fehlendem Body, bekam {resp.status_code}"
+        )
+E       AssertionError: Erwarte 422 bei fehlendem Body, bekam 404
+E       assert 404 == 422
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+tests/tdd/test_channel_test_button.py:54: AssertionError
+________________ test_notify_test_unknown_channel_returns_error ________________
+
+    def test_notify_test_unknown_channel_returns_error():
+        """
+        GIVEN: Der Endpoint existiert
+        WHEN: Ein unbekannter Kanal gesendet wird
+        THEN: Response enthaelt {"error": "..."}
+        """
+        from api.main import app
+        client = TestClient(app)
+        resp = client.post(
+            "/api/notify/test",
+            json={"channel": "fax"},
+            params={"user_id": "default"},
+        )
+        data = resp.json()
+>       assert "error" in data, f"Erwarte error-Key bei unbekanntem Kanal, bekam: {data}"
+E       AssertionError: Erwarte error-Key bei unbekanntem Kanal, bekam: {'detail': 'Not Found'}
+E       assert 'error' in {'detail': 'Not Found'}
+
+tests/tdd/test_channel_test_button.py:75: AssertionError
+______________________ test_notify_test_email_returns_ok _______________________
+
+    def test_notify_test_email_returns_ok():
+        """
+        GIVEN: Ein User mit konfigurierter E-Mail
+        WHEN: POST /api/notify/test mit channel=email
+        THEN: Response enthaelt {"status": "ok"}
+    
+        Hinweis: Dieser Test sendet eine ECHTE E-Mail.
+        Der Default-User muss mail_to konfiguriert haben.
+        """
+        from api.main import app
+        client = TestClient(app)
+        resp = client.post(
+            "/api/notify/test",
+            json={"channel": "email"},
+            params={"user_id": "default"},
+        )
+        data = resp.json()
+>       assert data.get("status") == "ok", (
+            f"Erwarte {{'status': 'ok'}}, bekam: {data}"
+        )
+E       AssertionError: Erwarte {'status': 'ok'}, bekam: {'detail': 'Not Found'}
+E       assert None == 'ok'
+E        +  where None = <built-in method get of dict object at 0x7f3bae52fac0>('status')
+E        +    where <built-in method get of dict object at 0x7f3bae52fac0> = {'detail': 'Not Found'}.get
+
+tests/tdd/test_channel_test_button.py:97: AssertionError
+______________________ test_notify_test_requires_user_id _______________________
+
+    def test_notify_test_requires_user_id():
+        """
+        GIVEN: Der Endpoint existiert
+        WHEN: POST ohne user_id Query-Parameter
+        THEN: 422 Validation Error
+        """
+        from api.main import app
+        client = TestClient(app)
+        resp = client.post(
+            "/api/notify/test",
+            json={"channel": "email"},
+        )
+>       assert resp.status_code == 422, (
+            f"Erwarte 422 bei fehlendem user_id, bekam {resp.status_code}"
+        )
+E       AssertionError: Erwarte 422 bei fehlendem user_id, bekam 404
+E       assert 404 == 422
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+tests/tdd/test_channel_test_button.py:116: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_channel_test_button.py::test_notify_router_module_exists
+FAILED tests/tdd/test_channel_test_button.py::test_notify_router_registered_in_app
+FAILED tests/tdd/test_channel_test_button.py::test_notify_test_requires_channel
+FAILED tests/tdd/test_channel_test_button.py::test_notify_test_unknown_channel_returns_error
+FAILED tests/tdd/test_channel_test_button.py::test_notify_test_email_returns_ok
+FAILED tests/tdd/test_channel_test_button.py::test_notify_test_requires_user_id
+============================== 6 failed in 0.28s ===============================

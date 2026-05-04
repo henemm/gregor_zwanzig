@@ -1,0 +1,210 @@
+
+Running 11 tests using 2 workers
+
+[1A[2K[1/11] e2e/dashboard.spec.ts:9:2 › Dashboard (M3a) › shows trip count stat card
+[1A[2K[2/11] e2e/trips.spec.ts:9:2 › Trips Page (M3a) › trips page loads and shows table or empty state
+[1A[2K[2m[WebServer] [22m
+[2m[WebServer] [22m[1;31m[404] GET /trips[0m
+
+[1A[2K  1) e2e/trips.spec.ts:9:2 › Trips Page (M3a) › trips page loads and shows table or empty state ────
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected[39m[2m) // Object.is equality[22m
+
+    Expected: [32mtrue[39m
+    Received: [31mfalse[39m
+
+      14 | 		const visible = await table.isVisible().catch(() => false)
+      15 | 			|| await emptyState.isVisible().catch(() => false);
+    > 16 | 		expect(visible).toBe(true);
+         | 		                ^
+      17 | 	});
+      18 |
+      19 | 	test('has create trip button', async ({ page }) => {
+        at /home/hem/gregor_zwanzig/frontend/e2e/trips.spec.ts:16:19
+
+    Error Context: test-results/trips-Trips-Page-M3a-trips-05570--shows-table-or-empty-state/error-context.md
+
+
+[1A[2K[3/11] e2e/trips.spec.ts:19:2 › Trips Page (M3a) › has create trip button
+[1A[2K[2m[WebServer] [22m
+[2m[WebServer] [22m[1;31m[404] GET /trips[0m
+
+[1A[2K  2) e2e/dashboard.spec.ts:9:2 › Dashboard (M3a) › shows trip count stat card ──────────────────────
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: locator('[data-testid="stat-trips"]')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for locator('[data-testid="stat-trips"]')[22m
+
+
+      10 | 		await page.goto('/');
+      11 | 		const tripCard = page.locator('[data-testid="stat-trips"]');
+    > 12 | 		await expect(tripCard).toBeVisible();
+         | 		                       ^
+      13 | 		await expect(tripCard.locator('.text-3xl, [data-testid="stat-value"]')).toHaveText(/\d+/);
+      14 | 	});
+      15 |
+        at /home/hem/gregor_zwanzig/frontend/e2e/dashboard.spec.ts:12:26
+
+    Error Context: test-results/dashboard-Dashboard-M3a-shows-trip-count-stat-card/error-context.md
+
+
+[1A[2K[4/11] e2e/dashboard.spec.ts:16:2 › Dashboard (M3a) › shows location count stat card
+[1A[2K  3) e2e/trips.spec.ts:19:2 › Trips Page (M3a) › has create trip button ────────────────────────────
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: locator('button').filter({ hasText: /Trip erstellen|Neuer Trip|New Trip/i })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for locator('button').filter({ hasText: /Trip erstellen|Neuer Trip|New Trip/i })[22m
+
+
+      20 | 		await page.goto('/trips');
+      21 | 		const createBtn = page.locator('button', { hasText: /Trip erstellen|Neuer Trip|New Trip/i });
+    > 22 | 		await expect(createBtn).toBeVisible();
+         | 		                        ^
+      23 | 	});
+      24 |
+      25 | 	test('create trip dialog opens', async ({ page }) => {
+        at /home/hem/gregor_zwanzig/frontend/e2e/trips.spec.ts:22:27
+
+    Error Context: test-results/trips-Trips-Page-M3a-has-create-trip-button/error-context.md
+
+
+[1A[2K[5/11] e2e/trips.spec.ts:25:2 › Trips Page (M3a) › create trip dialog opens
+[1A[2K[2m[WebServer] [22m
+[2m[WebServer] [22m[1;31m[404] GET /trips[0m
+
+[1A[2K  4) e2e/dashboard.spec.ts:16:2 › Dashboard (M3a) › shows location count stat card ─────────────────
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: locator('[data-testid="stat-locations"]')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for locator('[data-testid="stat-locations"]')[22m
+
+
+      17 | 		await page.goto('/');
+      18 | 		const locCard = page.locator('[data-testid="stat-locations"]');
+    > 19 | 		await expect(locCard).toBeVisible();
+         | 		                      ^
+      20 | 		await expect(locCard.locator('.text-3xl, [data-testid="stat-value"]')).toHaveText(/\d+/);
+      21 | 	});
+      22 |
+        at /home/hem/gregor_zwanzig/frontend/e2e/dashboard.spec.ts:19:25
+
+    Error Context: test-results/dashboard-Dashboard-M3a-shows-location-count-stat-card/error-context.md
+
+
+[1A[2K[6/11] e2e/dashboard.spec.ts:23:2 › Dashboard (M3a) › shows health status card
+[1A[2K  5) e2e/dashboard.spec.ts:23:2 › Dashboard (M3a) › shows health status card ───────────────────────
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: locator('[data-testid="stat-health"]')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for locator('[data-testid="stat-health"]')[22m
+
+
+      24 | 		await page.goto('/');
+      25 | 		const healthCard = page.locator('[data-testid="stat-health"]');
+    > 26 | 		await expect(healthCard).toBeVisible();
+         | 		                         ^
+      27 | 	});
+      28 |
+      29 | 	test('has link to trips page', async ({ page }) => {
+        at /home/hem/gregor_zwanzig/frontend/e2e/dashboard.spec.ts:26:28
+
+    Error Context: test-results/dashboard-Dashboard-M3a-shows-health-status-card/error-context.md
+
+
+[1A[2K[7/11] e2e/dashboard.spec.ts:29:2 › Dashboard (M3a) › has link to trips page
+[1A[2K  6) e2e/trips.spec.ts:25:2 › Trips Page (M3a) › create trip dialog opens ──────────────────────────
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('button').filter({ hasText: /Trip erstellen|Neuer Trip|New Trip/i })[22m
+
+
+      26 | 		await page.goto('/trips');
+      27 | 		const createBtn = page.locator('button', { hasText: /Trip erstellen|Neuer Trip|New Trip/i });
+    > 28 | 		await createBtn.click();
+         | 		                ^
+      29 |
+      30 | 		// Dialog should be open with a trip name input
+      31 | 		const dialog = page.locator('[role="dialog"]');
+        at /home/hem/gregor_zwanzig/frontend/e2e/trips.spec.ts:28:19
+
+    Error Context: test-results/trips-Trips-Page-M3a-create-trip-dialog-opens/error-context.md
+
+
+[1A[2K[8/11] e2e/trips.spec.ts:37:2 › Trips Page (M3a) › create trip with stage and waypoint
+[1A[2K[2m[WebServer] [22m
+[2m[WebServer] [22m[1;31m[404] GET /trips[0m
+
+[1A[2K  7) e2e/trips.spec.ts:37:2 › Trips Page (M3a) › create trip with stage and waypoint ───────────────
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('button').filter({ hasText: /Trip erstellen|Neuer Trip|New Trip/i })[22m
+
+
+      38 | 		await page.goto('/trips');
+      39 | 		const createBtn = page.locator('button', { hasText: /Trip erstellen|Neuer Trip|New Trip/i });
+    > 40 | 		await createBtn.click();
+         | 		                ^
+      41 |
+      42 | 		const dialog = page.locator('[role="dialog"]');
+      43 |
+        at /home/hem/gregor_zwanzig/frontend/e2e/trips.spec.ts:40:19
+
+    Error Context: test-results/trips-Trips-Page-M3a-create-trip-with-stage-and-waypoint/error-context.md
+
+
+[1A[2K[9/11] e2e/trips.spec.ts:73:2 › Trips Page (M3a) › edit trip opens pre-filled dialog
+[1A[2K[2m[WebServer] [22m
+[2m[WebServer] [22m[1;31m[404] GET /trips[0m
+
+[1A[2K[10/11] e2e/trips.spec.ts:95:2 › Trips Page (M3a) › delete trip with confirmation
+[1A[2K[2m[WebServer] [22m
+[2m[WebServer] [22m[1;31m[404] GET /trips[0m
+
+[1A[2K[11/11] e2e/trips.spec.ts:122:2 › Trips Page (M3a) › trips table shows stage count and date range
+[1A[2K[2m[WebServer] [22m
+[2m[WebServer] [22m[1;31m[404] GET /trips[0m
+
+[1A[2K  7 failed
+    e2e/dashboard.spec.ts:9:2 › Dashboard (M3a) › shows trip count stat card ───────────────────────
+    e2e/dashboard.spec.ts:16:2 › Dashboard (M3a) › shows location count stat card ──────────────────
+    e2e/dashboard.spec.ts:23:2 › Dashboard (M3a) › shows health status card ────────────────────────
+    e2e/trips.spec.ts:9:2 › Trips Page (M3a) › trips page loads and shows table or empty state ─────
+    e2e/trips.spec.ts:19:2 › Trips Page (M3a) › has create trip button ─────────────────────────────
+    e2e/trips.spec.ts:25:2 › Trips Page (M3a) › create trip dialog opens ───────────────────────────
+    e2e/trips.spec.ts:37:2 › Trips Page (M3a) › create trip with stage and waypoint ────────────────
+  3 skipped
+  1 passed (1.2m)

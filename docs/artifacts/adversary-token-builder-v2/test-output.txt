@@ -1,0 +1,11 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/agent-ae7c2e5c
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 16 items
+
+tests/unit/test_token_builder.py ..........                              [ 62%]
+tests/golden/test_sms_golden.py ......                                   [100%]
+
+============================== 16 passed in 0.03s ==============================

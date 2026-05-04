@@ -1,0 +1,10 @@
+{
+  "id": "gr20-test-corsica",
+  "name": "GR20 Test Corsica",
+  "lat": 42.15,
+  "lon": 9.1,
+  "elevation_m": 1800,
+  "region": null,
+  "bergfex_slug": null,
+  "activity_profile": "wandern"
+}

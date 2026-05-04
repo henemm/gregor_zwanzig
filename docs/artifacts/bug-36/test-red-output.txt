@@ -1,0 +1,1 @@
+Test FAILED: display_config metrics ignored in comparison emails

@@ -1,0 +1,20 @@
+{
+  "id": "c09c7b32",
+  "name": "E2E Test Trip",
+  "stages": [
+    {
+      "id": "e79132d7",
+      "name": "Etappe 1",
+      "date": "2026-04-13",
+      "waypoints": [
+        {
+          "id": "2f2d5891",
+          "name": "Testpunkt",
+          "lat": 47,
+          "lon": 11,
+          "elevation_m": 2000
+        }
+      ]
+    }
+  ]
+}

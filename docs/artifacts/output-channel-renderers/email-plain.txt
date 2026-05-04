@@ -1,0 +1,32 @@
+VALIDATOR β3 Renderer-Split - Morning Report
+Tag 1: Validator-Test
+28.04.2026
+12.5 km | ↑475m | ↓0m | max. 525m
+
+Tag 1: Validator-Test: 18–22°C, 🌥️, trocken, mäßiger Wind 16 km/h, Böen bis 32 km/h ab 15:00
+
+🌄 Ohne Stirnlampe: 06:30 – 20:31 (14h 01m)
+   Dämmerung 06:21 + 9min (Tal) = 06:30
+   Sonnenuntergang 20:40 – 9min (Tal) – 29min (Wolken) = 20:31
+
+━━ Segment 1: 08:00–12:00 | 12.5 km | ↑50m → 525m ━━
+  Time   Temp   Feels   Wind   Gust   Rain   Thunder   SnowL   Cloud   Sun 
+  -----  -----  ------  -----  -----  -----  --------  ------  ------  ----
+  10     18.2   17.7    8      18     0.0    –         –       ☀️      🌤️  
+  11     20.0   18.8    9      20     0.0    –         –       ☀️      ☀️  
+  12     21.4   19.8    11     25     0.0    –         –       ☀️      ☀️  
+  13     22.0   19.9    14     30     0.0    –         –       🌥️      ☀️  
+  14     21.9   19.8    16     32     0.0    –         –       🌥️      ☀️  
+
+━━ 🏁 Wetter am Ziel: 12:00–14:00 | 525m ━━
+  Time   Temp   Feels   Wind   Gust   Rain   Thunder   SnowL   Cloud   Sun 
+  -----  -----  ------  -----  -----  -----  --------  ------  ------  ----
+  14     20.2   18.4    12     31     0.0    –         –       ☁️      ☀️  
+  15     20.5   17.8    12     32     0.0    –         –       ☁️      ☀️  
+  16     20.3   17.2    12     32     0.0    –         –       ☁️      🌤️  
+
+Einheiten: Temp, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun W/m²
+------------------------------------------------------------
+Generated: 2026-04-28 04:53 UTC
+Data: openmeteo (meteofrance_arome)
+Fallback freezing_level_height, precipitation_probability, visibility: icon_eu

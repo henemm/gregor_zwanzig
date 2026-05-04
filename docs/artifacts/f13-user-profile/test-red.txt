@@ -1,0 +1,8 @@
+# github.com/henemm/gregor-api/internal/handler [github.com/henemm/gregor-api/internal/handler.test]
+internal/handler/profile_test.go:5:2: "net/http" imported and not used
+internal/handler/profile_test.go:28:7: undefined: GetProfileHandler
+internal/handler/profile_test.go:63:7: undefined: GetProfileHandler
+internal/handler/profile_test.go:85:7: undefined: UpdateProfileHandler
+internal/handler/profile_test.go:124:7: undefined: UpdateProfileHandler
+FAIL	github.com/henemm/gregor-api/internal/handler [build failed]
+FAIL

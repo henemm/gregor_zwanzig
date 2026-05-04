@@ -1,0 +1,24 @@
+================================================
+  External Validator — Isolierte QA-Session
+================================================
+
+  Spec:   docs/specs/bugfix/heartbeat_url_rotation.md
+  Server: https://staging.gregor20.henemm.com
+
+  Diese Session ist isoliert vom Implementierer.
+  Der Validator kennt nur: Spec + laufende App.
+================================================
+
+Validierung abgeschlossen. Report liegt unter `docs/artifacts/issue-118-heartbeat-url-rotation/validator-report.md`.
+
+## Verdict: **BROKEN**
+
+**Hauptbefund (CRITICAL):** Acceptance Criterion #1 fordert *0 Dateien* im Working Tree mit den geleakten Heartbeat-URLs. Tatsächlich enthält die Bugfix-Spec selbst (`docs/specs/bugfix/heartbeat_url_rotation.md`, „Root Cause Analysis"-Sektion) die beiden Tokens (`f4GBDxFQHxuu73FdRt5wjGsQ`, `5Cc4vmiEDgrSr7qsBa2k2av4`) in 4 Zeilen Klartext. Das Repo ist öffentlich → der Hauptzweck des Bugfixes (Public-Leak schließen) ist verfehlt. Spec-Sektion 8 verlangt Anonymisierung der Modul-Specs, hat sich auf sich selbst aber nicht angewendet.
+
+**Sekundärbefund (HIGH):** Staging-Service-ENV `GZ_HEARTBEAT_MORNING=` und `GZ_HEARTBEAT_EVENING=` sind leer → AC#11 (Live-Heartbeat-Empfang) nicht testbar.
+
+**Sekundärbefund (MEDIUM):** Empty-URL→MQ-Pfad seit Service-Restart (06:45) noch nie ausgelöst (alle Scheduler-Jobs `last_run=null`, keine MQ "Heartbeat-URL nicht konfiguriert" in DB) → AC#14 weder positiv noch negativ verifizierbar.
+
+**Bestätigt PASS:** Modul-Specs `betterstack_heartbeat.md` + `go_scheduler.md` sind sauber; Helper-Dateien `internal/notify/mq.go` + `src/lib/mq_notify.py` existieren; Server + Scheduler laufen.
+
+Code-interne ACs (#2, #3, #6–#10, #12) per Validator-Regel nicht aus `src/`/`tests/` lesbar → UNKLAR.

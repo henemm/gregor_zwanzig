@@ -54,8 +54,73 @@ def find_project_root() -> Path:
     return cwd
 
 
+def detect_scope() -> str:
+    """Classify staged files into a verification scope.
+
+    Returns:
+        'frontend-only' — only frontend/ files changed
+        'backend'       — only src/, api/, or unknown files changed
+        'full-stack'    — both frontend and backend files changed
+        'docs-only'     — only docs/, .claude/, *.md files changed (gate skipped)
+    """
+    import subprocess
+
+    result = subprocess.run(
+        ["git", "diff", "--cached", "--name-only"],
+        capture_output=True, text=True,
+    )
+    files = [f.strip() for f in result.stdout.splitlines() if f.strip()]
+
+    if not files:
+        return "docs-only"
+
+    has_frontend = False
+    has_backend = False
+
+    for path in files:
+        if path.startswith("frontend/"):
+            has_frontend = True
+        elif path.startswith("src/") or path.startswith("api/"):
+            has_backend = True
+        elif (
+            path.startswith("docs/")
+            or path.startswith(".claude/")
+            or path.endswith(".md")
+            or path.startswith("README")
+        ):
+            pass  # docs — neutral
+        else:
+            has_backend = True  # unknown path → conservative
+
+    if has_frontend and has_backend:
+        return "full-stack"
+    if has_frontend:
+        return "frontend-only"
+    if has_backend:
+        return "backend"
+    return "docs-only"
+
+
+SCOPE_LEVEL = {
+    "docs-only":     0,
+    "frontend-only": 1,
+    "backend":       2,
+    "full-stack":    3,
+}
+
+REQUIRED_BY_SCOPE = {
+    "frontend-only": ["server_restarted"],
+    "backend":       ["server_restarted", "test_trip_created", "emails_checked", "test_trip_cleaned"],
+    "full-stack":    ["server_restarted", "test_trip_created", "emails_checked", "test_trip_cleaned"],
+}
+
+
 def check_verification() -> tuple[bool, str]:
     """Check if e2e_verified.json exists and is recent."""
+    scope = detect_scope()
+    if scope == "docs-only":
+        return True, "Scope: docs-only — E2E Gate uebersprungen."
+
     project_root = find_project_root()
     verified_path = project_root / ".claude" / "e2e_verified.json"
 
@@ -87,19 +152,25 @@ def check_verification() -> tuple[bool, str]:
     except (ValueError, TypeError) as e:
         return False, f"Timestamp in e2e_verified.json ungueltig: {e}"
 
-    # Check required fields — ui_only features have fewer requirements
-    if data.get("feature_type") == "ui_only":
-        required = ["server_restarted"]
-    else:
-        required = ["server_restarted", "test_trip_created", "emails_checked", "test_trip_cleaned"]
+    # Scope-Hierarchie-Vergleich: verifizierter Scope muss Commit-Scope abdecken
+    # Legacy-JSON ohne scope-Feld → Fallback full-stack (konservativ, kein Regressionsrisiko)
+    verified_scope = data.get("scope", "full-stack")
+    if SCOPE_LEVEL.get(verified_scope, 0) < SCOPE_LEVEL.get(scope, 0):
+        return False, (
+            f"Commit-Scope ist '{scope}', aber E2E wurde nur fuer '{verified_scope}' verifiziert. "
+            f"Fuehre `/e2e-verify` erneut aus!"
+        )
+
+    # Pflichtfelder basierend auf erkanntem Scope pruefen
+    required = REQUIRED_BY_SCOPE.get(scope, REQUIRED_BY_SCOPE["backend"])
     missing = [f for f in required if not data.get(f)]
     if missing:
         return False, (
-            f"E2E-Verifikation unvollstaendig. Fehlend: {', '.join(missing)}. "
+            f"E2E-Verifikation unvollstaendig (Scope: {scope}). Fehlend: {', '.join(missing)}. "
             f"Fuehre `/e2e-verify` vollstaendig aus!"
         )
 
-    return True, f"E2E verifiziert vor {int(age.total_seconds() / 60)} Minuten."
+    return True, f"E2E verifiziert vor {int(age.total_seconds() / 60)} Minuten (Scope: {scope})."
 
 
 def check_user_override() -> bool:
