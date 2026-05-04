@@ -76,36 +76,60 @@
 				<div class="ml-2 space-y-2">
 					<Label class="text-sm text-muted-foreground">Wegpunkte</Label>
 					{#each stage.waypoints as wp, wi}
-						<div data-testid="waypoint-{wi}" class="flex items-center gap-2 text-sm">
-							<Input
-								placeholder="Name"
-								bind:value={wp.name}
-								class="w-32"
-							/>
-							<Input
-								type="number"
-								name="lat"
-								placeholder="Lat"
-								bind:value={wp.lat}
-								step="0.0001"
-								class="w-24"
-							/>
-							<Input
-								type="number"
-								name="lon"
-								placeholder="Lon"
-								bind:value={wp.lon}
-								step="0.0001"
-								class="w-24"
-							/>
-							<Input
-								type="number"
-								placeholder="Hoehe (m)"
-								bind:value={wp.elevation_m}
-								step="1"
-								class="w-24"
-							/>
-							<Button variant="ghost" size="icon-sm" onclick={() => removeWaypoint(si, wi)} title="Wegpunkt entfernen">
+						<div data-testid="waypoint-{wi}" class="flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:gap-2">
+							<div class="flex items-center justify-between gap-2 sm:contents">
+								<Input
+									data-testid="wp-name"
+									placeholder="Name"
+									bind:value={wp.name}
+									class="flex-1 sm:w-32 sm:flex-none"
+								/>
+								<Button
+									data-testid="wp-trash-mobile"
+									variant="ghost"
+									size="icon"
+									class="h-11 w-11 shrink-0 sm:hidden"
+									onclick={() => removeWaypoint(si, wi)}
+									title="Wegpunkt entfernen"
+								>
+									<TrashIcon class="size-4" />
+								</Button>
+							</div>
+							<div class="grid grid-cols-3 gap-2 sm:contents">
+								<Input
+									data-testid="wp-lat"
+									type="number"
+									name="lat"
+									placeholder="Lat"
+									bind:value={wp.lat}
+									step="0.0001"
+									class="w-full [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none sm:w-24"
+								/>
+								<Input
+									data-testid="wp-lon"
+									type="number"
+									name="lon"
+									placeholder="Lon"
+									bind:value={wp.lon}
+									step="0.0001"
+									class="w-full [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none sm:w-24"
+								/>
+								<Input
+									data-testid="wp-ele"
+									type="number"
+									placeholder="Hoehe (m)"
+									bind:value={wp.elevation_m}
+									step="1"
+									class="w-full [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none sm:w-24"
+								/>
+							</div>
+							<Button
+								variant="ghost"
+								size="icon-sm"
+								class="hidden sm:inline-flex"
+								onclick={() => removeWaypoint(si, wi)}
+								title="Wegpunkt entfernen"
+							>
 								<TrashIcon class="size-3.5" />
 							</Button>
 						</div>
