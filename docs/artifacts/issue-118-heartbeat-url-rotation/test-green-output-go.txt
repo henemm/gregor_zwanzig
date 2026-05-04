@@ -1,0 +1,108 @@
+=== RUN   TestNewWithStore
+--- PASS: TestNewWithStore (0.00s)
+=== RUN   TestTriggerEndpointForUser_SendsUserID
+2026/05/04 06:32:05 [scheduler] /api/scheduler/morning-subscriptions?user_id=alice → 200
+--- PASS: TestTriggerEndpointForUser_SendsUserID (0.00s)
+=== RUN   TestMorningSubscriptions_IteratesOverAllUsers
+2026/05/04 06:32:05 [scheduler] Running morning subscriptions...
+2026/05/04 06:32:05 [scheduler] /api/scheduler/morning-subscriptions?user_id=alice → 200
+2026/05/04 06:32:05 [scheduler] /api/scheduler/morning-subscriptions?user_id=bob → 200
+2026/05/04 06:32:05 [notify] CLAUDE_MQ_SECRET unset, skipping MQ send (subject="Heartbeat-URL für Job \"morning_subscriptions\" nicht konfiguriert")
+2026/05/04 06:32:05 [scheduler] WARN: Heartbeat URL empty for morning_subscriptions — MQ sent
+--- PASS: TestMorningSubscriptions_IteratesOverAllUsers (0.00s)
+=== RUN   TestMorningSubscriptions_ContinuesOnUserError
+2026/05/04 06:32:05 [scheduler] Running morning subscriptions...
+2026/05/04 06:32:05 [scheduler] morning_subscriptions: user alice failed: HTTP 500: {"error":"boom"}
+2026/05/04 06:32:05 [scheduler] /api/scheduler/morning-subscriptions?user_id=bob → 200
+2026/05/04 06:32:05 [scheduler] morning_subscriptions failed: HTTP 500: {"error":"boom"}
+--- PASS: TestMorningSubscriptions_ContinuesOnUserError (0.00s)
+=== RUN   TestMorningSubscriptions_NoUsers_Noop
+2026/05/04 06:32:05 [scheduler] Running morning subscriptions...
+2026/05/04 06:32:05 [scheduler] morning_subscriptions: no users registered, skipping
+2026/05/04 06:32:05 [notify] CLAUDE_MQ_SECRET unset, skipping MQ send (subject="Heartbeat-URL für Job \"morning_subscriptions\" nicht konfiguriert")
+2026/05/04 06:32:05 [scheduler] WARN: Heartbeat URL empty for morning_subscriptions — MQ sent
+--- PASS: TestMorningSubscriptions_NoUsers_Noop (0.00s)
+=== RUN   TestNew_ValidTimezone
+--- PASS: TestNew_ValidTimezone (0.00s)
+=== RUN   TestNew_InvalidTimezone
+--- PASS: TestNew_InvalidTimezone (0.00s)
+=== RUN   TestTriggerEndpoint_Success
+2026/05/04 06:32:05 [scheduler] /api/scheduler/morning-subscriptions?user_id=default → 200
+--- PASS: TestTriggerEndpoint_Success (0.00s)
+=== RUN   TestTriggerEndpoint_PythonDown
+--- PASS: TestTriggerEndpoint_PythonDown (0.00s)
+=== RUN   TestTriggerEndpoint_PythonError
+--- PASS: TestTriggerEndpoint_PythonError (0.00s)
+=== RUN   TestStatus
+2026/05/04 06:32:05 [scheduler] Started: 5 jobs, timezone Europe/Vienna
+2026/05/04 06:32:05 [scheduler] Stopped
+--- PASS: TestStatus (0.00s)
+=== RUN   TestRecordRun_Success
+--- PASS: TestRecordRun_Success (0.00s)
+=== RUN   TestRecordRun_Failure
+2026/05/04 06:32:05 [scheduler] test_job failed: boom
+--- PASS: TestRecordRun_Failure (0.00s)
+=== RUN   TestMorningSubscriptions_RecordsRun
+2026/05/04 06:32:05 [scheduler] Running morning subscriptions...
+2026/05/04 06:32:05 [scheduler] /api/scheduler/morning-subscriptions?user_id=default → 200
+2026/05/04 06:32:05 [notify] CLAUDE_MQ_SECRET unset, skipping MQ send (subject="Heartbeat-URL für Job \"morning_subscriptions\" nicht konfiguriert")
+2026/05/04 06:32:05 [scheduler] WARN: Heartbeat URL empty for morning_subscriptions — MQ sent
+--- PASS: TestMorningSubscriptions_RecordsRun (0.00s)
+=== RUN   TestMorningSubscriptions_FailedTrigger_RecordsError
+2026/05/04 06:32:05 [scheduler] Running morning subscriptions...
+2026/05/04 06:32:05 [scheduler] morning_subscriptions: user default failed: HTTP 500: {"error":"boom"}
+2026/05/04 06:32:05 [scheduler] morning_subscriptions failed: HTTP 500: {"error":"boom"}
+--- PASS: TestMorningSubscriptions_FailedTrigger_RecordsError (0.00s)
+=== RUN   TestPingHeartbeat_Success
+2026/05/04 06:32:05 [scheduler] Heartbeat ping OK (morning_subscriptions): .../morning
+--- PASS: TestPingHeartbeat_Success (0.00s)
+=== RUN   TestPingHeartbeat_Failure
+2026/05/04 06:32:05 [scheduler] Heartbeat ping failed (morning_subscriptions): Get "http://localhost:19999/heartbeat/nope": dial tcp [::1]:19999: connect: connection refused
+--- PASS: TestPingHeartbeat_Failure (0.00s)
+=== RUN   TestPingHeartbeat_EmptyURL
+2026/05/04 06:32:05 [scheduler] WARN: Heartbeat URL empty for morning_subscriptions — MQ sent
+--- PASS: TestPingHeartbeat_EmptyURL (0.00s)
+=== RUN   TestPingHeartbeat_EmptyURL_TriggersNotifier
+2026/05/04 06:32:05 [scheduler] WARN: Heartbeat URL empty for morning_subscriptions — MQ sent
+--- PASS: TestPingHeartbeat_EmptyURL_TriggersNotifier (0.00s)
+=== RUN   TestPingHeartbeat_EmptyURL_OnlyOncePerJob
+2026/05/04 06:32:05 [scheduler] WARN: Heartbeat URL empty for morning_subscriptions — MQ sent
+--- PASS: TestPingHeartbeat_EmptyURL_OnlyOncePerJob (0.00s)
+=== RUN   TestPingHeartbeat_EmptyURL_DifferentJobsSeparate
+2026/05/04 06:32:05 [scheduler] WARN: Heartbeat URL empty for morning_subscriptions — MQ sent
+2026/05/04 06:32:05 [scheduler] WARN: Heartbeat URL empty for evening_subscriptions — MQ sent
+--- PASS: TestPingHeartbeat_EmptyURL_DifferentJobsSeparate (0.00s)
+=== RUN   TestMorningSubscriptions_TriggersHeartbeat
+2026/05/04 06:32:05 [scheduler] Running morning subscriptions...
+2026/05/04 06:32:05 [scheduler] /api/scheduler/morning-subscriptions?user_id=default → 200
+2026/05/04 06:32:05 [scheduler] Heartbeat ping OK (morning_subscriptions): .../morning
+--- PASS: TestMorningSubscriptions_TriggersHeartbeat (0.00s)
+=== RUN   TestMorningSubscriptions_FailedTrigger_SkipsHeartbeat
+2026/05/04 06:32:05 [scheduler] Running morning subscriptions...
+2026/05/04 06:32:05 [scheduler] morning_subscriptions: user default failed: HTTP 500: {"error":"boom"}
+2026/05/04 06:32:05 [scheduler] morning_subscriptions failed: HTTP 500: {"error":"boom"}
+--- PASS: TestMorningSubscriptions_FailedTrigger_SkipsHeartbeat (0.00s)
+=== RUN   TestStatus_JSONSerializable
+2026/05/04 06:32:05 [scheduler] Started: 5 jobs, timezone Europe/Vienna
+2026/05/04 06:32:05 [scheduler] Stopped
+--- PASS: TestStatus_JSONSerializable (0.00s)
+=== RUN   TestStatus_IncludesLastRun
+2026/05/04 06:32:05 [scheduler] Started: 5 jobs, timezone Europe/Vienna
+2026/05/04 06:32:05 [scheduler] Running morning subscriptions...
+2026/05/04 06:32:05 [scheduler] /api/scheduler/morning-subscriptions?user_id=default → 200
+2026/05/04 06:32:05 [notify] CLAUDE_MQ_SECRET unset, skipping MQ send (subject="Heartbeat-URL für Job \"morning_subscriptions\" nicht konfiguriert")
+2026/05/04 06:32:05 [scheduler] WARN: Heartbeat URL empty for morning_subscriptions — MQ sent
+2026/05/04 06:32:05 [scheduler] Stopped
+--- PASS: TestStatus_IncludesLastRun (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/scheduler	0.031s
+=== RUN   TestSendMQ_NoSecret_NoOp
+2026/05/04 06:31:44 [notify] CLAUDE_MQ_SECRET unset, skipping MQ send (subject="subj")
+--- PASS: TestSendMQ_NoSecret_NoOp (0.00s)
+=== RUN   TestSendMQ_PostsWithHeadersAndBody
+--- PASS: TestSendMQ_PostsWithHeadersAndBody (0.00s)
+=== RUN   TestSendMQ_HTTPError
+2026/05/04 06:31:44 [notify] MQ send HTTP 500 (subject="subj")
+--- PASS: TestSendMQ_HTTPError (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/notify	(cached)

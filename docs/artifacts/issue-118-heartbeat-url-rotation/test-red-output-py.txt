@@ -1,0 +1,68 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 3 items
+
+tests/tdd/test_betterstack_heartbeat.py FFF                              [100%]
+
+=================================== FAILURES ===================================
+_______________ TestMQNotifyHelper.test_send_mq_function_exists ________________
+
+self = <tdd.test_betterstack_heartbeat.TestMQNotifyHelper object at 0x7b41d73a8680>
+
+    def test_send_mq_function_exists(self):
+        """
+        GIVEN: lib.mq_notify module
+        WHEN: importing send_mq
+        THEN: it should exist and be callable
+        """
+        # RED: lib/mq_notify.py existiert noch nicht
+>       from lib.mq_notify import send_mq
+E       ModuleNotFoundError: No module named 'lib'
+
+tests/tdd/test_betterstack_heartbeat.py:104: ModuleNotFoundError
+_____ TestPingHeartbeatEmptyURL.test_ping_heartbeat_accepts_job_name_param _____
+
+self = <tdd.test_betterstack_heartbeat.TestPingHeartbeatEmptyURL object at 0x7b41d6827e60>
+
+    def test_ping_heartbeat_accepts_job_name_param(self):
+        """
+        GIVEN: _ping_heartbeat function (new signature)
+        WHEN: inspecting parameters
+        THEN: it should accept (url, job_name) — currently only takes (url)
+        """
+        import inspect as inspect_mod
+        from web.scheduler import _ping_heartbeat
+    
+        # RED: current signature is _ping_heartbeat(url) — only 1 parameter
+        params = list(inspect_mod.signature(_ping_heartbeat).parameters.keys())
+>       assert "job_name" in params, f"expected job_name parameter, got {params}"
+E       AssertionError: expected job_name parameter, got ['url']
+E       assert 'job_name' in ['url']
+
+tests/tdd/test_betterstack_heartbeat.py:123: AssertionError
+____ TestPingHeartbeatEmptyURL.test_ping_heartbeat_empty_url_calls_send_mq _____
+
+self = <tdd.test_betterstack_heartbeat.TestPingHeartbeatEmptyURL object at 0x7b41d65f2090>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7b41d65f1550>
+
+    def test_ping_heartbeat_empty_url_calls_send_mq(self, monkeypatch):
+        """
+        GIVEN: _ping_heartbeat called with empty url
+        WHEN: invoking it once
+        THEN: lib.mq_notify.send_mq should be called once
+              (use module-level call counter, no mock)
+        """
+        # Replace send_mq via direct module attribute (no mock library)
+>       from lib import mq_notify  # RED: module doesn't exist
+        ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       ModuleNotFoundError: No module named 'lib'
+
+tests/tdd/test_betterstack_heartbeat.py:133: ModuleNotFoundError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_betterstack_heartbeat.py::TestMQNotifyHelper::test_send_mq_function_exists
+FAILED tests/tdd/test_betterstack_heartbeat.py::TestPingHeartbeatEmptyURL::test_ping_heartbeat_accepts_job_name_param
+FAILED tests/tdd/test_betterstack_heartbeat.py::TestPingHeartbeatEmptyURL::test_ping_heartbeat_empty_url_calls_send_mq
+============================== 3 failed in 0.07s ===============================

@@ -337,7 +337,7 @@ func TestPingHeartbeat_Success(t *testing.T) {
 		t.Fatalf("New() error: %v", err)
 	}
 
-	sched.pingHeartbeat(sched.heartbeatMorning)
+	sched.pingHeartbeat("morning_subscriptions", sched.heartbeatMorning)
 	if !pinged {
 		t.Fatal("Heartbeat server was not pinged")
 	}
@@ -357,10 +357,10 @@ func TestPingHeartbeat_Failure(t *testing.T) {
 	}
 
 	// Should not panic — fire-and-forget with logging
-	sched.pingHeartbeat(sched.heartbeatMorning)
+	sched.pingHeartbeat("morning_subscriptions", sched.heartbeatMorning)
 }
 
-// --- Test: pingHeartbeat with empty URL is a no-op ---
+// --- Test: pingHeartbeat with empty URL is a no-op (no HTTP request) ---
 
 func TestPingHeartbeat_EmptyURL(t *testing.T) {
 	cfg := &config.Config{
@@ -371,9 +371,107 @@ func TestPingHeartbeat_EmptyURL(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
+	// Replace notifier with no-op so we don't try to call the real MQ in unit tests.
+	sched.notifier = func(_, _, _, _, _ string) error { return nil }
 
-	// Should not panic or make any request
-	sched.pingHeartbeat("")
+	// Should not panic or make any HTTP request
+	sched.pingHeartbeat("morning_subscriptions", "")
+}
+
+// ---------------------------------------------------------------------------
+// Issue #118 — Empty Heartbeat-URL muss MQ-Notification an infra triggern
+// ---------------------------------------------------------------------------
+
+// TestPingHeartbeat_EmptyURL_TriggersNotifier — Wenn HeartbeatURL leer ist
+// (ENV nicht gesetzt), muss der konfigurierte notifier (Function-Field am
+// Scheduler) genau einmal aufgerufen werden mit recipient="infra".
+func TestPingHeartbeat_EmptyURL_TriggersNotifier(t *testing.T) {
+	type call struct {
+		recipient string
+		subject   string
+	}
+	var calls []call
+
+	cfg := &config.Config{
+		PythonCoreURL:     "http://localhost:8000",
+		SchedulerTimezone: "Europe/Vienna",
+	}
+	sched, err := New(cfg, testStore(t))
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	// Inject test notifier — RED: notifier field doesn't exist on Scheduler yet
+	sched.notifier = func(_, recipient, _, subject, _ string) error {
+		calls = append(calls, call{recipient, subject})
+		return nil
+	}
+
+	// New signature: (jobName, url) — RED: current signature is (url) only
+	sched.pingHeartbeat("morning_subscriptions", "")
+
+	if len(calls) != 1 {
+		t.Fatalf("expected 1 notifier call for empty URL, got %d", len(calls))
+	}
+	if calls[0].recipient != "infra" {
+		t.Errorf("expected recipient=infra, got %q", calls[0].recipient)
+	}
+}
+
+// TestPingHeartbeat_EmptyURL_OnlyOncePerJob — sync.Once: zweimal mit
+// gleichem jobName + leerer URL darf nur einen Notifier-Call auslösen
+// (kein Spam bei jedem Cron-Tick).
+func TestPingHeartbeat_EmptyURL_OnlyOncePerJob(t *testing.T) {
+	var count int
+
+	cfg := &config.Config{
+		PythonCoreURL:     "http://localhost:8000",
+		SchedulerTimezone: "Europe/Vienna",
+	}
+	sched, err := New(cfg, testStore(t))
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	sched.notifier = func(_, _, _, _, _ string) error {
+		count++
+		return nil
+	}
+
+	sched.pingHeartbeat("morning_subscriptions", "")
+	sched.pingHeartbeat("morning_subscriptions", "")
+	sched.pingHeartbeat("morning_subscriptions", "")
+
+	if count != 1 {
+		t.Fatalf("expected sync.Once: exactly 1 call for same job, got %d", count)
+	}
+}
+
+// TestPingHeartbeat_EmptyURL_DifferentJobsSeparate — morning und evening
+// haben separate sync.Once: jeweils einer pro Job.
+func TestPingHeartbeat_EmptyURL_DifferentJobsSeparate(t *testing.T) {
+	var count int
+
+	cfg := &config.Config{
+		PythonCoreURL:     "http://localhost:8000",
+		SchedulerTimezone: "Europe/Vienna",
+	}
+	sched, err := New(cfg, testStore(t))
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	sched.notifier = func(_, _, _, _, _ string) error {
+		count++
+		return nil
+	}
+
+	sched.pingHeartbeat("morning_subscriptions", "")
+	sched.pingHeartbeat("evening_subscriptions", "")
+
+	if count != 2 {
+		t.Fatalf("expected 2 calls (morning + evening), got %d", count)
+	}
 }
 
 // --- Test: morningSubscriptions triggers endpoint + heartbeat ---

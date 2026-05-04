@@ -12,6 +12,7 @@ SPEC: docs/specs/modules/trip_report_scheduler.md v1.0 (Feature 3.3)
 from __future__ import annotations
 
 import logging
+import os
 import sys
 from datetime import datetime
 from typing import TYPE_CHECKING
@@ -35,10 +36,14 @@ logger = logging.getLogger("scheduler")
 # Explicit timezone for all cron triggers (v1.1 fix)
 TIMEZONE = ZoneInfo("Europe/Vienna")
 
-# BetterStack Heartbeat URLs (pinged after successful report runs)
+# BetterStack Heartbeat URLs (read from ENV; empty → skip ping + one-time MQ).
 # Note: Go scheduler also pings these. During parallel phase, both ping.
-HEARTBEAT_MORNING = "https://uptime.betterstack.com/api/v1/heartbeat/f4GBDxFQHxuu73FdRt5wjGsQ"
-HEARTBEAT_EVENING = "https://uptime.betterstack.com/api/v1/heartbeat/5Cc4vmiEDgrSr7qsBa2k2av4"
+HEARTBEAT_MORNING = os.getenv("GZ_HEARTBEAT_MORNING", "")
+HEARTBEAT_EVENING = os.getenv("GZ_HEARTBEAT_EVENING", "")
+
+# Tracks job names that already triggered a "missing heartbeat URL" MQ in this
+# process — equivalent to Go's sync.Once-per-jobName: avoids spam on each tick.
+_warned_missing_heartbeats: set[str] = set()
 
 # Global scheduler instance
 _scheduler: BackgroundScheduler | None = None
@@ -140,7 +145,7 @@ def run_morning_subscriptions() -> None:
         logger.info("Running morning subscriptions...")
         _run_subscriptions_by_schedule(Schedule.DAILY_MORNING)
     _record_run("morning_subscriptions", _do)
-    _ping_heartbeat(HEARTBEAT_MORNING)
+    _ping_heartbeat(HEARTBEAT_MORNING, "morning_subscriptions")
 
 
 def run_evening_subscriptions() -> None:
@@ -151,7 +156,7 @@ def run_evening_subscriptions() -> None:
         _run_subscriptions_by_schedule(Schedule.DAILY_EVENING)
         _run_weekly_subscriptions()
     _record_run("evening_subscriptions", _do)
-    _ping_heartbeat(HEARTBEAT_EVENING)
+    _ping_heartbeat(HEARTBEAT_EVENING, "evening_subscriptions")
 
 
 def run_alert_checks() -> None:
@@ -195,14 +200,39 @@ def run_inbound_command_poll() -> None:
     _record_run("inbound_command_poll", _do)
 
 
-def _ping_heartbeat(url: str) -> None:
-    """Ping BetterStack heartbeat URL. Fire-and-forget with logging."""
+def _ping_heartbeat(url: str, job_name: str = "") -> None:
+    """Ping BetterStack heartbeat URL. Fire-and-forget with logging.
+
+    If url is empty (ENV-Var not set), no HTTP request is made and a single
+    MQ-notification is dispatched per (process, job_name) so the missing
+    configuration is visible without spamming the MQ on every cron tick.
+    """
+    if not url:
+        if job_name and job_name not in _warned_missing_heartbeats:
+            _warned_missing_heartbeats.add(job_name)
+            try:
+                from lib import mq_notify
+                mq_notify.send_mq(
+                    "gregor",
+                    "infra",
+                    "normal",
+                    f"Heartbeat-URL für Job '{job_name}' nicht konfiguriert",
+                    (
+                        f"GZ_HEARTBEAT_* ENV-Variable für Job '{job_name}' ist leer. "
+                        f"Service läuft normal weiter, aber externes Monitoring sollte "
+                        f"Job-Status anderweitig prüfen."
+                    ),
+                )
+                logger.warning("Heartbeat URL empty for %s — MQ sent", job_name)
+            except Exception as e:
+                logger.warning("Heartbeat empty-URL MQ-notify failed (%s): %s", job_name, e)
+        return
     try:
         response = httpx.get(url, timeout=5)
         response.raise_for_status()
-        logger.info(f"Heartbeat ping OK: {url[-8:]}")
+        logger.info(f"Heartbeat ping OK ({job_name}): {url[-8:]}")
     except Exception as e:
-        logger.warning(f"Heartbeat ping failed: {e}")
+        logger.warning(f"Heartbeat ping failed ({job_name}): {e}")
 
 
 def _run_weekly_subscriptions() -> None:

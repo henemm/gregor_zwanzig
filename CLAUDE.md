@@ -303,7 +303,7 @@ Im Zweifel: trotzdem deployen, dann ist der Drift-Monitor auf jeden Fall ruhig.
 
 ## Monitoring
 
-Heartbeat-Pings wurden entfernt (April 2026). Monitoring laeuft jetzt extern ueber `henemm-infra/check-gregor20.sh`.
+Externes Monitoring laeuft ueber `henemm-infra/check-gregor20.sh`. Der interne Heartbeat-Ping vom Scheduler an BetterStack ist optional — wenn `GZ_HEARTBEAT_MORNING`/`GZ_HEARTBEAT_EVENING` ENV-Variablen leer sind, wird kein Heartbeat gesendet (fail-soft). In dem Fall geht beim ersten Job-Lauf einmalig pro Prozess eine MQ-Nachricht an `infra` raus.
 
 **Status-Endpoints:**
 - Python: `/_scheduler_status` (NiceGUI, Port 8080)

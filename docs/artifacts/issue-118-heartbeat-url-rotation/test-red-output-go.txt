@@ -1,0 +1,24 @@
+# github.com/henemm/gregor-api/internal/scheduler [github.com/henemm/gregor-api/internal/scheduler.test]
+internal/scheduler/scheduler_test.go:403:8: sched.notifier undefined (type *Scheduler has no field or method notifier)
+internal/scheduler/scheduler_test.go:409:47: too many arguments in call to sched.pingHeartbeat
+	have (string, string)
+	want (string)
+internal/scheduler/scheduler_test.go:434:8: sched.notifier undefined (type *Scheduler has no field or method notifier)
+internal/scheduler/scheduler_test.go:439:47: too many arguments in call to sched.pingHeartbeat
+	have (string, string)
+	want (string)
+internal/scheduler/scheduler_test.go:440:47: too many arguments in call to sched.pingHeartbeat
+	have (string, string)
+	want (string)
+internal/scheduler/scheduler_test.go:441:47: too many arguments in call to sched.pingHeartbeat
+	have (string, string)
+	want (string)
+internal/scheduler/scheduler_test.go:462:8: sched.notifier undefined (type *Scheduler has no field or method notifier)
+internal/scheduler/scheduler_test.go:467:47: too many arguments in call to sched.pingHeartbeat
+	have (string, string)
+	want (string)
+internal/scheduler/scheduler_test.go:468:47: too many arguments in call to sched.pingHeartbeat
+	have (string, string)
+	want (string)
+FAIL	github.com/henemm/gregor-api/internal/scheduler [build failed]
+FAIL

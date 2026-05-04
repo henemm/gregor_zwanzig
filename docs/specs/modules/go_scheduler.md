@@ -150,8 +150,8 @@ Import-Updates:
 // internal/config/config.go — neue Fields
 type Config struct {
     // ... bestehende Fields ...
-    HeartbeatMorning  string `envconfig:"HEARTBEAT_MORNING" default:"https://uptime.betterstack.com/api/v1/heartbeat/f4GBDxFQHxuu73FdRt5wjGsQ"`
-    HeartbeatEvening  string `envconfig:"HEARTBEAT_EVENING" default:"https://uptime.betterstack.com/api/v1/heartbeat/5Cc4vmiEDgrSr7qsBa2k2av4"`
+    HeartbeatMorning  string `envconfig:"HEARTBEAT_MORNING" default:""`
+    HeartbeatEvening  string `envconfig:"HEARTBEAT_EVENING" default:""`
     SchedulerTimezone string `envconfig:"SCHEDULER_TIMEZONE" default:"Europe/Vienna"`
 }
 ```

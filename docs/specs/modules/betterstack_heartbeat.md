@@ -35,8 +35,8 @@ Pingt BetterStack Heartbeat-URLs nach erfolgreichem Morning- und Evening-Report,
 ### Konstanten
 
 ```python
-HEARTBEAT_MORNING = "https://uptime.betterstack.com/api/v1/heartbeat/f4GBDxFQHxuu73FdRt5wjGsQ"
-HEARTBEAT_EVENING = "https://uptime.betterstack.com/api/v1/heartbeat/5Cc4vmiEDgrSr7qsBa2k2av4"
+HEARTBEAT_MORNING = "https://uptime.betterstack.com/api/v1/heartbeat/<HEARTBEAT_MORNING_TOKEN>"
+HEARTBEAT_EVENING = "https://uptime.betterstack.com/api/v1/heartbeat/<HEARTBEAT_EVENING_TOKEN>"
 ```
 
 ### Hilfsfunktion
