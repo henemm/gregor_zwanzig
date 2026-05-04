@@ -16,8 +16,8 @@ type Config struct {
 	SessionSecret     string `envconfig:"SESSION_SECRET" default:"dev-secret-change-me"`
 	AuthUser          string `envconfig:"AUTH_USER" default:"admin"`
 	AuthPass          string `envconfig:"AUTH_PASS" default:""`
-	HeartbeatMorning  string `envconfig:"HEARTBEAT_MORNING" default:"https://uptime.betterstack.com/api/v1/heartbeat/f4GBDxFQHxuu73FdRt5wjGsQ"`
-	HeartbeatEvening  string `envconfig:"HEARTBEAT_EVENING" default:"https://uptime.betterstack.com/api/v1/heartbeat/5Cc4vmiEDgrSr7qsBa2k2av4"`
+	HeartbeatMorning  string `envconfig:"HEARTBEAT_MORNING" default:""`
+	HeartbeatEvening  string `envconfig:"HEARTBEAT_EVENING" default:""`
 	SchedulerTimezone string `envconfig:"SCHEDULER_TIMEZONE" default:"Europe/Vienna"`
 }
 

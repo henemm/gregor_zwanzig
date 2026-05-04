@@ -15,9 +15,14 @@ import (
 	"time"
 
 	"github.com/henemm/gregor-api/internal/config"
+	"github.com/henemm/gregor-api/internal/notify"
 	"github.com/henemm/gregor-api/internal/store"
 	"github.com/robfig/cron/v3"
 )
+
+// Notifier is the function signature for inter-instance message delivery.
+// Injectable for tests; defaults to notify.SendMQ.
+type Notifier func(sender, recipient, priority, subject, body string) error
 
 // jobResult tracks the last execution of a scheduled job.
 type jobResult struct {
@@ -43,6 +48,15 @@ type Scheduler struct {
 	mu               sync.RWMutex
 	lastRuns         map[string]*jobResult
 	entryMap         map[cron.EntryID]jobMeta // maps cron EntryID → job identity
+
+	// notifier delivers MQ messages (e.g. heartbeat-URL missing). Defaults to
+	// notify.SendMQ; tests inject their own.
+	notifier Notifier
+
+	// onceMissingHB ensures the "heartbeat URL empty" warning is sent only once
+	// per (process, jobName) — avoids MQ spam on every cron tick.
+	onceMissingHB   map[string]*sync.Once
+	onceMissingHBmu sync.Mutex
 }
 
 // New creates a Scheduler from config and store. Returns error if timezone is invalid.
@@ -61,6 +75,10 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 		store:            st,
 		lastRuns:         make(map[string]*jobResult),
 		entryMap:         make(map[cron.EntryID]jobMeta),
+		notifier: func(sender, recipient, priority, subject, body string) error {
+			return notify.SendMQ(sender, recipient, priority, subject, body)
+		},
+		onceMissingHB: make(map[string]*sync.Once),
 	}
 
 	// Register jobs and store EntryID → jobMeta mapping
@@ -132,7 +150,7 @@ func (s *Scheduler) morningSubscriptions() {
 	lr := s.lastRuns["morning_subscriptions"]
 	s.mu.RUnlock()
 	if lr != nil && lr.Status == "ok" {
-		s.pingHeartbeat(s.heartbeatMorning)
+		s.pingHeartbeat("morning_subscriptions", s.heartbeatMorning)
 	}
 }
 
@@ -145,7 +163,7 @@ func (s *Scheduler) eveningSubscriptions() {
 	lr := s.lastRuns["evening_subscriptions"]
 	s.mu.RUnlock()
 	if lr != nil && lr.Status == "ok" {
-		s.pingHeartbeat(s.heartbeatEvening)
+		s.pingHeartbeat("evening_subscriptions", s.heartbeatEvening)
 	}
 }
 
@@ -205,18 +223,52 @@ func (s *Scheduler) triggerEndpointForUser(path, userID string) error {
 }
 
 // pingHeartbeat sends a GET to BetterStack. Fire-and-forget with logging.
-func (s *Scheduler) pingHeartbeat(url string) {
+//
+// If url is empty (ENV-Var not configured), no HTTP request is made and a
+// single MQ-notification is dispatched per (process, jobName) so the missing
+// configuration is visible to operators without spamming the MQ on every tick.
+func (s *Scheduler) pingHeartbeat(jobName, url string) {
 	if url == "" {
+		s.warnMissingHeartbeatOnce(jobName)
 		return
 	}
 	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Get(url)
 	if err != nil {
-		log.Printf("[scheduler] Heartbeat ping failed: %v", err)
+		log.Printf("[scheduler] Heartbeat ping failed (%s): %v", jobName, err)
 		return
 	}
 	resp.Body.Close()
-	log.Printf("[scheduler] Heartbeat ping OK: ...%s", url[len(url)-8:])
+	log.Printf("[scheduler] Heartbeat ping OK (%s): ...%s", jobName, url[len(url)-8:])
+}
+
+// warnMissingHeartbeatOnce sends an MQ notification to `infra` once per
+// jobName for the lifetime of this Scheduler instance.
+func (s *Scheduler) warnMissingHeartbeatOnce(jobName string) {
+	s.onceMissingHBmu.Lock()
+	once, ok := s.onceMissingHB[jobName]
+	if !ok {
+		once = &sync.Once{}
+		s.onceMissingHB[jobName] = once
+	}
+	s.onceMissingHBmu.Unlock()
+
+	once.Do(func() {
+		if s.notifier == nil {
+			return
+		}
+		subject := fmt.Sprintf("Heartbeat-URL für Job %q nicht konfiguriert", jobName)
+		body := fmt.Sprintf(
+			"ENV-Variable für Heartbeat-Job %q ist leer. Service läuft normal weiter, "+
+				"aber externes Monitoring sollte Job-Status anderweitig prüfen.",
+			jobName,
+		)
+		if err := s.notifier("gregor", "infra", "normal", subject, body); err != nil {
+			log.Printf("[scheduler] WARN: notifier failed for %s: %v", jobName, err)
+		} else {
+			log.Printf("[scheduler] WARN: Heartbeat URL empty for %s — MQ sent", jobName)
+		}
+	})
 }
 
 // Status returns current scheduler state for API exposure.
