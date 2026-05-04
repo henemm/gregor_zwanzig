@@ -56,7 +56,10 @@ func main() {
 	r.Post("/api/auth/register",
 		registerLimiter.Middleware(handler.RegisterHandler(s, bcrypt.DefaultCost)).ServeHTTP,
 	)
-	r.Post("/api/auth/login", handler.LoginHandler(s, cfg.SessionSecret))
+	loginLimiter := authmw.NewIPRateLimiter(30, time.Hour)
+	r.Post("/api/auth/login",
+		loginLimiter.Middleware(handler.LoginHandler(s, cfg.SessionSecret)).ServeHTTP,
+	)
 	r.Post("/api/auth/logout", handler.LogoutHandler())
 	r.Post("/api/auth/forgot-password", handler.ForgotPasswordHandler(s, bcrypt.DefaultCost))
 	r.Post("/api/auth/reset-password", handler.ResetPasswordHandler(s, bcrypt.DefaultCost))
