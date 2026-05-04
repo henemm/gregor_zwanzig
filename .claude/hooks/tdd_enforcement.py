@@ -35,12 +35,14 @@ try:
         load_state, get_active_workflow, PHASES,
         PHASE_NAMES, TEST_REQUIRED_PHASES
     )
+    from config_loader import get_project_root
 except ImportError:
     sys.path.insert(0, str(Path(__file__).parent))
     from workflow_state_multi import (
         load_state, get_active_workflow, PHASES,
         PHASE_NAMES, TEST_REQUIRED_PHASES
     )
+    from config_loader import get_project_root
 
 
 # Minimum requirements for TDD RED phase
@@ -105,7 +107,12 @@ def validate_artifact(artifact: dict) -> tuple[bool, str]:
     if not path:
         return False, "Artifact has no path"
 
+    # Resolve relative paths against the main repo root, not CWD.
+    # Hook may run from a worktree, but workflow_state.json (and its paths)
+    # is written relative to the main repo via config_loader.
     artifact_path = Path(path)
+    if not artifact_path.is_absolute():
+        artifact_path = get_project_root() / artifact_path
     if not artifact_path.exists():
         return False, f"Artifact file not found: {path}"
 
