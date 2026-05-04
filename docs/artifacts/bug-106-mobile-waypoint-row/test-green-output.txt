@@ -1,0 +1,8 @@
+
+Running 3 tests using 1 worker
+
+  ✓  1 [setup] › e2e/global.setup.ts:5:1 › authenticate (317ms)
+  ✓  2 [tests] › e2e/trip-wizard.spec.ts:437:2 › Trip Wizard W1 — Bug #106 Mobile Waypoint Layout › all 4 waypoint inputs visible with width > 40px on mobile (530ms)
+  ✓  3 [tests] › e2e/trip-wizard.spec.ts:453:2 › Trip Wizard W1 — Bug #106 Mobile Waypoint Layout › mobile trash button has touch target >= 44x44px (472ms)
+
+  3 passed (2.5s)

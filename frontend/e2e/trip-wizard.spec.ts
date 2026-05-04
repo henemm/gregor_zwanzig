@@ -418,3 +418,44 @@ test.describe('Trip Wizard W1', () => {
 		await page.waitForURL('/trips/new');
 	});
 });
+
+// --- Bug #106: Wegpunkt-Zeile auf Mobile zu eng ---
+// Spec: docs/specs/bugfix/wizard_step2_mobile_waypoint_row.md
+test.describe('Trip Wizard W1 — Bug #106 Mobile Waypoint Layout', () => {
+	test.use({ viewport: { width: 375, height: 667 } }); // iPhone SE
+
+	test.beforeEach(async ({ page }) => {
+		await login(page);
+		await page.goto('/trips/new');
+		await page.locator('[data-testid="trip-name-input"]').fill('Mobile Bug 106');
+		await page.locator('button', { hasText: /[Mm]anuell/ }).click();
+		await page.locator('[data-testid="wizard-next"]').click();
+		await page.locator('button', { hasText: /[Ww]egpunkt/ }).click();
+		await expect(page.locator('[data-testid="waypoint-0"]')).toBeVisible();
+	});
+
+	test('all 4 waypoint inputs visible with width > 40px on mobile', async ({ page }) => {
+		const selectors = [
+			'[data-testid="wp-name"]',
+			'[data-testid="wp-lat"]',
+			'[data-testid="wp-lon"]',
+			'[data-testid="wp-ele"]',
+		];
+		for (const sel of selectors) {
+			const locator = page.locator(sel);
+			await expect(locator).toBeVisible();
+			const box = await locator.boundingBox();
+			expect(box, `boundingBox for ${sel} should not be null`).not.toBeNull();
+			expect(box!.width, `${sel} width should be > 40px`).toBeGreaterThan(40);
+		}
+	});
+
+	test('mobile trash button has touch target >= 44x44px', async ({ page }) => {
+		const trashBtn = page.locator('[data-testid="wp-trash-mobile"]');
+		await expect(trashBtn).toBeVisible();
+		const box = await trashBtn.boundingBox();
+		expect(box).not.toBeNull();
+		expect(box!.width).toBeGreaterThanOrEqual(44);
+		expect(box!.height).toBeGreaterThanOrEqual(44);
+	});
+});
