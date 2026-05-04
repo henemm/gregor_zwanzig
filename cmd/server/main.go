@@ -61,8 +61,14 @@ func main() {
 		loginLimiter.Middleware(handler.LoginHandler(s, cfg.SessionSecret)).ServeHTTP,
 	)
 	r.Post("/api/auth/logout", handler.LogoutHandler())
-	r.Post("/api/auth/forgot-password", handler.ForgotPasswordHandler(s, bcrypt.DefaultCost))
-	r.Post("/api/auth/reset-password", handler.ResetPasswordHandler(s, bcrypt.DefaultCost))
+	forgotLimiter := authmw.NewIPRateLimiter(5, time.Hour)
+	r.Post("/api/auth/forgot-password",
+		forgotLimiter.Middleware(handler.ForgotPasswordHandler(s, bcrypt.DefaultCost)).ServeHTTP,
+	)
+	resetLimiter := authmw.NewIPRateLimiter(10, time.Hour)
+	r.Post("/api/auth/reset-password",
+		resetLimiter.Middleware(handler.ResetPasswordHandler(s, bcrypt.DefaultCost)).ServeHTTP,
+	)
 	r.Delete("/api/auth/account", handler.DeleteAccountHandler(s))
 	r.Get("/api/auth/profile", handler.GetProfileHandler(s))
 	r.Put("/api/auth/profile", handler.UpdateProfileHandler(s))
