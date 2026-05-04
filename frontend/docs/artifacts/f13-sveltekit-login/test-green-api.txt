@@ -1,0 +1,8 @@
+HTTP/1.1 200 OK
+Content-Type: application/json
+Set-Cookie: gz_session=default.1776320345.8a8813c71baee008ef1c21d8a50412a29c1700f327f68c2fd6bf80ac6bf42210; Path=/; Max-Age=86400; HttpOnly; SameSite=Lax
+Date: Thu, 16 Apr 2026 06:19:05 GMT
+Content-Length: 17
+
+{"id":"default"}
+Login via Go API — Cookie set correctly

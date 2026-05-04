@@ -1,0 +1,99 @@
+F......FF.....sssssssssssssss........................................... [  6%]
+........................................................................ [ 12%]
+........................................................................ [ 19%]
+........................................................................ [ 25%]
+......................FF..............................................F. [ 32%]
+........................................................................ [ 38%]
+............................ssssss.......................xF.s........... [ 45%]
+.......................................................................s [ 51%]
+ssssss..........ss...................................................... [ 58%]
+........................................................................ [ 64%]
+........................................................................ [ 71%]
+..............................................FFF.........s............. [ 77%]
+........................................................................ [ 84%]
+........................................................................ [ 90%]
+........................................................................ [ 97%]
+.................................                                        [100%]
+=================================== FAILURES ===================================
+______________________________ test_alert_enabled ______________________________
+tests/e2e/test_e2e_friendly_format_config.py:283: in test_alert_enabled
+    modify_metric_config("cape", alert_enabled=True)
+tests/e2e/test_e2e_friendly_format_config.py:47: in modify_metric_config
+    for mc in data["display_config"]["metrics"]:
+              ^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'display_config'
+----------------------------- Captured stdout call -----------------------------
+
+============================================================
+TEST: alert_enabled steuert Change Detection
+============================================================
+____________ TestReportFormatting.test_email_html_contains_segments ____________
+tests/e2e/test_e2e_story3_reports.py:220: in test_email_html_contains_segments
+    assert "#2" in report.email_html
+E   assert '#2' in '<!DOCTYPE html>\n<html>\n<head>\n    <meta charset="utf-8">\n    <meta name="viewport" content="width=device-width, i...els °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun W/m²</span>\n        </div>\n    </div>\n</body>\n</html>'
+E    +  where '<!DOCTYPE html>\n<html>\n<head>\n    <meta charset="utf-8">\n    <meta name="viewport" content="width=device-width, i...els °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun W/m²</span>\n        </div>\n    </div>\n</body>\n</html>' = TripReport(trip_id='e2e-story3-stubai', trip_name='E2E Story3 Stubai', report_type='morning', generated_at=datetime.da...-----\nGenerated: 2026-04-22 10:53 UTC\nData: openmeteo (icon_d2)', sms_text=None, triggered_by='schedule', changes=[]).email_html
+_____________ TestReportFormatting.test_email_plain_text_fallback ______________
+tests/e2e/test_e2e_story3_reports.py:237: in test_email_plain_text_fallback
+    assert "SEGMENTS" in report.email_plain
+E   AssertionError: assert 'SEGMENTS' in 'E2E Story3 Stubai - Morning Report\n22.04.2026\n\n━━ Segment 1: 07:00–10:00 | 3.2 km | ↑993m → 2237m ━━\n  Time   Tem...----------------------------------------------------------\nGenerated: 2026-04-22 10:53 UTC\nData: openmeteo (icon_d2)'
+E    +  where 'E2E Story3 Stubai - Morning Report\n22.04.2026\n\n━━ Segment 1: 07:00–10:00 | 3.2 km | ↑993m → 2237m ━━\n  Time   Tem...----------------------------------------------------------\nGenerated: 2026-04-22 10:53 UTC\nData: openmeteo (icon_d2)' = TripReport(trip_id='e2e-story3-stubai', trip_name='E2E Story3 Stubai', report_type='morning', generated_at=datetime.da...-----\nGenerated: 2026-04-22 10:53 UTC\nData: openmeteo (icon_d2)', sms_text=None, triggered_by='schedule', changes=[]).email_plain
+___________________ TestNavigation.test_nav_has_account_link ___________________
+tests/tdd/test_account_page.py:136: in test_nav_has_account_link
+    assert '/account' in resp.text, "Missing /account link in navigation"
+E   AssertionError: Missing /account link in navigation
+E   assert '/account' in '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n'
+E    +  where '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n' = <Response [200 OK]>.text
+__________________ TestNavigation.test_nav_shows_konto_label ___________________
+tests/tdd/test_account_page.py:146: in test_nav_shows_konto_label
+    assert 'Konto' in resp.text, "Missing 'Konto' label in navigation"
+E   AssertionError: Missing 'Konto' label in navigation
+E   assert 'Konto' in '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n'
+E    +  where '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n' = <Response [200 OK]>.text
+________________ TestSettingsRenamed.test_settings_page_heading ________________
+tests/tdd/test_design_optimierungen.py:225: in test_settings_page_heading
+    assert text.strip() == "System-Status", (
+E   AssertionError: Settings page heading is 'Mein Konto', expected 'System-Status'
+E   assert 'Mein Konto' == 'System-Status'
+E     
+E     - System-Status
+E     + Mein Konto
+_____________ TestSnowgridPlausibility.test_all_resorts_have_data ______________
+tests/tdd/test_snowgrid.py:105: in test_all_resorts_have_data
+    assert success_rate >= 0.8, (
+E   AssertionError: Only 0% of resorts have data from both sources. Results: {'stubaier-gletscher': {'bergfex': 300, 'snowgrid': None}, 'axamer-lizum': {'bergfex': 120, 'snowgrid': None}, 'obergurgl-hochgurgl': {'bergfex': 96, 'snowgrid': None}, 'soelden': {'bergfex': 144, 'snowgrid': None}, 'ischgl': {'bergfex': 85, 'snowgrid': None}}
+E   assert 0.0 >= 0.8
+_______ TestSchedulerDestinationSegment.test_destination_segment_exists ________
+tests/unit/test_destination_segment.py:89: in test_destination_segment_exists
+    segments = self._load_trip_and_get_segments()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_destination_segment.py:83: in _load_trip_and_get_segments
+    target_date = trip.stages[1].date
+                  ^^^^^^^^^^^^^^
+E   IndexError: list index out of range
+_____ TestSchedulerDestinationSegment.test_destination_segment_coordinates _____
+tests/unit/test_destination_segment.py:97: in test_destination_segment_coordinates
+    segments = self._load_trip_and_get_segments()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_destination_segment.py:83: in _load_trip_and_get_segments
+    target_date = trip.stages[1].date
+                  ^^^^^^^^^^^^^^
+E   IndexError: list index out of range
+_____ TestSchedulerDestinationSegment.test_destination_segment_time_window _____
+tests/unit/test_destination_segment.py:103: in test_destination_segment_time_window
+    segments = self._load_trip_and_get_segments()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_destination_segment.py:83: in _load_trip_and_get_segments
+    target_date = trip.stages[1].date
+                  ^^^^^^^^^^^^^^
+E   IndexError: list index out of range
+=========================== short test summary info ============================
+FAILED tests/e2e/test_e2e_friendly_format_config.py::test_alert_enabled - Key...
+FAILED tests/e2e/test_e2e_story3_reports.py::TestReportFormatting::test_email_html_contains_segments
+FAILED tests/e2e/test_e2e_story3_reports.py::TestReportFormatting::test_email_plain_text_fallback
+FAILED tests/tdd/test_account_page.py::TestNavigation::test_nav_has_account_link
+FAILED tests/tdd/test_account_page.py::TestNavigation::test_nav_shows_konto_label
+FAILED tests/tdd/test_design_optimierungen.py::TestSettingsRenamed::test_settings_page_heading
+FAILED tests/tdd/test_snowgrid.py::TestSnowgridPlausibility::test_all_resorts_have_data
+FAILED tests/unit/test_destination_segment.py::TestSchedulerDestinationSegment::test_destination_segment_exists
+FAILED tests/unit/test_destination_segment.py::TestSchedulerDestinationSegment::test_destination_segment_coordinates
+FAILED tests/unit/test_destination_segment.py::TestSchedulerDestinationSegment::test_destination_segment_time_window

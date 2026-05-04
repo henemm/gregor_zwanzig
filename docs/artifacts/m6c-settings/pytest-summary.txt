@@ -1,0 +1,3 @@
+ERROR tests/tdd/test_weather_config_api_ui.py::TestUIMetricCount19::test_nineteen_metric_checkboxes
+ERROR tests/tdd/test_weather_config_api_ui.py::TestUIMetricCount19::test_new_metric_labels_present
+27 failed, 948 passed, 17 skipped, 6 deselected, 1 xfailed, 15 errors in 29.76s

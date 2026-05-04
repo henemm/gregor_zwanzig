@@ -1,0 +1,28 @@
+  ✓   1 e2e/trip-wizard.spec.ts:11:2 › Trip Wizard W1 › wizard create route exists at /trips/new (400ms)
+  ✓   2 e2e/trip-wizard.spec.ts:21:2 › Trip Wizard W1 › wizard shows 4-step stepper with Route as active (313ms)
+  ✓   3 e2e/trip-wizard.spec.ts:35:2 › Trip Wizard W1 › stepper labels are Route, Etappen, Wetter, Reports (293ms)
+  ✓   4 e2e/trip-wizard.spec.ts:46:2 › Trip Wizard W1 › step 1 shows GPX upload zone (276ms)
+  ✓   5 e2e/trip-wizard.spec.ts:52:2 › Trip Wizard W1 › step 1 shows trip name input (286ms)
+  ✓   6 e2e/trip-wizard.spec.ts:58:2 › Trip Wizard W1 › step 1 has manual create button (274ms)
+  ✓   7 e2e/trip-wizard.spec.ts:64:2 › Trip Wizard W1 › step 1 weiter button is disabled without trip name (264ms)
+  ✓   8 e2e/trip-wizard.spec.ts:71:2 › Trip Wizard W1 › step 1 weiter button enabled after entering trip name and adding stage (293ms)
+  ✓   9 e2e/trip-wizard.spec.ts:89:2 › Trip Wizard W1 › step 2 shows stages from step 1 (372ms)
+  ✓  10 e2e/trip-wizard.spec.ts:104:2 › Trip Wizard W1 › step 2 allows adding waypoints (417ms)
+  ✓  11 e2e/trip-wizard.spec.ts:121:2 › Trip Wizard W1 › step 2 allows adding more stages (394ms)
+  ✓  12 e2e/trip-wizard.spec.ts:139:2 › Trip Wizard W1 › back button on step 2 returns to step 1 (407ms)
+  ✓  13 e2e/trip-wizard.spec.ts:158:2 › Trip Wizard W1 › cancel button navigates to /trips (304ms)
+  ✓  14 e2e/trip-wizard.spec.ts:165:2 › Trip Wizard W1 › step 1 has no back button but wizard is visible (268ms)
+  ✘  15 e2e/trip-wizard.spec.ts:176:2 › Trip Wizard W1 › step 3 shows weather template selector (5.5s)
+  ✘  16 e2e/trip-wizard.spec.ts:192:2 › Trip Wizard W1 › step 3 has template dropdown with 7 options (5.5s)
+  ✘  17 e2e/trip-wizard.spec.ts:212:2 › Trip Wizard W1 › step 3 shows metric checkboxes grouped by category (5.6s)
+  ✘  18 e2e/trip-wizard.spec.ts:235:2 › Trip Wizard W1 › step 3 template selection pre-fills metrics (30.0s)
+  ✘  19 e2e/trip-wizard.spec.ts:258:2 › Trip Wizard W1 › step 3 manual override shows "Benutzerdefiniert" (30.0s)
+  ✓  20 e2e/trip-wizard.spec.ts:284:2 › Trip Wizard W1 › step 4 shows placeholder content (528ms)
+  ✓  21 e2e/trip-wizard.spec.ts:301:2 › Trip Wizard W1 › save button visible on last step (495ms)
+  ✓  24 e2e/trip-wizard.spec.ts:360:2 › Trip Wizard W1 › trips page "Neuer Trip" navigates to /trips/new (348ms)
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+  5 failed
+  2 skipped
+  17 passed (1.6m)

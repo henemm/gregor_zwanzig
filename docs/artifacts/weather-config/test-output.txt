@@ -1,0 +1,855 @@
+F....F.FF.FF..sssssssssssssss........................................... [  7%]
+........................................................................ [ 14%]
+..............................................FFFFFFFFFFFFFFFFFFF....F.F [ 21%]
+.............................FF......................................... [ 28%]
+....................................FFF.............................FFFF [ 35%]
+FFF....FFFF................................ssssss....................... [ 42%]
+xF.s...................................................................s [ 49%]
+ssssss......FFFFss...................................................... [ 56%]
+........................................................................ [ 63%]
+........................................................................ [ 70%]
+............................FFF.........s............................... [ 77%]
+............F.F....................FF................................... [ 84%]
+...........................................F....FFF..................... [ 91%]
+........................................................................ [ 98%]
+...............                                                          [100%]
+=================================== FAILURES ===================================
+______________________________ test_alert_enabled ______________________________
+tests/e2e/test_e2e_friendly_format_config.py:283: in test_alert_enabled
+    modify_metric_config("cape", alert_enabled=True)
+tests/e2e/test_e2e_friendly_format_config.py:47: in modify_metric_config
+    for mc in data["display_config"]["metrics"]:
+              ^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'display_config'
+----------------------------- Captured stdout call -----------------------------
+
+============================================================
+TEST: alert_enabled steuert Change Detection
+============================================================
+___________________ TestWeatherFetch.test_fetch_real_weather ___________________
+tests/e2e/test_e2e_story3_reports.py:181: in test_fetch_real_weather
+    assert -40 <= agg.temp_min_c <= 50, f"Implausible temp_min: {agg.temp_min_c}"
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: '<=' not supported between instances of 'int' and 'NoneType'
+------------------------------ Captured log call -------------------------------
+ERROR    services.segment_weather:segment_weather.py:138 Provider failed for segment 1: [openmeteo] API error: 429 - {"error":true,"reason":"Daily API request limit exceeded. Please try again tomorrow."}
+ERROR    services.segment_weather:segment_weather.py:138 Provider failed for segment 2: [openmeteo] API error: 429 - {"error":true,"reason":"Daily API request limit exceeded. Please try again tomorrow."}
+____________ TestReportFormatting.test_email_html_contains_segments ____________
+tests/e2e/test_e2e_story3_reports.py:220: in test_email_html_contains_segments
+    assert "#2" in report.email_html
+E   assert '#2' in '<!DOCTYPE html>\n<html>\n<head>\n    <meta charset="utf-8">\n    <meta name="viewport" content="width=device-width, i...   Generated: 2026-04-15 13:56 UTC | Data: openmeteo (n/a)\n            \n        </div>\n    </div>\n</body>\n</html>'
+E    +  where '<!DOCTYPE html>\n<html>\n<head>\n    <meta charset="utf-8">\n    <meta name="viewport" content="width=device-width, i...   Generated: 2026-04-15 13:56 UTC | Data: openmeteo (n/a)\n            \n        </div>\n    </div>\n</body>\n</html>' = TripReport(trip_id='e2e-story3-stubai', trip_name='E2E Story3 Stubai', report_type='morning', generated_at=datetime.da...---------\nGenerated: 2026-04-15 13:56 UTC\nData: openmeteo (n/a)', sms_text=None, triggered_by='schedule', changes=[]).email_html
+------------------------------ Captured log call -------------------------------
+ERROR    services.segment_weather:segment_weather.py:138 Provider failed for segment 1: [openmeteo] API error: 429 - {"error":true,"reason":"Daily API request limit exceeded. Please try again tomorrow."}
+ERROR    services.segment_weather:segment_weather.py:138 Provider failed for segment 2: [openmeteo] API error: 429 - {"reason":"Daily API request limit exceeded. Please try again tomorrow.","error":true}
+_____________ TestReportFormatting.test_email_plain_text_fallback ______________
+tests/e2e/test_e2e_story3_reports.py:237: in test_email_plain_text_fallback
+    assert "SEGMENTS" in report.email_plain
+E   AssertionError: assert 'SEGMENTS' in 'E2E Story3 Stubai - Morning Report\n15.04.2026\n\n━━ Segment 1: WETTERDATEN NICHT VERFUEGBAR ━━\n  Anbieter-Fehler na...\n------------------------------------------------------------\nGenerated: 2026-04-15 13:56 UTC\nData: openmeteo (n/a)'
+E    +  where 'E2E Story3 Stubai - Morning Report\n15.04.2026\n\n━━ Segment 1: WETTERDATEN NICHT VERFUEGBAR ━━\n  Anbieter-Fehler na...\n------------------------------------------------------------\nGenerated: 2026-04-15 13:56 UTC\nData: openmeteo (n/a)' = TripReport(trip_id='e2e-story3-stubai', trip_name='E2E Story3 Stubai', report_type='morning', generated_at=datetime.da...---------\nGenerated: 2026-04-15 13:56 UTC\nData: openmeteo (n/a)', sms_text=None, triggered_by='schedule', changes=[]).email_plain
+------------------------------ Captured log call -------------------------------
+ERROR    services.segment_weather:segment_weather.py:138 Provider failed for segment 1: [openmeteo] API error: 429 - {"reason":"Daily API request limit exceeded. Please try again tomorrow.","error":true}
+ERROR    services.segment_weather:segment_weather.py:138 Provider failed for segment 2: [openmeteo] API error: 429 - {"reason":"Daily API request limit exceeded. Please try again tomorrow.","error":true}
+_________________ TestReportFormatting.test_sms_format_compact _________________
+tests/e2e/test_e2e_story3_reports.py:254: in test_sms_format_compact
+    sms = formatter.format_sms(weather)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/formatters/sms_trip.py:75: in format_sms
+    segment_strs = [self._format_segment(seg) for seg in segments]
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^
+src/formatters/sms_trip.py:157: in _format_segment
+    parts = [f"E{seg.segment_id}:T{agg.temp_min_c:.0f}/{agg.temp_max_c:.0f}"]
+                                  ^^^^^^^^^^^^^^^^^^^^
+E   TypeError: unsupported format string passed to NoneType.__format__
+------------------------------ Captured log call -------------------------------
+ERROR    services.segment_weather:segment_weather.py:138 Provider failed for segment 1: [openmeteo] API error: 429 - {"error":true,"reason":"Daily API request limit exceeded. Please try again tomorrow."}
+ERROR    services.segment_weather:segment_weather.py:138 Provider failed for segment 2: [openmeteo] API error: 429 - {"error":true,"reason":"Daily API request limit exceeded. Please try again tomorrow."}
+______________ TestReportFormatting.test_sms_contains_temperature ______________
+tests/e2e/test_e2e_story3_reports.py:265: in test_sms_contains_temperature
+    sms = formatter.format_sms(weather)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/formatters/sms_trip.py:75: in format_sms
+    segment_strs = [self._format_segment(seg) for seg in segments]
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^
+src/formatters/sms_trip.py:157: in _format_segment
+    parts = [f"E{seg.segment_id}:T{agg.temp_min_c:.0f}/{agg.temp_max_c:.0f}"]
+                                  ^^^^^^^^^^^^^^^^^^^^
+E   TypeError: unsupported format string passed to NoneType.__format__
+------------------------------ Captured log call -------------------------------
+ERROR    services.segment_weather:segment_weather.py:138 Provider failed for segment 1: [openmeteo] API error: 429 - {"error":true,"reason":"Daily API request limit exceeded. Please try again tomorrow."}
+ERROR    services.segment_weather:segment_weather.py:138 Provider failed for segment 2: [openmeteo] API error: 429 - {"error":true,"reason":"Daily API request limit exceeded. Please try again tomorrow."}
+_______ TestSegmentWeatherCacheIntegration.test_cache_reduces_api_calls ________
+tests/integration/test_segment_weather_cache.py:46: in test_cache_reduces_api_calls
+    assert cache.stats()["total_entries"] == 1
+E   assert 0 == 1
+------------------------------ Captured log call -------------------------------
+ERROR    services.segment_weather:segment_weather.py:138 Provider failed for segment 1: [geosphere] HTTP 429: {
+  "message":"API rate limit exceeded",
+  "request_id":"05a1663bc881161057ef5a3403306b7d"
+}
+_ TestSegmentWeatherCacheIntegration.test_different_segments_cached_separately _
+tests/integration/test_segment_weather_cache.py:100: in test_different_segments_cached_separately
+    assert cache.stats()["total_entries"] == 2
+E   assert 0 == 2
+------------------------------ Captured log call -------------------------------
+ERROR    services.segment_weather:segment_weather.py:138 Provider failed for segment 1: [geosphere] HTTP 429: {
+  "message":"API rate limit exceeded",
+  "request_id":"c249121f60af8a02221fb42e38e33b58"
+}
+ERROR    services.segment_weather:segment_weather.py:138 Provider failed for segment 2: [geosphere] HTTP 429: {
+  "message":"API rate limit exceeded",
+  "request_id":"f1e18669fbd90f780305f40f87f42f37"
+}
+___ TestSegmentWeatherMetricsGeoSphere.test_geosphere_austria_basis_metrics ____
+tests/integration/test_segment_weather_metrics.py:63: in test_geosphere_austria_basis_metrics
+    assert summary.temp_min_c is not None
+E   assert None is not None
+E    +  where None = SegmentWeatherSummary(temp_min_c=None, temp_max_c=None, temp_avg_c=None, wind_max_kmh=None, gust_max_kmh=None, precip_...ind_direction_avg_deg=None, precip_type_dominant=None, dominant_wmo_code=None, dni_avg_wm2=None, aggregation_config={}).temp_min_c
+------------------------------ Captured log call -------------------------------
+ERROR    services.segment_weather:segment_weather.py:138 Provider failed for segment 1: [geosphere] HTTP 429: {
+  "message":"API rate limit exceeded",
+  "request_id":"ab7a2c059b33aa0af676b1271fb22e53"
+}
+___ TestSegmentWeatherMetricsOpenMeteo.test_openmeteo_corsica_basis_metrics ____
+tests/integration/test_segment_weather_metrics.py:152: in test_openmeteo_corsica_basis_metrics
+    assert result.timeseries.meta.model == "meteofrance_arome"
+           ^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'NoneType' object has no attribute 'meta'
+------------------------------ Captured log call -------------------------------
+ERROR    services.segment_weather:segment_weather.py:138 Provider failed for segment 1: [openmeteo] API error: 429 - {"error":true,"reason":"Daily API request limit exceeded. Please try again tomorrow."}
+________________ TestE2EStory2Flow.test_e2e_segment_to_metrics _________________
+tests/integration/test_segment_weather_metrics.py:204: in test_e2e_segment_to_metrics
+    assert weather_data.aggregated.temp_min_c is not None
+E   assert None is not None
+E    +  where None = SegmentWeatherSummary(temp_min_c=None, temp_max_c=None, temp_avg_c=None, wind_max_kmh=None, gust_max_kmh=None, precip_...ind_direction_avg_deg=None, precip_type_dominant=None, dominant_wmo_code=None, dni_avg_wm2=None, aggregation_config={}).temp_min_c
+E    +    where SegmentWeatherSummary(temp_min_c=None, temp_max_c=None, temp_avg_c=None, wind_max_kmh=None, gust_max_kmh=None, precip_...ind_direction_avg_deg=None, precip_type_dominant=None, dominant_wmo_code=None, dni_avg_wm2=None, aggregation_config={}) = SegmentWeatherData(segment=TripSegment(segment_id=1, start_point=GPXPoint(lat=47.27, lon=11.4, elevation_m=800, distan...[geosphere] HTTP 429: {\n  "message":"API rate limit exceeded",\n  "request_id":"e9cdb11b4692a12f15965419a2d3aa41"\n}').aggregated
+------------------------------ Captured log call -------------------------------
+ERROR    services.segment_weather:segment_weather.py:138 Provider failed for segment 1: [geosphere] HTTP 429: {
+  "message":"API rate limit exceeded",
+  "request_id":"e9cdb11b4692a12f15965419a2d3aa41"
+}
+__ TestSegmentWeatherMetricsExtended.test_geosphere_austria_extended_metrics ___
+tests/integration/test_segment_weather_metrics.py:251: in test_geosphere_austria_extended_metrics
+    assert "dewpoint_avg_c" in summary.aggregation_config
+E   AssertionError: assert 'dewpoint_avg_c' in {}
+E    +  where {} = SegmentWeatherSummary(temp_min_c=None, temp_max_c=None, temp_avg_c=None, wind_max_kmh=None, gust_max_kmh=None, precip_...ind_direction_avg_deg=None, precip_type_dominant=None, dominant_wmo_code=None, dni_avg_wm2=None, aggregation_config={}).aggregation_config
+------------------------------ Captured log call -------------------------------
+ERROR    services.segment_weather:segment_weather.py:138 Provider failed for segment 1: [geosphere] HTTP 429: {
+  "message":"API rate limit exceeded",
+  "request_id":"7d5d4347b3711767fccc690ec95a6d0b"
+}
+_ TestSegmentWeatherMetricsExtended.test_openmeteo_corsica_extended_no_winter __
+tests/integration/test_segment_weather_metrics.py:302: in test_openmeteo_corsica_extended_no_winter
+    assert "dewpoint_avg_c" in summary.aggregation_config
+E   AssertionError: assert 'dewpoint_avg_c' in {}
+E    +  where {} = SegmentWeatherSummary(temp_min_c=None, temp_max_c=None, temp_avg_c=None, wind_max_kmh=None, gust_max_kmh=None, precip_...ind_direction_avg_deg=None, precip_type_dominant=None, dominant_wmo_code=None, dni_avg_wm2=None, aggregation_config={}).aggregation_config
+------------------------------ Captured log call -------------------------------
+ERROR    services.segment_weather:segment_weather.py:138 Provider failed for segment 1: [openmeteo] API error: 429 - {"reason":"Daily API request limit exceeded. Please try again tomorrow.","error":true}
+________________ TestCoreMetricsNotNone.test_temp_min_not_none _________________
+tests/integration/test_snapshot_plausibility.py:54: in test_temp_min_not_none
+    assert mallorca_summary.aggregated.temp_min_c is not None
+E   assert None is not None
+E    +  where None = SegmentWeatherSummary(temp_min_c=None, temp_max_c=None, temp_avg_c=None, wind_max_kmh=None, gust_max_kmh=None, precip_...ind_direction_avg_deg=None, precip_type_dominant=None, dominant_wmo_code=None, dni_avg_wm2=None, aggregation_config={}).temp_min_c
+E    +    where SegmentWeatherSummary(temp_min_c=None, temp_max_c=None, temp_avg_c=None, wind_max_kmh=None, gust_max_kmh=None, precip_...ind_direction_avg_deg=None, precip_type_dominant=None, dominant_wmo_code=None, dni_avg_wm2=None, aggregation_config={}) = SegmentWeatherData(segment=TripSegment(segment_id=1, start_point=GPXPoint(lat=39.77, lon=2.71, elevation_m=100.0, dist...='[openmeteo] API error: 429 - {"error":true,"reason":"Daily API request limit exceeded. Please try again tomorrow."}').aggregated
+------------------------------ Captured log setup ------------------------------
+ERROR    services.segment_weather:segment_weather.py:138 Provider failed for segment 1: [openmeteo] API error: 429 - {"error":true,"reason":"Daily API request limit exceeded. Please try again tomorrow."}
+________________ TestCoreMetricsNotNone.test_temp_max_not_none _________________
+tests/integration/test_snapshot_plausibility.py:57: in test_temp_max_not_none
+    assert mallorca_summary.aggregated.temp_max_c is not None
+E   assert None is not None
+E    +  where None = SegmentWeatherSummary(temp_min_c=None, temp_max_c=None, temp_avg_c=None, wind_max_kmh=None, gust_max_kmh=None, precip_...ind_direction_avg_deg=None, precip_type_dominant=None, dominant_wmo_code=None, dni_avg_wm2=None, aggregation_config={}).temp_max_c
+E    +    where SegmentWeatherSummary(temp_min_c=None, temp_max_c=None, temp_avg_c=None, wind_max_kmh=None, gust_max_kmh=None, precip_...ind_direction_avg_deg=None, precip_type_dominant=None, dominant_wmo_code=None, dni_avg_wm2=None, aggregation_config={}) = SegmentWeatherData(segment=TripSegment(segment_id=1, start_point=GPXPoint(lat=39.77, lon=2.71, elevation_m=100.0, dist...='[openmeteo] API error: 429 - {"error":true,"reason":"Daily API request limit exceeded. Please try again tomorrow."}').aggregated
+________________ TestCoreMetricsNotNone.test_wind_max_not_none _________________
+tests/integration/test_snapshot_plausibility.py:60: in test_wind_max_not_none
+    assert mallorca_summary.aggregated.wind_max_kmh is not None
+E   assert None is not None
+E    +  where None = SegmentWeatherSummary(temp_min_c=None, temp_max_c=None, temp_avg_c=None, wind_max_kmh=None, gust_max_kmh=None, precip_...ind_direction_avg_deg=None, precip_type_dominant=None, dominant_wmo_code=None, dni_avg_wm2=None, aggregation_config={}).wind_max_kmh
+E    +    where SegmentWeatherSummary(temp_min_c=None, temp_max_c=None, temp_avg_c=None, wind_max_kmh=None, gust_max_kmh=None, precip_...ind_direction_avg_deg=None, precip_type_dominant=None, dominant_wmo_code=None, dni_avg_wm2=None, aggregation_config={}) = SegmentWeatherData(segment=TripSegment(segment_id=1, start_point=GPXPoint(lat=39.77, lon=2.71, elevation_m=100.0, dist...='[openmeteo] API error: 429 - {"error":true,"reason":"Daily API request limit exceeded. Please try again tomorrow."}').aggregated
+________________ TestCoreMetricsNotNone.test_gust_max_not_none _________________
+tests/integration/test_snapshot_plausibility.py:63: in test_gust_max_not_none
+    assert mallorca_summary.aggregated.gust_max_kmh is not None
+E   assert None is not None
+E    +  where None = SegmentWeatherSummary(temp_min_c=None, temp_max_c=None, temp_avg_c=None, wind_max_kmh=None, gust_max_kmh=None, precip_...ind_direction_avg_deg=None, precip_type_dominant=None, dominant_wmo_code=None, dni_avg_wm2=None, aggregation_config={}).gust_max_kmh
+E    +    where SegmentWeatherSummary(temp_min_c=None, temp_max_c=None, temp_avg_c=None, wind_max_kmh=None, gust_max_kmh=None, precip_...ind_direction_avg_deg=None, precip_type_dominant=None, dominant_wmo_code=None, dni_avg_wm2=None, aggregation_config={}) = SegmentWeatherData(segment=TripSegment(segment_id=1, start_point=GPXPoint(lat=39.77, lon=2.71, elevation_m=100.0, dist...='[openmeteo] API error: 429 - {"error":true,"reason":"Daily API request limit exceeded. Please try again tomorrow."}').aggregated
+_______________ TestCoreMetricsNotNone.test_precip_sum_not_none ________________
+tests/integration/test_snapshot_plausibility.py:66: in test_precip_sum_not_none
+    assert mallorca_summary.aggregated.precip_sum_mm is not None
+E   assert None is not None
+E    +  where None = SegmentWeatherSummary(temp_min_c=None, temp_max_c=None, temp_avg_c=None, wind_max_kmh=None, gust_max_kmh=None, precip_...ind_direction_avg_deg=None, precip_type_dominant=None, dominant_wmo_code=None, dni_avg_wm2=None, aggregation_config={}).precip_sum_mm
+E    +    where SegmentWeatherSummary(temp_min_c=None, temp_max_c=None, temp_avg_c=None, wind_max_kmh=None, gust_max_kmh=None, precip_...ind_direction_avg_deg=None, precip_type_dominant=None, dominant_wmo_code=None, dni_avg_wm2=None, aggregation_config={}) = SegmentWeatherData(segment=TripSegment(segment_id=1, start_point=GPXPoint(lat=39.77, lon=2.71, elevation_m=100.0, dist...='[openmeteo] API error: 429 - {"error":true,"reason":"Daily API request limit exceeded. Please try again tomorrow."}').aggregated
+________________ TestCoreMetricsNotNone.test_cloud_avg_not_none ________________
+tests/integration/test_snapshot_plausibility.py:69: in test_cloud_avg_not_none
+    assert mallorca_summary.aggregated.cloud_avg_pct is not None
+E   assert None is not None
+E    +  where None = SegmentWeatherSummary(temp_min_c=None, temp_max_c=None, temp_avg_c=None, wind_max_kmh=None, gust_max_kmh=None, precip_...ind_direction_avg_deg=None, precip_type_dominant=None, dominant_wmo_code=None, dni_avg_wm2=None, aggregation_config={}).cloud_avg_pct
+E    +    where SegmentWeatherSummary(temp_min_c=None, temp_max_c=None, temp_avg_c=None, wind_max_kmh=None, gust_max_kmh=None, precip_...ind_direction_avg_deg=None, precip_type_dominant=None, dominant_wmo_code=None, dni_avg_wm2=None, aggregation_config={}) = SegmentWeatherData(segment=TripSegment(segment_id=1, start_point=GPXPoint(lat=39.77, lon=2.71, elevation_m=100.0, dist...='[openmeteo] API error: 429 - {"error":true,"reason":"Daily API request limit exceeded. Please try again tomorrow."}').aggregated
+______________ TestCoreMetricsNotNone.test_humidity_avg_not_none _______________
+tests/integration/test_snapshot_plausibility.py:72: in test_humidity_avg_not_none
+    assert mallorca_summary.aggregated.humidity_avg_pct is not None
+E   assert None is not None
+E    +  where None = SegmentWeatherSummary(temp_min_c=None, temp_max_c=None, temp_avg_c=None, wind_max_kmh=None, gust_max_kmh=None, precip_...ind_direction_avg_deg=None, precip_type_dominant=None, dominant_wmo_code=None, dni_avg_wm2=None, aggregation_config={}).humidity_avg_pct
+E    +    where SegmentWeatherSummary(temp_min_c=None, temp_max_c=None, temp_avg_c=None, wind_max_kmh=None, gust_max_kmh=None, precip_...ind_direction_avg_deg=None, precip_type_dominant=None, dominant_wmo_code=None, dni_avg_wm2=None, aggregation_config={}) = SegmentWeatherData(segment=TripSegment(segment_id=1, start_point=GPXPoint(lat=39.77, lon=2.71, elevation_m=100.0, dist...='[openmeteo] API error: 429 - {"error":true,"reason":"Daily API request limit exceeded. Please try again tomorrow."}').aggregated
+___________ TestFallbackMetricsNotNone.test_visibility_min_not_none ____________
+tests/integration/test_snapshot_plausibility.py:80: in test_visibility_min_not_none
+    assert mallorca_summary.aggregated.visibility_min_m is not None, (
+E   AssertionError: visibility_min_m is None — WEATHER-05b fallback broken or cache deleted by tests
+E   assert None is not None
+E    +  where None = SegmentWeatherSummary(temp_min_c=None, temp_max_c=None, temp_avg_c=None, wind_max_kmh=None, gust_max_kmh=None, precip_...ind_direction_avg_deg=None, precip_type_dominant=None, dominant_wmo_code=None, dni_avg_wm2=None, aggregation_config={}).visibility_min_m
+E    +    where SegmentWeatherSummary(temp_min_c=None, temp_max_c=None, temp_avg_c=None, wind_max_kmh=None, gust_max_kmh=None, precip_...ind_direction_avg_deg=None, precip_type_dominant=None, dominant_wmo_code=None, dni_avg_wm2=None, aggregation_config={}) = SegmentWeatherData(segment=TripSegment(segment_id=1, start_point=GPXPoint(lat=39.77, lon=2.71, elevation_m=100.0, dist...='[openmeteo] API error: 429 - {"error":true,"reason":"Daily API request limit exceeded. Please try again tomorrow."}').aggregated
+_______________________ TestValueRanges.test_temp_range ________________________
+tests/integration/test_snapshot_plausibility.py:90: in test_temp_range
+    assert -50 <= agg.temp_min_c <= 50
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: '<=' not supported between instances of 'int' and 'NoneType'
+_______________________ TestValueRanges.test_wind_range ________________________
+tests/integration/test_snapshot_plausibility.py:95: in test_wind_range
+    assert 0 <= agg.wind_max_kmh <= 300
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: '<=' not supported between instances of 'int' and 'NoneType'
+______________________ TestValueRanges.test_precip_range _______________________
+tests/integration/test_snapshot_plausibility.py:99: in test_precip_range
+    assert 0 <= mallorca_summary.aggregated.precip_sum_mm <= 500
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: '<=' not supported between instances of 'int' and 'NoneType'
+__________________ TestValueRanges.test_cloud_humidity_range ___________________
+tests/integration/test_snapshot_plausibility.py:103: in test_cloud_humidity_range
+    assert 0 <= agg.cloud_avg_pct <= 100
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: '<=' not supported between instances of 'int' and 'NoneType'
+________________ TestCrossMetricConsistency.test_gust_gte_wind _________________
+tests/integration/test_snapshot_plausibility.py:132: in test_gust_gte_wind
+    assert agg.gust_max_kmh >= agg.wind_max_kmh, (
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: '>=' not supported between instances of 'NoneType' and 'NoneType'
+____________ TestFallbackMechanismActive.test_fallback_model_is_set ____________
+tests/integration/test_snapshot_plausibility.py:149: in test_fallback_model_is_set
+    meta = mallorca_summary.timeseries.meta
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'NoneType' object has no attribute 'meta'
+____ TestSegmentWeatherServiceGeoSphere.test_fetch_segment_weather_austria _____
+tests/integration/test_trip_segment_weather.py:66: in test_fetch_segment_weather_austria
+    assert len(result.timeseries.data) > 0
+               ^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'NoneType' object has no attribute 'data'
+------------------------------ Captured log call -------------------------------
+ERROR    services.segment_weather:segment_weather.py:138 Provider failed for segment 1: [geosphere] HTTP 429: {
+  "message":"API rate limit exceeded",
+  "request_id":"ee6ebd28a3d2a82cbb626a173e1c1417"
+}
+____ TestSegmentWeatherServiceOpenMeteo.test_fetch_segment_weather_corsica _____
+tests/integration/test_trip_segment_weather.py:130: in test_fetch_segment_weather_corsica
+    assert result.timeseries.meta.provider.value == "OPENMETEO"
+           ^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'NoneType' object has no attribute 'meta'
+------------------------------ Captured log call -------------------------------
+ERROR    services.segment_weather:segment_weather.py:138 Provider failed for segment 1: [openmeteo] API error: 429 - {"reason":"Daily API request limit exceeded. Please try again tomorrow.","error":true}
+____________ TestFetchForecastMallorca.test_valdemossa_returns_data ____________
+tests/tdd/test_compare_provider_routing.py:111: in test_valdemossa_returns_data
+    assert result["error"] is None, f"Expected no error, got: {result['error']}"
+E   AssertionError: Expected no error, got: [openmeteo] API error: 429 - {"reason":"Daily API request limit exceeded. Please try again tomorrow.","error":true}
+E   assert '[openmeteo] API error: 429 - {"reason":"Daily API request limit exceeded. Please try again tomorrow.","error":true}' is None
+_____________ TestFetchForecastMallorca.test_pollenca_returns_data _____________
+tests/tdd/test_compare_provider_routing.py:134: in test_pollenca_returns_data
+    assert result["error"] is None, f"Expected no error, got: {result['error']}"
+E   AssertionError: Expected no error, got: [openmeteo] API error: 429 - {"error":true,"reason":"Daily API request limit exceeded. Please try again tomorrow."}
+E   assert '[openmeteo] API error: 429 - {"error":true,"reason":"Daily API request limit exceeded. Please try again tomorrow."}' is None
+_________ TestFetchForecastAlpsRegression.test_innsbruck_returns_data __________
+tests/tdd/test_compare_provider_routing.py:163: in test_innsbruck_returns_data
+    assert result["error"] is None, f"Expected no error, got: {result['error']}"
+E   AssertionError: Expected no error, got: [geosphere] HTTP 429: {
+E       "message":"API rate limit exceeded",
+E       "request_id":"cad123105a306d7e7fcfbf0d063b0e75"
+E     }
+E   assert '[geosphere] HTTP 429: {\n  "message":"API rate limit exceeded",\n  "request_id":"cad123105a306d7e7fcfbf0d063b0e75"\n}' is None
+______________ TestSnowgridParsing.test_snowgrid_depth_conversion ______________
+tests/tdd/test_geosphere_parsing.py:38: in test_snowgrid_depth_conversion
+    result = validator.validate_snowgrid_parsing(lat, lon)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/validation/geosphere_validator.py:164: in validate_snowgrid_parsing
+    raw = self.fetch_raw_snowgrid(lat, lon)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/validation/geosphere_validator.py:74: in fetch_raw_snowgrid
+    response.raise_for_status()
+.venv/lib/python3.12/site-packages/httpx/_models.py:829: in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+E   httpx.HTTPStatusError: Client error '429 Too Many Requests' for url 'https://dataset.api.hub.geosphere.at/v1/timeseries/historical/snowgrid_cl-v2-1d-1km?lat_lon=47.26%2C11.39&parameters=snow_depth%2Cswe_tot&output_format=geojson&start=2026-04-08T13%3A56&end=2026-04-15T13%3A56'
+E   For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429
+_____________ TestSnowgridParsing.test_snowgrid_multiple_locations _____________
+tests/tdd/test_geosphere_parsing.py:58: in test_snowgrid_multiple_locations
+    result = validator.validate_snowgrid_parsing(lat, lon)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/validation/geosphere_validator.py:164: in validate_snowgrid_parsing
+    raw = self.fetch_raw_snowgrid(lat, lon)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/validation/geosphere_validator.py:74: in fetch_raw_snowgrid
+    response.raise_for_status()
+.venv/lib/python3.12/site-packages/httpx/_models.py:829: in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+E   httpx.HTTPStatusError: Client error '429 Too Many Requests' for url 'https://dataset.api.hub.geosphere.at/v1/timeseries/historical/snowgrid_cl-v2-1d-1km?lat_lon=47.26%2C11.39&parameters=snow_depth%2Cswe_tot&output_format=geojson&start=2026-04-08T13%3A56&end=2026-04-15T13%3A56'
+E   For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429
+_______________ TestNwpParsing.test_nwp_temperature_passthrough ________________
+tests/tdd/test_geosphere_parsing.py:84: in test_nwp_temperature_passthrough
+    result = validator.validate_nwp_parsing(lat, lon)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/validation/geosphere_validator.py:211: in validate_nwp_parsing
+    raw = self.fetch_raw_nwp(lat, lon)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/validation/geosphere_validator.py:121: in fetch_raw_nwp
+    response.raise_for_status()
+.venv/lib/python3.12/site-packages/httpx/_models.py:829: in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+E   httpx.HTTPStatusError: Client error '429 Too Many Requests' for url 'https://dataset.api.hub.geosphere.at/v1/timeseries/forecast/nwp-v1-1h-2500m?lat_lon=47.26%2C11.39&parameters=t2m%2Cu10m%2Cv10m%2Ctcc%2Csp&output_format=geojson'
+E   For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429
+________________ TestNwpParsing.test_nwp_wind_vector_conversion ________________
+tests/tdd/test_geosphere_parsing.py:106: in test_nwp_wind_vector_conversion
+    result = validator.validate_nwp_parsing(lat, lon)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/validation/geosphere_validator.py:211: in validate_nwp_parsing
+    raw = self.fetch_raw_nwp(lat, lon)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/validation/geosphere_validator.py:121: in fetch_raw_nwp
+    response.raise_for_status()
+.venv/lib/python3.12/site-packages/httpx/_models.py:829: in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+E   httpx.HTTPStatusError: Client error '429 Too Many Requests' for url 'https://dataset.api.hub.geosphere.at/v1/timeseries/forecast/nwp-v1-1h-2500m?lat_lon=47.26%2C11.39&parameters=t2m%2Cu10m%2Cv10m%2Ctcc%2Csp&output_format=geojson'
+E   For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429
+________________ TestNwpParsing.test_nwp_cloud_cover_conversion ________________
+tests/tdd/test_geosphere_parsing.py:129: in test_nwp_cloud_cover_conversion
+    result = validator.validate_nwp_parsing(lat, lon)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/validation/geosphere_validator.py:211: in validate_nwp_parsing
+    raw = self.fetch_raw_nwp(lat, lon)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/validation/geosphere_validator.py:121: in fetch_raw_nwp
+    response.raise_for_status()
+.venv/lib/python3.12/site-packages/httpx/_models.py:829: in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+E   httpx.HTTPStatusError: Client error '429 Too Many Requests' for url 'https://dataset.api.hub.geosphere.at/v1/timeseries/forecast/nwp-v1-1h-2500m?lat_lon=47.26%2C11.39&parameters=t2m%2Cu10m%2Cv10m%2Ctcc%2Csp&output_format=geojson'
+E   For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429
+_________________ TestNwpParsing.test_nwp_pressure_conversion __________________
+tests/tdd/test_geosphere_parsing.py:151: in test_nwp_pressure_conversion
+    result = validator.validate_nwp_parsing(lat, lon)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/validation/geosphere_validator.py:211: in validate_nwp_parsing
+    raw = self.fetch_raw_nwp(lat, lon)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/validation/geosphere_validator.py:121: in fetch_raw_nwp
+    response.raise_for_status()
+.venv/lib/python3.12/site-packages/httpx/_models.py:829: in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+E   httpx.HTTPStatusError: Client error '429 Too Many Requests' for url 'https://dataset.api.hub.geosphere.at/v1/timeseries/forecast/nwp-v1-1h-2500m?lat_lon=47.26%2C11.39&parameters=t2m%2Cu10m%2Cv10m%2Ctcc%2Csp&output_format=geojson'
+E   For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429
+___________________ TestNwpParsing.test_nwp_all_conversions ____________________
+tests/tdd/test_geosphere_parsing.py:168: in test_nwp_all_conversions
+    result = validator.validate_nwp_parsing(lat, lon)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/validation/geosphere_validator.py:211: in validate_nwp_parsing
+    raw = self.fetch_raw_nwp(lat, lon)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/validation/geosphere_validator.py:121: in fetch_raw_nwp
+    response.raise_for_status()
+.venv/lib/python3.12/site-packages/httpx/_models.py:829: in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+E   httpx.HTTPStatusError: Client error '429 Too Many Requests' for url 'https://dataset.api.hub.geosphere.at/v1/timeseries/forecast/nwp-v1-1h-2500m?lat_lon=47.26%2C11.39&parameters=t2m%2Cu10m%2Cv10m%2Ctcc%2Csp&output_format=geojson'
+E   For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429
+__________________ test_forecast_endpoint_returns_timeseries ___________________
+tests/tdd/test_go_api_setup.py:113: in test_forecast_endpoint_returns_timeseries
+    assert response.status_code == 200
+E   assert 502 == 200
+E    +  where 502 = <Response [502 Bad Gateway]>.status_code
+_____________________ test_forecast_meta_has_provider_info _____________________
+tests/tdd/test_go_api_setup.py:137: in test_forecast_meta_has_provider_info
+    meta = response.json()["meta"]
+           ^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'meta'
+____________________ test_forecast_data_has_correct_fields _____________________
+tests/tdd/test_go_api_setup.py:160: in test_forecast_data_has_correct_fields
+    point = response.json()["data"][0]
+            ^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'data'
+__________________ test_forecast_enums_serialized_as_strings ___________________
+tests/tdd/test_go_api_setup.py:185: in test_forecast_enums_serialized_as_strings
+    for point in response.json()["data"]:
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'data'
+_____________ TestSnowgridPlausibility.test_all_resorts_have_data ______________
+tests/tdd/test_snowgrid.py:105: in test_all_resorts_have_data
+    assert success_rate >= 0.8, (
+E   AssertionError: Only 0% of resorts have data from both sources. Results: {'stubaier-gletscher': {'bergfex': 300, 'snowgrid': None}, 'axamer-lizum': {'bergfex': 120, 'snowgrid': None}, 'obergurgl-hochgurgl': {'bergfex': 108, 'snowgrid': None}, 'soelden': {'bergfex': 150, 'snowgrid': None}, 'ischgl': {'bergfex': 100, 'snowgrid': None}}
+E   assert 0.0 >= 0.8
+____________ TestOpenMeteoNewParameters.test_provider_returns_cape _____________
+src/providers/openmeteo.py:385: in _request
+    response.raise_for_status()
+.venv/lib/python3.12/site-packages/httpx/_models.py:829: in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+E   httpx.HTTPStatusError: Client error '429 Too Many Requests' for url 'https://api.open-meteo.com/v1/dwd-icon?latitude=47.26&longitude=11.39&hourly=temperature_2m%2Capparent_temperature%2Crelative_humidity_2m%2Cdewpoint_2m%2Cpressure_msl%2Ccloud_cover%2Ccloud_cover_low%2Ccloud_cover_mid%2Ccloud_cover_high%2Cwind_speed_10m%2Cwind_direction_10m%2Cwind_gusts_10m%2Cprecipitation%2Cweather_code%2Cvisibility%2Cprecipitation_probability%2Ccape%2Cfreezing_level_height%2Cuv_index%2Cdirect_normal_irradiance%2Cis_day&timezone=UTC'
+E   For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429
+
+The above exception was the direct cause of the following exception:
+tests/tdd/test_weather_config_api_ui.py:581: in test_provider_returns_cape
+    ts = provider.fetch_forecast(loc)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/providers/openmeteo.py:615: in fetch_forecast
+    response_data = self._request(endpoint, params)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:338: in wrapped_f
+    return copy(f, *args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:477: in __call__
+    do = self.iter(retry_state=retry_state)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:378: in iter
+    result = action(retry_state)
+             ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:400: in <lambda>
+    self._add_action_func(lambda rs: rs.outcome.result())
+                                     ^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/concurrent/futures/_base.py:449: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/concurrent/futures/_base.py:401: in __get_result
+    raise self._exception
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:480: in __call__
+    result = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+src/providers/openmeteo.py:388: in _request
+    raise ProviderRequestError(
+E   providers.base.ProviderRequestError: [openmeteo] API error: 429 - {"error":true,"reason":"Daily API request limit exceeded. Please try again tomorrow."}
+_____________ TestOpenMeteoNewParameters.test_provider_returns_pop _____________
+src/providers/openmeteo.py:385: in _request
+    response.raise_for_status()
+.venv/lib/python3.12/site-packages/httpx/_models.py:829: in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+E   httpx.HTTPStatusError: Client error '429 Too Many Requests' for url 'https://api.open-meteo.com/v1/dwd-icon?latitude=47.26&longitude=11.39&hourly=temperature_2m%2Capparent_temperature%2Crelative_humidity_2m%2Cdewpoint_2m%2Cpressure_msl%2Ccloud_cover%2Ccloud_cover_low%2Ccloud_cover_mid%2Ccloud_cover_high%2Cwind_speed_10m%2Cwind_direction_10m%2Cwind_gusts_10m%2Cprecipitation%2Cweather_code%2Cvisibility%2Cprecipitation_probability%2Ccape%2Cfreezing_level_height%2Cuv_index%2Cdirect_normal_irradiance%2Cis_day&timezone=UTC'
+E   For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429
+
+The above exception was the direct cause of the following exception:
+tests/tdd/test_weather_config_api_ui.py:608: in test_provider_returns_pop
+    ts = provider.fetch_forecast(loc)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/providers/openmeteo.py:615: in fetch_forecast
+    response_data = self._request(endpoint, params)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:338: in wrapped_f
+    return copy(f, *args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:477: in __call__
+    do = self.iter(retry_state=retry_state)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:378: in iter
+    result = action(retry_state)
+             ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:400: in <lambda>
+    self._add_action_func(lambda rs: rs.outcome.result())
+                                     ^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/concurrent/futures/_base.py:449: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/concurrent/futures/_base.py:401: in __get_result
+    raise self._exception
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:480: in __call__
+    result = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+src/providers/openmeteo.py:388: in _request
+    raise ProviderRequestError(
+E   providers.base.ProviderRequestError: [openmeteo] API error: 429 - {"reason":"Daily API request limit exceeded. Please try again tomorrow.","error":true}
+_________ TestOpenMeteoNewParameters.test_provider_returns_visibility __________
+src/providers/openmeteo.py:385: in _request
+    response.raise_for_status()
+.venv/lib/python3.12/site-packages/httpx/_models.py:829: in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+E   httpx.HTTPStatusError: Client error '429 Too Many Requests' for url 'https://api.open-meteo.com/v1/dwd-icon?latitude=47.26&longitude=11.39&hourly=temperature_2m%2Capparent_temperature%2Crelative_humidity_2m%2Cdewpoint_2m%2Cpressure_msl%2Ccloud_cover%2Ccloud_cover_low%2Ccloud_cover_mid%2Ccloud_cover_high%2Cwind_speed_10m%2Cwind_direction_10m%2Cwind_gusts_10m%2Cprecipitation%2Cweather_code%2Cvisibility%2Cprecipitation_probability%2Ccape%2Cfreezing_level_height%2Cuv_index%2Cdirect_normal_irradiance%2Cis_day&timezone=UTC'
+E   For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429
+
+The above exception was the direct cause of the following exception:
+tests/tdd/test_weather_config_api_ui.py:634: in test_provider_returns_visibility
+    ts = provider.fetch_forecast(loc)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/providers/openmeteo.py:615: in fetch_forecast
+    response_data = self._request(endpoint, params)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:338: in wrapped_f
+    return copy(f, *args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:477: in __call__
+    do = self.iter(retry_state=retry_state)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:378: in iter
+    result = action(retry_state)
+             ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:400: in <lambda>
+    self._add_action_func(lambda rs: rs.outcome.result())
+                                     ^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/concurrent/futures/_base.py:449: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/concurrent/futures/_base.py:401: in __get_result
+    raise self._exception
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:480: in __call__
+    result = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+src/providers/openmeteo.py:388: in _request
+    raise ProviderRequestError(
+E   providers.base.ProviderRequestError: [openmeteo] API error: 429 - {"reason":"Daily API request limit exceeded. Please try again tomorrow.","error":true}
+_______ TestOpenMeteoNewParameters.test_provider_returns_freezing_level ________
+src/providers/openmeteo.py:385: in _request
+    response.raise_for_status()
+.venv/lib/python3.12/site-packages/httpx/_models.py:829: in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+E   httpx.HTTPStatusError: Client error '429 Too Many Requests' for url 'https://api.open-meteo.com/v1/dwd-icon?latitude=47.26&longitude=11.39&hourly=temperature_2m%2Capparent_temperature%2Crelative_humidity_2m%2Cdewpoint_2m%2Cpressure_msl%2Ccloud_cover%2Ccloud_cover_low%2Ccloud_cover_mid%2Ccloud_cover_high%2Cwind_speed_10m%2Cwind_direction_10m%2Cwind_gusts_10m%2Cprecipitation%2Cweather_code%2Cvisibility%2Cprecipitation_probability%2Ccape%2Cfreezing_level_height%2Cuv_index%2Cdirect_normal_irradiance%2Cis_day&timezone=UTC'
+E   For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429
+
+The above exception was the direct cause of the following exception:
+tests/tdd/test_weather_config_api_ui.py:660: in test_provider_returns_freezing_level
+    ts = provider.fetch_forecast(loc)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/providers/openmeteo.py:615: in fetch_forecast
+    response_data = self._request(endpoint, params)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:338: in wrapped_f
+    return copy(f, *args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:477: in __call__
+    do = self.iter(retry_state=retry_state)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:378: in iter
+    result = action(retry_state)
+             ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:400: in <lambda>
+    self._add_action_func(lambda rs: rs.outcome.result())
+                                     ^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/concurrent/futures/_base.py:449: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/concurrent/futures/_base.py:401: in __get_result
+    raise self._exception
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:480: in __call__
+    result = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+src/providers/openmeteo.py:388: in _request
+    raise ProviderRequestError(
+E   providers.base.ProviderRequestError: [openmeteo] API error: 429 - {"reason":"Daily API request limit exceeded. Please try again tomorrow.","error":true}
+_______ TestSchedulerDestinationSegment.test_destination_segment_exists ________
+tests/unit/test_destination_segment.py:89: in test_destination_segment_exists
+    segments = self._load_trip_and_get_segments()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_destination_segment.py:83: in _load_trip_and_get_segments
+    target_date = trip.stages[1].date
+                  ^^^^^^^^^^^^^^
+E   IndexError: list index out of range
+_____ TestSchedulerDestinationSegment.test_destination_segment_coordinates _____
+tests/unit/test_destination_segment.py:97: in test_destination_segment_coordinates
+    segments = self._load_trip_and_get_segments()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_destination_segment.py:83: in _load_trip_and_get_segments
+    target_date = trip.stages[1].date
+                  ^^^^^^^^^^^^^^
+E   IndexError: list index out of range
+_____ TestSchedulerDestinationSegment.test_destination_segment_time_window _____
+tests/unit/test_destination_segment.py:103: in test_destination_segment_time_window
+    segments = self._load_trip_and_get_segments()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_destination_segment.py:83: in _load_trip_and_get_segments
+    target_date = trip.stages[1].date
+                  ^^^^^^^^^^^^^^
+E   IndexError: list index out of range
+________ TestProbeModelAvailability.test_probe_returns_dict_with_models ________
+tests/unit/test_metric_availability_probe.py:42: in test_probe_returns_dict_with_models
+    assert len(result["models"]) >= 1
+E   assert 0 >= 1
+E    +  where 0 = len({})
+------------------------------ Captured log call -------------------------------
+WARNING  openmeteo:openmeteo.py:234   meteofrance_arome: probe failed ([openmeteo] API error: 429 - {"error":true,"reason":"Daily API request limit exceeded. Please try again tomorrow."}), skipping
+WARNING  openmeteo:openmeteo.py:234   icon_d2: probe failed ([openmeteo] API error: 429 - {"error":true,"reason":"Daily API request limit exceeded. Please try again tomorrow."}), skipping
+WARNING  openmeteo:openmeteo.py:234   metno_nordic: probe failed ([openmeteo] API error: 429 - {"error":true,"reason":"Daily API request limit exceeded. Please try again tomorrow."}), skipping
+WARNING  openmeteo:openmeteo.py:234   icon_eu: probe failed ([openmeteo] API error: 429 - {"error":true,"reason":"Daily API request limit exceeded. Please try again tomorrow."}), skipping
+WARNING  openmeteo:openmeteo.py:234   ecmwf_ifs04: probe failed ([openmeteo] API error: 429 - {"error":true,"reason":"Daily API request limit exceeded. Please try again tomorrow."}), skipping
+_______ TestProbeModelAvailability.test_ecmwf_has_most_params_available ________
+tests/unit/test_metric_availability_probe.py:65: in test_ecmwf_has_most_params_available
+    assert ecmwf is not None, "ECMWF model not in probe result"
+E   AssertionError: ECMWF model not in probe result
+E   assert None is not None
+------------------------------ Captured log call -------------------------------
+WARNING  openmeteo:openmeteo.py:234   meteofrance_arome: probe failed ([openmeteo] API error: 429 - {"reason":"Daily API request limit exceeded. Please try again tomorrow.","error":true}), skipping
+WARNING  openmeteo:openmeteo.py:234   icon_d2: probe failed ([openmeteo] API error: 429 - {"error":true,"reason":"Daily API request limit exceeded. Please try again tomorrow."}), skipping
+WARNING  openmeteo:openmeteo.py:234   metno_nordic: probe failed ([openmeteo] API error: 429 - {"reason":"Daily API request limit exceeded. Please try again tomorrow.","error":true}), skipping
+WARNING  openmeteo:openmeteo.py:234   icon_eu: probe failed ([openmeteo] API error: 429 - {"reason":"Daily API request limit exceeded. Please try again tomorrow.","error":true}), skipping
+WARNING  openmeteo:openmeteo.py:234   ecmwf_ifs04: probe failed ([openmeteo] API error: 429 - {"reason":"Daily API request limit exceeded. Please try again tomorrow.","error":true}), skipping
+_ TestDedicatedEndpointReturnsValidData.test_meteofrance_endpoint_returns_hourly_data _
+src/providers/openmeteo.py:385: in _request
+    response.raise_for_status()
+.venv/lib/python3.12/site-packages/httpx/_models.py:829: in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+E   httpx.HTTPStatusError: Client error '429 Too Many Requests' for url 'https://api.open-meteo.com/v1/meteofrance?latitude=39.77&longitude=2.72&hourly=temperature_2m%2Cwind_gusts_10m%2Ccloud_cover&timezone=UTC'
+E   For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_openmeteo_endpoint_routing.py:96: in test_meteofrance_endpoint_returns_hourly_data
+    data = provider._request("/v1/meteofrance", params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:338: in wrapped_f
+    return copy(f, *args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:477: in __call__
+    do = self.iter(retry_state=retry_state)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:378: in iter
+    result = action(retry_state)
+             ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:400: in <lambda>
+    self._add_action_func(lambda rs: rs.outcome.result())
+                                     ^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/concurrent/futures/_base.py:449: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/concurrent/futures/_base.py:401: in __get_result
+    raise self._exception
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:480: in __call__
+    result = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+src/providers/openmeteo.py:388: in _request
+    raise ProviderRequestError(
+E   providers.base.ProviderRequestError: [openmeteo] API error: 429 - {"reason":"Daily API request limit exceeded. Please try again tomorrow.","error":true}
+______ TestModelDataDiffersBetweenEndpoints.test_arome_differs_from_icon _______
+src/providers/openmeteo.py:385: in _request
+    response.raise_for_status()
+.venv/lib/python3.12/site-packages/httpx/_models.py:829: in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+E   httpx.HTTPStatusError: Client error '429 Too Many Requests' for url 'https://api.open-meteo.com/v1/meteofrance?latitude=39.77&longitude=2.72&hourly=temperature_2m%2Cwind_gusts_10m%2Ccloud_cover&timezone=UTC'
+E   For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_openmeteo_endpoint_routing.py:124: in test_arome_differs_from_icon
+    data_france = provider._request("/v1/meteofrance", params)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:338: in wrapped_f
+    return copy(f, *args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:477: in __call__
+    do = self.iter(retry_state=retry_state)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:378: in iter
+    result = action(retry_state)
+             ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:400: in <lambda>
+    self._add_action_func(lambda rs: rs.outcome.result())
+                                     ^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/concurrent/futures/_base.py:449: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/concurrent/futures/_base.py:401: in __get_result
+    raise self._exception
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:480: in __call__
+    result = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+src/providers/openmeteo.py:388: in _request
+    raise ProviderRequestError(
+E   providers.base.ProviderRequestError: [openmeteo] API error: 429 - {"error":true,"reason":"Daily API request limit exceeded. Please try again tomorrow."}
+_____ TestRequestBaseHostOverride.test_request_signature_accepts_base_host _____
+src/providers/openmeteo.py:385: in _request
+    response.raise_for_status()
+.venv/lib/python3.12/site-packages/httpx/_models.py:829: in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+E   httpx.HTTPStatusError: Client error '429 Too Many Requests' for url 'https://api.open-meteo.com/v1/dwd-icon?latitude=50.0&longitude=10.0&hourly=temperature_2m&timezone=UTC'
+E   For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_uv_air_quality.py:24: in test_request_signature_accepts_base_host
+    result = provider._request(
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:338: in wrapped_f
+    return copy(f, *args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:477: in __call__
+    do = self.iter(retry_state=retry_state)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:378: in iter
+    result = action(retry_state)
+             ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:400: in <lambda>
+    self._add_action_func(lambda rs: rs.outcome.result())
+                                     ^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/concurrent/futures/_base.py:449: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/concurrent/futures/_base.py:401: in __get_result
+    raise self._exception
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:480: in __call__
+    result = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+src/providers/openmeteo.py:388: in _request
+    raise ProviderRequestError(
+E   providers.base.ProviderRequestError: [openmeteo] API error: 429 - {"error":true,"reason":"Daily API request limit exceeded. Please try again tomorrow."}
+__________ TestFetchForecastUvIntegration.test_forecast_has_uv_values __________
+src/providers/openmeteo.py:385: in _request
+    response.raise_for_status()
+.venv/lib/python3.12/site-packages/httpx/_models.py:829: in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+E   httpx.HTTPStatusError: Client error '429 Too Many Requests' for url 'https://api.open-meteo.com/v1/meteofrance?latitude=39.77&longitude=2.71&hourly=temperature_2m%2Capparent_temperature%2Crelative_humidity_2m%2Cdewpoint_2m%2Cpressure_msl%2Ccloud_cover%2Ccloud_cover_low%2Ccloud_cover_mid%2Ccloud_cover_high%2Cwind_speed_10m%2Cwind_direction_10m%2Cwind_gusts_10m%2Cprecipitation%2Cweather_code%2Cvisibility%2Cprecipitation_probability%2Ccape%2Cfreezing_level_height%2Cuv_index%2Cdirect_normal_irradiance%2Cis_day&timezone=UTC&start_date=2026-04-15&end_date=2026-04-16'
+E   For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_uv_air_quality.py:106: in test_forecast_has_uv_values
+    timeseries = provider.fetch_forecast(location, start, end)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/providers/openmeteo.py:615: in fetch_forecast
+    response_data = self._request(endpoint, params)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:338: in wrapped_f
+    return copy(f, *args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:477: in __call__
+    do = self.iter(retry_state=retry_state)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:378: in iter
+    result = action(retry_state)
+             ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:400: in <lambda>
+    self._add_action_func(lambda rs: rs.outcome.result())
+                                     ^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/concurrent/futures/_base.py:449: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/concurrent/futures/_base.py:401: in __get_result
+    raise self._exception
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:480: in __call__
+    result = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+src/providers/openmeteo.py:388: in _request
+    raise ProviderRequestError(
+E   providers.base.ProviderRequestError: [openmeteo] API error: 429 - {"reason":"Daily API request limit exceeded. Please try again tomorrow.","error":true}
+__________ TestFetchForecastUvIntegration.test_forecast_uv_plausible ___________
+src/providers/openmeteo.py:385: in _request
+    response.raise_for_status()
+.venv/lib/python3.12/site-packages/httpx/_models.py:829: in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+E   httpx.HTTPStatusError: Client error '429 Too Many Requests' for url 'https://api.open-meteo.com/v1/meteofrance?latitude=39.77&longitude=2.71&hourly=temperature_2m%2Capparent_temperature%2Crelative_humidity_2m%2Cdewpoint_2m%2Cpressure_msl%2Ccloud_cover%2Ccloud_cover_low%2Ccloud_cover_mid%2Ccloud_cover_high%2Cwind_speed_10m%2Cwind_direction_10m%2Cwind_gusts_10m%2Cprecipitation%2Cweather_code%2Cvisibility%2Cprecipitation_probability%2Ccape%2Cfreezing_level_height%2Cuv_index%2Cdirect_normal_irradiance%2Cis_day&timezone=UTC&start_date=2026-04-15&end_date=2026-04-16'
+E   For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_uv_air_quality.py:122: in test_forecast_uv_plausible
+    timeseries = provider.fetch_forecast(location, start, end)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/providers/openmeteo.py:615: in fetch_forecast
+    response_data = self._request(endpoint, params)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:338: in wrapped_f
+    return copy(f, *args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:477: in __call__
+    do = self.iter(retry_state=retry_state)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:378: in iter
+    result = action(retry_state)
+             ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:400: in <lambda>
+    self._add_action_func(lambda rs: rs.outcome.result())
+                                     ^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/concurrent/futures/_base.py:449: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/concurrent/futures/_base.py:401: in __get_result
+    raise self._exception
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:480: in __call__
+    result = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+src/providers/openmeteo.py:388: in _request
+    raise ProviderRequestError(
+E   providers.base.ProviderRequestError: [openmeteo] API error: 429 - {"error":true,"reason":"Daily API request limit exceeded. Please try again tomorrow."}
+_ TestFetchForecastUvIntegration.test_weather_05b_fallback_still_works_with_uv _
+src/providers/openmeteo.py:385: in _request
+    response.raise_for_status()
+.venv/lib/python3.12/site-packages/httpx/_models.py:829: in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+E   httpx.HTTPStatusError: Client error '429 Too Many Requests' for url 'https://api.open-meteo.com/v1/meteofrance?latitude=39.77&longitude=2.71&hourly=temperature_2m%2Capparent_temperature%2Crelative_humidity_2m%2Cdewpoint_2m%2Cpressure_msl%2Ccloud_cover%2Ccloud_cover_low%2Ccloud_cover_mid%2Ccloud_cover_high%2Cwind_speed_10m%2Cwind_direction_10m%2Cwind_gusts_10m%2Cprecipitation%2Cweather_code%2Cvisibility%2Cprecipitation_probability%2Ccape%2Cfreezing_level_height%2Cuv_index%2Cdirect_normal_irradiance%2Cis_day&timezone=UTC&start_date=2026-04-15&end_date=2026-04-16'
+E   For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_uv_air_quality.py:158: in test_weather_05b_fallback_still_works_with_uv
+    timeseries = provider.fetch_forecast(location, start, end)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/providers/openmeteo.py:615: in fetch_forecast
+    response_data = self._request(endpoint, params)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:338: in wrapped_f
+    return copy(f, *args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:477: in __call__
+    do = self.iter(retry_state=retry_state)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:378: in iter
+    result = action(retry_state)
+             ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:400: in <lambda>
+    self._add_action_func(lambda rs: rs.outcome.result())
+                                     ^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/concurrent/futures/_base.py:449: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/concurrent/futures/_base.py:401: in __get_result
+    raise self._exception
+.venv/lib/python3.12/site-packages/tenacity/__init__.py:480: in __call__
+    result = fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+src/providers/openmeteo.py:388: in _request
+    raise ProviderRequestError(
+E   providers.base.ProviderRequestError: [openmeteo] API error: 429 - {"error":true,"reason":"Daily API request limit exceeded. Please try again tomorrow."}
+=========================== short test summary info ============================
+FAILED tests/e2e/test_e2e_friendly_format_config.py::test_alert_enabled - Key...
+FAILED tests/e2e/test_e2e_story3_reports.py::TestWeatherFetch::test_fetch_real_weather
+FAILED tests/e2e/test_e2e_story3_reports.py::TestReportFormatting::test_email_html_contains_segments
+FAILED tests/e2e/test_e2e_story3_reports.py::TestReportFormatting::test_email_plain_text_fallback
+FAILED tests/e2e/test_e2e_story3_reports.py::TestReportFormatting::test_sms_format_compact
+FAILED tests/e2e/test_e2e_story3_reports.py::TestReportFormatting::test_sms_contains_temperature
+FAILED tests/integration/test_segment_weather_cache.py::TestSegmentWeatherCacheIntegration::test_cache_reduces_api_calls
+FAILED tests/integration/test_segment_weather_cache.py::TestSegmentWeatherCacheIntegration::test_different_segments_cached_separately
+FAILED tests/integration/test_segment_weather_metrics.py::TestSegmentWeatherMetricsGeoSphere::test_geosphere_austria_basis_metrics
+FAILED tests/integration/test_segment_weather_metrics.py::TestSegmentWeatherMetricsOpenMeteo::test_openmeteo_corsica_basis_metrics
+FAILED tests/integration/test_segment_weather_metrics.py::TestE2EStory2Flow::test_e2e_segment_to_metrics
+FAILED tests/integration/test_segment_weather_metrics.py::TestSegmentWeatherMetricsExtended::test_geosphere_austria_extended_metrics
+FAILED tests/integration/test_segment_weather_metrics.py::TestSegmentWeatherMetricsExtended::test_openmeteo_corsica_extended_no_winter
+FAILED tests/integration/test_snapshot_plausibility.py::TestCoreMetricsNotNone::test_temp_min_not_none
+FAILED tests/integration/test_snapshot_plausibility.py::TestCoreMetricsNotNone::test_temp_max_not_none
+FAILED tests/integration/test_snapshot_plausibility.py::TestCoreMetricsNotNone::test_wind_max_not_none
+FAILED tests/integration/test_snapshot_plausibility.py::TestCoreMetricsNotNone::test_gust_max_not_none
+FAILED tests/integration/test_snapshot_plausibility.py::TestCoreMetricsNotNone::test_precip_sum_not_none
+FAILED tests/integration/test_snapshot_plausibility.py::TestCoreMetricsNotNone::test_cloud_avg_not_none
+FAILED tests/integration/test_snapshot_plausibility.py::TestCoreMetricsNotNone::test_humidity_avg_not_none
+FAILED tests/integration/test_snapshot_plausibility.py::TestFallbackMetricsNotNone::test_visibility_min_not_none
+FAILED tests/integration/test_snapshot_plausibility.py::TestValueRanges::test_temp_range
+FAILED tests/integration/test_snapshot_plausibility.py::TestValueRanges::test_wind_range
+FAILED tests/integration/test_snapshot_plausibility.py::TestValueRanges::test_precip_range
+FAILED tests/integration/test_snapshot_plausibility.py::TestValueRanges::test_cloud_humidity_range
+FAILED tests/integration/test_snapshot_plausibility.py::TestCrossMetricConsistency::test_gust_gte_wind
+FAILED tests/integration/test_snapshot_plausibility.py::TestFallbackMechanismActive::test_fallback_model_is_set
+FAILED tests/integration/test_trip_segment_weather.py::TestSegmentWeatherServiceGeoSphere::test_fetch_segment_weather_austria
+FAILED tests/integration/test_trip_segment_weather.py::TestSegmentWeatherServiceOpenMeteo::test_fetch_segment_weather_corsica
+FAILED tests/tdd/test_compare_provider_routing.py::TestFetchForecastMallorca::test_valdemossa_returns_data
+FAILED tests/tdd/test_compare_provider_routing.py::TestFetchForecastMallorca::test_pollenca_returns_data
+FAILED tests/tdd/test_compare_provider_routing.py::TestFetchForecastAlpsRegression::test_innsbruck_returns_data
+FAILED tests/tdd/test_geosphere_parsing.py::TestSnowgridParsing::test_snowgrid_depth_conversion
+FAILED tests/tdd/test_geosphere_parsing.py::TestSnowgridParsing::test_snowgrid_multiple_locations
+FAILED tests/tdd/test_geosphere_parsing.py::TestNwpParsing::test_nwp_temperature_passthrough
+FAILED tests/tdd/test_geosphere_parsing.py::TestNwpParsing::test_nwp_wind_vector_conversion
+FAILED tests/tdd/test_geosphere_parsing.py::TestNwpParsing::test_nwp_cloud_cover_conversion
+FAILED tests/tdd/test_geosphere_parsing.py::TestNwpParsing::test_nwp_pressure_conversion
+FAILED tests/tdd/test_geosphere_parsing.py::TestNwpParsing::test_nwp_all_conversions
+FAILED tests/tdd/test_go_api_setup.py::test_forecast_endpoint_returns_timeseries
+FAILED tests/tdd/test_go_api_setup.py::test_forecast_meta_has_provider_info
+FAILED tests/tdd/test_go_api_setup.py::test_forecast_data_has_correct_fields
+FAILED tests/tdd/test_go_api_setup.py::test_forecast_enums_serialized_as_strings
+FAILED tests/tdd/test_snowgrid.py::TestSnowgridPlausibility::test_all_resorts_have_data
+FAILED tests/tdd/test_weather_config_api_ui.py::TestOpenMeteoNewParameters::test_provider_returns_cape
+FAILED tests/tdd/test_weather_config_api_ui.py::TestOpenMeteoNewParameters::test_provider_returns_pop
+FAILED tests/tdd/test_weather_config_api_ui.py::TestOpenMeteoNewParameters::test_provider_returns_visibility
+FAILED tests/tdd/test_weather_config_api_ui.py::TestOpenMeteoNewParameters::test_provider_returns_freezing_level
+FAILED tests/unit/test_destination_segment.py::TestSchedulerDestinationSegment::test_destination_segment_exists
+FAILED tests/unit/test_destination_segment.py::TestSchedulerDestinationSegment::test_destination_segment_coordinates
+FAILED tests/unit/test_destination_segment.py::TestSchedulerDestinationSegment::test_destination_segment_time_window
+FAILED tests/unit/test_metric_availability_probe.py::TestProbeModelAvailability::test_probe_returns_dict_with_models
+FAILED tests/unit/test_metric_availability_probe.py::TestProbeModelAvailability::test_ecmwf_has_most_params_available
+FAILED tests/unit/test_openmeteo_endpoint_routing.py::TestDedicatedEndpointReturnsValidData::test_meteofrance_endpoint_returns_hourly_data
+FAILED tests/unit/test_openmeteo_endpoint_routing.py::TestModelDataDiffersBetweenEndpoints::test_arome_differs_from_icon
+FAILED tests/unit/test_uv_air_quality.py::TestRequestBaseHostOverride::test_request_signature_accepts_base_host
+FAILED tests/unit/test_uv_air_quality.py::TestFetchForecastUvIntegration::test_forecast_has_uv_values
+FAILED tests/unit/test_uv_air_quality.py::TestFetchForecastUvIntegration::test_forecast_uv_plausible
+FAILED tests/unit/test_uv_air_quality.py::TestFetchForecastUvIntegration::test_weather_05b_fallback_still_works_with_uv

@@ -1,0 +1,29 @@
+================================================
+  External Validator — Isolierte QA-Session
+================================================
+
+  Spec:   docs/specs/bugfix/heartbeat_url_rotation.md
+  Server: https://staging.gregor20.henemm.com
+
+  Diese Session ist isoliert vom Implementierer.
+  Der Validator kennt nur: Spec + laufende App.
+================================================
+
+## Verdict: **VERIFIED**
+
+**Spec:** `docs/specs/bugfix/heartbeat_url_rotation.md` (Issue #118)
+**Report:** `docs/artifacts/issue-118-heartbeat-url-rotation/validator-report.md`
+
+### Zusammenfassung
+
+12 von 12 prüfbaren Acceptance-Kriterien **PASS**, 2 **UNKLAR** (Live-BetterStack-Dashboard und claude-mq-DB außerhalb Validator-Scope), 1 **N/A** (URL-Rotation laut Spec explizit out-of-scope).
+
+**Belege:**
+- **Security-Kernziel:** `git ls-files | xargs grep -lE "uptime\.betterstack\.com/api/v1/heartbeat/[A-Za-z0-9]{20,}"` → 0 Treffer
+- **Python-Tests:** 9/9 grün (`uv run pytest tests/tdd/test_betterstack_heartbeat.py`)
+- **Go-Tests:** 6/6 grün (`go test ./internal/scheduler/... -run TestPingHeartbeat -v`), inkl. Empty-URL, TriggersNotifier, OnlyOncePerJob, DifferentJobsSeparate
+- **Live-Service:** Staging `/api/health` 200 OK, `/api/scheduler/status` listet 5 Jobs mit `running:true`
+- **Code-Struktur:** `internal/config/config.go` Defaults `""`; `src/web/scheduler.py` `os.getenv(GZ_HEARTBEAT_*, "")`; beide Helper-Files (`internal/notify/mq.go`, `src/lib/mq_notify.py`) existieren
+- **Doku:** Specs anonymisiert (`<HEARTBEAT_MORNING_TOKEN>`/`<HEARTBEAT_EVENING_TOKEN>`); CLAUDE.md Z.306 korrigiert (alte „Heartbeats wurden entfernt"-Falschaussage ersetzt durch Fail-Soft-Beschreibung)
+
+**Folgeaktion (User, kein Blocker):** Ab 18:00 Wien BetterStack-Dashboard prüfen, ob Evening-Heartbeat ankommt; sicherstellen, dass alte URLs in BetterStack gelöscht und neu erstellt wurden.

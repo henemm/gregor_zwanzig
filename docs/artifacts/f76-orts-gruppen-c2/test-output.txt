@@ -1,0 +1,10 @@
+
+Running 5 tests using 1 worker
+
+  ✓  1 e2e/orts-gruppen-c2.spec.ts:9:2 › F76 Phase C2: Orts-Gruppen › sidebar shows group headers when locations have groups (448ms)
+  ✓  2 e2e/orts-gruppen-c2.spec.ts:24:2 › F76 Phase C2: Orts-Gruppen › group header checkbox toggles all locations in group (381ms)
+  ✓  3 e2e/orts-gruppen-c2.spec.ts:45:2 › F76 Phase C2: Orts-Gruppen › clicking group header collapses/expands the group (349ms)
+  ✓  4 e2e/orts-gruppen-c2.spec.ts:64:2 › F76 Phase C2: Orts-Gruppen › LocationForm has group input field (343ms)
+  ✓  5 e2e/orts-gruppen-c2.spec.ts:77:2 › F76 Phase C2: Orts-Gruppen › ungrouped locations appear without group header (353ms)
+
+  5 passed (10.4s)

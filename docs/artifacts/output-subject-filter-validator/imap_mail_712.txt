@@ -1,0 +1,9 @@
+IMAP Message ID: 712
+Date: Mon, 27 Apr 2026 06:48:28 +0000
+From: gregor_zwanzig@henemm.com
+To: gregor_zwanzig@henemm.com
+Subject (raw): =?UTF-8?Q?=5BVALIDATOR_=CE=B22_Test=5D_Tag_1=3A_Po?=
+ =?UTF-8?Q?llen=C3=A7a_=E2=86=92_Lluc_=E2=80=94_Abe?=
+ =?UTF-8?Q?nd_=E2=80=94?=
+Subject (decoded): '[VALIDATOR β2 Test] Tag 1: Pollença → Lluc — Abend —'
+Subject length: 52

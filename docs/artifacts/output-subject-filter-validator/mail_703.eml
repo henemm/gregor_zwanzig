@@ -1,0 +1,342 @@
+Delivered-To: gregor_zwanzig@henemm.com
+X-Spam-Status: No
+Received: from a6-245.smtp-out.eu-west-1.amazonses.com (a6-245.smtp-out.eu-west-1.amazonses.com [54.240.6.245] (AS16509 Amazon.com, Inc., US))
+	(using TLSv1.3 with cipher TLS13_AES_256_GCM_SHA384)
+	by mail.henemm.com (Stalwart SMTP) with ESMTPS id 438410AB3608602;
+	Mon, 27 Apr 2026 05:54:06 +0000
+Authentication-Results: mail.henemm.com;
+	dkim=pass header.d=henemm.com header.s=resend header.b=dtq7jVOU;
+	dkim=pass header.d=amazonses.com header.s=shh3fegwg5fppqsuzphvschd53n6ihuv header.b=3zJCBXFR;
+	spf=none (mail.henemm.com: no SPF records found for postmaster@a6-245.smtp-out.eu-west-1.amazonses.com) smtp.helo=a6-245.smtp-out.eu-west-1.amazonses.com;
+	spf=pass (mail.henemm.com: domain of 0102019dcd808910-62ac5d44-be40-4432-a796-e118b9a2fb8e-000000@send.henemm.com designates 54.240.6.245 as permitted sender) smtp.mailfrom=0102019dcd808910-62ac5d44-be40-4432-a796-e118b9a2fb8e-000000@send.henemm.com;
+	iprev=pass policy.iprev=54.240.6.245;
+	dmarc=pass header.from=henemm.com policy.dmarc=quarantine
+Received-SPF: pass (mail.henemm.com: domain of 0102019dcd808910-62ac5d44-be40-4432-a796-e118b9a2fb8e-000000@send.henemm.com designates 54.240.6.245 as permitted sender)
+	receiver=mail.henemm.com; client-ip=54.240.6.245; envelope-from="0102019dcd808910-62ac5d44-be40-4432-a796-e118b9a2fb8e-000000@send.henemm.com"; helo=a6-245.smtp-out.eu-west-1.amazonses.com;
+X-Spam-Result: DMARC_POLICY_ALLOW (-0.50),
+	DKIM_ALLOW (-0.20),
+	RWL_MAILSPIKE_VERYGOOD (-0.20),
+	SPF_ALLOW (-0.20),
+	ARC_NA (0.00),
+	DBL_BLOCKED_OPENRESOLVER (0.00),
+	DKIM_SIGNED (0.00),
+	DNSWL_BLOCKED (0.00),
+	DWL_DNSWL_BLOCKED (0.00),
+	FROM_NEQ_ENV_FROM (0.00),
+	FROM_NO_DN (0.00),
+	HAS_REPLYTO (0.00),
+	HTML_SHORT_1 (0.00),
+	RBL_SENDERSCORE_REPUT_BLOCKED (0.00),
+	RBL_SPAMHAUS_BLOCKED_OPENRESOLVER (0.00),
+	RCPT_COUNT_ONE (0.00),
+	RCVD_TLS_LAST (0.00),
+	REPLYTO_EQ_FROM (0.00),
+	SOURCE_ASN_16509 (0.00),
+	TO_DN_NONE (0.00),
+	TO_EQ_FROM (0.00),
+	TO_MATCH_ENVRCPT_ALL (0.00),
+	URIBL_BLOCKED (0.00),
+	RCVD_COUNT_ZERO (0.10),
+	FORGED_SENDER (0.30),
+	PARTS_DIFFER (1.00)
+X-Spam-Score: ham, score=0.30
+Return-Path: <0102019dcd808910-62ac5d44-be40-4432-a796-e118b9a2fb8e-000000@send.henemm.com>
+DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/simple; s=resend;
+	d=henemm.com; t=1777269246;
+	h=From:To:Reply-To:Subject:Message-ID:Date:MIME-Version:Content-Type;
+	bh=sxqrUEJdqiPCxNCNF7NSCGrH0GPrawQeyxe9OpRuRIE=;
+	b=dtq7jVOUU0miUG2TG0jT5yIGZ+3I1khbY7fghPSuNZnjP+M3+NKHmhsgVDmtFifZ
+	1OSKRW/o6dH+mdP1lfS/X64xRbwb3NIsPEcXI6Cn5MgBl/cVcJf4zN9h4HdYntfnAEi
+	6n1XZEMmzct0CejeDREsWZdT2T4IiI8RiKEwMGTc=
+DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/simple;
+	s=shh3fegwg5fppqsuzphvschd53n6ihuv; d=amazonses.com; t=1777269246;
+	h=From:To:Reply-To:Subject:Message-ID:Date:MIME-Version:Content-Type:Feedback-ID;
+	bh=sxqrUEJdqiPCxNCNF7NSCGrH0GPrawQeyxe9OpRuRIE=;
+	b=3zJCBXFR8RQQDa5/EDiA+o0nT3nZf1BKkmHhQF9d1ldJwWjk/nl8m6dAGQ4bV5kB
+	gTc1gbfD+aXu6BwHbn9W/3VCtZxHHlnQcGqvyvfu3cpde7It8VWKc8aVxKLurSPFwal
+	ujF3tIxZXOWrm991sK/y3lRc+SJSDYwnWpq/TYC4=
+From: gregor_zwanzig@henemm.com
+To: gregor_zwanzig@henemm.com
+Reply-To: gregor_zwanzig@henemm.com
+Subject: Wetter-Vergleich: Mallorca  (27.04.2026)
+Message-ID: <0102019dcd808910-62ac5d44-be40-4432-a796-e118b9a2fb8e-000000@eu-west-1.amazonses.com>
+Date: Mon, 27 Apr 2026 05:54:06 +0000
+MIME-Version: 1.0
+Content-Type: multipart/alternative;
+ boundary="--_NmP-b856e9fa8590e074-Part_1"
+Feedback-ID: :1.eu-west-1.GsFbdI8orN5fGne5ow7WxbSc9xsuV2LCJl1M0X1egdOsvTBJFFB0rfsVxvpqxPeVYzVB5GgebAu0rYXX4XaBTIK1XEc7umk7GXsTJA5A5AvIvQIHO7nV9SL1JmwAq/Zr6lbknzd6wvuYpjHtP4nymyw9m8aerpfeLgWSAlw62xw=:1.eu-west-1.xc5b6Z4+0WlftYwtQHAHsTtsfYdZQImSOXWypZD9BdY=:AmazonSES
+X-SES-Outgoing: 2026.04.27-54.240.6.245
+
+----_NmP-b856e9fa8590e074-Part_1
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+=E2=9B=B7=EF=B8=8F SKIGEBIETE-VERGLEICH
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D
+=F0=9F=93=85 Forecast: Monday, 27.=
+04.2026
+=F0=9F=95=90 Time Window: 09:00 - 16:00
+=F0=9F=93=9D Created: 27.04=
+.2026 05:54
+
+=F0=9F=8F=86 EMPFEHLUNG: Pollen=C3=A7a
+   Score: 60 | =E2=9D=84=EF=B8=8F - | =E2=98=80=EF=B8=8F ~0h
+
+--------------------------------------------------
+#1 Pollen=C3=A7a
+   Score: 60
+   Snow: -
+   New Snow: -
+   Wind: 17/30 E
+   Temp: 18=C2=B0C
+   Sun: ~0h
+   Clouds: 0%
+   Layer: -
+
+#2 Valdemossa
+   Score: 60
+   Snow: -
+   New Snow: -
+   Wind: 12/31 SE
+   Temp: 16=C2=B0C
+   Sun: ~0h
+   Clouds: 0%
+   Layer: -
+
+HOURLY DETAILS
+---------------
+Time  | #1 Pollen=C3=A7a       | #2 Valdemossa     |
+09:00 | =E2=98=80=EF=B8=8F19=C2=B0 - 6/14E    | =E2=98=80=EF=B8=8F17=C2=B0 =
+- 7/17SE   |
+10:00 | =E2=98=80=EF=B8=8F20=C2=B0 - 10/20E   | =
+=E2=98=80=EF=B8=8F19=C2=B0 - 8/21SE   |
+11:00 | =E2=98=80=EF=B8=8F20=C2=B0 =
+- 15/26E   | =E2=98=80=EF=B8=8F20=C2=B0 - 11/26SE  |
+12:00 | =E2=98=80=EF=B8=8F20=C2=B0 - 17/30E   | =E2=98=80=EF=B8=8F22=C2=B0 =
+- 12/30SE  |
+13:00 | =E2=98=80=EF=B8=8F21=C2=B0 - 17/30E   | =
+=E2=98=80=EF=B8=8F22=C2=B0 - 9/31S    |
+14:00 | =E2=98=80=EF=B8=8F22=C2=B0 =
+- 17/30E   | =E2=98=80=EF=B8=8F22=C2=B0 - 11/28SE  |
+15:00 | =E2=98=80=EF=B8=8F20=C2=B0 - 17/30E   | =E2=98=80=EF=B8=8F21=C2=B0 =
+- 10/29SE  |
+16:00 | =E2=98=80=EF=B8=8F19=C2=B0 - 16/30E   | =
+=E2=98=80=EF=B8=8F20=C2=B0 - 10/26SE  |
+
+---
+Generated by Gregor Zwanzig =
+=E2=9B=B7=EF=B8=8F
+----_NmP-b856e9fa8590e074-Part_1
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset=3D"utf-8">
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', =
+Roboto, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; =
+border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.=
+1); }
+        .header { background: linear-gradient(135deg, #1976d2, =
+#42a5f5); color: white; padding: 24px; }
+        .header h1 { margin: 0 0 =
+8px 0; font-size: 24px; }
+        .header p { margin: 4px 0; opacity: 0.9; =
+font-size: 14px; }
+        .winner { background: #e8f5e9; padding: 20px; =
+border-left: 4px solid #4caf50; margin: 20px; border-radius: 8px; }
+        .winner h2 { margin: 0 0 8px 0; color: #2e7d32; font-size: 18px; }
+        .winner p { margin: 0; color: #555; }
+        table { width: 100%; =
+border-collapse: collapse; margin: 20px 0; }
+        th { background: =
+#f5f5f5; padding: 12px 8px; text-align: center; font-weight: 600; =
+border-bottom: 2px solid #ddd; }
+        th.label { text-align: left; =
+width: 140px; }
+        td { padding: 10px 8px; text-align: center; =
+border-bottom: 1px solid #eee; }
+        td.label { text-align: left; =
+font-weight: 500; color: #555; }
+        td.best { background: #e8f5e9; =
+font-weight: 600; color: #2e7d32; }
+        .section { padding: 0 20px; }
+        .section h3 { color: #333; border-bottom: 2px solid #1976d2; =
+padding-bottom: 8px; }
+        .footer { background: #f5f5f5; padding: =
+16px; text-align: center; color: #888; font-size: 12px; }
+        .rank { background: #1976d2; color: white; border-radius: 4px; =
+padding: 2px 6px; font-size: 11px; margin-right: 4px; }
+        .weather { font-size: 16px; }
+    </style>
+</head>
+<body>
+    <div class=3D"container">
+        <div class=3D"header">
+            <h1>=E2=9B=B7=EF=B8=8F Skigebiete-Vergleich</h1>
+            <p>=F0=9F=93=85 Forecast for: <strong>Monday, 27.04.=
+2026</strong></p>
+            <p>=F0=9F=95=90 Time Window: 09:00 - =
+16:00</p>
+            <p>=F0=9F=93=9D Created: 27.04.2026 05:54</p>
+        </div>
+
+        <div class=3D"winner">
+            <h2>=F0=9F=8F=86=
+ Empfehlung: Pollen=C3=A7a</h2>
+            <p>Score: <strong>60</strong> |=
+ -</p>
+        </div>
+
+        <div class=3D"section">
+            <h3>=F0=9F=93=8A Vergleich</h3>
+            <table>
+                <tr>
+                    <th class=3D"label">Metrik</th>
+                    <th><span class=3D"rank">#1</span> Pollen=C3=A7a</th>
+                    <th><span class=3D"rank">#2</span> Valdemossa</th>
+                </tr>
+                <tr>
+                    <td =
+class=3D"label">Score</td>
+                    <td class=3D"best">60</td>
+                    <td>60</td>
+                </tr>
+                <tr>
+                    <td class=3D"label">Wind/B=C3=B6en</td>
+                    <td>17/30 O</td>
+                    <td =
+class=3D"best">12/31 SO</td>
+                </tr>
+                <tr>
+                    <td class=3D"label">Temperatur (gef=C3=BChlt)</td>
+                    <td class=3D"best">18=C2=B0C</td>
+                    <td>16=C2=B0C</td>
+                </tr>
+                <tr>
+                    <td class=3D"label">Sonnenstunden<=
+/td>
+                    <td>0h</td>
+                    <td>0h</td>
+                </tr>
+                <tr>
+                    <td =
+class=3D"label">Bew=C3=B6lkung</td>
+                    <td =
+class=3D"best">0%</td>
+                    <td>0%</td>
+                </tr>
+                    <td class=3D"best">=E2=9C=A8 =
+klar</td>
+                    <td class=3D"best">=E2=9C=A8 klar</td>
+                </tr>
+            </table>
+            <p =
+style=3D"font-size: 12px; color: #888;">=F0=9F=9F=A2 Gr=C3=BCn =3D bester =
+Wert | Temperatur =3D gef=C3=BChlt (Wind Chill) | * tiefe Wolken =
+ignoriert</p>
+        </div>
+
+        <div class=3D"section">
+            <h3>=F0=9F=95=90 Stunden-=C3=9Cbersicht</h3>
+            <p style=3D"color: #666; margin-bottom: 12px;">=F0=9F=93=85 =
+Monday, 27.04.2026</p>
+            <table>
+                <tr>
+                    <th class=3D"label">Time</th>
+                    =
+<th><span class=3D"rank">#1</span> Pollen=C3=A7a</th>
+                    <th><span class=3D"rank">#2</span> Valdemossa</th>
+                </tr>
+                <tr>
+                    <td =
+class=3D"label">09:00</td>
+                    <td style=3D"white-space: =
+nowrap;">=E2=98=80=EF=B8=8F19=C2=B0 - 6/14E</td>
+                    <td =
+style=3D"white-space: nowrap;">=E2=98=80=EF=B8=8F17=C2=B0 - 7/17SE</td>
+                </tr>
+                <tr>
+                    <td =
+class=3D"label">10:00</td>
+                    <td style=3D"white-space: =
+nowrap;">=E2=98=80=EF=B8=8F20=C2=B0 - 10/20E</td>
+                    <td =
+style=3D"white-space: nowrap;">=E2=98=80=EF=B8=8F19=C2=B0 - 8/21SE</td>
+                </tr>
+                <tr>
+                    <td =
+class=3D"label">11:00</td>
+                    <td style=3D"white-space: =
+nowrap;">=E2=98=80=EF=B8=8F20=C2=B0 - 15/26E</td>
+                    <td =
+style=3D"white-space: nowrap;">=E2=98=80=EF=B8=8F20=C2=B0 - 11/26SE</td>
+                </tr>
+                <tr>
+                    <td =
+class=3D"label">12:00</td>
+                    <td style=3D"white-space: =
+nowrap;">=E2=98=80=EF=B8=8F20=C2=B0 - 17/30E</td>
+                    <td =
+style=3D"white-space: nowrap;">=E2=98=80=EF=B8=8F22=C2=B0 - 12/30SE</td>
+                </tr>
+                <tr>
+                    <td =
+class=3D"label">13:00</td>
+                    <td style=3D"white-space: =
+nowrap;">=E2=98=80=EF=B8=8F21=C2=B0 - 17/30E</td>
+                    <td =
+style=3D"white-space: nowrap;">=E2=98=80=EF=B8=8F22=C2=B0 - 9/31S</td>
+                </tr>
+                <tr>
+                    <td =
+class=3D"label">14:00</td>
+                    <td style=3D"white-space: =
+nowrap;">=E2=98=80=EF=B8=8F22=C2=B0 - 17/30E</td>
+                    <td =
+style=3D"white-space: nowrap;">=E2=98=80=EF=B8=8F22=C2=B0 - 11/28SE</td>
+                </tr>
+                <tr>
+                    <td =
+class=3D"label">15:00</td>
+                    <td style=3D"white-space: =
+nowrap;">=E2=98=80=EF=B8=8F20=C2=B0 - 17/30E</td>
+                    <td =
+style=3D"white-space: nowrap;">=E2=98=80=EF=B8=8F21=C2=B0 - 10/29SE</td>
+                </tr>
+                <tr>
+                    <td =
+class=3D"label">16:00</td>
+                    <td style=3D"white-space: =
+nowrap;">=E2=98=80=EF=B8=8F19=C2=B0 - 16/30E</td>
+                    <td =
+style=3D"white-space: nowrap;">=E2=98=80=EF=B8=8F20=C2=B0 - 10/26SE</td>
+                </tr>
+            </table>
+            <p =
+style=3D"font-size: 11px; color: #888; margin-top: 8px;">
+                <strong>Legend:</strong>
+                =E2=98=80=EF=B8=8F=
+ &lt;20% clouds |
+                =F0=9F=8C=A4=EF=B8=8F 20-50% |
+                =E2=9B=85 50-80% |
+                =E2=98=81=EF=B8=8F =
+&gt;80% |
+                =F0=9F=8C=A7=EF=B8=8F rain |
+                =E2=9D=84=EF=B8=8F snow
+            </p>
+        </div>
+
+        <div class=3D"footer">
+            <p>Generated by <strong>Gregor =
+Zwanzig</strong> =E2=9B=B7=EF=B8=8F</p>
+        </div>
+    </div>
+</body>
+</html>
+
+----_NmP-b856e9fa8590e074-Part_1--

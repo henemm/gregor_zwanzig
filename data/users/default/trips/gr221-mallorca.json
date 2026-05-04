@@ -167,13 +167,14 @@
     "change_threshold_precip_mm": 10,
     "change_threshold_temp_c": 5,
     "change_threshold_wind_kmh": 20,
+    "enabled": true,
     "evening_time": "18:00:00",
     "morning_time": "06:00:00",
     "multi_day_trend_reports": [
       "morning",
       "evening"
     ],
-    "send_email": false,
+    "send_email": true,
     "send_signal": false,
     "send_sms": false,
     "send_telegram": true,

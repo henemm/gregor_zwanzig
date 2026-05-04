@@ -1,0 +1,461 @@
+F......FF...F...............FFFFss...............................F...... [  7%]
+........................................................................ [ 14%]
+........................................................................ [ 21%]
+........................................................................ [ 28%]
+.....................FFFFFF............................................. [ 35%]
+..F............................FFFFF......EEEEEE.......................x [ 42%]
+F.s....................................................EEEEEEEF......... [ 50%]
+EE...................................................................... [ 57%]
+........................................................................ [ 64%]
+........................................................................ [ 71%]
+........................s............................................... [ 78%]
+........................................................................ [ 85%]
+.....FFF................................................................ [ 92%]
+.......................................................................  [100%]
+==================================== ERRORS ====================================
+_____ ERROR at setup of TestNoCacheMiddleware.test_html_page_has_no_cache ______
+tests/tdd/test_safari_cache_fix.py:33: in running_server
+    proc = subprocess.Popen(
+/usr/lib/python3.12/subprocess.py:1026: in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+/usr/lib/python3.12/subprocess.py:1955: in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+E   FileNotFoundError: [Errno 2] No such file or directory: '/opt/gregor_zwanziger'
+_ ERROR at setup of TestNoCacheMiddleware.test_non_html_response_has_no_cache __
+tests/tdd/test_safari_cache_fix.py:33: in running_server
+    proc = subprocess.Popen(
+/usr/lib/python3.12/subprocess.py:1026: in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+/usr/lib/python3.12/subprocess.py:1955: in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+E   FileNotFoundError: [Errno 2] No such file or directory: '/opt/gregor_zwanziger'
+________ ERROR at setup of TestMetaTags.test_meta_cache_control_present ________
+tests/tdd/test_safari_cache_fix.py:33: in running_server
+    proc = subprocess.Popen(
+/usr/lib/python3.12/subprocess.py:1026: in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+/usr/lib/python3.12/subprocess.py:1955: in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+E   FileNotFoundError: [Errno 2] No such file or directory: '/opt/gregor_zwanziger'
+___________ ERROR at setup of TestMetaTags.test_meta_pragma_present ____________
+tests/tdd/test_safari_cache_fix.py:33: in running_server
+    proc = subprocess.Popen(
+/usr/lib/python3.12/subprocess.py:1026: in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+/usr/lib/python3.12/subprocess.py:1955: in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+E   FileNotFoundError: [Errno 2] No such file or directory: '/opt/gregor_zwanziger'
+_ ERROR at setup of TestServerInstanceCheck.test_health_endpoint_returns_uuid __
+tests/tdd/test_safari_cache_fix.py:33: in running_server
+    proc = subprocess.Popen(
+/usr/lib/python3.12/subprocess.py:1026: in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+/usr/lib/python3.12/subprocess.py:1955: in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+E   FileNotFoundError: [Errno 2] No such file or directory: '/opt/gregor_zwanziger'
+_ ERROR at setup of TestServerInstanceCheck.test_instance_check_script_present _
+tests/tdd/test_safari_cache_fix.py:33: in running_server
+    proc = subprocess.Popen(
+/usr/lib/python3.12/subprocess.py:1026: in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+/usr/lib/python3.12/subprocess.py:1955: in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+E   FileNotFoundError: [Errno 2] No such file or directory: '/opt/gregor_zwanziger'
+_____ ERROR at setup of TestCategoryGrouping.test_category_headers_present _____
+tests/tdd/test_weather_config_api_ui.py:80: in running_server
+    proc = subprocess.Popen(
+/usr/lib/python3.12/subprocess.py:1026: in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+/usr/lib/python3.12/subprocess.py:1955: in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+E   FileNotFoundError: [Errno 2] No such file or directory: '/opt/gregor_zwanziger'
+__ ERROR at setup of TestCategoryGrouping.test_no_old_basis_extended_sections __
+tests/tdd/test_weather_config_api_ui.py:80: in running_server
+    proc = subprocess.Popen(
+/usr/lib/python3.12/subprocess.py:1026: in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+/usr/lib/python3.12/subprocess.py:1955: in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+E   FileNotFoundError: [Errno 2] No such file or directory: '/opt/gregor_zwanziger'
+_______ ERROR at setup of TestMetricCount.test_fifteen_metric_checkboxes _______
+tests/tdd/test_weather_config_api_ui.py:80: in running_server
+    proc = subprocess.Popen(
+/usr/lib/python3.12/subprocess.py:1026: in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+/usr/lib/python3.12/subprocess.py:1955: in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+E   FileNotFoundError: [Errno 2] No such file or directory: '/opt/gregor_zwanziger'
+______ ERROR at setup of TestMetricCount.test_metric_labels_from_catalog _______
+tests/tdd/test_weather_config_api_ui.py:80: in running_server
+    proc = subprocess.Popen(
+/usr/lib/python3.12/subprocess.py:1026: in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+/usr/lib/python3.12/subprocess.py:1955: in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+E   FileNotFoundError: [Errno 2] No such file or directory: '/opt/gregor_zwanziger'
+_ ERROR at setup of TestAggregationDropdowns.test_aggregation_selects_present __
+tests/tdd/test_weather_config_api_ui.py:80: in running_server
+    proc = subprocess.Popen(
+/usr/lib/python3.12/subprocess.py:1026: in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+/usr/lib/python3.12/subprocess.py:1955: in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+E   FileNotFoundError: [Errno 2] No such file or directory: '/opt/gregor_zwanziger'
+_________ ERROR at setup of TestProviderInfo.test_provider_info_shown __________
+tests/tdd/test_weather_config_api_ui.py:80: in running_server
+    proc = subprocess.Popen(
+/usr/lib/python3.12/subprocess.py:1026: in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+/usr/lib/python3.12/subprocess.py:1955: in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+E   FileNotFoundError: [Errno 2] No such file or directory: '/opt/gregor_zwanziger'
+_ ERROR at setup of TestSaveFormat.test_save_creates_display_config_with_aggregations _
+tests/tdd/test_weather_config_api_ui.py:80: in running_server
+    proc = subprocess.Popen(
+/usr/lib/python3.12/subprocess.py:1026: in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+/usr/lib/python3.12/subprocess.py:1955: in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+E   FileNotFoundError: [Errno 2] No such file or directory: '/opt/gregor_zwanziger'
+____ ERROR at setup of TestUIMetricCount19.test_nineteen_metric_checkboxes _____
+tests/tdd/test_weather_config_api_ui.py:80: in running_server
+    proc = subprocess.Popen(
+/usr/lib/python3.12/subprocess.py:1026: in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+/usr/lib/python3.12/subprocess.py:1955: in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+E   FileNotFoundError: [Errno 2] No such file or directory: '/opt/gregor_zwanziger'
+_____ ERROR at setup of TestUIMetricCount19.test_new_metric_labels_present _____
+tests/tdd/test_weather_config_api_ui.py:80: in running_server
+    proc = subprocess.Popen(
+/usr/lib/python3.12/subprocess.py:1026: in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+/usr/lib/python3.12/subprocess.py:1955: in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+E   FileNotFoundError: [Errno 2] No such file or directory: '/opt/gregor_zwanziger'
+=================================== FAILURES ===================================
+______________________________ test_alert_enabled ______________________________
+tests/e2e/test_e2e_friendly_format_config.py:283: in test_alert_enabled
+    modify_metric_config("cape", alert_enabled=True)
+tests/e2e/test_e2e_friendly_format_config.py:47: in modify_metric_config
+    for mc in data["display_config"]["metrics"]:
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'metrics'
+----------------------------- Captured stdout call -----------------------------
+
+============================================================
+TEST: alert_enabled steuert Change Detection
+============================================================
+____________ TestReportFormatting.test_email_html_contains_segments ____________
+tests/e2e/test_e2e_story3_reports.py:220: in test_email_html_contains_segments
+    assert "#2" in report.email_html
+E   assert '#2' in '<!DOCTYPE html>\n<html>\n<head>\n    <meta charset="utf-8">\n    <meta name="viewport" content="width=device-width, i...els °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun W/m²</span>\n        </div>\n    </div>\n</body>\n</html>'
+E    +  where '<!DOCTYPE html>\n<html>\n<head>\n    <meta charset="utf-8">\n    <meta name="viewport" content="width=device-width, i...els °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun W/m²</span>\n        </div>\n    </div>\n</body>\n</html>' = TripReport(trip_id='e2e-story3-stubai', trip_name='E2E Story3 Stubai', report_type='morning', generated_at=datetime.da...-----\nGenerated: 2026-04-14 16:08 UTC\nData: openmeteo (icon_d2)', sms_text=None, triggered_by='schedule', changes=[]).email_html
+_____________ TestReportFormatting.test_email_plain_text_fallback ______________
+tests/e2e/test_e2e_story3_reports.py:237: in test_email_plain_text_fallback
+    assert "SEGMENTS" in report.email_plain
+E   AssertionError: assert 'SEGMENTS' in 'E2E Story3 Stubai - Morning Report\n14.04.2026\n\n━━ Segment 1: 07:00–10:00 | 3.2 km | ↑993m → 2237m ━━\n  Time   Tem...----------------------------------------------------------\nGenerated: 2026-04-14 16:08 UTC\nData: openmeteo (icon_d2)'
+E    +  where 'E2E Story3 Stubai - Morning Report\n14.04.2026\n\n━━ Segment 1: 07:00–10:00 | 3.2 km | ↑993m → 2237m ━━\n  Time   Tem...----------------------------------------------------------\nGenerated: 2026-04-14 16:08 UTC\nData: openmeteo (icon_d2)' = TripReport(trip_id='e2e-story3-stubai', trip_name='E2E Story3 Stubai', report_type='morning', generated_at=datetime.da...-----\nGenerated: 2026-04-14 16:08 UTC\nData: openmeteo (icon_d2)', sms_text=None, triggered_by='schedule', changes=[]).email_plain
+_____________ TestEmailDelivery.test_send_and_verify_report_email ______________
+tests/e2e/test_e2e_story3_reports.py:308: in test_send_and_verify_report_email
+    imap.login(settings.smtp_user, settings.smtp_pass)
+/usr/lib/python3.12/imaplib.py:612: in login
+    raise self.error(dat[-1])
+E   imaplib.IMAP4.error: b'[AUTHENTICATIONFAILED] Invalid credentials (Failure)'
+_______________ test_weather_config_dialog_opens_with_checkboxes _______________
+tests/e2e/test_weather_config.py:63: in test_weather_config_dialog_opens_with_checkboxes
+    weather_button.click()
+.venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py:15637: in click
+    self._sync(
+.venv/lib/python3.12/site-packages/playwright/_impl/_locator.py:162: in click
+    return await self._frame._click(self._selector, strict=True, **params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/playwright/_impl/_frame.py:566: in _click
+    await self._channel.send("click", self._timeout, locals_to_params(locals()))
+.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:559: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.Error: Locator.click: Error: strict mode violation: locator("button:has-text(\"Wetter-Metriken\")") resolved to 4 elements:
+E       1) <button id="c24" tabindex="0" type="button" class="q-btn q-btn-item non-selectable no-outline q-btn--flat q-btn--rectangle text-primary q-btn--actionable q-focusable q-hoverable">…</button> aka get_by_role("button", name="Wetter-Metriken").first
+E       2) <button id="c37" tabindex="0" type="button" class="q-btn q-btn-item non-selectable no-outline q-btn--flat q-btn--rectangle text-primary q-btn--actionable q-focusable q-hoverable">…</button> aka get_by_role("button", name="Wetter-Metriken").nth(1)
+E       3) <button id="c50" tabindex="0" type="button" class="q-btn q-btn-item non-selectable no-outline q-btn--flat q-btn--rectangle text-primary q-btn--actionable q-focusable q-hoverable">…</button> aka get_by_role("button", name="Wetter-Metriken").nth(2)
+E       4) <button id="c65" tabindex="0" type="button" class="q-btn q-btn-item non-selectable no-outline q-btn--flat q-btn--rectangle text-primary q-btn--actionable q-focusable q-hoverable">…</button> aka get_by_role("button", name="Wetter-Metriken").nth(3)
+E   
+E   Call log:
+E     - waiting for locator("button:has-text(\"Wetter-Metriken\")")
+______________________ test_weather_config_default_state _______________________
+tests/e2e/test_weather_config.py:102: in test_weather_config_default_state
+    page.locator('button:has-text("Wetter-Metriken")').click()
+.venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py:15637: in click
+    self._sync(
+.venv/lib/python3.12/site-packages/playwright/_impl/_locator.py:162: in click
+    return await self._frame._click(self._selector, strict=True, **params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/playwright/_impl/_frame.py:566: in _click
+    await self._channel.send("click", self._timeout, locals_to_params(locals()))
+.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:559: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.Error: Locator.click: Error: strict mode violation: locator("button:has-text(\"Wetter-Metriken\")") resolved to 4 elements:
+E       1) <button id="c24" tabindex="0" type="button" class="q-btn q-btn-item non-selectable no-outline q-btn--flat q-btn--rectangle text-primary q-btn--actionable q-focusable q-hoverable">…</button> aka get_by_role("button", name="Wetter-Metriken").first
+E       2) <button id="c37" tabindex="0" type="button" class="q-btn q-btn-item non-selectable no-outline q-btn--flat q-btn--rectangle text-primary q-btn--actionable q-focusable q-hoverable">…</button> aka get_by_role("button", name="Wetter-Metriken").nth(1)
+E       3) <button id="c50" tabindex="0" type="button" class="q-btn q-btn-item non-selectable no-outline q-btn--flat q-btn--rectangle text-primary q-btn--actionable q-focusable q-hoverable">…</button> aka get_by_role("button", name="Wetter-Metriken").nth(2)
+E       4) <button id="c65" tabindex="0" type="button" class="q-btn q-btn-item non-selectable no-outline q-btn--flat q-btn--rectangle text-primary q-btn--actionable q-focusable q-hoverable">…</button> aka get_by_role("button", name="Wetter-Metriken").nth(3)
+E   
+E   Call log:
+E     - waiting for locator("button:has-text(\"Wetter-Metriken\")")
+____________ test_weather_config_save_button_validates_minimum_one _____________
+tests/e2e/test_weather_config.py:132: in test_weather_config_save_button_validates_minimum_one
+    page.locator('button:has-text("Wetter-Metriken")').click()
+.venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py:15637: in click
+    self._sync(
+.venv/lib/python3.12/site-packages/playwright/_impl/_locator.py:162: in click
+    return await self._frame._click(self._selector, strict=True, **params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/playwright/_impl/_frame.py:566: in _click
+    await self._channel.send("click", self._timeout, locals_to_params(locals()))
+.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:559: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.Error: Locator.click: Error: strict mode violation: locator("button:has-text(\"Wetter-Metriken\")") resolved to 4 elements:
+E       1) <button id="c24" tabindex="0" type="button" class="q-btn q-btn-item non-selectable no-outline q-btn--flat q-btn--rectangle text-primary q-btn--actionable q-focusable q-hoverable">…</button> aka get_by_role("button", name="Wetter-Metriken").first
+E       2) <button id="c37" tabindex="0" type="button" class="q-btn q-btn-item non-selectable no-outline q-btn--flat q-btn--rectangle text-primary q-btn--actionable q-focusable q-hoverable">…</button> aka get_by_role("button", name="Wetter-Metriken").nth(1)
+E       3) <button id="c50" tabindex="0" type="button" class="q-btn q-btn-item non-selectable no-outline q-btn--flat q-btn--rectangle text-primary q-btn--actionable q-focusable q-hoverable">…</button> aka get_by_role("button", name="Wetter-Metriken").nth(2)
+E       4) <button id="c65" tabindex="0" type="button" class="q-btn q-btn-item non-selectable no-outline q-btn--flat q-btn--rectangle text-primary q-btn--actionable q-focusable q-hoverable">…</button> aka get_by_role("button", name="Wetter-Metriken").nth(3)
+E   
+E   Call log:
+E     - waiting for locator("button:has-text(\"Wetter-Metriken\")")
+____________________ test_weather_config_saves_and_persists ____________________
+tests/e2e/test_weather_config.py:185: in test_weather_config_saves_and_persists
+    page.locator('button:has-text("Wetter-Metriken")').click()
+.venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py:15637: in click
+    self._sync(
+.venv/lib/python3.12/site-packages/playwright/_impl/_locator.py:162: in click
+    return await self._frame._click(self._selector, strict=True, **params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/playwright/_impl/_frame.py:566: in _click
+    await self._channel.send("click", self._timeout, locals_to_params(locals()))
+.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:559: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.Error: Locator.click: Error: strict mode violation: locator("button:has-text(\"Wetter-Metriken\")") resolved to 4 elements:
+E       1) <button id="c24" tabindex="0" type="button" class="q-btn q-btn-item non-selectable no-outline q-btn--flat q-btn--rectangle text-primary q-btn--actionable q-focusable q-hoverable">…</button> aka get_by_role("button", name="Wetter-Metriken").first
+E       2) <button id="c37" tabindex="0" type="button" class="q-btn q-btn-item non-selectable no-outline q-btn--flat q-btn--rectangle text-primary q-btn--actionable q-focusable q-hoverable">…</button> aka get_by_role("button", name="Wetter-Metriken").nth(1)
+E       3) <button id="c50" tabindex="0" type="button" class="q-btn q-btn-item non-selectable no-outline q-btn--flat q-btn--rectangle text-primary q-btn--actionable q-focusable q-hoverable">…</button> aka get_by_role("button", name="Wetter-Metriken").nth(2)
+E       4) <button id="c65" tabindex="0" type="button" class="q-btn q-btn-item non-selectable no-outline q-btn--flat q-btn--rectangle text-primary q-btn--actionable q-focusable q-hoverable">…</button> aka get_by_role("button", name="Wetter-Metriken").nth(3)
+E   
+E   Call log:
+E     - waiting for locator("button:has-text(\"Wetter-Metriken\")")
+_______________ TestBuildFriendlyKeys.test_all_friendly_disabled _______________
+tests/integration/test_friendly_format_and_alerts_config.py:107: in test_all_friendly_disabled
+    assert keys == set()
+E   AssertionError: assert {'sunshine'} == set()
+E     
+E     Extra items in the left set:
+E     'sunshine'
+E     Use -v to get more diff
+________ TestHeartbeatConstants.test_heartbeat_morning_constant_exists _________
+tests/tdd/test_betterstack_heartbeat.py:22: in test_heartbeat_morning_constant_exists
+    from web.scheduler import HEARTBEAT_MORNING
+E   ImportError: cannot import name 'HEARTBEAT_MORNING' from 'web.scheduler' (/home/hem/gregor_zwanzig/src/web/scheduler.py)
+________ TestHeartbeatConstants.test_heartbeat_evening_constant_exists _________
+tests/tdd/test_betterstack_heartbeat.py:32: in test_heartbeat_evening_constant_exists
+    from web.scheduler import HEARTBEAT_EVENING
+E   ImportError: cannot import name 'HEARTBEAT_EVENING' from 'web.scheduler' (/home/hem/gregor_zwanzig/src/web/scheduler.py)
+________ TestPingHeartbeatFunction.test_ping_heartbeat_function_exists _________
+tests/tdd/test_betterstack_heartbeat.py:46: in test_ping_heartbeat_function_exists
+    from web.scheduler import _ping_heartbeat
+E   ImportError: cannot import name '_ping_heartbeat' from 'web.scheduler' (/home/hem/gregor_zwanzig/src/web/scheduler.py)
+____ TestPingHeartbeatFunction.test_ping_heartbeat_invalid_url_no_exception ____
+tests/tdd/test_betterstack_heartbeat.py:56: in test_ping_heartbeat_invalid_url_no_exception
+    from web.scheduler import _ping_heartbeat
+E   ImportError: cannot import name '_ping_heartbeat' from 'web.scheduler' (/home/hem/gregor_zwanzig/src/web/scheduler.py)
+_____ TestHeartbeatIntegration.test_morning_subscriptions_calls_heartbeat ______
+tests/tdd/test_betterstack_heartbeat.py:74: in test_morning_subscriptions_calls_heartbeat
+    assert "_ping_heartbeat" in source
+E   assert '_ping_heartbeat' in 'def run_morning_subscriptions() -> None:\n    """Run all DAILY_MORNING subscriptions."""\n    def _do():\n        fro......")\n        _run_subscriptions_by_schedule(Schedule.DAILY_MORNING)\n    _record_run("morning_subscriptions", _do)\n'
+_____ TestHeartbeatIntegration.test_evening_subscriptions_calls_heartbeat ______
+tests/tdd/test_betterstack_heartbeat.py:86: in test_evening_subscriptions_calls_heartbeat
+    assert "_ping_heartbeat" in source
+E   assert '_ping_heartbeat' in 'def run_evening_subscriptions() -> None:\n    """Run DAILY_EVENING and matching WEEKLY subscriptions."""\n    def _do...schedule(Schedule.DAILY_EVENING)\n        _run_weekly_subscriptions()\n    _record_run("evening_subscriptions", _do)\n'
+_____________ TestSnowgridParsing.test_snowgrid_multiple_locations _____________
+tests/tdd/test_geosphere_parsing.py:60: in test_snowgrid_multiple_locations
+    assert result["validation"]["depth_matches"], (
+E   AssertionError: SNOWGRID parsing failed for Stubai!
+E     Raw: 45.0cm, Parsed: Nonecm
+E   assert False
+______ TestEndToEndEmailSending.test_e2e_smtp_sends_multipart_html_email _______
+tests/tdd/test_html_email.py:243: in test_e2e_smtp_sends_multipart_html_email
+    email_output.send(subject, html_body, plain_text_body=text_body)
+src/outputs/email.py:145: in send
+    server.sendmail(from_addr, [self._to], msg.as_string())
+                                           ^^^^^^^^^^^^^^^
+/usr/lib/python3.12/email/message.py:188: in as_string
+    g.flatten(self, unixfrom=unixfrom)
+/usr/lib/python3.12/email/generator.py:117: in flatten
+    self._write(msg)
+/usr/lib/python3.12/email/generator.py:200: in _write
+    self._write_headers(msg)
+/usr/lib/python3.12/email/generator.py:227: in _write_headers
+    folded = self.policy.fold(h, v)
+             ^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/email/_policybase.py:334: in fold
+    return self._fold(name, value, sanitize=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/email/_policybase.py:379: in _fold
+    return ''.join(parts)
+           ^^^^^^^^^^^^^^
+E   TypeError: sequence item 1: expected str instance, Mock found
+__________ TestEndToEndEmailSending.test_e2e_email_contains_all_data ___________
+tests/tdd/test_html_email.py:324: in test_e2e_email_contains_all_data
+    email_output.send(subject, html_body, plain_text_body=text_body)
+src/outputs/email.py:145: in send
+    server.sendmail(from_addr, [self._to], msg.as_string())
+                                           ^^^^^^^^^^^^^^^
+/usr/lib/python3.12/email/message.py:188: in as_string
+    g.flatten(self, unixfrom=unixfrom)
+/usr/lib/python3.12/email/generator.py:117: in flatten
+    self._write(msg)
+/usr/lib/python3.12/email/generator.py:200: in _write
+    self._write_headers(msg)
+/usr/lib/python3.12/email/generator.py:227: in _write_headers
+    folded = self.policy.fold(h, v)
+             ^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/email/_policybase.py:334: in fold
+    return self._fold(name, value, sanitize=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/email/_policybase.py:379: in _fold
+    return ''.join(parts)
+           ^^^^^^^^^^^^^^
+E   TypeError: sequence item 1: expected str instance, Mock found
+______ TestEndToEndEmailSending.test_e2e_plain_text_does_not_contain_css _______
+tests/tdd/test_html_email.py:392: in test_e2e_plain_text_does_not_contain_css
+    email_output.send(subject, html_body, plain_text_body=text_body)
+src/outputs/email.py:145: in send
+    server.sendmail(from_addr, [self._to], msg.as_string())
+                                           ^^^^^^^^^^^^^^^
+/usr/lib/python3.12/email/message.py:188: in as_string
+    g.flatten(self, unixfrom=unixfrom)
+/usr/lib/python3.12/email/generator.py:117: in flatten
+    self._write(msg)
+/usr/lib/python3.12/email/generator.py:200: in _write
+    self._write_headers(msg)
+/usr/lib/python3.12/email/generator.py:227: in _write_headers
+    folded = self.policy.fold(h, v)
+             ^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/email/_policybase.py:334: in fold
+    return self._fold(name, value, sanitize=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/email/_policybase.py:379: in _fold
+    return ''.join(parts)
+           ^^^^^^^^^^^^^^
+E   TypeError: sequence item 1: expected str instance, Mock found
+_______________ TestRealGmailE2E.test_real_gmail_e2e_html_email ________________
+tests/tdd/test_html_email.py:476: in test_real_gmail_e2e_html_email
+    imap.login(settings.smtp_user, settings.smtp_pass)
+/usr/lib/python3.12/imaplib.py:612: in login
+    raise self.error(dat[-1])
+E   imaplib.IMAP4.error: b'[AUTHENTICATIONFAILED] Invalid credentials (Failure)'
+----------------------------- Captured stdout call -----------------------------
+
+>>> E-Mail gesendet: [TEST-769ca09a] Ski Resort Comparison: Zillertal täglich (14.04.2026)
+____ TestEmailRetryMechanism.test_temporary_dns_error_succeeds_after_retry _____
+tests/tdd/test_html_email.py:605: in test_temporary_dns_error_succeeds_after_retry
+    email_output.send("Test Subject", "Test Body")
+src/outputs/email.py:145: in send
+    server.sendmail(from_addr, [self._to], msg.as_string())
+                                           ^^^^^^^^^^^^^^^
+/usr/lib/python3.12/email/message.py:188: in as_string
+    g.flatten(self, unixfrom=unixfrom)
+/usr/lib/python3.12/email/generator.py:117: in flatten
+    self._write(msg)
+/usr/lib/python3.12/email/generator.py:200: in _write
+    self._write_headers(msg)
+/usr/lib/python3.12/email/generator.py:227: in _write_headers
+    folded = self.policy.fold(h, v)
+             ^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/email/_policybase.py:334: in fold
+    return self._fold(name, value, sanitize=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/email/_policybase.py:379: in _fold
+    return ''.join(parts)
+           ^^^^^^^^^^^^^^
+E   TypeError: sequence item 1: expected str instance, Mock found
+------------------------------ Captured log call -------------------------------
+WARNING  outputs.email:email.py:163 Email send failed (attempt 1/4): [Errno -5] No address associated with hostname. Retrying in 5s...
+WARNING  outputs.email:email.py:163 Email send failed (attempt 2/4): [Errno -5] No address associated with hostname. Retrying in 15s...
+_____________ TestSnowgridPlausibility.test_all_resorts_have_data ______________
+tests/tdd/test_snowgrid.py:105: in test_all_resorts_have_data
+    assert success_rate >= 0.8, (
+E   AssertionError: Only 0% of resorts have data from both sources. Results: {'stubaier-gletscher': {'bergfex': 300, 'snowgrid': None}, 'axamer-lizum': {'bergfex': 120, 'snowgrid': None}, 'obergurgl-hochgurgl': {'bergfex': 105, 'snowgrid': None}, 'soelden': {'bergfex': 151, 'snowgrid': None}, 'ischgl': {'bergfex': 100, 'snowgrid': None}}
+E   assert 0.0 >= 0.8
+___________ TestAdditionalMetricsCatalog.test_catalog_has_19_metrics ___________
+tests/tdd/test_weather_config_api_ui.py:462: in test_catalog_has_19_metrics
+    assert len(metrics) == 19, (
+E   AssertionError: Expected 19 metrics (15 base + 4 new), got 24. Missing: visibility, rain_probability, cape, freezing_level
+E   assert 24 == 19
+E    +  where 24 = len([MetricDefinition(id='temperature', label_de='Temperatur', unit='°C', dp_field='t2m_c', category='temperature', defaul...hold=60.0, risk_thresholds={'medium': 50.0, 'high': 70.0}, exposition_risk_thresholds={'medium': 40, 'high': 60}), ...])
+_________________ TestRiskPopCape.test_extreme_cape_high_risk __________________
+tests/unit/test_trip_report_formatter_v2.py:450: in test_extreme_cape_high_risk
+    assert "Extreme Thunder Energy" in label
+E   AssertionError: assert 'Extreme Thunder Energy' in '⚠️ Thunder'
+________________ TestRiskPopCape.test_moderate_cape_medium_risk ________________
+tests/unit/test_trip_report_formatter_v2.py:457: in test_moderate_cape_medium_risk
+    assert level == "medium"
+E   AssertionError: assert 'moderate' == 'medium'
+E     
+E     - medium
+E     + moderate
+__________________ TestRiskPopCape.test_high_pop_medium_risk ___________________
+tests/unit/test_trip_report_formatter_v2.py:465: in test_high_pop_medium_risk
+    assert level == "medium"
+E   AssertionError: assert 'moderate' == 'medium'
+E     
+E     - medium
+E     + moderate
+=========================== short test summary info ============================
+FAILED tests/e2e/test_e2e_friendly_format_config.py::test_alert_enabled - Key...
+FAILED tests/e2e/test_e2e_story3_reports.py::TestReportFormatting::test_email_html_contains_segments
+FAILED tests/e2e/test_e2e_story3_reports.py::TestReportFormatting::test_email_plain_text_fallback
+FAILED tests/e2e/test_e2e_story3_reports.py::TestEmailDelivery::test_send_and_verify_report_email
+FAILED tests/e2e/test_weather_config.py::test_weather_config_dialog_opens_with_checkboxes
+FAILED tests/e2e/test_weather_config.py::test_weather_config_default_state - ...
+FAILED tests/e2e/test_weather_config.py::test_weather_config_save_button_validates_minimum_one
+FAILED tests/e2e/test_weather_config.py::test_weather_config_saves_and_persists
+FAILED tests/integration/test_friendly_format_and_alerts_config.py::TestBuildFriendlyKeys::test_all_friendly_disabled
+FAILED tests/tdd/test_betterstack_heartbeat.py::TestHeartbeatConstants::test_heartbeat_morning_constant_exists
+FAILED tests/tdd/test_betterstack_heartbeat.py::TestHeartbeatConstants::test_heartbeat_evening_constant_exists
+FAILED tests/tdd/test_betterstack_heartbeat.py::TestPingHeartbeatFunction::test_ping_heartbeat_function_exists
+FAILED tests/tdd/test_betterstack_heartbeat.py::TestPingHeartbeatFunction::test_ping_heartbeat_invalid_url_no_exception
+FAILED tests/tdd/test_betterstack_heartbeat.py::TestHeartbeatIntegration::test_morning_subscriptions_calls_heartbeat
+FAILED tests/tdd/test_betterstack_heartbeat.py::TestHeartbeatIntegration::test_evening_subscriptions_calls_heartbeat
+FAILED tests/tdd/test_geosphere_parsing.py::TestSnowgridParsing::test_snowgrid_multiple_locations
+FAILED tests/tdd/test_html_email.py::TestEndToEndEmailSending::test_e2e_smtp_sends_multipart_html_email
+FAILED tests/tdd/test_html_email.py::TestEndToEndEmailSending::test_e2e_email_contains_all_data
+FAILED tests/tdd/test_html_email.py::TestEndToEndEmailSending::test_e2e_plain_text_does_not_contain_css
+FAILED tests/tdd/test_html_email.py::TestRealGmailE2E::test_real_gmail_e2e_html_email
+FAILED tests/tdd/test_html_email.py::TestEmailRetryMechanism::test_temporary_dns_error_succeeds_after_retry
+FAILED tests/tdd/test_snowgrid.py::TestSnowgridPlausibility::test_all_resorts_have_data
+FAILED tests/tdd/test_weather_config_api_ui.py::TestAdditionalMetricsCatalog::test_catalog_has_19_metrics
+FAILED tests/unit/test_trip_report_formatter_v2.py::TestRiskPopCape::test_extreme_cape_high_risk
+FAILED tests/unit/test_trip_report_formatter_v2.py::TestRiskPopCape::test_moderate_cape_medium_risk
+FAILED tests/unit/test_trip_report_formatter_v2.py::TestRiskPopCape::test_high_pop_medium_risk
+ERROR tests/tdd/test_safari_cache_fix.py::TestNoCacheMiddleware::test_html_page_has_no_cache
+ERROR tests/tdd/test_safari_cache_fix.py::TestNoCacheMiddleware::test_non_html_response_has_no_cache
+ERROR tests/tdd/test_safari_cache_fix.py::TestMetaTags::test_meta_cache_control_present
+ERROR tests/tdd/test_safari_cache_fix.py::TestMetaTags::test_meta_pragma_present
+ERROR tests/tdd/test_safari_cache_fix.py::TestServerInstanceCheck::test_health_endpoint_returns_uuid
+ERROR tests/tdd/test_safari_cache_fix.py::TestServerInstanceCheck::test_instance_check_script_present
+ERROR tests/tdd/test_weather_config_api_ui.py::TestCategoryGrouping::test_category_headers_present
+ERROR tests/tdd/test_weather_config_api_ui.py::TestCategoryGrouping::test_no_old_basis_extended_sections
+ERROR tests/tdd/test_weather_config_api_ui.py::TestMetricCount::test_fifteen_metric_checkboxes
+ERROR tests/tdd/test_weather_config_api_ui.py::TestMetricCount::test_metric_labels_from_catalog
+ERROR tests/tdd/test_weather_config_api_ui.py::TestAggregationDropdowns::test_aggregation_selects_present
+ERROR tests/tdd/test_weather_config_api_ui.py::TestProviderInfo::test_provider_info_shown
+ERROR tests/tdd/test_weather_config_api_ui.py::TestSaveFormat::test_save_creates_display_config_with_aggregations
+ERROR tests/tdd/test_weather_config_api_ui.py::TestUIMetricCount19::test_nineteen_metric_checkboxes
+ERROR tests/tdd/test_weather_config_api_ui.py::TestUIMetricCount19::test_new_metric_labels_present

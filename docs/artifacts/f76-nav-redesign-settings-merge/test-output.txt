@@ -1,0 +1,265 @@
+F......FF.....sssssssssssssss........................................... [  6%]
+........................................................................ [ 12%]
+........................................................................ [ 19%]
+.............F.......................................................... [ 25%]
+......................FF........................................FFFFFFFF [ 32%]
+FFFFFF..............................F................................... [ 38%]
+...................................ssssss.......................xF.s.... [ 45%]
+........................................................................ [ 51%]
+......sssssss..........ss............................................... [ 57%]
+........................................................................ [ 64%]
+........................................................................ [ 70%]
+.....................................................FFF.........s...... [ 77%]
+........................................................................ [ 83%]
+........................................................................ [ 90%]
+........................................................................ [ 96%]
+........................................                                 [100%]
+=================================== FAILURES ===================================
+______________________________ test_alert_enabled ______________________________
+tests/e2e/test_e2e_friendly_format_config.py:283: in test_alert_enabled
+    modify_metric_config("cape", alert_enabled=True)
+tests/e2e/test_e2e_friendly_format_config.py:47: in modify_metric_config
+    for mc in data["display_config"]["metrics"]:
+              ^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'display_config'
+----------------------------- Captured stdout call -----------------------------
+
+============================================================
+TEST: alert_enabled steuert Change Detection
+============================================================
+____________ TestReportFormatting.test_email_html_contains_segments ____________
+tests/e2e/test_e2e_story3_reports.py:220: in test_email_html_contains_segments
+    assert "#2" in report.email_html
+E   assert '#2' in '<!DOCTYPE html>\n<html>\n<head>\n    <meta charset="utf-8">\n    <meta name="viewport" content="width=device-width, i...els °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun W/m²</span>\n        </div>\n    </div>\n</body>\n</html>'
+E    +  where '<!DOCTYPE html>\n<html>\n<head>\n    <meta charset="utf-8">\n    <meta name="viewport" content="width=device-width, i...els °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun W/m²</span>\n        </div>\n    </div>\n</body>\n</html>' = TripReport(trip_id='e2e-story3-stubai', trip_name='E2E Story3 Stubai', report_type='morning', generated_at=datetime.da...-----\nGenerated: 2026-04-23 07:36 UTC\nData: openmeteo (icon_d2)', sms_text=None, triggered_by='schedule', changes=[]).email_html
+_____________ TestReportFormatting.test_email_plain_text_fallback ______________
+tests/e2e/test_e2e_story3_reports.py:237: in test_email_plain_text_fallback
+    assert "SEGMENTS" in report.email_plain
+E   AssertionError: assert 'SEGMENTS' in 'E2E Story3 Stubai - Morning Report\n23.04.2026\n\n━━ Segment 1: 07:00–10:00 | 3.2 km | ↑993m → 2237m ━━\n  Time   Tem...----------------------------------------------------------\nGenerated: 2026-04-23 07:36 UTC\nData: openmeteo (icon_d2)'
+E    +  where 'E2E Story3 Stubai - Morning Report\n23.04.2026\n\n━━ Segment 1: 07:00–10:00 | 3.2 km | ↑993m → 2237m ━━\n  Time   Tem...----------------------------------------------------------\nGenerated: 2026-04-23 07:36 UTC\nData: openmeteo (icon_d2)' = TripReport(trip_id='e2e-story3-stubai', trip_name='E2E Story3 Stubai', report_type='morning', generated_at=datetime.da...-----\nGenerated: 2026-04-23 07:36 UTC\nData: openmeteo (icon_d2)', sms_text=None, triggered_by='schedule', changes=[]).email_plain
+_________ TestAlertOnChangesConfig.test_alerts_enabled_does_not_block __________
+tests/integration/test_trip_alert.py:233: in test_alerts_enabled_does_not_block
+    assert result is False  # Expected: fails later, not at config check
+    ^^^^^^^^^^^^^^^^^^^^^^
+E   assert True is False
+___________________ TestNavigation.test_nav_has_account_link ___________________
+tests/tdd/test_account_page.py:136: in test_nav_has_account_link
+    assert '/account' in resp.text, "Missing /account link in navigation"
+E   AssertionError: Missing /account link in navigation
+E   assert '/account' in '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n'
+E    +  where '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n' = <Response [200 OK]>.text
+__________________ TestNavigation.test_nav_shows_konto_label ___________________
+tests/tdd/test_account_page.py:146: in test_nav_shows_konto_label
+    assert 'Konto' in resp.text, "Missing 'Konto' label in navigation"
+E   AssertionError: Missing 'Konto' label in navigation
+E   assert 'Konto' in '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n'
+E    +  where '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n' = <Response [200 OK]>.text
+______________ TestWhiteBackground.test_background_is_pure_white _______________
+tests/tdd/test_design_optimierungen.py:95: in test_background_is_pure_white
+    page.goto(f"{FRONTEND_URL}/")
+.venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py:9050: in goto
+    self._sync(
+.venv/lib/python3.12/site-packages/playwright/_impl/_page.py:552: in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/playwright/_impl/_frame.py:153: in goto
+    await self._channel.send(
+.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:559: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.Error: Page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:3000/
+E   Call log:
+E     - navigating to "http://127.0.0.1:3000/", waiting until "load"
+________________ TestWhiteBackground.test_main_has_no_muted_bg _________________
+tests/tdd/test_design_optimierungen.py:117: in test_main_has_no_muted_bg
+    page.goto(f"{FRONTEND_URL}/")
+.venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py:9050: in goto
+    self._sync(
+.venv/lib/python3.12/site-packages/playwright/_impl/_page.py:552: in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/playwright/_impl/_frame.py:153: in goto
+    await self._channel.send(
+.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:559: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.Error: Page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:3000/
+E   Call log:
+E     - navigating to "http://127.0.0.1:3000/", waiting until "load"
+______________ TestAccountFooter.test_footer_has_border_separator ______________
+tests/tdd/test_design_optimierungen.py:140: in test_footer_has_border_separator
+    page.goto(f"{FRONTEND_URL}/")
+.venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py:9050: in goto
+    self._sync(
+.venv/lib/python3.12/site-packages/playwright/_impl/_page.py:552: in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/playwright/_impl/_frame.py:153: in goto
+    await self._channel.send(
+.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:559: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.Error: Page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:3000/
+E   Call log:
+E     - navigating to "http://127.0.0.1:3000/", waiting until "load"
+_________________ TestAccountFooter.test_footer_has_user_icon __________________
+tests/tdd/test_design_optimierungen.py:156: in test_footer_has_user_icon
+    page.goto(f"{FRONTEND_URL}/")
+.venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py:9050: in goto
+    self._sync(
+.venv/lib/python3.12/site-packages/playwright/_impl/_page.py:552: in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/playwright/_impl/_frame.py:153: in goto
+    await self._channel.send(
+.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:559: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.Error: Page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:3000/
+E   Call log:
+E     - navigating to "http://127.0.0.1:3000/", waiting until "load"
+_______ TestSettingsRenamed.test_sidebar_shows_system_status_in_dropdown _______
+tests/tdd/test_design_optimierungen.py:177: in test_sidebar_shows_system_status_in_dropdown
+    page.goto(f"{FRONTEND_URL}/")
+.venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py:9050: in goto
+    self._sync(
+.venv/lib/python3.12/site-packages/playwright/_impl/_page.py:552: in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/playwright/_impl/_frame.py:153: in goto
+    await self._channel.send(
+.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:559: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.Error: Page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:3000/
+E   Call log:
+E     - navigating to "http://127.0.0.1:3000/", waiting until "load"
+___________ TestSettingsRenamed.test_nav_does_not_show_einstellungen ___________
+tests/tdd/test_design_optimierungen.py:197: in test_nav_does_not_show_einstellungen
+    page.goto(f"{FRONTEND_URL}/")
+.venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py:9050: in goto
+    self._sync(
+.venv/lib/python3.12/site-packages/playwright/_impl/_page.py:552: in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/playwright/_impl/_frame.py:153: in goto
+    await self._channel.send(
+.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:559: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.Error: Page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:3000/
+E   Call log:
+E     - navigating to "http://127.0.0.1:3000/", waiting until "load"
+________________ TestSettingsRenamed.test_settings_page_heading ________________
+tests/tdd/test_design_optimierungen.py:217: in test_settings_page_heading
+    page.goto(f"{FRONTEND_URL}/settings")
+.venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py:9050: in goto
+    self._sync(
+.venv/lib/python3.12/site-packages/playwright/_impl/_page.py:552: in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/playwright/_impl/_frame.py:153: in goto
+    await self._channel.send(
+.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:559: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.Error: Page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:3000/settings
+E   Call log:
+E     - navigating to "http://127.0.0.1:3000/settings", waiting until "load"
+___________________________ test_detect_scope_exists ___________________________
+tests/tdd/test_e2e_scope_detection.py:25: in test_detect_scope_exists
+    from e2e_commit_gate import detect_scope
+E   ImportError: cannot import name 'detect_scope' from 'e2e_commit_gate' (/home/hem/gregor_zwanzig/tests/tdd/../../.claude/hooks/e2e_commit_gate.py)
+_______________________ test_detect_scope_frontend_only ________________________
+tests/tdd/test_e2e_scope_detection.py:37: in test_detect_scope_frontend_only
+    from e2e_commit_gate import detect_scope
+E   ImportError: cannot import name 'detect_scope' from 'e2e_commit_gate' (/home/hem/gregor_zwanzig/tests/tdd/../../.claude/hooks/e2e_commit_gate.py)
+__________________________ test_detect_scope_backend ___________________________
+tests/tdd/test_e2e_scope_detection.py:59: in test_detect_scope_backend
+    from e2e_commit_gate import detect_scope
+E   ImportError: cannot import name 'detect_scope' from 'e2e_commit_gate' (/home/hem/gregor_zwanzig/tests/tdd/../../.claude/hooks/e2e_commit_gate.py)
+_________________________ test_detect_scope_full_stack _________________________
+tests/tdd/test_e2e_scope_detection.py:80: in test_detect_scope_full_stack
+    from e2e_commit_gate import detect_scope
+E   ImportError: cannot import name 'detect_scope' from 'e2e_commit_gate' (/home/hem/gregor_zwanzig/tests/tdd/../../.claude/hooks/e2e_commit_gate.py)
+_________________________ test_detect_scope_docs_only __________________________
+tests/tdd/test_e2e_scope_detection.py:101: in test_detect_scope_docs_only
+    from e2e_commit_gate import detect_scope
+E   ImportError: cannot import name 'detect_scope' from 'e2e_commit_gate' (/home/hem/gregor_zwanzig/tests/tdd/../../.claude/hooks/e2e_commit_gate.py)
+__________________ test_detect_scope_unknown_path_is_backend ___________________
+tests/tdd/test_e2e_scope_detection.py:122: in test_detect_scope_unknown_path_is_backend
+    from e2e_commit_gate import detect_scope
+E   ImportError: cannot import name 'detect_scope' from 'e2e_commit_gate' (/home/hem/gregor_zwanzig/tests/tdd/../../.claude/hooks/e2e_commit_gate.py)
+_______________________ test_detect_scope_empty_staging ________________________
+tests/tdd/test_e2e_scope_detection.py:143: in test_detect_scope_empty_staging
+    from e2e_commit_gate import detect_scope
+E   ImportError: cannot import name 'detect_scope' from 'e2e_commit_gate' (/home/hem/gregor_zwanzig/tests/tdd/../../.claude/hooks/e2e_commit_gate.py)
+_____________ TestSnowgridParsing.test_snowgrid_multiple_locations _____________
+tests/tdd/test_geosphere_parsing.py:60: in test_snowgrid_multiple_locations
+    assert result["validation"]["depth_matches"], (
+E   AssertionError: SNOWGRID parsing failed for Stubai!
+E     Raw: 26.0cm, Parsed: Nonecm
+E   assert False
+_____________ TestSnowgridPlausibility.test_all_resorts_have_data ______________
+tests/tdd/test_snowgrid.py:105: in test_all_resorts_have_data
+    assert success_rate >= 0.8, (
+E   AssertionError: Only 60% of resorts have data from both sources. Results: {'stubaier-gletscher': {'bergfex': 300, 'snowgrid': 26.0}, 'axamer-lizum': {'bergfex': 120, 'snowgrid': 1.0}, 'obergurgl-hochgurgl': {'bergfex': None, 'snowgrid': None}, 'soelden': {'bergfex': 143, 'snowgrid': None}, 'ischgl': {'bergfex': 85, 'snowgrid': 9.0}}
+E   assert 0.6 >= 0.8
+_______ TestSchedulerDestinationSegment.test_destination_segment_exists ________
+tests/unit/test_destination_segment.py:89: in test_destination_segment_exists
+    segments = self._load_trip_and_get_segments()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_destination_segment.py:83: in _load_trip_and_get_segments
+    target_date = trip.stages[1].date
+                  ^^^^^^^^^^^^^^
+E   IndexError: list index out of range
+_____ TestSchedulerDestinationSegment.test_destination_segment_coordinates _____
+tests/unit/test_destination_segment.py:97: in test_destination_segment_coordinates
+    segments = self._load_trip_and_get_segments()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_destination_segment.py:83: in _load_trip_and_get_segments
+    target_date = trip.stages[1].date
+                  ^^^^^^^^^^^^^^
+E   IndexError: list index out of range
+_____ TestSchedulerDestinationSegment.test_destination_segment_time_window _____
+tests/unit/test_destination_segment.py:103: in test_destination_segment_time_window
+    segments = self._load_trip_and_get_segments()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_destination_segment.py:83: in _load_trip_and_get_segments
+    target_date = trip.stages[1].date
+                  ^^^^^^^^^^^^^^
+E   IndexError: list index out of range
+=========================== short test summary info ============================
+FAILED tests/e2e/test_e2e_friendly_format_config.py::test_alert_enabled - Key...
+FAILED tests/e2e/test_e2e_story3_reports.py::TestReportFormatting::test_email_html_contains_segments
+FAILED tests/e2e/test_e2e_story3_reports.py::TestReportFormatting::test_email_plain_text_fallback
+FAILED tests/integration/test_trip_alert.py::TestAlertOnChangesConfig::test_alerts_enabled_does_not_block
+FAILED tests/tdd/test_account_page.py::TestNavigation::test_nav_has_account_link
+FAILED tests/tdd/test_account_page.py::TestNavigation::test_nav_shows_konto_label
+FAILED tests/tdd/test_design_optimierungen.py::TestWhiteBackground::test_background_is_pure_white
+FAILED tests/tdd/test_design_optimierungen.py::TestWhiteBackground::test_main_has_no_muted_bg
+FAILED tests/tdd/test_design_optimierungen.py::TestAccountFooter::test_footer_has_border_separator
+FAILED tests/tdd/test_design_optimierungen.py::TestAccountFooter::test_footer_has_user_icon
+FAILED tests/tdd/test_design_optimierungen.py::TestSettingsRenamed::test_sidebar_shows_system_status_in_dropdown
+FAILED tests/tdd/test_design_optimierungen.py::TestSettingsRenamed::test_nav_does_not_show_einstellungen
+FAILED tests/tdd/test_design_optimierungen.py::TestSettingsRenamed::test_settings_page_heading
+FAILED tests/tdd/test_e2e_scope_detection.py::test_detect_scope_exists - Impo...
+FAILED tests/tdd/test_e2e_scope_detection.py::test_detect_scope_frontend_only
+FAILED tests/tdd/test_e2e_scope_detection.py::test_detect_scope_backend - Imp...
+FAILED tests/tdd/test_e2e_scope_detection.py::test_detect_scope_full_stack - ...
+FAILED tests/tdd/test_e2e_scope_detection.py::test_detect_scope_docs_only - I...
+FAILED tests/tdd/test_e2e_scope_detection.py::test_detect_scope_unknown_path_is_backend
+FAILED tests/tdd/test_e2e_scope_detection.py::test_detect_scope_empty_staging
+FAILED tests/tdd/test_geosphere_parsing.py::TestSnowgridParsing::test_snowgrid_multiple_locations
+FAILED tests/tdd/test_snowgrid.py::TestSnowgridPlausibility::test_all_resorts_have_data
+FAILED tests/unit/test_destination_segment.py::TestSchedulerDestinationSegment::test_destination_segment_exists
+FAILED tests/unit/test_destination_segment.py::TestSchedulerDestinationSegment::test_destination_segment_coordinates
+FAILED tests/unit/test_destination_segment.py::TestSchedulerDestinationSegment::test_destination_segment_time_window
+31 failed, 1056 passed, 32 skipped, 6 deselected, 1 xfailed in 43.84s

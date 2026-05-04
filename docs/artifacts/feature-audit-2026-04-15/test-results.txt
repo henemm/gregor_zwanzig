@@ -1,0 +1,113 @@
+F....F.FF.FF..sssssssssssssss...............................F........... [  7%]
+........................................................................ [ 14%]
+..............................................FFFFFFFFFFFFFFFFFFF....F.F [ 21%]
+.............................FF......................................... [ 28%]
+....................................FFF.............................FFFF [ 35%]
+FFF....FFFF...............FFFF.............EEEEEE..FFF.................. [ 42%]
+xF.s........................FFFFFFFFFFFF................EEEEEEEF.....FFF [ 50%]
+FEE..................................................................... [ 57%]
+........................................................................ [ 64%]
+........................................................................ [ 71%]
+.............FFF.........s...........................................F.F [ 78%]
+....................FF.................................................. [ 85%]
+......FFF...................F....FFF.................................... [ 92%]
+........................................................................ [100%]
+=========================== short test summary info ============================
+FAILED tests/e2e/test_e2e_friendly_format_config.py::test_alert_enabled - Key...
+FAILED tests/e2e/test_e2e_story3_reports.py::TestWeatherFetch::test_fetch_real_weather
+FAILED tests/e2e/test_e2e_story3_reports.py::TestReportFormatting::test_email_html_contains_segments
+FAILED tests/e2e/test_e2e_story3_reports.py::TestReportFormatting::test_email_plain_text_fallback
+FAILED tests/e2e/test_e2e_story3_reports.py::TestReportFormatting::test_sms_format_compact
+FAILED tests/e2e/test_e2e_story3_reports.py::TestReportFormatting::test_sms_contains_temperature
+FAILED tests/integration/test_friendly_format_and_alerts_config.py::TestBuildFriendlyKeys::test_all_friendly_disabled
+FAILED tests/integration/test_segment_weather_cache.py::TestSegmentWeatherCacheIntegration::test_cache_reduces_api_calls
+FAILED tests/integration/test_segment_weather_cache.py::TestSegmentWeatherCacheIntegration::test_different_segments_cached_separately
+FAILED tests/integration/test_segment_weather_metrics.py::TestSegmentWeatherMetricsGeoSphere::test_geosphere_austria_basis_metrics
+FAILED tests/integration/test_segment_weather_metrics.py::TestSegmentWeatherMetricsOpenMeteo::test_openmeteo_corsica_basis_metrics
+FAILED tests/integration/test_segment_weather_metrics.py::TestE2EStory2Flow::test_e2e_segment_to_metrics
+FAILED tests/integration/test_segment_weather_metrics.py::TestSegmentWeatherMetricsExtended::test_geosphere_austria_extended_metrics
+FAILED tests/integration/test_segment_weather_metrics.py::TestSegmentWeatherMetricsExtended::test_openmeteo_corsica_extended_no_winter
+FAILED tests/integration/test_snapshot_plausibility.py::TestCoreMetricsNotNone::test_temp_min_not_none
+FAILED tests/integration/test_snapshot_plausibility.py::TestCoreMetricsNotNone::test_temp_max_not_none
+FAILED tests/integration/test_snapshot_plausibility.py::TestCoreMetricsNotNone::test_wind_max_not_none
+FAILED tests/integration/test_snapshot_plausibility.py::TestCoreMetricsNotNone::test_gust_max_not_none
+FAILED tests/integration/test_snapshot_plausibility.py::TestCoreMetricsNotNone::test_precip_sum_not_none
+FAILED tests/integration/test_snapshot_plausibility.py::TestCoreMetricsNotNone::test_cloud_avg_not_none
+FAILED tests/integration/test_snapshot_plausibility.py::TestCoreMetricsNotNone::test_humidity_avg_not_none
+FAILED tests/integration/test_snapshot_plausibility.py::TestFallbackMetricsNotNone::test_visibility_min_not_none
+FAILED tests/integration/test_snapshot_plausibility.py::TestValueRanges::test_temp_range
+FAILED tests/integration/test_snapshot_plausibility.py::TestValueRanges::test_wind_range
+FAILED tests/integration/test_snapshot_plausibility.py::TestValueRanges::test_precip_range
+FAILED tests/integration/test_snapshot_plausibility.py::TestValueRanges::test_cloud_humidity_range
+FAILED tests/integration/test_snapshot_plausibility.py::TestCrossMetricConsistency::test_gust_gte_wind
+FAILED tests/integration/test_snapshot_plausibility.py::TestFallbackMechanismActive::test_fallback_model_is_set
+FAILED tests/integration/test_trip_segment_weather.py::TestSegmentWeatherServiceGeoSphere::test_fetch_segment_weather_austria
+FAILED tests/integration/test_trip_segment_weather.py::TestSegmentWeatherServiceOpenMeteo::test_fetch_segment_weather_corsica
+FAILED tests/tdd/test_compare_provider_routing.py::TestFetchForecastMallorca::test_valdemossa_returns_data
+FAILED tests/tdd/test_compare_provider_routing.py::TestFetchForecastMallorca::test_pollenca_returns_data
+FAILED tests/tdd/test_compare_provider_routing.py::TestFetchForecastAlpsRegression::test_innsbruck_returns_data
+FAILED tests/tdd/test_geosphere_parsing.py::TestSnowgridParsing::test_snowgrid_depth_conversion
+FAILED tests/tdd/test_geosphere_parsing.py::TestSnowgridParsing::test_snowgrid_multiple_locations
+FAILED tests/tdd/test_geosphere_parsing.py::TestNwpParsing::test_nwp_temperature_passthrough
+FAILED tests/tdd/test_geosphere_parsing.py::TestNwpParsing::test_nwp_wind_vector_conversion
+FAILED tests/tdd/test_geosphere_parsing.py::TestNwpParsing::test_nwp_cloud_cover_conversion
+FAILED tests/tdd/test_geosphere_parsing.py::TestNwpParsing::test_nwp_pressure_conversion
+FAILED tests/tdd/test_geosphere_parsing.py::TestNwpParsing::test_nwp_all_conversions
+FAILED tests/tdd/test_go_api_setup.py::test_forecast_endpoint_returns_timeseries
+FAILED tests/tdd/test_go_api_setup.py::test_forecast_meta_has_provider_info
+FAILED tests/tdd/test_go_api_setup.py::test_forecast_data_has_correct_fields
+FAILED tests/tdd/test_go_api_setup.py::test_forecast_enums_serialized_as_strings
+FAILED tests/tdd/test_html_email.py::TestEndToEndEmailSending::test_e2e_smtp_sends_multipart_html_email
+FAILED tests/tdd/test_html_email.py::TestEndToEndEmailSending::test_e2e_email_contains_all_data
+FAILED tests/tdd/test_html_email.py::TestEndToEndEmailSending::test_e2e_plain_text_does_not_contain_css
+FAILED tests/tdd/test_html_email.py::TestEmailRetryMechanism::test_temporary_dns_error_succeeds_after_retry
+FAILED tests/tdd/test_scheduler_triggers.py::TestSchedulerTriggerEndpoints::test_trip_reports_endpoint_exists
+FAILED tests/tdd/test_scheduler_triggers.py::TestSchedulerTriggerEndpoints::test_trip_reports_with_hour_param
+FAILED tests/tdd/test_scheduler_triggers.py::TestSchedulerTriggerEndpoints::test_alert_checks_endpoint_exists
+FAILED tests/tdd/test_snowgrid.py::TestSnowgridPlausibility::test_all_resorts_have_data
+FAILED tests/tdd/test_trip_command_processor.py::TestRuhetag::test_shifts_future_stages
+FAILED tests/tdd/test_trip_command_processor.py::TestRuhetag::test_shift_n_days
+FAILED tests/tdd/test_trip_command_processor.py::TestRuhetag::test_today_stage_unchanged
+FAILED tests/tdd/test_trip_command_processor.py::TestRuhetag::test_confirmation_contains_details
+FAILED tests/tdd/test_trip_command_processor.py::TestRuhetag::test_idempotency_blocks_duplicate
+FAILED tests/tdd/test_trip_command_processor.py::TestRuhetag::test_all_past_stages_returns_error
+FAILED tests/tdd/test_trip_command_processor.py::TestRuhetag::test_snapshot_deleted_after_ruhetag
+FAILED tests/tdd/test_trip_command_processor.py::TestStartdatum::test_shifts_all_stages
+FAILED tests/tdd/test_trip_command_processor.py::TestStartdatum::test_invalid_date_returns_error
+FAILED tests/tdd/test_trip_command_processor.py::TestStartdatum::test_missing_value_returns_error
+FAILED tests/tdd/test_trip_command_processor.py::TestStartdatum::test_confirmation_shows_old_and_new_dates
+FAILED tests/tdd/test_trip_command_processor.py::TestAbbruch::test_disables_report_config
+FAILED tests/tdd/test_weather_config_api_ui.py::TestAdditionalMetricsCatalog::test_catalog_has_19_metrics
+FAILED tests/tdd/test_weather_config_api_ui.py::TestOpenMeteoNewParameters::test_provider_returns_cape
+FAILED tests/tdd/test_weather_config_api_ui.py::TestOpenMeteoNewParameters::test_provider_returns_pop
+FAILED tests/tdd/test_weather_config_api_ui.py::TestOpenMeteoNewParameters::test_provider_returns_visibility
+FAILED tests/tdd/test_weather_config_api_ui.py::TestOpenMeteoNewParameters::test_provider_returns_freezing_level
+FAILED tests/unit/test_destination_segment.py::TestSchedulerDestinationSegment::test_destination_segment_exists
+FAILED tests/unit/test_destination_segment.py::TestSchedulerDestinationSegment::test_destination_segment_coordinates
+FAILED tests/unit/test_destination_segment.py::TestSchedulerDestinationSegment::test_destination_segment_time_window
+FAILED tests/unit/test_metric_availability_probe.py::TestProbeModelAvailability::test_probe_returns_dict_with_models
+FAILED tests/unit/test_metric_availability_probe.py::TestProbeModelAvailability::test_ecmwf_has_most_params_available
+FAILED tests/unit/test_openmeteo_endpoint_routing.py::TestDedicatedEndpointReturnsValidData::test_meteofrance_endpoint_returns_hourly_data
+FAILED tests/unit/test_openmeteo_endpoint_routing.py::TestModelDataDiffersBetweenEndpoints::test_arome_differs_from_icon
+FAILED tests/unit/test_trip_report_formatter_v2.py::TestRiskPopCape::test_extreme_cape_high_risk
+FAILED tests/unit/test_trip_report_formatter_v2.py::TestRiskPopCape::test_moderate_cape_medium_risk
+FAILED tests/unit/test_trip_report_formatter_v2.py::TestRiskPopCape::test_high_pop_medium_risk
+FAILED tests/unit/test_uv_air_quality.py::TestRequestBaseHostOverride::test_request_signature_accepts_base_host
+FAILED tests/unit/test_uv_air_quality.py::TestFetchForecastUvIntegration::test_forecast_has_uv_values
+FAILED tests/unit/test_uv_air_quality.py::TestFetchForecastUvIntegration::test_forecast_uv_plausible
+FAILED tests/unit/test_uv_air_quality.py::TestFetchForecastUvIntegration::test_weather_05b_fallback_still_works_with_uv
+ERROR tests/tdd/test_safari_cache_fix.py::TestNoCacheMiddleware::test_html_page_has_no_cache
+ERROR tests/tdd/test_safari_cache_fix.py::TestNoCacheMiddleware::test_non_html_response_has_no_cache
+ERROR tests/tdd/test_safari_cache_fix.py::TestMetaTags::test_meta_cache_control_present
+ERROR tests/tdd/test_safari_cache_fix.py::TestMetaTags::test_meta_pragma_present
+ERROR tests/tdd/test_safari_cache_fix.py::TestServerInstanceCheck::test_health_endpoint_returns_uuid
+ERROR tests/tdd/test_safari_cache_fix.py::TestServerInstanceCheck::test_instance_check_script_present
+ERROR tests/tdd/test_weather_config_api_ui.py::TestCategoryGrouping::test_category_headers_present
+ERROR tests/tdd/test_weather_config_api_ui.py::TestCategoryGrouping::test_no_old_basis_extended_sections
+ERROR tests/tdd/test_weather_config_api_ui.py::TestMetricCount::test_fifteen_metric_checkboxes
+ERROR tests/tdd/test_weather_config_api_ui.py::TestMetricCount::test_metric_labels_from_catalog
+ERROR tests/tdd/test_weather_config_api_ui.py::TestAggregationDropdowns::test_aggregation_selects_present
+ERROR tests/tdd/test_weather_config_api_ui.py::TestProviderInfo::test_provider_info_shown
+ERROR tests/tdd/test_weather_config_api_ui.py::TestSaveFormat::test_save_creates_display_config_with_aggregations
+ERROR tests/tdd/test_weather_config_api_ui.py::TestUIMetricCount19::test_nineteen_metric_checkboxes
+ERROR tests/tdd/test_weather_config_api_ui.py::TestUIMetricCount19::test_new_metric_labels_present

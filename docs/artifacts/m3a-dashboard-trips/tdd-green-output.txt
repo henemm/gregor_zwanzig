@@ -1,0 +1,108 @@
+[1A[2K[2m[WebServer] [22m[33m12:18:51 PM [vite-plugin-svelte] src/routes/trips/+page.svelte:12:28 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+
+[1A[2K[2m[WebServer] [22m10:   let { data } = $props();
+[2m[WebServer] [22m11: 
+[2m[WebServer] [22m12:   let trips: Trip[] = $state(data.trips);
+[2m[WebServer] [22m                                     ^
+[2m[WebServer] [22m13:   let dialogMode: 'create' | 'edit' | null = $state(null);
+[2m[WebServer] [22m14:   let editTarget: Trip | null = $state(null);
+
+[1A[2K[2m[WebServer] [22m[33m12:18:51 PM [vite-plugin-svelte] src/lib/components/TripForm.svelte:19:23 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m17:   const today = () => new Date().toISOString().slice(0, 10);
+[2m[WebServer] [22m18: 
+[2m[WebServer] [22m19:   let tripName = $state(trip?.name ?? '');
+[2m[WebServer] [22m                                ^
+[2m[WebServer] [22m20:   let tripId = $state(trip?.id ?? '');
+[2m[WebServer] [22m21:   let stages: Stage[] = $state(
+[2m[WebServer] [22m[33m12:18:51 PM [vite-plugin-svelte] src/lib/components/TripForm.svelte:20:21 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m18: 
+[2m[WebServer] [22m19:   let tripName = $state(trip?.name ?? '');
+[2m[WebServer] [22m20:   let tripId = $state(trip?.id ?? '');
+[2m[WebServer] [22m                              ^
+[2m[WebServer] [22m21:   let stages: Stage[] = $state(
+[2m[WebServer] [22m22:     trip ? JSON.parse(JSON.stringify(trip.stages)) : []
+[2m[WebServer] [22m[33m12:18:51 PM [vite-plugin-svelte] src/lib/components/TripForm.svelte:22:2 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m20:   let tripId = $state(trip?.id ?? '');
+[2m[WebServer] [22m21:   let stages: Stage[] = $state(
+[2m[WebServer] [22m22:     trip ? JSON.parse(JSON.stringify(trip.stages)) : []
+[2m[WebServer] [22m            ^
+[2m[WebServer] [22m23:   );
+[2m[WebServer] [22m24:   let error = $state('');
+[2m[WebServer] [22m[33m12:18:51 PM [vite-plugin-svelte] src/lib/components/TripForm.svelte:22:35 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m20:   let tripId = $state(trip?.id ?? '');
+[2m[WebServer] [22m21:   let stages: Stage[] = $state(
+[2m[WebServer] [22m22:     trip ? JSON.parse(JSON.stringify(trip.stages)) : []
+[2m[WebServer] [22m                                             ^
+[2m[WebServer] [22m23:   );
+[2m[WebServer] [22m24:   let error = $state('');
+
+[1A[2K[2m[WebServer] [22m[33m12:18:53 PM [vite-plugin-svelte] src/routes/trips/+page.svelte:12:28 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+
+[1A[2K[2m[WebServer] [22m10:   let { data } = $props();
+[2m[WebServer] [22m11: 
+[2m[WebServer] [22m12:   let trips: Trip[] = $state(data.trips);
+[2m[WebServer] [22m                                     ^
+[2m[WebServer] [22m13:   let dialogMode: 'create' | 'edit' | null = $state(null);
+[2m[WebServer] [22m14:   let editTarget: Trip | null = $state(null);
+
+[1A[2K[2m[WebServer] [22m[33m12:18:53 PM [vite-plugin-svelte] src/lib/components/TripForm.svelte:19:23 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m17:   const today = () => new Date().toISOString().slice(0, 10);
+[2m[WebServer] [22m18: 
+[2m[WebServer] [22m19:   let tripName = $state(trip?.name ?? '');
+[2m[WebServer] [22m                                ^
+[2m[WebServer] [22m20:   let tripId = $state(trip?.id ?? '');
+[2m[WebServer] [22m21:   let stages: Stage[] = $state(
+
+[1A[2K[2m[WebServer] [22m[33m12:18:53 PM [vite-plugin-svelte] src/lib/components/TripForm.svelte:20:21 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m18: 
+[2m[WebServer] [22m19:   let tripName = $state(trip?.name ?? '');
+[2m[WebServer] [22m20:   let tripId = $state(trip?.id ?? '');
+[2m[WebServer] [22m                              ^
+[2m[WebServer] [22m21:   let stages: Stage[] = $state(
+[2m[WebServer] [22m22:     trip ? JSON.parse(JSON.stringify(trip.stages)) : []
+[2m[WebServer] [22m[33m12:18:53 PM [vite-plugin-svelte] src/lib/components/TripForm.svelte:22:2 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m20:   let tripId = $state(trip?.id ?? '');
+[2m[WebServer] [22m21:   let stages: Stage[] = $state(
+[2m[WebServer] [22m22:     trip ? JSON.parse(JSON.stringify(trip.stages)) : []
+[2m[WebServer] [22m            ^
+[2m[WebServer] [22m23:   );
+[2m[WebServer] [22m24:   let error = $state('');
+[2m[WebServer] [22m[33m12:18:53 PM [vite-plugin-svelte] src/lib/components/TripForm.svelte:22:35 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m20:   let tripId = $state(trip?.id ?? '');
+[2m[WebServer] [22m21:   let stages: Stage[] = $state(
+[2m[WebServer] [22m22:     trip ? JSON.parse(JSON.stringify(trip.stages)) : []
+[2m[WebServer] [22m                                             ^
+[2m[WebServer] [22m23:   );
+[2m[WebServer] [22m24:   let error = $state('');
+
+[1A[2K[2m[WebServer] [22m[33m[33m[PLUGIN_TIMINGS] Warning:[0m Your build spent significant time in plugins. Here is a breakdown:
+[2m[WebServer] [22m  - vite-plugin-sveltekit-guard (83%)
+[2m[WebServer] [22m  - vite-plugin-svelte:compile (10%)
+[2m[WebServer] [22mSee https://rolldown.rs/options/checks#plugintimings for more details.
+[2m[WebServer] [22m[39m
+
+
+Running 11 tests using 2 workers
+
+[1A[2K[1/11] e2e/dashboard.spec.ts:9:2 › Dashboard (M3a) › shows trip count stat card
+[1A[2K[2/11] e2e/trips.spec.ts:9:2 › Trips Page (M3a) › trips page loads and shows table or empty state
+[1A[2K[3/11] e2e/dashboard.spec.ts:16:2 › Dashboard (M3a) › shows location count stat card
+[1A[2K[4/11] e2e/trips.spec.ts:19:2 › Trips Page (M3a) › has create trip button
+[1A[2K[5/11] e2e/dashboard.spec.ts:23:2 › Dashboard (M3a) › shows health status card
+[1A[2K[6/11] e2e/trips.spec.ts:25:2 › Trips Page (M3a) › create trip dialog opens
+[1A[2K[7/11] e2e/dashboard.spec.ts:29:2 › Dashboard (M3a) › has link to trips page
+[1A[2K[8/11] e2e/trips.spec.ts:37:2 › Trips Page (M3a) › create trip with stage and waypoint
+[1A[2K[9/11] e2e/trips.spec.ts:73:2 › Trips Page (M3a) › edit trip opens pre-filled dialog
+[1A[2K[10/11] e2e/trips.spec.ts:95:2 › Trips Page (M3a) › delete trip with confirmation
+[1A[2K[11/11] e2e/trips.spec.ts:125:2 › Trips Page (M3a) › trips table shows stage count and date range
+[1A[2K  11 passed (10.1s)

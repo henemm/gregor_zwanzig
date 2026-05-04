@@ -1,0 +1,240 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 8 items
+
+tests/tdd/test_signal_output.py FFFFFFFF                                 [100%]
+
+=================================== FAILURES ===================================
+__________________________ test_signal_output_import ___________________________
+
+    def test_signal_output_import():
+        """GIVEN outputs package WHEN importing SignalOutput THEN class exists."""
+>       from outputs.signal import SignalOutput
+E       ModuleNotFoundError: No module named 'outputs.signal'
+
+tests/tdd/test_signal_output.py:13: ModuleNotFoundError
+____________________ test_signal_output_implements_protocol ____________________
+
+    def test_signal_output_implements_protocol():
+        """GIVEN SignalOutput WHEN checking protocol THEN satisfies OutputChannel."""
+        from outputs.base import OutputChannel
+>       from outputs.signal import SignalOutput
+E       ModuleNotFoundError: No module named 'outputs.signal'
+
+tests/tdd/test_signal_output.py:20: ModuleNotFoundError
+___________________________ test_signal_output_name ____________________________
+
+    def test_signal_output_name():
+        """GIVEN SignalOutput WHEN accessing .name THEN returns signal."""
+>       from outputs.signal import SignalOutput
+E       ModuleNotFoundError: No module named 'outputs.signal'
+
+tests/tdd/test_signal_output.py:29: ModuleNotFoundError
+_______________________ test_signal_output_config_fields _______________________
+
+    def test_signal_output_config_fields():
+        """GIVEN Settings WHEN creating with signal fields THEN accessible."""
+        from app.config import Settings
+        settings = Settings(
+            signal_phone="+43000000",
+            signal_api_key="000000",
+            signal_api_url="https://test.example.com",
+        )
+>       assert settings.signal_phone == "+43000000"
+               ^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_signal_output.py:44: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor...m.com', imap_host='mail.henemm.com', imap_port=993, sms_gateway_url=None, sms_api_key=None, sms_from=None, sms_to=None)
+item = 'signal_phone'
+
+    def __getattr__(self, item: str) -> Any:
+        private_attributes = object.__getattribute__(self, '__private_attributes__')
+        if item in private_attributes:
+            attribute = private_attributes[item]
+            if hasattr(attribute, '__get__'):
+                return attribute.__get__(self, type(self))  # type: ignore
+    
+            try:
+                # Note: self.__pydantic_private__ cannot be None if self.__private_attributes__ has items
+                return self.__pydantic_private__[item]  # type: ignore
+            except KeyError as exc:
+                raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}') from exc
+        else:
+            # `__pydantic_extra__` can fail to be set if the model is not yet fully initialized.
+            # See `BaseModel.__repr_args__` for more details
+            try:
+                pydantic_extra = object.__getattribute__(self, '__pydantic_extra__')
+            except AttributeError:
+                pydantic_extra = None
+    
+            if pydantic_extra and item in pydantic_extra:
+                return pydantic_extra[item]
+            else:
+                if hasattr(self.__class__, item):
+                    return super().__getattribute__(item)  # Raises AttributeError if appropriate
+                else:
+                    # this is the current error
+>                   raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+E                   AttributeError: 'Settings' object has no attribute 'signal_phone'
+
+.venv/lib/python3.12/site-packages/pydantic/main.py:1026: AttributeError
+_______________________ test_signal_output_can_send_true _______________________
+
+    def test_signal_output_can_send_true():
+        """GIVEN Settings with phone and code WHEN can_send_signal THEN True."""
+        from app.config import Settings
+        settings = Settings(signal_phone="+43000000", signal_api_key="000000")
+>       assert settings.can_send_signal() is True
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_signal_output.py:53: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor...m.com', imap_host='mail.henemm.com', imap_port=993, sms_gateway_url=None, sms_api_key=None, sms_from=None, sms_to=None)
+item = 'can_send_signal'
+
+    def __getattr__(self, item: str) -> Any:
+        private_attributes = object.__getattribute__(self, '__private_attributes__')
+        if item in private_attributes:
+            attribute = private_attributes[item]
+            if hasattr(attribute, '__get__'):
+                return attribute.__get__(self, type(self))  # type: ignore
+    
+            try:
+                # Note: self.__pydantic_private__ cannot be None if self.__private_attributes__ has items
+                return self.__pydantic_private__[item]  # type: ignore
+            except KeyError as exc:
+                raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}') from exc
+        else:
+            # `__pydantic_extra__` can fail to be set if the model is not yet fully initialized.
+            # See `BaseModel.__repr_args__` for more details
+            try:
+                pydantic_extra = object.__getattribute__(self, '__pydantic_extra__')
+            except AttributeError:
+                pydantic_extra = None
+    
+            if pydantic_extra and item in pydantic_extra:
+                return pydantic_extra[item]
+            else:
+                if hasattr(self.__class__, item):
+                    return super().__getattribute__(item)  # Raises AttributeError if appropriate
+                else:
+                    # this is the current error
+>                   raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+E                   AttributeError: 'Settings' object has no attribute 'can_send_signal'. Did you mean: 'can_send_email'?
+
+.venv/lib/python3.12/site-packages/pydantic/main.py:1026: AttributeError
+______________________ test_signal_output_can_send_false _______________________
+
+    def test_signal_output_can_send_false():
+        """GIVEN Settings without phone WHEN can_send_signal THEN False."""
+        from app.config import Settings
+        settings = Settings(signal_api_key="000000")
+>       assert settings.can_send_signal() is False
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_signal_output.py:60: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor...m.com', imap_host='mail.henemm.com', imap_port=993, sms_gateway_url=None, sms_api_key=None, sms_from=None, sms_to=None)
+item = 'can_send_signal'
+
+    def __getattr__(self, item: str) -> Any:
+        private_attributes = object.__getattribute__(self, '__private_attributes__')
+        if item in private_attributes:
+            attribute = private_attributes[item]
+            if hasattr(attribute, '__get__'):
+                return attribute.__get__(self, type(self))  # type: ignore
+    
+            try:
+                # Note: self.__pydantic_private__ cannot be None if self.__private_attributes__ has items
+                return self.__pydantic_private__[item]  # type: ignore
+            except KeyError as exc:
+                raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}') from exc
+        else:
+            # `__pydantic_extra__` can fail to be set if the model is not yet fully initialized.
+            # See `BaseModel.__repr_args__` for more details
+            try:
+                pydantic_extra = object.__getattribute__(self, '__pydantic_extra__')
+            except AttributeError:
+                pydantic_extra = None
+    
+            if pydantic_extra and item in pydantic_extra:
+                return pydantic_extra[item]
+            else:
+                if hasattr(self.__class__, item):
+                    return super().__getattribute__(item)  # Raises AttributeError if appropriate
+                else:
+                    # this is the current error
+>                   raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+E                   AttributeError: 'Settings' object has no attribute 'can_send_signal'. Did you mean: 'can_send_email'?
+
+.venv/lib/python3.12/site-packages/pydantic/main.py:1026: AttributeError
+__________________________ test_signal_output_factory __________________________
+
+    def test_signal_output_factory():
+        """GIVEN get_channel WHEN requesting signal THEN returns SignalOutput."""
+        from outputs.base import get_channel
+        from app.config import Settings
+        settings = Settings(signal_phone="+43000000", signal_api_key="000000")
+>       channel = get_channel("signal", settings)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_signal_output.py:68: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'signal'
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor...m.com', imap_host='mail.henemm.com', imap_port=993, sms_gateway_url=None, sms_api_key=None, sms_from=None, sms_to=None)
+
+    def get_channel(name: str, settings: "Settings") -> OutputChannel:
+        """
+        Factory function to create output channel instances.
+    
+        Args:
+            name: Channel identifier (e.g., "console", "email")
+            settings: Application settings for channel configuration
+    
+        Returns:
+            OutputChannel instance
+    
+        Raises:
+            ValueError: If channel is not known
+            OutputConfigError: If channel configuration is incomplete
+    
+        Example:
+            >>> channel = get_channel("email", settings)
+            >>> channel.send("Report", "Content here...")
+        """
+        # Import here to avoid circular imports
+        from outputs.console import ConsoleOutput
+        from outputs.email import EmailOutput
+>       from outputs.sms import SMSOutput
+E       ModuleNotFoundError: No module named 'outputs.sms'
+
+src/outputs/base.py:88: ModuleNotFoundError
+________________________ test_signal_output_trip_config ________________________
+
+    def test_signal_output_trip_config():
+        """GIVEN TripReportConfig WHEN send_signal THEN field exists."""
+        from app.models import TripReportConfig
+        config = TripReportConfig(trip_id="test")
+>       assert config.send_signal is False
+               ^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'TripReportConfig' object has no attribute 'send_signal'
+
+tests/tdd/test_signal_output.py:76: AttributeError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_signal_output.py::test_signal_output_import - ModuleNot...
+FAILED tests/tdd/test_signal_output.py::test_signal_output_implements_protocol
+FAILED tests/tdd/test_signal_output.py::test_signal_output_name - ModuleNotFo...
+FAILED tests/tdd/test_signal_output.py::test_signal_output_config_fields - At...
+FAILED tests/tdd/test_signal_output.py::test_signal_output_can_send_true - At...
+FAILED tests/tdd/test_signal_output.py::test_signal_output_can_send_false - A...
+FAILED tests/tdd/test_signal_output.py::test_signal_output_factory - ModuleNo...
+FAILED tests/tdd/test_signal_output.py::test_signal_output_trip_config - Attr...
+============================== 8 failed in 0.20s ===============================

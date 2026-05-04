@@ -1,0 +1,167 @@
+
+Running 48 tests using 2 workers
+
+  ✓   2 e2e/dashboard.spec.ts:9:2 › Dashboard (M3a) › shows trip count stat card (612ms)
+  ✓   1 e2e/locations.spec.ts:9:2 › Locations Page (M3b) › locations page loads and shows table or empty state (671ms)
+  ✓   3 e2e/dashboard.spec.ts:16:2 › Dashboard (M3a) › shows location count stat card (385ms)
+  ✓   4 e2e/locations.spec.ts:19:2 › Locations Page (M3b) › has create location button (378ms)
+  ✓   5 e2e/dashboard.spec.ts:23:2 › Dashboard (M3a) › shows health status card (322ms)
+  ✓   6 e2e/locations.spec.ts:25:2 › Locations Page (M3b) › create location dialog opens (401ms)
+  ✓   7 e2e/dashboard.spec.ts:29:2 › Dashboard (M3a) › has link to trips page (330ms)
+  ✓   9 e2e/nav-redesign.spec.ts:9:2 › F76 Phase A: Navigation Redesign › sidebar shows exactly 3 nav items (340ms)
+  ✓  10 e2e/nav-redesign.spec.ts:20:2 › F76 Phase A: Navigation Redesign › sidebar shows "Startseite" link to / (257ms)
+  ✓  11 e2e/nav-redesign.spec.ts:32:2 › F76 Phase A: Navigation Redesign › sidebar shows "Meine Touren" link to /trips (283ms)
+  ✓  12 e2e/nav-redesign.spec.ts:44:2 › F76 Phase A: Navigation Redesign › sidebar shows "Orts-Vergleich" link to /compare (273ms)
+  ✓  13 e2e/nav-redesign.spec.ts:56:2 › F76 Phase A: Navigation Redesign › sidebar does NOT show old nav items (Locations, Abos, Wetter) (277ms)
+  ✓  14 e2e/nav-redesign.spec.ts:68:2 › F76 Phase A: Navigation Redesign › sidebar has no group headers (Daten, System) (261ms)
+  ✓  15 e2e/nav-redesign.spec.ts:80:2 › F76 Phase A: Navigation Redesign › active page is highlighted in nav (288ms)
+  ✓  16 e2e/system-status.spec.ts:12:2 › F75: System-Status → Mein Service › shows "Deine Reports" section (293ms)
+  ✓  17 e2e/system-status.spec.ts:16:2 › F75: System-Status → Mein Service › shows next morning report time (272ms)
+  ✓  18 e2e/system-status.spec.ts:20:2 › F75: System-Status → Mein Service › shows next evening report time (280ms)
+  ✓  19 e2e/system-status.spec.ts:24:2 › F75: System-Status → Mein Service › shows trip checks status (283ms)
+  ✓  20 e2e/system-status.spec.ts:28:2 › F75: System-Status → Mein Service › does NOT show internal job names (286ms)
+  ✓  21 e2e/system-status.spec.ts:35:2 › F75: System-Status → Mein Service › shows "Dein Account" section (276ms)
+  ✓  22 e2e/system-status.spec.ts:39:2 › F75: System-Status → Mein Service › shows trip count with link (299ms)
+  ✓  23 e2e/system-status.spec.ts:45:2 › F75: System-Status → Mein Service › shows subscription count with link (309ms)
+  ✓  24 e2e/system-status.spec.ts:51:2 › F75: System-Status → Mein Service › shows location count with link (309ms)
+  ✓  25 e2e/system-status.spec.ts:57:2 › F75: System-Status → Mein Service › shows notification channels (287ms)
+  ✘   8 e2e/locations.spec.ts:35:2 › Locations Page (M3b) › create location with coordinates (5.5s)
+  ✘  26 e2e/system-status.spec.ts:64:2 › F75: System-Status → Mein Service › shows weather model per location (315ms)
+  ✓  28 e2e/system-status.spec.ts:74:2 › F75: System-Status → Mein Service › shows "Verfügbarkeit" section with single status indicator (420ms)
+  ✓  27 e2e/locations.spec.ts:57:2 › Locations Page (M3b) › edit location opens pre-filled dialog (519ms)
+  ✓  29 e2e/system-status.spec.ts:80:2 › F75: System-Status → Mein Service › shows version number (411ms)
+  ✓  30 e2e/locations.spec.ts:77:2 › Locations Page (M3b) › delete location with confirmation (612ms)
+  ✓  31 e2e/system-status.spec.ts:86:2 › F75: System-Status → Mein Service › does NOT show old config table (345ms)
+  ✓  32 e2e/locations.spec.ts:105:2 › Locations Page (M3b) › table shows coordinates and elevation (375ms)
+  ✓  33 e2e/system-status.spec.ts:92:2 › F75: System-Status → Mein Service › does NOT show Go/Python health split (342ms)
+  ✓  35 e2e/system-status.spec.ts:97:2 › F75: System-Status → Mein Service › does NOT show old "Zeitplaner" heading (336ms)
+  ✓  36 e2e/trips.spec.ts:9:2 › Trips Page (M3a) › trips page loads and shows table or empty state (338ms)
+  ✓  37 e2e/trips.spec.ts:19:2 › Trips Page (M3a) › has create trip button (282ms)
+  ✓  38 e2e/trips.spec.ts:25:2 › Trips Page (M3a) › create trip dialog opens (339ms)
+  ✘  34 e2e/locations.spec.ts:120:2 › Locations Page (M3b) › activity profile badge shown after selection (5.5s)
+  ✓  40 e2e/weather.spec.ts:9:2 › Weather Table (M3c) › weather page loads with location selector and button (322ms)
+  ✓  41 e2e/weather.spec.ts:17:2 › Weather Table (M3c) › shows error when no location selected (347ms)
+  ✓  42 e2e/weather.spec.ts:24:2 › Weather Table (M3c) › loads forecast table after selecting location (442ms)
+  ✘  39 e2e/trips.spec.ts:37:2 › Trips Page (M3a) › create trip with stage and waypoint (5.8s)
+  ✓  43 e2e/weather.spec.ts:45:2 › Weather Table (M3c) › forecast table has 8 columns (504ms)
+  ✓  44 e2e/weather.spec.ts:60:2 › Weather Table (M3c) › shows meta info after loading forecast (520ms)
+  -  45 e2e/trips.spec.ts:73:2 › Trips Page (M3a) › edit trip opens pre-filled dialog
+  ✓  46 e2e/weather.spec.ts:74:2 › Weather Table (M3c) › weather page is still accessible via direct URL (338ms)
+  ✓  47 e2e/trips.spec.ts:95:2 › Trips Page (M3a) › delete trip with confirmation (602ms)
+  -  48 e2e/trips.spec.ts:125:2 › Trips Page (M3a) › trips table shows stage count and date range
+
+
+  1) e2e/locations.spec.ts:35:2 › Locations Page (M3b) › create location with coordinates ──────────
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).not.[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator:  locator('[role="dialog"]')
+    Expected: not visible
+    Received: visible
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "not toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for locator('[role="dialog"]')[22m
+    [2m    9 × locator resolved to <div id="bits-c2" role="dialog" tabindex="-1" aria-modal="true" data-state="open" data-dialog-content="" aria-labelledby="bits-c7" data-slot="dialog-content" class="bg-popover text-popover-foreground data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 ring-foreground/10 grid gap-4 rounded-xl p-4 text-sm ring-1 duration-100 sm:max-w-sm fixed top-1/2 left-1/2 z-50 w-full -translate-x-1/2 -translate-y-1/2 outline-none max…>…</div>[22m
+    [2m      - unexpected value "visible"[22m
+
+
+      49 |
+      50 | 		// Dialog should close
+    > 51 | 		await expect(dialog).not.toBeVisible({ timeout: 5000 });
+         | 		                         ^
+      52 |
+      53 | 		// Location should appear in the list
+      54 | 		await expect(page.locator('text=E2E Testort')).toBeVisible();
+        at /home/hem/gregor_zwanzig/frontend/e2e/locations.spec.ts:51:28
+
+    Error Context: test-results/locations-Locations-Page-M-b84c2-e-location-with-coordinates/error-context.md
+
+  2) e2e/locations.spec.ts:120:2 › Locations Page (M3b) › activity profile badge shown after selection 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).not.[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator:  locator('[role="dialog"]')
+    Expected: not visible
+    Received: visible
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "not toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for locator('[role="dialog"]')[22m
+    [2m    9 × locator resolved to <div id="bits-c2" role="dialog" tabindex="-1" aria-modal="true" data-state="open" data-dialog-content="" aria-labelledby="bits-c7" data-slot="dialog-content" class="bg-popover text-popover-foreground data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 ring-foreground/10 grid gap-4 rounded-xl p-4 text-sm ring-1 duration-100 sm:max-w-sm fixed top-1/2 left-1/2 z-50 w-full -translate-x-1/2 -translate-y-1/2 outline-none max…>…</div>[22m
+    [2m      - unexpected value "visible"[22m
+
+
+      131 |
+      132 | 		await dialog.locator('button', { hasText: /Speichern|Save/i }).click();
+    > 133 | 		await expect(dialog).not.toBeVisible({ timeout: 5000 });
+          | 		                         ^
+      134 |
+      135 | 		// Location should appear in list with profile badge
+      136 | 		await expect(page.locator('text=Profil Test')).toBeVisible();
+        at /home/hem/gregor_zwanzig/frontend/e2e/locations.spec.ts:133:28
+
+    Error Context: test-results/locations-Locations-Page-M-107b9-badge-shown-after-selection/error-context.md
+
+  3) e2e/system-status.spec.ts:64:2 › F75: System-Status → Mein Service › shows weather model per location 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: locator('[data-testid="account-section"]').locator('[data-testid="weather-models"]').getByText(/GeoSphere|OpenMeteo/)
+    Expected: visible
+    Error: strict mode violation: locator('[data-testid="account-section"]').locator('[data-testid="weather-models"]').getByText(/GeoSphere|OpenMeteo/) resolved to 2 elements:
+        1) <p class="text-sm text-muted-foreground">E2E Testort → GeoSphere (Alpen)</p> aka getByText('E2E Testort → GeoSphere (')
+        2) <p class="text-sm text-muted-foreground">Profil Test → GeoSphere (Alpen)</p> aka getByText('Profil Test → GeoSphere (')
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for locator('[data-testid="account-section"]').locator('[data-testid="weather-models"]').getByText(/GeoSphere|OpenMeteo/)[22m
+
+
+      67 | 		await expect(models).toBeVisible();
+      68 | 		// Should show provider name (GeoSphere or OpenMeteo)
+    > 69 | 		await expect(models.getByText(/GeoSphere|OpenMeteo/)).toBeVisible();
+         | 		                                                      ^
+      70 | 	});
+      71 |
+      72 | 	// --- Sektion 3: Verfuegbarkeit ---
+        at /home/hem/gregor_zwanzig/frontend/e2e/system-status.spec.ts:69:57
+
+    Error Context: test-results/system-status-F75-System-S-59a39--weather-model-per-location/error-context.md
+
+  4) e2e/trips.spec.ts:37:2 › Trips Page (M3a) › create trip with stage and waypoint ───────────────
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).not.[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator:  locator('[role="dialog"]')
+    Expected: not visible
+    Received: visible
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "not toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for locator('[role="dialog"]')[22m
+    [2m    9 × locator resolved to <div id="bits-c2" role="dialog" tabindex="-1" aria-modal="true" data-state="open" data-dialog-content="" data-slot="dialog-content" aria-labelledby="bits-c11" class="bg-popover text-popover-foreground data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 ring-foreground/10 grid gap-4 rounded-xl p-4 text-sm ring-1 duration-100 sm:max-w-sm fixed top-1/2 left-1/2 z-50 w-full -translate-x-1/2 -translate-y-1/2 outline-none ma…>…</div>[22m
+    [2m      - unexpected value "visible"[22m
+
+
+      65 |
+      66 | 		// Dialog should close
+    > 67 | 		await expect(dialog).not.toBeVisible({ timeout: 5000 });
+         | 		                         ^
+      68 |
+      69 | 		// Trip should appear in the list
+      70 | 		await expect(page.locator('text=E2E Test Trip')).toBeVisible();
+        at /home/hem/gregor_zwanzig/frontend/e2e/trips.spec.ts:67:28
+
+    Error Context: test-results/trips-Trips-Page-M3a-create-trip-with-stage-and-waypoint/error-context.md
+
+  4 failed
+    e2e/locations.spec.ts:35:2 › Locations Page (M3b) › create location with coordinates ───────────
+    e2e/locations.spec.ts:120:2 › Locations Page (M3b) › activity profile badge shown after selection 
+    e2e/system-status.spec.ts:64:2 › F75: System-Status → Mein Service › shows weather model per location 
+    e2e/trips.spec.ts:37:2 › Trips Page (M3a) › create trip with stage and waypoint ────────────────
+  2 skipped
+  42 passed (26.9s)

@@ -1,0 +1,12 @@
+=== RUN   TestGetProfileHandler
+--- PASS: TestGetProfileHandler (0.00s)
+=== RUN   TestGetProfileHandlerNotFound
+--- PASS: TestGetProfileHandlerNotFound (0.00s)
+=== RUN   TestUpdateProfileHandler
+--- PASS: TestUpdateProfileHandler (0.00s)
+=== RUN   TestUpdateProfilePreservesPasswordHash
+--- PASS: TestUpdateProfilePreservesPasswordHash (0.00s)
+=== RUN   TestRegisterCreatesUserDirs
+--- PASS: TestRegisterCreatesUserDirs (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/handler	(cached)

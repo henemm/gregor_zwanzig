@@ -1,0 +1,10 @@
+ERROR: file or directory not found: tests/tdd/test_design_optimierungen.py
+
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 0 items
+
+============================ no tests ran in 0.00s =============================

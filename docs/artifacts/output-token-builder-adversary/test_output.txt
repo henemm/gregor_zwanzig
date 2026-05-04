@@ -1,0 +1,50 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/agent-a009d9ae
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 16 items
+
+tests/unit/test_token_builder.py ..........                              [ 62%]
+tests/golden/test_sms_golden.py .....F                                   [100%]
+
+=================================== FAILURES ===================================
+___________________ test_new_builder_matches_sms_trip_today ____________________
+
+    def test_new_builder_matches_sms_trip_today():
+        """
+        GIVEN: One realistic segment (GR221, mild, dry) encoded both ways
+        WHEN:  Old SMSTripFormatter.format_sms vs new build_token_line(...).render(160)
+        THEN:  Both outputs are bit-identical (no drift)
+    
+               This test is the safety net for β1: the new builder MUST reproduce
+               today's SMS exactly. If the new builder differs, β3's caller migration
+               would change user-visible output — which β1 explicitly forbids.
+    
+        EXPECTED RED: ImportError on `from output.tokens import build_token_line`.
+        """
+        from formatters.sms_trip import SMSTripFormatter
+        from output.tokens import build_token_line
+    
+        segments, forecast, config = _build_synthetic_segments_for_cross_check()
+    
+        old = SMSTripFormatter().format_sms(segments)
+        new = build_token_line(
+            forecast, config,
+            report_type="evening",
+            stage_name="GR221 Tag1",
+        ).render(160)
+    
+>       assert new == old, f"Drift between old SMS and new builder:\n  old={old!r}\n  new={new!r}"
+E       AssertionError: Drift between old SMS and new builder:
+E           old='E1:T8/15 W25'
+E           new='GR221 Tag1: W25 G40 T8/15'
+E       assert 'GR221 Tag1: W25 G40 T8/15' == 'E1:T8/15 W25'
+E         
+E         - E1:T8/15 W25
+E         + GR221 Tag1: W25 G40 T8/15
+
+tests/golden/test_sms_golden.py:403: AssertionError
+=========================== short test summary info ============================
+FAILED tests/golden/test_sms_golden.py::test_new_builder_matches_sms_trip_today
+========================= 1 failed, 15 passed in 0.15s =========================

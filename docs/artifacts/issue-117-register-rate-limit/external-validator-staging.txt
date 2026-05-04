@@ -1,0 +1,28 @@
+================================================
+  External Validator — Isolierte QA-Session
+================================================
+
+  Spec:   docs/specs/bugfix/register_rate_limit.md
+  Server: https://staging.gregor20.henemm.com
+
+  Diese Session ist isoliert vom Implementierer.
+  Der Validator kennt nur: Spec + laufende App.
+================================================
+
+## Validator-Verdict: **VERIFIED**
+
+**Spec:** `docs/specs/bugfix/register_rate_limit.md`
+**Server:** https://staging.gregor20.henemm.com
+**Report:** `docs/artifacts/register-rate-limit-validator/validator-report.md`
+
+### Belegte Eigenschaften
+- **429-Pfad:** 7 von 7 sequentielle Register-Requests aus Validator-IP → `HTTP/1.1 429`, `Retry-After: 720`, Body `{"error":"rate_limit_exceeded"}`
+- **Burst-Konfiguration (indirekt):** `Retry-After: 720` = 3600/5 → `burst=5, window=1h` wie spezifiziert
+- **Spoofing-Resistenz:** Manipulierte `X-Real-IP: 9.9.9.9` und `X-Forwarded-For: 8.8.8.8` werden von Nginx neutralisiert → 429 bleibt an echte Client-IP gebunden
+- **Login unverändert:** 8 Login-Requests → 8× 401, **kein einziger 429** — exakt wie Spec verlangt
+
+### UNKLAR (kein Widerspruch zur Spec)
+- Direkte Beobachtung der ersten 5 erlaubten Requests nicht möglich, weil Validator-IP-Bucket zu Testbeginn bereits aufgebraucht war (Refill-Zeit 12 Min/Token zu lang).
+- Pro-IP-Independenz von außen nicht testbar — Nginx erzwingt korrekt eine IP. Sicherheitlich erwünscht.
+
+Hauptziel des Fixes (Account-Spam-Bremse, henemm-security#64) ist erreicht.

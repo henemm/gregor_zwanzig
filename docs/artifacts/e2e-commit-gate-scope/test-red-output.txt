@@ -1,0 +1,172 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 13 items
+
+tests/tdd/test_e2e_check_verification.py ........FFFFF                   [100%]
+
+=================================== FAILURES ===================================
+____ test_check_verification_frontend_only_passes_with_server_restart_only _____
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7eb65b71cd10>
+tmp_path = PosixPath('/tmp/pytest-of-hem/pytest-140/test_check_verification_fronte1')
+
+    def test_check_verification_frontend_only_passes_with_server_restart_only(monkeypatch, tmp_path):
+        """
+        GIVEN: Scope = frontend-only, JSON hat NUR server_restarted=True (keine Backend-Felder)
+        WHEN: check_verification() aufgerufen
+        THEN: (True, ...) — fuer frontend-only ist nur server_restarted Pflicht
+    
+        AKTUELLES VERHALTEN: FAIL — check_verification() verlangt alle 4 Felder
+        NACH IMPLEMENTIERUNG: PASS
+        """
+        _write_json(tmp_path, {
+            "verified_at": _fresh_ts(),
+            "server_restarted": True,
+            # test_trip_created, emails_checked, test_trip_cleaned absichtlich nicht gesetzt
+        })
+        _mock_scope(monkeypatch, "frontend-only")
+        _mock_root(monkeypatch, tmp_path)
+    
+        ok, msg = e2e_commit_gate.check_verification()
+    
+>       assert ok is True
+E       assert False is True
+
+tests/tdd/test_e2e_check_verification.py:236: AssertionError
+____________ test_check_verification_backend_passes_with_all_fields ____________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7eb65c4a0a70>
+tmp_path = PosixPath('/tmp/pytest-of-hem/pytest-140/test_check_verification_backen0')
+
+    def test_check_verification_backend_passes_with_all_fields(monkeypatch, tmp_path):
+        """
+        GIVEN: Scope = backend, JSON hat alle 4 Pflichtfelder + scope='backend'
+        WHEN: check_verification() aufgerufen
+        THEN: (True, Nachricht enthaelt 'backend')
+    
+        AKTUELLES VERHALTEN: FAIL — Erfolgs-Message enthaelt kein Scope-Info
+        NACH IMPLEMENTIERUNG: PASS
+        """
+        _write_json(tmp_path, {
+            "verified_at": _fresh_ts(),
+            "server_restarted": True, "test_trip_created": True,
+            "emails_checked": True, "test_trip_cleaned": True,
+            "scope": "backend",
+        })
+        _mock_scope(monkeypatch, "backend")
+        _mock_root(monkeypatch, tmp_path)
+    
+        ok, msg = e2e_commit_gate.check_verification()
+    
+        assert ok is True
+>       assert "backend" in msg.lower()
+E       AssertionError: assert 'backend' in 'e2e verifiziert vor 0 minuten.'
+E        +  where 'e2e verifiziert vor 0 minuten.' = <built-in method lower of str object at 0x7eb65b72bdc0>()
+E        +    where <built-in method lower of str object at 0x7eb65b72bdc0> = 'E2E verifiziert vor 0 Minuten.'.lower
+
+tests/tdd/test_e2e_check_verification.py:260: AssertionError
+______ test_check_verification_full_stack_verified_covers_backend_commit _______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7eb65b71daf0>
+tmp_path = PosixPath('/tmp/pytest-of-hem/pytest-140/test_check_verification_full_s0')
+
+    def test_check_verification_full_stack_verified_covers_backend_commit(monkeypatch, tmp_path):
+        """
+        GIVEN: Commit-Scope = backend, JSON scope = 'full-stack' (alle 4 Felder vorhanden)
+        WHEN: check_verification() aufgerufen
+        THEN: (True, Nachricht enthaelt 'backend') — full-stack deckt backend ab
+    
+        AKTUELLES VERHALTEN: FAIL — Erfolgs-Message enthaelt kein Scope-Info
+        NACH IMPLEMENTIERUNG: PASS
+        """
+        _write_json(tmp_path, {
+            "verified_at": _fresh_ts(),
+            "server_restarted": True, "test_trip_created": True,
+            "emails_checked": True, "test_trip_cleaned": True,
+            "scope": "full-stack",
+        })
+        _mock_scope(monkeypatch, "backend")
+        _mock_root(monkeypatch, tmp_path)
+    
+        ok, msg = e2e_commit_gate.check_verification()
+    
+        assert ok is True
+>       assert "backend" in msg.lower()
+E       AssertionError: assert 'backend' in 'e2e verifiziert vor 0 minuten.'
+E        +  where 'e2e verifiziert vor 0 minuten.' = <built-in method lower of str object at 0x7eb65b72b0f0>()
+E        +    where <built-in method lower of str object at 0x7eb65b72b0f0> = 'E2E verifiziert vor 0 Minuten.'.lower
+
+tests/tdd/test_e2e_check_verification.py:284: AssertionError
+___________ test_check_verification_scope_too_low_full_stack_blocked ___________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7eb65b71de20>
+tmp_path = PosixPath('/tmp/pytest-of-hem/pytest-140/test_check_verification_scope_0')
+
+    def test_check_verification_scope_too_low_full_stack_blocked(monkeypatch, tmp_path):
+        """
+        GIVEN: Commit-Scope = full-stack, JSON scope = 'frontend-only'
+        WHEN: check_verification() aufgerufen
+        THEN: (False, Fehlermeldung nennt 'frontend-only' oder 'scope')
+    
+        AKTUELLES VERHALTEN: FAIL — kein Scope-Vergleich, Gate blockiert nicht aus richtigem Grund
+        NACH IMPLEMENTIERUNG: PASS
+        """
+        _write_json(tmp_path, {
+            "verified_at": _fresh_ts(),
+            "server_restarted": True,
+            "scope": "frontend-only",
+        })
+        _mock_scope(monkeypatch, "full-stack")
+        _mock_root(monkeypatch, tmp_path)
+    
+        ok, msg = e2e_commit_gate.check_verification()
+    
+        assert ok is False
+>       assert "frontend-only" in msg or "scope" in msg.lower()
+E       AssertionError: assert ('frontend-only' in 'E2E-Verifikation unvollstaendig. Fehlend: test_trip_created, emails_checked, test_trip_cleaned. Fuehre `/e2e-verify` vollstaendig aus!' or 'scope' in 'e2e-verifikation unvollstaendig. fehlend: test_trip_created, emails_checked, test_trip_cleaned. fuehre `/e2e-verify` vollstaendig aus!')
+E        +  where 'e2e-verifikation unvollstaendig. fehlend: test_trip_created, emails_checked, test_trip_cleaned. fuehre `/e2e-verify` vollstaendig aus!' = <built-in method lower of str object at 0x7eb65b95ee40>()
+E        +    where <built-in method lower of str object at 0x7eb65b95ee40> = 'E2E-Verifikation unvollstaendig. Fehlend: test_trip_created, emails_checked, test_trip_cleaned. Fuehre `/e2e-verify` vollstaendig aus!'.lower
+
+tests/tdd/test_e2e_check_verification.py:307: AssertionError
+______ test_check_verification_scope_too_low_backend_vs_frontend_blocked _______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7eb65b71e720>
+tmp_path = PosixPath('/tmp/pytest-of-hem/pytest-140/test_check_verification_scope_1')
+
+    def test_check_verification_scope_too_low_backend_vs_frontend_blocked(monkeypatch, tmp_path):
+        """
+        GIVEN: Commit-Scope = backend, JSON scope = 'frontend-only'
+        WHEN: check_verification() aufgerufen
+        THEN: (False, Fehlermeldung nennt Scope-Konflikt — 'frontend-only' oder 'scope')
+    
+        AKTUELLES VERHALTEN: FAIL — blockiert zwar (fehlende Felder), aber
+        Fehlermeldung nennt nicht den Scope-Konflikt
+        NACH IMPLEMENTIERUNG: PASS
+        """
+        _write_json(tmp_path, {
+            "verified_at": _fresh_ts(),
+            "server_restarted": True,
+            "scope": "frontend-only",
+        })
+        _mock_scope(monkeypatch, "backend")
+        _mock_root(monkeypatch, tmp_path)
+    
+        ok, msg = e2e_commit_gate.check_verification()
+    
+        assert ok is False
+>       assert "frontend-only" in msg or "scope" in msg.lower()
+E       AssertionError: assert ('frontend-only' in 'E2E-Verifikation unvollstaendig. Fehlend: test_trip_created, emails_checked, test_trip_cleaned. Fuehre `/e2e-verify` vollstaendig aus!' or 'scope' in 'e2e-verifikation unvollstaendig. fehlend: test_trip_created, emails_checked, test_trip_cleaned. fuehre `/e2e-verify` vollstaendig aus!')
+E        +  where 'e2e-verifikation unvollstaendig. fehlend: test_trip_created, emails_checked, test_trip_cleaned. fuehre `/e2e-verify` vollstaendig aus!' = <built-in method lower of str object at 0x7eb65b95fb50>()
+E        +    where <built-in method lower of str object at 0x7eb65b95fb50> = 'E2E-Verifikation unvollstaendig. Fehlend: test_trip_created, emails_checked, test_trip_cleaned. Fuehre `/e2e-verify` vollstaendig aus!'.lower
+
+tests/tdd/test_e2e_check_verification.py:331: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_e2e_check_verification.py::test_check_verification_frontend_only_passes_with_server_restart_only
+FAILED tests/tdd/test_e2e_check_verification.py::test_check_verification_backend_passes_with_all_fields
+FAILED tests/tdd/test_e2e_check_verification.py::test_check_verification_full_stack_verified_covers_backend_commit
+FAILED tests/tdd/test_e2e_check_verification.py::test_check_verification_scope_too_low_full_stack_blocked
+FAILED tests/tdd/test_e2e_check_verification.py::test_check_verification_scope_too_low_backend_vs_frontend_blocked
+========================= 5 failed, 8 passed in 0.05s ==========================

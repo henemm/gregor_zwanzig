@@ -1,0 +1,36 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 16 items
+
+tests/tdd/test_design_optimierungen.py .......F                          [ 50%]
+tests/tdd/test_account_page.py ......FF                                  [100%]
+
+=================================== FAILURES ===================================
+________________ TestSettingsRenamed.test_settings_page_heading ________________
+tests/tdd/test_design_optimierungen.py:225: in test_settings_page_heading
+    assert text.strip() == "System-Status", (
+E   AssertionError: Settings page heading is 'Mein Konto', expected 'System-Status'
+E   assert 'Mein Konto' == 'System-Status'
+E     
+E     - System-Status
+E     + Mein Konto
+___________________ TestNavigation.test_nav_has_account_link ___________________
+tests/tdd/test_account_page.py:136: in test_nav_has_account_link
+    assert '/account' in resp.text, "Missing /account link in navigation"
+E   AssertionError: Missing /account link in navigation
+E   assert '/account' in '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n'
+E    +  where '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n' = <Response [200 OK]>.text
+__________________ TestNavigation.test_nav_shows_konto_label ___________________
+tests/tdd/test_account_page.py:146: in test_nav_shows_konto_label
+    assert 'Konto' in resp.text, "Missing 'Konto' label in navigation"
+E   AssertionError: Missing 'Konto' label in navigation
+E   assert 'Konto' in '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n'
+E    +  where '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n' = <Response [200 OK]>.text
+=========================== short test summary info ============================
+FAILED tests/tdd/test_design_optimierungen.py::TestSettingsRenamed::test_settings_page_heading
+FAILED tests/tdd/test_account_page.py::TestNavigation::test_nav_has_account_link
+FAILED tests/tdd/test_account_page.py::TestNavigation::test_nav_shows_konto_label
+======================== 3 failed, 13 passed in 18.42s =========================
