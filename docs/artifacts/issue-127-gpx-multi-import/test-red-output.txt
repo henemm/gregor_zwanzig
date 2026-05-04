@@ -1,0 +1,229 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 13 items
+
+tests/unit/test_natural_sort.py FFFFFFF                                  [ 53%]
+tests/unit/test_gpx_import_in_trip_dialog.py FFFFFF                      [100%]
+
+=================================== FAILURES ===================================
+_______________ TestNaturalSortKey.test_khw_pattern_natural_sort _______________
+
+self = <test_natural_sort.TestNaturalSortKey object at 0x76fed3062a80>
+
+    def test_khw_pattern_natural_sort(self):
+        """
+        GIVEN: KHW filenames with mixed alpha/numeric suffixes
+        WHEN: sorted with natural_sort_key
+        THEN: KHW_00a < KHW_00b < KHW_10 < KHW_11
+    
+        EXPECTED: FAIL - src.core.natural_sort doesn't exist yet
+        """
+>       from core.natural_sort import natural_sort_key
+E       ModuleNotFoundError: No module named 'core.natural_sort'
+
+tests/unit/test_natural_sort.py:26: ModuleNotFoundError
+________________ TestNaturalSortKey.test_pure_numeric_filenames ________________
+
+self = <test_natural_sort.TestNaturalSortKey object at 0x76fed3310d10>
+
+    def test_pure_numeric_filenames(self):
+        """
+        GIVEN: Filenames with pure numeric prefixes that lex-sort wrong
+        WHEN: sorted with natural_sort_key
+        THEN: Numeric order (1, 2, 10) not lex order (1, 10, 2)
+        """
+>       from core.natural_sort import natural_sort_key
+E       ModuleNotFoundError: No module named 'core.natural_sort'
+
+tests/unit/test_natural_sort.py:38: ModuleNotFoundError
+___________________ TestNaturalSortKey.test_alphanumeric_mix ___________________
+
+self = <test_natural_sort.TestNaturalSortKey object at 0x76fed2811730>
+
+    def test_alphanumeric_mix(self):
+        """
+        GIVEN: Mixed alphanumeric tokens
+        WHEN: sorted with natural_sort_key
+        THEN: Numeric chunks compared as ints, text chunks as strings
+        """
+>       from core.natural_sort import natural_sort_key
+E       ModuleNotFoundError: No module named 'core.natural_sort'
+
+tests/unit/test_natural_sort.py:50: ModuleNotFoundError
+______________________ TestNaturalSortKey.test_empty_list ______________________
+
+self = <test_natural_sort.TestNaturalSortKey object at 0x76fed2810350>
+
+    def test_empty_list(self):
+        """
+        GIVEN: Empty list
+        WHEN: sorted with natural_sort_key
+        THEN: Empty list (no exceptions)
+        """
+>       from core.natural_sort import natural_sort_key
+E       ModuleNotFoundError: No module named 'core.natural_sort'
+
+tests/unit/test_natural_sort.py:62: ModuleNotFoundError
+____________________ TestNaturalSortKey.test_single_element ____________________
+
+self = <test_natural_sort.TestNaturalSortKey object at 0x76fed2811940>
+
+    def test_single_element(self):
+        """
+        GIVEN: Single-element list
+        WHEN: sorted with natural_sort_key
+        THEN: List unchanged
+        """
+>       from core.natural_sort import natural_sort_key
+E       ModuleNotFoundError: No module named 'core.natural_sort'
+
+tests/unit/test_natural_sort.py:72: ModuleNotFoundError
+__________________ TestNaturalSortKey.test_identical_strings ___________________
+
+self = <test_natural_sort.TestNaturalSortKey object at 0x76fed28118e0>
+
+    def test_identical_strings(self):
+        """
+        GIVEN: List with identical strings
+        WHEN: sorted with natural_sort_key
+        THEN: Stable order, all elements present
+        """
+>       from core.natural_sort import natural_sort_key
+E       ModuleNotFoundError: No module named 'core.natural_sort'
+
+tests/unit/test_natural_sort.py:82: ModuleNotFoundError
+__________________ TestNaturalSortKey.test_real_khw_filenames __________________
+
+self = <test_natural_sort.TestNaturalSortKey object at 0x76fed28116d0>
+
+    def test_real_khw_filenames(self):
+        """
+        GIVEN: 13 real KHW filenames in randomized order
+        WHEN: sorted with natural_sort_key
+        THEN: Order is 00a, 00b, 01, 02, ..., 11
+    
+        This is the exact use case from Issue #127 (Trip 5f534011,
+        Kaiser-Hirsch-Weg, 13 etappen).
+        """
+>       from core.natural_sort import natural_sort_key
+E       ModuleNotFoundError: No module named 'core.natural_sort'
+
+tests/unit/test_natural_sort.py:96: ModuleNotFoundError
+______ TestMultiGpxImport.test_natural_sort_applied_to_uploaded_filenames ______
+
+self = <test_gpx_import_in_trip_dialog.TestMultiGpxImport object at 0x76fed2811a30>
+tmp_path = PosixPath('/tmp/pytest-of-hem/pytest-434/test_natural_sort_applied_to_u0')
+
+    def test_natural_sort_applied_to_uploaded_filenames(self, tmp_path):
+        """
+        GIVEN: 3 valid GPX bytes uploaded in random filename order
+               (KHW_11.gpx, KHW_00a.gpx, KHW_10.gpx)
+        WHEN: process_bulk_gpx_uploads(files, start_date)
+        THEN: Returned stages are ordered KHW_00a -> KHW_10 -> KHW_11
+    
+        Real-world reproduction of Issue #127 (Browser FileList random order).
+        """
+>       from web.pages.trips import process_bulk_gpx_uploads
+E       ImportError: cannot import name 'process_bulk_gpx_uploads' from 'web.pages.trips' (/home/hem/gregor_zwanzig/src/web/pages/trips.py)
+
+tests/unit/test_gpx_import_in_trip_dialog.py:170: ImportError
+________ TestMultiGpxImport.test_date_propagation_starts_at_user_choice ________
+
+self = <test_gpx_import_in_trip_dialog.TestMultiGpxImport object at 0x76fed2813e30>
+tmp_path = PosixPath('/tmp/pytest-of-hem/pytest-434/test_date_propagation_starts_a0')
+
+    def test_date_propagation_starts_at_user_choice(self, tmp_path):
+        """
+        GIVEN: 3 valid GPX files + start_date=2026-05-01
+        WHEN: process_bulk_gpx_uploads(...)
+        THEN: Stage 1 -> 2026-05-01, Stage 2 -> 2026-05-02, Stage 3 -> 2026-05-03
+        """
+>       from web.pages.trips import process_bulk_gpx_uploads
+E       ImportError: cannot import name 'process_bulk_gpx_uploads' from 'web.pages.trips' (/home/hem/gregor_zwanzig/src/web/pages/trips.py)
+
+tests/unit/test_gpx_import_in_trip_dialog.py:208: ImportError
+_______ TestMultiGpxImport.test_corrupt_file_skipped_with_gapless_dates ________
+
+self = <test_gpx_import_in_trip_dialog.TestMultiGpxImport object at 0x76fed2811460>
+tmp_path = PosixPath('/tmp/pytest-of-hem/pytest-434/test_corrupt_file_skipped_with0')
+
+    def test_corrupt_file_skipped_with_gapless_dates(self, tmp_path):
+        """
+        GIVEN: 3 files where the middle one is corrupt bytes
+        WHEN: process_bulk_gpx_uploads(start_date=2026-05-01)
+        THEN: 2 valid stages with GAPLESS dates (2026-05-01, 2026-05-02)
+              NOT (2026-05-01, 2026-05-03) — the skipped file does not
+              consume a date slot.
+    
+        This is the explicit "lückenlos" requirement from the spec
+        (Acceptance Criteria + R2).
+        """
+>       from web.pages.trips import process_bulk_gpx_uploads
+E       ImportError: cannot import name 'process_bulk_gpx_uploads' from 'web.pages.trips' (/home/hem/gregor_zwanzig/src/web/pages/trips.py)
+
+tests/unit/test_gpx_import_in_trip_dialog.py:236: ImportError
+_____________ TestMultiGpxImport.test_single_file_backwards_compat _____________
+
+self = <test_gpx_import_in_trip_dialog.TestMultiGpxImport object at 0x76fed2811310>
+tmp_path = PosixPath('/tmp/pytest-of-hem/pytest-434/test_single_file_backwards_com0')
+
+    def test_single_file_backwards_compat(self, tmp_path):
+        """
+        GIVEN: Exactly 1 GPX file
+        WHEN: process_bulk_gpx_uploads(start_date=2026-06-15)
+        THEN: 1 stage with the chosen date — single-file path still works.
+        """
+>       from web.pages.trips import process_bulk_gpx_uploads
+E       ImportError: cannot import name 'process_bulk_gpx_uploads' from 'web.pages.trips' (/home/hem/gregor_zwanzig/src/web/pages/trips.py)
+
+tests/unit/test_gpx_import_in_trip_dialog.py:263: ImportError
+_______ TestMultiGpxImport.test_default_start_date_with_existing_stages ________
+
+self = <test_gpx_import_in_trip_dialog.TestMultiGpxImport object at 0x76fed2813fe0>
+
+    def test_default_start_date_with_existing_stages(self):
+        """
+        GIVEN: existing stages with last date 2026-05-10
+        WHEN: compute_default_start_date(existing_stages_data)
+        THEN: Returns date(2026, 5, 11) — last_stage_date + 1
+    
+        Per spec §2 _refresh_commit_row default-date logic. Tests the
+        helper that is expected to be extracted as
+        `compute_default_start_date(stages_data)`.
+        """
+>       from web.pages.trips import compute_default_start_date
+E       ImportError: cannot import name 'compute_default_start_date' from 'web.pages.trips' (/home/hem/gregor_zwanzig/src/web/pages/trips.py)
+
+tests/unit/test_gpx_import_in_trip_dialog.py:284: ImportError
+________ TestMultiGpxImport.test_default_start_date_no_existing_stages _________
+
+self = <test_gpx_import_in_trip_dialog.TestMultiGpxImport object at 0x76fed2810bf0>
+
+    def test_default_start_date_no_existing_stages(self):
+        """
+        GIVEN: Empty stages list
+        WHEN: compute_default_start_date([])
+        THEN: Returns date.today()
+        """
+>       from web.pages.trips import compute_default_start_date
+E       ImportError: cannot import name 'compute_default_start_date' from 'web.pages.trips' (/home/hem/gregor_zwanzig/src/web/pages/trips.py)
+
+tests/unit/test_gpx_import_in_trip_dialog.py:301: ImportError
+=========================== short test summary info ============================
+FAILED tests/unit/test_natural_sort.py::TestNaturalSortKey::test_khw_pattern_natural_sort
+FAILED tests/unit/test_natural_sort.py::TestNaturalSortKey::test_pure_numeric_filenames
+FAILED tests/unit/test_natural_sort.py::TestNaturalSortKey::test_alphanumeric_mix
+FAILED tests/unit/test_natural_sort.py::TestNaturalSortKey::test_empty_list
+FAILED tests/unit/test_natural_sort.py::TestNaturalSortKey::test_single_element
+FAILED tests/unit/test_natural_sort.py::TestNaturalSortKey::test_identical_strings
+FAILED tests/unit/test_natural_sort.py::TestNaturalSortKey::test_real_khw_filenames
+FAILED tests/unit/test_gpx_import_in_trip_dialog.py::TestMultiGpxImport::test_natural_sort_applied_to_uploaded_filenames
+FAILED tests/unit/test_gpx_import_in_trip_dialog.py::TestMultiGpxImport::test_date_propagation_starts_at_user_choice
+FAILED tests/unit/test_gpx_import_in_trip_dialog.py::TestMultiGpxImport::test_corrupt_file_skipped_with_gapless_dates
+FAILED tests/unit/test_gpx_import_in_trip_dialog.py::TestMultiGpxImport::test_single_file_backwards_compat
+FAILED tests/unit/test_gpx_import_in_trip_dialog.py::TestMultiGpxImport::test_default_start_date_with_existing_stages
+FAILED tests/unit/test_gpx_import_in_trip_dialog.py::TestMultiGpxImport::test_default_start_date_no_existing_stages
+============================== 13 failed in 0.53s ==============================
