@@ -47,15 +47,15 @@ Behebt eine Security-Lücke (medium): Zwei BetterStack-Heartbeat-URLs liegen har
 `internal/config/config.go:19-20`:
 
 ```go
-HeartbeatMorning  string `envconfig:"HEARTBEAT_MORNING" default:"https://uptime.betterstack.com/api/v1/heartbeat/f4GBDxFQHxuu73FdRt5wjGsQ"`
-HeartbeatEvening  string `envconfig:"HEARTBEAT_EVENING" default:"https://uptime.betterstack.com/api/v1/heartbeat/5Cc4vmiEDgrSr7qsBa2k2av4"`
+HeartbeatMorning  string `envconfig:"HEARTBEAT_MORNING" default:"https://uptime.betterstack.com/api/v1/heartbeat/<MORNING_TOKEN>"`
+HeartbeatEvening  string `envconfig:"HEARTBEAT_EVENING" default:"https://uptime.betterstack.com/api/v1/heartbeat/<EVENING_TOKEN>"`
 ```
 
 `src/web/scheduler.py:40-41`:
 
 ```python
-HEARTBEAT_MORNING = "https://uptime.betterstack.com/api/v1/heartbeat/f4GBDxFQHxuu73FdRt5wjGsQ"
-HEARTBEAT_EVENING = "https://uptime.betterstack.com/api/v1/heartbeat/5Cc4vmiEDgrSr7qsBa2k2av4"
+HEARTBEAT_MORNING = "https://uptime.betterstack.com/api/v1/heartbeat/<MORNING_TOKEN>"
+HEARTBEAT_EVENING = "https://uptime.betterstack.com/api/v1/heartbeat/<EVENING_TOKEN>"
 ```
 
 `tests/tdd/test_betterstack_heartbeat.py:23/33` asserten gegen exakt diese URLs — beim Entfernen der Defaults würden RED-Tests sonst aus den falschen Gründen scheitern.
