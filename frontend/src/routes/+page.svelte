@@ -50,10 +50,10 @@
 		<div class="flex flex-col items-center gap-6 py-16 text-center">
 			<h1 class="text-2xl font-bold">Willkommen bei Gregor 20</h1>
 			<p class="text-muted-foreground">
-				Leg deine erste Tour oder deinen ersten Orts-Vergleich an.
+				Leg deinen ersten Trip oder deinen ersten Orts-Vergleich an.
 			</p>
 			<div class="flex gap-4">
-				<Button href="/trips"><PlusIcon class="mr-2 size-4" />Erste Tour anlegen</Button>
+				<Button href="/trips"><PlusIcon class="mr-2 size-4" />Ersten Trip anlegen</Button>
 				<Button variant="outline" href="/compare"
 					><PlusIcon class="mr-2 size-4" />Ersten Vergleich erstellen</Button
 				>
@@ -64,7 +64,7 @@
 
 		{#if data.trips.length > 0}
 			<section>
-				<h2 class="mb-4 text-lg font-semibold">Meine Touren</h2>
+				<h2 class="mb-4 text-lg font-semibold">Meine Trips</h2>
 				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
 					{#each data.trips as trip}
 						{@const firstDate = getFirstDate(trip)}
@@ -128,7 +128,7 @@
 		{/if}
 
 		<div class="flex gap-3">
-			<Button href="/trips" size="sm"><PlusIcon class="mr-2 size-4" />Neue Tour</Button>
+			<Button href="/trips" size="sm"><PlusIcon class="mr-2 size-4" />Neuer Trip</Button>
 			<Button href="/compare" size="sm" variant="outline"
 				><PlusIcon class="mr-2 size-4" />Neuer Vergleich</Button
 			>
