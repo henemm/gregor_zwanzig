@@ -6,6 +6,8 @@
 	import * as Card from '$lib/components/ui/card/index.js';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import TrashIcon from '@lucide/svelte/icons/trash-2';
+	import ArrowUpIcon from '@lucide/svelte/icons/arrow-up';
+	import ArrowDownIcon from '@lucide/svelte/icons/arrow-down';
 
 	interface Props {
 		stages: Stage[];
@@ -26,6 +28,16 @@
 
 	function removeStage(idx: number) {
 		stages.splice(idx, 1);
+	}
+
+	function moveStageUp(idx: number) {
+		if (idx <= 0) return;
+		[stages[idx - 1], stages[idx]] = [stages[idx], stages[idx - 1]];
+	}
+
+	function moveStageDown(idx: number) {
+		if (idx >= stages.length - 1) return;
+		[stages[idx], stages[idx + 1]] = [stages[idx + 1], stages[idx]];
 	}
 
 	function addWaypoint(stageIdx: number) {
@@ -66,6 +78,26 @@
 						class="flex-1"
 					/>
 					<Input type="date" bind:value={stage.date} class="w-40" />
+					<Button
+						data-testid="stage-move-up-{si}"
+						variant="ghost"
+						size="icon-sm"
+						disabled={si === 0}
+						onclick={() => moveStageUp(si)}
+						title="Nach oben verschieben"
+					>
+						<ArrowUpIcon class="size-4" />
+					</Button>
+					<Button
+						data-testid="stage-move-down-{si}"
+						variant="ghost"
+						size="icon-sm"
+						disabled={si === stages.length - 1}
+						onclick={() => moveStageDown(si)}
+						title="Nach unten verschieben"
+					>
+						<ArrowDownIcon class="size-4" />
+					</Button>
 					{#if stages.length > 1}
 						<Button variant="ghost" size="icon-sm" onclick={() => removeStage(si)} title="Etappe entfernen">
 							<TrashIcon class="size-4" />
