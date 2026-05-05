@@ -29,12 +29,19 @@ export async function uploadGpx(
 	stageDate: string,
 	startHour: number
 ): Promise<Stage> {
+	// Python FastAPI endpoint reads stage_date / start_hour from query params
+	// (see api/routers/gpx.py); the file goes via multipart body.
 	const form = new FormData();
 	form.append('file', file);
-	form.append('stage_date', stageDate);
-	form.append('start_hour', String(startHour));
 
-	const res = await fetch('/api/gpx/parse', { method: 'POST', body: form });
+	const params = new URLSearchParams();
+	if (stageDate) params.set('stage_date', stageDate);
+	params.set('start_hour', String(startHour));
+
+	const res = await fetch(`/api/gpx/parse?${params.toString()}`, {
+		method: 'POST',
+		body: form
+	});
 	if (!res.ok) {
 		const detail = await res.text();
 		throw new Error(`GPX parse failed: ${detail}`);
