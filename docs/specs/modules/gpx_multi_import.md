@@ -2,11 +2,11 @@
 entity_id: gpx_multi_import
 type: module
 created: 2026-05-04
-updated: 2026-05-04
+updated: 2026-05-05
 status: draft
-version: "1.0"
+version: "1.1"
 issue: 127
-tags: [ui, gpx, trips, upload, nicegui, natural-sort]
+tags: [ui, gpx, trips, upload, sveltekit, natural-sort]
 related_specs:
   - gpx_import_in_trip_dialog
   - gpx_upload
@@ -20,6 +20,35 @@ related_specs:
 ## Approval
 
 - [ ] Approved
+
+## Architektur-Hinweis (v1.1, kritisch)
+
+**Die User-UI ist SvelteKit, nicht NiceGUI.** Die in v1.0 spezifizierten
+Änderungen an `src/web/pages/trips.py` (NiceGUI) sind als Begleit-Patch
+vorhanden, **wirken aber nicht** auf gregor20.henemm.com. Nginx routet alle
+externen Anfragen an den SvelteKit-Frontend-Service (Port 3000) und an die
+Go-API (Port 8090); die Python-NiceGUI auf Port 8080 ist von außen
+unerreichbar.
+
+→ **Die echte Implementierung dieses Features muss im SvelteKit-Frontend
+erfolgen** (`frontend/src/lib/components/wizard/WizardStep1Route.svelte` u.a.).
+Tech-Debt-Issue #129 räumt die Python-NiceGUI in einem späteren Schritt auf.
+
+### Affected Files (v1.1 — SvelteKit-Schicht)
+
+| Pfad | Status | Rolle |
+|------|--------|-------|
+| `frontend/src/lib/utils/naturalSort.ts` | NEU | TS-Sortier-Helper |
+| `frontend/src/lib/components/wizard/WizardStep1Route.svelte` | GEÄNDERT | Multi-Upload-Buffer + Datums-Picker + Commit-Button |
+| `frontend/src/lib/api.ts` | ggf. GEÄNDERT | `uploadGpx()` ohne `today()` als Default — Datum wird vom Aufrufer übergeben |
+| `frontend/e2e/trip-wizard-multi-gpx.spec.ts` | NEU (TEST) | Playwright E2E |
+| `frontend/src/lib/utils/naturalSort.test.ts` | NEU (TEST) | Vitest oder Playwright-Unit |
+
+### Begleit-Patch v1.0 (NiceGUI)
+
+`src/core/natural_sort.py` und Änderungen an `src/web/pages/trips.py` bleiben
+als parallele Implementierung erhalten, bis Issue #129 die NiceGUI-Schicht
+ersatzlos entfernt. Sie schaden nicht, sind aber für den User unsichtbar.
 
 ## Purpose
 

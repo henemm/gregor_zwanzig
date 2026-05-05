@@ -4,6 +4,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
+	import { naturalSort } from '$lib/utils/naturalSort.js';
 	import UploadIcon from '@lucide/svelte/icons/upload';
 
 	interface Props {
@@ -16,36 +17,83 @@
 	const newId = (): string => crypto.randomUUID().slice(0, 8);
 	const today = (): string => new Date().toISOString().slice(0, 10);
 
+	function addDays(iso: string, days: number): string {
+		const d = new Date(iso + 'T00:00:00Z');
+		d.setUTCDate(d.getUTCDate() + days);
+		return d.toISOString().slice(0, 10);
+	}
+
+	function computeDefaultStartDate(stages: Stage[]): string {
+		if (stages.length === 0) return today();
+		const last = stages[stages.length - 1];
+		if (!last?.date) return today();
+		return addDays(last.date, 1);
+	}
+
 	let uploading = $state(false);
 	let uploadProgress = $state('');
 	let uploadError = $state('');
 	let dragOver = $state(false);
 
-	async function handleFiles(files: FileList | File[]) {
+	// Buffer-State: GPX-Files warten bis User Startdatum bestaetigt.
+	let pendingFiles = $state<File[]>([]);
+	let bulkStartDate = $state(today());
+
+	function handleFiles(files: FileList | File[]) {
 		const fileArray = Array.from(files).filter(f => f.name.endsWith('.gpx'));
 		if (fileArray.length === 0) return;
 
+		// Append to buffer (multiple drops accumulate). Recompute default date
+		// only when the buffer becomes non-empty for the first time.
+		const wasEmpty = pendingFiles.length === 0;
+		pendingFiles = [...pendingFiles, ...fileArray];
+		uploadError = '';
+		if (wasEmpty) {
+			bulkStartDate = computeDefaultStartDate(stages);
+		}
+	}
+
+	async function commitPending() {
+		if (pendingFiles.length === 0) return;
+		if (!bulkStartDate) {
+			uploadError = 'Bitte Startdatum waehlen.\n';
+			return;
+		}
+
 		uploading = true;
 		uploadError = '';
-		const total = fileArray.length;
 
-		for (let i = 0; i < fileArray.length; i++) {
-			const file = fileArray[i];
+		// Snapshot + clear buffer so the picker disappears immediately.
+		const sorted = naturalSort(pendingFiles, (f) => f.name);
+		const start = bulkStartDate;
+		const total = sorted.length;
+		pendingFiles = [];
+
+		let added = 0;
+		for (let i = 0; i < sorted.length; i++) {
+			const file = sorted[i];
 			uploadProgress = `Lade ${i + 1} von ${total} Dateien...`;
+			const stageDate = addDays(start, added);
 			try {
-				const stage = await uploadGpx(file, today(), 8);
+				const stage = await uploadGpx(file, stageDate, 8);
 				stages.push(stage);
+				added += 1;
 			} catch (e) {
 				uploadError += `${file.name}: ${e instanceof Error ? e.message : 'Fehler'}\n`;
 			}
 		}
 
-		if (!tripName && fileArray.length > 0) {
-			tripName = fileArray[0].name.replace(/\.gpx$/i, '');
+		if (!tripName && stages.length > 0) {
+			tripName = sorted[0].name.replace(/\.gpx$/i, '');
 		}
 
 		uploading = false;
 		uploadProgress = '';
+	}
+
+	function cancelPending() {
+		pendingFiles = [];
+		uploadError = '';
 	}
 
 	function onDrop(e: DragEvent) {
@@ -69,6 +117,7 @@
 		const input = e.target as HTMLInputElement;
 		if (input.files) {
 			handleFiles(input.files);
+			input.value = ''; // allow re-selecting same files
 		}
 	}
 
@@ -82,6 +131,11 @@
 	}
 
 	let fileInput: HTMLInputElement;
+	let commitLabel = $derived(
+		pendingFiles.length === 1
+			? '1 Etappe anlegen'
+			: `${pendingFiles.length} Etappen anlegen`
+	);
 </script>
 
 <div class="space-y-6">
@@ -119,6 +173,41 @@
 			onchange={onFileInput}
 		/>
 	</div>
+
+	{#if pendingFiles.length > 0}
+		<div class="rounded-md border p-4 space-y-3 bg-muted/30">
+			<p class="text-sm" data-testid="bulk-stage-pending-count">
+				{pendingFiles.length} Datei(en) ausgewaehlt
+			</p>
+			<div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+				<Label for="bulk-stage-start-date" class="sm:w-32">Startdatum</Label>
+				<Input
+					id="bulk-stage-start-date"
+					data-testid="bulk-stage-start-date"
+					type="date"
+					bind:value={bulkStartDate}
+					class="sm:w-44"
+				/>
+			</div>
+			<div class="flex items-center gap-2">
+				<Button
+					data-testid="bulk-stage-commit"
+					onclick={commitPending}
+					disabled={uploading}
+				>
+					{commitLabel}
+				</Button>
+				<Button
+					variant="outline"
+					data-testid="bulk-stage-cancel"
+					onclick={cancelPending}
+					disabled={uploading}
+				>
+					Abbrechen
+				</Button>
+			</div>
+		</div>
+	{/if}
 
 	{#if uploading}
 		<p class="text-sm text-muted-foreground">{uploadProgress}</p>
