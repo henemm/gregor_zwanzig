@@ -78,7 +78,7 @@
 
 	const navItems = [
 		{ href: '/', label: 'Startseite', icon: LayoutDashboard },
-		{ href: '/trips', label: 'Meine Touren', icon: RouteIcon },
+		{ href: '/trips', label: 'Meine Trips', icon: RouteIcon },
 		{ href: '/compare', label: 'Orts-Vergleich', icon: GitCompare },
 	];
 

@@ -1,0 +1,63 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 2 items
+
+tests/tdd/test_trips_naming.py FF                                        [100%]
+
+=================================== FAILURES ===================================
+________________________ test_sidebar_uses_trips_label _________________________
+
+    def test_sidebar_uses_trips_label() -> None:
+        """
+        GIVEN: Authentifizierte Session gegen deployed Frontend
+        WHEN:  GET / und Lesen des HTML
+        THEN:  Sidebar enthaelt 'Meine Trips', nicht 'Meine Touren'
+        """
+        with closing(_login_session()) as client:
+            r = client.get("/")
+            assert r.status_code == 200
+            html = r.text
+>           assert "Meine Trips" in html, (
+                "Sidebar-Label 'Meine Trips' fehlt im HTML — kanonischer Begriff ist Trip "
+                "(siehe API-Vertrag, URL /trips)."
+            )
+E           AssertionError: Sidebar-Label 'Meine Trips' fehlt im HTML — kanonischer Begriff ist Trip (siehe API-Vertrag, URL /trips).
+E           assert 'Meine Trips' in '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n'
+
+tests/tdd/test_trips_naming.py:57: AssertionError
+_____________________ test_homepage_uses_trip_terminology ______________________
+
+    def test_homepage_uses_trip_terminology() -> None:
+        """
+        GIVEN: Authentifizierte Session gegen deployed Frontend
+        WHEN:  GET / und Lesen des HTML
+        THEN:  Keine Tour/Touren-Vorkommen mehr; Trip-Bezeichnungen stattdessen
+        """
+        with closing(_login_session()) as client:
+            r = client.get("/")
+            assert r.status_code == 200
+            html = r.text
+    
+            forbidden = ("Erste Tour anlegen", "Neue Tour", "deine erste Tour")
+            for token in forbidden:
+>               assert token not in html, (
+                    f"Veraltetes Wording {token!r} noch im Startseiten-HTML — "
+                    f"Issue #126 fordert Vereinheitlichung auf 'Trip'."
+                )
+E               AssertionError: Veraltetes Wording 'Neue Tour' noch im Startseiten-HTML — Issue #126 fordert Vereinheitlichung auf 'Trip'.
+E               assert 'Neue Tour' not in '<!doctype h...>\n</html>\n'
+E                 
+E                 'Neue Tour' is contained here:
+E                 ?           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+E                   vg><!---->Neue Tour<!----></a><!--]--><!----> <!--[0--><a data-slot="button" class="focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:aria-invalid:border-destructive/50 border bg-clip-padding font-medium focus-visible:ring-3 active:not-aria-[haspopup]:translate-y-px aria-invalid:ring-3 group/button inline-flex shrink-0 items-center justify-center whitespace-nowrap transition-all outline-none select-none disab...
+E                 
+E                 ...Full output truncated (27 lines hidden), use '-vv' to show
+
+tests/tdd/test_trips_naming.py:79: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_trips_naming.py::test_sidebar_uses_trips_label - Assert...
+FAILED tests/tdd/test_trips_naming.py::test_homepage_uses_trip_terminology - ...
+============================== 2 failed in 0.28s ===============================
