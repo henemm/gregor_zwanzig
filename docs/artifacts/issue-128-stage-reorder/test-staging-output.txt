@@ -1,0 +1,10 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 2 items
+
+tests/tdd/test_stage_reorder.py ..                                       [100%]
+
+============================== 2 passed in 2.36s ===============================
