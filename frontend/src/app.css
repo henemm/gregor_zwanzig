@@ -26,8 +26,56 @@
 }
 
 @layer base {
-	body {
-		@apply bg-background text-foreground;
-		font-family: system-ui, -apple-system, sans-serif;
-	}
+  :root {
+    /* === Gregor-Design-Tokens (--g-* Namespace) === */
+
+    /* Primärfarben */
+    --g-accent:       #c45a2a;
+    --g-paper:        #f6f4ee;
+    --g-ink:          #1a1a18;
+
+    /* Surface-Stufen */
+    --g-surface-0:    #f6f4ee;
+    --g-surface-1:    #edeae1;
+    --g-surface-2:    #e3dfd4;
+
+    /* Ink-Stufen */
+    --g-ink-muted:    #5c5a52;
+    --g-ink-faint:    #9c9a90;
+
+    /* Semantic */
+    --g-success:      #3a7d44;
+    --g-warning:      #c8882a;
+    --g-danger:       #b33a2a;
+    --g-info:         #2a6cb3;
+
+    /* Wetter-Farben */
+    --g-wx-rain:      #4a7fb5;
+    --g-wx-sun:       #e8a820;
+    --g-wx-wind:      #6b8a8a;
+    --g-wx-snow:      #a8c8e8;
+    --g-wx-thunder:   #5a3a7a;
+    --g-wx-fog:       #9a9a8a;
+
+    /* Typografie */
+    --g-font-ui:      'Inter Tight', system-ui, sans-serif;
+    --g-font-data:    'JetBrains Mono', ui-monospace, monospace;
+
+    /* Radii */
+    --g-radius-xs:    0.125rem;
+    --g-radius-sm:    0.25rem;
+    --g-radius-md:    0.5rem;
+    --g-radius-lg:    0.75rem;
+    --g-radius-pill:  99rem;
+
+    /* Elevation */
+    --g-elev-1: 0 1px 3px rgba(26,26,24,0.08);
+    --g-elev-2: 0 4px 12px rgba(26,26,24,0.12);
+    --g-elev-3: 0 8px 24px rgba(26,26,24,0.16);
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--g-font-ui);
+  }
 }

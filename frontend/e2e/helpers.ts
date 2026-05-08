@@ -5,7 +5,8 @@ import { type Page } from '@playwright/test';
  * with a valid session cookie set.
  */
 export async function login(page: Page) {
-	await page.goto('/login');
+	await page.goto('/');
+	if (!page.url().includes('/login')) return;
 	await page.fill('input[name="username"]', 'admin');
 	await page.fill('input[name="password"]', 'test1234');
 	await page.click('button[type="submit"]');
