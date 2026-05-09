@@ -380,3 +380,212 @@ Use shadcn for:
 - Existing patterns that shadcn already provides well (card layouts, tabs, etc.)
 
 Both can coexist in the same codebase without conflicts — namespaces (Gregor `data-slot` vs. shadcn class-based) are disjoint.
+
+---
+
+## Cockpit Components (Epic #134)
+
+Dashboard-specific composite components for the homepage (`/`) trip cockpit.
+
+### Component Organization
+
+```
+frontend/src/routes/_cockpit/
+├── StagePill.svelte
+├── StageStrip.svelte
+├── ActiveTripCard.svelte
+├── BriefingsTimeline.svelte
+├── AlertFeed.svelte
+└── BottomRow.svelte
+```
+
+### StagePill Component
+
+**File:** `frontend/src/routes/_cockpit/StagePill.svelte`
+
+Visual indicator for a single trip stage with risk-aware coloring.
+
+**Props:**
+```typescript
+interface Props {
+  stage: Stage;
+  active: boolean;          // Is this the current stage?
+  muted: boolean;           // Is this a past stage?
+  riskTone?: 'success' | 'warning' | 'danger';  // Future risk level
+}
+```
+
+**Behavior:**
+- `active=true` → tone="accent"
+- `muted=true` → tone="default" + opacity-50
+- Future with `riskTone` → matched tone
+- Otherwise → tone="default"
+
+**Example:**
+```svelte
+<StagePill stage={todayStage} active={true} muted={false} />
+<StagePill stage={tomorrowStage} active={false} muted={false} />
+<StagePill stage={pastStage} active={false} muted={true} />
+```
+
+### StageStrip Component
+
+**File:** `frontend/src/routes/_cockpit/StageStrip.svelte`
+
+Horizontally scrollable timeline of all trip stages.
+
+**Props:**
+```typescript
+interface Props {
+  stages: Stage[];
+  activeStageid?: string | null;  // Optional: match by ID (fallback: date)
+}
+```
+
+**Behavior:**
+- Renders one StagePill per stage
+- Highlights stage matching `date === today` or `id === activeStageid`
+- Fades stages with `date < today`
+- Non-blocking horizontal scroll
+
+**Example:**
+```svelte
+<StageStrip stages={trip.stages} />
+<StageStrip stages={trip.stages} activeStageid={stage.id} />
+```
+
+### ActiveTripCard Component
+
+**File:** `frontend/src/routes/_cockpit/ActiveTripCard.svelte`
+
+Hero card displaying live trip status with elevation profile and weather.
+
+**Props:**
+```typescript
+interface Props {
+  trip: Trip;
+  stage: Stage | null;
+  dayIndex: number;  // 0-based index in trip.stages
+  forecastSummary: { temp: number | null; wind: number | null; precip: number | null } | null;
+  forecastStatus: 'idle' | 'loading' | 'ok' | 'error';
+}
+```
+
+**Rendering:**
+1. TopoBg (opacity 0.06) as background
+2. Pill tone="accent": "Live · Tag {dayIndex + 1} von {trip.stages.length}"
+3. Stage name + optional distance/elevation stats
+4. ElevSparkline from `stage.waypoints[].elevation_m`
+5. Weather line with temp·wind·precip (or loading state)
+
+**Example:**
+```svelte
+<ActiveTripCard 
+  {trip} 
+  stage={todayStage} 
+  dayIndex={0} 
+  forecastSummary={{temp: 18.5, wind: 22, precip: 0.4}}
+  forecastStatus="ok"
+/>
+```
+
+### BriefingsTimeline Component
+
+**File:** `frontend/src/routes/_cockpit/BriefingsTimeline.svelte`
+
+Scheduler job timeline with status indicators and timing metadata.
+
+**Props:**
+```typescript
+interface Props {
+  schedulerStatus: SchedulerStatus | null;
+}
+```
+
+**Job Labels:**
+| id | label |
+|----|----|
+| morning | Morgenbriefing |
+| evening | Abendbriefing |
+| alert | Alert-Check |
+| trip_reports_hourly | Trip-Reports |
+
+**Status Dot Tones:**
+- `last_run.status === 'ok'` → tone="success"
+- `last_run.status === 'error'` → tone="danger"
+- No `last_run` → tone="info"
+
+**Time Display:**
+- Next run: formatted as `HH:MM` (e.g., "10:00")
+- Last run: relative time (e.g., "vor 15 Min")
+
+**Example:**
+```svelte
+<BriefingsTimeline schedulerStatus={data.schedulerStatus} />
+```
+
+### AlertFeed Component
+
+**File:** `frontend/src/routes/_cockpit/AlertFeed.svelte`
+
+Alert history placeholder (no backend endpoint yet).
+
+**Props:** None
+
+**Current Behavior:** Shows "Keine Alerts in den letzten 24h"
+
+**Future:** Will populate when `GET /api/alerts?hours=24` endpoint is implemented.
+
+**Example:**
+```svelte
+<AlertFeed />
+```
+
+### BottomRow Component
+
+**File:** `frontend/src/routes/_cockpit/BottomRow.svelte`
+
+Two-column grid: tomorrow preview (left) + trip archive (right).
+
+**Props:**
+```typescript
+interface Props {
+  tomorrowStage: Stage | null;
+  archivedTrips: Trip[];  // Max 4
+}
+```
+
+**Left Column (TomorrowPreview):**
+- Shows tomorrow's stage name
+- ElevSparkline from waypoint elevations
+- Message if no tomorrow stage available
+
+**Right Column (ArchiveGrid):**
+- Up to 4 archived trip cards (name + stage count)
+- Message if no archived trips available
+
+**Example:**
+```svelte
+<BottomRow tomorrowStage={tomorrowStage} archivedTrips={archivedTrips.slice(0, 4)} />
+```
+
+---
+
+## Safari Compatibility Notes
+
+**All cockpit components use named event handlers, not inline arrows**, to work around NiceGUI's Python→JavaScript closure binding in Safari:
+
+CORRECT:
+```svelte
+<script>
+  async function handleClick() { /* ... */ }
+</script>
+<Btn onclick={handleClick}>Click</Btn>
+```
+
+WRONG:
+```svelte
+<Btn onclick={() => handleClick()}>Click</Btn>  <!-- Safari: no-op -->
+```
+
+Test in Safari first (strictest), then Firefox, then Chrome.

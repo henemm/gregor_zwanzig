@@ -579,8 +579,158 @@ null
 
 ---
 
+## 12) Scheduler Status Endpoint (Epic #134)
+
+Exposes scheduler job metadata for dashboard display (BriefingsTimeline component).
+
+**Handler:** `internal/handler/scheduler.go` | **Routing:** `cmd/server/main.go`
+
+### GET /api/scheduler/status
+
+Returns current scheduler state with per-job metadata (next_run, last_run).
+
+**Response 200:**
+
+```json
+{
+  "running": true,
+  "timezone": "Europe/Vienna",
+  "jobs": [
+    {
+      "id": "morning",
+      "name": "Morgenbriefing",
+      "next_run": "2026-05-10T07:00:00Z",
+      "last_run": {
+        "time": "2026-05-09T07:00:00Z",
+        "status": "ok",
+        "error": null
+      }
+    },
+    {
+      "id": "evening",
+      "name": "Abendbriefing",
+      "next_run": "2026-05-09T18:00:00Z",
+      "last_run": {
+        "time": "2026-05-09T17:55:00Z",
+        "status": "error",
+        "error": "forecast_api_timeout"
+      }
+    }
+  ]
+}
+```
+
+**Field Definitions:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| running | bool | Is scheduler process active |
+| timezone | string | Scheduler timezone (default: "Europe/Vienna") |
+| jobs[] | array | List of scheduled jobs |
+| jobs[].id | string | Job identifier (morning, evening, alert, trip_reports_hourly) |
+| jobs[].name | string | Human-readable job name |
+| jobs[].next_run | datetime \| null | ISO-8601 UTC datetime of next scheduled run |
+| jobs[].last_run | object \| null | Metadata of last execution (null if never run) |
+| jobs[].last_run.time | datetime | ISO-8601 UTC timestamp of execution |
+| jobs[].last_run.status | enum | 'ok' or 'error' |
+| jobs[].last_run.error | string \| null | Error code/message if status='error' |
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 503 | `{"error":"scheduler_unavailable"}` | Scheduler process not reachable |
+
+---
+
+## 13) Forecast Query Endpoint (Epic #134)
+
+Client-side forecast fetch for dashboard weather display (non-blocking).
+
+**Handler:** Proxies to Python weather provider | **Routing:** `cmd/server/main.go`
+
+### GET /api/forecast
+
+Fetches normalized weather forecast for a given coordinate.
+
+**Query Parameters:**
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| lat | float | yes | Latitude (-90 to 90) |
+| lon | float | yes | Longitude (-180 to 180) |
+| hours | integer | no | Forecast range in hours (default: 24) |
+
+**Response 200:**
+
+```json
+{
+  "meta": {
+    "provider": "GEOSPHERE",
+    "model": "INCA-LC",
+    "run": "2026-05-09T06:00:00Z",
+    "grid_res_km": 1,
+    "interp": "point_grid"
+  },
+  "data": [
+    {
+      "ts": "2026-05-09T12:00:00Z",
+      "t2m_c": 18.5,
+      "wind10m_kmh": 22.0,
+      "gust_kmh": 38.0,
+      "precip_1h_mm": 0.4,
+      "cloud_total_pct": 85,
+      "symbol": "lightrain",
+      "humidity_pct": 78,
+      "dewpoint_c": 17.0
+    }
+  ]
+}
+```
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 400 | `{"error":"invalid_coords"}` | lat/lon out of range or missing |
+| 503 | `{"error":"provider_unavailable"}` | Weather provider API unreachable |
+
+---
+
+## 14) Trip-Reports Trigger Endpoint (Epic #134)
+
+Manually triggers briefing generation for immediate test/delivery.
+
+**Handler:** `internal/handler/scheduler.go` | **Routing:** `cmd/server/main.go`
+
+### POST /api/scheduler/trip-reports
+
+Enqueues immediate trip report (morning/evening/alert) generation and send for active trip.
+
+**Request Body:** `{}` (empty, report type inferred from scheduler config)
+
+**Response 202 (Accepted):**
+
+```json
+{
+  "message": "Trip report enqueued",
+  "job_id": "trip-reports-1234",
+  "report_type": "evening"
+}
+```
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 400 | `{"error":"no_active_trip"}` | No trip with today's stage found |
+| 503 | `{"error":"scheduler_unavailable"}` | Scheduler not available |
+
+---
+
 ## Changelog
 
+- 2026-05-09: Added sections 12, 13, 14 — Scheduler Status, Forecast Query, Trip-Reports Trigger Endpoints (Epic #134). Support for dashboard briefing timeline, non-blocking client-side weather, and manual report trigger via API.
 - 2026-04-14: Added section 11 — Weather Config Endpoints (M5c): 6 GET/PUT-Endpoints fuer display_config auf Trip, Location und Subscription als opaque JSON.
 - 2026-04-14: Added section 10 — Subscriptions CRUD Endpoints (M5b): 5 REST-Endpoints fuer CompareSubscription, Single-File Storage, Validierung, Legacy-Migration.
 - 2026-04-14: Added section 9 — GPX Proxy Endpoint (M5a): POST /api/gpx/parse, Go-to-Python Multipart Proxy, Stage+Waypoints Response DTO.

@@ -101,3 +101,16 @@ export interface ForecastResponse {
 	meta: ForecastMeta;
 	data: ForecastDataPoint[];
 }
+
+export interface SchedulerJob {
+	id: string;
+	name: string;
+	next_run: string | null;
+	last_run: { time: string; status: 'ok' | 'error'; error?: string } | null;
+}
+
+export interface SchedulerStatus {
+	running: boolean;
+	timezone: string;
+	jobs: SchedulerJob[];
+}
