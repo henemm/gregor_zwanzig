@@ -1,0 +1,27 @@
+================================================
+  External Validator — Isolierte QA-Session
+================================================
+
+  Spec:   docs/specs/modules/epic_133_design_system_lauf_b.md
+  Server: https://staging.gregor20.henemm.com
+
+  Diese Session ist isoliert vom Implementierer.
+  Der Validator kennt nur: Spec + laufende App.
+================================================
+
+Validator-Report geschrieben.
+
+**Verdict: BROKEN**
+
+Befund in einem Satz: Lauf B ist auf Staging nicht aktiv — `/_design` liefert HTTP 404, und im 43,6 KB grossen CSS-Bundle fehlen alle 8 spezifizierten Lauf-B-Selektoren (`.g-topo`, `[data-slot="btn|g-card|pill|eyebrow|dot|topo-bg|elev-sparkline"]`), waehrend die Lauf-A-Tokens vollstaendig vorhanden sind (Bundle ist also aktuell, nur Lauf B fehlt).
+
+**Score:** 1/12 PASS (nur #12 — Sidebar enthaelt korrekt keinen `/_design`-Link), 11/12 FAIL.
+
+**Mögliche Root Cause** (für die Implementierer-Session): SvelteKit ignoriert per Default Verzeichnisse mit `_`-Praefix als private/Helper-Module — `/_design` ist daher nicht routbar, ohne `kit.config.routes` explizit zu öffnen oder das Verzeichnis umzubenennen. Spec verlangt aber genau diesen Pfad.
+
+**Report:** `docs/artifacts/epic-133-design-system-lauf-b/validator-report.md`
+**Beweise:** `docs/artifacts/epic-133-design-system-lauf-b/validator-evidence/` (4 Dateien — HTTP-Headers, Response-Body, CSS-Analyse, Page-Links).
+
+---
+
+Hinweis: In der Session liegt eine offene MQ-Nachricht von `infra` (Heartbeat-Audit Issue #60). Da Validator-Sessions isoliert arbeiten und die User-Anfrage explizit `Beginne jetzt mit der Validierung` lautete, habe ich die MQ-Nachricht zurückgestellt — sie ist in der nächsten regulären `gregor`-Session zu adressieren.

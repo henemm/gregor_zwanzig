@@ -79,3 +79,96 @@
     font-family: var(--g-font-ui);
   }
 }
+
+@layer components {
+  /* === Issue #143: Topo-Hintergrundmuster === */
+  .g-topo {
+    background-image:
+      radial-gradient(circle at 50% 50%, transparent 0, transparent 14px, var(--g-ink) 14px, var(--g-ink) 15px, transparent 15px),
+      radial-gradient(circle at 50% 50%, transparent 0, transparent 28px, var(--g-ink) 28px, var(--g-ink) 29px, transparent 29px);
+    background-size: 60px 60px;
+    opacity: var(--g-topo-opacity, 0.04);
+    pointer-events: none;
+  }
+
+  /* === Issue #144: Btn === */
+  [data-slot="btn"] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-family: var(--g-font-ui);
+    font-weight: 500;
+    border-radius: var(--g-radius-md);
+    cursor: pointer;
+    transition: opacity 0.15s ease, box-shadow 0.15s ease;
+  }
+  [data-slot="btn"][data-size="sm"] { padding: 0.25rem 0.75rem; font-size: 0.75rem; }
+  [data-slot="btn"][data-size="md"] { padding: 0.5rem 1rem;     font-size: 0.875rem; }
+  [data-slot="btn"][data-size="lg"] { padding: 0.75rem 1.5rem;  font-size: 1rem; }
+  [data-slot="btn"][data-variant="accent"]  { background: var(--g-accent);    color: var(--g-paper); border: none; }
+  [data-slot="btn"][data-variant="ghost"]   { background: transparent;        color: var(--g-ink);   border: none; }
+  [data-slot="btn"][data-variant="outline"] { background: transparent;        color: var(--g-ink);   border: 1px solid var(--g-ink); }
+  [data-slot="btn"][data-variant="ghost"]:hover   { background: var(--g-surface-1); opacity: 1; }
+  [data-slot="btn"][data-variant="outline"]:hover { background: var(--g-surface-1); opacity: 1; }
+  [data-slot="btn"]:hover                   { opacity: 0.85; }
+  [data-slot="btn"]:focus-visible           { outline: 2px solid var(--g-accent); outline-offset: 2px; }
+
+  /* === Issue #144: GCard === */
+  [data-slot="g-card"] {
+    background: var(--g-surface-1);
+    border-radius: var(--g-radius-lg);
+    box-shadow: var(--g-elev-1);
+    padding: 1rem;
+    transition: box-shadow 0.15s ease;
+  }
+  [data-slot="g-card"]:hover { box-shadow: var(--g-elev-2); }
+
+  /* === Issue #144: Pill === */
+  [data-slot="pill"] {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem 0.5rem;
+    border-radius: var(--g-radius-pill);
+    font-family: var(--g-font-ui);
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+  [data-slot="pill"][data-tone="default"]  { background: var(--g-surface-2);   color: var(--g-ink); }
+  [data-slot="pill"][data-tone="success"]  { background: var(--g-success);     color: #fff; }
+  [data-slot="pill"][data-tone="warning"]  { background: var(--g-warning);     color: var(--g-ink); }
+  [data-slot="pill"][data-tone="danger"]   { background: var(--g-danger);      color: #fff; }
+  [data-slot="pill"][data-tone="info"]     { background: var(--g-info);        color: #fff; }
+  [data-slot="pill"][data-tone="accent"]   { background: var(--g-accent);      color: var(--g-ink); }
+
+  /* === Issue #144: Eyebrow === */
+  [data-slot="eyebrow"] {
+    display: block;
+    font-family: var(--g-font-data);
+    font-size: 0.625rem;
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--g-ink-faint);
+  }
+
+  /* === Issue #144: Dot === */
+  [data-slot="dot"] {
+    display: inline-block;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  [data-slot="dot"][data-size="xs"] { width: 6px;  height: 6px; }
+  [data-slot="dot"][data-size="sm"] { width: 8px;  height: 8px; }
+  [data-slot="dot"][data-size="md"] { width: 10px; height: 10px; }
+  [data-slot="dot"][data-tone="rain"]    { background: var(--g-wx-rain); }
+  [data-slot="dot"][data-tone="sun"]     { background: var(--g-wx-sun); }
+  [data-slot="dot"][data-tone="wind"]    { background: var(--g-wx-wind); }
+  [data-slot="dot"][data-tone="snow"]    { background: var(--g-wx-snow); }
+  [data-slot="dot"][data-tone="thunder"] { background: var(--g-wx-thunder); }
+  [data-slot="dot"][data-tone="fog"]     { background: var(--g-wx-fog); }
+  [data-slot="dot"][data-tone="success"] { background: var(--g-success); }
+  [data-slot="dot"][data-tone="warning"] { background: var(--g-warning); }
+  [data-slot="dot"][data-tone="danger"]  { background: var(--g-danger); }
+  [data-slot="dot"][data-tone="info"]    { background: var(--g-info); }
+}
