@@ -139,24 +139,46 @@ def _record_run(job_id: str, func, *args, **kwargs) -> None:
 
 
 def run_morning_subscriptions() -> None:
-    """Run all DAILY_MORNING subscriptions."""
+    """Run all DAILY_MORNING subscriptions.
+
+    Heartbeat is only pinged when the job finished successfully (status == "ok"),
+    matching the Go-scheduler. Readiness, not Liveness.
+    """
     def _do():
         from app.user import Schedule
         logger.info("Running morning subscriptions...")
         _run_subscriptions_by_schedule(Schedule.DAILY_MORNING)
-    _record_run("morning_subscriptions", _do)
-    _ping_heartbeat(HEARTBEAT_MORNING, "morning_subscriptions")
+    try:
+        _record_run("morning_subscriptions", _do)
+    except Exception:
+        # _record_run has already recorded status="error" and re-raised.
+        # Swallow here so APScheduler does not log a misleading "job crashed";
+        # the error state is visible via _job_results / status endpoint.
+        pass
+    if _job_results.get("morning_subscriptions", {}).get("status") == "ok":
+        _ping_heartbeat(HEARTBEAT_MORNING, "morning_subscriptions")
 
 
 def run_evening_subscriptions() -> None:
-    """Run DAILY_EVENING and matching WEEKLY subscriptions."""
+    """Run DAILY_EVENING and matching WEEKLY subscriptions.
+
+    Heartbeat is only pinged when the job finished successfully (status == "ok"),
+    matching the Go-scheduler. Readiness, not Liveness.
+    """
     def _do():
         from app.user import Schedule
         logger.info("Running evening subscriptions...")
         _run_subscriptions_by_schedule(Schedule.DAILY_EVENING)
         _run_weekly_subscriptions()
-    _record_run("evening_subscriptions", _do)
-    _ping_heartbeat(HEARTBEAT_EVENING, "evening_subscriptions")
+    try:
+        _record_run("evening_subscriptions", _do)
+    except Exception:
+        # _record_run has already recorded status="error" and re-raised.
+        # Swallow here so APScheduler does not log a misleading "job crashed";
+        # the error state is visible via _job_results / status endpoint.
+        pass
+    if _job_results.get("evening_subscriptions", {}).get("status") == "ok":
+        _ping_heartbeat(HEARTBEAT_EVENING, "evening_subscriptions")
 
 
 def run_alert_checks() -> None:
@@ -236,27 +258,59 @@ def _ping_heartbeat(url: str, job_name: str = "") -> None:
 
 
 def _run_weekly_subscriptions() -> None:
-    """Run WEEKLY subscriptions if today matches the weekday."""
+    """Run WEEKLY subscriptions if today matches the weekday.
+
+    Each subscription runs independently — a failure in one does NOT stop the
+    others. However, if ANY subscription fails, this function raises a
+    RuntimeError at the end so the job is marked as "error" and the heartbeat
+    is suppressed (Readiness, not Liveness).
+    """
     from app.loader import load_compare_subscriptions
     from app.user import Schedule
 
     current_weekday = datetime.now().weekday()
     logger.info(f"Checking weekly subscriptions for weekday {current_weekday}")
 
+    errors = 0
+    total = 0
     for sub in load_compare_subscriptions():
         if sub.enabled and sub.schedule == Schedule.WEEKLY:
             if sub.weekday == current_weekday:
                 logger.info(f"Weekly subscription matches: {sub.name}")
-                _execute_subscription(sub)
+                total += 1
+                try:
+                    _execute_subscription(sub)
+                except Exception:
+                    errors += 1
+                    # Already logged in _execute_subscription; continue with next sub.
+
+    if errors > 0:
+        raise RuntimeError(f"{errors} von {total} Weekly-Subscriptions fehlgeschlagen")
 
 
 def _run_subscriptions_by_schedule(schedule: "Schedule") -> None:
-    """Run all subscriptions matching the given schedule."""
+    """Run all subscriptions matching the given schedule.
+
+    Each subscription runs independently — a failure in one does NOT stop the
+    others. However, if ANY subscription fails, this function raises a
+    RuntimeError at the end so the job is marked as "error" and the heartbeat
+    is suppressed (Readiness, not Liveness).
+    """
     from app.loader import load_compare_subscriptions
 
+    errors = 0
+    total = 0
     for sub in load_compare_subscriptions():
         if sub.enabled and sub.schedule == schedule:
-            _execute_subscription(sub)
+            total += 1
+            try:
+                _execute_subscription(sub)
+            except Exception:
+                errors += 1
+                # Already logged in _execute_subscription; continue with next sub.
+
+    if errors > 0:
+        raise RuntimeError(f"{errors} von {total} Subscriptions fehlgeschlagen")
 
 
 def _execute_subscription(sub: "CompareSubscription") -> None:
@@ -309,6 +363,7 @@ def _execute_subscription(sub: "CompareSubscription") -> None:
 
     except Exception as e:
         logger.error(f"Failed to execute subscription {sub.name}: {e}")
+        raise
 
 
 def get_scheduler_status() -> dict:
