@@ -64,6 +64,28 @@ export class WizardState {
 		this.activity ? mapActivityToProfile(this.activity) : null
 	);
 
+	// --- Step-Validation ----------------------------------------------------
+	//
+	// Sub-Spec #161 §6: Step 1 darf erst weitergeschaltet werden, wenn die drei
+	// Pflichtfelder (activity, name nicht-leer-getrimmt, startDate nicht-leer)
+	// gesetzt sind. Optional: shortcode (faellt nicht in die Bedingung).
+	//
+	// Implementierungsentscheidung (Abweichung vom literalen Spec-Pseudo-Code,
+	// dokumentiert im Master-Spec-Changelog 2026-05-10): Getter statt $derived,
+	// damit die Bedingung in Svelte-5 reaktiv bleibt UND in Plain-Node-Tests
+	// (Identity-Mocks fuer $state/$derived) bei Mutationen aktuell bleibt —
+	// $derived(...) wuerde unter Identity-Mocks nur einmal bei
+	// Klassen-Konstruktion evaluieren. Lesen eines Getters von $state-Feldern
+	// ist Svelte-5-reaktivitaets-kompatibel.
+	get canAdvanceStep1(): boolean {
+		return (
+			this.activity !== null &&
+			this.name.trim().length > 0 &&
+			typeof this.startDate === 'string' &&
+			this.startDate.length > 0
+		);
+	}
+
 	// --- Navigation ---------------------------------------------------------
 
 	nextStep(): void {

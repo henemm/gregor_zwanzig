@@ -11,7 +11,15 @@
 //   trip-wizard-back, trip-wizard-cancel, trip-wizard-next, trip-wizard-save.
 
 import { test, expect } from '@playwright/test';
-import { login } from './helpers.js';
+import { login, fillStep1, type Step1Input } from './helpers.js';
+
+// Default-Step-1-Eingaben fuer Tests, die durch Step 1 hindurch wollen
+// (#161 fuehrte einen disabled-Mechanismus am Weiter-Button ein).
+const DEFAULT_STEP1: Step1Input = {
+	activity: 'trekking',
+	name: 'Shell-Test',
+	startDate: '2026-06-01'
+};
 
 test.describe('Trip-Wizard Shell (#160)', () => {
 	test.beforeEach(async ({ page }) => {
@@ -37,6 +45,7 @@ test.describe('Trip-Wizard Shell (#160)', () => {
 
 	test('AC#5+#6: Weiter wechselt zu Step 2, Indikatoren updaten data-state', async ({ page }) => {
 		await page.goto('/trips/new');
+		await fillStep1(page, DEFAULT_STEP1);
 		await page.getByTestId('trip-wizard-next').click();
 		await expect(page.getByTestId('trip-wizard-step-1')).toHaveAttribute('data-state', 'done');
 		await expect(page.getByTestId('trip-wizard-step-2')).toHaveAttribute('data-state', 'active');
@@ -45,14 +54,17 @@ test.describe('Trip-Wizard Shell (#160)', () => {
 
 	test('AC#5: Zurueck wechselt zu Step 1 von Step 2', async ({ page }) => {
 		await page.goto('/trips/new');
+		await fillStep1(page, DEFAULT_STEP1);
 		await page.getByTestId('trip-wizard-next').click();
 		await page.getByTestId('trip-wizard-back').click();
 		await expect(page.getByTestId('trip-wizard-step-1')).toHaveAttribute('data-state', 'active');
 		await expect(page.getByTestId('trip-wizard-step1-profile')).toBeVisible();
 	});
 
-	test('AC#5a: Weiter-Button in Steps 1-3 enabled', async ({ page }) => {
+	test('AC#5a: Weiter-Button initial disabled, nach Step 1 ausfuellen enabled, in Steps 2-3 enabled', async ({ page }) => {
 		await page.goto('/trips/new');
+		await expect(page.getByTestId('trip-wizard-next')).toBeDisabled();
+		await fillStep1(page, DEFAULT_STEP1);
 		await expect(page.getByTestId('trip-wizard-next')).toBeEnabled();
 		await page.getByTestId('trip-wizard-next').click(); // -> Step 2
 		await expect(page.getByTestId('trip-wizard-next')).toBeEnabled();
@@ -69,6 +81,7 @@ test.describe('Trip-Wizard Shell (#160)', () => {
 	test('AC#8: Speichern-Button erscheint nur in Step 4', async ({ page }) => {
 		await page.goto('/trips/new');
 		await expect(page.getByTestId('trip-wizard-save')).not.toBeVisible();
+		await fillStep1(page, DEFAULT_STEP1);
 		await page.getByTestId('trip-wizard-next').click(); // 2
 		await page.getByTestId('trip-wizard-next').click(); // 3
 		await page.getByTestId('trip-wizard-next').click(); // 4
@@ -79,6 +92,7 @@ test.describe('Trip-Wizard Shell (#160)', () => {
 	test('AC#11: alle 4 Step-Slot-Container sind in den jeweiligen Steps sichtbar', async ({ page }) => {
 		await page.goto('/trips/new');
 		await expect(page.getByTestId('trip-wizard-step1-profile')).toBeVisible();
+		await fillStep1(page, DEFAULT_STEP1);
 		await page.getByTestId('trip-wizard-next').click();
 		await expect(page.getByTestId('trip-wizard-step2-stages')).toBeVisible();
 		await page.getByTestId('trip-wizard-next').click();

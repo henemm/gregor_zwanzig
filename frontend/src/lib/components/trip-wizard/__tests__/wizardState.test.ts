@@ -92,3 +92,76 @@ test('WizardState: defaultBriefingConfig ist nicht geteilt (Klone unabhaengig)',
 	// defaultBriefingConfig selbst ist auch unangetastet:
 	assert.equal(defaultBriefingConfig.channels.signal, false);
 });
+
+// --- canAdvanceStep1 (Sub-Spec #161 §6, AC#15) -----------------------------
+//
+// Pflichtfelder fuer Step 1: activity, name, startDate.
+// Optional: shortcode (faellt nicht in die Bedingung).
+// Hinweis: Damit die Tests in Plain-Node mit Identity-Mocks funktionieren,
+// muss die Implementierung getter-basiert sein (oder eine pure Helper-
+// Funktion verwenden) — beides ist Svelte-5-reaktivitaets-kompatibel.
+
+test('canAdvanceStep1: initial false (alle Pflichtfelder leer)', () => {
+	const s = new WizardState();
+	assert.equal(s.canAdvanceStep1, false);
+});
+
+test('canAdvanceStep1: nur activity gesetzt → false (name+startDate fehlen)', () => {
+	const s = new WizardState();
+	s.activity = 'trekking';
+	assert.equal(s.canAdvanceStep1, false);
+});
+
+test('canAdvanceStep1: activity+name gesetzt → false (startDate fehlt)', () => {
+	const s = new WizardState();
+	s.activity = 'skitour';
+	s.name = 'Stubai';
+	assert.equal(s.canAdvanceStep1, false);
+});
+
+test('canAdvanceStep1: alle 3 Pflichtfelder gesetzt → true', () => {
+	const s = new WizardState();
+	s.activity = 'trekking';
+	s.name = 'GR20';
+	s.startDate = '2026-06-01';
+	assert.equal(s.canAdvanceStep1, true);
+});
+
+test('canAdvanceStep1: name nur Whitespace → false (trim-Logik)', () => {
+	const s = new WizardState();
+	s.activity = 'trekking';
+	s.name = '   ';
+	s.startDate = '2026-06-01';
+	assert.equal(s.canAdvanceStep1, false);
+});
+
+test('canAdvanceStep1: leerer startDate-String → false (HTML5-Date-Input nach Loeschen)', () => {
+	const s = new WizardState();
+	s.activity = 'trekking';
+	s.name = 'GR20';
+	s.startDate = '';
+	assert.equal(s.canAdvanceStep1, false);
+});
+
+test('canAdvanceStep1: nach Loeschen eines Pflichtfelds → false', () => {
+	const s = new WizardState();
+	s.activity = 'mtb';
+	s.name = 'Tour';
+	s.startDate = '2026-07-15';
+	assert.equal(s.canAdvanceStep1, true, 'Pre-Condition: alle Pflichtfelder gesetzt');
+
+	s.activity = null;
+	assert.equal(s.canAdvanceStep1, false, 'Loeschen activity → canAdvanceStep1 false');
+});
+
+test('canAdvanceStep1: shortcode ist optional, beeinflusst Bedingung nicht', () => {
+	const s = new WizardState();
+	s.activity = 'klettersteig';
+	s.name = 'KS-Test';
+	s.startDate = '2026-08-01';
+	// kein shortcode gesetzt
+	assert.equal(s.canAdvanceStep1, true, 'shortcode leer → canAdvanceStep1 true');
+
+	s.shortcode = 'KS-25';
+	assert.equal(s.canAdvanceStep1, true, 'shortcode gesetzt → canAdvanceStep1 weiterhin true');
+});

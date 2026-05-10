@@ -118,7 +118,13 @@
 				Abbrechen
 			</Btn>
 			{#if state.currentStep < 4}
-				<Btn data-testid="trip-wizard-next" variant="accent" size="md" onclick={handleNext}>
+				<Btn
+					data-testid="trip-wizard-next"
+					variant="accent"
+					size="md"
+					onclick={handleNext}
+					disabled={state.currentStep === 1 ? !state.canAdvanceStep1 : false}
+				>
 					Weiter
 				</Btn>
 			{:else}

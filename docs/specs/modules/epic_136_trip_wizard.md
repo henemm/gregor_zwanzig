@@ -398,6 +398,11 @@ Sub-Specs **muessen liefern**:
 
 ## Changelog
 
+- 2026-05-10: §3.1 erweitert um additives Feld `get canAdvanceStep1(): boolean`
+  (Getter, nicht `$derived` — Plain-Node-Test-Kompatibilitaet,
+  Svelte-5-reaktivitaets-kompatibel da Read von `$state`-Feldern). Detail in
+  Sub-Spec [`epic_136_step1_profile.md`](./epic_136_step1_profile.md) §6.
+  Folge-Steps (#162–#164) ergaenzen analog `canAdvanceStep2/3/4`.
 - 2026-05-09: Implementation Iter-2 abgeschlossen — Backend-Validator `validateTrip` akzeptiert jetzt Stages mit leerem `waypoints[]` (Pausentage), `BriefingConfig.thresholds` auf `number | null` mit `null`-Defaults umgestellt. F004 (`startDate`-Type) und F006 (`briefings`→`report_config`-Mapping) als Known Limitations dokumentiert. Adversary-Validator: alle HIGH/MEDIUM-Findings erledigt.
 - 2026-05-09: Implementation Iter-1 abgeschlossen — `Trip.Shortcode` + `Trip.Activity` (Go), `ActivityType` + `Trip.shortcode?`/`Trip.activity?`/`Waypoint.suggested?` (TS), `wizardHelpers.ts` (6 Helper) und `wizardState.svelte.ts` (`WizardState` mit `BriefingConfig`, Save-Pipeline, Step-Navigation) angelegt. 23 TS-Tests + 5 Go-Tests grün.
 - 2026-05-09: Initial Master-Spec erstellt — Datenmodell-Patches, Verzeichnisstruktur, WizardState-Schema, Mapping-Tabelle, Save-Pipeline, Vertraege zu Sub-Specs (Issues #160–#165). Tech-Lead-Entscheidungen vom 2026-05-09 (User-approved): Bestand wird ersetzt, neuer Ordner `trip-wizard/`, neue Felder `shortcode`+`activity`, Pausentag = leeres `waypoints`-Array, T01-Nummerierung als UI-Concern, KI-Vorschlaege via `suggested`-Flag.
