@@ -73,6 +73,7 @@ test-results/
 # Secrets
 .env
 .env.backup.*
+.env.bak-*
 
 # bug89 test sandbox data
 data/users/__*/

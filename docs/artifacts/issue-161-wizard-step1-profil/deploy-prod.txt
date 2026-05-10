@@ -1,0 +1,3 @@
+[deploy-gregor-prod] FEHLER: Uncommitted Changes vorhanden — erst committen oder stashen
+?? .env.bak-20260510-103406
+?? docs/artifacts/issue-161-wizard-step1-profil/
