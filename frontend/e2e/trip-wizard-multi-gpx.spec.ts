@@ -22,7 +22,12 @@ const KHW_00A = path.join(FIXTURES_DIR, 'KHW_00a.gpx');
 const KHW_10 = path.join(FIXTURES_DIR, 'KHW_10.gpx');
 const KHW_11 = path.join(FIXTURES_DIR, 'KHW_11.gpx');
 
-test.describe('Trip Wizard Multi-GPX Upload (Issue #127)', () => {
+test.describe.skip('Trip Wizard Multi-GPX Upload (Issue #127)', () => {
+	// Cleanup nach Epic #136-Abschluss — alter Wizard noch im Edit-Pfad
+	// (TripEditView.svelte rendert weiterhin den alten Wizard).
+	// Der neue Wizard auf /trips/new (Epic #136) hat die hier getesteten
+	// TestIDs nicht; multi-gpx-Logik wird durch trip-wizard-step2.spec.ts (#162)
+	// abgedeckt. Loeschung im Cleanup-Folge-Issue.
 	test.beforeEach(async ({ page }) => {
 		await login(page);
 	});

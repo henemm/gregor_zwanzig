@@ -5,7 +5,7 @@
 // kein Step-lokaler Trip-State.
 
 import type { ActivityType, Stage, Trip, Waypoint } from '$lib/types';
-import { mapActivityToProfile, newId } from './wizardHelpers.ts';
+import { addDays, mapActivityToProfile, newId } from './wizardHelpers.ts';
 
 // `goto` und `api` werden in `save()` lazy importiert, damit Unit-Tests die
 // Klasse instanziieren und Felder/Methoden pruefen koennen, ohne dass der
@@ -86,6 +86,35 @@ export class WizardState {
 		);
 	}
 
+	/**
+	 * Sub-Spec #162 §3: Step 2 darf erst weitergeschaltet werden, wenn mindestens
+	 * eine Etappe existiert. Pausentage (waypoints.length === 0) zaehlen NICHT,
+	 * weil ein reiner Pause-Trip keinen Sinn ergibt — Acceptance-Criterion verlangt
+	 * mindestens eine echte Etappe. Aktuelle Implementierung: stages.length > 0.
+	 *
+	 * Getter (nicht $derived) — Plain-Node-Test-Kompatibilitaet, siehe canAdvanceStep1.
+	 */
+	get canAdvanceStep2(): boolean {
+		return this.stages.length > 0;
+	}
+
+	/**
+	 * Switch ueber currentStep — liefert true wenn der aktuelle Step weitergeschaltet
+	 * werden darf. Step 3 + 4 returnen aktuell true (keine Validierung dort).
+	 */
+	get canAdvanceCurrent(): boolean {
+		switch (this.currentStep) {
+			case 1:
+				return this.canAdvanceStep1;
+			case 2:
+				return this.canAdvanceStep2;
+			case 3:
+				return true;
+			case 4:
+				return true;
+		}
+	}
+
 	// --- Navigation ---------------------------------------------------------
 
 	nextStep(): void {
@@ -103,7 +132,10 @@ export class WizardState {
 	// --- Stages -------------------------------------------------------------
 
 	addStage(stage: Stage): void {
-		this.stages = [...this.stages, stage];
+		// Backend liefert keine id zurueck (POST /api/gpx/parse) — wir vergeben
+		// sie hier konsistent. Falls Caller bereits eine id hat, respektieren.
+		const stageWithId: Stage = stage.id ? stage : { ...stage, id: newId() };
+		this.stages = [...this.stages, stageWithId];
 	}
 
 	addPauseStage(): void {
@@ -117,6 +149,33 @@ export class WizardState {
 		this.stages = [...this.stages, pause];
 	}
 
+	/**
+	 * Sub-Spec #162 §7: Pausentag an Position `afterIndex + 1` einfuegen.
+	 * `afterIndex = -1` fuegt am Anfang ein. Ruft anschliessend
+	 * `recomputeStageDates()` auf, damit Folge-Datierung lueckenlos bleibt.
+	 */
+	addPauseStageAt(afterIndex: number): void {
+		const pause: Stage = {
+			id: newId(),
+			name: 'Pause',
+			date: '',
+			waypoints: []
+		};
+		const insertAt = Math.max(0, Math.min(this.stages.length, afterIndex + 1));
+		const next = this.stages.slice();
+		next.splice(insertAt, 0, pause);
+		this.stages = next;
+		this.recomputeStageDates();
+	}
+
+	/**
+	 * Sub-Spec #162 §5: Etappe per ID entfernen, anschliessend Daten neu rechnen.
+	 */
+	deleteStage(id: string): void {
+		this.stages = this.stages.filter((s) => s.id !== id);
+		this.recomputeStageDates();
+	}
+
 	reorderStages(fromIndex: number, toIndex: number): void {
 		if (fromIndex === toIndex) return;
 		if (fromIndex < 0 || fromIndex >= this.stages.length) return;
@@ -125,6 +184,27 @@ export class WizardState {
 		const [moved] = next.splice(fromIndex, 1);
 		next.splice(toIndex, 0, moved);
 		this.stages = next;
+		this.recomputeStageDates();
+	}
+
+	/**
+	 * Sub-Spec #162 §8 — Auto-Datierung:
+	 * Setzt `stages[i].date = startDate + i Tage` ausser bei `dateOverridden=true`.
+	 * No-op wenn `startDate` null/leer ist (Spec verbietet Mutation in dem Fall).
+	 *
+	 * Erstellt eine neue Stages-Array-Referenz, damit Svelte-5-Reaktivitaet greift.
+	 */
+	recomputeStageDates(): void {
+		if (typeof this.startDate !== 'string' || this.startDate.length === 0) {
+			return;
+		}
+		const start = this.startDate;
+		this.stages = this.stages.map((stage, i) => {
+			if (stage.dateOverridden === true) {
+				return stage;
+			}
+			return { ...stage, date: addDays(start, i) };
+		});
 	}
 
 	// --- Save-Pipeline (§1.4) ----------------------------------------------
@@ -153,10 +233,12 @@ export class WizardState {
 	 * - generiert eine neue Trip-ID via newId()
 	 */
 	toTripPayload(): Trip {
-		const cleanedStages: Stage[] = this.stages.map((stage) => ({
-			...stage,
-			waypoints: stage.waypoints.map((wp) => stripSuggested(wp))
-		}));
+		const cleanedStages: Stage[] = this.stages.map((stage) =>
+			stripDateOverridden({
+				...stage,
+				waypoints: stage.waypoints.map((wp) => stripSuggested(wp))
+			})
+		);
 
 		const trip: Trip = {
 			id: newId(),
@@ -180,6 +262,16 @@ export class WizardState {
 
 function stripSuggested(wp: Waypoint): Waypoint {
 	const { suggested: _ignored, ...rest } = wp;
+	return rest;
+}
+
+/**
+ * Strippt das transiente `dateOverridden`-Flag aus einer Stage.
+ * Wird beim Save (`toTripPayload`) angewendet — analog `stripSuggested` bei Waypoints.
+ * Sub-Spec #162 §2.
+ */
+function stripDateOverridden(stage: Stage): Stage {
+	const { dateOverridden: _ignored, ...rest } = stage;
 	return rest;
 }
 

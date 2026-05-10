@@ -1,4 +1,5 @@
 import { type Page } from '@playwright/test';
+import * as path from 'node:path';
 
 /**
  * Login helper — authenticates via the login form and returns the page
@@ -35,4 +36,33 @@ export async function fillStep1(page: Page, input: Step1Input): Promise<void> {
 		await page.getByTestId('trip-wizard-step1-shortcode').fill(input.shortcode);
 	}
 	await page.getByTestId('trip-wizard-step1-startdate').fill(input.startDate);
+}
+
+/**
+ * Eingabe-Vertrag fuer Trip-Wizard Step 2 (Sub-Spec #162 §11.2).
+ * Default-Files: `['test-trip.gpx']` aus `frontend/e2e/fixtures/`.
+ */
+export interface Step2Input {
+	files?: string[];
+}
+
+/**
+ * Laedt eine oder mehrere GPX-Dateien in den Step-2-Drop-Bereich
+ * und triggert anschliessend "Etappen anlegen" — wartet auf erscheinen
+ * der ersten Stage-Row.
+ *
+ * Voraussetzung: Wizard ist auf Step 2 (TripWizardShell hat Step2Stages gemountet).
+ */
+export async function fillStep2(page: Page, input?: Step2Input): Promise<void> {
+	const files = (input?.files ?? ['test-trip.gpx']).map((f) =>
+		path.resolve('./e2e/fixtures', f)
+	);
+	const fileInput = page.locator('input[type="file"][accept=".gpx"]');
+	await fileInput.setInputFiles(files);
+	// Pending-Region erwartet — Bulk-Commit-Button erscheint nach setInputFiles.
+	const commit = page.getByTestId('trip-wizard-step2-bulk-commit');
+	await commit.waitFor({ state: 'visible' });
+	await commit.click();
+	// Erste Stage-Row muss sichtbar werden.
+	await page.getByTestId('trip-wizard-step2-stage-row-0').waitFor({ state: 'visible' });
 }

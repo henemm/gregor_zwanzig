@@ -29,6 +29,13 @@ export interface Stage {
 	date: string;
 	waypoints: Waypoint[];
 	start_time?: string;
+	/**
+	 * Transientes Wizard-Flag (Step 2 / Sub-Spec #162):
+	 * `true` wenn der User das Datum manuell ueberschrieben hat — Auto-Datierung
+	 * (recomputeStageDates) laesst dieses Stage in Ruhe. Wird beim Save (Step 4)
+	 * via `toTripPayload()` gestrippt — analog `Waypoint.suggested`.
+	 */
+	dateOverridden?: boolean;
 }
 
 export interface Trip {

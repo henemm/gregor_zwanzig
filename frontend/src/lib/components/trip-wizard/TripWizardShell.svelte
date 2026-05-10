@@ -123,7 +123,7 @@
 					variant="accent"
 					size="md"
 					onclick={handleNext}
-					disabled={state.currentStep === 1 ? !state.canAdvanceStep1 : false}
+					disabled={!state.canAdvanceCurrent}
 				>
 					Weiter
 				</Btn>

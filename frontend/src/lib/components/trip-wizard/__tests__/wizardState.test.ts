@@ -165,3 +165,177 @@ test('canAdvanceStep1: shortcode ist optional, beeinflusst Bedingung nicht', () 
 	s.shortcode = 'KS-25';
 	assert.equal(s.canAdvanceStep1, true, 'shortcode gesetzt → canAdvanceStep1 weiterhin true');
 });
+
+// --- canAdvanceStep2 (Sub-Spec #162 §3) -----------------------------------
+//
+// Step 2 darf weitergeschaltet werden, sobald mindestens eine Etappe existiert.
+// Pausentage zaehlen aktuell nicht eigenstaendig — die Acceptance-Kriterien
+// verlangen mindestens eine "echte" Etappe; Implementierung: stages.length > 0.
+
+test('canAdvanceStep2: initial false (keine Etappen)', () => {
+	const s = new WizardState();
+	assert.equal(s.canAdvanceStep2, false);
+});
+
+test('canAdvanceStep2: nach addStage true', () => {
+	const s = new WizardState();
+	s.addStage({ id: 'a', name: 'Etappe 1', date: '2026-06-01', waypoints: [] });
+	assert.equal(s.canAdvanceStep2, true);
+});
+
+test('canAdvanceStep2: nach deleteStage zurueck auf false', () => {
+	const s = new WizardState();
+	s.addStage({ id: 'a', name: 'Etappe 1', date: '2026-06-01', waypoints: [] });
+	assert.equal(s.canAdvanceStep2, true);
+	s.deleteStage('a');
+	assert.equal(s.canAdvanceStep2, false);
+});
+
+// --- canAdvanceCurrent (Sub-Spec #162 §3, §9) ------------------------------
+
+test('canAdvanceCurrent: Step 1 spiegelt canAdvanceStep1', () => {
+	const s = new WizardState();
+	assert.equal(s.canAdvanceCurrent, false, 'initial Step 1 nicht erfuellt');
+	s.activity = 'trekking';
+	s.name = 'GR20';
+	s.startDate = '2026-06-01';
+	assert.equal(s.canAdvanceCurrent, true, 'Step 1 erfuellt');
+});
+
+test('canAdvanceCurrent: Step 2 spiegelt canAdvanceStep2', () => {
+	const s = new WizardState();
+	s.currentStep = 2;
+	assert.equal(s.canAdvanceCurrent, false, 'Step 2 ohne Etappen → false');
+	s.addStage({ id: 'a', name: 'Etappe 1', date: '2026-06-01', waypoints: [] });
+	assert.equal(s.canAdvanceCurrent, true, 'Step 2 mit Etappe → true');
+});
+
+test('canAdvanceCurrent: Step 3 ist immer true', () => {
+	const s = new WizardState();
+	s.currentStep = 3;
+	assert.equal(s.canAdvanceCurrent, true);
+});
+
+test('canAdvanceCurrent: Step 4 ist immer true', () => {
+	const s = new WizardState();
+	s.currentStep = 4;
+	assert.equal(s.canAdvanceCurrent, true);
+});
+
+// --- addPauseStageAt (Sub-Spec #162 §7) ------------------------------------
+
+test('addPauseStageAt: fuegt Pause an Position afterIndex+1 ein', () => {
+	const s = new WizardState();
+	s.startDate = '2026-06-01';
+	s.addStage({ id: 'a', name: 'A', date: '2026-06-01', waypoints: [{ id: 'w1', name: 'W', lat: 0, lon: 0, elevation_m: 0 }] });
+	s.addStage({ id: 'b', name: 'B', date: '2026-06-02', waypoints: [{ id: 'w2', name: 'W', lat: 0, lon: 0, elevation_m: 0 }] });
+	s.addPauseStageAt(0); // Pause nach Stage 0
+	assert.equal(s.stages.length, 3);
+	assert.equal(s.stages[0].id, 'a');
+	assert.equal(isPauseStage(s.stages[1]), true, 'Pause an Position 1');
+	assert.equal(s.stages[2].id, 'b');
+});
+
+test('addPauseStageAt: ruft recomputeStageDates auf', () => {
+	const s = new WizardState();
+	s.startDate = '2026-06-01';
+	s.addStage({ id: 'a', name: 'A', date: '2026-06-01', waypoints: [{ id: 'w1', name: 'W', lat: 0, lon: 0, elevation_m: 0 }] });
+	s.addStage({ id: 'b', name: 'B', date: '2026-06-02', waypoints: [{ id: 'w2', name: 'W', lat: 0, lon: 0, elevation_m: 0 }] });
+	s.addPauseStageAt(0);
+	// Nach Insert: Stage 0 = '2026-06-01', Pause = '2026-06-02', Stage 'b' = '2026-06-03'
+	assert.equal(s.stages[0].date, '2026-06-01');
+	assert.equal(s.stages[1].date, '2026-06-02');
+	assert.equal(s.stages[2].date, '2026-06-03');
+});
+
+// --- deleteStage (Sub-Spec #162 §5) ----------------------------------------
+
+test('deleteStage: entfernt Stage per ID', () => {
+	const s = new WizardState();
+	s.startDate = '2026-06-01';
+	s.addStage({ id: 'a', name: 'A', date: '2026-06-01', waypoints: [] });
+	s.addStage({ id: 'b', name: 'B', date: '2026-06-02', waypoints: [] });
+	s.addStage({ id: 'c', name: 'C', date: '2026-06-03', waypoints: [] });
+	s.deleteStage('b');
+	assert.equal(s.stages.length, 2);
+	assert.deepEqual(
+		s.stages.map((x) => x.id),
+		['a', 'c']
+	);
+});
+
+test('deleteStage: ruft recomputeStageDates auf', () => {
+	const s = new WizardState();
+	s.startDate = '2026-06-01';
+	s.addStage({ id: 'a', name: 'A', date: '2026-06-01', waypoints: [] });
+	s.addStage({ id: 'b', name: 'B', date: '2026-06-02', waypoints: [] });
+	s.addStage({ id: 'c', name: 'C', date: '2026-06-03', waypoints: [] });
+	s.deleteStage('a');
+	// Nach Delete: 'b' rueckt auf Index 0 → '2026-06-01', 'c' auf Index 1 → '2026-06-02'
+	assert.equal(s.stages[0].date, '2026-06-01');
+	assert.equal(s.stages[1].date, '2026-06-02');
+});
+
+// --- recomputeStageDates (Sub-Spec #162 §8) --------------------------------
+
+test('recomputeStageDates: setzt date=startDate+index', () => {
+	const s = new WizardState();
+	s.startDate = '2026-06-01';
+	s.addStage({ id: 'a', name: 'A', date: '', waypoints: [] });
+	s.addStage({ id: 'b', name: 'B', date: '', waypoints: [] });
+	s.recomputeStageDates();
+	assert.equal(s.stages[0].date, '2026-06-01');
+	assert.equal(s.stages[1].date, '2026-06-02');
+});
+
+test('recomputeStageDates: schuetzt dateOverridden=true', () => {
+	const s = new WizardState();
+	s.startDate = '2026-06-01';
+	s.addStage({ id: 'a', name: 'A', date: '2026-07-15', waypoints: [], dateOverridden: true });
+	s.addStage({ id: 'b', name: 'B', date: '', waypoints: [] });
+	s.recomputeStageDates();
+	assert.equal(s.stages[0].date, '2026-07-15', 'overridden bleibt');
+	assert.equal(s.stages[1].date, '2026-06-02');
+});
+
+test('recomputeStageDates: no-op wenn startDate null', () => {
+	const s = new WizardState();
+	s.startDate = null;
+	s.addStage({ id: 'a', name: 'A', date: '2026-06-01', waypoints: [] });
+	s.recomputeStageDates();
+	assert.equal(s.stages[0].date, '2026-06-01', 'date unveraendert');
+});
+
+// --- reorderStages: ruft recomputeStageDates auf ---------------------------
+
+test('reorderStages: re-dated Etappen lueckenlos', () => {
+	const s = new WizardState();
+	s.startDate = '2026-06-01';
+	s.addStage({ id: 'a', name: 'A', date: '2026-06-01', waypoints: [] });
+	s.addStage({ id: 'b', name: 'B', date: '2026-06-02', waypoints: [] });
+	s.addStage({ id: 'c', name: 'C', date: '2026-06-03', waypoints: [] });
+	s.reorderStages(2, 0); // C an den Anfang
+	assert.equal(s.stages[0].id, 'c');
+	assert.equal(s.stages[0].date, '2026-06-01', 'C bekommt Tag 1');
+	assert.equal(s.stages[1].date, '2026-06-02');
+	assert.equal(s.stages[2].date, '2026-06-03');
+});
+
+// --- toTripPayload: dateOverridden wird gestrippt --------------------------
+
+test('toTripPayload: strippt dateOverridden aus jeder Stage', () => {
+	const s = new WizardState();
+	s.activity = 'trekking';
+	s.name = 'GR20';
+	s.startDate = '2026-06-01';
+	s.addStage({ id: 'a', name: 'A', date: '2026-06-01', waypoints: [], dateOverridden: true });
+	s.addStage({ id: 'b', name: 'B', date: '2026-06-02', waypoints: [], dateOverridden: false });
+	const trip = s.toTripPayload();
+	for (const stage of trip.stages) {
+		assert.equal(
+			Object.prototype.hasOwnProperty.call(stage, 'dateOverridden'),
+			false,
+			`stage ${stage.id} darf kein dateOverridden mehr enthalten`
+		);
+	}
+});

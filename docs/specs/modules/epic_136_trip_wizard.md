@@ -398,6 +398,13 @@ Sub-Specs **muessen liefern**:
 
 ## Changelog
 
+- 2026-05-10: §3.1 erweitert um additive Felder `get canAdvanceStep2(): boolean`
+  und `get canAdvanceCurrent(): boolean` (Switch ueber `currentStep`); zusaetzlich
+  Methoden `addPauseStageAt(afterIndex)`, `deleteStage(id)`, `recomputeStageDates()`.
+  `reorderStages` ruft jetzt `recomputeStageDates()` am Ende auf. `Stage.dateOverridden?`
+  als transientes Wizard-Flag (analog `Waypoint.suggested?`) — wird in
+  `toTripPayload()` gestrippt. Detail in Sub-Spec
+  [`epic_136_step2_stages.md`](./epic_136_step2_stages.md). Issue #162 (Step 2 GPX-Multi-Upload).
 - 2026-05-10: §3.1 erweitert um additives Feld `get canAdvanceStep1(): boolean`
   (Getter, nicht `$derived` — Plain-Node-Test-Kompatibilitaet,
   Svelte-5-reaktivitaets-kompatibel da Read von `$state`-Feldern). Detail in

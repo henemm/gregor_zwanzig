@@ -11,7 +11,7 @@
 //   trip-wizard-back, trip-wizard-cancel, trip-wizard-next, trip-wizard-save.
 
 import { test, expect } from '@playwright/test';
-import { login, fillStep1, type Step1Input } from './helpers.js';
+import { login, fillStep1, fillStep2, type Step1Input } from './helpers.js';
 
 // Default-Step-1-Eingaben fuer Tests, die durch Step 1 hindurch wollen
 // (#161 fuehrte einen disabled-Mechanismus am Weiter-Button ein).
@@ -61,12 +61,15 @@ test.describe('Trip-Wizard Shell (#160)', () => {
 		await expect(page.getByTestId('trip-wizard-step1-profile')).toBeVisible();
 	});
 
-	test('AC#5a: Weiter-Button initial disabled, nach Step 1 ausfuellen enabled, in Steps 2-3 enabled', async ({ page }) => {
+	test('AC#5a: Weiter-Button initial disabled, in Step 2 disabled bis Etappe, in Steps 3+4 enabled', async ({ page }) => {
 		await page.goto('/trips/new');
 		await expect(page.getByTestId('trip-wizard-next')).toBeDisabled();
 		await fillStep1(page, DEFAULT_STEP1);
 		await expect(page.getByTestId('trip-wizard-next')).toBeEnabled();
 		await page.getByTestId('trip-wizard-next').click(); // -> Step 2
+		// In Step 2 ohne Etappe → disabled
+		await expect(page.getByTestId('trip-wizard-next')).toBeDisabled();
+		await fillStep2(page);
 		await expect(page.getByTestId('trip-wizard-next')).toBeEnabled();
 		await page.getByTestId('trip-wizard-next').click(); // -> Step 3
 		await expect(page.getByTestId('trip-wizard-next')).toBeEnabled();
@@ -83,6 +86,7 @@ test.describe('Trip-Wizard Shell (#160)', () => {
 		await expect(page.getByTestId('trip-wizard-save')).not.toBeVisible();
 		await fillStep1(page, DEFAULT_STEP1);
 		await page.getByTestId('trip-wizard-next').click(); // 2
+		await fillStep2(page);
 		await page.getByTestId('trip-wizard-next').click(); // 3
 		await page.getByTestId('trip-wizard-next').click(); // 4
 		await expect(page.getByTestId('trip-wizard-save')).toBeVisible();
@@ -95,6 +99,7 @@ test.describe('Trip-Wizard Shell (#160)', () => {
 		await fillStep1(page, DEFAULT_STEP1);
 		await page.getByTestId('trip-wizard-next').click();
 		await expect(page.getByTestId('trip-wizard-step2-stages')).toBeVisible();
+		await fillStep2(page);
 		await page.getByTestId('trip-wizard-next').click();
 		await expect(page.getByTestId('trip-wizard-step3-waypoints')).toBeVisible();
 		await page.getByTestId('trip-wizard-next').click();
