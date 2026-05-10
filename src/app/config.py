@@ -92,6 +92,10 @@ class Settings(BaseSettings):
     google_smtp_pass: Optional[str] = Field(default=None, description="Gmail SMTP password for tests")
     google_mail_from: Optional[str] = Field(default=None, description="Gmail sender for tests")
 
+    # Internal flag set by for_testing() / Test-User-Routing.
+    # Wenn True, blockiert EmailOutput jeden Versand über Resend (Production-Versanddienst).
+    is_test_mode: bool = Field(default=False, description="Test-Modus: blockiert Resend-Versand")
+
     # SMS settings (for sms channel)
     sms_gateway_url: Optional[str] = Field(default=None, description="SMS gateway HTTP endpoint")
     sms_api_key: Optional[str] = Field(default=None, description="SMS gateway API key")
@@ -136,13 +140,14 @@ class Settings(BaseSettings):
         Preserves IMAP and mail_to settings.
         """
         if not self.google_smtp_host or not self.google_smtp_user:
-            return self
+            return self.model_copy(update={"is_test_mode": True})
         return self.model_copy(update={
             "smtp_host": self.google_smtp_host,
             "smtp_port": self.google_smtp_port,
             "smtp_user": self.google_smtp_user,
             "smtp_pass": self.google_smtp_pass,
             "mail_from": self.google_mail_from or self.google_smtp_user,
+            "is_test_mode": True,
         })
 
     @staticmethod

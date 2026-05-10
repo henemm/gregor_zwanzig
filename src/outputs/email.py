@@ -50,6 +50,15 @@ class EmailOutput:
                 "Required: smtp_host, smtp_user, smtp_pass, mail_to",
             )
 
+        if getattr(settings, "is_test_mode", False) and "resend" in (settings.smtp_host or "").lower():
+            raise OutputConfigError(
+                "email",
+                "Test-Versand über Resend ist gesperrt. "
+                "Test-Mails MÜSSEN über Gmail gehen — siehe CLAUDE.md / Settings.for_testing(). "
+                "Konfiguriere GZ_GOOGLE_SMTP_HOST/USER/PASS oder verwende einen Test-User "
+                "(User-ID enthält 'test' oder 'tdd').",
+            )
+
         self._host = settings.smtp_host
         self._port = settings.smtp_port
         self._user = settings.smtp_user
