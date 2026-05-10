@@ -152,6 +152,7 @@ Alle Module benoetigen Specs vor Implementierung:
 - `trip_result_adapter` - Konvertiert TripForecastResult zu NormalizedForecast für Pipeline-Kompatibilität
 - `activity_profile` - Kanonischer Enum für Aktivitätsprofile (Wintersport, Wandern, Summer-Trekking, Allgemein)
 - `worktree_state_routing` - Hooks erkennen git Worktrees und schreiben workflow_state.json zentral ins Hauptrepo
+- `trip_wizard_master_fundament` - Master-Spec für Trip-Wizard (Epic #136): Datenmodell (Trip.shortcode, Trip.activity), WizardState-Runes, wizardHelpers, Verzeichnisstruktur (Spec: `docs/specs/modules/epic_136_trip_wizard.md`)
 
 ### Geplante Module
 Siehe GitHub Issues: https://github.com/henemm/gregor_zwanzig/issues

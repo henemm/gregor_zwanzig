@@ -1,7 +1,7 @@
 # Frontend Components Reference
 
-**Updated:** 2026-05-09  
-**Version:** 1.0
+**Updated:** 2026-05-10  
+**Version:** 1.2
 
 ## Overview
 
@@ -24,6 +24,22 @@ frontend/src/lib/components/
 │   ├── dot/              # GREGOR atom (Issue #144)
 │   ├── topo/             # GREGOR atom (Issue #143)
 │   └── elev-sparkline/   # GREGOR atom (Issue #146)
+│
+├── trip-wizard/          # Trip-Wizard components (Epic #136)
+│   ├── TripWizardShell.svelte   # Shell + 4-step stepper
+│   ├── Stepper.svelte           # Generic step indicator
+│   ├── wizardState.svelte.ts    # Central Runes state class
+│   ├── wizardHelpers.ts         # Shared helpers (newId, today, isPauseStage, etc.)
+│   ├── steps/
+│   │   ├── Step1Profile.svelte      # Activity profile + name/dates
+│   │   ├── Step2Stages.svelte       # Multi-GPX upload, drag-sort, pause
+│   │   ├── Step3Waypoints.svelte    # AI waypoint confirmation
+│   │   └── Step4Briefings.svelte    # Briefing channels & thresholds
+│   ├── templates/
+│   │   └── TemplatePicker.svelte    # GR20, KHW, Stubai pre-configs
+│   └── __tests__/
+│       ├── wizardHelpers.test.ts
+│       └── wizardState.test.ts
 │
 └── layout/
     └── Sidebar.svelte    # Main navigation (Issue #145)
@@ -568,6 +584,79 @@ interface Props {
 ```svelte
 <BottomRow tomorrowStage={tomorrowStage} archivedTrips={archivedTrips.slice(0, 4)} />
 ```
+
+---
+
+## Trip-Wizard Components (Epic #136)
+
+Multi-step wizard for creating new trips with activity profiles, GPX import, AI waypoint confirmation, and briefing config.
+
+**Route:** `/trips/new` → mounted by `frontend/src/routes/trips/new/+page.svelte`
+
+### Component Architecture
+
+```
+TripWizardShell (container, stepper + steps)
+├── Stepper (visual step indicator)
+├── Step1Profile (activity + name + dates)
+├── Step2Stages (GPX multi-upload, drag-sort, pause)
+├── Step3Waypoints (confirm AI-suggested waypoints)
+├── Step4Briefings (channel toggles + thresholds)
+└── TemplatePicker (GR20, KHW, Stubai shortcuts)
+```
+
+**State Management:** `WizardState` (Svelte 5 Runes class in `wizardState.svelte.ts`)
+
+**Shared Helpers:** `wizardHelpers.ts`
+- `newId()` — Generate unique component IDs
+- `today()` — Current date (test-injectable)
+- `addDays(date, n)` — Date arithmetic
+- `mapActivityToProfile(activityType)` — Maps 5 UI profiles → 4 canonical aggregation profiles (Wintersport, Wandern, Summer-Trekking, Allgemein)
+- `formatStageNumber(index)` — Formats as "T01", "T02", etc.
+- `isPauseStage(stage)` — True if `waypoints: []` (pause day)
+
+### Datenmodell Extensions (Epic #136)
+
+**Trip model additions** (`internal/model/trip.go` + `frontend/src/lib/types.ts`):
+- `Trip.shortcode?: string` — Short identifier for trip (e.g., "GR20", "KHW")
+- `Trip.activity?: ActivityType` — Selected profile ("wandern", "wintersport", "summer_trekking", "allgemein", "klettern")
+
+**Waypoint model** — New transient field:
+- `Waypoint.suggested?: boolean` — True if AI-generated (UI hint: show "Confirm" button, not "Edit")
+
+**Pause Stage Support:**
+- Stages with `waypoints: []` are valid (represent pause days)
+- Backend `validateTrip()` accepts this pattern
+- Frontend renders as gray/muted pill
+
+### Key Features
+
+1. **Profile Selection (Step 1):** 5 activity chips → UI state saved as `trip.activity`
+2. **Multi-GPX Upload (Step 2):** Drag-drop multiple GPX files, auto-sorted, natural sort order (T01, T02, ..., T10, T11, not T10, T11, T2)
+3. **Pause Days:** Insert empty-waypoint stages to skip days (e.g., rest day, weather day)
+4. **AI Waypoint Confirmation (Step 3):** Show suggested waypoints per stage, user confirms/edits
+5. **Briefing Config (Step 4):** Email/SMS toggles, thresholds (temp, wind, precip, etc.)
+6. **Templates (Step 2 right sidebar):** GR20, KHW, Stubai → quick-populate name, dates, stages from template
+
+### Example Usage
+
+```svelte
+<TripWizardShell {wizardState} />
+
+<!-- From within Step1Profile: -->
+<Btn on:click={() => wizardState.goToStep(2)}>Nächster Schritt</Btn>
+
+<!-- Check pause status: -->
+{#if isPauseStage(stage)}
+  <Pill tone="info">Pausentag</Pill>
+{/if}
+```
+
+### Links
+
+- **Master Spec:** `docs/specs/modules/epic_136_trip_wizard.md`
+- **Sub-Specs:** `docs/specs/modules/epic_136_step{0..5}_*.md`
+- **Child Issues:** #160–#165
 
 ---
 

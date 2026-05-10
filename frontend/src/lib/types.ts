@@ -11,6 +11,8 @@ export interface Location {
 	display_config?: Record<string, unknown>;
 }
 
+export type ActivityType = 'trekking' | 'skitour' | 'hochtour' | 'klettersteig' | 'mtb';
+
 export interface Waypoint {
 	id: string;
 	name: string;
@@ -18,6 +20,7 @@ export interface Waypoint {
 	lon: number;
 	elevation_m: number;
 	time_window?: string;
+	suggested?: boolean;
 }
 
 export interface Stage {
@@ -31,6 +34,8 @@ export interface Stage {
 export interface Trip {
 	id: string;
 	name: string;
+	shortcode?: string;
+	activity?: ActivityType;
 	stages: Stage[];
 	avalanche_regions?: string[];
 	aggregation?: Record<string, unknown>;

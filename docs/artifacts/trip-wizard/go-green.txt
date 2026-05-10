@@ -1,0 +1,22 @@
+=== RUN   TestTrip_ShortcodeRoundtrip
+--- PASS: TestTrip_ShortcodeRoundtrip (0.00s)
+=== RUN   TestTrip_ShortcodeOmitEmpty
+--- PASS: TestTrip_ShortcodeOmitEmpty (0.00s)
+=== RUN   TestTrip_ActivityRoundtrip
+=== RUN   TestTrip_ActivityRoundtrip/trekking
+=== RUN   TestTrip_ActivityRoundtrip/skitour
+=== RUN   TestTrip_ActivityRoundtrip/hochtour
+=== RUN   TestTrip_ActivityRoundtrip/klettersteig
+=== RUN   TestTrip_ActivityRoundtrip/mtb
+--- PASS: TestTrip_ActivityRoundtrip (0.00s)
+    --- PASS: TestTrip_ActivityRoundtrip/trekking (0.00s)
+    --- PASS: TestTrip_ActivityRoundtrip/skitour (0.00s)
+    --- PASS: TestTrip_ActivityRoundtrip/hochtour (0.00s)
+    --- PASS: TestTrip_ActivityRoundtrip/klettersteig (0.00s)
+    --- PASS: TestTrip_ActivityRoundtrip/mtb (0.00s)
+=== RUN   TestTrip_ActivityOmitEmpty
+--- PASS: TestTrip_ActivityOmitEmpty (0.00s)
+=== RUN   TestTrip_LegacyJSON_NoNewFields
+--- PASS: TestTrip_LegacyJSON_NoNewFields (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/model	0.002s

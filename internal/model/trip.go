@@ -26,4 +26,6 @@ type Trip struct {
 	WeatherConfig    map[string]interface{} `json:"weather_config,omitempty"`
 	DisplayConfig    map[string]interface{} `json:"display_config,omitempty"`
 	ReportConfig     map[string]interface{} `json:"report_config,omitempty"`
+	Shortcode        string                 `json:"shortcode,omitempty"`
+	Activity         string                 `json:"activity,omitempty"`
 }

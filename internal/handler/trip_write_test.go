@@ -48,6 +48,50 @@ func TestCreateTripHandler(t *testing.T) {
 	}
 }
 
+// Issue #136 Master-Spec §3.2 / Tech-Lead-Entscheidung #5:
+// Pausentag = Stage mit waypoints.length === 0. POST /api/trips MUSS
+// einen solchen Pausentag akzeptieren. Frueher hat validateTrip die
+// Stage abgelehnt ("at least one waypoint required"); nach dem Fix
+// duerfen Pausen-Stages durchlaufen.
+func TestPostTrip_AcceptsPauseStage(t *testing.T) {
+	s := newTestStore(t)
+
+	body := `{"id":"pause-trip","name":"Mit Pause","stages":[` +
+		`{"id":"S1","name":"Tag 1","date":"2026-06-01","waypoints":[` +
+		`{"id":"W1","name":"Start","lat":47.0,"lon":11.0,"elevation_m":500}` +
+		`]},` +
+		`{"id":"S2","name":"Pause","date":"","waypoints":[]}` +
+		`]}`
+
+	h := CreateTripHandler(s)
+	req := httptest.NewRequest("POST", "/api/trips", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+
+	if w.Code != 201 {
+		t.Fatalf("expected 201 for trip with pause stage, got %d: %s", w.Code, w.Body.String())
+	}
+
+	// Pausen-Stage muss persistiert sein (waypoints leer).
+	got, err := s.LoadTrip("pause-trip")
+	if err != nil {
+		t.Fatalf("LoadTrip: %v", err)
+	}
+	if got == nil {
+		t.Fatalf("pause-trip nicht gespeichert")
+	}
+	if len(got.Stages) != 2 {
+		t.Fatalf("expected 2 stages, got %d", len(got.Stages))
+	}
+	if len(got.Stages[1].Waypoints) != 0 {
+		t.Errorf("pause stage muss leere waypoints haben, got %d", len(got.Stages[1].Waypoints))
+	}
+	if got.Stages[1].Name != "Pause" {
+		t.Errorf("pause stage name: got %q", got.Stages[1].Name)
+	}
+}
+
 func TestCreateTripHandlerInvalid(t *testing.T) {
 	s := newTestStore(t)
 

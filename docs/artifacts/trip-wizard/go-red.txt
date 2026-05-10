@@ -1,0 +1,14 @@
+# github.com/henemm/gregor-api/internal/model [github.com/henemm/gregor-api/internal/model.test]
+internal/model/trip_field_test.go:13:42: unknown field Shortcode in struct literal of type Trip
+internal/model/trip_field_test.go:25:9: out.Shortcode undefined (type Trip has no field or method Shortcode)
+internal/model/trip_field_test.go:26:51: out.Shortcode undefined (type Trip has no field or method Shortcode)
+internal/model/trip_field_test.go:45:39: unknown field Activity in struct literal of type Trip
+internal/model/trip_field_test.go:58:11: out.Activity undefined (type Trip has no field or method Activity)
+internal/model/trip_field_test.go:59:55: out.Activity undefined (type Trip has no field or method Activity)
+internal/model/trip_field_test.go:83:9: out.Shortcode undefined (type Trip has no field or method Shortcode)
+internal/model/trip_field_test.go:84:51: out.Shortcode undefined (type Trip has no field or method Shortcode)
+internal/model/trip_field_test.go:86:9: out.Activity undefined (type Trip has no field or method Activity)
+internal/model/trip_field_test.go:87:50: out.Activity undefined (type Trip has no field or method Activity)
+internal/model/trip_field_test.go:87:50: too many errors
+FAIL	github.com/henemm/gregor-api/internal/model [build failed]
+FAIL

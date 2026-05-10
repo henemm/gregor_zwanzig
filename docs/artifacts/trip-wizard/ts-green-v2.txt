@@ -1,0 +1,148 @@
+TAP version 13
+# Subtest: mapActivityToProfile: trekking → summer_trekking
+ok 1 - mapActivityToProfile: trekking → summer_trekking
+  ---
+  duration_ms: 0.815301
+  type: 'test'
+  ...
+# Subtest: mapActivityToProfile: skitour → wintersport
+ok 2 - mapActivityToProfile: skitour → wintersport
+  ---
+  duration_ms: 0.111819
+  type: 'test'
+  ...
+# Subtest: mapActivityToProfile: hochtour → summer_trekking
+ok 3 - mapActivityToProfile: hochtour → summer_trekking
+  ---
+  duration_ms: 0.072309
+  type: 'test'
+  ...
+# Subtest: mapActivityToProfile: klettersteig → summer_trekking
+ok 4 - mapActivityToProfile: klettersteig → summer_trekking
+  ---
+  duration_ms: 0.062986
+  type: 'test'
+  ...
+# Subtest: mapActivityToProfile: mtb → allgemein
+ok 5 - mapActivityToProfile: mtb → allgemein
+  ---
+  duration_ms: 0.070947
+  type: 'test'
+  ...
+# Subtest: formatStageNumber: index 0 → T01
+ok 6 - formatStageNumber: index 0 → T01
+  ---
+  duration_ms: 0.095383
+  type: 'test'
+  ...
+# Subtest: formatStageNumber: index 9 → T10
+ok 7 - formatStageNumber: index 9 → T10
+  ---
+  duration_ms: 0.074341
+  type: 'test'
+  ...
+# Subtest: formatStageNumber: index 99 → T100
+ok 8 - formatStageNumber: index 99 → T100
+  ---
+  duration_ms: 0.063096
+  type: 'test'
+  ...
+# Subtest: isPauseStage: leere Wegpunkte → true
+ok 9 - isPauseStage: leere Wegpunkte → true
+  ---
+  duration_ms: 0.241875
+  type: 'test'
+  ...
+# Subtest: isPauseStage: mit Wegpunkten → false
+ok 10 - isPauseStage: mit Wegpunkten → false
+  ---
+  duration_ms: 0.334915
+  type: 'test'
+  ...
+# Subtest: addDays: 2026-05-09 + 1 Tag → 2026-05-10
+ok 11 - addDays: 2026-05-09 + 1 Tag → 2026-05-10
+  ---
+  duration_ms: 0.215064
+  type: 'test'
+  ...
+# Subtest: addDays: Monatsgrenze 2026-05-31 + 1 → 2026-06-01
+ok 12 - addDays: Monatsgrenze 2026-05-31 + 1 → 2026-06-01
+  ---
+  duration_ms: 0.071539
+  type: 'test'
+  ...
+# Subtest: today: liefert ISO-Datum YYYY-MM-DD
+ok 13 - today: liefert ISO-Datum YYYY-MM-DD
+  ---
+  duration_ms: 0.333232
+  type: 'test'
+  ...
+# Subtest: newId: liefert nicht-leeren String
+ok 14 - newId: liefert nicht-leeren String
+  ---
+  duration_ms: 2.112809
+  type: 'test'
+  ...
+# Subtest: newId: liefert eindeutige Werte
+ok 15 - newId: liefert eindeutige Werte
+  ---
+  duration_ms: 0.207403
+  type: 'test'
+  ...
+# Subtest: WizardState: Initial-State entspricht Spec-Defaults
+ok 16 - WizardState: Initial-State entspricht Spec-Defaults
+  ---
+  duration_ms: 0.761289
+  type: 'test'
+  ...
+# Subtest: WizardState: nextStep() schreitet 1 → 2 voran
+ok 17 - WizardState: nextStep() schreitet 1 → 2 voran
+  ---
+  duration_ms: 0.107391
+  type: 'test'
+  ...
+# Subtest: WizardState: nextStep() bleibt bei 4 (kein Wrap)
+ok 18 - WizardState: nextStep() bleibt bei 4 (kein Wrap)
+  ---
+  duration_ms: 0.089865
+  type: 'test'
+  ...
+# Subtest: WizardState: prevStep() bleibt bei 1 (kein Underflow)
+ok 19 - WizardState: prevStep() bleibt bei 1 (kein Underflow)
+  ---
+  duration_ms: 0.096345
+  type: 'test'
+  ...
+# Subtest: WizardState: prevStep() schreitet 4 → 3 zurueck
+ok 20 - WizardState: prevStep() schreitet 4 → 3 zurueck
+  ---
+  duration_ms: 0.07904
+  type: 'test'
+  ...
+# Subtest: WizardState: toTripPayload mit activity=skitour → aggregation.profile=wintersport
+ok 21 - WizardState: toTripPayload mit activity=skitour → aggregation.profile=wintersport
+  ---
+  duration_ms: 1.455577
+  type: 'test'
+  ...
+# Subtest: WizardState: addPauseStage() fuegt Stage mit leeren Wegpunkten hinzu
+ok 22 - WizardState: addPauseStage() fuegt Stage mit leeren Wegpunkten hinzu
+  ---
+  duration_ms: 0.581357
+  type: 'test'
+  ...
+# Subtest: WizardState: defaultBriefingConfig ist nicht geteilt (Klone unabhaengig)
+ok 23 - WizardState: defaultBriefingConfig ist nicht geteilt (Klone unabhaengig)
+  ---
+  duration_ms: 0.139991
+  type: 'test'
+  ...
+1..23
+# tests 23
+# suites 0
+# pass 23
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 112.471948

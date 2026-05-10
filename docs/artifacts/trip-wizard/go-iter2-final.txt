@@ -1,0 +1,32 @@
+=== RUN   TestCreateTripHandler
+--- PASS: TestCreateTripHandler (0.00s)
+=== RUN   TestPostTrip_AcceptsPauseStage
+--- PASS: TestPostTrip_AcceptsPauseStage (0.00s)
+=== RUN   TestCreateTripHandlerInvalid
+--- PASS: TestCreateTripHandlerInvalid (0.00s)
+=== RUN   TestCreateTripHandlerZeroCoords
+--- PASS: TestCreateTripHandlerZeroCoords (0.00s)
+=== RUN   TestUpdateTripHandler
+--- PASS: TestUpdateTripHandler (0.00s)
+=== RUN   TestUpdateTripHandlerNotFound
+--- PASS: TestUpdateTripHandlerNotFound (0.00s)
+=== RUN   TestDeleteTripHandler
+--- PASS: TestDeleteTripHandler (0.00s)
+=== RUN   TestUpdateTripHandlerPreservesAggregation
+--- PASS: TestUpdateTripHandlerPreservesAggregation (0.00s)
+=== RUN   TestUpdateTripHandlerPreservesReportConfig
+--- PASS: TestUpdateTripHandlerPreservesReportConfig (0.00s)
+=== RUN   TestUpdateTripHandlerPreservesWeatherConfig
+--- PASS: TestUpdateTripHandlerPreservesWeatherConfig (0.00s)
+=== RUN   TestUpdateTripHandlerPreservesDisplayConfig
+--- PASS: TestUpdateTripHandlerPreservesDisplayConfig (0.00s)
+=== RUN   TestUpdateTripHandlerPreservesAvalancheRegions
+--- PASS: TestUpdateTripHandlerPreservesAvalancheRegions (0.00s)
+=== RUN   TestUpdateTripHandlerReplacesAggregationWhenSent
+--- PASS: TestUpdateTripHandlerReplacesAggregationWhenSent (0.00s)
+=== RUN   TestUpdateTripHandlerKeepsAllConfigsOnNameOnlyUpdate
+--- PASS: TestUpdateTripHandlerKeepsAllConfigsOnNameOnlyUpdate (0.00s)
+=== RUN   TestDeleteTripHandlerUsesContextUserId
+--- PASS: TestDeleteTripHandlerUsesContextUserId (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/handler	0.015s

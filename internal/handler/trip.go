@@ -62,10 +62,10 @@ func validateTrip(t model.Trip) error {
 	if len(t.Stages) == 0 {
 		return fmt.Errorf("at least one stage required")
 	}
+	// Pausen-Stages (waypoints leer) sind erlaubt — Master-Spec Epic #136 §3.2.
+	// Trip mit ausschliesslich Pausen waere unsinnig, aber das verhindert die UI;
+	// der Backend-Validator beschraenkt sich auf die echten Korrektheitskriterien.
 	for _, s := range t.Stages {
-		if len(s.Waypoints) == 0 {
-			return fmt.Errorf("stage %s: at least one waypoint required", s.ID)
-		}
 		for _, wp := range s.Waypoints {
 			if wp.Lat == 0 && wp.Lon == 0 {
 				return fmt.Errorf("waypoint %s: coordinates required", wp.ID)
