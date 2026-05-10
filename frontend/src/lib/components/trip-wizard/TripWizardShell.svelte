@@ -1,0 +1,137 @@
+<script lang="ts">
+	// Wizard-Shell fuer Epic #136 Sub-Spec #160.
+	// Quelle: docs/specs/modules/epic_136_step0_shell.md §5
+	//
+	// Verantwortlich fuer:
+	//   - Header (h1 + Eyebrow "Schritt N von 4")
+	//   - Stepper-Render
+	//   - Dynamischer Step-Slot via {#if state.currentStep === N}
+	//   - Save-Status-Region (role="status", aria-live="polite")
+	//   - Footer mit Btn-Atomen (Zurueck/Abbrechen/Weiter/Speichern)
+	//
+	// Konsumiert WizardState via getContext('trip-wizard-state').
+	// Die Instanziierung erfolgt im +page.svelte Mount-Punkt (Factory-Pattern).
+
+	import { getContext } from 'svelte';
+	import { goto } from '$app/navigation';
+	import { Btn } from '$lib/components/ui/btn';
+	import { Eyebrow } from '$lib/components/ui/eyebrow';
+	import type { WizardState } from './wizardState.svelte';
+	import Stepper from './Stepper.svelte';
+	import Step1Profile from './steps/Step1Profile.svelte';
+	import Step2Stages from './steps/Step2Stages.svelte';
+	import Step3Waypoints from './steps/Step3Waypoints.svelte';
+	import Step4Briefings from './steps/Step4Briefings.svelte';
+
+	const state = getContext<WizardState>('trip-wizard-state');
+
+	// Wizard-spezifische Step-Texte (Spec §4).
+	const stepLabels = ['Profil & Eckdaten', 'GPX-Import', 'Wegpunkte', 'Briefings'];
+	const stepSubLabels = [
+		'Aktivitaet, Name, Zeitraum',
+		'Etappen hochladen',
+		'KI-Vorschlaege bestaetigen',
+		'Kanaele und Alerts'
+	];
+
+	const saveLabel = $derived(
+		state.saveStatus === 'saving'
+			? 'Speichern...'
+			: state.saveStatus === 'ok'
+				? 'Gespeichert'
+				: 'Speichern'
+	);
+
+	// Factory-Handler (CLAUDE.md NiceGUI/Safari-Pattern auf Svelte-Klassen erweitert):
+	// expliziter benannter Handler statt anonymer Closure.
+	function handleBack() {
+		state.prevStep();
+	}
+
+	function handleCancel() {
+		void goto('/');
+	}
+
+	function handleNext() {
+		state.nextStep();
+	}
+
+	function handleSave() {
+		void state.save();
+	}
+</script>
+
+<div data-testid="trip-wizard-shell" class="max-w-3xl mx-auto py-6 px-4">
+	<header class="mb-6 space-y-1">
+		<Eyebrow>Schritt {state.currentStep} von 4</Eyebrow>
+		<h1 class="text-2xl font-bold">Neuer Trip</h1>
+	</header>
+
+	<Stepper current={state.currentStep} labels={stepLabels} subLabels={stepSubLabels} />
+
+	<div class="min-h-[300px] mt-6">
+		{#if state.currentStep === 1}
+			<Step1Profile />
+		{:else if state.currentStep === 2}
+			<Step2Stages />
+		{:else if state.currentStep === 3}
+			<Step3Waypoints />
+		{:else if state.currentStep === 4}
+			<Step4Briefings />
+		{/if}
+	</div>
+
+	{#if state.saveStatus !== 'idle'}
+		<div
+			data-testid="trip-wizard-save-status"
+			role="status"
+			aria-live="polite"
+			class="mt-4 min-h-[1.5rem] text-sm"
+		>
+			{#if state.saveStatus === 'saving'}
+				<span>Speichern...</span>
+			{:else if state.saveStatus === 'error'}
+				<span class="text-[var(--g-danger)]">{state.saveError}</span>
+			{:else if state.saveStatus === 'ok'}
+				<span class="text-[var(--g-success)]">Gespeichert</span>
+			{/if}
+		</div>
+	{/if}
+
+	<div
+		class="flex items-center justify-between mt-8 pt-4 border-t border-[var(--g-ink-faint)]/30"
+	>
+		<div>
+			{#if state.currentStep > 1}
+				<Btn
+					data-testid="trip-wizard-back"
+					variant="outline"
+					size="md"
+					onclick={handleBack}
+				>
+					Zurueck
+				</Btn>
+			{/if}
+		</div>
+		<div class="flex items-center gap-2">
+			<Btn data-testid="trip-wizard-cancel" variant="ghost" size="md" onclick={handleCancel}>
+				Abbrechen
+			</Btn>
+			{#if state.currentStep < 4}
+				<Btn data-testid="trip-wizard-next" variant="accent" size="md" onclick={handleNext}>
+					Weiter
+				</Btn>
+			{:else}
+				<Btn
+					data-testid="trip-wizard-save"
+					variant="accent"
+					size="md"
+					onclick={handleSave}
+					disabled={state.saveStatus === 'saving'}
+				>
+					{saveLabel}
+				</Btn>
+			{/if}
+		</div>
+	</div>
+</div>

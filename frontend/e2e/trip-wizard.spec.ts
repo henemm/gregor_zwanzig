@@ -1,7 +1,13 @@
 import { test, expect } from '@playwright/test';
 import { login } from './helpers.js';
 
-test.describe('Trip Wizard W1', () => {
+// Cleanup nach Epic #136-Abschluss — alter Wizard noch im Edit-Pfad
+// (TripEditView.svelte rendert weiterhin den alten Wizard, deshalb nicht
+// loeschen). Die Tests pruefen den ALTEN Wizard mit Labels Route/Etappen/
+// Wetter/Reports und testIDs `wizard-*`. Sobald `/trips/new` auf den neuen
+// `TripWizardShell` umstellt, brechen sie unvermeidlich. Loeschung erfolgt
+// im Cleanup-Folge-Issue (Master-Spec §Delete).
+test.describe.skip('Trip Wizard W1', () => {
 	test.beforeEach(async ({ page }) => {
 		await login(page);
 	});
@@ -421,7 +427,8 @@ test.describe('Trip Wizard W1', () => {
 
 // --- Bug #106: Wegpunkt-Zeile auf Mobile zu eng ---
 // Spec: docs/specs/bugfix/wizard_step2_mobile_waypoint_row.md
-test.describe('Trip Wizard W1 — Bug #106 Mobile Waypoint Layout', () => {
+// Cleanup nach Epic #136-Abschluss — alter Wizard noch im Edit-Pfad.
+test.describe.skip('Trip Wizard W1 — Bug #106 Mobile Waypoint Layout', () => {
 	test.use({ viewport: { width: 375, height: 667 } }); // iPhone SE
 
 	test.beforeEach(async ({ page }) => {

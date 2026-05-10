@@ -1,0 +1,46 @@
+TAP version 13
+# Subtest: stepperStateOf: index 0, current 1 → active (erster Step aktiv)
+ok 1 - stepperStateOf: index 0, current 1 → active (erster Step aktiv)
+  ---
+  duration_ms: 0.66242
+  type: 'test'
+  ...
+# Subtest: stepperStateOf: index 1, current 1 → pending (zweiter Step pending)
+ok 2 - stepperStateOf: index 1, current 1 → pending (zweiter Step pending)
+  ---
+  duration_ms: 0.102865
+  type: 'test'
+  ...
+# Subtest: stepperStateOf: index 0, current 2 → done (erster Step done bei current=2)
+ok 3 - stepperStateOf: index 0, current 2 → done (erster Step done bei current=2)
+  ---
+  duration_ms: 0.061434
+  type: 'test'
+  ...
+# Subtest: stepperStateOf: index 0, current 4 → done (erster Step done bei current=4)
+ok 4 - stepperStateOf: index 0, current 4 → done (erster Step done bei current=4)
+  ---
+  duration_ms: 0.067733
+  type: 'test'
+  ...
+# Subtest: stepperStateOf: index 3, current 4 → active (vierter Step aktiv bei current=4)
+ok 5 - stepperStateOf: index 3, current 4 → active (vierter Step aktiv bei current=4)
+  ---
+  duration_ms: 0.070987
+  type: 'test'
+  ...
+# Subtest: stepperStateOf: index 2, current 4 → done (dritter Step done bei current=4)
+ok 6 - stepperStateOf: index 2, current 4 → done (dritter Step done bei current=4)
+  ---
+  duration_ms: 0.056625
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 85.932621
