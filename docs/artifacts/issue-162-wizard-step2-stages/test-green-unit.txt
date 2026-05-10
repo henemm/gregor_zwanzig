@@ -1,0 +1,202 @@
+TAP version 13
+# Subtest: WizardState: Initial-State entspricht Spec-Defaults
+ok 1 - WizardState: Initial-State entspricht Spec-Defaults
+  ---
+  duration_ms: 1.964716
+  type: 'test'
+  ...
+# Subtest: WizardState: nextStep() schreitet 1 → 2 voran
+ok 2 - WizardState: nextStep() schreitet 1 → 2 voran
+  ---
+  duration_ms: 0.162185
+  type: 'test'
+  ...
+# Subtest: WizardState: nextStep() bleibt bei 4 (kein Wrap)
+ok 3 - WizardState: nextStep() bleibt bei 4 (kein Wrap)
+  ---
+  duration_ms: 0.0728
+  type: 'test'
+  ...
+# Subtest: WizardState: prevStep() bleibt bei 1 (kein Underflow)
+ok 4 - WizardState: prevStep() bleibt bei 1 (kein Underflow)
+  ---
+  duration_ms: 0.075905
+  type: 'test'
+  ...
+# Subtest: WizardState: prevStep() schreitet 4 → 3 zurueck
+ok 5 - WizardState: prevStep() schreitet 4 → 3 zurueck
+  ---
+  duration_ms: 0.076495
+  type: 'test'
+  ...
+# Subtest: WizardState: toTripPayload mit activity=skitour → aggregation.profile=wintersport
+ok 6 - WizardState: toTripPayload mit activity=skitour → aggregation.profile=wintersport
+  ---
+  duration_ms: 1.60287
+  type: 'test'
+  ...
+# Subtest: WizardState: addPauseStage() fuegt Stage mit leeren Wegpunkten hinzu
+ok 7 - WizardState: addPauseStage() fuegt Stage mit leeren Wegpunkten hinzu
+  ---
+  duration_ms: 0.548497
+  type: 'test'
+  ...
+# Subtest: WizardState: defaultBriefingConfig ist nicht geteilt (Klone unabhaengig)
+ok 8 - WizardState: defaultBriefingConfig ist nicht geteilt (Klone unabhaengig)
+  ---
+  duration_ms: 0.090166
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep1: initial false (alle Pflichtfelder leer)
+ok 9 - canAdvanceStep1: initial false (alle Pflichtfelder leer)
+  ---
+  duration_ms: 0.27834
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep1: nur activity gesetzt → false (name+startDate fehlen)
+ok 10 - canAdvanceStep1: nur activity gesetzt → false (name+startDate fehlen)
+  ---
+  duration_ms: 0.286032
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep1: activity+name gesetzt → false (startDate fehlt)
+ok 11 - canAdvanceStep1: activity+name gesetzt → false (startDate fehlt)
+  ---
+  duration_ms: 0.121043
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep1: alle 3 Pflichtfelder gesetzt → true
+ok 12 - canAdvanceStep1: alle 3 Pflichtfelder gesetzt → true
+  ---
+  duration_ms: 0.0596
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep1: name nur Whitespace → false (trim-Logik)
+ok 13 - canAdvanceStep1: name nur Whitespace → false (trim-Logik)
+  ---
+  duration_ms: 0.044196
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep1: leerer startDate-String → false (HTML5-Date-Input nach Loeschen)
+ok 14 - canAdvanceStep1: leerer startDate-String → false (HTML5-Date-Input nach Loeschen)
+  ---
+  duration_ms: 0.034381
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep1: nach Loeschen eines Pflichtfelds → false
+ok 15 - canAdvanceStep1: nach Loeschen eines Pflichtfelds → false
+  ---
+  duration_ms: 0.037357
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep1: shortcode ist optional, beeinflusst Bedingung nicht
+ok 16 - canAdvanceStep1: shortcode ist optional, beeinflusst Bedingung nicht
+  ---
+  duration_ms: 0.04033
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep2: initial false (keine Etappen)
+ok 17 - canAdvanceStep2: initial false (keine Etappen)
+  ---
+  duration_ms: 0.038898
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep2: nach addStage true
+ok 18 - canAdvanceStep2: nach addStage true
+  ---
+  duration_ms: 0.073461
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep2: nach deleteStage zurueck auf false
+ok 19 - canAdvanceStep2: nach deleteStage zurueck auf false
+  ---
+  duration_ms: 0.082904
+  type: 'test'
+  ...
+# Subtest: canAdvanceCurrent: Step 1 spiegelt canAdvanceStep1
+ok 20 - canAdvanceCurrent: Step 1 spiegelt canAdvanceStep1
+  ---
+  duration_ms: 0.052679
+  type: 'test'
+  ...
+# Subtest: canAdvanceCurrent: Step 2 spiegelt canAdvanceStep2
+ok 21 - canAdvanceCurrent: Step 2 spiegelt canAdvanceStep2
+  ---
+  duration_ms: 0.05979
+  type: 'test'
+  ...
+# Subtest: canAdvanceCurrent: Step 3 ist immer true
+ok 22 - canAdvanceCurrent: Step 3 ist immer true
+  ---
+  duration_ms: 0.035445
+  type: 'test'
+  ...
+# Subtest: canAdvanceCurrent: Step 4 ist immer true
+ok 23 - canAdvanceCurrent: Step 4 ist immer true
+  ---
+  duration_ms: 0.029845
+  type: 'test'
+  ...
+# Subtest: addPauseStageAt: fuegt Pause an Position afterIndex+1 ein
+ok 24 - addPauseStageAt: fuegt Pause an Position afterIndex+1 ein
+  ---
+  duration_ms: 0.177608
+  type: 'test'
+  ...
+# Subtest: addPauseStageAt: ruft recomputeStageDates auf
+ok 25 - addPauseStageAt: ruft recomputeStageDates auf
+  ---
+  duration_ms: 0.077367
+  type: 'test'
+  ...
+# Subtest: deleteStage: entfernt Stage per ID
+ok 26 - deleteStage: entfernt Stage per ID
+  ---
+  duration_ms: 0.136046
+  type: 'test'
+  ...
+# Subtest: deleteStage: ruft recomputeStageDates auf
+ok 27 - deleteStage: ruft recomputeStageDates auf
+  ---
+  duration_ms: 0.083125
+  type: 'test'
+  ...
+# Subtest: recomputeStageDates: setzt date=startDate+index
+ok 28 - recomputeStageDates: setzt date=startDate+index
+  ---
+  duration_ms: 0.050205
+  type: 'test'
+  ...
+# Subtest: recomputeStageDates: schuetzt dateOverridden=true
+ok 29 - recomputeStageDates: schuetzt dateOverridden=true
+  ---
+  duration_ms: 0.930433
+  type: 'test'
+  ...
+# Subtest: recomputeStageDates: no-op wenn startDate null
+ok 30 - recomputeStageDates: no-op wenn startDate null
+  ---
+  duration_ms: 0.055374
+  type: 'test'
+  ...
+# Subtest: reorderStages: re-dated Etappen lueckenlos
+ok 31 - reorderStages: re-dated Etappen lueckenlos
+  ---
+  duration_ms: 0.174203
+  type: 'test'
+  ...
+# Subtest: toTripPayload: strippt dateOverridden aus jeder Stage
+ok 32 - toTripPayload: strippt dateOverridden aus jeder Stage
+  ---
+  duration_ms: 0.141975
+  type: 'test'
+  ...
+1..32
+# tests 32
+# suites 0
+# pass 32
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 110.324755
