@@ -1,0 +1,921 @@
+[deploy-gregor-prod] Pull main...
+[deploy-gregor-prod] Repo bereits auf neuestem Stand (5623a1e88c6fa91fca25d5e0d3b0ea36390d43ec)
+[deploy-gregor-prod] Baue gregor-api...
+[deploy-gregor-prod] Stoppe gregor-frontend vor dem Build...
+[deploy-gregor-prod] Baue Frontend...
+
+> frontend@0.0.1 build
+> vite build
+
+vite v8.0.8 building ssr environment for production...
+[2Ktransforming...5:51:16 PM [vite-plugin-svelte] src/routes/locations/+page.svelte:19:36 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+17:   let { data } = $props();
+18: 
+19:   let locations: Location[] = $state(data.locations);
+                                             ^
+20:   let refetching = $state(false);
+21:   async function refetchLocations() {
+5:51:16 PM [vite-plugin-svelte] src/routes/+layout.svelte:48:6 This reference only captures the initial value of `darkMode`. Did you mean to reference it inside a closure instead?
+https://svelte.dev/e/state_referenced_locally
+46:   if (browser) {
+47:     darkMode = localStorage.getItem('gz-dark') === '1';
+48:     if (darkMode) applyDarkMode(true);
+                    ^
+49:   }
+50: 
+5:51:16 PM [vite-plugin-svelte] src/routes/trips/+page.svelte:21:28 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+19:   let { data } = $props();
+20: 
+21:   let trips: Trip[] = $state(data.trips);
+                                     ^
+22:   let refetching = $state(false);
+23:   async function refetchTrips() {
+5:51:16 PM [vite-plugin-svelte] src/routes/subscriptions/+page.svelte:21:44 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+19:   const WEEKDAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+20: 
+21:   let subscriptions: Subscription[] = $state(data.subscriptions);
+                                                     ^
+22:   let refetching = $state(false);
+23:   async function refetchSubs() {
+5:51:16 PM [vite-plugin-svelte] src/routes/subscriptions/+page.svelte:32:36 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+30:     subscriptions.filter(s => s.name.toLowerCase().includes(search.toLowerCase()))
+31:   );
+32:   let locations: Location[] = $state(data.locations);
+                                             ^
+33:   let dialogMode: 'create' | 'edit' | null = $state(null);
+34:   let editTarget: Subscription | null = $state(null);
+5:51:16 PM [vite-plugin-svelte] src/routes/weather/+page.svelte:10:36 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+ 8:   let { data } = $props();
+ 9: 
+10:   let locations: Location[] = $state(data.locations);
+                                             ^
+11:   let selectedId = $state('');
+12:   let hours = $state('48');
+5:51:16 PM [vite-plugin-svelte] src/routes/compare/+page.svelte:16:36 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+14:   let { data } = $props();
+15: 
+16:   let locations: Location[] = $state(data.locations);
+                                             ^
+17:   let subscriptions: Subscription[] = $state(data.subscriptions ?? []);
+18:   let selectedIds = $state<string[]>(locations.map((l) => l.id));
+5:51:16 PM [vite-plugin-svelte] src/routes/compare/+page.svelte:17:44 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+15: 
+16:   let locations: Location[] = $state(data.locations);
+17:   let subscriptions: Subscription[] = $state(data.subscriptions ?? []);
+                                                     ^
+18:   let selectedIds = $state<string[]>(locations.map((l) => l.id));
+19: 
+5:51:16 PM [vite-plugin-svelte] src/routes/compare/+page.svelte:18:36 This reference only captures the initial value of `locations`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+16:   let locations: Location[] = $state(data.locations);
+17:   let subscriptions: Subscription[] = $state(data.subscriptions ?? []);
+18:   let selectedIds = $state<string[]>(locations.map((l) => l.id));
+                                                  ^
+19: 
+20:   const WEEKDAYS = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+5:51:16 PM [vite-plugin-svelte] src/routes/compare/+page.svelte:255:2 This reference only captures the initial value of `locations`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+253: 
+254:   let openGroups = $state<Set<string>>(new Set(
+255:     locations.filter((l) => l.group).map((l) => l.group!)
+                  ^
+256:   ));
+257: 
+5:51:16 PM [vite-plugin-svelte] src/routes/account/+page.svelte:8:21 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+ 6:   let { data } = $props();
+ 7: 
+ 8:   let mailTo = $state(data.profile?.mail_to ?? '');
+                              ^
+ 9:   let signalPhone = $state(data.profile?.signal_phone ?? '');
+10:   let signalApiKey = $state('');
+5:51:16 PM [vite-plugin-svelte] src/routes/account/+page.svelte:9:26 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+ 7: 
+ 8:   let mailTo = $state(data.profile?.mail_to ?? '');
+ 9:   let signalPhone = $state(data.profile?.signal_phone ?? '');
+                                   ^
+10:   let signalApiKey = $state('');
+11:   let telegramChatId = $state(data.profile?.telegram_chat_id ?? '');
+5:51:16 PM [vite-plugin-svelte] src/routes/account/+page.svelte:11:29 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+ 9:   let signalPhone = $state(data.profile?.signal_phone ?? '');
+10:   let signalApiKey = $state('');
+11:   let telegramChatId = $state(data.profile?.telegram_chat_id ?? '');
+                                      ^
+12:   let successMsg = $state<string | null>(null);
+13:   let errorMsg = $state<string | null>(null);
+5:51:16 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:16:36 This reference only captures the initial value of `locations`. Did you mean to reference it inside a closure instead?
+https://svelte.dev/e/state_referenced_locally
+14:   let { location, locations = [], onsave, oncancel }: Props = $props();
+15: 
+16:   const existingGroups = [...new Set(locations.flatMap(l => l.group ? [l.group] : []))].sort();
+                                                  ^
+17: 
+18:   function toKebab(s: string): string {
+5:51:16 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:26:19 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+24:   }
+25: 
+26:   let name = $state(location?.name ?? '');
+                                ^
+27:   let lat = $state(location?.lat ?? 47.0);
+28:   let lon = $state(location?.lon ?? 11.0);
+5:51:16 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:27:18 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+25: 
+26:   let name = $state(location?.name ?? '');
+27:   let lat = $state(location?.lat ?? 47.0);
+                               ^
+28:   let lon = $state(location?.lon ?? 11.0);
+29:   let dmsInput = $state('');
+5:51:16 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:28:18 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+26:   let name = $state(location?.name ?? '');
+27:   let lat = $state(location?.lat ?? 47.0);
+28:   let lon = $state(location?.lon ?? 11.0);
+                               ^
+29:   let dmsInput = $state('');
+30: 
+5:51:16 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:49:25 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+47:     }
+48:   }
+49:   let elevationM = $state(location?.elevation_m ?? 2000);
+                                      ^
+50:   let region = $state(location?.region ?? '');
+51:   let bergfexSlug = $state(location?.bergfex_slug ?? '');
+5:51:16 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:50:21 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+48:   }
+49:   let elevationM = $state(location?.elevation_m ?? 2000);
+50:   let region = $state(location?.region ?? '');
+                                  ^
+51:   let bergfexSlug = $state(location?.bergfex_slug ?? '');
+52:   let activityProfile = $state(location?.activity_profile ?? '');
+5:51:16 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:51:26 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+49:   let elevationM = $state(location?.elevation_m ?? 2000);
+50:   let region = $state(location?.region ?? '');
+51:   let bergfexSlug = $state(location?.bergfex_slug ?? '');
+                                       ^
+52:   let activityProfile = $state(location?.activity_profile ?? '');
+53:   let group = $state(location?.group ?? '');
+5:51:16 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:52:30 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+50:   let region = $state(location?.region ?? '');
+51:   let bergfexSlug = $state(location?.bergfex_slug ?? '');
+52:   let activityProfile = $state(location?.activity_profile ?? '');
+                                           ^
+53:   let group = $state(location?.group ?? '');
+54:   let error = $state('');
+5:51:16 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:53:20 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+51:   let bergfexSlug = $state(location?.bergfex_slug ?? '');
+52:   let activityProfile = $state(location?.activity_profile ?? '');
+53:   let group = $state(location?.group ?? '');
+                                 ^
+54:   let error = $state('');
+55: 
+5:51:16 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:156:4 Self-closing HTML tags for non-void elements are ambiguous — use `<option ...></option>` rather than `<option ... />`
+https://svelte.dev/e/element_invalid_self_closing_tag
+154:     <datalist id="group-options">
+155:       {#each existingGroups as g}
+156:         <option value={g} />
+                                 ^
+157:       {/each}
+158:     </datalist>
+5:51:16 PM [vite-plugin-svelte] src/lib/components/edit/TripEditView.svelte:17:23 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+15: 
+16:   // State: tiefe Kopie damit Cancel ohne Persistenz auch State verwirft
+17:   let tripName = $state(trip.name);
+                                ^
+18:   let stages: Stage[] = $state(JSON.parse(JSON.stringify(trip.stages ?? [])));
+19:   let displayConfig: Record<string, unknown> | undefined = $state(
+5:51:16 PM [vite-plugin-svelte] src/lib/components/edit/TripEditView.svelte:18:56 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+16:   // State: tiefe Kopie damit Cancel ohne Persistenz auch State verwirft
+17:   let tripName = $state(trip.name);
+18:   let stages: Stage[] = $state(JSON.parse(JSON.stringify(trip.stages ?? [])));
+                                                                 ^
+19:   let displayConfig: Record<string, unknown> | undefined = $state(
+20:     trip.display_config ? JSON.parse(JSON.stringify(trip.display_config)) : undefined
+5:51:16 PM [vite-plugin-svelte] src/lib/components/edit/TripEditView.svelte:20:2 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+18:   let stages: Stage[] = $state(JSON.parse(JSON.stringify(trip.stages ?? [])));
+19:   let displayConfig: Record<string, unknown> | undefined = $state(
+20:     trip.display_config ? JSON.parse(JSON.stringify(trip.display_config)) : undefined
+            ^
+21:   );
+22:   let reportConfig: Record<string, unknown> | undefined = $state(
+5:51:16 PM [vite-plugin-svelte] src/lib/components/edit/TripEditView.svelte:20:50 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+18:   let stages: Stage[] = $state(JSON.parse(JSON.stringify(trip.stages ?? [])));
+19:   let displayConfig: Record<string, unknown> | undefined = $state(
+20:     trip.display_config ? JSON.parse(JSON.stringify(trip.display_config)) : undefined
+                                                            ^
+21:   );
+22:   let reportConfig: Record<string, unknown> | undefined = $state(
+5:51:16 PM [vite-plugin-svelte] src/lib/components/edit/TripEditView.svelte:23:2 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+21:   );
+22:   let reportConfig: Record<string, unknown> | undefined = $state(
+23:     trip.report_config ? JSON.parse(JSON.stringify(trip.report_config)) : undefined
+            ^
+24:   );
+25: 
+5:51:16 PM [vite-plugin-svelte] src/lib/components/edit/TripEditView.svelte:23:49 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+21:   );
+22:   let reportConfig: Record<string, unknown> | undefined = $state(
+23:     trip.report_config ? JSON.parse(JSON.stringify(trip.report_config)) : undefined
+                                                           ^
+24:   );
+25: 
+5:51:16 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:26:19 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+24:   }
+25: 
+26:   let name = $state(subscription?.name ?? '');
+                                    ^
+27:   let enabled = $state(subscription?.enabled ?? true);
+28:   let schedule = $state<Subscription['schedule']>(subscription?.schedule ?? 'daily_morning');
+5:51:16 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:27:22 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+25: 
+26:   let name = $state(subscription?.name ?? '');
+27:   let enabled = $state(subscription?.enabled ?? true);
+                                       ^
+28:   let schedule = $state<Subscription['schedule']>(subscription?.schedule ?? 'daily_morning');
+29:   let weekday = $state(subscription?.weekday ?? 0);
+5:51:16 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:28:49 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+26:   let name = $state(subscription?.name ?? '');
+27:   let enabled = $state(subscription?.enabled ?? true);
+28:   let schedule = $state<Subscription['schedule']>(subscription?.schedule ?? 'daily_morning');
+                                                                  ^
+29:   let weekday = $state(subscription?.weekday ?? 0);
+30:   let timeWindowStart = $state(subscription?.time_window_start ?? 6);
+5:51:16 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:29:22 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+27:   let enabled = $state(subscription?.enabled ?? true);
+28:   let schedule = $state<Subscription['schedule']>(subscription?.schedule ?? 'daily_morning');
+29:   let weekday = $state(subscription?.weekday ?? 0);
+                                       ^
+30:   let timeWindowStart = $state(subscription?.time_window_start ?? 6);
+31:   let timeWindowEnd = $state(subscription?.time_window_end ?? 20);
+5:51:16 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:30:30 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+28:   let schedule = $state<Subscription['schedule']>(subscription?.schedule ?? 'daily_morning');
+29:   let weekday = $state(subscription?.weekday ?? 0);
+30:   let timeWindowStart = $state(subscription?.time_window_start ?? 6);
+                                               ^
+31:   let timeWindowEnd = $state(subscription?.time_window_end ?? 20);
+32:   let forecastHours = $state(subscription?.forecast_hours ?? 24);
+5:51:16 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:31:28 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+29:   let weekday = $state(subscription?.weekday ?? 0);
+30:   let timeWindowStart = $state(subscription?.time_window_start ?? 6);
+31:   let timeWindowEnd = $state(subscription?.time_window_end ?? 20);
+                                             ^
+32:   let forecastHours = $state(subscription?.forecast_hours ?? 24);
+33:   let topN = $state(subscription?.top_n ?? 3);
+5:51:16 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:32:28 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+30:   let timeWindowStart = $state(subscription?.time_window_start ?? 6);
+31:   let timeWindowEnd = $state(subscription?.time_window_end ?? 20);
+32:   let forecastHours = $state(subscription?.forecast_hours ?? 24);
+                                             ^
+33:   let topN = $state(subscription?.top_n ?? 3);
+34:   let includeHourly = $state(subscription?.include_hourly ?? false);
+5:51:16 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:33:19 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+31:   let timeWindowEnd = $state(subscription?.time_window_end ?? 20);
+32:   let forecastHours = $state(subscription?.forecast_hours ?? 24);
+33:   let topN = $state(subscription?.top_n ?? 3);
+                                    ^
+34:   let includeHourly = $state(subscription?.include_hourly ?? false);
+35:   let sendEmail = $state(subscription?.send_email ?? true);
+5:51:16 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:34:28 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+32:   let forecastHours = $state(subscription?.forecast_hours ?? 24);
+33:   let topN = $state(subscription?.top_n ?? 3);
+34:   let includeHourly = $state(subscription?.include_hourly ?? false);
+                                             ^
+35:   let sendEmail = $state(subscription?.send_email ?? true);
+36:   let sendSignal = $state(subscription?.send_signal ?? false);
+5:51:16 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:35:24 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+33:   let topN = $state(subscription?.top_n ?? 3);
+34:   let includeHourly = $state(subscription?.include_hourly ?? false);
+35:   let sendEmail = $state(subscription?.send_email ?? true);
+                                         ^
+36:   let sendSignal = $state(subscription?.send_signal ?? false);
+37:   let sendTelegram = $state(subscription?.send_telegram ?? false);
+5:51:16 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:36:25 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+34:   let includeHourly = $state(subscription?.include_hourly ?? false);
+35:   let sendEmail = $state(subscription?.send_email ?? true);
+36:   let sendSignal = $state(subscription?.send_signal ?? false);
+                                          ^
+37:   let sendTelegram = $state(subscription?.send_telegram ?? false);
+38:   let allLocations = $state(
+5:51:16 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:37:27 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+35:   let sendEmail = $state(subscription?.send_email ?? true);
+36:   let sendSignal = $state(subscription?.send_signal ?? false);
+37:   let sendTelegram = $state(subscription?.send_telegram ?? false);
+                                            ^
+38:   let allLocations = $state(
+39:     !subscription || !subscription.locations || subscription.locations[0] === '*'
+5:51:16 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:39:3 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+37:   let sendTelegram = $state(subscription?.send_telegram ?? false);
+38:   let allLocations = $state(
+39:     !subscription || !subscription.locations || subscription.locations[0] === '*'
+                     ^
+40:   );
+41:   let selectedLocations = $state<string[]>(
+5:51:16 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:39:20 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+37:   let sendTelegram = $state(subscription?.send_telegram ?? false);
+38:   let allLocations = $state(
+39:     !subscription || !subscription.locations || subscription.locations[0] === '*'
+                                      ^
+40:   );
+41:   let selectedLocations = $state<string[]>(
+5:51:16 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:39:46 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+37:   let sendTelegram = $state(subscription?.send_telegram ?? false);
+38:   let allLocations = $state(
+39:     !subscription || !subscription.locations || subscription.locations[0] === '*'
+                                                                ^
+40:   );
+41:   let selectedLocations = $state<string[]>(
+5:51:16 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:42:2 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+40:   );
+41:   let selectedLocations = $state<string[]>(
+42:     subscription?.locations?.filter((l) => l !== '*') ?? []
+                    ^
+43:   );
+44:   let activityProfile = $state<string>(subscription?.activity_profile ?? 'allgemein');
+5:51:16 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:44:38 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+42:     subscription?.locations?.filter((l) => l !== '*') ?? []
+43:   );
+44:   let activityProfile = $state<string>(subscription?.activity_profile ?? 'allgemein');
+                                                       ^
+45:   let error = $state('');
+46: 
+5:51:16 PM [vite-plugin-svelte] src/lib/components/ui/sidebar/Sidebar.svelte:84:3 `<svelte:component>` is deprecated in runes mode — components are dynamic by default
+https://svelte.dev/e/svelte_component_deprecated
+82:       onclick={closeMobileMenu}
+83:     >
+84:       <svelte:component this={item.icon} class="size-4 shrink-0 opacity-70" />
+                                                                                  ^
+85:       {item.label}
+86:     </a>
+✓ 882 modules transformed.
+rendering chunks...
+vite v8.0.8 building client environment for production...
+[2Ktransforming...5:51:18 PM [vite-plugin-svelte] src/routes/+layout.svelte:48:6 This reference only captures the initial value of `darkMode`. Did you mean to reference it inside a closure instead?
+https://svelte.dev/e/state_referenced_locally
+46:   if (browser) {
+47:     darkMode = localStorage.getItem('gz-dark') === '1';
+48:     if (darkMode) applyDarkMode(true);
+                    ^
+49:   }
+50: 
+5:51:18 PM [vite-plugin-svelte] src/routes/compare/+page.svelte:16:36 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+14:   let { data } = $props();
+15: 
+16:   let locations: Location[] = $state(data.locations);
+                                             ^
+17:   let subscriptions: Subscription[] = $state(data.subscriptions ?? []);
+18:   let selectedIds = $state<string[]>(locations.map((l) => l.id));
+5:51:18 PM [vite-plugin-svelte] src/routes/compare/+page.svelte:17:44 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+15: 
+16:   let locations: Location[] = $state(data.locations);
+17:   let subscriptions: Subscription[] = $state(data.subscriptions ?? []);
+                                                     ^
+18:   let selectedIds = $state<string[]>(locations.map((l) => l.id));
+19: 
+5:51:18 PM [vite-plugin-svelte] src/routes/compare/+page.svelte:18:36 This reference only captures the initial value of `locations`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+16:   let locations: Location[] = $state(data.locations);
+17:   let subscriptions: Subscription[] = $state(data.subscriptions ?? []);
+18:   let selectedIds = $state<string[]>(locations.map((l) => l.id));
+                                                  ^
+19: 
+20:   const WEEKDAYS = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+5:51:18 PM [vite-plugin-svelte] src/routes/compare/+page.svelte:255:2 This reference only captures the initial value of `locations`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+253: 
+254:   let openGroups = $state<Set<string>>(new Set(
+255:     locations.filter((l) => l.group).map((l) => l.group!)
+                  ^
+256:   ));
+257: 
+5:51:18 PM [vite-plugin-svelte] src/routes/trips/+page.svelte:21:28 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+19:   let { data } = $props();
+20: 
+21:   let trips: Trip[] = $state(data.trips);
+                                     ^
+22:   let refetching = $state(false);
+23:   async function refetchTrips() {
+5:51:18 PM [vite-plugin-svelte] src/routes/account/+page.svelte:8:21 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+ 6:   let { data } = $props();
+ 7: 
+ 8:   let mailTo = $state(data.profile?.mail_to ?? '');
+                              ^
+ 9:   let signalPhone = $state(data.profile?.signal_phone ?? '');
+10:   let signalApiKey = $state('');
+5:51:18 PM [vite-plugin-svelte] src/routes/account/+page.svelte:9:26 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+ 7: 
+ 8:   let mailTo = $state(data.profile?.mail_to ?? '');
+ 9:   let signalPhone = $state(data.profile?.signal_phone ?? '');
+                                   ^
+10:   let signalApiKey = $state('');
+11:   let telegramChatId = $state(data.profile?.telegram_chat_id ?? '');
+5:51:18 PM [vite-plugin-svelte] src/routes/account/+page.svelte:11:29 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+ 9:   let signalPhone = $state(data.profile?.signal_phone ?? '');
+10:   let signalApiKey = $state('');
+11:   let telegramChatId = $state(data.profile?.telegram_chat_id ?? '');
+                                      ^
+12:   let successMsg = $state<string | null>(null);
+13:   let errorMsg = $state<string | null>(null);
+5:51:18 PM [vite-plugin-svelte] src/routes/subscriptions/+page.svelte:21:44 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+19:   const WEEKDAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+20: 
+21:   let subscriptions: Subscription[] = $state(data.subscriptions);
+                                                     ^
+22:   let refetching = $state(false);
+23:   async function refetchSubs() {
+5:51:18 PM [vite-plugin-svelte] src/routes/subscriptions/+page.svelte:32:36 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+30:     subscriptions.filter(s => s.name.toLowerCase().includes(search.toLowerCase()))
+31:   );
+32:   let locations: Location[] = $state(data.locations);
+                                             ^
+33:   let dialogMode: 'create' | 'edit' | null = $state(null);
+34:   let editTarget: Subscription | null = $state(null);
+5:51:18 PM [vite-plugin-svelte] src/routes/weather/+page.svelte:10:36 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+ 8:   let { data } = $props();
+ 9: 
+10:   let locations: Location[] = $state(data.locations);
+                                             ^
+11:   let selectedId = $state('');
+12:   let hours = $state('48');
+5:51:18 PM [vite-plugin-svelte] src/routes/locations/+page.svelte:19:36 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+17:   let { data } = $props();
+18: 
+19:   let locations: Location[] = $state(data.locations);
+                                             ^
+20:   let refetching = $state(false);
+21:   async function refetchLocations() {
+5:51:18 PM [vite-plugin-svelte] src/lib/components/edit/TripEditView.svelte:17:23 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+15: 
+16:   // State: tiefe Kopie damit Cancel ohne Persistenz auch State verwirft
+17:   let tripName = $state(trip.name);
+                                ^
+18:   let stages: Stage[] = $state(JSON.parse(JSON.stringify(trip.stages ?? [])));
+19:   let displayConfig: Record<string, unknown> | undefined = $state(
+5:51:18 PM [vite-plugin-svelte] src/lib/components/edit/TripEditView.svelte:18:56 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+16:   // State: tiefe Kopie damit Cancel ohne Persistenz auch State verwirft
+17:   let tripName = $state(trip.name);
+18:   let stages: Stage[] = $state(JSON.parse(JSON.stringify(trip.stages ?? [])));
+                                                                 ^
+19:   let displayConfig: Record<string, unknown> | undefined = $state(
+20:     trip.display_config ? JSON.parse(JSON.stringify(trip.display_config)) : undefined
+5:51:18 PM [vite-plugin-svelte] src/lib/components/edit/TripEditView.svelte:20:2 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+18:   let stages: Stage[] = $state(JSON.parse(JSON.stringify(trip.stages ?? [])));
+19:   let displayConfig: Record<string, unknown> | undefined = $state(
+20:     trip.display_config ? JSON.parse(JSON.stringify(trip.display_config)) : undefined
+            ^
+21:   );
+22:   let reportConfig: Record<string, unknown> | undefined = $state(
+5:51:18 PM [vite-plugin-svelte] src/lib/components/edit/TripEditView.svelte:20:50 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+18:   let stages: Stage[] = $state(JSON.parse(JSON.stringify(trip.stages ?? [])));
+19:   let displayConfig: Record<string, unknown> | undefined = $state(
+20:     trip.display_config ? JSON.parse(JSON.stringify(trip.display_config)) : undefined
+                                                            ^
+21:   );
+22:   let reportConfig: Record<string, unknown> | undefined = $state(
+5:51:18 PM [vite-plugin-svelte] src/lib/components/edit/TripEditView.svelte:23:2 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+21:   );
+22:   let reportConfig: Record<string, unknown> | undefined = $state(
+23:     trip.report_config ? JSON.parse(JSON.stringify(trip.report_config)) : undefined
+            ^
+24:   );
+25: 
+5:51:18 PM [vite-plugin-svelte] src/lib/components/edit/TripEditView.svelte:23:49 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+21:   );
+22:   let reportConfig: Record<string, unknown> | undefined = $state(
+23:     trip.report_config ? JSON.parse(JSON.stringify(trip.report_config)) : undefined
+                                                           ^
+24:   );
+25: 
+5:51:18 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:16:36 This reference only captures the initial value of `locations`. Did you mean to reference it inside a closure instead?
+https://svelte.dev/e/state_referenced_locally
+14:   let { location, locations = [], onsave, oncancel }: Props = $props();
+15: 
+16:   const existingGroups = [...new Set(locations.flatMap(l => l.group ? [l.group] : []))].sort();
+                                                  ^
+17: 
+18:   function toKebab(s: string): string {
+5:51:18 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:26:19 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+24:   }
+25: 
+26:   let name = $state(location?.name ?? '');
+                                ^
+27:   let lat = $state(location?.lat ?? 47.0);
+28:   let lon = $state(location?.lon ?? 11.0);
+5:51:18 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:27:18 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+25: 
+26:   let name = $state(location?.name ?? '');
+27:   let lat = $state(location?.lat ?? 47.0);
+                               ^
+28:   let lon = $state(location?.lon ?? 11.0);
+29:   let dmsInput = $state('');
+5:51:18 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:28:18 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+26:   let name = $state(location?.name ?? '');
+27:   let lat = $state(location?.lat ?? 47.0);
+28:   let lon = $state(location?.lon ?? 11.0);
+                               ^
+29:   let dmsInput = $state('');
+30: 
+5:51:18 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:49:25 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+47:     }
+48:   }
+49:   let elevationM = $state(location?.elevation_m ?? 2000);
+                                      ^
+50:   let region = $state(location?.region ?? '');
+51:   let bergfexSlug = $state(location?.bergfex_slug ?? '');
+5:51:18 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:50:21 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+48:   }
+49:   let elevationM = $state(location?.elevation_m ?? 2000);
+50:   let region = $state(location?.region ?? '');
+                                  ^
+51:   let bergfexSlug = $state(location?.bergfex_slug ?? '');
+52:   let activityProfile = $state(location?.activity_profile ?? '');
+5:51:18 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:51:26 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+49:   let elevationM = $state(location?.elevation_m ?? 2000);
+50:   let region = $state(location?.region ?? '');
+51:   let bergfexSlug = $state(location?.bergfex_slug ?? '');
+                                       ^
+52:   let activityProfile = $state(location?.activity_profile ?? '');
+53:   let group = $state(location?.group ?? '');
+5:51:18 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:52:30 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+50:   let region = $state(location?.region ?? '');
+51:   let bergfexSlug = $state(location?.bergfex_slug ?? '');
+52:   let activityProfile = $state(location?.activity_profile ?? '');
+                                           ^
+53:   let group = $state(location?.group ?? '');
+54:   let error = $state('');
+5:51:18 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:53:20 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+51:   let bergfexSlug = $state(location?.bergfex_slug ?? '');
+52:   let activityProfile = $state(location?.activity_profile ?? '');
+53:   let group = $state(location?.group ?? '');
+                                 ^
+54:   let error = $state('');
+55: 
+5:51:18 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:156:4 Self-closing HTML tags for non-void elements are ambiguous — use `<option ...></option>` rather than `<option ... />`
+https://svelte.dev/e/element_invalid_self_closing_tag
+154:     <datalist id="group-options">
+155:       {#each existingGroups as g}
+156:         <option value={g} />
+                                 ^
+157:       {/each}
+158:     </datalist>
+5:51:18 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:26:19 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+24:   }
+25: 
+26:   let name = $state(subscription?.name ?? '');
+                                    ^
+27:   let enabled = $state(subscription?.enabled ?? true);
+28:   let schedule = $state<Subscription['schedule']>(subscription?.schedule ?? 'daily_morning');
+5:51:18 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:27:22 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+25: 
+26:   let name = $state(subscription?.name ?? '');
+27:   let enabled = $state(subscription?.enabled ?? true);
+                                       ^
+28:   let schedule = $state<Subscription['schedule']>(subscription?.schedule ?? 'daily_morning');
+29:   let weekday = $state(subscription?.weekday ?? 0);
+5:51:18 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:28:49 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+26:   let name = $state(subscription?.name ?? '');
+27:   let enabled = $state(subscription?.enabled ?? true);
+28:   let schedule = $state<Subscription['schedule']>(subscription?.schedule ?? 'daily_morning');
+                                                                  ^
+29:   let weekday = $state(subscription?.weekday ?? 0);
+30:   let timeWindowStart = $state(subscription?.time_window_start ?? 6);
+5:51:18 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:29:22 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+27:   let enabled = $state(subscription?.enabled ?? true);
+28:   let schedule = $state<Subscription['schedule']>(subscription?.schedule ?? 'daily_morning');
+29:   let weekday = $state(subscription?.weekday ?? 0);
+                                       ^
+30:   let timeWindowStart = $state(subscription?.time_window_start ?? 6);
+31:   let timeWindowEnd = $state(subscription?.time_window_end ?? 20);
+5:51:18 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:30:30 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+28:   let schedule = $state<Subscription['schedule']>(subscription?.schedule ?? 'daily_morning');
+29:   let weekday = $state(subscription?.weekday ?? 0);
+30:   let timeWindowStart = $state(subscription?.time_window_start ?? 6);
+                                               ^
+31:   let timeWindowEnd = $state(subscription?.time_window_end ?? 20);
+32:   let forecastHours = $state(subscription?.forecast_hours ?? 24);
+5:51:18 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:31:28 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+29:   let weekday = $state(subscription?.weekday ?? 0);
+30:   let timeWindowStart = $state(subscription?.time_window_start ?? 6);
+31:   let timeWindowEnd = $state(subscription?.time_window_end ?? 20);
+                                             ^
+32:   let forecastHours = $state(subscription?.forecast_hours ?? 24);
+33:   let topN = $state(subscription?.top_n ?? 3);
+5:51:18 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:32:28 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+30:   let timeWindowStart = $state(subscription?.time_window_start ?? 6);
+31:   let timeWindowEnd = $state(subscription?.time_window_end ?? 20);
+32:   let forecastHours = $state(subscription?.forecast_hours ?? 24);
+                                             ^
+33:   let topN = $state(subscription?.top_n ?? 3);
+34:   let includeHourly = $state(subscription?.include_hourly ?? false);
+5:51:18 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:33:19 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+31:   let timeWindowEnd = $state(subscription?.time_window_end ?? 20);
+32:   let forecastHours = $state(subscription?.forecast_hours ?? 24);
+33:   let topN = $state(subscription?.top_n ?? 3);
+                                    ^
+34:   let includeHourly = $state(subscription?.include_hourly ?? false);
+35:   let sendEmail = $state(subscription?.send_email ?? true);
+5:51:18 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:34:28 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+32:   let forecastHours = $state(subscription?.forecast_hours ?? 24);
+33:   let topN = $state(subscription?.top_n ?? 3);
+34:   let includeHourly = $state(subscription?.include_hourly ?? false);
+                                             ^
+35:   let sendEmail = $state(subscription?.send_email ?? true);
+36:   let sendSignal = $state(subscription?.send_signal ?? false);
+5:51:18 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:35:24 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+33:   let topN = $state(subscription?.top_n ?? 3);
+34:   let includeHourly = $state(subscription?.include_hourly ?? false);
+35:   let sendEmail = $state(subscription?.send_email ?? true);
+                                         ^
+36:   let sendSignal = $state(subscription?.send_signal ?? false);
+37:   let sendTelegram = $state(subscription?.send_telegram ?? false);
+5:51:18 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:36:25 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+34:   let includeHourly = $state(subscription?.include_hourly ?? false);
+35:   let sendEmail = $state(subscription?.send_email ?? true);
+36:   let sendSignal = $state(subscription?.send_signal ?? false);
+                                          ^
+37:   let sendTelegram = $state(subscription?.send_telegram ?? false);
+38:   let allLocations = $state(
+5:51:18 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:37:27 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+35:   let sendEmail = $state(subscription?.send_email ?? true);
+36:   let sendSignal = $state(subscription?.send_signal ?? false);
+37:   let sendTelegram = $state(subscription?.send_telegram ?? false);
+                                            ^
+38:   let allLocations = $state(
+39:     !subscription || !subscription.locations || subscription.locations[0] === '*'
+5:51:18 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:39:3 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+37:   let sendTelegram = $state(subscription?.send_telegram ?? false);
+38:   let allLocations = $state(
+39:     !subscription || !subscription.locations || subscription.locations[0] === '*'
+                     ^
+40:   );
+41:   let selectedLocations = $state<string[]>(
+5:51:18 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:39:20 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+37:   let sendTelegram = $state(subscription?.send_telegram ?? false);
+38:   let allLocations = $state(
+39:     !subscription || !subscription.locations || subscription.locations[0] === '*'
+                                      ^
+40:   );
+41:   let selectedLocations = $state<string[]>(
+5:51:18 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:39:46 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+37:   let sendTelegram = $state(subscription?.send_telegram ?? false);
+38:   let allLocations = $state(
+39:     !subscription || !subscription.locations || subscription.locations[0] === '*'
+                                                                ^
+40:   );
+41:   let selectedLocations = $state<string[]>(
+5:51:18 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:42:2 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+40:   );
+41:   let selectedLocations = $state<string[]>(
+42:     subscription?.locations?.filter((l) => l !== '*') ?? []
+                    ^
+43:   );
+44:   let activityProfile = $state<string>(subscription?.activity_profile ?? 'allgemein');
+5:51:18 PM [vite-plugin-svelte] src/lib/components/SubscriptionForm.svelte:44:38 This reference only captures the initial value of `subscription`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+42:     subscription?.locations?.filter((l) => l !== '*') ?? []
+43:   );
+44:   let activityProfile = $state<string>(subscription?.activity_profile ?? 'allgemein');
+                                                       ^
+45:   let error = $state('');
+46: 
+5:51:19 PM [vite-plugin-svelte] src/lib/components/ui/sidebar/Sidebar.svelte:84:3 `<svelte:component>` is deprecated in runes mode — components are dynamic by default
+https://svelte.dev/e/svelte_component_deprecated
+82:       onclick={closeMobileMenu}
+83:     >
+84:       <svelte:component this={item.icon} class="size-4 shrink-0 opacity-70" />
+                                                                                  ^
+85:       {item.label}
+86:     </a>
+✓ 878 modules transformed.
+rendering chunks...
+computing gzip size...
+.svelte-kit/output/client/_app/version.json                        0.02 kB │ gzip:  0.04 kB
+.svelte-kit/output/client/.vite/manifest.json                     14.41 kB │ gzip:  1.70 kB
+.svelte-kit/output/client/_app/immutable/assets/0.CdjrPI6R.css    51.03 kB │ gzip:  9.43 kB
+.svelte-kit/output/client/_app/immutable/chunks/C2fTWqFL2.js       0.00 kB │ gzip:  0.02 kB
+.svelte-kit/output/client/_app/immutable/chunks/DM3Myxu52.js       0.00 kB │ gzip:  0.02 kB
+.svelte-kit/output/client/_app/immutable/chunks/sDtFop4o.js        0.02 kB │ gzip:  0.04 kB
+.svelte-kit/output/client/_app/immutable/chunks/BVEOzTpX.js        0.06 kB │ gzip:  0.08 kB
+.svelte-kit/output/client/_app/immutable/chunks/DiL-jA7M.js        0.07 kB │ gzip:  0.08 kB
+.svelte-kit/output/client/_app/immutable/entry/start.BOW5KuBk.js   0.08 kB │ gzip:  0.09 kB
+.svelte-kit/output/client/_app/immutable/chunks/CmDDCRJm.js        0.36 kB │ gzip:  0.27 kB
+.svelte-kit/output/client/_app/immutable/nodes/1.BXvWjSB6.js       0.37 kB │ gzip:  0.26 kB
+.svelte-kit/output/client/_app/immutable/chunks/DLttRoFx2.js       0.41 kB │ gzip:  0.27 kB
+.svelte-kit/output/client/_app/immutable/chunks/ybsc4G0b2.js       0.41 kB │ gzip:  0.31 kB
+.svelte-kit/output/client/_app/immutable/chunks/DIqHE9kQ.js        0.67 kB │ gzip:  0.36 kB
+.svelte-kit/output/client/_app/immutable/chunks/DXLb_o1B.js        0.75 kB │ gzip:  0.48 kB
+.svelte-kit/output/client/_app/immutable/chunks/i4Z4YU2w.js        0.76 kB │ gzip:  0.33 kB
+.svelte-kit/output/client/_app/immutable/chunks/CMzpWzt72.js       1.04 kB │ gzip:  0.55 kB
+.svelte-kit/output/client/_app/immutable/chunks/B64WrFVF.js        1.20 kB │ gzip:  0.68 kB
+.svelte-kit/output/client/_app/immutable/chunks/C9YIx0In.js        1.37 kB │ gzip:  0.79 kB
+.svelte-kit/output/client/_app/immutable/nodes/6.X1GMtd5L.js       1.52 kB │ gzip:  0.82 kB
+.svelte-kit/output/client/_app/immutable/chunks/DZN-66qX.js        1.58 kB │ gzip:  0.64 kB
+.svelte-kit/output/client/_app/immutable/chunks/Ba-B9yFv.js        1.59 kB │ gzip:  0.90 kB
+.svelte-kit/output/client/_app/immutable/chunks/5AatlgiT.js        1.69 kB │ gzip:  0.90 kB
+.svelte-kit/output/client/_app/immutable/chunks/C6mYgIO5.js        1.71 kB │ gzip:  0.83 kB
+.svelte-kit/output/client/_app/immutable/chunks/CFQ_LWNO.js        1.75 kB │ gzip:  0.86 kB
+.svelte-kit/output/client/_app/immutable/nodes/12.DDXU34aG.js      1.81 kB │ gzip:  0.87 kB
+.svelte-kit/output/client/_app/immutable/chunks/NOF4EmPL.js        2.10 kB │ gzip:  0.71 kB
+.svelte-kit/output/client/_app/immutable/chunks/CbrjgfY0.js        2.40 kB │ gzip:  0.77 kB
+.svelte-kit/output/client/_app/immutable/nodes/11.COkwYPRv.js      2.49 kB │ gzip:  0.87 kB
+.svelte-kit/output/client/_app/immutable/chunks/BClQzOPh.js        2.55 kB │ gzip:  0.87 kB
+.svelte-kit/output/client/_app/immutable/nodes/9.CyJrYeoi.js       2.77 kB │ gzip:  1.12 kB
+.svelte-kit/output/client/_app/immutable/chunks/BtTVj9Vp.js        3.45 kB │ gzip:  1.25 kB
+.svelte-kit/output/client/_app/immutable/chunks/BBSbNJzy.js        5.00 kB │ gzip:  2.00 kB
+.svelte-kit/output/client/_app/immutable/nodes/3.DqK1eIFf.js       5.01 kB │ gzip:  1.61 kB
+.svelte-kit/output/client/_app/immutable/chunks/GnRoqRY92.js       5.07 kB │ gzip:  2.37 kB
+.svelte-kit/output/client/_app/immutable/chunks/DU_pbzFL.js        5.51 kB │ gzip:  2.19 kB
+.svelte-kit/output/client/_app/immutable/entry/app.BVNYcSOc.js     5.67 kB │ gzip:  2.07 kB
+.svelte-kit/output/client/_app/immutable/nodes/18.DNvt4gMk.js      6.38 kB │ gzip:  2.21 kB
+.svelte-kit/output/client/_app/immutable/chunks/CfoWZat5.js        7.21 kB │ gzip:  3.02 kB
+.svelte-kit/output/client/_app/immutable/nodes/7.COGwSn80.js       8.22 kB │ gzip:  2.73 kB
+.svelte-kit/output/client/_app/immutable/nodes/8.DbIVe-LT.js       8.34 kB │ gzip:  2.93 kB
+.svelte-kit/output/client/_app/immutable/chunks/CZyKhGO9.js        8.83 kB │ gzip:  3.01 kB
+.svelte-kit/output/client/_app/immutable/nodes/14.D054zFFG.js      9.86 kB │ gzip:  3.20 kB
+.svelte-kit/output/client/_app/immutable/nodes/2.Bbe5AAFs.js      10.41 kB │ gzip:  4.09 kB
+.svelte-kit/output/client/_app/immutable/nodes/0.46ioZ_1Y.js      10.50 kB │ gzip:  3.94 kB
+.svelte-kit/output/client/_app/immutable/nodes/15.BR8WBzV6.js     17.28 kB │ gzip:  5.14 kB
+.svelte-kit/output/client/_app/immutable/nodes/4.p7WY0yQE.js      20.51 kB │ gzip:  5.32 kB
+.svelte-kit/output/client/_app/immutable/nodes/16.CiMNSbQ0.js     24.43 kB │ gzip:  7.89 kB
+.svelte-kit/output/client/_app/immutable/nodes/5.MeoYOY4M.js      26.19 kB │ gzip:  7.24 kB
+.svelte-kit/output/client/_app/immutable/chunks/BsJ6_vT-.js       26.96 kB │ gzip:  8.59 kB
+.svelte-kit/output/client/_app/immutable/chunks/CR-CXSIP.js       32.15 kB │ gzip: 12.25 kB
+.svelte-kit/output/client/_app/immutable/chunks/DmxAPjrM.js       42.31 kB │ gzip: 12.95 kB
+.svelte-kit/output/client/_app/immutable/nodes/17.CmemaW5o.js     53.39 kB │ gzip: 18.02 kB
+.svelte-kit/output/client/_app/immutable/chunks/CZprkdIc.js       58.62 kB │ gzip: 22.36 kB
+
+✓ built in 1.89s
+computing gzip size...
+.svelte-kit/output/server/.vite/manifest.json                                17.58 kB │ gzip:  1.88 kB
+.svelte-kit/output/server/_app/immutable/assets/_layout.Bd0EXnPV.css         50.65 kB │ gzip:  9.41 kB
+.svelte-kit/output/server/chunks/navigation2.js                               0.03 kB │ gzip:  0.05 kB
+.svelte-kit/output/server/chunks/api.js                                       0.05 kB │ gzip:  0.06 kB
+.svelte-kit/output/server/chunks/forms.js                                     0.06 kB │ gzip:  0.06 kB
+.svelte-kit/output/server/chunks/navigation.js                                0.08 kB │ gzip:  0.08 kB
+.svelte-kit/output/server/entries/pages/trips/new/_page.server.ts.js          0.11 kB │ gzip:  0.11 kB
+.svelte-kit/output/server/chunks/app.js                                       0.13 kB │ gzip:  0.13 kB
+.svelte-kit/output/server/entries/pages/_layout.server.ts.js                  0.14 kB │ gzip:  0.13 kB
+.svelte-kit/output/server/entries/pages/weather/_page.server.ts.js            0.17 kB │ gzip:  0.15 kB
+.svelte-kit/output/server/entries/pages/settings/_page.server.ts.js           0.17 kB │ gzip:  0.15 kB
+.svelte-kit/output/server/entries/pages/locations/_page.server.ts.js          0.17 kB │ gzip:  0.15 kB
+.svelte-kit/output/server/entries/pages/gpx-upload/_page.server.ts.js         0.17 kB │ gzip:  0.15 kB
+.svelte-kit/output/server/entries/pages/subscriptions/_page.server.ts.js      0.17 kB │ gzip:  0.15 kB
+.svelte-kit/output/server/chunks/utils2.js                                    0.19 kB │ gzip:  0.15 kB
+.svelte-kit/output/server/entries/fallbacks/error.svelte.js                   0.41 kB │ gzip:  0.26 kB
+.svelte-kit/output/server/internal.js                                         0.45 kB │ gzip:  0.21 kB
+.svelte-kit/output/server/entries/pages/logout/_page.server.ts.js             0.55 kB │ gzip:  0.37 kB
+.svelte-kit/output/server/entries/pages/trips/_page.server.ts.js              0.59 kB │ gzip:  0.39 kB
+.svelte-kit/output/server/entries/pages/trips/_id_/edit/_page.server.ts.js    0.60 kB │ gzip:  0.39 kB
+.svelte-kit/output/server/entries/pages/forgot-password/_page.server.ts.js    0.68 kB │ gzip:  0.45 kB
+.svelte-kit/output/server/chunks/shared-server.js                             0.69 kB │ gzip:  0.30 kB
+.svelte-kit/output/server/chunks/environment.js                               0.84 kB │ gzip:  0.40 kB
+.svelte-kit/output/server/entries/pages/compare/_page.server.ts.js            0.85 kB │ gzip:  0.46 kB
+.svelte-kit/output/server/chunks/weatherEmoji.js                              0.98 kB │ gzip:  0.41 kB
+.svelte-kit/output/server/entries/endpoints/api/_...path_/_server.ts.js       1.04 kB │ gzip:  0.55 kB
+.svelte-kit/output/server/chunks/api2.js                                      1.11 kB │ gzip:  0.57 kB
+.svelte-kit/output/server/entries/pages/_page.server.ts.js                    1.14 kB │ gzip:  0.60 kB
+.svelte-kit/output/server/entries/pages/login/_page.server.ts.js              1.17 kB │ gzip:  0.67 kB
+.svelte-kit/output/server/entries/pages/register/_page.server.ts.js           1.19 kB │ gzip:  0.63 kB
+.svelte-kit/output/server/entries/pages/reset-password/_page.server.ts.js     1.35 kB │ gzip:  0.69 kB
+.svelte-kit/output/server/entries/hooks.server.js                             1.49 kB │ gzip:  0.70 kB
+.svelte-kit/output/server/entries/pages/forgot-password/_page.svelte.js       1.61 kB │ gzip:  0.75 kB
+.svelte-kit/output/server/entries/pages/reset-password/_page.svelte.js        1.89 kB │ gzip:  0.78 kB
+.svelte-kit/output/server/chunks/badge.js                                     1.95 kB │ gzip:  0.87 kB
+.svelte-kit/output/server/chunks/dot.js                                       2.17 kB │ gzip:  0.54 kB
+.svelte-kit/output/server/chunks/input.js                                     2.29 kB │ gzip:  0.70 kB
+.svelte-kit/output/server/chunks/elev-sparkline.js                            2.31 kB │ gzip:  0.96 kB
+.svelte-kit/output/server/entries/pages/register/_page.svelte.js              2.53 kB │ gzip:  0.84 kB
+.svelte-kit/output/server/entries/pages/weather/_page.svelte.js               2.99 kB │ gzip:  0.96 kB
+.svelte-kit/output/server/entries/pages/account/_page.server.ts.js            3.00 kB │ gzip:  0.87 kB
+.svelte-kit/output/server/chunks/label.js                                     3.12 kB │ gzip:  1.14 kB
+.svelte-kit/output/server/chunks/state.js                                     3.14 kB │ gzip:  1.20 kB
+.svelte-kit/output/server/chunks/card.js                                      3.45 kB │ gzip:  0.81 kB
+.svelte-kit/output/server/chunks/table.js                                     3.47 kB │ gzip:  0.71 kB
+.svelte-kit/output/server/chunks/button.js                                    3.81 kB │ gzip:  1.24 kB
+.svelte-kit/output/server/chunks/bell.js                                      3.93 kB │ gzip:  1.91 kB
+.svelte-kit/output/server/chunks/route.js                                     3.95 kB │ gzip:  1.87 kB
+.svelte-kit/output/server/chunks/trash-2.js                                   3.98 kB │ gzip:  1.86 kB
+.svelte-kit/output/server/entries/pages/login/_page.svelte.js                 4.16 kB │ gzip:  1.54 kB
+.svelte-kit/output/server/chunks/index-server.js                              4.59 kB │ gzip:  1.70 kB
+.svelte-kit/output/server/entries/pages/_design/_page.svelte.js               6.85 kB │ gzip:  1.27 kB
+.svelte-kit/output/server/chunks/internal.js                                  7.27 kB │ gzip:  2.63 kB
+.svelte-kit/output/server/chunks/LocationForm.js                              8.68 kB │ gzip:  2.15 kB
+.svelte-kit/output/server/chunks/plus.js                                      9.26 kB │ gzip:  2.74 kB
+.svelte-kit/output/server/chunks/shared.js                                   10.20 kB │ gzip:  3.33 kB
+.svelte-kit/output/server/chunks/exports.js                                  11.24 kB │ gzip:  3.51 kB
+.svelte-kit/output/server/chunks/Icon.js                                     12.46 kB │ gzip:  2.68 kB
+.svelte-kit/output/server/chunks/SubscriptionForm.js                         12.80 kB │ gzip:  2.68 kB
+.svelte-kit/output/server/chunks/create-id.js                                14.14 kB │ gzip:  4.50 kB
+.svelte-kit/output/server/chunks/pencil.js                                   14.38 kB │ gzip:  3.71 kB
+.svelte-kit/output/server/entries/pages/_page.svelte.js                      15.72 kB │ gzip:  3.82 kB
+.svelte-kit/output/server/chunks/legacy-client.js                            16.31 kB │ gzip:  4.91 kB
+.svelte-kit/output/server/entries/pages/_layout.svelte.js                    19.27 kB │ gzip:  4.77 kB
+.svelte-kit/output/server/entries/pages/gpx-upload/_page.svelte.js           22.67 kB │ gzip:  3.30 kB
+.svelte-kit/output/server/entries/pages/locations/_page.svelte.js            24.39 kB │ gzip:  4.93 kB
+.svelte-kit/output/server/entries/pages/subscriptions/_page.svelte.js        25.65 kB │ gzip:  3.60 kB
+.svelte-kit/output/server/chunks/utils.js                                    28.76 kB │ gzip:  8.35 kB
+.svelte-kit/output/server/entries/pages/account/_page.svelte.js              30.47 kB │ gzip:  4.05 kB
+.svelte-kit/output/server/entries/pages/trips/new/_page.svelte.js            31.69 kB │ gzip:  9.26 kB
+.svelte-kit/output/server/entries/pages/trips/_id_/edit/_page.svelte.js      33.83 kB │ gzip:  7.33 kB
+.svelte-kit/output/server/remote-entry.js                                    35.25 kB │ gzip:  7.97 kB
+.svelte-kit/output/server/entries/pages/trips/_page.svelte.js                37.77 kB │ gzip:  6.84 kB
+.svelte-kit/output/server/chunks/client.js                                   45.76 kB │ gzip: 13.57 kB
+.svelte-kit/output/server/entries/pages/compare/_page.svelte.js              63.79 kB │ gzip:  7.74 kB
+.svelte-kit/output/server/chunks/cloud-sun.js                                82.31 kB │ gzip: 18.06 kB
+.svelte-kit/output/server/index.js                                          119.57 kB │ gzip: 30.47 kB
+.svelte-kit/output/server/chunks/dev.js                                     129.38 kB │ gzip: 33.71 kB
+
+[33m[PLUGIN_TIMINGS] Warning:[0m Your build spent significant time in plugins. Here is a breakdown:
+  - vite-plugin-sveltekit-guard (83%)
+  - vite-plugin-svelte:compile (8%)
+See https://rolldown.rs/options/checks#plugintimings for more details.
+
+✓ built in 4.47s
+
+Run npm run preview to preview your production build locally.
+
+> Using @sveltejs/adapter-node
+  ✔ done
+[deploy-gregor-prod] Starte Services neu...
+[deploy-gregor-prod] Warte auf gregor-frontend...
+[deploy-gregor-prod] Frontend bereit nach 5 s (HTTP 302)
+[deploy-gregor-prod] Smoke-Test...
+[deploy-gregor-prod] Deploy erfolgreich (/trips/new HTTP 302)
+[deploy-gregor-prod] Live: 5623a1e (docs(issue-162): RED/GREEN Test-Artefakte + Staging-Smoke-Test (Validator-Ersatz))
