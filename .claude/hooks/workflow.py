@@ -606,6 +606,10 @@ def cmd_set_field(args: list[str]) -> None:
         value = False
     elif low in ("none", "null"):
         value = None
+    # F001: numerische Strings als int speichern, sonst crasht
+    # scope_guard beim Vergleich int > str (z.B. loc_limit_override).
+    elif isinstance(value, str) and value.lstrip("-").isdigit():
+        value = int(value)
     data, name = _read_active()
     data[key] = value
     _save(data)

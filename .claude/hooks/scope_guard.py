@@ -48,6 +48,21 @@ except ImportError:
             return {"max_loc_delta": 250, "loc_exclude_patterns": []}
 
 
+def _is_excluded(path: str, patterns: list) -> bool:
+    """Return True iff `path` matches any regex in `patterns`.
+
+    F003: invalid regex patterns are silently skipped (per-pattern try/except)
+    so a single bad entry in openspec.yaml never crashes the hook.
+    """
+    for p in patterns:
+        try:
+            if re.search(p, path):
+                return True
+        except re.error:
+            continue  # ungueltiges Regex ignorieren, naechstes Pattern testen
+    return False
+
+
 def _get_loc_delta(exclude_patterns: list) -> tuple:
     """Run ``git diff HEAD --numstat`` and sum insertions+deletions.
 
@@ -86,7 +101,7 @@ def _get_loc_delta(exclude_patterns: list) -> tuple:
             n = int(ins) + int(dels)
         except ValueError:
             continue
-        if any(re.search(p, path) for p in exclude_patterns):
+        if _is_excluded(path, exclude_patterns):
             continue
         total += n
         counted.append(path)
@@ -131,13 +146,23 @@ TASK_PATH_MAPPING = {
     'bugfix': ['src/', 'lib/', 'app/', 'test'],
 }
 
-# Paths that are always allowed regardless of task
+# Paths that are always allowed regardless of task.
+# F004: LoC-Limit ist fuer Code-Disziplin, nicht fuer Dokumentation.
+# Doku-/Spec-Edits sollen nie geblockt werden — Kommentar in main() ist hier
+# die Source of Truth ("LoC check explicitly NOT applied to docs/...").
 ALWAYS_ALLOWED = [
     '.claude/workflow_state.json',
     '.claude/current_task.json',
     '.claude/pending_validation.json',
     'docs/artifacts/',
     'docs/context/',
+    'docs/specs/',
+    'docs/features/',
+    'docs/reference/',
+    'docs/project/',
+    'CLAUDE.md',
+    '.md',          # alle Markdown-Dateien (Doku)
+    '.gitignore',
 ]
 
 
