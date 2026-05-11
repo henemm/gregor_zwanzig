@@ -26,7 +26,10 @@ async def test_notify(
     req: TestRequest,
     user_id: str = Query(...),
 ):
-    settings = Settings().with_user_profile(user_id)
+    # Issue #198: Channel-Tests sind konzeptionell Tests → IMMER Gmail-Routing,
+    # nie über Production-SMTP (Resend). _is_test_user("default") liefert False,
+    # daher zwingen wir .for_testing() unabhängig vom user_id.
+    settings = Settings().with_user_profile(user_id).for_testing()
     try:
         if req.channel == "email":
             output = EmailOutput(settings)
