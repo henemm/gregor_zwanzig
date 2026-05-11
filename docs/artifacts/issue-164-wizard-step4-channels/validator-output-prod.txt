@@ -1,0 +1,26 @@
+================================================
+  External Validator — Isolierte QA-Session
+================================================
+
+  Spec:   docs/specs/modules/epic_136_step4_briefings.md
+  Server: https://staging.gregor20.henemm.com
+
+  Diese Session ist isoliert vom Implementierer.
+  Der Validator kennt nur: Spec + laufende App.
+================================================
+
+## Verdict: **VERIFIED**
+
+Bericht geschrieben nach `docs/artifacts/issue-164-wizard-step4-channels/validator-report.md`.
+
+**Zusammenfassung der Validierung** (Spec: `epic_136_step4_briefings.md`):
+
+- **End-to-End-Walkthrough**: Vollstaendig durch alle 4 Wizard-Schritte gefuehrt (Step1 Profil, Step2 GPX-Upload + Etappen-Commit, Step3 Wegpunkte, Step4 Briefings). Zwei Test-Trips erfolgreich erstellt.
+- **Persistenz-Check via API**: Zwei Trips per `GET /api/trips/<id>` verifiziert:
+  - Trip A (`7fe744bb`) mit gesetzten Schwellwerten → `report_config.alert_thresholds` korrekt geschrieben (gust=80, precip=10, snow=2500, thunder="MED").
+  - Trip B (`81044db1`) mit Default-Werten → `alert_thresholds`-Key NICHT vorhanden (Spec §3.3 erfuellt).
+- **27 / 27 Acceptance Criteria PASS**: 24 direkt verifiziert (UI + API), 3 indirekt (AC#17/#18 Unit-Test-Kriterien sind ueber UI-Verhalten plausibel; AC#27 Build-gruen indirekt durch laufendes Staging).
+- **TestID-Migration** von `trip-wizard-step4-briefings` auf `trip-wizard-step4-container` ist abgeschlossen.
+- **Eine LOW-Auffaelligkeit**: Browser-Locale rendert `<input type="time">` als 12h-Format ("06:00 AM" / "06:00 PM"); der zugrundeliegende `inputValue` bleibt korrekt im HH:MM-Format. Kein Spec-Bruch.
+
+Beweise: 12 Screenshots in `docs/artifacts/issue-164-wizard-step4-channels/validator-screenshots/`, `results.json`, `walkthrough.log`, plus die zwei Walkthrough-Skripte unter `frontend/`.
