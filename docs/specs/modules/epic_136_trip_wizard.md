@@ -2,7 +2,7 @@
 entity_id: epic_136_trip_wizard
 type: module
 created: 2026-05-09
-updated: 2026-05-09
+updated: 2026-05-11
 status: approved
 version: "1.0"
 tags: [sveltekit, frontend, wizard, trip-creation, epic-136, master-spec]
@@ -188,7 +188,7 @@ Wird ausgeloest, sobald der User in Step 4 "Speichern" klickt. Reihenfolge:
 3. Aus jedem Wegpunkt das `suggested`-Flag entfernen (`{ ...wp, suggested: undefined }`); rejected suggestions sind bereits aus dem Array geloescht (Step 3).
 4. `aggregation.profile` aus `state.activity` ableiten (`mapActivityToProfile`); falls vom User in Step 4 explizit ueberschrieben, gewinnt User-Wahl.
 5. `POST /api/trips` mit dem vollstaendigen Trip-Body.
-6. Bei HTTP 201 + `id` in der Response: Redirect auf `/trips/${id}` (Trip-Uebersicht aus Epic #135 — falls noch nicht vorhanden, Fallback auf `/`).
+6. Bei HTTP 201 + `id` in der Response: **Fallback auf `/trips`** (Trip-Liste). Aktuell (bis Epic #135 die Trip-Detail-Page liefert) ist dies **unbedingt** — kein Versuch von `/trips/${id}` vorher, weil die Route noch nicht existiert. Sobald Epic #135 da ist, ersetzt der Cleanup (markiert per `TODO(epic-135)` in `wizardState.save()`) den Fallback durch eine Navigation auf die Detail-Page (`/trips/${created.id}`). Korrigiert 2026-05-11 gegenueber dem urspruenglichen `/`-Fallback per Issue #197, weil der User nach dem Speichern den neuen Trip in der Uebersichtsliste sehen soll (direktes Erfolgs-Feedback).
 7. Bei Fehler: Inline-Fehlermeldung am Save-Button, kein Toast (Konsistenz mit Cockpit-Pattern aus Epic #134).
 
 Edit-Pfad (`PUT /api/trips/{id}`) ist NICHT Teil dieser Master-Spec; der bestehende `TripEditView`-Pfad bleibt vorerst aktiv, bis ein Folge-Issue den Edit-Refactor anstoesst.
@@ -432,3 +432,4 @@ Sub-Specs **muessen liefern**:
 - 2026-05-09: Implementation Iter-2 abgeschlossen — Backend-Validator `validateTrip` akzeptiert jetzt Stages mit leerem `waypoints[]` (Pausentage), `BriefingConfig.thresholds` auf `number | null` mit `null`-Defaults umgestellt. F004 (`startDate`-Type) und F006 (`briefings`→`report_config`-Mapping) als Known Limitations dokumentiert. Adversary-Validator: alle HIGH/MEDIUM-Findings erledigt.
 - 2026-05-09: Implementation Iter-1 abgeschlossen — `Trip.Shortcode` + `Trip.Activity` (Go), `ActivityType` + `Trip.shortcode?`/`Trip.activity?`/`Waypoint.suggested?` (TS), `wizardHelpers.ts` (6 Helper) und `wizardState.svelte.ts` (`WizardState` mit `BriefingConfig`, Save-Pipeline, Step-Navigation) angelegt. 23 TS-Tests + 5 Go-Tests grün.
 - 2026-05-09: Initial Master-Spec erstellt — Datenmodell-Patches, Verzeichnisstruktur, WizardState-Schema, Mapping-Tabelle, Save-Pipeline, Vertraege zu Sub-Specs (Issues #160–#165). Tech-Lead-Entscheidungen vom 2026-05-09 (User-approved): Bestand wird ersetzt, neuer Ordner `trip-wizard/`, neue Felder `shortcode`+`activity`, Pausentag = leeres `waypoints`-Array, T01-Nummerierung als UI-Concern, KI-Vorschlaege via `suggested`-Flag.
+- 2026-05-11: §1.4 Save-Pipeline Schritt 6 — Fallback-Ziel von `/` auf `/trips` korrigiert (Issue #197). Begruendung: User-Feedback steht im Vordergrund; nach dem Save soll der neue Trip in der Uebersichtsliste sichtbar sein. Der Cleanup nach Epic #135 entfernt den Fallback samt TODO(epic-135)-Marker in `wizardState.svelte.ts`.

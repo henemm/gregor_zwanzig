@@ -729,3 +729,125 @@ test('toTripPayload #164 AC#20: KEINE alten change_threshold_*-Felder im report_
 		'change_threshold_precip_mm darf NICHT geschrieben werden'
 	);
 });
+
+// --- Issue #197: WizardState.save() Redirect-Fallback ----------------------
+//
+// Spec: docs/specs/bugfix/wizard_save_redirect_fallback.md
+//
+// Diese Tests inspizieren den Quellcode statisch (readFileSync), weil:
+//  - Im Plain-Node-Kontext sind die Lazy-Imports `$lib/api` und
+//    `$app/navigation` nicht aufloesbar. Mocks sind projektweit verboten.
+//  - AC-1/AC-2 sind durch die statische Source-Form 1:1 erfuellt (genau ein
+//    goto-Aufruf auf '/trips' innerhalb des try-Blocks bestimmt das
+//    Laufzeit-Verhalten).
+//  - AC-3 und AC-4 sind explizit Code-Marker- bzw. Spec-Datei-Tests.
+
+import { readFileSync } from 'node:fs';
+
+/** Liefert den Substring der save()-Methode (ohne Body-aeussere Klammern). */
+function extractSaveMethod(source: string): string {
+	const startMarker = 'async save(): Promise<void>';
+	const startIdx = source.indexOf(startMarker);
+	assert.ok(startIdx >= 0, "save()-Methoden-Header nicht gefunden in wizardState.svelte.ts");
+	// Klammer-Balance ab dem '{' nach dem Header.
+	const braceStart = source.indexOf('{', startIdx);
+	assert.ok(braceStart >= 0, "save()-Methoden-Body-Start '{' nicht gefunden");
+	let depth = 0;
+	for (let i = braceStart; i < source.length; i++) {
+		const c = source[i];
+		if (c === '{') depth++;
+		else if (c === '}') {
+			depth--;
+			if (depth === 0) {
+				return source.slice(braceStart, i + 1);
+			}
+		}
+	}
+	throw new Error('save()-Methoden-Body nicht geschlossen — Klammer-Balance gebrochen');
+}
+
+test("AC-1 #197: save() redirected auf '/trips' (Liste), NICHT auf /trips/${id}", () => {
+	const sourcePath = new URL('../wizardState.svelte.ts', import.meta.url);
+	const source = readFileSync(sourcePath, 'utf-8');
+	const saveBody = extractSaveMethod(source);
+
+	// Verbotene Form: Template-Literal mit Pfad-Segment /trips/${...}
+	const forbiddenTemplate = /goto\(\s*`\/trips\/\$\{/;
+	assert.equal(
+		forbiddenTemplate.test(saveBody),
+		false,
+		"save() darf nicht mehr `goto(`/trips/${...}`)` enthalten — Route existiert nicht (#197)"
+	);
+
+	// Erwartete Form: exakt ein Aufruf goto('/trips') (Single-Quotes oder Backticks ohne Pfad-Segment).
+	// Wir akzeptieren single-quotes, double-quotes oder Backticks ohne Interpolation auf /trips.
+	const acceptedCallRe = /goto\(\s*(['"`])\/trips\1\s*\)/g;
+	const matches = saveBody.match(acceptedCallRe) ?? [];
+	assert.equal(
+		matches.length,
+		1,
+		`save() muss exakt einen goto('/trips')-Aufruf enthalten — gefunden: ${matches.length}`
+	);
+
+	// Zusatzcheck: Es darf insgesamt nur einen goto-Aufruf in save() geben.
+	const allGotos = saveBody.match(/goto\s*\(/g) ?? [];
+	assert.equal(
+		allGotos.length,
+		1,
+		`save() darf nur einen einzigen goto-Aufruf enthalten — gefunden: ${allGotos.length}`
+	);
+});
+
+test('AC-2 #197: goto-Aufruf steht innerhalb des try-Blocks von save()', () => {
+	const sourcePath = new URL('../wizardState.svelte.ts', import.meta.url);
+	const source = readFileSync(sourcePath, 'utf-8');
+	const saveBody = extractSaveMethod(source);
+
+	const tryIdx = saveBody.indexOf('try {');
+	const gotoIdx = saveBody.indexOf('goto(');
+	const catchIdx = saveBody.search(/catch\s*\(\s*e\s*:/);
+
+	assert.ok(tryIdx >= 0, "save() muss einen 'try {'-Block enthalten");
+	assert.ok(gotoIdx >= 0, "save() muss einen 'goto('-Aufruf enthalten");
+	assert.ok(catchIdx >= 0, "save() muss einen 'catch (e:'-Block enthalten");
+
+	assert.ok(
+		tryIdx < gotoIdx,
+		"goto-Aufruf muss NACH 'try {' stehen (innerhalb des try-Blocks)"
+	);
+	assert.ok(
+		gotoIdx < catchIdx,
+		"goto-Aufruf muss VOR 'catch (e:' stehen (nicht im catch-Block)"
+	);
+});
+
+test('AC-3 #197: TODO(epic-135)-Marker steht in der save()-Methode bei dem goto-Aufruf', () => {
+	const sourcePath = new URL('../wizardState.svelte.ts', import.meta.url);
+	const source = readFileSync(sourcePath, 'utf-8');
+	const saveBody = extractSaveMethod(source);
+
+	assert.ok(
+		saveBody.includes('TODO(epic-135)'),
+		"save() muss den Cleanup-Marker 'TODO(epic-135)' enthalten (Verweis auf Epic #135 fuer spaeteren /trips/${id}-Wechsel)"
+	);
+});
+
+test('AC-4 #197: Master-Spec §1.4 nennt /trips als Fallback (nicht /) mit Verweis auf #197', () => {
+	const specPath = new URL(
+		'../../../../../../docs/specs/modules/epic_136_trip_wizard.md',
+		import.meta.url
+	);
+	const spec = readFileSync(specPath, 'utf-8');
+
+	// a) Fallback-Klausel zeigt auf /trips (nicht nur auf /).
+	assert.ok(
+		spec.includes('Fallback auf /trips') || spec.includes('Fallback auf `/trips`'),
+		"Master-Spec muss 'Fallback auf /trips' enthalten (#197 — Korrektur auf Trip-Liste statt /)"
+	);
+
+	// b) Verweis auf Issue #197 ist im Dokument vorhanden.
+	assert.ok(
+		spec.includes('#197') || spec.includes('Issue 197') || spec.includes('Issue #197'),
+		"Master-Spec muss auf Issue #197 verweisen (Begruendung des Fallback-Targets)"
+	);
+});

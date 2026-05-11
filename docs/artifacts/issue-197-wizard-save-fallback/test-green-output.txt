@@ -1,0 +1,400 @@
+TAP version 13
+# Subtest: WizardState: Initial-State entspricht Spec-Defaults
+ok 1 - WizardState: Initial-State entspricht Spec-Defaults
+  ---
+  duration_ms: 1.089042
+  type: 'test'
+  ...
+# Subtest: WizardState: nextStep() schreitet 1 → 2 voran
+ok 2 - WizardState: nextStep() schreitet 1 → 2 voran
+  ---
+  duration_ms: 0.129495
+  type: 'test'
+  ...
+# Subtest: WizardState: nextStep() bleibt bei 4 (kein Wrap)
+ok 3 - WizardState: nextStep() bleibt bei 4 (kein Wrap)
+  ---
+  duration_ms: 0.082164
+  type: 'test'
+  ...
+# Subtest: WizardState: prevStep() bleibt bei 1 (kein Underflow)
+ok 4 - WizardState: prevStep() bleibt bei 1 (kein Underflow)
+  ---
+  duration_ms: 0.085248
+  type: 'test'
+  ...
+# Subtest: WizardState: prevStep() schreitet 4 → 3 zurueck
+ok 5 - WizardState: prevStep() schreitet 4 → 3 zurueck
+  ---
+  duration_ms: 0.091578
+  type: 'test'
+  ...
+# Subtest: WizardState: toTripPayload mit activity=skitour → aggregation.profile=wintersport
+ok 6 - WizardState: toTripPayload mit activity=skitour → aggregation.profile=wintersport
+  ---
+  duration_ms: 1.521153
+  type: 'test'
+  ...
+# Subtest: WizardState: addPauseStage() fuegt Stage mit leeren Wegpunkten hinzu
+ok 7 - WizardState: addPauseStage() fuegt Stage mit leeren Wegpunkten hinzu
+  ---
+  duration_ms: 0.605853
+  type: 'test'
+  ...
+# Subtest: WizardState: defaultBriefingConfig ist nicht geteilt (Klone unabhaengig)
+ok 8 - WizardState: defaultBriefingConfig ist nicht geteilt (Klone unabhaengig)
+  ---
+  duration_ms: 0.098298
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep1: initial false (alle Pflichtfelder leer)
+ok 9 - canAdvanceStep1: initial false (alle Pflichtfelder leer)
+  ---
+  duration_ms: 1.132097
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep1: nur activity gesetzt → false (name+startDate fehlen)
+ok 10 - canAdvanceStep1: nur activity gesetzt → false (name+startDate fehlen)
+  ---
+  duration_ms: 0.344059
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep1: activity+name gesetzt → false (startDate fehlt)
+ok 11 - canAdvanceStep1: activity+name gesetzt → false (startDate fehlt)
+  ---
+  duration_ms: 0.143125
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep1: alle 3 Pflichtfelder gesetzt → true
+ok 12 - canAdvanceStep1: alle 3 Pflichtfelder gesetzt → true
+  ---
+  duration_ms: 0.064877
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep1: name nur Whitespace → false (trim-Logik)
+ok 13 - canAdvanceStep1: name nur Whitespace → false (trim-Logik)
+  ---
+  duration_ms: 0.037847
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep1: leerer startDate-String → false (HTML5-Date-Input nach Loeschen)
+ok 14 - canAdvanceStep1: leerer startDate-String → false (HTML5-Date-Input nach Loeschen)
+  ---
+  duration_ms: 0.029874
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep1: nach Loeschen eines Pflichtfelds → false
+ok 15 - canAdvanceStep1: nach Loeschen eines Pflichtfelds → false
+  ---
+  duration_ms: 0.03331
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep1: shortcode ist optional, beeinflusst Bedingung nicht
+ok 16 - canAdvanceStep1: shortcode ist optional, beeinflusst Bedingung nicht
+  ---
+  duration_ms: 0.038439
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep2: initial false (keine Etappen)
+ok 17 - canAdvanceStep2: initial false (keine Etappen)
+  ---
+  duration_ms: 0.035884
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep2: nach addStage true
+ok 18 - canAdvanceStep2: nach addStage true
+  ---
+  duration_ms: 0.066069
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep2: nach deleteStage zurueck auf false
+ok 19 - canAdvanceStep2: nach deleteStage zurueck auf false
+  ---
+  duration_ms: 0.077598
+  type: 'test'
+  ...
+# Subtest: canAdvanceCurrent: Step 1 spiegelt canAdvanceStep1
+ok 20 - canAdvanceCurrent: Step 1 spiegelt canAdvanceStep1
+  ---
+  duration_ms: 0.072289
+  type: 'test'
+  ...
+# Subtest: canAdvanceCurrent: Step 2 spiegelt canAdvanceStep2
+ok 21 - canAdvanceCurrent: Step 2 spiegelt canAdvanceStep2
+  ---
+  duration_ms: 0.050185
+  type: 'test'
+  ...
+# Subtest: canAdvanceCurrent: Step 3 ist immer true
+ok 22 - canAdvanceCurrent: Step 3 ist immer true
+  ---
+  duration_ms: 0.03364
+  type: 'test'
+  ...
+# Subtest: canAdvanceCurrent: Step 4 ist immer true
+ok 23 - canAdvanceCurrent: Step 4 ist immer true
+  ---
+  duration_ms: 0.036326
+  type: 'test'
+  ...
+# Subtest: addPauseStageAt: fuegt Pause an Position afterIndex+1 ein
+ok 24 - addPauseStageAt: fuegt Pause an Position afterIndex+1 ein
+  ---
+  duration_ms: 0.215516
+  type: 'test'
+  ...
+# Subtest: addPauseStageAt: ruft recomputeStageDates auf
+ok 25 - addPauseStageAt: ruft recomputeStageDates auf
+  ---
+  duration_ms: 0.092339
+  type: 'test'
+  ...
+# Subtest: deleteStage: entfernt Stage per ID
+ok 26 - deleteStage: entfernt Stage per ID
+  ---
+  duration_ms: 0.149996
+  type: 'test'
+  ...
+# Subtest: deleteStage: ruft recomputeStageDates auf
+ok 27 - deleteStage: ruft recomputeStageDates auf
+  ---
+  duration_ms: 0.077176
+  type: 'test'
+  ...
+# Subtest: recomputeStageDates: setzt date=startDate+index
+ok 28 - recomputeStageDates: setzt date=startDate+index
+  ---
+  duration_ms: 0.04609
+  type: 'test'
+  ...
+# Subtest: recomputeStageDates: schuetzt dateOverridden=true
+ok 29 - recomputeStageDates: schuetzt dateOverridden=true
+  ---
+  duration_ms: 0.055543
+  type: 'test'
+  ...
+# Subtest: recomputeStageDates: no-op wenn startDate null
+ok 30 - recomputeStageDates: no-op wenn startDate null
+  ---
+  duration_ms: 0.035944
+  type: 'test'
+  ...
+# Subtest: reorderStages: re-dated Etappen lueckenlos
+ok 31 - reorderStages: re-dated Etappen lueckenlos
+  ---
+  duration_ms: 0.130357
+  type: 'test'
+  ...
+# Subtest: toTripPayload: strippt dateOverridden aus jeder Stage
+ok 32 - toTripPayload: strippt dateOverridden aus jeder Stage
+  ---
+  duration_ms: 0.14648
+  type: 'test'
+  ...
+# Subtest: addStage AC\#16a: Waypoints ohne suggested-Flag → nach addStage suggested:true
+ok 33 - addStage AC\#16a: Waypoints ohne suggested-Flag → nach addStage suggested:true
+  ---
+  duration_ms: 0.083546
+  type: 'test'
+  ...
+# Subtest: addStage AC\#16b: Waypoints mit suggested:true (explizit) → bleibt true
+ok 34 - addStage AC\#16b: Waypoints mit suggested:true (explizit) → bleibt true
+  ---
+  duration_ms: 0.050776
+  type: 'test'
+  ...
+# Subtest: addStage AC\#16c: Waypoints mit suggested:false (explizit) → bleibt false
+ok 35 - addStage AC\#16c: Waypoints mit suggested:false (explizit) → bleibt false
+  ---
+  duration_ms: 0.036535
+  type: 'test'
+  ...
+# Subtest: confirmWaypoint AC\#14a: entfernt suggested-Property aus angegebenem Wegpunkt
+ok 36 - confirmWaypoint AC\#14a: entfernt suggested-Property aus angegebenem Wegpunkt
+  ---
+  duration_ms: 0.128293
+  type: 'test'
+  ...
+# Subtest: confirmWaypoint AC\#14b: falsche stageId → kein Crash, State unveraendert
+ok 37 - confirmWaypoint AC\#14b: falsche stageId → kein Crash, State unveraendert
+  ---
+  duration_ms: 0.065769
+  type: 'test'
+  ...
+# Subtest: confirmWaypoint AC\#14c: falsche waypointId → kein Crash, suggested bleibt
+ok 38 - confirmWaypoint AC\#14c: falsche waypointId → kein Crash, suggested bleibt
+  ---
+  duration_ms: 0.044477
+  type: 'test'
+  ...
+# Subtest: rejectWaypoint AC\#15a: entfernt Wegpunkt aus stage.waypoints
+ok 39 - rejectWaypoint AC\#15a: entfernt Wegpunkt aus stage.waypoints
+  ---
+  duration_ms: 0.081603
+  type: 'test'
+  ...
+# Subtest: rejectWaypoint AC\#15b: falsche stageId → State unveraendert
+ok 40 - rejectWaypoint AC\#15b: falsche stageId → State unveraendert
+  ---
+  duration_ms: 0.052829
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep3 AC\#17a: neuer State (keine Stages) → true
+ok 41 - canAdvanceStep3 AC\#17a: neuer State (keine Stages) → true
+  ---
+  duration_ms: 0.036426
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep3 AC\#17b: mit Stages → true
+ok 42 - canAdvanceStep3 AC\#17b: mit Stages → true
+  ---
+  duration_ms: 0.041102
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep3 AC\#17c: mit allen Waypoints verworfen → true
+ok 43 - canAdvanceStep3 AC\#17c: mit allen Waypoints verworfen → true
+  ---
+  duration_ms: 0.074732
+  type: 'test'
+  ...
+# Subtest: canAdvanceCurrent AC\#18: Step 3 delegiert auf canAdvanceStep3
+ok 44 - canAdvanceCurrent AC\#18: Step 3 delegiert auf canAdvanceStep3
+  ---
+  duration_ms: 0.060832
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep4 \#164 AC\#1: neuer State → true
+ok 45 - canAdvanceStep4 \#164 AC\#1: neuer State → true
+  ---
+  duration_ms: 0.058118
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep4 \#164 AC\#1b: alle Kanaele aus → trotzdem true
+ok 46 - canAdvanceStep4 \#164 AC\#1b: alle Kanaele aus → trotzdem true
+  ---
+  duration_ms: 0.078428
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep4 \#164 AC\#1c: beide Reports aus → trotzdem true
+ok 47 - canAdvanceStep4 \#164 AC\#1c: beide Reports aus → trotzdem true
+  ---
+  duration_ms: 0.048353
+  type: 'test'
+  ...
+# Subtest: canAdvanceCurrent \#164 AC\#2: Step 4 delegiert auf canAdvanceStep4
+ok 48 - canAdvanceCurrent \#164 AC\#2: Step 4 delegiert auf canAdvanceStep4
+  ---
+  duration_ms: 0.089034
+  type: 'test'
+  ...
+# Subtest: toTripPayload \#164 AC\#15a: report_config.send_email = briefings.channels.email
+ok 49 - toTripPayload \#164 AC\#15a: report_config.send_email = briefings.channels.email
+  ---
+  duration_ms: 0.111769
+  type: 'test'
+  ...
+# Subtest: toTripPayload \#164 AC\#15b: report_config.send_signal = briefings.channels.signal
+ok 50 - toTripPayload \#164 AC\#15b: report_config.send_signal = briefings.channels.signal
+  ---
+  duration_ms: 0.136075
+  type: 'test'
+  ...
+# Subtest: toTripPayload \#164 AC\#15c: report_config.send_telegram = briefings.channels.telegram
+ok 51 - toTripPayload \#164 AC\#15c: report_config.send_telegram = briefings.channels.telegram
+  ---
+  duration_ms: 0.084468
+  type: 'test'
+  ...
+# Subtest: toTripPayload \#164 AC\#15d: report_config.send_sms = briefings.channels.sms
+ok 52 - toTripPayload \#164 AC\#15d: report_config.send_sms = briefings.channels.sms
+  ---
+  duration_ms: 0.054332
+  type: 'test'
+  ...
+# Subtest: toTripPayload \#164 AC\#16a: report_config.morning_time = briefings.reports.morning.time
+ok 53 - toTripPayload \#164 AC\#16a: report_config.morning_time = briefings.reports.morning.time
+  ---
+  duration_ms: 0.093932
+  type: 'test'
+  ...
+# Subtest: toTripPayload \#164 AC\#16b: report_config.evening_time = briefings.reports.evening.time
+ok 54 - toTripPayload \#164 AC\#16b: report_config.evening_time = briefings.reports.evening.time
+  ---
+  duration_ms: 0.06632
+  type: 'test'
+  ...
+# Subtest: toTripPayload \#164 AC\#17a: report_config.enabled = true wenn beide Reports aktiv
+ok 55 - toTripPayload \#164 AC\#17a: report_config.enabled = true wenn beide Reports aktiv
+  ---
+  duration_ms: 0.048021
+  type: 'test'
+  ...
+# Subtest: toTripPayload \#164 AC\#17b: report_config.enabled = true wenn nur morning aktiv
+ok 56 - toTripPayload \#164 AC\#17b: report_config.enabled = true wenn nur morning aktiv
+  ---
+  duration_ms: 0.046161
+  type: 'test'
+  ...
+# Subtest: toTripPayload \#164 AC\#17c: report_config.enabled = false wenn beide Reports aus
+ok 57 - toTripPayload \#164 AC\#17c: report_config.enabled = false wenn beide Reports aus
+  ---
+  duration_ms: 0.05942
+  type: 'test'
+  ...
+# Subtest: toTripPayload \#164 AC\#18: alert_thresholds-Block geschrieben wenn min. 1 Feld nicht null
+ok 58 - toTripPayload \#164 AC\#18: alert_thresholds-Block geschrieben wenn min. 1 Feld nicht null
+  ---
+  duration_ms: 0.064147
+  type: 'test'
+  ...
+# Subtest: toTripPayload \#164 AC\#18b: alert_thresholds enthaelt alle 4 Felder auch wenn nur 1 gesetzt
+ok 59 - toTripPayload \#164 AC\#18b: alert_thresholds enthaelt alle 4 Felder auch wenn nur 1 gesetzt
+  ---
+  duration_ms: 0.051698
+  type: 'test'
+  ...
+# Subtest: toTripPayload \#164 AC\#19: KEIN alert_thresholds-Block wenn alle 4 thresholds null
+ok 60 - toTripPayload \#164 AC\#19: KEIN alert_thresholds-Block wenn alle 4 thresholds null
+  ---
+  duration_ms: 0.049725
+  type: 'test'
+  ...
+# Subtest: toTripPayload \#164 AC\#20: KEINE alten change_threshold_*-Felder im report_config
+ok 61 - toTripPayload \#164 AC\#20: KEINE alten change_threshold_*-Felder im report_config
+  ---
+  duration_ms: 0.052189
+  type: 'test'
+  ...
+# Subtest: AC-1 \#197: save() redirected auf '/trips' (Liste), NICHT auf /trips/${id}
+ok 62 - AC-1 \#197: save() redirected auf '/trips' (Liste), NICHT auf /trips/${id}
+  ---
+  duration_ms: 0.566614
+  type: 'test'
+  ...
+# Subtest: AC-2 \#197: goto-Aufruf steht innerhalb des try-Blocks von save()
+ok 63 - AC-2 \#197: goto-Aufruf steht innerhalb des try-Blocks von save()
+  ---
+  duration_ms: 0.27886
+  type: 'test'
+  ...
+# Subtest: AC-3 \#197: TODO(epic-135)-Marker steht in der save()-Methode bei dem goto-Aufruf
+ok 64 - AC-3 \#197: TODO(epic-135)-Marker steht in der save()-Methode bei dem goto-Aufruf
+  ---
+  duration_ms: 0.147432
+  type: 'test'
+  ...
+# Subtest: AC-4 \#197: Master-Spec §1.4 nennt /trips als Fallback (nicht /) mit Verweis auf \#197
+ok 65 - AC-4 \#197: Master-Spec §1.4 nennt /trips als Fallback (nicht /) mit Verweis auf \#197
+  ---
+  duration_ms: 0.146561
+  type: 'test'
+  ...
+1..65
+# tests 65
+# suites 0
+# pass 65
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 122.743164

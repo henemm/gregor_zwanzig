@@ -41,3 +41,29 @@ Nach erfolgreichem Trip-Save im Wizard (`POST /api/trips` 201) leitet `WizardSta
 4. **Test-Coverage:** `save()` ist aktuell nicht test-abgedeckt. RED-Phase muss einen Test einführen, der den Redirect-Pfad asserted.
 5. **Spätere Bereinigung:** Sobald Epic #135 fertig, soll Fallback entfernt werden. Code-Kommentar mit Issue-Referenz pflichtbewusst setzen, damit Cleanup nicht vergessen wird.
 6. **Validator-Lessons-learned:** AC #25 hat 404-Page nicht erkannt, weil URL-Wechsel ausreichte. Folge-Issue (oder Adversary-Verschärfung): Validator soll nach Redirect Page-Content laden, nicht nur URL prüfen. Nicht Scope dieses Issues.
+
+## Analyse-Ergebnisse
+
+### Verifiziert (bug-intake-Agent)
+
+- `frontend/src/routes/trips/[id]/+page.svelte` existiert nicht — Verzeichnis enthält nur `edit/`.
+- `save()` (Zeile 284–298) hat keinen Fallback. Der `try/catch` umschließt nur `api.post`, nicht den `goto`.
+- Nur eine einzige Stelle macht `goto(/trips/${id})` ohne `/edit`-Suffix — der Bug ist auf eine Zeile konzentriert.
+
+### Plan-Agent Risiko (zusätzlich aufgenommen)
+
+- **Response-ID vs. Payload-ID:** Aktuelle Implementierung nutzt `trip.id` aus dem lokalen Payload (per `newId()` client-generiert). Defensiv besser: die ID aus der Server-Response verwenden, falls Backend sie übernimmt/überschreibt. Validator-Bericht zeigt eine 8-stellige Hex-ID — Server akzeptiert die Client-ID heute, aber das ist nicht garantiert.
+
+### Entscheidung Redirect-Ziel (User, 2026-05-11)
+
+**`/trips` (Übersichtsliste)** — weicht vom Spec-Wortlaut (`/`) ab, erfüllt aber den Spec-Intent besser: User sieht den neuen Trip in der Liste → direktes Erfolgs-Feedback → von dort ein Klick zu Edit/Detail. Spec-Master wird im Spec-Schritt entsprechend aktualisiert oder explizit als Abweichung dokumentiert.
+
+### Scope-Schätzung (final)
+
+- 2 Dateien: `wizardState.svelte.ts`, `wizardState.test.ts`
+- ~20–25 LoC (4–5 LoC Produktivcode, 15–20 LoC Tests)
+- Plus minimaler Update der Master-Spec §1.4 (`/` → `/trips`) oder Abweichungs-Vermerk
+
+### Cleanup-Marker
+
+`TODO(epic-135)`-Kommentar über dem `goto` mit Link zu Issue #135. Wenn Epic #135 die Detail-Page liefert, wird der Fallback entfernt.
