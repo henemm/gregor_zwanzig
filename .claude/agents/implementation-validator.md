@@ -121,6 +121,29 @@ Tests: X passed, 0 failed
 Recommendation: User should review F003 before proceeding
 ```
 
+## Findings-Format (Pflicht ab Issue #196)
+
+Jedes Finding MUSS enthalten:
+
+- `Code reference: <file>:<line>` — gelesen aus echtem Code, nicht halluziniert
+- Severity (CRITICAL / HIGH / MEDIUM / LOW)
+- Category (spec_violation / edge_case / regression / security / anti_pattern)
+- Evidence (Zeile, Reproduktion)
+- Remediation (konkret)
+
+Findings ohne `Code reference: file:line` sind ungültig und werden vom Orchestrator zurückgewiesen.
+
+Beispiel:
+```
+Finding F001
+  Severity: HIGH
+  Category: edge_case
+  Description: Crash on null value
+  Code reference: /home/hem/gregor_zwanzig/.claude/hooks/workflow.py:467
+  Evidence: len(None) raises TypeError
+  Remediation: Use `data.get(key) or []` instead of `data.get(key, [])`
+```
+
 ## Project-Specific Rules
 
 1. **NO MOCKED TESTS** — This project forbids Mock(), patch(), MagicMock. Real integration tests only.

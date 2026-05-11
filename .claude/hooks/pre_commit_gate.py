@@ -28,6 +28,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 # Try to import config loader
@@ -183,6 +184,39 @@ def check_for_ui_changes(config: dict) -> bool:
         return False
 
 
+def _check_ambiguous_block(workflow_data: dict) -> tuple[bool, str]:
+    """Issue #196 — AMBIGUOUS-Verdict blocks commit unless override-token is fresh.
+
+    Returns (allowed, reason).
+    - VERIFIED/BROKEN/None: allowed (no AMBIGUOUS-Logik)
+    - AMBIGUOUS + valid override (expires_at > now): allowed with reason
+    - AMBIGUOUS + expired/missing override: blocked
+    """
+    verdict = (workflow_data.get("adversary_verdict") or "").upper()
+    if not verdict.startswith("AMBIGUOUS"):
+        return True, "verdict not AMBIGUOUS"
+
+    override = workflow_data.get("adversary_ambiguous_override") or {}
+    if isinstance(override, dict):
+        expires = override.get("expires_at", 0) or 0
+        if expires and time.time() < expires:
+            return True, f"override active: {override.get('reason', '')}"
+    return False, (
+        "AMBIGUOUS verdict blocks commit. "
+        "Run: workflow.py override-ambiguous '<reason>' (TTL 1h)"
+    )
+
+
+def _load_active_workflow() -> dict:
+    """Load active workflow state via workflow_state_multi wrapper (Issue #196)."""
+    try:
+        from workflow_state_multi import get_active_workflow
+        wf = get_active_workflow()
+        return wf or {}
+    except Exception:
+        return {}
+
+
 def main():
     config = get_pre_commit_config()
 
@@ -194,6 +228,17 @@ def main():
 
     if not is_git_commit(tool_input, config):
         sys.exit(0)
+
+    # Issue #196 — AMBIGUOUS-Verdict-Block (before test run)
+    wf = _load_active_workflow()
+    ok, reason = _check_ambiguous_block(wf)
+    if not ok:
+        print("=" * 70, file=sys.stderr)
+        print("BLOCKED - Adversary AMBIGUOUS", file=sys.stderr)
+        print("=" * 70, file=sys.stderr)
+        print(f"{reason}", file=sys.stderr)
+        print("=" * 70, file=sys.stderr)
+        sys.exit(2)
 
     # Run tests
     success, output = run_tests(config)

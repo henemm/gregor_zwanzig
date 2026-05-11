@@ -1,0 +1,387 @@
+.......FF.FF..sssssssssssssss.................FF.F...................... [  5%]
+........................................................................ [ 10%]
+........................................................................ [ 16%]
+FFF.FF.................................................F................ [ 21%]
+...........................F....................FF...................... [ 26%]
+........EEEE......................Fssssssss............................. [ 32%]
+................................................................F....... [ 37%]
+..................FFFFFFF............................................... [ 42%]
+..............F.FF.................ssssss.......................xF.s.... [ 48%]
+..............FF...................................................FF... [ 53%]
+...........sssssss..........ss.......................................... [ 59%]
+........................................................................ [ 64%]
+........................................................................ [ 69%]
+.................................................................s...... [ 75%]
+........................................................................ [ 80%]
+........................................................................ [ 85%]
+........................................................................ [ 91%]
+........................................................................ [ 96%]
+.............................................                            [100%]
+==================================== ERRORS ====================================
+_ ERROR at setup of TestPasswordChangeUI.test_account_has_password_change_section _
+tests/tdd/test_change_password.py:26: in session_cookie
+    assert resp.status_code == 200
+E   assert 429 == 200
+E    +  where 429 = <Response [429 Too Many Requests]>.status_code
+__ ERROR at setup of TestPasswordChangeUI.test_account_has_old_password_field __
+tests/tdd/test_change_password.py:26: in session_cookie
+    assert resp.status_code == 200
+E   assert 429 == 200
+E    +  where 429 = <Response [429 Too Many Requests]>.status_code
+_ ERROR at setup of TestPasswordChangeUI.test_account_has_new_password_fields __
+tests/tdd/test_change_password.py:26: in session_cookie
+    assert resp.status_code == 200
+E   assert 429 == 200
+E    +  where 429 = <Response [429 Too Many Requests]>.status_code
+_ ERROR at setup of TestPasswordChangeEndpoint.test_change_password_endpoint_exists _
+tests/tdd/test_change_password.py:26: in session_cookie
+    assert resp.status_code == 200
+E   assert 429 == 200
+E    +  where 429 = <Response [429 Too Many Requests]>.status_code
+=================================== FAILURES ===================================
+____________ TestReportFormatting.test_email_html_contains_segments ____________
+tests/e2e/test_e2e_story3_reports.py:220: in test_email_html_contains_segments
+    assert "#2" in report.email_html
+E   assert '#2' in '<!DOCTYPE html>\n<html>\n<head>\n    <meta charset="utf-8">\n    <meta name="viewport" content="width=device-width, i...els °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun W/m²</span>\n        </div>\n    </div>\n</body>\n</html>'
+E    +  where '<!DOCTYPE html>\n<html>\n<head>\n    <meta charset="utf-8">\n    <meta name="viewport" content="width=device-width, i...els °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun W/m²</span>\n        </div>\n    </div>\n</body>\n</html>' = TripReport(trip_id='e2e-story3-stubai', trip_name='E2E Story3 Stubai', report_type='morning', generated_at=datetime.da...-----\nGenerated: 2026-05-11 16:18 UTC\nData: openmeteo (icon_d2)', sms_text=None, triggered_by='schedule', changes=[]).email_html
+_____________ TestReportFormatting.test_email_plain_text_fallback ______________
+tests/e2e/test_e2e_story3_reports.py:237: in test_email_plain_text_fallback
+    assert "SEGMENTS" in report.email_plain
+E   AssertionError: assert 'SEGMENTS' in 'E2E Story3 Stubai - Morning Report\n11.05.2026\n\n━━ Segment 1: 07:00–10:00 | 3.2 km | ↑993m → 2237m ━━\n  Time   Tem...----------------------------------------------------------\nGenerated: 2026-05-11 16:18 UTC\nData: openmeteo (icon_d2)'
+E    +  where 'E2E Story3 Stubai - Morning Report\n11.05.2026\n\n━━ Segment 1: 07:00–10:00 | 3.2 km | ↑993m → 2237m ━━\n  Time   Tem...----------------------------------------------------------\nGenerated: 2026-05-11 16:18 UTC\nData: openmeteo (icon_d2)' = TripReport(trip_id='e2e-story3-stubai', trip_name='E2E Story3 Stubai', report_type='morning', generated_at=datetime.da...-----\nGenerated: 2026-05-11 16:18 UTC\nData: openmeteo (icon_d2)', sms_text=None, triggered_by='schedule', changes=[]).email_plain
+_________________ TestReportFormatting.test_sms_format_compact _________________
+tests/e2e/test_e2e_story3_reports.py:259: in test_sms_format_compact
+    assert "E1:" in sms
+E   AssertionError: assert 'E1:' in 'Etappe: N8 D14 R0.9@7 PR- W12@10 G38@10 TH:-'
+______________ TestReportFormatting.test_sms_contains_temperature ______________
+tests/e2e/test_e2e_story3_reports.py:270: in test_sms_contains_temperature
+    assert "E1:T" in sms
+E   AssertionError: assert 'E1:T' in 'Etappe: N8 D14 R0.9@7 PR- W12@10 G38@10 TH:-'
+________________________ test_cli_compact_uses_pipeline ________________________
+tests/integration/test_cli_wintersport.py:114: in test_cli_compact_uses_pipeline
+    assert proc.returncode == 0, (
+E   AssertionError: CLI fehlgeschlagen: stdout='' stderr='Provider error: [geosphere] HTTP 429: {\n  "message":"API rate limit exceeded",\n  "request_id":"57dec374b9b4945c2049df3b2249e71f"\n}\n'
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/home/hem/gregor_zwanzig/.venv/bin/python', '-m', 'src.app.cli', '--trip', '/tmp/pytest-of-hem...eosphere] HTTP 429: {\n  "message":"API rate limit exceeded",\n  "request_id":"57dec374b9b4945c2049df3b2249e71f"\n}\n').returncode
+__________________ test_cli_long_report_contains_all_sections __________________
+tests/integration/test_cli_wintersport.py:165: in test_cli_long_report_contains_all_sections
+    assert proc.returncode == 0, (
+E   AssertionError: CLI fehlgeschlagen: stdout='' stderr='Provider error: [geosphere] HTTP 429: {\n  "message":"API rate limit exceeded",\n  "request_id":"66003c052783e60e9f5ea66a851aaf3e"\n}\n'
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/home/hem/gregor_zwanzig/.venv/bin/python', '-m', 'src.app.cli', '--trip', '/tmp/pytest-of-hem...eosphere] HTTP 429: {\n  "message":"API rate limit exceeded",\n  "request_id":"66003c052783e60e9f5ea66a851aaf3e"\n}\n').returncode
+____________________ test_cli_long_report_subject_unchanged ____________________
+tests/integration/test_cli_wintersport.py:246: in test_cli_long_report_subject_unchanged
+    assert proc.returncode == 0, (
+E   AssertionError: CLI fehlgeschlagen: stdout='' stderr='Provider error: [geosphere] HTTP 429: {\n  "message":"API rate limit exceeded",\n  "request_id":"72d8136d8206972f65e44120eb13cd3a"\n}\n'
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/home/hem/gregor_zwanzig/.venv/bin/python', '-m', 'src.app.cli', '--trip', '/tmp/pytest-of-hem...eosphere] HTTP 429: {\n  "message":"API rate limit exceeded",\n  "request_id":"72d8136d8206972f65e44120eb13cd3a"\n}\n').returncode
+_______ TestSegmentWeatherCacheIntegration.test_cache_reduces_api_calls ________
+tests/integration/test_segment_weather_cache.py:45: in test_cache_reduces_api_calls
+    assert cache.stats()["total_entries"] == 1
+E   assert 0 == 1
+------------------------------ Captured log call -------------------------------
+ERROR    services.segment_weather:segment_weather.py:138 Provider failed for segment 1: [geosphere] HTTP 429: {
+  "message":"API rate limit exceeded",
+  "request_id":"d7eae6222e162d747d486123d8146056"
+}
+_ TestSegmentWeatherCacheIntegration.test_different_segments_cached_separately _
+tests/integration/test_segment_weather_cache.py:99: in test_different_segments_cached_separately
+    assert cache.stats()["total_entries"] == 2
+E   assert 0 == 2
+------------------------------ Captured log call -------------------------------
+ERROR    services.segment_weather:segment_weather.py:138 Provider failed for segment 1: [geosphere] HTTP 429: {
+  "message":"API rate limit exceeded",
+  "request_id":"ee50192072746f05345477168be6ac4e"
+}
+ERROR    services.segment_weather:segment_weather.py:138 Provider failed for segment 2: [geosphere] HTTP 429: {
+  "message":"API rate limit exceeded",
+  "request_id":"85366955a0bb665aaacd351b88bf7154"
+}
+___ TestSegmentWeatherMetricsGeoSphere.test_geosphere_austria_basis_metrics ____
+tests/integration/test_segment_weather_metrics.py:62: in test_geosphere_austria_basis_metrics
+    assert summary.temp_min_c is not None
+E   assert None is not None
+E    +  where None = SegmentWeatherSummary(temp_min_c=None, temp_max_c=None, temp_avg_c=None, wind_max_kmh=None, gust_max_kmh=None, precip_...ind_direction_avg_deg=None, precip_type_dominant=None, dominant_wmo_code=None, dni_avg_wm2=None, aggregation_config={}).temp_min_c
+------------------------------ Captured log call -------------------------------
+ERROR    services.segment_weather:segment_weather.py:138 Provider failed for segment 1: [geosphere] HTTP 429: {
+  "message":"API rate limit exceeded",
+  "request_id":"9807285ca8e719537042ad200906111e"
+}
+________________ TestE2EStory2Flow.test_e2e_segment_to_metrics _________________
+tests/integration/test_segment_weather_metrics.py:201: in test_e2e_segment_to_metrics
+    assert weather_data.aggregated.temp_min_c is not None
+E   assert None is not None
+E    +  where None = SegmentWeatherSummary(temp_min_c=None, temp_max_c=None, temp_avg_c=None, wind_max_kmh=None, gust_max_kmh=None, precip_...ind_direction_avg_deg=None, precip_type_dominant=None, dominant_wmo_code=None, dni_avg_wm2=None, aggregation_config={}).temp_min_c
+E    +    where SegmentWeatherSummary(temp_min_c=None, temp_max_c=None, temp_avg_c=None, wind_max_kmh=None, gust_max_kmh=None, precip_...ind_direction_avg_deg=None, precip_type_dominant=None, dominant_wmo_code=None, dni_avg_wm2=None, aggregation_config={}) = SegmentWeatherData(segment=TripSegment(segment_id=1, start_point=GPXPoint(lat=47.27, lon=11.4, elevation_m=800, distan...[geosphere] HTTP 429: {\n  "message":"API rate limit exceeded",\n  "request_id":"4b7baf33af83be0652817d1e6bba5811"\n}').aggregated
+------------------------------ Captured log call -------------------------------
+ERROR    services.segment_weather:segment_weather.py:138 Provider failed for segment 1: [geosphere] HTTP 429: {
+  "message":"API rate limit exceeded",
+  "request_id":"4b7baf33af83be0652817d1e6bba5811"
+}
+__ TestSegmentWeatherMetricsExtended.test_geosphere_austria_extended_metrics ___
+tests/integration/test_segment_weather_metrics.py:247: in test_geosphere_austria_extended_metrics
+    assert "dewpoint_avg_c" in summary.aggregation_config
+E   AssertionError: assert 'dewpoint_avg_c' in {}
+E    +  where {} = SegmentWeatherSummary(temp_min_c=None, temp_max_c=None, temp_avg_c=None, wind_max_kmh=None, gust_max_kmh=None, precip_...ind_direction_avg_deg=None, precip_type_dominant=None, dominant_wmo_code=None, dni_avg_wm2=None, aggregation_config={}).aggregation_config
+------------------------------ Captured log call -------------------------------
+ERROR    services.segment_weather:segment_weather.py:138 Provider failed for segment 1: [geosphere] HTTP 429: {
+  "message":"API rate limit exceeded",
+  "request_id":"fab6f84a2470135ed285ae5a33f7514e"
+}
+____ TestSegmentWeatherServiceGeoSphere.test_fetch_segment_weather_austria _____
+tests/integration/test_trip_segment_weather.py:66: in test_fetch_segment_weather_austria
+    assert len(result.timeseries.data) > 0
+               ^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'NoneType' object has no attribute 'data'
+------------------------------ Captured log call -------------------------------
+ERROR    services.segment_weather:segment_weather.py:138 Provider failed for segment 1: [geosphere] HTTP 429: {
+  "message":"API rate limit exceeded",
+  "request_id":"d503a564605a7e61122b0268fe2a9548"
+}
+_______________ TestSMSExposedSections.test_sms_grat_wind_label ________________
+tests/integration/test_wind_exposition_pipeline.py:329: in test_sms_grat_wind_label
+    assert "GratWind" in sms
+E   AssertionError: assert 'GratWind' in 'Etappe: N8 D12 R- PR- W35@8 G40@8 TH:-'
+___________________ TestNavigation.test_nav_has_account_link ___________________
+tests/tdd/test_account_page.py:135: in test_nav_has_account_link
+    assert '/account' in resp.text, "Missing /account link in navigation"
+E   AssertionError: Missing /account link in navigation
+E   assert '/account' in '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n'
+E    +  where '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n' = <Response [200 OK]>.text
+__________________ TestNavigation.test_nav_shows_konto_label ___________________
+tests/tdd/test_account_page.py:145: in test_nav_shows_konto_label
+    assert 'Konto' in resp.text, "Missing 'Konto' label in navigation"
+E   AssertionError: Missing 'Konto' label in navigation
+E   assert 'Konto' in '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n'
+E    +  where '<!doctype html>\n<html lang="en">\n\t<head>\n\t\t<meta charset="utf-8" />\n\t\t<meta name="viewport" content="width=d...t\t\t\t\t\t\terror: null\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t</script>\n\t\t</div>\n\t</body>\n</html>\n' = <Response [200 OK]>.text
+_________ TestFetchForecastAlpsRegression.test_innsbruck_returns_data __________
+tests/tdd/test_compare_provider_routing.py:162: in test_innsbruck_returns_data
+    assert result["error"] is None, f"Expected no error, got: {result['error']}"
+E   AssertionError: Expected no error, got: [geosphere] HTTP 429: {
+E       "message":"API rate limit exceeded",
+E       "request_id":"3589831fc448197e33279e063402ba35"
+E     }
+E   assert '[geosphere] HTTP 429: {\n  "message":"API rate limit exceeded",\n  "request_id":"3589831fc448197e33279e063402ba35"\n}' is None
+_________________ test_setup_script_idempotent_against_staging _________________
+tests/tdd/test_external_validator_auth.py:226: in test_setup_script_idempotent_against_staging
+    assert result.returncode == 0, (
+E   AssertionError: Setup-Skript exit 1:
+E     FEHLER: HTTP 429 beim Anlegen von 'validator-issue110':
+E     {"error":"rate_limit_exceeded"}
+E     
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['bash', '/home/hem/gregor_zwanzig/scripts/setup-validator-user.sh'], returncode=1, stdout='', stderr='FEHLER: HTTP 429 beim Anlegen von \'validator-issue110\':\n{"error":"rate_limit_exceeded"}\n').returncode
+______________ TestSnowgridParsing.test_snowgrid_depth_conversion ______________
+tests/tdd/test_geosphere_parsing.py:38: in test_snowgrid_depth_conversion
+    result = validator.validate_snowgrid_parsing(lat, lon)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/validation/geosphere_validator.py:164: in validate_snowgrid_parsing
+    raw = self.fetch_raw_snowgrid(lat, lon)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/validation/geosphere_validator.py:74: in fetch_raw_snowgrid
+    response.raise_for_status()
+.venv/lib/python3.12/site-packages/httpx/_models.py:829: in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+E   httpx.HTTPStatusError: Client error '429 Too Many Requests' for url 'https://dataset.api.hub.geosphere.at/v1/timeseries/historical/snowgrid_cl-v2-1d-1km?lat_lon=47.26%2C11.39&parameters=snow_depth%2Cswe_tot&output_format=geojson&start=2026-05-04T16%3A18&end=2026-05-11T16%3A18'
+E   For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429
+_____________ TestSnowgridParsing.test_snowgrid_multiple_locations _____________
+tests/tdd/test_geosphere_parsing.py:58: in test_snowgrid_multiple_locations
+    result = validator.validate_snowgrid_parsing(lat, lon)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/validation/geosphere_validator.py:164: in validate_snowgrid_parsing
+    raw = self.fetch_raw_snowgrid(lat, lon)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/validation/geosphere_validator.py:74: in fetch_raw_snowgrid
+    response.raise_for_status()
+.venv/lib/python3.12/site-packages/httpx/_models.py:829: in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+E   httpx.HTTPStatusError: Client error '429 Too Many Requests' for url 'https://dataset.api.hub.geosphere.at/v1/timeseries/historical/snowgrid_cl-v2-1d-1km?lat_lon=47.26%2C11.39&parameters=snow_depth%2Cswe_tot&output_format=geojson&start=2026-05-04T16%3A18&end=2026-05-11T16%3A18'
+E   For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429
+_______________ TestNwpParsing.test_nwp_temperature_passthrough ________________
+tests/tdd/test_geosphere_parsing.py:84: in test_nwp_temperature_passthrough
+    result = validator.validate_nwp_parsing(lat, lon)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/validation/geosphere_validator.py:211: in validate_nwp_parsing
+    raw = self.fetch_raw_nwp(lat, lon)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/validation/geosphere_validator.py:121: in fetch_raw_nwp
+    response.raise_for_status()
+.venv/lib/python3.12/site-packages/httpx/_models.py:829: in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+E   httpx.HTTPStatusError: Client error '429 Too Many Requests' for url 'https://dataset.api.hub.geosphere.at/v1/timeseries/forecast/nwp-v1-1h-2500m?lat_lon=47.26%2C11.39&parameters=t2m%2Cu10m%2Cv10m%2Ctcc%2Csp&output_format=geojson'
+E   For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429
+________________ TestNwpParsing.test_nwp_wind_vector_conversion ________________
+tests/tdd/test_geosphere_parsing.py:106: in test_nwp_wind_vector_conversion
+    result = validator.validate_nwp_parsing(lat, lon)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/validation/geosphere_validator.py:211: in validate_nwp_parsing
+    raw = self.fetch_raw_nwp(lat, lon)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/validation/geosphere_validator.py:121: in fetch_raw_nwp
+    response.raise_for_status()
+.venv/lib/python3.12/site-packages/httpx/_models.py:829: in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+E   httpx.HTTPStatusError: Client error '429 Too Many Requests' for url 'https://dataset.api.hub.geosphere.at/v1/timeseries/forecast/nwp-v1-1h-2500m?lat_lon=47.26%2C11.39&parameters=t2m%2Cu10m%2Cv10m%2Ctcc%2Csp&output_format=geojson'
+E   For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429
+________________ TestNwpParsing.test_nwp_cloud_cover_conversion ________________
+tests/tdd/test_geosphere_parsing.py:129: in test_nwp_cloud_cover_conversion
+    result = validator.validate_nwp_parsing(lat, lon)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/validation/geosphere_validator.py:211: in validate_nwp_parsing
+    raw = self.fetch_raw_nwp(lat, lon)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/validation/geosphere_validator.py:121: in fetch_raw_nwp
+    response.raise_for_status()
+.venv/lib/python3.12/site-packages/httpx/_models.py:829: in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+E   httpx.HTTPStatusError: Client error '429 Too Many Requests' for url 'https://dataset.api.hub.geosphere.at/v1/timeseries/forecast/nwp-v1-1h-2500m?lat_lon=47.26%2C11.39&parameters=t2m%2Cu10m%2Cv10m%2Ctcc%2Csp&output_format=geojson'
+E   For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429
+_________________ TestNwpParsing.test_nwp_pressure_conversion __________________
+tests/tdd/test_geosphere_parsing.py:151: in test_nwp_pressure_conversion
+    result = validator.validate_nwp_parsing(lat, lon)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/validation/geosphere_validator.py:211: in validate_nwp_parsing
+    raw = self.fetch_raw_nwp(lat, lon)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/validation/geosphere_validator.py:121: in fetch_raw_nwp
+    response.raise_for_status()
+.venv/lib/python3.12/site-packages/httpx/_models.py:829: in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+E   httpx.HTTPStatusError: Client error '429 Too Many Requests' for url 'https://dataset.api.hub.geosphere.at/v1/timeseries/forecast/nwp-v1-1h-2500m?lat_lon=47.26%2C11.39&parameters=t2m%2Cu10m%2Cv10m%2Ctcc%2Csp&output_format=geojson'
+E   For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429
+___________________ TestNwpParsing.test_nwp_all_conversions ____________________
+tests/tdd/test_geosphere_parsing.py:168: in test_nwp_all_conversions
+    result = validator.validate_nwp_parsing(lat, lon)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/validation/geosphere_validator.py:211: in validate_nwp_parsing
+    raw = self.fetch_raw_nwp(lat, lon)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/validation/geosphere_validator.py:121: in fetch_raw_nwp
+    response.raise_for_status()
+.venv/lib/python3.12/site-packages/httpx/_models.py:829: in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+E   httpx.HTTPStatusError: Client error '429 Too Many Requests' for url 'https://dataset.api.hub.geosphere.at/v1/timeseries/forecast/nwp-v1-1h-2500m?lat_lon=47.26%2C11.39&parameters=t2m%2Cu10m%2Cv10m%2Ctcc%2Csp&output_format=geojson'
+E   For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429
+____ TestRegisterFormAction.test_successful_registration_redirects_to_login ____
+tests/tdd/test_register_page.py:111: in test_successful_registration_redirects_to_login
+    assert data.get("type") == "redirect", f"Expected redirect, got {data}"
+E   AssertionError: Expected redirect, got {'type': 'failure', 'status': 500, 'data': '[{"error":1,"username":2},"Registrierung fehlgeschlagen","test_6d813365"]'}
+E   assert 'failure' == 'redirect'
+E     
+E     - redirect
+E     + failure
+__________ TestRegisterFormAction.test_duplicate_username_shows_error __________
+tests/tdd/test_register_page.py:141: in test_duplicate_username_shows_error
+    assert go_resp.status_code == 201, f"Setup failed: {go_resp.status_code}"
+E   AssertionError: Setup failed: 429
+E   assert 429 == 201
+E    +  where 429 = <Response [429 Too Many Requests]>.status_code
+____________ TestRegisterFormAction.test_short_password_shows_error ____________
+tests/tdd/test_register_page.py:164: in test_short_password_shows_error
+    assert "8 Zeichen" in resp.text or "erforderlich" in resp.text, \
+E   AssertionError: Missing password length error
+E   assert ('8 Zeichen' in '{"type":"failure","status":500,"data":"[{\\"error\\":1,\\"username\\":2},\\"Registrierung fehlgeschlagen\\",\\"test_301fa256\\"]"}' or 'erforderlich' in '{"type":"failure","status":500,"data":"[{\\"error\\":1,\\"username\\":2},\\"Registrierung fehlgeschlagen\\",\\"test_301fa256\\"]"}')
+E    +  where '{"type":"failure","status":500,"data":"[{\\"error\\":1,\\"username\\":2},\\"Registrierung fehlgeschlagen\\",\\"test_301fa256\\"]"}' = <Response [200 OK]>.text
+E    +  and   '{"type":"failure","status":500,"data":"[{\\"error\\":1,\\"username\\":2},\\"Registrierung fehlgeschlagen\\",\\"test_301fa256\\"]"}' = <Response [200 OK]>.text
+_____________ TestSnowgridPlausibility.test_all_resorts_have_data ______________
+tests/tdd/test_snowgrid.py:105: in test_all_resorts_have_data
+    assert success_rate >= 0.8, (
+E   AssertionError: Only 0% of resorts have data from both sources. Results: {'stubaier-gletscher': {'bergfex': 300, 'snowgrid': None}, 'axamer-lizum': {'bergfex': None, 'snowgrid': None}, 'obergurgl-hochgurgl': {'bergfex': None, 'snowgrid': None}, 'soelden': {'bergfex': 145, 'snowgrid': None}, 'ischgl': {'bergfex': None, 'snowgrid': None}}
+E   assert 0.0 >= 0.8
+____________________ test_stage_reorder_move_down_persists _____________________
+tests/tdd/test_stage_reorder.py:208: in test_stage_reorder_move_down_persists
+    asyncio.run(_run_move_down_persists())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/tdd/test_stage_reorder.py:100: in _run_move_down_persists
+    _login(client)
+tests/tdd/test_stage_reorder.py:36: in _login
+    pytest.fail(
+E   Failed: GZ_TEST_PASS env var required. Beispiel: GZ_TEST_PASS='...' uv run pytest tests/tdd/test_stage_reorder.py
+_____________________ test_stage_reorder_disabled_at_edges _____________________
+tests/tdd/test_stage_reorder.py:212: in test_stage_reorder_disabled_at_edges
+    asyncio.run(_run_disabled_at_edges())
+/usr/lib/python3.12/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/asyncio/base_events.py:687: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/tdd/test_stage_reorder.py:174: in _run_disabled_at_edges
+    _login(client)
+tests/tdd/test_stage_reorder.py:36: in _login
+    pytest.fail(
+E   Failed: GZ_TEST_PASS env var required. Beispiel: GZ_TEST_PASS='...' uv run pytest tests/tdd/test_stage_reorder.py
+________________________ test_sidebar_uses_trips_label _________________________
+tests/tdd/test_trips_naming.py:53: in test_sidebar_uses_trips_label
+    with closing(_login_session()) as client:
+                 ^^^^^^^^^^^^^^^^
+tests/tdd/test_trips_naming.py:35: in _login_session
+    pytest.fail(
+E   Failed: GZ_TEST_PASS env var required — Tests benoetigen eingeloggten User. Beispiel: GZ_TEST_PASS='...' uv run pytest tests/tdd/test_trips_naming.py
+_____________________ test_homepage_uses_trip_terminology ______________________
+tests/tdd/test_trips_naming.py:72: in test_homepage_uses_trip_terminology
+    with closing(_login_session()) as client:
+                 ^^^^^^^^^^^^^^^^
+tests/tdd/test_trips_naming.py:35: in _login_session
+    pytest.fail(
+E   Failed: GZ_TEST_PASS env var required — Tests benoetigen eingeloggten User. Beispiel: GZ_TEST_PASS='...' uv run pytest tests/tdd/test_trips_naming.py
+=============================== warnings summary ===============================
+tests/tdd/test_external_validator_auth.py:169
+  /home/hem/gregor_zwanzig/tests/tdd/test_external_validator_auth.py:169: PytestUnknownMarkWarning: Unknown pytest.mark.integration - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.integration
+
+tests/tdd/test_external_validator_auth.py:204
+  /home/hem/gregor_zwanzig/tests/tdd/test_external_validator_auth.py:204: PytestUnknownMarkWarning: Unknown pytest.mark.integration - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.integration
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/e2e/test_e2e_story3_reports.py::TestReportFormatting::test_email_html_contains_segments
+FAILED tests/e2e/test_e2e_story3_reports.py::TestReportFormatting::test_email_plain_text_fallback
+FAILED tests/e2e/test_e2e_story3_reports.py::TestReportFormatting::test_sms_format_compact
+FAILED tests/e2e/test_e2e_story3_reports.py::TestReportFormatting::test_sms_contains_temperature
+FAILED tests/integration/test_cli_wintersport.py::test_cli_compact_uses_pipeline
+FAILED tests/integration/test_cli_wintersport.py::test_cli_long_report_contains_all_sections
+FAILED tests/integration/test_cli_wintersport.py::test_cli_long_report_subject_unchanged
+FAILED tests/integration/test_segment_weather_cache.py::TestSegmentWeatherCacheIntegration::test_cache_reduces_api_calls
+FAILED tests/integration/test_segment_weather_cache.py::TestSegmentWeatherCacheIntegration::test_different_segments_cached_separately
+FAILED tests/integration/test_segment_weather_metrics.py::TestSegmentWeatherMetricsGeoSphere::test_geosphere_austria_basis_metrics
+FAILED tests/integration/test_segment_weather_metrics.py::TestE2EStory2Flow::test_e2e_segment_to_metrics
+FAILED tests/integration/test_segment_weather_metrics.py::TestSegmentWeatherMetricsExtended::test_geosphere_austria_extended_metrics
+FAILED tests/integration/test_trip_segment_weather.py::TestSegmentWeatherServiceGeoSphere::test_fetch_segment_weather_austria
+FAILED tests/integration/test_wind_exposition_pipeline.py::TestSMSExposedSections::test_sms_grat_wind_label
+FAILED tests/tdd/test_account_page.py::TestNavigation::test_nav_has_account_link
+FAILED tests/tdd/test_account_page.py::TestNavigation::test_nav_shows_konto_label
+FAILED tests/tdd/test_compare_provider_routing.py::TestFetchForecastAlpsRegression::test_innsbruck_returns_data
+FAILED tests/tdd/test_external_validator_auth.py::test_setup_script_idempotent_against_staging
+FAILED tests/tdd/test_geosphere_parsing.py::TestSnowgridParsing::test_snowgrid_depth_conversion
+FAILED tests/tdd/test_geosphere_parsing.py::TestSnowgridParsing::test_snowgrid_multiple_locations
+FAILED tests/tdd/test_geosphere_parsing.py::TestNwpParsing::test_nwp_temperature_passthrough
+FAILED tests/tdd/test_geosphere_parsing.py::TestNwpParsing::test_nwp_wind_vector_conversion
+FAILED tests/tdd/test_geosphere_parsing.py::TestNwpParsing::test_nwp_cloud_cover_conversion
+FAILED tests/tdd/test_geosphere_parsing.py::TestNwpParsing::test_nwp_pressure_conversion
+FAILED tests/tdd/test_geosphere_parsing.py::TestNwpParsing::test_nwp_all_conversions
+FAILED tests/tdd/test_register_page.py::TestRegisterFormAction::test_successful_registration_redirects_to_login
+FAILED tests/tdd/test_register_page.py::TestRegisterFormAction::test_duplicate_username_shows_error
+FAILED tests/tdd/test_register_page.py::TestRegisterFormAction::test_short_password_shows_error
+FAILED tests/tdd/test_snowgrid.py::TestSnowgridPlausibility::test_all_resorts_have_data
+FAILED tests/tdd/test_stage_reorder.py::test_stage_reorder_move_down_persists
+FAILED tests/tdd/test_stage_reorder.py::test_stage_reorder_disabled_at_edges
+FAILED tests/tdd/test_trips_naming.py::test_sidebar_uses_trips_label - Failed...
+FAILED tests/tdd/test_trips_naming.py::test_homepage_uses_trip_terminology - ...
+ERROR tests/tdd/test_change_password.py::TestPasswordChangeUI::test_account_has_password_change_section
+ERROR tests/tdd/test_change_password.py::TestPasswordChangeUI::test_account_has_old_password_field
+ERROR tests/tdd/test_change_password.py::TestPasswordChangeUI::test_account_has_new_password_fields
+ERROR tests/tdd/test_change_password.py::TestPasswordChangeEndpoint::test_change_password_endpoint_exists

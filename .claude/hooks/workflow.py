@@ -808,6 +808,23 @@ def cmd_reset(args: list[str]) -> None:
     print(f"Workflow {name} reset to phase0_idle.")
 
 
+def cmd_override_ambiguous(args: list[str]) -> None:
+    """Issue #196 — Override-Token (1h TTL) für AMBIGUOUS-Verdict."""
+    if not args:
+        print("Usage: workflow.py override-ambiguous <reason>", file=sys.stderr)
+        sys.exit(1)
+    reason = " ".join(args)
+    data, name = _read_active()
+    now = datetime.now()
+    data["adversary_ambiguous_override"] = {
+        "reason": reason,
+        "at": now.isoformat(),
+        "expires_at": now.timestamp() + 3600,
+    }
+    _save(data)
+    print(f"AMBIGUOUS-Override aktiv (gültig 1h): {reason}")
+
+
 COMMANDS = {
     "start": cmd_start,
     "switch": cmd_switch,
@@ -822,6 +839,7 @@ COMMANDS = {
     "mark-ui-red": cmd_mark_ui_red,
     "mark-green": cmd_mark_green,
     "write-log": cmd_write_log,
+    "override-ambiguous": cmd_override_ambiguous,
     "complete": cmd_complete,
     "backlog": cmd_backlog,
     "pause": cmd_pause,
