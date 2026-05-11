@@ -66,3 +66,48 @@ export async function fillStep2(page: Page, input?: Step2Input): Promise<void> {
 	// Erste Stage-Row muss sichtbar werden.
 	await page.getByTestId('trip-wizard-step2-stage-row-0').waitFor({ state: 'visible' });
 }
+
+/**
+ * Eingabe-Vertrag fuer Trip-Wizard Step 3 (Sub-Spec #163 §10).
+ * Default-Verhalten: keine Aktion — alle Waypoints bleiben suggested
+ * (canAdvanceStep3 = true), nur Weiter-Klick.
+ */
+export interface Step3Input {
+	confirmAll?: boolean;
+	rejectByName?: string[];
+}
+
+/**
+ * Step-3-Helper: optional Bestaetigen/Verwerfen, dann Weiter-Klick.
+ * Voraussetzung: Wizard ist auf Step 3 (Step3Waypoints gemountet).
+ */
+export async function fillStep3(page: Page, input: Step3Input = {}): Promise<void> {
+	await page.getByTestId('trip-wizard-step3-container').waitFor({ state: 'visible' });
+
+	if (input.confirmAll) {
+		// Solange ein Confirm-Button sichtbar ist, ersten klicken — nach Klick
+		// verschwindet der Button und folgende Indizes ruecken nicht (kein Reorder),
+		// aber `first()` greift immer den ersten verbliebenen Button.
+		const confirmBtns = page.getByTestId(/^trip-wizard-step3-confirm-/);
+		// Sicherheits-Cap, falls etwas schief laeuft.
+		for (let i = 0; i < 50; i++) {
+			const count = await confirmBtns.count();
+			if (count === 0) break;
+			await confirmBtns.first().click();
+		}
+	}
+
+	if (input.rejectByName && input.rejectByName.length > 0) {
+		for (const name of input.rejectByName) {
+			const row = page.locator('[data-testid^="trip-wizard-step3-waypoint-row-"]', {
+				hasText: name
+			});
+			const idx = await row.getAttribute('data-waypoint-index');
+			if (idx) {
+				await page.getByTestId(`trip-wizard-step3-reject-${idx}`).click();
+			}
+		}
+	}
+
+	await page.getByTestId('trip-wizard-next').click();
+}

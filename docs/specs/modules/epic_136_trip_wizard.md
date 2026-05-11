@@ -398,6 +398,14 @@ Sub-Specs **muessen liefern**:
 
 ## Changelog
 
+- 2026-05-10: §3.1 erweitert um additive Methoden/Getter (Sub-Spec #163):
+  `addStage()`-Patch: alle Waypoints der eingehenden Stage erhalten `suggested: true`
+  (Variante A, zentralisiert). `confirmWaypoint(stageId, waypointId)` — entfernt
+  `suggested`-Flag. `rejectWaypoint(stageId, waypointId)` — entfernt Wegpunkt aus
+  `stage.waypoints`. `get canAdvanceStep3(): boolean` (immer true — keine
+  Mindest-Bestaetigung). `canAdvanceCurrent` case 3 zeigt auf `canAdvanceStep3`
+  statt literal `true`. Detail in Sub-Spec
+  [`epic_136_step3_waypoints.md`](./epic_136_step3_waypoints.md).
 - 2026-05-10: §3.1 erweitert um additive Felder `get canAdvanceStep2(): boolean`
   und `get canAdvanceCurrent(): boolean` (Switch ueber `currentStep`); zusaetzlich
   Methoden `addPauseStageAt(afterIndex)`, `deleteStage(id)`, `recomputeStageDates()`.

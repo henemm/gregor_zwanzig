@@ -11,7 +11,7 @@
 //   trip-wizard-back, trip-wizard-cancel, trip-wizard-next, trip-wizard-save.
 
 import { test, expect } from '@playwright/test';
-import { login, fillStep1, fillStep2, type Step1Input } from './helpers.js';
+import { login, fillStep1, fillStep2, fillStep3, type Step1Input } from './helpers.js';
 
 // Default-Step-1-Eingaben fuer Tests, die durch Step 1 hindurch wollen
 // (#161 fuehrte einen disabled-Mechanismus am Weiter-Button ein).
@@ -88,7 +88,7 @@ test.describe('Trip-Wizard Shell (#160)', () => {
 		await page.getByTestId('trip-wizard-next').click(); // 2
 		await fillStep2(page);
 		await page.getByTestId('trip-wizard-next').click(); // 3
-		await page.getByTestId('trip-wizard-next').click(); // 4
+		await fillStep3(page); // 4
 		await expect(page.getByTestId('trip-wizard-save')).toBeVisible();
 		await expect(page.getByTestId('trip-wizard-next')).not.toBeVisible();
 	});
@@ -101,8 +101,10 @@ test.describe('Trip-Wizard Shell (#160)', () => {
 		await expect(page.getByTestId('trip-wizard-step2-stages')).toBeVisible();
 		await fillStep2(page);
 		await page.getByTestId('trip-wizard-next').click();
-		await expect(page.getByTestId('trip-wizard-step3-waypoints')).toBeVisible();
-		await page.getByTestId('trip-wizard-next').click();
+		// Sub-Spec #163 §9: TestID gewechselt von trip-wizard-step3-waypoints
+		// → trip-wizard-step3-container (Stub durch echte Komponente ersetzt).
+		await expect(page.getByTestId('trip-wizard-step3-container')).toBeVisible();
+		await fillStep3(page);
 		await expect(page.getByTestId('trip-wizard-step4-briefings')).toBeVisible();
 	});
 

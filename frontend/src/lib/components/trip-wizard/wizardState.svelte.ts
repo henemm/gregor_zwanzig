@@ -99,8 +99,22 @@ export class WizardState {
 	}
 
 	/**
+	 * Sub-Spec #163 §3.4: Step 3 darf immer weitergeschaltet werden — keine
+	 * Mindest-Bestaetigung erzwingen (User-Entscheidung 2026-05-10). Begruendung:
+	 * `stripSuggested` in `toTripPayload` entfernt das `suggested`-Flag sowieso —
+	 * unbestaetigte Waypoints werden beim Save automatisch ohne Flag persistiert,
+	 * d.h. faktisch akzeptiert. Explizites Verwerfen ist die einzige Aktion mit
+	 * fachlicher Konsequenz.
+	 *
+	 * Getter (nicht $derived) — siehe canAdvanceStep1 fuer Begruendung.
+	 */
+	get canAdvanceStep3(): boolean {
+		return true;
+	}
+
+	/**
 	 * Switch ueber currentStep — liefert true wenn der aktuelle Step weitergeschaltet
-	 * werden darf. Step 3 + 4 returnen aktuell true (keine Validierung dort).
+	 * werden darf. Step 4 returnt aktuell true (keine Validierung dort).
 	 */
 	get canAdvanceCurrent(): boolean {
 		switch (this.currentStep) {
@@ -109,7 +123,7 @@ export class WizardState {
 			case 2:
 				return this.canAdvanceStep2;
 			case 3:
-				return true;
+				return this.canAdvanceStep3;
 			case 4:
 				return true;
 		}
@@ -135,7 +149,54 @@ export class WizardState {
 		// Backend liefert keine id zurueck (POST /api/gpx/parse) — wir vergeben
 		// sie hier konsistent. Falls Caller bereits eine id hat, respektieren.
 		const stageWithId: Stage = stage.id ? stage : { ...stage, id: newId() };
-		this.stages = [...this.stages, stageWithId];
+		// Sub-Spec #163 §3.1: Waypoints aus GPX-Upload als automatische Vorschlaege
+		// markieren. Zentralisiert (Variante A, User-Entscheidung 2026-05-10) statt
+		// Mount-Hook in Step 3 — funktioniert auch fuer zukuenftige Pfade
+		// (z.B. #165 Vorlagen). Explizit gesetzte Werte (true|false) bleiben.
+		const withSuggested: Stage = {
+			...stageWithId,
+			waypoints: stageWithId.waypoints.map((wp) =>
+				wp.suggested !== undefined ? wp : { ...wp, suggested: true }
+			)
+		};
+		this.stages = [...this.stages, withSuggested];
+	}
+
+	/**
+	 * Sub-Spec #163 §3.2: Entfernt das `suggested`-Flag aus einem Wegpunkt.
+	 * Der Wegpunkt gilt danach als bestaetigt. Falsche stageId/waypointId:
+	 * No-op (kein Crash, State unveraendert).
+	 *
+	 * Wichtig: Property wird via Destructuring vollstaendig entfernt — NICHT auf
+	 * `false` gesetzt — sonst zaehlt `Object.prototype.hasOwnProperty('suggested')`
+	 * weiterhin als true (siehe AC#14a).
+	 */
+	confirmWaypoint(stageId: string, waypointId: string): void {
+		this.stages = this.stages.map((stage) => {
+			if (stage.id !== stageId) return stage;
+			return {
+				...stage,
+				waypoints: stage.waypoints.map((wp) => {
+					if (wp.id !== waypointId) return wp;
+					const { suggested: _ignored, ...rest } = wp;
+					return rest;
+				})
+			};
+		});
+	}
+
+	/**
+	 * Sub-Spec #163 §3.3: Entfernt einen Wegpunkt vollstaendig aus
+	 * `stage.waypoints`. Falsche stageId/waypointId: No-op.
+	 */
+	rejectWaypoint(stageId: string, waypointId: string): void {
+		this.stages = this.stages.map((stage) => {
+			if (stage.id !== stageId) return stage;
+			return {
+				...stage,
+				waypoints: stage.waypoints.filter((wp) => wp.id !== waypointId)
+			};
+		});
 	}
 
 	addPauseStage(): void {
