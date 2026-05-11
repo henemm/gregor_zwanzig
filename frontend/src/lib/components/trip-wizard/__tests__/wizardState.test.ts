@@ -339,3 +339,187 @@ test('toTripPayload: strippt dateOverridden aus jeder Stage', () => {
 		);
 	}
 });
+
+// --- Sub-Spec #163 §3.1: addStage-Patch (suggested:true zentral) -----------
+// AC#16 — Waypoints ohne suggested-Flag erhalten suggested:true; explizite
+// Werte (true / false) bleiben erhalten.
+
+test('addStage AC#16a: Waypoints ohne suggested-Flag → nach addStage suggested:true', () => {
+	const s = new WizardState();
+	s.addStage({
+		id: 'st-a',
+		name: 'Etappe A',
+		date: '2026-06-01',
+		waypoints: [
+			{ id: 'w1', name: 'Gipfel', lat: 0, lon: 0, elevation_m: 2000 },
+			{ id: 'w2', name: 'Hütte', lat: 0, lon: 0, elevation_m: 1500 }
+		]
+	});
+	const stage = s.stages[0];
+	assert.equal(stage.waypoints.length, 2);
+	assert.equal(stage.waypoints[0].suggested, true, 'wp1 ohne Flag → true');
+	assert.equal(stage.waypoints[1].suggested, true, 'wp2 ohne Flag → true');
+});
+
+test('addStage AC#16b: Waypoints mit suggested:true (explizit) → bleibt true', () => {
+	const s = new WizardState();
+	s.addStage({
+		id: 'st-b',
+		name: 'Etappe B',
+		date: '2026-06-01',
+		waypoints: [
+			{ id: 'w1', name: 'Gipfel', lat: 0, lon: 0, elevation_m: 2000, suggested: true }
+		]
+	});
+	assert.equal(s.stages[0].waypoints[0].suggested, true);
+});
+
+test('addStage AC#16c: Waypoints mit suggested:false (explizit) → bleibt false', () => {
+	const s = new WizardState();
+	s.addStage({
+		id: 'st-c',
+		name: 'Etappe C',
+		date: '2026-06-01',
+		waypoints: [
+			{ id: 'w1', name: 'Gipfel', lat: 0, lon: 0, elevation_m: 2000, suggested: false }
+		]
+	});
+	assert.equal(
+		s.stages[0].waypoints[0].suggested,
+		false,
+		'explizit false darf nicht zu true werden'
+	);
+});
+
+// --- Sub-Spec #163 §3.2: confirmWaypoint(stageId, waypointId) --------------
+// AC#14 — Entfernt suggested-Flag (Property weg, nicht nur false).
+
+test('confirmWaypoint AC#14a: entfernt suggested-Property aus angegebenem Wegpunkt', () => {
+	const s = new WizardState();
+	s.addStage({
+		id: 'st-1',
+		name: 'Etappe 1',
+		date: '2026-06-01',
+		waypoints: [
+			{ id: 'w1', name: 'Gipfel', lat: 0, lon: 0, elevation_m: 2000 },
+			{ id: 'w2', name: 'See', lat: 0, lon: 0, elevation_m: 1500 }
+		]
+	});
+	// Pre-Condition: addStage-Patch hat beide auf suggested:true gesetzt
+	assert.equal(s.stages[0].waypoints[0].suggested, true);
+	assert.equal(s.stages[0].waypoints[1].suggested, true);
+
+	s.confirmWaypoint('st-1', 'w1');
+
+	const wp1 = s.stages[0].waypoints[0];
+	const wp2 = s.stages[0].waypoints[1];
+	assert.equal(
+		Object.prototype.hasOwnProperty.call(wp1, 'suggested'),
+		false,
+		'suggested-Property muss vollstaendig entfernt sein, nicht nur false'
+	);
+	assert.equal(wp2.suggested, true, 'wp2 bleibt unangetastet');
+});
+
+test('confirmWaypoint AC#14b: falsche stageId → kein Crash, State unveraendert', () => {
+	const s = new WizardState();
+	s.addStage({
+		id: 'st-1',
+		name: 'Etappe 1',
+		date: '2026-06-01',
+		waypoints: [{ id: 'w1', name: 'X', lat: 0, lon: 0, elevation_m: 100 }]
+	});
+	const before = JSON.stringify(s.stages);
+	s.confirmWaypoint('st-DOES-NOT-EXIST', 'w1');
+	assert.equal(JSON.stringify(s.stages), before, 'State unveraendert bei falscher stageId');
+});
+
+test('confirmWaypoint AC#14c: falsche waypointId → kein Crash, suggested bleibt', () => {
+	const s = new WizardState();
+	s.addStage({
+		id: 'st-1',
+		name: 'Etappe 1',
+		date: '2026-06-01',
+		waypoints: [{ id: 'w1', name: 'X', lat: 0, lon: 0, elevation_m: 100 }]
+	});
+	s.confirmWaypoint('st-1', 'wp-DOES-NOT-EXIST');
+	assert.equal(
+		s.stages[0].waypoints[0].suggested,
+		true,
+		'wp1 bleibt suggested:true bei falscher waypointId'
+	);
+});
+
+// --- Sub-Spec #163 §3.3: rejectWaypoint(stageId, waypointId) ---------------
+// AC#15 — Entfernt Wegpunkt vollstaendig aus stage.waypoints.
+
+test('rejectWaypoint AC#15a: entfernt Wegpunkt aus stage.waypoints', () => {
+	const s = new WizardState();
+	s.addStage({
+		id: 'st-1',
+		name: 'Etappe 1',
+		date: '2026-06-01',
+		waypoints: [
+			{ id: 'w1', name: 'Gipfel', lat: 0, lon: 0, elevation_m: 2000 },
+			{ id: 'w2', name: 'See', lat: 0, lon: 0, elevation_m: 1500 }
+		]
+	});
+	s.rejectWaypoint('st-1', 'w1');
+	assert.equal(s.stages[0].waypoints.length, 1, 'genau 1 Wegpunkt uebrig');
+	assert.equal(s.stages[0].waypoints[0].id, 'w2', 'wp2 ist der verbleibende');
+});
+
+test('rejectWaypoint AC#15b: falsche stageId → State unveraendert', () => {
+	const s = new WizardState();
+	s.addStage({
+		id: 'st-1',
+		name: 'Etappe 1',
+		date: '2026-06-01',
+		waypoints: [{ id: 'w1', name: 'X', lat: 0, lon: 0, elevation_m: 100 }]
+	});
+	s.rejectWaypoint('UNKNOWN', 'w1');
+	assert.equal(s.stages[0].waypoints.length, 1);
+});
+
+// --- Sub-Spec #163 §3.4: canAdvanceStep3-Getter (immer true) ---------------
+// AC#17 — Liefert immer true; auch ohne Stages, mit allen verworfenen, etc.
+
+test('canAdvanceStep3 AC#17a: neuer State (keine Stages) → true', () => {
+	const s = new WizardState();
+	assert.equal(s.canAdvanceStep3, true);
+});
+
+test('canAdvanceStep3 AC#17b: mit Stages → true', () => {
+	const s = new WizardState();
+	s.addStage({
+		id: 'st-1',
+		name: 'Etappe',
+		date: '2026-06-01',
+		waypoints: [{ id: 'w1', name: 'X', lat: 0, lon: 0, elevation_m: 100 }]
+	});
+	assert.equal(s.canAdvanceStep3, true);
+});
+
+test('canAdvanceStep3 AC#17c: mit allen Waypoints verworfen → true', () => {
+	const s = new WizardState();
+	s.addStage({
+		id: 'st-1',
+		name: 'Etappe',
+		date: '2026-06-01',
+		waypoints: [{ id: 'w1', name: 'X', lat: 0, lon: 0, elevation_m: 100 }]
+	});
+	s.rejectWaypoint('st-1', 'w1');
+	assert.equal(s.stages[0].waypoints.length, 0, 'Pre-Condition: 0 Waypoints');
+	assert.equal(s.canAdvanceStep3, true);
+});
+
+// --- Sub-Spec #163 §3.5: canAdvanceCurrent case 3 → canAdvanceStep3 --------
+// AC#18 — Switch case 3 delegiert auf den Getter (statt literal true).
+
+test('canAdvanceCurrent AC#18: Step 3 delegiert auf canAdvanceStep3', () => {
+	const s = new WizardState();
+	s.currentStep = 3;
+	// Identitaet pruefen: canAdvanceCurrent === canAdvanceStep3
+	assert.equal(s.canAdvanceCurrent, s.canAdvanceStep3);
+	assert.equal(s.canAdvanceCurrent, true);
+});
