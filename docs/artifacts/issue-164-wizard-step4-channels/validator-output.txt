@@ -1,0 +1,24 @@
+================================================
+  External Validator — Isolierte QA-Session
+================================================
+
+  Spec:   docs/specs/modules/epic_136_step4_briefings.md
+  Server: https://staging.gregor20.henemm.com
+
+  Diese Session ist isoliert vom Implementierer.
+  Der Validator kennt nur: Spec + laufende App.
+================================================
+
+## Verdict: **VERIFIED**
+
+**Resultat:** 24 PASS / 0 FAIL / 3 UNKLAR (Unit-Tests + CI — extern nicht prüfbar)
+
+**Geprüft:** Wizard von Step 1 → 4 mit echtem Playwright-Browser gegen `staging.gregor20.henemm.com`:
+- AC#1–#16: UI-Struktur (3 Sektionen), Defaults (Email=true, Signal/Telegram=false, SMS disabled mit Hinweis, Morgen 06:00, Abend 18:00, Thresholds null), Bindings.
+- AC#19, AC#26: Save-Button in Step 4 sichtbar+enabled, neuer TestID `trip-wizard-step4-container` live.
+- AC#20–#25: Klick Save → `POST /api/trips` 201 mit `report_config` (Backward-Compat + `alert_thresholds`-Sub-Block), Redirect auf `/trips/e3e67865`, Trip vollständig persistiert.
+- AC#23 Sub-Case "alle null": Zweite Wizard-Sitzung ohne Thresholds → `alert_thresholds`-Key fehlt im POST-Body (Spec §3.3 erfüllt).
+
+**Bericht:** `docs/artifacts/issue-164/validator-report.md` + 10 Screenshots.
+
+**Nebenbefund (nicht Scope #164):** SPA-Route `/trips/{id}` antwortet nach Save mit 404, obwohl Trip via `GET /api/trips/{id}` korrekt verfügbar ist — Trip-Detail-Page-Routing, nicht Step-4-Save-Pipeline.
