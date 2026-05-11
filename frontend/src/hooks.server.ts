@@ -3,7 +3,7 @@ import { env } from '$env/dynamic/private';
 import { verifySession } from '$lib/auth.js';
 
 export const handle: Handle = async ({ event, resolve }) => {
-	const publicPaths = ['/login', '/register', '/logout', '/forgot-password', '/reset-password'];
+	const publicPaths = ['/login', '/register', '/logout', '/forgot-password', '/reset-password', '/email-preview-dev'];
 	if (publicPaths.includes(event.url.pathname)) {
 		const response = await resolve(event);
 		const ct = response.headers.get('content-type') ?? '';

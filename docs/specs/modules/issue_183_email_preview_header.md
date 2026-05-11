@@ -83,12 +83,14 @@ Stil: Tailwind-Klassen passend zum bestehenden Design-System. Stats-Grid: 5 Spal
 - `EmailPreviewHeader.svelte` wird in dieser Issue nicht in eine Route eingebaut — das passiert in #189 (Vorschau-Integration). Hier nur die Komponente selbst.
 - Visuelle Übereinstimmung mit dem Email-Layout (das später gerendert wird) wird in einem Folge-Issue feinabgestimmt.
 
-## Stand 2026-05-11 — teilfertig
+## Stand 2026-05-11 — fertig
 
-- **Fertig:** Pure-function `computeHeaderStats()` + 6 grüne Tests + Export in `index.ts`.
-- **Offen (AC-5, AC-6):** `EmailPreviewHeader.svelte`. Wird in einer Folge-Session mit Browser-/Playwright-Zugang nachgereicht. Grund: `ui_screenshot_gate.py` verlangt BEFORE/AFTER-Screenshots für UI-Komponenten — sinnvoll, aber für reine Logik-Sessions ohne Browser nicht erfüllbar.
-- **Issue #183 bleibt offen** bis die Svelte-Komponente nachgereicht ist.
+- **Fertig:** Pure-function `computeHeaderStats()` + 6 grüne Headless-Tests + Export in `index.ts` (Commit `0268d42`).
+- **Fertig (AC-5, AC-6):** `EmailPreviewHeader.svelte` als Svelte-5-Runen-Komponente; verifiziert per Playwright-E2E auf Dev-Route `/email-preview-dev` (3/3 Tests grün, Screenshot in `docs/artifacts/issue-183-email-preview-header/screenshot-header.png`).
+- **Dev-Route:** `frontend/src/routes/email-preview-dev/+page.svelte` — interne Vorschau-Seite mit Mock-Daten. Auf Production via `+page.server.ts` (`if (!dev) redirect(307, '/')`) geblockt + sichtbares DEV-Banner. Wird in Issue #189 (Vorschau-Integration) entfernt, sobald die Komponente in die echte Stelle eingebunden ist.
+- **Auth-Bypass:** Eintrag `/email-preview-dev` in `frontend/src/hooks.server.ts` `publicPaths` — nur wirksam wenn `dev=true`, sonst greift der Production-Redirect zuerst.
 
 ## Changelog
 
 - 2026-05-11: Initial spec — Issue #183
+- 2026-05-11: AC-5 + AC-6 implementiert (Svelte-Komponente + Dev-Route); Adversary AMBIGUOUS-Findings (F001 nicht-eindeutige test-IDs, F002 Dev-Route in Prod) gefixt — eindeutige `data-testid`-Suffixe + Production-Block in `+page.server.ts` + DEV-Banner.
