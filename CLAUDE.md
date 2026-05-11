@@ -30,6 +30,20 @@ Dieses Projekt nutzt den **OpenSpec 8-Phasen-Workflow** mit Adversary Verificati
 
 **Hooks erzwingen diesen Workflow!** Edit/Write auf geschuetzte Dateien ist blockiert.
 
+### Workflow-Tools v3 (Epic #191, ab 2026-05-11)
+
+| Was | Wann | Befehl / Pflicht |
+|-----|------|------------------|
+| **AC-N-Format in Specs** | Jede neue Spec (`created >= 2026-05-11`) | `## Acceptance Criteria` mit `**AC-1:** Given... / When... / Then...` (>=30 Zeichen). Vorbild: `docs/specs/modules/epic_191_state_migration.md`. Ohne AC-N blockt `workflow_gate` Code-Edits in Phase 6. |
+| **Execution-Log vor `complete`** | Workflow-Abschluss | `python3 .claude/hooks/workflow.py write-log success` schreibt YAML in `.claude/workflows/_log/`. Danach `workflow.py complete`. Ohne Log blockt der Hook. |
+| **LoC-Limit 250 pro Workflow** | Bei jedem Code-Edit | `workflow.py status` zeigt `LoC-Delta: +N/250`. Bei Überschreitung: `workflow.py set-field loc_limit_override 500` (oder höher) — gilt nur für aktiven Workflow. Generierte Dateien (`.po`, `uv.lock`, `package-lock.json` etc.) zählen nicht mit, ebenso `docs/`, `*.md`, `.gitignore`. |
+| **AMBIGUOUS blockt `git commit`** | Adversary liefert `AMBIGUOUS:...` | Override mit `workflow.py override-ambiguous "<Grund>"` (1 Stunde gültig). Begründung wird im Logbuch persistiert. |
+| **Phasen-Audit-Trail** | Automatisch | Jede Phasen-Transition landet in `phase_transitions[]` mit `from/to/at/trigger`. Fix-Loop-Counter (phase6b→phase6) wird automatisch gezählt. `workflow.py status` zeigt beide. |
+| **Trigger-Typen für `phase`** | Optional | `workflow.py phase <ziel> --trigger=command\|advance\|user_keyword\|manual`. Default `command`. UserPromptSubmit-Hook setzt automatisch `user_keyword`. |
+| **State pro Workflow** | Persistent | `.claude/workflows/<name>.json` (laufende) + `_archive/<name>.json` (abgeschlossen) + `.active` Symlink. Worktree-Routing bleibt intakt. |
+
+**Memory-Regel: KEINE Mocks in Tests!** Bei Adversary-Findings ist `Code reference: file:line` Pflicht — siehe `.claude/agents/implementation-validator.md` Sektion "Findings-Format".
+
 **Product Owner Pattern:** Main Context (Opus) ist reiner Orchestrierer und schreibt KEINEN Code. Implementierung wird an den Developer Agent (Opus, Worktree-Isolation) delegiert. Agent Teams ist aktiviert fuer direkte Inter-Agent-Kommunikation.
 
 **Agenten-Rollen und Modelle:**
