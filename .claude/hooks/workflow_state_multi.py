@@ -335,15 +335,42 @@ def can_modify_code(workflow_name: Optional[str] = None) -> tuple[bool, str]:
 
 # --- Public API: writes ------------------------------------------------
 
-def set_phase(workflow_name: str, phase: str) -> bool:
+def set_phase(workflow_name: str, phase: str, trigger: str = "manual") -> bool:
+    """Set the workflow phase and log the transition.
+
+    Loads the workflow directly via the v3 path helpers (worktree-aware,
+    Issue #112) so that the transition is recorded in the same file the
+    rest of the toolchain reads from.
+    """
     if phase not in PHASES:
         return False
-    state = load_state()
-    if workflow_name not in state["workflows"]:
+    wf_path = _w._workflow_file(workflow_name)
+    if not wf_path.exists():
+        # Check archive too
+        arch_path = _w._archive_file(workflow_name)
+        if not arch_path.exists():
+            return False
+        wf_path = arch_path
+    try:
+        workflow = _w._read_workflow_file(wf_path)
+    except (OSError, json.JSONDecodeError):
         return False
-    state["workflows"][workflow_name]["current_phase"] = phase
-    state["workflows"][workflow_name]["last_updated"] = datetime.now().isoformat()
-    save_state(state)
+    current = workflow.get("current_phase", "phase0_idle")
+    transitions = workflow.get("phase_transitions") or []
+    transitions.append({
+        "from": current,
+        "to": phase,
+        "at": datetime.now().isoformat(),
+        "trigger": trigger,
+    })
+    workflow["phase_transitions"] = transitions
+    if phase == "phase6_implement" and current == "phase6b_adversary":
+        workflow["fix_loop_iterations"] = (
+            workflow.get("fix_loop_iterations") or 0
+        ) + 1
+    workflow["current_phase"] = phase
+    workflow["last_updated"] = datetime.now().isoformat()
+    _w._atomic_write(wf_path, workflow)
     return True
 
 

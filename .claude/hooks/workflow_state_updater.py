@@ -3,9 +3,11 @@
 OpenSpec Framework - Workflow State Updater Hook
 
 Listens for user approval phrases in UserPromptSubmit events.
-When detected, updates workflow_state.json to mark spec as approved.
+When detected, updates workflow state via set_phase() so that
+phase transitions are logged with trigger="user_keyword".
 
-This enables the transition: spec_written -> spec_approved
+This enables the transition: phase3_spec -> phase4_approved
+(plus phase7_validate -> phase8_complete on "deployed").
 
 Exit Codes:
 - 0: Always (this hook never blocks, only updates state)
@@ -13,22 +15,25 @@ Exit Codes:
 
 import json
 import os
+import subprocess
 import sys
 import re
 from pathlib import Path
 from datetime import datetime
 
+HOOKS_DIR = Path(__file__).resolve().parent
+
 try:
     from config_loader import (
         load_config, get_state_file_path, get_approval_phrases
     )
-    from workflow_state_multi import load_state, save_state
+    from workflow_state_multi import load_state, save_state, set_phase
 except ImportError:
-    sys.path.insert(0, str(Path(__file__).parent))
+    sys.path.insert(0, str(HOOKS_DIR))
     from config_loader import (
         load_config, get_state_file_path, get_approval_phrases
     )
-    from workflow_state_multi import load_state, save_state
+    from workflow_state_multi import load_state, save_state, set_phase
 
 
 def is_approval_message(message: str) -> bool:
@@ -37,7 +42,6 @@ def is_approval_message(message: str) -> bool:
     approval_phrases = get_approval_phrases()
 
     for phrase in approval_phrases:
-        # Check if phrase is in message (word boundary aware)
         pattern = r'\b' + re.escape(phrase.lower()) + r'\b'
         if re.search(pattern, message_lower):
             return True
@@ -105,65 +109,56 @@ def main():
             approval_file.touch()
             print("Validation approved! Further edits are now unblocked.")
 
-    # Load current state (supports v2 multi-workflow)
+    # Load current state (v3 aggregated view)
     state = load_state()
+    active_name = state.get("active_workflow")
+    if not active_name or active_name not in state.get("workflows", {}):
+        sys.exit(0)
 
-    # Handle v2 multi-workflow format
-    if state.get("version") == "2.0" and "workflows" in state:
-        active_name = state.get("active_workflow")
-        if active_name and active_name in state["workflows"]:
-            workflow = state["workflows"][active_name]
+    workflow = state["workflows"][active_name]
 
-            # Handle spec approval (phase3_spec -> phase4_approved)
-            if is_approval and workflow.get("current_phase") == "phase3_spec":
-                workflow["spec_approved"] = True
-                workflow["current_phase"] = "phase4_approved"
-                workflow.setdefault("phases_completed", [])
-                if "phase4_approved" not in workflow["phases_completed"]:
-                    workflow["phases_completed"].append("phase4_approved")
-                workflow["last_updated"] = datetime.now().isoformat()
-                save_state(state)
-                print("Spec approved! You may now run /tdd-red")
+    # Handle spec approval (phase3_spec -> phase4_approved)
+    if is_approval and workflow.get("current_phase") == "phase3_spec":
+        set_phase(active_name, "phase4_approved", trigger="user_keyword")
+        # Reload to update spec_approved + phases_completed flags
+        state2 = load_state()
+        wf2 = state2["workflows"][active_name]
+        wf2["spec_approved"] = True
+        wf2.setdefault("phases_completed", [])
+        if "phase4_approved" not in wf2["phases_completed"]:
+            wf2["phases_completed"].append("phase4_approved")
+        wf2["last_updated"] = datetime.now().isoformat()
+        save_state(state2)
+        print("Spec approved! You may now run /tdd-red")
 
-            # Handle GREEN approval (phase6_implement -> green_approved)
-            elif is_green and workflow.get("current_phase") == "phase6_implement":
-                workflow["green_approved"] = True
-                workflow["last_updated"] = datetime.now().isoformat()
-                save_state(state)
-                print("GREEN tests approved! Adversary verification next.")
+    # Handle GREEN approval (phase6_implement -> green_approved)
+    elif is_green and workflow.get("current_phase") == "phase6_implement":
+        workflow["green_approved"] = True
+        workflow["last_updated"] = datetime.now().isoformat()
+        save_state(state)
+        print("GREEN tests approved! Adversary verification next.")
 
-            # Handle workflow completion (phase7_validate -> phase8_complete)
-            elif is_complete and workflow.get("current_phase") == "phase7_validate":
-                # Import complete_workflow from workflow_state_multi
-                try:
-                    from workflow_state_multi import complete_workflow
-                    complete_workflow(active_name)
-                    print(f"Workflow '{active_name}' completed! Phase set to phase8_complete.")
-                except ImportError:
-                    # Fallback: do it inline
-                    workflow["current_phase"] = "phase8_complete"
-                    workflow["backlog_status"] = "done"
-                    workflow["last_updated"] = datetime.now().isoformat()
-                    # Clear active workflow, pick next incomplete
-                    remaining = [n for n in state["workflows"] if n != active_name and
-                                state["workflows"][n]["current_phase"] != "phase8_complete"]
-                    state["active_workflow"] = remaining[0] if remaining else None
-                    save_state(state)
-                    print(f"Workflow '{active_name}' completed! Phase set to phase8_complete.")
+    # Handle workflow completion (phase7_validate -> phase8_complete)
+    elif is_complete and workflow.get("current_phase") == "phase7_validate":
+        # Auto-write-log with fail-soft behaviour: complete should still try
+        try:
+            subprocess.run(
+                [
+                    sys.executable,
+                    str(HOOKS_DIR / "workflow.py"),
+                    "write-log",
+                    "user_keyword:deployed",
+                ],
+                timeout=15,
+                check=False,
+                capture_output=True,
+            )
+        except Exception:
+            pass  # fail-soft
 
-    else:
-        # Handle v1 format (spec_written -> spec_approved)
-        if is_approval and state.get("current_phase") == "spec_written":
-            state["spec_approved"] = True
-            state["current_phase"] = "spec_approved"
-
-            if "phases_completed" not in state:
-                state["phases_completed"] = []
-            if "spec_approved" not in state["phases_completed"]:
-                state["phases_completed"].append("spec_approved")
-
-            save_state(state)
-            print("Spec approved! You may now run /implement")
+        from workflow_state_multi import complete_workflow
+        complete_workflow(active_name)
+        print(f"Workflow '{active_name}' completed! Phase set to phase8_complete.")
 
     sys.exit(0)
 

@@ -125,6 +125,8 @@ def _validate_name(name: str) -> None:
         raise ValueError(f"Invalid workflow name: {name!r}")
     if "/" in name or "\\" in name or name.startswith(".") or ".." in name:
         raise ValueError(f"Invalid workflow name: {name!r}")
+    if any(c in name for c in "*?["):
+        raise ValueError(f"Invalid workflow name (glob metacharacter): {name!r}")
 
 
 def _active_link() -> Path:
@@ -238,6 +240,32 @@ def _atomic_write(path: Path, data: dict) -> None:
         except OSError:
             pass
         raise
+
+
+def _atomic_write_yaml(path: Path, data: dict) -> None:
+    """Atomic YAML write: tempfile in same dir, then os.rename."""
+    import yaml
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=str(path.parent), suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w") as f:
+            yaml.safe_dump(data, f, sort_keys=False, default_flow_style=False)
+        os.rename(tmp, str(path))
+    except Exception:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+
+
+def _has_valid_log(log_dir: Path, name: str) -> bool:
+    """True iff at least one non-empty YAML log exists for the workflow."""
+    if not log_dir.exists():
+        return False
+    import glob
+    safe = glob.escape(name)
+    return any(p.stat().st_size > 0 for p in log_dir.glob(f"*_{safe}.yaml"))
 
 
 def _read_workflow_file(path: Path) -> dict:
@@ -453,12 +481,20 @@ def cmd_status(args: list[str]) -> None:
     phase = data.get("current_phase", "phase0_idle")
     phase_name = PHASE_NAMES.get(phase, phase)
     spec = data.get("spec_file") or "Not created"
+    test_artifacts = data.get("test_artifacts") or []
     print(f"Workflow: {name}")
     print(f"Phase: {phase_name}")
     print(f"Spec: {spec}")
     print(f"Approved: {'Yes' if data.get('spec_approved') else 'No'}")
-    print(f"Test Artifacts: {len(data.get('test_artifacts', []))}")
+    print(f"Test Artifacts: {len(test_artifacts)}")
     print(f"Adversary Verdict: {data.get('adversary_verdict') or 'Not yet'}")
+    fix_loop = data.get("fix_loop_iterations") or 0
+    transitions = data.get("phase_transitions") or []
+    print(f"Fix-Loop-Iterations: {fix_loop}")
+    print(f"Phase-Transitions: {len(transitions)}")
+    log_dir = _get_workflows_root() / "_log"
+    log_status = "written" if _has_valid_log(log_dir, name) else "pending"
+    print(f"Execution Log: {log_status}")
 
 
 def cmd_list(args: list[str]) -> None:
@@ -475,23 +511,43 @@ def cmd_list(args: list[str]) -> None:
 
 
 def cmd_phase(args: list[str]) -> None:
-    if not args:
-        print("Usage: workflow.py phase <phase>", file=sys.stderr)
+    # Parse optional --trigger=<value> flag, default "command"
+    trigger = "command"
+    positional: list[str] = []
+    for a in args:
+        if a.startswith("--trigger="):
+            trigger = a.split("=", 1)[1]
+        else:
+            positional.append(a)
+    if not positional:
+        print("Usage: workflow.py phase <phase> [--trigger=<value>]", file=sys.stderr)
         sys.exit(1)
-    target = args[0]
+    target = positional[0]
     if target not in PHASES:
         print(f"Unknown phase: {target}", file=sys.stderr)
         sys.exit(1)
     data, name = _read_active()
+    # Bypass-Schutz: Direkter Sprung zu phase8_complete erfordert Log
+    if target == "phase8_complete":
+        log_dir = _get_workflows_root() / "_log"
+        if not _has_valid_log(log_dir, name):
+            print(
+                f"BLOCKED: Direct jump to phase8_complete requires write-log first. "
+                f"Run: workflow.py write-log [outcome]",
+                file=sys.stderr,
+            )
+            sys.exit(1)
     current = data.get("current_phase", "phase0_idle")
-    data.setdefault("phase_transitions", []).append({
+    transitions = data.get("phase_transitions") or []
+    transitions.append({
         "from": current,
         "to": target,
         "at": datetime.now().isoformat(),
-        "trigger": "command",
+        "trigger": trigger,
     })
+    data["phase_transitions"] = transitions
     if target == "phase6_implement" and current == "phase6b_adversary":
-        data["fix_loop_iterations"] = data.get("fix_loop_iterations", 0) + 1
+        data["fix_loop_iterations"] = (data.get("fix_loop_iterations") or 0) + 1
     data["current_phase"] = target
     _save(data)
     print(f"Set phase to: {target}")
@@ -508,12 +564,14 @@ def cmd_advance(args: list[str]) -> None:
         print("Already at final phase.")
         return
     nxt = PHASES[idx + 1]
-    data.setdefault("phase_transitions", []).append({
+    transitions = data.get("phase_transitions") or []
+    transitions.append({
         "from": current,
         "to": nxt,
         "at": datetime.now().isoformat(),
         "trigger": "advance",
     })
+    data["phase_transitions"] = transitions
     data["current_phase"] = nxt
     _save(data)
     print(f"Advanced to: {nxt}")
@@ -606,8 +664,74 @@ def cmd_mark_green(args: list[str]) -> None:
     print(f"GREEN test marked done: {result}")
 
 
+def cmd_write_log(args: list[str]) -> None:
+    """Write a YAML execution log for the active workflow.
+
+    Usage: workflow.py write-log [outcome]
+    """
+    data, name = _read_active()
+    outcome = args[0] if args else "success"
+
+    # Derive phases_completed from phase_transitions[].to
+    transitions = data.get("phase_transitions") or []
+    seen: list[str] = []
+    for t in transitions:
+        target = t.get("to") if isinstance(t, dict) else None
+        if isinstance(target, str) and target not in seen:
+            seen.append(target)
+    phases_completed = seen
+
+    # phases_skipped: canonical phases not present in any transition target
+    phases_skipped = [p for p in PHASES if p not in phases_completed]
+
+    override = bool(data.get("adversary_ambiguous_override"))
+    tdd_red_confirmed = bool(
+        data.get("red_test_done") or data.get("ui_test_red_done")
+    )
+
+    # Project name (main repo dir name)
+    hooks_dir = Path(__file__).resolve().parent
+    if str(hooks_dir) not in sys.path:
+        sys.path.insert(0, str(hooks_dir))
+    from config_loader import find_project_root
+    project = find_project_root().name
+
+    affected_files = data.get("affected_files") or []
+    fix_loop = data.get("fix_loop_iterations") or 0
+
+    log_data = {
+        "workflow_id": name,
+        "project": project,
+        "completed_at": datetime.now().isoformat(),
+        "phases_completed": phases_completed,
+        "phases_skipped": phases_skipped,
+        "override_used": override,
+        "tdd_red_confirmed": tdd_red_confirmed,
+        "adversary_verdict": data.get("adversary_verdict") or "none",
+        "adversary_findings_total": data.get("adversary_findings_total") or 0,
+        "adversary_fix_loop_iterations": fix_loop,
+        "scope_files_changed": len(affected_files),
+        "scope_loc_delta": data.get("scope_loc_delta") or "+0",
+        "outcome": outcome,
+    }
+
+    date = datetime.now().strftime("%Y-%m-%d")
+    log_dir = _get_workflows_root() / "_log"
+    log_path = log_dir / f"{date}_{name}.yaml"
+    _atomic_write_yaml(log_path, log_data)
+    print(f"Execution log written: {log_path}")
+
+
 def cmd_complete(args: list[str]) -> None:
     data, name = _read_active()
+    log_dir = _get_workflows_root() / "_log"
+    if not _has_valid_log(log_dir, name):
+        print(
+            f"BLOCKED: No execution log for '{name}'. "
+            f"Run: workflow.py write-log [outcome]",
+            file=sys.stderr,
+        )
+        sys.exit(1)
     data["current_phase"] = "phase8_complete"
     data["backlog_status"] = "done"
     data["last_updated"] = datetime.now().isoformat()
@@ -677,6 +801,7 @@ COMMANDS = {
     "mark-red": cmd_mark_red,
     "mark-ui-red": cmd_mark_ui_red,
     "mark-green": cmd_mark_green,
+    "write-log": cmd_write_log,
     "complete": cmd_complete,
     "backlog": cmd_backlog,
     "pause": cmd_pause,

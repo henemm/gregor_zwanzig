@@ -1,0 +1,440 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 13 items
+
+tests/tdd/test_epic_191_logbuch_audit.py FFFFFF...FFFF                   [100%]
+
+=================================== FAILURES ===================================
+_______________ TestT1WriteLog.test_write_log_creates_yaml_file ________________
+
+self = <tdd.test_epic_191_logbuch_audit.TestT1WriteLog object at 0x7bfa1ad78fb0>
+fake_repo = PosixPath('/tmp/pytest-of-hem/pytest-113/test_write_log_creates_yaml_fi0/main_repo')
+
+    def test_write_log_creates_yaml_file(self, fake_repo):
+        """AC-1: workflow.py write-log erstellt _log/YYYY-MM-DD_<name>.yaml."""
+        result = subprocess.run(
+            [sys.executable, str(HOOKS_DIR / "workflow.py"), "write-log", "success"],
+            capture_output=True, text=True, cwd=str(fake_repo),
+        )
+>       assert result.returncode == 0, f"write-log fehlgeschlagen: {result.stderr}"
+E       AssertionError: write-log fehlgeschlagen: Unknown command: write-log
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/home/hem/gregor_zwanzig/.venv/bin/python', '/home/hem/gregor_zwanzig/.claude/hooks/workflow.py', 'write-log', 'success'], returncode=1, stdout='', stderr='Unknown command: write-log\n').returncode
+
+/home/hem/gregor_zwanzig/tests/tdd/test_epic_191_logbuch_audit.py:110: AssertionError
+____________ TestT1WriteLog.test_write_log_yaml_has_required_fields ____________
+
+self = <tdd.test_epic_191_logbuch_audit.TestT1WriteLog object at 0x7bfa1ab1ed20>
+fake_repo = PosixPath('/tmp/pytest-of-hem/pytest-113/test_write_log_yaml_has_requir0/main_repo')
+
+    def test_write_log_yaml_has_required_fields(self, fake_repo):
+        """AC-1: YAML enthält alle Pflichtfelder."""
+        import yaml
+    
+>       subprocess.run(
+            [sys.executable, str(HOOKS_DIR / "workflow.py"), "write-log", "success"],
+            capture_output=True, text=True, cwd=str(fake_repo), check=True,
+        )
+
+/home/hem/gregor_zwanzig/tests/tdd/test_epic_191_logbuch_audit.py:121: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = None, capture_output = True, timeout = None, check = True
+popenargs = (['/home/hem/gregor_zwanzig/.venv/bin/python', '/home/hem/gregor_zwanzig/.claude/hooks/workflow.py', 'write-log', 'success'],)
+kwargs = {'cwd': '/tmp/pytest-of-hem/pytest-113/test_write_log_yaml_has_requir0/main_repo', 'stderr': -1, 'stdout': -1, 'text': True}
+process = <Popen: returncode: 1 args: ['/home/hem/gregor_zwanzig/.venv/bin/python', '/...>
+stdout = '', stderr = 'Unknown command: write-log\n', retcode = 1
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout is given, and the process takes too long, a TimeoutExpired
+        exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['/home/hem/gregor_zwanzig/.venv/bin/python', '/home/hem/gregor_zwanzig/.claude/hooks/workflow.py', 'write-log', 'success']' returned non-zero exit status 1.
+
+/usr/lib/python3.12/subprocess.py:571: CalledProcessError
+___________ TestT1WriteLog.test_write_log_default_outcome_is_success ___________
+
+self = <tdd.test_epic_191_logbuch_audit.TestT1WriteLog object at 0x7bfa1ab1edb0>
+fake_repo = PosixPath('/tmp/pytest-of-hem/pytest-113/test_write_log_default_outcome0/main_repo')
+
+    def test_write_log_default_outcome_is_success(self, fake_repo):
+        """AC-1: Aufruf ohne Argument liefert outcome=success."""
+        import yaml
+    
+>       subprocess.run(
+            [sys.executable, str(HOOKS_DIR / "workflow.py"), "write-log"],
+            capture_output=True, text=True, cwd=str(fake_repo), check=True,
+        )
+
+/home/hem/gregor_zwanzig/tests/tdd/test_epic_191_logbuch_audit.py:149: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = None, capture_output = True, timeout = None, check = True
+popenargs = (['/home/hem/gregor_zwanzig/.venv/bin/python', '/home/hem/gregor_zwanzig/.claude/hooks/workflow.py', 'write-log'],)
+kwargs = {'cwd': '/tmp/pytest-of-hem/pytest-113/test_write_log_default_outcome0/main_repo', 'stderr': -1, 'stdout': -1, 'text': True}
+process = <Popen: returncode: 1 args: ['/home/hem/gregor_zwanzig/.venv/bin/python', '/...>
+stdout = '', stderr = 'Unknown command: write-log\n', retcode = 1
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout is given, and the process takes too long, a TimeoutExpired
+        exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['/home/hem/gregor_zwanzig/.venv/bin/python', '/home/hem/gregor_zwanzig/.claude/hooks/workflow.py', 'write-log']' returned non-zero exit status 1.
+
+/usr/lib/python3.12/subprocess.py:571: CalledProcessError
+____________ TestT2CompleteBlock.test_complete_blocked_without_log _____________
+
+self = <tdd.test_epic_191_logbuch_audit.TestT2CompleteBlock object at 0x7bfa1ab1f0b0>
+fake_repo = PosixPath('/tmp/pytest-of-hem/pytest-113/test_complete_blocked_without_0/main_repo')
+
+    def test_complete_blocked_without_log(self, fake_repo):
+        """AC-2: workflow.py complete ohne Log → Exit 1 mit klarer Meldung."""
+        result = subprocess.run(
+            [sys.executable, str(HOOKS_DIR / "workflow.py"), "complete"],
+            capture_output=True, text=True, cwd=str(fake_repo),
+        )
+>       assert result.returncode != 0, "complete darf ohne Log nicht erlaubt sein"
+E       AssertionError: complete darf ohne Log nicht erlaubt sein
+E       assert 0 != 0
+E        +  where 0 = CompletedProcess(args=['/home/hem/gregor_zwanzig/.venv/bin/python', '/home/hem/gregor_zwanzig/.claude/hooks/workflow.py', 'complete'], returncode=0, stdout='Workflow demo-wf completed and archived.\n', stderr='').returncode
+
+/home/hem/gregor_zwanzig/tests/tdd/test_epic_191_logbuch_audit.py:171: AssertionError
+______________ TestT2CompleteBlock.test_complete_allowed_with_log ______________
+
+self = <tdd.test_epic_191_logbuch_audit.TestT2CompleteBlock object at 0x7bfa1ab1ea80>
+fake_repo = PosixPath('/tmp/pytest-of-hem/pytest-113/test_complete_allowed_with_log0/main_repo')
+
+    def test_complete_allowed_with_log(self, fake_repo):
+        """AC-2: Nach write-log läuft complete durch."""
+>       subprocess.run(
+            [sys.executable, str(HOOKS_DIR / "workflow.py"), "write-log", "success"],
+            capture_output=True, text=True, cwd=str(fake_repo), check=True,
+        )
+
+/home/hem/gregor_zwanzig/tests/tdd/test_epic_191_logbuch_audit.py:179: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = None, capture_output = True, timeout = None, check = True
+popenargs = (['/home/hem/gregor_zwanzig/.venv/bin/python', '/home/hem/gregor_zwanzig/.claude/hooks/workflow.py', 'write-log', 'success'],)
+kwargs = {'cwd': '/tmp/pytest-of-hem/pytest-113/test_complete_allowed_with_log0/main_repo', 'stderr': -1, 'stdout': -1, 'text': True}
+process = <Popen: returncode: 1 args: ['/home/hem/gregor_zwanzig/.venv/bin/python', '/...>
+stdout = '', stderr = 'Unknown command: write-log\n', retcode = 1
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout is given, and the process takes too long, a TimeoutExpired
+        exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['/home/hem/gregor_zwanzig/.venv/bin/python', '/home/hem/gregor_zwanzig/.claude/hooks/workflow.py', 'write-log', 'success']' returned non-zero exit status 1.
+
+/usr/lib/python3.12/subprocess.py:571: CalledProcessError
+______ TestT2CompleteBlock.test_direct_jump_to_phase8_blocked_without_log ______
+
+self = <tdd.test_epic_191_logbuch_audit.TestT2CompleteBlock object at 0x7bfa1ab1e540>
+fake_repo = PosixPath('/tmp/pytest-of-hem/pytest-113/test_direct_jump_to_phase8_blo0/main_repo')
+
+    def test_direct_jump_to_phase8_blocked_without_log(self, fake_repo):
+        """AC-8: workflow.py phase phase8_complete ohne Log → blockiert."""
+        result = subprocess.run(
+            [sys.executable, str(HOOKS_DIR / "workflow.py"), "phase", "phase8_complete"],
+            capture_output=True, text=True, cwd=str(fake_repo),
+        )
+>       assert result.returncode != 0, \
+            "Direkter Sprung zu phase8_complete ohne Log muss blockiert sein"
+E       AssertionError: Direkter Sprung zu phase8_complete ohne Log muss blockiert sein
+E       assert 0 != 0
+E        +  where 0 = CompletedProcess(args=['/home/hem/gregor_zwanzig/.venv/bin/python', '/home/hem/gregor_zwanzig/.claude/hooks/workflow.py', 'phase', 'phase8_complete'], returncode=0, stdout='Set phase to: phase8_complete\n', stderr='').returncode
+
+/home/hem/gregor_zwanzig/tests/tdd/test_epic_191_logbuch_audit.py:199: AssertionError
+_______ TestT4StatusExtension.test_status_shows_fix_loop_and_transitions _______
+
+self = <tdd.test_epic_191_logbuch_audit.TestT4StatusExtension object at 0x7bfa1ab1de20>
+fake_repo = PosixPath('/tmp/pytest-of-hem/pytest-113/test_status_shows_fix_loop_and0/main_repo')
+
+    def test_status_shows_fix_loop_and_transitions(self, fake_repo):
+        """AC-5: status-Output enthält 'Fix-Loop-Iterations' und 'Phase-Transitions'."""
+        wf_file = fake_repo / ".claude" / "workflows" / "demo-wf.json"
+        state = json.loads(wf_file.read_text())
+        state["fix_loop_iterations"] = 3
+        # 2 Transitions sind schon im Fixture
+        wf_file.write_text(json.dumps(state, indent=2))
+    
+        result = subprocess.run(
+            [sys.executable, str(HOOKS_DIR / "workflow.py"), "status"],
+            capture_output=True, text=True, cwd=str(fake_repo), check=True,
+        )
+        output = result.stdout
+    
+>       assert "Fix-Loop-Iterations: 3" in output, \
+            f"Fix-Loop-Counter fehlt im Status-Output: {output}"
+E       AssertionError: Fix-Loop-Counter fehlt im Status-Output: Workflow: demo-wf
+E         Phase: Adversary Verification
+E         Spec: docs/specs/modules/demo.md
+E         Approved: Yes
+E         Test Artifacts: 1
+E         Adversary Verdict: VERIFIED
+E         
+E       assert 'Fix-Loop-Iterations: 3' in 'Workflow: demo-wf\nPhase: Adversary Verification\nSpec: docs/specs/modules/demo.md\nApproved: Yes\nTest Artifacts: 1\nAdversary Verdict: VERIFIED\n'
+
+/home/hem/gregor_zwanzig/tests/tdd/test_epic_191_logbuch_audit.py:280: AssertionError
+________ TestT5UpdaterPatch.test_updater_uses_set_phase_not_direct_dict ________
+
+self = <tdd.test_epic_191_logbuch_audit.TestT5UpdaterPatch object at 0x7bfa1ab1c740>
+
+    def test_updater_uses_set_phase_not_direct_dict(self):
+        """AC-6: workflow_state_updater.py darf 'current_phase' nicht direkt im Dict setzen."""
+        import re
+    
+        src = (HOOKS_DIR / "workflow_state_updater.py").read_text()
+    
+        # Verbotene Direkt-Edits: workflow["current_phase"] = ... oder w["current_phase"] = ...
+        direct_assignments = re.findall(
+            r'\w+\[\s*["\']current_phase["\']\s*\]\s*=',
+            src,
+        )
+>       assert not direct_assignments, \
+            f"Direkter Dict-Edit von current_phase verboten — fanden: {direct_assignments}"
+E       AssertionError: Direkter Dict-Edit von current_phase verboten — fanden: ['workflow["current_phase"] =', 'workflow["current_phase"] =', 'state["current_phase"] =']
+E       assert not ['workflow["current_phase"] =', 'workflow["current_phase"] =', 'state["current_phase"] =']
+
+tests/tdd/test_epic_191_logbuch_audit.py:305: AssertionError
+________ TestT5UpdaterPatch.test_set_phase_logs_transition_with_trigger ________
+
+self = <tdd.test_epic_191_logbuch_audit.TestT5UpdaterPatch object at 0x7bfa1ab3c050>
+fake_repo = PosixPath('/tmp/pytest-of-hem/pytest-113/test_set_phase_logs_transition0/main_repo')
+
+    def test_set_phase_logs_transition_with_trigger(self, fake_repo):
+        """AC-9: workflow_state_multi.set_phase loggt Transition mit Trigger-Param."""
+        sys.path.insert(0, str(HOOKS_DIR))
+        from workflow_state_multi import set_phase
+    
+>       ok = set_phase("demo-wf", "phase7_validate", trigger="user_keyword")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: set_phase() got an unexpected keyword argument 'trigger'
+
+/home/hem/gregor_zwanzig/tests/tdd/test_epic_191_logbuch_audit.py:317: TypeError
+_________ TestT5UpdaterPatch.test_set_phase_default_trigger_is_manual __________
+
+self = <tdd.test_epic_191_logbuch_audit.TestT5UpdaterPatch object at 0x7bfa1ab3f0e0>
+fake_repo = PosixPath('/tmp/pytest-of-hem/pytest-113/test_set_phase_default_trigger0/main_repo')
+
+    def test_set_phase_default_trigger_is_manual(self, fake_repo):
+        """AC-9: set_phase ohne explizites trigger= → 'manual'."""
+        sys.path.insert(0, str(HOOKS_DIR))
+        from workflow_state_multi import set_phase
+    
+        set_phase("demo-wf", "phase7_validate")
+    
+        state = json.loads((fake_repo / ".claude" / "workflows" / "demo-wf.json").read_text())
+        last = state["phase_transitions"][-1]
+>       assert last["trigger"] == "manual"
+E       AssertionError: assert 'command' == 'manual'
+E         
+E         - manual
+E         + command
+
+/home/hem/gregor_zwanzig/tests/tdd/test_epic_191_logbuch_audit.py:335: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_epic_191_logbuch_audit.py::TestT1WriteLog::test_write_log_creates_yaml_file
+FAILED tests/tdd/test_epic_191_logbuch_audit.py::TestT1WriteLog::test_write_log_yaml_has_required_fields
+FAILED tests/tdd/test_epic_191_logbuch_audit.py::TestT1WriteLog::test_write_log_default_outcome_is_success
+FAILED tests/tdd/test_epic_191_logbuch_audit.py::TestT2CompleteBlock::test_complete_blocked_without_log
+FAILED tests/tdd/test_epic_191_logbuch_audit.py::TestT2CompleteBlock::test_complete_allowed_with_log
+FAILED tests/tdd/test_epic_191_logbuch_audit.py::TestT2CompleteBlock::test_direct_jump_to_phase8_blocked_without_log
+FAILED tests/tdd/test_epic_191_logbuch_audit.py::TestT4StatusExtension::test_status_shows_fix_loop_and_transitions
+FAILED tests/tdd/test_epic_191_logbuch_audit.py::TestT5UpdaterPatch::test_updater_uses_set_phase_not_direct_dict
+FAILED tests/tdd/test_epic_191_logbuch_audit.py::TestT5UpdaterPatch::test_set_phase_logs_transition_with_trigger
+FAILED tests/tdd/test_epic_191_logbuch_audit.py::TestT5UpdaterPatch::test_set_phase_default_trigger_is_manual
+========================= 10 failed, 3 passed in 0.58s =========================
