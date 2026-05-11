@@ -22,42 +22,13 @@ try:
     from config_loader import (
         load_config, get_state_file_path, get_approval_phrases
     )
+    from workflow_state_multi import load_state, save_state
 except ImportError:
     sys.path.insert(0, str(Path(__file__).parent))
     from config_loader import (
         load_config, get_state_file_path, get_approval_phrases
     )
-
-
-def load_state() -> dict:
-    """Load current workflow state."""
-    state_file = get_state_file_path()
-
-    if not state_file.exists():
-        return {
-            "current_phase": "idle",
-            "feature_name": None,
-            "spec_file": None,
-            "spec_approved": False,
-            "tasks_created": False,
-            "implementation_done": False,
-            "validation_done": False,
-            "phases_completed": [],
-            "last_updated": datetime.now().isoformat(),
-        }
-
-    with open(state_file, 'r') as f:
-        return json.load(f)
-
-
-def save_state(state: dict):
-    """Save workflow state."""
-    state_file = get_state_file_path()
-    state_file.parent.mkdir(parents=True, exist_ok=True)
-    state["last_updated"] = datetime.now().isoformat()
-
-    with open(state_file, 'w') as f:
-        json.dump(state, f, indent=2)
+    from workflow_state_multi import load_state, save_state
 
 
 def is_approval_message(message: str) -> bool:

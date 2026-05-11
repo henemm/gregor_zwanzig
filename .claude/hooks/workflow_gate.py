@@ -28,6 +28,7 @@ try:
         load_config, get_state_file_path, get_project_root,
         get_protected_paths, get_always_allowed
     )
+    from workflow_state_multi import load_state as _load_state_v3
 except ImportError:
     # Fallback for direct execution
     sys.path.insert(0, str(Path(__file__).parent))
@@ -35,13 +36,20 @@ except ImportError:
         load_config, get_state_file_path, get_project_root,
         get_protected_paths, get_always_allowed
     )
+    from workflow_state_multi import load_state as _load_state_v3
 
 
 def load_state() -> dict:
-    """Load current workflow state (supports both v1 and v2 multi-workflow format)."""
-    state_file = get_state_file_path()
+    """Load current workflow state via the v3 wrapper.
 
-    if not state_file.exists():
+    Returns the v2-shaped state for backward compatibility with the rest
+    of this hook, which expects flat keys like ``current_phase``.
+    """
+    state = _load_state_v3()
+    active_workflow = state.get("active_workflow")
+    workflows = state.get("workflows") or {}
+
+    if not active_workflow or active_workflow not in workflows:
         return {
             "current_phase": "idle",
             "feature_name": None,
@@ -51,26 +59,19 @@ def load_state() -> dict:
             "validation_done": False,
         }
 
-    with open(state_file, 'r') as f:
-        state = json.load(f)
-
-    # Check for multi-workflow format (v2.0)
-    if state.get("version") == "2.0" and "workflows" in state:
-        active_workflow = state.get("active_workflow")
-        if active_workflow and active_workflow in state["workflows"]:
-            # Return active workflow data in old format for backward compatibility
-            workflow = state["workflows"][active_workflow]
-            return {
-                "current_phase": workflow.get("current_phase", "idle"),
-                "feature_name": active_workflow,
-                "spec_file": workflow.get("spec_file"),
-                "spec_approved": workflow.get("spec_approved", False),
-                "implementation_done": workflow.get("current_phase") in ["phase7_validate", "phase8_done"],
-                "validation_done": workflow.get("current_phase") == "phase8_done",
-            }
-
-    # Return as-is for old format (v1)
-    return state
+    workflow = workflows[active_workflow]
+    return {
+        "current_phase": workflow.get("current_phase", "idle"),
+        "feature_name": active_workflow,
+        "spec_file": workflow.get("spec_file"),
+        "spec_approved": workflow.get("spec_approved", False),
+        "red_test_done": workflow.get("red_test_done", False),
+        "green_test_done": workflow.get("green_test_done", False),
+        "implementation_done": workflow.get("current_phase") in [
+            "phase7_validate", "phase8_complete"
+        ],
+        "validation_done": workflow.get("current_phase") == "phase8_complete",
+    }
 
 
 def is_always_allowed(file_path: str) -> bool:

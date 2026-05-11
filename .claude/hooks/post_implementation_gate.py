@@ -26,13 +26,15 @@ import os
 from datetime import datetime, timedelta
 from pathlib import Path
 
-# Try to import config loader
+# Try to import config loader + v3 state wrapper
 try:
     from config_loader import get_project_root, load_config
+    from workflow_state_multi import load_state as _load_state_v3
 except ImportError:
     sys.path.insert(0, str(Path(__file__).parent))
     try:
         from config_loader import get_project_root, load_config
+        from workflow_state_multi import load_state as _load_state_v3
     except ImportError:
         def get_project_root():
             cwd = Path.cwd()
@@ -42,6 +44,8 @@ except ImportError:
             return cwd
         def load_config():
             return {}
+        def _load_state_v3():
+            return {"version": "2.0", "workflows": {}, "active_workflow": None}
 
 
 def get_lock_file() -> Path:
@@ -158,20 +162,16 @@ def check_user_approval() -> bool:
 
 
 def get_current_phase() -> str | None:
-    """Get the current workflow phase."""
-    state_file = get_project_root() / ".claude" / "workflow_state.json"
-    if not state_file.exists():
-        return None
+    """Get the current workflow phase via the v3 state wrapper."""
     try:
-        with open(state_file, 'r') as f:
-            state = json.load(f)
-        active = state.get("active_workflow")
-        if not active:
-            return None
-        workflow = state.get("workflows", {}).get(active, {})
-        return workflow.get("current_phase")
-    except (json.JSONDecodeError, Exception):
+        state = _load_state_v3()
+    except Exception:
         return None
+    active = state.get("active_workflow")
+    if not active:
+        return None
+    workflow = state.get("workflows", {}).get(active, {})
+    return workflow.get("current_phase")
 
 
 def is_workflow_complete() -> bool:

@@ -264,8 +264,22 @@ def is_module_enabled(category: str, module: str) -> bool:
 
 
 def get_state_file_path() -> Path:
-    """Get path to workflow state file."""
+    """Get path to workflow state file.
+
+    Retained for backward compatibility. After Epic #191 (Issue #192)
+    the v2 state file is renamed to workflow_state.json.bak; the live
+    state is per-workflow JSON files under :func:`get_workflows_dir`.
+    """
     return get_project_root() / ".claude" / "workflow_state.json"
+
+
+def get_workflows_dir() -> Path:
+    """Get path to per-workflow state directory (Epic #191).
+
+    Returns ``<project_root>/.claude/workflows`` honouring worktree
+    routing (Issue #112) via :func:`find_project_root`.
+    """
+    return find_project_root() / ".claude" / "workflows"
 
 
 if __name__ == "__main__":
