@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -135,15 +136,25 @@ func ProxyPostHandler(pythonURL, path string) http.HandlerFunc {
 	}
 }
 
-// appendUserID adds user_id to a query string if userId is non-empty.
+// appendUserID adds the authenticated user_id to a query string, replacing any
+// client-supplied user_id values (anti-spoofing — Bug #200 / Issue #199).
+//
+// Behaviour:
+//   - userID == "" (no auth context): rawQuery is returned unchanged
+//   - rawQuery contains user_id=X: X is removed, authenticated user_id is set
+//   - malformed rawQuery: dropped, only authenticated user_id remains
 func appendUserID(rawQuery, userID string) string {
 	if userID == "" {
 		return rawQuery
 	}
-	if rawQuery == "" {
+	values, err := url.ParseQuery(rawQuery)
+	if err != nil {
+		// Malformed query — defense-in-depth: drop everything, keep only auth.
 		return "user_id=" + userID
 	}
-	return rawQuery + "&user_id=" + userID
+	values.Del("user_id")
+	values.Set("user_id", userID)
+	return values.Encode()
 }
 
 // LoadedTripProxyHandler proxies GET /api/_internal/trip/{id}/loaded to the
