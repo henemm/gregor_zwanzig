@@ -395,8 +395,11 @@ export async function fillStep3(page: Page, input: Step3Input = {}): Promise<voi
 
   // Default: keine Aktion — alle Waypoints bleiben suggested (canAdvanceStep3 = true)
   await page.getByTestId('trip-wizard-next').click();
-  // Warten bis Step 4 sichtbar (oder naechster Step-Container)
-  await page.getByTestId('trip-wizard-step4-container').waitFor({ state: 'visible' });
+  // Warten bis Step 4 sichtbar. Heute traegt Step 4 die TestID
+  // `trip-wizard-step4-briefings`; sobald Sub-Issue #164 (Step 4 Save-Pipeline)
+  // gemerged ist, sollte das auf `trip-wizard-step4-container` umbenannt werden,
+  // analog Step 3.
+  await page.getByTestId('trip-wizard-step4-briefings').waitFor({ state: 'visible' });
 }
 ```
 
@@ -419,7 +422,8 @@ await page.getByTestId('trip-wizard-next').click();  // → Step 2
 await fillStep2(page);
 await page.getByTestId('trip-wizard-next').click();  // → Step 3
 await fillStep3(page);                               // → Step 4
-await expect(page.getByTestId('trip-wizard-step4-container')).toBeVisible();
+// Heute: trip-wizard-step4-briefings (Step 4 Container-TestID kommt mit #164)
+await expect(page.getByTestId('trip-wizard-step4-briefings')).toBeVisible();
 ```
 
 Hinweis: `fillStep3` klickt intern schon Weiter — kein zusaetzlicher `next.click()`
@@ -489,10 +493,10 @@ AC#11 (Full-Navigation bis Step 4). Tests die nur Step 1+2 pruefen: keine Aender
 | 17 | `canAdvanceStep3` gibt immer `true` zurueck | Unit-Test |
 | 18 | `canAdvanceCurrent` mit currentStep=3 delegiert auf `canAdvanceStep3` | Unit-Test |
 | 19 | Weiter-Button ist in Step 3 immer enabled | E2E (ohne jede Aktion: Button enabled) |
-| 20 | Empty-State §8a: keine Stages → Hinweis mit TestID `trip-wizard-step3-empty-no-stages` | E2E (direkt zu Step 3 navigieren ohne fillStep2) |
-| 21 | Empty-State §8b: nur Pausentage → Hinweis mit TestID `trip-wizard-step3-empty-only-pauses` | Unit-Test / E2E |
+| 20 | Empty-State §8a: keine Stages → Hinweis mit TestID `trip-wizard-step3-empty-no-stages` | Unit-Test (Komponente direkt mit leerem WizardState mounten — UI-Pfad ist nicht erreichbar, weil Step 2 den Weiter-Button bei `stages.length === 0` blockiert) |
+| 21 | Empty-State §8b: nur Pausentage → Hinweis mit TestID `trip-wizard-step3-empty-only-pauses` | Unit-Test (Komponente mit WizardState mounten, der nur Pause-Stages enthaelt — UI-Pfad nicht erreichbar) |
 | 22 | Empty-State §8c: aktive Stage hat 0 Waypoints → Hinweis mit TestID `trip-wizard-step3-empty-no-waypoints` | E2E (alle Waypoints verwerfen) |
-| 23 | `fillStep3()` ohne Parameter klickt Weiter und landet in Step 4 | E2E (Helper-Test) |
+| 23 | `fillStep3()` ohne Parameter klickt Weiter und landet in Step 4 (heute: TestID `trip-wizard-step4-briefings`; mit #164 spaeter `-container`) | E2E (Helper-Test) |
 | 24 | Master-Spec hat neuen Changelog-Eintrag fuer Step-3-Erweiterungen | Grep |
 | 25 | `npm run check` und `npm run build` im `frontend/` gruen | CI-Output |
 
@@ -588,6 +592,15 @@ AC#11 (Full-Navigation bis Step 4). Tests die nur Step 1+2 pruefen: keine Aender
 
 ## Changelog
 
+- 2026-05-11: External-Validator-Patch (Verdict AMBIGUOUS → VERIFIED): F-1
+  AC#23 aufgeloest via Spec-Anpassung statt Code-Aenderung. §10 `fillStep3` und
+  §11 Migration warten jetzt auf TestID `trip-wizard-step4-briefings` (heutiger
+  Stand); Container-Konvention `trip-wizard-step4-container` wird mit Sub-Issue
+  #164 (Step 4 Save-Pipeline) einheitlich nachgezogen. AC#20/21 von „E2E" auf
+  „Unit-Test" umgestellt — UI-Pfad zu Step 3 ohne Stages/nur Pausen ist nicht
+  erreichbar, weil Step 2 den Weiter-Button bei `stages.length === 0` blockiert.
+  Render-Branch bleibt defensiv im Markup. Keine Code-Aenderung in
+  `Step4Briefings.svelte` (out of scope nach Datei-Liste).
 - 2026-05-11: Terminologie korrigiert — „KI-Waypoints" / „KI-Pins" /
   „KI-Vorschlaege" → „Wegpunkt-Vorschlaege" / „Vorschlags-Pins" /
   „automatische Vorschlaege". Begruendung: die Wegpunkte stammen aus
