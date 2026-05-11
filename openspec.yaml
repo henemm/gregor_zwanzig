@@ -144,6 +144,25 @@ agents:
 spec_validation:
   ac_format_required_since: "2026-05-11"
 
+# Scope Guard - LoC-Delta-Limit pro Workflow (Issue #195, Epic #191)
+# scope_guard.py prüft `git diff HEAD --numstat` gegen max_loc_delta und
+# blockiert bei Überschreitung mit Exit 2. Override pro Workflow via
+# `workflow.py set-field loc_limit_override <N>`. Pfade die zu einem
+# Pattern in loc_exclude_patterns matchen, werden NICHT mitgezählt
+# (Übersetzungen, Lockfiles, Archive, Log-Verzeichnisse).
+scope_guard:
+  max_loc_delta: 250
+  loc_exclude_patterns:
+    - "\\.xcstrings$"
+    - "\\.po$"
+    - "package-lock\\.json$"
+    - "uv\\.lock$"
+    - "yarn\\.lock$"
+    - "Cargo\\.lock$"
+    - "/_archive/"
+    - "/_log/"
+    - "/\\.claude/workflows/"
+
 # Hooks Configuration
 hooks:
   # Timeout in seconds for hook execution

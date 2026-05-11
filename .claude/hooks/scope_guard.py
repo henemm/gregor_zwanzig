@@ -23,17 +23,19 @@ Exit Codes:
 """
 
 import json
+import re
+import subprocess
 import sys
 import os
 from pathlib import Path
 
 # Try to import config loader
 try:
-    from config_loader import get_project_root
+    from config_loader import get_project_root, get_scope_loc_config
 except ImportError:
     sys.path.insert(0, str(Path(__file__).parent))
     try:
-        from config_loader import get_project_root
+        from config_loader import get_project_root, get_scope_loc_config
     except ImportError:
         def get_project_root():
             cwd = Path.cwd()
@@ -41,6 +43,74 @@ except ImportError:
                 if (parent / ".git").exists():
                     return parent
             return cwd
+
+        def get_scope_loc_config():
+            return {"max_loc_delta": 250, "loc_exclude_patterns": []}
+
+
+def _get_loc_delta(exclude_patterns: list) -> tuple:
+    """Run ``git diff HEAD --numstat`` and sum insertions+deletions.
+
+    Files matching any pattern in ``exclude_patterns`` (regex via re.search)
+    are NOT counted. Binary files (numstat ``-`` markers) are skipped.
+
+    Returns:
+        Tuple ``(total_delta, list_of_counted_files)``. On any git error
+        (missing repo, timeout, binary missing) returns ``(0, [])`` —
+        fail-soft so the hook never crashes the user's edit (AC-4).
+    """
+    try:
+        result = subprocess.run(
+            ["git", "diff", "HEAD", "--numstat"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=10,
+        )
+        if result.returncode != 0:
+            return 0, []
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return 0, []
+
+    total = 0
+    counted = []
+    for line in result.stdout.splitlines():
+        parts = line.split("\t")
+        if len(parts) < 3:
+            continue
+        ins, dels, path = parts[0], parts[1], parts[2]
+        # Binary files show "-" — skip (AC-8)
+        if ins == "-" or dels == "-":
+            continue
+        try:
+            n = int(ins) + int(dels)
+        except ValueError:
+            continue
+        if any(re.search(p, path) for p in exclude_patterns):
+            continue
+        total += n
+        counted.append(path)
+    return total, counted
+
+
+def _check_loc_delta(workflow_state: dict) -> tuple:
+    """Return ``(allowed, reason)`` for the current diff against limit.
+
+    Limit precedence: ``workflow_state['loc_limit_override']`` (if truthy)
+    overrides the ``scope_guard.max_loc_delta`` from openspec.yaml.
+    """
+    config = get_scope_loc_config()
+    override = workflow_state.get("loc_limit_override") if workflow_state else None
+    max_delta = override if override else config["max_loc_delta"]
+    delta, counted = _get_loc_delta(config["loc_exclude_patterns"])
+
+    if delta > max_delta:
+        return False, (
+            f"LoC delta {delta} exceeds limit {max_delta} "
+            f"({len(counted)} files counted). "
+            f"To override: workflow.py set-field loc_limit_override <higher>"
+        )
+    return True, f"LoC delta ok: {delta}/{max_delta}"
 
 
 def get_task_file() -> Path:
@@ -113,6 +183,34 @@ def get_allowed_paths_for_type(task_type: str) -> list:
     return TASK_PATH_MAPPING.get(task_type, [])
 
 
+def _get_active_workflow_state() -> dict:
+    """Read the active workflow JSON if any; return {} on any error.
+
+    Used for ``loc_limit_override`` lookup. Fail-soft.
+    """
+    try:
+        hooks_dir = Path(__file__).resolve().parent
+        if str(hooks_dir) not in sys.path:
+            sys.path.insert(0, str(hooks_dir))
+        from config_loader import find_project_root
+        active = find_project_root() / ".claude" / "workflows" / ".active"
+        if not active.is_symlink():
+            return {}
+        target = active.parent / os.readlink(str(active))
+        return json.loads(target.read_text())
+    except (OSError, json.JSONDecodeError, Exception):
+        return {}
+
+
+def _loc_check_or_block() -> None:
+    """Run the LoC-Delta check (Issue #195). Exit 2 on overage; else return."""
+    wf = _get_active_workflow_state()
+    ok, reason = _check_loc_delta(wf)
+    if not ok:
+        print(f"BLOCKED: {reason}", file=sys.stderr)
+        sys.exit(2)
+
+
 def main():
     # Get tool input
     tool_input = os.environ.get("CLAUDE_TOOL_INPUT", "")
@@ -133,7 +231,8 @@ def main():
     if not file_path:
         sys.exit(0)
 
-    # Always-allowed paths pass through
+    # Always-allowed paths pass through — LoC check explicitly NOT applied
+    # to docs/, .md, .gitignore etc. (sonst blockt jeder Doku-Edit).
     if is_always_allowed(file_path):
         sys.exit(0)
 
@@ -153,6 +252,7 @@ Warning: Modifying critical file without defined task
   Consider defining the task first with:
   echo '{{"task": "...", "task_type": "{task_type}", "allowed_paths": [...]}}' > .claude/current_task.json
 """, file=sys.stderr)
+        _loc_check_or_block()
         sys.exit(0)
 
     # Task exists - check if path is allowed
@@ -165,9 +265,11 @@ Warning: Modifying critical file without defined task
 
     # If still no paths, allow all (no restriction)
     if not allowed_paths:
+        _loc_check_or_block()
         sys.exit(0)
 
     if is_path_allowed(file_path, allowed_paths):
+        _loc_check_or_block()
         sys.exit(0)
 
     # Path not allowed - BLOCK

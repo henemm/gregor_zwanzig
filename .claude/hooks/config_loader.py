@@ -263,6 +263,20 @@ def is_module_enabled(category: str, module: str) -> bool:
     return modules.get(category, {}).get(module, False)
 
 
+def get_scope_loc_config() -> dict:
+    """Return ``scope_guard`` LoC config (Issue #195, Epic #191).
+
+    Reads ``scope_guard.max_loc_delta`` und ``scope_guard.loc_exclude_patterns``
+    aus ``openspec.yaml``. Liefert Defaults (250 / []) wenn Sektion fehlt.
+    """
+    config = load_config()
+    sg = config.get("scope_guard", {}) or {}
+    return {
+        "max_loc_delta": sg.get("max_loc_delta", 250),
+        "loc_exclude_patterns": sg.get("loc_exclude_patterns", []),
+    }
+
+
 def get_ac_format_required_since() -> str | None:
     """Returns Stichtag-Datum (YYYY-MM-DD) oder None wenn nicht konfiguriert.
 

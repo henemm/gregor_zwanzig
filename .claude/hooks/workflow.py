@@ -496,6 +496,22 @@ def cmd_status(args: list[str]) -> None:
     log_status = "written" if _has_valid_log(log_dir, name) else "pending"
     print(f"Execution Log: {log_status}")
 
+    # LoC-Delta (Issue #195, Epic #191) — fail-soft
+    try:
+        hooks_dir = Path(__file__).resolve().parent
+        if str(hooks_dir) not in sys.path:
+            sys.path.insert(0, str(hooks_dir))
+        from scope_guard import _get_loc_delta
+        from config_loader import get_scope_loc_config
+        cfg = get_scope_loc_config()
+        delta, _ = _get_loc_delta(cfg["loc_exclude_patterns"])
+        override = data.get("loc_limit_override")
+        limit = override if override else cfg["max_loc_delta"]
+        suffix = " (override)" if override else ""
+        print(f"LoC-Delta: +{delta}/{limit}{suffix}")
+    except Exception:
+        pass  # fail-soft: status darf nie crashen
+
 
 def cmd_list(args: list[str]) -> None:
     active = _active_name()
