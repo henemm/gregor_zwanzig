@@ -111,3 +111,116 @@ export async function fillStep3(page: Page, input: Step3Input = {}): Promise<voi
 
 	await page.getByTestId('trip-wizard-next').click();
 }
+
+/**
+ * Eingabe-Vertrag fuer Trip-Wizard Step 4 (Sub-Spec #164 §8/§10).
+ *
+ * Default-Verhalten: keine Aenderungen — alle Toggles/Zeiten/Schwellwerte
+ * bleiben auf defaultBriefingConfig. Helper klickt nur den Save-Button und
+ * wartet auf Redirect nach `/trips/{id}` (sofern `expectSaveSuccess !== false`).
+ *
+ * SMS-Channel ist nicht konfigurierbar (disabled in der UI) und daher nicht
+ * Teil des Channel-Inputs.
+ */
+export interface Step4Input {
+	channels?: {
+		email?: boolean;
+		signal?: boolean;
+		telegram?: boolean;
+		// sms: nicht konfigurierbar (disabled)
+	};
+	reports?: {
+		morning?: { enabled?: boolean; time?: string };
+		evening?: { enabled?: boolean; time?: string };
+	};
+	thresholds?: {
+		gust_kmh?: number | null;
+		precip_mm?: number | null;
+		thunder_level?: 'NONE' | 'MED' | 'HIGH' | null;
+		snow_line_m?: number | null;
+	};
+	/** default: true — wartet auf Redirect nach Save (`/trips/{id}`) */
+	expectSaveSuccess?: boolean;
+}
+
+/**
+ * Step-4-Helper: optional Toggles/Zeiten/Schwellwerte setzen, dann Save klicken.
+ * Voraussetzung: Wizard ist auf Step 4 (Step4Briefings gemountet).
+ * Wartet zunaechst auf `trip-wizard-step4-container`.
+ */
+export async function fillStep4(page: Page, input: Step4Input = {}): Promise<void> {
+	await page.getByTestId('trip-wizard-step4-container').waitFor({ state: 'visible' });
+
+	// --- Channels --------------------------------------------------------------
+	if (input.channels) {
+		const channels: Array<['email' | 'signal' | 'telegram', boolean | undefined]> = [
+			['email', input.channels.email],
+			['signal', input.channels.signal],
+			['telegram', input.channels.telegram]
+		];
+		for (const [ch, target] of channels) {
+			if (target === undefined) continue;
+			const toggle = page
+				.getByTestId(`trip-wizard-step4-channel-${ch}`)
+				.locator('input[type="checkbox"]');
+			const current = await toggle.isChecked();
+			if (current !== target) {
+				await toggle.click();
+			}
+		}
+	}
+
+	// --- Report-Toggles + Zeiten ----------------------------------------------
+	if (input.reports) {
+		const reports: Array<['morning' | 'evening', { enabled?: boolean; time?: string } | undefined]> =
+			[
+				['morning', input.reports.morning],
+				['evening', input.reports.evening]
+			];
+		for (const [rep, cfg] of reports) {
+			if (!cfg) continue;
+			if (cfg.enabled !== undefined) {
+				const toggle = page.getByTestId(`trip-wizard-step4-report-${rep}-toggle`);
+				const current = await toggle.isChecked();
+				if (current !== cfg.enabled) {
+					await toggle.click();
+				}
+			}
+			if (cfg.time !== undefined) {
+				await page.getByTestId(`trip-wizard-step4-report-${rep}-time`).fill(cfg.time);
+			}
+		}
+	}
+
+	// --- Schwellwerte ----------------------------------------------------------
+	if (input.thresholds) {
+		const { gust_kmh, precip_mm, thunder_level, snow_line_m } = input.thresholds;
+		if (gust_kmh !== undefined) {
+			await page
+				.getByTestId('trip-wizard-step4-threshold-gust')
+				.fill(gust_kmh === null ? '' : String(gust_kmh));
+		}
+		if (precip_mm !== undefined) {
+			await page
+				.getByTestId('trip-wizard-step4-threshold-precip')
+				.fill(precip_mm === null ? '' : String(precip_mm));
+		}
+		if (thunder_level !== undefined) {
+			await page
+				.getByTestId('trip-wizard-step4-threshold-thunder')
+				.selectOption(thunder_level === null ? '' : thunder_level);
+		}
+		if (snow_line_m !== undefined) {
+			await page
+				.getByTestId('trip-wizard-step4-threshold-snow')
+				.fill(snow_line_m === null ? '' : String(snow_line_m));
+		}
+	}
+
+	// --- Save ------------------------------------------------------------------
+	await page.getByTestId('trip-wizard-save').click();
+
+	if (input.expectSaveSuccess !== false) {
+		await page.waitForURL(/\/trips\/[^/]+$/, { timeout: 10000 });
+	}
+}

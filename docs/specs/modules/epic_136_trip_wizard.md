@@ -398,6 +398,17 @@ Sub-Specs **muessen liefern**:
 
 ## Changelog
 
+- 2026-05-11: §3.1 und §1.4 erweitert um additive Methoden/Getter (Sub-Spec #164):
+  `get canAdvanceStep4(): boolean` (immer true — kein Kanal-Validierungs-Gate,
+  User-Entscheidung 2026-05-11). `canAdvanceCurrent` case 4 zeigt auf
+  `canAdvanceStep4` statt literal `true`. `toTripPayload()` erweitert um Mapping
+  `briefings -> report_config`: Backward-Compat-Block (enabled, morning_time,
+  evening_time, send_email/signal/telegram/sms) und neuer `alert_thresholds`-Sub-Block
+  (gust_kmh, precip_mm, thunder_level, snow_line_m; wird nur geschrieben wenn min.
+  ein Feld nicht null). Alte change_threshold_*-Felder unberuehrt. TestID-Wechsel
+  in Step4-Slot von `trip-wizard-step4-briefings` auf `trip-wizard-step4-container`
+  (analog Step-3-Pattern aus #163). Detail in Sub-Spec
+  [`epic_136_step4_briefings.md`](./epic_136_step4_briefings.md).
 - 2026-05-10: §3.1 erweitert um additive Methoden/Getter (Sub-Spec #163):
   `addStage()`-Patch: alle Waypoints der eingehenden Stage erhalten `suggested: true`
   (Variante A, zentralisiert). `confirmWaypoint(stageId, waypointId)` — entfernt

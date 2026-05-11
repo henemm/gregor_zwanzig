@@ -7,7 +7,7 @@
 //   trip-wizard-shell, trip-wizard-stepper,
 //   trip-wizard-step-1..4 mit data-state="done|active|pending",
 //   trip-wizard-step1-profile, trip-wizard-step2-stages,
-//   trip-wizard-step3-waypoints, trip-wizard-step4-briefings,
+//   trip-wizard-step3-waypoints, trip-wizard-step4-container,
 //   trip-wizard-back, trip-wizard-cancel, trip-wizard-next, trip-wizard-save.
 
 import { test, expect } from '@playwright/test';
@@ -105,7 +105,9 @@ test.describe('Trip-Wizard Shell (#160)', () => {
 		// → trip-wizard-step3-container (Stub durch echte Komponente ersetzt).
 		await expect(page.getByTestId('trip-wizard-step3-container')).toBeVisible();
 		await fillStep3(page);
-		await expect(page.getByTestId('trip-wizard-step4-briefings')).toBeVisible();
+		// Sub-Spec #164 §11: TestID gewechselt von trip-wizard-step4-briefings
+		// → trip-wizard-step4-container (Stub durch echte Komponente ersetzt).
+		await expect(page.getByTestId('trip-wizard-step4-container')).toBeVisible();
 	});
 
 	test('Step 1 hat keinen Zurueck-Button', async ({ page }) => {

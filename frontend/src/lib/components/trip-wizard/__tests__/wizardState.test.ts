@@ -523,3 +523,209 @@ test('canAdvanceCurrent AC#18: Step 3 delegiert auf canAdvanceStep3', () => {
 	assert.equal(s.canAdvanceCurrent, s.canAdvanceStep3);
 	assert.equal(s.canAdvanceCurrent, true);
 });
+
+// --- Sub-Spec #164 §3.1: canAdvanceStep4-Getter (immer true) ---------------
+// AC#17 (#164) — Liefert immer true; kein Validierungs-Gate fuer Step 4.
+
+test('canAdvanceStep4 #164 AC#1: neuer State → true', () => {
+	const s = new WizardState();
+	assert.equal(s.canAdvanceStep4, true);
+});
+
+test('canAdvanceStep4 #164 AC#1b: alle Kanaele aus → trotzdem true', () => {
+	const s = new WizardState();
+	s.briefings.channels.email = false;
+	s.briefings.channels.signal = false;
+	s.briefings.channels.telegram = false;
+	s.briefings.channels.sms = false;
+	assert.equal(s.canAdvanceStep4, true);
+});
+
+test('canAdvanceStep4 #164 AC#1c: beide Reports aus → trotzdem true', () => {
+	const s = new WizardState();
+	s.briefings.reports.morning.enabled = false;
+	s.briefings.reports.evening.enabled = false;
+	assert.equal(s.canAdvanceStep4, true);
+});
+
+// --- Sub-Spec #164 §3.2: canAdvanceCurrent case 4 → canAdvanceStep4 --------
+// AC#18 (#164) — Switch case 4 delegiert auf den Getter (statt literal true).
+
+test('canAdvanceCurrent #164 AC#2: Step 4 delegiert auf canAdvanceStep4', () => {
+	const s = new WizardState();
+	s.currentStep = 4;
+	// Identitaet pruefen: canAdvanceCurrent === canAdvanceStep4
+	assert.equal(s.canAdvanceCurrent, s.canAdvanceStep4);
+	assert.equal(s.canAdvanceCurrent, true);
+});
+
+// --- Sub-Spec #164 §3.3: toTripPayload() schreibt report_config -----------
+// Helper: minimal valide Setup-Funktion fuer die Mapping-Tests.
+function makeStateWithDefaults(): WizardState {
+	const s = new WizardState();
+	s.activity = 'trekking';
+	s.name = 'Step4-Test';
+	s.startDate = '2026-06-01';
+	return s;
+}
+
+test('toTripPayload #164 AC#15a: report_config.send_email = briefings.channels.email', () => {
+	const s = makeStateWithDefaults();
+	s.briefings.channels.email = true;
+	const rc = s.toTripPayload().report_config as Record<string, unknown> | undefined;
+	assert.ok(rc, 'report_config muss vorhanden sein');
+	assert.equal(rc.send_email, true);
+
+	const s2 = makeStateWithDefaults();
+	s2.briefings.channels.email = false;
+	const rc2 = s2.toTripPayload().report_config as Record<string, unknown> | undefined;
+	assert.ok(rc2);
+	assert.equal(rc2.send_email, false);
+});
+
+test('toTripPayload #164 AC#15b: report_config.send_signal = briefings.channels.signal', () => {
+	const s = makeStateWithDefaults();
+	s.briefings.channels.signal = true;
+	const rc = s.toTripPayload().report_config as Record<string, unknown> | undefined;
+	assert.ok(rc, 'report_config muss vorhanden sein');
+	assert.equal(rc.send_signal, true);
+
+	const s2 = makeStateWithDefaults();
+	s2.briefings.channels.signal = false;
+	const rc2 = s2.toTripPayload().report_config as Record<string, unknown> | undefined;
+	assert.ok(rc2);
+	assert.equal(rc2.send_signal, false);
+});
+
+test('toTripPayload #164 AC#15c: report_config.send_telegram = briefings.channels.telegram', () => {
+	const s = makeStateWithDefaults();
+	s.briefings.channels.telegram = true;
+	const rc = s.toTripPayload().report_config as Record<string, unknown> | undefined;
+	assert.ok(rc, 'report_config muss vorhanden sein');
+	assert.equal(rc.send_telegram, true);
+
+	const s2 = makeStateWithDefaults();
+	s2.briefings.channels.telegram = false;
+	const rc2 = s2.toTripPayload().report_config as Record<string, unknown> | undefined;
+	assert.ok(rc2);
+	assert.equal(rc2.send_telegram, false);
+});
+
+test('toTripPayload #164 AC#15d: report_config.send_sms = briefings.channels.sms', () => {
+	const s = makeStateWithDefaults();
+	s.briefings.channels.sms = false;
+	const rc = s.toTripPayload().report_config as Record<string, unknown> | undefined;
+	assert.ok(rc, 'report_config muss vorhanden sein');
+	assert.equal(rc.send_sms, false);
+});
+
+test('toTripPayload #164 AC#16a: report_config.morning_time = briefings.reports.morning.time', () => {
+	const s = makeStateWithDefaults();
+	s.briefings.reports.morning.time = '07:30';
+	const rc = s.toTripPayload().report_config as Record<string, unknown> | undefined;
+	assert.ok(rc, 'report_config muss vorhanden sein');
+	assert.equal(rc.morning_time, '07:30');
+});
+
+test('toTripPayload #164 AC#16b: report_config.evening_time = briefings.reports.evening.time', () => {
+	const s = makeStateWithDefaults();
+	s.briefings.reports.evening.time = '21:15';
+	const rc = s.toTripPayload().report_config as Record<string, unknown> | undefined;
+	assert.ok(rc, 'report_config muss vorhanden sein');
+	assert.equal(rc.evening_time, '21:15');
+});
+
+test('toTripPayload #164 AC#17a: report_config.enabled = true wenn beide Reports aktiv', () => {
+	const s = makeStateWithDefaults();
+	s.briefings.reports.morning.enabled = true;
+	s.briefings.reports.evening.enabled = true;
+	const rc = s.toTripPayload().report_config as Record<string, unknown> | undefined;
+	assert.ok(rc, 'report_config muss vorhanden sein');
+	assert.equal(rc.enabled, true);
+});
+
+test('toTripPayload #164 AC#17b: report_config.enabled = true wenn nur morning aktiv', () => {
+	const s = makeStateWithDefaults();
+	s.briefings.reports.morning.enabled = true;
+	s.briefings.reports.evening.enabled = false;
+	const rc = s.toTripPayload().report_config as Record<string, unknown> | undefined;
+	assert.ok(rc, 'report_config muss vorhanden sein');
+	assert.equal(rc.enabled, true);
+});
+
+test('toTripPayload #164 AC#17c: report_config.enabled = false wenn beide Reports aus', () => {
+	const s = makeStateWithDefaults();
+	s.briefings.reports.morning.enabled = false;
+	s.briefings.reports.evening.enabled = false;
+	const rc = s.toTripPayload().report_config as Record<string, unknown> | undefined;
+	assert.ok(rc, 'report_config muss vorhanden sein');
+	assert.equal(rc.enabled, false);
+});
+
+test('toTripPayload #164 AC#18: alert_thresholds-Block geschrieben wenn min. 1 Feld nicht null', () => {
+	const s = makeStateWithDefaults();
+	s.briefings.thresholds.gust_kmh = 80;
+	s.briefings.thresholds.precip_mm = 15;
+	s.briefings.thresholds.thunder_level = 'HIGH';
+	s.briefings.thresholds.snow_line_m = 1800;
+	const rc = s.toTripPayload().report_config as Record<string, unknown> | undefined;
+	assert.ok(rc, 'report_config muss vorhanden sein');
+	const at = rc.alert_thresholds as Record<string, unknown> | undefined;
+	assert.ok(at, 'alert_thresholds-Block muss vorhanden sein');
+	assert.equal(at.gust_kmh, 80);
+	assert.equal(at.precip_mm, 15);
+	assert.equal(at.thunder_level, 'HIGH');
+	assert.equal(at.snow_line_m, 1800);
+});
+
+test('toTripPayload #164 AC#18b: alert_thresholds enthaelt alle 4 Felder auch wenn nur 1 gesetzt', () => {
+	const s = makeStateWithDefaults();
+	s.briefings.thresholds.gust_kmh = 70;
+	// andere bleiben null
+	const rc = s.toTripPayload().report_config as Record<string, unknown> | undefined;
+	assert.ok(rc, 'report_config muss vorhanden sein');
+	const at = rc.alert_thresholds as Record<string, unknown> | undefined;
+	assert.ok(at, 'alert_thresholds-Block muss vorhanden sein');
+	assert.equal(at.gust_kmh, 70);
+	assert.equal(at.precip_mm, null);
+	assert.equal(at.thunder_level, null);
+	assert.equal(at.snow_line_m, null);
+});
+
+test('toTripPayload #164 AC#19: KEIN alert_thresholds-Block wenn alle 4 thresholds null', () => {
+	const s = makeStateWithDefaults();
+	// Defaults: alle null
+	assert.equal(s.briefings.thresholds.gust_kmh, null);
+	assert.equal(s.briefings.thresholds.precip_mm, null);
+	assert.equal(s.briefings.thresholds.thunder_level, null);
+	assert.equal(s.briefings.thresholds.snow_line_m, null);
+	const rc = s.toTripPayload().report_config as Record<string, unknown> | undefined;
+	assert.ok(rc, 'report_config muss vorhanden sein');
+	assert.equal(
+		Object.prototype.hasOwnProperty.call(rc, 'alert_thresholds'),
+		false,
+		'alert_thresholds darf NICHT geschrieben werden wenn alle null'
+	);
+});
+
+test('toTripPayload #164 AC#20: KEINE alten change_threshold_*-Felder im report_config', () => {
+	const s = makeStateWithDefaults();
+	s.briefings.thresholds.gust_kmh = 50;
+	const rc = s.toTripPayload().report_config as Record<string, unknown> | undefined;
+	assert.ok(rc, 'report_config muss vorhanden sein');
+	assert.equal(
+		Object.prototype.hasOwnProperty.call(rc, 'change_threshold_temp_c'),
+		false,
+		'change_threshold_temp_c darf NICHT geschrieben werden'
+	);
+	assert.equal(
+		Object.prototype.hasOwnProperty.call(rc, 'change_threshold_wind_kmh'),
+		false,
+		'change_threshold_wind_kmh darf NICHT geschrieben werden'
+	);
+	assert.equal(
+		Object.prototype.hasOwnProperty.call(rc, 'change_threshold_precip_mm'),
+		false,
+		'change_threshold_precip_mm darf NICHT geschrieben werden'
+	);
+});

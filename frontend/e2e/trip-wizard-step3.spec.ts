@@ -247,10 +247,10 @@ test.describe('Trip-Wizard Step 3 — Wegpunkt-Vorschlaege bestaetigen (#163)', 
 	test('AC#23: fillStep3() ohne Param klickt Weiter und landet in Step 4', async ({ page }) => {
 		await gotoStep3(page);
 		// Weiter-Button klicken — sollte ohne weitere Aktionen funktionieren
-		// (canAdvanceStep3 = true). Step 4 nutzt aktuell noch TestID
-		// `trip-wizard-step4-briefings` (Spec §10 zeigt -container, was Sub-Issue
-		// #164 nachzieht — out of scope hier).
+		// (canAdvanceStep3 = true). Sub-Spec #164 §11 hat den TestID von
+		// `trip-wizard-step4-briefings` auf `trip-wizard-step4-container`
+		// migriert.
 		await page.getByTestId('trip-wizard-next').click();
-		await expect(page.getByTestId('trip-wizard-step4-briefings')).toBeVisible();
+		await expect(page.getByTestId('trip-wizard-step4-container')).toBeVisible();
 	});
 });

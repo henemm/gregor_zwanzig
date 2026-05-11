@@ -1,0 +1,655 @@
+TAP version 13
+# Subtest: WizardState: Initial-State entspricht Spec-Defaults
+ok 1 - WizardState: Initial-State entspricht Spec-Defaults
+  ---
+  duration_ms: 1.016804
+  type: 'test'
+  ...
+# Subtest: WizardState: nextStep() schreitet 1 → 2 voran
+ok 2 - WizardState: nextStep() schreitet 1 → 2 voran
+  ---
+  duration_ms: 0.110838
+  type: 'test'
+  ...
+# Subtest: WizardState: nextStep() bleibt bei 4 (kein Wrap)
+ok 3 - WizardState: nextStep() bleibt bei 4 (kein Wrap)
+  ---
+  duration_ms: 0.063005
+  type: 'test'
+  ...
+# Subtest: WizardState: prevStep() bleibt bei 1 (kein Underflow)
+ok 4 - WizardState: prevStep() bleibt bei 1 (kein Underflow)
+  ---
+  duration_ms: 0.066981
+  type: 'test'
+  ...
+# Subtest: WizardState: prevStep() schreitet 4 → 3 zurueck
+ok 5 - WizardState: prevStep() schreitet 4 → 3 zurueck
+  ---
+  duration_ms: 0.065579
+  type: 'test'
+  ...
+# Subtest: WizardState: toTripPayload mit activity=skitour → aggregation.profile=wintersport
+ok 6 - WizardState: toTripPayload mit activity=skitour → aggregation.profile=wintersport
+  ---
+  duration_ms: 1.390297
+  type: 'test'
+  ...
+# Subtest: WizardState: addPauseStage() fuegt Stage mit leeren Wegpunkten hinzu
+ok 7 - WizardState: addPauseStage() fuegt Stage mit leeren Wegpunkten hinzu
+  ---
+  duration_ms: 0.533765
+  type: 'test'
+  ...
+# Subtest: WizardState: defaultBriefingConfig ist nicht geteilt (Klone unabhaengig)
+ok 8 - WizardState: defaultBriefingConfig ist nicht geteilt (Klone unabhaengig)
+  ---
+  duration_ms: 0.099341
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep1: initial false (alle Pflichtfelder leer)
+ok 9 - canAdvanceStep1: initial false (alle Pflichtfelder leer)
+  ---
+  duration_ms: 0.275727
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep1: nur activity gesetzt → false (name+startDate fehlen)
+ok 10 - canAdvanceStep1: nur activity gesetzt → false (name+startDate fehlen)
+  ---
+  duration_ms: 0.328606
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep1: activity+name gesetzt → false (startDate fehlt)
+ok 11 - canAdvanceStep1: activity+name gesetzt → false (startDate fehlt)
+  ---
+  duration_ms: 0.13884
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep1: alle 3 Pflichtfelder gesetzt → true
+ok 12 - canAdvanceStep1: alle 3 Pflichtfelder gesetzt → true
+  ---
+  duration_ms: 0.079511
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep1: name nur Whitespace → false (trim-Logik)
+ok 13 - canAdvanceStep1: name nur Whitespace → false (trim-Logik)
+  ---
+  duration_ms: 0.05326
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep1: leerer startDate-String → false (HTML5-Date-Input nach Loeschen)
+ok 14 - canAdvanceStep1: leerer startDate-String → false (HTML5-Date-Input nach Loeschen)
+  ---
+  duration_ms: 0.975542
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep1: nach Loeschen eines Pflichtfelds → false
+ok 15 - canAdvanceStep1: nach Loeschen eines Pflichtfelds → false
+  ---
+  duration_ms: 0.090206
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep1: shortcode ist optional, beeinflusst Bedingung nicht
+ok 16 - canAdvanceStep1: shortcode ist optional, beeinflusst Bedingung nicht
+  ---
+  duration_ms: 0.060312
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep2: initial false (keine Etappen)
+ok 17 - canAdvanceStep2: initial false (keine Etappen)
+  ---
+  duration_ms: 0.043345
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep2: nach addStage true
+ok 18 - canAdvanceStep2: nach addStage true
+  ---
+  duration_ms: 0.067512
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep2: nach deleteStage zurueck auf false
+ok 19 - canAdvanceStep2: nach deleteStage zurueck auf false
+  ---
+  duration_ms: 0.097747
+  type: 'test'
+  ...
+# Subtest: canAdvanceCurrent: Step 1 spiegelt canAdvanceStep1
+ok 20 - canAdvanceCurrent: Step 1 spiegelt canAdvanceStep1
+  ---
+  duration_ms: 0.049746
+  type: 'test'
+  ...
+# Subtest: canAdvanceCurrent: Step 2 spiegelt canAdvanceStep2
+ok 21 - canAdvanceCurrent: Step 2 spiegelt canAdvanceStep2
+  ---
+  duration_ms: 0.040441
+  type: 'test'
+  ...
+# Subtest: canAdvanceCurrent: Step 3 ist immer true
+ok 22 - canAdvanceCurrent: Step 3 ist immer true
+  ---
+  duration_ms: 0.040561
+  type: 'test'
+  ...
+# Subtest: canAdvanceCurrent: Step 4 ist immer true
+ok 23 - canAdvanceCurrent: Step 4 ist immer true
+  ---
+  duration_ms: 0.032158
+  type: 'test'
+  ...
+# Subtest: addPauseStageAt: fuegt Pause an Position afterIndex+1 ein
+ok 24 - addPauseStageAt: fuegt Pause an Position afterIndex+1 ein
+  ---
+  duration_ms: 0.17918
+  type: 'test'
+  ...
+# Subtest: addPauseStageAt: ruft recomputeStageDates auf
+ok 25 - addPauseStageAt: ruft recomputeStageDates auf
+  ---
+  duration_ms: 0.086129
+  type: 'test'
+  ...
+# Subtest: deleteStage: entfernt Stage per ID
+ok 26 - deleteStage: entfernt Stage per ID
+  ---
+  duration_ms: 0.141323
+  type: 'test'
+  ...
+# Subtest: deleteStage: ruft recomputeStageDates auf
+ok 27 - deleteStage: ruft recomputeStageDates auf
+  ---
+  duration_ms: 0.077117
+  type: 'test'
+  ...
+# Subtest: recomputeStageDates: setzt date=startDate+index
+ok 28 - recomputeStageDates: setzt date=startDate+index
+  ---
+  duration_ms: 0.047452
+  type: 'test'
+  ...
+# Subtest: recomputeStageDates: schuetzt dateOverridden=true
+ok 29 - recomputeStageDates: schuetzt dateOverridden=true
+  ---
+  duration_ms: 0.048483
+  type: 'test'
+  ...
+# Subtest: recomputeStageDates: no-op wenn startDate null
+ok 30 - recomputeStageDates: no-op wenn startDate null
+  ---
+  duration_ms: 0.043385
+  type: 'test'
+  ...
+# Subtest: reorderStages: re-dated Etappen lueckenlos
+ok 31 - reorderStages: re-dated Etappen lueckenlos
+  ---
+  duration_ms: 0.149806
+  type: 'test'
+  ...
+# Subtest: toTripPayload: strippt dateOverridden aus jeder Stage
+ok 32 - toTripPayload: strippt dateOverridden aus jeder Stage
+  ---
+  duration_ms: 0.107572
+  type: 'test'
+  ...
+# Subtest: addStage AC\#16a: Waypoints ohne suggested-Flag → nach addStage suggested:true
+ok 33 - addStage AC\#16a: Waypoints ohne suggested-Flag → nach addStage suggested:true
+  ---
+  duration_ms: 0.059839
+  type: 'test'
+  ...
+# Subtest: addStage AC\#16b: Waypoints mit suggested:true (explizit) → bleibt true
+ok 34 - addStage AC\#16b: Waypoints mit suggested:true (explizit) → bleibt true
+  ---
+  duration_ms: 0.050717
+  type: 'test'
+  ...
+# Subtest: addStage AC\#16c: Waypoints mit suggested:false (explizit) → bleibt false
+ok 35 - addStage AC\#16c: Waypoints mit suggested:false (explizit) → bleibt false
+  ---
+  duration_ms: 0.043736
+  type: 'test'
+  ...
+# Subtest: confirmWaypoint AC\#14a: entfernt suggested-Property aus angegebenem Wegpunkt
+ok 36 - confirmWaypoint AC\#14a: entfernt suggested-Property aus angegebenem Wegpunkt
+  ---
+  duration_ms: 0.092951
+  type: 'test'
+  ...
+# Subtest: confirmWaypoint AC\#14b: falsche stageId → kein Crash, State unveraendert
+ok 37 - confirmWaypoint AC\#14b: falsche stageId → kein Crash, State unveraendert
+  ---
+  duration_ms: 0.06022
+  type: 'test'
+  ...
+# Subtest: confirmWaypoint AC\#14c: falsche waypointId → kein Crash, suggested bleibt
+ok 38 - confirmWaypoint AC\#14c: falsche waypointId → kein Crash, suggested bleibt
+  ---
+  duration_ms: 0.043154
+  type: 'test'
+  ...
+# Subtest: rejectWaypoint AC\#15a: entfernt Wegpunkt aus stage.waypoints
+ok 39 - rejectWaypoint AC\#15a: entfernt Wegpunkt aus stage.waypoints
+  ---
+  duration_ms: 0.062495
+  type: 'test'
+  ...
+# Subtest: rejectWaypoint AC\#15b: falsche stageId → State unveraendert
+ok 40 - rejectWaypoint AC\#15b: falsche stageId → State unveraendert
+  ---
+  duration_ms: 0.035373
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep3 AC\#17a: neuer State (keine Stages) → true
+ok 41 - canAdvanceStep3 AC\#17a: neuer State (keine Stages) → true
+  ---
+  duration_ms: 0.030616
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep3 AC\#17b: mit Stages → true
+ok 42 - canAdvanceStep3 AC\#17b: mit Stages → true
+  ---
+  duration_ms: 0.033331
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep3 AC\#17c: mit allen Waypoints verworfen → true
+ok 43 - canAdvanceStep3 AC\#17c: mit allen Waypoints verworfen → true
+  ---
+  duration_ms: 0.036795
+  type: 'test'
+  ...
+# Subtest: canAdvanceCurrent AC\#18: Step 3 delegiert auf canAdvanceStep3
+ok 44 - canAdvanceCurrent AC\#18: Step 3 delegiert auf canAdvanceStep3
+  ---
+  duration_ms: 0.062735
+  type: 'test'
+  ...
+# Subtest: canAdvanceStep4 \#164 AC\#1: neuer State → true
+not ok 45 - canAdvanceStep4 \#164 AC\#1: neuer State → true
+  ---
+  duration_ms: 0.674848
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/frontend/src/lib/components/trip-wizard/__tests__/wizardState.test.ts:530:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + undefined
+    - true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/frontend/src/lib/components/trip-wizard/__tests__/wizardState.test.ts:532:9)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: canAdvanceStep4 \#164 AC\#1b: alle Kanaele aus → trotzdem true
+not ok 46 - canAdvanceStep4 \#164 AC\#1b: alle Kanaele aus → trotzdem true
+  ---
+  duration_ms: 0.194533
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/frontend/src/lib/components/trip-wizard/__tests__/wizardState.test.ts:535:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + undefined
+    - true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/frontend/src/lib/components/trip-wizard/__tests__/wizardState.test.ts:541:9)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: canAdvanceStep4 \#164 AC\#1c: beide Reports aus → trotzdem true
+not ok 47 - canAdvanceStep4 \#164 AC\#1c: beide Reports aus → trotzdem true
+  ---
+  duration_ms: 0.141113
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/frontend/src/lib/components/trip-wizard/__tests__/wizardState.test.ts:544:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + undefined
+    - true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/frontend/src/lib/components/trip-wizard/__tests__/wizardState.test.ts:548:9)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: canAdvanceCurrent \#164 AC\#2: Step 4 delegiert auf canAdvanceStep4
+not ok 48 - canAdvanceCurrent \#164 AC\#2: Step 4 delegiert auf canAdvanceStep4
+  ---
+  duration_ms: 0.091789
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/frontend/src/lib/components/trip-wizard/__tests__/wizardState.test.ts:554:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + true
+    - undefined
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/frontend/src/lib/components/trip-wizard/__tests__/wizardState.test.ts:558:9)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: toTripPayload \#164 AC\#15a: report_config.send_email = briefings.channels.email
+not ok 49 - toTripPayload \#164 AC\#15a: report_config.send_email = briefings.channels.email
+  ---
+  duration_ms: 0.115063
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/frontend/src/lib/components/trip-wizard/__tests__/wizardState.test.ts:572:1'
+  failureType: 'testCodeFailure'
+  error: 'report_config muss vorhanden sein'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/frontend/src/lib/components/trip-wizard/__tests__/wizardState.test.ts:576:9)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: toTripPayload \#164 AC\#15b: report_config.send_signal = briefings.channels.signal
+not ok 50 - toTripPayload \#164 AC\#15b: report_config.send_signal = briefings.channels.signal
+  ---
+  duration_ms: 0.084447
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/frontend/src/lib/components/trip-wizard/__tests__/wizardState.test.ts:586:1'
+  failureType: 'testCodeFailure'
+  error: 'report_config muss vorhanden sein'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/frontend/src/lib/components/trip-wizard/__tests__/wizardState.test.ts:590:9)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: toTripPayload \#164 AC\#15c: report_config.send_telegram = briefings.channels.telegram
+not ok 51 - toTripPayload \#164 AC\#15c: report_config.send_telegram = briefings.channels.telegram
+  ---
+  duration_ms: 0.076967
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/frontend/src/lib/components/trip-wizard/__tests__/wizardState.test.ts:600:1'
+  failureType: 'testCodeFailure'
+  error: 'report_config muss vorhanden sein'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/frontend/src/lib/components/trip-wizard/__tests__/wizardState.test.ts:604:9)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: toTripPayload \#164 AC\#15d: report_config.send_sms = briefings.channels.sms
+not ok 52 - toTripPayload \#164 AC\#15d: report_config.send_sms = briefings.channels.sms
+  ---
+  duration_ms: 0.160311
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/frontend/src/lib/components/trip-wizard/__tests__/wizardState.test.ts:614:1'
+  failureType: 'testCodeFailure'
+  error: 'report_config muss vorhanden sein'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/frontend/src/lib/components/trip-wizard/__tests__/wizardState.test.ts:618:9)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: toTripPayload \#164 AC\#16a: report_config.morning_time = briefings.reports.morning.time
+not ok 53 - toTripPayload \#164 AC\#16a: report_config.morning_time = briefings.reports.morning.time
+  ---
+  duration_ms: 0.188144
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/frontend/src/lib/components/trip-wizard/__tests__/wizardState.test.ts:622:1'
+  failureType: 'testCodeFailure'
+  error: 'report_config muss vorhanden sein'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/frontend/src/lib/components/trip-wizard/__tests__/wizardState.test.ts:626:9)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: toTripPayload \#164 AC\#16b: report_config.evening_time = briefings.reports.evening.time
+not ok 54 - toTripPayload \#164 AC\#16b: report_config.evening_time = briefings.reports.evening.time
+  ---
+  duration_ms: 0.107952
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/frontend/src/lib/components/trip-wizard/__tests__/wizardState.test.ts:630:1'
+  failureType: 'testCodeFailure'
+  error: 'report_config muss vorhanden sein'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/frontend/src/lib/components/trip-wizard/__tests__/wizardState.test.ts:634:9)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: toTripPayload \#164 AC\#17a: report_config.enabled = true wenn beide Reports aktiv
+not ok 55 - toTripPayload \#164 AC\#17a: report_config.enabled = true wenn beide Reports aktiv
+  ---
+  duration_ms: 0.09245
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/frontend/src/lib/components/trip-wizard/__tests__/wizardState.test.ts:638:1'
+  failureType: 'testCodeFailure'
+  error: 'report_config muss vorhanden sein'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/frontend/src/lib/components/trip-wizard/__tests__/wizardState.test.ts:643:9)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: toTripPayload \#164 AC\#17b: report_config.enabled = true wenn nur morning aktiv
+not ok 56 - toTripPayload \#164 AC\#17b: report_config.enabled = true wenn nur morning aktiv
+  ---
+  duration_ms: 0.120733
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/frontend/src/lib/components/trip-wizard/__tests__/wizardState.test.ts:647:1'
+  failureType: 'testCodeFailure'
+  error: 'report_config muss vorhanden sein'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/frontend/src/lib/components/trip-wizard/__tests__/wizardState.test.ts:652:9)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: toTripPayload \#164 AC\#17c: report_config.enabled = false wenn beide Reports aus
+not ok 57 - toTripPayload \#164 AC\#17c: report_config.enabled = false wenn beide Reports aus
+  ---
+  duration_ms: 0.085979
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/frontend/src/lib/components/trip-wizard/__tests__/wizardState.test.ts:656:1'
+  failureType: 'testCodeFailure'
+  error: 'report_config muss vorhanden sein'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/frontend/src/lib/components/trip-wizard/__tests__/wizardState.test.ts:661:9)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: toTripPayload \#164 AC\#18: alert_thresholds-Block geschrieben wenn min. 1 Feld nicht null
+not ok 58 - toTripPayload \#164 AC\#18: alert_thresholds-Block geschrieben wenn min. 1 Feld nicht null
+  ---
+  duration_ms: 0.082946
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/frontend/src/lib/components/trip-wizard/__tests__/wizardState.test.ts:665:1'
+  failureType: 'testCodeFailure'
+  error: 'report_config muss vorhanden sein'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/frontend/src/lib/components/trip-wizard/__tests__/wizardState.test.ts:672:9)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: toTripPayload \#164 AC\#18b: alert_thresholds enthaelt alle 4 Felder auch wenn nur 1 gesetzt
+not ok 59 - toTripPayload \#164 AC\#18b: alert_thresholds enthaelt alle 4 Felder auch wenn nur 1 gesetzt
+  ---
+  duration_ms: 0.084307
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/frontend/src/lib/components/trip-wizard/__tests__/wizardState.test.ts:681:1'
+  failureType: 'testCodeFailure'
+  error: 'report_config muss vorhanden sein'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/frontend/src/lib/components/trip-wizard/__tests__/wizardState.test.ts:686:9)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: toTripPayload \#164 AC\#19: KEIN alert_thresholds-Block wenn alle 4 thresholds null
+not ok 60 - toTripPayload \#164 AC\#19: KEIN alert_thresholds-Block wenn alle 4 thresholds null
+  ---
+  duration_ms: 0.072349
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/frontend/src/lib/components/trip-wizard/__tests__/wizardState.test.ts:695:1'
+  failureType: 'testCodeFailure'
+  error: 'report_config muss vorhanden sein'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/frontend/src/lib/components/trip-wizard/__tests__/wizardState.test.ts:703:9)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: toTripPayload \#164 AC\#20: KEINE alten change_threshold_*-Felder im report_config
+not ok 61 - toTripPayload \#164 AC\#20: KEINE alten change_threshold_*-Felder im report_config
+  ---
+  duration_ms: 0.076856
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/frontend/src/lib/components/trip-wizard/__tests__/wizardState.test.ts:711:1'
+  failureType: 'testCodeFailure'
+  error: 'report_config muss vorhanden sein'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/frontend/src/lib/components/trip-wizard/__tests__/wizardState.test.ts:715:9)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..61
+# tests 61
+# suites 0
+# pass 44
+# fail 17
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 125.219663

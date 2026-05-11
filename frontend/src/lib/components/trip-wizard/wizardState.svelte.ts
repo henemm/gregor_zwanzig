@@ -113,8 +113,19 @@ export class WizardState {
 	}
 
 	/**
+	 * Sub-Spec #164 §3.1: Trip ohne Kanaele speicherbar — kein Validierungs-Gate
+	 * (User-Entscheidung 2026-05-11). Begruendung: ad-hoc-Trips koennen nachtraeglich
+	 * konfiguriert werden. Konsistenz mit canAdvanceStep3-Pattern (#163).
+	 *
+	 * Getter (nicht $derived) — siehe canAdvanceStep1 fuer Begruendung.
+	 */
+	get canAdvanceStep4(): boolean {
+		return true;
+	}
+
+	/**
 	 * Switch ueber currentStep — liefert true wenn der aktuelle Step weitergeschaltet
-	 * werden darf. Step 4 returnt aktuell true (keine Validierung dort).
+	 * werden darf. Step 4 delegiert auf `canAdvanceStep4` (Sub-Spec #164 §3.2).
 	 */
 	get canAdvanceCurrent(): boolean {
 		switch (this.currentStep) {
@@ -125,7 +136,7 @@ export class WizardState {
 			case 3:
 				return this.canAdvanceStep3;
 			case 4:
-				return true;
+				return this.canAdvanceStep4;
 		}
 	}
 
@@ -316,6 +327,42 @@ export class WizardState {
 			trip.activity = this.activity;
 			trip.aggregation = { profile: mapActivityToProfile(this.activity) };
 		}
+
+		// Sub-Spec #164 §3.3: Mapping briefings -> report_config
+		// Zwei Bloecke: Backward-Compat (alte Felder, Scheduler/Alert lesen diese)
+		// und neue alert_thresholds (konsumiert ab Epic #139).
+		const b = this.briefings;
+		const rc: Record<string, unknown> = {
+			// Backward-Compat-Block (TripReportConfig.py Z.589-605):
+			// Synthetisch abgeleitet: enabled = morning.enabled || evening.enabled
+			// (Phase-2-Entscheidung #4, 2026-05-11).
+			enabled: b.reports.morning.enabled || b.reports.evening.enabled,
+			morning_time: b.reports.morning.time, // 'HH:MM'; Python liest time.fromisoformat
+			evening_time: b.reports.evening.time,
+			send_email: b.channels.email,
+			send_signal: b.channels.signal,
+			send_telegram: b.channels.telegram,
+			send_sms: b.channels.sms
+		};
+
+		// Neuer Block: alert_thresholds (Phase-2-Entscheidung #1, 2026-05-11).
+		// Nur schreiben wenn mindestens ein Feld gesetzt ist (nicht alle null).
+		const t = b.thresholds;
+		if (
+			t.gust_kmh !== null ||
+			t.precip_mm !== null ||
+			t.thunder_level !== null ||
+			t.snow_line_m !== null
+		) {
+			rc.alert_thresholds = {
+				gust_kmh: t.gust_kmh,
+				precip_mm: t.precip_mm,
+				thunder_level: t.thunder_level,
+				snow_line_m: t.snow_line_m
+			};
+		}
+
+		trip.report_config = rc;
 
 		return trip;
 	}
