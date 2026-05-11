@@ -1,0 +1,34 @@
+# Prod-Deploy Log Issue #163
+
+Datum: 2026-05-11 07:13 UTC
+Live Commit: 8544a3a (docs(claude.md): Step 3 als implementiertes Modul registrieren (Issue #163))
+Vorheriger Commit auf Prod: 9b155ff docs(issue-163): Spec-Patch fuer External-Validator F-1 + Validator-Report
+
+## Deploy-Schritte (deploy-gregor-prod.sh)
+1. git pull origin main
+2. go build -o gregor-api ./cmd/server
+3. npm install + npm run build (Frontend)
+4. systemctl restart gregor-python -> gregor-api -> gregor-frontend
+5. Smoke-Test /trips/new
+6. Live-Commit-Hash bestaetigt
+
+## Post-Deploy Healthcheck
+- /api/health: 200
+- /trips/new: 302 (Login-Redirect = normal)
+- check-gregor20.sh: OK: Alle Gregor20-Checks bestanden
+
+## Feature
+Trip-Wizard Step 3 - Wegpunkt-Vorschlaege bestaetigen
+- ProfileChart.svelte (NEU): SVG-Hoehenprofil mit Pin-Markern
+- WaypointRow.svelte (NEU): Confirm/Reject-Buttons
+- Step3Waypoints.svelte: Etappen-Liste links, rechte Confirm-UI
+- WizardState: addStage-Patch + confirmWaypoint + rejectWaypoint + canAdvanceStep3
+- fillStep3-E2E-Helper
+
+## External Validator
+- Pre-Deploy gegen Staging: AMBIGUOUS (1 FAIL F-1 per Spec-Patch geloest, 21 PASS)
+- Post-Deploy gegen Prod: laeuft (separates Artefakt)
+
+## Tests
+- Unit: 44/44 gruen (10 neu)
+- E2E: 60/60 gruen (15 neu Step 3)
