@@ -50,7 +50,25 @@ Flag as ERROR:
 - Dates are valid ISO format
 - Referenced files exist (check via Glob)
 
-### 5. Approval Status
+### 5. Acceptance-Criteria-Format (für neue Specs, Issue #194)
+
+If frontmatter `created` >= `ac_format_required_since` (read from `openspec.yaml`):
+
+REQUIRED:
+- [ ] Section `## Acceptance Criteria` present
+- [ ] At least one `**AC-N:**` entry where N is a positive integer
+- [ ] Each AC-entry has >=30 chars (Given/When/Then template recommended)
+
+Flag as ERROR:
+- Missing `## Acceptance Criteria` section
+- Section present but no `AC-N` entries
+- AC-entries are placeholders or too short
+
+Legacy specs (created < stichtag) skip this check.
+
+Stichtag wird zentral konfiguriert in `openspec.yaml` → `spec_validation.ac_format_required_since`.
+
+### 6. Approval Status
 
 - New/draft specs: `- [ ] Approved`
 - After approval: `- [x] Approved`

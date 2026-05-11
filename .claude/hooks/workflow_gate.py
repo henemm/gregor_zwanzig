@@ -26,7 +26,8 @@ from pathlib import Path
 try:
     from config_loader import (
         load_config, get_state_file_path, get_project_root,
-        get_protected_paths, get_always_allowed
+        get_protected_paths, get_always_allowed,
+        get_ac_format_required_since,
     )
     from workflow_state_multi import load_state as _load_state_v3
 except ImportError:
@@ -34,9 +35,60 @@ except ImportError:
     sys.path.insert(0, str(Path(__file__).parent))
     from config_loader import (
         load_config, get_state_file_path, get_project_root,
-        get_protected_paths, get_always_allowed
+        get_protected_paths, get_always_allowed,
+        get_ac_format_required_since,
     )
     from workflow_state_multi import load_state as _load_state_v3
+
+
+def _spec_has_valid_ac_format(spec_path: Path, stichtag: str | None) -> tuple[bool, str]:
+    """Prüft Spec auf AC-N-Format mit Stichtagsregel (Issue #194, Epic #191).
+
+    Returns (is_valid, reason):
+    - stichtag None oder Spec fehlt: (True, ...) — kein Block ohne Stichtag
+    - kein Frontmatter oder kein created-Feld: (True, "... legacy assumption")
+    - created < stichtag: (True, "legacy spec ...") — Grandfathering
+    - neue Spec ohne ``## Acceptance Criteria``: (False, ...)
+    - Section da, aber kein ``**AC-N:**``-Eintrag mit >=30 chars: (False, ...)
+    - sonst: (True, "AC-format ok (N criteria)")
+    """
+    if not stichtag:
+        return True, "no stichtag configured"
+    if not spec_path.exists():
+        return True, "spec file missing — skip check"
+
+    try:
+        content = spec_path.read_text(encoding="utf-8")
+    except OSError:
+        return True, "spec file unreadable — legacy assumption"
+
+    fm_match = re.search(r'^---\n(.*?)\n---', content, re.DOTALL)
+    if not fm_match:
+        return True, "no frontmatter — legacy assumption"
+
+    fm = fm_match.group(1)
+    created_match = re.search(r'^created:\s*(\d{4}-\d{2}-\d{2})', fm, re.MULTILINE)
+    if not created_match:
+        return True, "no created field — legacy assumption"
+
+    created = created_match.group(1)
+    if created < stichtag:
+        return True, f"legacy spec (created {created} < {stichtag})"
+
+    if "## Acceptance Criteria" not in content:
+        return False, (
+            f"new spec (created {created}) missing `## Acceptance Criteria` section"
+        )
+
+    # Mindestens 1 AC-N mit >=30 Zeichen Inhalt
+    ac_entries = re.findall(r'\*\*AC-\d+:\*\*\s*[^\n]{30,}', content)
+    if not ac_entries:
+        return False, (
+            f"new spec (created {created}) needs at least one `**AC-N:**` entry "
+            "with >=30 chars description"
+        )
+
+    return True, f"AC-format ok ({len(ac_entries)} criteria)"
 
 
 def load_state() -> dict:
@@ -249,13 +301,32 @@ def main():
     if is_always_allowed(file_path):
         sys.exit(0)
 
+    # Load state — needed for AC-Format check below as well as phase logic.
+    state = load_state()
+    phase = state.get("current_phase", "idle")
+
+    # AC-Format Hard-Block (Issue #194, Epic #191):
+    # In phase6_implement: prüfen, ob die zugehörige Spec das AC-N-Format einhält.
+    # Stichtagsregel schützt 164 Bestands-Specs.
+    # Runs BEFORE the `requires_workflow` early-exit so that the AC-Pflicht
+    # gilt für jeden Code-Edit in phase6, unabhängig von protected_paths.
+    if phase == "phase6_implement" and state.get("spec_file"):
+        spec_path = get_project_root() / state["spec_file"]
+        stichtag = get_ac_format_required_since()
+        ok, reason = _spec_has_valid_ac_format(spec_path, stichtag)
+        if not ok:
+            print(f"BLOCKED: Spec format violation — {reason}", file=sys.stderr)
+            print(f"Spec: {state['spec_file']}", file=sys.stderr)
+            print(
+                "Add `## Acceptance Criteria` section with `**AC-N:**` "
+                "Given/When/Then entries (>=30 chars each).",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+
     # Check if file requires workflow
     if not requires_workflow(file_path):
         sys.exit(0)
-
-    # Load state and check phase
-    state = load_state()
-    phase = state.get("current_phase", "idle")
 
     # Allowed phases for implementation (includes TDD RED for writing tests)
     allowed_phases = ["spec_approved", "implemented", "validated",

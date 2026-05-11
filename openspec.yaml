@@ -138,6 +138,12 @@ agents:
     model: "haiku"
     enabled: true
 
+# Spec Validation (Issue #194, Epic #191)
+# Specs mit created >= diesem Datum müssen ## Acceptance Criteria + AC-N enthalten.
+# Ältere Specs bleiben grandfathered.
+spec_validation:
+  ac_format_required_since: "2026-05-11"
+
 # Hooks Configuration
 hooks:
   # Timeout in seconds for hook execution

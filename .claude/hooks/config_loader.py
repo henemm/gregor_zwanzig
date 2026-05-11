@@ -263,6 +263,17 @@ def is_module_enabled(category: str, module: str) -> bool:
     return modules.get(category, {}).get(module, False)
 
 
+def get_ac_format_required_since() -> str | None:
+    """Returns Stichtag-Datum (YYYY-MM-DD) oder None wenn nicht konfiguriert.
+
+    Specs mit ``created >= ac_format_required_since`` müssen eine
+    ``## Acceptance Criteria``-Sektion mit ``**AC-N:**``-Einträgen enthalten
+    (Issue #194, Epic #191). Ältere Specs bleiben grandfathered.
+    """
+    config = load_config()
+    return config.get("spec_validation", {}).get("ac_format_required_since")
+
+
 def get_state_file_path() -> Path:
     """Get path to workflow state file.
 

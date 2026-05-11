@@ -41,6 +41,14 @@ tags: []
 - **Output:** [description]
 - **Side effects:** [if any]
 
+## Acceptance Criteria
+
+- **AC-1:** Given <precondition> / When <action> / Then <observable outcome>
+  - Test: (populated after /tdd-red)
+
+- **AC-2:** Given <precondition> / When <action> / Then <observable outcome>
+  - Test: (populated after /tdd-red)
+
 ## Known Limitations
 
 - [Any limitations or edge cases]
