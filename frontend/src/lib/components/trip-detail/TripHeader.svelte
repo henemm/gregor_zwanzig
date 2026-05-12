@@ -88,7 +88,7 @@
 	</nav>
 
 	<div class="title-row">
-		<h1 class="title">{trip.name}</h1>
+		<h2 class="title">{trip.name}</h2>
 		<TripStatusBadge {trip} {now} />
 	</div>
 

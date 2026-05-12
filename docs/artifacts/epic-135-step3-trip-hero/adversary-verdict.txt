@@ -1,0 +1,40 @@
+Adversary Validation — Issue #154 (Epic #135 Step 3: Trip-Hero)
+Date: 2026-05-12
+
+== Test Results ==
+Unit tests (tripHero.test.ts): 19/19 PASS
+Playwright hero (trip-detail-hero.spec.ts): 13/13 PASS
+Playwright regression tabs (#155): 10/10 PASS
+Playwright regression actions (#153): 14/14 PASS
+
+== Findings ==
+
+F001 — MEDIUM — double_h1_a11y
+  Code reference: 
+    frontend/src/lib/components/trip-detail/TripHeader.svelte:91
+    frontend/src/lib/components/trip-detail/TripHero.svelte:34
+  Description: Two <h1> elements rendered simultaneously when Overview tab is active.
+    TripHeader.svelte:91 renders <h1 class="title">{trip.name}</h1>
+    TripHero.svelte:34 renders <h1 data-testid="trip-hero-title">{trip.name}</h1>
+    Both visible on page at the same time. ARIA/accessibility best practice:
+    only one <h1> per page. Screen readers announce two page titles.
+  Spec reference: Not mentioned in Known Limitations. AC-1b only checks tagName=H1, not uniqueness.
+  Remediation: Demote TripHeader.svelte h1 to h2, or demote TripHero h1 to h2.
+    Or add to Known Limitations as explicit design decision for follow-up.
+
+F002 — LOW — datetime_string_silently_corrupts_output
+  Code reference: frontend/src/lib/utils/tripHero.ts:34
+  Description: parseStageDate(dateStr) splits on '-' and maps to Number.
+    Input "2026-05-12T10:00:00Z" → split gives ["2026","05","12T10:00:00Z"]
+    → Number("12T10:00:00Z") = NaN → Invalid Date
+    Result: formatDateRange returns "NaN. undefined NaN – NaN. undefined NaN"
+    getActiveStageDisplay/getDaysLabel return "Trip startet in NaN Tagen"
+  Impact: Low risk — Backend contract guarantees YYYY-MM-DD. No code path
+    currently passes datetime strings. sortedStageDates filters empty strings
+    but not datetime strings.
+  Spec: Known Limitations does not mention this. Spec only requires YYYY-MM-DD input.
+  Remediation: Add defensive strip in parseStageDate:
+    const clean = dateStr.split('T')[0];
+    const [y, m, d] = clean.split('-').map(Number);
+
+VERDICT: AMBIGUOUS

@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { Tabs } from 'bits-ui';
+	import TripHero from './TripHero.svelte';
+	import type { Trip } from '$lib/types';
 
 	interface Badges {
 		overview?: number;
@@ -13,9 +15,10 @@
 	interface Props {
 		initialTab?: string;
 		badges?: Badges;
+		trip?: Trip;
 	}
 
-	let { initialTab = 'overview', badges = {} }: Props = $props();
+	let { initialTab = 'overview', badges = {}, trip }: Props = $props();
 
 	const TABS = [
 		{ value: 'overview', label: 'Übersicht' },
@@ -80,7 +83,11 @@
 
 	{#each TABS as tab}
 		<Tabs.Content value={tab.value} data-testid="trip-detail-panel-{tab.value}">
-			<p class="p-4 text-sm">{PLACEHOLDERS[tab.value]}</p>
+			{#if tab.value === 'overview' && trip}
+				<TripHero {trip} />
+			{:else}
+				<p class="p-4 text-sm">{PLACEHOLDERS[tab.value]}</p>
+			{/if}
 		</Tabs.Content>
 	{/each}
 </Tabs.Root>

@@ -1,0 +1,17 @@
+
+Running 13 tests using 1 worker
+
+[1A[2K[1/13] [setup] › e2e/global.setup.ts:5:1 › authenticate and seed test data
+[1A[2K[2/13] [tests] › e2e/trip-detail-hero.spec.ts:27:2 › Issue #154 — Trip-Hero im Overview-Tab › AC-1: Hero rendert alle 6 TestIDs in fester Reihenfolge
+[1A[2K[3/13] [tests] › e2e/trip-detail-hero.spec.ts:38:2 › Issue #154 — Trip-Hero im Overview-Tab › AC-1b: Trip-Name als H1
+[1A[2K[4/13] [tests] › e2e/trip-detail-hero.spec.ts:47:2 › Issue #154 — Trip-Hero im Overview-Tab › AC-3: active Trip mit Stage 2/3 zeigt "Tag 2/3" + Stage-Name
+[1A[2K[5/13] [tests] › e2e/trip-detail-hero.spec.ts:55:2 › Issue #154 — Trip-Hero im Overview-Tab › AC-6: Trip ohne report_config zeigt "Briefings deaktiviert"
+[1A[2K[6/13] [tests] › e2e/trip-detail-hero.spec.ts:62:2 › Issue #154 — Trip-Hero im Overview-Tab › AC-10: active Trip zeigt "läuft seit Tag X"
+[1A[2K[7/13] [tests] › e2e/trip-detail-hero.spec.ts:68:2 › Issue #154 — Trip-Hero im Overview-Tab › AC-11: Date-Range zeigt Mai 2026 (kompakt)
+[1A[2K[8/13] [tests] › e2e/trip-detail-hero.spec.ts:77:2 › Issue #154 — Trip-Hero im Overview-Tab › AC-15: Reaktivität — nach "Pausieren" zeigt active-stage "Pausiert" ohne Reload
+[1A[2K[9/13] [tests] › e2e/trip-detail-hero.spec.ts:89:2 › Issue #154 — Trip-Hero im Overview-Tab › AC-16: Regressions-Guard — Tab-Navigation + Header bleiben sichtbar
+[1A[2K[10/13] [tests] › e2e/trip-detail-hero.spec.ts:101:2 › Issue #154 — Trip-Hero im Overview-Tab › AC-16b: Tab-Wechsel funktioniert nach wie vor
+[1A[2K[11/13] [tests] › e2e/trip-detail-hero.spec.ts:112:2 › Issue #154 — Trip-Hero im Overview-Tab › AC-18: Mobile-Layout — 3 Kacheln stacken auf schmalem Viewport
+[1A[2K[12/13] [tests] › e2e/trip-detail-hero.spec.ts:125:2 › Issue #154 — Trip-Hero im Overview-Tab › AC-18b: Desktop-Layout — 3 Kacheln nebeneinander auf breitem Viewport
+[1A[2K[13/13] [tests] › e2e/trip-detail-hero.spec.ts:138:2 › Issue #154 — Trip-Hero im Overview-Tab › Screenshot des Hero für visuelle Verifikation
+[1A[2K  13 passed (4.8s)

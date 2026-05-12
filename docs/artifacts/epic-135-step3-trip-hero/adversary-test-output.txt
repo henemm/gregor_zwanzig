@@ -1,0 +1,115 @@
+.....F.FF.FF..sssssssssssssss.................FF.F...................... [  5%]
+........................................................................ [ 10%]
+........................................................................ [ 15%]
+FFFFFFFFFFFFFFFFFFF....F.F.............................FF............... [ 21%]
+...........................F.................................EEEEE.EEEEE [ 26%]
+EEE...........................EEEE....................FFFssssssss....... [ 31%]
+........................................................................ [ 36%]
+................................F.........................FFFFFFF....FFF [ 42%]
+F..........................................F.FF.................ssssss.. [ 47%]
+.....................xF.s..................FF........................... [ 52%]
+........................FF..............sssssss......FFFFss............. [ 57%]
+........................................................................ [ 63%]
+........................................................................ [ 68%]
+........................................................................ [ 73%]
+......................s................................................. [ 78%]
+F.F..................................FF................................. [ 84%]
+........................................................................ [ 89%]
+.......................F....FFF......................................... [ 94%]
+........................................................................ [ 99%]
+..                                                                       [100%]
+=============================== warnings summary ===============================
+tests/tdd/test_external_validator_auth.py:169
+  /home/hem/gregor_zwanzig/tests/tdd/test_external_validator_auth.py:169: PytestUnknownMarkWarning: Unknown pytest.mark.integration - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.integration
+
+tests/tdd/test_external_validator_auth.py:204
+  /home/hem/gregor_zwanzig/tests/tdd/test_external_validator_auth.py:204: PytestUnknownMarkWarning: Unknown pytest.mark.integration - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.integration
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/e2e/test_e2e_story3_reports.py::TestWeatherFetch::test_fetch_real_weather
+FAILED tests/e2e/test_e2e_story3_reports.py::TestReportFormatting::test_email_html_contains_segments
+FAILED tests/e2e/test_e2e_story3_reports.py::TestReportFormatting::test_email_plain_text_fallback
+FAILED tests/e2e/test_e2e_story3_reports.py::TestReportFormatting::test_sms_format_compact
+FAILED tests/e2e/test_e2e_story3_reports.py::TestReportFormatting::test_sms_contains_temperature
+FAILED tests/integration/test_cli_wintersport.py::test_cli_compact_uses_pipeline
+FAILED tests/integration/test_cli_wintersport.py::test_cli_long_report_contains_all_sections
+FAILED tests/integration/test_cli_wintersport.py::test_cli_long_report_subject_unchanged
+FAILED tests/integration/test_segment_weather_cache.py::TestSegmentWeatherCacheIntegration::test_cache_reduces_api_calls
+FAILED tests/integration/test_segment_weather_cache.py::TestSegmentWeatherCacheIntegration::test_different_segments_cached_separately
+FAILED tests/integration/test_segment_weather_metrics.py::TestSegmentWeatherMetricsGeoSphere::test_geosphere_austria_basis_metrics
+FAILED tests/integration/test_segment_weather_metrics.py::TestSegmentWeatherMetricsOpenMeteo::test_openmeteo_corsica_basis_metrics
+FAILED tests/integration/test_segment_weather_metrics.py::TestE2EStory2Flow::test_e2e_segment_to_metrics
+FAILED tests/integration/test_segment_weather_metrics.py::TestSegmentWeatherMetricsExtended::test_geosphere_austria_extended_metrics
+FAILED tests/integration/test_segment_weather_metrics.py::TestSegmentWeatherMetricsExtended::test_openmeteo_corsica_extended_no_winter
+FAILED tests/integration/test_snapshot_plausibility.py::TestCoreMetricsNotNone::test_temp_min_not_none
+FAILED tests/integration/test_snapshot_plausibility.py::TestCoreMetricsNotNone::test_temp_max_not_none
+FAILED tests/integration/test_snapshot_plausibility.py::TestCoreMetricsNotNone::test_wind_max_not_none
+FAILED tests/integration/test_snapshot_plausibility.py::TestCoreMetricsNotNone::test_gust_max_not_none
+FAILED tests/integration/test_snapshot_plausibility.py::TestCoreMetricsNotNone::test_precip_sum_not_none
+FAILED tests/integration/test_snapshot_plausibility.py::TestCoreMetricsNotNone::test_cloud_avg_not_none
+FAILED tests/integration/test_snapshot_plausibility.py::TestCoreMetricsNotNone::test_humidity_avg_not_none
+FAILED tests/integration/test_snapshot_plausibility.py::TestFallbackMetricsNotNone::test_visibility_min_not_none
+FAILED tests/integration/test_snapshot_plausibility.py::TestValueRanges::test_temp_range
+FAILED tests/integration/test_snapshot_plausibility.py::TestValueRanges::test_wind_range
+FAILED tests/integration/test_snapshot_plausibility.py::TestValueRanges::test_precip_range
+FAILED tests/integration/test_snapshot_plausibility.py::TestValueRanges::test_cloud_humidity_range
+FAILED tests/integration/test_snapshot_plausibility.py::TestCrossMetricConsistency::test_gust_gte_wind
+FAILED tests/integration/test_snapshot_plausibility.py::TestFallbackMechanismActive::test_fallback_model_is_set
+FAILED tests/integration/test_trip_segment_weather.py::TestSegmentWeatherServiceGeoSphere::test_fetch_segment_weather_austria
+FAILED tests/integration/test_trip_segment_weather.py::TestSegmentWeatherServiceOpenMeteo::test_fetch_segment_weather_corsica
+FAILED tests/integration/test_wind_exposition_pipeline.py::TestSMSExposedSections::test_sms_grat_wind_label
+FAILED tests/tdd/test_compare_provider_routing.py::TestFetchForecastMallorca::test_valdemossa_returns_data
+FAILED tests/tdd/test_compare_provider_routing.py::TestFetchForecastMallorca::test_pollenca_returns_data
+FAILED tests/tdd/test_compare_provider_routing.py::TestFetchForecastAlpsRegression::test_innsbruck_returns_data
+FAILED tests/tdd/test_external_validator_auth.py::test_setup_script_idempotent_against_staging
+FAILED tests/tdd/test_geosphere_parsing.py::TestSnowgridParsing::test_snowgrid_depth_conversion
+FAILED tests/tdd/test_geosphere_parsing.py::TestSnowgridParsing::test_snowgrid_multiple_locations
+FAILED tests/tdd/test_geosphere_parsing.py::TestNwpParsing::test_nwp_temperature_passthrough
+FAILED tests/tdd/test_geosphere_parsing.py::TestNwpParsing::test_nwp_wind_vector_conversion
+FAILED tests/tdd/test_geosphere_parsing.py::TestNwpParsing::test_nwp_cloud_cover_conversion
+FAILED tests/tdd/test_geosphere_parsing.py::TestNwpParsing::test_nwp_pressure_conversion
+FAILED tests/tdd/test_geosphere_parsing.py::TestNwpParsing::test_nwp_all_conversions
+FAILED tests/tdd/test_go_api_setup.py::test_forecast_endpoint_returns_timeseries
+FAILED tests/tdd/test_go_api_setup.py::test_forecast_meta_has_provider_info
+FAILED tests/tdd/test_go_api_setup.py::test_forecast_data_has_correct_fields
+FAILED tests/tdd/test_go_api_setup.py::test_forecast_enums_serialized_as_strings
+FAILED tests/tdd/test_register_page.py::TestRegisterFormAction::test_successful_registration_redirects_to_login
+FAILED tests/tdd/test_register_page.py::TestRegisterFormAction::test_duplicate_username_shows_error
+FAILED tests/tdd/test_register_page.py::TestRegisterFormAction::test_short_password_shows_error
+FAILED tests/tdd/test_snowgrid.py::TestSnowgridPlausibility::test_all_resorts_have_data
+FAILED tests/tdd/test_stage_reorder.py::test_stage_reorder_move_down_persists
+FAILED tests/tdd/test_stage_reorder.py::test_stage_reorder_disabled_at_edges
+FAILED tests/tdd/test_trips_naming.py::test_sidebar_uses_trips_label - Failed...
+FAILED tests/tdd/test_trips_naming.py::test_homepage_uses_trip_terminology - ...
+FAILED tests/tdd/test_weather_config_api_ui.py::TestOpenMeteoNewParameters::test_provider_returns_cape
+FAILED tests/tdd/test_weather_config_api_ui.py::TestOpenMeteoNewParameters::test_provider_returns_pop
+FAILED tests/tdd/test_weather_config_api_ui.py::TestOpenMeteoNewParameters::test_provider_returns_visibility
+FAILED tests/tdd/test_weather_config_api_ui.py::TestOpenMeteoNewParameters::test_provider_returns_freezing_level
+FAILED tests/unit/test_metric_availability_probe.py::TestProbeModelAvailability::test_probe_returns_dict_with_models
+FAILED tests/unit/test_metric_availability_probe.py::TestProbeModelAvailability::test_ecmwf_has_most_params_available
+FAILED tests/unit/test_openmeteo_endpoint_routing.py::TestDedicatedEndpointReturnsValidData::test_meteofrance_endpoint_returns_hourly_data
+FAILED tests/unit/test_openmeteo_endpoint_routing.py::TestModelDataDiffersBetweenEndpoints::test_arome_differs_from_icon
+FAILED tests/unit/test_uv_air_quality.py::TestRequestBaseHostOverride::test_request_signature_accepts_base_host
+FAILED tests/unit/test_uv_air_quality.py::TestFetchForecastUvIntegration::test_forecast_has_uv_values
+FAILED tests/unit/test_uv_air_quality.py::TestFetchForecastUvIntegration::test_forecast_uv_plausible
+FAILED tests/unit/test_uv_air_quality.py::TestFetchForecastUvIntegration::test_weather_05b_fallback_still_works_with_uv
+ERROR tests/tdd/test_account_page.py::TestAccountPageExists::test_account_route_returns_200
+ERROR tests/tdd/test_account_page.py::TestAccountPageExists::test_account_page_shows_username
+ERROR tests/tdd/test_account_page.py::TestAccountPageExists::test_account_page_has_editable_fields
+ERROR tests/tdd/test_account_page.py::TestAccountPageExists::test_account_page_has_save_button
+ERROR tests/tdd/test_account_page.py::TestAccountPageExists::test_account_page_shows_member_since
+ERROR tests/tdd/test_account_page.py::TestNavigation::test_nav_has_account_link
+ERROR tests/tdd/test_account_page.py::TestNavigation::test_nav_shows_konto_label
+ERROR tests/tdd/test_account_page_extend.py::TestSignalApiKeyField::test_account_page_has_signal_api_key_field
+ERROR tests/tdd/test_account_page_extend.py::TestSignalApiKeyField::test_signal_api_key_has_password_type
+ERROR tests/tdd/test_account_page_extend.py::TestSignalApiKeyField::test_signal_api_key_placeholder
+ERROR tests/tdd/test_account_page_extend.py::TestAccountDeletion::test_account_page_has_danger_zone
+ERROR tests/tdd/test_account_page_extend.py::TestAccountDeletion::test_account_page_has_delete_button
+ERROR tests/tdd/test_account_page_extend.py::TestAccountDeletion::test_danger_zone_has_warning_text
+ERROR tests/tdd/test_change_password.py::TestPasswordChangeUI::test_account_has_password_change_section
+ERROR tests/tdd/test_change_password.py::TestPasswordChangeUI::test_account_has_old_password_field
+ERROR tests/tdd/test_change_password.py::TestPasswordChangeUI::test_account_has_new_password_fields
+ERROR tests/tdd/test_change_password.py::TestPasswordChangeEndpoint::test_change_password_endpoint_exists

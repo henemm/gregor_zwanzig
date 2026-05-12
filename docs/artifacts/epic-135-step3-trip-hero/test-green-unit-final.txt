@@ -1,0 +1,132 @@
+TAP version 13
+# Subtest: AC-2: getActiveStageDisplay — planned + 3 Tage bis Start → "startet in 3 Tagen"
+ok 1 - AC-2: getActiveStageDisplay — planned + 3 Tage bis Start → "startet in 3 Tagen"
+  ---
+  duration_ms: 1.605273
+  type: 'test'
+  ...
+# Subtest: AC-3: getActiveStageDisplay — active, Stage 2/5 "Vizzavona" → "Tag 2/5 · Vizzavona"
+ok 2 - AC-3: getActiveStageDisplay — active, Stage 2/5 "Vizzavona" → "Tag 2/5 · Vizzavona"
+  ---
+  duration_ms: 2.035462
+  type: 'test'
+  ...
+# Subtest: AC-4: getActiveStageDisplay — paused_at gesetzt → genau "Pausiert"
+ok 3 - AC-4: getActiveStageDisplay — paused_at gesetzt → genau "Pausiert"
+  ---
+  duration_ms: 0.135745
+  type: 'test'
+  ...
+# Subtest: AC-5: getActiveStageDisplay — archived + Ende vor 3 Tagen → "Beendet vor 3 Tagen"
+ok 4 - AC-5: getActiveStageDisplay — archived + Ende vor 3 Tagen → "Beendet vor 3 Tagen"
+  ---
+  duration_ms: 0.121383
+  type: 'test'
+  ...
+# Subtest: Edge: getActiveStageDisplay — planned + 1 Tag → "Trip startet morgen"
+ok 5 - Edge: getActiveStageDisplay — planned + 1 Tag → "Trip startet morgen"
+  ---
+  duration_ms: 0.116627
+  type: 'test'
+  ...
+# Subtest: Edge: getActiveStageDisplay — active ohne heutigen Stage → "Trip läuft"
+ok 6 - Edge: getActiveStageDisplay — active ohne heutigen Stage → "Trip läuft"
+  ---
+  duration_ms: 0.092198
+  type: 'test'
+  ...
+# Subtest: AC-6: getNextBriefing — kein report_config → "Briefings deaktiviert"
+ok 7 - AC-6: getNextBriefing — kein report_config → "Briefings deaktiviert"
+  ---
+  duration_ms: 0.108223
+  type: 'test'
+  ...
+# Subtest: AC-6b: getNextBriefing — enabled=false → "Briefings deaktiviert"
+ok 8 - AC-6b: getNextBriefing — enabled=false → "Briefings deaktiviert"
+  ---
+  duration_ms: 0.075034
+  type: 'test'
+  ...
+# Subtest: AC-7: getNextBriefing — morning_time=07:00, now=05:30 → "heute, 07:00"
+ok 9 - AC-7: getNextBriefing — morning_time=07:00, now=05:30 → "heute, 07:00"
+  ---
+  duration_ms: 0.253703
+  type: 'test'
+  ...
+# Subtest: AC-8: getNextBriefing — now nach evening → "morgen, 07:00"
+ok 10 - AC-8: getNextBriefing — now nach evening → "morgen, 07:00"
+  ---
+  duration_ms: 0.348025
+  type: 'test'
+  ...
+# Subtest: AC-9: getDaysLabel — planned + 3 Tage bis Start → "in 3 Tagen"
+ok 11 - AC-9: getDaysLabel — planned + 3 Tage bis Start → "in 3 Tagen"
+  ---
+  duration_ms: 0.238649
+  type: 'test'
+  ...
+# Subtest: AC-9-Edge: getDaysLabel — planned + 1 Tag → "morgen"
+ok 12 - AC-9-Edge: getDaysLabel — planned + 1 Tag → "morgen"
+  ---
+  duration_ms: 0.08605
+  type: 'test'
+  ...
+# Subtest: AC-10: getDaysLabel — active, Tag 2 → "läuft seit Tag 2"
+ok 13 - AC-10: getDaysLabel — active, Tag 2 → "läuft seit Tag 2"
+  ---
+  duration_ms: 0.076916
+  type: 'test'
+  ...
+# Subtest: AC-11: formatDateRange — 11.–14. Mai 2026 (gleicher Monat)
+ok 14 - AC-11: formatDateRange — 11.–14. Mai 2026 (gleicher Monat)
+  ---
+  duration_ms: 0.107642
+  type: 'test'
+  ...
+# Subtest: AC-12: formatDateRange — 30. Mai – 3. Juni 2026 (Monatswechsel)
+ok 15 - AC-12: formatDateRange — 30. Mai – 3. Juni 2026 (Monatswechsel)
+  ---
+  duration_ms: 0.057437
+  type: 'test'
+  ...
+# Subtest: AC-13: formatDateRange — Jahreswechsel
+ok 16 - AC-13: formatDateRange — Jahreswechsel
+  ---
+  duration_ms: 0.060191
+  type: 'test'
+  ...
+# Subtest: AC-14: formatDateRange — 1-Tages-Trip → "11. Mai 2026" (kein Bindestrich)
+ok 17 - AC-14: formatDateRange — 1-Tages-Trip → "11. Mai 2026" (kein Bindestrich)
+  ---
+  duration_ms: 0.05221
+  type: 'test'
+  ...
+# Subtest: Edge: formatDateRange — leere Stages → ""
+ok 18 - Edge: formatDateRange — leere Stages → ""
+  ---
+  duration_ms: 0.04682
+  type: 'test'
+  ...
+# Subtest: Robustheit: formatDateRange — unsortierte Stages werden intern sortiert
+ok 19 - Robustheit: formatDateRange — unsortierte Stages werden intern sortiert
+  ---
+  duration_ms: 0.052269
+  type: 'test'
+  ...
+TAP version 13
+1..1
+not ok 1 - src/lib/utils/tripHero.test.ts
+    ---
+    error:
+        name: "Error"
+        message: "No test suite found in file /home/hem/gregor_zwanzig/frontend/src/lib/utils/tripHero.test.ts"
+    ...
+1..19
+# tests 19
+# suites 0
+# pass 19
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 19.287352

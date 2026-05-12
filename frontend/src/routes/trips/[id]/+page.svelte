@@ -21,5 +21,5 @@
 
 <main class="container mx-auto max-w-5xl p-4">
 	<TripHeader {trip} onStatusChange={handleStatusChange} />
-	<TripTabs {initialTab} badges={{}} />
+	<TripTabs {initialTab} badges={{}} {trip} />
 </main>
