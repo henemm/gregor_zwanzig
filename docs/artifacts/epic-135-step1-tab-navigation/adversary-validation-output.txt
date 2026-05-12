@@ -1,0 +1,21 @@
+FAILED tests/tdd/test_design_optimierungen.py::TestSidebarBorderRemoved::test_nav_has_no_border_r_class
+FAILED tests/tdd/test_design_optimierungen.py::TestWhiteBackground::test_main_has_no_muted_bg
+FAILED tests/tdd/test_design_optimierungen.py::TestAccountFooter::test_footer_has_border_separator
+FAILED tests/tdd/test_design_optimierungen.py::TestAccountFooter::test_footer_has_user_icon
+FAILED tests/tdd/test_design_optimierungen.py::TestSettingsRenamed::test_sidebar_shows_system_status_in_dropdown
+FAILED tests/tdd/test_design_optimierungen.py::TestSettingsRenamed::test_nav_does_not_show_einstellungen
+FAILED tests/tdd/test_design_optimierungen.py::TestSettingsRenamed::test_settings_page_heading
+FAILED tests/tdd/test_register_page.py::TestRegisterPageExists::test_register_route_returns_200
+FAILED tests/tdd/test_register_page.py::TestRegisterPageExists::test_register_page_has_form_fields
+FAILED tests/tdd/test_register_page.py::TestRegisterPageExists::test_register_page_has_submit_button
+FAILED tests/tdd/test_register_page.py::TestRegisterPageExists::test_register_page_links_to_login
+FAILED tests/tdd/test_register_page.py::TestRegisterFormAction::test_successful_registration_redirects_to_login
+FAILED tests/tdd/test_register_page.py::TestRegisterFormAction::test_password_mismatch_shows_error
+FAILED tests/tdd/test_register_page.py::TestRegisterFormAction::test_duplicate_username_shows_error
+FAILED tests/tdd/test_register_page.py::TestRegisterFormAction::test_short_password_shows_error
+FAILED tests/tdd/test_snowgrid.py::TestSnowgridPlausibility::test_all_resorts_have_data
+FAILED tests/tdd/test_stage_reorder.py::test_stage_reorder_move_down_persists
+FAILED tests/tdd/test_stage_reorder.py::test_stage_reorder_disabled_at_edges
+FAILED tests/tdd/test_trips_naming.py::test_sidebar_uses_trips_label - Failed...
+FAILED tests/tdd/test_trips_naming.py::test_homepage_uses_trip_terminology - ...
+exit 0
