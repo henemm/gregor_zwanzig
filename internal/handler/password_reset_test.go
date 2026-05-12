@@ -11,6 +11,7 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/henemm/gregor-api/internal/config"
 	"github.com/henemm/gregor-api/internal/model"
 )
 
@@ -25,7 +26,7 @@ func TestForgotPasswordReturns200ForExistingUser(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "user.json"),
 		[]byte(`{"id":"alice","password_hash":"`+string(hash)+`"}`), 0644)
 
-	h := ForgotPasswordHandler(s, bcrypt.MinCost)
+	h := ForgotPasswordHandler(s, bcrypt.MinCost, config.Config{PublicHost: "https://test.example.com"})
 
 	body := `{"username":"alice"}`
 	req := httptest.NewRequest("POST", "/api/auth/forgot-password", strings.NewReader(body))
@@ -45,7 +46,7 @@ func TestForgotPasswordReturns200ForExistingUser(t *testing.T) {
 
 func TestForgotPasswordReturns200ForNonExistentUser(t *testing.T) {
 	s := newTestStore(t)
-	h := ForgotPasswordHandler(s, bcrypt.MinCost)
+	h := ForgotPasswordHandler(s, bcrypt.MinCost, config.Config{PublicHost: "https://test.example.com"})
 
 	// Non-existent user — should still return 200 (no user enumeration)
 	body := `{"username":"nobody"}`

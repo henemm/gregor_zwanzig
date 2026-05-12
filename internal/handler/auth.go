@@ -10,6 +10,8 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/henemm/gregor-api/internal/config"
+	"github.com/henemm/gregor-api/internal/mail"
 	"github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/model"
 	"github.com/henemm/gregor-api/internal/store"
@@ -152,7 +154,7 @@ func DeleteAccountHandler(s *store.Store) http.HandlerFunc {
 	}
 }
 
-func ForgotPasswordHandler(s *store.Store, bcryptCost int) http.HandlerFunc {
+func ForgotPasswordHandler(s *store.Store, bcryptCost int, cfg config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
 			Username string `json:"username"`
@@ -196,7 +198,58 @@ func ForgotPasswordHandler(s *store.Store, bcryptCost int) http.HandlerFunc {
 		}
 		s.SaveResetToken(req.Username, resetToken)
 
-		log.Printf("Password reset link: /reset-password?user=%s&token=%s", req.Username, token)
+		// --- Mail dispatch (Issue #124) ---
+		recipient := user.MailTo
+		if recipient == "" {
+			recipient = user.Email
+		}
+		if recipient == "" {
+			log.Printf("password reset: no email address for user %s — token written but not sent", req.Username)
+			w.Write([]byte(`{"status":"ok"}`))
+			return
+		}
+
+		// Select SMTP config: test users → Gmail, normal users → Resend (cfg.SMTP*)
+		var mailCfg mail.MailConfig
+		if mail.IsTestUser(req.Username) {
+			if cfg.GoogleSMTPHost == "" {
+				log.Printf("password reset: Google SMTP not configured, mail not sent for test user %s", req.Username)
+				w.Write([]byte(`{"status":"ok"}`))
+				return
+			}
+			mailCfg = mail.MailConfig{
+				Host: cfg.GoogleSMTPHost, Port: cfg.GoogleSMTPPort,
+				User: cfg.GoogleSMTPUser, Pass: cfg.GoogleSMTPPass,
+				From: cfg.GoogleSMTPUser,
+			}
+		} else {
+			if cfg.SMTPHost == "" {
+				log.Printf("password reset: SMTP not configured, mail not sent for user %s", req.Username)
+				w.Write([]byte(`{"status":"ok"}`))
+				return
+			}
+			mailCfg = mail.MailConfig{
+				Host: cfg.SMTPHost, Port: cfg.SMTPPort,
+				User: cfg.SMTPUser, Pass: cfg.SMTPPass,
+				From: cfg.SMTPFrom,
+			}
+		}
+
+		msg := mail.BuildResetMail(cfg.PublicHost, req.Username, token)
+
+		// Goroutine with timeout — endpoint must not block on SMTP.
+		go func(to string, msg mail.Mail, c mail.MailConfig, username string) {
+			done := make(chan error, 1)
+			go func() { done <- mail.Send(c, to, msg) }()
+			select {
+			case err := <-done:
+				if err != nil {
+					log.Printf("password reset: mail send failed for %s: %v", username, err)
+				}
+			case <-time.After(10 * time.Second):
+				log.Printf("password reset: mail send timeout (10s) for %s", username)
+			}
+		}(recipient, msg, mailCfg, req.Username)
 
 		w.Write([]byte(`{"status":"ok"}`))
 	}

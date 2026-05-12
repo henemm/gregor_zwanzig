@@ -1,0 +1,12 @@
+ok  	github.com/henemm/gregor-api/internal/mail	(cached)
+2026/05/12 06:22:03 password reset: mail send failed for alice: mail.Send: dial tcp 127.0.0.1:1: connect: connection refused
+2026/05/12 06:22:04 DEBUG: Selected model meteofrance_arome (1.3km) for 39.7000, 3.0000
+2026/05/12 06:22:04 password reset: no email address for user alice — token written but not sent
+--- FAIL: TestTripHandlerFound (0.00s)
+    trip_test.go:49: expected 200, got 404
+--- FAIL: TestGetTripWeatherConfigFound (0.00s)
+    weather_config_test.go:30: expected 200, got 404
+FAIL
+FAIL	github.com/henemm/gregor-api/internal/handler	0.652s
+ok  	github.com/henemm/gregor-api/internal/config	(cached)
+FAIL

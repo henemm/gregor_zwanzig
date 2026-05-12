@@ -1,0 +1,29 @@
+# github.com/henemm/gregor-api/internal/mail [github.com/henemm/gregor-api/internal/mail.test]
+internal/mail/sender_test.go:25:13: undefined: IsTestUser
+internal/mail/sender_test.go:32:9: undefined: BuildResetMail
+internal/mail/sender_test.go:42:9: undefined: BuildResetMail
+FAIL	github.com/henemm/gregor-api/internal/mail [build failed]
+# github.com/henemm/gregor-api/internal/handler [github.com/henemm/gregor-api/internal/handler.test]
+internal/handler/auth_password_reset_mail_test.go:37:3: unknown field SMTPHost in struct literal of type config.Config
+internal/handler/auth_password_reset_mail_test.go:38:3: unknown field SMTPPort in struct literal of type config.Config
+internal/handler/auth_password_reset_mail_test.go:39:3: unknown field SMTPUser in struct literal of type config.Config
+internal/handler/auth_password_reset_mail_test.go:40:3: unknown field SMTPPass in struct literal of type config.Config
+internal/handler/auth_password_reset_mail_test.go:41:3: unknown field PublicHost in struct literal of type config.Config
+internal/handler/auth_password_reset_mail_test.go:43:54: too many arguments in call to ForgotPasswordHandler
+	have (*store.Store, int, config.Config)
+	want (*store.Store, int)
+internal/handler/auth_password_reset_mail_test.go:74:3: unknown field PublicHost in struct literal of type config.Config
+internal/handler/auth_password_reset_mail_test.go:76:54: too many arguments in call to ForgotPasswordHandler
+	have (*store.Store, int, config.Config)
+	want (*store.Store, int)
+FAIL	github.com/henemm/gregor-api/internal/handler [build failed]
+FAIL
+# github.com/henemm/gregor-api/internal/mail [github.com/henemm/gregor-api/internal/mail.test]
+internal/mail/sender_integration_test.go:22:9: undefined: MailConfig
+internal/mail/sender_integration_test.go:29:9: undefined: BuildResetMail
+internal/mail/sender_integration_test.go:36:12: undefined: Send
+internal/mail/sender_test.go:25:13: undefined: IsTestUser
+internal/mail/sender_test.go:32:9: undefined: BuildResetMail
+internal/mail/sender_test.go:42:9: undefined: BuildResetMail
+FAIL	github.com/henemm/gregor-api/internal/mail [build failed]
+FAIL

@@ -19,6 +19,16 @@ type Config struct {
 	HeartbeatMorning  string `envconfig:"HEARTBEAT_MORNING" default:""`
 	HeartbeatEvening  string `envconfig:"HEARTBEAT_EVENING" default:""`
 	SchedulerTimezone string `envconfig:"SCHEDULER_TIMEZONE" default:"Europe/Vienna"`
+	SMTPHost          string `envconfig:"SMTP_HOST" default:""`
+	SMTPPort          int    `envconfig:"SMTP_PORT" default:"587"`
+	SMTPUser          string `envconfig:"SMTP_USER" default:""`
+	SMTPPass          string `envconfig:"SMTP_PASS" default:""`
+	SMTPFrom          string `envconfig:"SMTP_FROM" default:"gregor_zwanzig@henemm.com"`
+	GoogleSMTPHost    string `envconfig:"GOOGLE_SMTP_HOST" default:""`
+	GoogleSMTPPort    int    `envconfig:"GOOGLE_SMTP_PORT" default:"587"`
+	GoogleSMTPUser    string `envconfig:"GOOGLE_SMTP_USER" default:""`
+	GoogleSMTPPass    string `envconfig:"GOOGLE_SMTP_PASS" default:""`
+	PublicHost        string `envconfig:"PUBLIC_HOST" default:"https://gregor20.henemm.com"`
 }
 
 func Load() (*Config, error) {
