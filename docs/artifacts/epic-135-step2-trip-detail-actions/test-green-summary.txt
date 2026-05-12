@@ -1,0 +1,12 @@
+=== Go-Tests (Scope: Issue #153) ===
+ok  	github.com/henemm/gregor-api/internal/handler	0.011s
+
+=== Frontend Unit-Tests (tripStatus) ===
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 93.378943
+
+=== Playwright E2E-Tests (14 tests) ===
+[1A[2K  14 passed (14.7s)

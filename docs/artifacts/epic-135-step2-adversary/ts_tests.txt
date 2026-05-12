@@ -1,0 +1,70 @@
+TAP version 13
+# Subtest: AC-1: trip mit Stages umschliessend heute, keine Flags → active
+ok 1 - AC-1: trip mit Stages umschliessend heute, keine Flags → active
+  ---
+  duration_ms: 1.016975
+  type: 'test'
+  ...
+# Subtest: AC-2: archived_at + paused_at beide gesetzt → archived (Vorrang)
+ok 2 - AC-2: archived_at + paused_at beide gesetzt → archived (Vorrang)
+  ---
+  duration_ms: 0.103856
+  type: 'test'
+  ...
+# Subtest: AC-3: paused_at gesetzt + heute zwischen Stages → paused (Vorrang)
+ok 3 - AC-3: paused_at gesetzt + heute zwischen Stages → paused (Vorrang)
+  ---
+  duration_ms: 0.080702
+  type: 'test'
+  ...
+# Subtest: AC-4: trip ohne Stages + ohne Flags → planned
+ok 4 - AC-4: trip ohne Stages + ohne Flags → planned
+  ---
+  duration_ms: 0.098178
+  type: 'test'
+  ...
+# Subtest: AC-4b: Stages alle in der Zukunft → planned
+ok 5 - AC-4b: Stages alle in der Zukunft → planned
+  ---
+  duration_ms: 0.090065
+  type: 'test'
+  ...
+# Subtest: Edge: Stages alle in der Vergangenheit, keine Flags → planned
+ok 6 - Edge: Stages alle in der Vergangenheit, keine Flags → planned
+  ---
+  duration_ms: 0.082255
+  type: 'test'
+  ...
+# Subtest: Edge: nur archived_at gesetzt → archived
+ok 7 - Edge: nur archived_at gesetzt → archived
+  ---
+  duration_ms: 0.062623
+  type: 'test'
+  ...
+# Subtest: Edge: nur paused_at gesetzt → paused
+ok 8 - Edge: nur paused_at gesetzt → paused
+  ---
+  duration_ms: 0.060501
+  type: 'test'
+  ...
+# Subtest: Edge: heute = erstes Stage-Datum → active
+ok 9 - Edge: heute = erstes Stage-Datum → active
+  ---
+  duration_ms: 0.243336
+  type: 'test'
+  ...
+# Subtest: Edge: heute = letztes Stage-Datum → active
+ok 10 - Edge: heute = letztes Stage-Datum → active
+  ---
+  duration_ms: 0.3061
+  type: 'test'
+  ...
+1..10
+# tests 10
+# suites 0
+# pass 10
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 89.170257

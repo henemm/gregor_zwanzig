@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/henemm/gregor-api/internal/middleware"
@@ -182,6 +183,76 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 			})
 			return
 		}
+
+		if err := s.SaveTrip(*existing); err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(500)
+			w.Write([]byte(`{"error":"store_error"}`))
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(existing)
+	}
+}
+
+// tripStateRequest is the PATCH /api/trips/{id}/state input DTO.
+// Pointer fields distinguish "absent in body" (nil) from "explicitly sent" (non-nil),
+// so a caller can toggle paused or archived independently without touching the other.
+// See docs/specs/modules/epic_135_step2_trip_detail_actions.md §2 (Issue #153).
+type tripStateRequest struct {
+	Paused   *bool `json:"paused"`
+	Archived *bool `json:"archived"`
+}
+
+// UpdateTripStateHandler handles PATCH /api/trips/{id}/state for the
+// trip-detail pause/archive actions. Only paused_at and archived_at are
+// mutated; all other trip fields stay untouched (read-modify-write).
+func UpdateTripStateHandler(s *store.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
+		id := chi.URLParam(r, "id")
+
+		existing, err := s.LoadTrip(id)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(500)
+			w.Write([]byte(`{"error":"store_error"}`))
+			return
+		}
+		if existing == nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(404)
+			w.Write([]byte(`{"error":"not_found"}`))
+			return
+		}
+
+		var req tripStateRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(400)
+			w.Write([]byte(`{"error":"bad_request"}`))
+			return
+		}
+
+		now := time.Now().UTC()
+		if req.Paused != nil {
+			if *req.Paused {
+				t := now
+				existing.PausedAt = &t
+			} else {
+				existing.PausedAt = nil
+			}
+		}
+		if req.Archived != nil {
+			if *req.Archived {
+				t := now
+				existing.ArchivedAt = &t
+			} else {
+				existing.ArchivedAt = nil
+			}
+		}
+		existing.ID = id
 
 		if err := s.SaveTrip(*existing); err != nil {
 			w.Header().Set("Content-Type", "application/json")

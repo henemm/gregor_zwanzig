@@ -34,4 +34,5 @@ const handler: RequestHandler = async ({ request, params, cookies, url: reqUrl }
 export const GET = handler;
 export const POST = handler;
 export const PUT = handler;
+export const PATCH = handler;
 export const DELETE = handler;

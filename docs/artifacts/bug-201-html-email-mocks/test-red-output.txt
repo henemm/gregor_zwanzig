@@ -1,0 +1,103 @@
+Using CPython 3.12.3 interpreter at: /usr/bin/python3
+Creating virtual environment at: .venv
+   Building gregor-zwanzig @ file:///home/hem/gregor_zwanzig/.claude/worktrees/agent-a80fe4c253233b46a
+      Built gregor-zwanzig @ file:///home/hem/gregor_zwanzig/.claude/worktrees/agent-a80fe4c253233b46a
+Installed 73 packages in 40ms
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/agent-a80fe4c253233b46a
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 5 items
+
+tests/refactor/test_issue_201_mocks_removed.py FFFF.                     [100%]
+
+=================================== FAILURES ===================================
+______________________ test_ac1_no_mock_imports_or_calls _______________________
+
+    def test_ac1_no_mock_imports_or_calls():
+        """AC-1: 0 Mock-Imports oder MockSMTP/patch-Calls in target file."""
+        content = TARGET.read_text()
+        forbidden = [
+            "from unittest.mock",
+            "import mock",
+            "MockSMTP",
+            'patch("smtplib',
+            'patch("time',
+            "settings = Mock()",
+            "= Mock()",
+        ]
+        found = [pat for pat in forbidden if pat in content]
+>       assert found == [], f"Verbotene Mock-Patterns gefunden: {found}"
+E       AssertionError: Verbotene Mock-Patterns gefunden: ['from unittest.mock', 'MockSMTP', 'patch("smtplib', 'patch("time', 'settings = Mock()', '= Mock()']
+E       assert ['from unitte...', '= Mock()'] == []
+E         
+E         Left contains 6 more items, first extra item: 'from unittest.mock'
+E         Use -v to get more diff
+
+tests/refactor/test_issue_201_mocks_removed.py:27: AssertionError
+________________________ test_ac2_only_two_test_classes ________________________
+
+    def test_ac2_only_two_test_classes():
+        """AC-2: Genau 2 Test-Klassen (TestSubscriptionEmailGeneration + TestRealGmailE2E)."""
+        content = TARGET.read_text()
+        classes = re.findall(r"^class (Test\w+)", content, re.MULTILINE)
+>       assert sorted(classes) == sorted([
+            "TestSubscriptionEmailGeneration",
+            "TestRealGmailE2E",
+        ]), f"Erwartet [TestSubscriptionEmailGeneration, TestRealGmailE2E], got {classes}"
+E       AssertionError: Erwartet [TestSubscriptionEmailGeneration, TestRealGmailE2E], got ['TestHTMLEmailFormat', 'TestSubscriptionEmailGeneration', 'TestEndToEndEmailSending', 'TestRealGmailE2E', 'TestEmailRetryMechanism']
+E       assert ['TestEmailRe...ilGeneration'] == ['TestRealGma...ilGeneration']
+E         
+E         At index 0 diff: 'TestEmailRetryMechanism' != 'TestRealGmailE2E'
+E         Left contains 3 more items, first extra item: 'TestHTMLEmailFormat'
+E         Use -v to get more diff
+
+tests/refactor/test_issue_201_mocks_removed.py:34: AssertionError
+______________________ test_ac3_imports_point_to_services ______________________
+
+    def test_ac3_imports_point_to_services():
+        """AC-3: 0 Imports von web.pages.compare; statt dessen services.* Imports vorhanden."""
+        content = TARGET.read_text()
+>       assert "from web.pages.compare" not in content
+E       assert 'from web.pages.compare' not in '"""\nTDD-RE...ep_calls}"\n'
+E         
+E         'from web.pages.compare' is contained here:
+E           ionResult
+E           from web.pages.compare import render_comparison_html, run_comparison_for_subscription
+E         ? ++++++++++++++++++++++
+E           
+E           ...
+E         
+E         ...Full output truncated (622 lines hidden), use '-vv' to show
+
+tests/refactor/test_issue_201_mocks_removed.py:43: AssertionError
+___________________ test_ac4_collect_only_returns_two_tests ____________________
+
+    def test_ac4_collect_only_returns_two_tests():
+        """AC-4: pytest --collect-only sammelt genau 2 Tests."""
+        result = subprocess.run(
+            ["uv", "run", "pytest", "tests/tdd/test_html_email.py", "--collect-only", "-q"],
+            capture_output=True, text=True, cwd=REPO,
+        )
+        test_count = sum(
+            1 for line in result.stdout.splitlines()
+            if "::" in line and not line.startswith("=")
+        )
+>       assert test_count == 2, (
+            f"Erwartet 2 Tests, gesammelt {test_count}\nOutput:\n{result.stdout}"
+        )
+E       AssertionError: Erwartet 2 Tests, gesammelt 0
+E         Output:
+E         tests/tdd/test_html_email.py: 12
+E         
+E         
+E       assert 0 == 2
+
+tests/refactor/test_issue_201_mocks_removed.py:61: AssertionError
+=========================== short test summary info ============================
+FAILED tests/refactor/test_issue_201_mocks_removed.py::test_ac1_no_mock_imports_or_calls
+FAILED tests/refactor/test_issue_201_mocks_removed.py::test_ac2_only_two_test_classes
+FAILED tests/refactor/test_issue_201_mocks_removed.py::test_ac3_imports_point_to_services
+FAILED tests/refactor/test_issue_201_mocks_removed.py::test_ac4_collect_only_returns_two_tests
+==================== 4 failed, 1 passed in 70.13s (0:01:10) ====================
