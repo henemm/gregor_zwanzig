@@ -19,7 +19,7 @@ def run_comparison(
 ):
     from app.loader import load_all_locations
     from app.profile import ActivityProfile
-    from web.pages.compare import ComparisonEngine
+    from services.comparison_engine import ComparisonEngine
 
     all_locations = load_all_locations()
 

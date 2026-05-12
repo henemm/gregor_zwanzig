@@ -1,5 +1,5 @@
 """
-Compare Subscription Service — extracted from web.pages.compare.
+Compare Subscription Service — orchestrates subscription comparison runs.
 
 Runs comparison reports for subscriptions without NiceGUI dependency.
 Called by scheduler trigger endpoints and CLI.
@@ -36,9 +36,9 @@ def run_comparison_for_subscription(
     from app.loader import load_all_locations
     from app.user import Schedule
 
-    # Lazy import to avoid NiceGUI dependency at module level
-    from web.pages.compare import (
-        ComparisonEngine,
+    # Imports from extracted service modules (Epic #129 Phase A.1)
+    from services.comparison_engine import ComparisonEngine
+    from services.comparison_renderers import (
         render_comparison_html,
         render_comparison_text,
     )

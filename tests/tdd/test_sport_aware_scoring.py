@@ -22,7 +22,7 @@ class TestScoringProfileDispatch:
         THEN: Does not raise TypeError
         """
         from app.profile import ActivityProfile
-        from web.pages.compare import calculate_score
+        from services.comparison_scoring import calculate_score
 
         metrics = {"sunny_hours": 6, "wind_max": 10, "cloud_avg": 30}
         # Must accept profile parameter without error
@@ -35,7 +35,7 @@ class TestScoringProfileDispatch:
         WHEN: calculate_score(metrics, profile=None)
         THEN: Behaves like allgemein (snow has no effect)
         """
-        from web.pages.compare import calculate_score
+        from services.comparison_scoring import calculate_score
 
         metrics_with_snow = {"sunny_hours": 6, "wind_max": 10, "snow_depth_cm": 200, "snow_new_cm": 30}
         metrics_without_snow = {"sunny_hours": 6, "wind_max": 10}
@@ -56,7 +56,7 @@ class TestWintersportScoring:
         THEN: Score > 80
         """
         from app.profile import ActivityProfile
-        from web.pages.compare import calculate_score
+        from services.comparison_scoring import calculate_score
 
         metrics = {
             "snow_depth_cm": 100,
@@ -76,7 +76,7 @@ class TestWintersportScoring:
         THEN: Score matches current calculate_score() without profile
         """
         from app.profile import ActivityProfile
-        from web.pages.compare import calculate_score
+        from services.comparison_scoring import calculate_score
 
         metrics = {
             "snow_depth_cm": 50,
@@ -103,7 +103,7 @@ class TestWandernScoring:
         THEN: Score < 30 (dangerous conditions)
         """
         from app.profile import ActivityProfile
-        from web.pages.compare import calculate_score
+        from services.comparison_scoring import calculate_score
 
         metrics = {
             "thunder_level": "HIGH",
@@ -123,7 +123,7 @@ class TestWandernScoring:
         THEN: Score > 75 (excellent hiking conditions)
         """
         from app.profile import ActivityProfile
-        from web.pages.compare import calculate_score
+        from services.comparison_scoring import calculate_score
 
         metrics = {
             "thunder_level": "NONE",
@@ -145,7 +145,7 @@ class TestWandernScoring:
         THEN: Snow has no effect on score
         """
         from app.profile import ActivityProfile
-        from web.pages.compare import calculate_score
+        from services.comparison_scoring import calculate_score
 
         base = {"sunny_hours": 5, "wind_max": 15, "temp_min": 12}
         with_snow = {**base, "snow_depth_cm": 200, "snow_new_cm": 30}
@@ -161,7 +161,7 @@ class TestWandernScoring:
         THEN: Thunder HIGH penalizes more than MED
         """
         from app.profile import ActivityProfile
-        from web.pages.compare import calculate_score
+        from services.comparison_scoring import calculate_score
 
         base = {"sunny_hours": 5, "wind_max": 10, "temp_min": 15}
         score_none = calculate_score({**base, "thunder_level": "NONE"}, profile=ActivityProfile.WANDERN)
@@ -182,7 +182,7 @@ class TestAllgemeinScoring:
         THEN: Snow has no effect
         """
         from app.profile import ActivityProfile
-        from web.pages.compare import calculate_score
+        from services.comparison_scoring import calculate_score
 
         base = {"sunny_hours": 5, "wind_max": 15}
         with_snow = {**base, "snow_depth_cm": 200}
@@ -198,7 +198,7 @@ class TestAllgemeinScoring:
         THEN: Score is low but not zero (moderate penalties)
         """
         from app.profile import ActivityProfile
-        from web.pages.compare import calculate_score
+        from services.comparison_scoring import calculate_score
 
         metrics = {
             "precip_mm": 10,
@@ -220,7 +220,7 @@ class TestMetricExtraction:
         WHEN: Called with profile parameter
         THEN: Does not raise TypeError
         """
-        from web.pages.compare import ComparisonEngine
+        from services.comparison_engine import ComparisonEngine
         import inspect
 
         sig = inspect.signature(ComparisonEngine.run)

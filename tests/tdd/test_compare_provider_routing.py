@@ -25,7 +25,7 @@ class TestSelectProviderForLocation:
         THEN: Returns GeoSphereProvider instance
         """
         from providers.geosphere import GeoSphereProvider
-        from web.pages.compare import _select_provider_for_location
+        from services.comparison_engine import _select_provider_for_location
 
         provider = _select_provider_for_location(47.3, 11.4)
         assert isinstance(provider, GeoSphereProvider)
@@ -38,7 +38,7 @@ class TestSelectProviderForLocation:
         THEN: Returns OpenMeteoProvider instance
         """
         from providers.openmeteo import OpenMeteoProvider
-        from web.pages.compare import _select_provider_for_location
+        from services.comparison_engine import _select_provider_for_location
 
         provider = _select_provider_for_location(39.7, 2.6)
         assert isinstance(provider, OpenMeteoProvider)
@@ -50,7 +50,7 @@ class TestSelectProviderForLocation:
         THEN: Returns GeoSphereProvider (inclusive bounds)
         """
         from providers.geosphere import GeoSphereProvider
-        from web.pages.compare import _select_provider_for_location
+        from services.comparison_engine import _select_provider_for_location
 
         provider = _select_provider_for_location(45.0, 8.0)
         assert isinstance(provider, GeoSphereProvider)
@@ -63,7 +63,7 @@ class TestSelectProviderForLocation:
         THEN: Returns GeoSphereProvider (inclusive bounds)
         """
         from providers.geosphere import GeoSphereProvider
-        from web.pages.compare import _select_provider_for_location
+        from services.comparison_engine import _select_provider_for_location
 
         provider = _select_provider_for_location(50.0, 18.0)
         assert isinstance(provider, GeoSphereProvider)
@@ -76,7 +76,7 @@ class TestSelectProviderForLocation:
         THEN: Returns OpenMeteoProvider (outside GeoSphere bounds)
         """
         from providers.openmeteo import OpenMeteoProvider
-        from web.pages.compare import _select_provider_for_location
+        from services.comparison_engine import _select_provider_for_location
 
         provider = _select_provider_for_location(59.9, 10.8)
         assert isinstance(provider, OpenMeteoProvider)
@@ -96,7 +96,7 @@ class TestFetchForecastMallorca:
         THEN: Returns valid weather data (no error, raw_data present)
         """
         from app.loader import SavedLocation
-        from web.pages.compare import fetch_forecast_for_location
+        from services.comparison_engine import fetch_forecast_for_location
 
         loc = SavedLocation(
             id="test-valdemossa",
@@ -119,7 +119,7 @@ class TestFetchForecastMallorca:
         THEN: Returns valid weather data
         """
         from app.loader import SavedLocation
-        from web.pages.compare import fetch_forecast_for_location
+        from services.comparison_engine import fetch_forecast_for_location
 
         loc = SavedLocation(
             id="test-pollenca",
@@ -148,7 +148,7 @@ class TestFetchForecastAlpsRegression:
         THEN: Returns valid weather data via GeoSphere
         """
         from app.loader import SavedLocation
-        from web.pages.compare import fetch_forecast_for_location
+        from services.comparison_engine import fetch_forecast_for_location
 
         loc = SavedLocation(
             id="test-innsbruck",
