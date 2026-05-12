@@ -1,0 +1,34 @@
+=== TDD RED Phase Evidence — Issue #153 (Epic #135 Step 2) ===
+
+Drei Test-Suites geschrieben, alle FAIL weil Implementation fehlt:
+
+[1] Go-Backend-Tests: internal/handler/trip_state_test.go
+    Status: COMPILE-FAIL (RED)
+    Beweise:
+      - undefined: UpdateTripStateHandler (5x)
+      - model.Trip has no field PausedAt (4x)
+    Datei: test-red-go.txt
+
+[2] TypeScript-Unit-Tests: frontend/src/lib/utils/tripStatus.test.ts
+    Status: MODULE-NOT-FOUND (RED)
+    Beweise:
+      - ERR_MODULE_NOT_FOUND: tripStatus.ts
+      - 10 tests cannot run (file missing)
+    Datei: test-red-tripstatus.txt
+
+[3] Playwright-E2E-Tests: frontend/e2e/trip-detail-actions.spec.ts
+    Status: 14 tests discovered, alle würden FAIL (Komponenten/TestIDs nicht im DOM)
+    Beweise:
+      - data-testid="trip-detail-breadcrumb" existiert nirgendwo
+      - data-testid="trip-detail-status-badge" existiert nirgendwo
+      - data-testid="trip-detail-action-pause" existiert nirgendwo
+      - data-testid="trip-detail-action-archive" existiert nirgendwo
+      - data-testid="trip-detail-archive-confirm-dialog" existiert nirgendwo
+    Datei: test-red-playwright-list.txt
+
+Coverage AC-1 bis AC-20 aus Spec:
+  AC-1..AC-4   → tripStatus.test.ts (Pure-Function)
+  AC-5..AC-9   → trip_state_test.go (Backend-Endpoint)
+  AC-10..AC-20 → trip-detail-actions.spec.ts (E2E-UI)
+
+Bereit für Phase 6 (/5-implement): GREEN-Implementation kann starten.
