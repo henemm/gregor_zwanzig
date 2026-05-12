@@ -181,7 +181,7 @@ func (s *Scheduler) alertChecks() {
 
 func (s *Scheduler) inboundCommands() {
 	s.recordRun("inbound_command_poll", func() error {
-		return s.runForAllUsers("inbound_command_poll", "/api/scheduler/inbound-commands")
+		return s.triggerGlobalEndpoint("/api/scheduler/inbound-commands")
 	})
 }
 
@@ -219,6 +219,28 @@ func (s *Scheduler) triggerEndpointForUser(path, userID string) error {
 		return fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(body))
 	}
 	log.Printf("[scheduler] %s?user_id=%s → %d", path, userID, resp.StatusCode)
+	return nil
+}
+
+// triggerGlobalEndpoint sends a single POST to the Python trigger endpoint
+// without iterating over users. Use for global jobs (e.g. inbound polling)
+// where the endpoint operates on shared resources.
+//
+// Issue #200: inbound IMAP polling targets a shared mailbox; one tick must
+// produce exactly one IMAP login, not N (one per user).
+func (s *Scheduler) triggerGlobalEndpoint(path string) error {
+	url := s.pythonURL + path
+	resp, err := s.client.Post(url, "application/json", nil)
+	if err != nil {
+		return fmt.Errorf("HTTP error: %w", err)
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode >= 400 {
+		return fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(body))
+	}
+	log.Printf("[scheduler] %s → %d", path, resp.StatusCode)
 	return nil
 }
 

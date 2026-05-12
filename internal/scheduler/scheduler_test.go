@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -564,6 +566,140 @@ func TestStatus_JSONSerializable(t *testing.T) {
 	}
 	if len(data) < 10 {
 		t.Fatalf("JSON too short: %s", string(data))
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Issue #200 — Inbound Email Polling: ein Tick = ein IMAP-Login
+// ---------------------------------------------------------------------------
+//
+// Spec: docs/specs/bugfix/issue_200_inbound_polling_global.md
+//
+// Bug: inboundCommands() ruft den globalen IMAP-Endpoint einmal pro
+// registriertem User auf (via runForAllUsers). Folge: N redundante
+// IMAP-Logins pro 5-Min-Tick → Stalwart-Rate-Limiting bei falschem Pass.
+// Fix: genau ein POST pro Tick, unabhängig von der User-Anzahl.
+
+// testStoreWithUsers builds a store containing N additional users beyond the
+// "default" user (so ≥2 users for AC-1).
+func testStoreWithUsers(t *testing.T, extraUserIDs ...string) *store.Store {
+	t.Helper()
+	tmpDir := t.TempDir()
+	s := store.New(tmpDir, "default")
+	s.ProvisionUserDirs("default")
+	os.MkdirAll(filepath.Join(tmpDir, "users", "default"), 0755)
+	os.WriteFile(filepath.Join(tmpDir, "users", "default", "user.json"),
+		[]byte(`{"id":"default"}`), 0644)
+	for _, uid := range extraUserIDs {
+		dir := filepath.Join(tmpDir, "users", uid)
+		os.MkdirAll(dir, 0755)
+		os.WriteFile(filepath.Join(dir, "user.json"),
+			[]byte(`{"id":"`+uid+`"}`), 0644)
+	}
+	return s
+}
+
+// AC-1: inboundCommands triggert genau EINEN POST, unabhängig von User-Anzahl.
+//
+// RED-Beweis: Aktuell ruft inboundCommands() runForAllUsers auf, das einen
+// Call pro User absetzt. Mit 3 Test-Usern (default + alice + bob) wird der
+// Counter == 3 sein, nicht 1.
+func TestInboundCommandsCallsEndpointOnce(t *testing.T) {
+	var callCount atomic.Int32
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Errorf("Expected POST, got %s", r.Method)
+		}
+		if !strings.HasPrefix(r.URL.Path, "/api/scheduler/inbound-commands") {
+			t.Errorf("Expected path /api/scheduler/inbound-commands, got %s", r.URL.Path)
+		}
+		callCount.Add(1)
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, `{"status":"ok"}`)
+	}))
+	defer server.Close()
+
+	cfg := &config.Config{
+		PythonCoreURL:     server.URL,
+		SchedulerTimezone: "Europe/Vienna",
+	}
+	sched, err := New(cfg, testStoreWithUsers(t, "alice", "bob"))
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	sched.inboundCommands()
+
+	got := callCount.Load()
+	if got != 1 {
+		t.Fatalf("Expected exactly 1 POST to /api/scheduler/inbound-commands, got %d "+
+			"(bug: per-user-loop triggered N calls instead of 1 global call)", got)
+	}
+}
+
+// AC-2: Bei HTTP 200 wird lastRuns["inbound_command_poll"].Status == "ok" gesetzt.
+// Regression-Test: kann bereits GREEN sein (recordRun-Logik ist korrekt).
+func TestInboundCommandsRecordsOkStatus(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, `{"status":"ok"}`)
+	}))
+	defer server.Close()
+
+	cfg := &config.Config{
+		PythonCoreURL:     server.URL,
+		SchedulerTimezone: "Europe/Vienna",
+	}
+	sched, err := New(cfg, testStoreWithUsers(t, "alice", "bob"))
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	sched.inboundCommands()
+
+	sched.mu.RLock()
+	defer sched.mu.RUnlock()
+	lr, ok := sched.lastRuns["inbound_command_poll"]
+	if !ok {
+		t.Fatal("inboundCommands should record last run under key 'inbound_command_poll'")
+	}
+	if lr.Status != "ok" {
+		t.Fatalf("Expected status 'ok', got %q (error=%q)", lr.Status, lr.Error)
+	}
+}
+
+// AC-3: Bei HTTP 500 wird lastRuns["inbound_command_poll"].Status == "error"
+// gesetzt und Error enthält "HTTP 500".
+func TestInboundCommandsRecordsErrorStatus(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, `{"error":"boom"}`)
+	}))
+	defer server.Close()
+
+	cfg := &config.Config{
+		PythonCoreURL:     server.URL,
+		SchedulerTimezone: "Europe/Vienna",
+	}
+	sched, err := New(cfg, testStoreWithUsers(t, "alice", "bob"))
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	sched.inboundCommands()
+
+	sched.mu.RLock()
+	defer sched.mu.RUnlock()
+	lr, ok := sched.lastRuns["inbound_command_poll"]
+	if !ok {
+		t.Fatal("inboundCommands should record last run even on failure")
+	}
+	if lr.Status != "error" {
+		t.Fatalf("Expected status 'error', got %q", lr.Status)
+	}
+	if !strings.Contains(lr.Error, "HTTP 500") {
+		t.Fatalf("Expected error to contain 'HTTP 500', got %q", lr.Error)
 	}
 }
 
