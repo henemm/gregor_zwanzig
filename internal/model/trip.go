@@ -1,7 +1,5 @@
 package model
 
-import "time"
-
 type Waypoint struct {
 	ID         string  `json:"id"`
 	Name       string  `json:"name"`
@@ -30,6 +28,4 @@ type Trip struct {
 	ReportConfig     map[string]interface{} `json:"report_config,omitempty"`
 	Shortcode        string                 `json:"shortcode,omitempty"`
 	Activity         string                 `json:"activity,omitempty"`
-	PausedAt         *time.Time             `json:"paused_at,omitempty"`
-	ArchivedAt       *time.Time             `json:"archived_at,omitempty"`
 }

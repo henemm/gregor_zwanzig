@@ -87,7 +87,6 @@ func main() {
 	r.Get("/api/trips/{id}", handler.TripHandler(s))
 	r.Post("/api/trips", handler.CreateTripHandler(s))
 	r.Put("/api/trips/{id}", handler.UpdateTripHandler(s))
-	r.Patch("/api/trips/{id}/state", handler.UpdateTripStateHandler(s))
 	r.Delete("/api/trips/{id}", handler.DeleteTripHandler(s))
 	r.Get("/api/subscriptions", handler.SubscriptionsHandler(s))
 	r.Get("/api/subscriptions/{id}", handler.SubscriptionHandler(s))

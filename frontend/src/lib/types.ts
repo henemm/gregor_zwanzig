@@ -49,8 +49,6 @@ export interface Trip {
 	weather_config?: Record<string, unknown>;
 	display_config?: Record<string, unknown>;
 	report_config?: Record<string, unknown>;
-	paused_at?: string;
-	archived_at?: string;
 }
 
 export interface Subscription {
