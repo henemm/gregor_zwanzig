@@ -2,140 +2,31 @@
 Trip management page with nested Stage/Waypoint editing.
 
 Includes GPX import at stage level (Feature: gpx_import_in_trip_dialog).
+
+Hinweis (Epic #129 Phase A.2): Die Helper-Funktionen
+gpx_to_stage_data, process_bulk_gpx_uploads und
+compute_default_start_date wurden nach services/gpx_processing.py
+umgezogen, parse_dms_coordinates nach services/coordinates.py.
+Hier werden sie nur noch re-exportiert (UI-Funktionen unten nutzen
+sie weiter via lokalen Namen).
 """
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta, timezone
-from pathlib import Path
-from typing import Any, Dict, List, Optional
+from datetime import date, timedelta
+from typing import Any, Dict, List
 
 from nicegui import ui
 
 from app.loader import delete_trip, get_trips_dir, load_all_trips, load_trip, save_trip
-from app.models import EtappenConfig
 from app.trip import Stage, TimeWindow, Trip, Waypoint
-from core.natural_sort import natural_sort_key
-from web.pages.gpx_upload import (
-    compute_full_segmentation,
-    process_gpx_upload,
-    segments_to_trip,
+from services.coordinates import parse_dms_coordinates
+from services.gpx_processing import (
+    compute_default_start_date,
+    gpx_to_stage_data,
+    process_bulk_gpx_uploads,
 )
 from web.pages.weather_config import show_weather_config_dialog
 from web.pages.report_config import make_report_config_handler
-from web.utils import parse_dms_coordinates
-
-
-# Default upload directory for GPX files imported via trip dialog
-_GPX_UPLOAD_DIR = Path("data/users/default/gpx")
-
-
-def gpx_to_stage_data(
-    content: bytes,
-    filename: str,
-    stage_date: Optional[date] = None,
-    start_hour: int = 8,
-    upload_dir: Path = _GPX_UPLOAD_DIR,
-) -> dict:
-    """Parse GPX file and return a single stage dict for the trip dialog.
-
-    1 GPX file = 1 Stage with N Waypoints.
-
-    Args:
-        content: Raw GPX file bytes.
-        filename: Original filename (must end with .gpx).
-        stage_date: Date for the stage (defaults to today).
-        start_hour: Start hour of the hike (0-23).
-        upload_dir: Directory to save the GPX file.
-
-    Returns:
-        Dict with keys: name, date, waypoints[]
-    """
-    track = process_gpx_upload(content, filename, upload_dir=upload_dir)
-    d = stage_date or date.today()
-
-    config = EtappenConfig()
-    start_time = datetime(d.year, d.month, d.day, start_hour, 0, 0,
-                          tzinfo=timezone.utc)
-    segments = compute_full_segmentation(track, config, start_time)
-    trip = segments_to_trip(segments, track, d)
-
-    stage = trip.stages[0]  # 1 GPX = 1 Stage
-    return {
-        "name": stage.name,
-        "date": stage.date.isoformat(),
-        "waypoints": [
-            {
-                "id": wp.id,
-                "name": wp.name,
-                "lat": wp.lat,
-                "lon": wp.lon,
-                "elevation_m": wp.elevation_m,
-                "time_window": str(wp.time_window) if wp.time_window else None,
-            }
-            for wp in stage.waypoints
-        ],
-    }
-
-
-def compute_default_start_date(stages_data: list[dict]) -> date:
-    """Default start date for a Multi-GPX-Upload commit row.
-
-    Returns last_stage_date + 1 day if stages exist, otherwise date.today().
-    Used by the Multi-Upload-UI to pre-fill the date picker.
-
-    Spec: docs/specs/modules/gpx_multi_import.md
-    """
-    if not stages_data:
-        return date.today()
-    try:
-        last = date.fromisoformat(stages_data[-1]["date"])
-    except (KeyError, TypeError, ValueError):
-        return date.today()
-    return last + timedelta(days=1)
-
-
-def process_bulk_gpx_uploads(
-    files: list[tuple[str, bytes]],
-    start_date: date,
-    upload_dir: Path = _GPX_UPLOAD_DIR,
-) -> list[dict]:
-    """Process multiple uploaded GPX files in natural-sort order.
-
-    Behavior (per spec docs/specs/modules/gpx_multi_import.md):
-        1. Filenames are sorted via natural_sort_key (numeric-aware).
-        2. Each file is parsed individually via gpx_to_stage_data().
-        3. Dates are propagated sequentially: first valid stage gets
-           start_date, second gets start_date+1, etc.
-        4. Corrupt files are SKIPPED — they do not consume a date slot.
-           Valid files following a corrupt one still get gapless dates.
-
-    Args:
-        files: List of (filename, content_bytes) tuples as collected
-            from the multi-upload buffer (browser FileList order).
-        start_date: First valid stage's date.
-        upload_dir: Directory to save the GPX file copies.
-
-    Returns:
-        List of stage dicts (same shape as gpx_to_stage_data output),
-        in natural-sort order, with sequential gapless dates.
-
-    Note: Pure function — no ui.notify, no UI side effects. The caller
-    handles user-facing messages based on the return value.
-    """
-    sorted_files = sorted(files, key=lambda t: natural_sort_key(t[0]))
-
-    stages: list[dict] = []
-    for filename, content in sorted_files:
-        stage_date = start_date + timedelta(days=len(stages))
-        try:
-            stage_dict = gpx_to_stage_data(
-                content, filename, stage_date, upload_dir=upload_dir,
-            )
-            stages.append(stage_dict)
-        except Exception:
-            # Corrupt / unsupported file — skip, do not consume a date slot.
-            continue
-    return stages
 
 
 def make_commit_bulk_gpx_handler(

@@ -26,7 +26,7 @@ class TestGpxToStageData:
 
         EXPECTED: FAIL - gpx_to_stage_data doesn't exist yet
         """
-        from web.pages.trips import gpx_to_stage_data
+        from services.gpx_processing import gpx_to_stage_data
 
         content = GPX_TAG1.read_bytes()
         result = gpx_to_stage_data(content, "tag1.gpx", upload_dir=tmp_path)
@@ -41,7 +41,7 @@ class TestGpxToStageData:
         WHEN: gpx_to_stage_data() returns waypoints
         THEN: Each waypoint has id, name, lat, lon, elevation_m
         """
-        from web.pages.trips import gpx_to_stage_data
+        from services.gpx_processing import gpx_to_stage_data
 
         content = GPX_TAG1.read_bytes()
         result = gpx_to_stage_data(content, "tag1.gpx", upload_dir=tmp_path)
@@ -60,7 +60,7 @@ class TestGpxToStageData:
         WHEN: gpx_to_stage_data()
         THEN: Stage name is taken from GPX track
         """
-        from web.pages.trips import gpx_to_stage_data
+        from services.gpx_processing import gpx_to_stage_data
 
         content = GPX_TAG1.read_bytes()
         result = gpx_to_stage_data(content, "tag1.gpx", upload_dir=tmp_path)
@@ -78,7 +78,7 @@ class TestGpxToStageDataCustomDate:
         WHEN: gpx_to_stage_data(stage_date=2026-03-15)
         THEN: Returned date matches provided date
         """
-        from web.pages.trips import gpx_to_stage_data
+        from services.gpx_processing import gpx_to_stage_data
 
         content = GPX_TAG4.read_bytes()
         result = gpx_to_stage_data(
@@ -95,7 +95,7 @@ class TestGpxToStageDataCustomDate:
         WHEN: gpx_to_stage_data() without stage_date
         THEN: date defaults to today
         """
-        from web.pages.trips import gpx_to_stage_data
+        from services.gpx_processing import gpx_to_stage_data
 
         content = GPX_TAG4.read_bytes()
         result = gpx_to_stage_data(content, "tag4.gpx", upload_dir=tmp_path)
@@ -112,7 +112,7 @@ class TestGpxToStageDataInvalid:
         WHEN: gpx_to_stage_data()
         THEN: ValueError raised
         """
-        from web.pages.trips import gpx_to_stage_data
+        from services.gpx_processing import gpx_to_stage_data
 
         with pytest.raises(ValueError):
             gpx_to_stage_data(b"data", "track.kml", upload_dir=tmp_path)
@@ -123,7 +123,7 @@ class TestGpxToStageDataInvalid:
         WHEN: gpx_to_stage_data()
         THEN: Exception raised
         """
-        from web.pages.trips import gpx_to_stage_data
+        from services.gpx_processing import gpx_to_stage_data
 
         with pytest.raises(Exception):
             gpx_to_stage_data(b"<gpx><broken", "bad.gpx", upload_dir=tmp_path)
@@ -167,7 +167,7 @@ class TestMultiGpxImport:
 
         Real-world reproduction of Issue #127 (Browser FileList random order).
         """
-        from web.pages.trips import process_bulk_gpx_uploads
+        from services.gpx_processing import process_bulk_gpx_uploads
 
         bytes_a = self._real_bytes(REAL_GPX_TAG1)
         bytes_b = self._real_bytes(REAL_GPX_TAG2)
@@ -205,7 +205,7 @@ class TestMultiGpxImport:
         WHEN: process_bulk_gpx_uploads(...)
         THEN: Stage 1 -> 2026-05-01, Stage 2 -> 2026-05-02, Stage 3 -> 2026-05-03
         """
-        from web.pages.trips import process_bulk_gpx_uploads
+        from services.gpx_processing import process_bulk_gpx_uploads
 
         files = [
             ("a.gpx", self._real_bytes(REAL_GPX_TAG1)),
@@ -233,7 +233,7 @@ class TestMultiGpxImport:
         This is the explicit "lückenlos" requirement from the spec
         (Acceptance Criteria + R2).
         """
-        from web.pages.trips import process_bulk_gpx_uploads
+        from services.gpx_processing import process_bulk_gpx_uploads
 
         files = [
             ("a.gpx", self._real_bytes(REAL_GPX_TAG1)),
@@ -260,7 +260,7 @@ class TestMultiGpxImport:
         WHEN: process_bulk_gpx_uploads(start_date=2026-06-15)
         THEN: 1 stage with the chosen date — single-file path still works.
         """
-        from web.pages.trips import process_bulk_gpx_uploads
+        from services.gpx_processing import process_bulk_gpx_uploads
 
         files = [("only.gpx", self._real_bytes(REAL_GPX_TAG1))]
 
@@ -281,7 +281,7 @@ class TestMultiGpxImport:
         helper that is expected to be extracted as
         `compute_default_start_date(stages_data)`.
         """
-        from web.pages.trips import compute_default_start_date
+        from services.gpx_processing import compute_default_start_date
 
         stages_data = [
             {"name": "Stage A", "date": "2026-05-08", "waypoints": []},
@@ -298,7 +298,7 @@ class TestMultiGpxImport:
         WHEN: compute_default_start_date([])
         THEN: Returns date.today()
         """
-        from web.pages.trips import compute_default_start_date
+        from services.gpx_processing import compute_default_start_date
 
         result = compute_default_start_date([])
         assert result == date.today()

@@ -1,0 +1,14 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/agent-a7957b7cf5b7bba1f
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 43 items
+
+tests/refactor/test_epic_129a_2_module_structure.py .......              [ 16%]
+tests/unit/test_gpx_upload_page.py ........                              [ 34%]
+tests/unit/test_gpx_import_in_trip_dialog.py .............               [ 65%]
+tests/unit/test_etappen_config.py ....                                   [ 74%]
+tests/unit/test_trips_time_window_bugfix.py ...........                  [100%]
+
+============================== 43 passed in 0.89s ==============================

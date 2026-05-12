@@ -5,163 +5,27 @@ Upload-Widget fuer GPX-Dateien mit Validierung, Track-Zusammenfassung,
 Etappen-Konfiguration, Segment-Vorschau und Trip-Speicherung.
 
 Specs: docs/specs/modules/gpx_upload.md, etappen_config.md
+
+Hinweis (Epic #129 Phase A.2): Die Helper-Funktionen
+process_gpx_upload, compute_full_segmentation und segments_to_trip
+wurden nach services/gpx_processing.py umgezogen und werden hier
+nur noch re-exportiert (UI-Funktionen unten nutzen sie weiter).
 """
 from __future__ import annotations
 
 from datetime import date, datetime, time, timezone
-from pathlib import Path
-from typing import List, Optional
+from typing import List
 
 from nicegui import events, ui
 
 from app.loader import save_trip
 from app.models import EtappenConfig, GPXTrack, TripSegment
-from app.trip import ActivityProfile, AggregationConfig, Stage, TimeWindow, Trip, Waypoint
-from core.elevation_analysis import detect_waypoints
-from core.gpx_parser import GPXParseError, parse_gpx
-from core.hybrid_segmentation import optimize_segments
-from core.segment_builder import build_segments
-
-
-# Default upload directory
-_DEFAULT_UPLOAD_DIR = Path("data/users/default/gpx")
-
-
-def process_gpx_upload(
-    content: bytes,
-    filename: str,
-    upload_dir: Path = _DEFAULT_UPLOAD_DIR,
-) -> GPXTrack:
-    """Validate, save, and parse an uploaded GPX file.
-
-    Args:
-        content: Raw file content bytes.
-        filename: Original filename (must end with .gpx).
-        upload_dir: Directory to save the file to.
-
-    Returns:
-        Parsed GPXTrack object.
-
-    Raises:
-        ValueError: If filename does not end with .gpx.
-        GPXParseError: If GPX content is invalid.
-    """
-    if not filename.lower().endswith(".gpx"):
-        raise ValueError(f"Nur .gpx Dateien erlaubt, nicht '{filename}'")
-
-    upload_dir.mkdir(parents=True, exist_ok=True)
-    saved_path = upload_dir / filename
-
-    saved_path.write_bytes(content)
-
-    try:
-        return parse_gpx(saved_path)
-    except Exception:
-        # Clean up saved file on parse error
-        if saved_path.exists():
-            saved_path.unlink()
-        raise
-
-
-def compute_full_segmentation(
-    track: GPXTrack,
-    config: EtappenConfig,
-    start_time: datetime,
-) -> List[TripSegment]:
-    """Run complete segmentation pipeline.
-
-    Combines build_segments (1.4) + detect_waypoints (1.3) +
-    optimize_segments (1.5) into a single call.
-
-    Args:
-        track: Parsed GPX track.
-        config: Hiking speed and duration configuration.
-        start_time: Start time of the hike (UTC).
-
-    Returns:
-        List of optimized TripSegment objects.
-    """
-    segments = build_segments(track, config, start_time)
-    waypoints = detect_waypoints(track)
-    return optimize_segments(segments, waypoints, track, config)
-
-
-def segments_to_trip(
-    segments: List[TripSegment],
-    track: GPXTrack,
-    trip_date: date,
-    trip_name: Optional[str] = None,
-) -> Trip:
-    """Convert computed segments to a Trip object for weather/reports.
-
-    Creates N+1 Waypoints for N segments (one at each boundary).
-    Each waypoint gets a TimeWindow so the trip_report_scheduler
-    can create weather segments between consecutive waypoints.
-
-    Args:
-        segments: Computed TripSegment list.
-        track: Original GPX track (for name).
-        trip_date: Date of the hike.
-        trip_name: Optional override for trip name.
-
-    Returns:
-        Trip object ready for save_trip().
-    """
-    name = trip_name or track.name
-    trip_id = name.lower().replace(" ", "-")
-    trip_id = "".join(c for c in trip_id if c.isalnum() or c == "-")
-
-    waypoints: List[Waypoint] = []
-
-    for i, seg in enumerate(segments):
-        # Waypoint at segment start
-        wp_name = f"Seg {seg.segment_id} Start"
-        if i == 0:
-            wp_name = "Start"
-        elif seg.adjusted_to_waypoint and seg.waypoint:
-            wp_name = seg.waypoint.name or seg.waypoint.type.value
-
-        tw = TimeWindow(
-            start=seg.start_time.time(),
-            end=seg.start_time.time(),
-        )
-        waypoints.append(Waypoint(
-            id=f"G{i + 1}",
-            name=wp_name,
-            lat=seg.start_point.lat,
-            lon=seg.start_point.lon,
-            elevation_m=int(seg.start_point.elevation_m),
-            time_window=tw,
-        ))
-
-    # Last waypoint: end of last segment
-    last = segments[-1]
-    tw_end = TimeWindow(
-        start=last.end_time.time(),
-        end=last.end_time.time(),
-    )
-    waypoints.append(Waypoint(
-        id=f"G{len(segments) + 1}",
-        name="Ziel",
-        lat=last.end_point.lat,
-        lon=last.end_point.lon,
-        elevation_m=int(last.end_point.elevation_m),
-        time_window=tw_end,
-    ))
-
-    stage = Stage(
-        id="T1",
-        name=name,
-        date=trip_date,
-        waypoints=waypoints,
-    )
-
-    return Trip(
-        id=trip_id,
-        name=name,
-        stages=[stage],
-        aggregation=AggregationConfig.for_profile(ActivityProfile.SUMMER_TREKKING),
-    )
+from core.gpx_parser import GPXParseError
+from services.gpx_processing import (
+    compute_full_segmentation,
+    process_gpx_upload,
+    segments_to_trip,
+)
 
 
 def render_header() -> None:

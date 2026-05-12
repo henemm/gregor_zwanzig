@@ -1,5 +1,9 @@
 """
-Utility functions for the web UI.
+Coordinate parsing utilities.
+
+Pure functions for parsing geographic coordinates between formats.
+Extracted from src/web/utils.py (Epic #129 Phase A.2) to live in the
+services layer (UI-frei, server-side reuse durch API + UI).
 """
 from __future__ import annotations
 
@@ -51,25 +55,3 @@ def parse_dms_coordinates(dms_string: str) -> Optional[Tuple[float, float]]:
         return None
 
     return (lat, lon)
-
-
-def format_decimal_to_dms(lat: float, lon: float) -> str:
-    """
-    Convert decimal coordinates to DMS string.
-
-    Args:
-        lat: Latitude in decimal degrees
-        lon: Longitude in decimal degrees
-
-    Returns:
-        DMS string like "47°16'11.1"N 11°50'50.2"E"
-    """
-    def to_dms(decimal: float, is_lat: bool) -> str:
-        direction = ('N' if decimal >= 0 else 'S') if is_lat else ('E' if decimal >= 0 else 'W')
-        decimal = abs(decimal)
-        degrees = int(decimal)
-        minutes = int((decimal - degrees) * 60)
-        seconds = round((decimal - degrees - minutes / 60) * 3600, 1)
-        return f"{degrees}°{minutes}'{seconds}\"{direction}"
-
-    return f"{to_dms(lat, True)} {to_dms(lon, False)}"

@@ -12,7 +12,7 @@ from pathlib import Path
 
 from app.models import EtappenConfig
 from core.gpx_parser import parse_gpx
-from web.pages.gpx_upload import compute_full_segmentation
+from services.gpx_processing import compute_full_segmentation
 
 DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
 GPX_TAG4 = DATA_DIR / "2026-01-17_2753228656_Tag 4_ von Tossals Verds nach Lluc.gpx"

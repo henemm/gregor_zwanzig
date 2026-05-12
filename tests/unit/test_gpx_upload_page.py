@@ -13,7 +13,7 @@ import pytest
 
 from app.models import EtappenConfig
 from core.gpx_parser import parse_gpx
-from web.pages.gpx_upload import (
+from services.gpx_processing import (
     compute_full_segmentation,
     process_gpx_upload,
     segments_to_trip,

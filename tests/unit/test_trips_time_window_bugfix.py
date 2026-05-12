@@ -57,7 +57,7 @@ def _make_stage_without_time_windows() -> Stage:
 
 def _waypoint_to_stage_dict(stage: Stage) -> dict:
     """Reproduce the serialization logic from trips.py gpx_to_stage_data/edit dialog."""
-    from web.pages.trips import gpx_to_stage_data  # noqa: F401 - verify import works
+    from services.gpx_processing import gpx_to_stage_data  # noqa: F401 - verify import works
 
     # Use the same pattern as trips.py — now with time_window fix
     return {

@@ -13,7 +13,7 @@ async def parse_gpx(
     stage_date: Optional[date] = Query(None),
     start_hour: int = Query(8, ge=0, le=23),
 ):
-    from src.web.pages.trips import gpx_to_stage_data
+    from services.gpx_processing import gpx_to_stage_data
 
     content = await file.read()
     if not content:
