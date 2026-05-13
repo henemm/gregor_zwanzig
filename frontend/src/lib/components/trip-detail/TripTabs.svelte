@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Tabs } from 'bits-ui';
-	import TripHero from './TripHero.svelte';
+	import TripOverview from './TripOverview.svelte';
 	import type { Trip } from '$lib/types';
 
 	interface Badges {
@@ -84,7 +84,7 @@
 	{#each TABS as tab}
 		<Tabs.Content value={tab.value} data-testid="trip-detail-panel-{tab.value}">
 			{#if tab.value === 'overview' && trip}
-				<TripHero {trip} />
+				<TripOverview {trip} />
 			{:else}
 				<p class="p-4 text-sm">{PLACEHOLDERS[tab.value]}</p>
 			{/if}

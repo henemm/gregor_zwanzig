@@ -1,0 +1,19 @@
+
+Running 15 tests using 1 worker
+
+[1A[2K[1/15] [setup] › e2e/global.setup.ts:5:1 › authenticate and seed test data
+[1A[2K[2/15] [tests] › e2e/trip-detail-overview-left.spec.ts:37:2 › Epic #135 Step 4 — Trip-Detail Overview, linke Spalte (#156 + #157) › AC-1: TripOverview + Hero + linke + rechte Spalte sichtbar
+[1A[2K[3/15] [tests] › e2e/trip-detail-overview-left.spec.ts:48:2 › Epic #135 Step 4 — Trip-Detail Overview, linke Spalte (#156 + #157) › AC-2: FullProfile + StageList in DOM-Reihenfolge
+[1A[2K[4/15] [tests] › e2e/trip-detail-overview-left.spec.ts:64:2 › Epic #135 Step 4 — Trip-Detail Overview, linke Spalte (#156 + #157) › AC-3: SVG mit Polyline + 3 Hit-Areas für 3 Stages
+[1A[2K[5/15] [tests] › e2e/trip-detail-overview-left.spec.ts:88:2 › Epic #135 Step 4 — Trip-Detail Overview, linke Spalte (#156 + #157) › AC-4: Stage-Labels in DOM-Reihenfolge S1, S2, S3
+[1A[2K[6/15] [tests] › e2e/trip-detail-overview-left.spec.ts:109:2 › Epic #135 Step 4 — Trip-Detail Overview, linke Spalte (#156 + #157) › AC-5: Active-Stage hat Fill ohne User-Klick (heutige Stage 2)
+[1A[2K[7/15] [tests] › e2e/trip-detail-overview-left.spec.ts:135:2 › Epic #135 Step 4 — Trip-Detail Overview, linke Spalte (#156 + #157) › AC-6: Klick auf Hit-Area Stage 2 → Selected-Outline an Stage 2
+[1A[2K[8/15] [tests] › e2e/trip-detail-overview-left.spec.ts:159:2 › Epic #135 Step 4 — Trip-Detail Overview, linke Spalte (#156 + #157) › AC-7: StageList rendert 3 Cards für 3 Stages in Reihenfolge
+[1A[2K[9/15] [tests] › e2e/trip-detail-overview-left.spec.ts:181:2 › Epic #135 Step 4 — Trip-Detail Overview, linke Spalte (#156 + #157) › AC-8: Stage-Card zeigt Code + Datum + km + Hm + Waypoint-Count + Stage-Name
+[1A[2K[10/15] [tests] › e2e/trip-detail-overview-left.spec.ts:218:2 › Epic #135 Step 4 — Trip-Detail Overview, linke Spalte (#156 + #157) › AC-9: Klick auf Card 1 → data-selected="true", Outline im Profil bei Stage 1
+[1A[2K[11/15] [tests] › e2e/trip-detail-overview-left.spec.ts:252:2 › Epic #135 Step 4 — Trip-Detail Overview, linke Spalte (#156 + #157) › AC-10: Bidirektional — Klick im Profil dann auf Card → Card-Status in Sync
+[1A[2K[12/15] [tests] › e2e/trip-detail-overview-left.spec.ts:278:2 › Epic #135 Step 4 — Trip-Detail Overview, linke Spalte (#156 + #157) › AC-15: Empty-State bei stages = []
+[1A[2K[13/15] [tests] › e2e/trip-detail-overview-left.spec.ts:307:2 › Epic #135 Step 4 — Trip-Detail Overview, linke Spalte (#156 + #157) › AC-16: Step-3 TestIDs bleiben sichtbar (Regression-Guard)
+[1A[2K[14/15] [tests] › e2e/trip-detail-overview-left.spec.ts:316:2 › Epic #135 Step 4 — Trip-Detail Overview, linke Spalte (#156 + #157) › AC-17: Step-1 Tab-Liste + Step-2 Breadcrumb sichtbar
+[1A[2K[15/15] [tests] › e2e/trip-detail-overview-left.spec.ts:327:2 › Epic #135 Step 4 — Trip-Detail Overview, linke Spalte (#156 + #157) › AC-18: Active + Selected gleichzeitig möglich (heutige Stage angeklickt)
+[1A[2K  15 passed (4.4s)

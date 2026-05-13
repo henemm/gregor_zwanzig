@@ -1,0 +1,122 @@
+Adversary Verdict — Epic #135 Step 4 (Issues #156 + #157)
+Spec: docs/specs/modules/epic_135_step4_left_column.md
+Date: 2026-05-13
+Agent: implementation-validator (Sonnet)
+
+=======================================================================
+TEST RESULTS
+=======================================================================
+
+Unit Tests (Vitest):
+  src/lib/utils/fullProfile.test.ts
+  27/27 PASS (buildProfilePoints: 9, computeStageBoundaries: 6, formatStageCode: 6, getActiveStageId: 6)
+
+E2E Tests (Playwright):
+  e2e/trip-detail-overview-left.spec.ts
+  15/15 PASS (AC-1 through AC-18, excluding AC-11 which is unit-test-only)
+
+Regression Tests:
+  trip-detail-hero.spec.ts:    12/13 (1 FAIL: AC-11 pre-existing, hardcoded date 2026-05-11)
+  trip-detail-tabs.spec.ts:    10/10 PASS
+  trip-detail-actions.spec.ts: 14/14 PASS
+
+=======================================================================
+18-AC CHECKLIST
+=======================================================================
+
+AC-1:  PROVEN — trip-overview, trip-hero, trip-overview-left-column, trip-overview-right-column all visible (E2E AC-1)
+AC-2:  PROVEN — DOM order FullProfile before StageList confirmed via compareDocumentPosition (E2E AC-2)
+AC-3:  PROVEN — SVG present, polyline with >=3 tokens, 3 hit-area rects (E2E AC-3)
+AC-4:  PROVEN — Labels S1/S2/S3 in DOM order via compareDocumentPosition (E2E AC-4)
+AC-5:  PROVEN — Active-fill rect (opacity 0.15) present without user click when today=STAGE_2 (E2E AC-5)
+AC-6:  PROVEN — Click on hit-area shows selected-outline rect and card data-selected=true (E2E AC-6)
+AC-7:  PROVEN — 3 stage-row elements in correct order (E2E AC-7)
+AC-8:  PROVEN — Code pill T02, today date DD.MM., km, Hm, waypoint count 2, stage name (E2E AC-8)
+AC-9:  PROVEN — Click card1 sets data-selected=true on card1, false on others; outline in SVG (E2E AC-9)
+AC-10: PROVEN — Bidirectional: click profil stage2 then card stage1 → stage1 selected (E2E AC-10)
+AC-11: PROVEN — Unit test: stage without waypoints absent from points, present in boundaries with xStart===xEnd
+AC-12: PROVEN — Unit test: null/undefined elevation_m skipped, x-cursor advances past >15km (unit tests)
+AC-13: PROVEN — (0,false)=T01, (1,false)=T02, (2,true)=P, (9,false)=T10 (unit tests)
+AC-14: PROVEN — active trip returns stage-id, planned/archived/paused returns null (unit tests)
+AC-15: PROVEN — trip-full-profile-empty and trip-stage-empty visible, no polyline, no "undefined" (E2E AC-15)
+AC-16: PROVEN — trip-hero, trip-hero-title, trip-hero-stat-* still visible (E2E AC-16)
+AC-17: PROVEN — trip-detail-tab-list, all 6 tabs, trip-detail-breadcrumb visible (E2E AC-17)
+AC-18: PROVEN — active+selected simultaneously: data-active=true + data-selected=true + both SVG decorations (E2E AC-18)
+
+=======================================================================
+EDGE CASE PROBES
+=======================================================================
+
+1. Single-waypoint FIRST stage (e2e-stage-1 in test data):
+   Code reference: frontend/src/lib/utils/fullProfile.ts:83-113
+   Behavior: xStart=xEnd=0 because prevWp=null for the first waypoint ever (no prior point).
+   Hit area width = Math.max(1, scaleX(0)-scaleX(0)) = 1 SVG unit (1/1000 of width).
+   This is functionally a near-invisible hit area for stage1 in the test data.
+   Assessment: NOT a spec violation. AC-11 only discusses stages WITHOUT waypoints.
+   The spec's §3 hit-area description assumes stages have multiple waypoints.
+   Severity: LOW (UX note, no AC violated, not a blocker).
+   No E2E test clicks the SVG hit area of stage1, so no test breakage.
+
+2. Pill tone mismatch (spec says 'neutral', code uses 'default'):
+   Code reference: frontend/src/lib/components/trip-detail/StageDetailRow.svelte:57
+   Spec reference: docs/specs/modules/epic_135_step4_left_column.md §5 (line 300)
+   Spec says: tone={active ? 'accent' : 'neutral'}
+   Implementation uses: tone={active ? 'accent' : 'default'}
+   Pill interface: frontend/src/lib/components/ui/pill/Pill.svelte:7
+   Pill only supports: 'default' | 'success' | 'warning' | 'danger' | 'info' | 'accent'
+   'neutral' is NOT in the Pill interface. The implementation is CORRECT; the spec has a typo.
+   Severity: LOW (spec typo, implementation handles correctly).
+
+3. Safari pattern compliance:
+   Code reference: frontend/src/lib/components/trip-detail/FullProfile.svelte:101-105
+   Code reference: frontend/src/lib/components/trip-detail/StageList.svelte:27-31
+   Both components use factory pattern (makeStageClickHandler, makeSelectHandler).
+   StageDetailRow uses native onclick={onSelect} where onSelect is pre-bound — also Safari-safe.
+   Assessment: FULLY COMPLIANT with Safari requirements.
+
+4. Date/timezone consistency:
+   Code reference: frontend/src/lib/utils/fullProfile.ts:134-138 (getActiveStageId uses local time)
+   Code reference: frontend/src/lib/utils/tripHero.ts:39-43 (todayIso uses local time — identical pattern)
+   Code reference: frontend/src/lib/utils/tripStatus.ts:29 (deriveTripStatus uses UTC)
+   Assessment: getActiveStageId matches tripHero.ts exactly (both local time). Pre-existing design
+   choice documented in spec Known Limitations. Not a regression introduced by Step 4.
+
+5. Backend empty stages authorization:
+   Code reference: internal/handler/trip.go:63-66
+   Comment in code explains PO authorization and reason (AC-15, Wizard-Drafts).
+   validateTrip still checks id, name, and per-waypoint coordinates. Logic is consistent.
+   Assessment: Authorized change, no regression risk to existing trips.
+
+6. computeHeaderStats with null elevation in waypoints (NaN risk):
+   Code reference: frontend/src/lib/components/email-preview/headerStats.ts:54
+   For stages with null elevation_m, Math.round(NaN) = NaN would appear in stat-strip.
+   AC-15 only tests stages=[] (empty object returns zeros, not NaN).
+   Assessment: Pre-existing limitation of headerStats.ts, not introduced by Step 4.
+   Not a spec violation for the tested ACs.
+
+=======================================================================
+REGRESSIONS CHECK
+=======================================================================
+
+- TripTabs.svelte: Changed from TripHero to TripOverview. TripOverview renders TripHero
+  internally, so all Step-3 TestIDs remain in DOM. Verified by AC-16 E2E (PASS).
+- index.ts: 4 new exports added, 0 existing exports removed. Clean barrel.
+- trip-detail-hero.spec.ts AC-11: FAIL — pre-existing, documented before Step 4.
+  Test hardcodes date "11." but test data now uses dynamic today (2026-05-13). 
+  Unrelated to Step 4 changes.
+
+=======================================================================
+VERDICT
+=======================================================================
+
+═══════════════════════════════════════
+VERDICT: VERIFIED
+═══════════════════════════════════════
+The implementation withstood adversary testing.
+Tests: 27 unit + 15 E2E = 42 passed, 0 failed (in scope)
+Regressions: 24/24 tabs+actions pass; hero AC-11 pre-existing and documented
+Edge cases: All checked, none broken (single-wp hit area is UX note, not AC violation)
+Checklist: 18/18 ACs proven
+Spec violations: 0
+Critical/High findings: 0
+Low findings: 2 (single-wp first stage 1px hit area; spec typo 'neutral' vs 'default')

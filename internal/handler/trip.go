@@ -60,12 +60,10 @@ func validateTrip(t model.Trip) error {
 	if t.Name == "" {
 		return fmt.Errorf("name required")
 	}
-	if len(t.Stages) == 0 {
-		return fmt.Errorf("at least one stage required")
-	}
-	// Pausen-Stages (waypoints leer) sind erlaubt — Master-Spec Epic #136 §3.2.
-	// Trip mit ausschliesslich Pausen waere unsinnig, aber das verhindert die UI;
-	// der Backend-Validator beschraenkt sich auf die echten Korrektheitskriterien.
+	// Stages-leer ist zulaessig: Trip-Detail-Overview muss einen leeren Empty-State
+	// rendern koennen (Epic #135 Step 4, AC-15). Wizard-Drafts und frisch
+	// erstellte Trips landen ohne Stages im Store, bevor der User Etappen plant.
+	// Der Backend-Validator beschraenkt sich auf die echten Korrektheitskriterien.
 	for _, s := range t.Stages {
 		for _, wp := range s.Waypoints {
 			if wp.Lat == 0 && wp.Lon == 0 {

@@ -1,0 +1,49 @@
+
+Running 13 tests using 1 worker
+
+[1A[2K[1/13] [setup] › e2e/global.setup.ts:5:1 › authenticate and seed test data
+[1A[2K[2/13] [tests] › e2e/trip-detail-hero.spec.ts:27:2 › Issue #154 — Trip-Hero im Overview-Tab › AC-1: Hero rendert alle 6 TestIDs in fester Reihenfolge
+[1A[2K[3/13] [tests] › e2e/trip-detail-hero.spec.ts:38:2 › Issue #154 — Trip-Hero im Overview-Tab › AC-1b: Trip-Name als H1
+[1A[2K[4/13] [tests] › e2e/trip-detail-hero.spec.ts:47:2 › Issue #154 — Trip-Hero im Overview-Tab › AC-3: active Trip mit Stage 2/3 zeigt "Tag 2/3" + Stage-Name
+[1A[2K[5/13] [tests] › e2e/trip-detail-hero.spec.ts:55:2 › Issue #154 — Trip-Hero im Overview-Tab › AC-6: Trip ohne report_config zeigt "Briefings deaktiviert"
+[1A[2K[6/13] [tests] › e2e/trip-detail-hero.spec.ts:62:2 › Issue #154 — Trip-Hero im Overview-Tab › AC-10: active Trip zeigt "läuft seit Tag X"
+[1A[2K[7/13] [tests] › e2e/trip-detail-hero.spec.ts:68:2 › Issue #154 — Trip-Hero im Overview-Tab › AC-11: Date-Range zeigt Mai 2026 (kompakt)
+[1A[2K  1) [tests] › e2e/trip-detail-hero.spec.ts:68:2 › Issue #154 — Trip-Hero im Overview-Tab › AC-11: Date-Range zeigt Mai 2026 (kompakt) 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoContainText[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator: getByTestId('trip-hero-date-range')
+    Expected substring: [32m"1[7m1.[27m"[39m
+    Received string:    [31m"1[7m2.–14. Mai 2026[27m"[39m
+    Timeout: 5000ms
+
+    Call log:
+    [2m  - Expect "toContainText" with timeout 5000ms[22m
+    [2m  - waiting for getByTestId('trip-hero-date-range')[22m
+    [2m    9 × locator resolved to <p data-testid="trip-hero-date-range" class="trip-hero-date-range svelte-1jse58l">12.–14. Mai 2026</p>[22m
+    [2m      - unexpected value "12.–14. Mai 2026"[22m
+
+
+      71 | 		// Stages: 11.–13. Mai 2026
+      72 | 		await expect(range).toContainText('Mai 2026');
+    > 73 | 		await expect(range).toContainText('11.');
+         | 		                    ^
+      74 | 		await expect(range).toContainText('13.');
+      75 | 	});
+      76 |
+        at /home/hem/gregor_zwanzig/frontend/e2e/trip-detail-hero.spec.ts:73:23
+
+    Error Context: test-results/trip-detail-hero-Issue-154-f7666-nge-zeigt-Mai-2026-kompakt--tests/error-context.md
+
+    Error Context: test-results/trip-detail-hero-Issue-154-f7666-nge-zeigt-Mai-2026-kompakt--tests/error-context.md
+
+
+[1A[2K[8/13] [tests] › e2e/trip-detail-hero.spec.ts:77:2 › Issue #154 — Trip-Hero im Overview-Tab › AC-15: Reaktivität — nach "Pausieren" zeigt active-stage "Pausiert" ohne Reload
+[1A[2K[9/13] [tests] › e2e/trip-detail-hero.spec.ts:89:2 › Issue #154 — Trip-Hero im Overview-Tab › AC-16: Regressions-Guard — Tab-Navigation + Header bleiben sichtbar
+[1A[2K[10/13] [tests] › e2e/trip-detail-hero.spec.ts:101:2 › Issue #154 — Trip-Hero im Overview-Tab › AC-16b: Tab-Wechsel funktioniert nach wie vor
+[1A[2K[11/13] [tests] › e2e/trip-detail-hero.spec.ts:112:2 › Issue #154 — Trip-Hero im Overview-Tab › AC-18: Mobile-Layout — 3 Kacheln stacken auf schmalem Viewport
+[1A[2K[12/13] [tests] › e2e/trip-detail-hero.spec.ts:125:2 › Issue #154 — Trip-Hero im Overview-Tab › AC-18b: Desktop-Layout — 3 Kacheln nebeneinander auf breitem Viewport
+[1A[2K[13/13] [tests] › e2e/trip-detail-hero.spec.ts:138:2 › Issue #154 — Trip-Hero im Overview-Tab › Screenshot des Hero für visuelle Verifikation
+[1A[2K  1 failed
+    [tests] › e2e/trip-detail-hero.spec.ts:68:2 › Issue #154 — Trip-Hero im Overview-Tab › AC-11: Date-Range zeigt Mai 2026 (kompakt) 
+  12 passed (10.1s)

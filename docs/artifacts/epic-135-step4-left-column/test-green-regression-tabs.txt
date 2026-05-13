@@ -1,0 +1,15 @@
+
+Running 11 tests using 1 worker
+
+[1A[2K[1/11] [setup] › e2e/global.setup.ts:5:1 › authenticate and seed test data
+[1A[2K[2/11] [tests] › e2e/trip-detail-tabs.spec.ts:14:2 › Issue #155 — Trip-Detail Tab-Navigation › AC-1: 6 Tabs in fester Reihenfolge sichtbar
+[1A[2K[3/11] [tests] › e2e/trip-detail-tabs.spec.ts:25:2 › Issue #155 — Trip-Detail Tab-Navigation › AC-2: ohne URL-Hash → Übersicht ist aktiv
+[1A[2K[4/11] [tests] › e2e/trip-detail-tabs.spec.ts:32:2 › Issue #155 — Trip-Detail Tab-Navigation › AC-3: Klick auf "Etappen & Wegpunkte" wechselt aktiv + URL-Hash + Panel
+[1A[2K[5/11] [tests] › e2e/trip-detail-tabs.spec.ts:42:2 › Issue #155 — Trip-Detail Tab-Navigation › AC-4: Aufruf mit #alerts → Alerts-Tab initial aktiv
+[1A[2K[6/11] [tests] › e2e/trip-detail-tabs.spec.ts:50:2 › Issue #155 — Trip-Detail Tab-Navigation › AC-5: Aktiver Tab hat sichtbare Unterstreichung in --g-accent
+[1A[2K[7/11] [tests] › e2e/trip-detail-tabs.spec.ts:64:2 › Issue #155 — Trip-Detail Tab-Navigation › AC-6/AC-7: Badge-Slot — heute KEIN Tab hat Badge (Mock = leere badges-Prop)
+[1A[2K[8/11] [tests] › e2e/trip-detail-tabs.spec.ts:74:2 › Issue #155 — Trip-Detail Tab-Navigation › AC-8: Unbekannte Trip-ID → 404
+[1A[2K[9/11] [tests] › e2e/trip-detail-tabs.spec.ts:79:2 › Issue #155 — Trip-Detail Tab-Navigation › AC-9: Tastatur-Navigation mit ArrowRight wechselt Fokus
+[1A[2K[10/11] [tests] › e2e/trip-detail-tabs.spec.ts:90:2 › Issue #155 — Trip-Detail Tab-Navigation › Badge-Guard: badges={alerts: 0} rendert KEINE Badge (>= 1 Regel, Spec §2)
+[1A[2K[11/11] [tests] › e2e/trip-detail-tabs.spec.ts:106:2 › Issue #155 — Trip-Detail Tab-Navigation › Screenshot der Tab-Navigation für visuelle Verifikation
+[1A[2K  11 passed (3.5s)
