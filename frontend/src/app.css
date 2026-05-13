@@ -123,28 +123,125 @@
     pointer-events: none;
   }
 
-  /* === Issue #144: Btn === */
+  /* === Issue #214: Btn — Feature-Paritaet (7 Variants x 8 Sizes + States) === */
+
+  /* Base */
   [data-slot="btn"] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    font-family: var(--g-font-ui);
+    gap: var(--g-s-2, 8px);
+    font-family: inherit;
     font-weight: 500;
+    line-height: 1.2;
     border-radius: var(--g-radius-md);
+    border: 1px solid transparent;
     cursor: pointer;
-    transition: opacity 0.15s ease, box-shadow 0.15s ease;
+    user-select: none;
+    white-space: nowrap;
+    text-decoration: none;
+    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
   }
-  [data-slot="btn"][data-size="sm"] { padding: 0.25rem 0.75rem; font-size: 0.75rem; }
-  [data-slot="btn"][data-size="md"] { padding: 0.5rem 1rem;     font-size: 0.875rem; }
-  [data-slot="btn"][data-size="lg"] { padding: 0.75rem 1.5rem;  font-size: 1rem; }
-  [data-slot="btn"][data-variant="accent"]  { background: var(--g-accent);    color: var(--g-paper); border: none; }
-  [data-slot="btn"][data-variant="ghost"]   { background: transparent;        color: var(--g-ink);   border: none; }
-  [data-slot="btn"][data-variant="outline"] { background: transparent;        color: var(--g-ink);   border: 1px solid var(--g-ink); }
-  [data-slot="btn"][data-variant="ghost"]:hover   { background: var(--g-surface-1); opacity: 1; }
-  [data-slot="btn"][data-variant="outline"]:hover { background: var(--g-surface-1); opacity: 1; }
-  [data-slot="btn"]:hover                   { opacity: 0.85; }
-  [data-slot="btn"]:focus-visible           { outline: 2px solid var(--g-accent); outline-offset: 2px; }
+  [data-slot="btn"]:focus-visible {
+    outline: 2px solid var(--g-accent);
+    outline-offset: 2px;
+  }
+
+  /* Sizes */
+  [data-slot="btn"][data-size="xs"]      { padding: 4px 8px;   font-size: var(--g-text-xs, 11px); min-height: 24px; }
+  [data-slot="btn"][data-size="sm"]      { padding: 6px 10px;  font-size: var(--g-text-sm, 13px); min-height: 28px; }
+  [data-slot="btn"][data-size="md"]      { padding: 8px 14px;  font-size: var(--g-text-sm, 13px); min-height: 32px; }
+  [data-slot="btn"][data-size="lg"]      { padding: 10px 18px; font-size: var(--g-text-md, 15px); min-height: 36px; }
+  [data-slot="btn"][data-size="icon"]    { padding: 0; width: 32px; height: 32px; min-height: 32px; }
+  [data-slot="btn"][data-size="icon-xs"] { padding: 0; width: 24px; height: 24px; min-height: 24px; }
+  [data-slot="btn"][data-size="icon-sm"] { padding: 0; width: 28px; height: 28px; min-height: 28px; }
+  [data-slot="btn"][data-size="icon-lg"] { padding: 0; width: 36px; height: 36px; min-height: 36px; }
+
+  /* Variants */
+  [data-slot="btn"][data-variant="primary"] {
+    background-color: var(--g-ink);
+    color: var(--g-paper);
+    border-color: var(--g-ink);
+  }
+  [data-slot="btn"][data-variant="primary"]:hover {
+    background-color: color-mix(in oklab, var(--g-ink) 88%, var(--g-paper));
+  }
+
+  [data-slot="btn"][data-variant="accent"] {
+    background-color: var(--g-accent);
+    color: var(--g-paper);
+    border-color: var(--g-accent);
+  }
+  [data-slot="btn"][data-variant="accent"]:hover {
+    background-color: color-mix(in oklab, var(--g-accent) 90%, black);
+  }
+
+  [data-slot="btn"][data-variant="outline"] {
+    background-color: transparent;
+    color: var(--g-ink);
+    border-color: var(--g-ink);
+  }
+  [data-slot="btn"][data-variant="outline"]:hover {
+    background-color: var(--g-surface-2);
+  }
+
+  [data-slot="btn"][data-variant="ghost"] {
+    background-color: transparent;
+    color: var(--g-ink);
+    border-color: transparent;
+  }
+  [data-slot="btn"][data-variant="ghost"]:hover {
+    background-color: var(--g-surface-2);
+  }
+
+  [data-slot="btn"][data-variant="secondary"] {
+    background-color: var(--g-surface-2);
+    color: var(--g-ink);
+    border-color: var(--g-surface-2);
+  }
+  [data-slot="btn"][data-variant="secondary"]:hover {
+    background-color: color-mix(in oklab, var(--g-surface-2) 85%, var(--g-ink));
+  }
+
+  [data-slot="btn"][data-variant="destructive"] {
+    background-color: rgba(179, 58, 42, 0.10);
+    color: var(--g-danger);
+    border: 1px solid var(--g-danger);
+  }
+  [data-slot="btn"][data-variant="destructive"]:hover {
+    background-color: rgba(179, 58, 42, 0.18);
+  }
+
+  [data-slot="btn"][data-variant="link"] {
+    background-color: transparent;
+    color: var(--g-accent);
+    border-color: transparent;
+    padding-left: 0;
+    padding-right: 0;
+    text-underline-offset: 4px;
+  }
+  [data-slot="btn"][data-variant="link"]:hover {
+    text-decoration: underline;
+  }
+
+  /* Icon-Sizing pro Size */
+  [data-slot="btn"] > svg                        { width: 1rem;     height: 1rem;     flex-shrink: 0; }
+  [data-slot="btn"][data-size="xs"] > svg        { width: 0.875rem; height: 0.875rem; }
+  [data-slot="btn"][data-size="sm"] > svg        { width: 0.875rem; height: 0.875rem; }
+  [data-slot="btn"][data-size="md"] > svg        { width: 1rem;     height: 1rem;     }
+  [data-slot="btn"][data-size="lg"] > svg        { width: 1.125rem; height: 1.125rem; }
+  [data-slot="btn"][data-size="icon-xs"] > svg   { width: 0.875rem; height: 0.875rem; }
+  [data-slot="btn"][data-size="icon-sm"] > svg   { width: 1rem;     height: 1rem;     }
+  [data-slot="btn"][data-size="icon"] > svg      { width: 1rem;     height: 1rem;     }
+  [data-slot="btn"][data-size="icon-lg"] > svg   { width: 1.125rem; height: 1.125rem; }
+
+  /* Disabled-State */
+  [data-slot="btn"][disabled],
+  [data-slot="btn"][aria-disabled="true"] {
+    opacity: 0.5;
+    pointer-events: none;
+    cursor: not-allowed;
+  }
 
   /* === Issue #144: GCard === */
   [data-slot="g-card"] {

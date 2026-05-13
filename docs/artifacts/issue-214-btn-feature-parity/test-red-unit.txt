@@ -1,0 +1,106 @@
+TAP version 13
+1..1
+not ok 1 - src/lib/components/ui/btn/Btn.test.ts # time=20.95ms {
+    1..7
+    not ok 1 - Btn — Render-Pfade (button vs anchor) # time=11.20ms {
+        1..3
+        not ok 1 - AC-5a: rendert als <button>, wenn kein href gesetzt ist # time=9.45ms
+            ---
+            error:
+                name: "AssertionError"
+                message: "expected '' to be 'button' // Object.is equality"
+            at: "/home/hem/gregor_zwanzig/frontend/src/lib/components/ui/btn/Btn.test.ts:71:25"
+            actual: 
+            expected: "button"
+            ...
+        not ok 2 - AC-5b: rendert als <a>, wenn href gesetzt ist # time=0.85ms
+            ---
+            error:
+                name: "AssertionError"
+                message: "expected '' to be 'a' // Object.is equality"
+            at: "/home/hem/gregor_zwanzig/frontend/src/lib/components/ui/btn/Btn.test.ts:76:25"
+            actual: 
+            expected: "a"
+            ...
+        ok 3 - AC-10: data-slot="btn" auf beiden Render-Pfaden gesetzt # time=0.55ms
+    }
+    not ok 2 - Btn — href + disabled (WAI-ARIA-Pattern) # time=2.86ms {
+        1..4
+        ok 1 - AC-6a: href + disabled → kein href-Attribut im DOM # time=0.43ms
+        not ok 2 - AC-6b: href + disabled → aria-disabled="true" gesetzt # time=0.94ms
+            ---
+            error:
+                name: "AssertionError"
+                message: "expected null to be 'true' // Object.is equality"
+            at: "/home/hem/gregor_zwanzig/frontend/src/lib/components/ui/btn/Btn.test.ts:97:39"
+            actual: "null"
+            expected: "\"true\""
+            ...
+        not ok 3 - AC-6c: href + disabled → tabindex="-1" gesetzt # time=0.72ms
+            ---
+            error:
+                name: "AssertionError"
+                message: "expected null to be '-1' // Object.is equality"
+            at: "/home/hem/gregor_zwanzig/frontend/src/lib/components/ui/btn/Btn.test.ts:102:34"
+            actual: "null"
+            expected: "\"-1\""
+            ...
+        not ok 4 - AC-6d: href + disabled → role="link" gesetzt # time=0.66ms
+            ---
+            error:
+                name: "AssertionError"
+                message: "expected null to be 'link' // Object.is equality"
+            at: "/home/hem/gregor_zwanzig/frontend/src/lib/components/ui/btn/Btn.test.ts:107:30"
+            actual: "null"
+            expected: "\"link\""
+            ...
+    }
+    not ok 3 - Btn — <button> + disabled # time=1.57ms {
+        1..2
+        not ok 1 - AC-7: <button> + disabled → natives disabled-Attribut vorhanden # time=0.70ms
+            ---
+            error:
+                name: "AssertionError"
+                message: "expected '' to be 'button' // Object.is equality"
+            at: "/home/hem/gregor_zwanzig/frontend/src/lib/components/ui/btn/Btn.test.ts:114:25"
+            actual: 
+            expected: "button"
+            ...
+        ok 2 - AC-7b: <button> + disabled → Click-Handler feuert nicht (HTML-Native: disabled-Attribut verhindert click events) # time=0.77ms
+    }
+    not ok 4 - Btn — Default-Props # time=2.16ms {
+        1..2
+        not ok 1 - AC-3: Default-Variant ist "primary" (data-variant="primary") # time=1.70ms
+            ---
+            error:
+                name: "AssertionError"
+                message: "expected 'accent' to be 'primary' // Object.is equality"
+            at: "/home/hem/gregor_zwanzig/frontend/src/lib/components/ui/btn/Btn.test.ts:132:38"
+            actual: "accent"
+            expected: "primary"
+            ...
+        ok 2 - AC-4: Default-Size ist "md" (data-size="md") # time=0.41ms
+    }
+    ok 5 - Btn — Variants & Sizes (Loop-Tests) # time=1.09ms {
+        1..2
+        ok 1 - AC-1: alle 7 Variants werden akzeptiert und auf data-variant durchgereicht # time=0.53ms
+        ok 2 - AC-2: alle 8 Sizes werden akzeptiert und auf data-size durchgereicht # time=0.48ms
+    }
+    not ok 6 - Btn — class-Merge & children # time=1.15ms {
+        1..2
+        ok 1 - AC-12: eigene className wird auf class-Attribut gerendert # time=0.32ms
+        not ok 2 - AC-children: children-Snippet wird gerendert (Text-Content) # time=0.78ms
+            ---
+            error:
+                name: "AssertionError"
+                message: "expected '<!--[--><button data-slot=\"btn\" data-…' to contain 'Speichern'"
+            at: "/home/hem/gregor_zwanzig/frontend/src/lib/components/ui/btn/Btn.test.ts:186:16"
+            actual: "<!--[--><button data-slot=\"btn\" data-variant=\"accent\" data-size=\"md\" class=\"\"><!----></button><!--]-->"
+            expected: "Speichern"
+            ...
+    }
+    ok 7 - Btn — Type-Re-Exports # time=0.20ms {
+        1..1
+        ok 1 - exportiert die Type-Aliases BtnVariant, BtnSize, BtnProps via index.ts # time=0.17ms
+    }
+}

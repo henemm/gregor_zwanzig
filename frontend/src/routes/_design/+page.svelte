@@ -6,6 +6,7 @@
 	import { Dot } from '$lib/components/ui/dot';
 	import { TopoBg } from '$lib/components/ui/topo';
 	import { ElevSparkline } from '$lib/components/ui/elev-sparkline';
+	import Pencil from '@lucide/svelte/icons/pencil';
 </script>
 
 <div class="p-8 space-y-10">
@@ -21,6 +22,43 @@
 				<Btn variant="accent">Speichern</Btn>
 				<Btn variant="ghost">Abbrechen</Btn>
 				<Btn variant="outline" size="sm">Mehr</Btn>
+			</div>
+		</div>
+
+		<div class="space-y-3">
+			<Eyebrow>Btn — Variants</Eyebrow>
+			<div class="flex gap-2 items-center flex-wrap">
+				<Btn variant="primary"     data-testid="btn-showcase-variant-primary">Primary</Btn>
+				<Btn variant="accent"      data-testid="btn-showcase-variant-accent">Accent</Btn>
+				<Btn variant="outline"     data-testid="btn-showcase-variant-outline">Outline</Btn>
+				<Btn variant="ghost"       data-testid="btn-showcase-variant-ghost">Ghost</Btn>
+				<Btn variant="secondary"   data-testid="btn-showcase-variant-secondary">Secondary</Btn>
+				<Btn variant="destructive" data-testid="btn-showcase-variant-destructive">Delete</Btn>
+				<Btn variant="link"        data-testid="btn-showcase-variant-link">Link</Btn>
+			</div>
+		</div>
+
+		<div class="space-y-3">
+			<Eyebrow>Btn — Sizes</Eyebrow>
+			<div class="flex gap-2 items-center flex-wrap">
+				<Btn size="xs"      data-testid="btn-showcase-size-xs"><Pencil />XS</Btn>
+				<Btn size="sm"      data-testid="btn-showcase-size-sm"><Pencil />SM</Btn>
+				<Btn size="md"      data-testid="btn-showcase-size-md"><Pencil />MD</Btn>
+				<Btn size="lg"      data-testid="btn-showcase-size-lg"><Pencil />LG</Btn>
+				<Btn size="icon-xs" data-testid="btn-showcase-size-icon-xs" aria-label="Bearbeiten XS"><Pencil /></Btn>
+				<Btn size="icon-sm" data-testid="btn-showcase-size-icon-sm" aria-label="Bearbeiten SM"><Pencil /></Btn>
+				<Btn size="icon"    data-testid="btn-showcase-size-icon"    aria-label="Bearbeiten"><Pencil /></Btn>
+				<Btn size="icon-lg" data-testid="btn-showcase-size-icon-lg" aria-label="Bearbeiten LG"><Pencil /></Btn>
+			</div>
+		</div>
+
+		<div class="space-y-3">
+			<Eyebrow>Btn — States</Eyebrow>
+			<div class="flex gap-2 items-center flex-wrap">
+				<Btn disabled data-testid="btn-showcase-state-disabled">Disabled</Btn>
+				<Btn data-testid="btn-showcase-state-icon"><Pencil />With Icon</Btn>
+				<Btn href="/_design" data-testid="btn-showcase-state-link">As Link</Btn>
+				<Btn href="/_design" disabled data-testid="btn-showcase-state-link-disabled">Link Disabled</Btn>
 			</div>
 		</div>
 
