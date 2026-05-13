@@ -46,7 +46,19 @@ setup('authenticate and seed test data', async ({ page }) => {
 						{ id: 'e2e-wp-4', name: 'Ende', lat: 42.4, lon: 9.3, elevation_m: 400 }
 					]
 				}
-			]
+			],
+			report_config: {
+				enabled: true,
+				morning_time: '06:00:00',
+				evening_time: '18:00:00',
+				alert_on_changes: true
+			},
+			weather_config: {
+				metrics: ['temp_min', 'temp_max', 'wind_max', 'precip_sum']
+			},
+			aggregation: {
+				activity_profile: 'wandern'
+			}
 		}
 	});
 });

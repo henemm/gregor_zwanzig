@@ -1,0 +1,203 @@
+Adversary-Verifikation: epic_135_step5_right_column (Issues #158 + #159)
+Agent: implementation-validator (Sonnet)
+Date: 2026-05-13
+
+=============================================================================
+TEST RESULTS
+=============================================================================
+
+Unit Tests (Vitest — rightColumn.test.ts):
+  25/25 PASSED
+
+E2E Tests (Playwright — trip-detail-overview-right.spec.ts):
+  14/14 PASSED (15 total incl. setup step)
+
+Regression Suites (isolated, all pass):
+  trip-detail-overview-left.spec.ts:  15/15 PASSED
+  trip-detail-tabs.spec.ts:           11/11 PASSED
+  trip-detail-actions.spec.ts:        14/14 PASSED
+  trip-detail-hero.spec.ts:           11/13 (2 known, pre-documented: AC-6 + AC-11, Issue #204)
+
+All four suites combined: 48/50 PASSED — only the 2 pre-documented hero failures.
+
+=============================================================================
+ADVERSARY FINDINGS
+=============================================================================
+
+Finding F001
+  Severity: LOW
+  Category: anti_pattern
+  Description: `prettyLabel` is exported from rightColumn.ts and is the 5th
+    public function in the module, but it has zero direct unit tests. The
+    import statement in rightColumn.test.ts does not import `prettyLabel` at
+    all; it only appears in a comment. The E2E suite checks chip visibility by
+    testid but never asserts the human-readable label text (e.g. that
+    `temp_min` yields "Min-Temp", or that unknown keys fall back to the key
+    itself).
+  Code reference: /home/hem/gregor_zwanzig/frontend/src/lib/utils/rightColumn.test.ts:19
+    (import statement omits prettyLabel)
+  Code reference: /home/hem/gregor_zwanzig/frontend/src/lib/utils/rightColumn.ts:78
+    (prettyLabel implementation)
+  Evidence: `grep -n "prettyLabel" rightColumn.test.ts` returns only a comment
+    on line 8. No describe block for prettyLabel exists.
+  Spec reference: §1 (prettyLabel listed as 5th exported function), spec says
+    "mind. 12" unit tests — that bar is cleared (25 tests), but the 5th
+    function is untested.
+  Remediation: Add a `describe('prettyLabel', ...)` block to rightColumn.test.ts
+    covering: known key (temp_min → 'Min-Temp'), unknown key falls back to key
+    itself. 2–3 tests sufficient.
+
+Finding F002
+  Severity: LOW
+  Category: anti_pattern (test hygiene)
+  Description: The AC-3 E2E test creates a trip `e2e-no-briefing-trip` via POST
+    and never deletes it. There is no afterEach/afterAll cleanup for this
+    temporary trip. Across repeated test runs the trip accumulates in the test
+    database, which may cause ID conflicts or clutter.
+  Code reference: /home/hem/gregor_zwanzig/frontend/e2e/trip-detail-overview-right.spec.ts:85-116
+  Evidence: No DELETE /api/trips/e2e-no-briefing-trip call exists anywhere in
+    the spec file; afterAll only calls resetTripState(e2e-cockpit-test).
+  Remediation: Add cleanup in afterAll:
+    await request.delete(`/api/trips/${NO_BRIEFING_TRIP_ID}`);
+  Note: Pre-existing pattern in trip-detail-overview-left.spec.ts (AC-15 also
+    creates a temporary trip without cleanup), so this is a project-wide
+    pattern, not unique to Step 5.
+
+Finding F003
+  Severity: LOW
+  Category: anti_pattern (a11y)
+  Description: All 4 cards render as plain `<div>` (via GCard), without
+    role="region" or aria-label. The `<h3>` headings inside them have no
+    enclosing landmark. The `<aside>` container (`trip-overview-right-column`)
+    has no aria-label either.
+  Code reference: /home/hem/gregor_zwanzig/frontend/src/lib/components/ui/g-card/GCard.svelte:18
+  Code reference: /home/hem/gregor_zwanzig/frontend/src/lib/components/trip-detail/TripOverview.svelte:52
+  Evidence: GCard renders <div data-slot="g-card">. No ARIA landmark or label
+    on the aside or any card.
+  Spec reference: Spec does NOT require <section> or aria-label — this is an
+    advisory finding only, not a spec violation.
+  Remediation: Low priority; can be addressed in a future accessibility pass.
+    Adding aria-label="Briefings" / aria-label="Wetter-Metriken" etc. to each
+    GCard would improve screen-reader experience.
+
+=============================================================================
+AC CHECKLIST (18 ACs)
+=============================================================================
+
+AC-1:  PROVEN — E2E AC-1 passes; DOM order verified via compareDocumentPosition
+AC-2:  PROVEN — E2E AC-2 passes; 06:00:00, 18:00:00, "an" verified in DOM
+AC-3:  PROVEN — E2E AC-3 passes; empty state and link verified for trip without report_config
+AC-4:  PROVEN — E2E AC-4 passes; URL hash #briefings + tab active
+AC-5:  PROVEN — E2E AC-5 passes; "Wandern-Standard" in <h3>
+AC-6:  PROVEN — E2E AC-6 passes; 4 chip testids visible
+AC-7:  PROVEN — E2E AC-7 passes; URL hash #weather + tab active
+AC-8:  PROVEN — E2E AC-8 passes; "Noch keine Alerts konfiguriert" + "Konfigurieren"
+AC-9:  PROVEN — E2E AC-9 passes; URL hash #alerts + tab active
+AC-10: PROVEN — E2E AC-10 passes; 2 CTAs with href="#preview"
+AC-11: PROVEN — E2E AC-11 passes; URL hash #preview + tab active
+AC-12: PROVEN — E2E AC-12 passes; data-channel="sms" + hash #preview
+AC-13: PROVEN — Unit test AC-13a/b/c/d/e/f + Trip-ohne-aggregation all pass
+AC-14: PROVEN — Unit test AC-14a/b + edge cases (empty array, non-array, non-string) pass
+AC-15: PROVEN — Unit test AC-15a/b + partial/non-boolean edge cases pass
+AC-16: PROVEN — E2E AC-16 passes; all Step-3 + Step-4 TestIDs visible
+AC-17: PROVEN — E2E AC-17 passes; Tab-list + breadcrumb visible
+AC-18: PROVEN — Covered by AC-3 E2E test (trip without report_config shows empty state + link)
+
+=============================================================================
+TestID INVENTORY (Spec §9 — 16 IDs)
+=============================================================================
+
+All 16 TestIDs from Spec §9 are present in implementation files:
+- trip-overview-right-column: TripOverview.svelte:52
+- right-card-briefings: BriefingPreviewCard.svelte:22
+- right-card-briefings-morning: BriefingPreviewCard.svelte:30
+- right-card-briefings-evening: BriefingPreviewCard.svelte:37
+- right-card-briefings-alerts: BriefingPreviewCard.svelte:44
+- right-card-briefings-edit-link: BriefingPreviewCard.svelte:51
+- right-card-weather: WeatherMetricsPreviewCard.svelte:23
+- right-card-weather-preset: WeatherMetricsPreviewCard.svelte:25
+- right-card-weather-chip-{metric}: WeatherMetricsPreviewCard.svelte:32 (dynamic)
+- right-card-weather-edit-link: WeatherMetricsPreviewCard.svelte:39
+- right-card-alerts: AlertsPreviewCard.svelte:22
+- right-card-alerts-empty: AlertsPreviewCard.svelte:26
+- right-card-alerts-edit-link: AlertsPreviewCard.svelte:30
+- right-card-preview: PreviewCard.svelte:20
+- right-card-preview-email: PreviewCard.svelte:28
+- right-card-preview-sms: PreviewCard.svelte:36
+
+=============================================================================
+EDGE CASE PROBES
+=============================================================================
+
+1. getActiveMetrics with metrics=[] + wandern profile:
+   Returns [] (not fallback) — CORRECT per spec (explicitly configured empty list counts).
+   Code reference: rightColumn.ts:35-38
+
+2. getActiveMetrics with weather_config=null:
+   null is not accessed as Record via optional chaining: `trip.weather_config as Record|undefined`.
+   null passes through as falsy → falls back to profile default. No crash. CORRECT.
+   Code reference: rightColumn.ts:33
+
+3. getReportSchedule with enabled:true but no times:
+   isEmpty = false (shows list with "—" dashes). This matches spec template §2 exactly.
+   Code reference: BriefingPreviewCard.svelte:19
+
+4. getReportSchedule with morning_time=6 (number, not string):
+   Returns undefined. Strict typeof check prevents non-string pass-through. CORRECT.
+   Code reference: rightColumn.ts:59
+
+5. getPresetLabel with unrecognized profile:
+   Returns 'Standard-Metriken' (DEFAULT_LABEL). CORRECT per AC-13d.
+   Code reference: rightColumn.ts:20
+
+6. GCard + Pill data-testid propagation:
+   Both use {...rest} spread — data-testid attributes pass through correctly.
+   Code reference: GCard.svelte:22 / Pill component uses same pattern.
+
+7. DOM order verification in AC-1:
+   Uses compareDocumentPosition(DOCUMENT_POSITION_FOLLOWING=4) — correct bit-flag check.
+   Code reference: trip-detail-overview-right.spec.ts:60-62
+
+8. Hash navigation (AC-4/7/9/11/12):
+   All use <a href="#x"> anchor links; TripTabs hashchange listener handles tab activation.
+   No JavaScript click handler needed — spec-compliant.
+
+=============================================================================
+KNOWN FLUKE OBSERVED
+=============================================================================
+
+When running trip-detail-overview-left.spec.ts + trip-detail-actions.spec.ts +
+trip-detail-tabs.spec.ts simultaneously in one Playwright run, AC-5 of the
+left-column spec (Active-Stage Fill without user click) failed once. When run
+in isolation or paired only with the right-column spec, it passes 15/15.
+This is a pre-existing test-ordering race condition in the left-column spec
+(SVG fill depends on date-relative stage matching), not caused by Step 5.
+Not a Step-5 regression.
+
+=============================================================================
+SAFARI COMPATIBILITY
+=============================================================================
+
+No ui.button(on_click=...) patterns exist in the new Svelte components.
+The "Bearbeiten →" and CTA links are all plain <a href="#..."> anchor tags,
+which have no Safari closure-binding issues. Factory Pattern requirement does
+not apply here (no NiceGUI; this is SvelteKit).
+
+=============================================================================
+MOCK USAGE CHECK
+=============================================================================
+
+No Mock(), patch(), or MagicMock usage found in rightColumn.test.ts or
+trip-detail-overview-right.spec.ts. All tests use real data objects.
+COMPLIANT with project no-mock rule.
+
+═══════════════════════════════════════
+VERDICT: VERIFIED
+═══════════════════════════════════════
+The implementation withstood adversary testing.
+Tests: 25 unit + 14 E2E = 39 passed, 0 failed (in scope)
+Regressions: 0 new failures (2 pre-documented hero failures, Issue #204)
+Checklist: 18/18 ACs proven
+Edge cases: 8 probed, none broken
+Findings: F001 (LOW, prettyLabel untested), F002 (LOW, test cleanup),
+          F003 (LOW, a11y advisory) — no CRITICAL or HIGH findings

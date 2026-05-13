@@ -11,6 +11,10 @@
 	import TripHero from './TripHero.svelte';
 	import FullProfile from './FullProfile.svelte';
 	import StageList from './StageList.svelte';
+	import BriefingPreviewCard from './BriefingPreviewCard.svelte';
+	import WeatherMetricsPreviewCard from './WeatherMetricsPreviewCard.svelte';
+	import AlertsPreviewCard from './AlertsPreviewCard.svelte';
+	import PreviewCard from './PreviewCard.svelte';
 
 	interface Props {
 		trip: Trip;
@@ -46,7 +50,10 @@
 		</div>
 
 		<aside data-testid="trip-overview-right-column" class="trip-overview-right">
-			<!-- Platzhalter fuer #158 (Tagespanel) und #159 (Briefing-Konfigurator) -->
+			<BriefingPreviewCard {trip} />
+			<WeatherMetricsPreviewCard {trip} />
+			<AlertsPreviewCard {trip} />
+			<PreviewCard {trip} />
 		</aside>
 	</div>
 </section>
@@ -73,6 +80,9 @@
 		gap: 1.5rem;
 	}
 	.trip-overview-right {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
 		min-height: 1px;
 	}
 </style>
