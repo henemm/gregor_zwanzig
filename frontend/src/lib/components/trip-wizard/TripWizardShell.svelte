@@ -16,6 +16,7 @@
 	import { goto } from '$app/navigation';
 	import { Btn } from '$lib/components/ui/btn';
 	import { Eyebrow } from '$lib/components/ui/eyebrow';
+	import { TopoBg } from '$lib/components/ui/topo';
 	import type { WizardState } from './wizardState.svelte';
 	import Stepper from './Stepper.svelte';
 	import Step1Profile from './steps/Step1Profile.svelte';
@@ -62,12 +63,16 @@
 </script>
 
 <div data-testid="trip-wizard-shell" class="max-w-3xl mx-auto py-6 px-4">
-	<header class="mb-6 space-y-1">
-		<Eyebrow>Schritt {state.currentStep} von 4</Eyebrow>
-		<h1 class="text-2xl font-bold">Neuer Trip</h1>
-	</header>
+	<TopoBg opacity={0.4}>
+		<div class="p-6 rounded-lg mb-6">
+			<header class="space-y-1 mb-4">
+				<Eyebrow>Schritt {state.currentStep} von 4</Eyebrow>
+				<h1 class="text-2xl font-bold">Neuer Trip</h1>
+			</header>
 
-	<Stepper current={state.currentStep} labels={stepLabels} subLabels={stepSubLabels} />
+			<Stepper current={state.currentStep} labels={stepLabels} subLabels={stepSubLabels} />
+		</div>
+	</TopoBg>
 
 	<div class="min-h-[300px] mt-6">
 		{#if state.currentStep === 1}

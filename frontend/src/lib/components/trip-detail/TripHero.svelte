@@ -9,6 +9,7 @@
 		getNextBriefing,
 		getDaysLabel
 	} from '$lib/utils/tripHero';
+	import { TopoBg } from '$lib/components/ui/topo';
 
 	interface Props {
 		trip: Trip;
@@ -30,17 +31,19 @@
 	</div>
 {/snippet}
 
-<div data-testid="trip-hero" class="trip-hero">
-	<h1 data-testid="trip-hero-title" class="trip-hero-title">{trip.name}</h1>
-	{#if dateRange}
-		<p data-testid="trip-hero-date-range" class="trip-hero-date-range">{dateRange}</p>
-	{/if}
-	<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 trip-hero-stats">
-		{@render statTile('Aktive Etappe', activeStageText, 'trip-hero-stat-active-stage')}
-		{@render statTile('Nächstes Briefing', nextBriefingText, 'trip-hero-stat-next-briefing')}
-		{@render statTile('Tage bis Start', daysText, 'trip-hero-stat-days')}
+<TopoBg opacity={0.4}>
+	<div data-testid="trip-hero" class="trip-hero">
+		<h1 data-testid="trip-hero-title" class="trip-hero-title">{trip.name}</h1>
+		{#if dateRange}
+			<p data-testid="trip-hero-date-range" class="trip-hero-date-range">{dateRange}</p>
+		{/if}
+		<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 trip-hero-stats">
+			{@render statTile('Aktive Etappe', activeStageText, 'trip-hero-stat-active-stage')}
+			{@render statTile('Nächstes Briefing', nextBriefingText, 'trip-hero-stat-next-briefing')}
+			{@render statTile('Tage bis Start', daysText, 'trip-hero-stat-days')}
+		</div>
 	</div>
-</div>
+</TopoBg>
 
 <style>
 	.trip-hero {

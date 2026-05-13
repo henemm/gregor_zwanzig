@@ -2,6 +2,7 @@
 	import type { Trip, Stage, ForecastResponse } from '$lib/types.js';
 	import { api } from '$lib/api.js';
 	import { Btn } from '$lib/components/ui/btn/index.js';
+	import { TopoBg } from '$lib/components/ui/topo';
 	import ActiveTripCard from './_cockpit/ActiveTripCard.svelte';
 	import StageStrip from './_cockpit/StageStrip.svelte';
 	import BriefingsTimeline from './_cockpit/BriefingsTimeline.svelte';
@@ -106,48 +107,50 @@
 
 <div class="space-y-6">
 	<!-- Topbar -->
-	<header
-		data-testid="cockpit-topbar"
-		class="flex items-center justify-between gap-4 flex-wrap"
-	>
-		<div>
-			<p class="text-sm text-muted-foreground">{todayFormatted}</p>
-			<h1 class="text-2xl font-bold">Guten Tag</h1>
-		</div>
-		<div class="flex items-center gap-2 flex-wrap">
-			{#if briefingStatus === 'ok'}
-				<span class="text-sm text-green-600">Gesendet</span>
-			{/if}
-			{#if briefingStatus === 'error' && briefingError}
-				<span data-testid="briefing-error" class="text-sm text-destructive">
-					{briefingError}
-				</span>
-			{/if}
-			<Btn
-				data-testid="cta-test-briefing"
-				variant="outline"
-				size="sm"
-				onclick={handleTestBriefing}
-				disabled={briefingStatus === 'loading'}
-			>
-				{#if briefingStatus === 'loading'}
-					…
-				{:else if briefingStatus === 'ok'}
-					Gesendet
-				{:else}
-					Test-Briefing senden
+	<TopoBg opacity={0.3}>
+		<header
+			data-testid="cockpit-topbar"
+			class="flex items-center justify-between gap-4 flex-wrap p-6 rounded-lg"
+		>
+			<div>
+				<p class="text-sm text-muted-foreground">{todayFormatted}</p>
+				<h1 class="text-2xl font-bold">Guten Tag</h1>
+			</div>
+			<div class="flex items-center gap-2 flex-wrap">
+				{#if briefingStatus === 'ok'}
+					<span class="text-sm text-green-600">Gesendet</span>
 				{/if}
-			</Btn>
-			<Btn
-				variant="accent"
-				data-testid="cta-new-trip"
-				href="/trips/new"
-				size="sm"
-			>
-				Neuer Trip
-			</Btn>
-		</div>
-	</header>
+				{#if briefingStatus === 'error' && briefingError}
+					<span data-testid="briefing-error" class="text-sm text-destructive">
+						{briefingError}
+					</span>
+				{/if}
+				<Btn
+					data-testid="cta-test-briefing"
+					variant="outline"
+					size="sm"
+					onclick={handleTestBriefing}
+					disabled={briefingStatus === 'loading'}
+				>
+					{#if briefingStatus === 'loading'}
+						…
+					{:else if briefingStatus === 'ok'}
+						Gesendet
+					{:else}
+						Test-Briefing senden
+					{/if}
+				</Btn>
+				<Btn
+					variant="accent"
+					data-testid="cta-new-trip"
+					href="/trips/new"
+					size="sm"
+				>
+					Neuer Trip
+				</Btn>
+			</div>
+		</header>
+	</TopoBg>
 
 	<!-- Hero: Aktiver Trip oder Leer-State -->
 	{#if activeTrip && todayStage}
