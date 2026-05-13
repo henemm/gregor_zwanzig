@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Location } from '$lib/types.js';
-	import { Button } from '$lib/components/ui/button/index.js';
+	import { Btn } from '$lib/components/ui/btn/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 
@@ -159,7 +159,7 @@
 	</div>
 
 	<div class="flex justify-end gap-2 pt-2">
-		<Button variant="outline" onclick={oncancel}>Abbrechen</Button>
-		<Button onclick={save}>Speichern</Button>
+		<Btn variant="outline" onclick={oncancel}>Abbrechen</Btn>
+		<Btn variant="primary" onclick={save}>Speichern</Btn>
 	</div>
 </div>

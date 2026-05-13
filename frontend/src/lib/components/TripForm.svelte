@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Trip, Stage, Waypoint } from '$lib/types.js';
-	import { Button } from '$lib/components/ui/button/index.js';
+	import { Btn } from '$lib/components/ui/btn/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
@@ -85,7 +85,7 @@
 	<div class="space-y-3">
 		<div class="flex items-center justify-between">
 			<h3 class="text-sm font-medium">Etappen</h3>
-			<Button variant="outline" size="sm" onclick={addStage}>+ Etappe hinzufügen</Button>
+			<Btn variant="outline" size="sm" onclick={addStage}>+ Etappe hinzufügen</Btn>
 		</div>
 
 		{#each stages as stage, si}
@@ -98,7 +98,7 @@
 							class="flex-1"
 						/>
 						<Input type="date" bind:value={stage.date} class="w-40" />
-						<Button variant="ghost" size="sm" onclick={() => removeStage(si)}>×</Button>
+						<Btn variant="ghost" size="sm" onclick={() => removeStage(si)}>×</Btn>
 					</div>
 
 					<div class="ml-4 space-y-1">
@@ -130,10 +130,10 @@
 									bind:value={wp.elevation_m}
 									class="w-24"
 								/>
-								<Button variant="ghost" size="sm" onclick={() => removeWaypoint(si, wi)}>×</Button>
+								<Btn variant="ghost" size="sm" onclick={() => removeWaypoint(si, wi)}>×</Btn>
 							</div>
 						{/each}
-						<Button variant="outline" size="sm" onclick={() => addWaypoint(si)}>+ Wegpunkt</Button>
+						<Btn variant="outline" size="sm" onclick={() => addWaypoint(si)}>+ Wegpunkt</Btn>
 					</div>
 				</div>
 			</Card.Root>
@@ -141,7 +141,7 @@
 	</div>
 
 	<div class="flex justify-end gap-2 pt-2">
-		<Button variant="outline" onclick={oncancel}>Abbrechen</Button>
-		<Button onclick={save}>Speichern</Button>
+		<Btn variant="outline" onclick={oncancel}>Abbrechen</Btn>
+		<Btn variant="primary" onclick={save}>Speichern</Btn>
 	</div>
 </div>

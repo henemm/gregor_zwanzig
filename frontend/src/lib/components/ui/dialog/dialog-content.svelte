@@ -5,7 +5,7 @@
 	import * as Dialog from "./index.js";
 	import { cn, type WithoutChildrenOrChild } from "$lib/utils.js";
 	import type { ComponentProps } from "svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
+	import { Btn } from '$lib/components/ui/btn/index.js';
 	import XIcon from '@lucide/svelte/icons/x';
 
 	let {
@@ -37,10 +37,10 @@
 		{#if showCloseButton}
 			<DialogPrimitive.Close data-slot="dialog-close">
 				{#snippet child({ props })}
-					<Button variant="ghost" class="absolute top-2 right-2" size="icon-sm" {...props}>
+					<Btn variant="ghost" class="absolute top-2 right-2" size="icon-sm" {...props}>
 						<XIcon  />
 						<span class="sr-only">Close</span>
-					</Button>
+					</Btn>
 				{/snippet}
 			</DialogPrimitive.Close>
 		{/if}

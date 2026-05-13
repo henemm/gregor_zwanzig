@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { api } from '$lib/api.js';
-	import { Button } from '$lib/components/ui/button/index.js';
+	import { Btn } from '$lib/components/ui/btn/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 
 	interface MetricEntry {
@@ -189,10 +189,10 @@
 		{/if}
 
 		<Dialog.Footer>
-			<Button variant="outline" onclick={onclose}>Abbrechen</Button>
-			<Button onclick={handleSave} disabled={loading || saving}>
+			<Btn variant="outline" onclick={onclose}>Abbrechen</Btn>
+			<Btn variant="primary" onclick={handleSave} disabled={loading || saving}>
 				{saving ? 'Speichern…' : 'Speichern'}
-			</Button>
+			</Btn>
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>

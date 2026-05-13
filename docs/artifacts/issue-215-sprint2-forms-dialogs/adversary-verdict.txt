@@ -1,0 +1,93 @@
+Adversary Validation — Issue #215 Sprint 2 (Forms + Dialoge Button→Btn Migration)
+Date: 2026-05-13
+Agent: implementation-validator (Sonnet)
+
+=== TEST SUITE RESULTS ===
+
+forms-dialogs-btn-migration.spec.ts  : 8/8  passed (11.1s)
+trip-detail-actions.spec.ts          : 14/14 passed (14.8s) [AC-3]
+trip-detail-overview-left.spec.ts    : 15/15 passed (14.1s) [Regression]
+trip-detail-overview-right.spec.ts   : 15/15 passed (14.2s) [Regression]
+trip-header-btn-migration.spec.ts    : 3/3  passed           [AC-6, Sprint 1 guard]
+btn-feature-parity.spec.ts           : 9/9  passed (12.8s)  [Regression]
+
+TOTAL: 64/64 passed, 0 failed
+
+=== SCOPE VERIFICATION ===
+
+Files in scope (6 EDIT):
+  SubscriptionForm.svelte        — import { Btn }  [CLEAN: no Button import]
+  LocationForm.svelte            — import { Btn }  [CLEAN: no Button import]
+  TripForm.svelte                — import { Btn }  [CLEAN: no Button import]
+  WeatherConfigDialog.svelte     — import { Btn }  [CLEAN: no Button import]
+  ui/dialog/dialog-content.svelte — import { Btn } [CLEAN: no Button import]
+  ui/dialog/dialog-footer.svelte — import { Btn }  [CLEAN: no Button import]
+
+Files NOT in scope (correctly untouched):
+  wizard/WizardStep2Stages.svelte  — still Button (Phase C, correct)
+  wizard/WizardStep1Route.svelte   — still Button (Phase C, correct)
+  wizard/TripWizard.svelte         — still Button (Phase C, correct)
+
+=== CALL SITES COUNT ===
+
+14 <Btn> call sites confirmed across all 6 files:
+  SubscriptionForm.svelte    : 2 (outline cancel + primary save)
+  LocationForm.svelte        : 2 (outline cancel + primary save)
+  TripForm.svelte            : 6 (outline addStage, ghost removeStage x2, outline addWaypoint, outline cancel, primary save)
+  WeatherConfigDialog.svelte : 2 (outline cancel + primary save)
+  dialog-content.svelte      : 1 (ghost icon-sm close)
+  dialog-footer.svelte       : 1 (outline Close)
+
+=== VARIANT MAPPING VERIFICATION ===
+
+primary saves found: 4 (LocationForm, SubscriptionForm, TripForm, WeatherConfigDialog)
+NOTE: Known Limitations states "5 von 14" but §2 line-by-line instructions yield 4.
+This is a spec annotation inconsistency (likely counted wrong in the doc).
+The implementation follows §2 exactly — 4 saves set to primary. Not a bug.
+
+outline variants: 7 call sites — all preserved correctly
+ghost variants: 3 call sites — all preserved correctly
+size="sm" preserved: 4 call sites (TripForm only)
+size="icon-sm" preserved: 1 call site (dialog-content)
+
+=== AC CHECKLIST ===
+
+AC-1: All 6 files use import { Btn } and no Button import — PROVEN (6 file-system tests pass)
+AC-2: Dialog close-button has data-variant="ghost" + data-size="icon-sm" (Btn attributes) — PROVEN (browser DOM test passes)
+      NOTE: bits-ui spreads data-slot="dialog-close" over Btn's data-slot="btn" — known and accepted per spec.
+AC-3: trip-detail-actions.spec.ts 14/14 — PROVEN
+AC-4: No locations.spec.ts file exists — not testable, no regression
+AC-5: Regressions via trip-detail-overview tests — PROVEN (15/15)
+AC-6: trip-header-btn-migration.spec.ts Sprint 1 still 3/3 — PROVEN
+
+=== EDGE CASES CHECKED ===
+
+1. Orphaned Button imports: none found in the 6 files
+2. Unintended files modified: wizard components still use Button correctly (Phase C scope)
+3. variant="primary" explicit on all Speichern buttons: YES (4 of 4)
+4. {…props} spread in dialog-content + dialog-footer: preserved, Btn accepts HTMLButtonAttributes
+5. disabled prop in WeatherConfigDialog: present — disabled={loading || saving} on Btn — OK
+6. multiline children in WeatherConfigDialog Speichern button: preserved correctly
+7. Archive-Confirm-Dialog (uses dialog-content.svelte indirectly): regression-tested 14/14
+
+=== FINDINGS ===
+
+Finding F001
+  Severity: LOW
+  Category: spec_violation (annotation only)
+  Description: Known Limitations says "5 von 14 Aufrufstellen" need explicit primary, but implementation has exactly 4. The §2 line-by-line spec defines only 4 Speichern-buttons. No functional impact — implementation is correct per §2.
+  Code reference: /home/hem/gregor_zwanzig/docs/specs/modules/issue_215_sprint2_forms_dialogs.md:180
+  Evidence: grep 'variant="primary"' across 6 files returns 4 results; §2 lists 4 Speichern lines
+  Remediation: Update Known Limitations "5 von 14" → "4 von 14" in spec doc. No code change needed.
+
+═══════════════════════════════════════
+VERDICT: VERIFIED
+═══════════════════════════════════════
+The implementation withstood adversary testing.
+Tests: 64 passed, 0 failed
+Edge cases: All checked, none broken
+Regressions: None found
+Checklist: 6/6 ACs proven (AC-4 not testable — no locations.spec.ts exists, which is a known absence)
+
+Only finding is a LOW spec-annotation inconsistency (doc says "5", code correctly implements 4).
+No code changes required.
