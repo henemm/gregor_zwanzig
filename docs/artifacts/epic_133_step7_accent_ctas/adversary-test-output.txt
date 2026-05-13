@@ -1,0 +1,5 @@
+  ✓  1 [setup] › e2e/global.setup.ts:5:1 › authenticate and seed test data (502ms)
+  ✓  2 [tests] › e2e/accent-ctas.spec.ts:17:2 › Epic #133 Step 7 — Marken-CTAs auf accent › AC-1: Cockpit "Neuer Trip"-CTA hat variant="accent" (279ms)
+  ✓  3 [tests] › e2e/accent-ctas.spec.ts:29:2 › Epic #133 Step 7 — Marken-CTAs auf accent › AC-2: Trips-Liste "Neuer Trip"-Button hat variant="accent" (285ms)
+  ✓  4 [tests] › e2e/accent-ctas.spec.ts:41:2 › Epic #133 Step 7 — Marken-CTAs auf accent › AC-3: Compare "Vergleichen"-Button hat variant="accent" (240ms)
+  4 passed (11.5s)

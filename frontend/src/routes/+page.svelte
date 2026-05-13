@@ -139,7 +139,7 @@
 				{/if}
 			</Btn>
 			<Btn
-				variant="primary"
+				variant="accent"
 				data-testid="cta-new-trip"
 				href="/trips/new"
 				size="sm"

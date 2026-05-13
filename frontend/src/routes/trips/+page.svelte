@@ -210,7 +210,7 @@
 <div class="space-y-4">
 	<div class="flex items-center justify-between">
 		<h1 class="text-2xl font-bold">Trips</h1>
-		<Btn variant="primary" onclick={() => goto('/trips/new')}>Neuer Trip</Btn>
+		<Btn variant="accent" onclick={() => goto('/trips/new')}>Neuer Trip</Btn>
 	</div>
 
 	{#if error}

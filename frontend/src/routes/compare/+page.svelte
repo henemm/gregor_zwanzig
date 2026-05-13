@@ -420,7 +420,7 @@
 				</select>
 			</div>
 
-			<Btn variant="primary" onclick={runComparison} disabled={loading}>
+			<Btn variant="accent" onclick={runComparison} disabled={loading}>
 				{loading ? 'Lädt...' : 'Vergleichen'}
 			</Btn>
 		</Card.Content>
