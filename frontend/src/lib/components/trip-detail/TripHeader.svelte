@@ -2,7 +2,7 @@
 	// Spec: docs/specs/modules/epic_135_step2_trip_detail_actions.md (§6)
 	// Bündelt Breadcrumb + StatusBadge + Aktions-Buttons + Confirm-Dialog.
 	// Alle on:click-Handler sind benannte Funktionen (Safari-Kompatibilität).
-	import { Button } from '$lib/components/ui/button/index.js';
+	import { Btn } from '$lib/components/ui/btn/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import TripStatusBadge from './TripStatusBadge.svelte';
 	import { deriveTripStatus } from '$lib/utils/tripStatus';
@@ -94,7 +94,7 @@
 
 	<div class="actions">
 		{#if status !== 'archived'}
-			<Button
+			<Btn
 				variant="outline"
 				size="sm"
 				data-testid="trip-detail-action-pause"
@@ -102,9 +102,9 @@
 				disabled={isLoading}
 			>
 				{status === 'paused' ? 'Fortsetzen' : 'Pausieren'}
-			</Button>
+			</Btn>
 		{/if}
-		<Button
+		<Btn
 			variant="outline"
 			size="sm"
 			data-testid="trip-detail-action-archive"
@@ -112,7 +112,7 @@
 			disabled={isLoading}
 		>
 			{status === 'archived' ? 'Reaktivieren' : 'Archivieren'}
-		</Button>
+		</Btn>
 	</div>
 	{#if errorMsg}
 		<p class="text-sm text-red-600" data-testid="trip-detail-action-error">{errorMsg}</p>
@@ -132,21 +132,21 @@
 			</Dialog.Description>
 		</Dialog.Header>
 		<Dialog.Footer>
-			<Button
+			<Btn
 				variant="outline"
 				data-testid="trip-detail-archive-confirm-cancel"
 				onclick={handleArchiveCancel}
 			>
 				Abbrechen
-			</Button>
-			<Button
-				variant="default"
+			</Btn>
+			<Btn
+				variant="primary"
 				data-testid="trip-detail-archive-confirm-yes"
 				onclick={handleArchiveConfirm}
 				disabled={isLoading}
 			>
 				Bestätigen
-			</Button>
+			</Btn>
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>
