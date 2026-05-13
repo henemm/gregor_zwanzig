@@ -1,0 +1,7 @@
+  ✓  1 [setup] › e2e/global.setup.ts:5:1 › authenticate and seed test data (478ms)
+  ✓  2 [tests] › e2e/theme-bridge.spec.ts:19:2 › Epic #133 Step 6 — Theme-Bridge › AC-1: --color-primary löst zu Ink-Schwarz auf (rgb(26, 26, 24)) (298ms)
+  ✓  3 [tests] › e2e/theme-bridge.spec.ts:32:2 › Epic #133 Step 6 — Theme-Bridge › AC-2: --color-background löst zu Paper-Off-White auf (rgb(246, 244, 238)) (257ms)
+  ✓  4 [tests] › e2e/theme-bridge.spec.ts:45:2 › Epic #133 Step 6 — Theme-Bridge › AC-3: --color-accent löst zu Burnt-Orange auf (rgb(196, 90, 42)) (259ms)
+  ✓  5 [tests] › e2e/theme-bridge.spec.ts:58:2 › Epic #133 Step 6 — Theme-Bridge › AC-4: --color-destructive löst zu Danger-Rot auf (rgb(179, 58, 42)) (219ms)
+  ✓  6 [tests] › e2e/theme-bridge.spec.ts:71:2 › Epic #133 Step 6 — Theme-Bridge › AC-5: Dark-Mode-Override bleibt aktiv — Bridge versperrt ihn nicht (264ms)
+  6 passed (11.9s)

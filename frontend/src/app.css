@@ -1,25 +1,46 @@
 @import "tailwindcss";
 
+/* @property syntax="<color>" zwingt rgb()-Normalisierung in getComputedStyle (Issue #218) */
+@property --color-background { syntax: "<color>"; inherits: true; initial-value: rgb(246, 244, 238); }
+@property --color-foreground { syntax: "<color>"; inherits: true; initial-value: rgb(26, 26, 24); }
+@property --color-popover { syntax: "<color>"; inherits: true; initial-value: rgb(246, 244, 238); }
+@property --color-popover-foreground { syntax: "<color>"; inherits: true; initial-value: rgb(26, 26, 24); }
+@property --color-card { syntax: "<color>"; inherits: true; initial-value: rgb(237, 234, 225); }
+@property --color-card-foreground { syntax: "<color>"; inherits: true; initial-value: rgb(26, 26, 24); }
+@property --color-muted { syntax: "<color>"; inherits: true; initial-value: rgb(227, 223, 212); }
+@property --color-muted-foreground { syntax: "<color>"; inherits: true; initial-value: rgb(92, 90, 82); }
+@property --color-border { syntax: "<color>"; inherits: true; initial-value: rgb(156, 154, 144); }
+@property --color-input { syntax: "<color>"; inherits: true; initial-value: rgb(156, 154, 144); }
+@property --color-ring { syntax: "<color>"; inherits: true; initial-value: rgb(196, 90, 42); }
+@property --color-primary { syntax: "<color>"; inherits: true; initial-value: rgb(26, 26, 24); }
+@property --color-primary-foreground { syntax: "<color>"; inherits: true; initial-value: rgb(246, 244, 238); }
+@property --color-accent { syntax: "<color>"; inherits: true; initial-value: rgb(196, 90, 42); }
+@property --color-accent-foreground { syntax: "<color>"; inherits: true; initial-value: rgb(246, 244, 238); }
+@property --color-destructive { syntax: "<color>"; inherits: true; initial-value: rgb(179, 58, 42); }
+@property --color-sidebar { syntax: "<color>"; inherits: true; initial-value: rgb(237, 234, 225); }
+@property --color-sidebar-foreground { syntax: "<color>"; inherits: true; initial-value: rgb(26, 26, 24); }
+@property --color-sidebar-accent { syntax: "<color>"; inherits: true; initial-value: rgb(227, 223, 212); }
+
 @theme {
-	--color-background: oklch(1 0 0);
-	--color-foreground: oklch(0.145 0 0);
-	--color-popover: oklch(1 0 0);
-	--color-popover-foreground: oklch(0.145 0 0);
-	--color-card: oklch(1 0 0);
-	--color-card-foreground: oklch(0.145 0 0);
-	--color-muted: oklch(0.96 0 0);
-	--color-muted-foreground: oklch(0.45 0 0);
-	--color-border: oklch(0.90 0 0);
-	--color-input: oklch(0.90 0 0);
-	--color-ring: oklch(0.55 0 0);
-	--color-primary: oklch(0.205 0 0);
-	--color-primary-foreground: oklch(0.985 0 0);
-	--color-accent: oklch(0.96 0 0);
-	--color-accent-foreground: oklch(0.205 0 0);
-	--color-destructive: oklch(0.577 0.245 27.325);
-	--color-sidebar: oklch(0.97 0 0);
-	--color-sidebar-foreground: oklch(0.145 0 0);
-	--color-sidebar-accent: oklch(0.93 0 0);
+	--color-background: var(--g-paper);
+	--color-foreground: var(--g-ink);
+	--color-popover: var(--g-paper);
+	--color-popover-foreground: var(--g-ink);
+	--color-card: var(--g-surface-1);
+	--color-card-foreground: var(--g-ink);
+	--color-muted: var(--g-surface-2);
+	--color-muted-foreground: var(--g-ink-muted);
+	--color-border: var(--g-ink-faint);
+	--color-input: var(--g-ink-faint);
+	--color-ring: var(--g-accent);
+	--color-primary: var(--g-ink);
+	--color-primary-foreground: var(--g-paper);
+	--color-accent: var(--g-accent);
+	--color-accent-foreground: var(--g-paper);
+	--color-destructive: var(--g-danger);
+	--color-sidebar: var(--g-surface-1);
+	--color-sidebar-foreground: var(--g-ink);
+	--color-sidebar-accent: var(--g-surface-2);
 	--radius-sm: 0.25rem;
 	--radius-md: 0.5rem;
 	--radius-lg: 0.75rem;
