@@ -6,7 +6,7 @@
 		children?: Snippet;
 	}
 
-	let { opacity = 0.04, children }: Props = $props();
+	let { opacity = 0.5, children }: Props = $props();
 </script>
 
 <div class="relative overflow-hidden">

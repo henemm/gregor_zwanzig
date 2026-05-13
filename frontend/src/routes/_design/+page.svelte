@@ -65,7 +65,7 @@
 
 	<section data-testid="topo-section" class="space-y-3">
 		<Eyebrow>Topo-Hintergrund</Eyebrow>
-		<TopoBg opacity={0.06}>
+		<TopoBg>
 			<div class="p-8" style:border-radius="var(--g-radius-lg)">
 				<Eyebrow>Topo-Hintergrundmuster</Eyebrow>
 				<p class="mt-2">Subtiler Höhenlinien-Hintergrund. Wird hinter Inhalten gelegt, ohne Lesbarkeit zu stören.</p>

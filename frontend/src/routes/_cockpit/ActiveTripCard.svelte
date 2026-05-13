@@ -39,7 +39,7 @@
 
 <div data-testid="active-trip-card">
 	<GCard class="p-0 overflow-hidden">
-		<TopoBg opacity={0.06}>
+		<TopoBg>
 			<div class="p-6 space-y-3">
 				<Eyebrow>Aktiver Trip</Eyebrow>
 				<div class="flex items-center justify-between gap-3 flex-wrap">

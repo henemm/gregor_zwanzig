@@ -72,6 +72,36 @@
     --g-elev-1: 0 1px 3px rgba(26,26,24,0.08);
     --g-elev-2: 0 4px 12px rgba(26,26,24,0.12);
     --g-elev-3: 0 8px 24px rgba(26,26,24,0.16);
+
+    /* Type Scale (Spec design_system_tokens.css Z. 47–55) */
+    --g-text-xs:  11px;
+    --g-text-sm:  13px;
+    --g-text-md:  15px;
+    --g-text-lg:  17px;
+    --g-text-xl:  20px;
+    --g-text-2xl: 24px;
+    --g-text-3xl: 32px;
+    --g-text-4xl: 44px;
+    --g-text-5xl: 60px;
+
+    /* Tracking (Spec design_system_tokens.css Z. 58–61) */
+    --g-track-tight:  -0.02em;
+    --g-track-normal: 0;
+    --g-track-wide:   0.06em;
+    --g-track-caps:   0.12em;
+
+    /* Spacing Grid 4px (Spec design_system_tokens.css Z. 64–74) */
+    --g-s-1:  4px;
+    --g-s-2:  8px;
+    --g-s-3:  12px;
+    --g-s-4:  16px;
+    --g-s-5:  20px;
+    --g-s-6:  24px;
+    --g-s-8:  32px;
+    --g-s-10: 40px;
+    --g-s-12: 48px;
+    --g-s-16: 64px;
+    --g-s-20: 80px;
   }
 
   body {
@@ -81,13 +111,15 @@
 }
 
 @layer components {
-  /* === Issue #143: Topo-Hintergrundmuster === */
+  /* === Issue #143 + #209: Topo-Hintergrundmuster === */
   .g-topo {
     background-image:
-      radial-gradient(circle at 50% 50%, transparent 0, transparent 14px, var(--g-ink) 14px, var(--g-ink) 15px, transparent 15px),
-      radial-gradient(circle at 50% 50%, transparent 0, transparent 28px, var(--g-ink) 28px, var(--g-ink) 29px, transparent 29px);
-    background-size: 60px 60px;
-    opacity: var(--g-topo-opacity, 0.04);
+      radial-gradient(ellipse 800px 400px at 20% 30%, transparent 30%, rgba(26, 26, 24, 0.10) 30.5%, transparent 31%),
+      radial-gradient(ellipse 700px 350px at 22% 32%, transparent 35%, rgba(26, 26, 24, 0.12) 35.5%, transparent 36%),
+      radial-gradient(ellipse 600px 300px at 24% 34%, transparent 40%, rgba(26, 26, 24, 0.14) 40.5%, transparent 41%),
+      radial-gradient(ellipse 900px 450px at 80% 70%, transparent 30%, rgba(26, 26, 24, 0.10) 30.5%, transparent 31%),
+      radial-gradient(ellipse 800px 400px at 78% 68%, transparent 35%, rgba(26, 26, 24, 0.12) 35.5%, transparent 36%);
+    opacity: var(--g-topo-opacity, 0.5);
     pointer-events: none;
   }
 
