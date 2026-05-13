@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Location, ForecastResponse } from '$lib/types.js';
 	import { api } from '$lib/api.js';
-	import { Button } from '$lib/components/ui/button/index.js';
+	import { Btn } from '$lib/components/ui/btn/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import { weatherEmoji, degToCardinal } from '$lib/utils/weatherEmoji.js';
 
@@ -82,9 +82,9 @@
 			</select>
 		</div>
 
-		<Button onclick={loadForecast} disabled={loading}>
+		<Btn variant="primary" onclick={loadForecast} disabled={loading}>
 			{loading ? 'Lädt…' : 'Laden'}
-		</Button>
+		</Btn>
 	</div>
 
 	{#if error}

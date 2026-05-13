@@ -2,7 +2,7 @@
 	import type { Trip } from '$lib/types.js';
 	import { api } from '$lib/api.js';
 	import { goto } from '$app/navigation';
-	import { Button } from '$lib/components/ui/button/index.js';
+	import { Btn } from '$lib/components/ui/btn/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
@@ -210,7 +210,7 @@
 <div class="space-y-4">
 	<div class="flex items-center justify-between">
 		<h1 class="text-2xl font-bold">Trips</h1>
-		<Button onclick={() => goto('/trips/new')}>Neuer Trip</Button>
+		<Btn variant="primary" onclick={() => goto('/trips/new')}>Neuer Trip</Btn>
 	</div>
 
 	{#if error}
@@ -222,7 +222,7 @@
 			<RouteIcon class="mx-auto mb-3 size-10 text-muted-foreground/40" />
 			<p class="font-medium">Keine Trips vorhanden</p>
 			<p class="mt-1 text-sm text-muted-foreground">Erstelle deinen ersten Trip und konfiguriere Wetter-Reports.</p>
-			<Button variant="outline" class="mt-4" onclick={() => goto('/trips/new')}>Ersten Trip erstellen</Button>
+			<Btn variant="outline" class="mt-4" onclick={() => goto('/trips/new')}>Ersten Trip erstellen</Btn>
 		</div>
 	{:else}
 		<div class="relative mb-3 max-w-xs">
@@ -256,12 +256,12 @@
 						<Table.Cell class="hidden sm:table-cell text-sm text-muted-foreground">{dateRange(trip)}</Table.Cell>
 						<Table.Cell class="text-right">
 							<div class="inline-flex flex-wrap justify-end gap-0.5">
-								<Button variant="outline" size="icon-sm" title="Report-Konfiguration" onclick={() => openReportConfig(trip)}><BellIcon class="size-3.5" /></Button>
-								<Button variant="outline" size="icon-sm" title="Wetter-Konfiguration" onclick={() => (weatherConfigTarget = trip)}><CloudSunIcon class="size-3.5" /></Button>
-								<Button variant="outline" size="icon-sm" class="hidden sm:inline-flex" title="Test Morgen-Report" onclick={() => runTestReport(trip, 7)}><PlayIcon class="size-3.5" /></Button>
-								<Button variant="outline" size="icon-sm" class="hidden sm:inline-flex" title="Test Abend-Report" onclick={() => runTestReport(trip, 18)}><PlayIcon class="size-3.5" /></Button>
-								<Button data-testid="trip-edit-btn" variant="ghost" size="icon-sm" title="Bearbeiten" onclick={() => openEdit(trip)}><PencilIcon class="size-3.5" /></Button>
-								<Button variant="ghost" size="icon-sm" class="hidden sm:inline-flex" title="Löschen" onclick={() => (deleteTarget = trip)}><Trash2Icon class="size-3.5" /></Button>
+								<Btn variant="outline" size="icon-sm" title="Report-Konfiguration" onclick={() => openReportConfig(trip)}><BellIcon class="size-3.5" /></Btn>
+								<Btn variant="outline" size="icon-sm" title="Wetter-Konfiguration" onclick={() => (weatherConfigTarget = trip)}><CloudSunIcon class="size-3.5" /></Btn>
+								<Btn variant="outline" size="icon-sm" class="hidden sm:inline-flex" title="Test Morgen-Report" onclick={() => runTestReport(trip, 7)}><PlayIcon class="size-3.5" /></Btn>
+								<Btn variant="outline" size="icon-sm" class="hidden sm:inline-flex" title="Test Abend-Report" onclick={() => runTestReport(trip, 18)}><PlayIcon class="size-3.5" /></Btn>
+								<Btn data-testid="trip-edit-btn" variant="ghost" size="icon-sm" title="Bearbeiten" onclick={() => openEdit(trip)}><PencilIcon class="size-3.5" /></Btn>
+								<Btn variant="ghost" size="icon-sm" class="hidden sm:inline-flex" title="Löschen" onclick={() => (deleteTarget = trip)}><Trash2Icon class="size-3.5" /></Btn>
 							</div>
 						</Table.Cell>
 					</Table.Row>
@@ -286,8 +286,8 @@
 			</Dialog.Description>
 		</Dialog.Header>
 		<Dialog.Footer>
-			<Button variant="outline" onclick={() => (deleteTarget = null)}>Abbrechen</Button>
-			<Button variant="destructive" onclick={handleDelete}>Löschen</Button>
+			<Btn variant="outline" onclick={() => (deleteTarget = null)}>Abbrechen</Btn>
+			<Btn variant="destructive" onclick={handleDelete}>Löschen</Btn>
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>
@@ -456,10 +456,10 @@
 		{/if}
 
 		<Dialog.Footer>
-			<Button variant="outline" onclick={() => (reportConfigTarget = null)}>Abbrechen</Button>
-			<Button onclick={saveReportConfig} disabled={reportConfigLoading || reportConfigSaving}>
+			<Btn variant="outline" onclick={() => (reportConfigTarget = null)}>Abbrechen</Btn>
+			<Btn variant="primary" onclick={saveReportConfig} disabled={reportConfigLoading || reportConfigSaving}>
 				{reportConfigSaving ? 'Speichern…' : 'Speichern'}
-			</Button>
+			</Btn>
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>
@@ -494,9 +494,9 @@
 			{/if}
 		</div>
 		<Dialog.Footer>
-			<Button onclick={() => { testReportTarget = null; testReportResult = null; testReportError = null; }}>
+			<Btn variant="primary" onclick={() => { testReportTarget = null; testReportResult = null; testReportError = null; }}>
 				Schließen
-			</Button>
+			</Btn>
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>

@@ -1,8 +1,7 @@
 <script lang="ts">
 	import type { Trip, Stage, ForecastResponse } from '$lib/types.js';
 	import { api } from '$lib/api.js';
-	import { Btn } from '$lib/components/ui/btn';
-	import { Button } from '$lib/components/ui/button/index.js';
+	import { Btn } from '$lib/components/ui/btn/index.js';
 	import ActiveTripCard from './_cockpit/ActiveTripCard.svelte';
 	import StageStrip from './_cockpit/StageStrip.svelte';
 	import BriefingsTimeline from './_cockpit/BriefingsTimeline.svelte';
@@ -139,13 +138,14 @@
 					Test-Briefing senden
 				{/if}
 			</Btn>
-			<Button
+			<Btn
+				variant="primary"
 				data-testid="cta-new-trip"
 				href="/trips/new"
 				size="sm"
 			>
 				Neuer Trip
-			</Button>
+			</Btn>
 		</div>
 	</header>
 

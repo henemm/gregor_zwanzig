@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Location, Subscription, ForecastResponse } from '$lib/types.js';
 	import { api } from '$lib/api.js';
-	import { Button } from '$lib/components/ui/button/index.js';
+	import { Btn } from '$lib/components/ui/btn/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
@@ -338,9 +338,9 @@
 				</div>
 			{/each}
 		</div>
-		<Button variant="outline" size="sm" class="w-full" onclick={() => showNewLocDialog = true}>
+		<Btn variant="outline" size="sm" class="w-full" onclick={() => showNewLocDialog = true}>
 			Neuer Ort
-		</Button>
+		</Btn>
 	</aside>
 
 	<!-- Content -->
@@ -420,9 +420,9 @@
 				</select>
 			</div>
 
-			<Button onclick={runComparison} disabled={loading}>
+			<Btn variant="primary" onclick={runComparison} disabled={loading}>
 				{loading ? 'Lädt...' : 'Vergleichen'}
-			</Button>
+			</Btn>
 		</Card.Content>
 	</Card.Root>
 
@@ -440,12 +440,12 @@
 						<option value="72">72h</option>
 						<option value="120">120h</option>
 					</select>
-					<Button size="sm" onclick={() => showWeather(weatherLocationId!)} disabled={weatherLoading}>
+					<Btn variant="primary" size="sm" onclick={() => showWeather(weatherLocationId!)} disabled={weatherLoading}>
 						{weatherLoading ? 'Lädt…' : 'Laden'}
-					</Button>
-					<Button variant="ghost" size="sm" onclick={() => { weatherLocationId = null; weatherForecast = null; }}>
+					</Btn>
+					<Btn variant="ghost" size="sm" onclick={() => { weatherLocationId = null; weatherForecast = null; }}>
 						← Zurück
-					</Button>
+					</Btn>
 				</div>
 
 				{#if weatherLoading}

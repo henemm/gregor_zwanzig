@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Subscription, Location } from '$lib/types.js';
 	import { api } from '$lib/api.js';
-	import { Button } from '$lib/components/ui/button/index.js';
+	import { Btn } from '$lib/components/ui/btn/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
@@ -128,7 +128,7 @@
 <div class="space-y-4">
 	<div class="flex items-center justify-between">
 		<h1 class="text-2xl font-bold">Abos</h1>
-		<Button onclick={openCreate}>Neues Abo</Button>
+		<Btn variant="primary" onclick={openCreate}>Neues Abo</Btn>
 	</div>
 
 	{#if error}
@@ -140,7 +140,7 @@
 			<BellIcon class="mx-auto mb-3 size-10 text-muted-foreground/40" />
 			<p class="font-medium">Keine Abos vorhanden</p>
 			<p class="mt-1 text-sm text-muted-foreground">Erstelle dein erstes Abo fuer automatische Wetter-Vergleiche.</p>
-			<Button variant="outline" class="mt-4" onclick={openCreate}>Erstes Abo erstellen</Button>
+			<Btn variant="outline" class="mt-4" onclick={openCreate}>Erstes Abo erstellen</Btn>
 		</div>
 	{:else}
 		<div class="relative mb-3 max-w-xs">
@@ -197,19 +197,19 @@
 							</div>
 						</Table.Cell>
 						<Table.Cell class="hidden md:table-cell">
-							<Button
+							<Btn
 								variant="ghost"
 								size="sm"
 								onclick={() => handleToggleEnabled(sub)}
 							>
 								{sub.enabled ? 'Deaktivieren' : 'Aktivieren'}
-							</Button>
+							</Btn>
 						</Table.Cell>
 						<Table.Cell class="text-right">
 							<div class="inline-flex gap-0.5">
-								<Button variant="ghost" size="icon-sm" title="Wetter-Konfiguration" onclick={() => (weatherTarget = sub)}><CloudSunIcon class="size-3.5" /></Button>
-								<Button variant="ghost" size="icon-sm" title="Bearbeiten" onclick={() => openEdit(sub)}><PencilIcon class="size-3.5" /></Button>
-								<Button variant="ghost" size="icon-sm" title="Löschen" onclick={() => (deleteTarget = sub)}><Trash2Icon class="size-3.5" /></Button>
+								<Btn variant="ghost" size="icon-sm" title="Wetter-Konfiguration" onclick={() => (weatherTarget = sub)}><CloudSunIcon class="size-3.5" /></Btn>
+								<Btn variant="ghost" size="icon-sm" title="Bearbeiten" onclick={() => openEdit(sub)}><PencilIcon class="size-3.5" /></Btn>
+								<Btn variant="ghost" size="icon-sm" title="Löschen" onclick={() => (deleteTarget = sub)}><Trash2Icon class="size-3.5" /></Btn>
 							</div>
 						</Table.Cell>
 					</Table.Row>
@@ -254,8 +254,8 @@
 			</Dialog.Description>
 		</Dialog.Header>
 		<Dialog.Footer>
-			<Button variant="outline" onclick={() => (deleteTarget = null)}>Abbrechen</Button>
-			<Button variant="destructive" onclick={handleDelete}>Löschen</Button>
+			<Btn variant="outline" onclick={() => (deleteTarget = null)}>Abbrechen</Btn>
+			<Btn variant="destructive" onclick={handleDelete}>Löschen</Btn>
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>

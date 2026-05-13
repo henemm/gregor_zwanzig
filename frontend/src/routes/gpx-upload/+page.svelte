@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Waypoint } from '$lib/types.js';
 	import { api } from '$lib/api.js';
-	import { Button } from '$lib/components/ui/button/index.js';
+	import { Btn } from '$lib/components/ui/btn/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
@@ -173,9 +173,9 @@
 					<p class="text-sm text-destructive">{error}</p>
 				{/if}
 
-				<Button onclick={handleUpload} disabled={loading}>
+				<Btn variant="primary" onclick={handleUpload} disabled={loading}>
 					{loading ? 'Wird hochgeladen...' : 'Hochladen'}
-				</Button>
+				</Btn>
 			</div>
 		</Card.Content>
 	</Card.Root>
@@ -249,9 +249,9 @@
 							<p class="text-sm text-destructive">{saveError}</p>
 						{/if}
 
-						<Button onclick={handleSave} disabled={saving || !tripName.trim()}>
+						<Btn variant="primary" onclick={handleSave} disabled={saving || !tripName.trim()}>
 							{saving ? 'Wird gespeichert...' : 'Als Trip speichern'}
-						</Button>
+						</Btn>
 					</div>
 				</Card.Content>
 			</Card.Root>
