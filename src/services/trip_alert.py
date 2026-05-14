@@ -87,7 +87,7 @@ class TripAlertService:
 
         # 1a. Create change detector with per-trip thresholds
         # Priority: display_config (per-metric) > report_config (legacy 3-slider) > catalog defaults
-        if trip.display_config and trip.display_config.get_alert_enabled_metrics():
+        if trip.display_config and trip.display_config.get_enabled_metrics():
             self._change_detector = WeatherChangeDetectionService.from_display_config(
                 trip.display_config
             )

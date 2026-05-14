@@ -962,27 +962,6 @@ class TripReportFormatter:
         if daylight:
             daylight_html = self._format_daylight_html(daylight)
 
-        # Changes
-        changes_html = ""
-        if changes:
-            ch_items = []
-            for c in changes:
-                label_info = get_label_for_field(c.metric)
-                if label_info:
-                    name, agg, unit = label_info
-                    ch_items.append(
-                        f"<li><strong>{name} ({agg}):</strong> {c.old_value:.1f}{unit} → {c.new_value:.1f}{unit} ({c.delta:+.1f}{unit})</li>"
-                    )
-                else:
-                    ch_items.append(
-                        f"<li><strong>{c.metric}:</strong> {c.old_value:.1f} → {c.new_value:.1f} (Δ {abs(c.delta):.1f})</li>"
-                    )
-            changes_html = f"""
-            <div class="section">
-                <h3>⚠️ Wetteränderungen</h3>
-                <ul>{"".join(ch_items)}</ul>
-            </div>"""
-
         # Units legend from all segment tables
         all_rows = [r for tbl in seg_tables for r in tbl]
         legend_text = self._build_units_legend(all_rows) if all_rows else ""
@@ -1019,7 +998,6 @@ class TripReportFormatter:
 
         {summary_html}
         {daylight_html}
-        {changes_html}
         {segments_html}
         {night_html}
         {thunder_html}
@@ -1089,18 +1067,6 @@ class TripReportFormatter:
         # F11: Daylight
         if daylight:
             lines.append(self._format_daylight_plain(daylight))
-            lines.append("")
-
-        # Changes (before segments in alert emails)
-        if changes:
-            lines.append("━━ Wetteränderungen ━━")
-            for c in changes:
-                label_info = get_label_for_field(c.metric)
-                if label_info:
-                    name, agg, unit = label_info
-                    lines.append(f"  {name} ({agg}): {c.old_value:.1f}{unit} → {c.new_value:.1f}{unit} ({c.delta:+.1f}{unit})")
-                else:
-                    lines.append(f"  {c.metric}: {c.old_value:.1f} → {c.new_value:.1f} (Δ {abs(c.delta):.1f})")
             lines.append("")
 
         # Segment tables

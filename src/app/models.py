@@ -392,6 +392,7 @@ class WeatherChange:
     threshold: float               # Configured threshold
     severity: ChangeSeverity       # minor/moderate/major
     direction: str                 # "increase" or "decrease"
+    segment_id: str = ""           # Issue #131: 1, 2, "Ziel", … — filled by detector
 
 
 # --- Trip Weather Config DTOs (Feature 2.6) ---

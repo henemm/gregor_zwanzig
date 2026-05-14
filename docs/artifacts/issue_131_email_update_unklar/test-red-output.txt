@@ -1,0 +1,150 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 9 items
+
+tests/unit/test_issue_131_alert_klarheit.py FF.FFFFFF                    [100%]
+
+=================================== FAILURES ===================================
+_________________ test_ac1_detect_changes_attaches_segment_id __________________
+
+    def test_ac1_detect_changes_attaches_segment_id():
+        """AC-1: detect_changes() fuellt segment_id aus new_data.segment.segment_id."""
+        from services.weather_change_detection import WeatherChangeDetectionService
+    
+        service = WeatherChangeDetectionService()
+    
+        old_data_1 = _make_segment_data(1, _make_summary(visibility_min_m=5000))
+        new_data_1 = _make_segment_data(1, _make_summary(visibility_min_m=38000))
+        old_data_2 = _make_segment_data(2, _make_summary(visibility_min_m=8000))
+        new_data_2 = _make_segment_data(2, _make_summary(visibility_min_m=35000))
+    
+        changes_1 = service.detect_changes(old_data_1, new_data_1)
+        changes_2 = service.detect_changes(old_data_2, new_data_2)
+    
+        assert changes_1, "Sichtweite +33000m muss Threshold reissen"
+        assert changes_2, "Sichtweite +27000m muss Threshold reissen"
+>       assert all(c.segment_id == "1" for c in changes_1), \
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            f"Segment-1-Changes muessen segment_id='1' tragen, got {[c.segment_id for c in changes_1]}"
+
+tests/unit/test_issue_131_alert_klarheit.py:98: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+.0 = <list_iterator object at 0x79f97e868880>
+
+>   assert all(c.segment_id == "1" for c in changes_1), \
+               ^^^^^^^^^^^^
+        f"Segment-1-Changes muessen segment_id='1' tragen, got {[c.segment_id for c in changes_1]}"
+E   AttributeError: 'WeatherChange' object has no attribute 'segment_id'
+
+tests/unit/test_issue_131_alert_klarheit.py:98: AttributeError
+_________ test_ac2_from_display_config_uses_enabled_not_alert_enabled __________
+
+    def test_ac2_from_display_config_uses_enabled_not_alert_enabled():
+        """AC-2: from_display_config waehlt anhand enabled, nicht alert_enabled."""
+        from services.weather_change_detection import WeatherChangeDetectionService
+    
+        display_config = UnifiedWeatherDisplayConfig(
+            trip_id="trip-1",
+            metrics=[
+                MetricConfig(
+                    metric_id="visibility",
+                    enabled=True,
+                    alert_enabled=False,
+                    alert_threshold=None,
+                ),
+            ],
+        )
+    
+        service = WeatherChangeDetectionService.from_display_config(display_config)
+    
+>       assert "visibility_min_m" in service._thresholds, \
+            "from_display_config muss alle enabled Metriken aufnehmen, nicht nur alert_enabled"
+E       AssertionError: from_display_config muss alle enabled Metriken aufnehmen, nicht nur alert_enabled
+E       assert 'visibility_min_m' in {}
+E        +  where {} = <services.weather_change_detection.WeatherChangeDetectionService object at 0x79f97e947500>._thresholds
+
+tests/unit/test_issue_131_alert_klarheit.py:122: AssertionError
+________________ test_ac4_format_metric_value_meters_thousands _________________
+
+    def test_ac4_format_metric_value_meters_thousands():
+        """AC-4: format_metric_value('m', 12240.0) == '12.240 m'."""
+>       from app.metric_catalog import format_metric_value
+E       ImportError: cannot import name 'format_metric_value' from 'app.metric_catalog' (/home/hem/gregor_zwanzig/src/app/metric_catalog.py)
+
+tests/unit/test_issue_131_alert_klarheit.py:150: ImportError
+_________________ test_ac5_format_metric_value_percent_integer _________________
+
+    def test_ac5_format_metric_value_percent_integer():
+        """AC-5: Prozent als Integer; signed praefixt '+'."""
+>       from app.metric_catalog import format_metric_value
+E       ImportError: cannot import name 'format_metric_value' from 'app.metric_catalog' (/home/hem/gregor_zwanzig/src/app/metric_catalog.py)
+
+tests/unit/test_issue_131_alert_klarheit.py:157: ImportError
+____________ test_ac6_format_metric_value_celsius_and_mm_with_comma ____________
+
+    def test_ac6_format_metric_value_celsius_and_mm_with_comma():
+        """AC-6: °C/mm 1 NK mit Komma; signed negativ liefert Unicode-Minus."""
+>       from app.metric_catalog import format_metric_value
+E       ImportError: cannot import name 'format_metric_value' from 'app.metric_catalog' (/home/hem/gregor_zwanzig/src/app/metric_catalog.py)
+
+tests/unit/test_issue_131_alert_klarheit.py:165: ImportError
+________________ test_ac7_format_change_line_with_segment_label ________________
+
+    def test_ac7_format_change_line_with_segment_label():
+        """AC-7: Kompletter String mit Segment-Label und Zahlen-Formaten."""
+>       from output.renderers.email.helpers import (
+            build_segment_label,
+            format_change_line,
+        )
+E       ImportError: cannot import name 'build_segment_label' from 'output.renderers.email.helpers' (/home/hem/gregor_zwanzig/src/output/renderers/email/helpers.py)
+
+tests/unit/test_issue_131_alert_klarheit.py:173: ImportError
+_______________ test_ac8_two_segments_render_two_distinct_lines ________________
+
+    def test_ac8_two_segments_render_two_distinct_lines():
+        """AC-8: Zwei Sichtweite-Aenderungen → zwei separate Zeilen, eine pro Segment."""
+>       from output.renderers.email.helpers import (
+            build_segment_label,
+            format_change_line,
+        )
+E       ImportError: cannot import name 'build_segment_label' from 'output.renderers.email.helpers' (/home/hem/gregor_zwanzig/src/output/renderers/email/helpers.py)
+
+tests/unit/test_issue_131_alert_klarheit.py:202: ImportError
+_______________ test_ac9_trip_report_legacy_change_block_removed _______________
+
+    def test_ac9_trip_report_legacy_change_block_removed():
+        """AC-9: Toter Renderer-Block in trip_report.py ist entfernt."""
+        from pathlib import Path
+    
+        src = Path("src/formatters/trip_report.py").read_text(encoding="utf-8")
+>       assert "Wetteränderungen" not in src, (
+            "Toter Change-Renderer-Block in trip_report.py muss entfernt sein "
+            "— der Renderer delegiert auf output/renderers/email/*."
+        )
+E       AssertionError: Toter Change-Renderer-Block in trip_report.py muss entfernt sein — der Renderer delegiert auf output/renderers/email/*.
+E       assert 'Wetteränderungen' not in '"""\nTrip r...oin(lines)\n'
+E         
+E         'Wetteränderungen' is contained here:
+E              <h3>⚠️ Wetteränderungen</h3>
+E                           <ul>{"".join(ch_items)}</ul>
+E                       </div>"""
+E           
+E                   # Units legend from all segment tables...
+E         
+E         ...Full output truncated (227 lines hidden), use '-vv' to show
+
+tests/unit/test_issue_131_alert_klarheit.py:245: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/test_issue_131_alert_klarheit.py::test_ac1_detect_changes_attaches_segment_id
+FAILED tests/unit/test_issue_131_alert_klarheit.py::test_ac2_from_display_config_uses_enabled_not_alert_enabled
+FAILED tests/unit/test_issue_131_alert_klarheit.py::test_ac4_format_metric_value_meters_thousands
+FAILED tests/unit/test_issue_131_alert_klarheit.py::test_ac5_format_metric_value_percent_integer
+FAILED tests/unit/test_issue_131_alert_klarheit.py::test_ac6_format_metric_value_celsius_and_mm_with_comma
+FAILED tests/unit/test_issue_131_alert_klarheit.py::test_ac7_format_change_line_with_segment_label
+FAILED tests/unit/test_issue_131_alert_klarheit.py::test_ac8_two_segments_render_two_distinct_lines
+FAILED tests/unit/test_issue_131_alert_klarheit.py::test_ac9_trip_report_legacy_change_block_removed
+========================= 8 failed, 1 passed in 0.17s ==========================

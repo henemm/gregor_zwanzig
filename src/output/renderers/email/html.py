@@ -19,7 +19,8 @@ from services.daylight_service import DaylightWindow
 from utils.timezone import local_fmt
 
 from src.output.renderers.email.helpers import (
-    build_units_legend, fmt_val, shorten_stage_name, visible_cols,
+    build_segment_label, build_units_legend, fmt_val, format_change_line,
+    shorten_stage_name, visible_cols,
 )
 
 
@@ -227,16 +228,8 @@ def render_html(
     if changes:
         ch_items = []
         for c in changes:
-            label_info = get_label_for_field(c.metric)
-            if label_info:
-                name, agg, unit = label_info
-                ch_items.append(
-                    f"<li><strong>{name} ({agg}):</strong> {c.old_value:.1f}{unit} → {c.new_value:.1f}{unit} ({c.delta:+.1f}{unit})</li>"
-                )
-            else:
-                ch_items.append(
-                    f"<li><strong>{c.metric}:</strong> {c.old_value:.1f} → {c.new_value:.1f} (Δ {abs(c.delta):.1f})</li>"
-                )
+            label = build_segment_label(c, segments)
+            ch_items.append(f"<li>{format_change_line(c, label)}</li>")
         changes_html = f"""
             <div class="section">
                 <h3>⚠️ Wetteränderungen</h3>

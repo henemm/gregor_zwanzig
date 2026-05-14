@@ -526,6 +526,47 @@ def get_label_for_field(summary_field: str) -> tuple[str, str, str] | None:
     return None
 
 
+def _format_de_thousand(value: float) -> str:
+    """12240 → '12.240', 12240.7 → '12.241' (gerundet, integer-Display)."""
+    return f"{int(round(value)):,}".replace(",", ".")
+
+
+def format_metric_value(unit: str, value: float, *, signed: bool = False) -> str:
+    """
+    Einheits-spezifische DE-Formatierung mit Tausender-Trenner.
+
+    - m, km, hPa            → integer, Tausender-Trenner DE (Punkt)
+    - %                     → integer (kaufmännische Rundung)
+    - km/h                  → integer
+    - °C, mm                → 1 NK, Dezimaltrenner Komma
+    - sonst                 → str(value)
+
+    signed=True präfixt '+' bei positiven Werten (Delta-Darstellung),
+    Unicode-Minus '−' (U+2212) bei negativen Werten.
+    signed=False: negative Werte bei m/km/hPa/%/km/h ebenfalls Unicode-Minus.
+    """
+    abs_v = abs(value)
+    if unit in ("m", "km", "hPa"):
+        formatted = _format_de_thousand(abs_v)
+    elif unit in ("%", "km/h"):
+        formatted = f"{int(round(abs_v))}"
+    elif unit in ("°C", "mm"):
+        formatted = f"{abs_v:.1f}".replace(".", ",")
+    else:
+        return str(value)
+
+    sign = ""
+    if signed:
+        if value > 0:
+            sign = "+"
+        elif value < 0:
+            sign = "−"  # U+2212
+    elif value < 0 and unit in ("m", "km", "hPa", "%", "km/h", "°C", "mm"):
+        sign = "−"
+
+    return f"{sign}{formatted} {unit}".strip()
+
+
 def get_col_defs() -> list[tuple[str, str, str]]:
     """
     Get column definitions for formatter, ordered by catalog order.

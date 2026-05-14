@@ -359,6 +359,43 @@ def shorten_stage_name(name: str, max_len: int = 25) -> str:
     return name[:max_len] if len(name) > max_len else name
 
 
+def format_change_line(change, segment_label: str) -> str:
+    """
+    Eine Zeile für eine erkannte Wetteränderung (SSoT für HTML + Plain).
+
+    Beispiel-Output:
+        'Segment 2 (14:00–16:00) — Sichtweite (min): 12.240 m → 38.440 m (+26.200 m)'
+    """
+    from app.metric_catalog import format_metric_value, get_label_for_field
+    label_info = get_label_for_field(change.metric)
+    if label_info:
+        name, agg, unit = label_info
+        old_fmt = format_metric_value(unit, change.old_value)
+        new_fmt = format_metric_value(unit, change.new_value)
+        delta_fmt = format_metric_value(unit, change.delta, signed=True)
+        return f"{segment_label} — {name} ({agg}): {old_fmt} → {new_fmt} ({delta_fmt})"
+    return (
+        f"{segment_label} — {change.metric}: "
+        f"{change.old_value:.1f} → {change.new_value:.1f} "
+        f"(Δ {abs(change.delta):.1f})"
+    )
+
+
+def build_segment_label(change, segments) -> str:
+    """
+    Liefert 'Segment N (HH:MM–HH:MM)' oder '🏁 Ziel (HH:MM)' aus segment_id +
+    segments-Liste. Fallback ohne Match: 'Segment N' oder 'Unbekannt'.
+    """
+    for s in segments:
+        if str(s.segment.segment_id) == change.segment_id:
+            start = s.segment.start_time.strftime("%H:%M")
+            end = s.segment.end_time.strftime("%H:%M")
+            if str(s.segment.segment_id) == "Ziel":
+                return f"🏁 Ziel ({start})"
+            return f"Segment {s.segment.segment_id} ({start}–{end})"
+    return f"Segment {change.segment_id}" if change.segment_id else "Unbekannt"
+
+
 def build_friendly_keys(dc: UnifiedWeatherDisplayConfig) -> set[str]:
     """col_keys where user wants friendly format (mirrors trip_report)."""
     keys: set[str] = set()

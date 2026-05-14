@@ -20,7 +20,8 @@ from services.daylight_service import DaylightWindow
 from utils.timezone import local_fmt
 
 from src.output.renderers.email.helpers import (
-    build_units_legend, fmt_val, shorten_stage_name, visible_cols,
+    build_segment_label, build_units_legend, fmt_val, format_change_line,
+    shorten_stage_name, visible_cols,
 )
 
 
@@ -143,12 +144,8 @@ def render_plain(
     if changes:
         lines.append("━━ Wetteränderungen ━━")
         for c in changes:
-            label_info = get_label_for_field(c.metric)
-            if label_info:
-                name, agg, unit = label_info
-                lines.append(f"  {name} ({agg}): {c.old_value:.1f}{unit} → {c.new_value:.1f}{unit} ({c.delta:+.1f}{unit})")
-            else:
-                lines.append(f"  {c.metric}: {c.old_value:.1f} → {c.new_value:.1f} (Δ {abs(c.delta):.1f})")
+            label = build_segment_label(c, segments)
+            lines.append(f"  {format_change_line(c, label)}")
         lines.append("")
 
     for seg_data, rows in zip(segments, seg_tables):

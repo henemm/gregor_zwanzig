@@ -109,7 +109,7 @@ class WeatherChangeDetectionService:
         from app.metric_catalog import get_metric
         thresholds: dict[str, float] = {}
         for mc in display_config.metrics:
-            if not mc.alert_enabled:
+            if not mc.enabled:
                 continue
             try:
                 metric_def = get_metric(mc.metric_id)
@@ -182,6 +182,7 @@ class WeatherChangeDetectionService:
                     threshold=float(threshold),
                     severity=severity,
                     direction=direction,
+                    segment_id=str(new_data.segment.segment_id),
                 )
                 changes.append(change)
 
