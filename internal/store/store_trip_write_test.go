@@ -34,8 +34,11 @@ func TestSaveTrip_LegacyAlertRulesCoercedToEmptyArray(t *testing.T) {
 	if loaded == nil {
 		t.Fatal("expected trip, got nil")
 	}
-	if loaded.AlertRules != nil {
-		t.Fatalf("Erwartet nil nach Load von legacy JSON, got %v", loaded.AlertRules)
+	if loaded.AlertRules == nil {
+		t.Fatalf("Erwartet [] nach LoadTrip-Coercion, got nil")
+	}
+	if len(loaded.AlertRules) != 0 {
+		t.Fatalf("Erwartet len==0, got %d", len(loaded.AlertRules))
 	}
 
 	if err := s.SaveTrip(*loaded); err != nil {

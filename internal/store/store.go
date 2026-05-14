@@ -108,6 +108,12 @@ func (s *Store) LoadTrips() ([]model.Trip, error) {
 			continue
 		}
 
+		// Issue #205 Follow-Up: Read-Path-Coercion symmetrisch zu SaveTrip,
+		// damit API niemals "alert_rules":null zurückgibt.
+		if trip.AlertRules == nil {
+			trip.AlertRules = []model.AlertRule{}
+		}
+
 		trips = append(trips, trip)
 	}
 
@@ -136,6 +142,12 @@ func (s *Store) LoadTrip(id string) (*model.Trip, error) {
 	var trip model.Trip
 	if err := json.Unmarshal(data, &trip); err != nil {
 		return nil, err
+	}
+
+	// Issue #205 Follow-Up: Read-Path-Coercion symmetrisch zu SaveTrip,
+	// damit API niemals "alert_rules":null zurückgibt.
+	if trip.AlertRules == nil {
+		trip.AlertRules = []model.AlertRule{}
 	}
 
 	return &trip, nil
