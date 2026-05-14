@@ -187,6 +187,109 @@ func LoadedTripProxyHandler(pythonURL string) http.HandlerFunc {
 	}
 }
 
+// ValidatorFormatMetricProxyHandler proxies GET /api/_validator/format-metric.
+// Pure-function endpoint — no user_id injection needed, query string is passed
+// through verbatim. Cookie-auth via global AuthMiddleware remains required.
+// Spec: docs/specs/modules/issue_221_validator_observability_endpoints.md.
+func ValidatorFormatMetricProxyHandler(pythonURL string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		client := &http.Client{Timeout: 10 * time.Second}
+		url := pythonURL + "/api/_validator/format-metric"
+		if r.URL.RawQuery != "" {
+			url += "?" + r.URL.RawQuery
+		}
+
+		resp, err := client.Get(url)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadGateway)
+			w.Write([]byte(`{"error":"upstream unreachable"}`))
+			return
+		}
+		defer resp.Body.Close()
+
+		ct := resp.Header.Get("Content-Type")
+		if ct == "" {
+			ct = "application/json"
+		}
+		w.Header().Set("Content-Type", ct)
+		w.WriteHeader(resp.StatusCode)
+		io.Copy(w, resp.Body)
+	}
+}
+
+// AlertPreviewProxyHandler proxies POST /api/trips/{id}/alert-preview.
+// Trip ID via chi.URLParam, user_id from auth context appended to query.
+// Spec: docs/specs/modules/issue_221_validator_observability_endpoints.md.
+func AlertPreviewProxyHandler(pythonURL string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+		query := appendUserID(r.URL.RawQuery, middleware.UserIDFromContext(r.Context()))
+		url := pythonURL + "/api/trips/" + id + "/alert-preview"
+		if query != "" {
+			url += "?" + query
+		}
+
+		req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, url, r.Body)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(`{"error":"proxy_error"}`))
+			return
+		}
+		req.Header.Set("Content-Type", r.Header.Get("Content-Type"))
+
+		client := &http.Client{Timeout: 30 * time.Second}
+		resp, err := client.Do(req)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadGateway)
+			w.Write([]byte(`{"error":"upstream unreachable"}`))
+			return
+		}
+		defer resp.Body.Close()
+
+		ct := resp.Header.Get("Content-Type")
+		if ct == "" {
+			ct = "application/json"
+		}
+		w.Header().Set("Content-Type", ct)
+		w.WriteHeader(resp.StatusCode)
+		io.Copy(w, resp.Body)
+	}
+}
+
+// DetectorThresholdsProxyHandler proxies GET /api/_validator/detector-thresholds.
+// Forwards trip query param and injects authenticated user_id.
+// Spec: docs/specs/modules/issue_221_validator_observability_endpoints.md.
+func DetectorThresholdsProxyHandler(pythonURL string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		query := appendUserID(r.URL.RawQuery, middleware.UserIDFromContext(r.Context()))
+		url := pythonURL + "/api/_validator/detector-thresholds"
+		if query != "" {
+			url += "?" + query
+		}
+
+		client := &http.Client{Timeout: 10 * time.Second}
+		resp, err := client.Get(url)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadGateway)
+			w.Write([]byte(`{"error":"upstream unreachable"}`))
+			return
+		}
+		defer resp.Body.Close()
+
+		ct := resp.Header.Get("Content-Type")
+		if ct == "" {
+			ct = "application/json"
+		}
+		w.Header().Set("Content-Type", ct)
+		w.WriteHeader(resp.StatusCode)
+		io.Copy(w, resp.Body)
+	}
+}
+
 func GpxProxyHandler(pythonURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		client := &http.Client{Timeout: 30 * time.Second}
