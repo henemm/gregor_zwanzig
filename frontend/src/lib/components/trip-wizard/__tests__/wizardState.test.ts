@@ -74,6 +74,61 @@ test('WizardState: toTripPayload mit activity=skitour → aggregation.profile=wi
 	assert.equal((trip.aggregation as { profile: string }).profile, 'wintersport');
 });
 
+// --- Issue #222 W2: toTripPayload schreibt alert_rules parallel zu report_config -
+
+test('Issue #222 W2: toTripPayload schreibt alert_rules wenn gust_kmh gesetzt (AC-1)', () => {
+	const s = new WizardState();
+	s.activity = 'hike';
+	s.name = 'Issue 222 W2';
+	s.briefings.thresholds.gust_kmh = 50;
+	const trip = s.toTripPayload();
+	assert.ok(trip.alert_rules, 'alert_rules muss vorhanden sein');
+	assert.equal(trip.alert_rules!.length, 1);
+	const rule = trip.alert_rules![0];
+	assert.equal(rule.metric, 'wind_gust');
+	assert.equal(rule.threshold, 50);
+	assert.equal(rule.kind, 'absolute');
+	assert.equal(rule.severity, 'warning');
+	assert.equal(rule.enabled, true);
+});
+
+test('Issue #222 W2: toTripPayload setzt alert_thresholds parallel weiter (AC-7)', () => {
+	const s = new WizardState();
+	s.activity = 'hike';
+	s.name = 'Issue 222 W2 Parallel';
+	s.briefings.thresholds.gust_kmh = 50;
+	const trip = s.toTripPayload();
+	const rc = trip.report_config as { alert_thresholds?: { gust_kmh: number | null } };
+	assert.ok(rc.alert_thresholds, 'report_config.alert_thresholds bleibt parallel bestehen');
+	assert.equal(rc.alert_thresholds!.gust_kmh, 50);
+});
+
+test('Issue #222 W2: toTripPayload ohne Thresholds → kein alert_rules-Feld (AC-3)', () => {
+	const s = new WizardState();
+	s.activity = 'hike';
+	s.name = 'Issue 222 W2 Empty';
+	const trip = s.toTripPayload();
+	assert.equal(
+		trip.alert_rules === undefined || trip.alert_rules.length === 0,
+		true,
+		'kein alert_rules wenn keine Threshold gesetzt'
+	);
+});
+
+test('Issue #222 W2: toTripPayload mit allen 4 Thresholds → 4 alert_rules (AC-2)', () => {
+	const s = new WizardState();
+	s.activity = 'hike';
+	s.name = 'Issue 222 W2 All';
+	s.briefings.thresholds.gust_kmh = 50;
+	s.briefings.thresholds.precip_mm = 20;
+	s.briefings.thresholds.thunder_level = 'MED';
+	s.briefings.thresholds.snow_line_m = 2500;
+	const trip = s.toTripPayload();
+	assert.equal(trip.alert_rules!.length, 4);
+	const metrics = trip.alert_rules!.map((r) => r.metric);
+	assert.deepEqual(metrics, ['wind_gust', 'precipitation_sum', 'thunder_level', 'snow_line']);
+});
+
 test('WizardState: addPauseStage() fuegt Stage mit leeren Wegpunkten hinzu', () => {
 	const s = new WizardState();
 	const before = s.stages.length;

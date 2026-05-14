@@ -6,6 +6,7 @@
 
 import type { ActivityType, Stage, Trip, Waypoint } from '$lib/types';
 import { addDays, mapActivityToProfile, newId } from './wizardHelpers.ts';
+import { mapBriefingsToAlertRules } from '../../utils/alertMapping.ts';
 
 // `goto` und `api` werden in `save()` lazy importiert, damit Unit-Tests die
 // Klasse instanziieren und Felder/Methoden pruefen koennen, ohne dass der
@@ -368,6 +369,15 @@ export class WizardState {
 		}
 
 		trip.report_config = rc;
+
+		// Issue #222 W2: Parallel zum report_config.alert_thresholds-Block
+		// schreiben wir typisierte AlertRules. Beide Bloecke koexistieren —
+		// Scheduler/Channels lesen weiterhin report_config, TripAlertService
+		// liest trip.alert_rules.
+		const alertRules = mapBriefingsToAlertRules(b.thresholds);
+		if (alertRules.length > 0) {
+			trip.alert_rules = alertRules;
+		}
 
 		return trip;
 	}

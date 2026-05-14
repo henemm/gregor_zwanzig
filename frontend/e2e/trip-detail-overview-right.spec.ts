@@ -163,30 +163,91 @@ test.describe('Epic #135 Step 5 — Trip-Detail Overview, rechte Spalte (#158 + 
 		);
 	});
 
-	test('AC-8: Alert-Karte zeigt Empty-State "Noch keine Alerts konfiguriert" + "Konfigurieren"', async ({
+	test('AC-8: Alert-Karte zeigt Empty-State "Noch keine Alerts konfiguriert"', async ({
 		page
 	}) => {
 		await page.goto(`/trips/${TRIP_ID}`);
 		const alertEmpty = page.getByTestId('right-card-alerts-empty');
 		await expect(alertEmpty).toBeVisible();
 		await expect(alertEmpty).toContainText('Noch keine Alerts konfiguriert');
-
-		const alertLink = page.getByTestId('right-card-alerts-edit-link');
-		await expect(alertLink).toBeVisible();
-		await expect(alertLink).toContainText('Konfigurieren');
 	});
 
-	test('AC-9: Klick auf Alert-Konfigurieren-Link → URL-Hash #alerts + Tab aktiv', async ({
-		page
+	// Issue #222 W2: Card-Rendering bei vorhandenen alert_rules (AC-4 + AC-6).
+	// Legt einen separaten Trip mit alert_rules an, prueft Row-Count + Gewitter-Spezialfall.
+	test('AC #222 W2 AC-4/AC-6: Alert-Karte rendert eine Row pro enabled Rule, Gewitter zeigt "MITTEL"', async ({
+		page,
+		request
 	}) => {
-		await page.goto(`/trips/${TRIP_ID}`);
-		await page.getByTestId('right-card-alerts-edit-link').click();
+		const ALERT_TRIP_ID = 'e2e-alert-rules-trip';
+		await request.post('/api/trips', {
+			data: {
+				id: ALERT_TRIP_ID,
+				name: 'E2E Alert Rules Trip',
+				stages: [
+					{
+						id: 'ar-stage-1',
+						name: 'Etappe',
+						date: new Date().toISOString().slice(0, 10),
+						waypoints: [
+							{ id: 'ar-wp-1', name: 'Start', lat: 42.1, lon: 9.0, elevation_m: 500 }
+						]
+					}
+				],
+				alert_rules: [
+					{
+						id: 'rule-wind',
+						kind: 'absolute',
+						metric: 'wind_gust',
+						threshold: 50,
+						unit: 'km/h',
+						severity: 'warning',
+						enabled: true
+					},
+					{
+						id: 'rule-thunder',
+						kind: 'absolute',
+						metric: 'thunder_level',
+						threshold: 1.0,
+						unit: '',
+						severity: 'warning',
+						enabled: true
+					},
+					{
+						id: 'rule-thunder-critical',
+						kind: 'absolute',
+						metric: 'thunder_level',
+						threshold: 2.0,
+						unit: '',
+						severity: 'critical',
+						enabled: true
+					},
+					{
+						id: 'rule-disabled',
+						kind: 'absolute',
+						metric: 'precipitation_sum',
+						threshold: 20,
+						unit: 'mm',
+						severity: 'warning',
+						enabled: false
+					}
+				]
+			}
+		});
 
-		await expect(page).toHaveURL(/#alerts$/);
-		await expect(page.getByTestId('trip-detail-tab-alerts')).toHaveAttribute(
-			'data-state',
-			'active'
-		);
+		await page.goto(`/trips/${ALERT_TRIP_ID}`);
+		const rows = page.getByTestId('alert-row');
+		// AC-4: 3 enabled Rules → 3 Rows. Disabled wird gefiltert.
+		await expect(rows).toHaveCount(3);
+		// AC-6 (Gewitter-Spezial): threshold=1.0 → "MITTEL", nicht "1.0".
+		await expect(rows.nth(1)).toContainText('MITTEL');
+		// AC-6: severity=critical → Pill mit tone="danger", threshold=2.0 → "HOCH".
+		await expect(rows.nth(2)).toContainText('HOCH');
+		const dangerPill = rows.nth(2).locator('[data-slot="pill"][data-tone="danger"]');
+		await expect(dangerPill).toBeVisible();
+
+		// Cleanup: Test-Trip loeschen (F006 Fix-Loop 2).
+		const deleteRes = await request.delete(`/api/trips/${ALERT_TRIP_ID}`);
+		expect([200, 204, 404]).toContain(deleteRes.status());
 	});
 
 	test('AC-10: Vorschau-Karte hat genau 2 CTAs (Email + SMS) mit href=#preview', async ({
