@@ -5,7 +5,7 @@
 	//
 	// Rendert pro `enabled=true`-Rule eine `AlertRow` mit Pill und Comparison-Symbol.
 	// Bei keiner enabled-Rule: Empty-State.
-	// Edit-Link entfernt (eigenes Folge-Issue fuer Edit-Pfad).
+	// Edit-Link zeigt auf /trips/[id]/edit#alerts (Issue #223).
 
 	import type { Trip } from '$lib/types';
 	import { GCard } from '$lib/components/ui/g-card';
@@ -36,6 +36,11 @@
 			{/each}
 		</ul>
 	{/if}
+	<a
+		href={`/trips/${trip.id}/edit#alerts`}
+		class="edit-link"
+		data-testid="right-card-alerts-edit-link"
+	>Konfigurieren →</a>
 </GCard>
 
 <style>
@@ -65,5 +70,15 @@
 	}
 	.rules-list li {
 		padding: 0.25rem 0;
+	}
+	.edit-link {
+		font-size: 0.875rem;
+		color: var(--g-primary, #2563eb);
+		text-decoration: none;
+		margin-top: 0.25rem;
+		align-self: flex-start;
+	}
+	.edit-link:hover {
+		text-decoration: underline;
 	}
 </style>

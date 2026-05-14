@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Trip, Stage } from '$lib/types.js';
+	import type { Trip, Stage, AlertRule } from '$lib/types.js';
 	import { api } from '$lib/api.js';
 	import { goto } from '$app/navigation';
 	import AccordionSection from './AccordionSection.svelte';
@@ -7,6 +7,7 @@
 	import WizardStep2Stages from '$lib/components/wizard/WizardStep2Stages.svelte';
 	import WizardStep3Weather from '$lib/components/wizard/WizardStep3Weather.svelte';
 	import WizardStep4ReportConfig from '$lib/components/wizard/WizardStep4ReportConfig.svelte';
+	import AlertRulesEditor from '$lib/components/alert-rules-editor/AlertRulesEditor.svelte';
 
 	interface Props {
 		trip: Trip;
@@ -22,8 +23,13 @@
 	let reportConfig: Record<string, unknown> | undefined = $state(
 		trip.report_config ? JSON.parse(JSON.stringify(trip.report_config)) : undefined
 	);
+	let alertRules: AlertRule[] = $state(
+		Array.isArray(trip.alert_rules)
+			? (JSON.parse(JSON.stringify(trip.alert_rules)) as AlertRule[])
+			: []
+	);
 
-	type SectionId = 'route' | 'etappen' | 'wetter' | 'reports';
+	type SectionId = 'route' | 'etappen' | 'wetter' | 'alerts' | 'reports';
 	let openSection: SectionId | null = $state('etappen');
 
 	let saveError: string | null = $state(null);
@@ -47,6 +53,7 @@
 					stages,
 					display_config: displayConfig,
 					report_config: reportConfig,
+					alert_rules: alertRules,
 				};
 				await api.put(`/api/trips/${trip.id}`, updated);
 				goto('/trips');
@@ -98,6 +105,15 @@
 		onToggle={makeToggleHandler('wetter')}
 	>
 		<WizardStep3Weather bind:displayConfig mode="edit" />
+	</AccordionSection>
+
+	<AccordionSection
+		id="alerts"
+		title="Alarmregeln"
+		open={openSection === 'alerts'}
+		onToggle={makeToggleHandler('alerts')}
+	>
+		<AlertRulesEditor bind:rules={alertRules} />
 	</AccordionSection>
 
 	<AccordionSection
