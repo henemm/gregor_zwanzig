@@ -2,6 +2,49 @@ package model
 
 import "time"
 
+// AlertRuleKind classifies an alert rule as absolute threshold or delta change.
+type AlertRuleKind string
+
+const (
+	AlertRuleKindAbsolute AlertRuleKind = "absolute"
+	AlertRuleKindDelta    AlertRuleKind = "delta"
+)
+
+// AlertSeverity classifies the severity of an alert rule.
+type AlertSeverity string
+
+const (
+	AlertSeverityInfo     AlertSeverity = "info"
+	AlertSeverityWarning  AlertSeverity = "warning"
+	AlertSeverityCritical AlertSeverity = "critical"
+)
+
+// AlertMetric identifies which weather metric an alert observes.
+type AlertMetric string
+
+const (
+	AlertMetricWindGust            AlertMetric = "wind_gust"
+	AlertMetricPrecipitationSum    AlertMetric = "precipitation_sum"
+	AlertMetricTemperatureMin      AlertMetric = "temperature_min"
+	AlertMetricTemperatureMax      AlertMetric = "temperature_max"
+	AlertMetricThunderLevel        AlertMetric = "thunder_level"
+	AlertMetricSnowLine            AlertMetric = "snow_line"
+	AlertMetricTemperatureChange   AlertMetric = "temperature_change"
+	AlertMetricWindChange          AlertMetric = "wind_change"
+	AlertMetricPrecipitationChange AlertMetric = "precipitation_change"
+)
+
+// AlertRule is a single configurable alert rule on a Trip (Issue #205).
+type AlertRule struct {
+	ID        string        `json:"id"`
+	Kind      AlertRuleKind `json:"kind"`
+	Metric    AlertMetric   `json:"metric"`
+	Threshold float64       `json:"threshold"`
+	Unit      string        `json:"unit,omitempty"`
+	Severity  AlertSeverity `json:"severity"`
+	Enabled   bool          `json:"enabled"`
+}
+
 type Waypoint struct {
 	ID         string  `json:"id"`
 	Name       string  `json:"name"`
@@ -28,6 +71,7 @@ type Trip struct {
 	WeatherConfig    map[string]interface{} `json:"weather_config,omitempty"`
 	DisplayConfig    map[string]interface{} `json:"display_config,omitempty"`
 	ReportConfig     map[string]interface{} `json:"report_config,omitempty"`
+	AlertRules       []AlertRule            `json:"alert_rules"`
 	Shortcode        string                 `json:"shortcode,omitempty"`
 	Activity         string                 `json:"activity,omitempty"`
 	PausedAt         *time.Time             `json:"paused_at,omitempty"`

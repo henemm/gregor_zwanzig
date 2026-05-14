@@ -38,6 +38,30 @@ export interface Stage {
 	dateOverridden?: boolean;
 }
 
+// Alert Rules (Issue #205) — typisierte Alarm-Regeln pro Trip
+export type AlertRuleKind = 'absolute' | 'delta';
+export type AlertSeverity = 'info' | 'warning' | 'critical';
+export type AlertMetric =
+	| 'wind_gust'
+	| 'precipitation_sum'
+	| 'temperature_min'
+	| 'temperature_max'
+	| 'thunder_level'
+	| 'snow_line'
+	| 'temperature_change'
+	| 'wind_change'
+	| 'precipitation_change';
+
+export interface AlertRule {
+	id: string;
+	kind: AlertRuleKind;
+	metric: AlertMetric;
+	threshold: number;
+	unit?: string;
+	severity: AlertSeverity;
+	enabled: boolean;
+}
+
 export interface Trip {
 	id: string;
 	name: string;
@@ -49,6 +73,7 @@ export interface Trip {
 	weather_config?: Record<string, unknown>;
 	display_config?: Record<string, unknown>;
 	report_config?: Record<string, unknown>;
+	alert_rules?: AlertRule[];
 	paused_at?: string;
 	archived_at?: string;
 }

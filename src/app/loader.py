@@ -7,10 +7,17 @@ with validation and error handling.
 from __future__ import annotations
 
 import json
+import uuid
 from datetime import date
 from pathlib import Path
 from typing import Any, Dict, List, Union
 
+from app.models import (
+    AlertMetric,
+    AlertRule,
+    AlertRuleKind,
+    AlertSeverity,
+)
 from app.trip import (
     ActivityProfile,
     AggregationConfig,
@@ -20,6 +27,60 @@ from app.trip import (
     Trip,
     Waypoint,
 )
+
+
+# Mapping Legacy report_config -> AlertMetric + Unit (Issue #205)
+_LEGACY_DELTA_MAPPING: list[tuple[str, AlertMetric, str]] = [
+    ("change_threshold_temp_c", AlertMetric.TEMPERATURE_CHANGE, "°C"),
+    ("change_threshold_wind_kmh", AlertMetric.WIND_CHANGE, "km/h"),
+    ("change_threshold_precip_mm", AlertMetric.PRECIPITATION_CHANGE, "mm"),
+]
+
+
+def _alert_rule_from_dict(d: Dict[str, Any]) -> AlertRule:
+    """Parse a single AlertRule from a JSON dict."""
+    return AlertRule(
+        id=d["id"],
+        kind=AlertRuleKind(d["kind"]),
+        metric=AlertMetric(d["metric"]),
+        threshold=float(d["threshold"]),
+        unit=d.get("unit", ""),
+        severity=AlertSeverity(d["severity"]),
+        enabled=bool(d["enabled"]),
+    )
+
+
+def _migrate_legacy_alert_rules(data: Dict[str, Any]) -> List[AlertRule]:
+    """Generate AlertRule list from legacy report_config fields.
+
+    If `data["alert_rules"]` exists, parse it 1:1 (no re-migration).
+    Otherwise, derive Delta-Rules from `report_config.change_threshold_*`.
+    `alert_on_changes=False` keeps rules but marks them disabled (preserves
+    user thresholds — Datenverlust-Prinzip BUG-DATALOSS-GR221).
+    Legacy fields stay in `report_config` as fallback.
+    """
+    existing = data.get("alert_rules")
+    if existing is not None:
+        return [_alert_rule_from_dict(r) for r in existing]
+
+    report_config = data.get("report_config", {}) or {}
+    enabled = bool(report_config.get("alert_on_changes", False))
+
+    rules: List[AlertRule] = []
+    for legacy_field, metric, unit in _LEGACY_DELTA_MAPPING:
+        threshold = report_config.get(legacy_field)
+        if threshold is None:
+            continue
+        rules.append(AlertRule(
+            id=str(uuid.uuid4()),
+            kind=AlertRuleKind.DELTA,
+            metric=metric,
+            threshold=float(threshold),
+            unit=unit,
+            severity=AlertSeverity.WARNING,
+            enabled=enabled,
+        ))
+    return rules
 from app.user import (
     CompareSubscription,
     LocationSubscription,
@@ -37,12 +98,15 @@ class LoaderError(Exception):
     pass
 
 
-def load_trip(path: Union[str, Path]) -> Trip:
+def load_trip(source: Union[str, Path, Dict[str, Any]]) -> Trip:
     """
-    Load a Trip from a JSON file.
+    Load a Trip from a JSON file or a dict.
+
+    Accepts either a filesystem path (str/Path) or a pre-parsed JSON dict
+    (Issue #205 — Tests use the dict form directly).
 
     Args:
-        path: Path to the JSON file
+        source: Path to the JSON file or already-parsed trip dict
 
     Returns:
         Trip object
@@ -50,7 +114,10 @@ def load_trip(path: Union[str, Path]) -> Trip:
     Raises:
         LoaderError: If the file cannot be loaded or is invalid
     """
-    path = Path(path)
+    if isinstance(source, dict):
+        return _parse_trip(source.get("trip", source))
+
+    path = Path(source)
     if not path.exists():
         raise LoaderError(f"Trip file not found: {path}")
 
@@ -193,6 +260,9 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
             updated_at=datetime.fromisoformat(rc_data["updated_at"]) if "updated_at" in rc_data else datetime.now(),
         )
 
+    # Issue #205: Alert Rules — either directly from JSON or migrated from legacy.
+    alert_rules = _migrate_legacy_alert_rules(data)
+
     return Trip(
         id=data["id"],
         name=data["name"],
@@ -202,6 +272,7 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
         weather_config=weather_config,
         display_config=display_config,
         report_config=report_config,
+        alert_rules=alert_rules,
     )
 
 
@@ -631,6 +702,20 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             "sms_metrics": dc.sms_metrics,
             "updated_at": dc.updated_at.isoformat(),
         }
+
+    # Serialize alert_rules (Issue #205) — always emit, even if empty
+    data["alert_rules"] = [
+        {
+            "id": r.id,
+            "kind": r.kind.value,
+            "metric": r.metric.value,
+            "threshold": r.threshold,
+            "unit": r.unit,
+            "severity": r.severity.value,
+            "enabled": r.enabled,
+        }
+        for r in trip.alert_rules
+    ]
 
     # Serialize report config (Feature 3.5)
     if trip.report_config:

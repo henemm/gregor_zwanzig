@@ -147,6 +147,12 @@ func (s *Store) SaveTrip(trip model.Trip) error {
 		return err
 	}
 
+	// Issue #205 F002: Nil-Coercion verhindert "alert_rules":null im JSON,
+	// das beim nächsten Python-Load die Legacy-Migration erneut triggern würde.
+	if trip.AlertRules == nil {
+		trip.AlertRules = []model.AlertRule{}
+	}
+
 	data, err := json.MarshalIndent(trip, "", "  ")
 	if err != nil {
 		return err

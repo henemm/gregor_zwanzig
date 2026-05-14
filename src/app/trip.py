@@ -180,6 +180,7 @@ class Trip:
     weather_config: Optional["TripWeatherConfig"] = None  # Feature 2.6 (legacy, kept for migration)
     display_config: Optional["UnifiedWeatherDisplayConfig"] = None  # Feature 2.6 v2
     report_config: Optional["TripReportConfig"] = None  # Feature 3.5
+    alert_rules: List["AlertRule"] = field(default_factory=list)  # Issue #205
 
     def __post_init__(self) -> None:
         if not self.stages:

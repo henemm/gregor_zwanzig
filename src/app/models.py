@@ -617,3 +617,46 @@ class TripReportConfig:
 
     # Metadata
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+# --- Alert Rules (Issue #205) ----------------------------------------------
+
+class AlertRuleKind(str, Enum):
+    """Kind of alert rule: absolute threshold vs delta change."""
+    ABSOLUTE = "absolute"
+    DELTA = "delta"
+
+
+class AlertSeverity(str, Enum):
+    """Severity of alert rule."""
+    INFO = "info"
+    WARNING = "warning"
+    CRITICAL = "critical"
+
+
+class AlertMetric(str, Enum):
+    """Metric that an alert rule observes."""
+    WIND_GUST = "wind_gust"
+    PRECIPITATION_SUM = "precipitation_sum"
+    TEMPERATURE_MIN = "temperature_min"
+    TEMPERATURE_MAX = "temperature_max"
+    THUNDER_LEVEL = "thunder_level"
+    SNOW_LINE = "snow_line"
+    TEMPERATURE_CHANGE = "temperature_change"
+    WIND_CHANGE = "wind_change"
+    PRECIPITATION_CHANGE = "precipitation_change"
+
+
+@dataclass
+class AlertRule:
+    """Single configurable alert rule attached to a Trip.
+
+    See docs/specs/modules/issue_205_alert_rules.md.
+    """
+    id: str
+    kind: AlertRuleKind
+    metric: AlertMetric
+    threshold: float
+    severity: AlertSeverity
+    enabled: bool
+    unit: str = ""

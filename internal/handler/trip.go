@@ -120,6 +120,7 @@ type tripUpdateRequest struct {
 	WeatherConfig    *map[string]interface{} `json:"weather_config,omitempty"`
 	DisplayConfig    *map[string]interface{} `json:"display_config,omitempty"`
 	ReportConfig     *map[string]interface{} `json:"report_config,omitempty"`
+	AlertRules       *[]model.AlertRule      `json:"alert_rules,omitempty"`
 }
 
 func UpdateTripHandler(s *store.Store) http.HandlerFunc {
@@ -169,6 +170,9 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 		}
 		if req.ReportConfig != nil {
 			existing.ReportConfig = *req.ReportConfig
+		}
+		if req.AlertRules != nil {
+			existing.AlertRules = *req.AlertRules
 		}
 		existing.ID = id
 
