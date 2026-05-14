@@ -28,6 +28,28 @@ Wenn der Launcher dir am Ende des Prompts einen `Auth-Cookie fuer /api/*-Routen`
 - Falls Browser-Test (Playwright) noetig: Cookie via
   `page.context().addCookies([{name:'gz_session', value:'...', domain:'staging.gregor20.henemm.com', path:'/'}])` setzen.
 
+## Validator-Sichtbarkeits-Endpoints (Issue #221)
+
+Für Specs, die interne Python-Funktionen ohne öffentliche API beschreiben, gibt es
+drei cookie-geschützte Sichtbarkeits-Endpoints. **Nutze sie zuerst**, bevor du auf
+AMBIGUOUS gehst — sie machen interne Logik prüfbar:
+
+- `GET /api/_validator/format-metric?unit=<u>&value=<v>[&signed=true]`
+  → `{"formatted":"<string>"}` — wraps `src.app.metric_catalog.format_metric_value`.
+  Nützlich für jede AC, die ein erwartetes Format-Resultat fordert
+  (z.B. `format_metric_value("m", 12240.0) == "12.240 m"`).
+- `POST /api/trips/{id}/alert-preview` mit JSON-Body
+  `{"changes":[…WeatherChange…], "segment_times":[{"segment_id":"…","start":"HH:MM","end":"HH:MM"}]}`
+  → `{"html":"…","plain":"…"}` — rendert die Alert-Mail über den
+  Production-Renderer-Pfad, **ohne Versand**. Nützlich für ACs über
+  Alert-Mail-Inhalt, Change-Zeilen-Formatierung, Segment-Bezug.
+- `GET /api/_validator/detector-thresholds?trip=<id>`
+  → `{"config_source":"<from_alert_rules|from_display_config|from_trip_config|defaults>", "effective_detector":"<…>", "thresholds":{…}}`
+  — zeigt, welchen Detector-Pfad der `WeatherChangeDetectionService` für diesen
+  Trip nimmt (User-Intent aus rawem JSON + effektive Detector-Quelle nach Loader-Migration).
+
+Alle drei brauchen den `gz_session`-Cookie. Spec: `docs/specs/modules/issue_221_validator_observability_endpoints.md`.
+
 ## Regeln
 
 1. Lies NUR die Spec (Expected Behavior Sektion)
