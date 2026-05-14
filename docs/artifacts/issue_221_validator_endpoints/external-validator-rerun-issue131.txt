@@ -1,0 +1,32 @@
+================================================
+  External Validator — Isolierte QA-Session
+================================================
+
+  Spec:   docs/specs/modules/issue_131_alert_email_klarheit.md
+  Server: https://staging.gregor20.henemm.com
+
+  Diese Session ist isoliert vom Implementierer.
+  Der Validator kennt nur: Spec + laufende App.
+================================================
+
+## External-Validator-Verdict: **AMBIGUOUS**
+
+**Spec:** `docs/specs/modules/issue_131_alert_email_klarheit.md`
+**Server:** https://staging.gregor20.henemm.com
+**Report:** `docs/artifacts/issue_131_alert_email_klarheit/validator-report.md` (Run 1 + Run 2 dokumentiert)
+
+### Befund
+
+Issue 131 ist überwiegend ein internes Refactor von Renderer- und Detector-Funktionen. 8 von 9 Acceptance Criteria betreffen Python-Funktionen ohne HTTP-Oberfläche (`format_metric_value`, `format_change_line`, `build_segment_label`, `WeatherChange.segment_id`, `from_display_config`), AC-9 verlangt ein `grep` in `src/`, das der External Validator per Mandat nicht ausführen darf.
+
+Ich habe in zwei Runs 50+ plausible Endpoints geprüft (Validator-Hooks, Preview-Routen, Alert-Trigger, Mail-Verlauf, Scheduler-Trigger) — alle **404**. Der Scheduler-Job `alert_checks` hat seit Deploy nicht gefeuert (`last_run: null`, next 2026-05-15T00:00). Es liegen **weder widerlegende noch bestätigende** Beweise vor → AMBIGUOUS.
+
+### Empfehlung (gemäß Memory-Regel „Bei AMBIGUOUS Sichtbarkeit nachrüsten")
+
+Damit eine erneute External-Validierung möglich wird, mindestens **einen** dieser Endpoints einbauen:
+
+1. `GET /api/validator/format-metric-value?unit=m&value=12240` → `{"formatted":"12.240 m"}` (deckt AC-4/5/6).
+2. `POST /api/validator/alert-render` mit Trip-ID + synthetischen Changes → `{"html":"…","plain":"…"}` (deckt AC-1/7/8).
+3. `GET /api/validator/alert-detector/thresholds?trip_id=<id>` → Threshold-Map + verwendeter Pfad (`from_display_config`/`from_trip_config`) (deckt AC-2/3).
+
+Alternativ ist die Spec bewusst als „nur durch pytest verifizierbar" zu markieren — dann liegt die Verifikation außerhalb der External-Validator-Reichweite.

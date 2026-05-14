@@ -1,0 +1,27 @@
+================================================
+  External Validator — Isolierte QA-Session
+================================================
+
+  Spec:   docs/specs/modules/issue_131_alert_email_klarheit.md
+  Server: https://staging.gregor20.henemm.com
+
+  Diese Session ist isoliert vom Implementierer.
+  Der Validator kennt nur: Spec + laufende App.
+================================================
+
+# Verdict: VERIFIED
+
+**Report:** `docs/artifacts/issue_131_alert_email_klarheit/validator-report.md`
+
+**Zusammenfassung:**
+- **7 / 9 AC PASS** (hart belegt via Validator-Endpoints):
+  - AC-2: `from_display_config()` nimmt ENABLED-Metriken (visibility_min_m=1000.0 + temp_*_c=5.0 bei `alert_enabled=false`)
+  - AC-3: Trip ohne display_config → `config_source=from_trip_config`, alle 3-Slider-Metriken
+  - AC-4/5/6: format_metric_value liefert exakt `12.240 m`, `63 %`, `+34 %`, `12,5 °C`, `−2,3 mm` (Unicode-Minus U+2212)
+  - AC-7: alert-preview rendert `Segment 2 (14:00–16:00) — Sichtweite (min): 12.240 m → 38.440 m (+26.200 m)`
+  - AC-8: HTML+Plain liefern dieselben zwei Change-Zeilen, keine Format-Drift
+- **2 / 9 AC UNKLAR** (Sichtbarkeitslücken, kein Bug):
+  - AC-1: Detector-Output ohne dedizierten Endpoint nicht direkt prüfbar (indirekt via AC-7/8 belegt)
+  - AC-9: Code-Cleanup in `src/` extern nicht prüfbar
+
+**4 Findings**, alle LOW (Doku/Spec-Notation), keiner widerlegt das Verhalten.
