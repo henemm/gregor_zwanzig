@@ -85,21 +85,18 @@ class TripAlertService:
             logger.error("SMTP not configured, cannot send alerts")
             return False
 
-        # 1a. Create change detector with per-trip thresholds
-        # Priority: display_config (per-metric) > report_config (legacy 3-slider) > catalog defaults
-        if trip.display_config and trip.display_config.get_enabled_metrics():
-            self._change_detector = WeatherChangeDetectionService.from_display_config(
-                trip.display_config
-            )
-        elif trip.report_config:
-            self._change_detector = WeatherChangeDetectionService.from_trip_config(
-                trip.report_config
-            )
-        else:
-            self._change_detector = WeatherChangeDetectionService()
+        # 1a. Create change detector with per-trip priority (Issue #222 W1)
+        # Priority: alert_rules > display_config > report_config > catalog defaults
+        self._change_detector = self._select_change_detector(trip)
 
-        # 1b. Check if alerts are disabled for this trip
-        if trip.report_config and not trip.report_config.alert_on_changes:
+        # 1b. Check if alerts are disabled for this trip (legacy report_config path only)
+        # If alert_rules has active rules, those are source-of-truth (disable via rule.enabled=False)
+        has_active_rules = any(r.enabled for r in (trip.alert_rules or []))
+        if (
+            not has_active_rules
+            and trip.report_config
+            and not trip.report_config.alert_on_changes
+        ):
             logger.debug(f"Alerts disabled for trip {trip.id}")
             return False
 
@@ -153,6 +150,22 @@ class TripAlertService:
 
         return True
 
+    def _select_change_detector(self, trip: "Trip") -> WeatherChangeDetectionService:
+        """Return detector with priority alert_rules > display_config > report_config > defaults.
+
+        Issue #222 Workflow 1: alert_rules (enabled=True) is now the highest-priority
+        source for change-detection thresholds. Pure helper — directly unit-testable
+        without SMTP setup.
+        """
+        active_rules = [r for r in (trip.alert_rules or []) if r.enabled]
+        if active_rules:
+            return WeatherChangeDetectionService.from_alert_rules(active_rules)
+        if trip.display_config and trip.display_config.get_enabled_metrics():
+            return WeatherChangeDetectionService.from_display_config(trip.display_config)
+        if trip.report_config:
+            return WeatherChangeDetectionService.from_trip_config(trip.report_config)
+        return WeatherChangeDetectionService()
+
     def check_all_trips(self) -> int:
         """
         Check all active trips for weather changes and send alerts.
@@ -170,7 +183,13 @@ class TripAlertService:
         today = date_type.today()
         alerts_sent = 0
         for trip in load_all_trips(user_id=self._user_id):
-            if not trip.report_config or not trip.report_config.alert_on_changes:
+            # Issue #222 W1: Trips with active alert_rules must be checked even if
+            # report_config is missing or alert_on_changes=False — alert_rules is the
+            # new source-of-truth (disable via rule.enabled=False).
+            has_active_rules = any(r.enabled for r in (trip.alert_rules or []))
+            if not has_active_rules and (
+                not trip.report_config or not trip.report_config.alert_on_changes
+            ):
                 continue
 
             # Skip expired trips (all stages in the past)

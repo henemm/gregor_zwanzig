@@ -8,17 +8,68 @@ SPEC: docs/specs/modules/weather_change_detection.md v2.0
 """
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Optional
 
+logger = logging.getLogger(__name__)
+
 if TYPE_CHECKING:
-    from app.models import SegmentWeatherData, TripReportConfig, UnifiedWeatherDisplayConfig
+    from app.models import (
+        AlertRule,
+        SegmentWeatherData,
+        TripReportConfig,
+        UnifiedWeatherDisplayConfig,
+    )
 
 from enum import Enum
 
-from app.models import ChangeSeverity, ThunderLevel, WeatherChange
+from app.models import (
+    AlertMetric,
+    AlertRuleKind,
+    AlertSeverity,
+    ChangeSeverity,
+    ThunderLevel,
+    WeatherChange,
+)
 
 # Ordinal mapping for enum-type metrics (used for delta calculation)
 _THUNDER_ORDINAL = {ThunderLevel.NONE: 0, ThunderLevel.MED: 1, ThunderLevel.HIGH: 2}
+
+# --- Issue #222 Workflow 1: AlertRule → SegmentWeatherSummary field mappings ---
+
+# Absolute-Rule metrics → summary field name (one field per metric)
+_ALERT_METRIC_TO_SUMMARY_FIELD: dict[AlertMetric, str] = {
+    AlertMetric.WIND_GUST: "gust_max_kmh",
+    AlertMetric.PRECIPITATION_SUM: "precip_sum_mm",
+    AlertMetric.TEMPERATURE_MIN: "temp_min_c",
+    AlertMetric.TEMPERATURE_MAX: "temp_max_c",
+    AlertMetric.THUNDER_LEVEL: "thunder_level_max",
+    AlertMetric.SNOW_LINE: "freezing_level_m",
+}
+
+# Delta-Rule metrics → tuple of summary fields (metric-aggregating)
+_ALERT_DELTA_METRIC_TO_FIELDS: dict[AlertMetric, tuple[str, ...]] = {
+    AlertMetric.TEMPERATURE_CHANGE: ("temp_min_c", "temp_max_c"),
+    AlertMetric.WIND_CHANGE: ("wind_max_kmh", "gust_max_kmh"),
+    AlertMetric.PRECIPITATION_CHANGE: ("precip_sum_mm",),
+}
+
+# Comparison direction per absolute-rule metric ("above" or "below")
+_ALERT_METRIC_COMPARISON: dict[AlertMetric, str] = {
+    AlertMetric.WIND_GUST: "above",
+    AlertMetric.PRECIPITATION_SUM: "above",
+    AlertMetric.TEMPERATURE_MIN: "below",  # Kältealarm
+    AlertMetric.TEMPERATURE_MAX: "above",
+    AlertMetric.THUNDER_LEVEL: "above",
+    AlertMetric.SNOW_LINE: "above",
+}
+
+# AlertSeverity (Issue #205) → ChangeSeverity (DTO for mail filter)
+_RULE_SEVERITY_TO_CHANGE_SEVERITY: dict[AlertSeverity, ChangeSeverity] = {
+    AlertSeverity.INFO: ChangeSeverity.MINOR,
+    AlertSeverity.WARNING: ChangeSeverity.MODERATE,
+    AlertSeverity.CRITICAL: ChangeSeverity.MAJOR,
+}
 
 
 class WeatherChangeDetectionService:
@@ -43,6 +94,8 @@ class WeatherChangeDetectionService:
     def __init__(
         self,
         thresholds: Optional[dict[str, float]] = None,
+        absolute_rules: Optional[list["AlertRule"]] = None,
+        severity_overrides: Optional[dict[str, AlertSeverity]] = None,
     ):
         """
         Initialize with thresholds.
@@ -50,12 +103,20 @@ class WeatherChangeDetectionService:
         Args:
             thresholds: Custom {field: threshold} dict.
                         If None, uses get_change_detection_map() defaults from MetricCatalog.
+            absolute_rules: Issue #222 — Absolute AlertRules (kind=absolute, enabled=True).
+                            Detected via comparison-direction (above/below) per metric.
+            severity_overrides: Issue #222 — Maps summary-field → AlertSeverity for delta
+                                detection, so rule.severity wins over ratio-based classify.
         """
         if thresholds is None:
             from app.metric_catalog import get_change_detection_map
             self._thresholds = get_change_detection_map()
         else:
             self._thresholds = dict(thresholds)
+        self._absolute_rules: list["AlertRule"] = list(absolute_rules) if absolute_rules else []
+        self._severity_overrides: dict[str, AlertSeverity] = (
+            dict(severity_overrides) if severity_overrides else {}
+        )
 
     @classmethod
     def from_trip_config(cls, config: "TripReportConfig") -> "WeatherChangeDetectionService":
@@ -122,6 +183,51 @@ class WeatherChangeDetectionService:
                 thresholds[field] = threshold
         return cls(thresholds=thresholds)
 
+    @classmethod
+    def from_alert_rules(cls, rules: list["AlertRule"]) -> "WeatherChangeDetectionService":
+        """Factory: Build a service from Issue-#205 AlertRule list (Issue #222 W1).
+
+        Only rules with enabled=True contribute. Delta-rules fill _thresholds
+        (compatible with existing detect_changes logic). Absolute-rules go to
+        a separate _absolute_rules list (consumed by detect_changes). The rule
+        severity overrides the ratio-based classification for both paths.
+
+        Args:
+            rules: List of AlertRule objects (typically from Trip.alert_rules).
+
+        Returns:
+            WeatherChangeDetectionService with only rule-driven thresholds
+            (no MetricCatalog defaults — explicit opt-in via rules).
+        """
+        thresholds: dict[str, float] = {}
+        absolute_rules: list["AlertRule"] = []
+        severity_overrides: dict[str, AlertSeverity] = {}
+
+        for rule in rules:
+            if not rule.enabled:
+                continue
+            if rule.kind == AlertRuleKind.ABSOLUTE:
+                absolute_rules.append(rule)
+            elif rule.kind == AlertRuleKind.DELTA:
+                fields = _ALERT_DELTA_METRIC_TO_FIELDS.get(rule.metric, ())
+                if not fields:
+                    # Issue #222 F004: Surface unmapped delta-metrics instead of
+                    # silently dropping (e.g. WIND_GUST/TEMPERATURE_MIN as delta).
+                    logger.warning(
+                        "AlertRule kind=delta with unsupported metric %s (id=%s) — dropped",
+                        rule.metric, rule.id,
+                    )
+                    continue
+                for field_name in fields:
+                    thresholds[field_name] = rule.threshold
+                    severity_overrides[field_name] = rule.severity
+
+        return cls(
+            thresholds=thresholds,
+            absolute_rules=absolute_rules,
+            severity_overrides=severity_overrides,
+        )
+
     def detect_changes(
         self,
         old_data: "SegmentWeatherData",
@@ -171,7 +277,13 @@ class WeatherChangeDetectionService:
 
             # Check if exceeds threshold
             if abs(delta) > threshold:
-                severity = self._classify_severity(abs(delta), threshold)
+                # Issue #222: Rule-driven severity override (delta-rules from from_alert_rules)
+                if metric in self._severity_overrides:
+                    severity = _RULE_SEVERITY_TO_CHANGE_SEVERITY[
+                        self._severity_overrides[metric]
+                    ]
+                else:
+                    severity = self._classify_severity(abs(delta), threshold)
                 direction = "increase" if delta > 0 else "decrease"
 
                 change = WeatherChange(
@@ -186,7 +298,64 @@ class WeatherChangeDetectionService:
                 )
                 changes.append(change)
 
+        # Issue #222 Workflow 1: Absolute-rule detection (new_value vs threshold)
+        changes.extend(self._detect_absolute_changes(new_summary, new_data))
+
         return changes
+
+    def _detect_absolute_changes(
+        self,
+        new_summary,
+        new_data: "SegmentWeatherData",
+    ) -> list[WeatherChange]:
+        """Detect absolute-rule violations (Issue #222 W1).
+
+        For each absolute rule:
+        - Resolve summary field via _ALERT_METRIC_TO_SUMMARY_FIELD
+        - Look up comparison direction (above/below)
+        - Emit WeatherChange if threshold violated, using rule-severity
+        """
+        results: list[WeatherChange] = []
+        for rule in self._absolute_rules:
+            field_name = _ALERT_METRIC_TO_SUMMARY_FIELD.get(rule.metric)
+            if not field_name:
+                continue
+            new_value = getattr(new_summary, field_name, None)
+            if new_value is None:
+                continue
+            # Convert enum values (e.g., ThunderLevel) to ordinals
+            if isinstance(new_value, Enum):
+                new_value = _THUNDER_ORDINAL.get(new_value, 0)
+            comparison = _ALERT_METRIC_COMPARISON.get(rule.metric, "above")
+            # Issue #222 F003: THUNDER_LEVEL uses >= for above (user intent
+            # "ab Stufe MED alarmieren" — threshold=1.0 must match MED=1).
+            # Other numeric metrics keep strict > to avoid spurious noise.
+            if rule.metric == AlertMetric.THUNDER_LEVEL:
+                triggered = (
+                    (comparison == "above" and new_value >= rule.threshold)
+                    or (comparison == "below" and new_value <= rule.threshold)
+                )
+            else:
+                triggered = (
+                    (comparison == "above" and new_value > rule.threshold)
+                    or (comparison == "below" and new_value < rule.threshold)
+                )
+            if not triggered:
+                continue
+            severity = _RULE_SEVERITY_TO_CHANGE_SEVERITY[rule.severity]
+            results.append(
+                WeatherChange(
+                    metric=field_name,
+                    old_value=0.0,  # Absolute rules have no "old" comparison
+                    new_value=float(new_value),
+                    delta=float(new_value) - float(rule.threshold),
+                    threshold=float(rule.threshold),
+                    severity=severity,
+                    direction=comparison,  # "above" or "below"
+                    segment_id=str(new_data.segment.segment_id),
+                )
+            )
+        return results
 
     def _classify_severity(self, delta: float, threshold: float) -> ChangeSeverity:
         """
