@@ -104,6 +104,10 @@ func main() {
 	r.Post("/api/notify/test", handler.ProxyPostHandler(cfg.PythonCoreURL, "/api/notify/test"))
 	r.Get("/api/compare", handler.CompareProxyHandler(cfg.PythonCoreURL))
 	r.Get("/api/_internal/trip/{id}/loaded", handler.LoadedTripProxyHandler(cfg.PythonCoreURL))
+	// Issue #221: External Validator observability endpoints (cookie-auth via global middleware).
+	r.Get("/api/_validator/format-metric", handler.ValidatorFormatMetricProxyHandler(cfg.PythonCoreURL))
+	r.Get("/api/_validator/detector-thresholds", handler.DetectorThresholdsProxyHandler(cfg.PythonCoreURL))
+	r.Post("/api/trips/{id}/alert-preview", handler.AlertPreviewProxyHandler(cfg.PythonCoreURL))
 
 	// Scheduler
 	sched, err := scheduler.New(cfg, s)
