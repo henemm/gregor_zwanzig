@@ -1,0 +1,11 @@
+================================================
+  External Validator — Isolierte QA-Session
+================================================
+
+  Spec:   docs/specs/modules/issue_224_wizard_alert_rules_editor.md
+  Server: https://staging.gregor20.henemm.com
+
+  Diese Session ist isoliert vom Implementierer.
+  Der Validator kennt nur: Spec + laufende App.
+================================================
+

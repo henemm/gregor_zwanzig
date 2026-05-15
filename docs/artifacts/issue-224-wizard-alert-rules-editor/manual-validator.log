@@ -1,0 +1,13 @@
+LOGIN_OK
+WIZARD_OPENED
+STEP1_NEXT
+STEP2_NEXT
+STEP3_NEXT
+STEP4_VISIBLE
+AC-1_alert-rules-editor_visible=true
+AC-1_old-threshold-gust_count=0
+AC-1_old-thresholds-list_count=0
+AC-3_empty-state_visible=true
+AC-3_alert-rule-row_count_after_add=1
+SCREENSHOT_OK
+VERDICT_OK

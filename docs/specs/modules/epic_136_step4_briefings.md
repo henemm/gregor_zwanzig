@@ -483,6 +483,8 @@ AC#11) verweisen auf `trip-wizard-step4-briefings`; diese werden in §11 migrier
 | `trip-wizard-step4-threshold-thunder` | `ThresholdRow` Gewitter | Gewitter-Level-Select |
 | `trip-wizard-step4-threshold-snow` | `ThresholdRow` Schneefallgrenze | Schneefallgrenze-Input |
 
+> **Hinweis (seit Issue #224, 2026-05-15):** Die Threshold-bezogenen TestIDs und ACs (#9, #10, #14, #18, #18b, #19) sind obsolet. Sektion 3 ("Alert-Schwellwerte") wurde durch eine `AlertRulesEditor`-Integration ersetzt — siehe Issue #224 Spec für Details.
+
 ### §10 E2E-Helper `fillStep4`
 
 Datei: `frontend/e2e/helpers.ts`

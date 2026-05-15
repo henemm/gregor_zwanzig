@@ -3,12 +3,14 @@ entity_id: issue_224_wizard_alert_rules_editor
 type: module
 created: 2026-05-15
 updated: 2026-05-15
-status: draft
+status: active
 version: "1.0"
 title: Wizard-Umstellung auf AlertRulesEditor
 issue: 224
 related: [223, 222, 205, 164, 136]
 tags: [alerts, frontend, wizard, trip-new, issue-224, refactor]
+approved_by: User
+approved_date: 2026-05-15
 ---
 
 <!-- Issue #224 — Wizard Step 4 auf AlertRulesEditor umstellen -->
@@ -17,7 +19,7 @@ tags: [alerts, frontend, wizard, trip-new, issue-224, refactor]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (2026-05-15)
 
 ## Purpose
 

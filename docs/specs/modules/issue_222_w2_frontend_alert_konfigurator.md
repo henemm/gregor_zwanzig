@@ -295,6 +295,13 @@ THUNDER_LEVEL bekommt menschenlesbares "MITTEL"/"HOCH" statt "1.0"/"2.0".
   gewünscht" — wenn der User später eine NONE-Rule mit `severity` für
   Reporting will, muss das Datenmodell den Fall vorsehen.
 
+## Status Update
+
+**Hinweis (seit Issue #224, 2026-05-15):** Die Bridge-Funktion `mapBriefingsToAlertRules()` (definiert in dieser Spec) wurde mit Issue #224 abgebaut. Der Wizard schreibt jetzt direkt `alert_rules` ohne Bridge-Layer (`report_config.alert_thresholds` entfällt).
+
+Diese Spec bleibt als historische Referenz für die Zweit-Architektur (W1↔W2-Bridge). Die aktuelle Implementierung folgt dem Issue-#224-Muster.
+
 ## Changelog
 
 - 2026-05-14: Initial spec für Workflow 2 (Frontend) erstellt
+- 2026-05-15: Bridge-Funktion durch Issue #224 abgebaut (mapBriefingsToAlertRules entfernt, alertRules als direkter State)

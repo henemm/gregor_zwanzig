@@ -169,6 +169,7 @@ Alle Module benoetigen Specs vor Implementierung:
 - `trip_wizard_master_fundament` - Master-Spec für Trip-Wizard (Epic #136): Datenmodell (Trip.shortcode, Trip.activity), WizardState-Runes, wizardHelpers, Verzeichnisstruktur (Spec: `docs/specs/modules/epic_136_trip_wizard.md`)
 - `epic_136_step3_waypoints` - Trip-Wizard Step 3: Wegpunkt-Vorschläge bestätigen (Issue #163, Spec: `docs/specs/modules/epic_136_step3_waypoints.md`)
 - `epic_136_step4_briefings` - Trip-Wizard Step 4: Briefings & Kanäle, Save-Pipeline mit briefings→report_config-Mapping (Issue #164, Spec: `docs/specs/modules/epic_136_step4_briefings.md`)
+- `issue_224_wizard_alert_rules_editor` - Wizard Step 4 nutzt AlertRulesEditor statt Threshold-Block (Issue #224, Spec: `docs/specs/modules/issue_224_wizard_alert_rules_editor.md`)
 
 ### Geplante Module
 Siehe GitHub Issues: https://github.com/henemm/gregor_zwanzig/issues
