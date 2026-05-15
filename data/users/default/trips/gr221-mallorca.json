@@ -476,6 +476,18 @@
         "use_friendly_format": true,
         "alert_enabled": false,
         "alert_threshold": null
+      },
+      {
+        "metric_id": "confidence",
+        "enabled": true,
+        "aggregations": [
+          "min"
+        ],
+        "morning_enabled": null,
+        "evening_enabled": null,
+        "use_friendly_format": false,
+        "alert_enabled": false,
+        "alert_threshold": null
       }
     ],
     "show_night_block": true,

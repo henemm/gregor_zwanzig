@@ -703,6 +703,18 @@
       {
         "enabled": false,
         "metric_id": "fresh_snow"
+      },
+      {
+        "metric_id": "confidence",
+        "enabled": true,
+        "aggregations": [
+          "min"
+        ],
+        "morning_enabled": null,
+        "evening_enabled": null,
+        "use_friendly_format": false,
+        "alert_enabled": false,
+        "alert_threshold": null
       }
     ]
   },
