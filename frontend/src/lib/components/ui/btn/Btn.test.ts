@@ -14,9 +14,11 @@
 // verifiziert.
 //
 // Ausfuehrung:
-//   cd frontend && npx vitest run src/lib/components/ui/btn/Btn.test.ts
+//   cd frontend && node --experimental-strip-types --test \
+//     src/lib/components/ui/btn/Btn.test.ts
 
-import { describe, test, expect } from 'vitest';
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
 import { render } from 'svelte/server';
 import { createRawSnippet } from 'svelte';
 import {
@@ -24,7 +26,7 @@ import {
 	type BtnVariant,
 	type BtnSize,
 	type BtnProps
-} from './index';
+} from './index.ts';
 
 // ---------------------------------------------------------------------------
 // Helper
@@ -73,81 +75,138 @@ function rootTag(html: string): string {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('Btn — Render-Pfade (button vs anchor)', () => {
-	test('AC-5a: rendert als <button>, wenn kein href gesetzt ist', () => {
-		const html = renderBtn();
-		expect(rootTag(html)).toBe('button');
-	});
+// Btn — Render-Pfade (button vs anchor)
 
-	test('AC-5b: rendert als <a>, wenn href gesetzt ist', () => {
-		const html = renderBtn({ href: '/x' });
-		expect(rootTag(html)).toBe('a');
-	});
-
-	test('AC-10: data-slot="btn" auf beiden Render-Pfaden gesetzt', () => {
-		const button = renderBtn();
-		const anchor = renderBtn({ href: '/x' });
-		expect(attr(button, 'data-slot')).toBe('btn');
-		expect(attr(anchor, 'data-slot')).toBe('btn');
-	});
+test('Btn — Render-Pfade (button vs anchor) > AC-5a: rendert als <button>, wenn kein href gesetzt ist', () => {
+	const html = renderBtn();
+	assert.equal(rootTag(html), 'button');
 });
 
-describe('Btn — href + disabled (WAI-ARIA-Pattern)', () => {
-	test('AC-6a: href + disabled → kein href-Attribut im DOM', () => {
-		const html = renderBtn({ href: '/x', disabled: true });
-		// Kein href= im a-Tag (SSR rendert undefined-Attribute weg)
-		const tag = html.match(/<a\b[^>]*>/)?.[0] ?? '';
-		expect(/\bhref=/.test(tag)).toBe(false);
-	});
-
-	test('AC-6b: href + disabled → aria-disabled="true" gesetzt', () => {
-		const html = renderBtn({ href: '/x', disabled: true });
-		expect(attr(html, 'aria-disabled')).toBe('true');
-	});
-
-	test('AC-6c: href + disabled → tabindex="-1" gesetzt', () => {
-		const html = renderBtn({ href: '/x', disabled: true });
-		expect(attr(html, 'tabindex')).toBe('-1');
-	});
-
-	test('AC-6d: href + disabled → role="link" gesetzt', () => {
-		const html = renderBtn({ href: '/x', disabled: true });
-		expect(attr(html, 'role')).toBe('link');
-	});
+test('Btn — Render-Pfade (button vs anchor) > AC-5b: rendert als <a>, wenn href gesetzt ist', () => {
+	const html = renderBtn({ href: '/x' });
+	assert.equal(rootTag(html), 'a');
 });
 
-describe('Btn — <button> + disabled', () => {
-	test('AC-7: <button> + disabled → natives disabled-Attribut vorhanden', () => {
-		const html = renderBtn({ disabled: true });
-		expect(rootTag(html)).toBe('button');
-		expect(hasAttr(html, 'disabled')).toBe(true);
-	});
-
-	test('AC-7b: <button> + disabled → Click-Handler feuert nicht (HTML-Native: disabled-Attribut verhindert click events)', () => {
-		// SSR-Pruefung: Wenn disabled-Attribut auf <button> gerendert ist,
-		// liefert der Browser keine click-Events. Das ist HTML-Spec-Verhalten.
-		const html = renderBtn({ disabled: true });
-		expect(hasAttr(html, 'disabled')).toBe(true);
-		// Implicit: ohne disabled feuert Click; HTML-Native-Verhalten.
-		const ok = renderBtn({ disabled: false });
-		expect(hasAttr(ok, 'disabled')).toBe(false);
-	});
+test('Btn — Render-Pfade (button vs anchor) > AC-10: data-slot="btn" auf beiden Render-Pfaden gesetzt', () => {
+	const button = renderBtn();
+	const anchor = renderBtn({ href: '/x' });
+	assert.equal(attr(button, 'data-slot'), 'btn');
+	assert.equal(attr(anchor, 'data-slot'), 'btn');
 });
 
-describe('Btn — Default-Props', () => {
-	test('AC-3: Default-Variant ist "primary" (data-variant="primary")', () => {
-		const html = renderBtn();
-		expect(attr(html, 'data-variant')).toBe('primary');
-	});
+// Btn — href + disabled (WAI-ARIA-Pattern)
 
-	test('AC-4: Default-Size ist "md" (data-size="md")', () => {
-		const html = renderBtn();
-		expect(attr(html, 'data-size')).toBe('md');
-	});
+test('Btn — href + disabled (WAI-ARIA-Pattern) > AC-6a: href + disabled → kein href-Attribut im DOM', () => {
+	const html = renderBtn({ href: '/x', disabled: true });
+	// Kein href= im a-Tag (SSR rendert undefined-Attribute weg)
+	const tag = html.match(/<a\b[^>]*>/)?.[0] ?? '';
+	assert.equal(/\bhref=/.test(tag), false);
 });
 
-describe('Btn — Variants & Sizes (Loop-Tests)', () => {
-	const VARIANTS: BtnVariant[] = [
+test('Btn — href + disabled (WAI-ARIA-Pattern) > AC-6b: href + disabled → aria-disabled="true" gesetzt', () => {
+	const html = renderBtn({ href: '/x', disabled: true });
+	assert.equal(attr(html, 'aria-disabled'), 'true');
+});
+
+test('Btn — href + disabled (WAI-ARIA-Pattern) > AC-6c: href + disabled → tabindex="-1" gesetzt', () => {
+	const html = renderBtn({ href: '/x', disabled: true });
+	assert.equal(attr(html, 'tabindex'), '-1');
+});
+
+test('Btn — href + disabled (WAI-ARIA-Pattern) > AC-6d: href + disabled → role="link" gesetzt', () => {
+	const html = renderBtn({ href: '/x', disabled: true });
+	assert.equal(attr(html, 'role'), 'link');
+});
+
+// Btn — <button> + disabled
+
+test('Btn — <button> + disabled > AC-7: <button> + disabled → natives disabled-Attribut vorhanden', () => {
+	const html = renderBtn({ disabled: true });
+	assert.equal(rootTag(html), 'button');
+	assert.equal(hasAttr(html, 'disabled'), true);
+});
+
+test('Btn — <button> + disabled > AC-7b: <button> + disabled → Click-Handler feuert nicht (HTML-Native: disabled-Attribut verhindert click events)', () => {
+	// SSR-Pruefung: Wenn disabled-Attribut auf <button> gerendert ist,
+	// liefert der Browser keine click-Events. Das ist HTML-Spec-Verhalten.
+	const html = renderBtn({ disabled: true });
+	assert.equal(hasAttr(html, 'disabled'), true);
+	// Implicit: ohne disabled feuert Click; HTML-Native-Verhalten.
+	const ok = renderBtn({ disabled: false });
+	assert.equal(hasAttr(ok, 'disabled'), false);
+});
+
+// Btn — Default-Props
+
+test('Btn — Default-Props > AC-3: Default-Variant ist "primary" (data-variant="primary")', () => {
+	const html = renderBtn();
+	assert.equal(attr(html, 'data-variant'), 'primary');
+});
+
+test('Btn — Default-Props > AC-4: Default-Size ist "md" (data-size="md")', () => {
+	const html = renderBtn();
+	assert.equal(attr(html, 'data-size'), 'md');
+});
+
+// Btn — Variants & Sizes (Loop-Tests)
+
+const VARIANTS: BtnVariant[] = [
+	'primary',
+	'accent',
+	'outline',
+	'ghost',
+	'secondary',
+	'destructive',
+	'link'
+];
+const SIZES: BtnSize[] = [
+	'xs',
+	'sm',
+	'md',
+	'lg',
+	'icon',
+	'icon-xs',
+	'icon-sm',
+	'icon-lg'
+];
+
+test('Btn — Variants & Sizes (Loop-Tests) > AC-1: alle 7 Variants werden akzeptiert und auf data-variant durchgereicht', () => {
+	for (const v of VARIANTS) {
+		const html = renderBtn({ variant: v });
+		assert.equal(attr(html, 'data-variant'), v);
+	}
+});
+
+test('Btn — Variants & Sizes (Loop-Tests) > AC-2: alle 8 Sizes werden akzeptiert und auf data-size durchgereicht', () => {
+	for (const s of SIZES) {
+		const html = renderBtn({ size: s });
+		assert.equal(attr(html, 'data-size'), s);
+	}
+});
+
+// Btn — class-Merge & children
+
+test('Btn — class-Merge & children > AC-12: eigene className wird auf class-Attribut gerendert', () => {
+	const html = renderBtn({ class: 'custom-class' });
+	const cls = attr(html, 'class') ?? '';
+	assert.ok(cls.includes('custom-class'));
+});
+
+test('Btn — class-Merge & children > AC-children: children-Snippet wird gerendert (Text-Content)', () => {
+	const html = renderBtn({ _label: 'Speichern' });
+	assert.ok(html.includes('Speichern'));
+});
+
+// Btn — Type-Re-Exports
+
+test('Btn — Type-Re-Exports > exportiert die Type-Aliases BtnVariant, BtnSize, BtnProps via index.ts', () => {
+	// Compile-Time-Check: wenn Importe oben fehlschlagen, schlaegt der Test fehl.
+	// Runtime-Marker: existieren die Symbole? (Types werden gestrippt — nur Btn ist runtime)
+	assert.ok(Btn);
+	// Type-Imports werden vom Compiler validiert; runtime-seitig ist hier nichts zu pruefen.
+	// Dieser Test scheitert in der RED-Phase, weil index.ts die Types noch nicht re-exportiert
+	// (TS-Compile-Fehler beim Test-Import oben).
+	const variants: BtnVariant[] = [
 		'primary',
 		'accent',
 		'outline',
@@ -156,7 +215,7 @@ describe('Btn — Variants & Sizes (Loop-Tests)', () => {
 		'destructive',
 		'link'
 	];
-	const SIZES: BtnSize[] = [
+	const sizes: BtnSize[] = [
 		'xs',
 		'sm',
 		'md',
@@ -166,63 +225,6 @@ describe('Btn — Variants & Sizes (Loop-Tests)', () => {
 		'icon-sm',
 		'icon-lg'
 	];
-
-	test('AC-1: alle 7 Variants werden akzeptiert und auf data-variant durchgereicht', () => {
-		for (const v of VARIANTS) {
-			const html = renderBtn({ variant: v });
-			expect(attr(html, 'data-variant')).toBe(v);
-		}
-	});
-
-	test('AC-2: alle 8 Sizes werden akzeptiert und auf data-size durchgereicht', () => {
-		for (const s of SIZES) {
-			const html = renderBtn({ size: s });
-			expect(attr(html, 'data-size')).toBe(s);
-		}
-	});
-});
-
-describe('Btn — class-Merge & children', () => {
-	test('AC-12: eigene className wird auf class-Attribut gerendert', () => {
-		const html = renderBtn({ class: 'custom-class' });
-		const cls = attr(html, 'class') ?? '';
-		expect(cls).toContain('custom-class');
-	});
-
-	test('AC-children: children-Snippet wird gerendert (Text-Content)', () => {
-		const html = renderBtn({ _label: 'Speichern' });
-		expect(html).toContain('Speichern');
-	});
-});
-
-describe('Btn — Type-Re-Exports', () => {
-	test('exportiert die Type-Aliases BtnVariant, BtnSize, BtnProps via index.ts', () => {
-		// Compile-Time-Check: wenn Importe oben fehlschlagen, schlaegt der Test fehl.
-		// Runtime-Marker: existieren die Symbole? (Types werden gestrippt — nur Btn ist runtime)
-		expect(Btn).toBeTruthy();
-		// Type-Imports werden vom Compiler validiert; runtime-seitig ist hier nichts zu pruefen.
-		// Dieser Test scheitert in der RED-Phase, weil index.ts die Types noch nicht re-exportiert
-		// (TS-Compile-Fehler beim Test-Import oben).
-		const variants: BtnVariant[] = [
-			'primary',
-			'accent',
-			'outline',
-			'ghost',
-			'secondary',
-			'destructive',
-			'link'
-		];
-		const sizes: BtnSize[] = [
-			'xs',
-			'sm',
-			'md',
-			'lg',
-			'icon',
-			'icon-xs',
-			'icon-sm',
-			'icon-lg'
-		];
-		expect(variants.length).toBe(7);
-		expect(sizes.length).toBe(8);
-	});
+	assert.equal(variants.length, 7);
+	assert.equal(sizes.length, 8);
 });
