@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import logging
+import statistics
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
@@ -53,7 +54,37 @@ logger = logging.getLogger("openmeteo")
 # See: docs/specs/bugfix/openmeteo_endpoint_routing.md
 BASE_HOST = "https://api.open-meteo.com"
 AIR_QUALITY_HOST = "https://air-quality-api.open-meteo.com"
+ENSEMBLE_BASE_HOST = "https://ensemble-api.open-meteo.com"
 TIMEOUT = 30.0
+ENSEMBLE_TIMEOUT = 15.0  # Issue #121: shorter timeout for ensemble (best-effort)
+
+
+def compute_confidence_pct(
+    spread_t2m_k: float, spread_precip_mm: float, lead_time_hours: float
+) -> int:
+    """
+    Compute confidence percentage from ensemble spread with lead-time cap.
+
+    Returns int in [0, 100]. See docs/specs/modules/forecast_confidence.md AC-4, AC-5.
+
+    Formula:
+        raw = clamp(100 - spread_t2m_k * 15 - spread_precip_mm * 10, 0, 100)
+        cap = 95 (T+0-24h), 80 (T+24-48h), 60 (T+48-72h), 40 (T+72h+)
+        result = min(raw, cap)
+
+    Lead-Time-Cap is enforced even at zero spread (critical case AC-4).
+    """
+    raw = 100.0 - (spread_t2m_k * 15.0) - (spread_precip_mm * 10.0)
+    raw = max(0.0, min(100.0, raw))
+    if lead_time_hours <= 24:
+        cap = 95
+    elif lead_time_hours <= 48:
+        cap = 80
+    elif lead_time_hours <= 72:
+        cap = 60
+    else:
+        cap = 40
+    return int(round(min(raw, cap)))
 
 # Retry Configuration (per docs/specs/modules/api_retry.md)
 RETRY_ATTEMPTS = 5
@@ -151,9 +182,16 @@ class OpenMeteoProvider:
     location coordinates, with mandatory ECMWF global fallback.
     """
 
-    def __init__(self):
-        """Initialize provider with HTTP client."""
+    def __init__(self, ensemble_base_host: Optional[str] = None):
+        """Initialize provider with HTTP client.
+
+        Args:
+            ensemble_base_host: Override for ensemble API host (Issue #121).
+                Default: production ENSEMBLE_BASE_HOST. Tests inject a
+                closed local port for fault-injection (AC-6).
+        """
         self._client = httpx.Client(timeout=TIMEOUT)
+        self._ensemble_host = ensemble_base_host or ENSEMBLE_BASE_HOST
 
     @property
     def name(self) -> str:
@@ -411,6 +449,88 @@ class OpenMeteoProvider:
             return ThunderLevel.HIGH
         return ThunderLevel.NONE
 
+    def _fetch_ensemble_spread(
+        self,
+        location: "Location",
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
+    ) -> Dict[datetime, Tuple[Optional[float], Optional[float]]]:
+        """
+        Fetch ensemble spread from OpenMeteo Ensemble API. Best-effort.
+
+        Issue #121 / AC-3, AC-6: Returns dict mapping timestamp -> (spread_t2m_k,
+        spread_precip_mm). On ANY failure (HTTP error, timeout, connection error,
+        malformed response) returns {} - never raises to caller (AC-6).
+
+        Spread is computed as stdev across ensemble members. Requires >=5 valid
+        members per hour; otherwise that hour's spread is None.
+        """
+        params = {
+            "latitude": location.latitude,
+            "longitude": location.longitude,
+            "hourly": "temperature_2m,precipitation",
+            "models": "ecmwf_ifs04,icon_seamless,gfs_seamless",
+            "timezone": "UTC",
+        }
+        if start and end:
+            params["start_date"] = start.strftime("%Y-%m-%d")
+            params["end_date"] = end.strftime("%Y-%m-%d")
+
+        url = f"{self._ensemble_host}/v1/ensemble"
+        try:
+            response = self._client.get(url, params=params, timeout=ENSEMBLE_TIMEOUT)
+            response.raise_for_status()
+            data = response.json()
+        except Exception as e:
+            logger.warning("Ensemble fetch failed: %s", e)
+            return {}
+
+        try:
+            hourly = data.get("hourly", {})
+            times = hourly.get("time", [])
+            if not times:
+                return {}
+
+            # Collect all member keys for temperature_2m and precipitation.
+            temp_keys = [k for k in hourly.keys() if k.startswith("temperature_2m")]
+            precip_keys = [k for k in hourly.keys() if k.startswith("precipitation")]
+
+            result: Dict[datetime, Tuple[Optional[float], Optional[float]]] = {}
+            for i, time_str in enumerate(times):
+                try:
+                    ts = datetime.fromisoformat(time_str.replace("Z", "+00:00"))
+                    if ts.tzinfo is None:
+                        ts = ts.replace(tzinfo=timezone.utc)
+                except Exception:
+                    continue
+
+                temp_vals: List[float] = []
+                for k in temp_keys:
+                    arr = hourly.get(k, [])
+                    if i < len(arr) and arr[i] is not None:
+                        try:
+                            temp_vals.append(float(arr[i]))
+                        except (ValueError, TypeError):
+                            pass
+
+                precip_vals: List[float] = []
+                for k in precip_keys:
+                    arr = hourly.get(k, [])
+                    if i < len(arr) and arr[i] is not None:
+                        try:
+                            precip_vals.append(float(arr[i]))
+                        except (ValueError, TypeError):
+                            pass
+
+                spread_t = statistics.stdev(temp_vals) if len(temp_vals) >= 5 else None
+                spread_p = statistics.stdev(precip_vals) if len(precip_vals) >= 5 else None
+                result[ts] = (spread_t, spread_p)
+
+            return result
+        except Exception as e:
+            logger.warning("Ensemble parse failed: %s", e)
+            return {}
+
     def _fetch_uv_data(
         self, lat: float, lon: float, start: datetime, end: datetime
     ) -> Optional[Dict[str, Any]]:
@@ -635,6 +755,36 @@ class OpenMeteoProvider:
                         filled_count += 1
                 if filled_count:
                     logger.info("UV merged from AQ API: %d values", filled_count)
+
+        # Issue #121: Enrich with ensemble spread + lead-time-capped confidence.
+        # Best-effort: any failure leaves the three new fields at None (AC-6).
+        try:
+            spreads = self._fetch_ensemble_spread(location, start, end)
+        except Exception as e:  # pragma: no cover - defensive
+            logger.warning("Ensemble spread enrichment crashed: %s", e)
+            spreads = {}
+
+        if spreads:
+            now_utc = datetime.now(timezone.utc)
+            # Build a lookup with naive UTC ts to match primary timeseries.
+            spreads_naive: Dict[datetime, Tuple[Optional[float], Optional[float]]] = {}
+            for k, v in spreads.items():
+                k_naive = k.replace(tzinfo=None) if k.tzinfo is not None else k
+                spreads_naive[k_naive] = v
+
+            for dp in timeseries.data:
+                dp_ts_naive = dp.ts.replace(tzinfo=None) if dp.ts.tzinfo else dp.ts
+                spread = spreads_naive.get(dp_ts_naive)
+                if spread is None:
+                    continue
+                s_t, s_p = spread
+                dp.spread_t2m_k = s_t
+                dp.spread_precip_mm = s_p
+                if s_t is not None and s_p is not None:
+                    # Lead-time = hours from now to forecast ts.
+                    dp_ts_utc = dp.ts if dp.ts.tzinfo else dp.ts.replace(tzinfo=timezone.utc)
+                    lead_h = max(0.0, (dp_ts_utc - now_utc).total_seconds() / 3600.0)
+                    dp.confidence_pct = compute_confidence_pct(s_t, s_p, lead_h)
 
         # WEATHER-05b: Check for missing metrics and fetch fallback
         cache = self._load_availability_cache()

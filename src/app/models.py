@@ -11,6 +11,9 @@ from datetime import datetime, time, timezone
 from enum import Enum
 from typing import List, Optional
 
+# Re-export Location for convenience. Canonical definition lives in app.config.
+from app.config import Location  # noqa: F401
+
 
 class Provider(str, Enum):
     """Supported weather data providers."""
@@ -68,9 +71,9 @@ class ForecastMeta:
     """Metadata for a forecast timeseries."""
     provider: Provider
     model: str
-    run: datetime
     grid_res_km: float
-    interp: str  # e.g., "point_grid", "nearest_station", "idw2"
+    run: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    interp: str = "grid_point"  # e.g., "point_grid", "nearest_station", "idw2"
     stations_used: List[StationInfo] = field(default_factory=list)
     # WEATHER-05b: Fallback tracking
     fallback_model: Optional[str] = None
@@ -119,6 +122,11 @@ class ForecastDataPoint:
     wmo_code: Optional[int] = None        # WMO weather code (0-99)
     is_day: Optional[int] = None           # 1=Tag, 0=Nacht (von OpenMeteo)
     dni_wm2: Optional[float] = None        # Direct Normal Irradiance (W/m²)
+
+    # Forecast confidence (from ensemble spread, Issue #121)
+    confidence_pct: Optional[int] = None       # 0-100, lead-time-capped
+    spread_t2m_k: Optional[float] = None       # Ensemble sigma Temperatur, in K
+    spread_precip_mm: Optional[float] = None   # Ensemble sigma Niederschlag, in mm
 
 
 @dataclass
@@ -194,6 +202,7 @@ class RiskType(str, Enum):
     POOR_VISIBILITY = "poor_visibility"
     FREEZING_RAIN = "freezing_rain"
     WIND_EXPOSITION = "wind_exposition"
+    LOW_CONFIDENCE = "low_confidence"
 
 
 class RiskLevel(str, Enum):
@@ -342,6 +351,9 @@ class SegmentWeatherSummary:
     # DNI-based weather emoji aggregation (SPEC: weather_emoji_dni.md)
     dominant_wmo_code: Optional[int] = None  # Schwerster WMO-Code im Segment
     dni_avg_wm2: Optional[float] = None      # Durchschnittliche DNI (nur Tagesstunden)
+
+    # Forecast confidence aggregation (Issue #121)
+    confidence_pct_min: Optional[int] = None  # Min. Konfidenz ueber alle Stunden
 
     # Metadata
     aggregation_config: dict[str, str] = field(default_factory=dict)

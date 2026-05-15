@@ -13,6 +13,7 @@ const (
 	RiskPoorVisibility RiskType = "poor_visibility"
 	RiskFreezingRain   RiskType = "freezing_rain"
 	RiskWindExposition RiskType = "wind_exposition"
+	RiskLowConfidence  RiskType = "low_confidence"
 )
 
 // RiskLevel indicates severity.

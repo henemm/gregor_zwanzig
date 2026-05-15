@@ -72,6 +72,10 @@ type ForecastDataPoint struct {
 	SnowfallLimitM   *int         `json:"snowfall_limit_m,omitempty"`
 	SweKgm2          *float64     `json:"swe_kgm2,omitempty"`
 	PrecipType       *string      `json:"precip_type,omitempty"`
+	// Issue #121: Forecast confidence (from ensemble spread)
+	ConfidencePct    *int     `json:"confidence_pct,omitempty"`
+	SpreadT2mK       *float64 `json:"spread_t2m_k,omitempty"`
+	SpreadPrecipMm   *float64 `json:"spread_precip_mm,omitempty"`
 }
 
 type ForecastMeta struct {

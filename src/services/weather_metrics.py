@@ -901,6 +901,7 @@ class WeatherMetricsService:
         fresh_snow_sum = self._compute_fresh_snow(timeseries)
         wind_dir_avg = self._compute_wind_direction(timeseries)
         precip_type_dom = self._compute_precip_type(timeseries)
+        confidence_min = self._compute_confidence_min(timeseries)
 
         # Create new summary with basis + extended metrics
         extended_summary = SegmentWeatherSummary(
@@ -928,6 +929,8 @@ class WeatherMetricsService:
             snow_new_sum_cm=fresh_snow_sum,
             wind_direction_avg_deg=wind_dir_avg,
             precip_type_dominant=precip_type_dom,
+            # Issue #121: forecast confidence aggregation
+            confidence_pct_min=confidence_min,
             # Merge aggregation config
             aggregation_config={
                 **basis_summary.aggregation_config,
@@ -942,6 +945,7 @@ class WeatherMetricsService:
                 "snow_new_sum_cm": "sum",
                 "wind_direction_avg_deg": "avg",
                 "precip_type_dominant": "max",
+                "confidence_pct_min": "min",
             },
         )
 
@@ -992,6 +996,21 @@ class WeatherMetricsService:
         """Compute precipitation probability MAX. Returns pop_max_pct."""
         pop_vals = [dp.pop_pct for dp in timeseries.data if dp.pop_pct is not None]
         return round(max(pop_vals)) if pop_vals else None
+
+    def _compute_confidence_min(
+        self, timeseries: NormalizedTimeseries
+    ) -> Optional[int]:
+        """Compute confidence MIN over all hourly data points (Issue #121).
+
+        Worst-case aggregation: a single low-confidence hour makes the segment
+        low-confidence. Returns None when no data point has confidence_pct set.
+        """
+        vals = [
+            dp.confidence_pct
+            for dp in timeseries.data
+            if dp.confidence_pct is not None
+        ]
+        return min(vals) if vals else None
 
     def _compute_cape(self, timeseries: NormalizedTimeseries) -> Optional[float]:
         """Compute CAPE MAX. Returns cape_max_jkg."""

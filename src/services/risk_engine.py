@@ -98,6 +98,10 @@ class RiskEngine:
         if exposed_sections:
             self._check_wind_exposition(agg, segment, exposed_sections, risks)
 
+        # Rule 10: Low forecast confidence (Issue #121)
+        # Must run AFTER all other checks - depends on which HIGH risks already fired.
+        self._check_confidence(agg, risks)
+
         return RiskAssessment(risks=self._deduplicate(risks))
 
     def assess_segments(
@@ -162,6 +166,27 @@ class RiskEngine:
             if extra_fields:
                 kwargs.update(extra_fields)
             risks.append(Risk(**kwargs))
+
+    def _check_confidence(
+        self, agg: SegmentWeatherSummary, risks: list[Risk]
+    ) -> None:
+        """Rule 10: LOW_CONFIDENCE risk (Issue #121).
+
+        Fires only if confidence_pct_min < 40 AND at least one HIGH-level
+        THUNDERSTORM/WIND/RAIN risk is already present. Prevents alarm noise
+        on stable bad-weather forecasts.
+        """
+        if agg.confidence_pct_min is None or agg.confidence_pct_min >= 40:
+            return
+        high_risk_present = any(
+            r.type in (RiskType.THUNDERSTORM, RiskType.WIND, RiskType.RAIN)
+            and r.level == RiskLevel.HIGH
+            for r in risks
+        )
+        if high_risk_present:
+            risks.append(
+                Risk(type=RiskType.LOW_CONFIDENCE, level=RiskLevel.MODERATE)
+            )
 
     def _check_wind_exposition(
         self,
