@@ -133,12 +133,8 @@ export interface Step4Input {
 		morning?: { enabled?: boolean; time?: string };
 		evening?: { enabled?: boolean; time?: string };
 	};
-	thresholds?: {
-		gust_kmh?: number | null;
-		precip_mm?: number | null;
-		thunder_level?: 'NONE' | 'MED' | 'HIGH' | null;
-		snow_line_m?: number | null;
-	};
+	// Issue #224: AlertRulesEditor ersetzt Thresholds.
+	alertRules?: import('../src/lib/types').AlertRule[];
 	/** default: true — wartet auf Redirect nach Save (`/trips/{id}`) */
 	expectSaveSuccess?: boolean;
 }
@@ -192,28 +188,18 @@ export async function fillStep4(page: Page, input: Step4Input = {}): Promise<voi
 		}
 	}
 
-	// --- Schwellwerte ----------------------------------------------------------
-	if (input.thresholds) {
-		const { gust_kmh, precip_mm, thunder_level, snow_line_m } = input.thresholds;
-		if (gust_kmh !== undefined) {
-			await page
-				.getByTestId('trip-wizard-step4-threshold-gust')
-				.fill(gust_kmh === null ? '' : String(gust_kmh));
-		}
-		if (precip_mm !== undefined) {
-			await page
-				.getByTestId('trip-wizard-step4-threshold-precip')
-				.fill(precip_mm === null ? '' : String(precip_mm));
-		}
-		if (thunder_level !== undefined) {
-			await page
-				.getByTestId('trip-wizard-step4-threshold-thunder')
-				.selectOption(thunder_level === null ? '' : thunder_level);
-		}
-		if (snow_line_m !== undefined) {
-			await page
-				.getByTestId('trip-wizard-step4-threshold-snow')
-				.fill(snow_line_m === null ? '' : String(snow_line_m));
+	// --- Alarmregeln (Issue #224 — AlertRulesEditor) --------------------------
+	if (input.alertRules) {
+		for (const rule of input.alertRules) {
+			await page.getByTestId('alert-rules-editor-add').click();
+			// Default-Rule wurde hinzugefuegt; auf Edit-Mode wechseln und befuellen.
+			const row = page.getByTestId('alert-rule-row').last();
+			await row.getByTestId('alert-rule-edit-btn').click();
+			const edit = page.getByTestId('alert-rule-edit').last();
+			await edit.getByTestId('alert-rule-metric').selectOption(rule.metric);
+			await edit.getByTestId('alert-rule-threshold').fill(String(rule.threshold));
+			await edit.getByTestId('alert-rule-severity').selectOption(rule.severity);
+			await edit.getByTestId('alert-rule-save').click();
 		}
 	}
 

@@ -3,7 +3,7 @@
 // Spec-Referenz: docs/specs/modules/epic_136_step4_briefings.md
 // Issue: #164
 //
-// TestID-Inventar (Sub-Spec §9):
+// TestID-Inventar (Sub-Spec §9 + Issue #224 §"TestIDs"):
 //   trip-wizard-step4-container
 //   trip-wizard-step4-channels-list
 //   trip-wizard-step4-channel-email
@@ -16,15 +16,12 @@
 //   trip-wizard-step4-report-morning-time
 //   trip-wizard-step4-report-evening-toggle
 //   trip-wizard-step4-report-evening-time
-//   trip-wizard-step4-thresholds-list
-//   trip-wizard-step4-threshold-gust
-//   trip-wizard-step4-threshold-precip
-//   trip-wizard-step4-threshold-thunder  (select)
-//   trip-wizard-step4-threshold-snow
-//
-// RED-Phase: Step4Briefings.svelte ist heute ein Stub mit TestID
-// `trip-wizard-step4-briefings` (alt). Alle Tests scheitern wie erwartet,
-// weil die Implementierung von Toggles/Inputs/Selects noch nicht existiert.
+//   alert-rules-editor                   (Issue #224 — ersetzt Threshold-Block)
+//   alert-rules-editor-empty
+//   alert-rules-editor-add
+//   alert-rule-row, alert-rule-edit, alert-rule-edit-btn,
+//   alert-rule-metric, alert-rule-threshold, alert-rule-severity,
+//   alert-rule-save, alert-rule-cancel, alert-rule-delete
 
 import { test, expect, type Page } from '@playwright/test';
 import { login, fillStep1, fillStep2, fillStep3, type Step1Input } from './helpers.js';
@@ -105,33 +102,8 @@ test.describe('Trip-Wizard Step 4 — Briefings & Kanaele (#164)', () => {
 		await expect(page.getByTestId('trip-wizard-step4-report-evening-time')).toBeVisible();
 	});
 
-	test('AC#9: 4 Threshold-Inputs sind vorhanden (gust, precip, thunder, snow)', async ({
-		page
-	}) => {
-		await gotoStep4(page);
-		await expect(page.getByTestId('trip-wizard-step4-thresholds-list')).toBeVisible();
-		await expect(page.getByTestId('trip-wizard-step4-threshold-gust')).toBeVisible();
-		await expect(page.getByTestId('trip-wizard-step4-threshold-precip')).toBeVisible();
-		await expect(page.getByTestId('trip-wizard-step4-threshold-thunder')).toBeVisible();
-		await expect(page.getByTestId('trip-wizard-step4-threshold-snow')).toBeVisible();
-	});
-
-	test('AC#10: Thunder-Input ist ein <select> mit Optionen NONE/MED/HIGH', async ({ page }) => {
-		await gotoStep4(page);
-		const thunder = page.getByTestId('trip-wizard-step4-threshold-thunder');
-		await expect(thunder).toBeVisible();
-		// Tag-Name pruefen
-		const tagName = await thunder.evaluate((el) => el.tagName.toLowerCase());
-		expect(tagName).toBe('select');
-		// Optionen sammeln (value-Attribute)
-		const values = await thunder.evaluate((el) => {
-			const sel = el as HTMLSelectElement;
-			return Array.from(sel.options).map((o) => o.value);
-		});
-		expect(values).toContain('NONE');
-		expect(values).toContain('MED');
-		expect(values).toContain('HIGH');
-	});
+	// AC#9/AC#10 entfernt (Issue #224): Threshold-TestIDs existieren nicht mehr —
+	// die alte Sektion 3 wurde durch <AlertRulesEditor> ersetzt.
 
 	test('AC#11: Save-Button ist sichtbar und enabled in Step 4', async ({ page }) => {
 		await gotoStep4(page);
@@ -149,5 +121,27 @@ test.describe('Trip-Wizard Step 4 — Briefings & Kanaele (#164)', () => {
 		await expect(emailInput).toBeChecked();
 		await emailInput.click();
 		await expect(emailInput).not.toBeChecked();
+	});
+
+	// --- Issue #224: AlertRulesEditor ersetzt die alte Threshold-Sektion ---
+	// Spec: docs/specs/modules/issue_224_wizard_alert_rules_editor.md
+
+	test('Issue #224 AC-1: AlertRulesEditor sichtbar, alte ThresholdRow-TestIDs weg', async ({
+		page
+	}) => {
+		await gotoStep4(page);
+		await expect(page.getByTestId('alert-rules-editor')).toBeVisible();
+		await expect(page.getByTestId('trip-wizard-step4-thresholds-list')).toHaveCount(0);
+		await expect(page.getByTestId('trip-wizard-step4-threshold-gust')).toHaveCount(0);
+		await expect(page.getByTestId('trip-wizard-step4-threshold-precip')).toHaveCount(0);
+		await expect(page.getByTestId('trip-wizard-step4-threshold-thunder')).toHaveCount(0);
+		await expect(page.getByTestId('trip-wizard-step4-threshold-snow')).toHaveCount(0);
+	});
+
+	test('Issue #224 AC-3: Add-Button erzeugt eine Regel-Zeile', async ({ page }) => {
+		await gotoStep4(page);
+		await expect(page.getByTestId('alert-rules-editor-empty')).toBeVisible();
+		await page.getByTestId('alert-rules-editor-add').click();
+		await expect(page.getByTestId('alert-rule-row')).toHaveCount(1);
 	});
 });

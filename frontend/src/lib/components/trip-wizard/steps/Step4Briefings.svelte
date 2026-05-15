@@ -1,14 +1,16 @@
 <script lang="ts">
-	// Step 4: Briefings & Kanaele (Epic #136 Sub-Spec #164).
+	// Step 4: Briefings & Kanaele (Epic #136 Sub-Spec #164, Issue #224).
 	// Quelle: docs/specs/modules/epic_136_step4_briefings.md §7
+	//         docs/specs/modules/issue_224_wizard_alert_rules_editor.md §3
 	//
 	// Drei Sektionen, jede in eigenem GCard mit Eyebrow-Ueberschrift:
-	//   1. Kanaele       (4 ChannelToggles: email, signal, telegram, sms-disabled)
-	//   2. Reports       (2 ReportRows: morning, evening)
-	//   3. Schwellwerte  (4 ThresholdRows: gust_kmh, precip_mm, thunder_level, snow_line_m)
+	//   1. Kanaele     (4 ChannelToggles: email, signal, telegram, sms-disabled)
+	//   2. Reports     (2 ReportRows: morning, evening)
+	//   3. Alarmregeln (AlertRulesEditor — Issue #224)
 	//
-	// State: getContext('trip-wizard-state') — alle Mutationen direkt an
-	// `wizard.briefings.{channels|reports|thresholds}.*`.
+	// State: getContext('trip-wizard-state') — Channels/Reports mutieren
+	// `wizard.briefings.{channels|reports}.*`; AlertRules sind direkt an
+	// `wizard.alertRules` (Top-Level-State, $bindable).
 	//
 	// Save-Button kommt aus TripWizardShell, nicht hier (state.save()).
 
@@ -18,9 +20,7 @@
 	import type { WizardState, BriefingConfig } from '../wizardState.svelte';
 	import ChannelToggle from './ChannelToggle.svelte';
 	import ReportRow from './ReportRow.svelte';
-	import ThresholdRow from './ThresholdRow.svelte';
-
-	type ThunderLevel = 'NONE' | 'MED' | 'HIGH';
+	import AlertRulesEditor from '$lib/components/alert-rules-editor/AlertRulesEditor.svelte';
 
 	const wizard = getContext<WizardState>('trip-wizard-state');
 
@@ -42,17 +42,6 @@
 		return function doSetReportTime(time: string): void {
 			wizard.briefings.reports[report].time = time;
 		};
-	}
-
-	function makeNumberThresholdHandler(field: 'gust_kmh' | 'precip_mm' | 'snow_line_m') {
-		return function doSetNumberThreshold(v: number | ThunderLevel | null): void {
-			// `v` ist hier immer number|null — ThunderLevel kommt nur vom thunder-Handler.
-			wizard.briefings.thresholds[field] = v as number | null;
-		};
-	}
-
-	function doSetThunderThreshold(v: number | ThunderLevel | null): void {
-		wizard.briefings.thresholds.thunder_level = v as ThunderLevel | null;
 	}
 
 	// SMS-Channel ist disabled — Toggle hat einen No-op-Handler.
@@ -128,45 +117,11 @@
 		</GCard>
 	</section>
 
-	<!-- Sektion 3: Alert-Schwellwerte -->
+	<!-- Sektion 3: Alarmregeln (Issue #224 — AlertRulesEditor) -->
 	<section class="space-y-2">
 		<Eyebrow class="text-xs uppercase tracking-wide text-[var(--g-ink-faint)]"
-			>Alert-Schwellwerte</Eyebrow
+			>Alarmregeln</Eyebrow
 		>
-		<GCard class="rounded-md border border-[var(--g-ink-faint)]/20 p-4">
-			<div data-testid="trip-wizard-step4-thresholds-list" class="space-y-3">
-				<ThresholdRow
-					label="Boeen"
-					type="number"
-					unit="km/h"
-					value={wizard.briefings.thresholds.gust_kmh}
-					onchange={makeNumberThresholdHandler('gust_kmh')}
-					testid="trip-wizard-step4-threshold-gust"
-				/>
-				<ThresholdRow
-					label="Niederschlag"
-					type="number"
-					unit="mm"
-					value={wizard.briefings.thresholds.precip_mm}
-					onchange={makeNumberThresholdHandler('precip_mm')}
-					testid="trip-wizard-step4-threshold-precip"
-				/>
-				<ThresholdRow
-					label="Gewitter"
-					type="thunder"
-					value={wizard.briefings.thresholds.thunder_level}
-					onchange={doSetThunderThreshold}
-					testid="trip-wizard-step4-threshold-thunder"
-				/>
-				<ThresholdRow
-					label="Schneefallgrenze"
-					type="number"
-					unit="m"
-					value={wizard.briefings.thresholds.snow_line_m}
-					onchange={makeNumberThresholdHandler('snow_line_m')}
-					testid="trip-wizard-step4-threshold-snow"
-				/>
-			</div>
-		</GCard>
+		<AlertRulesEditor bind:rules={wizard.alertRules} />
 	</section>
 </div>

@@ -4,9 +4,8 @@
 // Sub-Steps lesen/schreiben ausschliesslich Felder dieser Klasse —
 // kein Step-lokaler Trip-State.
 
-import type { ActivityType, Stage, Trip, Waypoint } from '$lib/types';
+import type { AlertRule, ActivityType, Stage, Trip, Waypoint } from '$lib/types';
 import { addDays, mapActivityToProfile, newId } from './wizardHelpers.ts';
-import { mapBriefingsToAlertRules } from '../../utils/alertMapping.ts';
 
 // `goto` und `api` werden in `save()` lazy importiert, damit Unit-Tests die
 // Klasse instanziieren und Felder/Methoden pruefen koennen, ohne dass der
@@ -19,16 +18,8 @@ export interface BriefingConfig {
 		morning: { enabled: boolean; time: string }; // 'HH:MM' z.B. '06:00'
 		evening: { enabled: boolean; time: string }; // 'HH:MM' z.B. '18:00'
 	};
-	// Master-Spec §3.1: Schwellwerte sind nullable — `null` bedeutet
-	// "kein User-Override". Step 4 (Sub-Issue #164) zeigt Placeholder-Werte
-	// in der UI; das Backend setzt projekt-eigene Defaults, wenn die Werte
-	// nicht persistiert sind.
-	thresholds: {
-		gust_kmh: number | null;
-		precip_mm: number | null;
-		thunder_level: 'NONE' | 'MED' | 'HIGH' | null;
-		snow_line_m: number | null;
-	};
+	// Issue #224: `thresholds` entfaellt — ersetzt durch WizardState.alertRules
+	// (AlertRule[]) als Top-Level-State. Spec: docs/specs/modules/issue_224_wizard_alert_rules_editor.md
 }
 
 export const defaultBriefingConfig: BriefingConfig = {
@@ -36,12 +27,6 @@ export const defaultBriefingConfig: BriefingConfig = {
 	reports: {
 		morning: { enabled: true, time: '06:00' },
 		evening: { enabled: true, time: '18:00' }
-	},
-	thresholds: {
-		gust_kmh: null,
-		precip_mm: null,
-		thunder_level: null,
-		snow_line_m: null
 	}
 };
 
@@ -57,6 +42,9 @@ export class WizardState {
 	endDate = $state<string | null>(null);
 	stages = $state<Stage[]>([]);
 	briefings = $state<BriefingConfig>(cloneBriefingConfig(defaultBriefingConfig));
+	// Issue #224: Direkter Top-Level-State fuer Alarmregeln (analog `stages`),
+	// gebunden an `<AlertRulesEditor bind:rules={...}>` in Step 4.
+	alertRules: AlertRule[] = $state([]);
 
 	saveStatus = $state<SaveStatus>('idle');
 	saveError = $state<string | null>(null);
@@ -335,8 +323,9 @@ export class WizardState {
 		}
 
 		// Sub-Spec #164 §3.3: Mapping briefings -> report_config
-		// Zwei Bloecke: Backward-Compat (alte Felder, Scheduler/Alert lesen diese)
-		// und neue alert_thresholds (konsumiert ab Epic #139).
+		// Backward-Compat-Block (alte Felder, Scheduler/Alert lesen diese).
+		// Issue #224: `alert_thresholds`-Block entfaellt — AlertRules werden
+		// direkt aus `this.alertRules` in `trip.alert_rules` geschrieben.
 		const b = this.briefings;
 		const rc: Record<string, unknown> = {
 			// Backward-Compat-Block (TripReportConfig.py Z.589-605):
@@ -351,32 +340,13 @@ export class WizardState {
 			send_sms: b.channels.sms
 		};
 
-		// Neuer Block: alert_thresholds (Phase-2-Entscheidung #1, 2026-05-11).
-		// Nur schreiben wenn mindestens ein Feld gesetzt ist (nicht alle null).
-		const t = b.thresholds;
-		if (
-			t.gust_kmh !== null ||
-			t.precip_mm !== null ||
-			t.thunder_level !== null ||
-			t.snow_line_m !== null
-		) {
-			rc.alert_thresholds = {
-				gust_kmh: t.gust_kmh,
-				precip_mm: t.precip_mm,
-				thunder_level: t.thunder_level,
-				snow_line_m: t.snow_line_m
-			};
-		}
-
 		trip.report_config = rc;
 
-		// Issue #222 W2: Parallel zum report_config.alert_thresholds-Block
-		// schreiben wir typisierte AlertRules. Beide Bloecke koexistieren —
-		// Scheduler/Channels lesen weiterhin report_config, TripAlertService
-		// liest trip.alert_rules.
-		const alertRules = mapBriefingsToAlertRules(b.thresholds);
-		if (alertRules.length > 0) {
-			trip.alert_rules = alertRules;
+		// Issue #224: AlertRules werden direkt aus dem Top-Level-State geschrieben
+		// (Tiefkopie analog `TripEditView.svelte:26–28`). Kein Mapper, kein
+		// `alert_thresholds`-Block mehr — `BriefingConfig.thresholds` ist entfernt.
+		if (this.alertRules.length > 0) {
+			trip.alert_rules = JSON.parse(JSON.stringify(this.alertRules));
 		}
 
 		return trip;
@@ -404,8 +374,7 @@ function cloneBriefingConfig(src: BriefingConfig): BriefingConfig {
 		reports: {
 			morning: { ...src.reports.morning },
 			evening: { ...src.reports.evening }
-		},
-		thresholds: { ...src.thresholds }
+		}
 	};
 }
 

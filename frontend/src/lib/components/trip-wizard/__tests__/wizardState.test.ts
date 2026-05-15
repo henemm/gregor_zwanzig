@@ -74,60 +74,9 @@ test('WizardState: toTripPayload mit activity=skitour → aggregation.profile=wi
 	assert.equal((trip.aggregation as { profile: string }).profile, 'wintersport');
 });
 
-// --- Issue #222 W2: toTripPayload schreibt alert_rules parallel zu report_config -
-
-test('Issue #222 W2: toTripPayload schreibt alert_rules wenn gust_kmh gesetzt (AC-1)', () => {
-	const s = new WizardState();
-	s.activity = 'hike';
-	s.name = 'Issue 222 W2';
-	s.briefings.thresholds.gust_kmh = 50;
-	const trip = s.toTripPayload();
-	assert.ok(trip.alert_rules, 'alert_rules muss vorhanden sein');
-	assert.equal(trip.alert_rules!.length, 1);
-	const rule = trip.alert_rules![0];
-	assert.equal(rule.metric, 'wind_gust');
-	assert.equal(rule.threshold, 50);
-	assert.equal(rule.kind, 'absolute');
-	assert.equal(rule.severity, 'warning');
-	assert.equal(rule.enabled, true);
-});
-
-test('Issue #222 W2: toTripPayload setzt alert_thresholds parallel weiter (AC-7)', () => {
-	const s = new WizardState();
-	s.activity = 'hike';
-	s.name = 'Issue 222 W2 Parallel';
-	s.briefings.thresholds.gust_kmh = 50;
-	const trip = s.toTripPayload();
-	const rc = trip.report_config as { alert_thresholds?: { gust_kmh: number | null } };
-	assert.ok(rc.alert_thresholds, 'report_config.alert_thresholds bleibt parallel bestehen');
-	assert.equal(rc.alert_thresholds!.gust_kmh, 50);
-});
-
-test('Issue #222 W2: toTripPayload ohne Thresholds → kein alert_rules-Feld (AC-3)', () => {
-	const s = new WizardState();
-	s.activity = 'hike';
-	s.name = 'Issue 222 W2 Empty';
-	const trip = s.toTripPayload();
-	assert.equal(
-		trip.alert_rules === undefined || trip.alert_rules.length === 0,
-		true,
-		'kein alert_rules wenn keine Threshold gesetzt'
-	);
-});
-
-test('Issue #222 W2: toTripPayload mit allen 4 Thresholds → 4 alert_rules (AC-2)', () => {
-	const s = new WizardState();
-	s.activity = 'hike';
-	s.name = 'Issue 222 W2 All';
-	s.briefings.thresholds.gust_kmh = 50;
-	s.briefings.thresholds.precip_mm = 20;
-	s.briefings.thresholds.thunder_level = 'MED';
-	s.briefings.thresholds.snow_line_m = 2500;
-	const trip = s.toTripPayload();
-	assert.equal(trip.alert_rules!.length, 4);
-	const metrics = trip.alert_rules!.map((r) => r.metric);
-	assert.deepEqual(metrics, ['wind_gust', 'precipitation_sum', 'thunder_level', 'snow_line']);
-});
+// --- Issue #224: alte Issue-#222-W2-Threshold-Tests entfernt
+// (briefings.thresholds existiert nicht mehr; AlertRules werden direkt
+// ueber `wizard.alertRules` geschrieben — siehe Issue #224-Tests am Datei-Ende).
 
 test('WizardState: addPauseStage() fuegt Stage mit leeren Wegpunkten hinzu', () => {
 	const s = new WizardState();
@@ -717,55 +666,12 @@ test('toTripPayload #164 AC#17c: report_config.enabled = false wenn beide Report
 	assert.equal(rc.enabled, false);
 });
 
-test('toTripPayload #164 AC#18: alert_thresholds-Block geschrieben wenn min. 1 Feld nicht null', () => {
-	const s = makeStateWithDefaults();
-	s.briefings.thresholds.gust_kmh = 80;
-	s.briefings.thresholds.precip_mm = 15;
-	s.briefings.thresholds.thunder_level = 'HIGH';
-	s.briefings.thresholds.snow_line_m = 1800;
-	const rc = s.toTripPayload().report_config as Record<string, unknown> | undefined;
-	assert.ok(rc, 'report_config muss vorhanden sein');
-	const at = rc.alert_thresholds as Record<string, unknown> | undefined;
-	assert.ok(at, 'alert_thresholds-Block muss vorhanden sein');
-	assert.equal(at.gust_kmh, 80);
-	assert.equal(at.precip_mm, 15);
-	assert.equal(at.thunder_level, 'HIGH');
-	assert.equal(at.snow_line_m, 1800);
-});
-
-test('toTripPayload #164 AC#18b: alert_thresholds enthaelt alle 4 Felder auch wenn nur 1 gesetzt', () => {
-	const s = makeStateWithDefaults();
-	s.briefings.thresholds.gust_kmh = 70;
-	// andere bleiben null
-	const rc = s.toTripPayload().report_config as Record<string, unknown> | undefined;
-	assert.ok(rc, 'report_config muss vorhanden sein');
-	const at = rc.alert_thresholds as Record<string, unknown> | undefined;
-	assert.ok(at, 'alert_thresholds-Block muss vorhanden sein');
-	assert.equal(at.gust_kmh, 70);
-	assert.equal(at.precip_mm, null);
-	assert.equal(at.thunder_level, null);
-	assert.equal(at.snow_line_m, null);
-});
-
-test('toTripPayload #164 AC#19: KEIN alert_thresholds-Block wenn alle 4 thresholds null', () => {
-	const s = makeStateWithDefaults();
-	// Defaults: alle null
-	assert.equal(s.briefings.thresholds.gust_kmh, null);
-	assert.equal(s.briefings.thresholds.precip_mm, null);
-	assert.equal(s.briefings.thresholds.thunder_level, null);
-	assert.equal(s.briefings.thresholds.snow_line_m, null);
-	const rc = s.toTripPayload().report_config as Record<string, unknown> | undefined;
-	assert.ok(rc, 'report_config muss vorhanden sein');
-	assert.equal(
-		Object.prototype.hasOwnProperty.call(rc, 'alert_thresholds'),
-		false,
-		'alert_thresholds darf NICHT geschrieben werden wenn alle null'
-	);
-});
+// Issue #224: AC#18/AC#18b/AC#19 entfernt — `briefings.thresholds` und der
+// `report_config.alert_thresholds`-Block existieren nicht mehr. Ersatz-Tests
+// stehen weiter unten als "Issue #224 AC-4/AC-5/AC-6".
 
 test('toTripPayload #164 AC#20: KEINE alten change_threshold_*-Felder im report_config', () => {
 	const s = makeStateWithDefaults();
-	s.briefings.thresholds.gust_kmh = 50;
 	const rc = s.toTripPayload().report_config as Record<string, unknown> | undefined;
 	assert.ok(rc, 'report_config muss vorhanden sein');
 	assert.equal(
@@ -904,5 +810,87 @@ test('AC-4 #197: Master-Spec §1.4 nennt /trips als Fallback (nicht /) mit Verwe
 	assert.ok(
 		spec.includes('#197') || spec.includes('Issue 197') || spec.includes('Issue #197'),
 		"Master-Spec muss auf Issue #197 verweisen (Begruendung des Fallback-Targets)"
+	);
+});
+
+// --- Issue #224: WizardState.alertRules direct state (kein Mapper mehr) -----
+//
+// Spec: docs/specs/modules/issue_224_wizard_alert_rules_editor.md
+// AC-2/AC-4/AC-5/AC-6/AC-7 — der Wizard schreibt AlertRule[]-Objekte direkt
+// aus einem Top-Level-State `alertRules: AlertRule[]`, ohne
+// `mapBriefingsToAlertRules` und ohne `report_config.alert_thresholds`-Block.
+
+test('Issue #224 AC-2: alertRules ist initial leeres Array', () => {
+	const s = new WizardState();
+	assert.ok(Array.isArray(s.alertRules), 'alertRules muss ein Array sein');
+	assert.equal(s.alertRules.length, 0, 'alertRules initial leer');
+});
+
+test('Issue #224 AC-4: toTripPayload schreibt alertRules als Tiefkopie in trip.alert_rules', () => {
+	const s = new WizardState();
+	s.name = 'Issue 224 AC-4';
+	const rule = {
+		id: 'r1',
+		kind: 'absolute' as const,
+		metric: 'temperature_min' as const,
+		threshold: -10,
+		unit: '°C',
+		severity: 'critical' as const,
+		enabled: true
+	};
+	s.alertRules = [rule];
+	const trip = s.toTripPayload();
+	assert.ok(trip.alert_rules, 'alert_rules muss gesetzt sein');
+	assert.equal(trip.alert_rules!.length, 1);
+	assert.equal(trip.alert_rules![0].metric, 'temperature_min');
+	assert.equal(trip.alert_rules![0].severity, 'critical');
+	assert.equal(trip.alert_rules![0].threshold, -10);
+	assert.notStrictEqual(
+		trip.alert_rules![0],
+		rule,
+		'Tiefkopie — keine Referenz-Gleichheit zur State-Rule'
+	);
+});
+
+test('Issue #224 AC-5: toTripPayload ohne alertRules → kein alert_rules im Payload', () => {
+	const s = new WizardState();
+	s.name = 'Issue 224 AC-5';
+	const trip = s.toTripPayload();
+	assert.ok(
+		trip.alert_rules === undefined || trip.alert_rules.length === 0,
+		'leere alertRules → kein alert_rules-Feld im Payload'
+	);
+});
+
+test('Issue #224 AC-6: toTripPayload schreibt KEINEN report_config.alert_thresholds-Block', () => {
+	const s = new WizardState();
+	s.name = 'Issue 224 AC-6';
+	s.alertRules = [
+		{
+			id: 'r1',
+			kind: 'absolute' as const,
+			metric: 'wind_gust' as const,
+			threshold: 50,
+			unit: 'km/h',
+			severity: 'warning' as const,
+			enabled: true
+		}
+	];
+	const rc = s.toTripPayload().report_config as Record<string, unknown> | undefined;
+	assert.ok(rc, 'report_config muss vorhanden sein');
+	assert.equal(
+		Object.prototype.hasOwnProperty.call(rc, 'alert_thresholds'),
+		false,
+		'alert_thresholds-Block ist gestrichen — Wizard schreibt ihn nicht mehr'
+	);
+});
+
+test('Issue #224 AC-7: BriefingConfig.thresholds existiert nicht mehr (Runtime-Schnitt)', () => {
+	const s = new WizardState();
+	const briefings = s.briefings as unknown as Record<string, unknown>;
+	assert.equal(
+		Object.prototype.hasOwnProperty.call(briefings, 'thresholds'),
+		false,
+		'briefings.thresholds wurde aus BriefingConfig entfernt'
 	);
 });
