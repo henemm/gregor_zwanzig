@@ -10,7 +10,7 @@
 // Seiteneffektfrei. Haversine-Distanz analog zu email-preview/headerStats.ts.
 
 import type { Trip, Stage, Waypoint } from '$lib/types';
-import { deriveTripStatus } from './tripStatus';
+import { deriveTripStatus } from './tripStatus.ts';
 
 export interface ProfilePoint {
 	x: number; // kumulative Distanz in km
