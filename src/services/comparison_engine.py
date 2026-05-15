@@ -1,5 +1,5 @@
 """
-Comparison Engine — extracted from web.pages.compare (Epic #129 Phase A.1).
+Comparison Engine — extracted from the former NiceGUI compare page (Epic #129 Phase A.1; the source module was removed in Phase A.3).
 
 Single processor for ski resort / location comparisons. Generates a
 ComparisonResult that is consumed by both the Web UI and the email renderers,

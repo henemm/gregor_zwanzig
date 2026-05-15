@@ -6,13 +6,20 @@ requires-python = ">=3.10,<3.14"
 dependencies = [
     "httpx>=0.27.0",
     "pydantic-settings>=2.0.0",
-    "nicegui>=2.0.0",
-    "apscheduler>=3.10",
     "beautifulsoup4>=4.14.3",
     "tenacity>=8.2.0",
     "gpxpy>=1.6.2",
     "astral>=3.2",
     "timezonefinder>=8.2.0",
+    # FastAPI fuer die Python-Core-API (api/main.py). Wird seit Epic #129 A.3
+    # als direkte Dep gepflegt (vorher transitive).
+    "fastapi>=0.110",
+    "uvicorn>=0.30",
+    "python-multipart>=0.0.9",
+    # pyyaml fuer Tests (z. B. tests/tdd/test_epic_191_zeilenlimit.py).
+    # War vor Epic #129 A.3 transitive via uvicorn[standard] v0.40.0; in
+    # uvicorn 0.47+ nicht mehr enthalten — daher direkt gepflegt.
+    "pyyaml>=6.0",
 ]
 
 [tool.uv]
@@ -33,16 +40,13 @@ line-length = 88
 "src/app/loader.py" = ["F821"]
 "src/app/trip.py" = ["F821"]
 "src/services/weather_metrics.py" = ["F821"]
-"src/web/scheduler.py" = ["F821"]
 # Source: forward refs + dead-code tech-debt — chore-cleanup follows in dedicated workflow PR
 "src/app/metric_catalog.py" = ["F821", "F401", "F402"]
-"src/web/pages/compare.py" = ["F821", "F401", "F841"]
 "src/core/segment_builder.py" = ["F401", "F402"]
 "src/output/renderers/email/helpers.py" = ["F401"]
 "src/services/daylight_service.py" = ["F401"]
 "src/services/weather_snapshot.py" = ["F401", "F841"]
 "src/services/wind_exposition.py" = ["F401", "F841"]
-"src/web/pages/gpx_upload.py" = ["F401"]
 
 [tool.pytest.ini_options]
 addopts = "-q -m 'not email'"

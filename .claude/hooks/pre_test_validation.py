@@ -117,7 +117,7 @@ def main():
             print("   Bitte vor User-Test validieren:\n")
             print("   1. Server-Start prüfen: Server läuft ohne Fehler")
             print("   2. Syntax-Check: uv run python -m py_compile <file>")
-            print("   3. Import-Check: uv run python -c 'from web.pages.compare import *'")
+            print("   3. Import-Check: uv run python -c 'from api.main import app'")
             print("   4. Dann: validation.record('web-ui-check')\n")
 
     sys.exit(0)

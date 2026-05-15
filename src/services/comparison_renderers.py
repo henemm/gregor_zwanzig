@@ -1,5 +1,5 @@
 """
-Comparison Renderers — extracted from web.pages.compare (Epic #129 Phase A.1).
+Comparison Renderers — extracted from the former NiceGUI compare page (Epic #129 Phase A.1; the source module was removed in Phase A.3).
 
 Pure-function renderers that turn ComparisonResult into HTML / Plain-Text for
 email delivery. No NiceGUI dependency.

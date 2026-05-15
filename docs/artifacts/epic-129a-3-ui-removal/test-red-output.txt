@@ -1,11 +1,11 @@
 Using CPython 3.12.3 interpreter at: /usr/bin/python3
 Creating virtual environment at: .venv
-   Building gregor-zwanzig @ file:///home/hem/gregor_zwanzig/.claude/worktrees/agent-ad16727d2cd1cc3d1
-      Built gregor-zwanzig @ file:///home/hem/gregor_zwanzig/.claude/worktrees/agent-ad16727d2cd1cc3d1
-Installed 73 packages in 41ms
+   Building gregor-zwanzig @ file:///home/hem/gregor_zwanzig/.claude/worktrees/agent-ab749fab67c79803c
+      Built gregor-zwanzig @ file:///home/hem/gregor_zwanzig/.claude/worktrees/agent-ab749fab67c79803c
+Installed 73 packages in 39ms
 ============================= test session starts ==============================
 platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
-rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/agent-ad16727d2cd1cc3d1
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/agent-ab749fab67c79803c
 configfile: pyproject.toml
 plugins: anyio-4.12.0
 collected 6 items
@@ -14,208 +14,102 @@ tests/refactor/test_epic_129a_3_ui_removed.py FFFFF.                     [100%]
 
 =================================== FAILURES ===================================
 _______________________ test_ac1_src_web_directory_empty _______________________
-
-    def test_ac1_src_web_directory_empty():
-        """AC-1: src/web/ darf keine .py-Dateien mehr enthalten.
-    
-        Akzeptiert: Verzeichnis komplett geloescht ODER existiert noch ohne .py-Dateien
-        (z. B. nur leere __pycache__/-Reste, die wir ignorieren).
-        """
-        web = REPO / "src" / "web"
-        if not web.exists():
-            return  # geloescht — perfekt
-        py_files = [
-            p for p in web.rglob("*.py") if "__pycache__" not in str(p)
-        ]
->       assert py_files == [], (
-            f"src/web/ hat noch Python-Dateien: {py_files}"
-        )
-E       AssertionError: src/web/ hat noch Python-Dateien: [PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/agent-ad16727d2cd1cc3d1/src/web/scheduler.py'), PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/agent-ad16727d2cd1cc3d1/src/web/__init__.py'), PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/agent-ad16727d2cd1cc3d1/src/web/main.py'), PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/agent-ad16727d2cd1cc3d1/src/web/pages/dashboard.py'), PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/agent-ad16727d2cd1cc3d1/src/web/pages/settings.py'), PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/agent-ad16727d2cd1cc3d1/src/web/pages/__init__.py'), PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/agent-ad16727d2cd1cc3d1/src/web/pages/trips.py'), PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/agent-ad16727d2cd1cc3d1/src/web/pages/weather_config.py'), PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/agent-ad16727d2cd1cc3d1/src/web/pages/gpx_upload.py'), PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/agent-ad16727d2cd1cc3d1/src/web/pages/report_config.py'), PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/agent-ad16727d2cd1cc3d1/src/web/pages/compare.py')]
-E       assert [PosixPath('/...t__.py'), ...] == []
-E         
-E         Left contains 11 more items, first extra item: PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/agent-ad16727d2cd1cc3d1/src/web/scheduler.py')
-E         Use -v to get more diff
-
-tests/refactor/test_epic_129a_3_ui_removed.py:42: AssertionError
+tests/refactor/test_epic_129a_3_ui_removed.py:42: in test_ac1_src_web_directory_empty
+    assert py_files == [], (
+E   AssertionError: src/web/ hat noch Python-Dateien: [PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/agent-ab749fab67c79803c/src/web/scheduler.py'), PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/agent-ab749fab67c79803c/src/web/__init__.py'), PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/agent-ab749fab67c79803c/src/web/main.py'), PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/agent-ab749fab67c79803c/src/web/pages/dashboard.py'), PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/agent-ab749fab67c79803c/src/web/pages/settings.py'), PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/agent-ab749fab67c79803c/src/web/pages/__init__.py'), PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/agent-ab749fab67c79803c/src/web/pages/trips.py'), PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/agent-ab749fab67c79803c/src/web/pages/weather_config.py'), PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/agent-ab749fab67c79803c/src/web/pages/gpx_upload.py'), PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/agent-ab749fab67c79803c/src/web/pages/report_config.py'), PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/agent-ab749fab67c79803c/src/web/pages/compare.py')]
+E   assert [PosixPath('/...t__.py'), ...] == []
+E     
+E     Left contains 11 more items, first extra item: PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/agent-ab749fab67c79803c/src/web/scheduler.py')
+E     Use -v to get more diff
 _________________________ test_ac2_no_imports_from_web _________________________
-
-    def test_ac2_no_imports_from_web():
-        """AC-2: Niemand importiert mehr aus web.* oder src.web.*.
-    
-        Pruefbereich: src/, api/, tests/, .claude/. Diese Test-Datei selbst wird
-        aus der Trefferliste gefiltert (sie enthaelt die Such-Pattern als String-
-        Konstanten in der Doku, nicht als echte Imports).
-        """
-        result = subprocess.run(
-            [
-                "grep",
-                "-rn",
-                "--include=*.py",
-                "--exclude-dir=.git",
-                "--exclude-dir=worktrees",
-                "--exclude-dir=__pycache__",
-                "--exclude-dir=.venv",
-                "--exclude-dir=node_modules",
-                "--exclude-dir=htmlcov",
-                "-E",
-                r"from web\.|^import web\.|^import src\.web|from src\.web",
-                "src/",
-                "api/",
-                "tests/",
-                ".claude/",
-            ],
-            capture_output=True,
-            text=True,
-            cwd=REPO,
-        )
-        lines = [
-            line
-            for line in result.stdout.splitlines()
-            if "test_epic_129a_3_ui_removed.py" not in line
-        ]
->       assert lines == [], (
-            "Verbleibende web.* Imports:\n" + "\n".join(lines)
-        )
-E       AssertionError: Verbleibende web.* Imports:
-E         src/services/comparison_renderers.py:2:Comparison Renderers — extracted from web.pages.compare (Epic #129 Phase A.1).
-E         src/services/comparison_engine.py:2:Comparison Engine — extracted from web.pages.compare (Epic #129 Phase A.1).
-E         src/services/comparison_scoring.py:2:Comparison Scoring — extracted from web.pages.compare (Epic #129 Phase A.1).
-E         src/web/main.py:28:    from web.pages.dashboard import render_dashboard
-E         src/web/main.py:35:    from web.pages.trips import render_trips
-E         src/web/main.py:42:    from web.pages.compare import render_compare
-E         src/web/main.py:58:    from web.scheduler import get_scheduler_status
-E         src/web/main.py:119:# from web.scheduler import init_scheduler, shutdown_scheduler
-E         src/web/pages/trips.py:28:from web.pages.weather_config import show_weather_config_dialog
-E         src/web/pages/trips.py:29:from web.pages.report_config import make_report_config_handler
-E         tests/integration/test_trip_report_scheduler.py:136:        from web.scheduler import (
-E         tests/integration/test_trip_report_scheduler.py:154:        from web.scheduler import (
-E         tests/tdd/test_generic_locations_ui.py:26:        from web.pages.weather_config import get_available_providers_for_location
-E         tests/tdd/test_generic_locations_ui.py:36:        from web.pages.weather_config import get_available_providers_for_location
-E         tests/tdd/test_generic_locations_ui.py:52:        from web.pages.weather_config import get_available_providers_for_location
-E         tests/tdd/test_generic_locations_ui.py:68:        from web.pages.weather_config import get_available_providers_for_location
-E         tests/tdd/test_generic_locations_ui.py:83:        from web.pages.weather_config import get_available_providers_for_location
-E         tests/tdd/test_safari_cache_fix.py:37:         "from web.main import *; "
-E         tests/tdd/test_betterstack_heartbeat.py:26:        from web.scheduler import HEARTBEAT_MORNING
-E         tests/tdd/test_betterstack_heartbeat.py:36:        from web.scheduler import HEARTBEAT_EVENING
-E         tests/tdd/test_betterstack_heartbeat.py:50:        from web.scheduler import _ping_heartbeat
-E         tests/tdd/test_betterstack_heartbeat.py:60:        from web.scheduler import _ping_heartbeat
-E         tests/tdd/test_betterstack_heartbeat.py:75:        from web.scheduler import run_morning_subscriptions
-E         tests/tdd/test_betterstack_heartbeat.py:87:        from web.scheduler import run_evening_subscriptions
-E         tests/tdd/test_betterstack_heartbeat.py:124:        from web.scheduler import _ping_heartbeat
-E         tests/tdd/test_betterstack_heartbeat.py:144:            from web.scheduler import _ping_heartbeat
-E         tests/tdd/test_weather_config_api_ui.py:84:         "from web.main import *; "
-E         tests/tdd/test_weather_config_api_ui.py:133:        from web.pages.weather_config import get_available_providers_for_trip
-E         tests/tdd/test_weather_config_api_ui.py:144:        from web.pages.weather_config import get_available_providers_for_trip
-E         tests/tdd/test_weather_config_api_ui.py:158:        from web.pages.weather_config import get_available_providers_for_trip
-E         tests/tdd/test_weather_config_api_ui.py:172:        from web.pages.weather_config import get_available_providers_for_trip
-E         tests/unit/test_settings_protection.py:15:from web.pages.settings import save_env_settings
-E         tests/unit/test_weather_config_strategy.py:27:        from web.pages.weather_config import _DialogStrategy
-E         tests/unit/test_weather_config_strategy.py:36:        from web.pages.weather_config import _DialogStrategy
-E         tests/unit/test_weather_config_strategy.py:68:        from web.pages.weather_config import _render_weather_config_dialog
-E         tests/unit/test_weather_config_strategy.py:89:        from web.pages.weather_config import _make_trip_save_fn
-E         tests/unit/test_weather_config_strategy.py:95:        from web.pages.weather_config import _make_trip_save_fn
-E         tests/unit/test_weather_config_strategy.py:113:        from web.pages.weather_config import show_weather_config_dialog
-E         tests/refactor/test_epic_129a_1_module_structure.py:48:        if "from web.pages.compare" in content or "from src.web.pages.compare" in content:
-E         tests/refactor/test_epic_129a_1_module_structure.py:101:    assert "from web.pages.compare" not in src_text, (
-E         tests/refactor/test_epic_129a_1_module_structure.py:104:    assert "from src.web.pages.compare" not in src_text, (
-E         tests/refactor/test_epic_129a_2_module_structure.py:44:        "from web.pages.gpx_upload",
-E         tests/refactor/test_epic_129a_2_module_structure.py:45:        "from web.pages.trips",
-E         tests/refactor/test_epic_129a_2_module_structure.py:46:        "from web.utils",
-E         tests/refactor/test_epic_129a_2_module_structure.py:47:        "from src.web.pages.gpx_upload",
-E         tests/refactor/test_epic_129a_2_module_structure.py:48:        "from src.web.pages.trips",
-E         tests/refactor/test_epic_129a_2_module_structure.py:49:        "from src.web.utils",
-E         tests/refactor/test_issue_201_mocks_removed.py:43:    assert "from web.pages.compare" not in content
-E         tests/refactor/test_issue_201_mocks_removed.py:44:    assert "from src.web.pages.compare" not in content
-E         .claude/validate.py:82:        ["uv", "run", "python", "-c", "from web.main import *; print('Import OK')"],
-E         .claude/hooks/pre_test_validation.py:120:            print("   3. Import-Check: uv run python -c 'from web.pages.compare import *'")
-E       assert ['src/service...compare', ...] == []
-E         
-E         Left contains 51 more items, first extra item: 'src/services/comparison_renderers.py:2:Comparison Renderers — extracted from web.pages.compare (Epic #129 Phase A.1).'
-E         Use -v to get more diff
-
-tests/refactor/test_epic_129a_3_ui_removed.py:81: AssertionError
+tests/refactor/test_epic_129a_3_ui_removed.py:81: in test_ac2_no_imports_from_web
+    assert lines == [], (
+E   AssertionError: Verbleibende web.* Imports:
+E     src/services/comparison_renderers.py:2:Comparison Renderers — extracted from web.pages.compare (Epic #129 Phase A.1).
+E     src/services/comparison_engine.py:2:Comparison Engine — extracted from web.pages.compare (Epic #129 Phase A.1).
+E     src/services/comparison_scoring.py:2:Comparison Scoring — extracted from web.pages.compare (Epic #129 Phase A.1).
+E     src/web/main.py:28:    from web.pages.dashboard import render_dashboard
+E     src/web/main.py:35:    from web.pages.trips import render_trips
+E     src/web/main.py:42:    from web.pages.compare import render_compare
+E     src/web/main.py:58:    from web.scheduler import get_scheduler_status
+E     src/web/main.py:119:# from web.scheduler import init_scheduler, shutdown_scheduler
+E     src/web/pages/trips.py:28:from web.pages.weather_config import show_weather_config_dialog
+E     src/web/pages/trips.py:29:from web.pages.report_config import make_report_config_handler
+E     tests/integration/test_trip_report_scheduler.py:136:        from web.scheduler import (
+E     tests/integration/test_trip_report_scheduler.py:154:        from web.scheduler import (
+E     tests/tdd/test_generic_locations_ui.py:26:        from web.pages.weather_config import get_available_providers_for_location
+E     tests/tdd/test_generic_locations_ui.py:36:        from web.pages.weather_config import get_available_providers_for_location
+E     tests/tdd/test_generic_locations_ui.py:52:        from web.pages.weather_config import get_available_providers_for_location
+E     tests/tdd/test_generic_locations_ui.py:68:        from web.pages.weather_config import get_available_providers_for_location
+E     tests/tdd/test_generic_locations_ui.py:83:        from web.pages.weather_config import get_available_providers_for_location
+E     tests/tdd/test_safari_cache_fix.py:37:         "from web.main import *; "
+E     tests/tdd/test_betterstack_heartbeat.py:26:        from web.scheduler import HEARTBEAT_MORNING
+E     tests/tdd/test_betterstack_heartbeat.py:36:        from web.scheduler import HEARTBEAT_EVENING
+E     tests/tdd/test_betterstack_heartbeat.py:50:        from web.scheduler import _ping_heartbeat
+E     tests/tdd/test_betterstack_heartbeat.py:60:        from web.scheduler import _ping_heartbeat
+E     tests/tdd/test_betterstack_heartbeat.py:75:        from web.scheduler import run_morning_subscriptions
+E     tests/tdd/test_betterstack_heartbeat.py:87:        from web.scheduler import run_evening_subscriptions
+E     tests/tdd/test_betterstack_heartbeat.py:124:        from web.scheduler import _ping_heartbeat
+E     tests/tdd/test_betterstack_heartbeat.py:144:            from web.scheduler import _ping_heartbeat
+E     tests/tdd/test_weather_config_api_ui.py:84:         "from web.main import *; "
+E     tests/tdd/test_weather_config_api_ui.py:133:        from web.pages.weather_config import get_available_providers_for_trip
+E     tests/tdd/test_weather_config_api_ui.py:144:        from web.pages.weather_config import get_available_providers_for_trip
+E     tests/tdd/test_weather_config_api_ui.py:158:        from web.pages.weather_config import get_available_providers_for_trip
+E     tests/tdd/test_weather_config_api_ui.py:172:        from web.pages.weather_config import get_available_providers_for_trip
+E     tests/unit/test_settings_protection.py:15:from web.pages.settings import save_env_settings
+E     tests/unit/test_weather_config_strategy.py:27:        from web.pages.weather_config import _DialogStrategy
+E     tests/unit/test_weather_config_strategy.py:36:        from web.pages.weather_config import _DialogStrategy
+E     tests/unit/test_weather_config_strategy.py:68:        from web.pages.weather_config import _render_weather_config_dialog
+E     tests/unit/test_weather_config_strategy.py:89:        from web.pages.weather_config import _make_trip_save_fn
+E     tests/unit/test_weather_config_strategy.py:95:        from web.pages.weather_config import _make_trip_save_fn
+E     tests/unit/test_weather_config_strategy.py:113:        from web.pages.weather_config import show_weather_config_dialog
+E     tests/refactor/test_epic_129a_1_module_structure.py:48:        if "from web.pages.compare" in content or "from src.web.pages.compare" in content:
+E     tests/refactor/test_epic_129a_1_module_structure.py:101:    assert "from web.pages.compare" not in src_text, (
+E     tests/refactor/test_epic_129a_1_module_structure.py:104:    assert "from src.web.pages.compare" not in src_text, (
+E     tests/refactor/test_epic_129a_2_module_structure.py:44:        "from web.pages.gpx_upload",
+E     tests/refactor/test_epic_129a_2_module_structure.py:45:        "from web.pages.trips",
+E     tests/refactor/test_epic_129a_2_module_structure.py:46:        "from web.utils",
+E     tests/refactor/test_epic_129a_2_module_structure.py:47:        "from src.web.pages.gpx_upload",
+E     tests/refactor/test_epic_129a_2_module_structure.py:48:        "from src.web.pages.trips",
+E     tests/refactor/test_epic_129a_2_module_structure.py:49:        "from src.web.utils",
+E     tests/refactor/test_issue_201_mocks_removed.py:43:    assert "from web.pages.compare" not in content
+E     tests/refactor/test_issue_201_mocks_removed.py:44:    assert "from src.web.pages.compare" not in content
+E     .claude/validate.py:82:        ["uv", "run", "python", "-c", "from web.main import *; print('Import OK')"],
+E     .claude/hooks/pre_test_validation.py:120:            print("   3. Import-Check: uv run python -c 'from web.pages.compare import *'")
+E   assert ['src/service...compare', ...] == []
+E     
+E     Left contains 51 more items, first extra item: 'src/services/comparison_renderers.py:2:Comparison Renderers — extracted from web.pages.compare (Epic #129 Phase A.1).'
+E     Use -v to get more diff
 ______________________ test_ac3_seven_test_files_deleted _______________________
-
-    def test_ac3_seven_test_files_deleted():
-        """AC-3: Genau diese 7 Test-Dateien sind ersatzlos geloescht."""
-        deleted = [
-            "tests/tdd/test_weather_config_api_ui.py",
-            "tests/tdd/test_safari_cache_fix.py",
-            "tests/tdd/test_betterstack_heartbeat.py",
-            "tests/e2e/test_weather_config.py",
-            "tests/integration/test_trip_report_scheduler.py",
-            "tests/unit/test_settings_protection.py",
-            "tests/unit/test_weather_config_strategy.py",
-        ]
-        still_there = [f for f in deleted if (REPO / f).exists()]
->       assert still_there == [], (
-            f"Diese Test-Files sind noch nicht geloescht: {still_there}"
-        )
-E       AssertionError: Diese Test-Files sind noch nicht geloescht: ['tests/tdd/test_weather_config_api_ui.py', 'tests/tdd/test_safari_cache_fix.py', 'tests/tdd/test_betterstack_heartbeat.py', 'tests/e2e/test_weather_config.py', 'tests/integration/test_trip_report_scheduler.py', 'tests/unit/test_settings_protection.py', 'tests/unit/test_weather_config_strategy.py']
-E       assert ['tests/tdd/t...tion.py', ...] == []
-E         
-E         Left contains 7 more items, first extra item: 'tests/tdd/test_weather_config_api_ui.py'
-E         Use -v to get more diff
-
-tests/refactor/test_epic_129a_3_ui_removed.py:98: AssertionError
+tests/refactor/test_epic_129a_3_ui_removed.py:98: in test_ac3_seven_test_files_deleted
+    assert still_there == [], (
+E   AssertionError: Diese Test-Files sind noch nicht geloescht: ['tests/tdd/test_weather_config_api_ui.py', 'tests/tdd/test_safari_cache_fix.py', 'tests/tdd/test_betterstack_heartbeat.py', 'tests/e2e/test_weather_config.py', 'tests/integration/test_trip_report_scheduler.py', 'tests/unit/test_settings_protection.py', 'tests/unit/test_weather_config_strategy.py']
+E   assert ['tests/tdd/t...tion.py', ...] == []
+E     
+E     Left contains 7 more items, first extra item: 'tests/tdd/test_weather_config_api_ui.py'
+E     Use -v to get more diff
 __________________ test_ac4_pyproject_no_nicegui_apscheduler ___________________
-
-    def test_ac4_pyproject_no_nicegui_apscheduler():
-        """AC-4: pyproject.toml referenziert nicegui + apscheduler nicht mehr.
-    
-        Substring-Check ueber die ganze Datei (Dependencies + Ruff-Exceptions).
-        """
-        content = (REPO / "pyproject.toml").read_text()
-        forbidden = ["nicegui", "apscheduler"]
-        found = [s for s in forbidden if s in content]
->       assert found == [], (
-            f"pyproject.toml referenziert noch: {found}"
-        )
-E       AssertionError: pyproject.toml referenziert noch: ['nicegui', 'apscheduler']
-E       assert ['nicegui', 'apscheduler'] == []
-E         
-E         Left contains 2 more items, first extra item: 'nicegui'
-E         Use -v to get more diff
-
-tests/refactor/test_epic_129a_3_ui_removed.py:111: AssertionError
+tests/refactor/test_epic_129a_3_ui_removed.py:111: in test_ac4_pyproject_no_nicegui_apscheduler
+    assert found == [], (
+E   AssertionError: pyproject.toml referenziert noch: ['nicegui', 'apscheduler']
+E   assert ['nicegui', 'apscheduler'] == []
+E     
+E     Left contains 2 more items, first extra item: 'nicegui'
+E     Use -v to get more diff
 ________________________ test_ac5_no_web_main_in_hooks _________________________
-
-    def test_ac5_no_web_main_in_hooks():
-        """AC-5: .claude/validate.py + .claude/commands/e2e-verify.md haben keine
-        String-Eval-Imports mehr auf web.main / web.scheduler / -m src.web.main.
-        """
-        forbidden = [
-            "from web.main",
-            "from web.scheduler",
-            "-m src.web.main",
-            "-m web.main",
-        ]
-        offenders = []
-        for path in [".claude/validate.py", ".claude/commands/e2e-verify.md"]:
-            full = REPO / path
-            if not full.exists():
-                continue
-            content = full.read_text()
-            for s in forbidden:
-                if s in content:
-                    offenders.append(f"{path}: '{s}'")
->       assert offenders == [], (
-            "Verbleibende Hook-/Command-Referenzen auf NiceGUI-Entrypoints:\n  - "
-            + "\n  - ".join(offenders)
-        )
-E       AssertionError: Verbleibende Hook-/Command-Referenzen auf NiceGUI-Entrypoints:
-E           - .claude/validate.py: 'from web.main'
-E           - .claude/commands/e2e-verify.md: '-m src.web.main'
-E       assert [".claude/val...rc.web.main'"] == []
-E         
-E         Left contains 2 more items, first extra item: ".claude/validate.py: 'from web.main'"
-E         Use -v to get more diff
-
-tests/refactor/test_epic_129a_3_ui_removed.py:135: AssertionError
+tests/refactor/test_epic_129a_3_ui_removed.py:135: in test_ac5_no_web_main_in_hooks
+    assert offenders == [], (
+E   AssertionError: Verbleibende Hook-/Command-Referenzen auf NiceGUI-Entrypoints:
+E       - .claude/validate.py: 'from web.main'
+E       - .claude/commands/e2e-verify.md: '-m src.web.main'
+E   assert [".claude/val...rc.web.main'"] == []
+E     
+E     Left contains 2 more items, first extra item: ".claude/validate.py: 'from web.main'"
+E     Use -v to get more diff
 =========================== short test summary info ============================
 FAILED tests/refactor/test_epic_129a_3_ui_removed.py::test_ac1_src_web_directory_empty
 FAILED tests/refactor/test_epic_129a_3_ui_removed.py::test_ac2_no_imports_from_web
 FAILED tests/refactor/test_epic_129a_3_ui_removed.py::test_ac3_seven_test_files_deleted
 FAILED tests/refactor/test_epic_129a_3_ui_removed.py::test_ac4_pyproject_no_nicegui_apscheduler
 FAILED tests/refactor/test_epic_129a_3_ui_removed.py::test_ac5_no_web_main_in_hooks
-========================= 5 failed, 1 passed in 4.21s ==========================
+========================= 5 failed, 1 passed in 4.08s ==========================

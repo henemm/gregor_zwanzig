@@ -45,7 +45,11 @@ def test_compare_helpers():
         if not path.exists():
             continue
         content = path.read_text()
-        if "from web.pages.compare" in content or "from src.web.pages.compare" in content:
+        # String-Konkat verhindert, dass dieser Negativ-Check selbst vom
+        # Epic-#129-A.3-Grep als Import-Treffer gemeldet wird.
+        old_import_root = "from " + "web.pages.compare"
+        old_import_src = "from " + "src.web.pages.compare"
+        if old_import_root in content or old_import_src in content:
             offenders.append(f)
     assert offenders == [], (
         f"Diese Dateien importieren noch aus web.pages.compare: {offenders}"
@@ -98,10 +102,12 @@ def test_compare_subscription():
 
     assert callable(run_comparison_for_subscription)
     src_text = inspect.getsource(inspect.getmodule(run_comparison_for_subscription))
-    assert "from web.pages.compare" not in src_text, (
+    # String-Konkat verhindert, dass dieser Negativ-Check selbst vom
+    # Epic-#129-A.3-Grep als Import-Treffer gemeldet wird.
+    assert ("from " + "web.pages.compare") not in src_text, (
         "compare_subscription importiert noch aus web.pages.compare (alt)"
     )
-    assert "from src.web.pages.compare" not in src_text, (
+    assert ("from " + "src.web.pages.compare") not in src_text, (
         "compare_subscription importiert noch aus src.web.pages.compare (alt)"
     )
 

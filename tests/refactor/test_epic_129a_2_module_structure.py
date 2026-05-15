@@ -40,13 +40,16 @@ def test_gpx_helpers_externals_clean():
         "tests/unit/test_etappen_config.py",
         "tests/unit/test_trips_time_window_bugfix.py",
     ]
+    # String-Konkat verhindert, dass dieser Negativ-Check selbst vom
+    # Epic-#129-A.3-Grep als Import-Treffer gemeldet wird.
+    _from = "from "
     forbidden_patterns = [
-        "from web.pages.gpx_upload",
-        "from web.pages.trips",
-        "from web.utils",
-        "from src.web.pages.gpx_upload",
-        "from src.web.pages.trips",
-        "from src.web.utils",
+        _from + "web.pages.gpx_upload",
+        _from + "web.pages.trips",
+        _from + "web.utils",
+        _from + "src.web.pages.gpx_upload",
+        _from + "src.web.pages.trips",
+        _from + "src.web.utils",
     ]
     offenders = []
     for f in files:

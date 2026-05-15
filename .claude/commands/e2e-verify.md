@@ -28,24 +28,27 @@ cd /home/hem/gregor_zwanzig && uv run python3 -c "from api.main import app; prin
 
 **STOP wenn:** Output enthaelt nicht `IMPORT_OK` oder Exit-Code != 0. Code reparieren, dann erneut. Service NICHT restarten — Prod bleibt unangetastet.
 
-## Schritt 1: Server neu starten
+## Schritt 1: Go-API neu starten
+
+NiceGUI (Port 8080) ist seit Epic #129 A.3 ersatzlos entfernt. Production laeuft jetzt
+ueber die Go-API (Port 8090) plus SvelteKit-Frontend.
 
 ```bash
-# Alten Server killen
-fuser -k 8080/tcp 2>/dev/null || true
+# Alten API-Prozess killen (lokal)
+fuser -k 8090/tcp 2>/dev/null || true
 sleep 1
 
-# Neuen Server starten mit aktuellem Code
-nohup uv run python3 -m src.web.main --port 8080 > /tmp/gregor_server.log 2>&1 &
+# Go-API mit aktuellem Code starten
+nohup go run ./cmd/gregor-api > /tmp/gregor_api.log 2>&1 &
 sleep 3
 
-# PRUEFEN dass Server wirklich laeuft (PID + HTTP)
-SERVER_PID=$(fuser 8080/tcp 2>/dev/null | awk '{print $1}')
-echo "Server PID: $SERVER_PID"
-curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/
+# PRUEFEN dass API wirklich laeuft (PID + HTTP)
+API_PID=$(fuser 8090/tcp 2>/dev/null | awk '{print $1}')
+echo "API PID: $API_PID"
+curl -s -o /dev/null -w "%{http_code}" http://localhost:8090/api/health
 ```
 
-**STOP wenn:** Kein PID oder HTTP != 200. Server-Log pruefen!
+**STOP wenn:** Kein PID oder HTTP != 200. API-Log pruefen!
 
 ## Schritt 2: Test-Trip erstellen
 

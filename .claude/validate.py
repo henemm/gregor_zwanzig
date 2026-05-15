@@ -79,7 +79,7 @@ def check_import(module_path: str) -> tuple[bool, str]:
 def check_server_startup() -> tuple[bool, str]:
     """Quick check if server can start (doesn't keep running)."""
     result = subprocess.run(
-        ["uv", "run", "python", "-c", "from web.main import *; print('Import OK')"],
+        ["uv", "run", "python", "-c", "from api.main import app; print('Import OK')"],
         capture_output=True,
         text=True,
         cwd=PROJECT_ROOT / "src",

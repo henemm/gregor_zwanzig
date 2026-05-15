@@ -40,8 +40,10 @@ def test_ac2_only_two_test_classes():
 def test_ac3_imports_point_to_services():
     """AC-3: 0 Imports von web.pages.compare; statt dessen services.* Imports vorhanden."""
     content = TARGET.read_text()
-    assert "from web.pages.compare" not in content
-    assert "from src.web.pages.compare" not in content
+    # String-Konkat verhindert, dass dieser Negativ-Check selbst vom
+    # Epic-#129-A.3-Grep als Import-Treffer gemeldet wird.
+    assert ("from " + "web.pages.compare") not in content
+    assert ("from " + "src.web.pages.compare") not in content
     assert (
         "from services.comparison_renderers" in content
         or "from services.compare_subscription" in content

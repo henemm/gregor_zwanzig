@@ -1,5 +1,5 @@
 """
-Comparison Scoring — extracted from web.pages.compare (Epic #129 Phase A.1).
+Comparison Scoring — extracted from the former NiceGUI compare page (Epic #129 Phase A.1; the source module was removed in Phase A.3).
 
 Pure-function scorer for activity-aware weather scoring. No NiceGUI / UI deps.
 
