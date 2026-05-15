@@ -6,6 +6,7 @@ Bit-identical to TripReportFormatter._render_html() pre-β3.
 """
 from __future__ import annotations
 
+import html as _html
 from datetime import datetime, timezone
 from typing import Optional
 from zoneinfo import ZoneInfo
@@ -19,8 +20,8 @@ from services.daylight_service import DaylightWindow
 from utils.timezone import local_fmt
 
 from src.output.renderers.email.helpers import (
-    build_segment_label, build_units_legend, fmt_val, format_change_line,
-    shorten_stage_name, visible_cols,
+    build_confidence_hint, build_segment_label, build_units_legend, fmt_val,
+    format_change_line, shorten_stage_name, visible_cols,
 )
 
 
@@ -220,6 +221,19 @@ def render_html(
                 <p style="margin:0;font-size:14px;line-height:1.6;">{compact_summary}</p>
             </div>"""
 
+    # Issue #121 / AC-12 + AC-13: confidence hint (only when uncertain).
+    confidence_hint_html = ""
+    confidence_hint = build_confidence_hint(
+        segments, now=datetime.now(tz), tz=tz,
+    )
+    if confidence_hint:
+        confidence_hint_html = (
+            f'<div class="section" style="background:#fff8e1;border-left:4px solid #fbc02d;'
+            f'padding:12px;margin:8px 0;">'
+            f'<p class="confidence-hint" style="margin:0;font-size:14px;line-height:1.6;">'
+            f'{_html.escape(confidence_hint)}</p></div>'
+        )
+
     daylight_html = ""
     if daylight:
         daylight_html = _format_daylight_html(daylight, tz=tz)
@@ -270,6 +284,7 @@ def render_html(
         </div>
 
         {summary_html}
+        {confidence_hint_html}
         {daylight_html}
         {changes_html}
         {segments_html}

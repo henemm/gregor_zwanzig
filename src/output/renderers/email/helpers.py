@@ -14,6 +14,7 @@ from __future__ import annotations
 import math
 import re
 from collections import OrderedDict
+from datetime import datetime, timedelta
 from typing import Optional
 from zoneinfo import ZoneInfo
 
@@ -25,6 +26,12 @@ from app.models import (
     UnifiedWeatherDisplayConfig,
 )
 from utils.timezone import local_hour
+
+# Issue #121: German weekday names (0=Monday).
+_WEEKDAY_DE = [
+    "Montag", "Dienstag", "Mittwoch", "Donnerstag",
+    "Freitag", "Samstag", "Sonntag",
+]
 
 
 # ----------------------------------------------------------------------
@@ -204,6 +211,60 @@ def visible_cols(rows: list[dict]) -> list[tuple[str, str]]:
         return []
     keys = set(rows[0].keys()) - {"time"}
     return [(k, label) for k, label, _ in get_col_defs() if k in keys]
+
+
+def build_confidence_hint(
+    segments: list,
+    *,
+    now: datetime,
+    tz: ZoneInfo,
+) -> Optional[str]:
+    """Issue #121 / AC-12 + AC-13: Plain-text hint for low-confidence days.
+
+    Scans every hourly ForecastDataPoint in T+0..72h (relative to `now`).
+    If any data point has ``confidence_pct < 60``, returns a German hint
+    naming the weekday of the first uncertain day plus the maximum
+    temperature spread (in °C) for that day. Otherwise returns ``None``
+    (no visual noise on confident forecasts).
+    """
+    cutoff = now + timedelta(hours=72)
+    # day_date -> (min_conf, max_spread_k)
+    uncertain: dict = {}
+    for seg in segments:
+        ts = getattr(seg, "timeseries", None)
+        if ts is None:
+            continue
+        for dp in ts.data:
+            if dp.confidence_pct is None:
+                continue
+            # Normalize to tz-aware UTC for comparison with `cutoff`.
+            dp_ts = dp.ts
+            if dp_ts.tzinfo is None:
+                from datetime import timezone as _tz
+                dp_ts = dp_ts.replace(tzinfo=_tz.utc)
+            if dp_ts > cutoff:
+                continue
+            if dp.confidence_pct >= 60:
+                continue
+            day = dp_ts.astimezone(tz).date()
+            spread = dp.spread_t2m_k or 0.0
+            cur = uncertain.get(day)
+            if cur is None:
+                uncertain[day] = (dp.confidence_pct, spread)
+            else:
+                uncertain[day] = (
+                    min(cur[0], dp.confidence_pct),
+                    max(cur[1], spread),
+                )
+    if not uncertain:
+        return None
+    first_day = min(uncertain.keys())
+    _, max_spread = uncertain[first_day]
+    weekday = _WEEKDAY_DE[first_day.weekday()]
+    return (
+        f"Ab {weekday} nimmt die Unsicherheit zu "
+        f"(Temperatur-Spreizung {round(max_spread)} °C)."
+    )
 
 
 def build_units_legend(rows: list[dict]) -> str:

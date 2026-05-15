@@ -1,0 +1,11 @@
+============================= test session starts ==============================
+collected 86 items / 1 deselected / 85 selected
+
+tests/tdd/test_forecast_confidence_output.py .................           [ 20%]
+tests/tdd/test_forecast_confidence_backend.py ..................         [ 41%]
+tests/integration/test_risk_engine.py .................                  [ 61%]
+tests/unit/test_weather_metrics.py ................                      [ 80%]
+tests/unit/test_token_builder.py ............                            [ 94%]
+tests/golden/email/test_email_plain_golden.py .....                      [100%]
+
+======================= 85 passed, 1 deselected in 0.39s =======================

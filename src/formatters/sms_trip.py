@@ -76,12 +76,18 @@ def _segments_to_normalized_forecast(
         if agg.gust_max_kmh is not None and agg.gust_max_kmh > 0:
             gust_samples.append(HourlyValue(hour, float(agg.gust_max_kmh)))
 
+    # Issue #121: worst-case daily confidence aggregation over segments.
+    confs = [s.aggregated.confidence_pct_min for s in segments
+             if s.aggregated.confidence_pct_min is not None]
+    day_confidence = min(confs) if confs else None
+
     today = DailyForecast(
         temp_min_c=day_min,
         temp_max_c=day_max,
         rain_hourly=tuple(rain_samples),
         wind_hourly=tuple(wind_samples),
         gust_hourly=tuple(gust_samples),
+        confidence_pct_min=day_confidence,
     )
     return NormalizedForecast(days=(today,))
 

@@ -155,6 +155,19 @@ _METRICS: list[MetricDefinition] = [
         highlight_threshold=80.0,
         risk_thresholds={"medium": 80},
     ),
+    # === FORECAST CONFIDENCE (Issue #121) ===
+    MetricDefinition(
+        id="confidence", label_de="Sicherheit", unit="%",
+        dp_field="confidence_pct", category="atmosphere",
+        default_aggregations=("min",),
+        compact_label="Conf", col_key="confidence", col_label="Sicherheit",
+        providers={"openmeteo": True, "geosphere": False},
+        summary_fields={"min": "confidence_pct_min"},
+        # Issue #121: default_enabled=False — users opt in via dc.metrics
+        # or WeatherTemplate. Mirrors pop/rain_probability behaviour and
+        # preserves bit-identical goldens (output_channel_renderers §A7).
+        default_enabled=False,
+    ),
     MetricDefinition(
         id="thunder", label_de="Gewitter", unit="",
         dp_field="thunder_level", category="precipitation",

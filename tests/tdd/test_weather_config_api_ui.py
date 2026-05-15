@@ -457,14 +457,14 @@ class TestAdditionalMetricsCatalog:
         """
         GIVEN: MetricCatalog with all metrics registered
         WHEN: counting all metrics
-        THEN: exactly 24 metrics
+        THEN: exactly 25 metrics
 
-        Updated: catalog has grown to 24 metrics.
+        Updated: catalog has grown to 25 metrics (Issue #121 added 'confidence').
         """
         from app.metric_catalog import get_all_metrics
         metrics = get_all_metrics()
-        assert len(metrics) == 24, (
-            f"Expected 24 metrics, got {len(metrics)}."
+        assert len(metrics) == 25, (
+            f"Expected 25 metrics, got {len(metrics)}."
         )
 
     def test_visibility_metric_exists(self):

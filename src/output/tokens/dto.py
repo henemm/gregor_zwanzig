@@ -31,6 +31,7 @@ class DailyForecast:
     snowfall_limit_m: Optional[float] = None
     avalanche_level: Optional[int] = None
     wind_chill_c: Optional[float] = None
+    confidence_pct_min: Optional[int] = None  # Issue #121: worst-case daily confidence
 
 
 @dataclass(frozen=True)

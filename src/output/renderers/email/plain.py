@@ -20,8 +20,8 @@ from services.daylight_service import DaylightWindow
 from utils.timezone import local_fmt
 
 from src.output.renderers.email.helpers import (
-    build_segment_label, build_units_legend, fmt_val, format_change_line,
-    shorten_stage_name, visible_cols,
+    build_confidence_hint, build_segment_label, build_units_legend, fmt_val,
+    format_change_line, shorten_stage_name, visible_cols,
 )
 
 
@@ -135,6 +135,14 @@ def render_plain(
 
     if compact_summary:
         lines.append(compact_summary)
+        lines.append("")
+
+    # Issue #121 / AC-12 + AC-13: confidence hint (only when uncertain).
+    confidence_hint = build_confidence_hint(
+        segments, now=datetime.now(tz), tz=tz,
+    )
+    if confidence_hint:
+        lines.append(confidence_hint)
         lines.append("")
 
     if daylight:

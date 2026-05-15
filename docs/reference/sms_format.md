@@ -1,10 +1,10 @@
 ---
 entity_id: sms_format
 type: reference
-version: "2.0"
+version: "2.1"
 status: active
 created: 2025-12-27
-updated: 2026-04-28
+updated: 2026-05-15
 tags: [sms, compact, tokens, single-source-of-truth]
 ---
 
@@ -37,13 +37,14 @@ Diese Spec ersetzt v1.0 und integriert das Format aus dem Vorgänger-Projekt (`w
 ## 2. Token-Reihenfolge (fix)
 
 ```
-{Name}: N D R PR W G TH: TH+: HR:TH: Z: M: [SN SN24+ SFL AV WC] DBG
+{Name}: N D R PR W G TH: TH+: C HR:TH: Z: M: [SN SN24+ SFL AV WC] DBG
 ```
 
 | Block | Tokens | Pflicht? |
 |-------|--------|---------|
 | Header | `{Name}:` | immer |
 | Forecast | `N D R PR W G TH: TH+:` | immer (bei `-` als Null-Wert) |
+| Confidence | `C` | nur wenn Provider Konfidenz liefert (Issue #121, v2.1) |
 | Risks (Vigilance) | `HR:TH:` (zusammenhängend, kein Leerzeichen zwischen den beiden) | nur bei FR-Provider |
 | Fire-Zonen | `Z: M:` | nur Korsika, weglassen wenn leer |
 | Wintersport | `SN SN24+ SFL AV WC` | optional |
@@ -116,6 +117,23 @@ Es gibt zwei `TH:`-Tokens mit unterschiedlicher Bedeutung. Disambiguierung erfol
 Parser erkennen den Unterschied durch:
 - Forecast-`TH:` ist von Leerzeichen umgeben
 - Vigilance-`TH:` folgt **direkt** auf `HR:` ohne Leerzeichen
+
+### 3.4b Confidence-Symbol `C` (v2.1, Issue #121)
+
+Einzelnes Zeichen, das die tagesweise Worst-Case-Konfidenz der Wettervorhersage signalisiert. Position: **nach `TH+:`, vor `HR:`/Vigilance-Tokens**.
+
+| Wert | Symbol | Bedeutung |
+|------|--------|-----------|
+| `confidence_pct_min >= 75` | `C+` | Sichere Vorhersage |
+| `50 <= confidence_pct_min < 75` | `C~` | Mittlere Sicherheit |
+| `confidence_pct_min < 50` | `C?` | Unsichere Vorhersage |
+| `confidence_pct_min is None` | _(Token weggelassen)_ | Kein Provider-Support |
+
+**GSM-7-konform** — `+`, `~`, `?` sind alle Standard-GSM-7-Zeichen.
+
+Aggregation: `min()` der stündlichen `confidence_pct` über alle Segmente des Tages.
+
+Beispiel mit niedriger Konfidenz: `Etappe: N12 D22 R0.5 W15 G25 C?`
 
 ### 3.5 Fire-Risk-Tokens (Korsika-spezifisch)
 

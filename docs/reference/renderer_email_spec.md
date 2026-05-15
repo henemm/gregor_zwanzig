@@ -49,12 +49,23 @@ Note: "Gregor Zwanzig" appears as the sender name and does not need to be repeat
   - Time (with **leading zeros**, e.g. `05:00`, `14:00`, `19:00`)
   - Point (name or ID)
   - T (°C), W (km/h), G (km/h), R (mm), PR (%), TH (L/M/H), Symbol
+  - **Sicherheit** (%, optional, Issue #121) — am Ende der Spalten-Reihenfolge, nur wenn `confidence` als Metric aktiviert ist. Quelle: `dp.confidence_pct` via MetricCatalog.
 - Example:
 
-  | Time  | Point | T | W | G | R | PR | TH | Symbol     |
-  |-------|-------|---|---|---|---|----|----|------------|
-  | 14:00 | Monte |25 |22 |35 | 0 | 20 | M  | lightrain |
-  | 16:00 | Pass  |24 |28 |48 | 0 | 20 | M  | cloudy    |
+  | Time  | Point | T | W | G | R | PR | TH | Symbol     | Sicherheit |
+  |-------|-------|---|---|---|---|----|----|------------|------------|
+  | 14:00 | Monte |25 |22 |35 | 0 | 20 | M  | lightrain  | 82         |
+  | 16:00 | Pass  |24 |28 |48 | 0 | 20 | M  | cloudy     | 78         |
+
+#### 4a) Klartext-Hinweis bei niedriger Konfidenz (Issue #121)
+
+Im E-Mail-Body wird **zusätzlich** ein Klartext-Hinweis ausgegeben, wenn an mindestens einer Stunde in T+0..72h `confidence_pct < 60` liegt. Andernfalls erscheint **kein** Hinweis (Visual-Noise-Vermeidung).
+
+- Format: `"Ab {Wochentag} nimmt die Unsicherheit zu (Temperatur-Spreizung {N} °C)."`
+- Wochentag: erster betroffener Tag in T+0..72h (Deutsch: Montag–Sonntag).
+- Spread: `max(spread_t2m_k)` über alle unsicheren Stunden dieses Tages, gerundet auf ganze Kelvin/°C.
+- HTML: `<p class="confidence-hint">…</p>` in einem gelb hinterlegten Block, positioniert zwischen `summary` und `changes`.
+- Plain: eigene Zeile mit Leerzeile davor/dahinter, gleicher Position.
 
 ### 5) Debug Block
 - Always appended at the end, in `<pre>` formatted text.
