@@ -255,13 +255,22 @@
 						</Table.Cell>
 						<Table.Cell class="hidden sm:table-cell text-sm text-muted-foreground">{dateRange(trip)}</Table.Cell>
 						<Table.Cell class="text-right">
-							<div class="inline-flex flex-wrap justify-end gap-0.5">
-								<Btn variant="outline" size="icon-sm" title="Report-Konfiguration" onclick={() => openReportConfig(trip)}><BellIcon class="size-3.5" /></Btn>
-								<Btn variant="outline" size="icon-sm" title="Wetter-Konfiguration" onclick={() => (weatherConfigTarget = trip)}><CloudSunIcon class="size-3.5" /></Btn>
-								<Btn variant="outline" size="icon-sm" class="hidden sm:inline-flex" title="Test Morgen-Report" onclick={() => runTestReport(trip, 7)}><PlayIcon class="size-3.5" /></Btn>
-								<Btn variant="outline" size="icon-sm" class="hidden sm:inline-flex" title="Test Abend-Report" onclick={() => runTestReport(trip, 18)}><PlayIcon class="size-3.5" /></Btn>
-								<Btn data-testid="trip-edit-btn" variant="ghost" size="icon-sm" title="Bearbeiten" onclick={() => openEdit(trip)}><PencilIcon class="size-3.5" /></Btn>
-								<Btn variant="ghost" size="icon-sm" class="hidden sm:inline-flex" title="Löschen" onclick={() => (deleteTarget = trip)}><Trash2Icon class="size-3.5" /></Btn>
+							<div class="inline-flex flex-wrap justify-end gap-3">
+								<!-- Edit-Gruppe (3 Icons) -->
+								<div class="inline-flex gap-0.5">
+									<Btn variant="outline" size="icon-sm" title="Report-Konfiguration" onclick={() => openReportConfig(trip)}><BellIcon class="size-3.5" /></Btn>
+									<Btn variant="outline" size="icon-sm" title="Wetter-Konfiguration" onclick={() => (weatherConfigTarget = trip)}><CloudSunIcon class="size-3.5" /></Btn>
+									<Btn data-testid="trip-edit-btn" variant="ghost" size="icon-sm" title="Bearbeiten" onclick={() => openEdit(trip)}><PencilIcon class="size-3.5" /></Btn>
+								</div>
+								<!-- Send-Gruppe (2 Icons, nur >= sm) -->
+								<div class="hidden sm:inline-flex gap-0.5">
+									<Btn variant="outline" size="icon-sm" title="Test Morgen-Report" onclick={() => runTestReport(trip, 7)}><PlayIcon class="size-3.5" /></Btn>
+									<Btn variant="outline" size="icon-sm" title="Test Abend-Report" onclick={() => runTestReport(trip, 18)}><PlayIcon class="size-3.5" /></Btn>
+								</div>
+								<!-- Delete-Gruppe (1 Icon, nur >= sm) -->
+								<div class="hidden sm:inline-flex gap-0.5">
+									<Btn variant="ghost" size="icon-sm" title="Löschen" onclick={() => (deleteTarget = trip)}><Trash2Icon class="size-3.5" /></Btn>
+								</div>
 							</div>
 						</Table.Cell>
 					</Table.Row>

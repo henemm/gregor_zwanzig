@@ -1,0 +1,174 @@
+{
+  "desktop": {
+    "outer_classes": "inline-flex flex-wrap justify-end gap-0.5",
+    "outer_direct_children_count": 6,
+    "outer_direct_children": [
+      {
+        "tag": "BUTTON",
+        "classes": ""
+      },
+      {
+        "tag": "BUTTON",
+        "classes": ""
+      },
+      {
+        "tag": "BUTTON",
+        "classes": "hidden sm:inline-flex"
+      },
+      {
+        "tag": "BUTTON",
+        "classes": "hidden sm:inline-flex"
+      },
+      {
+        "tag": "BUTTON",
+        "classes": ""
+      },
+      {
+        "tag": "BUTTON",
+        "classes": "hidden sm:inline-flex"
+      }
+    ],
+    "buttons": [
+      {
+        "title": "Report-Konfiguration",
+        "testid": "",
+        "classes": "",
+        "hidden_sm": "",
+        "visible": true,
+        "parent_tag": "DIV",
+        "parent_classes": "inline-flex flex-wrap justify-end gap-0.5"
+      },
+      {
+        "title": "Wetter-Konfiguration",
+        "testid": "",
+        "classes": "",
+        "hidden_sm": "",
+        "visible": true,
+        "parent_tag": "DIV",
+        "parent_classes": "inline-flex flex-wrap justify-end gap-0.5"
+      },
+      {
+        "title": "Test Morgen-Report",
+        "testid": "",
+        "classes": "hidden sm:inline-flex",
+        "hidden_sm": true,
+        "visible": true,
+        "parent_tag": "DIV",
+        "parent_classes": "inline-flex flex-wrap justify-end gap-0.5"
+      },
+      {
+        "title": "Test Abend-Report",
+        "testid": "",
+        "classes": "hidden sm:inline-flex",
+        "hidden_sm": true,
+        "visible": true,
+        "parent_tag": "DIV",
+        "parent_classes": "inline-flex flex-wrap justify-end gap-0.5"
+      },
+      {
+        "title": "Bearbeiten",
+        "testid": "trip-edit-btn",
+        "classes": "",
+        "hidden_sm": "",
+        "visible": true,
+        "parent_tag": "DIV",
+        "parent_classes": "inline-flex flex-wrap justify-end gap-0.5"
+      },
+      {
+        "title": "L\u00f6schen",
+        "testid": "",
+        "classes": "hidden sm:inline-flex",
+        "hidden_sm": true,
+        "visible": true,
+        "parent_tag": "DIV",
+        "parent_classes": "inline-flex flex-wrap justify-end gap-0.5"
+      }
+    ]
+  },
+  "mobile": {
+    "outer_classes": "inline-flex flex-wrap justify-end gap-0.5",
+    "outer_direct_children_count": 6,
+    "outer_direct_children": [
+      {
+        "tag": "BUTTON",
+        "classes": ""
+      },
+      {
+        "tag": "BUTTON",
+        "classes": ""
+      },
+      {
+        "tag": "BUTTON",
+        "classes": "hidden sm:inline-flex"
+      },
+      {
+        "tag": "BUTTON",
+        "classes": "hidden sm:inline-flex"
+      },
+      {
+        "tag": "BUTTON",
+        "classes": ""
+      },
+      {
+        "tag": "BUTTON",
+        "classes": "hidden sm:inline-flex"
+      }
+    ],
+    "buttons": [
+      {
+        "title": "Report-Konfiguration",
+        "testid": "",
+        "classes": "",
+        "hidden_sm": "",
+        "visible": true,
+        "parent_tag": "DIV",
+        "parent_classes": "inline-flex flex-wrap justify-end gap-0.5"
+      },
+      {
+        "title": "Wetter-Konfiguration",
+        "testid": "",
+        "classes": "",
+        "hidden_sm": "",
+        "visible": true,
+        "parent_tag": "DIV",
+        "parent_classes": "inline-flex flex-wrap justify-end gap-0.5"
+      },
+      {
+        "title": "Test Morgen-Report",
+        "testid": "",
+        "classes": "hidden sm:inline-flex",
+        "hidden_sm": true,
+        "visible": false,
+        "parent_tag": "DIV",
+        "parent_classes": "inline-flex flex-wrap justify-end gap-0.5"
+      },
+      {
+        "title": "Test Abend-Report",
+        "testid": "",
+        "classes": "hidden sm:inline-flex",
+        "hidden_sm": true,
+        "visible": false,
+        "parent_tag": "DIV",
+        "parent_classes": "inline-flex flex-wrap justify-end gap-0.5"
+      },
+      {
+        "title": "Bearbeiten",
+        "testid": "trip-edit-btn",
+        "classes": "",
+        "hidden_sm": "",
+        "visible": true,
+        "parent_tag": "DIV",
+        "parent_classes": "inline-flex flex-wrap justify-end gap-0.5"
+      },
+      {
+        "title": "L\u00f6schen",
+        "testid": "",
+        "classes": "hidden sm:inline-flex",
+        "hidden_sm": true,
+        "visible": false,
+        "parent_tag": "DIV",
+        "parent_classes": "inline-flex flex-wrap justify-end gap-0.5"
+      }
+    ]
+  }
+}
