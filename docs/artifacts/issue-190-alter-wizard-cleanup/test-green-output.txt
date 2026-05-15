@@ -1,0 +1,15 @@
+PASS  AC-1 components/wizard/ entfernt
+PASS  AC-2 components/edit/EditRouteSection.svelte existiert
+PASS  AC-2 components/edit/EditStagesSection.svelte existiert
+PASS  AC-2 components/edit/EditWeatherSection.svelte existiert
+PASS  AC-2 components/edit/EditReportConfigSection.svelte existiert
+PASS  AC-3 kein $lib/components/wizard-Import im src/
+PASS  AC-4 frontend/e2e/trip-wizard.spec.ts gelöscht
+PASS  AC-8 alter Komponentenname 'WizardStep1Route' nicht mehr in src/
+PASS  AC-8 alter Komponentenname 'WizardStep2Stages' nicht mehr in src/
+PASS  AC-8 alter Komponentenname 'WizardStep3Weather' nicht mehr in src/
+PASS  AC-8 alter Komponentenname 'WizardStep4ReportConfig' nicht mehr in src/
+PASS  AC-8 alter Komponentenname 'TripWizard.svelte' nicht mehr in src/
+PASS  AC-8 alter Komponentenname 'WizardStepper' nicht mehr in src/
+
+Summary: 13/13 pass, 0 fail

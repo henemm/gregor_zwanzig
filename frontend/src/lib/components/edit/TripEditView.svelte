@@ -3,10 +3,10 @@
 	import { api } from '$lib/api.js';
 	import { goto } from '$app/navigation';
 	import AccordionSection from './AccordionSection.svelte';
-	import WizardStep1Route from '$lib/components/wizard/WizardStep1Route.svelte';
-	import WizardStep2Stages from '$lib/components/wizard/WizardStep2Stages.svelte';
-	import WizardStep3Weather from '$lib/components/wizard/WizardStep3Weather.svelte';
-	import WizardStep4ReportConfig from '$lib/components/wizard/WizardStep4ReportConfig.svelte';
+	import EditRouteSection from './EditRouteSection.svelte';
+	import EditStagesSection from './EditStagesSection.svelte';
+	import EditWeatherSection from './EditWeatherSection.svelte';
+	import EditReportConfigSection from './EditReportConfigSection.svelte';
 	import AlertRulesEditor from '$lib/components/alert-rules-editor/AlertRulesEditor.svelte';
 
 	interface Props {
@@ -86,7 +86,7 @@
 		open={openSection === 'route'}
 		onToggle={makeToggleHandler('route')}
 	>
-		<WizardStep1Route bind:tripName bind:stages mode="edit" />
+		<EditRouteSection bind:tripName bind:stages mode="edit" />
 	</AccordionSection>
 
 	<AccordionSection
@@ -95,7 +95,7 @@
 		open={openSection === 'etappen'}
 		onToggle={makeToggleHandler('etappen')}
 	>
-		<WizardStep2Stages bind:stages />
+		<EditStagesSection bind:stages />
 	</AccordionSection>
 
 	<AccordionSection
@@ -104,7 +104,7 @@
 		open={openSection === 'wetter'}
 		onToggle={makeToggleHandler('wetter')}
 	>
-		<WizardStep3Weather bind:displayConfig mode="edit" />
+		<EditWeatherSection bind:displayConfig mode="edit" />
 	</AccordionSection>
 
 	<AccordionSection
@@ -122,7 +122,7 @@
 		open={openSection === 'reports'}
 		onToggle={makeToggleHandler('reports')}
 	>
-		<WizardStep4ReportConfig bind:reportConfig mode="edit" />
+		<EditReportConfigSection bind:reportConfig mode="edit" />
 	</AccordionSection>
 
 	{#if saveError}
