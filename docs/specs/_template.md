@@ -23,6 +23,13 @@ tags: []
 - **File:** `path/to/file`
 - **Identifier:** `class/function name`
 
+> **PFLICHT — Schicht-Hinweis:** Affected Files MUSS die richtige Schicht treffen:
+> - **Frontend / User-UI** → `frontend/src/...` (SvelteKit, produktive Oberfläche auf gregor20.henemm.com)
+> - **Go-API** → `api/`, `internal/`, `cmd/` (Production-API auf Port 8090)
+> - **Python-Backend** → `src/services/`, `src/app/`, `src/providers/` (FastAPI Core über `api.main:app`)
+>
+> Im Zweifel vor dem Spec-Schreiben grep auf den betroffenen Symbol-Namen — Server-Code (Go vs. Python) und UI-Code (SvelteKit vs. Server-Templates) sind getrennt. Es gab in der Vergangenheit Doppelarbeit, weil Specs Helper-Funktionen in der falschen Schicht verortet haben (Issue #129).
+
 ## Dependencies
 
 | Entity | Type | Purpose |

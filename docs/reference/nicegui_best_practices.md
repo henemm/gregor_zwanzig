@@ -1,6 +1,9 @@
-# NiceGUI Best Practices - Safari Compatibility
+# NiceGUI Best Practices - Safari Compatibility (LEGACY)
+
+> **HINWEIS — Dieses Dokument ist historisch.** Die NiceGUI-Python-UI wurde am 2026-05-15 mit Issue #129 ersatzlos entfernt. Die produktive Oberfläche ist seither SvelteKit (`frontend/`). Diese Datei bleibt als Archiv für die NiceGUI-Phase erhalten, beschreibt aber **keinen aktuellen Code mehr**.
 
 **Date:** 2026-01-15
+**Status:** legacy (since 2026-05-15)
 **Purpose:** Prevent Safari browser compatibility issues in NiceGUI applications
 
 ## The Problem

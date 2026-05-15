@@ -2,13 +2,15 @@
 entity_id: web_ui
 type: feature
 created: 2025-12-28
-updated: 2025-12-28
-status: draft
+updated: 2026-05-15
+status: legacy
 version: "1.0"
-tags: [ui, nicegui, configuration]
+tags: [ui, nicegui, configuration, legacy, removed]
 ---
 
-# Web UI - Konfigurationsoberfläche
+# Web UI - Konfigurationsoberfläche (LEGACY — entfernt mit Issue #129)
+
+> **HINWEIS — Diese Spec ist historisch.** Die NiceGUI-basierte Python-UI in `src/web/` wurde am 2026-05-15 mit Issue #129 ersatzlos entfernt. Die produktive Benutzeroberfläche ist seit der SvelteKit-Migration `frontend/` (https://gregor20.henemm.com). Diese Datei bleibt als Archiv erhalten, beschreibt aber **keinen aktuellen Code mehr**.
 
 ## Approval
 

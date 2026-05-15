@@ -255,38 +255,11 @@ store.SaveTrip(trip)  // existing.aggregation, .display_config etc. weg!
 
 **Korrekt:** Read-Modify-Write mit Merge — bestehendes Objekt laden, nur explizit veraenderte Felder ueberschreiben, Rest erhalten.
 
-## NiceGUI Safari-Kompatibilitaet (KRITISCH!)
-
-**Safari ist STRENGER als Chrome/Firefox!** NiceGUI's Python→JavaScript-Uebersetzung hat **Closure-Binding-Probleme in Safari**.
-
-### Factory Pattern ist PFLICHT
-
-**ALLE `ui.button(on_click=X)` MUESSEN Factory Pattern verwenden:**
-
-Direkte Closure-Referenzen → Safari: Button reagiert nicht (keine Fehlermeldung)
-Factory Pattern → Safari bindet Callable korrekt
-
-**Naming:** `make_<action>_handler()` returns `do_<action>()`
-
-### Test-Reihenfolge
-
-1. Safari (strengste) - funktioniert Safari → funktioniert ueberall
-2. Firefox
-3. Chrome (permissivste)
-
-**Nach jeder UI-Aenderung:** Safari Hard Reload (Cmd+Shift+R)
-
-### Referenz
-
-**Details & Templates:** `docs/reference/nicegui_best_practices.md`
-
-Fixed Bugs: `docs/specs/bugfix/locations_add_button_fix.md`, `safari_subscriptions_fix.md`
-
 ## Deployment & Infrastruktur
 
 Globale Server-Infos und Monitoring-Anleitung stehen in `~/.claude/CLAUDE.md`.
 
-- **Production:** https://gregor20.henemm.com — Systemd (`gregor_zwanzig.service`, `gregor-api`, `gregor-frontend`)
+- **Production:** https://gregor20.henemm.com — Systemd (`gregor-python.service`, `gregor-api`, `gregor-frontend`)
 - **Staging:** https://staging.gregor20.henemm.com — Systemd (`gregor-python-staging`, `gregor-api-staging`, `gregor-frontend-staging`)
 - **Infrastruktur-Repo:** `henemm/henemm-infra` (Nginx-Config, Systemd-Service, Deploy-Scripts)
 
@@ -308,7 +281,7 @@ Globale Server-Infos und Monitoring-Anleitung stehen in `~/.claude/CLAUDE.md`.
 Mindestens diese Checks gegen `https://staging.gregor20.henemm.com`:
 - HTTP-Smoke: `/` antwortet `200` oder `302`, `/api/health` antwortet `200`
 - Eine geaenderte Funktion manuell durchgeklickt (oder via Playwright fuer UI-Features)
-- Bei Mail-Aenderungen: Test-Mail via `/_scheduler_status`-Trigger und IMAP-Verifikation
+- Bei Mail-Aenderungen: Test-Mail aus dem Scheduler triggern und IMAP-Verifikation
 - Bei Scheduler-Aenderungen: `last_run`-Status im Endpoint geprueft
 
 ### Ausnahme: Reine Doku-/Tooling-Aenderungen
@@ -323,11 +296,7 @@ Im Zweifel: trotzdem deployen, dann ist der Drift-Monitor auf jeden Fall ruhig.
 
 Externes Monitoring laeuft ueber `henemm-infra/check-gregor20.sh`. Der interne Heartbeat-Ping vom Scheduler an BetterStack ist optional — wenn `GZ_HEARTBEAT_MORNING`/`GZ_HEARTBEAT_EVENING` ENV-Variablen leer sind, wird kein Heartbeat gesendet (fail-soft). In dem Fall geht beim ersten Job-Lauf einmalig pro Prozess eine MQ-Nachricht an `infra` raus.
 
-**Status-Endpoints:**
-- Python: `/_scheduler_status` (NiceGUI, Port 8080)
-- Go: `/api/scheduler/status` (gregor-api, Port 8090)
-
-Beide liefern pro Job: `next_run` + `last_run` (time, status ok/error, error message). Der externe Health-Check kann damit erkennen ob Jobs tatsaechlich erfolgreich laufen.
+**Status-Endpoint:** `/api/scheduler/status` (gregor-api, Port 8090) — liefert pro Job: `next_run` + `last_run` (time, status ok/error, error message). Der externe Health-Check kann damit erkennen ob Jobs tatsaechlich erfolgreich laufen.
 
 **PFLICHT bei neuen Services/Schedulern:** Jeder neue Hintergrund-Job oder Service MUSS `last_run`-Tracking im Status-Endpoint haben, damit das externe Monitoring Fehler erkennen kann. Kein Job ohne Observability!
 
