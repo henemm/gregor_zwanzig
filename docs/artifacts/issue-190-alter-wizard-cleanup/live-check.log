@@ -1,0 +1,14 @@
+LOGIN_OK
+POST_TRIP HTTP 201
+EDIT_PAGE_OPENED
+SECTION_route_visible=false
+SECTION_etappen_visible=false
+SECTION_wetter_visible=false
+SECTION_alerts_visible=false
+SECTION_reports_visible=false
+TESTID_trip-name-input=0
+TESTID_stage-move-up-0=1
+TESTID_alert-rules-editor=0
+SCREENSHOT_OK
+CLEANUP_OK
+VERDICT: VERIFIED
