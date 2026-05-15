@@ -1,0 +1,49 @@
+=== EVIDENCE 4: Read-Modify-Write (alert_rules bleibt nach name-only PUT) ===
+GET nach name-only PUT:
+{
+    "id": "validator-test-1",
+    "name": "Validator Test",
+    "stages": [
+        {
+            "id": "stage1",
+            "name": "Stage 1",
+            "date": "2026-05-04",
+            "waypoints": [
+                {
+                    "id": "wp1",
+                    "name": "Start",
+                    "lat": 47,
+                    "lon": 11,
+                    "elevation_m": 0
+                },
+                {
+                    "id": "wp2",
+                    "name": "Ende",
+                    "lat": 47.1,
+                    "lon": 11.1,
+                    "elevation_m": 0
+                }
+            ]
+        }
+    ],
+    "alert_rules": [
+        {
+            "id": "550e8400-e29b-41d4-a716-446655440001",
+            "kind": "delta",
+            "metric": "temperature_change",
+            "threshold": 5,
+            "unit": "\u00b0C",
+            "severity": "warning",
+            "enabled": true
+        },
+        {
+            "id": "550e8400-e29b-41d4-a716-446655440002",
+            "kind": "absolute",
+            "metric": "wind_gust",
+            "threshold": 80,
+            "unit": "km/h",
+            "severity": "critical",
+            "enabled": false
+        }
+    ]
+}
