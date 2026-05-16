@@ -44,6 +44,14 @@ Frontend-Komponenten und Tab-Integration für die in Epic #140 (Master-Spec) vor
 - `src/services/preview_service.py` — Render-Orchestrierung (unverändert)
 - `frontend/src/lib/components/email-preview/` — `headerStats.ts` + `EmailPreviewHeader.svelte` aus altem #183 bleiben für etwaige Mini-Header-Verwendung; **nicht** Teil dieser Spec
 
+### Patch (Go-API-Proxy — Hot-Fix für Master-Spec-Lücke)
+
+- **File:** `internal/handler/preview_proxy.go` (NEU) — `PreviewProxyHandler(pythonURL, channel)`
+- **File:** `internal/handler/preview_proxy_test.go` (NEU) — 6 Tests
+- **File:** `cmd/server/main.go` (Patch) — 2 Route-Registrierungen
+
+Grund: Backend-Endpoint in `api/routers/preview.py` ist seit 11.05. committed, aber der Go-API-Proxy leitete `/api/preview/{trip_id}/email|sms` nicht an Python:8001 weiter — Validator gegen Staging gab HTTP 404. Pattern analog zu `LoadedTripProxyHandler`.
+
 ## Dependencies
 
 | Entity | Type | Purpose |
@@ -167,6 +175,9 @@ Innerhalb von `<Tabs.Content value="preview">` ersetzt der Placeholder durch:
 
 - **AC-8:** Given Frontend-Komponenten gerendert in einer Browser-Session / When der Browser die Komponenten mountet / Then nutzen sie Design-System-Tokens (`--g-paper`, `--g-ink`, `--g-accent`, `--g-r-3`, `--g-shadow-1`) statt hartkodierter Farben — Smoke-Check via DOM-Inspector.
   - Test: (populated after /tdd-red)
+
+- **AC-9:** Given laufender Go-API-Proxy / When `GET /api/preview/{trip_id}/email?type=morning` mit gültigem Auth-Cookie aufgerufen wird / Then proxiet Go den Aufruf an Python:8001/api/preview/{trip_id}/email mit `?user_id=…&type=morning` und gibt die Python-Response (HTML-Body, korrekter Content-Type) durch.
+  - Test: internal/handler/preview_proxy_test.go (6 Tests, GREEN)
 
 ## Known Limitations
 

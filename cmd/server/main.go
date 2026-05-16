@@ -108,6 +108,9 @@ func main() {
 	r.Get("/api/_validator/format-metric", handler.ValidatorFormatMetricProxyHandler(cfg.PythonCoreURL))
 	r.Get("/api/_validator/detector-thresholds", handler.DetectorThresholdsProxyHandler(cfg.PythonCoreURL))
 	r.Post("/api/trips/{id}/alert-preview", handler.AlertPreviewProxyHandler(cfg.PythonCoreURL))
+	// Issue #140 / #189: Output-Vorschau Email + SMS
+	r.Get("/api/preview/{trip_id}/email", handler.PreviewProxyHandler(cfg.PythonCoreURL, "email"))
+	r.Get("/api/preview/{trip_id}/sms", handler.PreviewProxyHandler(cfg.PythonCoreURL, "sms"))
 
 	// Scheduler
 	sched, err := scheduler.New(cfg, s)

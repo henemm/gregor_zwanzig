@@ -1,0 +1,9 @@
+# github.com/henemm/gregor-api/internal/handler [github.com/henemm/gregor-api/internal/handler.test]
+internal/handler/preview_proxy_test.go:53:7: undefined: PreviewProxyHandler
+internal/handler/preview_proxy_test.go:67:7: undefined: PreviewProxyHandler
+internal/handler/preview_proxy_test.go:81:7: undefined: PreviewProxyHandler
+internal/handler/preview_proxy_test.go:95:7: undefined: PreviewProxyHandler
+internal/handler/preview_proxy_test.go:109:7: undefined: PreviewProxyHandler
+internal/handler/preview_proxy_test.go:122:7: undefined: PreviewProxyHandler
+FAIL	github.com/henemm/gregor-api/internal/handler [build failed]
+FAIL
