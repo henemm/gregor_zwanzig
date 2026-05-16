@@ -70,27 +70,32 @@ const DEFAULT_LABEL = 'Standard-Metriken';
 
 export function getPresetLabel(trip: Trip): string {
   // Leitet das Preset-Label aus aggregation.activity_profile ab (provisional bis #206).
-  //   'wintersport' -> 'Wintersport-Standard'
-  //   'wandern'     -> 'Wandern-Standard'
-  //   'allgemein'   -> 'Standard-Metriken'
+  //   'wintersport'     -> 'Wintersport-Standard'
+  //   'wandern'         -> 'Wandern-Standard'
+  //   'summer_trekking' -> 'Sommer-Trekking-Standard'
+  //   'allgemein'       -> 'Standard-Metriken'
   //   unbekannt/null/undefined -> 'Standard-Metriken'
   const profile = (trip.aggregation as Record<string, unknown> | undefined)?.activity_profile;
-  if (profile === 'wintersport') return 'Wintersport-Standard';
-  if (profile === 'wandern')     return 'Wandern-Standard';
-  if (profile === 'allgemein')   return DEFAULT_LABEL;
+  if (profile === 'wintersport')     return 'Wintersport-Standard';
+  if (profile === 'wandern')         return 'Wandern-Standard';
+  if (profile === 'summer_trekking') return 'Sommer-Trekking-Standard';
+  if (profile === 'allgemein')       return DEFAULT_LABEL;
   return DEFAULT_LABEL;
 }
 
 export function getDefaultMetricsForProfile(profile: unknown): string[] {
   // Default-Metrik-Set wenn weather_config.metrics fehlt.
-  //   'wintersport' -> ['temp_min', 'temp_max', 'wind_max', 'snow_new', 'snow_depth', 'thunder_level']
-  //   'wandern'     -> ['temp_min', 'temp_max', 'wind_max', 'precip_sum', 'thunder_level', 'cloud_avg']
-  //   'allgemein'   -> ['temp_min', 'temp_max', 'wind_max', 'precip_sum']
-  //   sonst         -> []
+  //   'wintersport'     -> ['temp_min', 'temp_max', 'wind_max', 'snow_new', 'snow_depth', 'thunder_level']
+  //   'wandern'         -> ['temp_min', 'temp_max', 'wind_max', 'precip_sum', 'thunder_level', 'cloud_avg']
+  //   'summer_trekking' -> ['temp_min', 'temp_max', 'wind_max', 'gust_max', 'precip_sum', 'thunder_level', 'cloud_avg', 'uv_index']
+  //   'allgemein'       -> ['temp_min', 'temp_max', 'wind_max', 'precip_sum']
+  //   sonst             -> []
   if (profile === 'wintersport')
     return ['temp_min', 'temp_max', 'wind_max', 'snow_new', 'snow_depth', 'thunder_level'];
   if (profile === 'wandern')
     return ['temp_min', 'temp_max', 'wind_max', 'precip_sum', 'thunder_level', 'cloud_avg'];
+  if (profile === 'summer_trekking')
+    return ['temp_min', 'temp_max', 'wind_max', 'gust_max', 'precip_sum', 'thunder_level', 'cloud_avg', 'uv_index'];
   if (profile === 'allgemein')
     return ['temp_min', 'temp_max', 'wind_max', 'precip_sum'];
   return [];
@@ -142,6 +147,7 @@ const METRIC_LABELS: Record<string, string> = {
   humidity_avg:  'Feuchte',
   snow_new:      'Neuschnee',
   snow_depth:    'Schneehöhe',
+  uv_index:      'UV-Index',
 };
 
 export function prettyLabel(metricKey: string): string {
@@ -467,7 +473,7 @@ Der bestehende `e2e-cockpit-test` Trip-Seed wird **minimal-additiv** erweitert. 
 - **AC-12:** Given eine gerenderte Trip-Detail-Seite / When der User auf `right-card-preview-sms` klickt / Then ändert sich der URL-Hash zu `#preview` und das Preview-Tab ist aktiv (gleicher Hash, Channel-Differenzierung via `data-channel`-Attribut).
   - Test: (populated after /tdd-red)
 
-- **AC-13:** Given die Pure-Function `getPresetLabel` / When sie mit Trips aufgerufen wird, deren `aggregation.activity_profile` jeweils `'wintersport'`, `'wandern'`, `'allgemein'` und `null` ist / Then liefert sie genau `'Wintersport-Standard'`, `'Wandern-Standard'`, `'Standard-Metriken'`, `'Standard-Metriken'`.
+- **AC-13:** Given die Pure-Function `getPresetLabel` / When sie mit Trips aufgerufen wird, deren `aggregation.activity_profile` jeweils `'wintersport'`, `'wandern'`, `'summer_trekking'`, `'allgemein'` und `null` ist / Then liefert sie genau `'Wintersport-Standard'`, `'Wandern-Standard'`, `'Sommer-Trekking-Standard'`, `'Standard-Metriken'`, `'Standard-Metriken'`.
   - Test: (populated after /tdd-red)
 
 - **AC-14:** Given die Pure-Function `getActiveMetrics` / When sie mit Trip `{ weather_config: { metrics: ['temp_min', 'wind_max'] } }` aufgerufen wird / Then liefert sie genau `['temp_min', 'wind_max']`; und mit Trip `{ aggregation: { activity_profile: 'wandern' } }` ohne `weather_config.metrics` liefert sie das Wandern-Default-Set (`['temp_min','temp_max','wind_max','precip_sum','thunder_level','cloud_avg']`).
@@ -485,6 +491,15 @@ Der bestehende `e2e-cockpit-test` Trip-Seed wird **minimal-additiv** erweitert. 
 - **AC-18:** Given ein Trip OHNE `report_config` (separater Test-Trip oder explizit nullifizierter Mock) / When die Briefing-Karte gerendert wird / Then zeigt sie den Empty-State „Briefings deaktiviert" und der `right-card-briefings-edit-link` ist trotzdem sichtbar und führt bei Klick zu URL-Hash `#briefings`.
   - Test: (populated after /tdd-red)
 
+- **AC-19:** Given die Pure-Function `getDefaultMetricsForProfile` / When sie mit `'summer_trekking'` aufgerufen wird / Then liefert sie genau `['temp_min', 'temp_max', 'wind_max', 'gust_max', 'precip_sum', 'thunder_level', 'cloud_avg', 'uv_index']` (alpines Trekking-Risikoprofil — wandern-Basis plus Böen + UV).
+  - Test: (populated after /tdd-red)
+
+- **AC-20:** Given die Pure-Function `getActiveMetrics` / When sie mit Trip `{ aggregation: { activity_profile: 'summer_trekking' } }` ohne `weather_config.metrics` aufgerufen wird / Then liefert sie das `summer_trekking`-Default-Set aus AC-19 (Default-Fallback-Pfad für das neue Profil).
+  - Test: (populated after /tdd-red)
+
+- **AC-21:** Given die Funktion `prettyLabel` / When sie mit `'uv_index'` aufgerufen wird / Then liefert sie `'UV-Index'` (neues `METRIC_LABELS`-Mapping für das `summer_trekking`-Default-Set).
+  - Test: (populated after /tdd-red)
+
 ## Known Limitations
 
 - **Alert-Card ist Skeleton:** Inhalt blockiert auf Issue #205 (`Trip.alert_rules` fehlt im Datenmodell, Frontend + Backend). Bis dahin zeigt die Karte nur den Empty-State + „Konfigurieren →"-Link.
@@ -497,4 +512,5 @@ Der bestehende `e2e-cockpit-test` Trip-Seed wird **minimal-additiv** erweitert. 
 
 ## Changelog
 
+- 2026-05-16: Issue #232 — `summer_trekking`-Behandlung in `getPresetLabel` und `getDefaultMetricsForProfile` ergänzt (Label `'Sommer-Trekking-Standard'`, Default-Metriken-Set `['temp_min','temp_max','wind_max','gust_max','precip_sum','thunder_level','cloud_avg','uv_index']`). `METRIC_LABELS` um `uv_index: 'UV-Index'` erweitert. AC-13 um `'summer_trekking'`-Wert ergänzt; neue AC-19 (Default-Set), AC-20 (Active-Metrics-Fallback), AC-21 (`prettyLabel('uv_index')`). Hintergrund: Wizard-Mapping in `wizardHelpers.ts::mapActivityToProfile` produziert `summer_trekking` für `trekking`/`hochtour`/`klettersteig`; ohne Behandlung fielen diese Trips auf generisches `'Standard-Metriken'` + leeres Default-Set zurück (vom Adversary-Validator während Fix #230 aufgedeckt).
 - 2026-05-13: Initial spec — Issues #158 (Wetter-Metriken-Karte) + #159 (Briefings + Alerts + Vorschau), Epic #135 Step 5 (Trip-Detail Overview, rechte Spalte). 4 neue read-only Vorschau-Karten im `<aside data-testid="trip-overview-right-column">`: `BriefingPreviewCard`, `WeatherMetricsPreviewCard`, `AlertsPreviewCard`, `PreviewCard`. Pure-Function-Helper `rightColumn.ts` (`getPresetLabel`, `getDefaultMetricsForProfile`, `getActiveMetrics`, `getReportSchedule`, `prettyLabel`) kapselt generischen `Record<string, unknown>`-Zugriff bis #207 strukturiertes Typing liefert. Alle Karten verlinken via URL-Hash zum jeweiligen Tab (bestehende `hashchange`-Logik aus Step 1). Test-Trip-Seed in `global.setup.ts` um `report_config`, `weather_config.metrics`, `aggregation.activity_profile` erweitert. 18 Acceptance Criteria im AC-N-Format. TestID-Inventar (16 IDs inkl. bestehender `trip-overview-right-column` aus Step 4). Datei-Liste (~648 LoC, Override 700). Bekannte Limitierungen: Alert-Datenmodell (#205), Preset-Feld (#206), strukturiertes report_config-Typing (#207), Preview-Tab-Inhalt (#189), Hero-Test-Anpassung für Trip-ohne-report_config-Pfad.

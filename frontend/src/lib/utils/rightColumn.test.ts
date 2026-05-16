@@ -19,6 +19,7 @@ import {
 	getDefaultMetricsForProfile,
 	getActiveMetrics,
 	getReportSchedule,
+	prettyLabel,
 	type ReportSchedule
 } from './rightColumn.ts';
 
@@ -266,4 +267,48 @@ test('getReportSchedule > morning_time / evening_time als Non-String → undefin
 	const schedule = getReportSchedule(trip);
 	assert.equal(schedule.morning, undefined);
 	assert.equal(schedule.evening, undefined);
+});
+
+// =============================================================================
+// Issue #232 — summer_trekking-Profil-Behandlung
+// Spec: docs/specs/modules/epic_135_step5_right_column.md AC-13 (erweitert),
+// AC-19, AC-20, AC-21 (Changelog 2026-05-16).
+// =============================================================================
+
+test('getPresetLabel > AC-13g: profile = "summer_trekking" → "Sommer-Trekking-Standard"', () => {
+	const trip = tripWith({ aggregation: { profile: 'summer_trekking' } });
+	assert.equal(getPresetLabel(trip), 'Sommer-Trekking-Standard');
+});
+
+test('getDefaultMetricsForProfile > AC-19: "summer_trekking" → wandern-Basis + gust_max + uv_index', () => {
+	assert.deepEqual(getDefaultMetricsForProfile('summer_trekking'), [
+		'temp_min',
+		'temp_max',
+		'wind_max',
+		'gust_max',
+		'precip_sum',
+		'thunder_level',
+		'cloud_avg',
+		'uv_index'
+	]);
+});
+
+test('getActiveMetrics > AC-20: kein weather_config.metrics, profile = "summer_trekking" → Default-Set', () => {
+	const trip = tripWith({
+		aggregation: { profile: 'summer_trekking' }
+	});
+	assert.deepEqual(getActiveMetrics(trip), [
+		'temp_min',
+		'temp_max',
+		'wind_max',
+		'gust_max',
+		'precip_sum',
+		'thunder_level',
+		'cloud_avg',
+		'uv_index'
+	]);
+});
+
+test('prettyLabel > AC-21: "uv_index" → "UV-Index"', () => {
+	assert.equal(prettyLabel('uv_index'), 'UV-Index');
 });
