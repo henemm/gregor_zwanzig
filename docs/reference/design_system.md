@@ -1,6 +1,6 @@
 # Design-System Gregor 20 — Referenz
 
-**Stand:** 2026-05-12 · **Quelle:** Anthropic-Artifact „Gregor 20 — Redesign v2.html" · **Status:** Referenz (read-only)
+**Stand:** 2026-05-16 · **Quelle:** Anthropic-Artifact „Gregor 20 — Redesign v2.html" · **Status:** Referenz, synchron mit `frontend/src/app.css` (Issue #213)
 
 Single Source of Truth für visuelle Sprache, Tokens und Komponenten-Verträge. Das Begleit-CSS liegt unter `design_system_tokens.css` und kann 1:1 in `frontend/src/app.css` übernommen werden (siehe Drift-Hinweise am Ende).
 
@@ -17,48 +17,60 @@ Alpin, präzise, datenehrlich. Paper-Off-White als Bühne, Burnt-Orange als einz
 
 ## 1 · Farben
 
-### Surfaces (Paper-Palette)
+### Surfaces
 | Token | Hex | Verwendung |
 |---|---|---|
-| `--g-paper` | `#f6f4ee` | App-Hintergrund — leicht warmes Off-White |
-| `--g-paper-deep` | `#ecead9` | gedämpfter Akzent für Sektionen |
-| `--g-card` | `#ffffff` | Karten, Tabellen |
-| `--g-card-alt` | `#faf8f1` | Zebra, sekundäre Karten |
-| `--g-rule` | `#d8d3c2` | Standard-Linien |
-| `--g-rule-soft` | `#e7e2d3` | sanfte Trennlinien |
+| `--g-paper` | `#f6f4ee` | App-Hintergrund, leicht warmes Off-White |
+| `--g-surface-0` | `#f6f4ee` | Alias für `--g-paper`, Surface-Basis |
+| `--g-surface-1` | `#edeae1` | Erhöhte Surface (Card, gehobener Bereich) |
+| `--g-surface-2` | `#e3dfd4` | Stark erhöhte Surface (Modal, Sticky-Bar) |
+
+**Design-Vision (nicht in `app.css` implementiert):** `--g-paper-deep`,
+`--g-card`, `--g-card-alt`, `--g-rule`, `--g-rule-soft` — wenn benötigt,
+eigener Issue.
 
 ### Ink (Typografie)
 | Token | Hex | Verwendung |
 |---|---|---|
 | `--g-ink` | `#1a1a18` | Primärtext |
-| `--g-ink-2` | `#45433d` | Sekundärtext, Body |
-| `--g-ink-3` | `#6b675c` | Tertiär, Labels |
-| `--g-ink-4` | `#9a958a` | Hint, Placeholder |
+| `--g-ink-muted` | `#5c5a52` | Sekundärtext, Body |
+| `--g-ink-faint` | `#9c9a90` | Tertiär, Labels, Placeholder |
+
+**Design-Vision (nicht implementiert):** vierte Stufe (`--g-ink-4`) für Hint/Placeholder
+— `--g-ink-faint` deckt beide ab.
 
 ### Accent — Burnt Orange (alpin, markant)
 | Token | Hex | Verwendung |
 |---|---|---|
 | `--g-accent` | `#c45a2a` | Primär-Akzent (CTA, KI-Vorschlag, Logo-Blitz) |
-| `--g-accent-deep` | `#8c3e1a` | Akzent-Text auf hellem Akzent-Tint |
-| `--g-accent-soft` | `#f3d9c8` | Akzent-Hintergrund (Badge, Hover) |
-| `--g-accent-tint` | `rgba(196,90,42,0.08)` | Subtiler Akzent-Fond |
+
+**Design-Vision (nicht implementiert):** `--g-accent-deep` (Akzent-Text auf Tint),
+`--g-accent-soft` (Hintergrund-Badge), `--g-accent-tint` (subtiler Fond) —
+wenn benötigt, eigener Issue.
 
 ### Semantic
 | Token | Hex | Bedeutung |
 |---|---|---|
-| `--g-good` | `#3d6b3a` | Wetter OK, low risk |
-| `--g-warn` | `#c08a1a` | Achtung, Schwellwert nahe |
-| `--g-bad` | `#a83232` | Alarm, kritisch |
-| `--g-info` | `#2c5a8c` | Neutrale Daten-Highlight |
+| `--g-success` | `#3a7d44` | Wetter OK, low risk |
+| `--g-warning` | `#c8882a` | Achtung, Schwellwert nahe |
+| `--g-danger` | `#b33a2a` | Alarm, kritisch |
+| `--g-info` | `#2a6cb3` | Neutrale Daten-Highlight |
+
+**Hinweis:** Anthropic-Vision hatte `--g-good`/`--g-warn`/`--g-bad` — Ist
+verwendet Tailwind-konforme Namen (`success`/`warning`/`danger`).
 
 ### Wetter (aus echten Email-Reports abgeleitet)
 | Token | Hex | Bedeutung |
 |---|---|---|
-| `--g-weather-rain` | `#4a7ab8` | Regen |
-| `--g-weather-snow` | `#8aa4c0` | Schnee |
-| `--g-weather-thunder` | `#c43a2a` | Gewitter |
-| `--g-weather-sun` | `#d99a2a` | Sonne |
-| `--g-weather-cloud` | `#9a958a` | Bewölkung |
+| `--g-wx-rain` | `#4a7fb5` | Regen |
+| `--g-wx-sun` | `#e8a820` | Sonne |
+| `--g-wx-wind` | `#6b8a8a` | Wind |
+| `--g-wx-snow` | `#a8c8e8` | Schnee |
+| `--g-wx-thunder` | `#5a3a7a` | Gewitter |
+| `--g-wx-fog` | `#9a9a8a` | Nebel/Wolken |
+
+**Hinweis:** Anthropic-Vision hatte `--g-weather-*`-Präfix — Ist verwendet
+kürzeres `--g-wx-*` (in `app.css` seit längerem etabliert).
 
 ---
 
@@ -114,34 +126,45 @@ Karten-Padding: 20–24 px. Section-Abstand: 56 px. Inner-Padding Tabs/Buttons: 
 
 | Token | Wert | Anwendung |
 |---|---|---|
-| `--g-r-1` | 2 px | Inline-Marker |
-| `--g-r-2` | 4 px | Buttons |
-| `--g-r-3` | 6 px | Cards, Inputs |
-| `--g-r-4` | 10 px | Großflächige Container |
-| `--g-r-pill` | 999 px | Pills, Badges |
+| `--g-radius-xs` | `0.125rem` (2px) | Inline-Marker |
+| `--g-radius-sm` | `0.25rem` (4px) | Buttons |
+| `--g-radius-md` | `0.5rem` (8px) | Cards, Inputs |
+| `--g-radius-lg` | `0.75rem` (12px) | Großflächige Container |
+| `--g-radius-pill` | `99rem` | Pills, Badges |
+
+**Hinweis:** Anthropic-Vision hatte `--g-r-1`-bis-`--g-r-4` mit px-Werten — Ist
+verwendet rem-basiertes Tailwind-Naming.
 
 ---
 
-## 5 · Elevation — sehr dezent
+## 5 · Elevation — dezent
 
-```
---g-shadow-1: 0 1px 0 rgba(26,26,24,.04), 0 1px 2px  rgba(26,26,24,.04);
---g-shadow-2: 0 1px 0 rgba(26,26,24,.04), 0 4px 14px rgba(26,26,24,.06);
---g-shadow-3: 0 2px 0 rgba(26,26,24,.04), 0 12px 32px rgba(26,26,24,.08);
+```css
+--g-elev-1: 0 1px 3px  rgba(26,26,24,0.08);
+--g-elev-2: 0 4px 12px rgba(26,26,24,0.12);
+--g-elev-3: 0 8px 24px rgba(26,26,24,0.16);
 ```
 
-`shadow-1` für Default-Karten, `shadow-2` für gehobene (Modal, Sticky), `shadow-3` für Floating (Popover).
+`elev-1` für Default-Karten, `elev-2` für gehobene (Modal, Sticky), `elev-3`
+für Floating (Popover).
+
+**Hinweis:** Anthropic-Vision hatte zweiteilige Shadows (Hairline + Drop) — Ist
+verwendet einfache, leicht erhöhte Schatten.
 
 ---
 
 ## 6 · Komponenten-Verträge
 
-### Button (`Btn`)
-- **Variants:** `primary` (Ink-Hintergrund, Paper-Text), `accent` (Burnt-Orange-Hintergrund, Weiß-Text), `ghost` (transparent, Ink-Rahmen `--g-rule`), `quiet` (transparent, kein Rahmen, Ink-2-Text)
-- **Sizes:** `xs` 8/4 px · 11 px · `sm` 10/6 · 12 · `md` 14/9 · 13 · `lg` 20/12 · 14
-- **Shape:** `border-radius: var(--g-r-2)` (4 px) · `font-weight: 500` · `letter-spacing: -0.005em`
-- **Transition:** `all 120ms`
-- **Focus:** `outline: 2px solid var(--g-accent); outline-offset: 2px`
+### Button (`Btn`) — implementiert in `frontend/src/lib/components/ui/btn/Btn.svelte`
+- **Variants:** `primary` (default), `accent`, `outline`, `ghost`, `secondary`, `destructive`, `link`
+- **Sizes:** `xs`, `sm`, `md` (default), `lg`, `icon`, `icon-xs`, `icon-sm`, `icon-lg`
+- **Tag-Switch:** Render als `<a>` wenn `href` gesetzt, sonst `<button>`
+- **Disabled-State:** ARIA-konform (`aria-disabled="true"`; bei Links zusätzlich `role="link"`, `tabindex={-1}`)
+- **Tests:** SSR-Render-Test-Suite ist im Spec-Archiv von `issue_214_btn_feature_parity.md` (deaktiviert wegen Svelte-Loader-Limitation, Issue #228)
+
+**Hinweis:** Anthropic-Vision hatte 4 Variants (`primary`/`accent`/`ghost`/`quiet`) —
+Ist hat 7 (inkl. `outline`/`secondary`/`destructive`/`link` aus Tailwind-CVA-Erweiterung).
+`quiet` aus der Vision wurde nicht implementiert; nutze `ghost` für leise Buttons.
 
 ### Pill / Badge
 - Padding `3px 9px`, `border-radius: var(--g-r-pill)`, `font-size: 11px`, `font-family: mono`, `letter-spacing: 0.04em`, `text-transform: uppercase`, `font-weight: 500`, `line-height: 1.4`, `gap: 6px`
@@ -217,31 +240,35 @@ Die JSX-Quellen liegen im Anthropic-Artifact-Tarball; sind nicht in das Repo ein
 
 ---
 
-## 10 · Drift zur aktuellen `frontend/src/app.css` (Stand 2026-05-12)
+## 10 · Stand 2026-05-16 nach Issues #208–#212
 
-In `app.css` existiert bereits ein älterer `--g-*`-Token-Block aus Issue #143/#144. Werte weichen ab — eine Konsolidierung sollte als eigener Workflow gefahren werden (Schema-relevante Pflicht: nichts blind überschreiben).
+Die in §1-§9 oben dokumentierten Tokens und Komponenten sind synchron mit
+`frontend/src/app.css` (Stand `2026-05-16`). Issues #208 (Typography/Spacing),
+#209 (Topo), #210 (Sidebar), #211 (Fonts), #212 (Button-Konsolidierung) sind
+abgeschlossen — Naming und Werte sind hier konsolidiert.
 
-| Kategorie | `app.css` heute | Tokens v2 (diese Referenz) | Empfehlung |
-|---|---|---|---|
-| Ink-Stufen | `--g-ink-muted`, `--g-ink-faint` | `--g-ink-2`, `--g-ink-3`, `--g-ink-4` | v2 übernehmen, 4 Stufen statt 3 |
-| Surfaces | `--g-surface-0/1/2` | `--g-paper`, `--g-paper-deep`, `--g-card`, `--g-card-alt`, `--g-rule`, `--g-rule-soft` | v2 übernehmen, semantisch klarer |
-| Semantic-Naming | `--g-success/warning/danger` | `--g-good/warn/bad` | v2 ist Designer-Naming, beibehalten — und Aliase legen für Migrations-Phase |
-| Wetter-Naming | `--g-wx-*` | `--g-weather-*` | v2 übernehmen |
-| Wetter-Werte | rain `#4a7fb5`, sun `#e8a820`, thunder `#5a3a7a`, fog `#9a9a8a` | rain `#4a7ab8`, sun `#d99a2a`, thunder `#c43a2a`, cloud `#9a958a` | v2 übernehmen — abgeleitet aus echten Email-Reports |
-| Radii | `0.125 / 0.25 / 0.5 / 0.75 rem`, `99rem` | `2 / 4 / 6 / 10 px`, `999 px` | v2 in px übernehmen — die Skala ist enger |
-| Elevation | flach (3 Stufen, jeweils ein Schatten) | zweiteilig (Hairline + Drop), 3 Stufen | v2 übernehmen — sieht wertiger aus |
-| Buttons | `data-slot="btn"` mit `accent/ghost/outline` | `primary/accent/ghost/quiet` | v2 — „primary" (Ink) fehlt heute, „quiet" ebenfalls |
+**Bewusst nicht implementierte Anthropic-Design-Vision-Tokens:**
+- `--g-paper-deep`, `--g-card`, `--g-card-alt`, `--g-rule`, `--g-rule-soft`
+- `--g-ink-4` (vierte Ink-Stufe)
+- `--g-accent-deep`, `--g-accent-soft`, `--g-accent-tint`
+- `--g-shadow-*` mit zweiteiliger Struktur (Hairline + Drop)
+- Btn-Variant `quiet`
 
-**Wenn migriert wird:** Pre-Snapshot über `data_schema_backup.py` ist nicht nötig (CSS, kein Datenmodell), aber Atom-Komponenten (`<Btn>`, `<Pill>`, `<Card>` etc. — heute als `[data-slot="*"]`) müssen synchron umgebaut werden, sonst zerfällt das UI.
+Diese sind kein Drift, sondern Pragmatik-Entscheidungen — bei Bedarf eigener Issue.
+
+**Drift-Prävention:** Bei Token-Änderungen in `app.css` ist diese Spec mit
+zu aktualisieren. Memory-Note `reference_design_system.md` warnt
+explizit, vor jeder Frontend-/UI-Arbeit beide Quellen zu konsultieren.
 
 ---
 
 ## 11 · Begleit-Dateien
 
-- `design_system_tokens.css` — 1:1 Drop-in-CSS aus dem Artifact. Diese Datei ist die maschinell verlässliche Quelle der Werte; die Markdown-Tabelle oben ist die lesbare Übersetzung.
-- `frontend_components.md` — bestehende SvelteKit-Komponenten-Karte (nicht überschrieben).
+- `design_system_tokens.css` — Begleit-CSS aus Anthropic-Artifact. **Kann von
+  `app.css` abweichen** — im Zweifel gilt `app.css`. Issue #213.
+- `frontend_components.md` — bestehende SvelteKit-Komponenten-Karte.
 - `sveltekit_best_practices.md` — Frontend-Architektur, ergänzt diese Design-Referenz technisch.
 
 ---
 
-*Abgelegt von Claude (Tech-Lead-Rolle) am 2026-05-12 auf Anfrage des Users. Quelle: Anthropic-Design-Artifact `puP0zvL3b8eR2dsEqc3R9Q`.*
+*Abgelegt von Claude (Tech-Lead-Rolle) am 2026-05-12, aktualisiert am 2026-05-16 (Issue #213). Quelle: Anthropic-Design-Artifact `puP0zvL3b8eR2dsEqc3R9Q`, synchronisiert mit `app.css`-Ist-Stand.*

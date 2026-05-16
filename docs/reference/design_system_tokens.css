@@ -1,3 +1,10 @@
+/*
+ * design_system_tokens.css — Begleit-CSS zur Spec docs/reference/design_system.md
+ *
+ * WICHTIG: Diese Datei kann von frontend/src/app.css abweichen.
+ * Im Zweifel gilt app.css. Stand-Sync via Issue #213 (2026-05-16).
+ */
+
 /* Gregor 20 — Design Tokens v2 (Single Source of Truth)
  * Quelle: Anthropic-Artifact "Gregor 20 - Redesign v2.html", abgelegt 2026-05-12.
  *
