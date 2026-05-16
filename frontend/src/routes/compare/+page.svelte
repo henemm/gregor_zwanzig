@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Location, Subscription, ForecastResponse } from '$lib/types.js';
+	import type { Location, Subscription, ForecastResponse, ActivityProfile } from '$lib/types.js';
 	import { api } from '$lib/api.js';
 	import { Btn } from '$lib/components/ui/btn/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
@@ -35,7 +35,7 @@
 	let twStart = $state(9);
 	let twEnd = $state(16);
 	let forecastHours = $state(48);
-	let activityProfile = $state('allgemein');
+	let activityProfile = $state<ActivityProfile>('allgemein');
 	let loading = $state(false);
 	let error = $state('');
 	let result: CompareResult | null = $state(null);

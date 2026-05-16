@@ -69,13 +69,13 @@ import type { Trip } from '$lib/types';
 const DEFAULT_LABEL = 'Standard-Metriken';
 
 export function getPresetLabel(trip: Trip): string {
-  // Leitet das Preset-Label aus aggregation.activity_profile ab (provisional bis #206).
+  // Leitet das Preset-Label aus aggregation.profile ab (provisional bis #206).
   //   'wintersport'     -> 'Wintersport-Standard'
   //   'wandern'         -> 'Wandern-Standard'
   //   'summer_trekking' -> 'Sommer-Trekking-Standard'
   //   'allgemein'       -> 'Standard-Metriken'
   //   unbekannt/null/undefined -> 'Standard-Metriken'
-  const profile = (trip.aggregation as Record<string, unknown> | undefined)?.activity_profile;
+  const profile = trip.aggregation?.profile;
   if (profile === 'wintersport')     return 'Wintersport-Standard';
   if (profile === 'wandern')         return 'Wandern-Standard';
   if (profile === 'summer_trekking') return 'Sommer-Trekking-Standard';
@@ -102,13 +102,12 @@ export function getDefaultMetricsForProfile(profile: unknown): string[] {
 }
 
 export function getActiveMetrics(trip: Trip): string[] {
-  // Liest weather_config.metrics falls Array von Strings, sonst Default-Set aus aggregation.activity_profile.
-  const wc = trip.weather_config as Record<string, unknown> | undefined;
-  const metrics = wc?.metrics;
+  // Liest weather_config.metrics falls Array von Strings, sonst Default-Set aus aggregation.profile.
+  const metrics = trip.weather_config?.metrics;
   if (Array.isArray(metrics) && metrics.every((m) => typeof m === 'string')) {
     return metrics as string[];
   }
-  const profile = (trip.aggregation as Record<string, unknown> | undefined)?.activity_profile;
+  const profile = trip.aggregation?.profile;
   return getDefaultMetricsForProfile(profile);
 }
 

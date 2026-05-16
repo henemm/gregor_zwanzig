@@ -6,7 +6,7 @@ export interface Location {
 	elevation_m?: number;
 	region?: string;
 	bergfex_slug?: string;
-	activity_profile?: 'wintersport' | 'wandern' | 'allgemein';
+	activity_profile?: ActivityProfile;
 	group?: string;
 	display_config?: Record<string, unknown>;
 }
@@ -134,7 +134,7 @@ export interface Subscription {
 	send_signal: boolean;
 	send_telegram: boolean;
 	display_config?: Record<string, unknown>;
-	activity_profile?: 'wintersport' | 'wandern' | 'allgemein';
+	activity_profile?: ActivityProfile;
 }
 
 export interface HealthResponse {
