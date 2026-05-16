@@ -23,6 +23,12 @@ from src.output.renderers.email.helpers import (
     build_confidence_hint, build_segment_label, build_units_legend, fmt_val,
     format_change_line, shorten_stage_name, visible_cols,
 )
+from src.output.renderers.email.design_tokens import (
+    G_PAPER, G_SURFACE_1, G_INK, G_INK_MUTED, G_INK_FAINT,
+    G_ACCENT, G_WARNING, G_DANGER,
+    G_BOX_WARNING_BG, G_BOX_DANGER_BG, G_BOX_INFO_BG,
+    FONT_UI, FONT_DATA, WEB_FONT_LINK,
+)
 
 
 def _format_daylight_html(dl: DaylightWindow, *, tz: ZoneInfo) -> str:
@@ -62,13 +68,13 @@ def _format_daylight_html(dl: DaylightWindow, *, tz: ZoneInfo) -> str:
         )
 
     inner = "<br>".join(
-        f'<span style="font-size:12px;color:#666">{p}</span>'
+        f'<span style="font-size:12px;color:{G_INK_MUTED}">{p}</span>'
         for p in explanation_parts
     )
     explanation_html = f"<div style=\"margin-top:4px\">{inner}</div>"
 
     return (
-        f'<div style="background:#fffde7;border-left:4px solid #f9a825;'
+        f'<div style="background:{G_BOX_WARNING_BG};border-left:4px solid {G_WARNING};'
         f'padding:12px;margin:8px 0;">'
         f'<strong style="font-size:14px">{headline}</strong>'
         f'{explanation_html}'
@@ -132,9 +138,9 @@ def render_html(
         seg = seg_data.segment
         if seg_data.has_error:
             seg_html_parts.append(f"""
-            <div style="background:#fff3e0;border-left:4px solid #e65100;padding:12px;margin:8px 0;">
-                <strong style="color:#e65100;">Segment {seg.segment_id}: Wetterdaten nicht verfuegbar</strong>
-                <p style="margin:4px 0 0 0;color:#666;font-size:13px;">Anbieter-Fehler nach 5 Versuchen</p>
+            <div style="background:{G_BOX_DANGER_BG};border-left:4px solid {G_DANGER};padding:12px;margin:8px 0;">
+                <strong style="color:{G_DANGER};">Segment {seg.segment_id}: Wetterdaten nicht verfuegbar</strong>
+                <p style="margin:4px 0 0 0;color:{G_INK_MUTED};font-size:13px;">Anbieter-Fehler nach 5 Versuchen</p>
             </div>""")
             continue
         s_elev = int(seg.start_point.elevation_m or 0)
@@ -158,11 +164,11 @@ def render_html(
         last_seg = segments[-1].segment
         night_hint = ""
         if any(mc.enabled and mc.metric_id in ("temperature", "freezing_level") for mc in dc.metrics):
-            night_hint = '<p style="color:#999;font-size:11px;margin-top:4px">* Temperatur/Nullgradgrenze: Minimum im 2h-Block</p>'
+            night_hint = f'<p style="color:{G_INK_FAINT};font-size:11px;margin-top:4px">* Temperatur/Nullgradgrenze: Minimum im 2h-Block</p>'
         night_html = f"""
             <div class="section">
                 <h3>🌙 Nacht am Ziel ({int(last_seg.end_point.elevation_m or 0)}m)</h3>
-                <p style="color:#666;font-size:13px">Ankunft {last_seg.end_time.strftime('%H:%M')} → Morgen 06:00</p>
+                <p style="color:{G_INK_MUTED};font-size:13px">Ankunft {last_seg.end_time.strftime('%H:%M')} → Morgen 06:00</p>
                 {_render_html_table(night_rows, friendly_keys=friendly_keys)}
                 {night_hint}
             </div>"""
@@ -193,13 +199,13 @@ def render_html(
                 f'<td style="vertical-align:top;font-weight:bold;padding:6px 8px">{day["weekday"]}</td>'
                 f'<td style="padding:6px 8px">'
                 f'<div style="font-weight:600">{stage_name_short}</div>'
-                f'<div style="color:#555;font-size:12px">{summary}</div>'
+                f'<div style="color:{G_INK_MUTED};font-size:12px">{summary}</div>'
                 f'</td>'
                 f'</tr>'
             )
         trend_html = f"""
-            <div style="margin:16px;padding:12px;background:#f5f5f5;border-radius:8px;">
-                <h3 style="margin:0 0 8px 0;font-size:14px;color:#333">🔮 Naechste Etappen</h3>
+            <div style="margin:16px;padding:12px;background:{G_PAPER};border-radius:8px;">
+                <h3 style="margin:0 0 8px 0;font-size:14px;color:{G_INK}">🔮 Naechste Etappen</h3>
                 <table style="width:100%;border-collapse:collapse;font-size:13px">
                     {"".join(trend_rows)}
                 </table>
@@ -217,7 +223,7 @@ def render_html(
     summary_html = ""
     if compact_summary:
         summary_html = f"""
-            <div class="section" style="background:#f0f7ff;border-left:4px solid #42a5f5;padding:12px;margin:8px 0;">
+            <div class="section" style="background:{G_BOX_INFO_BG};border-left:4px solid {G_ACCENT};padding:12px;margin:8px 0;">
                 <p style="margin:0;font-size:14px;line-height:1.6;">{compact_summary}</p>
             </div>"""
 
@@ -228,7 +234,7 @@ def render_html(
     )
     if confidence_hint:
         confidence_hint_html = (
-            f'<div class="section" style="background:#fff8e1;border-left:4px solid #fbc02d;'
+            f'<div class="section" style="background:{G_BOX_WARNING_BG};border-left:4px solid {G_WARNING};'
             f'padding:12px;margin:8px 0;">'
             f'<p class="confidence-hint" style="margin:0;font-size:14px;line-height:1.6;">'
             f'{_html.escape(confidence_hint)}</p></div>'
@@ -258,19 +264,21 @@ def render_html(
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    {WEB_FONT_LINK}
     <style>
-        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 16px; background: #f5f5f5; }}
+        body {{ font-family: {FONT_UI}; margin: 0; padding: 16px; background: {G_PAPER}; }}
         .container {{ max-width: 800px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }}
-        .header {{ background: linear-gradient(135deg, #1976d2, #42a5f5); color: white; padding: 20px; }}
+        .header {{ background: {G_ACCENT}; color: white; padding: 20px; }}
         .header h1 {{ margin: 0 0 4px 0; font-size: 22px; }}
         .header h2 {{ margin: 0 0 4px 0; font-size: 16px; font-weight: 400; opacity: 0.9; }}
         .header p {{ margin: 2px 0; opacity: 0.85; font-size: 13px; }}
         .section {{ padding: 0 16px; }}
-        .section h3 {{ color: #333; border-bottom: 2px solid #1976d2; padding-bottom: 6px; margin-top: 16px; font-size: 14px; }}
+        .section h3 {{ color: {G_INK}; border-bottom: 2px solid {G_ACCENT}; padding-bottom: 6px; margin-top: 16px; font-size: 14px; }}
         table {{ width: 100%; border-collapse: collapse; margin: 8px 0 16px 0; font-size: 13px; }}
-        th {{ background: #e3f2fd; padding: 8px 6px; text-align: center; font-weight: 600; border-bottom: 2px solid #90caf9; font-size: 12px; white-space: nowrap; }}
+        th {{ background: {G_SURFACE_1}; padding: 8px 6px; text-align: center; font-weight: 600; border-bottom: 2px solid {G_INK_FAINT}; font-size: 12px; white-space: nowrap; }}
         td {{ padding: 6px; text-align: center; border-bottom: 1px solid #eee; }}
-        .footer {{ background: #f5f5f5; padding: 12px; text-align: center; color: #888; font-size: 11px; border-top: 1px solid #ddd; }}
+        .metric-value, td.metric, code {{ font-family: {FONT_DATA}; }}
+        .footer {{ background: {G_PAPER}; padding: 12px; text-align: center; color: {G_INK_MUTED}; font-size: 11px; border-top: 1px solid {G_INK_FAINT}; }}
         ul {{ padding-left: 20px; }}
         li {{ margin: 4px 0; font-size: 14px; }}
     </style>
@@ -295,7 +303,7 @@ def render_html(
 
         <div class="footer">
             Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')} | Data: {segments[0].provider} ({segments[0].timeseries.meta.model if segments[0].timeseries else 'n/a'}){(' | Fallback ' + ', '.join(segments[0].timeseries.meta.fallback_metrics) + ': ' + segments[0].timeseries.meta.fallback_model) if segments[0].timeseries and segments[0].timeseries.meta.fallback_model else ''}
-            {('<br><span style="font-size:10px;color:#999">' + legend_text + '</span>') if legend_text else ''}
+            {('<br><span style="font-size:10px;color:' + G_INK_FAINT + '">' + legend_text + '</span>') if legend_text else ''}
         </div>
     </div>
 </body>
