@@ -250,7 +250,7 @@ hinzugefügt; nur die Verwendungsabsicht wird benannt.
 |---|---|---|---|---|
 | Wintersport | `--g-profile-wintersport` | `#4a7fb5` (Alias `--g-wx-rain`) | `❄` | `Wintersport` |
 | Wandern | `--g-profile-wandern` | `#3a7d44` (Alias `--g-success`) | `🥾` | `Wandern` |
-| Summer-Trekking | `--g-profile-summer-trekking` | `#c45a2a` (Alias `--g-accent`) | `🏔` | `Summer-Trekking` |
+| Summer-Trekking | `--g-profile-summer-trekking` | `#c45a2a` (Alias `--g-accent`) | `🏔` | `Sommer-Trekking` |
 | Allgemein | `--g-profile-allgemein` | `#6b675c` (neutral, nahe `--g-ink-muted`) | `◯` | `Allgemein` |
 
 **Helper:** `frontend/src/lib/utils/profileSignature.ts` —

@@ -105,7 +105,7 @@ const SIGNATURES: Record<ActivityProfile, ProfileSignature> = {
     accent: 'var(--g-profile-summer-trekking)',
     accentFallback: '#c45a2a',
     icon: '\u{1F3D4}',       // 🏔
-    eyebrow: 'Summer-Trekking',
+    eyebrow: 'Sommer-Trekking',
   },
   allgemein: {
     accent: 'var(--g-profile-allgemein)',
@@ -159,7 +159,7 @@ hinzugefügt; nur die Verwendungsabsicht wird benannt.
 |---|---|---|---|---|
 | Wintersport | `--g-profile-wintersport` | `#4a7fb5` (Alias `--g-wx-rain`) | `❄` | `Wintersport` |
 | Wandern | `--g-profile-wandern` | `#3a7d44` (Alias `--g-success`) | `🥾` | `Wandern` |
-| Summer-Trekking | `--g-profile-summer-trekking` | `#c45a2a` (Alias `--g-accent`) | `🏔` | `Summer-Trekking` |
+| Summer-Trekking | `--g-profile-summer-trekking` | `#c45a2a` (Alias `--g-accent`) | `🏔` | `Sommer-Trekking` |
 | Allgemein | `--g-profile-allgemein` | `#6b675c` (neutral, nahe `--g-ink-muted`) | `◯` | `Allgemein` |
 
 **Helper:** `frontend/src/lib/utils/profileSignature.ts` —
@@ -244,3 +244,4 @@ Stand-Block (jetzt §11) bekommt Zeile zu Issue #238 ergänzt.
 ## Changelog
 
 - 2026-05-16: Initial spec (Epic #236 / Sub-Issue 2)
+- 2026-05-16: Eyebrow-Label korrigiert von 'Summer-Trekking' zu 'Sommer-Trekking' (Adversary-Finding F002, Konsistenz mit existierendem UI-Dropdown)

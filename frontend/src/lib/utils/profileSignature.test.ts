@@ -55,7 +55,7 @@ test('profileSignature(summer_trekking) liefert Burnt-Orange, Bergsymbol (AC-3)'
 	assert.equal(sig.accent, 'var(--g-profile-summer-trekking)');
 	assert.equal(sig.accentFallback, '#c45a2a');
 	assert.equal(sig.icon, '\u{1F3D4}');
-	assert.equal(sig.eyebrow, 'Summer-Trekking');
+	assert.equal(sig.eyebrow, 'Sommer-Trekking');
 });
 
 test('profileSignature(allgemein) liefert Neutral-Grau, Kreis (AC-3)', () => {
@@ -84,6 +84,12 @@ test('profileSignature("unknown") faellt auf allgemein zurueck (AC-4)', () => {
 test('profileSignature(undefined-cast) faellt auf allgemein zurueck (AC-4)', () => {
 	// @ts-expect-error – defensiver Pfad fuer Nicht-TS-Aufrufer
 	const sig = profileSignature(undefined);
+	assert.equal(sig.eyebrow, 'Allgemein');
+});
+
+test('profileSignature(null-cast) faellt auf allgemein zurueck (AC-4)', () => {
+	// @ts-expect-error – null darf zur Laufzeit ankommen
+	const sig = profileSignature(null);
 	assert.equal(sig.eyebrow, 'Allgemein');
 });
 

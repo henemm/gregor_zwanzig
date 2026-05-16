@@ -35,7 +35,7 @@ const SIGNATURES: Record<ActivityProfile, ProfileSignature> = {
 		accent: 'var(--g-profile-summer-trekking)',
 		accentFallback: '#c45a2a',
 		icon: '\u{1F3D4}',       // Berg-Symbol
-		eyebrow: 'Summer-Trekking',
+		eyebrow: 'Sommer-Trekking',
 	},
 	allgemein: {
 		accent: 'var(--g-profile-allgemein)',
