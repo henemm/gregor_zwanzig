@@ -184,36 +184,32 @@ def test_ac5_real_gmail_briefing_tokens():
     """
     import email as email_mod
     import imaplib
-    import smtplib
     import time
     import uuid
-    from email.mime.multipart import MIMEMultipart
-    from email.mime.text import MIMEText
 
     from app.config import Settings
+    from outputs.email import EmailOutput
 
     settings = Settings().for_testing()
+    if not settings.can_send_email():
+        pytest.skip("SMTP nicht konfiguriert")
 
     html = _render_minimal_html()
 
     marker = uuid.uuid4().hex[:12]
     subject = f"[GZ-TOKENS-{marker}] Trip-Briefing-Test"
 
-    msg = MIMEMultipart("alternative")
-    msg["From"] = settings.smtp_user
-    msg["To"] = settings.smtp_user
-    msg["Subject"] = subject
-    msg.attach(MIMEText("Plain-Text-Fallback fuer #240-Test", "plain"))
-    msg.attach(MIMEText(html, "html"))
-
-    with smtplib.SMTP(settings.smtp_host, settings.smtp_port) as smtp:
-        smtp.starttls()
-        smtp.login(settings.smtp_user, settings.smtp_pass)
-        smtp.send_message(msg)
+    # Pipeline-Versand via EmailOutput — routet auf settings.mail_to (Stalwart),
+    # nicht roher SMTP an smtp_user (gmail).
+    EmailOutput(settings).send(subject, html, plain_text_body="Plain-Fallback")
+    time.sleep(5)
 
     html_body = None
-    with imaplib.IMAP4_SSL(settings.imap_host, 993) as imap:
-        imap.login(settings.imap_user, settings.imap_pass)
+    imap_host = settings.imap_host or settings.smtp_host
+    imap_user = settings.imap_user or settings.smtp_user
+    imap_pass = settings.imap_pass or settings.smtp_pass
+    with imaplib.IMAP4_SSL(imap_host, settings.imap_port) as imap:
+        imap.login(imap_user, imap_pass)
         imap.select("INBOX")
         for _ in range(30):
             _, data = imap.search(None, f'(SUBJECT "{marker}")')
