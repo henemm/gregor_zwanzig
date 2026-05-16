@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Stage } from '$lib/types.js';
-	import { Button } from '$lib/components/ui/button/index.js';
+	import { Btn } from '$lib/components/ui/btn/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
@@ -62,10 +62,10 @@
 <div class="space-y-4">
 	<div class="flex items-center justify-between">
 		<h3 class="text-lg font-medium">Etappen</h3>
-		<Button variant="outline" size="sm" onclick={addStage}>
+		<Btn variant="outline" size="sm" onclick={addStage}>
 			<PlusIcon class="size-4 mr-1" />
 			Etappe hinzufuegen
-		</Button>
+		</Btn>
 	</div>
 
 	{#each stages as stage, si}
@@ -78,7 +78,7 @@
 						class="flex-1"
 					/>
 					<Input type="date" bind:value={stage.date} class="w-40" />
-					<Button
+					<Btn
 						data-testid="stage-move-up-{si}"
 						variant="ghost"
 						size="icon-sm"
@@ -87,8 +87,8 @@
 						title="Nach oben verschieben"
 					>
 						<ArrowUpIcon class="size-4" />
-					</Button>
-					<Button
+					</Btn>
+					<Btn
 						data-testid="stage-move-down-{si}"
 						variant="ghost"
 						size="icon-sm"
@@ -97,11 +97,11 @@
 						title="Nach unten verschieben"
 					>
 						<ArrowDownIcon class="size-4" />
-					</Button>
+					</Btn>
 					{#if stages.length > 1}
-						<Button variant="ghost" size="icon-sm" onclick={() => removeStage(si)} title="Etappe entfernen">
+						<Btn variant="ghost" size="icon-sm" onclick={() => removeStage(si)} title="Etappe entfernen">
 							<TrashIcon class="size-4" />
-						</Button>
+						</Btn>
 					{/if}
 				</div>
 
@@ -116,7 +116,7 @@
 									bind:value={wp.name}
 									class="flex-1 sm:w-32 sm:flex-none"
 								/>
-								<Button
+								<Btn
 									data-testid="wp-trash-mobile"
 									variant="ghost"
 									size="icon"
@@ -125,7 +125,7 @@
 									title="Wegpunkt entfernen"
 								>
 									<TrashIcon class="size-4" />
-								</Button>
+								</Btn>
 							</div>
 							<div class="grid grid-cols-3 gap-2 sm:contents">
 								<Input
@@ -155,7 +155,7 @@
 									class="w-full [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none sm:w-24"
 								/>
 							</div>
-							<Button
+							<Btn
 								variant="ghost"
 								size="icon-sm"
 								class="hidden sm:inline-flex"
@@ -163,13 +163,13 @@
 								title="Wegpunkt entfernen"
 							>
 								<TrashIcon class="size-3.5" />
-							</Button>
+							</Btn>
 						</div>
 					{/each}
-					<Button variant="outline" size="sm" onclick={() => addWaypoint(si)}>
+					<Btn variant="outline" size="sm" onclick={() => addWaypoint(si)}>
 						<PlusIcon class="size-3.5 mr-1" />
 						Wegpunkt
-					</Button>
+					</Btn>
 				</div>
 			</div>
 		</Card.Root>

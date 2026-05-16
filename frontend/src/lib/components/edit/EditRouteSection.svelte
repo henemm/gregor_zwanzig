@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Stage } from '$lib/types.js';
 	import { uploadGpx } from '$lib/api.js';
-	import { Button } from '$lib/components/ui/button/index.js';
+	import { Btn } from '$lib/components/ui/btn/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { naturalSort } from '$lib/utils/naturalSort.js';
@@ -190,21 +190,21 @@
 				/>
 			</div>
 			<div class="flex items-center gap-2">
-				<Button
+				<Btn
 					data-testid="bulk-stage-commit"
 					onclick={commitPending}
 					disabled={uploading}
 				>
 					{commitLabel}
-				</Button>
-				<Button
+				</Btn>
+				<Btn
 					variant="outline"
 					data-testid="bulk-stage-cancel"
 					onclick={cancelPending}
 					disabled={uploading}
 				>
 					Abbrechen
-				</Button>
+				</Btn>
 			</div>
 		</div>
 	{/if}
@@ -223,6 +223,6 @@
 
 	<div class="flex items-center gap-3">
 		<span class="text-sm text-muted-foreground">oder</span>
-		<Button variant="outline" onclick={addManualStage}>Manuell anlegen</Button>
+		<Btn variant="outline" onclick={addManualStage}>Manuell anlegen</Btn>
 	</div>
 </div>
