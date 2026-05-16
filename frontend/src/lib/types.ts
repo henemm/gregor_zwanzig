@@ -62,6 +62,46 @@ export interface AlertRule {
 	enabled: boolean;
 }
 
+// Issue #207 — Strukturiertes Typing fuer drei Trip-Konfigurationsfelder.
+// Spec: docs/specs/modules/issue_207_strukturiertes_typing.md
+// Nur Felder, die im Code aktuell gelesen/geschrieben werden — keine Toten-Felder.
+export type ActivityProfile = 'wintersport' | 'wandern' | 'allgemein' | 'summer_trekking';
+
+export interface Aggregation {
+	activity_profile?: ActivityProfile;
+}
+
+export interface WeatherConfigMetric {
+	metric_id: string;
+	enabled: boolean;
+}
+
+export interface WeatherConfig {
+	metrics?: WeatherConfigMetric[];
+}
+
+export interface ReportConfig {
+	enabled?: boolean;
+	morning_enabled?: boolean;
+	evening_enabled?: boolean;
+	morning_time?: string;
+	evening_time?: string;
+	send_email?: boolean;
+	send_signal?: boolean;
+	send_telegram?: boolean;
+	send_sms?: boolean;
+	alert_on_changes?: boolean;
+	change_threshold_temp_c?: number;
+	change_threshold_wind_kmh?: number;
+	change_threshold_precip_mm?: number;
+	show_compact_summary?: boolean;
+	show_daylight?: boolean;
+	wind_exposition_min_elevation_m?: number | null;
+	multi_day_trend_morning?: boolean;
+	multi_day_trend_evening?: boolean;
+	multi_day_trend_reports?: string[];
+}
+
 export interface Trip {
 	id: string;
 	name: string;
@@ -69,10 +109,10 @@ export interface Trip {
 	activity?: ActivityType;
 	stages: Stage[];
 	avalanche_regions?: string[];
-	aggregation?: Record<string, unknown>;
-	weather_config?: Record<string, unknown>;
+	aggregation?: Aggregation;
+	weather_config?: WeatherConfig;
 	display_config?: Record<string, unknown>;
-	report_config?: Record<string, unknown>;
+	report_config?: ReportConfig;
 	alert_rules?: AlertRule[];
 	paused_at?: string;
 	archived_at?: string;

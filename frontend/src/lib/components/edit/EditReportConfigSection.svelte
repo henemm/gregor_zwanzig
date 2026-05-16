@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import type { ReportConfig } from '$lib/types';
 
 	interface Props {
-		reportConfig: Record<string, unknown> | undefined;
+		reportConfig: ReportConfig | undefined;
 		mode?: 'create' | 'edit';
 	}
 	let { reportConfig = $bindable(), mode = 'create' }: Props = $props();
@@ -11,7 +12,10 @@
 	// Alle nicht UI-gepflegten Felder (insb. change_threshold_*, custom_unknown_*)
 	// muessen byte-identisch erhalten bleiben. Wir bewahren den initial geladenen
 	// Blob auf und mergen unsere UI-Felder beim Schreiben darueber.
-	let originalReportConfig: Record<string, unknown> = {};
+	// Issue #207: ReportConfig statt Record<string, unknown> — die zusaetzlichen
+	// unbekannten Felder (change_threshold_*) bleiben durch Spread erhalten,
+	// auch wenn der Compiler sie nicht im Interface kennt (forward-compatible).
+	let originalReportConfig: ReportConfig = {};
 
 	// --- UI-State pro Sektion ---------------------------------------------------
 	let morning_enabled = $state(true);
@@ -52,7 +56,7 @@
 	// --- Initial-Load ----------------------------------------------------------
 	onMount(() => {
 		if (reportConfig) {
-			originalReportConfig = { ...(reportConfig as Record<string, unknown>) };
+			originalReportConfig = { ...reportConfig };
 			const c = originalReportConfig;
 
 			// Master-Switch-Migration: bevorzugt morning_enabled/evening_enabled,
@@ -87,12 +91,12 @@
 			if (typeof c.multi_day_trend_morning === 'boolean') {
 				multi_day_trend_morning = c.multi_day_trend_morning;
 			} else if (Array.isArray(c.multi_day_trend_reports)) {
-				multi_day_trend_morning = (c.multi_day_trend_reports as string[]).includes('morning');
+				multi_day_trend_morning = c.multi_day_trend_reports.includes('morning');
 			}
 			if (typeof c.multi_day_trend_evening === 'boolean') {
 				multi_day_trend_evening = c.multi_day_trend_evening;
 			} else if (Array.isArray(c.multi_day_trend_reports)) {
-				multi_day_trend_evening = (c.multi_day_trend_reports as string[]).includes('evening');
+				multi_day_trend_evening = c.multi_day_trend_reports.includes('evening');
 			}
 		}
 

@@ -22,7 +22,7 @@ import {
 	type ReportSchedule
 } from './rightColumn.ts';
 
-import type { Trip } from '../types.ts';
+import type { Aggregation, ReportConfig, Trip, WeatherConfig } from '../types.ts';
 
 // =============================================================================
 // Helpers
@@ -59,12 +59,18 @@ test('getPresetLabel > AC-13c: activity_profile = "allgemein" → "Standard-Metr
 });
 
 test('getPresetLabel > AC-13d: unbekanntes Profile → "Standard-Metriken"', () => {
-	const trip = tripWith({ aggregation: { activity_profile: 'mountainbike' } });
+	// Issue #207: Off-Spec-Wert — testet Defensiv-Pfad gegen Fremddaten.
+	const trip = tripWith({
+		aggregation: { activity_profile: 'mountainbike' } as unknown as Aggregation
+	});
 	assert.equal(getPresetLabel(trip), 'Standard-Metriken');
 });
 
 test('getPresetLabel > AC-13e: activity_profile = null → "Standard-Metriken"', () => {
-	const trip = tripWith({ aggregation: { activity_profile: null } });
+	// Issue #207: Off-Spec-Wert — Backend kann null senden, Defensiv-Pfad.
+	const trip = tripWith({
+		aggregation: { activity_profile: null } as unknown as Aggregation
+	});
 	assert.equal(getPresetLabel(trip), 'Standard-Metriken');
 });
 
@@ -126,8 +132,10 @@ test('getDefaultMetricsForProfile > undefined → []', () => {
 // getActiveMetrics
 
 test('getActiveMetrics > AC-14a: weather_config.metrics gesetzt → genau diese Werte', () => {
+	// Issue #207: Backend liefert metrics als string[] (legacy). Spec hat
+	// inzwischen WeatherConfigMetric[], aber Off-Spec-Form bleibt akzeptiert.
 	const trip = tripWith({
-		weather_config: { metrics: ['temp_min', 'wind_max'] }
+		weather_config: { metrics: ['temp_min', 'wind_max'] } as unknown as WeatherConfig
 	});
 	assert.deepEqual(getActiveMetrics(trip), ['temp_min', 'wind_max']);
 });
@@ -161,16 +169,18 @@ test('getActiveMetrics > weather_config.metrics leer ([]) → leeres Array', () 
 });
 
 test('getActiveMetrics > weather_config.metrics ist kein Array → Fallback auf activity_profile', () => {
+	// Issue #207: Off-Spec — metrics ist String statt Array, defensiver Fallback.
 	const trip = tripWith({
-		weather_config: { metrics: 'temp_min' },
+		weather_config: { metrics: 'temp_min' } as unknown as WeatherConfig,
 		aggregation: { activity_profile: 'allgemein' }
 	});
 	assert.deepEqual(getActiveMetrics(trip), ['temp_min', 'temp_max', 'wind_max', 'precip_sum']);
 });
 
 test('getActiveMetrics > weather_config.metrics mit Non-String → Fallback auf Profile-Default', () => {
+	// Issue #207: Off-Spec — Array enthaelt Non-String-Element, defensiver Fallback.
 	const trip = tripWith({
-		weather_config: { metrics: ['temp_min', 42] },
+		weather_config: { metrics: ['temp_min', 42] } as unknown as WeatherConfig,
 		aggregation: { activity_profile: 'allgemein' }
 	});
 	assert.deepEqual(getActiveMetrics(trip), ['temp_min', 'temp_max', 'wind_max', 'precip_sum']);
@@ -236,20 +246,22 @@ test('getReportSchedule > Nur morning_time, kein evening_time → evening: undef
 });
 
 test('getReportSchedule > alert_on_changes nicht boolean → alertOnChanges=false', () => {
+	// Issue #207: Off-Spec — alert_on_changes als String. Defensiver Strict-Compare.
 	const trip = tripWith({
-		report_config: { enabled: true, alert_on_changes: 'yes' }
+		report_config: { enabled: true, alert_on_changes: 'yes' } as unknown as ReportConfig
 	});
 	// Spec: rc.alert_on_changes === true → exakter Strict-Compare
 	assert.equal(getReportSchedule(trip).alertOnChanges, false);
 });
 
 test('getReportSchedule > morning_time / evening_time als Non-String → undefined', () => {
+	// Issue #207: Off-Spec — Backend liefert Non-String fuer Zeit-Felder.
 	const trip = tripWith({
 		report_config: {
 			enabled: true,
 			morning_time: 6,
 			evening_time: null
-		}
+		} as unknown as ReportConfig
 	});
 	const schedule = getReportSchedule(trip);
 	assert.equal(schedule.morning, undefined);

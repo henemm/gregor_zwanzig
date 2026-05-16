@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Trip, Stage, AlertRule } from '$lib/types.js';
+	import type { Trip, Stage, AlertRule, ReportConfig } from '$lib/types.js';
 	import { api } from '$lib/api.js';
 	import { goto } from '$app/navigation';
 	import AccordionSection from './AccordionSection.svelte';
@@ -20,7 +20,7 @@
 	let displayConfig: Record<string, unknown> | undefined = $state(
 		trip.display_config ? JSON.parse(JSON.stringify(trip.display_config)) : undefined
 	);
-	let reportConfig: Record<string, unknown> | undefined = $state(
+	let reportConfig: ReportConfig | undefined = $state(
 		trip.report_config ? JSON.parse(JSON.stringify(trip.report_config)) : undefined
 	);
 	let alertRules: AlertRule[] = $state(

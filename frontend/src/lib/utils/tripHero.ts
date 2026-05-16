@@ -100,9 +100,8 @@ function compareHHMM(now: Date, hhmm: string): number {
 }
 
 export function getNextBriefing(trip: Trip, now: Date): string {
-	const cfg = trip.report_config as
-		| { enabled?: boolean; morning_time?: string; evening_time?: string }
-		| undefined;
+	// Issue #207: trip.report_config ist jetzt typisiert (ReportConfig | undefined).
+	const cfg = trip.report_config;
 	if (!cfg) return 'Briefings deaktiviert';
 	if (cfg.enabled === false) return 'Briefings deaktiviert';
 

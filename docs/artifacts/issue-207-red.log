@@ -1,0 +1,31 @@
+# RED-Beweis Issue #207 — Pre-Refactor State
+Datum: 2026-05-16T05:50:07Z
+
+## (1) types.ts: Record<string, unknown> Treffer
+11:	display_config?: Record<string, unknown>;
+72:	aggregation?: Record<string, unknown>;
+73:	weather_config?: Record<string, unknown>;
+74:	display_config?: Record<string, unknown>;
+75:	report_config?: Record<string, unknown>;
+96:	display_config?: Record<string, unknown>;
+
+## (2) Casts auf report_config / weather_config / aggregation Sub-Felder
+src/lib/utils/rightColumn.ts:59:		morning: typeof rc.morning_time === 'string' ? (rc.morning_time as string) : undefined,
+src/lib/utils/rightColumn.ts:60:		evening: typeof rc.evening_time === 'string' ? (rc.evening_time as string) : undefined,
+src/lib/utils/rightColumn.ts:37:			return metrics as string[];
+src/lib/utils/rightColumn.ts:59:		morning: typeof rc.morning_time === 'string' ? (rc.morning_time as string) : undefined,
+src/lib/utils/rightColumn.ts:60:		evening: typeof rc.evening_time === 'string' ? (rc.evening_time as string) : undefined,
+src/lib/components/edit/EditReportConfigSection.svelte:90:				multi_day_trend_morning = (c.multi_day_trend_reports as string[]).includes('morning');
+src/lib/components/edit/EditReportConfigSection.svelte:95:				multi_day_trend_evening = (c.multi_day_trend_reports as string[]).includes('evening');
+
+## (3) npm run check (Baseline)
+1778910612988 ERROR "src/routes/locations/+page.svelte" 19:42 "Property 'locations' does not exist on type 'never'."
+1778910612988 WARNING "src/routes/subscriptions/+page.svelte" 21:45 "This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?\nhttps://svelte.dev/e/state_referenced_locally"
+1778910612988 WARNING "src/routes/subscriptions/+page.svelte" 32:37 "This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?\nhttps://svelte.dev/e/state_referenced_locally"
+1778910612988 ERROR "src/routes/subscriptions/+page.svelte" 21:50 "Property 'subscriptions' does not exist on type 'never'."
+1778910612988 ERROR "src/routes/subscriptions/+page.svelte" 32:42 "Property 'locations' does not exist on type 'never'."
+1778910612988 WARNING "src/routes/trips/+page.svelte" 21:29 "This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?\nhttps://svelte.dev/e/state_referenced_locally"
+1778910612988 WARNING "src/routes/trips/[id]/+page.svelte" 10:26 "This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?\nhttps://svelte.dev/e/state_referenced_locally"
+1778910612988 WARNING "src/routes/weather/+page.svelte" 10:37 "This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?\nhttps://svelte.dev/e/state_referenced_locally"
+1778910612988 ERROR "src/routes/weather/+page.svelte" 10:42 "Property 'locations' does not exist on type 'never'."
+1778910612988 COMPLETED 955 FILES 24 ERRORS 55 WARNINGS 17 FILES_WITH_PROBLEMS

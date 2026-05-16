@@ -3,17 +3,18 @@
 //
 // Spec: docs/specs/modules/epic_135_step5_right_column.md §1.
 //
-// Kapselt den generischen `Record<string, unknown>`-Zugriff auf
-// `trip.report_config`, `trip.weather_config` und `trip.aggregation` an einer
-// Stelle. Alle Funktionen sind pure (kein Side-Effect, kein I/O) und
-// vollstaendig unit-testbar.
+// Issue #207: Nutzt jetzt die strukturierten Interfaces `Aggregation`,
+// `WeatherConfig`, `ReportConfig` aus `$lib/types` — keine Casts auf
+// `Record<string, unknown>` mehr. Defensive Runtime-Checks bleiben drin, weil
+// das Backend `map[string]interface{}` schickt und Tests bewusst Off-Spec-Werte
+// (Non-String, Non-Boolean) reinkippen, um Fallback-Pfade zu beweisen.
 
 import type { Trip } from '$lib/types';
 
 const DEFAULT_LABEL = 'Standard-Metriken';
 
 export function getPresetLabel(trip: Trip): string {
-	const profile = (trip.aggregation as Record<string, unknown> | undefined)?.activity_profile;
+	const profile = trip.aggregation?.activity_profile;
 	if (profile === 'wintersport') return 'Wintersport-Standard';
 	if (profile === 'wandern') return 'Wandern-Standard';
 	if (profile === 'allgemein') return DEFAULT_LABEL;
@@ -30,17 +31,20 @@ export function getDefaultMetricsForProfile(profile: unknown): string[] {
 }
 
 export function getActiveMetrics(trip: Trip): string[] {
-	const wc = trip.weather_config as Record<string, unknown> | undefined;
-	const metrics = wc?.metrics;
+	// Backend liefert `metrics` als unstrukturiertes JSON-Array — Off-Spec-Werte
+	// (Non-Array, Non-String-Elemente) sind moeglich. Wir greifen ueber `unknown`
+	// zu, damit die defensiven Branches kompilieren, ohne dass wir das Interface
+	// aufweichen muessen.
+	const metrics: unknown = trip.weather_config?.metrics;
 	if (Array.isArray(metrics)) {
-		if (metrics.every((m) => typeof m === 'string')) {
-			return metrics as string[];
+		if (metrics.every((m): m is string => typeof m === 'string')) {
+			return metrics;
 		}
 		// Array vorhanden aber enthaelt Non-Strings -> Fallback auf Profile-Default
-		const profile = (trip.aggregation as Record<string, unknown> | undefined)?.activity_profile;
+		const profile = trip.aggregation?.activity_profile;
 		return getDefaultMetricsForProfile(profile);
 	}
-	const profile = (trip.aggregation as Record<string, unknown> | undefined)?.activity_profile;
+	const profile = trip.aggregation?.activity_profile;
 	return getDefaultMetricsForProfile(profile);
 }
 
@@ -52,12 +56,15 @@ export interface ReportSchedule {
 }
 
 export function getReportSchedule(trip: Trip): ReportSchedule {
-	const rc = trip.report_config as Record<string, unknown> | undefined;
+	const rc = trip.report_config;
 	if (!rc) return { enabled: false, alertOnChanges: false };
+	// Defensive Runtime-Checks: Backend kann Off-Spec-Werte liefern.
+	const morningTime: unknown = rc.morning_time;
+	const eveningTime: unknown = rc.evening_time;
 	return {
 		enabled: rc.enabled === true,
-		morning: typeof rc.morning_time === 'string' ? (rc.morning_time as string) : undefined,
-		evening: typeof rc.evening_time === 'string' ? (rc.evening_time as string) : undefined,
+		morning: typeof morningTime === 'string' ? morningTime : undefined,
+		evening: typeof eveningTime === 'string' ? eveningTime : undefined,
 		alertOnChanges: rc.alert_on_changes === true
 	};
 }

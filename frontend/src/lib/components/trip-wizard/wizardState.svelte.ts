@@ -4,7 +4,15 @@
 // Sub-Steps lesen/schreiben ausschliesslich Felder dieser Klasse —
 // kein Step-lokaler Trip-State.
 
-import type { AlertRule, ActivityType, Stage, Trip, Waypoint } from '$lib/types';
+import type {
+	AlertRule,
+	ActivityType,
+	Aggregation,
+	ReportConfig,
+	Stage,
+	Trip,
+	Waypoint
+} from '$lib/types';
 import { addDays, mapActivityToProfile, newId } from './wizardHelpers.ts';
 
 // `goto` und `api` werden in `save()` lazy importiert, damit Unit-Tests die
@@ -319,15 +327,23 @@ export class WizardState {
 
 		if (this.activity) {
 			trip.activity = this.activity;
-			trip.aggregation = { profile: mapActivityToProfile(this.activity) };
+			// Issue #207: Aggregation strukturiert typisiert. Issue #230 (Mismatch
+			// `profile` vs `activity_profile`) ist separat — wir behalten das
+			// aktuelle Wire-Format `profile` bei und escapen den Typ-Mismatch
+			// bewusst, bis #230 migriert.
+			// TODO #230 — Mismatch noch nicht migriert
+			trip.aggregation = { profile: mapActivityToProfile(this.activity) } as unknown as Aggregation;
 		}
 
 		// Sub-Spec #164 §3.3: Mapping briefings -> report_config
 		// Backward-Compat-Block (alte Felder, Scheduler/Alert lesen diese).
 		// Issue #224: `alert_thresholds`-Block entfaellt — AlertRules werden
 		// direkt aus `this.alertRules` in `trip.alert_rules` geschrieben.
+		// Issue #207: ReportConfig statt Record<string, unknown> — strukturierte
+		// Typisierung sorgt dafuer, dass Tippfehler in Feldnamen vom Compiler
+		// gefangen werden.
 		const b = this.briefings;
-		const rc: Record<string, unknown> = {
+		const rc: ReportConfig = {
 			// Backward-Compat-Block (TripReportConfig.py Z.589-605):
 			// Synthetisch abgeleitet: enabled = morning.enabled || evening.enabled
 			// (Phase-2-Entscheidung #4, 2026-05-11).
