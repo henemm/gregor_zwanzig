@@ -1,0 +1,64 @@
+TAP version 13
+# Subtest: profileSignature(wintersport) liefert Eis-Blau, Schneeflocke (AC-3)
+ok 1 - profileSignature(wintersport) liefert Eis-Blau, Schneeflocke (AC-3)
+  ---
+  duration_ms: 0.832655
+  type: 'test'
+  ...
+# Subtest: profileSignature(wandern) liefert Waldgruen, Wanderschuh (AC-3)
+ok 2 - profileSignature(wandern) liefert Waldgruen, Wanderschuh (AC-3)
+  ---
+  duration_ms: 0.21145
+  type: 'test'
+  ...
+# Subtest: profileSignature(summer_trekking) liefert Burnt-Orange, Bergsymbol (AC-3)
+ok 3 - profileSignature(summer_trekking) liefert Burnt-Orange, Bergsymbol (AC-3)
+  ---
+  duration_ms: 0.107252
+  type: 'test'
+  ...
+# Subtest: profileSignature(allgemein) liefert Neutral-Grau, Kreis (AC-3)
+ok 4 - profileSignature(allgemein) liefert Neutral-Grau, Kreis (AC-3)
+  ---
+  duration_ms: 0.077007
+  type: 'test'
+  ...
+# Subtest: profileSignature("") faellt auf allgemein zurueck (AC-4)
+ok 5 - profileSignature("") faellt auf allgemein zurueck (AC-4)
+  ---
+  duration_ms: 0.121774
+  type: 'test'
+  ...
+# Subtest: profileSignature("unknown") faellt auf allgemein zurueck (AC-4)
+ok 6 - profileSignature("unknown") faellt auf allgemein zurueck (AC-4)
+  ---
+  duration_ms: 0.063525
+  type: 'test'
+  ...
+# Subtest: profileSignature(undefined-cast) faellt auf allgemein zurueck (AC-4)
+ok 7 - profileSignature(undefined-cast) faellt auf allgemein zurueck (AC-4)
+  ---
+  duration_ms: 0.104107
+  type: 'test'
+  ...
+# Subtest: Alle 4 Profile haben paarweise unterschiedliche accentFallback-Werte
+ok 8 - Alle 4 Profile haben paarweise unterschiedliche accentFallback-Werte
+  ---
+  duration_ms: 0.095445
+  type: 'test'
+  ...
+# Subtest: Alle 4 Profile haben paarweise unterschiedliche Icons
+ok 9 - Alle 4 Profile haben paarweise unterschiedliche Icons
+  ---
+  duration_ms: 0.227533
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 92.180837
