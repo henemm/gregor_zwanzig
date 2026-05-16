@@ -3,7 +3,7 @@
 // Spec: docs/specs/modules/epic_135_step3_trip_hero.md
 //
 // Voraussetzung: Test-Trip `e2e-cockpit-test` aus global.setup.ts
-// (Stages: Gestern 2026-05-11, Heute 2026-05-12, Morgen 2026-05-13).
+// (Stages: dynamisch relativ zu heute — yesterday / today / tomorrow).
 
 import { test, expect } from '@playwright/test';
 
@@ -68,10 +68,15 @@ test.describe('Issue #154 — Trip-Hero im Overview-Tab', () => {
 	test('AC-11: Date-Range zeigt Mai 2026 (kompakt)', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
 		const range = page.getByTestId('trip-hero-date-range');
-		// Stages: 11.–13. Mai 2026
+		// Stages werden in global.setup.ts dynamisch auf yesterday/today/tomorrow gesetzt
+		const today = new Date();
+		const yesterday = new Date(today);
+		yesterday.setDate(today.getDate() - 1);
+		const tomorrow = new Date(today);
+		tomorrow.setDate(today.getDate() + 1);
 		await expect(range).toContainText('Mai 2026');
-		await expect(range).toContainText('11.');
-		await expect(range).toContainText('13.');
+		await expect(range).toContainText(`${yesterday.getDate()}.`);
+		await expect(range).toContainText(`${tomorrow.getDate()}.`);
 	});
 
 	test('AC-15: Reaktivität — nach "Pausieren" zeigt active-stage "Pausiert" ohne Reload', async ({
