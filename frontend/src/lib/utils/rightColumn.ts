@@ -17,6 +17,7 @@ export function getPresetLabel(trip: Trip): string {
 	const profile = trip.aggregation?.profile;
 	if (profile === 'wintersport') return 'Wintersport-Standard';
 	if (profile === 'wandern') return 'Wandern-Standard';
+	if (profile === 'summer_trekking') return 'Sommer-Trekking-Standard';
 	if (profile === 'allgemein') return DEFAULT_LABEL;
 	return DEFAULT_LABEL;
 }
@@ -26,6 +27,8 @@ export function getDefaultMetricsForProfile(profile: unknown): string[] {
 		return ['temp_min', 'temp_max', 'wind_max', 'snow_new', 'snow_depth', 'thunder_level'];
 	if (profile === 'wandern')
 		return ['temp_min', 'temp_max', 'wind_max', 'precip_sum', 'thunder_level', 'cloud_avg'];
+	if (profile === 'summer_trekking')
+		return ['temp_min', 'temp_max', 'wind_max', 'gust_max', 'precip_sum', 'thunder_level', 'cloud_avg', 'uv_index'];
 	if (profile === 'allgemein') return ['temp_min', 'temp_max', 'wind_max', 'precip_sum'];
 	return [];
 }
@@ -79,7 +82,8 @@ const METRIC_LABELS: Record<string, string> = {
 	cloud_avg: 'Bewölkung',
 	humidity_avg: 'Feuchte',
 	snow_new: 'Neuschnee',
-	snow_depth: 'Schneehöhe'
+	snow_depth: 'Schneehöhe',
+	uv_index: 'UV-Index'
 };
 
 export function prettyLabel(metricKey: string): string {
