@@ -18,13 +18,13 @@ test.describe('Locations Page (M3b)', () => {
 
 	test('has create location button', async ({ page }) => {
 		await page.goto('/locations');
-		const createBtn = page.getByRole('button', { name: 'Neue Location' });
+		const createBtn = page.getByRole('button', { name: 'Neuer Ort' });
 		await expect(createBtn).toBeVisible();
 	});
 
 	test('create location dialog opens', async ({ page }) => {
 		await page.goto('/locations');
-		await page.getByRole('button', { name: 'Neue Location' }).click();
+		await page.getByRole('button', { name: 'Neuer Ort' }).click();
 
 		const dialog = page.locator('[role="dialog"]');
 		await expect(dialog).toBeVisible();
@@ -34,7 +34,7 @@ test.describe('Locations Page (M3b)', () => {
 
 	test('create location with coordinates', async ({ page }) => {
 		await page.goto('/locations');
-		await page.getByRole('button', { name: 'Neue Location' }).click();
+		await page.getByRole('button', { name: 'Neuer Ort' }).click();
 
 		const dialog = page.locator('[role="dialog"]');
 
@@ -119,7 +119,7 @@ test.describe('Locations Page (M3b)', () => {
 
 	test('activity profile badge shown after selection', async ({ page }) => {
 		await page.goto('/locations');
-		await page.getByRole('button', { name: 'Neue Location' }).click();
+		await page.getByRole('button', { name: 'Neuer Ort' }).click();
 
 		const dialog = page.locator('[role="dialog"]');
 		await dialog.locator('input[name="location-name"]').fill('Profil Test');

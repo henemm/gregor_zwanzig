@@ -22,56 +22,11 @@ test.describe('Trips Page (M3a)', () => {
 		await expect(createBtn).toBeVisible();
 	});
 
-	test('create trip navigates to wizard', async ({ page }) => {
-		await page.goto('/trips');
-		const createBtn = page.getByRole('button', { name: 'Neuer Trip' });
-		await createBtn.click();
-
-		// Should navigate to wizard page
-		await page.waitForURL('/trips/new');
-		await expect(page.locator('[data-testid="trip-wizard"]')).toBeVisible();
-
-		// Wizard should show trip name input
-		const nameInput = page.locator('[data-testid="trip-name-input"]');
-		await expect(nameInput).toBeVisible();
-	});
-
-	test('create trip via wizard', async ({ page }) => {
-		await page.goto('/trips/new');
-
-		// Fill trip name
-		const nameInput = page.locator('[data-testid="trip-name-input"]');
-		await nameInput.fill('E2E Test Trip');
-
-		// Add a manual stage
-		const manualBtn = page.locator('button', { hasText: /[Mm]anuell/ });
-		await manualBtn.click();
-
-		// Navigate to step 2
-		await page.locator('[data-testid="wizard-next"]').click();
-
-		// Add a waypoint
-		const addWpBtn = page.locator('button', { hasText: /[Ww]egpunkt/ });
-		await addWpBtn.click();
-
-		// Fill waypoint coordinates
-		await page.locator('input[name="lat"]').first().fill('47.0');
-		await page.locator('input[name="lon"]').first().fill('11.0');
-
-		// Navigate to step 3 and 4
-		await page.locator('[data-testid="wizard-next"]').click();
-		await page.locator('[data-testid="wizard-next"]').click();
-
-		// Save
-		const saveBtn = page.locator('[data-testid="wizard-save"]');
-		await saveBtn.click();
-
-		// Should navigate back to trips list
-		await page.waitForURL('/trips', { timeout: 5000 });
-
-		// Trip should appear in the list
-		await expect(page.locator('text=E2E Test Trip')).toBeVisible();
-	});
+	// 'create trip navigates to wizard' + 'create trip via wizard' entfernt (#217):
+	// Tests verwendeten alte Wizard-Selectoren (trip-wizard, wizard-next, wizard-save,
+	// trip-name-input) die seit Epic #136 nicht mehr existieren. Coverage durch
+	// dedizierte trip-wizard-step1/2/3/4.spec.ts + trip-wizard-shell.spec.ts.
+	// Vollstaendige Entfernung des alten Wizards: Issue #190.
 
 	// 'edit trip navigates to wizard with pre-filled name' moved to trip-edit.spec.ts (Issue #91 — TripEditView replaces TripWizard for edit).
 
