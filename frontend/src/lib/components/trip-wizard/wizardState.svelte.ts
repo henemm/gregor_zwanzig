@@ -7,7 +7,6 @@
 import type {
 	AlertRule,
 	ActivityType,
-	Aggregation,
 	ReportConfig,
 	Stage,
 	Trip,
@@ -327,12 +326,10 @@ export class WizardState {
 
 		if (this.activity) {
 			trip.activity = this.activity;
-			// Issue #207: Aggregation strukturiert typisiert. Issue #230 (Mismatch
-			// `profile` vs `activity_profile`) ist separat — wir behalten das
-			// aktuelle Wire-Format `profile` bei und escapen den Typ-Mismatch
-			// bewusst, bis #230 migriert.
-			// TODO #230 — Mismatch noch nicht migriert
-			trip.aggregation = { profile: mapActivityToProfile(this.activity) } as unknown as Aggregation;
+			// Issue #207: Aggregation strukturiert typisiert. Issue #230 hat den
+			// Mismatch zwischen Frontend-Read (`activity_profile`) und Wire-Format
+			// (`profile`) aufgeloest — Interface verwendet jetzt `profile`.
+			trip.aggregation = { profile: mapActivityToProfile(this.activity) };
 		}
 
 		// Sub-Spec #164 §3.3: Mapping briefings -> report_config

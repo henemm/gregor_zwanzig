@@ -43,38 +43,38 @@ function tripWith(overrides: Partial<Trip>): Trip {
 
 // getPresetLabel
 
-test('getPresetLabel > AC-13a: activity_profile = "wintersport" → "Wintersport-Standard"', () => {
-	const trip = tripWith({ aggregation: { activity_profile: 'wintersport' } });
+test('getPresetLabel > AC-13a: profile = "wintersport" → "Wintersport-Standard"', () => {
+	const trip = tripWith({ aggregation: { profile: 'wintersport' } });
 	assert.equal(getPresetLabel(trip), 'Wintersport-Standard');
 });
 
-test('getPresetLabel > AC-13b: activity_profile = "wandern" → "Wandern-Standard"', () => {
-	const trip = tripWith({ aggregation: { activity_profile: 'wandern' } });
+test('getPresetLabel > AC-13b: profile = "wandern" → "Wandern-Standard"', () => {
+	const trip = tripWith({ aggregation: { profile: 'wandern' } });
 	assert.equal(getPresetLabel(trip), 'Wandern-Standard');
 });
 
-test('getPresetLabel > AC-13c: activity_profile = "allgemein" → "Standard-Metriken"', () => {
-	const trip = tripWith({ aggregation: { activity_profile: 'allgemein' } });
+test('getPresetLabel > AC-13c: profile = "allgemein" → "Standard-Metriken"', () => {
+	const trip = tripWith({ aggregation: { profile: 'allgemein' } });
 	assert.equal(getPresetLabel(trip), 'Standard-Metriken');
 });
 
 test('getPresetLabel > AC-13d: unbekanntes Profile → "Standard-Metriken"', () => {
 	// Issue #207: Off-Spec-Wert — testet Defensiv-Pfad gegen Fremddaten.
 	const trip = tripWith({
-		aggregation: { activity_profile: 'mountainbike' } as unknown as Aggregation
+		aggregation: { profile: 'mountainbike' } as unknown as Aggregation
 	});
 	assert.equal(getPresetLabel(trip), 'Standard-Metriken');
 });
 
-test('getPresetLabel > AC-13e: activity_profile = null → "Standard-Metriken"', () => {
+test('getPresetLabel > AC-13e: profile = null → "Standard-Metriken"', () => {
 	// Issue #207: Off-Spec-Wert — Backend kann null senden, Defensiv-Pfad.
 	const trip = tripWith({
-		aggregation: { activity_profile: null } as unknown as Aggregation
+		aggregation: { profile: null } as unknown as Aggregation
 	});
 	assert.equal(getPresetLabel(trip), 'Standard-Metriken');
 });
 
-test('getPresetLabel > AC-13f: activity_profile = undefined → "Standard-Metriken"', () => {
+test('getPresetLabel > AC-13f: profile = undefined → "Standard-Metriken"', () => {
 	const trip = tripWith({ aggregation: {} });
 	assert.equal(getPresetLabel(trip), 'Standard-Metriken');
 });
@@ -140,9 +140,9 @@ test('getActiveMetrics > AC-14a: weather_config.metrics gesetzt → genau diese 
 	assert.deepEqual(getActiveMetrics(trip), ['temp_min', 'wind_max']);
 });
 
-test('getActiveMetrics > AC-14b: kein weather_config.metrics, activity_profile = "wandern" → Wandern-Default-Set', () => {
+test('getActiveMetrics > AC-14b: kein weather_config.metrics, profile = "wandern" → Wandern-Default-Set', () => {
 	const trip = tripWith({
-		aggregation: { activity_profile: 'wandern' }
+		aggregation: { profile: 'wandern' }
 	});
 	assert.deepEqual(getActiveMetrics(trip), [
 		'temp_min',
@@ -162,17 +162,17 @@ test('getActiveMetrics > Trip ohne weather_config und ohne aggregation → []', 
 test('getActiveMetrics > weather_config.metrics leer ([]) → leeres Array', () => {
 	const trip = tripWith({
 		weather_config: { metrics: [] },
-		aggregation: { activity_profile: 'wandern' }
+		aggregation: { profile: 'wandern' }
 	});
 	// Array.isArray([]) === true → explizit konfigurierte (leere) Liste zaehlt.
 	assert.deepEqual(getActiveMetrics(trip), []);
 });
 
-test('getActiveMetrics > weather_config.metrics ist kein Array → Fallback auf activity_profile', () => {
+test('getActiveMetrics > weather_config.metrics ist kein Array → Fallback auf profile', () => {
 	// Issue #207: Off-Spec — metrics ist String statt Array, defensiver Fallback.
 	const trip = tripWith({
 		weather_config: { metrics: 'temp_min' } as unknown as WeatherConfig,
-		aggregation: { activity_profile: 'allgemein' }
+		aggregation: { profile: 'allgemein' }
 	});
 	assert.deepEqual(getActiveMetrics(trip), ['temp_min', 'temp_max', 'wind_max', 'precip_sum']);
 });
@@ -181,7 +181,7 @@ test('getActiveMetrics > weather_config.metrics mit Non-String → Fallback auf 
 	// Issue #207: Off-Spec — Array enthaelt Non-String-Element, defensiver Fallback.
 	const trip = tripWith({
 		weather_config: { metrics: ['temp_min', 42] } as unknown as WeatherConfig,
-		aggregation: { activity_profile: 'allgemein' }
+		aggregation: { profile: 'allgemein' }
 	});
 	assert.deepEqual(getActiveMetrics(trip), ['temp_min', 'temp_max', 'wind_max', 'precip_sum']);
 });

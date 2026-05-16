@@ -68,7 +68,7 @@ export interface AlertRule {
 export type ActivityProfile = 'wintersport' | 'wandern' | 'allgemein' | 'summer_trekking';
 
 export interface Aggregation {
-	activity_profile?: ActivityProfile;
+	profile?: ActivityProfile;
 }
 
 export interface WeatherConfigMetric {

@@ -71,7 +71,7 @@ test('WizardState: toTripPayload mit activity=skitour → aggregation.profile=wi
 	const trip = s.toTripPayload();
 	assert.equal(trip.activity, 'skitour');
 	assert.ok(trip.aggregation, 'aggregation muss gesetzt sein');
-	assert.equal((trip.aggregation as { profile: string }).profile, 'wintersport');
+	assert.equal(trip.aggregation?.profile, 'wintersport');
 });
 
 // --- Issue #224: alte Issue-#222-W2-Threshold-Tests entfernt

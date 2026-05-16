@@ -1,0 +1,5 @@
+--- RED-Beweis Issue #230 (Stand vor Fix) ---
+Trip: {"profile":"wintersport"}
+getPresetLabel: Standard-Metriken (erwartet: Wintersport-Standard)
+getActiveMetrics: [] (erwartet: 6 Wintersport-Metriken)
+BUG bestätigt: JA — beide Read-Pfade fallen auf falsche Defaults zurück

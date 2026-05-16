@@ -14,7 +14,7 @@ import type { Trip } from '$lib/types';
 const DEFAULT_LABEL = 'Standard-Metriken';
 
 export function getPresetLabel(trip: Trip): string {
-	const profile = trip.aggregation?.activity_profile;
+	const profile = trip.aggregation?.profile;
 	if (profile === 'wintersport') return 'Wintersport-Standard';
 	if (profile === 'wandern') return 'Wandern-Standard';
 	if (profile === 'allgemein') return DEFAULT_LABEL;
@@ -41,10 +41,10 @@ export function getActiveMetrics(trip: Trip): string[] {
 			return metrics;
 		}
 		// Array vorhanden aber enthaelt Non-Strings -> Fallback auf Profile-Default
-		const profile = trip.aggregation?.activity_profile;
+		const profile = trip.aggregation?.profile;
 		return getDefaultMetricsForProfile(profile);
 	}
-	const profile = trip.aggregation?.activity_profile;
+	const profile = trip.aggregation?.profile;
 	return getDefaultMetricsForProfile(profile);
 }
 
