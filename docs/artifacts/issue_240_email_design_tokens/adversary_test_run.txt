@@ -1,0 +1,11 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/agent-a37883f0bcf194815
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 30 items / 1 deselected / 29 selected
+
+tests/tdd/test_email_design_tokens.py .......................            [ 79%]
+tests/unit/test_renderers_email.py ......                                [100%]
+
+======================= 29 passed, 1 deselected in 0.13s =======================
