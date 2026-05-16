@@ -52,10 +52,31 @@ test.describe('Issue #154 — Trip-Hero im Overview-Tab', () => {
 		await expect(activeStage).toContainText('Heute');
 	});
 
-	test('AC-6: Trip ohne report_config zeigt "Briefings deaktiviert"', async ({ page }) => {
-		await page.goto(`/trips/${TRIP_ID}`);
+	test('AC-6: Trip ohne report_config zeigt "Briefings deaktiviert"', async ({
+		page,
+		request
+	}) => {
+		// Eigener Trip ohne report_config — Shared e2e-cockpit-test hat eines (#229).
+		const NO_BRIEFING_TRIP_ID = 'e2e-hero-no-briefing-trip';
+		await request.post('/api/trips', {
+			data: {
+				id: NO_BRIEFING_TRIP_ID,
+				name: 'E2E Hero No-Briefing Trip',
+				stages: [
+					{
+						id: 'hero-nb-stage-1',
+						name: 'Etappe',
+						date: new Date().toISOString().slice(0, 10),
+						waypoints: [
+							{ id: 'hero-nb-wp-1', name: 'Start', lat: 42.1, lon: 9.0, elevation_m: 500 }
+						]
+					}
+				]
+			}
+		});
+
+		await page.goto(`/trips/${NO_BRIEFING_TRIP_ID}`);
 		const next = page.getByTestId('trip-hero-stat-next-briefing');
-		// e2e-cockpit-test hat kein report_config gesetzt
 		await expect(next).toContainText('Briefings deaktiviert');
 	});
 
