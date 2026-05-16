@@ -1,6 +1,12 @@
 <script lang="ts">
 	import { Tabs } from 'bits-ui';
 	import TripOverview from './TripOverview.svelte';
+	import {
+		EmailIframe,
+		SmsPhoneFrame,
+		defaultReportType,
+		type ReportType
+	} from '$lib/components/preview';
 	import type { Trip } from '$lib/types';
 
 	interface Badges {
@@ -48,6 +54,7 @@
 	// und synchronisiert bei späteren initialTab-Prop-Änderungen
 	// (z.B. hash-only navigation ohne Re-Mount).
 	let activeTab = $state<string>('overview');
+	let previewType = $state<ReportType>(defaultReportType());
 
 	$effect(() => {
 		activeTab = resolve(initialTab);
@@ -85,6 +92,21 @@
 		<Tabs.Content value={tab.value} data-testid="trip-detail-panel-{tab.value}">
 			{#if tab.value === 'overview' && trip}
 				<TripOverview {trip} />
+			{:else if tab.value === 'preview' && trip}
+				<div class="preview-shell">
+					<div class="preview-controls" data-testid="preview-controls">
+						<label>
+							<input type="radio" bind:group={previewType} value="morning" /> Morgen
+						</label>
+						<label>
+							<input type="radio" bind:group={previewType} value="evening" /> Abend
+						</label>
+					</div>
+					<div class="preview-grid">
+						<EmailIframe tripId={trip.id} type={previewType} />
+						<SmsPhoneFrame tripId={trip.id} type={previewType} />
+					</div>
+				</div>
 			{:else}
 				<p class="p-4 text-sm">{PLACEHOLDERS[tab.value]}</p>
 			{/if}
@@ -118,5 +140,34 @@
 		color: white;
 		font-size: 0.75rem;
 		font-weight: 600;
+	}
+	.preview-shell {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		padding: 1rem;
+	}
+	.preview-controls {
+		display: flex;
+		gap: 1.25rem;
+		font-size: 0.875rem;
+		color: var(--g-ink, #1a1a18);
+	}
+	.preview-controls label {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.375rem;
+		cursor: pointer;
+	}
+	.preview-grid {
+		display: grid;
+		gap: 1.5rem;
+		grid-template-columns: minmax(0, 1fr) 360px;
+		align-items: start;
+	}
+	@media (max-width: 960px) {
+		.preview-grid {
+			grid-template-columns: 1fr;
+		}
 	}
 </style>
