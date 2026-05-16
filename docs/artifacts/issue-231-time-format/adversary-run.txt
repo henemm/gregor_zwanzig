@@ -1,0 +1,28 @@
+Adversary Validation — Issue #231 (Zeit-Format-Norm HH:MM:SS)
+Date: 2026-05-16
+
+=== AC-1: Unit Tests ===
+5/5 passed. Regex /^\d{2}:\d{2}$/ handles all edge cases defensively.
+
+=== AC-2: Wizard Save-Path ===
+wizardState.svelte.ts:349-350 — both fields converted via toHHMMSS before trip.report_config assignment. PROVEN.
+
+=== AC-3: Edit-Dialog Roundtrip ===
+EditReportConfigSection.svelte:77 read → :125-126 save. '07:00:00'.slice(0,5)='07:00', toHHMMSS('07:00')='07:00:00'. Stable roundtrip. PROVEN.
+
+=== AC-4: Quick-Pick + Input ===
+Factory Pattern used (lines 141-148). Safari compliant. toHHMMSS applied in $effect at line 125-126. PROVEN.
+
+=== AC-5: Tests ===
+node --experimental-strip-types --test: 5 pass, 0 fail. PROVEN.
+
+=== AC-6: svelte-check ===
+ERROR count: 24 (baseline ≤24). No regression. PROVEN.
+
+=== AC-7: Legacy HH:MM Lazy Migration ===
+slice(0,5) on HH:MM = HH:MM unchanged, toHHMMSS normalizes on save. PROVEN.
+
+=== AC-8: Out-of-Scope Drift ===
+tripHero.ts:parseHHMM and rightColumn.ts unmodified. Only 2 save-paths touched. PROVEN.
+
+VERDICT: VERIFIED

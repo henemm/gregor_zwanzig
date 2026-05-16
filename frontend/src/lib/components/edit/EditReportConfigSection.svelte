@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import type { ReportConfig } from '$lib/types';
+	import { toHHMMSS } from '$lib/utils/time';
 
 	interface Props {
 		reportConfig: ReportConfig | undefined;
@@ -121,8 +122,8 @@
 			enabled: morning_enabled || evening_enabled,
 			morning_enabled,
 			evening_enabled,
-			morning_time,
-			evening_time,
+			morning_time: toHHMMSS(morning_time),
+			evening_time: toHHMMSS(evening_time),
 			send_email,
 			send_signal,
 			send_telegram,

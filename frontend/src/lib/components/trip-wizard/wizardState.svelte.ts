@@ -13,6 +13,7 @@ import type {
 	Waypoint
 } from '$lib/types';
 import { addDays, mapActivityToProfile, newId } from './wizardHelpers.ts';
+import { toHHMMSS } from '$lib/utils/time';
 
 // `goto` und `api` werden in `save()` lazy importiert, damit Unit-Tests die
 // Klasse instanziieren und Felder/Methoden pruefen koennen, ohne dass der
@@ -345,8 +346,8 @@ export class WizardState {
 			// Synthetisch abgeleitet: enabled = morning.enabled || evening.enabled
 			// (Phase-2-Entscheidung #4, 2026-05-11).
 			enabled: b.reports.morning.enabled || b.reports.evening.enabled,
-			morning_time: b.reports.morning.time, // 'HH:MM'; Python liest time.fromisoformat
-			evening_time: b.reports.evening.time,
+			morning_time: toHHMMSS(b.reports.morning.time),
+			evening_time: toHHMMSS(b.reports.evening.time),
 			send_email: b.channels.email,
 			send_signal: b.channels.signal,
 			send_telegram: b.channels.telegram,
