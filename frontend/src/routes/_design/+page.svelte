@@ -7,6 +7,10 @@
 	import { TopoBg } from '$lib/components/ui/topo';
 	import { ElevSparkline } from '$lib/components/ui/elev-sparkline';
 	import Pencil from '@lucide/svelte/icons/pencil';
+	import { profileSignature } from '$lib/utils/profileSignature';
+	import type { ActivityProfile } from '$lib/types';
+
+	const PROFILES: ActivityProfile[] = ['wintersport', 'wandern', 'summer_trekking', 'allgemein'];
 </script>
 
 <div class="p-8 space-y-10">
@@ -133,6 +137,30 @@
 					<span class="text-xs text-[color:var(--g-ink-faint)]">Single-Point</span>
 				</div>
 			</div>
+		</div>
+	</section>
+
+	<section data-testid="profile-signatures-section" class="space-y-3">
+		<Eyebrow>Aktivitätsprofile (Issue #238)</Eyebrow>
+		<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+			{#each PROFILES as p (p)}
+				{@const sig = profileSignature(p)}
+				<GCard>
+					<div class="flex flex-col gap-2">
+						<Eyebrow>{sig.icon} {sig.eyebrow}</Eyebrow>
+						<div class="flex items-center gap-2">
+							<span
+								class="inline-block w-3 h-3 rounded-full"
+								style:background-color={sig.accent}
+								aria-hidden="true"
+							></span>
+							<code class="text-xs" style:font-family="var(--g-font-data)">
+								{sig.accentFallback}
+							</code>
+						</div>
+					</div>
+				</GCard>
+			{/each}
 		</div>
 	</section>
 </div>

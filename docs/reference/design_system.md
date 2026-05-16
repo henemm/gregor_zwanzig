@@ -240,7 +240,32 @@ Die JSX-Quellen liegen im Anthropic-Artifact-Tarball; sind nicht in das Repo ein
 
 ---
 
-## 10 · Stand 2026-05-16 nach Issues #208–#212
+## 10 · Aktivitätsprofile — visuelle Signatur
+
+Vier Aktivitätsprofile, je mit Akzent, Icon, Eyebrow-Label. Token-Werte sind
+Aliase auf bestehende Design-Tokens — kein neuer Wert wird der Marke
+hinzugefügt; nur die Verwendungsabsicht wird benannt.
+
+| Profil | CSS-Token | Hex | Icon | Eyebrow-Label |
+|---|---|---|---|---|
+| Wintersport | `--g-profile-wintersport` | `#4a7fb5` (Alias `--g-wx-rain`) | `❄` | `Wintersport` |
+| Wandern | `--g-profile-wandern` | `#3a7d44` (Alias `--g-success`) | `🥾` | `Wandern` |
+| Summer-Trekking | `--g-profile-summer-trekking` | `#c45a2a` (Alias `--g-accent`) | `🏔` | `Summer-Trekking` |
+| Allgemein | `--g-profile-allgemein` | `#6b675c` (neutral, nahe `--g-ink-muted`) | `◯` | `Allgemein` |
+
+**Helper:** `frontend/src/lib/utils/profileSignature.ts` —
+`profileSignature(profile) → { accent, accentFallback, icon, eyebrow }`.
+`accent` ist die CSS-Variable, `accentFallback` der Hex-Wert (für Inline-CSS
+in Mails). Unbekannte Werte fallen auf `allgemein` zurück.
+
+**Verwendungs-Regel:** Akzentfarbe rein dekorativ (Pin, Dot, Header-Border) —
+nicht als Textfarbe verwenden; Kontrast auf hellen Surfaces ist knapp AA.
+Sichtbare Profil-Identifikation immer als Eyebrow + Icon **plus** Akzent, nie
+nur als Farbe (Branding-Kohärenz).
+
+---
+
+## 11 · Stand 2026-05-16 nach Issues #208–#212
 
 Die in §1-§9 oben dokumentierten Tokens und Komponenten sind synchron mit
 `frontend/src/app.css` (Stand `2026-05-16`). Issues #208 (Typography/Spacing),
@@ -262,7 +287,7 @@ explizit, vor jeder Frontend-/UI-Arbeit beide Quellen zu konsultieren.
 
 ---
 
-## 11 · Begleit-Dateien
+## 12 · Begleit-Dateien
 
 - `design_system_tokens.css` — Begleit-CSS aus Anthropic-Artifact. **Kann von
   `app.css` abweichen** — im Zweifel gilt `app.css`. Issue #213.

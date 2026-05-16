@@ -78,6 +78,12 @@
     --g-wx-thunder:   #5a3a7a;
     --g-wx-fog:       #9a9a8a;
 
+    /* Aktivitaetsprofile (Issue #238) — Aliase auf bestehende Tokens */
+    --g-profile-wintersport:      #4a7fb5;  /* Alias zu --g-wx-rain */
+    --g-profile-wandern:          #3a7d44;  /* Alias zu --g-success */
+    --g-profile-summer-trekking:  #c45a2a;  /* Alias zu --g-accent */
+    --g-profile-allgemein:        #6b675c;  /* nahe --g-ink-muted, neutral */
+
     /* Typografie */
     --g-font-ui:      'Inter Tight', system-ui, sans-serif;
     --g-font-data:    'JetBrains Mono', ui-monospace, monospace;
