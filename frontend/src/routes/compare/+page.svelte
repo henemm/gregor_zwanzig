@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Location, Subscription, ForecastResponse, ActivityProfile } from '$lib/types.js';
+	import { ACTIVITY_PROFILE_OPTIONS } from '$lib/types.js';
 	import { api } from '$lib/api.js';
 	import { Btn } from '$lib/components/ui/btn/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
@@ -414,9 +415,9 @@
 				<label for="cmp-profile" class="text-sm font-medium">Aktivitätsprofil</label>
 				<select id="cmp-profile" bind:value={activityProfile}
 					class="mt-1 block w-full rounded-md border px-3 py-2 text-sm">
-					<option value="allgemein">Allgemein</option>
-					<option value="wintersport">Wintersport</option>
-					<option value="wandern">Wandern</option>
+					{#each ACTIVITY_PROFILE_OPTIONS as opt}
+						<option value={opt.value}>{opt.label}</option>
+					{/each}
 				</select>
 			</div>
 

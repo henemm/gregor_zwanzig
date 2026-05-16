@@ -1,5 +1,6 @@
 <script lang="ts">
-	import type { Location } from '$lib/types.js';
+	import type { Location, ActivityProfile } from '$lib/types.js';
+	import { ACTIVITY_PROFILE_OPTIONS } from '$lib/types.js';
 	import { Btn } from '$lib/components/ui/btn/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
@@ -49,7 +50,7 @@
 	let elevationM = $state(location?.elevation_m ?? 2000);
 	let region = $state(location?.region ?? '');
 	let bergfexSlug = $state(location?.bergfex_slug ?? '');
-	let activityProfile = $state(location?.activity_profile ?? '');
+	let activityProfile = $state<ActivityProfile | ''>(location?.activity_profile ?? '');
 	let group = $state(location?.group ?? '');
 	let error = $state('');
 
@@ -71,7 +72,7 @@
 			elevation_m: elevationM !== '' ? Number(elevationM) : undefined,
 			region: region.trim() || undefined,
 			bergfex_slug: bergfexSlug.trim() || undefined,
-			activity_profile: (activityProfile as Location['activity_profile']) || undefined,
+			activity_profile: activityProfile || undefined,
 			group: group.trim() || undefined,
 			...(location?.display_config && { display_config: location.display_config })
 		};
@@ -135,9 +136,9 @@
 			class="flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-base transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3"
 		>
 			<option value="">— Kein Profil —</option>
-			<option value="wintersport">Wintersport</option>
-			<option value="wandern">Wandern</option>
-			<option value="allgemein">Allgemein</option>
+			{#each ACTIVITY_PROFILE_OPTIONS as opt}
+				<option value={opt.value}>{opt.label}</option>
+			{/each}
 		</select>
 	</div>
 

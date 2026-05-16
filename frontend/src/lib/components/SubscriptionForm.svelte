@@ -1,5 +1,6 @@
 <script lang="ts">
-	import type { Subscription, Location } from '$lib/types.js';
+	import type { Subscription, Location, ActivityProfile } from '$lib/types.js';
+	import { ACTIVITY_PROFILE_OPTIONS } from '$lib/types.js';
 	import { Btn } from '$lib/components/ui/btn/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
@@ -41,7 +42,7 @@
 	let selectedLocations = $state<string[]>(
 		subscription?.locations?.filter((l) => l !== '*') ?? []
 	);
-	let activityProfile = $state<string>(subscription?.activity_profile ?? 'allgemein');
+	let activityProfile = $state<ActivityProfile>(subscription?.activity_profile ?? 'allgemein');
 	let error = $state('');
 
 	function toggleLocation(id: string) {
@@ -87,7 +88,7 @@
 			send_telegram: sendTelegram,
 			locations: allLocations ? ['*'] : selectedLocations,
 			...(subscription?.display_config && { display_config: subscription.display_config }),
-			activity_profile: activityProfile as Subscription['activity_profile']
+			activity_profile: activityProfile
 		};
 		onsave(result);
 	}
@@ -151,9 +152,9 @@
 		<Label for="sub-profile">Aktivitätsprofil</Label>
 		<select id="sub-profile" bind:value={activityProfile}
 			class="flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-base transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3">
-			<option value="allgemein">Allgemein</option>
-			<option value="wintersport">Wintersport</option>
-			<option value="wandern">Wandern</option>
+			{#each ACTIVITY_PROFILE_OPTIONS as opt}
+				<option value={opt.value}>{opt.label}</option>
+			{/each}
 		</select>
 	</div>
 

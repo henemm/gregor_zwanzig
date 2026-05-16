@@ -67,6 +67,20 @@ export interface AlertRule {
 // Nur Felder, die im Code aktuell gelesen/geschrieben werden — keine Toten-Felder.
 export type ActivityProfile = 'wintersport' | 'wandern' | 'allgemein' | 'summer_trekking';
 
+export const ACTIVITY_PROFILE_OPTIONS = [
+	{ value: 'allgemein',       label: 'Allgemein' },
+	{ value: 'wintersport',     label: 'Wintersport' },
+	{ value: 'wandern',         label: 'Wandern' },
+	{ value: 'summer_trekking', label: 'Sommer-Trekking' },
+] as const satisfies ReadonlyArray<{ value: ActivityProfile; label: string }>;
+
+// Exhaustiveness-Check: wenn jemand ActivityProfile erweitert ohne
+// ACTIVITY_PROFILE_OPTIONS zu pflegen, bricht hier der Compiler.
+type _ActivityProfileOptionsCoverage =
+	ActivityProfile extends (typeof ACTIVITY_PROFILE_OPTIONS)[number]['value'] ? true : never;
+const _activityProfileCoverageCheck: _ActivityProfileOptionsCoverage = true;
+void _activityProfileCoverageCheck;
+
 export interface Aggregation {
 	profile?: ActivityProfile;
 }
