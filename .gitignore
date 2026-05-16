@@ -53,6 +53,10 @@ data/users/__test_*/
 data/users/test_*/
 data/users/csrf_test_*/
 data/users/val_test_*/
+# E2E-Test-Trips (Playwright erzeugt sie via request.post, kein Repo-Inhalt)
+data/users/default/trips/e2e-*.json
+data/users/default/trips/hero-nb-*.json
+data/users/default/trips/nb-*.json
 data/users/valtest_*/
 data/users/validator_test/
 data/users/design_*/
