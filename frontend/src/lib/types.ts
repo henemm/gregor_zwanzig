@@ -121,6 +121,7 @@ export interface Trip {
 	name: string;
 	shortcode?: string;
 	activity?: ActivityType;
+	region?: string;
 	stages: Stage[];
 	avalanche_regions?: string[];
 	aggregation?: Aggregation;

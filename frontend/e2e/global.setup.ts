@@ -24,6 +24,7 @@ setup('authenticate and seed test data', async ({ page }) => {
 		data: {
 			id: TRIP_ID,
 			name: 'E2E Cockpit Test Trip',
+			region: 'Korsika',
 			stages: [
 				{
 					id: 'e2e-stage-1',

@@ -75,6 +75,7 @@ type Trip struct {
 	AlertRules       []AlertRule            `json:"alert_rules"`
 	Shortcode        string                 `json:"shortcode,omitempty"`
 	Activity         string                 `json:"activity,omitempty"`
+	Region           string                 `json:"region,omitempty"`
 	PausedAt         *time.Time             `json:"paused_at,omitempty"`
 	ArchivedAt       *time.Time             `json:"archived_at,omitempty"`
 }

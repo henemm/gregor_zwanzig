@@ -169,4 +169,29 @@ test.describe('Issue #154 — Trip-Hero im Overview-Tab', () => {
 			fullPage: false
 		});
 	});
+
+	test('AC-202-1: Hero zeigt Region wenn trip.region gesetzt', async ({ page }) => {
+		// e2e-cockpit-test hat nach dem Seed-Update region: "Korsika"
+		await page.goto(`/trips/${TRIP_ID}`);
+		const regionEl = page.getByTestId('trip-hero-region');
+		await expect(regionEl).toBeVisible();
+		await expect(regionEl).toHaveText('Korsika');
+	});
+
+	test('AC-202-2: Hero zeigt kein Region-Element wenn trip.region fehlt', async ({ page, request }) => {
+		const NO_REGION_ID = 'e2e-hero-no-region-trip';
+		await request.delete(`/api/trips/${NO_REGION_ID}`);
+		const today = new Date().toISOString().slice(0, 10);
+		await request.post('/api/trips', {
+			data: {
+				id: NO_REGION_ID,
+				name: 'Kein Region Trip',
+				stages: [{ id: 'nr-s1', name: 'Tag 1', date: today,
+					waypoints: [{ id: 'nr-w1', name: 'Start', lat: 42.0, lon: 9.0, elevation_m: 100 }] }]
+			}
+		});
+		await page.goto(`/trips/${NO_REGION_ID}`);
+		await expect(page.getByTestId('trip-hero-region')).not.toBeVisible();
+		await request.delete(`/api/trips/${NO_REGION_ID}`);
+	});
 });

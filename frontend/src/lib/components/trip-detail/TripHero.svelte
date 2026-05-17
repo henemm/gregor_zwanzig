@@ -34,6 +34,9 @@
 <TopoBg opacity={0.4}>
 	<div data-testid="trip-hero" class="trip-hero">
 		<h1 data-testid="trip-hero-title" class="trip-hero-title">{trip.name}</h1>
+		{#if trip.region}
+			<p data-testid="trip-hero-region" class="trip-hero-region">{trip.region}</p>
+		{/if}
 		{#if dateRange}
 			<p data-testid="trip-hero-date-range" class="trip-hero-date-range">{dateRange}</p>
 		{/if}
@@ -56,6 +59,12 @@
 		font-size: 1.5rem;
 		font-weight: 700;
 		line-height: 1.2;
+	}
+	.trip-hero-region {
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: var(--g-ink-faint, #6b7280);
+		margin-top: -0.25rem;
 	}
 	.trip-hero-date-range {
 		font-size: 0.875rem;

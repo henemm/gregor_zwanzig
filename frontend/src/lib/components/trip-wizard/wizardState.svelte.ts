@@ -45,6 +45,7 @@ export class WizardState {
 	activity = $state<ActivityType | null>(null);
 	name = $state('');
 	shortcode = $state('');
+	region    = $state('');
 	// `null` bedeutet "nicht gewaehlt"; addDays-Aufrufer muessen vorher null-checken.
 	startDate = $state<string | null>(null);
 	endDate = $state<string | null>(null);
@@ -323,6 +324,11 @@ export class WizardState {
 		const sc = this.shortcode.trim();
 		if (sc.length > 0) {
 			trip.shortcode = sc;
+		}
+
+		const reg = this.region.trim();
+		if (reg.length > 0) {
+			trip.region = reg;
 		}
 
 		if (this.activity) {

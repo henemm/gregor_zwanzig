@@ -82,6 +82,18 @@
 		</label>
 
 		<label class="flex flex-col gap-1 text-sm">
+			<span>Region <span class="text-[var(--g-ink-faint)]">(optional)</span></span>
+			<input
+				type="text"
+				data-testid="trip-wizard-step1-region"
+				maxlength="50"
+				placeholder="z.B. Korsika, Mallorca"
+				bind:value={state.region}
+				class="h-9 rounded-lg border border-[var(--g-ink-faint)]/40 bg-transparent px-2.5 outline-none focus-visible:ring-2 focus-visible:ring-[var(--g-accent)]"
+			/>
+		</label>
+
+		<label class="flex flex-col gap-1 text-sm">
 			<span>Startdatum <span class="text-[var(--g-accent)]">*</span></span>
 			<input
 				type="date"
