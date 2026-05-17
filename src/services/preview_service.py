@@ -145,7 +145,7 @@ class PreviewService:
         from src.formatters.sms_trip import SMSTripFormatter
         # Input-Hygiene: ':' aus Stage-Namen entfernen, damit der Prefix-
         # Separator ':' in sms_format.md §3.1 eindeutig bleibt.
-        clean_stage = (stage_name or "Etappe").replace(":", "")
+        clean_stage = (stage_name or "Etappe").replace(":", "").strip()
         token_line = SMSTripFormatter().format_sms(
             segment_weather,
             stage_name=clean_stage,

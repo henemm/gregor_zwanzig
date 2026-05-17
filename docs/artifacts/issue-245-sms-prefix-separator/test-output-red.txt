@@ -1,0 +1,118 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 10 items
+
+tests/tdd/test_issue_245_sms_stage_colon.py FF.FF.....                   [100%]
+
+=================================== FAILURES ===================================
+_______ TestAC1SanitizeStageName.test_no_trailing_space_after_truncation _______
+
+self = <tdd.test_issue_245_sms_stage_colon.TestAC1SanitizeStageName object at 0x71d81f8f01a0>
+
+    def test_no_trailing_space_after_truncation(self):
+        """GIVEN Stage-Name der nach Colon-Entfernung 11+ Zeichen hat und an Position 10
+        einen Space trägt WHEN _sanitize_stage_name aufgerufen THEN kein trailing Space.
+    
+        "Tag 1 von Valldemossa nach Deià"
+          T(0)a(1)g(2) (3)1(4) (5)v(6)o(7)n(8) (9)V(10)...
+          [:10] = "Tag 1 von " — Position 9 ist ein Space!
+        """
+        cleaned = "Tag 1 von Valldemossa nach Deià"
+        result = _sanitize_stage_name(cleaned)
+>       assert not result.endswith(" "), (
+            f"_sanitize_stage_name darf keinen trailing Space zurückgeben, "
+            f"war: {result!r}"
+        )
+E       AssertionError: _sanitize_stage_name darf keinen trailing Space zurückgeben, war: 'Tag 1 von '
+E       assert not True
+E        +  where True = <built-in method endswith of str object at 0x71d81e335c70>(' ')
+E        +    where <built-in method endswith of str object at 0x71d81e335c70> = 'Tag 1 von '.endswith
+
+tests/tdd/test_issue_245_sms_stage_colon.py:47: AssertionError
+_______ TestAC1SanitizeStageName.test_no_leading_space_after_truncation ________
+
+self = <tdd.test_issue_245_sms_stage_colon.TestAC1SanitizeStageName object at 0x71d81e2ee720>
+
+    def test_no_leading_space_after_truncation(self):
+        """GIVEN Stage-Name mit führendem Space (nach Colon-Entfernung am Anfang)
+        WHEN _sanitize_stage_name aufgerufen THEN kein leading Space.
+        """
+        cleaned = " von Valldemossa nach Deià"
+        result = _sanitize_stage_name(cleaned)
+>       assert not result.startswith(" "), (
+            f"_sanitize_stage_name darf keinen leading Space zurückgeben, "
+            f"war: {result!r}"
+        )
+E       AssertionError: _sanitize_stage_name darf keinen leading Space zurückgeben, war: ' von Valld'
+E       assert not True
+E        +  where True = <built-in method startswith of str object at 0x71d81e32feb0>(' ')
+E        +    where <built-in method startswith of str object at 0x71d81e32feb0> = ' von Valld'.startswith
+
+tests/tdd/test_issue_245_sms_stage_colon.py:58: AssertionError
+_ TestAC1BuildTokenLine.test_stage_name_with_space_at_truncation_boundary_no_space_before_colon _
+
+self = <tdd.test_issue_245_sms_stage_colon.TestAC1BuildTokenLine object at 0x71d81e781640>
+
+    def test_stage_name_with_space_at_truncation_boundary_no_space_before_colon(self):
+        """GIVEN stage_name dessen 10-Char-Truncation auf einen Space endet
+        WHEN build_token_line aufgerufen
+        THEN enthält render() kein ' :' (kein Space vor Separator-Doppelpunkt).
+    
+        Simulation: "Tag 1 von Valldemossa nach Deià" ist das Ergebnis von
+        "Tag 1: von Valldemossa nach Deià".replace(":", "") in preview_service.py.
+        """
+        forecast = _minimal_forecast()
+        token_line = build_token_line(
+            forecast,
+            None,
+            report_type="morning",
+            stage_name="Tag 1 von Valldemossa nach Deià",
+        )
+        rendered = token_line.render()
+>       assert " :" not in rendered, (
+            f"token_line darf keinen Space vor ':' enthalten (Issue #245), "
+            f"war: {rendered!r}"
+        )
+E       AssertionError: token_line darf keinen Space vor ':' enthalten (Issue #245), war: 'Tag 1 von : N12 D24 R- PR- W- G- TH:-'
+E       assert ' :' not in 'Tag 1 von :...- W- G- TH:-'
+E         
+E         ' :' is contained here:
+E           Tag 1 von : N12 D24 R- PR- W- G- TH:-
+E         ?           ++
+
+tests/tdd/test_issue_245_sms_stage_colon.py:94: AssertionError
+_ TestAC1BuildTokenLine.test_stage_name_with_leading_space_no_space_after_first_colon _
+
+self = <tdd.test_issue_245_sms_stage_colon.TestAC1BuildTokenLine object at 0x71d81e311a90>
+
+    def test_stage_name_with_leading_space_no_space_after_first_colon(self):
+        """GIVEN stage_name mit führendem Space (nach Colon-Entfernung am Anfang)
+        WHEN build_token_line aufgerufen
+        THEN beginnt render() nicht mit einem Space.
+        """
+        forecast = _minimal_forecast()
+        token_line = build_token_line(
+            forecast,
+            None,
+            report_type="morning",
+            stage_name=" von Valldemossa nach Deià",
+        )
+        rendered = token_line.render()
+>       assert not rendered.startswith(" "), (
+            f"token_line darf nicht mit Space beginnen, war: {rendered!r}"
+        )
+E       AssertionError: token_line darf nicht mit Space beginnen, war: ' von Valld: N12 D24 R- PR- W- G- TH:-'
+E       assert not True
+E        +  where True = <built-in method startswith of str object at 0x71d81e31e600>(' ')
+E        +    where <built-in method startswith of str object at 0x71d81e31e600> = ' von Valld: N12 D24 R- PR- W- G- TH:-'.startswith
+
+tests/tdd/test_issue_245_sms_stage_colon.py:112: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_issue_245_sms_stage_colon.py::TestAC1SanitizeStageName::test_no_trailing_space_after_truncation
+FAILED tests/tdd/test_issue_245_sms_stage_colon.py::TestAC1SanitizeStageName::test_no_leading_space_after_truncation
+FAILED tests/tdd/test_issue_245_sms_stage_colon.py::TestAC1BuildTokenLine::test_stage_name_with_space_at_truncation_boundary_no_space_before_colon
+FAILED tests/tdd/test_issue_245_sms_stage_colon.py::TestAC1BuildTokenLine::test_stage_name_with_leading_space_no_space_after_first_colon
+========================= 4 failed, 6 passed in 0.05s ==========================

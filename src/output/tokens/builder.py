@@ -25,7 +25,7 @@ _UMLAUT = str.maketrans({
 
 def _sanitize_stage_name(name: str) -> str:
     """Replace Umlauts FIRST, then truncate to 10 chars (sms_format.md SSOT)."""
-    return name.translate(_UMLAUT)[:10]
+    return name.translate(_UMLAUT)[:10].strip()
 
 
 def _confidence_symbol(pct: Optional[int]) -> Optional[str]:
