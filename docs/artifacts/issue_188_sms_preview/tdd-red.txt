@@ -1,0 +1,109 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 6 items
+
+tests/tdd/test_epic_140_preview_endpoints.py FF..F.                      [100%]
+
+=================================== FAILURES ===================================
+_____ TestT5SmsTokenPipeline.test_ac1_token_line_not_email_subject_format ______
+
+self = <tdd.test_epic_140_preview_endpoints.TestT5SmsTokenPipeline object at 0x7ee4a24b79b0>
+client = <starlette.testclient.TestClient object at 0x7ee4a2091790>
+
+    def test_ac1_token_line_not_email_subject_format(self, client):
+        """AC-1/AC-5: token_line darf nicht im Email-Subject-Format sein.
+    
+        Altes Verhalten: token_line = '[GR221 Mallorca] ...' (Subject-Format)
+        Neues Verhalten: token_line = 'Tag 1: N8 D24 ...' (Spec-Format)
+        """
+        resp = client.get(
+            "/api/preview/gr221-mallorca/sms",
+            params={"type": "morning", "user_id": "default"},
+        )
+        assert resp.status_code in (200, 503), \
+            f"Erwarte 200 oder 503, bekam {resp.status_code}: {resp.text[:300]}"
+        if resp.status_code == 200:
+            data = resp.json()
+            token_line = data["token_line"]
+>           assert not token_line.startswith("["), (
+                f"token_line darf NICHT im Email-Subject-Format beginnen (mit '['), "
+                f"war: {token_line!r}"
+            )
+E           AssertionError: token_line darf NICHT im Email-Subject-Format beginnen (mit '['), war: '[GR221 Mallorca] Tag 1: von Valldemossa nach Deià — Morgen'
+E           assert not True
+E            +  where True = <built-in method startswith of str object at 0x7ee4a2070d40>('[')
+E            +    where <built-in method startswith of str object at 0x7ee4a2070d40> = '[GR221 Mallorca] Tag 1: von Valldemossa nach Deià — Morgen'.startswith
+
+tests/tdd/test_epic_140_preview_endpoints.py:194: AssertionError
+____ TestT5SmsTokenPipeline.test_ac1_token_line_contains_stage_colon_prefix ____
+
+self = <tdd.test_epic_140_preview_endpoints.TestT5SmsTokenPipeline object at 0x7ee4a23cc620>
+client = <starlette.testclient.TestClient object at 0x7ee4a20b4e00>
+
+    def test_ac1_token_line_contains_stage_colon_prefix(self, client):
+        """AC-1: token_line enthält 'StageName: ' gefolgt von Forecast-Token.
+    
+        Spec §3.1: Header ist '{Name}: '. Danach folgt min. ein Forecast-Token
+        (N, D, R, PR, W, G, TH:, TH+:).
+        """
+        resp = client.get(
+            "/api/preview/gr221-mallorca/sms",
+            params={"type": "morning", "user_id": "default"},
+        )
+        assert resp.status_code in (200, 503)
+        if resp.status_code == 200:
+            data = resp.json()
+            token_line = data["token_line"]
+            assert ": " in token_line, (
+                f"token_line muss 'Name: '-Prefix enthalten (sms_format.md §3.1), "
+                f"war: {token_line!r}"
+            )
+            after_prefix = token_line.split(": ", 1)[1] if ": " in token_line else ""
+            has_forecast = any(
+                after_prefix.startswith(tok)
+                for tok in ("N", "D", "R", "PR", "W", "G", "TH", "C")
+            )
+>           assert has_forecast, (
+                f"Nach dem Stage-Prefix muss ein Forecast-Token stehen "
+                f"(N/D/R/PR/W/G/TH/C), Rest war: {after_prefix!r}"
+            )
+E           AssertionError: Nach dem Stage-Prefix muss ein Forecast-Token stehen (N/D/R/PR/W/G/TH/C), Rest war: 'von Valldemossa nach Deià — Morgen'
+E           assert False
+
+tests/tdd/test_epic_140_preview_endpoints.py:222: AssertionError
+_______ TestT5SmsTokenPipeline.test_ac5_subject_differs_from_token_line ________
+
+self = <tdd.test_epic_140_preview_endpoints.TestT5SmsTokenPipeline object at 0x7ee4a23cd430>
+service = <src.services.preview_service.PreviewService object at 0x7ee49a7c5c40>
+
+    def test_ac5_subject_differs_from_token_line(self, service):
+        """AC-5: subject ≠ token_line (altes Verhalten: beide waren identisch).
+    
+        Alte Impl: subject = token_line[:160] — immer gleich.
+        Neue Impl: subject = Email-Subject, token_line = Spec-Token-Zeile.
+        """
+        try:
+            subject, token_line = service.render_sms_preview(
+                "gr221-mallorca", user_id="default", report_type="morning",
+            )
+        except RuntimeError:
+            pytest.skip("Wetter-API nicht erreichbar")
+>       assert subject != token_line, (
+            "subject und token_line dürfen NICHT identisch sein — "
+            "token_line muss das Spec-Token-Format sein, subject der Email-Betreff.\n"
+            f"  subject={subject!r}\n  token_line={token_line!r}"
+        )
+E       AssertionError: subject und token_line dürfen NICHT identisch sein — token_line muss das Spec-Token-Format sein, subject der Email-Betreff.
+E           subject='[GR221 Mallorca] Tag 1: von Valldemossa nach Deià — Morgen'
+E           token_line='[GR221 Mallorca] Tag 1: von Valldemossa nach Deià — Morgen'
+E       assert '[GR221 Mallorca] Tag 1: von Valldemossa nach Deià — Morgen' != '[GR221 Mallorca] Tag 1: von Valldemossa nach Deià — Morgen'
+
+tests/tdd/test_epic_140_preview_endpoints.py:268: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_epic_140_preview_endpoints.py::TestT5SmsTokenPipeline::test_ac1_token_line_not_email_subject_format
+FAILED tests/tdd/test_epic_140_preview_endpoints.py::TestT5SmsTokenPipeline::test_ac1_token_line_contains_stage_colon_prefix
+FAILED tests/tdd/test_epic_140_preview_endpoints.py::TestT5SmsTokenPipeline::test_ac5_subject_differs_from_token_line
+========================= 3 failed, 3 passed in 2.09s ==========================

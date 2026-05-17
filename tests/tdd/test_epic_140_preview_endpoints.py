@@ -160,3 +160,126 @@ class TestT4Structure:
         from src.services.preview_service import PreviewService
         assert hasattr(PreviewService, "render_email_preview")
         assert hasattr(PreviewService, "render_sms_preview")
+
+
+# ---------- T5: Issue #188 — SMS-Token-Pipeline ----------------------
+
+
+class TestT5SmsTokenPipeline:
+    """Issue #188 — SMS-Vorschau muss echtes Spec-Format liefern.
+
+    Spec: docs/specs/modules/issue_188_sms_preview_token_pipeline.md
+
+    Vor #188: render_sms_preview() gibt email_subject[:160] zurück.
+    Nach #188: render_sms_preview() gibt 'StageName: N8 D24 ...' zurück.
+
+    Wetter-API-Ausfälle → pytest.skip (wie im Rest dieser Datei).
+    """
+
+    def test_ac1_token_line_not_email_subject_format(self, client):
+        """AC-1/AC-5: token_line darf nicht im Email-Subject-Format sein.
+
+        Altes Verhalten: token_line = '[GR221 Mallorca] ...' (Subject-Format)
+        Neues Verhalten: token_line = 'Tag 1: N8 D24 ...' (Spec-Format)
+        """
+        resp = client.get(
+            "/api/preview/gr221-mallorca/sms",
+            params={"type": "morning", "user_id": "default"},
+        )
+        assert resp.status_code in (200, 503), \
+            f"Erwarte 200 oder 503, bekam {resp.status_code}: {resp.text[:300]}"
+        if resp.status_code == 200:
+            data = resp.json()
+            token_line = data["token_line"]
+            assert not token_line.startswith("["), (
+                f"token_line darf NICHT im Email-Subject-Format beginnen (mit '['), "
+                f"war: {token_line!r}"
+            )
+
+    def test_ac1_token_line_contains_stage_colon_prefix(self, client):
+        """AC-1: token_line enthält 'StageName: ' gefolgt von Forecast-Token.
+
+        Spec §3.1: Header ist '{Name}: '. Danach folgt min. ein Forecast-Token
+        (N, D, R, PR, W, G, TH:, TH+:).
+        """
+        resp = client.get(
+            "/api/preview/gr221-mallorca/sms",
+            params={"type": "morning", "user_id": "default"},
+        )
+        assert resp.status_code in (200, 503)
+        if resp.status_code == 200:
+            data = resp.json()
+            token_line = data["token_line"]
+            assert ": " in token_line, (
+                f"token_line muss 'Name: '-Prefix enthalten (sms_format.md §3.1), "
+                f"war: {token_line!r}"
+            )
+            after_prefix = token_line.split(": ", 1)[1] if ": " in token_line else ""
+            has_forecast = any(
+                after_prefix.startswith(tok)
+                for tok in ("N", "D", "R", "PR", "W", "G", "TH", "C")
+            )
+            assert has_forecast, (
+                f"Nach dem Stage-Prefix muss ein Forecast-Token stehen "
+                f"(N/D/R/PR/W/G/TH/C), Rest war: {after_prefix!r}"
+            )
+
+    def test_ac2_token_line_max_160_chars_via_service(self, service):
+        """AC-2: render_sms_preview liefert token_line mit ≤ 160 Zeichen."""
+        try:
+            _, token_line = service.render_sms_preview(
+                "gr221-mallorca", user_id="default", report_type="morning",
+            )
+        except RuntimeError:
+            pytest.skip("Wetter-API nicht erreichbar")
+        assert len(token_line) <= 160, (
+            f"token_line muss ≤ 160 Zeichen sein (sms_format.md §1), "
+            f"war {len(token_line)} Zeichen: {token_line!r}"
+        )
+
+    def test_ac4_deterministic_two_calls(self, service):
+        """AC-4: Gleiche Eingaben → bit-identische token_line."""
+        try:
+            _, token_line_1 = service.render_sms_preview(
+                "gr221-mallorca", user_id="default", report_type="morning",
+            )
+            _, token_line_2 = service.render_sms_preview(
+                "gr221-mallorca", user_id="default", report_type="morning",
+            )
+        except RuntimeError:
+            pytest.skip("Wetter-API nicht erreichbar")
+        assert token_line_1 == token_line_2, (
+            "Determinismus verletzt: zwei identische render_sms_preview-Aufrufe "
+            f"lieferten verschiedene Ergebnisse:\n  {token_line_1!r}\n  {token_line_2!r}"
+        )
+
+    def test_ac5_subject_differs_from_token_line(self, service):
+        """AC-5: subject ≠ token_line (altes Verhalten: beide waren identisch).
+
+        Alte Impl: subject = token_line[:160] — immer gleich.
+        Neue Impl: subject = Email-Subject, token_line = Spec-Token-Zeile.
+        """
+        try:
+            subject, token_line = service.render_sms_preview(
+                "gr221-mallorca", user_id="default", report_type="morning",
+            )
+        except RuntimeError:
+            pytest.skip("Wetter-API nicht erreichbar")
+        assert subject != token_line, (
+            "subject und token_line dürfen NICHT identisch sein — "
+            "token_line muss das Spec-Token-Format sein, subject der Email-Betreff.\n"
+            f"  subject={subject!r}\n  token_line={token_line!r}"
+        )
+
+    def test_ac5_char_count_equals_token_line_length(self, client):
+        """AC-5: char_count im JSON muss exakt len(token_line) entsprechen."""
+        resp = client.get(
+            "/api/preview/gr221-mallorca/sms",
+            params={"type": "morning", "user_id": "default"},
+        )
+        assert resp.status_code in (200, 503)
+        if resp.status_code == 200:
+            data = resp.json()
+            assert data["char_count"] == len(data["token_line"]), (
+                f"char_count {data['char_count']} ≠ len(token_line) {len(data['token_line'])}"
+            )

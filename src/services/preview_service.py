@@ -66,7 +66,11 @@ class PreviewService:
         raise ValueError(f"Trip '{trip.id}' hat keine Stages")
 
     def _build_report(self, trip: "Trip", target: date, report_type: str):
-        """Gemeinsame Pipeline: segments → weather → format_email → TripReport."""
+        """Gemeinsame Pipeline: segments → weather → format_email → TripReport.
+
+        Returns: (report, segment_weather, stage_name) — segment_weather und
+        stage_name werden von render_sms_preview wiederverwendet (Issue #188).
+        """
         from services.trip_report_scheduler import TripReportSchedulerService
         scheduler = TripReportSchedulerService(self.settings)
         segments = scheduler._convert_trip_to_segments(trip, target)
@@ -91,7 +95,7 @@ class PreviewService:
         if trip.display_config and trip.report_config:
             trip.display_config.show_compact_summary = trip.report_config.show_compact_summary
 
-        return scheduler._formatter.format_email(
+        report = scheduler._formatter.format_email(
             segments=segment_weather,
             trip_name=trip.name,
             report_type=report_type,
@@ -101,6 +105,7 @@ class PreviewService:
             tz=trip_tz,
             profile=trip.aggregation.profile,
         )
+        return report, segment_weather, stage_name
 
     def render_email_preview(
         self,
@@ -115,7 +120,7 @@ class PreviewService:
             raise ValueError(f"Ungültiger report_type '{report_type}'")
         trip = self._load_trip(trip_id, user_id)
         target = self._resolve_target_date(trip, target_date)
-        report = self._build_report(trip, target, report_type)
+        report, _segments, _stage_name = self._build_report(trip, target, report_type)
         return report.email_html
 
     def render_sms_preview(
@@ -126,19 +131,23 @@ class PreviewService:
         report_type: str = "morning",
         target_date: str | None = None,
     ) -> tuple[str, str]:
-        """Rendert die SMS-Vorschau.
+        """Rendert die SMS-Vorschau via echter Spec-Token-Pipeline (Issue #188).
 
-        Returns: (subject, token_line). Trip-Reports erzeugen aktuell keinen
-        separaten SMS-Token; wir nehmen den Email-Subject als SMS-Proxy
-        (enthält bereits Schlüssel-Tokens) und kürzen auf <=160 Zeichen.
-        Echte SMS-Token-Pipeline für Trips ist Folge-Issue.
+        Returns: (email_subject, token_line). token_line ist sms_format.md
+        v2.1-konform (≤160 Zeichen, '{StageName}: {Forecast-Tokens...}').
         """
         if report_type not in VALID_REPORT_TYPES:
             raise ValueError(f"Ungültiger report_type '{report_type}'")
         trip = self._load_trip(trip_id, user_id)
         target = self._resolve_target_date(trip, target_date)
-        report = self._build_report(trip, target, report_type)
+        report, segment_weather, stage_name = self._build_report(trip, target, report_type)
 
-        subject = report.email_subject
-        token_line = subject if len(subject) <= 160 else subject[:160]
-        return subject, token_line
+        from src.formatters.sms_trip import SMSTripFormatter
+        # Input-Hygiene: ':' aus Stage-Namen entfernen, damit der Prefix-
+        # Separator ':' in sms_format.md §3.1 eindeutig bleibt.
+        clean_stage = (stage_name or "Etappe").replace(":", "")
+        token_line = SMSTripFormatter().format_sms(
+            segment_weather,
+            stage_name=clean_stage,
+        )
+        return report.email_subject, token_line

@@ -64,7 +64,7 @@ class PreviewService:
 
 ## Known Limitations
 
-- SMS-Token-Zeile wird aktuell aus `email_subject` getrimmt (max 160 Zeichen). Eine echte Token-Pipeline für Trip-Reports ist Folge-Issue.
+- SMS-Token-Pipeline ist implementiert (Issue #188).
 - Wetter-Provider-Calls bei jeder Vorschau — Caching erfolgt über bestehende Service-Schicht.
 
 ## Changelog
