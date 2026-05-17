@@ -106,6 +106,7 @@ class SMSTripFormatter:
         exposed_sections: Optional[list[ExposedSection]] = None,
         *,
         stage_name: Optional[str] = None,
+        report_type: str = "evening",
     ) -> str:
         """Generate v2.0 SMS via TokenLine pipeline.
 
@@ -114,6 +115,7 @@ class SMSTripFormatter:
             max_length: max SMS length (sms_format.md §1, default 160)
             exposed_sections: kept for API parity (Risk-Pfad rebuild)
             stage_name: prefix '{Name}: ' (v2.0 §2). Default: 'Etappe'.
+            report_type: 'morning' or 'evening' (default 'evening').
 
         Returns:
             v2.0 wire-format string, ≤ max_length chars.
@@ -129,7 +131,7 @@ class SMSTripFormatter:
         token_line = build_token_line(
             forecast,
             None,
-            report_type="evening",
+            report_type=report_type,
             stage_name=stage_name or "Etappe",
         )
         return render_sms(token_line, max_length=max_length)

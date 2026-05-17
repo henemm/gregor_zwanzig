@@ -149,5 +149,6 @@ class PreviewService:
         token_line = SMSTripFormatter().format_sms(
             segment_weather,
             stage_name=clean_stage,
+            report_type=report_type,
         )
         return report.email_subject, token_line
