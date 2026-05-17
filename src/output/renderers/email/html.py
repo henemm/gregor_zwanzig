@@ -16,6 +16,7 @@ from app.models import (
     SegmentWeatherData, ThunderLevel, UnifiedWeatherDisplayConfig,
     WeatherChange,
 )
+from app.profile import ActivityProfile
 from services.daylight_service import DaylightWindow
 from utils.timezone import local_fmt
 
@@ -29,6 +30,7 @@ from src.output.renderers.email.design_tokens import (
     G_BOX_WARNING_BG, G_BOX_DANGER_BG, G_BOX_INFO_BG,
     FONT_UI, FONT_DATA, WEB_FONT_LINK,
 )
+from src.output.renderers.email.profile_signature import profile_signature
 
 
 def _format_daylight_html(dl: DaylightWindow, *, tz: ZoneInfo) -> str:
@@ -116,8 +118,10 @@ def render_html(
     daylight: Optional[DaylightWindow],
     tz: ZoneInfo,
     friendly_keys: set[str],
+    profile: Optional[ActivityProfile] = None,
 ) -> str:
     """Render full HTML e-mail body. Pure function."""
+    sig = profile_signature(profile)
     report_date = segments[0].segment.start_time.strftime("%d.%m.%Y")
     sub_header = stage_name or ""
     stats_line = ""
@@ -285,7 +289,8 @@ def render_html(
 </head>
 <body>
     <div class="container">
-        <div class="header">
+        <div class="header" style="background:{sig.accent_hex};">
+            <div class="eyebrow" style="font-size:11px;font-variant:small-caps;letter-spacing:0.08em;opacity:0.85;color:#ffffff;margin-bottom:4px;">{sig.icon} {sig.eyebrow}</div>
             <h1>{trip_name}</h1>
             {"<h2>" + sub_header + "</h2>" if sub_header else ""}
             <p>{report_type.title()} Report – {report_date}{" | " + stats_line if stats_line else ""}</p>

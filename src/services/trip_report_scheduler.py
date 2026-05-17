@@ -345,6 +345,7 @@ class TripReportSchedulerService:
             exposed_sections=exposed_sections,
             daylight=daylight_window,
             tz=trip_tz,
+            profile=trip.aggregation.profile,
         )
 
         # 7. Send via configured channels

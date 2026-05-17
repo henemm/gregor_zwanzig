@@ -15,6 +15,7 @@ from app.models import (
     ExposedSection, SegmentWeatherData, UnifiedWeatherDisplayConfig,
     WeatherChange,
 )
+from app.profile import ActivityProfile
 from services.daylight_service import DaylightWindow
 
 from src.output.renderers.email.html import render_html
@@ -40,6 +41,7 @@ def render_email(
     tz: ZoneInfo,
     exposed_sections: Optional[list[ExposedSection]] = None,
     friendly_keys: set[str],
+    profile: Optional[ActivityProfile] = None,
 ) -> tuple[str, str]:
     """Returns (html_body, plain_body). Pure function.
 
@@ -73,6 +75,7 @@ def render_email(
         daylight=daylight,
         tz=tz,
         friendly_keys=friendly_keys,
+        profile=profile,
     )
     plain_body = render_plain(
         segments=segments,
@@ -91,6 +94,7 @@ def render_email(
         daylight=daylight,
         tz=tz,
         friendly_keys=friendly_keys,
+        profile=profile,
     )
     return html_body, plain_body
 

@@ -34,6 +34,7 @@ from app.models import (
     UnifiedWeatherDisplayConfig,
     WeatherChange,
 )
+from app.profile import ActivityProfile
 from services.daylight_service import DaylightWindow
 from services.risk_engine import RiskEngine
 from src.output.renderers.email import render_email
@@ -60,6 +61,7 @@ class TripReportFormatter:
         exposed_sections: Optional[list[ExposedSection]] = None,
         daylight: Optional[DaylightWindow] = None,
         tz: Optional[ZoneInfo] = None,
+        profile: Optional[ActivityProfile] = None,
     ) -> TripReport:
         """Format trip segments into HTML + plain-text email."""
         if not segments:
@@ -125,6 +127,7 @@ class TripReportFormatter:
             tz=self._tz,
             exposed_sections=exposed_sections,
             friendly_keys=self._friendly_keys,
+            profile=profile,
         )
         first_agg = segments[0].aggregated
         email_subject = self._generate_subject(

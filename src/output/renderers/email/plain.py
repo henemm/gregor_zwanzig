@@ -16,6 +16,7 @@ from app.models import (
     SegmentWeatherData, ThunderLevel, UnifiedWeatherDisplayConfig,
     WeatherChange,
 )
+from app.profile import ActivityProfile
 from services.daylight_service import DaylightWindow
 from utils.timezone import local_fmt
 
@@ -23,6 +24,7 @@ from src.output.renderers.email.helpers import (
     build_confidence_hint, build_segment_label, build_units_legend, fmt_val,
     format_change_line, shorten_stage_name, visible_cols,
 )
+from src.output.renderers.email.profile_signature import profile_signature
 
 
 def _format_daylight_plain(dl: DaylightWindow, *, tz: ZoneInfo) -> str:
@@ -112,10 +114,13 @@ def render_plain(
     daylight: Optional[DaylightWindow],
     tz: ZoneInfo,
     friendly_keys: set[str],
+    profile: Optional[ActivityProfile] = None,
 ) -> str:
     """Render full plain-text e-mail body. Pure function."""
+    sig = profile_signature(profile)
     lines = []
     report_date = segments[0].segment.start_time.strftime("%d.%m.%Y")
+    lines.append(f"{sig.icon} {sig.eyebrow}")
     lines.append(f"{trip_name} - {report_type.title()} Report")
     if stage_name:
         lines.append(stage_name)

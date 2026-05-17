@@ -99,6 +99,7 @@ class PreviewService:
             stage_name=stage_name,
             stage_stats=stage_stats,
             tz=trip_tz,
+            profile=trip.aggregation.profile,
         )
 
     def render_email_preview(
