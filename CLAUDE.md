@@ -175,6 +175,7 @@ Alle Module benoetigen Specs vor Implementierung:
 - `epic_140_output_vorschau` - Output-Vorschau-Tab im Trip-Detail-View: Email-iframe + iOS-Phone-Frame für SMS, Backend rendert HTML wie echte Mail (Epic #140 / Issue #189, Sub-Spec: `docs/specs/modules/issue_189_preview_tab_integration.md`)
 - `epic_137_wegpunkt_editor` - Vollständiger Wegpunkt-Editor mit EtappenStrip (Drag-Drop), SVG-Karte, Höhenprofil, Waypoint-Editor (Issues #166–#172, Spec: `docs/specs/modules/epic_137_wegpunkt_editor.md`)
 - `issue_202_region_feld` - Trip: optionales Region-Freitext-Feld (max 50 Zeichen), erfassbar in Wizard Step 1, angezeigt im Trip-Hero (Issue #202, Spec: `docs/specs/modules/issue_202_region_feld.md`)
+- `issue_254_email_template_vorarbeit` - Vorarbeiten für EPIC 9: Design-System Mail-Tokens-Dokumentation (app.css Single Source of Truth), html.py Inventar, Preview-Script (Issue #254, Spec: `docs/specs/modules/issue_254_email_template_vorarbeit.md`)
 
 ### Geplante Module
 Siehe GitHub Issues: https://github.com/henemm/gregor_zwanzig/issues

@@ -1,8 +1,10 @@
 /*
  * design_system_tokens.css — Begleit-CSS zur Spec docs/reference/design_system.md
  *
- * WICHTIG: Diese Datei kann von frontend/src/app.css abweichen.
- * Im Zweifel gilt app.css. Stand-Sync via Issue #213 (2026-05-16).
+ * ENTSCHEIDUNG (Issue #254, §12 in design_system.md): app.css ist die verbindliche
+ * Mail-Token-Quelle. Diese Datei ist Archiv-Referenz des Anthropic-Artifacts.
+ * Mail-Templates verwenden src/output/renderers/email/design_tokens.py,
+ * das app.css spiegelt. Namens-Mapping und g-weather-thunder Bug-Issue → §12.
  */
 
 /* Gregor 20 — Design Tokens v2 (Single Source of Truth)

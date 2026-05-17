@@ -294,6 +294,49 @@ explizit, vor jeder Frontend-/UI-Arbeit beide Quellen zu konsultieren.
 - `frontend_components.md` — bestehende SvelteKit-Komponenten-Karte.
 - `sveltekit_best_practices.md` — Frontend-Architektur, ergänzt diese Design-Referenz technisch.
 
+### Mail-Tokens: Single Source of Truth
+
+**Entscheidung (Issue #254):** `frontend/src/app.css` ist die **verbindliche
+Single Source of Truth** für alle Mail-Template-Tokens.
+`src/output/renderers/email/design_tokens.py` ist die **abgeleitete Python-Kopie**
+dieser Token-Werte und wird bei jeder Änderung in `app.css` mit-aktualisiert.
+Die Datei `design_system_tokens.css` in diesem Verzeichnis ist eine
+**Archiv-Referenz** des ursprünglichen Anthropic-Artifacts und nicht produktiv.
+
+Hex-Werte der 11 Kern-Mail-Tokens sind aktuell 100 % konsistent zwischen
+`app.css` und `design_tokens.py`. Es bestehen jedoch **Namens-Abweichungen**
+zwischen der alten Anthropic-Tokens-Datei und der heutigen `app.css`:
+
+| Alter Name (Anthropic) | Neuer Name (`app.css`) | Verwendung |
+|---|---|---|
+| `--g-good` | `--g-success` | Wetter OK, low risk |
+| `--g-bad` | `--g-danger` | Alarm, kritisch |
+| `--g-ink-2` | `--g-ink-muted` | Sekundärtext, Body |
+| `--g-ink-3` | `--g-ink-muted` | (zusammengeführt mit `--g-ink-muted`) |
+| `--g-ink-4` | `--g-ink-faint` | Tertiär, Labels, Placeholder |
+| `--g-card` | `--g-surface-1` | Erhöhte Surface (Card) |
+| `--g-weather-thunder` | `--g-wx-thunder` | Gewitter (siehe Farbkonflikt unten) |
+
+**Farbkonflikt `--g-weather-thunder` / `--g-wx-thunder` (offener Bug-Issue):**
+Die alte Anthropic-Tokens-Datei definierte `--g-weather-thunder` als rotes
+`#c43a2a`, die heutige `app.css` definiert `--g-wx-thunder` als violettes
+`#5a3a7a`. Beide Werte werden derzeit an verschiedenen Stellen referenziert.
+Konflikt wird als **separates Bug-Issue geführt: Issue #256**. Im Mail-Template
+gilt bis zur Entscheidung: violett (`#5a3a7a`) gemäß `app.css`.
+
+### Inventar: `src/output/renderers/email/html.py`
+
+Status-Bewertung der sechs Bausteine, die EPIC 9 (Issue #236) adressiert:
+
+| Baustein | Status | Details |
+|---|---|---|
+| Dunkel-Footer (`#1a1a18`) | **FEHLT** | Footer nutzt `G_PAPER` (`#f6f4ee`), kein dunkles `#1a1a18` |
+| Daylight-Bar (SVG) | **FEHLT** | `_format_daylight_html()` rendert `<div>` mit Border-Left-Box, kein SVG |
+| Tag-System ok/warn/risk/info | **FEHLT** | Box-Tints (`G_BOX_WARNING_BG`, `G_BOX_DANGER_BG`, `G_BOX_INFO_BG`) vorhanden, kein Pill/Tag-System |
+| ActivityProfile-Parameter | **VORHANDEN** | `profile: Optional[ActivityProfile]`, `profile_signature()`, `sig.accent_hex` im Header |
+| Inline-CSS-Only | **VORHANDEN** | `<style>`-Block + Inline-Styles, Google Fonts rein dekorativ |
+| Inter Tight + JetBrains Mono | **VORHANDEN** | `FONT_UI`, `FONT_DATA`, `WEB_FONT_LINK` aus `design_tokens.py` vollständig eingebunden |
+
 ---
 
 *Abgelegt von Claude (Tech-Lead-Rolle) am 2026-05-12, aktualisiert am 2026-05-16 (Issue #213). Quelle: Anthropic-Design-Artifact `puP0zvL3b8eR2dsEqc3R9Q`, synchronisiert mit `app.css`-Ist-Stand.*
