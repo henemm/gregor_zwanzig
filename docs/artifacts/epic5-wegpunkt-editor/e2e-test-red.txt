@@ -1,0 +1,110 @@
+[1A[2K[2m[WebServer] [22m[33m10:56:29 AM [vite-plugin-svelte] src/routes/+layout.svelte:48:6 This reference only captures the initial value of `darkMode`. Did you mean to reference it inside a closure instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m46:   if (browser) {
+[2m[WebServer] [22m47:     darkMode = localStorage.getItem('gz-dark') === '1';
+[2m[WebServer] [22m48:     if (darkMode) applyDarkMode(true);
+[2m[WebServer] [22m                    ^
+[2m[WebServer] [22m49:   }
+[2m[WebServer] [22m50: 
+
+[1A[2K[2m[WebServer] [22m[33m10:56:29 AM [vite-plugin-svelte] src/routes/compare/+page.svelte:17:36 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+
+[1A[2K[2m[WebServer] [22m15:   let { data } = $props();
+[2m[WebServer] [22m16: 
+[2m[WebServer] [22m17:   let locations: Location[] = $state(data.locations);
+[2m[WebServer] [22m                                             ^
+[2m[WebServer] [22m18:   let subscriptions: Subscription[] = $state(data.subscriptions ?? []);
+[2m[WebServer] [22m19:   let selectedIds = $state<string[]>(locations.map((l) => l.id));
+
+[1A[2K[2m[WebServer] [22m[33m10:56:29 AM [vite-plugin-svelte] src/routes/compare/+page.svelte:18:44 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+
+[1A[2K[2m[WebServer] [22m16: 
+[2m[WebServer] [22m17:   let locations: Location[] = $state(data.locations);
+[2m[WebServer] [22m18:   let subscriptions: Subscription[] = $state(data.subscriptions ?? []);
+[2m[WebServer] [22m                                                     ^
+[2m[WebServer] [22m19:   let selectedIds = $state<string[]>(locations.map((l) => l.id));
+[2m[WebServer] [22m20: 
+
+[1A[2K[2m[WebServer] [22m[33m10:56:29 AM [vite-plugin-svelte] src/routes/compare/+page.svelte:19:36 This reference only captures the initial value of `locations`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m17:   let locations: Location[] = $state(data.locations);
+[2m[WebServer] [22m18:   let subscriptions: Subscription[] = $state(data.subscriptions ?? []);
+[2m[WebServer] [22m19:   let selectedIds = $state<string[]>(locations.map((l) => l.id));
+[2m[WebServer] [22m                                                  ^
+[2m[WebServer] [22m20: 
+[2m[WebServer] [22m21:   const WEEKDAYS = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+[2m[WebServer] [22m[33m10:56:29 AM [vite-plugin-svelte] src/routes/compare/+page.svelte:256:2 This reference only captures the initial value of `locations`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m254: 
+[2m[WebServer] [22m255:   let openGroups = $state<Set<string>>(new Set(
+[2m[WebServer] [22m256:     locations.filter((l) => l.group).map((l) => l.group!)
+[2m[WebServer] [22m                  ^
+[2m[WebServer] [22m257:   ));
+[2m[WebServer] [22m258: 
+
+[1A[2K[2m[WebServer] [22m[33m10:56:29 AM [vite-plugin-svelte] src/routes/locations/+page.svelte:19:36 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+
+[1A[2K[2m[WebServer] [22m17:   let { data } = $props();
+[2m[WebServer] [22m18: 
+[2m[WebServer] [22m19:   let locations: Location[] = $state(data.locations);
+[2m[WebServer] [22m                                             ^
+[2m[WebServer] [22m20:   let refetching = $state(false);
+[2m[WebServer] [22m21:   async function refetchLocations() {
+
+[1A[2K[2m[WebServer] [22m[33m10:56:29 AM [vite-plugin-svelte] src/routes/account/+page.svelte:8:21 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+
+[1A[2K[2m[WebServer] [22m 6:   let { data } = $props();
+[2m[WebServer] [22m 7: 
+[2m[WebServer] [22m 8:   let mailTo = $state(data.profile?.mail_to ?? '');
+[2m[WebServer] [22m                              ^
+[2m[WebServer] [22m 9:   let signalPhone = $state(data.profile?.signal_phone ?? '');
+[2m[WebServer] [22m10:   let signalApiKey = $state('');
+[2m[WebServer] [22m[33m10:56:29 AM [vite-plugin-svelte] src/routes/account/+page.svelte:9:26 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m 7: 
+[2m[WebServer] [22m 8:   let mailTo = $state(data.profile?.mail_to ?? '');
+[2m[WebServer] [22m 9:   let signalPhone = $state(data.profile?.signal_phone ?? '');
+[2m[WebServer] [22m                                   ^
+[2m[WebServer] [22m10:   let signalApiKey = $state('');
+[2m[WebServer] [22m11:   let telegramChatId = $state(data.profile?.telegram_chat_id ?? '');
+[2m[WebServer] [22m[33m10:56:29 AM [vite-plugin-svelte] src/routes/account/+page.svelte:11:29 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[2m[WebServer] [22mhttps://svelte.dev/e/state_referenced_locally[39m
+[2m[WebServer] [22m 9:   let signalPhone = $state(data.profile?.signal_phone ?? '');
+[2m[WebServer] [22m10:   let signalApiKey = $state('');
+[2m[WebServer] [22m11:   let telegramChatId = $state(data.profile?.telegram_chat_id ?? '');
+[2m[WebServer] [22m                                      ^
+[2m[WebServer] [22m12:   let successMsg = $state<string | null>(null);
+[1A[2K  7) [tests] › e2e/waypoints-editor.spec.ts:172:1 › AC-13: Pausetag zeigt PauseStageView statt MapCanvas 
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+    [2m  - waiting for getByTestId('stage-card-pause-1')[22m
+
+
+      197 | 	await page.getByTestId('trip-detail-tab-stages').click();
+      198 | 	// Pausetag-Kachel anklicken (Index 1)
+    > 199 | 	await page.getByTestId('stage-card-pause-1').click();
+          | 	                                             ^
+      200 | 	await expect(page.getByTestId('pause-stage-view')).toBeVisible();
+      201 | 	await expect(page.getByTestId('map-canvas')).not.toBeVisible();
+      202 | });
+        at /home/hem/gregor_zwanzig/frontend/e2e/waypoints-editor.spec.ts:199:47
+
+    Error Context: test-results/waypoints-editor-AC-13-Pau-90fe4-seStageView-statt-MapCanvas-tests/error-context.md
+
+
+[1A[2K  7 failed
+    [tests] › e2e/waypoints-editor.spec.ts:20:1 › AC-1: EtappenStrip zeigt StageCards für alle 3 Etappen 
+    [tests] › e2e/waypoints-editor.spec.ts:33:1 › AC-5: MapCanvas zeigt Routenlinie mit stroke var(--g-accent) 
+    [tests] › e2e/waypoints-editor.spec.ts:46:1 › AC-6: WaypointPin für suggested Waypoint zeigt Bestätigen-Button 
+    [tests] › e2e/waypoints-editor.spec.ts:81:1 › AC-10: suggested Waypoint zeigt Bestätigen + Verwerfen Buttons 
+    [tests] › e2e/waypoints-editor.spec.ts:116:1 › AC-11: manueller Waypoint zeigt Umbenennen + Löschen, kein Bestätigen 
+    [tests] › e2e/waypoints-editor.spec.ts:153:1 › AC-12: Speichern-Button schickt PUT /api/trips/:id 
+    [tests] › e2e/waypoints-editor.spec.ts:172:1 › AC-13: Pausetag zeigt PauseStageView statt MapCanvas 
+  1 passed (1.3m)

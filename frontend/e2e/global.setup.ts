@@ -1,6 +1,7 @@
 import { test as setup, expect } from '@playwright/test';
 
 const authFile = 'playwright/.auth/admin.json';
+const TRIP_ID = 'e2e-cockpit-test';
 
 setup('authenticate and seed test data', async ({ page }) => {
 	await page.goto('/login');
@@ -16,9 +17,12 @@ setup('authenticate and seed test data', async ({ page }) => {
 	const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
 	const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
 
+	// Sicherstellen dass ein altes Trip gelöscht wird (404 ignorieren)
+	await page.request.delete(`/api/trips/${TRIP_ID}`);
+
 	await page.request.post('/api/trips', {
 		data: {
-			id: 'e2e-cockpit-test',
+			id: TRIP_ID,
 			name: 'E2E Cockpit Test Trip',
 			stages: [
 				{
@@ -26,7 +30,8 @@ setup('authenticate and seed test data', async ({ page }) => {
 					name: 'Gestern',
 					date: yesterday,
 					waypoints: [
-						{ id: 'e2e-wp-1', name: 'Start', lat: 42.1, lon: 9.0, elevation_m: 800 }
+						{ id: 'e2e-wp-1', name: 'Start', lat: 42.1, lon: 9.0, elevation_m: 800 },
+						{ id: 'e2e-wp-1b', name: 'Zwischenstopp', lat: 42.15, lon: 9.05, elevation_m: 1000 }
 					]
 				},
 				{
@@ -39,12 +44,10 @@ setup('authenticate and seed test data', async ({ page }) => {
 					]
 				},
 				{
-					id: 'e2e-stage-3',
-					name: 'Morgen',
+					id: 'e2e-stage-pause',
+					name: 'Pausentag',
 					date: tomorrow,
-					waypoints: [
-						{ id: 'e2e-wp-4', name: 'Ende', lat: 42.4, lon: 9.3, elevation_m: 400 }
-					]
+					waypoints: []
 				}
 			],
 			report_config: {

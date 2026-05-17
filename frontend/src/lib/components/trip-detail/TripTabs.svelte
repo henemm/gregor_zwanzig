@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Tabs } from 'bits-ui';
 	import TripOverview from './TripOverview.svelte';
+	import WaypointsPanel from './WaypointsPanel.svelte';
 	import {
 		EmailIframe,
 		SmsPhoneFrame,
@@ -92,6 +93,8 @@
 		<Tabs.Content value={tab.value} data-testid="trip-detail-panel-{tab.value}">
 			{#if tab.value === 'overview' && trip}
 				<TripOverview {trip} />
+			{:else if tab.value === 'stages' && trip}
+				<WaypointsPanel {trip} />
 			{:else if tab.value === 'preview' && trip}
 				<div class="preview-shell">
 					<div class="preview-controls" data-testid="preview-controls">

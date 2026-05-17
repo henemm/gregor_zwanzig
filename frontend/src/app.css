@@ -63,6 +63,8 @@
     /* Ink-Stufen */
     --g-ink-muted:    #5c5a52;
     --g-ink-faint:    #9c9a90;
+    --g-ink-strong:   var(--g-ink);
+    --g-surface-raised: var(--g-surface-1);
 
     /* Semantic */
     --g-success:      #3a7d44;

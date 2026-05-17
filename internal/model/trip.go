@@ -52,6 +52,7 @@ type Waypoint struct {
 	Lon        float64 `json:"lon"`
 	ElevationM int     `json:"elevation_m"`
 	TimeWindow *string `json:"time_window,omitempty"`
+	Suggested  bool    `json:"suggested,omitempty"`
 }
 
 type Stage struct {

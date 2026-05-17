@@ -173,6 +173,7 @@ Alle Module benoetigen Specs vor Implementierung:
 - `preview_service` - Backend-Service für Email- und SMS-Vorschau, nutzt `TripReportFormatter.format_email()` ohne Versand (Epic #140, Spec: `docs/specs/modules/preview_service.md`)
 - `issue_188_sms_preview_token_pipeline` - Verkabelung render_sms_preview() auf SMSTripFormatter (Issue #188, Spec: `docs/specs/modules/issue_188_sms_preview_token_pipeline.md`)
 - `epic_140_output_vorschau` - Output-Vorschau-Tab im Trip-Detail-View: Email-iframe + iOS-Phone-Frame für SMS, Backend rendert HTML wie echte Mail (Epic #140 / Issue #189, Sub-Spec: `docs/specs/modules/issue_189_preview_tab_integration.md`)
+- `epic_137_wegpunkt_editor` - Vollständiger Wegpunkt-Editor mit EtappenStrip (Drag-Drop), SVG-Karte, Höhenprofil, Waypoint-Editor (Issues #166–#172, Spec: `docs/specs/modules/epic_137_wegpunkt_editor.md`)
 
 ### Geplante Module
 Siehe GitHub Issues: https://github.com/henemm/gregor_zwanzig/issues
