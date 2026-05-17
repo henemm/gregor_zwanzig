@@ -1,5 +1,5 @@
 """
-TDD: Tests fuer HTML-E-Mail-Versand (Subscription-Pipeline + echter Gmail-E2E).
+TDD: Tests fuer HTML-E-Mail-Versand (Subscription-Pipeline + echter Stalwart-E2E).
 
 Mocks sind in diesem Projekt verboten (siehe CLAUDE.md "KEINE MOCKED TESTS!").
 Diese Datei enthaelt nur zwei Tests:
@@ -7,12 +7,12 @@ Diese Datei enthaelt nur zwei Tests:
 - ``TestSubscriptionEmailGeneration``: prueft die Generierungs-Pipeline ohne Versand
   (schnell, ohne Netz fuer den SMTP-Teil — load_all_locations() macht ggf. einen
   echten Forecast-Call, aber kein SMTP).
-- ``TestRealGmailE2E``: echter End-to-End-Test (Gmail SMTP + IMAP). Per
+- ``TestRealStalwartE2E``: echter End-to-End-Test (Stalwart SMTP + IMAP). Per
   ``@pytest.mark.email`` standardmaessig deselected.
 
 Frueher gab es zusaetzlich ``TestHTMLEmailFormat``, ``TestEndToEndEmailSending``
 und ``TestEmailRetryMechanism``. Diese wurden in Issue #201 ersatzlos entfernt:
-ihre Coverage steckt 1:1 in ``TestRealGmailE2E::test_real_gmail_e2e_html_email``
+ihre Coverage steckt 1:1 in ``TestRealStalwartE2E::test_real_gmail_e2e_html_email``
 (echter Versand statt fake SMTP-Server).
 """
 import os
@@ -90,7 +90,7 @@ class TestSubscriptionEmailGeneration:
 
 
 @pytest.mark.email
-class TestRealGmailE2E:
+class TestRealStalwartE2E:
     """
     ECHTER E2E Test: Sendet via SMTP, ruft via IMAP ab, analysiert.
 
@@ -100,8 +100,8 @@ class TestRealGmailE2E:
     def test_real_gmail_e2e_html_email(self):
         """
         Echter E2E Test:
-        1. Sende E-Mail via Gmail SMTP
-        2. Rufe E-Mail via Gmail IMAP aus "Gesendet" ab
+        1. Sende E-Mail via Stalwart SMTP
+        2. Rufe E-Mail via Stalwart IMAP aus INBOX ab
         3. Analysiere MIME-Struktur
         4. Verifiziere HTML-Inhalt
         """
@@ -113,7 +113,7 @@ class TestRealGmailE2E:
         from app.loader import load_all_locations, load_compare_subscriptions
         from outputs.email import EmailOutput
 
-        # 1. Lade echte Daten (Gmail fuer Tests, spart Resend-Quota)
+        # 1. Lade echte Daten (Stalwart fuer Tests, spart Resend-Quota)
         settings = Settings().for_testing()
         if not settings.can_send_email():
             pytest.skip("SMTP nicht konfiguriert")

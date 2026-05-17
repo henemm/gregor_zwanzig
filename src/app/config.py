@@ -85,12 +85,12 @@ class Settings(BaseSettings):
     imap_user: Optional[str] = Field(default=None, description="IMAP username (default: smtp_user)")
     imap_pass: Optional[str] = Field(default=None, description="IMAP password (default: smtp_pass)")
 
-    # Google SMTP settings (for tests — avoids burning Resend quota)
-    google_smtp_host: Optional[str] = Field(default=None, description="Gmail SMTP host for tests")
-    google_smtp_port: int = Field(default=587, description="Gmail SMTP port for tests")
-    google_smtp_user: Optional[str] = Field(default=None, description="Gmail SMTP user for tests")
-    google_smtp_pass: Optional[str] = Field(default=None, description="Gmail SMTP password for tests")
-    google_mail_from: Optional[str] = Field(default=None, description="Gmail sender for tests")
+    # Test-Account-Credentials (gregor-test@henemm.com auf Stalwart)
+    test_smtp_user: Optional[str] = Field(default=None, description="Test SMTP username (GZ_TEST_SMTP_USER)")
+    test_smtp_pass: Optional[str] = Field(default=None, description="Test SMTP password (GZ_TEST_SMTP_PASS)")
+    test_mail_from: Optional[str] = Field(default=None, description="Test sender address (GZ_TEST_MAIL_FROM)")
+    test_imap_user: Optional[str] = Field(default=None, description="Test IMAP username (GZ_TEST_IMAP_USER)")
+    test_imap_pass: Optional[str] = Field(default=None, description="Test IMAP password (GZ_TEST_IMAP_PASS)")
 
     # Internal flag set by for_testing() / Test-User-Routing.
     # Wenn True, blockiert EmailOutput jeden Versand über Resend (Production-Versanddienst).
@@ -134,19 +134,19 @@ class Settings(BaseSettings):
         return self.inbound_address or self.smtp_user
 
     def for_testing(self) -> "Settings":
-        """Return a copy with Google SMTP credentials for test email sending.
+        """Return a copy with Stalwart test credentials for test email sending.
 
-        Falls back to regular SMTP if Google credentials are not configured.
-        Preserves IMAP and mail_to settings.
+        Falls back to is_test_mode=True only if test credentials are not configured.
+        smtp_host/imap_host bleiben unverändert — gleicher Stalwart-Server wie Produktion.
         """
-        if not self.google_smtp_host or not self.google_smtp_user:
+        if not self.test_smtp_user or not self.test_smtp_pass:
             return self.model_copy(update={"is_test_mode": True})
         return self.model_copy(update={
-            "smtp_host": self.google_smtp_host,
-            "smtp_port": self.google_smtp_port,
-            "smtp_user": self.google_smtp_user,
-            "smtp_pass": self.google_smtp_pass,
-            "mail_from": self.google_mail_from or self.google_smtp_user,
+            "smtp_user": self.test_smtp_user,
+            "smtp_pass": self.test_smtp_pass,
+            "mail_from": self.test_mail_from or f"{self.test_smtp_user}@henemm.com",
+            "imap_user": self.test_imap_user or self.test_smtp_user,
+            "imap_pass": self.test_imap_pass or self.test_smtp_pass,
             "is_test_mode": True,
         })
 
@@ -161,13 +161,13 @@ class Settings(BaseSettings):
 
         Loads data/users/{user_id}/user.json and overrides recipient fields.
         SMTP/Signal/Telegram infrastructure stays global.
-        Test users automatically use Gmail SMTP instead of Resend.
+        Test users automatically use Stalwart test credentials instead of Resend.
         Falls back to global settings if profile doesn't exist or fields are empty.
         """
         import json
         from pathlib import Path
 
-        # Test users use Gmail to avoid burning Resend quota
+        # Test users use Stalwart test account to avoid burning Resend quota
         base = self.for_testing() if self._is_test_user(user_id) else self
 
         profile_path = Path(f"data/users/{user_id}/user.json")

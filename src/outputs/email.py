@@ -54,8 +54,8 @@ class EmailOutput:
             raise OutputConfigError(
                 "email",
                 "Test-Versand über Resend ist gesperrt. "
-                "Test-Mails MÜSSEN über Gmail gehen — siehe CLAUDE.md / Settings.for_testing(). "
-                "Konfiguriere GZ_GOOGLE_SMTP_HOST/USER/PASS oder verwende einen Test-User "
+                "Test-Mails MÜSSEN über Stalwart gehen — siehe Settings.for_testing(). "
+                "Konfiguriere GZ_TEST_SMTP_USER/PASS oder verwende einen Test-User "
                 "(User-ID enthält 'test' oder 'tdd').",
             )
 

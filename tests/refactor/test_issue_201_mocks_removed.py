@@ -28,13 +28,13 @@ def test_ac1_no_mock_imports_or_calls():
 
 
 def test_ac2_only_two_test_classes():
-    """AC-2: Genau 2 Test-Klassen (TestSubscriptionEmailGeneration + TestRealGmailE2E)."""
+    """AC-2: Genau 2 Test-Klassen (TestSubscriptionEmailGeneration + TestRealStalwartE2E)."""
     content = TARGET.read_text()
     classes = re.findall(r"^class (Test\w+)", content, re.MULTILINE)
     assert sorted(classes) == sorted([
         "TestSubscriptionEmailGeneration",
-        "TestRealGmailE2E",
-    ]), f"Erwartet [TestSubscriptionEmailGeneration, TestRealGmailE2E], got {classes}"
+        "TestRealStalwartE2E",
+    ]), f"Erwartet [TestSubscriptionEmailGeneration, TestRealStalwartE2E], got {classes}"
 
 
 def test_ac3_imports_point_to_services():

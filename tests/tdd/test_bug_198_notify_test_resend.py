@@ -32,27 +32,25 @@ class TestBug198NotifyTestUsesGmail:
             "notify.py: test_notify() muss .for_testing() anwenden — Test-Mails immer über Gmail"
 
     def test_for_testing_routes_to_gmail_smtp(self):
-        """AC-2: for_testing() setzt smtp_host auf google_smtp_host."""
+        """AC-2: for_testing() setzt smtp_user auf test_smtp_user (Stalwart-Test-Account)."""
         sys.path.insert(0, str(REPO_ROOT / "src"))
         from app.config import Settings
 
-        # Custom Settings mit Gmail-Werten setzen
         s = Settings(
             smtp_host="smtp.resend.com",
             smtp_user="resend",
             smtp_pass="prod-key",
-            google_smtp_host="smtp.gmail.com",
-            google_smtp_user="gmail-user@gmail.com",
-            google_smtp_pass="gmail-pass",
+            test_smtp_user="gregor-test",
+            test_smtp_pass="testpass",
         )
         test_s = s.for_testing()
-        assert test_s.smtp_host == "smtp.gmail.com", \
-            f"for_testing() muss Gmail-Host nutzen, war {test_s.smtp_host}"
-        assert test_s.smtp_host != "smtp.resend.com", \
-            "for_testing() darf NIE Resend nutzen"
+        assert test_s.smtp_user == "gregor-test", \
+            f"for_testing() muss test_smtp_user nutzen, war {test_s.smtp_user}"
+        assert test_s.smtp_user != "resend", \
+            "for_testing() darf NIE Resend-User nutzen"
 
     def test_with_user_profile_default_and_for_testing(self):
-        """AC-3: with_user_profile('default').for_testing() liefert Gmail-Routing."""
+        """AC-3: with_user_profile('default').for_testing() liefert Stalwart-Test-Routing."""
         sys.path.insert(0, str(REPO_ROOT / "src"))
         from app.config import Settings
 
@@ -60,10 +58,9 @@ class TestBug198NotifyTestUsesGmail:
             smtp_host="smtp.resend.com",
             smtp_user="resend",
             smtp_pass="prod",
-            google_smtp_host="smtp.gmail.com",
-            google_smtp_user="gmail@x",
-            google_smtp_pass="gmail-pass",
+            test_smtp_user="gregor-test",
+            test_smtp_pass="testpass",
         )
         result = s.with_user_profile("default").for_testing()
-        assert result.smtp_host == "smtp.gmail.com", \
-            f"Channel-Test soll Gmail nutzen, war {result.smtp_host}"
+        assert result.smtp_user == "gregor-test", \
+            f"Channel-Test soll Test-Account nutzen, war {result.smtp_user}"

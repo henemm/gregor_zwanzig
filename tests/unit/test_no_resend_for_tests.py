@@ -36,10 +36,9 @@ def _resend_settings(**overrides) -> Settings:
         smtp_pass="re_xxx",
         mail_to="user@example.com",
         mail_from="bot@henemm.com",
-        google_smtp_host="smtp.gmail.com",
-        google_smtp_port=587,
-        google_smtp_user="henemm.gmbh@gmail.com",
-        google_smtp_pass="gmail-app-password",
+        test_smtp_user="gregor-test",
+        test_smtp_pass="testpass",
+        test_mail_from="gregor-test@henemm.com",
     )
     base.update(overrides)
     return Settings(**base)
@@ -55,19 +54,18 @@ def test_for_testing_setzt_is_test_mode():
 
 
 def test_for_testing_swappt_auf_gmail():
-    """for_testing() muss SMTP-Host auf Gmail umstellen, wenn google_smtp_* gesetzt."""
+    """for_testing() muss smtp_user auf Test-Credentials umstellen, wenn test_smtp_* gesetzt."""
     s = _resend_settings().for_testing()
-    assert s.smtp_host == "smtp.gmail.com"
-    assert s.smtp_user == "henemm.gmbh@gmail.com"
+    assert s.smtp_user == "gregor-test"
+    assert s.smtp_host == "smtp.resend.com"  # Host bleibt — Stalwart-Server gleich wie Produktion
 
 
 def test_for_testing_ohne_gmail_credentials_setzt_trotzdem_flag():
-    """Wenn google_smtp_* fehlen, bleibt SMTP unverändert — aber is_test_mode wird gesetzt,
+    """Wenn test_smtp_* fehlen, bleibt SMTP unverändert — aber is_test_mode wird gesetzt,
     damit der EmailOutput-Wächter den Resend-Versand blockiert."""
     s = _resend_settings(
-        google_smtp_host=None,
-        google_smtp_user=None,
-        google_smtp_pass=None,
+        test_smtp_user=None,
+        test_smtp_pass=None,
     ).for_testing()
     assert s.is_test_mode is True
     assert "resend" in s.smtp_host.lower()
@@ -80,12 +78,12 @@ def test_email_output_blockiert_resend_im_test_modus():
         EmailOutput(s)
     msg = str(exc_info.value).lower()
     assert "resend" in msg
-    assert "gmail" in msg or "test" in msg
+    assert "stalwart" in msg or "test" in msg
 
 
 def test_email_output_erlaubt_gmail_im_test_modus():
-    """EmailOutput MUSS funktionieren, wenn is_test_mode=True und Host = Gmail."""
-    s = _resend_settings().for_testing()
+    """EmailOutput MUSS funktionieren, wenn is_test_mode=True und Host = Stalwart (kein Resend)."""
+    s = _resend_settings(smtp_host="mail.henemm.com").for_testing()
     output = EmailOutput(s)
     assert output is not None
 

@@ -1,0 +1,115 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 5 items
+
+tests/tdd/test_email_routing_stalwart.py FFF.F                           [100%]
+
+=================================== FAILURES ===================================
+_____ TestForTestingStalwartRouting.test_settings_has_test_smtp_user_field _____
+
+self = <tdd.test_email_routing_stalwart.TestForTestingStalwartRouting object at 0x7ece2c7b6c30>
+
+    def test_settings_has_test_smtp_user_field(self):
+        """
+        AC-2: Settings muss test_smtp_user-Feld haben (ersetzt google_smtp_user).
+        GIVEN: frisches Settings-Objekt
+        WHEN:  Attribut test_smtp_user abgerufen
+        THEN:  kein AttributeError, Wert ist None wenn nicht gesetzt
+        """
+        from app.config import Settings
+        s = Settings()
+        # Field must exist — currently it doesn't → AttributeError → RED
+>       assert hasattr(s, "test_smtp_user"), "Settings fehlt Feld test_smtp_user"
+E       AssertionError: Settings fehlt Feld test_smtp_user
+E       assert False
+E        +  where False = hasattr(Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... signal_api_url='', telegram_bot_token='***REDACTED***', telegram_chat_id='8346977700'), 'test_smtp_user')
+
+tests/tdd/test_email_routing_stalwart.py:25: AssertionError
+_ TestForTestingStalwartRouting.test_for_testing_sets_smtp_user_from_test_creds _
+
+self = <tdd.test_email_routing_stalwart.TestForTestingStalwartRouting object at 0x7ece2be27f20>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7ece2a87acc0>
+
+    def test_for_testing_sets_smtp_user_from_test_creds(self, monkeypatch):
+        """
+        AC-1: for_testing() liest GZ_TEST_SMTP_USER und setzt smtp_user.
+        GIVEN: GZ_TEST_SMTP_USER=gregor-test, GZ_TEST_SMTP_PASS=testpass gesetzt
+        WHEN:  Settings().for_testing() aufgerufen
+        THEN:  result.smtp_user == "gregor-test", result.is_test_mode == True
+        """
+        monkeypatch.setenv("GZ_TEST_SMTP_USER", "gregor-test")
+        monkeypatch.setenv("GZ_TEST_SMTP_PASS", "testpass")
+    
+        from app.config import Settings
+        result = Settings().for_testing()
+    
+>       assert result.smtp_user == "gregor-test", (
+            f"smtp_user sollte 'gregor-test' sein, ist '{result.smtp_user}'"
+        )
+E       AssertionError: smtp_user sollte 'gregor-test' sein, ist 'gregor_zwanzig'
+E       assert 'gregor_zwanzig' == 'gregor-test'
+E         
+E         - gregor-test
+E         + gregor_zwanzig
+
+tests/tdd/test_email_routing_stalwart.py:44: AssertionError
+__ TestForTestingStalwartRouting.test_for_testing_overrides_imap_credentials ___
+
+self = <tdd.test_email_routing_stalwart.TestForTestingStalwartRouting object at 0x7ece2b0ae930>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7ece2a879fa0>
+
+    def test_for_testing_overrides_imap_credentials(self, monkeypatch):
+        """
+        AC-1: for_testing() setzt auch imap_user + imap_pass auf Test-Credentials.
+        GIVEN: GZ_TEST_IMAP_USER=gregor-test, GZ_TEST_IMAP_PASS=testpass gesetzt
+        WHEN:  Settings().for_testing() aufgerufen
+        THEN:  result.imap_user == "gregor-test", result.imap_pass == "testpass"
+        """
+        monkeypatch.setenv("GZ_TEST_SMTP_USER", "gregor-test")
+        monkeypatch.setenv("GZ_TEST_SMTP_PASS", "testpass")
+        monkeypatch.setenv("GZ_TEST_IMAP_USER", "gregor-test")
+        monkeypatch.setenv("GZ_TEST_IMAP_PASS", "testpass")
+    
+        from app.config import Settings
+        result = Settings().for_testing()
+    
+>       assert result.imap_user == "gregor-test", (
+            f"imap_user sollte 'gregor-test' sein, ist '{result.imap_user}'"
+        )
+E       AssertionError: imap_user sollte 'gregor-test' sein, ist 'gregor_zwanzig'
+E       assert 'gregor_zwanzig' == 'gregor-test'
+E         
+E         - gregor-test
+E         + gregor_zwanzig
+
+tests/tdd/test_email_routing_stalwart.py:64: AssertionError
+________ TestForTestingStalwartRouting.test_google_smtp_fields_removed _________
+
+self = <tdd.test_email_routing_stalwart.TestForTestingStalwartRouting object at 0x7ece2b0aeba0>
+
+    def test_google_smtp_fields_removed(self):
+        """
+        Regression: Die alten google_smtp_*-Felder dürfen nicht mehr existieren.
+        GIVEN: frisches Settings-Objekt
+        WHEN:  Attribut google_smtp_host abgerufen
+        THEN:  AttributeError (Feld entfernt)
+        """
+        from app.config import Settings
+        s = Settings()
+>       assert not hasattr(s, "google_smtp_host"), (
+            "google_smtp_host sollte entfernt sein (durch test_smtp_user ersetzt)"
+        )
+E       AssertionError: google_smtp_host sollte entfernt sein (durch test_smtp_user ersetzt)
+E       assert not True
+E        +  where True = hasattr(Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... signal_api_url='', telegram_bot_token='***REDACTED***', telegram_chat_id='8346977700'), 'google_smtp_host')
+
+tests/tdd/test_email_routing_stalwart.py:95: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_email_routing_stalwart.py::TestForTestingStalwartRouting::test_settings_has_test_smtp_user_field
+FAILED tests/tdd/test_email_routing_stalwart.py::TestForTestingStalwartRouting::test_for_testing_sets_smtp_user_from_test_creds
+FAILED tests/tdd/test_email_routing_stalwart.py::TestForTestingStalwartRouting::test_for_testing_overrides_imap_credentials
+FAILED tests/tdd/test_email_routing_stalwart.py::TestForTestingStalwartRouting::test_google_smtp_fields_removed
+========================= 4 failed, 1 passed in 0.14s ==========================
