@@ -2,8 +2,8 @@
 entity_id: issue_189_preview_tab_integration
 type: module
 created: 2026-05-16
-updated: 2026-05-16
-status: draft
+updated: 2026-05-17
+status: approved
 version: "1.0"
 tags: [frontend, preview, trip-detail, epic-140]
 parent_spec: docs/specs/modules/epic_140_output_vorschau.md
@@ -13,7 +13,7 @@ parent_spec: docs/specs/modules/epic_140_output_vorschau.md
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (User, 2026-05-17 — Workflow-Retrofit: Code/Tests bereits committed, Phase 7 Validate folgt)
 
 ## Purpose
 
