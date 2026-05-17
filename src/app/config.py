@@ -209,3 +209,17 @@ class Settings(BaseSettings):
     def can_send_telegram(self) -> bool:
         """Check if Telegram configuration is complete."""
         return bool(self.telegram_bot_token and self.telegram_chat_id)
+
+    _SENSITIVE_FIELDS = {
+        "smtp_pass", "imap_pass", "test_smtp_pass", "test_imap_pass",
+        "sms_api_key", "signal_api_key", "telegram_bot_token",
+    }
+
+    def __repr__(self) -> str:
+        fields = []
+        for name, value in self.__iter__():
+            if name in self._SENSITIVE_FIELDS and value:
+                fields.append(f"{name}='***'")
+            else:
+                fields.append(f"{name}={value!r}")
+        return f"Settings({', '.join(fields)})"

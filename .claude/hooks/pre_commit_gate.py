@@ -162,6 +162,37 @@ def run_tests(config: dict) -> tuple[bool, str]:
         return False, f"Failed to run tests: {e}"
 
 
+_SECRET_PATTERNS = [
+    # Telegram Bot Token: 10 Ziffern : 35 alphanumerische Zeichen
+    r"[0-9]{9,10}:[A-Za-z0-9_-]{35}",
+    # Google App Password: 16 Kleinbuchstaben (kein Leerzeichen)
+    r"smtp_pass='[a-z]{16}'",
+    r"smtp_pass=\"[a-z]{16}\"",
+    # Generische Credential-Zuweisungen mit echten Werten (nicht Platzhalter)
+    r"(smtp_pass|imap_pass|test_smtp_pass|test_imap_pass|api_key|bot_token)='[A-Za-z0-9+/._-]{12,}'",
+]
+
+
+def check_staged_for_secrets(project_root) -> list[str]:
+    """Scannt staged Dateien auf bekannte Secret-Muster. Gibt Fundstellen zurück."""
+    import re
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--cached", "--unified=0"],
+            cwd=project_root,
+            capture_output=True,
+            text=True,
+        )
+        findings = []
+        for pattern in _SECRET_PATTERNS:
+            for match in re.finditer(pattern, result.stdout):
+                context = result.stdout[max(0, match.start()-60):match.end()+20].replace("\n", " ")
+                findings.append(f"Pattern '{pattern[:40]}...' in: {context[:120]}")
+        return findings
+    except Exception:
+        return []
+
+
 def check_for_ui_changes(config: dict) -> bool:
     """Check if staged changes include UI files."""
     project_root = get_project_root()
@@ -228,6 +259,20 @@ def main():
 
     if not is_git_commit(tool_input, config):
         sys.exit(0)
+
+    # Secret-Scan: staged Dateien auf Credentials prüfen
+    project_root = get_project_root()
+    secret_findings = check_staged_for_secrets(project_root)
+    if secret_findings:
+        print("=" * 70, file=sys.stderr)
+        print("BLOCKED - Credentials in staged files detected!", file=sys.stderr)
+        print("=" * 70, file=sys.stderr)
+        for finding in secret_findings[:5]:
+            print(f"  {finding}", file=sys.stderr)
+        print("", file=sys.stderr)
+        print("Entferne die Credentials aus den Dateien, bevor du committed.", file=sys.stderr)
+        print("=" * 70, file=sys.stderr)
+        sys.exit(2)
 
     # Issue #196 — AMBIGUOUS-Verdict-Block (before test run)
     wf = _load_active_workflow()
