@@ -1,0 +1,25 @@
+============================= test session starts ==============================
+collected 3 items
+
+tests/tdd/test_trip_alert_profile.py F..                                 [100%]
+
+=================================== FAILURES ===================================
+_______________ test_ac1_trip_alert_passes_profile_to_formatter ________________
+
+    def test_ac1_trip_alert_passes_profile_to_formatter():
+        """
+        AC-1: trip_alert.py ruft format_email mit profile=trip.aggregation.profile
+        auf. Strukturelle Verifikation via Source-Inspection (kein Mock).
+        """
+        source = TRIP_ALERT_PY.read_text()
+>       assert "trip.aggregation.profile" in source, (
+            "trip_alert liest trip.aggregation.profile nicht — "
+            "Profil muss aus dem Trip an den Formatter weitergegeben werden"
+        )
+E       AssertionError: trip_alert liest trip.aggregation.profile nicht — Profil muss aus dem Trip an den Formatter weitergegeben werden
+E       assert 'trip.aggregation.profile' in '"""\nTrip alert service - sends immediate alerts on significant weather changes.\n\nFeature 3.4: Alert bei Änderungen...\n\n        logger.info(\n            f"Alert sent for trip {trip.name}: {len(changes)} changes detected"\n        )\n'
+
+tests/tdd/test_trip_alert_profile.py:46: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_trip_alert_profile.py::test_ac1_trip_alert_passes_profile_to_formatter
+========================= 1 failed, 2 passed in 0.13s ==========================

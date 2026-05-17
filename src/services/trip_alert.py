@@ -408,6 +408,7 @@ class TripAlertService:
             report_type="alert",
             display_config=trip.display_config,
             changes=changes,
+            profile=trip.aggregation.profile,
         )
 
         config = trip.report_config

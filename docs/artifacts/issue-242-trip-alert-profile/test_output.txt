@@ -1,0 +1,13 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 56 items / 1 deselected / 55 selected
+
+tests/tdd/test_trip_alert_profile.py ...                                 [  5%]
+tests/tdd/test_email_profile_pipeline.py .......................         [ 47%]
+tests/tdd/test_email_design_tokens.py .......................            [ 89%]
+tests/unit/test_renderers_email.py ......                                [100%]
+
+======================= 55 passed, 1 deselected in 0.18s =======================
