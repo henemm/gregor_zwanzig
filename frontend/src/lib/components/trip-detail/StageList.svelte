@@ -35,7 +35,7 @@
 	{#if !trip.stages || trip.stages.length === 0}
 		<p data-testid="trip-stage-empty" class="empty">Keine Etappen geplant</p>
 	{:else}
-		{#each trip.stages as stage, index (stage.id)}
+		{#each trip.stages as stage, index (stage.id || `idx-${index}`)}
 			{@const boundary = boundaries.find((b) => b.stageId === stage.id)}
 			<StageDetailRow
 				{stage}

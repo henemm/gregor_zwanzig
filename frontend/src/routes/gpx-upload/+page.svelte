@@ -100,6 +100,7 @@
 				name: tripName,
 				stages: [
 					{
+						id: generateId(tripName) + '-t1',
 						name: parsedStage.name,
 						date: parsedStage.date,
 						waypoints: parsedStage.waypoints

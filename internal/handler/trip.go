@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -74,6 +76,27 @@ func validateTrip(t model.Trip) error {
 	return nil
 }
 
+// randomShortID liefert 8 zufaellige Hex-Zeichen (4 Bytes).
+func randomShortID() string {
+	b := make([]byte, 4)
+	if _, err := rand.Read(b); err != nil {
+		panic("crypto/rand unavailable: " + err.Error())
+	}
+	return hex.EncodeToString(b)
+}
+
+// ensureStageIDs belegt leere Stage.ID-Felder mit einer generierten ID.
+// Issue #243: Verhindert dass leere Stage-IDs ins Backend gelangen und
+// Svelte each_key_duplicate-Fehler im Frontend ausloesen.
+func ensureStageIDs(stages []model.Stage) []model.Stage {
+	for i := range stages {
+		if stages[i].ID == "" {
+			stages[i].ID = randomShortID()
+		}
+	}
+	return stages
+}
+
 func CreateTripHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
@@ -84,6 +107,8 @@ func CreateTripHandler(s *store.Store) http.HandlerFunc {
 			w.Write([]byte(`{"error":"bad_request"}`))
 			return
 		}
+
+		trip.Stages = ensureStageIDs(trip.Stages)
 
 		if err := validateTrip(trip); err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -156,6 +181,7 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 		if req.Stages != nil {
 			existing.Stages = *req.Stages
 		}
+		existing.Stages = ensureStageIDs(existing.Stages)
 		if req.AvalancheRegions != nil {
 			existing.AvalancheRegions = *req.AvalancheRegions
 		}

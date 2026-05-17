@@ -3,7 +3,7 @@
   "name": "KHW 403",
   "stages": [
     {
-      "id": "",
+      "id": "9f6853e0",
       "name": "KHW_00a: Von Troblach Bhf nach Helmhotel",
       "date": "2026-05-04",
       "waypoints": [
@@ -42,7 +42,7 @@
       ]
     },
     {
-      "id": "",
+      "id": "f744ff97",
       "name": "KHW_11: von Dolinza Alm nach Nötsch im Gailtal",
       "date": "2026-05-04",
       "waypoints": [
@@ -89,7 +89,7 @@
       ]
     },
     {
-      "id": "",
+      "id": "57e43ea5",
       "name": "KHW_10: von Egger Alm nach Dolinza Alm",
       "date": "2026-05-04",
       "waypoints": [
@@ -136,7 +136,7 @@
       ]
     },
     {
-      "id": "",
+      "id": "b6aa4dfe",
       "name": "KHW_09: von Nassfeld nach Egger Alm",
       "date": "2026-05-04",
       "waypoints": [
@@ -183,7 +183,7 @@
       ]
     },
     {
-      "id": "",
+      "id": "52534500",
       "name": "KHW_08: von Straniger Alm nach Nassfeld/LIVIO",
       "date": "2026-05-04",
       "waypoints": [
@@ -238,7 +238,7 @@
       ]
     },
     {
-      "id": "",
+      "id": "d059c95b",
       "name": "KHW_07: von Zollnersee Hütte nach Straniger Alm",
       "date": "2026-05-04",
       "waypoints": [
@@ -269,7 +269,7 @@
       ]
     },
     {
-      "id": "",
+      "id": "8df365ca",
       "name": "KHW_06: von Almgasthof Valentinalm nach Zollnersee Hütte",
       "date": "2026-05-04",
       "waypoints": [
@@ -332,7 +332,7 @@
       ]
     },
     {
-      "id": "",
+      "id": "3347ff6f",
       "name": "KHW_05: von Wolayersee-Hütte nach Almgasthof Valentinalm",
       "date": "2026-05-04",
       "waypoints": [
@@ -363,7 +363,7 @@
       ]
     },
     {
-      "id": "",
+      "id": "66f3094a",
       "name": "KHW_04: von Hochweißsteinhaus nach Wolayersee-Hütte",
       "date": "2026-05-04",
       "waypoints": [
@@ -418,7 +418,7 @@
       ]
     },
     {
-      "id": "",
+      "id": "91bbc11b",
       "name": "KHW_03: von Porzehütte nach Hochweißsteinhaus",
       "date": "2026-05-04",
       "waypoints": [
@@ -481,7 +481,7 @@
       ]
     },
     {
-      "id": "",
+      "id": "85c2119e",
       "name": "KHW_02: von Obstansersee-Hütte nach Porzehütte",
       "date": "2026-05-04",
       "waypoints": [
@@ -528,7 +528,7 @@
       ]
     },
     {
-      "id": "",
+      "id": "5d1091d7",
       "name": "KHW_01: Sillianer Hütte nach Obstansersee-Hütte",
       "date": "2026-05-04",
       "waypoints": [
@@ -559,7 +559,7 @@
       ]
     },
     {
-      "id": "",
+      "id": "8fc6ee0d",
       "name": "KHW_00b: Von Helmhotel nach Sillianer Hütte",
       "date": "2026-05-04",
       "waypoints": [

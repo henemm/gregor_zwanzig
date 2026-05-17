@@ -3,7 +3,7 @@
   "name": "GR221 Mallorca",
   "stages": [
     {
-      "id": "",
+      "id": "2d108fe0",
       "name": "Tag 1: von Valldemossa nach Deià",
       "date": "2026-02-23",
       "waypoints": [
@@ -42,7 +42,7 @@
       ]
     },
     {
-      "id": "",
+      "id": "9304b7c5",
       "name": "Tag 2: von Deià nach Sóller",
       "date": "2026-02-24",
       "waypoints": [
@@ -81,7 +81,7 @@
       ]
     },
     {
-      "id": "",
+      "id": "7c409dd6",
       "name": "Tag 3: von Sóller nach Tossals Verds",
       "date": "2026-02-25",
       "waypoints": [
@@ -120,7 +120,7 @@
       ]
     },
     {
-      "id": "",
+      "id": "6f5959a4",
       "name": "Tag 4: von Tossals Verds nach Lluc",
       "date": "2026-02-26",
       "waypoints": [

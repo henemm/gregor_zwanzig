@@ -1,0 +1,13 @@
+=== RUN   TestProbe_ExistingIDsPreserved
+--- PASS: TestProbe_ExistingIDsPreserved (0.00s)
+=== RUN   TestProbe_NilStages
+--- PASS: TestProbe_NilStages (0.00s)
+=== RUN   TestProbe_UpdateTrip_NoStagesField
+--- PASS: TestProbe_UpdateTrip_NoStagesField (0.00s)
+=== RUN   TestProbe_13EmptyStages_AllUnique
+    probe_243_test.go:94: 13 generated IDs: [7dc39403 fef9b26a cea5bfba a0a8df5a c9081429 4b6d855b 27cbde4b 2f427b72 fdf45d7f 9bd297e6 495c9a3b 670350fb 4741133a]
+--- PASS: TestProbe_13EmptyStages_AllUnique (0.00s)
+=== RUN   TestProbe_CreateTrip_ResponseBodyHasGeneratedIDs
+--- PASS: TestProbe_CreateTrip_ResponseBodyHasGeneratedIDs (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/handler	(cached)

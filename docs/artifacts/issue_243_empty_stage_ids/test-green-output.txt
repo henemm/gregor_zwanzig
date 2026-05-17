@@ -1,0 +1,10 @@
+=== RUN   TestCreateTrip_EmptyStageID_AutoGenerates
+--- PASS: TestCreateTrip_EmptyStageID_AutoGenerates (0.00s)
+=== RUN   TestUpdateTrip_EmptyStageID_AutoGenerates
+--- PASS: TestUpdateTrip_EmptyStageID_AutoGenerates (0.00s)
+=== RUN   TestUpdateTrip_MultipleEmptyStageIDs_AllUnique
+--- PASS: TestUpdateTrip_MultipleEmptyStageIDs_AllUnique (0.00s)
+=== RUN   TestUpdateTrip_EmptyStageID_ResponseContainsGeneratedID
+--- PASS: TestUpdateTrip_EmptyStageID_ResponseContainsGeneratedID (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/handler	(cached)
