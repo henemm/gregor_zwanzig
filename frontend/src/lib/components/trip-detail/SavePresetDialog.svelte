@@ -47,7 +47,12 @@
 		enabledIds.filter((id) => indicatorCapable(id) && friendlyMap[id])
 	);
 	const indicatorCount = $derived(friendlyIds.length);
-	const rawCount = $derived(enabledIds.length - indicatorCount);
+	// Rohwert: nur indicator-capable Metriken mit friendlyMap[id] === false zaehlen.
+	// Metriken ohne indicatorCapable (z.B. temperature) zaehlen weder als Roh noch Indikator.
+	// Konsistent mit metricsEditor.ts::buildPresetSummary.
+	const rawCount = $derived(
+		enabledIds.filter((id) => indicatorCapable(id) && !friendlyMap[id]).length
+	);
 	const canSubmit = $derived(name.trim().length > 0 && !saving);
 
 	function reset() {

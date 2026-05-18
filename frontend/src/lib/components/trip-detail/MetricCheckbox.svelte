@@ -2,6 +2,7 @@
 	// Epic #138 Issues #174 + #175 — Eine Metric-Zeile mit Custom-Checkbox
 	// und Roh/Indikator-Pill-Toggle.
 	// Spec: docs/specs/modules/epic_138_174_178_metriken_ui.md §3
+	import { Pill } from '$lib/components/ui/pill/index.js';
 
 	interface MetricEntry {
 		id: string;
@@ -43,44 +44,60 @@
 </script>
 
 <li class="metric-row">
-	<input
-		type="checkbox"
-		data-testid="weather-metrics-tab-checkbox-{metric.id}"
-		checked={enabled}
-		onchange={toggleEnabled}
-		class="metric-checkbox"
+	<button
+		type="button"
+		role="checkbox"
+		aria-checked={enabled}
 		aria-label={metric.label}
-	/>
+		data-testid="weather-metrics-tab-checkbox-{metric.id}"
+		onclick={toggleEnabled}
+		class="metric-checkbox"
+		class:checked={enabled}
+	>
+		{#if enabled}
+			<svg
+				class="check-icon"
+				viewBox="0 0 16 16"
+				fill="none"
+				xmlns="http://www.w3.org/2000/svg"
+				aria-hidden="true"
+			>
+				<path
+					d="M3 8.5l3.5 3.5L13 5"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				/>
+			</svg>
+		{/if}
+	</button>
 	<span class="metric-name">{metric.label}</span>
 	{#if metric.unit}
 		<span class="metric-unit">{metric.unit}</span>
 	{/if}
 	{#if indicatorCapable}
 		<span class="format-toggle">
-			<span
-				data-slot="pill"
-				data-tone={!useIndicator ? 'accent' : 'default'}
+			<Pill
+				tone={!useIndicator ? 'accent' : 'default'}
 				data-testid="weather-metrics-tab-format-raw-{metric.id}"
 				data-active={String(!useIndicator)}
-				class="pill-toggle"
-				class:active={!useIndicator}
+				class="pill-toggle {!useIndicator ? 'active' : ''}"
 				role="button"
-				tabindex="0"
+				tabindex={0}
 				onclick={setRaw}
-				onkeydown={(e) => keyActivate(e, setRaw)}
-			>Roh</span>
-			<span
-				data-slot="pill"
-				data-tone={useIndicator ? 'accent' : 'default'}
+				onkeydown={(e: KeyboardEvent) => keyActivate(e, setRaw)}
+			>Roh</Pill>
+			<Pill
+				tone={useIndicator ? 'accent' : 'default'}
 				data-testid="weather-metrics-tab-format-indicator-{metric.id}"
 				data-active={String(useIndicator)}
-				class="pill-toggle"
-				class:active={useIndicator}
+				class="pill-toggle {useIndicator ? 'active' : ''}"
 				role="button"
-				tabindex="0"
+				tabindex={0}
 				onclick={setIndicator}
-				onkeydown={(e) => keyActivate(e, setIndicator)}
-			>Indikator</span>
+				onkeydown={(e: KeyboardEvent) => keyActivate(e, setIndicator)}
+			>Indikator</Pill>
 		</span>
 	{/if}
 </li>
@@ -95,6 +112,32 @@
 	}
 	.metric-checkbox {
 		flex-shrink: 0;
+		width: 1.1rem;
+		height: 1.1rem;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0;
+		border: 1px solid var(--g-border, #ddd);
+		border-radius: 3px;
+		background: var(--g-surface, #fff);
+		color: var(--g-surface, #fff);
+		cursor: pointer;
+		line-height: 0;
+	}
+	.metric-checkbox.checked {
+		background: var(--g-accent, #c45a2a);
+		border-color: var(--g-accent, #c45a2a);
+		color: #fff;
+	}
+	.metric-checkbox:focus-visible {
+		outline: 2px solid var(--g-accent, #c45a2a);
+		outline-offset: 1px;
+	}
+	.check-icon {
+		width: 0.85rem;
+		height: 0.85rem;
+		display: block;
 	}
 	.metric-name {
 		flex: 1;
@@ -110,25 +153,16 @@
 		gap: 0.25rem;
 		flex-shrink: 0;
 	}
-	.pill-toggle {
-		display: inline-flex;
-		align-items: center;
-		padding: 0.15rem 0.55rem;
-		font-size: 0.7rem;
-		border-radius: 999px;
-		border: 1px solid var(--g-border, #ddd);
-		background: var(--g-surface, #fff);
-		color: var(--g-ink-faint, #888);
+	.format-toggle :global(.pill-toggle) {
 		cursor: pointer;
-		line-height: 1.2;
 		user-select: none;
 	}
-	.pill-toggle.active {
+	.format-toggle :global(.pill-toggle.active) {
 		background: var(--g-accent, #c45a2a);
 		color: #fff;
 		border-color: var(--g-accent, #c45a2a);
 	}
-	.pill-toggle:focus-visible {
+	.format-toggle :global(.pill-toggle:focus-visible) {
 		outline: 2px solid var(--g-accent, #c45a2a);
 		outline-offset: 1px;
 	}

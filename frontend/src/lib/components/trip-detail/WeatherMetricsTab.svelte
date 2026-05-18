@@ -294,12 +294,14 @@
 			{#if saveError}
 				<span data-testid="weather-metrics-tab-error" class="save-error">{saveError}</span>
 			{/if}
-			<button
-				type="button"
-				class="preset-trigger"
-				data-testid="save-preset-dialog-trigger"
-				onclick={() => (showSavePresetDialog = true)}
-			>Als Preset speichern</button>
+			{#if !isDirty}
+				<button
+					type="button"
+					class="preset-trigger"
+					data-testid="save-preset-dialog-trigger"
+					onclick={() => (showSavePresetDialog = true)}
+				>Als Preset speichern</button>
+			{/if}
 			<button
 				data-testid="weather-metrics-tab-save"
 				onclick={handleSave}
