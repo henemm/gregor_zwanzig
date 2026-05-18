@@ -297,6 +297,7 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
     return UnifiedWeatherDisplayConfig(
         trip_id=data.get("trip_id", ""),
         metrics=metrics,
+        preset_name=data.get("preset_name"),
         show_night_block=data.get("show_night_block", True),
         night_interval_hours=data.get("night_interval_hours", 2),
         thunder_forecast_days=data.get("thunder_forecast_days", 2),
@@ -701,6 +702,7 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             "multi_day_trend_reports": dc.multi_day_trend_reports,
             "sms_metrics": dc.sms_metrics,
             "updated_at": dc.updated_at.isoformat(),
+            **({"preset_name": dc.preset_name} if dc.preset_name is not None else {}),
         }
 
     # Serialize alert_rules (Issue #205) — always emit, even if empty

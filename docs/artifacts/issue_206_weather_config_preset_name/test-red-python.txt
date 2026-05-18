@@ -1,0 +1,235 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig
+configfile: pyproject.toml
+plugins: anyio-4.12.0
+collected 8 items
+
+tests/tdd/test_issue_206_weather_config_preset_name.py FFFFFFFF          [100%]
+
+=================================== FAILURES ===================================
+_____ TestModelPresetNameField.test_unified_display_config_has_preset_name _____
+
+self = <tdd.test_issue_206_weather_config_preset_name.TestModelPresetNameField object at 0x702091a0f350>
+
+    def test_unified_display_config_has_preset_name(self):
+        """GIVEN UnifiedWeatherDisplayConfig
+        WHEN das Objekt ohne preset_name erstellt wird
+        THEN hat es das Attribut preset_name mit Default None.
+        Spec AC-1 Grundlage — RED: Feld existiert noch nicht."""
+        from app.models import UnifiedWeatherDisplayConfig, MetricConfig
+        from datetime import datetime, timezone
+    
+        cfg = UnifiedWeatherDisplayConfig(
+            trip_id="t1",
+            metrics=[],
+        )
+        # Feld muss existieren, Default ist None
+>       assert hasattr(cfg, 'preset_name'), "UnifiedWeatherDisplayConfig hat kein preset_name-Feld"
+E       AssertionError: UnifiedWeatherDisplayConfig hat kein preset_name-Feld
+E       assert False
+E        +  where False = hasattr(UnifiedWeatherDisplayConfig(trip_id='t1', metrics=[], show_compact_summary=True, show_night_block=True, night_interval...'evening'], sms_metrics=[], updated_at=datetime.datetime(2026, 5, 18, 6, 47, 56, 333939, tzinfo=datetime.timezone.utc)), 'preset_name')
+
+tests/tdd/test_issue_206_weather_config_preset_name.py:38: AssertionError
+___ TestModelPresetNameField.test_unified_display_config_stores_preset_name ____
+
+self = <tdd.test_issue_206_weather_config_preset_name.TestModelPresetNameField object at 0x702091842c30>
+
+    def test_unified_display_config_stores_preset_name(self):
+        """GIVEN UnifiedWeatherDisplayConfig
+        WHEN mit preset_name='wandern' erstellt
+        THEN gibt cfg.preset_name == 'wandern' zurück.
+        RED: Feld existiert noch nicht."""
+        from app.models import UnifiedWeatherDisplayConfig
+    
+>       cfg = UnifiedWeatherDisplayConfig(
+            trip_id="t1",
+            metrics=[],
+            preset_name="wandern",
+        )
+E       TypeError: UnifiedWeatherDisplayConfig.__init__() got an unexpected keyword argument 'preset_name'
+
+tests/tdd/test_issue_206_weather_config_preset_name.py:48: TypeError
+________ TestParseDisplayConfigPresetName.test_parse_reads_preset_name _________
+
+self = <tdd.test_issue_206_weather_config_preset_name.TestParseDisplayConfigPresetName object at 0x702091842d50>
+
+    def test_parse_reads_preset_name(self):
+        """GIVEN display_config-JSON mit preset_name='wintersport'
+        WHEN _parse_display_config() aufgerufen wird
+        THEN ist result.preset_name == 'wintersport'.
+        RED: Feld wird nicht gelesen."""
+        from app.loader import _parse_display_config
+    
+        data = {
+            "trip_id": "t1",
+            "metrics": [],
+            "preset_name": "wintersport",
+        }
+        result = _parse_display_config(data)
+>       assert result.preset_name == "wintersport"
+               ^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'UnifiedWeatherDisplayConfig' object has no attribute 'preset_name'
+
+tests/tdd/test_issue_206_weather_config_preset_name.py:76: AttributeError
+_ TestParseDisplayConfigPresetName.test_parse_returns_none_when_preset_name_missing _
+
+self = <tdd.test_issue_206_weather_config_preset_name.TestParseDisplayConfigPresetName object at 0x702091842e70>
+
+    def test_parse_returns_none_when_preset_name_missing(self):
+        """GIVEN display_config-JSON ohne preset_name
+        WHEN _parse_display_config() aufgerufen wird
+        THEN ist result.preset_name is None (kein KeyError, kein AttributeError).
+        RED: Feld existiert nicht auf dem Objekt."""
+        from app.loader import _parse_display_config
+    
+        data = {
+            "trip_id": "t1",
+            "metrics": [],
+        }
+        result = _parse_display_config(data)
+>       assert result.preset_name is None
+               ^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'UnifiedWeatherDisplayConfig' object has no attribute 'preset_name'
+
+tests/tdd/test_issue_206_weather_config_preset_name.py:90: AttributeError
+_____ TestParseDisplayConfigPresetName.test_parse_handles_null_preset_name _____
+
+self = <tdd.test_issue_206_weather_config_preset_name.TestParseDisplayConfigPresetName object at 0x702091842f90>
+
+    def test_parse_handles_null_preset_name(self):
+        """GIVEN display_config-JSON mit preset_name=null
+        WHEN _parse_display_config() aufgerufen wird
+        THEN ist result.preset_name is None.
+        RED: Feld existiert nicht."""
+        from app.loader import _parse_display_config
+    
+        data = {
+            "trip_id": "t1",
+            "metrics": [],
+            "preset_name": None,
+        }
+        result = _parse_display_config(data)
+>       assert result.preset_name is None
+               ^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'UnifiedWeatherDisplayConfig' object has no attribute 'preset_name'
+
+tests/tdd/test_issue_206_weather_config_preset_name.py:105: AttributeError
+______ TestTripToDictPresetName.test_trip_to_dict_serializes_preset_name _______
+
+self = <tdd.test_issue_206_weather_config_preset_name.TestTripToDictPresetName object at 0x7020918430b0>
+
+    def test_trip_to_dict_serializes_preset_name(self):
+        """GIVEN Trip mit display_config.preset_name='wandern'
+        WHEN _trip_to_dict() aufgerufen wird
+        THEN enthält result['display_config']['preset_name'] == 'wandern'.
+        RED: preset_name wird nicht serialisiert."""
+        from app.loader import _trip_to_dict
+    
+>       trip = self._make_trip_with_preset("wandern")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_issue_206_weather_config_preset_name.py:143: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <tdd.test_issue_206_weather_config_preset_name.TestTripToDictPresetName object at 0x7020918430b0>
+preset_name = 'wandern'
+
+    def _make_trip_with_preset(self, preset_name):
+        """Hilfsfunktion: Trip mit display_config und preset_name."""
+        from app.models import UnifiedWeatherDisplayConfig
+        from app.trip import Trip, Stage, Waypoint
+        from datetime import date, time
+    
+        waypoint = Waypoint(id="W1", name="Start", lat=47.0, lon=10.0, elevation_m=1000)
+        stage = Stage(id="T1", name="Etappe 1", date=date(2026, 8, 1), waypoints=[waypoint])
+>       dc = UnifiedWeatherDisplayConfig(
+            trip_id="t-preset-test",
+            metrics=[],
+            preset_name=preset_name,
+        )
+E       TypeError: UnifiedWeatherDisplayConfig.__init__() got an unexpected keyword argument 'preset_name'
+
+tests/tdd/test_issue_206_weather_config_preset_name.py:123: TypeError
+____ TestTripToDictPresetName.test_trip_to_dict_omits_preset_name_when_none ____
+
+self = <tdd.test_issue_206_weather_config_preset_name.TestTripToDictPresetName object at 0x7020918431d0>
+
+    def test_trip_to_dict_omits_preset_name_when_none(self):
+        """GIVEN Trip mit display_config.preset_name=None
+        WHEN _trip_to_dict() aufgerufen wird
+        THEN fehlt 'preset_name' im serialisierten display_config (nicht als null-Wert).
+        RED: Feld existiert nicht auf dem Objekt."""
+        from app.loader import _trip_to_dict
+    
+>       trip = self._make_trip_with_preset(None)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_issue_206_weather_config_preset_name.py:159: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <tdd.test_issue_206_weather_config_preset_name.TestTripToDictPresetName object at 0x7020918431d0>
+preset_name = None
+
+    def _make_trip_with_preset(self, preset_name):
+        """Hilfsfunktion: Trip mit display_config und preset_name."""
+        from app.models import UnifiedWeatherDisplayConfig
+        from app.trip import Trip, Stage, Waypoint
+        from datetime import date, time
+    
+        waypoint = Waypoint(id="W1", name="Start", lat=47.0, lon=10.0, elevation_m=1000)
+        stage = Stage(id="T1", name="Etappe 1", date=date(2026, 8, 1), waypoints=[waypoint])
+>       dc = UnifiedWeatherDisplayConfig(
+            trip_id="t-preset-test",
+            metrics=[],
+            preset_name=preset_name,
+        )
+E       TypeError: UnifiedWeatherDisplayConfig.__init__() got an unexpected keyword argument 'preset_name'
+
+tests/tdd/test_issue_206_weather_config_preset_name.py:123: TypeError
+________ TestTripToDictPresetName.test_roundtrip_preserves_preset_name _________
+
+self = <tdd.test_issue_206_weather_config_preset_name.TestTripToDictPresetName object at 0x7020918432f0>
+
+    def test_roundtrip_preserves_preset_name(self):
+        """GIVEN Trip mit preset_name='skitouren' wird serialisiert und zurückgelesen
+        WHEN _trip_to_dict() → _parse_display_config(result['display_config'])
+        THEN ist roundtrip.preset_name == 'skitouren'.
+        RED: Roundtrip schlägt fehl weil Feld nicht existiert."""
+        from app.loader import _trip_to_dict, _parse_display_config
+    
+>       trip = self._make_trip_with_preset("skitouren")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_issue_206_weather_config_preset_name.py:173: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <tdd.test_issue_206_weather_config_preset_name.TestTripToDictPresetName object at 0x7020918432f0>
+preset_name = 'skitouren'
+
+    def _make_trip_with_preset(self, preset_name):
+        """Hilfsfunktion: Trip mit display_config und preset_name."""
+        from app.models import UnifiedWeatherDisplayConfig
+        from app.trip import Trip, Stage, Waypoint
+        from datetime import date, time
+    
+        waypoint = Waypoint(id="W1", name="Start", lat=47.0, lon=10.0, elevation_m=1000)
+        stage = Stage(id="T1", name="Etappe 1", date=date(2026, 8, 1), waypoints=[waypoint])
+>       dc = UnifiedWeatherDisplayConfig(
+            trip_id="t-preset-test",
+            metrics=[],
+            preset_name=preset_name,
+        )
+E       TypeError: UnifiedWeatherDisplayConfig.__init__() got an unexpected keyword argument 'preset_name'
+
+tests/tdd/test_issue_206_weather_config_preset_name.py:123: TypeError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_issue_206_weather_config_preset_name.py::TestModelPresetNameField::test_unified_display_config_has_preset_name
+FAILED tests/tdd/test_issue_206_weather_config_preset_name.py::TestModelPresetNameField::test_unified_display_config_stores_preset_name
+FAILED tests/tdd/test_issue_206_weather_config_preset_name.py::TestParseDisplayConfigPresetName::test_parse_reads_preset_name
+FAILED tests/tdd/test_issue_206_weather_config_preset_name.py::TestParseDisplayConfigPresetName::test_parse_returns_none_when_preset_name_missing
+FAILED tests/tdd/test_issue_206_weather_config_preset_name.py::TestParseDisplayConfigPresetName::test_parse_handles_null_preset_name
+FAILED tests/tdd/test_issue_206_weather_config_preset_name.py::TestTripToDictPresetName::test_trip_to_dict_serializes_preset_name
+FAILED tests/tdd/test_issue_206_weather_config_preset_name.py::TestTripToDictPresetName::test_trip_to_dict_omits_preset_name_when_none
+FAILED tests/tdd/test_issue_206_weather_config_preset_name.py::TestTripToDictPresetName::test_roundtrip_preserves_preset_name
+============================== 8 failed in 0.13s ===============================

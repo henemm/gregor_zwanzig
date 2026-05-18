@@ -11,9 +11,24 @@
 
 import type { Trip } from '$lib/types';
 
+const TEMPLATE_LABELS: Record<string, string> = {
+	wandern: 'Wandern',
+	wintersport: 'Wintersport',
+	skitouren: 'Skitouren',
+	'alpen-trekking': 'Alpen-Trekking',
+	radtour: 'Radtour',
+	wassersport: 'Wassersport',
+	allgemein: 'Allgemein',
+	summer_trekking: 'Sommer-Trekking',
+};
+
 const DEFAULT_LABEL = 'Standard-Metriken';
 
 export function getPresetLabel(trip: Trip): string {
+	const savedKey = trip.display_config?.preset_name;
+	if (savedKey && savedKey in TEMPLATE_LABELS) {
+		return TEMPLATE_LABELS[savedKey];
+	}
 	const profile = trip.aggregation?.profile;
 	if (profile === 'wintersport') return 'Wintersport-Standard';
 	if (profile === 'wandern') return 'Wandern-Standard';
@@ -38,7 +53,7 @@ export function getActiveMetrics(trip: Trip): string[] {
 	// (Non-Array, Non-String-Elemente) sind moeglich. Wir greifen ueber `unknown`
 	// zu, damit die defensiven Branches kompilieren, ohne dass wir das Interface
 	// aufweichen muessen.
-	const metrics: unknown = trip.weather_config?.metrics;
+	const metrics: unknown = trip.display_config?.metrics;
 	if (Array.isArray(metrics)) {
 		if (metrics.every((m): m is string => typeof m === 'string')) {
 			return metrics;

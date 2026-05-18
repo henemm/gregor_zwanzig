@@ -477,7 +477,7 @@
 <WeatherConfigDialog
 	open={weatherConfigTarget !== null}
 	entityName={weatherConfigTarget?.name ?? ''}
-	currentConfig={weatherConfigTarget?.display_config}
+	currentConfig={weatherConfigTarget?.display_config as Record<string, unknown> | undefined}
 	onsave={handleWeatherSave}
 	onclose={() => (weatherConfigTarget = null)}
 />

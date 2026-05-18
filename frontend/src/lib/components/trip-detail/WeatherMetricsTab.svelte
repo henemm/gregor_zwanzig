@@ -62,16 +62,17 @@
 				fMap[m.id] = true;
 			}
 		}
-		const saved = trip.display_config as Record<string, unknown> | undefined;
-		const savedMetrics = saved?.metrics as
-			| Array<{ metric_id: string; enabled: boolean; use_friendly_format?: boolean }>
-			| undefined;
+		const savedMetrics = trip.display_config?.metrics;
 		if (savedMetrics) {
 			for (const mc of savedMetrics) {
 				eMap[mc.metric_id] = mc.enabled;
 				fMap[mc.metric_id] = mc.use_friendly_format ?? true;
 			}
 		}
+		const savedPreset = trip.display_config?.preset_name;
+		selectedTemplate = (savedPreset && templates.some((t) => t.id === savedPreset))
+			? savedPreset
+			: '';
 		enabledMap = eMap;
 		friendlyMap = fMap;
 	}
@@ -135,7 +136,12 @@
 				enabled: enabledMap[m.id] ?? m.default_enabled,
 				use_friendly_format: friendlyMap[m.id] ?? true
 			}));
-			await api.put(`/api/trips/${trip.id}/weather-config`, { metrics });
+			const payload = {
+				...(trip.display_config ?? {}),
+				metrics,
+				preset_name: selectedTemplate || undefined,
+			};
+			await api.put(`/api/trips/${trip.id}/weather-config`, payload);
 			saveSuccess = true;
 			setTimeout(() => {
 				saveSuccess = false;

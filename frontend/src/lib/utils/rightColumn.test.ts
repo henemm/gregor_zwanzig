@@ -23,7 +23,7 @@ import {
 	type ReportSchedule
 } from './rightColumn.ts';
 
-import type { Aggregation, ReportConfig, Trip, WeatherConfig } from '../types.ts';
+import type { Aggregation, ReportConfig, Trip, WeatherConfigMetric } from '../types.ts';
 
 // =============================================================================
 // Helpers
@@ -132,11 +132,9 @@ test('getDefaultMetricsForProfile > undefined → []', () => {
 
 // getActiveMetrics
 
-test('getActiveMetrics > AC-14a: weather_config.metrics gesetzt → genau diese Werte', () => {
-	// Issue #207: Backend liefert metrics als string[] (legacy). Spec hat
-	// inzwischen WeatherConfigMetric[], aber Off-Spec-Form bleibt akzeptiert.
+test('getActiveMetrics > AC-14a: display_config.metrics gesetzt → genau diese Werte', () => {
 	const trip = tripWith({
-		weather_config: { metrics: ['temp_min', 'wind_max'] } as unknown as WeatherConfig
+		display_config: { metrics: ['temp_min', 'wind_max'] as unknown as WeatherConfigMetric[] }
 	});
 	assert.deepEqual(getActiveMetrics(trip), ['temp_min', 'wind_max']);
 });
@@ -160,28 +158,25 @@ test('getActiveMetrics > Trip ohne weather_config und ohne aggregation → []', 
 	assert.deepEqual(getActiveMetrics(trip), []);
 });
 
-test('getActiveMetrics > weather_config.metrics leer ([]) → leeres Array', () => {
+test('getActiveMetrics > display_config.metrics leer ([]) → leeres Array', () => {
 	const trip = tripWith({
-		weather_config: { metrics: [] },
+		display_config: { metrics: [] },
 		aggregation: { profile: 'wandern' }
 	});
-	// Array.isArray([]) === true → explizit konfigurierte (leere) Liste zaehlt.
 	assert.deepEqual(getActiveMetrics(trip), []);
 });
 
-test('getActiveMetrics > weather_config.metrics ist kein Array → Fallback auf profile', () => {
-	// Issue #207: Off-Spec — metrics ist String statt Array, defensiver Fallback.
+test('getActiveMetrics > display_config.metrics ist kein Array → Fallback auf profile', () => {
 	const trip = tripWith({
-		weather_config: { metrics: 'temp_min' } as unknown as WeatherConfig,
+		display_config: { metrics: 'temp_min' } as unknown as import('../types.ts').DisplayConfig,
 		aggregation: { profile: 'allgemein' }
 	});
 	assert.deepEqual(getActiveMetrics(trip), ['temp_min', 'temp_max', 'wind_max', 'precip_sum']);
 });
 
-test('getActiveMetrics > weather_config.metrics mit Non-String → Fallback auf Profile-Default', () => {
-	// Issue #207: Off-Spec — Array enthaelt Non-String-Element, defensiver Fallback.
+test('getActiveMetrics > display_config.metrics mit Non-String → Fallback auf Profile-Default', () => {
 	const trip = tripWith({
-		weather_config: { metrics: ['temp_min', 42] } as unknown as WeatherConfig,
+		display_config: { metrics: ['temp_min', 42] } as unknown as import('../types.ts').DisplayConfig,
 		aggregation: { profile: 'allgemein' }
 	});
 	assert.deepEqual(getActiveMetrics(trip), ['temp_min', 'temp_max', 'wind_max', 'precip_sum']);
@@ -311,4 +306,41 @@ test('getActiveMetrics > AC-20: kein weather_config.metrics, profile = "summer_t
 
 test('prettyLabel > AC-21: "uv_index" → "UV-Index"', () => {
 	assert.equal(prettyLabel('uv_index'), 'UV-Index');
+});
+
+// =============================================================================
+// Issue #206 — preset_name in display_config
+// Spec: docs/specs/modules/issue_206_weather_config_preset_name.md
+// =============================================================================
+
+test('getActiveMetrics > #206 AC-7: display_config.metrics gesetzt → diese Metriken zurück', () => {
+	const trip = tripWith({
+		display_config: { metrics: ['temp_max', 'wind_max'] as unknown as WeatherConfigMetric[] },
+	});
+	const result = getActiveMetrics(trip);
+	assert.deepEqual(result, ['temp_max', 'wind_max']);
+});
+
+test('getPresetLabel > #206 AC-3: display_config.preset_name="wandern" → "Wandern" (nicht "Wandern-Standard")', () => {
+	const trip = tripWith({
+		display_config: { preset_name: 'wandern' },
+		aggregation: { profile: 'wintersport' }
+	});
+	assert.equal(getPresetLabel(trip), 'Wandern');
+});
+
+test('getPresetLabel > #206 AC-3b: display_config.preset_name="wintersport" → "Wintersport"', () => {
+	const trip = tripWith({
+		display_config: { preset_name: 'wintersport' },
+		aggregation: { profile: 'wandern' }
+	});
+	assert.equal(getPresetLabel(trip), 'Wintersport');
+});
+
+test('getPresetLabel > #206 AC-8: unbekannter preset_name → Fallback auf profile', () => {
+	const trip = tripWith({
+		display_config: { preset_name: 'geloeschtes-template-xyz' },
+		aggregation: { profile: 'wandern' }
+	});
+	assert.equal(getPresetLabel(trip), 'Wandern-Standard');
 });

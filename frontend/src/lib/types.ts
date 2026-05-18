@@ -117,6 +117,11 @@ export interface ReportConfig {
 	multi_day_trend_reports?: string[];
 }
 
+export interface DisplayConfig {
+	preset_name?: string;
+	metrics?: WeatherConfigMetric[];
+}
+
 export interface Trip {
 	id: string;
 	name: string;
@@ -127,7 +132,7 @@ export interface Trip {
 	avalanche_regions?: string[];
 	aggregation?: Aggregation;
 	weather_config?: WeatherConfig;
-	display_config?: Record<string, unknown>;
+	display_config?: DisplayConfig;
 	report_config?: ReportConfig;
 	alert_rules?: AlertRule[];
 	paused_at?: string;

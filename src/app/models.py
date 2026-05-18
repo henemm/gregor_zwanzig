@@ -479,6 +479,7 @@ class UnifiedWeatherDisplayConfig:
     """
     trip_id: str
     metrics: list[MetricConfig] = field(default_factory=list)
+    preset_name: Optional[str] = None   # Template-Key, z.B. "wandern"; None bei eigener Auswahl
     show_compact_summary: bool = True  # DEPRECATED: use TripReportConfig.show_compact_summary
     show_night_block: bool = True
     night_interval_hours: int = 2
