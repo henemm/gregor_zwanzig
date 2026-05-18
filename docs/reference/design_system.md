@@ -66,7 +66,7 @@ verwendet Tailwind-konforme Namen (`success`/`warning`/`danger`).
 | `--g-wx-sun` | `#e8a820` | Sonne |
 | `--g-wx-wind` | `#6b8a8a` | Wind |
 | `--g-wx-snow` | `#a8c8e8` | Schnee |
-| `--g-wx-thunder` | `#5a3a7a` | Gewitter |
+| `--g-wx-thunder` | `#c43a2a` | Gewitter |
 | `--g-wx-fog` | `#9a9a8a` | Nebel/Wolken |
 
 **Hinweis:** Anthropic-Vision hatte `--g-weather-*`-Präfix — Ist verwendet
@@ -317,12 +317,11 @@ zwischen der alten Anthropic-Tokens-Datei und der heutigen `app.css`:
 | `--g-card` | `--g-surface-1` | Erhöhte Surface (Card) |
 | `--g-weather-thunder` | `--g-wx-thunder` | Gewitter (siehe Farbkonflikt unten) |
 
-**Farbkonflikt `--g-weather-thunder` / `--g-wx-thunder` (offener Bug-Issue):**
+**Farbkonflikt `--g-weather-thunder` / `--g-wx-thunder` (gelöst durch Issue #256):**
 Die alte Anthropic-Tokens-Datei definierte `--g-weather-thunder` als rotes
-`#c43a2a`, die heutige `app.css` definiert `--g-wx-thunder` als violettes
-`#5a3a7a`. Beide Werte werden derzeit an verschiedenen Stellen referenziert.
-Konflikt wird als **separates Bug-Issue geführt: Issue #256**. Im Mail-Template
-gilt bis zur Entscheidung: violett (`#5a3a7a`) gemäß `app.css`.
+`#c43a2a`. Bug #256 (2026-05-18) korrigiert `--g-wx-thunder` in `app.css`
+von einem semantisch unpassenden Violett-Ton zu Rot (`#c43a2a`), konsistent
+mit der Gefahr-Palette (`--g-danger`). Konflikt ist gelöst.
 
 ### Inventar: `src/output/renderers/email/html.py`
 

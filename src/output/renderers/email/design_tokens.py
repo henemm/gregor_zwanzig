@@ -25,6 +25,7 @@ G_SUCCESS = '#3a7d44'
 G_WARNING = '#c8882a'          # Daylight-/Confidence-Akzent
 G_DANGER = '#b33a2a'           # Error-Akzent
 G_INFO = '#2a6cb3'             # Compact-Summary-Akzent
+G_WX_THUNDER = '#c43a2a'       # Gewitterwarnung — Gefahr-Rot, konsistent mit G_DANGER (#b33a2a)
 
 # --- Mail-spezifische Box-Tints ---
 # Im Frontend werden Tints ueber Alpha/Surface-Layer erzielt; Outlook kann das

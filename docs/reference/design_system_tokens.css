@@ -48,7 +48,7 @@
   /* Wetter-Farben (aus echtem Email-Report abgeleitet) */
   --g-weather-rain:    #4a7ab8;
   --g-weather-snow:    #8aa4c0;
-  --g-weather-thunder: #c43a2a;
+  --g-weather-thunder: #c43a2a; /* = --g-wx-thunder, synchronisiert via Issue #256 (2026-05-18) */
   --g-weather-sun:     #d99a2a;
   --g-weather-cloud:   #9a958a;
 
