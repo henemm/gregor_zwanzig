@@ -320,6 +320,49 @@ func (s *Store) DeleteSubscription(id string) error {
 	return s.saveSubscriptions(filtered)
 }
 
+// --- MetricPresets (Epic #138 Issue #177) ---
+
+// PresetsFile gibt den Pfad zur Preset-Datei des aktuellen Users zurück.
+func (s *Store) PresetsFile() string {
+	return filepath.Join(s.DataDir, "users", s.UserID, "metric_presets.json")
+}
+
+// LoadMetricPresets lädt alle User-Presets. Gibt leeren Slice (nicht nil)
+// zurück wenn die Datei nicht existiert (Erst-Aufruf).
+func (s *Store) LoadMetricPresets() ([]model.MetricPreset, error) {
+	data, err := os.ReadFile(s.PresetsFile())
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []model.MetricPreset{}, nil
+		}
+		return []model.MetricPreset{}, nil
+	}
+	var presets []model.MetricPreset
+	if err := json.Unmarshal(data, &presets); err != nil {
+		return []model.MetricPreset{}, nil
+	}
+	if presets == nil {
+		presets = []model.MetricPreset{}
+	}
+	return presets, nil
+}
+
+// SaveMetricPresets schreibt alle Presets atomar.
+func (s *Store) SaveMetricPresets(presets []model.MetricPreset) error {
+	dir := filepath.Join(s.DataDir, "users", s.UserID)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+	if presets == nil {
+		presets = []model.MetricPreset{}
+	}
+	data, err := json.MarshalIndent(presets, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(s.PresetsFile(), data, 0644)
+}
+
 func (s *Store) saveSubscriptions(subs []model.CompareSubscription) error {
 	dir := s.SubscriptionsDir()
 	if err := os.MkdirAll(dir, 0755); err != nil {

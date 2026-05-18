@@ -1,7 +1,12 @@
 <script lang="ts">
 	import { api } from '$lib/api.js';
-	import type { Trip } from '$lib/types';
+	import type { Trip, MetricPreset } from '$lib/types';
+	import { Pill } from '$lib/components/ui/pill/index.js';
 	import PresetRow from './PresetRow.svelte';
+	import MetricGroup from './MetricGroup.svelte';
+	import MetricCheckbox from './MetricCheckbox.svelte';
+	import TablePreview from './TablePreview.svelte';
+	import SavePresetDialog from './SavePresetDialog.svelte';
 
 	interface MetricEntry {
 		id: string;
@@ -32,8 +37,29 @@
 	};
 	const CATEGORY_ORDER = ['temperature', 'wind', 'precipitation', 'atmosphere', 'winter'];
 
+	// Epic #138 Issue #175 — Frontend-INDICATOR_MAP (12 Metriken).
+	// 9 backend-eligible + 3 frontend-erweitert (wind, gust, rain_probability).
+	const INDICATOR_MAP: Record<string, string> = {
+		wind_direction: 'N / O / S / W',
+		thunder: 'keins / mittel / hoch / extrem',
+		cape: 'niedrig / mittel / hoch / extrem',
+		cloud_total: 'klar / teilw. / bewölkt / bedeckt',
+		cloud_low: 'klar / teilw. / bewölkt / bedeckt',
+		cloud_mid: 'klar / teilw. / bewölkt / bedeckt',
+		cloud_high: 'klar / teilw. / bewölkt / bedeckt',
+		visibility: 'gut / eingeschränkt / schlecht / sehr schlecht',
+		sunshine: 'hell / wechselhaft / bedeckt',
+		wind: 'ruhig / mäßig / stark / sturm',
+		gust: 'harmlos / mäßig / stark / orkan',
+		rain_probability: 'niedrig / mittel / hoch / sehr hoch',
+	};
+	function indicatorCapable(id: string): boolean {
+		return id in INDICATOR_MAP;
+	}
+
 	let catalog: MetricCatalog = $state({});
 	let templates: Template[] = $state([]);
+	let userPresets: MetricPreset[] = $state([]);
 	let loading = $state(false);
 	let saving = $state(false);
 	let saveSuccess = $state(false);
@@ -42,6 +68,16 @@
 	let friendlyMap: Record<string, boolean> = $state({});
 	let selectedTemplate = $state('');
 	let lastAppliedTemplate = '';
+	let savedSnapshot = $state('');
+	let showSavePresetDialog = $state(false);
+
+	const isDirty = $derived(
+		JSON.stringify({ enabledMap, friendlyMap }) !== savedSnapshot
+	);
+
+	function snapshot(eMap: Record<string, boolean>, fMap: Record<string, boolean>): string {
+		return JSON.stringify({ enabledMap: eMap, friendlyMap: fMap });
+	}
 
 	function sortedCategories(): string[] {
 		const cats = Object.keys(catalog);
@@ -52,6 +88,10 @@
 
 	function allMetricEntries(): MetricEntry[] {
 		return sortedCategories().flatMap((cat) => catalog[cat] ?? []);
+	}
+
+	function countActiveInCategory(cat: string): number {
+		return (catalog[cat] ?? []).filter((m) => enabledMap[m.id]).length;
 	}
 
 	function initMaps(cat: MetricCatalog) {
@@ -76,17 +116,20 @@
 			: '';
 		enabledMap = eMap;
 		friendlyMap = fMap;
+		savedSnapshot = snapshot(eMap, fMap);
 	}
 
 	async function load() {
 		loading = true;
 		try {
-			const [catalogData, templateData] = await Promise.all([
+			const [catalogData, templateData, presetData] = await Promise.all([
 				api.get<MetricCatalog>('/api/metrics'),
-				api.get<Template[]>('/api/templates').catch(() => [] as Template[])
+				api.get<Template[]>('/api/templates').catch(() => [] as Template[]),
+				api.get<MetricPreset[]>('/api/metric-presets').catch(() => [] as MetricPreset[]),
 			]);
 			catalog = catalogData;
 			templates = templateData;
+			userPresets = presetData;
 			initMaps(catalogData);
 		} catch (e: unknown) {
 			saveError = (e as { error?: string })?.error ?? 'Fehler beim Laden';
@@ -127,8 +170,19 @@
 		}
 	}
 
-	function setFormat(id: string, friendly: boolean) {
-		friendlyMap = { ...friendlyMap, [id]: friendly };
+	function onModeChange(id: string, useIndicator: boolean) {
+		friendlyMap = { ...friendlyMap, [id]: useIndicator };
+	}
+
+	function handleDiscard() {
+		try {
+			const snap = JSON.parse(savedSnapshot);
+			enabledMap = snap.enabledMap;
+			friendlyMap = snap.friendlyMap;
+		} catch {
+			// Snapshot ungültig — auf Defaults zurücksetzen
+			initMaps(catalog);
+		}
 	}
 
 	async function handleSave() {
@@ -148,6 +202,7 @@
 			};
 			await api.put(`/api/trips/${trip.id}/weather-config`, payload);
 			saveSuccess = true;
+			savedSnapshot = snapshot(enabledMap, friendlyMap);
 			setTimeout(() => {
 				saveSuccess = false;
 			}, 3000);
@@ -157,14 +212,30 @@
 			saving = false;
 		}
 	}
+
+	function onPresetSaved(preset: MetricPreset) {
+		// Neues User-Preset oben in der Liste anzeigen
+		userPresets = [preset, ...userPresets];
+	}
 </script>
 
-<div data-testid="weather-metrics-tab" class="metrics-tab">
-	{#if loading}
+{#if loading && Object.keys(catalog).length === 0}
+	<div class="metrics-tab loading-shell" aria-busy="true">
 		<p class="loading-msg">Lade Metriken…</p>
-	{:else}
-		{#if templates.length > 0}
+	</div>
+{:else}
+	<div data-testid="weather-metrics-tab" class="metrics-tab">
+		{#if userPresets.length > 0 || templates.length > 0}
 			<section class="presets-section" data-testid="weather-metrics-preset-list">
+				{#each userPresets as p}
+					<PresetRow
+						id={p.id}
+						label={p.name}
+						metricCount={p.metrics.length}
+						isActive={selectedTemplate === p.id}
+						{onSelect}
+					/>
+				{/each}
 				{#each templates as t}
 					<PresetRow
 						id={t.id}
@@ -179,74 +250,76 @@
 
 		<div class="categories">
 			{#each sortedCategories() as cat}
-				<section data-category={cat} class="category-section">
-					<h3 class="category-heading">{CATEGORY_LABELS[cat] ?? cat}</h3>
-					<ul class="metric-list">
-						{#each (catalog[cat] ?? []) as metric}
-							<li class="metric-row">
-								<label class="metric-label">
-									<input
-										type="checkbox"
-										data-testid="weather-metrics-tab-checkbox-{metric.id}"
-										checked={enabledMap[metric.id] ?? metric.default_enabled}
-										onchange={(e) =>
-											onCheckboxChange(
-												metric.id,
-												(e.target as HTMLInputElement).checked
-											)}
-										class="metric-checkbox"
-									/>
-									<span class="metric-name">{metric.label}</span>
-									{#if metric.unit}
-										<span class="metric-unit">{metric.unit}</span>
-									{/if}
-								</label>
-								{#if metric.has_friendly_format}
-									<span class="format-toggle">
-										<button
-											data-testid="weather-metrics-tab-format-raw-{metric.id}"
-											data-active={String(!(friendlyMap[metric.id] ?? true))}
-											class="toggle-btn"
-											class:active={!(friendlyMap[metric.id] ?? true)}
-											onclick={() => setFormat(metric.id, false)}
-											type="button">Roh</button
-										>
-										<button
-											data-testid="weather-metrics-tab-format-indicator-{metric.id}"
-											data-active={String(friendlyMap[metric.id] ?? true)}
-											class="toggle-btn"
-											class:active={friendlyMap[metric.id] ?? true}
-											onclick={() => setFormat(metric.id, true)}
-											type="button">Indikator</button
-										>
-									</span>
-								{/if}
-							</li>
-						{/each}
-					</ul>
-				</section>
+				<MetricGroup
+					slug={cat}
+					label={CATEGORY_LABELS[cat] ?? cat}
+					activeCount={countActiveInCategory(cat)}
+					totalCount={(catalog[cat] ?? []).length}
+				>
+					{#each (catalog[cat] ?? []) as metric}
+						<MetricCheckbox
+							{metric}
+							enabled={enabledMap[metric.id] ?? metric.default_enabled}
+							useIndicator={friendlyMap[metric.id] ?? true}
+							indicatorCapable={indicatorCapable(metric.id)}
+							onToggle={onCheckboxChange}
+							{onModeChange}
+						/>
+					{/each}
+				</MetricGroup>
 			{/each}
 		</div>
 
+		<TablePreview
+			{catalog}
+			{enabledMap}
+			{friendlyMap}
+			categoryOrder={CATEGORY_ORDER}
+			{indicatorCapable}
+		/>
+
 		<div class="save-row">
+			{#if isDirty}
+				<Pill tone="warning" data-testid="weather-metrics-dirty-pill">Ungespeicherte Änderungen</Pill>
+				<button
+					data-testid="weather-metrics-discard"
+					onclick={handleDiscard}
+					type="button"
+					class="discard-btn"
+				>Verwerfen</button>
+			{/if}
 			{#if saveSuccess}
-				<span data-testid="weather-metrics-tab-success" class="save-success"
-					>Gespeichert ✓</span
-				>
+				<span data-testid="weather-metrics-tab-success" class="save-success">Gespeichert ✓</span>
 			{/if}
 			{#if saveError}
 				<span data-testid="weather-metrics-tab-error" class="save-error">{saveError}</span>
 			{/if}
 			<button
+				type="button"
+				class="preset-trigger"
+				data-testid="save-preset-dialog-trigger"
+				onclick={() => (showSavePresetDialog = true)}
+			>Als Preset speichern</button>
+			<button
 				data-testid="weather-metrics-tab-save"
 				onclick={handleSave}
-				disabled={saving}
+				disabled={saving || !isDirty}
 				class="save-btn"
 				type="button">{saving ? 'Speichern…' : 'Speichern'}</button
 			>
 		</div>
-	{/if}
-</div>
+
+		<SavePresetDialog
+			bind:open={showSavePresetDialog}
+			{enabledMap}
+			{friendlyMap}
+			{catalog}
+			{indicatorCapable}
+			onClose={() => (showSavePresetDialog = false)}
+			onSaved={onPresetSaved}
+		/>
+	</div>
+{/if}
 
 <style>
 	.metrics-tab {
@@ -263,67 +336,6 @@
 		flex-direction: column;
 		gap: 1.25rem;
 	}
-	.category-heading {
-		font-size: 0.8125rem;
-		font-weight: 600;
-		text-transform: uppercase;
-		letter-spacing: 0.04em;
-		color: var(--g-ink-faint, #888);
-		margin-bottom: 0.5rem;
-	}
-	.metric-list {
-		list-style: none;
-		padding: 0;
-		margin: 0;
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
-	}
-	.metric-row {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		padding: 0.25rem 0;
-	}
-	.metric-label {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		cursor: pointer;
-		flex: 1;
-		min-width: 0;
-		font-size: 0.875rem;
-	}
-	.metric-checkbox {
-		flex-shrink: 0;
-	}
-	.metric-name {
-		flex: 1;
-	}
-	.metric-unit {
-		font-size: 0.75rem;
-		color: var(--g-ink-faint, #888);
-		flex-shrink: 0;
-	}
-	.format-toggle {
-		display: flex;
-		border: 1px solid var(--g-border, #ddd);
-		border-radius: 4px;
-		overflow: hidden;
-		flex-shrink: 0;
-	}
-	.toggle-btn {
-		padding: 0.125rem 0.5rem;
-		font-size: 0.75rem;
-		background: var(--g-surface, #fff);
-		border: none;
-		cursor: pointer;
-		color: var(--g-ink-faint, #888);
-	}
-	.toggle-btn.active {
-		background: var(--g-accent, #c45a2a);
-		color: #fff;
-	}
 	.save-row {
 		display: flex;
 		align-items: center;
@@ -332,6 +344,7 @@
 		margin-top: 1.5rem;
 		padding-top: 1rem;
 		border-top: 1px solid var(--g-border, #ddd);
+		flex-wrap: wrap;
 	}
 	.save-success {
 		font-size: 0.875rem;
@@ -341,18 +354,30 @@
 		font-size: 0.875rem;
 		color: #dc2626;
 	}
-	.save-btn {
+	.save-btn, .preset-trigger, .discard-btn {
 		padding: 0.5rem 1.25rem;
-		background: var(--g-accent, #c45a2a);
-		color: #fff;
 		border: none;
 		border-radius: 4px;
 		font-size: 0.875rem;
 		font-weight: 500;
 		cursor: pointer;
 	}
+	.save-btn {
+		background: var(--g-accent, #c45a2a);
+		color: #fff;
+	}
 	.save-btn:disabled {
-		opacity: 0.6;
+		opacity: 0.5;
 		cursor: not-allowed;
+	}
+	.preset-trigger {
+		background: var(--g-surface, #fff);
+		border: 1px solid var(--g-border, #ddd);
+		color: var(--g-ink, #333);
+	}
+	.discard-btn {
+		background: transparent;
+		color: var(--g-ink-faint, #666);
+		text-decoration: underline;
 	}
 </style>

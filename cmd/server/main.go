@@ -112,6 +112,10 @@ func main() {
 	// Issue #140 / #189: Output-Vorschau Email + SMS
 	r.Get("/api/preview/{trip_id}/email", handler.PreviewProxyHandler(cfg.PythonCoreURL, "email"))
 	r.Get("/api/preview/{trip_id}/sms", handler.PreviewProxyHandler(cfg.PythonCoreURL, "sms"))
+	// Epic #138 Issue #177: User-MetricPresets
+	r.Get("/api/metric-presets", handler.ListMetricPresetsHandler(s))
+	r.Post("/api/metric-presets", handler.CreateMetricPresetHandler(s))
+	r.Delete("/api/metric-presets/{id}", handler.DeleteMetricPresetHandler(s))
 
 	// Scheduler
 	sched, err := scheduler.New(cfg, s)

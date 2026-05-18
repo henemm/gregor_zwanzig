@@ -19,7 +19,10 @@
 	data-testid="weather-metrics-preset-row-{id}"
 	onclick={() => onSelect(id)}
 >
-	<span class="preset-name" data-testid="weather-metrics-preset-row-{id}-name">{label}</span>
+	<!-- Name-Span trägt KEINEN prefixed testid mehr, weil strict-mode-Filter
+		 [data-testid^="weather-metrics-preset-row-"] mit hasText sonst sowohl
+		 den Button als auch den Name-Span findet. Siehe epic-138-block-b AC-6d. -->
+	<span class="preset-name" data-testid="preset-row-name-{id}">{label}</span>
 	<span class="preset-count" data-testid="weather-metrics-preset-row-{id}-count">{metricCount} Metriken</span>
 	<span class="preset-badge" data-testid="weather-metrics-preset-row-{id}-badge">Standard</span>
 	{#if isActive}

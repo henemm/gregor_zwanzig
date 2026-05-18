@@ -122,6 +122,17 @@ export interface DisplayConfig {
 	metrics?: WeatherConfigMetric[];
 }
 
+// Epic #138 Issue #177 — User-definierte Metric-Presets (Server-seitig persistiert).
+export interface MetricPreset {
+	id: string;
+	name: string;
+	description?: string;
+	is_default: boolean;
+	metrics: string[];
+	friendly_ids: string[];
+	created_at: string;
+}
+
 export interface Trip {
 	id: string;
 	name: string;
