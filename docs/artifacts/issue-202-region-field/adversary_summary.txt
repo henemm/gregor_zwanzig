@@ -1,0 +1,21 @@
+=== Go handler tests: TestTripRegion* ===
+PASS: TestTripRegion_CreateAndRead
+PASS: TestTripRegion_PreservedOnUpdate
+PASS: TestTripRegion_UpdateReplacesWhenSent
+
+=== Pre-existing Go failures (not caused by #202) ===
+FAIL: TestTripHandlerFound (missing e2e-test-story3 data fixture)
+FAIL: TestGetTripWeatherConfigFound (same fixture)
+FAIL: TestForecastHandler_ValidRequest_Returns200 (network/API)
+
+=== AC Checklist ===
+AC-1 PROVEN: Go test + JSON marshal test
+AC-2 PROVEN: omitempty test confirms no region field for empty trips
+AC-3 PROVEN: Go test TestTripRegion_PreservedOnUpdate
+AC-4 PROVEN: TripHero.svelte:37-39 implements {#if trip.region}
+AC-5 PROVEN: same conditional, E2E test AC-202-2
+AC-6 PROVEN: Step1Profile.svelte:84-94 has optional region input
+AC-7 PROVEN: maxlength='50' in Step1Profile.svelte:89
+AC-8 PROVEN: wizardState.svelte.ts:329-331 trim-guard + toTripPayload
+AC-9 N/A: Wizard edit path not implemented (Known Limitations)
+AC-10 PROVEN: omitempty + RMW preserve all other fields

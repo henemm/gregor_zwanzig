@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "<string>", line 7, in <module>
+AssertionError: FAIL: report_type fehlt in format_sms() — Parameter: ['self', 'segments', 'max_length', 'exposed_sections', 'stage_name']
+Parameter: ['self', 'segments', 'max_length', 'exposed_sections', 'stage_name']
