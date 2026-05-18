@@ -181,10 +181,9 @@ class Trip:
     display_config: Optional["UnifiedWeatherDisplayConfig"] = None  # Feature 2.6 v2
     report_config: Optional["TripReportConfig"] = None  # Feature 3.5
     alert_rules: List["AlertRule"] = field(default_factory=list)  # Issue #205
-
-    def __post_init__(self) -> None:
-        if not self.stages:
-            raise ValueError("Trip must have at least one stage")
+    alert_cooldown_minutes: Optional[int] = None  # Issue #181: per-trip cooldown (0=no limit)
+    alert_quiet_from: Optional[str] = None  # Issue #181: quiet hours start "HH:MM"
+    alert_quiet_to: Optional[str] = None  # Issue #181: quiet hours end "HH:MM"
 
     @property
     def start_date(self) -> date:

@@ -72,8 +72,11 @@ type Trip struct {
 	WeatherConfig    map[string]interface{} `json:"weather_config,omitempty"`
 	DisplayConfig    map[string]interface{} `json:"display_config,omitempty"`
 	ReportConfig     map[string]interface{} `json:"report_config,omitempty"`
-	AlertRules       []AlertRule            `json:"alert_rules"`
-	Shortcode        string                 `json:"shortcode,omitempty"`
+	AlertRules              []AlertRule            `json:"alert_rules"`
+	AlertCooldownMinutes    *int                   `json:"alert_cooldown_minutes,omitempty"`
+	AlertQuietFrom          *string                `json:"alert_quiet_from,omitempty"`
+	AlertQuietTo            *string                `json:"alert_quiet_to,omitempty"`
+	Shortcode               string                 `json:"shortcode,omitempty"`
 	Activity         string                 `json:"activity,omitempty"`
 	Region           string                 `json:"region,omitempty"`
 	PausedAt         *time.Time             `json:"paused_at,omitempty"`

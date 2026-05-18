@@ -146,6 +146,9 @@ export interface Trip {
 	display_config?: DisplayConfig;
 	report_config?: ReportConfig;
 	alert_rules?: AlertRule[];
+	alert_cooldown_minutes?: number;
+	alert_quiet_from?: string;
+	alert_quiet_to?: string;
 	paused_at?: string;
 	archived_at?: string;
 }

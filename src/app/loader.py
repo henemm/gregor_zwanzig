@@ -263,7 +263,7 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
     # Issue #205: Alert Rules — either directly from JSON or migrated from legacy.
     alert_rules = _migrate_legacy_alert_rules(data)
 
-    return Trip(
+    trip = Trip(
         id=data["id"],
         name=data["name"],
         stages=stages,
@@ -273,7 +273,11 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
         display_config=display_config,
         report_config=report_config,
         alert_rules=alert_rules,
+        alert_cooldown_minutes=data.get("alert_cooldown_minutes"),
+        alert_quiet_from=data.get("alert_quiet_from"),
+        alert_quiet_to=data.get("alert_quiet_to"),
     )
+    return trip
 
 
 def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig":
@@ -704,6 +708,14 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             "updated_at": dc.updated_at.isoformat(),
             **({"preset_name": dc.preset_name} if dc.preset_name is not None else {}),
         }
+
+    # Serialize alert cooldown and quiet hours (Issue #181)
+    if trip.alert_cooldown_minutes is not None:
+        data["alert_cooldown_minutes"] = trip.alert_cooldown_minutes
+    if trip.alert_quiet_from is not None:
+        data["alert_quiet_from"] = trip.alert_quiet_from
+    if trip.alert_quiet_to is not None:
+        data["alert_quiet_to"] = trip.alert_quiet_to
 
     # Serialize alert_rules (Issue #205) — always emit, even if empty
     data["alert_rules"] = [

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time as time_type, timedelta, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, List, Optional
 
@@ -100,8 +100,13 @@ class TripAlertService:
             logger.debug(f"Alerts disabled for trip {trip.id}")
             return False
 
-        # 1. Check throttle
-        if self._is_throttled(trip.id):
+        # 1. QuietHours-Check (AC-4/5/6): Alert während stiller Stunden unterdrücken
+        if self._is_quiet_hours(trip, datetime.now(timezone.utc)):
+            logger.debug(f"Alert suppressed: quiet hours active for trip {trip.id}")
+            return False
+
+        # 1b. Throttle-Check mit per-trip Cooldown (AC-2/3)
+        if self._is_throttled_with_cooldown(trip):
             logger.debug(f"Alert throttled for trip {trip.id}")
             return False
 
@@ -229,6 +234,54 @@ class TripAlertService:
         except Exception as e:
             logger.debug(f"No cached weather for trip {trip.id}: {e}")
             return None
+
+    def _is_quiet_hours(self, trip: "Trip", now: datetime) -> bool:
+        """Check if current time falls within the trip's configured quiet hours.
+
+        Issue #181: Supports midnight-wrap (e.g. 22:00–07:00).
+        Returns False when quiet hours are not configured (either field is missing).
+
+        Args:
+            trip: Trip with optional alert_quiet_from / alert_quiet_to fields
+            now: Current datetime (caller is responsible for correct timezone)
+
+        Returns:
+            True if alerts should be suppressed (quiet hours active)
+        """
+        if not trip.alert_quiet_from or not trip.alert_quiet_to:
+            return False
+        from_time = time_type.fromisoformat(trip.alert_quiet_from)
+        to_time = time_type.fromisoformat(trip.alert_quiet_to)
+        current = now.time()
+        if from_time > to_time:
+            # Midnight-wrap: e.g. 22:00 → 07:00
+            return current >= from_time or current < to_time
+        else:
+            # Normal window: e.g. 08:00 → 22:00
+            return from_time <= current < to_time
+
+    def _is_throttled_with_cooldown(self, trip: "Trip") -> bool:
+        """Check if alert is throttled using per-trip cooldown override.
+
+        Issue #181: alert_cooldown_minutes=0 means no limit (always returns False).
+        If None, falls back to global throttle_hours default.
+
+        Args:
+            trip: Trip with optional alert_cooldown_minutes field
+
+        Returns:
+            True if throttled (too soon since last alert)
+        """
+        if trip.alert_cooldown_minutes == 0:
+            return False
+        if trip.alert_cooldown_minutes is not None:
+            cooldown_td = timedelta(minutes=trip.alert_cooldown_minutes)
+        else:
+            cooldown_td = timedelta(hours=self._throttle_hours)
+        last_alert = self._last_alert_times.get(trip.id)
+        if last_alert is None:
+            return False
+        return datetime.now(timezone.utc) - last_alert < cooldown_td
 
     def _is_throttled(self, trip_id: str) -> bool:
         """

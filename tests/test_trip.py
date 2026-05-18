@@ -169,10 +169,10 @@ class TestTrip:
         assert len(trip.stages) == 1
         assert len(trip.all_waypoints) == 3
 
-    def test_trip_requires_stages(self):
-        """Trip must have at least one stage."""
-        with pytest.raises(ValueError, match="at least one stage"):
-            Trip(id="empty", name="Empty", stages=[])
+    def test_trip_allows_empty_stages(self):
+        """Trip can be created with empty stages (wizard drafts, Issue #181 AC-7/8)."""
+        trip = Trip(id="empty", name="Empty", stages=[])
+        assert trip.stages == []
 
     def test_trip_dates(self):
         """Trip provides start and end dates."""

@@ -1,0 +1,60 @@
+<script lang="ts">
+    let { cooldown_minutes = $bindable<number | undefined>(undefined) }: {
+        cooldown_minutes?: number;
+    } = $props();
+</script>
+
+<div class="cooldown-card" data-testid="alert-cooldown-card">
+    <h4 class="card-title">Mindestabstand zwischen Alerts</h4>
+    <div class="input-row">
+        <input
+            type="number"
+            min="0"
+            value={cooldown_minutes ?? ''}
+            oninput={(e) => {
+                const v = parseInt((e.target as HTMLInputElement).value);
+                cooldown_minutes = isNaN(v) ? undefined : v;
+            }}
+            data-testid="alert-cooldown-input"
+            class="cooldown-input"
+        />
+        <span class="unit">Minuten</span>
+    </div>
+    <p class="hint">
+        {#if cooldown_minutes === 0}
+            Kein Limit — Alerts werden immer sofort gesendet.
+        {:else if cooldown_minutes}
+            Nach jedem Alert werden {cooldown_minutes} Minuten gewartet.
+        {:else}
+            Standard: 120 Minuten (globaler Default).
+        {/if}
+    </p>
+</div>
+
+<style>
+    .cooldown-card {
+        padding: 1rem;
+        border: 1px solid var(--g-border, #e5e7eb);
+        border-radius: 0.5rem;
+        background: var(--g-surface-1, #fff);
+    }
+    .card-title {
+        font-size: 0.875rem;
+        font-weight: 600;
+        margin: 0 0 0.5rem;
+    }
+    .input-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .cooldown-input {
+        width: 80px;
+        min-height: 36px;
+        padding: 0.25rem 0.5rem;
+        border: 1px solid var(--g-border, #e5e7eb);
+        border-radius: 0.25rem;
+    }
+    .unit { font-size: 0.875rem; color: var(--g-ink-muted, #6b7280); }
+    .hint { margin: 0.5rem 0 0; font-size: 0.8125rem; color: var(--g-ink-muted, #6b7280); }
+</style>
