@@ -17,8 +17,8 @@
 
 	let alertRules = $state<AlertRule[]>(trip.alert_rules ?? []);
 	let cooldownMinutes = $state<number | undefined>(trip.alert_cooldown_minutes ?? undefined);
-	let quietFrom = $state<string>(trip.alert_quiet_from ?? '');
-	let quietTo = $state<string>(trip.alert_quiet_to ?? '');
+	let quietFrom = $state<string | undefined>(trip.alert_quiet_from ?? undefined);
+	let quietTo = $state<string | undefined>(trip.alert_quiet_to ?? undefined);
 
 	let saving = $state(false);
 	let saveSuccess = $state(false);
