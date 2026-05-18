@@ -7,9 +7,9 @@ implementierten `WeatherMetricsTab` um fehlende Komponenten: MetricGroup/
 MetricCheckbox als Sub-Komponenten, TablePreview (Live-Vorschau), SavePresetDialog
 (Modal), und dirty-State mit Ungespeichert-Warnung.
 
-**Stand 2026-05-18 (nach Kontext-Update):**
-- Issues #173, #173-TDD, Epic #138 Grundgerüst: CLOSED / implementiert
-- Issues #174–#178: OPEN — diese sind der Scope dieses Workflows
+**Stand 2026-05-18:**
+- Issues #173, #173-TDD, Epic #138 Phase 1 Grundgerüst: CLOSED / implementiert
+- Issues #174–#178 Phase 2: IMPLEMENTED & VERIFIED (2026-05-18)
 
 ## Aktueller Codebase-Stand (nach vorherigen Workflows)
 
@@ -33,15 +33,15 @@ MetricCheckbox als Sub-Komponenten, TablePreview (Live-Vorschau), SavePresetDial
 - Save-Button mit Erfolgs-/Fehlermeldung
 - PUT `/api/trips/{id}/weather-config` mit `use_friendly_format` im Payload
 
-### Was FEHLT (Issues #174–#178)
+### Implementiert (Issues #174–#178, Phase 2)
 
-| Issue | Was fehlt | Dateien |
+| Issue | Komponente | Status |
 |-------|-----------|---------|
-| #174 | `MetricGroup.svelte` (Eyebrow + aktive Zähler-Pill) + `MetricCheckbox.svelte` (Custom-Checkbox mit Label, Unit, Short-Text) | NEU |
-| #175 | `ModeBtn.svelte` — Pill-Buttons im Design-System-Stil (statt raw `<button>`) | NEU |
-| #176 | `TablePreview.svelte` — Live-Tabelle mit 4 Beispiel-Zeilen, Indikator-Werte kursiv+accent, ·skala-Marker in Header | NEU |
-| #177 | `SavePresetDialog.svelte` — Modal mit Name, Beschreibung, Zusammenfassung (X aktiv/Y Roh/Z Indikator), "Als Standard"-Checkbox | NEU |
-| #178 | `dirty`-State-Tracking in WeatherMetricsTab + "Ungespeicherte Änderungen"-Pill + Verwerfen-Button | EDIT `WeatherMetricsTab.svelte` |
+| #174 | `MetricGroup.svelte` (Eyebrow + aktive Zähler-Pill) + `MetricCheckbox.svelte` (Custom-Checkbox mit Label, Unit, Short-Text) | IMPLEMENTED |
+| #175 | Pill-Buttons im Design-System-Stil (INDICATOR_MAP mit 12 Metriken) | IMPLEMENTED |
+| #176 | `TablePreview.svelte` — Live-Tabelle mit 4 Beispiel-Zeilen, Indikator-Werte kursiv+accent, ·skala-Marker in Header | IMPLEMENTED |
+| #177 | `SavePresetDialog.svelte` — Modal mit Name, Beschreibung, Zusammenfassung (X aktiv/Y Roh/Z Indikator), "Als Standard"-Checkbox + Go-Backend (3 Endpoints) | IMPLEMENTED |
+| #178 | `dirty`-State-Tracking in WeatherMetricsTab + "Ungespeicherte Änderungen"-Pill + Verwerfen-Button | IMPLEMENTED |
 
 ## Related Files
 

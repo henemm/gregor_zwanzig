@@ -12,7 +12,7 @@ tags: [frontend, sveltekit, go, weather-config, trip-detail, metrics, epic-138]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved & Implemented (2026-05-18)
 
 ## Purpose
 
@@ -363,3 +363,4 @@ LoC-Override vor Implementierung: `workflow.py set-field loc_limit_override 550`
 ## Changelog
 
 - 2026-05-18: Initial spec — Issues #174–178 (Phase 2 Epic #138). 4 neue Frontend-Komponenten, Go-Backend für User-Presets (3 Endpoints), ~510 LoC netto, 11 Dateien. 8 Acceptance Criteria im AC-N-Format.
+- 2026-05-18: Implementation COMPLETED & VERIFIED. All AC-N tests pass. 19 files modified/created, 2595 LoC delta including e2e-tests and test-fixtures.

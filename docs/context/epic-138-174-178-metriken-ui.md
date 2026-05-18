@@ -2,17 +2,19 @@
 
 ## Request Summary
 
-Aufbauend auf dem bereits implementierten `WeatherMetricsTab.svelte` (Epic #138 Phase 1, VERIFIED) werden 5 neue Sub-Features für den Wetter-Metriken-Editor gebaut: MetricGroup/MetricCheckbox-Komponenten (#174), ModeBtn-Pill mit INDICATOR_MAP (#175), live TablePreview (#176), SavePresetDialog (#177) und dirty-State-Warnung (#178).
+Aufbauend auf dem bereits implementierten `WeatherMetricsTab.svelte` (Epic #138 Phase 1, VERIFIED) wurden 5 neue Sub-Features für den Wetter-Metriken-Editor gebaut: MetricGroup/MetricCheckbox-Komponenten (#174), ModeBtn-Pill mit INDICATOR_MAP (#175), live TablePreview (#176), SavePresetDialog (#177) und dirty-State-Warnung (#178).
 
-## Überblick der Issues
+**Status:** IMPLEMENTED & VERIFIED (2026-05-18)
 
-| Issue | Titel | Kernaufgabe |
-|-------|-------|-------------|
-| #174 | Metriken-Editor: Metriken-Gruppen + Checkbox-Grid | MetricGroup (Eyebrow + Zähler) + MetricCheckbox (Custom-CB, Label, Unit, Short) |
-| #175 | Metriken-Editor: Roh/Indikator-Toggle | ModeBtn-Pill pro Metrik mit INDICATOR_MAP (12 Metriken) |
-| #176 | Metriken-Editor: Tabellen-Vorschau live | TablePreview mit aktiven Spalten, 4 Beispiel-Zeilen |
-| #177 | Metriken-Editor: 'Als Preset speichern' Dialog | SavePresetDialog-Modal mit Name, Beschreibung, Zusammenfassung |
-| #178 | Metriken-Editor: Ungespeichert-Warnung + State | dirty-State, Pill 'Ungespeicherte Änderungen', Verwerfen/Speichern |
+## Überblick der Issues (ALLE IMPLEMENTIERT)
+
+| Issue | Titel | Kernaufgabe | Status |
+|-------|-------|-------------|--------|
+| #174 | Metriken-Editor: Metriken-Gruppen + Checkbox-Grid | MetricGroup (Eyebrow + Zähler) + MetricCheckbox (Custom-CB, Label, Unit, Short) | IMPLEMENTED |
+| #175 | Metriken-Editor: Roh/Indikator-Toggle | ModeBtn-Pill pro Metrik mit INDICATOR_MAP (12 Metriken) | IMPLEMENTED |
+| #176 | Metriken-Editor: Tabellen-Vorschau live | TablePreview mit aktiven Spalten, 4 Beispiel-Zeilen | IMPLEMENTED |
+| #177 | Metriken-Editor: 'Als Preset speichern' Dialog | SavePresetDialog-Modal mit Name, Beschreibung, Zusammenfassung + Go-Backend | IMPLEMENTED |
+| #178 | Metriken-Editor: Ungespeichert-Warnung + State | dirty-State, Pill 'Ungespeicherte Änderungen', Verwerfen/Speichern | IMPLEMENTED |
 
 ## Related Files
 
@@ -30,15 +32,21 @@ Aufbauend auf dem bereits implementierten `WeatherMetricsTab.svelte` (Epic #138 
 | `api/routers/config.py` | Backend: /api/metrics + /api/templates Endpoints |
 | `docs/specs/modules/epic_138_metriken_editor.md` | Bestehende Spec (Phase 1) — als Basis-Referenz |
 
-## Bestehende Implementation (Phase 1 — VERIFIED)
+## Implementierung Complete (Phase 1 + Phase 2)
 
-`WeatherMetricsTab.svelte` ist voll funktionsfähig mit:
-- Preset-Liste (PresetRow-Komponenten, 7 Templates)
-- 25 Metrik-Checkboxen in 5 Kategorien (einfache HTML-Checkboxen)
-- Roh/Indikator-Toggle (zwei Buttons) für 9 Metriken mit `has_friendly_format`
-- Speichern-Button mit Full-Replace PUT
+**Phase 1 (Epic #138 Grundgerüst):**
+- Preset-Liste (PresetRow-Komponenten, 7 Templates) ✓
+- 25 Metrik-Checkboxen in 5 Kategorien (einfache HTML-Checkboxen) ✓
+- Roh/Indikator-Toggle (zwei Buttons) für 9 Metriken mit `has_friendly_format` ✓
+- Speichern-Button mit Full-Replace PUT ✓
 
-Die Issues #174–178 bauen ÜBER dieser Basis eine poliertere UI-Schicht auf.
+**Phase 2 (Issues #174–178):**
+- MetricGroup + MetricCheckbox Sub-Komponenten mit Custom-Checkboxen ✓
+- ModeBtn-Pills mit INDICATOR_MAP (12 Metriken) ✓
+- TablePreview mit 4 statischen Beispielzeilen ✓
+- SavePresetDialog Modal + Go-Backend (3 Endpoints: GET/POST/DELETE) ✓
+- dirty-State-Tracking + "Ungespeicherte Änderungen"-Pill ✓
+- E2E-Tests (epic-138-block-b.spec.ts) + Unit-Tests (metricsEditor.test.ts) ✓
 
 ## Analyseergebnisse (Phase 2)
 
