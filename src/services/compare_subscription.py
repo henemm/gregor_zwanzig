@@ -37,6 +37,7 @@ def run_comparison_for_subscription(
     from app.user import Schedule
 
     # Imports from extracted service modules (Epic #129 Phase A.1)
+    from output.renderers.email.design_tokens import G_BOX_WARNING_BG, G_WARNING
     from services.comparison_engine import ComparisonEngine
     from services.comparison_renderers import (
         render_comparison_html,
@@ -106,8 +107,8 @@ def run_comparison_for_subscription(
             }
 
     # Use both renderers for Multipart Email
-    html_body = render_comparison_html(result, top_n_details=sub.top_n, enabled_metrics=enabled_metrics)
-    text_body = render_comparison_text(result, top_n_details=sub.top_n, enabled_metrics=enabled_metrics)
+    html_body = render_comparison_html(result, top_n_details=sub.top_n, enabled_metrics=enabled_metrics, profile=getattr(sub, 'activity_profile', None))
+    text_body = render_comparison_text(result, top_n_details=sub.top_n, enabled_metrics=enabled_metrics, profile=getattr(sub, 'activity_profile', None))
 
     # Add warning banner if locations failed
     if failed_locations:
@@ -116,7 +117,7 @@ def run_comparison_for_subscription(
             failed_names += f" (+{len(failed_locations) - 3} more)"
 
         warning_html = f'''
-        <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px 16px; margin: 0 20px 16px 20px; border-radius: 4px;">
+        <div style="background: {G_BOX_WARNING_BG}; border-left: 4px solid {G_WARNING}; padding: 12px 16px; margin: 0 20px 16px 20px; border-radius: 4px;">
             <strong>⚠️ Warning:</strong> {len(failed_locations)} location(s) unavailable due to API errors: {failed_names}
         </div>
 '''

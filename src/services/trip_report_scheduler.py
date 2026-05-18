@@ -17,6 +17,9 @@ from app.config import Settings
 from app.loader import load_all_trips
 from app.models import GPXPoint, NormalizedTimeseries, SegmentWeatherData, SegmentWeatherSummary, TripSegment
 from formatters.trip_report import TripReportFormatter
+from output.renderers.email.design_tokens import (
+    FONT_UI, G_ACCENT, G_DANGER, G_INK, G_PAPER, G_SURFACE_1, WEB_FONT_LINK,
+)
 from outputs.email import EmailOutput
 
 if TYPE_CHECKING:
@@ -37,6 +40,66 @@ def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
         * math.sin(dlon / 2) ** 2
     )
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+
+def build_service_error_email_html(trip_name: str, report_type: str, error_lines: str) -> str:
+    """Build the Service-Error E-Mail-Body with Design-System tokens.
+
+    Used when an SMS-only trip cannot fetch weather data (provider error) and
+    the user still needs to be informed via E-Mail fallback.
+
+    Args:
+        trip_name: Name of the affected trip.
+        report_type: "morning" or "evening".
+        error_lines: Pre-formatted multi-line error block (one segment per line).
+
+    Returns:
+        Complete HTML document string.
+    """
+    return (
+        '<!DOCTYPE html>'
+        '<html>'
+        '<head>'
+        '<meta charset="utf-8">'
+        f'{WEB_FONT_LINK}'
+        '<style>'
+        f'body {{ margin:0; padding:0; background:{G_PAPER}; '
+        f'font-family:{FONT_UI}; color:{G_INK}; }}'
+        '.container { max-width:640px; margin:0 auto; padding:24px; }'
+        f'.heading {{ border-bottom:2px solid {G_ACCENT}; color:{G_ACCENT}; '
+        'padding-bottom:8px; margin:0 0 16px 0; font-size:20px; }'
+        f'.meta {{ background:{G_SURFACE_1}; padding:12px 16px; '
+        'border-radius:6px; margin-bottom:16px; font-size:14px; }'
+        f'.error-block {{ border-left:4px solid {G_DANGER}; '
+        f'background:{G_SURFACE_1}; padding:12px 16px; margin:16px 0; '
+        'font-family: ui-monospace, SFMono-Regular, Menlo, monospace; '
+        'font-size:13px; white-space:pre-wrap; }'
+        f'.footer {{ background:{G_INK}; color:#ffffff; padding:16px 24px; '
+        'text-align:center; font-size:12px; }'
+        '.footer a { color:#ffffff; text-decoration:underline; }'
+        '</style>'
+        '</head>'
+        '<body>'
+        '<div class="container">'
+        '<h2 class="heading">Service-Benachrichtigung</h2>'
+        '<div class="meta">'
+        f'<strong>Trip:</strong> {trip_name}<br>'
+        f'<strong>Report:</strong> {report_type.title()}<br>'
+        '<strong>Problem:</strong> Wetterdaten konnten nicht abgerufen werden.'
+        '</div>'
+        '<p><strong>Betroffene Segmente:</strong></p>'
+        f'<div class="error-block">{error_lines}</div>'
+        '<p style="font-size:13px; color:#5c5a52;">'
+        'Diese E-Mail wurde automatisch gesendet, weil Ihr Trip nur SMS aktiviert '
+        'hat und Anbieter-Fehler aufgetreten sind.'
+        '</p>'
+        '</div>'
+        f'<div class="footer" style="background:{G_INK}; color:#ffffff;">'
+        'Gregor Zwanzig &mdash; automatischer Wetter-Service'
+        '</div>'
+        '</body>'
+        '</html>'
+    )
 
 
 class TripReportSchedulerService:
@@ -795,15 +858,10 @@ class TripReportSchedulerService:
             for e in errors
         )
         subject = f"[{trip.name}] Wetterdaten nicht verfuegbar"
-        body = (
-            f"<h3>Service-Benachrichtigung</h3>"
-            f"<p><b>Trip:</b> {trip.name}<br>"
-            f"<b>Report:</b> {report_type.title()}<br>"
-            f"<b>Problem:</b> Wetterdaten konnten nicht abgerufen werden.</p>"
-            f"<p><b>Betroffene Segmente:</b></p>"
-            f"<pre>{error_lines}</pre>"
-            f"<p><small>Diese E-Mail wurde automatisch gesendet, weil Ihr Trip "
-            f"nur SMS aktiviert hat und Anbieter-Fehler aufgetreten sind.</small></p>"
+        body = build_service_error_email_html(
+            trip_name=trip.name,
+            report_type=report_type,
+            error_lines=error_lines,
         )
         try:
             EmailOutput(self._settings).send(subject=subject, body=body, html=True)

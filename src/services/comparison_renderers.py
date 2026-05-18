@@ -10,9 +10,14 @@ SPEC (HTML/Text): docs/specs/compare_email.md v4.2
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Dict, List
+from typing import Dict, List, Optional
 
+from app.profile import ActivityProfile
 from app.user import ComparisonResult
+from output.renderers.email.design_tokens import (
+    FONT_UI, G_ACCENT, G_INK, G_PAPER, G_SUCCESS, G_SURFACE_1, WEB_FONT_LINK,
+)
+from output.renderers.email.profile_signature import profile_signature
 from services.weather_metrics import HourlyCell, WeatherMetricsService
 
 
@@ -25,7 +30,7 @@ def _degrees_to_compass(degrees: int | None) -> str:
     return directions[idx]
 
 
-def render_comparison_html(result: ComparisonResult, top_n_details: int = 3, enabled_metrics: set | None = None) -> str:
+def render_comparison_html(result: ComparisonResult, top_n_details: int = 3, enabled_metrics: set | None = None, profile: Optional[ActivityProfile] = None) -> str:
     """
     Render ComparisonResult as HTML for email.
 
@@ -36,6 +41,8 @@ def render_comparison_html(result: ComparisonResult, top_n_details: int = 3, ena
     Args:
         result: ComparisonResult from ComparisonEngine
         top_n_details: Number of locations to show hourly details for
+        enabled_metrics: Optional set of metric_ids that should be rendered.
+        profile: Optional ActivityProfile for header eyebrow signature.
 
     Returns:
         HTML string for email
@@ -78,35 +85,46 @@ def render_comparison_html(result: ComparisonResult, top_n_details: int = 3, ena
     best_sunny = find_best(sunny_hours_list, True)
     best_clouds = find_best(clouds, False)
 
+    # Profile signature (Eyebrow header)
+    sig = profile_signature(profile)
+    eyebrow_html = (
+        f'<div style="background:{sig.accent_hex};color:#ffffff;'
+        f'font-family:{FONT_UI};font-size:11px;letter-spacing:0.08em;'
+        f'padding:6px 24px;text-transform:uppercase;">'
+        f'{sig.icon_html} {sig.eyebrow}</div>'
+    )
+
     # CSS Styles
     html = f"""<!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
+    {WEB_FONT_LINK}
     <style>
-        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }}
+        body {{ font-family: {FONT_UI}; margin: 0; padding: 20px; background: {G_PAPER}; }}
         .container {{ max-width: 800px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }}
-        .header {{ background: linear-gradient(135deg, #1976d2, #42a5f5); color: white; padding: 24px; }}
+        .header {{ background: {G_PAPER}; color: {G_INK}; padding: 24px; }}
         .header h1 {{ margin: 0 0 8px 0; font-size: 24px; }}
         .header p {{ margin: 4px 0; opacity: 0.9; font-size: 14px; }}
-        .winner {{ background: #e8f5e9; padding: 20px; border-left: 4px solid #4caf50; margin: 20px; border-radius: 8px; }}
-        .winner h2 {{ margin: 0 0 8px 0; color: #2e7d32; font-size: 18px; }}
-        .winner p {{ margin: 0; color: #555; }}
+        .winner {{ background: {G_SURFACE_1}; padding: 20px; border-left: 4px solid {G_SUCCESS}; margin: 20px; border-radius: 8px; }}
+        .winner h2 {{ margin: 0 0 8px 0; color: {G_INK}; font-size: 18px; }}
+        .winner p {{ margin: 0; color: {G_INK}; }}
         table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
-        th {{ background: #f5f5f5; padding: 12px 8px; text-align: center; font-weight: 600; border-bottom: 2px solid #ddd; }}
+        th {{ background: {G_SURFACE_1}; padding: 12px 8px; text-align: center; font-weight: 600; border-bottom: 2px solid #ddd; }}
         th.label {{ text-align: left; width: 140px; }}
         td {{ padding: 10px 8px; text-align: center; border-bottom: 1px solid #eee; }}
-        td.label {{ text-align: left; font-weight: 500; color: #555; }}
-        td.best {{ background: #e8f5e9; font-weight: 600; color: #2e7d32; }}
+        td.label {{ text-align: left; font-weight: 500; color: {G_INK}; }}
+        td.best {{ background: {G_SURFACE_1}; font-weight: 600; color: {G_SUCCESS}; }}
         .section {{ padding: 0 20px; }}
-        .section h3 {{ color: #333; border-bottom: 2px solid #1976d2; padding-bottom: 8px; }}
-        .footer {{ background: #f5f5f5; padding: 16px; text-align: center; color: #888; font-size: 12px; }}
-        .rank {{ background: #1976d2; color: white; border-radius: 4px; padding: 2px 6px; font-size: 11px; margin-right: 4px; }}
+        .section h3 {{ color: {G_INK}; border-bottom: 2px solid {G_ACCENT}; padding-bottom: 8px; }}
+        .footer {{ background: {G_INK}; padding: 16px; text-align: center; color: #ffffff; font-size: 12px; }}
+        .rank {{ background: {G_ACCENT}; color: white; border-radius: 4px; padding: 2px 6px; font-size: 11px; margin-right: 4px; }}
         .weather {{ font-size: 16px; }}
     </style>
 </head>
 <body>
     <div class="container">
+        {eyebrow_html}
         <div class="header">
             <h1>⛷️ Skigebiete-Vergleich</h1>
             <p>📅 Forecast for: <strong>{target_date.strftime('%A, %d.%m.%Y')}</strong></p>
@@ -318,7 +336,7 @@ def render_comparison_html(result: ComparisonResult, top_n_details: int = 3, ena
     return html
 
 
-def render_comparison_text(result: ComparisonResult, top_n_details: int = 3, enabled_metrics: set | None = None) -> str:
+def render_comparison_text(result: ComparisonResult, top_n_details: int = 3, enabled_metrics: set | None = None, profile: Optional[ActivityProfile] = None) -> str:
     """
     Render ComparisonResult as Plain-Text for email fallback.
     If enabled_metrics is provided, only metrics in the set are rendered.
@@ -330,10 +348,14 @@ def render_comparison_text(result: ComparisonResult, top_n_details: int = 3, ena
     Args:
         result: ComparisonResult from ComparisonEngine
         top_n_details: Number of locations to show hourly details for
+        enabled_metrics: Optional set of metric_ids that should be rendered.
+        profile: Optional ActivityProfile (currently ignored, accepted for API consistency
+            with ``render_comparison_html``).
 
     Returns:
         Plain-text string for email
     """
+    _ = profile  # accepted for API consistency, not yet used
     from datetime import date
 
     time_window = result.time_window
