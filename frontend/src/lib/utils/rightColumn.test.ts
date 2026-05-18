@@ -18,6 +18,7 @@ import {
 	getPresetLabel,
 	getDefaultMetricsForProfile,
 	getActiveMetrics,
+	getActivePreset,
 	getReportSchedule,
 	prettyLabel,
 	type ReportSchedule
@@ -356,4 +357,64 @@ test('getPresetLabel > #206 AC-8: unbekannter preset_name → Fallback auf profi
 		aggregation: { profile: 'wandern' }
 	});
 	assert.equal(getPresetLabel(trip), 'Wandern-Standard');
+});
+
+// =============================================================================
+// Issue #173 — Metriken-Editor: Preset-Liste (getActivePreset)
+// Spec: docs/specs/modules/issue_173_metriken_editor_preset_liste.md
+//
+// PresetRow.svelte braucht eine Helper-Funktion, die aus `trip.display_config`
+// den aktiv ausgewählten Template-Key liefert. Single Source of Truth: das
+// persistierte `preset_name` aus display_config (Issue #206). Wenn kein Preset
+// gespeichert ist, liefert getActivePreset null — keine PresetRow ist aktiv.
+//
+// TDD RED: getActivePreset existiert noch nicht in rightColumn.ts.
+// =============================================================================
+
+test('getActivePreset > #173 AC-4: display_config.preset_name="skitouren" → "skitouren"', () => {
+	// AC-4: Trip mit gespeichertem Preset liefert genau diesen Template-Key.
+	// WeatherMetricsTab setzt damit selectedTemplate = "skitouren" und die
+	// "Skitouren"-PresetRow bekommt class:active.
+	const trip = tripWith({
+		display_config: { preset_name: 'skitouren' }
+	});
+	assert.equal(getActivePreset(trip), 'skitouren');
+});
+
+test('getActivePreset > #173 AC-4b: display_config.preset_name="wandern" → "wandern"', () => {
+	const trip = tripWith({
+		display_config: { preset_name: 'wandern' }
+	});
+	assert.equal(getActivePreset(trip), 'wandern');
+});
+
+test('getActivePreset > #173 AC-6: kein preset_name → null (keine Row aktiv)', () => {
+	// AC-6: Frischer Trip ohne preset_name → keine PresetRow hat class:active.
+	const trip = tripWith({
+		display_config: { metrics: [] }
+	});
+	assert.equal(getActivePreset(trip), null);
+});
+
+test('getActivePreset > #173 AC-6b: kein display_config → null', () => {
+	const trip = tripWith({});
+	assert.equal(getActivePreset(trip), null);
+});
+
+test('getActivePreset > #173: leerer String preset_name → null', () => {
+	// Defensiv: Backend kann '' liefern statt undefined. Leerer String darf
+	// keine Row aktivieren (entspricht "kein Preset").
+	const trip = tripWith({
+		display_config: { preset_name: '' }
+	});
+	assert.equal(getActivePreset(trip), null);
+});
+
+test('getActivePreset > #173: preset_name Non-String → null (Defensiv-Pfad)', () => {
+	// Issue #207-Style Off-Spec-Pfad: Backend liefert Non-String. Defensive
+	// Behandlung — kein Crash, sondern null.
+	const trip = tripWith({
+		display_config: { preset_name: 42 } as unknown as import('../types.ts').DisplayConfig
+	});
+	assert.equal(getActivePreset(trip), null);
 });
