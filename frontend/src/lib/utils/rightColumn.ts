@@ -55,10 +55,18 @@ export function getActiveMetrics(trip: Trip): string[] {
 	// aufweichen muessen.
 	const metrics: unknown = trip.display_config?.metrics;
 	if (Array.isArray(metrics)) {
+		// WeatherConfigMetric-Objekte: { metric_id, enabled, use_friendly_format }
+		// Real production data from WeatherMetricsTab
+		if (metrics.length > 0 && typeof (metrics[0] as { metric_id?: unknown })?.metric_id === 'string') {
+			return (metrics as Array<{ metric_id: string; enabled: boolean }>)
+				.filter(m => m.enabled)
+				.map(m => m.metric_id);
+		}
+		// String array (test compatibility)
 		if (metrics.every((m): m is string => typeof m === 'string')) {
 			return metrics;
 		}
-		// Array vorhanden aber enthaelt Non-Strings -> Fallback auf Profile-Default
+		// Non-string, non-object → fallback auf Profile-Default
 		const profile = trip.aggregation?.profile;
 		return getDefaultMetricsForProfile(profile);
 	}

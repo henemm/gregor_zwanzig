@@ -308,6 +308,19 @@ test('prettyLabel > AC-21: "uv_index" → "UV-Index"', () => {
 	assert.equal(prettyLabel('uv_index'), 'UV-Index');
 });
 
+test('getActiveMetrics > WeatherConfigMetric-Objekte → nur enabled=true als string[]', () => {
+	const trip = tripWith({
+		display_config: {
+			metrics: [
+				{ metric_id: 'temp_min', enabled: true },
+				{ metric_id: 'wind_max', enabled: false },
+				{ metric_id: 'precip_sum', enabled: true },
+			] as unknown as WeatherConfigMetric[]
+		}
+	});
+	assert.deepEqual(getActiveMetrics(trip), ['temp_min', 'precip_sum']);
+});
+
 // =============================================================================
 // Issue #206 — preset_name in display_config
 // Spec: docs/specs/modules/issue_206_weather_config_preset_name.md
