@@ -272,10 +272,10 @@ def render_html(
     <style>
         body {{ font-family: {FONT_UI}; margin: 0; padding: 16px; background: {G_PAPER}; }}
         .container {{ max-width: 800px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }}
-        .header {{ background: {G_ACCENT}; color: white; padding: 20px; }}
+        .header {{ background: {G_PAPER}; color: {G_INK}; padding: 20px; border-bottom: 1px solid {G_INK_FAINT}; }}
         .header h1 {{ margin: 0 0 4px 0; font-size: 22px; }}
-        .header h2 {{ margin: 0 0 4px 0; font-size: 16px; font-weight: 400; opacity: 0.9; }}
-        .header p {{ margin: 2px 0; opacity: 0.85; font-size: 13px; }}
+        .header h2 {{ margin: 0 0 4px 0; font-size: 16px; font-weight: 400; color: {G_INK_MUTED}; }}
+        .header p {{ margin: 2px 0; font-size: 13px; color: {G_INK_MUTED}; }}
         .section {{ padding: 0 16px; }}
         .section h3 {{ color: {G_INK}; border-bottom: 2px solid {G_ACCENT}; padding-bottom: 6px; margin-top: 16px; font-size: 14px; }}
         table {{ width: 100%; border-collapse: collapse; margin: 8px 0 16px 0; font-size: 13px; }}
@@ -289,8 +289,8 @@ def render_html(
 </head>
 <body>
     <div class="container">
-        <div class="header" style="background:{sig.accent_hex};">
-            <div class="eyebrow" style="font-size:11px;font-variant:small-caps;letter-spacing:0.08em;opacity:0.85;color:#ffffff;margin-bottom:4px;">{sig.icon} {sig.eyebrow}</div>
+        <div class="header">
+            <div class="eyebrow" style="font-size:11px;letter-spacing:0.12em;color:{G_ACCENT};margin-bottom:6px;display:flex;align-items:center;gap:6px;">{sig.icon_html} {sig.eyebrow}</div>
             <h1>{trip_name}</h1>
             {"<h2>" + sub_header + "</h2>" if sub_header else ""}
             <p>{report_type.title()} Report – {report_date}{" | " + stats_line if stats_line else ""}</p>

@@ -26,59 +26,61 @@ PREVIEW_PY = REPO_ROOT / "src" / "services" / "preview_service.py"
 
 
 PROFILE_CASES = [
-    (ActivityProfile.WINTERSPORT, "#4a7fb5", "❄", "Wintersport"),
-    (ActivityProfile.WANDERN, "#3a7d44", "🥾", "Wandern"),
-    (ActivityProfile.SUMMER_TREKKING, "#c45a2a", "🏔", "Sommer-Trekking"),
-    (ActivityProfile.ALLGEMEIN, "#6b675c", "◯", "Allgemein"),
+    (ActivityProfile.WINTERSPORT, "#4a7fb5", "❄", "WINTERSPORT · PISTE"),
+    (ActivityProfile.WANDERN, "#3a7d44", "🥾", "WANDERN"),
+    (ActivityProfile.SUMMER_TREKKING, "#c45a2a", "🏔", "ALPINE TOUR"),
+    (ActivityProfile.ALLGEMEIN, "#6b675c", "◯", "WETTER-BRIEFING"),
 ]
 
 
 # --- AC-1: profile_signature() liefert korrekte Werte pro Profil ----------
 
 def test_ac1_signature_wintersport():
-    """AC-1: WINTERSPORT → blau-eis, Schneeflocke, 'Wintersport'."""
+    """AC-1: WINTERSPORT → blau-eis, Schneeflocke, 'WINTERSPORT · PISTE'."""
     from src.output.renderers.email.profile_signature import profile_signature
     sig = profile_signature(ActivityProfile.WINTERSPORT)
     assert sig.accent_hex == "#4a7fb5"
     assert sig.icon == "❄"
-    assert sig.eyebrow == "Wintersport"
+    assert sig.eyebrow == "WINTERSPORT · PISTE"
 
 
 def test_ac1_signature_wandern():
-    """AC-1: WANDERN → Wald-Grün, Stiefel, 'Wandern'."""
+    """AC-1: WANDERN → Wald-Grün, Stiefel, 'WANDERN'."""
     from src.output.renderers.email.profile_signature import profile_signature
     sig = profile_signature(ActivityProfile.WANDERN)
     assert sig.accent_hex == "#3a7d44"
     assert sig.icon == "🥾"
-    assert sig.eyebrow == "Wandern"
+    assert sig.eyebrow == "WANDERN"
 
 
 def test_ac1_signature_summer_trekking():
-    """AC-1: SUMMER_TREKKING → Burnt-Orange, Berg, 'Sommer-Trekking' (ö + Bindestrich)."""
+    """AC-1: SUMMER_TREKKING → Burnt-Orange, Berg, 'ALPINE TOUR'."""
     from src.output.renderers.email.profile_signature import profile_signature
     sig = profile_signature(ActivityProfile.SUMMER_TREKKING)
     assert sig.accent_hex == "#c45a2a"
     assert sig.icon == "🏔"
-    assert sig.eyebrow == "Sommer-Trekking"
+    assert sig.eyebrow == "ALPINE TOUR"
 
 
 def test_ac1_signature_allgemein():
-    """AC-1: ALLGEMEIN → Neutral-Grau, Kreis, 'Allgemein'."""
+    """AC-1: ALLGEMEIN → Neutral-Grau, Kreis, 'WETTER-BRIEFING'."""
     from src.output.renderers.email.profile_signature import profile_signature
     sig = profile_signature(ActivityProfile.ALLGEMEIN)
     assert sig.accent_hex == "#6b675c"
     assert sig.icon == "◯"
-    assert sig.eyebrow == "Allgemein"
+    assert sig.eyebrow == "WETTER-BRIEFING"
 
 
 # --- AC-2: render_html(profile=...) rendert korrekten Header --------------
 
-@pytest.mark.parametrize("profile,accent_hex,icon,eyebrow", PROFILE_CASES)
-def test_ac2_render_html_with_profile(profile, accent_hex, icon, eyebrow):
+@pytest.mark.parametrize("profile,accent_hex,_icon,eyebrow", PROFILE_CASES)
+def test_ac2_render_html_with_profile(profile, accent_hex, _icon, eyebrow):
     """
     AC-2: render_html(profile=X) erzeugt HTML mit:
-      - {accent_hex} als Header-Background (Inline-Style)
-      - Eyebrow-Block "{icon} {eyebrow}" im Header
+      - {accent_hex} als Akzentfarbe im Eyebrow-SVG
+      - Eyebrow-Block "{SVG-Icon} {eyebrow}" im Header
+      - (Issue #255: Emoji-Icon wurde durch inline-SVG ersetzt — accent_hex
+        erscheint nun als fill/stroke im SVG, nicht mehr als Header-BG.)
     """
     from src.output.renderers.email.html import render_html
     kwargs = _common_kwargs()
@@ -106,9 +108,11 @@ def test_ac2_render_html_with_profile(profile, accent_hex, icon, eyebrow):
     assert accent_hex.lower() in html_lower, (
         f"Accent-Hex {accent_hex} fehlt im HTML für Profil {profile.value}"
     )
-    assert icon in html, f"Icon {icon} fehlt im HTML für Profil {profile.value}"
     assert eyebrow in html, f"Eyebrow {eyebrow!r} fehlt im HTML für Profil {profile.value}"
     assert "eyebrow" in html_lower, "CSS-Klasse 'eyebrow' fehlt im HTML"
+    assert "<svg" in html, (
+        f"SVG-Icon fehlt im HTML für Profil {profile.value} (Issue #255)"
+    )
 
 
 # --- AC-3: render_email reicht profile an render_html + render_plain -------
@@ -124,8 +128,8 @@ def test_ac3_render_email_passes_profile_through():
         token_line, profile=ActivityProfile.WINTERSPORT, **_common_kwargs(),
     )
     assert "#4a7fb5" in html.lower(), "Wintersport-Accent fehlt im HTML"
-    assert "Wintersport" in html, "Wintersport-Eyebrow fehlt im HTML"
-    assert "❄ Wintersport" in plain, "Wintersport-Prefix fehlt im Plain"
+    assert "WINTERSPORT · PISTE" in html, "Wintersport-Eyebrow fehlt im HTML"
+    assert "❄ WINTERSPORT · PISTE" in plain, "Wintersport-Prefix fehlt im Plain"
 
 
 # --- AC-4: format_email reicht profile an render_email durch ---------------
@@ -151,8 +155,8 @@ def test_ac4_format_email_passes_profile_through():
     assert "#c45a2a" in report.email_html.lower(), (
         "Summer-Trekking-Accent #c45a2a fehlt in TripReport.email_html"
     )
-    assert "Sommer-Trekking" in report.email_html, (
-        "Eyebrow 'Sommer-Trekking' fehlt in TripReport.email_html"
+    assert "ALPINE TOUR" in report.email_html, (
+        "Eyebrow 'ALPINE TOUR' fehlt in TripReport.email_html"
     )
 
 
@@ -231,7 +235,7 @@ def test_ac8_render_email_without_profile_kwarg_backward_compat():
     assert "#6b675c" in html.lower(), (
         "Default-Fallback ALLGEMEIN-Accent #6b675c fehlt im HTML"
     )
-    assert "Allgemein" in html, "Default-Fallback Eyebrow 'Allgemein' fehlt im HTML"
+    assert "WETTER-BRIEFING" in html, "Default-Fallback Eyebrow 'WETTER-BRIEFING' fehlt im HTML"
 
 
 # --- AC-9: Preview-Service reicht profile durch (Source-Inspection) --------
@@ -259,7 +263,7 @@ def test_ac10_signature_none_fallback():
     sig = profile_signature(None)
     assert sig.accent_hex == "#6b675c"
     assert sig.icon == "◯"
-    assert sig.eyebrow == "Allgemein"
+    assert sig.eyebrow == "WETTER-BRIEFING"
 
 
 def test_ac10_signature_unknown_value_fallback():
@@ -271,4 +275,4 @@ def test_ac10_signature_unknown_value_fallback():
     sig = profile_signature("nicht_im_enum")  # type: ignore[arg-type]
     assert sig.accent_hex == "#6b675c"
     assert sig.icon == "◯"
-    assert sig.eyebrow == "Allgemein"
+    assert sig.eyebrow == "WETTER-BRIEFING"

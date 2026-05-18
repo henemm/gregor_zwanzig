@@ -76,8 +76,8 @@ def test_ac2_trip_alert_render_with_wintersport_profile():
     assert "#4a7fb5" in report.email_html.lower(), (
         "Wintersport-Accent #4a7fb5 fehlt in Alert-Mail HTML"
     )
-    assert "Wintersport" in report.email_html, (
-        "Eyebrow 'Wintersport' fehlt in Alert-Mail HTML"
+    assert "WINTERSPORT" in report.email_html, (
+        "Eyebrow 'WINTERSPORT' (CAPS, Issue #255) fehlt in Alert-Mail HTML"
     )
 
 
@@ -101,6 +101,6 @@ def test_ac2_trip_alert_render_with_wandern_profile():
     assert "#3a7d44" in report.email_html.lower(), (
         "Wandern-Accent #3a7d44 fehlt in Alert-Mail HTML"
     )
-    assert "Wandern" in report.email_html, (
-        "Eyebrow 'Wandern' fehlt in Alert-Mail HTML"
+    assert "WANDERN" in report.email_html, (
+        "Eyebrow 'WANDERN' (CAPS, Issue #255) fehlt in Alert-Mail HTML"
     )
