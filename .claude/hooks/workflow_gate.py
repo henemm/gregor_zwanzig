@@ -29,7 +29,7 @@ try:
         get_protected_paths, get_always_allowed,
         get_ac_format_required_since,
     )
-    from workflow_state_multi import load_state as _load_state_v3
+    from workflow_state_multi import load_state as _load_state_v3, read_active_workflow_fast
 except ImportError:
     # Fallback for direct execution
     sys.path.insert(0, str(Path(__file__).parent))
@@ -38,7 +38,7 @@ except ImportError:
         get_protected_paths, get_always_allowed,
         get_ac_format_required_since,
     )
-    from workflow_state_multi import load_state as _load_state_v3
+    from workflow_state_multi import load_state as _load_state_v3, read_active_workflow_fast
 
 
 def _spec_has_valid_ac_format(spec_path: Path, stichtag: str | None) -> tuple[bool, str]:
@@ -92,16 +92,13 @@ def _spec_has_valid_ac_format(spec_path: Path, stichtag: str | None) -> tuple[bo
 
 
 def load_state() -> dict:
-    """Load current workflow state via the v3 wrapper.
+    """Load active workflow state via fast-path reader.
 
     Returns the v2-shaped state for backward compatibility with the rest
     of this hook, which expects flat keys like ``current_phase``.
     """
-    state = _load_state_v3()
-    active_workflow = state.get("active_workflow")
-    workflows = state.get("workflows") or {}
-
-    if not active_workflow or active_workflow not in workflows:
+    result = read_active_workflow_fast()
+    if result is None:
         return {
             "current_phase": "idle",
             "feature_name": None,
@@ -111,7 +108,7 @@ def load_state() -> dict:
             "validation_done": False,
         }
 
-    workflow = workflows[active_workflow]
+    active_workflow, workflow = result
     return {
         "current_phase": workflow.get("current_phase", "idle"),
         "feature_name": active_workflow,

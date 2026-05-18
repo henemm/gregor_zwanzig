@@ -305,6 +305,18 @@ def _resolve_active_path() -> Optional[Path]:
     return None
 
 
+def read_active_workflow_fast() -> "tuple[str, dict] | None":
+    """Fast-path: reads only .active symlink + its JSON. No glob, no aggregation."""
+    active_path = _resolve_active_path()
+    if active_path is None:
+        return None
+    data = _read_workflow_file(active_path)
+    if data is None:
+        return None
+    name = active_path.stem
+    return (name, data)
+
+
 def _read_active() -> tuple[dict, str]:
     """Read active workflow data + name. Exits with code 1 if none.
 
@@ -743,7 +755,22 @@ def cmd_write_log(args: list[str]) -> None:
 
 
 def cmd_complete(args: list[str]) -> None:
-    data, name = _read_active()
+    if args:
+        name = args[0]
+        live_path = _workflow_file(name)
+        arch_path = _archive_file(name)
+        if not live_path.exists() and not arch_path.exists():
+            print(f"ERROR: Workflow '{name}' not found", file=sys.stderr)
+            sys.exit(1)
+        data = _read_workflow_file(live_path) if live_path.exists() else _read_workflow_file(arch_path)
+        active = _active_name()
+        is_active = (active == name)
+        if not is_active and active:
+            print(f"WARNING: Completing '{name}' but active workflow is '{active}'", file=sys.stderr)
+    else:
+        data, name = _read_active()
+        is_active = True
+
     log_dir = _get_workflows_root() / "_log"
     if not _has_valid_log(log_dir, name):
         print(
@@ -757,12 +784,13 @@ def cmd_complete(args: list[str]) -> None:
     data["last_updated"] = datetime.now().isoformat()
     _archive_dir().mkdir(parents=True, exist_ok=True)
     _atomic_write(_archive_file(name), data)
-    wf_file = _workflow_file(name)
-    if wf_file.exists():
-        wf_file.unlink()
-    link = _active_link()
-    if link.is_symlink():
-        link.unlink()
+    live_path = _workflow_file(name)
+    if live_path.exists():
+        live_path.unlink()
+    if is_active:
+        link = _active_link()
+        if link.is_symlink():
+            link.unlink()
     print(f"Workflow {name} completed and archived.")
 
 
@@ -825,6 +853,40 @@ def cmd_override_ambiguous(args: list[str]) -> None:
     print(f"AMBIGUOUS-Override aktiv (gültig 1h): {reason}")
 
 
+def cmd_cleanup(args: list[str]) -> None:
+    apply = "--yes" in args
+    wf_dir = _get_workflows_root()
+    candidates = []
+    for p in sorted(wf_dir.glob("*.json")):
+        data = _read_workflow_file(p)
+        if data and data.get("current_phase") == "phase8_complete":
+            candidates.append(p.stem)
+
+    if not candidates:
+        print("Nothing to clean up")
+        return
+
+    if not apply:
+        print(f"Dry-run — {len(candidates)} workflow(s) to archive (use --yes to apply):")
+        for name in candidates:
+            print(f"  {name}")
+        return
+
+    _archive_dir().mkdir(parents=True, exist_ok=True)
+    for name in candidates:
+        live = _workflow_file(name)
+        if not live.exists():
+            continue
+        data = _read_workflow_file(live)
+        if not data or data.get("current_phase") != "phase8_complete":
+            continue
+        try:
+            live.rename(_archive_file(name))
+            print(f"Archived: {name}")
+        except FileNotFoundError:
+            pass
+
+
 COMMANDS = {
     "start": cmd_start,
     "switch": cmd_switch,
@@ -841,6 +903,7 @@ COMMANDS = {
     "write-log": cmd_write_log,
     "override-ambiguous": cmd_override_ambiguous,
     "complete": cmd_complete,
+    "cleanup": cmd_cleanup,
     "backlog": cmd_backlog,
     "pause": cmd_pause,
     "reset": cmd_reset,

@@ -27,6 +27,7 @@ if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
 import workflow as _w  # noqa: E402
+from workflow import read_active_workflow_fast  # noqa: E402, F401
 
 
 # --- Constants (kept identical for backward compatibility) -------------

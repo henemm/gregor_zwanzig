@@ -243,10 +243,11 @@ def check_tdd_requirements(file_path: str) -> tuple[bool, str]:
     Check if TDD requirements are met for modifying a file.
     Returns (allowed, reason).
     """
-    workflow = get_active_workflow()
-
-    if not workflow:
+    from workflow import read_active_workflow_fast
+    result = read_active_workflow_fast()
+    if result is None:
         return True, "No active workflow, TDD check skipped"
+    _wf_name, workflow = result
 
     phase = workflow.get("current_phase", "phase0_idle")
 
