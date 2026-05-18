@@ -2,7 +2,7 @@
 	// Epic #135 Step 4 (Issue #157) — Stage-Liste fuer Trip-Overview.
 	// Spec: docs/specs/modules/epic_135_step4_left_column.md §4.
 
-	import type { Trip } from '$lib/types';
+	import type { Trip, StagesWeatherResponse, StageWeatherResult } from '$lib/types';
 	import StageDetailRow from './StageDetailRow.svelte';
 	import { computeStageBoundaries, getActiveStageId } from '$lib/utils/fullProfile';
 
@@ -22,6 +22,19 @@
 
 	const boundaries = $derived(computeStageBoundaries(trip));
 	const activeStageId = $derived(getActiveStageId(trip, now));
+
+	// Issue #203 — Stage-Wetter asynchron nach Trip-Load nachladen.
+	let stageWeather: Record<string, StageWeatherResult | null> = $state({});
+
+	$effect(() => {
+		if (!trip?.id) return;
+		fetch(`/api/trips/${trip.id}/stages/weather`)
+			.then((r) => (r.ok ? (r.json() as Promise<StagesWeatherResponse>) : null))
+			.then((data) => {
+				if (data) stageWeather = data.results;
+			})
+			.catch(() => {});
+	});
 
 	// Safari-Closure-Factory: pro stageId einen benannten Handler erzeugen.
 	function makeSelectHandler(id: string) {
@@ -44,6 +57,7 @@
 				selected={selectedStageId === stage.id}
 				active={activeStageId === stage.id}
 				onSelect={makeSelectHandler(stage.id)}
+				weatherData={stageWeather[stage.id] ?? null}
 				{now}
 			/>
 		{/each}

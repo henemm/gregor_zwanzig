@@ -5,7 +5,7 @@
 	// Native <button> mit onclick={onSelect} — Safari-tauglich, da onSelect
 	// bereits in StageList pro Stage gebunden wird.
 
-	import type { Stage } from '$lib/types';
+	import type { Stage, StageWeatherResult } from '$lib/types';
 	import { computeHeaderStats } from '$lib/components/email-preview/headerStats';
 	import { Pill } from '$lib/components/ui/pill';
 
@@ -17,6 +17,7 @@
 		active: boolean;
 		onSelect: () => void;
 		now?: Date;
+		weatherData?: StageWeatherResult | null;
 	}
 
 	let {
@@ -26,8 +27,44 @@
 		selected,
 		active,
 		onSelect,
-		now: _now = new Date()
+		now: _now = new Date(),
+		weatherData = null
 	}: Props = $props();
+
+	// Issue #203 — WMO-Code → Emoji-Mapping.
+	function stageWeatherEmoji(
+		wmoCode: number | null | undefined,
+		isDay: number | null | undefined
+	): string {
+		if (wmoCode == null) return '🌡️';
+		if (wmoCode >= 95) return '⛈️';
+		if (wmoCode >= 80) return '🌦️';
+		if (wmoCode >= 71) return '❄️';
+		if (wmoCode >= 51) return '🌧️';
+		if (wmoCode >= 45) return '🌫️';
+		if (wmoCode >= 2) return '⛅';
+		return isDay === 0 ? '🌙' : '☀️';
+	}
+
+	const riskTone = $derived(
+		weatherData?.risk === 'green'
+			? ('success' as const)
+			: weatherData?.risk === 'yellow'
+				? ('warning' as const)
+				: weatherData?.risk === 'red'
+					? ('danger' as const)
+					: null
+	);
+
+	const riskLabel = $derived(
+		weatherData?.risk === 'green'
+			? 'Gering'
+			: weatherData?.risk === 'yellow'
+				? 'Mittel'
+				: weatherData?.risk === 'red'
+					? 'Hoch'
+					: null
+	);
 
 	const stats = $derived(computeHeaderStats(stage));
 	const wptCount = $derived(stage.waypoints?.length ?? 0);
@@ -62,6 +99,15 @@
 			{code}
 		</Pill>
 		<span class="eyebrow">{dateLabel}</span>
+		{#if riskTone && riskLabel}
+			<Pill
+				tone={riskTone}
+				data-testid="trip-stage-row-risk-{stage.id}"
+				class="risk-pill"
+			>
+				{riskLabel}
+			</Pill>
+		{/if}
 	</header>
 
 	<h3 class="stage-row-title">{stage.name}</h3>
@@ -84,6 +130,22 @@
 			<dd>{wptCount}</dd>
 		</div>
 	</dl>
+
+	{#if weatherData?.weather_summary}
+		{@const ws = weatherData.weather_summary}
+		<div class="weather-strip" data-testid="trip-stage-row-weather-{stage.id}">
+			<span class="weather-emoji">{stageWeatherEmoji(ws.wmo_code, ws.is_day)}</span>
+			{#if ws.temp_min_c != null && ws.temp_max_c != null}
+				<span class="eyebrow">{Math.round(ws.temp_min_c)}–{Math.round(ws.temp_max_c)} °C</span>
+			{/if}
+			{#if ws.wind_max_kmh != null}
+				<span class="eyebrow">Wind {Math.round(ws.wind_max_kmh)} km/h</span>
+			{/if}
+			{#if ws.precip_mm != null && ws.precip_mm > 0}
+				<span class="eyebrow">💧 {ws.precip_mm.toFixed(1)} mm</span>
+			{/if}
+		</div>
+	{/if}
 </button>
 
 <style>
@@ -107,6 +169,20 @@
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
+	}
+	.stage-row-header :global(.risk-pill) {
+		margin-left: auto;
+	}
+	.weather-strip {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.5rem;
+		padding-top: 0.25rem;
+	}
+	.weather-emoji {
+		font-size: 1.1rem;
+		line-height: 1;
 	}
 	.stage-row-title {
 		font-size: 1rem;

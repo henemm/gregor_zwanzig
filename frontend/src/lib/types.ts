@@ -214,3 +214,22 @@ export interface SchedulerStatus {
 	timezone: string;
 	jobs: SchedulerJob[];
 }
+
+// Issue #203 — Stage-Weather + Risk DTOs für GET /api/trips/{id}/stages/weather.
+export interface StageWeatherSummary {
+	temp_min_c?: number | null;
+	temp_max_c?: number | null;
+	wind_max_kmh?: number | null;
+	precip_mm?: number | null;
+	wmo_code?: number | null;
+	is_day?: number | null;
+}
+
+export interface StageWeatherResult {
+	weather_summary: StageWeatherSummary | null;
+	risk: 'green' | 'yellow' | 'red' | null;
+}
+
+export interface StagesWeatherResponse {
+	results: Record<string, StageWeatherResult | null>;
+}
