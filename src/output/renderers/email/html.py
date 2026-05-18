@@ -22,7 +22,7 @@ from utils.timezone import local_fmt
 
 from src.output.renderers.email.helpers import (
     build_confidence_hint, build_segment_label, build_units_legend, fmt_val,
-    format_change_line, shorten_stage_name, visible_cols,
+    format_change_line, pill_html, shorten_stage_name, visible_cols,
 )
 from src.output.renderers.email.design_tokens import (
     G_PAPER, G_SURFACE_1, G_INK, G_INK_MUTED, G_INK_FAINT,
@@ -88,16 +88,20 @@ def _render_html_table(rows: list[dict], *, friendly_keys: set[str]) -> str:
     if not rows:
         # Empty rows: render a minimal table skeleton so callers can still
         # detect a <table> in the body (β3 test_renderers_email expectation).
-        return "<table><tr><th>Time</th></tr></table>"
+        return '<table class="resp"><tr><th>Time</th></tr></table>'
     cols = visible_cols(rows)
     ths = "<th>Time</th>" + "".join(f"<th>{label}</th>" for _, label in cols)
     trs = []
     for r in rows:
-        tds = f"<td>{r['time']}</td>"
-        for key, _ in cols:
-            tds += f"<td>{fmt_val(key, r.get(key), friendly_keys=friendly_keys, html=True, row=r)}</td>"
+        tds = f'<td data-label="Time">{r["time"]}</td>'
+        for key, label in cols:
+            try:
+                cell = fmt_val(key, r.get(key), friendly_keys=friendly_keys, html=True, row=r)
+            except (TypeError, ValueError):
+                cell = str(r.get(key)) if r.get(key) is not None else "–"
+            tds += f'<td data-label="{label}">{cell}</td>'
         trs.append(f"<tr>{tds}</tr>")
-    return f"<table><tr>{ths}</tr>{''.join(trs)}</table>"
+    return f'<table class="resp"><tr>{ths}</tr>{"".join(trs)}</table>'
 
 
 def render_html(
@@ -268,6 +272,7 @@ def render_html(
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
     {WEB_FONT_LINK}
     <style>
         body {{ font-family: {FONT_UI}; margin: 0; padding: 16px; background: {G_PAPER}; }}
@@ -280,11 +285,23 @@ def render_html(
         .section h3 {{ color: {G_INK}; border-bottom: 2px solid {G_ACCENT}; padding-bottom: 6px; margin-top: 16px; font-size: 14px; }}
         table {{ width: 100%; border-collapse: collapse; margin: 8px 0 16px 0; font-size: 13px; }}
         th {{ background: {G_SURFACE_1}; padding: 8px 6px; text-align: center; font-weight: 600; border-bottom: 2px solid {G_INK_FAINT}; font-size: 12px; white-space: nowrap; }}
-        td {{ padding: 6px; text-align: center; border-bottom: 1px solid #eee; }}
+        td {{ padding: 6px; text-align: center; border-bottom: 1px solid {G_INK_FAINT}; }}
         .metric-value, td.metric, code {{ font-family: {FONT_DATA}; }}
-        .footer {{ background: {G_PAPER}; padding: 12px; text-align: center; color: {G_INK_MUTED}; font-size: 11px; border-top: 1px solid {G_INK_FAINT}; }}
+        .footer {{ background: {G_INK}; padding: 12px; text-align: center; color: #ffffff; font-size: 11px; }}
         ul {{ padding-left: 20px; }}
         li {{ margin: 4px 0; font-size: 14px; }}
+        @media (max-width:480px) {{
+            body {{ padding:4px; }}
+            .container {{ border-radius:0; box-shadow:none; }}
+            .header h1 {{ font-size:18px; }}
+            .header h2 {{ font-size:13px; }}
+            table.resp {{ display:block; }}
+            table.resp thead {{ display:none; }}
+            table.resp tbody {{ display:block; }}
+            table.resp tr {{ display:block; border:1px solid {G_INK_FAINT}; margin-bottom:6px; border-radius:4px; padding:4px; }}
+            table.resp td {{ display:block; text-align:right; padding:3px 8px; font-size:11px; }}
+            table.resp td::before {{ content:attr(data-label); float:left; font-weight:600; color:{G_INK_MUTED}; }}
+        }}
     </style>
 </head>
 <body>
@@ -308,7 +325,7 @@ def render_html(
 
         <div class="footer">
             Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')} | Data: {segments[0].provider} ({segments[0].timeseries.meta.model if segments[0].timeseries else 'n/a'}){(' | Fallback ' + ', '.join(segments[0].timeseries.meta.fallback_metrics) + ': ' + segments[0].timeseries.meta.fallback_model) if segments[0].timeseries and segments[0].timeseries.meta.fallback_model else ''}
-            {('<br><span style="font-size:10px;color:' + G_INK_FAINT + '">' + legend_text + '</span>') if legend_text else ''}
+            {('<br><span style="font-size:10px;color:rgba(255,255,255,0.6)">' + legend_text + '</span>') if legend_text else ''}
         </div>
     </div>
 </body>

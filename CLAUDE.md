@@ -176,6 +176,7 @@ Alle Module benoetigen Specs vor Implementierung:
 - `epic_137_wegpunkt_editor` - Vollständiger Wegpunkt-Editor mit EtappenStrip (Drag-Drop), SVG-Karte, Höhenprofil, Waypoint-Editor (Issues #166–#172, Spec: `docs/specs/modules/epic_137_wegpunkt_editor.md`)
 - `issue_202_region_feld` - Trip: optionales Region-Freitext-Feld (max 50 Zeichen), erfassbar in Wizard Step 1, angezeigt im Trip-Hero (Issue #202, Spec: `docs/specs/modules/issue_202_region_feld.md`)
 - `issue_254_email_template_vorarbeit` - Vorarbeiten für EPIC 9: Design-System Mail-Tokens-Dokumentation (app.css Single Source of Truth), html.py Inventar, Preview-Script (Issue #254, Spec: `docs/specs/modules/issue_254_email_template_vorarbeit.md`)
+- `issue_257_trip_briefing_mail_polish` - Dunkel-Footer (G_INK #1a1a18), Tag-/Pill-System, Mobile-Karten-Layout via @media, Dark-Mode-Schutz für Trip-Briefing-Mail (Issue #257, Spec: `docs/specs/modules/issue_257_trip_briefing_mail_polish.md`)
 
 ### Geplante Module
 Siehe GitHub Issues: https://github.com/henemm/gregor_zwanzig/issues

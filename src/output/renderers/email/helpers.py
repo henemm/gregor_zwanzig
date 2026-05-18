@@ -469,3 +469,29 @@ def build_friendly_keys(dc: UnifiedWeatherDisplayConfig) -> set[str]:
             except KeyError:
                 pass
     return keys
+
+
+def pill_html(label: str, tone: str) -> str:
+    """Outlook-kompatibler Pill/Tag-Baustein fuer Segment-Risk-Anzeigen.
+
+    Tone-Palette (hardkodierte Hex, keine CSS-Custom-Properties — Outlook
+    ignoriert CSS-Variablen):
+        good  -> BG #3a7d44 (G_SUCCESS), Text #ffffff
+        warn  -> BG #c8882a (G_WARNING), Text #ffffff
+        bad   -> BG #b33a2a (G_DANGER),  Text #ffffff
+        info  -> BG #2a6cb3 (G_INFO),    Text #ffffff
+        else  -> BG #edeae1 (G_SURFACE_1), Text #1a1a18 (neutral)
+    """
+    _TONES = {
+        "good": ("#3a7d44", "#ffffff"),
+        "warn": ("#c8882a", "#ffffff"),
+        "bad":  ("#b33a2a", "#ffffff"),
+        "info": ("#2a6cb3", "#ffffff"),
+    }
+    bg, fg = _TONES.get(tone, ("#edeae1", "#1a1a18"))
+    return (
+        f'<span style="background:{bg};color:{fg};border-radius:99px;'
+        f'padding:2px 8px;font-size:11px;font-weight:600;'
+        f'display:inline-block;line-height:1.4;">'
+        f'{label}</span>'
+    )

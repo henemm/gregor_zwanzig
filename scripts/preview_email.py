@@ -36,7 +36,15 @@ from app.models import (  # noqa: E402
     ThunderLevel,
     TripSegment,
 )
+from app.profile import ActivityProfile  # noqa: E402
 from output.renderers.email.html import render_html  # noqa: E402
+
+_PROFILE_MAP = {
+    "wintersport":      ActivityProfile.WINTERSPORT,
+    "wandern":          ActivityProfile.WANDERN,
+    "summer_trekking":  ActivityProfile.SUMMER_TREKKING,
+    "allgemein":        ActivityProfile.ALLGEMEIN,
+}
 
 
 def _build_fixture() -> SegmentWeatherData:
@@ -89,6 +97,12 @@ def main() -> int:
     parser.add_argument(
         "--report-type", default="morning", choices=["morning", "evening"]
     )
+    parser.add_argument(
+        "--profile",
+        choices=["wintersport", "wandern", "summer_trekking", "allgemein"],
+        default="allgemein",
+        help="Aktivitaetsprofil fuer Preview (default: allgemein)",
+    )
     args = parser.parse_args()
 
     seg = _build_fixture()
@@ -110,6 +124,7 @@ def main() -> int:
         daylight=None,
         tz=ZoneInfo("Europe/Paris"),
         friendly_keys=set(),
+        profile=_PROFILE_MAP[args.profile],
     )
 
     out_path = Path(args.out)

@@ -108,7 +108,7 @@ def test_format_email_generates_html():
     report = formatter.format_email(segments, "Test Trip", "morning")
 
     assert "<!DOCTYPE html>" in report.email_html
-    assert "<table>" in report.email_html.lower()
+    assert "<table" in report.email_html.lower()
 
 
 class TestMetricsFiltering:
