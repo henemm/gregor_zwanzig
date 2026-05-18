@@ -2,6 +2,7 @@
 	import { Tabs } from 'bits-ui';
 	import TripOverview from './TripOverview.svelte';
 	import WaypointsPanel from './WaypointsPanel.svelte';
+	import WeatherMetricsTab from './WeatherMetricsTab.svelte';
 	import {
 		EmailIframe,
 		SmsPhoneFrame,
@@ -39,7 +40,6 @@
 	const PLACEHOLDERS: Record<string, string> = {
 		overview: 'Inhalt folgt mit Issue #154 (Hero) + #156 (Höhenprofil) + #157 (Stage-Liste)',
 		stages: 'Inhalt folgt mit Epic #137 (Wegpunkt-Editor)',
-		weather: 'Inhalt folgt mit Issue #158 + Epic #138 (Metriken-Editor)',
 		briefings: 'Inhalt folgt mit Issue #159 (rechte Spalte)',
 		alerts: 'Inhalt folgt mit Epic #139 (Alert-Konfigurator)',
 		preview: 'Inhalt folgt mit Issue #189 (Vorschau-Integration)'
@@ -95,6 +95,8 @@
 				<TripOverview {trip} />
 			{:else if tab.value === 'stages' && trip}
 				<WaypointsPanel {trip} />
+			{:else if tab.value === 'weather' && trip}
+				<WeatherMetricsTab {trip} />
 			{:else if tab.value === 'preview' && trip}
 				<div class="preview-shell">
 					<div class="preview-controls" data-testid="preview-controls">

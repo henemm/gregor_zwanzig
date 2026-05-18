@@ -88,6 +88,7 @@ export interface Aggregation {
 export interface WeatherConfigMetric {
 	metric_id: string;
 	enabled: boolean;
+	use_friendly_format?: boolean;
 }
 
 export interface WeatherConfig {

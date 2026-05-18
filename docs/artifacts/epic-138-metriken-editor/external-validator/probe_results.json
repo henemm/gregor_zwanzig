@@ -1,0 +1,25 @@
+{
+  "tabFound": true,
+  "AC1_tabRoot": false,
+  "AC1_placeholderText": false,
+  "AC2_checkboxCount": 0,
+  "AC2_checkboxIds": [],
+  "AC2_headings": [],
+  "AC3_dropdownExists": false,
+  "AC5_rawButtonIds": [],
+  "AC5_indButtonIds": [],
+  "AC5_expectedEligible": [
+    "cape",
+    "cloud_high",
+    "cloud_low",
+    "cloud_mid",
+    "cloud_total",
+    "sunshine",
+    "thunder",
+    "visibility",
+    "wind_direction"
+  ],
+  "AC5_rawMatchesExpected": false,
+  "AC5_indMatchesExpected": false,
+  "AC6_saveBtnExists": false
+}

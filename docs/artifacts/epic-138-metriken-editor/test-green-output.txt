@@ -1,0 +1,15 @@
+
+Running 11 tests using 1 worker
+
+[1A[2K[1/11] [setup] › e2e/global.setup.ts:6:1 › authenticate and seed test data
+[1A[2K[2/11] [tests] › e2e/epic-138-metriken-editor.spec.ts:94:2 › Epic #138 — Wetter-Metriken-Editor Tab › AC-1: Metriken-Tab zeigt WeatherMetricsTab-Komponente, keinen Platzhaltertext
+[1A[2K[3/11] [tests] › e2e/epic-138-metriken-editor.spec.ts:113:2 › Epic #138 — Wetter-Metriken-Editor Tab › AC-2: Metriken-Tab zeigt genau 26 Metrik-Checkboxen in 5 Kategorien
+[1A[2K[4/11] [tests] › e2e/epic-138-metriken-editor.spec.ts:135:2 › Epic #138 — Wetter-Metriken-Editor Tab › AC-3: Template-Dropdown enthält genau 7 Presets plus leere Option
+[1A[2K[5/11] [tests] › e2e/epic-138-metriken-editor.spec.ts:162:2 › Epic #138 — Wetter-Metriken-Editor Tab › AC-4: Template "Wandern" aktiviert genau die definierten Metriken
+[1A[2K[6/11] [tests] › e2e/epic-138-metriken-editor.spec.ts:196:2 › Epic #138 — Wetter-Metriken-Editor Tab › AC-5: Roh/Indikator-Buttons genau für 9 eligible Metriken sichtbar, nicht für andere
+[1A[2K[7/11] [tests] › e2e/epic-138-metriken-editor.spec.ts:231:2 › Epic #138 — Wetter-Metriken-Editor Tab › AC-6: Speichern sendet PUT mit allen 26 Metrik-IDs und use_friendly_format
+[1A[2K[8/11] [tests] › e2e/epic-138-metriken-editor.spec.ts:266:2 › Epic #138 — Wetter-Metriken-Editor Tab › AC-7: Roh-Format für cloud_total wird nach Speichern und Reload korrekt geladen
+[1A[2K[9/11] [tests] › e2e/epic-138-metriken-editor.spec.ts:306:2 › Epic #138 — Wetter-Metriken-Editor Tab › AC-10: Erfolgsmeldung erscheint nach erfolgreichem Speichern
+[1A[2K[10/11] [tests] › e2e/epic-138-metriken-editor.spec.ts:346:2 › AC-8 — WeatherConfigDialog: use_friendly_format im Save-Payload › AC-8: WeatherConfigDialog sendet use_friendly_format in jedem Metrik-Objekt
+[1A[2K[11/11] [tests] › e2e/epic-138-metriken-editor.spec.ts:388:2 › AC-9 — EditWeatherSection: use_friendly_format in displayConfig-Emission › AC-9: Wizard-Bearbeitung emittiert use_friendly_format in displayConfig
+[1A[2K  11 passed (6.8s)

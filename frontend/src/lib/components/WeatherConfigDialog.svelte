@@ -9,6 +9,7 @@
 		unit: string;
 		category: string;
 		default_enabled: boolean;
+		has_friendly_format: boolean;
 	}
 
 	type MetricCatalog = Record<string, MetricEntry[]>;
@@ -47,6 +48,8 @@
 
 	// Map of metric_id -> enabled
 	let enabledMap: Record<string, boolean> = $state({});
+	// Map of metric_id -> use_friendly_format (Default: true)
+	let friendlyMap: Record<string, boolean> = $state({});
 
 	function buildEnabledMap(cat: MetricCatalog, cfg: Record<string, unknown> | undefined) {
 		const map: Record<string, boolean> = {};
@@ -65,11 +68,27 @@
 		return map;
 	}
 
+	function buildFriendlyMap(cat: MetricCatalog, cfg: Record<string, unknown> | undefined) {
+		const map: Record<string, boolean> = {};
+		for (const metrics of Object.values(cat)) {
+			for (const m of metrics) {
+				map[m.id] = true;
+			}
+		}
+		if (cfg && Array.isArray(cfg.metrics)) {
+			for (const entry of cfg.metrics as Array<{ metric_id: string; enabled: boolean; use_friendly_format?: boolean }>) {
+				map[entry.metric_id] = entry.use_friendly_format ?? true;
+			}
+		}
+		return map;
+	}
+
 	$effect(() => {
 		if (open && Object.keys(catalog).length === 0) {
 			loadCatalog();
 		} else if (open && Object.keys(catalog).length > 0) {
 			enabledMap = buildEnabledMap(catalog, currentConfig);
+			friendlyMap = buildFriendlyMap(catalog, currentConfig);
 		}
 	});
 
@@ -84,6 +103,7 @@
 			catalog = catalogData;
 			templates = templateData;
 			enabledMap = buildEnabledMap(catalog, currentConfig);
+			friendlyMap = buildFriendlyMap(catalog, currentConfig);
 		} catch (e: unknown) {
 			errorMsg = (e as { error?: string })?.error ?? 'Fehler beim Laden der Metriken';
 		} finally {
@@ -109,11 +129,16 @@
 		saving = true;
 		const metricsArr = Object.entries(enabledMap).map(([metric_id, enabled]) => ({
 			metric_id,
-			enabled
+			enabled,
+			use_friendly_format: friendlyMap[metric_id] ?? true
 		}));
 		const config: Record<string, unknown> = { metrics: metricsArr };
 		onsave(config);
 		saving = false;
+	}
+
+	function setFormat(id: string, friendly: boolean) {
+		friendlyMap = { ...friendlyMap, [id]: friendly };
 	}
 
 	function sortedCategories(): string[] {
@@ -162,25 +187,39 @@
 						<p class="text-sm font-semibold">{CATEGORY_LABELS[cat] ?? cat}</p>
 						<div class="grid grid-cols-1 gap-1 sm:grid-cols-2">
 							{#each catalog[cat] as metric}
-								<label
-									class="flex cursor-pointer items-center gap-2 rounded px-1 py-0.5 text-sm hover:bg-muted/50"
-								>
-									<input
-										type="checkbox"
-										class="rounded border-input"
-										checked={enabledMap[metric.id] ?? false}
-										onchange={(e) => {
-											enabledMap = {
-												...enabledMap,
-												[metric.id]: (e.target as HTMLInputElement).checked
-											};
-										}}
-									/>
-									<span>{metric.label}</span>
-									{#if metric.unit}
-										<span class="ml-auto text-xs text-muted-foreground">{metric.unit}</span>
+								<div class="flex items-center gap-2 rounded px-1 py-0.5 text-sm hover:bg-muted/50">
+									<label class="flex cursor-pointer items-center gap-2 flex-1 min-w-0">
+										<input
+											type="checkbox"
+											class="rounded border-input"
+											checked={enabledMap[metric.id] ?? false}
+											onchange={(e) => {
+												enabledMap = {
+													...enabledMap,
+													[metric.id]: (e.target as HTMLInputElement).checked
+												};
+											}}
+										/>
+										<span>{metric.label}</span>
+										{#if metric.unit}
+											<span class="ml-auto text-xs text-muted-foreground">{metric.unit}</span>
+										{/if}
+									</label>
+									{#if metric.has_friendly_format}
+										<span class="inline-flex border rounded overflow-hidden text-xs flex-shrink-0">
+											<button
+												type="button"
+												class="px-1.5 py-0.5 {!(friendlyMap[metric.id] ?? true) ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground'}"
+												onclick={() => setFormat(metric.id, false)}
+											>Roh</button>
+											<button
+												type="button"
+												class="px-1.5 py-0.5 {(friendlyMap[metric.id] ?? true) ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground'}"
+												onclick={() => setFormat(metric.id, true)}
+											>Indikator</button>
+										</span>
 									{/if}
-								</label>
+								</div>
 							{/each}
 						</div>
 					</div>

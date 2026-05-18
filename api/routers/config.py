@@ -42,5 +42,6 @@ def get_metrics():
             "unit": m.display_unit if m.display_unit else m.unit,
             "category": m.category,
             "default_enabled": m.default_enabled,
+            "has_friendly_format": m.has_friendly_format,
         })
     return result
