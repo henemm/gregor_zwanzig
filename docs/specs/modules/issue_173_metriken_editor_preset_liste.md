@@ -17,7 +17,7 @@ tags: [frontend, sveltekit, weather-config, trip-detail, metrics, presets, epic-
 
 ## Purpose
 
-`WeatherMetricsTab` bietet bislang nur ein Dropdown-Feld zur Preset-Auswahl — eine UX, die die verfügbaren Presets nicht kommuniziert und dem User keine Orientierung über Name, Metriken-Anzahl oder aktiv angewendetes Preset gibt. Dieses Issue führt eine neue `PresetRow`-Komponente ein, die alle 7 Standard-Presets als klickbare Zeilen mit Name, Metrik-Anzahl und builtin-Badge darstellt, das bisher aktive Preset visuell hervorhebt und das Template-Dropdown vollständig ersetzt.
+`WeatherMetricsTab` bietet bislang nur ein Dropdown-Feld zur Preset-Auswahl — eine UX, die die verfügbaren Presets nicht kommuniziert und dem User keine Orientierung über Name, Metriken-Anzahl oder aktiv angewendetes Preset gibt. Dieses Issue führt eine neue `PresetRow`-Komponente ein, die alle 7 Standard-Presets als klickbare Zeilen mit Name, Metrik-Anzahl und Standard-Badge darstellt, das bisher aktive Preset visuell hervorhebt und das Template-Dropdown vollständig ersetzt.
 
 ## Source
 
@@ -71,7 +71,7 @@ Markup:
     onclick={() => onSelect(id)}
     onkeydown={(e) => e.key === 'Enter' && onSelect(id)}
 >
-    <span class="badge" data-testid="weather-metrics-preset-row-{id}-badge">builtin</span>
+    <span class="badge" data-testid="weather-metrics-preset-row-{id}-badge">Standard</span>
     <span class="name" data-testid="weather-metrics-preset-row-{id}-name">{label}</span>
     <span class="count" data-testid="weather-metrics-preset-row-{id}-count">{metricCount} Metriken</span>
     {#if isActive}
@@ -186,7 +186,7 @@ Zu testende Fälle (kein Mocking):
 
 Neue Testfälle in Playwright:
 - Preset-Liste wird gerendert mit genau 7 Rows (`data-testid="weather-metrics-preset-list"`)
-- Jede Row zeigt Name, Metrik-Anzahl und builtin-Badge
+- Jede Row zeigt Name, Metrik-Anzahl und Standard-Badge
 - Klick auf Row `wandern` setzt das Preset, Metriken-Checkboxen aktualisieren sich auf 9 aktive
 - Active-Marker erscheint auf der geklickten Row nach Klick
 - Template-Dropdown `data-testid="weather-metrics-tab-template"` existiert nicht mehr (prüft Entfernung)
@@ -207,7 +207,7 @@ Neue Testfälle in Playwright:
 
 - **AC-2:** Given eine PresetRow wird gerendert
   When Name, Metrik-Anzahl und Badge inspiziert werden
-  Then zeigt die Row den lesbaren Preset-Namen, die korrekte Zahl der Metriken (z.B. "9 Metriken") und den Text "builtin" als Badge.
+  Then zeigt die Row den lesbaren Preset-Namen, die korrekte Zahl der Metriken (z.B. "9 Metriken") und den Text "Standard" als Badge.
   - Test: (populated after /tdd-red)
 
 - **AC-3:** Given der User klickt auf die PresetRow "Wandern"
@@ -258,7 +258,7 @@ Neue Testfälle in Playwright:
 
 ## Known Limitations
 
-- `isBuiltin` ist als Prop in der PresetRow-Interface vorbereitet, wird im MVP jedoch immer als `true` übergeben (alle 7 Templates sind Standard-Presets). Der Badge zeigt daher immer "builtin". Das Prop bleibt für spätere benutzerdefinierte Presets erhalten.
+- `isBuiltin` ist als Prop in der PresetRow-Interface vorbereitet, wird im MVP jedoch immer als `true` übergeben (alle 7 Templates sind Standard-Presets). Der Badge zeigt daher immer "Standard". Das Prop bleibt für spätere benutzerdefinierte Presets erhalten.
 - Der Active-State basiert auf `selectedTemplate === id` — wird ein Preset ausgewählt und anschließend manuell eine Metrik-Checkbox geändert, bleibt das Preset optisch aktiv, obwohl die Metrik-Auswahl abweicht. Dieses Verhalten ist gewünscht (Auswahl-Indikator, kein Live-Vergleich).
 
 ## Changelog

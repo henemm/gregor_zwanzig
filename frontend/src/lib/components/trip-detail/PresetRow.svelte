@@ -16,14 +16,14 @@
 	class="preset-row"
 	class:active={isActive}
 	type="button"
-	data-testid="preset-row-{id}"
+	data-testid="weather-metrics-preset-row-{id}"
 	onclick={() => onSelect(id)}
 >
-	<span class="preset-name" data-testid="preset-row-{id}-name">{label}</span>
-	<span class="preset-count" data-testid="preset-row-{id}-count">{metricCount} Metriken</span>
-	<span class="preset-badge" data-testid="preset-row-{id}-badge">Standard</span>
+	<span class="preset-name" data-testid="weather-metrics-preset-row-{id}-name">{label}</span>
+	<span class="preset-count" data-testid="weather-metrics-preset-row-{id}-count">{metricCount} Metriken</span>
+	<span class="preset-badge" data-testid="weather-metrics-preset-row-{id}-badge">Standard</span>
 	{#if isActive}
-		<span class="active-marker" data-testid="preset-row-{id}-active" aria-hidden="true">✓</span>
+		<span class="active-marker" data-testid="weather-metrics-preset-row-{id}-active" aria-hidden="true">✓</span>
 	{/if}
 </button>
 

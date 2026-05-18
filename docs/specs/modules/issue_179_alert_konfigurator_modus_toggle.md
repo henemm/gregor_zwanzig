@@ -68,9 +68,9 @@ Inhalt pro Card (statisch, in der Komponente hinterlegt):
 
 | mode | Eyebrow | Title | Beschreibung | Beispiel |
 |------|---------|-------|--------------|---------|
-| `absolute` | Modus | Absolut | Alarm wenn Wert Schwelle überschreitet | Wind > 50 km/h |
-| `delta` | Modus | Änderung (Δ) | Alarm bei starker Veränderung zum Vortag | Temperatur sinkt > 8 °C |
-| `both` | Modus | Beides | Erzeugt zwei Regeln: Absolut + Änderung | Wind > 50 km/h oder Δ > 20 km/h |
+| `absolute` | Absolut | Schwellwert | Alarm wenn Wert Schwelle überschreitet | Wind > 50 km/h |
+| `delta` | Änderung | Δ Differenz | Alarm bei starker Veränderung zum Vortag | Temperatur sinkt > 8 °C |
+| `both` | Kombiniert | Beides | Erzeugt zwei Regeln: Absolut + Änderung | Wind > 50 km/h oder Δ > 20 km/h |
 
 Layout: Eyebrow (klein, muted) → Title (fett) → Beschreibung (1 Zeile) → Beispiel (italic, muted). Die drei Cards stehen nebeneinander als Radio-Gruppe (`role="radiogroup"`). Aktive Card erhält visuelles Highlight (`border-color: var(--g-primary)`).
 
@@ -103,7 +103,7 @@ function startEdit() {
 
 **Guard für Delta-Metriken bei "Beides":**
 
-Delta-only Metriken (`temperature_change`, `wind_change`, `precipitation_change`) dürfen keine absolute Rule bekommen. Bei `editMode === 'both'` und einer Delta-Metrik: automatisch zu `editMode = 'delta'` zurückfallen und Hinweistext anzeigen ("Diese Metrik misst nur Änderungen — Modus auf Δ zurückgesetzt.").
+Delta-only Metriken (`temperature_change`, `wind_change`, `precipitation_change`) dürfen keine absolute Rule bekommen. Bei `editMode === 'both'` und einer Delta-Metrik: automatisch zu `editMode = 'delta'` zurückfallen und Hinweistext anzeigen ("Diese Metrik misst nur Änderungen — beim Speichern wird nur eine Δ-Regel erzeugt.").
 
 **`saveEdit()` — Signatur-Wechsel `onUpdate` → `onSave`:**
 
@@ -141,7 +141,7 @@ function saveEdit() {
 
 ```svelte
 <!-- In alert-rule-view: Badge nach dem Threshold -->
-<Pill tone="neutral">{rule.kind === 'delta' ? 'Δ' : 'Abs'}</Pill>
+<Pill tone="default">{rule.kind === 'delta' ? 'Δ' : 'Abs'}</Pill>
 ```
 
 ### 3. `AlertRulesEditor.svelte` — MODIFY, ~+15 LoC

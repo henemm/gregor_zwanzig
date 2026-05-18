@@ -131,40 +131,68 @@ test.describe('Epic #138 — Wetter-Metriken-Editor Tab', () => {
 		await expect(categories).toHaveCount(5);
 	});
 
-	// AC-3: Template-Dropdown mit 7 Presets
-	test('AC-3: Template-Dropdown enthält genau 7 Presets plus leere Option', async ({ page }) => {
+	// AC-3 (Issue #173): Preset-Liste statt Dropdown — 7 PresetRows
+	test('AC-3: Preset-Liste enthält genau 7 PresetRows mit Name, Metrik-Anzahl und Standard-Badge', async ({
+		page
+	}) => {
 		await page.goto(`/trips/${TRIP_ID}#weather`);
 		await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
 
-		const templateSelect = page.getByTestId('weather-metrics-tab-template');
-		await expect(templateSelect).toBeVisible();
+		// Container der PresetRow-Liste sichtbar
+		const presetList = page.getByTestId('weather-metrics-preset-list');
+		await expect(presetList).toBeVisible();
 
-		const options = templateSelect.locator('option');
-		// 7 Templates + 1 leere/Eigene-Option = 8 insgesamt
-		await expect(options).toHaveCount(8);
+		// Genau 7 PresetRows
+		const presetRows = page.locator('[data-testid^="weather-metrics-preset-row-"]').filter({
+			has: page.locator('[data-testid$="-name"]')
+		});
+		// Robustere Zählung: nur die Wrapper-Buttons (testid endet auf id, nicht auf -name/-count/-badge/-active)
+		const presetButtons = presetList.locator(
+			'button[data-testid^="weather-metrics-preset-row-"]'
+		);
+		await expect(presetButtons).toHaveCount(7);
 
-		// Bekannte Template-IDs vorhanden
-		const expectedLabels = [
-			'Alpen-Trekking',
-			'Wandern',
-			'Skitouren',
-			'Wintersport',
-			'Radtour',
-			'Wassersport',
-			'Allgemein'
+		// Bekannte Preset-IDs vorhanden mit Name + Count + Badge
+		const expectedIds = [
+			'alpen-trekking',
+			'wandern',
+			'skitouren',
+			'wintersport',
+			'radtour',
+			'wassersport',
+			'allgemein'
 		];
-		for (const label of expectedLabels) {
-			await expect(templateSelect.locator(`option:has-text("${label}")`)).toBeAttached();
+		for (const id of expectedIds) {
+			const row = page.getByTestId(`weather-metrics-preset-row-${id}`);
+			await expect(row, `PresetRow für ${id} fehlt`).toBeAttached();
+			await expect(page.getByTestId(`weather-metrics-preset-row-${id}-name`)).toBeAttached();
+			await expect(page.getByTestId(`weather-metrics-preset-row-${id}-count`)).toContainText(
+				/\d+ Metriken/
+			);
+			await expect(page.getByTestId(`weather-metrics-preset-row-${id}-badge`)).toHaveText(
+				'Standard'
+			);
 		}
+
+		// Alter Dropdown existiert nicht mehr
+		await expect(page.getByTestId('weather-metrics-tab-template')).toHaveCount(0);
+		// Suchhinweis: PresetRows ersetzen den Dropdown, alter selector darf nicht mehr auftauchen
 	});
 
-	// AC-4: Template-Anwendung setzt Checkboxen korrekt
-	test('AC-4: Template "Wandern" aktiviert genau die definierten Metriken', async ({ page }) => {
+	// AC-4 (Issue #173): Klick auf PresetRow "Wandern" aktiviert die Wandern-Metriken
+	test('AC-4: Klick auf PresetRow "Wandern" aktiviert genau die definierten Metriken', async ({
+		page
+	}) => {
 		await page.goto(`/trips/${TRIP_ID}#weather`);
 		await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
 
-		const templateSelect = page.getByTestId('weather-metrics-tab-template');
-		await templateSelect.selectOption({ label: 'Wandern' });
+		// PresetRow "Wandern" klicken
+		const wandernRow = page.getByTestId('weather-metrics-preset-row-wandern');
+		await expect(wandernRow).toBeVisible();
+		await wandernRow.click();
+
+		// Active-Marker erscheint auf der geklickten Row
+		await expect(page.getByTestId('weather-metrics-preset-row-wandern-active')).toBeVisible();
 
 		// Wandern-Metriken laut metric_catalog.py:
 		const wandernMetrics = [
