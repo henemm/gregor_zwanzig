@@ -179,6 +179,7 @@ Alle Module benoetigen Specs vor Implementierung:
 - `issue_257_trip_briefing_mail_polish` - Dunkel-Footer (G_INK #1a1a18), Tag-/Pill-System, Mobile-Karten-Layout via @media, Dark-Mode-Schutz für Trip-Briefing-Mail (Issue #257, Spec: `docs/specs/modules/issue_257_trip_briefing_mail_polish.md`)
 - `bug_256_thunder_color` - --g-wx-thunder Farbkorrektur: #5a3a7a (violett) → #c43a2a (rot), G_WX_THUNDER in design_tokens.py ergänzt (Bug #256, Spec: `docs/specs/modules/bug_256_thunder_color.md`)
 - `epic_138_174_178_metriken_ui` - Wetter-Metriken-Editor Phase 2 UI-Komponenten: MetricGroup, MetricCheckbox, TablePreview, SavePresetDialog, dirty-State-Warnung + Go-Backend für User-Presets (3 Endpoints: GET/POST/DELETE /api/metric-presets) (Epic #138 Issues #174–178, Spec: `docs/specs/modules/epic_138_174_178_metriken_ui.md`)
+- `issue_180_alert_metric_table` - Alert-Konfigurator: Schwellwert-Tabelle mit 9 AlertMetricRows (Toggle + Schwellwert-Inputs + Schweregrad-Dropdown), integriert AlertCooldownCard + AlertQuietHoursCard, speichert via PUT /api/trips/{id} — ersetzt Platzhalter im Alerts-Tab (Issue #180, Spec: `docs/specs/modules/issue_180_alert_metric_table.md`)
 
 ### Geplante Module
 Siehe GitHub Issues: https://github.com/henemm/gregor_zwanzig/issues

@@ -3,6 +3,7 @@
 	import TripOverview from './TripOverview.svelte';
 	import WaypointsPanel from './WaypointsPanel.svelte';
 	import WeatherMetricsTab from './WeatherMetricsTab.svelte';
+	import AlertsTab from '$lib/components/alerts-tab/AlertsTab.svelte';
 	import {
 		EmailIframe,
 		SmsPhoneFrame,
@@ -41,7 +42,6 @@
 		overview: 'Inhalt folgt mit Issue #154 (Hero) + #156 (Höhenprofil) + #157 (Stage-Liste)',
 		stages: 'Inhalt folgt mit Epic #137 (Wegpunkt-Editor)',
 		briefings: 'Inhalt folgt mit Issue #159 (rechte Spalte)',
-		alerts: 'Inhalt folgt mit Epic #139 (Alert-Konfigurator)',
 		preview: 'Inhalt folgt mit Issue #189 (Vorschau-Integration)'
 	};
 
@@ -97,6 +97,8 @@
 				<WaypointsPanel {trip} />
 			{:else if tab.value === 'weather' && trip}
 				<WeatherMetricsTab {trip} />
+			{:else if tab.value === 'alerts' && trip}
+				<AlertsTab {trip} />
 			{:else if tab.value === 'preview' && trip}
 				<div class="preview-shell">
 					<div class="preview-controls" data-testid="preview-controls">
