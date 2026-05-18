@@ -2,6 +2,10 @@
 	// Issue #223 — Container fuer die AlertRulesEditor-Komponente.
 	// Spec: docs/specs/modules/issue_223_alert_rules_editor.md §1.
 	//
+	// Issue #179 — Modus-Toggle: updateRule(index, updated) wird zu
+	// updateRules(index, updated[]) damit "Beides" 1 Rule durch 2 ersetzen kann.
+	// Spec: docs/specs/modules/issue_179_alert_konfigurator_modus_toggle.md
+	//
 	// Liste-basierter Editor fuer Trip.alert_rules. Empty-State, Liste,
 	// Add-Button. Die einzelnen Rules werden in AlertRuleRow gerendert.
 
@@ -15,8 +19,13 @@
 		rules = [...rules, newDefaultRule()];
 	}
 
-	function updateRule(index: number, updated: AlertRule) {
-		rules = rules.map((r, i) => (i === index ? updated : r));
+	function updateRules(index: number, updated: AlertRule[]) {
+		// Ersetzt rules[index] durch 1 oder 2 neue Rules (Modus 'Beides' -> 2 Rules).
+		rules = [
+			...rules.slice(0, index),
+			...updated,
+			...rules.slice(index + 1)
+		];
 	}
 
 	function deleteRule(index: number) {
@@ -35,7 +44,7 @@
 				<li>
 					<AlertRuleRow
 						{rule}
-						onUpdate={(updated) => updateRule(i, updated)}
+						onSave={(updated) => updateRules(i, updated)}
 						onDelete={() => deleteRule(i)}
 					/>
 				</li>

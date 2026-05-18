@@ -2,10 +2,13 @@
 	// Issue #223 — Eine Zeile pro AlertRule mit View- und Edit-Modus.
 	// Spec: docs/specs/modules/issue_223_alert_rules_editor.md §3.
 	//
-	// View-Mode: Label + Threshold + Severity-Pill + Enabled-Toggle +
-	//            [Bearbeiten] + [Löschen]
-	// Edit-Mode: Metric-Select + Threshold (number-input ODER thunder-select
-	//            bei thunder_level) + Severity-Select + Enabled + Save/Cancel
+	// Issue #179 — Modus-Toggle (Δ / Absolut / Beides) im Edit-Modus.
+	// Spec: docs/specs/modules/issue_179_alert_konfigurator_modus_toggle.md
+	//
+	// View-Mode: Label + Threshold + Mode-Badge (Abs / Δ) + Severity-Pill +
+	//            Enabled-Toggle + [Bearbeiten] + [Löschen]
+	// Edit-Mode: ModeCards-Zeile + Metric-Select + Threshold + Severity-Select +
+	//            Enabled + Save/Cancel
 	// F004-Guard: {#if info} um alles — unbekannte Metric crasht nicht.
 
 	import type { AlertRule, AlertMetric } from '$lib/types';
@@ -15,25 +18,33 @@
 		ALERT_SEVERITY_TONE,
 		thunderLevelLabel
 	} from '$lib/utils/alertMetricLabels';
+	import { DELTA_ONLY_METRICS, expandRules, type AlertRuleMode } from './alertRuleDefaults';
+	import ModeCard from './ModeCard.svelte';
 
 	let {
 		rule,
-		onUpdate,
+		onSave,
 		onDelete
 	}: {
 		rule: AlertRule;
-		onUpdate: (r: AlertRule) => void;
+		onSave: (rules: AlertRule[]) => void;
 		onDelete: () => void;
 	} = $props();
 
 	let editing = $state(false);
 	let draft = $state<AlertRule>({ ...rule });
+	let editMode = $state<AlertRuleMode>('absolute');
 
 	let info = $derived(ALERT_METRIC_LABELS[rule.metric]);
 	let valueText = $derived(
 		rule.metric === 'thunder_level'
 			? thunderLevelLabel(rule.threshold)
 			: `${rule.threshold} ${info?.unit ?? ''}`.trim()
+	);
+
+	// Issue #179: Hinweistext wenn 'both' bei Delta-only Metrik auf 'delta' zurueckfaellt.
+	let deltaOnlyHint = $derived(
+		editing && editMode === 'both' && DELTA_ONLY_METRICS.has(draft.metric)
 	);
 
 	// Alle bekannten Metrics fuer das Select im Edit-Mode
@@ -51,6 +62,8 @@
 
 	function startEdit() {
 		draft = { ...rule };
+		// AC-2 / AC-3: Mode-Vorauswahl aus rule.kind (Legacy-delta wird korrekt erkannt)
+		editMode = rule.kind === 'delta' ? 'delta' : 'absolute';
 		editing = true;
 	}
 
@@ -61,7 +74,8 @@
 			...draft,
 			unit: metricInfo?.unit || draft.unit
 		};
-		onUpdate(synced);
+		// expandRules erzeugt 1 oder 2 Rules abhaengig vom Modus
+		onSave(expandRules(synced, editMode));
 		editing = false;
 	}
 
@@ -72,7 +86,7 @@
 
 	function toggleEnabled(e: Event) {
 		const checked = (e.target as HTMLInputElement).checked;
-		onUpdate({ ...rule, enabled: checked });
+		onSave([{ ...rule, enabled: checked }]);
 	}
 
 	function onThunderChange(e: Event) {
@@ -84,62 +98,88 @@
 {#if info}
 	{#if editing}
 		<div class="alert-rule-edit" data-testid="alert-rule-edit">
-			<select
-				bind:value={draft.metric}
-				data-testid="alert-rule-metric"
-				class="field"
-			>
-				{#each METRIC_OPTIONS as m}
-					<option value={m}>{ALERT_METRIC_LABELS[m].label_de}</option>
-				{/each}
-			</select>
-
-			{#if draft.metric === 'thunder_level'}
-				<select
-					value={draft.threshold}
-					onchange={onThunderChange}
-					data-testid="alert-rule-threshold"
-					class="field"
-				>
-					<option value={1.0}>MITTEL</option>
-					<option value={2.0}>HOCH</option>
-				</select>
-			{:else}
-				<input
-					type="number"
-					bind:value={draft.threshold}
-					data-testid="alert-rule-threshold"
-					class="field"
+			<div class="mode-selector" role="radiogroup" aria-label="Alarm-Modus">
+				<ModeCard
+					mode="absolute"
+					selected={editMode === 'absolute'}
+					onSelect={() => (editMode = 'absolute')}
 				/>
+				<ModeCard
+					mode="delta"
+					selected={editMode === 'delta'}
+					onSelect={() => (editMode = 'delta')}
+				/>
+				<ModeCard
+					mode="both"
+					selected={editMode === 'both'}
+					onSelect={() => (editMode = 'both')}
+				/>
+			</div>
+
+			{#if deltaOnlyHint}
+				<p class="delta-only-hint" data-testid="alert-rule-delta-only-hint">
+					Diese Metrik misst nur Änderungen — beim Speichern wird nur eine Δ-Regel erzeugt.
+				</p>
 			{/if}
 
-			<select
-				bind:value={draft.severity}
-				data-testid="alert-rule-severity"
-				class="field"
-			>
-				<option value="info">Info</option>
-				<option value="warning">Warnung</option>
-				<option value="critical">Kritisch</option>
-			</select>
+			<div class="edit-fields">
+				<select
+					bind:value={draft.metric}
+					data-testid="alert-rule-metric"
+					class="field"
+				>
+					{#each METRIC_OPTIONS as m}
+						<option value={m}>{ALERT_METRIC_LABELS[m].label_de}</option>
+					{/each}
+				</select>
 
-			<label class="enabled-toggle">
-				<input type="checkbox" bind:checked={draft.enabled} />
-				Aktiv
-			</label>
+				{#if draft.metric === 'thunder_level'}
+					<select
+						value={draft.threshold}
+						onchange={onThunderChange}
+						data-testid="alert-rule-threshold"
+						class="field"
+					>
+						<option value={1.0}>MITTEL</option>
+						<option value={2.0}>HOCH</option>
+					</select>
+				{:else}
+					<input
+						type="number"
+						bind:value={draft.threshold}
+						data-testid="alert-rule-threshold"
+						class="field"
+					/>
+				{/if}
 
-			<button
-				type="button"
-				onclick={saveEdit}
-				data-testid="alert-rule-save"
-				class="btn-primary"
-			>Speichern</button>
-			<button
-				type="button"
-				onclick={cancelEdit}
-				data-testid="alert-rule-cancel"
-				class="btn-secondary"
-			>Abbrechen</button>
+				<select
+					bind:value={draft.severity}
+					data-testid="alert-rule-severity"
+					class="field"
+				>
+					<option value="info">Info</option>
+					<option value="warning">Warnung</option>
+					<option value="critical">Kritisch</option>
+				</select>
+
+				<label class="enabled-toggle">
+					<input type="checkbox" bind:checked={draft.enabled} />
+					Aktiv
+				</label>
+
+				<button
+					type="button"
+					onclick={saveEdit}
+					data-testid="alert-rule-save"
+					class="btn-primary"
+				>Speichern</button>
+				<button
+					type="button"
+					onclick={cancelEdit}
+					data-testid="alert-rule-cancel"
+					class="btn-secondary"
+				>Abbrechen</button>
+			</div>
 		</div>
 	{:else}
 		<div
@@ -149,6 +189,9 @@
 		>
 			<span class="label">{info.label_de}</span>
 			<span class="threshold">{info.comparison} {valueText}</span>
+			<Pill tone="default">
+				{rule.kind === 'delta' ? 'Δ' : 'Abs'}
+			</Pill>
 			<Pill tone={ALERT_SEVERITY_TONE[rule.severity]}>{rule.severity}</Pill>
 			<label class="enabled-toggle">
 				<input
@@ -175,8 +218,7 @@
 {/if}
 
 <style>
-	.alert-rule-view,
-	.alert-rule-edit {
+	.alert-rule-view {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
@@ -186,6 +228,33 @@
 		border: 1px solid var(--g-border, #e5e7eb);
 		border-radius: 0.375rem;
 		background: var(--g-surface-1, #fff);
+	}
+	.alert-rule-edit {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		padding: 0.5rem;
+		border: 1px solid var(--g-border, #e5e7eb);
+		border-radius: 0.375rem;
+		background: var(--g-surface-1, #fff);
+		font-size: 0.875rem;
+	}
+	.mode-selector {
+		display: flex;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
+	.delta-only-hint {
+		margin: 0;
+		font-size: 0.8125rem;
+		color: var(--g-ink-muted, #6b7280);
+		font-style: italic;
+	}
+	.edit-fields {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-wrap: wrap;
 	}
 	.alert-rule-view.disabled {
 		opacity: 0.55;

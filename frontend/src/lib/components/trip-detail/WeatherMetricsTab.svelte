@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { api } from '$lib/api.js';
 	import type { Trip } from '$lib/types';
+	import PresetRow from './PresetRow.svelte';
 
 	interface MetricEntry {
 		id: string;
@@ -114,6 +115,10 @@
 		enabledMap = newMap;
 	});
 
+	function onSelect(id: string) {
+		selectedTemplate = id;
+	}
+
 	function onCheckboxChange(id: string, checked: boolean) {
 		enabledMap = { ...enabledMap, [id]: checked };
 		if (selectedTemplate !== '__custom__') {
@@ -159,20 +164,17 @@
 		<p class="loading-msg">Lade Metriken…</p>
 	{:else}
 		{#if templates.length > 0}
-			<div class="template-row">
-				<label for="metrics-tpl-sel" class="template-label">Template</label>
-				<select
-					id="metrics-tpl-sel"
-					data-testid="weather-metrics-tab-template"
-					bind:value={selectedTemplate}
-					class="template-select"
-				>
-					<option value="">— Eigene Auswahl —</option>
-					{#each templates as t}
-						<option value={t.id}>{t.label}</option>
-					{/each}
-				</select>
-			</div>
+			<section class="presets-section" data-testid="weather-metrics-preset-list">
+				{#each templates as t}
+					<PresetRow
+						id={t.id}
+						label={t.label}
+						metricCount={t.metrics.length}
+						isActive={selectedTemplate === t.id}
+						{onSelect}
+					/>
+				{/each}
+			</section>
 		{/if}
 
 		<div class="categories">
@@ -250,24 +252,11 @@
 	.metrics-tab {
 		padding: 1rem;
 	}
-	.template-row {
+	.presets-section {
 		display: flex;
-		align-items: center;
-		gap: 0.75rem;
+		flex-direction: column;
+		gap: 0.4rem;
 		margin-bottom: 1.25rem;
-	}
-	.template-label {
-		font-size: 0.875rem;
-		font-weight: 500;
-	}
-	.template-select {
-		flex: 1;
-		max-width: 280px;
-		border: 1px solid var(--g-border, #ddd);
-		border-radius: 4px;
-		padding: 0.375rem 0.625rem;
-		font-size: 0.875rem;
-		background: var(--g-surface, #fff);
 	}
 	.categories {
 		display: flex;

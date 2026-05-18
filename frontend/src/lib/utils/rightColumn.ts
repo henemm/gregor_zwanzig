@@ -37,6 +37,19 @@ export function getPresetLabel(trip: Trip): string {
 	return DEFAULT_LABEL;
 }
 
+/**
+ * Issue #173 — Liefert den aktiv ausgewaehlten Preset-Template-Key fuer die
+ * PresetRow-Liste in `WeatherMetricsTab`. Single Source of Truth: das
+ * persistierte `display_config.preset_name` (Issue #206).
+ *
+ * - String mit Inhalt -> Template-Key (z.B. "skitouren")
+ * - Leer / undefined / Non-String -> null (keine PresetRow ist aktiv)
+ */
+export function getActivePreset(trip: Trip): string | null {
+	const key: unknown = trip.display_config?.preset_name;
+	return typeof key === 'string' && key.length > 0 ? key : null;
+}
+
 export function getDefaultMetricsForProfile(profile: unknown): string[] {
 	if (profile === 'wintersport')
 		return ['temp_min', 'temp_max', 'wind_max', 'snow_new', 'snow_depth', 'thunder_level'];
