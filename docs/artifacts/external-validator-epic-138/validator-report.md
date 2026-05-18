@@ -1,70 +1,83 @@
 # External Validator Report
 
 **Spec:** docs/specs/modules/epic_138_metriken_editor.md
-**Datum:** 2026-05-18T00:00:00Z
+**Datum:** 2026-05-18T06:30:00Z
 **Server:** https://staging.gregor20.henemm.com
-**Trip-ID (verwendet):** `validator-test-with-dc`
+**Trip-ID für Tests:** `validator-test-with-dc`
+**Validator-User:** `validator-issue110`
 
-## Zusammenfassung
+## Vorbemerkung
 
-Die in Epic #138 spezifizierten Aenderungen sind auf Staging **nicht ausgeliefert**. Der Wetter-Metriken-Tab zeigt unveraendert den Platzhaltertext „Inhalt folgt mit Issue #158 + Epic #138 (Metriken-Editor)" — der spezifizierte Inline-Editor ist nicht vorhanden. Das in §1 geforderte API-Feld `has_friendly_format` fehlt vollstaendig in der Antwort von `GET /api/metrics`. Zusaetzlich gibt die API nur 25 Metriken zurueck, waehrend Spec und AC-2 von 26 ausgehen.
-
-## Beweise
-
-- `01_trip_detail.png` — Trip-Detail-Seite (Übersicht-Tab)
-- `02_metriken_tab.png` — Wetter-Metriken-Tab nach Klick: nur Platzhaltertext sichtbar
-- `body_text.txt` — Volltext des Tab-Inhalts: „Wetter-Metriken / Inhalt folgt mit Issue #158 + Epic #138 (Metriken-Editor)"
+Diese unabhängige Validierung wurde ohne Kenntnis des Implementierungscodes durchgeführt — geprüft wurden ausschließlich die laufende App und die Spec. Screenshots und Netzwerk-Mitschnitte liegen in `screenshots-validator-rerun/`.
 
 ## Checklist
 
-| #  | Expected Behavior | Beweis | Verdict |
-|----|-------------------|--------|---------|
-| AC-1  | Metriken-Tab zeigt `data-testid="weather-metrics-tab"`, kein Platzhaltertext | `02_metriken_tab.png`: Platzhaltertext sichtbar; Playwright: Selektor `[data-testid="weather-metrics-tab"]` nicht gefunden | **FAIL** |
-| AC-2  | 26 Metrik-Checkboxen mit `data-testid="weather-metrics-tab-checkbox-{id}"` in 5 Kategorien | Playwright: 0 Checkboxen; zusaetzlich: `/api/metrics` liefert nur **25** Metriken (4+3+6+9+3) | **FAIL** |
-| AC-3  | Template-Dropdown mit 7 Presets + „Eigene Auswahl" | Playwright: `[data-testid="weather-metrics-tab-template"]` nicht im DOM. `/api/templates` liefert 7 Templates — UI-Seite jedoch nicht vorhanden | **FAIL** |
-| AC-4  | Template-Auswahl aktiviert Checkboxen, `use_friendly_format` bleibt unveraendert | Nicht pruefbar — kein Editor im DOM | **FAIL** |
-| AC-5  | Format-Buttons (raw/indicator) genau bei 9 eligible Metriken | Playwright: 0 Buttons. `/api/metrics` enthaelt zudem **kein** `has_friendly_format`-Feld (Felder pro Metrik: `id, label, unit, category, default_enabled`) | **FAIL** |
-| AC-6  | Save-PUT enthaelt alle 26 Metrik-Objekte mit `enabled` + `use_friendly_format` | Speichern-Button nicht im DOM; nicht ausloesbar | **FAIL** |
-| AC-7  | Roh-Toggle persistiert ueber Reload | Toggle nicht vorhanden | **FAIL** |
-| AC-8  | `WeatherConfigDialog` Save-Payload enthaelt `use_friendly_format` pro Metrik | Keine Locations im Test-Account vorhanden (`/api/locations` liefert `[]`) — UI-Trigger nicht reproduzierbar | **UNKLAR** |
-| AC-9  | `EditWeatherSection` emittiert `use_friendly_format` im `displayConfig` | Komponente ist Wizard-intern, nicht ohne Wizard-Trigger pruefbar | **UNKLAR** |
-| AC-10 | `weather-metrics-tab-success` / `-error` erscheint nach Save | Save-Button und Tab-Editor nicht vorhanden | **FAIL** |
+| #  | Expected Behavior (gekürzt) | Beweis | Verdict |
+|----|------------------------------|--------|---------|
+| 1  | `data-testid="weather-metrics-tab"` im DOM, kein Platzhalter, Checkboxen + Save-Button vorhanden | `02_metriken_tab.png`; Playwright `query_selector('[data-testid="weather-metrics-tab"]')` → True; kein "Platzhalter"-Text im Body | **PASS** |
+| 2  | Genau **26** Metrik-Checkboxen `weather-metrics-tab-checkbox-{id}` in 5 Kategorien | `02_metriken_tab.png`; Checkbox-Zähler liefert **25** (nicht 26!) in 5 Kategorien (temperature: 4, wind: 3, precipitation: 6, atmosphere: 9, winter: 3) | **FAIL** (1 Metrik zu wenig gegenüber Spec — siehe Finding #1) |
+| 3  | Template-Dropdown mit 7 Presets + 1 "Eigene Auswahl" (= 8 Optionen) | `02_metriken_tab.png`; `<select data-testid="weather-metrics-tab-template">` hat 8 `<option>`: `__custom__`, alpen-trekking, wandern, skitouren, wintersport, radtour, wassersport, allgemein | **PASS** |
+| 4  | Template-Auswahl ändert Checkboxen, ohne `use_friendly_format` zu verändern | `03_after_template.png`, `07_ac4_friendly_preserved.png`; Vor Template: wind_direction=Roh, thunder=Roh, cloud_total=Roh. Nach 4 verschiedenen Templates (skitouren → wintersport → allgemein → wassersport): friendly-State unverändert. Checkboxes von "Wandern"-Template wurden korrekt gesetzt (temperature, humidity, wind, gust, precipitation, rain_probability, cloud_total, sunshine, uv_index, confidence → true; thunder, cape → false) | **PASS** |
+| 5  | Genau **9 eligible** Metriken (wind_direction, thunder, cape, cloud_total, cloud_low, cloud_mid, cloud_high, visibility, sunshine) haben Roh/Indikator-Buttons | `02_metriken_tab.png`; Playwright zählt 9 Raw-Buttons + 9 Indicator-Buttons mit exakt diesen IDs. Restliche 16 Metriken haben keine Roh/Indikator-Buttons | **PASS** |
+| 6  | PUT-Body enthält **26** Metrik-Objekte mit `metric_id`, `enabled`, `use_friendly_format` | `04_after_save.png`, `screenshots-validator-rerun/save_payload.json`; Captured PUT `/api/trips/validator-test-with-dc/weather-config` mit 25 Metrik-Objekten — jedes Objekt enthält alle drei Felder. **Spec sagt 26, gesendet werden 25**. | **FAIL** (gleiche Spec-Diskrepanz wie AC-2, siehe Finding #1) — Vollständigkeit "alle Katalog-IDs mitgeschickt" ist erfüllt; alle 3 Felder pro Eintrag sind vorhanden |
+| 7  | Toggle "Roh" wird persistiert (nach Reload weiterhin Roh, kein Go-Default-Reset) | `06_toggle_state_after_save.png`; GET `/api/trips/.../weather-config` nach Save: wind_direction `use_friendly_format=false`, thunder `false`, cloud_total `false`, übrige eligible `true`. UI nach Reload zeigt: wind_direction.raw.active, thunder.raw.active, cloud_total.raw.active, alle anderen eligible .indicator.active | **PASS** |
+| 8  | WeatherConfigDialog Save-Payload enthält `use_friendly_format` pro Metrik | Konnte über die laufende App **nicht erreicht werden**: `/locations` und `/subscriptions` redirecten auf `/compare`; Location-Card hat nur "Wetter anzeigen"-Button (keine Konfig); Subscription-Card (`auto-report-card`) ist nicht klickbar; auch nach Anlegen einer Location + Subscription via API kein Dialog-Trigger sichtbar. Screenshots: `08_compare_page.png`, `10_weather_dialog.png`, `14_subscriptions.png`, `15_sub_card_clicked.png`, `21_verwalten.png`, `22_dblclick.png`, `24_sub_card.png` | **UNKLAR** |
+| 9  | EditWeatherSection emittiert `displayConfig` mit `use_friendly_format` pro Metrik | `18_wetter_section_expanded.png`, `19_after_trip_save.png`, `screenshots-validator-rerun/trip_edit_payload.json`; PUT `/api/trips/validator-test-with-dc` enthält `display_config.metrics` mit 25 Einträgen — alle haben `metric_id`, `enabled`, `use_friendly_format` | **PASS** |
+| 10 | `weather-metrics-tab-success` (Erfolg) bzw. `weather-metrics-tab-error` (Fehler) erscheint | `04_after_save.png`; Nach Klick auf "Speichern" erscheint `<*[data-testid="weather-metrics-tab-success"]>` mit Text "Gespeichert ✓"; `weather-metrics-tab-error`-Element fehlt korrekterweise; HTTP 200 OK | **PASS** (Success-Pfad verifiziert; Error-Pfad ohne Fehler-Trigger nicht getestet) |
 
 ## Findings
 
-### Finding 1 — Wetter-Metriken-Tab zeigt Platzhalter, Inline-Editor fehlt
-- **Severity:** CRITICAL
-- **Expected (Spec §6, AC-1):** Tab rendert `WeatherMetricsTab` mit `data-testid="weather-metrics-tab"`, Placeholder-Eintrag aus `TripTabs.svelte` entfernt
-- **Actual:** Tab zeigt Text „Inhalt folgt mit Issue #158 + Epic #138 (Metriken-Editor)" — Platzhalter ist noch aktiv
-- **Evidence:** `02_metriken_tab.png`, `body_text.txt`
+### Finding #1 — Metrik-Anzahl: Spec sagt 26, API/UI liefern 25
 
-### Finding 2 — `has_friendly_format`-Feld fehlt in `/api/metrics`
-- **Severity:** CRITICAL
-- **Expected (Spec §1):** Jedes Metrik-Objekt traegt `has_friendly_format: bool`; 9 eligible Metriken (`wind_direction, thunder, cape, cloud_total, cloud_low, cloud_mid, cloud_high, visibility, sunshine`) bekommen `true`
-- **Actual:** Felder pro Metrik sind ausschliesslich `id, label, unit, category, default_enabled`. Kein einziger Eintrag enthaelt `has_friendly_format`
-- **Evidence:** `curl -H "Cookie: gz_session=..." https://staging.gregor20.henemm.com/api/metrics` (alle 25 Eintraege gepruerft)
+- **Severity:** MEDIUM (Spec-Discrepanz, kein Bug in der App)
+- **Expected (Spec):** "alle **26** Metriken in 5 Kategorien" / AC-2: "genau **26** Metrik-Checkboxen" / AC-6: "genau **26** Metrik-Objekte im PUT-Body"
+- **Actual:** `GET /api/metrics` liefert 25 Metriken in 5 Kategorien (4 + 3 + 6 + 9 + 3); die UI rendert konsistent 25 Checkboxen; der PUT-Body sendet 25 Objekte. Die 9 eligible-Metriken passen exakt zur Spec.
+- **Evidence:**
+  - `02_metriken_tab.png` (25 Checkboxen sichtbar, 5 Kategorie-Headlines)
+  - `screenshots-validator-rerun/save_payload.json` (`metrics`-Array mit 25 Einträgen)
+  - API-Roundtrip `GET /api/metrics`: temperature(4) + wind(3) + precipitation(6) + atmosphere(9) + winter(3) = **25**
+- **Einschätzung:** Die App ist intern konsistent (API-Katalog ↔ UI-Render ↔ PUT-Body alle = 25). Der Spec-Wert "26" scheint ein Zählfehler in der Spec — er taucht ohne Begründung im "Purpose"-Absatz, AC-2 und AC-6 auf. Die Implementierung erfüllt die _Absicht_ der Spec ("alle Metriken aus dem Katalog, keine fehlt"), aber den buchstäblichen Wortlaut "26" nicht.
 
-### Finding 3 — `/api/metrics` liefert 25 statt 26 Metriken
-- **Severity:** HIGH
-- **Expected (Spec §5 und AC-2):** 26 Metriken
-- **Actual:** 25 (temperature: 4, wind: 3, precipitation: 6, atmosphere: 9, winter: 3)
-- **Evidence:** Auszaehlung der `/api/metrics`-Antwort. Die Spec listet 26 Checkbox-IDs an — eine fehlt
-- **Hinweis:** Selbst wenn das Frontend ausgeliefert waere, koennte AC-2 nicht erfuellt sein, weil der API-Katalog nur 25 Metriken anbietet
+### Finding #2 — WeatherConfigDialog im UI nicht erreichbar
 
-### Finding 4 — Bug-Fixes in `WeatherConfigDialog` und `EditWeatherSection` nicht verifizierbar
-- **Severity:** MEDIUM
-- **Expected (AC-8 / AC-9):** Save-Payloads dieser Komponenten enthalten `use_friendly_format` pro Metrik
-- **Actual:** Test-Account hat keine Locations (`/api/locations` = `[]`), und der Wizard ist nicht ohne manuelle Eingaben begehbar. Ein direkter API-Roundtrip auf `PUT /api/trips/.../weather-config` mit `use_friendly_format` wird vom Go-Handler korrekt persistiert — der Bug liegt aber laut Spec **im Frontend**, nicht im Handler, und der Frontend-Pfad ist nicht testbar
-- **Evidence:** `curl /api/locations` → `[]`; `PUT /api/trips/validator-test-with-dc/weather-config` mit `use_friendly_format:false` → GET liefert denselben Wert zurueck (Handler ist also nicht der Verursacher)
+- **Severity:** LOW (eingeschränkte Validierbarkeit — kein erwiesener Bug)
+- **Expected (Spec §3 + AC-8):** `WeatherConfigDialog.svelte` soll nach Bug-Fix `use_friendly_format` in den Save-Payload aufnehmen — für die "Dialog-Variante für Locations/Subscriptions".
+- **Actual:** Aus dem laufenden UI mit dem Validator-User ist der Dialog nicht zugänglich. Geprüft (Screenshots zur Dokumentation der Klicks `08`, `10`, `13`, `14`, `15`, `20`-`25`):
+  - `/locations` redirected auf `/compare` (301)
+  - `/subscriptions` redirected auf `/compare` (301)
+  - Location-Card in der Sidebar hat nur einen einzigen Action-Button (`weather-btn`, "Wetter anzeigen") — der lädt Forecast, kein Dialog
+  - Subscription-Card (`auto-report-card`) ist eine reine Anzeige (`<div>`), kein Click-Target
+  - Tests mit Klick/Doppelklick/Rechtsklick auf Location-Name und Subscription-Name → kein Dialog
+  - Neuer-Ort-Button (`Neuer Ort`) öffnet ebenfalls keinen WeatherConfig-Dialog
+  - "Verwalten →"-Link führt zu `/subscriptions` → redirect zurück nach `/compare`
+- **Einschätzung:** AC-8 kann mit dem aktuell laufenden Frontend nicht widerlegt **oder** belegt werden, weil der Dialog im UI nicht zugänglich ist. AC-9 (gleiche Bug-Pattern in `EditWeatherSection`) ist erwiesen; AC-7 zeigt, dass der Go-Handler `use_friendly_format` korrekt persistiert; somit ist die Architektur der Fix-Kette plausibel, aber nicht für `WeatherConfigDialog` direkt nachgewiesen.
 
-## Verdict: BROKEN
+## Verdict: AMBIGUOUS
 
-### Begruendung
+### Begründung
 
-Mindestens 8 der 10 Acceptance Criteria scheitern direkt am DOM/API-State auf Staging:
+- 7 von 10 AC sind eindeutig **PASS** (AC-1, AC-3, AC-4, AC-5, AC-7, AC-9, AC-10).
+- 2 AC scheitern am Spec-Buchstaben (AC-2 und AC-6 verlangen "26", die Implementierung liefert 25 — passend zum API-Katalog). Die Implementierung selbst ist konsistent; der Wert "26" in der Spec ist offenbar ein Zählfehler. Das ist keine Implementation-Brokenness, sondern eine Spec-Korrektur-Anforderung (siehe Finding #1).
+- 1 AC ist **UNKLAR** (AC-8: `WeatherConfigDialog` im UI nicht erreichbar).
 
-1. Der Inline-Editor existiert nicht — der Tab haengt am Platzhalter (AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, AC-7, AC-10).
-2. Das in §1 geforderte API-Feld `has_friendly_format` ist nicht in der `/api/metrics`-Antwort enthalten (AC-5 zusaetzlich strukturell unmoeglich erfuellbar).
-3. Der API-Katalog liefert nur 25 statt 26 Metriken — AC-2 ist auch unabhaengig vom Frontend nicht erfuellbar, solange die Backend-Quelle nicht 26 Eintraege liefert.
+Das Verdict ist daher **AMBIGUOUS** — nicht VERIFIED, weil zwei AC strikt nicht erfüllt sind (auch wenn das wahrscheinlich auf einen Spec-Fehler zurückgeht) und ein AC nicht überprüft werden konnte. Aber auch nicht BROKEN, weil keine reale fachliche Funktion ausfällt: die App ist intern konsistent, der Bug-Fix für `EditWeatherSection` ist erwiesen wirksam, und Persistenz-Roundtrip funktioniert.
 
-AC-8 und AC-9 sind UNKLAR (kein UI-Trigger im Test-Account verfuegbar), aendern am Gesamturteil aber nichts — die zentralen Spec-Punkte (§1 API-Feld, §5 neue Komponente, §6 Tab-Integration) sind nachweislich nicht in Produktion.
+### Empfehlung zur Disambiguierung
+
+1. **Spec-Wert "26 → 25" korrigieren** (oder begründen, wo die 26. Metrik herkommen soll). Anschließend AC-2/AC-6 re-prüfen.
+2. **AC-8 prüfen**: Entweder einen reproduzierbaren UI-Pfad zum `WeatherConfigDialog` dokumentieren (z. B. spezifische Route, Feature-Flag, anderes Account-Setup) ODER `validator-observability`-Endpoint einrichten, der die Save-Payload des Dialogs widerspiegelt.
+
+## Beweise (Artefakte in `screenshots-validator-rerun/`)
+
+| Datei | Zweck |
+|-------|-------|
+| `01_trip_detail.png` | Trip-Detail vor Tab-Klick |
+| `02_metriken_tab.png` | Metriken-Tab gerendert (25 Checkboxen, 9 Roh/Indikator-Toggles, Template-Dropdown, Save-Button) |
+| `03_after_template.png` | Nach Template-Wechsel (Wandern), friendly-State unverändert |
+| `04_after_save.png` | Erfolgsmeldung "Gespeichert ✓" sichtbar |
+| `05_after_reload.png` | Nach Reload: Toggle-Zustände erhalten |
+| `06_toggle_state_after_save.png` | Re-Check Toggle-Zustände nach Reload (gleiche Aussage wie 05) |
+| `07_ac4_friendly_preserved.png` | After 4 sequentielle Template-Wechsel: friendly-Zustand unverändert |
+| `08`-`25` | Vergebliche Suche nach `WeatherConfigDialog` über Locations/Subscriptions-Pfade |
+| `save_payload.json` | Captured `PUT /api/trips/.../weather-config` mit 25 Metric-Objekten, je `metric_id`+`enabled`+`use_friendly_format` |
+| `trip_edit_payload.json` | Captured `PUT /api/trips/...` aus `EditWeatherSection` mit `display_config.metrics` (25 × `use_friendly_format`) |
