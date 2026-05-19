@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/henemm/gregor-api/internal/middleware"
@@ -77,6 +78,9 @@ func CreateLocationHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 
+		now := time.Now().UTC()
+		loc.CreatedAt = &now
+
 		if err := s.SaveLocation(loc); err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(500)
@@ -118,6 +122,7 @@ func UpdateLocationHandler(s *store.Store) http.HandlerFunc {
 		}
 
 		loc.ID = id
+		loc.CreatedAt = existing.CreatedAt
 
 		if err := validateLocation(loc); err != nil {
 			w.Header().Set("Content-Type", "application/json")

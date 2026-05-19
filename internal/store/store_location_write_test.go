@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/henemm/gregor-api/internal/model"
 )
@@ -93,5 +94,68 @@ func TestLoadLocationNotFound(t *testing.T) {
 	}
 	if loc != nil {
 		t.Errorf("expected nil, got %+v", loc)
+	}
+}
+
+// AC-2 + AC-4: Roundtrip neuer Felder und Legacy-Kompatibilität
+func TestSaveLocationWithNewFields(t *testing.T) {
+	tmpDir := t.TempDir()
+	s := New(tmpDir, "test")
+
+	now := time.Now().UTC().Truncate(time.Second)
+	loc := model.Location{
+		ID:         "new-fields-test",
+		Name:       "New Fields Test",
+		Lat:        47.0,
+		Lon:        11.0,
+		Timezone:   "Europe/Vienna",
+		DataSource: "icon_d2",
+		CreatedAt:  &now,
+	}
+
+	if err := s.SaveLocation(loc); err != nil {
+		t.Fatalf("SaveLocation failed: %v", err)
+	}
+
+	loaded, err := s.LoadLocation("new-fields-test")
+	if err != nil {
+		t.Fatalf("LoadLocation failed: %v", err)
+	}
+	if loaded.Timezone != "Europe/Vienna" {
+		t.Errorf("expected timezone 'Europe/Vienna', got %q", loaded.Timezone)
+	}
+	if loaded.DataSource != "icon_d2" {
+		t.Errorf("expected data_source 'icon_d2', got %q", loaded.DataSource)
+	}
+	if loaded.CreatedAt == nil {
+		t.Fatal("expected non-nil created_at")
+	}
+	if !loaded.CreatedAt.Equal(now) {
+		t.Errorf("expected created_at %v, got %v", now, *loaded.CreatedAt)
+	}
+}
+
+func TestLoadLegacyLocationWithoutNewFields(t *testing.T) {
+	tmpDir := t.TempDir()
+	locDir := filepath.Join(tmpDir, "users", "test", "locations")
+	os.MkdirAll(locDir, 0755)
+	os.WriteFile(filepath.Join(locDir, "legacy.json"), []byte(`{"id":"legacy","name":"Legacy","lat":47.0,"lon":11.0}`), 0644)
+
+	s := New(tmpDir, "test")
+	loc, err := s.LoadLocation("legacy")
+	if err != nil {
+		t.Fatalf("unexpected error loading legacy location: %v", err)
+	}
+	if loc == nil {
+		t.Fatal("expected location, got nil")
+	}
+	if loc.CreatedAt != nil {
+		t.Errorf("expected nil created_at for legacy location, got %v", loc.CreatedAt)
+	}
+	if loc.Timezone != "" {
+		t.Errorf("expected empty timezone, got %q", loc.Timezone)
+	}
+	if loc.DataSource != "" {
+		t.Errorf("expected empty data_source, got %q", loc.DataSource)
 	}
 }

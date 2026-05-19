@@ -181,6 +181,7 @@ Alle Module benoetigen Specs vor Implementierung:
 - `epic_138_174_178_metriken_ui` - Wetter-Metriken-Editor Phase 2 UI-Komponenten: MetricGroup, MetricCheckbox, TablePreview, SavePresetDialog, dirty-State-Warnung + Go-Backend für User-Presets (3 Endpoints: GET/POST/DELETE /api/metric-presets) (Epic #138 Issues #174–178, Spec: `docs/specs/modules/epic_138_174_178_metriken_ui.md`)
 - `issue_180_alert_metric_table` - Alert-Konfigurator: Schwellwert-Tabelle mit 9 AlertMetricRows (Toggle + Schwellwert-Inputs + Schweregrad-Dropdown), integriert AlertCooldownCard + AlertQuietHoursCard, speichert via PUT /api/trips/{id} — ersetzt Platzhalter im Alerts-Tab (Issue #180, Spec: `docs/specs/modules/issue_180_alert_metric_table.md`)
 - `issue_259_briefings_tab` - Trip-Detail-View: Briefing-Zeitplan-Tab mit EditReportConfigSection + Speichern-Button (morgen/abend-Zeit, Kanäle, Optionen), speichert via PUT /api/trips/{id} mit report_config — Platzhalter ersetzt, Epic #135 vollständig (Issue #259, Spec: `docs/specs/modules/issue_259_briefings_tab.md`)
+- `compare_247_location_model` - Location-Struct +3 Felder: CreatedAt *time.Time (server-seitig auto-gesetzt), Timezone string, DataSource string; additiv mit omitempty, backward-compatible. CreateLocationHandler setzt CreatedAt auto-gesetzt, UpdateLocationHandler bewahrt CreatedAt aus existing. Issue #247, EPIC 2 #246 (Spec: `docs/specs/modules/compare_247_location_model.md`)
 
 ### Geplante Module
 Siehe GitHub Issues: https://github.com/henemm/gregor_zwanzig/issues

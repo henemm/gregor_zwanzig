@@ -1,5 +1,7 @@
 package model
 
+import "time"
+
 type Location struct {
 	ID              string                 `json:"id"`
 	Name            string                 `json:"name"`
@@ -11,4 +13,7 @@ type Location struct {
 	ActivityProfile *string                `json:"activity_profile,omitempty"`
 	Group           *string                `json:"group,omitempty"`
 	DisplayConfig   map[string]interface{} `json:"display_config,omitempty"`
+	Timezone        string                 `json:"timezone,omitempty"`
+	DataSource      string                 `json:"data_source,omitempty"`
+	CreatedAt       *time.Time             `json:"created_at,omitempty"`
 }
