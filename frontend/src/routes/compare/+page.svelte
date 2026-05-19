@@ -7,10 +7,10 @@
 	import * as Card from '$lib/components/ui/card/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import LocationForm from '$lib/components/LocationForm.svelte';
 	import SubscriptionForm from '$lib/components/SubscriptionForm.svelte';
-	import CloudSunIcon from '@lucide/svelte/icons/cloud-sun';
-	import { weatherEmoji, degToCardinal } from '$lib/utils/weatherEmoji.js';
+	import LocationsRail from '$lib/components/compare/LocationsRail.svelte';
+	import NewLocationWizard from '$lib/components/compare/NewLocationWizard.svelte';
+	import { weatherEmoji } from '$lib/utils/weatherEmoji.js';
 
 	let { data } = $props();
 
@@ -107,16 +107,11 @@
 		weatherLocationId ? locations.find(l => l.id === weatherLocationId)?.name ?? '' : ''
 	);
 
-	async function handleNewLocSave(loc: Location) {
-		try {
-			await api.post<Location>('/api/locations', loc);
-			locations = [...locations, loc];
-			selectedIds = [...selectedIds, loc.id];
-			allSelected = selectedIds.length === locations.length;
-			showNewLocDialog = false;
-		} catch (e: unknown) {
-			// LocationForm handles its own errors
-		}
+	function handleNewLocSave(loc: Location) {
+		locations = [...locations, loc];
+		selectedIds = [...selectedIds, loc.id];
+		allSelected = selectedIds.length === locations.length;
+		showNewLocDialog = false;
 	}
 
 	interface CompareLocation {
@@ -281,68 +276,19 @@
 
 <div class="flex gap-6">
 	<!-- Sidebar: Desktop only -->
-	<aside class="hidden w-60 shrink-0 space-y-4 border-r pr-4 md:block">
-		<h2 class="text-sm font-semibold">Meine Orte</h2>
-		<label class="flex items-center gap-2 text-sm">
-			<input type="checkbox" checked={allSelected} onchange={toggleAll}
-				class="h-4 w-4 rounded border-input" />
-			Alle ({locations.length})
-		</label>
-		<div class="space-y-1">
-			{#if groupedLocations.groups.size > 0}
-				{#each [...groupedLocations.groups.entries()].sort((a, b) => a[0].localeCompare(b[0])) as [groupName, groupLocs]}
-					{@const isOpen = openGroups.has(groupName)}
-					{@const allInGroup = groupLocs.every((l) => selectedIds.includes(l.id))}
-					<div>
-						<div class="flex items-center gap-1">
-							<button
-								data-testid="group-header"
-								class="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground"
-								onclick={() => toggleGroup(groupName)}
-							>
-								<span class="inline-block w-3 text-xs">{isOpen ? '\u25BC' : '\u25B6'}</span>
-							</button>
-							<label class="flex items-center gap-1.5 text-sm font-medium">
-								<input type="checkbox" checked={allInGroup}
-									onchange={() => toggleGroupSelection(groupName)}
-									class="h-3.5 w-3.5 rounded border-input" />
-								{groupName}
-							</label>
-						</div>
-						{#if isOpen}
-							<div class="ml-4 space-y-0.5">
-								{#each groupLocs as loc}
-									<div class="flex items-center gap-1.5 text-sm">
-										<input type="checkbox" checked={selectedIds.includes(loc.id)}
-											onchange={() => toggleLocation(loc.id)}
-											class="h-3.5 w-3.5 rounded border-input" />
-										<span class="flex-1">{loc.name}</span>
-										<button data-testid="weather-btn" title="Wetter anzeigen" onclick={() => showWeather(loc.id)} class="opacity-40 hover:opacity-100">
-											<CloudSunIcon class="size-3.5" />
-										</button>
-									</div>
-								{/each}
-							</div>
-						{/if}
-					</div>
-				{/each}
-			{/if}
-			{#each groupedLocations.ungrouped as loc}
-				<div class="flex items-center gap-1.5 text-sm">
-					<input type="checkbox" checked={selectedIds.includes(loc.id)}
-						onchange={() => toggleLocation(loc.id)}
-						class="h-3.5 w-3.5 rounded border-input" />
-					<span class="flex-1">{loc.name}</span>
-					<button data-testid="weather-btn" title="Wetter anzeigen" onclick={() => showWeather(loc.id)} class="opacity-40 hover:opacity-100">
-						<CloudSunIcon class="size-3.5" />
-					</button>
-				</div>
-			{/each}
-		</div>
-		<Btn variant="outline" size="sm" class="w-full" onclick={() => showNewLocDialog = true}>
-			Neuer Ort
-		</Btn>
-	</aside>
+	<LocationsRail
+		{locations}
+		{selectedIds}
+		{groupedLocations}
+		{openGroups}
+		{allSelected}
+		onToggleAll={toggleAll}
+		onToggleLocation={toggleLocation}
+		onToggleGroup={toggleGroup}
+		onToggleGroupSelection={toggleGroupSelection}
+		onShowWeather={showWeather}
+		onNewLocation={() => (showNewLocDialog = true)}
+	/>
 
 	<!-- Content -->
 	<div class="min-w-0 flex-1 space-y-6">
@@ -710,12 +656,11 @@
 		<Dialog.Header>
 			<Dialog.Title>Neue Location</Dialog.Title>
 		</Dialog.Header>
-		{#if showNewLocDialog}
-			<LocationForm
-				onsave={handleNewLocSave}
-				oncancel={() => showNewLocDialog = false}
-			/>
-		{/if}
+		<NewLocationWizard
+			{locations}
+			onsave={handleNewLocSave}
+			oncancel={() => (showNewLocDialog = false)}
+		/>
 	</Dialog.Content>
 </Dialog.Root>
 

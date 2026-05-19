@@ -9,6 +9,9 @@ export interface Location {
 	activity_profile?: ActivityProfile;
 	group?: string;
 	display_config?: Record<string, unknown>;
+	timezone?: string;
+	data_source?: string;
+	created_at?: string;
 }
 
 export type ActivityType = 'trekking' | 'skitour' | 'hochtour' | 'klettersteig' | 'mtb';
