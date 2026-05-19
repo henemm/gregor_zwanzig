@@ -3,7 +3,7 @@ entity_id: issue_249_locations_rail
 type: module
 created: 2026-05-19
 updated: 2026-05-19
-status: draft
+status: approved
 version: "1.0"
 tags: [compare, locations, frontend, wizard, rail]
 ---
@@ -12,7 +12,7 @@ tags: [compare, locations, frontend, wizard, rail]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved
 
 ## Purpose
 

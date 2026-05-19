@@ -183,6 +183,7 @@ Alle Module benoetigen Specs vor Implementierung:
 - `issue_180_alert_metric_table` - Alert-Konfigurator: Schwellwert-Tabelle mit 9 AlertMetricRows (Toggle + Schwellwert-Inputs + Schweregrad-Dropdown), integriert AlertCooldownCard + AlertQuietHoursCard, speichert via PUT /api/trips/{id} — ersetzt Platzhalter im Alerts-Tab (Issue #180, Spec: `docs/specs/modules/issue_180_alert_metric_table.md`)
 - `issue_259_briefings_tab` - Trip-Detail-View: Briefing-Zeitplan-Tab mit EditReportConfigSection + Speichern-Button (morgen/abend-Zeit, Kanäle, Optionen), speichert via PUT /api/trips/{id} mit report_config — Platzhalter ersetzt, Epic #135 vollständig (Issue #259, Spec: `docs/specs/modules/issue_259_briefings_tab.md`)
 - `compare_247_location_model` - Location-Struct +3 Felder: CreatedAt *time.Time (server-seitig auto-gesetzt), Timezone string, DataSource string; additiv mit omitempty, backward-compatible. CreateLocationHandler setzt CreatedAt auto-gesetzt, UpdateLocationHandler bewahrt CreatedAt aus existing. Issue #247, EPIC 2 #246 (Spec: `docs/specs/modules/compare_247_location_model.md`)
+- `issue_249_locations_rail` - Compare-Screen: Sidebar-Extraktion in LocationsRail (Suche + Chip-Filter + Gruppen-Verwaltung) + 3-Schritt-NewLocationWizard (Verortung → Benennung → Aktivitätsprofil); Location-Interface um timezone, data_source, created_at erweitert (Issue #249, Spec: `docs/specs/modules/issue_249_locations_rail.md`)
 
 ### Geplante Module
 Siehe GitHub Issues: https://github.com/henemm/gregor_zwanzig/issues
