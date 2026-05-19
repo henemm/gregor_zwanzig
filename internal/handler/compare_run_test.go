@@ -115,6 +115,25 @@ func TestCompareRunHandler_TooFewLocations_Returns400(t *testing.T) {
 	}
 }
 
+func TestCompareRunHandler_InvalidDate_Returns400(t *testing.T) {
+	// GIVEN: Request mit unparsbarem Datum
+	// WHEN:  POST /api/compare/run
+	// THEN:  HTTP 400 (Spec §5)
+	s := newTestStore(t)
+	engine := compare.New(s, nil)
+	h := CompareRunHandler(engine)
+
+	body := `{"location_ids":["a","b"],"date":"not-a-date","profile":"ALLGEMEIN"}`
+	req := httptest.NewRequest("POST", "/api/compare/run", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+
+	if w.Code != 400 {
+		t.Errorf("expected 400 for invalid date, got %d", w.Code)
+	}
+}
+
 func TestCompareRunHandler_InvalidProfile_Returns400(t *testing.T) {
 	// GIVEN: Request mit unbekanntem Profil-Wert
 	// WHEN:  POST /api/compare/run

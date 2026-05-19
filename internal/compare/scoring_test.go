@@ -107,5 +107,19 @@ func TestScoreRow_IdenticalMetrics_SameScore(t *testing.T) {
 	}
 }
 
+// --- F002: Negative Temperaturen — höhere Temp gewinnt -------------------
+
+func TestScoreRow_NegativeTemps_HigherTempGetsHigherScore(t *testing.T) {
+	// Zwei alpine Standorte im Winter: -3°C vs -8°C
+	warm := model.SegmentWeatherSummary{TempMaxC: fp(-3.0), WindMaxKmh: fp(20.0), PrecipSumMm: fp(1.0)}
+	cold := model.SegmentWeatherSummary{TempMaxC: fp(-8.0), WindMaxKmh: fp(20.0), PrecipSumMm: fp(1.0)}
+	all := []model.SegmentWeatherSummary{warm, cold}
+	scoreWarm := ScoreRow(warm, ProfileAllgemein, all)
+	scoreCold := ScoreRow(cold, ProfileAllgemein, all)
+	if scoreWarm <= scoreCold {
+		t.Errorf("warm(%d) sollte > cold(%d) sein (gleicher Wind, wärmere Temp)", scoreWarm, scoreCold)
+	}
+}
+
 // Suppress unused import warning until implementation exists
 var _ = ip

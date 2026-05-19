@@ -184,6 +184,7 @@ Alle Module benoetigen Specs vor Implementierung:
 - `issue_259_briefings_tab` - Trip-Detail-View: Briefing-Zeitplan-Tab mit EditReportConfigSection + Speichern-Button (morgen/abend-Zeit, Kanäle, Optionen), speichert via PUT /api/trips/{id} mit report_config — Platzhalter ersetzt, Epic #135 vollständig (Issue #259, Spec: `docs/specs/modules/issue_259_briefings_tab.md`)
 - `compare_247_location_model` - Location-Struct +3 Felder: CreatedAt *time.Time (server-seitig auto-gesetzt), Timezone string, DataSource string; additiv mit omitempty, backward-compatible. CreateLocationHandler setzt CreatedAt auto-gesetzt, UpdateLocationHandler bewahrt CreatedAt aus existing. Issue #247, EPIC 2 #246 (Spec: `docs/specs/modules/compare_247_location_model.md`)
 - `issue_249_locations_rail` - Compare-Screen: Sidebar-Extraktion in LocationsRail (Suche + Chip-Filter + Gruppen-Verwaltung) + 3-Schritt-NewLocationWizard (Verortung → Benennung → Aktivitätsprofil); Location-Interface um timezone, data_source, created_at erweitert (Issue #249, Spec: `docs/specs/modules/issue_249_locations_rail.md`)
+- `issue_250_compare_engine` - Compare-Engine Backend: POST /api/compare/run Endpoint (Go-nativer Service) mit parallelem Forecast-Fetch via Goroutines, 15-Min In-Memory-Cache, 4 Aktivitätsprofil-basierte Scoring-Gewichtungen (WINTERSPORT, ALPINE_TOURING, SUMMER_TREKKING, ALLGEMEIN), Partial-Result-Handling, Winner-Tags (Issue #250, Spec: `docs/specs/modules/issue_250_compare_engine.md`)
 
 ### Geplante Module
 Siehe GitHub Issues: https://github.com/henemm/gregor_zwanzig/issues

@@ -164,13 +164,13 @@ func ScoreRow(loc model.SegmentWeatherSummary, profile ActivityProfile, allMetri
 			// All candidates identical → no differentiation possible.
 			pct = 1.0
 		case spec.positive:
-			// Higher is better. Anchor 0 at value 0 so a single-candidate
-			// run still gives a meaningful score.
-			denom := maxVal
-			if denom <= 0 {
+			// Higher is better. Range-based normalisation so negative
+			// populations (e.g. all sub-zero temperatures) still differentiate.
+			rangeVal := maxVal - minVal
+			if rangeVal <= 0 {
 				pct = 1.0
 			} else {
-				pct = myVal / denom
+				pct = (myVal - minVal) / rangeVal
 			}
 		default:
 			// Lower is better. Best in population = 1.0, worst = 0.0.

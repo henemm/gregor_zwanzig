@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/henemm/gregor-api/internal/compare"
 	"github.com/henemm/gregor-api/internal/middleware"
@@ -32,6 +33,11 @@ func CompareRunHandler(engine *compare.Engine) http.HandlerFunc {
 		if len(req.LocationIDs) < 2 {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte(`{"error":"need_at_least_two_locations"}`))
+			return
+		}
+		if _, err := time.Parse("2006-01-02", req.Date); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(`{"error":"invalid_date"}`))
 			return
 		}
 		if !compare.IsValidProfile(req.Profile) {
