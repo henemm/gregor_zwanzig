@@ -7,6 +7,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -15,6 +16,15 @@ import (
 	"github.com/henemm/gregor-api/internal/model"
 	"github.com/henemm/gregor-api/internal/store"
 )
+
+// errorProvider implementiert provider.WeatherProvider und gibt bei jedem
+// FetchForecast-Aufruf einen Fehler zurück — simuliert z.B. HTTP 429 vom
+// Wetter-Provider. Echtes Struct, kein Mock aus dem testing-Paket.
+type errorProvider struct{}
+
+func (e *errorProvider) FetchForecast(lat, lon float64, hours int) (*model.Timeseries, error) {
+	return nil, fmt.Errorf("provider error 429")
+}
 
 func seedCompareLocation(t *testing.T, s *store.Store, id, name string, lat, lon float64, ele int) {
 	t.Helper()
@@ -190,5 +200,34 @@ func TestCompareRunHandler_SecondRequest_ReturnsSameScore(t *testing.T) {
 		if rows1[i].Score != rows2[i].Score {
 			t.Errorf("row %d: score mismatch first=%d second=%d", i, rows1[i].Score, rows2[i].Score)
 		}
+	}
+}
+
+// --- Issue #250: Provider-Fehler → Location droppen (Partial-Result) -------
+
+func TestCompareRunHandler_ProviderError_DropLocation(t *testing.T) {
+	// GIVEN: Zwei Locations im Store, Provider gibt immer Fehler
+	// WHEN:  POST /api/compare/run
+	// THEN:  rows ist leer (beide Locations gefallen gelassen), HTTP 200
+	s := newTestStore(t)
+	seedCompareLocation(t, s, "loc-a", "Ort A", 47.0, 11.0, 500)
+	seedCompareLocation(t, s, "loc-b", "Ort B", 46.5, 13.5, 800)
+
+	engine := compare.New(s, &errorProvider{})
+	h := CompareRunHandler(engine)
+
+	body := `{"location_ids":["loc-a","loc-b"],"date":"2026-06-15","profile":"ALLGEMEIN"}`
+	req := httptest.NewRequest("POST", "/api/compare/run", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var result compare.CompareResult
+	json.NewDecoder(w.Body).Decode(&result)
+	if len(result.Rows) != 0 {
+		t.Errorf("erwartet 0 rows bei Provider-Fehler, got %d", len(result.Rows))
 	}
 }

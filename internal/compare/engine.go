@@ -74,7 +74,10 @@ func (e *Engine) Run(ctx context.Context, userID string, req CompareRequest) (Co
 
 			if e.provider != nil {
 				ts, err := e.provider.FetchForecast(loc.Lat, loc.Lon, 72)
-				if err == nil && ts != nil {
+				if err != nil {
+					return // provider failed → drop location (partial result)
+				}
+				if ts != nil {
 					if agg := aggregateByDate(ts.Data, req.Date); agg != nil {
 						summary = *agg
 					}
