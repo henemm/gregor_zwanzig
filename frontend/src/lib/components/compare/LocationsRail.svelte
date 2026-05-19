@@ -97,7 +97,7 @@
 			onchange={onToggleAll}
 			class="h-4 w-4 rounded border-input"
 		/>
-		Alle ({locations.length})
+		Alle ({selectedIds.length}/{locations.length})
 	</label>
 
 	<div class="space-y-1">

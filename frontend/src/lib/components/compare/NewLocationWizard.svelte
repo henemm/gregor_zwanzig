@@ -48,6 +48,10 @@
 			error = 'Name ist erforderlich';
 			return;
 		}
+		if (step === 2 && toKebabCase(name).length === 0) {
+			error = 'Name muss mindestens einen Buchstaben oder eine Ziffer enthalten';
+			return;
+		}
 		error = null;
 		step = (step + 1) as 1 | 2 | 3;
 	}
