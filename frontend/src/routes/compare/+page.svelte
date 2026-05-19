@@ -111,6 +111,9 @@
 		locations = [...locations, loc];
 		selectedIds = [...selectedIds, loc.id];
 		allSelected = selectedIds.length === locations.length;
+		if (loc.group && !openGroups.has(loc.group)) {
+			openGroups = new Set([...openGroups, loc.group]);
+		}
 		showNewLocDialog = false;
 	}
 

@@ -40,7 +40,7 @@
 	}
 
 	function nextStep() {
-		if (step === 1 && Number(lat) === 0 && Number(lon) === 0) {
+		if (step === 1 && (isNaN(Number(lat)) || isNaN(Number(lon)) || (Number(lat) === 0 && Number(lon) === 0))) {
 			error = 'Bitte gültige Koordinaten eingeben';
 			return;
 		}

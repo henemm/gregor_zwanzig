@@ -105,9 +105,8 @@
 			{@const isOpen = openGroups.has(groupName)}
 			{@const allInGroup = groupLocs.every((l) => selectedIds.includes(l.id))}
 			<div>
-				<div class="flex items-center gap-1">
+				<div data-testid="compare-rail-group-header" class="flex items-center gap-1">
 					<button
-						data-testid="compare-rail-group-header"
 						aria-label={groupName}
 						class="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground"
 						onclick={() => onToggleGroup(groupName)}
