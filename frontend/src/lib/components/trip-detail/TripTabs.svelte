@@ -4,6 +4,7 @@
 	import WaypointsPanel from './WaypointsPanel.svelte';
 	import WeatherMetricsTab from './WeatherMetricsTab.svelte';
 	import AlertsTab from '$lib/components/alerts-tab/AlertsTab.svelte';
+	import BriefingsTab from '$lib/components/briefings-tab/BriefingsTab.svelte';
 	import {
 		EmailIframe,
 		SmsPhoneFrame,
@@ -41,7 +42,6 @@
 	const PLACEHOLDERS: Record<string, string> = {
 		overview: 'Inhalt folgt mit Issue #154 (Hero) + #156 (Höhenprofil) + #157 (Stage-Liste)',
 		stages: 'Inhalt folgt mit Epic #137 (Wegpunkt-Editor)',
-		briefings: 'Inhalt folgt mit Issue #159 (rechte Spalte)',
 		preview: 'Inhalt folgt mit Issue #189 (Vorschau-Integration)'
 	};
 
@@ -99,6 +99,8 @@
 				<WeatherMetricsTab {trip} />
 			{:else if tab.value === 'alerts' && trip}
 				<AlertsTab {trip} />
+			{:else if tab.value === 'briefings' && trip}
+				<BriefingsTab {trip} />
 			{:else if tab.value === 'preview' && trip}
 				<div class="preview-shell">
 					<div class="preview-controls" data-testid="preview-controls">
