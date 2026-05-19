@@ -80,6 +80,7 @@ func main() {
 	r.Get("/api/templates", handler.ProxyHandler(cfg.PythonCoreURL, "/templates"))
 	r.Get("/api/forecast", handler.ForecastHandler(omProvider))
 	r.Get("/api/locations", handler.LocationsHandler(s))
+	r.Post("/api/locations/resolve", handler.ResolveLocationHandler())
 	r.Post("/api/locations", handler.CreateLocationHandler(s))
 	r.Put("/api/locations/{id}", handler.UpdateLocationHandler(s))
 	r.Delete("/api/locations/{id}", handler.DeleteLocationHandler(s))
