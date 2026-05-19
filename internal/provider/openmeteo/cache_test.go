@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 // =============================================================================
@@ -34,7 +35,7 @@ func TestSaveAndLoadAvailabilityCache_Roundtrip(t *testing.T) {
 	path := filepath.Join(tmpDir, "model_availability.json")
 
 	original := &AvailabilityCache{
-		ProbeDate: "2026-04-13",
+		ProbeDate: time.Now().Format("2006-01-02"),
 		Models: map[string]ModelAvailability{
 			"meteofrance_arome": {
 				Available:   []string{"temperature_2m", "wind_speed_10m"},

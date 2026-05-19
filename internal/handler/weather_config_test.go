@@ -17,7 +17,8 @@ import (
 // ============================================================================
 
 func TestGetTripWeatherConfigFound(t *testing.T) {
-	s := store.New("../../data", "default")
+	s := newTestStore(t)
+	seedTrip(t, s, "e2e-test-story3", "Story3")
 
 	r := chi.NewRouter()
 	r.Get("/api/trips/{id}/weather-config", GetTripWeatherConfigHandler(s))
