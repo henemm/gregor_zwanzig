@@ -10,6 +10,7 @@ import (
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/henemm/gregor-api/internal/compare"
 	"github.com/henemm/gregor-api/internal/config"
 	"github.com/henemm/gregor-api/internal/handler"
 	authmw "github.com/henemm/gregor-api/internal/middleware"
@@ -105,6 +106,8 @@ func main() {
 	r.Post("/api/gpx/parse", handler.GpxProxyHandler(cfg.PythonCoreURL))
 	r.Post("/api/notify/test", handler.ProxyPostHandler(cfg.PythonCoreURL, "/api/notify/test"))
 	r.Get("/api/compare", handler.CompareProxyHandler(cfg.PythonCoreURL))
+	compareEngine := compare.New(s, omProvider)
+	r.Post("/api/compare/run", handler.CompareRunHandler(compareEngine))
 	r.Get("/api/_internal/trip/{id}/loaded", handler.LoadedTripProxyHandler(cfg.PythonCoreURL))
 	// Issue #221: External Validator observability endpoints (cookie-auth via global middleware).
 	r.Get("/api/_validator/format-metric", handler.ValidatorFormatMetricProxyHandler(cfg.PythonCoreURL))
