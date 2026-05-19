@@ -26,6 +26,7 @@
 	import type { WizardState } from '../wizardState.svelte';
 	import { addDays, isPauseStage } from '../wizardHelpers.ts';
 	import StageRow from './StageRow.svelte';
+	import TemplatePicker from '../templates/TemplatePicker.svelte';
 
 	const wizard = getContext<WizardState>('trip-wizard-state');
 
@@ -197,7 +198,11 @@
 	}
 </script>
 
-<div data-testid="trip-wizard-step2-stages" class="flex flex-col gap-6 py-4">
+<div
+	data-testid="trip-wizard-step2-layout"
+	class="grid gap-6 py-4 step2-grid"
+>
+	<div data-testid="trip-wizard-step2-stages" class="flex flex-col gap-6">
 	<!-- Drop-Zone -->
 	<div
 		data-testid="trip-wizard-step2-dropzone"
@@ -311,4 +316,21 @@
 			{/each}
 		</div>
 	{/if}
+	</div>
+
+	<!-- Rechte Spalte: Vorlagen-Picker (Sub-Spec #165) -->
+	<div>
+		<TemplatePicker />
+	</div>
 </div>
+
+<style>
+	.step2-grid {
+		grid-template-columns: 2fr minmax(0, 220px);
+	}
+	@media (max-width: 640px) {
+		.step2-grid {
+			grid-template-columns: 1fr;
+		}
+	}
+</style>
