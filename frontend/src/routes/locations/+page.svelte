@@ -20,8 +20,14 @@
 	let refetching = $state(false);
 	async function refetchLocations() {
 		refetching = true;
-		try { await refetchLocations(); }
-		finally { refetching = false; }
+		try {
+			const res = await fetch('/api/locations');
+			if (res.ok) {
+				locations = await res.json();
+			}
+		} finally {
+			refetching = false;
+		}
 	}
 	let search = $state('');
 	let filteredLocations = $derived(

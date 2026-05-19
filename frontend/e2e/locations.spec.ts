@@ -51,7 +51,7 @@ test.describe('Locations Page (M3b)', () => {
 		await expect(dialog).not.toBeVisible({ timeout: 5000 });
 
 		// Location should appear in the list
-		await expect(page.locator('text=E2E Testort')).toBeVisible();
+		await expect(page.locator('table').getByText('E2E Testort')).toBeVisible();
 	});
 
 	test('edit location opens pre-filled dialog', async ({ page }) => {
@@ -133,7 +133,7 @@ test.describe('Locations Page (M3b)', () => {
 		await expect(dialog).not.toBeVisible({ timeout: 5000 });
 
 		// Location should appear in list with profile badge
-		await expect(page.locator('text=Profil Test')).toBeVisible();
+		await expect(page.locator('table').getByText('Profil Test')).toBeVisible();
 		const row = page.locator('table tbody tr', { hasText: 'Profil Test' });
 		await expect(row.locator('text=wandern')).toBeVisible();
 	});
