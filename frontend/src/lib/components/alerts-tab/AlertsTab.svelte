@@ -10,6 +10,7 @@
 	import AlertMetricTable from './AlertMetricTable.svelte';
 	import AlertCooldownCard from './AlertCooldownCard.svelte';
 	import AlertQuietHoursCard from './AlertQuietHoursCard.svelte';
+	import AlertPreviewCard from './AlertPreviewCard.svelte';
 	import { api } from '$lib/api';
 	import type { Trip, AlertRule } from '$lib/types';
 
@@ -60,6 +61,8 @@
 		<AlertCooldownCard bind:cooldown_minutes={cooldownMinutes} />
 		<AlertQuietHoursCard bind:quiet_from={quietFrom} bind:quiet_to={quietTo} />
 	</div>
+
+	<AlertPreviewCard {trip} {alertRules} />
 
 	<div class="actions">
 		<button

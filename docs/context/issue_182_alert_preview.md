@@ -70,21 +70,53 @@ Der Endpoint ist auth-geschützt (Cookie), kein user_id im Frontend nötig
 2. `<div class="cards-row">` mit CooldownCard + QuietHoursCard
 3. `<div class="actions">` mit Speichern-Button + Feedback
 
-## Kern-Frage für Issue #182
+## Analyse-Ergebnis: Implementierungsstrategie
 
-**Was sind die "synthetischen Demo-Änderungen" für die Preview?**
+### Metric-Name-Mapping (kritisch)
 
-Option A — Statische Demo-Daten: Feste Beispiel-Änderungen (z.B. Wind-Böen-Alert),
-unabhängig von den konfigurierten Regeln. Einfach, immer verfügbar.
+`ChangePayload.metric` erwartet Python-Wetter-Feldnamen, NICHT die TypeScript-AlertMetric-Namen.
+Mapping aus `src/services/weather_change_detection.py`:
 
-Option B — Aus konfigurierten Regeln ableiten: Die aktivierten `alert_rules` des
-Trips werden in synthetische Changes umgewandelt (threshold +20% als "new_value").
-Zeigt dem User realistische Vorschau seiner eigenen Konfiguration.
+**Absolute-Regeln** (`_ALERT_METRIC_TO_SUMMARY_FIELD`):
+```
+wind_gust          → "gust_max_kmh"     / direction: "above"
+precipitation_sum  → "precip_sum_mm"    / direction: "above"
+temperature_min    → "temp_min_c"       / direction: "below"
+temperature_max    → "temp_max_c"       / direction: "above"
+thunder_level      → "thunder_level_max"/ direction: "above"
+snow_line          → "freezing_level_m" / direction: "above"
+```
 
-**Empfehlung:** Option B — macht die Preview für den User relevant. Je aktivierter
-Regel wird eine synthetische Change erzeugt: `new_value = threshold * 1.2`,
-`old_value = threshold * 0.8`, `delta = threshold * 0.4`. Falls keine Regeln
-aktiviert sind: Empty-State mit Hinweis "Zuerst Alerts konfigurieren".
+**Delta-Regeln** (`_ALERT_DELTA_METRIC_TO_FIELDS`, erstes Feld der Tuple):
+```
+temperature_change → "temp_min_c"       / direction: "increase"
+wind_change        → "wind_max_kmh"     / direction: "increase"
+precipitation_change → "precip_sum_mm"  / direction: "increase"
+```
+
+Severity-Mapping: `info→"minor"`, `warning→"moderate"`, `critical→"major"`
+
+### Synthetische Demo-Änderungen
+
+Pro aktivierter AlertRule:
+- `new_value = threshold * 1.2` (20% über Schwelle)
+- `old_value` = für absolute-rules: `threshold * 0.8`; für delta-rules: `0`
+- `delta = new_value - old_value`
+- `segment_id = stages[0]?.id ?? "1"` (alle Changes auf erstem Segment)
+- `segment_times`: `{ start: "08:00", end: "17:00" }` (Stub-Zeiten)
+
+### Scope (final)
+
+| Datei | Aktion | LoC |
+|-------|--------|-----|
+| `alerts-tab/AlertPreviewCard.svelte` | NEU | ~105 |
+| `alerts-tab/AlertsTab.svelte` | +Import +1 Tag | +5 |
+| **Total** | 2 Dateien | ~110 |
+
+### Trigger
+
+Expliziter Button-Klick ("Vorschau laden"). Kein Auto-Load.
+Button disabled wenn keine aktiven Regeln vorhanden.
 
 ## Abhängigkeiten
 
