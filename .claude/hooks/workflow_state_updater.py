@@ -100,18 +100,21 @@ def main():
     if not is_approval and not is_green and not is_complete:
         sys.exit(0)
 
-    # Handle post-implementation validation approval
-    # Create marker file so post_implementation_gate.py unblocks
+    # Load current state once — used both for the approval block and below.
+    state = load_state()
+    active_name = state.get("active_workflow")
+
+    # Handle post-implementation validation approval.
+    # Files are scoped to the active workflow so parallel workflows cannot
+    # accidentally unblock each other (mirrors post_implementation_gate.py).
     if is_approval:
-        approval_file = get_state_file_path().parent / "user_approved_validation"
-        pending_file = get_state_file_path().parent / "pending_validation.json"
+        claude_dir = get_state_file_path().parent
+        suffix = f"_{active_name}" if active_name else ""
+        approval_file = claude_dir / f"user_approved_validation{suffix}"
+        pending_file = claude_dir / f"pending_validation{suffix}.json"
         if pending_file.exists():
             approval_file.touch()
             print("Validation approved! Further edits are now unblocked.")
-
-    # Load current state (v3 aggregated view)
-    state = load_state()
-    active_name = state.get("active_workflow")
     if not active_name or active_name not in state.get("workflows", {}):
         sys.exit(0)
 

@@ -11,9 +11,12 @@ Features:
 - Batch Mode: Changes within N minutes are treated as one batch
 - User Approval: Only user can approve (via file marker or chat phrase)
 - Domain-Specific Validation: Different requirements per file type (configurable)
+- Per-Workflow Isolation: Lock and approval files are scoped to the active
+  workflow name so parallel workflows cannot accidentally unblock each other.
 
-Lock File: .claude/pending_validation.json
-Contains: {files, first_change, last_change, user_approved: false, requires: [...]}
+Lock File: .claude/pending_validation_<workflow>.json
+Approval:  .claude/user_approved_validation_<workflow>
+(Falls back to the un-suffixed names when no active workflow is detected.)
 
 Exit Codes:
 - 0: Allowed (no lock, user approved, or within batch window)
@@ -48,14 +51,27 @@ except ImportError:
             return {"version": "2.0", "workflows": {}, "active_workflow": None}
 
 
+def get_active_workflow_name() -> str | None:
+    """Return the name of the currently active workflow, or None."""
+    try:
+        state = _load_state_v3()
+    except Exception:
+        return None
+    return state.get("active_workflow") or None
+
+
 def get_lock_file() -> Path:
-    """Get path to lock file."""
-    return get_project_root() / ".claude" / "pending_validation.json"
+    """Get path to the per-workflow lock file."""
+    name = get_active_workflow_name()
+    suffix = f"_{name}" if name else ""
+    return get_project_root() / ".claude" / f"pending_validation{suffix}.json"
 
 
 def get_approval_file() -> Path:
-    """Get path to user approval marker file."""
-    return get_project_root() / ".claude" / "user_approved_validation"
+    """Get path to the per-workflow user approval marker file."""
+    name = get_active_workflow_name()
+    suffix = f"_{name}" if name else ""
+    return get_project_root() / ".claude" / f"user_approved_validation{suffix}"
 
 
 # Default settings (can be overridden in config.yaml)

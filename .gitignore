@@ -33,7 +33,9 @@ node_modules/
 .claude/worktrees/
 .claude/ui_screenshot_lock.json
 .claude/pending_validation.json
+.claude/pending_validation_*.json
 .claude/user_approved_validation
+.claude/user_approved_validation_*
 .claude/scheduled_tasks.lock
 .claude/e2e_verified.json
 

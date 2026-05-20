@@ -14,7 +14,7 @@ Den zentralen `.claude/workflow_state.json` (Version 2.0, 108 Workflows, 153 KB)
 | `.claude/hooks/config_loader.py` | — | **Zentraler Hebel** — `get_state_file_path()` ist Single Source of Truth für alle Hooks |
 | `.claude/hooks/scope_guard.py` | — | Liest State |
 | `.claude/hooks/red_test_gate.py` | — | Liest State |
-| `.claude/hooks/post_implementation_gate.py` | — | Liest State |
+| `.claude/hooks/post_implementation_gate.py` | — | Liest State + schreibt per-Workflow Lock/Approval-Dateien (`pending_validation_<name>.json`, `user_approved_validation_<name>`) |
 | `.claude/hooks/tdd_enforcement.py` | — | Liest State |
 | `.claude/hooks/ui_screenshot_gate.py` | — | Liest State |
 | `.claude/hooks/qa_gate.py` | — | Liest+schreibt State (adversary_verdict) |
