@@ -3,7 +3,7 @@ entity_id: bug_226_dni_wmo_passthrough
 type: bugfix
 created: 2026-05-20
 updated: 2026-05-20
-status: draft
+status: complete
 version: "1.0"
 tags: [bugfix, weather-metrics, segment-summary, dni, wmo-code, issue-226]
 ---
@@ -14,7 +14,7 @@ tags: [bugfix, weather-metrics, segment-summary, dni, wmo-code, issue-226]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (2026-05-20)
 
 ## Zweck
 

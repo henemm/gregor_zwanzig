@@ -3,7 +3,7 @@ entity_id: bug_226_dni_wmo_passthrough_tests
 type: tests
 created: 2026-05-20
 updated: 2026-05-20
-status: draft
+status: complete
 version: "1.0"
 tags: [tests, weather-metrics, segment-summary, dni, wmo-code, bug-226]
 parent: bug_226_dni_wmo_passthrough
