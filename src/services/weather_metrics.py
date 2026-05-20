@@ -916,6 +916,9 @@ class WeatherMetricsService:
             humidity_avg_pct=basis_summary.humidity_avg_pct,
             thunder_level_max=basis_summary.thunder_level_max,
             visibility_min_m=basis_summary.visibility_min_m,
+            # Felder aus compute_basis_metrics() die bisher fehlten (Issue #226)
+            dominant_wmo_code=basis_summary.dominant_wmo_code,
+            dni_avg_wm2=basis_summary.dni_avg_wm2,
             # Add extended metrics
             dewpoint_avg_c=dewpoint_avg,
             pressure_avg_hpa=pressure_avg,
