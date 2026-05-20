@@ -45,6 +45,8 @@ node_modules/
 # Data (runtime / user-uploaded)
 data/cache/
 data/*.gpx
+# Non-default users: real user data, not tracked
+data/users/henning/
 data/users/default/user.json
 data/users/default/weather_snapshots/
 data/users/default/alert_throttle.json
