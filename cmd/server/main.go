@@ -147,9 +147,10 @@ func main() {
 	// must NOT be served by the public /api/scheduler/status endpoint. Expose
 	// them via an authenticated route instead.
 	r.Get("/api/scheduler/subscriptions-status", func(w http.ResponseWriter, r *http.Request) {
+		userID := authmw.UserIDFromContext(r.Context())
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]any{
-			"compare_subscriptions": sched.BuildCompareSubscriptionsStatus(),
+			"compare_subscriptions": sched.BuildCompareSubscriptionsStatus(userID),
 		})
 	})
 

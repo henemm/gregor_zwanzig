@@ -62,7 +62,7 @@ func TestStatusIncludesCompareSubscriptions(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	subsSlice := sched.BuildCompareSubscriptionsStatus()
+	subsSlice := sched.BuildCompareSubscriptionsStatus("default")
 	if len(subsSlice) == 0 {
 		t.Fatal("BuildCompareSubscriptionsStatus() ist leer, erwartet mindestens 1 Eintrag")
 	}
@@ -96,7 +96,7 @@ func TestStatusCompareSubscriptionsEmptyWhenNone(t *testing.T) {
 	}
 	sched, _ := New(cfg, s)
 
-	subsSlice := sched.BuildCompareSubscriptionsStatus()
+	subsSlice := sched.BuildCompareSubscriptionsStatus("default")
 	if len(subsSlice) != 0 {
 		t.Errorf("erwartet leeres Array, got %d Einträge", len(subsSlice))
 	}
@@ -169,7 +169,7 @@ func TestBuildCompareSubscriptionsStatusOmitsEmptyFields(t *testing.T) {
 	}
 	sched, _ := New(cfg, s)
 
-	subsSlice := sched.BuildCompareSubscriptionsStatus()
+	subsSlice := sched.BuildCompareSubscriptionsStatus("default")
 	if len(subsSlice) == 0 {
 		t.Fatal("erwartet 1 Eintrag")
 	}

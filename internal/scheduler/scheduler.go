@@ -331,53 +331,43 @@ func (s *Scheduler) Status() map[string]any {
 }
 
 // BuildCompareSubscriptionsStatus returns id, name, enabled, last_run, last_status
-// for every subscription across every registered user. Issue #252 §5.
+// for every subscription of the given user. Issue #252 §5.
 //
 // Exposed via authenticated endpoint only — must NOT be included in public
 // /api/scheduler/status response (privacy: subscription names leak user intent).
-func (s *Scheduler) BuildCompareSubscriptionsStatus() []map[string]any {
+//
+// Privacy-Fix Issue #252: userID restricts results to a single user; cross-user
+// listing has been removed to close a Cross-User Privacy Leak.
+func (s *Scheduler) BuildCompareSubscriptionsStatus(userID string) []map[string]any {
 	result := []map[string]any{}
 	if s.store == nil {
 		return result
 	}
 
-	seen := map[string]bool{}
-	addSubs := func(subs []model.CompareSubscription) {
-		for _, sub := range subs {
-			if seen[sub.ID] {
-				continue
-			}
-			seen[sub.ID] = true
-			entry := map[string]any{
-				"id":      sub.ID,
-				"name":    sub.Name,
-				"enabled": sub.Enabled,
-			}
-			if sub.LastStatus != "" {
-				entry["last_status"] = sub.LastStatus
-			}
-			if sub.LastRun != nil {
-				entry["last_run"] = sub.LastRun.Format(time.RFC3339)
-			}
-			result = append(result, entry)
+	var subs []model.CompareSubscription
+	var loadErr error
+	if userID != "" {
+		subs, loadErr = s.store.WithUser(userID).LoadSubscriptions()
+	} else {
+		subs, loadErr = s.store.LoadSubscriptions()
+	}
+	if loadErr != nil {
+		return result
+	}
+
+	for _, sub := range subs {
+		entry := map[string]any{
+			"id":      sub.ID,
+			"name":    sub.Name,
+			"enabled": sub.Enabled,
 		}
-	}
-
-	userIDs, err := s.store.ListUserIDs()
-	if err == nil {
-		for _, uid := range userIDs {
-			us := s.store.WithUser(uid)
-			if subs, lerr := us.LoadSubscriptions(); lerr == nil {
-				addSubs(subs)
-			}
+		if sub.LastStatus != "" {
+			entry["last_status"] = sub.LastStatus
 		}
+		if sub.LastRun != nil {
+			entry["last_run"] = sub.LastRun.Format(time.RFC3339)
+		}
+		result = append(result, entry)
 	}
-
-	// Fallback: store's currently scoped user (single-user setups / tests that
-	// seed via SaveSubscription without provisioning user.json).
-	if subs, lerr := s.store.LoadSubscriptions(); lerr == nil {
-		addSubs(subs)
-	}
-
 	return result
 }
