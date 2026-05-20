@@ -205,6 +205,56 @@ export interface ForecastDataPoint {
 	is_day?: number | null;
 	dni_wm2?: number | null;
 	uv_index?: number | null;
+	snow_depth_cm?: number | null;
+	snow_new_24h_cm?: number | null;
+	freezing_level_m?: number | null;
+}
+
+// Issue #251 — Compare-Engine (POST /api/compare/run) DTOs.
+// Spec: docs/specs/modules/issue_251_compare_main_stage.md
+export interface CompareMetrics {
+	temp_min_c?: number | null;
+	temp_max_c?: number | null;
+	wind_max_kmh?: number | null;
+	gust_max_kmh?: number | null;
+	precip_sum_mm?: number | null;
+	cloud_avg_pct?: number | null;
+	visibility_min_m?: number | null;
+	wind_chill_min_c?: number | null;
+	uv_index_max?: number | null;
+	dni_avg_wm2?: number | null;
+	snow_depth_cm?: number | null;
+	snow_new_sum_cm?: number | null;
+	thunder_level_max?: string | null; // 'NONE' | 'MED' | 'HIGH'
+}
+
+export interface CompareRow {
+	location_id: string;
+	score: number; // 0–100
+	rank: number;  // 1 = bester
+	metrics: CompareMetrics;
+}
+
+export interface CompareWinner {
+	location_id: string;
+	tags: string[];
+}
+
+export interface CompareResult {
+	rows: CompareRow[];
+	winner?: CompareWinner;
+	hourly: Record<string, ForecastDataPoint[]>;
+}
+
+// Adapter: System-Namespace ActivityProfile → Go-Engine-Namespace.
+// Ausschliesslich an der API-Call-Site (+page.svelte::runComparison) zu verwenden.
+export function toCompareProfile(profile: ActivityProfile): string {
+	switch (profile) {
+		case 'wintersport':     return 'WINTERSPORT';
+		case 'wandern':         return 'ALPINE_TOURING';
+		case 'summer_trekking': return 'SUMMER_TREKKING';
+		case 'allgemein':       return 'ALLGEMEIN';
+	}
 }
 
 export interface ForecastMeta {
