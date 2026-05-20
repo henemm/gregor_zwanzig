@@ -143,6 +143,16 @@ func main() {
 		json.NewEncoder(w).Encode(sched.Status())
 	})
 
+	// Issue #252 (Adversary Finding 3): subscription names leak user intent and
+	// must NOT be served by the public /api/scheduler/status endpoint. Expose
+	// them via an authenticated route instead.
+	r.Get("/api/scheduler/subscriptions-status", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{
+			"compare_subscriptions": sched.BuildCompareSubscriptionsStatus(),
+		})
+	})
+
 	// Scheduler trigger proxies (frontend → Go → Python)
 	r.Post("/api/scheduler/trip-reports", handler.ProxyPostHandler(cfg.PythonCoreURL, "/api/scheduler/trip-reports"))
 	r.Post("/api/scheduler/morning-subscriptions", handler.ProxyPostHandler(cfg.PythonCoreURL, "/api/scheduler/morning-subscriptions"))

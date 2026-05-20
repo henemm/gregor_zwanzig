@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -84,6 +85,13 @@ func validateSubscription(sub model.CompareSubscription) error {
 		valid := map[string]bool{"wintersport": true, "wandern": true, "allgemein": true}
 		if !valid[*sub.ActivityProfile] {
 			return fmt.Errorf("activity_profile must be wintersport, wandern, or allgemein")
+		}
+	}
+	if sub.SendEmail && len(sub.Recipients) > 0 {
+		for _, addr := range sub.Recipients {
+			if !strings.Contains(addr, "@") {
+				return fmt.Errorf("recipients: ungültige E-Mail-Adresse: %s", addr)
+			}
 		}
 	}
 	return nil

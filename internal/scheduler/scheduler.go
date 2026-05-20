@@ -324,16 +324,18 @@ func (s *Scheduler) Status() map[string]any {
 		jobs = append(jobs, job)
 	}
 	return map[string]any{
-		"running":               true,
-		"jobs":                  jobs,
-		"compare_subscriptions": s.buildCompareSubscriptionsStatus(),
-		"timezone":              s.cron.Location().String(),
+		"running":  true,
+		"jobs":     jobs,
+		"timezone": s.cron.Location().String(),
 	}
 }
 
-// buildCompareSubscriptionsStatus returns id, name, enabled, last_run, last_status
+// BuildCompareSubscriptionsStatus returns id, name, enabled, last_run, last_status
 // for every subscription across every registered user. Issue #252 §5.
-func (s *Scheduler) buildCompareSubscriptionsStatus() []map[string]any {
+//
+// Exposed via authenticated endpoint only — must NOT be included in public
+// /api/scheduler/status response (privacy: subscription names leak user intent).
+func (s *Scheduler) BuildCompareSubscriptionsStatus() []map[string]any {
 	result := []map[string]any{}
 	if s.store == nil {
 		return result
@@ -347,15 +349,15 @@ func (s *Scheduler) buildCompareSubscriptionsStatus() []map[string]any {
 			}
 			seen[sub.ID] = true
 			entry := map[string]any{
-				"id":          sub.ID,
-				"name":        sub.Name,
-				"enabled":     sub.Enabled,
-				"last_status": sub.LastStatus,
+				"id":      sub.ID,
+				"name":    sub.Name,
+				"enabled": sub.Enabled,
+			}
+			if sub.LastStatus != "" {
+				entry["last_status"] = sub.LastStatus
 			}
 			if sub.LastRun != nil {
 				entry["last_run"] = sub.LastRun.Format(time.RFC3339)
-			} else {
-				entry["last_run"] = nil
 			}
 			result = append(result, entry)
 		}

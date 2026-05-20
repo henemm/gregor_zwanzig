@@ -14,11 +14,15 @@ import (
 	"github.com/henemm/gregor-api/internal/store"
 )
 
-// TDD RED: Issue #252 — Status() muss compare_subscriptions enthalten.
+// TDD RED: Issue #252 — BuildCompareSubscriptionsStatus()
 //
 // Spec: docs/specs/modules/issue_252_compare_presets.md §5
-// AC-4: GET /api/scheduler/status enthält compare_subscriptions-Array mit
-//       id, name, enabled, last_run, last_status pro aktivem Preset.
+// AC-4: GET /api/scheduler/subscriptions-status (authenticated) liefert
+//       compare_subscriptions-Array mit id, name, enabled, last_run, last_status
+//       pro aktivem Preset.
+//
+// Adversary Finding 3 (Privacy-Leak): Status() darf compare_subscriptions
+// NICHT mehr enthalten — Daten werden nur via authenticated Endpoint exposed.
 
 func seedSubscriptionForStatus(t *testing.T, s *store.Store, sub model.CompareSubscription) {
 	t.Helper()
@@ -58,19 +62,9 @@ func TestStatusIncludesCompareSubscriptions(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	status := sched.Status()
-
-	subs, ok := status["compare_subscriptions"]
-	if !ok {
-		t.Fatal("Status() fehlt 'compare_subscriptions'-Schlüssel")
-	}
-
-	subsSlice, ok := subs.([]map[string]any)
-	if !ok {
-		t.Fatalf("compare_subscriptions hat falschen Typ: %T", subs)
-	}
+	subsSlice := sched.BuildCompareSubscriptionsStatus()
 	if len(subsSlice) == 0 {
-		t.Fatal("compare_subscriptions ist leer, erwartet mindestens 1 Eintrag")
+		t.Fatal("BuildCompareSubscriptionsStatus() ist leer, erwartet mindestens 1 Eintrag")
 	}
 
 	entry := subsSlice[0]
@@ -102,21 +96,14 @@ func TestStatusCompareSubscriptionsEmptyWhenNone(t *testing.T) {
 	}
 	sched, _ := New(cfg, s)
 
-	status := sched.Status()
-	subs, ok := status["compare_subscriptions"]
-	if !ok {
-		t.Fatal("Status() fehlt 'compare_subscriptions'-Schlüssel auch wenn leer")
-	}
-	subsSlice, ok := subs.([]map[string]any)
-	if !ok {
-		t.Fatalf("compare_subscriptions hat falschen Typ: %T", subs)
-	}
+	subsSlice := sched.BuildCompareSubscriptionsStatus()
 	if len(subsSlice) != 0 {
 		t.Errorf("erwartet leeres Array, got %d Einträge", len(subsSlice))
 	}
 }
 
-// Smoke-Test: /api/scheduler/status Response-JSON enthält compare_subscriptions
+// Adversary Finding 3: /api/scheduler/status (public) darf compare_subscriptions
+// NICHT mehr enthalten. Privacy-Leak vermeiden.
 func TestSchedulerStatusEndpointJSON(t *testing.T) {
 	tmpDir := t.TempDir()
 	s := store.New(tmpDir, "default")
@@ -148,14 +135,49 @@ func TestSchedulerStatusEndpointJSON(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
 		t.Fatalf("JSON parse: %v", err)
 	}
-	if _, ok := body["compare_subscriptions"]; !ok {
-		t.Errorf("Response-JSON enthält kein 'compare_subscriptions'-Feld. Keys: %v",
-			func() []string {
-				keys := make([]string, 0, len(body))
-				for k := range body {
-					keys = append(keys, k)
-				}
-				return keys
-			}())
+	// Privacy-Fix: compare_subscriptions darf NICHT mehr im public Status sein.
+	if _, ok := body["compare_subscriptions"]; ok {
+		t.Error("Status() soll compare_subscriptions NICHT mehr enthalten (Privacy-Fix)")
+	}
+}
+
+// Finding 4: leere Felder (last_status == "", last_run == nil) müssen aus der
+// Map weggelassen werden, nicht als Null/Empty-String serialisiert.
+func TestBuildCompareSubscriptionsStatusOmitsEmptyFields(t *testing.T) {
+	tmpDir := t.TempDir()
+	s := store.New(tmpDir, "default")
+	s.ProvisionUserDirs("default")
+	os.MkdirAll(filepath.Join(tmpDir, "users", "default"), 0755)
+	os.WriteFile(filepath.Join(tmpDir, "users", "default", "user.json"),
+		[]byte(`{"id":"default"}`), 0644)
+
+	seedSubscriptionForStatus(t, s, model.CompareSubscription{
+		ID:              "no-runs-yet",
+		Name:            "Never Ran",
+		Enabled:         true,
+		ForecastHours:   48,
+		Schedule:        "daily_morning",
+		TimeWindowStart: 9,
+		TimeWindowEnd:   16,
+		TopN:            3,
+		// LastRun == nil, LastStatus == ""
+	})
+
+	cfg := &config.Config{
+		PythonCoreURL:     "http://localhost:8000",
+		SchedulerTimezone: "Europe/Vienna",
+	}
+	sched, _ := New(cfg, s)
+
+	subsSlice := sched.BuildCompareSubscriptionsStatus()
+	if len(subsSlice) == 0 {
+		t.Fatal("erwartet 1 Eintrag")
+	}
+	entry := subsSlice[0]
+	if _, ok := entry["last_status"]; ok {
+		t.Errorf("last_status sollte fehlen (war \"\"), got %v", entry["last_status"])
+	}
+	if _, ok := entry["last_run"]; ok {
+		t.Errorf("last_run sollte fehlen (war nil), got %v", entry["last_run"])
 	}
 }

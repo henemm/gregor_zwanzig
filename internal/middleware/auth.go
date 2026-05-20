@@ -34,10 +34,7 @@ func AuthMiddleware(secret string) func(http.Handler) http.Handler {
 			if r.URL.Path == "/api/health" || r.URL.Path == "/api/scheduler/status" ||
 				r.URL.Path == "/api/auth/register" || r.URL.Path == "/api/auth/login" ||
 				r.URL.Path == "/api/auth/logout" ||
-				r.URL.Path == "/api/auth/forgot-password" || r.URL.Path == "/api/auth/reset-password" ||
-				// Issue #252: PATCH /api/subscriptions/{id}/run-status — Scheduler-internal
-				(r.Method == http.MethodPatch && strings.HasSuffix(r.URL.Path, "/run-status") &&
-					strings.HasPrefix(r.URL.Path, "/api/subscriptions/")) {
+				r.URL.Path == "/api/auth/forgot-password" || r.URL.Path == "/api/auth/reset-password" {
 				next.ServeHTTP(w, r)
 				return
 			}
