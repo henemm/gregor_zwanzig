@@ -226,4 +226,9 @@
 		border-color: var(--g-border, #ddd);
 		color: var(--g-ink, #333);
 	}
+	@media (max-width: 767px) {
+		.field input[type='text'], .field textarea {
+			font-size: 16px;
+		}
+	}
 </style>

@@ -330,3 +330,10 @@
   [data-slot="dot"][data-tone="danger"]  { background: var(--g-danger); }
   [data-slot="dot"][data-tone="info"]    { background: var(--g-info); }
 }
+
+/* iOS Safari: font-size >= 16px auf Focus-Elementen, verhindert Auto-Zoom (#272) */
+@media (max-width: 767px) {
+  input, select, textarea {
+    font-size: 16px;
+  }
+}
