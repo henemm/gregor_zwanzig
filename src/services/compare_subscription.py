@@ -37,12 +37,11 @@ def run_comparison_for_subscription(
     from app.user import Schedule
 
     # Imports from extracted service modules (Epic #129 Phase A.1)
-    from output.renderers.email.design_tokens import G_BOX_WARNING_BG, G_WARNING
+    # Issue #253: HTML-Renderer kommt jetzt aus output.renderers.email.compare_html;
+    # Plain-Text-Renderer bleibt comparison_renderers.render_comparison_text.
+    from output.renderers.email.compare_html import render_compare_html
     from services.comparison_engine import ComparisonEngine
-    from services.comparison_renderers import (
-        render_comparison_html,
-        render_comparison_text,
-    )
+    from services.comparison_renderers import render_comparison_text
 
     # Load locations if not provided
     if all_locations is None:
@@ -106,27 +105,40 @@ def run_comparison_for_subscription(
                 if (m.get("enabled", True) if isinstance(m, dict) else getattr(m, 'enabled', True))
             }
 
-    # Use both renderers for Multipart Email
-    html_body = render_comparison_html(result, top_n_details=sub.top_n, enabled_metrics=enabled_metrics, profile=getattr(sub, 'activity_profile', None))
-    text_body = render_comparison_text(result, top_n_details=sub.top_n, enabled_metrics=enabled_metrics, profile=getattr(sub, 'activity_profile', None))
-
-    # Add warning banner if locations failed
+    # Warnungen sammeln (aus failed_locations) — werden direkt an den
+    # Renderer durchgereicht, kein String-Replace mehr.
+    collected_warnings: list[str] = []
     if failed_locations:
         failed_names = ", ".join(loc.name for loc in failed_locations[:3])
         if len(failed_locations) > 3:
-            failed_names += f" (+{len(failed_locations) - 3} more)"
-
-        warning_html = f'''
-        <div style="background: {G_BOX_WARNING_BG}; border-left: 4px solid {G_WARNING}; padding: 12px 16px; margin: 0 20px 16px 20px; border-radius: 4px;">
-            <strong>⚠️ Warning:</strong> {len(failed_locations)} location(s) unavailable due to API errors: {failed_names}
-        </div>
-'''
-        html_body = html_body.replace(
-            '</div>\n\n        <div class="winner">',
-            f'</div>\n{warning_html}\n        <div class="winner">'
+            failed_names += f" (+{len(failed_locations) - 3} mehr)"
+        collected_warnings.append(
+            f"⚠️ {len(failed_locations)} Standort(e) nicht verfügbar: {failed_names}"
         )
 
-        warning_text = f"\n⚠️ WARNING: {len(failed_locations)} location(s) unavailable: {failed_names}\n"
+    html_body = render_compare_html(
+        result,
+        profile=getattr(sub, 'activity_profile', None),
+        warnings=collected_warnings,
+        top_n_details=sub.top_n,
+        enabled_metrics=enabled_metrics,
+    )
+    text_body = render_comparison_text(
+        result,
+        top_n_details=sub.top_n,
+        enabled_metrics=enabled_metrics,
+        profile=getattr(sub, 'activity_profile', None),
+    )
+
+    # Plain-Text-Warnung bleibt erhalten (Plain-Text-Renderer unveraendert).
+    if failed_locations:
+        failed_names_text = ", ".join(loc.name for loc in failed_locations[:3])
+        if len(failed_locations) > 3:
+            failed_names_text += f" (+{len(failed_locations) - 3} more)"
+        warning_text = (
+            f"\n⚠️ WARNING: {len(failed_locations)} location(s) "
+            f"unavailable: {failed_names_text}\n"
+        )
         text_body = text_body.replace("=" * 24, "=" * 24 + warning_text, 1)
 
     subject = f"Wetter-Vergleich: {sub.name} ({now.strftime('%d.%m.%Y')})"

@@ -86,6 +86,7 @@ def _run_subscriptions_by_schedule(schedule, user_id: str = "default") -> int:
     from services.compare_subscription import run_comparison_for_subscription
 
     count = 0
+    success_count = 0
     settings = Settings().with_user_profile(user_id)
     all_locations = load_all_locations(user_id=user_id)
 
@@ -97,8 +98,12 @@ def _run_subscriptions_by_schedule(schedule, user_id: str = "default") -> int:
                 )
                 _send_subscription(sub, subject, html_body, text_body, settings)
                 count += 1
+                success_count += 1
             except Exception as e:
                 logger.error(f"Failed subscription {sub.name}: {e}")
+
+    if success_count > 0:
+        _ping_heartbeat_compare()
 
     return count
 
@@ -114,6 +119,7 @@ def _run_weekly_subscriptions(user_id: str = "default") -> int:
 
     current_weekday = datetime.now().weekday()
     count = 0
+    success_count = 0
     settings = Settings()
     all_locations = load_all_locations(user_id=user_id)
 
@@ -126,8 +132,12 @@ def _run_weekly_subscriptions(user_id: str = "default") -> int:
                     )
                     _send_subscription(sub, subject, html_body, text_body, settings)
                     count += 1
+                    success_count += 1
                 except Exception as e:
                     logger.error(f"Failed weekly subscription {sub.name}: {e}")
+
+    if success_count > 0:
+        _ping_heartbeat_compare()
 
     return count
 
@@ -166,3 +176,26 @@ def _send_subscription(sub, subject: str, html_body: str, text_body: str, settin
                 logger.error(f"Telegram failed for {sub.name}: {e}")
         else:
             logger.warning(f"Telegram requested but not configured: {sub.name}")
+
+
+def _ping_heartbeat_compare() -> None:
+    """Fail-soft: Heartbeat-Ping wenn GZ_HEARTBEAT_COMPARE gesetzt.
+
+    Wird ausschliesslich aufgerufen wenn mindestens ein Compare-Versand
+    erfolgreich war (Readiness statt Liveness, siehe globale Heartbeat-Regel).
+
+    SPEC: docs/specs/modules/issue_253_compare_email.md §3
+    """
+    import os
+
+    url = os.getenv("GZ_HEARTBEAT_COMPARE", "")
+    if not url:
+        logger.debug("GZ_HEARTBEAT_COMPARE nicht gesetzt — kein Heartbeat-Ping")
+        return
+    try:
+        import httpx
+
+        httpx.get(url, timeout=5)
+        logger.info("Heartbeat-Ping Compare OK")
+    except Exception as e:
+        logger.warning("Heartbeat-Ping Compare fehlgeschlagen: %s", e)
