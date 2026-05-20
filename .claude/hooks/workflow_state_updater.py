@@ -132,14 +132,14 @@ def main():
             wf2["phases_completed"].append("phase4_approved")
         wf2["last_updated"] = datetime.now().isoformat()
         save_state(state2)
-        print("Spec approved! You may now run /tdd-red")
+        print(f"[Workflow: {active_name}] Spec approved! (phase3_spec → phase4_approved) You may now run /tdd-red")
 
     # Handle GREEN approval (phase6_implement -> green_approved)
     elif is_green and workflow.get("current_phase") == "phase6_implement":
         workflow["green_approved"] = True
         workflow["last_updated"] = datetime.now().isoformat()
         save_state(state)
-        print("GREEN tests approved! Adversary verification next.")
+        print(f"[Workflow: {active_name}] GREEN tests approved! Adversary verification next.")
 
     # Handle workflow completion (phase7_validate -> phase8_complete)
     elif is_complete and workflow.get("current_phase") == "phase7_validate":

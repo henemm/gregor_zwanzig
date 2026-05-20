@@ -41,6 +41,7 @@ Dieses Projekt nutzt den **OpenSpec 8-Phasen-Workflow** mit Adversary Verificati
 | **Phasen-Audit-Trail** | Automatisch | Jede Phasen-Transition landet in `phase_transitions[]` mit `from/to/at/trigger`. Fix-Loop-Counter (phase6b→phase6) wird automatisch gezählt. `workflow.py status` zeigt beide. |
 | **Trigger-Typen für `phase`** | Optional | `workflow.py phase <ziel> --trigger=command\|advance\|user_keyword\|manual`. Default `command`. UserPromptSubmit-Hook setzt automatisch `user_keyword`. |
 | **State pro Workflow** | Persistent | `.claude/workflows/<name>.json` (laufende) + `_archive/<name>.json` (abgeschlossen) + `.active` Symlink. Worktree-Routing bleibt intakt. |
+| **Parallele Sessions** | Bei mehreren gleichzeitigen Claude-Code-Fenstern | `export GZ_ACTIVE_WORKFLOW=<name>` vor dem Start setzen. Env-Var hat Vorrang vor `.active`-Symlink — Session A und Session B kämpfen damit nicht mehr um denselben Symlink. `workflow.py status` zeigt die Quelle in eckigen Klammern. |
 
 **Memory-Regel: KEINE Mocks in Tests!** Bei Adversary-Findings ist `Code reference: file:line` Pflicht — siehe `.claude/agents/implementation-validator.md` Sektion "Findings-Format".
 

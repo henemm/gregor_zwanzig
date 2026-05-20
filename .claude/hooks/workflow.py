@@ -275,9 +275,21 @@ def _read_workflow_file(path: Path) -> dict:
 def _active_name() -> Optional[str]:
     """Return the name of the active workflow, or None.
 
-    Pre-migration fallback: if no `.active` symlink exists but the legacy
-    ``workflow_state.json`` has an ``active_workflow``, return that.
+    Priority:
+    1. GZ_ACTIVE_WORKFLOW env var (session-scoped, prevents cross-session
+       symlink collisions when multiple Claude Code instances run in parallel)
+    2. .active symlink (single-session default)
+    3. Legacy workflow_state.json fallback (pre-migration)
     """
+    env_name = os.environ.get("GZ_ACTIVE_WORKFLOW", "").strip()
+    if env_name:
+        try:
+            _validate_name(env_name)
+            if _workflow_file(env_name).exists() or _archive_file(env_name).exists():
+                return env_name
+        except ValueError:
+            pass  # invalid name in env var — fall through to symlink
+
     link = _active_link()
     if link.is_symlink():
         target = os.readlink(str(link))
@@ -484,8 +496,47 @@ def cmd_switch(args: list[str]) -> None:
     if not _workflow_file(name).exists() and not _archive_file(name).exists():
         print(f"Workflow {name} not found.", file=sys.stderr)
         sys.exit(1)
+
+    # Warn if current active workflow is in a phase where user keywords are expected.
+    KEYWORD_SENSITIVE_PHASES = {"phase3_spec", "phase6_implement", "phase7_validate"}
+    current = _active_name()
+    if current and current != name:
+        try:
+            cur_path = _resolve_active_path()
+            if cur_path:
+                cur_data = _read_workflow_file(cur_path)
+                cur_phase = cur_data.get("current_phase", "")
+                if cur_phase in KEYWORD_SENSITIVE_PHASES:
+                    print(
+                        f"WARNING: Switching away from '{current}' which is in {cur_phase}.\n"
+                        f"  User keywords ('approved', 'go', 'deployed') will now target '{name}'.\n"
+                        f"  Switch back with: workflow.py switch {current}",
+                        file=sys.stderr,
+                    )
+        except Exception:
+            pass  # fail-soft — switch must never abort
+
     _set_active(name)
-    print(f"Switched to: {name}")
+
+    env_name = os.environ.get("GZ_ACTIVE_WORKFLOW", "").strip()
+    if env_name and env_name != name:
+        print(
+            f"Switched to: {name} (.active symlink updated)\n"
+            f"WARNING: GZ_ACTIVE_WORKFLOW={env_name!r} is set in this session.\n"
+            f"  Hooks will still use '{env_name}' — the env var overrides the symlink.\n"
+            f"  To align: export GZ_ACTIVE_WORKFLOW={name}",
+            file=sys.stderr,
+        )
+        print(f"Switched to: {name}")
+    elif not env_name:
+        print(f"Switched to: {name}")
+        print(
+            f"Tip: For parallel sessions, set GZ_ACTIVE_WORKFLOW={name} "
+            "before starting Claude Code.",
+            file=sys.stderr,
+        )
+    else:
+        print(f"Switched to: {name}")
 
 
 def cmd_status(args: list[str]) -> None:
@@ -494,7 +545,9 @@ def cmd_status(args: list[str]) -> None:
     phase_name = PHASE_NAMES.get(phase, phase)
     spec = data.get("spec_file") or "Not created"
     test_artifacts = data.get("test_artifacts") or []
-    print(f"Workflow: {name}")
+    env_source = os.environ.get("GZ_ACTIVE_WORKFLOW", "").strip()
+    source_label = f"env:GZ_ACTIVE_WORKFLOW={env_source}" if env_source == name else ".active symlink"
+    print(f"Workflow: {name}  [{source_label}]")
     print(f"Phase: {phase_name}")
     print(f"Spec: {spec}")
     print(f"Approved: {'Yes' if data.get('spec_approved') else 'No'}")
@@ -647,6 +700,23 @@ def cmd_add_artifact(args: list[str]) -> None:
         print("Usage: workflow.py add-artifact <type> <path> <desc> <phase>", file=sys.stderr)
         sys.exit(1)
     art_type, art_path, desc, phase = args[0], args[1], args[2], args[3]
+
+    # Validate type early so the error surfaces here, not later at the gate hook.
+    try:
+        hooks_dir = Path(__file__).resolve().parent
+        if str(hooks_dir) not in sys.path:
+            sys.path.insert(0, str(hooks_dir))
+        from tdd_enforcement import VALID_ARTIFACT_TYPES
+        if art_type not in VALID_ARTIFACT_TYPES:
+            print(
+                f"Invalid artifact type: '{art_type}'\n"
+                f"Valid types: {', '.join(sorted(VALID_ARTIFACT_TYPES))}",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+    except ImportError:
+        pass  # fail-soft if tdd_enforcement unavailable
+
     data, name = _read_active()
     data.setdefault("test_artifacts", []).append({
         "type": art_type,
