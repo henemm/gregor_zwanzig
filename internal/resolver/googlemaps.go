@@ -36,6 +36,18 @@ func resolveGoogleMaps(input string) (ResolveResult, error) {
 		}
 	}
 
+	// Fallback: URL-Pfad auf Koordinaten prüfen (z.B. /maps/search/54.357928,+11.087327)
+	if u, err := url.Parse(finalURL); err == nil {
+		pathNorm := strings.ReplaceAll(u.Path, "+", " ")
+		if lat, lon, ok := parseLatLonString(pathNorm); ok && inRange(lat, lon) {
+			return finalize(ResolveResult{
+				Lat:        lat,
+				Lon:        lon,
+				SourceType: "google_maps",
+			}, true), nil
+		}
+	}
+
 	// Fallback: ll=/q= Parameter in final URL prüfen (Koordinaten)
 	if u, err := url.Parse(finalURL); err == nil {
 		for _, key := range []string{"ll", "q"} {
