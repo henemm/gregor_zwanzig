@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 import math
 from datetime import date, datetime, time, timedelta, timezone
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from app.config import Settings
 from app.loader import load_all_trips
@@ -337,6 +337,9 @@ class TripReportSchedulerService:
             logger.warning(f"No weather data for trip {trip.id}")
             return
 
+        # 2b. Ensemble-Anreicherung: 1 API-Call für letzten Waypoint der letzten Etappe
+        self._enrich_ensemble_for_trip(trip, segment_weather)
+
         # 3. Stage info for header
         stage = trip.get_stage_for_date(target_date)
         stage_name = stage.name if stage else None
@@ -661,7 +664,9 @@ class TripReportSchedulerService:
         weather_data = []
         for segment in segments:
             try:
-                data = service.fetch_segment_weather(segment)
+                # Bug #288: Skip ensemble per-segment; will be added once via
+                # _enrich_ensemble_for_trip() to keep API-Calls at 1/Report.
+                data = service.fetch_segment_weather(segment, enrich_ensemble=False)
                 weather_data.append(data)
             except Exception as e:
                 logger.error(
@@ -724,7 +729,9 @@ class TripReportSchedulerService:
         try:
             provider = get_provider("openmeteo")
             service = SegmentWeatherService(provider)
-            night_data = service.fetch_segment_weather(night_segment)
+            # Bug #288: night fetch is part of the per-stage data; ensemble
+            # is added once per trip via _enrich_ensemble_for_trip().
+            night_data = service.fetch_segment_weather(night_segment, enrich_ensemble=False)
             return night_data.timeseries
         except Exception as e:
             logger.warning(f"Failed to fetch night weather: {e}")
@@ -732,6 +739,120 @@ class TripReportSchedulerService:
             if last_segment.timeseries and last_segment.timeseries.data:
                 return last_segment.timeseries
             return None
+
+    def _enrich_ensemble_for_trip(
+        self,
+        trip: "Trip",
+        weather_data: List[SegmentWeatherData],
+    ) -> None:
+        """Bug #288: Add ensemble-spread confidence once per trip.
+
+        Performs a single Ensemble-API call for the last waypoint of the
+        last stage, then propagates confidence_pct / spread_t2m_k /
+        spread_precip_mm onto every DataPoint of every segment. Finally,
+        SegmentWeatherSummary.confidence_pct_min is set retroactively
+        (the dataclass is not frozen).
+
+        Args:
+            trip: Trip whose last stage / last waypoint anchors the call.
+            weather_data: Segment-weather list to enrich in-place.
+        """
+        from providers.base import get_provider
+        from providers.openmeteo import OpenMeteoProvider, compute_confidence_pct
+        from app.config import Location
+
+        if not weather_data or not trip.stages:
+            return
+
+        # 1. Last waypoint of last stage
+        last_wp = trip.stages[-1].last_waypoint
+        location = Location(
+            latitude=last_wp.lat,
+            longitude=last_wp.lon,
+            name=last_wp.name or "Ziel",
+            elevation_m=last_wp.elevation_m,
+        )
+
+        # 2. Derive time range from weather_data
+        all_starts = [w.segment.start_time for w in weather_data if w.segment]
+        all_ends = [w.segment.end_time for w in weather_data if w.segment]
+        if not all_starts or not all_ends:
+            return
+        start = min(all_starts)
+        end = max(all_ends)
+
+        # 3. Ensemble-API call (best-effort: failures must not crash report)
+        provider = get_provider("openmeteo")
+        if not isinstance(provider, OpenMeteoProvider):
+            return
+        try:
+            spreads = provider._fetch_ensemble_spread(location, start, end)
+        except Exception as e:
+            logger.warning("_enrich_ensemble_for_trip: ensemble fetch failed: %s", e)
+            return
+
+        if not spreads:
+            return
+
+        # 4. Timestamp-normalised lookup (mirrors openmeteo.py:770-787)
+        now_utc = datetime.now(timezone.utc)
+        spreads_naive: Dict[datetime, Tuple[Optional[float], Optional[float]]] = {}
+        for k, v in spreads.items():
+            k_naive = k.replace(tzinfo=None) if k.tzinfo is not None else k
+            spreads_naive[k_naive] = v
+
+        # 5. Propagate confidence onto every DataPoint of every segment
+        for weather_item in weather_data:
+            seg = weather_item.segment
+            seg_start = seg.start_time if seg is not None else None
+            seg_end = seg.end_time if seg is not None else None
+
+            # 5a. Per-DataPoint enrichment when timeseries exists
+            if weather_item.timeseries is not None:
+                for dp in weather_item.timeseries.data:
+                    dp_ts_naive = dp.ts.replace(tzinfo=None) if dp.ts.tzinfo else dp.ts
+                    spread = spreads_naive.get(dp_ts_naive)
+                    if spread is None:
+                        continue
+                    s_t, s_p = spread
+                    dp.spread_t2m_k = s_t
+                    dp.spread_precip_mm = s_p
+                    if s_t is not None and s_p is not None:
+                        dp_ts_utc = dp.ts if dp.ts.tzinfo else dp.ts.replace(tzinfo=timezone.utc)
+                        lead_h = max(0.0, (dp_ts_utc - now_utc).total_seconds() / 3600.0)
+                        dp.confidence_pct = compute_confidence_pct(s_t, s_p, lead_h)
+
+                # 6a. confidence_pct_min from DataPoints (SegmentWeatherSummary not frozen)
+                valid_conf = [
+                    dp.confidence_pct
+                    for dp in weather_item.timeseries.data
+                    if dp.confidence_pct is not None
+                ]
+                if valid_conf:
+                    weather_item.aggregated.confidence_pct_min = min(valid_conf)
+                    continue
+
+            # 5b/6b. Fallback: aggregate confidence directly from spreads within
+            # the segment time window (when timeseries is missing or empty)
+            if seg_start is None or seg_end is None:
+                continue
+            seg_start_naive = (
+                seg_start.replace(tzinfo=None) if seg_start.tzinfo else seg_start
+            )
+            seg_end_naive = (
+                seg_end.replace(tzinfo=None) if seg_end.tzinfo else seg_end
+            )
+            spread_confs: List[float] = []
+            for ts_naive, (s_t, s_p) in spreads_naive.items():
+                if ts_naive < seg_start_naive or ts_naive > seg_end_naive:
+                    continue
+                if s_t is None or s_p is None:
+                    continue
+                ts_utc = ts_naive.replace(tzinfo=timezone.utc)
+                lead_h = max(0.0, (ts_utc - now_utc).total_seconds() / 3600.0)
+                spread_confs.append(compute_confidence_pct(s_t, s_p, lead_h))
+            if spread_confs:
+                weather_item.aggregated.confidence_pct_min = min(spread_confs)
 
     def _build_stage_trend(
         self,

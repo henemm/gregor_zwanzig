@@ -662,6 +662,7 @@ class OpenMeteoProvider:
         location: "Location",
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
+        enrich_ensemble: bool = True,
     ) -> NormalizedTimeseries:
         """
         Fetch weather forecast for a location.
@@ -672,6 +673,9 @@ class OpenMeteoProvider:
             location: Location with latitude/longitude
             start: Start time (default: now)
             end: End time (default: now + 48h)
+            enrich_ensemble: If True (default), enrich data points with
+                ensemble-spread confidence (Issue #121); if False, skip the
+                ensemble-API call entirely. Bug #288 reduces calls to 1/report.
 
         Returns:
             NormalizedTimeseries with hourly forecast
@@ -758,33 +762,35 @@ class OpenMeteoProvider:
 
         # Issue #121: Enrich with ensemble spread + lead-time-capped confidence.
         # Best-effort: any failure leaves the three new fields at None (AC-6).
-        try:
-            spreads = self._fetch_ensemble_spread(location, start, end)
-        except Exception as e:  # pragma: no cover - defensive
-            logger.warning("Ensemble spread enrichment crashed: %s", e)
-            spreads = {}
+        # Bug #288: enrich_ensemble=False skips the ensemble call (alert-checks).
+        if enrich_ensemble:
+            try:
+                spreads = self._fetch_ensemble_spread(location, start, end)
+            except Exception as e:  # pragma: no cover - defensive
+                logger.warning("Ensemble spread enrichment crashed: %s", e)
+                spreads = {}
 
-        if spreads:
-            now_utc = datetime.now(timezone.utc)
-            # Build a lookup with naive UTC ts to match primary timeseries.
-            spreads_naive: Dict[datetime, Tuple[Optional[float], Optional[float]]] = {}
-            for k, v in spreads.items():
-                k_naive = k.replace(tzinfo=None) if k.tzinfo is not None else k
-                spreads_naive[k_naive] = v
+            if spreads:
+                now_utc = datetime.now(timezone.utc)
+                # Build a lookup with naive UTC ts to match primary timeseries.
+                spreads_naive: Dict[datetime, Tuple[Optional[float], Optional[float]]] = {}
+                for k, v in spreads.items():
+                    k_naive = k.replace(tzinfo=None) if k.tzinfo is not None else k
+                    spreads_naive[k_naive] = v
 
-            for dp in timeseries.data:
-                dp_ts_naive = dp.ts.replace(tzinfo=None) if dp.ts.tzinfo else dp.ts
-                spread = spreads_naive.get(dp_ts_naive)
-                if spread is None:
-                    continue
-                s_t, s_p = spread
-                dp.spread_t2m_k = s_t
-                dp.spread_precip_mm = s_p
-                if s_t is not None and s_p is not None:
-                    # Lead-time = hours from now to forecast ts.
-                    dp_ts_utc = dp.ts if dp.ts.tzinfo else dp.ts.replace(tzinfo=timezone.utc)
-                    lead_h = max(0.0, (dp_ts_utc - now_utc).total_seconds() / 3600.0)
-                    dp.confidence_pct = compute_confidence_pct(s_t, s_p, lead_h)
+                for dp in timeseries.data:
+                    dp_ts_naive = dp.ts.replace(tzinfo=None) if dp.ts.tzinfo else dp.ts
+                    spread = spreads_naive.get(dp_ts_naive)
+                    if spread is None:
+                        continue
+                    s_t, s_p = spread
+                    dp.spread_t2m_k = s_t
+                    dp.spread_precip_mm = s_p
+                    if s_t is not None and s_p is not None:
+                        # Lead-time = hours from now to forecast ts.
+                        dp_ts_utc = dp.ts if dp.ts.tzinfo else dp.ts.replace(tzinfo=timezone.utc)
+                        lead_h = max(0.0, (dp_ts_utc - now_utc).total_seconds() / 3600.0)
+                        dp.confidence_pct = compute_confidence_pct(s_t, s_p, lead_h)
 
         # WEATHER-05b: Check for missing metrics and fetch fallback
         cache = self._load_availability_cache()

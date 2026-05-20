@@ -71,6 +71,7 @@ class SegmentWeatherService:
     def fetch_segment_weather(
         self,
         segment: TripSegment,
+        enrich_ensemble: bool = True,
     ) -> SegmentWeatherData:
         """
         Fetch weather forecast for a trip segment.
@@ -87,6 +88,9 @@ class SegmentWeatherService:
 
         Args:
             segment: Trip segment with coordinates and time window
+            enrich_ensemble: If True (default), let provider enrich with
+                ensemble-spread confidence; if False, skip ensemble-API call
+                (Bug #288 — alert-checks must not consume daily quota).
 
         Returns:
             SegmentWeatherData with populated metrics
@@ -133,6 +137,7 @@ class SegmentWeatherService:
                 location,
                 start=segment.start_time,
                 end=segment.end_time,
+                enrich_ensemble=enrich_ensemble,
             )
         except ProviderRequestError as e:
             logger.error(f"Provider failed for segment {segment.segment_id}: {e}")

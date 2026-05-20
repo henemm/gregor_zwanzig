@@ -174,6 +174,7 @@ class GeoSphereProvider:
         location: "Location",
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
+        enrich_ensemble: bool = True,  # ignored, GeoSphere has no ensemble support
     ) -> NormalizedTimeseries:
         """
         Fetch weather forecast for a location.
@@ -185,6 +186,8 @@ class GeoSphereProvider:
             location: Geographic location to query
             start: Forecast start time (default: now)
             end: Forecast end time (default: +60h)
+            enrich_ensemble: Accepted for protocol compliance but ignored
+                (Bug #288); GeoSphere has no ensemble-spread API.
 
         Returns:
             NormalizedTimeseries with forecast data

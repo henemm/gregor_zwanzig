@@ -42,6 +42,7 @@ class WeatherProvider(Protocol):
         location: "Location",
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
+        enrich_ensemble: bool = True,
     ) -> "NormalizedTimeseries":
         """
         Fetch weather forecast for a location.
@@ -50,6 +51,8 @@ class WeatherProvider(Protocol):
             location: Geographic location to query
             start: Forecast start time (default: now)
             end: Forecast end time (default: provider-specific)
+            enrich_ensemble: If True (default), enrich data points with
+                ensemble-spread confidence; if False, skip ensemble-API call.
 
         Returns:
             Normalized timeseries with forecast data

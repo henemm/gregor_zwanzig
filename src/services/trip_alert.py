@@ -431,7 +431,9 @@ class TripAlertService:
             try:
                 # Clear cache to force fresh fetch
                 service._cache.clear()
-                fresh = service.fetch_segment_weather(cached.segment)
+                # Bug #288: Alert-Checks must NOT trigger ensemble-API calls
+                # (would consume the daily free-tier quota in ~30 minutes).
+                fresh = service.fetch_segment_weather(cached.segment, enrich_ensemble=False)
                 fresh_weather.append(fresh)
             except Exception as e:
                 logger.error(

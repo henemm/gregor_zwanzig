@@ -192,6 +192,7 @@ Alle Module benoetigen Specs vor Implementierung:
 - `issue_267_mobile_bottom_nav` - Mobile Bottom-Navigation mit 4 Workspace-Items (Übersicht, Trips, Vergleich, Locations) + TopAppBar für Viewports < 900px; Desktop-Sidebar unverändert (Issue #267, Spec: `docs/specs/modules/issue_267_mobile_bottom_nav.md`)
 - `issue_268_trips_mobile_card_stack` - Trips-Übersicht auf /trips zeigt auf Mobile (≤899px) Card-Stack statt Tabelle; pro Trip Karte mit Status-Punkt + Name + Etappen/Zeitraum + 44×44px-Button für Bottom-Sheet-Aktionen; Desktop ≥900px unverändert (Issue #268, Spec: `docs/specs/modules/issue_268_trips_mobile_card_stack.md`)
 - `issue_277_css_variable_fallbacks` - CSS Variable Fallbacks bereinigen: `--g-primary` (undefiniert) → `--g-ink` (Buttons) oder `--g-accent` (Active/Selected), `--g-border` (undefiniert) → `--g-ink-faint`, alle Hex-Fallbacks bei definierten Token entfernt (26 Svelte-Komponenten) (Issue #277, Spec: `docs/specs/modules/issue_277_css_variable_fallbacks.md`)
+- `bug_288_ensemble_api_limit` - Ensemble-API-Calls auf 1/Report + 0/Alert-Check reduziert: enrich_ensemble-Flag durch Provider/Service-Stack propagiert; _enrich_ensemble_for_trip() im Scheduler für einmaligen Ensemble-Call am Ziel-Wegpunkt (Bug #288, Spec: `docs/specs/modules/bug_288_ensemble_api_limit.md`)
 
 ### Geplante Module
 Siehe GitHub Issues: https://github.com/henemm/gregor_zwanzig/issues
