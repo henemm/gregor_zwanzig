@@ -43,8 +43,7 @@ func Resolve(input string) (ResolveResult, error) {
 		return resolveKomoot(input)
 	case strings.Contains(input, "goo.gl/maps") ||
 		strings.Contains(input, "maps.app.goo.gl") ||
-		strings.Contains(input, "maps.google.com") ||
-		strings.Contains(input, "www.google.com/maps"):
+		(strings.Contains(input, ".google.") && strings.Contains(input, "maps")):
 		return resolveGoogleMaps(input)
 	case strings.Contains(input, "<trkpt"):
 		return resolveGPX(input)
