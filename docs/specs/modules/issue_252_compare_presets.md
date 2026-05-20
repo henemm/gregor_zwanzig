@@ -24,8 +24,8 @@ Erweitert das bestehende `CompareSubscription`-System um drei neue Felder (`reci
 - **EDIT:** `internal/model/subscription.go` — `CompareSubscription`-Struct um 3 Felder erweitern
 - **EDIT:** `internal/handler/subscription.go` — Validierung + neuer `PatchSubscriptionRunStatusHandler`
 - **EDIT:** `cmd/server/main.go` — Route `PATCH /api/subscriptions/{id}/run-status` registrieren
-- **EDIT:** `internal/middleware/auth.go` — PATCH-Route zur Auth-Whitelist hinzufügen
-- **EDIT:** `internal/scheduler/scheduler.go` — `Status()`-Response um per-Subscription last_run/last_status erweitern
+- **EDIT:** `internal/scheduler/scheduler.go` — neuer authentifizierter Endpoint `GET /api/scheduler/subscriptions-status` liefert per-Subscription last_run/last_status; `compare_subscriptions` NICHT in öffentlichem `Status()` (Privacy-Fix: Adversary Finding 3)
+- **EDIT:** `cmd/server/main.go` — Route `GET /api/scheduler/subscriptions-status` als authentifizierten Endpoint registrieren
 - **EDIT:** `src/app/user.py` — `CompareSubscription`-Dataclass um 3 Felder erweitern
 - **EDIT:** `src/app/loader.py` — `load_compare_subscriptions()` liest 3 neue Felder
 - **EDIT:** `src/outputs/email.py` — `EmailOutput.send()` erhält optionalen `to`-Parameter
@@ -93,15 +93,16 @@ Einzige Änderung in dieser Datei.
 
 ### §4 `internal/middleware/auth.go` — Auth-Whitelist
 
-PATCH-Route `/api/subscriptions/{id}/run-status` zur bestehenden Auth-Whitelist hinzufügen (Muster identisch zu `/api/health`). Ermöglicht zukünftig lokalen Go-Scheduler-Aufruf ohne Cookie.
+PATCH-Route `/api/subscriptions/{id}/run-status` ist ein normaler authentifizierter Endpoint (Cookie-Auth). Kein Whitelist-Eintrag — Python-Scheduler nutzt direktes JSON-Schreiben statt HTTP.
 
-### §5 `internal/scheduler/scheduler.go` — Status()-Erweiterung
+### §5 `internal/scheduler/scheduler.go` — Authenticated Subscriptions-Status-Endpoint
 
-`GET /api/scheduler/status`-Response erhält ein neues optionales Feld `compare_subscriptions`:
+**Security-Entscheidung (Adversary Finding 3):** `compare_subscriptions` darf NICHT im öffentlichen `GET /api/scheduler/status` erscheinen — Subscription-Namen leaken User-Intent ohne Authentifizierung. Stattdessen:
+
+Neuer authentifizierter Endpoint `GET /api/scheduler/subscriptions-status`:
 
 ```json
 {
-  "jobs": { ... },
   "compare_subscriptions": [
     {
       "id": "sub-abc",
@@ -114,7 +115,7 @@ PATCH-Route `/api/subscriptions/{id}/run-status` zur bestehenden Auth-Whitelist 
 }
 ```
 
-Implementierung: `store.LoadSubscriptions(userID)` aufrufen, über die Liste iterieren, nur `id`, `name`, `enabled`, `last_run`, `last_status` in die Response mappen. Kein Fehler wenn Store leer ist — leeres Array zurückgeben.
+Implementierung: `BuildCompareSubscriptionsStatus()` (public) auf dem Scheduler-Struct; `store.LoadSubscriptions(userID)` aufrufen, nur `id`, `name`, `enabled`, `last_run`, `last_status` mappen. Leere Felder (`last_status == ""`, `last_run == nil`) werden weggelassen. Kein Fehler wenn Store leer — leeres Array zurückgeben.
 
 ### §6 `src/app/user.py` — CompareSubscription Dataclass
 
@@ -213,7 +214,7 @@ LoC-Limit-Override auf 250 setzen vor Implementierungsstart: `workflow.py set-fi
 - **Output:**
   - Scheduler sendet Compare-Mail an `sub.recipients` wenn befüllt, sonst an `settings.mail_to`.
   - Nach jedem Scheduler-Lauf enthält die Subscription-JSON `last_run` (ISO-8601) und `last_status` (`"ok"` / `"error"`).
-  - `GET /api/scheduler/status` enthält ein `compare_subscriptions`-Array mit `last_run`/`last_status` pro aktivem Preset.
+  - `GET /api/scheduler/subscriptions-status` (authentifiziert) enthält ein `compare_subscriptions`-Array mit `last_run`/`last_status` pro aktivem Preset. Der öffentliche `GET /api/scheduler/status`-Endpoint enthält diese Daten NICHT (Privacy-Fix).
   - `CompareSubscriptionsPanel` zeigt Active-Dot, LastRun-Zeitstempel und Status-Pill pro Preset.
 - **Side effects:**
   - Direktes Schreiben in `data/users/{user_id}/compare_subscriptions.json` durch Python-Scheduler (kein HTTP-Call).
@@ -232,7 +233,7 @@ LoC-Limit-Override auf 250 setzen vor Implementierungsstart: `workflow.py set-fi
 **AC-3:** Given der letzte Versand war erfolgreich (`last_status: "ok"`, `last_run` gesetzt) / When `CompareSubscriptionsPanel` die Subscription-Liste rendert / Then zeigt die Preset-Zeile den formatierten `last_run`-Zeitstempel und eine grüne Status-Pill mit Text "ok".
   - Test: (populated after /tdd-red)
 
-**AC-4:** Given `GET /api/scheduler/status` wird aufgerufen / Then enthält die Response ein `compare_subscriptions`-Array, in dem jeder aktive Preset mit `id`, `name`, `last_run` und `last_status` aufgeführt ist; Presets ohne bisherigen Lauf haben `last_run: null` und fehlendes `last_status`.
+**AC-4:** Given `GET /api/scheduler/subscriptions-status` (authentifiziert) wird aufgerufen / Then enthält die Response ein `compare_subscriptions`-Array, in dem jeder aktive Preset mit `id`, `name`, `enabled`, `last_run` und `last_status` aufgeführt ist; Presets ohne bisherigen Lauf lassen `last_run` und `last_status` weg. Der öffentliche `/api/scheduler/status`-Endpoint enthält das `compare_subscriptions`-Feld NICHT.
   - Test: (populated after /tdd-red)
 
 **AC-5:** Given ein Preset mit `recipients: ["a@example.com"]` / When der Scheduler feuert / Then wird `EmailOutput.send()` mit `to=["a@example.com"]` aufgerufen und die Mail geht an diese Adresse, nicht an `settings.mail_to`.
@@ -252,3 +253,4 @@ LoC-Limit-Override auf 250 setzen vor Implementierungsstart: `workflow.py set-fi
 ## Changelog
 
 - 2026-05-20: Initial spec — Issue #252. CompareSubscription +3 Felder (recipients, last_run, last_status), PatchSubscriptionRunStatusHandler, CompareSubscriptionsPanel, Python-Scheduler schreibt Status direkt in JSON. ~243 LoC, LoC-Override auf 250 erforderlich.
+- 2026-05-20: Spec-Korrektur nach Adversary Finding 3 — AC-4 und §5 auf authentifizierten Endpoint `GET /api/scheduler/subscriptions-status` aktualisiert; `compare_subscriptions` aus öffentlichem `Status()` entfernt (Privacy-Fix). Auth-Whitelist-Eintrag für PATCH entfällt (Finding 2).
