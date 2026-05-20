@@ -67,7 +67,7 @@
 	}
 	.empty-state {
 		font-size: 0.875rem;
-		color: var(--g-ink-faint, #6b7280);
+		color: var(--g-ink-faint);
 		margin: 0;
 	}
 	.rules-list {
@@ -83,12 +83,12 @@
 		font-size: 0.875rem;
 		padding: 0.5rem 0.75rem;
 		min-height: 44px;
-		border: 1px solid var(--g-border, #e5e7eb);
+		border: 1px solid var(--g-ink-faint);
 		border-radius: 0.375rem;
 		background: var(--g-surface-1, #fff);
 		cursor: pointer;
 	}
 	.add-button:hover {
-		background: var(--g-surface-2, #f3f4f6);
+		background: var(--g-surface-2);
 	}
 </style>

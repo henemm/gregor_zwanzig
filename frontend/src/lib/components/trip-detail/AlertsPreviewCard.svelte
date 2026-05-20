@@ -49,7 +49,7 @@
 		flex-direction: column;
 		gap: 0.5rem;
 		padding: 1rem;
-		border: 1px solid var(--g-border, #e5e7eb);
+		border: 1px solid var(--g-ink-faint);
 		border-radius: 0.5rem;
 		background: var(--g-surface-1, #fff);
 	}
@@ -60,7 +60,7 @@
 	}
 	.empty-state {
 		font-size: 0.875rem;
-		color: var(--g-ink-faint, #6b7280);
+		color: var(--g-ink-faint);
 		margin: 0;
 	}
 	.rules-list {
@@ -73,7 +73,7 @@
 	}
 	.edit-link {
 		font-size: 0.875rem;
-		color: var(--g-primary, #2563eb);
+		color: var(--g-accent);
 		text-decoration: none;
 		margin-top: 0.25rem;
 		align-self: flex-start;

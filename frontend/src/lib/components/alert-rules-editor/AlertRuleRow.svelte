@@ -225,7 +225,7 @@
 		flex-wrap: wrap;
 		font-size: 0.875rem;
 		padding: 0.5rem;
-		border: 1px solid var(--g-border, #e5e7eb);
+		border: 1px solid var(--g-ink-faint);
 		border-radius: 0.375rem;
 		background: var(--g-surface-1, #fff);
 	}
@@ -234,7 +234,7 @@
 		flex-direction: column;
 		gap: 0.5rem;
 		padding: 0.5rem;
-		border: 1px solid var(--g-border, #e5e7eb);
+		border: 1px solid var(--g-ink-faint);
 		border-radius: 0.375rem;
 		background: var(--g-surface-1, #fff);
 		font-size: 0.875rem;
@@ -247,7 +247,7 @@
 	.delta-only-hint {
 		margin: 0;
 		font-size: 0.8125rem;
-		color: var(--g-ink-muted, #6b7280);
+		color: var(--g-ink-muted);
 		font-style: italic;
 	}
 	.edit-fields {
@@ -263,7 +263,7 @@
 		font-weight: 500;
 	}
 	.threshold {
-		color: var(--g-ink-muted, #6b7280);
+		color: var(--g-ink-muted);
 	}
 	.enabled-toggle {
 		display: inline-flex;
@@ -274,7 +274,7 @@
 	.field {
 		min-height: 36px;
 		padding: 0.25rem 0.5rem;
-		border: 1px solid var(--g-border, #e5e7eb);
+		border: 1px solid var(--g-ink-faint);
 		border-radius: 0.25rem;
 		background: var(--g-surface-1, #fff);
 	}
@@ -285,15 +285,15 @@
 		border-radius: 0.25rem;
 		font-size: 0.8125rem;
 		cursor: pointer;
-		border: 1px solid var(--g-border, #e5e7eb);
+		border: 1px solid var(--g-ink-faint);
 		background: var(--g-surface-1, #fff);
 	}
 	.btn-primary {
-		background: var(--g-primary, #2563eb);
+		background: var(--g-ink);
 		color: #fff;
-		border-color: var(--g-primary, #2563eb);
+		border-color: var(--g-ink);
 	}
 	.btn-secondary:hover {
-		background: var(--g-surface-2, #f3f4f6);
+		background: var(--g-surface-2);
 	}
 </style>

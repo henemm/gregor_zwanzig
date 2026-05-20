@@ -158,7 +158,7 @@
 		padding: 0.75rem 1rem;
 		border-radius: 0.5rem;
 		background: var(--g-surface-1, transparent);
-		border: 1px solid var(--g-border, rgba(0, 0, 0, 0.08));
+		border: 1px solid var(--g-ink-faint);
 		cursor: pointer;
 	}
 	.stage-row[data-selected='true'] {
@@ -195,7 +195,7 @@
 		font-size: 0.6875rem;
 		letter-spacing: 0.06em;
 		text-transform: uppercase;
-		color: var(--g-ink-faint, #6b7280);
+		color: var(--g-ink-faint);
 	}
 	.stat-strip {
 		display: grid;

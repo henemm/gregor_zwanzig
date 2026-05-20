@@ -81,7 +81,7 @@
 <style>
 	.preview-card {
 		padding: 1rem;
-		border: 1px solid var(--g-border, #e5e7eb);
+		border: 1px solid var(--g-ink-faint);
 		border-radius: var(--g-radius-md, 0.5rem);
 		background: var(--g-surface-1, #fff);
 		box-shadow: var(--g-elev-1, 0 1px 2px rgba(0, 0, 0, 0.05));
@@ -99,8 +99,8 @@
 		min-height: 36px;
 		padding: 0.5rem 1rem;
 		border-radius: 0.375rem;
-		border: 1px solid var(--g-primary, #2563eb);
-		background: var(--g-primary, #2563eb);
+		border: 1px solid var(--g-ink);
+		background: var(--g-ink);
 		color: #fff;
 		font-size: 0.875rem;
 		cursor: pointer;
@@ -112,7 +112,7 @@
 	.empty {
 		margin: 0;
 		font-size: 0.8125rem;
-		color: var(--g-ink-muted, #6b7280);
+		color: var(--g-ink-muted);
 	}
 	.error {
 		margin: 0;

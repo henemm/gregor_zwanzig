@@ -75,7 +75,7 @@
 		flex: 1 1 0;
 		min-width: 0;
 		padding: 0.75rem;
-		border: 1px solid var(--g-border, #e5e7eb);
+		border: 1px solid var(--g-ink-faint);
 		border-radius: 0.5rem;
 		background: var(--g-surface-1, #fff);
 		text-align: left;
@@ -85,18 +85,18 @@
 		transition: border-color 120ms ease, background 120ms ease;
 	}
 	.mode-card:hover {
-		background: var(--g-surface-2, #f3f4f6);
+		background: var(--g-surface-2);
 	}
 	.mode-card.selected {
-		border-color: var(--g-primary, #2563eb);
+		border-color: var(--g-accent);
 		background: var(--g-surface-1, #fff);
-		box-shadow: 0 0 0 1px var(--g-primary, #2563eb) inset;
+		box-shadow: 0 0 0 1px var(--g-accent) inset;
 	}
 	.eyebrow {
 		font-size: 0.6875rem;
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
-		color: var(--g-ink-faint, #6b7280);
+		color: var(--g-ink-faint);
 	}
 	.title {
 		font-weight: 600;
@@ -104,11 +104,11 @@
 	}
 	.description {
 		font-size: 0.8125rem;
-		color: var(--g-ink-muted, #6b7280);
+		color: var(--g-ink-muted);
 	}
 	.example {
 		font-size: 0.75rem;
 		font-style: italic;
-		color: var(--g-ink-faint, #6b7280);
+		color: var(--g-ink-faint);
 	}
 </style>

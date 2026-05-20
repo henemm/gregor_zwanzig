@@ -45,7 +45,7 @@
 	}
 	.metric-group-counter {
 		font-size: 0.75rem;
-		color: var(--g-ink-faint, #888);
+		color: var(--g-ink-faint);
 		font-variant-numeric: tabular-nums;
 	}
 	.metric-group-counter[data-active='true'] {

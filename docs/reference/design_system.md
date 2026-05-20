@@ -33,12 +33,16 @@ eigener Issue.
 ### Ink (Typografie)
 | Token | Hex | Verwendung |
 |---|---|---|
-| `--g-ink` | `#1a1a18` | Primärtext |
+| `--g-ink` | `#1a1a18` | Primärtext, Button-Hintergründe |
 | `--g-ink-muted` | `#5c5a52` | Sekundärtext, Body |
-| `--g-ink-faint` | `#9c9a90` | Tertiär, Labels, Placeholder |
+| `--g-ink-faint` | `#9c9a90` | Tertiär, Labels, Placeholder, Borders |
 
 **Design-Vision (nicht implementiert):** vierte Stufe (`--g-ink-4`) für Hint/Placeholder
 — `--g-ink-faint` deckt beide ab.
+
+**Deprecated (entfernt Issue #277):** 
+- `--g-primary` — existiert nicht, nutze stattdessen `--g-ink` für Button-Hintergründe oder `--g-accent` für Active/Selected-States
+- `--g-border` — existiert nicht, nutze stattdessen `--g-ink-faint` für Borders und Trennlinien
 
 ### Accent — Burnt Orange (alpin, markant)
 | Token | Hex | Verwendung |

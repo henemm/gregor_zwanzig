@@ -34,7 +34,7 @@
 <style>
     .cooldown-card {
         padding: 1rem;
-        border: 1px solid var(--g-border, #e5e7eb);
+        border: 1px solid var(--g-ink-faint);
         border-radius: 0.5rem;
         background: var(--g-surface-1, #fff);
     }
@@ -52,9 +52,9 @@
         width: 80px;
         min-height: 36px;
         padding: 0.25rem 0.5rem;
-        border: 1px solid var(--g-border, #e5e7eb);
+        border: 1px solid var(--g-ink-faint);
         border-radius: 0.25rem;
     }
-    .unit { font-size: 0.875rem; color: var(--g-ink-muted, #6b7280); }
-    .hint { margin: 0.5rem 0 0; font-size: 0.8125rem; color: var(--g-ink-muted, #6b7280); }
+    .unit { font-size: 0.875rem; color: var(--g-ink-muted); }
+    .hint { margin: 0.5rem 0 0; font-size: 0.8125rem; color: var(--g-ink-muted); }
 </style>

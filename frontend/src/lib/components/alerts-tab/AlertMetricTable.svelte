@@ -39,7 +39,7 @@
 	.alert-metric-table {
 		display: flex;
 		flex-direction: column;
-		border: 1px solid var(--g-border, #e5e7eb);
+		border: 1px solid var(--g-ink-faint);
 		border-radius: 0.5rem;
 		background: var(--g-surface-1, #fff);
 	}

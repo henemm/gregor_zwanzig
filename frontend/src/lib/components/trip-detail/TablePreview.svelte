@@ -98,7 +98,7 @@
 	.table-preview {
 		margin-top: 1.5rem;
 		padding: 1rem;
-		border: 1px solid var(--g-border, #ddd);
+		border: 1px solid var(--g-ink-faint);
 		border-radius: 6px;
 		background: var(--g-surface-alt, #fafafa);
 	}
@@ -116,7 +116,7 @@
 	}
 	.hint {
 		font-size: 0.75rem;
-		color: var(--g-ink-faint, #888);
+		color: var(--g-ink-faint);
 	}
 	.table-wrap {
 		overflow-x: auto;
@@ -129,23 +129,23 @@
 	th, td {
 		text-align: left;
 		padding: 0.35rem 0.5rem;
-		border-bottom: 1px solid var(--g-border, #eee);
+		border-bottom: 1px solid var(--g-ink-faint);
 		white-space: nowrap;
 	}
 	th {
 		font-weight: 600;
-		color: var(--g-ink-faint, #555);
+		color: var(--g-ink-faint);
 	}
 	.th-suffix {
 		font-style: italic;
 		font-weight: 400;
-		color: var(--g-ink-faint, #888);
+		color: var(--g-ink-faint);
 		margin-left: 0.25rem;
 		font-size: 0.7rem;
 	}
 	.td-time {
 		font-weight: 500;
-		color: var(--g-ink, #333);
+		color: var(--g-ink);
 	}
 	.indicator-cell {
 		font-style: italic;

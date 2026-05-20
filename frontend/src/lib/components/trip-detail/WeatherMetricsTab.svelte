@@ -345,7 +345,7 @@
 		gap: 0.75rem;
 		margin-top: 1.5rem;
 		padding-top: 1rem;
-		border-top: 1px solid var(--g-border, #ddd);
+		border-top: 1px solid var(--g-ink-faint);
 		flex-wrap: wrap;
 	}
 	.save-success {
@@ -365,7 +365,7 @@
 		cursor: pointer;
 	}
 	.save-btn {
-		background: var(--g-accent, #c45a2a);
+		background: var(--g-accent);
 		color: #fff;
 	}
 	.save-btn:disabled {
@@ -374,12 +374,12 @@
 	}
 	.preset-trigger {
 		background: var(--g-surface, #fff);
-		border: 1px solid var(--g-border, #ddd);
-		color: var(--g-ink, #333);
+		border: 1px solid var(--g-ink-faint);
+		color: var(--g-ink);
 	}
 	.discard-btn {
 		background: transparent;
-		color: var(--g-ink-faint, #666);
+		color: var(--g-ink-faint);
 		text-decoration: underline;
 	}
 </style>

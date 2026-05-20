@@ -108,8 +108,8 @@
 		min-height: 40px;
 		padding: 0.5rem 1rem;
 		border-radius: 0.375rem;
-		border: 1px solid var(--g-primary, #2563eb);
-		background: var(--g-primary, #2563eb);
+		border: 1px solid var(--g-ink);
+		background: var(--g-ink);
 		color: #fff;
 		font-size: 0.875rem;
 		cursor: pointer;

@@ -37,7 +37,7 @@
 		gap: 0.75rem;
 		width: 100%;
 		padding: 0.6rem 1rem;
-		border: 1px solid var(--g-border, #ddd);
+		border: 1px solid var(--g-ink-faint);
 		border-radius: 4px;
 		cursor: pointer;
 		background: var(--g-surface, #fff);
@@ -55,15 +55,15 @@
 	}
 	.preset-count {
 		font-size: 0.875rem;
-		color: var(--g-ink-faint, #888);
+		color: var(--g-ink-faint);
 		flex-shrink: 0;
 	}
 	.preset-badge {
 		font-size: 0.75rem;
 		padding: 0.1rem 0.4rem;
-		border: 1px solid var(--g-border, #ddd);
+		border: 1px solid var(--g-ink-faint);
 		border-radius: 3px;
-		color: var(--g-ink-faint, #888);
+		color: var(--g-ink-faint);
 		flex-shrink: 0;
 	}
 	.active-marker {

@@ -52,6 +52,6 @@
 	}
 	.threshold {
 		flex: 1;
-		color: var(--g-ink-muted, #6b7280);
+		color: var(--g-ink-muted);
 	}
 </style>

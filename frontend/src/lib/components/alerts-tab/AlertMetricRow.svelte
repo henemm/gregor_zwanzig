@@ -92,7 +92,7 @@
 		align-items: center;
 		gap: 0.5rem;
 		padding: 0.5rem 0.25rem;
-		border-bottom: 1px solid var(--g-border, #e5e7eb);
+		border-bottom: 1px solid var(--g-ink-faint);
 		font-size: 0.875rem;
 	}
 	.metric-row:last-child {
@@ -108,36 +108,36 @@
 		min-height: 36px;
 		padding: 0.25rem 0.5rem;
 		border-radius: 0.25rem;
-		border: 1px solid var(--g-border, #e5e7eb);
+		border: 1px solid var(--g-ink-faint);
 		background: var(--g-surface-1, #fff);
 		font-size: 0.8125rem;
 		cursor: pointer;
 	}
 	.toggle.on {
-		background: var(--g-primary, #2563eb);
+		background: var(--g-accent);
 		color: #fff;
-		border-color: var(--g-primary, #2563eb);
+		border-color: var(--g-accent);
 	}
 	.num-input {
 		min-height: 36px;
 		padding: 0.25rem 0.5rem;
-		border: 1px solid var(--g-border, #e5e7eb);
+		border: 1px solid var(--g-ink-faint);
 		border-radius: 0.25rem;
 		width: 100%;
 		box-sizing: border-box;
 	}
 	.num-input:disabled {
-		background: var(--g-surface-2, #f3f4f6);
-		color: var(--g-ink-muted, #6b7280);
+		background: var(--g-surface-2);
+		color: var(--g-ink-muted);
 	}
 	.unit {
 		font-size: 0.8125rem;
-		color: var(--g-ink-muted, #6b7280);
+		color: var(--g-ink-muted);
 	}
 	.severity-select {
 		min-height: 36px;
 		padding: 0.25rem 0.5rem;
-		border: 1px solid var(--g-border, #e5e7eb);
+		border: 1px solid var(--g-ink-faint);
 		border-radius: 0.25rem;
 		background: var(--g-surface-1, #fff);
 	}

@@ -160,7 +160,7 @@
 	}
 	.breadcrumb {
 		font-size: 0.875rem;
-		color: var(--g-muted, #666);
+		color: var(--g-ink-muted);
 	}
 	.breadcrumb a {
 		color: inherit;

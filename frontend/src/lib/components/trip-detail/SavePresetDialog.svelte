@@ -177,12 +177,12 @@
 		font-weight: 500;
 	}
 	.required {
-		color: var(--g-accent, #c45a2a);
+		color: var(--g-accent);
 	}
 	.field input[type='text'],
 	.field textarea {
 		padding: 0.4rem 0.6rem;
-		border: 1px solid var(--g-border, #ddd);
+		border: 1px solid var(--g-ink-faint);
 		border-radius: 4px;
 		font: inherit;
 		font-size: 0.875rem;
@@ -196,7 +196,7 @@
 	}
 	.summary {
 		font-size: 0.8125rem;
-		color: var(--g-ink-faint, #666);
+		color: var(--g-ink-faint);
 		padding: 0.5rem 0.6rem;
 		background: var(--g-surface-alt, #f5f5f5);
 		border-radius: 4px;
@@ -214,7 +214,7 @@
 		border: 1px solid transparent;
 	}
 	.btn-primary {
-		background: var(--g-accent, #c45a2a);
+		background: var(--g-accent);
 		color: #fff;
 	}
 	.btn-primary:disabled {
@@ -223,8 +223,8 @@
 	}
 	.btn-secondary {
 		background: var(--g-surface, #fff);
-		border-color: var(--g-border, #ddd);
-		color: var(--g-ink, #333);
+		border-color: var(--g-ink-faint);
+		color: var(--g-ink);
 	}
 	@media (max-width: 767px) {
 		.field input[type='text'], .field textarea {

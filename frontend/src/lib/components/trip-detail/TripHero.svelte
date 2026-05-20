@@ -63,12 +63,12 @@
 	.trip-hero-region {
 		font-size: 0.875rem;
 		font-weight: 500;
-		color: var(--g-ink-faint, #6b7280);
+		color: var(--g-ink-faint);
 		margin-top: -0.25rem;
 	}
 	.trip-hero-date-range {
 		font-size: 0.875rem;
-		color: var(--g-ink-faint, #6b7280);
+		color: var(--g-ink-faint);
 	}
 	.trip-hero-stats {
 		margin-top: 0.5rem;
@@ -86,7 +86,7 @@
 		font-size: 0.6875rem;
 		letter-spacing: 0.06em;
 		text-transform: uppercase;
-		color: var(--g-ink-faint, #6b7280);
+		color: var(--g-ink-faint);
 	}
 	.stat-value {
 		font-size: 1rem;

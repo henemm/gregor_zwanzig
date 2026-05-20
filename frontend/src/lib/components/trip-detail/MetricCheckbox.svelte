@@ -118,7 +118,7 @@
 		align-items: center;
 		justify-content: center;
 		padding: 0;
-		border: 1px solid var(--g-border, #ddd);
+		border: 1px solid var(--g-ink-faint);
 		border-radius: 3px;
 		background: var(--g-surface, #fff);
 		color: var(--g-surface, #fff);
@@ -145,7 +145,7 @@
 	}
 	.metric-unit {
 		font-size: 0.75rem;
-		color: var(--g-ink-faint, #888);
+		color: var(--g-ink-faint);
 		flex-shrink: 0;
 	}
 	.format-toggle {
