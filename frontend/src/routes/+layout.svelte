@@ -4,6 +4,8 @@
 	import { browser } from '$app/environment';
 	import favicon from '$lib/assets/favicon.svg';
 	import { Sidebar } from '$lib/components/ui/sidebar';
+	import TopAppBar from '$lib/components/ui/sidebar/TopAppBar.svelte';
+	import BottomNav from '$lib/components/ui/sidebar/BottomNav.svelte';
 
 	let { children, data } = $props();
 
@@ -29,6 +31,7 @@
 	};
 
 	let darkMode = $state(false);
+	let mobileMenuOpen = $state(false);
 
 	function applyDarkMode(dark: boolean) {
 		const el = document.documentElement;
@@ -65,12 +68,18 @@
 {#if isLogin}
 	{@render children()}
 {:else}
+	<TopAppBar bind:mobileMenuOpen {darkMode} ontoggleDark={toggleDark} />
 	<div class="flex h-screen">
-		<Sidebar userId={data.userId} currentPath={page.url.pathname} {darkMode} ontoggleDark={toggleDark} />
-
-		<!-- Main content: add top padding on mobile for the top bar -->
-		<main class="flex-1 overflow-auto p-4 pt-16 md:p-6 md:pt-6">
+		<Sidebar
+			userId={data.userId}
+			currentPath={page.url.pathname}
+			{darkMode}
+			ontoggleDark={toggleDark}
+			bind:mobileMenuOpen
+		/>
+		<main class="mobile-scroll-pad flex-1 overflow-auto px-4 desktop:p-6 desktop:pt-6">
 			{@render children()}
 		</main>
 	</div>
+	<BottomNav />
 {/if}

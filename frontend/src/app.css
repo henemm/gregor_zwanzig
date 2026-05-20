@@ -46,6 +46,9 @@
 	--radius-lg: 0.75rem;
 }
 
+@custom-variant mobile { @media (max-width: 899px) { @slot; } }
+@custom-variant desktop { @media (min-width: 900px) { @slot; } }
+
 @layer base {
   :root {
     /* === Gregor-Design-Tokens (--g-* Namespace) === */
@@ -131,11 +134,31 @@
     --g-s-12: 48px;
     --g-s-16: 64px;
     --g-s-20: 80px;
+
+    /* Issue #267 — Mobile App-Shell Tokens */
+    --g-paper-deep: #ede9df;
+    --g-rule-soft: rgba(26, 26, 24, 0.08);
   }
 
   body {
     @apply bg-background text-foreground;
     font-family: var(--g-font-ui);
+  }
+}
+
+/* Issue #267 — Padding für Mobile-Content unter TopAppBar + über BottomNav.
+   Im utilities-Layer, damit Tailwind-Utilities mit gleicher Specificity
+   nicht das padding-bottom überschreiben. */
+@layer utilities {
+  .mobile-scroll-pad {
+    padding-top: 56px;
+    padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  }
+  @media (min-width: 900px) {
+    .mobile-scroll-pad {
+      padding-top: 0;
+      padding-bottom: 0;
+    }
   }
 }
 
