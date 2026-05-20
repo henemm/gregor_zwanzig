@@ -220,3 +220,43 @@ func TestResolveTimezoneAlwaysSet(t *testing.T) {
 		t.Error("expected non-empty timezone for any valid coordinates")
 	}
 }
+
+// AC-1 (Issue #276): Mobiler Google Maps Sharing-Link wird aufgelöst (echter HTTP-Call)
+func TestResolveMobileGoogleMapsLink(t *testing.T) {
+	// GIVEN: Mobiler Google Maps Sharing-Link (maps.google.com?q=...&ftid=...&entry=gps)
+	result, err := resolver.Resolve("https://maps.google.com?q=Freden%20op%27n%20Kliff%2C%2023758%20Wangels&ftid=0x47b287f8362cffa1:0x43d19fdda3876e3f&entry=gps")
+
+	// THEN: Kein Fehler, SourceType google_maps, Koordinaten nahe Wangels (54.3°N, 10.8°E)
+	if err != nil {
+		t.Fatalf("expected no error for mobile Google Maps URL, got %v", err)
+	}
+	if result.SourceType != "google_maps" {
+		t.Errorf("expected source_type 'google_maps', got %q", result.SourceType)
+	}
+	if math.Abs(result.Lat-54.3) > 0.5 {
+		t.Errorf("expected lat near 54.3 (Wangels), got %f", result.Lat)
+	}
+	if math.Abs(result.Lon-10.8) > 0.5 {
+		t.Errorf("expected lon near 10.8 (Wangels), got %f", result.Lon)
+	}
+}
+
+// AC-2 (Issue #276): Desktop Google Maps Place-Link wird aufgelöst (echter HTTP-Call)
+func TestResolveDesktopGoogleMapsPlaceLink(t *testing.T) {
+	// GIVEN: Desktop Google Maps Place-URL mit @lat,lon im Pfad
+	result, err := resolver.Resolve("https://www.google.com/maps/place/Innsbruck/@47.2692,11.4041,13z")
+
+	// THEN: Kein Fehler, SourceType google_maps, Koordinaten nahe Innsbruck
+	if err != nil {
+		t.Fatalf("expected no error for desktop Google Maps URL, got %v", err)
+	}
+	if result.SourceType != "google_maps" {
+		t.Errorf("expected source_type 'google_maps', got %q", result.SourceType)
+	}
+	if math.Abs(result.Lat-47.27) > 0.1 {
+		t.Errorf("expected lat near 47.27 (Innsbruck), got %f", result.Lat)
+	}
+	if math.Abs(result.Lon-11.40) > 0.1 {
+		t.Errorf("expected lon near 11.40 (Innsbruck), got %f", result.Lon)
+	}
+}
