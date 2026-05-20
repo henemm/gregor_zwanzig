@@ -15,6 +15,11 @@
 	import PlayIcon from '@lucide/svelte/icons/play';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
+	import EllipsisVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
+	import { Dot } from '$lib/components/ui/dot';
+	import { deriveTripStatus } from '$lib/utils/tripStatus';
+
+	const now = new Date();
 
 	let { data } = $props();
 
@@ -64,6 +69,17 @@
 	let testReportRunning = $state(false);
 	let testReportResult: string | null = $state(null);
 	let testReportError: string | null = $state(null);
+
+	// Mobile Action Sheet (Issue #268)
+	let sheetTrip: Trip | null = $state(null);
+
+	function statusTone(trip: Trip): 'success' | 'info' | 'warning' | 'danger' {
+		const status = deriveTripStatus(trip, now);
+		if (status === 'active') return 'success';
+		if (status === 'planned') return 'info';
+		if (status === 'paused') return 'warning';
+		return 'danger';
+	}
 
 	function dateRange(trip: Trip): string {
 		if (!trip.stages.length) return '-';
@@ -236,7 +252,33 @@
 				{/each}
 			</div>
 		{:else}
-		<div class="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+		<!-- Mobile Card-Stack (Issue #268) -->
+		<div data-testid="trip-card-stack" class="desktop:hidden flex flex-col gap-2">
+			{#each filteredTrips as trip (trip.id)}
+				<div data-testid="trip-card" data-slot="g-card" class="flex items-center gap-3 px-3 py-2">
+					<Dot tone={statusTone(trip)} size="sm" class="shrink-0" />
+					<button
+						data-testid="trip-card-content-btn"
+						class="flex-1 flex flex-col items-start text-left min-h-[44px] justify-center min-w-0"
+						onclick={() => goto(`/trips/${trip.id}`)}
+					>
+						<span class="font-medium text-sm truncate w-full">{trip.name}</span>
+						<span class="text-xs text-muted-foreground truncate w-full">
+							{trip.stages.length} Etappen · {dateRange(trip)}
+						</span>
+					</button>
+					<button
+						data-testid="trip-card-menu-btn"
+						class="shrink-0 flex items-center justify-center min-h-[44px] min-w-[44px] rounded-lg -mr-1 hover:bg-muted/60 transition-colors"
+						onclick={(e) => { e.stopPropagation(); sheetTrip = trip; }}
+						aria-label="Aktionen für {trip.name}"
+					>
+						<EllipsisVerticalIcon class="size-5" />
+					</button>
+				</div>
+			{/each}
+		</div>
+		<div class="hidden desktop:block overflow-x-auto -mx-4 px-4 desktop:mx-0 desktop:px-0">
 		<Table.Root>
 			<Table.Header>
 				<Table.Row>
@@ -509,3 +551,55 @@
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>
+
+<!-- Bottom-Sheet Backdrop + Panel (Issue #268) -->
+{#if sheetTrip !== null}
+	<div
+		class="fixed inset-0 z-[70] bg-black/50 desktop:hidden"
+		onclick={() => (sheetTrip = null)}
+		role="presentation"
+	></div>
+	<div
+		data-testid="trip-action-sheet"
+		class="fixed bottom-0 left-0 right-0 z-[75] desktop:hidden rounded-t-2xl border-t"
+		style="background: var(--g-paper-deep); border-color: var(--g-rule-soft); padding-bottom: env(safe-area-inset-bottom);"
+		role="dialog"
+		aria-modal="true"
+		aria-label="Aktionen"
+	>
+	<div class="flex justify-center pt-3 pb-1">
+		<div class="w-10 h-1 rounded-full bg-muted-foreground/25"></div>
+	</div>
+	<div class="px-4 py-2 text-sm font-semibold truncate">{sheetTrip?.name ?? ''}</div>
+	<div class="h-px mx-4 bg-border"></div>
+	<div class="py-2">
+		<button class="w-full flex items-center gap-3 px-4 min-h-[44px] text-sm hover:bg-muted/60 active:bg-muted"
+			onclick={() => { const t = sheetTrip!; sheetTrip = null; openReportConfig(t); }}>
+			<BellIcon class="size-4 text-muted-foreground shrink-0" /> Report-Konfiguration
+		</button>
+		<button class="w-full flex items-center gap-3 px-4 min-h-[44px] text-sm hover:bg-muted/60 active:bg-muted"
+			onclick={() => { const t = sheetTrip!; weatherConfigTarget = t; sheetTrip = null; }}>
+			<CloudSunIcon class="size-4 text-muted-foreground shrink-0" /> Wetter-Konfiguration
+		</button>
+		<button class="w-full flex items-center gap-3 px-4 min-h-[44px] text-sm hover:bg-muted/60 active:bg-muted"
+			onclick={() => { const t = sheetTrip!; sheetTrip = null; openEdit(t); }}>
+			<PencilIcon class="size-4 text-muted-foreground shrink-0" /> Bearbeiten
+		</button>
+		<div class="h-px mx-4 bg-border"></div>
+		<button class="w-full flex items-center gap-3 px-4 min-h-[44px] text-sm hover:bg-muted/60 active:bg-muted"
+			onclick={() => { const t = sheetTrip!; sheetTrip = null; runTestReport(t, 7); }}>
+			<PlayIcon class="size-4 text-muted-foreground shrink-0" /> Test Morgen-Report
+		</button>
+		<button class="w-full flex items-center gap-3 px-4 min-h-[44px] text-sm hover:bg-muted/60 active:bg-muted"
+			onclick={() => { const t = sheetTrip!; sheetTrip = null; runTestReport(t, 18); }}>
+			<PlayIcon class="size-4 text-muted-foreground shrink-0" /> Test Abend-Report
+		</button>
+		<div class="h-px mx-4 bg-border"></div>
+		<button class="w-full flex items-center gap-3 px-4 min-h-[44px] text-sm text-destructive hover:bg-destructive/10 active:bg-destructive/15"
+			onclick={() => { const t = sheetTrip!; sheetTrip = null; deleteTarget = t; }}>
+			<Trash2Icon class="size-4 shrink-0" /> Löschen
+		</button>
+	</div>
+	<div class="h-2"></div>
+	</div>
+{/if}

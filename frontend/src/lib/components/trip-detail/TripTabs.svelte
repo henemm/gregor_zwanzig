@@ -126,7 +126,7 @@
 <style>
 	:global(.trip-tabs-list) {
 		display: flex;
-		border-bottom: 1px solid var(--g-border, #ddd);
+		border-bottom: 1px solid var(--g-ink-faint);
 	}
 	:global(.trip-tab-trigger) {
 		position: relative;
@@ -177,6 +177,36 @@
 	@media (max-width: 960px) {
 		.preview-grid {
 			grid-template-columns: 1fr;
+		}
+	}
+	@media (max-width: 899px) {
+		/* Scrollbares Tab-Band */
+		:global(.trip-tabs-list) {
+			overflow-x: auto;
+			white-space: nowrap;
+			scrollbar-width: none;
+			-ms-overflow-style: none;
+			scroll-snap-type: x mandatory;
+		}
+		:global(.trip-tabs-list)::-webkit-scrollbar {
+			display: none;
+		}
+
+		/* Pill-Trigger: einzeilig, nicht schrumpfbar */
+		:global(.trip-tab-trigger) {
+			white-space: nowrap;
+			flex-shrink: 0;
+			scroll-snap-align: start;
+			border-bottom: none;
+			border-radius: var(--g-radius-pill, 99rem);
+			padding: 0.375rem 0.875rem;
+		}
+
+		/* Aktiver Pill: gefüllt mit Akzentfarbe */
+		:global(.trip-tab-trigger[data-state='active']) {
+			background: var(--g-accent);
+			color: var(--g-paper, #f6f4ee);
+			border-bottom-color: transparent;
 		}
 	}
 </style>
