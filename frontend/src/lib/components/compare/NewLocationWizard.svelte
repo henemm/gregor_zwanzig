@@ -34,9 +34,25 @@
 	let saving = $state(false);
 	let error = $state<string | null>(null);
 
+	interface ResolveResult {
+		lat: number;
+		lon: number;
+		elevation_m?: number;
+		timezone: string;
+		suggested_name?: string;
+		region?: string;
+		source_type: string;
+	}
+
+	let resolveInput = $state('');
+	let resolving = $state(false);
+	let resolvePreview = $state<ResolveResult | null>(null);
+	let resolveError = $state<string | null>(null);
+
 	function prevStep() {
 		if (step > 1) step = (step - 1) as 1 | 2 | 3;
 		error = null;
+		resolveError = null;
 	}
 
 	function nextStep() {
@@ -80,6 +96,27 @@
 		}
 	}
 
+	async function resolveLocation() {
+		if (!resolveInput.trim() || resolving) return;
+		resolving = true;
+		error = null;
+		resolveError = null;
+		resolvePreview = null;
+		try {
+			const result = await api.post<ResolveResult>('/api/locations/resolve', { input: resolveInput });
+			resolvePreview = result;
+			lat = String(result.lat);
+			lon = String(result.lon);
+			if (result.elevation_m !== undefined) elevationM = String(result.elevation_m);
+			if (result.suggested_name && !name.trim()) name = result.suggested_name;
+		} catch (e: unknown) {
+			const apiErr = e as { code?: string; message?: string; error?: string };
+			resolveError = apiErr.message ?? apiErr.error ?? 'Fehler beim Auflösen';
+		} finally {
+			resolving = false;
+		}
+	}
+
 	let existingGroups = $derived(
 		[...new Set(locations.map((l) => l.group).filter((g): g is string => Boolean(g)))],
 	);
@@ -95,6 +132,58 @@
 
 	{#if step === 1}
 		<div class="space-y-4">
+			<!-- Import-Block -->
+			<div class="flex gap-2">
+				<Input
+					data-testid="location-wizard-resolve-input"
+					placeholder="Komoot-Link, Google-Maps-URL oder Koordinaten…"
+					bind:value={resolveInput}
+					onkeydown={(e) => e.key === 'Enter' && resolveLocation()}
+				/>
+				<Btn
+					data-testid="location-wizard-resolve-btn"
+					variant="outline"
+					onclick={resolveLocation}
+					disabled={resolving || !resolveInput.trim()}
+				>
+					{resolving ? 'Auflösen…' : 'Auflösen'}
+				</Btn>
+			</div>
+
+			{#if resolvePreview}
+				<div
+					data-testid="location-wizard-resolve-preview"
+					class="rounded-md border border-input bg-muted/30 p-3 text-xs space-y-0.5"
+				>
+					<p>
+						<span class="text-muted-foreground">Lat/Lon:</span>
+						{resolvePreview.lat}, {resolvePreview.lon}
+					</p>
+					{#if resolvePreview.elevation_m !== undefined}
+						<p>
+							<span class="text-muted-foreground">Höhe:</span>
+							{resolvePreview.elevation_m} m
+						</p>
+					{/if}
+					<p>
+						<span class="text-muted-foreground">Zeitzone:</span>
+						{resolvePreview.timezone}
+					</p>
+					<p>
+						<span class="text-muted-foreground">Quelle:</span>
+						{resolvePreview.source_type}
+					</p>
+				</div>
+			{/if}
+
+			{#if resolveError}
+				<p data-testid="location-wizard-resolve-error" class="text-sm text-destructive">
+					{resolveError}
+				</p>
+			{/if}
+
+			<p class="text-xs text-muted-foreground">oder Koordinaten manuell eingeben</p>
+
 			<div class="grid grid-cols-2 gap-3">
 				<div>
 					<Label for="wiz-lat">Breitengrad (Lat)</Label>
@@ -104,6 +193,7 @@
 						type="number"
 						step="0.000001"
 						bind:value={lat}
+						oninput={() => (resolvePreview = null)}
 					/>
 				</div>
 				<div>
@@ -114,6 +204,7 @@
 						type="number"
 						step="0.000001"
 						bind:value={lon}
+						oninput={() => (resolvePreview = null)}
 					/>
 				</div>
 			</div>
@@ -121,9 +212,6 @@
 				<Label for="wiz-elev">Höhe über NN (m, optional)</Label>
 				<Input id="wiz-elev" type="number" bind:value={elevationM} />
 			</div>
-			<p class="text-xs text-muted-foreground">
-				URL-Import (Komoot, Google Maps) folgt in einem Update.
-			</p>
 		</div>
 	{/if}
 
