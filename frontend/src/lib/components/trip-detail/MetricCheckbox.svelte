@@ -120,8 +120,8 @@
 		padding: 0;
 		border: 1px solid var(--g-ink-faint);
 		border-radius: 3px;
-		background: var(--g-surface, #fff);
-		color: var(--g-surface, #fff);
+		background: var(--g-paper);
+		color: var(--g-paper);
 		cursor: pointer;
 		line-height: 0;
 	}

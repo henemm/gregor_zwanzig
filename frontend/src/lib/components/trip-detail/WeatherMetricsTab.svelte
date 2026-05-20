@@ -373,7 +373,7 @@
 		cursor: not-allowed;
 	}
 	.preset-trigger {
-		background: var(--g-surface, #fff);
+		background: var(--g-surface-0);
 		border: 1px solid var(--g-ink-faint);
 		color: var(--g-ink);
 	}

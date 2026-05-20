@@ -100,7 +100,7 @@
 		padding: 1rem;
 		border: 1px solid var(--g-ink-faint);
 		border-radius: 6px;
-		background: var(--g-surface-alt, #fafafa);
+		background: var(--g-surface-1);
 	}
 	.table-preview-header {
 		display: flex;

@@ -198,7 +198,7 @@
 		font-size: 0.8125rem;
 		color: var(--g-ink-faint);
 		padding: 0.5rem 0.6rem;
-		background: var(--g-surface-alt, #f5f5f5);
+		background: var(--g-surface-1);
 		border-radius: 4px;
 	}
 	.error {
@@ -222,7 +222,7 @@
 		cursor: not-allowed;
 	}
 	.btn-secondary {
-		background: var(--g-surface, #fff);
+		background: var(--g-surface-0);
 		border-color: var(--g-ink-faint);
 		color: var(--g-ink);
 	}

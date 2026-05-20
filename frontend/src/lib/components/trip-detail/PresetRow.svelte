@@ -40,14 +40,14 @@
 		border: 1px solid var(--g-ink-faint);
 		border-radius: 4px;
 		cursor: pointer;
-		background: var(--g-surface, #fff);
+		background: var(--g-surface-0);
 		font: inherit;
 		color: inherit;
 		text-align: left;
 	}
 	.preset-row.active {
 		border-color: var(--g-accent, #c45a2a);
-		background-color: color-mix(in srgb, var(--g-accent, #c45a2a) 8%, var(--g-surface, #fff));
+		background-color: color-mix(in srgb, var(--g-accent, #c45a2a) 8%, var(--g-surface-0));
 	}
 	.preset-name {
 		flex: 1;
