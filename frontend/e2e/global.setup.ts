@@ -12,6 +12,19 @@ setup('authenticate and seed test data', async ({ page }) => {
 	await expect(page).toHaveURL('/');
 	await page.context().storageState({ path: authFile });
 
+	// Seed: E2E-Test-Locations für Compare-Tests (Issue #263).
+	// IDs sind stabil — FixtureProvider liefert per nearest-Lookup
+	// passende Wetter-Daten für diese 3 Locations.
+	const e2eLocations = [
+		{ id: 'e2e-loc-innsbruck', name: 'Innsbruck (E2E)', lat: 47.2692, lon: 11.4041, elevation_m: 574 },
+		{ id: 'e2e-loc-stubai', name: 'Stubai (E2E)', lat: 47.1015, lon: 11.2958, elevation_m: 1000 },
+		{ id: 'e2e-loc-zillertal', name: 'Zillertal (E2E)', lat: 47.2190, lon: 11.8767, elevation_m: 540 }
+	];
+	for (const loc of e2eLocations) {
+		await page.request.delete(`/api/locations/${loc.id}`);
+		await page.request.post('/api/locations', { data: loc });
+	}
+
 	// Seed: E2E-Cockpit-Test-Trip mit dynamischem Datum (immer relativ zu heute)
 	const today = new Date().toISOString().slice(0, 10);
 	const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);

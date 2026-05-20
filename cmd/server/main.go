@@ -15,6 +15,8 @@ import (
 	"github.com/henemm/gregor-api/internal/handler"
 	authmw "github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/model"
+	"github.com/henemm/gregor-api/internal/provider"
+	"github.com/henemm/gregor-api/internal/provider/fixture"
 	"github.com/henemm/gregor-api/internal/provider/openmeteo"
 	"github.com/henemm/gregor-api/internal/scheduler"
 	"github.com/henemm/gregor-api/internal/store"
@@ -39,13 +41,19 @@ func main() {
 		log.Printf("Seed user '%s' created", cfg.UserID)
 	}
 
-	omProvider := openmeteo.NewProvider(openmeteo.ProviderConfig{
-		BaseURL:    cfg.OpenMeteoBaseURL,
-		AQURL:      cfg.OpenMeteoAQURL,
-		TimeoutSec: cfg.OpenMeteoTimeout,
-		Retries:    cfg.OpenMeteoRetries,
-		CacheDir:   cfg.CacheDir,
-	})
+	var weatherProvider provider.WeatherProvider
+	if cfg.TestFixtureDir != "" {
+		weatherProvider = fixture.NewProvider(cfg.TestFixtureDir)
+		log.Printf("[fixture] FixtureProvider aktiv — dir: %s", cfg.TestFixtureDir)
+	} else {
+		weatherProvider = openmeteo.NewProvider(openmeteo.ProviderConfig{
+			BaseURL:    cfg.OpenMeteoBaseURL,
+			AQURL:      cfg.OpenMeteoAQURL,
+			TimeoutSec: cfg.OpenMeteoTimeout,
+			Retries:    cfg.OpenMeteoRetries,
+			CacheDir:   cfg.CacheDir,
+		})
+	}
 
 	r := chi.NewRouter()
 	r.Use(chimw.Logger)
@@ -79,7 +87,7 @@ func main() {
 	r.Get("/api/config", handler.ProxyHandler(cfg.PythonCoreURL, "/config"))
 	r.Get("/api/metrics", handler.ProxyHandler(cfg.PythonCoreURL, "/metrics"))
 	r.Get("/api/templates", handler.ProxyHandler(cfg.PythonCoreURL, "/templates"))
-	r.Get("/api/forecast", handler.ForecastHandler(omProvider))
+	r.Get("/api/forecast", handler.ForecastHandler(weatherProvider))
 	r.Get("/api/locations", handler.LocationsHandler(s))
 	r.Post("/api/locations/resolve", handler.ResolveLocationHandler())
 	r.Post("/api/locations", handler.CreateLocationHandler(s))
@@ -91,7 +99,7 @@ func main() {
 	r.Put("/api/trips/{id}", handler.UpdateTripHandler(s))
 	r.Patch("/api/trips/{id}/state", handler.UpdateTripStateHandler(s))
 	r.Delete("/api/trips/{id}", handler.DeleteTripHandler(s))
-	r.Get("/api/trips/{id}/stages/weather", handler.StagesWeatherHandler(s, omProvider))
+	r.Get("/api/trips/{id}/stages/weather", handler.StagesWeatherHandler(s, weatherProvider))
 	r.Get("/api/subscriptions", handler.SubscriptionsHandler(s))
 	r.Get("/api/subscriptions/{id}", handler.SubscriptionHandler(s))
 	r.Post("/api/subscriptions", handler.CreateSubscriptionHandler(s))
@@ -106,7 +114,7 @@ func main() {
 	r.Post("/api/gpx/parse", handler.GpxProxyHandler(cfg.PythonCoreURL))
 	r.Post("/api/notify/test", handler.ProxyPostHandler(cfg.PythonCoreURL, "/api/notify/test"))
 	r.Get("/api/compare", handler.CompareProxyHandler(cfg.PythonCoreURL))
-	compareEngine := compare.New(s, omProvider)
+	compareEngine := compare.New(s, weatherProvider)
 	r.Post("/api/compare/run", handler.CompareRunHandler(compareEngine))
 	r.Get("/api/_internal/trip/{id}/loaded", handler.LoadedTripProxyHandler(cfg.PythonCoreURL))
 	// Issue #221: External Validator observability endpoints (cookie-auth via global middleware).

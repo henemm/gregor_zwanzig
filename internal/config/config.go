@@ -29,6 +29,7 @@ type Config struct {
 	GoogleSMTPUser    string `envconfig:"GOOGLE_SMTP_USER" default:""`
 	GoogleSMTPPass    string `envconfig:"GOOGLE_SMTP_PASS" default:""`
 	PublicHost        string `envconfig:"PUBLIC_HOST" default:"https://gregor20.henemm.com"`
+	TestFixtureDir    string `envconfig:"TEST_FIXTURE_DIR" default:""`
 }
 
 func Load() (*Config, error) {
