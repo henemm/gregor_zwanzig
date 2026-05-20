@@ -53,6 +53,7 @@
 	let twEnd = $state(16);
 	let forecastHours = $state(48);
 	let activityProfile = $state<ActivityProfile>('allgemein');
+	let profileManuallyOverridden = $state(false);
 	let loading = $state(false);
 	let error = $state('');
 	let result: CompareResult | null = $state(null);
@@ -190,6 +191,33 @@
 		return { groups, ungrouped };
 	});
 
+	// Issue #132 — Dominantes Profil der aktuell gewaehlten Locations bestimmen.
+	// Ein Profil gilt als dominant, wenn es auf mehr als 50 % der profilierten
+	// (nicht-'allgemein') gewaehlten Locations zutrifft.
+	let dominantProfile = $derived.by((): ActivityProfile | null => {
+		const ids = allSelected ? locations.map((l) => l.id) : selectedIds;
+		const profiled = ids
+			.map((id) => locations.find((l) => l.id === id)?.activity_profile)
+			.filter((p): p is ActivityProfile => Boolean(p) && p !== 'allgemein');
+		if (profiled.length === 0) return null;
+		const counts = new Map<ActivityProfile, number>();
+		for (const p of profiled) counts.set(p, (counts.get(p) ?? 0) + 1);
+		const [top] = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+		return top[1] / profiled.length > 0.5 ? top[0] : null;
+	});
+
+	$effect(() => {
+		if (!profileManuallyOverridden && dominantProfile && activityProfile !== dominantProfile) {
+			activityProfile = dominantProfile;
+		}
+	});
+
+	$effect(() => {
+		selectedIds;
+		allSelected;
+		profileManuallyOverridden = false;
+	});
+
 	let openGroups = $state<Set<string>>(
 		new Set(locations.filter((l) => l.group).map((l) => l.group!))
 	);
@@ -247,6 +275,7 @@
 			{loading}
 			onrun={runComparison}
 			onsavebriefing={() => (showSaveAsSubDialog = true)}
+			onprofilechange={() => (profileManuallyOverridden = true)}
 		/>
 
 		{#if error}

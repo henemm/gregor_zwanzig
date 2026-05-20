@@ -19,6 +19,7 @@
 		loading: boolean;
 		onrun: () => void;
 		onsavebriefing: () => void;
+		onprofilechange?: () => void;
 	}
 
 	let {
@@ -31,6 +32,7 @@
 		loading,
 		onrun,
 		onsavebriefing,
+		onprofilechange,
 	}: Props = $props();
 </script>
 
@@ -95,6 +97,7 @@
 						data-testid="compare-preset-profile-select"
 						bind:value={activityProfile}
 						class="mt-1 block w-full rounded-md border px-3 py-2 text-sm"
+						onchange={() => onprofilechange?.()}
 					>
 						{#each ACTIVITY_PROFILE_OPTIONS as opt}
 							<option value={opt.value}>{opt.label}</option>

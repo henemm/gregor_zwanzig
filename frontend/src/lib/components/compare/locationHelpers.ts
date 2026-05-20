@@ -5,7 +5,7 @@
 // Diese Datei enthaelt ausschliesslich pure Funktionen ohne Svelte-Abhaengigkeit —
 // damit sind sie via `node --experimental-strip-types --test` unit-testbar.
 
-import type { Location } from '../../types.js';
+import type { Location, ActivityProfile } from '../../types.js';
 
 /**
  * Wandelt einen freien Namen in eine URL-/Id-taugliche kebab-case-Form um.
@@ -38,21 +38,25 @@ export function toKebabCase(input: string): string {
 }
 
 /**
- * Filtert eine Location-Liste anhand eines Suchstrings und eines optionalen
- * Gruppen-Chip-Filters.
+ * Filtert eine Location-Liste anhand eines Suchstrings, eines optionalen
+ * Gruppen-Chip-Filters und eines optionalen Aktivitaetsprofil-Filters.
  *
  * Regeln:
- * - `search === ''` UND `activeGroup === null` -> alle Locations zurueck
+ * - `search === ''` UND `activeGroup === null` UND `activeProfile === null`
+ *   -> alle Locations zurueck (kein Filter aktiv)
  * - Suche ist case-insensitiv und vergleicht Name ODER Gruppe (Substring-Match)
  * - Wenn `activeGroup !== null` wird zusaetzlich nach exakt diesem Gruppennamen
- *   gefiltert (UND-Verknuepfung mit der Suche)
+ *   gefiltert (UND-Verknuepfung)
+ * - Wenn `activeProfile !== null` wird zusaetzlich nach exakt diesem Profil
+ *   gefiltert; Locations ohne `activity_profile` matchen nicht (Issue #132).
  */
 export function filterLocations(
 	locations: Location[],
 	search: string,
 	activeGroup: string | null,
+	activeProfile: ActivityProfile | null = null,
 ): Location[] {
-	if (search === '' && activeGroup === null) {
+	if (search === '' && activeGroup === null && activeProfile === null) {
 		return locations;
 	}
 	const q = search.toLowerCase();
@@ -62,6 +66,8 @@ export function filterLocations(
 			l.name.toLowerCase().includes(q) ||
 			(l.group ?? '').toLowerCase().includes(q);
 		const matchesGroup = activeGroup === null || l.group === activeGroup;
-		return matchesSearch && matchesGroup;
+		const matchesProfile =
+			activeProfile === null || l.activity_profile === activeProfile;
+		return matchesSearch && matchesGroup && matchesProfile;
 	});
 }

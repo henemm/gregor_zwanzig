@@ -6,11 +6,12 @@
 	// Diese Komponente ist rein presentational: sie haelt lokal nur Search- und
 	// Chip-Filter-State; Selection-/Gruppen-Toggle-Logik liegt in der Page.
 
-	import type { Location } from '$lib/types.js';
+	import type { Location, ActivityProfile } from '$lib/types.js';
 	import { Btn } from '$lib/components/ui/btn/index.js';
 	import { Pill } from '$lib/components/ui/pill/index.js';
 	import CloudSunIcon from '@lucide/svelte/icons/cloud-sun';
 	import { filterLocations } from './locationHelpers.js';
+	import { profileSignature } from '$lib/utils/profileSignature.js';
 
 	interface Props {
 		locations: Location[];
@@ -42,12 +43,28 @@
 
 	let search = $state('');
 	let activeGroup = $state<string | null>(null);
+	let activeProfile = $state<ActivityProfile | null>(null);
+
+	// Issue #132 — Nur Profile, die tatsaechlich (nicht-'allgemein') in der Liste vorkommen,
+	// werden als Chips gerendert. Feste Sortier-Reihenfolge fuer UI-Stabilitaet.
+	let profilesInLocations = $derived(
+		[
+			...new Set(
+				locations
+					.map((l) => l.activity_profile)
+					.filter((p): p is ActivityProfile => Boolean(p) && p !== 'allgemein'),
+			),
+		].sort((a, b) => {
+			const order = ['wintersport', 'wandern', 'summer_trekking'];
+			return order.indexOf(a) - order.indexOf(b);
+		}),
+	);
 
 	// Gefilterte Locations werden aus groupedLocations + filterLocations() abgeleitet.
 	// Damit bleibt die Gruppen-Reihenfolge konsistent zur Page, und wir setzen nur die
 	// einzelnen Listen auf gefilterte Subsets.
 	let filteredGrouped = $derived.by(() => {
-		const filtered = filterLocations(locations, search, activeGroup);
+		const filtered = filterLocations(locations, search, activeGroup, activeProfile);
 		const filteredIds = new Set(filtered.map((l) => l.id));
 		const groups = new Map<string, Location[]>();
 		const ungrouped: Location[] = [];
@@ -85,6 +102,23 @@
 					class="cursor-pointer"
 				>
 					<Pill tone={activeGroup === g ? 'accent' : 'default'}>{g}</Pill>
+				</button>
+			{/each}
+		</div>
+	{/if}
+
+	{#if profilesInLocations.length > 0}
+		<div class="flex flex-wrap gap-1">
+			{#each profilesInLocations as p}
+				{@const sig = profileSignature(p)}
+				<button
+					data-testid="compare-rail-profile-chip"
+					aria-label={sig.eyebrow}
+					aria-pressed={activeProfile === p}
+					onclick={() => (activeProfile = activeProfile === p ? null : p)}
+					class="cursor-pointer"
+				>
+					<Pill tone={activeProfile === p ? 'accent' : 'default'}>{sig.icon} {sig.eyebrow}</Pill>
 				</button>
 			{/each}
 		</div>
@@ -134,6 +168,10 @@
 									class="h-3.5 w-3.5 rounded border-input"
 								/>
 								<span class="flex-1">{loc.name}</span>
+								{#if loc.activity_profile && loc.activity_profile !== 'allgemein'}
+									{@const sig = profileSignature(loc.activity_profile)}
+									<span title={sig.eyebrow} class="text-xs opacity-60">{sig.icon}</span>
+								{/if}
 								<button
 									onclick={() => onShowWeather(loc.id)}
 									title="Wetter anzeigen"
@@ -157,6 +195,10 @@
 					class="h-3.5 w-3.5 rounded border-input"
 				/>
 				<span class="flex-1">{loc.name}</span>
+				{#if loc.activity_profile && loc.activity_profile !== 'allgemein'}
+					{@const sig = profileSignature(loc.activity_profile)}
+					<span title={sig.eyebrow} class="text-xs opacity-60">{sig.icon}</span>
+				{/if}
 				<button
 					onclick={() => onShowWeather(loc.id)}
 					title="Wetter anzeigen"

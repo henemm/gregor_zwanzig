@@ -10,7 +10,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { toKebabCase, filterLocations } from '../locationHelpers.ts';
-import type { Location } from '../../../types.ts';
+import type { Location, ActivityProfile } from '../../../types.ts';
 
 // ─── toKebabCase ────────────────────────────────────────────────────────────
 
@@ -90,4 +90,69 @@ test('filterLocations: Suche + Chip-Filter kombiniert', () => {
 test('filterLocations: kein Treffer liefert leeres Array', () => {
 	const result = filterLocations(LOCS, 'xyz', null);
 	assert.equal(result.length, 0);
+});
+
+// ─── filterLocations: activeProfile (Issue #132) ─────────────────────────────
+//
+// Tests for activeProfile parameter (Issue #132 — will FAIL until filterLocations is extended)
+// Spec: docs/specs/modules/issue_132_compare_activity_profiles.md
+//
+// Erweitert filterLocations() um den 4. Parameter
+// `activeProfile: ActivityProfile | null = null`. Default `null` erhaelt
+// Backward-Compat zu allen bestehenden 3-arg-Aufrufen.
+
+function locWithProfile(name: string, profile?: ActivityProfile, group?: string): Location {
+	return { id: toKebabCase(name), name, lat: 47, lon: 12, group, activity_profile: profile } as Location;
+}
+
+const LOCS_WITH_PROFILES: Location[] = [
+	locWithProfile('Penken', 'wintersport', 'Zillertal'),
+	locWithProfile('Mayrhofen', 'wintersport', 'Zillertal'),
+	locWithProfile('Hochkönig', 'wandern', 'Hochkönig'),
+	locWithProfile('Dienten', 'allgemein', 'Hochkönig'),
+	locWithProfile('Schladming', undefined),
+];
+
+// AC-4 / AC-5 (Spec §1): activeProfile=null darf nicht filtern.
+test('filterLocations: activeProfile null returns all locations', () => {
+	const result = filterLocations(LOCS_WITH_PROFILES, '', null, null);
+	assert.equal(result.length, LOCS_WITH_PROFILES.length);
+});
+
+// AC-4: Chip-Filter auf "wintersport" zeigt nur Locations mit diesem Profil.
+test('filterLocations: activeProfile filters to matching locations only', () => {
+	const result = filterLocations(LOCS_WITH_PROFILES, '', null, 'wintersport');
+	assert.equal(result.length, 2);
+	assert.ok(result.every((l) => l.activity_profile === 'wintersport'));
+	assert.deepEqual(
+		result.map((l) => l.name).sort(),
+		['Mayrhofen', 'Penken']
+	);
+});
+
+// AC-4 Randfall: Filter auf Profil ohne Treffer -> leeres Array.
+test('filterLocations: activeProfile with no matching locations returns empty array', () => {
+	const result = filterLocations(LOCS_WITH_PROFILES, '', null, 'summer_trekking');
+	assert.equal(result.length, 0);
+});
+
+// AC-4 (Spec §1): UND-Verknuepfung — search + activeProfile.
+test('filterLocations: combines search and activeProfile filter', () => {
+	// Suche "may" matched "Mayrhofen" (wintersport) und sonst nichts.
+	const result = filterLocations(LOCS_WITH_PROFILES, 'may', null, 'wintersport');
+	assert.equal(result.length, 1);
+	assert.equal(result[0].name, 'Mayrhofen');
+
+	// Suche "hoch" matched "Hochkönig" (wandern); mit Profil-Filter "wintersport" -> 0.
+	const result2 = filterLocations(LOCS_WITH_PROFILES, 'hoch', null, 'wintersport');
+	assert.equal(result2.length, 0);
+});
+
+// AC-2: Locations ohne activity_profile dürfen niemals einen aktiven Profil-Filter matchen.
+test('filterLocations: location without profile does not match activeProfile filter', () => {
+	const result = filterLocations(LOCS_WITH_PROFILES, '', null, 'wintersport');
+	// Schladming hat kein Profil -> darf nicht auftauchen.
+	assert.ok(!result.some((l) => l.name === 'Schladming'));
+	// Dienten hat 'allgemein' -> darf bei Filter 'wintersport' ebenfalls nicht auftauchen.
+	assert.ok(!result.some((l) => l.name === 'Dienten'));
 });
