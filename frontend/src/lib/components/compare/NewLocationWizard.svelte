@@ -14,7 +14,8 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import Stepper from '$lib/components/trip-wizard/Stepper.svelte';
-	import { toKebabCase } from './locationHelpers.js';
+	import LocationPreviewMap from '$lib/components/compare/LocationPreviewMap.svelte';
+	import { toKebabCase, isCoordsValid } from './locationHelpers.js';
 
 	interface Props {
 		locations: Location[];
@@ -120,6 +121,8 @@
 	let existingGroups = $derived(
 		[...new Set(locations.map((l) => l.group).filter((g): g is string => Boolean(g)))],
 	);
+
+	let coordsValid = $derived(isCoordsValid(lat, lon));
 </script>
 
 <div data-testid="location-wizard" class="space-y-6 py-2">
@@ -212,6 +215,12 @@
 				<Label for="wiz-elev">Höhe über NN (m, optional)</Label>
 				<Input id="wiz-elev" type="number" bind:value={elevationM} />
 			</div>
+
+			{#if coordsValid}
+				<div data-testid="location-wizard-map-preview" class="mt-3">
+					<LocationPreviewMap lat={Number(lat)} lon={Number(lon)} />
+				</div>
+			{/if}
 		</div>
 	{/if}
 

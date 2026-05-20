@@ -1,6 +1,9 @@
 // TDD RED — Issue #249: LocationsRail + NewLocationWizard Hilfs-Logik.
+// TDD RED — Issue #266: isCoordsValid — Validierungslogik für LocationPreviewMap.
 //
-// Spec: docs/specs/modules/issue_249_locations_rail.md
+// Specs:
+//   docs/specs/modules/issue_249_locations_rail.md
+//   docs/specs/modules/issue_266_location_preview_map.md
 //
 // Ausführen:
 //   cd frontend && node --experimental-strip-types --test \
@@ -9,7 +12,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { toKebabCase, filterLocations } from '../locationHelpers.ts';
+import { toKebabCase, filterLocations, isCoordsValid } from '../locationHelpers.ts';
 import type { Location, ActivityProfile } from '../../../types.ts';
 
 // ─── toKebabCase ────────────────────────────────────────────────────────────
@@ -155,4 +158,51 @@ test('filterLocations: location without profile does not match activeProfile fil
 	assert.ok(!result.some((l) => l.name === 'Schladming'));
 	// Dienten hat 'allgemein' -> darf bei Filter 'wintersport' ebenfalls nicht auftauchen.
 	assert.ok(!result.some((l) => l.name === 'Dienten'));
+});
+
+// ─── isCoordsValid (Issue #266) ───────────────────────────────────────────────
+//
+// Prueft die Koordinaten-Validierungslogik fuer LocationPreviewMap.
+// Spec: docs/specs/modules/issue_266_location_preview_map.md (coordsValid-Logik)
+//
+// Regel: valide wenn lat und lon numerisch und NOT beide 0.
+
+// AC-2: Default-Koordinaten (47.0 / 11.0) sind valide.
+test('isCoordsValid: 47.0 / 11.0 ist valide (Default-Werte)', () => {
+	assert.equal(isCoordsValid('47.0', '11.0'), true);
+});
+
+// AC-3: 0 / 0 ist nicht valide.
+test('isCoordsValid: 0 / 0 ist nicht valide', () => {
+	assert.equal(isCoordsValid('0', '0'), false);
+});
+
+// Randfall: 0 / 11.0 ist valide (nur beide 0 sind verboten).
+test('isCoordsValid: 0 lat mit gültigem lon ist valide', () => {
+	assert.equal(isCoordsValid('0', '11.0'), true);
+});
+
+// Randfall: 47.0 / 0 ist valide.
+test('isCoordsValid: gültiger lat mit 0 lon ist valide', () => {
+	assert.equal(isCoordsValid('47.0', '0'), true);
+});
+
+// Randfall: NaN-String ist nicht valide.
+test('isCoordsValid: NaN-String ist nicht valide', () => {
+	assert.equal(isCoordsValid('abc', '11.0'), false);
+});
+
+// Randfall: Leerer String ist nicht valide.
+test('isCoordsValid: leerer String ist nicht valide', () => {
+	assert.equal(isCoordsValid('', '11.0'), false);
+});
+
+// AC-4: Negative Koordinaten (z.B. Südhalbkugel) sind valide.
+test('isCoordsValid: negative Koordinaten sind valide', () => {
+	assert.equal(isCoordsValid('-33.8688', '151.2093'), true);
+});
+
+// Randfall: Sehr kleine Nicht-Null-Werte sind valide.
+test('isCoordsValid: kleiner positiver Wert (0.0001) ist valide', () => {
+	assert.equal(isCoordsValid('0.0001', '0.0001'), true);
 });

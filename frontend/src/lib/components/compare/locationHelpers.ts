@@ -71,3 +71,22 @@ export function filterLocations(
 		return matchesSearch && matchesGroup && matchesProfile;
 	});
 }
+
+/**
+ * Prueft ob lat/lon-Werte valide Koordinaten fuer die LocationPreviewMap darstellen.
+ * Akzeptiert String- oder Number-Werte (Svelte `bind:value` auf `type="number"`
+ * konvertiert mitunter zu Number).
+ * Valide = beide nicht leer, beide numerisch UND nicht beide exakt 0.
+ * Issue #266, Spec: docs/specs/modules/issue_266_location_preview_map.md
+ */
+export function isCoordsValid(lat: string | number, lon: string | number): boolean {
+	const latStr = String(lat);
+	const lonStr = String(lon);
+	return (
+		latStr.trim() !== '' &&
+		lonStr.trim() !== '' &&
+		!isNaN(Number(latStr)) &&
+		!isNaN(Number(lonStr)) &&
+		!(Number(latStr) === 0 && Number(lonStr) === 0)
+	);
+}
