@@ -145,6 +145,7 @@ class Settings(BaseSettings):
             "smtp_user": self.test_smtp_user,
             "smtp_pass": self.test_smtp_pass,
             "mail_from": self.test_mail_from or f"{self.test_smtp_user}@henemm.com",
+            "inbound_address": f"{self.test_smtp_user}@henemm.com",
             "imap_user": self.test_imap_user or self.test_smtp_user,
             "imap_pass": self.test_imap_pass or self.test_smtp_pass,
             "is_test_mode": True,
