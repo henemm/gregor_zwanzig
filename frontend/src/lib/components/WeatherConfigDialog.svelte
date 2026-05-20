@@ -2,6 +2,8 @@
 	import { api } from '$lib/api.js';
 	import { Btn } from '$lib/components/ui/btn/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
+	import { Checkbox } from '$lib/components/ui/checkbox';
+	import { Select } from '$lib/components/ui/select';
 
 	interface MetricEntry {
 		id: string;
@@ -169,16 +171,16 @@
 			{#if templates.length > 0}
 				<div class="py-2">
 					<label for="template-select" class="block text-sm font-medium mb-1">Template laden</label>
-					<select
+					<Select
 						id="template-select"
-						class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+						class="w-full"
 						onchange={applyTemplate}
 					>
 						<option value="">-- Kein Template --</option>
 						{#each templates as t}
 							<option value={t.id}>{t.label}</option>
 						{/each}
-					</select>
+					</Select>
 				</div>
 			{/if}
 			<div class="space-y-5 py-2">
@@ -188,10 +190,8 @@
 						<div class="grid grid-cols-1 gap-1 sm:grid-cols-2">
 							{#each catalog[cat] as metric}
 								<div class="flex items-center gap-2 rounded px-1 py-0.5 text-sm hover:bg-muted/50">
-									<label class="flex cursor-pointer items-center gap-2 flex-1 min-w-0">
-										<input
-											type="checkbox"
-											class="rounded border-input"
+									<div class="flex items-center gap-2 flex-1 min-w-0">
+										<Checkbox
 											checked={enabledMap[metric.id] ?? false}
 											onchange={(e) => {
 												enabledMap = {
@@ -199,12 +199,10 @@
 													[metric.id]: (e.target as HTMLInputElement).checked
 												};
 											}}
-										/>
-										<span>{metric.label}</span>
-										{#if metric.unit}
-											<span class="ml-auto text-xs text-muted-foreground">{metric.unit}</span>
-										{/if}
-									</label>
+										>
+											{metric.label}{#if metric.unit}<span class="ml-2 text-xs text-muted-foreground">{metric.unit}</span>{/if}
+										</Checkbox>
+									</div>
 									{#if metric.has_friendly_format}
 										<span class="inline-flex border rounded overflow-hidden text-xs flex-shrink-0">
 											<button

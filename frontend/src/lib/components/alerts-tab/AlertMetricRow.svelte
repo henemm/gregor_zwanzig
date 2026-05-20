@@ -14,6 +14,7 @@
 	import { ALERT_METRIC_LABELS } from '$lib/utils/alertMetricLabels';
 	import { DELTA_ONLY_METRICS } from '$lib/components/alert-rules-editor/alertRuleDefaults';
 	import type { MetricRowState } from './alertMetricTable.ts';
+	import { Select } from '$lib/components/ui/select';
 
 	let {
 		metric,
@@ -74,7 +75,7 @@
 	/>
 	<span class="unit">{info?.unit ?? ''}</span>
 
-	<select
+	<Select
 		class="severity-select"
 		data-testid="alert-metric-severity-{metric}"
 		bind:value={state.severity}
@@ -82,7 +83,7 @@
 		<option value="info">Info</option>
 		<option value="warning">Warnung</option>
 		<option value="critical">Kritisch</option>
-	</select>
+	</Select>
 </div>
 
 <style>

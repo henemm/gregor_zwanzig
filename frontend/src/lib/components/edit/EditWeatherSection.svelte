@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import { api } from '$lib/api.js';
+	import { Checkbox } from '$lib/components/ui/checkbox';
+	import { Select } from '$lib/components/ui/select';
 
 	interface MetricEntry {
 		id: string;
@@ -41,7 +43,7 @@
 	let loadError: string | null = $state(null);
 	let enabledMap: Record<string, boolean> = $state({});
 	let friendlyMap: Record<string, boolean> = $state({});
-	// Bound to the <select> via bind:value — updated by both user interaction and Playwright
+	// Bound to the Select-component via bind:value — updated by both user interaction and Playwright
 	let selectedTemplate: string = $state('');
 	let showCustom = $state(false);
 	// Tracks which template was last applied to avoid re-applying in the $effect
@@ -169,10 +171,10 @@
 	<div>
 		<label for="weather-template" class="block text-sm font-medium mb-1">Wetter-Profil</label>
 		<!-- bind:value ensures Playwright's selectOption updates Svelte state directly -->
-		<select
+		<Select
 			id="weather-template"
 			data-testid="weather-template-select"
-			class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+			class="w-full"
 			bind:value={selectedTemplate}
 		>
 			<option value="">Kein Profil</option>
@@ -182,7 +184,7 @@
 			{#if showCustom}
 				<option value="__custom__" disabled>Benutzerdefiniert</option>
 			{/if}
-		</select>
+		</Select>
 	</div>
 
 	{#if loadError}
@@ -197,16 +199,13 @@
 					<div class="grid grid-cols-1 gap-1 sm:grid-cols-2">
 						{#each catalog[cat] as metric}
 							<div class="flex items-center gap-2 rounded px-1 py-0.5 text-sm hover:bg-muted/50">
-								<label class="flex cursor-pointer items-center gap-2 flex-1 min-w-0">
-									<input
-										type="checkbox"
+								<div class="flex-1 min-w-0">
+									<Checkbox
 										data-testid="metric-checkbox-{metric.id}"
-										class="rounded border-input"
 										checked={enabledMap[metric.id] ?? false}
 										onchange={(e) => toggleMetric(metric.id, (e.target as HTMLInputElement).checked)}
-									/>
-									<span>{metric.label}</span>
-								</label>
+									>{metric.label}</Checkbox>
+								</div>
 								{#if metric.has_friendly_format}
 									<span class="inline-flex border rounded overflow-hidden text-xs flex-shrink-0">
 										<button

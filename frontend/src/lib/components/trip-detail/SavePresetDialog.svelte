@@ -5,6 +5,7 @@
 	import { api } from '$lib/api.js';
 	import type { MetricPreset } from '$lib/types';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
+	import { Checkbox } from '$lib/components/ui/checkbox';
 
 	interface MetricEntry {
 		id: string;
@@ -129,14 +130,12 @@
 				{enabledIds.length} Metriken aktiv · {rawCount} Rohwert · {indicatorCount} Indikator
 			</div>
 
-			<label class="field-inline">
-				<input
+			<div class="field-inline">
+				<Checkbox
 					data-testid="save-preset-is-default"
-					type="checkbox"
 					bind:checked={isDefault}
-				/>
-				<span>Als Standard für neue Trips</span>
-			</label>
+				>Als Standard für neue Trips</Checkbox>
+			</div>
 
 			{#if error}
 				<div class="error" data-testid="save-preset-error">{error}</div>

@@ -14,6 +14,8 @@
 	// Layout: flex items-center gap-3
 	// Hint-TestID: `${testid}-hint` (nur gerendert, wenn `hint` gesetzt).
 
+	import { Checkbox } from '$lib/components/ui/checkbox';
+
 	interface Props {
 		label: string;
 		checked: boolean;
@@ -35,21 +37,12 @@
 	data-testid={testid}
 	class="flex flex-col gap-1 {disabled ? 'opacity-50 cursor-not-allowed' : ''}"
 >
-	<label
-		class="flex items-center gap-3 text-sm {disabled
-			? 'cursor-not-allowed'
-			: 'cursor-pointer'}"
-	>
-		<input
-			type="checkbox"
-			{checked}
-			{disabled}
-			aria-disabled={disabled ? 'true' : undefined}
-			onchange={handleChange}
-			class="h-4 w-4"
-		/>
-		<span>{label}</span>
-	</label>
+	<Checkbox
+		{checked}
+		{disabled}
+		aria-disabled={disabled ? 'true' : undefined}
+		onchange={handleChange}
+	>{label}</Checkbox>
 	{#if hint}
 		<span data-testid="{testid}-hint" class="text-xs text-[var(--g-ink-faint)] pl-7">
 			{hint}

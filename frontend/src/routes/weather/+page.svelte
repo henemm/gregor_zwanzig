@@ -4,6 +4,7 @@
 	import { Btn } from '$lib/components/ui/btn/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import { weatherEmoji, degToCardinal } from '$lib/utils/weatherEmoji.js';
+	import { Select } from '$lib/components/ui/select';
 
 	let { data } = $props();
 
@@ -53,33 +54,33 @@
 	<div class="flex items-end gap-3">
 		<div>
 			<label for="location-select" class="mb-1 block text-sm font-medium">Location</label>
-			<select
+			<Select
 				id="location-select"
 				name="location-select"
 				bind:value={selectedId}
-				class="flex h-8 w-56 rounded-lg border border-input bg-transparent px-2.5 py-1 text-base transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3"
+				class="w-56"
 			>
 				<option value="">— Location wählen —</option>
 				{#each locations as loc}
 					<option value={loc.id}>{loc.name}</option>
 				{/each}
-			</select>
+			</Select>
 		</div>
 
 		<div>
 			<label for="hours-select" class="mb-1 block text-sm font-medium">Stunden</label>
-			<select
+			<Select
 				id="hours-select"
 				name="hours-select"
 				bind:value={hours}
-				class="flex h-8 w-24 rounded-lg border border-input bg-transparent px-2.5 py-1 text-base transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3"
+				class="w-24"
 			>
 				<option value="24">24h</option>
 				<option value="48">48h</option>
 				<option value="72">72h</option>
 				<option value="120">120h</option>
 				<option value="240">240h</option>
-			</select>
+			</Select>
 		</div>
 
 		<Btn variant="primary" onclick={loadForecast} disabled={loading}>

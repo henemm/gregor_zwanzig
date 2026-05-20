@@ -13,6 +13,8 @@
 
 	import type { AlertRule, AlertMetric } from '$lib/types';
 	import { Pill } from '$lib/components/ui/pill';
+	import { Checkbox } from '$lib/components/ui/checkbox';
+	import { Select } from '$lib/components/ui/select';
 	import {
 		ALERT_METRIC_LABELS,
 		ALERT_SEVERITY_TONE,
@@ -123,7 +125,7 @@
 			{/if}
 
 			<div class="edit-fields">
-				<select
+				<Select
 					bind:value={draft.metric}
 					data-testid="alert-rule-metric"
 					class="field"
@@ -131,10 +133,10 @@
 					{#each METRIC_OPTIONS as m}
 						<option value={m}>{ALERT_METRIC_LABELS[m].label_de}</option>
 					{/each}
-				</select>
+				</Select>
 
 				{#if draft.metric === 'thunder_level'}
-					<select
+					<Select
 						value={draft.threshold}
 						onchange={onThunderChange}
 						data-testid="alert-rule-threshold"
@@ -142,7 +144,7 @@
 					>
 						<option value={1.0}>MITTEL</option>
 						<option value={2.0}>HOCH</option>
-					</select>
+					</Select>
 				{:else}
 					<input
 						type="number"
@@ -152,7 +154,7 @@
 					/>
 				{/if}
 
-				<select
+				<Select
 					bind:value={draft.severity}
 					data-testid="alert-rule-severity"
 					class="field"
@@ -160,12 +162,9 @@
 					<option value="info">Info</option>
 					<option value="warning">Warnung</option>
 					<option value="critical">Kritisch</option>
-				</select>
+				</Select>
 
-				<label class="enabled-toggle">
-					<input type="checkbox" bind:checked={draft.enabled} />
-					Aktiv
-				</label>
+				<Checkbox bind:checked={draft.enabled}>Aktiv</Checkbox>
 
 				<button
 					type="button"
@@ -193,14 +192,10 @@
 				{rule.kind === 'delta' ? 'Δ' : 'Abs'}
 			</Pill>
 			<Pill tone={ALERT_SEVERITY_TONE[rule.severity]}>{rule.severity}</Pill>
-			<label class="enabled-toggle">
-				<input
-					type="checkbox"
-					checked={rule.enabled}
-					onchange={toggleEnabled}
-				/>
-				Aktiv
-			</label>
+			<Checkbox
+				checked={rule.enabled}
+				onchange={toggleEnabled}
+			>Aktiv</Checkbox>
 			<button
 				type="button"
 				onclick={startEdit}

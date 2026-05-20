@@ -4,6 +4,7 @@
 	import { Btn } from '$lib/components/ui/btn/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
+	import { Select } from '$lib/components/ui/select';
 
 	interface Props {
 		location?: Location;
@@ -129,17 +130,17 @@
 
 	<div>
 		<Label for="activity-profile">Aktivitätsprofil</Label>
-		<select
+		<Select
 			id="activity-profile"
 			name="activity-profile"
 			bind:value={activityProfile}
-			class="flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-base transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3"
+			class="w-full"
 		>
 			<option value="">— Kein Profil —</option>
 			{#each ACTIVITY_PROFILE_OPTIONS as opt}
 				<option value={opt.value}>{opt.label}</option>
 			{/each}
-		</select>
+		</Select>
 	</div>
 
 	<div>

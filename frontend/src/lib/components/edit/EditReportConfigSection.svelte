@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import type { ReportConfig } from '$lib/types';
 	import { toHHMMSS } from '$lib/utils/time';
+	import { Checkbox } from '$lib/components/ui/checkbox';
 
 	interface Props {
 		reportConfig: ReportConfig | undefined;
@@ -155,17 +156,14 @@
 	<!-- Morgen-Report                                                          -->
 	<!-- ====================================================================== -->
 	<section class="space-y-3 rounded-md border border-input p-3">
-		<label class="flex cursor-pointer items-center gap-2 text-sm font-semibold">
+		<div class="text-sm font-semibold">
 			<span data-testid="morning-master-switch" class="inline-flex items-center gap-2">
-				<input
-					type="checkbox"
-					class="rounded border-input"
+				<Checkbox
 					checked={morning_enabled}
 					onchange={(e) => { morning_enabled = (e.target as HTMLInputElement).checked; }}
-				/>
-				<span>Morgen-Report aktivieren</span>
+				>Morgen-Report aktivieren</Checkbox>
 			</span>
-		</label>
+		</div>
 
 		<div class="flex flex-wrap items-center gap-2 pl-6">
 			<label class="flex items-center gap-2 text-sm">
@@ -198,35 +196,29 @@
 			</button>
 		</div>
 
-		<label class="flex cursor-pointer items-center gap-2 pl-6 text-sm">
+		<div class="pl-6 text-sm">
 			<span data-testid="report-morning-trend" class="inline-flex items-center gap-2">
-				<input
-					type="checkbox"
-					class="rounded border-input"
+				<Checkbox
 					checked={multi_day_trend_morning}
 					disabled={!morning_enabled}
 					onchange={(e) => { multi_day_trend_morning = (e.target as HTMLInputElement).checked; }}
-				/>
-				<span>Trend über mehrere Tage zeigen</span>
+				>Trend über mehrere Tage zeigen</Checkbox>
 			</span>
-		</label>
+		</div>
 	</section>
 
 	<!-- ====================================================================== -->
 	<!-- Abend-Report                                                            -->
 	<!-- ====================================================================== -->
 	<section class="space-y-3 rounded-md border border-input p-3">
-		<label class="flex cursor-pointer items-center gap-2 text-sm font-semibold">
+		<div class="text-sm font-semibold">
 			<span data-testid="evening-master-switch" class="inline-flex items-center gap-2">
-				<input
-					type="checkbox"
-					class="rounded border-input"
+				<Checkbox
 					checked={evening_enabled}
 					onchange={(e) => { evening_enabled = (e.target as HTMLInputElement).checked; }}
-				/>
-				<span>Abend-Report aktivieren</span>
+				>Abend-Report aktivieren</Checkbox>
 			</span>
-		</label>
+		</div>
 
 		<div class="flex flex-wrap items-center gap-2 pl-6">
 			<label class="flex items-center gap-2 text-sm">
@@ -259,18 +251,15 @@
 			</button>
 		</div>
 
-		<label class="flex cursor-pointer items-center gap-2 pl-6 text-sm">
+		<div class="pl-6 text-sm">
 			<span data-testid="report-evening-trend" class="inline-flex items-center gap-2">
-				<input
-					type="checkbox"
-					class="rounded border-input"
+				<Checkbox
 					checked={multi_day_trend_evening}
 					disabled={!evening_enabled}
 					onchange={(e) => { multi_day_trend_evening = (e.target as HTMLInputElement).checked; }}
-				/>
-				<span>Trend über mehrere Tage zeigen</span>
+				>Trend über mehrere Tage zeigen</Checkbox>
 			</span>
-		</label>
+		</div>
 	</section>
 
 	<!-- ====================================================================== -->
@@ -280,18 +269,15 @@
 		<h3 class="text-sm font-semibold">Kanäle</h3>
 
 		<!-- E-Mail -->
-		<label class="flex cursor-pointer items-center gap-2 text-sm">
+		<div class="text-sm">
 			<span data-testid="channel-email" class="inline-flex items-center gap-2">
-				<input
-					type="checkbox"
-					class="rounded border-input"
+				<Checkbox
 					checked={send_email}
 					disabled={!availableChannels.email}
 					onchange={(e) => { send_email = (e.target as HTMLInputElement).checked; }}
-				/>
-				<span>E-Mail{profile?.mail_to ? ` (${profile.mail_to})` : ''}</span>
+				>E-Mail{profile?.mail_to ? ` (${profile.mail_to})` : ''}</Checkbox>
 			</span>
-		</label>
+		</div>
 		{#if !availableChannels.email}
 			<div data-testid="channel-email-hint" class="pl-6 text-xs text-muted-foreground">
 				E-Mail-Adresse fehlt — <a href="/account" class="underline hover:text-primary">im Account einrichten</a>
@@ -299,18 +285,15 @@
 		{/if}
 
 		<!-- Signal -->
-		<label class="flex cursor-pointer items-center gap-2 text-sm">
+		<div class="text-sm">
 			<span data-testid="channel-signal" class="inline-flex items-center gap-2">
-				<input
-					type="checkbox"
-					class="rounded border-input"
+				<Checkbox
 					checked={send_signal}
 					disabled={!availableChannels.signal}
 					onchange={(e) => { send_signal = (e.target as HTMLInputElement).checked; }}
-				/>
-				<span>Signal{profile?.signal_phone ? ` (${profile.signal_phone})` : ''}</span>
+				>Signal{profile?.signal_phone ? ` (${profile.signal_phone})` : ''}</Checkbox>
 			</span>
-		</label>
+		</div>
 		{#if !availableChannels.signal}
 			<div data-testid="channel-signal-hint" class="pl-6 text-xs text-muted-foreground">
 				Signal-Nummer fehlt — <a href="/account" class="underline hover:text-primary">im Account einrichten</a>
@@ -318,18 +301,15 @@
 		{/if}
 
 		<!-- Telegram -->
-		<label class="flex cursor-pointer items-center gap-2 text-sm">
+		<div class="text-sm">
 			<span data-testid="channel-telegram" class="inline-flex items-center gap-2">
-				<input
-					type="checkbox"
-					class="rounded border-input"
+				<Checkbox
 					checked={send_telegram}
 					disabled={!availableChannels.telegram}
 					onchange={(e) => { send_telegram = (e.target as HTMLInputElement).checked; }}
-				/>
-				<span>Telegram{profile?.telegram_chat_id ? ` (${profile.telegram_chat_id})` : ''}</span>
+				>Telegram{profile?.telegram_chat_id ? ` (${profile.telegram_chat_id})` : ''}</Checkbox>
 			</span>
-		</label>
+		</div>
 		{#if !availableChannels.telegram}
 			<div data-testid="channel-telegram-hint" class="pl-6 text-xs text-muted-foreground">
 				Telegram-Chat-ID fehlt — <a href="/account" class="underline hover:text-primary">im Account einrichten</a>
@@ -351,26 +331,20 @@
 		</button>
 		{#if showAdvanced}
 			<div class="space-y-2 pl-2">
-				<label class="flex cursor-pointer items-center gap-2 text-sm">
-					<input
-						type="checkbox"
+				<div class="text-sm">
+					<Checkbox
 						data-testid="report-compact-summary"
-						class="rounded border-input"
 						checked={show_compact_summary}
 						onchange={(e) => { show_compact_summary = (e.target as HTMLInputElement).checked; }}
-					/>
-					<span>Kompakte Zusammenfassung</span>
-				</label>
-				<label class="flex cursor-pointer items-center gap-2 text-sm">
-					<input
-						type="checkbox"
+					>Kompakte Zusammenfassung</Checkbox>
+				</div>
+				<div class="text-sm">
+					<Checkbox
 						data-testid="report-show-daylight"
-						class="rounded border-input"
 						checked={show_daylight}
 						onchange={(e) => { show_daylight = (e.target as HTMLInputElement).checked; }}
-					/>
-					<span>Tageslicht anzeigen</span>
-				</label>
+					>Tageslicht anzeigen</Checkbox>
+				</div>
 				<label class="text-sm">
 					<span class="block text-muted-foreground">Wind-Exposition Mindesthöhe (m)</span>
 					<input

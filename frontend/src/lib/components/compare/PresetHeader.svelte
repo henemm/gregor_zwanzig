@@ -8,6 +8,7 @@
 	import { ACTIVITY_PROFILE_OPTIONS } from '$lib/types.js';
 	import { Btn } from '$lib/components/ui/btn/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
+	import { Select } from '$lib/components/ui/select';
 
 	interface Props {
 		compareDate: string;
@@ -56,53 +57,53 @@
 				</div>
 				<div>
 					<label for="cmp-start" class="text-sm font-medium">Von</label>
-					<select
+					<Select
 						id="cmp-start"
 						bind:value={twStart}
-						class="mt-1 block w-full rounded-md border px-3 py-2 text-sm"
+						class="mt-1 block w-full"
 					>
 						{#each Array.from({ length: 24 }, (_, i) => i) as h}
 							<option value={h}>{String(h).padStart(2, '0')}:00</option>
 						{/each}
-					</select>
+					</Select>
 				</div>
 				<div>
 					<label for="cmp-end" class="text-sm font-medium">Bis</label>
-					<select
+					<Select
 						id="cmp-end"
 						bind:value={twEnd}
-						class="mt-1 block w-full rounded-md border px-3 py-2 text-sm"
+						class="mt-1 block w-full"
 					>
 						{#each Array.from({ length: 24 }, (_, i) => i) as h}
 							<option value={h}>{String(h).padStart(2, '0')}:00</option>
 						{/each}
-					</select>
+					</Select>
 				</div>
 				<div>
 					<label for="cmp-hours" class="text-sm font-medium">Horizont</label>
-					<select
+					<Select
 						id="cmp-hours"
 						bind:value={forecastHours}
-						class="mt-1 block w-full rounded-md border px-3 py-2 text-sm"
+						class="mt-1 block w-full"
 					>
 						<option value={24}>24h</option>
 						<option value={48}>48h</option>
 						<option value={72}>72h</option>
-					</select>
+					</Select>
 				</div>
 				<div>
 					<label for="cmp-profile" class="text-sm font-medium">Profil</label>
-					<select
+					<Select
 						id="cmp-profile"
 						data-testid="compare-preset-profile-select"
 						bind:value={activityProfile}
-						class="mt-1 block w-full rounded-md border px-3 py-2 text-sm"
+						class="mt-1 block w-full"
 						onchange={() => onprofilechange?.()}
 					>
 						{#each ACTIVITY_PROFILE_OPTIONS as opt}
 							<option value={opt.value}>{opt.label}</option>
 						{/each}
-					</select>
+					</Select>
 				</div>
 			</div>
 

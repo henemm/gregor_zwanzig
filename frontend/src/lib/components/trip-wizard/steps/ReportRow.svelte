@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { Checkbox } from '$lib/components/ui/checkbox';
+
 	// ReportRow — Toggle + Zeit-Input fuer einen Report-Typ (Morgen/Abend).
 	// Epic #136 Sub-Spec #164 §5.
 	//
@@ -45,13 +47,11 @@
 	}
 </script>
 
-<label class="flex items-center gap-4 text-sm">
-	<input
-		type="checkbox"
+<div class="flex items-center gap-4 text-sm">
+	<Checkbox
 		data-testid={testidToggle}
 		checked={enabled}
 		onchange={handleToggle}
-		class="h-4 w-4"
 	/>
 	<span class="flex-1">{label}</span>
 	<input
@@ -62,4 +62,4 @@
 		oninput={handleTime}
 		class="h-9 rounded-lg border border-[var(--g-ink-faint)]/40 bg-transparent px-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--g-accent)] disabled:opacity-50"
 	/>
-</label>
+</div>

@@ -4,6 +4,8 @@
 	import { Btn } from '$lib/components/ui/btn/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
+	import { Checkbox } from '$lib/components/ui/checkbox';
+	import { Select } from '$lib/components/ui/select';
 
 	interface Props {
 		subscription?: Subscription;
@@ -113,56 +115,49 @@
 
 	<!-- Enabled -->
 	<div class="flex items-center gap-3">
-		<input
-			id="sub-enabled"
-			type="checkbox"
-			bind:checked={enabled}
-			class="h-4 w-4 rounded border-input"
-		/>
-		<Label for="sub-enabled">Aktiv</Label>
+		<Checkbox id="sub-enabled" bind:checked={enabled}>Aktiv</Checkbox>
 	</div>
 
 	<!-- Schedule -->
 	<div>
 		<Label for="sub-schedule">Zeitplan</Label>
-		<select
+		<Select
 			id="sub-schedule"
 			name="sub-schedule"
 			bind:value={schedule}
-			class="flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-base transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3"
+			class="w-full"
 		>
 			<option value="daily_morning">Täglich 07:00</option>
 			<option value="daily_evening">Täglich 18:00</option>
 			<option value="weekly">Wöchentlich</option>
-		</select>
+		</Select>
 	</div>
 
 	<!-- Weekday (only if weekly) -->
 	{#if schedule === 'weekly'}
 		<div>
 			<Label for="sub-weekday">Wochentag</Label>
-			<select
+			<Select
 				id="sub-weekday"
 				name="sub-weekday"
 				bind:value={weekday}
-				class="flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-base transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3"
+				class="w-full"
 			>
 				{#each WEEKDAYS as day, i}
 					<option value={i}>{day}</option>
 				{/each}
-			</select>
+			</Select>
 		</div>
 	{/if}
 
 	<!-- Activity Profile -->
 	<div>
 		<Label for="sub-profile">Aktivitätsprofil</Label>
-		<select id="sub-profile" bind:value={activityProfile}
-			class="flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-base transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3">
+		<Select id="sub-profile" bind:value={activityProfile} class="w-full">
 			{#each ACTIVITY_PROFILE_OPTIONS as opt}
 				<option value={opt.value}>{opt.label}</option>
 			{/each}
-		</select>
+		</Select>
 	</div>
 
 	<!-- Time Window -->
@@ -194,16 +189,16 @@
 	<!-- Forecast Hours -->
 	<div>
 		<Label for="sub-forecast">Vorhersage-Horizont (Stunden)</Label>
-		<select
+		<Select
 			id="sub-forecast"
 			name="sub-forecast"
 			bind:value={forecastHours}
-			class="flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-base transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3"
+			class="w-full"
 		>
 			<option value={24}>24 Stunden</option>
 			<option value={48}>48 Stunden</option>
 			<option value={72}>72 Stunden</option>
-		</select>
+		</Select>
 	</div>
 
 	<!-- Top N -->
@@ -222,26 +217,14 @@
 
 	<!-- Include Hourly -->
 	<div class="flex items-center gap-3">
-		<input
-			id="sub-hourly"
-			type="checkbox"
-			bind:checked={includeHourly}
-			class="h-4 w-4 rounded border-input"
-		/>
-		<Label for="sub-hourly">Stündliche Daten einschließen</Label>
+		<Checkbox id="sub-hourly" bind:checked={includeHourly}>Stündliche Daten einschließen</Checkbox>
 	</div>
 
 	<!-- Channels -->
 	<div class="space-y-2">
 		<p class="text-sm font-medium">Kanäle</p>
 		<div class="flex items-center gap-3">
-			<input
-				id="sub-email"
-				type="checkbox"
-				bind:checked={sendEmail}
-				class="h-4 w-4 rounded border-input"
-			/>
-			<Label for="sub-email">E-Mail</Label>
+			<Checkbox id="sub-email" bind:checked={sendEmail}>E-Mail</Checkbox>
 		</div>
 		{#if sendEmail}
 			<div>
@@ -257,22 +240,10 @@
 			</div>
 		{/if}
 		<div class="flex items-center gap-3">
-			<input
-				id="sub-signal"
-				type="checkbox"
-				bind:checked={sendSignal}
-				class="h-4 w-4 rounded border-input"
-			/>
-			<Label for="sub-signal">Signal</Label>
+			<Checkbox id="sub-signal" bind:checked={sendSignal}>Signal</Checkbox>
 		</div>
 		<div class="flex items-center gap-3">
-			<input
-				id="sub-telegram"
-				type="checkbox"
-				bind:checked={sendTelegram}
-				class="h-4 w-4 rounded border-input"
-			/>
-			<Label for="sub-telegram">Telegram</Label>
+			<Checkbox id="sub-telegram" bind:checked={sendTelegram}>Telegram</Checkbox>
 		</div>
 	</div>
 
@@ -280,26 +251,17 @@
 	<div class="space-y-2">
 		<p class="text-sm font-medium">Locations</p>
 		<div class="flex items-center gap-3">
-			<input
-				id="sub-all-locs"
-				type="checkbox"
-				bind:checked={allLocations}
-				class="h-4 w-4 rounded border-input"
-			/>
-			<Label for="sub-all-locs">Alle Locations</Label>
+			<Checkbox id="sub-all-locs" bind:checked={allLocations}>Alle Locations</Checkbox>
 		</div>
 		{#if !allLocations}
 			<div class="max-h-40 overflow-y-auto rounded-lg border border-input p-2 space-y-1">
 				{#each locations as loc}
 					<div class="flex items-center gap-2">
-						<input
+						<Checkbox
 							id={`loc-${loc.id}`}
-							type="checkbox"
 							checked={selectedLocations.includes(loc.id)}
 							onchange={() => toggleLocation(loc.id)}
-							class="h-4 w-4 rounded border-input"
-						/>
-						<label for={`loc-${loc.id}`} class="text-sm">{loc.name}</label>
+						>{loc.name}</Checkbox>
 					</div>
 				{/each}
 				{#if locations.length === 0}

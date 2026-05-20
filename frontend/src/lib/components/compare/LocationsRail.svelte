@@ -9,6 +9,7 @@
 	import type { Location, ActivityProfile } from '$lib/types.js';
 	import { Btn } from '$lib/components/ui/btn/index.js';
 	import { Pill } from '$lib/components/ui/pill/index.js';
+	import { Checkbox } from '$lib/components/ui/checkbox';
 	import CloudSunIcon from '@lucide/svelte/icons/cloud-sun';
 	import { filterLocations } from './locationHelpers.js';
 	import { profileSignature } from '$lib/utils/profileSignature.js';
@@ -81,7 +82,7 @@
 
 <div
 	data-testid="compare-rail"
-	class="hidden w-60 shrink-0 flex-col space-y-3 border-r pr-4 md:flex"
+	class="w-60 shrink-0 flex flex-col space-y-3 border-r pr-4"
 >
 	<input
 		data-testid="compare-rail-search"
@@ -124,15 +125,10 @@
 		</div>
 	{/if}
 
-	<label class="flex items-center gap-2 text-sm">
-		<input
-			type="checkbox"
-			checked={allSelected}
-			onchange={onToggleAll}
-			class="h-4 w-4 rounded border-input"
-		/>
-		Alle ({selectedIds.length}/{locations.length})
-	</label>
+	<Checkbox
+		checked={allSelected}
+		onchange={onToggleAll}
+	>Alle ({selectedIds.length}/{locations.length})</Checkbox>
 
 	<div class="space-y-1">
 		{#each [...filteredGrouped.groups.entries()].sort((a, b) => a[0].localeCompare(b[0])) as [groupName, groupLocs]}
@@ -147,25 +143,18 @@
 					>
 						<span class="inline-block w-3 text-xs">{isOpen ? '▼' : '▶'}</span>
 					</button>
-					<label class="flex items-center gap-1.5 text-sm font-medium">
-						<input
-							type="checkbox"
-							checked={allInGroup}
-							onchange={() => onToggleGroupSelection(groupName)}
-							class="h-3.5 w-3.5 rounded border-input"
-						/>
-						{groupName} ({groupLocs.length})
-					</label>
+					<Checkbox
+						checked={allInGroup}
+						onchange={() => onToggleGroupSelection(groupName)}
+					>{groupName} ({groupLocs.length})</Checkbox>
 				</div>
 				{#if isOpen}
 					<div class="ml-4 space-y-0.5">
 						{#each groupLocs as loc}
 							<div class="flex items-center gap-1.5 text-sm">
-								<input
-									type="checkbox"
+								<Checkbox
 									checked={selectedIds.includes(loc.id)}
 									onchange={() => onToggleLocation(loc.id)}
-									class="h-3.5 w-3.5 rounded border-input"
 								/>
 								<span class="flex-1">{loc.name}</span>
 								{#if loc.activity_profile && loc.activity_profile !== 'allgemein'}
@@ -188,11 +177,9 @@
 
 		{#each filteredGrouped.ungrouped as loc}
 			<div class="flex items-center gap-1.5 text-sm">
-				<input
-					type="checkbox"
+				<Checkbox
 					checked={selectedIds.includes(loc.id)}
 					onchange={() => onToggleLocation(loc.id)}
-					class="h-3.5 w-3.5 rounded border-input"
 				/>
 				<span class="flex-1">{loc.name}</span>
 				{#if loc.activity_profile && loc.activity_profile !== 'allgemein'}

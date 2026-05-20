@@ -26,6 +26,7 @@
 	import HourlyMatrix from '$lib/components/compare/HourlyMatrix.svelte';
 	import CompareSubscriptionsPanel from '$lib/components/compare/CompareSubscriptionsPanel.svelte';
 	import { weatherEmoji } from '$lib/utils/weatherEmoji.js';
+	import { Select } from '$lib/components/ui/select';
 
 	let { data } = $props();
 
@@ -46,6 +47,7 @@
 	let showNewLocDialog = $state(false);
 	let showSaveAsSubDialog = $state(false);
 	let saveSubError = $state<string | null>(null);
+	let showLocationsSheet = $state(false);
 
 	let prefilledSub = $derived({
 		id: '',
@@ -233,23 +235,48 @@
 
 <div class="flex gap-6">
 	<!-- Sidebar: Desktop only -->
-	<LocationsRail
-		{locations}
-		{selectedIds}
-		{groupedLocations}
-		{openGroups}
-		{allSelected}
-		onToggleAll={toggleAll}
-		onToggleLocation={toggleLocation}
-		onToggleGroup={toggleGroup}
-		onToggleGroupSelection={toggleGroupSelection}
-		onShowWeather={showWeather}
-		onNewLocation={() => (showNewLocDialog = true)}
-	/>
+	<div class="hidden desktop:flex shrink-0">
+		<LocationsRail
+			{locations}
+			{selectedIds}
+			{groupedLocations}
+			{openGroups}
+			{allSelected}
+			onToggleAll={toggleAll}
+			onToggleLocation={toggleLocation}
+			onToggleGroup={toggleGroup}
+			onToggleGroupSelection={toggleGroupSelection}
+			onShowWeather={showWeather}
+			onNewLocation={() => (showNewLocDialog = true)}
+		/>
+	</div>
 
 	<!-- Content -->
 	<div class="min-w-0 flex-1 space-y-6">
 		<h1 class="text-2xl font-bold">Orts-Vergleich</h1>
+
+		<div data-testid="compare-mobile-chip-row" class="desktop:hidden space-y-2">
+			{#if locations.length > 0}
+				<div class="flex gap-2 overflow-x-auto pb-1">
+					{#each locations.filter((l) => allSelected || selectedIds.includes(l.id)) as loc}
+						<button
+							class="shrink-0 rounded-full border border-border bg-muted px-3 py-1 text-xs"
+							onclick={() => toggleLocation(loc.id)}
+						>
+							{loc.name} ×
+						</button>
+					{/each}
+				</div>
+			{/if}
+			<Btn
+				data-testid="compare-mobile-open-sheet"
+				variant="outline"
+				size="sm"
+				onclick={() => (showLocationsSheet = true)}
+			>
+				Orte wählen ({allSelected ? locations.length : selectedIds.length})
+			</Btn>
+		</div>
 
 		<PresetHeader
 			bind:compareDate={targetDate}
@@ -311,15 +338,15 @@
 				</Card.Header>
 				<Card.Content class="space-y-4">
 					<div class="flex items-center gap-3">
-						<select
+						<Select
 							bind:value={weatherHours}
-							class="flex h-8 w-24 rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm"
+							class="w-24"
 						>
 							<option value="24">24h</option>
 							<option value="48">48h</option>
 							<option value="72">72h</option>
 							<option value="120">120h</option>
-						</select>
+						</Select>
 						<Btn
 							variant="primary"
 							size="sm"
@@ -414,6 +441,42 @@
 		{/if}
 	</div>
 </div>
+
+<!-- Mobile: Locations Bottom-Sheet -->
+{#if showLocationsSheet}
+	<div
+		class="fixed inset-0 z-[70] bg-black/50 desktop:hidden"
+		onclick={() => (showLocationsSheet = false)}
+		role="presentation"
+	></div>
+	<div
+		data-testid="compare-locations-sheet"
+		class="fixed bottom-0 left-0 right-0 z-[75] desktop:hidden rounded-t-2xl border-t overflow-y-auto"
+		style="background: var(--g-paper-deep); border-color: var(--g-rule-soft); padding-bottom: env(safe-area-inset-bottom); max-height: 85vh;"
+		role="dialog"
+		aria-modal="true"
+		aria-label="Orte wählen"
+	>
+		<div class="flex justify-center pt-3 pb-1">
+			<div class="w-10 h-1 rounded-full bg-muted-foreground/25"></div>
+		</div>
+		<div class="px-4 py-3">
+			<LocationsRail
+				{locations}
+				{selectedIds}
+				{groupedLocations}
+				{openGroups}
+				{allSelected}
+				onToggleAll={toggleAll}
+				onToggleLocation={toggleLocation}
+				onToggleGroup={toggleGroup}
+				onToggleGroupSelection={toggleGroupSelection}
+				onShowWeather={(id) => { showLocationsSheet = false; showWeather(id); }}
+				onNewLocation={() => { showLocationsSheet = false; showNewLocDialog = true; }}
+			/>
+		</div>
+	</div>
+{/if}
 
 <!-- New Location Dialog -->
 <Dialog.Root

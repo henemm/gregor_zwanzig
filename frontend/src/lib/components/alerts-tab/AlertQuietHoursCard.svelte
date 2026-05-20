@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { Checkbox } from '$lib/components/ui/checkbox';
+
     let {
         quiet_from = $bindable<string | undefined>(undefined),
         quiet_to   = $bindable<string | undefined>(undefined),
@@ -22,15 +24,11 @@
 <div class="quiet-card" data-testid="alert-quiet-hours-card">
     <div class="header-row">
         <h4 class="card-title">Stille Stunden</h4>
-        <label class="toggle-label">
-            <input
-                type="checkbox"
-                checked={enabled}
-                onchange={toggleEnabled}
-                data-testid="alert-quiet-hours-toggle"
-            />
-            Aktiv
-        </label>
+        <Checkbox
+            checked={enabled}
+            onchange={toggleEnabled}
+            data-testid="alert-quiet-hours-toggle"
+        >Aktiv</Checkbox>
     </div>
     {#if enabled}
         <div class="time-row">

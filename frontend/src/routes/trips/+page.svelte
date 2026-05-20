@@ -17,6 +17,8 @@
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 	import EllipsisVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
 	import { Dot } from '$lib/components/ui/dot';
+	import { Checkbox } from '$lib/components/ui/checkbox';
+	import { Select } from '$lib/components/ui/select';
 	import { deriveTripStatus } from '$lib/utils/tripStatus';
 
 	const now = new Date();
@@ -362,9 +364,9 @@
 				<div class="grid grid-cols-2 gap-4">
 					<div class="space-y-1">
 						<label class="text-sm font-medium" for="morning-hour">Morgen-Report (Stunde)</label>
-						<select
+						<Select
 							id="morning-hour"
-							class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+							class="w-full"
 							value={getHour(reportConfig.morning_time)}
 							onchange={(e) => {
 								reportConfig.morning_time = setHour(reportConfig.morning_time, Number((e.target as HTMLSelectElement).value));
@@ -373,13 +375,13 @@
 							{#each Array.from({ length: 24 }, (_, i) => i) as h}
 								<option value={h}>{String(h).padStart(2, '0')}:00</option>
 							{/each}
-						</select>
+						</Select>
 					</div>
 					<div class="space-y-1">
 						<label class="text-sm font-medium" for="evening-hour">Abend-Report (Stunde)</label>
-						<select
+						<Select
 							id="evening-hour"
-							class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+							class="w-full"
 							value={getHour(reportConfig.evening_time)}
 							onchange={(e) => {
 								reportConfig.evening_time = setHour(reportConfig.evening_time, Number((e.target as HTMLSelectElement).value));
@@ -388,81 +390,32 @@
 							{#each Array.from({ length: 24 }, (_, i) => i) as h}
 								<option value={h}>{String(h).padStart(2, '0')}:00</option>
 							{/each}
-						</select>
+						</Select>
 					</div>
 				</div>
 
 				<!-- Enabled -->
-				<div class="flex items-center gap-3">
-					<label class="flex items-center gap-2 text-sm font-medium">
-						<input
-							type="checkbox"
-							class="rounded border-input"
-							bind:checked={reportConfig.enabled}
-						/>
-						Reports aktiv
-					</label>
+				<div class="flex items-center gap-3 text-sm font-medium">
+					<Checkbox bind:checked={reportConfig.enabled}>Reports aktiv</Checkbox>
 				</div>
 
 				<!-- Channels -->
 				<div class="space-y-2">
 					<p class="text-sm font-medium">Kanäle</p>
-					<div class="space-y-2">
-						<label class="flex items-center gap-2 text-sm">
-							<input
-								type="checkbox"
-								class="rounded border-input"
-								bind:checked={reportConfig.send_email}
-							/>
-							E-Mail senden
-						</label>
-						<label class="flex items-center gap-2 text-sm">
-							<input
-								type="checkbox"
-								class="rounded border-input"
-								bind:checked={reportConfig.send_signal}
-							/>
-							Signal senden
-						</label>
-						<label class="flex items-center gap-2 text-sm">
-							<input
-								type="checkbox"
-								class="rounded border-input"
-								bind:checked={reportConfig.send_telegram}
-							/>
-							Telegram senden
-						</label>
+					<div class="space-y-2 text-sm">
+						<div><Checkbox bind:checked={reportConfig.send_email}>E-Mail senden</Checkbox></div>
+						<div><Checkbox bind:checked={reportConfig.send_signal}>Signal senden</Checkbox></div>
+						<div><Checkbox bind:checked={reportConfig.send_telegram}>Telegram senden</Checkbox></div>
 					</div>
 				</div>
 
 				<!-- Options -->
 				<div class="space-y-2">
 					<p class="text-sm font-medium">Optionen</p>
-					<div class="space-y-2">
-						<label class="flex items-center gap-2 text-sm">
-							<input
-								type="checkbox"
-								class="rounded border-input"
-								bind:checked={reportConfig.alert_on_changes}
-							/>
-							Alert bei Änderungen
-						</label>
-						<label class="flex items-center gap-2 text-sm">
-							<input
-								type="checkbox"
-								class="rounded border-input"
-								bind:checked={reportConfig.show_compact_summary}
-							/>
-							Kompakte Zusammenfassung anzeigen
-						</label>
-						<label class="flex items-center gap-2 text-sm">
-							<input
-								type="checkbox"
-								class="rounded border-input"
-								bind:checked={reportConfig.show_daylight}
-							/>
-							Tageslicht anzeigen
-						</label>
+					<div class="space-y-2 text-sm">
+						<div><Checkbox bind:checked={reportConfig.alert_on_changes}>Alert bei Änderungen</Checkbox></div>
+						<div><Checkbox bind:checked={reportConfig.show_compact_summary}>Kompakte Zusammenfassung anzeigen</Checkbox></div>
+						<div><Checkbox bind:checked={reportConfig.show_daylight}>Tageslicht anzeigen</Checkbox></div>
 					</div>
 				</div>
 
