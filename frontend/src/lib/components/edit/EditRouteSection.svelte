@@ -64,27 +64,33 @@
 		uploadError = '';
 
 		// Snapshot + clear buffer so the picker disappears immediately.
-		const sorted = naturalSort(pendingFiles, (f) => f.name);
+		const files = pendingFiles;
 		const start = bulkStartDate;
-		const total = sorted.length;
+		const total = files.length;
 		pendingFiles = [];
 
-		let added = 0;
-		for (let i = 0; i < sorted.length; i++) {
-			const file = sorted[i];
+		const uploaded: Stage[] = [];
+		let uploadIndex = 0;
+		for (let i = 0; i < files.length; i++) {
+			const file = files[i];
 			uploadProgress = `Lade ${i + 1} von ${total} Dateien...`;
-			const stageDate = addDays(start, added);
+			const stageDate = addDays(start, uploadIndex);
 			try {
 				const stage = await uploadGpx(file, stageDate, 8);
-				stages.push(stage);
-				added += 1;
+				uploaded.push(stage);
+				uploadIndex += 1;
 			} catch (e) {
 				uploadError += `${file.name}: ${e instanceof Error ? e.message : 'Fehler'}\n`;
 			}
 		}
 
-		if (!tripName && stages.length > 0) {
-			tripName = sorted[0].name.replace(/\.gpx$/i, '');
+		const sorted = naturalSort(uploaded, (s) => s.name);
+		for (const stage of sorted) {
+			stages.push(stage);
+		}
+
+		if (!tripName && sorted.length > 0) {
+			tripName = sorted[0].name;
 		}
 
 		uploading = false;

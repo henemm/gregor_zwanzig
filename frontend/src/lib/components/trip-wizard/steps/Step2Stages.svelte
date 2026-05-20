@@ -91,27 +91,33 @@
 
 		uploading = true;
 		uploadError = '';
-		const sorted = naturalSort(pendingFiles, (f) => f.name);
+		const files = pendingFiles;
 		const start = bulkStartDate;
-		const total = sorted.length;
+		const total = files.length;
 		pendingFiles = [];
 
+		const uploaded: Stage[] = [];
 		let added = 0;
-		for (let i = 0; i < sorted.length; i++) {
-			const file = sorted[i];
+		for (let i = 0; i < files.length; i++) {
+			const file = files[i];
 			uploadProgress = `Lade ${i + 1} von ${total} Dateien...`;
 			const stageDate = addDays(start, added);
 			try {
 				const stage = await uploadGpx(file, stageDate, 8);
-				// id-Vergabe passiert zentral in wizard.addStage()
-				// (Backend liefert ggf. keine id; DnD braucht stage.id als Key).
-				wizard.addStage(stage);
+				uploaded.push(stage);
 				added += 1;
 			} catch (e) {
 				const msg = e instanceof Error ? e.message : String(e);
 				uploadError += `${file.name}: ${msg}\n`;
 				console.error('GPX upload failed', file.name, e);
 			}
+		}
+
+		const sorted = naturalSort(uploaded, (s) => s.name);
+		for (const stage of sorted) {
+			// id-Vergabe passiert zentral in wizard.addStage()
+			// (Backend liefert ggf. keine id; DnD braucht stage.id als Key).
+			wizard.addStage(stage);
 		}
 
 		uploading = false;
