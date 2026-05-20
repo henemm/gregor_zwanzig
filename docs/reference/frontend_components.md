@@ -23,7 +23,12 @@ frontend/src/lib/components/
 │   ├── eyebrow/          # GREGOR atom (Issue #144)
 │   ├── dot/              # GREGOR atom (Issue #144)
 │   ├── topo/             # GREGOR atom (Issue #143)
-│   └── elev-sparkline/   # GREGOR atom (Issue #146)
+│   ├── elev-sparkline/   # GREGOR atom (Issue #146)
+│   │
+│   └── sidebar/
+│       ├── TopAppBar.svelte    # Fixed top bar (mobile-only, Issue #267)
+│       ├── BottomNav.svelte    # Fixed bottom nav (mobile-only, Issue #267)
+│       └── Sidebar.svelte      # Main navigation (Issue #145)
 │
 ├── trip-wizard/          # Trip-Wizard components (Epic #136)
 │   ├── TripWizardShell.svelte   # Shell + 4-step stepper
@@ -42,7 +47,7 @@ frontend/src/lib/components/
 │       └── wizardState.test.ts
 │
 └── layout/
-    └── Sidebar.svelte    # Main navigation (Issue #145)
+    └── (organized in sidebar/ above)
 ```
 
 ## Gregor Atoms (Epic #133)
@@ -396,6 +401,141 @@ Use shadcn for:
 - Existing patterns that shadcn already provides well (card layouts, tabs, etc.)
 
 Both can coexist in the same codebase without conflicts — namespaces (Gregor `data-slot` vs. shadcn class-based) are disjoint.
+
+---
+
+## App-Shell Navigation (Issue #267)
+
+Mobile-responsive navigation system with responsive layout switching at the 900px breakpoint.
+
+### TopAppBar Component
+
+**File:** `frontend/src/lib/components/ui/sidebar/TopAppBar.svelte`
+
+Fixed header bar for mobile viewports (< 900px). Contains hamburger menu trigger, app title, and dark mode toggle.
+
+**Props:**
+```typescript
+interface Props {
+  mobileMenuOpen: boolean;
+}
+let { mobileMenuOpen = $bindable() }: Props = $props();
+```
+
+**Layout:**
+- **Height:** 56px, `position: fixed; top: 0; left: 0; right: 0; z-index: 60`
+- **Background:** `var(--g-paper)`
+- **Border:** `1px solid var(--g-rule-soft)` (bottom)
+- **Visibility:** Mobile only (`class="desktop:hidden"`)
+
+**Sections:**
+1. **Left:** Hamburger button (Menu/X icon) — toggles `mobileMenuOpen` state
+2. **Center:** Title "Gregor 20" (bold)
+3. **Right:** Dark mode toggle (Moon/Sun icon)
+
+**Usage:**
+```svelte
+import TopAppBar from '$lib/components/ui/sidebar/TopAppBar.svelte';
+
+let mobileMenuOpen = $state(false);
+// ... in template:
+<TopAppBar bind:mobileMenuOpen />
+```
+
+### BottomNav Component
+
+**File:** `frontend/src/lib/components/ui/sidebar/BottomNav.svelte`
+
+Fixed footer bar for mobile viewports (< 900px). Contains 4 workspace navigation items with active state indication.
+
+**Props:** None — route detection via SvelteKit `page` store
+
+**Layout:**
+- **Height:** 64px + `env(safe-area-inset-bottom)` (iPhone notch/home-indicator support)
+- `position: fixed; bottom: 0; left: 0; right: 0; z-index: 50`
+- **Background:** `var(--g-paper-deep)`
+- **Border:** `1px solid var(--g-rule-soft)` (top)
+- **Grid:** 4 equal columns `grid-template-columns: repeat(4, 1fr)`
+- **Visibility:** Mobile only (`class="desktop:hidden"`)
+
+**Navigation Items (auto-generated from NAV_ITEMS):**
+
+| Icon | Label | Route |
+|------|-------|-------|
+| LayoutDashboard | Übersicht | `/` |
+| Route | Trips | `/trips` |
+| GitCompare | Vergleich | `/compare` |
+| MapPin | Locations | `/locations` |
+
+**Per-Item Styling:**
+- **Active State:** 
+  - Accent line top: `box-shadow: inset 0 2px 0 var(--g-accent)`
+  - Font-weight: 600
+  - Color: `var(--g-ink)`
+- **Inactive State:**
+  - No line
+  - Font-weight: 500
+  - Color: `var(--g-ink-muted)`
+- **Icon Size:** 22px
+- **Label Size:** 10px
+
+**Usage:**
+```svelte
+import BottomNav from '$lib/components/ui/sidebar/BottomNav.svelte';
+
+// ... in template:
+<BottomNav />
+```
+
+### Layout Integration
+
+Both components are orchestrated in `frontend/src/routes/+layout.svelte`:
+
+```svelte
+<script>
+  import TopAppBar from '$lib/components/ui/sidebar/TopAppBar.svelte';
+  import BottomNav from '$lib/components/ui/sidebar/BottomNav.svelte';
+  
+  let mobileMenuOpen = $state(false);
+</script>
+
+<TopAppBar bind:mobileMenuOpen />
+
+<div class="desktop:flex h-screen">
+  <Sidebar bind:mobileMenuOpen />
+  
+  <main class="flex-1 overflow-y-auto mobile:pt-14 mobile-scroll-pad">
+    {@render children()}
+  </main>
+</div>
+
+<BottomNav />
+```
+
+**Responsive Breakpoint:** 900px (custom `@custom-variant` in `app.css`)
+- **< 900px:** TopAppBar visible, BottomNav visible, Sidebar drawer-only
+- **>= 900px:** TopAppBar hidden, BottomNav hidden, Sidebar full sidebar (unchanged)
+
+**CSS Utilities Added:**
+- `--g-paper-deep` — BottomNav background (slightly darker than surface)
+- `--g-rule-soft` — Border/divider color (soft ink at 8% opacity)
+- `.mobile-scroll-pad` — Padding-bottom to prevent BottomNav overlap: `calc(64px + env(safe-area-inset-bottom))`
+- `@custom-variant mobile` — Matches viewport < 900px
+- `@custom-variant desktop` — Matches viewport >= 900px
+
+### Sidebar Component Updates
+
+**File:** `frontend/src/lib/components/ui/sidebar/Sidebar.svelte`
+
+Updated to support both desktop full-sidebar and mobile drawer modes.
+
+**Changes from Issue #267:**
+- Removed mobile-specific (hamburger, overlay) UI logic
+- Added 4th NavItem for Locations (`/locations`)
+- Accepts `mobileMenuOpen` as `$bindable()` prop to control drawer state
+- All `md:` Tailwind breakpoint classes → `desktop:` (900px instead of 768px)
+- On mobile, drawer shows only secondary items (Konto, Status, Dark Mode, Logout)
+- Workspace routes (Übersicht, Trips, Vergleich, Locations) removed from drawer, available only in BottomNav
 
 ---
 

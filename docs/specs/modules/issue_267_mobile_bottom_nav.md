@@ -3,7 +3,7 @@ entity_id: issue_267_mobile_bottom_nav
 type: module
 created: 2026-05-20
 updated: 2026-05-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, mobile, navigation, bottom-nav, app-shell, svelte, responsive, issue-267]
 ---
@@ -256,3 +256,4 @@ Template-Struktur:
 ## Changelog
 
 - 2026-05-20: Initial spec erstellt (Issue #267 — Mobile Bottom-Navigation + TopAppBar für App-Shell).
+- 2026-05-20: Implementierung abgeschlossen. TopAppBar (38 LoC), BottomNav (62 LoC), Sidebar angepasst (−51 LoC Netto), +layout.svelte angepasst (+12 LoC), app.css ergänzt (+12 LoC). Gesamt 73 LoC < 250 Limit. AC-1 bis AC-7 erfolgreich.

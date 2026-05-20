@@ -188,6 +188,7 @@ Alle Module benoetigen Specs vor Implementierung:
 - `issue_263_openmeteo_fixture_provider` - E2E Fixture-Provider für Playwright-Tests: FixtureProvider Go-Paket mit Nearest-Location-Lookup + Timestamp-Re-Stamping, 3 Test-Locations (Innsbruck/Stubai/Zillertal mit JSON-Fixtures), Config-Feld TestFixtureDir, Provider-Selektion in main.go via `GZ_TEST_FIXTURE_DIR` Env-Var, E2E-Setup-Seedung, Refresh-Script (Issue #263, Spec: `docs/specs/modules/issue_263_openmeteo_fixture_provider.md`)
 - `issue_276_mobile_gmaps_link` - Mobiler Google Maps Link wird erkannt: Switch-Routing erweitert um `maps.google.com` und `www.google.com/maps`, vollständige Redirect-Kette (bis zu 10 Hops), gestaffelter Nominatim-Fallback als OSM-Geocoding-Fallback wenn `@lat,lon` nicht in finaler URL (Issue #276, Spec: `docs/specs/modules/issue_276_mobile_gmaps_link.md`)
 - `bug_272_ios_input_font_size` - iOS Safari Auto-Zoom bei Eingabefeldern mit font-size < 16 px verhindern: unlayered Media Query in app.css + Scoped Override in SavePresetDialog.svelte (Bug #272, Spec: `docs/specs/modules/bug_272_ios_input_font_size.md`)
+- `issue_267_mobile_bottom_nav` - Mobile Bottom-Navigation mit 4 Workspace-Items (Übersicht, Trips, Vergleich, Locations) + TopAppBar für Viewports < 900px; Desktop-Sidebar unverändert (Issue #267, Spec: `docs/specs/modules/issue_267_mobile_bottom_nav.md`)
 
 ### Geplante Module
 Siehe GitHub Issues: https://github.com/henemm/gregor_zwanzig/issues
