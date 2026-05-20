@@ -455,6 +455,10 @@ class TripAlertService:
             weather: Current weather data
             changes: Detected changes to include
         """
+        alert_date = weather[0].segment.start_time.date()
+        matched_stage = trip.get_stage_for_date(alert_date)
+        stage_name = matched_stage.name if matched_stage else None
+
         report = self._formatter.format_email(
             segments=weather,
             trip_name=trip.name,
@@ -462,6 +466,7 @@ class TripAlertService:
             display_config=trip.display_config,
             changes=changes,
             profile=trip.aggregation.profile,
+            stage_name=stage_name,
         )
 
         config = trip.report_config

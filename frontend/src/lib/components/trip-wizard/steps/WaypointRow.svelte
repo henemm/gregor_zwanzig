@@ -51,7 +51,7 @@
 		width="14"
 		height="14"
 		viewBox="0 0 14 14"
-		aria-label={isSuggested ? 'Vorschlag (unbestaetigt)' : 'Bestaetigt'}
+		aria-label={isSuggested ? 'Vorschlag (unbestätigt)' : 'Bestätigt'}
 		role="img"
 	>
 		{#if isSuggested}
@@ -84,7 +84,7 @@
 			type="button"
 			data-testid="trip-wizard-step3-confirm-{index}"
 			onclick={handleConfirm}
-			aria-label="Vorschlag bestaetigen"
+			aria-label="Vorschlag bestätigen"
 			class="rounded p-1 text-[var(--g-accent)] hover:bg-[var(--g-accent)]/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--g-accent)]"
 		>
 			<Check class="size-4" />

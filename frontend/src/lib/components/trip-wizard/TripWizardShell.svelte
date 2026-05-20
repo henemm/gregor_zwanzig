@@ -29,10 +29,10 @@
 	// Wizard-spezifische Step-Texte (Spec §4).
 	const stepLabels = ['Profil & Eckdaten', 'GPX-Import', 'Wegpunkte', 'Briefings'];
 	const stepSubLabels = [
-		'Aktivitaet, Name, Zeitraum',
+		'Aktivität, Name, Zeitraum',
 		'Etappen hochladen',
-		'KI-Vorschlaege bestaetigen',
-		'Kanaele und Alerts'
+		'KI-Vorschläge bestätigen',
+		'Kanäle und Alerts'
 	];
 
 	const saveLabel = $derived(
@@ -114,7 +114,7 @@
 					size="md"
 					onclick={handleBack}
 				>
-					Zurueck
+					Zurück
 				</Btn>
 			{/if}
 		</div>

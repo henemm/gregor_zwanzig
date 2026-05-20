@@ -56,7 +56,7 @@
 	async function commitPending() {
 		if (pendingFiles.length === 0) return;
 		if (!bulkStartDate) {
-			uploadError = 'Bitte Startdatum waehlen.\n';
+			uploadError = 'Bitte Startdatum wählen.';
 			return;
 		}
 
@@ -163,7 +163,7 @@
 	>
 		<UploadIcon class="mx-auto mb-2 size-8 text-muted-foreground" />
 		<p class="font-medium">GPX-Dateien hierher ziehen</p>
-		<p class="text-sm text-muted-foreground mt-1">oder klicken zum Auswaehlen</p>
+		<p class="text-sm text-muted-foreground mt-1">oder klicken zum Auswählen</p>
 		<input
 			bind:this={fileInput}
 			type="file"
@@ -177,7 +177,7 @@
 	{#if pendingFiles.length > 0}
 		<div class="rounded-md border p-4 space-y-3 bg-muted/30">
 			<p class="text-sm" data-testid="bulk-stage-pending-count">
-				{pendingFiles.length} Datei(en) ausgewaehlt
+				{pendingFiles.length} Datei(en) ausgewählt
 			</p>
 			<div class="flex flex-col gap-2 sm:flex-row sm:items-center">
 				<Label for="bulk-stage-start-date" class="sm:w-32">Startdatum</Label>

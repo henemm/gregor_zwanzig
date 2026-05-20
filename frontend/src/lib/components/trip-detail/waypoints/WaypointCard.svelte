@@ -71,7 +71,7 @@
 				e.stopPropagation();
 				onConfirm();
 			}}
-			aria-label="Wegpunkt bestaetigen"
+			aria-label="Wegpunkt bestätigen"
 		>
 			<Check class="size-3" />
 		</Btn>
@@ -109,7 +109,7 @@
 				e.stopPropagation();
 				onDelete();
 			}}
-			aria-label="Wegpunkt loeschen"
+			aria-label="Wegpunkt löschen"
 		>
 			<X class="size-3" />
 		</Btn>

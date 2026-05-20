@@ -40,7 +40,7 @@
 
 <div data-testid="trip-wizard-step1-profile" class="flex flex-col gap-6 py-4">
 	<section class="flex flex-col gap-2">
-		<span class="text-xs uppercase tracking-wide text-[var(--g-ink-faint)]">Aktivitaet</span>
+		<span class="text-xs uppercase tracking-wide text-[var(--g-ink-faint)]">Aktivität</span>
 		<div class="flex flex-wrap gap-2">
 			{#each PROFILES as profile (profile.activity)}
 				{@const selected = state.activity === profile.activity}

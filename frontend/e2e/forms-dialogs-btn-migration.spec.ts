@@ -12,7 +12,6 @@ import { readFile } from 'node:fs/promises';
 const FILES = [
 	'frontend/src/lib/components/SubscriptionForm.svelte',
 	'frontend/src/lib/components/LocationForm.svelte',
-	'frontend/src/lib/components/TripForm.svelte',
 	'frontend/src/lib/components/WeatherConfigDialog.svelte',
 	'frontend/src/lib/components/ui/dialog/dialog-content.svelte',
 	'frontend/src/lib/components/ui/dialog/dialog-footer.svelte'

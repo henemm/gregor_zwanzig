@@ -165,7 +165,7 @@
 					data-testid="trip-full-profile-stage-{b.stageId}"
 					role="button"
 					tabindex="0"
-					aria-label="Etappe {b.code} auswaehlen"
+					aria-label="Etappe {b.code} auswählen"
 					x={scaleX(b.xStart)}
 					y={0}
 					width={Math.max(1, scaleX(b.xEnd) - scaleX(b.xStart))}

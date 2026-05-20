@@ -54,7 +54,7 @@
 	<!-- Sektion 1: Kanaele -->
 	<section class="space-y-2">
 		<Eyebrow class="text-xs uppercase tracking-wide text-[var(--g-ink-faint)]"
-			>Kanaele</Eyebrow
+			>Kanäle</Eyebrow
 		>
 		<GCard class="rounded-md border border-[var(--g-ink-faint)]/20 p-4">
 			<div data-testid="trip-wizard-step4-channels-list" class="space-y-3">
@@ -80,7 +80,7 @@
 					label="SMS"
 					checked={false}
 					disabled
-					hint="demnaechst verfuegbar"
+					hint="demnächst verfügbar"
 					onchange={doNoopSmsToggle}
 					testid="trip-wizard-step4-channel-sms"
 				/>

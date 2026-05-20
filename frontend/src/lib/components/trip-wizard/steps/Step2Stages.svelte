@@ -85,7 +85,7 @@
 	async function commitPending(): Promise<void> {
 		if (pendingFiles.length === 0) return;
 		if (!bulkStartDate) {
-			uploadError = 'Bitte Startdatum waehlen.';
+			uploadError = 'Bitte Startdatum wählen.';
 			return;
 		}
 
@@ -208,7 +208,7 @@
 		data-testid="trip-wizard-step2-dropzone"
 		role="button"
 		tabindex="0"
-		aria-label="GPX-Dateien hierher ziehen oder klicken zum Auswaehlen"
+		aria-label="GPX-Dateien hierher ziehen oder klicken zum Auswählen"
 		class="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
 			{dragOver
 			? 'border-[var(--g-accent)] bg-[var(--g-accent)]/5'
@@ -221,7 +221,7 @@
 	>
 		<Upload class="mx-auto mb-2 size-8 text-[var(--g-ink-faint)]" />
 		<p class="font-medium">GPX-Dateien hierher ziehen</p>
-		<p class="text-sm text-[var(--g-ink-faint)] mt-1">oder klicken zum Auswaehlen</p>
+		<p class="text-sm text-[var(--g-ink-faint)] mt-1">oder klicken zum Auswählen</p>
 		<input
 			bind:this={fileInputEl}
 			type="file"
@@ -239,7 +239,7 @@
 			class="rounded-md border border-[var(--g-ink-faint)]/30 p-4 space-y-3 bg-[var(--g-ink-faint)]/5"
 		>
 			<p class="text-sm" data-testid="trip-wizard-step2-pending-count">
-				{pendingFiles.length} Datei(en) ausgewaehlt
+				{pendingFiles.length} Datei(en) ausgewählt
 			</p>
 			<div class="flex flex-col gap-2 sm:flex-row sm:items-center">
 				<label class="sm:w-32 text-sm" for="bulk-stage-start-date">Startdatum</label>
@@ -306,7 +306,7 @@
 							data-testid="trip-wizard-step2-pause-after-{i}"
 							onclick={makePauseInsertHandler(i)}
 							class="opacity-0 hover:opacity-100 focus-visible:opacity-100 transition-opacity inline-flex items-center gap-1 rounded-full border border-[var(--g-ink-faint)]/30 bg-white/60 px-2 py-0.5 text-xs text-[var(--g-ink-faint)]"
-							aria-label="Pausentag nach dieser Etappe einfuegen"
+							aria-label="Pausentag nach dieser Etappe einfügen"
 						>
 							<Plus class="size-3" />
 							Pause
