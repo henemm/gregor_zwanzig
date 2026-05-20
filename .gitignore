@@ -53,6 +53,7 @@ data/users/default/alert_throttle.json
 data/users/default/command_log.json
 data/users/default/password_reset.json
 data/users/default/gpx/
+data/users/default/locations/
 data/users/__test_*/
 data/users/test_*/
 data/users/csrf_test_*/
