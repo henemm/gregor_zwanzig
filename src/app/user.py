@@ -133,6 +133,10 @@ class CompareSubscription:
     send_telegram: bool = False
     display_config: Optional["UnifiedWeatherDisplayConfig"] = None
     activity_profile: Optional[ActivityProfile] = None
+    # Issue #252 — per-Subscription Empfaenger & Lauf-Status
+    recipients: List[str] = field(default_factory=list)
+    last_run: Optional[str] = None    # ISO-8601 string, None wenn noch nie gelaufen
+    last_status: Optional[str] = None  # "ok" | "error" | None
 
 
 @dataclass

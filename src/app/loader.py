@@ -98,6 +98,9 @@ class LoaderError(Exception):
     pass
 
 
+_DATA_ROOT: str | None = None
+
+
 def load_trip(source: Union[str, Path, Dict[str, Any]]) -> Trip:
     """
     Load a Trip from a JSON file or a dict.
@@ -797,7 +800,15 @@ def delete_trip(trip_id: str, user_id: str = "default") -> None:
 # =============================================================================
 
 def get_compare_subscriptions_file(user_id: str = "default") -> Path:
-    """Get the compare subscriptions file path for a user."""
+    """Get the compare subscriptions file path for a user.
+
+    Honors module-level _DATA_ROOT override (used in tests). When set, the
+    path becomes `{_DATA_ROOT}/users/{user_id}/compare_subscriptions.json`.
+    """
+    import sys as _sys
+    _root = getattr(_sys.modules[__name__], "_DATA_ROOT", None)
+    if _root:
+        return Path(_root) / "users" / user_id / "compare_subscriptions.json"
     return get_data_dir(user_id) / "compare_subscriptions.json"
 
 
@@ -859,6 +870,9 @@ def load_compare_subscriptions(user_id: str = "default") -> List[CompareSubscrip
             send_telegram=sub_data.get("send_telegram", False),
             display_config=_parse_display_config(sub_data["display_config"]) if sub_data.get("display_config") else None,
             activity_profile=_parse_activity_profile(sub_data.get("activity_profile")),
+            recipients=sub_data.get("recipients", []),
+            last_run=sub_data.get("last_run"),
+            last_status=sub_data.get("last_status"),
         ))
     return subscriptions
 
@@ -900,6 +914,13 @@ def save_compare_subscriptions(
         }
         if sub.activity_profile is not None:
             sub_dict["activity_profile"] = sub.activity_profile.value
+        # Issue #252 — Empfaenger und Lauf-Status (omitempty-Semantik)
+        if sub.recipients:
+            sub_dict["recipients"] = list(sub.recipients)
+        if sub.last_run is not None:
+            sub_dict["last_run"] = sub.last_run
+        if sub.last_status is not None:
+            sub_dict["last_status"] = sub.last_status
         if sub.display_config is not None:
             dc = sub.display_config
             sub_dict["display_config"] = {

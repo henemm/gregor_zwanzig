@@ -43,6 +43,7 @@
 		subscription?.locations?.filter((l) => l !== '*') ?? []
 	);
 	let activityProfile = $state<ActivityProfile>(subscription?.activity_profile ?? 'allgemein');
+	let recipients = $state(subscription?.recipients?.join(', ') ?? '');
 	let error = $state('');
 
 	function toggleLocation(id: string) {
@@ -88,7 +89,13 @@
 			send_telegram: sendTelegram,
 			locations: allLocations ? ['*'] : selectedLocations,
 			...(subscription?.display_config && { display_config: subscription.display_config }),
-			activity_profile: activityProfile
+			activity_profile: activityProfile,
+			recipients: sendEmail
+				? recipients
+						.split(',')
+						.map((e: string) => e.trim())
+						.filter((e: string) => e.includes('@'))
+				: []
 		};
 		onsave(result);
 	}
@@ -236,6 +243,19 @@
 			/>
 			<Label for="sub-email">E-Mail</Label>
 		</div>
+		{#if sendEmail}
+			<div>
+				<Label for="sub-recipients">E-Mail-Empfänger</Label>
+				<Input
+					id="sub-recipients"
+					placeholder="email@example.com, andere@example.com"
+					bind:value={recipients}
+				/>
+				<p class="text-xs text-muted-foreground mt-1">
+					Leer lassen für Standard-Empfänger. Komma-getrennt für mehrere.
+				</p>
+			</div>
+		{/if}
 		<div class="flex items-center gap-3">
 			<input
 				id="sub-signal"

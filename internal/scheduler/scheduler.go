@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/henemm/gregor-api/internal/config"
+	"github.com/henemm/gregor-api/internal/model"
 	"github.com/henemm/gregor-api/internal/notify"
 	"github.com/henemm/gregor-api/internal/store"
 	"github.com/robfig/cron/v3"
@@ -323,8 +324,58 @@ func (s *Scheduler) Status() map[string]any {
 		jobs = append(jobs, job)
 	}
 	return map[string]any{
-		"running":  true,
-		"jobs":     jobs,
-		"timezone": s.cron.Location().String(),
+		"running":               true,
+		"jobs":                  jobs,
+		"compare_subscriptions": s.buildCompareSubscriptionsStatus(),
+		"timezone":              s.cron.Location().String(),
 	}
+}
+
+// buildCompareSubscriptionsStatus returns id, name, enabled, last_run, last_status
+// for every subscription across every registered user. Issue #252 §5.
+func (s *Scheduler) buildCompareSubscriptionsStatus() []map[string]any {
+	result := []map[string]any{}
+	if s.store == nil {
+		return result
+	}
+
+	seen := map[string]bool{}
+	addSubs := func(subs []model.CompareSubscription) {
+		for _, sub := range subs {
+			if seen[sub.ID] {
+				continue
+			}
+			seen[sub.ID] = true
+			entry := map[string]any{
+				"id":          sub.ID,
+				"name":        sub.Name,
+				"enabled":     sub.Enabled,
+				"last_status": sub.LastStatus,
+			}
+			if sub.LastRun != nil {
+				entry["last_run"] = sub.LastRun.Format(time.RFC3339)
+			} else {
+				entry["last_run"] = nil
+			}
+			result = append(result, entry)
+		}
+	}
+
+	userIDs, err := s.store.ListUserIDs()
+	if err == nil {
+		for _, uid := range userIDs {
+			us := s.store.WithUser(uid)
+			if subs, lerr := us.LoadSubscriptions(); lerr == nil {
+				addSubs(subs)
+			}
+		}
+	}
+
+	// Fallback: store's currently scoped user (single-user setups / tests that
+	// seed via SaveSubscription without provisioning user.json).
+	if subs, lerr := s.store.LoadSubscriptions(); lerr == nil {
+		addSubs(subs)
+	}
+
+	return result
 }

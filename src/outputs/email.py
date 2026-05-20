@@ -78,6 +78,7 @@ class EmailOutput:
         body: str,
         html: bool = True,
         plain_text_body: str | None = None,
+        to: list[str] | None = None,
     ) -> None:
         """
         Send email via SMTP with automatic retry on network errors.
@@ -103,11 +104,16 @@ class EmailOutput:
         # Use inbound address as From if set (Gmail supports plus-addresses)
         from_addr = self._reply_to or self._from
 
+        # Issue #252: per-call recipient override.
+        # `to` may be a list of addresses; falsy/empty falls back to settings.mail_to.
+        recipients: list[str] = list(to) if to else [self._to]
+        to_header = ", ".join(recipients)
+
         if html:
             msg = MIMEMultipart("alternative")
             msg["Subject"] = subject
             msg["From"] = from_addr
-            msg["To"] = self._to
+            msg["To"] = to_header
             if self._reply_to:
                 msg["Reply-To"] = self._reply_to
 
@@ -137,7 +143,7 @@ class EmailOutput:
             msg = MIMEText(body, "plain", "utf-8")
             msg["Subject"] = subject
             msg["From"] = from_addr
-            msg["To"] = self._to
+            msg["To"] = to_header
             if self._reply_to:
                 msg["Reply-To"] = self._reply_to
 
@@ -151,7 +157,7 @@ class EmailOutput:
                 with smtplib.SMTP(self._host, self._port) as server:
                     server.starttls()
                     server.login(self._user, self._password)
-                    server.sendmail(from_addr, [self._to], msg.as_string())
+                    server.sendmail(from_addr, recipients, msg.as_string())
 
                 # Success - log if this was after retry
                 if attempt > 0:

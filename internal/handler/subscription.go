@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/henemm/gregor-api/internal/middleware"
@@ -195,6 +196,68 @@ func UpdateSubscriptionHandler(s *store.Store) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(sub)
+	}
+}
+
+// PatchSubscriptionRunStatusHandler updates only last_run + last_status on an
+// existing subscription. Read-Modify-Write — all other fields preserved.
+// Issue #252 §2. Route: PATCH /api/subscriptions/{id}/run-status.
+func PatchSubscriptionRunStatusHandler(s *store.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
+		id := chi.URLParam(r, "id")
+
+		existing, err := s.LoadSubscription(id)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(`{"error":"store_error"}`))
+			return
+		}
+		if existing == nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte(`{"error":"not_found"}`))
+			return
+		}
+
+		var patch struct {
+			LastRun    string `json:"last_run"`
+			LastStatus string `json:"last_status"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&patch); err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(`{"error":"bad_request"}`))
+			return
+		}
+
+		if patch.LastRun != "" {
+			t, perr := time.Parse(time.RFC3339, patch.LastRun)
+			if perr != nil {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusBadRequest)
+				json.NewEncoder(w).Encode(map[string]string{
+					"error":  "bad_request",
+					"detail": "last_run must be RFC3339",
+				})
+				return
+			}
+			existing.LastRun = &t
+		}
+		if patch.LastStatus != "" {
+			existing.LastStatus = patch.LastStatus
+		}
+
+		if err := s.SaveSubscription(*existing); err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(`{"error":"store_error"}`))
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(existing)
 	}
 }
 

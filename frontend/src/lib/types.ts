@@ -173,6 +173,10 @@ export interface Subscription {
 	send_telegram: boolean;
 	display_config?: Record<string, unknown>;
 	activity_profile?: ActivityProfile;
+	// Issue #252 — per-Subscription Empfaenger + Lauf-Status (additiv)
+	recipients?: string[];
+	last_run?: string;     // ISO-8601
+	last_status?: string;  // "ok" | "error"
 }
 
 export interface HealthResponse {

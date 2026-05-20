@@ -81,6 +81,8 @@ def trigger_inbound():
 
 def _run_subscriptions_by_schedule(schedule, user_id: str = "default") -> int:
     """Run all subscriptions matching the given schedule. Returns count."""
+    from datetime import datetime
+
     from app.config import Settings
     from app.loader import load_all_locations, load_compare_subscriptions
     from services.compare_subscription import run_comparison_for_subscription
@@ -99,8 +101,22 @@ def _run_subscriptions_by_schedule(schedule, user_id: str = "default") -> int:
                 _send_subscription(sub, subject, html_body, text_body, settings)
                 count += 1
                 success_count += 1
+                # Issue #252 — Lauf-Status nach Erfolg zurueckschreiben
+                sub.last_run = datetime.utcnow().isoformat() + "Z"
+                sub.last_status = "ok"
+                try:
+                    _save_subscription(user_id, sub)
+                except Exception as save_err:
+                    logger.error(f"Failed to persist run-status for {sub.name}: {save_err}")
             except Exception as e:
                 logger.error(f"Failed subscription {sub.name}: {e}")
+                # Issue #252 — auch Fehler-Status zurueckschreiben
+                sub.last_run = datetime.utcnow().isoformat() + "Z"
+                sub.last_status = "error"
+                try:
+                    _save_subscription(user_id, sub)
+                except Exception as save_err:
+                    logger.error(f"Failed to persist error-status for {sub.name}: {save_err}")
 
     if success_count > 0:
         _ping_heartbeat_compare()
@@ -133,8 +149,20 @@ def _run_weekly_subscriptions(user_id: str = "default") -> int:
                     _send_subscription(sub, subject, html_body, text_body, settings)
                     count += 1
                     success_count += 1
+                    sub.last_run = datetime.utcnow().isoformat() + "Z"
+                    sub.last_status = "ok"
+                    try:
+                        _save_subscription(user_id, sub)
+                    except Exception as save_err:
+                        logger.error(f"Failed to persist weekly run-status for {sub.name}: {save_err}")
                 except Exception as e:
                     logger.error(f"Failed weekly subscription {sub.name}: {e}")
+                    sub.last_run = datetime.utcnow().isoformat() + "Z"
+                    sub.last_status = "error"
+                    try:
+                        _save_subscription(user_id, sub)
+                    except Exception as save_err:
+                        logger.error(f"Failed to persist weekly error-status for {sub.name}: {save_err}")
 
     if success_count > 0:
         _ping_heartbeat_compare()
@@ -148,7 +176,14 @@ def _send_subscription(sub, subject: str, html_body: str, text_body: str, settin
         if settings.can_send_email():
             from outputs.email import EmailOutput
 
-            EmailOutput(settings).send(subject, html_body, plain_text_body=text_body)
+            # Issue #252: per-Subscription recipients override settings.mail_to
+            to_list = list(sub.recipients) if getattr(sub, "recipients", None) else None
+            EmailOutput(settings).send(
+                subject,
+                html_body,
+                plain_text_body=text_body,
+                to=to_list,
+            )
             logger.info(f"Email sent for: {sub.name}")
         else:
             logger.error(f"Email requested but SMTP not configured: {sub.name}")
@@ -176,6 +211,62 @@ def _send_subscription(sub, subject: str, html_body: str, text_body: str, settin
                 logger.error(f"Telegram failed for {sub.name}: {e}")
         else:
             logger.warning(f"Telegram requested but not configured: {sub.name}")
+
+
+def _save_subscription(user_id: str, sub, data_root: str | None = None) -> None:
+    """Read-modify-write last_run/last_status for a single subscription.
+
+    Issue #252 — Scheduler persists run-status directly in the JSON store
+    (no HTTP call to the Go API, because the Go endpoint requires cookie-auth
+    that the scheduler doesn't have).
+
+    Only `last_run` and `last_status` are overwritten; every other field of the
+    existing JSON entry is preserved (Read-Modify-Write per
+    BUG-DATALOSS-GR221 / data_schema_backup contract).
+
+    Args:
+        user_id: User identifier (subscription file is per-user).
+        sub: CompareSubscription whose last_run / last_status will be written.
+        data_root: Optional override of the data root for tests
+            (`{data_root}/users/{user_id}/compare_subscriptions.json`).
+            Default `None` resolves to `data/users/{user_id}/...`.
+    """
+    import json as _json
+    import os as _os
+
+    base = data_root if data_root else "data"
+    path = _os.path.join(base, "users", user_id, "compare_subscriptions.json")
+    if not _os.path.exists(path):
+        logger.warning("Subscription file not found, cannot persist status: %s", path)
+        return
+
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            payload = _json.load(f)
+    except (OSError, _json.JSONDecodeError) as e:
+        logger.error("Failed to read subscription file %s: %s", path, e)
+        return
+
+    subs = payload.get("subscriptions", [])
+    updated = False
+    for entry in subs:
+        if entry.get("id") == sub.id:
+            if sub.last_run is not None:
+                entry["last_run"] = sub.last_run
+            if sub.last_status is not None:
+                entry["last_status"] = sub.last_status
+            updated = True
+            break
+
+    if not updated:
+        logger.warning("Subscription id %r not found in %s", sub.id, path)
+        return
+
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            _json.dump(payload, f, indent=2, ensure_ascii=False)
+    except OSError as e:
+        logger.error("Failed to write subscription file %s: %s", path, e)
 
 
 def _ping_heartbeat_compare() -> None:

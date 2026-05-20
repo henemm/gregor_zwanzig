@@ -104,6 +104,7 @@ func main() {
 	r.Get("/api/subscriptions/{id}", handler.SubscriptionHandler(s))
 	r.Post("/api/subscriptions", handler.CreateSubscriptionHandler(s))
 	r.Put("/api/subscriptions/{id}", handler.UpdateSubscriptionHandler(s))
+	r.Patch("/api/subscriptions/{id}/run-status", handler.PatchSubscriptionRunStatusHandler(s))
 	r.Delete("/api/subscriptions/{id}", handler.DeleteSubscriptionHandler(s))
 	r.Get("/api/trips/{id}/weather-config", handler.GetTripWeatherConfigHandler(s))
 	r.Put("/api/trips/{id}/weather-config", handler.PutTripWeatherConfigHandler(s))
