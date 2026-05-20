@@ -3,7 +3,7 @@ entity_id: issue_266_location_preview_map
 type: module
 created: 2026-05-20
 updated: 2026-05-20
-status: draft
+status: approved
 version: "1.0"
 tags: [frontend, compare, ui, map]
 ---
@@ -12,7 +12,7 @@ tags: [frontend, compare, ui, map]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved
 
 ## Purpose
 
