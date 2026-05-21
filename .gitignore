@@ -92,3 +92,4 @@ test-results/
 
 # bug89 test sandbox data
 data/users/__*/
+*.zip
