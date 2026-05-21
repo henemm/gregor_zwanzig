@@ -4,7 +4,6 @@
 	import { goto } from '$app/navigation';
 	import { Btn } from '$lib/components/ui/btn/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
-	import { Badge } from '$lib/components/ui/badge/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import WeatherConfigDialog from '$lib/components/WeatherConfigDialog.svelte';
@@ -19,6 +18,7 @@
 	import { Dot } from '$lib/components/ui/dot';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { Select } from '$lib/components/ui/select';
+	import { Eyebrow } from '$lib/components/ui/eyebrow/index.js';
 	import { deriveTripStatus } from '$lib/utils/tripStatus';
 
 	const now = new Date();
@@ -75,12 +75,45 @@
 	// Mobile Action Sheet (Issue #268)
 	let sheetTrip: Trip | null = $state(null);
 
+	// Bug #295: Kebab-Menü State
+	let kebabOpenId: string | null = $state(null);
+	let primaryActionLoading: string | null = $state(null);
+
 	function statusTone(trip: Trip): 'success' | 'info' | 'warning' | 'danger' {
 		const status = deriveTripStatus(trip, now);
 		if (status === 'active') return 'success';
 		if (status === 'planned') return 'info';
 		if (status === 'paused') return 'warning';
 		return 'danger';
+	}
+
+	function primaryLabel(trip: Trip): string {
+		const s = deriveTripStatus(trip, now);
+		if (s === 'active' || s === 'planned') return 'Briefing-Vorschau';
+		if (s === 'paused') return 'Reaktivieren';
+		return 'Dearchivieren';
+	}
+
+	async function handlePrimaryAction(trip: Trip) {
+		const s = deriveTripStatus(trip, now);
+		if (s === 'active' || s === 'planned') {
+			goto(`/trips/${trip.id}#preview`);
+			return;
+		}
+		primaryActionLoading = trip.id;
+		try {
+			const res = await fetch(`/api/trips/${trip.id}/state`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(s === 'paused' ? { paused: false } : { archived: false })
+			});
+			if (!res.ok) throw new Error(`PATCH failed: ${res.status}`);
+			await refetchTrips();
+		} catch (e: unknown) {
+			error = (e as Error).message ?? 'Fehler beim Statuswechsel';
+		} finally {
+			primaryActionLoading = null;
+		}
 	}
 
 	function dateRange(trip: Trip): string {
@@ -225,11 +258,39 @@
 	}
 </script>
 
+<svelte:window
+	onkeydown={(e: KeyboardEvent) => {
+		if (e.key === 'Escape' && kebabOpenId !== null) kebabOpenId = null;
+	}}
+/>
+
 <div class="space-y-4">
-	<div class="flex items-center justify-between">
-		<h1 class="text-2xl font-bold">Trips</h1>
+	<div class="flex items-start justify-between gap-4">
+		<div>
+			<Eyebrow>WORKSPACE · TOUREN</Eyebrow>
+			<h1 class="text-3xl font-semibold tracking-tight mt-1">Trips</h1>
+			<p class="text-sm text-muted-foreground mt-1">Alle Touren auf einen Blick — Status, Zeitraum und Aktionen.</p>
+		</div>
 		<Btn variant="accent" onclick={() => goto('/trips/new')}>Neuer Trip</Btn>
 	</div>
+
+	{#if trips.length > 0}
+		<div class="hidden desktop:flex items-center gap-6 pb-3 border-b border-muted">
+			{#each [
+				{ label: 'Aktiv',      status: 'active',   tone: 'success' as const },
+				{ label: 'Geplant',    status: 'planned',  tone: 'info'    as const },
+				{ label: 'Pausiert',   status: 'paused',   tone: 'warning' as const },
+				{ label: 'Archiviert', status: 'archived', tone: 'danger'  as const },
+			] as stat}
+				{@const count = trips.filter(t => deriveTripStatus(t, now) === stat.status).length}
+				<div class="flex items-center gap-1.5 text-sm">
+					<Dot tone={stat.tone} size="sm" />
+					<span class="font-mono tabular-nums">{count}</span>
+					<div class="text-muted-foreground">{stat.label}</div>
+				</div>
+			{/each}
+		</div>
+	{/if}
 
 	{#if error}
 		<p class="text-sm text-destructive">{error}</p>
@@ -243,9 +304,9 @@
 			<Btn variant="outline" class="mt-4" onclick={() => goto('/trips/new')}>Ersten Trip erstellen</Btn>
 		</div>
 	{:else}
-		<div class="relative mb-3 max-w-xs">
+		<div class="relative mb-3 max-w-[380px]">
 			<SearchIcon class="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-			<Input placeholder="Suchen..." class="pl-8" bind:value={search} />
+			<Input placeholder="Suchen..." class="pl-8 rounded-full" bind:value={search} />
 		</div>
 		{#if refetching}
 			<div class="space-y-3">
@@ -285,7 +346,6 @@
 			<Table.Header>
 				<Table.Row>
 					<Table.Head>Name</Table.Head>
-					<Table.Head class="hidden sm:table-cell">Etappen</Table.Head>
 					<Table.Head class="hidden sm:table-cell">Zeitraum</Table.Head>
 					<Table.Head class="text-right">Aktionen</Table.Head>
 				</Table.Row>
@@ -293,27 +353,78 @@
 			<Table.Body>
 				{#each filteredTrips as trip}
 					<Table.Row>
-						<Table.Cell class="font-medium">{trip.name}</Table.Cell>
-						<Table.Cell class="hidden sm:table-cell">
-							<Badge variant="secondary">{trip.stages.length} Etappen</Badge>
+						<Table.Cell>
+							<div class="flex flex-col min-w-0">
+								<a href="/trips/{trip.id}" class="font-medium truncate hover:underline decoration-[var(--g-accent)] underline-offset-2">
+									{trip.name}
+								</a>
+								<span class="font-mono text-xs text-muted-foreground tabular-nums">
+									{trip.stages?.length ?? 0} Etappen
+								</span>
+							</div>
 						</Table.Cell>
-						<Table.Cell class="hidden sm:table-cell text-sm text-muted-foreground">{dateRange(trip)}</Table.Cell>
+						<Table.Cell class="hidden sm:table-cell font-mono tabular-nums text-sm text-muted-foreground">
+							{dateRange(trip)}
+						</Table.Cell>
 						<Table.Cell class="text-right">
-							<div class="inline-flex flex-wrap justify-end gap-3">
-								<!-- Edit-Gruppe (3 Icons) -->
-								<div class="inline-flex gap-0.5">
-									<Btn variant="outline" size="icon-sm" title="Report-Konfiguration" onclick={() => openReportConfig(trip)}><BellIcon class="size-3.5" /></Btn>
-									<Btn variant="outline" size="icon-sm" title="Wetter-Konfiguration" onclick={() => (weatherConfigTarget = trip)}><CloudSunIcon class="size-3.5" /></Btn>
-									<Btn data-testid="trip-edit-btn" variant="ghost" size="icon-sm" title="Bearbeiten" onclick={() => openEdit(trip)}><PencilIcon class="size-3.5" /></Btn>
-								</div>
-								<!-- Send-Gruppe (2 Icons, nur >= sm) -->
-								<div class="hidden sm:inline-flex gap-0.5">
-									<Btn variant="outline" size="icon-sm" title="Test Morgen-Report" onclick={() => runTestReport(trip, 7)}><PlayIcon class="size-3.5" /></Btn>
-									<Btn variant="outline" size="icon-sm" title="Test Abend-Report" onclick={() => runTestReport(trip, 18)}><PlayIcon class="size-3.5" /></Btn>
-								</div>
-								<!-- Delete-Gruppe (1 Icon, nur >= sm) -->
-								<div class="hidden sm:inline-flex gap-0.5">
-									<Btn variant="ghost" size="icon-sm" title="Löschen" onclick={() => (deleteTarget = trip)}><Trash2Icon class="size-3.5" /></Btn>
+							<div class="inline-flex items-center gap-2">
+								<Btn
+									variant="outline"
+									size="sm"
+									onclick={() => handlePrimaryAction(trip)}
+									disabled={primaryActionLoading === trip.id}
+								>{primaryLabel(trip)}</Btn>
+								<div class="relative">
+									<Btn
+										variant="ghost"
+										size="icon-sm"
+										title="Weitere Aktionen"
+										aria-label="Weitere Aktionen"
+										onclick={(e: MouseEvent) => {
+											e.stopPropagation();
+											kebabOpenId = kebabOpenId === trip.id ? null : trip.id;
+										}}
+									>⋯</Btn>
+									{#if kebabOpenId === trip.id}
+										<div
+											role="menu"
+											class="absolute right-0 top-full mt-1 z-50 min-w-[200px] rounded-md border bg-popover shadow-md py-1"
+											tabindex="-1"
+											onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') kebabOpenId = null; }}
+											onfocusout={(e: FocusEvent) => {
+												if (!(e.currentTarget as Element).contains(e.relatedTarget as Node)) {
+													kebabOpenId = null;
+												}
+											}}
+										>
+											<button
+												data-testid="trip-edit-btn"
+												class="w-full text-left px-3 py-1.5 text-sm hover:bg-muted"
+												onclick={() => { kebabOpenId = null; openEdit(trip); }}
+											>Bearbeiten</button>
+											<button
+												class="w-full text-left px-3 py-1.5 text-sm hover:bg-muted"
+												onclick={() => { kebabOpenId = null; runTestReport(trip, 7); }}
+											>Test-Briefing Morgen</button>
+											<button
+												class="w-full text-left px-3 py-1.5 text-sm hover:bg-muted"
+												onclick={() => { kebabOpenId = null; runTestReport(trip, 18); }}
+											>Test-Briefing Abend</button>
+											<button
+												class="w-full text-left px-3 py-1.5 text-sm hover:bg-muted"
+												onclick={() => { kebabOpenId = null; weatherConfigTarget = trip; }}
+											>Wetter-Konfiguration</button>
+											<button
+												class="w-full text-left px-3 py-1.5 text-sm hover:bg-muted"
+												onclick={() => { kebabOpenId = null; openReportConfig(trip); }}
+											>Report-Konfiguration</button>
+											<hr class="my-1 border-border" />
+											<button
+												class="w-full text-left px-3 py-1.5 text-sm text-destructive hover:bg-muted"
+												onclick={() => { kebabOpenId = null; deleteTarget = trip; }}
+											>Löschen</button>
+										</div>
+									{/if}
 								</div>
 							</div>
 						</Table.Cell>
@@ -321,6 +432,9 @@
 				{/each}
 			</Table.Body>
 		</Table.Root>
+		<p class="hidden desktop:block mt-2 font-mono text-xs uppercase tracking-wide text-muted-foreground">
+			{filteredTrips.length} von {trips.length} Trips
+		</p>
 		</div>
 		{/if}
 	{/if}

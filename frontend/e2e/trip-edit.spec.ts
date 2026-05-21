@@ -21,6 +21,8 @@ async function gotoSeedEdit(page: import('@playwright/test').Page) {
 	await page.goto('/trips');
 	const row = page.locator(`tr:has-text("${SEED_TRIP_NAME}")`).first();
 	await expect(row).toBeVisible();
+	// trip-edit-btn liegt im Kebab-Menü (#295)
+	await row.getByTitle('Weitere Aktionen').click();
 	await row.locator('[data-testid="trip-edit-btn"]').click();
 	await page.waitForURL(/\/trips\/[^/]+\/edit/);
 }
@@ -150,6 +152,8 @@ test.describe('Trip Edit View (Issue #91)', () => {
 		await page.goto('/trips');
 		const seedRow = page.locator(`tr:has-text("${SEED_TRIP_NAME}")`).first();
 		await expect(seedRow).toBeVisible();
+		// trip-edit-btn liegt im Kebab-Menü (#295)
+		await seedRow.getByTitle('Weitere Aktionen').click();
 		await seedRow.locator('[data-testid="trip-edit-btn"]').click();
 		await page.waitForURL(/\/trips\/[^/]+\/edit/);
 

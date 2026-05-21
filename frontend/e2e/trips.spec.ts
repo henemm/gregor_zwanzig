@@ -39,7 +39,11 @@ test.describe('Trips Page (M3a)', () => {
 			test.skip();
 			return;
 		}
-		const tripName = await firstRow.locator('td').first().textContent();
+		const tripName = await firstRow.locator('td a').first().textContent()
+			?? await firstRow.locator('td').first().textContent();
+		// Löschen liegt im Kebab-Menü (#295)
+		const kebabBtn = firstRow.getByTitle('Weitere Aktionen');
+		await kebabBtn.click();
 		const deleteBtn = firstRow.getByRole('button', { name: 'Löschen' });
 		await deleteBtn.click();
 
