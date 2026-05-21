@@ -546,8 +546,16 @@ def cmd_status(args: list[str]) -> None:
     spec = data.get("spec_file") or "Not created"
     test_artifacts = data.get("test_artifacts") or []
     env_source = os.environ.get("GZ_ACTIVE_WORKFLOW", "").strip()
-    source_label = f"env:GZ_ACTIVE_WORKFLOW={env_source}" if env_source == name else ".active symlink"
+    using_env = env_source == name
+    source_label = f"env:GZ_ACTIVE_WORKFLOW={env_source}" if using_env else ".active symlink"
     print(f"Workflow: {name}  [{source_label}]")
+    if not using_env and _active_link().is_symlink():
+        print(
+            f"WARNING: GZ_ACTIVE_WORKFLOW is not set — workflow resolved via .active symlink.\n"
+            f"  Parallel sessions will compete for the symlink. To pin this session:\n"
+            f"  export GZ_ACTIVE_WORKFLOW={name}",
+            file=sys.stderr,
+        )
     print(f"Phase: {phase_name}")
     print(f"Spec: {spec}")
     print(f"Approved: {'Yes' if data.get('spec_approved') else 'No'}")
@@ -957,6 +965,44 @@ def cmd_cleanup(args: list[str]) -> None:
             pass
 
 
+def cmd_clear_stale_lock(args: list[str]) -> None:
+    """Remove a dangling or mismatched .active symlink.
+
+    Cases handled:
+    - Dangling symlink (target .json missing) → always removed.
+    - GZ_ACTIVE_WORKFLOW set and differs from symlink target → removed with explanation.
+    - Symlink matches env var (or no env var, symlink valid) → no action, prints status.
+    """
+    link = _active_link()
+    if not link.is_symlink():
+        print("No .active symlink found — nothing to clear.")
+        return
+
+    target = os.readlink(str(link))
+    target_name = Path(target).stem
+    target_path = link.parent / target
+
+    env_name = os.environ.get("GZ_ACTIVE_WORKFLOW", "").strip()
+
+    if not target_path.exists():
+        link.unlink()
+        print(f"Removed dangling .active symlink (target '{target}' did not exist).")
+        return
+
+    if env_name and env_name != target_name:
+        link.unlink()
+        print(
+            f"Removed stale .active symlink: pointed to '{target_name}', "
+            f"but GZ_ACTIVE_WORKFLOW='{env_name}' is set in this session."
+        )
+        return
+
+    print(
+        f".active symlink is valid → '{target_name}'"
+        + (f"  (matches GZ_ACTIVE_WORKFLOW)" if env_name == target_name else "")
+    )
+
+
 COMMANDS = {
     "start": cmd_start,
     "switch": cmd_switch,
@@ -977,6 +1023,7 @@ COMMANDS = {
     "backlog": cmd_backlog,
     "pause": cmd_pause,
     "reset": cmd_reset,
+    "clear-stale-lock": cmd_clear_stale_lock,
 }
 
 

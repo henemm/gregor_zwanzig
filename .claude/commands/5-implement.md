@@ -23,11 +23,28 @@ python3 .claude/hooks/workflow_state_multi.py status
 
 ## Your Tasks
 
+### 0. Workflow-Name pinnen (ZUERST — vor allem anderen!)
+
+**Noch bevor du irgendeinen anderen Befehl ausfuehrst**, lese den aktiven Workflow-Namen:
+
+```bash
+python3 .claude/hooks/workflow.py status
+```
+
+Notiere den `Workflow:`-Wert (z.B. `issue_294_home_kachel`).
+Verwende **ab jetzt fuer ALLE** `workflow.py`-Aufrufe diesen Workflow explizit als Prefix:
+
+```bash
+GZ_ACTIVE_WORKFLOW=<name> python3 .claude/hooks/workflow.py <command>
+```
+
+Damit arbeitet diese Session unveraenderlich auf dem richtigen Workflow — auch wenn ein anderes Fenster den `.active`-Symlink zwischendurch umbeansprucht.
+
 ### 1. Verify RED Phase Complete
 
 ```bash
-python3 -c "
-import sys; sys.path.insert(0, '.claude/hooks')
+GZ_ACTIVE_WORKFLOW=<name> python3 -c "
+import os, sys; os.environ['GZ_ACTIVE_WORKFLOW'] = '<name>'; sys.path.insert(0, '.claude/hooks')
 from workflow_state_multi import get_active_workflow
 
 w = get_active_workflow()
@@ -58,13 +75,26 @@ Agent(subagent_type="Explore", model="haiku", prompt="
 ")
 ```
 
-### 3. Delegate to Developer Agent (Opus, Worktree)
+### 3. Workflow-Name für Developer Agent ermitteln
 
-**DU implementierst NICHT selbst!** Spawne den Developer Agent:
+Lese den aktiven Workflow-Namen **bevor** du den Agent spawst:
+
+```bash
+python3 .claude/hooks/workflow.py status
+```
+
+Notiere den `Workflow:`-Wert (z.B. `issue_294_home_kachel`). Dieser wird als `GZ_ACTIVE_WORKFLOW` an den Developer Agent übergeben.
+
+### 4. Delegate to Developer Agent (Opus, kein Worktree)
+
+**DU implementierst NICHT selbst!** Spawne den Developer Agent — **OHNE** `isolation="worktree"` (Worktrees kennen den Workflow-State nicht):
 
 ```
-Agent(subagent_type="developer", isolation="worktree", prompt="
+Agent(subagent_type="developer", prompt="
   Implementiere [FEATURE_NAME] nach Spec.
+
+  ## Pflicht: Workflow-Kontext setzen (ZUERST ausführen!)
+  export GZ_ACTIVE_WORKFLOW=[WORKFLOW_NAME]
 
   ## Spec
   Pfad: [SPEC_PATH]
@@ -87,7 +117,7 @@ Agent(subagent_type="developer", isolation="worktree", prompt="
 ")
 ```
 
-### 4. Review Developer-Ergebnis
+### 5. Review Developer-Ergebnis
 
 Wenn der Developer Agent zurueckmeldet:
 1. **Pruefe den Bericht** — Welche Dateien geaendert? Tests gruen?
@@ -96,7 +126,7 @@ Wenn der Developer Agent zurueckmeldet:
 
 **Bei Problemen:** Gib dem Developer Agent Feedback und lass ihn nochmal ran (max 3 Iterationen).
 
-### 5. Capture Artifacts & Update State
+### 6. Capture Artifacts & Update State
 
 ```bash
 uv run pytest tests/ -v > docs/artifacts/[workflow]/test-green-output.txt 2>&1
@@ -117,7 +147,7 @@ add_test_artifact(active, {
 "
 ```
 
-### 6. User-Freigabe der GREEN-Ergebnisse (PFLICHT)
+### 7. User-Freigabe der GREEN-Ergebnisse (PFLICHT)
 
 **STOP! Du darfst NICHT weitermachen ohne User-Freigabe!**
 
@@ -147,13 +177,13 @@ Sage "go" wenn du mit den Ergebnissen zufrieden bist.
 - Du darfst NICHT "go" simulieren oder die Freigabe umgehen
 - Der User gibt frei mit: "go", "weiter", "tests ok", "green ok"
 
-### 7. Update Workflow State to Adversary Phase
+### 8. Update Workflow State to Adversary Phase
 
 ```bash
-python3 .claude/hooks/workflow_state_multi.py phase phase6b_adversary
+GZ_ACTIVE_WORKFLOW=<name> python3 .claude/hooks/workflow.py phase phase6b_adversary
 ```
 
-### 8. External Validator (MANDATORY)
+### 9. External Validator (MANDATORY)
 
 **Du startest den Validator per Bash — der Output ist fuer den User sichtbar.**
 
@@ -211,7 +241,7 @@ Wenn nach 3 Fix-Loops immer noch Probleme: Eskalation mit allen Findings an den 
 
 **Wenn "go":**
 ```bash
-python3 .claude/hooks/workflow_state_multi.py phase phase7_validate
+GZ_ACTIVE_WORKFLOW=<name> python3 .claude/hooks/workflow.py phase phase7_validate
 ```
 
 #### Warum ist das trotzdem unabhaengig?
