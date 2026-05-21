@@ -63,6 +63,10 @@ export interface AlertRule {
 	unit?: string;
 	severity: AlertSeverity;
 	enabled: boolean;
+	// Issue #297 — Paar-Markierung für mode='both' (gemeinsame UUID).
+	pair_id?: string;
+	// Issue #297 — Zeitfenster für delta-Rules ('1h' | '3h' | '6h' | '12h' | '24h').
+	delta_window?: string;
 }
 
 // Issue #207 — Strukturiertes Typing fuer drei Trip-Konfigurationsfelder.

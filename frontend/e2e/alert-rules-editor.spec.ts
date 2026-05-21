@@ -317,3 +317,123 @@ test.describe('Issue #223: AlertRulesEditor', () => {
 		}
 	});
 });
+
+test.describe('Issue #297: AlertRulesEditor — mode=both mit zwei Threshold-Feldern', () => {
+	test.beforeEach(async ({ page }) => {
+		await login(page);
+	});
+
+	test('AC-3: mode=both zeigt drei separate Felder (abs + delta + zeitfenster)', async ({ page, request }) => {
+		const id = tripId('ac297-3');
+		await createTrip(request, id, [
+			{
+				id: 'r1',
+				kind: 'absolute',
+				metric: 'wind_gust',
+				threshold: 50,
+				unit: 'km/h',
+				severity: 'warning',
+				enabled: true
+			}
+		]);
+		try {
+			await page.goto(`/trips/${id}/edit`);
+			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="alert-rule-edit-btn"]').first().click();
+			await expect(page.locator('[data-testid="alert-rule-edit"]')).toBeVisible();
+			// mode='both' wählen
+			await page.locator('[data-testid="mode-card-both"]').click();
+			// Drei separate Felder müssen erscheinen
+			await expect(page.locator('[data-testid="alert-rule-threshold-abs"]')).toBeVisible();
+			await expect(page.locator('[data-testid="alert-rule-threshold-delta"]')).toBeVisible();
+			await expect(page.locator('[data-testid="alert-rule-delta-window"]')).toBeVisible();
+			// Das generische threshold-Feld darf NICHT vorhanden sein wenn mode='both'
+			await expect(page.locator('[data-testid="alert-rule-threshold"]')).not.toBeVisible();
+		} finally {
+			await deleteTrip(request, id);
+		}
+	});
+
+	test('AC-9: Speichern-Button zeigt "Beide Regeln speichern" bei mode=both', async ({ page, request }) => {
+		const id = tripId('ac297-9');
+		await createTrip(request, id, [
+			{
+				id: 'r1',
+				kind: 'absolute',
+				metric: 'wind_gust',
+				threshold: 50,
+				unit: 'km/h',
+				severity: 'warning',
+				enabled: true
+			}
+		]);
+		try {
+			await page.goto(`/trips/${id}/edit`);
+			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="alert-rule-edit-btn"]').first().click();
+			// Erst Speichern-Button bei mode='absolute' prüfen
+			await expect(page.locator('[data-testid="alert-rule-save"]')).toContainText('Speichern');
+			await expect(page.locator('[data-testid="alert-rule-save"]')).not.toContainText('Beide Regeln speichern');
+			// mode='both' wählen
+			await page.locator('[data-testid="mode-card-both"]').click();
+			// Button-Label muss sich ändern
+			await expect(page.locator('[data-testid="alert-rule-save"]')).toContainText('Beide Regeln speichern');
+		} finally {
+			await deleteTrip(request, id);
+		}
+	});
+
+	test('AC-10: Nach Speichern mit mode=both erscheint pair-indicator bei zweiter Rule', async ({ page, request }) => {
+		const id = tripId('ac297-10');
+		await createTrip(request, id, []);
+		try {
+			await page.goto(`/trips/${id}/edit`);
+			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			// Neue Rule hinzufügen
+			await page.locator('[data-testid="alert-rules-editor-add"]').click();
+			await page.locator('[data-testid="alert-rule-edit-btn"]').first().click();
+			// mode='both' wählen
+			await page.locator('[data-testid="mode-card-both"]').click();
+			// Threshold-Felder füllen
+			await page.locator('[data-testid="alert-rule-threshold-abs"]').fill('80');
+			await page.locator('[data-testid="alert-rule-threshold-delta"]').fill('30');
+			// Speichern
+			await page.locator('[data-testid="alert-rule-save"]').click();
+			// Zwei Zeilen müssen erscheinen
+			await expect(page.locator('[data-testid="alert-rule-row"]')).toHaveCount(2);
+			// Zweite Zeile hat pair-indicator
+			await expect(page.locator('[data-testid="pair-indicator"]')).toHaveCount(1);
+			await expect(page.locator('[data-testid="alert-rule-row"]').nth(1).locator('[data-testid="pair-indicator"]')).toBeVisible();
+		} finally {
+			await deleteTrip(request, id);
+		}
+	});
+
+	test('AC-4: ModeCard "Beides" zeigt Badge "3 Felder"', async ({ page, request }) => {
+		const id = tripId('ac297-4');
+		await createTrip(request, id, [
+			{
+				id: 'r1',
+				kind: 'absolute',
+				metric: 'wind_gust',
+				threshold: 50,
+				unit: 'km/h',
+				severity: 'warning',
+				enabled: true
+			}
+		]);
+		try {
+			await page.goto(`/trips/${id}/edit`);
+			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="alert-rule-edit-btn"]').first().click();
+			// ModeCard 'both' muss Badge "3 Felder" zeigen
+			await expect(page.locator('[data-testid="mode-card-badge-both"]')).toBeVisible();
+			await expect(page.locator('[data-testid="mode-card-badge-both"]')).toContainText('3 Felder');
+			// Auch die anderen ModeCards prüfen
+			await expect(page.locator('[data-testid="mode-card-badge-absolute"]')).toContainText('1 Feld');
+			await expect(page.locator('[data-testid="mode-card-badge-delta"]')).toContainText('2 Felder');
+		} finally {
+			await deleteTrip(request, id);
+		}
+	});
+});

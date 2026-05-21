@@ -199,6 +199,7 @@ Alle Module benoetigen Specs vor Implementierung:
 - `bug_282_295_trips_list_redesign` - Trips-Liste Desktop Redesign: Eyebrow + H1-Typografie + Summary-Stats-Strip mit 4 Status-Zählern (Aktiv/Geplant/Pausiert/Archiviert), Search-Input mit rounded-full, Trip-Name als anklickbarer Link, Aktionsspalte mit Primary-Button (status-abhängig: "Briefing-Vorschau" / "Reaktivieren" / "Dearchivieren") + Kebab-Dropdown mit 6 Aktionen (Bearbeiten, Test-Briefings, Wetter-/Report-Konfiguration, Löschen), Footer mit Trip-Zähler, Mobile Card-Stack unverändert (Bugs #282 + #295, Spec: `docs/specs/modules/bug_282_295_trips_list_redesign.md`)
 - `bug_305_mobile_email_template` - HTML-E-Mail auf iOS Mail responsive: `<thead>`/`<tbody>`-Struktur in `_render_html_table()` ergänzt, `@media`-Breakpoint von 480px auf 600px angehoben damit CSS-Header-Hide und iOS-Mail-Viewport greift (Bug #305, Spec: `docs/specs/modules/bug_305_mobile_email_template.md`)
 - `issue_284_alert_rules_restyle` - AlertRulesEditor + ModeCard auf Brand-Tokens: Btn-Komponenten, outlined Severity-Pills (deutsch), Mono-Threshold, Card-Wrapper (Issue #284, Spec: `docs/specs/modules/issue_284_alert_rules_restyle.md`)
+- `issue_280_home_topbar_polish` - H1 "Startseite" auf Home-Seite mit `letter-spacing: -0.025em` (tracking-tight) ergänzt, konsistent mit Trips-Seite (Issue #280, Spec: `docs/specs/modules/issue_280_home_topbar_polish.md`)
 
 ### Geplante Module
 Siehe GitHub Issues: https://github.com/henemm/gregor_zwanzig/issues

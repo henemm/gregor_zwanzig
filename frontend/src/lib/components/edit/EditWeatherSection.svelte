@@ -3,6 +3,7 @@
 	import { api } from '$lib/api.js';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { Select } from '$lib/components/ui/select';
+	import Segmented from '$lib/components/ui/segmented';
 
 	interface MetricEntry {
 		id: string;
@@ -195,10 +196,10 @@
 		<div class="space-y-5">
 			{#each sortedCategories() as cat}
 				<div class="space-y-2">
-					<h4 class="text-sm font-semibold">{CATEGORY_LABELS[cat] ?? cat}</h4>
+					<h4 class="category-heading">{CATEGORY_LABELS[cat] ?? cat}</h4>
 					<div class="grid grid-cols-1 gap-1 sm:grid-cols-2">
 						{#each catalog[cat] as metric}
-							<div class="flex items-center gap-2 rounded px-1 py-0.5 text-sm hover:bg-muted/50">
+							<div class="metric-row">
 								<div class="flex-1 min-w-0">
 									<Checkbox
 										data-testid="metric-checkbox-{metric.id}"
@@ -207,18 +208,11 @@
 									>{metric.label}</Checkbox>
 								</div>
 								{#if metric.has_friendly_format}
-									<span class="inline-flex border rounded overflow-hidden text-xs flex-shrink-0">
-										<button
-											type="button"
-											class="px-1.5 py-0.5 {!(friendlyMap[metric.id] ?? true) ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground'}"
-											onclick={() => setFormat(metric.id, false)}
-										>Roh</button>
-										<button
-											type="button"
-											class="px-1.5 py-0.5 {(friendlyMap[metric.id] ?? true) ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground'}"
-											onclick={() => setFormat(metric.id, true)}
-										>Indikator</button>
-									</span>
+									<Segmented
+										options={[{ value: 'raw', label: 'Roh' }, { value: 'indicator', label: 'Indikator' }]}
+										selected={(friendlyMap[metric.id] ?? true) ? 'indicator' : 'raw'}
+										onselect={(v) => setFormat(metric.id, v === 'indicator')}
+									/>
 								{/if}
 							</div>
 						{/each}
@@ -228,3 +222,27 @@
 		</div>
 	{/if}
 </div>
+
+<style>
+	.category-heading {
+		color: var(--g-ink);
+		font-size: var(--g-text-xs);
+		font-weight: 600;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		border-bottom: 1px solid var(--g-ink-faint);
+		padding-bottom: 4px;
+		margin-bottom: 4px;
+	}
+	.metric-row {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 2px 4px;
+		min-height: 28px;
+		border-radius: var(--g-radius-sm);
+	}
+	.metric-row:hover {
+		background: var(--g-surface-2);
+	}
+</style>

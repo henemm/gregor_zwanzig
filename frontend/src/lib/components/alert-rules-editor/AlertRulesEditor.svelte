@@ -48,11 +48,15 @@
 		<div class="rules-card">
 			<ul class="rules-list">
 				{#each rules as rule, i (rule.id)}
+					{@const isPairFollower = !!(
+						rule.pair_id && rules[i - 1]?.pair_id === rule.pair_id
+					)}
 					<li>
 						<AlertRuleRow
 							{rule}
 							onSave={(updated) => updateRules(i, updated)}
 							onDelete={() => deleteRule(i)}
+							pairFollower={isPairFollower}
 						/>
 					</li>
 				{/each}

@@ -155,3 +155,50 @@ test('expandRules > bestehende Rule mit kind=delta → [rule] unveraendert bei m
 	assert.equal(result[0].threshold, legacyDeltaRule.threshold);
 	assert.equal(result[0].severity, legacyDeltaRule.severity);
 });
+
+// =============================================================================
+// Issue #297 — ZWEI Threshold-Felder bei mode='both'
+// =============================================================================
+// Diese Tests sind TDD RED — sie schlagen fehl bis expandRules() die neue
+// Signatur (base, mode, absThreshold, deltaThreshold, deltaWindow) erhält.
+
+test('expandRules #297 > mode=both → zwei Rules mit gleicher pair_id (AC-5)', () => {
+	const base = newDefaultRule(); // wind_gust — nicht delta-only
+	// Neue Signatur: expandRules(base, mode, absThreshold, deltaThreshold, deltaWindow)
+	const result = expandRules(base, 'both', 80, 30, '3h');
+	assert.equal(result.length, 2, 'mode=both muss 2 Rules erzeugen');
+	// Beide Rules müssen dasselbe pair_id tragen
+	assert.ok(result[0].pair_id, 'Erste Rule muss pair_id haben');
+	assert.ok(result[1].pair_id, 'Zweite Rule muss pair_id haben');
+	assert.equal(result[0].pair_id, result[1].pair_id, 'Beide pair_ids müssen identisch sein');
+});
+
+test('expandRules #297 > mode=both → korrekte absThreshold / deltaThreshold (AC-6)', () => {
+	const base = newDefaultRule();
+	const result = expandRules(base, 'both', 80, 30, '6h');
+	assert.equal(result.length, 2);
+	assert.equal(result[0].kind, 'absolute');
+	assert.equal(result[0].threshold, 80, 'Erste Rule muss absThreshold=80 haben');
+	assert.equal(result[1].kind, 'delta');
+	assert.equal(result[1].threshold, 30, 'Zweite Rule muss deltaThreshold=30 haben');
+});
+
+test('expandRules #297 > mode=both → delta-Rule trägt delta_window (AC-7)', () => {
+	const base = newDefaultRule();
+	const result = expandRules(base, 'both', 80, 30, '3h');
+	const deltaRule = result.find((r) => r.kind === 'delta');
+	assert.ok(deltaRule, 'Delta-Rule muss existieren');
+	assert.equal(deltaRule!.delta_window, '3h', 'delta_window muss aus Parameter kommen');
+	const absRule = result.find((r) => r.kind === 'absolute');
+	assert.ok(absRule, 'Absolute-Rule muss existieren');
+	assert.equal(absRule!.delta_window, undefined, 'Absolute-Rule darf kein delta_window haben');
+});
+
+test('expandRules #297 > mode=both + delta-only Metrik → nur delta, kein pair_id (AC-8)', () => {
+	const base: AlertRule = { ...newDefaultRule(), metric: 'temperature_change' };
+	const result = expandRules(base, 'both', 80, 5, '6h');
+	assert.equal(result.length, 1, 'delta-only Metrik muss nur 1 Rule erzeugen');
+	assert.equal(result[0].kind, 'delta');
+	// Bei delta-only kein pair_id (nur ein Objekt im Paar)
+	assert.ok(!result[0].pair_id, 'delta-only Rule bei mode=both darf kein pair_id haben');
+});

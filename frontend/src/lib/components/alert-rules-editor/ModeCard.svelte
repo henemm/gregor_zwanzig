@@ -23,26 +23,34 @@
 		title: string;
 		description: string;
 		example: string;
+		badge: string;
 	};
 
+	// Issue #297 — Feld-Anzahl-Badge: zeigt wie viele Eingaben der Modus erzeugt.
+	//   'absolute' -> 1 Feld  (Schwelle)
+	//   'delta'    -> 2 Felder (Schwelle + Zeitfenster)
+	//   'both'     -> 3 Felder (AbsSchwelle + ΔSchwelle + Zeitfenster)
 	const COPY: Record<AlertRuleMode, ModeCopy> = {
 		absolute: {
 			eyebrow: 'Absolut',
 			title: 'Schwellwert',
 			description: 'Alarm wenn Wert überschritten',
-			example: 'Wind > 80 km/h'
+			example: 'Wind > 80 km/h',
+			badge: '1 Feld'
 		},
 		delta: {
 			eyebrow: 'Änderung',
 			title: 'Δ Differenz',
 			description: 'Alarm bei starker Änderung',
-			example: 'Temperatur −8°C in 6h'
+			example: 'Temperatur −8°C in 6h',
+			badge: '2 Felder'
 		},
 		both: {
 			eyebrow: 'Kombiniert',
 			title: 'Beides',
 			description: 'Absolut und Änderung überwachen',
-			example: 'Wind > 80 km/h oder +30 km/h'
+			example: 'Wind > 80 km/h oder +30 km/h',
+			badge: '3 Felder'
 		}
 	};
 
@@ -65,6 +73,7 @@
 	<span class="title">{copy.title}</span>
 	<span class="description">{copy.description}</span>
 	<span class="example">{copy.example}</span>
+	<span class="field-count-badge" data-testid={`mode-card-badge-${mode}`}>{copy.badge}</span>
 </button>
 
 <style>
@@ -112,5 +121,17 @@
 		font-style: normal;
 		letter-spacing: 0;
 		color: var(--g-ink-faint);
+	}
+	.field-count-badge {
+		align-self: flex-start;
+		margin-top: 0.25rem;
+		padding: 0.125rem 0.5rem;
+		border: 1px solid var(--g-ink-faint);
+		border-radius: 999px;
+		font-size: 0.6875rem;
+		font-family: var(--g-font-ui);
+		color: var(--g-ink-muted);
+		background: var(--g-surface-2);
+		letter-spacing: 0.02em;
 	}
 </style>

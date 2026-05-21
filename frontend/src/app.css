@@ -335,6 +335,35 @@
   [data-slot="pill"][data-outlined][data-tone="info"]     { color: var(--g-info); }
   [data-slot="pill"][data-outlined][data-tone="default"]  { color: var(--g-ink-muted); }
 
+  /* === Issue #285: Segmented Control === */
+  [data-slot="segmented"] {
+    display: inline-flex;
+    border: 1px solid var(--g-ink-faint);
+    border-radius: var(--g-radius-sm);
+    overflow: hidden;
+    font-family: var(--g-font-data);
+    font-size: var(--g-text-xs);
+  }
+  [data-slot="segmented-item"] {
+    padding: 3px 10px;
+    background: transparent;
+    color: var(--g-ink-muted);
+    cursor: pointer;
+    border: none;
+    line-height: 1.4;
+    transition: background 0.1s, color 0.1s;
+  }
+  [data-slot="segmented-item"]:not(:last-child) {
+    border-right: 1px solid var(--g-ink-faint);
+  }
+  [data-slot="segmented-item"][data-active="true"] {
+    background: var(--g-ink);
+    color: var(--g-paper);
+  }
+  [data-slot="segmented-item"][data-active="false"]:hover {
+    background: var(--g-surface-2);
+  }
+
   /* === Issue #144: Eyebrow === */
   [data-slot="eyebrow"] {
     display: block;

@@ -59,7 +59,7 @@
 <style>
 	.home { display: flex; flex-direction: column; gap: 2rem; }
 	.home__header { display: flex; flex-direction: column; gap: 0.25rem; }
-	.home__title { font-size: var(--g-text-3xl); font-weight: 600; margin: 0; }
+	.home__title { font-size: var(--g-text-3xl); font-weight: 600; letter-spacing: -0.025em; margin: 0; }
 	.home__section-title { font-size: var(--g-text-xl); font-weight: 600; margin: 0 0 0.75rem; }
 	.kachel-grid { display: grid; grid-template-columns: 1fr; gap: 0.75rem; }
 	@media (min-width: 640px) { .kachel-grid { grid-template-columns: repeat(2, 1fr); } }

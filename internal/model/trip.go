@@ -35,14 +35,17 @@ const (
 )
 
 // AlertRule is a single configurable alert rule on a Trip (Issue #205).
+// Issue #297 — PairID + DeltaWindow als optionale Felder (omitempty) ergänzt.
 type AlertRule struct {
-	ID        string        `json:"id"`
-	Kind      AlertRuleKind `json:"kind"`
-	Metric    AlertMetric   `json:"metric"`
-	Threshold float64       `json:"threshold"`
-	Unit      string        `json:"unit,omitempty"`
-	Severity  AlertSeverity `json:"severity"`
-	Enabled   bool          `json:"enabled"`
+	ID          string        `json:"id"`
+	Kind        AlertRuleKind `json:"kind"`
+	Metric      AlertMetric   `json:"metric"`
+	Threshold   float64       `json:"threshold"`
+	Unit        string        `json:"unit,omitempty"`
+	Severity    AlertSeverity `json:"severity"`
+	Enabled     bool          `json:"enabled"`
+	PairID      *string       `json:"pair_id,omitempty"`
+	DeltaWindow *string       `json:"delta_window,omitempty"`
 }
 
 type Waypoint struct {

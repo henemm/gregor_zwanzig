@@ -4,6 +4,7 @@
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { Select } from '$lib/components/ui/select';
+	import Segmented from '$lib/components/ui/segmented';
 
 	interface MetricEntry {
 		id: string;
@@ -204,18 +205,11 @@
 										</Checkbox>
 									</div>
 									{#if metric.has_friendly_format}
-										<span class="inline-flex border rounded overflow-hidden text-xs flex-shrink-0">
-											<button
-												type="button"
-												class="px-1.5 py-0.5 {!(friendlyMap[metric.id] ?? true) ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground'}"
-												onclick={() => setFormat(metric.id, false)}
-											>Roh</button>
-											<button
-												type="button"
-												class="px-1.5 py-0.5 {(friendlyMap[metric.id] ?? true) ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground'}"
-												onclick={() => setFormat(metric.id, true)}
-											>Indikator</button>
-										</span>
+										<Segmented
+											options={[{ value: 'raw', label: 'Roh' }, { value: 'indicator', label: 'Indikator' }]}
+											selected={(friendlyMap[metric.id] ?? true) ? 'indicator' : 'raw'}
+											onselect={(v) => setFormat(metric.id, v === 'indicator')}
+										/>
 									{/if}
 								</div>
 							{/each}
