@@ -2,8 +2,8 @@
 entity_id: issue_293_wordmark
 type: module
 created: 2026-05-20
-updated: 2026-05-20
-status: draft
+updated: 2026-05-21
+status: implemented
 version: "1.0"
 tags: [frontend, design-system, ui-component, branding, typography, svelte, issue-293]
 ---
@@ -12,7 +12,7 @@ tags: [frontend, design-system, ui-component, branding, typography, svelte, issu
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (2026-05-21, Post-Implementation)
 
 ## Purpose
 
@@ -234,3 +234,4 @@ import Wordmark from '$lib/components/ui/wordmark/Wordmark.svelte';
 ## Changelog
 
 - 2026-05-20: Initial spec erstellt (Issue #293 — Wordmark "gregor.zwanzig" mit Mono-Akzent, Variante B).
+- 2026-05-21: Implementation abgeschlossen, spec auf `implemented` aktualisiert. Wordmark-Komponente in Sidebar, TopAppBar, Login-Seite, und app.html-Title integriert.
