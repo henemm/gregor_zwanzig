@@ -77,7 +77,7 @@
 						bind:value={stage.name}
 						class="flex-1"
 					/>
-					<Input type="date" bind:value={stage.date} class="w-40" />
+					<Input type="date" bind:value={stage.date} class="w-40 g-num-input" />
 					<Btn
 						data-testid="stage-move-up-{si}"
 						variant="ghost"
@@ -107,6 +107,13 @@
 
 				<div class="ml-2 space-y-2">
 					<Label class="text-sm text-muted-foreground">Wegpunkte</Label>
+					<div class="hidden sm:grid grid-cols-[1fr_88px_88px_88px_32px] gap-1 px-1 mb-1">
+						<span class="g-th">Name</span>
+						<span class="g-th text-right">Lat</span>
+						<span class="g-th text-right">Lon</span>
+						<span class="g-th text-right">Höhe</span>
+						<span></span>
+					</div>
 					{#each stage.waypoints as wp, wi}
 						<div data-testid="waypoint-{wi}" class="flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:gap-2">
 							<div class="flex items-center justify-between gap-2 sm:contents">
@@ -135,7 +142,7 @@
 									placeholder="Lat"
 									bind:value={wp.lat}
 									step="0.0001"
-									class="w-full [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none sm:w-24"
+									class="g-num-input text-right w-full sm:w-[88px] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
 								/>
 								<Input
 									data-testid="wp-lon"
@@ -144,16 +151,19 @@
 									placeholder="Lon"
 									bind:value={wp.lon}
 									step="0.0001"
-									class="w-full [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none sm:w-24"
+									class="g-num-input text-right w-full sm:w-[88px] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
 								/>
-								<Input
-									data-testid="wp-ele"
-									type="number"
-									placeholder="Hoehe (m)"
-									bind:value={wp.elevation_m}
-									step="1"
-									class="w-full [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none sm:w-24"
-								/>
+								<label class="g-num-with-unit">
+									<Input
+										data-testid="wp-ele"
+										type="number"
+										placeholder="Hoehe (m)"
+										bind:value={wp.elevation_m}
+										step="1"
+										class="g-num-input text-right w-full sm:w-[88px] pr-6 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+									/>
+									<span class="g-num-unit" aria-hidden="true">m</span>
+								</label>
 							</div>
 							<Btn
 								variant="ghost"
@@ -179,3 +189,20 @@
 		<p class="text-sm text-muted-foreground">Alle Etappen müssen mindestens einen Wegpunkt haben.</p>
 	{/if}
 </div>
+
+<style>
+	.g-num-with-unit {
+		position: relative;
+		display: block;
+	}
+	.g-num-unit {
+		position: absolute;
+		right: 8px;
+		top: 50%;
+		transform: translateY(-50%);
+		font-family: var(--g-font-data);
+		font-size: 11px;
+		color: var(--g-ink-faint);
+		pointer-events: none;
+	}
+</style>
