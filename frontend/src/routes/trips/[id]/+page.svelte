@@ -17,7 +17,7 @@
 	}
 </script>
 
-<svelte:head><title>{trip.name} — Gregor 20</title></svelte:head>
+<svelte:head><title>{trip.name} — Gregor Zwanzig</title></svelte:head>
 
 <main class="container mx-auto max-w-5xl p-4">
 	<TripHeader {trip} onStatusChange={handleStatusChange} />

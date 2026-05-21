@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import type { ActionData } from './$types.js';
+	import Wordmark from '$lib/components/ui/wordmark/Wordmark.svelte';
 
 	let { form }: { form: ActionData } = $props();
 	const registered = $derived($page.url.searchParams.get('registered') === '1');
@@ -9,7 +10,7 @@
 <div class="flex min-h-screen items-center justify-center bg-background">
 	<div class="w-full max-w-sm space-y-6 p-6">
 		<div class="space-y-2 text-center">
-			<h1 class="text-2xl font-bold">Gregor 20</h1>
+			<Wordmark size="lg" href="/" />
 			<p class="text-muted-foreground text-sm">Anmelden um fortzufahren</p>
 		</div>
 

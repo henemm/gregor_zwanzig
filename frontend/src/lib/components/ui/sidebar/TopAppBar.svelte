@@ -3,6 +3,7 @@
 	import X from '@lucide/svelte/icons/x';
 	import MoonIcon from '@lucide/svelte/icons/moon';
 	import SunIcon from '@lucide/svelte/icons/sun';
+	import Wordmark from '$lib/components/ui/wordmark/Wordmark.svelte';
 
 	interface Props {
 		mobileMenuOpen: boolean;
@@ -30,7 +31,7 @@
 			<Menu class="h-5 w-5" />
 		{/if}
 	</button>
-	<span class="flex-1 text-sm font-bold">Gregor 20</span>
+	<span class="flex-1"><Wordmark size="sm" /></span>
 	<button
 		data-testid="top-app-bar-toggle-dark"
 		onclick={ontoggleDark}

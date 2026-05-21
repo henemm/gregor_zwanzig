@@ -9,6 +9,7 @@
 	import LogOut from '@lucide/svelte/icons/log-out';
 	import MoonIcon from '@lucide/svelte/icons/moon';
 	import SunIcon from '@lucide/svelte/icons/sun';
+	import Wordmark from '$lib/components/ui/wordmark/Wordmark.svelte';
 
 	interface SidebarProps {
 		userId: string | null | undefined;
@@ -52,7 +53,7 @@
 	class="fixed z-50 h-full w-60 flex-col bg-sidebar text-sidebar-foreground p-4 transition-transform duration-200 desktop:static desktop:translate-x-0 desktop:flex
 	{mobileMenuOpen ? 'flex translate-x-0' : 'hidden -translate-x-full'}"
 >
-	<h1 class="mb-6 text-lg font-bold">Gregor 20</h1>
+	<div class="mb-6"><Wordmark size="md" /></div>
 
 	<!-- Desktop: Full workspace nav. Mobile (drawer): secondary items only via CSS -->
 	{#each navItems as item}
