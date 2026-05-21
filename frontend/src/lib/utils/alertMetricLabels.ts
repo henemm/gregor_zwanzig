@@ -45,3 +45,16 @@ export function thunderLevelLabel(threshold: number): string {
 	if (threshold >= 1.0) return 'MITTEL';
 	return 'KEINE';
 }
+
+// Bug #317 — Legacy-AlertMetric-IDs auf aktuelle AlertMetric-Enum-Werte abbilden.
+// Spec: docs/specs/modules/bug_317_alert_rules_editor_metrics.md
+const LEGACY_ALERT_METRIC_MAP: Record<string, AlertMetric> = {
+	precipitation: 'precipitation_sum',
+	thunder: 'thunder_level',
+	snowfall_limit: 'snow_line',
+};
+
+export function normalizeAlertMetric(raw: string): AlertMetric | undefined {
+	if (raw in ALERT_METRIC_LABELS) return raw as AlertMetric;
+	return LEGACY_ALERT_METRIC_MAP[raw] as AlertMetric | undefined;
+}

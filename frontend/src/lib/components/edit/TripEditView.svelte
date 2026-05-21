@@ -8,6 +8,7 @@
 	import EditWeatherSection from './EditWeatherSection.svelte';
 	import EditReportConfigSection from './EditReportConfigSection.svelte';
 	import AlertRulesEditor from '$lib/components/alert-rules-editor/AlertRulesEditor.svelte';
+	import { normalizeAlertMetric } from '$lib/utils/alertMetricLabels';
 
 	interface Props {
 		trip: Trip;
@@ -25,7 +26,10 @@
 	);
 	let alertRules: AlertRule[] = $state(
 		Array.isArray(trip.alert_rules)
-			? (JSON.parse(JSON.stringify(trip.alert_rules)) as AlertRule[])
+			? (JSON.parse(JSON.stringify(trip.alert_rules)) as AlertRule[]).map(r => ({
+					...r,
+					metric: normalizeAlertMetric(r.metric) ?? r.metric,
+				}))
 			: []
 	);
 

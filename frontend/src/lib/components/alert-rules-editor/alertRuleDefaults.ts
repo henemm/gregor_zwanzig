@@ -74,17 +74,21 @@ export function expandRules(
 	}
 	// mode === 'both'
 	if (DELTA_ONLY_METRICS.has(rule.metric)) {
-		// AC-6/AC-8: Delta-only-Metrik bei 'both' fallback auf nur delta, kein pair_id.
-		return [
-			{ ...rule, kind: 'delta', threshold: deltaThreshold, delta_window: deltaWindow }
-		];
+		// AC-6/AC-8: Delta-only-Metrik bei 'both' fallback auf nur delta.
+		// pair_id explizit entfernen — base rule koennte schon eine haben.
+		const { pair_id: _pid, ...rest } = rule;
+		return [{ ...rest, kind: 'delta', threshold: deltaThreshold, delta_window: deltaWindow }];
 	}
 	// AC-5/AC-7: zwei Rules mit gemeinsamer pair_id.
+	// F005: base rule koennte bereits pair_id / delta_window tragen (z.B. aus
+	// frueherer Delta-Speicherung). Diese muessen via Destructuring entfernt
+	// werden, damit die Absolute-Rule kein altes delta_window erbt (AC-7).
 	const pairId = crypto.randomUUID();
+	const { pair_id: _pid, delta_window: _dw, ...rest } = rule;
 	return [
-		{ ...rule, kind: 'absolute', threshold: absThreshold, pair_id: pairId },
+		{ ...rest, kind: 'absolute', threshold: absThreshold, pair_id: pairId },
 		{
-			...rule,
+			...rest,
 			id: crypto.randomUUID(),
 			kind: 'delta',
 			threshold: deltaThreshold,

@@ -12,11 +12,15 @@
 	import AlertQuietHoursCard from './AlertQuietHoursCard.svelte';
 	import AlertPreviewCard from './AlertPreviewCard.svelte';
 	import { api } from '$lib/api';
+	import { normalizeAlertMetric } from '$lib/utils/alertMetricLabels';
 	import type { Trip, AlertRule } from '$lib/types';
 
 	let { trip }: { trip: Trip } = $props();
 
-	let alertRules = $state<AlertRule[]>(trip.alert_rules ?? []);
+	let alertRules = $state<AlertRule[]>((trip.alert_rules ?? []).map(r => ({
+		...r,
+		metric: normalizeAlertMetric(r.metric) ?? r.metric,
+	})));
 	let cooldownMinutes = $state<number | undefined>(trip.alert_cooldown_minutes ?? undefined);
 	let quietFrom = $state<string | undefined>(trip.alert_quiet_from ?? undefined);
 	let quietTo = $state<string | undefined>(trip.alert_quiet_to ?? undefined);

@@ -13,7 +13,8 @@ import assert from 'node:assert/strict';
 import {
 	ALERT_METRIC_LABELS,
 	ALERT_SEVERITY_TONE,
-	thunderLevelLabel
+	thunderLevelLabel,
+	normalizeAlertMetric,
 } from './alertMetricLabels.ts';
 
 test('thunderLevelLabel: threshold 2.0 → HOCH (AC-6)', () => {
@@ -47,4 +48,54 @@ test('ALERT_METRIC_LABELS: thunder_level hat comparison ≥', () => {
 test('ALERT_METRIC_LABELS: wind_gust hat unit km/h und comparison >', () => {
 	assert.equal(ALERT_METRIC_LABELS['wind_gust'].unit, 'km/h');
 	assert.equal(ALERT_METRIC_LABELS['wind_gust'].comparison, '>');
+});
+
+// =============================================================================
+// Bug #317 — normalizeAlertMetric(): Legacy-Metrik-IDs normalisieren
+// Spec: docs/specs/modules/bug_317_alert_rules_editor_metrics.md
+// =============================================================================
+
+test('normalizeAlertMetric: aktuelle ID "precipitation_sum" → gibt sich selbst zurück (AC-5)', () => {
+	assert.equal(normalizeAlertMetric('precipitation_sum'), 'precipitation_sum');
+});
+
+test('normalizeAlertMetric: Legacy-ID "precipitation" → "precipitation_sum" (AC-1)', () => {
+	assert.equal(normalizeAlertMetric('precipitation'), 'precipitation_sum');
+});
+
+test('normalizeAlertMetric: Legacy-ID "thunder" → "thunder_level" (AC-2)', () => {
+	assert.equal(normalizeAlertMetric('thunder'), 'thunder_level');
+});
+
+test('normalizeAlertMetric: Legacy-ID "snowfall_limit" → "snow_line" (AC-3)', () => {
+	assert.equal(normalizeAlertMetric('snowfall_limit'), 'snow_line');
+});
+
+test('normalizeAlertMetric: vollständig unbekannte ID "foobar" → undefined (AC-4)', () => {
+	assert.equal(normalizeAlertMetric('foobar'), undefined);
+});
+
+test('normalizeAlertMetric: alle 9 aktuellen AlertMetric-IDs werden unverändert zurückgegeben (AC-5 Vollabdeckung)', () => {
+	const current = [
+		'wind_gust', 'precipitation_sum', 'temperature_min', 'temperature_max',
+		'thunder_level', 'snow_line', 'temperature_change', 'wind_change', 'precipitation_change',
+	];
+	for (const id of current) {
+		assert.equal(normalizeAlertMetric(id), id, `${id} wurde unerwartet verändert`);
+	}
+});
+
+test('normalizeAlertMetric: Normalisierung aller 3 Legacy-IDs aus dem Validator-Trip (AC-6)', () => {
+	const legacyRules = [
+		{ metric: 'precipitation' },
+		{ metric: 'thunder' },
+		{ metric: 'snowfall_limit' },
+	];
+	const normalized = legacyRules.map(r => ({
+		...r,
+		metric: normalizeAlertMetric(r.metric) ?? r.metric,
+	}));
+	assert.equal(normalized[0].metric, 'precipitation_sum');
+	assert.equal(normalized[1].metric, 'thunder_level');
+	assert.equal(normalized[2].metric, 'snow_line');
 });

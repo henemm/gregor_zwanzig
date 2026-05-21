@@ -209,3 +209,50 @@ test('expandRules #297 > mode=both + delta-only Metrik → nur delta, kein pair_
 	// Bei delta-only kein pair_id (nur ein Objekt im Paar)
 	assert.ok(!result[0].pair_id, 'delta-only Rule bei mode=both darf kein pair_id haben');
 });
+
+test('expandRules #297 F004 > mode=both + delta-only + base hat pair_id → pair_id entfernt', () => {
+	// F004-Regression: Wenn die Base-Rule bereits eine pair_id traegt (z.B. aus
+	// einem frueheren both-Modus mit anderer Metrik) UND die Metrik delta-only ist,
+	// muss der DELTA_ONLY-Guard pair_id aktiv entfernen — nicht via Spread durchreichen.
+	const base: AlertRule = {
+		...newDefaultRule(),
+		metric: 'temperature_change',
+		pair_id: 'legacy-pair-id-from-previous-state'
+	};
+	const result = expandRules(base, 'both', 80, 5, '6h');
+	assert.equal(result.length, 1, 'delta-only Metrik muss nur 1 Rule erzeugen');
+	assert.equal(result[0].kind, 'delta');
+	assert.strictEqual(result[0].pair_id, undefined, 'F004: pair_id muss entfernt sein');
+});
+
+test('expandRules #297 F005 > mode=both + base mit kind=delta + delta_window → Absolute-Rule darf kein delta_window erben (AC-7)', () => {
+	// F005-Regression: Wenn die Base-Rule bereits kind='delta' + delta_window
+	// traegt (z.B. aus einer frueheren Delta-Speicherung) und der User auf
+	// mode='both' wechselt, darf die neu erzeugte Absolute-Rule das alte
+	// delta_window NICHT via Spread uebernehmen. AC-7: Absolute-Rule hat
+	// niemals delta_window.
+	const base: AlertRule = {
+		...newDefaultRule(),
+		kind: 'delta',
+		metric: 'wind_gust', // Standard-Metrik (nicht delta-only) → both-Pfad
+		delta_window: '12h'
+	};
+	const result = expandRules(base, 'both', 80, 30, '3h');
+	assert.equal(result.length, 2, 'mode=both muss 2 Rules erzeugen');
+
+	const absRule = result.find((r) => r.kind === 'absolute');
+	assert.ok(absRule, 'Absolute-Rule muss existieren');
+	assert.strictEqual(
+		absRule!.delta_window,
+		undefined,
+		'F005: Absolute-Rule darf kein delta_window aus base erben (AC-7)'
+	);
+
+	const deltaRule = result.find((r) => r.kind === 'delta');
+	assert.ok(deltaRule, 'Delta-Rule muss existieren');
+	assert.equal(
+		deltaRule!.delta_window,
+		'3h',
+		'F005: Delta-Rule muss den neuen deltaWindow-Parameter haben, nicht den alten Wert aus base'
+	);
+});

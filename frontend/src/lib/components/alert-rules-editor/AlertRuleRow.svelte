@@ -301,6 +301,11 @@
 			>
 		</div>
 	{/if}
+{:else}
+	<div class="alert-rule-view alert-rule-unknown" data-testid="alert-rule-unknown">
+		<span class="label">[{rule.metric}]</span>
+		<Btn variant="ghost" size="sm" type="button" onclick={onDelete} data-testid="alert-rule-delete">Löschen</Btn>
+	</div>
 {/if}
 
 <style>
