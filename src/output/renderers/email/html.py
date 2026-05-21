@@ -88,7 +88,7 @@ def _render_html_table(rows: list[dict], *, friendly_keys: set[str]) -> str:
     if not rows:
         # Empty rows: render a minimal table skeleton so callers can still
         # detect a <table> in the body (β3 test_renderers_email expectation).
-        return '<table class="resp"><tr><th>Time</th></tr></table>'
+        return '<table class="resp"><thead><tr><th>Time</th></tr></thead><tbody></tbody></table>'
     cols = visible_cols(rows)
     ths = "<th>Time</th>" + "".join(f"<th>{label}</th>" for _, label in cols)
     trs = []
@@ -101,7 +101,7 @@ def _render_html_table(rows: list[dict], *, friendly_keys: set[str]) -> str:
                 cell = str(r.get(key)) if r.get(key) is not None else "–"
             tds += f'<td data-label="{label}">{cell}</td>'
         trs.append(f"<tr>{tds}</tr>")
-    return f'<table class="resp"><tr>{ths}</tr>{"".join(trs)}</table>'
+    return f'<table class="resp"><thead><tr>{ths}</tr></thead><tbody>{"".join(trs)}</tbody></table>'
 
 
 def render_html(
@@ -290,7 +290,7 @@ def render_html(
         .footer {{ background: {G_INK}; padding: 12px; text-align: center; color: #ffffff; font-size: 11px; }}
         ul {{ padding-left: 20px; }}
         li {{ margin: 4px 0; font-size: 14px; }}
-        @media (max-width:480px) {{
+        @media (max-width:600px) {{
             body {{ padding:4px; }}
             .container {{ border-radius:0; box-shadow:none; }}
             .header h1 {{ font-size:18px; }}

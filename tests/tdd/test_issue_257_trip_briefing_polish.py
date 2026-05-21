@@ -212,7 +212,7 @@ def test_ac5_mobile_media_query_present():
     """
     html = _render_minimal_html()
     assert "@media" in html, "@media fehlt komplett im HTML"
-    assert "480px" in html, "@media (max-width: 480px) fehlt"
+    assert "600px" in html, "@media (max-width: 600px) fehlt — Bug #305 hebt Breakpoint von 480px auf 600px an"
 
 
 def test_ac5_mobile_table_resp_rule():
