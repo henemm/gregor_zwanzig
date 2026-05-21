@@ -115,13 +115,14 @@
 						<span></span>
 					</div>
 					{#each stage.waypoints as wp, wi}
-						<div data-testid="waypoint-{wi}" class="flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:gap-2">
+						<div data-testid="waypoint-{wi}" class="flex flex-col gap-2 text-sm sm:grid sm:grid-cols-[1fr_88px_88px_88px_32px] sm:gap-1 sm:items-center sm:px-1">
+							<!-- Mobile: Name + mobiler Trash in einer Zeile; Desktop: contents -> Name landet in Grid-Spalte 1 -->
 							<div class="flex items-center justify-between gap-2 sm:contents">
 								<Input
 									data-testid="wp-name"
 									placeholder="Name"
 									bind:value={wp.name}
-									class="flex-1 sm:w-32 sm:flex-none"
+									class="flex-1 sm:w-full"
 								/>
 								<Btn
 									data-testid="wp-trash-mobile"
@@ -134,37 +135,35 @@
 									<TrashIcon class="size-4" />
 								</Btn>
 							</div>
-							<div class="grid grid-cols-3 gap-2 sm:contents">
+							<Input
+								data-testid="wp-lat"
+								type="number"
+								name="lat"
+								placeholder="Lat"
+								bind:value={wp.lat}
+								step="0.0001"
+								class="g-num-input text-right w-full [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+							/>
+							<Input
+								data-testid="wp-lon"
+								type="number"
+								name="lon"
+								placeholder="Lon"
+								bind:value={wp.lon}
+								step="0.0001"
+								class="g-num-input text-right w-full [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+							/>
+							<label class="g-num-with-unit">
 								<Input
-									data-testid="wp-lat"
+									data-testid="wp-ele"
 									type="number"
-									name="lat"
-									placeholder="Lat"
-									bind:value={wp.lat}
-									step="0.0001"
-									class="g-num-input text-right w-full sm:w-[88px] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+									placeholder="Hoehe (m)"
+									bind:value={wp.elevation_m}
+									step="1"
+									class="g-num-input text-right w-full pr-6 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
 								/>
-								<Input
-									data-testid="wp-lon"
-									type="number"
-									name="lon"
-									placeholder="Lon"
-									bind:value={wp.lon}
-									step="0.0001"
-									class="g-num-input text-right w-full sm:w-[88px] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-								/>
-								<label class="g-num-with-unit">
-									<Input
-										data-testid="wp-ele"
-										type="number"
-										placeholder="Hoehe (m)"
-										bind:value={wp.elevation_m}
-										step="1"
-										class="g-num-input text-right w-full sm:w-[88px] pr-6 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-									/>
-									<span class="g-num-unit" aria-hidden="true">m</span>
-								</label>
-							</div>
+								<span class="g-num-unit" aria-hidden="true">m</span>
+							</label>
 							<Btn
 								variant="ghost"
 								size="icon-sm"

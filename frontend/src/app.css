@@ -367,11 +367,12 @@
   [data-slot="dot"][data-tone="info"]    { background: var(--g-info); }
 }
 
-/* Bug #283 — Numerische Inputs in JetBrains Mono mit tabular-nums */
+/* Bug #283 — Numerische Inputs in JetBrains Mono mit tabular-nums.
+   Hinweis: font-size NICHT setzen — sonst überschreibt die Klassen-Specificity (0,1,0)
+   die iOS-Safari-Schutzregel (Bug #272), und Mobile zoomt beim Input-Fokus rein. */
 .g-num-input {
   font-family: var(--g-font-data);
   font-variant-numeric: tabular-nums;
-  font-size: var(--g-text-sm);
 }
 
 /* Bug #283 — Tabellenkopf-Caption */
