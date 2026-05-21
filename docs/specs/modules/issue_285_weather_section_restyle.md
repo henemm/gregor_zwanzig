@@ -3,7 +3,7 @@ entity_id: issue_285_weather_section_restyle
 type: module
 created: 2026-05-21
 updated: 2026-05-21
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, design-system, edit-weather-section, weather-config-dialog, segmented-control, ui-restyle, css-tokens, svelte, issue-285]
 ---
@@ -12,7 +12,7 @@ tags: [frontend, design-system, edit-weather-section, weather-config-dialog, seg
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved
 
 ## Purpose
 
@@ -279,4 +279,5 @@ Diese Testids werden durch die Änderungen nicht berührt, da sie auf Checkbox- 
 
 ## Changelog
 
+- 2026-05-21: Spec status set to implemented; Approval checkbox checked
 - 2026-05-21: Initial spec created (Issue #285 — EditWeatherSection + WeatherConfigDialog Full Restyle)
