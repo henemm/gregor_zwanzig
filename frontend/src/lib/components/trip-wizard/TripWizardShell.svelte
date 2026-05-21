@@ -104,7 +104,9 @@
 	{/if}
 
 	<div
-		class="flex items-center justify-between mt-8 pt-4 border-t border-[var(--g-ink-faint)]/30"
+		class="flex items-center justify-between mt-8 pt-4 border-t border-[var(--g-ink-faint)]/30
+		       sticky bottom-0 bg-[var(--g-paper)] mobile:py-3 mobile:px-4 mobile:mx-[-1rem]"
+		style="padding-bottom: env(safe-area-inset-bottom, 0px);"
 	>
 		<div>
 			{#if state.currentStep > 1}
@@ -113,13 +115,20 @@
 					variant="outline"
 					size="md"
 					onclick={handleBack}
+					class="mobile:min-h-[44px]"
 				>
 					Zurück
 				</Btn>
 			{/if}
 		</div>
 		<div class="flex items-center gap-2">
-			<Btn data-testid="trip-wizard-cancel" variant="ghost" size="md" onclick={handleCancel}>
+			<Btn
+				data-testid="trip-wizard-cancel"
+				variant="ghost"
+				size="md"
+				onclick={handleCancel}
+				class="mobile:min-h-[44px]"
+			>
 				Abbrechen
 			</Btn>
 			{#if state.currentStep < 4}
@@ -129,6 +138,7 @@
 					size="md"
 					onclick={handleNext}
 					disabled={!state.canAdvanceCurrent}
+					class="mobile:min-h-[44px]"
 				>
 					Weiter
 				</Btn>
@@ -139,6 +149,7 @@
 					size="md"
 					onclick={handleSave}
 					disabled={state.saveStatus === 'saving'}
+					class="mobile:min-h-[44px]"
 				>
 					{saveLabel}
 				</Btn>

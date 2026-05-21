@@ -59,6 +59,7 @@
 
 	const publicPages = ['/login', '/register', '/forgot-password', '/reset-password'];
 	const isLogin = $derived(publicPages.includes(page.url.pathname));
+	const isWizard = $derived(page.url.pathname.startsWith('/trips/new'));
 </script>
 
 <svelte:head>
@@ -81,5 +82,7 @@
 			{@render children()}
 		</main>
 	</div>
-	<BottomNav />
+	{#if !isWizard}
+		<BottomNav />
+	{/if}
 {/if}
