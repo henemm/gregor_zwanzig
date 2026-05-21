@@ -30,6 +30,12 @@ export const ALERT_SEVERITY_TONE: Record<AlertSeverity, 'info' | 'warning' | 'da
 	critical: 'danger'
 };
 
+export const SEVERITY_LABEL_DE: Record<AlertSeverity, string> = {
+	info: 'Info',
+	warning: 'Warnung',
+	critical: 'Kritisch'
+};
+
 /**
  * Wandelt einen THUNDER_LEVEL-Threshold (1.0 / 2.0) in einen menschenlesbaren
  * Label fuer die AlertRow-Anzeige. >=2.0 → "HOCH", >=1.0 → "MITTEL", sonst "KEINE".

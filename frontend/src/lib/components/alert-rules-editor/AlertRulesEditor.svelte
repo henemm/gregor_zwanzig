@@ -12,6 +12,7 @@
 	import type { AlertRule } from '$lib/types';
 	import AlertRuleRow from './AlertRuleRow.svelte';
 	import { newDefaultRule } from './alertRuleDefaults';
+	import { Btn } from '$lib/components/ui/btn';
 
 	let { rules = $bindable<AlertRule[]>([]) }: { rules: AlertRule[] } = $props();
 
@@ -35,60 +36,60 @@
 
 <div class="alert-rules-editor" data-testid="alert-rules-editor">
 	{#if rules.length === 0}
-		<p class="empty-state" data-testid="alert-rules-editor-empty">
-			Noch keine Alarmregeln konfiguriert.
-		</p>
+		<div class="rules-card">
+			<p class="empty-state" data-testid="alert-rules-editor-empty">
+				Noch keine Alarmregeln konfiguriert.
+			</p>
+			<div class="card-footer">
+				<Btn variant="ghost" size="sm" type="button" data-testid="alert-rules-editor-add" onclick={addRule}>+ Regel hinzufügen</Btn>
+			</div>
+		</div>
 	{:else}
-		<ul class="rules-list">
-			{#each rules as rule, i (rule.id)}
-				<li>
-					<AlertRuleRow
-						{rule}
-						onSave={(updated) => updateRules(i, updated)}
-						onDelete={() => deleteRule(i)}
-					/>
-				</li>
-			{/each}
-		</ul>
+		<div class="rules-card">
+			<ul class="rules-list">
+				{#each rules as rule, i (rule.id)}
+					<li>
+						<AlertRuleRow
+							{rule}
+							onSave={(updated) => updateRules(i, updated)}
+							onDelete={() => deleteRule(i)}
+						/>
+					</li>
+				{/each}
+			</ul>
+			<div class="card-footer">
+				<Btn variant="ghost" size="sm" type="button" data-testid="alert-rules-editor-add" onclick={addRule}>+ Regel hinzufügen</Btn>
+			</div>
+		</div>
 	{/if}
-	<button
-		type="button"
-		data-testid="alert-rules-editor-add"
-		class="add-button"
-		onclick={addRule}
-	>+ Regel hinzufügen</button>
 </div>
 
 <style>
 	.alert-rules-editor {
 		display: flex;
 		flex-direction: column;
-		gap: 0.75rem;
+	}
+	.rules-card {
+		border: 1px solid var(--g-ink-faint);
+		border-radius: var(--g-radius-md);
+		overflow: hidden;
 	}
 	.empty-state {
 		font-size: 0.875rem;
 		color: var(--g-ink-faint);
 		margin: 0;
+		padding: 12px 14px;
 	}
 	.rules-list {
 		list-style: none;
 		padding: 0;
 		margin: 0;
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
 	}
-	.add-button {
-		align-self: flex-start;
-		font-size: 0.875rem;
-		padding: 0.5rem 0.75rem;
-		min-height: 44px;
-		border: 1px solid var(--g-ink-faint);
-		border-radius: 0.375rem;
-		background: var(--g-surface-1, #fff);
-		cursor: pointer;
+	.card-footer {
+		padding: 8px 12px;
+		border-top: 1px solid var(--g-ink-faint);
 	}
-	.add-button:hover {
-		background: var(--g-surface-2);
+	.rules-list li:last-child :global(.alert-rule-view) {
+		border-bottom: none;
 	}
 </style>

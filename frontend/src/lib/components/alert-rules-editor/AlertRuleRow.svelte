@@ -15,9 +15,11 @@
 	import { Pill } from '$lib/components/ui/pill';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { Select } from '$lib/components/ui/select';
+	import { Btn } from '$lib/components/ui/btn';
 	import {
 		ALERT_METRIC_LABELS,
 		ALERT_SEVERITY_TONE,
+		SEVERITY_LABEL_DE,
 		thunderLevelLabel
 	} from '$lib/utils/alertMetricLabels';
 	import { DELTA_ONLY_METRICS, expandRules, type AlertRuleMode } from './alertRuleDefaults';
@@ -128,7 +130,6 @@
 				<Select
 					bind:value={draft.metric}
 					data-testid="alert-rule-metric"
-					class="field"
 				>
 					{#each METRIC_OPTIONS as m}
 						<option value={m}>{ALERT_METRIC_LABELS[m].label_de}</option>
@@ -140,7 +141,6 @@
 						value={draft.threshold}
 						onchange={onThunderChange}
 						data-testid="alert-rule-threshold"
-						class="field"
 					>
 						<option value={1.0}>MITTEL</option>
 						<option value={2.0}>HOCH</option>
@@ -150,14 +150,13 @@
 						type="number"
 						bind:value={draft.threshold}
 						data-testid="alert-rule-threshold"
-						class="field"
+						class="number-input"
 					/>
 				{/if}
 
 				<Select
 					bind:value={draft.severity}
 					data-testid="alert-rule-severity"
-					class="field"
 				>
 					<option value="info">Info</option>
 					<option value="warning">Warnung</option>
@@ -166,18 +165,18 @@
 
 				<Checkbox bind:checked={draft.enabled}>Aktiv</Checkbox>
 
-				<button
-					type="button"
+				<Btn
+					variant="primary"
+					size="sm"
 					onclick={saveEdit}
-					data-testid="alert-rule-save"
-					class="btn-primary"
-				>Speichern</button>
-				<button
-					type="button"
+					data-testid="alert-rule-save">Speichern</Btn
+				>
+				<Btn
+					variant="ghost"
+					size="sm"
 					onclick={cancelEdit}
-					data-testid="alert-rule-cancel"
-					class="btn-secondary"
-				>Abbrechen</button>
+					data-testid="alert-rule-cancel">Abbrechen</Btn
+				>
 			</div>
 		</div>
 	{:else}
@@ -188,42 +187,48 @@
 		>
 			<span class="label">{info.label_de}</span>
 			<span class="threshold">{info.comparison} {valueText}</span>
-			<Pill tone="default">
+			<Pill tone="default" data-outlined>
 				{rule.kind === 'delta' ? 'Δ' : 'Abs'}
 			</Pill>
-			<Pill tone={ALERT_SEVERITY_TONE[rule.severity]}>{rule.severity}</Pill>
+			<Pill tone={ALERT_SEVERITY_TONE[rule.severity]} data-outlined
+				>{SEVERITY_LABEL_DE[rule.severity]}</Pill
+			>
 			<Checkbox
 				checked={rule.enabled}
 				onchange={toggleEnabled}
 			>Aktiv</Checkbox>
-			<button
+			<Btn
+				variant="ghost"
+				size="sm"
 				type="button"
 				onclick={startEdit}
-				data-testid="alert-rule-edit-btn"
-				class="btn-secondary"
-			>Bearbeiten</button>
-			<button
+				data-testid="alert-rule-edit-btn">Bearbeiten</Btn
+			>
+			<Btn
+				variant="ghost"
+				size="sm"
 				type="button"
 				onclick={onDelete}
-				data-testid="alert-rule-delete"
-				class="btn-secondary"
-			>Löschen</button>
+				data-testid="alert-rule-delete">Löschen</Btn
+			>
 		</div>
 	{/if}
 {/if}
 
 <style>
 	.alert-rule-view {
-		display: flex;
+		display: grid;
+		grid-template-columns: minmax(140px, 1fr) auto auto auto auto auto auto;
 		align-items: center;
-		gap: 0.5rem;
-		flex-wrap: wrap;
-		font-size: 0.875rem;
-		padding: 0.5rem;
-		border: 1px solid var(--g-ink-faint);
-		border-radius: 0.375rem;
-		background: var(--g-surface-1, #fff);
+		gap: 12px;
+		padding: 10px 14px;
+		border: none;
+		border-bottom: 1px solid var(--g-ink-faint);
+		border-radius: 0;
+		background: transparent;
+		font-size: var(--g-text-sm);
 	}
+	.alert-rule-view:hover { background: var(--g-surface-2); }
 	.alert-rule-edit {
 		display: flex;
 		flex-direction: column;
@@ -258,37 +263,19 @@
 		font-weight: 500;
 	}
 	.threshold {
+		font-family: var(--g-font-data);
+		font-variant-numeric: tabular-nums;
 		color: var(--g-ink-muted);
 	}
-	.enabled-toggle {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.25rem;
-		font-size: 0.8125rem;
-	}
-	.field {
+	.number-input {
 		min-height: 36px;
 		padding: 0.25rem 0.5rem;
 		border: 1px solid var(--g-ink-faint);
-		border-radius: 0.25rem;
-		background: var(--g-surface-1, #fff);
-	}
-	.btn-primary,
-	.btn-secondary {
-		min-height: 36px;
-		padding: 0.25rem 0.75rem;
-		border-radius: 0.25rem;
-		font-size: 0.8125rem;
-		cursor: pointer;
-		border: 1px solid var(--g-ink-faint);
-		background: var(--g-surface-1, #fff);
-	}
-	.btn-primary {
-		background: var(--g-ink);
-		color: #fff;
-		border-color: var(--g-ink);
-	}
-	.btn-secondary:hover {
-		background: var(--g-surface-2);
+		border-radius: var(--g-radius-sm);
+		background: var(--g-paper);
+		font-family: var(--g-font-ui);
+		font-size: var(--g-text-sm);
+		color: var(--g-ink);
+		width: 80px;
 	}
 </style>

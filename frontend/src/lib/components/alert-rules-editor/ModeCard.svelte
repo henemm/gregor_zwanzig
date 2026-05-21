@@ -107,8 +107,10 @@
 		color: var(--g-ink-muted);
 	}
 	.example {
-		font-size: 0.75rem;
-		font-style: italic;
+		font-family: var(--g-font-data);
+		font-size: 11px;
+		font-style: normal;
+		letter-spacing: 0;
 		color: var(--g-ink-faint);
 	}
 </style>
