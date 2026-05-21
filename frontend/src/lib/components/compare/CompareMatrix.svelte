@@ -115,7 +115,7 @@
 		<Table.Root>
 			<Table.Header>
 				<Table.Row>
-					<Table.Head class="w-40">Metrik</Table.Head>
+					<Table.Head class="w-40 sticky left-0 z-10 bg-card">Metrik</Table.Head>
 					{#each rows as row, i}
 						{@const loc = locById.get(row.location_id)}
 						<Table.Head class="text-center">
@@ -133,7 +133,7 @@
 					{@const numericValues = rawValues.map((v) => numericValue(v))}
 					{@const best = bestIndex(numericValues, metric.higherIsBetter)}
 					<Table.Row data-testid="compare-matrix-row">
-						<Table.Cell class="font-medium">{metric.label}</Table.Cell>
+						<Table.Cell class="font-medium sticky left-0 z-10 bg-card">{metric.label}</Table.Cell>
 						{#each rows as row, i}
 							{@const raw = rawValues[i]}
 							{@const num = numericValues[i]}

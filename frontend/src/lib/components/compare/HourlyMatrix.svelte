@@ -74,7 +74,7 @@
 					<table class="w-full text-xs">
 						<thead>
 							<tr class="text-left text-muted-foreground">
-								<th class="py-1 pr-2">Zeit</th>
+								<th class="py-1 pr-2 sticky left-0 z-10 bg-card">Zeit</th>
 								<th class="py-1 pr-2"></th>
 								<th class="py-1 pr-2">Temp</th>
 								<th class="py-1 pr-2">Wind</th>
@@ -86,7 +86,7 @@
 						<tbody>
 							{#each section.points as p}
 								<tr class="border-t">
-									<td class="py-1 pr-2">{formatTime(p.ts)}</td>
+									<td class="py-1 pr-2 sticky left-0 z-10 bg-card">{formatTime(p.ts)}</td>
 									<td class="py-1 pr-2">
 										{weatherEmoji(p.wmo_code, p.is_day, p.dni_wm2, p.cloud_total_pct)}
 									</td>

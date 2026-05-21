@@ -4,9 +4,11 @@ const authFile = 'playwright/.auth/admin.json';
 const TRIP_ID = 'e2e-cockpit-test';
 
 setup('authenticate and seed test data', async ({ page }) => {
+	const user = process.env.E2E_USER ?? 'admin';
+	const pass = process.env.E2E_PASS ?? 'test1234';
 	await page.goto('/login');
-	await page.fill('input[name="username"]', 'admin');
-	await page.fill('input[name="password"]', 'test1234');
+	await page.fill('input[name="username"]', user);
+	await page.fill('input[name="password"]', pass);
 	await page.click('button[type="submit"]');
 	await page.waitForURL('/');
 	await expect(page).toHaveURL('/');
