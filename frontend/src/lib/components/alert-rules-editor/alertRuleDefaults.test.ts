@@ -73,6 +73,9 @@ test('expandRules > mode=absolute → eine Rule, kind=absolute (AC-4)', () => {
 	assert.equal(result[0].metric, base.metric);
 	assert.equal(result[0].threshold, base.threshold);
 	assert.equal(result[0].severity, base.severity);
+	// F002: pair_id + delta_window duerfen bei mode=absolute nicht gesetzt sein.
+	assert.equal(result[0].pair_id, undefined, 'Absolute-Rule darf kein pair_id haben');
+	assert.equal(result[0].delta_window, undefined, 'Absolute-Rule darf kein delta_window haben');
 });
 
 test('expandRules > mode=delta → eine Rule, kind=delta (AC-4)', () => {
@@ -83,6 +86,10 @@ test('expandRules > mode=delta → eine Rule, kind=delta (AC-4)', () => {
 	assert.equal(result[0].kind, 'delta');
 	assert.equal(result[0].metric, base.metric);
 	assert.equal(result[0].threshold, base.threshold);
+	// F002: pair_id darf bei mode=delta (aus single-mode) nicht gesetzt sein.
+	// delta_window kommt aus Default-Param ('6h'), wenn nicht uebergeben.
+	assert.equal(result[0].pair_id, undefined, 'Delta-Rule aus mode=delta darf kein pair_id haben');
+	assert.equal(result[0].delta_window, '6h', 'Delta-Rule muss delta_window aus Default-Param haben');
 });
 
 test('expandRules > mode=both → zwei Rules (AC-5)', () => {

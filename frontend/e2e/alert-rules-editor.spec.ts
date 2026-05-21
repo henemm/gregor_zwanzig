@@ -436,4 +436,48 @@ test.describe('Issue #297: AlertRulesEditor — mode=both mit zwei Threshold-Fel
 			await deleteTrip(request, id);
 		}
 	});
+
+	test('AC-11: pair_id und delta_window überleben PUT-Roundtrip (Backend-Persistenz)', async ({ page, request }) => {
+		const id = tripId('ac297-11');
+		await createTrip(request, id, [
+			{
+				id: 'r-abs',
+				kind: 'absolute',
+				metric: 'wind_gust',
+				threshold: 80,
+				unit: 'km/h',
+				severity: 'warning',
+				enabled: true,
+				pair_id: 'test-pair-uuid-123'
+			},
+			{
+				id: 'r-delta',
+				kind: 'delta',
+				metric: 'wind_gust',
+				threshold: 30,
+				unit: 'km/h',
+				severity: 'warning',
+				enabled: true,
+				pair_id: 'test-pair-uuid-123',
+				delta_window: '3h'
+			}
+		]);
+		try {
+			// Trip via API neu laden und Felder prüfen
+			const res = await request.get(`/api/trips/${id}`);
+			expect(res.status()).toBe(200);
+			const body = await res.json();
+			const rules: unknown[] = body.alert_rules ?? [];
+			expect(rules).toHaveLength(2);
+			const absRule = (rules as Array<{kind: string; pair_id?: string; delta_window?: string}>)
+				.find(r => r.kind === 'absolute');
+			const deltaRule = (rules as Array<{kind: string; pair_id?: string; delta_window?: string}>)
+				.find(r => r.kind === 'delta');
+			expect(absRule?.pair_id).toBe('test-pair-uuid-123');
+			expect(deltaRule?.pair_id).toBe('test-pair-uuid-123');
+			expect(deltaRule?.delta_window).toBe('3h');
+		} finally {
+			await deleteTrip(request, id);
+		}
+	});
 });

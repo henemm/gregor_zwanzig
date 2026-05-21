@@ -59,11 +59,17 @@ export function expandRules(
 	deltaWindow: string = '6h'
 ): AlertRule[] {
 	if (mode === 'absolute') {
-		return [{ ...rule, kind: 'absolute', threshold: absThreshold }];
+		// F001: pair_id + delta_window explizit entfernen — beim Mode-Wechsel von
+		// 'both'/'delta' nach 'absolute' duerfen diese Felder nicht ueberleben.
+		const { pair_id: _pid, delta_window: _dw, ...rest } = rule;
+		return [{ ...rest, kind: 'absolute', threshold: absThreshold }];
 	}
 	if (mode === 'delta') {
+		// F001: pair_id entfernen — beim Mode-Wechsel von 'both' nach 'delta'
+		// darf die Paar-Markierung nicht zurueckbleiben.
+		const { pair_id: _pid, ...rest } = rule;
 		return [
-			{ ...rule, kind: 'delta', threshold: deltaThreshold, delta_window: deltaWindow }
+			{ ...rest, kind: 'delta', threshold: deltaThreshold, delta_window: deltaWindow }
 		];
 	}
 	// mode === 'both'
