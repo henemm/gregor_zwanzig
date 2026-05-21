@@ -25,9 +25,6 @@
 	<span class="preset-name" data-testid="preset-row-name-{id}">{label}</span>
 	<span class="preset-count" data-testid="weather-metrics-preset-row-{id}-count">{metricCount} Metriken</span>
 	<span class="preset-badge" data-testid="weather-metrics-preset-row-{id}-badge">Standard</span>
-	{#if isActive}
-		<span class="active-marker" data-testid="weather-metrics-preset-row-{id}-active" aria-hidden="true">✓</span>
-	{/if}
 </button>
 
 <style>
@@ -64,11 +61,6 @@
 		border: 1px solid var(--g-ink-faint);
 		border-radius: 3px;
 		color: var(--g-ink-faint);
-		flex-shrink: 0;
-	}
-	.active-marker {
-		color: var(--g-accent, #c45a2a);
-		font-weight: 600;
 		flex-shrink: 0;
 	}
 </style>

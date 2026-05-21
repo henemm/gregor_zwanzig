@@ -190,7 +190,7 @@
 						class="number-input"
 						aria-label="Δ-Schwelle"
 					/>
-					<select
+					<Select
 						bind:value={draftDeltaWindow}
 						data-testid="alert-rule-delta-window"
 						class="window-select"
@@ -201,7 +201,7 @@
 						<option value="6h">6 Stunden</option>
 						<option value="12h">12 Stunden</option>
 						<option value="24h">24 Stunden</option>
-					</select>
+					</Select>
 				{:else if editMode === 'delta'}
 					<!-- Issue #297 AC-2: Threshold + Zeitfenster bei mode='delta'. -->
 					<input
@@ -210,7 +210,7 @@
 						data-testid="alert-rule-threshold"
 						class="number-input"
 					/>
-					<select
+					<Select
 						bind:value={draftDeltaWindow}
 						data-testid="alert-rule-delta-window"
 						class="window-select"
@@ -221,7 +221,7 @@
 						<option value="6h">6 Stunden</option>
 						<option value="12h">12 Stunden</option>
 						<option value="24h">24 Stunden</option>
-					</select>
+					</Select>
 				{:else}
 					<!-- AC-1: ein Threshold-Feld bei mode='absolute'. -->
 					<input

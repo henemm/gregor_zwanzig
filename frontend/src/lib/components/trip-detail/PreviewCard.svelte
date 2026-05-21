@@ -28,7 +28,7 @@
 			data-testid="right-card-preview-email"
 			class="cta-link"
 		>
-			📧 E-Mail-Vorschau →
+			E-Mail-Vorschau →
 		</a>
 		<a
 			href="#preview"
@@ -36,7 +36,7 @@
 			data-testid="right-card-preview-sms"
 			class="cta-link"
 		>
-			💬 SMS-Vorschau →
+			SMS-Vorschau →
 		</a>
 	</div>
 </GCard>

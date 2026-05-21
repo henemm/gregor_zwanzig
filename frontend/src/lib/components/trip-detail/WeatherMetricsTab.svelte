@@ -289,7 +289,7 @@
 				>Verwerfen</button>
 			{/if}
 			{#if saveSuccess}
-				<span data-testid="weather-metrics-tab-success" class="save-success">Gespeichert ✓</span>
+				<span data-testid="weather-metrics-tab-success" class="save-success">Gespeichert</span>
 			{/if}
 			{#if saveError}
 				<span data-testid="weather-metrics-tab-error" class="save-error">{saveError}</span>
