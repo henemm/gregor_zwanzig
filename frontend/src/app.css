@@ -314,6 +314,9 @@
     font-family: var(--g-font-ui);
     font-size: 0.75rem;
     font-weight: 500;
+    max-width: 100%;
+    min-width: 0;
+    white-space: nowrap;
   }
   [data-slot="pill"][data-tone="default"]  { background: var(--g-surface-2);   color: var(--g-ink); }
   [data-slot="pill"][data-tone="success"]  { background: var(--g-success);     color: #fff; }

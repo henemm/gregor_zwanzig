@@ -18,8 +18,35 @@
 	const label = $derived(stage.name ?? stage.date ?? '—');
 </script>
 
-<span data-testid="stage-pill" class={muted ? 'opacity-50' : ''}>
+<span
+	data-testid="stage-pill"
+	class="stage-pill"
+	class:muted
+	class:active
+	title={label}
+>
 	<Pill {tone}>
-		{label}
+		<span class="stage-pill__label">{label}</span>
 	</Pill>
 </span>
+
+<style>
+	.stage-pill {
+		flex: 0 0 auto;
+		max-width: 180px;
+	}
+	.stage-pill__label {
+		display: inline-block;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		max-width: 100%;
+		vertical-align: middle;
+	}
+	.stage-pill.muted {
+		opacity: 0.5;
+	}
+	.stage-pill.active .stage-pill__label {
+		font-weight: 600;
+	}
+</style>
