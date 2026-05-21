@@ -1,0 +1,356 @@
+{
+  "$schema": "./SCREENS.schema.json",
+  "version": "1.0",
+  "generated_at": "2026-05-21",
+  "description": "Maschinenlesbares Screen-Manifest. Pro Screen: Layout-Pattern, verwendete Komponenten, sichtbare Copy-Strings, zugehöriger Mockup-Frame, Charter-Compliance-Checks. Source-of-Truth für Claude Code bei der Svelte-Implementierung.",
+  "screens": [
+    {
+      "id": "auth.login",
+      "route": "/login",
+      "title": "Anmelden",
+      "layout": "split-auth",
+      "viewports": ["desktop@1440", "mobile@375"],
+      "mockup_frames": { "desktop": "A-login", "mobile": null },
+      "components": [
+        "BrandWordmark", "Eyebrow", "Field", "Input", "Btn", "TopoBg"
+      ],
+      "copy": {
+        "eyebrow": "01 · ANMELDEN",
+        "title": "Willkommen zurück.",
+        "sub": "Melde dich an, um deine Touren und Briefings zu verwalten.",
+        "submit": "Anmelden",
+        "field_username": "Benutzername",
+        "field_password": "Passwort",
+        "link_forgot": "Passwort vergessen?",
+        "link_register": "Noch kein Konto? Registrieren"
+      },
+      "charter_checks": {
+        "uses_page_chrome": false,
+        "uses_canonical_atoms": true,
+        "no_native_controls": true,
+        "no_emoji": true,
+        "copy_uses_dictionary": true
+      },
+      "notes": "Auth-Screens nutzen <AuthSplit> statt <PageHeader>, da sie ohne App-Shell laufen."
+    },
+    {
+      "id": "auth.register",
+      "route": "/register",
+      "title": "Registrieren",
+      "layout": "split-auth",
+      "viewports": ["desktop@1440", "mobile@375"],
+      "mockup_frames": { "desktop": "A-register", "mobile": "A-register-m" },
+      "components": ["BrandWordmark", "Field", "Input", "Btn", "TopoBg"],
+      "copy": {
+        "eyebrow": "02 · KONTO ERSTELLEN",
+        "title": "Konto erstellen.",
+        "submit": "Konto erstellen"
+      },
+      "charter_checks": { "uses_page_chrome": false, "uses_canonical_atoms": true }
+    },
+    {
+      "id": "auth.forgot",
+      "route": "/forgot-password",
+      "title": "Passwort vergessen",
+      "layout": "split-auth",
+      "viewports": ["desktop@1440", "mobile@375"],
+      "mockup_frames": { "desktop": "A-forgot", "mobile": "A-forgot-m" },
+      "components": ["BrandWordmark", "Field", "Input", "Btn"],
+      "copy": {
+        "eyebrow": "03 · PASSWORT VERGESSEN",
+        "title": "Passwort zurücksetzen.",
+        "submit": "Reset anfordern"
+      },
+      "charter_checks": { "uses_page_chrome": false, "uses_canonical_atoms": true }
+    },
+    {
+      "id": "auth.reset",
+      "route": "/reset-password",
+      "title": "Neues Passwort",
+      "layout": "split-auth",
+      "viewports": ["desktop@1440", "mobile@375"],
+      "mockup_frames": { "desktop": "A-reset", "mobile": "A-reset-m" },
+      "components": ["BrandWordmark", "Field", "Input", "Btn"],
+      "copy": {
+        "eyebrow": "04 · NEUES PASSWORT",
+        "title": "Passwort vergeben.",
+        "submit": "Passwort speichern"
+      },
+      "charter_checks": { "uses_page_chrome": false, "uses_canonical_atoms": true }
+    },
+    {
+      "id": "home",
+      "route": "/",
+      "title": "Startseite",
+      "layout": "kachel-grid",
+      "viewports": ["desktop@1440", "mobile@375"],
+      "mockup_frames": { "desktop": "1A", "mobile": null },
+      "components": [
+        "BrandShell", "PageHeader", "PageSection", "PageTileGrid", "Tile", "PageActions", "PageEmpty"
+      ],
+      "copy": {
+        "eyebrow": "STARTSEITE · ÜBERSICHT",
+        "title": "Startseite",
+        "primary_cta": "+ Neue Tour"
+      },
+      "charter_checks": {
+        "uses_page_chrome": true,
+        "is_kachel_not_table": true,
+        "no_cockpit_style": true,
+        "max_one_primary_action": true
+      }
+    },
+    {
+      "id": "touren.liste",
+      "route": "/touren",
+      "title": "Meine Touren",
+      "layout": "kachel-grid",
+      "viewports": ["desktop@1440", "mobile@375"],
+      "mockup_frames": { "desktop": "T-list-v2", "mobile": null },
+      "components": [
+        "BrandShell", "PageHeader", "PageActions", "PageTileGrid", "Tile", "DropdownMenu", "Segmented", "Pill"
+      ],
+      "copy": {
+        "eyebrow": "TOUREN",
+        "title": "Meine Touren",
+        "sub": "Geplante und aktive Touren. Abgeschlossene Touren findest du im Archiv.",
+        "primary_cta": "+ Neue Tour",
+        "filter_all": "Alle",
+        "filter_active": "Aktiv",
+        "filter_planned": "Geplant",
+        "filter_paused": "Pausiert"
+      },
+      "charter_checks": {
+        "uses_page_chrome": true,
+        "is_kachel_not_table": true,
+        "no_icon_soup": true,
+        "click_name_opens_detail": true,
+        "max_one_primary_action": true,
+        "uses_dropdown_for_secondary": true
+      },
+      "notes": "REFACTORED in Runde 2. Ersetzt das alte Tabellen-Layout aus Flow7_ListReduced."
+    },
+    {
+      "id": "touren.detail",
+      "route": "/touren/[id]",
+      "title": "Tour-Detail",
+      "layout": "master-detail",
+      "viewports": ["desktop@1440", "mobile@375"],
+      "mockup_frames": { "desktop": "T-detail-v2", "mobile": null },
+      "components": [
+        "BrandShell", "PageHeader", "PageActions", "PageSection",
+        "Card", "KV", "Eyebrow", "Pill", "Dot", "DropdownMenu"
+      ],
+      "copy": {
+        "eyebrow_pattern": "TOUR · {NAME}",
+        "primary_cta": "Tour bearbeiten",
+        "etappen_section_title": "Etappen"
+      },
+      "charter_checks": {
+        "uses_page_chrome": true,
+        "max_one_primary_action": true,
+        "uses_dropdown_for_secondary": true,
+        "stage_click_opens_weather": true
+      }
+    },
+    {
+      "id": "touren.wizard.step1",
+      "route": "/touren/neu?step=1",
+      "title": "Trip-Wizard · Step 1 Route",
+      "layout": "wizard",
+      "viewports": ["desktop@1440", "mobile@375"],
+      "mockup_frames": { "desktop": "1B", "mobile": null },
+      "components": ["BrandShell", "WizardStepper", "Field", "Input", "Btn"],
+      "copy": { "eyebrow": "SCHRITT 1 / 4 · NEUE TOUR", "title": "Route hochladen" },
+      "charter_checks": { "wizard_steps_match_charter": true }
+    },
+    {
+      "id": "touren.wizard.step2",
+      "route": "/touren/neu?step=2",
+      "title": "Trip-Wizard · Step 2 Etappen",
+      "layout": "wizard",
+      "viewports": ["desktop@1440", "mobile@375"],
+      "mockup_frames": { "desktop": "1C", "mobile": "W-s2-m" },
+      "components": ["BrandShell", "WizardStepper", "Btn"],
+      "copy": { "eyebrow": "SCHRITT 2 / 4 · NEUE TOUR", "title": "Etappen bestätigen" }
+    },
+    {
+      "id": "touren.wizard.step3",
+      "route": "/touren/neu?step=3",
+      "title": "Trip-Wizard · Step 3 Wetter-Template",
+      "layout": "wizard",
+      "viewports": ["desktop@1440", "mobile@375"],
+      "mockup_frames": { "desktop": "1D", "mobile": "W-s3-m" },
+      "components": ["BrandShell", "WizardStepper", "Btn", "Checkbox"],
+      "copy": { "eyebrow": "SCHRITT 3 / 4 · NEUE TOUR", "title": "Wetter-Briefing wählen", "save_template_cta": "↓ Diese Konfiguration im Profil speichern" }
+    },
+    {
+      "id": "touren.wizard.step4",
+      "route": "/touren/neu?step=4",
+      "title": "Trip-Wizard · Step 4 Reports",
+      "layout": "wizard",
+      "viewports": ["desktop@1440", "mobile@375"],
+      "mockup_frames": { "desktop": "1E", "mobile": "W-s4-m" },
+      "components": ["BrandShell", "WizardStepper", "Btn", "Switch", "ChannelCard"],
+      "copy": { "eyebrow": "SCHRITT 4 / 4 · NEUE TOUR", "title": "Reports & Kanäle", "submit": "Tour anlegen" }
+    },
+    {
+      "id": "orts-vergleich.uebersicht",
+      "route": "/orts-vergleich",
+      "title": "Orts-Vergleich · Übersicht",
+      "layout": "master-detail",
+      "viewports": ["desktop@1680"],
+      "mockup_frames": { "desktop": "CD-full" },
+      "components": [
+        "BrandShell", "CompareLocationsRail", "ComparePresetHeader",
+        "CompareRecBanner", "CompareMatrix", "CompareHourlyMatrix"
+      ],
+      "copy": { "eyebrow_pattern": "ORTS-VERGLEICH · {NAME}", "primary_cta": "Auto-Briefing →" },
+      "charter_checks": { "is_kachel_not_table": true, "max_one_primary_action": true }
+    },
+    {
+      "id": "wetter.drilldown.trip",
+      "route": "/touren/[id]?wetter={etappeId}",
+      "title": "Wetter-Drill-Down · aus Etappe",
+      "layout": "embedded-panel",
+      "viewports": ["desktop@1680", "mobile@375"],
+      "mockup_frames": { "desktop": "WX-trip", "mobile": "WX-mobile" },
+      "components": ["WxPanelHeader", "WxThresholds", "WxHourlyTable", "Btn"],
+      "copy": { "eyebrow_pattern": "TAG {N} · {DAY} · {DATE} · ETAPPE" },
+      "charter_checks": { "no_standalone_weather_page": true, "embedded_drill_down": true }
+    },
+    {
+      "id": "wetter.drilldown.compare",
+      "route": "/orts-vergleich/[id]?ort={ortId}",
+      "title": "Wetter-Drill-Down · aus Compare",
+      "layout": "embedded-panel",
+      "viewports": ["desktop@1680", "mobile@375"],
+      "mockup_frames": { "desktop": "WX-compare", "mobile": "WX-mobile" },
+      "components": ["WxPanelHeader", "WxThresholds", "WxHourlyTable", "Btn"],
+      "charter_checks": { "no_standalone_weather_page": true, "embedded_drill_down": true }
+    },
+    {
+      "id": "archiv",
+      "route": "/archiv",
+      "title": "Archiv · vergangene Touren",
+      "layout": "kachel-grid",
+      "viewports": ["desktop@1440", "mobile@375"],
+      "mockup_frames": { "desktop": "A-list-v2", "mobile": null },
+      "components": ["BrandShell", "PageHeader", "PageTileGrid", "Tile"],
+      "copy": { "eyebrow": "ARCHIV · VERGANGENE TOUREN", "title": "Archiv" },
+      "charter_checks": { "is_kachel_not_table": true },
+      "notes": "REFACTORED in Runde 3 — kanonisches PageTileGrid + Tile. Alter Tabellen-Frame 8A bleibt als Vorher-Beispiel sichtbar."
+    },
+    {
+      "id": "konto",
+      "route": "/account",
+      "title": "Konto-Einstellungen",
+      "layout": "single-column-sections",
+      "viewports": ["desktop@1440", "mobile@375"],
+      "mockup_frames": { "desktop": "K-desktop-v2", "mobile": "AC-mobile" },
+      "components": [
+        "BrandShell", "PageHeader", "Card", "KV", "Eyebrow", "Pill", "Dot",
+        "ChannelCard", "Switch", "Field", "Input", "Btn"
+      ],
+      "copy": { "eyebrow": "KONTO · /account", "title": "Konto-Einstellungen" },
+      "charter_checks": {
+        "uses_page_chrome": true,
+        "danger_zone_present": true,
+        "no_emoji": true
+      },
+      "notes": "REFACTORED in Runde 3 — kanonische PageHeader + PageSection. Mobile-Version (AC-mobile) folgt in einer Mini-Runde."
+    },
+    {
+      "id": "primitives",
+      "route": null,
+      "title": "UI-Primitive Spec-Sheet",
+      "layout": "spec-sheet",
+      "viewports": ["desktop@1280"],
+      "mockup_frames": { "desktop": ["P-toast", "P-dropdown", "P-segmented", "P-switch", "P-sheet"] },
+      "components": ["Toast", "DropdownMenu", "Segmented", "Switch", "Sheet"],
+      "notes": "Foundation-Spec aus Issue #312. Diese Komponenten sind in COMPONENTS.md §4-§6 katalogisiert."
+    }
+  ],
+  "compliance_rules": [
+    {
+      "id": "uses_page_chrome",
+      "description": "Screen verwendet <PageHeader> aus page-chrome.jsx — keine lokale Header-Implementierung.",
+      "anti_pattern": "AP-011"
+    },
+    {
+      "id": "is_kachel_not_table",
+      "description": "Listen sind Kachel-Grids, keine Tabellen.",
+      "anti_pattern": "AP-003"
+    },
+    {
+      "id": "no_icon_soup",
+      "description": "Listen-Items haben max. 1 Icon-Button (Kebab) zusätzlich zum Namen.",
+      "anti_pattern": "AP-005"
+    },
+    {
+      "id": "click_name_opens_detail",
+      "description": "Klick auf den Item-Namen öffnet die Detail-Seite — keine separate Action-Spalte.",
+      "anti_pattern": "AP-005"
+    },
+    {
+      "id": "max_one_primary_action",
+      "description": "Genau eine Primäraktion pro Screen.",
+      "anti_pattern": "AP-004"
+    },
+    {
+      "id": "uses_dropdown_for_secondary",
+      "description": "Sekundäre Aktionen leben im <DropdownMenu>.",
+      "anti_pattern": "AP-004"
+    },
+    {
+      "id": "no_native_controls",
+      "description": "Keine nativen Checkboxen/Selects.",
+      "anti_pattern": "AP-001"
+    },
+    {
+      "id": "no_emoji",
+      "description": "Keine Emoji im UI.",
+      "anti_pattern": "AP-009"
+    },
+    {
+      "id": "no_cockpit_style",
+      "description": "Startseite ist Kachel-Übersicht, kein Live-Cockpit.",
+      "anti_pattern": "AP-010"
+    },
+    {
+      "id": "no_standalone_weather_page",
+      "description": "Wetter ist Drill-Down aus Kontext, keine eigene Seite.",
+      "anti_pattern": "AP-013"
+    },
+    {
+      "id": "embedded_drill_down",
+      "description": "Wetter-Drill-Down erscheint als Slide-Panel (Desktop) oder Bottom-Sheet (Mobile).",
+      "anti_pattern": "AP-013"
+    },
+    {
+      "id": "copy_uses_dictionary",
+      "description": "Alle User-facing Strings kommen aus COPY.md (keine Tabu-Wörter).",
+      "anti_pattern": "AP-014"
+    },
+    {
+      "id": "danger_zone_present",
+      "description": "Destruktive Aktionen sind visuell als Danger-Zone abgesetzt.",
+      "anti_pattern": null
+    },
+    {
+      "id": "wizard_steps_match_charter",
+      "description": "Wizard hat genau 4 Schritte: Route · Etappen · Wetter · Reports.",
+      "anti_pattern": null
+    },
+    {
+      "id": "stage_click_opens_weather",
+      "description": "Klick auf eine Etappe öffnet das Wetter-Drill-Down-Panel.",
+      "anti_pattern": null
+    },
+    {
+      "id": "uses_canonical_atoms",
+      "description": "Buttons, Pills, Cards etc. aus atoms.jsx — keine Eigenbauten.",
+      "anti_pattern": "AP-006"
+    }
+  ]
+}

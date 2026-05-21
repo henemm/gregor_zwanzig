@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Gregor Zwanzig — Soll-Mockups (User Flows)</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  body { background: var(--g-paper); color: var(--g-ink); }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="brand-kit.jsx"></script>
+<script type="text/babel" src="atoms.jsx"></script>
+<script type="text/babel" src="mobile-shell.jsx"></script>
+<script type="text/babel" src="soll-mockups/page-chrome.jsx"></script>
+<script type="text/babel" src="soll-mockups/design-canvas.jsx"></script>
+
+<!-- Original atomic frames (Sidebar, Wetter Segmented, Report Config) -->
+<script type="text/babel" src="soll-mockups/app-shell.jsx"></script>
+<script type="text/babel" src="soll-mockups/frame-1-sidebar.jsx"></script>
+<script type="text/babel" src="soll-mockups/frame-4-segmented.jsx"></script>
+<script type="text/babel" src="soll-mockups/frame-5-report-config.jsx"></script>
+
+<!-- 7 User Flows in priority order -->
+<script type="text/babel" src="soll-mockups/flow-1-trip-anlegen.jsx"></script>
+<script type="text/babel" src="soll-mockups/flow-2-trip-editieren.jsx"></script>
+<script type="text/babel" src="soll-mockups/flow-3-orte-anlegen.jsx"></script>
+<script type="text/babel" src="soll-mockups/flow-4-5-orte-vergleich-editieren.jsx"></script>
+<script type="text/babel" src="soll-mockups/flow-6-alarm-revised.jsx"></script>
+<script type="text/babel" src="soll-mockups/flow-7-trip-liste-detail.jsx"></script>
+<script type="text/babel" src="screen-archive.jsx"></script>
+
+<!-- Round 2 (Issues #306-#312) -->
+<script type="text/babel" src="soll-mockups/primitives.jsx"></script>
+<script type="text/babel" src="soll-mockups/flow-9-auth.jsx"></script>
+<script type="text/babel" src="soll-mockups/flow-10-account.jsx"></script>
+<script type="text/babel" src="soll-mockups/flow-11-weather-drilldown.jsx"></script>
+<script type="text/babel" src="soll-mockups/flow-12-wizard-detail.jsx"></script>
+<script type="text/babel" src="soll-mockups/flow-13-compare-detail.jsx"></script>
+
+<!-- Round 3 · Design System Foundation (CHARTER · COMPONENTS · COPY · ANTI-PATTERNS) -->
+<script type="text/babel" src="soll-mockups/design-system-proof.jsx"></script>
+<script type="text/babel" src="soll-mockups/flow-7-refactored.jsx"></script>
+<script type="text/babel" src="soll-mockups/flow-8-archive-refactored.jsx"></script>
+<script type="text/babel" src="soll-mockups/flow-10-account-refactored.jsx"></script>
+<script type="text/babel" src="soll-mockups/audit.jsx"></script>
+
+<script type="text/babel">
+const { DesignCanvas, DCSection, DCArtboard, AppShell } = window;
+
+// Wrapper for any shell-mode flow frame — adds the global sidebar with wordmark
+function Shell({ active, children }) {
+  return <AppShell active={active}>{children}</AppShell>;
+}
+
+function App() {
+  return (
+    <DesignCanvas
+      title="Gregor Zwanzig — Soll-Mockups (User Flows)"
+      subtitle="Design System v1.0 + Audit-Status · 17 Screens, kanonische Bausteine, Drift-Tracking."
+    >
+      {/* ═════════ AUDIT · Konsistenz-Dashboard ═════════
+       *  Erstes, was Claude Code (und der Reviewer) sehen.
+       *  Rot = Drift, grün = compliant. Zellen referenzieren AP-IDs aus ANTI-PATTERNS.md.
+       */}
+      <DCSection id="audit" title="Audit · Konsistenz-Status (gegen CHARTER + ANTI-PATTERNS)">
+        <DCArtboard id="AU-grid" label="Drift-Dashboard · alle Screens × alle Regeln" width={1800} height={840}>
+          <window.AuditGrid />
+        </DCArtboard>
+      </DCSection>
+
+      {/* ═════════ DESIGN SYSTEM · Proof-Layer ═════════
+       *  Diese Sektion bewiest, dass die kanonischen Bausteine aus
+       *  docs/design-system/COMPONENTS.md §2 (Page-Chrome) existieren
+       *  und funktionieren. Claude Code: hier siehst du die buchstäbliche
+       *  Verwendung — <PageHeader>, <PageTileGrid>, <Tile>, <PageEmpty>.
+       */}
+      <DCSection id="ds-foundation" title="Design System · Page-Chrome (CHARTER + COMPONENTS · v1.0)">
+        <DCArtboard id="DS-header" label="① PageHeader + PageActions (Right-Slot)" width={1280} height={260}>
+          <window.ProofPageHeader />
+        </DCArtboard>
+        <DCArtboard id="DS-grid"   label="② PageTileGrid + Tile · 3-spaltig mit allen Status-Tonalitäten" width={1280} height={580}>
+          <window.ProofTileGrid />
+        </DCArtboard>
+        <DCArtboard id="DS-empty"  label="③ PageEmpty · alle 5 kanonischen Empty-States" width={1080} height={920}>
+          <window.ProofEmptyStates />
+        </DCArtboard>
+        <DCArtboard id="DS-tour-list" label="④ NEU · Touren-Liste als Kachel-Grid (4-spaltig · ersetzt Tabelle)" width={1440} height={760}>
+          <Shell active="trips"><window.ProofTourList /></Shell>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ─── 1. Trip anlegen (4-Schritt-Wizard) ─── */}
+      <DCSection id="flow-1" title="① Trip anlegen — Wizard (US-1, US-2, US-3)">
+        <DCArtboard id="1A" label="A · Startseite Einstieg (Kacheln)" width={1140} height={540}>
+          <Shell active="home"><window.Flow1_Einstieg /></Shell>
+        </DCArtboard>
+        <DCArtboard id="1B" label="B · Step 1 · Route (GPX-Upload)" width={1140} height={620}>
+          <Shell active="trips"><window.Flow1_Step1 /></Shell>
+        </DCArtboard>
+        <DCArtboard id="1C" label="C · Step 2 · Etappen (algorithmische Wegpunkte)" width={1140} height={620}>
+          <Shell active="trips"><window.Flow1_Step2 /></Shell>
+        </DCArtboard>
+        <DCArtboard id="1D" label="D · Step 3 · Wetter-Template (Pro-Metrik-Horizont)" width={1140} height={620}>
+          <Shell active="trips"><window.Flow1_Step3 /></Shell>
+        </DCArtboard>
+        <DCArtboard id="1E" label="E · Step 4 · Reports & Kanäle (4 Report-Typen)" width={1140} height={620}>
+          <Shell active="trips"><window.Flow1_Step4 /></Shell>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ─── 2. Trip editieren (Map-Visual) ─── */}
+      <DCSection id="flow-2" title="② Trip editieren — Visueller Wegpunkt-Editor (KEIN Lat/Lon-Input)">
+        <DCArtboard id="2A" label="A · Editor-Übersicht mit Tab-Navigation" width={1320} height={560}>
+          <Shell active="trips"><window.Flow2_Overview /></Shell>
+        </DCArtboard>
+        <DCArtboard id="2B" label="B · Karte + Höhenprofil + Wegpunkt-Sidebar" width={1320} height={620}>
+          <Shell active="trips"><window.Flow2_MapEditor /></Shell>
+        </DCArtboard>
+        <DCArtboard id="2C" label="C · Wegpunkt-Detail-Dialog (algorithmischer Vorschlag, Modal)" width={720} height={520}>
+          <window.Flow2_WaypointDetail />
+        </DCArtboard>
+      </DCSection>
+
+      {/* ─── 3. Orte + Vergleich anlegen ─── */}
+      <DCSection id="flow-3" title="③ Orte & Vergleich anlegen — Master-Detail mit Gruppen">
+        <DCArtboard id="3A" label="A · App-Sidebar + Locations-Sidebar + Auto-Reports-Content" width={1320} height={620}>
+          <Shell active="compare"><window.Flow3_SidebarOverview /></Shell>
+        </DCArtboard>
+        <DCArtboard id="3B" label="B · Neuer Ort (Modal)" width={920} height={620}>
+          <window.Flow3_AddLocation />
+        </DCArtboard>
+        <DCArtboard id="3C" label="C · Neuer Vergleich mit Auto-Report Option" width={1320} height={680}>
+          <Shell active="compare"><window.Flow3_NewCompare /></Shell>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ─── 4. Orte editieren ─── */}
+      <DCSection id="flow-4" title="④ Orte editieren — Inline-Rename, Drag-Gruppen, Delete">
+        <DCArtboard id="4A" label="A · Edit-Modus aktiv" width={1320} height={620}>
+          <Shell active="compare"><window.Flow4_EditMode /></Shell>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ─── 5. Vergleich editieren ─── */}
+      <DCSection id="flow-5" title="⑤ Vergleich editieren — Auto-Report Konfiguration">
+        <DCArtboard id="5A" label="A · Auto-Report Edit-Dialog (Modal)" width={920} height={680}>
+          <window.Flow5_EditCompare />
+        </DCArtboard>
+      </DCSection>
+
+      {/* ─── 6. Alarmregeln (revidiert) ─── */}
+      <DCSection id="flow-6" title="⑥ Alarmregeln — Revidiert (Beides-Fix mit zwei Threshold-Feldern)">
+        <DCArtboard id="6A" label="A · List-View mit Inline-Edit aufgeklappt" width={1320} height={620}>
+          <Shell active="trips"><window.Flow6_ListInlineEdit /></Shell>
+        </DCArtboard>
+        <DCArtboard id="6B" label="B · Neue Regel (Modal)" width={920} height={680}>
+          <window.Flow6_AddRule />
+        </DCArtboard>
+      </DCSection>
+
+      {/* ─── 7. Trip-Liste & Detail ─── */}
+      <DCSection id="flow-7" title="⑦ Trip-Liste reduziert + Detail-Seite (Icon-Soup raus)">
+        <DCArtboard id="7A" label="A · Liste mit EINER Primäraktion + Kebab" width={1320} height={560}>
+          <Shell active="trips"><window.Flow7_ListReduced /></Shell>
+        </DCArtboard>
+        <DCArtboard id="7B" label="B · Detail-Seite mit Übersichts-Cards" width={1320} height={720}>
+          <Shell active="trips"><window.Flow7_Detail /></Shell>
+        </DCArtboard>
+
+        <DCArtboard id="T-list-v2"   label="A · NEU (Runde 2 · kanonisch) · Touren-Liste als Kachel-Grid" width={1440} height={780}>
+          <Shell active="trips"><window.TourenListeV2 /></Shell>
+        </DCArtboard>
+        <DCArtboard id="T-detail-v2" label="B · NEU (Runde 2 · kanonisch) · Tour-Detail mit PageHeader + KV-Cards" width={1440} height={760}>
+          <Shell active="trips"><window.TourDetailV2 /></Shell>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ─── 8. Archiv — vergangene Touren ─── */}
+      <DCSection id="flow-8" title="⑧ Archiv — vergangene Touren, retrospektiv (Briefing-Treffer & Vorlagen-Übernahme)">
+        <DCArtboard id="8A" label="A · Archiv-Liste (alt · Tabelle) — als Vorher-Beispiel" width={1440} height={900}>
+          <Shell active="archive"><window.ArchiveContent /></Shell>
+        </DCArtboard>
+        <DCArtboard id="A-list-v2" label="A · NEU (Runde 3 · kanonisch) · Archiv als Kachel-Grid" width={1440} height={900}>
+          <Shell active="archive"><window.ArchivContentV2 /></Shell>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ─── ROUND 2 — Issues #306–#312 ─── */}
+
+      {/* #312 Foundation Primitives */}
+      <DCSection id="prim" title="#312 · UI-Primitive — Foundation (Toast / Dropdown / Segmented / Switch / Sheet)">
+        <DCArtboard id="P-toast"     label="Toast · 3 Tones + Position Desktop/Mobile" width={1280} height={620}>
+          <window.PrimToastSpec />
+        </DCArtboard>
+        <DCArtboard id="P-dropdown"  label="Dropdown · Kebab-Menü + States"             width={1080} height={420}>
+          <window.PrimDropdownSpec />
+        </DCArtboard>
+        <DCArtboard id="P-segmented" label="Segmented · 2-way / 3-way / mit Badges"     width={1280} height={360}>
+          <window.PrimSegmentedSpec />
+        </DCArtboard>
+        <DCArtboard id="P-switch"    label="Switch · States + Row-Pattern + Compact"    width={1280} height={460}>
+          <window.PrimSwitchSpec />
+        </DCArtboard>
+        <DCArtboard id="P-sheet"     label="Bottom-Sheet · peek / half / full"          width={1280} height={460}>
+          <window.PrimSheetSpec />
+        </DCArtboard>
+      </DCSection>
+
+      {/* #306 Login Desktop */}
+      <DCSection id="auth" title="#306 + #307 · Auth-Flow — Login · Registrieren · Passwort vergessen · Passwort zurücksetzen">
+        <DCArtboard id="A-login"      label="#306 · Login Desktop — Split-Layout (1440)"            width={1440} height={820}>
+          <window.AuthLoginDesktop />
+        </DCArtboard>
+        <DCArtboard id="A-register"   label="#307 · Registrierung Desktop (mit Validierungs-Error)" width={1440} height={820}>
+          <window.AuthRegisterDesktop />
+        </DCArtboard>
+        <DCArtboard id="A-forgot"     label="#307 · Passwort vergessen Desktop"                     width={1440} height={820}>
+          <window.AuthForgotDesktop />
+        </DCArtboard>
+        <DCArtboard id="A-forgot-ok"  label="#307 · Passwort vergessen — Success-State"             width={1440} height={820}>
+          <window.AuthForgotDesktop success />
+        </DCArtboard>
+        <DCArtboard id="A-reset"      label="#307 · Reset-Password Desktop (Token-Eingabe)"         width={1440} height={820}>
+          <window.AuthResetDesktop />
+        </DCArtboard>
+
+        <DCArtboard id="A-register-m" label="#307 · Registrierung Mobile"      width={400} height={860}>
+          <window.AuthRegisterMobile />
+        </DCArtboard>
+        <DCArtboard id="A-forgot-m"   label="#307 · Passwort vergessen Mobile" width={400} height={860}>
+          <window.AuthForgotMobile />
+        </DCArtboard>
+        <DCArtboard id="A-reset-m"    label="#307 · Reset-Password Mobile"     width={400} height={860}>
+          <window.AuthResetMobile />
+        </DCArtboard>
+      </DCSection>
+
+      {/* #308 Account */}
+      <DCSection id="account" title="#308 · Konto-Seite — Profil · Kanäle · Passwort · System · Templates · Danger">
+        <DCArtboard id="AC-desktop" label="#308 · Account Desktop (alt · eigene AccountSection)" width={1440} height={1280}>
+          <Shell active="home"><window.AccountDesktop /></Shell>
+        </DCArtboard>
+        <DCArtboard id="K-desktop-v2" label="#308 · NEU (Runde 3 · kanonisch · PageHeader + PageSection)" width={1440} height={1280}>
+          <Shell active="home"><window.KontoV2 /></Shell>
+        </DCArtboard>
+        <DCArtboard id="AC-mobile"  label="#308 · Account Mobile (375)"   width={400} height={860}>
+          <window.AccountMobile />
+        </DCArtboard>
+      </DCSection>
+
+      {/* #309 Weather Drill-Down */}
+      <DCSection id="wx" title="#309 · Wetter-Drill-Down — eingebettet aus Trip-Detail + Compare (Slide-Panel rechts)">
+        <DCArtboard id="WX-trip"    label="#309 · Aus Trip-Detail (Etappe) · Desktop · Slide-Panel 540 px"  width={1680} height={900}>
+          <window.WxFromTripDetail />
+        </DCArtboard>
+        <DCArtboard id="WX-compare" label="#309 · Aus Compare (Ort) · Desktop · Slide-Panel 540 px"         width={1680} height={900}>
+          <window.WxFromCompare />
+        </DCArtboard>
+        <DCArtboard id="WX-mobile"  label="#309 · Mobile Bottom-Sheet (snap=full, 88 %)"                     width={400} height={860}>
+          <window.WxMobile />
+        </DCArtboard>
+      </DCSection>
+
+      {/* #310 Wizard Steps 2-4 */}
+      <DCSection id="wiz-detail" title="#310 · Trip-Wizard Steps 2–4 — Detail (Mobile + Desktop-Callouts)">
+        <DCArtboard id="W-s2-call" label="#310 · Step 2 Detail-Spec — Algorithmus-Vorschlag + Naismith" width={520} height={500}>
+          <window.WizardCalloutNaismith />
+        </DCArtboard>
+        <DCArtboard id="W-s3-call" label="#310 · Step 3 Detail-Spec — Pro-Metrik-Override + Save"      width={520} height={500}>
+          <window.WizardCalloutOverride />
+        </DCArtboard>
+        <DCArtboard id="W-s4-call" label="#310 · Step 4 Detail-Spec — Kanal-Auswahl + Preview"         width={520} height={500}>
+          <window.WizardCalloutChannels />
+        </DCArtboard>
+
+        <DCArtboard id="W-s2-m" label="#310 · Step 2 Mobile — Etappen bestätigen"  width={400} height={860}>
+          <window.WizardStep2Mobile />
+        </DCArtboard>
+        <DCArtboard id="W-s3-m" label="#310 · Step 3 Mobile — Wetter-Template"     width={400} height={860}>
+          <window.WizardStep3Mobile />
+        </DCArtboard>
+        <DCArtboard id="W-s4-m" label="#310 · Step 4 Mobile — Reports & Kanäle"    width={400} height={860}>
+          <window.WizardStep4Mobile />
+        </DCArtboard>
+      </DCSection>
+
+      {/* #311 Compare Detail */}
+      <DCSection id="compare-detail" title="#311 · Compare-Screen Detail-Specs — Rail + Header + Matrix + Banner + Hourly (1680)">
+        <DCArtboard id="CD-full" label="#311 · Compare Detail — Annotation-Tags zeigen Spec-Werte" width={1680} height={1280}>
+          <window.CompareDetailFull />
+        </DCArtboard>
+      </DCSection>
+
+      {/* ─── Atomic reference frames (older context) ─── */}
+      <DCSection id="atomic" title="Atomic — kleinere Komponenten-Referenz (Issues 02, 08, 09)">
+        <DCArtboard id="A-side-B" label="Sidebar Wordmark — Variante B (gewählt)" width={280} height={520}>
+          <window.FrameSidebar variant="B" />
+        </DCArtboard>
+        <DCArtboard id="A-segmented" label="Issue 08 — Roh/Indikator Segmented Control" width={820} height={440}>
+          <window.FrameSegmented />
+        </DCArtboard>
+        <DCArtboard id="A-reports" label="Issue 09 — Report-Config (Kanäle + Quick-Chips)" width={820} height={680}>
+          <window.FrameReportConfig />
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
