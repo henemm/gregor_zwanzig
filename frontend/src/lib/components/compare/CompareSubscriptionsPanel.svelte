@@ -2,6 +2,9 @@
 	import type { Subscription } from '$lib/types.js';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { Btn } from '$lib/components/ui/btn/index.js';
+	import { Dot } from '$lib/components/ui/dot/index.js';
+	import { Pill } from '$lib/components/ui/pill/index.js';
+	import PencilIcon from '@lucide/svelte/icons/pencil';
 
 	interface Props {
 		subscriptions: Subscription[];
@@ -53,12 +56,7 @@
 					<Card.Content class="py-3">
 						<div class="flex items-start justify-between gap-2">
 							<div class="flex items-center gap-2 min-w-0">
-								<span
-									class="mt-1 h-2 w-2 shrink-0 rounded-full {sub.enabled
-										? 'bg-green-500'
-										: 'bg-gray-300'}"
-									title={sub.enabled ? 'Aktiv' : 'Inaktiv'}
-								></span>
+								<Dot tone={sub.enabled ? 'success' : 'default'} size="sm" />
 								<div class="min-w-0">
 									<p class="truncate font-medium text-sm">{sub.name}</p>
 									<p class="text-xs text-muted-foreground">
@@ -68,20 +66,17 @@
 										<p class="text-xs text-muted-foreground mt-0.5">
 											Zuletzt: {formatLastRun(sub.last_run)}
 											{#if sub.last_status === 'ok'}
-												<span
-													class="ml-1 inline-flex items-center rounded-full bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-700"
-													>ok</span
-												>
+												<Pill tone="success">ok</Pill>
 											{:else if sub.last_status === 'error'}
-												<span
-													class="ml-1 inline-flex items-center rounded-full bg-red-50 px-1.5 py-0.5 text-xs font-medium text-red-700"
-													>Fehler</span
-												>
+												<Pill tone="danger">Fehler</Pill>
 											{/if}
 										</p>
 									{/if}
 								</div>
 							</div>
+							<Btn variant="ghost" size="icon-sm" title="Bearbeiten">
+								<PencilIcon class="size-3.5" />
+							</Btn>
 						</div>
 					</Card.Content>
 				</Card.Root>

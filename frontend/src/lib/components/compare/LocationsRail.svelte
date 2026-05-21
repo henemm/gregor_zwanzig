@@ -82,7 +82,8 @@
 
 <div
 	data-testid="compare-rail"
-	class="w-60 shrink-0 flex flex-col space-y-3 border-r pr-4"
+	class="w-60 shrink-0 flex flex-col space-y-3 pr-4"
+	style="border-right: 1px solid color-mix(in srgb, var(--g-ink-faint) 40%, transparent);"
 >
 	<input
 		data-testid="compare-rail-search"
@@ -119,7 +120,7 @@
 					onclick={() => (activeProfile = activeProfile === p ? null : p)}
 					class="cursor-pointer"
 				>
-					<Pill tone={activeProfile === p ? 'accent' : 'default'}>{sig.icon} {sig.eyebrow}</Pill>
+					<Pill tone={activeProfile === p ? 'accent' : 'default'}><span data-slot="dot" data-size="xs" style="background: {sig.accent}; flex-shrink: 0; margin-right: 4px;" title={sig.eyebrow}></span>{sig.eyebrow}</Pill>
 				</button>
 			{/each}
 		</div>
@@ -159,7 +160,7 @@
 								<span class="flex-1">{loc.name}</span>
 								{#if loc.activity_profile && loc.activity_profile !== 'allgemein'}
 									{@const sig = profileSignature(loc.activity_profile)}
-									<span title={sig.eyebrow} class="text-xs opacity-60">{sig.icon}</span>
+									<span data-slot="dot" data-size="xs" style="background: {sig.accent}; flex-shrink: 0;" title={sig.eyebrow}></span>
 								{/if}
 								<button
 									onclick={() => onShowWeather(loc.id)}
@@ -184,7 +185,7 @@
 				<span class="flex-1">{loc.name}</span>
 				{#if loc.activity_profile && loc.activity_profile !== 'allgemein'}
 					{@const sig = profileSignature(loc.activity_profile)}
-					<span title={sig.eyebrow} class="text-xs opacity-60">{sig.icon}</span>
+					<span data-slot="dot" data-size="xs" style="background: {sig.accent}; flex-shrink: 0;" title={sig.eyebrow}></span>
 				{/if}
 				<button
 					onclick={() => onShowWeather(loc.id)}

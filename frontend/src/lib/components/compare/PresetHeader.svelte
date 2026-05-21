@@ -52,7 +52,7 @@
 						data-testid="compare-preset-date-input"
 						type="date"
 						bind:value={compareDate}
-						class="mt-1 block w-full rounded-md border px-3 py-2 text-sm"
+						class="mt-1 block w-full rounded-md border px-3 py-2 text-sm font-mono"
 					/>
 				</div>
 				<div>
@@ -109,7 +109,7 @@
 
 			<!-- Rechte Seite: Buttons -->
 			<div class="flex flex-wrap items-center gap-2">
-				<Btn variant="outline" disabled={true}>Preset laden</Btn>
+				<Btn variant="ghost" disabled={true}>Preset laden</Btn>
 				<Btn
 					variant="outline"
 					data-testid="compare-preset-save-btn"
