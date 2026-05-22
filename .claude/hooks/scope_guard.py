@@ -279,17 +279,25 @@ def main():
     task = load_task()
 
     if task is None:
-        # No task defined - warn but allow for critical paths
         task_type = detect_task_type(file_path)
         if task_type in ['feature', 'bugfix']:
-            # These are critical - just warn
+            try:
+                wf_names = sorted(
+                    f.stem for f in (get_project_root() / ".claude" / "workflows").glob("*.json")
+                    if not f.stem.startswith(".")
+                )[:5]
+                wf_hint = "\n  ".join(wf_names) if wf_names else "<workflow-name>"
+            except Exception:
+                wf_hint = "<workflow-name>"
             print(f"""
-Warning: Modifying critical file without defined task
-  File: {file_path}
-  Type: {task_type}
+Kein aktiver Workflow — GZ_ACTIVE_WORKFLOW nicht gesetzt.
+  Datei: {file_path}
 
-  Set the active workflow before editing:
-  export GZ_ACTIVE_WORKFLOW=<workflow-name>
+  Loesung:  export GZ_ACTIVE_WORKFLOW=<workflow-name>
+  NICHT in settings.json eintragen — das ist eine Shell-Variable, kein Config-Wert.
+
+  Verfuegbare Workflows (Auswahl):
+  {wf_hint}
 """, file=sys.stderr)
         _loc_check_or_block()
         sys.exit(0)
@@ -328,13 +336,11 @@ Warning: Modifying critical file without defined task
 ║                                                                  ║
 ║  This change is NOT part of the current task!                    ║
 ║                                                                  ║
-║  Options:                                                        ║
-║  1. Complete current task first, then ask user about this        ║
-║  2. Ask user for permission to expand scope                      ║
-║  3. Update task file to include this path:                       ║
-║     Edit .claude/current_task.json                               ║
+║  Loesung:                                                        ║
+║  export GZ_ACTIVE_WORKFLOW=<richtiger-workflow-name>             ║
+║  NICHT in settings.json eintragen — Shell-Variable!             ║
 ║                                                                  ║
-║  DO NOT expand scope without user approval!                      ║
+║  Scope erweitern: workflow.py set-affected-files <datei>         ║
 ╚══════════════════════════════════════════════════════════════════╝
 """, file=sys.stderr)
     sys.exit(2)
