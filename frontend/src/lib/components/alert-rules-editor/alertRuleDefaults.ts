@@ -46,7 +46,8 @@ export function newDefaultRule(): AlertRule {
 export const DELTA_ONLY_METRICS: ReadonlySet<AlertMetric> = new Set<AlertMetric>([
 	'temperature_change',
 	'wind_change',
-	'precipitation_change'
+	'precipitation_change',
+	'thunder_level'
 ]);
 
 export type AlertRuleMode = 'absolute' | 'delta' | 'both';

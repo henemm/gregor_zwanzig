@@ -2,8 +2,8 @@
 entity_id: issue_297_alert_beides_mode
 type: module
 created: 2026-05-21
-updated: 2026-05-21
-status: draft
+updated: 2026-05-22
+status: implemented
 version: "1.0"
 issue: 297
 tags: [alert-rules, frontend, mode-both, pair-id, alertrulerow, modecard, expandrules, issue-297]
@@ -325,3 +325,4 @@ Logik: `isPairFollower` ist `true` wenn die aktuelle Rule eine `pair_id` hat UND
 ## Changelog
 
 - 2026-05-21: Initial spec für Issue #297 — separate Threshold-Felder bei mode='both', ModeCard-Badge, `expandRules()`-Signaturerweiterung mit `absThreshold`/`deltaThreshold`/`deltaWindow`, `pair_id`-Semantik für Paar-Markierung im List-View, Known Limitation für unvollständige Paar-Bearbeitung dokumentiert, 11 Acceptance Criteria im AC-N Given/When/Then-Format.
+- 2026-05-22: Implementiert — Adversary-Fixes durchgeführt: expandRules() strippt pair_id/delta_window korrekt via Destructuring in allen 4 Pfaden (F001/F004/AC-7). thunder_level zu DELTA_ONLY_METRICS hinzugefügt (diskrete Ordinal-Metrik). 16 Unit-Tests für expandRules() Logik.

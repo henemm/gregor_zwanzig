@@ -225,6 +225,18 @@ test('expandRules #297 F004 > mode=both + delta-only + base hat pair_id → pair
 	assert.strictEqual(result[0].pair_id, undefined, 'F004: pair_id muss entfernt sein');
 });
 
+test('expandRules #297 > mode=both + thunder_level → nur delta-Rule, kein pair_id (diskrete Ordinal-Metrik)', () => {
+	// thunder_level ist eine diskrete Ordinal-Metrik (MITTEL/HOCH) — ein
+	// Δ-Alarm ergibt semantisch keinen Sinn. Deshalb wurde thunder_level zu
+	// DELTA_ONLY_METRICS hinzugefuegt (Issue #297). Bei mode='both' muss der
+	// DELTA_ONLY-Guard greifen: genau 1 delta-Rule, ohne pair_id.
+	const base: AlertRule = { ...newDefaultRule(), metric: 'thunder_level', threshold: 1 };
+	const result = expandRules(base, 'both', 80, 20, '6h');
+	assert.equal(result.length, 1, 'thunder_level bei mode=both muss nur 1 Rule erzeugen');
+	assert.equal(result[0].kind, 'delta', 'Einzige Rule muss kind=delta haben');
+	assert.strictEqual(result[0].pair_id, undefined, 'thunder_level Rule darf kein pair_id haben');
+});
+
 test('expandRules #297 F005 > mode=both + base mit kind=delta + delta_window → Absolute-Rule darf kein delta_window erben (AC-7)', () => {
 	// F005-Regression: Wenn die Base-Rule bereits kind='delta' + delta_window
 	// traegt (z.B. aus einer frueheren Delta-Speicherung) und der User auf
