@@ -29,12 +29,12 @@
 		{
 			label: 'Abend-Briefing',
 			meta: schedule.evening ? `${schedule.evening} · E-Mail` : '—',
-			state: schedule.enabled && !!schedule.evening ? 'on' : 'off'
+			state: schedule.enabled && schedule.evening_enabled && !!schedule.evening ? 'on' : 'off'
 		},
 		{
 			label: 'Morgen-Update',
 			meta: schedule.morning ? `${schedule.morning} · E-Mail` : '—',
-			state: schedule.enabled && !!schedule.morning ? 'on' : 'off'
+			state: schedule.enabled && schedule.morning_enabled && !!schedule.morning ? 'on' : 'off'
 		},
 		{
 			label: 'Warnungen',

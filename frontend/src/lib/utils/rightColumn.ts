@@ -90,20 +90,24 @@ export function getActiveMetrics(trip: Trip): string[] {
 export interface ReportSchedule {
 	morning?: string;
 	evening?: string;
+	morning_enabled: boolean;
+	evening_enabled: boolean;
 	alertOnChanges: boolean;
 	enabled: boolean;
 }
 
 export function getReportSchedule(trip: Trip): ReportSchedule {
 	const rc = trip.report_config;
-	if (!rc) return { enabled: false, alertOnChanges: false };
+	if (!rc) return { enabled: false, morning_enabled: false, evening_enabled: false, alertOnChanges: false };
 	// Defensive Runtime-Checks: Backend kann Off-Spec-Werte liefern.
 	const morningTime: unknown = rc.morning_time;
 	const eveningTime: unknown = rc.evening_time;
 	return {
 		enabled: rc.enabled === true,
-		morning: typeof morningTime === 'string' ? morningTime : undefined,
-		evening: typeof eveningTime === 'string' ? eveningTime : undefined,
+		morning_enabled: rc.morning_enabled === true,
+		evening_enabled: rc.evening_enabled === true,
+		morning: typeof morningTime === 'string' ? morningTime.slice(0, 5) : undefined,
+		evening: typeof eveningTime === 'string' ? eveningTime.slice(0, 5) : undefined,
 		alertOnChanges: rc.alert_on_changes === true
 	};
 }
