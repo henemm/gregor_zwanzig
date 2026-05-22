@@ -97,3 +97,4 @@ data/users/__*/
 
 # Session-spezifische Workflow-Zuordnung (ephemer, nicht versionieren)
 .claude/session_workflows.json
+data/diagnostics/

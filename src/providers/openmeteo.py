@@ -58,6 +58,10 @@ ENSEMBLE_BASE_HOST = "https://ensemble-api.open-meteo.com"
 TIMEOUT = 30.0
 ENSEMBLE_TIMEOUT = 15.0  # Issue #121: shorter timeout for ensemble (best-effort)
 
+# Issue #338: Diagnose-Zähler — append-only JSONL für jeden ausgehenden Abruf.
+# Reine Observability, fail-soft. In .gitignore (data/diagnostics/).
+DIAGNOSTICS_PATH = Path("data/diagnostics/openmeteo_calls.jsonl")
+
 
 def compute_confidence_pct(
     spread_t2m_k: float, spread_precip_mm: float, lead_time_hours: float
@@ -387,6 +391,63 @@ class OpenMeteoProvider:
             f"ECMWF global fallback failed - check REGIONAL_MODELS configuration!"
         )
 
+    # Issue #338: Mapping Aufrufer-Funktionsname (im Stack) -> Diagnose-Quelle.
+    # Reihenfolge = Priorität (äußerste/spezifischste Quelle zuerst).
+    # F002-Fix (#338): Vorschau-Einstiegsfunktionen GANZ NACH OBEN — die
+    # Vorschau ist die äußerste Quelle, ihre gesamte Last (inkl. evtl.
+    # Trend-Anteil) soll als "vorschau" erfasst werden. Echte Funktionsnamen
+    # statt Teilstring "preview", um die _fetch_weather→"briefing"-Falle und
+    # Teilstring-Kollisionen zu vermeiden.
+    _CALL_SOURCE_MARKERS = [
+        ("render_email_preview", "vorschau"),
+        ("render_sms_preview", "vorschau"),
+        ("_fetch_fresh_weather", "alarm"),
+        ("_build_stage_trend", "trend"),
+        ("_enrich_ensemble_for_trip", "ensemble"),
+        ("_fetch_ensemble_spread", "ensemble"),
+        ("_fetch_uv_data", "uv"),
+        ("_fetch_night_weather", "briefing_nacht"),
+        ("_fetch_weather", "briefing"),
+        ("compare", "vergleich"),
+    ]
+
+    def _resolve_call_source(self) -> str:
+        """Issue #338: Diagnose-Quelle aus den Aufrufer-Frame-Namen ableiten."""
+        import inspect
+
+        names = [f.function for f in inspect.stack()[:25]]
+        for marker, source in self._CALL_SOURCE_MARKERS:
+            if any(marker in n for n in names):
+                return source
+        return "unbekannt"
+
+    def _log_api_call(
+        self, endpoint: str, status: Optional[int], error: Optional[str] = None
+    ) -> None:
+        """
+        Issue #338: Einen ausgehenden Open-Meteo-Abruf protokollieren (fail-soft).
+
+        Hängt eine JSONL-Zeile (ts, endpoint, status, source, error) an
+        DIAGNOSTICS_PATH an. Jeder Fehler wird geschluckt — Diagnose darf den
+        Abruf NIE beeinträchtigen.
+        """
+        try:
+            import providers.openmeteo as _om
+
+            path = _om.DIAGNOSTICS_PATH
+            path.parent.mkdir(parents=True, exist_ok=True)
+            line = json.dumps({
+                "ts": datetime.now(timezone.utc).isoformat(),
+                "endpoint": endpoint,
+                "status": status,
+                "source": self._resolve_call_source(),
+                "error": error,
+            })
+            with path.open("a") as fh:
+                fh.write(line + "\n")
+        except Exception:
+            pass  # Diagnose darf den Abruf NIE beeinträchtigen
+
     @retry(
         stop=stop_after_attempt(RETRY_ATTEMPTS),
         wait=wait_exponential(multiplier=1, min=RETRY_WAIT_MIN, max=RETRY_WAIT_MAX),
@@ -417,9 +478,12 @@ class OpenMeteoProvider:
             ProviderRequestError: On non-retryable errors or after max retries
         """
         host = base_host or BASE_HOST
-        url = f"{host}{endpoint}"
+        url = f"{host}{endpoint}"  # host+path ohne Query (params separat)
         try:
             response = self._client.get(url, params=params)
+            # Issue #338: Genau eine Zeile pro get() — der echte Status (inkl.
+            # 429) ist hier bekannt; im HTTPStatusError-Zweig NICHT erneut loggen.
+            self._log_api_call(url, response.status_code)
             response.raise_for_status()
             return response.json()
         except httpx.HTTPStatusError as e:
@@ -428,6 +492,8 @@ class OpenMeteoProvider:
                 f"API error: {e.response.status_code} - {e.response.text}"
             ) from e
         except httpx.RequestError as e:
+            # Issue #338: kein Response → eigener Log-Eintrag mit Fehlertext.
+            self._log_api_call(url, None, error=str(e))
             raise ProviderRequestError("openmeteo", f"Request failed: {e}") from e
 
     def _parse_thunder_level(self, weather_code: Optional[int]) -> ThunderLevel:
@@ -476,12 +542,18 @@ class OpenMeteoProvider:
             params["start_date"] = start.strftime("%Y-%m-%d")
             params["end_date"] = end.strftime("%Y-%m-%d")
 
-        url = f"{self._ensemble_host}/v1/ensemble"
+        url = f"{self._ensemble_host}/v1/ensemble"  # host+path ohne Query
         try:
             response = self._client.get(url, params=params, timeout=ENSEMBLE_TIMEOUT)
+            self._log_api_call(url, response.status_code)  # Issue #338
             response.raise_for_status()
             data = response.json()
+        except httpx.HTTPStatusError as e:
+            # Issue #338: bereits nach get() protokolliert (kein Doppel-Eintrag).
+            logger.warning("Ensemble fetch failed: %s", e)
+            return {}
         except Exception as e:
+            self._log_api_call(url, None, error=str(e))  # Issue #338
             logger.warning("Ensemble fetch failed: %s", e)
             return {}
 
