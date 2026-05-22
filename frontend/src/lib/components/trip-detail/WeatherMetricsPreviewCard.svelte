@@ -52,12 +52,12 @@
 		background: var(--g-surface-1, #fff);
 	}
 	.card-title {
-		font-size: 1rem;
+		font-size: var(--g-text-md);
 		font-weight: 600;
 		margin: 0;
 	}
 	.empty-state {
-		font-size: 0.875rem;
+		font-size: var(--g-text-sm);
 		color: var(--g-ink-faint);
 		margin: 0;
 	}
@@ -71,12 +71,12 @@
 		padding: 0.125rem 0.5rem;
 		border-radius: 9999px;
 		background: var(--g-surface-2, rgba(0, 0, 0, 0.05));
-		font-size: 0.75rem;
+		font-size: var(--g-text-xs);
 		color: var(--g-ink, inherit);
 	}
 	.edit-link {
 		display: inline-block;
-		font-size: 0.875rem;
+		font-size: var(--g-text-sm);
 		color: var(--g-accent);
 		text-decoration: none;
 		margin-top: 0.25rem;
