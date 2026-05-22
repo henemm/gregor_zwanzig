@@ -1,5 +1,6 @@
 ---
 name: spec-validator
+model: haiku
 description: Validates entity specifications for completeness and correctness.
 ---
 

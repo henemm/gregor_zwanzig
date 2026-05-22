@@ -1,5 +1,6 @@
 ---
 name: spec-writer
+model: sonnet
 description: Creates and updates entity specifications following the spec-first workflow.
 ---
 

@@ -1,3 +1,9 @@
+---
+name: user-story-planner
+model: sonnet
+description: Breaks down user needs into implementable features.
+---
+
 # User-Story-Planner Agent
 
 Breaks down larger user needs into implementable features for **Gregor Zwanziger**.

@@ -155,7 +155,7 @@
 								aria-hidden="true"
 							></span>
 							<code class="text-xs" style:font-family="var(--g-font-data)">
-								{sig.accentFallback}
+								{sig.accent}
 							</code>
 						</div>
 					</div>

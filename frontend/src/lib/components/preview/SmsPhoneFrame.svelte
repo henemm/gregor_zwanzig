@@ -73,38 +73,38 @@
 	.sms-shell { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
 	.stub-pill {
 		display: inline-block; padding: 0.25rem 0.625rem; font-size: 0.75rem; font-weight: 500;
-		color: var(--g-ink, #1a1a18); background: var(--g-warning, #c8882a); border-radius: 99rem;
+		color: var(--g-ink); background: var(--g-warning); border-radius: 99rem;
 	}
 	.phone-frame {
-		position: relative; width: 320px; background: #1a1a18; border-radius: 36px;
+		position: relative; width: 320px; background: var(--g-ink); border-radius: 36px;
 		padding: 36px 14px 28px;
 		box-shadow: var(--g-shadow-1, var(--g-elev-1, 0 1px 3px rgba(26, 26, 24, 0.08)));
 	}
 	.phone-frame::before {
 		content: ''; position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
-		width: 60px; height: 18px; background: #000; border-radius: 12px;
+		width: 60px; height: 18px; background: black; border-radius: 12px;
 	}
 	.phone-screen {
-		background: var(--g-paper, #f6f4ee); border-radius: 18px; min-height: 200px; padding: 14px;
+		background: var(--g-paper); border-radius: 18px; min-height: 200px; padding: 14px;
 		display: flex; flex-direction: column; justify-content: center;
 	}
 	.bubble {
-		background: var(--g-paper, #f6f4ee); color: var(--g-ink, #1a1a18);
+		background: var(--g-paper); color: var(--g-ink);
 		font-family: var(--g-font-data, 'JetBrains Mono', ui-monospace, monospace);
 		font-size: 13px; line-height: 1.45; word-break: break-word;
-		padding: 8px 10px; border: 1px solid var(--g-ink-faint, #9c9a90); border-radius: 14px;
+		padding: 8px 10px; border: 1px solid var(--g-ink-faint); border-radius: 14px;
 	}
-	.state-msg { font-size: 0.8125rem; color: var(--g-ink, #1a1a18); text-align: center; }
-	.state-msg.error { color: #b03a2e; }
+	.state-msg { font-size: 0.8125rem; color: var(--g-ink); text-align: center; }
+	.state-msg.error { color: var(--g-danger); }
 	.char-count {
 		font-family: var(--g-font-data, 'JetBrains Mono', monospace);
 		font-size: 0.8125rem; margin: 0;
 	}
-	.char-count-ok { color: var(--g-ink, #1a1a18); }
-	.char-count-warn { color: var(--g-warning, #b67700); }
-	.char-count-over { color: #b03a2e; }
+	.char-count-ok { color: var(--g-ink); }
+	.char-count-warn { color: var(--g-warning); }
+	.char-count-over { color: var(--g-danger); }
 	.legend {
 		max-width: 320px; font-size: 0.6875rem; line-height: 1.4;
-		color: var(--g-ink-muted, #5c5a52); text-align: center; margin: 0;
+		color: var(--g-ink-muted); text-align: center; margin: 0;
 	}
 </style>
