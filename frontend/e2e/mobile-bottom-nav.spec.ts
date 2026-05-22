@@ -11,7 +11,7 @@
 //   bottom-nav-item-home          — Link zu /
 //   bottom-nav-item-trips         — Link zu /trips
 //   bottom-nav-item-compare       — Link zu /compare
-//   bottom-nav-item-locations     — Link zu /locations
+//   bottom-nav-item-archive       — Link zu /archiv
 //   top-app-bar                   — TopAppBar-Container (mobile only)
 //   top-app-bar-hamburger         — Hamburger-Button
 //   top-app-bar-toggle-dark       — Dark-Mode-Toggle
@@ -82,7 +82,7 @@ test.describe('Issue #267: Mobile Bottom-Navigation', () => {
 		await expect(page.getByTestId('bottom-nav-item-home')).toBeVisible();
 		await expect(page.getByTestId('bottom-nav-item-trips')).toBeVisible();
 		await expect(page.getByTestId('bottom-nav-item-compare')).toBeVisible();
-		await expect(page.getByTestId('bottom-nav-item-locations')).toBeVisible();
+		await expect(page.getByTestId('bottom-nav-item-archive')).toBeVisible();
 	});
 
 	// ─── AC-3: Navigation via BottomNav + Akzent-Linie ─────────────────────
@@ -189,7 +189,7 @@ test.describe('Issue #267: Mobile Bottom-Navigation', () => {
 		await expect(sidebar.locator('a[href="/"]')).toBeVisible();
 		await expect(sidebar.locator('a[href="/trips"]')).toBeVisible();
 		await expect(sidebar.locator('a[href="/compare"]')).toBeVisible();
-		await expect(sidebar.locator('a[href="/locations"]')).toBeVisible();
+		await expect(sidebar.locator('a[href="/archiv"]')).toBeVisible();
 	});
 
 	// ─── Zusatz: BottomNav auf Tablets zwischen 768-899px ───────────────────

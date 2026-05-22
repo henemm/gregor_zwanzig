@@ -3,13 +3,13 @@
 	import LayoutDashboard from '@lucide/svelte/icons/layout-dashboard';
 	import RouteIcon from '@lucide/svelte/icons/route';
 	import GitCompare from '@lucide/svelte/icons/git-compare';
-	import MapPin from '@lucide/svelte/icons/map-pin';
+	import Archive from '@lucide/svelte/icons/archive';
 
 	const navItems = [
 		{ href: '/',          label: 'Übersicht', icon: LayoutDashboard, testid: 'bottom-nav-item-home'     },
 		{ href: '/trips',     label: 'Trips',     icon: RouteIcon,       testid: 'bottom-nav-item-trips'    },
 		{ href: '/compare',   label: 'Vergleich', icon: GitCompare,      testid: 'bottom-nav-item-compare'  },
-		{ href: '/locations', label: 'Locations', icon: MapPin,          testid: 'bottom-nav-item-locations' },
+		{ href: '/archiv',    label: 'Archiv',    icon: Archive,         testid: 'bottom-nav-item-archive'   },
 	];
 </script>
 

@@ -2,7 +2,7 @@
 	import LayoutDashboard from '@lucide/svelte/icons/layout-dashboard';
 	import RouteIcon from '@lucide/svelte/icons/route';
 	import GitCompare from '@lucide/svelte/icons/git-compare';
-	import MapPinIcon from '@lucide/svelte/icons/map-pin';
+	import ArchiveIcon from '@lucide/svelte/icons/archive';
 	import MonitorIcon from '@lucide/svelte/icons/monitor';
 	import UserIcon from '@lucide/svelte/icons/user';
 	import ChevronUp from '@lucide/svelte/icons/chevron-up';
@@ -27,7 +27,7 @@
 		{ href: '/',          label: 'Startseite',    icon: LayoutDashboard },
 		{ href: '/trips',     label: 'Meine Touren',  icon: RouteIcon        },
 		{ href: '/compare',   label: 'Orts-Vergleich', icon: GitCompare      },
-		{ href: '/locations', label: 'Standorte',     icon: MapPinIcon       },
+		{ href: '/archiv',    label: 'Archiv',         icon: ArchiveIcon      },
 	];
 
 	function closeMobileMenu() { mobileMenuOpen = false; }
