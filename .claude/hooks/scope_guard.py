@@ -336,10 +336,10 @@ Kein aktiver Workflow — GZ_ACTIVE_WORKFLOW nicht gesetzt.
 ║                                                                  ║
 ║  This change is NOT part of the current task!                    ║
 ║                                                                  ║
-║  Loesung:                                                        ║
-║  export GZ_ACTIVE_WORKFLOW=<richtiger-workflow-name>             ║
-║  NICHT in settings.json eintragen — Shell-Variable!             ║
-║                                                                  ║
+║  Loesung: Session neu starten mit:                               ║
+║    export GZ_ACTIVE_WORKFLOW=<richtiger-workflow-name>           ║
+║    claude                                                        ║
+║  NICHT in settings.json/.local.json eintragen!                  ║
 ║  Scope erweitern: workflow.py set-affected-files <datei>         ║
 ╚══════════════════════════════════════════════════════════════════╝
 """, file=sys.stderr)
