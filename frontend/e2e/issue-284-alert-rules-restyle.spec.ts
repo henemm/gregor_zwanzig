@@ -3,6 +3,8 @@
 //
 // Diese Tests prüfen visuelle und strukturelle Eigenschaften nach dem Restyle.
 // Alle Tests MÜSSEN rot sein vor der Implementierung.
+//
+// Issue #319: Kebab-Öffnen vor Edit/Delete-Klicks vorgeschaltet.
 
 import { test, expect } from '@playwright/test';
 import { login } from './helpers.js';
@@ -159,6 +161,7 @@ test.describe('Issue #284: AlertRulesEditor Restyle', () => {
 	});
 
 	// AC-1: Speichern-Button ist <Btn> (data-slot="btn") mit variant="primary"
+	// Issue #319: Kebab-Trigger öffnen, dann Edit-Button klicken
 	test('AC-1a: Speichern-Button ist Btn-Komponente (data-slot=btn)', async ({ page, request }) => {
 		const id = tripId('ac1a');
 		await createTrip(request, id, [
@@ -175,6 +178,7 @@ test.describe('Issue #284: AlertRulesEditor Restyle', () => {
 		try {
 			await page.goto(`/trips/${id}/edit`);
 			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="alert-rule-kebab-trigger"]').first().click();
 			await page.locator('[data-testid="alert-rule-edit-btn"]').first().click();
 			const saveBtn = page.locator('[data-testid="alert-rule-save"]');
 			// MUSS rot sein: aktuell plain <button class="btn-primary">, kein data-slot="btn"
@@ -185,6 +189,7 @@ test.describe('Issue #284: AlertRulesEditor Restyle', () => {
 	});
 
 	// AC-1: Abbrechen-Button ist <Btn> mit variant="ghost"
+	// Issue #319: Kebab-Trigger öffnen, dann Edit-Button klicken
 	test('AC-1b: Abbrechen-Button ist Btn ghost (data-variant=ghost)', async ({ page, request }) => {
 		const id = tripId('ac1b');
 		await createTrip(request, id, [
@@ -201,6 +206,7 @@ test.describe('Issue #284: AlertRulesEditor Restyle', () => {
 		try {
 			await page.goto(`/trips/${id}/edit`);
 			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="alert-rule-kebab-trigger"]').first().click();
 			await page.locator('[data-testid="alert-rule-edit-btn"]').first().click();
 			const cancelBtn = page.locator('[data-testid="alert-rule-cancel"]');
 			// MUSS rot sein: aktuell plain <button class="btn-secondary">
@@ -211,6 +217,7 @@ test.describe('Issue #284: AlertRulesEditor Restyle', () => {
 	});
 
 	// AC-1: Bearbeiten-Button in View-Mode ist <Btn> ghost
+	// Issue #319: Kebab-Trigger öffnen, damit der Edit-Button sichtbar ist
 	test('AC-1c: Bearbeiten-Button ist Btn ghost (data-slot=btn)', async ({ page, request }) => {
 		const id = tripId('ac1c');
 		await createTrip(request, id, [
@@ -227,6 +234,7 @@ test.describe('Issue #284: AlertRulesEditor Restyle', () => {
 		try {
 			await page.goto(`/trips/${id}/edit`);
 			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="alert-rule-kebab-trigger"]').first().click();
 			const editBtn = page.locator('[data-testid="alert-rule-edit-btn"]').first();
 			// MUSS rot sein: aktuell plain <button class="btn-secondary">
 			await expect(editBtn).toHaveAttribute('data-slot', 'btn');
@@ -251,6 +259,7 @@ test.describe('Issue #284: AlertRulesEditor Restyle', () => {
 	});
 
 	// AC-5: ModeCard example-Text ist nicht kursiv
+	// Issue #319: Kebab-Trigger öffnen, dann Edit-Button klicken
 	test('AC-5: ModeCard example-Text ist Mono-Font, nicht kursiv', async ({ page, request }) => {
 		const id = tripId('ac5');
 		await createTrip(request, id, [
@@ -267,6 +276,7 @@ test.describe('Issue #284: AlertRulesEditor Restyle', () => {
 		try {
 			await page.goto(`/trips/${id}/edit`);
 			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="alert-rule-kebab-trigger"]').first().click();
 			await page.locator('[data-testid="alert-rule-edit-btn"]').first().click();
 			// ModeCard (absolut) ist standard-ausgewählt
 			const modeCard = page.locator('[data-testid="mode-card-absolute-selected"]');

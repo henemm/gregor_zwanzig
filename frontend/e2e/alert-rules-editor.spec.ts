@@ -4,6 +4,9 @@
 //
 // Pattern: Trip wird via API angelegt, danach Edit-Seite geprueft.
 // Cleanup inline am Ende jedes Tests (DELETE /api/trips/<id>).
+//
+// Issue #319: Kebab-Öffnen vor Edit/Delete-Klicks vorgeschaltet.
+// Neue AC-1 bis AC-6 Tests für Kebab-Menü am Ende der Datei.
 
 import { test, expect } from '@playwright/test';
 import { login } from './helpers.js';
@@ -116,6 +119,7 @@ test.describe('Issue #223: AlertRulesEditor', () => {
 		}
 	});
 
+	// Issue #319: Kebab-Trigger öffnen vor Delete-Klick
 	test('AC-4: Löschen entfernt Rule, Empty-State erscheint wieder', async ({ page, request }) => {
 		const id = tripId('ac4');
 		await createTrip(request, id, [
@@ -141,6 +145,7 @@ test.describe('Issue #223: AlertRulesEditor', () => {
 		}
 	});
 
+	// Issue #319: Kebab-Trigger öffnen vor Edit-Klick
 	test('AC-5: Bearbeiten + Threshold ändern + Speichern → View-Mode mit neuem Wert', async ({
 		page,
 		request
@@ -173,6 +178,7 @@ test.describe('Issue #223: AlertRulesEditor', () => {
 		}
 	});
 
+	// Issue #319: Kebab-Trigger öffnen vor Edit-Klick
 	test('AC-6: Abbrechen verwirft Änderung', async ({ page, request }) => {
 		const id = tripId('ac6');
 		await createTrip(request, id, [
@@ -283,6 +289,7 @@ test.describe('Issue #223: AlertRulesEditor', () => {
 		}
 	});
 
+	// Issue #319: Kebab-Trigger öffnen vor Edit-Klick
 	test('AC-10: THUNDER_LEVEL — View zeigt "HOCH", Edit zeigt Select mit MITTEL/HOCH', async ({
 		page,
 		request
@@ -327,6 +334,7 @@ test.describe('Issue #297: AlertRulesEditor — mode=both mit zwei Threshold-Fel
 		await login(page);
 	});
 
+	// Issue #319: Kebab-Trigger öffnen vor Edit-Klick
 	test('AC-3: mode=both zeigt drei separate Felder (abs + delta + zeitfenster)', async ({ page, request }) => {
 		const id = tripId('ac297-3');
 		await createTrip(request, id, [
@@ -359,6 +367,7 @@ test.describe('Issue #297: AlertRulesEditor — mode=both mit zwei Threshold-Fel
 		}
 	});
 
+	// Issue #319: Kebab-Trigger öffnen vor Edit-Klick
 	test('AC-9: Speichern-Button zeigt "Beide Regeln speichern" bei mode=both', async ({ page, request }) => {
 		const id = tripId('ac297-9');
 		await createTrip(request, id, [
@@ -389,6 +398,7 @@ test.describe('Issue #297: AlertRulesEditor — mode=both mit zwei Threshold-Fel
 		}
 	});
 
+	// Issue #319: Kebab-Trigger öffnen vor Edit-Klick
 	test('AC-10: Nach Speichern mit mode=both erscheint pair-indicator bei zweiter Rule', async ({ page, request }) => {
 		const id = tripId('ac297-10');
 		await createTrip(request, id, []);
@@ -416,6 +426,7 @@ test.describe('Issue #297: AlertRulesEditor — mode=both mit zwei Threshold-Fel
 		}
 	});
 
+	// Issue #319: Kebab-Trigger öffnen vor Edit-Klick
 	test('AC-4: ModeCard "Beides" zeigt Badge "3 Felder"', async ({ page, request }) => {
 		const id = tripId('ac297-4');
 		await createTrip(request, id, [
@@ -484,6 +495,206 @@ test.describe('Issue #297: AlertRulesEditor — mode=both mit zwei Threshold-Fel
 			expect(absRule?.pair_id).toBe('test-pair-uuid-123');
 			expect(deltaRule?.pair_id).toBe('test-pair-uuid-123');
 			expect(deltaRule?.delta_window).toBe('3h');
+		} finally {
+			await deleteTrip(request, id);
+		}
+	});
+});
+
+// Issue #319: Kebab-Menü für AlertRuleRow
+// Spec: docs/specs/modules/issue_319_alert_rule_kebab_menu.md
+//
+// TDD RED — diese Tests müssen fehlschlagen, da data-testid="alert-rule-kebab-trigger"
+// noch nicht im DOM existiert (Implementierung noch ausstehend).
+
+test.describe('Issue #319: Kebab-Menue (AC-1 bis AC-6)', () => {
+	test.beforeEach(async ({ page }) => {
+		await login(page);
+	});
+
+	// AC-1: Keine direkten Edit/Delete-Buttons sichtbar im View-Modus, nur Kebab-Trigger
+	test('AC-1: View-Modus zeigt nur Kebab-Trigger, keine direkten Bearbeiten/Loeschen-Buttons', async ({
+		page,
+		request
+	}) => {
+		const id = tripId('ac319-1');
+		await createTrip(request, id, [
+			{
+				id: 'r1',
+				kind: 'absolute',
+				metric: 'wind_gust',
+				threshold: 50,
+				unit: 'km/h',
+				severity: 'warning',
+				enabled: true
+			}
+		]);
+		try {
+			await page.goto(`/trips/${id}/edit`);
+			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			const row = page.locator('[data-testid="alert-rule-row"]').first();
+			// Kebab-Trigger muss sichtbar sein
+			await expect(row.locator('[data-testid="alert-rule-kebab-trigger"]')).toBeVisible();
+			// Direkte Text-Buttons duerfen NICHT sichtbar sein
+			await expect(row.locator('[data-testid="alert-rule-edit-btn"]')).not.toBeVisible();
+			await expect(row.locator('[data-testid="alert-rule-delete"]')).not.toBeVisible();
+		} finally {
+			await deleteTrip(request, id);
+		}
+	});
+
+	// AC-2: Klick auf Kebab-Trigger oeffnet Dropdown mit Bearbeiten + Loeschen
+	test('AC-2: Klick auf Kebab-Trigger oeffnet Dropdown mit Bearbeiten und Loeschen', async ({
+		page,
+		request
+	}) => {
+		const id = tripId('ac319-2');
+		await createTrip(request, id, [
+			{
+				id: 'r1',
+				kind: 'absolute',
+				metric: 'wind_gust',
+				threshold: 50,
+				unit: 'km/h',
+				severity: 'warning',
+				enabled: true
+			}
+		]);
+		try {
+			await page.goto(`/trips/${id}/edit`);
+			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			// Vor Klick: Dropdown-Eintraege nicht sichtbar
+			await expect(page.locator('[data-testid="alert-rule-edit-btn"]')).not.toBeVisible();
+			await expect(page.locator('[data-testid="alert-rule-delete"]')).not.toBeVisible();
+			// Klick auf Trigger
+			await page.locator('[data-testid="alert-rule-kebab-trigger"]').first().click();
+			// Dropdown muss sichtbar sein (role=menu)
+			await expect(page.locator('[role="menu"]')).toBeVisible();
+			// Beide Eintraege sichtbar
+			await expect(page.locator('[data-testid="alert-rule-edit-btn"]')).toBeVisible();
+			await expect(page.locator('[data-testid="alert-rule-delete"]')).toBeVisible();
+		} finally {
+			await deleteTrip(request, id);
+		}
+	});
+
+	// AC-3: Klick auf Bearbeiten im Dropdown oeffnet Edit-Modus
+	test('AC-3: Dropdown Bearbeiten oeffnet Edit-Modus', async ({ page, request }) => {
+		const id = tripId('ac319-3');
+		await createTrip(request, id, [
+			{
+				id: 'r1',
+				kind: 'absolute',
+				metric: 'wind_gust',
+				threshold: 50,
+				unit: 'km/h',
+				severity: 'warning',
+				enabled: true
+			}
+		]);
+		try {
+			await page.goto(`/trips/${id}/edit`);
+			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="alert-rule-kebab-trigger"]').first().click();
+			await page.locator('[data-testid="alert-rule-edit-btn"]').click();
+			// Dropdown geschlossen
+			await expect(page.locator('[role="menu"]')).not.toBeVisible();
+			// Edit-Modus aktiv: Threshold-Input und Speichern-Button sichtbar
+			await expect(page.locator('[data-testid="alert-rule-edit"]')).toBeVisible();
+			await expect(page.locator('[data-testid="alert-rule-save"]')).toBeVisible();
+		} finally {
+			await deleteTrip(request, id);
+		}
+	});
+
+	// AC-4: Klick auf Loeschen im Dropdown entfernt die Regel
+	test('AC-4: Dropdown Loeschen entfernt die Regel', async ({ page, request }) => {
+		const id = tripId('ac319-4');
+		await createTrip(request, id, [
+			{
+				id: 'r1',
+				kind: 'absolute',
+				metric: 'wind_gust',
+				threshold: 50,
+				unit: 'km/h',
+				severity: 'warning',
+				enabled: true
+			}
+		]);
+		try {
+			await page.goto(`/trips/${id}/edit`);
+			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="alert-rule-kebab-trigger"]').first().click();
+			await page.locator('[data-testid="alert-rule-delete"]').click();
+			// Regel entfernt
+			await expect(page.locator('[data-testid="alert-rule-row"]')).toHaveCount(0);
+			await expect(page.locator('[data-testid="alert-rules-editor-empty"]')).toBeVisible();
+		} finally {
+			await deleteTrip(request, id);
+		}
+	});
+
+	// AC-5: Escape-Taste schliesst das Dropdown
+	test('AC-5: Escape-Taste schliesst das offene Dropdown', async ({ page, request }) => {
+		const id = tripId('ac319-5');
+		await createTrip(request, id, [
+			{
+				id: 'r1',
+				kind: 'absolute',
+				metric: 'wind_gust',
+				threshold: 50,
+				unit: 'km/h',
+				severity: 'warning',
+				enabled: true
+			}
+		]);
+		try {
+			await page.goto(`/trips/${id}/edit`);
+			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="alert-rule-kebab-trigger"]').first().click();
+			// Dropdown ist offen
+			await expect(page.locator('[role="menu"]')).toBeVisible();
+			// Escape druecken
+			await page.keyboard.press('Escape');
+			// Dropdown geschlossen
+			await expect(page.locator('[role="menu"]')).not.toBeVisible();
+			// Trigger noch sichtbar
+			await expect(page.locator('[data-testid="alert-rule-kebab-trigger"]').first()).toBeVisible();
+		} finally {
+			await deleteTrip(request, id);
+		}
+	});
+
+	// AC-6: F004-Fallback-Pfad zeigt nur Kebab-Trigger, keinen direkten Loeschen-Button
+	test('AC-6: F004-Fallback zeigt Kebab-Trigger statt direktem Loeschen-Button', async ({
+		page,
+		request
+	}) => {
+		const id = tripId('ac319-6');
+		// Unbekannte Metrik loest F004-Fallback aus
+		await createTrip(request, id, [
+			{
+				id: 'r1',
+				kind: 'absolute',
+				metric: 'unknown_metric_xyz',
+				threshold: 10,
+				unit: '',
+				severity: 'warning',
+				enabled: true
+			}
+		]);
+		try {
+			await page.goto(`/trips/${id}/edit`);
+			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			const row = page.locator('[data-testid="alert-rule-row"]').first();
+			// Kebab-Trigger muss sichtbar sein
+			await expect(row.locator('[data-testid="alert-rule-kebab-trigger"]')).toBeVisible();
+			// Kein direkter Loeschen-Button
+			await expect(row.locator('[data-testid="alert-rule-delete"]')).not.toBeVisible();
+			// Dropdown oeffnen: nur Loeschen, kein Bearbeiten
+			await row.locator('[data-testid="alert-rule-kebab-trigger"]').click();
+			await expect(page.locator('[data-testid="alert-rule-delete"]')).toBeVisible();
+			await expect(page.locator('[data-testid="alert-rule-edit-btn"]')).not.toBeVisible();
 		} finally {
 			await deleteTrip(request, id);
 		}

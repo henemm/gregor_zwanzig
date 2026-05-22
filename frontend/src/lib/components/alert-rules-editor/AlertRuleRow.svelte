@@ -40,6 +40,7 @@
 	let editing = $state(false);
 	let draft = $state<AlertRule>({ ...rule });
 	let editMode = $state<AlertRuleMode>('absolute');
+	let kebabOpen = $state(false);
 
 	// Issue #297 — separate Felder fuer Absolut-Schwelle, Delta-Schwelle und Zeitfenster.
 	// Initialwerte werden in startEdit() aus rule.* gesetzt; Defaults dienen Erst-Render.
@@ -285,33 +286,76 @@
 				checked={rule.enabled}
 				onchange={toggleEnabled}
 			>Aktiv</Checkbox>
-			<Btn
-				variant="ghost"
-				size="sm"
-				type="button"
-				onclick={startEdit}
-				data-testid="alert-rule-edit-btn">Bearbeiten</Btn
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div class="relative"
+				onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') kebabOpen = false; }}
+				onfocusout={(e: FocusEvent) => {
+					if (!(e.currentTarget as Element).contains(e.relatedTarget as Node)) kebabOpen = false;
+				}}
 			>
-			<Btn
-				variant="ghost"
-				size="sm"
-				type="button"
-				onclick={onDelete}
-				data-testid="alert-rule-delete">Löschen</Btn
-			>
+				<Btn variant="ghost" size="icon-sm" type="button"
+					 onclick={() => (kebabOpen = !kebabOpen)}
+					 aria-label="Aktionen"
+					 data-testid="alert-rule-kebab-trigger">⋯</Btn>
+
+				{#if kebabOpen}
+					<div class="kebab-dropdown" role="menu">
+						<Btn
+							variant="ghost"
+							size="sm"
+							type="button"
+							role="menuitem"
+							onclick={() => { kebabOpen = false; startEdit(); }}
+							data-testid="alert-rule-edit-btn"
+						>Bearbeiten</Btn>
+						<Btn
+							variant="ghost"
+							size="sm"
+							type="button"
+							role="menuitem"
+							onclick={() => { kebabOpen = false; onDelete(); }}
+							data-testid="alert-rule-delete"
+						>Löschen</Btn>
+					</div>
+				{/if}
+			</div>
 		</div>
 	{/if}
 {:else}
-	<div class="alert-rule-view alert-rule-unknown" data-testid="alert-rule-unknown">
+	<div class="alert-rule-view alert-rule-unknown" data-testid="alert-rule-row" data-unknown="true">
 		<span class="label">[{rule.metric}]</span>
-		<Btn variant="ghost" size="sm" type="button" onclick={onDelete} data-testid="alert-rule-delete">Löschen</Btn>
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div class="relative"
+			onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') kebabOpen = false; }}
+			onfocusout={(e: FocusEvent) => {
+				if (!(e.currentTarget as Element).contains(e.relatedTarget as Node)) kebabOpen = false;
+			}}
+		>
+			<Btn variant="ghost" size="icon-sm" type="button"
+				 onclick={() => (kebabOpen = !kebabOpen)}
+				 aria-label="Aktionen"
+				 data-testid="alert-rule-kebab-trigger">⋯</Btn>
+
+			{#if kebabOpen}
+				<div class="kebab-dropdown" role="menu">
+					<Btn
+						variant="ghost"
+						size="sm"
+						type="button"
+						role="menuitem"
+						onclick={() => { kebabOpen = false; onDelete(); }}
+						data-testid="alert-rule-delete"
+					>Löschen</Btn>
+				</div>
+			{/if}
+		</div>
 	</div>
 {/if}
 
 <style>
 	.alert-rule-view {
 		display: grid;
-		grid-template-columns: minmax(140px, 1fr) auto auto auto auto auto auto;
+		grid-template-columns: minmax(140px, 1fr) auto auto auto auto auto;
 		align-items: center;
 		gap: 12px;
 		padding: 10px 14px;
@@ -380,6 +424,35 @@
 		font-family: var(--g-font-ui);
 		font-size: var(--g-text-sm);
 		color: var(--g-ink);
+	}
+	.relative {
+		position: relative;
+	}
+	.kebab-dropdown {
+		position: absolute;
+		right: 0;
+		top: 100%;
+		z-index: 50;
+		background: var(--g-surface);
+		border: 1px solid var(--g-ink-faint);
+		border-radius: 6px;
+		min-width: 120px;
+		box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+		padding: 4px 0;
+	}
+	.kebab-dropdown button {
+		display: block;
+		width: 100%;
+		padding: 8px 14px;
+		text-align: left;
+		background: none;
+		border: none;
+		cursor: pointer;
+		font-size: var(--g-text-sm);
+		color: var(--g-ink);
+	}
+	.kebab-dropdown button:hover {
+		background: var(--g-surface-raised);
 	}
 	/* Issue #297 — visuelle Paar-Markierung: zweite Rule eines Paares. */
 	.alert-rule-view.pair-follower {
