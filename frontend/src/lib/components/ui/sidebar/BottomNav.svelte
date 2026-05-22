@@ -7,7 +7,7 @@
 
 	const navItems = [
 		{ href: '/',          label: 'Übersicht', icon: LayoutDashboard, testid: 'bottom-nav-item-home'     },
-		{ href: '/trips',     label: 'Trips',     icon: RouteIcon,       testid: 'bottom-nav-item-trips'    },
+		{ href: '/trips',     label: 'Touren',    icon: RouteIcon,       testid: 'bottom-nav-item-trips'    },
 		{ href: '/compare',   label: 'Vergleich', icon: GitCompare,      testid: 'bottom-nav-item-compare'  },
 		{ href: '/archiv',    label: 'Archiv',    icon: Archive,         testid: 'bottom-nav-item-archive'   },
 	];

@@ -233,7 +233,7 @@
 		testReportError = null;
 		try {
 			await api.post(`/api/scheduler/trip-reports?hour=${hour}`, {});
-			testReportResult = `Test-Report (${hour === 7 ? 'Morning' : 'Evening'}) wurde ausgelöst. Alle aktiven Trips für ${hour}:00 Uhr werden verarbeitet.`;
+			testReportResult = `Test-Report (${hour === 7 ? 'Morning' : 'Evening'}) wurde ausgelöst. Alle aktiven Touren für ${hour}:00 Uhr werden verarbeitet.`;
 		} catch (e: unknown) {
 			testReportError = (e as { error?: string; detail?: string })?.detail
 				?? (e as { error?: string })?.error
@@ -268,10 +268,10 @@
 	<div class="flex items-start justify-between gap-4">
 		<div>
 			<Eyebrow>WORKSPACE · TOUREN</Eyebrow>
-			<h1 class="text-3xl font-semibold tracking-tight mt-1">Trips</h1>
+			<h1 class="text-3xl font-semibold tracking-tight mt-1">Meine Touren</h1>
 			<p class="text-sm text-muted-foreground mt-1">Alle Touren auf einen Blick — Status, Zeitraum und Aktionen.</p>
 		</div>
-		<Btn variant="accent" onclick={() => goto('/trips/new')}>Neuer Trip</Btn>
+		<Btn variant="accent" onclick={() => goto('/trips/new')}>+ Neue Tour</Btn>
 	</div>
 
 	{#if trips.length > 0}
@@ -299,9 +299,9 @@
 	{#if trips.length === 0}
 		<div data-testid="empty-state" class="rounded-lg border border-dashed p-10 text-center">
 			<RouteIcon class="mx-auto mb-3 size-10 text-muted-foreground/40" />
-			<p class="font-medium">Keine Trips vorhanden</p>
-			<p class="mt-1 text-sm text-muted-foreground">Erstelle deinen ersten Trip und konfiguriere Wetter-Reports.</p>
-			<Btn variant="outline" class="mt-4" onclick={() => goto('/trips/new')}>Ersten Trip erstellen</Btn>
+			<p class="font-medium">Noch keine Tour.</p>
+			<p class="mt-1 text-sm text-muted-foreground">Lege deine erste Tour an — Wizard in 4 Schritten.</p>
+			<Btn variant="outline" class="mt-4" onclick={() => goto('/trips/new')}>+ Neue Tour</Btn>
 		</div>
 	{:else}
 		<div class="relative mb-3 max-w-[380px]">
@@ -433,7 +433,7 @@
 			</Table.Body>
 		</Table.Root>
 		<p class="hidden desktop:block mt-2 font-mono text-xs uppercase tracking-wide text-muted-foreground">
-			{filteredTrips.length} von {trips.length} Trips
+			{filteredTrips.length} von {trips.length} Touren
 		</p>
 		</div>
 		{/if}
@@ -447,7 +447,7 @@
 >
 	<Dialog.Content>
 		<Dialog.Header>
-			<Dialog.Title>Trip löschen</Dialog.Title>
+			<Dialog.Title>Tour löschen</Dialog.Title>
 			<Dialog.Description>
 				Möchtest du "{deleteTarget?.name}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
 			</Dialog.Description>
