@@ -1,6 +1,8 @@
 [
   {
     "index": 0,
+    "stable_id": "foundation-css-tokens",
+    "status": "existing-or-update",
     "source": "00-foundation-css-tokens.md",
     "title": "Fix dangling CSS variable fallbacks (--g-primary, --g-border → real tokens)",
     "labels": [
@@ -13,6 +15,8 @@
   },
   {
     "index": 1,
+    "stable_id": "foundation-form-controls",
+    "status": "existing-or-update",
     "source": "01-foundation-form-controls.md",
     "title": "Replace native checkboxes & selects with branded UI components",
     "labels": [
@@ -25,6 +29,8 @@
   },
   {
     "index": 2,
+    "stable_id": "sidebar-logo-and-rebrand",
+    "status": "existing-or-update",
     "source": "02-sidebar-logo-and-rebrand.md",
     "title": "Sidebar — wordmark \"gregor.zwanzig\" mit Mono-Akzent",
     "labels": [
@@ -36,6 +42,8 @@
   },
   {
     "index": 3,
+    "stable_id": "screen-home-cockpit",
+    "status": "existing-or-update",
     "source": "03-screen-home-cockpit.md",
     "title": "Home — replace \"Active-Trip-Cockpit\" with Kachel-Übersicht (spec-aligned)",
     "labels": [
@@ -48,6 +56,8 @@
   },
   {
     "index": 4,
+    "stable_id": "screen-trips-list",
+    "status": "existing-or-update",
     "source": "05-screen-trips-list.md",
     "title": "Trips-Liste — Icon-Soup raus, EINE Primäraktion + Kebab, Klick-auf-Name = Detail",
     "labels": [
@@ -60,6 +70,8 @@
   },
   {
     "index": 5,
+    "stable_id": "trip-editor-stages-table",
+    "status": "existing-or-update",
     "source": "06-trip-editor-stages-table.md",
     "title": "Trip-Editor — Wegpunkte visuell auf Karte (KEIN Lat/Lon-Input), Naismith-Ankunftszeiten",
     "labels": [
@@ -73,6 +85,8 @@
   },
   {
     "index": 6,
+    "stable_id": "alert-rules-editor-restyle",
+    "status": "existing-or-update",
     "source": "07-alert-rules-editor-restyle.md",
     "title": "AlertRulesEditor — \"Beides\"-Modus mit ZWEI Threshold-Feldern (Wert-Ambiguität fix)",
     "labels": [
@@ -86,6 +100,8 @@
   },
   {
     "index": 7,
+    "stable_id": "edit-weather-section-controls",
+    "status": "existing-or-update",
     "source": "08-edit-weather-section-controls.md",
     "title": "EditWeatherSection — brand checkboxes + segmented \"Roh/Indikator\" control",
     "labels": [
@@ -97,6 +113,8 @@
   },
   {
     "index": 8,
+    "stable_id": "edit-report-config-controls",
+    "status": "existing-or-update",
     "source": "09-edit-report-config-controls.md",
     "title": "EditReportConfigSection — time inputs, quick-chips, channel rows polish",
     "labels": [
@@ -109,6 +127,8 @@
   },
   {
     "index": 9,
+    "stable_id": "trip-wizard-4-steps",
+    "status": "existing-or-update",
     "source": "11-trip-wizard-4-steps.md",
     "title": "New Trip — 4-Schritt-Wizard ersetzt den flachen Anlege-Dialog",
     "labels": [
@@ -122,6 +142,8 @@
   },
   {
     "index": 10,
+    "stable_id": "locations-with-groups",
+    "status": "existing-or-update",
     "source": "12-locations-with-groups.md",
     "title": "Compare — Master-Detail Sidebar mit Gruppen (Orte organisieren)",
     "labels": [
@@ -134,6 +156,8 @@
   },
   {
     "index": 11,
+    "stable_id": "trip-detail-page",
+    "status": "existing-or-update",
     "source": "13-trip-detail-page.md",
     "title": "Trip-Detail-Seite — alle Aktionen prominent, Übersicht in Cards",
     "labels": [
@@ -146,6 +170,8 @@
   },
   {
     "index": 12,
+    "stable_id": "backend-naismith-and-waypoint-suggestions",
+    "status": "existing-or-update",
     "source": "14-backend-naismith-and-waypoint-suggestions.md",
     "title": "Backend coordination — Naismith arrival-time calculation + algorithmic waypoint suggestions",
     "labels": [
@@ -157,6 +183,8 @@
   },
   {
     "index": 13,
+    "stable_id": "pro-metric-horizon-and-template-save",
+    "status": "existing-or-update",
     "source": "15-pro-metric-horizon-and-template-save.md",
     "title": "Wetter-Templates — Pro-Metrik-Zeithorizont + \"Im Profil speichern\"",
     "labels": [
@@ -168,6 +196,8 @@
   },
   {
     "index": 14,
+    "stable_id": "output-layout-system",
+    "status": "new",
     "source": "body-14-output-layout-system.md",
     "title": "Output-Layout-System — Spalten/Detail/Aus + Kanal-Constraints (Email/Telegram/Signal/SMS)",
     "labels": [

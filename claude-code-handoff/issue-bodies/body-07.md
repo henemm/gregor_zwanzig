@@ -1,3 +1,4 @@
+<!-- gregor-zwanzig-handoff: stable_id=edit-weather-section-controls -->
 ## Problem
 
 The Wetter section in trip edit (Temperatur / Wind / Niederschlag / Atmosphäre / Winter-Schnee) renders:

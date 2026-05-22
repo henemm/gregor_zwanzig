@@ -1,3 +1,4 @@
+<!-- gregor-zwanzig-handoff: stable_id=trip-editor-stages-table -->
 ## Problem — fundamentale Neuausrichtung
 
 Der aktuelle Trip-Editor (`/trips/[id]/edit`) zeigt Wegpunkte als Stack von Eingabezeilen mit **Lat/Lon/Höhen-Number-Inputs**. Das **widerspricht der Spec**:

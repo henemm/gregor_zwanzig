@@ -1,0 +1,56 @@
+# Gregor Zwanzig · Claude Code Handoff · Manifest
+# Generated to verify the handoff packet arrived intact.
+# After unzipping, run: bash claude-code-handoff/check-manifest.sh
+#
+# Files (excl. MANIFEST.txt): 48
+# Total bytes (excl. MANIFEST.txt): 8490254
+#
+# path<TAB>bytes
+claude-code-handoff/check-manifest.sh	1108
+claude-code-handoff/create-issues.sh	3098
+claude-code-handoff/INSTRUCTIONS.md	8351
+claude-code-handoff/issue-bodies/body-00.md	4489
+claude-code-handoff/issue-bodies/body-01.md	6590
+claude-code-handoff/issue-bodies/body-02.md	3102
+claude-code-handoff/issue-bodies/body-03.md	6808
+claude-code-handoff/issue-bodies/body-04.md	7484
+claude-code-handoff/issue-bodies/body-05.md	9982
+claude-code-handoff/issue-bodies/body-06.md	8341
+claude-code-handoff/issue-bodies/body-07.md	4611
+claude-code-handoff/issue-bodies/body-08.md	4754
+claude-code-handoff/issue-bodies/body-09.md	4018
+claude-code-handoff/issue-bodies/body-10.md	3988
+claude-code-handoff/issue-bodies/body-11.md	6174
+claude-code-handoff/issue-bodies/body-12.md	4784
+claude-code-handoff/issue-bodies/body-13.md	4333
+claude-code-handoff/issue-bodies/body-14-output-layout-system.md	11779
+claude-code-handoff/issues.json	5995
+claude-code-handoff/screenshots/01-trips-list.png	902866
+claude-code-handoff/screenshots/02-trips-list-variant.png	255523
+claude-code-handoff/screenshots/03-home-cockpit.png	695547
+claude-code-handoff/screenshots/04-orts-vergleich.png	635955
+claude-code-handoff/screenshots/05-trip-editor-top.png	3149129
+claude-code-handoff/screenshots/06-trip-editor-full.png	418062
+claude-code-handoff/screenshots/07-wetter-section.png	226806
+claude-code-handoff/screenshots/08-alarmregeln-edit.png	220824
+claude-code-handoff/screenshots/09-reports-expanded.png	140717
+claude-code-handoff/screenshots/10-reports-collapsed.png	290313
+claude-code-handoff/screenshots/11-alarmregeln-list.png	349758
+claude-code-handoff/screenshots/soll-flow1A-home-kacheln.png	57099
+claude-code-handoff/screenshots/soll-flow1B-wizard-step1-route.png	63915
+claude-code-handoff/screenshots/soll-flow1C-wizard-step2-etappen.png	72833
+claude-code-handoff/screenshots/soll-flow1D-wizard-step3-wetter.png	80482
+claude-code-handoff/screenshots/soll-flow1E-wizard-step4-reports.png	62046
+claude-code-handoff/screenshots/soll-flow2A-trip-editor-overview.png	67590
+claude-code-handoff/screenshots/soll-flow2B-map-editor.png	60450
+claude-code-handoff/screenshots/soll-flow2C-waypoint-detail.png	39522
+claude-code-handoff/screenshots/soll-flow3A-sidebar-overview.png	68980
+claude-code-handoff/screenshots/soll-flow3B-add-location.png	43412
+claude-code-handoff/screenshots/soll-flow3C-new-compare.png	66700
+claude-code-handoff/screenshots/soll-flow4A-edit-locations.png	74045
+claude-code-handoff/screenshots/soll-flow5A-edit-compare.png	55190
+claude-code-handoff/screenshots/soll-flow6A-list-inline-edit.png	72483
+claude-code-handoff/screenshots/soll-flow6B-add-rule.png	56378
+claude-code-handoff/screenshots/soll-flow7A-trip-list-reduced.png	63636
+claude-code-handoff/screenshots/soll-flow7B-trip-detail.png	68115
+claude-code-handoff/screenshots/soll-sidebar-B.png	22089

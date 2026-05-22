@@ -1,3 +1,4 @@
+<!-- gregor-zwanzig-handoff: stable_id=output-layout-system -->
 # Issue 14 · Output-Layout-System (Spalten · Detail · Aus + Kanal-Constraints)
 
 **Type:** Backend + Frontend Architecture

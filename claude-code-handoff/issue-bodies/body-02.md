@@ -1,3 +1,4 @@
+<!-- gregor-zwanzig-handoff: stable_id=sidebar-logo-and-rebrand -->
 ## Problem
 
 Aktuelle Sidebar rendert `<h1>Gregor 20</h1>` als plain Inter-Tight bold — kein Markenausdruck. Auch im Mobile-Top-Bar identisch.

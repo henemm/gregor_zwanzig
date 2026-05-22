@@ -1,3 +1,4 @@
+<!-- gregor-zwanzig-handoff: stable_id=pro-metric-horizon-and-template-save -->
 ## Problem
 
 `EditWeatherSection.svelte` (heute) zeigt Metriken nur als On/Off-Checkboxen. Die Spec verlangt mehr:

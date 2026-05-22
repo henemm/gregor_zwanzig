@@ -1,3 +1,4 @@
+<!-- gregor-zwanzig-handoff: stable_id=foundation-form-controls -->
 ## Problem
 
 Across the app, `<input type="checkbox">` and `<select>` are used with raw Tailwind class hints (`class="rounded border-input"`) — but browsers ignore those styles on form-control internals. Result: every checkbox in the app renders as the **OS default** (blue iOS/macOS checkmark) and every select renders with the native dropdown arrow + system focus ring.

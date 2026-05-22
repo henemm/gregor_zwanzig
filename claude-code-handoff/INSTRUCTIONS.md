@@ -1,14 +1,29 @@
 # Claude Code Handoff — Gregor Zwanzig Design + Spec Alignment
 
-This folder contains **14 ready-to-create GitHub issues** for `henemm/gregor_zwanzig`,
-plus the screenshots they reference (Ist + Soll). **You (Claude Code) should create these
-issues on GitHub on the user's behalf.**
+This folder contains **15 issues** for `henemm/gregor_zwanzig`. Most of them are
+**already on GitHub** from earlier handoffs — only one is new this round (see
+status per issue in `issues.json`, `"status": "new"` vs `"existing-or-update"`).
+
+**Each issue body starts with a stable-ID marker** that survives across
+handoffs:
+
+```
+<!-- gregor-zwanzig-handoff: stable_id=<slug> -->
+```
+
+Use the marker to dedupe (Step 3 below).
 
 ## Quick start (paste this prompt into Claude Code)
 
-> Read `claude-code-handoff/INSTRUCTIONS.md` and execute it. Create all 14
-> GitHub issues, with screenshots committed first so the embedded image URLs
-> resolve. Ask me before pushing if anything is ambiguous.
+> Read `claude-code-handoff/INSTRUCTIONS.md` and execute it. **Do not blindly
+> create 15 issues** — first dedupe against existing GitHub issues by
+> stable-ID marker, then only create what is missing and edit bodies of
+> what already exists. Ask before pushing if anything is ambiguous.
+>
+> Issue mit `"status": "new"` in `issues.json` ist garantiert noch nicht
+> auf GitHub. Issue #14 (Output-Layout-System) ist eine Backend-/Frontend-
+> Architektur-Story — nur Issue erstellen, Implementierung erfolgt später
+> separat.
 
 ## What's in here
 
@@ -17,11 +32,12 @@ claude-code-handoff/
 ├── INSTRUCTIONS.md           ← THIS file (full plan + commands)
 ├── PROMPT-FÜR-CLAUDE-CODE.txt ← One-line prompt to paste into Claude Code
 ├── create-issues.sh          ← Optional CLI fallback if you want to run it yourself
-├── issues.json               ← Machine-readable index: 14 issues with titles, labels, body_file paths
+├── issues.json               ← Machine-readable index: 15 issues with titles, labels, body_file paths
 ├── issue-bodies/
 │   ├── body-00.md            ← Body for each issue in order
-│   ├── … (14 files total)
-│   └── body-13.md
+│   ├── … (14 "body-NN.md" files for the design-compliance issues)
+│   ├── body-13.md
+│   └── body-14-output-layout-system.md  ← NEW: Spalten/Detail/Aus + Kanal-Constraints
 └── screenshots/
     ├── 01-…-11-*.png         ← Ist-Screenshots (current implementation)
     └── soll-*.png            ← Soll-Mockups (target designs from Soll-Mockups.html)
@@ -66,7 +82,30 @@ curl -fsI "https://raw.githubusercontent.com/henemm/gregor_zwanzig/main/.github/
 
 If it 404s, GitHub may take ~30 seconds to propagate. Retry.
 
-### 3. Create the 14 issues in order
+### 3. Dedupe against existing GitHub issues
+
+For each entry in `issues.json`, check if a GitHub issue with that
+`stable_id` already exists:
+
+```bash
+stable_id="foundation-css-tokens"
+gh issue list --repo henemm/gregor_zwanzig --state all --search \
+  "in:body gregor-zwanzig-handoff: stable_id=$stable_id" --json number,title,state
+```
+
+- **Match found, state=closed** → issue is done. Skip silently. Do NOT reopen.
+- **Match found, state=open** → issue exists. Update body if changed
+  (`gh issue edit <num> --body-file ...`). Update labels if `issues.json`
+  lists labels not yet on the issue. Do NOT change the title.
+- **No match** → create the issue (next step). This is the only case where
+  the entry with `status: "new"` should land; for `status: "existing-or-update"`
+  entries without a match, ask the user before creating — may have been
+  deleted intentionally.
+
+Report at the end: how many issues were created, updated, skipped (closed),
+or flagged for user-decision.
+
+### 4. Create only the truly new issues
 
 Iterate over `issues.json` and run for each entry:
 
@@ -102,6 +141,7 @@ for spec in \
   "area:compare:9a958a:" \
   "area:sidebar:9a958a:" \
   "area:weather:9a958a:" \
+  "area:output:9a958a:Briefing-Output · Spalten/Detail/Aus-Layout" \
   "area:components:9a958a:"; do
   name="${spec%%:*}"; rest="${spec#*:}"; color="${rest%%:*}"; desc="${rest#*:}"
   if [ -n "$desc" ]; then
@@ -114,22 +154,38 @@ done
 
 Or use the included `create-issues.sh` which handles this.
 
-### 4. Report back
+### 5. Report back
 
-Print the URLs of all 14 created issues to the user, in order. Example:
+Print a per-issue summary (created / updated / skipped-closed / asked-user)
+with URLs where applicable. Example:
 
 ```
-Created 11 issues:
-  #42  Fix dangling CSS variable fallbacks               https://github.com/henemm/gregor_zwanzig/issues/42
-  #43  Replace native checkboxes & selects               https://github.com/henemm/gregor_zwanzig/issues/43
-  …
+Dedupe summary (15 entries in issues.json):
+  CREATED  #58  Output-Layout-System            https://github.com/henemm/gregor_zwanzig/issues/58
+  UPDATED  #44  Replace native checkboxes       https://github.com/henemm/gregor_zwanzig/issues/44
+  SKIPPED  #42  Fix dangling CSS variables      (closed, already merged)
+  ASKED    —    Sidebar logo                    (no match, status=existing-or-update)
 ```
 
-### 5. Suggested next step
+### 6. No "start with X" recommendation
 
-Tell the user: "Start with issues #42 (CSS tokens) and #43 (form controls).
-Those two reparieren ~60% des Design-Drift in einem Rutsch. Danach kannst du
-03–10 parallel angehen."
+Unlike earlier handoffs, the user's repo state is now mixed (several issues
+done, others in flight). Do not recommend a starting point. Only the new
+issue (`status: "new"`) is a fresh work item; everything else is
+user-prioritized.
+
+## Manifest · packet integrity
+
+Before starting, verify the handoff packet arrived intact. Expected file
+count in `claude-code-handoff/` matches `MANIFEST.txt`:
+
+```bash
+bash claude-code-handoff/check-manifest.sh   # or eyeball the count
+wc -l claude-code-handoff/MANIFEST.txt
+```
+
+If counts don't match, the upload was truncated — ask the user for a fresh
+zip and stop.
 
 ## Edge cases & notes
 

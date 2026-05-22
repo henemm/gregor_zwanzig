@@ -1,3 +1,4 @@
+<!-- gregor-zwanzig-handoff: stable_id=screen-trips-list -->
 ## Problem
 
 Die `/trips` Liste rendert **6 Icon-Buttons pro Zeile** (Bell, Cloud-Sun, Pencil, Play, Play, Trash), separiert in „Edit-Gruppe" und „Send-Gruppe" via `gap-3`. Jeder Icon braucht einen Tooltip um seine Bedeutung zu offenbaren — das ist Datenbank-Admin-Tool-Optik, nicht produktiv:

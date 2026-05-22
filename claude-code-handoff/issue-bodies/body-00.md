@@ -1,3 +1,4 @@
+<!-- gregor-zwanzig-handoff: stable_id=foundation-css-tokens -->
 ## Problem
 
 Several components reference CSS variables that **do not exist** in `frontend/src/app.css`, and the inline fallbacks point at generic blue/gray hex codes. Result: large parts of the UI render in the wrong color (system blue `#2563eb`, neutral gray borders) instead of the brand palette (burnt orange `#c45a2a`, ink-based borders).

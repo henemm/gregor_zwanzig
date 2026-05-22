@@ -1,3 +1,4 @@
+<!-- gregor-zwanzig-handoff: stable_id=alert-rules-editor-restyle -->
 ## Problem — semantischer Bug, nicht nur Styling
 
 Wenn der User im Alert-Editor den Modus **„Beides"** wählt, zeigt das UI **nur EIN Threshold-Feld** (z.B. „50 km/h"). Das ist ambig:

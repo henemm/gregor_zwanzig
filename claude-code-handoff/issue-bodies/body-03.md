@@ -1,3 +1,4 @@
+<!-- gregor-zwanzig-handoff: stable_id=screen-home-cockpit -->
 ## Problem — fundamentale Neuausrichtung
 
 Die aktuelle Home-Seite (`/`) rendert ein **„aktiver Trip" Cockpit** mit Heute-Hero-Card, Stage-Strip, Briefings-Timeline und Alert-Feed. Das **widerspricht dem Produkt-Konzept**:

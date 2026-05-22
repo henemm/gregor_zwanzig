@@ -1,3 +1,4 @@
+<!-- gregor-zwanzig-handoff: stable_id=backend-naismith-and-waypoint-suggestions -->
 ## Background
 
 Two implicit requirements from `docs/specs/user_stories_foundation.md` US-1 are not yet supported by the backend, but the frontend designs (Issues #06, #11) depend on them:

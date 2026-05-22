@@ -1,3 +1,4 @@
+<!-- gregor-zwanzig-handoff: stable_id=edit-report-config-controls -->
 ## Problem
 
 The Reports section of the trip editor has multiple inconsistencies vs the design:

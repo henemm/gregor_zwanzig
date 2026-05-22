@@ -1,3 +1,4 @@
+<!-- gregor-zwanzig-handoff: stable_id=trip-wizard-4-steps -->
 ## Problem
 
 `/trips/new` rendert aktuell ein flaches Formular (Name + Etappen + Wegpunkte als Lat/Lon-Inputs + separate Wetter/Reports-Dialoge). Die Spec verlangt einen **geführten 4-Schritt-Wizard** der den User durch Route → Etappen → Wetter → Reports lotst.

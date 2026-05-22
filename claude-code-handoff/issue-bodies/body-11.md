@@ -1,3 +1,4 @@
+<!-- gregor-zwanzig-handoff: stable_id=trip-detail-page -->
 ## Problem
 
 Aktuell führt `/trips/[id]` zu einer fast leeren Seite (161 Bytes). Alle Trip-Aktionen leben in der Liste als Icon-Soup (Issue #05). Die Detail-Seite soll der **primäre Arbeitsplatz** für einen einzelnen Trip sein, sobald er angelegt ist.

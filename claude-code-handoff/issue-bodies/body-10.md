@@ -1,3 +1,4 @@
+<!-- gregor-zwanzig-handoff: stable_id=locations-with-groups -->
 ## Problem
 
 Aktuelles `/compare` zeigt eine flache Ortsliste mit Checkboxes. Die Spec (`ux_redesign_navigation.md §3`) verlangt **Master-Detail-Layout**:
