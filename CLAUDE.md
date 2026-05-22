@@ -201,6 +201,7 @@ Alle Module benoetigen Specs vor Implementierung:
 - `issue_284_alert_rules_restyle` - AlertRulesEditor + ModeCard auf Brand-Tokens: Btn-Komponenten, outlined Severity-Pills (deutsch), Mono-Threshold, Card-Wrapper (Issue #284, Spec: `docs/specs/modules/issue_284_alert_rules_restyle.md`)
 - `issue_285_weather_section_restyle` - Segmented.svelte ([data-slot]-Muster), EditWeatherSection + WeatherConfigDialog: Roh/Indikator-Toggle auf Brand-Tokens, Kategorie-Headings + Row-Hover bereinigt (Issue #285, Spec: `docs/specs/modules/issue_285_weather_section_restyle.md`)
 - `issue_280_home_topbar_polish` - H1 "Startseite" auf Home-Seite mit `letter-spacing: -0.025em` (tracking-tight) ergänzt, konsistent mit Trips-Seite (Issue #280, Spec: `docs/specs/modules/issue_280_home_topbar_polish.md`)
+- `bug_317_alert_rules_editor_metrics` - AlertRulesEditor zeigte nur 3 von 6 Metriken. Fix: normalizeAlertMetric() mappt Legacy-IDs (precipitation→precipitation_sum, thunder→thunder_level, snowfall_limit→snow_line) beim Laden. F004-Guard zeigt unbekannte Metriken als Fallback statt sie auszublenden (Bug #317, Spec: `docs/specs/modules/bug_317_alert_rules_editor_metrics.md`)
 
 ### Geplante Module
 Siehe GitHub Issues: https://github.com/henemm/gregor_zwanzig/issues

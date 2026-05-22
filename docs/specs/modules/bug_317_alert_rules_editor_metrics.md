@@ -2,8 +2,8 @@
 entity_id: bug_317_alert_rules_editor_metrics
 type: bugfix
 created: 2026-05-21
-updated: 2026-05-21
-status: draft
+updated: 2026-05-22
+status: implemented
 version: "1.0"
 tags: [bugfix, frontend, alert-rules, metric-normalization, legacy-data, issue-317]
 ---
@@ -14,7 +14,7 @@ tags: [bugfix, frontend, alert-rules, metric-normalization, legacy-data, issue-3
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (2026-05-22)
 
 ## Zweck
 
@@ -154,22 +154,22 @@ Kein Schema-Change, nur Wert-Korrekturen. Nach dem Patch öffnet der Alerts-Tab 
 ## Acceptance Criteria
 
 - **AC-1:** Given ein Trip mit einer Alert-Rule `"metric": "precipitation"` (Legacy-ID) / When der Alerts-Tab geöffnet wird / Then ist die Regel im Editor sichtbar und zeigt den Label für `precipitation_sum`
-  - Test: (populated after /tdd-red)
+  - Test: `test — Legacy-ID 'precipitation' mappt auf 'precipitation_sum'` ✓
 
 - **AC-2:** Given ein Trip mit einer Alert-Rule `"metric": "thunder"` (Legacy-ID) / When der Alerts-Tab geöffnet wird / Then ist die Regel im Editor sichtbar und zeigt den Label für `thunder_level`
-  - Test: (populated after /tdd-red)
+  - Test: `test — Legacy-ID 'thunder' mappt auf 'thunder_level'` ✓
 
 - **AC-3:** Given ein Trip mit einer Alert-Rule `"metric": "snowfall_limit"` (Legacy-ID) / When der Alerts-Tab geöffnet wird / Then ist die Regel im Editor sichtbar und zeigt den Label für `snow_line`
-  - Test: (populated after /tdd-red)
+  - Test: `test — Legacy-ID 'snowfall_limit' mappt auf 'snow_line'` ✓
 
 - **AC-4:** Given ein Trip mit einer Alert-Rule mit völlig unbekannter Metrik-ID `"metric": "foobar"` / When der Alerts-Tab geöffnet wird / Then wird die Regel als `[foobar]` mit Löschen-Button angezeigt — keine Row wird ausgeblendet
-  - Test: (populated after /tdd-red)
+  - Test: `test — unbekannte ID 'foobar' gibt undefined zurück` ✓
 
 - **AC-5:** Given `normalizeAlertMetric('precipitation_sum')` (aktuelle ID) / When die Funktion aufgerufen wird / Then gibt sie `'precipitation_sum'` zurück — keine Doppelt-Mapping-Schleife
-  - Test: `test — bekannte aktuelle ID gibt sich selbst zurück`
+  - Test: `test — bekannte aktuelle ID gibt sich selbst zurück` ✓
 
 - **AC-6:** Given der Validator-Staging-Trip `ac206-validator-1779092432` / When der Alerts-Tab geöffnet wird / Then sind alle 6 Alert-Regeln sichtbar (3 Wetter-Metriken + 3 weitere)
-  - Test: (populated after /tdd-red)
+  - Test: E2E-Verifikation mit Datenpatch ✓
 
 ## Known Limitations
 
