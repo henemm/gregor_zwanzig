@@ -1,23 +1,22 @@
-"""TDD-RED: Issue #258 — Hook-Architektur Fast-Path-Reader + cmd_cleanup.
+"""Regression-Guard: Issue #258 Hook-Architektur (Fast-Path + cmd_cleanup).
 
-Spec:    docs/specs/modules/issue_258_hook_arch_fix.md
-Context: docs/context/issue-258-hot-path-hooks.md
+Spec:    docs/specs/modules/issue_258_hook_arch_fix.md (Original-Spec, #258)
+Update:  docs/specs/modules/bug_333_test_issue_258_obsolete.md (Test-Refresh, #333)
 Issue:   https://github.com/henemm/gregor_zwanzig/issues/258
 
 Tests gegen 14 Acceptance Criteria, gruppiert in 4 Test-Klassen:
 
 - TestReadActiveWorkflowFast    (AC-1, AC-2, AC-3)         — 4 Tests
 - TestCmdCompleteOptionalName   (AC-6, AC-7, AC-8, AC-9)   — 6 Tests
-- TestCmdCleanup                (AC-10, AC-11, AC-12, AC-13) — 5 Tests
+- TestCmdCleanup                (AC-10 … AC-13)            — 5 Tests
 - TestHotPathIntegration        (AC-4, AC-5)               — 2 Tests
 
-ALLE Tests MÜSSEN aktuell FEHLSCHLAGEN, da:
-- `read_active_workflow_fast()` in `workflow.py` noch nicht existiert
-- `cmd_complete` akzeptiert noch keinen optionalen Workflow-Namen
-- `cmd_cleanup` existiert noch gar nicht
-- `tdd_enforcement.py` / `workflow_gate.py` lesen noch via `_aggregate_state`
-
-Das ist das Phase-5-RED-Ziel — Phase 6 (Implementation) ist später.
+Update 2026-05-22 (#333): Commit 59bd925 hat den Symlink-Fallback in
+_active_name() deaktiviert — Tests setzen seitdem zusätzlich
+GZ_ACTIVE_WORKFLOW (in-process via _activate(), subprocess via
+_subprocess_env()). Test AC-3 wurde von "dangling → None" auf
+"dangling/missing → FATAL exit 1" umformuliert (Verhaltens-Drift,
+nicht Setup-Anpassung). Production-Code unverändert.
 
 Keine Mocks (CLAUDE.md-Regel), echte Filesystem-Operationen via tmp_path,
 echte subprocess-Calls für CLI-Tests.
@@ -62,6 +61,13 @@ def hooks_on_path():
 @pytest.fixture
 def fake_repo(tmp_path, monkeypatch, hooks_on_path):
     """Minimales v3-Repo mit `.claude/workflows/`-Layout und `git init`."""
+    # Isolation gegen Shell-Leaks aus laufenden Workflows (Issue #333):
+    # Drei Session-Vars müssen explizit aus der Test-Env verschwinden,
+    # sonst sieht der subprocess-aufgerufene workflow.py die kontaminierten
+    # Werte und triggert FATAL "set but no matching workflow file exists".
+    for var in ("GZ_ACTIVE_WORKFLOW", "CLAUDE_CODE_SESSION_ID",
+                "GZ_HOOK_SESSION_ID"):
+        monkeypatch.delenv(var, raising=False)
     repo = tmp_path / "repo"
     (repo / ".claude" / "workflows" / "_archive").mkdir(parents=True)
     (repo / ".claude" / "workflows" / "_log").mkdir(parents=True)
@@ -132,6 +138,30 @@ def _write_valid_log(repo: Path, name: str) -> Path:
     return log_path
 
 
+def _subprocess_env(active: str | None = None) -> dict:
+    """Sauberes env-dict für subprocess-Aufrufe: keine Session-Leaks aus Shell.
+
+    Optional setzt es GZ_ACTIVE_WORKFLOW auf einen im fake_repo existierenden
+    Workflow, damit _active_name() im Subprocess auflöst statt FATAL zu triggern.
+    """
+    env = {k: v for k, v in os.environ.items()
+           if k not in ("GZ_ACTIVE_WORKFLOW", "CLAUDE_CODE_SESSION_ID",
+                        "GZ_HOOK_SESSION_ID")}
+    if active is not None:
+        env["GZ_ACTIVE_WORKFLOW"] = active
+    return env
+
+
+def _activate(repo: Path, name: str, monkeypatch) -> None:
+    """Markiere `name` als aktiven Workflow für In-Process-Tests.
+
+    Setzt sowohl den (legacy) .active-Symlink als auch die heute autoritative
+    Env-Var GZ_ACTIVE_WORKFLOW. Der Symlink bleibt, weil cmd_start/cmd_complete
+    ihn in Production weiter pflegen — er ist nur kein Fallback mehr."""
+    _set_active(repo, name)
+    monkeypatch.setenv("GZ_ACTIVE_WORKFLOW", name)
+
+
 # ---------- TestReadActiveWorkflowFast (AC-1, AC-2, AC-3) ----------
 
 
@@ -147,11 +177,12 @@ class TestReadActiveWorkflowFast:
             f"Erwartet None bei fehlendem Symlink, war {result!r}"
         )
 
-    def test_returns_name_and_data_when_active_exists(self, fake_repo):
-        """AC-1: Symlink + JSON existieren → (name, dict)-Tuple."""
+    def test_returns_name_and_data_when_active_exists(self, fake_repo,
+                                                       monkeypatch):
+        """AC-1: Aktiver Workflow gesetzt + JSON existiert → (name, dict)-Tuple."""
         _create_workflow(fake_repo, "issue-258-hot-path-hooks",
                          phase="phase5_tdd_red")
-        _set_active(fake_repo, "issue-258-hot-path-hooks")
+        _activate(fake_repo, "issue-258-hot-path-hooks", monkeypatch)
 
         from workflow import read_active_workflow_fast
 
@@ -163,18 +194,28 @@ class TestReadActiveWorkflowFast:
         assert data["current_phase"] == "phase5_tdd_red"
         assert data["name"] == "issue-258-hot-path-hooks"
 
-    def test_returns_none_when_active_symlink_dangling(self, fake_repo):
-        """AC-3: Symlink zeigt auf gelöschte JSON → None ohne Crash."""
+    def test_fatal_when_env_workflow_file_missing(self, fake_repo,
+                                                   monkeypatch, capsys):
+        """AC-3: ENV zeigt auf nicht-existente JSON → FATAL exit 1.
+
+        Verhaltens-Drift (Commit 59bd925): Symlink-Fallback ist deaktiviert.
+        Wenn GZ_ACTIVE_WORKFLOW gesetzt ist, die Datei aber fehlt, triggert
+        _active_name() ein klares SystemExit(1) mit FATAL-Banner auf stderr
+        statt graceful None zurückzugeben. Dieser Test verifiziert die
+        strengere Fail-Loud-Semantik."""
         wf_path = _create_workflow(fake_repo, "ghost", phase="phase1_context")
-        _set_active(fake_repo, "ghost")
-        # Symlink bleibt, Ziel-JSON wird gelöscht → dangling
+        monkeypatch.setenv("GZ_ACTIVE_WORKFLOW", "ghost")
+        # ENV bleibt, JSON wird gelöscht → ENV zeigt auf nicht-existente Datei
         wf_path.unlink()
 
         from workflow import read_active_workflow_fast
 
-        result = read_active_workflow_fast()
-        assert result is None, (
-            f"Erwartet None bei dangling Symlink, war {result!r}"
+        with pytest.raises(SystemExit) as exc:
+            read_active_workflow_fast()
+        assert exc.value.code == 1
+        err = capsys.readouterr().err
+        assert "FATAL" in err and "ghost" in err, (
+            f"stderr muss 'FATAL' und 'ghost' enthalten: {err!r}"
         )
 
     def test_no_filesystem_aggregation(self, fake_repo, monkeypatch):
@@ -188,7 +229,7 @@ class TestReadActiveWorkflowFast:
         """
         # Erstelle den aktiven Workflow + viele "Distraktoren"
         _create_workflow(fake_repo, "active-wf", phase="phase5_tdd_red")
-        _set_active(fake_repo, "active-wf")
+        _activate(fake_repo, "active-wf", monkeypatch)
         for i in range(5):
             _create_workflow(fake_repo, f"other-{i}", phase="phase1_context")
         for i in range(3):
@@ -244,6 +285,7 @@ class TestCmdCompleteOptionalName:
             capture_output=True,
             text=True,
             cwd=str(fake_repo),
+            env=_subprocess_env("wf-a"),
         )
         assert first.returncode == 0, (
             f"complete ohne Arg sollte erfolgreich sein: {first.stderr}"
@@ -262,6 +304,7 @@ class TestCmdCompleteOptionalName:
             capture_output=True,
             text=True,
             cwd=str(fake_repo),
+            env=_subprocess_env(None),
         )
         assert unknown.returncode == 1, (
             f"complete <unknown> muss exit 1 liefern (Issue #258): "
@@ -295,6 +338,7 @@ class TestCmdCompleteOptionalName:
             capture_output=True,
             text=True,
             cwd=str(fake_repo),
+            env=_subprocess_env("wf-dummy-active"),
         )
         # Erwartet: exit 0 — komplettiert wf-b, Warn-Banner für anderen
         # aktiven Workflow, .active bleibt unverändert
@@ -329,6 +373,7 @@ class TestCmdCompleteOptionalName:
             capture_output=True,
             text=True,
             cwd=str(fake_repo),
+            env=_subprocess_env("wf-active"),
         )
         assert result.returncode == 0, (
             f"complete <other> sollte erfolgreich sein: {result.stderr}"
@@ -355,6 +400,7 @@ class TestCmdCompleteOptionalName:
             capture_output=True,
             text=True,
             cwd=str(fake_repo),
+            env=_subprocess_env("wf-active"),
         )
         combined = result.stderr + result.stdout
         assert "WARNING" in combined, (
@@ -376,6 +422,7 @@ class TestCmdCompleteOptionalName:
             capture_output=True,
             text=True,
             cwd=str(fake_repo),
+            env=_subprocess_env("wf-active"),
         )
         assert result.returncode == 1, (
             f"Erwartet exit 1, bekam {result.returncode}: {result.stderr}"
@@ -408,6 +455,7 @@ class TestCmdCompleteOptionalName:
             capture_output=True,
             text=True,
             cwd=str(fake_repo),
+            env=_subprocess_env("wf-other-active"),
         )
         assert result.returncode == 0, (
             f"complete <wf-archive-me> fehlgeschlagen: {result.stderr}"
