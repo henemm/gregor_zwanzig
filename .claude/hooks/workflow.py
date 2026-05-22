@@ -544,24 +544,13 @@ def cmd_switch(args: list[str]) -> None:
     _set_active(name)
 
     env_name = os.environ.get("GZ_ACTIVE_WORKFLOW", "").strip()
-    if env_name and env_name != name:
+    print(f"Switched to: {name}")
+    if env_name != name:
         print(
-            f"Switched to: {name} (.active symlink updated)\n"
-            f"WARNING: GZ_ACTIVE_WORKFLOW={env_name!r} is set in this session.\n"
-            f"  Hooks will still use '{env_name}' — the env var overrides the symlink.\n"
-            f"  To align: export GZ_ACTIVE_WORKFLOW={name}",
-            file=sys.stderr,
+            f"\nPFLICHT: Setze diese Env-Var SOFORT — ohne sie blockieren alle Folgebefehle:\n"
+            f"  export GZ_ACTIVE_WORKFLOW={name}\n"
+            f"  NICHT in settings.json eintragen — das gilt nur fuer diese Shell-Session.",
         )
-        print(f"Switched to: {name}")
-    elif not env_name:
-        print(f"Switched to: {name}")
-        print(
-            f"Tip: For parallel sessions, set GZ_ACTIVE_WORKFLOW={name} "
-            "before starting Claude Code.",
-            file=sys.stderr,
-        )
-    else:
-        print(f"Switched to: {name}")
 
 
 def cmd_status(args: list[str]) -> None:
