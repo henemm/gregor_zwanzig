@@ -167,12 +167,33 @@ ALWAYS_ALLOWED = [
 
 
 def load_task() -> dict | None:
-    """Load current task definition."""
+    """Load current task definition.
+
+    Priority:
+    1. GZ_ACTIVE_WORKFLOW env var -> affected_files from workflow JSON
+    2. current_task.json fallback (legacy / sessions without env var)
+
+    This allows parallel workflows to run in separate sessions without
+    fighting over a single current_task.json file.
+    """
+    name = os.environ.get("GZ_ACTIVE_WORKFLOW", "").strip()
+    if name:
+        wf = _get_active_workflow_state()
+        files = wf.get("affected_files") or []
+        if files:
+            wf_name = wf.get("name", name)
+            task_type = "bugfix" if wf_name.startswith("bug") else "feature"
+            return {
+                "task": wf_name,
+                "task_type": task_type,
+                "allowed_paths": list(files),
+            }
+
     task_file = get_task_file()
     if not task_file.exists():
         return None
     try:
-        with open(task_file, 'r') as f:
+        with open(task_file, "r") as f:
             return json.load(f)
     except Exception:
         return None
@@ -211,18 +232,28 @@ def get_allowed_paths_for_type(task_type: str) -> list:
 def _get_active_workflow_state() -> dict:
     """Read the active workflow JSON if any; return {} on any error.
 
-    Used for ``loc_limit_override`` lookup. Fail-soft.
+    Reads GZ_ACTIVE_WORKFLOW env var — the only supported activation method.
+    The .active symlink is disabled per CLAUDE.md and intentionally not used.
+    Fail-soft.
     """
     try:
+        name = os.environ.get("GZ_ACTIVE_WORKFLOW", "").strip()
+        if not name:
+            return {}
         hooks_dir = Path(__file__).resolve().parent
         if str(hooks_dir) not in sys.path:
             sys.path.insert(0, str(hooks_dir))
-        from config_loader import find_project_root
-        active = find_project_root() / ".claude" / "workflows" / ".active"
-        if not active.is_symlink():
-            return {}
-        target = active.parent / os.readlink(str(active))
-        return json.loads(target.read_text())
+        from config_loader import find_main_repo_from_worktree, find_project_root
+        cwd = Path.cwd()
+        main = find_main_repo_from_worktree(cwd)
+        root = main if main is not None else find_project_root()
+        wf_file = root / ".claude" / "workflows" / f"{name}.json"
+        if wf_file.exists():
+            return json.loads(wf_file.read_text())
+        arch = root / ".claude" / "workflows" / "_archive" / f"{name}.json"
+        if arch.exists():
+            return json.loads(arch.read_text())
+        return {}
     except (OSError, json.JSONDecodeError, Exception):
         return {}
 
