@@ -223,7 +223,8 @@ def _resolve_workflow_name() -> str:
     Mirrors workflow.py._active_name so scope_guard and the gates always agree.
     """
     root = get_project_root()
-    sid = os.environ.get("CLAUDE_CODE_SESSION_ID", "").strip()
+    sid = (os.environ.get("GZ_HOOK_SESSION_ID", "").strip()
+           or os.environ.get("CLAUDE_CODE_SESSION_ID", "").strip())
     if sid:
         try:
             reg_file = root / ".claude" / "session_workflows.json"
@@ -268,13 +269,19 @@ def _loc_check_or_block() -> None:
 
 
 def main():
-    # Get tool input
+    # Get tool input. Read stdin once and capture BOTH tool_input and the
+    # session_id (the documented, reliable per-session identifier — env var
+    # CLAUDE_CODE_SESSION_ID is undocumented and not passed to hooks).
     tool_input = os.environ.get("CLAUDE_TOOL_INPUT", "")
 
     if not tool_input:
         try:
             data = json.load(sys.stdin)
             tool_input = json.dumps(data.get("tool_input", {}))
+            sid = (data.get("session_id") or "").strip()
+            if sid:
+                # Propagate to resolution functions for the duration of this hook.
+                os.environ["GZ_HOOK_SESSION_ID"] = sid
         except (json.JSONDecodeError, Exception):
             sys.exit(0)
 
@@ -310,8 +317,9 @@ def main():
 Kein aktiver Workflow — GZ_ACTIVE_WORKFLOW nicht gesetzt.
   Datei: {file_path}
 
-  Loesung:  export GZ_ACTIVE_WORKFLOW=<workflow-name>
-  NICHT in settings.json eintragen — das ist eine Shell-Variable, kein Config-Wert.
+  Loesung (sofort wirksam, kein Neustart):
+    python3 .claude/hooks/workflow.py switch <workflow-name>
+  NICHT in settings.json/.local.json eintragen!
 
   Verfuegbare Workflows (Auswahl):
   {wf_hint}
@@ -353,9 +361,8 @@ Kein aktiver Workflow — GZ_ACTIVE_WORKFLOW nicht gesetzt.
 ║                                                                  ║
 ║  This change is NOT part of the current task!                    ║
 ║                                                                  ║
-║  Loesung: Session neu starten mit:                               ║
-║    export GZ_ACTIVE_WORKFLOW=<richtiger-workflow-name>           ║
-║    claude                                                        ║
+║  Loesung (sofort wirksam, kein Neustart):                        ║
+║    workflow.py switch <richtiger-workflow-name>                  ║
 ║  NICHT in settings.json/.local.json eintragen!                  ║
 ║  Scope erweitern: workflow.py set-affected-files <datei>         ║
 ╚══════════════════════════════════════════════════════════════════╝

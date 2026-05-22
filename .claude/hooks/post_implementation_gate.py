@@ -223,6 +223,20 @@ def is_within_batch_window(lock: dict) -> bool:
 
 
 def main():
+    # Per-session workflow resolution (#325): capture session_id from the stdin
+    # payload (documented + reliable; env CLAUDE_CODE_SESSION_ID is not passed to
+    # hooks) and expose tool_input via CLAUDE_TOOL_INPUT so existing logic below is
+    # unchanged. Only reads stdin when CLAUDE_TOOL_INPUT is not already set.
+    if not os.environ.get("CLAUDE_TOOL_INPUT"):
+        try:
+            _raw = sys.stdin.read()
+            _payload = json.loads(_raw) if _raw.strip() else {}
+            _sid = (_payload.get("session_id") or "").strip()
+            if _sid:
+                os.environ["GZ_HOOK_SESSION_ID"] = _sid
+            os.environ["CLAUDE_TOOL_INPUT"] = json.dumps(_payload.get("tool_input", {}))
+        except Exception:
+            pass
     # Get tool input
     tool_input = os.environ.get("CLAUDE_TOOL_INPUT", "")
 

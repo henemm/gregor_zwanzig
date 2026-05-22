@@ -307,8 +307,14 @@ def _write_session_workflow(name: str) -> None:
 
 
 def _session_workflow_name() -> Optional[str]:
-    """Return the workflow mapped to the current session, if valid; else None."""
-    sid = os.environ.get("CLAUDE_CODE_SESSION_ID", "").strip()
+    """Return the workflow mapped to the current session, if valid; else None.
+
+    Prefers GZ_HOOK_SESSION_ID (set by hooks from the stdin payload session_id —
+    the documented, reliable source) over CLAUDE_CODE_SESSION_ID (undocumented,
+    not reliably passed to hooks). CLI calls have CLAUDE_CODE_SESSION_ID.
+    """
+    sid = (os.environ.get("GZ_HOOK_SESSION_ID", "").strip()
+           or os.environ.get("CLAUDE_CODE_SESSION_ID", "").strip())
     if not sid:
         return None
     name = _read_session_registry().get(sid)
