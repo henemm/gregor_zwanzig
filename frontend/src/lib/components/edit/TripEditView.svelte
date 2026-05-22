@@ -136,7 +136,8 @@
 	{/if}
 
 	<div class="fixed bottom-0 left-0 right-0 bg-background border-t p-3
-	            flex gap-2 justify-end">
+	            flex gap-2 justify-end"
+	     style="padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));">
 		<div class="max-w-3xl mx-auto w-full flex gap-2 justify-end">
 			<button
 				type="button"
