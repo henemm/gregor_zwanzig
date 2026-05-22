@@ -1,0 +1,182 @@
+[
+  {
+    "index": 0,
+    "source": "00-foundation-css-tokens.md",
+    "title": "Fix dangling CSS variable fallbacks (--g-primary, --g-border → real tokens)",
+    "labels": [
+      "design-compliance",
+      "foundation",
+      "priority:high",
+      "area:tokens"
+    ],
+    "body_file": "issue-bodies/body-00.md"
+  },
+  {
+    "index": 1,
+    "source": "01-foundation-form-controls.md",
+    "title": "Replace native checkboxes & selects with branded UI components",
+    "labels": [
+      "design-compliance",
+      "foundation",
+      "priority:high",
+      "area:components"
+    ],
+    "body_file": "issue-bodies/body-01.md"
+  },
+  {
+    "index": 2,
+    "source": "02-sidebar-logo-and-rebrand.md",
+    "title": "Sidebar — wordmark \"gregor.zwanzig\" mit Mono-Akzent",
+    "labels": [
+      "design-compliance",
+      "area:sidebar",
+      "priority:medium"
+    ],
+    "body_file": "issue-bodies/body-02.md"
+  },
+  {
+    "index": 3,
+    "source": "03-screen-home-cockpit.md",
+    "title": "Home — replace \"Active-Trip-Cockpit\" with Kachel-Übersicht (spec-aligned)",
+    "labels": [
+      "design-compliance",
+      "area:home",
+      "priority:high",
+      "breaking-change"
+    ],
+    "body_file": "issue-bodies/body-03.md"
+  },
+  {
+    "index": 4,
+    "source": "05-screen-trips-list.md",
+    "title": "Trips-Liste — Icon-Soup raus, EINE Primäraktion + Kebab, Klick-auf-Name = Detail",
+    "labels": [
+      "design-compliance",
+      "area:trips",
+      "priority:high",
+      "ux"
+    ],
+    "body_file": "issue-bodies/body-04.md"
+  },
+  {
+    "index": 5,
+    "source": "06-trip-editor-stages-table.md",
+    "title": "Trip-Editor — Wegpunkte visuell auf Karte (KEIN Lat/Lon-Input), Naismith-Ankunftszeiten",
+    "labels": [
+      "design-compliance",
+      "area:editor",
+      "priority:high",
+      "breaking-change",
+      "ux"
+    ],
+    "body_file": "issue-bodies/body-05.md"
+  },
+  {
+    "index": 6,
+    "source": "07-alert-rules-editor-restyle.md",
+    "title": "AlertRulesEditor — \"Beides\"-Modus mit ZWEI Threshold-Feldern (Wert-Ambiguität fix)",
+    "labels": [
+      "design-compliance",
+      "area:alerts",
+      "priority:high",
+      "bug",
+      "ux"
+    ],
+    "body_file": "issue-bodies/body-06.md"
+  },
+  {
+    "index": 7,
+    "source": "08-edit-weather-section-controls.md",
+    "title": "EditWeatherSection — brand checkboxes + segmented \"Roh/Indikator\" control",
+    "labels": [
+      "design-compliance",
+      "area:editor",
+      "priority:medium"
+    ],
+    "body_file": "issue-bodies/body-07.md"
+  },
+  {
+    "index": 8,
+    "source": "09-edit-report-config-controls.md",
+    "title": "EditReportConfigSection — time inputs, quick-chips, channel rows polish",
+    "labels": [
+      "design-compliance",
+      "area:editor",
+      "area:reports",
+      "priority:medium"
+    ],
+    "body_file": "issue-bodies/body-08.md"
+  },
+  {
+    "index": 9,
+    "source": "11-trip-wizard-4-steps.md",
+    "title": "New Trip — 4-Schritt-Wizard ersetzt den flachen Anlege-Dialog",
+    "labels": [
+      "feature",
+      "area:trips",
+      "area:editor",
+      "priority:high",
+      "ux"
+    ],
+    "body_file": "issue-bodies/body-09.md"
+  },
+  {
+    "index": 10,
+    "source": "12-locations-with-groups.md",
+    "title": "Compare — Master-Detail Sidebar mit Gruppen (Orte organisieren)",
+    "labels": [
+      "feature",
+      "area:compare",
+      "priority:high",
+      "ux"
+    ],
+    "body_file": "issue-bodies/body-10.md"
+  },
+  {
+    "index": 11,
+    "source": "13-trip-detail-page.md",
+    "title": "Trip-Detail-Seite — alle Aktionen prominent, Übersicht in Cards",
+    "labels": [
+      "feature",
+      "area:trips",
+      "priority:high",
+      "ux"
+    ],
+    "body_file": "issue-bodies/body-11.md"
+  },
+  {
+    "index": 12,
+    "source": "14-backend-naismith-and-waypoint-suggestions.md",
+    "title": "Backend coordination — Naismith arrival-time calculation + algorithmic waypoint suggestions",
+    "labels": [
+      "backend-coordination",
+      "area:trips",
+      "priority:medium"
+    ],
+    "body_file": "issue-bodies/body-12.md"
+  },
+  {
+    "index": 13,
+    "source": "15-pro-metric-horizon-and-template-save.md",
+    "title": "Wetter-Templates — Pro-Metrik-Zeithorizont + \"Im Profil speichern\"",
+    "labels": [
+      "feature",
+      "area:weather",
+      "priority:medium"
+    ],
+    "body_file": "issue-bodies/body-13.md"
+  },
+  {
+    "index": 14,
+    "source": "body-14-output-layout-system.md",
+    "title": "Output-Layout-System — Spalten/Detail/Aus + Kanal-Constraints (Email/Telegram/Signal/SMS)",
+    "labels": [
+      "feature",
+      "area:weather",
+      "area:output",
+      "backend-coordination",
+      "priority:high"
+    ],
+    "body_file": "issue-bodies/body-14-output-layout-system.md"
+  }
+]

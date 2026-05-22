@@ -1,0 +1,21 @@
+───── PROMPT FÜR CLAUDE CODE ─────
+
+Lies die Datei `claude-code-handoff/INSTRUCTIONS.md` in diesem Repo und führe
+den dort beschriebenen Plan aus:
+
+1. Verifiziere, dass `gh` CLI authentifiziert ist (`gh auth status`).
+2. Lege fehlende Labels auf GitHub an (Liste in INSTRUCTIONS.md Step 3).
+3. Committe die Screenshots aus `claude-code-handoff/screenshots/` nach
+   `.github/issue-assets/`, pushe nach `main`.
+4. Erstelle die 14 Issues per `gh issue create`, indem du `issues.json`
+   iterierst und für jeden Eintrag Titel, Labels und body-file übergibst.
+5. Drucke am Ende eine Liste aller 14 erzeugten Issue-URLs in Reihenfolge.
+
+Frag mich nur, wenn etwas mehrdeutig ist oder ein Push abgelehnt würde.
+Sonst: alles automatisch durchziehen.
+
+───── ENDE PROMPT ─────
+
+Nach dem Run: schau dir die 11 Issues auf
+https://github.com/henemm/gregor_zwanzig/issues an und vergib evtl. noch
+Assignees / Milestones wie du sie strukturieren willst.
