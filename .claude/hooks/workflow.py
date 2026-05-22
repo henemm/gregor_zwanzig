@@ -272,13 +272,70 @@ def _read_workflow_file(path: Path) -> dict:
     return json.loads(path.read_text())
 
 
+def _session_registry_file() -> Path:
+    """Path of the per-session workflow registry (session_id -> workflow)."""
+    return _get_repo_root() / ".claude" / "session_workflows.json"
+
+
+def _read_session_registry() -> dict:
+    """Return the session->workflow map; {} on any error. Fail-soft."""
+    try:
+        f = _session_registry_file()
+        if f.exists():
+            return json.loads(f.read_text())
+    except (OSError, json.JSONDecodeError):
+        pass
+    return {}
+
+
+def _write_session_workflow(name: str) -> None:
+    """Map the current CLAUDE_CODE_SESSION_ID to workflow ``name``.
+
+    This is what makes live workflow-switching possible without a session
+    restart: each session writes its OWN session-id entry, and hooks resolve
+    via the session-id (see _active_name). Fail-soft.
+    """
+    sid = os.environ.get("CLAUDE_CODE_SESSION_ID", "").strip()
+    if not sid:
+        return
+    try:
+        reg = _read_session_registry()
+        reg[sid] = name
+        _atomic_write(_session_registry_file(), reg)
+    except Exception:
+        pass
+
+
+def _session_workflow_name() -> Optional[str]:
+    """Return the workflow mapped to the current session, if valid; else None."""
+    sid = os.environ.get("CLAUDE_CODE_SESSION_ID", "").strip()
+    if not sid:
+        return None
+    name = _read_session_registry().get(sid)
+    if not name:
+        return None
+    if _workflow_file(name).exists() or _archive_file(name).exists():
+        return name
+    return None
+
+
 def _active_name() -> Optional[str]:
     """Return the name of the active workflow, or None.
 
-    ONLY reads GZ_ACTIVE_WORKFLOW env var. The .active symlink fallback is
-    intentionally removed — relying on it causes cross-session workflow drift.
-    Every caller MUST set GZ_ACTIVE_WORKFLOW explicitly.
+    Resolution order:
+    1. CLAUDE_CODE_SESSION_ID -> session_workflows.json (per-session, live-switchable)
+    2. GZ_ACTIVE_WORKFLOW env var (legacy/fallback; FATAL if set but invalid)
+    3. legacy single-file state
+
+    The session-id registry has priority so a session can switch workflows
+    at any time (workflow.py switch) without a restart, and parallel sessions
+    never collide. Sessions without a registry entry behave exactly as before.
     """
+    # 1. Session-ID registry — highest priority, overrides a stale env var.
+    sess = _session_workflow_name()
+    if sess:
+        return sess
+
     env_name = os.environ.get("GZ_ACTIVE_WORKFLOW", "").strip()
     if env_name:
         try:
@@ -504,12 +561,11 @@ def cmd_start(args: list[str]) -> None:
     data = _new_workflow(name)
     _atomic_write(_workflow_file(name), data)
     _set_active(name)
+    _write_session_workflow(name)
     print(f"Started workflow: {name}")
     print(
-        f"\nPFLICHT: Setze diese Env-Var SOFORT — ohne sie blockieren alle Folgebefehle:\n"
-        f"  export GZ_ACTIVE_WORKFLOW={name}\n"
-        f"  Und uebergib sie beim Agent-Spawn:\n"
-        f'  Agent(prompt="... ## Pflicht\\nexport GZ_ACTIVE_WORKFLOW={name}\\n...")',
+        f"  Aktiv fuer diese Session (via Session-ID-Registry) — kein Neustart, "
+        f"keine Env-Var noetig.",
     )
 
 
@@ -542,15 +598,12 @@ def cmd_switch(args: list[str]) -> None:
             pass  # fail-soft — switch must never abort
 
     _set_active(name)
-
-    env_name = os.environ.get("GZ_ACTIVE_WORKFLOW", "").strip()
+    _write_session_workflow(name)
     print(f"Switched to: {name}")
-    if env_name != name:
-        print(
-            f"\nPFLICHT: Setze diese Env-Var SOFORT — ohne sie blockieren alle Folgebefehle:\n"
-            f"  export GZ_ACTIVE_WORKFLOW={name}\n"
-            f"  NICHT in settings.json eintragen — das gilt nur fuer diese Shell-Session.",
-        )
+    print(
+        f"  Aktiv fuer diese Session (via Session-ID-Registry) — sofort wirksam, "
+        f"kein Neustart noetig.",
+    )
 
 
 def cmd_status(args: list[str]) -> None:

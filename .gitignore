@@ -94,3 +94,6 @@ test-results/
 # bug89 test sandbox data
 data/users/__*/
 *.zip
+
+# Session-spezifische Workflow-Zuordnung (ephemer, nicht versionieren)
+.claude/session_workflows.json

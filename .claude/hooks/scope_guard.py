@@ -161,12 +161,13 @@ ALWAYS_ALLOWED = [
 
 
 def load_task() -> dict | None:
-    """Load current task from the active workflow (GZ_ACTIVE_WORKFLOW).
+    """Load current task from the active workflow for THIS session.
 
-    Returns None if no workflow is active or affected_files is empty.
-    Sessions without GZ_ACTIVE_WORKFLOW get a warning but are not hard-blocked.
+    Resolves via session-id registry, then GZ_ACTIVE_WORKFLOW (see
+    _resolve_workflow_name). Returns None if no workflow is active or
+    affected_files is empty — sessions without one get a warning, not a block.
     """
-    name = os.environ.get("GZ_ACTIVE_WORKFLOW", "").strip()
+    name = _resolve_workflow_name()
     if not name:
         return None
     wf = _get_active_workflow_state()
@@ -212,24 +213,40 @@ def get_allowed_paths_for_type(task_type: str) -> list:
     return TASK_PATH_MAPPING.get(task_type, [])
 
 
-def _get_active_workflow_state() -> dict:
-    """Read the active workflow JSON if any; return {} on any error.
+def _resolve_workflow_name() -> str:
+    """Resolve the active workflow name for THIS session.
 
-    Reads GZ_ACTIVE_WORKFLOW env var — the only supported activation method.
-    The .active symlink is disabled per CLAUDE.md and intentionally not used.
-    Fail-soft.
+    Order:
+    1. CLAUDE_CODE_SESSION_ID -> session_workflows.json (per-session, live)
+    2. GZ_ACTIVE_WORKFLOW env var (legacy/fallback)
+
+    Mirrors workflow.py._active_name so scope_guard and the gates always agree.
     """
+    root = get_project_root()
+    sid = os.environ.get("CLAUDE_CODE_SESSION_ID", "").strip()
+    if sid:
+        try:
+            reg_file = root / ".claude" / "session_workflows.json"
+            if reg_file.exists():
+                reg = json.loads(reg_file.read_text())
+                name = reg.get(sid)
+                if name and (
+                    (root / ".claude" / "workflows" / f"{name}.json").exists()
+                    or (root / ".claude" / "workflows" / "_archive" / f"{name}.json").exists()
+                ):
+                    return name
+        except (OSError, json.JSONDecodeError):
+            pass
+    return os.environ.get("GZ_ACTIVE_WORKFLOW", "").strip()
+
+
+def _get_active_workflow_state() -> dict:
+    """Read the active workflow JSON for THIS session; {} on any error. Fail-soft."""
     try:
-        name = os.environ.get("GZ_ACTIVE_WORKFLOW", "").strip()
+        name = _resolve_workflow_name()
         if not name:
             return {}
-        hooks_dir = Path(__file__).resolve().parent
-        if str(hooks_dir) not in sys.path:
-            sys.path.insert(0, str(hooks_dir))
-        from config_loader import find_main_repo_from_worktree, find_project_root
-        cwd = Path.cwd()
-        main = find_main_repo_from_worktree(cwd)
-        root = main if main is not None else find_project_root()
+        root = get_project_root()
         wf_file = root / ".claude" / "workflows" / f"{name}.json"
         if wf_file.exists():
             return json.loads(wf_file.read_text())
