@@ -40,7 +40,8 @@
 		moon: Moon,
 		headlamp: Flashlight
 	} as const;
+
+	const IconComp = $derived(iconMap[kind]);
 </script>
 
-{@const IconComp = iconMap[kind]}
 <IconComp {size} {color} class={className} aria-hidden="true" />

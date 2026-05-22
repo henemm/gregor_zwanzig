@@ -3,7 +3,7 @@ entity_id: issue_322_wicon_komponente
 type: bugfix
 created: 2026-05-22
 updated: 2026-05-22
-status: draft
+status: implemented
 version: "1.0"
 tags: [bugfix, frontend, design-system, emoji, wicon, lucide, ap-009, issue-322]
 ---
