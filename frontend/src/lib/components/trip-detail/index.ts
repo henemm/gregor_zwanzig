@@ -16,3 +16,4 @@ export { default as MetricGroup } from './MetricGroup.svelte';
 export { default as MetricCheckbox } from './MetricCheckbox.svelte';
 export { default as TablePreview } from './TablePreview.svelte';
 export { default as SavePresetDialog } from './SavePresetDialog.svelte';
+export { default as DetailCard } from './DetailCard.svelte';

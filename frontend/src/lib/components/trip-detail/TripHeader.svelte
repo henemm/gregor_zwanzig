@@ -1,185 +1,202 @@
 <script lang="ts">
-	// Spec: docs/specs/modules/epic_135_step2_trip_detail_actions.md (§6)
-	// Bündelt Breadcrumb + StatusBadge + Aktions-Buttons + Confirm-Dialog.
-	// Alle on:click-Handler sind benannte Funktionen (Safari-Kompatibilität).
+	// Issue #302 — Trip-Detail Header (Soll-Mockup).
+	// Spec: docs/specs/modules/issue_302_trip_detail_page.md §3.
+	//
+	// Zweispaltig: Links Breadcrumb + H1 + Statuszeile + Meta. Rechts 3 Buttons.
+	// Pause/Archive-Logik ist in +page.svelte als Danger-Zone gewandert.
 	import { Btn } from '$lib/components/ui/btn/index.js';
-	import * as Dialog from '$lib/components/ui/dialog/index.js';
+	import { Eyebrow } from '$lib/components/ui/eyebrow';
 	import TripStatusBadge from './TripStatusBadge.svelte';
-	import { deriveTripStatus } from '$lib/utils/tripStatus';
+	import { deriveTripStatus, type TripStatus } from '$lib/utils/tripStatus';
+	import { formatDateRange, getDaysLabel } from '$lib/utils/tripHero';
+	import { computeTripStats } from '$lib/utils/tripStats';
+	import { api } from '$lib/api';
+	import { goto } from '$app/navigation';
 	import type { Trip } from '$lib/types';
 
 	interface Props {
 		trip: Trip;
+		// onStatusChange ist obsolet — Pause/Archive haben die Komponente verlassen.
+		// Prop bleibt zur Backward-Compatibility, wird nicht mehr ausgelöst.
 		onStatusChange?: (updated: Trip) => void;
 		now?: Date;
 	}
 
-	let { trip, onStatusChange, now = new Date() }: Props = $props();
+	let { trip, now = new Date() }: Props = $props();
 
-	const status = $derived(deriveTripStatus(trip, now));
+	const status = $derived<TripStatus>(deriveTripStatus(trip, now));
+	const stats = $derived(computeTripStats(trip));
+	const dateRange = $derived(formatDateRange(trip));
+	const daysLabel = $derived(getDaysLabel(trip, now));
 
-	let archiveDialogOpen = $state(false);
-	// F002: PATCH-Fehler nicht still schlucken — sichtbares Error-Label.
-	let errorMsg = $state<string | null>(null);
-	// F003: Doppel-Klick-Schutz — Buttons während laufendem PATCH disablen.
-	let isLoading = $state(false);
+	const statusLabelMap: Record<TripStatus, string> = {
+		active: 'AKTIV',
+		planned: 'GEPLANT',
+		paused: 'PAUSIERT',
+		archived: 'ARCHIVIERT'
+	};
 
-	async function sendStateUpdate(
-		paused?: boolean,
-		archived?: boolean
-	): Promise<void> {
-		const body: Record<string, boolean> = {};
-		if (paused !== undefined) body.paused = paused;
-		if (archived !== undefined) body.archived = archived;
+	let testBriefingLoading = $state(false);
+	let testBriefingMsg = $state<string | null>(null);
 
-		isLoading = true;
+	async function handleTestBriefing(): Promise<void> {
+		testBriefingLoading = true;
+		testBriefingMsg = null;
 		try {
-			const res = await fetch(`/api/trips/${trip.id}/state`, {
-				method: 'PATCH',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(body)
-			});
-			if (!res.ok) {
-				throw new Error(`PATCH /state failed: ${res.status}`);
-			}
-			const updated: Trip = await res.json();
-			// Erfolg: vorigen Fehler ausblenden.
-			errorMsg = null;
-			onStatusChange?.(updated);
-		} catch (e) {
-			errorMsg = e instanceof Error ? e.message : String(e);
+			await api.post('/api/scheduler/trip-reports?hour=18', {});
+			testBriefingMsg = 'Briefings für alle aktiven Trips ausgelöst.';
+		} catch {
+			testBriefingMsg = 'Fehler beim Senden.';
 		} finally {
-			isLoading = false;
+			testBriefingLoading = false;
 		}
 	}
 
-	function handlePauseClick(): void {
-		// Toggle: aktuell pausiert → resume, sonst pause.
-		const nextPaused = status !== 'paused';
-		void sendStateUpdate(nextPaused, undefined);
+	function handlePreview(): void {
+		void goto(`/trips/${trip.id}#preview`);
 	}
 
-	function handleArchiveClick(): void {
-		archiveDialogOpen = true;
-	}
-
-	function handleArchiveCancel(): void {
-		archiveDialogOpen = false;
-	}
-
-	function handleArchiveConfirm(): void {
-		const nextArchived = status !== 'archived';
-		archiveDialogOpen = false;
-		void sendStateUpdate(undefined, nextArchived);
-	}
-
-	function handleDialogOpenChange(open: boolean): void {
-		archiveDialogOpen = open;
+	function handleEdit(): void {
+		void goto(`/trips/${trip.id}/edit`);
 	}
 </script>
 
 <header class="trip-header">
-	<nav data-testid="trip-detail-breadcrumb" aria-label="Breadcrumb" class="breadcrumb">
-		<a href="/trips" data-testid="trip-detail-breadcrumb-link-trips">Trips</a>
-		<span aria-hidden="true"> / </span>
-		<span data-testid="trip-detail-breadcrumb-current">
-			{trip.shortcode ?? trip.name}
-		</span>
-	</nav>
+	<div class="header-main">
+		<div class="header-left">
+			<nav data-testid="trip-detail-breadcrumb" aria-label="Breadcrumb" class="breadcrumb">
+				<Eyebrow>
+					<a href="/trips" data-testid="trip-detail-breadcrumb-link-trips">MEINE TOUREN</a>
+					<span aria-hidden="true"> › </span>
+					<span data-testid="trip-detail-breadcrumb-current">
+						{(trip.shortcode ?? trip.name).toUpperCase()}
+					</span>
+				</Eyebrow>
+			</nav>
 
-	<div class="title-row">
-		<h2 class="title">{trip.name}</h2>
-		<TripStatusBadge {trip} {now} />
-	</div>
+			<h1 class="trip-h1" data-testid="trip-detail-h1">
+				{#if trip.shortcode}<span class="h1-shortcode">{trip.shortcode}</span> · {/if}{trip.name}
+			</h1>
 
-	<div class="actions">
-		{#if status !== 'archived'}
+			<div class="status-line">
+				<span class="status-text status-{status}">
+					{statusLabelMap[status]} · {daysLabel}
+				</span>
+				<TripStatusBadge {trip} {now} />
+			</div>
+
+			<div class="meta-line" data-testid="trip-detail-meta">
+				{#if dateRange}<span>{dateRange}</span> · {/if}<span>{stats.kmTotal.toFixed(1)} km</span>
+				· <span>↑{Math.round(stats.ascentM).toLocaleString('de-DE')} m</span>
+			</div>
+		</div>
+
+		<div class="header-actions">
 			<Btn
 				variant="outline"
 				size="sm"
-				data-testid="trip-detail-action-pause"
-				onclick={handlePauseClick}
-				disabled={isLoading}
+				data-testid="trip-detail-action-preview"
+				onclick={handlePreview}
 			>
-				{status === 'paused' ? 'Fortsetzen' : 'Pausieren'}
+				Briefing-Vorschau
 			</Btn>
-		{/if}
-		<Btn
-			variant="outline"
-			size="sm"
-			data-testid="trip-detail-action-archive"
-			onclick={handleArchiveClick}
-			disabled={isLoading}
-		>
-			{status === 'archived' ? 'Reaktivieren' : 'Archivieren'}
-		</Btn>
-	</div>
-	{#if errorMsg}
-		<p class="text-sm text-red-600" data-testid="trip-detail-action-error">{errorMsg}</p>
-	{/if}
-</header>
-
-<Dialog.Root open={archiveDialogOpen} onOpenChange={handleDialogOpenChange}>
-	<Dialog.Content data-testid="trip-detail-archive-confirm-dialog">
-		<Dialog.Header>
-			<Dialog.Title>
-				{status === 'archived' ? 'Trip reaktivieren?' : 'Trip archivieren?'}
-			</Dialog.Title>
-			<Dialog.Description>
-				{status === 'archived'
-					? 'Der Trip wird aus dem Archiv zurückgeholt und ist wieder aktiv.'
-					: 'Der Trip wird ins Archiv verschoben — er kann später reaktiviert werden.'}
-			</Dialog.Description>
-		</Dialog.Header>
-		<Dialog.Footer>
 			<Btn
 				variant="outline"
-				data-testid="trip-detail-archive-confirm-cancel"
-				onclick={handleArchiveCancel}
+				size="sm"
+				data-testid="trip-detail-action-edit"
+				onclick={handleEdit}
 			>
-				Abbrechen
+				Bearbeiten
 			</Btn>
 			<Btn
-				variant="primary"
-				data-testid="trip-detail-archive-confirm-yes"
-				onclick={handleArchiveConfirm}
-				disabled={isLoading}
+				variant="accent"
+				size="sm"
+				data-testid="trip-detail-action-test-briefing"
+				onclick={handleTestBriefing}
+				disabled={testBriefingLoading}
 			>
-				Bestätigen
+				Test-Briefing senden
 			</Btn>
-		</Dialog.Footer>
-	</Dialog.Content>
-</Dialog.Root>
+		</div>
+	</div>
+
+	{#if testBriefingMsg}
+		<p class="briefing-msg" data-testid="trip-detail-test-briefing-msg">{testBriefingMsg}</p>
+	{/if}
+</header>
 
 <style>
 	.trip-header {
 		display: flex;
 		flex-direction: column;
 		gap: 0.5rem;
-		margin-bottom: 1rem;
+		margin-bottom: 1.25rem;
 	}
-	.breadcrumb {
-		font-size: 0.875rem;
-		color: var(--g-ink-muted);
+	.header-main {
+		display: flex;
+		gap: 1.5rem;
+		align-items: flex-start;
+		justify-content: space-between;
+		flex-wrap: wrap;
+	}
+	.header-left {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		min-width: 0;
+		flex: 1 1 320px;
 	}
 	.breadcrumb a {
 		color: inherit;
+		text-decoration: none;
+	}
+	.breadcrumb a:hover {
 		text-decoration: underline;
 	}
-	.title-row {
+	.trip-h1 {
+		margin: 0;
+		font-size: 2rem;
+		font-weight: 700;
+		letter-spacing: -0.025em;
+		color: var(--g-ink);
+		line-height: 1.15;
+	}
+	.h1-shortcode {
+		font-family: var(--g-font-mono, ui-monospace, monospace);
+		color: var(--g-accent);
+	}
+	.status-line {
 		display: flex;
 		align-items: center;
 		gap: 0.75rem;
 		flex-wrap: wrap;
 	}
-	.title {
-		font-size: 1.5rem;
-		font-weight: 700;
-		margin: 0;
+	.status-text {
+		font-size: 0.8125rem;
+		font-weight: 600;
+		letter-spacing: 0.05em;
 	}
-	.actions {
+	.status-active   { color: var(--g-accent); }
+	.status-planned  { color: var(--g-info); }
+	.status-paused   { color: var(--g-warning); }
+	.status-archived { color: var(--g-ink-faint); }
+	.meta-line {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.25rem;
+		font-size: 0.875rem;
+		color: var(--g-ink-muted);
+		font-variant-numeric: tabular-nums;
+	}
+	.header-actions {
 		display: flex;
 		gap: 0.5rem;
 		flex-wrap: wrap;
+		flex-shrink: 0;
+	}
+	.briefing-msg {
+		margin: 0;
+		font-size: 0.875rem;
+		color: var(--g-ink-muted);
 	}
 </style>

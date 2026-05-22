@@ -1,13 +1,16 @@
 import { test, expect } from '@playwright/test';
 
 const TRIP_ID = 'e2e-cockpit-test';
+// Issue #302 — Labels nach Soll-Mockup. Placeholder-Regex entfernt, weil die
+// Inhalte mit Epic #135/137/138/139 längst implementiert sind und die alten
+// Skelett-Texte nicht mehr existieren.
 const TABS = [
-	{ value: 'overview', label: 'Übersicht', placeholder: /Inhalt folgt mit Issue #154/ },
-	{ value: 'stages', label: 'Etappen & Wegpunkte', placeholder: /Inhalt folgt mit Epic #137/ },
-	{ value: 'weather', label: 'Wetter-Metriken', placeholder: /Inhalt folgt mit Issue #158/ },
-	{ value: 'briefings', label: 'Briefing-Zeitplan', placeholder: /Inhalt folgt mit Issue #159/ },
-	{ value: 'alerts', label: 'Alerts', placeholder: /Inhalt folgt mit Epic #139/ },
-	{ value: 'preview', label: 'Vorschau', placeholder: /Inhalt folgt mit Issue #189/ }
+	{ value: 'overview', label: 'Übersicht' },
+	{ value: 'stages', label: 'Etappen' },
+	{ value: 'weather', label: 'Wetter-Briefing' },
+	{ value: 'briefings', label: 'Reports & Kanäle' },
+	{ value: 'alerts', label: 'Alarmregeln' },
+	{ value: 'preview', label: 'Vorschau' }
 ];
 
 test.describe('Issue #155 — Trip-Detail Tab-Navigation', () => {
@@ -29,22 +32,19 @@ test.describe('Issue #155 — Trip-Detail Tab-Navigation', () => {
 		await expect(page.getByTestId('trip-detail-panel-overview')).toBeVisible();
 	});
 
-	test('AC-3: Klick auf "Etappen & Wegpunkte" wechselt aktiv + URL-Hash + Panel', async ({ page }) => {
+	test('AC-3: Klick auf "Etappen" wechselt aktiv + URL-Hash + Panel sichtbar', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
 		await page.getByTestId('trip-detail-tab-stages').click();
 		await expect(page.getByTestId('trip-detail-tab-stages')).toHaveAttribute('data-state', 'active');
 		await expect(page).toHaveURL(new RegExp('#stages$'));
 		const panel = page.getByTestId('trip-detail-panel-stages');
 		await expect(panel).toBeVisible();
-		await expect(panel).toContainText(/Inhalt folgt mit Epic #137 \(Wegpunkt-Editor\)/);
 	});
 
 	test('AC-4: Aufruf mit #alerts → Alerts-Tab initial aktiv', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}#alerts`);
 		await expect(page.getByTestId('trip-detail-tab-alerts')).toHaveAttribute('data-state', 'active');
-		await expect(page.getByTestId('trip-detail-panel-alerts')).toContainText(
-			/Inhalt folgt mit Epic #139/
-		);
+		await expect(page.getByTestId('trip-detail-panel-alerts')).toBeVisible();
 	});
 
 	test('AC-5: Aktiver Tab hat sichtbare Unterstreichung in --g-accent', async ({ page }) => {
@@ -61,11 +61,14 @@ test.describe('Issue #155 — Trip-Detail Tab-Navigation', () => {
 		expect(inactiveBorder).not.toMatch(/rgb\(196,\s*90,\s*42\)/);
 	});
 
-	test('AC-6/AC-7: Badge-Slot — heute KEIN Tab hat Badge (Mock = leere badges-Prop)', async ({
+	test('AC-6/AC-7: Badge-Slot — Tabs ohne Inhalt rendern KEIN Badge', async ({
 		page
 	}) => {
+		// Issue #302: stages + alerts haben jetzt Auto-Badges (Etappenanzahl +
+		// enabled Alert-Rules). Die anderen Tabs dürfen weiterhin kein Badge zeigen.
 		await page.goto(`/trips/${TRIP_ID}`);
 		for (const tab of TABS) {
+			if (tab.value === 'stages' || tab.value === 'alerts') continue;
 			const badge = page.getByTestId(`trip-detail-tab-badge-${tab.value}`);
 			await expect(badge).toHaveCount(0);
 		}

@@ -203,6 +203,7 @@ Alle Module benoetigen Specs vor Implementierung:
 - `issue_280_home_topbar_polish` - H1 "Startseite" auf Home-Seite mit `letter-spacing: -0.025em` (tracking-tight) ergänzt, konsistent mit Trips-Seite (Issue #280, Spec: `docs/specs/modules/issue_280_home_topbar_polish.md`)
 - `bug_317_alert_rules_editor_metrics` - AlertRulesEditor zeigte nur 3 von 6 Metriken. Fix: normalizeAlertMetric() mappt Legacy-IDs (precipitation→precipitation_sum, thunder→thunder_level, snowfall_limit→snow_line) beim Laden. F004-Guard zeigt unbekannte Metriken als Fallback statt sie auszublenden (Bug #317, Spec: `docs/specs/modules/bug_317_alert_rules_editor_metrics.md`)
 - `issue_297_alert_beides_mode` - Alert-Modus "Beides": Separate Threshold-Felder (Absolut + Δ) mit Paar-Markierung; expandRules() strippt pair_id/delta_window korrekt via Destructuring (F001/F004/AC-7). thunder_level zu DELTA_ONLY_METRICS hinzugefügt. 16 Unit-Tests. (Issue #297, Spec: `docs/specs/modules/issue_297_alert_beides_mode.md`)
+- `issue_302_trip_detail_page` - Trip-Detail-Seite komplett redesigned: H1-Header mit Breadcrumb + Status-Zeile + 3 Aktionsbuttons (Briefing-Vorschau, Bearbeiten, Test-Briefing), 5 umbenannte Tabs mit Badge-Zählern (Etappen-Count, Alert-Count), 2×2 DetailCard-Grid in Übersicht-Tab (Reports, Alarmregeln, Route, Datenstand), Danger-Zone mit Pause/Archiv/Löschen am Seitenende (Issue #302, Spec: `docs/specs/modules/issue_302_trip_detail_page.md`)
 
 ### Geplante Module
 Siehe GitHub Issues: https://github.com/henemm/gregor_zwanzig/issues

@@ -28,14 +28,30 @@
 		trip?: Trip;
 	}
 
-	let { initialTab = 'overview', badges = {}, trip }: Props = $props();
+	let { initialTab = 'overview', badges: badgesProp = {}, trip }: Props = $props();
 
+	// Issue #302 — Auto-Badges aus Trip ableiten (Etappenanzahl + enabled Alerts).
+	// Explizite Werte in der `badges` Prop ueberschreiben die Auto-Ableitung.
+	const badges = $derived<Badges>({
+		stages: badgesProp.stages ?? trip?.stages?.length ?? 0,
+		alerts: badgesProp.alerts ?? (trip?.alert_rules ?? []).filter((r) => r.enabled).length,
+		overview: badgesProp.overview,
+		weather: badgesProp.weather,
+		briefings: badgesProp.briefings,
+		preview: badgesProp.preview
+	});
+
+	// Issue #302 — Labels & Badges nach Soll-Mockup:
+	//   stages    -> "Etappen" (war: "Etappen & Wegpunkte")
+	//   weather   -> "Wetter-Briefing" (war: "Wetter-Metriken")
+	//   briefings -> "Reports & Kanäle" (war: "Briefing-Zeitplan")
+	//   alerts    -> "Alarmregeln" (war: "Alerts")
 	const TABS = [
 		{ value: 'overview', label: 'Übersicht' },
-		{ value: 'stages', label: 'Etappen & Wegpunkte' },
-		{ value: 'weather', label: 'Wetter-Metriken' },
-		{ value: 'briefings', label: 'Briefing-Zeitplan' },
-		{ value: 'alerts', label: 'Alerts' },
+		{ value: 'stages', label: 'Etappen' },
+		{ value: 'weather', label: 'Wetter-Briefing' },
+		{ value: 'briefings', label: 'Reports & Kanäle' },
+		{ value: 'alerts', label: 'Alarmregeln' },
 		{ value: 'preview', label: 'Vorschau' }
 	] as const;
 

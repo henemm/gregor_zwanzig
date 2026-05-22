@@ -43,9 +43,10 @@ test.describe('Issue #153 — Trip-Detail Header (Breadcrumb + Status + Aktionen
 
 	test('AC-11: Breadcrumb zeigt Trip-Name wenn kein Shortcode', async ({ page }) => {
 		// e2e-cockpit-test hat keinen Shortcode → Fallback auf Name.
+		// Issue #302: Breadcrumb rendert Eyebrow-style UPPERCASE.
 		await page.goto(`/trips/${TRIP_ID}`);
 		const current = page.getByTestId('trip-detail-breadcrumb-current');
-		await expect(current).toContainText('E2E Cockpit Test Trip');
+		await expect(current).toContainText('E2E COCKPIT TEST TRIP');
 	});
 
 	test('AC-12: Status-Badge zeigt "Aktiv" für trip mit Stages umschliessend heute', async ({
@@ -61,12 +62,14 @@ test.describe('Issue #153 — Trip-Detail Header (Breadcrumb + Status + Aktionen
 		expect(['success', 'info']).toContain(tone);
 	});
 
-	test('AC-13: Klick auf "Pausieren" → PATCH + Badge wechselt zu "Pausiert" ohne Reload', async ({
+	test('AC-13: Klick auf "Briefings pausieren" → PATCH + Badge wechselt zu "Pausiert" ohne Reload', async ({
 		page
 	}) => {
+		// Issue #302: Pause-Button hat jetzt Label "Briefings pausieren" und lebt
+		// in der Danger-Zone unter den Tabs.
 		await page.goto(`/trips/${TRIP_ID}`);
 		const pauseBtn = page.getByTestId('trip-detail-action-pause');
-		await expect(pauseBtn).toContainText('Pausieren');
+		await expect(pauseBtn).toContainText('Briefings pausieren');
 
 		// Klick → PATCH
 		await pauseBtn.click();
@@ -111,9 +114,10 @@ test.describe('Issue #153 — Trip-Detail Header (Breadcrumb + Status + Aktionen
 		await expect(page.getByTestId('trip-detail-action-archive')).toContainText('Archivieren');
 	});
 
-	test('AC-16: Confirm im Dialog → PATCH gesendet + Badge "Archiviert" + Pause-Button weg', async ({
+	test('AC-16: Confirm im Dialog → PATCH gesendet + Badge "Archiviert" + Pause-Button disabled', async ({
 		page
 	}) => {
+		// Issue #302: Pause-Button bleibt im DOM (Danger-Zone), wird aber deaktiviert.
 		await page.goto(`/trips/${TRIP_ID}`);
 		await page.getByTestId('trip-detail-action-archive').click();
 		await page.getByTestId('trip-detail-archive-confirm-yes').click();
@@ -125,20 +129,22 @@ test.describe('Issue #153 — Trip-Detail Header (Breadcrumb + Status + Aktionen
 		const badge = page.getByTestId('trip-detail-status-badge');
 		await expect(badge).toContainText('Archiviert');
 
-		// Pause-Button ist nicht mehr im DOM
-		await expect(page.getByTestId('trip-detail-action-pause')).toHaveCount(0);
+		// Pause-Button bleibt sichtbar, ist aber disabled
+		const pauseBtn = page.getByTestId('trip-detail-action-pause');
+		await expect(pauseBtn).toBeVisible();
+		await expect(pauseBtn).toBeDisabled();
 	});
 
-	test('AC-17: Archivierter Trip → Button-Label "Reaktivieren", kein Pause-Button', async ({
+	test('AC-17: Archivierter Trip → Button-Label "Reaktivieren", Pause-Button disabled', async ({
 		page,
 		request
 	}) => {
-		// Setup: Trip archivieren
+		// Issue #302: Pause-Button bleibt im DOM und ist deaktiviert.
 		await request.patch(`/api/trips/${TRIP_ID}/state`, { data: { archived: true } });
 
 		await page.goto(`/trips/${TRIP_ID}`);
 		await expect(page.getByTestId('trip-detail-action-archive')).toContainText('Reaktivieren');
-		await expect(page.getByTestId('trip-detail-action-pause')).toHaveCount(0);
+		await expect(page.getByTestId('trip-detail-action-pause')).toBeDisabled();
 	});
 
 	test('AC-18: Pausierter Trip → Button-Label "Fortsetzen", Archive-Button bleibt sichtbar', async ({
@@ -188,6 +194,7 @@ test.describe('Issue #153 — Trip-Detail Header (Breadcrumb + Status + Aktionen
 	});
 
 	test('Toggle-Roundtrip: Pause → Resume → wieder aktiv', async ({ page }) => {
+		// Issue #302: Pause-Button-Label ist "Briefings pausieren" / "Fortsetzen".
 		await page.goto(`/trips/${TRIP_ID}`);
 		await page.getByTestId('trip-detail-action-pause').click();
 		await expect(page.getByTestId('trip-detail-status-badge')).toContainText('Pausiert');
@@ -195,7 +202,7 @@ test.describe('Issue #153 — Trip-Detail Header (Breadcrumb + Status + Aktionen
 		// Resume
 		await page.getByTestId('trip-detail-action-pause').click();
 		await expect(page.getByTestId('trip-detail-status-badge')).not.toContainText('Pausiert');
-		await expect(page.getByTestId('trip-detail-action-pause')).toContainText('Pausieren');
+		await expect(page.getByTestId('trip-detail-action-pause')).toContainText('Briefings pausieren');
 	});
 
 	test('Screenshot der Trip-Header-Komponente für visuelle Verifikation', async ({ page }) => {
