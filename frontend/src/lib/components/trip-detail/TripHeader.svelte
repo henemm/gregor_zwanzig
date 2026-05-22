@@ -155,7 +155,7 @@
 	}
 	.trip-h1 {
 		margin: 0;
-		font-size: 2rem;
+		font-size: var(--g-text-3xl);
 		font-weight: 700;
 		letter-spacing: -0.025em;
 		color: var(--g-ink);
@@ -172,7 +172,7 @@
 		flex-wrap: wrap;
 	}
 	.status-text {
-		font-size: 0.8125rem;
+		font-size: var(--g-text-sm);
 		font-weight: 600;
 		letter-spacing: 0.05em;
 	}
@@ -184,7 +184,7 @@
 		display: flex;
 		flex-wrap: wrap;
 		gap: 0.25rem;
-		font-size: 0.875rem;
+		font-size: var(--g-text-sm);
 		color: var(--g-ink-muted);
 		font-variant-numeric: tabular-nums;
 	}
@@ -196,7 +196,7 @@
 	}
 	.briefing-msg {
 		margin: 0;
-		font-size: 0.875rem;
+		font-size: var(--g-text-sm);
 		color: var(--g-ink-muted);
 	}
 </style>

@@ -56,18 +56,18 @@
 		gap: 0.75rem;
 	}
 	.trip-hero-title {
-		font-size: 1.5rem;
+		font-size: var(--g-text-2xl);
 		font-weight: 700;
 		line-height: 1.2;
 	}
 	.trip-hero-region {
-		font-size: 0.875rem;
+		font-size: var(--g-text-sm);
 		font-weight: 500;
 		color: var(--g-ink-faint);
 		margin-top: -0.25rem;
 	}
 	.trip-hero-date-range {
-		font-size: 0.875rem;
+		font-size: var(--g-text-sm);
 		color: var(--g-ink-faint);
 	}
 	.trip-hero-stats {
@@ -83,13 +83,13 @@
 	}
 	.eyebrow {
 		font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-		font-size: 0.6875rem;
+		font-size: var(--g-text-xs);
 		letter-spacing: 0.06em;
 		text-transform: uppercase;
 		color: var(--g-ink-faint);
 	}
 	.stat-value {
-		font-size: 1rem;
+		font-size: var(--g-text-md);
 		font-weight: 600;
 		color: var(--g-ink, inherit);
 	}
