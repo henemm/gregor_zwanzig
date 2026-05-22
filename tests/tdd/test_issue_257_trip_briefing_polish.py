@@ -217,16 +217,26 @@ def test_ac5_mobile_media_query_present():
 
 def test_ac5_mobile_table_resp_rule():
     """
-    AC-5 (Teil 2): @media-Block enthält table.resp und td::before Regeln.
+    AC-5 (Teil 2): Mobile-Responsive-Layout via Dual-Mode (desktop-only/mobile-compact).
 
     GIVEN ein gerendertes Trip-Briefing-HTML
     WHEN der @media-Block analysiert wird
-    THEN enthält dieser table.resp und td::before Selektoren
+    THEN enthält dieser .desktop-only (display:none) und .mobile-compact (display:block)
+
+    Hinweis: Bug #305 v2 ersetzt das alte td::before-Karten-Layout durch das Dual-Mode-Pattern.
+    Die table.resp-Klasse bleibt als Elementklasse erhalten, das td::before-CSS wird nicht mehr
+    benötigt da die Desktop-Tabelle auf Mobile via display:none !important ausgeblendet wird.
     """
     html = _render_minimal_html()
-    assert "table.resp" in html, "Kein table.resp-Selektor im @media-Block"
-    assert "td::before" in html or "td:before" in html, (
-        "Kein td::before/td:before im @media-Block (fehlendes data-label Karten-Layout)"
+    assert 'class="resp"' in html, "Kein <table class=\"resp\"> im HTML"
+    media_start = html.find("@media")
+    assert media_start != -1, "Kein @media-Block gefunden"
+    media_block = html[media_start:html.find("</style>", media_start)]
+    assert "desktop-only" in media_block, (
+        "Kein .desktop-only-Selektor im @media-Block (Bug #305 v2 Dual-Mode fehlt)"
+    )
+    assert "mobile-compact" in media_block, (
+        "Kein .mobile-compact-Selektor im @media-Block (Bug #305 v2 Dual-Mode fehlt)"
     )
 
 

@@ -347,3 +347,229 @@ class TestMobileLayoutPlaywright:
             )
             + "\n\nRoot Cause: Kein <thead>-Tag -> CSS-Regel greift nicht."
         )
+
+
+# ---------------------------------------------------------------------------
+# v2 Fix: Dual-Mode-Layout — desktop-only / mobile-compact
+# ---------------------------------------------------------------------------
+
+class TestMobileCompactLayout:
+    """AC-7..AC-10: HTML-Struktur und CSS für Dual-Mode-Rendering."""
+
+    def test_desktop_only_wrapper_exists(self):
+        """
+        AC-7: render_html() muss mindestens einen desktop-only-Wrapper mit table.resp erzeugen.
+
+        GIVEN render_html() mit einem Segment
+        WHEN das HTML auf Wrapper-Klassen geprüft wird
+        THEN enthält es 'desktop-only' in der HTML-Body-Sektion mit einer <table> darin
+
+        Ohne diesen Wrapper wird die Tabelle auf Mobile nie ausgeblendet.
+        """
+        html = _render_full_html()
+        body_start = html.find("<body>")
+        body = html[body_start:] if body_start != -1 else html
+        assert "desktop-only" in body, (
+            "FEHLT: Kein 'desktop-only'-Wrapper im HTML-Body.\n"
+            "Ohne diesen Wrapper kann die Tabelle auf Mobile nicht ausgeblendet werden."
+        )
+        # desktop-only must contain a <table> before mobile-compact
+        desktop_idx = body.find("desktop-only")
+        table_after = body.find("<table", desktop_idx)
+        mc_idx = body.find("mobile-compact", desktop_idx)
+        assert table_after != -1, "Kein <table> nach desktop-only in Body gefunden"
+        assert mc_idx == -1 or table_after < mc_idx, (
+            f"<table> liegt NICHT vor mobile-compact nach desktop-only.\n"
+            f"desktop-only@{desktop_idx}, table@{table_after}, mobile-compact@{mc_idx}"
+        )
+
+    def test_mobile_compact_wrapper_exists(self):
+        """
+        AC-8: render_html() muss mindestens einen mobile-compact-Wrapper erzeugen.
+
+        GIVEN render_html() mit einem Segment
+        WHEN das HTML auf Mobile-Wrapper geprüft wird
+        THEN enthält es 'mobile-compact'
+
+        Ohne diesen Wrapper gibt es keine kompakte Mobile-Ansicht.
+        """
+        html = _render_full_html()
+        assert "mobile-compact" in html, (
+            "FEHLT: Kein 'mobile-compact'-Wrapper im HTML.\n"
+            "Ohne diesen Wrapper gibt es keine kompakte Mobile-Ansicht."
+        )
+
+    def test_css_hides_desktop_on_mobile(self):
+        """
+        AC-9: Der @media-Block muss .desktop-only verstecken.
+
+        GIVEN render_html()
+        WHEN der CSS-Block auf Dual-Mode-Switch geprüft wird
+        THEN enthält der @media (max-width:600px)-Block 'desktop-only' mit 'none'
+
+        Ohne diese Regel bleibt die Desktop-Tabelle auf Mobile sichtbar.
+        """
+        html = _render_full_html()
+        media_start = html.find("@media")
+        assert media_start != -1, "Kein @media-Block gefunden"
+        media_block = html[media_start:html.find("</style>", media_start)]
+        assert "desktop-only" in media_block, (
+            "FEHLT: 'desktop-only' nicht im @media-Block.\n"
+            "Ohne diese Regel bleibt die Desktop-Tabelle auf Mobile sichtbar."
+        )
+        dt_pos = media_block.find("desktop-only")
+        chunk = media_block[dt_pos:dt_pos + 120]
+        assert "none" in chunk, (
+            f"FEHLT: 'none' nach 'desktop-only' im @media-Block nicht gefunden.\n"
+            f"Gefunden: {chunk!r}"
+        )
+
+    def test_css_shows_compact_on_mobile(self):
+        """
+        AC-10: Der @media-Block muss .mobile-compact einblenden.
+
+        GIVEN render_html()
+        WHEN der CSS-Block auf Dual-Mode-Switch geprüft wird
+        THEN enthält der @media (max-width:600px)-Block 'mobile-compact' mit 'block'
+
+        Ohne diese Regel bleibt die Compact-Ansicht auch auf Mobile unsichtbar.
+        """
+        html = _render_full_html()
+        media_start = html.find("@media")
+        assert media_start != -1, "Kein @media-Block gefunden"
+        media_block = html[media_start:html.find("</style>", media_start)]
+        assert "mobile-compact" in media_block, (
+            "FEHLT: 'mobile-compact' nicht im @media-Block.\n"
+            "Ohne diese Regel bleibt die Compact-Ansicht auch auf Mobile versteckt."
+        )
+        mc_pos = media_block.find("mobile-compact")
+        chunk = media_block[mc_pos:mc_pos + 120]
+        assert "block" in chunk, (
+            f"FEHLT: 'block' nach 'mobile-compact' im @media-Block nicht gefunden.\n"
+            f"Gefunden: {chunk!r}"
+        )
+
+    def test_mobile_compact_has_time_slots(self):
+        """
+        AC-8b: mobile-compact muss Zeitstempel-Einträge aus den Rows enthalten.
+
+        GIVEN render_html() mit Rows die Zeitstempel haben
+        WHEN das HTML auf mobile-compact geprüft wird
+        THEN enthält der mobile-compact-Bereich mindestens einen Zeitstempel
+
+        Wenn der mobile-compact-Block leer ist, gibt es auf Mobile gar nichts zu sehen.
+        """
+        html = _render_full_html()
+        mc_start = html.find("mobile-compact")
+        assert mc_start != -1, "Kein mobile-compact gefunden"
+        mc_block = html[mc_start:mc_start + 5000]
+        has_time = any(f"{h:02d}:00" in mc_block for h in range(6, 16))
+        assert has_time, (
+            "FEHLT: Kein Zeitstempel im mobile-compact-Block.\n"
+            "Der Block ist entweder leer oder enthält keine Row-Daten."
+        )
+
+
+class TestMobileCompactLayoutPlaywright:
+    """AC-11..AC-13: Playwright-Tests bei 375px Viewport."""
+
+    @pytest.fixture(scope="class")
+    def html_path(self, tmp_path_factory) -> str:
+        html = _render_full_html()
+        p = tmp_path_factory.mktemp("bug305v2") / "email_v2.html"
+        p.write_text(html, encoding="utf-8")
+        return str(p)
+
+    def test_desktop_only_hidden_at_375px(self, html_path):
+        """
+        AC-11: .desktop-only-Elemente müssen bei 375px Viewport unsichtbar sein.
+
+        GIVEN gerendertes HTML bei 375px Viewport
+        WHEN Sichtbarkeit von .desktop-only geprüft wird
+        THEN hat kein .desktop-only-Element offsetHeight > 0
+        """
+        from playwright.sync_api import sync_playwright
+
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            context = browser.new_context(viewport={"width": 375, "height": 812})
+            page = context.new_page()
+            page.goto(f"file://{html_path}")
+            page.wait_for_load_state("networkidle")
+            heights = page.evaluate("""() => {
+                return Array.from(document.querySelectorAll(".desktop-only"))
+                    .map(el => ({ tag: el.tagName, height: el.offsetHeight }));
+            }""")
+            browser.close()
+
+        assert heights, "Keine .desktop-only-Elemente gefunden — AC-7 muss zuerst grün sein."
+        visible = [h for h in heights if h["height"] > 0]
+        assert not visible, (
+            f"desktop-only sichtbar bei 375px: {visible}\n"
+            "CSS '.desktop-only { display:none !important }' fehlt oder greift nicht."
+        )
+
+    def test_mobile_compact_visible_at_375px(self, html_path):
+        """
+        AC-12: .mobile-compact-Elemente müssen bei 375px Viewport sichtbar sein.
+
+        GIVEN gerendertes HTML bei 375px Viewport
+        WHEN Sichtbarkeit von .mobile-compact geprüft wird
+        THEN hat mindestens ein .mobile-compact-Element offsetHeight > 0
+        """
+        from playwright.sync_api import sync_playwright
+
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            context = browser.new_context(viewport={"width": 375, "height": 812})
+            page = context.new_page()
+            page.goto(f"file://{html_path}")
+            page.wait_for_load_state("networkidle")
+            heights = page.evaluate("""() => {
+                return Array.from(document.querySelectorAll(".mobile-compact"))
+                    .map(el => ({ tag: el.tagName, height: el.offsetHeight }));
+            }""")
+            page.screenshot(path="/tmp/bug305v2_mobile_375px.png", full_page=True)
+            browser.close()
+
+        assert heights, "Keine .mobile-compact-Elemente gefunden — AC-8 muss zuerst grün sein."
+        visible = [h for h in heights if h["height"] > 0]
+        assert visible, (
+            "Kein .mobile-compact-Element sichtbar bei 375px.\n"
+            "CSS '.mobile-compact { display:block !important }' fehlt oder greift nicht.\n"
+            "Screenshot: /tmp/bug305v2_mobile_375px.png"
+        )
+
+    def test_mobile_compact_no_overflow_at_375px(self, html_path):
+        """
+        AC-13: .mobile-compact-Elemente dürfen bei 375px keinen horizontalen Overflow haben.
+
+        GIVEN gerendertes HTML bei 375px Viewport
+        WHEN scrollWidth vs. clientWidth geprüft wird
+        THEN ist für alle .mobile-compact scrollWidth <= clientWidth
+        """
+        from playwright.sync_api import sync_playwright
+
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            context = browser.new_context(viewport={"width": 375, "height": 812})
+            page = context.new_page()
+            page.goto(f"file://{html_path}")
+            page.wait_for_load_state("networkidle")
+            metrics = page.evaluate("""() => {
+                return Array.from(document.querySelectorAll(".mobile-compact"))
+                    .map(el => ({
+                        scrollWidth: el.scrollWidth,
+                        clientWidth: el.clientWidth,
+                        overflow: el.scrollWidth - el.clientWidth,
+                    }));
+            }""")
+            browser.close()
+
+        assert metrics, "Keine .mobile-compact-Elemente gefunden"
+        for i, el in enumerate(metrics):
+            assert el["scrollWidth"] <= el["clientWidth"], (
+                f"mobile-compact[{i}]: Overflow {el['overflow']}px bei 375px.\n"
+                f"  scrollWidth={el['scrollWidth']}px, clientWidth={el['clientWidth']}px\n"
+                f"  Screenshot: /tmp/bug305v2_mobile_375px.png"
+            )

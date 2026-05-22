@@ -104,6 +104,37 @@ def _render_html_table(rows: list[dict], *, friendly_keys: set[str]) -> str:
     return f'<table class="resp"><thead><tr>{ths}</tr></thead><tbody>{"".join(trs)}</tbody></table>'
 
 
+
+def _render_mobile_compact_rows(rows: list[dict], *, friendly_keys: set[str]) -> str:
+    """Single-line-per-hour rows for the mobile compact email view."""
+    cols = visible_cols(rows) if rows else []
+    parts_html = []
+    for r in rows:
+        time_str = r.get("time", "")
+        vals = []
+        for key, _ in cols:
+            try:
+                cell = fmt_val(key, r.get(key), friendly_keys=friendly_keys, html=True, row=r)
+            except (TypeError, ValueError):
+                raw = r.get(key)
+                cell = str(raw) if raw is not None else ""
+            if cell and cell != "\u2013":
+                vals.append(cell)
+        if not vals:
+            continue
+        row_html = (
+            '<div style="display:flex;gap:8px;padding:5px 0;'
+            'border-bottom:1px solid ' + G_INK_FAINT + ';font-size:12px;">'
+            '<span style="font-family:' + FONT_DATA + ';color:' + G_INK_MUTED + ';'
+            'min-width:34px;flex-shrink:0">' + time_str + '</span>'
+            '<span style="color:' + G_INK + ';line-height:1.5;word-break:break-word">'
+            + ' · '.join(vals) +
+            '</span></div>'
+        )
+        parts_html.append(row_html)
+    return "".join(parts_html)
+
+
 def render_html(
     *,
     segments: list[SegmentWeatherData],
@@ -154,17 +185,42 @@ def render_html(
         s_elev = int(seg.start_point.elevation_m or 0)
         e_elev = int(seg.end_point.elevation_m or 0)
         if seg.segment_id == "Ziel":
-            seg_html_parts.append(f"""
-            <div class="section destination">
-                <h3>\U0001f3c1 Wetter am Ziel: {seg.start_time.strftime('%H:%M')}–{seg.end_time.strftime('%H:%M')} | {s_elev}m</h3>
-                {_render_html_table(rows, friendly_keys=friendly_keys)}
-            </div>""")
+            seg_header = (
+                "🏁 Wetter am Ziel: "
+                + seg.start_time.strftime('%H:%M')
+                + "–" + seg.end_time.strftime('%H:%M')
+                + " | " + str(s_elev) + "m"
+            )
+            desktop_div = (
+                '<div class="section destination desktop-only">'
+                "<h3>" + seg_header + "</h3>"
+                + _render_html_table(rows, friendly_keys=friendly_keys)
+                + "</div>"
+            )
         else:
-            seg_html_parts.append(f"""
-            <div class="section">
-                <h3>Segment {seg.segment_id}: {seg.start_time.strftime('%H:%M')}–{seg.end_time.strftime('%H:%M')} | {seg.distance_km:.1f} km | ↑{s_elev}m → {e_elev}m</h3>
-                {_render_html_table(rows, friendly_keys=friendly_keys)}
-            </div>""")
+            seg_header = (
+                "Segment " + str(seg.segment_id) + ": "
+                + seg.start_time.strftime('%H:%M')
+                + "–" + seg.end_time.strftime('%H:%M')
+                + " | " + f"{seg.distance_km:.1f}" + " km"
+                + " | ↑" + str(s_elev) + "m → " + str(e_elev) + "m"
+            )
+            desktop_div = (
+                '<div class="section desktop-only">'
+                "<h3>" + seg_header + "</h3>"
+                + _render_html_table(rows, friendly_keys=friendly_keys)
+                + "</div>"
+            )
+        compact_rows = _render_mobile_compact_rows(rows, friendly_keys=friendly_keys)
+        mobile_div = (
+            '<div class="mobile-compact" style="display:none;padding:0 16px">'
+            '<div style="font-size:12px;font-weight:600;color:' + G_INK
+            + ';border-bottom:2px solid ' + G_ACCENT
+            + ';padding:10px 0 6px 0;margin-top:12px">' + seg_header + '</div>'
+            + compact_rows
+            + '</div>'
+        )
+        seg_html_parts.append(desktop_div + mobile_div)
     segments_html = "".join(seg_html_parts)
 
     night_html = ""
@@ -173,13 +229,24 @@ def render_html(
         night_hint = ""
         if any(mc.enabled and mc.metric_id in ("temperature", "freezing_level") for mc in dc.metrics):
             night_hint = f'<p style="color:{G_INK_FAINT};font-size:11px;margin-top:4px">* Temperatur/Nullgradgrenze: Minimum im 2h-Block</p>'
-        night_html = f"""
-            <div class="section">
-                <h3>🌙 Nacht am Ziel ({int(last_seg.end_point.elevation_m or 0)}m)</h3>
-                <p style="color:{G_INK_MUTED};font-size:13px">Ankunft {last_seg.end_time.strftime('%H:%M')} → Morgen 06:00</p>
-                {_render_html_table(night_rows, friendly_keys=friendly_keys)}
-                {night_hint}
-            </div>"""
+        night_elev = int(last_seg.end_point.elevation_m or 0)
+        night_header = f"🌙 Nacht am Ziel ({night_elev}m)"
+        night_compact = _render_mobile_compact_rows(night_rows, friendly_keys=friendly_keys)
+        night_html = (
+            '<div class="section desktop-only">'
+            "<h3>" + night_header + "</h3>"
+            '<p style="color:' + G_INK_MUTED + ';font-size:13px">Ankunft '
+            + last_seg.end_time.strftime('%H:%M') + " → Morgen 06:00</p>"
+            + _render_html_table(night_rows, friendly_keys=friendly_keys)
+            + night_hint
+            + "</div>"
+            '<div class="mobile-compact" style="display:none;padding:0 16px">'
+            '<div style="font-size:12px;font-weight:600;color:' + G_INK
+            + ';border-bottom:2px solid ' + G_ACCENT
+            + ';padding:10px 0 6px 0;margin-top:12px">' + night_header + '</div>'
+            + night_compact
+            + "</div>"
+        )
 
     thunder_html = ""
     if thunder_forecast:
@@ -290,17 +357,15 @@ def render_html(
         .footer {{ background: {G_INK}; padding: 12px; text-align: center; color: #ffffff; font-size: 11px; }}
         ul {{ padding-left: 20px; }}
         li {{ margin: 4px 0; font-size: 14px; }}
+        .desktop-only {{ display: block; }}
+        .mobile-compact {{ display: none; }}
         @media (max-width:600px) {{
             body {{ padding:4px; }}
             .container {{ border-radius:0; box-shadow:none; }}
             .header h1 {{ font-size:18px; }}
             .header h2 {{ font-size:13px; }}
-            table.resp {{ display:block; }}
-            table.resp thead {{ display:none; }}
-            table.resp tbody {{ display:block; }}
-            table.resp tr {{ display:block; border:1px solid {G_INK_FAINT}; margin-bottom:6px; border-radius:4px; padding:4px; }}
-            table.resp td {{ display:block; text-align:right; padding:3px 8px; font-size:11px; }}
-            table.resp td::before {{ content:attr(data-label); float:left; font-weight:600; color:{G_INK_MUTED}; }}
+            .desktop-only {{ display: none !important; }}
+            .mobile-compact {{ display: block !important; }}
         }}
     </style>
 </head>
