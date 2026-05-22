@@ -128,11 +128,6 @@ def _check_loc_delta(workflow_state: dict) -> tuple:
     return True, f"LoC delta ok: {delta}/{max_delta}"
 
 
-def get_task_file() -> Path:
-    """Get path to current task file."""
-    return get_project_root() / ".claude" / "current_task.json"
-
-
 # Mapping of task types to default allowed paths
 # Can be extended in config.yaml
 TASK_PATH_MAPPING = {
@@ -152,7 +147,6 @@ TASK_PATH_MAPPING = {
 # die Source of Truth ("LoC check explicitly NOT applied to docs/...").
 ALWAYS_ALLOWED = [
     '.claude/workflow_state.json',
-    '.claude/current_task.json',
     '.claude/pending_validation.json',
     'docs/artifacts/',
     'docs/context/',
@@ -167,36 +161,25 @@ ALWAYS_ALLOWED = [
 
 
 def load_task() -> dict | None:
-    """Load current task definition.
+    """Load current task from the active workflow (GZ_ACTIVE_WORKFLOW).
 
-    Priority:
-    1. GZ_ACTIVE_WORKFLOW env var -> affected_files from workflow JSON
-    2. current_task.json fallback (legacy / sessions without env var)
-
-    This allows parallel workflows to run in separate sessions without
-    fighting over a single current_task.json file.
+    Returns None if no workflow is active or affected_files is empty.
+    Sessions without GZ_ACTIVE_WORKFLOW get a warning but are not hard-blocked.
     """
     name = os.environ.get("GZ_ACTIVE_WORKFLOW", "").strip()
-    if name:
-        wf = _get_active_workflow_state()
-        files = wf.get("affected_files") or []
-        if files:
-            wf_name = wf.get("name", name)
-            task_type = "bugfix" if wf_name.startswith("bug") else "feature"
-            return {
-                "task": wf_name,
-                "task_type": task_type,
-                "allowed_paths": list(files),
-            }
-
-    task_file = get_task_file()
-    if not task_file.exists():
+    if not name:
         return None
-    try:
-        with open(task_file, "r") as f:
-            return json.load(f)
-    except Exception:
+    wf = _get_active_workflow_state()
+    files = wf.get("affected_files") or []
+    if not files:
         return None
+    wf_name = wf.get("name", name)
+    task_type = "bugfix" if wf_name.startswith("bug") else "feature"
+    return {
+        "task": wf_name,
+        "task_type": task_type,
+        "allowed_paths": list(files),
+    }
 
 
 def is_always_allowed(file_path: str) -> bool:
@@ -305,8 +288,8 @@ Warning: Modifying critical file without defined task
   File: {file_path}
   Type: {task_type}
 
-  Consider defining the task first with:
-  echo '{{"task": "...", "task_type": "{task_type}", "allowed_paths": [...]}}' > .claude/current_task.json
+  Set the active workflow before editing:
+  export GZ_ACTIVE_WORKFLOW=<workflow-name>
 """, file=sys.stderr)
         _loc_check_or_block()
         sys.exit(0)

@@ -714,31 +714,6 @@ def cmd_set_field(args: list[str]) -> None:
     print(f"Set {key} = {value} on {name}")
 
 
-def _sync_current_task(data: dict) -> None:
-    """Write .claude/current_task.json from workflow affected_files.
-
-    scope_guard.py reads current_task.json for allowed_paths. Without this
-    sync, the file stays stale after a workflow switch and blocks all edits.
-    Fail-soft: errors here must never abort the caller.
-    """
-    try:
-        files = data.get("affected_files") or []
-        if not files:
-            return
-        name = data.get("name", "")
-        task_type = "bugfix" if name.startswith("bug") else "feature"
-        task_desc = name.replace("-", " ").replace("_", " ")
-        current_task = {
-            "task": task_desc,
-            "task_type": task_type,
-            "allowed_paths": list(files),
-        }
-        target = _get_repo_root() / ".claude" / "current_task.json"
-        _atomic_write(target, current_task)
-    except Exception:
-        pass  # fail-soft: scope_guard still runs, user sees the block message
-
-
 def cmd_set_affected_files(args: list[str]) -> None:
     replace = "--replace" in args
     files = [a for a in args if a != "--replace"]
@@ -750,7 +725,6 @@ def cmd_set_affected_files(args: list[str]) -> None:
         existing.update(files)
         data["affected_files"] = sorted(existing)
     _save(data)
-    _sync_current_task(data)
     print(f"Set affected_files on {name}: {len(data['affected_files'])} files")
 
 
