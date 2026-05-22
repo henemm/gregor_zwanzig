@@ -564,11 +564,16 @@ def cmd_start(args: list[str]) -> None:
     if _workflow_file(name).exists() or _archive_file(name).exists():
         print(f"Workflow {name} already exists.", file=sys.stderr)
         sys.exit(1)
+    # Self-maintaining cleanup: every new start archives terminal/stale
+    # workflows (protects sessions still active via the registry).
+    swept = _auto_sweep()
     data = _new_workflow(name)
     _atomic_write(_workflow_file(name), data)
     _set_active(name)
     _write_session_workflow(name)
     print(f"Started workflow: {name}")
+    if swept:
+        print(f"  (Aufgeraeumt: {swept} alte/erledigte Workflow(s) archiviert)")
     print(
         f"  Aktiv fuer diese Session (via Session-ID-Registry) — kein Neustart, "
         f"keine Env-Var noetig.",
@@ -1004,37 +1009,106 @@ def cmd_override_ambiguous(args: list[str]) -> None:
     print(f"AMBIGUOUS-Override aktiv (gültig 1h): {reason}")
 
 
+# Phases that mean "done" — always safe to archive.
+_TERMINAL_PHASES = {"phase8_complete", "phase8_done"}
+
+
+def _sweep_candidates(stale_days: int) -> "list[tuple[Path, str]]":
+    """Return [(path, reason)] of live workflows safe to archive.
+
+    A workflow is a candidate when it is in a terminal phase OR has not been
+    updated for >= stale_days. Workflows referenced by ANY session in the
+    session registry are protected (an active session is working on them).
+    Invalid/junk files (e.g. a stray '--help' workflow) are flagged too.
+    Archiving is non-destructive: archived workflows still resolve normally.
+    """
+    from datetime import datetime as _dt
+    wf_dir = _get_workflows_root()
+    if not wf_dir.exists():
+        return []
+    active = set(_read_session_registry().values())
+    now = _dt.now()
+    out = []
+    for p in sorted(wf_dir.glob("*.json")):
+        name = p.stem
+        if name in active:
+            continue  # protected: an active session points here
+        data = _read_workflow_file(p)
+        if not data:
+            out.append((p, "invalid/corrupt"))
+            continue
+        phase = data.get("current_phase", "")
+        if phase in _TERMINAL_PHASES:
+            out.append((p, f"terminal ({phase})"))
+            continue
+        lu = data.get("last_updated") or data.get("created") or ""
+        try:
+            age = (now - _dt.fromisoformat(lu)).days
+        except Exception:
+            age = 9999
+        if age >= stale_days:
+            out.append((p, f"stale {age}d"))
+    return out
+
+
+def _archive_path(path: Path) -> None:
+    """Move a live workflow file into _archive/, preserving its raw filename.
+
+    Uses the raw filename (not _archive_file) so invalid names like '--help'
+    can still be moved without tripping _validate_name.
+    """
+    arch = _archive_dir()
+    arch.mkdir(parents=True, exist_ok=True)
+    path.rename(arch / path.name)
+
+
+def _auto_sweep(stale_days: int = 14) -> int:
+    """Silently archive terminal/stale workflows. Returns count. Fail-soft.
+
+    Called from cmd_start so every new workflow start tidies the graveyard —
+    the workflow cleans up after itself (and its long-dead siblings).
+    """
+    try:
+        cands = _sweep_candidates(stale_days)
+        for p, _ in cands:
+            try:
+                _archive_path(p)
+            except OSError:
+                pass
+        return len(cands)
+    except Exception:
+        return 0
+
+
 def cmd_cleanup(args: list[str]) -> None:
     apply = "--yes" in args
-    wf_dir = _get_workflows_root()
-    candidates = []
-    for p in sorted(wf_dir.glob("*.json")):
-        data = _read_workflow_file(p)
-        if data and data.get("current_phase") == "phase8_complete":
-            candidates.append(p.stem)
+    stale_days = 14
+    for a in args:
+        if a.startswith("--days="):
+            try:
+                stale_days = int(a.split("=", 1)[1])
+            except ValueError:
+                pass
 
+    candidates = _sweep_candidates(stale_days)
     if not candidates:
         print("Nothing to clean up")
         return
 
     if not apply:
-        print(f"Dry-run — {len(candidates)} workflow(s) to archive (use --yes to apply):")
-        for name in candidates:
-            print(f"  {name}")
+        print(f"Dry-run — {len(candidates)} workflow(s) to archive "
+              f"(stale_days={stale_days}, use --yes to apply):")
+        for p, reason in candidates:
+            print(f"  {p.stem}  [{reason}]")
         return
 
-    _archive_dir().mkdir(parents=True, exist_ok=True)
-    for name in candidates:
-        live = _workflow_file(name)
-        if not live.exists():
-            continue
-        data = _read_workflow_file(live)
-        if not data or data.get("current_phase") != "phase8_complete":
+    for p, reason in candidates:
+        if not p.exists():
             continue
         try:
-            live.rename(_archive_file(name))
-            print(f"Archived: {name}")
-        except FileNotFoundError:
+            _archive_path(p)
+            print(f"Archived: {p.stem}  [{reason}]")
+        except OSError:
             pass
 
 
