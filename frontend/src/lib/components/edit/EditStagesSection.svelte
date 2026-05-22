@@ -138,6 +138,7 @@
 							<Input
 								data-testid="wp-lat"
 								type="number"
+								inputmode="decimal"
 								name="lat"
 								placeholder="Lat"
 								bind:value={wp.lat}
@@ -147,6 +148,7 @@
 							<Input
 								data-testid="wp-lon"
 								type="number"
+								inputmode="decimal"
 								name="lon"
 								placeholder="Lon"
 								bind:value={wp.lon}
@@ -157,6 +159,7 @@
 								<Input
 									data-testid="wp-ele"
 									type="number"
+									inputmode="decimal"
 									placeholder="Hoehe (m)"
 									bind:value={wp.elevation_m}
 									step="1"
