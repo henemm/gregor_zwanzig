@@ -8,6 +8,8 @@
 	import type { Stage, StageWeatherResult } from '$lib/types';
 	import { computeHeaderStats } from '$lib/components/email-preview/headerStats';
 	import { Pill } from '$lib/components/ui/pill';
+	import { WIcon } from '$lib/components/ui/wicon/index.js';
+	import { wmoToWIconKind } from '$lib/utils/weatherUtils.js';
 
 	interface Props {
 		stage: Stage;
@@ -30,21 +32,6 @@
 		now: _now = new Date(),
 		weatherData = null
 	}: Props = $props();
-
-	// Issue #203 — WMO-Code → Emoji-Mapping.
-	function stageWeatherEmoji(
-		wmoCode: number | null | undefined,
-		isDay: number | null | undefined
-	): string {
-		if (wmoCode == null) return '🌡️';
-		if (wmoCode >= 95) return '⛈️';
-		if (wmoCode >= 80) return '🌦️';
-		if (wmoCode >= 71) return '❄️';
-		if (wmoCode >= 51) return '🌧️';
-		if (wmoCode >= 45) return '🌫️';
-		if (wmoCode >= 2) return '⛅';
-		return isDay === 0 ? '🌙' : '☀️';
-	}
 
 	const riskTone = $derived(
 		weatherData?.risk === 'green'
@@ -134,7 +121,7 @@
 	{#if weatherData?.weather_summary}
 		{@const ws = weatherData.weather_summary}
 		<div class="weather-strip" data-testid="trip-stage-row-weather-{stage.id}">
-			<span class="weather-emoji">{stageWeatherEmoji(ws.wmo_code, ws.is_day)}</span>
+			<WIcon kind={wmoToWIconKind(ws.wmo_code, ws.is_day)} size={18} />
 			{#if ws.temp_min_c != null && ws.temp_max_c != null}
 				<span class="eyebrow">{Math.round(ws.temp_min_c)}–{Math.round(ws.temp_max_c)} °C</span>
 			{/if}
@@ -142,7 +129,7 @@
 				<span class="eyebrow">Wind {Math.round(ws.wind_max_kmh)} km/h</span>
 			{/if}
 			{#if ws.precip_mm != null && ws.precip_mm > 0}
-				<span class="eyebrow">💧 {ws.precip_mm.toFixed(1)} mm</span>
+				<span class="eyebrow">{ws.precip_mm.toFixed(1)} mm</span>
 			{/if}
 		</div>
 	{/if}
@@ -179,10 +166,6 @@
 		align-items: center;
 		gap: 0.5rem;
 		padding-top: 0.25rem;
-	}
-	.weather-emoji {
-		font-size: 1.1rem;
-		line-height: 1;
 	}
 	.stage-row-title {
 		font-size: 1rem;

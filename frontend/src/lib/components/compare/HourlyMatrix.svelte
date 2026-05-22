@@ -6,7 +6,8 @@
 	import type { CompareRow, ForecastDataPoint, Location } from '$lib/types.js';
 	import { Pill } from '$lib/components/ui/pill/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
-	import { weatherEmoji } from '$lib/utils/weatherEmoji.js';
+	import { WIcon } from '$lib/components/ui/wicon/index.js';
+	import { wmoToWIconKind } from '$lib/utils/weatherUtils.js';
 
 	interface Props {
 		hourly: Record<string, ForecastDataPoint[]>;
@@ -88,7 +89,7 @@
 								<tr class="border-t">
 									<td class="py-1 pr-2 sticky left-0 z-10 bg-card">{formatTime(p.ts)}</td>
 									<td class="py-1 pr-2">
-										{weatherEmoji(p.wmo_code, p.is_day, p.dni_wm2, p.cloud_total_pct)}
+										<WIcon kind={wmoToWIconKind(p.wmo_code, p.is_day, p.dni_wm2, p.cloud_total_pct)} size={14} />
 									</td>
 									<td class="py-1 pr-2">{fmtNum(p.t2m_c, 1)}°</td>
 									<td class="py-1 pr-2">{fmtNum(p.wind10m_kmh)}</td>

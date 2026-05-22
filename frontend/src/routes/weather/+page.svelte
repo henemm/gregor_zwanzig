@@ -3,7 +3,8 @@
 	import { api } from '$lib/api.js';
 	import { Btn } from '$lib/components/ui/btn/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
-	import { weatherEmoji, degToCardinal } from '$lib/utils/weatherEmoji.js';
+	import { WIcon } from '$lib/components/ui/wicon/index.js';
+	import { wmoToWIconKind, degToCardinal } from '$lib/utils/weatherUtils.js';
 	import { Select } from '$lib/components/ui/select';
 
 	let { data } = $props();
@@ -124,7 +125,7 @@
 						{/if}
 						<Table.Row>
 							<Table.Cell class="text-sm">{formatTime(dp.ts)}</Table.Cell>
-							<Table.Cell>{weatherEmoji(dp.wmo_code, dp.is_day, dp.dni_wm2, dp.cloud_total_pct)}</Table.Cell>
+							<Table.Cell><WIcon kind={wmoToWIconKind(dp.wmo_code, dp.is_day, dp.dni_wm2, dp.cloud_total_pct)} size={16} /></Table.Cell>
 							<Table.Cell class="text-sm">{dp.t2m_c != null ? dp.t2m_c.toFixed(1) + '°' : '—'}</Table.Cell>
 							<Table.Cell class="text-sm">{dp.precip_1h_mm != null && dp.precip_1h_mm > 0 ? dp.precip_1h_mm.toFixed(1) + ' mm' : '—'}</Table.Cell>
 							<Table.Cell class="text-sm">{dp.wind10m_kmh != null ? Math.round(dp.wind10m_kmh) + ' km/h' : '—'}</Table.Cell>

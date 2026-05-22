@@ -25,7 +25,8 @@
 	import CompareMatrix from '$lib/components/compare/CompareMatrix.svelte';
 	import HourlyMatrix from '$lib/components/compare/HourlyMatrix.svelte';
 	import CompareSubscriptionsPanel from '$lib/components/compare/CompareSubscriptionsPanel.svelte';
-	import { weatherEmoji } from '$lib/utils/weatherEmoji.js';
+	import { WIcon } from '$lib/components/ui/wicon/index.js';
+	import { wmoToWIconKind } from '$lib/utils/weatherUtils.js';
 	import { Select } from '$lib/components/ui/select';
 
 	let { data } = $props();
@@ -399,7 +400,7 @@
 										{/if}
 										<Table.Row>
 											<Table.Cell class="text-xs">{formatTime(row.ts)}</Table.Cell>
-											<Table.Cell>{weatherEmoji(row.wmo_code, row.is_day)}</Table.Cell>
+											<Table.Cell><WIcon kind={wmoToWIconKind(row.wmo_code, row.is_day)} size={14} /></Table.Cell>
 											<Table.Cell class="text-xs">
 												{row.t2m_c != null ? `${row.t2m_c.toFixed(1)}°` : '-'}
 											</Table.Cell>
