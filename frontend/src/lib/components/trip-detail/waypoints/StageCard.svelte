@@ -120,10 +120,10 @@
 	.stage-card {
 		display: flex;
 		flex-direction: column;
-		gap: 4px;
+		gap: var(--g-s-1);
 		width: 160px;
 		min-height: 100px;
-		padding: 8px;
+		padding: var(--g-s-2);
 		background: var(--g-paper);
 		border: 1px solid var(--g-ink-faint);
 		border-radius: var(--g-radius-md);
@@ -168,7 +168,7 @@
 
 	.stage-card__meta {
 		display: flex;
-		gap: 6px;
+		gap: var(--g-s-2);
 		font-size: var(--g-text-xs);
 		color: var(--g-ink-muted);
 	}

@@ -237,8 +237,8 @@
 	.metric-row {
 		display: flex;
 		align-items: center;
-		gap: 8px;
-		padding: 2px 4px;
+		gap: var(--g-s-2);
+		padding: 0 var(--g-s-1);
 		min-height: 28px;
 		border-radius: var(--g-radius-sm);
 	}

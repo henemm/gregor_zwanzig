@@ -209,6 +209,7 @@ Alle Module benoetigen Specs vor Implementierung:
 - `issue_299_edit_report_config_section_polish` - EditReportConfigSection UI-Polish: 6 visuelle Fixes (Quick-Chips mit Brand-Token-Pill-Styling, Channel-Links in Accent-Orange, Advanced-Toggle als Ghost-Btn mit rotierendem Chevron, Wind-Exposition mit m-Suffix, 3 Sektions-Container als Card.Root, Zeit-Inputs in JetBrains Mono) ohne Logik-Änderungen (Issue #299, Spec: `docs/specs/modules/issue_299_edit_report_config_section_polish.md`)
 - `issue_322_wicon_komponente` - WIcon.svelte (Lucide-Wrapper, 8 kinds) + weatherUtils.ts (wmoToWIconKind + degToCardinal); AP-009-Compliance: Emojis in StageDetailRow/HourlyMatrix/weather/compare durch SVG-Icons ersetzt (Issue #322, Spec: `docs/specs/modules/issue_322_wicon_komponente.md`)
 - `issue_323_hex_fallbacks_cleanup` - AP-007 Restdrift: 14 Hex-Farbliterale in SmsPhoneFrame.svelte durch Design-System-Tokens ersetzt; `accentFallback`-Dead-Code-Feld aus profileSignature.ts und allen Referenzen entfernt (Issue #323, Spec: `docs/specs/modules/issue_323_hex_fallbacks_cleanup.md`)
+- `bug_324_magic_pixel_spacing` - AP-008: 17 Magic-Pixel-Werte in 6 Svelte-Komponenten (EditWeatherSection, StageCard, AlertRuleRow, AlertRulesEditor, TripKachel, CompareKachel) auf --g-s-* CSS-Design-Tokens ersetzt; `padding`/`margin`/`gap` vollständig tokenisiert (Bug #324, Spec: `docs/specs/modules/bug_324_magic_pixel_spacing.md`)
 
 ### Geplante Module
 Siehe GitHub Issues: https://github.com/henemm/gregor_zwanzig/issues

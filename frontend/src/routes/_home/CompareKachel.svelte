@@ -43,8 +43,8 @@
 	.kachel {
 		display: flex;
 		flex-direction: column;
-		gap: 6px;
-		padding: 14px 16px;
+		gap: var(--g-s-2);
+		padding: var(--g-s-4);
 		background: var(--g-surface-1);
 		border: 1px solid var(--g-ink-faint);
 		border-radius: var(--g-radius-lg);
@@ -71,7 +71,7 @@
 	.kachel__status {
 		display: inline-flex;
 		align-items: center;
-		gap: 5px;
+		gap: var(--g-s-1);
 		font-family: var(--g-font-data);
 		font-size: 9px;
 		letter-spacing: 0.16em;

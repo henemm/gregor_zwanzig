@@ -82,7 +82,7 @@
 		font-size: 0.875rem;
 		color: var(--g-ink-faint);
 		margin: 0;
-		padding: 12px 14px;
+		padding: var(--g-s-3) var(--g-s-4);
 	}
 	.rules-list {
 		list-style: none;
@@ -90,7 +90,7 @@
 		margin: 0;
 	}
 	.card-footer {
-		padding: 8px 12px;
+		padding: var(--g-s-2) var(--g-s-3);
 		border-top: 1px solid var(--g-ink-faint);
 	}
 	.rules-list li:last-child :global(.alert-rule-view) {

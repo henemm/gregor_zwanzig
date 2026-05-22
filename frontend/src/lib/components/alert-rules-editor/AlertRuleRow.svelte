@@ -357,8 +357,8 @@
 		display: grid;
 		grid-template-columns: minmax(140px, 1fr) auto auto auto auto auto;
 		align-items: center;
-		gap: 12px;
-		padding: 10px 14px;
+		gap: var(--g-s-3);
+		padding: var(--g-s-3) var(--g-s-4);
 		border: none;
 		border-bottom: 1px solid var(--g-ink-faint);
 		border-radius: 0;
@@ -438,12 +438,12 @@
 		border-radius: 6px;
 		min-width: 120px;
 		box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-		padding: 4px 0;
+		padding: var(--g-s-1) 0;
 	}
 	.kebab-dropdown button {
 		display: block;
 		width: 100%;
-		padding: 8px 14px;
+		padding: var(--g-s-2) var(--g-s-4);
 		text-align: left;
 		background: none;
 		border: none;
