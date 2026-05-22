@@ -132,6 +132,7 @@ test.describe('Issue #223: AlertRulesEditor', () => {
 		try {
 			await page.goto(`/trips/${id}/edit`);
 			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="alert-rule-kebab-trigger"]').first().click();
 			await page.locator('[data-testid="alert-rule-delete"]').first().click();
 			await expect(page.locator('[data-testid="alert-rule-row"]')).toHaveCount(0);
 			await expect(page.locator('[data-testid="alert-rules-editor-empty"]')).toBeVisible();
@@ -159,6 +160,7 @@ test.describe('Issue #223: AlertRulesEditor', () => {
 		try {
 			await page.goto(`/trips/${id}/edit`);
 			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="alert-rule-kebab-trigger"]').first().click();
 			await page.locator('[data-testid="alert-rule-edit-btn"]').first().click();
 			await expect(page.locator('[data-testid="alert-rule-edit"]')).toBeVisible();
 			const thresholdInput = page.locator('[data-testid="alert-rule-threshold"]').first();
@@ -187,6 +189,7 @@ test.describe('Issue #223: AlertRulesEditor', () => {
 		try {
 			await page.goto(`/trips/${id}/edit`);
 			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="alert-rule-kebab-trigger"]').first().click();
 			await page.locator('[data-testid="alert-rule-edit-btn"]').first().click();
 			await page.locator('[data-testid="alert-rule-threshold"]').first().fill('99');
 			await page.locator('[data-testid="alert-rule-cancel"]').click();
@@ -303,6 +306,7 @@ test.describe('Issue #223: AlertRulesEditor', () => {
 			await expect(row).toContainText('HOCH');
 			await expect(row).not.toContainText('> 2');
 
+			await page.locator('[data-testid="alert-rule-kebab-trigger"]').first().click();
 			await page.locator('[data-testid="alert-rule-edit-btn"]').first().click();
 			const select = page.locator('[data-testid="alert-rule-threshold"]').first();
 			await expect(select).toBeVisible();
@@ -339,6 +343,7 @@ test.describe('Issue #297: AlertRulesEditor — mode=both mit zwei Threshold-Fel
 		try {
 			await page.goto(`/trips/${id}/edit`);
 			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="alert-rule-kebab-trigger"]').first().click();
 			await page.locator('[data-testid="alert-rule-edit-btn"]').first().click();
 			await expect(page.locator('[data-testid="alert-rule-edit"]')).toBeVisible();
 			// mode='both' wählen
@@ -370,6 +375,7 @@ test.describe('Issue #297: AlertRulesEditor — mode=both mit zwei Threshold-Fel
 		try {
 			await page.goto(`/trips/${id}/edit`);
 			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="alert-rule-kebab-trigger"]').first().click();
 			await page.locator('[data-testid="alert-rule-edit-btn"]').first().click();
 			// Erst Speichern-Button bei mode='absolute' prüfen
 			await expect(page.locator('[data-testid="alert-rule-save"]')).toContainText('Speichern');
@@ -391,6 +397,7 @@ test.describe('Issue #297: AlertRulesEditor — mode=both mit zwei Threshold-Fel
 			await page.locator('[data-testid="edit-section-alerts-header"]').click();
 			// Neue Rule hinzufügen
 			await page.locator('[data-testid="alert-rules-editor-add"]').click();
+			await page.locator('[data-testid="alert-rule-kebab-trigger"]').first().click();
 			await page.locator('[data-testid="alert-rule-edit-btn"]').first().click();
 			// mode='both' wählen
 			await page.locator('[data-testid="mode-card-both"]').click();
@@ -425,6 +432,7 @@ test.describe('Issue #297: AlertRulesEditor — mode=both mit zwei Threshold-Fel
 		try {
 			await page.goto(`/trips/${id}/edit`);
 			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="alert-rule-kebab-trigger"]').first().click();
 			await page.locator('[data-testid="alert-rule-edit-btn"]').first().click();
 			// ModeCard 'both' muss Badge "3 Felder" zeigen
 			await expect(page.locator('[data-testid="mode-card-badge-both"]')).toBeVisible();

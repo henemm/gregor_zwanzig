@@ -90,6 +90,9 @@
 	.card-row[data-state='off'] {
 		color: var(--g-ink-muted);
 	}
+	.card-row[data-state='off'] [data-slot='dot'] {
+		background: var(--g-ink-faint);
+	}
 	.row-label {
 		min-width: 0;
 		overflow: hidden;

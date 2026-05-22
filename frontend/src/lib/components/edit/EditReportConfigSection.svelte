@@ -3,6 +3,9 @@
 	import type { ReportConfig } from '$lib/types';
 	import { toHHMMSS } from '$lib/utils/time';
 	import { Checkbox } from '$lib/components/ui/checkbox';
+	import * as Card from '$lib/components/ui/card/index.js';
+	import { Btn } from '$lib/components/ui/btn/index.js';
+	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 
 	interface Props {
 		reportConfig: ReportConfig | undefined;
@@ -155,7 +158,7 @@
 	<!-- ====================================================================== -->
 	<!-- Morgen-Report                                                          -->
 	<!-- ====================================================================== -->
-	<section class="space-y-3 rounded-md border border-input p-3">
+	<Card.Root class="p-3 space-y-3 hover:translate-y-0 hover:shadow-none">
 		<div class="text-sm font-semibold">
 			<span data-testid="morning-master-switch" class="inline-flex items-center gap-2">
 				<Checkbox
@@ -171,7 +174,7 @@
 				<input
 					type="time"
 					data-testid="report-morning-time"
-					class="rounded-md border border-input bg-background px-2 py-1 text-sm disabled:opacity-50"
+					class="g-num-input rounded-md border border-input bg-background px-2 py-1 text-sm disabled:opacity-50"
 					bind:value={morning_time}
 					disabled={!morning_enabled}
 				/>
@@ -179,7 +182,7 @@
 			<button
 				type="button"
 				data-testid="report-morning-quickpick-07"
-				class="rounded-md border border-input bg-background px-2 py-1 text-xs hover:bg-accent disabled:opacity-50"
+				class="g-quick-chip disabled:opacity-50"
 				onclick={makeMorningTimeHandler('07:00')}
 				disabled={!morning_enabled}
 			>
@@ -188,7 +191,7 @@
 			<button
 				type="button"
 				data-testid="report-morning-quickpick-18"
-				class="rounded-md border border-input bg-background px-2 py-1 text-xs hover:bg-accent disabled:opacity-50"
+				class="g-quick-chip disabled:opacity-50"
 				onclick={makeMorningTimeHandler('18:00')}
 				disabled={!morning_enabled}
 			>
@@ -205,12 +208,12 @@
 				>Trend über mehrere Tage zeigen</Checkbox>
 			</span>
 		</div>
-	</section>
+	</Card.Root>
 
 	<!-- ====================================================================== -->
 	<!-- Abend-Report                                                            -->
 	<!-- ====================================================================== -->
-	<section class="space-y-3 rounded-md border border-input p-3">
+	<Card.Root class="p-3 space-y-3 hover:translate-y-0 hover:shadow-none">
 		<div class="text-sm font-semibold">
 			<span data-testid="evening-master-switch" class="inline-flex items-center gap-2">
 				<Checkbox
@@ -226,7 +229,7 @@
 				<input
 					type="time"
 					data-testid="report-evening-time"
-					class="rounded-md border border-input bg-background px-2 py-1 text-sm disabled:opacity-50"
+					class="g-num-input rounded-md border border-input bg-background px-2 py-1 text-sm disabled:opacity-50"
 					bind:value={evening_time}
 					disabled={!evening_enabled}
 				/>
@@ -234,7 +237,7 @@
 			<button
 				type="button"
 				data-testid="report-evening-quickpick-07"
-				class="rounded-md border border-input bg-background px-2 py-1 text-xs hover:bg-accent disabled:opacity-50"
+				class="g-quick-chip disabled:opacity-50"
 				onclick={makeEveningTimeHandler('07:00')}
 				disabled={!evening_enabled}
 			>
@@ -243,7 +246,7 @@
 			<button
 				type="button"
 				data-testid="report-evening-quickpick-18"
-				class="rounded-md border border-input bg-background px-2 py-1 text-xs hover:bg-accent disabled:opacity-50"
+				class="g-quick-chip disabled:opacity-50"
 				onclick={makeEveningTimeHandler('18:00')}
 				disabled={!evening_enabled}
 			>
@@ -260,12 +263,12 @@
 				>Trend über mehrere Tage zeigen</Checkbox>
 			</span>
 		</div>
-	</section>
+	</Card.Root>
 
 	<!-- ====================================================================== -->
 	<!-- Kanaele                                                                -->
 	<!-- ====================================================================== -->
-	<section class="space-y-2 rounded-md border border-input p-3">
+	<Card.Root class="p-3 space-y-2 hover:translate-y-0 hover:shadow-none">
 		<h3 class="text-sm font-semibold">Kanäle</h3>
 
 		<!-- E-Mail -->
@@ -280,7 +283,7 @@
 		</div>
 		{#if !availableChannels.email}
 			<div data-testid="channel-email-hint" class="pl-6 text-xs text-muted-foreground">
-				E-Mail-Adresse fehlt — <a href="/account" class="underline hover:text-primary">im Account einrichten</a>
+				E-Mail-Adresse fehlt — <a href="/account" style="color:var(--g-accent);text-decoration:underline;text-underline-offset:2px">im Account einrichten</a>
 			</div>
 		{/if}
 
@@ -296,7 +299,7 @@
 		</div>
 		{#if !availableChannels.signal}
 			<div data-testid="channel-signal-hint" class="pl-6 text-xs text-muted-foreground">
-				Signal-Nummer fehlt — <a href="/account" class="underline hover:text-primary">im Account einrichten</a>
+				Signal-Nummer fehlt — <a href="/account" style="color:var(--g-accent);text-decoration:underline;text-underline-offset:2px">im Account einrichten</a>
 			</div>
 		{/if}
 
@@ -312,23 +315,19 @@
 		</div>
 		{#if !availableChannels.telegram}
 			<div data-testid="channel-telegram-hint" class="pl-6 text-xs text-muted-foreground">
-				Telegram-Chat-ID fehlt — <a href="/account" class="underline hover:text-primary">im Account einrichten</a>
+				Telegram-Chat-ID fehlt — <a href="/account" style="color:var(--g-accent);text-decoration:underline;text-underline-offset:2px">im Account einrichten</a>
 			</div>
 		{/if}
-	</section>
+	</Card.Root>
 
 	<!-- ====================================================================== -->
 	<!-- Erweitert                                                              -->
 	<!-- ====================================================================== -->
 	<div class="space-y-2">
-		<button
-			type="button"
-			data-testid="report-show-advanced"
-			class="text-sm font-semibold text-primary hover:underline"
-			onclick={() => { showAdvanced = !showAdvanced; }}
-		>
+		<Btn variant="ghost" size="sm" data-testid="report-show-advanced" onclick={() => { showAdvanced = !showAdvanced; }}>
 			{showAdvanced ? 'Erweitert ausblenden' : 'Erweitert anzeigen'}
-		</button>
+			<ChevronDown style="transform: rotate({showAdvanced ? 180 : 0}deg); transition: transform 150ms ease;" />
+		</Btn>
 		{#if showAdvanced}
 			<div class="space-y-2 pl-2">
 				<div class="text-sm">
@@ -345,20 +344,55 @@
 						onchange={(e) => { show_daylight = (e.target as HTMLInputElement).checked; }}
 					>Tageslicht anzeigen</Checkbox>
 				</div>
-				<label class="text-sm">
+				<div class="text-sm">
 					<span class="block text-muted-foreground">Wind-Exposition Mindesthöhe (m)</span>
-					<input
-						type="number"
-						data-testid="report-wind-exposition"
-						class="w-full max-w-xs rounded-md border border-input bg-background px-2 py-1 text-sm"
-						value={wind_exposition_min_elevation_m ?? ''}
-						oninput={(e) => {
-							const v = (e.target as HTMLInputElement).value;
-							wind_exposition_min_elevation_m = v === '' ? null : Number(v);
-						}}
-					/>
-				</label>
+					<label class="g-num-with-unit block w-full max-w-xs">
+						<input
+							type="number"
+							data-testid="report-wind-exposition"
+							class="g-num-input w-full rounded-md border border-input bg-background px-2 py-1 text-sm pr-7"
+							value={wind_exposition_min_elevation_m ?? ''}
+							oninput={(e) => {
+								const v = (e.target as HTMLInputElement).value;
+								wind_exposition_min_elevation_m = v === '' ? null : Number(v);
+							}}
+						/>
+						<span class="g-num-unit" aria-hidden="true">m</span>
+					</label>
+				</div>
 			</div>
 		{/if}
 	</div>
 </div>
+
+<style>
+	.g-quick-chip {
+		border: 1px solid var(--g-ink-faint);
+		border-radius: var(--g-radius-pill);
+		font-family: var(--g-font-data);
+		font-size: 11px;
+		color: var(--g-ink-muted);
+		padding: 2px 8px;
+		background: transparent;
+		cursor: pointer;
+	}
+	.g-quick-chip:hover {
+		background: var(--g-surface-2);
+		color: var(--g-ink);
+	}
+
+	.g-num-with-unit {
+		position: relative;
+		display: block;
+	}
+	.g-num-unit {
+		position: absolute;
+		right: 8px;
+		top: 50%;
+		transform: translateY(-50%);
+		font-family: var(--g-font-data);
+		font-size: 11px;
+		color: var(--g-ink-faint);
+		pointer-events: none;
+	}
+</style>
