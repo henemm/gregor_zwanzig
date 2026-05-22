@@ -210,6 +210,7 @@ Alle Module benoetigen Specs vor Implementierung:
 - `issue_322_wicon_komponente` - WIcon.svelte (Lucide-Wrapper, 8 kinds) + weatherUtils.ts (wmoToWIconKind + degToCardinal); AP-009-Compliance: Emojis in StageDetailRow/HourlyMatrix/weather/compare durch SVG-Icons ersetzt (Issue #322, Spec: `docs/specs/modules/issue_322_wicon_komponente.md`)
 - `issue_323_hex_fallbacks_cleanup` - AP-007 Restdrift: 14 Hex-Farbliterale in SmsPhoneFrame.svelte durch Design-System-Tokens ersetzt; `accentFallback`-Dead-Code-Feld aus profileSignature.ts und allen Referenzen entfernt (Issue #323, Spec: `docs/specs/modules/issue_323_hex_fallbacks_cleanup.md`)
 - `bug_324_magic_pixel_spacing` - AP-008: 17 Magic-Pixel-Werte in 6 Svelte-Komponenten (EditWeatherSection, StageCard, AlertRuleRow, AlertRulesEditor, TripKachel, CompareKachel) auf --g-s-* CSS-Design-Tokens ersetzt; `padding`/`margin`/`gap` vollständig tokenisiert (Bug #324, Spec: `docs/specs/modules/bug_324_magic_pixel_spacing.md`)
+- `bug_332_approval_hook_session_id` - Approval-Hook (`workflow_state_updater.py`) extrahiert `session_id` aus stdin-Payload und exportiert sie nach `GZ_HOOK_SESSION_ID`, sodass `_active_name()` die Session-Registry korrekt auflöst. Behebt Approval-Routing-Bug bei parallelen Workflows (vorher: zuletzt global aktiver Workflow gewann); Pattern aus 7 anderen Hooks übernommen, angepasst für UserPromptSubmit (Bug #332, Spec: `docs/specs/modules/bug_332_approval_hook_session_id.md`)
 
 ### Geplante Module
 Siehe GitHub Issues: https://github.com/henemm/gregor_zwanzig/issues

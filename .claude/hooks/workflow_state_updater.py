@@ -83,11 +83,22 @@ def is_completion_message(message: str) -> bool:
 
 
 def main():
-    # Get user input from environment or stdin
+    # Per-session workflow resolution (#332/#325): stdin nur EINMAL lesen,
+    # session_id extrahieren, GZ_HOOK_SESSION_ID exportieren. Der nachfolgende
+    # Code nutzt das bereits geparste _payload — kein zweiter stdin-Read möglich.
+    _payload = {}
     try:
-        data = json.load(sys.stdin)
-        user_message = data.get("user_prompt", data.get("prompt", ""))
+        _raw = sys.stdin.read()
+        if _raw.strip():
+            _payload = json.loads(_raw)
+            _sid = (_payload.get("session_id") or "").strip()
+            if _sid:
+                os.environ["GZ_HOOK_SESSION_ID"] = _sid
     except (json.JSONDecodeError, Exception):
+        pass
+
+    user_message = _payload.get("user_prompt", _payload.get("prompt", ""))
+    if not user_message:
         user_message = os.environ.get("CLAUDE_USER_PROMPT", "")
 
     if not user_message:
