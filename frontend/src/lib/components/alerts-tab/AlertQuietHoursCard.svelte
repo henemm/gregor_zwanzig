@@ -61,21 +61,20 @@
 
 <style>
     .quiet-card {
-        padding: 1rem;
+        padding: var(--g-s-4);
         border: 1px solid var(--g-ink-faint);
-        border-radius: 0.5rem;
+        border-radius: var(--g-radius-md);
         background: var(--g-surface-1, #fff);
     }
     .header-row {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin-bottom: 0.5rem;
+        margin-bottom: var(--g-s-2);
     }
-    .card-title { font-size: 0.875rem; font-weight: 600; margin: 0; }
-    .toggle-label { display: inline-flex; align-items: center; gap: 0.375rem; font-size: 0.875rem; cursor: pointer; }
-    .time-row { display: flex; gap: 1rem; flex-wrap: wrap; }
-    .time-row label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; }
-    .time-input { min-height: 36px; padding: 0.25rem 0.5rem; border: 1px solid var(--g-ink-faint); border-radius: 0.25rem; }
-    .midnight-hint { margin: 0.5rem 0 0; font-size: 0.8125rem; color: var(--g-ink-muted); font-style: italic; }
+    .card-title { font-size: var(--g-text-sm); font-weight: 600; margin: 0; }
+    .time-row { display: flex; gap: var(--g-s-4); flex-wrap: wrap; }
+    .time-row label { display: flex; align-items: center; gap: var(--g-s-2); font-size: var(--g-text-sm); }
+    .time-input { min-height: 36px; padding: var(--g-s-1) var(--g-s-2); border: 1px solid var(--g-ink-faint); border-radius: var(--g-radius-sm); }
+    .midnight-hint { margin: var(--g-s-2) 0 0; font-size: var(--g-text-xs); color: var(--g-ink-muted); font-style: italic; }
 </style>

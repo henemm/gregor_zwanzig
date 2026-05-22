@@ -33,28 +33,28 @@
 
 <style>
     .cooldown-card {
-        padding: 1rem;
+        padding: var(--g-s-4);
         border: 1px solid var(--g-ink-faint);
-        border-radius: 0.5rem;
+        border-radius: var(--g-radius-md);
         background: var(--g-surface-1, #fff);
     }
     .card-title {
-        font-size: 0.875rem;
+        font-size: var(--g-text-sm);
         font-weight: 600;
-        margin: 0 0 0.5rem;
+        margin: 0 0 var(--g-s-2);
     }
     .input-row {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: var(--g-s-2);
     }
     .cooldown-input {
         width: 80px;
         min-height: 36px;
-        padding: 0.25rem 0.5rem;
+        padding: var(--g-s-1) var(--g-s-2);
         border: 1px solid var(--g-ink-faint);
-        border-radius: 0.25rem;
+        border-radius: var(--g-radius-sm);
     }
-    .unit { font-size: 0.875rem; color: var(--g-ink-muted); }
-    .hint { margin: 0.5rem 0 0; font-size: 0.8125rem; color: var(--g-ink-muted); }
+    .unit { font-size: var(--g-text-sm); color: var(--g-ink-muted); }
+    .hint { margin: var(--g-s-2) 0 0; font-size: var(--g-text-xs); color: var(--g-ink-muted); }
 </style>
