@@ -172,7 +172,7 @@
 		gap: 0.25rem;
 	}
 	.field-label {
-		font-size: 0.8125rem;
+		font-size: var(--g-text-xs);
 		font-weight: 500;
 	}
 	.required {
@@ -184,37 +184,37 @@
 		border: 1px solid var(--g-ink-faint);
 		border-radius: 4px;
 		font: inherit;
-		font-size: 0.875rem;
+		font-size: var(--g-text-sm);
 	}
 	.field-inline {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-		font-size: 0.875rem;
+		font-size: var(--g-text-sm);
 		cursor: pointer;
 	}
 	.summary {
-		font-size: 0.8125rem;
+		font-size: var(--g-text-xs);
 		color: var(--g-ink-faint);
 		padding: 0.5rem 0.6rem;
 		background: var(--g-surface-1);
 		border-radius: 4px;
 	}
 	.error {
-		font-size: 0.8125rem;
-		color: #dc2626;
+		font-size: var(--g-text-xs);
+		color: var(--g-danger);
 	}
 	.btn-primary, .btn-secondary {
 		padding: 0.45rem 1rem;
 		border-radius: 4px;
-		font-size: 0.875rem;
+		font-size: var(--g-text-sm);
 		font-weight: 500;
 		cursor: pointer;
 		border: 1px solid transparent;
 	}
 	.btn-primary {
 		background: var(--g-accent);
-		color: #fff;
+		color: var(--g-paper);
 	}
 	.btn-primary:disabled {
 		opacity: 0.5;
@@ -227,6 +227,7 @@
 	}
 	@media (max-width: 767px) {
 		.field input[type='text'], .field textarea {
+			/* iOS zoom guard (#272): exakt 16px, --g-text-md (15px) wuerde Auto-Zoom reaktivieren */
 			font-size: 16px;
 		}
 	}
