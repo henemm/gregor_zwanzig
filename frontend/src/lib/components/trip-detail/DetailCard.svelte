@@ -90,7 +90,7 @@
 	.card-row[data-state='off'] {
 		color: var(--g-ink-muted);
 	}
-	.card-row[data-state='off'] [data-slot='dot'] {
+	.card-row[data-state='off'] :global([data-slot='dot']) {
 		background: var(--g-ink-faint);
 	}
 	.row-label {
