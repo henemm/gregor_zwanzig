@@ -275,11 +275,9 @@ def _read_workflow_file(path: Path) -> dict:
 def _active_name() -> Optional[str]:
     """Return the name of the active workflow, or None.
 
-    Priority:
-    1. GZ_ACTIVE_WORKFLOW env var (session-scoped, prevents cross-session
-       symlink collisions when multiple Claude Code instances run in parallel)
-    2. .active symlink (single-session default)
-    3. Legacy workflow_state.json fallback (pre-migration)
+    ONLY reads GZ_ACTIVE_WORKFLOW env var. The .active symlink fallback is
+    intentionally removed — relying on it causes cross-session workflow drift.
+    Every caller MUST set GZ_ACTIVE_WORKFLOW explicitly.
     """
     env_name = os.environ.get("GZ_ACTIVE_WORKFLOW", "").strip()
     if env_name:
@@ -288,12 +286,33 @@ def _active_name() -> Optional[str]:
             if _workflow_file(env_name).exists() or _archive_file(env_name).exists():
                 return env_name
         except ValueError:
-            pass  # invalid name in env var — fall through to symlink
+            print(
+                f"FATAL: GZ_ACTIVE_WORKFLOW='{env_name}' is not a valid workflow name.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        print(
+            f"FATAL: GZ_ACTIVE_WORKFLOW='{env_name}' is set but no matching workflow file exists.\n"
+            f"  Run: python3 .claude/hooks/workflow.py list",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
+    # Symlink fallback is DISABLED. If a stale .active symlink exists, tell the user
+    # what to do instead of silently using it.
     link = _active_link()
     if link.is_symlink():
         target = os.readlink(str(link))
-        return Path(target).stem
+        name = Path(target).stem
+        print(
+            f"FATAL: GZ_ACTIVE_WORKFLOW is not set.\n"
+            f"  A .active symlink points to '{name}', but symlink fallback is disabled.\n"
+            f"  Set the env var explicitly and retry:\n"
+            f"    export GZ_ACTIVE_WORKFLOW={name}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
     if not _v3_dir_has_content():
         legacy = _read_legacy_state()
         if legacy:
@@ -486,6 +505,12 @@ def cmd_start(args: list[str]) -> None:
     _atomic_write(_workflow_file(name), data)
     _set_active(name)
     print(f"Started workflow: {name}")
+    print(
+        f"\nPFLICHT: Setze diese Env-Var SOFORT — ohne sie blockieren alle Folgebefehle:\n"
+        f"  export GZ_ACTIVE_WORKFLOW={name}\n"
+        f"  Und uebergib sie beim Agent-Spawn:\n"
+        f'  Agent(prompt="... ## Pflicht\\nexport GZ_ACTIVE_WORKFLOW={name}\\n...")',
+    )
 
 
 def cmd_switch(args: list[str]) -> None:

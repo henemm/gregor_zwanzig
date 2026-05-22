@@ -64,14 +64,13 @@ Task(subagent_type="spec-validator", model="haiku", prompt="
 
 ```bash
 # Update spec file path in workflow
-python3 -c "
-import sys; sys.path.insert(0, '.claude/hooks')
-from workflow_state_multi import load_state, save_state
-state = load_state()
-active = state.get('active_workflow')
-if active:
-    state['workflows'][active]['spec_file'] = 'docs/specs/[category]/[entity].md'
-    save_state(state)
+GZ_ACTIVE_WORKFLOW=<name> python3 -c "
+import os, sys; sys.path.insert(0, '.claude/hooks')
+import workflow as _w
+active = os.environ['GZ_ACTIVE_WORKFLOW']
+data, _ = _w._read_active()
+data['spec_file'] = 'docs/specs/[category]/[entity].md'
+_w._save(data)
 "
 
 # Advance to spec_written phase

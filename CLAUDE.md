@@ -40,8 +40,10 @@ Dieses Projekt nutzt den **OpenSpec 8-Phasen-Workflow** mit Adversary Verificati
 | **AMBIGUOUS blockt `git commit`** | Adversary liefert `AMBIGUOUS:...` | Override mit `workflow.py override-ambiguous "<Grund>"` (1 Stunde gültig). Begründung wird im Logbuch persistiert. |
 | **Phasen-Audit-Trail** | Automatisch | Jede Phasen-Transition landet in `phase_transitions[]` mit `from/to/at/trigger`. Fix-Loop-Counter (phase6b→phase6) wird automatisch gezählt. `workflow.py status` zeigt beide. |
 | **Trigger-Typen für `phase`** | Optional | `workflow.py phase <ziel> --trigger=command\|advance\|user_keyword\|manual`. Default `command`. UserPromptSubmit-Hook setzt automatisch `user_keyword`. |
-| **State pro Workflow** | Persistent | `.claude/workflows/<name>.json` (laufende) + `_archive/<name>.json` (abgeschlossen) + `.active` Symlink. Worktree-Routing bleibt intakt. |
-| **Parallele Sessions** | Bei mehreren gleichzeitigen Claude-Code-Fenstern | `export GZ_ACTIVE_WORKFLOW=<name>` vor dem Start setzen. Env-Var hat Vorrang vor `.active`-Symlink — Session A und Session B kämpfen damit nicht mehr um denselben Symlink. `workflow.py status` zeigt die Quelle in eckigen Klammern. |
+| **State pro Workflow** | Persistent | `.claude/workflows/<name>.json` (laufende) + `_archive/<name>.json` (abgeschlossen). Worktree-Routing bleibt intakt. |
+| **GZ_ACTIVE_WORKFLOW PFLICHT** | Jederzeit | `export GZ_ACTIVE_WORKFLOW=<name>` ist die EINZIGE erlaubte Methode. `workflow.py start <name>` gibt die korrekte Export-Zeile aus. |
+
+**SYMLINK VERBOTEN:** Der `.active`-Symlink ist als Fallback DEAKTIVIERT. `workflow.py` bricht mit FATAL-Fehler ab wenn `GZ_ACTIVE_WORKFLOW` nicht gesetzt ist. Niemals `state['active_workflow']` aus `load_state()` lesen — immer `os.environ['GZ_ACTIVE_WORKFLOW']` direkt. Beim Agent-Spawn immer `export GZ_ACTIVE_WORKFLOW=<name>` im Prompt übergeben.
 
 **Memory-Regel: KEINE Mocks in Tests!** Bei Adversary-Findings ist `Code reference: file:line` Pflicht — siehe `.claude/agents/implementation-validator.md` Sektion "Findings-Format".
 

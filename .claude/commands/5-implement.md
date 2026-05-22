@@ -131,12 +131,11 @@ Wenn der Developer Agent zurueckmeldet:
 ```bash
 uv run pytest tests/ -v > docs/artifacts/[workflow]/test-green-output.txt 2>&1
 
-python3 -c "
-import sys; sys.path.insert(0, '.claude/hooks')
-from workflow_state_multi import add_test_artifact, load_state
+GZ_ACTIVE_WORKFLOW=<name> python3 -c "
+import os, sys; sys.path.insert(0, '.claude/hooks')
+from workflow_state_multi import add_test_artifact
 
-state = load_state()
-active = state['active_workflow']
+active = os.environ['GZ_ACTIVE_WORKFLOW']
 
 add_test_artifact(active, {
     'type': 'test_output',
