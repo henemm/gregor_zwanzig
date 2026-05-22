@@ -30,6 +30,7 @@ node_modules/
 .claude/validator.env
 
 # Claude Code (transient)
+.claude/current_task.json
 .claude/worktrees/
 .claude/ui_screenshot_lock.json
 .claude/pending_validation.json
