@@ -10,7 +10,27 @@
 	import { profileSignature } from '$lib/utils/profileSignature';
 	import type { ActivityProfile } from '$lib/types';
 
+	import { Badge } from '$lib/components/ui/badge';
+	import { Checkbox } from '$lib/components/ui/checkbox';
+	import { Input } from '$lib/components/ui/input';
+	import { Label } from '$lib/components/ui/label';
+	import { Select } from '$lib/components/ui/select';
+	import Segmented from '$lib/components/ui/segmented';
+	import { WIcon } from '$lib/components/ui/wicon';
+	import Wordmark from '$lib/components/ui/wordmark/Wordmark.svelte';
+	import * as Card from '$lib/components/ui/card/index.js';
+	import * as Table from '$lib/components/ui/table/index.js';
+	import * as Dialog from '$lib/components/ui/dialog/index.js';
+	import AccordionSection from '$lib/components/edit/AccordionSection.svelte';
+	import Loader2 from '@lucide/svelte/icons/loader-2';
+
 	const PROFILES: ActivityProfile[] = ['wintersport', 'wandern', 'summer_trekking', 'allgemein'];
+
+	let dialogOpen = $state(false);
+	let accordionAOpen = $state(true);
+	let accordionBOpen = $state(false);
+	let segmentedSelected = $state('etappe');
+	let checkboxChecked = $state(true);
 </script>
 
 <div class="p-8 space-y-10">
@@ -103,6 +123,213 @@
 				</div>
 			</GCard>
 		</div>
+
+		<div class="space-y-3">
+			<Eyebrow>Btn — Loading-State</Eyebrow>
+			<div class="flex gap-2 items-center flex-wrap">
+				<Btn variant="primary" disabled data-testid="btn-loading">
+					<Loader2 class="animate-spin" size={16} />
+					Lädt…
+				</Btn>
+			</div>
+		</div>
+
+		<div class="space-y-3">
+			<Eyebrow>Pills — Outlined</Eyebrow>
+			<div class="flex gap-2 items-center flex-wrap">
+				<Pill tone="warning" data-outlined>Outlined Warning</Pill>
+				<Pill tone="danger" data-outlined>Outlined Danger</Pill>
+				<Pill tone="info" data-outlined>Outlined Info</Pill>
+			</div>
+		</div>
+
+		<div class="space-y-3">
+			<Eyebrow>Dot — Semantic-Tones × Sizes</Eyebrow>
+			<div data-testid="dot-semantic-group" class="flex flex-col gap-2">
+				<div class="flex gap-3 items-center">
+					<Dot tone="success" size="xs" /> <Dot tone="success" size="sm" /> <Dot tone="success" size="md" />
+				</div>
+				<div class="flex gap-3 items-center">
+					<Dot tone="warning" size="xs" /> <Dot tone="warning" size="sm" /> <Dot tone="warning" size="md" />
+				</div>
+				<div class="flex gap-3 items-center">
+					<Dot tone="danger" size="xs" /> <Dot tone="danger" size="sm" /> <Dot tone="danger" size="md" />
+				</div>
+				<div class="flex gap-3 items-center">
+					<Dot tone="info" size="xs" /> <Dot tone="info" size="sm" /> <Dot tone="info" size="md" />
+				</div>
+			</div>
+		</div>
+
+		<div class="space-y-3">
+			<Eyebrow>Badge — Variants</Eyebrow>
+			<div class="flex gap-2 items-center flex-wrap">
+				<Badge variant="default">Default</Badge>
+				<Badge variant="secondary">Secondary</Badge>
+				<Badge variant="destructive">Destructive</Badge>
+				<Badge variant="outline">Outline</Badge>
+				<Badge variant="ghost">Ghost</Badge>
+				<Badge variant="link">Link</Badge>
+			</div>
+		</div>
+
+		<div class="space-y-3">
+			<Eyebrow>WIcon — Wetter-Icons</Eyebrow>
+			<div data-testid="wicon-group" class="flex gap-3 items-center flex-wrap">
+				<WIcon kind="sun" />
+				<WIcon kind="cloud" />
+				<WIcon kind="rain" />
+				<WIcon kind="thunder" />
+				<WIcon kind="snow" />
+				<WIcon kind="wind" />
+				<WIcon kind="moon" />
+				<WIcon kind="headlamp" />
+			</div>
+		</div>
+	</section>
+
+	<section data-testid="wordmark-section" class="space-y-3">
+		<Eyebrow>Wordmark</Eyebrow>
+		<div class="flex items-end" style:gap="var(--g-s-6)">
+			<Wordmark size="sm" />
+			<Wordmark size="md" />
+			<Wordmark size="lg" />
+		</div>
+	</section>
+
+	<section data-testid="form-controls-section" class="space-y-6">
+		<Eyebrow>Form Controls</Eyebrow>
+
+		<div class="space-y-3">
+			<Eyebrow>Checkbox</Eyebrow>
+			<div class="flex gap-4 items-center flex-wrap">
+				<Checkbox bind:checked={checkboxChecked}>Checked</Checkbox>
+				<Checkbox>Unchecked</Checkbox>
+				<Checkbox disabled>Disabled</Checkbox>
+			</div>
+		</div>
+
+		<div class="space-y-3">
+			<Eyebrow>Segmented</Eyebrow>
+			<Segmented
+				options={[
+					{ value: 'etappe', label: 'Etappe' },
+					{ value: 'tag', label: 'Tag' }
+				]}
+				selected={segmentedSelected}
+				onselect={(v) => (segmentedSelected = v)}
+			/>
+		</div>
+
+		<div class="space-y-3">
+			<Eyebrow>Label + Input</Eyebrow>
+			<div class="flex flex-col gap-2 max-w-sm">
+				<Label for="demo-input">Name</Label>
+				<Input id="demo-input" placeholder="Eingabe…" />
+				<Input placeholder="Disabled" disabled />
+				<Input placeholder="Fehler" aria-invalid="true" />
+			</div>
+		</div>
+
+		<div class="space-y-3">
+			<Eyebrow>Select</Eyebrow>
+			<div class="flex gap-3 items-center flex-wrap">
+				<Select>
+					<option value="a">Option A</option>
+					<option value="b">Option B</option>
+				</Select>
+				<Select disabled>
+					<option value="a">Disabled</option>
+				</Select>
+			</div>
+		</div>
+	</section>
+
+	<section data-testid="card-section" class="space-y-3">
+		<Eyebrow>Card</Eyebrow>
+		<Card.Root>
+			<Card.Header>
+				<Card.Title>Kartentitel</Card.Title>
+				<Card.Description>Beschreibungstext der Karte.</Card.Description>
+			</Card.Header>
+			<Card.Content>Inhalt der Karte.</Card.Content>
+			<Card.Footer>
+				<Btn variant="ghost" size="sm">Aktion</Btn>
+			</Card.Footer>
+		</Card.Root>
+	</section>
+
+	<section data-testid="table-section" class="space-y-3">
+		<Eyebrow>Table</Eyebrow>
+		<Table.Root>
+			<Table.Header>
+				<Table.Row>
+					<Table.Head>Etappe</Table.Head>
+					<Table.Head>Distanz</Table.Head>
+					<Table.Head>Status</Table.Head>
+				</Table.Row>
+			</Table.Header>
+			<Table.Body>
+				<Table.Row>
+					<Table.Cell>Calenzana → Ortu</Table.Cell>
+					<Table.Cell>16 km</Table.Cell>
+					<Table.Cell>Aktiv</Table.Cell>
+				</Table.Row>
+				<Table.Row>
+					<Table.Cell>Ortu → Carrozzu</Table.Cell>
+					<Table.Cell>12 km</Table.Cell>
+					<Table.Cell>Geplant</Table.Cell>
+				</Table.Row>
+			</Table.Body>
+		</Table.Root>
+	</section>
+
+	<section data-testid="dialog-section" class="space-y-3">
+		<Eyebrow>Dialog</Eyebrow>
+		<Btn variant="outline" data-testid="dialog-open-trigger" onclick={() => (dialogOpen = true)}>
+			Dialog öffnen
+		</Btn>
+		<Dialog.Root bind:open={dialogOpen}>
+			<Dialog.Content>
+				<Dialog.Header>
+					<Dialog.Title>Beispiel-Dialog</Dialog.Title>
+					<Dialog.Description>Beschreibungstext des Dialogs.</Dialog.Description>
+				</Dialog.Header>
+				<Dialog.Footer>
+					<Btn variant="ghost" data-testid="dialog-close-btn" onclick={() => (dialogOpen = false)}>
+						Schliessen
+					</Btn>
+				</Dialog.Footer>
+			</Dialog.Content>
+		</Dialog.Root>
+	</section>
+
+	<section data-testid="accordion-section" class="space-y-3">
+		<Eyebrow>Accordion</Eyebrow>
+		<AccordionSection
+			id="demo-a"
+			title="Sektion A (offen)"
+			open={accordionAOpen}
+			onToggle={() => (accordionAOpen = !accordionAOpen)}
+		>
+			Inhalt von Sektion A ist sichtbar.
+		</AccordionSection>
+		<AccordionSection
+			id="demo-b"
+			title="Sektion B (geschlossen)"
+			open={accordionBOpen}
+			onToggle={() => (accordionBOpen = !accordionBOpen)}
+		>
+			Inhalt von Sektion B ist verborgen.
+		</AccordionSection>
+	</section>
+
+	<section data-testid="nav-hint-section" class="space-y-3">
+		<Eyebrow>Navigation</Eyebrow>
+		<p class="text-sm text-[color:var(--g-ink-muted)]">
+			Sidebar, TopAppBar und BottomNav sind in dieser Seite nicht live darstellbar, da sie
+			$app/state-Abhängigkeiten haben. Visuell prüfbar über normale App-Navigation.
+		</p>
 	</section>
 
 	<section data-testid="topo-section" class="space-y-3">
