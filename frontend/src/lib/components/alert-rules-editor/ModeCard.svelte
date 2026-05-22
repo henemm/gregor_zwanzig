@@ -102,22 +102,22 @@
 		box-shadow: 0 0 0 1px var(--g-accent) inset;
 	}
 	.eyebrow {
-		font-size: 0.6875rem;
+		font-size: var(--g-text-xs);
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
 		color: var(--g-ink-faint);
 	}
 	.title {
 		font-weight: 600;
-		font-size: 0.9375rem;
+		font-size: var(--g-text-md);
 	}
 	.description {
-		font-size: 0.8125rem;
+		font-size: var(--g-text-sm);
 		color: var(--g-ink-muted);
 	}
 	.example {
 		font-family: var(--g-font-data);
-		font-size: 11px;
+		font-size: var(--g-text-xs);
 		font-style: normal;
 		letter-spacing: 0;
 		color: var(--g-ink-faint);
@@ -128,7 +128,7 @@
 		padding: 0.125rem 0.5rem;
 		border: 1px solid var(--g-ink-faint);
 		border-radius: 999px;
-		font-size: 0.6875rem;
+		font-size: var(--g-text-xs);
 		font-family: var(--g-font-ui);
 		color: var(--g-ink-muted);
 		background: var(--g-surface-2);
