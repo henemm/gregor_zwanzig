@@ -464,7 +464,10 @@ class MetricConfig:
     use_friendly_format: bool = True
     # Per-metric alert configuration (v2.3)
     alert_enabled: bool = False
-    alert_threshold: Optional[float] = None  # None = MetricCatalog default
+    alert_threshold: Optional[float] = None
+    # Issue #342: Pro-Metrik-Zeithorizont (today/tomorrow/day_after).
+    # None = Legacy/Default (alle Horizonte sichtbar).
+    horizons: Optional[dict] = None  # None = MetricCatalog default
 
 
 @dataclass

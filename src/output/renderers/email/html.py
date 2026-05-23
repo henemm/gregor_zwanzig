@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from typing import Optional
 from zoneinfo import ZoneInfo
 
-from app.metric_catalog import get_label_for_field
+from app.metric_catalog import get_label_for_field, get_metric
 from app.models import (
     SegmentWeatherData, ThunderLevel, UnifiedWeatherDisplayConfig,
     WeatherChange,
@@ -21,8 +21,9 @@ from services.daylight_service import DaylightWindow
 from utils.timezone import local_fmt
 
 from src.output.renderers.email.helpers import (
-    build_confidence_hint, build_segment_label, build_units_legend, fmt_val,
-    format_change_line, pill_html, shorten_stage_name, visible_cols,
+    build_confidence_hint, build_segment_label, build_units_legend,
+    derive_horizon, fmt_val, format_change_line, pill_html,
+    shorten_stage_name, visible_cols,
 )
 from src.output.renderers.email.design_tokens import (
     G_PAPER, G_SURFACE_1, G_INK, G_INK_MUTED, G_INK_FAINT,
@@ -84,12 +85,19 @@ def _format_daylight_html(dl: DaylightWindow, *, tz: ZoneInfo) -> str:
     )
 
 
-def _render_html_table(rows: list[dict], *, friendly_keys: set[str]) -> str:
+def _render_html_table(
+    rows: list[dict],
+    *,
+    friendly_keys: set[str],
+    allowed_col_keys: Optional[set[str]] = None,
+) -> str:
     if not rows:
         # Empty rows: render a minimal table skeleton so callers can still
         # detect a <table> in the body (β3 test_renderers_email expectation).
         return '<table class="resp"><thead><tr><th>Time</th></tr></thead><tbody></tbody></table>'
     cols = visible_cols(rows)
+    if allowed_col_keys is not None:
+        cols = [(k, label) for (k, label) in cols if k in allowed_col_keys]
     ths = "<th>Time</th>" + "".join(f"<th>{label}</th>" for _, label in cols)
     trs = []
     for r in rows:
@@ -105,9 +113,16 @@ def _render_html_table(rows: list[dict], *, friendly_keys: set[str]) -> str:
 
 
 
-def _render_mobile_compact_rows(rows: list[dict], *, friendly_keys: set[str]) -> str:
+def _render_mobile_compact_rows(
+    rows: list[dict],
+    *,
+    friendly_keys: set[str],
+    allowed_col_keys: Optional[set[str]] = None,
+) -> str:
     """Single-line-per-hour rows for the mobile compact email view."""
     cols = visible_cols(rows) if rows else []
+    if allowed_col_keys is not None:
+        cols = [(k, label) for (k, label) in cols if k in allowed_col_keys]
     parts_html = []
     for r in rows:
         time_str = r.get("time", "")
@@ -135,6 +150,32 @@ def _render_mobile_compact_rows(rows: list[dict], *, friendly_keys: set[str]) ->
     return "".join(parts_html)
 
 
+def _allowed_col_keys_for_horizon(
+    dc: UnifiedWeatherDisplayConfig, horizon: Optional[str],
+) -> Optional[set[str]]:
+    """Issue #342: Liefert das Set der erlaubten col_keys für einen Horizont.
+
+    - horizon=None → kein Filter (Tag 4+ oder Legacy): None zurückgeben.
+    - Pro enabled MetricConfig: wenn horizons-Dict gesetzt und der gewählte
+      Horizont darin auf False steht → ausschließen. Sonst einschließen
+      (Default True bei fehlendem Feld → Backward-Compat AC-7).
+    """
+    if horizon is None:
+        return None
+    keys: set[str] = set()
+    for mc in dc.metrics:
+        if not mc.enabled:
+            continue
+        horizons = mc.horizons
+        if horizons is not None and not horizons.get(horizon, True):
+            continue
+        try:
+            keys.add(get_metric(mc.metric_id).col_key)
+        except KeyError:
+            continue
+    return keys
+
+
 def render_html(
     *,
     segments: list[SegmentWeatherData],
@@ -158,6 +199,8 @@ def render_html(
     """Render full HTML e-mail body. Pure function."""
     sig = profile_signature(profile)
     report_date = segments[0].segment.start_time.strftime("%d.%m.%Y")
+    # Issue #342: Tages-Basis für Pro-Metrik-Horizont-Filter.
+    report_date_obj = segments[0].segment.start_time.date()
     sub_header = stage_name or ""
     stats_line = ""
     if stage_stats:
@@ -182,6 +225,9 @@ def render_html(
                 <p style="margin:4px 0 0 0;color:{G_INK_MUTED};font-size:13px;">Anbieter-Fehler nach 5 Versuchen</p>
             </div>""")
             continue
+        # Issue #342: Horizont pro Etappe ableiten und erlaubte Spalten berechnen.
+        etappe_horizon = derive_horizon(report_date_obj, seg.start_time.date())
+        allowed_keys = _allowed_col_keys_for_horizon(dc, etappe_horizon)
         s_elev = int(seg.start_point.elevation_m or 0)
         e_elev = int(seg.end_point.elevation_m or 0)
         if seg.segment_id == "Ziel":
@@ -194,7 +240,7 @@ def render_html(
             desktop_div = (
                 '<div class="section destination desktop-only">'
                 "<h3>" + seg_header + "</h3>"
-                + _render_html_table(rows, friendly_keys=friendly_keys)
+                + _render_html_table(rows, friendly_keys=friendly_keys, allowed_col_keys=allowed_keys)
                 + "</div>"
             )
         else:
@@ -208,10 +254,10 @@ def render_html(
             desktop_div = (
                 '<div class="section desktop-only">'
                 "<h3>" + seg_header + "</h3>"
-                + _render_html_table(rows, friendly_keys=friendly_keys)
+                + _render_html_table(rows, friendly_keys=friendly_keys, allowed_col_keys=allowed_keys)
                 + "</div>"
             )
-        compact_rows = _render_mobile_compact_rows(rows, friendly_keys=friendly_keys)
+        compact_rows = _render_mobile_compact_rows(rows, friendly_keys=friendly_keys, allowed_col_keys=allowed_keys)
         mobile_div = (
             '<div class="mobile-compact" style="display:none;padding:0 16px">'
             '<div style="font-size:12px;font-weight:600;color:' + G_INK

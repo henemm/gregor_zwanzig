@@ -301,6 +301,7 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
             use_friendly_format=mc_data.get("use_friendly_format", True),
             alert_enabled=mc_data.get("alert_enabled", False),
             alert_threshold=mc_data.get("alert_threshold"),
+            horizons=mc_data.get("horizons"),
         ))
 
     return UnifiedWeatherDisplayConfig(
