@@ -6,6 +6,7 @@
 
 	import type {
 		Location,
+		Group,
 		Subscription,
 		ForecastResponse,
 		ActivityProfile,
@@ -13,13 +14,16 @@
 	} from '$lib/types.js';
 	import { toCompareProfile } from '$lib/types.js';
 	import { api } from '$lib/api.js';
+	import { invalidateAll } from '$app/navigation';
 	import { Btn } from '$lib/components/ui/btn/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import SubscriptionForm from '$lib/components/SubscriptionForm.svelte';
+	import LocationForm from '$lib/components/LocationForm.svelte';
 	import LocationsRail from '$lib/components/compare/LocationsRail.svelte';
 	import NewLocationWizard from '$lib/components/compare/NewLocationWizard.svelte';
+	import { groupLocations } from '$lib/components/compare/locationHelpers.js';
 	import PresetHeader from '$lib/components/compare/PresetHeader.svelte';
 	import RecommendationBanner from '$lib/components/compare/RecommendationBanner.svelte';
 	import CompareMatrix from '$lib/components/compare/CompareMatrix.svelte';
@@ -32,8 +36,18 @@
 	let { data } = $props();
 
 	let locations: Location[] = $state(data.locations);
+	let groups: Group[] = $state(data.groups ?? []);
 	let subscriptions: Subscription[] = $state(data.subscriptions ?? []);
 	let selectedIds = $state<string[]>(locations.map((l) => l.id));
+
+	// Nach invalidateAll() (Location-Edit, Gruppen-Anlegen) liefert SvelteKit ein
+	// frisches `data`. Lokalen State synchronisieren, ohne die aktuelle Auswahl zu
+	// verlieren (nur noch existierende IDs behalten).
+	$effect(() => {
+		locations = data.locations;
+		groups = data.groups ?? [];
+		subscriptions = data.subscriptions ?? [];
+	});
 
 	let allSelected = $state(true);
 	let targetDate = $state(new Date().toISOString().slice(0, 10));
@@ -49,6 +63,8 @@
 	let showSaveAsSubDialog = $state(false);
 	let saveSubError = $state<string | null>(null);
 	let showLocationsSheet = $state(false);
+	let editingLocation = $state<Location | null>(null);
+	let locationEditOpen = $state(false);
 
 	let prefilledSub = $derived({
 		id: '',
@@ -121,10 +137,39 @@
 		locations = [...locations, loc];
 		selectedIds = [...selectedIds, loc.id];
 		allSelected = selectedIds.length === locations.length;
-		if (loc.group && !openGroups.has(loc.group)) {
-			openGroups = new Set([...openGroups, loc.group]);
+		if (loc.group_id && !openGroups.has(loc.group_id)) {
+			openGroups = new Set([...openGroups, loc.group_id]);
 		}
 		showNewLocDialog = false;
+	}
+
+	function handleEditLocation(loc: Location) {
+		editingLocation = loc;
+		locationEditOpen = true;
+	}
+
+	// Read-Modify-Write: bestehende Location-Felder bleiben erhalten, nur das
+	// vom Edit-Dialog gelieferte vollstaendige Objekt (inkl. group_id) wird per
+	// PUT persistiert. Danach invalidateAll() holt den frischen Stand vom Backend.
+	async function handleLocationSave(updated: Location) {
+		try {
+			await api.put<Location>(`/api/locations/${updated.id}`, updated);
+			locationEditOpen = false;
+			editingLocation = null;
+			await invalidateAll();
+		} catch (e: unknown) {
+			const body = e as { detail?: string; error?: string };
+			error = body?.detail ?? body?.error ?? 'Fehler beim Speichern der Location';
+		}
+	}
+
+	function handleGroupCreated(group: Group) {
+		// Neue Gruppe sofort aufgeklappt anzeigen (sonst rendert sie nach
+		// invalidateAll() eingeklappt, da nicht in openGroups). Backend hat die
+		// Gruppe persistiert; frischen Stand inkl. ggf. backfilled group_id-Migration
+		// vom Server holen.
+		openGroups = new Set([...openGroups, group.id]);
+		invalidateAll();
 	}
 
 	function toggleAll() {
@@ -164,21 +209,8 @@
 		}
 	}
 
-	// Grouped locations for sidebar
-	let groupedLocations = $derived.by(() => {
-		const groups = new Map<string, Location[]>();
-		const ungrouped: Location[] = [];
-		for (const loc of locations) {
-			if (loc.group) {
-				const list = groups.get(loc.group) ?? [];
-				list.push(loc);
-				groups.set(loc.group, list);
-			} else {
-				ungrouped.push(loc);
-			}
-		}
-		return { groups, ungrouped };
-	});
+	// Grouped locations for sidebar (Issue #301: Group-Entity via group_id).
+	let groupedLocations = $derived(groupLocations(locations, groups));
 
 	// Issue #132 — Dominantes Profil der aktuell gewaehlten Locations bestimmen.
 	// Ein Profil gilt als dominant, wenn es auf mehr als 50 % der profilierten
@@ -207,22 +239,22 @@
 		profileManuallyOverridden = false;
 	});
 
-	let openGroups = $state<Set<string>>(
-		new Set(locations.filter((l) => l.group).map((l) => l.group!))
-	);
+	// AC-9: initial alle Gruppen aufgeklappt (Set der group.id).
+	let openGroups = $state<Set<string>>(new Set(groups.map((g) => g.id)));
 
-	function toggleGroup(groupName: string) {
+	function toggleGroup(groupId: string) {
 		const next = new Set(openGroups);
-		if (next.has(groupName)) {
-			next.delete(groupName);
+		if (next.has(groupId)) {
+			next.delete(groupId);
 		} else {
-			next.add(groupName);
+			next.add(groupId);
 		}
 		openGroups = next;
 	}
 
-	function toggleGroupSelection(groupName: string) {
-		const groupLocs = groupedLocations.groups.get(groupName) ?? [];
+	function toggleGroupSelection(groupId: string) {
+		const section = groupedLocations.sections.find((s) => s.group.id === groupId);
+		const groupLocs = section?.locations ?? [];
 		const allInGroup = groupLocs.every((l) => selectedIds.includes(l.id));
 		if (allInGroup) {
 			selectedIds = selectedIds.filter((id) => !groupLocs.some((l) => l.id === id));
@@ -239,6 +271,7 @@
 	<div class="hidden desktop:flex shrink-0">
 		<LocationsRail
 			{locations}
+			{groups}
 			{selectedIds}
 			{groupedLocations}
 			{openGroups}
@@ -248,7 +281,9 @@
 			onToggleGroup={toggleGroup}
 			onToggleGroupSelection={toggleGroupSelection}
 			onShowWeather={showWeather}
+			onEditLocation={handleEditLocation}
 			onNewLocation={() => (showNewLocDialog = true)}
+			onGroupCreated={handleGroupCreated}
 		/>
 	</div>
 
@@ -464,6 +499,7 @@
 		<div class="px-4 py-3">
 			<LocationsRail
 				{locations}
+				{groups}
 				{selectedIds}
 				{groupedLocations}
 				{openGroups}
@@ -473,7 +509,9 @@
 				onToggleGroup={toggleGroup}
 				onToggleGroupSelection={toggleGroupSelection}
 				onShowWeather={(id) => { showLocationsSheet = false; showWeather(id); }}
+				onEditLocation={(loc) => { showLocationsSheet = false; handleEditLocation(loc); }}
 				onNewLocation={() => { showLocationsSheet = false; showNewLocDialog = true; }}
+				onGroupCreated={handleGroupCreated}
 			/>
 		</div>
 	</div>
@@ -492,9 +530,39 @@
 		</Dialog.Header>
 		<NewLocationWizard
 			{locations}
+			{groups}
 			onsave={handleNewLocSave}
 			oncancel={() => (showNewLocDialog = false)}
 		/>
+	</Dialog.Content>
+</Dialog.Root>
+
+<!-- Location Edit Dialog (Issue #301: Klick auf Ortsname) -->
+<Dialog.Root
+	open={locationEditOpen}
+	onOpenChange={(open) => {
+		if (!open) {
+			locationEditOpen = false;
+			editingLocation = null;
+		}
+	}}
+>
+	<Dialog.Content class="max-h-[80vh] max-w-lg overflow-y-auto">
+		<Dialog.Header>
+			<Dialog.Title>Ort bearbeiten</Dialog.Title>
+		</Dialog.Header>
+		{#if editingLocation}
+			<LocationForm
+				location={editingLocation}
+				{locations}
+				{groups}
+				onsave={handleLocationSave}
+				oncancel={() => {
+					locationEditOpen = false;
+					editingLocation = null;
+				}}
+			/>
+		{/if}
 	</Dialog.Content>
 </Dialog.Root>
 

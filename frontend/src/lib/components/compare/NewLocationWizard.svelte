@@ -7,30 +7,32 @@
 	// Aktivitaetsprofil. Speichern persistiert via POST /api/locations und liefert
 	// die neue Location via onsave() an die Page zurueck.
 
-	import type { Location, ActivityProfile } from '$lib/types.js';
+	import type { Location, Group, ActivityProfile } from '$lib/types.js';
 	import { ACTIVITY_PROFILE_OPTIONS } from '$lib/types.js';
 	import { api } from '$lib/api.js';
 	import { Btn } from '$lib/components/ui/btn/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
+	import { Select } from '$lib/components/ui/select';
 	import Stepper from '$lib/components/trip-wizard/Stepper.svelte';
 	import LocationPreviewMap from '$lib/components/compare/LocationPreviewMap.svelte';
 	import { toKebabCase, isCoordsValid } from './locationHelpers.js';
 
 	interface Props {
 		locations: Location[];
+		groups?: Group[];
 		onsave: (loc: Location) => void;
 		oncancel: () => void;
 	}
 
-	let { locations, onsave, oncancel }: Props = $props();
+	let { locations, groups = [], onsave, oncancel }: Props = $props();
 
 	let step = $state<1 | 2 | 3>(1);
 	let lat = $state('47.0');
 	let lon = $state('11.0');
 	let elevationM = $state('');
 	let name = $state('');
-	let group = $state('');
+	let selectedGroupId = $state('');
 	let activityProfile = $state<ActivityProfile>('allgemein');
 	let saving = $state(false);
 	let error = $state<string | null>(null);
@@ -84,7 +86,7 @@
 				lat: Number(lat),
 				lon: Number(lon),
 				elevation_m: elevationM !== '' ? Number(elevationM) : undefined,
-				group: group.trim() || undefined,
+				group_id: selectedGroupId || undefined,
 				activity_profile: activityProfile,
 			};
 			await api.post<Location>('/api/locations', loc);
@@ -117,10 +119,6 @@
 			resolving = false;
 		}
 	}
-
-	let existingGroups = $derived(
-		[...new Set(locations.map((l) => l.group).filter((g): g is string => Boolean(g)))],
-	);
 
 	let coordsValid = $derived(isCoordsValid(lat, lon));
 </script>
@@ -237,18 +235,17 @@
 			</div>
 			<div>
 				<Label for="wiz-group">Gruppe (optional)</Label>
-				<input
+				<Select
 					id="wiz-group"
-					list="wiz-group-opts"
-					bind:value={group}
-					placeholder="z.B. Zillertal"
-					class="flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-base transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3"
-				/>
-				<datalist id="wiz-group-opts">
-					{#each existingGroups as g}
-						<option value={g}></option>
+					data-testid="wizard-group-select"
+					bind:value={selectedGroupId}
+					class="w-full"
+				>
+					<option value="">Keine Gruppe</option>
+					{#each groups as g (g.id)}
+						<option value={g.id}>{g.name}</option>
 					{/each}
-				</datalist>
+				</Select>
 			</div>
 		</div>
 	{/if}

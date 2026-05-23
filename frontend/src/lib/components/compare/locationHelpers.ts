@@ -5,7 +5,7 @@
 // Diese Datei enthaelt ausschliesslich pure Funktionen ohne Svelte-Abhaengigkeit —
 // damit sind sie via `node --experimental-strip-types --test` unit-testbar.
 
-import type { Location, ActivityProfile } from '../../types.js';
+import type { Location, ActivityProfile, Group } from '../../types.js';
 
 /**
  * Wandelt einen freien Namen in eine URL-/Id-taugliche kebab-case-Form um.
@@ -39,37 +39,75 @@ export function toKebabCase(input: string): string {
 
 /**
  * Filtert eine Location-Liste anhand eines Suchstrings, eines optionalen
- * Gruppen-Chip-Filters und eines optionalen Aktivitaetsprofil-Filters.
+ * Gruppen-Chip-Filters (group_id) und eines optionalen Aktivitaetsprofil-Filters.
+ *
+ * Issue #301 §4: Gruppen werden ueber `group_id` (Group-Entity) statt Legacy-
+ * Freitext `loc.group` gefiltert. Die `groupNameMap` (group_id -> group.name)
+ * erlaubt die Suche im Gruppennamen (AC-4).
  *
  * Regeln:
- * - `search === ''` UND `activeGroup === null` UND `activeProfile === null`
+ * - `search === ''` UND `activeGroupId === null` UND `activeProfile === null`
  *   -> alle Locations zurueck (kein Filter aktiv)
- * - Suche ist case-insensitiv und vergleicht Name ODER Gruppe (Substring-Match)
- * - Wenn `activeGroup !== null` wird zusaetzlich nach exakt diesem Gruppennamen
- *   gefiltert (UND-Verknuepfung)
+ * - Suche ist case-insensitiv und vergleicht Ortsname ODER Gruppenname
+ *   (aufgeloest via groupNameMap) als Substring-Match
+ * - Wenn `activeGroupId !== null` wird zusaetzlich nach exakt dieser group_id
+ *   gefiltert (UND-Verknuepfung); Orte ohne group_id matchen dann nie
  * - Wenn `activeProfile !== null` wird zusaetzlich nach exakt diesem Profil
  *   gefiltert; Locations ohne `activity_profile` matchen nicht (Issue #132).
  */
 export function filterLocations(
 	locations: Location[],
 	search: string,
-	activeGroup: string | null,
+	activeGroupId: string | null,
 	activeProfile: ActivityProfile | null = null,
+	groupNameMap: Map<string, string> = new Map(),
 ): Location[] {
-	if (search === '' && activeGroup === null && activeProfile === null) {
+	if (search === '' && activeGroupId === null && activeProfile === null) {
 		return locations;
 	}
 	const q = search.toLowerCase();
 	return locations.filter((l) => {
+		const groupName = groupNameMap.get(l.group_id ?? '') ?? '';
 		const matchesSearch =
 			search === '' ||
 			l.name.toLowerCase().includes(q) ||
-			(l.group ?? '').toLowerCase().includes(q);
-		const matchesGroup = activeGroup === null || l.group === activeGroup;
+			groupName.toLowerCase().includes(q);
+		const matchesGroup = activeGroupId === null || l.group_id === activeGroupId;
 		const matchesProfile =
 			activeProfile === null || l.activity_profile === activeProfile;
 		return matchesSearch && matchesGroup && matchesProfile;
 	});
+}
+
+/**
+ * Gruppiert Orte nach `group_id` ihrer Group-Entity fuer die Sidebar (Issue #301 §5/§8).
+ *
+ * Rueckgabe:
+ *   { sections: { group, locations }[]; ungrouped }
+ *
+ * Regeln:
+ * - Sektionen sind nach `group.order` aufsteigend sortiert.
+ * - Orte ohne `group_id` ODER mit unbekannter `group_id` (nicht in `groups`)
+ *   landen in `ungrouped`.
+ * - Leere Gruppen erscheinen als Sektion mit leerer locations-Liste.
+ */
+export function groupLocations(
+	locations: Location[],
+	groups: Group[],
+): { sections: { group: Group; locations: Location[] }[]; ungrouped: Location[] } {
+	const sorted = [...groups].sort((a, b) => a.order - b.order);
+	const buckets = new Map<string, Location[]>(sorted.map((g) => [g.id, []]));
+	const ungrouped: Location[] = [];
+	for (const loc of locations) {
+		const bucket = loc.group_id ? buckets.get(loc.group_id) : undefined;
+		if (bucket) {
+			bucket.push(loc);
+		} else {
+			ungrouped.push(loc);
+		}
+	}
+	const sections = sorted.map((group) => ({ group, locations: buckets.get(group.id)! }));
+	return { sections, ungrouped };
 }
 
 /**

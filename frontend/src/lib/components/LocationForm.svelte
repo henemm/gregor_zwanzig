@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Location, ActivityProfile } from '$lib/types.js';
+	import type { Location, Group, ActivityProfile } from '$lib/types.js';
 	import { ACTIVITY_PROFILE_OPTIONS } from '$lib/types.js';
 	import { Btn } from '$lib/components/ui/btn/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
@@ -9,13 +9,12 @@
 	interface Props {
 		location?: Location;
 		locations?: Location[];
+		groups?: Group[];
 		onsave: (loc: Location) => void;
 		oncancel: () => void;
 	}
 
-	let { location, locations = [], onsave, oncancel }: Props = $props();
-
-	const existingGroups = [...new Set(locations.flatMap(l => l.group ? [l.group] : []))].sort();
+	let { location, locations = [], groups = [], onsave, oncancel }: Props = $props();
 
 	function toKebab(s: string): string {
 		return s
@@ -52,7 +51,7 @@
 	let region = $state(location?.region ?? '');
 	let bergfexSlug = $state(location?.bergfex_slug ?? '');
 	let activityProfile = $state<ActivityProfile | ''>(location?.activity_profile ?? '');
-	let group = $state(location?.group ?? '');
+	let groupId = $state(location?.group_id ?? '');
 	let error = $state('');
 
 	function save() {
@@ -65,17 +64,20 @@
 			error = 'Koordinaten dürfen nicht beide 0 sein';
 			return;
 		}
+		// Read-Modify-Write: bestehende, nicht im Formular editierte Felder
+		// (display_config, timezone, data_source, created_at) bleiben erhalten;
+		// nur die vom Formular verwalteten Felder werden ueberschrieben.
 		const result: Location = {
+			...location,
 			id: location?.id ?? toKebab(name),
 			name: name.trim(),
 			lat: Number(lat),
 			lon: Number(lon),
-			elevation_m: elevationM !== '' ? Number(elevationM) : undefined,
+			elevation_m: String(elevationM) !== '' ? Number(elevationM) : undefined,
 			region: region.trim() || undefined,
 			bergfex_slug: bergfexSlug.trim() || undefined,
 			activity_profile: activityProfile || undefined,
-			group: group.trim() || undefined,
-			...(location?.display_config && { display_config: location.display_config })
+			group_id: groupId || undefined,
 		};
 		onsave(result);
 	}
@@ -144,20 +146,19 @@
 	</div>
 
 	<div>
-		<Label for="group">Gruppe (optional)</Label>
-		<input
-			id="group"
-			name="group"
-			list="group-options"
-			bind:value={group}
-			placeholder="z.B. Ski Alpin"
-			class="flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-base transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3"
-		/>
-		<datalist id="group-options">
-			{#each existingGroups as g}
-				<option value={g} />
+		<Label for="location-group">Gruppe (optional)</Label>
+		<Select
+			id="location-group"
+			name="location-group"
+			data-testid="location-form-group"
+			bind:value={groupId}
+			class="w-full"
+		>
+			<option value="">Keine Gruppe</option>
+			{#each groups as g (g.id)}
+				<option value={g.id}>{g.name}</option>
 			{/each}
-		</datalist>
+		</Select>
 	</div>
 
 	<div class="flex justify-end gap-2 pt-2">

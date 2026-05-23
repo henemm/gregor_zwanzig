@@ -1,35 +1,44 @@
 <script lang="ts">
-	// Issue #249 — Compare-Screen Locations-Sidebar.
+	// Issue #249 / #301 — Compare-Screen Locations-Sidebar.
 	//
 	// Spec: docs/specs/modules/issue_249_locations_rail.md
+	//       docs/specs/modules/issue_301_sidebar_groups.md §7
 	//
 	// Diese Komponente ist rein presentational: sie haelt lokal nur Search- und
 	// Chip-Filter-State; Selection-/Gruppen-Toggle-Logik liegt in der Page.
+	// Seit #301: Gruppen kommen als Group-Entity (group_id), gerendert via GroupSection;
+	// Wrapper ist <aside> mit 320px (E2E sucht page.locator('aside')).
 
-	import type { Location, ActivityProfile } from '$lib/types.js';
+	import type { Location, Group, ActivityProfile } from '$lib/types.js';
 	import { Btn } from '$lib/components/ui/btn/index.js';
 	import { Pill } from '$lib/components/ui/pill/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import CloudSunIcon from '@lucide/svelte/icons/cloud-sun';
+	import GroupSection from './GroupSection.svelte';
+	import CreateGroupDialog from './CreateGroupDialog.svelte';
 	import { filterLocations } from './locationHelpers.js';
 	import { profileSignature } from '$lib/utils/profileSignature.js';
 
 	interface Props {
 		locations: Location[];
+		groups: Group[];
 		selectedIds: string[];
-		groupedLocations: { groups: Map<string, Location[]>; ungrouped: Location[] };
+		groupedLocations: { sections: { group: Group; locations: Location[] }[]; ungrouped: Location[] };
 		openGroups: Set<string>;
 		allSelected: boolean;
 		onToggleAll: () => void;
 		onToggleLocation: (id: string) => void;
-		onToggleGroup: (name: string) => void;
-		onToggleGroupSelection: (name: string) => void;
+		onToggleGroup: (id: string) => void;
+		onToggleGroupSelection: (id: string) => void;
 		onShowWeather: (id: string) => void;
+		onEditLocation: (loc: Location) => void;
 		onNewLocation: () => void;
+		onGroupCreated: (group: Group) => void;
 	}
 
 	let {
 		locations,
+		groups,
 		selectedIds,
 		groupedLocations,
 		openGroups,
@@ -39,12 +48,18 @@
 		onToggleGroup,
 		onToggleGroupSelection,
 		onShowWeather,
+		onEditLocation,
 		onNewLocation,
+		onGroupCreated,
 	}: Props = $props();
 
 	let search = $state('');
 	let activeGroup = $state<string | null>(null);
 	let activeProfile = $state<ActivityProfile | null>(null);
+	let createGroupOpen = $state(false);
+
+	// group_id -> group.name fuer die Suche im Gruppennamen (AC-4).
+	let groupNameMap = $derived(new Map(groups.map((g) => [g.id, g.name])));
 
 	// Issue #132 — Nur Profile, die tatsaechlich (nicht-'allgemein') in der Liste vorkommen,
 	// werden als Chips gerendert. Feste Sortier-Reihenfolge fuer UI-Stabilitaet.
@@ -61,29 +76,25 @@
 		}),
 	);
 
-	// Gefilterte Locations werden aus groupedLocations + filterLocations() abgeleitet.
-	// Damit bleibt die Gruppen-Reihenfolge konsistent zur Page, und wir setzen nur die
-	// einzelnen Listen auf gefilterte Subsets.
+	// Gefilterte Sektionen werden aus groupedLocations + filterLocations() abgeleitet.
+	// Die Gruppen-Reihenfolge bleibt konsistent zur Page; einzelne Listen werden auf
+	// gefilterte Subsets gesetzt.
 	let filteredGrouped = $derived.by(() => {
-		const filtered = filterLocations(locations, search, activeGroup, activeProfile);
+		const filtered = filterLocations(locations, search, activeGroup, activeProfile, groupNameMap);
 		const filteredIds = new Set(filtered.map((l) => l.id));
-		const groups = new Map<string, Location[]>();
-		const ungrouped: Location[] = [];
-		for (const [name, locs] of groupedLocations.groups) {
-			const gl = locs.filter((l) => filteredIds.has(l.id));
-			if (gl.length > 0) groups.set(name, gl);
-		}
-		for (const l of groupedLocations.ungrouped) {
-			if (filteredIds.has(l.id)) ungrouped.push(l);
-		}
-		return { groups, ungrouped };
+		const sections = groupedLocations.sections.map((s) => ({
+			group: s.group,
+			locations: s.locations.filter((l) => filteredIds.has(l.id)),
+		}));
+		const ungrouped = groupedLocations.ungrouped.filter((l) => filteredIds.has(l.id));
+		return { sections, ungrouped };
 	});
 </script>
 
-<div
+<aside
 	data-testid="compare-rail"
-	class="w-60 shrink-0 flex flex-col space-y-3 pr-4"
-	style="border-right: 1px solid color-mix(in srgb, var(--g-ink-faint) 40%, transparent);"
+	class="shrink-0 flex flex-col space-y-3 pr-4"
+	style="width: 320px; border-right: 1px solid color-mix(in srgb, var(--g-ink-faint) 40%, transparent);"
 >
 	<input
 		data-testid="compare-rail-search"
@@ -93,17 +104,17 @@
 		class="h-8 w-full rounded-md border border-input bg-transparent px-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
 	/>
 
-	{#if groupedLocations.groups.size > 0}
+	{#if groups.length > 0}
 		<div class="flex flex-wrap gap-1">
-			{#each [...groupedLocations.groups.keys()].sort() as g}
+			{#each groups as g (g.id)}
 				<button
 					data-testid="compare-rail-chip"
-					aria-label={g}
-					aria-pressed={activeGroup === g}
-					onclick={() => (activeGroup = activeGroup === g ? null : g)}
+					aria-label={g.name}
+					aria-pressed={activeGroup === g.id}
+					onclick={() => (activeGroup = activeGroup === g.id ? null : g.id)}
 					class="cursor-pointer"
 				>
-					<Pill tone={activeGroup === g ? 'accent' : 'default'}>{g}</Pill>
+					<Pill tone={activeGroup === g.id ? 'accent' : 'default'}>{g.name}</Pill>
 				</button>
 			{/each}
 		</div>
@@ -132,79 +143,69 @@
 	>Alle ({selectedIds.length}/{locations.length})</Checkbox>
 
 	<div class="space-y-1">
-		{#each [...filteredGrouped.groups.entries()].sort((a, b) => a[0].localeCompare(b[0])) as [groupName, groupLocs]}
-			{@const isOpen = openGroups.has(groupName)}
-			{@const allInGroup = groupLocs.every((l) => selectedIds.includes(l.id))}
-			<div>
-				<div data-testid="compare-rail-group-header" class="flex items-center gap-1">
-					<button
-						aria-label={groupName}
-						class="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground"
-						onclick={() => onToggleGroup(groupName)}
-					>
-						<span class="inline-block w-3 text-xs">{isOpen ? '▼' : '▶'}</span>
-					</button>
-					<Checkbox
-						checked={allInGroup}
-						onchange={() => onToggleGroupSelection(groupName)}
-					>{groupName} ({groupLocs.length})</Checkbox>
-				</div>
-				{#if isOpen}
-					<div class="ml-4 space-y-0.5">
-						{#each groupLocs as loc}
-							<div class="flex items-center gap-1.5 text-sm">
-								<Checkbox
-									checked={selectedIds.includes(loc.id)}
-									onchange={() => onToggleLocation(loc.id)}
-								/>
-								<span class="flex-1">{loc.name}</span>
-								{#if loc.activity_profile && loc.activity_profile !== 'allgemein'}
-									{@const sig = profileSignature(loc.activity_profile)}
-									<span data-slot="dot" data-size="xs" style="background: {sig.accent}; flex-shrink: 0;" title={sig.eyebrow}></span>
-								{/if}
-								<button
-									onclick={() => onShowWeather(loc.id)}
-									title="Wetter anzeigen"
-									class="opacity-40 hover:opacity-100"
-								>
-									<CloudSunIcon class="size-3.5" />
-								</button>
-							</div>
-						{/each}
-					</div>
-				{/if}
-			</div>
+		{#each filteredGrouped.sections as section (section.group.id)}
+			<GroupSection
+				group={section.group}
+				locations={section.locations}
+				open={openGroups.has(section.group.id)}
+				{selectedIds}
+				onToggle={() => onToggleGroup(section.group.id)}
+				onToggleAll={() => onToggleGroupSelection(section.group.id)}
+				{onToggleLocation}
+				{onEditLocation}
+				{onShowWeather}
+			/>
 		{/each}
 
-		{#each filteredGrouped.ungrouped as loc}
-			<div class="flex items-center gap-1.5 text-sm">
-				<Checkbox
-					checked={selectedIds.includes(loc.id)}
-					onchange={() => onToggleLocation(loc.id)}
-				/>
-				<span class="flex-1">{loc.name}</span>
-				{#if loc.activity_profile && loc.activity_profile !== 'allgemein'}
-					{@const sig = profileSignature(loc.activity_profile)}
-					<span data-slot="dot" data-size="xs" style="background: {sig.accent}; flex-shrink: 0;" title={sig.eyebrow}></span>
-				{/if}
-				<button
-					onclick={() => onShowWeather(loc.id)}
-					title="Wetter anzeigen"
-					class="opacity-40 hover:opacity-100"
-				>
-					<CloudSunIcon class="size-3.5" />
-				</button>
+		{#if filteredGrouped.ungrouped.length > 0}
+			<div class="ungroup-section" data-testid="ungroup-section">
+				<p class="text-sm font-medium text-muted-foreground">Ungruppiert ({filteredGrouped.ungrouped.length})</p>
+				<ul class="ml-4 space-y-0.5">
+					{#each filteredGrouped.ungrouped as loc (loc.id)}
+						<li class="flex items-center gap-1.5 text-sm">
+							<Checkbox
+								checked={selectedIds.includes(loc.id)}
+								onchange={() => onToggleLocation(loc.id)}
+							/>
+							<button
+								class="loc-name-btn flex-1 text-left hover:underline"
+								onclick={() => onEditLocation(loc)}
+								data-testid="loc-name-{loc.id}"
+							>{loc.name}</button>
+							<button
+								onclick={() => onShowWeather(loc.id)}
+								title="Wetter anzeigen"
+								class="opacity-40 hover:opacity-100"
+							>
+								<CloudSunIcon class="size-3.5" />
+							</button>
+						</li>
+					{/each}
+				</ul>
 			</div>
-		{/each}
+		{/if}
 	</div>
 
-	<Btn
-		variant="outline"
-		size="sm"
-		class="w-full"
-		onclick={onNewLocation}
-		data-testid="compare-rail-new-btn"
-	>
-		+ NEU
-	</Btn>
-</div>
+	<div class="rail-footer flex gap-2">
+		<Btn
+			variant="outline"
+			size="sm"
+			class="flex-1"
+			onclick={onNewLocation}
+			data-testid="compare-rail-new-btn"
+		>
+			+ Ort
+		</Btn>
+		<Btn
+			variant="outline"
+			size="sm"
+			class="flex-1"
+			onclick={() => (createGroupOpen = true)}
+			data-testid="compare-rail-new-group-btn"
+		>
+			+ Gruppe
+		</Btn>
+	</div>
+</aside>
+
+<CreateGroupDialog bind:open={createGroupOpen} onCreate={onGroupCreated} />

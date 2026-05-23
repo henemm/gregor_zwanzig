@@ -7,11 +7,21 @@ export interface Location {
 	region?: string;
 	bergfex_slug?: string;
 	activity_profile?: ActivityProfile;
-	group?: string;
+	group?: string;      // Legacy-Freitext — bleibt erhalten, wird nicht mehr gelesen
+	group_id?: string;   // Issue #301 — Source of Truth (FK auf Group-Entity)
 	display_config?: Record<string, unknown>;
 	timezone?: string;
 	data_source?: string;
 	created_at?: string;
+}
+
+// Issue #301 — Group-Entity (Spiegel von internal/model/group.go).
+// Source of Truth fuer Gruppen kommt aus GET /api/groups (sortiert nach order).
+export interface Group {
+	id: string;
+	name: string;
+	default_profile?: ActivityProfile; // kanonisch (Unterstrich): 'wintersport' | 'wandern' | 'summer_trekking' | 'allgemein'
+	order: number;
 }
 
 export type ActivityType = 'trekking' | 'skitour' | 'hochtour' | 'klettersteig' | 'mtb';
