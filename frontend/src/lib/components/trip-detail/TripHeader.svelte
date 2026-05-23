@@ -7,7 +7,6 @@
 	import { Btn } from '$lib/components/ui/btn/index.js';
 	import { Eyebrow } from '$lib/components/ui/eyebrow';
 	import TripStatusBadge from './TripStatusBadge.svelte';
-	import { deriveTripStatus, type TripStatus } from '$lib/utils/tripStatus';
 	import { formatDateRange, getDaysLabel } from '$lib/utils/tripHero';
 	import { computeTripStats } from '$lib/utils/tripStats';
 	import { api } from '$lib/api';
@@ -24,17 +23,9 @@
 
 	let { trip, now = new Date() }: Props = $props();
 
-	const status = $derived<TripStatus>(deriveTripStatus(trip, now));
 	const stats = $derived(computeTripStats(trip));
 	const dateRange = $derived(formatDateRange(trip));
 	const daysLabel = $derived(getDaysLabel(trip, now));
-
-	const statusLabelMap: Record<TripStatus, string> = {
-		active: 'AKTIV',
-		planned: 'GEPLANT',
-		paused: 'PAUSIERT',
-		archived: 'ARCHIVIERT'
-	};
 
 	let testBriefingLoading = $state(false);
 	let testBriefingMsg = $state<string | null>(null);
@@ -79,8 +70,8 @@
 			</h1>
 
 			<div class="status-line">
-				<span class="status-text status-{status}">
-					{statusLabelMap[status]} · {daysLabel}
+				<span class="status-supplement" data-testid="trip-detail-status-supplement">
+					{daysLabel}
 				</span>
 				<TripStatusBadge {trip} {now} />
 			</div>
@@ -171,15 +162,10 @@
 		gap: 0.75rem;
 		flex-wrap: wrap;
 	}
-	.status-text {
+	.status-supplement {
 		font-size: var(--g-text-sm);
-		font-weight: 600;
-		letter-spacing: 0.05em;
+		color: var(--g-ink-muted);
 	}
-	.status-active   { color: var(--g-accent); }
-	.status-planned  { color: var(--g-info); }
-	.status-paused   { color: var(--g-warning); }
-	.status-archived { color: var(--g-ink-faint); }
 	.meta-line {
 		display: flex;
 		flex-wrap: wrap;
