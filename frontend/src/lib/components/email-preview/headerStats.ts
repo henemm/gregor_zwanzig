@@ -14,7 +14,7 @@ export interface HeaderStats {
 const EARTH_RADIUS_KM = 6371.0088;
 
 /** Haversine-Distanz zwischen zwei Punkten in km. */
-function haversineKm(a: Waypoint, b: Waypoint): number {
+export function haversineKm(a: Waypoint, b: Waypoint): number {
 	const toRad = (deg: number) => (deg * Math.PI) / 180;
 	const dLat = toRad(b.lat - a.lat);
 	const dLon = toRad(b.lon - a.lon);

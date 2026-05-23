@@ -24,6 +24,9 @@
 		onReject: () => void;
 		onRename: () => void;
 		onDelete: () => void;
+		// Issue #296-FE: berechnete Ankunftszeit "HH:MM" (computeArrivalTimes).
+		// Nur im Trip-Editor gesetzt; Detail-View gibt das Prop NICHT → unveraendert.
+		arrival?: string | null;
 	}
 
 	let {
@@ -34,7 +37,8 @@
 		onConfirm,
 		onReject,
 		onRename,
-		onDelete
+		onDelete,
+		arrival = null
 	}: Props = $props();
 
 	const isSuggested = $derived(waypoint.suggested === true);
@@ -59,6 +63,14 @@
 	<!-- Hoehe (optional) -->
 	{#if waypoint.elevation_m}
 		<span class="text-xs text-[var(--g-ink-faint)]">{waypoint.elevation_m} m</span>
+	{/if}
+
+	<!-- Ankunftszeit (Issue #296-FE, nur wenn Prop gesetzt) -->
+	{#if arrival}
+		<span
+			data-testid="wp-arrival-{index}"
+			class="text-xs font-[var(--g-font-data)] text-[var(--g-ink-faint)] tabular-nums"
+		>{arrival}</span>
 	{/if}
 
 	<!-- Aktionen fuer vorgeschlagene Wegpunkte -->

@@ -4,11 +4,12 @@
 	import { goto } from '$app/navigation';
 	import AccordionSection from './AccordionSection.svelte';
 	import EditRouteSection from './EditRouteSection.svelte';
-	import EditStagesSection from './EditStagesSection.svelte';
+	import EditStagesPanelNew from './EditStagesPanelNew.svelte';
 	import EditWeatherSection from './EditWeatherSection.svelte';
 	import EditReportConfigSection from './EditReportConfigSection.svelte';
 	import AlertRulesEditor from '$lib/components/alert-rules-editor/AlertRulesEditor.svelte';
 	import { normalizeAlertMetric } from '$lib/utils/alertMetricLabels';
+	import { stripSuggested } from '$lib/utils/waypointEditor';
 
 	interface Props {
 		trip: Trip;
@@ -54,7 +55,8 @@
 				const updated: Trip = {
 					...trip,
 					name: tripName,
-					stages,
+					// Issue #296-FE: transientes `suggested`-Flag nicht persistieren.
+					stages: stripSuggested(stages),
 					display_config: displayConfig,
 					report_config: reportConfig,
 					alert_rules: alertRules,
@@ -99,7 +101,7 @@
 		open={openSection === 'etappen'}
 		onToggle={makeToggleHandler('etappen')}
 	>
-		<EditStagesSection bind:stages />
+		<EditStagesPanelNew bind:stages />
 	</AccordionSection>
 
 	<AccordionSection

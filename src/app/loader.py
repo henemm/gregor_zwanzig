@@ -155,6 +155,8 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
                 lon=wp_data["lon"],
                 elevation_m=wp_data["elevation_m"],
                 time_window=time_window,
+                # Issue #296 — persistierte Naismith-Ankunftszeit erhalten (Datenverlust-Regel)
+                arrival_calculated=wp_data.get("arrival_calculated"),
             )
             waypoints.append(waypoint)
 
@@ -655,6 +657,9 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             }
             if wp.time_window:
                 wp_dict["time_window"] = str(wp.time_window)
+            # Issue #296 — persistierte Naismith-Ankunftszeit erhalten (omitempty-Äquivalent)
+            if wp.arrival_calculated:
+                wp_dict["arrival_calculated"] = wp.arrival_calculated
             waypoints_data.append(wp_dict)
 
         stage_dict = {

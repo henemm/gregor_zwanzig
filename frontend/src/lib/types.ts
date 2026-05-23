@@ -24,6 +24,9 @@ export interface Waypoint {
 	elevation_m: number;
 	time_window?: string;
 	suggested?: boolean;
+	// Issue #296 — vom Backend (Naismith) persistierte Ankunftszeit "HH:MM".
+	// Editor zeigt clientseitig live (computeArrivalTimes), BE ist authoritative.
+	arrival_calculated?: string;
 }
 
 export interface Stage {

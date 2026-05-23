@@ -67,6 +67,7 @@ class Waypoint:
     lon: float
     elevation_m: int
     time_window: Optional[TimeWindow] = None
+    arrival_calculated: Optional[str] = None  # Issue #296 — "HH:MM", vom Backend berechnet (Naismith)
 
     def __str__(self) -> str:
         tw = f" ({self.time_window})" if self.time_window else ""

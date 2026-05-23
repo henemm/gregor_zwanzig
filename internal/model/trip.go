@@ -49,13 +49,14 @@ type AlertRule struct {
 }
 
 type Waypoint struct {
-	ID         string  `json:"id"`
-	Name       string  `json:"name"`
-	Lat        float64 `json:"lat"`
-	Lon        float64 `json:"lon"`
-	ElevationM int     `json:"elevation_m"`
-	TimeWindow *string `json:"time_window,omitempty"`
-	Suggested  bool    `json:"suggested,omitempty"`
+	ID                string  `json:"id"`
+	Name              string  `json:"name"`
+	Lat               float64 `json:"lat"`
+	Lon               float64 `json:"lon"`
+	ElevationM        int     `json:"elevation_m"`
+	TimeWindow        *string `json:"time_window,omitempty"`
+	Suggested         bool    `json:"suggested,omitempty"`
+	ArrivalCalculated *string `json:"arrival_calculated,omitempty"` // Issue #296 — "HH:MM", vom Backend berechnet (Naismith)
 }
 
 type Stage struct {

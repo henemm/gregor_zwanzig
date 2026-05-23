@@ -52,6 +52,48 @@ export function boundingBox(waypoints: Waypoint[]): BoundingBox {
 }
 
 /**
+ * Linear interpolierter neuer Wegpunkt aus einer fraction (0..1) über den
+ * Wegpunkt-Index-Raum. Gibt lat/lon/elevation_m + Einfügeindex zurück.
+ * Issue #296-FE. Spec: docs/specs/modules/issue_296_fe_profile_editor.md §3 (AC-7).
+ *
+ *   floatIdx = fraction * (n-1); i = floor(floatIdx); t = floatIdx - i.
+ *   Felder = lerp(wp[i], wp[i+1], t). insertAfterIndex = i.
+ *
+ * Edge-Cases:
+ *   - n === 0 → Nullpunkt {0,0,0, insertAfterIndex -1}
+ *   - n === 1 → exakt wp[0], insertAfterIndex 0
+ *   - fraction wird auf [0,1] geclamped
+ */
+export function interpolateWaypoint(
+	waypoints: Waypoint[],
+	fraction: number
+): { lat: number; lon: number; elevation_m: number; insertAfterIndex: number } {
+	const n = waypoints.length;
+	if (n === 0) {
+		return { lat: 0, lon: 0, elevation_m: 0, insertAfterIndex: -1 };
+	}
+	if (n === 1) {
+		const a = waypoints[0];
+		return { lat: a.lat, lon: a.lon, elevation_m: a.elevation_m, insertAfterIndex: 0 };
+	}
+
+	const f = Math.min(1, Math.max(0, fraction));
+	const floatIdx = f * (n - 1);
+	let i = Math.floor(floatIdx);
+	if (i >= n - 1) i = n - 2; // fraction === 1 → letztes Segment, t === 1
+	const t = floatIdx - i;
+
+	const a = waypoints[i];
+	const b = waypoints[i + 1];
+	return {
+		lat: a.lat + (b.lat - a.lat) * t,
+		lon: a.lon + (b.lon - a.lon) * t,
+		elevation_m: a.elevation_m + (b.elevation_m - a.elevation_m) * t,
+		insertAfterIndex: i
+	};
+}
+
+/**
  * Normiert Waypoint-Koordinaten einer Stage auf SVG-Viewport-Koordinaten.
  * Padding: 8px von allen Seiten. cosLat-Korrektur für x-Achse.
  */

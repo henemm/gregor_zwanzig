@@ -218,6 +218,13 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 		}
 		existing.ID = id
 
+		// Issue #296-BE — Naismith-Ankunftszeiten frisch aus den (ggf. neuen)
+		// Wegpunkten berechnen, nach dem Stage-Merge, vor SaveTrip.
+		// arrival_calculated ist abgeleitet, nicht user-geliefert.
+		for i := range existing.Stages {
+			model.ComputeStageArrivals(&existing.Stages[i])
+		}
+
 		if err := validateTrip(*existing); err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(400)

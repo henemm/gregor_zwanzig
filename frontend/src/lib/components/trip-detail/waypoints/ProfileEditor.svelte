@@ -24,9 +24,13 @@
 		stage: Stage;
 		activeWaypointId: string | null;
 		onWaypointActivate: (waypointId: string) => void;
+		// Issue #296-FE: nur im Trip-Editor gesetzt. Klick auf die Profil-Flaeche
+		// fuegt einen Wegpunkt ein (fraction 0..1 entlang Profil-x). Detail-View
+		// gibt das Prop NICHT → keine Regression.
+		onProfileAdd?: (fraction: number) => void;
 	}
 
-	let { stage, activeWaypointId, onWaypointActivate }: Props = $props();
+	let { stage, activeWaypointId, onWaypointActivate, onProfileAdd }: Props = $props();
 
 	const padding = 8;
 	const svgW = 360;
@@ -70,7 +74,10 @@
 	);
 
 	function makeWaypointClickHandler(waypointId: string) {
-		return function handleWaypointClick() {
+		return function handleWaypointClick(e: MouseEvent) {
+			// Issue #296-FE: Pin-Klick aktiviert nur, fuegt NICHT hinzu — verhindert,
+			// dass der darunterliegende Flaechen-Click (onProfileAdd) mitfeuert.
+			e.stopPropagation();
 			onWaypointActivate(waypointId);
 		};
 	}
@@ -78,6 +85,24 @@
 	function makeWaypointKeyHandler(waypointId: string) {
 		return function handleWaypointKey(e: KeyboardEvent) {
 			if (e.key === 'Enter' || e.key === ' ') onWaypointActivate(waypointId);
+		};
+	}
+
+	// Issue #296-FE: Klick auf die Profil-Flaeche → fraction 0..1 entlang x.
+	// Nur aktiv wenn onProfileAdd gesetzt ist (Trip-Editor). Factory-Pattern
+	// (Safari-Closure-Schutz, siehe CLAUDE.md / WaypointsPanel-Vorbild).
+	function makeProfileAddHandler() {
+		return function handleProfileAdd(e: MouseEvent) {
+			if (!onProfileAdd) return;
+			const svg = (e.currentTarget as SVGElement).ownerSVGElement
+				?? (e.currentTarget as SVGSVGElement);
+			const rect = svg.getBoundingClientRect();
+			// clientX → SVG-Userspace-x (viewBox 0..svgW skaliert auf rect.width).
+			const scaleX = rect.width > 0 ? svgW / rect.width : 1;
+			const svgX = (e.clientX - rect.left) * scaleX;
+			const raw = (svgX - padding) / innerW;
+			const fraction = Math.min(1, Math.max(0, raw));
+			onProfileAdd(fraction);
 		};
 	}
 </script>
@@ -91,6 +116,21 @@
 	aria-label="Höhenprofil mit {n} Wegpunkten"
 	class="border border-[var(--g-ink-faint)]/20 rounded bg-white/40 w-full"
 >
+	<!-- Issue #296-FE: transparente Klick-Flaeche zum Hinzufuegen (nur im Editor). -->
+	{#if onProfileAdd}
+		<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+		<rect
+			data-testid="profile-add-area"
+			x="0"
+			y="0"
+			width={svgW}
+			height={svgH}
+			fill="transparent"
+			onclick={makeProfileAddHandler()}
+			style="cursor: copy;"
+		/>
+	{/if}
+
 	<!-- Gridlines bei 25%, 50%, 75% der Zeichenflaeche-Hoehe -->
 	<line
 		x1={padding}

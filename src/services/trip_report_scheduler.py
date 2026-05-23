@@ -42,6 +42,17 @@ def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
+def _parse_hhmm(value: str) -> Optional[time]:
+    """Parse 'HH:MM' to a time; returns None on malformed input.
+
+    Issue #296 — used to consume persisted Naismith arrival_calculated values.
+    """
+    try:
+        return time.fromisoformat(value)
+    except (ValueError, TypeError):
+        return None
+
+
 def build_service_error_email_html(trip_name: str, report_type: str, error_lines: str) -> str:
     """Build the Service-Error E-Mail-Body with Design-System tokens.
 
@@ -533,28 +544,41 @@ class TripReportSchedulerService:
             wp1 = waypoints[i]
             wp2 = waypoints[i + 1]
 
-            # Get wp1 start time (with interpolation fallback)
-            if wp1.time_window is None:
-                if i == 0:
-                    wp1_start = default_start
-                else:
-                    wp1_start = self._interpolate_arrival_time(
-                        waypoints[i - 1], wp1, cumulative_time,
-                    )
-                    logger.info(f"Interpolated time for {wp1.id}: {wp1_start}")
-            else:
+            # Get wp1 start time. Priority: time_window > persisted
+            # arrival_calculated (Issue #296, Go-Naismith) > interpolation.
+            # Interpolation uses a divergent max()-formula — the correct
+            # Naismith formula is the SUM (see segment_builder.compute_hiking_time);
+            # persisted arrival_calculated already carries the summed value.
+            wp1_arrival = (
+                _parse_hhmm(wp1.arrival_calculated) if wp1.arrival_calculated else None
+            )
+            if wp1.time_window is not None:
                 wp1_start = wp1.time_window.start
+            elif wp1_arrival is not None:
+                wp1_start = wp1_arrival
+            elif i == 0:
+                wp1_start = default_start
+            else:
+                wp1_start = self._interpolate_arrival_time(
+                    waypoints[i - 1], wp1, cumulative_time,
+                )
+                logger.info(f"Interpolated time for {wp1.id}: {wp1_start}")
 
             cumulative_time = wp1_start
 
-            # Get wp2 start time (with interpolation fallback)
-            if wp2.time_window is None:
+            # Get wp2 start time. Same priority chain as wp1.
+            wp2_arrival = (
+                _parse_hhmm(wp2.arrival_calculated) if wp2.arrival_calculated else None
+            )
+            if wp2.time_window is not None:
+                wp2_start = wp2.time_window.start
+            elif wp2_arrival is not None:
+                wp2_start = wp2_arrival
+            else:
                 wp2_start = self._interpolate_arrival_time(
                     wp1, wp2, wp1_start,
                 )
                 logger.info(f"Interpolated time for {wp2.id}: {wp2_start}")
-            else:
-                wp2_start = wp2.time_window.start
 
             # Convert time to datetime with UTC timezone
             start_dt = datetime.combine(
