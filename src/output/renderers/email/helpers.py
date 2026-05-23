@@ -14,7 +14,7 @@ from __future__ import annotations
 import math
 import re
 from collections import OrderedDict
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Optional
 from zoneinfo import ZoneInfo
 
@@ -205,12 +205,69 @@ def extract_night_rows(night_weather: NormalizedTimeseries,
 # Column descriptions / units legend
 # ----------------------------------------------------------------------
 
-def visible_cols(rows: list[dict]) -> list[tuple[str, str]]:
-    """(key, label) for columns present in rows, ordered by MetricCatalog."""
-    if not rows:
+# Sentinel: erlaubt der polymorphen visible_cols(), zwischen "kein horizon
+# kwarg uebergeben" (alter Tabellen-Rows-Pfad) und "horizon=None" (neuer
+# DisplayMetric-Pfad ohne Filter, Issue #342 Tag 4+) zu unterscheiden.
+_HORIZON_UNSET = object()
+
+
+def visible_cols(rows_or_metrics: list[dict], horizon=_HORIZON_UNSET):
+    """Polymorphe Funktion mit zwei Aufruf-Formen.
+
+    Alter Pfad (Renderer-Tabellen-Rows):
+        visible_cols(rows: list[dict]) -> list[tuple[str, str]]
+        rows = [{"time": "08", "wind": 12, "temp": 14}, ...]
+        Liefert (col_key, label)-Paare entsprechend MetricCatalog.
+
+    Neuer Pfad (Issue #342, DisplayMetric-Configs mit Horizon-Filter):
+        visible_cols(dc_metrics: list[dict], horizon: str | None) -> list[str]
+        dc_metrics = [{"metric_id":"wind", "enabled":True, "horizons":{...}}]
+        horizon in {"today","tomorrow","day_after"} -> nur metric_ids mit
+        horizons[horizon]==True (Default True wenn Feld fehlt).
+        horizon=None -> kein Horizont-Filter (Tag 4+).
+    """
+    # Neuer Pfad erkennt sich daran, dass das horizon-Keyword explizit
+    # uebergeben wurde (auch bei horizon=None).
+    if horizon is not _HORIZON_UNSET:
+        out: list[str] = []
+        for m in rows_or_metrics:
+            if not m.get("enabled", True):
+                continue
+            if horizon is not None:
+                horizons = m.get(
+                    "horizons",
+                    {"today": True, "tomorrow": True, "day_after": True},
+                )
+                if not horizons.get(horizon, True):
+                    continue
+            mid = m.get("metric_id")
+            if mid:
+                out.append(mid)
+        return out
+
+    # Alter Pfad: Tabellen-Rows -> (key, label) tuples.
+    if not rows_or_metrics:
         return []
-    keys = set(rows[0].keys()) - {"time"}
+    keys = set(rows_or_metrics[0].keys()) - {"time"}
     return [(k, label) for k, label, _ in get_col_defs() if k in keys]
+
+
+def derive_horizon(report_date: date, etappe_date: date) -> str | None:
+    """Issue #342 §5: Etappen-Startdatum -> Horizont-Schluessel.
+
+    Liefert 'today'/'tomorrow'/'day_after' fuer Delta 0/1/2 Tage relativ
+    zum Report-Datum. Etappen ab Tag 4 (Delta >= 3) liegen ausserhalb der
+    drei Horizonte und werden mit None markiert; der Renderer interpretiert
+    das als "kein Filter" (alle aktivierten Metriken sichtbar).
+    """
+    delta = (etappe_date - report_date).days
+    if delta == 0:
+        return "today"
+    if delta == 1:
+        return "tomorrow"
+    if delta == 2:
+        return "day_after"
+    return None
 
 
 def build_confidence_hint(

@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
@@ -268,6 +269,191 @@ func TestStore_LoadMetricPresets_EmptyWhenNoFile(t *testing.T) {
 	}
 	if len(presets) != 0 {
 		t.Fatalf("expected empty slice, got %d entries", len(presets))
+	}
+}
+
+// =============================================================================
+// Issue #342 — PATCH /api/metric-presets/{id}: Read-Modify-Write
+// Spec: docs/specs/modules/issue_342_pro_metrik_horizon_backend.md §4, AC-5
+//
+// Tests scheitern absichtlich (RED): PatchMetricPresetHandler existiert noch
+// nicht. Bei `go test` → undefined: handler.PatchMetricPresetHandler.
+// =============================================================================
+
+// TestPatchMetricPreset_NameOnly (AC-5)
+//
+// Given: bestehendes Preset {Name: "Original", Metrics: [wind enabled],
+//        IsDefault: false}.
+// When:  PATCH /api/metric-presets/{id} mit Body {"name": "Umbenannt"}.
+// Then:  HTTP 200, Response hat Name="Umbenannt", Metrics & IsDefault
+//        & CreatedAt unverändert. GET zeigt persistierten Zustand.
+func TestPatchMetricPreset_NameOnly(t *testing.T) {
+	s := newTestStore(t)
+
+	r := chi.NewRouter()
+	r.Get("/api/metric-presets", ListMetricPresetsHandler(s))
+	r.Post("/api/metric-presets", CreateMetricPresetHandler(s))
+	r.Patch("/api/metric-presets/{id}", PatchMetricPresetHandler(s))
+
+	// 1. Preset via POST anlegen.
+	createBody := map[string]interface{}{
+		"name":       "Original",
+		"metrics":    []map[string]interface{}{{"metric_id": "wind", "enabled": true}},
+		"is_default": false,
+	}
+	createBytes, _ := json.Marshal(createBody)
+	postW := httptest.NewRecorder()
+	r.ServeHTTP(postW, withBody(t, "POST", "/api/metric-presets", createBytes))
+	if postW.Code != http.StatusCreated {
+		t.Fatalf("POST failed: %d %s", postW.Code, postW.Body.String())
+	}
+	var created model.MetricPreset
+	if err := json.Unmarshal(postW.Body.Bytes(), &created); err != nil {
+		t.Fatalf("failed to parse POST response: %v", err)
+	}
+	originalMetrics := created.Metrics
+	originalCreatedAt := created.CreatedAt
+
+	// 2. PATCH nur den Name.
+	patchBody := map[string]interface{}{"name": "Umbenannt"}
+	patchBytes, _ := json.Marshal(patchBody)
+	patchW := httptest.NewRecorder()
+	r.ServeHTTP(patchW, withBody(t, "PATCH", "/api/metric-presets/"+created.ID, patchBytes))
+
+	if patchW.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", patchW.Code, patchW.Body.String())
+	}
+
+	var patched model.MetricPreset
+	if err := json.Unmarshal(patchW.Body.Bytes(), &patched); err != nil {
+		t.Fatalf("failed to parse PATCH response: %v", err)
+	}
+
+	if patched.Name != "Umbenannt" {
+		t.Errorf("expected Name=Umbenannt, got %q", patched.Name)
+	}
+	if patched.IsDefault != false {
+		t.Errorf("IsDefault changed unexpectedly: got %v", patched.IsDefault)
+	}
+	if !patched.CreatedAt.Equal(originalCreatedAt) {
+		t.Errorf("CreatedAt changed: got %v want %v", patched.CreatedAt, originalCreatedAt)
+	}
+	if !reflect.DeepEqual(patched.Metrics, originalMetrics) {
+		t.Errorf("Metrics changed unexpectedly:\ngot:  %#v\nwant: %#v",
+			patched.Metrics, originalMetrics)
+	}
+
+	// 3. GET zeigt persistierten Zustand.
+	getW := httptest.NewRecorder()
+	r.ServeHTTP(getW, httptest.NewRequest("GET", "/api/metric-presets", nil))
+	var list []model.MetricPreset
+	json.Unmarshal(getW.Body.Bytes(), &list)
+	if len(list) != 1 {
+		t.Fatalf("expected 1 preset after PATCH, got %d", len(list))
+	}
+	if list[0].Name != "Umbenannt" {
+		t.Errorf("persisted Name=%q, expected Umbenannt", list[0].Name)
+	}
+	if !reflect.DeepEqual(list[0].Metrics, originalMetrics) {
+		t.Errorf("persisted Metrics changed:\ngot:  %#v\nwant: %#v",
+			list[0].Metrics, originalMetrics)
+	}
+}
+
+// TestPatchMetricPreset_NotFound
+//
+// PATCH auf nicht-existierende ID → HTTP 404.
+func TestPatchMetricPreset_NotFound(t *testing.T) {
+	s := newTestStore(t)
+
+	r := chi.NewRouter()
+	r.Patch("/api/metric-presets/{id}", PatchMetricPresetHandler(s))
+
+	patchBytes, _ := json.Marshal(map[string]interface{}{"name": "X"})
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, withBody(t, "PATCH", "/api/metric-presets/nonexistent-id", patchBytes))
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+// TestPatchMetricPreset_IsDefaultExclusive
+//
+// Zwei Presets A und B (beide is_default=false).
+// 1. PATCH B mit {is_default: true} → B=true, A=false.
+// 2. PATCH A mit {is_default: true} → A=true, B=false (exklusiver Default).
+func TestPatchMetricPreset_IsDefaultExclusive(t *testing.T) {
+	s := newTestStore(t)
+
+	r := chi.NewRouter()
+	r.Get("/api/metric-presets", ListMetricPresetsHandler(s))
+	r.Post("/api/metric-presets", CreateMetricPresetHandler(s))
+	r.Patch("/api/metric-presets/{id}", PatchMetricPresetHandler(s))
+
+	createPreset := func(name string) model.MetricPreset {
+		body := map[string]interface{}{
+			"name":       name,
+			"metrics":    []map[string]interface{}{{"metric_id": "wind", "enabled": true}},
+			"is_default": false,
+		}
+		b, _ := json.Marshal(body)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, withBody(t, "POST", "/api/metric-presets", b))
+		if w.Code != http.StatusCreated {
+			t.Fatalf("create %s failed: %d %s", name, w.Code, w.Body.String())
+		}
+		var p model.MetricPreset
+		json.Unmarshal(w.Body.Bytes(), &p)
+		return p
+	}
+
+	a := createPreset("Preset A")
+	b := createPreset("Preset B")
+
+	loadList := func() []model.MetricPreset {
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, httptest.NewRequest("GET", "/api/metric-presets", nil))
+		var list []model.MetricPreset
+		json.Unmarshal(w.Body.Bytes(), &list)
+		return list
+	}
+
+	patchDefault := func(id string) {
+		body, _ := json.Marshal(map[string]interface{}{"is_default": true})
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, withBody(t, "PATCH", "/api/metric-presets/"+id, body))
+		if w.Code != http.StatusOK {
+			t.Fatalf("PATCH %s failed: %d %s", id, w.Code, w.Body.String())
+		}
+	}
+
+	defaultByID := func(list []model.MetricPreset) map[string]bool {
+		out := map[string]bool{}
+		for _, p := range list {
+			out[p.ID] = p.IsDefault
+		}
+		return out
+	}
+
+	// 1. B auf default setzen.
+	patchDefault(b.ID)
+	got := defaultByID(loadList())
+	if !got[b.ID] {
+		t.Errorf("after PATCH B: B.IsDefault should be true, got false")
+	}
+	if got[a.ID] {
+		t.Errorf("after PATCH B: A.IsDefault should be false, got true")
+	}
+
+	// 2. A auf default setzen → B muss zurück auf false.
+	patchDefault(a.ID)
+	got = defaultByID(loadList())
+	if !got[a.ID] {
+		t.Errorf("after PATCH A: A.IsDefault should be true, got false")
+	}
+	if got[b.ID] {
+		t.Errorf("after PATCH A: B.IsDefault should be false, got true")
 	}
 }
 
