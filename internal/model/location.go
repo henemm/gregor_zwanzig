@@ -12,6 +12,7 @@ type Location struct {
 	BergfexSlug     *string                `json:"bergfex_slug,omitempty"`
 	ActivityProfile *string                `json:"activity_profile,omitempty"`
 	Group           *string                `json:"group,omitempty"`
+	GroupID         *string                `json:"group_id,omitempty"`
 	DisplayConfig   map[string]interface{} `json:"display_config,omitempty"`
 	Timezone        string                 `json:"timezone,omitempty"`
 	DataSource      string                 `json:"data_source,omitempty"`

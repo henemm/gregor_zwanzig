@@ -146,6 +146,59 @@ func UpdateLocationHandler(s *store.Store) http.HandlerFunc {
 	}
 }
 
+// PatchLocationHandler — PATCH /api/locations/{id}. Partial merge of present
+// keys (at least group_id). 404 if location missing. All other fields
+// (CreatedAt, ActivityProfile, …) are preserved. Issue #341 §6.
+func PatchLocationHandler(s *store.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
+		id := chi.URLParam(r, "id")
+
+		existing, err := s.LoadLocation(id)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(500)
+			w.Write([]byte(`{"error":"store_error"}`))
+			return
+		}
+		if existing == nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(404)
+			w.Write([]byte(`{"error":"not_found"}`))
+			return
+		}
+
+		var patch map[string]json.RawMessage
+		if err := json.NewDecoder(r.Body).Decode(&patch); err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(400)
+			w.Write([]byte(`{"error":"bad_request"}`))
+			return
+		}
+
+		if raw, ok := patch["group_id"]; ok {
+			var v *string
+			if err := json.Unmarshal(raw, &v); err != nil {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(400)
+				w.Write([]byte(`{"error":"bad_request"}`))
+				return
+			}
+			existing.GroupID = v
+		}
+
+		if err := s.SaveLocation(*existing); err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(500)
+			w.Write([]byte(`{"error":"store_error"}`))
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(existing)
+	}
+}
+
 func DeleteLocationHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
