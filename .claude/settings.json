@@ -18,72 +18,72 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 /home/hem/gregor_zwanzig/.claude/hooks/workflow_gate.py",
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/workflow_gate.py",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "python3 /home/hem/gregor_zwanzig/.claude/hooks/spec_enforcement.py",
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/spec_enforcement.py",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "python3 /home/hem/gregor_zwanzig/.claude/hooks/claude_md_protection.py",
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/claude_md_protection.py",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "python3 /home/hem/gregor_zwanzig/.claude/hooks/tdd_enforcement.py",
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/tdd_enforcement.py",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "python3 /home/hem/gregor_zwanzig/.claude/hooks/red_test_gate.py",
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/red_test_gate.py",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "python3 /home/hem/gregor_zwanzig/.claude/hooks/post_implementation_gate.py",
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/post_implementation_gate.py",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "python3 /home/hem/gregor_zwanzig/.claude/hooks/scope_guard.py",
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/scope_guard.py",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "python3 /home/hem/gregor_zwanzig/.claude/hooks/plan_validator.py",
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/plan_validator.py",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "python3 /home/hem/gregor_zwanzig/.claude/hooks/ui_screenshot_gate.py",
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/ui_screenshot_gate.py",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "python3 /home/hem/gregor_zwanzig/.claude/hooks/domain_pattern_guard.py",
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/domain_pattern_guard.py",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "python3 /home/hem/gregor_zwanzig/.claude/hooks/architecture_guard.py",
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/architecture_guard.py",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "python3 /home/hem/gregor_zwanzig/.claude/hooks/track_changes.py",
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/track_changes.py",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "python3 /home/hem/gregor_zwanzig/.claude/hooks/backlog_guard.py",
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/backlog_guard.py",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "python3 /home/hem/gregor_zwanzig/.claude/hooks/data_schema_backup.py",
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/data_schema_backup.py",
             "timeout": 35
           }
         ]
@@ -93,22 +93,22 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 /home/hem/gregor_zwanzig/.claude/hooks/pre_commit_gate.py",
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/pre_commit_gate.py",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "python3 /home/hem/gregor_zwanzig/.claude/hooks/pre_commit_validation.py",
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/pre_commit_validation.py",
             "timeout": 180
           },
           {
             "type": "command",
-            "command": "python3 /home/hem/gregor_zwanzig/.claude/hooks/secrets_guard.py",
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/secrets_guard.py",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "python3 /home/hem/gregor_zwanzig/.claude/hooks/e2e_commit_gate.py",
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/e2e_commit_gate.py",
             "timeout": 5
           }
         ]
@@ -118,7 +118,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 /home/hem/gregor_zwanzig/.claude/hooks/secrets_guard.py",
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/secrets_guard.py",
             "timeout": 5
           }
         ]
@@ -139,7 +139,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 /home/hem/gregor_zwanzig/.claude/hooks/notify_sound.py",
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/notify_sound.py",
             "timeout": 5
           }
         ]
@@ -150,7 +150,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 /home/hem/gregor_zwanzig/.claude/hooks/workflow_state_updater.py",
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/workflow_state_updater.py",
             "timeout": 5
           }
         ]
@@ -162,7 +162,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 /home/hem/gregor_zwanzig/.claude/hooks/auto_restart_server.py",
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/auto_restart_server.py",
             "timeout": 30
           }
         ]

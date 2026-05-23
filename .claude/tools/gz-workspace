@@ -1,0 +1,144 @@
+#!/usr/bin/env bash
+#
+# gz-workspace — Isolierte Parallel-Workspaces (Issue #348)
+#
+# Erzeugt pro Claude-Session eine eigenstaendige Arbeitskopie via
+# `git clone --local` (Objekte gehardlinkt -> platzsparend, eigene .git,
+# eigener Index, eigener .claude/-State). So kollidieren parallele Sessions
+# weder ueber gemeinsame Dateien noch ueber gemeinsame Workflow-Buchfuehrung.
+#
+# Aufruf AUS dem zu parallelisierenden Repo heraus (cwd im Repo).
+#
+#   bash .claude/tools/gz-workspace new <name>
+#   bash .claude/tools/gz-workspace list
+#   bash .claude/tools/gz-workspace clean <name> [--force]
+#
+set -euo pipefail
+
+WS_ROOT="${GZ_WS_ROOT:-/home/hem/gz-workspaces}"
+
+usage() {
+    cat <<'EOF'
+gz-workspace — isolierte Parallel-Workspaces (clone-basiert)
+
+Aufruf aus dem zu parallelisierenden Repo heraus:
+
+  gz-workspace new <name>            Neuen isolierten Workspace anlegen
+  gz-workspace list                  Alle Workspaces mit Branch + Status
+  gz-workspace clean <name>          Workspace entfernen (nur wenn sauber)
+  gz-workspace clean <name> --force  Workspace ungeprueft entfernen
+
+Konfiguration:
+  GZ_WS_ROOT   Wurzelverzeichnis fuer Workspaces (Default: /home/hem/gz-workspaces)
+
+Name-Regeln: ^[a-z0-9][a-z0-9-]*$
+Jeder Workspace ist voll isoliert (eigene Dateien + eigener Workflow-State).
+EOF
+}
+
+die() {
+    echo "Fehler: $*" >&2
+    exit 1
+}
+
+# Hauptrepo = das Repo, aus dem heraus das Skript aufgerufen wird.
+src_repo() {
+    git -C "$PWD" rev-parse --show-toplevel 2>/dev/null \
+        || die "Nicht in einem git-Repo aufgerufen (cwd: $PWD)"
+}
+
+cmd_new() {
+    local name="${1:-}"
+    [ -n "$name" ] || die "Name fehlt. Aufruf: gz-workspace new <name>"
+    [[ "$name" =~ ^[a-z0-9][a-z0-9-]*$ ]] \
+        || die "Ungueltiger Name '$name' (erlaubt: ^[a-z0-9][a-z0-9-]*\$)"
+
+    local src target
+    src="$(src_repo)"
+    target="$WS_ROOT/$name"
+    [ -e "$target" ] && die "Workspace existiert bereits: $target"
+
+    mkdir -p "$WS_ROOT"
+    git clone --local "$src" "$target" >&2
+    git -C "$target" checkout -b "ws/$name" >&2
+
+    # Laufenden lokalen Workflow-State im Klon entfernen (nur Top-Level *.json;
+    # _archive/_log bleiben unangetastet). Klon startet mit sauberem State.
+    rm -f "$target"/.claude/workflows/*.json 2>/dev/null || true
+
+    cat >&2 <<EOF
+
+Workspace angelegt: $target  (Branch ws/$name)
+
+Naechste Schritte:
+  cd $target
+  # dort eine NEUE Claude-Session starten
+  # fuer Frontend-Arbeit:  cd frontend && npm ci
+EOF
+}
+
+cmd_list() {
+    printf 'WORKSPACE\tBRANCH\tUNCOMMITTED\n'
+    [ -d "$WS_ROOT" ] || return 0
+    local dir name branch dirty
+    for dir in "$WS_ROOT"/*/; do
+        [ -d "$dir" ] || continue
+        dir="${dir%/}"
+        name="$(basename "$dir")"
+        if [ -d "$dir/.git" ]; then
+            branch="$(git -C "$dir" rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')"
+            dirty="$(git -C "$dir" status --porcelain 2>/dev/null | wc -l | tr -d ' ')"
+        else
+            branch='(kein git)'
+            dirty='?'
+        fi
+        printf '%s\t%s\t%s\n' "$name" "$branch" "$dirty"
+    done
+}
+
+cmd_clean() {
+    local name="" force=0 arg
+    for arg in "$@"; do
+        case "$arg" in
+            --force) force=1 ;;
+            -*) die "Unbekannte Option: $arg" ;;
+            *) [ -z "$name" ] && name="$arg" || die "Zu viele Argumente" ;;
+        esac
+    done
+    [ -n "$name" ] || die "Name fehlt. Aufruf: gz-workspace clean <name> [--force]"
+
+    local target
+    target="$WS_ROOT/$name"
+    [ -d "$target" ] || die "Workspace existiert nicht: $target"
+
+    if [ "$force" -ne 1 ]; then
+        local dirty
+        dirty="$(git -C "$target" status --porcelain 2>/dev/null | wc -l | tr -d ' ')"
+        [ "$dirty" = "0" ] \
+            || die "Workspace '$name' hat $dirty uncommittete Aenderung(en). Mit --force entfernen."
+
+        # Ungepushte Commits pruefen — nur wenn ein Upstream existiert.
+        if git -C "$target" rev-parse --abbrev-ref '@{u}' >/dev/null 2>&1; then
+            local ahead
+            ahead="$(git -C "$target" rev-list '@{u}..' 2>/dev/null | wc -l | tr -d ' ')"
+            [ "$ahead" = "0" ] \
+                || die "Workspace '$name' hat $ahead ungepushte(n) Commit(s). Mit --force entfernen."
+        fi
+    fi
+
+    rm -rf "$target"
+    echo "Workspace entfernt: $target" >&2
+}
+
+main() {
+    local sub="${1:-}"
+    case "$sub" in
+        new)   shift; cmd_new "$@" ;;
+        list)  shift; cmd_list "$@" ;;
+        clean) shift; cmd_clean "$@" ;;
+        ""|-h|--help|help) usage ;;
+        *) usage; die "Unbekanntes Subkommando: $sub" ;;
+    esac
+}
+
+main "$@"

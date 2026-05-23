@@ -303,6 +303,20 @@ store.SaveTrip(trip)  // existing.aggregation, .display_config etc. weg!
 
 **Korrekt:** Read-Modify-Write mit Merge — bestehendes Objekt laden, nur explizit veraenderte Felder ueberschreiben, Rest erhalten.
 
+## Parallele Sessions
+
+**Ein Projektordner = hoechstens eine Claude-Session gleichzeitig.** Mehrere Sessions im selben Working-Tree kollidieren: gemeinsame Dateien (uncommittete Fremd-Arbeit verschmutzt die Sicht, `git add -A` wuerde sie mit-committen) und gemeinsame Workflow-Buchfuehrung (Session-Verwechslung).
+
+Fuer Parallelarbeit eine isolierte Arbeitskopie anlegen:
+
+```bash
+bash .claude/tools/gz-workspace new <name>   # isolierter Klon unter $GZ_WS_ROOT (Default /home/hem/gz-workspaces) auf Branch ws/<name>
+bash .claude/tools/gz-workspace list         # alle Workspaces mit Branch + uncommitted-Zaehler
+bash .claude/tools/gz-workspace clean <name> # entfernen (nur wenn sauber; --force erzwingt)
+```
+
+Danach `cd` in den Workspace und dort eine NEUE Claude-Session starten. Fuer Frontend-Arbeit dort `cd frontend && npm ci`. Jeder Workspace ist voll isoliert (eigenes `.git`/Index, eigene Dateien, eigener Workflow-State); die Klon-Objekte sind gehardlinkt (platzsparend). Hauptrepo und andere Workspaces bleiben unberuehrt.
+
 ## Deployment & Infrastruktur
 
 Globale Server-Infos und Monitoring-Anleitung stehen in `~/.claude/CLAUDE.md`.
