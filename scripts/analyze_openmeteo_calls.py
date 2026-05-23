@@ -2,9 +2,16 @@
 """
 Issue #338 — Auswertung des Open-Meteo Abruf-Zählers.
 
-Liest die append-only JSONL (data/diagnostics/openmeteo_calls.jsonl) und gibt
-eine Aufschlüsselung der Abrufe nach Quelle, Endpoint und Stunde sowie die
-Status-Quote (200 / 429 / sonstige) aus.
+Liest beide append-only JSONL-Quellen und aggregiert sie GEMEINSAM:
+- Python-Pfad (data/diagnostics/openmeteo_calls.jsonl) — OpenMeteoProvider +
+  GeoSphereProvider (`geosphere_clouds`)
+- Go-Pfad   (data/diagnostics/openmeteo_calls_go.jsonl) — Go-Provider
+  (`go_forecast` / `go_uv`)
+
+Die Go-Datei wird automatisch als Geschwisterdatei der angegebenen Python-JSONL
+gesucht (gleiches Verzeichnis). Ausgabe: Aufschlüsselung nach Quelle, Endpoint
+und Stunde sowie Status-Quote (200 / 429 / sonstige). Quelle-Präfix `go_*` macht
+die Sprachherkunft sichtbar.
 
 Nur stdlib — keine externen Abhängigkeiten.
 
@@ -21,6 +28,7 @@ from collections import Counter
 from pathlib import Path
 
 DEFAULT_PATH = Path("data/diagnostics/openmeteo_calls.jsonl")
+GO_FILENAME = "openmeteo_calls_go.jsonl"
 
 
 def _load(path: Path) -> list[dict]:
@@ -63,13 +71,19 @@ def _print_breakdown(title: str, counter: Counter, total: int) -> None:
 
 
 def analyze(path: Path) -> int:
+    # Issue #338 (Erweiterung): Python- UND Go-Quelle gemeinsam aggregieren.
     rows = _load(path)
+    go_path = path.parent / GO_FILENAME
+    go_rows = _load(go_path) if go_path != path else []
+    rows = rows + go_rows
     total = len(rows)
 
     print("=" * 60)
-    print(f"Open-Meteo Abruf-Zähler — {path}")
+    print("Open-Meteo Abruf-Zähler")
+    print(f"  Python: {path}")
+    print(f"  Go:     {go_path}")
     print("=" * 60)
-    print(f"\nGesamt-Abrufe: {total}")
+    print(f"\nGesamt-Abrufe (beide Quellen): {total}")
 
     if total == 0:
         return 0

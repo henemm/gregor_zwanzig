@@ -357,8 +357,17 @@ class GeoSphereProvider:
             f"timezone=Europe/Vienna&forecast_hours={hours}"
         )
 
+        # Issue #338: jeden ausgehenden Open-Meteo-Clouds-Abruf zählen
+        # (source="geosphere_clouds"). Fail-soft, kein Verhaltenswandel.
+        from providers.call_log import log_api_call
+
+        responded = False
         try:
             response = self._client.get(url, timeout=10.0)
+            responded = True
+            log_api_call(
+                "https://api.open-meteo.com/v1/forecast", response.status_code
+            )
             response.raise_for_status()
             data = response.json()
 
@@ -384,7 +393,13 @@ class GeoSphereProvider:
 
             return result
 
-        except Exception:
+        except Exception as e:
+            # Issue #338: Request-Fehler vor Response (kein Status) eigens
+            # protokollieren; nach erfolgreichem get() ist bereits geloggt.
+            if not responded:
+                log_api_call(
+                    "https://api.open-meteo.com/v1/forecast", None, error=str(e)
+                )
             # Silently fail - cloud layers are optional
             return {}
 

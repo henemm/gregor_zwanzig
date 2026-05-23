@@ -41,6 +41,7 @@ from app.models import (
     Provider,
     ThunderLevel,
 )
+from providers import call_log
 from providers.base import ProviderError, ProviderRequestError
 
 if TYPE_CHECKING:
@@ -392,61 +393,33 @@ class OpenMeteoProvider:
         )
 
     # Issue #338: Mapping Aufrufer-Funktionsname (im Stack) -> Diagnose-Quelle.
-    # Reihenfolge = Priorität (äußerste/spezifischste Quelle zuerst).
-    # F002-Fix (#338): Vorschau-Einstiegsfunktionen GANZ NACH OBEN — die
-    # Vorschau ist die äußerste Quelle, ihre gesamte Last (inkl. evtl.
-    # Trend-Anteil) soll als "vorschau" erfasst werden. Echte Funktionsnamen
-    # statt Teilstring "preview", um die _fetch_weather→"briefing"-Falle und
-    # Teilstring-Kollisionen zu vermeiden.
-    _CALL_SOURCE_MARKERS = [
-        ("render_email_preview", "vorschau"),
-        ("render_sms_preview", "vorschau"),
-        ("_fetch_fresh_weather", "alarm"),
-        ("_build_stage_trend", "trend"),
-        ("_enrich_ensemble_for_trip", "ensemble"),
-        ("_fetch_ensemble_spread", "ensemble"),
-        ("_fetch_uv_data", "uv"),
-        ("_fetch_night_weather", "briefing_nacht"),
-        ("_fetch_weather", "briefing"),
-        ("compare", "vergleich"),
-    ]
+    # Konsolidiert nach providers.call_log (DRY). Klassen-Attribut bleibt als
+    # Alias für Rückwärtskompatibilität bestehender Referenzen.
+    _CALL_SOURCE_MARKERS = call_log._CALL_SOURCE_MARKERS
 
     def _resolve_call_source(self) -> str:
-        """Issue #338: Diagnose-Quelle aus den Aufrufer-Frame-Namen ableiten."""
-        import inspect
-
-        names = [f.function for f in inspect.stack()[:25]]
-        for marker, source in self._CALL_SOURCE_MARKERS:
-            if any(marker in n for n in names):
-                return source
-        return "unbekannt"
+        """Issue #338: Thin-Wrapper auf call_log.resolve_call_source()."""
+        return call_log.resolve_call_source()
 
     def _log_api_call(
         self, endpoint: str, status: Optional[int], error: Optional[str] = None
     ) -> None:
         """
-        Issue #338: Einen ausgehenden Open-Meteo-Abruf protokollieren (fail-soft).
+        Issue #338: Thin-Wrapper auf call_log.log_api_call() (fail-soft).
 
-        Hängt eine JSONL-Zeile (ts, endpoint, status, source, error) an
-        DIAGNOSTICS_PATH an. Jeder Fehler wird geschluckt — Diagnose darf den
-        Abruf NIE beeinträchtigen.
+        Die bestehenden Tests konfigurieren providers.openmeteo.DIAGNOSTICS_PATH
+        um; damit diese Umkonfiguration weiter greift, wird der hier gültige
+        DIAGNOSTICS_PATH vor dem Delegieren an call_log gespiegelt. Verhalten
+        unverändert gegenüber bd8e1e2.
         """
-        try:
-            import providers.openmeteo as _om
+        import providers.openmeteo as _om
 
-            path = _om.DIAGNOSTICS_PATH
-            path.parent.mkdir(parents=True, exist_ok=True)
-            line = json.dumps({
-                "ts": datetime.now(timezone.utc).isoformat(),
-                "endpoint": endpoint,
-                "status": status,
-                "source": self._resolve_call_source(),
-                "error": error,
-            })
-            with path.open("a") as fh:
-                fh.write(line + "\n")
-        except Exception:
-            pass  # Diagnose darf den Abruf NIE beeinträchtigen
+        prev = call_log.DIAGNOSTICS_PATH
+        call_log.DIAGNOSTICS_PATH = _om.DIAGNOSTICS_PATH
+        try:
+            call_log.log_api_call(endpoint, status, error)
+        finally:
+            call_log.DIAGNOSTICS_PATH = prev
 
     @retry(
         stop=stop_after_attempt(RETRY_ATTEMPTS),

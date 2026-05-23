@@ -69,10 +69,15 @@ func (p *OpenMeteoProvider) doRequest(ctx context.Context, reqURL string) ([]byt
 
 		resp, err := p.client.Do(req)
 		if err != nil {
+			// Issue #338: Netzwerkfehler (kein Status) protokollieren.
+			logAPICall(reqURL, 0, err.Error())
 			lastErr = err
 			log.Printf("WARN: OpenMeteo request attempt %d failed: %v", attempt+1, err)
 			continue
 		}
+		// Issue #338: erfolgreichen HTTP-Roundtrip (jeder Status, inkl. 429)
+		// protokollieren — bildet die echte Last pro Retry-Versuch ab.
+		logAPICall(reqURL, resp.StatusCode, "")
 
 		body, readErr := io.ReadAll(resp.Body)
 		resp.Body.Close()
