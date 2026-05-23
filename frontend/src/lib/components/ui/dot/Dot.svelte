@@ -3,7 +3,7 @@
 	import { cn, type WithElementRef } from '$lib/utils.js';
 
 	type WeatherTone = 'rain' | 'sun' | 'wind' | 'snow' | 'thunder' | 'fog';
-	type SemanticTone = 'success' | 'warning' | 'danger' | 'info';
+	type SemanticTone = 'default' | 'success' | 'warning' | 'danger' | 'info';
 
 	interface Props extends WithElementRef<HTMLAttributes<HTMLSpanElement>> {
 		tone: WeatherTone | SemanticTone;

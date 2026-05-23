@@ -28,7 +28,7 @@
 	import RecommendationBanner from '$lib/components/compare/RecommendationBanner.svelte';
 	import CompareMatrix from '$lib/components/compare/CompareMatrix.svelte';
 	import HourlyMatrix from '$lib/components/compare/HourlyMatrix.svelte';
-	import CompareSubscriptionsPanel from '$lib/components/compare/CompareSubscriptionsPanel.svelte';
+	import AutoReportsOverview from '$lib/components/compare/AutoReportsOverview.svelte';
 	import { WIcon } from '$lib/components/ui/wicon/index.js';
 	import { wmoToWIconKind } from '$lib/utils/weatherUtils.js';
 	import { Select } from '$lib/components/ui/select';
@@ -470,7 +470,7 @@
 
 		<!-- Auto-Reports: show when no comparison active -->
 		{#if !result && !loading && !weatherLocationId}
-			<CompareSubscriptionsPanel
+			<AutoReportsOverview
 				{subscriptions}
 				onsavebriefing={() => (showSaveAsSubDialog = true)}
 			/>
