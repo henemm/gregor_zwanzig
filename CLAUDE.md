@@ -110,31 +110,33 @@ uv run pytest
 
 **NIEMALS `Mock()`, `patch()`, oder `MagicMock` fuer E-Mail/API Tests verwenden!**
 
-## ECHTE E2E TESTS (NOCH KRITISCHER!)
+## E2E-Verifikation (Post-Push auf Staging)
 
-**ICH (Claude) starte und restarte den Server - NICHT der User!**
+Die echte "funktioniert es wirklich"-Verifikation laeuft **nach** dem Push gegen
+die Staging-Umgebung (`https://staging.gregor20.henemm.com`) — **nie** durch einen
+lokalen Neustart des Live-Servers (auf dieser Maschine = Produktion). Siehe Issue #339.
 
-**E2E Test Workflow:**
+**Ablauf:** `git push origin main` → ~5 Min Staging-Auto-Deploy abwarten →
+`/e2e-verify` (gegen Staging) → `deploy-gregor-prod.sh`.
 
-1. **ICH stoppe den alten Server** (falls laufend)
-2. **ICH starte den Server neu** mit aktuellem Code
-3. **ICH fuehre Browser-Test aus** mit Playwright
-4. **ICH pruefe Screenshot** visuell
-5. **ICH teste E-Mail** via SMTP senden + IMAP pruefen
+**E2E-Verifikation (`/e2e-verify`):**
 
-**Benutze den E2E Hook:**
+1. Smoke gegen Staging (`/` + `/api/health`)
+2. Scope bestimmen (frontend-only vs. backend/full-stack)
+3. frontend-only → visuelle Pruefung (Playwright/Screenshot), keine Mail
+4. backend/full-stack → Test-Trip auf Staging, Mail nur an `gregor-test@henemm.com`, IMAP-Pruefung
+5. Nachweis in `.claude/e2e_verified.json`
+
+Basis-URL fuer Browser-Checks via `GZ_SVELTE_BASE` (Default Staging):
 ```bash
-# Browser Test
-uv run python3 .claude/hooks/e2e_browser_test.py browser --check "Feature" --action "compare"
-
-# Email Test
-uv run python3 .claude/hooks/e2e_browser_test.py email --check "Feature" --send-from-ui
+GZ_SVELTE_BASE=https://staging.gregor20.henemm.com \
+  uv run python3 .claude/hooks/e2e_browser_test.py browser --check "Feature" --url "/"
 ```
 
 **VERBOTEN:**
-- Python-Funktionen direkt aufrufen und als "E2E Test" bezeichnen
-- User bitten den Server zu starten
-- "E2E Test erfolgreich" sagen ohne gruenen Hook-Output
+- Den lokalen Live-Server stoppen oder neu starten
+- Sammel-Versand ueber alle Touren — nur der Test-Trip darf eine Mail bekommen
+- "E2E Test erfolgreich" sagen ohne Verifikation gegen Staging
 
 ## E-MAIL SPEC VALIDATOR (ZWINGEND!)
 
@@ -145,6 +147,10 @@ uv run python3 .claude/hooks/email_spec_validator.py
 ```
 
 Prueft: Struktur, Location-Anzahl, Plausibilitaet, Format, Vollstaendigkeit.
+
+Laeuft in der Acceptance-Stage gegen die Staging-Mail: Test-Trip mit Empfaenger
+`gregor-test@henemm.com`, IMAP-Quelle ist das Stalwart-Test-Postfach (`mail.henemm.com`).
+Credentials kommen aus den Settings (`GZ_IMAP_*`) — niemals im Klartext hier. Kein Gmail.
 
 **NUR bei Exit 0 darfst du "E2E Test bestanden" sagen!**
 

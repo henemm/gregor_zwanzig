@@ -27,6 +27,18 @@ import email
 from pathlib import Path
 
 
+def _base_url():
+    """Konfigurierbare Basis-URL fuer Browser-Checks (Default: Staging).
+
+    Override via GZ_SVELTE_BASE. NiceGUI (Port 8080) ist seit Epic #129 A.3
+    entfernt; die frueher hartkodierte lokale URL existiert nicht mehr.
+    """
+    import os
+    return os.environ.get(
+        "GZ_SVELTE_BASE", "https://staging.gregor20.henemm.com"
+    ).rstrip("/")
+
+
 def run_browser_test(url: str, check_text: str, action: str = None) -> tuple[bool, str, str]:
     """
     Führt Browser-Test durch.
@@ -47,7 +59,7 @@ def run_browser_test(url: str, check_text: str, action: str = None) -> tuple[boo
             page = browser.new_page(viewport={'width': 1400, 'height': 1000})
 
             # Navigate to page
-            full_url = f"http://localhost:8080{url}"
+            full_url = f"{_base_url()}{url}"
             try:
                 page.goto(full_url, timeout=5000)
             except Exception as e:
@@ -131,7 +143,7 @@ def run_email_test(check_text: str, send_from_ui: bool = False) -> tuple[bool, s
                 browser = p.chromium.launch(headless=True)
                 page = browser.new_page(viewport={'width': 1400, 'height': 1000})
 
-                page.goto('http://localhost:8080/compare', timeout=5000)
+                page.goto(f'{_base_url()}/compare', timeout=5000)
                 time.sleep(2)
 
                 # Select first 3 locations (minimum for spec compliance)
@@ -227,7 +239,7 @@ def main():
 
     if args.mode == "browser":
         print(f"🔍 E2E BROWSER Test")
-        print(f"   URL: http://localhost:8080{args.url}")
+        print(f"   URL: {_base_url()}{args.url}")
         print(f"   Check: '{args.check}'")
         print(f"   Action: {args.action}")
         print(f"   Expect: {'RED' if expect_fail else 'GREEN'}")

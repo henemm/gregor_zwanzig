@@ -1,201 +1,102 @@
-# E2E Production Verification
+# E2E-Verifikation (Post-Push auf Staging)
 
-**PFLICHT vor jedem Commit!** Mechanische Verifikation, dass der neue Code produktiv funktioniert.
+Sichere Acceptance-Stage-Verifikation, dass der neue Code auf der **Staging**-Umgebung
+tatsaechlich funktioniert. Sie ersetzt die fruehere lokale Prod-Verifikation
+(Issue #339): kein Eingriff in den Live-Server, keine Mails an echte Nutzer.
 
-Du MUSST jeden Schritt vollstaendig ausfuehren. Kein Schritt darf uebersprungen werden.
-Am Ende schreibst du `.claude/e2e_verified.json` — ohne diese Datei blockiert der Pre-Commit-Hook.
+## Wann ausfuehren
 
-## Optional: Staging-Umgebung
+NACH `git push origin main`, sobald der Staging-Auto-Deploy (~5 Min via Cron)
+durch ist — und VOR `deploy-gregor-prod.sh`.
 
-Eine Staging-Umgebung steht unter https://staging.gregor20.henemm.com bereit (Auto-Deploy alle 5 Min via Cron auf push to main; siehe henemm/henemm-infra#52).
+Ablauf:
+1. `git push origin main`
+2. ~5 Min warten (Auto-Deploy auf Staging)
+3. Diese Prozedur (`/e2e-verify`) gegen Staging
+4. `deploy-gregor-prod.sh`
 
-TDD-Tests koennen via ENV gegen Staging laufen:
-```bash
-GZ_SVELTE_BASE=https://staging.gregor20.henemm.com uv run pytest tests/tdd/
-```
+## Ziel-Umgebung
 
-`validate-external.sh` akzeptiert ebenfalls `GZ_VALIDATION_URL` als ENV-Variable.
+- **Basis-URL:** `https://staging.gregor20.henemm.com`
+- **Override:** `GZ_SVELTE_BASE` bzw. `GZ_VALIDATION_URL` (z. B. fuer einen anderen
+  Staging-Host). Niemals auf die Live-Produktions-URL umstellen.
 
-**Wichtig:** Diese Production-Verification (Schritte 1–6 unten) bleibt produktiv (gregor20.henemm.com). Staging ersetzt sie nicht.
-
-## Schritt 0: Import-Smoke (Pre-Restart-Gate)
-
-**PFLICHT bevor Schritt 1 ausgefuehrt wird.** Faengt ImportError ab, bevor der Prod-Service durch `systemctl restart` kippt.
-
-```bash
-cd /home/hem/gregor_zwanzig && uv run python3 -c "from api.main import app; print('IMPORT_OK')"
-```
-
-**STOP wenn:** Output enthaelt nicht `IMPORT_OK` oder Exit-Code != 0. Code reparieren, dann erneut. Service NICHT restarten — Prod bleibt unangetastet.
-
-## Schritt 1: Go-API neu starten
-
-NiceGUI (Port 8080) ist seit Epic #129 A.3 ersatzlos entfernt. Production laeuft jetzt
-ueber die Go-API (Port 8090) plus SvelteKit-Frontend.
+## Schritt 1: Smoke gegen Staging
 
 ```bash
-# Alten API-Prozess killen (lokal)
-fuser -k 8090/tcp 2>/dev/null || true
-sleep 1
-
-# Go-API mit aktuellem Code starten
-nohup go run ./cmd/gregor-api > /tmp/gregor_api.log 2>&1 &
-sleep 3
-
-# PRUEFEN dass API wirklich laeuft (PID + HTTP)
-API_PID=$(fuser 8090/tcp 2>/dev/null | awk '{print $1}')
-echo "API PID: $API_PID"
-curl -s -o /dev/null -w "%{http_code}" http://localhost:8090/api/health
+BASE="${GZ_SVELTE_BASE:-https://staging.gregor20.henemm.com}"
+curl -s -o /dev/null -w "ROOT %{http_code}\n" "$BASE/"
+curl -s -o /dev/null -w "HEALTH %{http_code}\n" "$BASE/api/health"
 ```
 
-**STOP wenn:** Kein PID oder HTTP != 200. API-Log pruefen!
+**STOP wenn:** ROOT nicht `200`/`302` oder HEALTH nicht `200`. Auto-Deploy noch
+nicht durch oder fehlgeschlagen — warten bzw. Staging-Logs pruefen.
 
-## Schritt 2: Test-Trip erstellen
+## Schritt 2: Scope bestimmen
 
-Erstelle einen Test-Trip via API oder Loader. **NIEMALS** Produktiv-Trips (GR221 etc.) verwenden!
+Die zu pruefende Tiefe haengt vom Aenderungs-Scope ab (Logik aus `e2e_commit_gate.py::detect_scope`,
+Issue #86):
 
-```python
-uv run python3 -c "
-from src.app.loader import Loader
-loader = Loader()
-# Erstelle minimalen Test-Trip mit 2 Stages
-import json
-test_trip = {
-    'id': 'e2e-verify-test',
-    'name': 'E2E Verify Test',
-    'stages': [
-        {
-            'id': 'S1', 'name': 'Stage 1', 'date': '$(date -d '+1 day' +%Y-%m-%d)',
-            'waypoints': [
-                {'id': 'W1', 'name': 'Start', 'lat': 47.0, 'lon': 11.0, 'elevation_m': 500},
-                {'id': 'W2', 'name': 'Ziel', 'lat': 47.1, 'lon': 11.1, 'elevation_m': 800}
-            ],
-            'start_time': '09:00:00'
-        },
-        {
-            'id': 'S2', 'name': 'Stage 2', 'date': '$(date -d '+2 days' +%Y-%m-%d)',
-            'waypoints': [
-                {'id': 'W1', 'name': 'Start', 'lat': 47.1, 'lon': 11.1, 'elevation_m': 800},
-                {'id': 'W2', 'name': 'Ziel', 'lat': 47.2, 'lon': 11.2, 'elevation_m': 600}
-            ],
-            'start_time': '09:00:00'
-        }
-    ]
-}
-loader.save_trip('default', test_trip)
-print('Test-Trip erstellt: e2e-verify-test')
-"
+- **frontend-only** → nur visuelle Pruefung auf Staging, KEIN Mailversand.
+- **backend** / **full-stack** → Test-Trip auf Staging anlegen + Briefing
+  ausschliesslich an diesen Test-Trip senden, danach IMAP-Pruefung.
+
+```bash
+python3 .claude/hooks/e2e_commit_gate.py <<< '{"tool_input":{"command":"git commit"}}' 2>&1 || true
 ```
 
-## Schritt 3: Report senden
+(Der Aufruf gibt nur den erkannten Scope als Hinweis aus — er blockt nichts.)
 
-Sende BEIDE Report-Typen (morning + evening) via TripReportSchedulerService:
+## Schritt 3a: frontend-only — visuelle Pruefung
 
-```python
-uv run python3 -c "
-import asyncio
-from src.services.trip_report_scheduler import TripReportSchedulerService
-from src.app.loader import Loader
+Playwright/Screenshot gegen Staging. Die Basis-URL kommt aus `GZ_SVELTE_BASE`:
 
-async def send():
-    loader = Loader()
-    scheduler = TripReportSchedulerService(loader)
-    # Morning
-    result_m = await scheduler.send_report('default', 'e2e-verify-test', 'morning')
-    print(f'Morning: {result_m}')
-    # Evening
-    result_e = await scheduler.send_report('default', 'e2e-verify-test', 'evening')
-    print(f'Evening: {result_e}')
-
-asyncio.run(send())
-"
+```bash
+GZ_SVELTE_BASE="${GZ_SVELTE_BASE:-https://staging.gregor20.henemm.com}" \
+  uv run python3 .claude/hooks/e2e_browser_test.py browser --check "Feature" --url "/"
 ```
 
-**STOP wenn:** Fehler beim Senden. Logs pruefen!
+Screenshot visuell pruefen: ist die Aenderung auf Staging sichtbar und korrekt?
+KEINE Mail in diesem Scope.
 
-## Schritt 4: E-Mails abrufen und SYSTEMATISCH pruefen
+## Schritt 3b: backend / full-stack — Test-Trip + Test-Mail
 
-Rufe BEIDE E-Mails via IMAP ab. Pruefe den Inhalt SYSTEMATISCH — nicht nur stichprobenartig!
+1. **Test-Trip auf Staging anlegen** (via Staging-API), niemals einen Produktiv-Trip
+   (GR221 etc.) verwenden. Der Trip bekommt als einzigen Empfaenger die Test-Adresse
+   `gregor-test@henemm.com`.
+2. **Briefing ausschliesslich an diesen einen Test-Trip** ausloesen — niemals einen
+   Sammel-Versand ueber alle aktiven Touren. Nur dieser eine Test-Trip darf eine Mail
+   erhalten.
+3. **IMAP-Pruefung gegen Stalwart:** Posteingang von `gregor-test@henemm.com` auf
+   `mail.henemm.com` abrufen (Credentials aus den Settings, nicht im Klartext hier).
+   Pruefen: Subject mit Trip-Name + Report-Typ, HTML-Body nicht leer, Wetter-Tabelle
+   vorhanden, Werte plausibel, Timestamp NACH dem Versand.
 
-```python
-uv run python3 -c "
-import imaplib, email, os, time
-time.sleep(5)  # Warten auf Zustellung
+Inhaltliche Tiefe via Spec-Validator (liest dieselbe Test-Mail):
 
-user = os.environ['GZ_SMTP_USER']
-pw = os.environ['GZ_SMTP_PASS']
-
-imap = imaplib.IMAP4_SSL('imap.gmail.com')
-imap.login(user, pw)
-imap.select('INBOX')
-
-# Letzte 5 E-Mails holen
-_, data = imap.search(None, 'ALL')
-ids = data[0].split()[-5:]
-
-for mid in ids:
-    _, msg_data = imap.fetch(mid, '(RFC822)')
-    msg = email.message_from_bytes(msg_data[0][1])
-    subj = msg.get('Subject', '')
-    date = msg.get('Date', '')
-    print(f'--- {subj} ({date}) ---')
-
-    # HTML Body extrahieren
-    for part in msg.walk():
-        if part.get_content_type() == 'text/html':
-            html = part.get_payload(decode=True).decode('utf-8')
-            print(f'HTML Laenge: {len(html)} Zeichen')
-            # Ersten 2000 Zeichen ausgeben fuer Pruefung
-            print(html[:2000])
-            print('...')
-            break
-    print()
-
-imap.close()
-imap.logout()
-"
+```bash
+uv run python3 .claude/hooks/email_spec_validator.py
 ```
 
-### Was du PRUEFEN musst (Checkliste):
+**STOP wenn:** Validator nicht Exit 0.
 
-Fuer JEDE E-Mail:
-- [ ] Subject enthaelt Trip-Name und Report-Typ
-- [ ] HTML-Body ist nicht leer
-- [ ] Tabelle mit Wetterdaten vorhanden
-- [ ] Alle konfigurierten Metriken haben Spalten (Temperature, Wind, etc.)
-- [ ] Werte sind plausibel (nicht "N/A" ueberall, nicht "None")
-- [ ] Timestamp der E-Mail ist NACH dem Sendevorgang (nicht alte E-Mail!)
+## Schritt 4: Test-Trip aufraeumen
 
-**Feature-spezifisch:**
-- Bei Formatter-Features: HTML UND Plain-Text pruefen
-- Bei Config-Features: ALLE betroffenen Config-Optionen einzeln pruefen
-- Bei Metrik-Features: Spaltenheader, Werte und Units-Legend pruefen
+Den auf Staging angelegten Test-Trip wieder loeschen, damit Staging sauber bleibt.
 
-## Schritt 5: Test-Trip aufraeumen
+## Schritt 5: Nachweis schreiben
 
-```python
-uv run python3 -c "
-from src.app.loader import Loader
-loader = Loader()
-loader.delete_trip('default', 'e2e-verify-test')
-print('Test-Trip geloescht')
-"
-```
-
-## Schritt 6: Verified-JSON schreiben
-
-NUR wenn ALLE Schritte erfolgreich waren:
+NUR wenn alle relevanten Schritte erfolgreich waren — als Nachweis fuer den
+Pre-Prod-Schritt:
 
 ```bash
 python3 -c "
 import json, datetime
 data = {
     'verified_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
-    'server_restarted': True,
-    'test_trip_created': True,
-    'reports_sent': ['morning', 'evening'],
-    'emails_checked': True,
-    'test_trip_cleaned': True,
+    'environment': 'staging',
+    'scope': 'frontend-only',  # oder 'backend' / 'full-stack'
+    'checks': ['staging_smoke', 'visual'],  # backend zusaetzlich: 'test_trip', 'test_mail', 'imap'
     'feature_checks': ['HIER BESCHREIBEN WAS GEPRUEFT WURDE']
 }
 with open('.claude/e2e_verified.json', 'w') as f:
@@ -206,9 +107,12 @@ print('e2e_verified.json geschrieben')
 
 ## VERBOTEN
 
-- Schritte ueberspringen
-- "Sieht gut aus" ohne systematische Pruefung sagen
-- Alte E-Mails als Verifikation akzeptieren (Timestamp pruefen!)
-- Python-Funktionen direkt aufrufen statt echte E-Mails zu senden
-- Produktiv-Trips verwenden
-- `.claude/e2e_verified.json` schreiben OHNE alle Schritte durchlaufen zu haben
+- Den lokalen Produktiv-API-Port (8090) beenden oder beschiessen.
+- Die Go-API lokal als eigenen Prozess hochfahren, um gegen `localhost` zu testen.
+- Einen Sammel-Versand ueber alle aktiven Touren ausloesen — nur der eine Test-Trip
+  darf eine Mail erhalten, Empfaenger ausschliesslich `gregor-test@henemm.com`.
+- IMAP gegen ein Gmail-Postfach pruefen — Stalwart (`mail.henemm.com`) ist die Quelle.
+- In einen laufenden Systemd-Prozess von Live oder Staging eingreifen
+  (stoppen/starten/neu starten).
+- Produktiv-Trips fuer den Test verwenden.
+- Den Nachweis schreiben, ohne die relevanten Schritte tatsaechlich durchlaufen zu haben.
