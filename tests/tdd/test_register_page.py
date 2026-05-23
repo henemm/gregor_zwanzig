@@ -13,6 +13,10 @@ import os
 import httpx
 import uuid
 
+import pytest
+
+pytestmark = pytest.mark.live
+
 SVELTE_BASE = os.environ.get("GZ_SVELTE_BASE", "https://gregor20.henemm.com")
 GO_BASE = "http://localhost:8090"
 

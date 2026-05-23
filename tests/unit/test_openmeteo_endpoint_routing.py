@@ -21,6 +21,8 @@ import pytest
 
 sys.path.insert(0, "src")
 
+pytestmark = pytest.mark.live
+
 
 class TestSelectModelReturnsCorrectEndpoint:
     """Test 1: select_model() must return (model_id, grid_res_km, endpoint)."""

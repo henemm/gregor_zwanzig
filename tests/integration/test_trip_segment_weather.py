@@ -12,6 +12,8 @@ from app.models import GPXPoint, TripSegment
 from providers.base import get_provider
 from services.segment_weather import SegmentWeatherService
 
+pytestmark = pytest.mark.live
+
 
 class TestSegmentWeatherServiceGeoSphere:
     """Test segment weather fetching with GeoSphere provider (Austrian Alps)."""

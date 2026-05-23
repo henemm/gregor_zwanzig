@@ -6,6 +6,7 @@ enabling easy extension with new data sources.
 """
 from __future__ import annotations
 
+import os
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional, Protocol, runtime_checkable
 
@@ -115,6 +116,14 @@ def get_provider(name: str) -> WeatherProvider:
         >>> print(provider.name)
         geosphere
     """
+    # Offline test mode (Issue #346): when GZ_TEST_FIXTURE_DIR is set, serve
+    # openmeteo requests from static fixtures instead of hitting the live API.
+    # Lazy import keeps fixture.py out of the production import graph.
+    fixture_dir = os.environ.get("GZ_TEST_FIXTURE_DIR", "").strip()
+    if fixture_dir and name == "openmeteo":
+        from providers.fixture import FixtureProvider
+        return FixtureProvider(fixture_dir)
+
     # Lazy import providers to populate registry
     if not _PROVIDER_FACTORIES:
         _load_providers()

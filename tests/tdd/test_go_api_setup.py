@@ -6,6 +6,9 @@ All tests MUST FAIL until api/ module is implemented.
 
 SPEC: docs/specs/modules/go_api_setup.md
 """
+import pytest
+
+pytestmark = pytest.mark.live
 
 
 # ============================================================================

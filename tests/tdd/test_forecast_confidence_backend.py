@@ -18,6 +18,8 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
+pytestmark = pytest.mark.live
+
 
 class TestForecastDataPointBackwardCompat:
     """AC-1: ForecastDataPoint (Python) backward-compat without confidence fields."""

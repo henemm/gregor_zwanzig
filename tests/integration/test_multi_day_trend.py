@@ -16,6 +16,8 @@ from __future__ import annotations
 import pytest
 from datetime import date, datetime, timezone
 
+pytestmark = pytest.mark.live
+
 from app.models import (
     ForecastMeta,
     GPXPoint,

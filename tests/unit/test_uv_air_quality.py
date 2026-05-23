@@ -8,6 +8,9 @@ All tests use REAL API calls (no mocks!) per CLAUDE.md.
 import json
 from datetime import datetime, timezone, timedelta
 
+import pytest
+
+pytestmark = pytest.mark.live
 
 
 class TestRequestBaseHostOverride:

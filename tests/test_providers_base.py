@@ -11,6 +11,8 @@ from providers.base import (
 )
 from providers.geosphere import GeoSphereProvider
 
+pytestmark = pytest.mark.live
+
 
 class TestWeatherProviderProtocol:
     """Tests for WeatherProvider protocol compliance."""

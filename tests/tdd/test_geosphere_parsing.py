@@ -16,6 +16,8 @@ import pytest
 
 from validation import GeoSphereValidator
 
+pytestmark = pytest.mark.live
+
 
 class TestSnowgridParsing:
     """TDD: Validate SNOWGRID API parsing."""

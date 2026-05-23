@@ -15,6 +15,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
+pytestmark = pytest.mark.live
+
 MALLORCA_LAT = 39.77
 MALLORCA_LON = 2.71
 

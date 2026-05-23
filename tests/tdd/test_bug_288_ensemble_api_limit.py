@@ -18,6 +18,8 @@ from datetime import date, datetime, timezone, timedelta
 
 import pytest
 
+pytestmark = pytest.mark.live
+
 
 # ---------------------------------------------------------------------------
 # Helpers: minimale Objekte ohne externe Deps

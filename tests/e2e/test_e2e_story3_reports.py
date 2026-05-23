@@ -37,6 +37,8 @@ from app.trip import Stage, TimeWindow, Trip, Waypoint
 from formatters.sms_trip import SMSTripFormatter
 from formatters.trip_report import TripReportFormatter
 
+pytestmark = pytest.mark.live
+
 
 # ---------------------------------------------------------------------------
 # Test fixtures

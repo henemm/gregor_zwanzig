@@ -7,10 +7,14 @@ NO MOCKS - uses real providers and cache.
 from datetime import datetime, timedelta, timezone
 
 
+import pytest
+
 from app.models import GPXPoint, TripSegment
 from providers.base import get_provider
 from services.segment_weather import SegmentWeatherService
 from services.weather_cache import WeatherCacheService
+
+pytestmark = pytest.mark.live
 
 
 class TestSegmentWeatherCacheIntegration:

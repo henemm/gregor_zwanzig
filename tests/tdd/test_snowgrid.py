@@ -14,6 +14,8 @@ import pytest
 from providers.geosphere import GeoSphereProvider
 from validation import GroundTruthFetcher, all_resort_slugs, get_resort
 
+pytestmark = pytest.mark.live
+
 
 class TestSnowgridPlausibility:
     """

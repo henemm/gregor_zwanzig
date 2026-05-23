@@ -13,7 +13,7 @@ tags: [go, provider, fixture, e2e, testing, openmeteo, playwright]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved
 
 ## Purpose
 

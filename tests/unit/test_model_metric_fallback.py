@@ -21,6 +21,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
+import pytest
+
+pytestmark = pytest.mark.live
+
 from app.models import (
     ForecastDataPoint,
     ForecastMeta,
