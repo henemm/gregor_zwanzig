@@ -2,6 +2,7 @@ package store
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -342,11 +343,11 @@ func (s *Store) LoadMetricPresets() ([]model.MetricPreset, error) {
 		if os.IsNotExist(err) {
 			return []model.MetricPreset{}, nil
 		}
-		return []model.MetricPreset{}, nil
+		return nil, err
 	}
 	var rawPresets []map[string]interface{}
 	if err := json.Unmarshal(data, &rawPresets); err != nil {
-		return []model.MetricPreset{}, nil
+		return nil, fmt.Errorf("metric_presets.json korrupt: %w", err)
 	}
 	presets := make([]model.MetricPreset, 0, len(rawPresets))
 	for _, rp := range rawPresets {

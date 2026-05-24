@@ -324,3 +324,48 @@ func TestLoadMetricPresets_NewSchemaHorizonsDefault(t *testing.T) {
 		t.Errorf("Horizons default wrong: got %+v, want %+v", got, wantAllTrue)
 	}
 }
+
+// =============================================================================
+// Bug #350 — LoadMetricPresets darf korruptes JSON nicht wie leere Datei behandeln.
+// Adversary-Finding F002 aus #342. RED: aktuell gibt LoadMetricPresets bei
+// ungültigem JSON ([], nil) zurück (store.go:349) statt einen Fehler.
+// =============================================================================
+
+// TestLoadMetricPresets_CorruptJSONReturnsError (AC-1)
+//
+// Given: metric_presets.json mit ungültigem JSON-Inhalt.
+// When:  LoadMetricPresets() wird aufgerufen.
+// Then:  Es kommt ein Fehler (err != nil) und NICHT ([], nil) — sonst ist eine
+//        korrupte Datei nicht von einem leeren Zustand zu unterscheiden.
+func TestLoadMetricPresets_CorruptJSONReturnsError(t *testing.T) {
+	tmpDir := t.TempDir()
+	writePresetsRaw(t, tmpDir, "u", `{kaputtes-json ohne abschluss`)
+
+	s := New(tmpDir, "").WithUser("u")
+	presets, err := s.LoadMetricPresets()
+	if err == nil {
+		t.Fatalf("expected error for corrupt JSON, got nil (presets=%+v) — "+
+			"silent failure überschreibt sonst beim nächsten Save alle Presets", presets)
+	}
+}
+
+// TestLoadMetricPresets_MissingFileReturnsEmpty (AC-2)
+//
+// Given: keine metric_presets.json (Erst-Aufruf).
+// When:  LoadMetricPresets() wird aufgerufen.
+// Then:  ([]MetricPreset{}, nil) — der legitime Leer-Zustand bleibt fehlerfrei.
+func TestLoadMetricPresets_MissingFileReturnsEmpty(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	s := New(tmpDir, "").WithUser("u")
+	presets, err := s.LoadMetricPresets()
+	if err != nil {
+		t.Fatalf("missing file must not error, got: %v", err)
+	}
+	if presets == nil {
+		t.Fatal("missing file must return non-nil empty slice")
+	}
+	if len(presets) != 0 {
+		t.Fatalf("missing file must return empty slice, got %d presets", len(presets))
+	}
+}

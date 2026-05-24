@@ -14,11 +14,14 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/henemm/gregor-api/internal/model"
+	"github.com/henemm/gregor-api/internal/store"
 )
 
 // =============================================================================
@@ -454,6 +457,57 @@ func TestPatchMetricPreset_IsDefaultExclusive(t *testing.T) {
 	}
 	if got[b.ID] {
 		t.Errorf("after PATCH A: B.IsDefault should be false, got true")
+	}
+}
+
+// =============================================================================
+// Bug #350 (AC-3) — korrupte Preset-Datei darf bei POST nicht überschrieben werden.
+// RED: aktuell schluckt LoadMetricPresets den JSON-Fehler (store.go:349) und gibt
+// ([], nil) zurück → der Handler läuft durch, SaveMetricPresets überschreibt die
+// korrupte Datei mit nur dem neuen Preset → Datenverlust.
+// =============================================================================
+
+// TestCreateMetricPreset_CorruptFileNotOverwritten (AC-3)
+//
+// Given: eine korrupte metric_presets.json (ungültiges JSON) auf der Platte.
+// When:  POST /api/metric-presets ein neues Preset anlegen will.
+// Then:  Der Handler antwortet 500 store_error UND die Datei auf der Platte
+//        bleibt byte-gleich (wird nicht mit der leeren Liste überschrieben).
+func TestCreateMetricPreset_CorruptFileNotOverwritten(t *testing.T) {
+	tmpDir := t.TempDir()
+	s := store.New(tmpDir, "test")
+
+	presetsPath := filepath.Join(tmpDir, "users", "test", "metric_presets.json")
+	if err := os.MkdirAll(filepath.Dir(presetsPath), 0755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	corrupt := []byte(`{kaputt — nicht-valides json`)
+	if err := os.WriteFile(presetsPath, corrupt, 0644); err != nil {
+		t.Fatalf("write corrupt: %v", err)
+	}
+
+	r := chi.NewRouter()
+	r.Post("/api/metric-presets", CreateMetricPresetHandler(s))
+
+	body, _ := json.Marshal(map[string]interface{}{
+		"name":    "Neu",
+		"metrics": []string{"wind"},
+	})
+	req := httptest.NewRequest("POST", "/api/metric-presets", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500 on corrupt presets file, got %d: %s", w.Code, w.Body.String())
+	}
+
+	after, err := os.ReadFile(presetsPath)
+	if err != nil {
+		t.Fatalf("read after: %v", err)
+	}
+	if !bytes.Equal(after, corrupt) {
+		t.Errorf("corrupt presets file was overwritten — Datenverlust!\nvorher: %s\nnachher: %s", corrupt, after)
 	}
 }
 
