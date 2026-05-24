@@ -326,22 +326,27 @@ def _session_workflow_name() -> Optional[str]:
 
 
 def _active_name() -> Optional[str]:
-    """Return the name of the active workflow, or None.
+    """Return the name of the active workflow, or None (Issue #325).
 
-    Resolution order:
-    1. CLAUDE_CODE_SESSION_ID -> session_workflows.json (per-session, live-switchable)
-    2. GZ_ACTIVE_WORKFLOW env var (legacy/fallback; FATAL if set but invalid)
-    3. legacy single-file state
+    Canonical resolution order — identical everywhere (scope_guard.py is the
+    reference). NO silent fallbacks:
+    1. Session-ID (GZ_HOOK_SESSION_ID / CLAUDE_CODE_SESSION_ID) -> session_workflows.json
+    2. GZ_ACTIVE_WORKFLOW env var (override / backward-compat; FATAL if set but invalid)
+    3. None — no `.active` symlink resolution, no "first non-archived" guess.
 
     The session-id registry has priority so a session can switch workflows
     at any time (workflow.py switch) without a restart, and parallel sessions
-    never collide. Sessions without a registry entry behave exactly as before.
+    never collide. The `.active` symlink remains a lifecycle artefact written
+    by cmd_start/cmd_switch and cleared by cmd_complete (#258/#333) — but it is
+    NOT a resolution source anymore (Issue #325, AC-1).
     """
     # 1. Session-ID registry — highest priority, overrides a stale env var.
     sess = _session_workflow_name()
     if sess:
         return sess
 
+    # 2. GZ_ACTIVE_WORKFLOW override. Set-but-invalid stays FATAL (legacy
+    #    behaviour, see #333) so a typo fails loudly instead of guessing.
     env_name = os.environ.get("GZ_ACTIVE_WORKFLOW", "").strip()
     if env_name:
         try:
@@ -361,21 +366,8 @@ def _active_name() -> Optional[str]:
         )
         sys.exit(1)
 
-    # Symlink fallback is DISABLED. If a stale .active symlink exists, tell the user
-    # what to do instead of silently using it.
-    link = _active_link()
-    if link.is_symlink():
-        target = os.readlink(str(link))
-        name = Path(target).stem
-        print(
-            f"FATAL: GZ_ACTIVE_WORKFLOW is not set.\n"
-            f"  A .active symlink points to '{name}', but symlink fallback is disabled.\n"
-            f"  Set the env var explicitly and retry:\n"
-            f"    export GZ_ACTIVE_WORKFLOW={name}",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-
+    # 3. No binding, no override → no active workflow. The `.active` symlink is
+    #    NOT consulted (Issue #325): no FATAL, no silent target adoption.
     if not _v3_dir_has_content():
         legacy = _read_legacy_state()
         if legacy:
@@ -623,17 +615,16 @@ def cmd_status(args: list[str]) -> None:
     phase_name = PHASE_NAMES.get(phase, phase)
     spec = data.get("spec_file") or "Not created"
     test_artifacts = data.get("test_artifacts") or []
+    # Issue #325: the workflow is resolved via the Session-Registry or the
+    # GZ_ACTIVE_WORKFLOW override — NOT via the `.active` symlink (which is now
+    # only a lifecycle artefact). Report whichever canonical source applied.
     env_source = os.environ.get("GZ_ACTIVE_WORKFLOW", "").strip()
     using_env = env_source == name
-    source_label = f"env:GZ_ACTIVE_WORKFLOW={env_source}" if using_env else ".active symlink"
+    source_label = (
+        f"env:GZ_ACTIVE_WORKFLOW={env_source}" if using_env
+        else "session-registry"
+    )
     print(f"Workflow: {name}  [{source_label}]")
-    if not using_env and _active_link().is_symlink():
-        print(
-            f"WARNING: GZ_ACTIVE_WORKFLOW is not set — workflow resolved via .active symlink.\n"
-            f"  Parallel sessions will compete for the symlink. To pin this session:\n"
-            f"  export GZ_ACTIVE_WORKFLOW={name}",
-            file=sys.stderr,
-        )
     print(f"Phase: {phase_name}")
     print(f"Spec: {spec}")
     print(f"Approved: {'Yes' if data.get('spec_approved') else 'No'}")

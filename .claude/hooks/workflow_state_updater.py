@@ -111,9 +111,16 @@ def main():
     if not is_approval and not is_green and not is_complete:
         sys.exit(0)
 
-    # Load current state once — used both for the approval block and below.
+    # Issue #325: resolve the active workflow DIRECTLY via the canonical
+    # resolver (Session-Registry → GZ_ACTIVE_WORKFLOW → None) — the same path
+    # scope_guard uses. Do NOT infer it from _aggregate_state()'s aggregation:
+    # without a session binding there is no active workflow, so a user keyword
+    # must NOT jump phases on a foreign workflow (root cause of #325).
+    import workflow as _w
+    active_name = _w._active_name()
+
+    # State (aggregated workflow dicts) is still needed for reads/writes below.
     state = load_state()
-    active_name = state.get("active_workflow")
 
     # Handle post-implementation validation approval.
     # Files are scoped to the active workflow so parallel workflows cannot

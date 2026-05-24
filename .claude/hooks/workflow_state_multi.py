@@ -114,13 +114,11 @@ def _aggregate_state() -> dict:
             workflows[name] = data
             archived_to_origin[name] = True
 
+    # Issue #325: `active_workflow` reflects EXACTLY what _active_name()
+    # resolves (Session-Registry → GZ_ACTIVE_WORKFLOW → None). NO silent
+    # "first non-archived workflow" guess — that mis-routed user keywords
+    # onto the wrong workflow (root cause of #325).
     active = _w._active_name()
-    if not active and workflows:
-        # No symlink -> first non-archived workflow
-        for n, archived in archived_to_origin.items():
-            if not archived:
-                active = n
-                break
 
     return {
         "version": "2.0",
