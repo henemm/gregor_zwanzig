@@ -215,6 +215,40 @@ def check_for_ui_changes(config: dict) -> bool:
         return False
 
 
+_BACKEND_PREFIXES = ("src/", "tests/", "internal/", "cmd/", "api/")
+
+
+def has_backend_changes(project_root) -> bool:
+    """True, wenn staged Aenderungen Python/Go-Backend-Code beruehren.
+
+    Scope-Regel (Issue #354): Die volle Backend-Test-Suite (uv run pytest) ist
+    nur relevant, wenn der Commit Backend-Code anfasst. Ein reiner Frontend-
+    (frontend/), Tooling- (.claude/) oder Docs- (docs/) Commit kann das Backend
+    nicht beeinflussen; ihn an der Backend-Suite zu messen ist sinnlos und
+    blockiert bei vorbestehend roter Suite jeden unverwandten Commit.
+
+    Backend = src/, tests/, internal/, cmd/, api/ oder eine .py-Datei im
+    Repo-Root (z.B. conftest.py). Im Zweifel (Fehler) -> True (Tests fahren).
+    """
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--cached", "--name-only"],
+            cwd=project_root,
+            capture_output=True,
+            text=True,
+        )
+        for f in result.stdout.strip().split("\n"):
+            if not f:
+                continue
+            if f.startswith(_BACKEND_PREFIXES):
+                return True
+            if f.endswith(".py") and "/" not in f:
+                return True
+        return False
+    except Exception:
+        return True
+
+
 def _check_ambiguous_block(workflow_data: dict) -> tuple[bool, str]:
     """Issue #196 — AMBIGUOUS-Verdict blocks commit unless override-token is fresh.
 
@@ -284,6 +318,22 @@ def main():
         print(f"{reason}", file=sys.stderr)
         print("=" * 70, file=sys.stderr)
         sys.exit(2)
+
+    # Issue #354 — Scope: Backend-Test-Suite nur bei Backend-Code-Aenderungen.
+    # Reiner Frontend-/Tooling-/Docs-Commit kann das Backend nicht beeinflussen.
+    # Secret-Scan + AMBIGUOUS-Block (oben) liefen bereits unabhaengig vom Scope.
+    if not has_backend_changes(project_root):
+        print(
+            "Pre-Commit Gate: keine Backend-Code-Aenderung "
+            "(src/tests/internal/cmd/api) — Backend-Test-Suite uebersprungen.",
+            file=sys.stderr,
+        )
+        if config["screenshot_reminder"] and check_for_ui_changes(config):
+            print(
+                "Note: UI changes detected. Consider adding screenshot artifacts.",
+                file=sys.stderr,
+            )
+        sys.exit(0)
 
     # Run tests
     success, output = run_tests(config)
