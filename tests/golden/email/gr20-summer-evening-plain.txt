@@ -1,3 +1,4 @@
+◯ WETTER-BRIEFING
 GR20 - Evening Report
 GR20 E3
 11.07.2026
@@ -26,5 +27,5 @@ GR20 E3: trocken, ⚡ möglich
 
 Einheiten: Temp, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun W/m²
 ------------------------------------------------------------
-Generated: 2026-04-28 12:00 UTC
+Generated: <TIMESTAMP> UTC
 Data: openmeteo (arome_france)

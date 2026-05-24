@@ -78,7 +78,9 @@ class TestSubscriptionEmailGeneration:
 
         assert "<!DOCTYPE html>" in html_body, \
             f"Subscription email must be HTML. Got: {html_body[:200]}"
-        assert "<table>" in html_body.lower(), \
+        # Renderer schreibt <table class="matrix-table" ...> mit Attributen
+        # (Issue #355): "<table " (mit Space) statt nacktem "<table>".
+        assert "<table " in html_body.lower(), \
             "Subscription email must contain HTML tables"
         assert "======" not in html_body, \
             "HTML email should not contain ASCII table borders"

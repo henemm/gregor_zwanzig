@@ -166,7 +166,11 @@ def test_validate_external_warns_when_no_credentials(hide_validator_env):
     )
 
 
-@pytest.mark.integration
+# Issue #355: echter Login-Test gegen Staging (validate-external.sh ruft den
+# laufenden Server). `integration` war nicht registriert und filterte nicht →
+# Test landete faelschlich in der Default-Offline-Suite. Auf den registrierten
+# `live`-Marker umgestellt (addopts = -m 'not email and not live').
+@pytest.mark.live
 def test_validate_external_injects_cookie_with_real_login():
     """
     GIVEN: .claude/validator.env mit gueltigen Credentials, Staging erreichbar
@@ -201,7 +205,11 @@ def test_validate_external_injects_cookie_with_real_login():
     )
 
 
-@pytest.mark.integration
+# Issue #355: echter Setup-Test gegen Staging (setup-validator-user.sh legt
+# einen User via POST gegen den laufenden Server an → HTTP 429 bei Rate-Limit).
+# `integration` war nicht registriert und filterte nicht → Test landete
+# faelschlich in der Default-Offline-Suite. Auf `live` umgestellt.
+@pytest.mark.live
 def test_setup_script_idempotent_against_staging():
     """
     GIVEN: .claude/validator.env mit Credentials, Staging erreichbar

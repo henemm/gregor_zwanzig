@@ -16,6 +16,7 @@ noch nicht existieren. Das ist das RED-Phasen-Ziel.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -25,6 +26,28 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 HOOKS_DIR = REPO_ROOT / ".claude" / "hooks"
+
+# Session-Env-Vars, die aus einer laufenden Workflow-Shell lecken und seit
+# Commit 59bd925 (Symlink-Fallback aus, #333) ein FATAL exit 1 in _active_name()
+# ausloesen, wenn sie auf einen im fake_repo nicht existenten Workflow zeigen.
+# (Issue #355)
+_SESSION_ENV_VARS = (
+    "GZ_ACTIVE_WORKFLOW",
+    "CLAUDE_CODE_SESSION_ID",
+    "GZ_HOOK_SESSION_ID",
+)
+
+
+def _subprocess_env(active: str | None = None) -> dict:
+    """env-dict fuer subprocess-Aufrufe ohne Session-Leaks aus der Shell.
+
+    Optional setzt es GZ_ACTIVE_WORKFLOW auf einen im fake_repo existierenden
+    Workflow, damit _active_name() im Subprocess aufloest statt FATAL zu triggern.
+    """
+    env = {k: v for k, v in os.environ.items() if k not in _SESSION_ENV_VARS}
+    if active is not None:
+        env["GZ_ACTIVE_WORKFLOW"] = active
+    return env
 
 
 # ---------- Fixtures ----------------------------------------------------
@@ -49,6 +72,11 @@ def hooks_on_path():
 @pytest.fixture
 def fake_repo(tmp_path, monkeypatch, hooks_on_path):
     """Minimales Repo-Layout mit `.claude/`-Verzeichnis und 108-Workflow-State."""
+    # Isolation gegen Shell-Leaks (#355/#333): aktiver Workflow wird ueber
+    # den migrierten Legacy-State (wf-050) aufgeloest. GZ_ACTIVE_WORKFLOW wird
+    # unten auf wf-050 gesetzt (existiert nach Migration als Archiv-Datei).
+    for var in _SESSION_ENV_VARS:
+        monkeypatch.delenv(var, raising=False)
     main_repo = tmp_path / "main_repo"
     main_repo.mkdir()
     (main_repo / ".git").mkdir()
@@ -83,6 +111,10 @@ def fake_repo(tmp_path, monkeypatch, hooks_on_path):
     state_file = claude_dir / "workflow_state.json"
     state_file.write_text(json.dumps(state, indent=2))
 
+    # In-Process-Tests rufen nach migrate() den Wrapper auf; _active_name()
+    # braucht GZ_ACTIVE_WORKFLOW explizit (Symlink-Fallback aus). 'wf-050'
+    # ist der aktive Workflow und existiert nach der Migration (archiviert).
+    monkeypatch.setenv("GZ_ACTIVE_WORKFLOW", "wf-050")
     monkeypatch.chdir(main_repo)
     return main_repo
 
@@ -90,6 +122,8 @@ def fake_repo(tmp_path, monkeypatch, hooks_on_path):
 @pytest.fixture
 def fake_worktree(tmp_path, monkeypatch, hooks_on_path):
     """Hauptrepo + Worktree mit korrekt verlinktem `.git`-Marker."""
+    for var in _SESSION_ENV_VARS:
+        monkeypatch.delenv(var, raising=False)
     main_repo = tmp_path / "main_repo"
     main_repo.mkdir()
     git_dir = main_repo / ".git"
@@ -359,6 +393,7 @@ class TestT4ApiCompat:
         result = subprocess.run(
             [sys.executable, str(HOOKS_DIR / "workflow.py"), "status"],
             capture_output=True, text=True, cwd=str(fake_repo),
+            env=_subprocess_env("wf-050"),
         )
         assert result.returncode == 0, f"workflow.py status fehlgeschlagen: {result.stderr}"
         assert "wf-050" in result.stdout or "wf-050" in result.stderr
@@ -371,6 +406,7 @@ class TestT4ApiCompat:
         result = subprocess.run(
             [sys.executable, str(HOOKS_DIR / "workflow.py"), "list"],
             capture_output=True, text=True, cwd=str(fake_repo),
+            env=_subprocess_env("wf-050"),
         )
         assert result.returncode == 0
         # Mindestens einige Workflows in der Ausgabe

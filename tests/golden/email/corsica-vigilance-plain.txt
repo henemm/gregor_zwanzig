@@ -1,3 +1,4 @@
+◯ WETTER-BRIEFING
 Korsika Trail - Update Report
 Corsica E5
 11.07.2026
@@ -21,5 +22,5 @@ Corsica E5: 18–32°C, 🌥️, trocken, Regen ab 10:00, mäßiger Wind 30 km/h
 
 Einheiten: Temp, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun W/m²
 ------------------------------------------------------------
-Generated: 2026-04-28 12:00 UTC
+Generated: <TIMESTAMP> UTC
 Data: openmeteo (arome_france)

@@ -350,19 +350,26 @@ class TestEmailFriendlyVsRawFormatting:
 class TestFromDisplayConfig:
     """
     Test WeatherChangeDetectionService.from_display_config() factory.
-    Verifies per-metric alert_enabled and alert_threshold are correctly applied.
+
+    Issue #355: from_display_config() filtert nach `enabled` (display flag),
+    NICHT nach `alert_enabled` — bewusste #131-Semantik (siehe maßgeblichen Test
+    test_issue_131_alert_klarheit::test_ac2_from_display_config_uses_enabled_not_alert_enabled).
+    Erwartungen an die `enabled`-Semantik angepasst; Produktionscode unverändert.
     """
 
     def test_only_alert_enabled_metrics_in_map(self):
-        """Only metrics with alert_enabled=True should appear in thresholds."""
+        """Only metrics with enabled=True appear in thresholds (#131 semantics).
+
+        Die Auswahl erfolgt anhand `enabled`, unabhängig von `alert_enabled`.
+        """
         from services.weather_change_detection import WeatherChangeDetectionService
 
         dc = UnifiedWeatherDisplayConfig(
             trip_id="test",
             metrics=[
-                MetricConfig(metric_id="temperature", alert_enabled=True),
-                MetricConfig(metric_id="wind", alert_enabled=False),
-                MetricConfig(metric_id="precipitation", alert_enabled=True),
+                MetricConfig(metric_id="temperature", enabled=True),
+                MetricConfig(metric_id="wind", enabled=False),
+                MetricConfig(metric_id="precipitation", enabled=True),
             ],
         )
         service = WeatherChangeDetectionService.from_display_config(dc)
@@ -819,6 +826,10 @@ class TestAlertFlowWithSimulatedData:
         TripAlertService uses from_display_config() when display_config has
         alert-enabled metrics. This test verifies the detector is configured
         with per-metric thresholds.
+
+        Issue #355: from_display_config() wählt anhand `enabled` (#131-Semantik).
+        Eine Metrik wird über `enabled=False` (statt `alert_enabled=False`) aus
+        der Detection ausgeschlossen. Produktionscode unverändert.
         """
         from app.trip import Stage, TimeWindow, Trip, Waypoint
         from datetime import date as date_type, time as time_type
@@ -836,9 +847,10 @@ class TestAlertFlowWithSimulatedData:
         trip.display_config = UnifiedWeatherDisplayConfig(
             trip_id="test-trip",
             metrics=[
-                MetricConfig(metric_id="temperature", alert_enabled=True,
+                MetricConfig(metric_id="temperature", enabled=True,
+                             alert_enabled=True,
                              alert_threshold=3.0),  # Lower than default 5.0
-                MetricConfig(metric_id="wind", alert_enabled=False),
+                MetricConfig(metric_id="wind", enabled=False),
             ],
         )
 
@@ -861,7 +873,7 @@ class TestAlertFlowWithSimulatedData:
         temp_changes = [c for c in changes if "temp" in c.metric]
         assert len(temp_changes) > 0
 
-        # Wind should NOT be detected (alert_enabled=False)
+        # Wind should NOT be detected (enabled=False → not in threshold map)
         wind_changes = [c for c in changes if "wind" in c.metric]
         assert len(wind_changes) == 0
 

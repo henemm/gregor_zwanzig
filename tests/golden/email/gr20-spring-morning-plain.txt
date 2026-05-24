@@ -1,3 +1,4 @@
+◯ WETTER-BRIEFING
 GR20 - Morning Report
 GR20 E1
 11.07.2026
@@ -20,5 +21,5 @@ GR20 E1: 2–9°C, 🌥️, trocken, Regen ab 6:00, mäßiger Wind 35 km/h, Böe
 
 Einheiten: Temp, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun W/m²
 ------------------------------------------------------------
-Generated: 2026-04-28 12:00 UTC
+Generated: <TIMESTAMP> UTC
 Data: openmeteo (arome_france)

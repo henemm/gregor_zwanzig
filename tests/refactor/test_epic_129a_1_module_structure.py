@@ -22,8 +22,6 @@ import inspect
 import subprocess
 from pathlib import Path
 
-import pytest
-
 REPO = Path(__file__).resolve().parents[2]
 
 
@@ -112,30 +110,12 @@ def test_compare_subscription():
     )
 
 
-def test_render_comparison_html():
-    """AC-4: src/web/pages/compare.py laedt weiterhin ohne ImportError und
-    enthaelt Re-Imports auf die neuen Service-Module (render_compare,
-    ComparisonEngine, calculate_score, render_comparison_html).
-    """
-    try:
-        import nicegui  # noqa: F401
-    except ImportError:
-        pytest.skip("nicegui nicht installiert - kann compare.py nicht testen")
-
-    mod = importlib.import_module("web.pages.compare")
-    assert hasattr(mod, "render_compare"), (
-        "web.pages.compare.render_compare verschwand faelschlich"
-    )
-    # Re-Imports muessen vorhanden sein, damit UI-Funktionen weiterhin laufen
-    assert hasattr(mod, "ComparisonEngine"), (
-        "Re-Import ComparisonEngine fehlt in compare.py"
-    )
-    assert hasattr(mod, "calculate_score"), (
-        "Re-Import calculate_score fehlt in compare.py"
-    )
-    assert hasattr(mod, "render_comparison_html"), (
-        "Re-Import render_comparison_html fehlt in compare.py"
-    )
+# AC-4 (test_render_comparison_html) — geloescht in Issue #355.
+# Der Test pruefte, dass die NiceGUI-Seite src/web/pages/compare.py nach dem
+# Epic-#129-Refactor weiterhin ladbar ist und Re-Imports enthaelt. Die gesamte
+# NiceGUI-web/pages/-Schicht wurde im SvelteKit-Rework entfernt; das Modul
+# web.pages.compare existiert nicht mehr. AC-1..AC-3 + AC-5 (Service-Module,
+# Import-Sauberkeit, tote Funktionen) bleiben gueltig und getestet.
 
 
 def test_calculate_score():

@@ -1,21 +1,19 @@
 """
-TDD RED Tests — Bug #290 + #281: StageStrip & g-accent Fallback
+TDD Tests — Bug #290 + #281: StageStrip & g-accent Fallback
 
 SPEC: docs/specs/modules/bug_281_290_stagestrip.md
 
 Hintergrund:
-  #290: StageDetailRow.svelte Z.230 hat var(--g-accent, #3b82f6) —
-        blauer Hex-Fallback widerspricht Issue-#277-Konvention.
-  #281: Stage-Pills im Cockpit-StageStrip umbrechen bei langen Namen
-        auf mehrere Zeilen. Design-Intent: einzeilige Chips mit Truncation.
+  #290: StageDetailRow.svelte hatte var(--g-accent, #3b82f6) —
+        blauer Hex-Fallback widerspricht Issue-#277-Konvention (gefixt).
+  #281: Stage-Pills im Cockpit-StageStrip umbrachen bei langen Namen.
 
-RED-Zustand (jetzt):
-  - var(--g-accent, #3b82f6) noch in StageDetailRow.svelte → AC-1 FAIL
-  - stage-pill__label fehlt in StagePill.svelte → AC-2 FAIL
-  - title={label} fehlt in StagePill.svelte → AC-3 FAIL
-  - font-weight für .active fehlt in StagePill.svelte → AC-4 FAIL
-  - strip-fade-right fehlt in StageStrip.svelte → AC-5 FAIL
-  - white-space: nowrap fehlt im Pill-Block von app.css → AC-2 FAIL
+Sanierung Issue #355:
+  Die Pill-/Strip-Komponenten lebten unter frontend/src/routes/_cockpit/
+  (StagePill.svelte, StageStrip.svelte). Dieser Cockpit-Code wurde im
+  SvelteKit-Rework entfernt — die zugehoerigen AC-2..AC-5-Tests sind obsolet
+  und wurden geloescht. AC-1 (StageDetailRow blauer Fallback) und der
+  globale app.css-Pill-Block existieren weiterhin und bleiben getestet.
 """
 
 from pathlib import Path
@@ -24,8 +22,6 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 FRONTEND_SRC = REPO_ROOT / "frontend" / "src"
 
 STAGE_DETAIL_ROW = FRONTEND_SRC / "lib" / "components" / "trip-detail" / "StageDetailRow.svelte"
-STAGE_PILL = REPO_ROOT / "frontend" / "src" / "routes" / "_cockpit" / "StagePill.svelte"
-STAGE_STRIP = REPO_ROOT / "frontend" / "src" / "routes" / "_cockpit" / "StageStrip.svelte"
 APP_CSS = FRONTEND_SRC / "app.css"
 
 
@@ -54,26 +50,8 @@ def test_no_blue_accent_fallback_in_stage_detail_row():
 
 
 # ---------------------------------------------------------------------------
-# AC-2 — Einzeilige Pills mit Truncation
+# AC-2 — Einzeilige Pills mit Truncation (globaler app.css-Block)
 # ---------------------------------------------------------------------------
-
-
-def test_stage_pill_has_label_wrapper_class():
-    """
-    GIVEN:  StagePill.svelte (Bug #281)
-    WHEN:   Quelltext nach 'stage-pill__label' durchsucht wird
-    THEN:   Mindestens 1 Treffer — Label-Wrapper für text-overflow: ellipsis
-
-    RED: stage-pill__label fehlt → kein Truncation-Wrapper
-    """
-    assert STAGE_PILL.exists(), f"Datei nicht gefunden: {STAGE_PILL}"
-
-    content = STAGE_PILL.read_text()
-    assert "stage-pill__label" in content, (
-        "Klasse 'stage-pill__label' fehlt in StagePill.svelte. "
-        "Fix: Label in <span class='stage-pill__label'> wrappen mit "
-        "overflow:hidden; text-overflow:ellipsis; white-space:nowrap"
-    )
 
 
 def test_pill_global_css_has_whitespace_nowrap():
@@ -98,67 +76,7 @@ def test_pill_global_css_has_whitespace_nowrap():
 
 
 # ---------------------------------------------------------------------------
-# AC-3 — Nativer Tooltip mit vollem Label
+# AC-3..AC-5 (StagePill/StageStrip unter routes/_cockpit/) — geloescht in #355.
+# Der Cockpit-Code wurde im SvelteKit-Rework entfernt; die Tests referenzierten
+# nicht mehr existente Pfade und sind obsolet (siehe Modul-Docstring).
 # ---------------------------------------------------------------------------
-
-
-def test_stage_pill_has_title_binding():
-    """
-    GIVEN:  StagePill.svelte (Bug #281)
-    WHEN:   Quelltext nach 'title={label}' durchsucht wird
-    THEN:   Vorhanden — Browser zeigt vollständigen Stage-Namen beim Hover
-
-    RED: title={label} fehlt → kein nativer Tooltip
-    """
-    assert STAGE_PILL.exists(), f"Datei nicht gefunden: {STAGE_PILL}"
-
-    content = STAGE_PILL.read_text()
-    assert "title={label}" in content, (
-        "'title={label}' fehlt in StagePill.svelte. "
-        "Fix: title={label} auf den äußeren <span> setzen"
-    )
-
-
-# ---------------------------------------------------------------------------
-# AC-4 — Aktive Pill visuell hervorgehoben
-# ---------------------------------------------------------------------------
-
-
-def test_stage_pill_active_has_bold_style():
-    """
-    GIVEN:  StagePill.svelte (Bug #281)
-    WHEN:   Quelltext nach font-weight + active-Kombination durchsucht wird
-    THEN:   Beide vorhanden — aktive Stage-Pill zeigt Label in font-weight: 600
-
-    RED: StagePill hat keinen .active-spezifischen font-weight-Style
-    """
-    assert STAGE_PILL.exists(), f"Datei nicht gefunden: {STAGE_PILL}"
-
-    content = STAGE_PILL.read_text()
-    assert ".stage-pill.active .stage-pill__label" in content and "font-weight: 600" in content, (
-        "Kein spezifischer '.stage-pill.active .stage-pill__label { font-weight: 600 }' in StagePill.svelte. "
-        "Fix: .stage-pill.active .stage-pill__label { font-weight: 600; }"
-    )
-
-
-# ---------------------------------------------------------------------------
-# AC-5 — Scroll-Affordance: rechte Fade-Maske
-# ---------------------------------------------------------------------------
-
-
-def test_stage_strip_has_fade_mask():
-    """
-    GIVEN:  StageStrip.svelte (Bug #281)
-    WHEN:   Quelltext nach 'strip-fade-right' durchsucht wird
-    THEN:   Vorhanden — gradient-Maske signalisiert weiteren Scroll-Content
-
-    RED: strip-fade-right fehlt in StageStrip.svelte
-    """
-    assert STAGE_STRIP.exists(), f"Datei nicht gefunden: {STAGE_STRIP}"
-
-    content = STAGE_STRIP.read_text()
-    assert "strip-fade-right" in content, (
-        "'strip-fade-right' fehlt in StageStrip.svelte. "
-        "Fix: <div class='strip-fade-right' aria-hidden='true'> mit "
-        "gradient: transparent → var(--g-paper) einbauen"
-    )

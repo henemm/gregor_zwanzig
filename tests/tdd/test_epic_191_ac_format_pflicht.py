@@ -15,6 +15,7 @@ Erwartet RED: alle 11, da neue Funktionalität.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -24,6 +25,26 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 HOOKS_DIR = REPO_ROOT / ".claude" / "hooks"
+
+# Session-Env-Vars, die aus einer laufenden Workflow-Shell lecken und seit
+# Commit 59bd925 (#333) ein FATAL exit 1 auslösen, wenn sie auf einen im
+# Test-Repo nicht existenten Workflow zeigen (Symlink-Fallback aus). (#355)
+_SESSION_ENV_VARS = (
+    "GZ_ACTIVE_WORKFLOW",
+    "CLAUDE_CODE_SESSION_ID",
+    "GZ_HOOK_SESSION_ID",
+)
+
+
+def _subprocess_env(active: str | None = "demo") -> dict:
+    """env-dict für subprocess-Aufrufe ohne Session-Leaks; setzt aktiven Workflow.
+
+    Default 'demo' ist der im jeweiligen Test angelegte Workflow.
+    """
+    env = {k: v for k, v in os.environ.items() if k not in _SESSION_ENV_VARS}
+    if active is not None:
+        env["GZ_ACTIVE_WORKFLOW"] = active
+    return env
 
 
 @pytest.fixture
@@ -230,6 +251,7 @@ class TestT3WorkflowGateLive:
         result = subprocess.run(
             [sys.executable, str(HOOKS_DIR / "workflow_gate.py")],
             input=payload, text=True, capture_output=True,
+            env=_subprocess_env(),
         )
         assert result.returncode == 2, \
             f"Erwartet Block (Exit 2), bekam {result.returncode}. Stderr: {result.stderr}"
@@ -276,6 +298,7 @@ class TestT3WorkflowGateLive:
         result = subprocess.run(
             [sys.executable, str(HOOKS_DIR / "workflow_gate.py")],
             input=payload, text=True, capture_output=True,
+            env=_subprocess_env(),
         )
         # AC-3-Schutz: Legacy darf nicht blockiert werden — Exit 0 erwartet.
         # (Andere Gates wie tdd_enforcement laufen separat — der workflow_gate selbst muss OK sagen)

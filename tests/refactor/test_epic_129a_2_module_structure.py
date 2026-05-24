@@ -22,8 +22,6 @@ import inspect
 import subprocess
 from pathlib import Path
 
-import pytest
-
 REPO = Path(__file__).resolve().parents[2]
 
 
@@ -124,40 +122,13 @@ def test_gpx_to_stage_data_signature():
     )
 
 
-def test_pages_loadable():
-    """AC-4: src/web/pages/{gpx_upload,trips}.py laden weiterhin ohne ImportError
-    und enthalten Re-Imports auf die neuen Service-Module.
-    """
-    try:
-        import nicegui  # noqa: F401
-    except ImportError:
-        pytest.skip("nicegui nicht installiert - kann pages nicht testen")
-
-    # gpx_upload.py
-    mod_upload = importlib.import_module("web.pages.gpx_upload")
-    assert hasattr(mod_upload, "render_gpx_upload"), (
-        "web.pages.gpx_upload.render_gpx_upload verschwand faelschlich"
-    )
-    # Re-Imports muessen vorhanden sein, damit UI-Funktionen weiterhin laufen
-    for name in ("process_gpx_upload", "compute_full_segmentation", "segments_to_trip"):
-        assert hasattr(mod_upload, name), (
-            f"Re-Import {name} fehlt in web.pages.gpx_upload"
-        )
-
-    # trips.py
-    mod_trips = importlib.import_module("web.pages.trips")
-    assert hasattr(mod_trips, "render_trips"), (
-        "web.pages.trips.render_trips verschwand faelschlich"
-    )
-    for name in (
-        "gpx_to_stage_data",
-        "process_bulk_gpx_uploads",
-        "compute_default_start_date",
-        "parse_dms_coordinates",
-    ):
-        assert hasattr(mod_trips, name), (
-            f"Re-Import {name} fehlt in web.pages.trips"
-        )
+# AC-4 (test_pages_loadable) — geloescht in Issue #355.
+# Der Test pruefte, dass die NiceGUI-Seiten src/web/pages/{gpx_upload,trips}.py
+# nach dem Epic-#129-Refactor weiterhin ladbar sind und Re-Imports enthalten.
+# Die gesamte NiceGUI-web/pages/-Schicht wurde im SvelteKit-Rework entfernt;
+# die Module web.pages.gpx_upload / web.pages.trips existieren nicht mehr.
+# AC-1..AC-3 + AC-5 (Service-Module coordinates/gpx_processing, API-Contract,
+# tote Funktionen, web/utils.py) bleiben gueltig und getestet.
 
 
 def test_dead_format_decimal_to_dms_removed():

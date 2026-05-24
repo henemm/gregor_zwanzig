@@ -20,6 +20,7 @@ GREEN-Zustand (nach β3-Implementation):
 """
 from __future__ import annotations
 
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -158,11 +159,27 @@ def _build_seg_weather(
     )
 
 
+# Die "Generated:"-Zeile traegt einen Live-Timestamp (plain.py nutzt
+# datetime.now()). Dieser ist bewusst nicht-deterministisch und kein
+# Renderer-Inhalt; fuer den Bit-Vergleich wird er auf einen festen Platzhalter
+# normalisiert (Test-seitig, kein Prod-Verhalten). Issue #355.
+_GENERATED_RE = re.compile(
+    r"^Generated: \d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC", flags=re.MULTILINE
+)
+_GENERATED_PLACEHOLDER = "Generated: <TIMESTAMP> UTC"
+
+
+def _normalize(text: str) -> str:
+    """Replace the volatile Generated-timestamp with a stable placeholder."""
+    return _GENERATED_RE.sub(_GENERATED_PLACEHOLDER, text)
+
+
 def _assert_plain_matches_golden(stem: str, plain: str) -> None:
     expected = _read_golden(stem)
-    assert plain == expected, (
+    assert _normalize(plain) == _normalize(expected), (
         f"Plain-Body-Drift in {stem}.\n"
-        f"Bit-Vergleich gegen tests/golden/email/{stem}-plain.txt fehlgeschlagen.\n"
+        f"Bit-Vergleich gegen tests/golden/email/{stem}-plain.txt fehlgeschlagen "
+        f"(Generated-Timestamp wird normalisiert).\n"
         f"Spec §A7 verlangt bit-identischen Output vor und nach β3-Migration."
     )
 

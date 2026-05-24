@@ -83,13 +83,20 @@ class TestSidebarBorderRemoved:
 
 
 class TestWhiteBackground:
-    """Change 2: Light mode background should be pure white."""
+    """Change 2: Light mode background uses the warm paper token G_PAPER.
+
+    Sanierung Issue #355: Der urspruengliche Test erwartete pure white
+    (rgb(255,255,255)). Die gewollte Design-Realitaet ist der Marken-Token
+    --g-paper (#f6f4ee = rgb(246, 244, 238)); --color-background ist auf
+    var(--g-paper) gesetzt (frontend/src/app.css). Erwartung an den
+    Design-Token angepasst.
+    """
 
     def test_background_is_pure_white(self, browser_context):
         """
         GIVEN: The dashboard in light mode
         WHEN: Checking the computed background color of the body
-        THEN: It should be pure white (rgb(255, 255, 255))
+        THEN: It should be the G_PAPER token (rgb(246, 244, 238) / #f6f4ee)
         """
         page = browser_context.new_page()
         page.goto(f"{FRONTEND_URL}/")
@@ -100,11 +107,11 @@ class TestWhiteBackground:
         )
         page.close()
 
-        # oklch(1 0 0) and rgb(255, 255, 255) are both pure white
-        # Chromium may return either format depending on version
-        pure_white_values = {"rgb(255, 255, 255)", "oklch(1 0 0)"}
-        assert bg_color in pure_white_values, (
-            f"Body background is not pure white: {bg_color}"
+        # G_PAPER (#f6f4ee). Chromium may report rgb or the oklch equivalent
+        # depending on version.
+        paper_values = {"rgb(246, 244, 238)", "oklch(0.965 0.005 85)"}
+        assert bg_color in paper_values, (
+            f"Body background is not the G_PAPER token (#f6f4ee): {bg_color}"
         )
 
     def test_main_has_no_muted_bg(self, browser_context):

@@ -16,6 +16,11 @@ load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 SVELTE_BASE = os.environ.get("GZ_SVELTE_BASE", "https://gregor20.henemm.com")
 GO_BASE = "http://localhost:8090"
 
+# Issue #355: echte Live-Server-/Login-Tests (httpx gegen den laufenden Server).
+# Vom Default-Offline-Lauf (addopts = -m 'not email and not live') ausgeschlossen;
+# explizit ausfuehrbar mit `-m live` + GZ_AUTH_PASS gegen den Server.
+pytestmark = pytest.mark.live
+
 
 @pytest.fixture(scope="module")
 def session_cookie():

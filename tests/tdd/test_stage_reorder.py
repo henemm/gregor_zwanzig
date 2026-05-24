@@ -30,6 +30,11 @@ USER = os.getenv("GZ_TEST_USER", "default")
 PASS = os.getenv("GZ_TEST_PASS")
 TIMEOUT = 10.0
 
+# Issue #355: echte Live-Server-/Login-Tests (httpx + Playwright gegen Staging).
+# Vom Default-Offline-Lauf (addopts = -m 'not email and not live') ausgeschlossen;
+# explizit ausfuehrbar mit `-m live` + GZ_TEST_PASS gegen Staging.
+pytestmark = pytest.mark.live
+
 
 def _login(client: httpx.Client) -> None:
     if not PASS:

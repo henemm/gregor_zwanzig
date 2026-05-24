@@ -17,6 +17,7 @@ Erwartet: ~10 Tests RED (write_log/complete-block/updater-patch fehlen),
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -26,6 +27,31 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 HOOKS_DIR = REPO_ROOT / ".claude" / "hooks"
+
+# Session-Env-Vars, die aus einer laufenden Workflow-Shell in die Subprozesse
+# (und den In-Process-Import von workflow.py) lecken koennen. Seit Commit 59bd925
+# (Symlink-Fallback aus, Issue #333) triggert ein gesetztes GZ_ACTIVE_WORKFLOW,
+# das auf einen im fake_repo nicht existenten Workflow zeigt, ein FATAL exit 1.
+# Diese Tests muessen daher die Env-Vars isolieren und den fake_repo-Workflow
+# explizit als aktiv markieren (Issue #355, Muster aus bug_333).
+_SESSION_ENV_VARS = (
+    "GZ_ACTIVE_WORKFLOW",
+    "CLAUDE_CODE_SESSION_ID",
+    "GZ_HOOK_SESSION_ID",
+)
+
+
+def _subprocess_env(active: str | None = "demo-wf") -> dict:
+    """Sauberes env-dict fuer subprocess-Aufrufe: keine Session-Leaks aus Shell.
+
+    Setzt GZ_ACTIVE_WORKFLOW auf den im fake_repo existierenden Workflow
+    (Default 'demo-wf'), damit _active_name() im Subprocess aufloest statt FATAL
+    zu triggern.
+    """
+    env = {k: v for k, v in os.environ.items() if k not in _SESSION_ENV_VARS}
+    if active is not None:
+        env["GZ_ACTIVE_WORKFLOW"] = active
+    return env
 
 
 # ---------- Fixtures ----------------------------------------------------
@@ -49,6 +75,11 @@ def hooks_on_path():
 @pytest.fixture
 def fake_repo(tmp_path, monkeypatch, hooks_on_path):
     """Minimales v3-Repo mit einem aktiven Workflow in phase6b_adversary."""
+    # Isolation gegen Shell-Leaks (Issue #355/#333): Session-Vars entfernen,
+    # damit weder Subprozess noch In-Process-Import einen fremden Workflow
+    # aufloest (sonst FATAL exit 1). GZ_ACTIVE_WORKFLOW wird unten gesetzt.
+    for var in _SESSION_ENV_VARS:
+        monkeypatch.delenv(var, raising=False)
     main_repo = tmp_path / "main_repo"
     main_repo.mkdir()
     (main_repo / ".git").mkdir()
@@ -91,6 +122,8 @@ def fake_repo(tmp_path, monkeypatch, hooks_on_path):
     (wf_dir / "demo-wf.json").write_text(json.dumps(wf_state, indent=2))
     (wf_dir / ".active").symlink_to("demo-wf.json")
 
+    # In-Process-Tests (set_phase-Import) brauchen den aktiven Workflow explizit.
+    monkeypatch.setenv("GZ_ACTIVE_WORKFLOW", "demo-wf")
     monkeypatch.chdir(main_repo)
     return main_repo
 
@@ -106,6 +139,7 @@ class TestT1WriteLog:
         result = subprocess.run(
             [sys.executable, str(HOOKS_DIR / "workflow.py"), "write-log", "success"],
             capture_output=True, text=True, cwd=str(fake_repo),
+            env=_subprocess_env(),
         )
         assert result.returncode == 0, f"write-log fehlgeschlagen: {result.stderr}"
 
@@ -121,6 +155,7 @@ class TestT1WriteLog:
         subprocess.run(
             [sys.executable, str(HOOKS_DIR / "workflow.py"), "write-log", "success"],
             capture_output=True, text=True, cwd=str(fake_repo), check=True,
+            env=_subprocess_env(),
         )
 
         log_file = next((fake_repo / ".claude" / "workflows" / "_log").glob("*_demo-wf.yaml"))
@@ -149,6 +184,7 @@ class TestT1WriteLog:
         subprocess.run(
             [sys.executable, str(HOOKS_DIR / "workflow.py"), "write-log"],
             capture_output=True, text=True, cwd=str(fake_repo), check=True,
+            env=_subprocess_env(),
         )
 
         log_file = next((fake_repo / ".claude" / "workflows" / "_log").glob("*_demo-wf.yaml"))
@@ -167,6 +203,7 @@ class TestT2CompleteBlock:
         result = subprocess.run(
             [sys.executable, str(HOOKS_DIR / "workflow.py"), "complete"],
             capture_output=True, text=True, cwd=str(fake_repo),
+            env=_subprocess_env(),
         )
         assert result.returncode != 0, "complete darf ohne Log nicht erlaubt sein"
         assert "BLOCKED" in (result.stderr + result.stdout), \
@@ -179,10 +216,12 @@ class TestT2CompleteBlock:
         subprocess.run(
             [sys.executable, str(HOOKS_DIR / "workflow.py"), "write-log", "success"],
             capture_output=True, text=True, cwd=str(fake_repo), check=True,
+            env=_subprocess_env(),
         )
         result = subprocess.run(
             [sys.executable, str(HOOKS_DIR / "workflow.py"), "complete"],
             capture_output=True, text=True, cwd=str(fake_repo),
+            env=_subprocess_env(),
         )
         assert result.returncode == 0, f"complete sollte mit Log erlaubt sein: {result.stderr}"
 
@@ -195,6 +234,7 @@ class TestT2CompleteBlock:
         result = subprocess.run(
             [sys.executable, str(HOOKS_DIR / "workflow.py"), "phase", "phase8_complete"],
             capture_output=True, text=True, cwd=str(fake_repo),
+            env=_subprocess_env(),
         )
         assert result.returncode != 0, \
             "Direkter Sprung zu phase8_complete ohne Log muss blockiert sein"
@@ -212,6 +252,7 @@ class TestT3TransitionsAndFixLoop:
         subprocess.run(
             [sys.executable, str(HOOKS_DIR / "workflow.py"), "phase", "phase7_validate"],
             capture_output=True, text=True, cwd=str(fake_repo), check=True,
+            env=_subprocess_env(),
         )
 
         state = json.loads((fake_repo / ".claude" / "workflows" / "demo-wf.json").read_text())
@@ -233,6 +274,7 @@ class TestT3TransitionsAndFixLoop:
         subprocess.run(
             [sys.executable, str(HOOKS_DIR / "workflow.py"), "phase", "phase6_implement"],
             capture_output=True, text=True, cwd=str(fake_repo), check=True,
+            env=_subprocess_env(),
         )
 
         state = json.loads(wf_file.read_text())
@@ -250,6 +292,7 @@ class TestT3TransitionsAndFixLoop:
         subprocess.run(
             [sys.executable, str(HOOKS_DIR / "workflow.py"), "phase", "phase6b_adversary"],
             capture_output=True, text=True, cwd=str(fake_repo), check=True,
+            env=_subprocess_env(),
         )
 
         state = json.loads(wf_file.read_text())
@@ -274,6 +317,7 @@ class TestT4StatusExtension:
         result = subprocess.run(
             [sys.executable, str(HOOKS_DIR / "workflow.py"), "status"],
             capture_output=True, text=True, cwd=str(fake_repo), check=True,
+            env=_subprocess_env(),
         )
         output = result.stdout
 
@@ -369,6 +413,7 @@ class TestFixLoop1Findings:
         result = subprocess.run(
             [sys.executable, str(HOOKS_DIR / "workflow.py"), "status"],
             capture_output=True, text=True, cwd=str(fake_repo),
+            env=_subprocess_env(),
         )
         assert result.returncode == 0, \
             f"status darf bei null-Feldern nicht crashen: stderr={result.stderr}"
@@ -388,6 +433,7 @@ class TestFixLoop1Findings:
         result = subprocess.run(
             [sys.executable, str(HOOKS_DIR / "workflow.py"), "phase", "phase7_validate"],
             capture_output=True, text=True, cwd=str(fake_repo),
+            env=_subprocess_env(),
         )
         assert result.returncode == 0, \
             f"phase-cmd darf bei null nicht crashen: stderr={result.stderr}"
@@ -431,6 +477,7 @@ class TestFixLoop1Findings:
         result = subprocess.run(
             [sys.executable, str(HOOKS_DIR / "workflow.py"), "complete"],
             capture_output=True, text=True, cwd=str(fake_repo),
+            env=_subprocess_env(),
         )
         assert result.returncode != 0, \
             "complete darf bei 0-Byte-Log-File nicht durchgehen"
@@ -440,6 +487,7 @@ class TestFixLoop1Findings:
         result2 = subprocess.run(
             [sys.executable, str(HOOKS_DIR / "workflow.py"), "phase", "phase8_complete"],
             capture_output=True, text=True, cwd=str(fake_repo),
+            env=_subprocess_env(),
         )
         assert result2.returncode != 0, \
             "Direkter Sprung zu phase8_complete darf bei 0-Byte-Log nicht durchgehen"

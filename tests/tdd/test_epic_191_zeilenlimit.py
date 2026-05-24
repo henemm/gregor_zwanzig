@@ -29,6 +29,26 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parents[2]
 HOOKS_DIR = REPO_ROOT / ".claude" / "hooks"
 
+# Session-Env-Vars, die aus einer laufenden Workflow-Shell lecken und seit
+# Commit 59bd925 (#333) ein FATAL exit 1 auslösen, wenn sie auf einen im
+# Test-Repo nicht existenten Workflow zeigen (Symlink-Fallback aus). (#355)
+_SESSION_ENV_VARS = (
+    "GZ_ACTIVE_WORKFLOW",
+    "CLAUDE_CODE_SESSION_ID",
+    "GZ_HOOK_SESSION_ID",
+)
+
+
+def _subprocess_env(active: str | None = "demo") -> dict:
+    """env-dict für subprocess-Aufrufe ohne Session-Leaks; setzt aktiven Workflow.
+
+    Default 'demo' ist der von _init_active_workflow() erzeugte Workflow.
+    """
+    env = {k: v for k, v in os.environ.items() if k not in _SESSION_ENV_VARS}
+    if active is not None:
+        env["GZ_ACTIVE_WORKFLOW"] = active
+    return env
+
 
 # ---------- Helper: echtes git-Repo bauen ----------------------------
 
@@ -288,6 +308,7 @@ class TestT2CheckLocDelta:
             [sys.executable, str(HOOKS_DIR / "workflow.py"),
              "set-field", "loc_limit_override", "500"],
             cwd=repo, capture_output=True, text=True,
+            env=_subprocess_env(),
         )
         assert result.returncode == 0, f"set-field fehlgeschlagen: {result.stderr}"
 
@@ -310,6 +331,7 @@ class TestT2CheckLocDelta:
         gate_result = subprocess.run(
             [sys.executable, str(HOOKS_DIR / "scope_guard.py")],
             input=payload, cwd=repo, capture_output=True, text=True,
+            env=_subprocess_env(),
         )
         # Mit override 500 muss exit 0 sein (nicht 2 = BLOCKED)
         assert gate_result.returncode == 0, (
@@ -332,6 +354,7 @@ class TestT3StatusShowsDelta:
         result = subprocess.run(
             [sys.executable, str(HOOKS_DIR / "workflow.py"), "status"],
             cwd=fake_git_repo, capture_output=True, text=True,
+            env=_subprocess_env(),
         )
         assert result.returncode == 0
         assert "LoC-Delta" in result.stdout, \
@@ -345,6 +368,7 @@ class TestT3StatusShowsDelta:
         result = subprocess.run(
             [sys.executable, str(HOOKS_DIR / "workflow.py"), "status"],
             cwd=fake_git_repo, capture_output=True, text=True,
+            env=_subprocess_env(),
         )
         assert "/500" in result.stdout, f"Override-Limit muss in status: {result.stdout}"
         assert "override" in result.stdout.lower()

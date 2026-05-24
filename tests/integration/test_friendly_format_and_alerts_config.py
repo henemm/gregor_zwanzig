@@ -252,23 +252,40 @@ class TestAlertEnabledConfig:
         assert "wind" not in alert_ids
 
     def test_change_detection_uses_alert_config(self) -> None:
-        """WeatherChangeDetectionService.from_display_config() respects alert_enabled.
+        """from_display_config() selects detection metrics by `enabled` (#131).
 
-        Bug #89 v1.1 default: zero alert metrics → zero thresholds. Once we opt-in
-        a few metrics, those thresholds appear in the service.
+        Issue #355: Die maßgebliche #131-Semantik wählt anhand `enabled`
+        (display flag), nicht `alert_enabled`. Wir aktivieren gezielt nur eine
+        Teilmenge via `enabled=True`; genau deren Thresholds erscheinen im
+        Service. Produktionscode unverändert (siehe test_issue_131_alert_klarheit).
         """
         from services.weather_change_detection import WeatherChangeDetectionService
 
+        # Nichts enabled → keine Thresholds.
         dc = build_default_display_config()
-        service_default = WeatherChangeDetectionService.from_display_config(dc)
-        assert len(service_default._thresholds) == 0
+        none_enabled = [
+            MetricConfig(
+                metric_id=mc.metric_id, enabled=False,
+                aggregations=mc.aggregations,
+                alert_enabled=mc.alert_enabled,
+            )
+            for mc in dc.metrics
+        ]
+        dc_none = UnifiedWeatherDisplayConfig(
+            trip_id="test", metrics=none_enabled,
+            show_night_block=dc.show_night_block,
+            night_interval_hours=dc.night_interval_hours,
+            thunder_forecast_days=dc.thunder_forecast_days,
+        )
+        service_none = WeatherChangeDetectionService.from_display_config(dc_none)
+        assert len(service_none._thresholds) == 0
 
         opted_in = {"temperature", "wind", "gust"}
         new_metrics = [
             MetricConfig(
-                metric_id=mc.metric_id, enabled=mc.enabled,
+                metric_id=mc.metric_id, enabled=mc.metric_id in opted_in,
                 aggregations=mc.aggregations,
-                alert_enabled=mc.metric_id in opted_in,
+                alert_enabled=mc.alert_enabled,
             )
             for mc in dc.metrics
         ]
@@ -285,15 +302,19 @@ class TestAlertEnabledConfig:
         assert any("gust" in k for k in threshold_keys)
 
     def test_no_alerts_means_empty_thresholds(self) -> None:
-        """If all alert_enabled=False, change detection has no thresholds."""
+        """If no metric is enabled, change detection has no thresholds.
+
+        Issue #355: Unter der #131-Semantik steuert `enabled` die Detection.
+        "Keine aktiven Metriken" heißt `enabled=False` für alle → leere Map.
+        """
         from services.weather_change_detection import WeatherChangeDetectionService
 
         dc = build_default_display_config()
         new_metrics = [
             MetricConfig(
-                metric_id=mc.metric_id, enabled=mc.enabled,
+                metric_id=mc.metric_id, enabled=False,
                 aggregations=mc.aggregations,
-                alert_enabled=False,
+                alert_enabled=mc.alert_enabled,
             )
             for mc in dc.metrics
         ]

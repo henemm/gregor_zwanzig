@@ -156,10 +156,11 @@ class WeatherChangeDetectionService:
     @classmethod
     def from_display_config(cls, display_config: "UnifiedWeatherDisplayConfig") -> "WeatherChangeDetectionService":
         """
-        Factory: Create service from per-metric alert settings.
+        Factory: Create service from per-metric display settings.
 
-        Only metrics with alert_enabled=True are included in detection.
-        User-set alert_threshold overrides MetricCatalog default.
+        Only metrics with enabled=True are included in detection (display flag;
+        bewusst so seit Issue #131 — NICHT alert_enabled). User-set
+        alert_threshold overrides MetricCatalog default.
 
         Args:
             display_config: Unified weather display config with per-metric alert settings

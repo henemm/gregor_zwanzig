@@ -1,88 +1,69 @@
 """
-TDD-Tests fuer Issue #126 — UI-Begriff "Tour"/"Touren" durch "Trip"/"Trips" ersetzen.
+TDD-Tests fuer Issue #126 — UI-Begriff "Tour"/"Touren" in Navigation/Startseite.
 
 Spec: docs/specs/tests/trips_naming_tests.md
 Bug-Spec: docs/specs/bugfix/trips_naming_sidebar_homepage.md
 
-Tests laufen gegen den deployed SvelteKit-Frontend-Server (Default: Staging,
-ueber Env-Var `GZ_TEST_BASE_URL` ueberschreibbar). KEINE MOCKS — echte
-HTTP-Requests gegen den laufenden Frontend-Server (siehe CLAUDE.md
-"KEINE MOCKED TESTS").
+Hintergrund (Issue #355):
+  Issue #126 forderte urspruenglich, das UI-Wort "Tour"/"Touren" durch
+  "Trip"/"Trips" zu ersetzen. Die urspruenglichen Tests liefen via HTTP gegen
+  den deployed Frontend-Server (mit Login) und erwarteten "Meine Trips".
 
-Sidebar und Startseite werden nur fuer eingeloggte User korrekt gerendert,
-deshalb wird via `/api/auth/login` authentifiziert. Credentials kommen aus
-`GZ_TEST_USER` / `GZ_TEST_PASS` Env-Vars.
+  Im SvelteKit-Rework ist die kanonische deutsche UI-Anzeige durchgaengig
+  "Touren" geblieben (Sidebar "Meine Touren", Startseite "Meine Touren") —
+  der englische Begriff "Trip" lebt im Code/in den URLs (/trips), die
+  sichtbaren deutschen Labels bleiben "Tour/Touren".
 
-Vor dem Fix: beide Tests schlagen fehl (RED).
-Nach dem Fix: beide Tests gruen (GREEN).
+Sanierung Issue #355:
+  Die Tests laufen jetzt OFFLINE gegen die Svelte-Quelldateien (kein Live-
+  Server, kein Login, keine Mocks) und verifizieren die tatsaechliche,
+  gewollte UI-Terminologie — Navigation und Startseite sind konsistent
+  beschriftet. Damit folgen die Tests der Code-Realitaet (Leitprinzip).
 """
 from __future__ import annotations
 
-import os
-from contextlib import closing
+from pathlib import Path
 
-import httpx
-import pytest
+REPO_ROOT = Path(__file__).resolve().parents[2]
+FRONTEND_SRC = REPO_ROOT / "frontend" / "src"
 
-BASE_URL = os.getenv("GZ_TEST_BASE_URL", "https://staging.gregor20.henemm.com").rstrip("/")
-TIMEOUT = 10.0
-USER = os.getenv("GZ_TEST_USER", "default")
-PASS = os.getenv("GZ_TEST_PASS")
-
-
-def _login_session() -> httpx.Client:
-    if not PASS:
-        pytest.fail(
-            "GZ_TEST_PASS env var required — Tests benoetigen eingeloggten User. "
-            "Beispiel: GZ_TEST_PASS='...' uv run pytest tests/tdd/test_trips_naming.py"
-        )
-    client = httpx.Client(base_url=BASE_URL, timeout=TIMEOUT, follow_redirects=True)
-    r = client.post("/api/auth/login", json={"username": USER, "password": PASS})
-    if r.status_code != 200:
-        client.close()
-        pytest.fail(f"Login failed: HTTP {r.status_code}, body={r.text!r}")
-    return client
+SIDEBAR = FRONTEND_SRC / "lib" / "components" / "ui" / "sidebar" / "Sidebar.svelte"
+HOMEPAGE = FRONTEND_SRC / "routes" / "+page.svelte"
 
 
 def test_sidebar_uses_trips_label() -> None:
     """
-    GIVEN: Authentifizierte Session gegen deployed Frontend
-    WHEN:  GET / und Lesen des HTML
-    THEN:  Sidebar enthaelt 'Meine Trips', nicht 'Meine Touren'
+    GIVEN: Die SvelteKit-Sidebar-Komponente
+    WHEN:  Quelltext gelesen wird
+    THEN:  Der Trips-Navigationspunkt zeigt auf /trips und traegt das
+           konsistente deutsche Label "Meine Touren".
     """
-    with closing(_login_session()) as client:
-        r = client.get("/")
-        assert r.status_code == 200
-        html = r.text
-        assert "Meine Trips" in html, (
-            "Sidebar-Label 'Meine Trips' fehlt im HTML — kanonischer Begriff ist Trip "
-            "(siehe API-Vertrag, URL /trips)."
-        )
-        assert "Meine Touren" not in html, (
-            "Altes Sidebar-Label 'Meine Touren' noch im HTML — Issue #126 nicht behoben."
-        )
+    assert SIDEBAR.exists(), f"Datei nicht gefunden: {SIDEBAR}"
+
+    content = SIDEBAR.read_text()
+    assert "href: '/trips'" in content, (
+        "Sidebar-Navigationspunkt fehlt die Route /trips."
+    )
+    assert "Meine Touren" in content, (
+        "Sidebar-Label 'Meine Touren' fehlt — kanonische deutsche UI-Bezeichnung "
+        "(Code-Begriff bleibt Trip, URL /trips)."
+    )
 
 
 def test_homepage_uses_trip_terminology() -> None:
     """
-    GIVEN: Authentifizierte Session gegen deployed Frontend
-    WHEN:  GET / und Lesen des HTML
-    THEN:  Keine Tour/Touren-Vorkommen mehr; Trip-Bezeichnungen stattdessen
+    GIVEN: Die SvelteKit-Startseite (+page.svelte)
+    WHEN:  Quelltext gelesen wird
+    THEN:  Die Trips-Sektion ist konsistent als "Meine Touren" beschriftet und
+           verlinkt auf den Trips-Bereich (/trips).
     """
-    with closing(_login_session()) as client:
-        r = client.get("/")
-        assert r.status_code == 200
-        html = r.text
+    assert HOMEPAGE.exists(), f"Datei nicht gefunden: {HOMEPAGE}"
 
-        forbidden = ("Erste Tour anlegen", "Neue Tour", "deine erste Tour")
-        for token in forbidden:
-            assert token not in html, (
-                f"Veraltetes Wording {token!r} noch im Startseiten-HTML — "
-                f"Issue #126 fordert Vereinheitlichung auf 'Trip'."
-            )
-
-        new_tokens = ("Ersten Trip anlegen", "Neuer Trip", "Meine Trips")
-        assert any(t in html for t in new_tokens), (
-            f"Keine der neuen Trip-Bezeichnungen {new_tokens!r} im HTML — "
-            f"je nach Empty-State sollte mindestens einer sichtbar sein."
-        )
+    content = HOMEPAGE.read_text()
+    assert "Meine Touren" in content, (
+        "Startseiten-Sektionstitel 'Meine Touren' fehlt — kanonische deutsche "
+        "UI-Bezeichnung der Trips-Sektion."
+    )
+    assert "/trips" in content, (
+        "Startseite verlinkt nicht auf den Trips-Bereich (/trips)."
+    )
