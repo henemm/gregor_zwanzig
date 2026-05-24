@@ -171,11 +171,26 @@ test.describe('Issue #343: HorizonChip-UI', () => {
 		expect(chipBox!.height).toBeGreaterThanOrEqual(44);
 	});
 
-	// AC-7: SavePresetDialog zeigt ZEITHORIZONTE-Box
+	// AC-7: SavePresetDialog zeigt ZEITHORIZONTE-Box mit EXAKTEM Wording
+	// Fix-Loop #1 (F003): strict assertion auf "N nur heute" — vorher zu locker.
 	test('AC-7: SavePresetDialog zeigt ZEITHORIZONTE-Block mit Wording-Zusammenfassung', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
 		await page.getByTestId('trip-detail-tab-weather').click();
 		await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
+
+		// Setze temperature auf "nur heute" (tomorrow + day_after deaktivieren)
+		const morgen = page.getByTestId('horizon-chip-temperature-tomorrow');
+		if ((await morgen.getAttribute('data-active')) === 'true') {
+			await morgen.click();
+		}
+		const dayAfter = page.getByTestId('horizon-chip-temperature-day_after');
+		if ((await dayAfter.getAttribute('data-active')) === 'true') {
+			await dayAfter.click();
+		}
+
+		// State persistieren, sonst ist Preset-Trigger nicht sichtbar (versteckt wenn dirty)
+		await page.getByTestId('weather-metrics-tab-save').click();
+		await expect(page.getByTestId('weather-metrics-tab-success')).toBeVisible();
 
 		await page.getByTestId('save-preset-dialog-trigger').click();
 		await expect(page.getByTestId('save-preset-dialog')).toBeVisible();
@@ -183,6 +198,74 @@ test.describe('Issue #343: HorizonChip-UI', () => {
 
 		const summary = page.getByTestId('save-preset-horizon-summary');
 		await expect(summary).toBeVisible();
-		await expect(summary).toContainText(/(alle drei Tage|nur heute|nur morgen|sonstige Kombinationen)/);
+		// Strict: temperature ist genau "nur heute" → "N nur heute" muss exakt vorkommen.
+		await expect(summary).toContainText(/\b\d+ nur heute\b/);
+	});
+
+	// AC-4 (Fix-Loop #1, F001): Submit speichert horizons in POST /api/metric-presets
+	// Vorher fehlte ein Submit-Test komplett — AC-4 war unbeweisbar.
+	test('AC-4: Submit speichert horizons in POST /api/metric-presets', async ({ page, request: apiRequest }) => {
+		// Backend-Reset: setze Trip-Zustand auf {all horizons true} — sonst hängt
+		// dieser Test vom Vor-Zustand früherer Tests im selben Trip ab.
+		await apiRequest.put(`/api/trips/${TRIP_ID}/weather-config`, {
+			data: {
+				metrics: [
+					{
+						metric_id: 'temperature',
+						enabled: true,
+						use_friendly_format: true,
+						horizons: { today: true, tomorrow: true, day_after: true },
+					},
+				],
+			},
+		});
+
+		await page.goto(`/trips/${TRIP_ID}`);
+		await page.getByTestId('trip-detail-tab-weather').click();
+		await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
+
+		// 1. Klick auf day_after → false (Anfangszustand garantiert true durch API-Reset)
+		const chip = page.getByTestId('horizon-chip-temperature-day_after');
+		await expect(chip).toBeVisible();
+		await expect(chip).toHaveAttribute('data-active', 'true');
+		await chip.click();
+		await expect(chip).toHaveAttribute('data-active', 'false');
+
+		// 2. Persistieren (Preset-Trigger ist nur sichtbar wenn !isDirty)
+		await page.getByTestId('weather-metrics-tab-save').click();
+		await expect(page.getByTestId('weather-metrics-tab-success')).toBeVisible();
+
+		// 3. Dialog öffnen
+		await page.getByTestId('save-preset-dialog-trigger').click();
+		await expect(page.getByTestId('save-preset-dialog')).toBeVisible();
+
+		// 4. Namen eingeben (eindeutig pro Run, damit kein Duplikat-Konflikt)
+		const presetName = `AC-4-Test-Preset-${Date.now()}`;
+		await page.getByTestId('save-preset-name').fill(presetName);
+
+		// 5. POST abfangen + Submit klicken
+		const requestPromise = page.waitForRequest(
+			(req) => req.url().includes('/api/metric-presets') && req.method() === 'POST',
+		);
+		await page.getByTestId('save-preset-submit').click();
+		const postReq = await requestPromise;
+
+		// 6. Body inspizieren — metrics[] mit horizons pro Eintrag
+		const body = JSON.parse(postReq.postData() || '{}');
+		expect(body.name).toBe(presetName);
+		expect(Array.isArray(body.metrics)).toBe(true);
+		expect(body.metrics.length).toBeGreaterThan(0);
+
+		const tempMetric = body.metrics.find((m: { metric_id: string }) => m.metric_id === 'temperature');
+		expect(tempMetric).toBeDefined();
+		expect(tempMetric.horizons).toBeDefined();
+		expect(tempMetric.horizons).toHaveProperty('today');
+		expect(tempMetric.horizons).toHaveProperty('tomorrow');
+		expect(tempMetric.horizons).toHaveProperty('day_after');
+		// Wir haben oben day_after auf false getoggelt → muss im Payload reflektiert sein
+		expect(tempMetric.horizons.day_after).toBe(false);
+
+		// 7. Dialog schließt sich nach erfolgreichem Save
+		await expect(page.getByTestId('save-preset-dialog')).not.toBeVisible({ timeout: 5000 });
 	});
 });

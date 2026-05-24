@@ -89,17 +89,20 @@
 	<div class="grid-three">
 		{#each DAYS as day}
 			{@const cols = visibleCols(day)}
-			<div class="day-table" data-testid="table-preview-day-{day}" data-day={day}>
-				<caption-row>
-					<Eyebrow>{DAY_LABEL[day]} — {cols.length} METRIKEN</Eyebrow>
-				</caption-row>
+			<div class="day-table" data-testid="table-preview-day-{day}">
 				{#if cols.length === 0}
+					<div class="caption-empty">
+						<Eyebrow>{DAY_LABEL[day]} — 0 METRIKEN</Eyebrow>
+					</div>
 					<div class="empty-day">
 						<p>Keine Metriken für diesen Horizont aktiviert.</p>
 					</div>
 				{:else}
 					<div class="table-wrap">
-						<table>
+						<table data-day={day}>
+							<caption>
+								<Eyebrow>{DAY_LABEL[day]} — {cols.length} METRIKEN</Eyebrow>
+							</caption>
 							<thead>
 								<tr>
 									<th class="th-time">Zeit</th>
@@ -171,6 +174,14 @@
 		display: flex;
 		flex-direction: column;
 		gap: var(--g-s-2);
+	}
+	caption {
+		caption-side: top;
+		text-align: left;
+		padding: 0 0 var(--g-s-2) 0;
+	}
+	.caption-empty {
+		padding: 0 0 var(--g-s-1) 0;
 	}
 	.empty-day {
 		padding: var(--g-s-3);
