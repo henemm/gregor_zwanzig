@@ -105,10 +105,25 @@ export interface Aggregation {
 	profile?: ActivityProfile;
 }
 
+// Issue #343 — Pro-Metrik-Zeithorizont (Backend live aus #342).
+// Default beim Load fehlender Felder ist {true,true,true}.
+export type Horizons = {
+	today: boolean;
+	tomorrow: boolean;
+	day_after: boolean;
+};
+
+export const HORIZONS_ALL: Horizons = {
+	today: true,
+	tomorrow: true,
+	day_after: true,
+};
+
 export interface WeatherConfigMetric {
 	metric_id: string;
 	enabled: boolean;
 	use_friendly_format?: boolean;
+	horizons?: Horizons; // Issue #343 — optional; defaultet HORIZONS_ALL beim Load
 }
 
 export interface WeatherConfig {
@@ -143,13 +158,23 @@ export interface DisplayConfig {
 }
 
 // Epic #138 Issue #177 — User-definierte Metric-Presets (Server-seitig persistiert).
+// Issue #342 / #343 — Schema-Migration: `metrics` ist jetzt eine Liste von
+// DisplayMetric-Objekten ({metric_id, enabled, use_friendly_format, horizons?})
+// statt zweier paralleler String-Arrays (metrics + friendly_ids).
+// Backend hat Compat-Layer (siehe internal/store/store.go::LoadMetricPresets).
+export interface MetricPresetMetric {
+	metric_id: string;
+	enabled: boolean;
+	use_friendly_format: boolean;
+	horizons?: Horizons;
+}
+
 export interface MetricPreset {
 	id: string;
 	name: string;
 	description?: string;
 	is_default: boolean;
-	metrics: string[];
-	friendly_ids: string[];
+	metrics: MetricPresetMetric[];
 	created_at: string;
 }
 

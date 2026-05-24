@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { api } from '$lib/api.js';
-	import type { Trip, MetricPreset } from '$lib/types';
+	import type { Trip, MetricPreset, Horizons } from '$lib/types';
+	import { HORIZONS_ALL } from '$lib/types';
 	import { Pill } from '$lib/components/ui/pill/index.js';
 	import PresetRow from './PresetRow.svelte';
 	import MetricGroup from './MetricGroup.svelte';
@@ -66,17 +67,23 @@
 	let saveError: string | null = $state(null);
 	let enabledMap: Record<string, boolean> = $state({});
 	let friendlyMap: Record<string, boolean> = $state({});
+	// Issue #343 — Pro-Metrik-Horizont (today/tomorrow/day_after). Defaultet HORIZONS_ALL.
+	let horizonsMap: Record<string, Horizons> = $state({});
 	let selectedTemplate = $state('');
 	let lastAppliedTemplate = '';
 	let savedSnapshot = $state('');
 	let showSavePresetDialog = $state(false);
 
 	const isDirty = $derived(
-		JSON.stringify({ enabledMap, friendlyMap }) !== savedSnapshot
+		JSON.stringify({ enabledMap, friendlyMap, horizonsMap }) !== savedSnapshot
 	);
 
-	function snapshot(eMap: Record<string, boolean>, fMap: Record<string, boolean>): string {
-		return JSON.stringify({ enabledMap: eMap, friendlyMap: fMap });
+	function snapshot(
+		eMap: Record<string, boolean>,
+		fMap: Record<string, boolean>,
+		hMap: Record<string, Horizons>,
+	): string {
+		return JSON.stringify({ enabledMap: eMap, friendlyMap: fMap, horizonsMap: hMap });
 	}
 
 	function sortedCategories(): string[] {
@@ -97,10 +104,12 @@
 	function initMaps(cat: MetricCatalog) {
 		const eMap: Record<string, boolean> = {};
 		const fMap: Record<string, boolean> = {};
+		const hMap: Record<string, Horizons> = {};
 		for (const metrics of Object.values(cat)) {
 			for (const m of metrics) {
 				eMap[m.id] = m.default_enabled;
 				fMap[m.id] = true;
+				hMap[m.id] = { ...HORIZONS_ALL };
 			}
 		}
 		const savedMetrics = trip.display_config?.metrics;
@@ -108,6 +117,9 @@
 			for (const mc of savedMetrics) {
 				eMap[mc.metric_id] = mc.enabled;
 				fMap[mc.metric_id] = mc.use_friendly_format ?? true;
+				hMap[mc.metric_id] = mc.horizons
+					? { ...mc.horizons }
+					: { ...HORIZONS_ALL };
 			}
 		}
 		const savedPreset = trip.display_config?.preset_name;
@@ -116,7 +128,8 @@
 			: '';
 		enabledMap = eMap;
 		friendlyMap = fMap;
-		savedSnapshot = snapshot(eMap, fMap);
+		horizonsMap = hMap;
+		savedSnapshot = snapshot(eMap, fMap, hMap);
 	}
 
 	async function load() {
@@ -174,11 +187,31 @@
 		friendlyMap = { ...friendlyMap, [id]: useIndicator };
 	}
 
+	function onHorizonChange(id: string, day: keyof Horizons) {
+		const current = horizonsMap[id] ?? { ...HORIZONS_ALL };
+		horizonsMap = {
+			...horizonsMap,
+			[id]: { ...current, [day]: !current[day] },
+		};
+	}
+
 	function handleDiscard() {
 		try {
 			const snap = JSON.parse(savedSnapshot);
 			enabledMap = snap.enabledMap;
 			friendlyMap = snap.friendlyMap;
+			if (snap.horizonsMap) {
+				horizonsMap = snap.horizonsMap;
+			} else {
+				// Fehlt der Horizont-Snapshot (z.B. Alt-Snapshot ohne horizonsMap),
+				// defaultet jede bekannte Metrik auf eine frische HORIZONS_ALL-Kopie —
+				// analog zu initMaps(), statt ein leeres Objekt zu setzen.
+				const hMap: Record<string, Horizons> = {};
+				for (const id of Object.keys(enabledMap)) {
+					hMap[id] = { ...HORIZONS_ALL };
+				}
+				horizonsMap = hMap;
+			}
 		} catch {
 			// Snapshot ungültig — auf Defaults zurücksetzen
 			initMaps(catalog);
@@ -193,7 +226,8 @@
 			const metrics = allMetricEntries().map((m) => ({
 				metric_id: m.id,
 				enabled: enabledMap[m.id] ?? m.default_enabled,
-				use_friendly_format: friendlyMap[m.id] ?? true
+				use_friendly_format: friendlyMap[m.id] ?? true,
+				horizons: horizonsMap[m.id] ?? { ...HORIZONS_ALL },
 			}));
 			const payload = {
 				...(trip.display_config ?? {}),
@@ -202,7 +236,7 @@
 			};
 			await api.put(`/api/trips/${trip.id}/weather-config`, payload);
 			saveSuccess = true;
-			savedSnapshot = snapshot(enabledMap, friendlyMap);
+			savedSnapshot = snapshot(enabledMap, friendlyMap, horizonsMap);
 			setTimeout(() => {
 				saveSuccess = false;
 			}, 3000);
@@ -262,8 +296,10 @@
 							enabled={enabledMap[metric.id] ?? metric.default_enabled}
 							useIndicator={friendlyMap[metric.id] ?? true}
 							indicatorCapable={indicatorCapable(metric.id)}
+							horizons={horizonsMap[metric.id] ?? { ...HORIZONS_ALL }}
 							onToggle={onCheckboxChange}
 							{onModeChange}
+							{onHorizonChange}
 						/>
 					{/each}
 				</MetricGroup>
@@ -274,6 +310,7 @@
 			{catalog}
 			{enabledMap}
 			{friendlyMap}
+			{horizonsMap}
 			categoryOrder={CATEGORY_ORDER}
 			{indicatorCapable}
 		/>
@@ -315,6 +352,7 @@
 			bind:open={showSavePresetDialog}
 			{enabledMap}
 			{friendlyMap}
+			{horizonsMap}
 			{catalog}
 			{indicatorCapable}
 			onClose={() => (showSavePresetDialog = false)}
