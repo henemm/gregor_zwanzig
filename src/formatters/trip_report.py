@@ -138,6 +138,30 @@ class TripReportFormatter:
             gust_max_kmh=first_agg.gust_max_kmh,
         )
 
+        # Issue #360: kanal-bewusster Narrow-Body fuer Signal/Telegram.
+        # Reine Zusatzberechnung — email_plain bleibt unveraendert.
+        from src.output.renderers.narrow import render_narrow
+        signal_text = render_narrow(
+            "signal",
+            segments=segments,
+            seg_tables=seg_tables,
+            dc=dc,
+            report_type=report_type,
+            tz=self._tz,
+            trip_name=trip_name,
+            friendly_keys=self._friendly_keys,
+        )
+        telegram_text = render_narrow(
+            "telegram",
+            segments=segments,
+            seg_tables=seg_tables,
+            dc=dc,
+            report_type=report_type,
+            tz=self._tz,
+            trip_name=trip_name,
+            friendly_keys=self._friendly_keys,
+        )
+
         return TripReport(
             trip_id=trip_id,
             trip_name=trip_name,
@@ -148,6 +172,8 @@ class TripReportFormatter:
             email_html=email_html,
             email_plain=email_plain,
             sms_text=None,
+            signal_text=signal_text,
+            telegram_text=telegram_text,
             triggered_by="schedule" if not changes else "change_detection",
             changes=changes if changes else [],
         )

@@ -468,6 +468,9 @@ class MetricConfig:
     # Issue #342: Pro-Metrik-Zeithorizont (today/tomorrow/day_after).
     # None = Legacy/Default (alle Horizonte sichtbar).
     horizons: Optional[dict] = None  # None = MetricCatalog default
+    # Issue #360: kanal-bewusster Renderer — Spalten-Datenmodell.
+    bucket: str = "primary"   # "primary" (eigene Spalte) | "secondary" (Detail-Zeile)
+    order: int = 0            # Sortier-Reihenfolge innerhalb des Buckets
 
 
 @dataclass
@@ -577,6 +580,9 @@ class TripReport:
     email_html: str
     email_plain: str
     sms_text: Optional[str] = None  # Feature 3.2 will populate
+    # Issue #360: kanal-bewusster Narrow-Body fuer Signal/Telegram.
+    signal_text: Optional[str] = None
+    telegram_text: Optional[str] = None
 
     # Metadata
     triggered_by: Optional[str] = None  # "schedule" or "change_detection"

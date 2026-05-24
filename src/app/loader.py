@@ -290,10 +290,33 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
     from datetime import datetime as _dt
     from app.models import MetricConfig, UnifiedWeatherDisplayConfig
 
+    raw_metrics = data.get("metrics", [])
+    # Issue #360 (F002): bucket/order pro Metrik aufloesen. auto_distribute wird
+    # IMMER auf die aktiven Metrik-IDs angewandt, damit auch teil-migrierte
+    # Configs (eine Metrik hat bucket/order, andere nicht) korrekt sind:
+    # nicht-migrierte AKTIVE Metriken erben das auto_distribute-Ergebnis statt
+    # stillschweigend auf ("secondary", 0) zu fallen.
+    bucket_order_by_id: Dict[str, tuple] = {}
+    if raw_metrics:
+        from src.output.renderers.channel_layout import auto_distribute
+        active_ids = [mc["metric_id"] for mc in raw_metrics if mc.get("enabled", True)]
+        for dist in auto_distribute(active_ids):
+            bucket_order_by_id[dist.metric_id] = (dist.bucket, dist.order)
+
     metrics = []
-    for mc_data in data.get("metrics", []):
+    for mc_data in raw_metrics:
+        mid = mc_data["metric_id"]
+        if "bucket" in mc_data or "order" in mc_data:
+            # Explizit gesetzt (voll-/teil-migriert) → unveraendert uebernehmen.
+            bucket = mc_data.get("bucket", "primary")
+            order = mc_data.get("order", 0)
+        else:
+            # Nicht migriert: aktive Metrik erbt auto_distribute; wirklich
+            # unbekannte/inaktive fallen auf secondary/0 (erscheinen nicht im
+            # Layout).
+            bucket, order = bucket_order_by_id.get(mid, ("secondary", 0))
         metrics.append(MetricConfig(
-            metric_id=mc_data["metric_id"],
+            metric_id=mid,
             enabled=mc_data.get("enabled", True),
             aggregations=mc_data.get("aggregations", ["min", "max"]),
             morning_enabled=mc_data.get("morning_enabled"),
@@ -302,6 +325,8 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
             alert_enabled=mc_data.get("alert_enabled", False),
             alert_threshold=mc_data.get("alert_threshold"),
             horizons=mc_data.get("horizons"),
+            bucket=bucket,
+            order=order,
         ))
 
     return UnifiedWeatherDisplayConfig(
@@ -577,6 +602,8 @@ def save_location(location: SavedLocation, user_id: str = "default") -> Path:
                     "use_friendly_format": mc.use_friendly_format,
                     "alert_enabled": mc.alert_enabled,
                     "alert_threshold": mc.alert_threshold,
+                    "bucket": mc.bucket,
+                    "order": mc.order,
                 }
                 for mc in dc.metrics
             ],
@@ -706,6 +733,8 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
                     "use_friendly_format": mc.use_friendly_format,
                     "alert_enabled": mc.alert_enabled,
                     "alert_threshold": mc.alert_threshold,
+                    "bucket": mc.bucket,
+                    "order": mc.order,
                 }
                 for mc in dc.metrics
             ],
@@ -941,6 +970,8 @@ def save_compare_subscriptions(
                         "use_friendly_format": mc.use_friendly_format,
                         "alert_enabled": mc.alert_enabled,
                         "alert_threshold": mc.alert_threshold,
+                        "bucket": mc.bucket,
+                        "order": mc.order,
                     }
                     for mc in dc.metrics
                 ],
