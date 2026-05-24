@@ -2,6 +2,12 @@
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { api } from '$lib/api.js';
+	import PencilIcon from '@lucide/svelte/icons/pencil';
+	import Trash2Icon from '@lucide/svelte/icons/trash-2';
+	import CheckIcon from '@lucide/svelte/icons/check';
+	import XIcon from '@lucide/svelte/icons/x';
+	import type { MetricPreset } from '$lib/types';
+	import { metricCountLabel, showDefaultBadge, isValidRename, applyRename, removePreset, isEmpty } from '$lib/utils/presetCardHelpers';
 
 	let { data } = $props();
 
@@ -16,6 +22,47 @@
 	type TestStatus = 'idle' | 'loading' | 'ok' | 'error';
 	let testStatus = $state<Record<string, TestStatus>>({email: 'idle', signal: 'idle', telegram: 'idle'});
 	let testError = $state<Record<string, string | null>>({email: null, signal: null, telegram: null});
+
+	// Issue #344 — Wetter-Profile (User-MetricPresets)
+	let presets = $state<MetricPreset[]>(data.metricPresets ?? []);
+	let editingId = $state<string | null>(null);
+	let editName = $state('');
+	let presetError = $state<string | null>(null);
+
+	function startEdit(p: MetricPreset) {
+		editingId = p.id;
+		editName = p.name;
+		presetError = null;
+	}
+
+	function cancelEdit() {
+		editingId = null;
+		editName = '';
+	}
+
+	async function saveRename(id: string) {
+		if (!isValidRename(editName)) return;
+		try {
+			const updated = await api.patch<MetricPreset>(`/api/metric-presets/${id}`, { name: editName.trim() });
+			presets = applyRename(presets, updated);
+			editingId = null;
+			editName = '';
+		} catch (e: unknown) {
+			const body = e as { error?: string };
+			presetError = body?.error ?? 'Umbenennen fehlgeschlagen';
+		}
+	}
+
+	async function deletePreset(p: MetricPreset) {
+		if (!window.confirm(`Profil „${p.name}" wirklich löschen?`)) return;
+		try {
+			await api.del(`/api/metric-presets/${p.id}`);
+			presets = removePreset(presets, p.id);
+		} catch (e: unknown) {
+			const body = e as { error?: string };
+			presetError = body?.error ?? 'Löschen fehlgeschlagen';
+		}
+	}
 
 	async function sendTest(channel: string) {
 		testStatus[channel] = 'loading';
@@ -364,6 +411,79 @@
 			>
 				Passwort ändern
 			</button>
+		</Card.Content>
+	</Card.Root>
+
+	<!-- Issue #344 — Wetter-Profile (User-MetricPresets) -->
+	<Card.Root data-testid="wetter-profile-card">
+		<Card.Header>
+			<Card.Title>Wetter-Profile</Card.Title>
+			<Card.Description>Deine gespeicherten Metrik-Auswahlen</Card.Description>
+		</Card.Header>
+		<Card.Content>
+			{#if isEmpty(presets)}
+				<p data-testid="wetter-profile-empty" class="text-sm text-muted-foreground">
+					Du hast noch keine Wetter-Profile angelegt. Speichere ein Profil im Trip-Wetter-Tab.
+				</p>
+			{:else}
+				<div class="space-y-2">
+					{#each presets as p (p.id)}
+						<div data-testid="wetter-profile-row-{p.id}" class="flex items-center justify-between gap-2 text-sm">
+							{#if editingId === p.id}
+								<input
+									data-testid="wetter-profile-rename-input-{p.id}"
+									bind:value={editName}
+									onkeydown={(e) => { if (e.key === 'Enter') saveRename(p.id); if (e.key === 'Escape') cancelEdit(); }}
+									class="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+								/>
+								<div class="flex items-center gap-1">
+									<button
+										onclick={() => saveRename(p.id)}
+										aria-label="Speichern"
+										class="inline-flex h-9 w-9 items-center justify-center rounded-md hover:bg-accent"
+									>
+										<CheckIcon class="h-4 w-4" />
+									</button>
+									<button
+										onclick={cancelEdit}
+										aria-label="Abbrechen"
+										class="inline-flex h-9 w-9 items-center justify-center rounded-md hover:bg-accent"
+									>
+										<XIcon class="h-4 w-4" />
+									</button>
+								</div>
+							{:else}
+								<span data-testid="wetter-profile-name-{p.id}" class="font-medium">{p.name}</span>
+								<div class="flex items-center gap-2">
+									<Badge variant="secondary" data-testid="wetter-profile-count-{p.id}">{metricCountLabel(p)}</Badge>
+									{#if showDefaultBadge(p)}
+										<Badge variant="secondary" data-testid="wetter-profile-default-{p.id}">Standard</Badge>
+									{/if}
+									<button
+										data-testid="wetter-profile-edit-{p.id}"
+										onclick={() => startEdit(p)}
+										aria-label="Umbenennen"
+										class="inline-flex h-9 w-9 items-center justify-center rounded-md hover:bg-accent"
+									>
+										<PencilIcon class="h-4 w-4" />
+									</button>
+									<button
+										data-testid="wetter-profile-delete-{p.id}"
+										onclick={() => deletePreset(p)}
+										aria-label="Löschen"
+										class="inline-flex h-9 w-9 items-center justify-center rounded-md text-destructive hover:bg-destructive/10"
+									>
+										<Trash2Icon class="h-4 w-4" />
+									</button>
+								</div>
+							{/if}
+						</div>
+					{/each}
+				</div>
+			{/if}
+			{#if presetError}
+				<p class="mt-2 text-sm text-destructive">{presetError}</p>
+			{/if}
 		</Card.Content>
 	</Card.Root>
 
