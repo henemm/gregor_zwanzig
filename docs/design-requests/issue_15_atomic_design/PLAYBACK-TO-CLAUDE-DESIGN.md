@@ -39,7 +39,7 @@ Damit die 1:1 übernommenen Atomic-Bausteine **pixeltreu zum Design** rendern, e
 
 **Die zwei „Lücken"-Tokens sind geklärt:** `--g-accent-deep/soft/tint` und `--g-weather-cloud` sind in eurer `tokens.css` bereits mit Werten definiert (`#8c3e1a` / `#f3d9c8` / `rgba(196,90,42,.08)` / `#9a958a`) — wir übernehmen diese. Bitte nur **bestätigen**, dass sie so beabsichtigt sind.
 
-**Echte Design-Frage an euch + PO:** Durch die Wert-Unterschiede koexistieren vorerst **zwei leicht verschiedene Farbwelten** (neue Bibliothek = Sandbox-Werte, Bestands-Screens = app.css-Werte). Soll die *gesamte* App perspektivisch auf die Sandbox-Werte umstellen — insbesondere **weiße Karten überall** statt beige? Das ist eine Design-Entscheidung, kein Code-Thema, und wird **nicht** im Fundament-Epic gelöst. Bitte Position dazu.
+**Design-Entscheidung (PO, 2026-05-25): GETROFFEN.** Karten werden **app-weit reinweiß** (`#ffffff`) — Begründung: besserer Kontrast / Lesbarkeit. D. h. die gesamte App zieht perspektivisch auf die Sandbox-Werte nach (nicht nur die neue Bibliothek). Die App-weite Umstellung der Bestands-Screens ist ein **Phase-2-Punkt** im Epic #368 (eigene Issues), nicht Teil von #369. Für die neue Atomic-Bibliothek gilt Weiß sofort.
 
 **Langfristige Namens-Vereinheitlichung:** Damit künftige Handoffs *ohne* additive Doppel-Tokens 1:1 passen, sollten wir uns auf **einen** kanonischen Namenssatz einigen. Da `docs/design-system/TOKENS.md` bereits eure Namen führt, wäre der saubere Weg, perspektivisch auch `app.css` darauf umzustellen (großer Rename über 142 Dateien — eigenes Issue). Bis dahin trägt die Bridge.
 
@@ -94,7 +94,7 @@ Hinweis zur Sandbox: `docs/atomic-design-inventory.md` notiert selbst, dass `scr
 | # | Bitte | Aufwand bei euch |
 |---|---|---|
 | A1 | Bestätigen, dass `--g-accent-deep/soft/tint` + `--g-weather-cloud` so beabsichtigt sind (Werte in eurer `tokens.css` vorhanden) | trivial |
-| A2 | **Design-Entscheidung:** App-weit auf Sandbox-Werte umstellen (u. a. weiße Karten) — ja/nein? | Entscheidung |
+| A2 | ~~Design-Entscheidung weiße Karten~~ — **PO hat entschieden: ja, app-weit weiß** (2026-05-25) | erledigt |
 | A3 | Langfristig: ein kanonischer Namenssatz (Vorschlag: `app.css` auf eure Namen umstellen, eigenes Issue) | mittel |
 | E1 | body-15 „Design Reference" von `Redesign v2.html` auf `Komponenten.html` korrigieren | trivial |
 | B/D | Dialog/Table/Select/Card **nicht** als flache Atome nachspezifizieren; Organisms-Migration erst nach #364 | kein Code, nur Spec-Hinweis |
