@@ -36,17 +36,27 @@ except ImportError:
     from workflow_state_multi import load_state, save_state, set_phase
 
 
-def is_approval_message(message: str) -> bool:
-    """Check if message contains an approval phrase."""
-    message_lower = message.lower().strip()
-    approval_phrases = get_approval_phrases()
+def _starts_with_command(message: str, phrases) -> bool:
+    """True nur, wenn die Nachricht MIT einer Phrase BEGINNT — nicht, wenn sie
+    sie bloß irgendwo enthält. Bug #380: ein nachgestelltes Trigger-Wort hinter
+    einem Status-Satz ('Task done. approved.', 'Tests pass. Go.', 'Job done!')
+    darf KEINEN Phasen-Übergang auslösen — solche kurzen Klartext-Zusammenfassungen
+    stammen von Agenten, nicht vom User.
 
-    for phrase in approval_phrases:
-        pattern = r'\b' + re.escape(phrase.lower()) + r'\b'
-        if re.search(pattern, message_lower):
+    Die Phrase zählt nur, wenn ihr Satzende, ein Leerzeichen oder Satzzeichen
+    (.,!?) folgt. Diese positive Erlaubnisliste blockiert sowohl Wort-Präfixe
+    ('go' ≠ 'going') als auch header-artige Agent-Ausgaben mit Trenner
+    ('approved: ...', 'go: ...', 'done- ...') — Adversary-Befund F003."""
+    s = message.strip().lower()
+    for phrase in phrases:
+        if re.match(re.escape(phrase.lower()) + r"(?=$|\s|[.,!?])", s):
             return True
-
     return False
+
+
+def is_approval_message(message: str) -> bool:
+    """True, wenn die Nachricht mit einer Approval-Phrase BEGINNT (#380)."""
+    return _starts_with_command(message, get_approval_phrases())
 
 
 # Phrases that indicate user approves GREEN test results
@@ -63,23 +73,38 @@ COMPLETION_PHRASES = [
 
 
 def is_green_approval(message: str) -> bool:
-    """Check if message approves GREEN test results."""
-    message_lower = message.lower().strip()
-    for phrase in GREEN_APPROVAL_PHRASES:
-        pattern = r'\b' + re.escape(phrase) + r'\b'
-        if re.search(pattern, message_lower):
-            return True
-    return False
+    """True, wenn die Nachricht mit einer GREEN-Phrase BEGINNT (#380)."""
+    return _starts_with_command(message, GREEN_APPROVAL_PHRASES)
 
 
 def is_completion_message(message: str) -> bool:
-    """Check if message signals workflow completion."""
-    message_lower = message.lower().strip()
-    for phrase in COMPLETION_PHRASES:
-        pattern = r'\b' + re.escape(phrase) + r'\b'
-        if re.search(pattern, message_lower):
-            return True
-    return False
+    """True, wenn die Nachricht mit einer Completion-Phrase BEGINNT (#380)."""
+    return _starts_with_command(message, COMPLETION_PHRASES)
+
+
+# Bug #380: Marker harness-injizierter Inhalte. Diese kommen als
+# UserPromptSubmit-Event an, sind aber KEINE echte User-Eingabe — eine
+# Freigabe darf daraus niemals abgeleitet werden.
+_INJECTED_MARKERS = (
+    "<task-notification", "<system-reminder", "<function_results",
+    "<function_calls", "tool_use_id", "spec validation:", "verdict:",
+    "approval status",
+)
+
+
+def _is_injected_content(message: str) -> bool:
+    """True, wenn der Text Marker harness-injizierter Inhalte enthält (#380)."""
+    low = message.lower()
+    return any(m in low for m in _INJECTED_MARKERS)
+
+
+def _looks_like_user_turn(message: str) -> bool:
+    """True nur für kurze, eigenständige User-Turns. Echte Freigaben sind knapp
+    ('approved', 'go', 'passt'); lange Texte mit zufälligem Treffer (z.B.
+    Agent-Ergebnisse) werden bewusst ausgeschlossen (#380). Falsch-Negativ
+    (User tippt erneut knapp) ist harmlos, Falsch-Positiv gefährlich."""
+    stripped = message.strip()
+    return 0 < len(stripped) <= 120 and len(stripped.split()) <= 20
 
 
 def main():
@@ -102,6 +127,14 @@ def main():
         user_message = os.environ.get("CLAUDE_USER_PROMPT", "")
 
     if not user_message:
+        sys.exit(0)
+
+    # Bug #380: Phasen-Übergänge dürfen NUR aus echtem User-Text kommen. Harness-
+    # injizierte Inhalte (Task-Notifications abgeschlossener Hintergrund-Agenten,
+    # System-Reminder, Tool-Ergebnisse) kommen ebenfalls als UserPromptSubmit-Event
+    # an und enthalten oft Trigger-Wörter (ein Spec-Validator liefert quasi
+    # garantiert "approved"). Guard sitzt VOR allen drei Erkennungen.
+    if _is_injected_content(user_message) or not _looks_like_user_turn(user_message):
         sys.exit(0)
 
     is_approval = is_approval_message(user_message)
