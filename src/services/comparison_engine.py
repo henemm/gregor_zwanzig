@@ -55,7 +55,10 @@ class ComparisonEngine:
             ComparisonResult with all metrics for all locations
         """
         from datetime import date, datetime
+        from app.config import Settings
 
+        # Issue #347: configurable sunny-hours DNI band (GZ_SUNNY_* env overrides)
+        settings = Settings()
         results: List[LocationResult] = []
 
         for loc in locations:
@@ -139,7 +142,7 @@ class ComparisonEngine:
 
                     # Sonnenstunden: Use WeatherMetricsService (Single Source of Truth)
                     metrics["sunny_hours"] = WeatherMetricsService.calculate_sunny_hours(
-                        filtered_data, loc.elevation_m
+                        filtered_data, loc.elevation_m, settings=settings
                     )
 
                     # Cloud layers for "Wolkenlage" analysis
@@ -272,8 +275,16 @@ def _select_provider_for_location(lat: float, lon: float):
     return get_provider("openmeteo")
 
 
-def fetch_forecast_for_location(loc: SavedLocation, hours: int = 48) -> Dict[str, Any]:
-    """Fetch forecast for a location and extract all available metrics."""
+def fetch_forecast_for_location(
+    loc: SavedLocation,
+    hours: int = 48,
+    settings: Optional["Settings"] = None,
+) -> Dict[str, Any]:
+    """Fetch forecast for a location and extract all available metrics.
+
+    Issue #347: optional ``settings`` is passed through to
+    ``calculate_sunny_hours`` so custom DNI bands can be used; ``None`` -> defaults.
+    """
     result: Dict[str, Any] = {
         "location": loc,
         "error": None,
@@ -426,8 +437,9 @@ def fetch_forecast_for_location(loc: SavedLocation, hours: int = 48) -> Dict[str
                 result["visibility_avg"] = int(sum(visibility) / len(visibility))
 
             # Sunny hours: Use WeatherMetricsService (Single Source of Truth)
+            from app.config import Settings
             result["sunny_hours"] = WeatherMetricsService.calculate_sunny_hours(
-                forecast.data, loc.elevation_m
+                forecast.data, loc.elevation_m, settings=settings or Settings()
             )
 
         result["score"] = calculate_score(result, profile=getattr(loc, 'activity_profile', None) if 'loc' in dir() else None)

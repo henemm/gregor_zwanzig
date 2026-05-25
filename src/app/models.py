@@ -351,6 +351,7 @@ class SegmentWeatherSummary:
     # DNI-based weather emoji aggregation (SPEC: weather_emoji_dni.md)
     dominant_wmo_code: Optional[int] = None  # Schwerster WMO-Code im Segment
     dni_avg_wm2: Optional[float] = None      # Durchschnittliche DNI (nur Tagesstunden)
+    sunny_hours: Optional[float] = None      # Sonnenstunden (h) — Issue #347, calculate_sunny_hours()
 
     # Forecast confidence aggregation (Issue #121)
     confidence_pct_min: Optional[int] = None  # Min. Konfidenz ueber alle Stunden

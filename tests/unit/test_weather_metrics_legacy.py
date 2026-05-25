@@ -90,22 +90,32 @@ class TestCalculateSunnyHours:
 
     def test_api_sunshine_duration(self):
         """
-        GIVEN: Forecast data with cloud cover (no API sunshine data)
-        WHEN: Calculating sunny hours for low elevation
-        THEN: Returns 0 (no fallback for low elevations)
+        GIVEN: Forecast data with cloud cover, no DNI (Geosphere-style),
+               low elevation (1500 m)
+        WHEN: Calculating sunny hours
+        THEN: Returns the proportional cloud-fallback sum (NOT 0)
 
-        Note: ForecastDataPoint doesn't have sunshine_duration_s field yet,
-        so we test the cloud-based logic instead.
+        Issue #347 (AC-4): Die alte Erwartung `hours == 0` war durch den Defekt
+        erzwungen (Cloud-Fallback griff nur ab 2500 m, binaerer 30%-Cutoff).
+        Nach dem Fix greift der proportionale Cloud-Fallback auch unter 2500 m:
+            cloud=20% -> (100-20)/100 = 0.8
+            cloud=25% -> (100-25)/100 = 0.75
+        Summe ~1.55 -> klar > 0.
         """
-        # Create data points with cloud cover
+        # Create data points with cloud cover, no DNI (Geosphere-style)
         dp1 = ForecastDataPoint(
             ts=datetime(2026, 2, 4, 9, 0),
-            cloud_total_pct=20,  # Clear
+            cloud_total_pct=20,  # Mostly clear
+            dni_wm2=None,
         )
         dp2 = ForecastDataPoint(
             ts=datetime(2026, 2, 4, 10, 0),
-            cloud_total_pct=25,  # Clear
+            cloud_total_pct=25,  # Mostly clear
+            dni_wm2=None,
         )
-        # Low elevation: no API data, no fallback → 0 hours
+        # Low elevation + proportional cloud fallback -> positive sunny hours
         hours = WeatherMetricsService.calculate_sunny_hours([dp1, dp2], elevation_m=1500)
-        assert hours == 0
+        assert hours > 1.0, (
+            f"#347 AC-4: proportionaler Cloud-Fallback muss > 1.0 h ergeben "
+            f"(0.8 + 0.75), war {hours}"
+        )

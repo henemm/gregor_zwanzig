@@ -82,6 +82,9 @@ def dp_to_row(dp: ForecastDataPoint, dc: UnifiedWeatherDisplayConfig,
         row["_wind_dir_deg"] = getattr(dp, "wind_direction_deg", None)
     row["_is_day"] = getattr(dp, "is_day", None)
     row["_dni_wm2"] = getattr(dp, "dni_wm2", None)
+    # Issue #347: precompute sunny hours (h) via the single source of truth.
+    from services.weather_metrics import WeatherMetricsService
+    row["_sunny_hours"] = WeatherMetricsService.calculate_sunny_hours([dp])
     row["_wmo_code"] = getattr(dp, "wmo_code", None)
     return row
 
@@ -159,6 +162,10 @@ def aggregate_night_block(dps: list[ForecastDataPoint],
     row["_is_day"] = dps[-1].is_day if hasattr(dps[-1], 'is_day') else None
     dni_vals = [dp.dni_wm2 for dp in dps if getattr(dp, 'dni_wm2', None) is not None]
     row["_dni_wm2"] = sum(dni_vals) / len(dni_vals) if dni_vals else None
+    # Issue #347: precompute sunny hours (h) for this block — sum of per-hour
+    # fractions via the single source of truth, NOT the fraction of an avg.
+    from services.weather_metrics import WeatherMetricsService
+    row["_sunny_hours"] = WeatherMetricsService.calculate_sunny_hours(dps)
     from services.weather_metrics import _WMO_SEVERITY
     wmo_vals = [dp.wmo_code for dp in dps if getattr(dp, 'wmo_code', None) is not None]
     row["_wmo_code"] = max(wmo_vals, key=lambda c: _WMO_SEVERITY.get(c, 0)) if wmo_vals else None
@@ -402,12 +409,17 @@ def fmt_val(key: str, val, *, friendly_keys: set[str],
             emoji = "☁️"
         return emoji
     if key == "sunshine":
+        # Issue #347: numerisch Sonnenstunden (h) statt roher DNI-Summe (W/m²);
+        # DNI bleibt interne Hilfsgröße für den Emoji-Pfad.
         if not use_friendly:
-            return f"{val:.0f}"
+            hours = row.get("_sunny_hours") if row else None
+            if hours is None:
+                return "–"
+            return f"{hours:.1f} h"
         from services.weather_metrics import get_weather_emoji
         return get_weather_emoji(
             is_day=row.get("_is_day") if row else None,
-            dni_wm2=val,
+            dni_wm2=row.get("_dni_wm2") if row else val,
             wmo_code=row.get("_wmo_code") if row else None,
             cloud_pct=round(row.get("cloud")) if row and row.get("cloud") is not None else None,
         )

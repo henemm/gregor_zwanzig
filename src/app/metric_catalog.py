@@ -266,14 +266,16 @@ _METRICS: list[MetricDefinition] = [
         risk_thresholds={"high_lt": 100.0},
     ),
     MetricDefinition(
-        id="sunshine", label_de="Sonnenschein (DNI)", unit="W/m²",
+        id="sunshine", label_de="Sonnenschein", unit="h",
         dp_field="dni_wm2", category="atmosphere",
-        default_aggregations=("avg",),
+        default_aggregations=("sum",),
         compact_label="☀", col_key="sunshine", col_label="Sun",
         providers={"openmeteo": True, "geosphere": False},
         default_enabled=True,
         friendly_label="☀️🌙☁️",
-        summary_fields={"avg": "dni_avg_wm2"},
+        # Issue #347: Sonnenstunden (h) statt DNI-Mittelwert (W/m²); DNI bleibt
+        # intern als Hilfsgröße (Emoji-Logik) erhalten.
+        summary_fields={"sum": "sunny_hours"},
     ),
     MetricDefinition(
         id="uv_index", label_de="UV-Index", unit="",

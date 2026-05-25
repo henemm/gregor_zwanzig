@@ -72,6 +72,11 @@ class Settings(BaseSettings):
     forecast_hours: int = Field(default=48, description="Hours to forecast ahead")
     include_snow: bool = Field(default=True, description="Include snow data if available")
 
+    # Sunny-hours calculation (Issue #347): DNI interpolation band + cloud-fallback threshold
+    sunny_dni_min_wm2: float = Field(default=60.0, description="DNI lower bound (W/m²); below = 0 sunny hours")
+    sunny_dni_max_wm2: float = Field(default=180.0, description="DNI upper bound (W/m²); at/above = full sunny hour")
+    sunny_cloud_threshold_pct: int = Field(default=30, description="Reserved cloud threshold for sunny-hours (Issue #347)")
+
     # SMTP settings (for email channel)
     smtp_host: Optional[str] = Field(default=None, description="SMTP server host")
     smtp_port: int = Field(default=587, description="SMTP server port")

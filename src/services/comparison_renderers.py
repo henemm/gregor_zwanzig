@@ -227,7 +227,7 @@ def render_comparison_html(result: ComparisonResult, top_n_details: int = 3, ena
         for i, v in enumerate(sunny_hours_list):
             is_best = i == best_sunny and v is not None and v > 0
             # Spec: "~[N]h" for N>0, "0h" for N=0, "-" for None
-            html += f"                    {cell(v, lambda x: '0h' if x == 0 else f'~{x}h' if x is not None else '-', is_best)}\n"
+            html += f"                    {cell(v, lambda x: '0h' if x == 0 else f'~{x:.1f}h' if x is not None else '-', is_best)}\n"
         html += "                </tr>\n"
 
     # Clouds row - SPEC: docs/specs/cloud_cover_simplification.md

@@ -243,56 +243,87 @@ class WeatherMetricsService:
         return cloud_total_pct
 
     @staticmethod
+    def dni_to_sunny_fraction(
+        dni_wm2: Optional[float],
+        dni_min: float = 60.0,
+        dni_max: float = 180.0,
+    ) -> float:
+        """
+        WMO-conform sunny-hour fraction for a single hour from DNI (Issue #347).
+
+        ``dni >= max`` -> 1.0, ``min < dni < max`` -> linear interpolation,
+        ``dni <= min`` or None -> 0.0.
+        """
+        if dni_wm2 is None:
+            return 0.0
+        if dni_wm2 >= dni_max:
+            return 1.0
+        if dni_wm2 > dni_min:
+            return (dni_wm2 - dni_min) / (dni_max - dni_min)
+        return 0.0
+
+    @staticmethod
     def calculate_sunny_hours(
         data: List["ForecastDataPoint"],
         elevation_m: Optional[int] = None,
-    ) -> int:
+        settings: Optional["Settings"] = None,
+    ) -> float:
         """
-        Calculate sunny hours from forecast data.
+        Calculate sunny hours from forecast data (Issue #347).
 
-        Primary: Uses sunshine_duration_s from API (most accurate)
-        Fallback: Uses effective_cloud < 30% for high elevations
+        Main path (DNI): for each data point with ``dni_wm2`` set, contribute a
+        WMO-conform linearly interpolated fraction over the configured band:
+        ``dni >= max`` -> +1.0 h, ``min < dni < max`` -> +(dni-min)/(max-min) h,
+        ``dni <= min`` -> +0.0 h.
 
-        For high elevations, takes maximum of both methods to avoid
-        penalizing locations that are above low clouds.
+        Fallback path (proportional cloud): only when NO data point carries DNI
+        (e.g. Geosphere). Per point ``(100 - effective_cloud) / 100`` h via
+        ``calculate_effective_cloud`` (elevation logic preserved). No binary cutoff.
 
         Legacy static method for compare.py compatibility.
 
-        SPEC: docs/specs/modules/weather_metrics.md
+        SPEC: docs/specs/modules/issue_347_sunshine_hours.md
 
         Args:
             data: List of ForecastDataPoint with weather data
             elevation_m: Location elevation in meters
+            settings: Optional Settings for DNI band; None -> defaults 60/180
 
         Returns:
-            Number of sunny hours (rounded integer)
+            Number of sunny hours (float, rounded to 1 decimal place)
         """
         if not data:
             return 0
 
-        # Method 1: API-based (preferred, most accurate)
-        sunshine_seconds = [
-            dp.sunshine_duration_s for dp in data
-            if hasattr(dp, 'sunshine_duration_s') and dp.sunshine_duration_s is not None
-        ]
-        api_hours = round(sum(sunshine_seconds) / 3600) if sunshine_seconds else 0
+        if settings is None:
+            from app.config import Settings
+            settings = Settings()
 
-        # Method 2: Cloud-based fallback for high elevations
-        # High elevations should not be penalized by low clouds
-        spec_hours = 0
-        if elevation_m is not None and elevation_m >= WeatherMetricsService.HIGH_ELEVATION_THRESHOLD_M:
-            for dp in data:
+        dni_min = settings.sunny_dni_min_wm2
+        dni_max = settings.sunny_dni_max_wm2
+
+        # Main path: any data point with DNI -> DNI interpolation (cloud fallback off)
+        has_dni = any(getattr(dp, "dni_wm2", None) is not None for dp in data)
+
+        total_hours = 0.0
+        for dp in data:
+            dni = getattr(dp, "dni_wm2", None)
+            if has_dni:
+                total_hours += WeatherMetricsService.dni_to_sunny_fraction(
+                    dni, dni_min, dni_max
+                )
+            else:
+                # Proportional cloud fallback (no DNI available, e.g. Geosphere)
                 eff_cloud = WeatherMetricsService.calculate_effective_cloud(
                     elevation_m,
                     dp.cloud_total_pct,
-                    getattr(dp, 'cloud_mid_pct', None),
-                    getattr(dp, 'cloud_high_pct', None),
+                    getattr(dp, "cloud_mid_pct", None),
+                    getattr(dp, "cloud_high_pct", None),
                 )
-                if eff_cloud is not None and eff_cloud < WeatherMetricsService.SUNNY_HOUR_CLOUD_THRESHOLD_PCT:
-                    spec_hours += 1
+                if eff_cloud is not None:
+                    total_hours += (100 - eff_cloud) / 100
 
-        # Take maximum to benefit high elevations
-        return max(api_hours, spec_hours)
+        return round(total_hours, 1)
 
     @staticmethod
     def get_weather_symbol(
@@ -605,6 +636,9 @@ class WeatherMetricsService:
         # DNI-based emoji aggregation (SPEC: weather_emoji_dni.md)
         dominant_wmo = compute_dominant_wmo(timeseries.data)
         dni_avg = compute_dni_day_avg(timeseries.data)
+        # Issue #347: precompute sunny hours (h) via the single source of truth
+        # so Trip-Summary and Compare render the identical quantity (AC-9).
+        sunny_hours = WeatherMetricsService.calculate_sunny_hours(timeseries.data)
 
         # Create summary with aggregation config
         summary = SegmentWeatherSummary(
@@ -620,6 +654,7 @@ class WeatherMetricsService:
             visibility_min_m=visibility_min,
             dominant_wmo_code=dominant_wmo,
             dni_avg_wm2=dni_avg,
+            sunny_hours=sunny_hours,
             aggregation_config={
                 "temp_min_c": "min",
                 "temp_max_c": "max",
@@ -919,6 +954,7 @@ class WeatherMetricsService:
             # Felder aus compute_basis_metrics() die bisher fehlten (Issue #226)
             dominant_wmo_code=basis_summary.dominant_wmo_code,
             dni_avg_wm2=basis_summary.dni_avg_wm2,
+            sunny_hours=basis_summary.sunny_hours,  # Issue #347
             # Add extended metrics
             dewpoint_avg_c=dewpoint_avg,
             pressure_avg_hpa=pressure_avg,
