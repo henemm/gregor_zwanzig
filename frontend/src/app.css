@@ -138,6 +138,45 @@
     /* Issue #267 — Mobile App-Shell Tokens */
     --g-paper-deep: #ede9df;
     --g-rule-soft: rgba(26, 26, 24, 0.08);
+
+    /* === Atomic-Design-Bridge (#369) — Sandbox-Token-Namen + -Werte, additiv.
+       Damit 1:1 aus der Claude-Design-Sandbox uebernommene Bausteine pixeltreu rendern.
+       Bestehende Tokens bleiben unveraendert. Mapping: docs/design-requests/issue_15_atomic_design/spec/TOKEN-MAPPING.md === */
+    /* Surfaces */
+    --g-card:        #ffffff;
+    --g-card-alt:    #faf8f1;
+    --g-rule:        #d8d3c2;
+    /* Ink-Abstufungen */
+    --g-ink-2:       #45433d;
+    --g-ink-3:       #6b675c;
+    --g-ink-4:       #9a958a;
+    /* Accent-Abstufungen */
+    --g-accent-deep: #8c3e1a;
+    --g-accent-soft: #f3d9c8;
+    --g-accent-tint: rgba(196, 90, 42, 0.08);
+    /* Semantik */
+    --g-good:        #3d6b3a;
+    --g-warn:        #c08a1a;
+    --g-bad:         #a83232;
+    /* Wetter */
+    --g-weather-rain:    #4a7ab8;
+    --g-weather-snow:    #8aa4c0;
+    --g-weather-sun:     #d99a2a;
+    --g-weather-cloud:   #9a958a;
+    --g-weather-thunder: var(--g-wx-thunder);
+    /* Schrift (Alias, Wert identisch) */
+    --g-font-sans:   var(--g-font-ui);
+    --g-font-mono:   var(--g-font-data);
+    /* Radien */
+    --g-r-1:    var(--g-radius-xs);
+    --g-r-2:    var(--g-radius-sm);
+    --g-r-3:    6px;
+    --g-r-4:    10px;
+    --g-r-pill: var(--g-radius-pill);
+    /* Elevation */
+    --g-shadow-1: 0 1px 0 rgba(26, 26, 24, 0.04), 0 1px 2px rgba(26, 26, 24, 0.04);
+    --g-shadow-2: 0 1px 0 rgba(26, 26, 24, 0.04), 0 4px 14px rgba(26, 26, 24, 0.06);
+    --g-shadow-3: 0 2px 0 rgba(26, 26, 24, 0.04), 0 12px 32px rgba(26, 26, 24, 0.08);
   }
 
   body {
