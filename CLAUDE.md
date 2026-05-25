@@ -317,6 +317,8 @@ bash .claude/tools/gz-workspace clean <name> # entfernen (nur wenn sauber; --for
 
 Danach `cd` in den Workspace und dort eine NEUE Claude-Session starten. Fuer Frontend-Arbeit dort `cd frontend && npm ci`. Jeder Workspace ist voll isoliert (eigenes `.git`/Index, eigene Dateien, eigener Workflow-State); die Klon-Objekte sind gehardlinkt (platzsparend). Hauptrepo und andere Workspaces bleiben unberuehrt.
 
+**Selbst-Isolierung (automatisch):** Erkennt der Session-Wächter eine zweite Sitzung im selben Ordner, ruft Claude unaufgefordert `EnterWorktree` auf und arbeitet in der isolierten Kopie weiter — kein Beenden oder Neustart nötig, der Nutzer muss nichts tun.
+
 ## Deployment & Infrastruktur
 
 Globale Server-Infos und Monitoring-Anleitung stehen in `~/.claude/CLAUDE.md`.

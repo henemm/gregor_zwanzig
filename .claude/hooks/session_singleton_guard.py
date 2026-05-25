@@ -167,14 +167,12 @@ def _session_pid() -> int:
 
 
 def _is_alive(entry: dict, now: float, stale: int) -> bool:
-    """Lebend = PID in /proc ODER last_seen juenger als STALE_SECONDS."""
+    """Lebend = PID in /proc. Ohne verwertbare PID: last_seen-Fenster (Fallback)."""
     pid = entry.get("pid")
-    if isinstance(pid, int) and _pid_alive(pid):
-        return True
+    if isinstance(pid, int) and not isinstance(pid, bool):
+        return _pid_alive(pid)
     last_seen = entry.get("last_seen")
-    if isinstance(last_seen, (int, float)) and (now - last_seen) < stale:
-        return True
-    return False
+    return isinstance(last_seen, (int, float)) and (now - last_seen) < stale
 
 
 def _read_entries(locks: Path) -> dict:
@@ -226,8 +224,21 @@ def _has_shell_metachars(command: str) -> bool:
     return any(tok in command for tok in _SHELL_METACHARS)
 
 
+def _is_worktree_cwd(cwd: str) -> bool:
+    """True, wenn cwd innerhalb eines .claude/worktrees/<name>/-Worktrees liegt.
+
+    Erfordert eine nicht-leere <name>-Komponente — die blanke worktrees-Basis
+    ist KEIN Worktree und bekommt keinen Freibrief.
+    """
+    if not cwd:
+        return False
+    return bool(re.search(r"/\.claude/worktrees/[^/]+", cwd))
+
+
 def _is_rescue_command(tool_name: str, tool_input: dict) -> bool:
-    """True iff Bash-Kommando ein reiner gz-workspace-Aufruf ist."""
+    """True iff Kommando ein erlaubter Rettungsweg ist (EnterWorktree oder gz-workspace)."""
+    if tool_name == "EnterWorktree":
+        return True
     if tool_name != "Bash":
         return False
     command = ""
@@ -255,18 +266,19 @@ def _read_payload() -> dict:
 def _block_message() -> str:
     return (
         "============================================================\n"
-        "BLOCKIERT — Parallele Claude-Sitzung im selben Repo erkannt!\n"
+        "BLOCKIERT — Parallele Sitzung im selben Repo erkannt!\n"
         "============================================================\n"
-        "In diesem Arbeitsverzeichnis arbeitet bereits eine andere\n"
-        "Claude-Sitzung (der Inhaber). Zwei Sitzungen im selben Repo\n"
-        "kollidieren ueber gemeinsame Dateien und Workflow-Buchfuehrung.\n"
+        "CLAUDE: In diesem Arbeitsverzeichnis ist bereits eine andere\n"
+        "Sitzung aktiv (der Inhaber). Bitte isoliere dich SOFORT selbst,\n"
+        "indem du das Werkzeug EnterWorktree aufrufst (ohne Parameter\n"
+        "genuegt). Danach kannst du normal weiterarbeiten — der Nutzer\n"
+        "muss nichts tun.\n"
         "\n"
-        "Lege fuer diese Aufgabe einen eigenen, isolierten Arbeitsordner an:\n"
+        "Manueller Ausweg (falls EnterWorktree nicht verfuegbar):\n"
         "\n"
         "    bash .claude/tools/gz-workspace new mein-feature\n"
         "\n"
-        "Wechsle danach in den neuen Ordner und starte dort eine neue Sitzung.\n"
-        "(Reine gz-workspace-Kommandos bleiben weiterhin erlaubt.)\n"
+        "(Reine gz-workspace-Kommandos und EnterWorktree bleiben erlaubt.)\n"
     )
 
 
@@ -320,6 +332,10 @@ def _do_guard(payload: dict) -> None:
 
     # Fehlende Pflichtangaben -> fail-safe erlauben.
     if not session_id or not cwd:
+        sys.exit(0)
+
+    # Eine bereits isolierte Worktree-Sitzung wird nie blockiert (keine Endlos-Isolierung).
+    if _is_worktree_cwd(cwd):
         sys.exit(0)
 
     repo_root = _resolve_repo_root(cwd)

@@ -1,0 +1,8 @@
+# Dateien, die beim Anlegen eines neuen Worktrees mitkopiert werden.
+# Nur tatsaechlich gitignorierte Pfade aufnehmen (jeder Eintrag ist mit
+# `git check-ignore -q <pfad>` verifiziert).
+# node_modules/ und .venv/ werden bewusst NICHT kopiert — im Worktree
+# einmalig `npm ci` bzw. `uv sync` ausfuehren.
+.env
+.claude/validator.env
+.claude/settings.local.json
