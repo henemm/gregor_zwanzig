@@ -59,6 +59,31 @@ test('AC-7: buildPreviewUrl unterscheidet zwischen email und sms Kanal', () => {
 });
 
 // ============================================================================
+// AC-6 (Issue #363): buildPreviewUrl akzeptiert signal + telegram
+// ============================================================================
+
+test('AC-6: buildPreviewUrl(signal, gr20, morning) → signal-Endpoint', () => {
+	assert.equal(
+		buildPreviewUrl('signal', 'gr20', 'morning'),
+		'/api/preview/gr20/signal?type=morning'
+	);
+});
+
+test('AC-6: buildPreviewUrl(telegram, gr20, evening, 2026-05-25) → telegram + date', () => {
+	assert.equal(
+		buildPreviewUrl('telegram', 'gr20', 'evening', '2026-05-25'),
+		'/api/preview/gr20/telegram?type=evening&date=2026-05-25'
+	);
+});
+
+test('AC-6: buildPreviewUrl encodet trip_id auch für signal-Kanal', () => {
+	assert.equal(
+		buildPreviewUrl('signal', 'tour/2026', 'morning'),
+		'/api/preview/tour%2F2026/signal?type=morning'
+	);
+});
+
+// ============================================================================
 // AC-1: defaultReportType — Initial-Default für Morning/Evening
 // ============================================================================
 

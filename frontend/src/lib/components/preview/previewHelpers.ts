@@ -8,7 +8,7 @@ export type CharCountStatus = 'ok' | 'warn' | 'over';
 // Baut URL zum Go-Proxy. Session-Cookie geht automatisch mit, user_id wird
 // serverseitig injiziert — Frontend hängt keinen user_id-Query an.
 export function buildPreviewUrl(
-	channel: 'email' | 'sms',
+	channel: 'email' | 'sms' | 'signal' | 'telegram',
 	tripId: string,
 	type: ReportType,
 	date?: string

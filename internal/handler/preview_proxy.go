@@ -11,7 +11,7 @@ import (
 )
 
 // PreviewProxyHandler proxies GET /api/preview/{trip_id}/{channel} to the
-// Python core (channel ∈ {"email", "sms"}). Trip ID via chi.URLParam,
+// Python core (channel ∈ {"email", "sms", "signal", "telegram"}). Trip ID via chi.URLParam,
 // user_id from auth context appended to query. Original query params
 // (type, date) are forwarded verbatim. Timeout 30s wegen Wetter-Fetch.
 //

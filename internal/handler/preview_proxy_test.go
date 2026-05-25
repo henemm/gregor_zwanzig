@@ -114,6 +114,46 @@ func TestPreviewProxyHandlerPropagates404(t *testing.T) {
 	}
 }
 
+// Issue #363 (AC-5): Signal/Telegram werden über denselben generischen
+// PreviewProxyHandler an <python>/api/preview/{id}/{channel} weitergeleitet,
+// user_id aus dem Auth-Context injiziert, Query verbatim durchgereicht.
+func TestPreviewProxyHandlerForwardsSignalChannel(t *testing.T) {
+	py, lastURL := startFakePreviewPython(t, 200, `{"subject":"x","body":"y","char_count":1,"max_line_width":1}`, "")
+
+	h := PreviewProxyHandler(py.URL, "signal")
+	w := dispatchPreviewWithChi(h, "signal", "/api/preview/gr20/signal?type=morning", "alice")
+
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d (body=%q)", w.Code, w.Body.String())
+	}
+	if !strings.Contains(*lastURL, "/api/preview/gr20/signal") {
+		t.Errorf("expected proxied URL to include trip_id and signal channel, got %q", *lastURL)
+	}
+	if !strings.Contains(*lastURL, "user_id=alice") {
+		t.Errorf("expected user_id=alice injected from auth context, got %q", *lastURL)
+	}
+	if !strings.Contains(*lastURL, "type=morning") {
+		t.Errorf("expected type=morning forwarded verbatim, got %q", *lastURL)
+	}
+}
+
+func TestPreviewProxyHandlerForwardsTelegramChannel(t *testing.T) {
+	py, lastURL := startFakePreviewPython(t, 200, `{"subject":"x","body":"y","char_count":1,"max_line_width":1}`, "")
+
+	h := PreviewProxyHandler(py.URL, "telegram")
+	w := dispatchPreviewWithChi(h, "telegram", "/api/preview/gr20/telegram?type=evening", "default")
+
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d (body=%q)", w.Code, w.Body.String())
+	}
+	if !strings.Contains(*lastURL, "/api/preview/gr20/telegram") {
+		t.Errorf("expected proxied URL to include trip_id and telegram channel, got %q", *lastURL)
+	}
+	if !strings.Contains(*lastURL, "type=evening") {
+		t.Errorf("expected type=evening forwarded verbatim, got %q", *lastURL)
+	}
+}
+
 func TestPreviewProxyHandlerHandlesUpstreamError(t *testing.T) {
 	// Closed server simulates connection-refused.
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))

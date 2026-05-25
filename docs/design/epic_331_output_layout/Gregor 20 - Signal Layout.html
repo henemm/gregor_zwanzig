@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<title>Gregor 20 — Signal-Layout (Mobile)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  html, body { background: #f0eee9; height: 100%; }
+  #root { min-height: 100%; }
+</style>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="signal-layout.jsx"></script>
+
+<script type="text/babel">
+  function ConfigPointerCard() {
+    return (
+      <div style={{
+        padding: 28, background: "var(--g-card)", height: "100%",
+        overflow: "auto", border: "1px solid var(--g-rule)", borderRadius: 6,
+        fontFamily: "var(--g-font-sans)",
+      }}>
+        <div className="mono" style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--g-ink-3)", marginBottom: 8 }}>
+          Wo lebt die Konfiguration?
+        </div>
+        <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.02em", margin: "0 0 12px" }}>
+          Spalten-Verteilung passiert nicht hier — sondern im zentralen Metriken-Editor
+        </h1>
+        <div style={{ fontSize: 13.5, color: "var(--g-ink-2)", lineHeight: 1.6 }}>
+          Diese Datei beschreibt nur das <strong>Signal-spezifische Limit</strong> (6 Tabellen-Spalten) und seine Begründung. Die Konfiguration
+          (welche Metrik wird Spalte, welche Detail, welche Reihenfolge) gilt kanal-übergreifend für Email · Telegram · Signal · SMS
+          und lebt zusammen mit allen anderen Trip-Settings im Wetter-Metriken-Editor:
+        </div>
+        <div style={{
+          marginTop: 18, padding: "14px 16px",
+          background: "var(--g-card-alt)", border: "1px solid var(--g-rule-soft)",
+          borderRadius: 4,
+          fontFamily: "var(--g-font-mono)", fontSize: 12.5, color: "var(--g-ink)",
+        }}>
+          Gregor 20 - Redesign v2.html<br/>
+          → Sektion 03 · Trip-Konfiguration<br/>
+          → Artboard „Wetter-Metriken-Editor · Spalten-Layout & Multi-Channel-Vorschau“
+        </div>
+        <div style={{ marginTop: 14, padding: "14px 16px", borderLeft: "3px solid var(--g-accent)", background: "rgba(196,90,42,0.05)", fontSize: 13, color: "var(--g-ink-2)", lineHeight: 1.55 }}>
+          <strong>Für Claude Code:</strong> Backend-Datenmodell, Renderer-Algorithmus, API-Endpoints und Acceptance-Criteria stehen in{" "}
+          <code style={{ fontFamily: "var(--g-font-mono)", fontSize: 12, background: "var(--g-paper-deep)", padding: "1px 6px", borderRadius: 2 }}>
+            claude-code-handoff/issue-bodies/body-14-output-layout-system.md
+          </code>.
+          Identische `applyChannel(primary, secondary, maxCols)` Funktion existiert dort (Python) und im Frontend (JS) für die Live-Vorschau.
+        </div>
+      </div>
+    );
+  }
+
+  function App() {
+    return (
+      <DesignCanvas>
+        <DCSection id="intro" title="Signal · Output-Kanal · Mobile"
+          subtitle="Wie das Abend-Briefing im Signal Messenger aussehen soll. Recherchierte Capabilities oben, das konkrete Layout unten — eine Bubble pro Sinnabschnitt, skaliert linear mit der Anzahl Tour-Segmente.">
+          <DCArtboard id="signal-readme" label="Recherche · was Signal technisch kann + Layout-Pattern" width={840} height={1180}>
+            <SignalReadmeCard/>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="layout" title="Layout · Sektion-Bubbles"
+          subtitle="Inhalt: Etappe KHW · Porze → Hochweißsteinhaus mit 3 Segmenten (Aufstieg · Höhenkamm · Abstieg). Quick-Read zuerst, dann eine Bubble pro Segment, dann Ziel/Nacht und Outlook.">
+          <DCArtboard id="signal-light" label="Light Mode · Default" width={387} height={1900}>
+            <VariantB theme="light"/>
+          </DCArtboard>
+          <DCArtboard id="signal-dark" label="Dark Mode" width={387} height={1900}>
+            <VariantB theme="dark"/>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="overflow" title="Spalten-Constraint · das harte Limit"
+          subtitle="Drei Zustände derselben Segment-Bubble nebeneinander. Bubble-Content-Breite ≈ 272 px — mehr als 6 Spalten führen zum Mono-Zeilenumbruch, der Spalten-Ausrichtung zerstört. Die Constraint-Tabelle dokumentiert das Limit je Gerät × Schriftgröße.">
+          <DCArtboard id="overflow-readme" label="Constraint-Tabelle · max Spalten je Gerät × Schriftgröße" width={760} height={780}>
+            <OverflowReadme/>
+          </DCArtboard>
+          <DCArtboard id="overflow-ok" label="OK · 6 Spalten, sauber aligned" width={387} height={700}>
+            <OverflowDemo theme="light" state="ok"/>
+          </DCArtboard>
+          <DCArtboard id="overflow-broken" label="Broken · 9 Spalten, Umbruch zerstört Alignment" width={387} height={700}>
+            <OverflowDemo theme="light" state="broken"/>
+          </DCArtboard>
+          <DCArtboard id="overflow-fixed" label="Fix · 6 Spalten + Detail-Zeile" width={387} height={700}>
+            <OverflowDemo theme="light" state="fixed"/>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="config-pointer"
+          title="Spalten-Konfiguration · wo das Limit durchgesetzt wird"
+          subtitle={'Das hier ist der Signal-Kanal-Steckbrief. Die eigentliche User-Konfiguration („welche Metrik wird Spalte, welche Detail“) lebt zusammen mit Email/Telegram/SMS im zentralen Wetter-Metriken-Editor — siehe Gregor 20 - Redesign v2.html, Sektion 03. Backend-Spec: claude-code-handoff/issue-bodies/body-14-output-layout-system.md.'}>
+          <DCArtboard id="config-pointer-card" label="Verweis · zentraler Metriken-Editor" width={820} height={420}>
+            <ConfigPointerCard/>
+          </DCArtboard>
+        </DCSection>
+      </DesignCanvas>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

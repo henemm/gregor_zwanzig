@@ -130,6 +130,9 @@ func main() {
 	// Issue #140 / #189: Output-Vorschau Email + SMS
 	r.Get("/api/preview/{trip_id}/email", handler.PreviewProxyHandler(cfg.PythonCoreURL, "email"))
 	r.Get("/api/preview/{trip_id}/sms", handler.PreviewProxyHandler(cfg.PythonCoreURL, "sms"))
+	// Issue #363: Signal/Telegram-Vorschau (kanal-bewusster Narrow-Renderer #360)
+	r.Get("/api/preview/{trip_id}/signal", handler.PreviewProxyHandler(cfg.PythonCoreURL, "signal"))
+	r.Get("/api/preview/{trip_id}/telegram", handler.PreviewProxyHandler(cfg.PythonCoreURL, "telegram"))
 	// Epic #138 Issue #177: User-MetricPresets (+ #342 PATCH Read-Modify-Write)
 	r.Get("/api/metric-presets", handler.ListMetricPresetsHandler(s))
 	r.Post("/api/metric-presets", handler.CreateMetricPresetHandler(s))
