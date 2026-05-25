@@ -762,3 +762,53 @@ def test_ac8_session_pid_fallback_when_no_claude():
     assert fallback == os.getppid(), (
         f"fallback must be os.getppid() {os.getppid()} when walk is None, got {fallback}"
     )
+
+
+# --------------------------------------------------------------------------- #
+# Issue #381: block message must steer a blocked session to call EnterWorktree
+# DIRECTLY — no ToolSearch / schema-load detour first (that path is also blocked).
+# --------------------------------------------------------------------------- #
+def test_issue381_block_message_directs_direct_enterworktree(tmp_path):
+    """#381 (AC-1/AC-2): the block message tells the blocked session to call
+    EnterWorktree *directly* and explicitly NOT to try ToolSearch/schema-loading
+    first. Regression guard: without this hint a blocked session wastes turns
+    trying to activate the (also-blocked) ToolSearch path before discovering that
+    EnterWorktree is parameter-less and directly callable.
+    """
+    repo = tmp_path / "repo"
+    _git_init(repo)
+
+    now = time.time()
+    _write_entry(
+        repo, "owner-A", pid=os.getpid(), started_at=now - 100, last_seen=now
+    )
+    _write_entry(
+        repo, "guest-B", pid=os.getpid(), started_at=now + 50, last_seen=now
+    )
+
+    blocked = _run_hook(
+        "guard",
+        {
+            "session_id": "guest-B",
+            "cwd": str(repo),
+            "tool_name": "Edit",
+            "tool_input": {"file_path": str(repo / "x.py")},
+        },
+        cwd=repo,
+    )
+    assert blocked.returncode == 2, blocked.stdout
+    msg = blocked.stderr + blocked.stdout
+    low = msg.lower()
+
+    # AC-1: explicit "call it directly" guidance ...
+    assert "direkt" in low, f"expected 'direkt' (call-directly) hint in:\n{msg}"
+    # ... and an explicit warning not to take the ToolSearch detour.
+    assert "toolsearch" in low, (
+        f"expected explicit ToolSearch warning in block message:\n{msg}"
+    )
+    # AC-2: existing guarantees must still hold.
+    assert "enterworktree" in low, f"EnterWorktree must still be named:\n{msg}"
+    assert "gz-workspace" in low, f"gz-workspace fallback must remain:\n{msg}"
+    assert "<" not in msg and ">" not in msg, (
+        f"block message must stay free of angle-bracket placeholders:\n{msg}"
+    )
