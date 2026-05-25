@@ -142,6 +142,15 @@ ENV `GZ_SESSION_STALE_SECONDS`. Registry-Pfad relativ zum repo_root.
   B neuer Inhaber und der Wächter erlaubt (exit 0); A's veralteter Eintrag wird aufgeräumt.
   - Test: (populated after /tdd-red)
 
+- **AC-8:** Given der `register`-Hook wird von Claude Code über einen kurzlebigen
+  Wrapper-Prozess gestartet (sodass `os.getppid()` NICHT die langlebige Sitzung trifft) /
+  When eine Sitzung sich registriert / Then speichert der Eintrag die echte
+  Claude-Sitzungs-PID (ermittelt durch Hochlaufen der Eltern-Prozesskette bis zum
+  `claude`-Prozess), damit `_pid_alive` eine geschlossene Sitzung SOFORT als tot erkennt
+  und ihren Inhaber-Anspruch nicht bis zum STALE-Fenster (Default 900 s) blockiert.
+  Fail-safe: schlägt die Ermittlung fehl, wird auf `os.getppid()` zurückgefallen.
+  - Test: (populated after /tdd-red)
+
 ## Known Limitations
 
 - Greift nur für Sitzungen, die nach Einführung des Hooks **neu gestartet** werden
@@ -156,5 +165,8 @@ ENV `GZ_SESSION_STALE_SECONDS`. Registry-Pfad relativ zum repo_root.
 ## Changelog
 
 - 2026-05-25: Initial spec created (Sperre gegen parallele Sitzungen im selben Repo)
+- 2026-05-25: AC-8 ergänzt — echte Sitzungs-PID via Eltern-Prozesskette statt
+  `os.getppid()` (Bugfix: getppid traf nur den kurzlebigen Wrapper → tote Sitzungen
+  blockierten bis STALE-Fenster statt sofort freizugeben)
 </content>
 </invoke>

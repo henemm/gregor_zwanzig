@@ -106,6 +106,66 @@ def _pid_alive(pid: int) -> bool:
         return False
 
 
+def _proc_lookup(pid: int):
+    """``(comm, ppid)`` aus ``/proc/<pid>/stat`` lesen; Exception -> None.
+
+    Das stat-Format lautet ``pid (comm) state ppid ...``. Der ``comm``-Name steht
+    in Klammern und kann selbst ``)`` oder Leerzeichen enthalten, deshalb wird das
+    letzte ``)`` via ``rfind(')')`` gesucht. Direkt nach dem state-Char (ein Token
+    nach dem ``)``) folgt die ppid.
+    """
+    try:
+        raw = Path(f"/proc/{int(pid)}/stat").read_text()
+        close = raw.rfind(")")
+        if close == -1:
+            return None
+        open_paren = raw.find("(")
+        if open_paren == -1 or open_paren > close:
+            return None
+        comm = raw[open_paren + 1 : close]
+        rest = raw[close + 1 :].split()
+        # rest[0] = state-Char, rest[1] = ppid
+        if len(rest) < 2:
+            return None
+        return comm, int(rest[1])
+    except Exception:
+        return None
+
+
+def _walk_to_session_pid(start_pid, lookup, target_comm: str = "claude", max_depth: int = 12):
+    """Eltern-Kette ab ``start_pid`` hochlaufen bis ``comm == target_comm``.
+
+    ``lookup(pid)`` liefert ``(comm, ppid)`` oder ``None``. Gibt die PID mit
+    passendem comm zurueck. Bricht mit ``None`` ab, wenn ein lookup ``None``
+    liefert, ppid <= 1 (init) erreicht ist, oder ``max_depth`` ueberschritten wird.
+    Reine Funktion (keine Seiteneffekte, kein /proc-Zugriff) — testbar mit
+    injiziertem Prozessbaum.
+    """
+    pid = start_pid
+    for _ in range(max_depth):
+        info = lookup(pid)
+        if info is None:
+            return None
+        comm, ppid = info
+        if comm == target_comm:
+            return pid
+        if not isinstance(ppid, int) or ppid <= 1:
+            return None
+        pid = ppid
+    return None
+
+
+def _session_pid() -> int:
+    """Echte Claude-Sitzungs-PID; Fail-safe: ``os.getppid()`` (AC-8).
+
+    Laeuft die Eltern-Kette ab ``os.getppid()`` hoch bis zum ``claude``-Prozess.
+    Schlaegt das fehl (kein claude-Vorfahr, /proc-Fehler), wird auf den direkten
+    Eltern-Prozess zurueckgefallen.
+    """
+    r = _walk_to_session_pid(os.getppid(), _proc_lookup)
+    return r if r is not None else os.getppid()
+
+
 def _is_alive(entry: dict, now: float, stale: int) -> bool:
     """Lebend = PID in /proc ODER last_seen juenger als STALE_SECONDS."""
     pid = entry.get("pid")
@@ -242,7 +302,9 @@ def _do_register(payload: dict) -> None:
         "session_id": session_id,
         "cwd": cwd,
         "repo_root": str(repo_root),
-        "pid": os.getppid(),
+        # AC-8: echte Claude-Sitzungs-PID statt des kurzlebigen Wrapper-Prozesses
+        # (os.getppid trifft nur den Wrapper -> Eintrag immer "tot").
+        "pid": _session_pid(),
         "started_at": started_at,
         "last_seen": now,
     }

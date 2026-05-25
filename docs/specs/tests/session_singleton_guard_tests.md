@@ -20,7 +20,7 @@ phase: phase5_tdd_red
 
 Test-Manifest fuer den Session-Singleton-Waechter aus
 `docs/specs/modules/session_singleton_guard.md`. Jeder pytest-Test mappt 1:1 auf
-ein Acceptance Criterion (AC-1..AC-7) der Parent-Spec.
+ein Acceptance Criterion (AC-1..AC-8) der Parent-Spec.
 
 Parent-Spec: `docs/specs/modules/session_singleton_guard.md` v1.0
 
@@ -43,6 +43,20 @@ Parent-Spec: `docs/specs/modules/session_singleton_guard.md` v1.0
 | `test_ac5_no_own_entry_allowed` | AC-5 | Sitzung ohne eigenen Registry-Eintrag (Bestands-Sitzung) -> immer exit 0. |
 | `test_ac6_failsafe_broken_input_allowed` | AC-6 | Leerer Payload, kaputtes JSON, fehlendes/leeres cwd -> exit 0, kein Traceback nach aussen (Fail-safe, parametrisiert). |
 | `test_ac7_dead_owner_reaped` | AC-7 | Toter Inhaber A (PID nicht in /proc und last_seen aelter als STALE_SECONDS) -> verbliebene Sitzung B wird Inhaber (exit 0), A's Eintrag aufgeraeumt. |
+
+### PID-Liveness (AC-8 — echte Sitzungs-PID statt Wrapper)
+
+| Test-Funktion | AC | Was geprueft wird |
+|---|---|---|
+| `test_ac8_walk_finds_claude_pid` | AC-8 | `_walk_to_session_pid` laeuft die Eltern-Kette hoch (injizierter Prozessbaum, kein Mock) und findet die `claude`-PID. |
+| `test_ac8_walk_no_claude_returns_none` | AC-8 | Kein `claude`-Vorfahr (nur `bash`->init) -> Walk liefert None (Basis fuer getppid-Fallback). |
+| `test_ac8_walk_unknown_pid_returns_none` | AC-8 | `lookup` liefert None (PID verschwunden) -> Walk endet sauber mit None. |
+| `test_ac8_walk_respects_max_depth` | AC-8 | Ueberlange Kette wird durch `max_depth` begrenzt -> None, kein Haengen. |
+| `test_ac8_proc_lookup_real_process` | AC-8 | `_proc_lookup(os.getpid())` liest `/proc/<pid>/stat` und liefert plausibles `(comm, ppid)` ohne Crash. |
+| `test_ac8_proc_lookup_dead_pid_returns_none` | AC-8 | `_proc_lookup` einer toten PID -> None (keine Exception). |
+| `test_ac8_proc_lookup_matches_real_ppid` | AC-8 | `_proc_lookup`-Parsing ist robust (rfind(')')); ppid stimmt mit echtem `os.getppid()` ueberein. |
+| `test_ac8_session_pid_real_call_plausible` | AC-8 | `_session_pid()` (echter End-to-End-Aufruf) liefert eine lebende PID — entweder den gefundenen `claude`-Vorfahr ODER (Fail-safe) `os.getppid()`. |
+| `test_ac8_session_pid_fallback_when_no_claude` | AC-8 | Ohne `claude`-Vorfahr (injizierter `bash`->init-Baum) walkt zu None -> dokumentierte Fallback-Komposition ergibt `os.getppid()`. |
 
 ### Adversary-Regressionen (F001–F003)
 
@@ -94,3 +108,6 @@ liefert non-zero / "No such file").
 ## Changelog
 
 - 2026-05-25: Initial — Test-Manifest fuer Session-Singleton-Guard (AC-1..AC-7).
+- 2026-05-25: AC-8 ergaenzt — 8 Tests fuer echte Sitzungs-PID via Eltern-Prozesskette
+  (`_walk_to_session_pid`/`_proc_lookup`/`_session_pid`), No-Mocks via injiziertem
+  Prozessbaum-`lookup` und echtem `/proc`-Read.

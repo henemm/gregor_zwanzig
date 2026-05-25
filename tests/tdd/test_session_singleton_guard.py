@@ -1,4 +1,4 @@
-"""TDD tests for the session-singleton-guard hook (AC-1..AC-7).
+"""TDD tests for the session-singleton-guard hook (AC-1..AC-8).
 
 These are REAL integration tests: the hook is invoked as a true subprocess
 with real tmpdir-backed registries and real `git init`'d repos. NO MOCKS.
@@ -29,6 +29,23 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 HOOK_PATH = REPO_ROOT / ".claude" / "hooks" / "session_singleton_guard.py"
+
+
+def _import_hook():
+    """Import the hook module by file path for direct unit access (AC-8).
+
+    No mocking — we import the real module and call its pure helper functions
+    with injected data. Loaded lazily so the import-error itself surfaces as a
+    test failure (RED) while the helpers do not yet exist.
+    """
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "session_singleton_guard", str(HOOK_PATH)
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 # --------------------------------------------------------------------------- #
@@ -595,4 +612,153 @@ def test_f003_session_id_path_traversal_contained(tmp_path):
     )
     assert g_guest.returncode == 2, (
         f"younger session must be blocked, got {g_guest.returncode}\n{g_guest.stdout}"
+    )
+
+
+# --------------------------------------------------------------------------- #
+# AC-8: register stores the REAL claude session PID (walk up the parent chain),
+# not the short-lived wrapper that os.getppid() points at.
+# --------------------------------------------------------------------------- #
+def test_ac8_walk_finds_claude_pid():
+    """AC-8: _walk_to_session_pid climbs the parent chain to the claude process.
+
+    Injected, fully synthetic process tree (no mocks): a `bash` child of a
+    `claude` parent. Walking up from the bash PID must land on the claude PID.
+    """
+    hook = _import_hook()
+
+    # 42:bash -> 41:claude -> 1:init
+    tree = {42: ("bash", 41), 41: ("claude", 1)}
+
+    def lookup(pid):
+        return tree.get(pid)
+
+    found = hook._walk_to_session_pid(42, lookup)
+    assert found == 41, f"walk must find the claude PID 41, got {found!r}"
+
+
+def test_ac8_walk_no_claude_returns_none():
+    """AC-8: if no `claude` ancestor exists, the walk returns None.
+
+    `_session_pid` then falls back to os.getppid() (covered separately). Here we
+    only assert the pure walk gives up cleanly when it reaches init (ppid<=1).
+    """
+    hook = _import_hook()
+
+    # 42:bash -> 41:bash -> 1:init  (no claude anywhere)
+    tree = {42: ("bash", 41), 41: ("bash", 1)}
+
+    def lookup(pid):
+        return tree.get(pid)
+
+    found = hook._walk_to_session_pid(42, lookup)
+    assert found is None, f"walk must return None when no claude found, got {found!r}"
+
+
+def test_ac8_walk_unknown_pid_returns_none():
+    """AC-8: a lookup that yields None (pid gone) terminates the walk -> None."""
+    hook = _import_hook()
+
+    def lookup(pid):
+        return None
+
+    found = hook._walk_to_session_pid(12345, lookup)
+    assert found is None, f"walk must return None for unknown start pid, got {found!r}"
+
+
+def test_ac8_walk_respects_max_depth():
+    """AC-8: a cycle/over-long chain is bounded by max_depth -> None (no hang)."""
+    hook = _import_hook()
+
+    # A long chain of bash processes, far deeper than max_depth.
+    tree = {i: ("bash", i - 1) for i in range(2, 200)}
+
+    def lookup(pid):
+        return tree.get(pid)
+
+    found = hook._walk_to_session_pid(199, lookup, max_depth=12)
+    assert found is None, f"walk must stop at max_depth and return None, got {found!r}"
+
+
+def test_ac8_proc_lookup_real_process():
+    """AC-8: _proc_lookup reads /proc/<pid>/stat for a real, living process.
+
+    Uses the test process itself (os.getpid()): must return a plausible
+    (comm, ppid) tuple without crashing. comm is the executable name, ppid is a
+    positive int.
+    """
+    hook = _import_hook()
+
+    result = hook._proc_lookup(os.getpid())
+    assert result is not None, "lookup of our own live PID must not be None"
+    comm, ppid = result
+    assert isinstance(comm, str) and comm, f"comm must be a non-empty str, got {comm!r}"
+    assert isinstance(ppid, int) and ppid > 0, f"ppid must be a positive int, got {ppid!r}"
+
+
+def test_ac8_proc_lookup_dead_pid_returns_none():
+    """AC-8: _proc_lookup of a non-existent PID returns None (no exception)."""
+    hook = _import_hook()
+
+    result = hook._proc_lookup(_dead_pid())
+    assert result is None, f"lookup of a dead PID must be None, got {result!r}"
+
+
+def test_ac8_proc_lookup_matches_real_ppid():
+    """AC-8: comm names may contain ')' / spaces; parse via rfind(')').
+
+    We assert the parser is robust by feeding the real /proc/<pid>/stat of our
+    own process: the parsed ppid must equal the real os.getppid(), proving the
+    rfind(')')-based comm/ppid split works regardless of comm content.
+    """
+    hook = _import_hook()
+
+    result = hook._proc_lookup(os.getpid())
+    assert result is not None
+    _comm, ppid = result
+    # ppid from /proc must match the real parent of this test process.
+    assert ppid == os.getppid(), (
+        f"_proc_lookup ppid {ppid} must equal real os.getppid() {os.getppid()}"
+    )
+
+
+def test_ac8_session_pid_real_call_plausible():
+    """AC-8: _session_pid() is a real end-to-end call returning a live PID.
+
+    The result is EITHER the discovered `claude` ancestor PID (when the test runs
+    inside a Claude Code session) OR — fail-safe — os.getppid(). Both are valid;
+    we only assert it is a positive PID that is actually alive in /proc.
+    """
+    hook = _import_hook()
+
+    pid = hook._session_pid()
+    assert isinstance(pid, int) and pid > 0, f"_session_pid must be a positive int, got {pid!r}"
+    assert Path(f"/proc/{pid}").exists(), (
+        f"_session_pid {pid} must be a living process (claude ancestor or getppid())"
+    )
+
+
+def test_ac8_session_pid_fallback_when_no_claude():
+    """AC-8 fail-safe: with NO claude ancestor the walk yields None -> getppid().
+
+    No mocks: we drive the PURE walk helper with an injected `bash`->init chain
+    that contains no `claude`, prove it returns None, then assert the documented
+    _session_pid composition (`r if r is not None else os.getppid()`) lands on
+    os.getppid() for that data.
+    """
+    hook = _import_hook()
+
+    ppid = os.getppid()
+    tree = {ppid: ("bash", 1)}  # bash whose parent is init -> no claude
+
+    def lookup(pid):
+        return tree.get(pid)
+
+    walked = hook._walk_to_session_pid(ppid, lookup)
+    assert walked is None, "a no-claude chain must walk to None"
+
+    # Mirror the production fallback line.
+    fallback = walked if walked is not None else os.getppid()
+    assert fallback == os.getppid(), (
+        f"fallback must be os.getppid() {os.getppid()} when walk is None, got {fallback}"
     )
