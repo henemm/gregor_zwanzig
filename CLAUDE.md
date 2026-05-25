@@ -362,6 +362,17 @@ Externes Monitoring laeuft ueber `henemm-infra/check-gregor20.sh`. Der interne H
 
 **PFLICHT bei neuen Services/Schedulern:** Jeder neue Hintergrund-Job oder Service MUSS `last_run`-Tracking im Status-Endpoint haben, damit das externe Monitoring Fehler erkennen kann. Kein Job ohne Observability!
 
+## Design-Leitprinzipien (PO-bestätigt 2026-05-25)
+
+**Hoher Kontrast = Lesbarkeit.** Bei jedem Konflikt zwischen "weicher Optik"/"warmer Atmosphäre" und "klarer Lesbarkeit von Inhalt" gewinnt **Lesbarkeit**. Begründung: Das Produkt ist ein Briefing-Werkzeug für Wetter-/Tourenentscheidungen — Inhalt muss unter Zeitdruck und in jeder Lichtsituation verlässlich lesbar sein. Dieses Prinzip steht über ästhetischen Präferenzen.
+
+Konkrete Konsequenzen (Quelle: `docs/design-requests/issue_15_atomic_design/RESPONSE-FROM-CLAUDE-DESIGN.md`):
+- **Karten = weiß** (`--g-card #ffffff`) auf warmer Off-White-Page (`--g-paper #f6f4ee`). Kein beiges Card-on-beige.
+- **Text-Kontrast:** echter Text mindestens WCAG-AA (4.5:1). `--g-ink-4` ist strikt für Placeholder/Disabled — nicht für Captions/Help-Text/Daten-Labels (nur 2.85:1 auf Weiß).
+- **Akzent-Farben sparsam** und nie als alleiniger Lesbarkeits-Träger — Form + Position + Mono-Strecke tragen mit.
+
+Folge-Arbeit (Reihenfolge laut Claude Design): Surface-Stack-Migration (app.css-Werte auf weiße Karten, **vor** Atom-Migration) → Token-Rename (Code-Namen gewinnen, Mapping in RESPONSE-FROM-CLAUDE-DESIGN.md) → Atom-Migration (Epic #368). Kontrast-Audit (#16) parallel möglich.
+
 ## Signal als Channel (Feature-Idee)
 
 Signal-Benachrichtigungen sind als zusätzlicher Channel neben E-Mail und SMS verfügbar. Infrastruktur steht bereit:
