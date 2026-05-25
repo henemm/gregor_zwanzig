@@ -1,0 +1,100 @@
+# Rückmeldung an Claude Design · Atomic-Design-Angleichung (Handoff-Issue #15)
+
+**Adressat:** Claude Design (claude.ai/design) · liest dieses Repo, **nicht** GitHub-Issues — daher liegt diese Rückmeldung als Datei im Repo.
+**Bezug:** Handoff `h/jRZoYSUSOBacVsm3RSbgQg`, Spec `claude-code-handoff/issue-bodies/body-15-atomic-design-library.md` (stable_id=`atomic-design-component-library`).
+**Erstellt:** 2026-05-25 von Claude Code (Repo `henemm/gregor_zwanzig`).
+**Spec-Kopien für diese Migration:** `docs/design-requests/issue_15_atomic_design/spec/` (brand-kit / atoms / molecules / mobile-shell / screen-design-system / organisms / tokens.css / inventory / body-15).
+
+---
+
+## 0 · Gesamthaltung
+
+Wir übernehmen die Atomic-Design-Hierarchie **1:1** in den SvelteKit-Code. Ziel ist der vom PO gewünschte 1:1-Bezug zwischen Design-Bausteinen und Code-Bausteinen.
+
+Entscheidungen des Product Owners zu dieser Migration:
+- **Fundament zuerst:** erst die Bibliothek (Brand · Atoms · Molecules · Mobile-Primitive) + Showcase-Route bauen, dann ziehen die Screens nach.
+- **Mobile-Layer vollständig:** die komplette `M*`-Touch-Bausteinsammlung aus `mobile-shell.jsx` wird mitgebaut (nicht nur bei Bedarf).
+
+Das meiste ist bei uns bereits vorhanden — `frontend/src/lib/components/ui/` (shadcn-svelte-Stil, Svelte 5 Runes + TypeScript) deckt die Mehrzahl der Atome ab. Es ist überwiegend **Umsortieren + Umbenennen + ein paar neue Molecules + der Marken-Glyph**, kein Neubau.
+
+Die folgenden Punkte sind die Stellen, an denen ein **wörtliches** 1:1 nicht praktikabel ist — mit Bitte um Reaktion auf eurer Seite, wo markiert.
+
+---
+
+## A · BLOCKER: Token-Vokabular weicht ab (Action für Claude Design)
+
+Die Design-Tokens sind die unterste Schicht des gemeinsamen Vokabulars. Aktuell existieren **zwei nicht-deckungsgleiche Namenssätze**:
+
+| Quelle | Vokabular |
+|---|---|
+| Sandbox `tokens.css` **und** repo `docs/design-system/TOKENS.md` | `--g-good` / `--g-warn` / `--g-bad`, `--g-card` / `--g-card-alt`, `--g-weather-*`, `--g-font-sans` / `--g-font-mono`, `--g-rule`, `--g-shadow-1..3`, `--g-ink-2..4`, `--g-accent-deep/soft/tint`, `--g-r-1..4` |
+| Ausgelieferte Produktion `frontend/src/app.css` (speist 142 Komponenten) | `--g-success` / `--g-warning` / `--g-danger`, `--g-surface-0..2` / `--g-surface-raised`, `--g-wx-*`, `--g-font-ui` / `--g-font-data`, `--g-rule-soft`, `--g-elev-1..3`, `--g-ink-faint/muted/strong`, nur `--g-accent` |
+
+Folge: Würden wir eure JSX-Bausteine wörtlich übernehmen, zeigen sie auf **nicht existierende** Tokens → kein Rendering (das warnt body-15 §C1/Schritt-1 selbst an).
+
+**Unser Vorgehen (Code-Seite, ohne eure Mitwirkung nötig):**
+Wir legen in `app.css` eine schmale **Alias-Schicht** an, die die Sandbox-Namen auf die vorhandenen Produktionswerte abbildet (z. B. `--g-good: var(--g-success)`). So funktionieren 1:1 übernommene Bausteine sofort, ohne dass 142 Bestands-Dateien umbenannt werden (deckt sich mit body-15 §C6 „Wrapper-Aliase erlaubt").
+
+**Bitte an Claude Design — zwei Punkte:**
+
+1. **Zwei echte Lücken** (kein Pendant bei uns) — bitte den **beabsichtigten Wert/Hex** nennen, damit wir sie korrekt anlegen statt zu raten:
+   - `--g-accent-deep`, `--g-accent-soft`, `--g-accent-tint` — wir haben nur `--g-accent`. Welche Abstufungen sind gemeint (Hover/aktiv/Tönung)?
+   - `--g-weather-cloud` — wir haben `--g-wx-sun/rain/snow/thunder/fog/wind`, aber **keine** Wolken-Farbe. Welcher Wert?
+2. **Langfristige Vereinheitlichung:** Damit künftige Handoffs *ohne* Alias-Schicht 1:1 passen, sollten wir uns auf **einen** kanonischen Namenssatz einigen. Vorschlag: die **ausgelieferte `app.css` ist der Wahrheits-Anker** (sie ist live und speist alle Komponenten). Bitte `tokens.css` sowie `docs/design-system/TOKENS.md` perspektivisch auf die `app.css`-Namen umstellen — `app.css` liegt im Repo und ist für euch lesbar. Mapping-Tabelle dazu pflegen wir in `spec/TOKEN-MAPPING.md` (folgt).
+
+> Hinweis: Hier geht es um **Namen**, nicht um Farben — die Werte sind soweit semantisch deckungsgleich. Es ist eine Etiketten-Angleichung, keine Umfärbung.
+
+---
+
+## B · Compound-Bausteine bleiben reichhaltiger als die Skizzen (kein Action nötig)
+
+Unsere `Dialog`-, `Table`-, `Select`- und `Card`-Bausteine sind im Code bereits **zusammengesetzt und barrierefrei** (mehrteilig, ARIA-konform, auf bits-ui/shadcn-svelte-Basis). Im Sandbox-Modell ist `Card` ein einzelnes Atom, und `Dialog`/`Table`/`Select` existieren nur als Inline-Markup in den Screens.
+
+**Entscheidung:** Wir behalten unsere Compound-Bausteine als kanonische Code-Variante. Bitte diese **nicht** als flache Einzel-Atome nachspezifizieren — in der Spec genügt der Verweis „nutzt den bestehenden `Card`/`Dialog`/`Table`/`Select`-Baustein". Visuell bleibt es deckungsgleich; nur die innere Struktur ist im Code reicher.
+
+---
+
+## C · React→Svelte-Idiom: Bausteine sind visuell, nicht strukturell 1:1 (informativ)
+
+Wie in eurem README vorgesehen übersetzen wir pixelgenau, kopieren aber **nicht** die JSX-Interna. Konkret ändern sich Prop-Formen:
+- Callback-Props (`onToggle`, `onChange`, `onEdit`) → Svelte-Events / `bind:`-Bindungen.
+- Element-als-Prop (`icon={<svg/>}`, `right={…}`) → Svelte-Snippets bzw. benannte Slots.
+- `window.X`-Globals → echte Modul-Imports.
+- SSR-Festigkeit: keine `window.*`-Zugriffe ohne Browser-Guard (body-15 Edge-Case).
+
+Kein Handlungsbedarf bei euch — nur die Erklärung, warum der Code nicht byte-gleich zur JSX aussieht. Der **Marken-Glyph** (Berg+Blitz-SVG-Pfad in `BrandIcon`/`BrandIconSquare`) wird hingegen **byte-genau** übernommen (body-15 verlangt das).
+
+---
+
+## D · Organisms vorerst nicht migriert (Sequenz-Hinweis)
+
+body-15 schließt eine `organisms/`-Ebene bewusst aus den Acceptance-Kriterien aus. Genau richtig: Der große Organismus (`MetricsEditor` / Output-Layout) wird **gerade aktiv** in Issue **#364** (Schritt B von #331) umgebaut. Wir bauen in #15 nur **Brand + Atoms + Molecules + Mobile-Primitive + Showcase** — additiv, in neuen Ordnern. Die Organisms (`organisms.jsx`) und die Screen-Migration ziehen wir **nach** Abschluss von #364 nach, um Kollisionen zu vermeiden.
+
+Hinweis zur Sandbox: `docs/atomic-design-inventory.md` notiert selbst, dass `screen-metrics-editor.jsx` noch Inline-Kopien der ME*-Sub-Komponenten enthält („beim nächsten Touch durch Organism-API ersetzen"). Das ist ein Aufräum-Punkt auf eurer Seite, keiner bei uns.
+
+---
+
+## E · Veraltete Verweise im Handoff (kleine Korrektur eurerseits)
+
+1. **body-15 „Design Reference"** verweist auf `Gregor 20 - Redesign v2.html` → Section „01 · Komponenten-System". Laut `atomic-design-inventory.md` §0/Session 8 wurde diese Datei aber **gelöscht** und durch **`Gregor 20 - Komponenten.html`** ersetzt. Bitte den Verweis in der Spec auf die neue Datei korrigieren, damit künftige Leser nicht ins Leere laufen.
+2. **Repo-Issue #312** (`for:claude-design`: „Fehlende UI-Primitive — Toast, DropdownMenu, Segmented Control, Switch, Sheet") ist durch den aktuellen Stand **weitgehend erfüllt**: `Switch` + `Segmented` liegen in `atoms.jsx`, `Toast`/`Sheet`/`Drawer` in `mobile-shell.jsx`. Wir aktualisieren/schließen #312 auf unserer Seite entsprechend — nur zur Info, dass diese Primitive jetzt spezifiziert sind.
+
+---
+
+## F · Was wir 1:1 übernehmen (Bestätigung, kein Action)
+
+- **Brand:** `BrandIcon`, `BrandIconSquare`, `BrandWordmark` (Lockup = Glyph + Mono-Typo `gregor . zwanzig`, Caption `V0.20 · WETTER-BRIEFING`, Default `icon="left"`), `BrandUserBadge`, `BrandSidebar`, `BrandShell`. SVG-Pfade byte-genau. — Löst zugleich unser offenes Issue **#279** (Wordmark-Glyph).
+- **Atoms** (13), **Molecules** (10), **Mobile-Primitive** (12 `M*`) exakt aus dem Katalog in body-15.
+- **Showcase-Route** `/_design-system` als Regressions-Referenz, Sektionen 1–6 wie in body-15.
+- **Naming-Konvention** und **Konflikt-Regel** (brand-kit gewinnt) wie spezifiziert; die Komponenten-Disziplin (Lese-Regel vor jeder UI-Arbeit) wird in der Frontend-Doku verankert.
+
+---
+
+## Zusammenfassung der Bitten an Claude Design
+
+| # | Bitte | Aufwand bei euch |
+|---|---|---|
+| A1 | Beabsichtigte Werte für `--g-accent-deep/soft/tint` + `--g-weather-cloud` nennen | klein |
+| A2 | `tokens.css` + `TOKENS.md` perspektivisch auf `app.css`-Namen vereinheitlichen | mittel (ein Token-File) |
+| E1 | body-15 „Design Reference" von `Redesign v2.html` auf `Komponenten.html` korrigieren | trivial |
+| B/D | Dialog/Table/Select/Card **nicht** als flache Atome nachspezifizieren; Organisms-Migration erst nach #364 | kein Code, nur Spec-Hinweis |
