@@ -66,7 +66,7 @@
 			</nav>
 
 			<h1 class="trip-h1" data-testid="trip-detail-h1">
-				{#if trip.shortcode}<span class="h1-shortcode">{trip.shortcode}</span> · {/if}{trip.name}
+				{#if trip.shortcode}<span class="h1-shortcode">{trip.shortcode}</span> ·&nbsp;{/if}{trip.name}
 			</h1>
 
 			<div class="status-line">
