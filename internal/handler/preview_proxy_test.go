@@ -141,13 +141,16 @@ func TestPreviewProxyHandlerForwardsTelegramChannel(t *testing.T) {
 	py, lastURL := startFakePreviewPython(t, 200, `{"subject":"x","body":"y","char_count":1,"max_line_width":1}`, "")
 
 	h := PreviewProxyHandler(py.URL, "telegram")
-	w := dispatchPreviewWithChi(h, "telegram", "/api/preview/gr20/telegram?type=evening", "default")
+	w := dispatchPreviewWithChi(h, "telegram", "/api/preview/gr20/telegram?type=evening", "carol")
 
 	if w.Code != 200 {
 		t.Fatalf("expected 200, got %d (body=%q)", w.Code, w.Body.String())
 	}
 	if !strings.Contains(*lastURL, "/api/preview/gr20/telegram") {
 		t.Errorf("expected proxied URL to include trip_id and telegram channel, got %q", *lastURL)
+	}
+	if !strings.Contains(*lastURL, "user_id=carol") {
+		t.Errorf("expected user_id=carol injected from auth context, got %q", *lastURL)
 	}
 	if !strings.Contains(*lastURL, "type=evening") {
 		t.Errorf("expected type=evening forwarded verbatim, got %q", *lastURL)

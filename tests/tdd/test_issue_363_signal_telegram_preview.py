@@ -134,20 +134,30 @@ def test_ac3_signal_body_differs_from_sms_and_email(client):
     sig = client.get(f"/api/preview/{TRIP_ID}/signal", params=params)
     sms = client.get(f"/api/preview/{TRIP_ID}/sms", params=params)
     email = client.get(f"/api/preview/{TRIP_ID}/email", params=params)
+    telegram = client.get(f"/api/preview/{TRIP_ID}/telegram", params=params)
 
     assert sig.status_code in (200, 503), (
         f"Signal-Endpoint muss existieren, bekam {sig.status_code}: {sig.text[:200]}"
     )
-    if not (sig.status_code == 200 and sms.status_code == 200 and email.status_code == 200):
+    if not (
+        sig.status_code == 200
+        and sms.status_code == 200
+        and email.status_code == 200
+        and telegram.status_code == 200
+    ):
         pytest.skip("Wetter-API nicht erreichbar (mind. ein Kanal 503)")
 
     signal_body = sig.json()["body"]
     sms_token = sms.json()["token_line"]
     email_html = email.text
+    telegram_body = telegram.json()["body"]
 
     assert signal_body != sms_token, "Signal-body darf nicht die SMS-Token-Zeile sein"
     assert signal_body != email_html, "Signal-body darf nicht der E-Mail-HTML sein"
     assert sms_token != email_html
+    assert signal_body != telegram_body, (
+        "Signal- und Telegram-Body müssen sich unterscheiden (eigenständiges Kanal-Rendering)"
+    )
 
 
 # ===========================================================================
