@@ -267,7 +267,6 @@ CLI → Config → Provider Adapter → Normalizer → Risk Engine → Formatter
 
 **Decision Patterns:**
 - Provider selection logic: `docs/reference/decision_matrix.md`
-- Factory Pattern for NiceGUI buttons: `docs/reference/nicegui_best_practices.md`
 
 ## Standards Injection
 

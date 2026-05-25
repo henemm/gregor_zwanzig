@@ -231,7 +231,6 @@ for loc in locations:
 
 ## References
 
-- Best Practices: `docs/reference/nicegui_best_practices.md`
 - Bug Fix Examples:
   - `docs/specs/bugfix/locations_add_button_fix.md`
   - `docs/specs/bugfix/safari_subscriptions_fix.md`

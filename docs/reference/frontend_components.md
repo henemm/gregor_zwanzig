@@ -1,7 +1,7 @@
 # Frontend Components Reference
 
-**Updated:** 2026-05-10  
-**Version:** 1.2
+**Updated:** 2026-05-25  
+**Version:** 1.3
 
 ## Overview
 
@@ -539,194 +539,6 @@ Updated to support both desktop full-sidebar and mobile drawer modes.
 
 ---
 
-## Cockpit Components (Epic #134)
-
-Dashboard-specific composite components for the homepage (`/`) trip cockpit.
-
-### Component Organization
-
-```
-frontend/src/routes/_cockpit/
-├── StagePill.svelte
-├── StageStrip.svelte
-├── ActiveTripCard.svelte
-├── BriefingsTimeline.svelte
-├── AlertFeed.svelte
-└── BottomRow.svelte
-```
-
-### StagePill Component
-
-**File:** `frontend/src/routes/_cockpit/StagePill.svelte`
-
-Visual indicator for a single trip stage with risk-aware coloring.
-
-**Props:**
-```typescript
-interface Props {
-  stage: Stage;
-  active: boolean;          // Is this the current stage?
-  muted: boolean;           // Is this a past stage?
-  riskTone?: 'success' | 'warning' | 'danger';  // Future risk level
-}
-```
-
-**Behavior:**
-- `active=true` → tone="accent"
-- `muted=true` → tone="default" + opacity-50
-- Future with `riskTone` → matched tone
-- Otherwise → tone="default"
-
-**Example:**
-```svelte
-<StagePill stage={todayStage} active={true} muted={false} />
-<StagePill stage={tomorrowStage} active={false} muted={false} />
-<StagePill stage={pastStage} active={false} muted={true} />
-```
-
-### StageStrip Component
-
-**File:** `frontend/src/routes/_cockpit/StageStrip.svelte`
-
-Horizontally scrollable timeline of all trip stages.
-
-**Props:**
-```typescript
-interface Props {
-  stages: Stage[];
-  activeStageid?: string | null;  // Optional: match by ID (fallback: date)
-}
-```
-
-**Behavior:**
-- Renders one StagePill per stage
-- Highlights stage matching `date === today` or `id === activeStageid`
-- Fades stages with `date < today`
-- Non-blocking horizontal scroll
-
-**Example:**
-```svelte
-<StageStrip stages={trip.stages} />
-<StageStrip stages={trip.stages} activeStageid={stage.id} />
-```
-
-### ActiveTripCard Component
-
-**File:** `frontend/src/routes/_cockpit/ActiveTripCard.svelte`
-
-Hero card displaying live trip status with elevation profile and weather.
-
-**Props:**
-```typescript
-interface Props {
-  trip: Trip;
-  stage: Stage | null;
-  dayIndex: number;  // 0-based index in trip.stages
-  forecastSummary: { temp: number | null; wind: number | null; precip: number | null } | null;
-  forecastStatus: 'idle' | 'loading' | 'ok' | 'error';
-}
-```
-
-**Rendering:**
-1. TopoBg (opacity 0.06) as background
-2. Pill tone="accent": "Live · Tag {dayIndex + 1} von {trip.stages.length}"
-3. Stage name + optional distance/elevation stats
-4. ElevSparkline from `stage.waypoints[].elevation_m`
-5. Weather line with temp·wind·precip (or loading state)
-
-**Example:**
-```svelte
-<ActiveTripCard 
-  {trip} 
-  stage={todayStage} 
-  dayIndex={0} 
-  forecastSummary={{temp: 18.5, wind: 22, precip: 0.4}}
-  forecastStatus="ok"
-/>
-```
-
-### BriefingsTimeline Component
-
-**File:** `frontend/src/routes/_cockpit/BriefingsTimeline.svelte`
-
-Scheduler job timeline with status indicators and timing metadata.
-
-**Props:**
-```typescript
-interface Props {
-  schedulerStatus: SchedulerStatus | null;
-}
-```
-
-**Job Labels:**
-| id | label |
-|----|----|
-| morning | Morgenbriefing |
-| evening | Abendbriefing |
-| alert | Alert-Check |
-| trip_reports_hourly | Trip-Reports |
-
-**Status Dot Tones:**
-- `last_run.status === 'ok'` → tone="success"
-- `last_run.status === 'error'` → tone="danger"
-- No `last_run` → tone="info"
-
-**Time Display:**
-- Next run: formatted as `HH:MM` (e.g., "10:00")
-- Last run: relative time (e.g., "vor 15 Min")
-
-**Example:**
-```svelte
-<BriefingsTimeline schedulerStatus={data.schedulerStatus} />
-```
-
-### AlertFeed Component
-
-**File:** `frontend/src/routes/_cockpit/AlertFeed.svelte`
-
-Alert history placeholder (no backend endpoint yet).
-
-**Props:** None
-
-**Current Behavior:** Shows "Keine Alerts in den letzten 24h"
-
-**Future:** Will populate when `GET /api/alerts?hours=24` endpoint is implemented.
-
-**Example:**
-```svelte
-<AlertFeed />
-```
-
-### BottomRow Component
-
-**File:** `frontend/src/routes/_cockpit/BottomRow.svelte`
-
-Two-column grid: tomorrow preview (left) + trip archive (right).
-
-**Props:**
-```typescript
-interface Props {
-  tomorrowStage: Stage | null;
-  archivedTrips: Trip[];  // Max 4
-}
-```
-
-**Left Column (TomorrowPreview):**
-- Shows tomorrow's stage name
-- ElevSparkline from waypoint elevations
-- Message if no tomorrow stage available
-
-**Right Column (ArchiveGrid):**
-- Up to 4 archived trip cards (name + stage count)
-- Message if no archived trips available
-
-**Example:**
-```svelte
-<BottomRow tomorrowStage={tomorrowStage} archivedTrips={archivedTrips.slice(0, 4)} />
-```
-
----
-
 ## Trip-Wizard Components (Epic #136)
 
 Multi-step wizard for creating new trips with activity profiles, GPX import, AI waypoint confirmation, and briefing config.
@@ -800,21 +612,216 @@ TripWizardShell (container, stepper + steps)
 
 ---
 
-## Safari Compatibility Notes
+## Component Inventory (Ist-Stand Phase 1)
 
-**All cockpit components use named event handlers, not inline arrows**, to work around NiceGUI's Python→JavaScript closure binding in Safari:
+Vollstaendiges Inventar aller Komponenten unter `frontend/src/lib/components/` (plus
+route-lokale Kacheln unter `frontend/src/routes/_home/`). Pfade sind relativ zu
+`frontend/src/lib/components/`. Volle Props-Tiefe nur fuer Kern-Atome (siehe oben:
+Btn, GCard, Pill, Eyebrow, Dot, TopoBg, ElevSparkline) sowie Wordmark (unten);
+Detail-Props weiterer Komponenten stehen im jeweiligen Quellcode/Spec.
 
-CORRECT:
-```svelte
-<script>
-  async function handleClick() { /* ... */ }
-</script>
-<Btn onclick={handleClick}>Click</Btn>
+### ui/ — Atome & shadcn-Bausteine
+
+| Komponente | Pfad rel. zu components/ | Kurzbeschreibung |
+|---|---|---|
+| Btn | `ui/btn/Btn.svelte` | Gregor-Button-Atom, 3 Varianten (siehe Detail oben), Issue #144 |
+| GCard | `ui/g-card/GCard.svelte` | Surface-Container mit Elevation/Hover, Issue #144 |
+| Pill | `ui/pill/Pill.svelte` | Kompaktes Inline-Label mit semantischen Tones, Issue #144 |
+| Eyebrow | `ui/eyebrow/Eyebrow.svelte` | All-Caps-Metadaten-/Sektions-Label, Issue #144 |
+| Dot | `ui/dot/Dot.svelte` | Runder Status-/Wetter-Indikator, Issue #144 |
+| TopoBg | `ui/topo/TopoBg.svelte` | Topographisches Hintergrundmuster, Issue #143 |
+| ElevSparkline | `ui/elev-sparkline/ElevSparkline.svelte` | Inline-SVG-Sparkline fuer Hoehenprofile, Issue #146 |
+| badge | `ui/badge/badge.svelte` | shadcn-Label/Tag |
+| Checkbox | `ui/checkbox/Checkbox.svelte` | Auswahl-Checkbox |
+| HorizonChip | `ui/horizon-chip/HorizonChip.svelte` | Chip fuer Zeit-Horizont-Auswahl |
+| input | `ui/input/input.svelte` | shadcn-Texteingabefeld |
+| label | `ui/label/label.svelte` | shadcn-Formular-Label |
+| Segmented | `ui/segmented/Segmented.svelte` | Segmented-Control ([data-slot]-Muster), Issue #285 |
+| Select | `ui/select/Select.svelte` | Dropdown-Auswahl |
+| table | `ui/table/table.svelte` (+ table-* Teile) | shadcn-Tabellen-Bausteine |
+| card | `ui/card/card.svelte` (+ card-* Teile) | shadcn-Card-Bausteine |
+| dialog | `ui/dialog/dialog.svelte` (+ dialog-* Teile) | shadcn-Modal-Bausteine |
+| WIcon | `ui/wicon/WIcon.svelte` | Lucide-Wrapper, 8 Wetter-Icon-Kinds, Issue #322 |
+| Wordmark | `ui/wordmark/Wordmark.svelte` | Wortmarke „gregor.zwanzig" (siehe Props unten), Issue #293 |
+| TopAppBar | `ui/sidebar/TopAppBar.svelte` | Fixierte Top-Bar (mobile), Issue #267 (Detail oben) |
+| BottomNav | `ui/sidebar/BottomNav.svelte` | Fixierte Bottom-Navigation (mobile), Issue #267 (Detail oben) |
+| Sidebar | `ui/sidebar/Sidebar.svelte` | Haupt-Navigation (Desktop + Drawer), Issue #145 (Detail oben) |
+
+#### Wordmark Component
+
+**File:** `frontend/src/lib/components/ui/wordmark/Wordmark.svelte`
+
+Wortmarke „gregor.zwanzig" in JetBrains Mono. Rendert als anklickbarer
+`<a href>`-Link (Home-Link), Ziel ueber `href` (Default `/`).
+
+**Props:**
+```typescript
+interface WordmarkProps {
+  size?: 'sm' | 'md' | 'lg';   // 14–24px; Untertitel ab 'md'; default 'md'
+  href?: string;               // Link-Ziel, default '/'
+}
 ```
 
-WRONG:
-```svelte
-<Btn onclick={() => handleClick()}>Click</Btn>  <!-- Safari: no-op -->
-```
+**Darstellung:**
+- „gregor**.**zwanzig" in JetBrains Mono (`--g-font-data`)
+- Punkt in `--g-ink-faint`, „zwanzig" in `--g-accent`
+- Untertitel „v0.20 · wetter-briefing" ab `md`
+- Drei Groessen: `sm`/`md`/`lg` (14–24px)
 
-Test in Safari first (strictest), then Firefox, then Chrome.
+**Einsatz:** Sidebar (`md`), TopAppBar (`sm`), Login-Seite (`lg`). Spec: `docs/specs/modules/issue_293_wordmark.md`.
+
+### alert-rules-editor/ — Alert-Regel-Editor (#284/#297/#317)
+
+| Komponente | Pfad rel. zu components/ | Kurzbeschreibung |
+|---|---|---|
+| AlertRulesEditor | `alert-rules-editor/AlertRulesEditor.svelte` | Container fuer Alert-Regeln, Brand-Token-Styling |
+| AlertRuleRow | `alert-rules-editor/AlertRuleRow.svelte` | Einzelne Alert-Regel-Zeile (Metrik + Schwellwert + Schweregrad) |
+| ModeCard | `alert-rules-editor/ModeCard.svelte` | Modus-Auswahl (Absolut/Δ/Beides), Issue #297 |
+| alertRuleDefaults.ts | `alert-rules-editor/alertRuleDefaults.ts` | Default-Werte + Metrik-Normalisierung (Helper) |
+
+### alerts-tab/ — Alarm-Tab (#180)
+
+| Komponente | Pfad rel. zu components/ | Kurzbeschreibung |
+|---|---|---|
+| AlertsTab | `alerts-tab/AlertsTab.svelte` | Tab-Container fuer Alarm-Konfiguration |
+| AlertMetricTable | `alerts-tab/AlertMetricTable.svelte` | Schwellwert-Tabelle mit Metrik-Zeilen |
+| AlertMetricRow | `alerts-tab/AlertMetricRow.svelte` | Einzelne Metrik-Zeile (Toggle + Schwellwert + Schweregrad) |
+| AlertCooldownCard | `alerts-tab/AlertCooldownCard.svelte` | Cooldown-Einstellung |
+| AlertQuietHoursCard | `alerts-tab/AlertQuietHoursCard.svelte` | Ruhezeiten-Einstellung |
+| AlertPreviewCard | `alerts-tab/AlertPreviewCard.svelte` | Vorschau ausgeloester Alarme |
+| alertMetricTable.ts | `alerts-tab/alertMetricTable.ts` | Tabellen-Logik (Helper) |
+| alertPreviewHelpers.ts | `alerts-tab/alertPreviewHelpers.ts` | Vorschau-Logik (Helper) |
+
+### briefings-tab/ — Briefing-Zeitplan-Tab (#259)
+
+| Komponente | Pfad rel. zu components/ | Kurzbeschreibung |
+|---|---|---|
+| BriefingsTab | `briefings-tab/BriefingsTab.svelte` | Briefing-Zeitplan-Tab (morgen/abend, Kanaele, Optionen) |
+
+### compare/ — Vergleichs-Screen (EPIC #246/#250)
+
+| Komponente | Pfad rel. zu components/ | Kurzbeschreibung |
+|---|---|---|
+| AddReportCard | `compare/AddReportCard.svelte` | Karte zum Hinzufuegen eines Vergleichs-Reports |
+| AutoReportCard | `compare/AutoReportCard.svelte` | Auto-Report-Karte |
+| AutoReportsOverview | `compare/AutoReportsOverview.svelte` | Uebersicht automatischer Reports |
+| CompareMatrix | `compare/CompareMatrix.svelte` | Vergleichs-Matrix (Locations × Metriken) |
+| CreateGroupDialog | `compare/CreateGroupDialog.svelte` | Dialog zum Anlegen einer Location-Gruppe |
+| GroupSection | `compare/GroupSection.svelte` | Gruppen-Abschnitt in der Sidebar |
+| HourlyMatrix | `compare/HourlyMatrix.svelte` | Stuendliche Wetter-Matrix |
+| LocationPreviewMap | `compare/LocationPreviewMap.svelte` | Mini-Map-Vorschau im Wizard, Issue #266 |
+| LocationsRail | `compare/LocationsRail.svelte` | Sidebar (Suche + Chip-Filter + Gruppen), Issue #249 |
+| NewLocationWizard | `compare/NewLocationWizard.svelte` | 3-Schritt-Wizard (Verortung→Benennung→Profil), Issue #249 |
+| PresetHeader | `compare/PresetHeader.svelte` | Kopfzeile fuer Compare-Preset |
+| RecommendationBanner | `compare/RecommendationBanner.svelte` | Empfehlungs-Banner (Winner-Tags) |
+| locationHelpers.ts | `compare/locationHelpers.ts` | Location-Logik inkl. isCoordsValid() (Helper) |
+| subscriptionHelpers.ts | `compare/subscriptionHelpers.ts` | Subscription-Logik (Helper) |
+
+### edit/ — Trip-Bearbeitung
+
+| Komponente | Pfad rel. zu components/ | Kurzbeschreibung |
+|---|---|---|
+| TripEditView | `edit/TripEditView.svelte` | Container der Trip-Bearbeitung |
+| EditReportConfigSection | `edit/EditReportConfigSection.svelte` | Report-Konfiguration (Zeiten, Kanaele, Optionen) |
+| EditRouteSection | `edit/EditRouteSection.svelte` | Routen-/Region-Bearbeitung |
+| EditStagesPanelNew | `edit/EditStagesPanelNew.svelte` | Etappen-Panel |
+| EditWeatherSection | `edit/EditWeatherSection.svelte` | Wetter-Metriken-Bearbeitung |
+| AccordionSection | `edit/AccordionSection.svelte` | Aufklappbarer Abschnitts-Wrapper |
+
+### email-preview/ — Email-Vorschau-Kopf
+
+| Komponente | Pfad rel. zu components/ | Kurzbeschreibung |
+|---|---|---|
+| EmailPreviewHeader | `email-preview/EmailPreviewHeader.svelte` | Kopfzeile der Email-Vorschau |
+| headerStats.ts | `email-preview/headerStats.ts` | Statistik-Logik fuer den Kopf (Helper) |
+
+### preview/ — Output-Vorschau (Epic #140)
+
+| Komponente | Pfad rel. zu components/ | Kurzbeschreibung |
+|---|---|---|
+| EmailIframe | `preview/EmailIframe.svelte` | Gerenderte HTML-Mail im iframe |
+| SmsPhoneFrame | `preview/SmsPhoneFrame.svelte` | SMS-Vorschau im iOS-Phone-Frame |
+| previewHelpers.ts | `preview/previewHelpers.ts` | Vorschau-Logik (Helper) |
+
+### trip-detail/ — Trip-Detail-Ansicht (#302/#138/#259)
+
+| Komponente | Pfad rel. zu components/ | Kurzbeschreibung |
+|---|---|---|
+| TripHeader | `trip-detail/TripHeader.svelte` | H1-Header mit Breadcrumb + Status + Aktionen |
+| TripOverview | `trip-detail/TripOverview.svelte` | 2×2 DetailCard-Grid (Uebersicht-Tab) |
+| TripTabs | `trip-detail/TripTabs.svelte` | Tab-Leiste mit Badge-Zaehlern |
+| TripStatusBadge | `trip-detail/TripStatusBadge.svelte` | Status-Badge des Trips |
+| DetailCard | `trip-detail/DetailCard.svelte` | Karte im Uebersicht-Grid |
+| StageList | `trip-detail/StageList.svelte` | Etappen-Liste |
+| StageDetailRow | `trip-detail/StageDetailRow.svelte` | Etappen-Detailzeile (SVG-Icons, #322) |
+| WaypointsPanel | `trip-detail/WaypointsPanel.svelte` | Panel-Wrapper fuer Wegpunkt-Editor |
+| WeatherMetricsTab | `trip-detail/WeatherMetricsTab.svelte` | Wetter-Metriken-Tab |
+| WeatherMetricsPreviewCard | `trip-detail/WeatherMetricsPreviewCard.svelte` | Live-Vorschau der Metriken-Tabelle |
+| MetricGroup | `trip-detail/MetricGroup.svelte` | Metrik-Gruppe im Editor |
+| MetricCheckbox | `trip-detail/MetricCheckbox.svelte` | Metrik-Auswahl-Checkbox |
+| TablePreview | `trip-detail/TablePreview.svelte` | Tabellen-Vorschau der Metriken |
+| SavePresetDialog | `trip-detail/SavePresetDialog.svelte` | Dialog zum Speichern eines Presets |
+| PresetRow | `trip-detail/PresetRow.svelte` | Preset-Listenzeile |
+| ActiveMetricRow | `trip-detail/ActiveMetricRow.svelte` | Aktive-Metrik-Zeile |
+| BucketSection | `trip-detail/BucketSection.svelte` | Metrik-Bucket-Abschnitt |
+| BucketSectionOff | `trip-detail/BucketSectionOff.svelte` | Deaktivierter Bucket-Abschnitt |
+| FullProfile | `trip-detail/FullProfile.svelte` | Vollstaendige Profil-Ansicht |
+| AboutOutputLayout | `trip-detail/AboutOutputLayout.svelte` | Erklaer-Layout zur Ausgabe |
+| BriefingPreviewCard | `trip-detail/BriefingPreviewCard.svelte` | Briefing-Vorschau-Karte |
+| ChannelPreviewCard | `trip-detail/ChannelPreviewCard.svelte` | Kanal-Vorschau-Karte |
+| ChannelPreviewBlock | `trip-detail/ChannelPreviewBlock.svelte` | Kanal-Vorschau-Block |
+| ChannelLimitMarkers | `trip-detail/ChannelLimitMarkers.svelte` | Zeichen-Limit-Marker (SMS) |
+| PreviewCard | `trip-detail/PreviewCard.svelte` | Generische Vorschau-Karte |
+| metricsEditor.ts | `trip-detail/metricsEditor.ts` | Metriken-Editor-Logik (Helper) |
+
+### trip-detail/waypoints/ — Wegpunkt-Editor (Epic #137)
+
+| Komponente | Pfad rel. zu components/ | Kurzbeschreibung |
+|---|---|---|
+| EtappenStrip | `trip-detail/waypoints/EtappenStrip.svelte` | Etappen-Strip mit Drag-Drop |
+| MapCanvas | `trip-detail/waypoints/MapCanvas.svelte` | SVG-Karte der Route |
+| WaypointPin | `trip-detail/waypoints/WaypointPin.svelte` | Wegpunkt-Marker auf der Karte |
+| PauseStageView | `trip-detail/waypoints/PauseStageView.svelte` | Ansicht fuer Pausen-Etappen |
+| ProfileEditor | `trip-detail/waypoints/ProfileEditor.svelte` | Hoehenprofil-Editor |
+| StageCard | `trip-detail/waypoints/StageCard.svelte` | Etappen-Karte |
+| WaypointCard | `trip-detail/waypoints/WaypointCard.svelte` | Wegpunkt-Editor-Karte |
+
+### trip-wizard/ — Trip-Wizard (Epic #136)
+
+Architektur + Detail siehe Abschnitt „Trip-Wizard Components" oben. Inventar-Ergaenzung:
+
+| Komponente | Pfad rel. zu components/ | Kurzbeschreibung |
+|---|---|---|
+| TripWizardShell | `trip-wizard/TripWizardShell.svelte` | Shell + 4-Schritt-Stepper |
+| Stepper | `trip-wizard/Stepper.svelte` | Generischer Schritt-Indikator |
+| Step1Profile | `trip-wizard/steps/Step1Profile.svelte` | Schritt 1: Profil + Name + Datum |
+| Step2Stages | `trip-wizard/steps/Step2Stages.svelte` | Schritt 2: GPX-Upload, Drag-Sort, Pause |
+| Step3Waypoints | `trip-wizard/steps/Step3Waypoints.svelte` | Schritt 3: Wegpunkt-Bestaetigung |
+| Step4Briefings | `trip-wizard/steps/Step4Briefings.svelte` | Schritt 4: Briefings & Kanaele |
+| ChannelToggle | `trip-wizard/steps/ChannelToggle.svelte` | Kanal-Umschalter |
+| ProfileChart | `trip-wizard/steps/ProfileChart.svelte` | Profil-Chart-Vorschau |
+| ReportRow | `trip-wizard/steps/ReportRow.svelte` | Report-Zeile |
+| StageRow | `trip-wizard/steps/StageRow.svelte` | Etappen-Zeile |
+| WaypointRow | `trip-wizard/steps/WaypointRow.svelte` | Wegpunkt-Zeile |
+| TemplatePicker | `trip-wizard/templates/TemplatePicker.svelte` | Vorlagen (GR20, KHW, Stubai) |
+| stepperCompact.ts | `trip-wizard/stepperCompact.ts` | Kompakter Stepper-Zustand (Helper) |
+| stepperState.ts | `trip-wizard/stepperState.ts` | Stepper-Zustand (Helper) |
+| tripTemplates.ts | `trip-wizard/templates/tripTemplates.ts` | Vorlagen-Definitionen (Helper) |
+
+### Top-Level (direkt in components/)
+
+| Komponente | Pfad rel. zu components/ | Kurzbeschreibung |
+|---|---|---|
+| LocationForm | `LocationForm.svelte` | Formular zum Anlegen/Bearbeiten einer Location |
+| SubscriptionForm | `SubscriptionForm.svelte` | Formular fuer Abonnement-/Empfaenger-Daten |
+| WeatherConfigDialog | `WeatherConfigDialog.svelte` | Dialog fuer Wetter-Konfiguration, Issue #285 |
+
+### routes/_home/ — Route-lokale Kacheln
+
+Pfade relativ zu `frontend/src/routes/_home/`.
+
+| Komponente | Pfad rel. zu routes/_home/ | Kurzbeschreibung |
+|---|---|---|
+| TripKachel | `TripKachel.svelte` | Trip-Kachel auf der Startseite |
+| CompareKachel | `CompareKachel.svelte` | Vergleichs-Kachel auf der Startseite |
+| EmptyKachel | `EmptyKachel.svelte` | Platzhalter-Kachel (kein Inhalt) |
