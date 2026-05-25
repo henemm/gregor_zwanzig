@@ -6,6 +6,7 @@
 	// Design: docs/design/epic_331_output_layout/screen-metrics-editor.jsx (Z. 555-650)
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { Eyebrow } from '$lib/components/ui/eyebrow/index.js';
+	import { Select } from '$lib/components/ui/select';
 	import { CHANNEL_COL_BUDGET, type MetricEntry } from './metricsEditor.ts';
 	import ChannelPreviewCard from './ChannelPreviewCard.svelte';
 
@@ -72,11 +73,11 @@
 	<div class="mobile-only mobile-preview">
 		<label class="ch-select">
 			<span class="select-label">Kanal</span>
-			<select bind:value={mobileChannel} data-testid="channel-preview-mobile-select">
+			<Select bind:value={mobileChannel} data-testid="channel-preview-mobile-select">
 				{#each CHANNELS as c}
 					<option value={c.id}>{c.label}</option>
 				{/each}
-			</select>
+			</Select>
 		</label>
 		<ChannelPreviewCard
 			label={mobileCard.label}
@@ -135,15 +136,6 @@
 		letter-spacing: var(--g-track-caps);
 		text-transform: uppercase;
 	}
-	.ch-select select {
-		padding: var(--g-s-2) var(--g-s-3);
-		border: 1px solid var(--g-ink-faint);
-		border-radius: var(--g-radius-sm);
-		font: inherit;
-		font-size: 16px; /* iOS-Zoom-Guard (#272) */
-		background: var(--g-surface-0);
-		color: var(--g-ink);
-	}
 	.mobile-only {
 		display: none;
 	}
@@ -153,6 +145,11 @@
 		}
 		.mobile-only {
 			display: flex;
+		}
+	}
+	@media (max-width: 767px) {
+		.ch-select :global(.gz-select select) {
+			font-size: 16px; /* iOS-Zoom-Guard (#272) — überschreibt --g-text-sm aus Select.svelte */
 		}
 	}
 </style>
