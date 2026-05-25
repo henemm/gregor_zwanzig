@@ -449,3 +449,117 @@ test('AC-8: autoAssign aus Preset-Metriken liefert frische Buckets (überschreib
 	assert.ok(b.off.includes('wind'));
 	assert.ok(b.off.includes('gust'));
 });
+
+// =============================================================================
+// Issue #365 (Schritt C von #361) — 4-Kanal-Live-Vorschau (AC-1..AC-4)
+// =============================================================================
+//
+// Spec: docs/specs/modules/issue_365_channel_preview_mobile.md
+// Design: docs/design/epic_331_output_layout/screen-metrics-editor.jsx (Z. 555-667)
+//
+// applyChannel(primary, secondary, budget) und buildBucketSummary(buckets,
+// friendlyMap) existieren noch NICHT → in RED schlägt der Aufruf fehl (undefined
+// is not a function). AC-5 (responsive) + AC-6 (Marker-Politur) sind rein
+// visuell und werden NICHT hier erzwungen. KEINE Mocks (pure functions).
+
+// ---------- AC-1: applyChannel je Kanal --------------------------------------
+
+test('AC-1: applyChannel Email (Infinity) → inTable==primary, detail==secondary, demoted 0', () => {
+	const primary = ['temperature', 'wind', 'gust'];
+	const secondary = ['cloud_total', 'humidity'];
+	const r = editor.applyChannel(primary, secondary, editor.CHANNEL_COL_BUDGET.email);
+	assert.deepEqual(r.inTable, primary);
+	assert.deepEqual(r.detail, secondary);
+	assert.equal(r.demoted, 0);
+});
+
+test('F001: applyChannel Email gibt eine KOPIE von primary zurück (kein Alias)', () => {
+	const primary = ['temperature', 'wind'];
+	const r = editor.applyChannel(primary, [], editor.CHANNEL_COL_BUDGET.email);
+	assert.deepEqual(r.inTable, primary);
+	assert.notStrictEqual(r.inTable, primary, 'inTable darf nicht dieselbe Referenz wie primary sein');
+});
+
+test('AC-1: applyChannel SMS (0) → inTable==[], detail==alles, demoted==primary.length', () => {
+	const primary = ['temperature', 'wind', 'gust'];
+	const secondary = ['cloud_total'];
+	const r = editor.applyChannel(primary, secondary, editor.CHANNEL_COL_BUDGET.sms);
+	assert.deepEqual(r.inTable, []);
+	assert.deepEqual(r.detail, ['temperature', 'wind', 'gust', 'cloud_total']);
+	assert.equal(r.demoted, primary.length);
+});
+
+test('AC-1: applyChannel Signal (5) kappt inTable, demoted==overflow', () => {
+	const primary = ['temperature', 'wind', 'gust', 'rain_probability', 'precipitation', 'wind_chill'];
+	const secondary = ['cloud_total'];
+	const r = editor.applyChannel(primary, secondary, editor.CHANNEL_COL_BUDGET.signal);
+	assert.equal(r.inTable.length, 5);
+	assert.deepEqual(r.inTable, ['temperature', 'wind', 'gust', 'rain_probability', 'precipitation']);
+	// Overflow (wind_chill) landet VORNE in detail, vor secondary.
+	assert.deepEqual(r.detail, ['wind_chill', 'cloud_total']);
+	assert.equal(r.demoted, 1);
+});
+
+test('AC-1: applyChannel Telegram (7) kappt erst ab der 8. Spalte', () => {
+	const primary = ['a', 'b', 'c', 'd', 'e', 'f', 'g']; // genau 7
+	const r = editor.applyChannel(primary, [], editor.CHANNEL_COL_BUDGET.telegram);
+	assert.equal(r.inTable.length, 7);
+	assert.equal(r.demoted, 0);
+});
+
+// ---------- AC-2: 7 primary, Signal 5 → 2 demoted vorne in detail -------------
+
+test('AC-2: 7 primary bei Signal-Budget 5 → demoted==2, 2 überzählige vorne in detail', () => {
+	const primary = ['temperature', 'wind', 'gust', 'rain_probability', 'precipitation', 'wind_chill', 'cloud_total'];
+	const secondary = ['humidity'];
+	const sig = editor.applyChannel(primary, secondary, editor.CHANNEL_COL_BUDGET.signal);
+	assert.equal(sig.inTable.length, 5);
+	assert.equal(sig.demoted, 2);
+	// Die 2 überzähligen (wind_chill, cloud_total) stehen VOR secondary.
+	assert.deepEqual(sig.detail.slice(0, 2), ['wind_chill', 'cloud_total']);
+	assert.equal(sig.detail[2], 'humidity');
+
+	// Email zeigt alle 7 ohne Demote.
+	const mail = editor.applyChannel(primary, secondary, editor.CHANNEL_COL_BUDGET.email);
+	assert.equal(mail.inTable.length, 7);
+	assert.equal(mail.demoted, 0);
+});
+
+// ---------- AC-3: SMS keine Tabelle, alles flach in detail --------------------
+
+test('AC-3: SMS-Karte hat keine Tabelle (inTable==[]) — alles in detail', () => {
+	const primary = ['temperature', 'wind'];
+	const secondary = ['cloud_total', 'humidity'];
+	const r = editor.applyChannel(primary, secondary, editor.CHANNEL_COL_BUDGET.sms);
+	assert.deepEqual(r.inTable, []);
+	assert.deepEqual(r.detail, ['temperature', 'wind', 'cloud_total', 'humidity']);
+});
+
+// ---------- AC-4: bucket-bewusste Preset-Summary ------------------------------
+
+test('AC-4: buildBucketSummary zählt Spalten, Detail und Skala', () => {
+	const buckets: editor.Buckets = {
+		primary: ['temperature', 'wind'],      // wind ist indicatorCapable
+		secondary: ['cloud_total', 'humidity'], // cloud_total ist indicatorCapable
+		off: ['gust'],
+	};
+	// wind=Skala (true), cloud_total=Skala (true), humidity=Roh (false).
+	const friendlyMap = { wind: true, cloud_total: true, humidity: false };
+	const s = editor.buildBucketSummary(buckets, friendlyMap);
+	assert.equal(s.spalten, 2, '2 Spalten (primary)');
+	assert.equal(s.detail, 2, '2 Detail (secondary)');
+	// Skala = aktive + indicatorCapable + friendlyMap===true: wind + cloud_total.
+	assert.equal(s.skala, 2, 'wind + cloud_total als Skala');
+});
+
+test('AC-4: buildBucketSummary ignoriert off-Metriken bei der Skala-Zählung', () => {
+	const buckets: editor.Buckets = {
+		primary: ['temperature'],
+		secondary: [],
+		off: ['wind'], // off + indicatorCapable + true → zählt NICHT
+	};
+	const s = editor.buildBucketSummary(buckets, { wind: true });
+	assert.equal(s.spalten, 1);
+	assert.equal(s.detail, 0);
+	assert.equal(s.skala, 0, 'off-Metrik darf nicht als Skala zählen');
+});

@@ -16,6 +16,7 @@
 	import BucketSection from './BucketSection.svelte';
 	import BucketSectionOff from './BucketSectionOff.svelte';
 	import AboutOutputLayout from './AboutOutputLayout.svelte';
+	import ChannelPreviewBlock from './ChannelPreviewBlock.svelte';
 	import {
 		autoAssign, move, reorder, buildWeatherConfigMetrics,
 		type Buckets, type MetricEntry, type MetricCatalog,
@@ -370,6 +371,13 @@
 					onReorder={(id, dir) => onReorder('secondary', id, dir)}
 				/>
 
+				<ChannelPreviewBlock
+					primary={buckets.primary}
+					secondary={buckets.secondary}
+					{metricById}
+					{shortById}
+				/>
+
 				<BucketSectionOff
 					items={buckets.off}
 					{metricById}
@@ -388,6 +396,7 @@
 			{horizonsMap}
 			{catalog}
 			{indicatorCapable}
+			{buckets}
 			onClose={() => (showSavePresetDialog = false)}
 			onSaved={onPresetSaved}
 		/>

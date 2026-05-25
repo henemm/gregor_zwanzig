@@ -358,3 +358,60 @@ export function buildWeatherConfigMetrics(
 
 	return out;
 }
+
+// =============================================================================
+// Issue #365 (Schritt C von #361) — 4-Kanal-Live-Vorschau (AC-1..AC-4)
+// =============================================================================
+//
+// Spec: docs/specs/modules/issue_365_channel_preview_mobile.md
+// Design: docs/design/epic_331_output_layout/screen-metrics-editor.jsx (Z. 555-667)
+
+export interface ChannelLayout {
+	inTable: string[];
+	detail: string[];
+	demoted: number;
+}
+
+/**
+ * AC-1..AC-3: Wendet das Spalten-Budget eines Kanals auf eine Bucket-Auswahl an.
+ * Deckt sich mit Backend render_for_channel (#360):
+ * - budget === Infinity (Email): alles als Spalte, kein Demote.
+ * - budget === 0 (SMS): keine Tabelle, alles flach in detail, demoted == |primary|.
+ * - sonst (Signal 5 / Telegram 7): inTable gekappt; überzählige primary vorne
+ *   in detail (vor secondary), demoted == overflow.
+ */
+export function applyChannel(
+	primary: string[],
+	secondary: string[],
+	budget: number,
+): ChannelLayout {
+	if (budget === 0) {
+		return { inTable: [], detail: [...primary, ...secondary], demoted: primary.length };
+	}
+	// F001-Sauberkeit: Email-Pfad gibt eine KOPIE von primary zurück (kein Alias).
+	const inTable = budget === Infinity ? [...primary] : primary.slice(0, budget);
+	const overflow = budget === Infinity ? [] : primary.slice(budget);
+	return { inTable, detail: [...overflow, ...secondary], demoted: overflow.length };
+}
+
+export interface BucketSummary {
+	spalten: number;
+	detail: number;
+	skala: number;
+}
+
+/**
+ * AC-4: Bucket-bewusste Preset-Zusammenfassung für den SavePresetDialog.
+ * - spalten: |primary|
+ * - detail:  |secondary|
+ * - skala:   aktive (primary+secondary) Metriken mit friendlyMap[id]===true.
+ *            off-Metriken zählen NICHT.
+ */
+export function buildBucketSummary(
+	buckets: Buckets,
+	friendlyMap: Record<string, boolean>,
+): BucketSummary {
+	const active = [...buckets.primary, ...buckets.secondary];
+	const skala = active.filter((id) => friendlyMap[id] === true).length;
+	return { spalten: buckets.primary.length, detail: buckets.secondary.length, skala };
+}

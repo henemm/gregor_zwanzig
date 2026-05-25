@@ -12,6 +12,7 @@
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { Eyebrow } from '$lib/components/ui/eyebrow/index.js';
 	import { computeHorizonSummary, dotsForHorizons } from '$lib/utils/horizonHelpers';
+	import { buildBucketSummary, type Buckets } from './metricsEditor.ts';
 
 	interface MetricEntry {
 		id: string;
@@ -32,6 +33,8 @@
 		indicatorCapable: (id: string) => boolean;
 		onClose: () => void;
 		onSaved: (preset: MetricPreset) => void;
+		// Issue #365 — optional: bucket-bewusste Zusammenfassung (Spalten/Detail/Skala).
+		buckets?: Buckets;
 	}
 
 	let {
@@ -43,7 +46,11 @@
 		indicatorCapable,
 		onClose,
 		onSaved,
+		buckets,
 	}: Props = $props();
+
+	// Issue #365 — Spalten/Detail/Skala-Zähler (nur wenn Buckets übergeben).
+	const bucketSummary = $derived(buckets ? buildBucketSummary(buckets, friendlyMap) : null);
 
 	let name = $state('');
 	let description = $state('');
@@ -165,6 +172,13 @@
 					<strong>{rawCount}</strong> Rohwert ·
 					<strong>{indicatorCount}</strong> Indikator
 				</div>
+				{#if bucketSummary}
+					<div class="status" data-testid="save-preset-bucket-summary">
+						<strong>{bucketSummary.spalten}</strong> Spalten ·
+						<strong>{bucketSummary.detail}</strong> Detail ·
+						<strong>{bucketSummary.skala}</strong> als Skala
+					</div>
+				{/if}
 				<hr />
 				<Eyebrow>ZEITHORIZONTE</Eyebrow>
 				<div class="horizon-summary" data-testid="save-preset-horizon-summary">

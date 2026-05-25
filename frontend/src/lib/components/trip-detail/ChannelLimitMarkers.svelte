@@ -19,6 +19,9 @@
 </script>
 
 <div class="markers" data-testid="channel-limit-markers">
+	<!-- Issue #365 Fresh-Eyes-Politur: Label ordnet die Badges klar der
+		"Spalten"-Überschrift zu. -->
+	<span class="markers-label mono">Limit</span>
 	{#each channels as c}
 		<span
 			class="marker"
@@ -34,8 +37,15 @@
 <style>
 	.markers {
 		display: flex;
-		gap: var(--g-s-2);
+		gap: var(--g-s-1);
 		align-items: center;
+	}
+	.markers-label {
+		font-size: var(--g-text-xs);
+		color: var(--g-ink-faint);
+		letter-spacing: var(--g-track-caps);
+		text-transform: uppercase;
+		margin-right: var(--g-s-1);
 	}
 	.marker {
 		padding: var(--g-s-1) var(--g-s-2);
