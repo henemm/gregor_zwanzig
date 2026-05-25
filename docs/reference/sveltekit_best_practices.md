@@ -336,6 +336,127 @@ All interactive components must be keyboard-accessible.
 
 ---
 
+## UI State Patterns (Error · Loading · Empty · API-Error)
+
+Four UI situations recur on almost every page. Historically each page solved them
+differently (some forms showed no feedback, loading was sometimes a spinner and
+sometimes a blank table, API errors were sometimes `alert()` and sometimes silent).
+To keep UX consistent and stop re-inventing the wheel, **every page must follow the
+rules below.** (Issue #314)
+
+> **Scope note.** This section is the *contract*. The reusable `EmptyState.svelte`
+> primitive, the global input-error CSS rule, and the `Toast` primitive are
+> implemented as part of the Atomic-Design component epic (`EmptyState` → #372,
+> input atom → #371, `Toast` → #312) — **not** here. Until those land, use the
+> inline fallbacks documented below. This doc decides the *behaviour*; the epic
+> ships the *components*.
+
+### Decision Matrix
+
+| Situation | Rule |
+|-----------|------|
+| **Form-field error** | Red field border + error text directly below the field. No toast. Stays visible until corrected. |
+| **Loading — page** | Skeleton blocks sized like the final content. No full-page spinner/overlay, no blank screen. |
+| **Loading — button action** | Disable the button + inline spinner icon. Rest of the page stays interactive. |
+| **Empty state** | Centered icon + headline + description + optional CTA, via the shared `EmptyState`. |
+| **API error** | Always visible to the user — `Toast tone="error"` (preferred) or inline error block. Never silent. |
+
+### 1. Form-Field Errors
+
+- Mark the invalid field with `aria-invalid` (accessible **and** styleable).
+- Show the message directly below the field in `--g-danger`, small text.
+- **No toast** for validation errors — they must stay visible until the user fixes them.
+
+**✅ Correct:**
+```svelte
+<input
+  data-slot="input"
+  type="email"
+  bind:value={email}
+  aria-invalid={!!emailError}
+  aria-describedby={emailError ? 'email-error' : undefined}
+/>
+{#if emailError}
+  <p id="email-error" class="mt-1 text-xs" style="color: var(--g-danger)">
+    {emailError}
+  </p>
+{/if}
+```
+
+The red border is driven by a global rule on the input atom (added with the atom in #371):
+```css
+[data-slot="input"][aria-invalid="true"] {
+  border-color: var(--g-danger);
+}
+```
+
+> Drive the colour through the `--g-danger` **token** (inline `style` or `data-slot`),
+> never an arbitrary Tailwind value like `text-[color:var(--g-danger)]`
+> (see *Common Pitfalls #4*). `text-xs` etc. are fine — those are standard utilities.
+
+### 2. Loading States
+
+**Page load → skeletons, not spinners.** Render neutral placeholder blocks shaped
+like the content that will appear (same card sizes, same list rows). This avoids
+layout shift and feels faster than a centered spinner.
+
+- Use a neutral surface token (`--g-surface-2`) with a subtle pulse.
+- **No full-page overlay** and no blank screen while loading.
+
+**Button action → disable + inline spinner.** While an action runs (save, send,
+test channel), disable the button and show a spinning `Loader2` icon inside it.
+Keep the rest of the page interactive — never block the whole screen for one action.
+
+**✅ Correct:**
+```svelte
+<Btn variant="accent" disabled={saving} aria-busy={saving}>
+  {#if saving}<Loader2 class="animate-spin" size={16} />{/if}
+  Speichern
+</Btn>
+```
+
+### 3. Empty States
+
+When a list/collection is empty, show one centered block — **icon + headline +
+description + optional CTA** — and the same layout everywhere via the shared
+`EmptyState` primitive.
+
+```svelte
+<EmptyState
+  icon={MapPin}
+  title="Noch keine Orte"
+  description="Füge deinen ersten Ort hinzu, um Wettervergleiche zu starten."
+>
+  <Btn variant="accent" href="/locations/new">Ort hinzufügen</Btn>
+</EmptyState>
+```
+
+`EmptyState` lives in `frontend/src/lib/components/ui/` (shipped with #372).
+`routes/_home/EmptyKachel.svelte` is the existing prototype and should be migrated
+onto the shared primitive when #372 lands.
+
+### 4. API Errors
+
+An API/network failure must **always be visible to the user** (AC-3) — never an
+`alert()`, never a silent failure, never console-only.
+
+- **Preferred:** `Toast` with `tone="error"` (once the `Toast` primitive from #312 exists).
+- **Until then:** an inline error block at the top of the affected section, in `--g-danger`.
+
+**✅ Correct (inline fallback):**
+```svelte
+{#if loadError}
+  <p role="alert" class="text-sm" style="color: var(--g-danger)">
+    {loadError}
+  </p>
+{/if}
+```
+
+**❌ Wrong:** `alert(err.message)` · `console.error(err)` as the only handling ·
+swallowing the error so the user sees nothing.
+
+---
+
 ## Event Handling
 
 ### Native Event Forwarding
