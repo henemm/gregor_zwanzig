@@ -319,6 +319,19 @@ Danach `cd` in den Workspace und dort eine NEUE Claude-Session starten. Fuer Fro
 
 **Selbst-Isolierung (automatisch):** Erkennt der Session-Wächter eine zweite Sitzung im selben Ordner, ruft Claude unaufgefordert `EnterWorktree` auf und arbeitet in der isolierten Kopie weiter — kein Beenden oder Neustart nötig, der Nutzer muss nichts tun.
 
+### Abschluss einer parallelen Session — NIE „ich warte auf die andere Session"
+
+Jede Session liefert **unabhängig** aus. Kein Warten aufeinander, keine Koordination über den geteilten Baum. Der Integrationspunkt ist `origin/main`, nicht der lokale Ordner:
+
+1. **Isoliert arbeiten** (Workspace/Worktree) — erzwingt der Session-Wächter ohnehin.
+2. **Grün?** Im eigenen Branch committen, dann `git fetch origin && git rebase origin/main`, dann nach `main` pushen. Git serialisiert gleichzeitige Pushes selbst; bei Ablehnung erneut rebasen und pushen.
+3. **Staging** aktualisiert sich automatisch (~5 Min, eigener Klon) → gegen Staging validieren.
+4. **Production ausliefern:** `bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh` — **aus jeder Session jederzeit gefahrlos.** Ein `flock` serialisiert gleichzeitige Deploys (zweiter Aufruf wartet kurz und liefert dann den aktuellen `origin/main`-Stand). Das Script hängt **nicht mehr** am Zustand des geteilten Arbeitsbaums.
+
+**Die eine Regel, die das sicher macht:** Nach `main` wird nur Grünes (staging-validiert) gepusht — `main` ist immer auslieferbar. Dann darf ein Deploy auch frisch gepushte Arbeit einer anderen Session mitnehmen.
+
+**Verboten:** Ein Deploy aufschieben, „bis der gemeinsame Ordner sauber ist" oder „bis die andere Session fertig ist". Diese Pattsituation existiert nicht mehr — der Deploy bringt den Code hart auf `origin/main` (untracked Live-Daten unberührt, echte uncommittete WIP wird vorher als stash-Commit + `deploy-safety/*`-Tag gesichert).
+
 ## Deployment & Infrastruktur
 
 Globale Server-Infos und Monitoring-Anleitung stehen in `~/.claude/CLAUDE.md`.
@@ -338,7 +351,7 @@ Globale Server-Infos und Monitoring-Anleitung stehen in `~/.claude/CLAUDE.md`.
 | 3 | Staging-Validierung | siehe Definition unten |
 | 4 | Prod-Deploy | `bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh` |
 
-`systemctl restart` allein **reicht nie** — `deploy-gregor-prod.sh` macht `git pull → Go-Binary bauen → Frontend bauen → alle 3 Services restarten → Smoke-Test`. Ohne diesen vollen Lauf entsteht Code-Drift, den `check-gregor20.sh` als BetterStack-Alert meldet (siehe Issue #113).
+`systemctl restart` allein **reicht nie** — `deploy-gregor-prod.sh` macht `flock-Lock → hart auf origin/main syncen (Daten unberührt, WIP gesichert) → Go-Binary bauen → Frontend bauen → alle 3 Services restarten → Smoke-Test`. Ohne diesen vollen Lauf entsteht Code-Drift, den `check-gregor20.sh` als BetterStack-Alert meldet (siehe Issue #113). Das Script ist **parallel-session-sicher**: es blockiert nicht mehr bei „dirty" Arbeitsbaum und serialisiert gleichzeitige Deploys über `flock`. Schritt 4 darf daher aus jeder Session jederzeit laufen.
 
 ### Was zaehlt als „Staging-validiert"?
 
