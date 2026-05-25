@@ -348,9 +348,11 @@ def test_ac8_select_native_has_appearance_none_not_only_vendor():
 # ---------------------------------------------------------------------------
 
 
+# Issue #345: EditWeatherSection.svelte gelöscht (Wetter-Editor-Konsolidierung)
+# und aus beiden Listen entfernt. Die read-only WeatherSummaryCard.svelte ist
+# KEIN Ersatz hier — sie nutzt weder Checkbox noch Select.
 _EXPECTED_CHECKBOX_IMPORTS = [
     FRONTEND_SRC / "lib" / "components" / "edit" / "EditReportConfigSection.svelte",
-    FRONTEND_SRC / "lib" / "components" / "edit" / "EditWeatherSection.svelte",
     FRONTEND_SRC / "lib" / "components" / "alert-rules-editor" / "AlertRuleRow.svelte",
     FRONTEND_SRC / "lib" / "components" / "compare" / "LocationsRail.svelte",
     FRONTEND_SRC / "lib" / "components" / "SubscriptionForm.svelte",
@@ -359,7 +361,6 @@ _EXPECTED_CHECKBOX_IMPORTS = [
 _EXPECTED_SELECT_IMPORTS = [
     FRONTEND_SRC / "lib" / "components" / "alert-rules-editor" / "AlertRuleRow.svelte",
     FRONTEND_SRC / "lib" / "components" / "alerts-tab" / "AlertMetricRow.svelte",
-    FRONTEND_SRC / "lib" / "components" / "edit" / "EditWeatherSection.svelte",
     FRONTEND_SRC / "lib" / "components" / "compare" / "PresetHeader.svelte",
     FRONTEND_SRC / "lib" / "components" / "SubscriptionForm.svelte",
 ]

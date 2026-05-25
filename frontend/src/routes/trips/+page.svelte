@@ -6,7 +6,6 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import WeatherConfigDialog from '$lib/components/WeatherConfigDialog.svelte';
 	import SearchIcon from '@lucide/svelte/icons/search';
 	import RouteIcon from '@lucide/svelte/icons/route';
 	import BellIcon from '@lucide/svelte/icons/bell';
@@ -61,9 +60,6 @@
 		wind_exposition_min_elevation_m: null as number | null,
 		multi_day_trend_reports: ['evening'] as string[]
 	});
-
-	// Weather Config Dialog
-	let weatherConfigTarget: Trip | null = $state(null);
 
 	// Test Report
 	let testReportTarget: Trip | null = $state(null);
@@ -243,19 +239,6 @@
 		}
 	}
 
-	async function handleWeatherSave(config: Record<string, unknown>) {
-		if (!weatherConfigTarget) return;
-		error = null;
-		try {
-			await api.put(`/api/trips/${weatherConfigTarget.id}/weather-config`, config);
-			await refetchTrips();
-			weatherConfigTarget = null;
-		} catch (e: unknown) {
-			error = (e as { error?: string; detail?: string })?.detail
-				?? (e as { error?: string })?.error
-				?? 'Fehler beim Speichern der Wetter-Konfiguration';
-		}
-	}
 </script>
 
 <svelte:window
@@ -412,7 +395,7 @@
 											>Test-Briefing Abend</button>
 											<button
 												class="w-full text-left px-3 py-1.5 text-sm hover:bg-muted"
-												onclick={() => { kebabOpenId = null; weatherConfigTarget = trip; }}
+												onclick={() => { kebabOpenId = null; goto(`/trips/${trip.id}#weather`); }}
 											>Wetter-Konfiguration</button>
 											<button
 												class="w-full text-left px-3 py-1.5 text-sm hover:bg-muted"
@@ -582,15 +565,6 @@
 	</Dialog.Content>
 </Dialog.Root>
 
-<!-- Weather Config Dialog -->
-<WeatherConfigDialog
-	open={weatherConfigTarget !== null}
-	entityName={weatherConfigTarget?.name ?? ''}
-	currentConfig={weatherConfigTarget?.display_config as Record<string, unknown> | undefined}
-	onsave={handleWeatherSave}
-	onclose={() => (weatherConfigTarget = null)}
-/>
-
 <!-- Test Report Result Dialog -->
 <Dialog.Root
 	open={testReportTarget !== null}
@@ -645,7 +619,7 @@
 			<BellIcon class="size-4 text-muted-foreground shrink-0" /> Report-Konfiguration
 		</button>
 		<button class="w-full flex items-center gap-3 px-4 min-h-[44px] text-sm hover:bg-muted/60 active:bg-muted"
-			onclick={() => { const t = sheetTrip!; weatherConfigTarget = t; sheetTrip = null; }}>
+			onclick={() => { const t = sheetTrip!; sheetTrip = null; goto(`/trips/${t.id}#weather`); }}>
 			<CloudSunIcon class="size-4 text-muted-foreground shrink-0" /> Wetter-Konfiguration
 		</button>
 		<button class="w-full flex items-center gap-3 px-4 min-h-[44px] text-sm hover:bg-muted/60 active:bg-muted"

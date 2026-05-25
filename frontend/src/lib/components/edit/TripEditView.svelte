@@ -5,7 +5,7 @@
 	import AccordionSection from './AccordionSection.svelte';
 	import EditRouteSection from './EditRouteSection.svelte';
 	import EditStagesPanelNew from './EditStagesPanelNew.svelte';
-	import EditWeatherSection from './EditWeatherSection.svelte';
+	import WeatherSummaryCard from './WeatherSummaryCard.svelte';
 	import EditReportConfigSection from './EditReportConfigSection.svelte';
 	import AlertRulesEditor from '$lib/components/alert-rules-editor/AlertRulesEditor.svelte';
 	import { normalizeAlertMetric } from '$lib/utils/alertMetricLabels';
@@ -19,9 +19,9 @@
 	// State: tiefe Kopie damit Cancel ohne Persistenz auch State verwirft
 	let tripName = $state(trip.name);
 	let stages: Stage[] = $state(JSON.parse(JSON.stringify(trip.stages ?? [])));
-	let displayConfig: Record<string, unknown> | undefined = $state(
-		trip.display_config ? JSON.parse(JSON.stringify(trip.display_config)) : undefined
-	);
+	// Issue #345 / AC-2: display_config wird in dieser Maske NICHT mehr bearbeitet
+	// (Wetter-Tab ist der einzige Editor). Kein UI-State, kein Neu-Bauen — der Save
+	// reicht den geladenen trip.display_config unverändert durch (Read-Modify-Write).
 	let reportConfig: ReportConfig | undefined = $state(
 		trip.report_config ? JSON.parse(JSON.stringify(trip.report_config)) : undefined
 	);
@@ -57,7 +57,9 @@
 					name: tripName,
 					// Issue #296-FE: transientes `suggested`-Flag nicht persistieren.
 					stages: stripSuggested(stages),
-					display_config: displayConfig,
+					// Issue #345 / AC-2: display_config unverändert aus dem geladenen trip
+					// durchreichen (via `...trip` bereits enthalten) — KEIN Überschreiben
+					// der im Wetter-Tab gesetzten Buckets/Horizonte.
 					report_config: reportConfig,
 					alert_rules: alertRules,
 				};
@@ -110,7 +112,7 @@
 		open={openSection === 'wetter'}
 		onToggle={makeToggleHandler('wetter')}
 	>
-		<EditWeatherSection bind:displayConfig mode="edit" />
+		<WeatherSummaryCard displayConfig={trip.display_config} tripId={trip.id} />
 	</AccordionSection>
 
 	<AccordionSection
