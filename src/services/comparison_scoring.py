@@ -17,29 +17,37 @@ if TYPE_CHECKING:
 def calculate_score(
     metrics: Dict[str, Any],
     profile: Optional["ActivityProfile"] = None,
+    window_hours: Optional[float] = None,
 ) -> int:
     """
     Calculate a weather score based on activity profile (higher = better).
 
     SPEC: docs/specs/modules/sport_aware_comparison.md v1.0
+    SPEC: docs/specs/modules/issue_366_compare_score_recalibration.md v1.0
 
     Dispatches to profile-specific scorer:
     - wintersport: Snow, powder, cold temps rewarded
     - wandern: Thunder/rain penalized, sunshine/visibility rewarded
     - allgemein: Balanced, no snow keys
+
+    When ``window_hours`` is provided (>0), the sunshine bonus is based on the
+    SHARE of sunny hours within the time window (window-length independent,
+    #366). Without it the legacy absolute thresholds apply unchanged.
     """
     from app.profile import ActivityProfile
 
     effective = profile or ActivityProfile.ALLGEMEIN
     if effective == ActivityProfile.WINTERSPORT:
-        return _score_wintersport(metrics)
+        return _score_wintersport(metrics, window_hours)
     elif effective == ActivityProfile.WANDERN:
-        return _score_wandern(metrics)
+        return _score_wandern(metrics, window_hours)
     else:
-        return _score_allgemein(metrics)
+        return _score_allgemein(metrics, window_hours)
 
 
-def _score_wintersport(metrics: Dict[str, Any]) -> int:
+def _score_wintersport(
+    metrics: Dict[str, Any], window_hours: Optional[float] = None
+) -> int:
     """Ski/wintersport scoring — rewards snow, penalizes rain and wind."""
     score = 50
 
@@ -58,12 +66,21 @@ def _score_wintersport(metrics: Dict[str, Any]) -> int:
 
     sunny_hours = metrics.get("sunny_hours")
     if sunny_hours is not None:
-        if sunny_hours >= 6:
-            score += 15
-        elif sunny_hours >= 4:
-            score += 10
-        elif sunny_hours >= 2:
-            score += 5
+        if window_hours and window_hours > 0:
+            fraction = max(0.0, min(1.0, sunny_hours / window_hours))
+            if fraction >= 0.70:
+                score += 15
+            elif fraction >= 0.50:
+                score += 10
+            elif fraction >= 0.25:
+                score += 5
+        else:
+            if sunny_hours >= 6:
+                score += 15
+            elif sunny_hours >= 4:
+                score += 10
+            elif sunny_hours >= 2:
+                score += 5
 
     wind_max = metrics.get("wind_max")
     if wind_max:
@@ -113,7 +130,9 @@ def _score_wintersport(metrics: Dict[str, Any]) -> int:
     return max(0, min(100, score))
 
 
-def _score_wandern(metrics: Dict[str, Any]) -> int:
+def _score_wandern(
+    metrics: Dict[str, Any], window_hours: Optional[float] = None
+) -> int:
     """Hiking scoring — thunder/rain critical, sunshine/visibility important."""
     score = 50
 
@@ -163,12 +182,21 @@ def _score_wandern(metrics: Dict[str, Any]) -> int:
     # Sunshine (max +20)
     sunny_hours = metrics.get("sunny_hours")
     if sunny_hours is not None:
-        if sunny_hours >= 7:
-            score += 20
-        elif sunny_hours >= 5:
-            score += 12
-        elif sunny_hours >= 3:
-            score += 5
+        if window_hours and window_hours > 0:
+            fraction = max(0.0, min(1.0, sunny_hours / window_hours))
+            if fraction >= 0.70:
+                score += 20
+            elif fraction >= 0.50:
+                score += 12
+            elif fraction >= 0.30:
+                score += 5
+        else:
+            if sunny_hours >= 7:
+                score += 20
+            elif sunny_hours >= 5:
+                score += 12
+            elif sunny_hours >= 3:
+                score += 5
 
     # Temperature (ideal 10-20°C)
     temp_min = metrics.get("temp_min")
@@ -183,7 +211,9 @@ def _score_wandern(metrics: Dict[str, Any]) -> int:
     return max(0, min(100, score))
 
 
-def _score_allgemein(metrics: Dict[str, Any]) -> int:
+def _score_allgemein(
+    metrics: Dict[str, Any], window_hours: Optional[float] = None
+) -> int:
     """Balanced generic outdoor scoring — no snow, moderate weights."""
     score = 55
 
@@ -227,11 +257,20 @@ def _score_allgemein(metrics: Dict[str, Any]) -> int:
     # Sunshine (max +15)
     sunny_hours = metrics.get("sunny_hours")
     if sunny_hours is not None:
-        if sunny_hours >= 6:
-            score += 15
-        elif sunny_hours >= 4:
-            score += 8
-        elif sunny_hours >= 2:
-            score += 4
+        if window_hours and window_hours > 0:
+            fraction = max(0.0, min(1.0, sunny_hours / window_hours))
+            if fraction >= 0.65:
+                score += 15
+            elif fraction >= 0.45:
+                score += 8
+            elif fraction >= 0.25:
+                score += 4
+        else:
+            if sunny_hours >= 6:
+                score += 15
+            elif sunny_hours >= 4:
+                score += 8
+            elif sunny_hours >= 2:
+                score += 4
 
     return max(0, min(100, score))

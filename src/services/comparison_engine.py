@@ -78,6 +78,8 @@ class ComparisonEngine:
 
                 # Filter by target date and time window
                 start_hour, end_hour = time_window
+                # Window length (inclusive) drives the sunshine SHARE bonus (#366)
+                window_hours = end_hour - start_hour + 1
                 filtered_data = [
                     dp for dp in raw_data
                     if dp.ts.date() == target_date
@@ -173,7 +175,7 @@ class ComparisonEngine:
 
                 # Calculate score (profile-aware)
                 effective_profile = profile or getattr(loc, 'activity_profile', None)
-                score = calculate_score(metrics, profile=effective_profile)
+                score = calculate_score(metrics, profile=effective_profile, window_hours=window_hours)
 
                 results.append(LocationResult(
                     location=loc,
