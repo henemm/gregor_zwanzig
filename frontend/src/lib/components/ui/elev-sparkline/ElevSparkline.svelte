@@ -4,9 +4,22 @@
 		width?: number;
 		height?: number;
 		active?: boolean;
+		// Issue #371: optionale stroke/fill/showArea-Props (additiv).
+		// Defaults erhalten das bestehende Verhalten (currentColor, keine Flaeche).
+		stroke?: string;
+		fill?: string;
+		showArea?: boolean;
 	}
 
-	let { data, width = 120, height = 24, active = false }: Props = $props();
+	let {
+		data,
+		width = 120,
+		height = 24,
+		active = false,
+		stroke = 'currentColor',
+		fill = 'rgba(196,90,42,0.10)',
+		showArea = false
+	}: Props = $props();
 
 	const padding = 2;
 
@@ -29,6 +42,9 @@
 				.join(' ');
 		})()
 	);
+
+	// Issue #371: Flaeche schliesst Polyline-Punkte nach unten zur Baseline.
+	let areaPoints = $derived(polyline ? `${polyline} ${width},${height} 0,${height}` : '');
 </script>
 
 <svg
@@ -40,10 +56,13 @@
 	aria-hidden="true"
 >
 	{#if polyline}
+		{#if showArea}
+			<polygon points={areaPoints} fill={fill} stroke="none" />
+		{/if}
 		<polyline
 			points={polyline}
 			fill="none"
-			stroke="currentColor"
+			stroke={stroke}
 			stroke-width="1.5"
 			stroke-linejoin="round"
 			stroke-linecap="round"

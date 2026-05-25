@@ -8,6 +8,7 @@
 		| 'accent'
 		| 'outline'
 		| 'ghost'
+		| 'quiet'
 		| 'secondary'
 		| 'destructive'
 		| 'link';

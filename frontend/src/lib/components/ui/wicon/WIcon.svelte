@@ -17,14 +17,15 @@
 	import type { WIconKind } from '$lib/utils/weatherUtils.js';
 
 	interface Props {
-		kind: WIconKind;
+		// Issue #371: kind-Default 'cloud' (additiv, bestehende Aufrufer setzen kind explizit).
+		kind?: WIconKind;
 		size?: number;
 		color?: string;
 		class?: string;
 	}
 
 	let {
-		kind,
+		kind = 'cloud',
 		size = 20,
 		color = 'currentColor',
 		class: className = ''

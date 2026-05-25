@@ -314,6 +314,15 @@
   [data-slot="btn"][data-variant="link"]:hover {
     text-decoration: underline;
   }
+  /* #371: quiet-Variante (Sandbox atoms.jsx::Btn) — transparent, gedämpfte Schrift, randlos */
+  [data-slot="btn"][data-variant="quiet"] {
+    background-color: transparent;
+    color: var(--g-ink-2);
+    border-color: transparent;
+  }
+  [data-slot="btn"][data-variant="quiet"]:hover {
+    background-color: var(--g-surface-2);
+  }
 
   /* Icon-Sizing pro Size */
   [data-slot="btn"] > svg                        { width: 1rem;     height: 1rem;     flex-shrink: 0; }
@@ -363,6 +372,8 @@
   [data-slot="pill"][data-tone="danger"]   { background: var(--g-danger);      color: #fff; }
   [data-slot="pill"][data-tone="info"]     { background: var(--g-info);        color: #fff; }
   [data-slot="pill"][data-tone="accent"]   { background: var(--g-accent);      color: var(--g-ink); }
+  /* #371: ghost-Tone (Sandbox atoms.jsx::Pill) — transparent mit Rule-Border */
+  [data-slot="pill"][data-tone="ghost"]    { background: transparent;          color: var(--g-ink-3); border: 1px solid var(--g-rule); }
 
   /* === Issue #284: Pill outlined-Variante === */
   [data-slot="pill"][data-outlined] {
