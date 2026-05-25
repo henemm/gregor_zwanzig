@@ -17,6 +17,10 @@
 | `--g-rule` | `#d8d3c2` | Standard-Linien zwischen Elementen |
 | `--g-rule-soft` | `#e7e2d3` | Sanfte Trennlinien |
 
+> **Code-Namen-Mapping (`app.css`, seit #378 Surface-Stack-Migration):** Die produktiven `--g-surface-*`-Tokens tragen jetzt diese Werte:
+> `--g-surface-0` (`#f6f4ee`, = `--g-paper`) · `--g-surface-1` (`#ffffff`, = `--g-card`, weiße Karten) · `--g-surface-2` (`#ecead9`, entspricht dem **Sandbox-Wert** von `--g-paper-deep`) · `--g-surface-raised` (`#faf8f1`, = `--g-card-alt`) · `--g-rule` (`#d8d3c2`) · `--g-rule-soft` (`#e7e2d3`).
+> **Wichtig:** Das eigenständige Token `--g-paper-deep` in `app.css` bleibt bei `#ede9df` (außerhalb #378-Scope, Constraint C1) — es ist **nicht identisch** mit `--g-surface-2` (`#ecead9`), auch wenn beide einen sehr ähnlichen Beige-Ton tragen.
+
 ---
 
 ## 2. Ink — Typografie-Farben

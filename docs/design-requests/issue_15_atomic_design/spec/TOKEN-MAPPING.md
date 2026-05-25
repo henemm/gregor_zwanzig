@@ -6,6 +6,8 @@ Grundlage für die Token-Bridge (#369). Vergleich der Werte beider Quellen, Stan
 
 Legende: **= identisch** · **≈ leicht abweichend** · **✗ deutlich abweichend** · **NEU = bei uns nicht vorhanden** · **KOLLISION = gleicher Name, anderer Wert**
 
+> **Update #378 (Surface-Stack-Migration, 2026-05-25):** Die Spalte „Unser Wert" unten zeigt den Stand **vor** #378. Seither tragen `--g-surface-1` = `#ffffff`, `--g-surface-2` = `#ecead9`, `--g-surface-raised` = `#faf8f1` und `--g-rule-soft` = `#e7e2d3` — Surface-/Rule-Werte von Code und Sandbox sind damit deckungsgleich (einzige Ausnahme: `--g-paper-deep` bleibt `#ede9df`).
+
 | Sandbox-Token | Sandbox-Wert | Unser Pendant | Unser Wert | Status | Bridge-Aktion |
 |---|---|---|---|---|---|
 | `--g-paper` | `#f6f4ee` | `--g-paper` | `#f6f4ee` | = | nichts (identisch) |
@@ -13,7 +15,7 @@ Legende: **= identisch** · **≈ leicht abweichend** · **✗ deutlich abweiche
 | `--g-card` | `#ffffff` | `--g-surface-1` | `#edeae1` | ✗ | **NEU** `--g-card: #ffffff` |
 | `--g-card-alt` | `#faf8f1` | `--g-surface-2` | `#e3dfd4` | ✗ | **NEU** `--g-card-alt: #faf8f1` |
 | `--g-rule` | `#d8d3c2` | — | — | NEU | **NEU** `--g-rule: #d8d3c2` |
-| `--g-rule-soft` | `#e7e2d3` | `--g-rule-soft` | `rgba(26,26,24,.08)` | KOLLISION | unseren behalten |
+| `--g-rule-soft` | `#e7e2d3` | `--g-rule-soft` | `#e7e2d3` | = | **[#378]** migriert → `#e7e2d3` |
 | `--g-ink` | `#1a1a18` | `--g-ink` | `#1a1a18` | = | nichts |
 | `--g-ink-2` | `#45433d` | `--g-ink-muted` | `#5c5a52` | ✗ | **NEU** `--g-ink-2: #45433d` |
 | `--g-ink-3` | `#6b675c` | — | — | NEU | **NEU** `--g-ink-3: #6b675c` |
@@ -51,4 +53,4 @@ Die Wert-Unterschiede (vor allem **weiße Karte** vs. beiges Surface, abweichend
 
 ## Drei Kollisionen (gleicher Name, anderer Wert)
 
-`--g-info`, `--g-paper-deep`, `--g-rule-soft` existieren bei uns bereits mit abweichenden Werten. Wir **behalten unsere Werte** (würde sonst bestehende UI verändern). Neue Bausteine erben für diese drei unsere Variante — die Unterschiede sind klein und unkritisch.
+`--g-info` und `--g-paper-deep` existieren bei uns bereits mit abweichenden Werten. Wir **behalten unsere Werte** (würde sonst bestehende UI verändern). Neue Bausteine erben für diese zwei unsere Variante — die Unterschiede sind klein und unkritisch. (`--g-rule-soft` wurde mit **#378** auf den Sandbox-Wert `#e7e2d3` migriert — keine Kollision mehr.)

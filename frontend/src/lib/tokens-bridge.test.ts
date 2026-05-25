@@ -79,7 +79,7 @@ test('Bridge: Elevation-Shadows vorhanden', () => {
 });
 
 test('Regression: bestehende Tokens unveraendert vorhanden', () => {
-	assert.ok(hasDecl('--g-surface-1', '#edeae1'), '--g-surface-1 darf nicht veraendert sein');
+	assert.ok(hasDecl('--g-surface-1', '#ffffff'), '--g-surface-1 ist nach #378 reinweiss (Surface-Stack-Migration)');
 	assert.ok(hasDecl('--g-success', '#3a7d44'), '--g-success bleibt');
 	assert.ok(hasDecl('--g-wx-thunder', '#c43a2a'), '--g-wx-thunder bleibt');
 });
@@ -87,4 +87,37 @@ test('Regression: bestehende Tokens unveraendert vorhanden', () => {
 test('Kollisionen NICHT auf Sandbox-Werte umdefiniert', () => {
 	assert.ok(!hasDecl('--g-info', '#2c5a8c'), '--g-info darf NICHT auf Sandbox-Wert umdefiniert werden');
 	assert.ok(hasDecl('--g-info', '#2a6cb3'), '--g-info behaelt unseren Wert');
+});
+
+// --- Issue #378: Surface-Stack-Migration (weisse Karten auf warmer Off-White-Page) ---
+// RED vor der app.css-Aenderung: surface-1/2/raised + rule-soft tragen noch die alten
+// beigen Werte → diese Asserts schlagen fehl, bis der Werte-Tausch erfolgt ist.
+
+test('#378 AC-1: --g-surface-1 ist reinweiss (#ffffff) — der Knackpunkt', () => {
+	assert.ok(hasDecl('--g-surface-1', '#ffffff'), '--g-surface-1 muss #ffffff sein (Karten reinweiss)');
+});
+
+test('#378 AC-2: restliche Surface-/Rule-Werte auf Sandbox-Zielwerte getauscht', () => {
+	assert.ok(hasDecl('--g-surface-2', '#ecead9'), '--g-surface-2 muss #ecead9 sein');
+	assert.ok(hasDecl('--g-surface-raised', '#faf8f1'), '--g-surface-raised muss #faf8f1 sein (direkter Hex, kein var-Verweis)');
+	assert.ok(hasDecl('--g-rule-soft', '#e7e2d3'), '--g-rule-soft muss #e7e2d3 sein (opak, ersetzt rgba)');
+});
+
+test('#378 AC-2b: --g-surface-raised verweist NICHT mehr auf var(--g-surface-1)', () => {
+	assert.ok(!hasDecl('--g-surface-raised', 'var(--g-surface-1)'), '--g-surface-raised darf nicht mehr auf surface-1 verweisen');
+});
+
+test('#378 AC-4: nicht-migrierte Tokens bleiben unveraendert', () => {
+	assert.ok(hasDecl('--g-surface-0', '#f6f4ee'), '--g-surface-0 bleibt #f6f4ee');
+	assert.ok(hasDecl('--g-rule', '#d8d3c2'), '--g-rule bleibt #d8d3c2');
+	assert.ok(hasDecl('--g-paper-deep', '#ede9df'), '--g-paper-deep bleibt #ede9df (nicht im #378-Scope, C1)');
+});
+
+test('#378 AC-7: keine alten beigen Surface-Fallbacks in @property (rgb-Form, F002)', () => {
+	// Die @property-initial-values der Surface-Aliase (--color-card/-muted/-sidebar/-sidebar-accent)
+	// trugen die alten beigen Werte in rgb()-Form als Fallback — die muessen mit-migriert sein.
+	assert.ok(!/rgb\(237,\s*234,\s*225\)/.test(css), 'alter surface-1-Fallback rgb(237,234,225)=#edeae1 entfernt');
+	assert.ok(!/rgb\(227,\s*223,\s*212\)/.test(css), 'alter surface-2-Fallback rgb(227,223,212)=#e3dfd4 entfernt');
+	assert.ok(/initial-value:\s*rgb\(255,\s*255,\s*255\)/.test(css), 'weisser Surface-Fallback rgb(255,255,255) vorhanden');
+	assert.ok(/initial-value:\s*rgb\(236,\s*234,\s*217\)/.test(css), 'neuer surface-2-Fallback rgb(236,234,217)=#ecead9 vorhanden');
 });

@@ -5,9 +5,9 @@
 @property --color-foreground { syntax: "<color>"; inherits: true; initial-value: rgb(26, 26, 24); }
 @property --color-popover { syntax: "<color>"; inherits: true; initial-value: rgb(246, 244, 238); }
 @property --color-popover-foreground { syntax: "<color>"; inherits: true; initial-value: rgb(26, 26, 24); }
-@property --color-card { syntax: "<color>"; inherits: true; initial-value: rgb(237, 234, 225); }
+@property --color-card { syntax: "<color>"; inherits: true; initial-value: rgb(255, 255, 255); }
 @property --color-card-foreground { syntax: "<color>"; inherits: true; initial-value: rgb(26, 26, 24); }
-@property --color-muted { syntax: "<color>"; inherits: true; initial-value: rgb(227, 223, 212); }
+@property --color-muted { syntax: "<color>"; inherits: true; initial-value: rgb(236, 234, 217); }
 @property --color-muted-foreground { syntax: "<color>"; inherits: true; initial-value: rgb(92, 90, 82); }
 @property --color-border { syntax: "<color>"; inherits: true; initial-value: rgb(156, 154, 144); }
 @property --color-input { syntax: "<color>"; inherits: true; initial-value: rgb(156, 154, 144); }
@@ -17,9 +17,9 @@
 @property --color-accent { syntax: "<color>"; inherits: true; initial-value: rgb(196, 90, 42); }
 @property --color-accent-foreground { syntax: "<color>"; inherits: true; initial-value: rgb(246, 244, 238); }
 @property --color-destructive { syntax: "<color>"; inherits: true; initial-value: rgb(179, 58, 42); }
-@property --color-sidebar { syntax: "<color>"; inherits: true; initial-value: rgb(237, 234, 225); }
+@property --color-sidebar { syntax: "<color>"; inherits: true; initial-value: rgb(255, 255, 255); }
 @property --color-sidebar-foreground { syntax: "<color>"; inherits: true; initial-value: rgb(26, 26, 24); }
-@property --color-sidebar-accent { syntax: "<color>"; inherits: true; initial-value: rgb(227, 223, 212); }
+@property --color-sidebar-accent { syntax: "<color>"; inherits: true; initial-value: rgb(236, 234, 217); }
 
 @theme {
 	--color-background: var(--g-paper);
@@ -58,16 +58,16 @@
     --g-paper:        #f6f4ee;
     --g-ink:          #1a1a18;
 
-    /* Surface-Stufen */
+    /* Surface-Stufen — #378: weiße Karten auf warmer Off-White-Page (Werte-Tausch, Namen unverändert) */
     --g-surface-0:    #f6f4ee;
-    --g-surface-1:    #edeae1;
-    --g-surface-2:    #e3dfd4;
+    --g-surface-1:    #ffffff;
+    --g-surface-2:    #ecead9;
 
     /* Ink-Stufen */
     --g-ink-muted:    #5c5a52;
     --g-ink-faint:    #9c9a90;
     --g-ink-strong:   var(--g-ink);
-    --g-surface-raised: var(--g-surface-1);
+    --g-surface-raised: #faf8f1;
 
     /* Semantic */
     --g-success:      #3a7d44;
@@ -137,7 +137,7 @@
 
     /* Issue #267 — Mobile App-Shell Tokens */
     --g-paper-deep: #ede9df;
-    --g-rule-soft: rgba(26, 26, 24, 0.08);
+    --g-rule-soft: #e7e2d3;  /* #378: opak, ersetzt rgba(26,26,24,0.08) */
 
     /* === Atomic-Design-Bridge (#369) — Sandbox-Token-Namen + -Werte, additiv.
        Damit 1:1 aus der Claude-Design-Sandbox uebernommene Bausteine pixeltreu rendern.
