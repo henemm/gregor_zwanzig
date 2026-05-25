@@ -32,17 +32,16 @@ Die Design-Tokens sind die unterste Schicht des gemeinsamen Vokabulars. Aktuell 
 
 Folge: Würden wir eure JSX-Bausteine wörtlich übernehmen, zeigen sie auf **nicht existierende** Tokens → kein Rendering (das warnt body-15 §C1/Schritt-1 selbst an).
 
+**Korrektur (Wert-Abgleich durchgeführt):** Die Divergenz ist **Name UND Wert** — nicht nur Benennung. Beispiele: `--g-card` ist im Design **reines Weiß** `#ffffff`, unser nächstes Pendant `--g-surface-1` ist beige `#edeae1`; `--g-weather-snow`/`-sun` und einige Radien (`--g-r-3/4`) weichen ebenfalls ab. Vollständige Gegenüberstellung: **`spec/TOKEN-MAPPING.md`**.
+
 **Unser Vorgehen (Code-Seite, ohne eure Mitwirkung nötig):**
-Wir legen in `app.css` eine schmale **Alias-Schicht** an, die die Sandbox-Namen auf die vorhandenen Produktionswerte abbildet (z. B. `--g-good: var(--g-success)`). So funktionieren 1:1 übernommene Bausteine sofort, ohne dass 142 Bestands-Dateien umbenannt werden (deckt sich mit body-15 §C6 „Wrapper-Aliase erlaubt").
+Damit die 1:1 übernommenen Atomic-Bausteine **pixeltreu zum Design** rendern, ergänzen wir die Sandbox-Tokens **mit den Sandbox-Werten unter den Sandbox-Namen additiv** in `app.css` (nicht als Alias auf abweichende Bestands-Werte). Bestehende Tokens bleiben unangetastet → keine bestehende Route ändert sich (body-15 §C6). Wo Name **und** Wert identisch sind, aliasen wir (`--g-font-sans → var(--g-font-ui)`). Drei Namens-Kollisionen (`--g-info`, `--g-paper-deep`, `--g-rule-soft`) behalten **unseren** Wert.
 
-**Bitte an Claude Design — zwei Punkte:**
+**Die zwei „Lücken"-Tokens sind geklärt:** `--g-accent-deep/soft/tint` und `--g-weather-cloud` sind in eurer `tokens.css` bereits mit Werten definiert (`#8c3e1a` / `#f3d9c8` / `rgba(196,90,42,.08)` / `#9a958a`) — wir übernehmen diese. Bitte nur **bestätigen**, dass sie so beabsichtigt sind.
 
-1. **Zwei echte Lücken** (kein Pendant bei uns) — bitte den **beabsichtigten Wert/Hex** nennen, damit wir sie korrekt anlegen statt zu raten:
-   - `--g-accent-deep`, `--g-accent-soft`, `--g-accent-tint` — wir haben nur `--g-accent`. Welche Abstufungen sind gemeint (Hover/aktiv/Tönung)?
-   - `--g-weather-cloud` — wir haben `--g-wx-sun/rain/snow/thunder/fog/wind`, aber **keine** Wolken-Farbe. Welcher Wert?
-2. **Langfristige Vereinheitlichung:** Damit künftige Handoffs *ohne* Alias-Schicht 1:1 passen, sollten wir uns auf **einen** kanonischen Namenssatz einigen. Vorschlag: die **ausgelieferte `app.css` ist der Wahrheits-Anker** (sie ist live und speist alle Komponenten). Bitte `tokens.css` sowie `docs/design-system/TOKENS.md` perspektivisch auf die `app.css`-Namen umstellen — `app.css` liegt im Repo und ist für euch lesbar. Mapping-Tabelle dazu pflegen wir in `spec/TOKEN-MAPPING.md` (folgt).
+**Echte Design-Frage an euch + PO:** Durch die Wert-Unterschiede koexistieren vorerst **zwei leicht verschiedene Farbwelten** (neue Bibliothek = Sandbox-Werte, Bestands-Screens = app.css-Werte). Soll die *gesamte* App perspektivisch auf die Sandbox-Werte umstellen — insbesondere **weiße Karten überall** statt beige? Das ist eine Design-Entscheidung, kein Code-Thema, und wird **nicht** im Fundament-Epic gelöst. Bitte Position dazu.
 
-> Hinweis: Hier geht es um **Namen**, nicht um Farben — die Werte sind soweit semantisch deckungsgleich. Es ist eine Etiketten-Angleichung, keine Umfärbung.
+**Langfristige Namens-Vereinheitlichung:** Damit künftige Handoffs *ohne* additive Doppel-Tokens 1:1 passen, sollten wir uns auf **einen** kanonischen Namenssatz einigen. Da `docs/design-system/TOKENS.md` bereits eure Namen führt, wäre der saubere Weg, perspektivisch auch `app.css` darauf umzustellen (großer Rename über 142 Dateien — eigenes Issue). Bis dahin trägt die Bridge.
 
 ---
 
@@ -94,7 +93,8 @@ Hinweis zur Sandbox: `docs/atomic-design-inventory.md` notiert selbst, dass `scr
 
 | # | Bitte | Aufwand bei euch |
 |---|---|---|
-| A1 | Beabsichtigte Werte für `--g-accent-deep/soft/tint` + `--g-weather-cloud` nennen | klein |
-| A2 | `tokens.css` + `TOKENS.md` perspektivisch auf `app.css`-Namen vereinheitlichen | mittel (ein Token-File) |
+| A1 | Bestätigen, dass `--g-accent-deep/soft/tint` + `--g-weather-cloud` so beabsichtigt sind (Werte in eurer `tokens.css` vorhanden) | trivial |
+| A2 | **Design-Entscheidung:** App-weit auf Sandbox-Werte umstellen (u. a. weiße Karten) — ja/nein? | Entscheidung |
+| A3 | Langfristig: ein kanonischer Namenssatz (Vorschlag: `app.css` auf eure Namen umstellen, eigenes Issue) | mittel |
 | E1 | body-15 „Design Reference" von `Redesign v2.html` auf `Komponenten.html` korrigieren | trivial |
 | B/D | Dialog/Table/Select/Card **nicht** als flache Atome nachspezifizieren; Organisms-Migration erst nach #364 | kein Code, nur Spec-Hinweis |
