@@ -122,6 +122,16 @@
             "timeout": 5
           }
         ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/session_singleton_guard.py guard",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "SessionStart": [
@@ -130,6 +140,11 @@
           {
             "type": "command",
             "command": "bash /home/hem/claude-mq/check-messages.sh"
+          },
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/session_singleton_guard.py register",
+            "timeout": 10
           }
         ]
       }
