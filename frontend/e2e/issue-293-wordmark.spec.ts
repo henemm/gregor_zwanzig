@@ -1,9 +1,16 @@
 // E2E — Issue #293: Sidebar Wordmark "gregor.zwanzig"
 //
 // Spec: docs/specs/modules/issue_293_wordmark.md (AC-1 bis AC-8)
+//       docs/specs/modules/issue_370_brand_library.md (§9 Test-Update)
 //
-// TDD RED: Diese Tests MÜSSEN FEHLSCHLAGEN, weil Wordmark.svelte noch nicht
-// existiert und alle Stellen noch den Plaintext "Gregor 20" zeigen.
+// TDD RED (Issue #370): Diese Tests MÜSSEN FEHLSCHLAGEN, bis #370 die
+// Brand-Bibliothek liefert. Das neue Soll:
+//   - Caption ist UPPERCASE "V0.20 · WETTER-BRIEFING" (text-transform:uppercase
+//     in BrandWordmark) statt lowercase "v0.20 · wetter-briefing".
+//   - In Desktop-Sidebar UND auf der Login-Seite ist der Berg+Blitz-Glyph
+//     `data-testid="brand-icon"` (ein <svg>) sichtbar (Issue #279).
+//   - Fragile Svelte-scoped CSS-Klassen (.wordmark__zwanzig / .wordmark__dot)
+//     wurden durch Text-/testid-basierte Checks ersetzt.
 
 import { test, expect } from '@playwright/test';
 import { login } from './helpers.js';
@@ -16,14 +23,15 @@ test.describe('Issue #293: Wordmark "gregor.zwanzig"', () => {
 		await login(page);
 	});
 
-	// ─── AC-1: Desktop-Sidebar zeigt Wordmark mit Untertitel ─────────────────
-	test('AC-1: Desktop-Sidebar zeigt "gregor.zwanzig" mit Untertitel', async ({ page }) => {
+	// ─── AC-1: Desktop-Sidebar zeigt Wordmark mit Glyph + UPPERCASE-Untertitel ─
+	test('AC-1: Desktop-Sidebar zeigt "gregor.zwanzig" mit Glyph + Untertitel', async ({ page }) => {
 		/**
 		 * GIVEN: User ist eingeloggt, Viewport ≥ 900px (Desktop)
 		 * WHEN:  Startseite geladen wird
-		 * THEN:  Sidebar enthält Link mit aria-label "Gregor Zwanzig — Home"
-		 *        und sichtbaren Text "gregor" sowie "zwanzig"
-		 *        und Untertitel "v0.20 · wetter-briefing"
+		 * THEN:  Sidebar enthält Link mit aria-label "Gregor Zwanzig — Home",
+		 *        sichtbaren Berg+Blitz-Glyph (data-testid="brand-icon"),
+		 *        Text "gregor" + "zwanzig"
+		 *        und UPPERCASE-Untertitel "V0.20 · WETTER-BRIEFING".
 		 */
 		await page.setViewportSize(DESKTOP_VIEWPORT);
 		await page.goto('/');
@@ -33,7 +41,12 @@ test.describe('Issue #293: Wordmark "gregor.zwanzig"', () => {
 		await expect(wordmark).toBeVisible();
 		await expect(wordmark).toContainText('gregor');
 		await expect(wordmark).toContainText('zwanzig');
-		await expect(wordmark).toContainText('v0.20 · wetter-briefing');
+		// Caption ist nun UPPERCASE (text-transform:uppercase in BrandWordmark).
+		await expect(wordmark).toContainText('V0.20 · WETTER-BRIEFING');
+
+		// Issue #279: Berg+Blitz-Glyph ist als <svg> in der Sidebar-Wordmark sichtbar.
+		const glyph = wordmark.getByTestId('brand-icon');
+		await expect(glyph).toBeVisible();
 	});
 
 	// ─── AC-2: Mobile TopAppBar zeigt kompaktes Wordmark ohne Untertitel ─────
@@ -53,41 +66,43 @@ test.describe('Issue #293: Wordmark "gregor.zwanzig"', () => {
 		await expect(wordmark).toContainText('gregor');
 		await expect(wordmark).toContainText('zwanzig');
 
-		// Untertitel darf im Mobile-Wordmark NICHT im DOM sein (size="sm")
-		const subtitle = wordmark.locator('text=v0.20 · wetter-briefing');
+		// Untertitel darf im Mobile-Wordmark NICHT im DOM sein (size="sm").
+		// Guard auf die tatsaechlich gerenderte UPPERCASE-Caption (#370): die
+		// frueher gepruefte lowercase-Form existiert nie mehr → Assertion waere
+		// trivial wahr und wuerde eine sm-Caption-Regression nicht erkennen.
+		const subtitle = wordmark.locator('text=V0.20 · WETTER-BRIEFING');
 		await expect(subtitle).toHaveCount(0);
 	});
 
-	// ─── AC-3: Wordmark-Farben entsprechen Design-Tokens ─────────────────────
-	test('AC-3: "zwanzig" hat Accent-Farbe, Punkt hat Ink-Faint-Farbe', async ({ page }) => {
+	// ─── AC-3: Wordmark zeigt Glyph + "zwanzig" in Accent-Farbe ──────────────
+	test('AC-3: Berg+Blitz-Glyph sichtbar, "zwanzig" hat Accent-Farbe', async ({ page }) => {
 		/**
 		 * GIVEN: User ist eingeloggt, Desktop-Viewport
 		 * WHEN:  Startseite geladen wird
-		 * THEN:  ".wordmark__zwanzig" hat computed color rgb(196, 90, 42) = --g-accent
-		 *        ".wordmark__dot"     hat computed color rgb(156, 154, 144) = --g-ink-faint
+		 * THEN:  Der Berg+Blitz-Glyph (data-testid="brand-icon") ist sichtbar
+		 *        und der Text "zwanzig" hat computed color rgb(196, 90, 42) = --g-accent.
+		 *
+		 * Hinweis (#370): Die früheren scoped CSS-Klassen .wordmark__zwanzig /
+		 * .wordmark__dot wurden entfernt — Svelte-scoped Klassen sind in E2E nicht
+		 * stabil. Stattdessen testid-basierter Glyph-Check + Text-Span-Farbprüfung.
 		 */
 		await page.setViewportSize(DESKTOP_VIEWPORT);
 		await page.goto('/');
 
 		// Sidebar-Wordmark explizit ansprechen (TopAppBar hat desktop:hidden, stört .first())
 		const sidebar = page.getByTestId('desktop-sidebar');
-		const zwanzig = sidebar.locator('.wordmark__zwanzig');
-		const dot     = sidebar.locator('.wordmark__dot');
+		const wordmark = sidebar.locator('a[aria-label="Gregor Zwanzig — Home"]');
 
+		// Berg+Blitz-Glyph als <svg> sichtbar.
+		const glyph = wordmark.getByTestId('brand-icon');
+		await expect(glyph).toBeVisible();
+
+		// "zwanzig" wird als eigener Span mit Accent-Farbe gerendert.
+		const zwanzig = wordmark.getByText('zwanzig', { exact: true });
 		await expect(zwanzig).toBeVisible();
-		await expect(dot).toBeVisible();
-
-		const zwanzigColor = await zwanzig.evaluate(
-			(el) => window.getComputedStyle(el).color
-		);
-		const dotColor = await dot.evaluate(
-			(el) => window.getComputedStyle(el).color
-		);
-
+		const zwanzigColor = await zwanzig.evaluate((el) => window.getComputedStyle(el).color);
 		// --g-accent = #c45a2a = rgb(196, 90, 42)
 		expect(zwanzigColor).toBe('rgb(196, 90, 42)');
-		// --g-ink-faint = #9c9a90 = rgb(156, 154, 144)
-		expect(dotColor).toBe('rgb(156, 154, 144)');
 	});
 
 	// ─── AC-4: Klick auf Wordmark navigiert zur Startseite ───────────────────
@@ -120,18 +135,23 @@ test.describe('Issue #293: Wordmark "gregor.zwanzig"', () => {
 		await expect(page).toHaveTitle(/Gregor Zwanzig/);
 	});
 
-	// ─── AC-6: Login-Seite zeigt Wordmark statt Plain-H1 ─────────────────────
-	test('AC-6: Login-Seite zeigt Wordmark (kein h1 "Gregor 20")', async ({ page }) => {
+	// ─── AC-6: Login-Seite zeigt Wordmark mit Glyph statt Plain-H1 ───────────
+	test('AC-6: Login-Seite zeigt Wordmark mit Glyph (kein h1 "Gregor 20")', async ({ page }) => {
 		/**
 		 * GIVEN: Unauthentifizierter User
 		 * WHEN:  /login geladen wird
-		 * THEN:  Seite enthält Link mit aria-label "Gregor Zwanzig — Home"
+		 * THEN:  Seite enthält Link mit aria-label "Gregor Zwanzig — Home",
+		 *        den sichtbaren Berg+Blitz-Glyph (data-testid="brand-icon", #279)
 		 *        und KEIN <h1>-Element mit Text "Gregor 20"
 		 */
 		await page.goto('/login');
 
 		const wordmark = page.locator('a[aria-label="Gregor Zwanzig — Home"]');
 		await expect(wordmark).toBeVisible();
+
+		// Issue #279: Glyph ist auch auf der Login-Seite sichtbar.
+		const glyph = wordmark.getByTestId('brand-icon');
+		await expect(glyph).toBeVisible();
 
 		// Kein Plain-h1 "Gregor 20" mehr
 		const oldH1 = page.locator('h1', { hasText: 'Gregor 20' });

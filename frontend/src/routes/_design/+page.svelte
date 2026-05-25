@@ -18,6 +18,7 @@
 	import Segmented from '$lib/components/ui/segmented';
 	import { WIcon } from '$lib/components/ui/wicon';
 	import Wordmark from '$lib/components/ui/wordmark/Wordmark.svelte';
+	import BrandWordmark from '$lib/brand/BrandWordmark.svelte';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
@@ -31,6 +32,11 @@
 	let accordionBOpen = $state(false);
 	let segmentedSelected = $state('etappe');
 	let checkboxChecked = $state(true);
+
+	// Issue #370: unbekannte Prop-Werte fuer den Fallback-Test (md/left).
+	// Bewusst ueber die TS-Union hinaus, um AC-8 zu pruefen.
+	const fallbackSize = 'xl' as unknown as 'sm' | 'md' | 'lg';
+	const fallbackIcon = 'bottom' as unknown as 'left' | 'only' | 'none';
 </script>
 
 <div class="p-8 space-y-10">
@@ -194,6 +200,50 @@
 			<Wordmark size="sm" />
 			<Wordmark size="md" />
 			<Wordmark size="lg" />
+		</div>
+	</section>
+
+	<section data-testid="brand-section" class="space-y-6">
+		<Eyebrow>Brand-Bibliothek (Issue #370)</Eyebrow>
+
+		<div class="space-y-3">
+			<Eyebrow>BrandWordmark — icon="left" (Default-Lockup)</Eyebrow>
+			<div data-testid="brand-demo-left" class="flex items-end" style:gap="var(--g-s-6)">
+				<BrandWordmark size="sm" />
+				<BrandWordmark size="md" />
+				<BrandWordmark size="lg" />
+			</div>
+		</div>
+
+		<div class="space-y-3">
+			<Eyebrow>BrandWordmark — icon="only" (nur Glyph)</Eyebrow>
+			<div data-testid="brand-demo-icon-only">
+				<BrandWordmark icon="only" />
+			</div>
+		</div>
+
+		<div class="space-y-3">
+			<Eyebrow>BrandWordmark — icon="none" (nur Typo)</Eyebrow>
+			<div data-testid="brand-demo-icon-none">
+				<BrandWordmark icon="none" caption={null} />
+			</div>
+		</div>
+
+		<div class="space-y-3">
+			<Eyebrow>BrandWordmark — dark</Eyebrow>
+			<div
+				data-testid="brand-demo-dark"
+				style="display:inline-block;padding:16px;background:var(--g-ink)"
+			>
+				<BrandWordmark dark={true} />
+			</div>
+		</div>
+
+		<div class="space-y-3">
+			<Eyebrow>BrandWordmark — Fallback (unbekannte Props → md/left)</Eyebrow>
+			<div data-testid="brand-demo-fallback">
+				<BrandWordmark size={fallbackSize} icon={fallbackIcon} />
+			</div>
 		</div>
 	</section>
 

@@ -1,55 +1,20 @@
 <script lang="ts">
+	// Thin-Wrapper (Issue #370): delegiert an die kanonische Brand-Bibliothek.
+	// Bewahrt Link-Verhalten + aria-label; BrandWordmark selbst hat kein href.
+	import BrandWordmark from '$lib/brand/BrandWordmark.svelte';
+
 	interface Props {
 		size?: 'sm' | 'md' | 'lg';
 		href?: string;
 	}
 
 	let { size = 'md', href = '/' }: Props = $props();
+
+	// Backward-Compat: kompakte sm-Variante (Mobile TopAppBar) zeigt keinen
+	// Untertitel — wie die fruehere Wordmark-Logik ({#if size !== 'sm'}).
+	const caption = $derived(size === 'sm' ? null : undefined);
 </script>
 
-<a {href} aria-label="Gregor Zwanzig — Home" class="wordmark wordmark--{size}">
-	<div class="wordmark__row">
-		<span class="wordmark__gregor">gregor</span>
-		<span class="wordmark__dot">.</span>
-		<span class="wordmark__zwanzig">zwanzig</span>
-	</div>
-	{#if size !== 'sm'}
-		<div class="wordmark__subtitle">v0.20 · wetter-briefing</div>
-	{/if}
+<a {href} aria-label="Gregor Zwanzig — Home" style="text-decoration:none;display:inline-block">
+	<BrandWordmark {size} icon="left" {caption} />
 </a>
-
-<style>
-	.wordmark {
-		display: inline-block;
-		text-decoration: none;
-	}
-
-	.wordmark__row {
-		font-family: var(--g-font-data);
-		font-weight: 500;
-		letter-spacing: 0.04em;
-		color: var(--g-ink);
-		display: flex;
-		align-items: baseline;
-		gap: 0;
-	}
-
-	.wordmark__dot { color: var(--g-ink-faint); }
-	.wordmark__zwanzig { color: var(--g-accent); }
-
-	.wordmark__subtitle {
-		font-family: var(--g-font-data);
-		letter-spacing: 0.18em;
-		text-transform: uppercase;
-		color: var(--g-ink-faint);
-		margin-top: 3px;
-	}
-
-	.wordmark--sm .wordmark__row { font-size: 14px; }
-
-	.wordmark--md .wordmark__row { font-size: 18px; }
-	.wordmark--md .wordmark__subtitle { font-size: 9px; }
-
-	.wordmark--lg .wordmark__row { font-size: 24px; }
-	.wordmark--lg .wordmark__subtitle { font-size: 10px; }
-</style>

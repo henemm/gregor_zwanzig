@@ -60,13 +60,16 @@
 	const publicPages = ['/login', '/register', '/forgot-password', '/reset-password'];
 	const isLogin = $derived(publicPages.includes(page.url.pathname));
 	const isWizard = $derived(page.url.pathname.startsWith('/trips/new'));
+	// Showcase-Route (#370): ohne App-Chrome (TopAppBar/Sidebar/BottomNav), damit
+	// die Brand-Demos die einzigen App-Bausteine auf der Seite sind.
+	const isShowcase = $derived(page.url.pathname === '/_design');
 </script>
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
-{#if isLogin}
+{#if isLogin || isShowcase}
 	{@render children()}
 {:else}
 	<TopAppBar bind:mobileMenuOpen {darkMode} ontoggleDark={toggleDark} />
