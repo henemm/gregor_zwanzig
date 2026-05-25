@@ -1,6 +1,20 @@
 # Atomic-Design-Inventur · Gregor Zwanzig
 
-**Status:** Migration abgeschlossen für Desktop-Kern und Mobile-Detail (Sessions 1–7). `organisms.jsx` repariert und produktiv. HTML-Pages auf drei finale Dateien konsolidiert. Doku aktuell zum Stand 25. Mai 2026.
+**Status:** Sandbox-Migration abgeschlossen für Desktop-Kern und Mobile-Detail (Sessions 1–7). `organisms.jsx` repariert und produktiv. HTML-Pages auf drei finale Dateien konsolidiert. Doku aktuell zum Stand 25. Mai 2026.
+
+**Produktions-Sync-Status (GitHub-Repo `henemm/gregor_zwanzig`, Stand 25.05.2026):**
+Die SvelteKit-Migration der hier dokumentierten Atomic-Library läuft als **Epic #368** mit Unter-Issues #369–#374. Davon abgeschlossen und in Produktion:
+- **#369 Token-Bridge** — Tokens aus `tokens.css` in `frontend/src/app.css` übernommen (Werte teils noch divergent → siehe Surface-Stack-Migration unten)
+- **#370 Brand-Bibliothek** — `BrandIcon` (Berg+Blitz-Glyph), `BrandIconSquare`, `BrandWordmark`, `BrandSidebar`, `BrandUserBadge` produktiv
+
+Offen in #368: **#371–#374** (Atoms / Molecules / Mobile-Primitive / Showcase-Route).
+
+**Anhängige Foundation-Issues (verschickt im Mai-2026-Handoff):**
+- **#17 Surface-Stack-Migration** *(`status: new`)* — Werte in `app.css` auf Sandbox-Stack umstellen (weiße Cards). Blocker für #371–#374.
+- **#377 Contrast-Audit der Ink-Skala** *(`existing`)* — WCAG-AA-Verifikation gegen finale Surface-Werte. Parallel zu #371–#374 machbar.
+
+Beide folgen aus dem PO-Leitprinzip „hoher Kontrast = Lesbarkeit" (CLAUDE.md). Siehe `docs/design-requests/issue_15_atomic_design/RESPONSE-FROM-CLAUDE-DESIGN.md` für die Entscheidungsbegründung.
+
 **Scope:** alle JSX-Komponenten + die 9 HTML-Pages im Projekt-Root.
 **Ziel:** Single-Source-of-Truth pro Komponente, dokumentierte Drift, Entscheidungs­vorlage mit Empfehlung.
 
