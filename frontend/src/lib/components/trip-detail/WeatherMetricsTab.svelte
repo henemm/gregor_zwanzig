@@ -1,23 +1,26 @@
 <script lang="ts">
+	// Issue #364 (Schritt B von #361) — Bucket-Editor: Spalten / Detail-Werte /
+	// Nicht im Briefing + Reihenfolge + Roh/Skala. Ersetzt den Kategorie-Checkbox-
+	// Editor. bucket/order reisen additiv durch die Go-API in display_config und
+	// werden vom Python-Loader (#360) gelesen — kein Backend-Umbau.
+	// Spec: docs/specs/modules/issue_364_metrics_editor_buckets.md
+	// Design: docs/design/epic_331_output_layout/screen-metrics-editor.jsx
 	import { api } from '$lib/api.js';
 	import type { Trip, MetricPreset, Horizons } from '$lib/types';
 	import { HORIZONS_ALL } from '$lib/types';
 	import { Pill } from '$lib/components/ui/pill/index.js';
+	import { Eyebrow } from '$lib/components/ui/eyebrow/index.js';
+	import { Btn } from '$lib/components/ui/btn/index.js';
 	import PresetRow from './PresetRow.svelte';
-	import MetricGroup from './MetricGroup.svelte';
-	import MetricCheckbox from './MetricCheckbox.svelte';
-	import TablePreview from './TablePreview.svelte';
 	import SavePresetDialog from './SavePresetDialog.svelte';
+	import BucketSection from './BucketSection.svelte';
+	import BucketSectionOff from './BucketSectionOff.svelte';
+	import AboutOutputLayout from './AboutOutputLayout.svelte';
+	import {
+		autoAssign, move, reorder, buildWeatherConfigMetrics,
+		type Buckets, type MetricEntry, type MetricCatalog,
+	} from './metricsEditor.ts';
 
-	interface MetricEntry {
-		id: string;
-		label: string;
-		unit: string;
-		category: string;
-		default_enabled: boolean;
-		has_friendly_format: boolean;
-	}
-	type MetricCatalog = Record<string, MetricEntry[]>;
 	interface Template {
 		id: string;
 		label: string;
@@ -26,7 +29,6 @@
 	interface Props {
 		trip: Trip;
 	}
-
 	let { trip }: Props = $props();
 
 	const CATEGORY_LABELS: Record<string, string> = {
@@ -34,12 +36,11 @@
 		wind: 'Wind',
 		precipitation: 'Niederschlag',
 		atmosphere: 'Atmosphäre',
-		winter: 'Winter / Schnee'
+		winter: 'Winter / Schnee',
 	};
 	const CATEGORY_ORDER = ['temperature', 'wind', 'precipitation', 'atmosphere', 'winter'];
 
-	// Epic #138 Issue #175 — Frontend-INDICATOR_MAP (12 Metriken).
-	// 9 backend-eligible + 3 frontend-erweitert (wind, gust, rain_probability).
+	// Frontend-INDICATOR_MAP (12 Metriken) — wie zuvor; steuert Roh/Skala-Toggle.
 	const INDICATOR_MAP: Record<string, string> = {
 		wind_direction: 'N / O / S / W',
 		thunder: 'keins / mittel / hoch / extrem',
@@ -65,71 +66,100 @@
 	let saving = $state(false);
 	let saveSuccess = $state(false);
 	let saveError: string | null = $state(null);
-	let enabledMap: Record<string, boolean> = $state({});
+
+	// Bucket-State (ersetzt enabledMap). friendlyMap = Roh/Skala, horizonsMap bleibt.
+	let buckets: Buckets = $state({ primary: [], secondary: [], off: [] });
 	let friendlyMap: Record<string, boolean> = $state({});
-	// Issue #343 — Pro-Metrik-Horizont (today/tomorrow/day_after). Defaultet HORIZONS_ALL.
 	let horizonsMap: Record<string, Horizons> = $state({});
 	let selectedTemplate = $state('');
-	let lastAppliedTemplate = '';
 	let savedSnapshot = $state('');
 	let showSavePresetDialog = $state(false);
+	let showAbout = $state(false);
+	let pendingPreset: string | null = $state(null);
+
+	// Abgeleitete Lookups für die Komponenten.
+	const metricById = $derived.by(() => {
+		const map: Record<string, MetricEntry> = {};
+		for (const ms of Object.values(catalog)) for (const m of ms) map[m.id] = m;
+		return map;
+	});
+	// Kürzel (Design "Kürzel"): aus dem Label abgeleitet — kein Backend-Feld.
+	const shortById = $derived.by(() => {
+		const map: Record<string, string> = {};
+		for (const id of Object.keys(metricById)) {
+			const label = metricById[id].label;
+			map[id] = label.length > 6 ? label.slice(0, 6) : label;
+		}
+		return map;
+	});
 
 	const isDirty = $derived(
-		JSON.stringify({ enabledMap, friendlyMap, horizonsMap }) !== savedSnapshot
+		JSON.stringify({ buckets, friendlyMap, horizonsMap }) !== savedSnapshot,
 	);
 
-	function snapshot(
-		eMap: Record<string, boolean>,
-		fMap: Record<string, boolean>,
-		hMap: Record<string, Horizons>,
-	): string {
-		return JSON.stringify({ enabledMap: eMap, friendlyMap: fMap, horizonsMap: hMap });
+	function snapshot(b: Buckets, f: Record<string, boolean>, h: Record<string, Horizons>): string {
+		return JSON.stringify({ buckets: b, friendlyMap: f, horizonsMap: h });
 	}
 
-	function sortedCategories(): string[] {
-		const cats = Object.keys(catalog);
-		return CATEGORY_ORDER.filter((c) => cats.includes(c)).concat(
-			cats.filter((c) => !CATEGORY_ORDER.includes(c))
-		);
+	function allCatalogIds(): string[] {
+		return CATEGORY_ORDER.filter((c) => c in catalog)
+			.concat(Object.keys(catalog).filter((c) => !CATEGORY_ORDER.includes(c)))
+			.flatMap((c) => (catalog[c] ?? []).map((m) => m.id));
 	}
 
-	function allMetricEntries(): MetricEntry[] {
-		return sortedCategories().flatMap((cat) => catalog[cat] ?? []);
-	}
-
-	function countActiveInCategory(cat: string): number {
-		return (catalog[cat] ?? []).filter((m) => enabledMap[m.id]).length;
-	}
-
-	function initMaps(cat: MetricCatalog) {
-		const eMap: Record<string, boolean> = {};
+	function initFromTrip() {
 		const fMap: Record<string, boolean> = {};
 		const hMap: Record<string, Horizons> = {};
-		for (const metrics of Object.values(cat)) {
-			for (const m of metrics) {
-				eMap[m.id] = m.default_enabled;
-				fMap[m.id] = true;
-				hMap[m.id] = { ...HORIZONS_ALL };
-			}
+		for (const id of allCatalogIds()) {
+			fMap[id] = true;
+			hMap[id] = { ...HORIZONS_ALL };
 		}
+
 		const savedMetrics = trip.display_config?.metrics;
+		let b: Buckets;
+		const hasBuckets = savedMetrics?.some((m) => m.bucket || m.order !== undefined);
+
+		if (savedMetrics && hasBuckets) {
+			// bucket/order vorhanden → direkt übernehmen (order-sortiert).
+			const prim = savedMetrics
+				.filter((m) => m.enabled && m.bucket === 'primary')
+				.sort((a, b2) => (a.order ?? 0) - (b2.order ?? 0));
+			const sec = savedMetrics
+				.filter((m) => m.enabled && m.bucket === 'secondary')
+				.sort((a, b2) => (a.order ?? 0) - (b2.order ?? 0));
+			// enabled ohne expliziten bucket → secondary (defensiv), wie #360-Loader.
+			const looseActive = savedMetrics.filter(
+				(m) => m.enabled && m.bucket !== 'primary' && m.bucket !== 'secondary',
+			);
+			const activeIds = new Set([...prim, ...sec, ...looseActive].map((m) => m.metric_id));
+			b = {
+				primary: prim.map((m) => m.metric_id),
+				secondary: [...sec.map((m) => m.metric_id), ...looseActive.map((m) => m.metric_id)],
+				off: allCatalogIds().filter((id) => !activeIds.has(id)),
+			};
+		} else if (savedMetrics && savedMetrics.length) {
+			// Legacy ohne bucket/order → autoAssign auf aktive IDs.
+			const activeIds = savedMetrics.filter((m) => m.enabled).map((m) => m.metric_id);
+			b = autoAssign(activeIds, catalog);
+		} else {
+			// Kein gespeicherter Stand → Default-enabled aus Katalog.
+			const activeIds = allCatalogIds().filter((id) => metricById[id]?.default_enabled);
+			b = autoAssign(activeIds, catalog);
+		}
+
 		if (savedMetrics) {
-			for (const mc of savedMetrics) {
-				eMap[mc.metric_id] = mc.enabled;
-				fMap[mc.metric_id] = mc.use_friendly_format ?? true;
-				hMap[mc.metric_id] = mc.horizons
-					? { ...mc.horizons }
-					: { ...HORIZONS_ALL };
+			for (const m of savedMetrics) {
+				fMap[m.metric_id] = m.use_friendly_format ?? true;
+				hMap[m.metric_id] = m.horizons ? { ...m.horizons } : { ...HORIZONS_ALL };
 			}
 		}
+
 		const savedPreset = trip.display_config?.preset_name;
-		selectedTemplate = (savedPreset && templates.some((t) => t.id === savedPreset))
-			? savedPreset
-			: '';
-		enabledMap = eMap;
+		selectedTemplate = savedPreset ?? '';
+		buckets = b;
 		friendlyMap = fMap;
 		horizonsMap = hMap;
-		savedSnapshot = snapshot(eMap, fMap, hMap);
+		savedSnapshot = snapshot(b, fMap, hMap);
 	}
 
 	async function load() {
@@ -143,7 +173,7 @@
 			catalog = catalogData;
 			templates = templateData;
 			userPresets = presetData;
-			initMaps(catalogData);
+			initFromTrip();
 		} catch (e: unknown) {
 			saveError = (e as { error?: string })?.error ?? 'Fehler beim Laden';
 		} finally {
@@ -155,66 +185,59 @@
 		if (Object.keys(catalog).length === 0) load();
 	});
 
-	$effect(() => {
-		const tmplKey = selectedTemplate;
-		if (!Object.keys(catalog).length) return;
-		if (!tmplKey || tmplKey === '__custom__' || tmplKey === lastAppliedTemplate) return;
-		lastAppliedTemplate = tmplKey;
-		const tpl = templates.find((t) => t.id === tmplKey);
-		if (!tpl) return;
-		const newMap: Record<string, boolean> = {};
-		for (const metrics of Object.values(catalog)) {
-			for (const m of metrics) {
-				newMap[m.id] = tpl.metrics.includes(m.id);
+	// --- Preset-Auswahl: autoAssign überschreibt Buckets (Confirm wenn dirty) ---
+	function applyPreset(id: string) {
+		const userP = userPresets.find((p) => p.id === id);
+		const tmpl = templates.find((t) => t.id === id);
+		const activeIds = userP
+			? userP.metrics.filter((m) => m.enabled).map((m) => m.metric_id)
+			: (tmpl ? tmpl.metrics : []);
+		buckets = autoAssign(activeIds, catalog);
+		if (userP) {
+			for (const m of userP.metrics) {
+				friendlyMap = { ...friendlyMap, [m.metric_id]: m.use_friendly_format };
 			}
 		}
-		enabledMap = newMap;
-	});
-
-	function onSelect(id: string) {
 		selectedTemplate = id;
 	}
 
-	function onCheckboxChange(id: string, checked: boolean) {
-		enabledMap = { ...enabledMap, [id]: checked };
-		if (selectedTemplate !== '__custom__') {
-			selectedTemplate = '__custom__';
-			lastAppliedTemplate = '__custom__';
+	function onSelectPreset(id: string) {
+		if (isDirty) {
+			pendingPreset = id;
+			return;
 		}
+		applyPreset(id);
 	}
 
-	function onModeChange(id: string, useIndicator: boolean) {
+	function confirmPreset() {
+		if (pendingPreset) applyPreset(pendingPreset);
+		pendingPreset = null;
+	}
+
+	function onMode(id: string, useIndicator: boolean) {
 		friendlyMap = { ...friendlyMap, [id]: useIndicator };
 	}
 
-	function onHorizonChange(id: string, day: keyof Horizons) {
-		const current = horizonsMap[id] ?? { ...HORIZONS_ALL };
-		horizonsMap = {
-			...horizonsMap,
-			[id]: { ...current, [day]: !current[day] },
-		};
+	function onMove(id: string, target: 'primary' | 'secondary' | 'off') {
+		const from: keyof Buckets = buckets.primary.includes(id)
+			? 'primary'
+			: buckets.secondary.includes(id) ? 'secondary' : 'off';
+		buckets = move(buckets, id, from, target);
+		if (selectedTemplate) selectedTemplate = '';
+	}
+
+	function onReorder(bucket: keyof Buckets, id: string, dir: -1 | 1) {
+		buckets = reorder(buckets, bucket, id, dir);
 	}
 
 	function handleDiscard() {
 		try {
 			const snap = JSON.parse(savedSnapshot);
-			enabledMap = snap.enabledMap;
+			buckets = snap.buckets;
 			friendlyMap = snap.friendlyMap;
-			if (snap.horizonsMap) {
-				horizonsMap = snap.horizonsMap;
-			} else {
-				// Fehlt der Horizont-Snapshot (z.B. Alt-Snapshot ohne horizonsMap),
-				// defaultet jede bekannte Metrik auf eine frische HORIZONS_ALL-Kopie —
-				// analog zu initMaps(), statt ein leeres Objekt zu setzen.
-				const hMap: Record<string, Horizons> = {};
-				for (const id of Object.keys(enabledMap)) {
-					hMap[id] = { ...HORIZONS_ALL };
-				}
-				horizonsMap = hMap;
-			}
+			horizonsMap = snap.horizonsMap ?? {};
 		} catch {
-			// Snapshot ungültig — auf Defaults zurücksetzen
-			initMaps(catalog);
+			initFromTrip();
 		}
 	}
 
@@ -223,12 +246,7 @@
 		saveSuccess = false;
 		saveError = null;
 		try {
-			const metrics = allMetricEntries().map((m) => ({
-				metric_id: m.id,
-				enabled: enabledMap[m.id] ?? m.default_enabled,
-				use_friendly_format: friendlyMap[m.id] ?? true,
-				horizons: horizonsMap[m.id] ?? { ...HORIZONS_ALL },
-			}));
+			const metrics = buildWeatherConfigMetrics(buckets, friendlyMap, horizonsMap, catalog);
 			const payload = {
 				...(trip.display_config ?? {}),
 				metrics,
@@ -236,10 +254,8 @@
 			};
 			await api.put(`/api/trips/${trip.id}/weather-config`, payload);
 			saveSuccess = true;
-			savedSnapshot = snapshot(enabledMap, friendlyMap, horizonsMap);
-			setTimeout(() => {
-				saveSuccess = false;
-			}, 3000);
+			savedSnapshot = snapshot(buckets, friendlyMap, horizonsMap);
+			setTimeout(() => { saveSuccess = false; }, 3000);
 		} catch (e: unknown) {
 			saveError = (e as { error?: string })?.error ?? 'Speichern fehlgeschlagen';
 		} finally {
@@ -248,9 +264,16 @@
 	}
 
 	function onPresetSaved(preset: MetricPreset) {
-		// Neues User-Preset oben in der Liste anzeigen
 		userPresets = [preset, ...userPresets];
 	}
+
+	// Für SavePresetDialog (erwartet enabledMap): aktive = primary+secondary.
+	const enabledMap = $derived.by(() => {
+		const map: Record<string, boolean> = {};
+		for (const id of allCatalogIds()) map[id] = false;
+		for (const id of [...buckets.primary, ...buckets.secondary]) map[id] = true;
+		return map;
+	});
 </script>
 
 {#if loading && Object.keys(catalog).length === 0}
@@ -259,93 +282,103 @@
 	</div>
 {:else}
 	<div data-testid="weather-metrics-tab" class="metrics-tab">
-		{#if userPresets.length > 0 || templates.length > 0}
-			<section class="presets-section" data-testid="weather-metrics-preset-list">
-				{#each userPresets as p}
-					<PresetRow
-						id={p.id}
-						label={p.name}
-						metricCount={p.metrics.length}
-						isActive={selectedTemplate === p.id}
-						{onSelect}
-					/>
-				{/each}
-				{#each templates as t}
-					<PresetRow
-						id={t.id}
-						label={t.label}
-						metricCount={t.metrics.length}
-						isActive={selectedTemplate === t.id}
-						{onSelect}
-					/>
-				{/each}
-			</section>
-		{/if}
+		<header class="tab-head">
+			<div class="intro">
+				<Eyebrow>Wetter-Metriken</Eyebrow>
+				<h2 class="h1">Welche Werte gehen in das Briefing — und wie?</h2>
+				<p class="lede">
+					Jede Metrik landet als <strong>eigene Spalte</strong> in der Tabelle oder als
+					<strong>Detail-Wert</strong> in einer kompakten Zeile darunter. Email zeigt beides
+					vollständig; Signal/Telegram haben Spalten-Limits — was nicht passt, wandert
+					automatisch in die Detail-Zeile.
+					<button type="button" class="link-btn" data-testid="about-trigger" onclick={() => (showAbout = true)}>
+						Wie funktioniert das genau?
+					</button>
+				</p>
+			</div>
+			<div class="actions">
+				{#if isDirty}
+					<Pill tone="warning" data-testid="weather-metrics-dirty-pill">Ungespeicherte Änderungen</Pill>
+					<Btn variant="ghost" size="sm" data-testid="weather-metrics-discard" onclick={handleDiscard}>Verwerfen</Btn>
+				{/if}
+				{#if saveSuccess}
+					<span data-testid="weather-metrics-tab-success" class="save-success">Gespeichert</span>
+				{/if}
+				{#if saveError}
+					<span data-testid="weather-metrics-tab-error" class="save-error">{saveError}</span>
+				{/if}
+				<Btn variant="primary" size="sm" data-testid="weather-metrics-tab-save" disabled={saving || !isDirty} onclick={handleSave}>
+					{saving ? 'Speichern…' : 'Speichern'}
+				</Btn>
+			</div>
+		</header>
 
-		<div class="categories">
-			{#each sortedCategories() as cat}
-				<MetricGroup
-					slug={cat}
-					label={CATEGORY_LABELS[cat] ?? cat}
-					activeCount={countActiveInCategory(cat)}
-					totalCount={(catalog[cat] ?? []).length}
-				>
-					{#each (catalog[cat] ?? []) as metric}
-						<MetricCheckbox
-							{metric}
-							enabled={enabledMap[metric.id] ?? metric.default_enabled}
-							useIndicator={friendlyMap[metric.id] ?? true}
-							indicatorCapable={indicatorCapable(metric.id)}
-							horizons={horizonsMap[metric.id] ?? { ...HORIZONS_ALL }}
-							onToggle={onCheckboxChange}
-							{onModeChange}
-							{onHorizonChange}
-						/>
+		<div class="layout">
+			<!-- Preset-Spalte -->
+			<aside class="preset-col">
+				<Eyebrow>Preset-Auswahl</Eyebrow>
+				<div class="preset-list" data-testid="weather-metrics-preset-list">
+					{#each userPresets as p}
+						<PresetRow id={p.id} label={p.name} metricCount={p.metrics.length} isActive={selectedTemplate === p.id} onSelect={onSelectPreset} />
 					{/each}
-				</MetricGroup>
-			{/each}
-		</div>
+					{#each templates as t}
+						<PresetRow id={t.id} label={t.label} metricCount={t.metrics.length} isActive={selectedTemplate === t.id} onSelect={onSelectPreset} />
+					{/each}
+				</div>
+				<div class="preset-save-box">
+					<Eyebrow>Eigenes Preset</Eyebrow>
+					<p class="preset-save-hint">
+						Aktuelle Auswahl ({buckets.primary.length + buckets.secondary.length} Metriken)
+						speichern und auf andere Trips anwenden.
+					</p>
+					<Btn variant="ghost" size="sm" class="full" data-testid="save-preset-dialog-trigger" onclick={() => (showSavePresetDialog = true)}>
+						+ Als Preset speichern
+					</Btn>
+				</div>
+			</aside>
 
-		<TablePreview
-			{catalog}
-			{enabledMap}
-			{friendlyMap}
-			{horizonsMap}
-			categoryOrder={CATEGORY_ORDER}
-			{indicatorCapable}
-		/>
+			<!-- Editor -->
+			<div class="editor-col">
+				<BucketSection
+					eyebrow="Im Briefing als Spalte"
+					title="Spalten"
+					hint="Eine eigene Tabellen-Spalte je Metrik. Reihenfolge = von links nach rechts. Email zeigt alle; Signal max 6, Telegram max 8."
+					bucket="primary"
+					items={buckets.primary}
+					{metricById}
+					{shortById}
+					{friendlyMap}
+					{indicatorCapable}
+					showLimitMarkers
+					{onMode}
+					{onMove}
+					onReorder={(id, dir) => onReorder('primary', id, dir)}
+				/>
 
-		<div class="save-row">
-			{#if isDirty}
-				<Pill tone="warning" data-testid="weather-metrics-dirty-pill">Ungespeicherte Änderungen</Pill>
-				<button
-					data-testid="weather-metrics-discard"
-					onclick={handleDiscard}
-					type="button"
-					class="discard-btn"
-				>Verwerfen</button>
-			{/if}
-			{#if saveSuccess}
-				<span data-testid="weather-metrics-tab-success" class="save-success">Gespeichert</span>
-			{/if}
-			{#if saveError}
-				<span data-testid="weather-metrics-tab-error" class="save-error">{saveError}</span>
-			{/if}
-			{#if !isDirty}
-				<button
-					type="button"
-					class="preset-trigger"
-					data-testid="save-preset-dialog-trigger"
-					onclick={() => (showSavePresetDialog = true)}
-				>Als Preset speichern</button>
-			{/if}
-			<button
-				data-testid="weather-metrics-tab-save"
-				onclick={handleSave}
-				disabled={saving || !isDirty}
-				class="save-btn"
-				type="button">{saving ? 'Speichern…' : 'Speichern'}</button
-			>
+				<BucketSection
+					eyebrow="Im Briefing als Detail"
+					title="Detail-Werte"
+					hint="Erscheinen als kompakte Zeile direkt unter der Tabelle: Bewölkung 80 % · Sicht 5 km · …"
+					bucket="secondary"
+					items={buckets.secondary}
+					{metricById}
+					{shortById}
+					{friendlyMap}
+					{indicatorCapable}
+					{onMode}
+					{onMove}
+					onReorder={(id, dir) => onReorder('secondary', id, dir)}
+				/>
+
+				<BucketSectionOff
+					items={buckets.off}
+					{metricById}
+					{shortById}
+					categoryLabels={CATEGORY_LABELS}
+					categoryOrder={CATEGORY_ORDER}
+					onAdd={onMove}
+				/>
+			</div>
 		</div>
 
 		<SavePresetDialog
@@ -358,66 +391,141 @@
 			onClose={() => (showSavePresetDialog = false)}
 			onSaved={onPresetSaved}
 		/>
+
+		<AboutOutputLayout bind:open={showAbout} onClose={() => (showAbout = false)} />
+
+		{#if pendingPreset}
+			<div class="confirm-overlay" role="dialog" aria-modal="true" data-testid="preset-confirm">
+				<div class="confirm-box">
+					<Eyebrow>Preset anwenden</Eyebrow>
+					<p>Du hast ungespeicherte Änderungen. Das Preset überschreibt die aktuelle Auswahl.</p>
+					<div class="confirm-actions">
+						<Btn variant="ghost" size="sm" data-testid="preset-confirm-cancel" onclick={() => (pendingPreset = null)}>Abbrechen</Btn>
+						<Btn variant="primary" size="sm" data-testid="preset-confirm-ok" onclick={confirmPreset}>Überschreiben</Btn>
+					</div>
+				</div>
+			</div>
+		{/if}
 	</div>
 {/if}
 
 <style>
 	.metrics-tab {
-		padding: 1rem;
+		padding: var(--g-s-4);
 	}
-	.presets-section {
+	.tab-head {
 		display: flex;
-		flex-direction: column;
-		gap: 0.4rem;
-		margin-bottom: 1.25rem;
+		justify-content: space-between;
+		align-items: flex-start;
+		gap: var(--g-s-6);
+		margin-bottom: var(--g-s-6);
+		flex-wrap: wrap;
 	}
-	.categories {
-		display: flex;
-		flex-direction: column;
-		gap: 1.25rem;
+	.intro {
+		max-width: 760px;
 	}
-	.save-row {
+	.h1 {
+		font-size: var(--g-text-2xl);
+		font-weight: 600;
+		letter-spacing: var(--g-track-tight);
+		margin: var(--g-s-1) 0 var(--g-s-2);
+	}
+	.lede {
+		font-size: var(--g-text-sm);
+		color: var(--g-ink-muted);
+		line-height: 1.55;
+	}
+	.link-btn {
+		margin-left: var(--g-s-1);
+		color: var(--g-accent);
+		background: none;
+		border: none;
+		cursor: pointer;
+		padding: 0;
+		font-size: var(--g-text-sm);
+		text-decoration: underline;
+		text-underline-offset: 2px;
+	}
+	.actions {
 		display: flex;
+		gap: var(--g-s-2);
 		align-items: center;
-		justify-content: flex-end;
-		gap: 0.75rem;
-		margin-top: 1.5rem;
-		padding-top: 1rem;
-		border-top: 1px solid var(--g-ink-faint);
 		flex-wrap: wrap;
 	}
 	.save-success {
-		font-size: 0.875rem;
-		color: #16a34a;
+		font-size: var(--g-text-sm);
+		color: var(--g-success);
 	}
 	.save-error {
-		font-size: 0.875rem;
-		color: #dc2626;
+		font-size: var(--g-text-sm);
+		color: var(--g-danger);
 	}
-	.save-btn, .preset-trigger, .discard-btn {
-		padding: 0.5rem 1.25rem;
-		border: none;
-		border-radius: 4px;
-		font-size: 0.875rem;
-		font-weight: 500;
-		cursor: pointer;
+	.layout {
+		display: grid;
+		grid-template-columns: 300px 1fr;
+		gap: var(--g-s-8);
+		align-items: start;
 	}
-	.save-btn {
-		background: var(--g-accent);
-		color: #fff;
+	.preset-list {
+		display: flex;
+		flex-direction: column;
+		gap: var(--g-s-1);
+		margin-top: var(--g-s-2);
 	}
-	.save-btn:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
+	.preset-save-box {
+		margin-top: var(--g-s-6);
+		padding: var(--g-s-4);
+		background: var(--g-surface-1);
+		border-radius: var(--g-radius-sm);
+		border: 1px dashed var(--g-ink-faint);
 	}
-	.preset-trigger {
-		background: var(--g-surface-0);
+	.preset-save-hint {
+		font-size: var(--g-text-sm);
+		color: var(--g-ink-muted);
+		margin: var(--g-s-2) 0;
+		line-height: 1.4;
+	}
+	:global(.preset-save-box .full) {
+		width: 100%;
+	}
+	.editor-col {
+		display: flex;
+		flex-direction: column;
+		gap: var(--g-s-6);
+	}
+	.confirm-overlay {
+		position: fixed;
+		inset: 0;
+		background: color-mix(in srgb, var(--g-ink) 45%, transparent);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 100;
+	}
+	.confirm-box {
+		width: 420px;
+		max-width: 90vw;
+		background: var(--g-paper);
 		border: 1px solid var(--g-ink-faint);
-		color: var(--g-ink);
+		border-radius: var(--g-radius-md);
+		padding: var(--g-s-5);
+		box-shadow: var(--g-elev-3);
 	}
-	.discard-btn {
-		background: transparent;
-		color: var(--g-ink-faint);
-		text-decoration: underline;
+	.confirm-box p {
+		font-size: var(--g-text-sm);
+		color: var(--g-ink-muted);
+		margin: var(--g-s-2) 0 var(--g-s-4);
+		line-height: 1.5;
+	}
+	.confirm-actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: var(--g-s-2);
+	}
+	@media (max-width: 899px) {
+		.layout {
+			grid-template-columns: 1fr;
+			gap: var(--g-s-6);
+		}
 	}
 </style>

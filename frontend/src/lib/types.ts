@@ -124,6 +124,11 @@ export interface WeatherConfigMetric {
 	enabled: boolean;
 	use_friendly_format?: boolean;
 	horizons?: Horizons; // Issue #343 — optional; defaultet HORIZONS_ALL beim Load
+	// Issue #364 — Bucket-Editor: Spalten/Detail-Zuordnung + Reihenfolge.
+	// Reisen additiv durch die Go-API (DisplayConfig = map[string]interface{})
+	// und werden vom Python-Loader (#360) gelesen.
+	bucket?: 'primary' | 'secondary';
+	order?: number;
 }
 
 export interface WeatherConfig {

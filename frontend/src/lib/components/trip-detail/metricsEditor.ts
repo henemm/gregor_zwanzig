@@ -170,3 +170,191 @@ export function selectTableColumns(
 	}
 	return cols;
 }
+
+// =============================================================================
+// Issue #364 (Schritt B von #361) — Bucket-Editor-Logik (AC-1..AC-8)
+// =============================================================================
+//
+// Spec: docs/specs/modules/issue_364_metrics_editor_buckets.md
+// Design: docs/design/epic_331_output_layout/screen-metrics-editor.jsx
+
+export interface Buckets {
+	primary: string[];
+	secondary: string[];
+	off: string[];
+}
+
+export type Horizons = { today: boolean; tomorrow: boolean; day_after: boolean };
+const HORIZONS_ALL: Horizons = { today: true, tomorrow: true, day_after: true };
+
+// Metrik mit bucket/order — Round-Trip-Shape fuer PUT /weather-config.
+export interface BucketWeatherConfigMetric {
+	metric_id: string;
+	enabled: boolean;
+	use_friendly_format: boolean;
+	horizons: Horizons;
+	bucket?: 'primary' | 'secondary';
+	order: number;
+}
+
+/**
+ * Heuristik-Prioritaet — KONSISTENT mit Backend #360
+ * (src/output/renderers/channel_layout.py::METRIC_PRIORITY). Hoeher = wichtiger.
+ * Die 5 wichtigsten landen via autoAssign im primary-Bucket (Signal-safe).
+ */
+export const METRIC_PRIORITY: Record<string, number> = {
+	temperature: 95, wind: 90, gust: 88, rain_probability: 85,
+	precipitation: 78, wind_chill: 70, cloud_total: 65, thunder: 60,
+	fresh_snow: 55, visibility: 55, freezing_level: 50, uv_index: 45,
+	wind_direction: 40, snow_depth: 35, precip_type: 35, snowfall_limit: 35,
+	cloud_low: 30, humidity: 25, sunshine: 25, dewpoint: 20,
+	pressure: 18, cape: 15, cloud_mid: 12, cloud_high: 10, confidence: 8,
+};
+
+// Anzahl Metriken, die autoAssign als primary markiert (= Signal-Budget,
+// Uhrzeit nicht mitgezaehlt). Deckt sich mit Backend _PRIMARY_SLOTS = 5.
+const PRIMARY_SLOTS = 5;
+
+/**
+ * Waehlbare Metrik-Spalten je Kanal (Uhrzeit NICHT mitgezaehlt — deckt sich
+ * mit #360: Signal total 6 = 5 Metriken + Zeit, Telegram total 8 = 7 + Zeit).
+ * Anzeige-Budget, KEIN hartes Limit — der Renderer demotet kanalspezifisch.
+ */
+export const CHANNEL_COL_BUDGET: Record<'email' | 'telegram' | 'signal' | 'sms', number> = {
+	email: Infinity,
+	telegram: 7,
+	signal: 5,
+	sms: 0,
+};
+
+/** Flache Liste aller Katalog-IDs (Insertion-Order der Kategorien). */
+function allCatalogIds(catalog: MetricCatalog): string[] {
+	const ids: string[] = [];
+	for (const metrics of Object.values(catalog)) {
+		for (const m of metrics) ids.push(m.id);
+	}
+	return ids;
+}
+
+/**
+ * AC-1 / AC-8: Verteilt aktive Metrik-IDs auf primary/secondary/off.
+ *
+ * Top-5 nach METRIC_PRIORITY -> primary (in Prioritaets-Reihenfolge), Rest der
+ * aktiven -> secondary, im Katalog vorhandene aber nicht aktive -> off.
+ * Stabil: bei gleicher Prioritaet entscheidet die Eingabe-Reihenfolge.
+ * Konsistent mit Backend auto_distribute (5 in primary, Signal-safe).
+ */
+export function autoAssign(activeIds: string[], catalog: MetricCatalog): Buckets {
+	// F002-Härtung: doppelte IDs entfernen (erste Vorkommen behalten), damit
+	// eine Metrik nie zweimal in primary/secondary landet.
+	const uniqueIds = [...new Set(activeIds)];
+
+	const ranked = uniqueIds
+		.map((id, idx) => ({ id, idx, prio: METRIC_PRIORITY[id] ?? 0 }))
+		.sort((a, b) => (b.prio - a.prio) || (a.idx - b.idx))
+		.map((x) => x.id);
+
+	const primary = ranked.slice(0, PRIMARY_SLOTS);
+	const secondary = ranked.slice(PRIMARY_SLOTS);
+
+	const activeSet = new Set(uniqueIds);
+	const off = allCatalogIds(catalog).filter((id) => !activeSet.has(id));
+
+	return { primary, secondary, off };
+}
+
+/**
+ * AC-2 / AC-6: Verschiebt eine Metrik zwischen Buckets (immutabel).
+ * Entfernt aus `from`, haengt an `to` an. Andere Buckets unveraendert.
+ *
+ * F001-Härtung: Liegt `id` nicht in `b[from]`, ist der Aufruf ein No-Op
+ * (Shallow-Copy) — keine Phantom-ID darf in `to` auftauchen.
+ */
+export function move(b: Buckets, id: string, from: keyof Buckets, to: keyof Buckets): Buckets {
+	if (!b[from].includes(id)) return { ...b };
+	const next: Buckets = {
+		primary: [...b.primary],
+		secondary: [...b.secondary],
+		off: [...b.off],
+	};
+	next[from] = next[from].filter((x) => x !== id);
+	if (!next[to].includes(id)) next[to] = [...next[to], id];
+	return next;
+}
+
+/**
+ * AC-3: Vertauscht eine Metrik mit ihrem Nachbarn (dir=-1 hoch, dir=+1 runter).
+ * An den Raendern No-Op (gibt das unveraenderte Objekt zurueck).
+ */
+export function reorder(b: Buckets, bucket: keyof Buckets, id: string, dir: -1 | 1): Buckets {
+	const list = [...b[bucket]];
+	const idx = list.indexOf(id);
+	if (idx === -1) return b;
+	const target = idx + dir;
+	if (target < 0 || target >= list.length) return b;
+	[list[idx], list[target]] = [list[target], list[idx]];
+	return { ...b, [bucket]: list };
+}
+
+/**
+ * AC-5: Liefert je Kanal, ob die primary-Spaltenzahl das Budget ueberschreitet.
+ * `> budget` (nicht `>=`) — exakt am Budget ist noch ok.
+ */
+export function channelOverflow(
+	primaryCount: number,
+): { email: boolean; telegram: boolean; signal: boolean; sms: boolean } {
+	return {
+		email: primaryCount > CHANNEL_COL_BUDGET.email,
+		telegram: primaryCount > CHANNEL_COL_BUDGET.telegram,
+		signal: primaryCount > CHANNEL_COL_BUDGET.signal,
+		sms: primaryCount > CHANNEL_COL_BUDGET.sms,
+	};
+}
+
+/**
+ * AC-7 / AC-4: Baut die display_config.metrics-Liste fuer den Save.
+ *
+ * - primary/secondary -> enabled:true mit bucket + lueckenlosem order (0..n-1
+ *   je Bucket).
+ * - off -> enabled:false, bucket weggelassen, order 0.
+ * - use_friendly_format aus friendlyMap (Default true), horizons aus
+ *   horizonsMap (Default HORIZONS_ALL).
+ *
+ * Reihenfolge der Ausgabe folgt der Katalog-Reihenfolge, damit kein Metrik
+ * verloren geht (alle Katalog-IDs erscheinen genau einmal).
+ */
+export function buildWeatherConfigMetrics(
+	buckets: Buckets,
+	friendlyMap: Record<string, boolean>,
+	horizonsMap: Record<string, Horizons>,
+	catalog: MetricCatalog,
+): BucketWeatherConfigMetric[] {
+	const orderOf: Record<string, number> = {};
+	const bucketOf: Record<string, 'primary' | 'secondary'> = {};
+	buckets.primary.forEach((id, i) => { orderOf[id] = i; bucketOf[id] = 'primary'; });
+	buckets.secondary.forEach((id, i) => { orderOf[id] = i; bucketOf[id] = 'secondary'; });
+
+	const seen = new Set<string>();
+	const out: BucketWeatherConfigMetric[] = [];
+
+	const emit = (id: string) => {
+		if (seen.has(id)) return;
+		seen.add(id);
+		const bucket = bucketOf[id];
+		out.push({
+			metric_id: id,
+			enabled: bucket !== undefined,
+			use_friendly_format: friendlyMap[id] ?? true,
+			horizons: horizonsMap[id] ?? { ...HORIZONS_ALL },
+			...(bucket ? { bucket } : {}),
+			order: orderOf[id] ?? 0,
+		});
+	};
+
+	// Erst alle Katalog-Metriken in Katalog-Reihenfolge, dann etwaige
+	// Bucket-IDs die (noch) nicht im Katalog stehen.
+	for (const id of allCatalogIds(catalog)) emit(id);
+	for (const id of [...buckets.primary, ...buckets.secondary, ...buckets.off]) emit(id);
+
+	return out;
+}
