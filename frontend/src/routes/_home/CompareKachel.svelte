@@ -24,7 +24,7 @@
 	const statusLabel = $derived(sub.enabled ? 'aktiv' : 'pausiert');
 </script>
 
-<a href="/compare" data-testid="subscription-card" class="kachel">
+<a href="/compare" data-testid="subscription-card" data-slot="g-card">
 	<div class="kachel__row">
 		<span class="kachel__type">Vergleich</span>
 		<span class="kachel__status" style:color={statusColor}>
@@ -40,19 +40,18 @@
 </a>
 
 <style>
-	.kachel {
+	[data-slot="g-card"] {
 		display: flex;
 		flex-direction: column;
 		gap: var(--g-s-2);
 		padding: var(--g-s-4);
-		background: var(--g-surface-1);
 		border: 1px solid var(--g-ink-faint);
-		border-radius: var(--g-radius-lg);
 		text-decoration: none;
 		color: var(--g-ink);
+		box-shadow: none;
 		transition: border-color 120ms, box-shadow 120ms;
 	}
-	.kachel:hover {
+	[data-slot="g-card"]:hover {
 		border-color: var(--g-accent);
 		box-shadow: var(--g-elev-1);
 	}

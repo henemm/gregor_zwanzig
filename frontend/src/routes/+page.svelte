@@ -95,7 +95,10 @@
 		<div>
 			<Eyebrow>Übersicht · {todayPretty}</Eyebrow>
 			<div style:font-size="22px" style:font-weight="600" style:margin-top="2px" style:letter-spacing="-0.005em">
-				Startseite
+				Deine Touren & Vergleiche
+			</div>
+			<div style:font-size="0.9375rem" style:color="var(--g-ink-muted)" style:margin-top="4px" style:line-height="1.5">
+				Was du jetzt vorbereitest, läuft unterwegs autark. Briefings gehen per Email oder Signal, du musst am Berg nichts tun.
 			</div>
 		</div>
 		<div style:display="flex" style:gap="10px" style:align-items="center">
@@ -303,10 +306,9 @@
 			</div>
 		{/if}
 
-		<!-- AC-12: Weitere Touren + Orts-Vergleiche (nichts verschwindet) -->
+		<!-- AC-12: Weitere Touren + Vergleiche (nichts verschwindet) -->
 		{#if otherTrips.length > 0}
 			<section style:margin-bottom="32px">
-				<h2 class="section-title">Weitere Trips</h2>
 				<div class="kachel-grid">
 					{#each otherTrips as trip (trip.id)}
 						<TripKachel {trip} />
@@ -317,7 +319,6 @@
 
 		{#if subscriptions.length > 0}
 			<section style:margin-bottom="32px">
-				<h2 class="section-title">Orts-Vergleiche</h2>
 				<div class="kachel-grid">
 					{#each subscriptions as sub (sub.id)}
 						<CompareKachel {sub} />
@@ -348,11 +349,6 @@
 		display: grid;
 		grid-template-columns: repeat(4, 1fr);
 		gap: 12px;
-	}
-	.section-title {
-		font-size: var(--g-text-xl);
-		font-weight: 600;
-		margin: 0 0 0.75rem;
 	}
 	.kachel-grid {
 		display: grid;

@@ -24,7 +24,7 @@
 	};
 </script>
 
-<a href="/trips/{trip.id}" data-testid="trip-card" class="kachel">
+<a href="/trips/{trip.id}" data-testid="trip-card" data-slot="g-card">
 	<div class="kachel__row">
 		<span class="kachel__type">Trip</span>
 		<span class="kachel__status" style:color={statusColors[status]}>
@@ -36,23 +36,22 @@
 	{#if range}
 		<div class="kachel__when">{range}</div>
 	{/if}
-	<div class="kachel__meta">{stageCount} {stageCount === 1 ? 'Etappe' : 'Etappen'}</div>
+	<div class="kachel__meta">{stageCount} {stageCount === 1 ? 'Etappe' : 'Etappen'}{#if trip.report_config?.morning_enabled || trip.report_config?.evening_enabled} · Reports ✓{/if}</div>
 </a>
 
 <style>
-	.kachel {
+	[data-slot="g-card"] {
 		display: flex;
 		flex-direction: column;
 		gap: var(--g-s-2);
 		padding: var(--g-s-4);
-		background: var(--g-surface-1);
 		border: 1px solid var(--g-ink-faint);
-		border-radius: var(--g-radius-lg);
 		text-decoration: none;
 		color: var(--g-ink);
+		box-shadow: none;
 		transition: border-color 120ms, box-shadow 120ms;
 	}
-	.kachel:hover {
+	[data-slot="g-card"]:hover {
 		border-color: var(--g-accent);
 		box-shadow: var(--g-elev-1);
 	}
