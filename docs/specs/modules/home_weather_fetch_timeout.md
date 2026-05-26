@@ -1,6 +1,6 @@
 # Spec: Home-Loader — kein Live-Wetter-Abruf (Issue #395)
 
-**Status:** Draft — wartet auf PO-Approval
+**Status:** Approved (PO 2026-05-26) — Live auf Prod. Nachspiel: Parallel-Session ccbe84c führte den Fetch wieder ein → am 2026-05-26 erneut entfernt (Commit 9211546).
 **Created:** 2026-05-26
 **Issue:** #395 (Regression aus #386)
 **Schweregrad:** hoch — Startseite ist meistbesucht, Bug live auf Prod.
