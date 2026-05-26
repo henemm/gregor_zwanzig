@@ -149,13 +149,25 @@ test('canAdvanceStep1: leerer startDate-String → false (HTML5-Date-Input nach 
 
 test('canAdvanceStep1: nach Loeschen eines Pflichtfelds → false', () => {
 	const s = new WizardState();
-	s.activity = 'mtb';
+	// Issue #300: activity ist KEIN Pflichtfeld mehr — Pflicht sind name + startDate.
 	s.name = 'Tour';
 	s.startDate = '2026-07-15';
 	assert.equal(s.canAdvanceStep1, true, 'Pre-Condition: alle Pflichtfelder gesetzt');
 
-	s.activity = null;
-	assert.equal(s.canAdvanceStep1, false, 'Loeschen activity → canAdvanceStep1 false');
+	s.name = '';
+	assert.equal(s.canAdvanceStep1, false, 'Loeschen name → canAdvanceStep1 false');
+});
+
+test('canAdvanceStep1: Issue #300 — activity ist kein Pflichtfeld mehr (nur name+startDate)', () => {
+	const s = new WizardState();
+	s.name = 'GR20';
+	s.startDate = '2026-06-01';
+	assert.equal(s.activity, null, 'Pre-Condition: activity ist null');
+	assert.equal(
+		s.canAdvanceStep1,
+		true,
+		'name + startDate reichen — activity nicht erforderlich'
+	);
 });
 
 test('canAdvanceStep1: shortcode ist optional, beeinflusst Bedingung nicht', () => {

@@ -10,7 +10,8 @@ import type {
 	ReportConfig,
 	Stage,
 	Trip,
-	Waypoint
+	Waypoint,
+	WeatherConfigMetric
 } from '$lib/types';
 import { addDays, mapActivityToProfile, newId } from './wizardHelpers.ts';
 import { toHHMMSS } from '$lib/utils/time';
@@ -54,6 +55,9 @@ export class WizardState {
 	// Issue #224: Direkter Top-Level-State fuer Alarmregeln (analog `stages`),
 	// gebunden an `<AlertRulesEditor bind:rules={...}>` in Step 4.
 	alertRules: AlertRule[] = $state([]);
+	// Issue #300: Wetter-Metriken aus Step 3 (Wetter-Konfigurator). Werden beim
+	// Save als `display_config.metrics` persistiert (toTripPayload).
+	weatherMetrics = $state<WeatherConfigMetric[]>([]);
 
 	saveStatus = $state<SaveStatus>('idle');
 	saveError = $state<string | null>(null);
@@ -64,9 +68,10 @@ export class WizardState {
 
 	// --- Step-Validation ----------------------------------------------------
 	//
-	// Sub-Spec #161 §6: Step 1 darf erst weitergeschaltet werden, wenn die drei
-	// Pflichtfelder (activity, name nicht-leer-getrimmt, startDate nicht-leer)
-	// gesetzt sind. Optional: shortcode (faellt nicht in die Bedingung).
+	// AC-2 Issue #300: Step 1 darf weitergeschaltet werden, sobald die zwei
+	// Pflichtfelder (name nicht-leer-getrimmt, startDate nicht-leer) gesetzt
+	// sind. `activity` ist KEIN Pflichtfeld mehr — sie wird in Step 3 gewaehlt.
+	// Optional: shortcode (faellt nicht in die Bedingung).
 	//
 	// Implementierungsentscheidung (Abweichung vom literalen Spec-Pseudo-Code,
 	// dokumentiert im Master-Spec-Changelog 2026-05-10): Getter statt $derived,
@@ -76,8 +81,8 @@ export class WizardState {
 	// Klassen-Konstruktion evaluieren. Lesen eines Getters von $state-Feldern
 	// ist Svelte-5-reaktivitaets-kompatibel.
 	get canAdvanceStep1(): boolean {
+		// AC-2 Issue #300: activity ist kein Pflichtfeld mehr — name + startDate genügen.
 		return (
-			this.activity !== null &&
 			this.name.trim().length > 0 &&
 			typeof this.startDate === 'string' &&
 			this.startDate.length > 0
@@ -367,6 +372,12 @@ export class WizardState {
 		// `alert_thresholds`-Block mehr — `BriefingConfig.thresholds` ist entfernt.
 		if (this.alertRules.length > 0) {
 			trip.alert_rules = JSON.parse(JSON.stringify(this.alertRules));
+		}
+
+		// Issue #300: Wetter-Metriken aus Step 3 als display_config.metrics
+		// persistieren — nur wenn welche gewaehlt wurden (omitempty-Symmetrie).
+		if (this.weatherMetrics.length > 0) {
+			trip.display_config = { metrics: [...this.weatherMetrics] };
 		}
 
 		return trip;

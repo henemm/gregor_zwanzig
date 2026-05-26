@@ -21,18 +21,18 @@
 	import Stepper from './Stepper.svelte';
 	import Step1Profile from './steps/Step1Profile.svelte';
 	import Step2Stages from './steps/Step2Stages.svelte';
-	import Step3Waypoints from './steps/Step3Waypoints.svelte';
-	import Step4Briefings from './steps/Step4Briefings.svelte';
+	import Step3Weather from './steps/Step3Weather.svelte';
+	import Step4Reports from './steps/Step4Reports.svelte';
 
 	const state = getContext<WizardState>('trip-wizard-state');
 
 	// Wizard-spezifische Step-Texte (Spec §4).
-	const stepLabels = ['Profil & Eckdaten', 'GPX-Import', 'Wegpunkte', 'Briefings'];
+	const stepLabels = ['Route', 'Etappen', 'Wetter', 'Reports'];
 	const stepSubLabels = [
-		'Aktivität, Name, Zeitraum',
-		'Etappen hochladen',
-		'KI-Vorschläge bestätigen',
-		'Kanäle und Alerts'
+		'Name & GPX hochladen',
+		'Etappen prüfen',
+		'Metriken konfigurieren',
+		'Briefings einrichten'
 	];
 
 	const saveLabel = $derived(
@@ -80,9 +80,9 @@
 		{:else if state.currentStep === 2}
 			<Step2Stages />
 		{:else if state.currentStep === 3}
-			<Step3Waypoints />
+			<Step3Weather />
 		{:else if state.currentStep === 4}
-			<Step4Briefings />
+			<Step4Reports />
 		{/if}
 	</div>
 

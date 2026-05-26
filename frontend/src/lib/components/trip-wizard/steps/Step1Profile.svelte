@@ -1,62 +1,26 @@
 <script lang="ts">
-	// Step 1: Aktivitaetsprofil + Eckdaten (Epic #136 Sub-Spec #161).
-	// Quelle: docs/specs/modules/epic_136_step1_profile.md §1–§5
+	// Step 1 (Issue #300: "Route"): Eckdaten des Trips.
+	// Quelle: docs/specs/modules/issue_300_wizard_redesign.md
 	//
 	// Verantwortlich fuer:
-	//   - 5 ProfileChips (Trekking, Skitour, Hochtour, Klettersteig, MTB) als
-	//     <button>-Wrapper um <Pill> mit aria-pressed-Toggle-Semantik
-	//   - 3 Eingabefelder: Name (Pflicht), Kuerzel (optional, max 20),
-	//     Startdatum (Pflicht, type=date)
+	//   - 4 Eingabefelder: Name (Pflicht), Kuerzel (optional, max 20),
+	//     Region (optional, max 50), Startdatum (Pflicht, type=date)
 	//   - Bindung an WizardState (via getContext)
 	//   - Hilfetext zum Enddatum (wird in Schritt 2 berechnet)
+	//
+	// AC-2 #300: Aktivitaetsprofil ist KEIN Pflichtfeld mehr — es wird in
+	// Step 3 (Wetter) gewaehlt. Die Activity-Chips wurden hier entfernt.
 	//
 	// Validierungs-/Disabled-Logik liegt zentral in WizardState.canAdvanceStep1
 	// und wird vom Shell-Footer ausgelesen.
 
 	import { getContext } from 'svelte';
-	import { Pill } from '$lib/components/ui/pill';
-	import type { ActivityType } from '$lib/types';
 	import type { WizardState } from '../wizardState.svelte';
 
 	const state = getContext<WizardState>('trip-wizard-state');
-
-	// Reihenfolge gemaess Sub-Spec §3.
-	const PROFILES: { activity: ActivityType; label: string }[] = [
-		{ activity: 'trekking', label: 'Trekking' },
-		{ activity: 'skitour', label: 'Skitour' },
-		{ activity: 'hochtour', label: 'Hochtour' },
-		{ activity: 'klettersteig', label: 'Klettersteig' },
-		{ activity: 'mtb', label: 'MTB' }
-	];
-
-	// Factory-Handler (CLAUDE.md Safari-Pattern): benannter Handler mit
-	// gebundener Activity statt anonymer Closure pro Render.
-	function makeSelectHandler(activity: ActivityType) {
-		return function handleSelectActivity() {
-			state.activity = activity;
-		};
-	}
 </script>
 
 <div data-testid="trip-wizard-step1-profile" class="flex flex-col gap-6 py-4">
-	<section class="flex flex-col gap-2">
-		<span class="text-xs uppercase tracking-wide text-[var(--g-ink-muted)]">Aktivität</span>
-		<div class="flex flex-wrap gap-2">
-			{#each PROFILES as profile (profile.activity)}
-				{@const selected = state.activity === profile.activity}
-				<button
-					type="button"
-					data-testid={`trip-wizard-step1-chip-${profile.activity}`}
-					aria-pressed={selected}
-					onclick={makeSelectHandler(profile.activity)}
-					class="focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--g-accent)] rounded-full"
-				>
-					<Pill tone={selected ? 'accent' : 'default'}>{profile.label}</Pill>
-				</button>
-			{/each}
-		</div>
-	</section>
-
 	<section class="flex flex-col gap-4">
 		<span class="text-xs uppercase tracking-wide text-[var(--g-ink-muted)]">Eckdaten</span>
 
