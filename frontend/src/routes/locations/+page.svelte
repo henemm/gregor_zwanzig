@@ -8,6 +8,7 @@
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import LocationForm from '$lib/components/LocationForm.svelte';
 	import WeatherConfigDialog from '$lib/components/WeatherConfigDialog.svelte';
+	import { EmptyState } from '$lib/components/ui/empty-state/index.js';
 	import SearchIcon from '@lucide/svelte/icons/search';
 	import MapPinIcon from '@lucide/svelte/icons/map-pin';
 	import CloudSunIcon from '@lucide/svelte/icons/cloud-sun';
@@ -112,12 +113,9 @@
 	{/if}
 
 	{#if locations.length === 0}
-		<div data-testid="empty-state" class="rounded-lg border border-dashed p-10 text-center">
-			<MapPinIcon class="mx-auto mb-3 size-10 text-muted-foreground/40" />
-			<p class="font-medium">Keine Locations vorhanden</p>
-			<p class="mt-1 text-sm text-muted-foreground">Fuege Orte hinzu, um Wetter-Daten abzurufen und zu vergleichen.</p>
-			<Btn variant="outline" class="mt-4" onclick={openCreate}>Erste Location erstellen</Btn>
-		</div>
+		<EmptyState icon={MapPinIcon} title="Keine Locations vorhanden" description="Füge Orte hinzu, um Wetterdaten abzurufen und zu vergleichen.">
+			<Btn variant="outline" onclick={openCreate}>Ort hinzufügen</Btn>
+		</EmptyState>
 	{:else}
 		<div class="relative mb-3 max-w-xs">
 			<SearchIcon class="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />

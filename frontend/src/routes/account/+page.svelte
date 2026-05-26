@@ -1,6 +1,8 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card/index.js';
+	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
+	import { Btn } from '$lib/components/ui/btn/index.js';
 	import { api } from '$lib/api.js';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
@@ -28,6 +30,8 @@
 	let editingId = $state<string | null>(null);
 	let editName = $state('');
 	let presetError = $state<string | null>(null);
+	let deletePresetTarget: MetricPreset | null = $state(null);
+	let showDeleteAccountDialog = $state(false);
 
 	function startEdit(p: MetricPreset) {
 		editingId = p.id;
@@ -53,8 +57,14 @@
 		}
 	}
 
-	async function deletePreset(p: MetricPreset) {
-		if (!window.confirm(`Profil „${p.name}" wirklich löschen?`)) return;
+	function deletePreset(p: MetricPreset) {
+		deletePresetTarget = p;
+	}
+
+	async function confirmDeletePreset() {
+		if (!deletePresetTarget) return;
+		const p = deletePresetTarget;
+		deletePresetTarget = null;
 		try {
 			await api.del(`/api/metric-presets/${p.id}`);
 			presets = removePreset(presets, p.id);
@@ -196,12 +206,12 @@
 		trip_reports_hourly: 'Trip-Checks',
 	};
 
-	async function deleteAccount() {
-		const confirmed = window.confirm(
-			'Bist du sicher? Alle deine Daten werden unwiderruflich gelöscht.'
-		);
-		if (!confirmed) return;
+	function deleteAccount() {
+		showDeleteAccountDialog = true;
+	}
 
+	async function confirmDeleteAccount() {
+		showDeleteAccountDialog = false;
 		try {
 			await api.del('/api/auth/account');
 			window.location.href = '/login';
@@ -662,4 +672,42 @@
 			{/if}
 		</Card.Content>
 	</Card.Root>
+
+	<!-- Preset löschen Dialog -->
+	<Dialog.Root
+		open={deletePresetTarget !== null}
+		onOpenChange={(open) => { if (!open) deletePresetTarget = null; }}
+	>
+		<Dialog.Content>
+			<Dialog.Header>
+				<Dialog.Title>Profil löschen</Dialog.Title>
+				<Dialog.Description>
+					Möchtest du „{deletePresetTarget?.name}" wirklich löschen?
+				</Dialog.Description>
+			</Dialog.Header>
+			<Dialog.Footer>
+				<Btn variant="outline" onclick={() => (deletePresetTarget = null)}>Abbrechen</Btn>
+				<Btn variant="destructive" onclick={confirmDeletePreset}>Löschen</Btn>
+			</Dialog.Footer>
+		</Dialog.Content>
+	</Dialog.Root>
+
+	<!-- Account löschen Dialog -->
+	<Dialog.Root
+		open={showDeleteAccountDialog}
+		onOpenChange={(open) => { if (!open) showDeleteAccountDialog = false; }}
+	>
+		<Dialog.Content>
+			<Dialog.Header>
+				<Dialog.Title>Account löschen</Dialog.Title>
+				<Dialog.Description>
+					Bist du sicher? Alle deine Daten werden unwiderruflich gelöscht.
+				</Dialog.Description>
+			</Dialog.Header>
+			<Dialog.Footer>
+				<Btn variant="outline" onclick={() => (showDeleteAccountDialog = false)}>Abbrechen</Btn>
+				<Btn variant="destructive" onclick={confirmDeleteAccount}>Account löschen</Btn>
+			</Dialog.Footer>
+		</Dialog.Content>
+	</Dialog.Root>
 </div>

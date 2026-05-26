@@ -32,6 +32,8 @@
 	import { WIcon } from '$lib/components/ui/wicon/index.js';
 	import { wmoToWIconKind } from '$lib/utils/weatherUtils.js';
 	import { Select } from '$lib/components/ui/select';
+	import { EmptyState } from '$lib/components/ui/empty-state/index.js';
+	import MapPinIcon from '@lucide/svelte/icons/map-pin';
 
 	let { data } = $props();
 
@@ -314,6 +316,11 @@
 			</Btn>
 		</div>
 
+		{#if locations.length === 0}
+			<EmptyState icon={MapPinIcon} title="Keine Orte konfiguriert" description="Füge zuerst einen Ort hinzu, um einen Vergleich zu starten.">
+				<Btn variant="outline" href="/locations">Zu Locations</Btn>
+			</EmptyState>
+		{:else}
 		<PresetHeader
 			bind:compareDate={targetDate}
 			bind:twStart
@@ -474,6 +481,7 @@
 				{subscriptions}
 				onsavebriefing={() => (showSaveAsSubDialog = true)}
 			/>
+		{/if}
 		{/if}
 	</div>
 </div>

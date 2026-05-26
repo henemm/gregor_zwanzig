@@ -8,6 +8,7 @@
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import SubscriptionForm from '$lib/components/SubscriptionForm.svelte';
 	import WeatherConfigDialog from '$lib/components/WeatherConfigDialog.svelte';
+	import { EmptyState } from '$lib/components/ui/empty-state/index.js';
 	import SearchIcon from '@lucide/svelte/icons/search';
 	import BellIcon from '@lucide/svelte/icons/bell';
 	import CloudSunIcon from '@lucide/svelte/icons/cloud-sun';
@@ -136,12 +137,9 @@
 	{/if}
 
 	{#if subscriptions.length === 0}
-		<div data-testid="empty-state" class="rounded-lg border border-dashed p-10 text-center">
-			<BellIcon class="mx-auto mb-3 size-10 text-muted-foreground/40" />
-			<p class="font-medium">Keine Abos vorhanden</p>
-			<p class="mt-1 text-sm text-muted-foreground">Erstelle dein erstes Abo fuer automatische Wetter-Vergleiche.</p>
-			<Btn variant="outline" class="mt-4" onclick={openCreate}>Erstes Abo erstellen</Btn>
-		</div>
+		<EmptyState icon={BellIcon} title="Keine Abos vorhanden" description="Erstelle dein erstes Abo für automatische Wetter-Vergleiche.">
+			<Btn variant="outline" onclick={openCreate}>Abo erstellen</Btn>
+		</EmptyState>
 	{:else}
 		<div class="relative mb-3 max-w-xs">
 			<SearchIcon class="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />

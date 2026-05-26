@@ -18,6 +18,7 @@
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { Select } from '$lib/components/ui/select';
 	import { Eyebrow } from '$lib/components/ui/eyebrow/index.js';
+	import { EmptyState } from '$lib/components/ui/empty-state/index.js';
 	import { deriveTripStatus } from '$lib/utils/tripStatus';
 
 	const now = new Date();
@@ -280,12 +281,9 @@
 	{/if}
 
 	{#if trips.length === 0}
-		<div data-testid="empty-state" class="rounded-lg border border-dashed p-10 text-center">
-			<RouteIcon class="mx-auto mb-3 size-10 text-muted-foreground/40" />
-			<p class="font-medium">Noch keine Tour.</p>
-			<p class="mt-1 text-sm text-muted-foreground">Lege deine erste Tour an — Wizard in 4 Schritten.</p>
-			<Btn variant="outline" class="mt-4" onclick={() => goto('/trips/new')}>+ Neue Tour</Btn>
-		</div>
+		<EmptyState icon={RouteIcon} title="Noch keine Tour." description="Lege deine erste Tour an — Wizard in 4 Schritten.">
+			<Btn variant="outline" onclick={() => goto('/trips/new')}>+ Neue Tour</Btn>
+		</EmptyState>
 	{:else}
 		<div class="relative mb-3 max-w-[380px]">
 			<SearchIcon class="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />

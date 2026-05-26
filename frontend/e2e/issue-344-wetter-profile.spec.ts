@@ -121,8 +121,12 @@ test.describe('Issue #344: Wetter-Profile-Karte auf /account', () => {
 		await page.goto('/account');
 		await expect(page.locator(`[data-testid="wetter-profile-row-${id}"]`)).toBeVisible();
 
-		page.once('dialog', (d) => d.accept());
 		await page.click(`[data-testid="wetter-profile-delete-${id}"]`);
+		// Dialog.Root öffnet sich (statt window.confirm)
+		const dialog = page.locator('[role="dialog"]');
+		await expect(dialog).toBeVisible();
+		await dialog.getByRole('button', { name: 'Löschen' }).click();
+		await expect(dialog).not.toBeVisible();
 
 		await expect(page.locator(`[data-testid="wetter-profile-row-${id}"]`)).toHaveCount(0);
 
@@ -135,8 +139,12 @@ test.describe('Issue #344: Wetter-Profile-Karte auf /account', () => {
 		const id = await seedPreset(request, `${PREFIX} Bleibt`, ['temperature']);
 
 		await page.goto('/account');
-		page.once('dialog', (d) => d.dismiss());
 		await page.click(`[data-testid="wetter-profile-delete-${id}"]`);
+		// Dialog.Root öffnet sich
+		const dialog = page.locator('[role="dialog"]');
+		await expect(dialog).toBeVisible();
+		await dialog.getByRole('button', { name: 'Abbrechen' }).click();
+		await expect(dialog).not.toBeVisible();
 
 		await expect(page.locator(`[data-testid="wetter-profile-row-${id}"]`)).toBeVisible();
 	});
