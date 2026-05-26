@@ -20,7 +20,7 @@
 	// Factory-Pattern (CLAUDE.md Safari): benannte Handler.
 
 	import GripVertical from '@lucide/svelte/icons/grip-vertical';
-	import Trash2 from '@lucide/svelte/icons/trash-2';
+	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 	import { Pill } from '$lib/components/ui/pill';
 	import type { Stage } from '$lib/types';
 	import { formatStageNumber, isPauseStage } from '../wizardHelpers.ts';
@@ -97,6 +97,6 @@
 		aria-label="Etappe entfernen"
 		class="rounded p-1 text-[var(--g-ink-muted)] hover:bg-[var(--g-ink-faint)]/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--g-accent)]"
 	>
-		<Trash2 class="size-4" />
+		<Trash2Icon class="size-4" />
 	</button>
 </div>

@@ -20,7 +20,7 @@
 	// Safari/Factory: benannte Handler statt anonymer Closures.
 
 	import { getContext } from 'svelte';
-	import Upload from '@lucide/svelte/icons/upload';
+	import UploadIcon from '@lucide/svelte/icons/upload';
 	import { uploadGpx } from '$lib/api';
 	import { naturalSort } from '$lib/utils/naturalSort.js';
 	import type { Stage } from '$lib/types';
@@ -208,7 +208,7 @@
 			onclick={handleDropZoneClick}
 			onkeydown={handleDropZoneKeydown}
 		>
-			<Upload class="mx-auto mb-2 size-8 text-[var(--g-ink-muted)]" />
+			<UploadIcon class="mx-auto mb-2 size-8 text-[var(--g-ink-muted)]" />
 			<p class="font-medium">GPX-Dateien hierher ziehen</p>
 			<p class="text-sm text-[var(--g-ink-muted)] mt-1">oder klicken zum Auswählen</p>
 			<input

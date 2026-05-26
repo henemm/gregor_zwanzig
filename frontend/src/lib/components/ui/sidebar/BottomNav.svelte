@@ -3,7 +3,7 @@
 	import LayoutDashboard from '@lucide/svelte/icons/layout-dashboard';
 	import RouteIcon from '@lucide/svelte/icons/route';
 	import GitCompare from '@lucide/svelte/icons/git-compare';
-	import Archive from '@lucide/svelte/icons/archive';
+	import ArchiveIcon from '@lucide/svelte/icons/archive';
 
 	// Issue #373 — additive mobile-shell-Props (backward-compatible, Default
 	// undefined; ohne sie laeuft die route-basierte #267-Aktiv-Logik unveraendert).
@@ -18,7 +18,7 @@
 		{ href: '/',          id: 'home',    label: 'Übersicht', icon: LayoutDashboard, testid: 'bottom-nav-item-home'     },
 		{ href: '/trips',     id: 'trips',   label: 'Touren',    icon: RouteIcon,       testid: 'bottom-nav-item-trips'    },
 		{ href: '/compare',   id: 'compare', label: 'Vergleich', icon: GitCompare,      testid: 'bottom-nav-item-compare'  },
-		{ href: '/archiv',    id: 'archive', label: 'Archiv',    icon: Archive,         testid: 'bottom-nav-item-archive'   },
+		{ href: '/archiv',    id: 'archive', label: 'Archiv',    icon: ArchiveIcon,     testid: 'bottom-nav-item-archive'   },
 	];
 </script>
 

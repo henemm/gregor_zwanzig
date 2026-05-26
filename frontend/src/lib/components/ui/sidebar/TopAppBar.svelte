@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Menu from '@lucide/svelte/icons/menu';
-	import X from '@lucide/svelte/icons/x';
+	import XIcon from '@lucide/svelte/icons/x';
 	import MoonIcon from '@lucide/svelte/icons/moon';
 	import SunIcon from '@lucide/svelte/icons/sun';
 	import Wordmark from '$lib/components/ui/wordmark/Wordmark.svelte';
@@ -48,7 +48,7 @@
 		aria-label="Menu"
 	>
 		{#if mobileMenuOpen}
-			<X class="h-5 w-5" />
+			<XIcon class="h-5 w-5" />
 		{:else}
 			<Menu class="h-5 w-5" />
 		{/if}

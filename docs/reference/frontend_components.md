@@ -1,7 +1,7 @@
 # Frontend Components Reference
 
-**Updated:** 2026-05-25  
-**Version:** 1.3
+**Updated:** 2026-05-26  
+**Version:** 1.4
 
 ## Overview
 
@@ -643,6 +643,16 @@ Detail-Props weiterer Komponenten stehen im jeweiligen Quellcode/Spec.
 | dialog | `ui/dialog/dialog.svelte` (+ dialog-* Teile) | shadcn-Modal-Bausteine |
 | WIcon | `ui/wicon/WIcon.svelte` | Lucide-Wrapper, 8 Wetter-Icon-Kinds, Issue #322 |
 | Wordmark | `ui/wordmark/Wordmark.svelte` | Wortmarke „gregor.zwanzig" (siehe Props unten), Issue #293 |
+
+#### Icons (Lucide)
+
+**WICHTIG:** Das Icon-System ist in `docs/reference/sveltekit_best_practices.md` → „Icons (Lucide)" dokumentiert. Dort stehen die verbindlichen Regeln für:
+- **Import-Pfade:** Immer `@lucide/svelte/icons/<name>` (kein Barrel-Import)
+- **Alias-Namenskonvention:** Kurze/mehrdeutige Namen mit `-Icon`-Suffix (`PencilIcon`, `CheckIcon`, `XIcon`, `Trash2Icon`, `PlusIcon`, `UploadIcon`, `ArchiveIcon`); mehrsilbige selbsterklärende Namen ohne Suffix (`GripVertical`, `ChevronDown`, `EllipsisVertical`, `Loader2`)
+- **Genehmigte Aktions-Icons:** Vollständige Liste für Bearbeiten/Löschen/Schließen/Hinzufügen/Bestätigen/usw.
+- **Wetter-Icons:** Nur `<WIcon kind="..." />` verwenden, nicht direkt `Cloud`/`Sun`/`CloudRain` etc. (Issue #322)
+
+**Beziehung zu WIcon:** `WIcon` ist ein spezialisierter Wrapper für Wetter-Inhalte (8 kinds: rain, sun, wind, snow, thunder, fog + 2 Fallbacks). Alle anderen UI-Icons (Buttons, Menüs, Listen) nutzen Lucide-Icons gemäß der Konvention oben.
 | TopAppBar | `ui/sidebar/TopAppBar.svelte` | Fixierte Top-Bar (mobile), Issue #267 (Detail oben) |
 | BottomNav | `ui/sidebar/BottomNav.svelte` | Fixierte Bottom-Navigation (mobile), Issue #267 (Detail oben) |
 | Sidebar | `ui/sidebar/Sidebar.svelte` | Haupt-Navigation (Desktop + Drawer), Issue #145 (Detail oben) |

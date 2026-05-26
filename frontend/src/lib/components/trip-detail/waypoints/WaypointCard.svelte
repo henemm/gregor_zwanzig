@@ -8,9 +8,9 @@
 	// Aktiv-Hervorhebung: bg-[var(--g-surface-raised)] wenn active === true
 	// Pin-Stil: suggested → gestrichelt orange; sonst solid ink-strong
 
-	import Check from '@lucide/svelte/icons/check';
-	import X from '@lucide/svelte/icons/x';
-	import Pencil from '@lucide/svelte/icons/pencil';
+	import CheckIcon from '@lucide/svelte/icons/check';
+	import XIcon from '@lucide/svelte/icons/x';
+	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import { Btn } from '$lib/components/ui/btn';
 	import WaypointPin from './WaypointPin.svelte';
 	import type { Waypoint } from '$lib/types';
@@ -85,7 +85,7 @@
 			}}
 			aria-label="Wegpunkt bestätigen"
 		>
-			<Check class="size-3" />
+			<CheckIcon class="size-3" />
 		</Btn>
 		<Btn
 			variant="ghost"
@@ -97,7 +97,7 @@
 			}}
 			aria-label="Wegpunkt verwerfen"
 		>
-			<X class="size-3" />
+			<XIcon class="size-3" />
 		</Btn>
 	{:else}
 		<!-- Aktionen fuer manuelle (bestaetigte) Wegpunkte -->
@@ -111,7 +111,7 @@
 			}}
 			aria-label="Wegpunkt umbenennen"
 		>
-			<Pencil class="size-3" />
+			<PencilIcon class="size-3" />
 		</Btn>
 		<Btn
 			variant="ghost"
@@ -123,7 +123,7 @@
 			}}
 			aria-label="Wegpunkt löschen"
 		>
-			<X class="size-3" />
+			<XIcon class="size-3" />
 		</Btn>
 	{/if}
 </div>

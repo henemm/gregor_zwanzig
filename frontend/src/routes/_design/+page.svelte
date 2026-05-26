@@ -6,7 +6,7 @@
 	import { Dot } from '$lib/components/ui/dot';
 	import { TopoBg } from '$lib/components/ui/topo';
 	import { ElevSparkline } from '$lib/components/ui/elev-sparkline';
-	import Pencil from '@lucide/svelte/icons/pencil';
+	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import { profileSignature } from '$lib/utils/profileSignature';
 	import type { ActivityProfile } from '$lib/types';
 
@@ -91,14 +91,14 @@
 		<div class="space-y-3">
 			<Eyebrow>Btn — Sizes</Eyebrow>
 			<div class="flex gap-2 items-center flex-wrap">
-				<Btn size="xs"      data-testid="btn-showcase-size-xs"><Pencil />XS</Btn>
-				<Btn size="sm"      data-testid="btn-showcase-size-sm"><Pencil />SM</Btn>
-				<Btn size="md"      data-testid="btn-showcase-size-md"><Pencil />MD</Btn>
-				<Btn size="lg"      data-testid="btn-showcase-size-lg"><Pencil />LG</Btn>
-				<Btn size="icon-xs" data-testid="btn-showcase-size-icon-xs" aria-label="Bearbeiten XS"><Pencil /></Btn>
-				<Btn size="icon-sm" data-testid="btn-showcase-size-icon-sm" aria-label="Bearbeiten SM"><Pencil /></Btn>
-				<Btn size="icon"    data-testid="btn-showcase-size-icon"    aria-label="Bearbeiten"><Pencil /></Btn>
-				<Btn size="icon-lg" data-testid="btn-showcase-size-icon-lg" aria-label="Bearbeiten LG"><Pencil /></Btn>
+				<Btn size="xs"      data-testid="btn-showcase-size-xs"><PencilIcon />XS</Btn>
+				<Btn size="sm"      data-testid="btn-showcase-size-sm"><PencilIcon />SM</Btn>
+				<Btn size="md"      data-testid="btn-showcase-size-md"><PencilIcon />MD</Btn>
+				<Btn size="lg"      data-testid="btn-showcase-size-lg"><PencilIcon />LG</Btn>
+				<Btn size="icon-xs" data-testid="btn-showcase-size-icon-xs" aria-label="Bearbeiten XS"><PencilIcon /></Btn>
+				<Btn size="icon-sm" data-testid="btn-showcase-size-icon-sm" aria-label="Bearbeiten SM"><PencilIcon /></Btn>
+				<Btn size="icon"    data-testid="btn-showcase-size-icon"    aria-label="Bearbeiten"><PencilIcon /></Btn>
+				<Btn size="icon-lg" data-testid="btn-showcase-size-icon-lg" aria-label="Bearbeiten LG"><PencilIcon /></Btn>
 			</div>
 		</div>
 
@@ -106,7 +106,7 @@
 			<Eyebrow>Btn — States</Eyebrow>
 			<div class="flex gap-2 items-center flex-wrap">
 				<Btn disabled data-testid="btn-showcase-state-disabled">Disabled</Btn>
-				<Btn data-testid="btn-showcase-state-icon"><Pencil />With Icon</Btn>
+				<Btn data-testid="btn-showcase-state-icon"><PencilIcon />With Icon</Btn>
 				<Btn href="/_design" data-testid="btn-showcase-state-link">As Link</Btn>
 				<Btn href="/_design" disabled data-testid="btn-showcase-state-link-disabled">Link Disabled</Btn>
 			</div>

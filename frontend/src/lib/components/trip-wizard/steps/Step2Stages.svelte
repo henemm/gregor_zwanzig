@@ -19,7 +19,7 @@
 	// Safari/Factory: benannte Handler statt anonymer Closures (Spec §6, §7).
 
 	import { getContext } from 'svelte';
-	import Plus from '@lucide/svelte/icons/plus';
+	import PlusIcon from '@lucide/svelte/icons/plus';
 	import { dndzone, type DndEvent } from 'svelte-dnd-action';
 	import { flip } from 'svelte/animate';
 	import type { Stage } from '$lib/types';
@@ -144,7 +144,7 @@
 							class="opacity-0 hover:opacity-100 focus-visible:opacity-100 transition-opacity inline-flex items-center gap-1 rounded-full border border-[var(--g-ink-faint)]/30 bg-white/60 px-2 py-0.5 text-xs text-[var(--g-ink-muted)]"
 							aria-label="Pausentag nach dieser Etappe einfügen"
 						>
-							<Plus class="size-3" />
+							<PlusIcon class="size-3" />
 							Pause
 						</button>
 					</div>

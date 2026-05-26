@@ -17,8 +17,8 @@
 	// Bestaetigen-Btn: nur sichtbar wenn waypoint.suggested === true (AC#11).
 	// Verwerfen-Btn: immer sichtbar.
 
-	import Check from '@lucide/svelte/icons/check';
-	import X from '@lucide/svelte/icons/x';
+	import CheckIcon from '@lucide/svelte/icons/check';
+	import XIcon from '@lucide/svelte/icons/x';
 	import type { Waypoint } from '$lib/types';
 
 	interface Props {
@@ -88,7 +88,7 @@
 			data-audit="audit:exempt: Icon (§1.4.11, 3:1)"
 			class="rounded p-1 text-[var(--g-accent)] hover:bg-[var(--g-accent)]/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--g-accent)]"
 		>
-			<Check class="size-4" />
+			<CheckIcon class="size-4" />
 		</button>
 	{/if}
 
@@ -99,6 +99,6 @@
 		aria-label="Wegpunkt verwerfen"
 		class="rounded p-1 text-[var(--g-ink-muted)] hover:bg-[var(--g-ink-faint)]/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--g-accent)]"
 	>
-		<X class="size-4" />
+		<XIcon class="size-4" />
 	</button>
 </div>

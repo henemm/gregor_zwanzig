@@ -1,7 +1,7 @@
 # SvelteKit Best Practices – Gregor Frontend
 
-**Updated:** 2026-05-09  
-**Version:** 1.0
+**Updated:** 2026-05-26  
+**Version:** 1.1
 
 ## Overview
 
@@ -743,6 +743,70 @@ Currently, Gregor uses a light-mode-only design. When dark mode is added:
 3. A theme switcher will toggle the color scheme globally
 
 No component refactoring needed when dark mode arrives.
+
+---
+
+## Icons (Lucide)
+
+Gregor nutzt [Lucide](https://lucide.dev/) (`@lucide/svelte`) als einzige Icon-Bibliothek
+für UI-Aktions-Icons. Diese Sektion ist die **verbindliche und einzige schreibende Autorität**
+für Icon-Auswahl und Import-Alias-Namensgebung.
+
+### 1. Import-Pfad-Regel
+
+Immer den **tiefen Import-Pfad** (`@lucide/svelte/icons/<name>`) verwenden, niemals den
+Barrel-Import — der Barrel lädt die gesamte Bibliothek ins Bundle.
+
+```svelte
+<!-- Korrekt: tiefer Pfad, ein Icon -->
+import PencilIcon from '@lucide/svelte/icons/pencil';
+import Trash2Icon from '@lucide/svelte/icons/trash-2';
+
+<!-- Verboten: Barrel-Import lädt die gesamte Bibliothek -->
+import { Pencil, Trash2 } from '@lucide/svelte';
+```
+
+### 2. Alias-Namens-Konvention
+
+Kurze oder mehrdeutige Icon-Namen erhalten das Suffix `Icon`. Mehrsilbige,
+selbsterklärende Namen bleiben ohne Suffix.
+
+| Kategorie | Beispiele mit `Icon`-Suffix | Beispiele ohne Suffix |
+|-----------|-----------------------------|-----------------------|
+| Kurz / mehrdeutig | `PencilIcon`, `Trash2Icon`, `XIcon`, `CheckIcon`, `PlusIcon`, `UploadIcon`, `ArchiveIcon`, `BellIcon`, `SearchIcon` | — |
+| Mehrsilbig / selbsterklärend | — | `GripVertical`, `ChevronDown`, `ChevronUp`, `LayoutDashboard`, `GitCompare`, `LogOut`, `EllipsisVertical`, `Loader2` |
+
+**Faustformel:** Ein Name, der als JavaScript-Bezeichner allein stehend wie eine gewöhnliche
+Variable aussieht (`X`, `Check`, `Plus`), bekommt `Icon` als Suffix. Namen, die eindeutig ein
+visuelles Konzept beschreiben (`ChevronDown`, `GripVertical`), bleiben unverändert.
+
+### 3. Genehmigte Aktions-Icons
+
+| Aktion | Lucide-Icon | Import-Alias |
+|--------|-------------|--------------|
+| Bearbeiten | `pencil` | `PencilIcon` |
+| Löschen | `trash-2` | `Trash2Icon` |
+| Schließen / Dialog-X | `x` | `XIcon` |
+| Entfernen aus Liste | `x` | `XIcon` |
+| Hinzufügen / Neu | `plus` | `PlusIcon` |
+| Bestätigen / Speichern | `check` | `CheckIcon` |
+| Suche | `search` | `SearchIcon` |
+| Drag-Handle | `grip-vertical` | `GripVertical` |
+| Kebab-Menü | `ellipsis-vertical` | `EllipsisVertical` |
+| Laden / Spinner | `loader-2` | `Loader2` |
+| Hochladen / Import | `upload` | `UploadIcon` |
+| Archivieren | `archive` | `ArchiveIcon` |
+| Alarm / Benachrichtigung | `bell` | `BellIcon` |
+
+### 4. Wetter-Icons — Abgrenzung
+
+**Wichtig:** Für Wetter-Icons (Sonne, Regen, Schnee, Gewitter usw.) ausschließlich
+`<WIcon kind="..." />` aus `$lib/components/ui/wicon` verwenden. Lucide-Wetter-Icons
+(`Cloud`, `Sun`, `CloudRain`, …) dürfen in der App-UI **nicht** direkt importiert werden.
+`WIcon` ist in `docs/specs/modules/issue_322_wicon_komponente.md` spezifiziert.
+
+**Kreuzreferenz:** AP-009 (Emojis als Icons verboten — stattdessen Lucide bzw. WIcon),
+AP-005 (kein Icon-Überfluss — nicht jede Zeile braucht ein Icon).
 
 ---
 
