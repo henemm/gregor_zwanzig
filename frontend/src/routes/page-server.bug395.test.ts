@@ -1,9 +1,14 @@
-// TDD RED: Bug #395 — SSR-Loader-Timeout fehlt auf Startseite (+page.server.ts).
+// Bug #395 — SSR-Loader-Timeout auf Startseite (+page.server.ts).
 //
 // Spec: docs/specs/modules/bug_395_ssr_timeout.md
 //
+// Issue #395 — Loader holt KEIN Live-Wetter mehr; trips/subscriptions behalten
+// defensive AbortSignal.timeout(5000), damit `/` bei langsamen Endpoints nicht
+// haengt (fail-soft). Den "kein Live-Wetter"-Guard prueft separat
+// frontend/src/lib/home-loader-no-weather.test.ts.
+//
 // Source-Inspection-Sentinel (mock-frei): Prüft, dass AbortSignal.timeout()
-// in +page.server.ts gesetzt ist. Schlägt fehl, solange der Fix fehlt.
+// auf den trips/subscriptions-Fetches in +page.server.ts gesetzt ist.
 //
 // Ausführen:
 //   cd frontend && node --experimental-strip-types --test \
@@ -18,16 +23,6 @@ import { dirname, join } from 'node:path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const src = readFileSync(join(__dirname, '+page.server.ts'), 'utf-8');
 
-test('AC-1: Wetter-Fetch hat AbortSignal.timeout(3500)', () => {
-	// GIVEN: +page.server.ts SSR-Loader
-	// WHEN: der Source-Text gelesen wird
-	// THEN: enthält der heroWeather-Fetch AbortSignal.timeout(3500)
-	assert.ok(
-		src.includes('AbortSignal.timeout(3500)'),
-		'AbortSignal.timeout(3500) fehlt im Wetter-Fetch — Startseite kann bis zu 57s hängen'
-	);
-});
-
 test('AC-2: trips/subscriptions-Fetches haben AbortSignal.timeout(5000) (mind. 2×)', () => {
 	// GIVEN: +page.server.ts SSR-Loader
 	// WHEN: der Source-Text gelesen wird
@@ -39,13 +34,14 @@ test('AC-2: trips/subscriptions-Fetches haben AbortSignal.timeout(5000) (mind. 2
 	);
 });
 
-test('AC-3: AbortSignal.timeout kommt insgesamt mindestens 3× vor', () => {
+test('AC-3: AbortSignal.timeout kommt insgesamt mindestens 2× vor', () => {
 	// GIVEN: +page.server.ts SSR-Loader
 	// WHEN: alle fetch()-Aufrufe gezählt werden
-	// THEN: sind alle 3 Fetches (weather + trips + subscriptions) mit Timeout gesichert
+	// THEN: sind beide Fetches (trips + subscriptions) mit Timeout gesichert.
+	//   Kein Wetter-Fetch mehr (Issue #395), daher nur noch >=2× statt >=3×.
 	const matches = src.match(/AbortSignal\.timeout\(/g) ?? [];
 	assert.ok(
-		matches.length >= 3,
-		`AbortSignal.timeout erwartet >=3×, gefunden: ${matches.length} — nicht alle Fetches sind abgesichert`
+		matches.length >= 2,
+		`AbortSignal.timeout erwartet >=2× für trips+subscriptions, gefunden: ${matches.length} — nicht alle Fetches sind abgesichert`
 	);
 });
