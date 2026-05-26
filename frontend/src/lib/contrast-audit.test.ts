@@ -146,3 +146,23 @@ test('AC-8: _design-Route enthaelt Kontrast-Belege-Sektion', () => {
 		'data-testid="contrast-section" fehlt in _design/+page.svelte'
 	);
 });
+
+test('AC-1 §1.4.11: --g-ink-faint nirgends als SVG stroke ohne audit:exempt', () => {
+	const offenders: string[] = [];
+	for (const f of FILES.filter(f => f.endsWith('.svelte'))) {
+		const content = readFileSync(f, 'utf-8');
+		const re = /stroke="var\(--g-ink-faint\)"/g;
+		let m: RegExpExecArray | null;
+		while ((m = re.exec(content)) !== null) {
+			const ctx = content.slice(Math.max(0, m.index - 60), m.index + 120);
+			if (/audit:exempt/.test(ctx)) continue;
+			const line = content.slice(0, m.index).split('\n').length;
+			offenders.push(`${f.replace(SRC, '')}:${line}`);
+		}
+	}
+	assert.equal(
+		offenders.length,
+		0,
+		`stroke="var(--g-ink-faint)" ohne audit:exempt (§1.4.11 FAIL):\n  ${offenders.join('\n  ')}`
+	);
+});

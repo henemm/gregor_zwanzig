@@ -77,7 +77,7 @@
 		<polyline
 			points={polylinePoints}
 			fill="none"
-			stroke="var(--g-ink-faint)"
+			stroke="var(--g-ink-muted)"
 			stroke-width="1.5"
 		/>
 	{/if}

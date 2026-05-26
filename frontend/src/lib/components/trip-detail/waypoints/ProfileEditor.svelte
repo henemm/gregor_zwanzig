@@ -132,30 +132,33 @@
 	{/if}
 
 	<!-- Gridlines bei 25%, 50%, 75% der Zeichenflaeche-Hoehe -->
+	<!-- audit:exempt — dekorativ -->
 	<line
+		stroke="var(--g-ink-faint)"
 		x1={padding}
 		y1={padding + innerH * 0.25}
 		x2={svgW - padding}
 		y2={padding + innerH * 0.25}
-		stroke="var(--g-ink-faint)"
 		stroke-dasharray="2,4"
 		stroke-width="0.5"
 	/>
+	<!-- audit:exempt — dekorativ -->
 	<line
+		stroke="var(--g-ink-faint)"
 		x1={padding}
 		y1={padding + innerH * 0.5}
 		x2={svgW - padding}
 		y2={padding + innerH * 0.5}
-		stroke="var(--g-ink-faint)"
 		stroke-dasharray="2,4"
 		stroke-width="0.5"
 	/>
+	<!-- audit:exempt — dekorativ -->
 	<line
+		stroke="var(--g-ink-faint)"
 		x1={padding}
 		y1={padding + innerH * 0.75}
 		x2={svgW - padding}
 		y2={padding + innerH * 0.75}
-		stroke="var(--g-ink-faint)"
 		stroke-dasharray="2,4"
 		stroke-width="0.5"
 	/>
@@ -164,7 +167,7 @@
 		<polyline
 			points={polylinePoints}
 			fill="none"
-			stroke="var(--g-ink-faint)"
+			stroke="var(--g-ink-muted)"
 			stroke-width="1.5"
 		/>
 	{/if}

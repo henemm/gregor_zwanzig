@@ -101,7 +101,14 @@ Alle 86 waren echter Lesetext / funktionale Icons (Drag-Handles, Upload-Icon →
 - `--g-success #3a7d44` auf `--g-paper` = 4.55:1 — gerade noch AA, sehr knapp. Beobachten.
 - `--g-warn`/`--g-warning` fallen für Body-Text durch — werden aktuell nicht als Textfarbe genutzt; bei künftiger Textnutzung gilt PO-Eskalation (Wert anpassen oder Symbol-Affordance).
 - Token-Divergenz (named `--g-ink-faint` vs. numbered `--g-ink-4`, `--g-ink-muted` vs. `--g-ink-3`, `--g-warn` vs. `--g-warning`) ist OUT OF SCOPE — eigener Rename-Issue. Werte hier nur dokumentiert, nicht geändert (PO-Constraint C6).
-- **SVG-Chart-Strokes (§1.4.11 Non-Text-Kontrast, OUT OF SCOPE für #377):** Höhenprofil-Datenkurven nutzen `stroke="var(--g-ink-faint)"` (2.82:1 < 3:1) in `ProfileEditor.svelte` (`<polyline>` Z.140-Bereich) und `ProfileChart.svelte:80`. Das sind bedeutungstragende Grafik-Objekte und fallen unter WCAG §1.4.11 (3:1-Minimum), nicht unter den Text-Kontrast-Audit (§1.4.3) dieses Issues. **Empfehlung Folge-Issue:** Datenkurven → `--g-ink-3`/`--g-ink-muted` anheben. Die gestrichelten Gitter-Hilfslinien (`stroke-dasharray`, `stroke-width:0.5`) sind dekorativ und §1.4.11-exempt. Das Issue grenzt §1.4.11-Themen explizit als eigene Accessibility-Issues ab.
+
+## 6. SVG-Chart-Strokes (§1.4.11 Non-Text-Kontrast)
+
+**[BEHOBEN in Bug #383]** Höhenprofil-Datenkurven wurden gehärtet:
+- **Vorher:** `stroke="var(--g-ink-faint)"` (2.82:1 < 3:1) — FAIL §1.4.11
+- **Nachher:** `stroke="var(--g-ink-muted)"` (6.91:1) — PASS §1.4.11 AA
+
+Die gestrichelten Gitter-Hilfslinien (`stroke-dasharray`, `stroke-width:0.5`) in `ProfileEditor.svelte` sind dekorativ und §1.4.11-exempt — gekennzeichnet mit `audit:exempt`-Kommentaren. Neuer Source-Inspection-Test in `contrast-audit.test.ts` (AC-1 §1.4.11) verhindert zukünftige Regressionen bei Datenkurven-Strokes.
 
 ## 6. Showcase
 
