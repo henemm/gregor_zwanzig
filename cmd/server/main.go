@@ -103,6 +103,7 @@ func main() {
 	r.Post("/api/trips", handler.CreateTripHandler(s))
 	r.Put("/api/trips/{id}", handler.UpdateTripHandler(s))
 	r.Patch("/api/trips/{id}/state", handler.UpdateTripStateHandler(s))
+	r.Patch("/api/trips/{id}/waypoints/{waypointId}/confirm", handler.ConfirmWaypointHandler(s))
 	r.Delete("/api/trips/{id}", handler.DeleteTripHandler(s))
 	r.Get("/api/trips/{id}/stages/weather", handler.StagesWeatherHandler(s, weatherProvider))
 	r.Get("/api/subscriptions", handler.SubscriptionsHandler(s))

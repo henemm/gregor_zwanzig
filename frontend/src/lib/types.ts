@@ -37,6 +37,11 @@ export interface Waypoint {
 	// Issue #296 — vom Backend (Naismith) persistierte Ankunftszeit "HH:MM".
 	// Editor zeigt clientseitig live (computeArrivalTimes), BE ist authoritative.
 	arrival_calculated?: string;
+	// Issue #303 — algorithmische Wegpunktvorschläge + User-Override.
+	origin?: string;              // 'manual' | 'algorithmic'
+	confirmed?: boolean;          // true = vom User bestätigt
+	suggestion_reason?: string;   // 'detected_peak' | 'detected_valley' | 'detected_pass' | 'legacy_suggested'
+	arrival_override?: string;    // User-Override "HH:MM"
 }
 
 export interface Stage {

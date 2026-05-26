@@ -57,6 +57,11 @@ type Waypoint struct {
 	TimeWindow        *string `json:"time_window,omitempty"`
 	Suggested         bool    `json:"suggested,omitempty"`
 	ArrivalCalculated *string `json:"arrival_calculated,omitempty"` // Issue #296 — "HH:MM", vom Backend berechnet (Naismith)
+	// Issue #303 — algorithmische Wegpunktvorschläge + Override.
+	Origin           string  `json:"origin,omitempty"`            // "manual" | "algorithmic"; leer = "manual"
+	Confirmed        *bool   `json:"confirmed,omitempty"`         // *bool: false bleibt serialisierbar, nur nil wird ausgelassen
+	SuggestionReason *string `json:"suggestion_reason,omitempty"` // "detected_peak" | "detected_valley" | "detected_pass" | "legacy_suggested"
+	ArrivalOverride  *string `json:"arrival_override,omitempty"`  // User-Override "HH:MM"
 }
 
 type Stage struct {

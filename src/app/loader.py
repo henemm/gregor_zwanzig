@@ -10,7 +10,7 @@ import json
 import uuid
 from datetime import date
 from pathlib import Path
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 
 from app.models import (
     AlertMetric,
@@ -101,22 +101,40 @@ class LoaderError(Exception):
 _DATA_ROOT: str | None = None
 
 
-def load_trip(source: Union[str, Path, Dict[str, Any]]) -> Trip:
+def load_trip(
+    source: Union[str, Path, Dict[str, Any]],
+    data_dir: Optional[Union[str, Path]] = None,
+    user_id: str = "default",
+) -> Optional[Trip]:
     """
     Load a Trip from a JSON file or a dict.
 
     Accepts either a filesystem path (str/Path) or a pre-parsed JSON dict
     (Issue #205 — Tests use the dict form directly).
 
+    Issue #303: when ``data_dir`` is given, ``source`` is interpreted as a
+    trip ID and resolved to ``{data_dir}/users/{user_id}/trips/{id}.json``.
+    Returns ``None`` if that file does not exist (mirrors the Go store).
+
     Args:
-        source: Path to the JSON file or already-parsed trip dict
+        source: Path to the JSON file, a trip ID (with ``data_dir``), or a dict.
+        data_dir: Optional base data directory; activates trip-ID resolution.
+        user_id: User namespace under ``data_dir`` (default: "default").
 
     Returns:
-        Trip object
+        Trip object, or None if resolved via ``data_dir`` and not found.
 
     Raises:
         LoaderError: If the file cannot be loaded or is invalid
     """
+    if data_dir is not None and not isinstance(source, dict):
+        path = Path(data_dir) / "users" / user_id / "trips" / f"{source}.json"
+        if not path.exists():
+            return None
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return _parse_trip(data.get("trip", data))
+
     if isinstance(source, dict):
         return _parse_trip(source.get("trip", source))
 
@@ -157,6 +175,11 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
                 time_window=time_window,
                 # Issue #296 — persistierte Naismith-Ankunftszeit erhalten (Datenverlust-Regel)
                 arrival_calculated=wp_data.get("arrival_calculated"),
+                # Issue #303 — Vorschlags-Metadaten + Override (Datenverlust-Regel)
+                origin=wp_data.get("origin"),
+                confirmed=wp_data.get("confirmed"),
+                suggestion_reason=wp_data.get("suggestion_reason"),
+                arrival_override=wp_data.get("arrival_override"),
             )
             waypoints.append(waypoint)
 
@@ -688,6 +711,16 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             # Issue #296 — persistierte Naismith-Ankunftszeit erhalten (omitempty-Äquivalent)
             if wp.arrival_calculated:
                 wp_dict["arrival_calculated"] = wp.arrival_calculated
+            # Issue #303 — Vorschlags-Metadaten + Override (omitempty-Äquivalent).
+            # confirmed: `is not None` statt truthy — False muss persistiert werden.
+            if wp.origin:
+                wp_dict["origin"] = wp.origin
+            if wp.confirmed is not None:
+                wp_dict["confirmed"] = wp.confirmed
+            if wp.suggestion_reason:
+                wp_dict["suggestion_reason"] = wp.suggestion_reason
+            if wp.arrival_override:
+                wp_dict["arrival_override"] = wp.arrival_override
             waypoints_data.append(wp_dict)
 
         stage_dict = {
@@ -794,18 +827,30 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
     return data
 
 
-def save_trip(trip: Trip, user_id: str = "default") -> Path:
+def save_trip(
+    trip: Trip,
+    user_id: str = "default",
+    data_dir: Optional[Union[str, Path]] = None,
+) -> Path:
     """
     Save a trip to JSON file.
+
+    Issue #303: when ``data_dir`` is given, the trip is written to
+    ``{data_dir}/users/{user_id}/trips/{id}.json`` (test-isolation), otherwise
+    the configured data root is used.
 
     Args:
         trip: Trip object to save
         user_id: User identifier (default: "default")
+        data_dir: Optional base data directory override.
 
     Returns:
         Path to the saved file
     """
-    trips_dir = get_trips_dir(user_id)
+    if data_dir is not None:
+        trips_dir = Path(data_dir) / "users" / user_id / "trips"
+    else:
+        trips_dir = get_trips_dir(user_id)
     trips_dir.mkdir(parents=True, exist_ok=True)
 
     path = trips_dir / f"{trip.id}.json"

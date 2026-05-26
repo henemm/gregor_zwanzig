@@ -226,20 +226,34 @@ def gpx_to_stage_data(
     trip = segments_to_trip(segments, track, d)
 
     stage = trip.stages[0]  # 1 GPX = 1 Stage
+    waypoint_dicts = [
+        {
+            "id": wp.id,
+            "name": wp.name,
+            "lat": wp.lat,
+            "lon": wp.lon,
+            "elevation_m": wp.elevation_m,
+            "time_window": str(wp.time_window) if wp.time_window else None,
+        }
+        for wp in stage.waypoints
+    ]
+
+    # Issue #303 — algorithmische Wegpunkt-Anreicherung. Zweiter, unabhängiger
+    # detect_waypoints-Aufruf NACH der Segmentierung; greift NICHT in die
+    # Segmentierungspipeline ein. Additiv — Fehler dürfen den Parse nicht kippen.
+    try:
+        from services.route_analyzer import enrich_waypoints_from_detected
+        detected = detect_waypoints(track)
+        waypoint_dicts = enrich_waypoints_from_detected(
+            waypoint_dicts, detected, track
+        )
+    except Exception:
+        pass
+
     return {
         "name": stage.name,
         "date": stage.date.isoformat(),
-        "waypoints": [
-            {
-                "id": wp.id,
-                "name": wp.name,
-                "lat": wp.lat,
-                "lon": wp.lon,
-                "elevation_m": wp.elevation_m,
-                "time_window": str(wp.time_window) if wp.time_window else None,
-            }
-            for wp in stage.waypoints
-        ],
+        "waypoints": waypoint_dicts,
     }
 
 

@@ -317,6 +317,82 @@ func UpdateTripStateHandler(s *store.Store) http.HandlerFunc {
 	}
 }
 
+// confirmWaypointRequest is the PATCH /api/trips/{id}/waypoints/{waypointId}/confirm
+// input DTO (Issue #303). arrival_override is optional and only honored when
+// confirmed is true.
+type confirmWaypointRequest struct {
+	Confirmed       bool    `json:"confirmed"`
+	ArrivalOverride *string `json:"arrival_override,omitempty"`
+}
+
+// ConfirmWaypointHandler confirms (or unconfirms) a waypoint suggestion and
+// optionally stores a manual arrival_override. Issue #303 §5.
+//
+// Legacy compatibility: a waypoint with suggested==true and empty Origin is
+// normalized to Origin="algorithmic"/SuggestionReason="legacy_suggested".
+// arrival_calculated is recomputed via ComputeStageArrivals so the persisted
+// Naismith value stays current alongside the user override.
+func ConfirmWaypointHandler(s *store.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
+		tripID := chi.URLParam(r, "id")
+		waypointID := chi.URLParam(r, "waypointId")
+
+		trip, err := s.LoadTrip(tripID)
+		if err != nil || trip == nil {
+			http.NotFound(w, r)
+			return
+		}
+
+		var req confirmWaypointRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
+
+		found := false
+		for si := range trip.Stages {
+			for wi := range trip.Stages[si].Waypoints {
+				wp := &trip.Stages[si].Waypoints[wi]
+				if wp.ID != waypointID {
+					continue
+				}
+				found = true
+				// Legacy-Normalisierung: Suggested=true + leeres Origin → "algorithmic".
+				if wp.Origin == "" && wp.Suggested {
+					wp.Origin = "algorithmic"
+					reason := "legacy_suggested"
+					wp.SuggestionReason = &reason
+				}
+				confirmed := req.Confirmed
+				wp.Confirmed = &confirmed
+				if req.Confirmed {
+					wp.ArrivalOverride = req.ArrivalOverride
+				} else {
+					wp.ArrivalOverride = nil
+				}
+			}
+		}
+		if !found {
+			http.NotFound(w, r)
+			return
+		}
+
+		// Naismith-Ankunftszeiten nach der Änderung aktuell halten.
+		for si := range trip.Stages {
+			model.ComputeStageArrivals(&trip.Stages[si])
+		}
+
+		if err := s.SaveTrip(*trip); err != nil {
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(trip)
+	}
+}
+
 func DeleteTripHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s = s.WithUser(middleware.UserIDFromContext(r.Context()))

@@ -68,6 +68,11 @@ class Waypoint:
     elevation_m: int
     time_window: Optional[TimeWindow] = None
     arrival_calculated: Optional[str] = None  # Issue #296 — "HH:MM", vom Backend berechnet (Naismith)
+    # Issue #303 — algorithmische Wegpunktvorschläge + Override.
+    origin: Optional[str] = None              # "manual" | "algorithmic"
+    confirmed: Optional[bool] = None          # True = bestätigt; False bleibt erhalten (≠ None)
+    suggestion_reason: Optional[str] = None   # "detected_peak" | "detected_valley" | "detected_pass" | "legacy_suggested"
+    arrival_override: Optional[str] = None    # User-Override "HH:MM"
 
     def __str__(self) -> str:
         tw = f" ({self.time_window})" if self.time_window else ""

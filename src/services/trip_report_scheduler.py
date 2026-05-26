@@ -544,14 +544,16 @@ class TripReportSchedulerService:
             wp1 = waypoints[i]
             wp2 = waypoints[i + 1]
 
-            # Get wp1 start time. Priority: time_window > persisted
-            # arrival_calculated (Issue #296, Go-Naismith) > interpolation.
-            # Interpolation uses a divergent max()-formula — the correct
-            # Naismith formula is the SUM (see segment_builder.compute_hiking_time);
-            # persisted arrival_calculated already carries the summed value.
-            wp1_arrival = (
-                _parse_hhmm(wp1.arrival_calculated) if wp1.arrival_calculated else None
+            # Get wp1 start time. Priority: time_window > arrival_override
+            # (Issue #303, User) > persisted arrival_calculated (Issue #296,
+            # Go-Naismith) > interpolation. Interpolation uses a divergent
+            # max()-formula — the correct Naismith formula is the SUM (see
+            # segment_builder.compute_hiking_time); persisted arrival_calculated
+            # already carries the summed value.
+            wp1_arrival_str = (
+                getattr(wp1, "arrival_override", None) or wp1.arrival_calculated
             )
+            wp1_arrival = _parse_hhmm(wp1_arrival_str) if wp1_arrival_str else None
             if wp1.time_window is not None:
                 wp1_start = wp1.time_window.start
             elif wp1_arrival is not None:
@@ -567,9 +569,10 @@ class TripReportSchedulerService:
             cumulative_time = wp1_start
 
             # Get wp2 start time. Same priority chain as wp1.
-            wp2_arrival = (
-                _parse_hhmm(wp2.arrival_calculated) if wp2.arrival_calculated else None
+            wp2_arrival_str = (
+                getattr(wp2, "arrival_override", None) or wp2.arrival_calculated
             )
+            wp2_arrival = _parse_hhmm(wp2_arrival_str) if wp2_arrival_str else None
             if wp2.time_window is not None:
                 wp2_start = wp2.time_window.start
             elif wp2_arrival is not None:

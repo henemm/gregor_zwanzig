@@ -6,40 +6,67 @@ import (
 	"testing"
 )
 
-// TDD RED — Issue #296-BE AC-6.
-// Erwartet: FAIL (Compile-Fehler) bis Waypoint.ArrivalCalculated existiert.
+// Issue #303 AC-2 — Marshal/Omit-Semantik der vier neuen Waypoint-Felder.
 //
-// AC-6: genau ein neues Feld `arrival_calculated`; KEINE Felder `origin`
-// oder `confirmed`.
+// Ersetzt den #296-Test TestWaypointJSON_HasArrivalNotOriginConfirmed: dieser
+// behauptete, origin/confirmed dürften NICHT im JSON erscheinen. Nach #303 ist
+// das falsch — die Felder sind reguläre, additive omitempty-Felder.
 
-// TestWaypointJSON_HasArrivalNotOriginConfirmed prüft, dass eine Waypoint-Struct
-// nach JSON-Marshalling das Feld `arrival_calculated` tragen kann und KEINE
-// Felder `origin`/`confirmed` erzeugt (AC-6).
-func TestWaypointJSON_HasArrivalNotOriginConfirmed(t *testing.T) {
-	arr := "10:15"
+func ptrStr(s string) *string { return &s }
+
+func ptrBool(b bool) *bool { return &b }
+
+// TestWaypointJSON_NewFieldsMarshalAndOmit prüft beide Richtungen:
+// gesetzte Felder erscheinen im JSON, Zero-Value-Felder werden ausgelassen.
+func TestWaypointJSON_NewFieldsMarshalAndOmit(t *testing.T) {
+	// Gesetzte Felder → alle drei Keys im JSON.
 	wp := Waypoint{
-		ID:                "W1",
-		Name:              "Gipfel",
-		Lat:               47.0,
-		Lon:               11.0,
-		ElevationM:        2500,
-		ArrivalCalculated: &arr,
+		ID:               "W1",
+		Name:             "Gipfel",
+		Lat:              47.0,
+		Lon:              11.0,
+		ElevationM:       2500,
+		Origin:           "algorithmic",
+		Confirmed:        ptrBool(true),
+		SuggestionReason: ptrStr("detected_peak"),
 	}
-
 	b, err := json.Marshal(wp)
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
 	js := string(b)
+	if !strings.Contains(js, `"origin":"algorithmic"`) {
+		t.Fatalf("origin fehlt im JSON, war: %s", js)
+	}
+	if !strings.Contains(js, `"confirmed":true`) {
+		t.Fatalf("confirmed fehlt im JSON, war: %s", js)
+	}
+	if !strings.Contains(js, `"suggestion_reason":"detected_peak"`) {
+		t.Fatalf("suggestion_reason fehlt im JSON, war: %s", js)
+	}
 
-	if !strings.Contains(js, `"arrival_calculated":"10:15"`) {
-		t.Fatalf("erwartet arrival_calculated:10:15 im JSON, war: %s", js)
+	// confirmed=false MUSS serialisierbar sein (*bool, nicht bool+omitempty).
+	wpFalse := Waypoint{ID: "W2", Name: "Tal", Lat: 47.0, Lon: 11.0, ElevationM: 800,
+		Confirmed: ptrBool(false)}
+	bf, err := json.Marshal(wpFalse)
+	if err != nil {
+		t.Fatalf("marshal false: %v", err)
 	}
-	if strings.Contains(js, `"origin"`) {
-		t.Fatalf("Feld origin darf NICHT existieren, war: %s", js)
+	if !strings.Contains(string(bf), `"confirmed":false`) {
+		t.Fatalf("confirmed:false ging verloren (bool+omitempty-Falle), war: %s", string(bf))
 	}
-	if strings.Contains(js, `"confirmed"`) {
-		t.Fatalf("Feld confirmed darf NICHT existieren, war: %s", js)
+
+	// Zero-Value → keiner der vier neuen Keys.
+	zero := Waypoint{ID: "W3", Name: "Start", Lat: 47.0, Lon: 11.0, ElevationM: 500}
+	bz, err := json.Marshal(zero)
+	if err != nil {
+		t.Fatalf("marshal zero: %v", err)
+	}
+	jz := string(bz)
+	for _, key := range []string{`"origin"`, `"confirmed"`, `"suggestion_reason"`, `"arrival_override"`} {
+		if strings.Contains(jz, key) {
+			t.Fatalf("Zero-Value darf %s nicht enthalten, war: %s", key, jz)
+		}
 	}
 }
 

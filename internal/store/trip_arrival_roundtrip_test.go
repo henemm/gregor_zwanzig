@@ -129,3 +129,80 @@ func TestTripRoundTrip_PreservesFieldsWithoutArrival(t *testing.T) {
 		t.Fatalf("persistierter arrival_calculated ging verloren: %v", wp.ArrivalCalculated)
 	}
 }
+
+// TestTripRoundTrip_WithConfirmationFields — Issue #303 AC-3.
+// Ein Trip-JSON mit allen vier neuen Feldern gesetzt durchläuft
+// LoadTrip → SaveTrip → LoadTrip ohne Feldverlust. confirmed ist *bool —
+// false UND true müssen den Roundtrip überleben.
+func TestTripRoundTrip_WithConfirmationFields(t *testing.T) {
+	tmpDir := t.TempDir()
+	s := New(tmpDir, "test")
+
+	tripDir := filepath.Join(tmpDir, "users", "test", "trips")
+	if err := os.MkdirAll(tripDir, 0755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+
+	confirmedJSON := `{
+		"id": "conf-trip",
+		"name": "Confirmed Trip",
+		"stages": [
+			{
+				"id": "S1",
+				"name": "Tag 1",
+				"date": "2026-05-26",
+				"waypoints": [
+					{"id":"W1","name":"Start","lat":47.0,"lon":11.0,"elevation_m":500,
+					 "origin":"algorithmic","confirmed":true,
+					 "suggestion_reason":"detected_peak","arrival_override":"11:45"},
+					{"id":"W2","name":"Tal","lat":47.05,"lon":11.05,"elevation_m":800,
+					 "origin":"algorithmic","confirmed":false,
+					 "suggestion_reason":"detected_valley"}
+				]
+			}
+		]
+	}`
+	path := filepath.Join(tripDir, "conf-trip.json")
+	if err := os.WriteFile(path, []byte(confirmedJSON), 0644); err != nil {
+		t.Fatalf("write conf json: %v", err)
+	}
+
+	loaded, err := s.LoadTrip("conf-trip")
+	if err != nil || loaded == nil {
+		t.Fatalf("LoadTrip: %v", err)
+	}
+	if err := s.SaveTrip(*loaded); err != nil {
+		t.Fatalf("SaveTrip: %v", err)
+	}
+	reloaded, err := s.LoadTrip("conf-trip")
+	if err != nil || reloaded == nil {
+		t.Fatalf("re-LoadTrip: %v", err)
+	}
+
+	wps := reloaded.Stages[0].Waypoints
+	if len(wps) != 2 {
+		t.Fatalf("expected 2 waypoints, got %d", len(wps))
+	}
+
+	// W1 — alle vier Felder gesetzt, confirmed=true.
+	if wps[0].Origin != "algorithmic" {
+		t.Fatalf("W1 origin ging verloren: %q", wps[0].Origin)
+	}
+	if wps[0].Confirmed == nil || !*wps[0].Confirmed {
+		t.Fatalf("W1 confirmed=true ging verloren: %v", wps[0].Confirmed)
+	}
+	if wps[0].SuggestionReason == nil || *wps[0].SuggestionReason != "detected_peak" {
+		t.Fatalf("W1 suggestion_reason ging verloren: %v", wps[0].SuggestionReason)
+	}
+	if wps[0].ArrivalOverride == nil || *wps[0].ArrivalOverride != "11:45" {
+		t.Fatalf("W1 arrival_override ging verloren: %v", wps[0].ArrivalOverride)
+	}
+
+	// W2 — confirmed=false MUSS erhalten bleiben (*bool, nicht bool+omitempty).
+	if wps[1].Confirmed == nil || *wps[1].Confirmed {
+		t.Fatalf("W2 confirmed=false ging durch Roundtrip verloren: %v", wps[1].Confirmed)
+	}
+	if wps[1].SuggestionReason == nil || *wps[1].SuggestionReason != "detected_valley" {
+		t.Fatalf("W2 suggestion_reason ging verloren: %v", wps[1].SuggestionReason)
+	}
+}

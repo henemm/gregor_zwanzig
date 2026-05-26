@@ -274,11 +274,11 @@ class GPXWaypoint:
 class GPXTrack:
     """Parsed GPX track with computed metrics."""
     name: str
-    points: List[GPXPoint]
-    waypoints: List["GPXWaypoint"]
-    total_distance_km: float
-    total_ascent_m: float
-    total_descent_m: float
+    points: List[GPXPoint] = field(default_factory=list)
+    waypoints: List["GPXWaypoint"] = field(default_factory=list)
+    total_distance_km: float = 0.0
+    total_ascent_m: float = 0.0
+    total_descent_m: float = 0.0
 
 
 @dataclass
