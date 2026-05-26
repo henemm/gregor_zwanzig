@@ -60,7 +60,7 @@ Vorbereitungslogik eines Weitwanderers wider.
 Nicht in Scope:
 - `Trip.display_config` Backend-Felder — bestehende `map[string]interface{}`-Struktur bleibt
 - KI-Wegpunkt-Vorschläge — `Step3Waypoints.svelte` bleibt als leerer Fallback erhalten
-- Trend-Vorschau Card (Step 4) — Platzhalter `"Demnächst"`, kein Backend-Anschluss
+- Trend-Vorschau Card (Step 4) — zeigt Hinweis "Im Abend-Briefing enthalten" (Trend ist Bestandteil des Abend-Briefings, kein separater Report)
 - Änderungen an bestehenden `/trips/[id]` Detail-Seiten-Tabs
 
 ## Implementation Details
@@ -246,10 +246,10 @@ onMount(async () => {
       <ChannelChips bind:channels={wizard.briefings.channels} />
     </GCard>
 
-    <!-- Card 4: Trend-Vorschau (Platzhalter) -->
-    <GCard data-testid="card-trend" class="disabled">
-      <Eyebrow>Trend-Vorschau</Eyebrow>
-      <Pill variant="outlined">Demnächst</Pill>
+    <!-- Card 4: Mehrtages-Trend (im Abend-Briefing enthalten) -->
+    <GCard data-testid="card-trend">
+      <Eyebrow>Mehrtages-Trend</Eyebrow>
+      <p>Im Abend-Briefing enthalten.</p>
     </GCard>
 
   </div>
@@ -337,7 +337,7 @@ import Step4Reports from './steps/Step4Reports.svelte';
 
 **`trip-wizard-step4.spec.ts`:**
 - Prüft vier Cards: `card-evening`, `card-morning`, `card-alerts`, `card-trend`
-- `card-trend` muss `disabled`-Klasse haben
+- `card-trend` zeigt Eyebrow "Mehrtages-Trend" + Text "Im Abend-Briefing enthalten" (keine `disabled`-Klasse)
 
 ---
 
@@ -391,7 +391,7 @@ Then ist `wizard.activity === 'ski_touring'` und der Hinweistext verschwindet.
 
 **AC-8:** Given Step 4 (Reports) wird geöffnet /
 When die vier Report-Cards gerendert werden /
-Then sind "Abend-Briefing", "Morgen-Update" und "Warnungen" interaktiv (Checkbox + Zeit/Kanal) und "Trend-Vorschau" trägt die CSS-Klasse `disabled` sowie das Badge "Demnächst" — ohne interaktive Elemente.
+Then sind "Abend-Briefing", "Morgen-Update" und "Warnungen" interaktiv (Checkbox + Zeit/Kanal) und "Mehrtages-Trend" zeigt den Hinweis "Im Abend-Briefing enthalten" ohne interaktive Elemente (der Trend ist Bestandteil jedes Abend-Briefings).
 
 **AC-9:** Given Step 4 (Reports) zeigt die Abend-Briefing-Card /
 When der User die Uhrzeit auf "20:00" ändert /
