@@ -26,7 +26,7 @@
 	const now = new Date();
 	const trips = $derived((data.trips ?? []) as Trip[]);
 	const subscriptions = $derived((data.subscriptions ?? []) as Subscription[]);
-	const heroWeather = $derived((data.heroWeather ?? null) as StagesWeatherResponse | null);
+	const heroWeather = null as StagesWeatherResponse | null; // Issue 395: kein Live-Wetter auf der Website (dormant; späteres On-Demand-Laden separat)
 	const isEmpty = $derived(trips.length === 0 && subscriptions.length === 0);
 
 	const todayPretty = now.toLocaleDateString('de-DE', {
@@ -95,7 +95,7 @@
 		<div>
 			<Eyebrow>Übersicht · {todayPretty}</Eyebrow>
 			<div style:font-size="22px" style:font-weight="600" style:margin-top="2px" style:letter-spacing="-0.005em">
-				Deine Touren & Vergleiche
+				Deine Trips & Vergleiche
 			</div>
 			<div style:font-size="0.9375rem" style:color="var(--g-ink-muted)" style:margin-top="4px" style:line-height="1.5">
 				Was du jetzt vorbereitest, läuft unterwegs autark. Briefings gehen per Email oder Signal, du musst am Berg nichts tun.
@@ -306,7 +306,7 @@
 			</div>
 		{/if}
 
-		<!-- AC-12: Weitere Touren + Vergleiche (nichts verschwindet) -->
+		<!-- AC-12: Weitere Trips + Vergleiche (nichts verschwindet) -->
 		{#if otherTrips.length > 0}
 			<section style:margin-bottom="32px">
 				<div class="kachel-grid">
