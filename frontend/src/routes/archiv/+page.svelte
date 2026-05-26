@@ -1,197 +1,229 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	// Issue #388 — Archiv-Seite: Atomic-Migration + vollstaendige Listenansicht.
+	//
+	// Vorlage: docs/design-requests/issue_15_atomic_design/spec/screen-archive.jsx
+	// Die Inline-Helper der JSX-Vorlage sind durch Atome ersetzt:
+	//   Sort-Tabs       -> Segmented (atoms)
+	//   Aktions-Buttons -> Btn variant="quiet" size="icon-sm" (atoms)
+	//
+	// Spec: docs/specs/modules/issue_388_archiv_atomic.md
+
+	import type { PageData } from './$types.js';
 	import type { Trip } from '$lib/types.js';
-	import { api } from '$lib/api.js';
+	import Segmented from '$lib/components/ui/segmented/index.js';
 	import { Btn } from '$lib/components/ui/btn/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
-	import Segmented from '$lib/components/ui/segmented';
+	import { Stat } from '$lib/components/molecules';
 	import { Eyebrow } from '$lib/components/ui/eyebrow/index.js';
-	import { EmptyState } from '$lib/components/ui/empty-state/index.js';
-	import * as Card from '$lib/components/ui/card/index.js';
-	import * as Dialog from '$lib/components/ui/dialog/index.js';
+	import HistoryIcon from '@lucide/svelte/icons/history';
+	import CopyIcon from '@lucide/svelte/icons/copy';
+	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 	import SearchIcon from '@lucide/svelte/icons/search';
-	import ArchiveIcon from '@lucide/svelte/icons/archive';
-	import { filterArchived, sortArchive, type ArchiveSortMode } from './archiveHelpers.js';
 
-	const now = new Date();
-
-	let trips: Trip[] = $state([]);
-	let loading = $state(true);
-	let loadError: string | null = $state(null);
-	let actionError: string | null = $state(null);
-
-	let search = $state('');
-	let sortMode: ArchiveSortMode = $state('recent');
-
-	let restoringId: string | null = $state(null);
-	let deleteTarget: Trip | null = $state(null);
-	let deleting = $state(false);
+	let { data }: { data: PageData } = $props();
 
 	const SORT_OPTIONS = [
 		{ value: 'recent', label: 'Neueste' },
+		{ value: 'accuracy', label: 'Genauigkeit' },
 		{ value: 'stages', label: 'Etappen' }
 	];
 
-	onMount(async () => {
-		try {
-			const all = await api.get<Trip[]>('/api/trips');
-			trips = filterArchived(Array.isArray(all) ? all : [], now);
-		} catch (e: unknown) {
-			loadError = (e as { error?: string })?.error ?? 'Fehler beim Laden des Archivs';
-		} finally {
-			loading = false;
-		}
-	});
+	let query = $state('');
+	let sort = $state('recent');
 
-	let visibleTrips = $derived(
-		sortArchive(
-			trips.filter((t) => t.name.toLowerCase().includes(search.toLowerCase())),
-			sortMode
-		)
+	// Tour-Zeitraum aus den Etappen-Daten (kein eigenes from/to im Trip-Modell).
+	function stageDates(t: Trip): string[] {
+		return (t.stages ?? []).map((s) => s.date).filter(Boolean).sort();
+	}
+	function rangeFrom(t: Trip): string {
+		const d = stageDates(t);
+		return d.length ? d[0] : (t.archived_at ?? '').slice(0, 10);
+	}
+	function rangeTo(t: Trip): string {
+		const d = stageDates(t);
+		return d.length ? d[d.length - 1] : (t.archived_at ?? '').slice(0, 10);
+	}
+	function alertCount(t: Trip): number {
+		return (t.alert_rules ?? []).length;
+	}
+
+	const filtered = $derived(
+		(data.trips as Trip[])
+			.filter((t) => t.name.toLowerCase().includes(query.toLowerCase()))
+			.sort((a, b) => {
+				if (sort === 'recent')
+					return (b.archived_at ?? '').localeCompare(a.archived_at ?? '');
+				if (sort === 'stages') return (b.stages?.length ?? 0) - (a.stages?.length ?? 0);
+				// 'accuracy': kein Backend-Feld — bestehende Reihenfolge beibehalten.
+				return 0;
+			})
 	);
 
-	/** Zeitraum aus Etappen-Daten (Muster wie Touren-Liste). */
-	function dateRange(trip: Trip): string {
-		const dates = (trip.stages ?? []).map((s) => s.date).filter((d): d is string => !!d).sort();
-		if (!dates.length) return '–';
-		if (dates.length === 1) return dates[0];
-		return `${dates[0]} — ${dates[dates.length - 1]}`;
-	}
-
-	function stageLabel(trip: Trip): string {
-		const n = trip.stages?.length ?? 0;
-		return `${n} ${n === 1 ? 'Etappe' : 'Etappen'}`;
-	}
-
-	async function restoreTrip(trip: Trip) {
-		actionError = null;
-		restoringId = trip.id;
-		try {
-			await api.patch(`/api/trips/${trip.id}`, { archived: false });
-			trips = trips.filter((t) => t.id !== trip.id);
-		} catch (e: unknown) {
-			actionError = (e as { error?: string })?.error ?? 'Fehler beim Wiederherstellen';
-		} finally {
-			restoringId = null;
-		}
-	}
-
-	async function confirmDelete() {
-		if (!deleteTarget) return;
-		actionError = null;
-		deleting = true;
-		const target = deleteTarget;
-		try {
-			await api.del(`/api/trips/${target.id}`);
-			trips = trips.filter((t) => t.id !== target.id);
-			deleteTarget = null;
-		} catch (e: unknown) {
-			actionError = (e as { error?: string })?.error ?? 'Fehler beim Löschen';
-		} finally {
-			deleting = false;
-		}
-	}
+	// Stats-Strip: nur "Touren" hat ein Backend-Feld. Briefings/Treffer/Alarme
+	// existieren (noch) nicht im Trip-Modell -> Stat zeigt Em-Dash.
+	const totalTrips = $derived((data.trips as Trip[]).length);
 </script>
 
-<div class="space-y-4">
-	<div>
-		<Eyebrow>WORKSPACE · VERGANGENE TRIPS</Eyebrow>
-		<h1 class="text-3xl font-semibold tracking-tight mt-1">Archiv</h1>
-		<p class="text-sm text-muted-foreground mt-1">
-			Abgeschlossene und archivierte Trips. Wiederherstellen holt einen Trip zurück in die aktive Liste.
+<main style="padding:32px 40px;overflow:auto">
+	<!-- Header -->
+	<div style="margin-bottom:28px">
+		<Eyebrow>Workspace · Vergangene Touren</Eyebrow>
+		<h1
+			style="font-size:32px;font-weight:600;letter-spacing:-0.025em;margin-top:4px"
+		>
+			Archiv
+		</h1>
+		<p
+			style="font-size:14px;color:var(--g-ink-3);margin-top:6px;max-width:620px;line-height:1.5"
+		>
+			Touren, deren Enddatum vorbei ist. Hier siehst du nachträglich, wie gut die
+			Briefings getroffen haben, und kannst eine Tour als Vorlage für eine neue
+			Planung übernehmen.
 		</p>
 	</div>
 
-	{#if loadError}
-		<p class="text-sm text-destructive">{loadError}</p>
-	{/if}
-	{#if actionError}
-		<p class="text-sm text-destructive">{actionError}</p>
-	{/if}
-
-	{#if loading}
-		<div class="space-y-3">
-			{#each Array(3) as _}
-				<div class="h-14 w-full animate-pulse rounded-lg bg-muted"></div>
-			{/each}
-		</div>
-	{:else if trips.length === 0}
-		<EmptyState
-			icon={ArchiveIcon}
-			title="Noch keine archivierten Trips."
-			description="Archivierte Trips erscheinen hier — du kannst sie jederzeit wiederherstellen."
-		/>
-	{:else}
-		<div class="flex flex-wrap items-center justify-between gap-3">
-			<div class="relative max-w-[380px] flex-1 min-w-[200px]">
-				<SearchIcon class="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-				<Input placeholder="Suchen..." class="pl-8 rounded-full" bind:value={search} />
-			</div>
-			<Segmented
-				options={SORT_OPTIONS}
-				selected={sortMode}
-				onselect={(v) => (sortMode = v as ArchiveSortMode)}
+	<!-- Toolbar: Suche + Sortierung -->
+	<div style="display:flex;gap:16px;align-items:center;margin-bottom:20px">
+		<div style="position:relative;flex:0 0 380px">
+			<span style="position:absolute;top:9px;left:12px;color:var(--g-ink-muted);display:inline-flex">
+				<SearchIcon size={14} />
+			</span>
+			<input
+				bind:value={query}
+				placeholder="Suchen…"
+				style="width:100%;padding:9px 14px 9px 34px;border:1px solid var(--g-rule);border-radius:var(--g-r-pill);background:var(--g-card);font-size:13px;font-family:var(--g-font-sans);color:var(--g-ink);outline:none"
 			/>
 		</div>
+		<div
+			style="display:flex;align-items:center;gap:8px;font-size:11px;font-family:var(--g-font-mono);letter-spacing:0.16em;text-transform:uppercase;color:var(--g-ink-3)"
+		>
+			<span>Sortieren</span>
+			<Segmented options={SORT_OPTIONS} selected={sort} onselect={(v) => (sort = v)} />
+		</div>
+	</div>
 
-		<Card.Root>
-			<Card.Content class="p-0">
-				<ul class="divide-y divide-[var(--g-rule-soft)]">
-					{#each visibleTrips as trip (trip.id)}
-						<li class="flex items-center gap-3 px-4 py-3">
-							<div class="flex min-w-0 flex-1 flex-col">
-								<a
-									href="/trips/{trip.id}"
-									class="truncate font-medium hover:underline decoration-[var(--g-accent)] underline-offset-2"
-								>{trip.name}</a>
-								<span class="font-mono text-xs text-muted-foreground tabular-nums">
-									{stageLabel(trip)} · {dateRange(trip)}
-								</span>
-							</div>
-							<div class="flex shrink-0 items-center gap-2">
-								<Btn
-									variant="outline"
-									size="sm"
-									onclick={() => restoreTrip(trip)}
-									disabled={restoringId === trip.id}
-								>{restoringId === trip.id ? 'Wiederherstellen…' : 'Wiederherstellen'}</Btn>
-								<Btn
-									variant="ghost"
-									size="sm"
-									class="text-destructive"
-									onclick={() => (deleteTarget = trip)}
-								>Löschen</Btn>
-							</div>
-						</li>
-					{/each}
-				</ul>
-			</Card.Content>
-		</Card.Root>
+	<!-- Stats-Strip -->
+	<div
+		style="display:flex;gap:32px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--g-rule-soft)"
+	>
+		<Stat layout="inline" label="Touren" value={totalTrips} />
+		<Stat layout="inline" label="Briefings gesendet" value={null} />
+		<Stat layout="inline" label="Forecast-Treffer Ø" value={null} tone="accent" />
+		<Stat layout="inline" label="Alarme ausgelöst" value={null} />
+	</div>
 
-		<p class="font-mono text-xs uppercase tracking-wide text-muted-foreground">
-			{visibleTrips.length} von {trips.length} archivierte Trips
-		</p>
-	{/if}
-</div>
+	<!-- Tabelle -->
+	<div
+		data-slot="card"
+		style="overflow:hidden;background:var(--g-card);border:1px solid var(--g-rule);border-radius:var(--g-r-3)"
+	>
+		<!-- Kopfzeile -->
+		<div
+			style="display:grid;grid-template-columns:1.7fr 0.7fr 1.1fr 0.9fr 1.6fr auto;gap:0;padding:12px 20px;background:var(--g-paper-deep);font-size:11px;font-family:var(--g-font-mono);letter-spacing:0.18em;text-transform:uppercase;color:var(--g-ink-3);font-weight:500;border-bottom:1px solid var(--g-rule)"
+		>
+			<div>Name</div>
+			<div>Etappen</div>
+			<div>Zeitraum</div>
+			<div>Treffer</div>
+			<div>Was passiert ist</div>
+			<div style="text-align:right">Aktionen</div>
+		</div>
 
-<!-- Löschen-Bestätigung (endgültig, irreversibel) -->
-<Dialog.Root
-	open={deleteTarget !== null}
-	onOpenChange={(open) => { if (!open) deleteTarget = null; }}
->
-	<Dialog.Content>
-		<Dialog.Header>
-			<Dialog.Title>Trip endgültig löschen</Dialog.Title>
-			<Dialog.Description>
-				Möchtest du "{deleteTarget?.name}" endgültig löschen? Diese Aktion ist irreversibel und kann
-				nicht rückgängig gemacht werden.
-			</Dialog.Description>
-		</Dialog.Header>
-		<Dialog.Footer>
-			<Btn variant="outline" onclick={() => (deleteTarget = null)} disabled={deleting}>Abbrechen</Btn>
-			<Btn variant="destructive" onclick={confirmDelete} disabled={deleting}>
-				{deleting ? 'Löschen…' : 'Endgültig löschen'}
+		{#each filtered as trip, i (trip.id)}
+			{@render archiveRow(trip, i % 2 === 1)}
+		{/each}
+
+		{#if filtered.length === 0}
+			<div style="padding:40px;text-align:center;color:var(--g-ink-3);font-size:13px">
+				{#if query}
+					Keine archivierten Touren für »{query}« gefunden.
+				{:else}
+					Keine archivierten Touren.
+				{/if}
+			</div>
+		{/if}
+	</div>
+
+	<!-- Footer-Zaehler -->
+	<div
+		style="margin-top:14px;font-size:11px;color:var(--g-ink-muted);font-family:var(--g-font-mono);letter-spacing:0.06em"
+	>
+		{filtered.length} von {totalTrips} archivierten Touren · auto-archiviert nach Tour-Ende
+	</div>
+</main>
+
+<!-- ArchiveRow: Tabellenzeile, identisches 6-Spalten-Grid wie Kopfzeile. -->
+{#snippet archiveRow(trip: Trip, alt: boolean)}
+	{@const stageN = trip.stages?.length ?? 0}
+	{@const alerts = alertCount(trip)}
+	<div
+		style="display:grid;grid-template-columns:1.7fr 0.7fr 1.1fr 0.9fr 1.6fr auto;align-items:center;padding:16px 20px;gap:0;border-bottom:1px solid var(--g-rule-soft);background:{alt
+			? 'var(--g-paper-deep)'
+			: 'transparent'}"
+	>
+		<div style="display:flex;align-items:center;gap:10px;min-width:0">
+			<span
+				style="width:7px;height:7px;border-radius:50%;background:var(--g-ink-4);flex-shrink:0"
+			></span>
+			<span
+				style="font-size:14px;font-weight:600;letter-spacing:-0.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+				>{trip.name}</span
+			>
+			{#if alerts > 0}
+				<span
+					style:font-size="10px"
+					style:font-family="var(--g-font-mono)"
+					style:color="var(--g-accent-deep)"
+					style:text-transform="uppercase"
+					style:letter-spacing="0.16em"
+					>· {alerts} alert{alerts > 1 ? 's' : ''}</span
+				>
+			{/if}
+		</div>
+		<div style="font-size:13px;color:var(--g-ink-2);font-variant-numeric:tabular-nums">
+			{stageN}
+			{stageN === 1 ? 'Etappe' : 'Etappen'}
+		</div>
+		<div
+			style="font-size:13px;color:var(--g-ink-2);font-family:var(--g-font-mono);letter-spacing:0.02em"
+		>
+			{rangeFrom(trip)} → {rangeTo(trip)}
+		</div>
+		{@render accuracyBar()}
+		<div
+			style="font-size:12px;color:var(--g-ink-3);line-height:1.4;padding-right:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+		>
+			—
+		</div>
+		<div style="display:flex;gap:4px;justify-content:flex-end">
+			<Btn variant="quiet" size="icon-sm" title="Briefing-Verlauf öffnen">
+				<HistoryIcon size={14} />
 			</Btn>
-		</Dialog.Footer>
-	</Dialog.Content>
-</Dialog.Root>
+			<Btn variant="quiet" size="icon-sm" title="Als Vorlage neu anlegen">
+				<CopyIcon size={14} />
+			</Btn>
+			<span style="width:1px;height:18px;background:var(--g-rule);margin:0 4px"></span>
+			<Btn variant="quiet" size="icon-sm" title="Endgültig löschen">
+				<Trash2Icon size={14} />
+			</Btn>
+		</div>
+	</div>
+{/snippet}
+
+<!-- AccuracyBar: accuracy-Daten ausstehend (kein Backend-Feld). -->
+<!-- Track sichtbar (0 %-Streifen), Zahl zeigt Em-Dash statt 0%. -->
+{#snippet accuracyBar()}
+	<div style="display:flex;align-items:center;gap:10px;padding-right:16px">
+		<div
+			style="flex:1;height:4px;background:var(--g-rule-soft);border-radius:var(--g-r-pill);overflow:hidden;max-width:80px"
+		>
+			<div style="width:0%;height:100%;background:var(--g-ink)"></div>
+		</div>
+		<span
+			style:font-family="var(--g-font-mono)"
+			style:font-size="12px"
+			style:font-weight="600"
+			style:font-variant-numeric="tabular-nums"
+			style:color="var(--g-ink-3)">—</span
+		>
+	</div>
+{/snippet}
