@@ -86,7 +86,8 @@ class TripReportFormatter:
         night_rows = []
         if report_type == "evening" and night_weather and dc.show_night_block:
             last_seg = segments[-1]
-            arrival_hour = last_seg.segment.end_time.hour
+            # Bug #398: Nacht-Block beginnt bei der LOKALEN Ankunftsstunde.
+            arrival_hour = local_hour(last_seg.segment.end_time, self._tz)
             night_rows = self._extract_night_rows(
                 night_weather, arrival_hour, dc.night_interval_hours, dc,
             )
@@ -136,6 +137,7 @@ class TripReportFormatter:
             temp_max_c=first_agg.temp_max_c,
             wind_max_kmh=first_agg.wind_max_kmh,
             gust_max_kmh=first_agg.gust_max_kmh,
+            tz=self._tz,
         )
 
         # Issue #360: kanal-bewusster Narrow-Body fuer Signal/Telegram.
@@ -194,7 +196,10 @@ class TripReportFormatter:
         end_h = seg_data.segment.end_time.hour
         rows = []
         for dp in seg_data.timeseries.data:
-            if start_h <= dp.ts.hour <= end_h:
+            h = dp.ts.hour
+            # Bug #399: Mitternachts-Übergang (start_h > end_h, z. B. 23…01).
+            include = (start_h <= h <= end_h) if start_h <= end_h else (h >= start_h or h <= end_h)
+            if include:
                 rows.append(self._dp_to_row(dp, dc))
         return rows
 
@@ -522,6 +527,7 @@ class TripReportFormatter:
         temp_max_c: Optional[float] = None,
         wind_max_kmh: Optional[float] = None,
         gust_max_kmh: Optional[float] = None,
+        tz: Optional[ZoneInfo] = None,
     ) -> str:
         """Generate §11-konformes E-Mail-Subject via output.subject filter.
 
@@ -540,7 +546,14 @@ class TripReportFormatter:
         # 'alert' wird auf 'update' gemappt — semantisch identisch (Wetteränderung).
         rt = "update" if report_type == "alert" else report_type
         # Stage-Name = explizite Stage falls vorhanden, sonst Datum als Diskriminator.
-        stage = stage_name or dt.strftime("%d.%m.%Y")
+        # Bug #397 (F002): Datums-Fallback in Ortszeit, nicht UTC — sonst springt
+        # das Datum bei Segment-Start nahe UTC-Mitternacht auf den falschen Tag.
+        if stage_name:
+            stage = stage_name
+        elif tz is not None:
+            stage = local_fmt(dt, tz, "%d.%m.%Y")
+        else:
+            stage = dt.strftime("%d.%m.%Y")
 
         # Build D/W/G tokens from segment aggregates (whitelist for subject §11).
         tokens: list[Token] = []

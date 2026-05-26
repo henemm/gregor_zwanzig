@@ -22,6 +22,7 @@ from utils.timezone import local_fmt
 
 from src.output.renderers.channel_layout import CHANNEL_LIMITS, render_for_channel
 from src.output.renderers.email.helpers import fmt_val
+from utils.timezone import local_fmt
 
 # Maximale Zeilenbreite pro Kanal (Bubble-Constraint). Signal-Blase ~26 Zeichen
 # Monospace; Telegram ist breiter, wir halten uns trotzdem an ein lesbares Mass.
@@ -172,7 +173,8 @@ def render_narrow(
         lines.extend(_wrap(trip_name, width))
     report_date = ""
     if segments:
-        report_date = segments[0].segment.start_time.strftime("%d.%m.%Y")
+        # Bug #397: Datums-Header in Ortszeit.
+        report_date = local_fmt(segments[0].segment.start_time, tz, "%d.%m.%Y")
     head2 = f"{report_type.title()} {report_date}".strip()
     if head2:
         lines.extend(_wrap(head2, width))

@@ -15,9 +15,11 @@ _detect_risk() erhalten (§A4 - Alert-Pfad nicht migriert in β3).
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional
+from zoneinfo import ZoneInfo
 
 from app.models import ExposedSection, RiskLevel, RiskType, SegmentWeatherData
 from services.risk_engine import RiskEngine
+from utils.timezone import local_fmt, local_hour
 from src.output.renderers.sms import render_sms
 from src.output.tokens.builder import build_token_line
 from src.output.tokens.dto import (
@@ -44,6 +46,8 @@ _SMS_RISK_LABELS: dict[tuple[RiskType, RiskLevel], str] = {
 
 def _segments_to_normalized_forecast(
     segments: list[SegmentWeatherData],
+    *,
+    tz: ZoneInfo = ZoneInfo("UTC"),
 ) -> NormalizedForecast:
     """Aggregate trip segments into a single-day NormalizedForecast.
 
@@ -68,7 +72,8 @@ def _segments_to_normalized_forecast(
     gust_samples: list[HourlyValue] = []
     for seg in segments:
         agg = seg.aggregated
-        hour = seg.segment.start_time.hour
+        # Bug #398: Synthetische Stunden-Token auf Ortszeit verankern.
+        hour = local_hour(seg.segment.start_time, tz)
         if agg.precip_sum_mm is not None and agg.precip_sum_mm > 0:
             rain_samples.append(HourlyValue(hour, float(agg.precip_sum_mm)))
         if agg.wind_max_kmh is not None and agg.wind_max_kmh > 0:
@@ -107,6 +112,7 @@ class SMSTripFormatter:
         *,
         stage_name: Optional[str] = None,
         report_type: str = "evening",
+        tz: ZoneInfo = ZoneInfo("UTC"),
     ) -> str:
         """Generate v2.0 SMS via TokenLine pipeline.
 
@@ -116,6 +122,8 @@ class SMSTripFormatter:
             exposed_sections: kept for API parity (Risk-Pfad rebuild)
             stage_name: prefix '{Name}: ' (v2.0 §2). Default: 'Etappe'.
             report_type: 'morning' or 'evening' (default 'evening').
+            tz: Zielzeitzone für Stunden-Token (Bug #398). Default UTC
+                (abwärtskompatibel: UTC→UTC = keine Verschiebung).
 
         Returns:
             v2.0 wire-format string, ≤ max_length chars.
@@ -126,8 +134,9 @@ class SMSTripFormatter:
         if not segments:
             raise ValueError("Cannot format SMS with no segments")
         self._exposed_sections = exposed_sections
+        self._tz = tz
 
-        forecast = _segments_to_normalized_forecast(segments)
+        forecast = _segments_to_normalized_forecast(segments, tz=tz)
 
         # Worst-case WIND_EXPOSITION aus allen Segmenten bestimmen
         we_label: Optional[str] = None
@@ -210,5 +219,7 @@ class SMSTripFormatter:
         label = _SMS_RISK_LABELS.get(
             (top.type, top.level), top.type.value.title()
         )
-        time_str = seg_data.segment.start_time.strftime("%Hh")
+        # Bug #398: Risiko-Stunde in Ortszeit (Default UTC im Legacy-Pfad).
+        tz = getattr(self, "_tz", ZoneInfo("UTC"))
+        time_str = local_fmt(seg_data.segment.start_time, tz, "%Hh")
         return (label, time_str)

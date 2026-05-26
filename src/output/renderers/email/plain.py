@@ -119,7 +119,8 @@ def render_plain(
     """Render full plain-text e-mail body. Pure function."""
     sig = profile_signature(profile)
     lines = []
-    report_date = segments[0].segment.start_time.strftime("%d.%m.%Y")
+    # Bug #397: Datums-Header in Ortszeit (passt zu lokalen Segment-Zeiten).
+    report_date = local_fmt(segments[0].segment.start_time, tz, "%d.%m.%Y")
     lines.append(f"{sig.icon} {sig.eyebrow}")
     lines.append(f"{trip_name} - {report_type.title()} Report")
     if stage_name:

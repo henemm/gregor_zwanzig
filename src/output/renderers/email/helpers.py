@@ -22,7 +22,7 @@ from app.metric_catalog import (
     get_col_defs, get_metric, get_metric_by_col_key,
 )
 from app.models import (
-    ForecastDataPoint, NormalizedTimeseries, ThunderLevel,
+    ForecastDataPoint, ThunderLevel,
     UnifiedWeatherDisplayConfig,
 )
 from utils.timezone import local_fmt, local_hour
@@ -98,7 +98,10 @@ def extract_hourly_rows(seg_data, dc: UnifiedWeatherDisplayConfig,
     end_h = seg_data.segment.end_time.hour
     rows = []
     for dp in seg_data.timeseries.data:
-        if start_h <= dp.ts.hour <= end_h:
+        h = dp.ts.hour
+        # Bug #399: Mitternachts-Übergang (start_h > end_h, z. B. 23…01).
+        include = (start_h <= h <= end_h) if start_h <= end_h else (h >= start_h or h <= end_h)
+        if include:
             rows.append(dp_to_row(dp, dc, tz=tz))
     return rows
 
@@ -173,39 +176,9 @@ def aggregate_night_block(dps: list[ForecastDataPoint],
     return row
 
 
-def extract_night_rows(night_weather: NormalizedTimeseries,
-                       arrival_hour: int, interval: int,
-                       dc: UnifiedWeatherDisplayConfig,
-                       *, tz: ZoneInfo) -> list[dict]:
-    """Aggregate night data into 2h blocks from arrival to 06:00."""
-    if not night_weather.data:
-        return []
-    first_date = night_weather.data[0].ts.astimezone(tz).date()
-
-    night_dps: list[ForecastDataPoint] = []
-    for dp in night_weather.data:
-        local_dt = dp.ts.astimezone(tz)
-        h = local_dt.hour
-        is_same_day = local_dt.date() == first_date
-        is_next_day = local_dt.date() > first_date
-        in_range = (is_same_day and h >= arrival_hour) or (is_next_day and h <= 6)
-        if in_range:
-            night_dps.append(dp)
-
-    if not night_dps:
-        return []
-
-    blocks: dict[tuple, list[ForecastDataPoint]] = {}
-    for dp in night_dps:
-        local_dt = dp.ts.astimezone(tz)
-        block_start = local_dt.hour - (local_dt.hour % interval)
-        block_key = (local_dt.date(), block_start)
-        blocks.setdefault(block_key, []).append(dp)
-
-    rows = []
-    for block_key in sorted(blocks.keys()):
-        rows.append(aggregate_night_block(blocks[block_key], dc, interval, tz=tz))
-    return rows
+# Bug #399 / Spec FIX 4: extract_night_rows() entfernt — toter Code ohne
+# Aufrufer (lebender Pfad: TripReportFormatter._extract_night_rows). Die
+# Block-Aggregation aggregate_night_block() bleibt (wird genutzt).
 
 
 # ----------------------------------------------------------------------
@@ -511,10 +484,13 @@ def format_change_line(change, segment_label: str) -> str:
     )
 
 
-def build_segment_label(change, segments, tz: ZoneInfo) -> str:
+def build_segment_label(change, segments, *, tz: ZoneInfo = ZoneInfo("UTC")) -> str:
     """
     Liefert 'Segment N (HH:MM–HH:MM)' oder '🏁 Ziel (HH:MM)' aus segment_id +
     segments-Liste. Fallback ohne Match: 'Segment N' oder 'Unbekannt'.
+
+    Bug #397: Zeiten werden in Ortszeit (`tz`) gerendert; Default UTC bleibt
+    abwärtskompatibel (UTC→UTC = keine Verschiebung).
     """
     for s in segments:
         if str(s.segment.segment_id) == change.segment_id:

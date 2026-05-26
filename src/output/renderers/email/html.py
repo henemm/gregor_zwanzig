@@ -198,7 +198,8 @@ def render_html(
 ) -> str:
     """Render full HTML e-mail body. Pure function."""
     sig = profile_signature(profile)
-    report_date = segments[0].segment.start_time.strftime("%d.%m.%Y")
+    # Bug #397: Datums-Header in Ortszeit (passt zu lokalen Segment-Zeiten).
+    report_date = local_fmt(segments[0].segment.start_time, tz, "%d.%m.%Y")
     # Issue #342: Tages-Basis für Pro-Metrik-Horizont-Filter.
     report_date_obj = segments[0].segment.start_time.date()
     sub_header = stage_name or ""

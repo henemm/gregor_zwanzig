@@ -68,8 +68,9 @@ class PreviewService:
     def _build_report(self, trip: "Trip", target: date, report_type: str):
         """Gemeinsame Pipeline: segments → weather → format_email → TripReport.
 
-        Returns: (report, segment_weather, stage_name) — segment_weather und
-        stage_name werden von render_sms_preview wiederverwendet (Issue #188).
+        Returns: (report, segment_weather, stage_name, trip_tz) — segment_weather,
+        stage_name und trip_tz werden von render_sms_preview wiederverwendet
+        (Issue #188 / Bug #397: tz muss in die SMS-Token durchgereicht werden).
         """
         from services.trip_report_scheduler import TripReportSchedulerService
         scheduler = TripReportSchedulerService(self.settings)
@@ -105,7 +106,7 @@ class PreviewService:
             tz=trip_tz,
             profile=trip.aggregation.profile,
         )
-        return report, segment_weather, stage_name
+        return report, segment_weather, stage_name, trip_tz
 
     def render_email_preview(
         self,
@@ -120,7 +121,7 @@ class PreviewService:
             raise ValueError(f"Ungültiger report_type '{report_type}'")
         trip = self._load_trip(trip_id, user_id)
         target = self._resolve_target_date(trip, target_date)
-        report, _segments, _stage_name = self._build_report(trip, target, report_type)
+        report, _segments, _stage_name, _trip_tz = self._build_report(trip, target, report_type)
         return report.email_html
 
     def render_sms_preview(
@@ -140,16 +141,21 @@ class PreviewService:
             raise ValueError(f"Ungültiger report_type '{report_type}'")
         trip = self._load_trip(trip_id, user_id)
         target = self._resolve_target_date(trip, target_date)
-        report, segment_weather, stage_name = self._build_report(trip, target, report_type)
+        report, segment_weather, stage_name, trip_tz = self._build_report(
+            trip, target, report_type
+        )
 
         from src.formatters.sms_trip import SMSTripFormatter
         # Input-Hygiene: ':' aus Stage-Namen entfernen, damit der Prefix-
         # Separator ':' in sms_format.md §3.1 eindeutig bleibt.
         clean_stage = (stage_name or "Etappe").replace(":", "").strip()
+        # Bug #397 (F001): tz durchreichen, sonst rendern die Stunden-Token UTC
+        # statt Ortszeit (z.B. R5.0@8 statt @10 für CEST).
         token_line = SMSTripFormatter().format_sms(
             segment_weather,
             stage_name=clean_stage,
             report_type=report_type,
+            tz=trip_tz,
         )
         return report.email_subject, token_line
 
@@ -170,7 +176,7 @@ class PreviewService:
             raise ValueError(f"Ungültiger report_type '{report_type}'")
         trip = self._load_trip(trip_id, user_id)
         target = self._resolve_target_date(trip, target_date)
-        report, _segments, _stage_name = self._build_report(trip, target, report_type)
+        report, _segments, _stage_name, _trip_tz = self._build_report(trip, target, report_type)
         return report.email_subject, (report.signal_text or "")
 
     def render_telegram_preview(
@@ -189,5 +195,5 @@ class PreviewService:
             raise ValueError(f"Ungültiger report_type '{report_type}'")
         trip = self._load_trip(trip_id, user_id)
         target = self._resolve_target_date(trip, target_date)
-        report, _segments, _stage_name = self._build_report(trip, target, report_type)
+        report, _segments, _stage_name, _trip_tz = self._build_report(trip, target, report_type)
         return report.email_subject, (report.telegram_text or "")
