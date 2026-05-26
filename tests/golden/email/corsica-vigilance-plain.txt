@@ -20,7 +20,7 @@ Corsica E5: 18–32°C, 🌥️, trocken, Regen ab 10:00, mäßiger Wind 30 km/h
   💨 Böen bis 85 km/h (10:00)
   🌧 Regen gesamt: 8.0 mm
 
-Einheiten: Temp, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun W/m²
+Einheiten: Temp, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun h
 ------------------------------------------------------------
 Generated: <TIMESTAMP> UTC
 Data: openmeteo (arome_france)

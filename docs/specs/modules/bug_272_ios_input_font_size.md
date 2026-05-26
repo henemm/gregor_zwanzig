@@ -118,4 +118,5 @@ Die Spezifität dieser Scoped-Regel (0-1-1 durch `.field textarea`) ist identisc
 
 ## Changelog
 
+- 2026-05-26: Bug #382 behebt latente Regression bei Select.svelte (14 Einsatzorte triggern iOS-Zoom, weil Komponenten-CSS höhere Spezifität als globaler Guard hat). Pattern: scoped @media in Select.svelte wie in SavePresetDialog.
 - 2026-05-20: Initial spec erstellt. Behebt iOS-Auto-Zoom durch zwei CSS-Ergänzungen: globale unlayered Media Query in app.css + Scoped Override in SavePresetDialog.svelte. 2 Dateien, ~8 LoC.

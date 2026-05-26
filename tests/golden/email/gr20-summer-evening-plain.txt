@@ -25,7 +25,7 @@ GR20 E3: trocken, ⚡ möglich
 ━━ Zusammenfassung ━━
   🌧 Regen gesamt: 2.5 mm
 
-Einheiten: Temp, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun W/m²
+Einheiten: Temp, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun h
 ------------------------------------------------------------
 Generated: <TIMESTAMP> UTC
 Data: openmeteo (arome_france)

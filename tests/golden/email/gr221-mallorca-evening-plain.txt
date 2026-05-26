@@ -15,7 +15,7 @@ GR221 Tag1: 8–15°C, 🌥️, trocken, mäßiger Wind 25 km/h, Böen bis 55 km
   13     18.9   12.6    18     43     0.0    –         –       ⛅       –   
   14     19.2   12.8    19     44     0.0    –         –       ⛅       –   
 
-Einheiten: Temp, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun W/m²
+Einheiten: Temp, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun h
 ------------------------------------------------------------
 Generated: <TIMESTAMP> UTC
 Data: openmeteo (arome_france)

@@ -62,4 +62,9 @@
     color: var(--g-ink-muted);
     pointer-events: none;
   }
+  @media (max-width: 767px) {
+    .gz-select select {
+      font-size: 16px; /* iOS zoom guard (#272, #382) */
+    }
+  }
 </style>

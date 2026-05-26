@@ -1,19 +1,20 @@
 {
-  "verified_at": "2026-05-02T12:21:27.514036+00:00",
-  "user_override": true,
-  "override_reason": "Tech-Lead-Decision 2026-05-02: Issue #112 ist eine reine .claude/hooks/-Aenderung ohne Production-App-Path. Vollstaendiger Mail-/Trip-E2E ist hier inhaltlich nicht anwendbar (Skill /e2e-verify ist auch veraltet, siehe Kommentar in Issue #86). Smoke-Verifikation: IMPORT_OK + HTTP 200 + pytest 4/4 gr\u00fcn + External Validator VERIFIED.",
-  "change_scope": "tooling-only",
-  "change_files": [
-    ".claude/hooks/config_loader.py",
-    ".claude/hooks/workflow_state_multi.py"
+  "verified_at": "2026-05-25T04:34:28.621784+00:00",
+  "environment": "staging",
+  "commit": "e74cb24",
+  "issue": 347,
+  "scope": "backend",
+  "checks": [
+    "staging_smoke",
+    "staging_commit_match",
+    "email_preview_render",
+    "restore_ok"
   ],
-  "app_path_affected": false,
-  "smoke_evidence": {
-    "import_smoke": "IMPORT_OK",
-    "http_health": 200,
-    "target_tests": "4/4 passed (tests/tdd/test_worktree_state_routing.py)",
-    "regression_delta": "+3 passed / -3 failed vs baseline (exactly the 3 newly-green tests)",
-    "external_validator_verdict": "VERIFIED"
-  },
-  "follow_up_issue": "https://github.com/henemm/gregor_zwanzig/issues/86 \u2014 Hook soll tooling-only Scope eigenstaendig erkennen, dann waere user_override hier nicht noetig"
+  "feature_checks": [
+    "Staging HEAD == e74cb24, Build+Restart durch, ROOT 302 / HEALTH 200",
+    "E-Mail-Vorschau (echter format_email-Pfad, ohne Versand) rendert: Sun-Spalte zeigt Sonnenstunden als \"1.0 h\" (numerisch + Einheit h) statt rohem DNI-W/m² — AC-8 live bestaetigt",
+    "Emoji-Pfad intakt (Sun-Emoji im friendly-Modus)",
+    "Test-Trip display_config nach Pruefung restauriert (Restore PUT 200)",
+    "Hinweis: interaktiver /api/compare/run nutzt Go-Engine (dni_avg_wm2), nicht den Python-sunny_hours-Pfad — ausserhalb #347-Scope, moegliches Folge-Thema"
+  ]
 }
