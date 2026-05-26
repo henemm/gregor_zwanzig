@@ -143,6 +143,23 @@ REGIONAL_MODELS = [
     },
 ]
 
+# Bug #353: Open-Meteo Vorhersagehorizont.
+# Empirisch (2026-05-25, echte Diagnose-Calls): /v1/meteofrance, /v1/dwd-icon,
+# /v1/ecmwf, /v1/gfs erlauben start_date nur bis today+15; +16 → HTTP 400
+# ("start_date out of allowed range"). Die Grenze ist modell-/endpoint-
+# übergreifend identisch (Open-Meteo validiert vor dem Modell-Processing).
+OPENMETEO_MAX_FORECAST_DAYS = 15
+
+
+def is_within_forecast_horizon(stage_date: date, reference_date: date) -> bool:
+    """True, wenn stage_date <= reference_date + OPENMETEO_MAX_FORECAST_DAYS.
+
+    Jenseits davon liefert KEIN Open-Meteo-Modell Daten (Bug #353).
+    Reine Funktion, deterministisch testbar (keine API, keine Mocks).
+    """
+    return (stage_date - reference_date).days <= OPENMETEO_MAX_FORECAST_DAYS
+
+
 # Metric Availability Probe (WEATHER-05a)
 AVAILABILITY_CACHE_PATH = Path("data/cache/model_availability.json")
 AVAILABILITY_CACHE_TTL_DAYS = 7

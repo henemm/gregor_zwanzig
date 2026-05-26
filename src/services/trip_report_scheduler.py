@@ -893,6 +893,10 @@ class TripReportSchedulerService:
         """
         from formatters.compact_summary import CompactSummaryFormatter
         from app.metric_catalog import build_default_display_config
+        from providers.openmeteo import (
+            OPENMETEO_MAX_FORECAST_DAYS,
+            is_within_forecast_horizon,
+        )
 
         WEEKDAYS_DE = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
         formatter = CompactSummaryFormatter()
@@ -903,7 +907,14 @@ class TripReportSchedulerService:
             return None
 
         trend = []
+        today = date.today()
         for stage in future_stages:
+            if not is_within_forecast_horizon(stage.date, today):
+                logger.debug(
+                    "Stage %s (%s) beyond Open-Meteo forecast horizon (today+%d), skipping trend",
+                    stage.id, stage.date, OPENMETEO_MAX_FORECAST_DAYS,
+                )
+                continue
             try:
                 segments = self._convert_trip_to_segments(trip, stage.date)
                 if not segments:
