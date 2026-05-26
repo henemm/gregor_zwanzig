@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/henemm/gregor-api/internal/store"
+	"github.com/henemm/gregor-api/internal/model"
 )
 
 func startFakePython() *httptest.Server {
@@ -143,8 +143,10 @@ func TestProxyHandlerForwardsQueryParams(t *testing.T) {
 // --- Location Handler Tests ---
 
 func TestLocationsHandler(t *testing.T) {
-	// GIVEN: Store pointing to real data
-	s := store.New("../../data", "default")
+	// GIVEN: Store mit einer geseedeten Location
+	s := newTestStore(t)
+	loc := model.Location{ID: "test-loc", Name: "Test Location", Lat: 47.0, Lon: 11.0}
+	s.SaveLocation(loc)
 
 	// WHEN: Calling GET /api/locations
 	h := LocationsHandler(s)

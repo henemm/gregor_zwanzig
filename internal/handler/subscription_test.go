@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/henemm/gregor-api/internal/store"
+	"github.com/henemm/gregor-api/internal/model"
 )
 
 // Write tests use CreateSubscriptionHandler to seed data (no manual file setup needed)
@@ -18,7 +18,10 @@ import (
 // ============================================================================
 
 func TestSubscriptionsHandler(t *testing.T) {
-	s := store.New("../../data", "default")
+	s := newTestStore(t)
+	seedSubscription(t, s, model.CompareSubscription{
+		ID: "test-sub", Name: "Test Abo", Enabled: true, Locations: []string{},
+	})
 
 	h := SubscriptionsHandler(s)
 	req := httptest.NewRequest("GET", "/api/subscriptions", nil)
@@ -44,7 +47,10 @@ func TestSubscriptionsHandler(t *testing.T) {
 }
 
 func TestSubscriptionHandlerFound(t *testing.T) {
-	s := store.New("../../data", "default")
+	s := newTestStore(t)
+	seedSubscription(t, s, model.CompareSubscription{
+		ID: "zillertal-t-glich", Name: "Zillertal täglich", Enabled: true, Locations: []string{},
+	})
 
 	r := chi.NewRouter()
 	r.Get("/api/subscriptions/{id}", SubscriptionHandler(s))
@@ -67,7 +73,8 @@ func TestSubscriptionHandlerFound(t *testing.T) {
 }
 
 func TestSubscriptionHandlerNotFound(t *testing.T) {
-	s := store.New("../../data", "default")
+	s := newTestStore(t)
+	// kein Seed — leerer Store gibt korrekt 404 zurueck
 
 	r := chi.NewRouter()
 	r.Get("/api/subscriptions/{id}", SubscriptionHandler(s))

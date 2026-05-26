@@ -6,11 +6,11 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/henemm/gregor-api/internal/store"
 )
 
 func TestTripsHandler(t *testing.T) {
-	s := store.New("../../data", "default")
+	s := newTestStore(t)
+	seedTrip(t, s, "test-trip", "Test Trip")
 
 	h := TripsHandler(s)
 	req := httptest.NewRequest("GET", "/api/trips", nil)
@@ -36,7 +36,8 @@ func TestTripsHandler(t *testing.T) {
 }
 
 func TestTripHandlerFound(t *testing.T) {
-	s := store.New("../../data", "default")
+	s := newTestStore(t)
+	seedTrip(t, s, "e2e-test-story3", "Story 3")
 
 	r := chi.NewRouter()
 	r.Get("/api/trips/{id}", TripHandler(s))
@@ -59,7 +60,8 @@ func TestTripHandlerFound(t *testing.T) {
 }
 
 func TestTripHandlerNotFound(t *testing.T) {
-	s := store.New("../../data", "default")
+	s := newTestStore(t)
+	// kein Seed noetig — leerer Store gibt korrekt 404 zurueck
 
 	r := chi.NewRouter()
 	r.Get("/api/trips/{id}", TripHandler(s))

@@ -40,7 +40,7 @@ func TestStagesWeatherHandler_TripNotFound_Returns404(t *testing.T) {
 	// GIVEN: Kein Trip mit ID "nonexistent-xyz-stage-weather" im Store
 	// WHEN: GET /api/trips/nonexistent-xyz-stage-weather/stages/weather
 	// THEN: HTTP 404, body.error == "not_found"
-	s := store.New("../../data", "default")
+	s := newTestStore(t) // leerer Store gibt korrekt 404 zurueck
 	r := chi.NewRouter()
 	r.Get("/api/trips/{id}/stages/weather", StagesWeatherHandler(s, nil))
 

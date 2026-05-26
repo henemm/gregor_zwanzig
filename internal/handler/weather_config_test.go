@@ -9,7 +9,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/henemm/gregor-api/internal/model"
-	"github.com/henemm/gregor-api/internal/store"
 )
 
 // ============================================================================
@@ -33,7 +32,7 @@ func TestGetTripWeatherConfigFound(t *testing.T) {
 }
 
 func TestGetTripWeatherConfigNotFound(t *testing.T) {
-	s := store.New("../../data", "default")
+	s := newTestStore(t)
 
 	r := chi.NewRouter()
 	r.Get("/api/trips/{id}/weather-config", GetTripWeatherConfigHandler(s))
@@ -106,7 +105,7 @@ func TestPutTripWeatherConfigBadJSON(t *testing.T) {
 // ============================================================================
 
 func TestGetLocationWeatherConfigNotFound(t *testing.T) {
-	s := store.New("../../data", "default")
+	s := newTestStore(t)
 
 	r := chi.NewRouter()
 	r.Get("/api/locations/{id}/weather-config", GetLocationWeatherConfigHandler(s))
