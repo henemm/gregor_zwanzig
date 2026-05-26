@@ -3,7 +3,7 @@ entity_id: issue_386_home_atomic_migration
 type: module
 created: 2026-05-26
 updated: 2026-05-26
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, atomic-design, migration, home, svelte, design-system, issue-386, epic-368]
 ---
@@ -18,7 +18,7 @@ tags: [frontend, atomic-design, migration, home, svelte, design-system, issue-38
 
 ## Zweck
 
-Die Startseite (`/`) nutzt derzeit Inline-CSS-Konstrukte für Kacheln und Layout ohne Rückgriff auf die in Epic #368–#374 aufgebaute Atomic-Bibliothek. Diese Migration ersetzt das bestehende Layout durch das kanonische Kachel-Design aus `soll-flow1A-home-kacheln.png`: Eyebrow-Datumszeile, H1 mit Subtext, Trip- und Compare-Kacheln mit Status-Dot, "Reports ✓"-Zeile und Token-konformen Hover-States — alles auf Basis der vorhandenen `GCard`-Atom, Atomic-Tokens und `tripStatus()`-Utility, ohne deren Schnittstellen zu verändern.
+Die Startseite (`/`) nutzt derzeit Inline-CSS-Konstrukte für Kacheln und Layout ohne Rückgriff auf die in Epic #368–#374 aufgebaute Atomic-Bibliothek. Diese Migration ersetzt das bestehende Layout durch das kanonische Kachel-Design aus `soll-flow1A-home-kacheln.png`: Eyebrow-Datumszeile, H1 mit Subtext, Trip- und Compare-Kacheln mit Status-Dot, "Reports ✓"-Zeile und Token-konformen Hover-States — alles auf Basis der vorhandenen `GCard`-Atom, Atomic-Tokens und `tripStatus()`-Utility, ohne deren Schnittstellen zu verändern. Die Kachel-Migration wurde auf das existierende Cockpit-Layout aufgesetzt (nicht als Ersatz des Cockpits).
 
 ## Quelle / Source
 
@@ -129,6 +129,9 @@ KEINE Inline-Helper-Extraktion zu Library-Komponenten:
 Token-Namen 1:1 aus JSX übernehmen:
   - var(--g-card), var(--g-paper), var(--g-accent), var(--g-ink-muted),
     var(--g-ink-faint), var(--g-elev-1) — genau diese Namen, keine Umbenennungen
+
+Das Cockpit-Layout wurde parallel in Commit 5afb4de geliefert und ist Teil des Deliverables
+als übergeordnete PO-Entscheidung.
 ```
 
 ### 6. LoC-Budget
@@ -143,7 +146,7 @@ Token-Namen 1:1 aus JSX übernehmen:
 ## Expected Behavior
 
 - **Input:** Browser lädt Route `/`; Trip- und Compare-Daten kommen unverändert vom bestehenden API-Aufruf
-- **Output:** Seite rendert Kachel-Layout gemäß `soll-flow1A-home-kacheln.png`: H1 "Deine Touren & Vergleiche" + Subtext, flaches Grid ohne Sektions-Header, Kacheln mit `data-slot="g-card"` (weißer Card-Hintergrund, `--g-ink-faint`-Border, `--g-elev-1`-Hover), "Reports ✓" wenn report_config aktiv
+- **Output:** Seite zeigt Cockpit-Layout (Hero, Etappen-Streifen, Briefings, Archiv) PLUS Kachel-Grid mit `data-slot="g-card"`, H1-Text "Deine Touren & Vergleiche", kein Sektions-Header. Kacheln mit weißem Card-Hintergrund, `--g-ink-faint`-Border, `--g-elev-1`-Hover, "Reports ✓" wenn report_config aktiv
 - **Side effects:** Keine Logik-Änderung; bestehende Navigation, API-Calls, Svelte-Store-Bindings bleiben byte-gleich; `tripStatus()` wird nicht neu importiert (bereits vorhanden in TripKachel)
 
 ## Acceptance Criteria
@@ -173,10 +176,11 @@ Token-Namen 1:1 aus JSX übernehmen:
 
 - **Kein Playwright-Pixel-Test:** Die visuelle Übereinstimmung mit `soll-flow1A-home-kacheln.png` wird per manueller Sichtprüfung oder Screenshot-Vergleich bestätigt, nicht durch automatisierten Pixel-Diff — konsistent mit dem bestehenden Testansatz des Projekts.
 - **screen-home.jsx vs. soll-flow1A:** Die Referenz-JSX von Claude Design beschreibt ein Cockpit-Layout. Das kanonische Soll für dieses Issue ist ausschließlich `soll-flow1A-home-kacheln.png` (Kachel-Layout). Die DELIVERY-NOTE gilt trotzdem für Token-Namen und Scope.
+- **Cockpit-Layout Hybrid:** Diese Spec beschreibt die Kachel-Migration; das übergeordnete Cockpit-Layout wurde parallel in Commit 5afb4de geliefert und ist Teil des Deliverables.
 
 ## Out of Scope
 
-- Cockpit-Ansicht oder stündliche Wetter-Widgets (explizit ausgeschlossen per Design-Annotation)
+- Stündliche Live-Wetter-Widgets auf der Startseite (kein SSR-Wetter-Fetch per #395)
 - Extraktion von TripKachel/CompareKachel in die Library (`frontend/src/lib/`) — bleibt page-lokal
 - Änderungen an Routing, API-Endpunkten oder Store-Logik
 - Neue Library-Atome oder Molecules anlegen
@@ -184,3 +188,4 @@ Token-Namen 1:1 aus JSX übernehmen:
 ## Changelog
 
 - 2026-05-26: Initial spec erstellt. Migration der Startseite auf Atomic-Bibliothek (Epic #368 Phase 2, Issue #386): H1-Text + Subtext, `data-slot="g-card"` auf TripKachel + CompareKachel, "Reports ✓"-Anzeige, Hover-CSS-Delta auf Token-Basis, Sektions-Header-Entfernung.
+- 2026-05-26: Spec auf geliefertes Cockpit+Kachel-Hybrid aktualisiert nach External Validator Feedback. Status: implemented.
