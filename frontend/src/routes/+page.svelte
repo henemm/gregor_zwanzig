@@ -53,7 +53,7 @@
 	);
 
 	const heroLabel = $derived(
-		heroIsActive ? `Tag ${heroStageIdx + 1} von ${heroStages.length}` : 'Nächste Tour'
+		heroIsActive ? `Tag ${heroStageIdx + 1} von ${heroStages.length}` : 'Nächster Trip'
 	);
 	const heroStats = $derived(stageStats(heroStage));
 	const heroWindow = $derived(stageWindow(heroStage));
@@ -216,7 +216,7 @@
 								</div>
 							{:else}
 								<div style:font-size="13px" style:color="var(--g-ink-3)">
-									Keine Briefings für diese Tour geplant.
+									Keine Briefings für diesen Trip geplant.
 								</div>
 							{/if}
 						</div>
@@ -227,7 +227,7 @@
 						<div style:padding="20px">
 							<SectionH eyebrow="Alarme · letzte 24 h" title="Keine Alarme" />
 							<div style:font-size="13px" style:color="var(--g-ink-3)" style:line-height="1.5">
-								Keine Alarme in den letzten 24 Stunden. Schwellen verwaltest du in der Tour.
+								Keine Alarme in den letzten 24 Stunden. Schwellen verwaltest du im Trip.
 							</div>
 						</div>
 					</Card>
@@ -306,7 +306,7 @@
 		<!-- AC-12: Weitere Touren + Orts-Vergleiche (nichts verschwindet) -->
 		{#if otherTrips.length > 0}
 			<section style:margin-bottom="32px">
-				<h2 class="section-title">Weitere Touren</h2>
+				<h2 class="section-title">Weitere Trips</h2>
 				<div class="kachel-grid">
 					{#each otherTrips as trip (trip.id)}
 						<TripKachel {trip} />
@@ -327,7 +327,7 @@
 		{/if}
 
 		<div style:display="flex" style:gap="12px" style:flex-wrap="wrap">
-			<Btn href="/trips/new" variant="accent">+ Neue Tour</Btn>
+			<Btn href="/trips/new" variant="accent">+ Neuer Trip</Btn>
 			<Btn href="/compare" variant="outline">+ Neuer Vergleich</Btn>
 		</div>
 	{/if}

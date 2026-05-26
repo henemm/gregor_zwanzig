@@ -15,7 +15,7 @@
 
 	const NAV_ITEMS = [
 		{ id: 'home', label: 'Startseite', icon: 'home' },
-		{ id: 'trips', label: 'Meine Touren', icon: 'trip' },
+		{ id: 'trips', label: 'Meine Trips', icon: 'trip' },
 		{ id: 'compare', label: 'Orts-Vergleich', icon: 'compare' },
 		{ id: 'archive', label: 'Archiv', icon: 'archive' }
 	] as const;

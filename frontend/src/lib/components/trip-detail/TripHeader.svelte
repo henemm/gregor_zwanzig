@@ -57,7 +57,7 @@
 		<div class="header-left">
 			<nav data-testid="trip-detail-breadcrumb" aria-label="Breadcrumb" class="breadcrumb">
 				<Eyebrow>
-					<a href="/trips" data-testid="trip-detail-breadcrumb-link-trips">MEINE TOUREN</a>
+					<a href="/trips" data-testid="trip-detail-breadcrumb-link-trips">MEINE TRIPS</a>
 					<span aria-hidden="true"> › </span>
 					<span data-testid="trip-detail-breadcrumb-current">
 						{(trip.shortcode ?? trip.name).toUpperCase()}

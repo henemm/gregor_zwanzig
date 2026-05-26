@@ -3,9 +3,9 @@
 	import { Btn } from '$lib/components/ui/btn/index.js';
 </script>
 
-<EmptyState title="Willkommen bei Gregor 20" description="Leg deine erste Tour an oder starte einen Orts-Vergleich.">
+<EmptyState title="Willkommen bei Gregor 20" description="Leg deinen ersten Trip an oder starte einen Orts-Vergleich.">
 	<div style="display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center;">
-		<Btn variant="accent" href="/trips/new">+ Neue Tour</Btn>
+		<Btn variant="accent" href="/trips/new">+ Neuer Trip</Btn>
 		<Btn variant="outline" href="/compare">+ Neuer Vergleich</Btn>
 	</div>
 </EmptyState>

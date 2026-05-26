@@ -230,7 +230,7 @@
 		testReportError = null;
 		try {
 			await api.post(`/api/scheduler/trip-reports?hour=${hour}`, {});
-			testReportResult = `Test-Report (${hour === 7 ? 'Morning' : 'Evening'}) wurde ausgelöst. Alle aktiven Touren für ${hour}:00 Uhr werden verarbeitet.`;
+			testReportResult = `Test-Report (${hour === 7 ? 'Morning' : 'Evening'}) wurde ausgelöst. Alle aktiven Trips für ${hour}:00 Uhr werden verarbeitet.`;
 		} catch (e: unknown) {
 			testReportError = (e as { error?: string; detail?: string })?.detail
 				?? (e as { error?: string })?.error
@@ -251,11 +251,11 @@
 <div class="space-y-4">
 	<div class="flex items-start justify-between gap-4">
 		<div>
-			<Eyebrow>WORKSPACE · TOUREN</Eyebrow>
-			<h1 class="text-3xl font-semibold tracking-tight mt-1">Meine Touren</h1>
-			<p class="text-sm text-muted-foreground mt-1">Alle Touren auf einen Blick — Status, Zeitraum und Aktionen.</p>
+			<Eyebrow>WORKSPACE · TRIPS</Eyebrow>
+			<h1 class="text-3xl font-semibold tracking-tight mt-1">Meine Trips</h1>
+			<p class="text-sm text-muted-foreground mt-1">Alle Trips auf einen Blick — Status, Zeitraum und Aktionen.</p>
 		</div>
-		<Btn variant="accent" onclick={() => goto('/trips/new')}>+ Neue Tour</Btn>
+		<Btn variant="accent" onclick={() => goto('/trips/new')}>+ Neuer Trip</Btn>
 	</div>
 
 	{#if trips.length > 0}
@@ -281,8 +281,8 @@
 	{/if}
 
 	{#if trips.length === 0}
-		<EmptyState icon={RouteIcon} title="Noch keine Tour." description="Lege deine erste Tour an — Wizard in 4 Schritten.">
-			<Btn variant="outline" onclick={() => goto('/trips/new')}>+ Neue Tour</Btn>
+		<EmptyState icon={RouteIcon} title="Noch kein Trip." description="Lege deinen ersten Trip an — Wizard in 4 Schritten.">
+			<Btn variant="outline" onclick={() => goto('/trips/new')}>+ Neuer Trip</Btn>
 		</EmptyState>
 	{:else}
 		<div class="relative mb-3 max-w-[380px]">
@@ -414,7 +414,7 @@
 			</Table.Body>
 		</Table.Root>
 		<p class="hidden desktop:block mt-2 font-mono text-xs uppercase tracking-wide text-muted-foreground">
-			{filteredTrips.length} von {trips.length} Touren
+			{filteredTrips.length} von {trips.length} Trips
 		</p>
 		</div>
 		{/if}
@@ -428,7 +428,7 @@
 >
 	<Dialog.Content>
 		<Dialog.Header>
-			<Dialog.Title>Tour löschen</Dialog.Title>
+			<Dialog.Title>Trip löschen</Dialog.Title>
 			<Dialog.Description>
 				Möchtest du "{deleteTarget?.name}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
 			</Dialog.Description>

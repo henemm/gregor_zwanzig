@@ -5,9 +5,9 @@
 
 <div class="space-y-4">
 	<div>
-		<Eyebrow>ARCHIV · VERGANGENE TOUREN</Eyebrow>
+		<Eyebrow>ARCHIV · VERGANGENE TRIPS</Eyebrow>
 		<h1 class="text-3xl font-semibold tracking-tight mt-1">Archiv</h1>
 	</div>
 
-	<EmptyState title="Noch keine abgeschlossenen Touren im Archiv." />
+	<EmptyState title="Noch keine abgeschlossenen Trips im Archiv." />
 </div>

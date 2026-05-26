@@ -60,7 +60,7 @@
 		{ l: 'Title 3xl · 32', s: 32, w: 600, t: 'KHW_00a · Toblach → Helmhotel' },
 		{ l: 'Title 2xl · 24', s: 24, w: 600, t: 'Etappen-Übersicht' },
 		{ l: 'Heading xl · 20', s: 20, w: 600, t: 'Wegpunkt-Editor' },
-		{ l: 'Body lg · 17', s: 17, w: 400, t: 'Vor der Tour aktualisierst du am Desktop, unterwegs liest du SMS.' },
+		{ l: 'Body lg · 17', s: 17, w: 400, t: 'Vor dem Trip aktualisierst du am Desktop, unterwegs liest du SMS.' },
 		{ l: 'Body md · 15', s: 15, w: 400, t: '8–12°C, trocken, Regen ab 11:00, schwacher Wind NE 12 km/h.' },
 		{ l: 'Caption sm · 13', s: 13, w: 500, t: 'Letzter Sync: 06:01 UTC · openmeteo (icon_d2)' },
 		{ l: 'Eyebrow xs · 11', s: 11, w: 500, t: 'MORNING REPORT · 06.05.2026', caps: true, mono: true }
@@ -598,7 +598,7 @@
 					<ThresholdRow label="Windböen" value="≥ 50 km/h" />
 					<ThresholdRow label="Niederschlag" value="≥ 10 mm/h" />
 					<ThresholdRow label="Gewitter-Wahrscheinlichkeit" value="≥ 40 %" />
-					<ThresholdRow label="Schneefallgrenze" value="200 m unter Tour-Höhe" />
+					<ThresholdRow label="Schneefallgrenze" value="200 m unter Trip-Höhe" />
 				{/snippet}
 				{@render Panel('ChannelChip (default + compact) · ThresholdRow', chipThresholdBody)}
 			</div>
@@ -617,7 +617,7 @@
 					<div>
 						{@render MonoTag('layout="inline" (Archiv-Style)')}
 						<div style:display="flex" style:gap="32px" style:margin-top="10px">
-							<Stat layout="inline" label="Touren" value="12" />
+							<Stat layout="inline" label="Trips" value="12" />
 							<Stat layout="inline" label="Briefings" value="486" />
 							<Stat layout="inline" label="Treffer Ø" tone="accent" value="87%" />
 						</div>
@@ -670,7 +670,7 @@
 						<ThresholdRow divider="solid" label="Wind / Böen" value="≥ 50 km/h" />
 						<ThresholdRow divider="solid" label="Niederschlag" value="≥ 10 mm/h" />
 						<ThresholdRow divider="solid" label="Gewitter-Wahrsch." value="≥ 40 %" />
-						<ThresholdRow divider="solid" label="Nullgrad-Grenze" value="−200 m unter Tour" last />
+						<ThresholdRow divider="solid" label="Nullgrad-Grenze" value="−200 m unter Trip" last />
 						<div style:margin-top="18px">{@render MonoTag('BriefingTimelineRow dense')}</div>
 						{#each REPORT_TIMELINE as r (r.when)}
 							<div style:margin-top="6px">

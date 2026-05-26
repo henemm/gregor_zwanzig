@@ -49,8 +49,8 @@
 	</div>
 	<div class="ws-note">
 		<strong>Read-only.</strong>
-		Die Wetter-Konfiguration lebt im Tour-Detail, Tab „Wetter-Briefing" — dort
-		der einzige Bearbeitungs-Ort. „Tour speichern" hier ändert nur die Stammdaten.
+		Die Wetter-Konfiguration lebt im Trip-Detail, Tab „Wetter-Briefing" — dort
+		der einzige Bearbeitungs-Ort. „Trip speichern" hier ändert nur die Stammdaten.
 	</div>
 </div>
 

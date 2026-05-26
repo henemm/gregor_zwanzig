@@ -160,7 +160,7 @@
 					bind:value={description}
 					maxlength="120"
 					rows="2"
-					placeholder="Optimiert für Tagestouren"
+					placeholder="Optimiert für Tages-Trips"
 				></textarea>
 			</label>
 
