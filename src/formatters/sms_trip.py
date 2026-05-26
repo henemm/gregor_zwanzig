@@ -21,7 +21,7 @@ from services.risk_engine import RiskEngine
 from src.output.renderers.sms import render_sms
 from src.output.tokens.builder import build_token_line
 from src.output.tokens.dto import (
-    DailyForecast, HourlyValue, NormalizedForecast,
+    DailyForecast, HourlyValue, MetricSpec, NormalizedForecast,
 )
 
 if TYPE_CHECKING:
@@ -128,9 +128,29 @@ class SMSTripFormatter:
         self._exposed_sections = exposed_sections
 
         forecast = _segments_to_normalized_forecast(segments)
+
+        # Worst-case WIND_EXPOSITION aus allen Segmenten bestimmen
+        we_label: Optional[str] = None
+        for seg in segments:
+            label, _ = self._detect_risk(seg)
+            if label in ("GratSturm", "GratWind"):
+                if label == "GratSturm":
+                    we_label = "GratSturm"
+                    break
+                we_label = "GratWind"
+
+        # MetricSpec-Config nur wenn WIND_EXPOSITION erkannt
+        config = None
+        if we_label is not None:
+            config = [MetricSpec(
+                symbol="WE",
+                use_friendly_format=True,
+                friendly_label=we_label,
+            )]
+
         token_line = build_token_line(
             forecast,
-            None,
+            config,
             report_type=report_type,
             stage_name=stage_name or "Etappe",
         )

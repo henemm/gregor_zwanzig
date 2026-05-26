@@ -198,27 +198,21 @@ def test_ac5_comparison_text_profile_param_ignored(minimal_comparison_result):
 # AC-6: Warning-Banner-Tokens + Profil-Weitergabe in compare_subscription.py
 # ---------------------------------------------------------------------------
 
-@pytest.mark.xfail(
-    reason="G_BOX_WARNING_BG ungenutzt — Issue #358",
-    strict=False,
-)
 def test_ac6_warning_banner_tokens():
     """
-    GIVEN: compare_subscription.py Source-Code
+    GIVEN: compare_html.py Source-Code
     WHEN:  Auf verbotene Warning-Farben + G_BOX_WARNING_BG geprüft
     THEN:  #fff3cd und #ffc107 fehlen; G_BOX_WARNING_BG ist referenziert
-
-    ERWARTET ROT: Warning-Banner enthält noch #fff3cd/#ffc107.
     """
-    from services import compare_subscription  # noqa: PLC0415
+    from output.renderers.email import compare_html  # noqa: PLC0415
     from output.renderers.email.design_tokens import G_BOX_WARNING_BG  # noqa: PLC0415
 
-    with open(compare_subscription.__file__) as f:
+    with open(compare_html.__file__) as f:
         source_code = f.read()
 
     assert "#fff3cd" not in source_code, "Verbotene Farbe #fff3cd im Warning-Banner noch vorhanden"
     assert "#ffc107" not in source_code, "Verbotene Farbe #ffc107 im Warning-Banner noch vorhanden"
-    assert "G_BOX_WARNING_BG" in source_code, "G_BOX_WARNING_BG fehlt in compare_subscription.py"
+    assert "G_BOX_WARNING_BG" in source_code, "G_BOX_WARNING_BG fehlt in compare_html.py"
 
 
 def test_ac6_compare_subscription_profile_forwarding():
