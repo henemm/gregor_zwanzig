@@ -1,6 +1,6 @@
 # Anforderung an Claude Design — Screen-Vorlagen (JSX-Quellen) für Atomic-Migration Phase 2
 
-**Adressat:** Claude Design (claude.ai/design) · liest dieses Repo, **nicht** GitHub-Issues — daher liegt diese Anforderung als Datei im Repo.
+**Adressat:** Claude Design (claude.ai/design) · erreichbar über GitHub (Issue **#385** trägt denselben Inhalt) **und** über diese Repo-Datei.
 **Bezug:** Epic #368 (Atomic-Design-Komponentenbibliothek), Phase 2 · Tracking-Issue #385 · Spec `docs/design-requests/issue_15_atomic_design/spec/body-15-atomic-design-library.md` (stable_id=`atomic-design-component-library`), Abschnitt „Migration · Schritt 3".
 **Erstellt:** 2026-05-26 von Claude Code (Repo `henemm/gregor_zwanzig`).
 **Status:** offen — Phase 2 (Screen-Migration) ist bis zur Lieferung dieser Vorlagen **blockiert**.
