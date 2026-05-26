@@ -44,7 +44,7 @@ function tripWith(overrides: Partial<Trip>): Trip {
 // Heute fix für deterministische Tests (kein new Date() ohne Argument).
 const TODAY = new Date('2026-05-12T09:00:00Z');
 
-// Tour, deren Etappen heute (2026-05-12) einschließen → aktiv, Tag 2 von 3.
+// Trip, dessen Etappen heute (2026-05-12) einschließen → aktiv, Tag 2 von 3.
 const ACTIVE_TRIP = tripWith({
 	id: 'khw',
 	name: 'KHW 403',
@@ -55,7 +55,7 @@ const ACTIVE_TRIP = tripWith({
 	]
 });
 
-// Tour, deren Etappen alle in der Zukunft liegen → geplant.
+// Trip, dessen Etappen alle in der Zukunft liegen → geplant.
 const PLANNED_TRIP = tripWith({
 	id: 'gr20',
 	name: 'GR20',
@@ -65,7 +65,7 @@ const PLANNED_TRIP = tripWith({
 	]
 });
 
-// Tour, deren Etappen alle in der Vergangenheit liegen → fertig.
+// Trip, dessen Etappen alle in der Vergangenheit liegen → fertig.
 const FINISHED_TRIP = tripWith({
 	id: 'tmb',
 	name: 'TMB',
@@ -75,7 +75,7 @@ const FINISHED_TRIP = tripWith({
 	]
 });
 
-// Tour ganz ohne datierte Etappen → draft.
+// Trip ganz ohne datierte Etappen → draft.
 const DRAFT_TRIP = tripWith({ id: 'draft', name: 'Entwurf', stages: [] });
 
 // ============================================================================
@@ -103,7 +103,7 @@ test('tripStatus → fertig wenn archived_at gesetzt (auch ohne Vergangenheit)',
 	assert.equal(tripStatus(t, TODAY), 'fertig');
 });
 
-test('AC-1: activeOrNextTrip → heute aktive Tour gewinnt vor geplanter', () => {
+test('AC-1: activeOrNextTrip → heute aktiver Trip gewinnt vor geplantem', () => {
 	const picked = activeOrNextTrip([PLANNED_TRIP, ACTIVE_TRIP, FINISHED_TRIP], TODAY);
 	assert.equal(picked?.id, 'khw');
 });
@@ -137,7 +137,7 @@ test('AC-4: todayStageIndex → -1 wenn keine Etappe heute ist', () => {
 	assert.equal(todayStageIndex(PLANNED_TRIP, TODAY), -1);
 });
 
-test('todayStageIndex → -1 bei Tour ohne Etappen', () => {
+test('todayStageIndex → -1 bei Trip ohne Etappen', () => {
 	assert.equal(todayStageIndex(DRAFT_TRIP, TODAY), -1);
 });
 
@@ -145,14 +145,14 @@ test('todayStageIndex → -1 bei Tour ohne Etappen', () => {
 // 1b) Etappen-Streifen-Zustand (stageStripState) — Fix F001 (Issue #386)
 // ============================================================================
 
-test('AC-4/F001: geplante Tour (todayIdx < 0) → ALLE Etappen future, nie active', () => {
-	// Hero ist "Nächste Tour": keine Etappe läuft heute → kein 'active'.
+test('AC-4/F001: geplanter Trip (todayIdx < 0) → ALLE Etappen future, nie active', () => {
+	// Hero ist "Nächster Trip": keine Etappe läuft heute → kein 'active'.
 	assert.equal(stageStripState(-1, 0), 'future');
 	assert.equal(stageStripState(-1, 1), 'future');
 	assert.equal(stageStripState(-1, 2), 'future');
 });
 
-test('AC-4: aktive Tour (todayIdx = 2, 5 Etappen) → done/done/active/future/future', () => {
+test('AC-4: aktiver Trip (todayIdx = 2, 5 Etappen) → done/done/active/future/future', () => {
 	const todayIdx = 2;
 	assert.equal(stageStripState(todayIdx, 0), 'done');
 	assert.equal(stageStripState(todayIdx, 1), 'done');
@@ -182,10 +182,10 @@ test('AC-1/AC-2/AC-4: Cockpit nutzt Hero-Bausteine (StagePill, ElevSparkline, Pi
 	}
 });
 
-test('AC-1/AC-11: Hero-Pill unterscheidet aktive Tour ("Tag X von Y") und nächste Tour', () => {
+test('AC-1/AC-11: Hero-Pill unterscheidet aktiven Trip ("Tag X von Y") und nächsten Trip', () => {
 	const src = readPage();
 	assert.match(src, /Tag /, 'Live-Label "Tag X von Y" fehlt');
-	assert.match(src, /Nächste Tour/, 'AC-11-Label "Nächste Tour" fehlt');
+	assert.match(src, /Nächster Trip/, 'AC-11-Label "Nächster Trip" fehlt');
 });
 
 test('AC-5: "Was geht heute raus" nutzt BriefingTimelineRow aus report_config', () => {
@@ -202,7 +202,7 @@ test('AC-6: Alarm-Karte zeigt sauberen Leerzustand, KEINEN Fake-Zähler', () => 
 
 test('AC-12: Rückwärtskompatibilität — TripKachel + CompareKachel bleiben erreichbar', () => {
 	const src = readPage();
-	assert.match(src, /TripKachel/, 'TripKachel (Weitere Touren) fehlt');
+	assert.match(src, /TripKachel/, 'TripKachel (Weitere Trips) fehlt');
 	assert.match(src, /CompareKachel/, 'CompareKachel (Orts-Vergleiche) fehlt');
 });
 
