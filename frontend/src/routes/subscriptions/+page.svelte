@@ -263,6 +263,7 @@
 	open={weatherTarget !== null}
 	entityName={weatherTarget?.name ?? ''}
 	currentConfig={weatherTarget?.display_config}
+	entityType="subscription"
 	onsave={handleWeatherSave}
 	onclose={() => (weatherTarget = null)}
 />

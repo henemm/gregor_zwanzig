@@ -5,6 +5,7 @@
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { Select } from '$lib/components/ui/select';
 	import Segmented from '$lib/components/ui/segmented';
+	import { buildScoreMap } from '$lib/utils/scoreToggleHelpers.js';
 
 	interface MetricEntry {
 		id: string;
@@ -21,11 +22,12 @@
 		open: boolean;
 		entityName: string;
 		currentConfig: Record<string, unknown> | undefined;
+		entityType?: 'location' | 'subscription' | 'trip';
 		onsave: (config: Record<string, unknown>) => void;
 		onclose: () => void;
 	}
 
-	let { open, entityName, currentConfig, onsave, onclose }: Props = $props();
+	let { open, entityName, currentConfig, entityType = 'trip', onsave, onclose }: Props = $props();
 
 	const CATEGORY_LABELS: Record<string, string> = {
 		temperature: 'Temperatur',
@@ -53,6 +55,9 @@
 	let enabledMap: Record<string, boolean> = $state({});
 	// Map of metric_id -> use_friendly_format (Default: true)
 	let friendlyMap: Record<string, boolean> = $state({});
+	// Map of metric_id -> score_member (Default: true) — Issue #362
+	let scoreMap: Record<string, boolean> = $state({});
+	const showScoreToggle = $derived(entityType === 'location' || entityType === 'subscription');
 
 	function buildEnabledMap(cat: MetricCatalog, cfg: Record<string, unknown> | undefined) {
 		const map: Record<string, boolean> = {};
@@ -92,6 +97,7 @@
 		} else if (open && Object.keys(catalog).length > 0) {
 			enabledMap = buildEnabledMap(catalog, currentConfig);
 			friendlyMap = buildFriendlyMap(catalog, currentConfig);
+			scoreMap = buildScoreMap(catalog, currentConfig);
 		}
 	});
 
@@ -107,6 +113,7 @@
 			templates = templateData;
 			enabledMap = buildEnabledMap(catalog, currentConfig);
 			friendlyMap = buildFriendlyMap(catalog, currentConfig);
+			scoreMap = buildScoreMap(catalog, currentConfig);
 		} catch (e: unknown) {
 			errorMsg = (e as { error?: string })?.error ?? 'Fehler beim Laden der Metriken';
 		} finally {
@@ -133,7 +140,8 @@
 		const metricsArr = Object.entries(enabledMap).map(([metric_id, enabled]) => ({
 			metric_id,
 			enabled,
-			use_friendly_format: friendlyMap[metric_id] ?? true
+			use_friendly_format: friendlyMap[metric_id] ?? true,
+			...(showScoreToggle ? { score_member: scoreMap[metric_id] ?? true } : {})
 		}));
 		const config: Record<string, unknown> = { metrics: metricsArr };
 		onsave(config);
@@ -209,6 +217,13 @@
 											options={[{ value: 'raw', label: 'Roh' }, { value: 'indicator', label: 'Indikator' }]}
 											selected={(friendlyMap[metric.id] ?? true) ? 'indicator' : 'raw'}
 											onselect={(v) => setFormat(metric.id, v === 'indicator')}
+										/>
+									{/if}
+									{#if showScoreToggle && enabledMap[metric.id]}
+										<Segmented
+											options={[{ value: 'score', label: 'Im Score' }, { value: 'noscore', label: 'Nicht im Score' }]}
+											selected={(scoreMap[metric.id] ?? true) ? 'score' : 'noscore'}
+											onselect={(v) => { scoreMap = { ...scoreMap, [metric.id]: v === 'score' }; }}
 										/>
 									{/if}
 								</div>

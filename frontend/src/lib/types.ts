@@ -134,6 +134,7 @@ export interface WeatherConfigMetric {
 	// und werden vom Python-Loader (#360) gelesen.
 	bucket?: 'primary' | 'secondary';
 	order?: number;
+	score_member?: boolean;
 }
 
 export interface WeatherConfig {

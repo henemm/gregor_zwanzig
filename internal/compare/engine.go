@@ -33,6 +33,7 @@ type fetchedRow struct {
 	locationID string
 	summary    model.SegmentWeatherSummary
 	hourly     []model.ForecastDataPoint
+	location   *model.Location
 }
 
 // Run executes a compare round-trip. It is safe to call concurrently.
@@ -59,8 +60,12 @@ func (e *Engine) Run(ctx context.Context, userID string, req CompareRequest) (Co
 
 			key := cacheKey{LocationID: locID, Date: req.Date, Profile: req.Profile}
 			if entry, ok := e.cache.get(key); ok {
+				loc, err := us.LoadLocation(locID)
+				if err != nil || loc == nil {
+					return
+				}
 				mu.Lock()
-				fetched = append(fetched, fetchedRow{locationID: locID, summary: entry.summary, hourly: entry.hourly})
+				fetched = append(fetched, fetchedRow{locationID: locID, summary: entry.summary, hourly: entry.hourly, location: loc})
 				mu.Unlock()
 				return
 			}
@@ -89,7 +94,7 @@ func (e *Engine) Run(ctx context.Context, userID string, req CompareRequest) (Co
 			e.cache.set(key, summary, hourly)
 
 			mu.Lock()
-			fetched = append(fetched, fetchedRow{locationID: locID, summary: summary, hourly: hourly})
+			fetched = append(fetched, fetchedRow{locationID: locID, summary: summary, hourly: hourly, location: loc})
 			mu.Unlock()
 		}()
 	}
@@ -98,6 +103,14 @@ func (e *Engine) Run(ctx context.Context, userID string, req CompareRequest) (Co
 	if len(fetched) == 0 {
 		return CompareResult{Rows: []CompareRow{}, Hourly: map[string][]model.ForecastDataPoint{}}, nil
 	}
+
+	locs := make([]*model.Location, 0, len(fetched))
+	for _, fr := range fetched {
+		if fr.location != nil {
+			locs = append(locs, fr.location)
+		}
+	}
+	enabledKeys := intersectScoreKeys(locs, req.Profile)
 
 	allMetrics := make([]model.SegmentWeatherSummary, len(fetched))
 	for i, fr := range fetched {
@@ -108,7 +121,7 @@ func (e *Engine) Run(ctx context.Context, userID string, req CompareRequest) (Co
 	for i, fr := range fetched {
 		rows[i] = CompareRow{
 			LocationID: fr.locationID,
-			Score:      ScoreRow(fr.summary, req.Profile, allMetrics),
+			Score:      ScoreRow(fr.summary, req.Profile, allMetrics, enabledKeys),
 			Metrics:    fr.summary,
 		}
 	}
@@ -301,4 +314,112 @@ func thunderOrder(l model.ThunderLevel) int {
 	default:
 		return 0
 	}
+}
+
+// frontendIDToMetricKey maps the string metric IDs stored in DisplayConfig
+// to the internal metricKey constants used by the scoring engine.
+var frontendIDToMetricKey = map[string]metricKey{
+	"precipitation": metricPrecipSum,
+	"wind":          metricWindMax,
+	"gust":          metricWindMax,
+	"temperature":   metricTempMax,
+	"snow_depth":    metricSnowDepth,
+	"fresh_snow":    metricSnowNew,
+	"sunshine":      metricSunnyHours,
+	"cloud_total":   metricCloudAvg,
+	"thunder":       metricThunderProxy,
+	"visibility":    metricVisibilityMin,
+	"uv_index":      metricUvIndexMax,
+}
+
+// extractScoreMap reads score_member fields from a location's DisplayConfig.
+// Returns nil if no score_member fields are present (all default to true).
+func extractScoreMap(loc *model.Location) map[metricKey]bool {
+	if loc == nil || loc.DisplayConfig == nil {
+		return nil
+	}
+	raw, ok := loc.DisplayConfig["metrics"]
+	if !ok {
+		return nil
+	}
+	metricsSlice, ok := raw.([]interface{})
+	if !ok {
+		return nil
+	}
+	result := make(map[metricKey]bool)
+	for _, item := range metricsSlice {
+		entry, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		idRaw, ok := entry["metric_id"]
+		if !ok {
+			continue
+		}
+		id, ok := idRaw.(string)
+		if !ok {
+			continue
+		}
+		smRaw, ok := entry["score_member"]
+		if !ok {
+			continue // absent = default true, skip
+		}
+		sm, ok := smRaw.(bool)
+		if !ok {
+			continue
+		}
+		mk, ok := frontendIDToMetricKey[id]
+		if !ok {
+			continue
+		}
+		result[mk] = sm
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
+}
+
+// intersectScoreKeys returns metric keys enabled (score_member=true or absent)
+// across ALL locations. Returns nil when no filtering is needed:
+//   - no location has any score_member field set
+//   - the resulting intersection would be empty (fallback to full scoring)
+func intersectScoreKeys(locs []*model.Location, _ ActivityProfile) map[metricKey]bool {
+	scoreMaps := make([]map[metricKey]bool, 0, len(locs))
+	for _, loc := range locs {
+		if sm := extractScoreMap(loc); sm != nil {
+			scoreMaps = append(scoreMaps, sm)
+		}
+	}
+	if len(scoreMaps) == 0 {
+		return nil
+	}
+
+	// Collect all mentioned keys.
+	allKeys := make(map[metricKey]struct{})
+	for _, sm := range scoreMaps {
+		for k := range sm {
+			allKeys[k] = struct{}{}
+		}
+	}
+
+	// A key is included only if it is NOT explicitly false in any location.
+	result := make(map[metricKey]bool)
+	for k := range allKeys {
+		excluded := false
+		for _, sm := range scoreMaps {
+			if v, exists := sm[k]; exists && !v {
+				excluded = true
+				break
+			}
+		}
+		if !excluded {
+			result[k] = true
+		}
+	}
+
+	if len(result) == 0 {
+		return nil // empty intersection → fallback
+	}
+	return result
 }

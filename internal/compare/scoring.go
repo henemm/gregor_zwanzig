@@ -127,8 +127,33 @@ func thunderProxy(s model.SegmentWeatherSummary) (float64, bool) {
 //   - negative metrics: best (lowest) value = 100%, the worst observed value
 //     = 0%, linear interpolation otherwise.
 //   - identical values across all candidates degenerate to 100% (no signal).
-func ScoreRow(loc model.SegmentWeatherSummary, profile ActivityProfile, allMetrics []model.SegmentWeatherSummary) int {
+func ScoreRow(loc model.SegmentWeatherSummary, profile ActivityProfile, allMetrics []model.SegmentWeatherSummary, enabledKeys map[metricKey]bool) int {
 	specs := profileMetrics(profile)
+
+	// Filter and re-normalise when caller supplies an explicit key set.
+	if enabledKeys != nil {
+		active := make([]metricSpec, 0, len(specs))
+		for _, s := range specs {
+			if enabledKeys[s.key] {
+				active = append(active, s)
+			}
+		}
+		if len(active) > 0 {
+			// Re-normalise weights so they sum to 1.0.
+			var totalWeight float64
+			for _, s := range active {
+				totalWeight += s.weight
+			}
+			if totalWeight > 0 && math.Abs(totalWeight-1.0) > 1e-9 {
+				for i := range active {
+					active[i].weight = active[i].weight / totalWeight
+				}
+			}
+			specs = active
+		}
+		// else: all filtered out → fallback to full profile (no change to specs)
+	}
+
 	if len(specs) == 0 || len(allMetrics) == 0 {
 		return 0
 	}

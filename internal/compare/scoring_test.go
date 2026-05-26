@@ -24,8 +24,8 @@ func TestScoreRow_HigherPrecipGetsLowerScore_SummerTrekking(t *testing.T) {
 	wet := model.SegmentWeatherSummary{PrecipSumMm: fp(20.0), WindMaxKmh: fp(10.0)}
 	all := []model.SegmentWeatherSummary{dry, wet}
 
-	scoreDry := ScoreRow(dry, ProfileSummerTrekking, all)
-	scoreWet := ScoreRow(wet, ProfileSummerTrekking, all)
+	scoreDry := ScoreRow(dry, ProfileSummerTrekking, all, nil)
+	scoreWet := ScoreRow(wet, ProfileSummerTrekking, all, nil)
 
 	if scoreDry <= scoreWet {
 		t.Errorf("dry(%d) sollte > wet(%d) sein", scoreDry, scoreWet)
@@ -46,7 +46,7 @@ func TestScoreRow_ScoreInRange0To100(t *testing.T) {
 	for _, profile := range []ActivityProfile{
 		ProfileWintersport, ProfileAlpineTour, ProfileSummerTrekking, ProfileAllgemein,
 	} {
-		score := ScoreRow(summary, profile, all)
+		score := ScoreRow(summary, profile, all, nil)
 		if score < 0 || score > 100 {
 			t.Errorf("Profil %s: Score %d außerhalb [0,100]", profile, score)
 		}
@@ -61,8 +61,8 @@ func TestScoreRow_AlpineTour_MissingAvalanche_NoError(t *testing.T) {
 	b := model.SegmentWeatherSummary{WindMaxKmh: fp(60.0), SnowNewSumCm: fp(0.0)}
 	all := []model.SegmentWeatherSummary{a, b}
 
-	scoreA := ScoreRow(a, ProfileAlpineTour, all)
-	scoreB := ScoreRow(b, ProfileAlpineTour, all)
+	scoreA := ScoreRow(a, ProfileAlpineTour, all, nil)
+	scoreB := ScoreRow(b, ProfileAlpineTour, all, nil)
 
 	if scoreA <= scoreB {
 		t.Errorf("a(%d) sollte > b(%d) sein (weniger Wind, mehr Schnee)", scoreA, scoreB)
@@ -102,7 +102,7 @@ func TestScoreRow_IdenticalMetrics_SameScore(t *testing.T) {
 	b := model.SegmentWeatherSummary{TempMaxC: fp(20.0), WindMaxKmh: fp(15.0), PrecipSumMm: fp(2.0)}
 	all := []model.SegmentWeatherSummary{a, b}
 
-	if ScoreRow(a, ProfileAllgemein, all) != ScoreRow(b, ProfileAllgemein, all) {
+	if ScoreRow(a, ProfileAllgemein, all, nil) != ScoreRow(b, ProfileAllgemein, all, nil) {
 		t.Error("Identische Metriken müssen identische Scores ergeben")
 	}
 }
@@ -114,8 +114,8 @@ func TestScoreRow_NegativeTemps_HigherTempGetsHigherScore(t *testing.T) {
 	warm := model.SegmentWeatherSummary{TempMaxC: fp(-3.0), WindMaxKmh: fp(20.0), PrecipSumMm: fp(1.0)}
 	cold := model.SegmentWeatherSummary{TempMaxC: fp(-8.0), WindMaxKmh: fp(20.0), PrecipSumMm: fp(1.0)}
 	all := []model.SegmentWeatherSummary{warm, cold}
-	scoreWarm := ScoreRow(warm, ProfileAllgemein, all)
-	scoreCold := ScoreRow(cold, ProfileAllgemein, all)
+	scoreWarm := ScoreRow(warm, ProfileAllgemein, all, nil)
+	scoreCold := ScoreRow(cold, ProfileAllgemein, all, nil)
 	if scoreWarm <= scoreCold {
 		t.Errorf("warm(%d) sollte > cold(%d) sein (gleicher Wind, wärmere Temp)", scoreWarm, scoreCold)
 	}
@@ -148,8 +148,8 @@ func TestScoreRow_Wintersport_MoreSunnyHoursGetsHigherScore(t *testing.T) {
 	}
 	all := []model.SegmentWeatherSummary{sunny, cloudy}
 
-	scoreSunny := ScoreRow(sunny, ProfileWintersport, all)
-	scoreCloudy := ScoreRow(cloudy, ProfileWintersport, all)
+	scoreSunny := ScoreRow(sunny, ProfileWintersport, all, nil)
+	scoreCloudy := ScoreRow(cloudy, ProfileWintersport, all, nil)
 
 	if scoreSunny <= scoreCloudy {
 		t.Errorf("sunny(%d) sollte > cloudy(%d) sein (mehr SunnyHoursH)", scoreSunny, scoreCloudy)
@@ -170,7 +170,7 @@ func TestSunnyHoursH_MaximumBoundary_NotExceedsDay(t *testing.T) {
 	}
 	all := []model.SegmentWeatherSummary{full, zero}
 
-	score := ScoreRow(full, ProfileWintersport, all)
+	score := ScoreRow(full, ProfileWintersport, all, nil)
 	if score < 0 || score > 100 {
 		t.Errorf("Score %d außerhalb [0,100] bei SunnyHoursH=24.0", score)
 	}

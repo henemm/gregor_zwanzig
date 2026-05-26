@@ -195,6 +195,7 @@
 	open={weatherTarget !== null}
 	entityName={weatherTarget?.name ?? ''}
 	currentConfig={weatherTarget?.display_config}
+	entityType="location"
 	onsave={handleWeatherSave}
 	onclose={() => (weatherTarget = null)}
 />
