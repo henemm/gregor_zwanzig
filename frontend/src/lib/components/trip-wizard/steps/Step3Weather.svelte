@@ -167,6 +167,12 @@
 							onclick={makeToggleHorizon(metric, 'day_after')}
 						/>
 					</div>
+					<span
+						data-testid={`metric-format-${metric.metric_id}`}
+						class="format-label text-xs text-[var(--g-ink-muted)]"
+					>
+						{metric.use_friendly_format ? 'Indikator' : 'Roh'}
+					</span>
 				</div>
 			{/each}
 		</div>

@@ -1,14 +1,17 @@
 <script lang="ts">
-	// Step 2: GPX-Multi-Upload + Drag-Sort + Pause (Epic #136 Sub-Spec #162).
-	// Quelle: docs/specs/modules/epic_136_step2_stages.md
+	// Step 2: Drag-Sort + Pause (Epic #136 Sub-Spec #162; Issue #300 Redesign).
+	// Quelle: docs/specs/modules/issue_300_wizard_redesign.md
 	//
-	// Layout (Spec §1):
-	//   - Drop-Zone (Multi-File-Drag-Drop, klick = File-Picker, Enter/Space)
-	//   - Pending-Region (Bulk-Datumspicker + "X Etappen anlegen"-Button)
-	//   - Etappen-Liste (DnD-sortierbar) mit Pause-Inserter zwischen Rows
+	// Layout (#300 §"Step 2 — Etappen"):
+	//   - Header: "N ETAPPEN ERKANNT AUS N GPX" (Badge-Stil)
+	//   - Etappen-Liste (DnD-sortierbar) mit Pause-Inserter zwischen Rows;
+	//     pro Etappe eine "+N Vorschläge"-Pill bei vorhandenen Wegpunkt-Vorschlägen
+	//   - TemplatePicker (rechte Spalte, unverändert)
+	//
+	// AC-3 #300: Der GPX-Upload (Drop-Zone + Pending-Region) wurde nach Step 1
+	// (Route) verschoben — hier gibt es keinen Upload-Bereich mehr.
 	//
 	// Logik:
-	//   - commitPending: naturalSort -> uploadGpx (sequenziell) -> wizard.addStage
 	//   - DnD via svelte-dnd-action; nach finalize: wizard.recomputeStageDates()
 	//   - Pause-Inserter: wizard.addPauseStageAt(afterIndex)
 	//   - Auto-Datierung in WizardState; manueller Override setzt dateOverridden=true
@@ -16,35 +19,18 @@
 	// Safari/Factory: benannte Handler statt anonymer Closures (Spec §6, §7).
 
 	import { getContext } from 'svelte';
-	import Upload from '@lucide/svelte/icons/upload';
 	import Plus from '@lucide/svelte/icons/plus';
 	import { dndzone, type DndEvent } from 'svelte-dnd-action';
 	import { flip } from 'svelte/animate';
-	import { uploadGpx } from '$lib/api';
-	import { naturalSort } from '$lib/utils/naturalSort.js';
 	import type { Stage } from '$lib/types';
 	import type { WizardState } from '../wizardState.svelte';
-	import { addDays, isPauseStage } from '../wizardHelpers.ts';
+	import { isPauseStage } from '../wizardHelpers.ts';
 	import StageRow from './StageRow.svelte';
 	import TemplatePicker from '../templates/TemplatePicker.svelte';
 
 	const wizard = getContext<WizardState>('trip-wizard-state');
 
-	// --- Local UI-State -----------------------------------------------------
-
-	let dragOver = $state(false);
-	let pendingFiles = $state<File[]>([]);
-	let bulkStartDate = $state('');
-	let uploading = $state(false);
-	let uploadProgress = $state('');
-	let uploadError = $state('');
-	let fileInputEl: HTMLInputElement | null = $state(null);
-
 	// --- Derivations --------------------------------------------------------
-
-	const commitLabel = $derived(
-		pendingFiles.length === 1 ? '1 Etappe anlegen' : `${pendingFiles.length} Etappen anlegen`
-	);
 
 	// nonPauseIndex pro Stage berechnen (Spec §5): Position unter den
 	// nicht-Pause-Stages — Pausen geben -1 zurueck.
@@ -55,81 +41,18 @@
 
 	const nonPauseIndices = $derived(computeNonPauseIndices(wizard.stages));
 
-	// --- File-Buffer-Logik --------------------------------------------------
-
-	function defaultBulkDate(): string {
-		// Default: wizard.startDate + wizard.stages.length Tage
-		// (so reiht sich der Bulk lueckenlos an die bisherigen Etappen an).
-		if (typeof wizard.startDate === 'string' && wizard.startDate.length > 0) {
-			return addDays(wizard.startDate, wizard.stages.length);
-		}
-		// Fallback: heute
-		const now = new Date();
-		const yyyy = now.getFullYear();
-		const mm = String(now.getMonth() + 1).padStart(2, '0');
-		const dd = String(now.getDate()).padStart(2, '0');
-		return `${yyyy}-${mm}-${dd}`;
+	// AC-4 #300: Anzahl erkannter Etappen. Jede GPX = 1 Etappe, daher ist die
+	// GPX-Anzahl identisch zur Nicht-Pause-Etappen-Anzahl.
+	function countNonPauseStages(stages: Stage[]): number {
+		return stages.filter((s) => !isPauseStage(s)).length;
 	}
 
-	function bufferFiles(files: FileList | File[]) {
-		const arr = Array.from(files).filter((f) => f.name.toLowerCase().endsWith('.gpx'));
-		if (arr.length === 0) return;
-		const wasEmpty = pendingFiles.length === 0;
-		pendingFiles = [...pendingFiles, ...arr];
-		uploadError = '';
-		if (wasEmpty) {
-			bulkStartDate = defaultBulkDate();
-		}
-	}
+	const stageCount = $derived(countNonPauseStages(wizard.stages));
 
-	async function commitPending(): Promise<void> {
-		if (pendingFiles.length === 0) return;
-		if (!bulkStartDate) {
-			uploadError = 'Bitte Startdatum wählen.';
-			return;
-		}
+	// --- Vorschläge-Pill (AC-4) ---------------------------------------------
 
-		uploading = true;
-		uploadError = '';
-		const files = pendingFiles;
-		const start = bulkStartDate;
-		const total = files.length;
-		pendingFiles = [];
-
-		const uploaded: Stage[] = [];
-		let added = 0;
-		for (let i = 0; i < files.length; i++) {
-			const file = files[i];
-			uploadProgress = `Lade ${i + 1} von ${total} Dateien...`;
-			const stageDate = addDays(start, added);
-			try {
-				const stage = await uploadGpx(file, stageDate, 8);
-				uploaded.push(stage);
-				added += 1;
-			} catch (e) {
-				const msg = e instanceof Error ? e.message : String(e);
-				uploadError += `${file.name}: ${msg}\n`;
-				console.error('GPX upload failed', file.name, e);
-			}
-		}
-
-		const sorted = naturalSort(uploaded, (s) => s.name);
-		for (const stage of sorted) {
-			// id-Vergabe passiert zentral in wizard.addStage()
-			// (Backend liefert ggf. keine id; DnD braucht stage.id als Key).
-			wizard.addStage(stage);
-		}
-
-		uploading = false;
-		uploadProgress = '';
-
-		// Nach Upload: Auto-Datierung greift, falls startDate gesetzt.
-		wizard.recomputeStageDates();
-	}
-
-	function cancelPending() {
-		pendingFiles = [];
-		uploadError = '';
+	function suggestedCount(stage: Stage): number {
+		return (stage.waypoints ?? []).filter((wp) => wp.suggested).length;
 	}
 
 	// --- DnD-Handler --------------------------------------------------------
@@ -141,44 +64,6 @@
 	function handleDndFinalize(e: CustomEvent<DndEvent<Stage>>) {
 		wizard.stages = e.detail.items;
 		wizard.recomputeStageDates();
-	}
-
-	// --- Drop-Zone ----------------------------------------------------------
-
-	function handleDrop(e: DragEvent) {
-		e.preventDefault();
-		dragOver = false;
-		if (e.dataTransfer?.files) {
-			bufferFiles(e.dataTransfer.files);
-		}
-	}
-
-	function handleDragOver(e: DragEvent) {
-		e.preventDefault();
-		dragOver = true;
-	}
-
-	function handleDragLeave() {
-		dragOver = false;
-	}
-
-	function handleDropZoneClick() {
-		fileInputEl?.click();
-	}
-
-	function handleDropZoneKeydown(e: KeyboardEvent) {
-		if (e.key === 'Enter' || e.key === ' ') {
-			e.preventDefault();
-			fileInputEl?.click();
-		}
-	}
-
-	function handleFileInput(e: Event) {
-		const input = e.target as HTMLInputElement;
-		if (input.files) {
-			bufferFiles(input.files);
-			input.value = ''; // erneutes Auswaehlen derselben Files erlauben
-		}
 	}
 
 	// --- Stage-Row-Handler --------------------------------------------------
@@ -209,83 +94,15 @@
 	class="grid gap-6 py-4 step2-grid"
 >
 	<div data-testid="trip-wizard-step2-stages" class="flex flex-col gap-6">
-	<!-- Drop-Zone -->
-	<div
-		data-testid="trip-wizard-step2-dropzone"
-		role="button"
-		tabindex="0"
-		aria-label="GPX-Dateien hierher ziehen oder klicken zum Auswählen"
-		class="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
-			{dragOver
-			? 'border-[var(--g-accent)] bg-[var(--g-accent)]/5'
-			: 'border-[var(--g-ink-faint)]/30 hover:border-[var(--g-accent)]/50'}"
-		ondrop={handleDrop}
-		ondragover={handleDragOver}
-		ondragleave={handleDragLeave}
-		onclick={handleDropZoneClick}
-		onkeydown={handleDropZoneKeydown}
-	>
-		<Upload class="mx-auto mb-2 size-8 text-[var(--g-ink-muted)]" />
-		<p class="font-medium">GPX-Dateien hierher ziehen</p>
-		<p class="text-sm text-[var(--g-ink-muted)] mt-1">oder klicken zum Auswählen</p>
-		<input
-			bind:this={fileInputEl}
-			type="file"
-			accept=".gpx"
-			multiple
-			class="hidden"
-			onchange={handleFileInput}
-		/>
-	</div>
-
-	<!-- Pending-Region -->
-	{#if pendingFiles.length > 0}
-		<div
-			data-testid="trip-wizard-step2-pending"
-			class="rounded-md border border-[var(--g-ink-faint)]/30 p-4 space-y-3 bg-[var(--g-ink-faint)]/5"
-		>
-			<p class="text-sm" data-testid="trip-wizard-step2-pending-count">
-				{pendingFiles.length} Datei(en) ausgewählt
-			</p>
-			<div class="flex flex-col gap-2 sm:flex-row sm:items-center">
-				<label class="sm:w-32 text-sm" for="bulk-stage-start-date">Startdatum</label>
-				<input
-					id="bulk-stage-start-date"
-					data-testid="trip-wizard-step2-bulk-startdate"
-					type="date"
-					bind:value={bulkStartDate}
-					class="h-9 rounded border border-[var(--g-ink-faint)]/40 bg-transparent px-2 outline-none focus-visible:ring-2 focus-visible:ring-[var(--g-accent)]"
-				/>
-			</div>
-			<div class="flex items-center gap-2">
-				<button
-					type="button"
-					data-testid="trip-wizard-step2-bulk-commit"
-					onclick={commitPending}
-					disabled={uploading}
-					class="rounded-md bg-[var(--g-accent)] px-3 py-2 text-sm text-white disabled:opacity-50"
-				>
-					{commitLabel}
-				</button>
-				<button
-					type="button"
-					data-testid="trip-wizard-step2-bulk-cancel"
-					onclick={cancelPending}
-					disabled={uploading}
-					class="rounded-md border border-[var(--g-ink-faint)]/40 px-3 py-2 text-sm disabled:opacity-50"
-				>
-					Abbrechen
-				</button>
-			</div>
+	<!-- Header: "N ETAPPEN ERKANNT AUS N GPX" (AC-4 #300) -->
+	{#if wizard.stages.length > 0}
+		<div class="flex items-center gap-2" data-testid="trip-wizard-step2-header">
+			<span
+				class="text-xs font-semibold uppercase tracking-widest text-[var(--g-ink-muted)]"
+			>
+				{stageCount} ETAPPEN ERKANNT AUS {stageCount} GPX
+			</span>
 		</div>
-	{/if}
-
-	{#if uploading}
-		<p class="text-sm text-[var(--g-ink-muted)]">{uploadProgress}</p>
-	{/if}
-
-	{#if uploadError}
-		<p class="text-sm text-[var(--g-danger)] whitespace-pre-line">{uploadError}</p>
 	{/if}
 
 	<!-- Etappen-Liste mit DnD + Pause-Inserter -->
@@ -298,14 +115,27 @@
 			onfinalize={handleDndFinalize}
 		>
 			{#each wizard.stages as stage, i (stage.id)}
+				{@const suggested = suggestedCount(stage)}
 				<div animate:flip={{ duration: 200 }} class="flex flex-col">
-					<StageRow
-						{stage}
-						index={i}
-						nonPauseIndex={nonPauseIndices[i]}
-						onDateChange={handleStageDateChange}
-						onDelete={handleStageDelete}
-					/>
+					<div class="flex items-center gap-2">
+						<div class="flex-1">
+							<StageRow
+								{stage}
+								index={i}
+								nonPauseIndex={nonPauseIndices[i]}
+								onDateChange={handleStageDateChange}
+								onDelete={handleStageDelete}
+							/>
+						</div>
+						{#if suggested > 0}
+							<span
+								data-testid="trip-wizard-step2-suggested-pill-{i}"
+								class="shrink-0 rounded-full border border-dashed border-[var(--g-accent)]/60 px-2 py-0.5 text-xs text-[var(--g-accent)]"
+							>
+								+{suggested} Vorschläge
+							</span>
+						{/if}
+					</div>
 					<div class="flex justify-center py-1">
 						<button
 							type="button"
