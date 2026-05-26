@@ -3,22 +3,32 @@
 	// Quelle: docs/specs/modules/issue_300_wizard_redesign.md §"Step 4 — Reports"
 	//
 	// Vier Report-Cards in einem 2×2-Grid:
-	//   1. Abend-Briefing  (card-evening)  — Checkbox + Uhrzeit
-	//   2. Morgen-Update   (card-morning)  — Checkbox + Uhrzeit
-	//   3. Warnungen       (card-alerts)   — AUTARK-Badge
-	//   4. Trend-Vorschau  (card-trend)    — disabled, Badge "Demnächst"
+	//   1. Abend-Briefing  (card-evening)  — Checkbox + Uhrzeit + Kanäle
+	//   2. Morgen-Update   (card-morning)  — Checkbox + Uhrzeit + Kanäle
+	//   3. Warnungen       (card-alerts)   — AUTARK-Badge + Kanäle
+	//   4. Mehrtages-Trend (card-trend)    — Hinweis: im Abend-Briefing enthalten
 	//
 	// State: getContext('trip-wizard-state'). Reports mutieren
-	// wizard.briefings.reports.{morning|evening}.{enabled|time}. Save-Button
-	// kommt aus TripWizardShell (state.save()).
+	// wizard.briefings.reports.{morning|evening}.{enabled|time}. Kanäle teilen
+	// alle Cards: wizard.briefings.channels.{email|signal|telegram|sms}.
+	// Save-Button kommt aus TripWizardShell (state.save()).
 
 	import { getContext } from 'svelte';
 	import { Eyebrow } from '$lib/components/ui/eyebrow';
 	import { GCard } from '$lib/components/ui/g-card';
 	import { Pill } from '$lib/components/ui/pill';
+	import ChannelChip from '$lib/components/molecules/ChannelChip.svelte';
 	import type { WizardState } from '../wizardState.svelte';
 
 	const wizard = getContext<WizardState>('trip-wizard-state');
+
+	// Kanal-Liste (geteilt von allen interaktiven Cards).
+	const CHANNELS = [
+		{ key: 'email', kind: 'Email' },
+		{ key: 'signal', kind: 'Signal' },
+		{ key: 'telegram', kind: 'Telegram' },
+		{ key: 'sms', kind: 'SMS' }
+	] as const;
 
 	// --- Factory-Handler (Safari/Factory: benannte Handler) -----------------
 
@@ -27,7 +37,27 @@
 			wizard.briefings.reports[report].enabled = (e.target as HTMLInputElement).checked;
 		};
 	}
+
+	function makeToggleChannel(key: keyof typeof wizard.briefings.channels) {
+		return function handleToggle() {
+			wizard.briefings.channels[key] = !wizard.briefings.channels[key];
+		};
+	}
 </script>
+
+{#snippet channelRow()}
+	<div class="flex gap-1 flex-wrap mt-2">
+		{#each CHANNELS as ch (ch.key)}
+			<button
+				type="button"
+				onclick={makeToggleChannel(ch.key)}
+				class="cursor-pointer bg-transparent border-0 p-0"
+			>
+				<ChannelChip kind={ch.kind} active={wizard.briefings.channels[ch.key]} />
+			</button>
+		{/each}
+	</div>
+{/snippet}
 
 <div class="step4-reports py-4" data-testid="step4-reports">
 	<div class="reports-grid grid gap-4 sm:grid-cols-2">
@@ -54,6 +84,7 @@
 					class="h-9 w-28 rounded-lg border border-[var(--g-ink-faint)]/40 bg-transparent px-2.5 font-mono outline-none focus-visible:ring-2 focus-visible:ring-[var(--g-accent)]"
 				/>
 			</label>
+			{@render channelRow()}
 		</GCard>
 
 		<!-- Card 2: Morgen-Update -->
@@ -79,6 +110,7 @@
 					class="h-9 w-28 rounded-lg border border-[var(--g-ink-faint)]/40 bg-transparent px-2.5 font-mono outline-none focus-visible:ring-2 focus-visible:ring-[var(--g-accent)]"
 				/>
 			</label>
+			{@render channelRow()}
 		</GCard>
 
 		<!-- Card 3: Warnungen (autark) -->
@@ -91,15 +123,16 @@
 			<p class="text-sm text-[var(--g-ink-muted)]">
 				Warnungen werden automatisch ausgelöst, sobald eine Alarmregel überschritten wird.
 			</p>
+			{@render channelRow()}
 		</GCard>
 
-		<!-- Card 4: Trend-Vorschau (Platzhalter) -->
+		<!-- Card 4: Mehrtages-Trend (Teil des Abend-Briefings) -->
 		<GCard
 			data-testid="card-trend"
-			class="disabled rounded-md border border-[var(--g-ink-faint)]/20 p-4 flex flex-col gap-3 opacity-60"
+			class="rounded-md border border-[var(--g-ink-faint)]/20 p-4 flex flex-col gap-3"
 		>
-			<Eyebrow>Trend-Vorschau</Eyebrow>
-			<Pill tone="default">Demnächst</Pill>
+			<Eyebrow>Mehrtages-Trend</Eyebrow>
+			<p class="text-sm text-[var(--g-ink-muted)]">Im Abend-Briefing enthalten.</p>
 		</GCard>
 	</div>
 </div>
