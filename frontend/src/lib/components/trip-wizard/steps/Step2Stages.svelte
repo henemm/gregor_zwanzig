@@ -130,7 +130,7 @@
 						{#if suggested > 0}
 							<span
 								data-testid="trip-wizard-step2-suggested-pill-{i}"
-								class="shrink-0 rounded-full border border-dashed border-[var(--g-accent)]/60 px-2 py-0.5 text-xs text-[var(--g-accent)]"
+								class="shrink-0 rounded-full border border-dashed border-[var(--g-accent)]/60 px-2 py-0.5 text-xs text-[var(--g-accent-deep)]"
 							>
 								+{suggested} Vorschläge
 							</span>

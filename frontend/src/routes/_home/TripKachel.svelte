@@ -1,17 +1,8 @@
 <script lang="ts">
 	import type { Trip, Stage } from '$lib/types.js';
+	import { tripStatus } from '$lib/utils/tripStatus.js';
 
 	let { trip }: { trip: Trip } = $props();
-
-	const today = new Date().toISOString().slice(0, 10);
-
-	function tripStatus(t: Trip): 'aktiv' | 'geplant' | 'fertig' | 'draft' {
-		const dates = t.stages?.map((s: Stage) => s.date).filter(Boolean).sort() ?? [];
-		if (!dates.length) return 'draft';
-		if (dates[dates.length - 1] < today) return 'fertig';
-		if (dates[0] <= today) return 'aktiv';
-		return 'geplant';
-	}
 
 	function computeRange(t: Trip): string {
 		const dates = t.stages?.map((s: Stage) => s.date).filter(Boolean).sort() ?? [];

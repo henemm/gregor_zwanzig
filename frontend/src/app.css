@@ -461,7 +461,7 @@
   [data-slot="empty-state"] [data-slot="empty-state-icon"] {
     width: 40px;
     height: 40px;
-    color: var(--g-ink-faint);
+    color: var(--g-ink-faint); /* audit:exempt — dekoratives Empty-State-Icon, begleitender Text traegt die Bedeutung (WCAG §1.4.3) */
     margin-bottom: 0.25rem;
   }
   [data-slot="empty-state"] [data-slot="empty-state-title"] {
