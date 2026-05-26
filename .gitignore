@@ -76,6 +76,9 @@ gregor-api
 gregor_zwanzig
 server
 
+# Diagnostic logs (Go runtime, OpenMeteo API call traces)
+**/data/diagnostics/
+
 # Workflow / TDD artifacts (test outputs, screenshots — kein Commit)
 docs/artifacts/
 
