@@ -24,7 +24,7 @@
 		class="desktop:hidden flex items-center gap-2 text-sm"
 	>
 		<span class="font-mono font-semibold text-[var(--g-ink)]">{current} / {labels.length}</span>
-		<span class="text-[var(--g-ink-faint)]">·</span>
+		<span class="text-[var(--g-ink-muted)]">·</span>
 		<span class="text-[var(--g-ink)]">{labels[current - 1]}</span>
 	</div>
 
@@ -48,20 +48,20 @@
 					</span>
 				{:else if state === 'active'}
 					<span
-						class="w-8 h-8 rounded-full border-2 border-[var(--g-accent)] bg-[var(--g-accent)]/10 flex items-center justify-center text-[var(--g-accent)] font-medium"
+						class="w-8 h-8 rounded-full border-2 border-[var(--g-accent)] bg-[var(--g-accent)]/10 flex items-center justify-center text-[var(--g-accent-deep)] font-medium"
 					>
 						{i + 1}
 					</span>
 				{:else}
 					<span
-						class="w-8 h-8 rounded-full border border-[var(--g-ink-faint)] flex items-center justify-center text-[var(--g-ink-faint)]"
+						class="w-8 h-8 rounded-full border border-[var(--g-ink-faint)] flex items-center justify-center text-[var(--g-ink-muted)]"
 					>
 						{i + 1}
 					</span>
 				{/if}
 				<span class="text-sm mt-1 leading-tight">{label}</span>
 				{#if subLabels[i]}
-					<span class="text-xs text-[var(--g-ink-faint)] leading-tight">{subLabels[i]}</span>
+					<span class="text-xs text-[var(--g-ink-muted)] leading-tight">{subLabels[i]}</span>
 				{/if}
 			</div>
 			{#if i < labels.length - 1}

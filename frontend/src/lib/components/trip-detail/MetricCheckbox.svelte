@@ -195,7 +195,7 @@
 	.metric-unit {
 		grid-area: unit;
 		font-size: var(--g-text-xs);
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 		flex-shrink: 0;
 	}
 	.format-toggle {

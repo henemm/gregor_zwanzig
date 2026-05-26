@@ -105,7 +105,7 @@
 		font-size: var(--g-text-xs);
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 	}
 	.title {
 		font-weight: 600;
@@ -120,7 +120,7 @@
 		font-size: var(--g-text-xs);
 		font-style: normal;
 		letter-spacing: 0;
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 	}
 	.field-count-badge {
 		align-self: flex-start;

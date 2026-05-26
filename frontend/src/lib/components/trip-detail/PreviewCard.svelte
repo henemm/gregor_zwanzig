@@ -63,7 +63,7 @@
 	}
 	.cta-link {
 		font-size: 0.875rem;
-		color: var(--g-accent);
+		color: var(--g-accent-deep);
 		text-decoration: none;
 	}
 	.cta-link:hover {

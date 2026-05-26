@@ -53,7 +53,7 @@
 <div data-testid="trip-wizard-step4-container" class="space-y-6 py-4">
 	<!-- Sektion 1: Kanaele -->
 	<section class="space-y-2">
-		<Eyebrow class="text-xs uppercase tracking-wide text-[var(--g-ink-faint)]"
+		<Eyebrow class="text-xs uppercase tracking-wide text-[var(--g-ink-muted)]"
 			>Kanäle</Eyebrow
 		>
 		<GCard class="rounded-md border border-[var(--g-ink-faint)]/20 p-4">
@@ -90,7 +90,7 @@
 
 	<!-- Sektion 2: Reports -->
 	<section class="space-y-2">
-		<Eyebrow class="text-xs uppercase tracking-wide text-[var(--g-ink-faint)]"
+		<Eyebrow class="text-xs uppercase tracking-wide text-[var(--g-ink-muted)]"
 			>Reports</Eyebrow
 		>
 		<GCard class="rounded-md border border-[var(--g-ink-faint)]/20 p-4">
@@ -119,7 +119,7 @@
 
 	<!-- Sektion 3: Alarmregeln (Issue #224 — AlertRulesEditor) -->
 	<section class="space-y-2">
-		<Eyebrow class="text-xs uppercase tracking-wide text-[var(--g-ink-faint)]"
+		<Eyebrow class="text-xs uppercase tracking-wide text-[var(--g-ink-muted)]"
 			>Alarmregeln</Eyebrow
 		>
 		<AlertRulesEditor bind:rules={wizard.alertRules} />

@@ -80,7 +80,7 @@
 	}
 	.empty-state {
 		font-size: 0.875rem;
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 		margin: 0;
 		padding: var(--g-s-3) var(--g-s-4);
 	}

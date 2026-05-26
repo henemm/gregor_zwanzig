@@ -178,7 +178,7 @@
 		font-size: 0.6875rem;
 		letter-spacing: 0.06em;
 		text-transform: uppercase;
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 	}
 	.stat-strip {
 		display: grid;

@@ -104,7 +104,7 @@
 	}
 	.note {
 		margin-top: var(--g-s-3);
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 	}
 	.btn-primary {
 		padding: var(--g-s-2) var(--g-s-4);

@@ -71,7 +71,7 @@
 			<div class="flex items-start justify-between gap-2 mb-2">
 				<div>
 					<p class="font-semibold text-sm">{tpl.name}</p>
-					<p class="text-xs text-[var(--g-ink-faint)]">
+					<p class="text-xs text-[var(--g-ink-muted)]">
 						{REGION[tpl.id]} · {STAGE_COUNTS[tpl.id]} Etappen
 					</p>
 				</div>

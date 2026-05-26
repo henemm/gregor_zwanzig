@@ -109,7 +109,7 @@
 		align-self: flex-start;
 		font-size: 0.875rem;
 		font-weight: 500;
-		color: var(--g-accent);
+		color: var(--g-accent-deep);
 		text-decoration: none;
 	}
 	.card-action:hover {

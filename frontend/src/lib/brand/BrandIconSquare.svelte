@@ -12,7 +12,7 @@
 	let {
 		size = 96,
 		color = 'var(--g-ink)',
-		accent = 'var(--g-accent)',
+		accent = 'var(--g-accent)', // audit:exempt — Icon-Farbe (§1.4.11)
 		bg = 'var(--g-paper)',
 		bleed = false
 	}: Props = $props();

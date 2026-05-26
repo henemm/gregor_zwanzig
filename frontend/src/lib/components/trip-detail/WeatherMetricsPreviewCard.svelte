@@ -58,7 +58,7 @@
 	}
 	.empty-state {
 		font-size: var(--g-text-sm);
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 		margin: 0;
 	}
 	.chips {
@@ -77,7 +77,7 @@
 	.edit-link {
 		display: inline-block;
 		font-size: var(--g-text-sm);
-		color: var(--g-accent);
+		color: var(--g-accent-deep);
 		text-decoration: none;
 		margin-top: 0.25rem;
 	}

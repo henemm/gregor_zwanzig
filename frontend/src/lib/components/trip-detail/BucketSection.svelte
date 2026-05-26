@@ -96,13 +96,13 @@
 		letter-spacing: var(--g-track-tight);
 	}
 	.count {
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 		font-weight: 400;
 		font-size: var(--g-text-sm);
 	}
 	.hint {
 		font-size: var(--g-text-sm);
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 		margin-top: var(--g-s-2);
 		line-height: 1.5;
 		max-width: 760px;
@@ -110,7 +110,7 @@
 	.empty {
 		padding: var(--g-s-5);
 		font-size: var(--g-text-sm);
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 		font-style: italic;
 		text-align: center;
 	}

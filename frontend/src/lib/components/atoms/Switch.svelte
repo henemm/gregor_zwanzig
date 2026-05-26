@@ -39,7 +39,7 @@
 
 	const toneColors = {
 		good: 'var(--g-good)',
-		accent: 'var(--g-accent)',
+		accent: 'var(--g-accent)', // audit:exempt — Switch-Track-Hintergrund (§1.4.11, kein Text)
 		info: 'var(--g-info)',
 		warn: 'var(--g-warn)',
 		bad: 'var(--g-bad)'

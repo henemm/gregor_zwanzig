@@ -106,7 +106,7 @@
 	}
 	.hint {
 		font-size: var(--g-text-sm);
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 		margin-top: var(--g-s-2);
 		line-height: 1.5;
 		max-width: 760px;
@@ -132,7 +132,7 @@
 	}
 	.select-label {
 		font-size: var(--g-text-xs);
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 		letter-spacing: var(--g-track-caps);
 		text-transform: uppercase;
 	}

@@ -90,13 +90,13 @@
 		margin-top: 2px;
 	}
 	.muted {
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 		font-size: var(--g-text-sm);
 		font-weight: 400;
 	}
 	.chev {
 		font-size: var(--g-text-sm);
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 	}
 	.body {
 		padding: 0 var(--g-s-5) var(--g-s-5);
@@ -138,7 +138,7 @@
 	}
 	.off-meta {
 		font-size: var(--g-text-xs);
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 	}
 	.text-btn {
 		padding: var(--g-s-1) var(--g-s-2);

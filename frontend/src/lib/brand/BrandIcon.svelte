@@ -8,7 +8,7 @@
 		accent?: string;
 	}
 
-	let { size = 'md', color = 'var(--g-ink)', accent = 'var(--g-accent)' }: Props = $props();
+	let { size = 'md', color = 'var(--g-ink)', accent = 'var(--g-accent)' }: Props = $props(); // audit:exempt — Icon-Farbe (§1.4.11)
 
 	const SIZES: Record<string, number> = { sm: 18, md: 24, lg: 32 };
 	const px = $derived(typeof size === 'number' ? size : (SIZES[size] ?? SIZES.md));

@@ -163,7 +163,7 @@
 	}
 	.hint {
 		font-size: var(--g-text-xs);
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 	}
 	.grid-three {
 		display: grid;
@@ -187,7 +187,7 @@
 		padding: var(--g-s-3);
 		border: 1px dashed var(--g-ink-faint);
 		border-radius: var(--g-radius-sm);
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 		font-size: var(--g-text-xs);
 	}
 	.empty-day p {
@@ -209,20 +209,20 @@
 	}
 	th {
 		font-weight: 600;
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 	}
 	.col-name {
 		font-weight: 600;
 	}
 	.col-unit {
 		font-size: var(--g-text-xs);
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 		font-weight: 400;
 	}
 	.th-suffix {
 		font-style: italic;
 		font-weight: 400;
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 		margin-left: var(--g-s-1);
 		font-size: var(--g-text-xs);
 	}
@@ -232,6 +232,6 @@
 	}
 	.indicator-cell {
 		font-style: italic;
-		color: var(--g-accent);
+		color: var(--g-accent-deep);
 	}
 </style>

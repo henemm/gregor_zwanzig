@@ -25,7 +25,7 @@
 
 	<p class="text-lg font-medium">{stage.name}</p>
 
-	<p class="text-sm text-[var(--g-ink-faint)]">{stage.date}</p>
+	<p class="text-sm text-[var(--g-ink-muted)]">{stage.date}</p>
 
 	{#if prevLocation || nextLocation}
 		<div class="flex flex-col gap-1 text-sm">
@@ -37,6 +37,6 @@
 			{/if}
 		</div>
 	{:else}
-		<p class="text-sm text-[var(--g-ink-faint)]">Kein Standort hinterlegt</p>
+		<p class="text-sm text-[var(--g-ink-muted)]">Kein Standort hinterlegt</p>
 	{/if}
 </div>

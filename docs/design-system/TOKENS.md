@@ -25,34 +25,37 @@
 
 ## 2. Ink — Typografie-Farben
 
-| Token | Wert | Verwendung |
-|---|---|---|
-| `--g-ink` | `#1a1a18` | Primärtext (Titel, Body) |
-| `--g-ink-2` | `#45433d` | Sekundärtext (Body in Cards) |
-| `--g-ink-3` | `#6b675c` | Tertiärtext (Labels, Eyebrows) |
-| `--g-ink-4` | `#9a958a` | Hint, Placeholder, Captions |
+| Token | Wert | Verwendung | Freigabe (auf weißer Card, #377) |
+|---|---|---|---|
+| `--g-ink` | `#1a1a18` | Primärtext (Titel, Body) | **AAA-text** |
+| `--g-ink-2` | `#45433d` | Sekundärtext (Body in Cards) | **AAA-text** |
+| `--g-ink-3` | `#6b675c` | Tertiärtext (Labels, Eyebrows) | **AA-text** |
+| `--g-ink-muted` | `#5c5a52` | Sekundärtext, Captions, Hints, Daten-Labels | **AA-text** |
+| `--g-ink-4` | `#9a958a` | Hint, Placeholder, Disabled, dekorative/Logo-Glyphen — **kein Lesetext** | **decorative only** (FAIL für Text) |
 
 ---
 
 ## 3. Accent — Burnt Orange
 
-| Token | Wert | Verwendung |
-|---|---|---|
-| `--g-accent` | `#c45a2a` | Primäraktion, aktiver Nav-Item, ein Hervorhebungs-Element |
-| `--g-accent-deep` | `#8c3e1a` | Text auf hellem Accent-Hintergrund |
-| `--g-accent-soft` | `#f3d9c8` | Borders um Accent-Tinted-Container |
-| `--g-accent-tint` | `rgba(196, 90, 42, 0.08)` | Sehr dezenter Accent-Hintergrund |
+| Token | Wert | Verwendung | Freigabe (auf weißer Card, #377) |
+|---|---|---|---|
+| `--g-accent` | `#c45a2a` | Primäraktion, aktiver Nav-Item, Hervorhebung; als Textfarbe nur Large-Text oder mit Underline/`font-weight ≥ 600` | **AA-large** (Body-Text → `--g-accent-deep`) |
+| `--g-accent-deep` | `#8c3e1a` | Text auf hellem Hintergrund, Accent-Body-Text | **AAA-text** (paper: AA-text) |
+| `--g-accent-soft` | `#f3d9c8` | Borders um Accent-Tinted-Container | — (Surface) |
+| `--g-accent-tint` | `rgba(196, 90, 42, 0.08)` | Sehr dezenter Accent-Hintergrund | — (Surface) |
 
 ---
 
 ## 4. Semantic — Status-Farben
 
-| Token | Wert | Verwendung |
-|---|---|---|
-| `--g-good` | `#3d6b3a` | Aktiv, verbunden, OK |
-| `--g-warn` | `#c08a1a` | Warnung, Schwellwert nahe |
-| `--g-bad` | `#a83232` | Alarm, Fehler, kritisch, destruktiv |
-| `--g-info` | `#2c5a8c` | Neutrale Daten-Highlights |
+| Token | Wert | Verwendung | Freigabe (auf weißer Card, #377) |
+|---|---|---|---|
+| `--g-good` | `#3d6b3a` | Aktiv, verbunden, OK | **AA-text** |
+| `--g-warn` | `#c08a1a` | Warnung, Schwellwert nahe — nur als Hintergrund/Icon, **nicht** als Body-Textfarbe | **AA-large** (card), FAIL card-alt/paper |
+| `--g-bad` | `#a83232` | Alarm, Fehler, kritisch, destruktiv | **AA-text** |
+| `--g-info` | `#2a6cb3` | Neutrale Daten-Highlights | **AA-text** |
+
+> Hinweis (#377): `--g-info` ist real `#2a6cb3` (5.39:1 AA), nicht `#2c5a8c` — frühere Doku korrigiert.
 
 ---
 

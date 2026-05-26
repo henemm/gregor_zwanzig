@@ -392,7 +392,7 @@
 		transform: translateY(-50%);
 		font-family: var(--g-font-data);
 		font-size: 11px;
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 		pointer-events: none;
 	}
 </style>

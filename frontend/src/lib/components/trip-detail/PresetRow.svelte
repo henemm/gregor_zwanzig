@@ -52,7 +52,7 @@
 	}
 	.preset-count {
 		font-size: 0.875rem;
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 		flex-shrink: 0;
 	}
 	.preset-badge {
@@ -60,7 +60,7 @@
 		padding: 0.1rem 0.4rem;
 		border: 1px solid var(--g-ink-faint);
 		border-radius: 3px;
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 		flex-shrink: 0;
 	}
 </style>

@@ -72,11 +72,11 @@
 	<span class="flex-1 truncate text-sm">{waypoint.name}</span>
 
 	{#if waypoint.elevation_m}
-		<span class="text-sm text-[var(--g-ink-faint)]">{waypoint.elevation_m} m</span>
+		<span class="text-sm text-[var(--g-ink-muted)]">{waypoint.elevation_m} m</span>
 	{/if}
 
 	{#if waypoint.time_window}
-		<span class="text-sm text-[var(--g-ink-faint)]">{waypoint.time_window}</span>
+		<span class="text-sm text-[var(--g-ink-muted)]">{waypoint.time_window}</span>
 	{/if}
 
 	{#if isSuggested}
@@ -85,6 +85,7 @@
 			data-testid="trip-wizard-step3-confirm-{index}"
 			onclick={handleConfirm}
 			aria-label="Vorschlag bestätigen"
+			data-audit="audit:exempt: Icon (§1.4.11, 3:1)"
 			class="rounded p-1 text-[var(--g-accent)] hover:bg-[var(--g-accent)]/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--g-accent)]"
 		>
 			<Check class="size-4" />
@@ -96,7 +97,7 @@
 		data-testid="trip-wizard-step3-reject-{index}"
 		onclick={handleReject}
 		aria-label="Wegpunkt verwerfen"
-		class="rounded p-1 text-[var(--g-ink-faint)] hover:bg-[var(--g-ink-faint)]/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--g-accent)]"
+		class="rounded p-1 text-[var(--g-ink-muted)] hover:bg-[var(--g-ink-faint)]/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--g-accent)]"
 	>
 		<X class="size-4" />
 	</button>

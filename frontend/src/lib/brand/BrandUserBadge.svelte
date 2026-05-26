@@ -19,7 +19,7 @@
 				.join('')
 				.toUpperCase()
 	);
-	const avatarBg = $derived(accent ? 'var(--g-accent)' : 'var(--g-ink)');
+	const avatarBg = $derived(accent ? 'var(--g-accent)' : 'var(--g-ink)'); // audit:exempt — Avatar-Hintergrund (kein Text)
 </script>
 
 <div style="display:flex;align-items:center;gap:10px">

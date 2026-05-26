@@ -126,7 +126,7 @@
 		font-weight: 500;
 	}
 	.required {
-		color: var(--g-accent);
+		color: var(--g-accent-deep);
 	}
 	.field input[type='text'] {
 		padding: var(--g-s-2) var(--g-s-2);

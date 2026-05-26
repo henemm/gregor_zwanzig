@@ -225,9 +225,9 @@
 		onclick={handleDropZoneClick}
 		onkeydown={handleDropZoneKeydown}
 	>
-		<Upload class="mx-auto mb-2 size-8 text-[var(--g-ink-faint)]" />
+		<Upload class="mx-auto mb-2 size-8 text-[var(--g-ink-muted)]" />
 		<p class="font-medium">GPX-Dateien hierher ziehen</p>
-		<p class="text-sm text-[var(--g-ink-faint)] mt-1">oder klicken zum Auswählen</p>
+		<p class="text-sm text-[var(--g-ink-muted)] mt-1">oder klicken zum Auswählen</p>
 		<input
 			bind:this={fileInputEl}
 			type="file"
@@ -281,7 +281,7 @@
 	{/if}
 
 	{#if uploading}
-		<p class="text-sm text-[var(--g-ink-faint)]">{uploadProgress}</p>
+		<p class="text-sm text-[var(--g-ink-muted)]">{uploadProgress}</p>
 	{/if}
 
 	{#if uploadError}
@@ -311,7 +311,7 @@
 							type="button"
 							data-testid="trip-wizard-step2-pause-after-{i}"
 							onclick={makePauseInsertHandler(i)}
-							class="opacity-0 hover:opacity-100 focus-visible:opacity-100 transition-opacity inline-flex items-center gap-1 rounded-full border border-[var(--g-ink-faint)]/30 bg-white/60 px-2 py-0.5 text-xs text-[var(--g-ink-faint)]"
+							class="opacity-0 hover:opacity-100 focus-visible:opacity-100 transition-opacity inline-flex items-center gap-1 rounded-full border border-[var(--g-ink-faint)]/30 bg-white/60 px-2 py-0.5 text-xs text-[var(--g-ink-muted)]"
 							aria-label="Pausentag nach dieser Etappe einfügen"
 						>
 							<Plus class="size-3" />

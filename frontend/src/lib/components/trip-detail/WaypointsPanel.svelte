@@ -199,7 +199,7 @@
 						/>
 					{/each}
 					{#if activeStage.waypoints.length === 0}
-						<p class="text-sm text-[var(--g-ink-faint)]">Keine Wegpunkte.</p>
+						<p class="text-sm text-[var(--g-ink-muted)]">Keine Wegpunkte.</p>
 					{/if}
 				</div>
 			{/if}

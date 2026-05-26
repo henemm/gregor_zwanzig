@@ -42,7 +42,7 @@
 	}
 	.markers-label {
 		font-size: var(--g-text-xs);
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 		letter-spacing: var(--g-track-caps);
 		text-transform: uppercase;
 		margin-right: var(--g-s-1);
@@ -54,7 +54,7 @@
 		letter-spacing: var(--g-track-wide);
 		border-radius: var(--g-radius-pill);
 		background: var(--g-surface-1);
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 		font-weight: 600;
 		border: 1px solid transparent;
 		white-space: nowrap;

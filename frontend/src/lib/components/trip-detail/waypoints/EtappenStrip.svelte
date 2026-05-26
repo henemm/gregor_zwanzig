@@ -60,7 +60,7 @@
 					type="button"
 					data-testid="etappen-strip-pause-after-{i}"
 					onclick={makePauseInsertHandler(i)}
-					class="opacity-0 hover:opacity-100 focus-visible:opacity-100 transition-opacity text-xs text-[var(--g-ink-faint)] px-2 py-0.5"
+					class="opacity-0 hover:opacity-100 focus-visible:opacity-100 transition-opacity text-xs text-[var(--g-ink-muted)] px-2 py-0.5"
 					aria-label="Pausentag nach Etappe {i + 1} einfügen"
 				>+ Pause</button>
 			{/if}

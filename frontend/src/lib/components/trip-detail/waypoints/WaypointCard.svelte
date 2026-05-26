@@ -62,14 +62,14 @@
 
 	<!-- Hoehe (optional) -->
 	{#if waypoint.elevation_m}
-		<span class="text-xs text-[var(--g-ink-faint)]">{waypoint.elevation_m} m</span>
+		<span class="text-xs text-[var(--g-ink-muted)]">{waypoint.elevation_m} m</span>
 	{/if}
 
 	<!-- Ankunftszeit (Issue #296-FE, nur wenn Prop gesetzt) -->
 	{#if arrival}
 		<span
 			data-testid="wp-arrival-{index}"
-			class="text-xs font-[var(--g-font-data)] text-[var(--g-ink-faint)] tabular-nums"
+			class="text-xs font-[var(--g-font-data)] text-[var(--g-ink-muted)] tabular-nums"
 		>{arrival}</span>
 	{/if}
 

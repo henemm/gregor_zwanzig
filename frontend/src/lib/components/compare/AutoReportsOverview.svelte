@@ -70,7 +70,7 @@
 
 	.empty-hint {
 		font-size: 0.875rem;
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 		margin-top: var(--g-s-2);
 	}
 </style>

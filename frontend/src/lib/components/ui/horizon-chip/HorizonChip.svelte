@@ -50,7 +50,7 @@
 		border-radius: var(--g-radius-pill);
 		border: 1px solid var(--g-ink-faint);
 		background: transparent;
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 		font-family: var(--g-font-data);
 		font-size: var(--g-text-xs);
 		letter-spacing: var(--g-track-caps);

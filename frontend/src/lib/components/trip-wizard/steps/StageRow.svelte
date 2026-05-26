@@ -57,7 +57,7 @@
 >
 	<span
 		data-testid="trip-wizard-step2-drag-handle-{index}"
-		class="text-[var(--g-ink-faint)] cursor-grab focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--g-accent)]"
+		class="text-[var(--g-ink-muted)] cursor-grab focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--g-accent)]"
 		aria-label="Etappe verschieben"
 		role="button"
 		tabindex="0"
@@ -68,7 +68,7 @@
 	{#if isPause}
 		<span
 			data-testid="trip-wizard-step2-pause-marker-{index}"
-			class="text-xs uppercase tracking-wide text-[var(--g-ink-faint)]"
+			class="text-xs uppercase tracking-wide text-[var(--g-ink-muted)]"
 		>
 			Pause
 		</span>
@@ -95,7 +95,7 @@
 		data-testid="trip-wizard-step2-stage-delete-{index}"
 		onclick={makeDeleteHandler(stage.id)}
 		aria-label="Etappe entfernen"
-		class="rounded p-1 text-[var(--g-ink-faint)] hover:bg-[var(--g-ink-faint)]/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--g-accent)]"
+		class="rounded p-1 text-[var(--g-ink-muted)] hover:bg-[var(--g-ink-faint)]/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--g-accent)]"
 	>
 		<Trash2 class="size-4" />
 	</button>

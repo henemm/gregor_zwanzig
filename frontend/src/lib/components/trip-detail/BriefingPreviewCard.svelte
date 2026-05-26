@@ -70,7 +70,7 @@
 	}
 	.empty-state {
 		font-size: 0.875rem;
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 		margin: 0;
 	}
 	.schedule-list {
@@ -100,7 +100,7 @@
 	.edit-link {
 		display: inline-block;
 		font-size: 0.875rem;
-		color: var(--g-accent);
+		color: var(--g-accent-deep);
 		text-decoration: none;
 		margin-top: 0.25rem;
 	}

@@ -154,7 +154,7 @@
 	}
 	.h1-shortcode {
 		font-family: var(--g-font-mono, ui-monospace, monospace);
-		color: var(--g-accent);
+		color: var(--g-accent); /* audit:exempt — Large-Text in <h1> (≥18pt → WCAG AA-large) */
 	}
 	.status-line {
 		display: flex;

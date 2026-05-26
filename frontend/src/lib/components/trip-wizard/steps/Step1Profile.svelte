@@ -40,7 +40,7 @@
 
 <div data-testid="trip-wizard-step1-profile" class="flex flex-col gap-6 py-4">
 	<section class="flex flex-col gap-2">
-		<span class="text-xs uppercase tracking-wide text-[var(--g-ink-faint)]">Aktivität</span>
+		<span class="text-xs uppercase tracking-wide text-[var(--g-ink-muted)]">Aktivität</span>
 		<div class="flex flex-wrap gap-2">
 			{#each PROFILES as profile (profile.activity)}
 				{@const selected = state.activity === profile.activity}
@@ -58,10 +58,10 @@
 	</section>
 
 	<section class="flex flex-col gap-4">
-		<span class="text-xs uppercase tracking-wide text-[var(--g-ink-faint)]">Eckdaten</span>
+		<span class="text-xs uppercase tracking-wide text-[var(--g-ink-muted)]">Eckdaten</span>
 
 		<label class="flex flex-col gap-1 text-sm">
-			<span>Name <span class="text-[var(--g-accent)]">*</span></span>
+			<span>Name <span class="text-[var(--g-accent-deep)]">*</span></span>
 			<input
 				type="text"
 				data-testid="trip-wizard-step1-name"
@@ -71,7 +71,7 @@
 		</label>
 
 		<label class="flex flex-col gap-1 text-sm">
-			<span>Kuerzel <span class="text-[var(--g-ink-faint)]">(optional)</span></span>
+			<span>Kuerzel <span class="text-[var(--g-ink-muted)]">(optional)</span></span>
 			<input
 				type="text"
 				data-testid="trip-wizard-step1-shortcode"
@@ -82,7 +82,7 @@
 		</label>
 
 		<label class="flex flex-col gap-1 text-sm">
-			<span>Region <span class="text-[var(--g-ink-faint)]">(optional)</span></span>
+			<span>Region <span class="text-[var(--g-ink-muted)]">(optional)</span></span>
 			<input
 				type="text"
 				data-testid="trip-wizard-step1-region"
@@ -94,14 +94,14 @@
 		</label>
 
 		<label class="flex flex-col gap-1 text-sm">
-			<span>Startdatum <span class="text-[var(--g-accent)]">*</span></span>
+			<span>Startdatum <span class="text-[var(--g-accent-deep)]">*</span></span>
 			<input
 				type="date"
 				data-testid="trip-wizard-step1-startdate"
 				bind:value={state.startDate}
 				class="h-9 rounded-lg border border-[var(--g-ink-faint)]/40 bg-transparent px-2.5 outline-none focus-visible:ring-2 focus-visible:ring-[var(--g-accent)]"
 			/>
-			<span class="text-xs text-[var(--g-ink-faint)]"
+			<span class="text-xs text-[var(--g-ink-muted)]"
 				>Das Enddatum wird in Schritt 2 aus den Etappen berechnet.</span
 			>
 		</label>

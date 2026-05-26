@@ -72,7 +72,7 @@
 	}
 	.empty {
 		padding: 1rem;
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 		font-size: 0.875rem;
 	}
 </style>

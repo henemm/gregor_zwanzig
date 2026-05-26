@@ -26,10 +26,10 @@
 	const stageCount = $derived(trip.stages?.length ?? 0);
 
 	const statusColors: Record<string, string> = {
-		aktiv: 'var(--g-accent)',
+		aktiv: 'var(--g-accent-deep)',
 		geplant: 'var(--g-success)',
 		fertig: 'var(--g-ink-muted)',
-		draft: 'var(--g-ink-faint)'
+		draft: 'var(--g-ink-muted)'
 	};
 </script>
 
@@ -75,7 +75,7 @@
 		font-size: 10px;
 		letter-spacing: 0.14em;
 		text-transform: uppercase;
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 	}
 	.kachel__status {
 		display: inline-flex;

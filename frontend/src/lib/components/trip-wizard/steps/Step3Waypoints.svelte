@@ -79,14 +79,14 @@
 		<!-- §8a: Keine Stages -->
 		<div
 			data-testid="trip-wizard-step3-empty-no-stages"
-			class="w-full text-sm text-[var(--g-ink-faint)]"
+			class="w-full text-sm text-[var(--g-ink-muted)]"
 		>
 			Bitte zuerst in Schritt 2 GPX-Dateien hochladen.
 		</div>
 	{:else}
 		<!-- Linke Etappen-Liste -->
 		<div class="flex w-48 flex-col gap-2">
-			<Eyebrow class="text-xs text-[var(--g-ink-faint)]">Etappen</Eyebrow>
+			<Eyebrow class="text-xs text-[var(--g-ink-muted)]">Etappen</Eyebrow>
 			<div data-testid="trip-wizard-step3-stages-list" class="flex flex-col gap-1">
 				{#each wizard.stages as stage, i (stage.id)}
 					{@const isPause = isPauseStage(stage)}
@@ -94,7 +94,7 @@
 					{#if isPause}
 						<div
 							data-testid="trip-wizard-step3-pause-marker-{i}"
-							class="rounded-md border border-[var(--g-ink-faint)]/20 px-3 py-2 text-xs uppercase tracking-wide text-[var(--g-ink-faint)]"
+							class="rounded-md border border-[var(--g-ink-faint)]/20 px-3 py-2 text-xs uppercase tracking-wide text-[var(--g-ink-muted)]"
 							style="opacity: 0.5; pointer-events: none;"
 						>
 							Pausentag
@@ -116,7 +116,7 @@
 							</span>
 							<span class="text-sm truncate w-full">{stage.name}</span>
 							{#if stage.date}
-								<span class="text-xs text-[var(--g-ink-faint)]">{stage.date}</span>
+								<span class="text-xs text-[var(--g-ink-muted)]">{stage.date}</span>
 							{/if}
 						</button>
 					{/if}
@@ -126,7 +126,7 @@
 
 		<!-- Rechte Confirm-UI -->
 		<div class="flex flex-1 flex-col gap-3">
-			<Eyebrow class="text-xs text-[var(--g-ink-faint)]">Wegpunkte</Eyebrow>
+			<Eyebrow class="text-xs text-[var(--g-ink-muted)]">Wegpunkte</Eyebrow>
 
 			{#if activeStage}
 				<ProfileChart stage={activeStage} />
@@ -136,7 +136,7 @@
 						(ueberlagert §8b, weil eine aktive Stage existiert) -->
 					<div
 						data-testid="trip-wizard-step3-empty-no-waypoints"
-						class="text-sm text-[var(--g-ink-faint)]"
+						class="text-sm text-[var(--g-ink-muted)]"
 					>
 						Keine Wegpunkte mehr — alle verworfen.
 					</div>
@@ -156,7 +156,7 @@
 				<!-- §8b: keine aktive Stage waehlbar — alle sind Pausen -->
 				<div
 					data-testid="trip-wizard-step3-empty-only-pauses"
-					class="text-sm text-[var(--g-ink-faint)]"
+					class="text-sm text-[var(--g-ink-muted)]"
 				>
 					Trip enthaelt nur Pausentage — keine Wegpunkte.
 				</div>

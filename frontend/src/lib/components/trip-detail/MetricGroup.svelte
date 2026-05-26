@@ -45,11 +45,11 @@
 	}
 	.metric-group-counter {
 		font-size: 0.75rem;
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 		font-variant-numeric: tabular-nums;
 	}
 	.metric-group-counter[data-active='true'] {
-		color: var(--g-accent, #c45a2a);
+		color: var(--g-accent-deep);
 		font-weight: 600;
 	}
 	.metric-group-list {

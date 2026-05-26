@@ -44,7 +44,7 @@
 		onchange={handleChange}
 	>{label}</Checkbox>
 	{#if hint}
-		<span data-testid="{testid}-hint" class="text-xs text-[var(--g-ink-faint)] pl-7">
+		<span data-testid="{testid}-hint" class="text-xs text-[var(--g-ink-muted)] pl-7">
 			{hint}
 		</span>
 	{/if}

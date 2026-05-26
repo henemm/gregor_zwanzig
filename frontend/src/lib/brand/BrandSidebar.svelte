@@ -21,7 +21,7 @@
 	] as const;
 
 	function iconColor(isActive: boolean): string {
-		return isActive ? 'var(--g-accent)' : 'var(--g-ink-3)';
+		return isActive ? 'var(--g-accent)' : 'var(--g-ink-3)'; // audit:exempt — Icon stroke/fill (§1.4.11)
 	}
 </script>
 
@@ -61,7 +61,7 @@
 					<span
 						style="font-family:var(--g-font-mono);font-size:10px;color:{isActive
 							? 'var(--g-accent-deep)'
-							: 'var(--g-ink-4)'};background:{isActive
+							: 'var(--g-ink-muted)'};background:{isActive
 							? 'rgba(196,90,42,0.12)'
 							: 'rgba(26,26,24,0.05)'};padding:1px 6px;border-radius:var(--g-r-pill);font-weight:600;letter-spacing:0.02em"
 					>{count}</span>

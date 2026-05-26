@@ -123,7 +123,7 @@
 		font-size: 10px;
 		border-radius: var(--g-radius-pill);
 		background: var(--g-surface-1);
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 		font-weight: 600;
 		/* Badge nur so breit wie sein Inhalt; "X/Y Spalten" stets vollständig. */
 		align-self: flex-start;
@@ -136,7 +136,7 @@
 	}
 	.hint {
 		font-size: var(--g-text-xs);
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 		margin-top: var(--g-s-1);
 		letter-spacing: var(--g-track-wide);
 	}
@@ -177,7 +177,7 @@
 	}
 	.detail-eyebrow {
 		font-size: 9px;
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 		letter-spacing: var(--g-track-caps);
 		text-transform: uppercase;
 		margin-right: var(--g-s-1);
@@ -188,7 +188,7 @@
 		line-height: 1.5;
 	}
 	.ellipsis {
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 	}
 	.demote-badge {
 		/* mt:auto schiebt den Warn-Hinweis unten bündig → Karten gleich hoch. */

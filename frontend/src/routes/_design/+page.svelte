@@ -27,6 +27,26 @@
 
 	const PROFILES: ActivityProfile[] = ['wintersport', 'wandern', 'summer_trekking', 'allgemein'];
 
+	// Issue #377: Kontrast-Belege — Ratio auf weisser Card (#ffffff), gemessen mit
+	// scripts/contrast_audit.py (WCAG 2.1 relative luminance). Quelle: Spec-Matrix.
+	const CONTRAST_TOKENS: { name: string; hex: string; ratio: number; cls: string }[] = [
+		{ name: '--g-ink', hex: '#1a1a18', ratio: 17.43, cls: 'AAA' },
+		{ name: '--g-ink-2', hex: '#45433d', ratio: 9.89, cls: 'AAA' },
+		{ name: '--g-ink-3', hex: '#6b675c', ratio: 5.65, cls: 'AA' },
+		{ name: '--g-ink-muted', hex: '#5c5a52', ratio: 6.91, cls: 'AA' },
+		{ name: '--g-ink-4', hex: '#9a958a', ratio: 2.98, cls: 'FAIL' },
+		{ name: '--g-ink-faint', hex: '#9c9a90', ratio: 2.82, cls: 'FAIL' },
+		{ name: '--g-accent', hex: '#c45a2a', ratio: 4.34, cls: 'AA-large' },
+		{ name: '--g-accent-deep', hex: '#8c3e1a', ratio: 7.45, cls: 'AAA' },
+		{ name: '--g-good', hex: '#3d6b3a', ratio: 6.25, cls: 'AA' },
+		{ name: '--g-warn', hex: '#c08a1a', ratio: 3.05, cls: 'AA-large' },
+		{ name: '--g-warning', hex: '#c8882a', ratio: 3.0, cls: 'FAIL' },
+		{ name: '--g-bad', hex: '#a83232', ratio: 6.63, cls: 'AA' },
+		{ name: '--g-danger', hex: '#b33a2a', ratio: 5.91, cls: 'AA' },
+		{ name: '--g-info', hex: '#2a6cb3', ratio: 5.39, cls: 'AA' },
+		{ name: '--g-success', hex: '#3a7d44', ratio: 5.0, cls: 'AA' }
+	];
+
 	let dialogOpen = $state(false);
 	let accordionAOpen = $state(true);
 	let accordionBOpen = $state(false);
@@ -407,11 +427,11 @@
 			<div class="flex gap-6 items-start">
 				<div class="flex flex-col items-start gap-1">
 					<ElevSparkline data={[]} width={120} height={24} />
-					<span class="text-xs text-[color:var(--g-ink-faint)]">leer</span>
+					<span class="text-xs text-[color: var(--g-ink-muted)]">leer</span>
 				</div>
 				<div class="flex flex-col items-start gap-1">
 					<ElevSparkline data={[1500]} width={120} height={24} />
-					<span class="text-xs text-[color:var(--g-ink-faint)]">Single-Point</span>
+					<span class="text-xs text-[color: var(--g-ink-muted)]">Single-Point</span>
 				</div>
 			</div>
 		</div>
@@ -437,6 +457,38 @@
 						</div>
 					</div>
 				</GCard>
+			{/each}
+		</div>
+	</section>
+	<section data-testid="contrast-section" class="space-y-3">
+		<Eyebrow>Issue #377</Eyebrow>
+		<h2>Kontrast-Belege (WCAG-AA auf weißer Card)</h2>
+		<p style="color: var(--g-ink-muted); font-size: var(--g-text-sm);">
+			Ratio gemessen auf <code>--g-card #ffffff</code> via <code>scripts/contrast_audit.py</code>.
+		</p>
+		<div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+			{#each CONTRAST_TOKENS as t (t.name)}
+				{@const pass = t.ratio >= 4.5}
+				<div
+					class="flex items-center gap-3 rounded p-2"
+					style="border: 1px solid var(--g-rule); background: var(--g-card);"
+				>
+					<span
+						class="inline-block rounded"
+						style="width: 32px; height: 32px; flex: 0 0 auto; background-color: {t.hex};"
+						aria-hidden="true"
+					></span>
+					<div class="flex flex-col" style="min-width: 0;">
+						<code style="font-family: var(--g-font-data); font-size: var(--g-text-xs); color: var(--g-ink);">{t.name}</code>
+						<span style="font-family: var(--g-font-data); font-size: var(--g-text-xs); color: var(--g-ink-muted);">
+							{t.hex} · {t.ratio.toFixed(2)}:1
+						</span>
+					</div>
+					<span
+						class="ml-auto rounded"
+						style="font-family: var(--g-font-data); font-size: 10px; font-weight: 600; padding: 2px 6px; color: {pass ? 'var(--g-good)' : 'var(--g-bad)'}; background: {pass ? 'rgba(61,107,58,0.12)' : 'rgba(168,50,50,0.12)'};"
+					>{pass ? `${t.cls} ✓` : 'FAIL'}</span>
+				</div>
 			{/each}
 		</div>
 	</section>

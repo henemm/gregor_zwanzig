@@ -20,7 +20,7 @@
 	const firstLoc = $derived(
 		sub.locations?.length > 0 && sub.locations[0] !== '*' ? sub.locations[0] : null
 	);
-	const statusColor = $derived(sub.enabled ? 'var(--g-success)' : 'var(--g-ink-faint)');
+	const statusColor = $derived(sub.enabled ? 'var(--g-success)' : 'var(--g-ink-muted)');
 	const statusLabel = $derived(sub.enabled ? 'aktiv' : 'pausiert');
 </script>
 
@@ -66,7 +66,7 @@
 		font-size: 10px;
 		letter-spacing: 0.14em;
 		text-transform: uppercase;
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 	}
 	.kachel__status {
 		display: inline-flex;

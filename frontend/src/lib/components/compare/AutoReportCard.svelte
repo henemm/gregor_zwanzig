@@ -65,7 +65,7 @@
 		align-items: center;
 		gap: var(--g-s-2);
 		font-size: 0.8125rem;
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 	}
 
 	.mono {
@@ -77,6 +77,6 @@
 		align-items: center;
 		gap: var(--g-s-2);
 		font-size: 0.75rem;
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 	}
 </style>

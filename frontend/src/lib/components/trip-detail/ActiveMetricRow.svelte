@@ -111,7 +111,7 @@
 	.idx {
 		font-size: var(--g-text-xs);
 		font-weight: 600;
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 		text-align: right;
 	}
 	.idx.warn {
@@ -127,7 +127,7 @@
 	}
 	.meta {
 		font-size: var(--g-text-xs);
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 		margin-top: 2px;
 	}
 	.short {
@@ -148,17 +148,17 @@
 		cursor: pointer;
 		border-radius: var(--g-radius-xs);
 		background: transparent;
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 		letter-spacing: var(--g-track-wide);
 	}
 	.mode-btn.active {
 		background: var(--g-paper);
-		color: var(--g-accent);
+		color: var(--g-accent-deep);
 		box-shadow: 0 0 0 1px var(--g-ink-faint);
 	}
 	.raw-only {
 		font-size: var(--g-text-xs);
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 		letter-spacing: var(--g-track-wide);
 		text-transform: uppercase;
 	}

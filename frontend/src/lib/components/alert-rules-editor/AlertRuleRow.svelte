@@ -463,7 +463,7 @@
 		font-size: 0.6875rem;
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
-		color: var(--g-accent);
+		color: var(--g-accent-deep);
 		font-weight: 600;
 	}
 </style>

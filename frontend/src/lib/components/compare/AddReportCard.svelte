@@ -36,7 +36,7 @@
 		border: 2px dashed var(--g-ink-faint);
 		border-radius: var(--g-s-3);
 		background: transparent;
-		color: var(--g-ink-faint);
+		color: var(--g-ink-muted);
 		font-size: 0.875rem;
 		font-weight: 600;
 		cursor: pointer;

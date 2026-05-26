@@ -242,7 +242,7 @@
 		font-weight: 500;
 	}
 	.required {
-		color: var(--g-accent);
+		color: var(--g-accent-deep);
 	}
 	.field input[type='text'],
 	.field textarea {
