@@ -18,7 +18,7 @@
 	}
 
 	let { icon, label, badge = null, active = false, href = '#', onclick }: Props = $props();
-	const iconColor = $derived(active ? 'var(--g-accent)' : 'var(--g-ink-3)');
+	const iconColor = $derived(active ? 'var(--g-accent-deep)' : 'var(--g-ink-3)');
 </script>
 
 <a

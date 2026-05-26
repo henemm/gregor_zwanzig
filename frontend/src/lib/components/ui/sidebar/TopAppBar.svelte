@@ -57,7 +57,7 @@
 		{#if eyebrow}
 			<span
 				class="mono block"
-				style="font-size: 9px; color: var(--g-ink-4); letter-spacing: 0.12em; text-transform: uppercase; line-height: 1;"
+				style="font-size: 9px; color: var(--g-ink-muted); letter-spacing: 0.12em; text-transform: uppercase; line-height: 1;"
 				>{eyebrow}</span
 			>
 		{/if}
