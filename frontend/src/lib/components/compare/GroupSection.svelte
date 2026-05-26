@@ -88,6 +88,14 @@
 						onclick={() => onEditLocation(loc)}
 						data-testid="loc-name-{loc.id}"
 					>{loc.name}</button>
+					{#if loc.activity_profile && loc.activity_profile !== 'allgemein'}
+						<span
+							data-slot="dot"
+							data-size="xs"
+							style="background: {profileSignature(loc.activity_profile).accent}; flex-shrink: 0;"
+							title={profileSignature(loc.activity_profile).eyebrow}
+						></span>
+					{/if}
 					<button
 						onclick={() => onShowWeather(loc.id)}
 						title="Wetter anzeigen"

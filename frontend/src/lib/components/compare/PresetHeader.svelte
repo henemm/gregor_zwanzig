@@ -9,6 +9,7 @@
 	import { Btn } from '$lib/components/ui/btn/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { Select } from '$lib/components/ui/select';
+	import { Field } from '$lib/components/molecules/index.js';
 
 	interface Props {
 		compareDate: string;
@@ -45,66 +46,66 @@
 		<div class="flex flex-wrap items-end justify-between gap-4">
 			<!-- Linke Seite: Eingaben -->
 			<div class="grid flex-1 grid-cols-2 gap-3 md:grid-cols-5">
-				<div>
-					<label for="cmp-date" class="text-sm font-medium">Datum</label>
+				<Field label="Datum" dense={false}>
 					<input
 						id="cmp-date"
+						aria-label="Datum"
 						data-testid="compare-preset-date-input"
 						type="date"
 						bind:value={compareDate}
-						class="mt-1 block w-full rounded-md border px-3 py-2 text-sm font-mono"
+						class="block w-full rounded-md border px-3 py-2 text-sm font-mono"
 					/>
-				</div>
-				<div>
-					<label for="cmp-start" class="text-sm font-medium">Von</label>
+				</Field>
+				<Field label="Von" dense={false}>
 					<Select
 						id="cmp-start"
+						aria-label="Von"
 						bind:value={twStart}
-						class="mt-1 block w-full"
+						class="block w-full"
 					>
 						{#each Array.from({ length: 24 }, (_, i) => i) as h}
 							<option value={h}>{String(h).padStart(2, '0')}:00</option>
 						{/each}
 					</Select>
-				</div>
-				<div>
-					<label for="cmp-end" class="text-sm font-medium">Bis</label>
+				</Field>
+				<Field label="Bis" dense={false}>
 					<Select
 						id="cmp-end"
+						aria-label="Bis"
 						bind:value={twEnd}
-						class="mt-1 block w-full"
+						class="block w-full"
 					>
 						{#each Array.from({ length: 24 }, (_, i) => i) as h}
 							<option value={h}>{String(h).padStart(2, '0')}:00</option>
 						{/each}
 					</Select>
-				</div>
-				<div>
-					<label for="cmp-hours" class="text-sm font-medium">Horizont</label>
+				</Field>
+				<Field label="Horizont" dense={false}>
 					<Select
 						id="cmp-hours"
+						aria-label="Horizont"
 						bind:value={forecastHours}
-						class="mt-1 block w-full"
+						class="block w-full"
 					>
 						<option value={24}>24h</option>
 						<option value={48}>48h</option>
 						<option value={72}>72h</option>
 					</Select>
-				</div>
-				<div>
-					<label for="cmp-profile" class="text-sm font-medium">Profil</label>
+				</Field>
+				<Field label="Profil" dense={false}>
 					<Select
 						id="cmp-profile"
+						aria-label="Profil"
 						data-testid="compare-preset-profile-select"
 						bind:value={activityProfile}
-						class="mt-1 block w-full"
+						class="block w-full"
 						onchange={() => onprofilechange?.()}
 					>
 						{#each ACTIVITY_PROFILE_OPTIONS as opt}
 							<option value={opt.value}>{opt.label}</option>
 						{/each}
 					</Select>
-				</div>
+				</Field>
 			</div>
 
 			<!-- Rechte Seite: Buttons -->

@@ -16,6 +16,7 @@
 	import { api } from '$lib/api.js';
 	import { invalidateAll } from '$app/navigation';
 	import { Btn } from '$lib/components/ui/btn/index.js';
+	import { Pill } from '$lib/components/ui/pill/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
@@ -298,10 +299,13 @@
 				<div class="flex gap-2 overflow-x-auto pb-1">
 					{#each locations.filter((l) => allSelected || selectedIds.includes(l.id)) as loc}
 						<button
-							class="shrink-0 rounded-full border border-border bg-muted px-3 py-1 text-xs"
+							class="cursor-pointer shrink-0"
 							onclick={() => toggleLocation(loc.id)}
+							aria-pressed={allSelected || selectedIds.includes(loc.id)}
 						>
-							{loc.name} ×
+							<Pill tone={(allSelected || selectedIds.includes(loc.id)) ? 'accent' : 'default'}>
+								{loc.name} ×
+							</Pill>
 						</button>
 					{/each}
 				</div>
