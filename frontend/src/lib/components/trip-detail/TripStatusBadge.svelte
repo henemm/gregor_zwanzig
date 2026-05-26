@@ -12,9 +12,9 @@
 
 	let { trip, now = new Date() }: Props = $props();
 
-	const TONE_MAP: Record<TripStatus, 'info' | 'success' | 'warning' | 'default'> = {
+	const TONE_MAP: Record<TripStatus, 'info' | 'accent' | 'warning' | 'default'> = {
 		planned: 'info',
-		active: 'success',
+		active: 'accent',
 		paused: 'warning',
 		archived: 'default'
 	};
@@ -29,6 +29,6 @@
 	const status = $derived(deriveTripStatus(trip, now));
 </script>
 
-<Pill tone={TONE_MAP[status]} data-testid="trip-detail-status-badge">
+<Pill tone={TONE_MAP[status]} data-outlined data-testid="trip-detail-status-badge">
 	{LABEL_MAP[status]}
 </Pill>

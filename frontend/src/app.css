@@ -384,6 +384,7 @@
   [data-slot="pill"][data-outlined][data-tone="danger"]   { color: var(--g-danger); }
   [data-slot="pill"][data-outlined][data-tone="info"]     { color: var(--g-info); }
   [data-slot="pill"][data-outlined][data-tone="default"]  { color: var(--g-ink-muted); }
+  [data-slot="pill"][data-outlined][data-tone="accent"]  { color: var(--g-accent-deep); }
 
   /* === Issue #285: Segmented Control === */
   [data-slot="segmented"] {
