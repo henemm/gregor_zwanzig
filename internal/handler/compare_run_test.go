@@ -9,13 +9,26 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http/httptest"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/henemm/gregor-api/internal/compare"
 	"github.com/henemm/gregor-api/internal/model"
+	"github.com/henemm/gregor-api/internal/provider/fixture"
 	"github.com/henemm/gregor-api/internal/store"
 )
+
+// fixtureDir gibt den absoluten Pfad zum fixtures/openmeteo-Verzeichnis zurück.
+// Nutzt runtime.Caller um den Pfad relativ zur Testdatei aufzulösen.
+func fixtureDir() string {
+	_, file, _, _ := runtime.Caller(0)
+	// handler/ → internal/ → root
+	root := filepath.Join(filepath.Dir(file), "..", "..")
+	return filepath.Join(root, "fixtures", "openmeteo")
+}
 
 // errorProvider implementiert provider.WeatherProvider und gibt bei jedem
 // FetchForecast-Aufruf einen Fehler zurück — simuliert z.B. HTTP 429 vom
@@ -200,6 +213,48 @@ func TestCompareRunHandler_SecondRequest_ReturnsSameScore(t *testing.T) {
 		if rows1[i].Score != rows2[i].Score {
 			t.Errorf("row %d: score mismatch first=%d second=%d", i, rows1[i].Score, rows2[i].Score)
 		}
+	}
+}
+
+// --- Issue #367: sunny_hours_h in Response, kein dni_avg_wm2 ----------------
+
+// AC-1 + AC-5: Response enthält sunny_hours_h > 0, kein dni_avg_wm2.
+// ERWARTET RED: Engine gibt noch DniAvgWm2 statt SunnyHoursH zurück.
+func TestCompareRunHandler_SunnyHoursH_InResponse_DniAbsent(t *testing.T) {
+	// GIVEN: Store mit zwei Locations nahe Innsbruck, FixtureProvider (dni_wm2=250 je Stunde)
+	// WHEN:  POST /api/compare/run mit WINTERSPORT-Profil
+	// THEN:  JSON enthält "sunny_hours_h", NICHT "dni_avg_wm2"
+	s := newTestStore(t)
+	// Koordinaten nahe Innsbruck-Fixture (47.2692, 11.4041)
+	seedCompareLocation(t, s, "loc-ibk-a", "Innsbruck A", 47.27, 11.40, 574)
+	seedCompareLocation(t, s, "loc-ibk-b", "Innsbruck B", 47.26, 11.41, 580)
+
+	prov := fixture.NewProvider(fixtureDir())
+	engine := compare.New(s, prov)
+	h := CompareRunHandler(engine)
+
+	// Fixture-Provider re-stempelt alle Timestamps auf heute — Datum muss matchen
+	today := time.Now().UTC().Format("2006-01-02")
+	body := `{"location_ids":["loc-ibk-a","loc-ibk-b"],"date":"` + today + `","profile":"WINTERSPORT"}`
+	req := httptest.NewRequest("POST", "/api/compare/run", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	rawJSON := w.Body.String()
+
+	// AC-5: dni_avg_wm2 darf nicht in der Response vorkommen
+	if strings.Contains(rawJSON, "dni_avg_wm2") {
+		t.Errorf("Response enthält noch 'dni_avg_wm2' — muss durch 'sunny_hours_h' ersetzt werden; body=%s", rawJSON)
+	}
+
+	// AC-1: sunny_hours_h muss in der Response vorkommen
+	if !strings.Contains(rawJSON, "sunny_hours_h") {
+		t.Errorf("Response enthält kein 'sunny_hours_h' — Go-Engine noch nicht umgestellt; body=%s", rawJSON)
 	}
 }
 

@@ -28,7 +28,7 @@
 		WINTERSPORT: [
 			{ label: 'Schneehöhe',    key: 'snow_depth_cm',    higherIsBetter: true,  unit: 'cm',   decimals: 0 },
 			{ label: 'Neuschnee',     key: 'snow_new_sum_cm',  higherIsBetter: true,  unit: 'cm',   decimals: 1 },
-			{ label: 'Sonnenstunden', key: 'dni_avg_wm2',      higherIsBetter: true,  unit: 'W/m²', decimals: 0 },
+			{ label: 'Sonnenstunden', key: 'sunny_hours_h',     higherIsBetter: true,  unit: 'h',    decimals: 1 },
 			{ label: 'Wind max.',     key: 'wind_max_kmh',     higherIsBetter: false, unit: 'km/h', decimals: 0 },
 			{ label: 'Bewölkung',     key: 'cloud_avg_pct',    higherIsBetter: false, unit: '%',    decimals: 0 },
 		],

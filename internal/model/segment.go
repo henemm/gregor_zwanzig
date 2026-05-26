@@ -21,7 +21,7 @@ type SegmentWeatherSummary struct {
 	PressureAvgHpa      *float64     `json:"pressure_avg_hpa,omitempty"`
 	DewpointAvgC        *float64     `json:"dewpoint_avg_c,omitempty"`
 	UvIndexMax          *float64     `json:"uv_index_max,omitempty"`
-	DniAvgWm2           *float64     `json:"dni_avg_wm2,omitempty"`
+	SunnyHoursH         *float64     `json:"sunny_hours_h,omitempty"`
 	SnowDepthCm         *float64     `json:"snow_depth_cm,omitempty"`
 	SnowNewSumCm        *float64     `json:"snow_new_sum_cm,omitempty"`
 	DominantWmoCode     *int         `json:"dominant_wmo_code,omitempty"`

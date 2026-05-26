@@ -2,6 +2,7 @@ package compare
 
 import (
 	"context"
+	"math"
 	"sort"
 	"sync"
 
@@ -183,10 +184,11 @@ func aggregateByDate(points []model.ForecastDataPoint, dateStr string) *model.Se
 
 	out := &model.SegmentWeatherSummary{ThunderLevelMax: model.ThunderNone}
 
+	const dniMin, dniMax = 60.0, 180.0
 	var precipSum float64
 	precipAny := false
-	var dniSum float64
-	dniCount := 0
+	var sunnyFractionSum float64
+	sunnyAny := false
 	var cloudSum int
 	cloudCount := 0
 	var snowDepthMax *float64
@@ -209,8 +211,14 @@ func aggregateByDate(points []model.ForecastDataPoint, dateStr string) *model.Se
 			precipAny = true
 		}
 		if pt.DniWm2 != nil {
-			dniSum += *pt.DniWm2
-			dniCount++
+			v := *pt.DniWm2
+			switch {
+			case v >= dniMax:
+				sunnyFractionSum += 1.0
+			case v > dniMin:
+				sunnyFractionSum += (v - dniMin) / (dniMax - dniMin)
+			}
+			sunnyAny = true
 		}
 		if pt.CloudTotalPct != nil {
 			cloudSum += *pt.CloudTotalPct
@@ -235,9 +243,9 @@ func aggregateByDate(points []model.ForecastDataPoint, dateStr string) *model.Se
 		s := precipSum
 		out.PrecipSumMm = &s
 	}
-	if dniCount > 0 {
-		avg := dniSum / float64(dniCount)
-		out.DniAvgWm2 = &avg
+	if sunnyAny {
+		rounded := math.Round(sunnyFractionSum*10) / 10
+		out.SunnyHoursH = &rounded
 	}
 	if cloudCount > 0 {
 		avg := cloudSum / cloudCount

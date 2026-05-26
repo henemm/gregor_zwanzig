@@ -14,7 +14,7 @@ type metricKey string
 const (
 	metricSnowDepth      metricKey = "snow_depth"
 	metricSnowNew        metricKey = "snow_new"
-	metricDniAvg         metricKey = "dni_avg"
+	metricSunnyHours     metricKey = "sunny_hours"
 	metricWindMax        metricKey = "wind_max"
 	metricCloudAvg       metricKey = "cloud_avg"
 	metricAvalancheLevel metricKey = "avalanche_level"
@@ -45,7 +45,7 @@ func profileMetrics(profile ActivityProfile) []metricSpec {
 		return []metricSpec{
 			{key: metricSnowDepth, weight: 0.30, positive: true, extract: extractFloat(func(s model.SegmentWeatherSummary) *float64 { return s.SnowDepthCm })},
 			{key: metricSnowNew, weight: 0.25, positive: true, extract: extractFloat(func(s model.SegmentWeatherSummary) *float64 { return s.SnowNewSumCm })},
-			{key: metricDniAvg, weight: 0.20, positive: true, extract: extractFloat(func(s model.SegmentWeatherSummary) *float64 { return s.DniAvgWm2 })},
+			{key: metricSunnyHours, weight: 0.20, positive: true, extract: extractFloat(func(s model.SegmentWeatherSummary) *float64 { return s.SunnyHoursH })},
 			{key: metricWindMax, weight: 0.15, positive: false, extract: extractFloat(func(s model.SegmentWeatherSummary) *float64 { return s.WindMaxKmh })},
 			{key: metricCloudAvg, weight: 0.10, positive: false, extract: extractInt(func(s model.SegmentWeatherSummary) *int { return s.CloudAvgPct })},
 		}
@@ -230,7 +230,7 @@ func labelFor(k metricKey) string {
 		return "Beste Schneelage"
 	case metricSnowNew:
 		return "Frischer Schnee"
-	case metricDniAvg:
+	case metricSunnyHours:
 		return "Viel Sonne"
 	case metricWindMax:
 		return "Wenig Wind"

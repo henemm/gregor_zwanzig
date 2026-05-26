@@ -273,7 +273,7 @@ export interface CompareMetrics {
 	visibility_min_m?: number | null;
 	wind_chill_min_c?: number | null;
 	uv_index_max?: number | null;
-	dni_avg_wm2?: number | null;
+	sunny_hours_h?: number | null;
 	snow_depth_cm?: number | null;
 	snow_new_sum_cm?: number | null;
 	thunder_level_max?: string | null; // 'NONE' | 'MED' | 'HIGH'

@@ -123,3 +123,55 @@ func TestScoreRow_NegativeTemps_HigherTempGetsHigherScore(t *testing.T) {
 
 // Suppress unused import warning until implementation exists
 var _ = ip
+
+// --- Issue #367: SunnyHoursH ersetzt DniAvgWm2 im WINTERSPORT-Scoring -------
+
+// AC-3: Mehr Sonnenstunden → höherer Score im WINTERSPORT-Profil.
+// ERWARTET RED: SegmentWeatherSummary.SunnyHoursH existiert noch nicht (Compile-Fehler).
+func TestScoreRow_Wintersport_MoreSunnyHoursGetsHigherScore(t *testing.T) {
+	// GIVEN: Zwei Locations — A mit 6h Sonne, B mit 2h Sonne, sonst identisch
+	// WHEN:  ScoreRow mit ProfileWintersport
+	// THEN:  Location A hat höheren Score als B
+	sunny := model.SegmentWeatherSummary{
+		SnowDepthCm:  fp(50.0),
+		SnowNewSumCm: fp(10.0),
+		SunnyHoursH:  fp(6.0),
+		WindMaxKmh:   fp(20.0),
+		CloudAvgPct:  ip(30),
+	}
+	cloudy := model.SegmentWeatherSummary{
+		SnowDepthCm:  fp(50.0),
+		SnowNewSumCm: fp(10.0),
+		SunnyHoursH:  fp(2.0),
+		WindMaxKmh:   fp(20.0),
+		CloudAvgPct:  ip(30),
+	}
+	all := []model.SegmentWeatherSummary{sunny, cloudy}
+
+	scoreSunny := ScoreRow(sunny, ProfileWintersport, all)
+	scoreCloudy := ScoreRow(cloudy, ProfileWintersport, all)
+
+	if scoreSunny <= scoreCloudy {
+		t.Errorf("sunny(%d) sollte > cloudy(%d) sein (mehr SunnyHoursH)", scoreSunny, scoreCloudy)
+	}
+}
+
+// AC-2: SunnyHoursH liegt physikalisch zwischen 0 und 24.
+// ERWARTET RED: SegmentWeatherSummary.SunnyHoursH existiert noch nicht (Compile-Fehler).
+func TestSunnyHoursH_MaximumBoundary_NotExceedsDay(t *testing.T) {
+	// GIVEN: Location mit vollem Sonnentag (24.0h)
+	// WHEN:  Score berechnet
+	// THEN:  Score liegt in [0, 100], Feld ist akzeptiert
+	full := model.SegmentWeatherSummary{
+		SunnyHoursH: fp(24.0),
+	}
+	zero := model.SegmentWeatherSummary{
+		SunnyHoursH: fp(0.0),
+	}
+	all := []model.SegmentWeatherSummary{full, zero}
+
+	score := ScoreRow(full, ProfileWintersport, all)
+	if score < 0 || score > 100 {
+		t.Errorf("Score %d außerhalb [0,100] bei SunnyHoursH=24.0", score)
+	}
+}
