@@ -35,6 +35,21 @@
 		'Briefings einrichten'
 	];
 
+	// Issue #391: sprechende H1-Titel + step-spezifische Footer-Hinweise.
+	const stepTitles: Record<number, string> = {
+		1: 'Route — wie kennt das System deinen Weg?',
+		2: 'Etappen — stimmt die Tagesaufteilung?',
+		3: 'Wetter — welche Daten gehen ins Briefing?',
+		4: 'Reports — wann und wohin?'
+	};
+
+	const stepHints: Record<number, string | null> = {
+		1: 'GPX-Upload empfohlen — manuelle Eingabe geht auch.',
+		2: 'Algorithmische Wegpunkte sind orange gestrichelt — bestätigen oder verwerfen.',
+		3: null,
+		4: 'Unterwegs läuft alles autark. Kein Eingreifen nötig.'
+	};
+
 	const saveLabel = $derived(
 		state.saveStatus === 'saving'
 			? 'Speichern...'
@@ -66,8 +81,8 @@
 	<TopoBg opacity={0.4}>
 		<div class="p-6 rounded-lg mb-6">
 			<header class="space-y-1 mb-4">
-				<Eyebrow>Schritt {state.currentStep} von 4</Eyebrow>
-				<h1 class="text-2xl font-bold">Neuer Trip</h1>
+				<Eyebrow>SCHRITT {state.currentStep} VON 4 · NEUE TOUR</Eyebrow>
+				<h1 class="text-2xl font-bold">{stepTitles[state.currentStep]}</h1>
 			</header>
 
 			<Stepper current={state.currentStep} labels={stepLabels} subLabels={stepSubLabels} />
@@ -156,4 +171,13 @@
 			{/if}
 		</div>
 	</div>
+
+	{#if stepHints[state.currentStep]}
+		<p
+			data-testid="trip-wizard-step-hint"
+			class="mt-3 text-center text-sm italic text-[var(--g-ink-muted)]"
+		>
+			{stepHints[state.currentStep]}
+		</p>
+	{/if}
 </div>

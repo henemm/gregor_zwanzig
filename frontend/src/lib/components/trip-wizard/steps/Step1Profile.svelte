@@ -21,6 +21,7 @@
 
 	import { getContext } from 'svelte';
 	import UploadIcon from '@lucide/svelte/icons/upload';
+	import { Field } from '$lib/components/molecules';
 	import { uploadGpx } from '$lib/api';
 	import { naturalSort } from '$lib/utils/naturalSort.js';
 	import type { Stage } from '$lib/types';
@@ -152,40 +153,37 @@
 	<section class="flex flex-col gap-4">
 		<span class="text-xs uppercase tracking-wide text-[var(--g-ink-muted)]">Eckdaten</span>
 
-		<label class="flex flex-col gap-1 text-sm">
-			<span>Name <span class="text-[var(--g-accent-deep)]">*</span></span>
+		<Field label="TRIP-NAME">
 			<input
 				type="text"
 				data-testid="trip-wizard-step1-name"
 				bind:value={wizard.name}
-				class="h-9 rounded-lg border border-[var(--g-ink-faint)]/40 bg-transparent px-2.5 outline-none focus-visible:ring-2 focus-visible:ring-[var(--g-accent)]"
+				class="w-full h-9 rounded-lg border border-[var(--g-ink-faint)]/40 bg-transparent px-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--g-accent)]"
 			/>
-		</label>
+		</Field>
 
-		<label class="flex flex-col gap-1 text-sm">
-			<span>Region <span class="text-[var(--g-ink-muted)]">(optional)</span></span>
+		<Field label="REGION" side="(optional)">
 			<input
 				type="text"
 				data-testid="trip-wizard-step1-region"
 				maxlength="50"
 				placeholder="z.B. Korsika, Mallorca"
 				bind:value={wizard.region}
-				class="h-9 rounded-lg border border-[var(--g-ink-faint)]/40 bg-transparent px-2.5 outline-none focus-visible:ring-2 focus-visible:ring-[var(--g-accent)]"
+				class="w-full h-9 rounded-lg border border-[var(--g-ink-faint)]/40 bg-transparent px-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--g-accent)]"
 			/>
-		</label>
+		</Field>
 
-		<label class="flex flex-col gap-1 text-sm">
-			<span>Startdatum <span class="text-[var(--g-accent-deep)]">*</span></span>
+		<Field
+			label="STARTDATUM"
+			hint="Das Enddatum wird in Schritt 2 aus den Etappen berechnet."
+		>
 			<input
 				type="date"
 				data-testid="trip-wizard-step1-startdate"
 				bind:value={wizard.startDate}
-				class="h-9 rounded-lg border border-[var(--g-ink-faint)]/40 bg-transparent px-2.5 outline-none focus-visible:ring-2 focus-visible:ring-[var(--g-accent)]"
+				class="w-full h-9 rounded-lg border border-[var(--g-ink-faint)]/40 bg-transparent px-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--g-accent)]"
 			/>
-			<span class="text-xs text-[var(--g-ink-muted)]"
-				>Das Enddatum wird in Schritt 2 aus den Etappen berechnet.</span
-			>
-		</label>
+		</Field>
 	</section>
 
 	<!-- GPX-Upload (AC-3 #300: von Step 2 hierher verschoben) -->

@@ -15,6 +15,7 @@
 
 	import { getContext } from 'svelte';
 	import { Eyebrow } from '$lib/components/ui/eyebrow';
+	import { Field } from '$lib/components/molecules';
 	import { HorizonChip } from '$lib/components/ui/horizon-chip';
 	import type { ActivityType, Horizons, WeatherConfigMetric } from '$lib/types';
 	import { HORIZONS_ALL } from '$lib/types';
@@ -114,17 +115,18 @@
 
 <div class="step3-weather flex flex-col gap-6 py-4" data-testid="step3-weather">
 	<section class="flex flex-col gap-2">
-		<Eyebrow>Aktivitätsprofil</Eyebrow>
-		<select
-			data-testid="activity-dropdown"
-			bind:value={selectedOption}
-			onchange={handleActivityChange}
-			class="h-9 max-w-xs rounded-lg border border-[var(--g-ink-faint)]/40 bg-transparent px-2.5 outline-none focus-visible:ring-2 focus-visible:ring-[var(--g-accent)]"
-		>
-			{#each ACTIVITY_OPTIONS as opt (opt.value)}
-				<option value={opt.value}>{opt.label}</option>
-			{/each}
-		</select>
+		<Field label="AKTIVITÄTSPROFIL">
+			<select
+				data-testid="activity-dropdown"
+				bind:value={selectedOption}
+				onchange={handleActivityChange}
+				class="h-9 max-w-xs rounded-lg border border-[var(--g-ink-faint)]/40 bg-transparent px-2.5 outline-none focus-visible:ring-2 focus-visible:ring-[var(--g-accent)]"
+			>
+				{#each ACTIVITY_OPTIONS as opt (opt.value)}
+					<option value={opt.value}>{opt.label}</option>
+				{/each}
+			</select>
+		</Field>
 
 		{#if wizard.activity === null}
 			<p class="text-sm text-[var(--g-ink-muted)]" data-testid="activity-hint">

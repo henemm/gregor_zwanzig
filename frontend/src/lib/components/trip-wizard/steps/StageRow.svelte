@@ -78,6 +78,12 @@
 		</span>
 	{/if}
 
+	{#if !isPause && stage.waypoints.length > 0}
+		<Pill tone="ghost" data-testid="trip-wizard-step2-stage-wp-count-{index}">
+			{stage.waypoints.length} WP
+		</Pill>
+	{/if}
+
 	<input
 		type="date"
 		data-testid="trip-wizard-step2-stage-date-{index}"

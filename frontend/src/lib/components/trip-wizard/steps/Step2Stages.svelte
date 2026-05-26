@@ -20,6 +20,7 @@
 
 	import { getContext } from 'svelte';
 	import PlusIcon from '@lucide/svelte/icons/plus';
+	import { Pill, Btn } from '$lib/components/atoms';
 	import { dndzone, type DndEvent } from 'svelte-dnd-action';
 	import { flip } from 'svelte/animate';
 	import type { Stage } from '$lib/types';
@@ -87,6 +88,10 @@
 			wizard.addPauseStageAt(afterIndex);
 		};
 	}
+
+	// --- Platzhalter-Handler (Issue #391; Funktion folgt separat) -----------
+	function handleMerge() {}
+	function handleInsert() {}
 </script>
 
 <div
@@ -96,12 +101,20 @@
 	<div data-testid="trip-wizard-step2-stages" class="flex flex-col gap-6">
 	<!-- Header: "N ETAPPEN ERKANNT AUS N GPX" (AC-4 #300) -->
 	{#if wizard.stages.length > 0}
-		<div class="flex items-center gap-2" data-testid="trip-wizard-step2-header">
+		<div class="flex flex-wrap items-center gap-2" data-testid="trip-wizard-step2-header">
 			<span
 				class="text-xs font-semibold uppercase tracking-widest text-[var(--g-ink-muted)]"
 			>
 				{stageCount} ETAPPEN ERKANNT AUS {stageCount} GPX
 			</span>
+			<div class="ml-auto flex items-center gap-2">
+				<Btn variant="ghost" size="sm" onclick={handleMerge} data-testid="trip-wizard-step2-btn-merge">
+					Zusammenführen
+				</Btn>
+				<Btn variant="ghost" size="sm" onclick={handleInsert} data-testid="trip-wizard-step2-btn-insert">
+					+ Etappe einschieben
+				</Btn>
+			</div>
 		</div>
 	{/if}
 
@@ -128,12 +141,14 @@
 							/>
 						</div>
 						{#if suggested > 0}
-							<span
+							<Pill
+								tone="accent"
+								data-outlined
+								class="border-dashed shrink-0"
 								data-testid="trip-wizard-step2-suggested-pill-{i}"
-								class="shrink-0 rounded-full border border-dashed border-[var(--g-accent)]/60 px-2 py-0.5 text-xs text-[var(--g-accent-deep)]"
 							>
 								+{suggested} Vorschläge
-							</span>
+							</Pill>
 						{/if}
 					</div>
 					<div class="flex justify-center py-1">

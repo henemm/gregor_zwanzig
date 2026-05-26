@@ -5,7 +5,7 @@
 	// Logik (stepperStateOf) liegt in stepperState.ts — unit-testbar ohne
 	// Svelte-Compiler.
 
-	import { Dot } from '$lib/components/ui/dot';
+	import CheckIcon from '@lucide/svelte/icons/check';
 	import { stepperStateOf } from './stepperState.ts';
 
 	interface Props {
@@ -44,7 +44,7 @@
 					<span
 						class="w-8 h-8 rounded-full bg-[var(--g-success)]/15 flex items-center justify-center"
 					>
-						<Dot tone="success" size="md" />
+						<CheckIcon class="size-4 text-[var(--g-success)]" />
 					</span>
 				{:else if state === 'active'}
 					<span
