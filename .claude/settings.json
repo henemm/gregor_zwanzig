@@ -18,72 +18,72 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/workflow_gate.py",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/workflow_gate.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/workflow_gate.py\"; fi",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/spec_enforcement.py",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/spec_enforcement.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/spec_enforcement.py\"; fi",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/claude_md_protection.py",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/claude_md_protection.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/claude_md_protection.py\"; fi",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/tdd_enforcement.py",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/tdd_enforcement.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/tdd_enforcement.py\"; fi",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/red_test_gate.py",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/red_test_gate.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/red_test_gate.py\"; fi",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/post_implementation_gate.py",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/post_implementation_gate.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/post_implementation_gate.py\"; fi",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/scope_guard.py",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/scope_guard.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/scope_guard.py\"; fi",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/plan_validator.py",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/plan_validator.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/plan_validator.py\"; fi",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/ui_screenshot_gate.py",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/ui_screenshot_gate.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/ui_screenshot_gate.py\"; fi",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/domain_pattern_guard.py",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/domain_pattern_guard.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/domain_pattern_guard.py\"; fi",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/architecture_guard.py",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/architecture_guard.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/architecture_guard.py\"; fi",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/track_changes.py",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/track_changes.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/track_changes.py\"; fi",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/backlog_guard.py",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/backlog_guard.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/backlog_guard.py\"; fi",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/data_schema_backup.py",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/data_schema_backup.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/data_schema_backup.py\"; fi",
             "timeout": 35
           }
         ]
@@ -93,22 +93,22 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/pre_commit_gate.py",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/pre_commit_gate.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/pre_commit_gate.py\"; fi",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/pre_commit_validation.py",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/pre_commit_validation.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/pre_commit_validation.py\"; fi",
             "timeout": 180
           },
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/secrets_guard.py",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/secrets_guard.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/secrets_guard.py\"; fi",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/e2e_commit_gate.py",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/e2e_commit_gate.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/e2e_commit_gate.py\"; fi",
             "timeout": 5
           }
         ]
@@ -118,7 +118,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/secrets_guard.py",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/secrets_guard.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/secrets_guard.py\"; fi",
             "timeout": 5
           }
         ]
@@ -128,7 +128,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/session_singleton_guard.py guard",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/session_singleton_guard.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/session_singleton_guard.py\" guard; fi",
             "timeout": 10
           }
         ]
@@ -143,7 +143,7 @@
           },
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/session_singleton_guard.py register",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/session_singleton_guard.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/session_singleton_guard.py\" register; fi",
             "timeout": 10
           }
         ]
@@ -154,7 +154,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/notify_sound.py",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/notify_sound.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/notify_sound.py\"; fi",
             "timeout": 5
           }
         ]
@@ -165,7 +165,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/workflow_state_updater.py",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/workflow_state_updater.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/workflow_state_updater.py\"; fi",
             "timeout": 5
           }
         ]
@@ -177,7 +177,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/auto_restart_server.py",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/auto_restart_server.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/auto_restart_server.py\"; fi",
             "timeout": 30
           }
         ]

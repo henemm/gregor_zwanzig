@@ -40,7 +40,7 @@ Quoting der Pfade (`"…"`) ist additiv robust (CLAUDE_PROJECT_DIR mit Leerzeich
 | Datei | Relevanz |
 |-------|----------|
 | `.claude/settings.json` | **Einziger zu ändernder Produktiv-Artefakt.** Enthält 24 `python3 ${CLAUDE_PROJECT_DIR}`-Hook-Einträge über PreToolUse/SessionStart/Stop/UserPromptSubmit/PostToolUse |
-| `.claude/hooks/*.py` (21 referenzierte) | Die Hook-Implementierungen selbst — bleiben **unverändert**; nur ihre Einbindung in settings.json wird gehärtet |
+| `.claude/hooks/*.py` (22 referenzierte) | Die Hook-Implementierungen selbst — bleiben **unverändert**; nur ihre Einbindung in settings.json wird gehärtet |
 | `tests/tdd/test_issue_348_parallel_workspaces.py` | Präzedenz: `.claude`-Tooling wird mock-frei in `tests/tdd/` getestet — Vorbild für AC-3-Regressionstest |
 | `.claude/tools/gz-workspace` | Isolierte Parallel-Arbeitskopie für die Implementierung (Tree ist aktuell dirty) |
 

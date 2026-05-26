@@ -30,14 +30,14 @@ weiterhin **fail-closed** blockt. Behebt #384.
   die Events `PreToolUse`, `PostToolUse`, `SessionStart`, `Stop`, `UserPromptSubmit`
 - **Schicht:** Claude-Code-Hook-/Konfigurations-Infrastruktur. **Keine** App-Schicht —
   weder Go-API (`internal/`, `cmd/`) noch Python-Backend (`src/`) noch SvelteKit
-  (`frontend/`) werden berührt. Die 21 Hook-`.py`-Dateien bleiben **unverändert**;
+  (`frontend/`) werden berührt. Die 22 Hook-`.py`-Dateien bleiben **unverändert**;
   geändert wird nur ihre Einbindung. Test in `tests/tdd/`.
 
 ## Dependencies
 
 | Entity | Type | Purpose |
 |--------|------|---------|
-| `.claude/hooks/*.py` (21 referenzierte) | Hook-Skripte | Implementieren die Gates; Verhalten bei vorhandener Datei unverändert |
+| `.claude/hooks/*.py` (22 referenzierte) | Hook-Skripte | Implementieren die Gates; Verhalten bei vorhandener Datei unverändert |
 | `${CLAUDE_PROJECT_DIR}` | Env-Var | Zeigt für jede Session aufs Hauptrepo — Wurzel der geteilten Verwundbarkeit |
 | `bash /home/hem/claude-mq/check-messages.sh` | externes Kommando | SessionStart, absoluter Pfad außerhalb Repo → kann nicht via checkout verschwinden → **nicht** Teil des Fixes |
 
@@ -125,7 +125,7 @@ Nach der Änderung MUSS `.claude/settings.json` valides JSON bleiben
 
 ## Out of Scope
 
-- Keine Änderung an der Logik der 21 Hook-`.py`-Dateien.
+- Keine Änderung an der Logik der 22 Hook-`.py`-Dateien.
 - Keine Änderung an `~/.claude/settings.json` (global) oder `.claude/settings.local.json`
   (hat keinen hooks-Block) — der Lockout-Vektor liegt allein in der Repo-`settings.json`.
 - Sekundäre Doku-Härtung in `CLAUDE.md` (Issue „Sekundär"): separater Folgeschritt; Wissen
@@ -137,3 +137,4 @@ Nach der Änderung MUSS `.claude/settings.json` valides JSON bleiben
 ## Changelog
 
 - 2026-05-26: Initial spec created (#384)
+- 2026-05-26: Adversary VERIFIED; Doku-Korrektur 21→22 Hook-Dateien (`e2e_commit_gate.py` wurde im ursprünglichen Zähl-Grep wegen der Ziffer verschluckt; Invocation-Zahl 24 war stets korrekt)
