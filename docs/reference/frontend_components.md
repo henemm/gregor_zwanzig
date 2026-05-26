@@ -825,3 +825,18 @@ Pfade relativ zu `frontend/src/routes/_home/`.
 | TripKachel | `TripKachel.svelte` | Trip-Kachel auf der Startseite |
 | CompareKachel | `CompareKachel.svelte` | Vergleichs-Kachel auf der Startseite |
 | EmptyKachel | `EmptyKachel.svelte` | Platzhalter-Kachel (kein Inhalt) |
+
+## Atomic-Design-Bibliothek (Epic #368)
+
+Kanonische Komponenten-Hierarchie, 1:1 an die Claude-Design-Sandbox angeglichen. Eine Quelle für künftige UI-Arbeit. **Vor jeder UI-Änderung die Showcase-Route `/_design-system` ansehen** (Regressions-Referenz).
+
+| Kategorie | Pfad | Inhalt |
+|---|---|---|
+| **brand** | `lib/brand/` | Marken-Bausteine: BrandIcon, BrandIconSquare, BrandWordmark, BrandUserBadge, BrandSidebar, BrandShell (Issue #370) |
+| **atoms** | `lib/components/atoms/` | 13 Atome: Eyebrow, Pill, Card, Btn, Input, Switch, Dot, WIcon, ElevSparkline, SectionH, AvatarStack, TopoBg, KV (Issue #371) |
+| **molecules** | `lib/components/molecules/` | 10 Molecules: Field, DetailRow, StagePill, ChannelRow, ChannelChip, BriefingTimelineRow, BriefingScheduleRow, ThresholdRow, Stat, AlertRow (Issue #372) |
+| **mobile** | `lib/components/mobile/` | 12 Touch-Primitive (M*): MBtn, MInput, MField, MSwitch, MTab, MIcon, TopAppBar, BottomNav, Drawer, Sheet, Toast, MobileShell (Issue #373) |
+
+**Naming-Konvention:** Brand-only → `Brand*`. Mobile-only → `M*`. Atoms/Molecules → sprechender Name ohne Prefix. **Konflikt-Regel:** Bei Widerspruch gewinnt `brand-kit`, dann `atoms`.
+
+**Showcase:** `routes/_design-system/+page.svelte` rendert alle Bausteine in allen Varianten (Issue #374).
