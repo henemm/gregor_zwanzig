@@ -157,7 +157,7 @@ def render_plain(
     if changes:
         lines.append("━━ Wetteränderungen ━━")
         for c in changes:
-            label = build_segment_label(c, segments)
+            label = build_segment_label(c, segments, tz=tz)
             lines.append(f"  {format_change_line(c, label)}")
         lines.append("")
 
@@ -171,16 +171,16 @@ def render_plain(
         s_elev = int(seg.start_point.elevation_m or 0)
         e_elev = int(seg.end_point.elevation_m or 0)
         if seg.segment_id == "Ziel":
-            lines.append(f"━━ \U0001f3c1 Wetter am Ziel: {seg.start_time.strftime('%H:%M')}–{seg.end_time.strftime('%H:%M')} | {s_elev}m ━━")
+            lines.append(f"━━ \U0001f3c1 Wetter am Ziel: {local_fmt(seg.start_time, tz)}–{local_fmt(seg.end_time, tz)} | {s_elev}m ━━")
         else:
-            lines.append(f"━━ Segment {seg.segment_id}: {seg.start_time.strftime('%H:%M')}–{seg.end_time.strftime('%H:%M')} | {seg.distance_km:.1f} km | ↑{s_elev}m → {e_elev}m ━━")
+            lines.append(f"━━ Segment {seg.segment_id}: {local_fmt(seg.start_time, tz)}–{local_fmt(seg.end_time, tz)} | {seg.distance_km:.1f} km | ↑{s_elev}m → {e_elev}m ━━")
         lines.append(_render_text_table(rows, friendly_keys=friendly_keys))
         lines.append("")
 
     if night_rows:
         last_seg = segments[-1].segment
         lines.append(f"━━ Nacht am Ziel ({int(last_seg.end_point.elevation_m or 0)}m) ━━")
-        lines.append(f"Ankunft {last_seg.end_time.strftime('%H:%M')} → Morgen 06:00")
+        lines.append(f"Ankunft {local_fmt(last_seg.end_time, tz)} → Morgen 06:00")
         lines.append(_render_text_table(night_rows, friendly_keys=friendly_keys))
         if any(mc.enabled and mc.metric_id in ("temperature", "freezing_level") for mc in dc.metrics):
             lines.append("  * Temperatur/Nullgradgrenze: Minimum im 2h-Block")

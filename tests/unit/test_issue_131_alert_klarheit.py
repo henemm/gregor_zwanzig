@@ -9,6 +9,7 @@ These tests are written BEFORE the implementation. They MUST fail in RED phase.
 NO MOCKS — uses real dataclasses and real functions.
 """
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 import pytest
 
@@ -194,7 +195,7 @@ def test_ac7_format_change_line_with_segment_label():
     )
     segment = _make_segment_data(2, _make_summary(visibility_min_m=38440))
 
-    label = build_segment_label(change, [segment])
+    label = build_segment_label(change, [segment], tz=ZoneInfo("UTC"))
     line = format_change_line(change, label)
 
     expected = (
@@ -232,7 +233,7 @@ def test_ac8_two_segments_render_two_distinct_lines():
     segments = [seg_1, seg_2]
 
     lines = [
-        format_change_line(c, build_segment_label(c, segments))
+        format_change_line(c, build_segment_label(c, segments, tz=ZoneInfo("UTC")))
         for c in (change_1, change_2)
     ]
 

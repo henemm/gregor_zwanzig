@@ -25,7 +25,7 @@ from app.models import (
     ForecastDataPoint, NormalizedTimeseries, ThunderLevel,
     UnifiedWeatherDisplayConfig,
 )
-from utils.timezone import local_hour
+from utils.timezone import local_fmt, local_hour
 
 # Issue #121: German weekday names (0=Monday).
 _WEEKDAY_DE = [
@@ -511,15 +511,15 @@ def format_change_line(change, segment_label: str) -> str:
     )
 
 
-def build_segment_label(change, segments) -> str:
+def build_segment_label(change, segments, tz: ZoneInfo) -> str:
     """
     Liefert 'Segment N (HH:MM–HH:MM)' oder '🏁 Ziel (HH:MM)' aus segment_id +
     segments-Liste. Fallback ohne Match: 'Segment N' oder 'Unbekannt'.
     """
     for s in segments:
         if str(s.segment.segment_id) == change.segment_id:
-            start = s.segment.start_time.strftime("%H:%M")
-            end = s.segment.end_time.strftime("%H:%M")
+            start = local_fmt(s.segment.start_time, tz)
+            end = local_fmt(s.segment.end_time, tz)
             if str(s.segment.segment_id) == "Ziel":
                 return f"🏁 Ziel ({start})"
             return f"Segment {s.segment.segment_id} ({start}–{end})"

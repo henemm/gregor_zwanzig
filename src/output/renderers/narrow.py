@@ -18,6 +18,7 @@ from zoneinfo import ZoneInfo
 
 from app.metric_catalog import get_metric
 from app.models import SegmentWeatherData, UnifiedWeatherDisplayConfig
+from utils.timezone import local_fmt
 
 from src.output.renderers.channel_layout import CHANNEL_LIMITS, render_for_channel
 from src.output.renderers.email.helpers import fmt_val
@@ -181,8 +182,8 @@ def render_narrow(
         if seg_data.has_error:
             lines.extend(_wrap(f"Seg {seg.segment_id}: keine Daten", width))
             continue
-        start = seg.start_time.strftime("%H:%M")
-        end = seg.end_time.strftime("%H:%M")
+        start = local_fmt(seg.start_time, tz)
+        end = local_fmt(seg.end_time, tz)
         if str(seg.segment_id) == "Ziel":
             lines.extend(_wrap(f"Ziel {start}", width))
         else:

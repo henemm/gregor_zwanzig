@@ -233,8 +233,8 @@ def render_html(
         if seg.segment_id == "Ziel":
             seg_header = (
                 "🏁 Wetter am Ziel: "
-                + seg.start_time.strftime('%H:%M')
-                + "–" + seg.end_time.strftime('%H:%M')
+                + local_fmt(seg.start_time, tz)
+                + "–" + local_fmt(seg.end_time, tz)
                 + " | " + str(s_elev) + "m"
             )
             desktop_div = (
@@ -246,8 +246,8 @@ def render_html(
         else:
             seg_header = (
                 "Segment " + str(seg.segment_id) + ": "
-                + seg.start_time.strftime('%H:%M')
-                + "–" + seg.end_time.strftime('%H:%M')
+                + local_fmt(seg.start_time, tz)
+                + "–" + local_fmt(seg.end_time, tz)
                 + " | " + f"{seg.distance_km:.1f}" + " km"
                 + " | ↑" + str(s_elev) + "m → " + str(e_elev) + "m"
             )
@@ -282,7 +282,7 @@ def render_html(
             '<div class="section desktop-only">'
             "<h3>" + night_header + "</h3>"
             '<p style="color:' + G_INK_MUTED + ';font-size:13px">Ankunft '
-            + last_seg.end_time.strftime('%H:%M') + " → Morgen 06:00</p>"
+            + local_fmt(last_seg.end_time, tz) + " → Morgen 06:00</p>"
             + _render_html_table(night_rows, friendly_keys=friendly_keys)
             + night_hint
             + "</div>"
@@ -369,7 +369,7 @@ def render_html(
     if changes:
         ch_items = []
         for c in changes:
-            label = build_segment_label(c, segments)
+            label = build_segment_label(c, segments, tz=tz)
             ch_items.append(f"<li>{format_change_line(c, label)}</li>")
         changes_html = f"""
             <div class="section">
