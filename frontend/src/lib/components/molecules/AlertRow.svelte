@@ -50,9 +50,31 @@
 		divider === 'dashed' || divider === 'solid' || divider === 'none' ? divider : 'dashed'
 	);
 
-	const tone = $derived(alert.kind === 'thunder' ? 'bad' : 'warn');
+	const TONE_MAP: Record<string, 'bad' | 'warn'> = {
+		'thunder': 'bad',
+		'thunder_level': 'bad',
+	};
+	const tone = $derived<'bad' | 'warn'>(TONE_MAP[alert.kind] ?? 'warn');
 	const toneColor = $derived(tone === 'bad' ? 'var(--g-bad)' : 'var(--g-warn)');
-	const iconKind = $derived<WIconKind>(alert.kind === 'thunder' ? 'thunder' : 'wind');
+
+	const KIND_MAP: Record<string, WIconKind> = {
+		'thunder': 'thunder',
+		'thunder_level': 'thunder',
+		'wind': 'wind',
+		'wind_gust': 'wind',
+		'wind_change': 'wind',
+		'rain': 'rain',
+		'precipitation_sum': 'rain',
+		'precipitation_change': 'rain',
+		'snow': 'snow',
+		'snow_line': 'snow',
+		'sun': 'sun',
+		'temperature': 'sun',
+		'temperature_min': 'sun',
+		'temperature_max': 'sun',
+		'temperature_change': 'sun',
+	};
+	const iconKind = $derived<WIconKind>(KIND_MAP[alert.kind] ?? 'wind');
 	const borderBottom = $derived(
 		last || resolvedDivider === 'none' ? 'none' : `1px ${resolvedDivider} var(--g-rule-soft)`
 	);

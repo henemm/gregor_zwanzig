@@ -87,3 +87,35 @@ test('#372 AC-5/6: SSR-fest + Token-basiert', () => {
 		assert.ok(/var\(--g-/.test(src), `${name}: nutzt keine --g-*-Tokens`);
 	}
 });
+
+// Bug #417: AlertRow KIND_MAP + TONE_MAP vollstaendig
+// TDD RED: Tests schlagen fehl bis KIND_MAP/TONE_MAP in AlertRow.svelte implementiert sind.
+// Spec: docs/specs/modules/bug_417_alertrow_icon_mapping.md
+test('#417 AC-1/2/3/4/5: AlertRow KIND_MAP enthält alle erwarteten kind-Werte', () => {
+	const ar = read('AlertRow.svelte');
+	// KIND_MAP-Struktur muss explizit vorhanden sein (nicht nur ternäre Bedingung)
+	assert.ok(ar.includes('KIND_MAP'), 'KIND_MAP fehlt in AlertRow.svelte');
+	// Backend-Metrik-Namen müssen als Keys im KIND_MAP erscheinen
+	const expectedKinds = [
+		'thunder_level',       // AC-7: war bisher nicht abgedeckt
+		'wind_gust',           // AC-4: Backend-Metrik-Name
+		'wind_change',
+		'precipitation_sum',   // AC-2: rain-Kategorie
+		'precipitation_change',
+		'snow_line',           // AC-3: snow-Kategorie
+		'temperature_min',     // AC-5: sun-Kategorie
+		'temperature_max',
+		'temperature_change',
+	];
+	for (const kind of expectedKinds) {
+		assert.ok(ar.includes(`'${kind}'`), `KIND_MAP-Schlüssel '${kind}' fehlt in AlertRow.svelte`);
+	}
+});
+
+test('#417 AC-7/8: AlertRow TONE_MAP enthält thunder_level als bad', () => {
+	const ar = read('AlertRow.svelte');
+	// TONE_MAP-Struktur muss explizit vorhanden sein (nicht nur ternäre Bedingung)
+	assert.ok(ar.includes('TONE_MAP'), 'TONE_MAP fehlt in AlertRow.svelte');
+	// thunder_level muss als bad eingestuft sein
+	assert.ok(ar.includes("'thunder_level'"), "TONE_MAP: 'thunder_level' fehlt in AlertRow.svelte");
+});
