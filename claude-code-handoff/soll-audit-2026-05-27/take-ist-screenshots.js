@@ -178,15 +178,16 @@ async function desktopRun(browser) {
   await shotRoute(page, 'desktop-alerts.png',        '/trips/' + TRIP_ID + '#alerts',  { timeout: 1500 });
   await shotRoute(page, 'desktop-email-preview.png', '/trips/' + TRIP_ID + '#preview', { timeout: 1500 });
 
-  // SMS-Vorschau: auf Preview-Tab bleiben, SMS-Radio aktivieren
+  // SMS-Vorschau: Element-Screenshot des SMS-Phone-Frames (immer sichtbar neben dem Email-Iframe)
   try {
-    await page.click('input[type="radio"][value="sms"], [data-testid="preview-channel-sms"]').catch(() => {});
-    await page.waitForTimeout(500);
+    await page.locator('[data-testid="sms-phone-wrapper"]').screenshot({
+      path: path.join(OUT_DIR, 'desktop-sms-preview.png')
+    });
+    console.log('  [ok] desktop-sms-preview.png');
   } catch (err) {
     ERRORS++;
-    console.error('  [FEHLER] desktop-sms-preview.png (radio): ' + err.message);
+    console.error('  [FEHLER] desktop-sms-preview.png: ' + err.message);
   }
-  await shot(page, 'desktop-sms-preview.png');
 
   await shotRoute(page, 'desktop-wp-editor.png',     '/trips/' + TRIP_ID + '/edit',  { selector: 'body' });
 
