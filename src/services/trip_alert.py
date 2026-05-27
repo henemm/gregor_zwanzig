@@ -428,20 +428,13 @@ class TripAlertService:
     def _append_alert_log(self, trip_id: str, changes_count: int, severity: str) -> None:
         """Issue #393: Hängt einen Alert-Versand-Eintrag an alert_log.json an.
 
-        48h-Retention: Einträge älter als 48 Stunden werden beim Schreiben entfernt.
-        Wird von Go (GET /api/cockpit/status) read-only gelesen.
+        Issue #396: Keine Retention mehr — Einträge bleiben dauerhaft erhalten,
+        damit die Archiv-Statistik (Alarme pro Tour) alle historischen Alerts
+        zählen kann. Der Cockpit-Endpoint filtert weiterhin Go-seitig auf 24 h.
+        Wird von Go (GET /api/cockpit/status, GET /api/archive/stats) read-only gelesen.
         """
         path = Path(f"data/users/{self._user_id}/alert_log.json")
         data = json.loads(path.read_text()) if path.exists() else {"entries": []}
-        cutoff = datetime.now(tz=timezone.utc) - timedelta(hours=48)
-        def _aware(s: str) -> datetime:
-            dt = datetime.fromisoformat(s)
-            return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
-
-        data["entries"] = [
-            e for e in data["entries"]
-            if _aware(e["sent_at"]) > cutoff
-        ]
         data["entries"].append({
             "trip_id": trip_id,
             "sent_at": datetime.now(tz=timezone.utc).isoformat(),

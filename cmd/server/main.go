@@ -141,6 +141,8 @@ func main() {
 	r.Delete("/api/metric-presets/{id}", handler.DeleteMetricPresetHandler(s))
 	// Issue #393: Cockpit-Kacheln — Versandstatus + Alarm-Historie (read-only Logs)
 	r.Get("/api/cockpit/status", handler.CockpitStatusHandler(s))
+	// Issue #396: Archiv-Statistiken — Briefings + Alarme pro Tour (Gesamtzahl, kein Zeitfilter)
+	r.Get("/api/archive/stats", handler.ArchiveStatsHandler(s))
 
 	// Scheduler
 	sched, err := scheduler.New(cfg, s)

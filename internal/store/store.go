@@ -726,3 +726,34 @@ func (s *Store) LoadAlertLog() ([]AlertLogEntry, error) {
 	}
 	return f.Entries, nil
 }
+
+// BriefingCountByTrip returns a map[tripID]count of all briefing-log entries
+// per trip for the user-scoped store (Issue #396). Fail-soft: on load error it
+// returns an empty map and no error so the archive view never 500s.
+func (s *Store) BriefingCountByTrip() (map[string]int, error) {
+	entries, err := s.LoadBriefingLog()
+	if err != nil {
+		return map[string]int{}, nil
+	}
+	counts := make(map[string]int)
+	for _, e := range entries {
+		counts[e.TripID]++
+	}
+	return counts, nil
+}
+
+// AlertCountByTrip returns a map[tripID]count of all alert-log entries per trip
+// for the user-scoped store (Issue #396). No time filter — every historical
+// alert is counted (the 48h-retention was removed in the Python writer).
+// Fail-soft: on load error it returns an empty map and no error.
+func (s *Store) AlertCountByTrip() (map[string]int, error) {
+	entries, err := s.LoadAlertLog()
+	if err != nil {
+		return map[string]int{}, nil
+	}
+	counts := make(map[string]int)
+	for _, e := range entries {
+		counts[e.TripID]++
+	}
+	return counts, nil
+}
