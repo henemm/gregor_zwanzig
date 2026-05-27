@@ -357,3 +357,23 @@ export interface StageWeatherResult {
 export interface StagesWeatherResponse {
 	results: Record<string, StageWeatherResult | null>;
 }
+
+// Issue #393 — Cockpit-Kacheln: Versandstatus + Alarm-Historie.
+export interface BriefingLogEntry {
+	trip_id: string;
+	kind: 'morning' | 'evening';
+	sent_at: string;
+	channels: string[];
+}
+
+export interface AlertLogEntry {
+	trip_id: string;
+	sent_at: string;
+	changes_count: number;
+	severity: 'LOW' | 'MODERATE' | 'HIGH';
+}
+
+export interface CockpitStatus {
+	briefings: BriefingLogEntry[];
+	alerts: AlertLogEntry[];
+}

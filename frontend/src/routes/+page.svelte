@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Trip, Subscription, StagesWeatherResponse } from '$lib/types.js';
+	import type { Trip, Subscription, StagesWeatherResponse, CockpitStatus } from '$lib/types.js';
 	import { Card, Pill, Dot, Eyebrow, Btn, ElevSparkline, SectionH } from '$lib/components/atoms';
 	import { StagePill, BriefingTimelineRow } from '$lib/components/molecules';
 	import {
@@ -27,6 +27,7 @@
 	const trips = $derived((data.trips ?? []) as Trip[]);
 	const subscriptions = $derived((data.subscriptions ?? []) as Subscription[]);
 	const heroWeather = null as StagesWeatherResponse | null; // Issue 395: kein Live-Wetter auf der Website (dormant; späteres On-Demand-Laden separat)
+	const cockpitStatus = $derived((data.cockpitStatus ?? null) as CockpitStatus | null);
 	const isEmpty = $derived(trips.length === 0 && subscriptions.length === 0);
 
 	const todayPretty = now.toLocaleDateString('de-DE', {
@@ -73,7 +74,12 @@
 	const nextSummary = $derived(weatherSummary(nextWeatherResult));
 
 	// --- Rechte Spalte: geplante Briefings ----------------------------------
-	const briefings = $derived(hero ? plannedBriefings(hero.report_config) : []);
+	const briefings = $derived(
+		hero ? plannedBriefings(hero.report_config, cockpitStatus?.briefings, hero.id) : []
+	);
+	const heroAlerts = $derived(
+		(cockpitStatus?.alerts ?? []).filter((a) => a.trip_id === hero?.id)
+	);
 
 	// --- Archiv -------------------------------------------------------------
 	const archive = $derived(archivedTrips(trips, now, 4));
@@ -225,13 +231,54 @@
 						</div>
 					</Card>
 
-					<!-- Alarme · letzte 24 h (sauberer Leerzustand, AC-6) -->
+					<!-- Alarme · letzte 24 h (echte Events oder Leerzustand, AC-6/7) -->
 					<Card>
 						<div style:padding="20px">
-							<SectionH eyebrow="Alarme · letzte 24 h" title="Keine Alarme" />
-							<div style:font-size="13px" style:color="var(--g-ink-3)" style:line-height="1.5">
-								Keine Alarme in den letzten 24 Stunden. Schwellen verwaltest du im Trip.
-							</div>
+							<SectionH
+								eyebrow="Alarme · letzte 24 h"
+								title={heroAlerts.length > 0
+									? `${heroAlerts.length} Alarm${heroAlerts.length > 1 ? 'e' : ''}`
+									: 'Keine Alarme'}
+							/>
+							{#if heroAlerts.length > 0}
+								<div style:display="flex" style:flex-direction="column" style:gap="6px">
+									{#each heroAlerts as alert (alert.sent_at)}
+										<div
+											style:display="flex"
+											style:align-items="center"
+											style:gap="8px"
+											style:padding="8px 10px"
+											style:background="var(--g-card-alt)"
+											style:border="1px solid var(--g-rule-soft)"
+											style:border-radius="var(--g-r-2)"
+											style:font-size="13px"
+										>
+											<Dot
+												tone={alert.severity === 'HIGH'
+													? 'bad'
+													: alert.severity === 'MODERATE'
+														? 'warn'
+														: 'neutral'}
+											/>
+											<span style:color="var(--g-ink-2)"
+												>{new Date(alert.sent_at).toLocaleTimeString('de-DE', {
+													hour: '2-digit',
+													minute: '2-digit'
+												})}</span
+											>
+											<span style:color="var(--g-ink-3)"
+												>{alert.changes_count} Änderung{alert.changes_count !== 1
+													? 'en'
+													: ''}</span
+											>
+										</div>
+									{/each}
+								</div>
+							{:else}
+								<div style:font-size="13px" style:color="var(--g-ink-3)" style:line-height="1.5">
+									Keine Alarme in den letzten 24 Stunden. Schwellen verwaltest du im Trip.
+								</div>
+							{/if}
 						</div>
 					</Card>
 				</div>

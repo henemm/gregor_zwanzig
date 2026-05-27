@@ -660,3 +660,69 @@ func (s *Store) DeleteGroup(id string) error {
 
 	return s.saveGroups(filtered)
 }
+
+// BriefingLogEntry represents one briefing send event (Issue #393).
+type BriefingLogEntry struct {
+	TripID   string   `json:"trip_id"`
+	Kind     string   `json:"kind"`
+	SentAt   string   `json:"sent_at"`
+	Channels []string `json:"channels"`
+}
+
+type briefingLogFile struct {
+	Entries []BriefingLogEntry `json:"entries"`
+}
+
+// LoadBriefingLog reads the user's briefing_log.json. Returns an empty slice
+// if the file is missing or corrupt (fail-soft). Issue #393.
+func (s *Store) LoadBriefingLog() ([]BriefingLogEntry, error) {
+	path := filepath.Join(s.DataDir, "users", s.UserID, "briefing_log.json")
+	b, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return []BriefingLogEntry{}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var f briefingLogFile
+	if err := json.Unmarshal(b, &f); err != nil {
+		return []BriefingLogEntry{}, nil
+	}
+	if f.Entries == nil {
+		return []BriefingLogEntry{}, nil
+	}
+	return f.Entries, nil
+}
+
+// AlertLogEntry represents one alert fire event (Issue #393).
+type AlertLogEntry struct {
+	TripID       string `json:"trip_id"`
+	SentAt       string `json:"sent_at"`
+	ChangesCount int    `json:"changes_count"`
+	Severity     string `json:"severity"`
+}
+
+type alertLogFile struct {
+	Entries []AlertLogEntry `json:"entries"`
+}
+
+// LoadAlertLog reads the user's alert_log.json. Returns an empty slice if the
+// file is missing or corrupt (fail-soft). Issue #393.
+func (s *Store) LoadAlertLog() ([]AlertLogEntry, error) {
+	path := filepath.Join(s.DataDir, "users", s.UserID, "alert_log.json")
+	b, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return []AlertLogEntry{}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var f alertLogFile
+	if err := json.Unmarshal(b, &f); err != nil {
+		return []AlertLogEntry{}, nil
+	}
+	if f.Entries == nil {
+		return []AlertLogEntry{}, nil
+	}
+	return f.Entries, nil
+}

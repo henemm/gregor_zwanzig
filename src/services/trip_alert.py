@@ -154,6 +154,11 @@ class TripAlertService:
         self._last_alert_times[trip.id] = datetime.now(timezone.utc)
         self._save_throttle_times()
 
+        # 8. Issue #393: Alert-Log für Cockpit-Kachel "Alarme · letzte 24 h".
+        # Nur nach erfolgreichem Versand; höchste Severity der significant-Liste.
+        severity = self._highest_severity(significant)
+        self._append_alert_log(trip.id, len(significant), severity)
+
         return True
 
     def _select_change_detector(self, trip: "Trip") -> WeatherChangeDetectionService:
@@ -405,6 +410,45 @@ class TripAlertService:
         """
         significant_severities = {ChangeSeverity.MODERATE, ChangeSeverity.MAJOR}
         return [c for c in changes if c.severity in significant_severities]
+
+    @staticmethod
+    def _highest_severity(changes: List[WeatherChange]) -> str:
+        """Issue #393: Höchste Severity der Changes als Cockpit-Token (LOW/MODERATE/HIGH).
+
+        ChangeSeverity (minor<moderate<major) wird auf das Frontend-Token-Set gemappt:
+        MINOR→LOW, MODERATE→MODERATE, MAJOR→HIGH. Leere Liste → "LOW".
+        """
+        rank = {ChangeSeverity.MINOR: 0, ChangeSeverity.MODERATE: 1, ChangeSeverity.MAJOR: 2}
+        token = {ChangeSeverity.MINOR: "LOW", ChangeSeverity.MODERATE: "MODERATE", ChangeSeverity.MAJOR: "HIGH"}
+        if not changes:
+            return "LOW"
+        top = max(changes, key=lambda c: rank.get(c.severity, 0)).severity
+        return token.get(top, "LOW")
+
+    def _append_alert_log(self, trip_id: str, changes_count: int, severity: str) -> None:
+        """Issue #393: Hängt einen Alert-Versand-Eintrag an alert_log.json an.
+
+        48h-Retention: Einträge älter als 48 Stunden werden beim Schreiben entfernt.
+        Wird von Go (GET /api/cockpit/status) read-only gelesen.
+        """
+        path = Path(f"data/users/{self._user_id}/alert_log.json")
+        data = json.loads(path.read_text()) if path.exists() else {"entries": []}
+        cutoff = datetime.now(tz=timezone.utc) - timedelta(hours=48)
+        def _aware(s: str) -> datetime:
+            dt = datetime.fromisoformat(s)
+            return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+        data["entries"] = [
+            e for e in data["entries"]
+            if _aware(e["sent_at"]) > cutoff
+        ]
+        data["entries"].append({
+            "trip_id": trip_id,
+            "sent_at": datetime.now(tz=timezone.utc).isoformat(),
+            "changes_count": changes_count,
+            "severity": severity,
+        })
+        path.write_text(json.dumps(data, indent=2))
 
     def _fetch_fresh_weather(
         self,

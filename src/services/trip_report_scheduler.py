@@ -8,9 +8,11 @@ SPEC: docs/specs/modules/trip_report_scheduler.md v1.0
 """
 from __future__ import annotations
 
+import json
 import logging
 import math
 from datetime import date, datetime, time, timedelta, timezone
+from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from app.config import Settings
@@ -460,6 +462,17 @@ class TripReportSchedulerService:
             except Exception as e:
                 logger.error(f"Telegram send failed for {trip.name}: {e}")
 
+        # Issue #393: Briefing-Log für Cockpit-Kachel "Was geht heute raus".
+        # Nur nach erfolgreichem Versand (kein Exception oben) anhängen.
+        sent_channels: List[str] = []
+        if not config or config.send_email:
+            sent_channels.append("email")
+        if config and config.send_signal and self._settings.can_send_signal():
+            sent_channels.append("signal")
+        if config and config.send_telegram and self._settings.can_send_telegram():
+            sent_channels.append("telegram")
+        self._append_briefing_log(trip.id, report_type, sent_channels)
+
         logger.info(f"Trip report sent: {trip.name} ({report_type})")
 
         # 8. WEATHER-04: Service-E-Mail bei SMS-only + Fehler
@@ -476,6 +489,22 @@ class TripReportSchedulerService:
             WeatherSnapshotService().save(trip.id, segment_weather, target_date)
         except Exception as e:
             logger.warning(f"Failed to save weather snapshot for {trip.id}: {e}")
+
+    def _append_briefing_log(self, trip_id: str, kind: str, channels: List[str]) -> None:
+        """Issue #393: Hängt einen Briefing-Versand-Eintrag an briefing_log.json an.
+
+        Wird von Go (GET /api/cockpit/status) read-only gelesen. Kein Bereinigen —
+        das Frontend filtert auf "heute".
+        """
+        path = Path(f"data/users/{self._user_id}/briefing_log.json")
+        data = json.loads(path.read_text()) if path.exists() else {"entries": []}
+        data["entries"].append({
+            "trip_id": trip_id,
+            "kind": kind,
+            "sent_at": datetime.now(tz=timezone.utc).isoformat(),
+            "channels": channels,
+        })
+        path.write_text(json.dumps(data, indent=2))
 
     def _interpolate_arrival_time(
         self,

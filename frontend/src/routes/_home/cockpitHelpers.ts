@@ -4,7 +4,7 @@
 // Reine Funktionen (seiteneffektfrei) für die Hero-/Briefing-/Archiv-Ableitung.
 // Keine Mocks, kein Render — gegen echte Trip/Stage/ReportConfig-DTO-Form.
 
-import type { Trip, Stage, ReportConfig, StageWeatherResult } from '$lib/types';
+import type { Trip, Stage, ReportConfig, StageWeatherResult, BriefingLogEntry } from '$lib/types';
 // Relative Wert-Importe (statt $lib-Alias), damit die reinen Helfer auch unter
 // dem Node-Test-Runner (`node --test --experimental-strip-types`) auflösbar
 // bleiben. Vite löst $lib-Alias und relativen Pfad zur Laufzeit identisch auf.
@@ -90,7 +90,7 @@ export interface BriefingReport {
 	when: string;
 	kind: string;
 	channels: string[];
-	status: 'planned';
+	status: 'planned' | 'sent';
 	etappe?: string;
 }
 
@@ -106,17 +106,44 @@ export function reportChannels(rc: ReportConfig | undefined): string[] {
 
 /**
  * Geplante Briefings aus report_config → BriefingTimelineRow-Eingabe.
- * Status immer 'planned' (Versandstatus vertagt → #393).
+ *
+ * Issue #393: optionaler `sentLog` (heutige Briefing-Versand-Einträge) markiert
+ * Rows als 'sent', wenn ein passender Eintrag (gleicher tripId + kind + heutiges
+ * Datum) existiert; sonst 'planned'. Ohne sentLog/tripId bleibt alles 'planned'
+ * (backward-compatible).
  */
-export function plannedBriefings(rc: ReportConfig | undefined): BriefingReport[] {
+export function plannedBriefings(
+	rc: ReportConfig | undefined,
+	sentLog?: BriefingLogEntry[],
+	tripId?: string
+): BriefingReport[] {
 	if (!rc) return [];
 	const channels = reportChannels(rc);
+	const todayPrefix = new Date().toISOString().slice(0, 10);
+
+	const isSent = (kind: string): boolean => {
+		if (!sentLog || !tripId) return false;
+		return sentLog.some(
+			(e) => e.trip_id === tripId && e.kind === kind && e.sent_at.startsWith(todayPrefix)
+		);
+	};
+
 	const rows: BriefingReport[] = [];
 	if (rc.morning_enabled) {
-		rows.push({ when: rc.morning_time || '07:00', kind: 'morgen', channels, status: 'planned' });
+		rows.push({
+			when: rc.morning_time || '07:00',
+			kind: 'morgen',
+			channels,
+			status: isSent('morning') ? 'sent' : 'planned'
+		});
 	}
 	if (rc.evening_enabled) {
-		rows.push({ when: rc.evening_time || '18:00', kind: 'abend', channels, status: 'planned' });
+		rows.push({
+			when: rc.evening_time || '18:00',
+			kind: 'abend',
+			channels,
+			status: isSent('evening') ? 'sent' : 'planned'
+		});
 	}
 	return rows;
 }

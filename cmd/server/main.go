@@ -139,6 +139,8 @@ func main() {
 	r.Post("/api/metric-presets", handler.CreateMetricPresetHandler(s))
 	r.Patch("/api/metric-presets/{id}", handler.PatchMetricPresetHandler(s))
 	r.Delete("/api/metric-presets/{id}", handler.DeleteMetricPresetHandler(s))
+	// Issue #393: Cockpit-Kacheln — Versandstatus + Alarm-Historie (read-only Logs)
+	r.Get("/api/cockpit/status", handler.CockpitStatusHandler(s))
 
 	// Scheduler
 	sched, err := scheduler.New(cfg, s)
