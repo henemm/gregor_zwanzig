@@ -7,6 +7,7 @@
 	import * as Table from '$lib/components/ui/table/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import LocationForm from '$lib/components/LocationForm.svelte';
+	import NewLocationWizard from '$lib/components/compare/NewLocationWizard.svelte';
 	import WeatherConfigDialog from '$lib/components/WeatherConfigDialog.svelte';
 	import { EmptyState } from '$lib/components/ui/empty-state/index.js';
 	import SearchIcon from '@lucide/svelte/icons/search';
@@ -57,6 +58,11 @@
 				(e as { error?: string })?.error ??
 				'Fehler beim Speichern';
 		}
+	}
+
+	function handleNewLocationSave(loc: Location) {
+		refetchLocations();
+		dialogMode = null;
 	}
 
 	async function handleDelete() {
@@ -179,7 +185,14 @@
 		<Dialog.Header>
 			<Dialog.Title>{dialogMode === 'create' ? 'Neue Location' : 'Location bearbeiten'}</Dialog.Title>
 		</Dialog.Header>
-		{#if dialogMode}
+		{#if dialogMode === 'create'}
+			<NewLocationWizard
+				{locations}
+				groups={[]}
+				onsave={handleNewLocationSave}
+				oncancel={closeDialog}
+			/>
+		{:else if dialogMode === 'edit'}
 			<LocationForm
 				location={editTarget ?? undefined}
 				{locations}
