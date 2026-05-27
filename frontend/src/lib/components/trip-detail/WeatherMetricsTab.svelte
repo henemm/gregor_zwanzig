@@ -17,6 +17,7 @@
 	import BucketSectionOff from './BucketSectionOff.svelte';
 	import AboutOutputLayout from './AboutOutputLayout.svelte';
 	import ChannelPreviewBlock from './ChannelPreviewBlock.svelte';
+	import WeatherMetricsMobileView from './WeatherMetricsMobileView.svelte';
 	import {
 		autoAssign, move, reorder, buildWeatherConfigMetrics,
 		CATEGORY_LABELS, CATEGORY_ORDER, INDICATOR_MAP, indicatorCapable,
@@ -50,6 +51,7 @@
 	let showSavePresetDialog = $state(false);
 	let showAbout = $state(false);
 	let pendingPreset: string | null = $state(null);
+	let showMobileView = $state(false);
 
 	// Abgeleitete Lookups für die Komponenten.
 	const metricById = $derived.by(() => {
@@ -192,6 +194,16 @@
 		friendlyMap = { ...friendlyMap, [id]: useIndicator };
 	}
 
+	// Issue #415 — Mobile-Toggle: aktiviert -> secondary-Bucket, deaktiviert -> off.
+	function onToggleMetric(id: string, active: boolean) {
+		const from: keyof Buckets = buckets.primary.includes(id)
+			? 'primary'
+			: buckets.secondary.includes(id) ? 'secondary' : 'off';
+		const to: keyof Buckets = active ? 'secondary' : 'off';
+		if (from !== to) buckets = move(buckets, id, from, to);
+		if (selectedTemplate) selectedTemplate = '';
+	}
+
 	function onMove(id: string, target: 'primary' | 'secondary' | 'off') {
 		const from: keyof Buckets = buckets.primary.includes(id)
 			? 'primary'
@@ -256,6 +268,9 @@
 	</div>
 {:else}
 	<div data-testid="weather-metrics-tab" class="metrics-tab">
+		<button class="mobile-metrics-trigger" data-testid="mobile-metrics-trigger" onclick={() => (showMobileView = true)}>
+			Metriken konfigurieren ({buckets.primary.length + buckets.secondary.length} aktiv)
+		</button>
 		<header class="tab-head">
 			<div class="intro">
 				<Eyebrow>Wetter-Metriken</Eyebrow>
@@ -388,6 +403,28 @@
 				</div>
 			</div>
 		{/if}
+
+		{#if showMobileView}
+			<WeatherMetricsMobileView
+				{trip}
+				{catalog}
+				{templates}
+				{userPresets}
+				{buckets}
+				{friendlyMap}
+				{metricById}
+				{selectedTemplate}
+				{savedSnapshot}
+				{isDirty}
+				{saving}
+				{onToggleMetric}
+				onSelectPreset={applyPreset}
+				onSave={handleSave}
+				onDiscard={handleDiscard}
+				onClose={() => (showMobileView = false)}
+				onOpenSavePresetDialog={() => (showSavePresetDialog = true)}
+			/>
+		{/if}
 	</div>
 {/if}
 
@@ -504,10 +541,28 @@
 		justify-content: flex-end;
 		gap: var(--g-s-2);
 	}
+	.mobile-metrics-trigger {
+		display: none;
+	}
 	@media (max-width: 899px) {
 		.layout {
 			grid-template-columns: 1fr;
 			gap: var(--g-s-6);
+		}
+		.mobile-metrics-trigger {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			width: 100%;
+			padding: var(--g-s-3) var(--g-s-4);
+			background: var(--g-paper);
+			border: 1px solid var(--g-ink-faint);
+			border-radius: var(--g-radius-md);
+			font-size: var(--g-text-sm);
+			font-weight: 500;
+			cursor: pointer;
+			color: var(--g-ink);
+			margin-bottom: var(--g-s-4);
 		}
 	}
 </style>
