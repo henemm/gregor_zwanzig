@@ -81,7 +81,7 @@
 	<TopoBg opacity={0.4}>
 		<div class="p-6 rounded-lg mb-6">
 			<header class="space-y-1 mb-4">
-				<Eyebrow>SCHRITT {state.currentStep} VON 4 · NEUE TOUR</Eyebrow>
+				<Eyebrow>SCHRITT {state.currentStep} VON 4 · NEUER TRIP</Eyebrow>
 				<h1 class="text-2xl font-bold">{stepTitles[state.currentStep]}</h1>
 			</header>
 

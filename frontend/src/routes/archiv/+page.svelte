@@ -74,7 +74,7 @@
 <main style="padding:32px 40px;overflow:auto">
 	<!-- Header -->
 	<div style="margin-bottom:28px">
-		<Eyebrow>Workspace · Vergangene Touren</Eyebrow>
+		<Eyebrow>Workspace · Vergangene Trips</Eyebrow>
 		<h1
 			style="font-size:32px;font-weight:600;letter-spacing:-0.025em;margin-top:4px"
 		>
@@ -83,8 +83,8 @@
 		<p
 			style="font-size:14px;color:var(--g-ink-3);margin-top:6px;max-width:620px;line-height:1.5"
 		>
-			Touren, deren Enddatum vorbei ist. Hier siehst du nachträglich, wie gut die
-			Briefings getroffen haben, und kannst eine Tour als Vorlage für eine neue
+			Trips, deren Enddatum vorbei ist. Hier siehst du nachträglich, wie gut die
+			Briefings getroffen haben, und kannst einen Trip als Vorlage für eine neue
 			Planung übernehmen.
 		</p>
 	</div>
@@ -113,7 +113,7 @@
 	<div
 		style="display:flex;gap:32px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--g-rule-soft)"
 	>
-		<Stat layout="inline" label="Touren" value={totalTrips} />
+		<Stat layout="inline" label="Trips" value={totalTrips} />
 		<Stat layout="inline" label="Briefings gesendet" value={totalBriefings} />
 		<Stat layout="inline" label="Forecast-Treffer Ø" value={null} tone="accent" />
 		<Stat layout="inline" label="Alarme ausgelöst" value={totalAlerts} />
@@ -143,9 +143,9 @@
 		{#if filtered.length === 0}
 			<div style="padding:40px;text-align:center;color:var(--g-ink-3);font-size:13px">
 				{#if query}
-					Keine archivierten Touren für »{query}« gefunden.
+					Keine archivierten Trips für »{query}« gefunden.
 				{:else}
-					Keine archivierten Touren.
+					Keine archivierten Trips.
 				{/if}
 			</div>
 		{/if}
@@ -155,7 +155,7 @@
 	<div
 		style="margin-top:14px;font-size:11px;color:var(--g-ink-muted);font-family:var(--g-font-mono);letter-spacing:0.06em"
 	>
-		{filtered.length} von {totalTrips} archivierten Touren · auto-archiviert nach Tour-Ende
+		{filtered.length} von {totalTrips} archivierten Trips · auto-archiviert nach Trip-Ende
 	</div>
 </main>
 

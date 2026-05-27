@@ -4,7 +4,7 @@
 // Diese Tests MÜSSEN in der RED-Phase fehlschlagen — die Implementation fehlt noch.
 //
 // AC-1: Stepper done-State zeigt CheckIcon statt Dot
-// AC-2: TripWizardShell hat dynamischen H1-Titel + Eyebrow "SCHRITT N VON 4 · NEUE TOUR"
+// AC-2: TripWizardShell hat dynamischen H1-Titel + Eyebrow "SCHRITT N VON 4 · NEUER TRIP"
 // AC-3: TripWizardShell hat step-spezifische Footer-Hinweistexte
 // AC-4: Step1Profile nutzt Field-Molecule für Inputs
 // AC-5: StageRow zeigt WP-Count Badge
@@ -83,10 +83,10 @@ test('AC-2d: Shell H1-Text für Schritt 4: "Reports — wann und wohin?"', () =>
   );
 });
 
-test('AC-2e: Shell-Eyebrow enthält "NEUE TOUR" (SCHRITT N VON 4 · NEUE TOUR)', () => {
+test('AC-2e: Shell-Eyebrow enthält "NEUER TRIP" (SCHRITT N VON 4 · NEUER TRIP)', () => {
   assert.ok(
-    shell.includes('NEUE TOUR'),
-    'TripWizardShell.svelte Eyebrow muss "NEUE TOUR" enthalten (Format: SCHRITT N VON 4 · NEUE TOUR)'
+    shell.includes('NEUER TRIP'),
+    'TripWizardShell.svelte Eyebrow muss "NEUER TRIP" enthalten (Format: SCHRITT N VON 4 · NEUER TRIP)'
   );
 });
 
