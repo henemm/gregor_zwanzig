@@ -1,0 +1,4 @@
+# Design-Handoff-Archive (zu groß für git, lokal vorhanden)
+*.zip
+*.tar.gz
+handoff-*/
