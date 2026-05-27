@@ -147,7 +147,14 @@
 		font-weight: 500;
 		border-bottom: 2px solid transparent;
 		background: transparent;
+		color: var(--g-ink);
 		cursor: pointer;
+	}
+	/* Override: app.css setzt data-active="true" global auf ink-Hintergrund (WeatherConfigDialog).
+	   TripTabs braucht transparenten Hintergrund + ink-Text, nur Unterstrichen. */
+	.trip-tabs :global([data-slot="segmented-item"][data-active="true"]) {
+		background: transparent;
+		color: var(--g-ink);
 	}
 	.trip-tabs :global([data-slot="segmented-item"][data-state='active']) {
 		border-bottom-color: var(--g-accent);
