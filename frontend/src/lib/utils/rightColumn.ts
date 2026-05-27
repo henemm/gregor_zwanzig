@@ -106,8 +106,8 @@ export function getReportSchedule(trip: Trip): ReportSchedule {
 		enabled: rc.enabled === true,
 		morning_enabled: rc.morning_enabled === true,
 		evening_enabled: rc.evening_enabled === true,
-		morning: typeof morningTime === 'string' ? morningTime.slice(0, 5) : undefined,
-		evening: typeof eveningTime === 'string' ? eveningTime.slice(0, 5) : undefined,
+		morning: typeof morningTime === 'string' ? morningTime : undefined,
+		evening: typeof eveningTime === 'string' ? eveningTime : undefined,
 		alertOnChanges: rc.alert_on_changes === true
 	};
 }

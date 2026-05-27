@@ -203,6 +203,8 @@ test('getReportSchedule > AC-15a: voll konfiguriert → strukturiertes Schedule-
 		enabled: true,
 		morning: '06:00:00',
 		evening: '18:00:00',
+		morning_enabled: false,
+		evening_enabled: false,
 		alertOnChanges: true
 	});
 });

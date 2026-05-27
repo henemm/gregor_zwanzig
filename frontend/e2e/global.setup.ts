@@ -60,8 +60,8 @@ setup('authenticate and seed test data', async ({ page }) => {
 					]
 				},
 				{
-					id: 'e2e-stage-pause',
-					name: 'Pausentag',
+					id: 'e2e-stage-3',
+					name: 'Morgen',
 					date: tomorrow,
 					waypoints: []
 				}
@@ -72,11 +72,11 @@ setup('authenticate and seed test data', async ({ page }) => {
 				evening_time: '18:00:00',
 				alert_on_changes: true
 			},
-			weather_config: {
+			display_config: {
 				metrics: ['temp_min', 'temp_max', 'wind_max', 'precip_sum']
 			},
 			aggregation: {
-				activity_profile: 'wandern'
+				profile: 'wandern'
 			}
 		}
 	});

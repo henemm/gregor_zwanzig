@@ -1,113 +1,106 @@
 <script lang="ts">
-	// Issue #302 — Trip-Detail Übersicht-Tab als 2×2 DetailCard-Grid.
-	// Spec: docs/specs/modules/issue_302_trip_detail_page.md §5.
-	//
-	// Vier Karten: Reports, Alarmregeln, Route, Datenstand. Header-Infos (Hero,
-	// Stats, Status) sind in TripHeader.svelte gewandert; FullProfile + StageList +
-	// Right-Column-Previews leben jetzt in ihren jeweiligen Tabs.
+	// Issue #409 — Trip-Detail Übersicht-Tab: Höhenprofil + Etappen-Layout
+	// statt Card-Grid.
+	// Spec: docs/specs/modules/issue_409_trip_detail_overview.md
 
 	import type { Trip } from '$lib/types';
-	import DetailCard, { type DetailCardItem } from './DetailCard.svelte';
+	import FullProfile from './FullProfile.svelte';
+	import StageList from './StageList.svelte';
+	import BriefingPreviewCard from './BriefingPreviewCard.svelte';
+	import WeatherMetricsPreviewCard from './WeatherMetricsPreviewCard.svelte';
+	import AlertsPreviewCard from './AlertsPreviewCard.svelte';
+	import PreviewCard from './PreviewCard.svelte';
+	import Stat from '$lib/components/molecules/Stat.svelte';
 	import { computeTripStats } from '$lib/utils/tripStats';
 	import { getReportSchedule } from '$lib/utils/rightColumn';
-	import { ALERT_METRIC_LABELS, SEVERITY_LABEL_DE, normalizeAlertMetric } from '$lib/utils/alertMetricLabels';
+	import { getActiveStageId } from '$lib/utils/fullProfile';
+	import { deriveTripStatus } from '$lib/utils/tripStatus';
 
 	interface Props {
 		trip: Trip;
+		now?: Date;
 	}
 
-	let { trip }: Props = $props();
+	let { trip, now = new Date() }: Props = $props();
+
+	let selectedStageId = $state<string | null>(null);
 
 	const stats = $derived(computeTripStats(trip));
 	const schedule = $derived(getReportSchedule(trip));
-	const enabledAlerts = $derived((trip.alert_rules ?? []).filter((r) => r.enabled));
-	const waypointCount = $derived(
-		(trip.stages ?? []).reduce((acc, s) => acc + (s.waypoints?.length ?? 0), 0)
+	const status = $derived(deriveTripStatus(trip, now));
+	const activeId = $derived(getActiveStageId(trip, now));
+	const stages = $derived(trip.stages ?? []);
+
+	// Etappen-Kachel: "aktiveIndex+1 / Gesamt" oder "– / Gesamt"
+	const activeIndex = $derived(
+		activeId !== null ? stages.findIndex((s) => s.id === activeId) : -1
+	);
+	const etappeValue = $derived(
+		activeIndex >= 0 ? `${activeIndex + 1}/${stats.stages}` : `–/${stats.stages}`
 	);
 
-	const reportItems = $derived<DetailCardItem[]>([
-		{
-			label: 'Abend-Briefing',
-			meta: schedule.evening ? `${schedule.evening} · E-Mail` : '—',
-			state: schedule.enabled && schedule.evening_enabled && !!schedule.evening ? 'on' : 'off'
-		},
-		{
-			label: 'Morgen-Update',
-			meta: schedule.morning ? `${schedule.morning} · E-Mail` : '—',
-			state: schedule.enabled && schedule.morning_enabled && !!schedule.morning ? 'on' : 'off'
-		},
-		{
-			label: 'Warnungen',
-			meta: `${enabledAlerts.length} Schwellen`,
-			state: enabledAlerts.length > 0 ? 'on' : 'off'
-		}
-	]);
+	// Briefing-Kachel: früheste aktivierte Zeit
+	const briefingTimes = $derived(
+		(
+			[
+				schedule.enabled && schedule.morning_enabled && schedule.morning
+					? schedule.morning
+					: null,
+				schedule.enabled && schedule.evening_enabled && schedule.evening
+					? schedule.evening
+					: null
+			].filter(Boolean) as string[]
+		).sort()
+	);
+	const nextBriefing = $derived(briefingTimes[0] ?? '–:–');
 
-	function alertLabel(rule: typeof enabledAlerts[number]): string {
-		const metricKey = normalizeAlertMetric(rule.metric);
-		const meta = metricKey ? ALERT_METRIC_LABELS[metricKey] : undefined;
-		if (!meta) return rule.metric;
-		const cmp = meta.comparison;
-		const unit = meta.unit ? ` ${meta.unit}` : '';
-		return `${meta.label_de} ${cmp} ${rule.threshold}${unit}`;
+	// Start-Kachel: Tage bis ersten Stage-Datum
+	const startStage = $derived(stages.find((s) => !!s.date));
+	const daysValue = $derived(
+		(() => {
+			if (status === 'active') return 'Läuft';
+			if (!startStage?.date) return '–';
+			const todayMs = new Date(now.toISOString().slice(0, 10) + 'T00:00:00Z').getTime();
+			const startMs = new Date(startStage.date.slice(0, 10) + 'T00:00:00Z').getTime();
+			const diff = Math.ceil((startMs - todayMs) / 86_400_000);
+			return diff === 0 ? 'Heute' : `${diff} Tg`;
+		})()
+	);
+	const daysLabel = $derived(status === 'active' ? 'STATUS' : 'START IN');
+
+	function handleSelectStage(id: string): void {
+		selectedStageId = id;
 	}
-
-	const alertItems = $derived<DetailCardItem[]>(
-		enabledAlerts.length === 0
-			? [{ label: 'Keine Regel aktiv', state: 'off' as const }]
-			: enabledAlerts.slice(0, 3).map((r) => ({
-					label: alertLabel(r),
-					meta: SEVERITY_LABEL_DE[r.severity],
-					state: r.severity === 'critical' ? ('warn' as const) : ('on' as const)
-				}))
-	);
-
-	const routeItems = $derived<DetailCardItem[]>([
-		{ label: 'Gesamtdistanz', meta: `${stats.kmTotal.toFixed(1)} km` },
-		{ label: 'Höhenmeter', meta: `↑${Math.round(stats.ascentM).toLocaleString('de-DE')} m` },
-		{ label: 'Etappenanzahl', meta: `${stats.stages}` }
-	]);
-
-	const dataItems = $derived<DetailCardItem[]>([
-		{ label: 'Wegpunkte', meta: `${waypointCount}` },
-		{ label: 'Etappen', meta: `${stats.stages}` }
-	]);
 </script>
 
 <section data-testid="trip-overview" class="trip-overview">
-	<div class="overview-grid">
-		<DetailCard
-			testid="reports"
-			eyebrow="REPORTS"
-			title="Was geht raus"
-			items={reportItems}
-			actionText="Reports anpassen →"
-			actionHref="#briefings"
-		/>
-		<DetailCard
-			testid="alarmregeln"
-			eyebrow={`ALARMREGELN · ${enabledAlerts.length}`}
-			title="Wachhund-Schwellen"
-			items={alertItems}
-			actionText="Regeln verwalten →"
-			actionHref="#alerts"
-		/>
-		<DetailCard
-			testid="route"
-			eyebrow={`${stats.stages} ETAPPEN`}
-			title="Route & Etappen"
-			items={routeItems}
-			actionText="Etappen-Editor öffnen →"
-			actionHref="#stages"
-		/>
-		<DetailCard
-			testid="datenstand"
-			eyebrow="LETZTER BRIEFING-LAUF"
-			title="Datenstand"
-			items={dataItems}
-			actionText="Etappen →"
-			actionHref="#stages"
-		/>
+	<div data-testid="trip-hero" class="trip-hero">
+		<div data-testid="trip-hero-title" class="trip-hero-title">{trip.name}</div>
+		<div class="hero-stats">
+			<div data-testid="trip-hero-stat-active-stage">
+				<Stat label="ETAPPE" value={etappeValue} size="sm" mono />
+			</div>
+			<div data-testid="trip-hero-stat-next-briefing">
+				<Stat label="BRIEFING" value={nextBriefing} size="sm" mono />
+			</div>
+			<div data-testid="trip-hero-stat-days">
+				<Stat label={daysLabel} value={daysValue} size="sm" mono />
+			</div>
+		</div>
+	</div>
+
+	<div class="overview-columns">
+		<div data-testid="trip-overview-left-column" class="left-column">
+			<FullProfile {trip} {selectedStageId} onSelectStage={handleSelectStage} {now} />
+			<StageList {trip} {selectedStageId} onSelectStage={handleSelectStage} {now} />
+		</div>
+
+		<aside data-testid="trip-overview-right-column" class="right-column">
+			<BriefingPreviewCard {trip} />
+			<WeatherMetricsPreviewCard {trip} />
+			<AlertsPreviewCard {trip} />
+			<PreviewCard {trip} />
+		</aside>
 	</div>
 </section>
 
@@ -115,16 +108,48 @@
 	.trip-overview {
 		display: flex;
 		flex-direction: column;
-		gap: 1.5rem;
+		gap: var(--g-s-4, 1.5rem);
 	}
-	.overview-grid {
+
+	.trip-hero {
+		display: flex;
+		flex-direction: column;
+		gap: var(--g-s-2, 0.5rem);
+	}
+
+	.trip-hero-title {
+		font-size: var(--g-text-lg, 1.125rem);
+		font-weight: 600;
+		color: var(--g-ink);
+	}
+
+	.hero-stats {
+		display: flex;
+		gap: var(--g-s-4, 1.5rem);
+		flex-wrap: wrap;
+	}
+
+	.overview-columns {
 		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 1rem;
-		padding: 1rem 0;
+		grid-template-columns: 2fr 1fr;
+		gap: var(--g-s-4, 1.5rem);
+		align-items: start;
 	}
-	@media (max-width: 768px) {
-		.overview-grid {
+
+	.left-column {
+		display: flex;
+		flex-direction: column;
+		gap: var(--g-s-4, 1.5rem);
+	}
+
+	.right-column {
+		display: flex;
+		flex-direction: column;
+		gap: var(--g-s-3, 1rem);
+	}
+
+	@media (max-width: 899px) {
+		.overview-columns {
 			grid-template-columns: 1fr;
 		}
 	}
