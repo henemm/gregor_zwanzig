@@ -2,7 +2,6 @@
 	import '../app.css';
 	import { page } from '$app/state';
 	import { browser } from '$app/environment';
-	import favicon from '$lib/assets/favicon.svg';
 	import { Sidebar } from '$lib/components/ui/sidebar';
 	import TopAppBar from '$lib/components/ui/sidebar/TopAppBar.svelte';
 	import BottomNav from '$lib/components/ui/sidebar/BottomNav.svelte';
@@ -64,10 +63,6 @@
 	// die Brand-Demos die einzigen App-Bausteine auf der Seite sind.
 	const isShowcase = $derived(page.url.pathname === '/_design');
 </script>
-
-<svelte:head>
-	<link rel="icon" href={favicon} />
-</svelte:head>
 
 {#if isLogin || isShowcase}
 	{@render children()}
