@@ -19,6 +19,7 @@
 	import ChannelPreviewBlock from './ChannelPreviewBlock.svelte';
 	import {
 		autoAssign, move, reorder, buildWeatherConfigMetrics,
+		CATEGORY_LABELS, CATEGORY_ORDER, INDICATOR_MAP, indicatorCapable,
 		type Buckets, type MetricEntry, type MetricCatalog,
 	} from './metricsEditor.ts';
 
@@ -31,34 +32,6 @@
 		trip: Trip;
 	}
 	let { trip }: Props = $props();
-
-	const CATEGORY_LABELS: Record<string, string> = {
-		temperature: 'Temperatur',
-		wind: 'Wind',
-		precipitation: 'Niederschlag',
-		atmosphere: 'Atmosphäre',
-		winter: 'Winter / Schnee',
-	};
-	const CATEGORY_ORDER = ['temperature', 'wind', 'precipitation', 'atmosphere', 'winter'];
-
-	// Frontend-INDICATOR_MAP (12 Metriken) — wie zuvor; steuert Roh/Skala-Toggle.
-	const INDICATOR_MAP: Record<string, string> = {
-		wind_direction: 'N / O / S / W',
-		thunder: 'keins / mittel / hoch / extrem',
-		cape: 'niedrig / mittel / hoch / extrem',
-		cloud_total: 'klar / teilw. / bewölkt / bedeckt',
-		cloud_low: 'klar / teilw. / bewölkt / bedeckt',
-		cloud_mid: 'klar / teilw. / bewölkt / bedeckt',
-		cloud_high: 'klar / teilw. / bewölkt / bedeckt',
-		visibility: 'gut / eingeschränkt / schlecht / sehr schlecht',
-		sunshine: 'hell / wechselhaft / bedeckt',
-		wind: 'ruhig / mäßig / stark / sturm',
-		gust: 'harmlos / mäßig / stark / orkan',
-		rain_probability: 'niedrig / mittel / hoch / sehr hoch',
-	};
-	function indicatorCapable(id: string): boolean {
-		return id in INDICATOR_MAP;
-	}
 
 	let catalog: MetricCatalog = $state({});
 	let templates: Template[] = $state([]);
@@ -383,7 +356,7 @@
 					{metricById}
 					{shortById}
 					categoryLabels={CATEGORY_LABELS}
-					categoryOrder={CATEGORY_ORDER}
+					categoryOrder={[...CATEGORY_ORDER]}
 					onAdd={onMove}
 				/>
 			</div>

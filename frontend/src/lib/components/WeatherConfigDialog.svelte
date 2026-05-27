@@ -6,6 +6,7 @@
 	import { Select } from '$lib/components/ui/select';
 	import Segmented from '$lib/components/ui/segmented';
 	import { buildScoreMap } from '$lib/utils/scoreToggleHelpers.js';
+	import { CATEGORY_LABELS, CATEGORY_ORDER } from '$lib/components/trip-detail/metricsEditor';
 
 	interface MetricEntry {
 		id: string;
@@ -28,16 +29,6 @@
 	}
 
 	let { open, entityName, currentConfig, entityType = 'trip', onsave, onclose }: Props = $props();
-
-	const CATEGORY_LABELS: Record<string, string> = {
-		temperature: 'Temperatur',
-		wind: 'Wind',
-		precipitation: 'Niederschlag',
-		atmosphere: 'Atmosphäre',
-		winter: 'Winter/Schnee'
-	};
-
-	const CATEGORY_ORDER = ['temperature', 'wind', 'precipitation', 'atmosphere', 'winter'];
 
 	interface Template {
 		id: string;

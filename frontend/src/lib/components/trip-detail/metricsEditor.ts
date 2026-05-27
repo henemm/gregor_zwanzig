@@ -52,6 +52,14 @@ export const CATEGORY_ORDER: readonly string[] = [
 	'winter',
 ];
 
+export const CATEGORY_LABELS: Record<string, string> = {
+	temperature: 'Temperatur',
+	wind: 'Wind',
+	precipitation: 'Niederschlag',
+	atmosphere: 'Atmosphäre',
+	winter: 'Winter / Schnee',
+};
+
 /**
  * Liefert true, wenn die Metrik einen Roh/Indikator-Toggle bekommt.
  * Wrapper ueber INDICATOR_MAP — siehe Spec §4.
