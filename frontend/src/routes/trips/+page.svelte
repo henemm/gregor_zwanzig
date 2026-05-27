@@ -2,8 +2,8 @@
 	import type { Trip } from '$lib/types.js';
 	import { api } from '$lib/api.js';
 	import { goto } from '$app/navigation';
-	import { Btn } from '$lib/components/ui/btn/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
+	import { Btn, Input, Dot, Eyebrow } from '$lib/components/atoms';
+	import { Stat } from '$lib/components/molecules';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import SearchIcon from '@lucide/svelte/icons/search';
@@ -14,10 +14,8 @@
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 	import EllipsisVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
-	import { Dot } from '$lib/components/ui/dot';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { Select } from '$lib/components/ui/select';
-	import { Eyebrow } from '$lib/components/ui/eyebrow/index.js';
 	import { EmptyState } from '$lib/components/ui/empty-state/index.js';
 	import { deriveTripStatus } from '$lib/utils/tripStatus';
 
@@ -267,10 +265,9 @@
 				{ label: 'Archiviert', status: 'archived', tone: 'danger'  as const },
 			] as stat}
 				{@const count = trips.filter(t => deriveTripStatus(t, now) === stat.status).length}
-				<div class="flex items-center gap-1.5 text-sm">
+				<div class="flex items-center gap-2">
 					<Dot tone={stat.tone} size="sm" />
-					<span class="font-mono tabular-nums">{count}</span>
-					<div class="text-muted-foreground">{stat.label}</div>
+					<Stat layout="inline" label={stat.label} value={count} />
 				</div>
 			{/each}
 		</div>
