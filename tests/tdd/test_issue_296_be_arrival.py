@@ -125,7 +125,13 @@ def test_scheduler_prefers_persisted_arrival():
 
     assert len(segments) >= 1, "Erwartet >=1 Segment"
     seg = segments[0]
-    assert seg.end_time.hour == 14 and seg.end_time.minute == 30, (
-        f"Segment-Endzeit soll aus persistiertem arrival_calculated (14:30) "
-        f"stammen, war {seg.end_time.time()}"
+    # Bug #401: end_time wird jetzt korrekt als UTC gespeichert. Die persistierte
+    # Arrival "14:30" ist Lokalzeit (lat=47/lon=11 = Europe/Vienna, im Mai CEST=UTC+2),
+    # also UTC 12:30. Zum Vergleich auf Lokalzeit zurückrechnen — die Test-Aussage
+    # (persistierter Wert gewinnt gegen Interpolation) bleibt unverändert.
+    from utils.timezone import tz_for_coords
+    local_end = seg.end_time.astimezone(tz_for_coords(47.0, 11.0))
+    assert local_end.hour == 14 and local_end.minute == 30, (
+        f"Segment-Endzeit soll aus persistiertem arrival_calculated (14:30 lokal) "
+        f"stammen, war {local_end.time()} lokal / {seg.end_time.time()} UTC"
     )

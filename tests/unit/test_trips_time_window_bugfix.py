@@ -290,8 +290,12 @@ class TestSchedulerInterpolation:
 
         normal = [s for s in segments if s.segment_id != "Ziel"]
         assert len(normal) == 1, f"Expected 1 normal segment, got {len(normal)}"
-        assert normal[0].start_time.hour == 9, \
-            f"First segment should start at 09:00, got {normal[0].start_time}"
+        # Bug #401: start_time ist jetzt korrekt UTC. lat=39.71/lon=2.622 = Mallorca
+        # (Europe/Madrid). Lokale Stage-Startzeit 09:00 zum Vergleich aus UTC ableiten.
+        from utils.timezone import tz_for_coords
+        local_start = normal[0].start_time.astimezone(tz_for_coords(39.710, 2.622))
+        assert local_start.hour == 9, \
+            f"First segment should start at 09:00 local, got {local_start}"
 
     def test_scheduler_preserves_existing_time_windows(self):
         """
@@ -309,10 +313,15 @@ class TestSchedulerInterpolation:
 
         normal = [s for s in segments if s.segment_id != "Ziel"]
         assert len(normal) == 3
-        assert normal[0].start_time.hour == 8
-        assert normal[0].end_time.hour == 10
-        assert normal[1].start_time.hour == 10
-        assert normal[1].end_time.hour == 12
+        # Bug #401: Zeiten sind jetzt korrekt UTC. lat=39.71/lon=2.622 = Mallorca
+        # (Europe/Madrid). Die konfigurierten time_windows (lokal 08–10, 10–12) zum
+        # Vergleich aus UTC auf Lokalzeit zurückrechnen.
+        from utils.timezone import tz_for_coords
+        tz = tz_for_coords(39.710, 2.622)
+        assert normal[0].start_time.astimezone(tz).hour == 8
+        assert normal[0].end_time.astimezone(tz).hour == 10
+        assert normal[1].start_time.astimezone(tz).hour == 10
+        assert normal[1].end_time.astimezone(tz).hour == 12
 
     def test_scheduler_interpolation_respects_elevation(self):
         """

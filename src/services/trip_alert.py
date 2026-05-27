@@ -19,6 +19,7 @@ from app.models import ChangeSeverity, SegmentWeatherData, WeatherChange
 from formatters.trip_report import TripReportFormatter
 from outputs.email import EmailOutput
 from services.weather_change_detection import WeatherChangeDetectionService
+from utils.timezone import tz_for_coords
 
 if TYPE_CHECKING:
     from app.trip import Trip
@@ -461,6 +462,14 @@ class TripAlertService:
         matched_stage = trip.get_stage_for_date(alert_date)
         stage_name = matched_stage.name if matched_stage else None
 
+        # Bug #400: ohne tz= würde format_email den UTC-Default nutzen und
+        # Segment-Zeiten in UTC statt Lokalzeit anzeigen. Zeitzone aus den
+        # Koordinaten des ersten Segments bestimmen.
+        alert_tz = tz_for_coords(
+            weather[0].segment.start_point.lat,
+            weather[0].segment.start_point.lon,
+        )
+
         report = self._formatter.format_email(
             segments=weather,
             trip_name=trip.name,
@@ -469,6 +478,7 @@ class TripAlertService:
             changes=changes,
             profile=trip.aggregation.profile,
             stage_name=stage_name,
+            tz=alert_tz,
         )
 
         config = trip.report_config

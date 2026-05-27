@@ -21,6 +21,7 @@ from output.renderers.email.design_tokens import (
     FONT_UI, G_ACCENT, G_DANGER, G_INK, G_PAPER, G_SURFACE_1, WEB_FONT_LINK,
 )
 from outputs.email import EmailOutput
+from utils.timezone import tz_for_coords
 
 if TYPE_CHECKING:
     from app.trip import Trip
@@ -325,7 +326,7 @@ class TripReportSchedulerService:
         logger.debug(f"Created {len(segments)} segments for {trip.id}")
 
         # 1b. Compute local timezone from coordinates for display
-        from utils.timezone import tz_for_coords
+        # (tz_for_coords now imported top-level — Bug #401)
         trip_tz = tz_for_coords(segments[0].start_point.lat, segments[0].start_point.lon)
 
         # 2. Wind exposition detection (before weather fetch, needs TripSegments)
@@ -583,16 +584,19 @@ class TripReportSchedulerService:
                 )
                 logger.info(f"Interpolated time for {wp2.id}: {wp2_start}")
 
-            # Convert time to datetime with UTC timezone
-            start_dt = datetime.combine(
-                target_date,
-                wp1_start,
-                tzinfo=timezone.utc
+            # Bug #401: User-konfigurierte Zeiten sind LOKALE Zeiten (Wizard-Eingabe,
+            # z.B. 08:00 CEST), nicht UTC. Korrekt lokal→UTC konvertieren, statt sie
+            # fälschlich als UTC zu etikettieren. Zeitzone aus wp1-Koordinaten.
+            seg_tz = tz_for_coords(wp1.lat, wp1.lon)
+            start_dt = (
+                datetime.combine(target_date, wp1_start)
+                .replace(tzinfo=seg_tz)
+                .astimezone(timezone.utc)
             )
-            end_dt = datetime.combine(
-                target_date,
-                wp2_start,
-                tzinfo=timezone.utc
+            end_dt = (
+                datetime.combine(target_date, wp2_start)
+                .replace(tzinfo=seg_tz)
+                .astimezone(timezone.utc)
             )
 
             # Handle case where end is before start (shouldn't happen normally)
