@@ -21,6 +21,10 @@
 
 	let { data }: { data: PageData } = $props();
 
+	const archiveStats = $derived(
+		data.archiveStats ?? { briefings: {} as Record<string, number>, alerts: {} as Record<string, number> }
+	);
+
 	const SORT_OPTIONS = [
 		{ value: 'recent', label: 'Neueste' },
 		{ value: 'accuracy', label: 'Genauigkeit' },
@@ -43,7 +47,7 @@
 		return d.length ? d[d.length - 1] : (t.archived_at ?? '').slice(0, 10);
 	}
 	function alertCount(t: Trip): number {
-		return (t.alert_rules ?? []).length;
+		return archiveStats.alerts[t.id] ?? 0;
 	}
 
 	const filtered = $derived(
@@ -58,9 +62,13 @@
 			})
 	);
 
-	// Stats-Strip: nur "Touren" hat ein Backend-Feld. Briefings/Treffer/Alarme
-	// existieren (noch) nicht im Trip-Modell -> Stat zeigt Em-Dash.
 	const totalTrips = $derived((data.trips as Trip[]).length);
+	const totalBriefings = $derived(
+		Object.values(archiveStats.briefings).reduce((s, n) => s + n, 0)
+	);
+	const totalAlerts = $derived(
+		Object.values(archiveStats.alerts).reduce((s, n) => s + n, 0)
+	);
 </script>
 
 <main style="padding:32px 40px;overflow:auto">
@@ -106,9 +114,9 @@
 		style="display:flex;gap:32px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--g-rule-soft)"
 	>
 		<Stat layout="inline" label="Touren" value={totalTrips} />
-		<Stat layout="inline" label="Briefings gesendet" value={null} />
+		<Stat layout="inline" label="Briefings gesendet" value={totalBriefings} />
 		<Stat layout="inline" label="Forecast-Treffer Ø" value={null} tone="accent" />
-		<Stat layout="inline" label="Alarme ausgelöst" value={null} />
+		<Stat layout="inline" label="Alarme ausgelöst" value={totalAlerts} />
 	</div>
 
 	<!-- Tabelle -->
