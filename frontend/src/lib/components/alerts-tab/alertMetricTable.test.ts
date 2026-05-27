@@ -16,6 +16,8 @@ import {
 	ALL_ALERT_METRICS,
 	alertRulesToRowState,
 	rowStateToAlertRules,
+	deriveAlertMode,
+	applyModeToRowState,
 } from './alertMetricTable.ts';
 
 import type { AlertRule, AlertMetric } from '../../types.ts';
@@ -227,4 +229,78 @@ test('rowStateToAlertRules > neue Regel bekommt eine UUID', () => {
 	const rule = result.find(r => r.metric === 'snow_line');
 	assert.ok(rule?.id, 'Neue Regel muss eine ID haben');
 	assert.ok(rule!.id.length > 0, 'ID darf nicht leer sein');
+});
+
+// =============================================================================
+// deriveAlertMode — Issue #414
+// =============================================================================
+
+test('deriveAlertMode > leeres Array ergibt "both" (Default)', () => {
+	const mode = deriveAlertMode([]);
+	assert.equal(mode, 'both');
+});
+
+test('deriveAlertMode > nur absolute Rules ergibt "both" (Default bevorzugt)', () => {
+	const rules: AlertRule[] = [{ id: 'r1', kind: 'absolute', metric: 'wind_gust', threshold: 50, severity: 'warning', enabled: true }];
+	assert.equal(deriveAlertMode(rules), 'both');
+});
+
+test('deriveAlertMode > nur delta Rules ergibt "delta"', () => {
+	const rules: AlertRule[] = [{ id: 'r1', kind: 'delta', metric: 'wind_gust', threshold: 20, severity: 'warning', enabled: true }];
+	assert.equal(deriveAlertMode(rules), 'delta');
+});
+
+test('deriveAlertMode > abs + delta Rules ergibt "both"', () => {
+	const rules: AlertRule[] = [
+		{ id: 'r1', kind: 'absolute', metric: 'wind_gust', threshold: 50, severity: 'warning', enabled: true },
+		{ id: 'r2', kind: 'delta',    metric: 'wind_gust', threshold: 20, severity: 'warning', enabled: true },
+	];
+	assert.equal(deriveAlertMode(rules), 'both');
+});
+
+// =============================================================================
+// applyModeToRowState — Issue #414
+// =============================================================================
+
+test('applyModeToRowState "absolute" setzt absEnabled=true, deltaEnabled=false für Standard-Metriken (AC-4)', () => {
+	const state = alertRulesToRowState([]);
+	applyModeToRowState(state, 'absolute');
+	assert.equal(state['wind_gust'].absEnabled, true);
+	assert.equal(state['wind_gust'].deltaEnabled, false);
+	assert.equal(state['precipitation_sum'].absEnabled, true);
+	assert.equal(state['precipitation_sum'].deltaEnabled, false);
+});
+
+test('applyModeToRowState "delta" setzt absEnabled=false, deltaEnabled=true für alle Metriken (AC-5)', () => {
+	const state = alertRulesToRowState([]);
+	applyModeToRowState(state, 'delta');
+	assert.equal(state['wind_gust'].absEnabled, false);
+	assert.equal(state['wind_gust'].deltaEnabled, true);
+	assert.equal(state['snow_line'].absEnabled, false);
+	assert.equal(state['snow_line'].deltaEnabled, true);
+});
+
+test('applyModeToRowState "both" setzt absEnabled=true und deltaEnabled=true für Standard-Metriken', () => {
+	const state = alertRulesToRowState([]);
+	applyModeToRowState(state, 'both');
+	assert.equal(state['wind_gust'].absEnabled, true);
+	assert.equal(state['wind_gust'].deltaEnabled, true);
+});
+
+test('applyModeToRowState "absolute" lässt DELTA_ONLY_METRICS absEnabled=false (AC-11)', () => {
+	const state = alertRulesToRowState([]);
+	applyModeToRowState(state, 'absolute');
+	assert.equal(state['temperature_change'].absEnabled, false);
+	assert.equal(state['wind_change'].absEnabled, false);
+	assert.equal(state['precipitation_change'].absEnabled, false);
+	assert.equal(state['thunder_level'].absEnabled, false);
+});
+
+test('applyModeToRowState bewahrt Threshold-Werte beim Modus-Wechsel (AC-6)', () => {
+	const state = alertRulesToRowState([]);
+	state['wind_gust'].absThreshold = 70;
+	state['wind_gust'].deltaThreshold = 25;
+	applyModeToRowState(state, 'delta');
+	assert.equal(state['wind_gust'].absThreshold, 70);
+	assert.equal(state['wind_gust'].deltaThreshold, 25);
 });

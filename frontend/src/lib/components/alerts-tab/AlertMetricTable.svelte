@@ -10,13 +10,15 @@
 	import {
 		alertRulesToRowState,
 		rowStateToAlertRules,
+		applyModeToRowState,
 		ALL_ALERT_METRICS
 	} from './alertMetricTable.ts';
 	import AlertMetricRow from './AlertMetricRow.svelte';
 
 	// Prop heisst `alert_rules` (Underscore), spiegelbildlich zu Trip.alert_rules
 	// und konsistent mit AlertCooldownCard (cooldown_minutes) / AlertQuietHoursCard.
-	let { alert_rules = $bindable<AlertRule[]>([]) }: { alert_rules: AlertRule[] } = $props();
+	// Issue #414: optionaler requestedMode steuert die abs/delta-Flags aller Zeilen.
+	let { alert_rules = $bindable<AlertRule[]>([]), requestedMode }: { alert_rules: AlertRule[]; requestedMode?: 'absolute' | 'delta' | 'both' } = $props();
 
 	// `existing` wird beim Mount eingefroren, damit IDs ueber spaetere
 	// Row-State-Aenderungen hinweg stabil bleiben (Save-Pfad).
@@ -26,6 +28,20 @@
 	// Nach jeder Row-State-Aenderung: alert_rules zurueckschreiben.
 	$effect(() => {
 		alert_rules = rowStateToAlertRules(rowState, existing);
+	});
+
+	// Issue #414: Modus-Wechsel von aussen (AlertsTab-Picker) auf alle Zeilen anwenden.
+	// F001: Erste $effect-Ausfuehrung (initial mount) ueberspringen, sonst wuerden
+	// bestehende Trip-Konfigurationen beim blossen Oeffnen des Tabs ueberschrieben.
+	let _hasModeApplied = false;
+	$effect(() => {
+		if (requestedMode !== undefined) {
+			if (_hasModeApplied) {
+				applyModeToRowState(rowState, requestedMode);
+			} else {
+				_hasModeApplied = true;
+			}
+		}
 	});
 </script>
 

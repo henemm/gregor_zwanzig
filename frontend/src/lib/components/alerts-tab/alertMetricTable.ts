@@ -125,3 +125,39 @@ export function rowStateToAlertRules(
 	}
 	return result;
 }
+
+// Issue #414 — Modus aus persistierten Rules ableiten.
+export function deriveAlertMode(rules: readonly AlertRule[]): 'absolute' | 'delta' | 'both' {
+	const hasAbs = rules.some((r) => r.kind === 'absolute' && r.enabled);
+	const hasDelta = rules.some((r) => r.kind === 'delta' && r.enabled);
+	if (hasAbs && hasDelta) return 'both';
+	if (hasDelta) return 'delta';
+	return 'both'; // Default: 'both' (auch bei leerem Array und nur-absolute)
+}
+
+// Issue #414 — Modus auf RowStateMap anwenden; mutiert in-place.
+// Threshold-Werte (absThreshold, deltaThreshold) werden NICHT geaendert.
+export function applyModeToRowState(
+	state: RowStateMap,
+	mode: 'absolute' | 'delta' | 'both',
+): void {
+	for (const metric of ALL_ALERT_METRICS) {
+		const row = state[metric];
+		if (!row) continue;
+		const isDeltaOnly = DELTA_ONLY_METRICS.has(metric);
+		switch (mode) {
+			case 'absolute':
+				row.absEnabled = !isDeltaOnly;
+				row.deltaEnabled = false;
+				break;
+			case 'delta':
+				row.absEnabled = false;
+				row.deltaEnabled = true;
+				break;
+			case 'both':
+				row.absEnabled = !isDeltaOnly;
+				row.deltaEnabled = true;
+				break;
+		}
+	}
+}
