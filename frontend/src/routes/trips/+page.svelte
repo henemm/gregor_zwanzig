@@ -2,8 +2,7 @@
 	import type { Trip } from '$lib/types.js';
 	import { api } from '$lib/api.js';
 	import { goto } from '$app/navigation';
-	import { Btn, Input, Dot, Eyebrow } from '$lib/components/atoms';
-	import { Stat } from '$lib/components/molecules';
+	import { Btn, Input, Dot, Eyebrow, Pill } from '$lib/components/atoms';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import SearchIcon from '@lucide/svelte/icons/search';
@@ -14,10 +13,12 @@
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 	import EllipsisVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
+	import SendIcon from '@lucide/svelte/icons/send';
+	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { Select } from '$lib/components/ui/select';
 	import { EmptyState } from '$lib/components/ui/empty-state/index.js';
-	import { deriveTripStatus } from '$lib/utils/tripStatus';
+	import { deriveTripStatus, tripStatus, type HomeTripStatus } from '$lib/utils/tripStatus';
 
 	const now = new Date();
 
@@ -34,6 +35,11 @@
 	let filteredTrips = $derived(
 		trips.filter(t => t.name.toLowerCase().includes(search.toLowerCase()))
 	);
+	let mobileFilter = $state<'all' | HomeTripStatus>('all');
+	let mobileFiltered = $derived(
+		filteredTrips.filter(t => mobileFilter === 'all' || tripStatus(t, now) === mobileFilter)
+	);
+	let expandedCardId = $state<string | null>(null);
 	let deleteTarget: Trip | null = $state(null);
 	let error: string | null = $state(null);
 
@@ -259,15 +265,15 @@
 	{#if trips.length > 0}
 		<div class="hidden desktop:flex items-center gap-6 pb-3 border-b border-muted">
 			{#each [
-				{ label: 'Aktiv',      status: 'active',   tone: 'success' as const },
-				{ label: 'Geplant',    status: 'planned',  tone: 'info'    as const },
-				{ label: 'Pausiert',   status: 'paused',   tone: 'warning' as const },
-				{ label: 'Archiviert', status: 'archived', tone: 'danger'  as const },
-			] as stat}
-				{@const count = trips.filter(t => deriveTripStatus(t, now) === stat.status).length}
+				{ label: 'Aktiv',         status: 'aktiv'   as const },
+				{ label: 'Geplant',       status: 'geplant' as const },
+				{ label: 'Abgeschlossen', status: 'fertig'  as const },
+				{ label: 'Drafts',        status: 'draft'   as const },
+			] as stat (stat.status)}
+				{@const count = trips.filter(t => tripStatus(t, now) === stat.status).length}
 				<div class="flex items-center gap-2">
-					<Dot tone={stat.tone} size="sm" />
-					<Stat layout="inline" label={stat.label} value={count} />
+					<span style="font-size:22px;font-weight:700;color:var(--g-accent);line-height:1">{count}</span>
+					<span style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--g-ink-muted)">{stat.label}</span>
 				</div>
 			{/each}
 		</div>
@@ -293,29 +299,78 @@
 				{/each}
 			</div>
 		{:else}
-		<!-- Mobile Card-Stack (Issue #268) -->
+		<!-- Mobile Filter-Pills (Issue #413) -->
+		<div class="desktop:hidden flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+			{#each [
+				{ label: 'Alle',    value: 'all'     as const, count: filteredTrips.length },
+				{ label: 'Aktiv',   value: 'aktiv'   as const, count: filteredTrips.filter(t => tripStatus(t, now) === 'aktiv').length },
+				{ label: 'Geplant', value: 'geplant' as const, count: filteredTrips.filter(t => tripStatus(t, now) === 'geplant').length },
+				{ label: 'Fertig',  value: 'fertig'  as const, count: filteredTrips.filter(t => tripStatus(t, now) === 'fertig').length },
+			] as f (f.value)}
+				<button
+					class="shrink-0 cursor-pointer"
+					aria-pressed={mobileFilter === f.value}
+					onclick={() => { mobileFilter = f.value; expandedCardId = null; }}
+				>
+					<Pill tone={mobileFilter === f.value ? 'accent' : 'default'}>
+						{f.label} ({f.count})
+					</Pill>
+				</button>
+			{/each}
+		</div>
+		<!-- Mobile Card-Stack (Issue #268 + #413) -->
 		<div data-testid="trip-card-stack" class="desktop:hidden flex flex-col gap-2">
-			{#each filteredTrips as trip (trip.id)}
-				<div data-testid="trip-card" data-slot="g-card" class="flex items-center gap-3 px-3 py-2">
-					<Dot tone={statusTone(trip)} size="sm" class="shrink-0" />
-					<button
-						data-testid="trip-card-content-btn"
-						class="flex-1 flex flex-col items-start text-left min-h-[44px] justify-center min-w-0"
-						onclick={() => goto(`/trips/${trip.id}`)}
-					>
-						<span class="font-medium text-sm truncate w-full">{trip.name}</span>
-						<span class="text-xs text-muted-foreground truncate w-full">
-							{trip.stages.length} Etappen · {dateRange(trip)}
-						</span>
-					</button>
-					<button
-						data-testid="trip-card-menu-btn"
-						class="shrink-0 flex items-center justify-center min-h-[44px] min-w-[44px] rounded-lg -mr-1 hover:bg-muted/60 transition-colors"
-						onclick={(e) => { e.stopPropagation(); sheetTrip = trip; }}
-						aria-label="Aktionen für {trip.name}"
-					>
-						<EllipsisVerticalIcon class="size-5" />
-					</button>
+			{#each mobileFiltered as trip (trip.id)}
+				<div data-testid="trip-card" data-slot="g-card" class="flex flex-col px-3 py-2">
+					<div class="flex items-center gap-3">
+						<Dot tone={statusTone(trip)} size="sm" class="shrink-0" />
+						<button
+							data-testid="trip-card-content-btn"
+							class="flex-1 flex flex-col items-start text-left min-h-[44px] justify-center min-w-0"
+							onclick={() => (expandedCardId = expandedCardId === trip.id ? null : trip.id)}
+						>
+							<span class="font-medium text-sm truncate w-full">
+								{trip.name}
+								<span class="text-[10px] font-normal tracking-wider uppercase text-muted-foreground ml-1">· {tripStatus(trip, now)}</span>
+							</span>
+							{#if trip.region}
+								<span class="text-xs text-muted-foreground truncate w-full">{trip.region}</span>
+							{/if}
+							<span class="text-xs text-muted-foreground truncate w-full">
+								{trip.stages.length} Etappen · {dateRange(trip)}
+							</span>
+						</button>
+						<button
+							data-testid="trip-card-menu-btn"
+							class="shrink-0 flex items-center justify-center min-h-[44px] min-w-[44px] rounded-lg -mr-1 hover:bg-muted/60 transition-colors"
+							onclick={(e) => { e.stopPropagation(); sheetTrip = trip; }}
+							aria-label="Aktionen für {trip.name}"
+						>
+							<EllipsisVerticalIcon class="size-5" />
+						</button>
+					</div>
+					{#if expandedCardId === trip.id}
+						<div class="flex gap-1 pt-2 border-t border-muted mt-2">
+							<button
+								class="flex-1 flex items-center justify-center gap-1.5 min-h-[40px] text-xs rounded-lg hover:bg-muted/60"
+								onclick={() => goto(`/trips/${trip.id}#preview`)}
+							>
+								<SendIcon class="size-3.5" /> Briefing senden
+							</button>
+							<button
+								class="flex-1 flex items-center justify-center gap-1.5 min-h-[40px] text-xs rounded-lg hover:bg-muted/60"
+								onclick={() => goto(`/trips/${trip.id}`)}
+							>
+								<ExternalLinkIcon class="size-3.5" /> Vorschau
+							</button>
+							<button
+								class="flex-1 flex items-center justify-center gap-1.5 min-h-[40px] text-xs rounded-lg hover:bg-muted/60"
+								onclick={() => goto(`/trips/${trip.id}#alerts`)}
+							>
+								<BellIcon class="size-3.5" /> Alerts
+							</button>
+						</div>
+					{/if}
 				</div>
 			{/each}
 		</div>

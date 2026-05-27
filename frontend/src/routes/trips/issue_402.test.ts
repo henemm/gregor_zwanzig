@@ -62,14 +62,7 @@ test('AC-1: Btn/Input/Dot/Eyebrow werden aus $lib/components/atoms importiert', 
 	}
 });
 
-test('AC-1: Stat wird aus $lib/components/molecules importiert', () => {
-	const src = readPage();
-	const molecules = namedImportsFrom(src, '$lib/components/molecules');
-	assert.ok(
-		molecules.includes('Stat'),
-		`Stat wird nicht aus '$lib/components/molecules' importiert (gefunden: ${molecules.join(', ') || 'keine'})`
-	);
-});
+// AC-1 Stat-Import: durch #411 superseded — Stats-Strip nutzt jetzt Inline-HTML, kein <Stat> mehr
 
 test('AC-1: Btn/Input/Dot/Eyebrow werden NICHT mehr direkt aus ui/ importiert', () => {
 	const src = readPage();
@@ -81,39 +74,25 @@ test('AC-1: Btn/Input/Dot/Eyebrow werden NICHT mehr direkt aus ui/ importiert', 
 	}
 });
 
-// ── AC-2: Stats-Streifen via Stat-Molecule ───────────────────────────────────
+// ── AC-2: Stats-Streifen — durch #411 superseded ─────────────────────────────
+// #411 ersetzt <Stat layout="inline"> durch Inline-HTML mit --g-accent-Zahlen.
+// Neue Assertions für Stats-Strip: issue_411_413.test.ts
 
-test('AC-2: Stats-Streifen nutzt <Stat layout="inline">', () => {
-	const src = readPage();
-	assert.ok(src.includes('<Stat'), 'Keine <Stat>-Komponente im Markup gefunden');
-	assert.ok(
-		/<Stat[^>]*layout=["']inline["']/.test(src),
-		'<Stat> ohne layout="inline" — Stats-Streifen nicht über Stat-Molecule umgesetzt'
-	);
-});
-
-test('AC-2: Zähler basieren weiterhin auf deriveTripStatus', () => {
+test('AC-2: deriveTripStatus ist noch im Code (wird in statusTone/primaryLabel genutzt)', () => {
 	const src = readPage();
 	assert.ok(
 		src.includes('deriveTripStatus'),
-		'deriveTripStatus nicht mehr verwendet — Zähler-Logik darf nicht geändert werden'
+		'deriveTripStatus komplett entfernt — wird noch in statusTone()/primaryLabel() benötigt'
 	);
 });
 
-// ── AC-3: Farbige Status-Punkte bleiben erhalten (PO-Entscheidung Variante A) ──
+// ── AC-3: Farbige Status-Punkte in Mobile-Karten ─────────────────────────────
+// <Dot> bleibt im Mobile Card-Stack erhalten; <Stat> ist durch #411 entfernt.
 
-test('AC-3: Status-Streifen behält farbige Dot-Punkte mit tone neben Stat', () => {
+test('AC-3: <Dot> mit tone-Prop ist noch vorhanden (Mobile Card-Stack)', () => {
 	const src = readPage();
-	assert.ok(src.includes('<Dot'), 'Kein <Dot> im Markup — Status-Punkte gingen verloren');
-	assert.ok(
-		/<Dot[^>]*tone=/.test(src),
-		'<Dot> ohne tone-Prop — Status-Farb-Codierung fehlt'
-	);
-	// Dot und Stat müssen koexistieren (komponierter Streifen, nicht entweder/oder)
-	assert.ok(
-		src.includes('<Dot') && src.includes('<Stat'),
-		'Dot und Stat koexistieren nicht — Variante A (Punkte + Baustein) nicht umgesetzt'
-	);
+	assert.ok(src.includes('<Dot'), 'Kein <Dot> mehr im Markup — Mobile-Karten nutzen status-Dots');
+	assert.ok(/<Dot[^>]*tone=/.test(src), '<Dot> ohne tone-Prop gefunden');
 });
 
 // ── AC-4: Nicht-atomisierte Komponenten bleiben unverändert aus ui/ ───────────
