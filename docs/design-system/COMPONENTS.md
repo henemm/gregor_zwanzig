@@ -55,7 +55,7 @@ Slots werden in der "Was sie tut"-Spalte erwähnt.
 | Komponente | Props | Was sie tut |
 |---|---|---|
 | `<Btn>` | `variant: "primary" \| "accent" \| "ghost" \| "quiet"`, `size: "xs" \| "sm" \| "md" \| "lg"`, `icon: ReactNode`, `onClick` | Der einzige Button. |
-| `<Eyebrow>` | `color: string` (default `--g-ink-3`) + Children | Mono-Caps-Label oberhalb von Titles. |
+| `<Eyebrow>` | `color: string` (default `--g-ink-muted`) + Children | Mono-Caps-Label oberhalb von Titles. Default-Farbe via app.css-Regel `[data-slot="eyebrow"]`: `--g-ink-muted` (~6,91:1, WCAG-AA) — durchgesetzt vom Kontrast-Audit seit #377. (Frühere Katalog-Angabe `--g-ink-3` war eine Token-Namens-Divergenz; Code-Name gewinnt, siehe CLAUDE.md.) |
 | `<Pill>` | `tone: "neutral" \| "accent" \| "good" \| "warn" \| "bad" \| "ghost"` | Status-Pill. |
 | `<Dot>` | `tone: "good" \| "warn" \| "bad" \| "info" \| "neutral"`, `size: number` (default `8`) | Status-Indikator. |
 | `<KV>` | `label: string`, `value: ReactNode`, `mono: boolean` (default `true`) | Key-Value-Zeile mit gestrichelter Trennlinie. |
