@@ -65,6 +65,27 @@ export function isPauseStage(stage: Pick<Stage, 'waypoints'>): boolean {
 }
 
 /**
+ * Maskiert eine Telefonnummer fuer die UI: nur die letzten 4 Ziffern bleiben
+ * sichtbar, der Praefix (Laender-/Vorwahl) bleibt erhalten, dazwischen `•••`.
+ * Issue #412 — Kanal-Karte (Signal/SMS-Nummer maskiert).
+ *
+ * maskPhone('+49 151 23 45 8847') === '+49 151 ••• 8847'
+ * maskPhone('') === maskPhone(undefined) === maskPhone(null) === ''
+ */
+export function maskPhone(raw?: string | null): string {
+	if (!raw) return '';
+	const s = raw.trim();
+	if (!s) return '';
+	const digits = s.replace(/\D/g, '');
+	if (digits.length <= 6) return s; // zu kurz zum sinnvollen Maskieren
+	const plus = s.startsWith('+') ? '+' : '';
+	const cc = digits.slice(0, 2); // Laendervorwahl, z.B. "49"
+	const net = digits.slice(2, 5); // Netz/Vorwahl, z.B. "151"
+	const last4 = digits.slice(-4); // letzte 4 sichtbar
+	return `${plus}${cc} ${net} ••• ${last4}`;
+}
+
+/**
  * Mapping UI-Aktivitaet → kanonisches Aggregations-Profil
  * (siehe Master-Spec §1.3).
  */
