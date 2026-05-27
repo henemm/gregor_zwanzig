@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Tabs } from 'bits-ui';
+	import { Segmented } from '$lib/components/atoms';
 	import TripOverview from './TripOverview.svelte';
 	import WaypointsPanel from './WaypointsPanel.svelte';
 	import WeatherMetricsTab from './WeatherMetricsTab.svelte';
@@ -61,6 +61,16 @@
 		preview: 'Inhalt folgt mit Issue #189 (Vorschau-Integration)'
 	};
 
+	const segmentedOptions = $derived(
+		TABS.map(tab => ({
+			value: tab.value,
+			label: tab.label,
+			badge: (badges[tab.value] ?? 0) >= 1 ? badges[tab.value] : undefined,
+			testid: `trip-detail-tab-${tab.value}`,
+			badge_testid: `trip-detail-tab-badge-${tab.value}`,
+		}))
+	);
+
 	const VALID_VALUES: readonly string[] = TABS.map((t) => t.value);
 
 	function resolve(value: string): string {
@@ -87,64 +97,50 @@
 	}
 </script>
 
-<Tabs.Root value={activeTab} onValueChange={handleValueChange}>
-	<Tabs.List data-testid="trip-detail-tab-list" class="trip-tabs-list">
-		{#each TABS as tab}
-			<Tabs.Trigger
-				value={tab.value}
-				data-testid="trip-detail-tab-{tab.value}"
-				class="trip-tab-trigger"
-			>
-				{tab.label}
-				{#if (badges[tab.value] ?? 0) >= 1}
-					<span data-testid="trip-detail-tab-badge-{tab.value}" class="trip-tab-badge">
-						{badges[tab.value]}
-					</span>
-				{/if}
-			</Tabs.Trigger>
-		{/each}
-	</Tabs.List>
-
+<div class="trip-tabs" data-testid="trip-detail-tab-list">
+	<Segmented options={segmentedOptions} selected={activeTab} onselect={handleValueChange} />
 	{#each TABS as tab}
-		<Tabs.Content value={tab.value} data-testid="trip-detail-panel-{tab.value}">
-			{#if tab.value === 'overview' && trip}
-				<TripOverview {trip} />
-			{:else if tab.value === 'stages' && trip}
-				<WaypointsPanel {trip} />
-			{:else if tab.value === 'weather' && trip}
-				<WeatherMetricsTab {trip} />
-			{:else if tab.value === 'alerts' && trip}
-				<AlertsTab {trip} />
-			{:else if tab.value === 'briefings' && trip}
-				<BriefingsTab {trip} />
-			{:else if tab.value === 'preview' && trip}
-				<div class="preview-shell">
-					<div class="preview-controls" data-testid="preview-controls">
-						<label>
-							<input type="radio" bind:group={previewType} value="morning" /> Morgen
-						</label>
-						<label>
-							<input type="radio" bind:group={previewType} value="evening" /> Abend
-						</label>
+		{#if activeTab === tab.value}
+			<div data-testid="trip-detail-panel-{tab.value}">
+				{#if tab.value === 'overview' && trip}
+					<TripOverview {trip} />
+				{:else if tab.value === 'stages' && trip}
+					<WaypointsPanel {trip} />
+				{:else if tab.value === 'weather' && trip}
+					<WeatherMetricsTab {trip} />
+				{:else if tab.value === 'alerts' && trip}
+					<AlertsTab {trip} />
+				{:else if tab.value === 'briefings' && trip}
+					<BriefingsTab {trip} />
+				{:else if tab.value === 'preview' && trip}
+					<div class="preview-shell">
+						<div class="preview-controls" data-testid="preview-controls">
+							<label>
+								<input type="radio" bind:group={previewType} value="morning" /> Morgen
+							</label>
+							<label>
+								<input type="radio" bind:group={previewType} value="evening" /> Abend
+							</label>
+						</div>
+						<div class="preview-grid">
+							<EmailIframe tripId={trip.id} type={previewType} />
+							<SmsPhoneFrame tripId={trip.id} type={previewType} />
+						</div>
 					</div>
-					<div class="preview-grid">
-						<EmailIframe tripId={trip.id} type={previewType} />
-						<SmsPhoneFrame tripId={trip.id} type={previewType} />
-					</div>
-				</div>
-			{:else}
-				<p class="p-4 text-sm">{PLACEHOLDERS[tab.value]}</p>
-			{/if}
-		</Tabs.Content>
+				{:else}
+					<p class="p-4 text-sm">{PLACEHOLDERS[tab.value]}</p>
+				{/if}
+			</div>
+		{/if}
 	{/each}
-</Tabs.Root>
+</div>
 
 <style>
-	:global(.trip-tabs-list) {
+	.trip-tabs :global([data-slot="segmented"]) {
 		display: flex;
 		border-bottom: 1px solid var(--g-ink-faint);
 	}
-	:global(.trip-tab-trigger) {
+	.trip-tabs :global([data-slot="segmented-item"]) {
 		position: relative;
 		padding: 0.5rem 1rem;
 		font-size: 0.875rem;
@@ -153,10 +149,10 @@
 		background: transparent;
 		cursor: pointer;
 	}
-	:global(.trip-tab-trigger[data-state='active']) {
+	.trip-tabs :global([data-slot="segmented-item"][data-state='active']) {
 		border-bottom-color: var(--g-accent);
 	}
-	:global(.trip-tab-badge) {
+	.trip-tabs :global([data-slot="segmented-badge"]) {
 		display: inline-block;
 		margin-left: 0.375rem;
 		padding: 0.125rem 0.375rem;
@@ -197,19 +193,19 @@
 	}
 	@media (max-width: 899px) {
 		/* Scrollbares Tab-Band */
-		:global(.trip-tabs-list) {
+		.trip-tabs :global([data-slot="segmented"]) {
 			overflow-x: auto;
 			white-space: nowrap;
 			scrollbar-width: none;
 			-ms-overflow-style: none;
 			scroll-snap-type: x mandatory;
 		}
-		:global(.trip-tabs-list)::-webkit-scrollbar {
+		.trip-tabs :global([data-slot="segmented"])::-webkit-scrollbar {
 			display: none;
 		}
 
 		/* Pill-Trigger: einzeilig, nicht schrumpfbar */
-		:global(.trip-tab-trigger) {
+		.trip-tabs :global([data-slot="segmented-item"]) {
 			white-space: nowrap;
 			flex-shrink: 0;
 			scroll-snap-align: start;
@@ -219,7 +215,7 @@
 		}
 
 		/* Aktiver Pill: gefüllt mit Akzentfarbe */
-		:global(.trip-tab-trigger[data-state='active']) {
+		.trip-tabs :global([data-slot="segmented-item"][data-state='active']) {
 			background: var(--g-accent);
 			color: var(--g-paper, #f6f4ee);
 			border-bottom-color: transparent;

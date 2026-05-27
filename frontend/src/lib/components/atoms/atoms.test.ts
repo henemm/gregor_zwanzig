@@ -21,21 +21,21 @@ const here = dirname(fileURLToPath(import.meta.url));
 const read = (f: string) => readFileSync(join(here, f), 'utf-8');
 const has = (f: string) => existsSync(join(here, f));
 
-const ALL_13 = [
+const ALL_14 = [
 	'Eyebrow', 'Pill', 'Card', 'Btn', 'Input', 'Switch', 'Dot',
-	'WIcon', 'ElevSparkline', 'SectionH', 'AvatarStack', 'TopoBg', 'KV',
+	'WIcon', 'ElevSparkline', 'SectionH', 'AvatarStack', 'TopoBg', 'KV', 'Segmented',
 ];
 
-test('#371 AC-1: alle 13 Atom-Dateien existieren in atoms/', () => {
-	for (const name of ALL_13) {
+test('#371/#403 AC-1: alle 14 Atom-Dateien existieren in atoms/', () => {
+	for (const name of ALL_14) {
 		assert.ok(has(`${name}.svelte`), `atoms/${name}.svelte fehlt`);
 	}
 	assert.ok(has('index.ts'), 'atoms/index.ts fehlt');
 });
 
-test('#371 AC-1: index.ts re-exportiert alle 13 Atome', () => {
+test('#371/#403 AC-1: index.ts re-exportiert alle 14 Atome', () => {
 	const idx = read('index.ts');
-	for (const name of ALL_13) {
+	for (const name of ALL_14) {
 		assert.ok(new RegExp(`\\b${name}\\b`).test(idx), `index.ts exportiert ${name} nicht`);
 	}
 });
