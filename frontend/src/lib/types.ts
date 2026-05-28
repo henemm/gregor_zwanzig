@@ -163,9 +163,20 @@ export interface ReportConfig {
 	multi_day_trend_reports?: string[];
 }
 
+// Issue #429 — kanal-spezifische Layout-Listen (snake_case auf der Wire).
+// Backend persistiert pro Kanal eine eigene WeatherConfigMetric[]; bei
+// fehlendem Kanal-Eintrag fällt das Rendering auf DisplayConfig.metrics zurück.
+export interface ChannelLayouts {
+	email?: WeatherConfigMetric[];
+	telegram?: WeatherConfigMetric[];
+	signal?: WeatherConfigMetric[];
+	sms?: WeatherConfigMetric[];
+}
+
 export interface DisplayConfig {
 	preset_name?: string;
 	metrics?: WeatherConfigMetric[];
+	channel_layouts?: ChannelLayouts; // Issue #429
 }
 
 // Epic #138 Issue #177 — User-definierte Metric-Presets (Server-seitig persistiert).

@@ -54,9 +54,11 @@ def render_for_channel(
 ) -> ChannelLayout:
     """Berechne das Spalten-/Detail-Layout fuer ``channel``.
 
-    Respektiert die per-Report-Typ-Flags ueber ``get_metrics_for_report_type``.
+    Respektiert die per-Report-Typ-Flags ueber ``get_metrics_for_channel``,
+    das wiederum kanal-spezifische Listen (Issue #429) oder die globale
+    Liste (Fallback) liefert.
     """
-    enabled = dc.get_metrics_for_report_type(report_type)
+    enabled = dc.get_metrics_for_channel(channel, report_type)
     primary = sorted(
         [m for m in enabled if m.bucket == "primary"], key=lambda m: m.order,
     )

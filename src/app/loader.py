@@ -352,6 +352,37 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
             order=order,
         ))
 
+    # Issue #429: kanal-spezifische Layouts laden (optional, backward-compat).
+    # Wenn channel_layouts fehlt ODER alle Kanal-Listen leer sind → None,
+    # damit get_metrics_for_channel auf die globale Liste zurückfällt.
+    per_channel_layouts: Optional[Dict[str, List[MetricConfig]]] = None
+    raw_channel_layouts = data.get("channel_layouts")
+    if (
+        raw_channel_layouts
+        and isinstance(raw_channel_layouts, dict)
+        and any(raw_channel_layouts.values())
+    ):
+        per_channel_layouts = {}
+        for ch, ch_metrics in raw_channel_layouts.items():
+            if not isinstance(ch_metrics, list):
+                continue
+            ch_parsed: List[MetricConfig] = []
+            for mc_data in ch_metrics:
+                ch_parsed.append(MetricConfig(
+                    metric_id=mc_data["metric_id"],
+                    enabled=mc_data.get("enabled", True),
+                    aggregations=mc_data.get("aggregations", ["min", "max"]),
+                    morning_enabled=mc_data.get("morning_enabled"),
+                    evening_enabled=mc_data.get("evening_enabled"),
+                    use_friendly_format=mc_data.get("use_friendly_format", True),
+                    alert_enabled=mc_data.get("alert_enabled", False),
+                    alert_threshold=mc_data.get("alert_threshold"),
+                    horizons=mc_data.get("horizons"),
+                    bucket=mc_data.get("bucket", "primary"),
+                    order=mc_data.get("order", 0),
+                ))
+            per_channel_layouts[ch] = ch_parsed
+
     return UnifiedWeatherDisplayConfig(
         trip_id=data.get("trip_id", ""),
         metrics=metrics,
@@ -361,6 +392,7 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
         thunder_forecast_days=data.get("thunder_forecast_days", 2),
         multi_day_trend_reports=data.get("multi_day_trend_reports", ["evening"] if data.get("show_multi_day_trend", True) else []),
         sms_metrics=data.get("sms_metrics", []),
+        per_channel_layouts=per_channel_layouts,
         updated_at=_dt.fromisoformat(data["updated_at"]) if "updated_at" in data else _dt.now(),
     )
 

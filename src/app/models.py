@@ -474,6 +474,36 @@ class MetricConfig:
     order: int = 0            # Sortier-Reihenfolge innerhalb des Buckets
 
 
+def _filter_metrics_by_report_type(
+    metrics: list["MetricConfig"], report_type: str,
+) -> list["MetricConfig"]:
+    """Wendet morning/evening_enabled-Override auf eine Metrik-Liste an.
+
+    Shared zwischen get_metrics_for_report_type() und get_metrics_for_channel()
+    (Issue #429), damit beide Pfade dieselbe Filter-Semantik haben.
+    """
+    result: list[MetricConfig] = []
+    for mc in metrics:
+        if report_type == "morning":
+            if mc.morning_enabled is True:
+                result.append(mc)
+            elif mc.morning_enabled is False:
+                pass
+            elif mc.enabled:
+                result.append(mc)
+        elif report_type == "evening":
+            if mc.evening_enabled is True:
+                result.append(mc)
+            elif mc.evening_enabled is False:
+                pass
+            elif mc.enabled:
+                result.append(mc)
+        else:
+            if mc.enabled:
+                result.append(mc)
+    return result
+
+
 @dataclass
 class UnifiedWeatherDisplayConfig:
     """
@@ -493,6 +523,10 @@ class UnifiedWeatherDisplayConfig:
     thunder_forecast_days: int = 2
     multi_day_trend_reports: list[str] = field(default_factory=lambda: ["evening"])  # DEPRECATED: use TripReportConfig.multi_day_trend_reports
     sms_metrics: list[str] = field(default_factory=list)  # Phase 3
+    # Issue #429 — kanal-spezifische Layout-Listen.
+    # None = keine Kanal-Layouts gespeichert → Fallback auf globale `metrics`.
+    # Leere Liste pro Kanal = expliziter User-Wunsch („leer"), kein Fallback (AC-7).
+    per_channel_layouts: Optional[dict[str, list[MetricConfig]]] = None
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     def is_metric_enabled(self, metric_id: str) -> bool:
@@ -523,28 +557,30 @@ class UnifiedWeatherDisplayConfig:
           - None  -> fall back to global enabled
         For other report_types: return only globally enabled metrics.
         """
-        result = []
-        for mc in self.metrics:
-            if report_type == "morning":
-                if mc.morning_enabled is True:
-                    result.append(mc)
-                elif mc.morning_enabled is False:
-                    pass
-                else:
-                    if mc.enabled:
-                        result.append(mc)
-            elif report_type == "evening":
-                if mc.evening_enabled is True:
-                    result.append(mc)
-                elif mc.evening_enabled is False:
-                    pass
-                else:
-                    if mc.enabled:
-                        result.append(mc)
-            else:
-                if mc.enabled:
-                    result.append(mc)
-        return result
+        return _filter_metrics_by_report_type(self.metrics, report_type)
+
+    def get_metrics_for_channel(self, channel: str, report_type: str) -> list[MetricConfig]:
+        """Liefert die Metriken-Liste für einen Kanal (Issue #429).
+
+        Priorität:
+        1. per_channel_layouts[channel] vorhanden UND nicht-leer → kanal-spezifische
+           Liste, gefiltert nach enabled + morning_enabled/evening_enabled.
+        2. per_channel_layouts[channel] explizit leer ([]) → leere Liste, kein
+           Fallback (AC-7: expliziter User-Wunsch).
+        3. Sonst (None oder Kanal fehlt) → Fallback auf globale Liste via
+           get_metrics_for_report_type(report_type).
+        """
+        if (
+            self.per_channel_layouts is not None
+            and channel in self.per_channel_layouts
+        ):
+            channel_metrics = self.per_channel_layouts[channel]
+            if len(channel_metrics) == 0:
+                # AC-7: explizit leer → kein Fallback
+                return []
+            return _filter_metrics_by_report_type(channel_metrics, report_type)
+        # Fallback auf globale Liste
+        return self.get_metrics_for_report_type(report_type)
 
 
 # --- Trip Report DTOs (Feature 3.1) ---
