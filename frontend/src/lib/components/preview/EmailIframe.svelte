@@ -1,7 +1,7 @@
 <script lang="ts">
 	// Issue #189 — Email-Vorschau im iframe.
 	// Spec: docs/specs/modules/issue_189_preview_tab_integration.md
-	import { buildPreviewUrl, type ReportType } from './previewHelpers';
+	import { buildPreviewUrl, friendlyPreviewError, PREVIEW_ERROR_GENERIC, type ReportType } from './previewHelpers';
 
 	interface Props { tripId: string; type: ReportType; date?: string; }
 	let { tripId, type, date }: Props = $props();
@@ -16,16 +16,14 @@
 		loading = true; error = null; html = '';
 		fetch(url, { credentials: 'same-origin', signal: controller.signal }).then(async (res) => {
 			if (!res.ok) {
-				const detail = await res.text();
-				error = `Vorschau konnte nicht geladen werden (HTTP ${res.status}). ${detail}`;
+				error = friendlyPreviewError(res.status, await res.text());
 				loading = false; return;
 			}
 			html = await res.text();
 			loading = false;
 		}).catch((err: unknown) => {
 			if (err instanceof Error && err.name === 'AbortError') return;
-			const msg = err instanceof Error ? err.message : String(err);
-			error = `Netzwerkfehler: ${msg}`;
+			error = PREVIEW_ERROR_GENERIC;
 			loading = false;
 		});
 		return () => controller.abort();

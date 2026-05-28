@@ -29,3 +29,26 @@ export function charCountStatus(n: number, limit = 160): CharCountStatus {
 	if (n > limit - 16) return 'warn';
 	return 'ok';
 }
+
+// Issue #421 — Vorschau-Fehler verständlich auf Deutsch.
+export const PREVIEW_ERROR_GENERIC =
+	'Vorschau konnte nicht geladen werden. Bitte später erneut versuchen.';
+export const PREVIEW_ERROR_NO_WAYPOINTS =
+	'Diese Etappe hat noch keine Wegpunkte. Bitte im Wegpunkt-Editor ' +
+	'mindestens einen Start- und Zielpunkt festlegen.';
+
+// Übersetzt einen HTTP-Fehler der Vorschau-Endpoints in verständliches Deutsch.
+// Schlüsselt auf den inhaltlichen Signal-Text (detail enthält "waypoint"),
+// nicht auf den numerischen Code — resilient gegen Status-Drift im Backend.
+// Parst body defensiv als JSON; wirft niemals.
+export function friendlyPreviewError(status: number, body: string): string {
+	let detail = '';
+	try {
+		const parsed = JSON.parse(body);
+		if (parsed && typeof parsed.detail === 'string') detail = parsed.detail;
+	} catch {
+		detail = body ?? '';
+	}
+	if (/waypoint/i.test(detail)) return PREVIEW_ERROR_NO_WAYPOINTS;
+	return PREVIEW_ERROR_GENERIC;
+}

@@ -14,11 +14,15 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 
 import {
 	buildPreviewUrl,
 	defaultReportType,
 	charCountStatus,
+	friendlyPreviewError,
+	PREVIEW_ERROR_GENERIC,
+	PREVIEW_ERROR_NO_WAYPOINTS,
 	type ReportType
 } from '../previewHelpers.ts';
 
@@ -148,3 +152,102 @@ test('AC-1: ReportType-Type lässt nur morning|evening zu (Compile-Sanity)', () 
 	assert.equal(morning, 'morning');
 	assert.equal(evening, 'evening');
 });
+
+// ============================================================================
+// Issue #421 — friendlyPreviewError: technische Fehler → verständliches Deutsch
+// ============================================================================
+
+// AC-1: Leere Wegpunkte (422 + detail enthält "waypoint") → Wegpunkt-Hinweis
+test('#421 AC-1: 422 mit waypoint-detail → PREVIEW_ERROR_NO_WAYPOINTS', () => {
+	const body = '{"detail":"Stage must have at least one waypoint"}';
+	assert.equal(friendlyPreviewError(422, body), PREVIEW_ERROR_NO_WAYPOINTS);
+});
+
+test('#421 AC-1: Wegpunkt-Meldung ist deutsch + actionable (Wegpunkt-Editor)', () => {
+	assert.match(PREVIEW_ERROR_NO_WAYPOINTS, /Wegpunkte/);
+	assert.match(PREVIEW_ERROR_NO_WAYPOINTS, /Wegpunkt-Editor/);
+	// Kein englischer Rohtext durchgereicht
+	assert.doesNotMatch(PREVIEW_ERROR_NO_WAYPOINTS, /waypoint/i);
+});
+
+// AC-2: Jeder andere Fehler → generische Meldung, OHNE HTTP-Zahl / JSON-Klammern
+test('#421 AC-2: 503 weather-provider → PREVIEW_ERROR_GENERIC', () => {
+	const body = '{"detail":"weather provider unavailable"}';
+	assert.equal(friendlyPreviewError(503, body), PREVIEW_ERROR_GENERIC);
+});
+
+test('#421 AC-2: 404 trip-not-found → PREVIEW_ERROR_GENERIC', () => {
+	assert.equal(
+		friendlyPreviewError(404, '{"detail":"trip not found"}'),
+		PREVIEW_ERROR_GENERIC
+	);
+});
+
+test('#421 AC-2: 502 proxy-upstream → PREVIEW_ERROR_GENERIC', () => {
+	assert.equal(
+		friendlyPreviewError(502, '{"error":"upstream unreachable"}'),
+		PREVIEW_ERROR_GENERIC
+	);
+});
+
+test('#421 AC-2: generische Meldung enthält weder HTTP-Zahl noch JSON-Klammern', () => {
+	const msg = friendlyPreviewError(503, '{"detail":"x"}');
+	assert.ok(!msg.includes('{'), 'keine öffnende JSON-Klammer');
+	assert.ok(!msg.includes('}'), 'keine schließende JSON-Klammer');
+	assert.doesNotMatch(msg, /\d{3}/, 'keine 3-stellige HTTP-Statuszahl');
+	assert.doesNotMatch(msg, /HTTP/i, 'kein "HTTP"-Präfix');
+});
+
+// AC-3: defensiv — wirft nie, Roh-String-Fallback, leerer/kaputter Body
+test('#421 AC-3: leerer Body → generische Meldung, kein Throw', () => {
+	assert.equal(friendlyPreviewError(500, ''), PREVIEW_ERROR_GENERIC);
+});
+
+test('#421 AC-3: nicht-JSON-Body wirft nicht → generische Meldung', () => {
+	assert.equal(friendlyPreviewError(500, '<<<kaputt'), PREVIEW_ERROR_GENERIC);
+});
+
+test('#421 AC-3: waypoint als Roh-Plaintext (kein JSON) → Wegpunkt-Hinweis (Fallback)', () => {
+	assert.equal(
+		friendlyPreviewError(422, 'Stage must have at least one waypoint'),
+		PREVIEW_ERROR_NO_WAYPOINTS
+	);
+});
+
+test('#421 AC-3: detail als Array (FastAPI-Validierung) → generisch, kein Throw', () => {
+	const body = '{"detail":[{"loc":["query","type"],"msg":"field required"}]}';
+	assert.equal(friendlyPreviewError(422, body), PREVIEW_ERROR_GENERIC);
+});
+
+test('#421 AC-3: waypoint-Match ist case-insensitive', () => {
+	assert.equal(
+		friendlyPreviewError(422, '{"detail":"needs a WAYPOINT"}'),
+		PREVIEW_ERROR_NO_WAYPOINTS
+	);
+});
+
+// ============================================================================
+// AC-4: Source-Inspection — kein roher Statuscode/JSON mehr in den Frames
+// ============================================================================
+
+const emailSrc = readFileSync(new URL('../EmailIframe.svelte', import.meta.url), 'utf8');
+const smsSrc = readFileSync(new URL('../SmsPhoneFrame.svelte', import.meta.url), 'utf8');
+
+for (const [name, src] of [
+	['EmailIframe.svelte', emailSrc],
+	['SmsPhoneFrame.svelte', smsSrc]
+] as const) {
+	test(`#421 AC-4: ${name} reicht keinen rohen HTTP-Status/Body mehr durch`, () => {
+		assert.ok(!src.includes('HTTP ${res.status}'), 'keine rohe HTTP-Statuszahl');
+		assert.ok(!src.includes('${detail}'), 'kein roher Body angehängt');
+		assert.ok(!src.includes('Netzwerkfehler:'), 'kein rohes "Netzwerkfehler:"-Präfix');
+	});
+
+	test(`#421 AC-4: ${name} verwendet friendlyPreviewError`, () => {
+		assert.ok(src.includes('friendlyPreviewError'), 'importiert + nutzt die zentrale Funktion');
+	});
+
+	test(`#421 AC-4: ${name} behält AbortError-Early-Return im catch-Zweig`, () => {
+		assert.match(src, /AbortError/);
+	});
+}

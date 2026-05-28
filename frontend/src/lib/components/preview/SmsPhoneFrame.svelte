@@ -1,7 +1,7 @@
 <script lang="ts">
 	// Issue #189 — SMS-Vorschau im iOS-Phone-Frame.
 	// Spec: docs/specs/modules/issue_189_preview_tab_integration.md
-	import { buildPreviewUrl, charCountStatus, type ReportType } from './previewHelpers';
+	import { buildPreviewUrl, charCountStatus, friendlyPreviewError, PREVIEW_ERROR_GENERIC, type ReportType } from './previewHelpers';
 
 	interface Props {
 		tripId: string;
@@ -22,16 +22,14 @@
 		loading = true; error = null; payload = null;
 		fetch(url, { credentials: 'same-origin', signal: controller.signal }).then(async (res) => {
 			if (!res.ok) {
-				const detail = await res.text();
-				error = `Vorschau konnte nicht geladen werden (HTTP ${res.status}). ${detail}`;
+				error = friendlyPreviewError(res.status, await res.text());
 				loading = false; return;
 			}
 			payload = (await res.json()) as SmsPayload;
 			loading = false;
 		}).catch((err: unknown) => {
 			if (err instanceof Error && err.name === 'AbortError') return;
-			const msg = err instanceof Error ? err.message : String(err);
-			error = `Netzwerkfehler: ${msg}`;
+			error = PREVIEW_ERROR_GENERIC;
 			loading = false;
 		});
 		return () => controller.abort();
