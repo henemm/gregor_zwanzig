@@ -13,11 +13,13 @@
 	import { Btn } from '$lib/components/ui/btn/index.js';
 	import PresetRow from './PresetRow.svelte';
 	import SavePresetDialog from './SavePresetDialog.svelte';
-	import BucketSection from './BucketSection.svelte';
-	import BucketSectionOff from './BucketSectionOff.svelte';
 	import AboutOutputLayout from './AboutOutputLayout.svelte';
 	import ChannelPreviewBlock from './ChannelPreviewBlock.svelte';
 	import WeatherMetricsMobileView from './WeatherMetricsMobileView.svelte';
+	// Issue #431: Bucket-Editor wandert in `shared/OutputLayoutEditor.svelte` —
+	// dieser Tab wird zum duennen Wrapper (channel="email" fix), Wizard nutzt
+	// dieselbe Komponente mit 4 Kanal-Tabs.
+	import OutputLayoutEditor from '$lib/components/shared/OutputLayoutEditor.svelte';
 	import {
 		autoAssign, move, reorder, buildWeatherConfigMetrics,
 		CATEGORY_LABELS, CATEGORY_ORDER, INDICATOR_MAP, indicatorCapable,
@@ -326,37 +328,21 @@
 				</div>
 			</aside>
 
-			<!-- Editor -->
+			<!-- Editor — Issue #431: shared OutputLayoutEditor (channel="email" fix).
+			     Preset-Liste (Templates + User-Presets) bleibt links in der
+			     preset-col oben — wir geben hier KEINE preset-Daten an den
+			     Editor weiter, damit es keine doppelte Preset-Anzeige gibt. -->
 			<div class="editor-col">
-				<BucketSection
-					eyebrow="Im Briefing als Spalte"
-					title="Spalten"
-					hint="Eine eigene Tabellen-Spalte je Metrik. Reihenfolge = von links nach rechts. Email zeigt alle; Signal max 6, Telegram max 8."
-					bucket="primary"
-					items={buckets.primary}
-					{metricById}
-					{shortById}
-					{friendlyMap}
-					{indicatorCapable}
-					showLimitMarkers
+				<OutputLayoutEditor
+					channel="email"
+					{catalog}
+					bind:buckets
+					bind:friendlyMap
+					bind:selectedTemplate
+					categoryLabels={CATEGORY_LABELS}
+					onReorder={(bucket, id, dir) => onReorder(bucket, id, dir)}
+					onMove={(id, target) => onMove(id, target)}
 					{onMode}
-					{onMove}
-					onReorder={(id, dir) => onReorder('primary', id, dir)}
-				/>
-
-				<BucketSection
-					eyebrow="Im Briefing als Detail"
-					title="Detail-Werte"
-					hint="Erscheinen als kompakte Zeile direkt unter der Tabelle: Bewölkung 80 % · Sicht 5 km · …"
-					bucket="secondary"
-					items={buckets.secondary}
-					{metricById}
-					{shortById}
-					{friendlyMap}
-					{indicatorCapable}
-					{onMode}
-					{onMove}
-					onReorder={(id, dir) => onReorder('secondary', id, dir)}
 				/>
 
 				<ChannelPreviewBlock
@@ -364,15 +350,6 @@
 					secondary={buckets.secondary}
 					{metricById}
 					{shortById}
-				/>
-
-				<BucketSectionOff
-					items={buckets.off}
-					{metricById}
-					{shortById}
-					categoryLabels={CATEGORY_LABELS}
-					categoryOrder={[...CATEGORY_ORDER]}
-					onAdd={onMove}
 				/>
 			</div>
 		</div>

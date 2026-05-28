@@ -7,6 +7,8 @@
 import type {
 	AlertRule,
 	ActivityType,
+	ChannelLayouts,
+	DisplayConfig,
 	ReportConfig,
 	Stage,
 	Trip,
@@ -42,7 +44,8 @@ export const defaultBriefingConfig: BriefingConfig = {
 export type SaveStatus = 'idle' | 'saving' | 'ok' | 'error';
 
 export class WizardState {
-	currentStep = $state<1 | 2 | 3 | 4>(1);
+	// Issue #430: Wizard von 4 auf 5 Steps erweitert (neuer Layout-Step 4).
+	currentStep = $state<1 | 2 | 3 | 4 | 5>(1);
 	activity = $state<ActivityType | null>(null);
 	name = $state('');
 	shortcode = $state('');
@@ -58,6 +61,9 @@ export class WizardState {
 	// Issue #300: Wetter-Metriken aus Step 3 (Wetter-Konfigurator). Werden beim
 	// Save als `display_config.metrics` persistiert (toTripPayload).
 	weatherMetrics = $state<WeatherConfigMetric[]>([]);
+	// Issue #431: Pro-Kanal-Layouts aus Step 4 (Layout-Editor).
+	// null = noch nicht gesetzt (Step 4 nicht besucht) → omitempty in toTripPayload.
+	channelLayouts = $state<ChannelLayouts | null>(null);
 
 	saveStatus = $state<SaveStatus>('idle');
 	saveError = $state<string | null>(null);
@@ -116,9 +122,8 @@ export class WizardState {
 	}
 
 	/**
-	 * Sub-Spec #164 §3.1: Trip ohne Kanaele speicherbar — kein Validierungs-Gate
-	 * (User-Entscheidung 2026-05-11). Begruendung: ad-hoc-Trips koennen nachtraeglich
-	 * konfiguriert werden. Konsistenz mit canAdvanceStep3-Pattern (#163).
+	 * Issue #430: Step 4 (NEU) = Layout-Editor. Kein Gate — User darf jederzeit
+	 * weiterschalten, der Default ist die globale Liste aus Step 3.
 	 *
 	 * Getter (nicht $derived) — siehe canAdvanceStep1 fuer Begruendung.
 	 */
@@ -127,8 +132,16 @@ export class WizardState {
 	}
 
 	/**
+	 * Issue #430: Step 5 (heute Reports, war Step 4). Trip ohne Kanaele
+	 * speicherbar — kein Gate (Sub-Spec #164 §3.1, User-Entscheidung 2026-05-11).
+	 */
+	get canAdvanceStep5(): boolean {
+		return true;
+	}
+
+	/**
 	 * Switch ueber currentStep — liefert true wenn der aktuelle Step weitergeschaltet
-	 * werden darf. Step 4 delegiert auf `canAdvanceStep4` (Sub-Spec #164 §3.2).
+	 * werden darf. Issue #430: erweitert um case 5 (Reports).
 	 */
 	get canAdvanceCurrent(): boolean {
 		switch (this.currentStep) {
@@ -140,20 +153,22 @@ export class WizardState {
 				return this.canAdvanceStep3;
 			case 4:
 				return this.canAdvanceStep4;
+			case 5:
+				return this.canAdvanceStep5;
 		}
 	}
 
 	// --- Navigation ---------------------------------------------------------
 
 	nextStep(): void {
-		if (this.currentStep < 4) {
-			this.currentStep = (this.currentStep + 1) as 1 | 2 | 3 | 4;
+		if (this.currentStep < 5) {
+			this.currentStep = (this.currentStep + 1) as 1 | 2 | 3 | 4 | 5;
 		}
 	}
 
 	prevStep(): void {
 		if (this.currentStep > 1) {
-			this.currentStep = (this.currentStep - 1) as 1 | 2 | 3 | 4;
+			this.currentStep = (this.currentStep - 1) as 1 | 2 | 3 | 4 | 5;
 		}
 	}
 
@@ -378,6 +393,15 @@ export class WizardState {
 		// persistieren — nur wenn welche gewaehlt wurden (omitempty-Symmetrie).
 		if (this.weatherMetrics.length > 0) {
 			trip.display_config = { metrics: [...this.weatherMetrics] };
+		}
+
+		// Issue #431: channel_layouts (Step 4 Layout) additiv unter display_config
+		// schreiben — nur wenn nicht null (omitempty-Symmetrie). Bewahrt das aus
+		// `weatherMetrics` ggf. bereits gesetzte `metrics`-Feld.
+		if (this.channelLayouts !== null) {
+			const dc: DisplayConfig = trip.display_config ?? {};
+			dc.channel_layouts = this.channelLayouts;
+			trip.display_config = dc;
 		}
 
 		return trip;

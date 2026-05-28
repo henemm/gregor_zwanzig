@@ -43,11 +43,18 @@ test('WizardState: nextStep() schreitet 1 → 2 voran', () => {
 	assert.equal(s.currentStep, 2);
 });
 
-test('WizardState: nextStep() bleibt bei 4 (kein Wrap)', () => {
+test('WizardState: nextStep() schreitet 4 → 5 voran (Issue #430 — 5 Steps)', () => {
 	const s = new WizardState();
 	s.currentStep = 4;
 	s.nextStep();
-	assert.equal(s.currentStep, 4);
+	assert.equal(s.currentStep, 5);
+});
+
+test('WizardState: nextStep() bleibt bei 5 (kein Wrap, Issue #430)', () => {
+	const s = new WizardState();
+	s.currentStep = 5;
+	s.nextStep();
+	assert.equal(s.currentStep, 5);
 });
 
 test('WizardState: prevStep() bleibt bei 1 (kein Underflow)', () => {

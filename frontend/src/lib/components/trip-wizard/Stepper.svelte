@@ -1,31 +1,54 @@
 <script lang="ts">
-	// Pure presentational 4-Step-Stepper fuer Epic #136 Sub-Spec #160.
+	// Pure presentational Stepper fuer Epic #136 Sub-Spec #160.
+	// Issue #430: erweitert von 4 auf 5 Steps + Mobile-Progressbar.
 	// Quelle: docs/specs/modules/epic_136_step0_shell.md §3
-	// Mobile-Compact-Block: bug_271_wizard_mobile_stepper.md §2
-	// Logik (stepperStateOf) liegt in stepperState.ts — unit-testbar ohne
-	// Svelte-Compiler.
+	// Mobile-Compact-Block: docs/specs/modules/issue_430_431_wizard_layout_step.md §2
+	// Logik (stepperStateOf, progressBarSegments) liegt in stepperState.ts /
+	// stepperCompact.ts — unit-testbar ohne Svelte-Compiler.
 
 	import CheckIcon from '@lucide/svelte/icons/check';
 	import { stepperStateOf } from './stepperState.ts';
+	import { progressBarSegments } from './stepperCompact.ts';
 
 	interface Props {
-		current: 1 | 2 | 3 | 4;
+		current: 1 | 2 | 3 | 4 | 5;
 		labels: string[];
 		subLabels?: string[];
 	}
 
 	let { current, labels, subLabels = [] }: Props = $props();
+
+	// Issue #430: Segmente fuer Mobile-Progressbar (eine Bar pro Step).
+	const segments = $derived(progressBarSegments(current, labels.length));
 </script>
 
 <div data-testid="trip-wizard-stepper">
-	<!-- Mobile Compact Stepper (Viewport <= 899px) -->
+	<!-- Mobile Compact Stepper (Viewport <= 899px) — Issue #430 Progressbar -->
 	<div
 		data-testid="trip-wizard-stepper-compact"
-		class="desktop:hidden flex items-center gap-2 text-sm"
+		class="desktop:hidden"
 	>
-		<span class="font-mono font-semibold text-[var(--g-ink)]">{current} / {labels.length}</span>
-		<span class="text-[var(--g-ink-muted)]">·</span>
-		<span class="text-[var(--g-ink)]">{labels[current - 1]}</span>
+		<div
+			data-testid="trip-wizard-stepper-progress"
+			class="progress-bar flex gap-1 mb-1"
+		>
+			{#each segments as seg, i (i)}
+				<div
+					data-testid={`progress-segment-${i + 1}`}
+					data-segment-state={seg}
+					class={`h-1 flex-1 rounded-full transition-colors ${
+						seg === 'done'
+							? 'bg-[var(--g-success)]'
+							: seg === 'active'
+								? 'bg-[var(--g-accent)]'
+								: 'bg-[var(--g-ink-faint)]/30'
+					}`}
+				></div>
+			{/each}
+		</div>
+		<span class="text-xs font-mono text-[var(--g-ink-muted)]">
+			SCHRITT {current} VON {labels.length} · {labels[current - 1]}
+		</span>
 	</div>
 
 	<!-- Desktop Full Stepper (Viewport >= 900px) -->
