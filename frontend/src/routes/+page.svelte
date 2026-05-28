@@ -120,7 +120,7 @@
 		{#if hero}
 			<div class="cockpit-hero">
 				<!-- Aktiver/Nächster Trip -->
-				<Card class="!p-0" style="overflow: hidden; border-left: 3px solid var(--g-accent);">
+				<Card padding={0} accent={true}>
 					<div style:padding="24px 28px 0">
 						<div style:display="flex" style:align-items="center" style:gap="10px" style:margin-bottom="8px">
 							<Pill tone="accent">

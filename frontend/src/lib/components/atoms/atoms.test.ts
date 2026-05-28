@@ -110,3 +110,37 @@ test('#371 AC-4: Atome SSR-fest — kein ungeschuetzter window.*-Zugriff', () =>
 		assert.ok(!hasRawWindow || hasGuard, `${name}: ungeschuetzter window.*-Zugriff (nicht SSR-fest)`);
 	}
 });
+
+// ── Bug #420 — atoms/Card.svelte: padding + accent Props ─────────────────────
+
+test('#420 AC-1/AC-5/AC-7: Card deklariert padding+accent als explizite Props, kein ui/card-Import', () => {
+	const card = read('Card.svelte');
+	// AC-5: padding-Prop mit Default 20
+	assert.ok(/padding.*=.*20|padding\s*\?\s*20/.test(card), 'Card: padding-Prop mit Default 20 fehlt');
+	// AC-7: accent-Prop mit Default false
+	assert.ok(/accent.*=.*false|accent\s*\?\s*false/.test(card), 'Card: accent-Prop mit Default false fehlt');
+	// AC-7: keine Delegation an ui/card mehr
+	assert.ok(!/import.*ui\/card/.test(card), 'Card delegiert noch an ui/card — eigenstaendige Implementierung fehlt (AC-7)');
+});
+
+test('#420 AC-3/AC-4: Card border-left nutzt --g-accent (accent=true) vs --g-rule (accent=false)', () => {
+	const card = read('Card.svelte');
+	assert.ok(/--g-accent/.test(card), 'Card: --g-accent fuer accent-border fehlt (AC-3)');
+	assert.ok(/--g-rule/.test(card), 'Card: --g-rule fuer Standard-border fehlt (AC-4)');
+	assert.ok(/3px\s+solid/.test(card), 'Card: accent-border-Breite 3px solid fehlt (AC-3)');
+});
+
+test('#420 AC-1/AC-2: Card setzt padding als Inline-Style (kein Tailwind py-*)', () => {
+	const card = read('Card.svelte');
+	// Inline-Style-Direktive oder style-Binding fuer padding
+	assert.ok(/style:padding|style="[^"]*padding/.test(card), 'Card: padding als Inline-Style fehlt (AC-1/AC-2)');
+	// Kein hardcodiertes Tailwind py-4 mehr auf dem Root-Element
+	assert.ok(!/\bpy-4\b/.test(card), 'Card: hardcodiertes Tailwind py-4 noch vorhanden (blockiert padding=0, AC-2)');
+});
+
+test('#420 AC-6: +page.svelte Workaround entfernt — kein !p-0 und kein inline border-left auf Card', () => {
+	const page = readFileSync(join(here, '../../../routes/+page.svelte'), 'utf-8');
+	assert.ok(!/<Card[^>]*!p-0/.test(page), '+page.svelte: !p-0-Workaround auf Card noch vorhanden (AC-6)');
+	assert.ok(!/<Card[^>]*border-left:\s*3px\s+solid\s+var\(--g-accent\)/.test(page),
+		'+page.svelte: border-left-Workaround auf Card noch vorhanden (AC-6)');
+});
