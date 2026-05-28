@@ -64,6 +64,10 @@ export class WizardState {
 	// Issue #431: Pro-Kanal-Layouts aus Step 4 (Layout-Editor).
 	// null = noch nicht gesetzt (Step 4 nicht besucht) → omitempty in toTripPayload.
 	channelLayouts = $state<ChannelLayouts | null>(null);
+	// Issue #432 (Scope-Erweiterung, schließt #437): Mehrtages-Trend-Toggle
+	// im Abend-Briefing. Default true = heutiges Backend-Verhalten
+	// (multi_day_trend_reports = ["evening"] in TripReportConfig).
+	trendEnabled = $state<boolean>(true);
 
 	saveStatus = $state<SaveStatus>('idle');
 	saveError = $state<string | null>(null);
@@ -379,6 +383,12 @@ export class WizardState {
 			send_telegram: b.channels.telegram,
 			send_sms: b.channels.sms
 		};
+
+		// Issue #432 (Scope-Erweiterung, schließt #437): Mehrtages-Trend-Persistenz.
+		// Wert kommt aus dem Wizard-Toggle in der Abend-Card; das bestehende
+		// Backend-Feld `multi_day_trend_evening` steuert den Trend-Block im
+		// Abend-Briefing-Renderer.
+		rc.multi_day_trend_evening = this.trendEnabled;
 
 		trip.report_config = rc;
 

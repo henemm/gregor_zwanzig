@@ -1,31 +1,35 @@
 <script lang="ts">
-	// Step 3: Wetter (Issue #300 — Wizard-Redesign).
-	// Quelle: docs/specs/modules/issue_300_wizard_redesign.md §"Step 3 — Wetter"
+	// Step 3: Wetter (Issue #432 — Wizard-Wetter-Umbau).
+	// Quelle: docs/specs/modules/issue_432_step3_step5_polish.md §A
 	//
-	// Dedizierter Wetter-Konfigurations-Schritt (ersetzt den alten Wegpunkte-Step):
+	// Dedizierter Wetter-Konfigurations-Schritt:
 	//   - Aktivitätsprofil-Dropdown (schreibt wizard.activity)
-	//   - Hinweistext "Standard-Metriken werden verwendet." wenn activity null
-	//   - Metrik-Tabelle: pro Metrik Checkbox + Name + 3 HorizonChips
+	//   - Metrik-Tabelle aus /api/metrics-Katalog (5 Kategorien-Gruppen)
+	//   - Pro Metrik: Checkbox (enabled) + Format-Dropdown (raw/scale/simplified/symbol)
+	//   - Sticky-Header pro Gruppe, Fade-Indikator unten
+	//   - Zähler-Header „METRIKEN · N AKTIV VON M"
 	//
-	// State: getContext('trip-wizard-state'). Metrik-Änderungen werden in
-	// wizard.weatherMetrics gehalten und beim Save als display_config.metrics
-	// persistiert (siehe WizardState.toTripPayload).
-	//
-	// Kein Gate: canAdvanceStep3 bleibt true — Weiter-Button immer aktiv.
+	// State: getContext('trip-wizard-state'). Metrik-Änderungen mutieren
+	// wizard.weatherMetrics. `formatModeMap` ist UI-only (4 Optionen) und wird
+	// beim Save auf use_friendly_format: boolean reduziert (raw→false, sonst true).
+	// Issue #435 bringt das echte 4-Optionen-Datenmodell.
 
-	import { getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 	import { Eyebrow } from '$lib/components/ui/eyebrow';
 	import { Field } from '$lib/components/molecules';
-	import { HorizonChip } from '$lib/components/ui/horizon-chip';
-	import type { ActivityType, Horizons, WeatherConfigMetric } from '$lib/types';
-	import { HORIZONS_ALL } from '$lib/types';
+	import { api } from '$lib/api';
+	import {
+		CATEGORY_ORDER,
+		CATEGORY_LABELS,
+		type MetricCatalog,
+		type MetricEntry
+	} from '$lib/components/trip-detail/metricsEditor';
+	import type { ActivityType, WeatherConfigMetric } from '$lib/types';
 	import type { WizardState } from '../wizardState.svelte';
 
 	const wizard = getContext<WizardState>('trip-wizard-state');
 
-	// Dropdown-Optionen → ActivityType-Mapping. Leerer Wert = kein Profil (null).
-	// Die UI-Werte folgen dem Spec-/E2E-Inventar (ski_touring, trekking, …); das
-	// Mapping hält wizard.activity typsicher (ActivityType-Union).
+	// --- Aktivitätsprofil ---------------------------------------------------
 	type ActivityOption = { value: string; label: string };
 	const ACTIVITY_OPTIONS: ActivityOption[] = [
 		{ value: '', label: 'Standard (kein Profil)' },
@@ -50,7 +54,6 @@
 		mtb: ''
 	};
 
-	// Lokaler Select-Wert, abgeleitet aus wizard.activity (typsicher gebunden).
 	let selectedOption = $state<string>(
 		wizard.activity ? (ACTIVITY_TO_OPTION[wizard.activity] ?? '') : ''
 	);
@@ -60,55 +63,86 @@
 		wizard.activity = mapped ?? null;
 	}
 
-	// --- Metrik-Tabelle -----------------------------------------------------
-	// Standard-Metriken (Hard-coded; kein API-Call für Basisimplementierung).
-	const DEFAULT_METRICS: { id: string; label: string }[] = [
-		{ id: 'temperature', label: 'Temperatur' },
-		{ id: 'wind_speed', label: 'Wind' },
-		{ id: 'precipitation', label: 'Niederschlag' },
-		{ id: 'snow_line', label: 'Schneefallgrenze' },
-		{ id: 'thunder_level', label: 'Gewitter' },
-		{ id: 'sunshine_hours', label: 'Sonnenstunden' }
-	];
+	// --- Metrik-Katalog laden ----------------------------------------------
+	let catalog = $state<MetricCatalog>({});
+	let loading = $state(true);
 
-	function cloneHorizons(h: Horizons): Horizons {
-		return { today: h.today, tomorrow: h.tomorrow, day_after: h.day_after };
-	}
+	// Format-Modus pro Metrik (UI-only, nicht in WeatherConfigMetric persistiert):
+	//   raw / scale / simplified / symbol.
+	type FormatMode = 'raw' | 'scale' | 'simplified' | 'symbol';
+	let formatModeMap = $state<Record<string, FormatMode>>({});
 
-	// wizard.weatherMetrics initialisieren, falls noch leer — pro Metrik ein
-	// WeatherConfigMetric mit allen Horizonten aktiv.
-	if (wizard.weatherMetrics.length === 0) {
-		wizard.weatherMetrics = DEFAULT_METRICS.map((m) => ({
-			metric_id: m.id,
-			enabled: true,
-			use_friendly_format: false,
-			horizons: cloneHorizons(HORIZONS_ALL)
-		}));
-	}
-
-	function labelFor(metricId: string): string {
-		return DEFAULT_METRICS.find((m) => m.id === metricId)?.label ?? metricId;
-	}
-
-	function ensureHorizons(metric: WeatherConfigMetric): Horizons {
-		if (!metric.horizons) {
-			metric.horizons = cloneHorizons(HORIZONS_ALL);
+	onMount(async () => {
+		try {
+			catalog = await api.get<MetricCatalog>('/api/metrics');
+		} catch {
+			catalog = {};
+		} finally {
+			loading = false;
 		}
-		return metric.horizons;
+		initFromCatalog();
+	});
+
+	function initFromCatalog() {
+		// Initial-Zustand des Format-Dropdowns: Roh, wenn keine Friendly-Format-Fähigkeit,
+		// sonst Skala. (Defaults fürs UI; persistiert wird use_friendly_format=boolean.)
+		const modes: Record<string, FormatMode> = {};
+		for (const cat of Object.values(catalog)) {
+			for (const m of cat) {
+				modes[m.id] = m.has_friendly_format ? 'scale' : 'raw';
+			}
+		}
+		// Wenn schon weatherMetrics existieren, deren use_friendly_format spiegeln
+		for (const m of wizard.weatherMetrics) {
+			if (modes[m.metric_id] !== undefined) {
+				modes[m.metric_id] = m.use_friendly_format ? 'scale' : 'raw';
+			}
+		}
+		formatModeMap = modes;
+
+		// wizard.weatherMetrics aus Katalog befüllen, wenn noch leer
+		if (wizard.weatherMetrics.length === 0) {
+			const all: WeatherConfigMetric[] = [];
+			for (const catKey of CATEGORY_ORDER) {
+				for (const m of catalog[catKey] ?? []) {
+					all.push({
+						metric_id: m.id,
+						enabled: true,
+						use_friendly_format: m.has_friendly_format
+					});
+				}
+			}
+			if (all.length > 0) wizard.weatherMetrics = all;
+		}
+	}
+
+	// --- Reaktive Zähler ----------------------------------------------------
+	const activeCount = $derived(wizard.weatherMetrics.filter((m) => m.enabled).length);
+	const totalCount = $derived(wizard.weatherMetrics.length);
+
+	function metricsForCategory(catKey: string): MetricEntry[] {
+		return catalog[catKey] ?? [];
+	}
+
+	function findMetric(id: string): WeatherConfigMetric | undefined {
+		return wizard.weatherMetrics.find((m) => m.metric_id === id);
 	}
 
 	// --- Factory-Handler (Safari/Factory: benannte Handler) -----------------
 
-	function makeToggleEnabled(metric: WeatherConfigMetric) {
+	function makeToggleEnabled(metricId: string) {
 		return function handleToggleEnabled(e: Event) {
-			metric.enabled = (e.target as HTMLInputElement).checked;
+			const m = findMetric(metricId);
+			if (m) m.enabled = (e.target as HTMLInputElement).checked;
 		};
 	}
 
-	function makeToggleHorizon(metric: WeatherConfigMetric, day: keyof Horizons) {
-		return function handleToggleHorizon() {
-			const h = ensureHorizons(metric);
-			h[day] = !h[day];
+	function makeFormatChange(metricId: string) {
+		return function handleFormatChange(e: Event) {
+			const mode = (e.target as HTMLSelectElement).value as FormatMode;
+			formatModeMap[metricId] = mode;
+			const m = findMetric(metricId);
+			if (m) m.use_friendly_format = mode !== 'raw';
 		};
 	}
 </script>
@@ -135,48 +169,93 @@
 		{/if}
 	</section>
 
-	<section class="flex flex-col gap-3">
-		<Eyebrow>Metriken</Eyebrow>
-		<div class="flex flex-col gap-1">
-			{#each wizard.weatherMetrics as metric (metric.metric_id)}
-				{@const horizons = ensureHorizons(metric)}
-				<div
-					data-testid={`metric-row-${metric.metric_id}`}
-					class="flex flex-wrap items-center gap-3 rounded-md border border-[var(--g-ink-faint)]/20 px-3 py-2"
-				>
-					<label class="flex items-center gap-2 text-sm min-w-[10rem]">
-						<input
-							type="checkbox"
-							checked={metric.enabled}
-							onchange={makeToggleEnabled(metric)}
-						/>
-						<span>{labelFor(metric.metric_id)}</span>
-					</label>
-					<div class="flex flex-wrap items-center gap-1">
-						<HorizonChip
-							day="today"
-							active={horizons.today}
-							onclick={makeToggleHorizon(metric, 'today')}
-						/>
-						<HorizonChip
-							day="tomorrow"
-							active={horizons.tomorrow}
-							onclick={makeToggleHorizon(metric, 'tomorrow')}
-						/>
-						<HorizonChip
-							day="day_after"
-							active={horizons.day_after}
-							onclick={makeToggleHorizon(metric, 'day_after')}
-						/>
-					</div>
-					<span
-						data-testid={`metric-format-${metric.metric_id}`}
-						class="format-label text-xs text-[var(--g-ink-muted)]"
-					>
-						{metric.use_friendly_format ? 'Indikator' : 'Roh'}
-					</span>
-				</div>
-			{/each}
+	<section class="flex flex-col gap-2">
+		<div class="flex items-center justify-between">
+			<Eyebrow data-testid="metrics-header">
+				METRIKEN · {activeCount} AKTIV VON {totalCount}
+			</Eyebrow>
 		</div>
+
+		{#if loading}
+			<p class="text-sm text-[var(--g-ink-muted)]" data-testid="metrics-loading">
+				Metriken laden...
+			</p>
+		{:else}
+			<div
+				class="metrics-scroll relative max-h-[480px] overflow-y-auto"
+				data-testid="step3-metrics-scroll"
+			>
+				{#each CATEGORY_ORDER as catKey (catKey)}
+					{@const catMetrics = metricsForCategory(catKey)}
+					{#if catMetrics.length > 0}
+						<div class="metric-group" data-testid={`metric-group-${catKey}`}>
+							<div class="sticky-header" data-testid={`metric-group-header-${catKey}`}>
+								<Eyebrow>{CATEGORY_LABELS[catKey] ?? catKey}</Eyebrow>
+							</div>
+
+							{#each catMetrics as m (m.id)}
+								{@const wm = findMetric(m.id)}
+								<div
+									data-testid={`metric-row-${m.id}`}
+									class="flex flex-wrap items-center gap-3 rounded-md border border-[var(--g-ink-faint)]/20 px-3 py-2 mb-1"
+								>
+									<label class="flex items-center gap-2 text-sm min-w-[10rem]">
+										<input
+											type="checkbox"
+											checked={wm?.enabled ?? false}
+											onchange={makeToggleEnabled(m.id)}
+										/>
+										<span>{m.label}</span>
+									</label>
+
+									<select
+										data-testid={`metric-format-select-${m.id}`}
+										value={formatModeMap[m.id] ?? 'raw'}
+										onchange={makeFormatChange(m.id)}
+										class="h-8 rounded border border-[var(--g-ink-faint)]/40 bg-transparent px-2 text-xs outline-none focus-visible:ring-2 focus-visible:ring-[var(--g-accent)]"
+									>
+										<option value="raw">Roh</option>
+										<option value="scale">Skala</option>
+										<option value="simplified">Vereinfacht</option>
+										<option value="symbol">Symbol</option>
+									</select>
+								</div>
+							{/each}
+						</div>
+					{/if}
+				{/each}
+
+				<div
+					class="scroll-fade"
+					data-testid="step3-scroll-fade"
+					aria-hidden="true"
+				></div>
+			</div>
+		{/if}
 	</section>
 </div>
+
+<style>
+	.metrics-scroll {
+		/* Scrollbarer Container für die Metrik-Gruppen. */
+		position: relative;
+	}
+
+	.sticky-header {
+		position: sticky;
+		top: 0;
+		z-index: 2;
+		background: var(--g-paper);
+		padding: var(--g-s-2, 0.5rem) 0;
+	}
+
+	.scroll-fade {
+		/* Fade-Indikator am unteren Rand zum Andeuten von weiterem Inhalt. */
+		position: sticky;
+		bottom: 0;
+		height: 1.5rem;
+		margin-top: -1.5rem;
+		pointer-events: none;
+		background: linear-gradient(to bottom, transparent, var(--g-paper));
+	}
+</style>

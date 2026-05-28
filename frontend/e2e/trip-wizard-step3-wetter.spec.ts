@@ -113,7 +113,9 @@ test.describe('Trip-Wizard Schritt 3 — Wetter (Issue #300)', () => {
 		await expect(page.getByTestId('activity-hint')).not.toBeVisible();
 	});
 
-	test('AC-5: Metriken-Tabelle zeigt Zeilen mit HorizonChips', async ({ page }) => {
+	test('AC-5/#432: Metriken-Tabelle zeigt Zeilen mit Format-Dropdown (4 Optionen)', async ({
+		page
+	}) => {
 		await page.goto('/trips/new');
 		await page.getByTestId('trip-wizard-step1-name').fill('Wetter-Test');
 		await page.getByTestId('trip-wizard-step1-startdate').fill('2026-06-01');
@@ -123,8 +125,14 @@ test.describe('Trip-Wizard Schritt 3 — Wetter (Issue #300)', () => {
 		// Mindestens eine metric-row muss sichtbar sein
 		const metricRows = page.locator('[data-testid^="metric-row-"]');
 		await expect(metricRows.first()).toBeVisible();
-		// Mindestens ein HorizonChip (data-slot="horizon-chip") muss sichtbar sein
-		const horizonChip = page.locator('[data-slot="horizon-chip"]').first();
-		await expect(horizonChip).toBeVisible();
+		// Pro Zeile (#432): Format-Dropdown mit 4 Optionen raw|scale|simplified|symbol
+		// (vorher war hier eine Zeitfenster-Chip — entfernt mit Step-3-Refactor).
+		const firstRow = metricRows.first();
+		const formatSelect = firstRow.locator('select').first();
+		await expect(formatSelect).toBeVisible();
+		const optionValues = await formatSelect.locator('option').evaluateAll((opts) =>
+			opts.map((o) => (o as HTMLOptionElement).value)
+		);
+		expect(optionValues).toEqual(expect.arrayContaining(['raw', 'scale', 'simplified', 'symbol']));
 	});
 });

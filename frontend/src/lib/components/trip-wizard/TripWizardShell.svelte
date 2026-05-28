@@ -23,9 +23,9 @@
 	import Step2Stages from './steps/Step2Stages.svelte';
 	import Step3Weather from './steps/Step3Weather.svelte';
 	import Step4Layout from './steps/Step4Layout.svelte';
-	// Issue #430: Step4Reports.svelte bleibt — wird ab jetzt bei currentStep === 5
-	// gemountet. Datei-Umbenennung auf Step5Reports.svelte ist OOS (PR 4/#432).
-	import Step4Reports from './steps/Step4Reports.svelte';
+	// Issue #432 (PR 4/Epic #428): Step4Reports.svelte wurde nach Step5Reports.svelte
+	// umbenannt; bei currentStep === 5 gemountet.
+	import Step5Reports from './steps/Step5Reports.svelte';
 
 	const state = getContext<WizardState>('trip-wizard-state');
 
@@ -105,7 +105,7 @@
 		{:else if state.currentStep === 4}
 			<Step4Layout />
 		{:else if state.currentStep === 5}
-			<Step4Reports />
+			<Step5Reports />
 		{/if}
 	</div>
 
