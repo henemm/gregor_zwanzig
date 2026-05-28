@@ -11,7 +11,7 @@ Die Datei ist in 7 Schichten gegliedert, von Token → Atom → Molekül → Pag
 1. **Brand** — Wordmark, Sidebar, User-Badge
 2. **Page-Chrome** — Seiten-Skelett (Header, Section, Tile-Grid, Empty)
 3. **Atoms** — Btn, Eyebrow, Pill, Dot, KV, Card, Sparkline
-4. **Forms** — Input, Field, Checkbox, Select, Switch, Segmented
+4. **Forms** — Input, Field, Checkbox, Select, Switch, Segmented (Props: `options`/`selected`/`onselect`)
 5. **Feedback** — Toast, Dialog
 6. **Overlay** — DropdownMenu, Sheet, Tooltip
 7. **Mobile-Shell** — PhoneFrame, TopAppBar, BottomNav, Drawer, MInput, MBtn
@@ -75,7 +75,7 @@ Slots werden in der "Was sie tut"-Spalte erwähnt.
 | `<Select>` | `value`, `options: Array<{id, label}>`, `placeholder`, `onChange` | Brand-Select. **Ersetzt** native `<select>`. |
 | `<Switch>` | `checked`, `onChange`, `disabled`, `size: "sm" \| "md"` (default `md`) | On/Off Toggle. 44×24 default, 32×18 für `sm`. |
 | `<SwitchRow>` | `label`, `sub`, `checked`, `onChange` | Switch als volle Zeile mit Label + Sub-Text. |
-| `<Segmented>` | `items: Array<{id, label, badge?}>`, `value`, `onChange`, `size: "sm" \| "md"` | 2–3-Way-Toggle. |
+| `<Segmented>` | **`options: Array<{value, label, badge?}>`**, **`selected`**, **`onselect(v)`** — Alias: `items` (mit `id` statt `value`), `value`, `onChange` werden ebenfalls akzeptiert; `size: "sm" \| "md"` (optional) | 2–3-Way-Toggle. |
 
 ---
 

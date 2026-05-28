@@ -1,26 +1,49 @@
 <script lang="ts">
-  type Option = { value: string; label: string; badge?: number; testid?: string; badge_testid?: string };
+  // Issue #418 — Dual-API: SOLL-Props (items/value/onChange/size) als primäre API,
+  // IST-Props (options/selected/onselect) als rückwärtskompatibles Alias.
+  type SollItem = { id: string; label: string; badge?: number };
+  type IstOption = { value: string; label: string; badge?: number; testid?: string; badge_testid?: string };
 
   let {
+    items,
+    value,
+    onChange,
+    size,
     options,
     selected,
-    onselect
+    onselect,
   }: {
-    options: Option[];
-    selected: string;
-    onselect: (v: string) => void;
+    items?: SollItem[];
+    value?: string;
+    onChange?: (id: string) => void;
+    size?: 'sm' | 'md';
+    options?: IstOption[];
+    selected?: string;
+    onselect?: (value: string) => void;
   } = $props();
+
+  const resolvedItems = $derived(
+    items
+      ? items.map(i => ({ value: i.id, label: i.label, badge: i.badge, testid: undefined, badge_testid: undefined }))
+      : (options ?? [])
+  );
+  const resolvedValue = $derived(value ?? selected ?? '');
+  const resolvedChange = $derived(
+    onChange
+      ? (v: string) => onChange(v)
+      : (onselect ?? (() => {}))
+  );
 </script>
 
-<div data-slot="segmented">
-  {#each options as opt}
+<div data-slot="segmented" data-size={size ?? undefined}>
+  {#each resolvedItems as item}
     <button
       type="button"
       data-slot="segmented-item"
-      data-active={opt.value === selected ? "true" : "false"}
-      data-state={opt.value === selected ? "active" : "inactive"}
-      data-testid={opt.testid ?? undefined}
-      onclick={() => onselect(opt.value)}
-    >{opt.label}{#if opt.badge !== undefined && opt.badge >= 1}<span data-slot="segmented-badge" data-testid={opt.badge_testid ?? undefined}>{opt.badge}</span>{/if}</button>
+      data-active={item.value === resolvedValue ? "true" : "false"}
+      data-state={item.value === resolvedValue ? "active" : "inactive"}
+      data-testid={item.testid ?? undefined}
+      onclick={() => resolvedChange(item.value ?? '')}
+    >{item.label}{#if item.badge !== undefined && item.badge >= 1}<span data-slot="segmented-badge" data-testid={item.badge_testid ?? undefined}>{item.badge}</span>{/if}</button>
   {/each}
 </div>

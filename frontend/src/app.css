@@ -415,6 +415,16 @@
     background: var(--g-surface-2);
   }
 
+  /* === Issue #418: Segmented size-Varianten === */
+  [data-slot="segmented"][data-size="sm"] [data-slot="segmented-item"] {
+    padding: 2px 8px;
+    font-size: var(--g-text-xs);
+  }
+  [data-slot="segmented"][data-size="md"] [data-slot="segmented-item"] {
+    padding: 4px 12px;
+    font-size: var(--g-text-sm);
+  }
+
   /* === Issue #144: Eyebrow === */
   [data-slot="eyebrow"] {
     display: block;

@@ -237,6 +237,7 @@ Alle Module benoetigen Specs vor Implementierung:
 - `issue_408_location_wizard` - Locations-Seite `/locations`: "Neuer Ort"-Button zeigt jetzt `NewLocationWizard` (3 Schritte: Smart-Import / Benennung / Aktivitätsprofil) statt `LocationForm`; Edit-Flow bleibt unverändert. 1 Datei, ~12 LoC (Issue #408, Spec: `docs/specs/modules/issue_408_location_wizard.md`)
 - `issue_407_waypoint_editor_screen` - /trips/[id]/edit von Akkordeon-Maske zu dediziertem Vollbild-Wegpunkt-Editor umgebaut: WaypointEditorPage (SVG-Karte + Höhenprofil + Wegpunkt-Sidebar), StageNavDropdown (Mobile Prev/Next), AISuggestionBar (KI-Vorschlag übernehmen/verwerfen), stripSuggested vor PUT; Wetter/Alarmregeln/Reports-Sektionen entfernt (Issue #407, Spec: `docs/specs/modules/issue_407_waypoint_editor_screen.md`)
 - `issue_414_mobile_alerts_modus_picker` - Mobile Alerts-Tab: H1-Header + 3-Wege-Modus-Picker (Δ-Änderung/Schwellwert/Beides·EMPFOHLEN) + fixierter Bottom-Footer; `deriveAlertMode()` leitet Modus aus alert_rules ab, `applyModeToRowState()` schaltet Toggles; Desktop unverändert (Issue #414, Spec: `docs/specs/modules/issue_414_mobile_alerts_modus_picker.md`)
+- `issue_418_segmented_api` - Segmented.svelte Dual-API: SOLL-Props (items/value/onChange/size) + IST-Alias (options/selected/onselect), size-CSS-Varianten sm/md in app.css, COMPONENTS.md aktualisiert (Issue #418, Spec: `docs/specs/modules/issue_418_segmented_api.md`)
 
 ### Geplante Module
 Siehe GitHub Issues: https://github.com/henemm/gregor_zwanzig/issues
