@@ -1,22 +1,20 @@
 <script lang="ts">
-	// Issue #251 — RecommendationBanner: Empfehlungs-Banner mit Winner-Score und Tags.
-	//
-	// Spec: docs/specs/modules/issue_251_compare_main_stage.md §3
+	// Issue #251/#455 — RecommendationBanner: Empfehlungs-Banner mit Winner-Score und Tags.
+	// Issue #454: Tags sind jetzt CompareTag[] ({type, label}) statt string[].
 
-	import type { CompareRow, CompareWinner, Location } from '$lib/types.js';
+	import type { RankingEntry, Location } from '$lib/types.js';
 	import { Pill } from '$lib/components/ui/pill/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
 
 	interface Props {
-		winner: CompareWinner;
-		winnerRow: CompareRow;
+		topEntry: RankingEntry;
 		locations: Location[];
 	}
 
-	let { winner, winnerRow, locations }: Props = $props();
+	let { topEntry, locations }: Props = $props();
 
 	let locName = $derived(
-		locations.find((l) => l.id === winner.location_id)?.name ?? winner.location_id
+		locations.find((l) => l.id === topEntry.location_id)?.name ?? topEntry.location_id
 	);
 </script>
 
@@ -29,17 +27,17 @@
 			data-testid="compare-banner-score"
 			class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[color:var(--g-success)] text-xl font-bold text-white"
 		>
-			{Math.round(winnerRow.score)}
+			{Math.round(topEntry.score)}
 		</div>
 		<div class="flex-1 min-w-0">
 			<p class="text-xs uppercase tracking-wide text-muted-foreground">Empfehlung</p>
 			<p data-testid="compare-banner-location-name" class="text-lg font-semibold">
 				{locName}
 			</p>
-			{#if winner.tags && winner.tags.length > 0}
+			{#if topEntry.tags && topEntry.tags.length > 0}
 				<div data-testid="compare-banner-tags" class="mt-2 flex flex-wrap gap-1.5">
-					{#each winner.tags as tag}
-						<Pill tone="success" class="px-2 py-0.5 text-xs rounded-full">{tag}</Pill>
+					{#each topEntry.tags as tag}
+						<Pill tone="success" class="px-2 py-0.5 text-xs rounded-full">{tag.label}</Pill>
 					{/each}
 				</div>
 			{/if}

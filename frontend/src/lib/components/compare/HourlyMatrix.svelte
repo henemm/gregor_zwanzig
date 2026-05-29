@@ -1,52 +1,43 @@
 <script lang="ts">
-	// Issue #251 — HourlyMatrix: Stunden-Verlauf der Top-3 Locations.
-	//
-	// Spec: docs/specs/modules/issue_251_compare_main_stage.md §5
+	// Issue #251/#455 — HourlyMatrix: Stunden-Verlauf der Top-3 Locations.
+	// Issue #454: stunden_verlauf[] (StundenVerlaufEntry) statt hourly-Record.
 
-	import type { CompareRow, ForecastDataPoint, Location } from '$lib/types.js';
+	import type { StundenVerlaufEntry, Location } from '$lib/types.js';
 	import { Pill } from '$lib/components/ui/pill/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
-	import { WIcon } from '$lib/components/ui/wicon/index.js';
-	import { wmoToWIconKind } from '$lib/utils/weatherUtils.js';
 
 	interface Props {
-		hourly: Record<string, ForecastDataPoint[]>;
+		stunden_verlauf: StundenVerlaufEntry[];
 		locations: Location[];
-		rows: CompareRow[];
 	}
 
-	let { hourly, locations, rows }: Props = $props();
+	let { stunden_verlauf, locations }: Props = $props();
 
 	let locById = $derived(new Map(locations.map((l) => [l.id, l])));
 
 	let topSections = $derived(
-		rows
+		stunden_verlauf
 			.slice(0, 3)
-			.filter((r) => Array.isArray(hourly[r.location_id]) && hourly[r.location_id].length > 0)
-			.map((r, idx) => ({
+			.filter((e) => e.hours.length > 0)
+			.map((e, idx) => ({
 				rank: idx + 1,
-				row: r,
-				name: locById.get(r.location_id)?.name ?? r.location_id,
-				points: hourly[r.location_id],
+				entry: e,
+				name: locById.get(e.location_id)?.name ?? e.location_id,
 			}))
 	);
 
-	function formatTime(ts: string): string {
-		return new Date(ts).toLocaleTimeString('de-AT', { hour: '2-digit', minute: '2-digit' });
-	}
-
-	function fmtNum(v: number | null | undefined, decimals = 0): string {
+	function fmtNum(v: unknown, decimals = 0): string {
 		if (v == null) return '—';
-		return v.toFixed(decimals);
+		return (v as number).toFixed(decimals);
 	}
 
-	function thunderTone(level: string | null | undefined): 'success' | 'warning' | 'danger' {
+	function thunderTone(level: unknown): 'success' | 'warning' | 'danger' {
 		if (level === 'HIGH') return 'danger';
 		if (level === 'MED') return 'warning';
 		return 'success';
 	}
 
-	function thunderLabel(level: string | null | undefined): string {
+	function thunderLabel(level: unknown): string {
 		if (level === 'HIGH') return 'Hoch';
 		if (level === 'MED') return 'Mittel';
 		return 'Kein';
@@ -76,7 +67,6 @@
 						<thead>
 							<tr class="text-left text-muted-foreground">
 								<th class="py-1 pr-2 sticky left-0 z-10 bg-card">Zeit</th>
-								<th class="py-1 pr-2"></th>
 								<th class="py-1 pr-2">Temp</th>
 								<th class="py-1 pr-2">Wind</th>
 								<th class="py-1 pr-2">Böen</th>
@@ -85,19 +75,16 @@
 							</tr>
 						</thead>
 						<tbody>
-							{#each section.points as p}
+							{#each section.entry.hours as h}
 								<tr class="border-t">
-									<td class="py-1 pr-2 sticky left-0 z-10 bg-card">{formatTime(p.ts)}</td>
+									<td class="py-1 pr-2 sticky left-0 z-10 bg-card">{h.hour}:00</td>
+									<td class="py-1 pr-2">{fmtNum(h.values['t2m_c'], 1)}°</td>
+									<td class="py-1 pr-2">{fmtNum(h.values['wind10m_kmh'])}</td>
+									<td class="py-1 pr-2">{fmtNum(h.values['gust_kmh'])}</td>
+									<td class="py-1 pr-2">{fmtNum(h.values['precip_1h_mm'], 1)}</td>
 									<td class="py-1 pr-2">
-										<WIcon kind={wmoToWIconKind(p.wmo_code, p.is_day, p.dni_wm2, p.cloud_total_pct)} size={14} />
-									</td>
-									<td class="py-1 pr-2">{fmtNum(p.t2m_c, 1)}°</td>
-									<td class="py-1 pr-2">{fmtNum(p.wind10m_kmh)}</td>
-									<td class="py-1 pr-2">{fmtNum(p.gust_kmh)}</td>
-									<td class="py-1 pr-2">{fmtNum(p.precip_1h_mm, 1)}</td>
-									<td class="py-1 pr-2">
-										<Pill tone={thunderTone(p.thunder_level)} class="px-2 py-0.5 text-[10px] rounded-full">
-											{thunderLabel(p.thunder_level)}
+										<Pill tone={thunderTone(h.values['thunder_level'])} class="px-2 py-0.5 text-[10px] rounded-full">
+											{thunderLabel(h.values['thunder_level'])}
 										</Pill>
 									</td>
 								</tr>

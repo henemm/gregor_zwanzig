@@ -305,8 +305,8 @@ export interface ForecastDataPoint {
 	freezing_level_m?: number | null;
 }
 
-// Issue #251 — Compare-Engine (POST /api/compare/run) DTOs.
-// Spec: docs/specs/modules/issue_251_compare_main_stage.md
+// Issue #251/#454/455 — Compare-Engine (POST /api/compare/run) DTOs.
+// Issue #454 änderte Response-Schema: ranking/matrix/stunden_verlauf.
 export interface CompareMetrics {
 	temp_min_c?: number | null;
 	temp_max_c?: number | null;
@@ -320,25 +320,47 @@ export interface CompareMetrics {
 	sunny_hours_h?: number | null;
 	snow_depth_cm?: number | null;
 	snow_new_sum_cm?: number | null;
-	thunder_level_max?: string | null; // 'NONE' | 'MED' | 'HIGH'
+	thunder_level_max?: string | null;
 }
 
 export interface CompareRow {
 	location_id: string;
-	score: number; // 0–100
-	rank: number;  // 1 = bester
+	score: number;
+	rank: number;
 	metrics: CompareMetrics;
 }
 
-export interface CompareWinner {
+export interface CompareTag {
+	type: string;
+	label: string;
+}
+
+export interface RankingEntry {
 	location_id: string;
-	tags: string[];
+	name: string;
+	score: number;
+	tags: CompareTag[];
+}
+
+export interface MatrixEntry {
+	location_id: string;
+	metrics: Record<string, unknown>;
+}
+
+export interface StundenVerlaufHour {
+	hour: string;
+	values: Record<string, unknown>;
+}
+
+export interface StundenVerlaufEntry {
+	location_id: string;
+	hours: StundenVerlaufHour[];
 }
 
 export interface CompareResult {
-	rows: CompareRow[];
-	winner?: CompareWinner;
-	hourly: Record<string, ForecastDataPoint[]>;
+	ranking: RankingEntry[];
+	matrix: MatrixEntry[];
+	stunden_verlauf: StundenVerlaufEntry[];
 }
 
 // Adapter: System-Namespace ActivityProfile → Go-Engine-Namespace.

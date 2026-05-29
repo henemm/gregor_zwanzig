@@ -7,7 +7,7 @@
 	import { groupLocations } from '$lib/components/compare/locationHelpers.js';
 	import { api } from '$lib/api.js';
 	import { toCompareProfile } from '$lib/types.js';
-	import type { ActivityProfile, CompareResult, Location, Group } from '$lib/types.js';
+	import type { ActivityProfile, CompareResult, CompareMetrics, CompareRow, RankingEntry, Location, Group } from '$lib/types.js';
 	import LocationsRail from '$lib/components/compare/LocationsRail.svelte';
 	import PresetHeader from '$lib/components/compare/PresetHeader.svelte';
 	import RecommendationBanner from '$lib/components/compare/RecommendationBanner.svelte';
@@ -34,6 +34,16 @@
 
 	let groupedLocations = $derived(groupLocations(locations, groups));
 	let allSelected = $derived(selectedIds.length === locations.length && locations.length > 0);
+	let matrixRows: CompareRow[] = $derived.by(() => {
+		if (!result) return [];
+		return result.ranking.map((r, i) => ({
+			location_id: r.location_id,
+			score: r.score,
+			rank: i + 1,
+			metrics: (result!.matrix.find((m) => m.location_id === r.location_id)?.metrics ?? {}) as CompareMetrics,
+		}));
+	});
+	let topEntry: RankingEntry | null = $derived.by(() => result?.ranking?.[0] ?? null);
 
 	// Event-Handler für LocationsRail
 	function handleToggleAll() {
@@ -83,7 +93,10 @@
 		try {
 			result = await api.post<CompareResult>('/api/compare/run', {
 				location_ids: selectedIds,
-				date:         compareDate,
+				date_from:    compareDate,
+				date_to:      compareDate,
+				hour_from:    twStart,
+				hour_to:      twEnd,
 				profile:      toCompareProfile(activityProfile),
 			});
 		} catch (e) {
@@ -150,27 +163,25 @@
 			</div>
 		{/if}
 
-		{#if result?.winner && result.rows[0]}
+		{#if topEntry}
 			<RecommendationBanner
-				winner={result.winner}
-				winnerRow={result.rows[0]}
+				{topEntry}
 				{locations}
 			/>
 		{/if}
 
-		{#if result?.rows?.length}
+		{#if matrixRows.length}
 			<CompareMatrix
-				rows={result.rows}
+				rows={matrixRows}
 				{locations}
 				profile={activityProfile}
 			/>
 		{/if}
 
-		{#if result?.hourly && Object.keys(result.hourly).length}
+		{#if result?.stunden_verlauf?.length}
 			<HourlyMatrix
-				hourly={result.hourly}
+				stunden_verlauf={result.stunden_verlauf}
 				{locations}
-				rows={result.rows}
 			/>
 		{/if}
 	</div>
