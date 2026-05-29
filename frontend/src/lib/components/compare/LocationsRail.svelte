@@ -108,6 +108,18 @@
 		class="h-8 w-full rounded-md border border-input bg-transparent px-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
 	/>
 
+	{#if locations.length === 0}
+		<div data-testid="compare-rail-empty">
+			<EmptyState
+				title="Noch keine Orte"
+				description="Lege deinen ersten Ort an, um einen Vergleich zu starten."
+			>
+				{#snippet children()}
+					<Btn onclick={onNewLocation}>Ersten Ort anlegen</Btn>
+				{/snippet}
+			</EmptyState>
+		</div>
+	{:else}
 	<p
 		data-testid="compare-rail-counter"
 		class="text-xs {locations.length < 2
@@ -119,18 +131,6 @@
 		{locations.length} Orte · min. 2 / max. 8
 	</p>
 
-	{#if locations.length === 0}
-		<div data-testid="compare-rail-empty">
-			<EmptyState
-				title="Noch keine Orte"
-				description="Lege deinen ersten Ort an, um einen Vergleich zu starten."
-			>
-				{#snippet children()}
-					<Btn onclick={onNewLocation}>+ Ersten Ort anlegen</Btn>
-				{/snippet}
-			</EmptyState>
-		</div>
-	{:else}
 	{#if groups.length > 0}
 		<div class="flex flex-wrap gap-1">
 			{#each groups as g (g.id)}
