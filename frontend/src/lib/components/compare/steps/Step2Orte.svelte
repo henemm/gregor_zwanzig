@@ -28,6 +28,8 @@
 	let preview = $state<ResolveResult | null>(null);
 	let resolveError = $state<string | null>(null);
 	let adding = $state(false);
+	let fallbackLat = $state('');
+	let fallbackLon = $state('');
 
 	// F002: $derived.by(fn) ist Svelte-5-Form für berechnete Werte mit
 	// Funktions-Body. $derived(() => {...}) würde die Funktion selbst speichern,
@@ -70,6 +72,29 @@
 			state.pickedIds = [...state.pickedIds, loc.id];
 			importInput = '';
 			preview = null;
+		} catch (e: unknown) {
+			resolveError = extractMsg(e) ?? 'Fehler beim Hinzufügen';
+		} finally {
+			adding = false;
+		}
+	}
+
+	async function addLocationFromFallback() {
+		const lat = parseFloat(fallbackLat);
+		const lon = parseFloat(fallbackLon);
+		if (isNaN(lat) || isNaN(lon)) return;
+		adding = true;
+		try {
+			const loc = await api.post<Location>('/api/locations', {
+				name: `${lat.toFixed(4)}, ${lon.toFixed(4)}`,
+				lat,
+				lon
+			});
+			state.pickedIds = [...state.pickedIds, loc.id];
+			importInput = '';
+			resolveError = null;
+			fallbackLat = '';
+			fallbackLon = '';
 		} catch (e: unknown) {
 			resolveError = extractMsg(e) ?? 'Fehler beim Hinzufügen';
 		} finally {
@@ -128,12 +153,49 @@
 				<p class="text-xs text-[var(--g-danger)]">{resolveError}</p>
 			{/if}
 
+			{#if resolveError}
+				<div class="space-y-2 mt-2">
+					<p class="text-xs text-[var(--g-ink-muted)]">Koordinaten manuell eingeben:</p>
+					<div class="flex gap-2">
+						<input
+							data-testid="compare-step2-fallback-lat"
+							type="number"
+							step="any"
+							placeholder="Breitengrad (z.B. 47.2692)"
+							bind:value={fallbackLat}
+							class="flex-1 border rounded px-2 py-1 text-sm bg-[var(--g-paper)] border-[var(--g-ink-faint)]"
+						/>
+						<input
+							data-testid="compare-step2-fallback-lon"
+							type="number"
+							step="any"
+							placeholder="Längengrad (z.B. 11.4041)"
+							bind:value={fallbackLon}
+							class="flex-1 border rounded px-2 py-1 text-sm bg-[var(--g-paper)] border-[var(--g-ink-faint)]"
+						/>
+					</div>
+					<button
+						data-testid="compare-step2-fallback-add-btn"
+						type="button"
+						disabled={adding || !fallbackLat || !fallbackLon}
+						onclick={addLocationFromFallback}
+						class="px-3 py-1 text-xs rounded bg-[var(--g-accent)] text-white disabled:opacity-40"
+					>
+						{adding ? 'Wird hinzugefügt…' : 'Hinzufügen'}
+					</button>
+				</div>
+			{/if}
+
 			{#if preview}
 				<div class="p-3 rounded bg-[var(--g-ink-faint)]/10 text-sm space-y-1">
 					<p class="font-medium">{preview.suggested_name ?? '(kein Name)'}</p>
 					<p class="text-[var(--g-ink-muted)]">
 						{preview.lat.toFixed(4)}, {preview.lon.toFixed(4)}
 					</p>
+					{#if preview.elevation_m !== undefined}
+						<p class="text-[var(--g-ink-muted)]">Höhe: {preview.elevation_m} m</p>
+					{/if}
+					<p class="text-[var(--g-ink-muted)]">Zeitzone: {preview.timezone}</p>
 					<button
 						type="button"
 						disabled={adding}
