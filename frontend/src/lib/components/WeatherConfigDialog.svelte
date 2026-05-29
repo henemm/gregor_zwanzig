@@ -7,15 +7,16 @@
 	import Segmented from '$lib/components/ui/segmented';
 	import { buildScoreMap } from '$lib/utils/scoreToggleHelpers.js';
 	import { CATEGORY_LABELS, CATEGORY_ORDER } from '$lib/components/trip-detail/metricsEditor';
+	// Issue #435 — Single Source of Truth in $lib/types.ts (Adversary F002).
+	import type { MetricEntry } from '$lib/types';
 
-	interface MetricEntry {
-		id: string;
-		label: string;
-		unit: string;
-		category: string;
-		default_enabled: boolean;
-		has_friendly_format: boolean;
-	}
+	// Issue #435: Label-Map für N-Optionen-Dropdown.
+	const FORMAT_MODE_LABELS: Record<string, string> = {
+		raw: 'Roh',
+		scale: 'Skala',
+		simplified: 'Vereinfacht',
+		symbol: 'Symbol'
+	};
 
 	type MetricCatalog = Record<string, MetricEntry[]>;
 
@@ -46,6 +47,8 @@
 	let enabledMap: Record<string, boolean> = $state({});
 	// Map of metric_id -> use_friendly_format (Default: true)
 	let friendlyMap: Record<string, boolean> = $state({});
+	// Issue #435: Map of metric_id -> format_mode (Default: catalog default_format_mode)
+	let formatModeMap: Record<string, string> = $state({});
 	// Map of metric_id -> score_member (Default: true) — Issue #362
 	let scoreMap: Record<string, boolean> = $state({});
 	const showScoreToggle = $derived(entityType === 'location' || entityType === 'subscription');
@@ -82,12 +85,34 @@
 		return map;
 	}
 
+	// Issue #435: format_mode-Map aus Katalog + Persistenz.
+	function buildFormatModeMap(cat: MetricCatalog, cfg: Record<string, unknown> | undefined) {
+		const map: Record<string, string> = {};
+		for (const metrics of Object.values(cat)) {
+			for (const m of metrics) {
+				map[m.id] = m.default_format_mode ?? (m.has_friendly_format ? 'scale' : 'raw');
+			}
+		}
+		if (cfg && Array.isArray(cfg.metrics)) {
+			for (const entry of cfg.metrics as Array<{ metric_id: string; format_mode?: string; use_friendly_format?: boolean }>) {
+				if (entry.format_mode) {
+					map[entry.metric_id] = entry.format_mode;
+				} else if (entry.use_friendly_format === false) {
+					map[entry.metric_id] = 'raw';
+				}
+				// (use_friendly_format=true ohne format_mode → Katalog-Default bleibt)
+			}
+		}
+		return map;
+	}
+
 	$effect(() => {
 		if (open && Object.keys(catalog).length === 0) {
 			loadCatalog();
 		} else if (open && Object.keys(catalog).length > 0) {
 			enabledMap = buildEnabledMap(catalog, currentConfig);
 			friendlyMap = buildFriendlyMap(catalog, currentConfig);
+			formatModeMap = buildFormatModeMap(catalog, currentConfig);
 			scoreMap = buildScoreMap(catalog, currentConfig);
 		}
 	});
@@ -104,6 +129,7 @@
 			templates = templateData;
 			enabledMap = buildEnabledMap(catalog, currentConfig);
 			friendlyMap = buildFriendlyMap(catalog, currentConfig);
+			formatModeMap = buildFormatModeMap(catalog, currentConfig);
 			scoreMap = buildScoreMap(catalog, currentConfig);
 		} catch (e: unknown) {
 			errorMsg = (e as { error?: string })?.error ?? 'Fehler beim Laden der Metriken';
@@ -128,19 +154,27 @@
 
 	function handleSave() {
 		saving = true;
-		const metricsArr = Object.entries(enabledMap).map(([metric_id, enabled]) => ({
-			metric_id,
-			enabled,
-			use_friendly_format: friendlyMap[metric_id] ?? true,
-			...(showScoreToggle ? { score_member: scoreMap[metric_id] ?? true } : {})
-		}));
+		const metricsArr = Object.entries(enabledMap).map(([metric_id, enabled]) => {
+			const mode = formatModeMap[metric_id];
+			const friendly = mode !== undefined ? mode !== 'raw' : (friendlyMap[metric_id] ?? true);
+			return {
+				metric_id,
+				enabled,
+				// Issue #435: format_mode (neu) + use_friendly_format (BC) parallel.
+				...(mode !== undefined ? { format_mode: mode } : {}),
+				use_friendly_format: friendly,
+				...(showScoreToggle ? { score_member: scoreMap[metric_id] ?? true } : {})
+			};
+		});
 		const config: Record<string, unknown> = { metrics: metricsArr };
 		onsave(config);
 		saving = false;
 	}
 
-	function setFormat(id: string, friendly: boolean) {
-		friendlyMap = { ...friendlyMap, [id]: friendly };
+	// Issue #435: Single-Mode-Setter (Dropdown statt Segmented-Control).
+	function setFormatMode(id: string, mode: string) {
+		formatModeMap = { ...formatModeMap, [id]: mode };
+		friendlyMap = { ...friendlyMap, [id]: mode !== 'raw' };
 	}
 
 	function sortedCategories(): string[] {
@@ -203,12 +237,26 @@
 											{metric.label}{#if metric.unit}<span class="ml-2 text-xs text-muted-foreground">{metric.unit}</span>{/if}
 										</Checkbox>
 									</div>
-									{#if metric.has_friendly_format}
-										<Segmented
-											options={[{ value: 'raw', label: 'Roh' }, { value: 'indicator', label: 'Indikator' }]}
-											selected={(friendlyMap[metric.id] ?? true) ? 'indicator' : 'raw'}
-											onselect={(v) => setFormat(metric.id, v === 'indicator')}
-										/>
+									{#if (metric.format_modes && metric.format_modes.length > 1)}
+										<Select
+											aria-label="Format-Modus"
+											value={formatModeMap[metric.id] ?? metric.default_format_mode ?? 'raw'}
+											onchange={(e) => setFormatMode(metric.id, (e.target as HTMLSelectElement).value)}
+										>
+											{#each metric.format_modes as mode (mode)}
+												<option value={mode}>{FORMAT_MODE_LABELS[mode] ?? mode}</option>
+											{/each}
+										</Select>
+									{:else if metric.has_friendly_format}
+										<!-- Fallback nur für alte Backend-Versionen ohne format_modes-Feld. -->
+										<Select
+											aria-label="Format-Modus"
+											value={(formatModeMap[metric.id] ?? ((friendlyMap[metric.id] ?? true) ? 'symbol' : 'raw'))}
+											onchange={(e) => setFormatMode(metric.id, (e.target as HTMLSelectElement).value)}
+										>
+											<option value="raw">Roh</option>
+											<option value="symbol">Symbol</option>
+										</Select>
 									{/if}
 									{#if showScoreToggle && enabledMap[metric.id]}
 										<Segmented

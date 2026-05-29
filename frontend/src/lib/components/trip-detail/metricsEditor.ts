@@ -4,14 +4,9 @@
 // Reine Funktionen ohne Svelte-Abhaengigkeit, damit sie via node:test
 // unit-getestet werden koennen (siehe metricsEditor.test.ts).
 
-export interface MetricEntry {
-	id: string;
-	label: string;
-	unit: string;
-	category: string;
-	default_enabled: boolean;
-	has_friendly_format: boolean;
-}
+// Issue #435 — Single Source of Truth in $lib/types.ts (Adversary F002).
+import type { MetricEntry } from '$lib/types';
+export type { MetricEntry };
 
 export type MetricCatalog = Record<string, MetricEntry[]>;
 

@@ -64,7 +64,8 @@ def _format_daylight_plain(dl: DaylightWindow, *, tz: ZoneInfo) -> str:
     return "\n".join(lines)
 
 
-def _render_text_table(rows: list[dict], *, friendly_keys: set[str]) -> str:
+def _render_text_table(rows: list[dict], *, friendly_keys: set[str],
+                       format_modes: Optional[dict[str, str]] = None) -> str:
     """Plain-text table from row dicts."""
     if not rows:
         return "  (keine Daten)"
@@ -75,7 +76,8 @@ def _render_text_table(rows: list[dict], *, friendly_keys: set[str]) -> str:
         w = len(label)
         for r in rows:
             val_str = (
-                fmt_val(key, r.get(key), friendly_keys=friendly_keys, row=r)
+                fmt_val(key, r.get(key), friendly_keys=friendly_keys,
+                        row=r, format_modes=format_modes)
                 if key != "time" else r["time"]
             )
             w = max(w, len(val_str))
@@ -89,7 +91,8 @@ def _render_text_table(rows: list[dict], *, friendly_keys: set[str]) -> str:
         for (label, key), w in zip(headers, widths):
             val_str = (
                 r["time"] if key == "time"
-                else fmt_val(key, r.get(key), friendly_keys=friendly_keys, row=r)
+                else fmt_val(key, r.get(key), friendly_keys=friendly_keys,
+                             row=r, format_modes=format_modes)
             )
             parts.append(val_str.ljust(w))
         lines.append(f"  {'  '.join(parts)}")
@@ -114,6 +117,7 @@ def render_plain(
     daylight: Optional[DaylightWindow],
     tz: ZoneInfo,
     friendly_keys: set[str],
+    format_modes: Optional[dict[str, str]] = None,
     profile: Optional[ActivityProfile] = None,
 ) -> str:
     """Render full plain-text e-mail body. Pure function."""
@@ -175,7 +179,7 @@ def render_plain(
             lines.append(f"━━ \U0001f3c1 Wetter am Ziel: {local_fmt(seg.start_time, tz)}–{local_fmt(seg.end_time, tz)} | {s_elev}m ━━")
         else:
             lines.append(f"━━ Segment {seg.segment_id}: {local_fmt(seg.start_time, tz)}–{local_fmt(seg.end_time, tz)} | {seg.distance_km:.1f} km | ↑{s_elev}m → {e_elev}m ━━")
-        lines.append(_render_text_table(rows, friendly_keys=friendly_keys))
+        lines.append(_render_text_table(rows, friendly_keys=friendly_keys, format_modes=format_modes))
         lines.append("")
 
     if night_rows:

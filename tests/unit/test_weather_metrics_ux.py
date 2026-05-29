@@ -525,12 +525,16 @@ class TestFmtValFriendlyToggle:
 
 
 class TestBuildFriendlyKeys:
-    """4d) _build_friendly_keys() builds correct set from config."""
+    """4d) build_friendly_keys() builds correct set from config.
+
+    Issue #435 / AC-10: konsolidiert in email/helpers.py (Vor-Commit). Die
+    frühere TripReportFormatter._build_friendly_keys() wurde gelöscht; der
+    Adapter importiert jetzt aus helpers.py.
+    """
 
     def test_builds_keys_for_enabled_metrics(self):
-        from formatters.trip_report import TripReportFormatter
+        from src.output.renderers.email.helpers import build_friendly_keys
         from app.models import MetricConfig, UnifiedWeatherDisplayConfig
-        f = TripReportFormatter()
         dc = UnifiedWeatherDisplayConfig(
             trip_id="test",
             metrics=[
@@ -540,18 +544,17 @@ class TestBuildFriendlyKeys:
                 MetricConfig(metric_id="temperature", use_friendly_format=True),
             ],
         )
-        keys = f._build_friendly_keys(dc)
+        keys = build_friendly_keys(dc)
         assert "cloud" in keys      # cloud_total → col_key "cloud"
         assert "cape" in keys
         assert "visibility" not in keys  # explicitly disabled
         assert "temp" not in keys    # temperature has no friendly format
 
     def test_empty_config_returns_empty_set(self):
-        from formatters.trip_report import TripReportFormatter
+        from src.output.renderers.email.helpers import build_friendly_keys
         from app.models import UnifiedWeatherDisplayConfig
-        f = TripReportFormatter()
         dc = UnifiedWeatherDisplayConfig(trip_id="test", metrics=[])
-        keys = f._build_friendly_keys(dc)
+        keys = build_friendly_keys(dc)
         assert keys == set()
 
 

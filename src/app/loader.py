@@ -37,6 +37,72 @@ _LEGACY_DELTA_MAPPING: list[tuple[str, AlertMetric, str]] = [
 ]
 
 
+def _resolve_format_mode(mc_data: dict, metric_id: str) -> str:
+    """
+    Issue #435: Resolve format_mode from persisted MetricConfig dict.
+
+    Precedence:
+        1. Explicit `format_mode` field wins (new write path).
+        2. Legacy `use_friendly_format=False` -> "raw".
+        3. Legacy `use_friendly_format=True` (or missing) ->
+           Catalog `default_format_mode` of the metric.
+
+    For unknown metric_ids (not in catalog) falls back to "raw".
+    """
+    raw = mc_data.get("format_mode")
+    if raw is not None:
+        return raw
+    if not mc_data.get("use_friendly_format", True):
+        return "raw"
+    try:
+        from app.metric_catalog import get_metric
+        return get_metric(metric_id).default_format_mode
+    except KeyError:
+        return "raw"
+
+
+def _friendly_from_mode(mode: str) -> bool:
+    """Issue #435: Map new format_mode back to legacy use_friendly_format bool.
+
+    "raw" -> False, every other mode -> True (backward-compat for older readers).
+    """
+    return mode != "raw"
+
+
+def _metric_to_dict(mc) -> dict:
+    """Issue #435: Serialize a MetricConfig to dict, writing format_mode and
+    use_friendly_format in parallel (Backward-Compat for older readers).
+
+    Precedence:
+      - If `format_mode` is explicit on the MetricConfig, write it as-is and
+        derive `use_friendly_format` from it (raw -> False, other -> True).
+      - Else write the existing `use_friendly_format` bool; `format_mode`
+        gets resolved via the catalog default (so reading the file later
+        produces the same effective mode).
+    """
+    if mc.format_mode is not None:
+        mode = mc.format_mode
+        friendly = _friendly_from_mode(mode)
+    else:
+        mode = None
+        friendly = mc.use_friendly_format
+    out = {
+        "metric_id": mc.metric_id,
+        "enabled": mc.enabled,
+        "aggregations": mc.aggregations,
+        "morning_enabled": mc.morning_enabled,
+        "evening_enabled": mc.evening_enabled,
+        "use_friendly_format": friendly,
+        "alert_enabled": mc.alert_enabled,
+        "alert_threshold": mc.alert_threshold,
+        "bucket": mc.bucket,
+        "order": mc.order,
+    }
+    if mode is not None:
+        out["format_mode"] = mode
+    return out
+
+
 def _alert_rule_from_dict(d: Dict[str, Any]) -> AlertRule:
     """Parse a single AlertRule from a JSON dict."""
     return AlertRule(
@@ -338,6 +404,9 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
             # unbekannte/inaktive fallen auf secondary/0 (erscheinen nicht im
             # Layout).
             bucket, order = bucket_order_by_id.get(mid, ("secondary", 0))
+        # Issue #435: nur explizite format_mode-Felder ins Modell übernehmen,
+        # damit Roundtrip-Tests use_friendly_format bit-identisch erhalten.
+        explicit_mode = mc_data.get("format_mode")
         metrics.append(MetricConfig(
             metric_id=mid,
             enabled=mc_data.get("enabled", True),
@@ -345,6 +414,7 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
             morning_enabled=mc_data.get("morning_enabled"),
             evening_enabled=mc_data.get("evening_enabled"),
             use_friendly_format=mc_data.get("use_friendly_format", True),
+            format_mode=explicit_mode,
             alert_enabled=mc_data.get("alert_enabled", False),
             alert_threshold=mc_data.get("alert_threshold"),
             horizons=mc_data.get("horizons"),
@@ -368,6 +438,7 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
                 continue
             ch_parsed: List[MetricConfig] = []
             for mc_data in ch_metrics:
+                ch_explicit_mode = mc_data.get("format_mode")
                 ch_parsed.append(MetricConfig(
                     metric_id=mc_data["metric_id"],
                     enabled=mc_data.get("enabled", True),
@@ -375,6 +446,7 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
                     morning_enabled=mc_data.get("morning_enabled"),
                     evening_enabled=mc_data.get("evening_enabled"),
                     use_friendly_format=mc_data.get("use_friendly_format", True),
+                    format_mode=ch_explicit_mode,
                     alert_enabled=mc_data.get("alert_enabled", False),
                     alert_threshold=mc_data.get("alert_threshold"),
                     horizons=mc_data.get("horizons"),
@@ -647,21 +719,7 @@ def save_location(location: SavedLocation, user_id: str = "default") -> Path:
         dc = location.display_config
         data["display_config"] = {
             "trip_id": dc.trip_id,
-            "metrics": [
-                {
-                    "metric_id": mc.metric_id,
-                    "enabled": mc.enabled,
-                    "aggregations": mc.aggregations,
-                    "morning_enabled": mc.morning_enabled,
-                    "evening_enabled": mc.evening_enabled,
-                    "use_friendly_format": mc.use_friendly_format,
-                    "alert_enabled": mc.alert_enabled,
-                    "alert_threshold": mc.alert_threshold,
-                    "bucket": mc.bucket,
-                    "order": mc.order,
-                }
-                for mc in dc.metrics
-            ],
+            "metrics": [_metric_to_dict(mc) for mc in dc.metrics],
             "show_night_block": dc.show_night_block,
             "night_interval_hours": dc.night_interval_hours,
             "thunder_forecast_days": dc.thunder_forecast_days,
@@ -788,21 +846,7 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
         dc = trip.display_config
         data["display_config"] = {
             "trip_id": dc.trip_id,
-            "metrics": [
-                {
-                    "metric_id": mc.metric_id,
-                    "enabled": mc.enabled,
-                    "aggregations": mc.aggregations,
-                    "morning_enabled": mc.morning_enabled,
-                    "evening_enabled": mc.evening_enabled,
-                    "use_friendly_format": mc.use_friendly_format,
-                    "alert_enabled": mc.alert_enabled,
-                    "alert_threshold": mc.alert_threshold,
-                    "bucket": mc.bucket,
-                    "order": mc.order,
-                }
-                for mc in dc.metrics
-            ],
+            "metrics": [_metric_to_dict(mc) for mc in dc.metrics],
             "show_night_block": dc.show_night_block,
             "night_interval_hours": dc.night_interval_hours,
             "thunder_forecast_days": dc.thunder_forecast_days,
@@ -1037,21 +1081,7 @@ def save_compare_subscriptions(
             dc = sub.display_config
             sub_dict["display_config"] = {
                 "trip_id": dc.trip_id,
-                "metrics": [
-                    {
-                        "metric_id": mc.metric_id,
-                        "enabled": mc.enabled,
-                        "aggregations": mc.aggregations,
-                        "morning_enabled": mc.morning_enabled,
-                        "evening_enabled": mc.evening_enabled,
-                        "use_friendly_format": mc.use_friendly_format,
-                        "alert_enabled": mc.alert_enabled,
-                        "alert_threshold": mc.alert_threshold,
-                        "bucket": mc.bucket,
-                        "order": mc.order,
-                    }
-                    for mc in dc.metrics
-                ],
+                "metrics": [_metric_to_dict(mc) for mc in dc.metrics],
                 "updated_at": dc.updated_at.isoformat(),
             }
         sub_list.append(sub_dict)

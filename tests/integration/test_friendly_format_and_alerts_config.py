@@ -48,9 +48,14 @@ def _make_display_config(friendly_overrides: dict[str, bool]) -> UnifiedWeatherD
 
 
 def _make_formatter(dc: UnifiedWeatherDisplayConfig) -> TripReportFormatter:
-    """Create a formatter with _friendly_keys built from the given config."""
+    """Create a formatter with _friendly_keys built from the given config.
+
+    Issue #435 / AC-10: build_friendly_keys() lebt jetzt in
+    src.output.renderers.email.helpers (Konsolidierung der Duplikate).
+    """
+    from src.output.renderers.email.helpers import build_friendly_keys
     fmt = TripReportFormatter()
-    fmt._friendly_keys = fmt._build_friendly_keys(dc)
+    fmt._friendly_keys = build_friendly_keys(dc)
     return fmt
 
 
@@ -65,8 +70,8 @@ class TestBuildFriendlyKeys:
     def test_all_friendly_enabled(self) -> None:
         """Default config: all friendly metrics are in the set."""
         dc = build_default_display_config()
-        fmt = TripReportFormatter()
-        keys = fmt._build_friendly_keys(dc)
+        from src.output.renderers.email.helpers import build_friendly_keys
+        keys = build_friendly_keys(dc)
         # All metrics with has_friendly_format and default use_friendly=True
         assert "cloud" in keys
         assert "cape" in keys
@@ -75,22 +80,22 @@ class TestBuildFriendlyKeys:
     def test_visibility_disabled(self) -> None:
         """Visibility friendly=False: 'visibility' not in set."""
         dc = _make_display_config({"visibility": False})
-        fmt = TripReportFormatter()
-        keys = fmt._build_friendly_keys(dc)
+        from src.output.renderers.email.helpers import build_friendly_keys
+        keys = build_friendly_keys(dc)
         assert "visibility" not in keys
 
     def test_cape_disabled(self) -> None:
         """Cape friendly=False: 'cape' not in set."""
         dc = _make_display_config({"cape": False})
-        fmt = TripReportFormatter()
-        keys = fmt._build_friendly_keys(dc)
+        from src.output.renderers.email.helpers import build_friendly_keys
+        keys = build_friendly_keys(dc)
         assert "cape" not in keys
 
     def test_cloud_disabled(self) -> None:
         """Cloud friendly=False: 'cloud' not in set."""
         dc = _make_display_config({"cloud_total": False})
-        fmt = TripReportFormatter()
-        keys = fmt._build_friendly_keys(dc)
+        from src.output.renderers.email.helpers import build_friendly_keys
+        keys = build_friendly_keys(dc)
         assert "cloud" not in keys
 
     def test_all_friendly_disabled(self) -> None:
@@ -101,8 +106,8 @@ class TestBuildFriendlyKeys:
             "visibility": False, "wind_direction": False, "sunshine": False,
         }
         dc = _make_display_config(overrides)
-        fmt = TripReportFormatter()
-        keys = fmt._build_friendly_keys(dc)
+        from src.output.renderers.email.helpers import build_friendly_keys
+        keys = build_friendly_keys(dc)
         assert keys == set()
 
 

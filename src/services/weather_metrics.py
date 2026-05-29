@@ -125,6 +125,52 @@ def _cloud_pct_emoji(cloud_pct: Optional[int]) -> str:
     return "☁️"
 
 
+# =============================================================================
+# Issue #435: Simplified-Mode Helpers (single source of truth)
+# =============================================================================
+# Used by E-Mail-Renderer (helpers.fmt_val) for format_mode="simplified".
+# Adjective thresholds mirror compact_summary._format_wind (line 271–279)
+# and compact_summary._precip_adjective (line 187–192).
+
+def format_wind_strength(kmh: Optional[float]) -> str:
+    """Wind-strength adjective (kürzel) for simplified-mode rendering.
+
+    Thresholds mirror compact_summary._format_wind (line 271–279):
+      <10 km/h  -> "schwach"
+      <25 km/h  -> "mäßig"
+      <40 km/h  -> "stark"
+      >=40 km/h -> "sehr stark"
+    None -> "–"
+    """
+    if kmh is None:
+        return "–"
+    if kmh < 10:
+        return "schwach"
+    if kmh < 25:
+        return "mäßig"
+    if kmh < 40:
+        return "stark"
+    return "sehr stark"
+
+
+def format_precip_intensity(mm: Optional[float]) -> str:
+    """Precipitation-intensity adjective (kürzel) for simplified-mode rendering.
+
+    Thresholds mirror compact_summary._precip_adjective (line 187–192):
+      None or 0  -> "trocken"
+      <=2 mm     -> "leicht"
+      <=10 mm    -> "mäßig"
+      >10 mm     -> "stark"
+    """
+    if mm is None or mm <= 0:
+        return "trocken"
+    if mm <= 2:
+        return "leicht"
+    if mm <= 10:
+        return "mäßig"
+    return "stark"
+
+
 def compute_dominant_wmo(data) -> Optional[int]:
     """Most severe WMO code from hourly data points."""
     codes = [dp.wmo_code for dp in data if getattr(dp, 'wmo_code', None) is not None]

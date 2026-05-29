@@ -18,6 +18,7 @@ from app.models import (
 from app.profile import ActivityProfile
 from services.daylight_service import DaylightWindow
 
+from src.output.renderers.email.helpers import build_format_modes
 from src.output.renderers.email.html import render_html
 from src.output.renderers.email.plain import render_plain
 from src.output.tokens.dto import TokenLine
@@ -57,6 +58,9 @@ def render_email(
     trip_name = token_line.trip_name or token_line.stage_name
     report_type = token_line.report_type
     night_rows_list = night_rows if night_rows is not None else []
+    # Issue #435: pro-Spalte effektiver format_mode (resolves explicit MetricConfig.format_mode
+    # else catalog default; mirrors loader._resolve_format_mode semantics).
+    format_modes = build_format_modes(display_config)
 
     html_body = render_html(
         segments=segments,
@@ -75,6 +79,7 @@ def render_email(
         daylight=daylight,
         tz=tz,
         friendly_keys=friendly_keys,
+        format_modes=format_modes,
         profile=profile,
     )
     plain_body = render_plain(
@@ -94,6 +99,7 @@ def render_email(
         daylight=daylight,
         tz=tz,
         friendly_keys=friendly_keys,
+        format_modes=format_modes,
         profile=profile,
     )
     return html_body, plain_body

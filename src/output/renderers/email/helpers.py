@@ -38,16 +38,44 @@ _WEEKDAY_DE = [
 # Wind-direction helpers
 # ----------------------------------------------------------------------
 
+def _effective_format_mode(mc) -> str:
+    """Issue #435: resolve effective format_mode from MetricConfig.
+
+    Precedence:
+      1. Explicit mc.format_mode (new field) wins.
+      2. Legacy mc.use_friendly_format=True -> catalog default_format_mode.
+      3. Legacy mc.use_friendly_format=False -> "raw".
+    """
+    explicit = getattr(mc, "format_mode", None)
+    if explicit is not None:
+        return explicit
+    if not getattr(mc, "use_friendly_format", True):
+        return "raw"
+    try:
+        return get_metric(mc.metric_id).default_format_mode
+    except KeyError:
+        return "raw"
+
+
 def should_merge_wind_dir(dc: UnifiedWeatherDisplayConfig) -> bool:
-    """True if wind_direction (friendly) should merge into wind column."""
+    """True if wind_direction (scale-mode) should merge into wind column.
+
+    Issue #435: trigger switched from `use_friendly_format` bool to
+    `format_mode == "scale"` — semantically the same default behaviour for
+    pre-#435 data (catalog default is "scale" for wind_direction), but a
+    user with explicit `format_mode="raw"` now sees the wind-direction as a
+    separate degree column instead of a compass-merged cell.
+    """
     wind_enabled = False
-    wdir_enabled_friendly = False
+    wdir_enabled_scale = False
     for mc in dc.metrics:
         if mc.metric_id == "wind" and mc.enabled:
             wind_enabled = True
-        if mc.metric_id == "wind_direction" and mc.enabled and mc.use_friendly_format:
-            wdir_enabled_friendly = True
-    return wind_enabled and wdir_enabled_friendly
+        if (mc.metric_id == "wind_direction"
+                and mc.enabled
+                and _effective_format_mode(mc) == "scale"):
+            wdir_enabled_scale = True
+    return wind_enabled and wdir_enabled_scale
 
 
 def degrees_to_compass(degrees: int | float | None) -> str:
@@ -329,12 +357,27 @@ def build_units_legend(rows: list[dict]) -> str:
 # Cell value formatting
 # ----------------------------------------------------------------------
 
-def fmt_val(key: str, val, *, friendly_keys: set[str],
-            html: bool = False, row: dict | None = None) -> str:
-    """Format single cell value. Respects per-metric friendly format toggle."""
+def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
+            html: bool = False, row: dict | None = None,
+            format_modes: dict[str, str] | None = None) -> str:
+    """Format single cell value. Respects per-metric format_mode toggle.
+
+    Issue #435: when `format_modes` is provided, the per-column mode wins
+    over the `friendly_keys` set. The two parameters coexist for backward
+    compatibility.
+    """
     if val is None:
         return "–"
-    use_friendly = key in friendly_keys
+
+    # Resolve effective mode per column (Issue #435).
+    if format_modes is not None:
+        mode = format_modes.get(key, "raw")
+    else:
+        mode = None
+    # Legacy fallback when no per-column modes are supplied.
+    if friendly_keys is None:
+        friendly_keys = set()
+    use_friendly = (mode is not None and mode != "raw") or (mode is None and key in friendly_keys)
 
     if key == "thunder":
         if val == ThunderLevel.HIGH:
@@ -347,6 +390,10 @@ def fmt_val(key: str, val, *, friendly_keys: set[str],
     if key in ("temp", "felt", "dewpoint"):
         return f"{val:.1f}"
     if key in ("wind", "gust"):
+        # Issue #435: simplified -> adjective only, kein km/h-Wert in Zelle.
+        if mode == "simplified":
+            from services.weather_metrics import format_wind_strength
+            return format_wind_strength(val)
         s = f"{val:.0f}"
         if key == "wind" and row and "_wind_dir_deg" in row:
             compass = degrees_to_compass(row["_wind_dir_deg"])
@@ -360,6 +407,9 @@ def fmt_val(key: str, val, *, friendly_keys: set[str],
                 return f'<span style="background:#fff9c4;color:#f57f17;padding:2px 4px;border-radius:3px">{s}</span>'
         return s
     if key == "precip":
+        if mode == "simplified":
+            from services.weather_metrics import format_precip_intensity
+            return format_precip_intensity(val)
         s = f"{val:.1f}"
         dt = get_metric("precipitation").display_thresholds
         if html and val and dt.get("blue") and val >= dt["blue"]:
@@ -445,6 +495,13 @@ def fmt_val(key: str, val, *, friendly_keys: set[str],
     if key == "freeze_lvl":
         return f"{val:.0f}"
     if key == "wind_dir":
+        # Issue #435: raw mode -> degree value; scale mode -> compass label
+        # (default friendly behaviour for pre-#435 data).
+        if mode == "raw":
+            try:
+                return f"{int(val)}°"
+            except (TypeError, ValueError):
+                return str(val)
         return degrees_to_compass(val) or str(val)
     return str(val)
 
@@ -503,17 +560,40 @@ def build_segment_label(change, segments, *, tz: ZoneInfo = ZoneInfo("UTC")) -> 
 
 
 def build_friendly_keys(dc: UnifiedWeatherDisplayConfig) -> set[str]:
-    """col_keys where user wants friendly format (mirrors trip_report)."""
+    """col_keys where user wants friendly format (mirrors trip_report).
+
+    Issue #435: friendly = format_mode in {"scale","simplified","symbol"}.
+    Keeps backward-compat for legacy callers passing dc with only
+    use_friendly_format set (effective-mode helper resolves via catalog).
+    """
     keys: set[str] = set()
     for mc in dc.metrics:
-        if mc.use_friendly_format:
-            try:
-                metric_def = get_metric(mc.metric_id)
-                if metric_def.has_friendly_format:
-                    keys.add(metric_def.col_key)
-            except KeyError:
-                pass
+        mode = _effective_format_mode(mc)
+        if mode == "raw":
+            continue
+        try:
+            metric_def = get_metric(mc.metric_id)
+            if metric_def.has_friendly_format:
+                keys.add(metric_def.col_key)
+        except KeyError:
+            pass
     return keys
+
+
+def build_format_modes(dc: UnifiedWeatherDisplayConfig) -> dict[str, str]:
+    """Issue #435: col_key -> effective format_mode mapping for the renderer.
+
+    Resolves explicit MetricConfig.format_mode if set, else falls back via
+    the catalog default (mirrors loader._resolve_format_mode semantics).
+    """
+    out: dict[str, str] = {}
+    for mc in dc.metrics:
+        try:
+            metric_def = get_metric(mc.metric_id)
+        except KeyError:
+            continue
+        out[metric_def.col_key] = _effective_format_mode(mc)
+    return out
 
 
 def pill_html(label: str, tone: str) -> str:

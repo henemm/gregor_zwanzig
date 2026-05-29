@@ -17,6 +17,7 @@
 	import { getContext, onMount } from 'svelte';
 	import { Eyebrow } from '$lib/components/ui/eyebrow';
 	import { Field } from '$lib/components/molecules';
+	import { Select } from '$lib/components/ui/select';
 	import { api } from '$lib/api';
 	import {
 		CATEGORY_ORDER,
@@ -67,10 +68,20 @@
 	let catalog = $state<MetricCatalog>({});
 	let loading = $state(true);
 
-	// Format-Modus pro Metrik (UI-only, nicht in WeatherConfigMetric persistiert):
-	//   raw / scale / simplified / symbol.
+	// Format-Modus pro Metrik. Werte: raw / scale / simplified / symbol.
+	// Issue #435: persistiert jetzt in WeatherConfigMetric.format_mode parallel
+	// zu use_friendly_format (Backward-Compat). Dropdown-Optionen werden pro
+	// Metrik aus m.format_modes (Katalog) iteriert.
 	type FormatMode = 'raw' | 'scale' | 'simplified' | 'symbol';
 	let formatModeMap = $state<Record<string, FormatMode>>({});
+
+	// Issue #435: Label-Map für die Dropdown-Anzeige.
+	const FORMAT_MODE_LABELS: Record<string, string> = {
+		raw: 'Roh',
+		scale: 'Skala',
+		simplified: 'Vereinfacht',
+		symbol: 'Symbol'
+	};
 
 	onMount(async () => {
 		try {
@@ -84,18 +95,24 @@
 	});
 
 	function initFromCatalog() {
-		// Initial-Zustand des Format-Dropdowns: Roh, wenn keine Friendly-Format-Fähigkeit,
-		// sonst Skala. (Defaults fürs UI; persistiert wird use_friendly_format=boolean.)
+		// Issue #435: Initial-Modus pro Metrik = default_format_mode aus Katalog
+		// (Fallback raw, wenn Backend-Katalog noch alt ist).
 		const modes: Record<string, FormatMode> = {};
 		for (const cat of Object.values(catalog)) {
 			for (const m of cat) {
-				modes[m.id] = m.has_friendly_format ? 'scale' : 'raw';
+				const def = (m.default_format_mode ?? (m.has_friendly_format ? 'scale' : 'raw')) as FormatMode;
+				modes[m.id] = def;
 			}
 		}
-		// Wenn schon weatherMetrics existieren, deren use_friendly_format spiegeln
+		// Bereits persistierten format_mode (oder Legacy-Bool) zurückspiegeln.
 		for (const m of wizard.weatherMetrics) {
 			if (modes[m.metric_id] !== undefined) {
-				modes[m.metric_id] = m.use_friendly_format ? 'scale' : 'raw';
+				if (m.format_mode) {
+					modes[m.metric_id] = m.format_mode as FormatMode;
+				} else if (m.use_friendly_format === false) {
+					modes[m.metric_id] = 'raw';
+				}
+				// (use_friendly_format=true ohne format_mode → Katalog-Default)
 			}
 		}
 		formatModeMap = modes;
@@ -105,10 +122,12 @@
 			const all: WeatherConfigMetric[] = [];
 			for (const catKey of CATEGORY_ORDER) {
 				for (const m of catalog[catKey] ?? []) {
+					const def = (m.default_format_mode ?? (m.has_friendly_format ? 'scale' : 'raw'));
 					all.push({
 						metric_id: m.id,
 						enabled: true,
-						use_friendly_format: m.has_friendly_format
+						use_friendly_format: def !== 'raw',
+						format_mode: def
 					});
 				}
 			}
@@ -142,7 +161,11 @@
 			const mode = (e.target as HTMLSelectElement).value as FormatMode;
 			formatModeMap[metricId] = mode;
 			const m = findMetric(metricId);
-			if (m) m.use_friendly_format = mode !== 'raw';
+			if (m) {
+				// Issue #435: schreibe format_mode (neu) UND use_friendly_format (BC).
+				m.format_mode = mode;
+				m.use_friendly_format = mode !== 'raw';
+			}
 		};
 	}
 </script>
@@ -150,16 +173,16 @@
 <div class="step3-weather flex flex-col gap-6 py-4" data-testid="step3-weather">
 	<section class="flex flex-col gap-2">
 		<Field label="AKTIVITÄTSPROFIL">
-			<select
+			<Select
 				data-testid="activity-dropdown"
 				bind:value={selectedOption}
 				onchange={handleActivityChange}
-				class="h-9 max-w-xs rounded-lg border border-[var(--g-ink-faint)]/40 bg-transparent px-2.5 outline-none focus-visible:ring-2 focus-visible:ring-[var(--g-accent)]"
+				class="max-w-xs"
 			>
 				{#each ACTIVITY_OPTIONS as opt (opt.value)}
 					<option value={opt.value}>{opt.label}</option>
 				{/each}
-			</select>
+			</Select>
 		</Field>
 
 		{#if wizard.activity === null}
@@ -208,17 +231,15 @@
 										<span>{m.label}</span>
 									</label>
 
-									<select
+									<Select
 										data-testid={`metric-format-select-${m.id}`}
-										value={formatModeMap[m.id] ?? 'raw'}
+										value={formatModeMap[m.id] ?? (m.default_format_mode ?? 'raw')}
 										onchange={makeFormatChange(m.id)}
-										class="h-8 rounded border border-[var(--g-ink-faint)]/40 bg-transparent px-2 text-xs outline-none focus-visible:ring-2 focus-visible:ring-[var(--g-accent)]"
 									>
-										<option value="raw">Roh</option>
-										<option value="scale">Skala</option>
-										<option value="simplified">Vereinfacht</option>
-										<option value="symbol">Symbol</option>
-									</select>
+										{#each (m.format_modes ?? ['raw']) as mode (mode)}
+											<option value={mode}>{FORMAT_MODE_LABELS[mode] ?? mode}</option>
+										{/each}
+									</Select>
 								</div>
 							{/each}
 						</div>

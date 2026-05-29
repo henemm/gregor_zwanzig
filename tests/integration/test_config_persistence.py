@@ -348,7 +348,8 @@ class TestFriendlyFormatRespectsConfig:
             thunder_forecast_days=dc.thunder_forecast_days,
         )
         fmt = TripReportFormatter()
-        fmt._friendly_keys = fmt._build_friendly_keys(dc)
+        from src.output.renderers.email.helpers import build_friendly_keys
+        fmt._friendly_keys = build_friendly_keys(dc)
         result = fmt._fmt_val("visibility", 15000)
         assert result == "15"
         assert result != "good"
@@ -371,7 +372,8 @@ class TestFriendlyFormatRespectsConfig:
             thunder_forecast_days=dc.thunder_forecast_days,
         )
         fmt = TripReportFormatter()
-        fmt._friendly_keys = fmt._build_friendly_keys(dc)
+        from src.output.renderers.email.helpers import build_friendly_keys
+        fmt._friendly_keys = build_friendly_keys(dc)
         result = fmt._fmt_val("visibility", 15000)
         assert result == "good"
 
@@ -393,7 +395,8 @@ class TestFriendlyFormatRespectsConfig:
             thunder_forecast_days=dc.thunder_forecast_days,
         )
         fmt = TripReportFormatter()
-        fmt._friendly_keys = fmt._build_friendly_keys(dc)
+        from src.output.renderers.email.helpers import build_friendly_keys
+        fmt._friendly_keys = build_friendly_keys(dc)
         result = fmt._fmt_val("cloud", 50)
         assert result == "50"
 

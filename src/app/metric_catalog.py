@@ -44,6 +44,10 @@ class MetricDefinition:
     highlight_threshold: Optional[float] = None
     risk_thresholds: dict[str, float] = field(default_factory=dict)
     exposition_risk_thresholds: dict[str, float] = field(default_factory=dict)
+    # Issue #435: Format-Modi pro Metrik. SPEC docs/specs/modules/issue_435_metric_format_modes.md
+    # Erlaubte Werte: "raw" | "scale" | "simplified" | "symbol"
+    format_modes: tuple[str, ...] = ("raw",)
+    default_format_mode: str = "raw"
 
     @property
     def has_friendly_format(self) -> bool:
@@ -105,6 +109,8 @@ _METRICS: list[MetricDefinition] = [
         highlight_threshold=50.0,
         risk_thresholds={"medium": 50.0, "high": 70.0},
         exposition_risk_thresholds={"medium": 30, "high": 50},
+        format_modes=("raw", "simplified"),
+        default_format_mode="raw",
     ),
     MetricDefinition(
         id="gust", label_de="Böen", unit="km/h",
@@ -118,6 +124,8 @@ _METRICS: list[MetricDefinition] = [
         highlight_threshold=60.0,
         risk_thresholds={"medium": 50.0, "high": 70.0},
         exposition_risk_thresholds={"medium": 40, "high": 60},
+        format_modes=("raw", "simplified"),
+        default_format_mode="raw",
     ),
     MetricDefinition(
         id="wind_direction", label_de="Windrichtung", unit="°",
@@ -129,6 +137,8 @@ _METRICS: list[MetricDefinition] = [
         summary_fields={"avg": "wind_direction_avg_deg"},
         friendly_label="N/S/W/E",
         # Circular mean: no numeric delta comparison for alerts
+        format_modes=("raw", "scale"),
+        default_format_mode="scale",
     ),
     # === PRECIPITATION ===
     MetricDefinition(
@@ -141,6 +151,8 @@ _METRICS: list[MetricDefinition] = [
         default_change_threshold=10.0,
         display_thresholds={"blue": 5.0},
         risk_thresholds={"medium": 20.0},
+        format_modes=("raw", "simplified"),
+        default_format_mode="raw",
     ),
     MetricDefinition(
         id="rain_probability", label_de="Regenwahrscheinlichkeit", unit="%",
@@ -177,6 +189,8 @@ _METRICS: list[MetricDefinition] = [
         summary_fields={"max": "thunder_level_max"},
         default_change_threshold=1.0,
         friendly_label="⚡",
+        format_modes=("symbol",),
+        default_format_mode="symbol",
     ),
     MetricDefinition(
         id="cape", label_de="Gewitterenergie (CAPE)", unit="J/kg",
@@ -191,6 +205,8 @@ _METRICS: list[MetricDefinition] = [
         display_thresholds={"yellow": 1000.0},
         highlight_threshold=1000.0,
         risk_thresholds={"medium": 1000.0, "high": 2000.0},
+        format_modes=("raw", "symbol"),
+        default_format_mode="symbol",
     ),
     MetricDefinition(
         id="snowfall_limit", label_de="Schneefallgrenze", unit="m",
@@ -220,6 +236,8 @@ _METRICS: list[MetricDefinition] = [
         friendly_label="\u2600\ufe0f\u26c5\u2601\ufe0f",
         summary_fields={"avg": "cloud_avg_pct"},
         default_change_threshold=30,
+        format_modes=("raw", "symbol"),
+        default_format_mode="symbol",
     ),
     MetricDefinition(
         id="cloud_low", label_de="Tiefe Wolken", unit="%",
@@ -230,6 +248,8 @@ _METRICS: list[MetricDefinition] = [
         default_enabled=False,
         friendly_label="\u2600\ufe0f\u26c5\u2601\ufe0f",
         # No summary_fields: not on SegmentWeatherSummary
+        format_modes=("raw", "symbol"),
+        default_format_mode="symbol",
     ),
     MetricDefinition(
         id="cloud_mid", label_de="Mittelhohe Wolken", unit="%",
@@ -240,6 +260,8 @@ _METRICS: list[MetricDefinition] = [
         default_enabled=False,
         friendly_label="\u2600\ufe0f\u26c5\u2601\ufe0f",
         # No summary_fields: not on SegmentWeatherSummary
+        format_modes=("raw", "symbol"),
+        default_format_mode="symbol",
     ),
     MetricDefinition(
         id="cloud_high", label_de="Hohe Wolken", unit="%",
@@ -250,6 +272,8 @@ _METRICS: list[MetricDefinition] = [
         default_enabled=False,
         friendly_label="\u2600\ufe0f\u26c5\u2601\ufe0f",
         # No summary_fields: not on SegmentWeatherSummary
+        format_modes=("raw", "symbol"),
+        default_format_mode="symbol",
     ),
     MetricDefinition(
         id="visibility", label_de="Sichtweite", unit="m",
@@ -264,6 +288,8 @@ _METRICS: list[MetricDefinition] = [
         default_change_threshold=1000,
         display_thresholds={"orange_lt": 500.0},
         risk_thresholds={"high_lt": 100.0},
+        format_modes=("raw", "simplified"),
+        default_format_mode="simplified",
     ),
     MetricDefinition(
         id="sunshine", label_de="Sonnenschein", unit="h",
@@ -276,6 +302,8 @@ _METRICS: list[MetricDefinition] = [
         # Issue #347: Sonnenstunden (h) statt DNI-Mittelwert (W/m²); DNI bleibt
         # intern als Hilfsgröße (Emoji-Logik) erhalten.
         summary_fields={"sum": "sunny_hours"},
+        format_modes=("raw", "symbol"),
+        default_format_mode="symbol",
     ),
     MetricDefinition(
         id="uv_index", label_de="UV-Index", unit="",

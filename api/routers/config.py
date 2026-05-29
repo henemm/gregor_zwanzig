@@ -43,5 +43,8 @@ def get_metrics():
             "category": m.category,
             "default_enabled": m.default_enabled,
             "has_friendly_format": m.has_friendly_format,
+            # Issue #435: Format-Modi pro Metrik (raw/scale/simplified/symbol)
+            "format_modes": list(m.format_modes),
+            "default_format_mode": m.default_format_mode,
         })
     return result

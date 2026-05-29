@@ -61,6 +61,10 @@ class MetricSpec:
     threshold: Optional[float] = None
     use_friendly_format: bool = False
     friendly_label: str = ""
+    # Issue #435: explicit format_mode (raw/scale/simplified/symbol).
+    # When set to "symbol" or "scale", the builder emits a friendly token
+    # bit-identical to legacy use_friendly_format=True (Backward-Compat).
+    format_mode: Optional[str] = None
 
 
 @dataclass(frozen=True)

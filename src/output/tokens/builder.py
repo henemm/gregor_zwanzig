@@ -81,11 +81,25 @@ def _visible(spec: Optional[MetricSpec], rt: ReportType) -> bool:
                 or rt == "evening" and not spec.evening_enabled)
 
 
+def _spec_uses_friendly_token(spec: Optional[MetricSpec]) -> bool:
+    """Issue #435: friendly-token trigger (parallel zu legacy use_friendly_format).
+
+    - format_mode in {"symbol","scale"} -> friendly (Symbol/Skala dominieren Text).
+    - format_mode in {"raw","simplified"} -> numerischer Token.
+    - format_mode None -> legacy use_friendly_format bool als Trigger.
+    """
+    if spec is None:
+        return False
+    if spec.format_mode is not None:
+        return spec.format_mode in ("symbol", "scale")
+    return bool(spec.use_friendly_format)
+
+
 def _mk_metric(symbol: str, samples: tuple, spec: Optional[MetricSpec],
                rt: ReportType, is_level: bool = False) -> Optional[Token]:
     if not _visible(spec, rt):
         return None
-    if spec and spec.use_friendly_format and spec.friendly_label:
+    if spec and _spec_uses_friendly_token(spec) and spec.friendly_label:
         value = f"\x00{spec.friendly_label}"
     else:
         thr = spec.threshold if (spec and spec.threshold is not None) \
@@ -220,7 +234,7 @@ def build_token_line(
     # Friendly-format companion tokens (custom symbols only).
     handled = {t.symbol for t in tokens}
     for spec in specs:
-        if (spec.use_friendly_format and spec.friendly_label
+        if (_spec_uses_friendly_token(spec) and spec.friendly_label
                 and spec.symbol not in handled
                 and spec.symbol not in STD_SYMBOLS
                 and _visible(spec, report_type)):

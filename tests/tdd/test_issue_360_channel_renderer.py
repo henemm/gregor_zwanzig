@@ -243,7 +243,8 @@ def test_ac5_render_narrow_signal_line_width_and_detail_trailer():
     formatter = TripReportFormatter()
     tz = ZoneInfo("Europe/Vienna")
     formatter._tz = tz
-    formatter._friendly_keys = formatter._build_friendly_keys(dc)
+    from src.output.renderers.email.helpers import build_friendly_keys
+    formatter._friendly_keys = build_friendly_keys(dc)
     seg_tables = [formatter._extract_hourly_rows(segment, dc)]
     assert seg_tables[0], "Row-Builder muss echte Rows liefern"
 

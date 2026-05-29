@@ -128,6 +128,17 @@ class ForecastDataPoint:
     spread_t2m_k: Optional[float] = None       # Ensemble sigma Temperatur, in K
     spread_precip_mm: Optional[float] = None   # Ensemble sigma Niederschlag, in mm
 
+    # Issue #435: Test-helper alias — some test helpers init with
+    # `wind_dir_deg=` instead of `wind_direction_deg=`. We accept both;
+    # __post_init__ canonicalises to wind_direction_deg.
+    wind_dir_deg: Optional[float] = None
+
+    def __post_init__(self):
+        # Issue #435: canonicalise wind_dir_deg -> wind_direction_deg.
+        if self.wind_dir_deg is not None and self.wind_direction_deg is None:
+            # dataclass with frozen=False allows direct assignment
+            object.__setattr__(self, "wind_direction_deg", int(self.wind_dir_deg))
+
 
 @dataclass
 class NormalizedTimeseries:
@@ -359,6 +370,17 @@ class SegmentWeatherSummary:
     # Metadata
     aggregation_config: dict[str, str] = field(default_factory=dict)
 
+    # Issue #435: Test-helper alias — some test helpers init with
+    # `wind_dir_deg_avg=` instead of `wind_direction_avg_deg=`.
+    wind_dir_deg_avg: Optional[float] = None
+
+    def __post_init__(self):
+        # Issue #435: canonicalise wind_dir_deg_avg -> wind_direction_avg_deg.
+        if (self.wind_dir_deg_avg is not None
+                and self.wind_direction_avg_deg is None):
+            object.__setattr__(self, "wind_direction_avg_deg",
+                               int(self.wind_dir_deg_avg))
+
 
 @dataclass
 class SegmentWeatherData:
@@ -462,7 +484,14 @@ class MetricConfig:
     # Phase 3: per-report-type overrides (None = follows global enabled)
     morning_enabled: Optional[bool] = None
     evening_enabled: Optional[bool] = None
+    # @deprecated Issue #435 — bleibt als Backward-Compat-Boolean; neuer
+    # Format-Modus wird über `format_mode` (string) ausgedrückt. Loader
+    # mappt zwischen beiden Feldern (siehe loader._resolve_format_mode).
     use_friendly_format: bool = True
+    # Issue #435: Erweiterter Format-Modus pro Metrik.
+    # Werte: "raw" | "scale" | "simplified" | "symbol". None = lade-fallback
+    # auf default_format_mode der Metrik (resp. legacy use_friendly_format).
+    format_mode: Optional[str] = None
     # Per-metric alert configuration (v2.3)
     alert_enabled: bool = False
     alert_threshold: Optional[float] = None

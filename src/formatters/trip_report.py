@@ -38,6 +38,7 @@ from app.profile import ActivityProfile
 from services.daylight_service import DaylightWindow
 from services.risk_engine import RiskEngine
 from src.output.renderers.email import render_email
+from src.output.renderers.email.helpers import build_friendly_keys
 from src.output.tokens.dto import TokenLine
 
 
@@ -75,7 +76,7 @@ class TripReportFormatter:
             dc = dataclasses.replace(dc, metrics=active_metrics)
         self._tz = tz or ZoneInfo("UTC")
         self._exposed_sections = exposed_sections
-        self._friendly_keys = self._build_friendly_keys(dc)
+        self._friendly_keys = build_friendly_keys(dc)
         trip_id = trip_name.lower().replace(" ", "-")
         trip_id = "".join(c for c in trip_id if c.isalnum() or c == "-")
 
@@ -616,17 +617,12 @@ class TripReportFormatter:
     def _should_merge_wind_dir(dc: UnifiedWeatherDisplayConfig) -> bool:
         """Check if wind_direction should be merged into wind column.
 
-        Returns True when wind_direction is enabled with friendly format ON
-        and wind is also enabled.
+        Issue #435: trigger switched from `use_friendly_format` bool to
+        `format_mode == "scale"`. Default (legacy) behaviour preserved via
+        catalog default_format_mode="scale" for wind_direction.
         """
-        wind_enabled = False
-        wdir_enabled_friendly = False
-        for mc in dc.metrics:
-            if mc.metric_id == "wind" and mc.enabled:
-                wind_enabled = True
-            if mc.metric_id == "wind_direction" and mc.enabled and mc.use_friendly_format:
-                wdir_enabled_friendly = True
-        return wind_enabled and wdir_enabled_friendly
+        from src.output.renderers.email.helpers import should_merge_wind_dir
+        return should_merge_wind_dir(dc)
 
     @staticmethod
     def _degrees_to_compass(degrees: int | float | None) -> str:
@@ -636,19 +632,6 @@ class TripReportFormatter:
         degrees = int(degrees) % 360
         directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
         return directions[round(degrees / 45) % 8]
-
-    def _build_friendly_keys(self, dc: UnifiedWeatherDisplayConfig) -> set[str]:
-        """Build set of col_keys where user wants friendly formatting."""
-        keys = set()
-        for mc in dc.metrics:
-            if mc.use_friendly_format:
-                try:
-                    metric_def = get_metric(mc.metric_id)
-                    if metric_def.has_friendly_format:
-                        keys.add(metric_def.col_key)
-                except KeyError:
-                    pass
-        return keys
 
     def _fmt_val(self, key: str, val, html: bool = False, row: dict | None = None) -> str:
         """Format a single cell value. Respects per-metric friendly format toggle."""

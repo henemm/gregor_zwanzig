@@ -124,10 +124,30 @@ export const HORIZONS_ALL: Horizons = {
 	day_after: true,
 };
 
+// Issue #435 — kanonische Frontend-Repräsentation eines Metrik-Eintrags
+// aus GET /api/catalog/metrics. Single Source of Truth (Adversary F002).
+// Frühere lokale Duplikate in metricsEditor.ts und WeatherConfigDialog.svelte
+// wurden durch Import dieses Typs ersetzt.
+export interface MetricEntry {
+	id: string;
+	label: string;
+	unit: string;
+	category: string;
+	default_enabled: boolean;
+	has_friendly_format: boolean;
+	/** Issue #435: erlaubte Format-Modi pro Metrik (raw/scale/simplified/symbol). */
+	format_modes?: string[];
+	/** Issue #435: Default-Format-Modus dieser Metrik. */
+	default_format_mode?: string;
+}
+
 export interface WeatherConfigMetric {
 	metric_id: string;
 	enabled: boolean;
+	/** @deprecated Issue #435 — bleibt als Backward-Compat; siehe `format_mode`. */
 	use_friendly_format?: boolean;
+	/** Issue #435: explicit format mode. Werte: 'raw' | 'scale' | 'simplified' | 'symbol'. */
+	format_mode?: string;
 	horizons?: Horizons; // Issue #343 — optional; defaultet HORIZONS_ALL beim Load
 	// Issue #364 — Bucket-Editor: Spalten/Detail-Zuordnung + Reihenfolge.
 	// Reisen additiv durch die Go-API (DisplayConfig = map[string]interface{})

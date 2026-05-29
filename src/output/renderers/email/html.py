@@ -90,6 +90,7 @@ def _render_html_table(
     *,
     friendly_keys: set[str],
     allowed_col_keys: Optional[set[str]] = None,
+    format_modes: Optional[dict[str, str]] = None,
 ) -> str:
     if not rows:
         # Empty rows: render a minimal table skeleton so callers can still
@@ -104,7 +105,8 @@ def _render_html_table(
         tds = f'<td data-label="Time">{r["time"]}</td>'
         for key, label in cols:
             try:
-                cell = fmt_val(key, r.get(key), friendly_keys=friendly_keys, html=True, row=r)
+                cell = fmt_val(key, r.get(key), friendly_keys=friendly_keys,
+                               html=True, row=r, format_modes=format_modes)
             except (TypeError, ValueError):
                 cell = str(r.get(key)) if r.get(key) is not None else "–"
             tds += f'<td data-label="{label}">{cell}</td>'
@@ -118,6 +120,7 @@ def _render_mobile_compact_rows(
     *,
     friendly_keys: set[str],
     allowed_col_keys: Optional[set[str]] = None,
+    format_modes: Optional[dict[str, str]] = None,
 ) -> str:
     """Single-line-per-hour rows for the mobile compact email view."""
     cols = visible_cols(rows) if rows else []
@@ -129,7 +132,8 @@ def _render_mobile_compact_rows(
         vals = []
         for key, _ in cols:
             try:
-                cell = fmt_val(key, r.get(key), friendly_keys=friendly_keys, html=True, row=r)
+                cell = fmt_val(key, r.get(key), friendly_keys=friendly_keys,
+                               html=True, row=r, format_modes=format_modes)
             except (TypeError, ValueError):
                 raw = r.get(key)
                 cell = str(raw) if raw is not None else ""
@@ -194,6 +198,7 @@ def render_html(
     daylight: Optional[DaylightWindow],
     tz: ZoneInfo,
     friendly_keys: set[str],
+    format_modes: Optional[dict[str, str]] = None,
     profile: Optional[ActivityProfile] = None,
 ) -> str:
     """Render full HTML e-mail body. Pure function."""
@@ -241,7 +246,7 @@ def render_html(
             desktop_div = (
                 '<div class="section destination desktop-only">'
                 "<h3>" + seg_header + "</h3>"
-                + _render_html_table(rows, friendly_keys=friendly_keys, allowed_col_keys=allowed_keys)
+                + _render_html_table(rows, friendly_keys=friendly_keys, allowed_col_keys=allowed_keys, format_modes=format_modes)
                 + "</div>"
             )
         else:
@@ -255,10 +260,10 @@ def render_html(
             desktop_div = (
                 '<div class="section desktop-only">'
                 "<h3>" + seg_header + "</h3>"
-                + _render_html_table(rows, friendly_keys=friendly_keys, allowed_col_keys=allowed_keys)
+                + _render_html_table(rows, friendly_keys=friendly_keys, allowed_col_keys=allowed_keys, format_modes=format_modes)
                 + "</div>"
             )
-        compact_rows = _render_mobile_compact_rows(rows, friendly_keys=friendly_keys, allowed_col_keys=allowed_keys)
+        compact_rows = _render_mobile_compact_rows(rows, friendly_keys=friendly_keys, allowed_col_keys=allowed_keys, format_modes=format_modes)
         mobile_div = (
             '<div class="mobile-compact" style="display:none;padding:0 16px">'
             '<div style="font-size:12px;font-weight:600;color:' + G_INK
@@ -278,13 +283,13 @@ def render_html(
             night_hint = f'<p style="color:{G_INK_FAINT};font-size:11px;margin-top:4px">* Temperatur/Nullgradgrenze: Minimum im 2h-Block</p>'
         night_elev = int(last_seg.end_point.elevation_m or 0)
         night_header = f"🌙 Nacht am Ziel ({night_elev}m)"
-        night_compact = _render_mobile_compact_rows(night_rows, friendly_keys=friendly_keys)
+        night_compact = _render_mobile_compact_rows(night_rows, friendly_keys=friendly_keys, format_modes=format_modes)
         night_html = (
             '<div class="section desktop-only">'
             "<h3>" + night_header + "</h3>"
             '<p style="color:' + G_INK_MUTED + ';font-size:13px">Ankunft '
             + local_fmt(last_seg.end_time, tz) + " → Morgen 06:00</p>"
-            + _render_html_table(night_rows, friendly_keys=friendly_keys)
+            + _render_html_table(night_rows, friendly_keys=friendly_keys, format_modes=format_modes)
             + night_hint
             + "</div>"
             '<div class="mobile-compact" style="display:none;padding:0 16px">'

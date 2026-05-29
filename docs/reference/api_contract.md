@@ -387,6 +387,32 @@ Lawinenlagebericht als eigenstaendiges Datenobjekt (nicht Teil von NormalizedTim
 | wind_exposition_min_elevation_m | float/null  | Wind-Exposition Höhen-Schwelle [m]; null = 1500m (F7c)|
 | updated_at                      | datetime    | Zeitpunkt der letzten Config-Änderung                  |
 
+#### MetricConfig (Issue #435)
+| Feld                | Typ              | Beschreibung                                          |
+|---------------------|------------------|-------------------------------------------------------|
+| metric_id           | str              | Metrik-ID (z.B. `wind`, `cloud_total`, `sunshine`)     |
+| enabled             | bool             | Metrik aktiv im Report? (default: true)                |
+| aggregations        | list[str]        | Aggregations-Funktionen pro Segment (default: `["min","max"]`) |
+| morning_enabled     | bool \| None     | Override Morgen-Report (None = globale Einstellung)    |
+| evening_enabled     | bool \| None     | Override Abend-Report (None = globale Einstellung)     |
+| use_friendly_format | bool             | @deprecated (seit Issue #435) — nutze `format_mode`    |
+| format_mode         | str \| None      | Format-Modus: `"raw"` \| `"scale"` \| `"simplified"` \| `"symbol"`. None = Katalog-Default |
+| alert_enabled       | bool             | Alert bei Änderung dieser Metrik? (default: false)     |
+| alert_threshold     | float \| None    | Schwellenwert für Alert (z.B. 5.0 für Temperatur)      |
+| horizons            | dict \| None     | Pro-Metrik-Zeithorizont-Filter (None = alle sichtbar)  |
+| bucket              | str              | Spalten-Gruppierung: `"primary"` (eigene Spalte) \| `"secondary"` (Detail-Zeile), default: `"primary"` |
+| order               | int              | Sortier-Reihenfolge innerhalb des Buckets (default: 0) |
+
+**Format Mode Details:**
+- `raw`: Numerischer Wert mit Einheit (z.B. `18.5°C`, `22 km/h`)
+- `scale`: Kategorisierte Skala (z.B. `wind_direction` → `N`, `NE`, `E`, ...)
+- `simplified`: Adjektiv-Kürzel ohne Zahl (z.B. `wind: schwach`, `precip: mäßig`)
+- `symbol`: Emoji-Darstellung (z.B. `cloud_total: ☁️`, `sunshine: ☀️`)
+
+**Backward Compatibility:**
+- Bestandsdaten mit nur `use_friendly_format: bool` werden beim Laden automatisch auf `format_mode` gemappt
+- Schreib-Pfade persistieren beide Felder parallel: `format_mode="symbol"` → `use_friendly_format=true`; `format_mode="raw"` → `use_friendly_format=false`
+
 ---
 
 ---
@@ -728,8 +754,90 @@ Enqueues immediate trip report (morning/evening/alert) generation and send for a
 
 ---
 
+## 15) Metric Catalog Endpoint (Issue #435)
+
+Provides metadata about available weather metrics, including per-metric format modes.
+
+**Handler:** `api/routers/config.py` | **Routing:** `cmd/server/main.go`
+
+### GET /api/metrics
+
+Returns catalog of all available weather metrics with format mode options and defaults.
+
+**Response 200:**
+
+```json
+{
+  "metrics": [
+    {
+      "id": "temperature",
+      "name": "Temperature",
+      "unit": "°C",
+      "format_modes": ["raw"],
+      "default_format_mode": "raw"
+    },
+    {
+      "id": "wind_direction",
+      "name": "Wind Direction",
+      "unit": "degrees",
+      "format_modes": ["raw", "scale"],
+      "default_format_mode": "scale"
+    },
+    {
+      "id": "cloud_total",
+      "name": "Cloud Cover (Total)",
+      "unit": "%",
+      "format_modes": ["raw", "symbol"],
+      "default_format_mode": "symbol"
+    },
+    {
+      "id": "sunshine",
+      "name": "Sunshine",
+      "unit": "hours",
+      "format_modes": ["raw", "symbol"],
+      "default_format_mode": "symbol"
+    }
+  ]
+}
+```
+
+**Field Definitions:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| metrics[] | array | List of available metrics |
+| metrics[].id | string | Metric identifier (e.g., `wind_direction`, `cloud_total`) |
+| metrics[].name | string | Human-readable metric name |
+| metrics[].unit | string | Unit of measurement |
+| metrics[].format_modes | string[] | Supported format modes for this metric (`raw`, `scale`, `simplified`, `symbol`) |
+| metrics[].default_format_mode | string | Recommended default format mode (must be in `format_modes`) |
+
+**Format Mode Reference:**
+
+| Mode | Description | Example Metrics |
+|------|-------------|-----------------|
+| `raw` | Numeric value with unit | `temperature: 18.5°C`, `wind: 22 km/h` |
+| `scale` | Categorized scale representation | `wind_direction: N (345°)` as compass point |
+| `simplified` | Adjective shorthand without value | `wind: schwach`, `precipitation: mäßig` |
+| `symbol` | Emoji or icon representation | `cloud_total: ☁️`, `sunshine: ☀️` |
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 503 | `{"error":"service_unavailable"}` | Metric catalog not initialized |
+
+**Notes:**
+
+- Frontend uses `format_modes` to filter dropdown options in Wizard Step 3 and WeatherConfigDialog
+- `MetricConfig.format_mode` in persisted configs (e.g., `trips.json`, `locations.json`) refers to one of the values in the corresponding metric's `format_modes` array
+- Legacy code may use `MetricConfig.use_friendly_format` (deprecated boolean) — loader automatically maps to `format_mode` for backward compatibility
+
+---
+
 ## Changelog
 
+- 2026-05-29: Added section 15 — Metric Catalog Endpoint (Issue #435): GET /api/metrics exposes `format_modes[]` and `default_format_mode` per metric for frontend UI filtering and backward-compatibility mapping.
 - 2026-05-10: Epic #136 Trip-Wizard Master-Spec Fundament — Extended Trip model with `shortcode` and `activity` fields; Waypoint.suggested transient flag for wizard UI; Backend Trip.validateTrip() now accepts pause stages (waypoints: []). See `docs/specs/modules/epic_136_trip_wizard.md`.
 - 2026-05-09: Added sections 12, 13, 14 — Scheduler Status, Forecast Query, Trip-Reports Trigger Endpoints (Epic #134). Support for dashboard briefing timeline, non-blocking client-side weather, and manual report trigger via API.
 - 2026-04-14: Added section 11 — Weather Config Endpoints (M5c): 6 GET/PUT-Endpoints fuer display_config auf Trip, Location und Subscription als opaque JSON.
