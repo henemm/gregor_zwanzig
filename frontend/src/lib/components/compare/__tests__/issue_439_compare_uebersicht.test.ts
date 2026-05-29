@@ -45,24 +45,14 @@ test('AC-2: CompareRow.svelte existiert', () => {
 });
 
 // ── AC-2: +page.svelte — neuer Header ────────────────────────────────────────
-
-test('AC-2: +page.svelte enthält Eyebrow WORKSPACE · ORTS-VERGLEICHE', () => {
-	const src = readFileSync(PAGE, 'utf-8');
-	assert.match(
-		src,
-		/WORKSPACE\s*[·•]\s*ORTS-VERGLEICHE/,
-		'+page.svelte muss Eyebrow "WORKSPACE · ORTS-VERGLEICHE" enthalten'
-	);
-});
-
-test('AC-2: +page.svelte enthält H1 „Orts-Vergleiche"', () => {
-	const src = readFileSync(PAGE, 'utf-8');
-	assert.match(
-		src,
-		/<h1[^>]*>\s*Orts-Vergleiche\s*<\/h1>/,
-		'+page.svelte muss eine H1 „Orts-Vergleiche" enthalten'
-	);
-});
+//
+// HINWEIS (Issue #455): Vier Assertions aus dem ursprünglichen #439-Test wurden
+// hier entfernt, weil sie durch die neue Compare-Hauptbühne überholt sind:
+//   - Eyebrow „WORKSPACE · ORTS-VERGLEICHE" (jetzt nicht mehr in +page.svelte)
+//   - H1 „Orts-Vergleiche" (jetzt nicht mehr in +page.svelte)
+//   - assert.doesNotMatch LocationsRail-Import (jetzt wieder eingebunden)
+//   - assert.doesNotMatch PresetHeader-Import (jetzt wieder eingebunden)
+// Die neuen Layout-Assertions kommen in issue_455_compare_main_stage.test.ts.
 
 test('AC-2: +page.svelte hat Button + Neuer Vergleich → /compare/new', () => {
 	const src = readFileSync(PAGE, 'utf-8');
@@ -73,52 +63,13 @@ test('AC-2: +page.svelte hat Button + Neuer Vergleich → /compare/new', () => {
 	);
 });
 
-test('AC-2: +page.svelte importiert CompareList', () => {
-	const src = readFileSync(PAGE, 'utf-8');
-	assert.match(
-		src,
-		/import\s+CompareList\b/,
-		'+page.svelte muss CompareList importieren'
-	);
-});
-
-// ── AC-2: +page.svelte — alte interaktive Inhalte sind entfernt ──────────────
-
-test('AC-2: +page.svelte enthält NICHT mehr LocationsRail (altes Layout entfernt)', () => {
-	const src = readFileSync(PAGE, 'utf-8');
-	assert.doesNotMatch(
-		src,
-		/import\s+LocationsRail\b/,
-		'+page.svelte darf LocationsRail nicht mehr importieren (altes interaktives Layout)'
-	);
-});
-
-test('AC-2: +page.svelte enthält NICHT mehr PresetHeader (altes Layout entfernt)', () => {
-	const src = readFileSync(PAGE, 'utf-8');
-	assert.doesNotMatch(
-		src,
-		/import\s+PresetHeader\b/,
-		'+page.svelte darf PresetHeader nicht mehr importieren (altes interaktives Layout)'
-	);
-});
-
 // ── AC-4: Stats-Row ───────────────────────────────────────────────────────────
-
-test('AC-4: +page.svelte enthält Stats-Row mit Aktiv/Pausiert/Drafts', () => {
-	const src = readFileSync(PAGE, 'utf-8');
-	assert.match(src, /Aktiv/, '+page.svelte muss Zähler "Aktiv" in Stats-Row haben');
-	assert.match(src, /Pausiert/, '+page.svelte muss Zähler "Pausiert" in Stats-Row haben');
-	assert.match(src, /Drafts/, '+page.svelte muss Zähler "Drafts" in Stats-Row haben');
-});
-
-test('AC-4: +page.svelte verwendet --g-accent für den Aktiv-Zähler', () => {
-	const src = readFileSync(PAGE, 'utf-8');
-	assert.match(
-		src,
-		/--g-accent/,
-		'+page.svelte muss --g-accent für den Aktiv-Zähler in der Stats-Row verwenden'
-	);
-});
+//
+// HINWEIS (Issue #455): Die beiden Stats-Row-Assertions ("Aktiv/Pausiert/Drafts"
+// in +page.svelte und --g-accent für Aktiv-Zähler) sind durch die neue
+// Compare-Hauptbühne überholt. Die Subscription-Übersicht ist jetzt im rechten
+// Sidepanel (AutoReportsOverview), nicht mehr im Haupt-Header. Status-Zähler
+// existieren in dieser Form nicht mehr.
 
 // ── AC-3: Suche ───────────────────────────────────────────────────────────────
 

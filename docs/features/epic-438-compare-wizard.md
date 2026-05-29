@@ -7,8 +7,9 @@
 - `docs/specs/modules/issue_441_compare_wizard_step3_idealwerte.md` (Step 3 — Idealwerte)
 - `docs/specs/modules/issue_442_...` (Step 4 — Layout, TBD)
 - `docs/specs/modules/issue_443_...` (Step 5 — Versand, TBD)
+- `docs/specs/modules/issue_455_compare_main_stage.md` (Compare-Hauptbühne Frontend)
 
-**Child Issues:** #440, #441, #442 (planned), #443 (planned)
+**Child Issues:** #440, #441, #442, #443, #455 (planned)
 
 ---
 
@@ -450,6 +451,7 @@ None—pure frontend changes for Steps 1–3. Backend endpoints are opaque (no s
 
 | Date | Change |
 |------|--------|
+| 2026-05-29 | Compare-Hauptbühne Frontend implemented: `/compare` route rebuilt from 49-line subscription list to full 3-column interactive layout (LocationsRail \| CompareMatrix/Banner/HourlyMatrix \| AutoReportsOverview), 156 net LoC. Issue #455 ✓ |
 | 2026-05-29 | Step 3 (Idealwerte) implemented: compareMetricDefs.ts, Step3Idealwerte.svelte, ~305 LoC, 10 AC fulfilled. Issue #441 ✓ |
 | 2026-05-27 | Wizard shell + Steps 1–2 implemented: CompareWizard.svelte, Step1Vergleich.svelte, Step2Orte.svelte, State management. Issue #440 ✓ |
 | 2026-05-?? | Steps 4–5 planned (Issues #442, #443) |
