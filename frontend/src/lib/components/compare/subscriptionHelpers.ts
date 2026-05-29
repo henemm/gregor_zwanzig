@@ -39,3 +39,19 @@ export function formatLastRun(ts: string | undefined): string {
 		minute: '2-digit'
 	}).format(d);
 }
+
+// Issue #439 — Status-Ableitung für die Übersichtsseite.
+// Rein Frontend; kein Backend-Feld. Spec §2 (issue_439_compare_uebersicht.md).
+export type CompareStatus = 'active' | 'paused' | 'draft';
+
+export const STATUS_MAP = {
+	active: { label: 'aktiv',    dot: 'var(--g-accent)' },
+	paused: { label: 'pausiert', dot: 'var(--g-ink-3)'  },
+	draft:  { label: 'draft',    dot: 'var(--g-ink-4)'  },
+} as const;
+
+export function deriveStatus(sub: Subscription): CompareStatus {
+	if (!sub.name || sub.locations.length === 0) return 'draft';
+	if (!sub.enabled) return 'paused';
+	return 'active';
+}

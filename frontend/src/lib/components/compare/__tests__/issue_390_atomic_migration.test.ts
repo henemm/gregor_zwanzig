@@ -27,10 +27,17 @@ const PRESET_HEADER = join(ROOT, 'src/lib/components/compare/PresetHeader.svelte
 const GROUP_SECTION = join(ROOT, 'src/lib/components/compare/GroupSection.svelte');
 
 // ── AC-1 + AC-5: +page.svelte — ChipBtn → Pill ────────────────────────────
+//
+// OBSOLET durch Issue #439: routes/compare/+page.svelte ist nicht mehr der
+// interaktive Vergleichsrechner, sondern eine Tabellen-Übersicht aller Orts-
+// Vergleiche. Es gibt keine Mobile-Chip-Row mehr und keinen direkten Pill-
+// Import; die alten interaktiven Composites (LocationsRail, PresetHeader,
+// CompareMatrix etc.) leben weiter, aber gehören nicht mehr in /compare.
+// Die folgenden Tests werden als historische Dokumentation belassen und mit
+// test.skip markiert — die zugrundeliegenden Composites bleiben unverändert.
 
-test('AC-1: +page.svelte importiert Pill aus atoms', () => {
+test.skip('AC-1: +page.svelte importiert Pill aus atoms (obsolet durch #439)', () => {
 	const src = readFileSync(PAGE, 'utf-8');
-	// Pill muss aus ui/pill importiert werden
 	assert.match(
 		src,
 		/import\s*\{[^}]*\bPill\b[^}]*\}\s*from\s*['"][^'"]*ui\/pill[^'"]*['"]/,
@@ -38,9 +45,8 @@ test('AC-1: +page.svelte importiert Pill aus atoms', () => {
 	);
 });
 
-test('AC-1: Mobile Chip-Row nutzt <Pill> statt inline-Button-Klassen', () => {
+test.skip('AC-1: Mobile Chip-Row nutzt <Pill> statt inline-Button-Klassen (obsolet durch #439)', () => {
 	const src = readFileSync(PAGE, 'utf-8');
-	// Der data-testid="compare-mobile-chip-row"-Block muss Pill enthalten
 	const chipRowBlock = src.match(
 		/data-testid="compare-mobile-chip-row"[\s\S]*?(?=<\/div>\s*<Btn|<Btn\s+data-testid="compare-mobile-open-sheet")/
 	)?.[0] ?? '';
@@ -59,7 +65,7 @@ test('AC-5: Alte inline-Button-Klassen aus Mobile Chip-Row entfernt', () => {
 	);
 });
 
-test('AC-1: Mobile Chip-Buttons haben aria-pressed', () => {
+test.skip('AC-1: Mobile Chip-Buttons haben aria-pressed (obsolet durch #439)', () => {
 	const src = readFileSync(PAGE, 'utf-8');
 	const chipRowBlock = src.match(
 		/data-testid="compare-mobile-chip-row"[\s\S]*?(?=<Btn\s+data-testid="compare-mobile-open-sheet")/

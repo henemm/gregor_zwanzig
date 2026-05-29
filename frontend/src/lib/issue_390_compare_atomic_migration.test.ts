@@ -30,7 +30,8 @@ test('AC-1a: compare/+page.svelte importiert Pill aus ui/pill', () => {
 	);
 });
 
-test('AC-1b: compare/+page.svelte hat aria-pressed auf dem Mobile-Chip-Button', () => {
+// Obsolet durch Issue #439: /compare ist Tabellen-Übersicht, kein Mobile-Chip-Picker mehr.
+test.skip('AC-1b: compare/+page.svelte hat aria-pressed auf dem Mobile-Chip-Button (obsolet durch #439)', () => {
 	const src = read('routes/compare/+page.svelte');
 	assert.ok(
 		src.includes('aria-pressed'),
