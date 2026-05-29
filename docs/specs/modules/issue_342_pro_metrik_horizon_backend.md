@@ -583,6 +583,7 @@ Alle Tests laufen **ohne Mocks** (CLAUDE.md-Pflicht: „KEINE MOCKED TESTS!").
 - **Lazy-Migration ohne Schreib-Lauf:** Bestehende JSON-Dateien werden erst beim nächsten User-Save in das neue Schema überführt. Wer das Schema „auf Platte" prüfen will, sieht alte Dateien — das ist beabsichtigt für Rollback-Sicherheit.
 - **Tag 4+ ohne Horizont-Differenzierung:** Etappen außerhalb der drei Horizonte zeigen immer alle aktivierten Metriken. Eine feinere Steuerung („Tag 4 wie heute behandeln") ist nicht im Scope.
 - **PATCH ohne Field-Level-Validation:** Der Handler akzeptiert beliebige `metrics[]`-Inhalte. Eine schema-genaue Validierung (z.B. „metric_id muss im /api/metrics-Katalog existieren") ist nicht im Scope dieser Spec.
+- Vergangene Etappen (Etappen-Datum vor Report-Datum) ignorieren den Horizont-Filter: `derive_horizon()` gibt `None` zurück, sodass alle Metriken sichtbar bleiben. Dieses Verhalten ist beabsichtigt — für bereits abgelaufene Tage existiert kein sinnvoller Horizont-Kontext.
 
 ## Changelog
 

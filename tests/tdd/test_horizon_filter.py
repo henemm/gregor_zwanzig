@@ -133,6 +133,21 @@ def test_derive_horizon_mapping():
     assert derive_horizon(base, date(2026, 5, 26)) is None
 
 
+def test_derive_horizon_negative_delta():
+    """Vergangene Etappen (delta < 0) geben None zurueck — kein Horizont-Treffer.
+
+    Issue #351 / AC-1: Backfill-Coverage fuer expliziten Guard.
+    Verhalten war bereits korrekt (catch-all return None), dieser Test
+    dokumentiert und sichert es ab.
+    """
+    from output.renderers.email.helpers import derive_horizon
+
+    report = date(2026, 5, 10)
+    assert derive_horizon(report, date(2026, 5, 9)) is None    # delta = -1
+    assert derive_horizon(report, date(2026, 5, 1)) is None    # delta = -9
+    assert derive_horizon(report, date(2025, 12, 31)) is None  # delta = -130
+
+
 # ----------------------------------------------------------------------
 # End-to-End: render_html() filtert pro Etappe
 # ----------------------------------------------------------------------

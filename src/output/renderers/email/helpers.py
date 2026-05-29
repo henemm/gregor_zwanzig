@@ -266,6 +266,10 @@ def derive_horizon(report_date: date, etappe_date: date) -> str | None:
     das als "kein Filter" (alle aktivierten Metriken sichtbar).
     """
     delta = (etappe_date - report_date).days
+    # Vergangene Etappen (delta < 0) ignorieren den Horizont-Filter —
+    # sie sind bereits abgelaufen und haben keinen relevanten Horizont.
+    if delta < 0:
+        return None
     if delta == 0:
         return "today"
     if delta == 1:
