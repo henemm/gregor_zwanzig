@@ -429,7 +429,6 @@ WEATHER_TEMPLATES: dict[str, dict] = {
             "temperature", "wind_chill", "wind", "gust", "precipitation",
             "thunder", "cape", "rain_probability", "snowfall_limit",
             "freezing_level", "cloud_total", "cloud_low", "visibility", "uv_index",
-            "confidence",
         ],
     },
     "wandern": {
@@ -437,7 +436,6 @@ WEATHER_TEMPLATES: dict[str, dict] = {
         "metrics": [
             "temperature", "humidity", "wind", "gust", "precipitation",
             "rain_probability", "cloud_total", "sunshine", "uv_index",
-            "confidence",
         ],
     },
     "skitouren": {
@@ -446,7 +444,6 @@ WEATHER_TEMPLATES: dict[str, dict] = {
             "temperature", "wind_chill", "wind", "gust", "precipitation",
             "fresh_snow", "snow_depth", "snowfall_limit", "freezing_level",
             "cloud_total", "cloud_low", "visibility",
-            "confidence",
         ],
     },
     "wintersport": {
@@ -454,7 +451,6 @@ WEATHER_TEMPLATES: dict[str, dict] = {
         "metrics": [
             "temperature", "wind_chill", "wind", "gust", "precipitation",
             "fresh_snow", "snow_depth", "cloud_total", "sunshine", "visibility",
-            "confidence",
         ],
     },
     "radtour": {
@@ -462,7 +458,6 @@ WEATHER_TEMPLATES: dict[str, dict] = {
         "metrics": [
             "temperature", "wind", "wind_direction", "gust", "precipitation",
             "rain_probability", "thunder", "cape", "cloud_total", "sunshine", "uv_index",
-            "confidence",
         ],
     },
     "wassersport": {
@@ -470,7 +465,6 @@ WEATHER_TEMPLATES: dict[str, dict] = {
         "metrics": [
             "temperature", "wind", "gust", "wind_direction", "precipitation",
             "rain_probability", "thunder", "cape", "cloud_total", "visibility",
-            "confidence",
         ],
     },
     "allgemein": {
@@ -478,7 +472,6 @@ WEATHER_TEMPLATES: dict[str, dict] = {
         "metrics": [
             "temperature", "wind", "gust", "precipitation",
             "rain_probability", "cloud_total", "sunshine",
-            "confidence",
         ],
     },
 }

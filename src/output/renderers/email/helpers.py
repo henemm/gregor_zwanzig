@@ -284,16 +284,15 @@ def build_confidence_hint(
     now: datetime,
     tz: ZoneInfo,
 ) -> Optional[str]:
-    """Issue #121 / AC-12 + AC-13: Plain-text hint for low-confidence days.
+    """Issue #121 / Bug #423: Plain-text hint for low-confidence days.
 
     Scans every hourly ForecastDataPoint in T+0..72h (relative to `now`).
-    If any data point has ``confidence_pct < 60``, returns a German hint
-    naming the weekday of the first uncertain day plus the maximum
-    temperature spread (in °C) for that day. Otherwise returns ``None``
-    (no visual noise on confident forecasts).
+    If any data point has ``confidence_pct < 60``, returns a German hint of
+    the form 'Ab {Wochentag} ist die Vorhersage weniger verlässlich.'
+    Otherwise returns ``None`` (no visual noise on confident forecasts).
     """
     cutoff = now + timedelta(hours=72)
-    # day_date -> (min_conf, max_spread_k)
+    # day_date -> min_conf_pct
     uncertain: dict = {}
     for seg in segments:
         ts = getattr(seg, "timeseries", None)
@@ -312,24 +311,16 @@ def build_confidence_hint(
             if dp.confidence_pct >= 60:
                 continue
             day = dp_ts.astimezone(tz).date()
-            spread = dp.spread_t2m_k or 0.0
             cur = uncertain.get(day)
             if cur is None:
-                uncertain[day] = (dp.confidence_pct, spread)
+                uncertain[day] = dp.confidence_pct
             else:
-                uncertain[day] = (
-                    min(cur[0], dp.confidence_pct),
-                    max(cur[1], spread),
-                )
+                uncertain[day] = min(cur, dp.confidence_pct)
     if not uncertain:
         return None
     first_day = min(uncertain.keys())
-    _, max_spread = uncertain[first_day]
     weekday = _WEEKDAY_DE[first_day.weekday()]
-    return (
-        f"Ab {weekday} nimmt die Unsicherheit zu "
-        f"(Temperatur-Spreizung {round(max_spread)} °C)."
-    )
+    return f"Ab {weekday} ist die Vorhersage weniger verlässlich."
 
 
 def build_units_legend(rows: list[dict]) -> str:

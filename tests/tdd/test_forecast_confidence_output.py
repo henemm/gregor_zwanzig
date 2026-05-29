@@ -241,8 +241,7 @@ class TestConfidenceHintGenerator:
         hint = build_confidence_hint(segments, now=monday, tz=tz)
         assert hint is not None, "Hint should fire for confidence=45 at T+48h"
         assert "Mittwoch" in hint, f"Hint must mention 'Mittwoch': {hint}"
-        # Spread angabe in °C
-        assert "°C" in hint, f"Hint must mention spread in °C: {hint}"
+        assert "weniger verlässlich" in hint, f"Hint must say 'weniger verlässlich': {hint}"
 
     def test_high_confidence_in_72h_window_no_hint(self):
         """AC-13: all confidence ≥ 60 in T+0-72h → no hint."""
