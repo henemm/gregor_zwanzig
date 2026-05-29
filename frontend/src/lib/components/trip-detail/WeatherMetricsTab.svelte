@@ -16,10 +16,11 @@
 	import AboutOutputLayout from './AboutOutputLayout.svelte';
 	import ChannelPreviewBlock from './ChannelPreviewBlock.svelte';
 	import WeatherMetricsMobileView from './WeatherMetricsMobileView.svelte';
-	// Issue #431: Bucket-Editor wandert in `shared/OutputLayoutEditor.svelte` —
+	// Issue #431: Bucket-Editor wandert in `shared/` (siehe Import unten) —
 	// dieser Tab wird zum duennen Wrapper (channel="email" fix), Wizard nutzt
 	// dieselbe Komponente mit 4 Kanal-Tabs.
 	import OutputLayoutEditor from '$lib/components/shared/OutputLayoutEditor.svelte';
+	// Issue #433: leitet `onDndReorder` an die Shared-Komponente durch.
 	import {
 		autoAssign, move, reorder, buildWeatherConfigMetrics,
 		CATEGORY_LABELS, CATEGORY_ORDER, INDICATOR_MAP, indicatorCapable,
@@ -218,6 +219,10 @@
 		buckets = reorder(buckets, bucket, id, dir);
 	}
 
+	function onDndReorder(bucket: 'primary' | 'secondary', newOrder: string[]) {
+		buckets = { ...buckets, [bucket]: newOrder };
+	}
+
 	function handleDiscard() {
 		try {
 			const snap = JSON.parse(savedSnapshot);
@@ -343,6 +348,7 @@
 					onReorder={(bucket, id, dir) => onReorder(bucket, id, dir)}
 					onMove={(id, target) => onMove(id, target)}
 					{onMode}
+					{onDndReorder}
 				/>
 
 				<ChannelPreviewBlock

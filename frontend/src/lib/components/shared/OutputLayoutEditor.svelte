@@ -47,6 +47,7 @@
 		onMove?: (id: string, target: 'primary' | 'secondary' | 'off') => void;
 		onMode?: (id: string, useIndicator: boolean) => void;
 		onSelectPreset?: (id: string) => void;
+		onDndReorder?: (bucket: 'primary' | 'secondary', newOrder: string[]) => void;
 	}
 
 	let {
@@ -62,6 +63,7 @@
 		onMove,
 		onMode,
 		onSelectPreset,
+		onDndReorder,
 	}: Props = $props();
 
 	// Abgeleitete Lookup-Maps (Katalog -> Metrik-Entry und Kuerzel).
@@ -219,6 +221,7 @@
 			onMode={(id, useIndicator) => onMode?.(id, useIndicator)}
 			onMove={(id, target) => onMove?.(id, target)}
 			onReorder={(id, dir) => onReorder?.('primary', id, dir)}
+			onDndReorder={(newOrder) => onDndReorder?.('primary', newOrder)}
 		/>
 
 		<BucketSection
@@ -234,6 +237,7 @@
 			onMode={(id, useIndicator) => onMode?.(id, useIndicator)}
 			onMove={(id, target) => onMove?.(id, target)}
 			onReorder={(id, dir) => onReorder?.('secondary', id, dir)}
+			onDndReorder={(newOrder) => onDndReorder?.('secondary', newOrder)}
 		/>
 
 		<BucketSectionOff

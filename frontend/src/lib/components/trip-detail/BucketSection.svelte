@@ -8,6 +8,8 @@
 	import ActiveMetricRow from './ActiveMetricRow.svelte';
 	import { CHANNEL_COL_BUDGET, type MetricEntry } from './metricsEditor.ts';
 	import ChannelLimitMarkers from './ChannelLimitMarkers.svelte';
+	import { dndzone, type DndEvent } from 'svelte-dnd-action';
+	import { flip } from 'svelte/animate';
 
 	interface Props {
 		eyebrow: string;
@@ -23,14 +25,34 @@
 		onMode: (id: string, useIndicator: boolean) => void;
 		onMove: (id: string, target: 'primary' | 'secondary' | 'off') => void;
 		onReorder: (id: string, dir: -1 | 1) => void;
+		onDndReorder: (newOrder: string[]) => void;
 	}
 	let {
 		eyebrow, title, hint, bucket, items, metricById, shortById,
 		friendlyMap, indicatorCapable, showLimitMarkers = false,
-		onMode, onMove, onReorder,
+		onMode, onMove, onReorder, onDndReorder,
 	}: Props = $props();
 
 	const signalBudget = CHANNEL_COL_BUDGET.signal; // 5 wählbare Spalten
+
+	// dndzone braucht Array<{id: string}>. Ein $effect (NICHT die abgeleitete
+	// Variante!) synct items in den lokalen DnD-State, weil dndzone die Liste
+	// während der consider-Phase mit einem Phantom-Placeholder mutiert — eine
+	// abgeleitete Variable würde den Drag-Zustand pro Tick zurücksetzen.
+	let dndItems = $state<{ id: string }[]>([]);
+
+	$effect(() => {
+		dndItems = items.map((id) => ({ id }));
+	});
+
+	function handleDndConsider(e: CustomEvent<DndEvent<{ id: string }>>) {
+		dndItems = e.detail.items;
+	}
+
+	function handleDndFinalize(e: CustomEvent<DndEvent<{ id: string }>>) {
+		dndItems = e.detail.items;
+		onDndReorder(dndItems.map((x) => x.id));
+	}
 </script>
 
 <Card.Root data-testid="bucket-section-{bucket}">
@@ -50,29 +72,35 @@
 	{#if items.length === 0}
 		<div class="empty">Keine Einträge — Metriken aus „Nicht im Briefing" hinzufügen.</div>
 	{:else}
-		<div>
-			{#each items as id, i}
-				{#if bucket === 'primary' && i === signalBudget}
-					<div class="signal-divider mono" data-testid="signal-divider">
-						↓ ab hier bei <strong>Signal</strong> automatisch als Detail-Zeile (max {signalBudget} Spalten)
-					</div>
-				{/if}
-				{#if metricById[id]}
-					<ActiveMetricRow
-						metric={metricById[id]}
-						short={shortById[id] ?? metricById[id].label.slice(0, 5)}
-						{bucket}
-						index={i}
-						isFirst={i === 0}
-						isLast={i === items.length - 1}
-						isOverLimit={bucket === 'primary' && i >= signalBudget}
-						hasIndicator={indicatorCapable(id)}
-						useIndicator={friendlyMap[id] ?? true}
-						onMode={(v) => onMode(id, v)}
-						onMove={(t) => onMove(id, t)}
-						onReorder={(d) => onReorder(id, d)}
-					/>
-				{/if}
+		<div
+			use:dndzone={{ items: dndItems, flipDurationMs: 200, dropTargetStyle: {}, dropFromOthersDisabled: true }}
+			onconsider={handleDndConsider}
+			onfinalize={handleDndFinalize}
+		>
+			{#each dndItems as item, i (item.id)}
+				<div animate:flip={{ duration: 200 }}>
+					{#if bucket === 'primary' && i === signalBudget}
+						<div class="signal-divider mono" data-testid="signal-divider">
+							↓ ab hier bei <strong>Signal</strong> automatisch als Detail-Zeile (max {signalBudget} Spalten)
+						</div>
+					{/if}
+					{#if metricById[item.id]}
+						<ActiveMetricRow
+							metric={metricById[item.id]}
+							short={shortById[item.id] ?? metricById[item.id].label.slice(0, 5)}
+							{bucket}
+							index={i}
+							isFirst={i === 0}
+							isLast={i === items.length - 1}
+							isOverLimit={bucket === 'primary' && i >= signalBudget}
+							hasIndicator={indicatorCapable(item.id)}
+							useIndicator={friendlyMap[item.id] ?? true}
+							onMode={(v) => onMode(item.id, v)}
+							onMove={(t) => onMove(item.id, t)}
+							onReorder={(d) => onReorder(item.id, d)}
+						/>
+					{/if}
+				</div>
 			{/each}
 		</div>
 	{/if}

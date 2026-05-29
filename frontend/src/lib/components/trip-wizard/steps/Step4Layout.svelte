@@ -228,6 +228,13 @@
 		};
 	}
 
+	function handleDndReorder(bucket: 'primary' | 'secondary', newOrder: string[]) {
+		channelBuckets = {
+			...channelBuckets,
+			[activeChannel]: { ...channelBuckets[activeChannel], [bucket]: newOrder },
+		};
+	}
+
 	function handleMode(id: string, useIndicator: boolean) {
 		channelFriendly = {
 			...channelFriendly,
@@ -309,6 +316,7 @@
 					onMove={handleMove}
 					onMode={handleMode}
 					onSelectPreset={handleSelectPreset}
+					onDndReorder={handleDndReorder}
 				/>
 			</div>
 			<aside class="preview-col" data-testid="layout-preview">
