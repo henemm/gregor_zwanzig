@@ -76,6 +76,14 @@ Backend-Voraussetzung für die Pro-Metrik-Zeithorizont-Funktion aus Klammer-Epic
 | `render_html()` (`html.py:140`) | Python-Function | Top-Level-Renderer — propagiert `report_date` und Etappen-Startdatum |
 | `epic_138_174_178_metriken_ui` Spec | Vorgänger-Spec | Definiert heutiges `MetricPreset`-Schema und User-Preset-Endpoints |
 
+## Related Bugs
+
+**Bug #349** — `normalizeMetricsPayload()` Horizons-Zero-Value-Unterscheidung
+- **Issue:** Die Normalisierungs-Logik konnte nicht unterscheiden, ob `horizons` im JSON-Payload fehlt oder explizit mit `{false,false,false}` gesetzt wurde.
+- **Fix:** Lokaler Decode-Struct mit `*Horizons` Pointer (nil = fehlt, non-nil = explizit gesetzt).
+- **Scope:** Nur Eingabe-Normalisierung, kein Modell-/Store-/Renderer-Change.
+- **Spec:** `docs/specs/modules/bug_349_horizons_zero_value.md`
+
 ## Implementation Details
 
 ### §1 Go-Modell `internal/model/metric_preset.go` — Schema-Erweiterung

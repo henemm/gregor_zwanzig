@@ -512,6 +512,55 @@ func TestCreateMetricPreset_CorruptFileNotOverwritten(t *testing.T) {
 }
 
 // =============================================================================
+// Bug #349 — normalizeMetricsPayload Horizons-Zero-Value-Unterscheidung.
+// Spec: docs/specs/modules/bug_349_horizons_zero_value.md
+//
+// AC-1 (RED): Ein explizit gesendetes horizons={false,false,false} darf NICHT
+// von der Default-Heuristik mit {true,true,true} ueberschrieben werden.
+// AC-2: Fehlt horizons im JSON, gilt der Default {true,true,true}.
+// AC-3: Teilweise gesetzte horizons werden exakt uebernommen.
+// =============================================================================
+
+func TestNormalizeMetricsPayload_ExplicitAllFalse_Preserved(t *testing.T) {
+	raw := json.RawMessage(`[{"metric_id":"wind","enabled":true,"horizons":{"today":false,"tomorrow":false,"day_after":false}}]`)
+	got := normalizeMetricsPayload(raw, nil)
+	if len(got) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(got))
+	}
+	h := got[0].Horizons
+	if h.Today || h.Tomorrow || h.DayAfter {
+		t.Errorf("AC-1 FAIL: explizit alle-false horizons wurden mit alle-true ueberschrieben: got Today=%v Tomorrow=%v DayAfter=%v",
+			h.Today, h.Tomorrow, h.DayAfter)
+	}
+}
+
+func TestNormalizeMetricsPayload_MissingHorizons_DefaultsAllTrue(t *testing.T) {
+	raw := json.RawMessage(`[{"metric_id":"wind","enabled":true}]`)
+	got := normalizeMetricsPayload(raw, nil)
+	if len(got) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(got))
+	}
+	h := got[0].Horizons
+	if !h.Today || !h.Tomorrow || !h.DayAfter {
+		t.Errorf("AC-2 FAIL: fehlende horizons sollten Default {true,true,true} liefern, got Today=%v Tomorrow=%v DayAfter=%v",
+			h.Today, h.Tomorrow, h.DayAfter)
+	}
+}
+
+func TestNormalizeMetricsPayload_PartialHorizons_ExactValuePreserved(t *testing.T) {
+	raw := json.RawMessage(`[{"metric_id":"wind","enabled":true,"horizons":{"today":true,"tomorrow":false,"day_after":false}}]`)
+	got := normalizeMetricsPayload(raw, nil)
+	if len(got) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(got))
+	}
+	h := got[0].Horizons
+	if !h.Today || h.Tomorrow || h.DayAfter {
+		t.Errorf("AC-3 FAIL: teilweise gesetzte horizons wurden modifiziert: got Today=%v Tomorrow=%v DayAfter=%v want Today=true Tomorrow=false DayAfter=false",
+			h.Today, h.Tomorrow, h.DayAfter)
+	}
+}
+
+// =============================================================================
 // Helpers
 // =============================================================================
 

@@ -59,27 +59,37 @@ func normalizeMetricsPayload(raw json.RawMessage, friendlyIDs []string) []model.
 	}
 
 	// Erst []DisplayMetric direkt versuchen (Neu-Schema).
-	var asStructs []model.DisplayMetric
-	if err := json.Unmarshal(raw, &asStructs); err == nil && len(asStructs) > 0 {
+	// Bug #349: Lokaler Decode-Struct mit *Horizons unterscheidet sicher
+	// zwischen "Feld fehlt im JSON" (nil) und "explizit {false,false,false}".
+	type displayMetricInput struct {
+		MetricID          string          `json:"metric_id"`
+		Enabled           bool            `json:"enabled"`
+		UseFriendlyFormat bool            `json:"use_friendly_format"`
+		Horizons          *model.Horizons `json:"horizons"`
+	}
+	var asInputs []displayMetricInput
+	if err := json.Unmarshal(raw, &asInputs); err == nil && len(asInputs) > 0 {
 		// Erkennen, ob mindestens ein metric_id gesetzt ist – sonst ist es
 		// vermutlich Legacy []string und wir landen unten im Fallback.
 		anyID := false
-		for _, m := range asStructs {
+		for _, m := range asInputs {
 			if m.MetricID != "" {
 				anyID = true
 				break
 			}
 		}
 		if anyID {
-			for i := range asStructs {
-				// Default horizons wenn alle drei Felder im JSON fehlen
-				// (Unmarshal liefert dann den Zero-Wert {false,false,false}).
-				if !asStructs[i].Horizons.Today &&
-					!asStructs[i].Horizons.Tomorrow &&
-					!asStructs[i].Horizons.DayAfter {
-					// Pruefen, ob horizons ueberhaupt im rohen JSON stand —
-					// einfacher Heuristic-Re-Decode auf RawMessage-Items.
+			asStructs := make([]model.DisplayMetric, len(asInputs))
+			for i, in := range asInputs {
+				asStructs[i] = model.DisplayMetric{
+					MetricID:          in.MetricID,
+					Enabled:           in.Enabled,
+					UseFriendlyFormat: in.UseFriendlyFormat,
+				}
+				if in.Horizons == nil {
 					asStructs[i].Horizons = allTrue
+				} else {
+					asStructs[i].Horizons = *in.Horizons
 				}
 			}
 			return asStructs
