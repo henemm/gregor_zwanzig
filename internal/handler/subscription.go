@@ -82,9 +82,9 @@ func validateSubscription(sub model.CompareSubscription) error {
 		return fmt.Errorf("weekday must be 0-6")
 	}
 	if sub.ActivityProfile != nil {
-		valid := map[string]bool{"wintersport": true, "wandern": true, "allgemein": true}
+		valid := map[string]bool{"wintersport": true, "wandern": true, "allgemein": true, "summer_trekking": true}
 		if !valid[*sub.ActivityProfile] {
-			return fmt.Errorf("activity_profile must be wintersport, wandern, or allgemein")
+			return fmt.Errorf("activity_profile must be wintersport, wandern, allgemein, or summer_trekking")
 		}
 	}
 	if sub.SendEmail && len(sub.Recipients) > 0 {

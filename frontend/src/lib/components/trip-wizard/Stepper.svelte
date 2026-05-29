@@ -14,22 +14,36 @@
 		current: 1 | 2 | 3 | 4 | 5;
 		labels: string[];
 		subLabels?: string[];
+		// Issue #440: Optional callback fuer Edit-Modus (Tab-Verhalten,
+		// alle Steps frei klickbar). Wenn nicht gesetzt, sind die Punkte
+		// nicht klickbar (Create-Modus, Default).
+		onStepClick?: (step: number) => void;
+		// F003 (Issue #440): TestID-Prefix fuer Wiederverwendung im
+		// CompareWizard. Default bleibt 'trip-wizard' (Backward-Compat fuer
+		// bestehende E2E-Tests + Stepper-Tests).
+		testidPrefix?: string;
 	}
 
-	let { current, labels, subLabels = [] }: Props = $props();
+	let {
+		current,
+		labels,
+		subLabels = [],
+		onStepClick,
+		testidPrefix = 'trip-wizard'
+	}: Props = $props();
 
 	// Issue #430: Segmente fuer Mobile-Progressbar (eine Bar pro Step).
 	const segments = $derived(progressBarSegments(current, labels.length));
 </script>
 
-<div data-testid="trip-wizard-stepper">
+<div data-testid={`${testidPrefix}-stepper`}>
 	<!-- Mobile Compact Stepper (Viewport <= 899px) — Issue #430 Progressbar -->
 	<div
-		data-testid="trip-wizard-stepper-compact"
+		data-testid={`${testidPrefix}-stepper-compact`}
 		class="desktop:hidden"
 	>
 		<div
-			data-testid="trip-wizard-stepper-progress"
+			data-testid={`${testidPrefix}-stepper-progress`}
 			class="progress-bar flex gap-1 mb-1"
 		>
 			{#each segments as seg, i (i)}
@@ -53,15 +67,16 @@
 
 	<!-- Desktop Full Stepper (Viewport >= 900px) -->
 	<div
-		data-testid="trip-wizard-stepper-full"
+		data-testid={`${testidPrefix}-stepper-full`}
 		class="mobile:hidden flex items-start gap-2"
 	>
 		{#each labels as label, i (i)}
 			{@const state = stepperStateOf(i, current)}
 			<div
-				data-testid={`trip-wizard-step-${i + 1}`}
+				data-testid={`${testidPrefix}-step-${i + 1}`}
 				data-state={state}
-				class="flex flex-col items-center text-center min-w-0 flex-1"
+				onclick={onStepClick ? () => onStepClick(i + 1) : undefined}
+				class={`flex flex-col items-center text-center min-w-0 flex-1 ${onStepClick ? 'cursor-pointer' : ''}`}
 			>
 				{#if state === 'done'}
 					<span

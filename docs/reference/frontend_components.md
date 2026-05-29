@@ -1,7 +1,7 @@
 # Frontend Components Reference
 
-**Updated:** 2026-05-26  
-**Version:** 1.4
+**Updated:** 2026-05-29  
+**Version:** 1.5
 
 ## Overview
 
@@ -612,13 +612,15 @@ TripWizardShell (container, stepper + steps)
 
 ---
 
-## Component Inventory (Ist-Stand Phase 1)
+## Component Inventory (Ist-Stand Phase 1 + Issue #440)
 
 Vollstaendiges Inventar aller Komponenten unter `frontend/src/lib/components/` (plus
 route-lokale Kacheln unter `frontend/src/routes/_home/`). Pfade sind relativ zu
 `frontend/src/lib/components/`. Volle Props-Tiefe nur fuer Kern-Atome (siehe oben:
 Btn, GCard, Pill, Eyebrow, Dot, TopoBg, ElevSparkline) sowie Wordmark (unten);
 Detail-Props weiterer Komponenten stehen im jeweiligen Quellcode/Spec.
+
+**2026-05-29:** Orts-Vergleich-Wizard hinzugefuegt (Issue #440) — separater 5-Schritt-Wizard fuer Create/Edit-Modus mit Stepper-Reuse + Test-Suites.
 
 ### ui/ — Atome & shadcn-Bausteine
 
@@ -708,7 +710,9 @@ interface WordmarkProps {
 |---|---|---|
 | BriefingsTab | `briefings-tab/BriefingsTab.svelte` | Briefing-Zeitplan-Tab (morgen/abend, Kanaele, Optionen) |
 
-### compare/ — Vergleichs-Screen (EPIC #246/#250)
+### compare/ — Vergleichs-Screen (EPIC #246/#250) & Orts-Vergleich-Wizard (Issue #440)
+
+#### Screen & Report Components (existing)
 
 | Komponente | Pfad rel. zu components/ | Kurzbeschreibung |
 |---|---|---|
@@ -726,6 +730,25 @@ interface WordmarkProps {
 | RecommendationBanner | `compare/RecommendationBanner.svelte` | Empfehlungs-Banner (Winner-Tags) |
 | locationHelpers.ts | `compare/locationHelpers.ts` | Location-Logik inkl. isCoordsValid() (Helper) |
 | subscriptionHelpers.ts | `compare/subscriptionHelpers.ts` | Subscription-Logik (Helper) |
+
+#### Orts-Vergleich-Wizard (Issue #440 — Create/Edit Mode)
+
+New 5-step wizard for creating and editing compare subscriptions (Orts-Vergleiche). Separate from TripWizard, reuses `Stepper` via `testidPrefix` prop.
+
+| Komponente | Pfad rel. zu components/ | Kurzbeschreibung |
+|---|---|---|
+| CompareWizard | `compare/CompareWizard.svelte` | Shell + 5-Schritt-Stepper, State-Management |
+| compareWizardState.svelte.ts | `compare/compareWizardState.svelte.ts` | Zentrale State-Klasse (Runes), analog `wizardState.svelte.ts` |
+| Step1Vergleich | `compare/steps/Step1Vergleich.svelte` | Schritt 1: Name + Region + Aktivitaetsprofil |
+| Step2Orte | `compare/steps/Step2Orte.svelte` | Schritt 2: Orte waehlen via Smart-Import + Library |
+| (Steps 3–5) | `compare/steps/Step3*–Step5*.svelte` | Placeholder (Metriken, Briefing-Zeiten, Optionen) |
+| compareWizardHelpers.ts | `compare/compareWizardHelpers.ts` | Shared helpers (newId, validRegions, mapActivityProfile) |
+
+**Routes:**
+- `frontend/src/routes/compare/new/+page.svelte` — Create mode (Wizard-Entry)
+- `frontend/src/routes/compare/new/+page.server.ts` — Server actions (POST /api/subscriptions)
+- `frontend/src/routes/compare/[id]/edit/+page.svelte` — Edit mode (Load existing subscription)
+- `frontend/src/routes/compare/[id]/edit/+page.server.ts` — Server actions (PUT /api/subscriptions/{id})
 
 ### edit/ — Trip-Bearbeitung
 
@@ -796,14 +819,14 @@ interface WordmarkProps {
 | StageCard | `trip-detail/waypoints/StageCard.svelte` | Etappen-Karte |
 | WaypointCard | `trip-detail/waypoints/WaypointCard.svelte` | Wegpunkt-Editor-Karte |
 
-### trip-wizard/ — Trip-Wizard (Epic #136)
+### trip-wizard/ — Trip-Wizard (Epic #136) & Reusable Stepper
 
 Architektur + Detail siehe Abschnitt „Trip-Wizard Components" oben. Inventar-Ergaenzung:
 
 | Komponente | Pfad rel. zu components/ | Kurzbeschreibung |
 |---|---|---|
 | TripWizardShell | `trip-wizard/TripWizardShell.svelte` | Shell + 4-Schritt-Stepper |
-| Stepper | `trip-wizard/Stepper.svelte` | Generischer Schritt-Indikator |
+| Stepper | `trip-wizard/Stepper.svelte` | Generischer Schritt-Indikator, reusbar via `testidPrefix` + `onStepClick` Props (Issue #440) |
 | Step1Profile | `trip-wizard/steps/Step1Profile.svelte` | Schritt 1: Profil + Name + Datum |
 | Step2Stages | `trip-wizard/steps/Step2Stages.svelte` | Schritt 2: GPX-Upload, Drag-Sort, Pause |
 | Step3Waypoints | `trip-wizard/steps/Step3Waypoints.svelte` | Schritt 3: Wegpunkt-Bestaetigung |
