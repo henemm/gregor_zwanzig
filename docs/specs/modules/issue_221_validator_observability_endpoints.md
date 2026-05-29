@@ -367,6 +367,7 @@ r.Post("/api/trips/{id}/alert-preview",       handler.AlertPreviewProxyHandler(c
 
 ## Changelog
 
+- 2026-05-29: Sister-Spec Issue #448 dokumentiert neuen Endpoint `/api/_validator/metrics-for-channel` für Kaskaden-Sichtbarkeit bei Metric-Channel-Auflösung. Komplementär zu Endpoint #3 (Alert Detector-Auswahl).
 - 2026-05-14: Initial spec — Issue #221 (External Validator: Sichtbarkeits-Endpoints)
 - 2026-05-14: Loader-Adapter dokumentiert — Router nutzt
   `_load_trip_for_validator` + `_config_source_from_raw` statt direkt

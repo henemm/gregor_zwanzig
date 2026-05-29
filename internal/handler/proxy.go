@@ -290,6 +290,37 @@ func DetectorThresholdsProxyHandler(pythonURL string) http.HandlerFunc {
 	}
 }
 
+// MetricsForChannelProxyHandler proxies GET /api/_validator/metrics-for-channel.
+// Forwards trip, channel, report query params and injects authenticated user_id.
+// Spec: docs/specs/modules/issue_448_validator_metrics_for_channel.md.
+func MetricsForChannelProxyHandler(pythonURL string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		query := appendUserID(r.URL.RawQuery, middleware.UserIDFromContext(r.Context()))
+		url := pythonURL + "/api/_validator/metrics-for-channel"
+		if query != "" {
+			url += "?" + query
+		}
+
+		client := &http.Client{Timeout: 10 * time.Second}
+		resp, err := client.Get(url)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadGateway)
+			w.Write([]byte(`{"error":"upstream unreachable"}`))
+			return
+		}
+		defer resp.Body.Close()
+
+		ct := resp.Header.Get("Content-Type")
+		if ct == "" {
+			ct = "application/json"
+		}
+		w.Header().Set("Content-Type", ct)
+		w.WriteHeader(resp.StatusCode)
+		io.Copy(w, resp.Body)
+	}
+}
+
 func GpxProxyHandler(pythonURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		client := &http.Client{Timeout: 30 * time.Second}

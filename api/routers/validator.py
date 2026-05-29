@@ -32,6 +32,7 @@ from src.app.models import (
     SegmentWeatherData,
     SegmentWeatherSummary,
     TripSegment,
+    UnifiedWeatherDisplayConfig,
     WeatherChange,
 )
 from src.app.trip import Trip
@@ -124,6 +125,28 @@ def _effective_detector_source(trip: Trip) -> str:
     if trip.report_config:
         return "from_trip_config"
     return "defaults"
+
+
+def _determine_cascade_source(
+    dc: "UnifiedWeatherDisplayConfig | None",
+    channel: str,
+    report_type: str,
+) -> str:
+    """Spiegel von UnifiedWeatherDisplayConfig.get_metrics_for_channel() in models.py.
+
+    Ermittelt welche Kaskadenstufe aktiv ist: per_report → per_channel → global.
+    Eine leere Liste auf Stufe 1/2 ist expliziter User-Wunsch — kein Fallback
+    auf die nächste Stufe. Spec: docs/specs/modules/issue_448_validator_metrics_for_channel.md.
+    """
+    if dc is None:
+        return "global"
+    per_report = (dc.per_report_layouts or {}).get(report_type, {})
+    if channel in per_report:
+        return "per_report"
+    per_channel = dc.per_channel_layouts or {}
+    if channel in per_channel:
+        return "per_channel"
+    return "global"
 
 
 # ---------------------------------------------------------------------------
@@ -264,3 +287,32 @@ async def alert_preview(
         changes=changes,
     )
     return {"html": report.email_html, "plain": report.email_plain}
+
+
+# ---------------------------------------------------------------------------
+# Endpoint #4 — Metrics-for-channel cascade visibility (Issue #448).
+# ---------------------------------------------------------------------------
+
+@router.get("/api/_validator/metrics-for-channel")
+async def metrics_for_channel(
+    trip: str = Query(..., description="Trip-ID"),
+    channel: str = Query(..., description="email|telegram|signal|sms"),
+    report: str = Query(..., description="morning|evening"),
+    user_id: str = Query(..., description="Vom Go-Proxy injiziert (Anti-Spoofing)"),
+):
+    """Macht die dreistufige get_metrics_for_channel-Kaskade von außen prüfbar.
+
+    Spec: docs/specs/modules/issue_448_validator_metrics_for_channel.md.
+    Response: {"source": "per_report|per_channel|global", "metric_ids": [...]}.
+    """
+    trip_obj = _load_trip_for_validator(user_id, trip)
+    if trip_obj is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Trip {trip} nicht gefunden für User {user_id}",
+        )
+
+    dc = trip_obj.display_config  # kann None sein (Loader injiziert i.d.R. Default)
+    source = _determine_cascade_source(dc, channel, report)
+    metrics = dc.get_metrics_for_channel(channel, report) if dc else []
+    return {"source": source, "metric_ids": [mc.metric_id for mc in metrics]}
