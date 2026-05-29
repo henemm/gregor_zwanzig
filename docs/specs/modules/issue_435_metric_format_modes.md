@@ -258,7 +258,7 @@ das Frontend zwischendurch in Bug-Zustand belassen (alle Modi außer raw → boo
 - `visibility`-Symbol-Variante (z.B. ✅/⚠️ statt Textklassen) wird in dieser Iteration nicht angeboten; Folge-Issue, falls gewünscht.
 - `loc_limit_override 400` ist in Phase 6 zu setzen (Gesamt ~350 LoC, überschreitet 250er-Default).
 - `_resolve_format_mode()` in `src/app/loader.py` wird im Production-Read-Pfad heute nicht aufgerufen — die äquivalente Resolution erfolgt zur Render-Zeit in `_effective_format_mode` (`src/output/renderers/email/helpers.py`). Beide Funktionen halten denselben Vertrag, sind aber Duplikate. Konsolidierung in Folge-Issue (Adversary F001, 2026-05-28).
-- `_resolve_format_mode()` und `_effective_format_mode()` lassen unbekannte `format_mode`-Strings (z.B. `"Symbol"` mit Großbuchstaben, `"raw_v2"`) ungeprüft durch. `fmt_val` fällt in solchen Fällen auf den Friendly-/Symbol-Pfad zurück (graceful degradation), kein Crash. Strikte Validierung in Folge-Issue (Adversary F004, 2026-05-28).
+- `_resolve_format_mode()` und `_effective_format_mode()` lassen unbekannte `format_mode`-Strings (z.B. `"Symbol"` mit Großbuchstaben, `"raw_v2"`) ungeprüft durch. `fmt_val` fällt in solchen Fällen auf den Friendly-/Symbol-Pfad zurück (graceful degradation), kein Crash. Strikte Validierung in [Issue #446](issue_446_format_mode_validation.md) (implementiert 2026-05-29).
 
 ## Changelog
 

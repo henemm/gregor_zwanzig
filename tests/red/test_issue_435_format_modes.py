@@ -785,3 +785,138 @@ class TestAC444DelegationToResolveFormatMode:
             "AC-444-C: _effective_format_mode enthält noch einen direkten "
             "Katalog-Lookup (default_format_mode) — Delegation nicht umgebaut"
         )
+
+
+# ===========================================================================
+# AC-446: Strikte format_mode-Validierung gegen MetricDefinition.format_modes
+# SPEC: docs/specs/modules/issue_446_format_mode_validation.md
+# ===========================================================================
+
+class TestAC446FormatModeValidation:
+    """
+    Issue #446: _resolve_format_mode muss unbekannte format_mode-Strings
+    gegen MetricDefinition.format_modes validieren.
+
+    Bei unbekanntem Modus und bekannter Metrik: WARNING + Fallback auf
+    default_format_mode. Bei unbekannter metric_id: Original-String bleibt.
+    """
+
+    def test_ac446_1_unknown_capitalized_falls_back_with_warning(self):
+        """AC-1: format_mode='Symbol' (Großbuchstabe) für cloud_total → 'symbol' + WARNING."""
+        import logging
+        from app import loader
+
+        with self.assert_warning_logged("app.loader"):
+            mode = loader._resolve_format_mode(
+                {"format_mode": "Symbol"},
+                "cloud_total",
+            )
+        assert mode == "symbol", (
+            f"AC-446-1: 'Symbol' muss auf catalog default 'symbol' fallen, war '{mode}'"
+        )
+
+    def test_ac446_2_unknown_all_caps_falls_back_to_catalog_default(self):
+        """AC-2: format_mode='RAW' (Caps) für cloud_total → 'symbol' (catalog default)."""
+        from app import loader
+
+        mode = loader._resolve_format_mode(
+            {"format_mode": "RAW"},
+            "cloud_total",
+        )
+        assert mode == "symbol", (
+            f"AC-446-2: 'RAW' ist nicht in ('raw','symbol') für cloud_total → "
+            f"Fallback auf 'symbol', war '{mode}'"
+        )
+
+    def test_ac446_3_valid_mode_returned_unchanged(self):
+        """AC-3: format_mode='raw' (valide) für cloud_total → 'raw' unverändert, kein Log."""
+        import logging
+        from app import loader
+
+        with self.assert_no_warning_logged("app.loader"):
+            mode = loader._resolve_format_mode(
+                {"format_mode": "raw"},
+                "cloud_total",
+            )
+        assert mode == "raw", (
+            f"AC-446-3: Valides 'raw' muss unverändert zurückgegeben werden, war '{mode}'"
+        )
+
+    def test_ac446_4_unknown_metric_id_returns_raw_unchanged(self):
+        """AC-4: format_mode='raw_v2' für unbekannte Metrik → 'raw_v2' bleibt (KeyError → pass)."""
+        from app import loader
+
+        mode = loader._resolve_format_mode(
+            {"format_mode": "raw_v2"},
+            "nonexistent_metric_xyz",
+        )
+        assert mode == "raw_v2", (
+            f"AC-446-4: Unbekannte metric_id → raw bleibt 'raw_v2', war '{mode}'"
+        )
+
+    def test_ac446_5_mode_not_in_restricted_format_modes_falls_back(self):
+        """AC-5: format_mode='raw' für thunder (nur 'symbol') → 'symbol' (Fallback)."""
+        from app import loader
+
+        mode = loader._resolve_format_mode(
+            {"format_mode": "raw"},
+            "thunder",
+        )
+        assert mode == "symbol", (
+            f"AC-446-5: thunder hat nur format_modes=('symbol',) → "
+            f"'raw' muss auf 'symbol' fallen, war '{mode}'"
+        )
+
+    # --- Hilfsmethoden ---
+
+    from contextlib import contextmanager
+
+    @contextmanager
+    def assert_warning_logged(self, logger_name: str):
+        import logging
+
+        records: list = []
+
+        class _Cap(logging.Handler):
+            def emit(self, record):
+                records.append(record)
+
+        handler = _Cap()
+        handler.setLevel(logging.WARNING)
+        log = logging.getLogger(logger_name)
+        log.addHandler(handler)
+        try:
+            yield
+        finally:
+            log.removeHandler(handler)
+
+        warnings = [r for r in records if r.levelno >= logging.WARNING]
+        assert warnings, (
+            f"AC-446: Kein WARNING über Logger '{logger_name}' geloggt — "
+            f"erwartet bei unbekanntem format_mode"
+        )
+
+    @contextmanager
+    def assert_no_warning_logged(self, logger_name: str):
+        import logging
+
+        records: list = []
+
+        class _Cap(logging.Handler):
+            def emit(self, record):
+                records.append(record)
+
+        handler = _Cap()
+        handler.setLevel(logging.WARNING)
+        log = logging.getLogger(logger_name)
+        log.addHandler(handler)
+        try:
+            yield
+        finally:
+            log.removeHandler(handler)
+
+        warnings = [r for r in records if r.levelno >= logging.WARNING]
+        assert not warnings, (
+            f"AC-446: Unerwartetes WARNING über Logger '{logger_name}' bei "
+            f"validen format_mode-Werten: {[r.getMessage() for r in warnings]}"
+        )

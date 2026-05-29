@@ -51,6 +51,19 @@ def _resolve_format_mode(mc_data: dict, metric_id: str) -> str:
     """
     raw = mc_data.get("format_mode")
     if raw is not None:
+        try:
+            from app.metric_catalog import get_metric
+            metric_def = get_metric(metric_id)
+            if raw not in metric_def.format_modes:
+                import logging
+                logging.getLogger(__name__).warning(
+                    "Unknown format_mode %r for metric %r; "
+                    "falling back to default %r",
+                    raw, metric_id, metric_def.default_format_mode,
+                )
+                return metric_def.default_format_mode
+        except KeyError:
+            pass  # unbekannte metric_id → weiter mit raw
         return raw
     if not mc_data.get("use_friendly_format", True):
         return "raw"

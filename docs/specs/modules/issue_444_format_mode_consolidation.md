@@ -105,7 +105,7 @@ In `tests/red/test_issue_435_format_modes.py` wird eine neue Klasse `TestAC444De
 ## Known Limitations
 
 - `_resolve_format_mode` in `loader.py` wird im Production-Read-Pfad heute nicht aufgerufen — nach diesem Refactoring wird es indirekt über `_effective_format_mode` zur Render-Zeit aufgerufen. Das Deployment-Verhalten ändert sich nicht, aber der Code-Pfad verschiebt sich.
-- Unbekannte `format_mode`-Strings (z.B. `"raw_v2"`) werden weiterhin ungeprüft durchgereicht (Verhalten geerbt von `_resolve_format_mode`). Strikte Validierung bleibt Out-of-Scope (Adversary F004, #435).
+- Unbekannte `format_mode`-Strings (z.B. `"raw_v2"`) werden weiterhin ungeprüft durchgereicht (Verhalten geerbt von `_resolve_format_mode`). Strikte Validierung in [Issue #446](issue_446_format_mode_validation.md) (implementiert 2026-05-29).
 - Die symmetrische Richtung — `loader._resolve_format_mode` als Wrapper auf `_effective_format_mode` — ist nicht möglich, da `loader.py` zur Load-Zeit auf einem serialisierten `dict` operiert, nicht auf einem `MetricConfig`-Objekt.
 
 ## Changelog
