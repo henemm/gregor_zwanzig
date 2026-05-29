@@ -7,6 +7,7 @@
 	import { setContext } from 'svelte';
 	import { CompareWizardState } from '$lib/components/compare/compareWizardState.svelte';
 	import CompareWizard from '$lib/components/compare/CompareWizard.svelte';
+	import type { IdealRange } from '$lib/components/compare/compareMetricDefs';
 	import type { ActivityProfile } from '$lib/types';
 
 	let { data } = $props();
@@ -22,6 +23,8 @@
 	state.existingDisplayConfig =
 		(data.subscription.display_config as Record<string, unknown>) ?? {};
 	state.region = (state.existingDisplayConfig.region as string) ?? '';
+	state.idealRanges =
+		(state.existingDisplayConfig.ideal_ranges as Record<string, IdealRange>) ?? {};
 
 	// Issue #443 — Step-5-Versand-Felder prefüllen
 	state.sendEmail = data.subscription.send_email ?? true;

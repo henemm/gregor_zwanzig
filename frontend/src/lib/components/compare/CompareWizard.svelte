@@ -15,6 +15,7 @@
 	import Stepper from '$lib/components/trip-wizard/Stepper.svelte';
 	import Step1Vergleich from './steps/Step1Vergleich.svelte';
 	import Step2Orte from './steps/Step2Orte.svelte';
+	import Step3Idealwerte from './steps/Step3Idealwerte.svelte';
 	import Step5Versand from './steps/Step5Versand.svelte';
 	import type { Location } from '$lib/types';
 
@@ -139,6 +140,8 @@
 			<Step1Vergleich />
 		{:else if state.currentStep === 2}
 			<Step2Orte {locations} />
+		{:else if state.currentStep === 3}
+			<Step3Idealwerte />
 		{:else if state.currentStep === 5}
 			<Step5Versand />
 		{:else}

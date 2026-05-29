@@ -79,6 +79,9 @@ Siehe: `docs/features/architecture.md`
 
 | Dokument | Beschreibung |
 |----------|--------------|
+| `docs/features/epic-438-compare-wizard.md` | Orts-Vergleich Wizard (5 Steps, Step 3 ✓) |
+| `docs/features/epic-134-cockpit-dashboard.md` | Trip-Cockpit-Startseite |
+| `docs/features/architecture.md` | Systemarchitektur (Backend + Frontend + Wizards) |
 | `docs/reference/api_contract.md` | Single Source of Truth: DTOs & Datenformate |
 | `docs/reference/decision_matrix.md` | Provider-Auswahl (MET vs MOSMIX) |
 | `docs/features/scope.md` | Projektvision & Ziele |

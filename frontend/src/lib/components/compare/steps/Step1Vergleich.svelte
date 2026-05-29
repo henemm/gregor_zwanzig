@@ -4,7 +4,7 @@
 	import { getContext } from 'svelte';
 	import { Field } from '$lib/components/molecules';
 	import type { CompareWizardState } from '../compareWizardState.svelte';
-	import { ACTIVITY_PROFILE_OPTIONS } from '$lib/types';
+	import { ACTIVITY_PROFILE_OPTIONS, type ActivityProfile } from '$lib/types';
 
 	const state = getContext<CompareWizardState>('compare-wizard-state');
 
@@ -16,6 +16,25 @@
 
 	function profileLabel(value: string, fallback: string): string {
 		return COMPARE_PROFILE_LABELS[value] ?? fallback;
+	}
+
+	// Issue #441 AC-6: Profil-Wechsel-Guard — bestätigt das Verwerfen
+	// bereits gesetzter Idealwerte, bevor das Profil gewechselt wird.
+	function handleProfileSelect(value: ActivityProfile) {
+		if (
+			Object.keys(state.idealRanges).length > 0 &&
+			value !== state.activityProfile
+		) {
+			if (
+				!confirm(
+					'Aktivitätsprofil wechseln? Deine Idealwert-Einstellungen werden zurückgesetzt.'
+				)
+			) {
+				return;
+			}
+			state.idealRanges = {};
+		}
+		state.activityProfile = value;
 	}
 </script>
 
@@ -56,9 +75,7 @@
 				<button
 					data-testid={`compare-step1-tile-${opt.value}`}
 					type="button"
-					onclick={() => {
-						state.activityProfile = opt.value;
-					}}
+					onclick={() => handleProfileSelect(opt.value)}
 					class={`p-4 rounded border text-left transition-colors ${
 						state.activityProfile === opt.value
 							? 'border-[var(--g-accent)] bg-[var(--g-accent)]/10 text-[var(--g-accent-deep)]'
