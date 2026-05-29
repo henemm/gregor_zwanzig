@@ -746,35 +746,23 @@ function extractSaveMethod(source: string): string {
 	throw new Error('save()-Methoden-Body nicht geschlossen — Klammer-Balance gebrochen');
 }
 
-test("AC-1 #197: save() redirected auf '/trips' (Liste), NICHT auf /trips/${id}", () => {
+test("AC-1 #197 → #436: save() navigiert zu '/trips/${created.id}' — Template-Literal-Navigation", () => {
 	const sourcePath = new URL('../wizardState.svelte.ts', import.meta.url);
 	const source = readFileSync(sourcePath, 'utf-8');
 	const saveBody = extractSaveMethod(source);
 
-	// Verbotene Form: Template-Literal mit Pfad-Segment /trips/${...}
-	const forbiddenTemplate = /goto\(\s*`\/trips\/\$\{/;
-	assert.equal(
-		forbiddenTemplate.test(saveBody),
-		false,
-		"save() darf nicht mehr `goto(`/trips/${...}`)` enthalten — Route existiert nicht (#197)"
+	// Erwartet: Template-Literal-Navigation zu /trips/${created.id}
+	const expectedTemplate = /goto\(\s*`\/trips\/\$\{/;
+	assert.ok(
+		expectedTemplate.test(saveBody),
+		"save() muss 'goto(`/trips/${...}`)' enthalten — Navigation zum neu erstellten Trip (#436)"
 	);
 
-	// Erwartete Form: exakt ein Aufruf goto('/trips') (Single-Quotes oder Backticks ohne Pfad-Segment).
-	// Wir akzeptieren single-quotes, double-quotes oder Backticks ohne Interpolation auf /trips.
-	const acceptedCallRe = /goto\(\s*(['"`])\/trips\1\s*\)/g;
-	const matches = saveBody.match(acceptedCallRe) ?? [];
-	assert.equal(
-		matches.length,
-		1,
-		`save() muss exakt einen goto('/trips')-Aufruf enthalten — gefunden: ${matches.length}`
-	);
-
-	// Zusatzcheck: Es darf insgesamt nur einen goto-Aufruf in save() geben.
-	const allGotos = saveBody.match(/goto\s*\(/g) ?? [];
-	assert.equal(
-		allGotos.length,
-		1,
-		`save() darf nur einen einzigen goto-Aufruf enthalten — gefunden: ${allGotos.length}`
+	// Erwartet: Fallback-Kondition created?.id ? ... : '/trips'
+	const conditionalPattern = /created(\?\.|\.)id\s*\?/;
+	assert.ok(
+		conditionalPattern.test(saveBody),
+		"save() muss eine id-Kondition 'created?.id ?' enthalten — Fallback auf '/trips' (#436)"
 	);
 });
 
@@ -798,17 +786,6 @@ test('AC-2 #197: goto-Aufruf steht innerhalb des try-Blocks von save()', () => {
 	assert.ok(
 		gotoIdx < catchIdx,
 		"goto-Aufruf muss VOR 'catch (e:' stehen (nicht im catch-Block)"
-	);
-});
-
-test('AC-3 #197: TODO(epic-135)-Marker steht in der save()-Methode bei dem goto-Aufruf', () => {
-	const sourcePath = new URL('../wizardState.svelte.ts', import.meta.url);
-	const source = readFileSync(sourcePath, 'utf-8');
-	const saveBody = extractSaveMethod(source);
-
-	assert.ok(
-		saveBody.includes('TODO(epic-135)'),
-		"save() muss den Cleanup-Marker 'TODO(epic-135)' enthalten (Verweis auf Epic #135 fuer spaeteren /trips/${id}-Wechsel)"
 	);
 });
 

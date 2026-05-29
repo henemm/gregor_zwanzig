@@ -310,14 +310,16 @@ export class WizardState {
 		try {
 			const { api } = await import('$lib/api');
 			const created = await api.post<Trip>('/api/trips', trip);
-			void created;
 			this.saveStatus = 'ok';
 			const { goto } = await import('$app/navigation');
-			// TODO(epic-135): Wenn Epic #135 (Trip-Detail-Page /trips/[id]) verfuegbar ist,
-			// diesen Fallback durch eine Navigation auf die Detail-Page des
-			// neu erstellten Trips (created.id) ersetzen.
-			// Tracking: Issue #197 (Master-Spec §1.4).
-			await goto('/trips');
+			// Issue #436: Navigation zur Detail-Page des neu erstellten Trips.
+			// Logisch aequivalent zu: created?.id ? `/trips/${created.id}` : '/trips'
+			// (als if/else expandiert fuer bessere Lesbarkeit + Stack-Traces).
+			if (created?.id) {
+				await goto(`/trips/${created.id}`);
+			} else {
+				await goto('/trips');
+			}
 		} catch (e: unknown) {
 			this.saveStatus = 'error';
 			this.saveError = extractErrorMessage(e);
