@@ -11,9 +11,13 @@ const cacheTTL = 15 * time.Minute
 
 // cacheKey identifies a single compare result entry. Profile is part of the
 // key because winner-tags and downstream UI depend on it.
+// Issue #454: Date → DateFrom/DateTo/HourFrom/HourTo for multi-day windows.
 type cacheKey struct {
 	LocationID string
-	Date       string
+	DateFrom   string
+	DateTo     string
+	HourFrom   int
+	HourTo     int
 	Profile    ActivityProfile
 }
 

@@ -2,9 +2,11 @@ package compare
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"sort"
 	"sync"
+	"time"
 
 	"github.com/henemm/gregor-api/internal/model"
 	"github.com/henemm/gregor-api/internal/provider"
@@ -42,11 +44,15 @@ type fetchedRow struct {
 //   - Locations that don't exist are silently dropped (partial result, no error).
 //   - A nil provider yields an empty SegmentWeatherSummary for every existing
 //     location — scoring then degenerates to zeros, but the request still
-//     succeeds with a populated rows array. This lets the HTTP handler stay
+//     succeeds with a populated ranking array. This lets the HTTP handler stay
 //     observable in tests that don't wire a real provider.
 //   - Cache hits skip both the store lookup and the provider call.
+//   - Issue #454: Multi-day aggregation across [date_from..date_to] with an
+//     hour-window filter [hour_from..hour_to] (UTC).
 func (e *Engine) Run(ctx context.Context, userID string, req CompareRequest) (CompareResult, error) {
 	us := e.store.WithUser(userID)
+
+	hours := forecastHours(req.DateTo)
 
 	var mu sync.Mutex
 	var wg sync.WaitGroup
@@ -57,51 +63,98 @@ func (e *Engine) Run(ctx context.Context, userID string, req CompareRequest) (Co
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-
-			key := cacheKey{LocationID: locID, Date: req.Date, Profile: req.Profile}
-			if entry, ok := e.cache.get(key); ok {
-				loc, err := us.LoadLocation(locID)
-				if err != nil || loc == nil {
-					return
-				}
-				mu.Lock()
-				fetched = append(fetched, fetchedRow{locationID: locID, summary: entry.summary, hourly: entry.hourly, location: loc})
-				mu.Unlock()
+			fr, ok := e.fetchOne(us, locID, req, hours)
+			if !ok {
 				return
 			}
-
-			loc, err := us.LoadLocation(locID)
-			if err != nil || loc == nil {
-				return // partial result — drop silently
-			}
-
-			var summary model.SegmentWeatherSummary
-			var hourly []model.ForecastDataPoint
-
-			if e.provider != nil {
-				ts, err := e.provider.FetchForecast(loc.Lat, loc.Lon, 72)
-				if err != nil {
-					return // provider failed → drop location (partial result)
-				}
-				if ts != nil {
-					if agg := aggregateByDate(ts.Data, req.Date); agg != nil {
-						summary = *agg
-					}
-					hourly = filterByDate(ts.Data, req.Date)
-				}
-			}
-
-			e.cache.set(key, summary, hourly)
-
 			mu.Lock()
-			fetched = append(fetched, fetchedRow{locationID: locID, summary: summary, hourly: hourly, location: loc})
+			fetched = append(fetched, fr)
 			mu.Unlock()
 		}()
 	}
 	wg.Wait()
 
+	return buildResult(fetched, req), nil
+}
+
+// forecastHours returns the number of forecast hours to request from the
+// provider, sized to span until date_to + 48h buffer, capped to OpenMeteo's
+// 240h limit and floored at 72h to keep backwards compatibility with the
+// previous single-day behaviour.
+func forecastHours(dateTo string) int {
+	const (
+		defaultHours = 72
+		maxHours     = 240
+	)
+	if dateTo == "" {
+		return defaultHours
+	}
+	t, err := time.Parse("2006-01-02", dateTo)
+	if err != nil {
+		return defaultHours
+	}
+	delta := int(t.Sub(time.Now()).Hours()) + 48
+	if delta < defaultHours {
+		return defaultHours
+	}
+	if delta > maxHours {
+		return maxHours
+	}
+	return delta
+}
+
+// fetchOne resolves a single location (cache-first, then provider). Returns
+// (row, true) on success, (_, false) when the location should be dropped.
+func (e *Engine) fetchOne(us *store.Store, locID string, req CompareRequest, hours int) (fetchedRow, bool) {
+	key := cacheKey{
+		LocationID: locID,
+		DateFrom:   req.DateFrom,
+		DateTo:     req.DateTo,
+		HourFrom:   req.HourFrom,
+		HourTo:     req.HourTo,
+		Profile:    req.Profile,
+	}
+	if entry, ok := e.cache.get(key); ok {
+		loc, err := us.LoadLocation(locID)
+		if err != nil || loc == nil {
+			return fetchedRow{}, false
+		}
+		return fetchedRow{locationID: locID, summary: entry.summary, hourly: entry.hourly, location: loc}, true
+	}
+
+	loc, err := us.LoadLocation(locID)
+	if err != nil || loc == nil {
+		return fetchedRow{}, false
+	}
+
+	var summary model.SegmentWeatherSummary
+	var hourly []model.ForecastDataPoint
+	if e.provider != nil {
+		ts, err := e.provider.FetchForecast(loc.Lat, loc.Lon, hours)
+		if err != nil {
+			return fetchedRow{}, false
+		}
+		if ts != nil {
+			if agg := aggregateByDateRange(ts.Data, req.DateFrom, req.DateTo, req.HourFrom, req.HourTo); agg != nil {
+				summary = *agg
+			}
+			hourly = filterByDateRange(ts.Data, req.DateFrom, req.DateTo, req.HourFrom, req.HourTo)
+		}
+	}
+
+	e.cache.set(key, summary, hourly)
+	return fetchedRow{locationID: locID, summary: summary, hourly: hourly, location: loc}, true
+}
+
+// buildResult turns the fetched rows into the Issue #454 response shape.
+func buildResult(fetched []fetchedRow, req CompareRequest) CompareResult {
+	empty := CompareResult{
+		Ranking:        []RankingEntry{},
+		Matrix:         []MatrixEntry{},
+		StundenVerlauf: []StundenVerlaufEntry{},
+	}
 	if len(fetched) == 0 {
-		return CompareResult{Rows: []CompareRow{}, Hourly: map[string][]model.ForecastDataPoint{}}, nil
+		return empty
 	}
 
 	locs := make([]*model.Location, 0, len(fetched))
@@ -117,65 +170,277 @@ func (e *Engine) Run(ctx context.Context, userID string, req CompareRequest) (Co
 		allMetrics[i] = fr.summary
 	}
 
-	rows := make([]CompareRow, len(fetched))
+	// Stable sort: highest score first, ties broken by location_id asc.
+	type scoredRow struct {
+		fr    fetchedRow
+		score int
+	}
+	scored := make([]scoredRow, len(fetched))
 	for i, fr := range fetched {
-		rows[i] = CompareRow{
-			LocationID: fr.locationID,
-			Score:      ScoreRow(fr.summary, req.Profile, allMetrics, enabledKeys),
-			Metrics:    fr.summary,
-		}
+		scored[i] = scoredRow{fr: fr, score: ScoreRow(fr.summary, req.Profile, allMetrics, enabledKeys)}
 	}
-
-	sort.SliceStable(rows, func(i, j int) bool {
-		if rows[i].Score != rows[j].Score {
-			return rows[i].Score > rows[j].Score
+	sort.SliceStable(scored, func(i, j int) bool {
+		if scored[i].score != scored[j].score {
+			return scored[i].score > scored[j].score
 		}
-		return rows[i].LocationID < rows[j].LocationID
+		return scored[i].fr.locationID < scored[j].fr.locationID
 	})
-	for i := range rows {
-		rows[i].Rank = i + 1
-	}
 
-	hourly := make(map[string][]model.ForecastDataPoint)
-	topN := 3
-	if len(rows) < topN {
-		topN = len(rows)
-	}
-	hourlyByLoc := make(map[string][]model.ForecastDataPoint, len(fetched))
-	for _, fr := range fetched {
-		hourlyByLoc[fr.locationID] = fr.hourly
-	}
-	for i := 0; i < topN; i++ {
-		hourly[rows[i].LocationID] = hourlyByLoc[rows[i].LocationID]
-	}
-
-	var winner *CompareWinner
-	if len(rows) > 0 {
-		w := rows[0]
-		winner = &CompareWinner{
-			LocationID: w.LocationID,
-			Tags:       WinnerTags(w.Metrics, req.Profile),
+	ranking := make([]RankingEntry, len(scored))
+	matrix := make([]MatrixEntry, len(scored))
+	stundenVerlauf := make([]StundenVerlaufEntry, len(scored))
+	for i, s := range scored {
+		var name string
+		if s.fr.location != nil {
+			name = s.fr.location.Name
+		}
+		tags := []CompareTag{}
+		if i == 0 {
+			tags = WinnerTagsTyped(s.fr.summary, req.Profile)
+		}
+		ranking[i] = RankingEntry{
+			LocationID: s.fr.locationID,
+			Name:       name,
+			Score:      s.score,
+			Tags:       tags,
+		}
+		matrix[i] = MatrixEntry{LocationID: s.fr.locationID, Metrics: metricsMap(s.fr.summary)}
+		stundenVerlauf[i] = StundenVerlaufEntry{
+			LocationID: s.fr.locationID,
+			Hours:      hourlyMap(s.fr.hourly),
 		}
 	}
 
-	return CompareResult{Rows: rows, Winner: winner, Hourly: hourly}, nil
+	return CompareResult{Ranking: ranking, Matrix: matrix, StundenVerlauf: stundenVerlauf}
 }
 
-// filterByDate keeps only forecast points whose UTC date matches dateStr
-// (YYYY-MM-DD). An empty or unparseable dateStr is treated as "no filter".
-func filterByDate(points []model.ForecastDataPoint, dateStr string) []model.ForecastDataPoint {
-	if dateStr == "" {
-		out := make([]model.ForecastDataPoint, len(points))
-		copy(out, points)
-		return out
+// metricsMap serialises a SegmentWeatherSummary into a flat snake_case map,
+// only including non-nil / non-zero values.
+func metricsMap(s model.SegmentWeatherSummary) map[string]any {
+	out := map[string]any{}
+	if s.TempMinC != nil {
+		out["temp_min_c"] = *s.TempMinC
 	}
-	out := make([]model.ForecastDataPoint, 0, len(points))
-	for _, pt := range points {
-		if pt.Time.UTC().Format("2006-01-02") == dateStr {
-			out = append(out, pt)
-		}
+	if s.TempMaxC != nil {
+		out["temp_max_c"] = *s.TempMaxC
+	}
+	if s.WindMaxKmh != nil {
+		out["wind_max_kmh"] = *s.WindMaxKmh
+	}
+	if s.GustMaxKmh != nil {
+		out["gust_max_kmh"] = *s.GustMaxKmh
+	}
+	if s.PrecipSumMm != nil {
+		out["precip_sum_mm"] = *s.PrecipSumMm
+	}
+	if s.SunnyHoursH != nil {
+		out["sunny_hours_h"] = *s.SunnyHoursH
+	}
+	if s.CloudAvgPct != nil {
+		out["cloud_avg_pct"] = *s.CloudAvgPct
+	}
+	if s.VisibilityMinM != nil {
+		out["visibility_min_m"] = *s.VisibilityMinM
+	}
+	if s.SnowDepthCm != nil {
+		out["snow_depth_cm"] = *s.SnowDepthCm
+	}
+	if s.SnowNewSumCm != nil {
+		out["snow_new_sum_cm"] = *s.SnowNewSumCm
+	}
+	if s.UvIndexMax != nil {
+		out["uv_index_max"] = *s.UvIndexMax
+	}
+	if s.PopMaxPct != nil {
+		out["pop_max_pct"] = *s.PopMaxPct
+	}
+	if s.CapeMaxJkg != nil {
+		out["cape_max_jkg"] = *s.CapeMaxJkg
+	}
+	if s.ThunderLevelMax != "" {
+		out["thunder_level_max"] = string(s.ThunderLevelMax)
 	}
 	return out
+}
+
+// hourlyMap projects forecast points to the stunden_verlauf shape: two-digit
+// UTC hour and a flat values map of the 7 surface fields per the spec.
+func hourlyMap(points []model.ForecastDataPoint) []StundenVerlaufHour {
+	hours := make([]StundenVerlaufHour, 0, len(points))
+	for _, pt := range points {
+		values := map[string]any{}
+		if pt.T2mC != nil {
+			values["t2m_c"] = *pt.T2mC
+		}
+		if pt.Wind10mKmh != nil {
+			values["wind10m_kmh"] = *pt.Wind10mKmh
+		}
+		if pt.GustKmh != nil {
+			values["gust_kmh"] = *pt.GustKmh
+		}
+		if pt.Precip1hMm != nil {
+			values["precip_1h_mm"] = *pt.Precip1hMm
+		}
+		if pt.CloudTotalPct != nil {
+			values["cloud_total_pct"] = *pt.CloudTotalPct
+		}
+		if pt.ThunderLevel != "" {
+			values["thunder_level"] = string(pt.ThunderLevel)
+		}
+		if pt.VisibilityM != nil {
+			values["visibility_m"] = *pt.VisibilityM
+		}
+		hours = append(hours, StundenVerlaufHour{
+			Hour:   fmt.Sprintf("%02d", pt.Time.UTC().Hour()),
+			Values: values,
+		})
+	}
+	return hours
+}
+
+// filterByDateRange keeps only forecast points whose UTC date is within
+// [dateFrom..dateTo] AND whose UTC hour is within [hourFrom..hourTo].
+// Empty / unparseable date strings degrade to "no date filter" (hour filter
+// still applies).
+func filterByDateRange(points []model.ForecastDataPoint, dateFrom, dateTo string, hourFrom, hourTo int) []model.ForecastDataPoint {
+	from, fromOK := parseDate(dateFrom)
+	to, toOK := parseDate(dateTo)
+	out := make([]model.ForecastDataPoint, 0, len(points))
+	for _, pt := range points {
+		utc := pt.Time.UTC()
+		hour := utc.Hour()
+		if hour < hourFrom || hour > hourTo {
+			continue
+		}
+		if fromOK && toOK {
+			d := time.Date(utc.Year(), utc.Month(), utc.Day(), 0, 0, 0, 0, time.UTC)
+			if d.Before(from) || d.After(to) {
+				continue
+			}
+		}
+		out = append(out, pt)
+	}
+	return out
+}
+
+// dayAggregate holds a per-day summary plus the point count that produced it
+// (for the cloud-cover weighted average over the full window).
+type dayAggregate struct {
+	summary *model.SegmentWeatherSummary
+	count   int
+}
+
+// aggregateByDateRange splits points into calendar days, aggregates each day
+// via aggregateByDate, and merges the per-day summaries into one.
+func aggregateByDateRange(points []model.ForecastDataPoint, dateFrom, dateTo string, hourFrom, hourTo int) *model.SegmentWeatherSummary {
+	from, fromOK := parseDate(dateFrom)
+	to, toOK := parseDate(dateTo)
+	if !fromOK || !toOK || to.Before(from) {
+		return nil
+	}
+
+	days := make([]dayAggregate, 0)
+	for d := from; !d.After(to); d = d.AddDate(0, 0, 1) {
+		dateStr := d.Format("2006-01-02")
+		filtered := make([]model.ForecastDataPoint, 0)
+		for _, pt := range points {
+			utc := pt.Time.UTC()
+			if utc.Format("2006-01-02") != dateStr {
+				continue
+			}
+			if utc.Hour() < hourFrom || utc.Hour() > hourTo {
+				continue
+			}
+			filtered = append(filtered, pt)
+		}
+		if agg := aggregateByDate(filtered, ""); agg != nil {
+			days = append(days, dayAggregate{summary: agg, count: len(filtered)})
+		}
+	}
+	if len(days) == 0 {
+		return nil
+	}
+	return mergeDays(days)
+}
+
+// mergeDays combines per-day SegmentWeatherSummary aggregates into a single
+// summary. min/max/sum/weighted-avg per the spec §3.
+func mergeDays(days []dayAggregate) *model.SegmentWeatherSummary {
+	out := &model.SegmentWeatherSummary{ThunderLevelMax: model.ThunderNone}
+	var precipSum, sunnySum, snowNewSum float64
+	precipAny, sunnyAny, snowNewAny := false, false, false
+	var cloudWeighted float64
+	var cloudWeights int
+	var lastSnowDepth *float64
+
+	for _, d := range days {
+		s := d.summary
+		updateMinFloat(&out.TempMinC, s.TempMinC)
+		updateMaxFloat(&out.TempMaxC, s.TempMaxC)
+		updateMaxFloat(&out.WindMaxKmh, s.WindMaxKmh)
+		updateMaxFloat(&out.GustMaxKmh, s.GustMaxKmh)
+		updateMinFloat(&out.VisibilityMinM, s.VisibilityMinM)
+		updateMaxFloat(&out.UvIndexMax, s.UvIndexMax)
+		updateMaxFloat(&out.CapeMaxJkg, s.CapeMaxJkg)
+		updateMaxInt(&out.PopMaxPct, s.PopMaxPct)
+
+		if s.PrecipSumMm != nil {
+			precipSum += *s.PrecipSumMm
+			precipAny = true
+		}
+		if s.SunnyHoursH != nil {
+			sunnySum += *s.SunnyHoursH
+			sunnyAny = true
+		}
+		if s.SnowNewSumCm != nil {
+			snowNewSum += *s.SnowNewSumCm
+			snowNewAny = true
+		}
+		if s.CloudAvgPct != nil && d.count > 0 {
+			cloudWeighted += float64(*s.CloudAvgPct) * float64(d.count)
+			cloudWeights += d.count
+		}
+		if s.SnowDepthCm != nil {
+			v := *s.SnowDepthCm
+			lastSnowDepth = &v
+		}
+		if thunderOrder(s.ThunderLevelMax) > thunderOrder(out.ThunderLevelMax) {
+			out.ThunderLevelMax = s.ThunderLevelMax
+		}
+	}
+
+	if precipAny {
+		v := precipSum
+		out.PrecipSumMm = &v
+	}
+	if sunnyAny {
+		v := math.Round(sunnySum*10) / 10
+		out.SunnyHoursH = &v
+	}
+	if snowNewAny {
+		v := snowNewSum
+		out.SnowNewSumCm = &v
+	}
+	if cloudWeights > 0 {
+		v := int(math.Round(cloudWeighted / float64(cloudWeights)))
+		out.CloudAvgPct = &v
+	}
+	if lastSnowDepth != nil {
+		out.SnowDepthCm = lastSnowDepth
+	}
+	return out
+}
+
+// parseDate is a permissive YYYY-MM-DD parser. Returns (zero, false) on error.
+func parseDate(s string) (time.Time, bool) {
+	if s == "" {
+		return time.Time{}, false
+	}
+	t, err := time.Parse("2006-01-02", s)
+	if err != nil {
+		return time.Time{}, false
+	}
+	return t, true
 }
 
 // aggregateByDate aggregates forecast points into a SegmentWeatherSummary

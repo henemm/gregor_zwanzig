@@ -222,28 +222,58 @@ func ScoreRow(loc model.SegmentWeatherSummary, profile ActivityProfile, allMetri
 	return score
 }
 
-// WinnerTags returns at least one human-readable tag describing why the
-// winner won. Picks from the two highest-weighted metrics of the profile.
-func WinnerTags(winner model.SegmentWeatherSummary, profile ActivityProfile) []string {
+// WinnerTagsTyped returns at least one typed tag describing why the winner won.
+// Picks from the two highest-weighted metrics of the profile. Each tag carries
+// a machine-readable type and a human-readable German label.
+// Issue #454: replaces WinnerTags() ([]string).
+func WinnerTagsTyped(winner model.SegmentWeatherSummary, profile ActivityProfile) []CompareTag {
 	specs := profileMetrics(profile)
 	if len(specs) == 0 {
-		return []string{"Bester Score"}
+		return []CompareTag{{Type: "best_score", Label: "Bester Score"}}
 	}
 
-	tags := make([]string, 0, 2)
+	tags := make([]CompareTag, 0, 2)
 	for i, spec := range specs {
 		if i >= 2 {
 			break
 		}
-		tag := labelFor(spec.key)
-		if tag != "" {
-			tags = append(tags, tag)
+		label := labelFor(spec.key)
+		if label == "" {
+			continue
 		}
+		tags = append(tags, CompareTag{Type: typeFor(spec.key), Label: label})
 	}
 	if len(tags) == 0 {
-		tags = append(tags, "Bester Score")
+		tags = append(tags, CompareTag{Type: "best_score", Label: "Bester Score"})
 	}
 	return tags
+}
+
+// typeFor returns the machine-readable tag type for a metric key.
+func typeFor(k metricKey) string {
+	switch k {
+	case metricSnowDepth, metricSnowNew:
+		return "best_snow"
+	case metricSunnyHours:
+		return "best_sun"
+	case metricWindMax:
+		return "low_wind"
+	case metricPrecipSum:
+		return "low_rain"
+	case metricVisibilityMin:
+		return "good_visibility"
+	case metricThunderProxy:
+		return "low_thunder"
+	case metricTempMax:
+		return "best_temp"
+	case metricCloudAvg:
+		return "clear_sky"
+	case metricAvalancheLevel:
+		return "low_avalanche"
+	case metricUvIndexMax:
+		return "moderate_uv"
+	}
+	return "best_score"
 }
 
 // labelFor returns the German UI label associated with a metric key. The

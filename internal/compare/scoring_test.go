@@ -73,21 +73,24 @@ func TestScoreRow_AlpineTour_MissingAvalanche_NoError(t *testing.T) {
 
 func TestWinnerTags_SummerTrekking_ReturnsTags(t *testing.T) {
 	// GIVEN: Eine Location mit niedrigem Regen und wenig Wind
-	// WHEN:  WinnerTags mit SUMMER_TREKKING
-	// THEN:  Mindestens ein nicht-leerer Tag zurückgegeben
+	// WHEN:  WinnerTagsTyped mit SUMMER_TREKKING
+	// THEN:  Mindestens ein typisierter Tag mit nicht-leerem Type+Label zurückgegeben
 	winner := model.SegmentWeatherSummary{
 		PrecipSumMm: fp(0.1),
 		WindMaxKmh:  fp(5.0),
 		UvIndexMax:  fp(6.0),
 	}
-	tags := WinnerTags(winner, ProfileSummerTrekking)
+	tags := WinnerTagsTyped(winner, ProfileSummerTrekking)
 
 	if len(tags) == 0 {
-		t.Error("WinnerTags sollte mindestens einen Tag zurückgeben")
+		t.Error("WinnerTagsTyped sollte mindestens einen Tag zurückgeben")
 	}
 	for _, tag := range tags {
-		if tag == "" {
-			t.Error("WinnerTag darf nicht leer sein")
+		if tag.Type == "" {
+			t.Error("WinnerTag.Type darf nicht leer sein")
+		}
+		if tag.Label == "" {
+			t.Error("WinnerTag.Label darf nicht leer sein")
 		}
 	}
 }

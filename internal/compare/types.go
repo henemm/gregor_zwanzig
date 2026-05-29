@@ -1,8 +1,7 @@
 // Package compare implements profile-weighted ranking of weather forecasts
-// for multiple locations. See docs/specs/modules/compare_engine.md.
+// for multiple locations. See docs/specs/modules/compare_engine.md and
+// docs/specs/modules/issue_454_compare_engine_backend.md.
 package compare
-
-import "github.com/henemm/gregor-api/internal/model"
 
 // ActivityProfile enumerates the supported scoring profiles for a compare run.
 type ActivityProfile string
@@ -28,29 +27,52 @@ func IsValidProfile(p ActivityProfile) bool {
 }
 
 // CompareRequest is the JSON body of POST /api/compare/run.
+// Issue #454: date → date_from/date_to/hour_from/hour_to.
 type CompareRequest struct {
 	LocationIDs []string        `json:"location_ids"`
-	Date        string          `json:"date"`
+	DateFrom    string          `json:"date_from"`
+	DateTo      string          `json:"date_to"`
+	HourFrom    int             `json:"hour_from"`
+	HourTo      int             `json:"hour_to"`
 	Profile     ActivityProfile `json:"profile"`
 }
 
-// CompareRow is one entry in the compare ranking.
-type CompareRow struct {
-	LocationID string                      `json:"location_id"`
-	Score      int                         `json:"score"`
-	Rank       int                         `json:"rank"`
-	Metrics    model.SegmentWeatherSummary `json:"metrics"`
+// CompareTag is a machine-readable + human-readable tag for a winning location.
+type CompareTag struct {
+	Type  string `json:"type"`
+	Label string `json:"label"`
 }
 
-// CompareWinner names the top-ranked location plus a few profile-specific tags.
-type CompareWinner struct {
-	LocationID string   `json:"location_id"`
-	Tags       []string `json:"tags"`
+// RankingEntry is one position in the ranking block of CompareResult.
+type RankingEntry struct {
+	LocationID string       `json:"location_id"`
+	Name       string       `json:"name"`
+	Score      int          `json:"score"`
+	Tags       []CompareTag `json:"tags"`
+}
+
+// MatrixEntry holds the aggregated SegmentWeatherSummary fields as a flat map.
+type MatrixEntry struct {
+	LocationID string         `json:"location_id"`
+	Metrics    map[string]any `json:"metrics"`
+}
+
+// StundenVerlaufHour is one filtered hourly datapoint with a two-digit UTC hour.
+type StundenVerlaufHour struct {
+	Hour   string         `json:"hour"`
+	Values map[string]any `json:"values"`
+}
+
+// StundenVerlaufEntry holds the filtered hourly trace for a single location.
+type StundenVerlaufEntry struct {
+	LocationID string               `json:"location_id"`
+	Hours      []StundenVerlaufHour `json:"hours"`
 }
 
 // CompareResult is the JSON response of POST /api/compare/run.
+// Issue #454: rows/winner/hourly → ranking/matrix/stunden_verlauf.
 type CompareResult struct {
-	Rows   []CompareRow                         `json:"rows"`
-	Winner *CompareWinner                       `json:"winner,omitempty"`
-	Hourly map[string][]model.ForecastDataPoint `json:"hourly"`
+	Ranking        []RankingEntry        `json:"ranking"`
+	Matrix         []MatrixEntry         `json:"matrix"`
+	StundenVerlauf []StundenVerlaufEntry `json:"stunden_verlauf"`
 }
