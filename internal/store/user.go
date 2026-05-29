@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/henemm/gregor-api/internal/model"
 )
@@ -149,6 +150,28 @@ func (s *Store) FindUserByOAuthSub(provider, sub string) (*model.User, error) {
 			continue
 		}
 		if u.OAuthProvider == provider && u.OAuthSub == sub {
+			return u, nil
+		}
+	}
+	return nil, nil
+}
+
+// FindUserByEmail searches all users for one whose Email field matches the given
+// address (case-insensitive). Returns (nil, nil) if no match found.
+func (s *Store) FindUserByEmail(email string) (*model.User, error) {
+	if strings.TrimSpace(email) == "" {
+		return nil, nil
+	}
+	ids, err := s.ListUserIDs()
+	if err != nil {
+		return nil, err
+	}
+	for _, id := range ids {
+		u, err := s.LoadUser(id)
+		if err != nil || u == nil {
+			continue
+		}
+		if strings.EqualFold(u.Email, strings.TrimSpace(email)) {
 			return u, nil
 		}
 	}

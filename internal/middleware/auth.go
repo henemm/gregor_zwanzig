@@ -35,7 +35,8 @@ func AuthMiddleware(secret string) func(http.Handler) http.Handler {
 				r.URL.Path == "/api/auth/register" || r.URL.Path == "/api/auth/login" ||
 				r.URL.Path == "/api/auth/logout" ||
 				r.URL.Path == "/api/auth/forgot-password" || r.URL.Path == "/api/auth/reset-password" ||
-				r.URL.Path == "/api/auth/google/init" || r.URL.Path == "/api/auth/google/callback" {
+				r.URL.Path == "/api/auth/google/init" || r.URL.Path == "/api/auth/google/callback" ||
+				r.URL.Path == "/api/auth/magic-link" || r.URL.Path == "/api/auth/magic-link/verify" {
 				next.ServeHTTP(w, r)
 				return
 			}

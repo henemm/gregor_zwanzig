@@ -84,6 +84,14 @@ func main() {
 	r.Put("/api/auth/password", handler.ChangePasswordHandler(s, bcrypt.DefaultCost))
 	r.Get("/api/auth/google/init", handler.GoogleOAuthInitHandler(cfg))
 	r.Get("/api/auth/google/callback", handler.GoogleOAuthCallbackHandler(cfg, s))
+	magicLinkLimiter := authmw.NewIPRateLimiter(5, 15*time.Minute)
+	r.Post("/api/auth/magic-link",
+		magicLinkLimiter.Middleware(handler.MagicLinkRequestHandler(s, cfg)).ServeHTTP,
+	)
+	magicVerifyLimiter := authmw.NewIPRateLimiter(10, 15*time.Minute)
+	r.Post("/api/auth/magic-link/verify",
+		magicVerifyLimiter.Middleware(handler.MagicLinkVerifyHandler(s, cfg)).ServeHTTP,
+	)
 
 	r.Get("/api/health", handler.HealthHandler(cfg.PythonCoreURL))
 	r.Get("/api/config", handler.ProxyHandler(cfg.PythonCoreURL, "/config"))
