@@ -9,6 +9,9 @@
 	import TripStatusBadge from './TripStatusBadge.svelte';
 	import { formatDateRange, getDaysLabel } from '$lib/utils/tripHero';
 	import { computeTripStats } from '$lib/utils/tripStats';
+	import { deriveTripStatus, todayStageIndex } from '$lib/utils/tripStatus';
+	import { getReportSchedule } from '$lib/utils/rightColumn';
+	import Stat from '$lib/components/molecules/Stat.svelte';
 	import { api } from '$lib/api';
 	import { goto } from '$app/navigation';
 	import type { Trip } from '$lib/types';
@@ -26,6 +29,55 @@
 	const stats = $derived(computeTripStats(trip));
 	const dateRange = $derived(formatDateRange(trip));
 	const daysLabel = $derived(getDaysLabel(trip, now));
+
+	// Issue #416 — Mobile Kennzahlen-Kacheln (sichtbar nur ≤ 899px).
+	// Spec: docs/specs/modules/issue_416_mobile_trip_kennzahlen.md
+	const etappeValue = $derived((() => {
+		const total = trip.stages?.length ?? 0;
+		if (total === 0) return '—';
+		const s = deriveTripStatus(trip, now);
+		if (s === 'active') {
+			const idx = todayStageIndex(trip, now);
+			return idx >= 0 ? `${idx + 1}/${total}` : `—/${total}`;
+		}
+		if (s === 'archived') return `${total}/${total}`;
+		return `—/${total}`;
+	})());
+
+	const briefingValue = $derived((() => {
+		const sched = getReportSchedule(trip);
+		if (!sched.enabled) return '—';
+		if (sched.morning_enabled && sched.morning) return sched.morning.slice(0, 5);
+		if (sched.evening_enabled && sched.evening) return sched.evening.slice(0, 5);
+		return '—';
+	})());
+
+	const startLabel = $derived((() => {
+		const s = deriveTripStatus(trip, now);
+		if (s === 'planned') return 'START IN';
+		if (s === 'active') return 'TAG';
+		return 'STATUS';
+	})());
+
+	const startValue = $derived((() => {
+		const s = deriveTripStatus(trip, now);
+		if (s === 'planned') {
+			const dates = (trip.stages ?? [])
+				.map((st) => st.date)
+				.filter((d): d is string => !!d)
+				.sort();
+			if (!dates.length) return '—';
+			const firstDay = new Date(dates[0] + 'T00:00:00');
+			const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+			const diff = Math.ceil((firstDay.getTime() - today.getTime()) / 86_400_000);
+			return diff > 0 ? `${diff} Tg` : '—';
+		}
+		if (s === 'active') {
+			const idx = todayStageIndex(trip, now);
+			return idx >= 0 ? `Tag ${idx + 1}` : '—';
+		}
+		return '—';
+	})());
 
 	let testBriefingLoading = $state(false);
 	let testBriefingMsg = $state<string | null>(null);
@@ -111,6 +163,18 @@
 		</div>
 	</div>
 
+	<div class="mobile-metrics" data-testid="trip-header-mobile-metrics">
+		<div data-testid="metric-etappe">
+			<Stat label="ETAPPE" value={etappeValue} size="sm" mono />
+		</div>
+		<div data-testid="metric-briefing">
+			<Stat label="BRIEFING" value={briefingValue} size="sm" mono />
+		</div>
+		<div data-testid="metric-start">
+			<Stat label={startLabel} value={startValue} size="sm" mono />
+		</div>
+	</div>
+
 	{#if testBriefingMsg}
 		<p class="briefing-msg" data-testid="trip-detail-test-briefing-msg">{testBriefingMsg}</p>
 	{/if}
@@ -184,5 +248,15 @@
 		margin: 0;
 		font-size: var(--g-text-sm);
 		color: var(--g-ink-muted);
+	}
+	.mobile-metrics {
+		display: none;
+	}
+	@media (max-width: 899px) {
+		.mobile-metrics {
+			display: flex;
+			gap: var(--g-s-3);
+			padding-top: var(--g-s-2);
+		}
 	}
 </style>
