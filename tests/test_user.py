@@ -52,6 +52,57 @@ class TestSavedLocation:
         with pytest.raises(AttributeError):
             loc.name = "Changed"
 
+    # Issue #451 AC-3: SavedLocation deserializes group, timezone, created_at.
+
+    def test_saved_location_has_group_field(self):
+        """SavedLocation accepts and stores group field."""
+        loc = SavedLocation(
+            id="stubai",
+            name="Stubai",
+            lat=47.0,
+            lon=11.0,
+            elevation_m=2000,
+            group="alps",
+        )
+        assert loc.group == "alps"
+
+    def test_saved_location_has_timezone_field(self):
+        """SavedLocation accepts and stores timezone field."""
+        loc = SavedLocation(
+            id="stubai",
+            name="Stubai",
+            lat=47.0,
+            lon=11.0,
+            elevation_m=2000,
+            timezone="Europe/Vienna",
+        )
+        assert loc.timezone == "Europe/Vienna"
+
+    def test_saved_location_has_created_at_field(self):
+        """SavedLocation accepts and stores created_at field (ISO-8601 string)."""
+        loc = SavedLocation(
+            id="stubai",
+            name="Stubai",
+            lat=47.0,
+            lon=11.0,
+            elevation_m=2000,
+            created_at="2026-05-29T12:00:00Z",
+        )
+        assert loc.created_at == "2026-05-29T12:00:00Z"
+
+    def test_saved_location_optional_fields_default_none(self):
+        """SavedLocation new optional fields default to None."""
+        loc = SavedLocation(
+            id="stubai",
+            name="Stubai",
+            lat=47.0,
+            lon=11.0,
+            elevation_m=2000,
+        )
+        assert loc.group is None
+        assert loc.timezone is None
+        assert loc.created_at is None
+
 
 class TestUserPreferences:
     """Tests for UserPreferences."""

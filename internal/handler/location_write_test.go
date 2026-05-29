@@ -239,3 +239,47 @@ func TestUpdateLocationHandlerPreservesCreatedAt(t *testing.T) {
 		t.Fatalf("expected CreatedAt %v, got %v", original, *loaded.CreatedAt)
 	}
 }
+
+// Issue #451 AC-1: GET /api/locations/{id} returns 200 + JSON for known ID.
+func TestGetSingleLocationHandler(t *testing.T) {
+	s := newTestStore(t)
+	seedLocation(t, s, "known", "Known Place")
+
+	r := chi.NewRouter()
+	r.Get("/api/locations/{id}", LocationHandler(s))
+
+	req := httptest.NewRequest("GET", "/api/locations/known", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to parse response: %v", err)
+	}
+	if resp["id"] != "known" {
+		t.Errorf("expected id 'known', got %v", resp["id"])
+	}
+	if resp["name"] != "Known Place" {
+		t.Errorf("expected name 'Known Place', got %v", resp["name"])
+	}
+}
+
+// Issue #451 AC-2: GET /api/locations/{id} returns 404 for unknown ID.
+func TestGetSingleLocationHandlerNotFound(t *testing.T) {
+	s := newTestStore(t)
+
+	r := chi.NewRouter()
+	r.Get("/api/locations/{id}", LocationHandler(s))
+
+	req := httptest.NewRequest("GET", "/api/locations/ghost", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != 404 {
+		t.Fatalf("expected 404, got %d: %s", w.Code, w.Body.String())
+	}
+}

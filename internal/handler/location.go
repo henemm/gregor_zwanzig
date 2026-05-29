@@ -199,6 +199,28 @@ func PatchLocationHandler(s *store.Store) http.HandlerFunc {
 	}
 }
 
+func LocationHandler(s *store.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
+		id := chi.URLParam(r, "id")
+		loc, err := s.LoadLocation(id)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(`{"error":"store_error"}`))
+			return
+		}
+		if loc == nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte(`{"error":"not_found"}`))
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(loc)
+	}
+}
+
 func DeleteLocationHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s = s.WithUser(middleware.UserIDFromContext(r.Context()))

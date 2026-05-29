@@ -59,6 +59,9 @@ class SavedLocation:
     bergfex_slug: Optional[str] = None  # Bergfex URL slug for snow data (e.g., "hochfuegen")
     activity_profile: ActivityProfile = ActivityProfile.ALLGEMEIN
     display_config: Optional["UnifiedWeatherDisplayConfig"] = None
+    group: Optional[str] = None
+    timezone: Optional[str] = None
+    created_at: Optional[str] = None
 
     def __str__(self) -> str:
         region_str = f" [{self.region}]" if self.region else ""
