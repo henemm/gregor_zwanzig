@@ -12,6 +12,7 @@
 	let { data } = $props();
 	const state = new CompareWizardState();
 	setContext('compare-wizard-state', state);
+	setContext('compare-wizard-profile', data.profile ?? null);
 </script>
 
 <CompareWizard locations={data.locations} />

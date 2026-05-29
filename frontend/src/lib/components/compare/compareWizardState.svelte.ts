@@ -19,6 +19,17 @@ export class CompareWizardState {
 	subscriptionEnabled = $state(true);
 	// round-trip Sicherheit fuer bestehende display_config-Felder
 	existingDisplayConfig = $state<Record<string, unknown>>({});
+	// Issue #443 — Step 5 Versand-Felder
+	sendEmail = $state(true);
+	sendSignal = $state(false);
+	sendTelegram = $state(false);
+	timeWindowStart = $state(9);
+	timeWindowEnd = $state(16);
+	forecastHours = $state(48);
+	schedule = $state<'daily_morning' | 'daily_evening' | 'weekly'>('daily_morning');
+	weekday = $state(0);
+	includeHourly = $state(false);
+	topN = $state(3);
 	saveStatus = $state<SaveStatus>('idle');
 	saveError = $state<string | null>(null);
 
@@ -32,12 +43,18 @@ export class CompareWizardState {
 		return this.pickedIds.length >= 2;
 	}
 
+	get canAdvanceStep5(): boolean {
+		return this.sendEmail || this.sendSignal || this.sendTelegram;
+	}
+
 	get canAdvanceCurrent(): boolean {
 		switch (this.currentStep) {
 			case 1:
 				return this.canAdvanceStep1;
 			case 2:
 				return this.canAdvanceStep2;
+			case 5:
+				return this.canAdvanceStep5;
 			default:
 				return true;
 		}
@@ -88,16 +105,16 @@ export class CompareWizardState {
 					...this.existingDisplayConfig,
 					...(this.region ? { region: this.region } : {})
 				},
-				forecast_hours: 48,
-				time_window_start: 9,
-				time_window_end: 16,
-				schedule: 'daily_morning',
-				weekday: 0,
-				include_hourly: false,
-				top_n: 3,
-				send_email: true,
-				send_signal: false,
-				send_telegram: false
+				forecast_hours: this.forecastHours,
+				time_window_start: this.timeWindowStart,
+				time_window_end: this.timeWindowEnd,
+				schedule: this.schedule,
+				weekday: this.weekday,
+				include_hourly: this.includeHourly,
+				top_n: this.topN,
+				send_email: this.sendEmail,
+				send_signal: this.sendSignal,
+				send_telegram: this.sendTelegram
 			});
 			this.subscriptionEnabled = newEnabled;
 		} catch {
@@ -124,16 +141,16 @@ export class CompareWizardState {
 				...(this.region ? { region: this.region } : {})
 			},
 			enabled: this.subscriptionEnabled,
-			forecast_hours: 48,
-			time_window_start: 9,
-			time_window_end: 16,
-			schedule: 'daily_morning',
-			weekday: 0,
-			include_hourly: false,
-			top_n: 3,
-			send_email: true,
-			send_signal: false,
-			send_telegram: false
+			forecast_hours: this.forecastHours,
+			time_window_start: this.timeWindowStart,
+			time_window_end: this.timeWindowEnd,
+			schedule: this.schedule,
+			weekday: this.weekday,
+			include_hourly: this.includeHourly,
+			top_n: this.topN,
+			send_email: this.sendEmail,
+			send_signal: this.sendSignal,
+			send_telegram: this.sendTelegram
 		};
 		if (!this.isEditMode) {
 			payload.id = crypto.randomUUID();

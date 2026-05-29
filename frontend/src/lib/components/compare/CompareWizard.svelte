@@ -15,6 +15,7 @@
 	import Stepper from '$lib/components/trip-wizard/Stepper.svelte';
 	import Step1Vergleich from './steps/Step1Vergleich.svelte';
 	import Step2Orte from './steps/Step2Orte.svelte';
+	import Step5Versand from './steps/Step5Versand.svelte';
 	import type { Location } from '$lib/types';
 
 	interface Props {
@@ -138,6 +139,8 @@
 			<Step1Vergleich />
 		{:else if state.currentStep === 2}
 			<Step2Orte {locations} />
+		{:else if state.currentStep === 5}
+			<Step5Versand />
 		{:else}
 			<div class="text-[var(--g-ink-muted)] text-center py-12">
 				Schritt {state.currentStep} — folgt in einem weiteren Issue.
@@ -206,7 +209,7 @@
 					variant="accent"
 					size="md"
 					onclick={handleSave}
-					disabled={state.saveStatus === 'saving'}
+					disabled={!state.canAdvanceStep5 || state.saveStatus === 'saving'}
 				>
 					Briefing aktivieren →
 				</Btn>
