@@ -1,7 +1,7 @@
 # Frontend Components Reference
 
 **Updated:** 2026-05-29  
-**Version:** 1.5
+**Version:** 1.6
 
 ## Overview
 
@@ -726,10 +726,10 @@ interface WordmarkProps {
 | AutoReportsOverview | `compare/AutoReportsOverview.svelte` | Uebersicht automatischer Reports |
 | CompareMatrix | `compare/CompareMatrix.svelte` | Vergleichs-Matrix (Locations × Metriken) |
 | CreateGroupDialog | `compare/CreateGroupDialog.svelte` | Dialog zum Anlegen einer Location-Gruppe |
-| GroupSection | `compare/GroupSection.svelte` | Gruppen-Abschnitt in der Sidebar |
 | HourlyMatrix | `compare/HourlyMatrix.svelte` | Stuendliche Wetter-Matrix |
 | LocationPreviewMap | `compare/LocationPreviewMap.svelte` | Mini-Map-Vorschau im Wizard, Issue #266 |
-| LocationsRail | `compare/LocationsRail.svelte` | Sidebar (Suche + Chip-Filter + Gruppen), Issue #249 |
+| LocationsRail | `compare/LocationsRail.svelte` | Sidebar (Suche + Chip-Filter + Gruppen + Drag-Reorder), Issue #249/#453 |
+| GroupSection | `compare/GroupSection.svelte` | Gruppen-Abschnitt in der Sidebar mit Drag-Reihenfolge, Issue #301/#453 |
 | NewLocationWizard | `compare/NewLocationWizard.svelte` | 3-Schritt-Wizard (Verortung→Benennung→Profil), Issue #249 |
 | PresetHeader | `compare/PresetHeader.svelte` | Kopfzeile fuer Compare-Preset |
 | RecommendationBanner | `compare/RecommendationBanner.svelte` | Empfehlungs-Banner (Winner-Tags) |
@@ -758,6 +758,117 @@ New 5-step wizard for creating and editing compare subscriptions (Orts-Vergleich
 - `frontend/src/routes/compare/new/+page.server.ts` — Server actions (POST /api/subscriptions)
 - `frontend/src/routes/compare/[id]/edit/+page.svelte` — Edit mode (Load existing subscription)
 - `frontend/src/routes/compare/[id]/edit/+page.server.ts` — Server actions (PUT /api/subscriptions/{id})
+
+#### LocationsRail Component (Issue #453)
+
+**File:** `frontend/src/lib/components/compare/LocationsRail.svelte`
+
+Sidebar-Rail für die Compare-Hauptbühne. Zeigt Locations als gruppierte/ungrupierte Liste mit Suche, Chip-Filter nach Gruppen/Aktivitätsprofilen, Constraint-Zähler (min 2 / max 8) mit farblicher Warnung, Leerzustand, und HTML5-Drag-Reihenfolge-Unterstützung.
+
+**Props:**
+```typescript
+interface Props {
+  locations: Location[];
+  groups: Group[];
+  selectedIds: string[];
+  groupedLocations: { sections: { group: Group; locations: Location[] }[]; ungrouped: Location[] };
+  openGroups: Set<string>;
+  allSelected: boolean;
+  onToggleAll: () => void;
+  onToggleLocation: (id: string) => void;
+  onToggleGroup: (id: string) => void;
+  onToggleGroupSelection: (id: string) => void;
+  onShowWeather: (id: string) => void;
+  onEditLocation: (loc: Location) => void;
+  onNewLocation: () => void;
+  onGroupCreated: (group: Group) => void;
+  onReorder?: (sourceId: string, targetId: string) => void;  // NEW Issue #453
+}
+```
+
+**Layout & Sizing (Issue #453):**
+- **Width:** `240px` (fixed, no responsive variants)
+- **Border:** Right border 1px, `--g-ink-faint` at 40% opacity
+- **Sections (top to bottom):**
+  1. Search input
+  2. Constraint-Zähler (nur wenn `locations.length > 0`), TestID: `compare-rail-counter`
+  3. Chip-Filter für Gruppen + Activity-Profile (optional)
+  4. "Alle auswählen" Checkbox
+  5. Gruppierte/Ungrupierte Locations mit Drag-Support
+  6. Footer mit "+ Ort" + "+ Gruppe" Buttons
+
+**Constraint-Zähler Farben (Issue #453):**
+```
+< 2:   --g-danger   (Mindestanzahl unterschritten)
+2–8:   --g-success  (Gültige Bereich)
+> 8:   --g-ink-muted (Obergrenze überschritten, kein Hard-Block)
+```
+
+**EmptyState (Issue #453):**
+Wenn `locations.length === 0`:
+- Zeigt `EmptyState` mit Title "Noch keine Orte" + Description + CTA "Ersten Ort anlegen"
+- TestID des Wrapper-Divs: `compare-rail-empty`
+- Normal-Render (Zähler, Filter, Liste) ist nicht sichtbar
+
+**Drag-and-Drop (Issue #453):**
+- Alle Location-Items (`<li>`) sind `draggable="true"`
+- `ondragstart` setzt intern `dragSourceId`
+- `ondrop` ruft optional `onReorder(sourceId, targetId)` auf
+- Drop auf dasselbe Item wird ignoriert (kein Callback)
+- Keine visuelle Reorder-Animation im Component selbst — Consumer (Compare-Hauptbühne) verantwortlich
+
+**TestIDs:**
+- `compare-rail` — Hauptcontainer
+- `compare-rail-search` — Suchfeld
+- `compare-rail-counter` — Constraint-Zähler
+- `compare-rail-empty` — EmptyState-Wrapper
+- `compare-rail-chip` — Gruppen-Filter-Chip
+- `compare-rail-profile-chip` — Profil-Filter-Chip
+- `compare-rail-new-btn` — "+ Ort"-Button
+- `compare-rail-new-group-btn` — "+ Gruppe"-Button
+- `ungroup-section` — Ungrupierte-Sektion-Wrapper
+- `loc-name-{loc.id}` — Location-Namen-Button
+- `group-section-{group.id}` — Gruppen-Sektion (aus GroupSection)
+
+**Related (Issue #453):**
+- `GroupSection.svelte` — Rendert Gruppen-Blöcke mit neuen DnD-Props `onDragStart` / `onDrop`
+- `EmptyState` — UI-Komponente für Leerzustand (aus `$lib/components/ui/empty-state/`)
+
+#### GroupSection Component (Issue #301/#453)
+
+**File:** `frontend/src/lib/components/compare/GroupSection.svelte`
+
+Render-Komponente für eine einzelne Gruppen-Sektion in LocationsRail. Zeigt klapbare Gruppen-Header (Chevron + Checkbox mit indeterminate-State + Profil-Dot + Name + Count) und darunter Liste mit Locations + Drag-Support.
+
+**Props (Issue #453):**
+```typescript
+interface Props {
+  group: Group;
+  locations: Location[];
+  open?: boolean;
+  selectedIds: string[];
+  onToggle: () => void;
+  onToggleAll: () => void;
+  onToggleLocation: (id: string) => void;
+  onEditLocation: (loc: Location) => void;
+  onShowWeather: (id: string) => void;
+  onDragStart?: (id: string) => void;    // NEW Issue #453
+  onDrop?: (targetId: string) => void;   // NEW Issue #453
+}
+```
+
+**Drag-Support (Issue #453):**
+- Alle Location-Items in der ausgeklappten Liste sind `draggable="true"`
+- `ondragstart={() => onDragStart?.(loc.id)}` — Parent (LocationsRail) setzt `dragSourceId`
+- `ondragover={(e) => e.preventDefault()}` — Standard DnD-Handling
+- `ondrop={() => onDrop?.(loc.id)}` — Parent ruft `onReorder` auf; Logik: `if (dragSourceId !== targetId)`
+
+**TestIDs:**
+- `group-section-{group.id}` — Sektion-Wrapper
+- `compare-rail-group-header` — Gruppen-Header-Zeile
+- `group-count-{group.id}` — Locations-Zähler im Header
+
+---
 
 ### edit/ — Trip-Bearbeitung
 
