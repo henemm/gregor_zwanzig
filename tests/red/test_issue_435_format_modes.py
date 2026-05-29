@@ -703,3 +703,85 @@ class TestAC10ConsolidatedFriendlyKeys:
             "AC-10 RED: trip_report.py muss build_friendly_keys (oder "
             "build_format_modes) aus email/helpers.py importieren"
         )
+
+
+# ---------------------------------------------------------------------------
+# Issue #444 — Delegation: _effective_format_mode → loader._resolve_format_mode
+# SPEC: docs/specs/modules/issue_444_format_mode_consolidation.md
+# ---------------------------------------------------------------------------
+
+class TestAC444DelegationToResolveFormatMode:
+    """
+    Issue #444: _effective_format_mode muss an loader._resolve_format_mode
+    delegieren (Thin Wrapper). Kein eigener Präzedenz-Code mehr in helpers.py.
+    """
+
+    def test_ac444_a_delegates_to_resolve_format_mode(self):
+        """AC-444-A: Body von _effective_format_mode enthält einen Aufruf von
+        _resolve_format_mode (strukturelle Verifikation via ast).
+        """
+        import ast
+        import inspect
+        from output.renderers.email import helpers
+
+        src = inspect.getsource(helpers._effective_format_mode)
+        tree = ast.parse(src)
+        calls = [
+            node for node in ast.walk(tree)
+            if isinstance(node, ast.Call)
+            and (
+                (isinstance(node.func, ast.Name)
+                 and node.func.id == "_resolve_format_mode")
+                or (isinstance(node.func, ast.Attribute)
+                    and node.func.attr == "_resolve_format_mode")
+            )
+        ]
+        assert calls, (
+            "AC-444-A: _effective_format_mode enthält keinen "
+            "_resolve_format_mode-Aufruf — Delegation nicht implementiert"
+        )
+
+    def test_ac444_b_parity_all_three_precedence_cases(self):
+        """AC-444-B: Für alle drei Präzedenzfälle liefert _effective_format_mode
+        dasselbe Ergebnis wie loader._resolve_format_mode mit äquivalentem Dict.
+        """
+        from app import loader
+        from app.models import MetricConfig
+        from output.renderers.email.helpers import _effective_format_mode
+
+        cases = [
+            MetricConfig(metric_id="cloud_total", format_mode="raw",
+                         use_friendly_format=True),
+            MetricConfig(metric_id="cloud_total", format_mode=None,
+                         use_friendly_format=False),
+            MetricConfig(metric_id="cloud_total", format_mode=None,
+                         use_friendly_format=True),
+        ]
+        for mc in cases:
+            expected = loader._resolve_format_mode(
+                {
+                    "format_mode": mc.format_mode,
+                    "use_friendly_format": mc.use_friendly_format,
+                },
+                mc.metric_id,
+            )
+            got = _effective_format_mode(mc)
+            assert got == expected, (
+                f"AC-444-B: Parität verletzt für "
+                f"format_mode={mc.format_mode!r}, "
+                f"use_friendly_format={mc.use_friendly_format!r}: "
+                f"got {got!r}, erwartet {expected!r}"
+            )
+
+    def test_ac444_c_no_duplicate_catalog_lookup(self):
+        """AC-444-C: Body von _effective_format_mode enthält keinen direkten
+        Katalog-Lookup (kein 'default_format_mode' im Quelltext).
+        """
+        import inspect
+        from output.renderers.email import helpers
+
+        src = inspect.getsource(helpers._effective_format_mode)
+        assert "default_format_mode" not in src, (
+            "AC-444-C: _effective_format_mode enthält noch einen direkten "
+            "Katalog-Lookup (default_format_mode) — Delegation nicht umgebaut"
+        )

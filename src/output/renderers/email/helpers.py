@@ -39,22 +39,19 @@ _WEEKDAY_DE = [
 # ----------------------------------------------------------------------
 
 def _effective_format_mode(mc) -> str:
-    """Issue #435: resolve effective format_mode from MetricConfig.
+    """Issue #444: thin wrapper — delegates to loader._resolve_format_mode.
 
-    Precedence:
-      1. Explicit mc.format_mode (new field) wins.
-      2. Legacy mc.use_friendly_format=True -> catalog default_format_mode.
-      3. Legacy mc.use_friendly_format=False -> "raw".
+    See loader._resolve_format_mode for the authoritative precedence rule
+    (explicit format_mode > use_friendly_format=False > catalog default).
     """
-    explicit = getattr(mc, "format_mode", None)
-    if explicit is not None:
-        return explicit
-    if not getattr(mc, "use_friendly_format", True):
-        return "raw"
-    try:
-        return get_metric(mc.metric_id).default_format_mode
-    except KeyError:
-        return "raw"
+    from app.loader import _resolve_format_mode
+    return _resolve_format_mode(
+        {
+            "format_mode": getattr(mc, "format_mode", None),
+            "use_friendly_format": getattr(mc, "use_friendly_format", True),
+        },
+        mc.metric_id,
+    )
 
 
 def should_merge_wind_dir(dc: UnifiedWeatherDisplayConfig) -> bool:
