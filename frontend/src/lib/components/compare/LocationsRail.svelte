@@ -7,12 +7,13 @@
 	// Diese Komponente ist rein presentational: sie haelt lokal nur Search- und
 	// Chip-Filter-State; Selection-/Gruppen-Toggle-Logik liegt in der Page.
 	// Seit #301: Gruppen kommen als Group-Entity (group_id), gerendert via GroupSection;
-	// Wrapper ist <aside> mit 320px (E2E sucht page.locator('aside')).
+	// Wrapper ist <aside> mit 240px (Issue #453).
 
 	import type { Location, Group, ActivityProfile } from '$lib/types.js';
 	import { Btn } from '$lib/components/ui/btn/index.js';
 	import { Pill } from '$lib/components/ui/pill/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox';
+	import { EmptyState } from '$lib/components/ui/empty-state/index.js';
 	import CloudSunIcon from '@lucide/svelte/icons/cloud-sun';
 	import GroupSection from './GroupSection.svelte';
 	import CreateGroupDialog from './CreateGroupDialog.svelte';
@@ -34,6 +35,7 @@
 		onEditLocation: (loc: Location) => void;
 		onNewLocation: () => void;
 		onGroupCreated: (group: Group) => void;
+		onReorder?: (sourceId: string, targetId: string) => void;
 	}
 
 	let {
@@ -51,12 +53,14 @@
 		onEditLocation,
 		onNewLocation,
 		onGroupCreated,
+		onReorder,
 	}: Props = $props();
 
 	let search = $state('');
 	let activeGroup = $state<string | null>(null);
 	let activeProfile = $state<ActivityProfile | null>(null);
 	let createGroupOpen = $state(false);
+	let dragSourceId = $state<string | null>(null);
 
 	// group_id -> group.name fuer die Suche im Gruppennamen (AC-4).
 	let groupNameMap = $derived(new Map(groups.map((g) => [g.id, g.name])));
@@ -94,7 +98,7 @@
 <aside
 	data-testid="compare-rail"
 	class="shrink-0 flex flex-col space-y-3 pr-4"
-	style="width: 320px; border-right: 1px solid color-mix(in srgb, var(--g-ink-faint) 40%, transparent);"
+	style="width: 240px; border-right: 1px solid color-mix(in srgb, var(--g-ink-faint) 40%, transparent);"
 >
 	<input
 		data-testid="compare-rail-search"
@@ -104,6 +108,29 @@
 		class="h-8 w-full rounded-md border border-input bg-transparent px-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
 	/>
 
+	<p
+		data-testid="compare-rail-counter"
+		class="text-xs {locations.length < 2
+			? 'text-[var(--g-danger)]'
+			: locations.length <= 8
+				? 'text-[var(--g-success)]'
+				: 'text-[var(--g-ink-muted)]'}"
+	>
+		{locations.length} Orte · min. 2 / max. 8
+	</p>
+
+	{#if locations.length === 0}
+		<div data-testid="compare-rail-empty">
+			<EmptyState
+				title="Noch keine Orte"
+				description="Lege deinen ersten Ort an, um einen Vergleich zu starten."
+			>
+				{#snippet children()}
+					<Btn onclick={onNewLocation}>+ Ersten Ort anlegen</Btn>
+				{/snippet}
+			</EmptyState>
+		</div>
+	{:else}
 	{#if groups.length > 0}
 		<div class="flex flex-wrap gap-1">
 			{#each groups as g (g.id)}
@@ -154,6 +181,13 @@
 				{onToggleLocation}
 				{onEditLocation}
 				{onShowWeather}
+				onDragStart={(id) => (dragSourceId = id)}
+				onDrop={(targetId) => {
+					if (dragSourceId && dragSourceId !== targetId) {
+						onReorder?.(dragSourceId, targetId);
+					}
+					dragSourceId = null;
+				}}
 			/>
 		{/each}
 
@@ -162,7 +196,18 @@
 				<p class="text-sm font-medium text-muted-foreground">Ungruppiert ({filteredGrouped.ungrouped.length})</p>
 				<ul class="ml-4 space-y-0.5">
 					{#each filteredGrouped.ungrouped as loc (loc.id)}
-						<li class="flex items-center gap-1.5 text-sm">
+						<li
+							draggable="true"
+							ondragstart={() => (dragSourceId = loc.id)}
+							ondragover={(e) => e.preventDefault()}
+							ondrop={() => {
+								if (dragSourceId && dragSourceId !== loc.id) {
+									onReorder?.(dragSourceId, loc.id);
+								}
+								dragSourceId = null;
+							}}
+							class="flex items-center gap-1.5 text-sm"
+						>
 							<Checkbox
 								checked={selectedIds.includes(loc.id)}
 								onchange={() => onToggleLocation(loc.id)}
@@ -206,6 +251,7 @@
 			+ Gruppe
 		</Btn>
 	</div>
+	{/if}
 </aside>
 
 <CreateGroupDialog bind:open={createGroupOpen} onCreate={onGroupCreated} />

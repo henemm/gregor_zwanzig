@@ -23,6 +23,8 @@
 		onToggleLocation: (id: string) => void;
 		onEditLocation: (loc: Location) => void;
 		onShowWeather: (id: string) => void;
+		onDragStart?: (id: string) => void;
+		onDrop?: (targetId: string) => void;
 	}
 
 	let {
@@ -35,6 +37,8 @@
 		onToggleLocation,
 		onEditLocation,
 		onShowWeather,
+		onDragStart,
+		onDrop,
 	}: Props = $props();
 
 	let allSelected = $derived(
@@ -78,7 +82,13 @@
 	{#if open}
 		<ul class="ml-4 space-y-0.5">
 			{#each locations as loc (loc.id)}
-				<li class="flex items-center gap-1.5 text-sm">
+				<li
+					draggable="true"
+					ondragstart={() => onDragStart?.(loc.id)}
+					ondragover={(e) => e.preventDefault()}
+					ondrop={() => onDrop?.(loc.id)}
+					class="flex items-center gap-1.5 text-sm"
+				>
 					<Checkbox
 						checked={selectedIds.includes(loc.id)}
 						onchange={() => onToggleLocation(loc.id)}
