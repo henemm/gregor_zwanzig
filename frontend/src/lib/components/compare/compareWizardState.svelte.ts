@@ -4,7 +4,7 @@
 // Factory-Pattern: Instanziierung im +page.svelte mount (Safari-Reaktivitaets-Fix).
 // Lazy imports von goto/api damit Unit-Tests die Klasse ohne Browser-APIs testen.
 
-import type { ActivityProfile } from '$lib/types';
+import type { ActivityProfile, ChannelLayouts } from '$lib/types';
 import type { IdealRange } from './compareMetricDefs';
 
 export type SaveStatus = 'idle' | 'saving' | 'ok' | 'error';
@@ -22,6 +22,8 @@ export class CompareWizardState {
 	existingDisplayConfig = $state<Record<string, unknown>>({});
 	// Issue #441: Idealwerte pro Metrik (Step 3); leer = nicht in display_config.
 	idealRanges = $state<Record<string, IdealRange>>({});
+	// Issue #442: Pro-Kanal-Layouts. null = Step 4 nicht besucht / nichts konfiguriert.
+	channelLayouts = $state<ChannelLayouts | null>(null);
 	// Issue #443 — Step 5 Versand-Felder
 	sendEmail = $state(true);
 	sendSignal = $state(false);
@@ -109,6 +111,9 @@ export class CompareWizardState {
 					...(this.region ? { region: this.region } : {}),
 					...(Object.keys(this.idealRanges).length > 0
 						? { ideal_ranges: this.idealRanges }
+						: {}),
+					...(this.channelLayouts !== null
+						? { channel_layouts: this.channelLayouts }
 						: {})
 				},
 				forecast_hours: this.forecastHours,
@@ -147,6 +152,9 @@ export class CompareWizardState {
 				...(this.region ? { region: this.region } : {}),
 				...(Object.keys(this.idealRanges).length > 0
 					? { ideal_ranges: this.idealRanges }
+					: {}),
+				...(this.channelLayouts !== null
+					? { channel_layouts: this.channelLayouts }
 					: {})
 			},
 			enabled: this.subscriptionEnabled,

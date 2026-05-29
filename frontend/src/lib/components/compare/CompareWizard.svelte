@@ -16,6 +16,7 @@
 	import Step1Vergleich from './steps/Step1Vergleich.svelte';
 	import Step2Orte from './steps/Step2Orte.svelte';
 	import Step3Idealwerte from './steps/Step3Idealwerte.svelte';
+	import Step4Layout from './steps/Step4Layout.svelte';
 	import Step5Versand from './steps/Step5Versand.svelte';
 	import type { Location } from '$lib/types';
 
@@ -142,6 +143,8 @@
 			<Step2Orte {locations} />
 		{:else if state.currentStep === 3}
 			<Step3Idealwerte />
+		{:else if state.currentStep === 4}
+			<Step4Layout />
 		{:else if state.currentStep === 5}
 			<Step5Versand />
 		{:else}

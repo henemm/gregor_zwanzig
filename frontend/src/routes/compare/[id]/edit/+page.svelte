@@ -8,7 +8,7 @@
 	import { CompareWizardState } from '$lib/components/compare/compareWizardState.svelte';
 	import CompareWizard from '$lib/components/compare/CompareWizard.svelte';
 	import type { IdealRange } from '$lib/components/compare/compareMetricDefs';
-	import type { ActivityProfile } from '$lib/types';
+	import type { ActivityProfile, ChannelLayouts } from '$lib/types';
 
 	let { data } = $props();
 
@@ -37,6 +37,12 @@
 	state.weekday = data.subscription.weekday ?? 0;
 	state.includeHourly = data.subscription.include_hourly ?? false;
 	state.topN = data.subscription.top_n ?? 3;
+
+	// Issue #442: Pro-Kanal-Layouts aus display_config.channel_layouts prefillen.
+	const savedLayouts = state.existingDisplayConfig.channel_layouts as
+		| ChannelLayouts
+		| undefined;
+	if (savedLayouts) state.channelLayouts = savedLayouts;
 
 	setContext('compare-wizard-state', state);
 	setContext('compare-wizard-profile', data.profile ?? null);

@@ -545,6 +545,10 @@ Multi-step wizard for creating new trips with activity profiles, GPX import, AI 
 
 **Route:** `/trips/new` → mounted by `frontend/src/routes/trips/new/+page.svelte`
 
+**Varianten:** Der Trip-Wizard hat zwei mögliche Step-4-Konfigurationen (per Trip konfigurierbar):
+1. **Step4Briefings** (traditionell): Kanal-Toggles + Alarm-Schwellenwerte
+2. **Step4Layout** (Issue #431): Pro-Kanal-Metriken-Konfiguration (Reihenfolge, Bucket-Zuordnung) — wird in `compareWizardState` als Vorlage für Orts-Vergleiche verwendet
+
 ### Component Architecture
 
 ```
@@ -553,7 +557,7 @@ TripWizardShell (container, stepper + steps)
 ├── Step1Profile (activity + name + dates)
 ├── Step2Stages (GPX multi-upload, drag-sort, pause)
 ├── Step3Waypoints (confirm AI-suggested waypoints)
-├── Step4Briefings (channel toggles + thresholds)
+├── Step4Briefings OR Step4Layout (channel config variants)
 └── TemplatePicker (GR20, KHW, Stubai shortcuts)
 ```
 
@@ -587,8 +591,9 @@ TripWizardShell (container, stepper + steps)
 2. **Multi-GPX Upload (Step 2):** Drag-drop multiple GPX files, auto-sorted, natural sort order (T01, T02, ..., T10, T11, not T10, T11, T2)
 3. **Pause Days:** Insert empty-waypoint stages to skip days (e.g., rest day, weather day)
 4. **AI Waypoint Confirmation (Step 3):** Show suggested waypoints per stage, user confirms/edits
-5. **Briefing Config (Step 4):** Email/SMS toggles, thresholds (temp, wind, precip, etc.)
-6. **Templates (Step 2 right sidebar):** GR20, KHW, Stubai → quick-populate name, dates, stages from template
+5. **Briefing Config (Step 4a, traditional):** Email/SMS toggles, thresholds (temp, wind, precip, etc.)
+6. **Layout Config (Step 4b, Issue #431):** Pro-Kanal-Metrik-Reihenfolge, Bucket-Zuordnung (primär/sekundär/aus), Channel-Constraint-Anzeige
+7. **Templates (Step 2 right sidebar):** GR20, KHW, Stubai → quick-populate name, dates, stages from template
 
 ### Example Usage
 
@@ -741,8 +746,12 @@ New 5-step wizard for creating and editing compare subscriptions (Orts-Vergleich
 | compareWizardState.svelte.ts | `compare/compareWizardState.svelte.ts` | Zentrale State-Klasse (Runes), analog `wizardState.svelte.ts` |
 | Step1Vergleich | `compare/steps/Step1Vergleich.svelte` | Schritt 1: Name + Region + Aktivitaetsprofil |
 | Step2Orte | `compare/steps/Step2Orte.svelte` | Schritt 2: Orte waehlen via Smart-Import + Library |
-| (Steps 3–5) | `compare/steps/Step3*–Step5*.svelte` | Placeholder (Metriken, Briefing-Zeiten, Optionen) |
+| Step3Metriken | `compare/steps/Step3Metriken.svelte` | Schritt 3: Wetter-Metriken waehlen |
+| Step4Layout | `compare/steps/Step4Layout.svelte` | Schritt 4: Pro-Kanal-Layout (E-Mail/Telegram/Signal/SMS), Issue #442 |
+| Step5Versand | `compare/steps/Step5Versand.svelte` | Schritt 5: Versand + Aktivierung |
 | compareWizardHelpers.ts | `compare/compareWizardHelpers.ts` | Shared helpers (newId, validRegions, mapActivityProfile) |
+
+**Step4Layout (Issue #442):** Directe Adaption von Trip-Wizard Step4Layout. Der Nutzer konfiguriert pro Kanal (Email/Telegram/Signal/SMS) die Wetter-Metriken und deren Reihenfolge im Briefing. Verwendet `OutputLayoutEditor` (gemeinsame Komponente, Issue #431) mit Channel-Tabs + Bucket-Konfiguration (primär/sekundär/aus). Fallback bei neuer Subscription: `autoAssign([], catalog)` statt `weatherMetrics`.
 
 **Routes:**
 - `frontend/src/routes/compare/new/+page.svelte` — Create mode (Wizard-Entry)
@@ -805,7 +814,8 @@ New 5-step wizard for creating and editing compare subscriptions (Orts-Vergleich
 | ChannelPreviewBlock | `trip-detail/ChannelPreviewBlock.svelte` | Kanal-Vorschau-Block |
 | ChannelLimitMarkers | `trip-detail/ChannelLimitMarkers.svelte` | Zeichen-Limit-Marker (SMS) |
 | PreviewCard | `trip-detail/PreviewCard.svelte` | Generische Vorschau-Karte |
-| metricsEditor.ts | `trip-detail/metricsEditor.ts` | Metriken-Editor-Logik (Helper) |
+| OutputLayoutEditor | `trip-detail/OutputLayoutEditor.svelte` | Universal Layout-Editor mit Channel-Tabs + Bucket-Reorder (Issue #431, reused in Compare Issue #442) |
+| metricsEditor.ts | `trip-detail/metricsEditor.ts` | Metriken-Editor-Logik (Helper) — `autoAssign`, `buildWeatherConfigMetrics`, `move`, `reorder`, `CHANNEL_COL_BUDGET` |
 
 ### trip-detail/waypoints/ — Wegpunkt-Editor (Epic #137)
 
@@ -825,12 +835,13 @@ Architektur + Detail siehe Abschnitt „Trip-Wizard Components" oben. Inventar-E
 
 | Komponente | Pfad rel. zu components/ | Kurzbeschreibung |
 |---|---|---|
-| TripWizardShell | `trip-wizard/TripWizardShell.svelte` | Shell + 4-Schritt-Stepper |
+| TripWizardShell | `trip-wizard/TripWizardShell.svelte` | Shell + 5-Schritt-Stepper |
 | Stepper | `trip-wizard/Stepper.svelte` | Generischer Schritt-Indikator, reusbar via `testidPrefix` + `onStepClick` Props (Issue #440) |
 | Step1Profile | `trip-wizard/steps/Step1Profile.svelte` | Schritt 1: Profil + Name + Datum |
 | Step2Stages | `trip-wizard/steps/Step2Stages.svelte` | Schritt 2: GPX-Upload, Drag-Sort, Pause |
 | Step3Waypoints | `trip-wizard/steps/Step3Waypoints.svelte` | Schritt 3: Wegpunkt-Bestaetigung |
 | Step4Briefings | `trip-wizard/steps/Step4Briefings.svelte` | Schritt 4: Briefings & Kanaele |
+| Step4Layout | `trip-wizard/steps/Step4Layout.svelte` | Schritt 4 (alt.): Pro-Kanal-Layout (E-Mail/Telegram/Signal/SMS), Issue #431 |
 | ChannelToggle | `trip-wizard/steps/ChannelToggle.svelte` | Kanal-Umschalter |
 | ProfileChart | `trip-wizard/steps/ProfileChart.svelte` | Profil-Chart-Vorschau |
 | ReportRow | `trip-wizard/steps/ReportRow.svelte` | Report-Zeile |
