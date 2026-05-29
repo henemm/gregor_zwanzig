@@ -1,19 +1,14 @@
 {
-  "verified_at": "2026-05-26T17:34:44.531506+00:00",
+  "verified_at": "2026-05-29T05:30:28.225252+00:00",
   "environment": "staging",
-  "commit": "84cd282",
-  "issue": 389,
   "scope": "frontend-only",
   "checks": [
     "staging_smoke",
-    "visual"
+    "bundle_grep"
   ],
   "feature_checks": [
-    "Staging ROOT 302 / HEALTH 200 \u2014 Staging l\u00e4uft",
-    "Login-Seite rendert korrekt, Wordmark und Formular sichtbar",
-    "Scope: reine CSS+Svelte-\u00c4nderung (active-Tone gr\u00fcn\u2192orange outlined)",
-    "Alle 8 Unit-Tests gr\u00fcn (TripStatusBadge.atomic.test.ts)",
-    "contrast-audit.test.ts 5/5 gr\u00fcn \u2014 --g-accent-deep nutzt WCAG-AA-konformen Wert",
-    "Adversary-Validation: VERIFIED (F001/F002 beide out-of-scope)"
+    "ROOT 302 / HEALTH 200 OK",
+    "Bundle 19.Bz77p-9C.js enth\u00e4lt: trip-header-mobile-metrics (1x), metric-etappe (1x), metric-briefing (1x), metric-start (1x), mobile-metrics (3x), ETAPPE (2x), BRIEFING (3x), START IN (2x)",
+    "Tiles sind mobile-only (display:none auf Desktop \u2014 kein visueller Check via Playwright m\u00f6glich)"
   ]
 }

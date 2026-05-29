@@ -6,17 +6,9 @@
 	// Spec: docs/specs/modules/epic_138_174_178_metriken_ui.md §5
 	//       docs/specs/modules/issue_343_horizon_chip_ui.md §4
 	import { Eyebrow } from '$lib/components/ui/eyebrow/index.js';
-	import type { Horizons } from '$lib/types';
+	import type { Horizons, MetricEntry } from '$lib/types';
 	import { HORIZONS_ALL } from '$lib/types';
 
-	interface MetricEntry {
-		id: string;
-		label: string;
-		unit: string;
-		category: string;
-		default_enabled: boolean;
-		has_friendly_format: boolean;
-	}
 	type MetricCatalog = Record<string, MetricEntry[]>;
 	type Day = 'today' | 'tomorrow' | 'day_after';
 

@@ -6,7 +6,7 @@
 	//       docs/specs/modules/issue_343_horizon_chip_ui.md §5
 
 	import { api } from '$lib/api.js';
-	import type { MetricPreset, Horizons } from '$lib/types';
+	import type { MetricPreset, Horizons, MetricEntry } from '$lib/types';
 	import { HORIZONS_ALL } from '$lib/types';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox';
@@ -14,14 +14,6 @@
 	import { computeHorizonSummary, dotsForHorizons } from '$lib/utils/horizonHelpers';
 	import { buildBucketSummary, type Buckets } from './metricsEditor.ts';
 
-	interface MetricEntry {
-		id: string;
-		label: string;
-		unit: string;
-		category: string;
-		default_enabled: boolean;
-		has_friendly_format: boolean;
-	}
 	type MetricCatalog = Record<string, MetricEntry[]>;
 
 	interface Props {

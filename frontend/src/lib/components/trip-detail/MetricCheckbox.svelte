@@ -8,16 +8,7 @@
 	//       docs/specs/modules/issue_343_horizon_chip_ui.md §2
 	import { Pill } from '$lib/components/ui/pill/index.js';
 	import { HorizonChip } from '$lib/components/ui/horizon-chip/index.js';
-	import type { Horizons } from '$lib/types';
-
-	interface MetricEntry {
-		id: string;
-		label: string;
-		unit: string;
-		category: string;
-		default_enabled: boolean;
-		has_friendly_format: boolean;
-	}
+	import type { Horizons, MetricEntry } from '$lib/types';
 
 	interface Props {
 		metric: MetricEntry;
