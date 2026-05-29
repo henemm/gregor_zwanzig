@@ -10,10 +10,12 @@ require (
 	github.com/ringsaturn/tzf v1.0.4
 	github.com/robfig/cron/v3 v3.0.1
 	golang.org/x/crypto v0.50.0
+	golang.org/x/oauth2 v0.36.0
 	golang.org/x/time v0.15.0
 )
 
 require (
+	cloud.google.com/go/compute/metadata v0.3.0 // indirect
 	github.com/emersion/go-message v0.18.2 // indirect
 	github.com/emersion/go-sasl v0.0.0-20241020182733-b788ff22d5a6 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect

@@ -3,7 +3,7 @@
 	import type { ActionData } from './$types.js';
 	import Wordmark from '$lib/components/ui/wordmark/Wordmark.svelte';
 
-	let { form }: { form: ActionData } = $props();
+	let { form, data }: { form: ActionData; data: { googleEnabled: boolean } } = $props();
 	const registered = $derived($page.url.searchParams.get('registered') === '1');
 </script>
 
@@ -57,6 +57,22 @@
 				Anmelden
 			</button>
 		</form>
+		{#if data.googleEnabled}
+			<div class="relative">
+				<div class="absolute inset-0 flex items-center">
+					<span class="w-full border-t border-input"></span>
+				</div>
+				<div class="relative flex justify-center text-xs uppercase">
+					<span class="bg-background px-2 text-muted-foreground">oder</span>
+				</div>
+			</div>
+			<a
+				href="/api/auth/google/init"
+				class="inline-flex h-10 w-full items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground ring-offset-background hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+			>
+				Mit Google anmelden
+			</a>
+		{/if}
 		<div class="space-y-2">
 			<a href="/register" class="block text-center text-sm text-muted-foreground hover:underline">
 				Noch kein Konto? Konto erstellen

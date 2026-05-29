@@ -835,9 +835,140 @@ Returns catalog of all available weather metrics with format mode options and de
 
 ---
 
+## 16) Google OAuth Login Endpoints (Issue #425)
+
+**Handler:** `internal/handler/auth_oauth.go` (NEW) | **Routing:** `cmd/server/main.go`
+
+### Endpoints
+
+| Method | Path | Status | Description |
+|--------|------|--------|-------------|
+| GET | `/api/auth/google/init` | 302 / 501 | Initiate Google OAuth flow (redirects to Google consent screen) |
+| GET | `/api/auth/google/callback` | 302 / 400 | Handle Google OAuth callback (exchanges code for session) |
+
+### GET /api/auth/google/init
+
+Initiates the Google OAuth 2.0 Authorization Code flow.
+
+**Prerequisites:**
+- `GZ_GOOGLE_CLIENT_ID` must be configured (non-empty)
+
+**Behavior:**
+
+1. Generate random 16-byte state token (hex-encoded)
+2. Set `gz_oauth_state` cookie (HttpOnly, SameSite=Lax, MaxAge=600s, Secure on HTTPS only)
+3. Redirect to Google OAuth consent URL with scopes `openid email profile`
+
+**Response:**
+
+| Status | Behavior |
+|--------|----------|
+| 302 | Redirect to `https://accounts.google.com/o/oauth2/v2/auth?...state=<token>...` |
+| 501 | Not Implemented — feature disabled (`GZ_GOOGLE_CLIENT_ID` not set) |
+
+**Error Cases:**
+
+- Config not loaded: HTTP 501
+- `GZ_GOOGLE_CLIENT_ID` empty: HTTP 501
+
+### GET /api/auth/google/callback
+
+Handles the OAuth callback from Google. Exchanges authorization code for ID token, verifies the user, and issues a session.
+
+**Query Parameters:**
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| code | string | yes | OAuth authorization code from Google |
+| state | string | yes | CSRF protection token (must match cookie) |
+
+**Behavior:**
+
+1. Read `gz_oauth_state` cookie; validate against `state` query param (constant-time comparison)
+2. Delete `gz_oauth_state` cookie (MaxAge=-1)
+3. Exchange `code` for ID token via `oauth2.Exchange()`
+4. Fetch user info from `https://www.googleapis.com/oauth2/v3/userinfo`
+5. Validate `email_verified: true` in userinfo
+6. Lookup user by `OAuthProvider: "google"` + `OAuthSub: sub`
+   - **Found:** Issue `gz_session` cookie, redirect to `/`
+   - **Not Found:** Generate new User-ID (`g-{8hex}`), create new user, issue `gz_session` cookie, redirect to `/`
+7. On any error: Redirect to `/login?error=oauth_failed` (no stack traces exposed)
+
+**Response:**
+
+| Status | Behavior |
+|--------|----------|
+| 302 | Redirect to `/` (success) or `/login?error=oauth_failed` (failure) |
+| 400 | Invalid query parameters or malformed request |
+
+**Error Cases:**
+
+| Scenario | Response |
+|----------|----------|
+| State mismatch (CSRF attempt) | 302 to `/login?error=oauth_failed` |
+| `email_verified: false` | 302 to `/login?error=oauth_failed` |
+| Google userinfo endpoint unavailable | 302 to `/login?error=oauth_failed` |
+| ID collision after 3 generation attempts | 302 to `/login?error=oauth_failed` |
+| Network error during token exchange | 302 to `/login?error=oauth_failed` |
+
+**Side Effects:**
+
+- New `data/users/g-{8hex}/user.json` created for first-time Google users
+- Session cookie `gz_session` set with 7-day expiry
+- Existing users with matching `oauth_sub` skip creation and reuse their account
+
+### User Data Model (Modified)
+
+**`internal/model/user.go`:**
+
+```go
+type User struct {
+    // ... existing fields ...
+    OAuthProvider string `json:"oauth_provider,omitempty"`
+    OAuthSub      string `json:"oauth_sub,omitempty"`
+}
+```
+
+- `OAuthProvider`: OAuth provider name (e.g., `"google"`)
+- `OAuthSub`: OAuth subject claim (unique ID from provider)
+- Fields optional (omitempty) for backward compatibility with password-auth users
+
+### Config Parameters
+
+**Environment Variables:**
+
+| Var | Type | Required | Default | Description |
+|-----|------|----------|---------|-------------|
+| GZ_GOOGLE_CLIENT_ID | string | no | (unset) | Google OAuth 2.0 Client ID |
+| GZ_GOOGLE_CLIENT_SECRET | string | no | (unset) | Google OAuth 2.0 Client Secret |
+| GZ_GOOGLE_REDIRECT_URL | string | no | (unset) | Callback URL (e.g., `https://gregor20.henemm.com/api/auth/google/callback`) |
+
+**Feature Gate:**
+- If `GZ_GOOGLE_CLIENT_ID` is empty or unset:
+  - Frontend buttons hidden (`data.googleEnabled = false`)
+  - `/api/auth/google/init` returns HTTP 501
+  - Google login is disabled
+
+### Frontend Integration
+
+**Login/Registration Pages:**
+- `frontend/src/routes/login/+page.server.ts` — exposes `data.googleEnabled` flag
+- `frontend/src/routes/register/+page.server.ts` — exposes `data.googleEnabled` flag
+- Conditional button: `{#if data.googleEnabled} <a href="/api/auth/google/init">Mit Google anmelden</a> {/if}`
+
+### Session Handling
+
+Google OAuth users receive the same session mechanism as password-auth users:
+- Cookie: `gz_session` (format: `{userId}.{timestamp}.{sig}`)
+- User-ID format for OAuth users: `g-{8hex}` (no dots to prevent session parsing errors)
+- Session verification: `frontend/src/lib/auth.ts` → `verifySession()` handles split defensively
+
+---
+
 ## Changelog
 
 - 2026-05-29: Issue #446 — Format-Mode-Validierung in `_resolve_format_mode()`: Unbekannte `format_mode`-Strings (z.B. `"Symbol"` mit Großbuchstabe, `"raw_v2"`) werden jetzt gegen `MetricDefinition.format_modes` validiert und auf `default_format_mode` zurückgefallen, mit WARNING-Log.
+- 2026-05-29: Added section 16 — Google OAuth Login Endpoints (Issue #425): GET /api/auth/google/init (initiates flow, redirect to Google), GET /api/auth/google/callback (code exchange, user creation/lookup, session issuance). User model extended with `OAuthProvider` and `OAuthSub` fields. Feature-gated via `GZ_GOOGLE_CLIENT_ID` config. New User-ID format `g-{8hex}` for OAuth users (prevents session parse errors).
 - 2026-05-29: Added section 15 — Metric Catalog Endpoint (Issue #435): GET /api/metrics exposes `format_modes[]` and `default_format_mode` per metric for frontend UI filtering and backward-compatibility mapping.
 - 2026-05-29: Issue #440 — Orts-Vergleich-Wizard Phase 1 — Extended CompareSubscription model with `activity_profile` (optional, validProfiles: wintersport|wandern|summer_trekking|allgemein). Frontend: CompareWizard Shell + Step 1 (Name/Region/Profile) + Step 2 (Smart-Import + Library). Stepper component made reusable via testidPrefix + onStepClick props. See `docs/specs/modules/issue_440_compare_wizard_shell_step1_step2.md`.
 - 2026-05-10: Epic #136 Trip-Wizard Master-Spec Fundament — Extended Trip model with `shortcode` and `activity` fields; Waypoint.suggested transient flag for wizard UI; Backend Trip.validateTrip() now accepts pause stages (waypoints: []). See `docs/specs/modules/epic_136_trip_wizard.md`.

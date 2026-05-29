@@ -12,9 +12,10 @@ export function verifySession(
 	maxAge = 86400
 ): { userId: string } | null {
 	const parts = cookie.split('.');
-	if (parts.length !== 3) return null;
-
-	const [userId, tsStr, sig] = parts;
+	if (parts.length < 3) return null;
+	const sig = parts.pop()!;
+	const tsStr = parts.pop()!;
+	const userId = parts.join('.');
 	if (!userId || !tsStr || !sig) return null;
 
 	const ts = parseInt(tsStr, 10);

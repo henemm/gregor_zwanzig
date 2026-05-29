@@ -34,7 +34,8 @@ func AuthMiddleware(secret string) func(http.Handler) http.Handler {
 			if r.URL.Path == "/api/health" || r.URL.Path == "/api/scheduler/status" ||
 				r.URL.Path == "/api/auth/register" || r.URL.Path == "/api/auth/login" ||
 				r.URL.Path == "/api/auth/logout" ||
-				r.URL.Path == "/api/auth/forgot-password" || r.URL.Path == "/api/auth/reset-password" {
+				r.URL.Path == "/api/auth/forgot-password" || r.URL.Path == "/api/auth/reset-password" ||
+				r.URL.Path == "/api/auth/google/init" || r.URL.Path == "/api/auth/google/callback" {
 				next.ServeHTTP(w, r)
 				return
 			}

@@ -11,6 +11,8 @@ type User struct {
 	SignalPhone    string    `json:"signal_phone,omitempty"`
 	SignalAPIKey   string    `json:"signal_api_key,omitempty"`
 	TelegramChatID string    `json:"telegram_chat_id,omitempty"`
+	OAuthProvider  string    `json:"oauth_provider,omitempty"`
+	OAuthSub       string    `json:"oauth_sub,omitempty"`
 }
 
 type PasswordResetToken struct {

@@ -28,6 +28,9 @@ type Config struct {
 	GoogleSMTPPort    int    `envconfig:"GOOGLE_SMTP_PORT" default:"587"`
 	GoogleSMTPUser    string `envconfig:"GOOGLE_SMTP_USER" default:""`
 	GoogleSMTPPass    string `envconfig:"GOOGLE_SMTP_PASS" default:""`
+	GoogleClientID     string `envconfig:"GOOGLE_CLIENT_ID" default:""`
+	GoogleClientSecret string `envconfig:"GOOGLE_CLIENT_SECRET" default:""`
+	GoogleRedirectURL  string `envconfig:"GOOGLE_REDIRECT_URL" default:""`
 	PublicHost        string `envconfig:"PUBLIC_HOST" default:"https://gregor20.henemm.com"`
 	TestFixtureDir    string `envconfig:"TEST_FIXTURE_DIR" default:""`
 }

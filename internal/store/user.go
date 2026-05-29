@@ -135,3 +135,22 @@ func (s *Store) UserExists(id string) bool {
 	_, err := os.Stat(path)
 	return err == nil
 }
+
+// FindUserByOAuthSub searches for a user matching both OAuthProvider and OAuthSub.
+// Returns (nil, nil) when no matching user exists.
+func (s *Store) FindUserByOAuthSub(provider, sub string) (*model.User, error) {
+	ids, err := s.ListUserIDs()
+	if err != nil {
+		return nil, err
+	}
+	for _, id := range ids {
+		u, err := s.LoadUser(id)
+		if err != nil || u == nil {
+			continue
+		}
+		if u.OAuthProvider == provider && u.OAuthSub == sub {
+			return u, nil
+		}
+	}
+	return nil, nil
+}

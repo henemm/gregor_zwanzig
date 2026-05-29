@@ -164,9 +164,15 @@ HTML + Client-Side Interactivity
 ### Authentication & Authorization
 
 - **Server-side:** `hooks.server.ts` verifies session via cookies
-- **Protected Routes:** All routes except `/login` require valid session
+- **Protected Routes:** All routes except `/login` and `/register` require valid session
 - **Client-side:** Svelte Stores track auth state; components react to changes
 - **Development:** `/_design` showcase is auth-protected (development convenience)
+- **Login Methods:**
+  - **Username/Password:** Traditional auth via session cookies
+  - **Google OAuth:** OAuth 2.0 Authorization Code flow (Issue #425, feature-gated via `GZ_GOOGLE_CLIENT_ID`)
+    - Init: GET `/api/auth/google/init` → redirect to Google consent
+    - Callback: GET `/api/auth/google/callback?code=...&state=...` → create/lookup user, issue session
+    - User-ID format for OAuth users: `g-{8hex}` to prevent session parsing errors
 
 ### Testing Strategy
 
