@@ -193,10 +193,17 @@ export interface ChannelLayouts {
 	sms?: WeatherConfigMetric[];
 }
 
+// Issue #434 — per-report-Overrides (Abend ≠ Morgen, snake_case auf der Wire).
+export interface ChannelLayoutsPerReport {
+	morning?: ChannelLayouts;
+	evening?: ChannelLayouts;
+}
+
 export interface DisplayConfig {
 	preset_name?: string;
 	metrics?: WeatherConfigMetric[];
 	channel_layouts?: ChannelLayouts; // Issue #429
+	channel_layouts_per_report?: ChannelLayoutsPerReport; // Issue #434
 }
 
 // Epic #138 Issue #177 — User-definierte Metric-Presets (Server-seitig persistiert).

@@ -468,6 +468,38 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
                 ))
             per_channel_layouts[ch] = ch_parsed
 
+    # Issue #434: per-report-Overrides laden (optional, backward-compat).
+    per_report_layouts: Optional[Dict[str, Dict[str, List[MetricConfig]]]] = None
+    raw_per_report = data.get("channel_layouts_per_report")
+    if raw_per_report and isinstance(raw_per_report, dict):
+        per_report_layouts = {}
+        for report_type, channels_dict in raw_per_report.items():
+            if not isinstance(channels_dict, dict):
+                continue
+            per_report_layouts[report_type] = {}
+            for ch, ch_metrics in channels_dict.items():
+                if not isinstance(ch_metrics, list):
+                    continue
+                per_report_layouts[report_type][ch] = [
+                    MetricConfig(
+                        metric_id=mc_data["metric_id"],
+                        enabled=mc_data.get("enabled", True),
+                        aggregations=mc_data.get("aggregations", ["min", "max"]),
+                        morning_enabled=mc_data.get("morning_enabled"),
+                        evening_enabled=mc_data.get("evening_enabled"),
+                        use_friendly_format=mc_data.get("use_friendly_format", True),
+                        format_mode=mc_data.get("format_mode"),
+                        alert_enabled=mc_data.get("alert_enabled", False),
+                        alert_threshold=mc_data.get("alert_threshold"),
+                        horizons=mc_data.get("horizons"),
+                        bucket=mc_data.get("bucket", "primary"),
+                        order=mc_data.get("order", 0),
+                    )
+                    for mc_data in ch_metrics
+                ]
+        if not per_report_layouts:
+            per_report_layouts = None
+
     return UnifiedWeatherDisplayConfig(
         trip_id=data.get("trip_id", ""),
         metrics=metrics,
@@ -478,6 +510,7 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
         multi_day_trend_reports=data.get("multi_day_trend_reports", ["evening"] if data.get("show_multi_day_trend", True) else []),
         sms_metrics=data.get("sms_metrics", []),
         per_channel_layouts=per_channel_layouts,
+        per_report_layouts=per_report_layouts,
         updated_at=_dt.fromisoformat(data["updated_at"]) if "updated_at" in data else _dt.now(),
     )
 
@@ -740,6 +773,21 @@ def save_location(location: SavedLocation, user_id: str = "default") -> Path:
             "sms_metrics": dc.sms_metrics,
             "updated_at": dc.updated_at.isoformat(),
         }
+        # Issue #429: per_channel_layouts serialisieren (latenter Bug-Fix)
+        if dc.per_channel_layouts is not None:
+            data["display_config"]["channel_layouts"] = {
+                ch: [_metric_to_dict(mc) for mc in metrics]
+                for ch, metrics in dc.per_channel_layouts.items()
+            }
+        # Issue #434: per_report_layouts serialisieren
+        if dc.per_report_layouts is not None:
+            data["display_config"]["channel_layouts_per_report"] = {
+                report_type: {
+                    ch: [_metric_to_dict(mc) for mc in metrics]
+                    for ch, metrics in channels_dict.items()
+                }
+                for report_type, channels_dict in dc.per_report_layouts.items()
+            }
 
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
@@ -868,6 +916,21 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             "updated_at": dc.updated_at.isoformat(),
             **({"preset_name": dc.preset_name} if dc.preset_name is not None else {}),
         }
+        # Issue #429: per_channel_layouts serialisieren (latenter Bug-Fix)
+        if dc.per_channel_layouts is not None:
+            data["display_config"]["channel_layouts"] = {
+                ch: [_metric_to_dict(mc) for mc in metrics]
+                for ch, metrics in dc.per_channel_layouts.items()
+            }
+        # Issue #434: per_report_layouts serialisieren
+        if dc.per_report_layouts is not None:
+            data["display_config"]["channel_layouts_per_report"] = {
+                report_type: {
+                    ch: [_metric_to_dict(mc) for mc in metrics]
+                    for ch, metrics in channels_dict.items()
+                }
+                for report_type, channels_dict in dc.per_report_layouts.items()
+            }
 
     # Serialize alert cooldown and quiet hours (Issue #181)
     if trip.alert_cooldown_minutes is not None:
@@ -1097,6 +1160,21 @@ def save_compare_subscriptions(
                 "metrics": [_metric_to_dict(mc) for mc in dc.metrics],
                 "updated_at": dc.updated_at.isoformat(),
             }
+            # Issue #429: per_channel_layouts serialisieren (latenter Bug-Fix)
+            if dc.per_channel_layouts is not None:
+                sub_dict["display_config"]["channel_layouts"] = {
+                    ch: [_metric_to_dict(mc) for mc in metrics]
+                    for ch, metrics in dc.per_channel_layouts.items()
+                }
+            # Issue #434: per_report_layouts serialisieren
+            if dc.per_report_layouts is not None:
+                sub_dict["display_config"]["channel_layouts_per_report"] = {
+                    report_type: {
+                        ch: [_metric_to_dict(mc) for mc in metrics]
+                        for ch, metrics in channels_dict.items()
+                    }
+                    for report_type, channels_dict in dc.per_report_layouts.items()
+                }
         sub_list.append(sub_dict)
 
     data = {"subscriptions": sub_list}

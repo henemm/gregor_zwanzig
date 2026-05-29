@@ -70,7 +70,8 @@ class TripReportFormatter:
 
         dc = display_config or build_default_display_config()
         if report_type in ("morning", "evening"):
-            active_metrics = dc.get_metrics_for_report_type(report_type)
+            # Issue #434: kanal-bewusste Auflösung (per_report > per_channel > global).
+            active_metrics = dc.get_metrics_for_channel("email", report_type)
             # Force enabled=True on all active metrics so downstream guards don't skip them
             active_metrics = [dataclasses.replace(mc, enabled=True) for mc in active_metrics]
             dc = dataclasses.replace(dc, metrics=active_metrics)

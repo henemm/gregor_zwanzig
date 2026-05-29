@@ -556,6 +556,10 @@ class UnifiedWeatherDisplayConfig:
     # None = keine Kanal-Layouts gespeichert → Fallback auf globale `metrics`.
     # Leere Liste pro Kanal = expliziter User-Wunsch („leer"), kein Fallback (AC-7).
     per_channel_layouts: Optional[dict[str, list[MetricConfig]]] = None
+    # Issue #434 — per-report-Overrides (Abend ≠ Morgen).
+    # Struktur: { "morning": { "email": [...] }, "evening": { "email": [...] } }.
+    # None = kein per-report-Override → nächste Kaskadenebene (per_channel_layouts).
+    per_report_layouts: Optional[dict[str, dict[str, list[MetricConfig]]]] = None
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     def is_metric_enabled(self, metric_id: str) -> bool:
@@ -589,26 +593,37 @@ class UnifiedWeatherDisplayConfig:
         return _filter_metrics_by_report_type(self.metrics, report_type)
 
     def get_metrics_for_channel(self, channel: str, report_type: str) -> list[MetricConfig]:
-        """Liefert die Metriken-Liste für einen Kanal (Issue #429).
+        """Liefert die Metriken-Liste für einen Kanal (Issue #429 + #434).
 
-        Priorität:
-        1. per_channel_layouts[channel] vorhanden UND nicht-leer → kanal-spezifische
-           Liste, gefiltert nach enabled + morning_enabled/evening_enabled.
-        2. per_channel_layouts[channel] explizit leer ([]) → leere Liste, kein
-           Fallback (AC-7: expliziter User-Wunsch).
-        3. Sonst (None oder Kanal fehlt) → Fallback auf globale Liste via
-           get_metrics_for_report_type(report_type).
+        Dreistufige Kaskade:
+        1. per_report_layouts[report_type][channel] (Issue #434) — höchste Priorität.
+           Leere Liste = expliziter User-Wunsch, kein Fallback.
+        2. per_channel_layouts[channel] (Issue #429) — zweite Stufe.
+           Leere Liste = expliziter User-Wunsch, kein Fallback.
+        3. globale Liste via get_metrics_for_report_type(report_type) — Fallback.
         """
+        # Ebene 1 (#434): per_report_layouts[report_type][channel]
+        if (
+            self.per_report_layouts is not None
+            and report_type in self.per_report_layouts
+            and channel in self.per_report_layouts[report_type]
+        ):
+            report_channel_metrics = self.per_report_layouts[report_type][channel]
+            if len(report_channel_metrics) == 0:
+                return []
+            return _filter_metrics_by_report_type(report_channel_metrics, report_type)
+
+        # Ebene 2 (#429): per_channel_layouts[channel]
         if (
             self.per_channel_layouts is not None
             and channel in self.per_channel_layouts
         ):
             channel_metrics = self.per_channel_layouts[channel]
             if len(channel_metrics) == 0:
-                # AC-7: explizit leer → kein Fallback
                 return []
             return _filter_metrics_by_report_type(channel_metrics, report_type)
-        # Fallback auf globale Liste
+
+        # Ebene 3: globaler Fallback
         return self.get_metrics_for_report_type(report_type)
 
 
