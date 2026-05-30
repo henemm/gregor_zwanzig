@@ -362,39 +362,42 @@ class TestAutoReportCardTopOrtRendering:
         assert "top_ort_letzter_versand" in content, (
             "top_ort_letzter_versand fehlt in AutoReportCard.svelte"
         )
-        assert "{#if subscription.top_ort_letzter_versand}" in content, (
-            "Conditional block für top_ort_letzter_versand fehlt — wird immer angezeigt?"
-        )
+        # #459 refactored component from Subscription to ComparePreset
+        assert (
+            "{#if subscription.top_ort_letzter_versand}" in content
+            or "{#if preset.top_ort_letzter_versand}" in content
+        ), "Conditional block für top_ort_letzter_versand fehlt — wird immer angezeigt?"
 
     def test_component_has_correct_testid(self):
         """
         GIVEN: AutoReportCard.svelte ist implementiert
         WHEN: Datei gelesen
-        THEN: data-testid="top-ort-{subscription.id}" existiert
+        THEN: data-testid für top_ort_letzter_versand existiert
         """
         import pathlib
         path = pathlib.Path("frontend/src/lib/components/compare/AutoReportCard.svelte")
         content = path.read_text()
-        assert 'data-testid="top-ort-{subscription.id}"' in content, (
-            "data-testid='top-ort-{subscription.id}' fehlt in AutoReportCard.svelte"
-        )
+        # #459 refactored: preset.id statt subscription.id
+        assert (
+            'data-testid="top-ort-{subscription.id}"' in content
+            or 'data-testid="card-top-ort-{preset.id}"' in content
+        ), "data-testid für top_ort_letzter_versand fehlt in AutoReportCard.svelte"
 
     def test_component_nested_inside_last_run_block(self):
         """
         GIVEN: AutoReportCard.svelte ist implementiert
         WHEN: Datei gelesen
-        THEN: top_ort_letzter_versand-Block ist innerhalb {#if subscription.last_run} verschachtelt
+        THEN: top_ort_letzter_versand-Block ist bedingt gerendert
         """
         import pathlib
         path = pathlib.Path("frontend/src/lib/components/compare/AutoReportCard.svelte")
         content = path.read_text()
-        last_run_pos = content.find("{#if subscription.last_run}")
-        top_ort_pos = content.find("{#if subscription.top_ort_letzter_versand}")
-        assert last_run_pos != -1, "{#if subscription.last_run} Block fehlt"
-        assert top_ort_pos != -1, "{#if subscription.top_ort_letzter_versand} Block fehlt"
-        assert top_ort_pos > last_run_pos, (
-            "top_ort_letzter_versand-Block muss NACH last_run-Block stehen (verschachtelt)"
+        # #459 refactored: kein last_run-Block mehr, top_ort direkt bedingt
+        top_ort_cond = (
+            "{#if subscription.top_ort_letzter_versand}" in content
+            or "{#if preset.top_ort_letzter_versand}" in content
         )
+        assert top_ort_cond, "{#if ...top_ort_letzter_versand} Block fehlt"
 
     def test_subscription_type_has_top_ort_field(self):
         """
