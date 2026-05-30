@@ -266,6 +266,115 @@ func PasskeyLoginFinishHandler(s *store.Store, wa *webauthn.WebAuthn, cs *Challe
 	}
 }
 
+// PasskeyLoginDiscoverableBeginHandler starts a Discoverable (usernameless) WebAuthn
+// login ceremony with Conditional Mediation. No request body is required — the
+// browser will surface all registered passkeys for the RP as an autofill picker.
+// Issue #467 — V3 Add-on (Conditional UI / Discoverable Credentials).
+func PasskeyLoginDiscoverableBeginHandler(wa *webauthn.WebAuthn, cs *ChallengeStore) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// BeginDiscoverableMediatedLogin emits "mediation":"conditional" in the
+		// top-level JSON — required for the browser to render the inline picker.
+		assertion, sessionData, err := wa.BeginDiscoverableMediatedLogin(protocol.MediationConditional)
+		if err != nil {
+			writeJSONError(w, http.StatusInternalServerError, "begin_failed")
+			return
+		}
+
+		// UserID MUST stay empty: ValidatePasskeyLogin refuses any session that
+		// was initiated with a non-empty UserID (see go-webauthn login.go:254).
+		cs.Put(sessionData.Challenge, &ChallengeEntry{
+			SessionData: *sessionData,
+			UserID:      "",
+			ExpiresAt:   time.Now().Add(challengeTTL),
+		})
+
+		// Serialise the FULL assertion object (not just assertion.Response) so
+		// the top-level "mediation":"conditional" survives the wire — without
+		// it the browser falls back to a modal prompt.
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(assertion)
+	}
+}
+
+// PasskeyLoginDiscoverableFinishHandler completes a Discoverable login ceremony.
+// The browser supplies the user identity via the assertion's userHandle; we look
+// up the user via that handle and validate the signature against their stored
+// credentials. Issue #467 — V3 Add-on.
+func PasskeyLoginDiscoverableFinishHandler(s *store.Store, wa *webauthn.WebAuthn, cs *ChallengeStore, secret string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Cap body size — same as V1 (F004).
+		r.Body = http.MaxBytesReader(w, r.Body, maxWebAuthnBodyBytes)
+
+		parsedResponse, err := protocol.ParseCredentialRequestResponseBody(r.Body)
+		if err != nil {
+			writeJSONError(w, http.StatusUnauthorized, "invalid_credentials")
+			return
+		}
+
+		// NOTE: Unlike V1 we do NOT clear parsedResponse.Response.UserHandle —
+		// the Discoverable flow uses userHandle as the SOLE user identifier.
+
+		challenge := parsedResponse.Response.CollectedClientData.Challenge
+		entry, ok := cs.Take(challenge)
+		if !ok {
+			writeJSONError(w, http.StatusUnauthorized, "invalid_credentials")
+			return
+		}
+
+		// DiscoverableUserHandler: load user by userHandle (== user.ID bytes).
+		discoverableHandler := func(rawID, userHandle []byte) (webauthn.User, error) {
+			u, lerr := s.LoadUser(string(userHandle))
+			if lerr != nil || u == nil {
+				return nil, lerr
+			}
+			return u, nil
+		}
+
+		user, credential, err := wa.ValidatePasskeyLogin(discoverableHandler, entry.SessionData, parsedResponse)
+		if err != nil || user == nil || credential == nil {
+			writeJSONError(w, http.StatusUnauthorized, "invalid_credentials")
+			return
+		}
+
+		mu, ok := user.(*model.User)
+		if !ok {
+			writeJSONError(w, http.StatusUnauthorized, "invalid_credentials")
+			return
+		}
+
+		// Update SignCount + LastUsedAt on the matching persisted credential.
+		now := time.Now().UTC()
+		for i, pc := range mu.PasskeyCredentials {
+			if bytes.Equal(pc.ID, credential.ID) {
+				mu.PasskeyCredentials[i].Authenticator.SignCount = credential.Authenticator.SignCount
+				mu.PasskeyCredentials[i].Authenticator.CloneWarning = credential.Authenticator.CloneWarning
+				mu.PasskeyCredentials[i].LastUsedAt = now
+				break
+			}
+		}
+		if err := s.SaveUser(*mu); err != nil {
+			writeJSONError(w, http.StatusInternalServerError, "store_error")
+			return
+		}
+
+		userID := mu.WebAuthnName()
+		token := middleware.SignSession(userID, secret)
+		secure := r.Header.Get("X-Forwarded-Proto") == "https" || r.TLS != nil
+		http.SetCookie(w, &http.Cookie{
+			Name:     "gz_session",
+			Value:    token,
+			Path:     "/",
+			HttpOnly: true,
+			SameSite: http.SameSiteLaxMode,
+			MaxAge:   86400,
+			Secure:   secure,
+		})
+
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]string{"id": userID})
+	}
+}
+
 // PasskeyDeleteCredentialHandler removes a single registered Passkey from the
 // authenticated user's credential list. Refuses to remove the last passkey of
 // a passwordless user (lock-out protection) — in V1 this branch is defensive

@@ -1008,3 +1008,338 @@ func registerForUserAt(t *testing.T, s *store.Store, wa *webauthn.WebAuthn, cs *
 
 // silence unused-import vigilance for protocol package — referenced via lib.
 var _ = protocol.AuthenticatorTransport("")
+
+// -----------------------------------------------------------------------------
+// TDD RED — Issue #467 Discoverable Credentials + Conditional UI
+// Handler PasskeyLoginDiscoverableBeginHandler / PasskeyLoginDiscoverableFinishHandler
+// do NOT exist yet → build fails (RED state). Tests written against the spec.
+// -----------------------------------------------------------------------------
+
+// makeAssertionResponseDiscoverable builds an assertion body for the Discoverable
+// flow where userHandle carries the real user ID (not "placeholder").
+func (a *testAuthenticator) makeAssertionResponseDiscoverable(t *testing.T, challengeB64URL string, signCount uint32, userID string) []byte {
+	t.Helper()
+	clientData := map[string]interface{}{
+		"type":      "webauthn.get",
+		"challenge": challengeB64URL,
+		"origin":    a.origin,
+	}
+	clientDataJSON, err := json.Marshal(clientData)
+	if err != nil {
+		t.Fatalf("clientData marshal: %v", err)
+	}
+	clientDataHash := sha256.Sum256(clientDataJSON)
+
+	authData := a.buildAuthenticatorData(t, false, signCount)
+
+	signedPayload := append([]byte{}, authData...)
+	signedPayload = append(signedPayload, clientDataHash[:]...)
+	digest := sha256.Sum256(signedPayload)
+	sig, err := ecdsa.SignASN1(rand.Reader, a.privKey, digest[:])
+	if err != nil {
+		t.Fatalf("ecdsa sign: %v", err)
+	}
+
+	credIDB64 := base64.RawURLEncoding.EncodeToString(a.credID)
+	body := map[string]interface{}{
+		"id":    credIDB64,
+		"rawId": credIDB64,
+		"type":  "public-key",
+		"response": map[string]interface{}{
+			"clientDataJSON":    base64.RawURLEncoding.EncodeToString(clientDataJSON),
+			"authenticatorData": base64.RawURLEncoding.EncodeToString(authData),
+			"signature":         base64.RawURLEncoding.EncodeToString(sig),
+			// Real user ID as userHandle — required by DiscoverableUserHandler
+			"userHandle": base64.RawURLEncoding.EncodeToString([]byte(userID)),
+		},
+	}
+	out, err := json.Marshal(body)
+	if err != nil {
+		t.Fatalf("body marshal: %v", err)
+	}
+	return out
+}
+
+// AC-1: Discoverable Begin liefert HTTP 200 mit "mediation":"conditional"
+func TestPasskeyDiscoverableBeginHandler_ReturnsConditionalMediation(t *testing.T) {
+	rpID, origin := "localhost", "http://localhost"
+	_ = newTestStore(t) // Begin does not require a populated store
+	wa := newTestWebAuthn(t, rpID, origin)
+	cs := NewChallengeStore()
+
+	h := PasskeyLoginDiscoverableBeginHandler(wa, cs)
+	req := httptest.NewRequest("POST", "/api/auth/passkey/discoverable/begin", nil)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	// Response must contain "mediation":"conditional" at top level.
+	var resp map[string]interface{}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("response not valid JSON: %v", err)
+	}
+	mediation, ok := resp["mediation"]
+	if !ok {
+		t.Fatal(`response missing "mediation" field — BeginDiscoverableMediatedLogin must be used, not BeginDiscoverableLogin`)
+	}
+	if mediation != "conditional" {
+		t.Fatalf(`expected "mediation":"conditional", got %q`, mediation)
+	}
+
+	// publicKey.challenge must be present
+	pk, _ := resp["publicKey"].(map[string]interface{})
+	if pk == nil {
+		t.Fatal(`response missing "publicKey" field`)
+	}
+	challenge, _ := pk["challenge"].(string)
+	if challenge == "" {
+		t.Fatal(`publicKey.challenge is empty`)
+	}
+}
+
+// AC-1 (Teil 2): ChallengeEntry.UserID muss leer sein nach Begin
+func TestPasskeyDiscoverableBeginHandler_ChallengeEntryUserIDIsEmpty(t *testing.T) {
+	rpID, origin := "localhost", "http://localhost"
+	_ = newTestStore(t) // store not needed for begin-only test
+	wa := newTestWebAuthn(t, rpID, origin)
+	cs := NewChallengeStore()
+
+	h := PasskeyLoginDiscoverableBeginHandler(wa, cs)
+	req := httptest.NewRequest("POST", "/api/auth/passkey/discoverable/begin", nil)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	// Extract challenge from response and look up the entry in the store
+	var resp map[string]interface{}
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
+	pk, _ := resp["publicKey"].(map[string]interface{})
+	challenge, _ := pk["challenge"].(string)
+
+	entry, ok := cs.Take(challenge)
+	if !ok {
+		t.Fatal("challenge not found in ChallengeStore after Begin")
+	}
+	if entry.UserID != "" {
+		t.Fatalf("ChallengeEntry.UserID must be empty for Discoverable flow, got %q", entry.UserID)
+	}
+}
+
+// AC-2: Discoverable Finish — vollständiger Roundtrip setzt Session-Cookie
+func TestPasskeyDiscoverableFinishHandler_FullRoundtrip_Success(t *testing.T) {
+	rpID, origin := "localhost", "http://localhost"
+	s := newTestStore(t)
+	wa := newTestWebAuthn(t, rpID, origin)
+	cs := NewChallengeStore()
+	secret := "test-secret"
+
+	// Register a passkey for alice
+	userID := "alice"
+	auth := registerForUser(t, s, wa, cs, userID)
+
+	// Discoverable Begin
+	beginH := PasskeyLoginDiscoverableBeginHandler(wa, cs)
+	beginReq := httptest.NewRequest("POST", "/api/auth/passkey/discoverable/begin", nil)
+	beginW := httptest.NewRecorder()
+	beginH.ServeHTTP(beginW, beginReq)
+	if beginW.Code != http.StatusOK {
+		t.Fatalf("begin: expected 200, got %d: %s", beginW.Code, beginW.Body.String())
+	}
+
+	var beginResp map[string]interface{}
+	_ = json.Unmarshal(beginW.Body.Bytes(), &beginResp)
+	pk, _ := beginResp["publicKey"].(map[string]interface{})
+	challenge, _ := pk["challenge"].(string)
+
+	// Construct assertion with real userHandle = "alice"
+	assertionBody := auth.makeAssertionResponseDiscoverable(t, challenge, 1, userID)
+
+	// Discoverable Finish
+	finishH := PasskeyLoginDiscoverableFinishHandler(s, wa, cs, secret)
+	finishReq := httptest.NewRequest("POST", "/api/auth/passkey/discoverable/finish",
+		strings.NewReader(string(assertionBody)))
+	finishReq.Header.Set("Content-Type", "application/json")
+	finishW := httptest.NewRecorder()
+	finishH.ServeHTTP(finishW, finishReq)
+
+	if finishW.Code != http.StatusOK {
+		t.Fatalf("finish: expected 200, got %d: %s", finishW.Code, finishW.Body.String())
+	}
+
+	// Session cookie must be set
+	setCookie := finishW.Header().Get("Set-Cookie")
+	if !strings.Contains(setCookie, "gz_session=") {
+		t.Fatalf("expected gz_session cookie, got: %q", setCookie)
+	}
+	if !strings.Contains(setCookie, "HttpOnly") {
+		t.Fatal("gz_session cookie must be HttpOnly")
+	}
+
+	// Response body must contain the user ID
+	var finishResp map[string]string
+	if err := json.Unmarshal(finishW.Body.Bytes(), &finishResp); err != nil {
+		t.Fatalf("finish response not valid JSON: %v", err)
+	}
+	if finishResp["id"] != userID {
+		t.Fatalf("expected id=%q, got %q", userID, finishResp["id"])
+	}
+
+	// LastUsedAt must be set after successful discoverable login
+	reloaded, err := s.LoadUser(userID)
+	if err != nil || reloaded == nil {
+		t.Fatal("user not found after finish")
+	}
+	if len(reloaded.PasskeyCredentials) == 0 {
+		t.Fatal("no credentials after finish")
+	}
+	if reloaded.PasskeyCredentials[0].LastUsedAt.IsZero() {
+		t.Fatal("LastUsedAt was not updated after discoverable login")
+	}
+}
+
+// AC-3: Leerer userHandle → 401
+func TestPasskeyDiscoverableFinishHandler_EmptyUserHandle_Returns401(t *testing.T) {
+	rpID, origin := "localhost", "http://localhost"
+	s := newTestStore(t)
+	wa := newTestWebAuthn(t, rpID, origin)
+	cs := NewChallengeStore()
+	secret := "test-secret"
+
+	userID := "alice"
+	auth := registerForUser(t, s, wa, cs, userID)
+
+	// Begin
+	beginH := PasskeyLoginDiscoverableBeginHandler(wa, cs)
+	beginReq := httptest.NewRequest("POST", "/api/auth/passkey/discoverable/begin", nil)
+	beginW := httptest.NewRecorder()
+	beginH.ServeHTTP(beginW, beginReq)
+	var beginResp map[string]interface{}
+	_ = json.Unmarshal(beginW.Body.Bytes(), &beginResp)
+	pk, _ := beginResp["publicKey"].(map[string]interface{})
+	challenge, _ := pk["challenge"].(string)
+
+	// Assertion with empty userHandle
+	assertionBody := auth.makeAssertionResponseDiscoverable(t, challenge, 1, "")
+
+	finishH := PasskeyLoginDiscoverableFinishHandler(s, wa, cs, secret)
+	finishReq := httptest.NewRequest("POST", "/api/auth/passkey/discoverable/finish",
+		strings.NewReader(string(assertionBody)))
+	finishReq.Header.Set("Content-Type", "application/json")
+	finishW := httptest.NewRecorder()
+	finishH.ServeHTTP(finishW, finishReq)
+
+	if finishW.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 for empty userHandle, got %d: %s", finishW.Code, finishW.Body.String())
+	}
+}
+
+// AC-3 (Teil 2): Unbekannter userHandle → 401
+func TestPasskeyDiscoverableFinishHandler_UnknownUserHandle_Returns401(t *testing.T) {
+	rpID, origin := "localhost", "http://localhost"
+	s := newTestStore(t)
+	wa := newTestWebAuthn(t, rpID, origin)
+	cs := NewChallengeStore()
+	secret := "test-secret"
+
+	userID := "alice"
+	auth := registerForUser(t, s, wa, cs, userID)
+
+	beginH := PasskeyLoginDiscoverableBeginHandler(wa, cs)
+	beginReq := httptest.NewRequest("POST", "/api/auth/passkey/discoverable/begin", nil)
+	beginW := httptest.NewRecorder()
+	beginH.ServeHTTP(beginW, beginReq)
+	var beginResp map[string]interface{}
+	_ = json.Unmarshal(beginW.Body.Bytes(), &beginResp)
+	pk, _ := beginResp["publicKey"].(map[string]interface{})
+	challenge, _ := pk["challenge"].(string)
+
+	// userHandle points to a user that doesn't exist
+	assertionBody := auth.makeAssertionResponseDiscoverable(t, challenge, 1, "does-not-exist")
+
+	finishH := PasskeyLoginDiscoverableFinishHandler(s, wa, cs, secret)
+	finishReq := httptest.NewRequest("POST", "/api/auth/passkey/discoverable/finish",
+		strings.NewReader(string(assertionBody)))
+	finishReq.Header.Set("Content-Type", "application/json")
+	finishW := httptest.NewRecorder()
+	finishH.ServeHTTP(finishW, finishReq)
+
+	if finishW.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 for unknown userHandle, got %d: %s", finishW.Code, finishW.Body.String())
+	}
+}
+
+// AC-4: Challenge-Replay nach erfolgreichem Finish → 401
+func TestPasskeyDiscoverableFinishHandler_ChallengeReplay_Returns401(t *testing.T) {
+	rpID, origin := "localhost", "http://localhost"
+	s := newTestStore(t)
+	wa := newTestWebAuthn(t, rpID, origin)
+	cs := NewChallengeStore()
+	secret := "test-secret"
+
+	userID := "alice"
+	auth := registerForUser(t, s, wa, cs, userID)
+
+	beginH := PasskeyLoginDiscoverableBeginHandler(wa, cs)
+	beginReq := httptest.NewRequest("POST", "/api/auth/passkey/discoverable/begin", nil)
+	beginW := httptest.NewRecorder()
+	beginH.ServeHTTP(beginW, beginReq)
+	var beginResp map[string]interface{}
+	_ = json.Unmarshal(beginW.Body.Bytes(), &beginResp)
+	pk, _ := beginResp["publicKey"].(map[string]interface{})
+	challenge, _ := pk["challenge"].(string)
+
+	assertionBody := auth.makeAssertionResponseDiscoverable(t, challenge, 1, userID)
+	finishH := PasskeyLoginDiscoverableFinishHandler(s, wa, cs, secret)
+
+	// First call — must succeed
+	req1 := httptest.NewRequest("POST", "/api/auth/passkey/discoverable/finish",
+		strings.NewReader(string(assertionBody)))
+	req1.Header.Set("Content-Type", "application/json")
+	w1 := httptest.NewRecorder()
+	finishH.ServeHTTP(w1, req1)
+	if w1.Code != http.StatusOK {
+		t.Fatalf("first finish: expected 200, got %d: %s", w1.Code, w1.Body.String())
+	}
+
+	// Second call with same challenge body — ChallengeStore.Take is destructive
+	req2 := httptest.NewRequest("POST", "/api/auth/passkey/discoverable/finish",
+		strings.NewReader(string(assertionBody)))
+	req2.Header.Set("Content-Type", "application/json")
+	w2 := httptest.NewRecorder()
+	finishH.ServeHTTP(w2, req2)
+	if w2.Code != http.StatusUnauthorized {
+		t.Fatalf("replay: expected 401, got %d: %s", w2.Code, w2.Body.String())
+	}
+}
+
+// F004 (Discoverable): oversized body must not be accepted at /discoverable/finish.
+func TestPasskeyDiscoverableFinishRejectsOversizedBody(t *testing.T) {
+	rpID, origin := "localhost", "http://localhost"
+	wa := newTestWebAuthn(t, rpID, origin)
+	cs := NewChallengeStore()
+	s := newTestStore(t)
+	secret := "test-secret"
+
+	// 70 KB body — exceeds the 64 KB cap
+	oversized := make([]byte, 70*1024)
+	for i := range oversized {
+		oversized[i] = 'x'
+	}
+
+	h := PasskeyLoginDiscoverableFinishHandler(s, wa, cs, secret)
+	req := httptest.NewRequest("POST", "/api/auth/passkey/discoverable/finish",
+		bytes.NewReader(oversized))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+
+	if w.Code == http.StatusOK {
+		t.Fatalf("oversized body must not return 200, got %d", w.Code)
+	}
+}

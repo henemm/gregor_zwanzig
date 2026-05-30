@@ -119,6 +119,13 @@ func main() {
 	r.Post("/api/auth/passkey/login/finish",
 		passkeyLimiter.Middleware(handler.PasskeyLoginFinishHandler(s, webAuthn, challengeStore, cfg.SessionSecret)).ServeHTTP,
 	)
+	// Issue #467 — Discoverable Credentials + Conditional UI (public)
+	r.Post("/api/auth/passkey/discoverable/begin",
+		passkeyLimiter.Middleware(handler.PasskeyLoginDiscoverableBeginHandler(webAuthn, challengeStore)).ServeHTTP,
+	)
+	r.Post("/api/auth/passkey/discoverable/finish",
+		passkeyLimiter.Middleware(handler.PasskeyLoginDiscoverableFinishHandler(s, webAuthn, challengeStore, cfg.SessionSecret)).ServeHTTP,
+	)
 	// Authenticated endpoints (cookie required via AuthMiddleware)
 	r.Post("/api/auth/passkey/register/begin",
 		passkeyLimiter.Middleware(handler.PasskeyRegisterBeginHandler(s, webAuthn, challengeStore)).ServeHTTP,
