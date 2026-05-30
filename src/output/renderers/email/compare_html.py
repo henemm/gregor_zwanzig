@@ -23,8 +23,8 @@ from typing import Optional
 from app.profile import ActivityProfile
 from app.user import ComparisonResult, LocationResult
 from output.renderers.email.design_tokens import (
-    FONT_UI, G_ACCENT, G_BOX_WARNING_BG, G_INK, G_INK_FAINT, G_INK_MUTED,
-    G_PAPER, G_SUCCESS, G_SURFACE_1, G_WARNING, WEB_FONT_LINK,
+    FONT_DATA, FONT_UI, G_ACCENT, G_BOX_WARNING_BG, G_INK, G_INK_FAINT,
+    G_INK_MUTED, G_PAPER, G_SUCCESS, G_SURFACE_1, G_WARNING, WEB_FONT_LINK,
 )
 from output.renderers.email.profile_signature import profile_signature
 
@@ -84,6 +84,14 @@ METRIC_UNITS = {
     "cloud_avg": "%",
     "temp_max": "°C",
 }
+
+# Issue #460 — Tag-Farben und Wochentag-Abkuerzungen
+_TAG_COLORS = {
+    "good": {"bg": "#dcf2e1", "fg": "#14532d", "border": "#86c89a"},
+    "warn": {"bg": "#fde6cc", "fg": "#7c2d12", "border": "#f0a060"},
+    "info": {"bg": "#dde8f3", "fg": "#1e3a5f", "border": "#8aacd0"},
+}
+_WEEKDAY_ABBR = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
 
 
 # ---------------------------------------------------------------------------
@@ -149,6 +157,122 @@ def _render_winner_card(winner: LocationResult) -> str:
         f'<span style="display:inline-block;background:{badge_bg};'
         f'color:#ffffff;padding:4px 12px;border-radius:12px;'
         f'font-size:13px;font-weight:600;">Score {score}</span>'
+        f'</div>'
+    )
+
+
+def _render_winner_tags(tags: list[dict]) -> str:
+    """Issue #460 — Pill-Tags unter der Winner-Card.
+
+    - Leere Liste -> "" (kein Container).
+    - Unbekannte Tones werden uebersprungen.
+    """
+    if not tags:
+        return ""
+
+    pills: list[str] = []
+    for tag in tags:
+        tone = tag.get("tone")
+        colors = _TAG_COLORS.get(tone)
+        if colors is None:
+            continue
+        label = _html.escape(str(tag.get("label", "")))
+        pill_style = (
+            f"display:inline-flex;align-items:center;"
+            f"padding:4px 10px;"
+            f"background:{colors['bg']};color:{colors['fg']};"
+            f"border:1px solid {colors['border']};border-radius:99px;"
+            f"font-family:{FONT_DATA};font-size:11px;font-weight:600;"
+            f"white-space:nowrap;"
+        )
+        pills.append(f'<span style="{pill_style}">{label}</span>')
+
+    if not pills:
+        return ""
+
+    container_style = (
+        "display:flex;flex-wrap:wrap;gap:6px;"
+        "margin:0 20px;padding-top:12px;"
+    )
+    return f'<div style="{container_style}">{"".join(pills)}</div>'
+
+
+def _render_header(result: ComparisonResult, sig) -> str:
+    """Issue #460 — Header-Sektion mit Profil-Label, Datum/Zeitfenster und Stats-Grid."""
+    label_text = f"ORTS-VERGLEICH · {_html.escape(sig.eyebrow)}"
+    label_style = (
+        f"font-family:{FONT_DATA};font-size:10px;"
+        f"color:{G_ACCENT};letter-spacing:0.08em;"
+        f"text-transform:uppercase;margin:0 0 6px 0;"
+    )
+
+    weekday = _WEEKDAY_ABBR[result.target_date.weekday()]
+    date_str = result.target_date.strftime("%d.%m.%Y")
+    start_h, end_h = result.time_window
+    time_str = f"{start_h:02d}:00 – {end_h:02d}:00"
+    date_line = f"{weekday}, {date_str}  ·  {time_str}"
+    date_style = (
+        f"font-family:{FONT_DATA};font-size:13px;"
+        f"color:{G_INK};margin-top:6px;"
+    )
+
+    # Stats-Werte
+    profil_val = _html.escape(sig.eyebrow)
+    orte_val = str(len(result.valid_locations))
+    horizont_val = "+48h"
+    erstellt_val = datetime.now().strftime("%H:%M")
+
+    cell_label_style = (
+        f"font-family:{FONT_DATA};font-size:9px;"
+        f"color:{G_INK_FAINT};text-transform:uppercase;"
+        f"letter-spacing:0.08em;padding-bottom:2px;"
+    )
+    cell_value_style = (
+        f"font-family:{FONT_UI};font-size:14px;"
+        f"color:{G_INK};font-weight:600;"
+    )
+
+    def _cell(label: str, value: str, width: str) -> str:
+        return (
+            f'<td width="{width}" style="vertical-align:top;padding:0 8px 0 0;">'
+            f'<div style="{cell_label_style}">{label}</div>'
+            f'<div style="{cell_value_style}">{value}</div>'
+            f'</td>'
+        )
+
+    desktop_cells = (
+        _cell("Profil", profil_val, "25%")
+        + _cell("Orte", orte_val, "25%")
+        + _cell("Horizont", horizont_val, "25%")
+        + _cell("Erstellt", erstellt_val, "25%")
+    )
+    desktop_table = (
+        f'<table class="header-stats-desktop" cellspacing="0" cellpadding="0" '
+        f'style="width:100%;margin-top:14px;border-collapse:collapse;">'
+        f'<tr>{desktop_cells}</tr>'
+        f'</table>'
+    )
+
+    mobile_row1 = _cell("Profil", profil_val, "50%") + _cell("Orte", orte_val, "50%")
+    mobile_row2 = _cell("Horizont", horizont_val, "50%") + _cell("Erstellt", erstellt_val, "50%")
+    mobile_table = (
+        f'<table class="header-stats-mobile" cellspacing="0" cellpadding="0" '
+        f'style="display:none;width:100%;margin-top:14px;border-collapse:collapse;">'
+        f'<tr>{mobile_row1}</tr>'
+        f'<tr>{mobile_row2}</tr>'
+        f'</table>'
+    )
+
+    wrapper_style = (
+        f"background:{G_PAPER};padding:22px;"
+        f"border-bottom:1px solid #e6e1d3;"
+    )
+    return (
+        f'<div class="header-wrapper" style="{wrapper_style}">'
+        f'<div style="{label_style}">{label_text}</div>'
+        f'<div style="{date_style}">{date_line}</div>'
+        f'{desktop_table}'
+        f'{mobile_table}'
         f'</div>'
     )
 
@@ -324,6 +448,7 @@ def render_compare_html(
     warnings: list[str] | None = None,
     top_n_details: int = 3,
     enabled_metrics: set | None = None,
+    winner_tags: list[dict] | None = None,
 ) -> str:
     """Rendert ComparisonResult als HTML-Mail.
 
@@ -335,6 +460,8 @@ def render_compare_html(
         warnings: Liste von Warnungs-Texten; je Eintrag ein orange-Banner.
         top_n_details: Anzahl Locations mit Stunden-Verlauf (0 = keiner).
         enabled_metrics: Optionaler Set-Filter fuer Metrik-Zeilen.
+        winner_tags: Issue #460 — optionale Pill-Tags unter Winner-Card.
+            Liste von {"tone": "good"|"warn"|"info", "label": str}.
 
     Returns:
         HTML-String (DOCTYPE bis </html>).
@@ -351,9 +478,13 @@ def render_compare_html(
         f'{sig.icon_html} {_html.escape(sig.eyebrow)}</div>'
     )
 
+    header_html = _render_header(result, sig)
+
     winner_html = ""
+    winner_tags_html = ""
     if result.winner is not None:
         winner_html = _render_winner_card(result.winner)
+        winner_tags_html = _render_winner_tags(winner_tags or [])
 
     warnings_html = "".join(_render_warning_banner(w) for w in warnings)
 
@@ -383,6 +514,9 @@ th, td {{ vertical-align: top; }}
     th, td {{ padding: 4px 6px !important; }}
     .matrix-table {{ display: none !important; }}
     .mobile-cards {{ display: block !important; }}
+    .header-stats-desktop {{ display: none !important; }}
+    .header-stats-mobile {{ display: table !important; }}
+    .header-wrapper {{ padding: 18px !important; }}
 }}
 </style>"""
 
@@ -398,7 +532,9 @@ th, td {{ vertical-align: top; }}
 <body>
 <div class="container">
 {eyebrow_html}
+{header_html}
 {winner_html}
+{winner_tags_html}
 {warnings_html}
 {matrix_html}
 {hourly_html}
