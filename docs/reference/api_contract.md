@@ -1038,9 +1038,75 @@ Google OAuth users receive the same session mechanism as password-auth users:
 
 ---
 
+## 17) Compare-Preset Model (Issue #458)
+
+Das neue `ComparePreset`-Datenmodell für Auto-Briefings (Orts-Vergleiche) mit CRUD-Endpoints.
+
+### ComparePreset Structure
+
+```json
+{
+  "id": "cp-a1b2c3d4e5f6g7h8",
+  "name": "Alpenvergleich",
+  "user_id": "alice@example.com",
+  "location_ids": ["loc-001", "loc-002", "loc-003"],
+  "schedule": "daily",
+  "profil": "WINTERSPORT",
+  "hour_from": 6,
+  "hour_to": 8,
+  "empfaenger": ["alice@example.com", "bob@example.com"],
+  "letzter_versand": "2026-05-29T07:00:00Z",
+  "top_ort_letzter_versand": "Andermatt",
+  "created_at": "2026-05-20T14:30:00Z"
+}
+```
+
+### Feldliste
+
+| Feld | Typ | Beschreibung |
+|------|-----|-------------|
+| id | string | Eindeutige ID (`cp-{8hex}`) |
+| name | string | Benutzer-definierter Name |
+| user_id | string | Besitzer-User-ID |
+| location_ids | string[] | 1–5 Orts-IDs zum Vergleichen |
+| schedule | enum | `"daily"` \| `"weekly"` \| `"manual"` |
+| profil | enum | `"WINTERSPORT"` \| `"ALPINE_TOURING"` \| `"SUMMER_TREKKING"` \| `"ALLGEMEIN"` |
+| hour_from | integer | Start-Stunde [0..23] für tägliche Versände |
+| hour_to | integer | End-Stunde [0..23] |
+| empfaenger | string[] | E-Mail-Adressen (Validierung: muss `@` enthalten) |
+| letzter_versand | datetime \| null | ISO-8601 UTC des letzten Versands |
+| top_ort_letzter_versand | string \| null | Ort mit höchstem Score beim letzten Versand |
+| created_at | datetime | Erstellungszeitpunkt (ISO-8601 UTC) |
+
+### Endpoints
+
+| Method | Path | Verhalten |
+|--------|------|-----------|
+| `GET` | `/api/compare/presets` | Alle Presets des eingeloggten Users; `[]` falls keine |
+| `POST` | `/api/compare/presets` | Neues Preset anlegen → `201 Created` + Preset-JSON |
+| `PUT` | `/api/compare/presets/{id}` | Preset komplett aktualisieren → `200 OK` + Preset-JSON |
+| `DELETE` | `/api/compare/presets/{id}` | Preset löschen → `204 No Content`; `404` falls nicht gefunden |
+| `POST` | `/api/compare/presets/{id}/send` | Versand triggern (Stub: `{"status":"queued"}` mit `200`) — echte Versand-Logik folgt #461 |
+
+### Validierung
+
+- `name`: erforderlich, nicht leer
+- `schedule`: einer von `["daily", "weekly", "manual"]`
+- `profil`: einer von `["WINTERSPORT", "ALPINE_TOURING", "SUMMER_TREKKING", "ALLGEMEIN"]`
+- `hour_from`, `hour_to`: Integers in [0..23], `hour_from <= hour_to`
+- `empfaenger`: Array von Strings mit mindestens `@`-Zeichen (einfache Email-Validierung)
+- `location_ids`: Array (leer erlaubt, aber mind. 1 Ort bei Versand sinnvoll)
+
+### User-Isolation
+
+Alle Endpoints filtern nach dem eingeloggten User (via `middleware.UserIDFromContext()`). Queries auf fremde Presets (`user_id ≠ authenticated user`) werden ignoriert/404.
+
+---
+
 ## Changelog
 
-- 2026-05-30: Issue #458 — ComparePreset CRUD Endpoints: GET/POST /api/compare/presets, PUT/DELETE /{id}, POST /{id}/send (stub). Storage compare_presets.json, user-isolated. Foundation für #456.
+- 2026-05-30: Issue #459 — Auto-Briefings Sidepanel Frontend (ComparePreset-System): AutoReportsOverview, SavePresetDialog, subscriptionHelpers (presetScheduleLabel, formatLastSent), ComparePreset-Interface in types.ts; +page.server.ts lädt `/api/compare/presets`; AutoReportCard und AutoReportsOverview auf ComparePreset umgebaut mit manuellem Versand-Button. Spec #458-Backend-Endpoints vorausgesetzt (`GET /api/compare/presets`, `/send`).
+- 2026-05-30: Issue #458 — Compare-Preset Backend (CRUD+Endpoints): Neues `ComparePreset`-Datenmodell (separate Entität von `CompareSubscription`); 5 REST-Endpoints: GET/POST/PUT/DELETE + `/send`-Stub; Single-File Storage `compare_presets.json`; User-Isolation; Validierung. Siehe Abschnitt 17.
 - 2026-05-29: Issue #455 — Compare-Hauptbühne Frontend `/compare` route implemented (pure frontend, no API changes). 3-column layout: LocationsRail (left 320px) | CompareMatrix/RecommendationBanner/HourlyMatrix (center flex) | AutoReportsOverview (right 320px). POST `/api/compare/run` contract unchanged; frontend wires existing Go-backend endpoint. See `docs/specs/modules/issue_455_compare_main_stage.md`.
 - 2026-05-29: Issue #448 — Validator-Endpoint `GET /api/_validator/metrics-for-channel` ergänzt (Tooling-API, nicht versionsstabil): Macht die dreistufige Kaskade von `get_metrics_for_channel()` (per_report → per_channel → global) von außen prüfbar. Response: `{"source": "per_report|per_channel|global", "metric_ids": [...]}`. Params: `trip`, `channel`, `report`, `user_id` (via Go-Proxy injiziert).
 - 2026-05-29: Issue #442 — Compare-Wizard Step 4 Layout (Pure Frontend): Step4Layout component added to Compare-Wizard, enabling per-channel metric configuration (Email/Telegram/Signal/SMS) with reusable OutputLayoutEditor component (Issue #431). Wizard calls GET /api/metrics (required), GET /api/templates (optional), GET /api/metric-presets (optional) on mount. No backend changes; `channel_layouts` field added to CompareSubscription state (frontend-only persistence via `save()`).

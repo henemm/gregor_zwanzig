@@ -437,3 +437,20 @@ export interface CockpitStatus {
 	briefings: BriefingLogEntry[];
 	alerts: AlertLogEntry[];
 }
+
+// Issue #459 — Auto-Briefings Sidepanel.
+// Spec: docs/specs/modules/issue_459_auto_briefings_sidepanel.md
+// Spiegelt das von #458 bereitgestellte ComparePreset (GET /api/compare/presets).
+export interface ComparePreset {
+	id: string;
+	name: string;
+	location_ids: string[];
+	schedule: 'daily' | 'weekly' | 'manual';
+	profil: ActivityProfile;
+	hour_from: number;
+	hour_to: number;
+	empfaenger: string[];
+	letzter_versand?: string;           // ISO-8601
+	top_ort_letzter_versand?: string | null;
+	created_at: string;
+}

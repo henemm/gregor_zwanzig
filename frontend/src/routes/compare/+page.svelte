@@ -188,10 +188,7 @@
 
 	<!-- Rechte Spalte: Auto-Briefings Sidepanel -->
 	<div class="overflow-y-auto" data-testid="compare-sidebar">
-		<AutoReportsOverview
-			subscriptions={data.subscriptions ?? []}
-			onsavebriefing={handleSaveBriefing}
-		/>
+		<AutoReportsOverview presets={data.presets} />
 	</div>
 </div>
 

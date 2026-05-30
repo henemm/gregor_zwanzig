@@ -1,39 +1,43 @@
 <script lang="ts">
-	// Issue #301 Lieferung B — Default-Content im Compare-Bereich als gestaltetes
-	// Auto-Reports-Kachelraster (Eyebrow + H1 + responsives Grid). Drop-in-Ersatz
-	// für das frühere Subscriptions-Panel mit identischer Props-Signatur.
+	// Issue #459 — Sidepanel-Übersicht: gespeicherte Auto-Briefings (ComparePresets).
 	//
-	// Spec: docs/specs/modules/issue_301b_auto_reports_overview.md (§2)
+	// Spec: docs/specs/modules/issue_459_auto_briefings_sidepanel.md (§4)
+	// Vorher (#301): Subscription-Liste. Jetzt: ComparePreset-Kacheln + internes
+	// SavePresetDialog (kein Callback nach oben).
 
-	import type { Subscription } from '$lib/types.js';
+	import type { ComparePreset } from '$lib/types.js';
 	import { Eyebrow } from '$lib/components/ui/eyebrow/index.js';
 	import AutoReportCard from './AutoReportCard.svelte';
 	import AddReportCard from './AddReportCard.svelte';
+	import SavePresetDialog from './SavePresetDialog.svelte';
 
 	interface Props {
-		subscriptions: Subscription[];
-		onsavebriefing: () => void;
+		presets: ComparePreset[];
 	}
 
-	let { subscriptions, onsavebriefing }: Props = $props();
+	let { presets }: Props = $props();
+	let saveDialogOpen = $state(false);
 </script>
 
 <section class="auto-reports-overview" data-testid="auto-reports-overview">
-	<Eyebrow>Orts-Vergleich · Auto-Reports</Eyebrow>
-	<h1 class="overview-heading">Deine Auto-Reports</h1>
+	<Eyebrow>AUTO-BRIEFINGS</Eyebrow>
+	<h1 class="overview-heading">Deine Auto-Briefings</h1>
 
-	<div class="reports-grid" data-testid="reports-grid">
-		{#each subscriptions as sub (sub.id)}
-			<AutoReportCard subscription={sub} />
-		{/each}
-		<AddReportCard onclick={onsavebriefing} />
-	</div>
-
-	{#if subscriptions.length === 0}
-		<p class="empty-hint" data-testid="empty-hint">
-			Noch kein Auto-Report angelegt. Starte mit dem Vergleich und speichere ihn.
+	{#if presets.length === 0}
+		<p class="empty-hint" data-testid="auto-reports-empty">
+			Noch kein Auto-Briefing gespeichert. Starte einen Vergleich und speichere
+			ihn als Auto-Briefing.
 		</p>
 	{/if}
+
+	<div class="reports-grid" data-testid="reports-grid">
+		{#each presets as preset (preset.id)}
+			<AutoReportCard {preset} />
+		{/each}
+		<AddReportCard onclick={() => (saveDialogOpen = true)} />
+	</div>
+
+	<SavePresetDialog bind:open={saveDialogOpen} />
 </section>
 
 <style>
@@ -69,7 +73,7 @@
 	}
 
 	.empty-hint {
-		font-size: 0.875rem;
+		font-size: var(--g-text-sm);
 		color: var(--g-ink-muted);
 		margin-top: var(--g-s-2);
 	}

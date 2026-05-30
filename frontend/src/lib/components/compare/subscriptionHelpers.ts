@@ -6,7 +6,7 @@
 //
 // Spec: docs/specs/modules/issue_301b_auto_reports_overview.md (§1)
 
-import type { Subscription } from '../../types.js';
+import type { Subscription, ComparePreset } from '../../types.js';
 
 // Konvention 0=Montag (authoritativ: SubscriptionForm.svelte:19 +
 // subscriptions/+page.svelte:19). NICHT Sonntag-first.
@@ -54,4 +54,28 @@ export function deriveStatus(sub: Subscription): CompareStatus {
 	if (!sub.name || sub.locations.length === 0) return 'draft';
 	if (!sub.enabled) return 'paused';
 	return 'active';
+}
+
+// Issue #459 — ComparePreset-Helfer für das Auto-Briefings-Sidepanel.
+// Spec: docs/specs/modules/issue_459_auto_briefings_sidepanel.md (§2)
+
+/** ComparePreset → lesbares Zeitplan-Label. */
+export function presetScheduleLabel(preset: ComparePreset): string {
+	if (preset.schedule === 'daily') {
+		return `Täglich ${preset.hour_from}–${preset.hour_to} Uhr`;
+	}
+	if (preset.schedule === 'weekly') return 'Wöchentlich';
+	return 'Manuell';
+}
+
+/** ISO-Timestamp → kurzes deutsches Datum (de-DE) | "Noch kein Versand" wenn leer/ungültig. */
+export function formatLastSent(iso?: string | null): string {
+	if (!iso) return 'Noch kein Versand';
+	const d = new Date(iso);
+	if (isNaN(d.getTime())) return 'Noch kein Versand';
+	return d.toLocaleDateString('de-DE', {
+		day: '2-digit',
+		month: '2-digit',
+		year: 'numeric'
+	});
 }

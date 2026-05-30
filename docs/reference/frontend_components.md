@@ -722,8 +722,9 @@ interface WordmarkProps {
 | Komponente | Pfad rel. zu components/ | Kurzbeschreibung |
 |---|---|---|
 | AddReportCard | `compare/AddReportCard.svelte` | Karte zum Hinzufuegen eines Vergleichs-Reports |
-| AutoReportCard | `compare/AutoReportCard.svelte` | Auto-Report-Karte |
-| AutoReportsOverview | `compare/AutoReportsOverview.svelte` | Uebersicht automatischer Reports |
+| AutoReportCard | `compare/AutoReportCard.svelte` | Auto-Report-Karte (umgebaut auf ComparePreset, Issue #459) |
+| AutoReportsOverview | `compare/AutoReportsOverview.svelte` | Uebersicht automatischer Reports (ComparePreset-System, Issue #459) |
+| SavePresetDialog | `compare/SavePresetDialog.svelte` | Dialog zum Speichern neuer Presets (Issue #459) |
 | CompareMatrix | `compare/CompareMatrix.svelte` | Vergleichs-Matrix (Locations × Metriken) |
 | CreateGroupDialog | `compare/CreateGroupDialog.svelte` | Dialog zum Anlegen einer Location-Gruppe |
 | HourlyMatrix | `compare/HourlyMatrix.svelte` | Stuendliche Wetter-Matrix |
@@ -734,7 +735,7 @@ interface WordmarkProps {
 | PresetHeader | `compare/PresetHeader.svelte` | Kopfzeile fuer Compare-Preset |
 | RecommendationBanner | `compare/RecommendationBanner.svelte` | Empfehlungs-Banner (Winner-Tags) |
 | locationHelpers.ts | `compare/locationHelpers.ts` | Location-Logik inkl. isCoordsValid() (Helper) |
-| subscriptionHelpers.ts | `compare/subscriptionHelpers.ts` | Subscription-Logik (Helper) |
+| subscriptionHelpers.ts | `compare/subscriptionHelpers.ts` | Subscription- und Preset-Logik: presetScheduleLabel, formatLastSent (Issue #459) |
 
 #### Orts-Vergleich-Wizard (Issue #440 — Create/Edit Mode)
 
