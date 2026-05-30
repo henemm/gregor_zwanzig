@@ -5,10 +5,18 @@ package mail
 
 import (
 	"fmt"
+	"mime"
 	"net/smtp"
 	"strings"
 	"time"
 )
+
+// encodeMailHeader serialisiert einen Header-Wert RFC-2047-konform als
+// Quoted-Printable Encoded-Word (=?utf-8?q?...?=) bei Non-ASCII-Input.
+// ASCII-only-Eingaben gibt mime.QEncoding.Encode bitidentisch zurück.
+func encodeMailHeader(s string) string {
+	return mime.QEncoding.Encode("UTF-8", s)
+}
 
 // MailConfig captures the SMTP credentials and sender identity for one dispatch.
 // Build it per-request from internal/config.Config (Resend vs. Google branch).
@@ -54,7 +62,7 @@ func Send(cfg MailConfig, to string, msg Mail) error {
 	headers := []string{
 		fmt.Sprintf("From: %s", from),
 		fmt.Sprintf("To: %s", to),
-		fmt.Sprintf("Subject: %s", msg.Subject),
+		fmt.Sprintf("Subject: %s", encodeMailHeader(msg.Subject)),
 		"MIME-Version: 1.0",
 		fmt.Sprintf("Content-Type: multipart/alternative; boundary=\"%s\"", boundary),
 	}
