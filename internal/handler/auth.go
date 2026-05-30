@@ -361,19 +361,21 @@ type profileResponse struct {
 // passkeyProfileEntry exposes a registered Passkey to the client WITHOUT the
 // public key — that material is server-side only.
 type passkeyProfileEntry struct {
-	ID         string `json:"id"`
-	Label      string `json:"label,omitempty"`
-	CreatedAt  string `json:"created_at"`
-	LastUsedAt string `json:"last_used_at,omitempty"`
+	ID                string `json:"id"`
+	Label             string `json:"label,omitempty"`
+	AuthenticatorName string `json:"authenticator_name,omitempty"`
+	CreatedAt         string `json:"created_at"`
+	LastUsedAt        string `json:"last_used_at,omitempty"`
 }
 
 func toProfileResponse(u *model.User) profileResponse {
 	passkeys := make([]passkeyProfileEntry, 0, len(u.PasskeyCredentials))
 	for _, pc := range u.PasskeyCredentials {
 		entry := passkeyProfileEntry{
-			ID:        base64.RawURLEncoding.EncodeToString(pc.ID),
-			Label:     pc.Label,
-			CreatedAt: pc.CreatedAt.Format(time.RFC3339),
+			ID:                base64.RawURLEncoding.EncodeToString(pc.ID),
+			Label:             pc.Label,
+			AuthenticatorName: aaguidToName(pc.Authenticator.AAGUID),
+			CreatedAt:         pc.CreatedAt.Format(time.RFC3339),
 		}
 		if !pc.LastUsedAt.IsZero() {
 			entry.LastUsedAt = pc.LastUsedAt.Format(time.RFC3339)

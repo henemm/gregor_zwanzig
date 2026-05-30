@@ -16,7 +16,7 @@
 	let { data } = $props();
 
 	// Issue #450 — Passkey-Verwaltung
-	type PasskeyEntry = { id: string; label: string; created_at: string; last_used_at?: string };
+	type PasskeyEntry = { id: string; label?: string; created_at: string; last_used_at?: string; authenticator_name?: string };
 	let passkeys = $state<PasskeyEntry[]>(data.profile?.passkeys ?? []);
 	let webAuthnSupported = $state(false);
 	let newPasskeyLabel = $state('');
@@ -454,7 +454,7 @@
 					{#each passkeys as pk (pk.id)}
 						<div data-testid="passkey-row-{pk.id}" class="flex items-center justify-between gap-2 text-sm">
 							<div class="flex flex-col">
-								<span class="font-medium">{pk.label || 'Unbenanntes Gerät'}</span>
+								<span class="font-medium">{[pk.authenticator_name, pk.label].filter(Boolean).join(' · ') || 'Unbenanntes Gerät'}</span>
 								<span class="text-xs text-muted-foreground">
 									registriert {formatDate(pk.created_at)}{#if pk.last_used_at} · zuletzt verwendet {formatDate(pk.last_used_at)}{/if}
 								</span>

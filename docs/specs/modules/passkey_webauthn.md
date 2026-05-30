@@ -458,9 +458,10 @@ Mock-freier Roundtrip — Test agiert als Authenticator:
 - **Kein User-Enumeration-Padding bei Login-Begin:** Wir geben sofort 401 zurück wenn der User nicht existiert oder keine Passkeys hat. Antwortzeit unterscheidet sich messbar von einem erfolgreichen Begin (Library-Aufruf entfällt). Das ist konsistent mit dem bestehenden Passwort-Login (kein Padding bei `bcrypt`-Mismatch); bei Bedarf in eigenem Issue addressieren.
 - **Kein Discoverable-Credentials-Pfad:** Login erfordert weiterhin Username-Eingabe (Identifier-First). Echter passwordless Flow mit Conditional UI ist explizit Folge-Issue.
 - **Kein Recovery-Pfad ausserhalb Passwort:** V1 lebt davon, dass jeder User noch ein Passwort hat. Ein Passkey-only-User wäre bei Geräteverlust ausgeschlossen — daher V1 NICHT für Passkey-only-User. Folge-Issue „Passwordless-Registrierung" setzt voraus, dass #449 (Magic Link) als Recovery-Pfad live ist.
-- **AAGUID-Display nicht in V1:** Die Account-Liste zeigt nur das User-vergebene `Label`. Eine Übersetzung von AAGUID zu „YubiKey 5", „iCloud Keychain", „Windows Hello" etc. ist möglich (`go-webauthn/aaguid`-Mappings), aber nicht in V1 — UX-Verbesserung als Folge-Issue.
+- ~~**AAGUID-Display nicht in V1:** Die Account-Liste zeigt nur das User-vergebene `Label`. Eine Übersetzung von AAGUID zu „YubiKey 5", „iCloud Keychain", „Windows Hello" etc. ist möglich (`go-webauthn/aaguid`-Mappings), aber nicht in V1 — UX-Verbesserung als Folge-Issue.~~ **RESOLVED in Issue #468:** AAGUID-Mapping lebt jetzt in `internal/handler/aaguid.go`; GET `/api/auth/profile` liefert Passkey-Felder mit optionalem `authenticator_name`. Frontend zeigt kombiniert `"{authenticator_name} · {label}"` an.
 - **Browser-Support auf älteren iOS-Versionen:** WebAuthn ist auf iOS 16+ verfügbar, ältere Geräte zeigen den Button nicht (Feature-Detection greift). Akzeptable Einschränkung; das klassische Login bleibt.
 
 ## Changelog
 
+- 2026-05-30: Known Limitation „AAGUID-Display" (zeile 461) marked RESOLVED: Issue #468 liefert Authenticator-Name-Mapping über `internal/handler/aaguid.go` + Profile-Response-Feld `authenticator_name`.
 - 2026-05-30: Initial spec — V1 Add-on (PO-bestätigt), basierend auf Phase-1-Kontext + Phase-2-Analyse aus `docs/context/issue-450-passkey.md`
