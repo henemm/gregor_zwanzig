@@ -188,16 +188,28 @@ HTML + Client-Side Interactivity
 
 ### Authentication & Authorization
 
-- **Server-side:** `hooks.server.ts` verifies session via cookies
-- **Protected Routes:** All routes except `/login` and `/register` require valid session
-- **Client-side:** Svelte Stores track auth state; components react to changes
-- **Development:** `/_design` showcase is auth-protected (development convenience)
-- **Login Methods:**
-  - **Username/Password:** Traditional auth via session cookies
-  - **Google OAuth:** OAuth 2.0 Authorization Code flow (Issue #425, feature-gated via `GZ_GOOGLE_CLIENT_ID`)
-    - Init: GET `/api/auth/google/init` → redirect to Google consent
-    - Callback: GET `/api/auth/google/callback?code=...&state=...` → create/lookup user, issue session
-    - User-ID format for OAuth users: `g-{8hex}` to prevent session parsing errors
+**Auth Methods:**
+- **Username/Password:** `/api/auth/register` + `/api/auth/login` (traditional, bcrypt-hashed)
+- **Passkey/WebAuthn (Issue #450):** `/api/auth/passkey/register/begin|finish` (Face ID, Touch ID, Windows Hello, YubiKey), `/api/auth/passkey/login/begin|finish`, `/api/auth/passkey/credentials/{id}` (delete passkey)
+- **Google OAuth (Issue #425, feature-gated via `GZ_GOOGLE_CLIENT_ID`):** OAuth 2.0 Authorization Code flow
+  - Init: GET `/api/auth/google/init` → redirect to Google consent
+  - Callback: GET `/api/auth/google/callback?code=...&state=...` → create/lookup user, issue session
+  - User-ID format for OAuth users: `g-{8hex}` to prevent session parsing errors
+- **Magic Link (Issue #449):** `/api/auth/magic-link` + `/api/auth/magic-link/verify` (6-digit OTP per E-Mail)
+
+**Session Format:** Server-side-signed cookie `gz_session = <userId>.<timestamp>.<hmacSig>` (24h TTL, HttpOnly, SameSite=Lax, Secure on HTTPS) — identisch über alle Auth-Methoden hinweg.
+
+**User Model Extensions (Issues #425, #450):**
+- `PasswordHash` field optional (`omitempty` JSON tag) — leerer Hash für reine OAuth/Passkey-User
+- `PasskeyCredentials[]` array für FIDO2 credentials (Credential-ID, Public-Key, Attestation-Type, Transport, AAGUID, SignCount, Label, timestamps)
+- `OAuthProvider` + `OAuthSub` für externe Identitäten
+- Profile endpoint (`GET /api/auth/profile`) returns `has_passkey: bool` + `passkeys[]` array (public metadata only, no secret key material)
+
+**Server-side Validation:**
+- `hooks.server.ts` verifies session cookie signature
+- Protected Routes: All routes except `/login`, `/register`, `/magic-link`, `/api/auth/google/*` require valid session
+- Client-side: Svelte Stores track auth state; components react to changes
+- Development: `/_design` showcase is auth-protected (development convenience)
 
 ### Testing Strategy
 
@@ -255,6 +267,16 @@ The frontend includes two configurable wizard systems:
 
 **REST API Contracts:**
 
+*Authentication:*
+- `/api/auth/register`, `/api/auth/login`, `/api/auth/logout` — Password-based auth
+- `/api/auth/passkey/register/begin|finish` — WebAuthn passkey registration (Issue #450)
+- `/api/auth/passkey/login/begin|finish` — WebAuthn passkey login
+- `/api/auth/passkey/credentials/{id}` — Passkey management (delete)
+- `/api/auth/google/init|callback` — Google OAuth (Issue #425, feature-gated)
+- `/api/auth/magic-link`, `/api/auth/magic-link/verify` — Magic Link OTP (Issue #449)
+- `/api/auth/profile` — User profile + passkey list
+
+*Data:*
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
 | `/api/trips` | GET/POST | Trip CRUD |
@@ -295,7 +317,7 @@ The frontend includes two configurable wizard systems:
 
 **Format:** JSON, standard HTTP methods (GET, POST, PUT, DELETE)
 
-**Auth:** Session cookies (set by `hooks.server.ts`)
+**Auth:** Session cookies (format: `<userId>.<timestamp>.<hmacSig>`, set by Login or Passkey endpoints, 24h TTL)
 
 ### Frontend → Channels
 

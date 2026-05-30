@@ -2,6 +2,7 @@ package handler
 
 import (
 	"crypto/rand"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"log"
@@ -344,17 +345,41 @@ func LogoutHandler() http.HandlerFunc {
 	}
 }
 
-// profileResponse is the public view of a User (no password_hash).
+// profileResponse is the public view of a User (no password_hash, no public_key).
+// Issue #450 adds the Passkey-summary fields.
 type profileResponse struct {
-	ID             string `json:"id"`
-	Email          string `json:"email,omitempty"`
-	MailTo         string `json:"mail_to,omitempty"`
-	SignalPhone    string `json:"signal_phone,omitempty"`
-	TelegramChatID string `json:"telegram_chat_id,omitempty"`
-	CreatedAt      string `json:"created_at"`
+	ID             string                 `json:"id"`
+	Email          string                 `json:"email,omitempty"`
+	MailTo         string                 `json:"mail_to,omitempty"`
+	SignalPhone    string                 `json:"signal_phone,omitempty"`
+	TelegramChatID string                 `json:"telegram_chat_id,omitempty"`
+	CreatedAt      string                 `json:"created_at"`
+	HasPasskey     bool                   `json:"has_passkey"`
+	Passkeys       []passkeyProfileEntry  `json:"passkeys,omitempty"`
+}
+
+// passkeyProfileEntry exposes a registered Passkey to the client WITHOUT the
+// public key — that material is server-side only.
+type passkeyProfileEntry struct {
+	ID         string `json:"id"`
+	Label      string `json:"label,omitempty"`
+	CreatedAt  string `json:"created_at"`
+	LastUsedAt string `json:"last_used_at,omitempty"`
 }
 
 func toProfileResponse(u *model.User) profileResponse {
+	passkeys := make([]passkeyProfileEntry, 0, len(u.PasskeyCredentials))
+	for _, pc := range u.PasskeyCredentials {
+		entry := passkeyProfileEntry{
+			ID:        base64.RawURLEncoding.EncodeToString(pc.ID),
+			Label:     pc.Label,
+			CreatedAt: pc.CreatedAt.Format(time.RFC3339),
+		}
+		if !pc.LastUsedAt.IsZero() {
+			entry.LastUsedAt = pc.LastUsedAt.Format(time.RFC3339)
+		}
+		passkeys = append(passkeys, entry)
+	}
 	return profileResponse{
 		ID:             u.ID,
 		Email:          u.Email,
@@ -362,6 +387,8 @@ func toProfileResponse(u *model.User) profileResponse {
 		SignalPhone:    u.SignalPhone,
 		TelegramChatID: u.TelegramChatID,
 		CreatedAt:      u.CreatedAt.Format(time.RFC3339),
+		HasPasskey:     len(u.PasskeyCredentials) > 0,
+		Passkeys:       passkeys,
 	}
 }
 

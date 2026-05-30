@@ -33,6 +33,10 @@ type Config struct {
 	GoogleRedirectURL  string `envconfig:"GOOGLE_REDIRECT_URL" default:""`
 	PublicHost        string `envconfig:"PUBLIC_HOST" default:"https://gregor20.henemm.com"`
 	TestFixtureDir    string `envconfig:"TEST_FIXTURE_DIR" default:""`
+	// Issue #450 — Passkey/WebAuthn V1 Add-on
+	WebAuthnRPID          string `envconfig:"WEBAUTHN_RP_ID" default:"localhost"`
+	WebAuthnRPDisplayName string `envconfig:"WEBAUTHN_RP_DISPLAY_NAME" default:"Gregor Zwanzig"`
+	WebAuthnRPOrigins     string `envconfig:"WEBAUTHN_RP_ORIGINS" default:"http://localhost:5173"`
 }
 
 func Load() (*Config, error) {

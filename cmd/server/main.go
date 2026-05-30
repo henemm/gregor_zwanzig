@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
+	"github.com/go-webauthn/webauthn/webauthn"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/henemm/gregor-api/internal/compare"
@@ -55,6 +57,22 @@ func main() {
 		})
 	}
 
+	// Issue #450 — WebAuthn/Passkey init (RPID/RPOrigins from config).
+	origins := strings.Split(cfg.WebAuthnRPOrigins, ",")
+	for i := range origins {
+		origins[i] = strings.TrimSpace(origins[i])
+	}
+	webAuthn, err := webauthn.New(&webauthn.Config{
+		RPID:          cfg.WebAuthnRPID,
+		RPDisplayName: cfg.WebAuthnRPDisplayName,
+		RPOrigins:     origins,
+	})
+	if err != nil {
+		log.Fatalf("webauthn init: %v", err)
+	}
+	challengeStore := handler.NewChallengeStore()
+	passkeyLimiter := authmw.NewIPRateLimiter(30, time.Hour)
+
 	r := chi.NewRouter()
 	r.Use(chimw.Logger)
 	r.Use(authmw.AuthMiddleware(cfg.SessionSecret))
@@ -91,6 +109,25 @@ func main() {
 	magicVerifyLimiter := authmw.NewIPRateLimiter(10, 15*time.Minute)
 	r.Post("/api/auth/magic-link/verify",
 		magicVerifyLimiter.Middleware(handler.MagicLinkVerifyHandler(s, cfg)).ServeHTTP,
+	)
+
+	// Issue #450 — Passkey/WebAuthn endpoints
+	// Public endpoints (exempted in middleware.AuthMiddleware)
+	r.Post("/api/auth/passkey/login/begin",
+		passkeyLimiter.Middleware(handler.PasskeyLoginBeginHandler(s, webAuthn, challengeStore)).ServeHTTP,
+	)
+	r.Post("/api/auth/passkey/login/finish",
+		passkeyLimiter.Middleware(handler.PasskeyLoginFinishHandler(s, webAuthn, challengeStore, cfg.SessionSecret)).ServeHTTP,
+	)
+	// Authenticated endpoints (cookie required via AuthMiddleware)
+	r.Post("/api/auth/passkey/register/begin",
+		passkeyLimiter.Middleware(handler.PasskeyRegisterBeginHandler(s, webAuthn, challengeStore)).ServeHTTP,
+	)
+	r.Post("/api/auth/passkey/register/finish",
+		passkeyLimiter.Middleware(handler.PasskeyRegisterFinishHandler(s, webAuthn, challengeStore)).ServeHTTP,
+	)
+	r.Delete("/api/auth/passkey/credentials/{id}",
+		passkeyLimiter.Middleware(handler.PasskeyDeleteCredentialHandler(s)).ServeHTTP,
 	)
 
 	r.Get("/api/health", handler.HealthHandler(cfg.PythonCoreURL))

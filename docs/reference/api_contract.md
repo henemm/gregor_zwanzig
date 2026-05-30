@@ -1100,18 +1100,331 @@ Das neue `ComparePreset`-Datenmodell für Auto-Briefings (Orts-Vergleiche) mit C
 ### User-Isolation
 
 Alle Endpoints filtern nach dem eingeloggten User (via `middleware.UserIDFromContext()`). Queries auf fremde Presets (`user_id ≠ authenticated user`) werden ignoriert/404.
+## 18) Authentication Endpoints (Session + Passkey)
+
+**Scope:** User registration, password-based login, and FIDO2 passkey-based authentication.
+
+**Handler:** `internal/handler/auth.go` | **Middleware:** `internal/middleware/auth.go` | **Routing:** `cmd/server/main.go`
+
+### A) Password-based Authentication
+
+#### POST /api/auth/register
+
+User registration with username + password (HTTP 201 on success, 409 if user exists).
+
+**Request Body:**
+```json
+{"username": "alice", "password": "geheim123"}
+```
+
+**Response 201:**
+```json
+{"id": "alice"}
+```
+
+**Validation:**
+- `username`: 3–50 characters, alphanumeric + underscore
+- `password`: ≥8 characters
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 400 | `{"error":"validation_error","detail":"..."}` | username/password missing or too short |
+| 409 | `{"error":"user_already_exists"}` | User with this ID already registered |
+
+#### POST /api/auth/login
+
+User login with username + password, returns session cookie.
+
+**Request Body:**
+```json
+{"username": "alice", "password": "geheim123"}
+```
+
+**Response 200:**
+```json
+{"id": "alice"}
+```
+
+**Side Effects:**
+- Sets `Set-Cookie: gz_session=<userId>.<timestamp>.<hmacSig>; HttpOnly; SameSite=Lax; MaxAge=86400; Secure` (Secure flag active on HTTPS)
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 400 | `{"error":"bad_request"}` | JSON malformed |
+| 401 | `{"error":"invalid_credentials"}` | User not found or password incorrect (same message for both) |
+
+### B) Passkey Authentication (WebAuthn/FIDO2)
+
+Issue #450 — Add WebAuthn (Face ID, Touch ID, Windows Hello, etc.) as alternative auth method alongside password. V1 is add-on (existing users keep passwords); discoverable credentials (login without username) are future-scope.
+
+**Key Configuration:**
+- **RP-ID (Relying Party):** Prod `gregor20.henemm.com`, Staging `staging.gregor20.henemm.com` (isolated)
+- **Rate-Limit:** 30 requests/hour per IP (all 5 endpoints)
+- **Body-Size-Cap:** 64 KB (`http.MaxBytesReader`)
+- **Challenge-TTL:** 5 minutes (in-memory store with garbage collection)
+
+#### POST /api/auth/passkey/register/begin
+
+Initiate passkey registration (requires valid session cookie).
+
+**Request Body:** `{}` (empty)
+
+**Response 200:**
+```json
+{
+  "publicKey": {
+    "challenge": "<base64url-string>",
+    "rp": {
+      "name": "Gregor Zwanzig",
+      "id": "gregor20.henemm.com"
+    },
+    "user": {
+      "id": "<base64url-userId>",
+      "name": "<userId>",
+      "displayName": "<userId>"
+    },
+    "pubKeyCredParams": [
+      {"type": "public-key", "alg": -7},
+      {"type": "public-key", "alg": -257}
+    ],
+    "timeout": 300000,
+    "attestation": "direct",
+    "authenticatorSelection": {
+      "authenticatorAttachment": "platform",
+      "residentKey": "preferred",
+      "userVerification": "preferred"
+    }
+  }
+}
+```
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 401 | (via `AuthMiddleware`) | No valid session cookie |
+| 429 | `{"error":"rate_limit_exceeded"}` with `Retry-After` header | Too many requests from this IP |
+
+#### POST /api/auth/passkey/register/finish
+
+Complete passkey registration (requires valid session cookie, challenge from `register/begin`).
+
+**Request Body:**
+```json
+{
+  "id": "<base64url-credentialId>",
+  "rawId": "<base64url-raw>",
+  "response": {
+    "clientDataJSON": "<base64url-json>",
+    "attestationObject": "<base64url-object>"
+  },
+  "type": "public-key",
+  "label": "MacBook"  // optional: user-provided device name
+}
+```
+
+**Response 201:**
+```json
+{
+  "id": "<base64url-credentialId>",
+  "label": "MacBook",
+  "created_at": "2026-05-30T12:00:00Z"
+}
+```
+
+**Side Effects:**
+- `user.json` updated with new entry in `passkey_credentials[]` array
+- Profile endpoint now returns `"has_passkey": true`
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 400 | `{"error":"challenge_expired_or_missing"}` | Challenge not in store or expired (5 min timeout) |
+| 400 | `{"error":"attestation_invalid"}` | WebAuthn library signature/attestation verification failed |
+| 401 | (via `AuthMiddleware`) | No valid session cookie |
+| 429 | `{"error":"rate_limit_exceeded"}` with `Retry-After` header | Too many requests from this IP |
+
+#### POST /api/auth/passkey/login/begin
+
+Initiate passkey login (public, no auth required).
+
+**Request Body:**
+```json
+{"username": "alice"}
+```
+
+**Response 200:**
+```json
+{
+  "publicKey": {
+    "challenge": "<base64url-string>",
+    "timeout": 300000,
+    "rpId": "gregor20.henemm.com",
+    "allowCredentials": [
+      {
+        "type": "public-key",
+        "id": "<base64url-credentialId-1>",
+        "transports": ["platform", "usb"]
+      }
+    ],
+    "userVerification": "preferred"
+  }
+}
+```
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 401 | `{"error":"invalid_credentials"}` | User not found or has no passkeys |
+| 429 | `{"error":"rate_limit_exceeded"}` with `Retry-After` header | Too many requests from this IP |
+
+#### POST /api/auth/passkey/login/finish
+
+Complete passkey login (public, no auth required).
+
+**Request Body:**
+```json
+{
+  "id": "<base64url-credentialId>",
+  "rawId": "<base64url-raw>",
+  "response": {
+    "clientDataJSON": "<base64url-json>",
+    "authenticatorData": "<base64url-data>",
+    "signature": "<base64url-sig>"
+  },
+  "type": "public-key"
+}
+```
+
+**Response 200:**
+```json
+{"id": "alice"}
+```
+
+**Side Effects:**
+- Sets `Set-Cookie: gz_session=<userId>.<timestamp>.<hmacSig>; HttpOnly; SameSite=Lax; MaxAge=86400; Secure`
+- Updates `last_used_at` timestamp on the used credential
+- Increments `sign_count` on the credential (cloning detection)
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 401 | `{"error":"invalid_credentials"}` | Challenge invalid, expired (5 min), signature verification failed, or user deleted |
+| 429 | `{"error":"rate_limit_exceeded"}` with `Retry-After` header | Too many requests from this IP |
+
+#### DELETE /api/auth/passkey/credentials/{id}
+
+Remove a registered passkey (requires valid session cookie).
+
+**Path Parameter:**
+- `id`: Base64URL-encoded credential ID
+
+**Response 200:**
+```json
+{"status": "deleted"}
+```
+
+**Validation & Safety:**
+- Returns 400 if user has no password hash AND this is their only credential (lock-out prevention)
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 400 | `{"error":"cannot_remove_last_passkey_without_password"}` | User would be locked out (no password, last passkey) |
+| 401 | (via `AuthMiddleware`) | No valid session cookie |
+| 404 | `{"error":"not_found"}` | Credential ID not found in user's list |
+| 429 | `{"error":"rate_limit_exceeded"}` with `Retry-After` header | Too many requests from this IP |
+
+### C) Profile & Session Status
+
+#### GET /api/auth/profile
+
+Returns authenticated user profile (requires valid session cookie).
+
+**Response 200:**
+```json
+{
+  "id": "alice",
+  "email": "alice@example.com",
+  "has_passkey": true,
+  "passkeys": [
+    {
+      "id": "<base64url-credentialId>",
+      "label": "MacBook",
+      "created_at": "2026-05-30T12:00:00Z",
+      "last_used_at": "2026-05-30T15:30:00Z"
+    },
+    {
+      "id": "<base64url-credentialId-2>",
+      "label": "iPhone",
+      "created_at": "2026-05-25T10:00:00Z",
+      "last_used_at": "2026-05-29T08:15:00Z"
+    }
+  ]
+}
+```
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 401 | (via `AuthMiddleware`) | No valid session cookie or session expired |
+
+### User Model Extensions
+
+**File:** `internal/model/user.go`
+
+```go
+type User struct {
+    ID                 string                 `json:"id"`
+    Email              string                 `json:"email,omitempty"`
+    PasswordHash       string                 `json:"password_hash,omitempty"`  // now optional (omitempty)
+    PasskeyCredentials []WebAuthnCredential   `json:"passkey_credentials,omitempty"`  // NEW (Issue #450)
+    CreatedAt          time.Time              `json:"created_at"`
+    MailTo             string                 `json:"mail_to,omitempty"`
+    SignalPhone        string                 `json:"signal_phone,omitempty"`
+    SignalAPIKey       string                 `json:"signal_api_key,omitempty"`
+    TelegramChatID     string                 `json:"telegram_chat_id,omitempty"`
+}
+
+type WebAuthnCredential struct {
+    ID              []byte                `json:"id"`                  // Credential-ID (raw bytes)
+    PublicKey       []byte                `json:"public_key"`          // COSE-encoded
+    AttestationType string                `json:"attestation_type"`
+    Transport       []string              `json:"transport,omitempty"`
+    Flags           webauthn.CredentialFlags `json:"flags"`
+    Authenticator   webauthn.Authenticator   `json:"authenticator"`    // AAGUID, SignCount, CloneWarning
+    CreatedAt       time.Time             `json:"created_at"`
+    LastUsedAt      time.Time             `json:"last_used_at,omitempty"`
+    Label           string                `json:"label,omitempty"`    // User-provided device name
+}
+```
+
+**Backward Compatibility:**
+- Existing `user.json` files without `passkey_credentials` field deserialize cleanly (`nil` slice maps to empty list)
+- `PasswordHash` field now optional; existing users retain their password hash
+- Profile endpoint includes `has_passkey` boolean and `passkeys[]` array (excludes `public_key` and raw crypto fields)
 
 ---
 
 ## Changelog
 
+- 2026-05-30: Added section 18 — Authentication Endpoints (Issue #450 Passkey/WebAuthn V1): 5 passkey endpoints (register/begin|finish, login/begin|finish, delete), password auth methods (register, login), profile endpoint with `has_passkey`+`passkeys[]`. User model extended with `PasskeyCredentials[]` and `PasswordHash` now optional. Rate-limit 30/h per IP (alle 5 Endpoints), challenge TTL 5 min, RP-ID isolation (prod vs staging), 64 KB body cap.
 - 2026-05-30: Issue #459 — Auto-Briefings Sidepanel Frontend (ComparePreset-System): AutoReportsOverview, SavePresetDialog, subscriptionHelpers (presetScheduleLabel, formatLastSent), ComparePreset-Interface in types.ts; +page.server.ts lädt `/api/compare/presets`; AutoReportCard und AutoReportsOverview auf ComparePreset umgebaut mit manuellem Versand-Button. Spec #458-Backend-Endpoints vorausgesetzt (`GET /api/compare/presets`, `/send`).
-- 2026-05-30: Issue #458 — Compare-Preset Backend (CRUD+Endpoints): Neues `ComparePreset`-Datenmodell (separate Entität von `CompareSubscription`); 5 REST-Endpoints: GET/POST/PUT/DELETE + `/send`-Stub; Single-File Storage `compare_presets.json`; User-Isolation; Validierung. Siehe Abschnitt 17.
+- 2026-05-30: Issue #458 — Compare-Preset Backend (CRUD+Endpoints): Neues `ComparePreset`-Datenmodell (separate Entität von `CompareSubscription`); 5 REST-Endpoints: GET/POST/PUT/DELETE + `/send`-Stub; Single-File Storage `compare_presets.json`; User-Isolation; Validierung. Siehe Abschnitt 16.
 - 2026-05-29: Issue #455 — Compare-Hauptbühne Frontend `/compare` route implemented (pure frontend, no API changes). 3-column layout: LocationsRail (left 320px) | CompareMatrix/RecommendationBanner/HourlyMatrix (center flex) | AutoReportsOverview (right 320px). POST `/api/compare/run` contract unchanged; frontend wires existing Go-backend endpoint. See `docs/specs/modules/issue_455_compare_main_stage.md`.
 - 2026-05-29: Issue #448 — Validator-Endpoint `GET /api/_validator/metrics-for-channel` ergänzt (Tooling-API, nicht versionsstabil): Macht die dreistufige Kaskade von `get_metrics_for_channel()` (per_report → per_channel → global) von außen prüfbar. Response: `{"source": "per_report|per_channel|global", "metric_ids": [...]}`. Params: `trip`, `channel`, `report`, `user_id` (via Go-Proxy injiziert).
 - 2026-05-29: Issue #442 — Compare-Wizard Step 4 Layout (Pure Frontend): Step4Layout component added to Compare-Wizard, enabling per-channel metric configuration (Email/Telegram/Signal/SMS) with reusable OutputLayoutEditor component (Issue #431). Wizard calls GET /api/metrics (required), GET /api/templates (optional), GET /api/metric-presets (optional) on mount. No backend changes; `channel_layouts` field added to CompareSubscription state (frontend-only persistence via `save()`).
 - 2026-05-29: Issue #446 — Format-Mode-Validierung in `_resolve_format_mode()`: Unbekannte `format_mode`-Strings (z.B. `"Symbol"` mit Großbuchstabe, `"raw_v2"`) werden jetzt gegen `MetricDefinition.format_modes` validiert und auf `default_format_mode` zurückgefallen, mit WARNING-Log.
-- 2026-05-29: Added section 16 — Google OAuth Login Endpoints (Issue #425): GET /api/auth/google/init (initiates flow, redirect to Google), GET /api/auth/google/callback (code exchange, user creation/lookup, session issuance). User model extended with `OAuthProvider` and `OAuthSub` fields. Feature-gated via `GZ_GOOGLE_CLIENT_ID` config. New User-ID format `g-{8hex}` for OAuth users (prevents session parse errors).
+- 2026-05-29: Added section (legacy 16, neu nummeriert) — Google OAuth Login Endpoints (Issue #425): GET /api/auth/google/init (initiates flow, redirect to Google), GET /api/auth/google/callback (code exchange, user creation/lookup, session issuance). User model extended with `OAuthProvider` and `OAuthSub` fields. Feature-gated via `GZ_GOOGLE_CLIENT_ID` config. New User-ID format `g-{8hex}` for OAuth users (prevents session parse errors).
 - 2026-05-29: Added section 15 — Metric Catalog Endpoint (Issue #435): GET /api/metrics exposes `format_modes[]` and `default_format_mode` per metric for frontend UI filtering and backward-compatibility mapping.
 - 2026-05-29: Issue #440 — Orts-Vergleich-Wizard Phase 1 — Extended CompareSubscription model with `activity_profile` (optional, validProfiles: wintersport|wandern|summer_trekking|allgemein). Frontend: CompareWizard Shell + Step 1 (Name/Region/Profile) + Step 2 (Smart-Import + Library). Stepper component made reusable via testidPrefix + onStepClick props. See `docs/specs/modules/issue_440_compare_wizard_shell_step1_step2.md`.
 - 2026-05-10: Epic #136 Trip-Wizard Master-Spec Fundament — Extended Trip model with `shortcode` and `activity` fields; Waypoint.suggested transient flag for wizard UI; Backend Trip.validateTrip() now accepts pause stages (waypoints: []). See `docs/specs/modules/epic_136_trip_wizard.md`.
