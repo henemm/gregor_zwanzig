@@ -121,11 +121,27 @@ def _render_mobile_compact_rows(
     friendly_keys: set[str],
     allowed_col_keys: Optional[set[str]] = None,
     format_modes: Optional[dict[str, str]] = None,
+    include_header: bool = False,
 ) -> str:
-    """Single-line-per-hour rows for the mobile compact email view."""
+    """Single-line-per-hour rows for the mobile compact email view.
+
+    Bug #463: Wenn include_header=True, wird vor den Daten-Rows eine kompakte
+    Header-Zeile mit den Spalten-Labels (Zeit · Temp · Wind · …) erzeugt.
+    """
     cols = visible_cols(rows) if rows else []
     if allowed_col_keys is not None:
         cols = [(k, label) for (k, label) in cols if k in allowed_col_keys]
+    header_html = ""
+    if include_header and cols:
+        header_html = (
+            '<div style="display:flex;gap:8px;padding:5px 0;'
+            'border-bottom:1px solid ' + G_INK_FAINT + ';font-size:11px;'
+            'font-weight:600;color:' + G_INK_MUTED + ';">'
+            '<span style="font-family:' + FONT_DATA + ';min-width:34px;flex-shrink:0">Zeit</span>'
+            '<span style="color:' + G_INK + ';">'
+            + ' · '.join(label for (_, label) in cols)
+            + '</span></div>'
+        )
     parts_html = []
     for r in rows:
         time_str = r.get("time", "")
@@ -151,7 +167,9 @@ def _render_mobile_compact_rows(
             '</span></div>'
         )
         parts_html.append(row_html)
-    return "".join(parts_html)
+    if not parts_html:
+        return ""
+    return header_html + "".join(parts_html)
 
 
 def _allowed_col_keys_for_horizon(
@@ -263,7 +281,7 @@ def render_html(
                 + _render_html_table(rows, friendly_keys=friendly_keys, allowed_col_keys=allowed_keys, format_modes=format_modes)
                 + "</div>"
             )
-        compact_rows = _render_mobile_compact_rows(rows, friendly_keys=friendly_keys, allowed_col_keys=allowed_keys, format_modes=format_modes)
+        compact_rows = _render_mobile_compact_rows(rows, friendly_keys=friendly_keys, allowed_col_keys=allowed_keys, format_modes=format_modes, include_header=True)
         mobile_div = (
             '<div class="mobile-compact" style="display:none;padding:0 16px">'
             '<div style="font-size:12px;font-weight:600;color:' + G_INK
@@ -283,7 +301,7 @@ def render_html(
             night_hint = f'<p style="color:{G_INK_FAINT};font-size:11px;margin-top:4px">* Temperatur/Nullgradgrenze: Minimum im 2h-Block</p>'
         night_elev = int(last_seg.end_point.elevation_m or 0)
         night_header = f"🌙 Nacht am Ziel ({night_elev}m)"
-        night_compact = _render_mobile_compact_rows(night_rows, friendly_keys=friendly_keys, format_modes=format_modes)
+        night_compact = _render_mobile_compact_rows(night_rows, friendly_keys=friendly_keys, format_modes=format_modes, include_header=True)
         night_html = (
             '<div class="section desktop-only">'
             "<h3>" + night_header + "</h3>"
