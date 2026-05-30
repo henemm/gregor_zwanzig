@@ -25,25 +25,26 @@ Go Cron-Scheduler für Morning/Evening Reports, Trip Reports, Alert Checks und I
 - `go get github.com/robfig/cron/v3`
 
 ### Step 2: Config erweitern (`internal/config/config.go`)
-- `HeartbeatMorning`, `HeartbeatEvening`, `SchedulerTimezone` Fields
-- ~8 LoC
+- `HeartbeatMorning`, `HeartbeatEvening`, `SchedulerTimezone`, `HeartbeatComparePresets` Fields (Issue #461)
+- ~8-10 LoC
 
 ### Step 3: Python Trigger-Endpoints (`api/routers/scheduler.py`)
-- 5 POST-Endpoints (kein Request Body, synchron):
+- 6 POST-Endpoints (kein Request Body, synchron):
   - `POST /api/scheduler/morning-subscriptions`
   - `POST /api/scheduler/evening-subscriptions`
   - `POST /api/scheduler/trip-reports`
   - `POST /api/scheduler/alert-checks`
   - `POST /api/scheduler/inbound-commands`
-- ~90 LoC, neues File + Router-Include in `api/main.py`
+  - `POST /api/scheduler/compare-presets-daily` (Issue #461, added 2026-05-30)
+- ~90 LoC initial, expanded with Issue #461 compare-presets endpoint
 
 ### Step 4: Go Scheduler (`internal/scheduler/scheduler.go`)
 - `robfig/cron/v3` mit `WithLocation("Europe/Vienna")`
 - `import _ "time/tzdata"` für eingebettete Timezone-Daten
-- 5 Cron-Jobs triggern Python-Endpoints via HTTP POST
-- Heartbeat-Ping nach Morning/Evening
+- 6 Cron-Jobs triggern Python-Endpoints via HTTP POST (Issue #461: comparePresetsDaily added at 06:00)
+- Heartbeat-Ping nach Morning/Evening/ComparePresetsDaily
 - 120s Timeout für langläufige Jobs
-- ~180 LoC
+- ~180+ LoC (expanded for Issue #461)
 
 ### Step 5: Wiring in `cmd/server/main.go`
 - Scheduler init + defer Stop
@@ -120,6 +121,14 @@ Go Scheduler (robfig/cron)
   ├─ POST /api/scheduler/alert-checks → Python FastAPI
   │     └─ TripAlertService.check_all_trips()
   │         └─ OpenMeteo → Change Detection → Email/Signal
+  │
+  ├─ POST /api/scheduler/compare-presets-daily → Python FastAPI (Issue #461, 06:00 UTC)
+  │     └─ _run_compare_presets_daily()
+  │         └─ Filter schedule='daily' presets
+  │         └─ Run Compare Engine per preset
+  │         └─ Render/Send Compare-Email via Resend
+  │         └─ Update letzter_versand + top_ort_letzter_versand
+  │     └─ ping BetterStack Heartbeat (only if error_count == 0)
   │
   └─ POST /api/scheduler/inbound-commands → Python FastAPI
         └─ InboundEmailReader.poll_and_process()

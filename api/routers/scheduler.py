@@ -79,6 +79,13 @@ def trigger_inbound():
     return {"status": "ok", "count": count}
 
 
+@router.post("/compare-presets-daily")
+def trigger_compare_presets_daily(user_id: str = "default"):
+    """Trigger daily compare preset dispatch (called by Go scheduler at 06:00)."""
+    count = _run_compare_presets_daily(user_id)
+    return {"status": "ok", "count": count}
+
+
 @router.post("/subscriptions/{subscription_id}/send")
 def manual_send_subscription(subscription_id: str, user_id: str = Query("default")):
     """Manueller Versand-Trigger fuer eine einzelne Subscription. Issue #456."""
@@ -336,3 +343,137 @@ def _ping_heartbeat_compare() -> None:
         logger.info("Heartbeat-Ping Compare OK")
     except Exception as e:
         logger.warning("Heartbeat-Ping Compare fehlgeschlagen: %s", e)
+
+
+def _run_compare_presets_daily(user_id: str = "default", data_root: str | None = None) -> int:
+    """Verarbeitet alle Compare-Presets mit schedule='daily' fuer den gegebenen User.
+
+    Laedt compare_presets.json (direktes Array), filtert auf schedule='daily',
+    fuehrt ComparisonEngine aus, sendet E-Mail, persistiert Lauf-Status.
+    Gibt Anzahl erfolgreich versendeter Presets zurueck.
+    """
+    import json as _json
+    from datetime import date
+    from pathlib import Path
+
+    from app.config import Settings
+    from app.loader import _parse_activity_profile, load_all_locations
+    from output.renderers.email.compare_html import render_compare_html
+    from outputs.email import EmailOutput
+    from services.comparison_engine import ComparisonEngine
+    from services.comparison_renderers import render_comparison_text
+
+    if data_root is None:
+        data_root = "data"
+
+    preset_path = Path(data_root) / "users" / user_id / "compare_presets.json"
+    if not preset_path.exists():
+        logger.info("No compare_presets.json for user %s — skipping", user_id)
+        return 0
+
+    try:
+        presets = _json.loads(preset_path.read_text(encoding="utf-8"))
+    except Exception as e:
+        logger.error("Failed to load compare_presets.json for %s: %s", user_id, e)
+        return 0
+
+    settings = Settings().with_user_profile(user_id)
+    success_count = 0
+    all_locations = None  # lazy: only load when a daily preset with location_ids is found
+
+    for preset in presets:
+        if preset.get("schedule") != "daily":
+            continue
+
+        preset_id = preset.get("id", "")
+        location_ids = preset.get("location_ids") or []
+        if not location_ids:
+            logger.warning("Preset %s has no location_ids — skipping", preset_id)
+            continue
+
+        if all_locations is None:
+            all_locations = load_all_locations(user_id=user_id)
+        locations = [loc for loc in all_locations if loc.id in location_ids]
+        if not locations:
+            logger.warning("Preset %s: none of %s resolved — skipping", preset_id, location_ids)
+            continue
+
+        try:
+            profil_str = preset.get("profil", "").lower()
+            profile = _parse_activity_profile(profil_str)
+            hour_from = preset.get("hour_from", 9)
+            hour_to = preset.get("hour_to", 16)
+            empfaenger = preset.get("empfaenger") or []
+            if not empfaenger:
+                logger.warning("Preset %s has no empfaenger — skipping", preset_id)
+                continue
+
+            result = ComparisonEngine.run(
+                locations=locations,
+                time_window=(hour_from, hour_to),
+                target_date=date.today(),
+                forecast_hours=48,
+                profile=profile,
+            )
+
+            top_ort = result.locations[0].location.name if result.locations else None
+
+            name = preset.get("name", preset_id)
+            from datetime import datetime as _datetime
+            subject = f"Wetter-Vergleich: {name} ({_datetime.now().strftime('%d.%m.%Y')})"
+            html_body = render_compare_html(result, profile=profile)
+            text_body = render_comparison_text(result, profile=profile)
+            EmailOutput(settings).send(
+                subject,
+                html_body,
+                plain_text_body=text_body,
+                to=empfaenger,
+            )
+
+            _save_preset_status(user_id, preset_id, top_ort, data_root=data_root)
+            success_count += 1
+            logger.info("Compare preset %s sent to %s", preset_id, empfaenger)
+        except Exception as e:
+            logger.error("Compare preset %s failed: %s", preset_id, e)
+
+    return success_count
+
+
+def _save_preset_status(
+    user_id: str,
+    preset_id: str,
+    top_ort: str | None,
+    data_root: str | None = None,
+) -> None:
+    """Read-Modify-Write: schreibt letzter_versand + top_ort_letzter_versand.
+
+    Alle anderen Felder bleiben erhalten (BUG-DATALOSS-GR221).
+    """
+    import datetime as _dt
+    import json as _json
+    from pathlib import Path
+
+    if data_root is None:
+        data_root = "data"
+
+    path = Path(data_root) / "users" / user_id / "compare_presets.json"
+    if not path.exists():
+        return
+
+    try:
+        presets = _json.loads(path.read_text(encoding="utf-8"))
+    except Exception as e:
+        logger.error("Failed to read compare_presets.json for status update: %s", e)
+        return
+
+    for entry in presets:
+        if entry.get("id") == preset_id:
+            entry["letzter_versand"] = _dt.datetime.utcnow().isoformat() + "Z"
+            entry["top_ort_letzter_versand"] = top_ort
+            break
+
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            _json.dump(presets, f, indent=2, ensure_ascii=False)
+    except OSError as e:
+        logger.error("Failed to write compare_presets.json %s: %s", path, e)

@@ -1100,7 +1100,77 @@ Das neue `ComparePreset`-Datenmodell für Auto-Briefings (Orts-Vergleiche) mit C
 ### User-Isolation
 
 Alle Endpoints filtern nach dem eingeloggten User (via `middleware.UserIDFromContext()`). Queries auf fremde Presets (`user_id ≠ authenticated user`) werden ignoriert/404.
-## 18) Authentication Endpoints (Session + Passkey)
+
+---
+
+## 17) Compare-Presets Daily Dispatch Endpoint (Issue #461)
+
+Automatically dispatches daily Compare-Presets at 06:00 UTC (Vienna time). Triggered by Go scheduler; Python endpoint filters presets by `schedule='daily'`, runs Compare Engine, sends emails, and updates preset status fields.
+
+**Handler:** `api/routers/scheduler.py` | **Routing:** `cmd/server/main.go`
+
+### POST /api/scheduler/compare-presets-daily
+
+Processes all daily Compare-Presets for a user: filters by `schedule='daily'`, runs Compare Engine, renders/sends emails, updates `letzter_versand` and `top_ort_letzter_versand`.
+
+**Query Parameters:**
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| user_id | string | no | User identifier (default: "default" for V1) |
+
+**Response 200:**
+
+```json
+{
+  "status": "ok",
+  "count": 2
+}
+```
+
+**Field Definitions:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| status | enum | Always `"ok"` (endpoint succeeds even if individual presets fail) |
+| count | int | Number of `schedule='daily'` presets processed (not error count) |
+
+**Internal Behavior:**
+
+1. Load `data/users/{user_id}/compare_presets.json` as direct JSON array `[...]`
+2. Filter: only `preset["schedule"] == "daily"`
+3. For each matching preset:
+   - Validate `location_ids` (warn if empty, increment `error_count`)
+   - Convert `preset["profil"]` (Uppercase Go string → lowercase Python enum, fallback ALLGEMEIN)
+   - Call Compare Engine with `target_date=today`, `forecast_hours=48`, `hour_from`, `hour_to`, `activity_profile`
+   - Render Compare-Email template
+   - Send via Resend to all `preset["empfaenger"]`
+   - Call `_save_preset_status(user_id, preset_id, top_ort)` to update JSON
+   - On any error: log warning, increment `error_count`, continue (no job abort)
+4. Go scheduler pings BetterStack Heartbeat (`GZ_HEARTBEAT_COMPARE_PRESETS`) only if `error_count == 0` (operator-visible success indicator)
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 200 | `{"status":"ok","count":0}` | No daily presets found (not an error) |
+| 200 | `{"status":"ok","count":2}` | 2 presets processed; some may have had per-item errors but HTTP 200 always |
+
+**Side Effects:**
+
+- `data/users/{user_id}/compare_presets.json` updated with `letzter_versand` (ISO-datetime UTC) and `top_ort_letzter_versand` (string or null) for each successfully sent preset
+- Email sent to all recipients in `preset["empfaenger"]`
+- Log entries on WARNING for each failed preset
+
+**Notes:**
+
+- Endpoint always returns HTTP 200 regardless of `error_count` (job success tracked by Go scheduler via `recordRun()`)
+- Python-side heartbeat ping (`GZ_HEARTBEAT_COMPARE_PRESETS` ENV) is not called by Python; Go scheduler handles this via `pingHeartbeat()` on the full job result
+- BetterStack Heartbeat is pinged only when `error_count == 0` — any preset-level error blocks the ping (Readiness Principle)
+
+---
+
+## 19) Authentication Endpoints (Session + Passkey)
 
 **Scope:** User registration, password-based login, and FIDO2 passkey-based authentication.
 
@@ -1417,6 +1487,7 @@ type WebAuthnCredential struct {
 
 ## Changelog
 
+- 2026-05-30: Issue #461 — Compare-Presets Daily Dispatch (Cronjob): New `POST /api/scheduler/compare-presets-daily` endpoint (section 17) triggered daily by Go scheduler at 06:00 UTC. Filters presets by `schedule='daily'`, runs Compare Engine, renders/sends emails via Resend, updates `letzter_versand` and `top_ort_letzter_versand` fields. Per-preset error isolation; BetterStack Heartbeat pinged only on `error_count==0` (Readiness Principle). Config field `HeartbeatComparePresets` added to Go config; Go scheduler job count increased from 5 to 6. Tests: 11 new comprehensive tests in `test_issue_461_compare_preset_dispatch.py`.
 - 2026-05-30: Added section 18 — Authentication Endpoints (Issue #450 Passkey/WebAuthn V1): 5 passkey endpoints (register/begin|finish, login/begin|finish, delete), password auth methods (register, login), profile endpoint with `has_passkey`+`passkeys[]`. User model extended with `PasskeyCredentials[]` and `PasswordHash` now optional. Rate-limit 30/h per IP (alle 5 Endpoints), challenge TTL 5 min, RP-ID isolation (prod vs staging), 64 KB body cap.
 - 2026-05-30: Issue #459 — Auto-Briefings Sidepanel Frontend (ComparePreset-System): AutoReportsOverview, SavePresetDialog, subscriptionHelpers (presetScheduleLabel, formatLastSent), ComparePreset-Interface in types.ts; +page.server.ts lädt `/api/compare/presets`; AutoReportCard und AutoReportsOverview auf ComparePreset umgebaut mit manuellem Versand-Button. Spec #458-Backend-Endpoints vorausgesetzt (`GET /api/compare/presets`, `/send`).
 - 2026-05-30: Issue #458 — Compare-Preset Backend (CRUD+Endpoints): Neues `ComparePreset`-Datenmodell (separate Entität von `CompareSubscription`); 5 REST-Endpoints: GET/POST/PUT/DELETE + `/send`-Stub; Single-File Storage `compare_presets.json`; User-Isolation; Validierung. Siehe Abschnitt 16.

@@ -172,8 +172,8 @@ func TestStatus(t *testing.T) {
 	if !ok {
 		t.Fatalf("Status jobs should be a slice, got %T", status["jobs"])
 	}
-	if len(jobs) != 5 {
-		t.Fatalf("Expected 5 jobs, got %d", len(jobs))
+	if len(jobs) != 6 {
+		t.Fatalf("Expected 6 jobs, got %d", len(jobs))
 	}
 
 	// Each job should have id, name, next_run, last_run
@@ -744,5 +744,69 @@ func TestStatus_IncludesLastRun(t *testing.T) {
 	}
 	if !found {
 		t.Fatal("morning_subscriptions job not found in status")
+	}
+}
+
+// --- Tests: comparePresetsDaily heartbeat (Issue #461) ---
+
+func TestComparePresetsDaily_TriggersHeartbeat(t *testing.T) {
+	var heartbeatPinged bool
+	heartbeatServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		heartbeatPinged = true
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer heartbeatServer.Close()
+
+	triggerServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, `{"status":"ok","count":1}`)
+	}))
+	defer triggerServer.Close()
+
+	cfg := &config.Config{
+		PythonCoreURL:           triggerServer.URL,
+		HeartbeatComparePresets: heartbeatServer.URL + "/heartbeat/compare-presets",
+		SchedulerTimezone:       "Europe/Vienna",
+	}
+	sched, err := New(cfg, testStore(t))
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	sched.comparePresetsDaily()
+
+	if !heartbeatPinged {
+		t.Fatal("Heartbeat should be pinged after successful trigger")
+	}
+}
+
+func TestComparePresetsDaily_FailedTrigger_SkipsHeartbeat(t *testing.T) {
+	triggerServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, `{"error":"boom"}`)
+	}))
+	defer triggerServer.Close()
+
+	var heartbeatPinged bool
+	heartbeatServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		heartbeatPinged = true
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer heartbeatServer.Close()
+
+	cfg := &config.Config{
+		PythonCoreURL:           triggerServer.URL,
+		HeartbeatComparePresets: heartbeatServer.URL + "/heartbeat/compare-presets",
+		SchedulerTimezone:       "Europe/Vienna",
+	}
+	sched, err := New(cfg, testStore(t))
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	sched.comparePresetsDaily()
+
+	if heartbeatPinged {
+		t.Fatal("Heartbeat should NOT be pinged when trigger fails")
 	}
 }

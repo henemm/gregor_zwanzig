@@ -42,8 +42,9 @@ type jobMeta struct {
 type Scheduler struct {
 	cron             *cron.Cron
 	pythonURL        string
-	heartbeatMorning string
-	heartbeatEvening string
+	heartbeatMorning        string
+	heartbeatEvening        string
+	heartbeatComparePresets string
 	client           *http.Client
 	store            *store.Store
 	mu               sync.RWMutex
@@ -70,8 +71,9 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 	s := &Scheduler{
 		cron:             cron.New(cron.WithLocation(loc)),
 		pythonURL:        cfg.PythonCoreURL,
-		heartbeatMorning: cfg.HeartbeatMorning,
-		heartbeatEvening: cfg.HeartbeatEvening,
+		heartbeatMorning:        cfg.HeartbeatMorning,
+		heartbeatEvening:        cfg.HeartbeatEvening,
+		heartbeatComparePresets: cfg.HeartbeatComparePresets,
 		client:           &http.Client{Timeout: 120 * time.Second},
 		store:            st,
 		lastRuns:         make(map[string]*jobResult),
@@ -95,6 +97,7 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 		{"0 * * * *", s.tripReports, "trip_reports_hourly", "Trip Reports (hourly check)"},
 		{"0,30 * * * *", s.alertChecks, "alert_checks", "Alert Checks (every 30 min)"},
 		{"*/5 * * * *", s.inboundCommands, "inbound_command_poll", "Inbound Command Poll (every 5min)"},
+		{"0 6 * * *", s.comparePresetsDaily, "compare_presets_daily", "Compare Presets Daily (06:00)"},
 	}
 	for _, j := range jobs {
 		eid, _ := s.cron.AddFunc(j.expr, j.fn)
@@ -107,7 +110,7 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 // Start begins cron scheduling.
 func (s *Scheduler) Start() {
 	s.cron.Start()
-	log.Printf("[scheduler] Started: 5 jobs, timezone %s", s.cron.Location())
+	log.Printf("[scheduler] Started: 6 jobs, timezone %s", s.cron.Location())
 }
 
 // Stop gracefully shuts down the scheduler and waits for running jobs.
@@ -184,6 +187,19 @@ func (s *Scheduler) inboundCommands() {
 	s.recordRun("inbound_command_poll", func() error {
 		return s.triggerGlobalEndpoint("/api/scheduler/inbound-commands")
 	})
+}
+
+func (s *Scheduler) comparePresetsDaily() {
+	log.Println("[scheduler] Running compare presets daily...")
+	s.recordRun("compare_presets_daily", func() error {
+		return s.runForAllUsers("compare_presets_daily", "/api/scheduler/compare-presets-daily")
+	})
+	s.mu.RLock()
+	lr := s.lastRuns["compare_presets_daily"]
+	s.mu.RUnlock()
+	if lr != nil && lr.Status == "ok" {
+		s.pingHeartbeat("compare_presets_daily", s.heartbeatComparePresets)
+	}
 }
 
 // recordRun executes a job function and stores the result.
