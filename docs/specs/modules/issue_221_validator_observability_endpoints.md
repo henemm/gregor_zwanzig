@@ -367,6 +367,7 @@ r.Post("/api/trips/{id}/alert-preview",       handler.AlertPreviewProxyHandler(c
 
 ## Changelog
 
+- 2026-05-30: Sister-Spec Issue #464 dokumentiert neuen Endpoint `POST /api/_validator/compare-email-preview` für Compare-E-Mail-Renderer-Observability. Komplementär: #221/Endpoint#2 prüft Alert-Mail-Format, #464 prüft Compare-Mail-Format (Winner-Tags, Header-Sektion). Ort-Vergleich ist kein Trip-Kontext, daher kein `user_id`-Inject nötig.
 - 2026-05-29: Sister-Spec Issue #448 dokumentiert neuen Endpoint `/api/_validator/metrics-for-channel` für Kaskaden-Sichtbarkeit bei Metric-Channel-Auflösung. Komplementär zu Endpoint #3 (Alert Detector-Auswahl).
 - 2026-05-14: Initial spec — Issue #221 (External Validator: Sichtbarkeits-Endpoints)
 - 2026-05-14: Loader-Adapter dokumentiert — Router nutzt

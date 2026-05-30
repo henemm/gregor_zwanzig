@@ -14,6 +14,7 @@ Endpoints (tooling-API — nicht versionsstabil, nicht für Frontend):
 from __future__ import annotations
 
 import json
+from datetime import date as date_type
 from datetime import datetime, time, timezone
 from pathlib import Path
 from typing import Optional
@@ -35,8 +36,11 @@ from src.app.models import (
     UnifiedWeatherDisplayConfig,
     WeatherChange,
 )
+from src.app.profile import ActivityProfile
 from src.app.trip import Trip
+from src.app.user import ComparisonResult, LocationResult, SavedLocation
 from src.formatters.trip_report import TripReportFormatter
+from src.output.renderers.email.compare_html import render_compare_html
 from src.services.trip_alert import TripAlertService
 
 router = APIRouter()
@@ -316,3 +320,62 @@ async def metrics_for_channel(
     source = _determine_cascade_source(dc, channel, report)
     metrics = dc.get_metrics_for_channel(channel, report) if dc else []
     return {"source": source, "metric_ids": [mc.metric_id for mc in metrics]}
+
+
+# ---------------------------------------------------------------------------
+# Endpoint #5 — Compare-E-Mail Preview für Validator (Issue #464).
+# ---------------------------------------------------------------------------
+
+class WinnerTag(BaseModel):
+    tone: str   # "good" | "warn" | "bad" | "neutral" | "info"
+    label: str
+
+
+class CompareEmailPreviewBody(BaseModel):
+    profile: str                              # ActivityProfile-Wert, z. B. "wintersport"
+    time_window: list[int] = Field(..., min_length=2, max_length=2)
+    target_date: str                          # ISO-8601, z. B. "2026-05-31"
+    winner_tags: list[WinnerTag] = []
+
+
+@router.post("/api/_validator/compare-email-preview")
+async def compare_email_preview(body: CompareEmailPreviewBody):
+    """Rendert Compare-E-Mail HTML für den Validator.
+
+    Spec: docs/specs/modules/issue_464_compare_email_preview_validator.md.
+    Kein Wetterdaten-Fetch, kein SMTP. Pure Render-Funktion.
+    """
+    try:
+        profile_enum = ActivityProfile(body.profile)
+    except ValueError:
+        raise HTTPException(
+            status_code=422, detail=f"Unbekanntes Profil: {body.profile}"
+        )
+
+    try:
+        target_date = date_type.fromisoformat(body.target_date)
+    except ValueError:
+        raise HTTPException(
+            status_code=422, detail=f"Ungültiges Datum: {body.target_date}"
+        )
+
+    stub_location = SavedLocation(
+        id="preview-1",
+        name="Vorschau-Ort",
+        lat=47.0,
+        lon=11.0,
+        elevation_m=2000,
+    )
+    loc_result = LocationResult(
+        location=stub_location,
+        score=85,
+        error=None,   # KRITISCH: None → result.winner ist nicht None
+    )
+    result = ComparisonResult(
+        locations=[loc_result],
+        time_window=(body.time_window[0], body.time_window[1]),
+        target_date=target_date,
+    )
+    winner_tags_raw = [{"tone": t.tone, "label": t.label} for t in body.winner_tags]
+    html = render_compare_html(result, profile=profile_enum, winner_tags=winner_tags_raw)
+    return {"html": html}
