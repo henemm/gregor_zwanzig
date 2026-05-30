@@ -140,11 +140,118 @@ def _render_warning_banner(warning_text: str) -> str:
     )
 
 
-def _render_winner_card(winner: LocationResult) -> str:
-    """Winner-Card mit border-left + Score-Badge."""
+def _generate_winner_tags(
+    winner: LocationResult,
+    profile: Optional[ActivityProfile],
+) -> list[tuple[str, str]]:
+    """Erzeugt bis zu 4 (tone, label)-Tupel aus Winner-Metriken.
+
+    Profilspezifisch (WINTERSPORT / WANDERN / sonst). Sortierung good > warn > info.
+    Leere Liste wenn winner oder profile None ist. SPEC: issue_457 §1.
+    """
+    if winner is None or profile is None:
+        return []
+
+    if winner.error is not None:
+        return []
+
+    tags: list[tuple[str, str]] = []
+
+    if profile == ActivityProfile.WINTERSPORT:
+        sd = winner.snow_depth_cm
+        if sd is not None and sd >= 100:
+            tags.append(("good", f"Schneehöhe {sd:.0f} cm"))
+        elif sd is not None and 50 <= sd < 100:
+            tags.append(("info", f"Schneehöhe {sd:.0f} cm"))
+        sn = winner.snow_new_cm
+        if sn is not None and sn >= 10:
+            tags.append(("good", f"+{sn:.0f} cm Neuschnee"))
+        elif sn is not None and 3 <= sn < 10:
+            tags.append(("info", f"+{sn:.0f} cm Neuschnee"))
+        if winner.above_low_clouds is True:
+            tags.append(("good", "Über den Wolken"))
+        sh = winner.sunny_hours
+        if sh is not None and sh >= 6:
+            tags.append(("good", f"{sh} h Sonne"))
+        wm = winner.wind_max
+        if wm is not None and wm > 40:
+            tags.append(("warn", f"Wind {wm:.0f} km/h"))
+        gm = winner.gust_max
+        if gm is not None and gm > 60:
+            tags.append(("warn", f"Böen {gm:.0f} km/h"))
+    elif profile == ActivityProfile.WANDERN:
+        sh = winner.sunny_hours
+        if sh is not None and sh >= 7:
+            tags.append(("good", f"{sh} h Sonne"))
+        elif sh is not None and 4 <= sh < 7:
+            tags.append(("info", f"{sh} h Sonne"))
+        wm = winner.wind_max
+        if wm is not None and wm > 40:
+            tags.append(("warn", f"Wind {wm:.0f} km/h"))
+        ca = winner.cloud_avg
+        if ca is not None and ca >= 80:
+            tags.append(("warn", "Stark bewölkt"))
+        tm = winner.temp_max
+        if tm is not None and 5 <= tm <= 22:
+            tags.append(("good", f"Temp. {tm:.0f}°C"))
+    else:
+        sh = winner.sunny_hours
+        if sh is not None and sh >= 6:
+            tags.append(("good", f"{sh} h Sonne"))
+        wm = winner.wind_max
+        if wm is not None and wm > 30:
+            tags.append(("warn", f"Wind {wm:.0f} km/h"))
+        ca = winner.cloud_avg
+        if ca is not None and ca < 30:
+            tags.append(("good", "Gering bewölkt"))
+
+    good_tags = [t for t in tags if t[0] == "good"]
+    warn_tags = [t for t in tags if t[0] == "warn"]
+    info_tags = [t for t in tags if t[0] == "info"]
+
+    if warn_tags and len(good_tags) >= 4:
+        # Mindestens 1 Warn-Tag reservieren — max 3 Good + 1 Warn
+        result = good_tags[:3] + warn_tags[:1]
+    else:
+        result = good_tags + warn_tags
+        result = result + info_tags
+        result = result[:4]
+    return result
+
+
+def _render_tag(tone: str, label: str) -> str:
+    """Rendert einen Tag als Inline-CSS-Pill (Outlook-kompatibel)."""
+    colors = _TAG_COLORS.get(tone, _TAG_COLORS["info"])
+    safe = _html.escape(label)
+    return (
+        f'<span style="display:inline-block;padding:2px 8px;'
+        f'border-radius:12px;font-size:12px;font-weight:600;'
+        f'background:{colors["bg"]};color:{colors["fg"]};'
+        f'border:1px solid {colors["border"]};">{safe}</span>'
+    )
+
+
+def _render_winner_card(
+    winner: LocationResult,
+    tags: Optional[list[tuple[str, str]]] = None,
+) -> str:
+    """Winner-Card mit border-left + Score-Badge + optional Tag-Pills."""
     name = _html.escape(winner.location.name)
     score = winner.score if winner.score is not None else 0
     badge_bg = G_SUCCESS if winner.error is None else G_WARNING
+    tags_html = ""
+    if tags:
+        pieces = []
+        for t in tags:
+            if isinstance(t, dict):
+                tone, label = t.get("tone", "info"), t.get("label", "")
+            else:
+                tone, label = t[0], t[1]
+            pieces.append(_render_tag(tone, label))
+        tags_html = (
+            f'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">'
+            f'{"".join(pieces)}</div>'
+        )
     return (
         f'<div style="background:{G_SURFACE_1};'
         f'border-left:4px solid {G_SUCCESS};'
@@ -157,6 +264,7 @@ def _render_winner_card(winner: LocationResult) -> str:
         f'<span style="display:inline-block;background:{badge_bg};'
         f'color:#ffffff;padding:4px 12px;border-radius:12px;'
         f'font-size:13px;font-weight:600;">Score {score}</span>'
+        f'{tags_html}'
         f'</div>'
     )
 

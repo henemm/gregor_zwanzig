@@ -41,7 +41,10 @@ def run_comparison_for_subscription(
     # Imports from extracted service modules (Epic #129 Phase A.1)
     # Issue #253: HTML-Renderer kommt jetzt aus output.renderers.email.compare_html;
     # Plain-Text-Renderer bleibt comparison_renderers.render_comparison_text.
-    from output.renderers.email.compare_html import render_compare_html
+    from output.renderers.email.compare_html import (
+        _generate_winner_tags,
+        render_compare_html,
+    )
     from services.comparison_engine import ComparisonEngine
     from services.comparison_renderers import render_comparison_text
 
@@ -118,12 +121,22 @@ def run_comparison_for_subscription(
             f"⚠️ {len(failed_locations)} Standort(e) nicht verfügbar: {failed_names}"
         )
 
+    # Issue #457: Auto-generierte Begründungs-Tags für Winner-Card.
+    # _generate_winner_tags gibt list[tuple[str,str]] zurück; render_compare_html
+    # erwartet list[dict] (Issue #460 Format).
+    winner_tags_tuples = _generate_winner_tags(
+        result.winner,
+        getattr(sub, 'activity_profile', None),
+    )
+    winner_tags_dicts = [{"tone": t, "label": l} for t, l in winner_tags_tuples]
+
     html_body = render_compare_html(
         result,
         profile=getattr(sub, 'activity_profile', None),
         warnings=collected_warnings,
         top_n_details=sub.top_n,
         enabled_metrics=enabled_metrics,
+        winner_tags=winner_tags_dicts,
     )
     text_body = render_comparison_text(
         result,

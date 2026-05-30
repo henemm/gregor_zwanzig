@@ -157,7 +157,16 @@ class EmailOutput:
                 with smtplib.SMTP(self._host, self._port) as server:
                     server.starttls()
                     server.login(self._user, self._password)
-                    server.sendmail(from_addr, recipients, msg.as_string())
+                    if len(recipients) == 1:
+                        server.sendmail(from_addr, recipients, msg.as_string())
+                    else:
+                        for recipient in recipients:
+                            try:
+                                server.sendmail(from_addr, [recipient], msg.as_string())
+                            except smtplib.SMTPException as exc:
+                                logger.error(
+                                    "SMTP-Fehler für Empfänger %s: %s", recipient, exc
+                                )
 
                 # Success - log if this was after retry
                 if attempt > 0:
