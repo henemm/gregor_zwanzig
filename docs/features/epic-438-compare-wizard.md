@@ -457,6 +457,7 @@ None—pure frontend changes for Steps 1–3. Backend endpoints are opaque (no s
 
 | Date | Change |
 |------|--------|
+| 2026-05-30 | Compare-Komponenten-Migration abgeschlossen: 14 Dateien in `compare/` und `compare/steps/` importieren `Btn`, `Eyebrow`, `Pill`, `Input`, `TopoBg` jetzt aus kanonischem Atom-Barrel (`$lib/components/atoms`) statt direkt aus `ui/`-Unterordnern. Reine Import-Pfad-Migration, kein Verhalten geändert. Sentinel-Test `issue_462.test.ts` verhindert Zurückrutschen. Sub-Issue von Epic #368 Phase 2 Compare-Zweig. Issue #462 ✓ |
 | 2026-05-30 | Auto-Briefings Sidepanel Frontend implemented: AutoReportsOverview rebuilt for ComparePreset-system (from #458), includes SavePresetDialog, manuellen Versand-Button, subscriptionHelpers für Schedule-Labels. Issue #459 ✓ |
 | 2026-05-30 | ComparePreset CRUD backend foundation: 5 Endpoints (List/Create/Update/Delete/Send-Stub), compare_presets.json, User-Isolation. Issue #458 ✓ |
 | 2026-05-29 | Compare-Hauptbühne Frontend implemented: `/compare` route rebuilt from 49-line subscription list to full 3-column interactive layout (LocationsRail \| CompareMatrix/Banner/HourlyMatrix \| AutoReportsOverview), 156 net LoC. Issue #455 ✓ |

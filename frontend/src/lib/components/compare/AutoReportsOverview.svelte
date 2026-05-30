@@ -6,7 +6,7 @@
 	// SavePresetDialog (kein Callback nach oben).
 
 	import type { ComparePreset } from '$lib/types.js';
-	import { Eyebrow } from '$lib/components/ui/eyebrow/index.js';
+	import { Eyebrow } from '$lib/components/atoms';
 	import AutoReportCard from './AutoReportCard.svelte';
 	import AddReportCard from './AddReportCard.svelte';
 	import SavePresetDialog from './SavePresetDialog.svelte';

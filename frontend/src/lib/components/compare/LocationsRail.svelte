@@ -10,8 +10,7 @@
 	// Wrapper ist <aside> mit 240px (Issue #453).
 
 	import type { Location, Group, ActivityProfile } from '$lib/types.js';
-	import { Btn } from '$lib/components/ui/btn/index.js';
-	import { Pill } from '$lib/components/ui/pill/index.js';
+	import { Btn, Pill } from '$lib/components/atoms';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { EmptyState } from '$lib/components/ui/empty-state/index.js';
 	import CloudSunIcon from '@lucide/svelte/icons/cloud-sun';

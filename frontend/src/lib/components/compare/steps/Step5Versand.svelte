@@ -2,7 +2,7 @@
 	// Issue #443 — Step 5: Versand + Aktivierung.
 	// Spec: docs/specs/modules/issue_443_compare_wizard_step5_versand.md
 	import { getContext } from 'svelte';
-	import { Eyebrow } from '$lib/components/ui/eyebrow';
+	import { Eyebrow } from '$lib/components/atoms';
 	import { GCard } from '$lib/components/ui/g-card';
 	import ChannelToggle from '$lib/components/trip-wizard/steps/ChannelToggle.svelte';
 	import { maskPhone } from '$lib/components/trip-wizard/wizardHelpers';

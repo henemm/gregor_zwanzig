@@ -3,7 +3,7 @@
 	// Issue #454: Tags sind jetzt CompareTag[] ({type, label}) statt string[].
 
 	import type { RankingEntry, Location } from '$lib/types.js';
-	import { Pill } from '$lib/components/ui/pill/index.js';
+	import { Pill } from '$lib/components/atoms';
 	import * as Card from '$lib/components/ui/card/index.js';
 
 	interface Props {

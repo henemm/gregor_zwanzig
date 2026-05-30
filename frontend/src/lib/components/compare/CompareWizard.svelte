@@ -8,9 +8,7 @@
 
 	import { getContext } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { Btn } from '$lib/components/ui/btn';
-	import { Eyebrow } from '$lib/components/ui/eyebrow';
-	import { TopoBg } from '$lib/components/ui/topo';
+	import { Btn, Eyebrow, TopoBg } from '$lib/components/atoms';
 	import type { CompareWizardState } from './compareWizardState.svelte';
 	import Stepper from '$lib/components/trip-wizard/Stepper.svelte';
 	import Step1Vergleich from './steps/Step1Vergleich.svelte';

@@ -2,7 +2,7 @@
 	// Issue #266 — Mini-Map-Vorschau für NewLocationWizard Schritt 1.
 	// Spec: docs/specs/modules/issue_266_location_preview_map.md
 
-	import { TopoBg } from '$lib/components/ui/topo';
+	import { TopoBg } from '$lib/components/atoms';
 
 	interface Props {
 		lat: number;

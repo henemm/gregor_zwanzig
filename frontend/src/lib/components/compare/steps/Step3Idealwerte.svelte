@@ -7,7 +7,7 @@
 	// per $effect beim ersten Rendern gesetzt — nur für Keys die noch nicht
 	// belegt sind (Edit-Modus-Schutz, AC-5).
 	import { getContext } from 'svelte';
-	import { Eyebrow } from '$lib/components/ui/eyebrow';
+	import { Eyebrow } from '$lib/components/atoms';
 	import type { CompareWizardState } from '../compareWizardState.svelte';
 	import {
 		PROFILE_METRICS_WITH_SCALES,

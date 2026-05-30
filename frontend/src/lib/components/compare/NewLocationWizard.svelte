@@ -10,8 +10,7 @@
 	import type { Location, Group, ActivityProfile } from '$lib/types.js';
 	import { ACTIVITY_PROFILE_OPTIONS } from '$lib/types.js';
 	import { api } from '$lib/api.js';
-	import { Btn } from '$lib/components/ui/btn/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
+	import { Btn, Input } from '$lib/components/atoms';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Select } from '$lib/components/ui/select';
 	import Stepper from '$lib/components/trip-wizard/Stepper.svelte';
@@ -139,7 +138,7 @@
 					data-testid="location-wizard-resolve-input"
 					placeholder="Komoot-Link, Google-Maps-URL oder Koordinaten…"
 					bind:value={resolveInput}
-					onkeydown={(e) => e.key === 'Enter' && resolveLocation()}
+					onkeydown={(e: KeyboardEvent) => e.key === 'Enter' && resolveLocation()}
 				/>
 				<Btn
 					data-testid="location-wizard-resolve-btn"

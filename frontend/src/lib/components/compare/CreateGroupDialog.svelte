@@ -11,7 +11,7 @@
 	import type { Group, ActivityProfile } from '$lib/types.js';
 	import { ACTIVITY_PROFILE_OPTIONS } from '$lib/types.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import { Btn } from '$lib/components/ui/btn/index.js';
+	import { Btn } from '$lib/components/atoms';
 	import { Select } from '$lib/components/ui/select';
 
 	interface Props {

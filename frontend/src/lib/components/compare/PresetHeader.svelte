@@ -6,7 +6,7 @@
 
 	import type { ActivityProfile } from '$lib/types.js';
 	import { ACTIVITY_PROFILE_OPTIONS } from '$lib/types.js';
-	import { Btn } from '$lib/components/ui/btn/index.js';
+	import { Btn } from '$lib/components/atoms';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { Select } from '$lib/components/ui/select';
 	import { Field } from '$lib/components/molecules/index.js';

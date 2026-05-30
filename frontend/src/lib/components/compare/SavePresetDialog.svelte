@@ -10,7 +10,7 @@
 	import { api } from '$lib/api.js';
 	import type { ComparePreset } from '$lib/types.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import { Btn } from '$lib/components/ui/btn/index.js';
+	import { Btn } from '$lib/components/atoms';
 	import { Select } from '$lib/components/ui/select';
 
 	interface Props {

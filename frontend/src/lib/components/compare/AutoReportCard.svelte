@@ -7,7 +7,7 @@
 
 	import type { ComparePreset } from '$lib/types.js';
 	import * as Card from '$lib/components/ui/card/index.js';
-	import { Btn } from '$lib/components/ui/btn/index.js';
+	import { Btn } from '$lib/components/atoms';
 	import SendIcon from '@lucide/svelte/icons/send';
 	import { api } from '$lib/api.js';
 	import { presetScheduleLabel, formatLastSent } from './subscriptionHelpers.js';
