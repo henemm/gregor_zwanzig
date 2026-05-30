@@ -57,8 +57,8 @@
 			{formatLastSent(preset.letzter_versand)}
 		</div>
 		{#if preset.top_ort_letzter_versand}
-			<div class="card-top-ort" data-testid="card-top-ort-{preset.id}">
-				Top: {preset.top_ort_letzter_versand}
+			<div class="card-top-ort" data-testid="top-ort-{preset.id}">
+				Top-Ort: {preset.top_ort_letzter_versand}
 			</div>
 		{/if}
 		{#if sendError}

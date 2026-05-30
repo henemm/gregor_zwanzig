@@ -381,6 +381,7 @@ class TestAutoReportCardTopOrtRendering:
         assert (
             'data-testid="top-ort-{subscription.id}"' in content
             or 'data-testid="card-top-ort-{preset.id}"' in content
+            or 'data-testid="top-ort-{preset.id}"' in content
         ), "data-testid für top_ort_letzter_versand fehlt in AutoReportCard.svelte"
 
     def test_component_nested_inside_last_run_block(self):
