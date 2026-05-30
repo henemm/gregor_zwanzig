@@ -835,7 +835,80 @@ Returns catalog of all available weather metrics with format mode options and de
 
 ---
 
-## 16) Google OAuth Login Endpoints (Issue #425)
+## 16) ComparePreset CRUD Endpoints (Issue #458)
+
+Manages persisted Compare-Preset configurations for automatic, multi-location comparison reports (foundation for Epic #456 — Auto-Briefings).
+
+**Handler:** `internal/handler/compare_preset.go` | **Storage:** `data/users/{userID}/compare_presets.json` | **Routing:** `cmd/server/main.go`
+
+### ComparePreset DTO
+
+```go
+type ComparePreset struct {
+    ID                   string     `json:"id"`                                    // "cp-{hex}", auto-generated
+    Name                 string     `json:"name"`
+    UserID               string     `json:"user_id"`                               // set from Auth-Context, server-managed
+    LocationIDs          []string   `json:"location_ids"`                          // 2+ locations to compare
+    Schedule             string     `json:"schedule"`                              // "daily" | "weekly" | "manual"
+    Profil               string     `json:"profil"`                                // ActivityProfile: WINTERSPORT|ALPINE_TOURING|SUMMER_TREKKING|ALLGEMEIN
+    HourFrom             int        `json:"hour_from"`                             // 0..23
+    HourTo               int        `json:"hour_to"`                               // 0..23, >= HourFrom
+    Empfaenger           []string   `json:"empfaenger"`                            // Email addresses for delivery
+    LetzterVersand       *time.Time `json:"letzter_versand,omitempty"`             // last send timestamp (server-managed)
+    TopOrtLetzterVersand *string    `json:"top_ort_letzter_versand,omitempty"`     // highest-ranked location from last send (server-managed)
+    CreatedAt            time.Time  `json:"created_at"`
+}
+```
+
+### Endpoints
+
+| Method | Path | Status | Description |
+|--------|------|--------|-------------|
+| GET | `/api/compare/presets` | 200 | List all presets for authenticated user ([] if none) |
+| POST | `/api/compare/presets` | 201 / 400 | Create new preset; ID auto-generated, user_id from auth context |
+| PUT | `/api/compare/presets/{id}` | 200 / 400 / 404 | Update preset (user_id, created_at preserved from stored record) |
+| DELETE | `/api/compare/presets/{id}` | 204 / 404 | Delete preset |
+| POST | `/api/compare/presets/{id}/send` | 200 / 404 | Queue manual send (stub: returns `{"status":"queued"}`, actual send in #461) |
+
+### Validation Rules (POST/PUT)
+
+| Field | Constraint |
+|-------|-----------|
+| `name` | not empty |
+| `schedule` | in `{"daily", "weekly", "manual"}` |
+| `profil` | valid per `internal/compare/types.go` IsValidProfile() |
+| `hour_from` | 0–23 |
+| `hour_to` | 0–23 |
+| — | `hour_to >= hour_from` |
+| `empfaenger[]` | each contains `@` (basic email check) |
+
+### Error Responses
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 400 | `{"error":"validation_error","detail":"..."}` | Validation failed (see above) |
+| 400 | `{"error":"bad_request"}` | JSON not decodable |
+| 404 | `{"error":"not_found"}` | ID not found in user's preset list |
+
+### Notes
+
+- **User Isolation:** Every preset belongs to one user (read from Auth-Context). No user can see/modify another user's presets.
+- **Server-Managed Fields:** On CREATE, `id` is auto-generated (`cp-{hex}`) and `user_id` is set from context. On UPDATE, `user_id` and `created_at` are never overwritten from request body.
+- **send Endpoint is Stub:** Returns `{"status":"queued"}` immediately. Actual comparison execution and email dispatch is Issue #461.
+- **LocationIDs Validation:** Backend does not validate that referenced location IDs exist in `data/users/{userID}/locations.json`. Invalid IDs cause errors only during send (Issue #461).
+
+### Source Files
+
+| File | Change |
+|------|--------|
+| `internal/model/compare_preset.go` | NEW — ComparePreset struct |
+| `internal/store/store.go` | +LoadComparePresets(), SaveComparePresets(), comparePresetsFile() |
+| `internal/handler/compare_preset.go` | NEW — 5 handlers + newComparePresetID(), validateComparePreset() |
+| `cmd/server/main.go` | +5 route registrations |
+
+---
+
+## 17) Google OAuth Login Endpoints (Issue #425)
 
 **Handler:** `internal/handler/auth_oauth.go` (NEW) | **Routing:** `cmd/server/main.go`
 
@@ -967,6 +1040,7 @@ Google OAuth users receive the same session mechanism as password-auth users:
 
 ## Changelog
 
+- 2026-05-30: Issue #458 — ComparePreset CRUD Endpoints: GET/POST /api/compare/presets, PUT/DELETE /{id}, POST /{id}/send (stub). Storage compare_presets.json, user-isolated. Foundation für #456.
 - 2026-05-29: Issue #455 — Compare-Hauptbühne Frontend `/compare` route implemented (pure frontend, no API changes). 3-column layout: LocationsRail (left 320px) | CompareMatrix/RecommendationBanner/HourlyMatrix (center flex) | AutoReportsOverview (right 320px). POST `/api/compare/run` contract unchanged; frontend wires existing Go-backend endpoint. See `docs/specs/modules/issue_455_compare_main_stage.md`.
 - 2026-05-29: Issue #448 — Validator-Endpoint `GET /api/_validator/metrics-for-channel` ergänzt (Tooling-API, nicht versionsstabil): Macht die dreistufige Kaskade von `get_metrics_for_channel()` (per_report → per_channel → global) von außen prüfbar. Response: `{"source": "per_report|per_channel|global", "metric_ids": [...]}`. Params: `trip`, `channel`, `report`, `user_id` (via Go-Proxy injiziert).
 - 2026-05-29: Issue #442 — Compare-Wizard Step 4 Layout (Pure Frontend): Step4Layout component added to Compare-Wizard, enabling per-channel metric configuration (Email/Telegram/Signal/SMS) with reusable OutputLayoutEditor component (Issue #431). Wizard calls GET /api/metrics (required), GET /api/templates (optional), GET /api/metric-presets (optional) on mount. No backend changes; `channel_layouts` field added to CompareSubscription state (frontend-only persistence via `save()`).

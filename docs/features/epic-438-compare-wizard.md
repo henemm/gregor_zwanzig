@@ -8,8 +8,9 @@
 - `docs/specs/modules/issue_442_...` (Step 4 — Layout, TBD)
 - `docs/specs/modules/issue_443_...` (Step 5 — Versand, TBD)
 - `docs/specs/modules/issue_455_compare_main_stage.md` (Compare-Hauptbühne Frontend)
+- `docs/specs/modules/issue_458_compare_preset_backend.md` (Backend CRUD + persistence)
 
-**Child Issues:** #440, #441, #442, #443, #455 (planned)
+**Child Issues:** #440, #441, #442, #443, #455, #458 (backend foundation)
 
 ---
 
@@ -332,6 +333,11 @@ interface CompareSubscription {
 | `DELETE /api/subscriptions/{id}` | DELETE | Delete subscription |
 | `PATCH /api/subscriptions/{id}/enabled` | PATCH | Toggle enabled state |
 | `POST /api/subscriptions/{id}/preview` | POST | Preview compare-Report (for validation) |
+| `GET /api/compare/presets` | GET | List saved compare presets (Issue #458) |
+| `POST /api/compare/presets` | POST | Create preset (Issue #458) |
+| `PUT /api/compare/presets/{id}` | PUT | Update preset (Issue #458) |
+| `DELETE /api/compare/presets/{id}` | DELETE | Delete preset (Issue #458) |
+| `POST /api/compare/presets/{id}/send` | POST | Queue manual send (Issue #458, stub for #461) |
 
 **Compare Algorithm** (Backend, TBD)
 
@@ -451,6 +457,7 @@ None—pure frontend changes for Steps 1–3. Backend endpoints are opaque (no s
 
 | Date | Change |
 |------|--------|
+| 2026-05-30 | ComparePreset CRUD backend foundation: 5 Endpoints (List/Create/Update/Delete/Send-Stub), compare_presets.json, User-Isolation. Issue #458 ✓ |
 | 2026-05-29 | Compare-Hauptbühne Frontend implemented: `/compare` route rebuilt from 49-line subscription list to full 3-column interactive layout (LocationsRail \| CompareMatrix/Banner/HourlyMatrix \| AutoReportsOverview), 156 net LoC. Issue #455 ✓ |
 | 2026-05-29 | Step 3 (Idealwerte) implemented: compareMetricDefs.ts, Step3Idealwerte.svelte, ~305 LoC, 10 AC fulfilled. Issue #441 ✓ |
 | 2026-05-27 | Wizard shell + Steps 1–2 implemented: CompareWizard.svelte, Step1Vergleich.svelte, Step2Orte.svelte, State management. Issue #440 ✓ |

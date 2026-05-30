@@ -457,6 +457,45 @@ func (s *Store) SaveMetricPresets(presets []model.MetricPreset) error {
 	return os.WriteFile(s.PresetsFile(), data, 0644)
 }
 
+// --- ComparePresets (Issue #458) ---
+
+func (s *Store) comparePresetsFile() string {
+	return filepath.Join(s.DataDir, "users", s.UserID, "compare_presets.json")
+}
+
+func (s *Store) LoadComparePresets() ([]model.ComparePreset, error) {
+	data, err := os.ReadFile(s.comparePresetsFile())
+	if os.IsNotExist(err) {
+		return []model.ComparePreset{}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var presets []model.ComparePreset
+	if err := json.Unmarshal(data, &presets); err != nil {
+		return nil, err
+	}
+	if presets == nil {
+		presets = []model.ComparePreset{}
+	}
+	return presets, nil
+}
+
+func (s *Store) SaveComparePresets(presets []model.ComparePreset) error {
+	dir := filepath.Join(s.DataDir, "users", s.UserID)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+	if presets == nil {
+		presets = []model.ComparePreset{}
+	}
+	data, err := json.MarshalIndent(presets, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(s.comparePresetsFile(), data, 0644)
+}
+
 func (s *Store) saveSubscriptions(subs []model.CompareSubscription) error {
 	dir := s.SubscriptionsDir()
 	if err := os.MkdirAll(dir, 0755); err != nil {
