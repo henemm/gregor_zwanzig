@@ -12,6 +12,7 @@ import (
 type ChallengeEntry struct {
 	SessionData webauthn.SessionData
 	UserID      string
+	Email       string // public register/begin; empty for auth-protected flows
 	ExpiresAt   time.Time
 }
 

@@ -136,6 +136,13 @@ func main() {
 	r.Delete("/api/auth/passkey/credentials/{id}",
 		passkeyLimiter.Middleware(handler.PasskeyDeleteCredentialHandler(s)).ServeHTTP,
 	)
+	passkeyRegPubLimiter := authmw.NewIPRateLimiter(5, time.Hour)
+	r.Post("/api/auth/passkey/register/public/begin",
+		passkeyRegPubLimiter.Middleware(handler.PasskeyRegisterPublicBeginHandler(s, webAuthn, challengeStore)).ServeHTTP,
+	)
+	r.Post("/api/auth/passkey/register/public/finish",
+		passkeyRegPubLimiter.Middleware(handler.PasskeyRegisterPublicFinishHandler(s, webAuthn, challengeStore, cfg.SessionSecret)).ServeHTTP,
+	)
 
 	r.Get("/api/health", handler.HealthHandler(cfg.PythonCoreURL))
 	r.Get("/api/config", handler.ProxyHandler(cfg.PythonCoreURL, "/config"))

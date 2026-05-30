@@ -39,6 +39,12 @@ func RegisterHandler(s *store.Store, bcryptCost int) http.HandlerFunc {
 			w.Write([]byte(`{"error":"validation failed"}`))
 			return
 		}
+		if !validUsernameRe.MatchString(req.Username) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(400)
+			w.Write([]byte(`{"error":"validation failed"}`))
+			return
+		}
 		if len(req.Password) < 8 {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(400)

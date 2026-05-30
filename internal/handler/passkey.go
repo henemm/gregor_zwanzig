@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -17,6 +18,8 @@ import (
 	"github.com/henemm/gregor-api/internal/model"
 	"github.com/henemm/gregor-api/internal/store"
 )
+
+var validUsernameRe = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
 
 // Passkey/WebAuthn handlers — Issue #450 V1 Add-on.
 //
@@ -456,4 +459,127 @@ func lastPathSegment(p string) string {
 		return p[i+1:]
 	}
 	return p
+}
+
+// PasskeyRegisterPublicBeginHandler starts a public WebAuthn registration ceremony.
+// No session required — takes {"username","email"}, validates, checks availability,
+// and returns a WebAuthn challenge. Issue #466 — V2 Add-on.
+func PasskeyRegisterPublicBeginHandler(s *store.Store, wa *webauthn.WebAuthn, cs *ChallengeStore) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Username string `json:"username"`
+			Email    string `json:"email"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeJSONError(w, http.StatusBadRequest, "invalid_request")
+			return
+		}
+		if len(req.Username) < 3 || len(req.Username) > 50 || !validUsernameRe.MatchString(req.Username) {
+			writeJSONError(w, http.StatusBadRequest, "validation_failed")
+			return
+		}
+		if !strings.Contains(req.Email, "@") {
+			writeJSONError(w, http.StatusBadRequest, "validation_failed")
+			return
+		}
+		if s.UserExists(req.Username) {
+			writeJSONError(w, http.StatusConflict, "user_already_exists")
+			return
+		}
+
+		tempUser := &model.User{ID: req.Username}
+		creation, sessionData, err := wa.BeginRegistration(tempUser)
+		if err != nil {
+			writeJSONError(w, http.StatusInternalServerError, "webauthn_begin_failed")
+			return
+		}
+
+		cs.Put(sessionData.Challenge, &ChallengeEntry{
+			SessionData: *sessionData,
+			UserID:      req.Username,
+			Email:       req.Email,
+			ExpiresAt:   time.Now().Add(challengeTTL),
+		})
+
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{"publicKey": creation.Response})
+	}
+}
+
+// PasskeyRegisterPublicFinishHandler completes a public WebAuthn registration.
+// Verifies attestation, creates a passwordless user, and sets gz_session cookie.
+// Issue #466 — V2 Add-on.
+func PasskeyRegisterPublicFinishHandler(s *store.Store, wa *webauthn.WebAuthn, cs *ChallengeStore, secret string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, maxWebAuthnBodyBytes)
+
+		bodyBytes, err := io.ReadAll(r.Body)
+		if err != nil {
+			writeJSONError(w, http.StatusBadRequest, "invalid_body")
+			return
+		}
+
+		parsedResponse, err := protocol.ParseCredentialCreationResponseBody(bytes.NewReader(bodyBytes))
+		if err != nil {
+			writeJSONError(w, http.StatusBadRequest, "attestation_invalid")
+			return
+		}
+
+		challenge := parsedResponse.Response.CollectedClientData.Challenge
+		entry, ok := cs.Take(challenge)
+		if !ok {
+			writeJSONError(w, http.StatusBadRequest, "challenge_expired_or_missing")
+			return
+		}
+
+		// Race protection: username may have been claimed between Begin and Finish.
+		if s.UserExists(entry.UserID) {
+			writeJSONError(w, http.StatusConflict, "user_already_exists")
+			return
+		}
+
+		tempUser := &model.User{ID: entry.UserID}
+		credential, err := wa.CreateCredential(tempUser, entry.SessionData, parsedResponse)
+		if err != nil {
+			writeJSONError(w, http.StatusBadRequest, "attestation_invalid")
+			return
+		}
+
+		now := time.Now().UTC()
+		newUser := model.User{
+			ID:        entry.UserID,
+			Email:     entry.Email,
+			CreatedAt: now,
+			PasskeyCredentials: []model.WebAuthnCredential{{
+				ID:              credential.ID,
+				PublicKey:       credential.PublicKey,
+				AttestationType: credential.AttestationType,
+				Transport:       transportsToStrings(credential.Transport),
+				Flags:           credential.Flags,
+				Authenticator:   credential.Authenticator,
+				CreatedAt:       now,
+			}},
+		}
+		if err := s.SaveUser(newUser); err != nil {
+			writeJSONError(w, http.StatusInternalServerError, "store_error")
+			return
+		}
+		s.ProvisionUserDirs(entry.UserID)
+
+		token := middleware.SignSession(entry.UserID, secret)
+		secure := r.Header.Get("X-Forwarded-Proto") == "https" || r.TLS != nil
+		http.SetCookie(w, &http.Cookie{
+			Name:     "gz_session",
+			Value:    token,
+			Path:     "/",
+			HttpOnly: true,
+			SameSite: http.SameSiteLaxMode,
+			MaxAge:   86400,
+			Secure:   secure,
+		})
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		_ = json.NewEncoder(w).Encode(map[string]string{"id": entry.UserID})
+	}
 }
