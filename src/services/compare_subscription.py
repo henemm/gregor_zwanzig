@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 def run_comparison_for_subscription(
     sub: "CompareSubscription",
     all_locations: "List[SavedLocation] | None" = None,
-) -> tuple[str, str, str]:
+) -> tuple[str, str, str, str | None]:
     """
     Run a comparison for a subscription and generate email content.
 
@@ -29,7 +29,9 @@ def run_comparison_for_subscription(
         all_locations: Optional pre-loaded locations list
 
     Returns:
-        Tuple of (subject, html_body, text_body) for the email
+        Tuple of (subject, html_body, text_body, winner_name) for the email.
+        winner_name is the location name of the top-ranked location (Issue #456),
+        or None if no unique winner could be determined.
     """
     from datetime import date, datetime, timedelta
 
@@ -142,4 +144,6 @@ def run_comparison_for_subscription(
         text_body = text_body.replace("=" * 24, "=" * 24 + warning_text, 1)
 
     subject = f"Wetter-Vergleich: {sub.name} ({now.strftime('%d.%m.%Y')})"
-    return subject, html_body, text_body
+    # Issue #456: Winner-Name als 4. Tupel-Element fuer Top-Ort-Anzeige.
+    winner_name = result.winner.location.name if result.winner else None
+    return subject, html_body, text_body, winner_name

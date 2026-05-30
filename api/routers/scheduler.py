@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, Query
 
 router = APIRouter(prefix="/api/scheduler", tags=["scheduler"])
 logger = logging.getLogger("scheduler.trigger")
@@ -79,6 +79,41 @@ def trigger_inbound():
     return {"status": "ok", "count": count}
 
 
+@router.post("/subscriptions/{subscription_id}/send")
+def manual_send_subscription(subscription_id: str, user_id: str = Query("default")):
+    """Manueller Versand-Trigger fuer eine einzelne Subscription. Issue #456."""
+    from datetime import datetime
+
+    from app.config import Settings
+    from app.loader import load_compare_subscriptions
+    from services.compare_subscription import run_comparison_for_subscription
+
+    all_subs = load_compare_subscriptions(user_id=user_id)
+    sub = next((s for s in all_subs if s.id == subscription_id), None)
+    if sub is None:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+
+    settings = Settings().with_user_profile(user_id)
+    try:
+        subject, html_body, text_body, winner_name = run_comparison_for_subscription(sub)
+        _send_subscription(sub, subject, html_body, text_body, settings)
+        sub.last_run = datetime.utcnow().isoformat() + "Z"
+        sub.last_status = "ok"
+        sub.top_ort_letzter_versand = winner_name
+        _save_subscription(user_id, sub)
+        return {"status": "ok", "winner": winner_name or ""}
+    except HTTPException:
+        raise
+    except Exception as e:
+        sub.last_run = datetime.utcnow().isoformat() + "Z"
+        sub.last_status = "error"
+        try:
+            _save_subscription(user_id, sub)
+        except Exception as save_err:
+            logger.error(f"Failed to persist error-status for {sub.name}: {save_err}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 def _run_subscriptions_by_schedule(schedule, user_id: str = "default") -> int:
     """Run all subscriptions matching the given schedule. Returns count."""
     from datetime import datetime
@@ -95,7 +130,7 @@ def _run_subscriptions_by_schedule(schedule, user_id: str = "default") -> int:
     for sub in load_compare_subscriptions(user_id=user_id):
         if sub.enabled and sub.schedule == schedule:
             try:
-                subject, html_body, text_body = run_comparison_for_subscription(
+                subject, html_body, text_body, winner_name = run_comparison_for_subscription(
                     sub, all_locations
                 )
                 _send_subscription(sub, subject, html_body, text_body, settings)
@@ -104,6 +139,8 @@ def _run_subscriptions_by_schedule(schedule, user_id: str = "default") -> int:
                 # Issue #252 — Lauf-Status nach Erfolg zurueckschreiben
                 sub.last_run = datetime.utcnow().isoformat() + "Z"
                 sub.last_status = "ok"
+                # Issue #456 — Top-Ort persistieren (None ueberschreibt nicht)
+                sub.top_ort_letzter_versand = winner_name
                 try:
                     _save_subscription(user_id, sub)
                 except Exception as save_err:
@@ -143,7 +180,7 @@ def _run_weekly_subscriptions(user_id: str = "default") -> int:
         if sub.enabled and sub.schedule == Schedule.WEEKLY:
             if sub.weekday == current_weekday:
                 try:
-                    subject, html_body, text_body = run_comparison_for_subscription(
+                    subject, html_body, text_body, winner_name = run_comparison_for_subscription(
                         sub, all_locations
                     )
                     _send_subscription(sub, subject, html_body, text_body, settings)
@@ -151,6 +188,8 @@ def _run_weekly_subscriptions(user_id: str = "default") -> int:
                     success_count += 1
                     sub.last_run = datetime.utcnow().isoformat() + "Z"
                     sub.last_status = "ok"
+                    # Issue #456 — Top-Ort persistieren (None ueberschreibt nicht)
+                    sub.top_ort_letzter_versand = winner_name
                     try:
                         _save_subscription(user_id, sub)
                     except Exception as save_err:
@@ -255,6 +294,10 @@ def _save_subscription(user_id: str, sub, data_root: str | None = None) -> None:
                 entry["last_run"] = sub.last_run
             if sub.last_status is not None:
                 entry["last_status"] = sub.last_status
+            # Issue #456 — Top-Ort nur schreiben, wenn nicht None (None loescht NICHT)
+            top_ort = getattr(sub, "top_ort_letzter_versand", None)
+            if top_ort is not None:
+                entry["top_ort_letzter_versand"] = top_ort
             updated = True
             break
 

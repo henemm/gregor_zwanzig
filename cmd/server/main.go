@@ -123,6 +123,8 @@ func main() {
 	r.Put("/api/subscriptions/{id}", handler.UpdateSubscriptionHandler(s))
 	r.Patch("/api/subscriptions/{id}/run-status", handler.PatchSubscriptionRunStatusHandler(s))
 	r.Delete("/api/subscriptions/{id}", handler.DeleteSubscriptionHandler(s))
+	// Issue #456 — Manueller Versand-Trigger fuer eine einzelne Subscription
+	r.Post("/api/subscriptions/{id}/send", handler.SendSubscriptionProxyHandler(cfg.PythonCoreURL))
 	r.Get("/api/trips/{id}/weather-config", handler.GetTripWeatherConfigHandler(s))
 	r.Put("/api/trips/{id}/weather-config", handler.PutTripWeatherConfigHandler(s))
 	r.Get("/api/locations/{id}/weather-config", handler.GetLocationWeatherConfigHandler(s))

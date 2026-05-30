@@ -140,6 +140,8 @@ class CompareSubscription:
     recipients: List[str] = field(default_factory=list)
     last_run: Optional[str] = None    # ISO-8601 string, None wenn noch nie gelaufen
     last_status: Optional[str] = None  # "ok" | "error" | None
+    # Issue #456 — Gewinner-Ort des letzten Versands (additiv)
+    top_ort_letzter_versand: Optional[str] = None
 
 
 @dataclass

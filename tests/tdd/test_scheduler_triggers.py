@@ -131,7 +131,7 @@ class TestCompareSubscriptionExtraction:
         """
         GIVEN: A valid CompareSubscription
         WHEN: run_comparison_for_subscription(sub, locations)
-        THEN: Returns (subject, html_body, text_body) tuple
+        THEN: Returns (subject, html_body, text_body, winner_name) tuple (Issue #456)
         """
         from services.compare_subscription import run_comparison_for_subscription
         from app.user import CompareSubscription, Schedule
@@ -149,8 +149,9 @@ class TestCompareSubscriptionExtraction:
         result = run_comparison_for_subscription(sub, locations)
 
         assert isinstance(result, tuple)
-        assert len(result) == 3
-        subject, html_body, text_body = result
+        assert len(result) == 4
+        subject, html_body, text_body, winner_name = result
         assert isinstance(subject, str)
         assert isinstance(html_body, str)
         assert isinstance(text_body, str)
+        assert winner_name is None or isinstance(winner_name, str)

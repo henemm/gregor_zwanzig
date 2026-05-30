@@ -344,7 +344,7 @@ def _run_subscriptions(settings: Settings, debug: DebugBuffer) -> int:
         print(f"Running subscription: {sub.name}")
         try:
             # SPEC: docs/specs/compare_email.md v4.2 - Multipart Email
-            subject, html_body, text_body = run_comparison_for_subscription(sub, all_locations)
+            subject, html_body, text_body, _winner_name = run_comparison_for_subscription(sub, all_locations)
 
             if settings.dry_run:
                 print(f"\n=== DRY RUN: {subject} ===")

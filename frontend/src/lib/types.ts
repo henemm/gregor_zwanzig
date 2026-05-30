@@ -268,6 +268,8 @@ export interface Subscription {
 	recipients?: string[];
 	last_run?: string;     // ISO-8601
 	last_status?: string;  // "ok" | "error"
+	// Issue #456 — Top-Ort des letzten Versands (additiv)
+	top_ort_letzter_versand?: string;
 }
 
 export interface HealthResponse {

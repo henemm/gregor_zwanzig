@@ -1105,6 +1105,7 @@ def load_compare_subscriptions(user_id: str = "default") -> List[CompareSubscrip
             recipients=sub_data.get("recipients", []),
             last_run=sub_data.get("last_run"),
             last_status=sub_data.get("last_status"),
+            top_ort_letzter_versand=sub_data.get("top_ort_letzter_versand"),
         ))
     return subscriptions
 
@@ -1153,6 +1154,9 @@ def save_compare_subscriptions(
             sub_dict["last_run"] = sub.last_run
         if sub.last_status is not None:
             sub_dict["last_status"] = sub.last_status
+        # Issue #456 — Top-Ort des letzten Versands (omitempty)
+        if sub.top_ort_letzter_versand is not None:
+            sub_dict["top_ort_letzter_versand"] = sub.top_ort_letzter_versand
         if sub.display_config is not None:
             dc = sub.display_config
             sub_dict["display_config"] = {

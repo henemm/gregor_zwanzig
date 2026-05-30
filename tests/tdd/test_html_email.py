@@ -73,8 +73,9 @@ class TestSubscriptionEmailGeneration:
             pytest.skip("No locations configured")
 
         # Run with real data (network call)
-        # SPEC: docs/specs/compare_email.md v4.2 - Multipart Email returns 3 values
-        subject, html_body, text_body = run_comparison_for_subscription(sample_subscription, locations[:2])
+        # SPEC: docs/specs/compare_email.md v4.2 - Multipart Email
+        # Issue #456: 4-tuple incl. winner_name
+        subject, html_body, text_body, _winner_name = run_comparison_for_subscription(sample_subscription, locations[:2])
 
         assert "<!DOCTYPE html>" in html_body, \
             f"Subscription email must be HTML. Got: {html_body[:200]}"
@@ -131,7 +132,8 @@ class TestRealStalwartE2E:
         # 2. Generiere E-Mail
         # SPEC: docs/specs/compare_email.md v4.2 - Multipart Email
         sub = subs[0]
-        subject, html_body, text_body = run_comparison_for_subscription(sub, locations)
+        # Issue #456: 4-tuple incl. winner_name
+        subject, html_body, text_body, _winner_name = run_comparison_for_subscription(sub, locations)
 
         # Unique Subject für Suche
         import uuid

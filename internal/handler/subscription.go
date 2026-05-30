@@ -181,6 +181,11 @@ func UpdateSubscriptionHandler(s *store.Store) http.HandlerFunc {
 
 		sub.ID = id
 
+		// Read-Modify-Write: Scheduler-managed fields aus existing übernehmen
+		sub.LastRun = existing.LastRun
+		sub.LastStatus = existing.LastStatus
+		sub.TopOrtLetzterVersand = existing.TopOrtLetzterVersand
+
 		if err := validateSubscription(sub); err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(400)

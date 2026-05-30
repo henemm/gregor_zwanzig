@@ -305,6 +305,6 @@ class TestEmailSubject:
             locations=[],
             schedule=Schedule.DAILY_MORNING,
         )
-        subject, _, _ = run_comparison_for_subscription(sub)
+        subject, _, _, _ = run_comparison_for_subscription(sub)
         assert "Wetter-Vergleich" in subject, f"Subject should contain 'Wetter-Vergleich', got: {subject}"
         assert "Ski" not in subject, f"Subject should not contain 'Ski', got: {subject}"

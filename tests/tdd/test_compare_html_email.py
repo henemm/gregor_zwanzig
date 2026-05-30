@@ -307,7 +307,7 @@ class TestCompareEmailE2E:
             pytest.skip("Keine Locations konfiguriert")
 
         sub = subs[0]
-        subject, html_body, text_body = run_comparison_for_subscription(sub, locations)
+        subject, html_body, text_body, _winner_name = run_comparison_for_subscription(sub, locations)
 
         unique_id = str(uuid.uuid4())[:8]
         test_subject = f"[TEST-Compare-{unique_id}] {subject}"

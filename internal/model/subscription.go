@@ -20,7 +20,8 @@ type CompareSubscription struct {
 	DisplayConfig   map[string]interface{} `json:"display_config,omitempty"`
 	ActivityProfile *string                `json:"activity_profile,omitempty"`
 	// Issue #252 — per-Subscription Empfaenger & Lauf-Status (additiv, omitempty)
-	Recipients []string   `json:"recipients,omitempty"`
-	LastRun    *time.Time `json:"last_run,omitempty"`
-	LastStatus string     `json:"last_status,omitempty"`
+	Recipients           []string   `json:"recipients,omitempty"`
+	LastRun              *time.Time `json:"last_run,omitempty"`
+	LastStatus           string     `json:"last_status,omitempty"`
+	TopOrtLetzterVersand string     `json:"top_ort_letzter_versand,omitempty"`
 }
