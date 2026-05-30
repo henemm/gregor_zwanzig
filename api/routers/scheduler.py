@@ -85,7 +85,7 @@ def manual_send_subscription(subscription_id: str, user_id: str = Query("default
     from datetime import datetime
 
     from app.config import Settings
-    from app.loader import load_compare_subscriptions
+    from app.loader import load_all_locations, load_compare_subscriptions
     from services.compare_subscription import run_comparison_for_subscription
 
     all_subs = load_compare_subscriptions(user_id=user_id)
@@ -93,9 +93,12 @@ def manual_send_subscription(subscription_id: str, user_id: str = Query("default
     if sub is None:
         raise HTTPException(status_code=404, detail="Subscription not found")
 
+    all_locations = load_all_locations(user_id=user_id)
     settings = Settings().with_user_profile(user_id)
     try:
-        subject, html_body, text_body, winner_name = run_comparison_for_subscription(sub)
+        subject, html_body, text_body, winner_name = run_comparison_for_subscription(
+            sub, all_locations
+        )
         _send_subscription(sub, subject, html_body, text_body, settings)
         sub.last_run = datetime.utcnow().isoformat() + "Z"
         sub.last_status = "ok"
