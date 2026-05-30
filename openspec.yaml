@@ -30,6 +30,11 @@ workflow:
     - "lgtm"
     - "looks good"
 
+  # Issue #465 (D1): Auto-Advance Phase 1->2 und 2->3 nach Slash-Commands
+  # /1-context und /2-analyse. Skill-Dateien rufen am Ende
+  # `python3 .claude/hooks/workflow.py auto-advance-spec` auf.
+  spec_auto_advance: true
+
 # File Protection Rules
 # Files matching these patterns REQUIRE the full workflow
 protected_paths:

@@ -30,6 +30,12 @@ tags: []
 >
 > Im Zweifel vor dem Spec-Schreiben grep auf den betroffenen Symbol-Namen — Server-Code (Go vs. Python) und UI-Code (SvelteKit vs. Server-Templates) sind getrennt. Es gab in der Vergangenheit Doppelarbeit, weil Specs Helper-Funktionen in der falschen Schicht verortet haben (Issue #129).
 
+## Estimated Scope
+
+- **LoC:** [Zahl oder Bereich, z.B. ~50]
+- **Files:** [Anzahl betroffener Dateien]
+- **Effort:** [low | medium | high]
+
 ## Dependencies
 
 | Entity | Type | Purpose |

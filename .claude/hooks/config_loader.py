@@ -288,6 +288,19 @@ def get_ac_format_required_since() -> str | None:
     return config.get("spec_validation", {}).get("ac_format_required_since")
 
 
+def get_spec_auto_advance() -> bool:
+    """Issue #465 (D1): Return True wenn ``workflow.spec_auto_advance`` aktiv.
+
+    Quelle: ``openspec.yaml`` -> ``workflow.spec_auto_advance``. Default False
+    (kein-op). Fail-soft: jeder Fehler beim Laden -> False.
+    """
+    try:
+        cfg = load_config()
+        return bool(cfg.get("workflow", {}).get("spec_auto_advance", False))
+    except Exception:
+        return False
+
+
 def get_state_file_path() -> Path:
     """Get path to workflow state file.
 

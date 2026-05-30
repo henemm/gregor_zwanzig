@@ -18,12 +18,63 @@ Exit codes:
 """
 
 import argparse
+import os
 import sys
 import imaplib
 import email
 import re
 from pathlib import Path
 from typing import List, Tuple, Dict, Any
+
+
+def _write_validation_log(
+    success: bool,
+    errors: list,
+    min_locations: int,
+    log_dir: "Path | None" = None,
+    workflow_id: "str | None" = None,
+) -> None:
+    """Issue #465 (B2): Strukturiertes Validator-Log YAML.
+
+    Schreibt in ``.claude/workflows/_log/<ts>_<wf>_email_validation.yaml``.
+    Fail-soft: jeder Fehler wird unterdrueckt, damit der Validator-Exit-Code
+    erhalten bleibt.
+    """
+    try:
+        from datetime import datetime
+        import yaml as _yaml
+
+        if log_dir is None:
+            hooks_dir = Path(__file__).resolve().parent
+            project_root = hooks_dir.parent.parent
+            log_dir = project_root / ".claude" / "workflows" / "_log"
+
+        if workflow_id is None:
+            workflow_id = os.environ.get("GZ_ACTIVE_WORKFLOW", "unknown")
+
+        log_dir = Path(log_dir)
+        log_dir.mkdir(parents=True, exist_ok=True)
+
+        date_str = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        log_path = log_dir / f"{date_str}_{workflow_id}_email_validation.yaml"
+
+        data = {
+            "validator": "email_spec_validator",
+            "validated_at": datetime.utcnow().isoformat(),
+            "workflow_id": workflow_id,
+            "passed": bool(success),
+            "error_count": len(errors),
+            "errors": list(errors),
+            "min_locations_checked": int(min_locations),
+        }
+
+        import tempfile
+        fd, tmp = tempfile.mkstemp(dir=str(log_dir), suffix=".tmp")
+        with os.fdopen(fd, "w") as f:
+            _yaml.safe_dump(data, f, allow_unicode=True)
+        os.rename(tmp, str(log_path))
+    except Exception:
+        pass  # fail-soft — darf Validator nie abbrechen
 
 
 def fetch_latest_email() -> str:
@@ -300,6 +351,9 @@ def main():
     print()
 
     success, errors = run_validation(args.min_locations)
+
+    # Issue #465 (B2): Strukturiertes Log VOR sys.exit() schreiben (fail-soft).
+    _write_validation_log(success=success, errors=errors, min_locations=args.min_locations)
 
     if success:
         print("✅ ALLE SPEC-ANFORDERUNGEN ERFÜLLT!")

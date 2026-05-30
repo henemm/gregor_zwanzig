@@ -484,7 +484,38 @@ def _new_workflow(name: str) -> dict:
         "fix_loop_iterations": 0,
         "phases_completed": [],
         "backlog_status": "open",
+        # Issue #465: Workflow-Typen + Schaetz-Feld (backward-kompatibel via .get)
+        "workflow_type": "feature",
+        "estimated_loc": None,
     }
+
+
+def _compute_phase_durations(transitions: list) -> dict:
+    """Berechnet Verweildauer pro Phase in Sekunden aus phase_transitions[].at.
+
+    Issue #465 (B1). Fail-soft: fehlerhafte Eintraege werden uebersprungen.
+    Letzter Eintrag laeuft bis datetime.now(). Phase-Key = ``to`` (Fallback ``from``).
+    """
+    durations: dict = {}
+    if not transitions:
+        return durations
+    for i, t in enumerate(transitions):
+        try:
+            phase_name = t.get("to") or t.get("from")
+            if not phase_name:
+                continue
+            t_at = datetime.fromisoformat(t["at"])
+            if i + 1 < len(transitions):
+                next_at = datetime.fromisoformat(transitions[i + 1]["at"])
+                seconds = int((next_at - t_at).total_seconds())
+            else:
+                seconds = int((datetime.now() - t_at).total_seconds())
+            if seconds < 0:
+                seconds = 0
+            durations[phase_name] = seconds
+        except Exception:
+            continue
+    return durations
 
 
 def _derive_backlog_status(phase: str) -> str:
@@ -549,10 +580,38 @@ def _write_workflow(name: str, data: dict, archived: bool = False) -> None:
 # --- CLI commands --------------------------------------------------------
 
 def cmd_start(args: list[str]) -> None:
-    if not args:
-        print("Usage: workflow.py start <name>", file=sys.stderr)
+    # Issue #465 (A1): --type Flag fuer Workflow-Typen.
+    valid_types = {"feature", "bugfix", "docs"}
+    wf_type = "feature"
+    positional: list[str] = []
+    i = 0
+    while i < len(args):
+        a = args[i]
+        if a == "--type":
+            if i + 1 >= len(args):
+                print("ERROR: --type requires a value (feature|bugfix|docs)", file=sys.stderr)
+                sys.exit(1)
+            wf_type = args[i + 1]
+            i += 2
+            continue
+        if a.startswith("--type="):
+            wf_type = a.split("=", 1)[1]
+            i += 1
+            continue
+        positional.append(a)
+        i += 1
+
+    if wf_type not in valid_types:
+        print(
+            f"ERROR: Invalid type '{wf_type}'. Valid: {', '.join(sorted(valid_types))}",
+            file=sys.stderr,
+        )
         sys.exit(1)
-    name = args[0]
+
+    if not positional:
+        print("Usage: workflow.py start <name> [--type feature|bugfix|docs]", file=sys.stderr)
+        sys.exit(1)
+    name = positional[0]
     if _workflow_file(name).exists() or _archive_file(name).exists():
         print(f"Workflow {name} already exists.", file=sys.stderr)
         sys.exit(1)
@@ -560,10 +619,46 @@ def cmd_start(args: list[str]) -> None:
     # workflows (protects sessions still active via the registry).
     swept = _auto_sweep()
     data = _new_workflow(name)
+    data["workflow_type"] = wf_type
+
+    # Issue #465 (A1): Phasen-Skip-Transitions je nach Typ vorbereiten.
+    if wf_type in ("bugfix", "docs"):
+        now = datetime.now().isoformat()
+        skip_pairs: list[tuple[str, str]] = []
+        if wf_type == "bugfix":
+            # Skip Phasen 1, 2, 3 -> landet in phase4_approved
+            skip_pairs = [
+                ("phase0_idle", "phase1_context"),
+                ("phase1_context", "phase2_analyse"),
+                ("phase2_analyse", "phase3_spec"),
+                ("phase3_spec", "phase4_approved"),
+            ]
+            data["current_phase"] = "phase4_approved"
+        else:  # docs
+            # Skip Phasen 1, 2 -> landet in phase3_spec; spaeter werden auch
+            # phase5_tdd_red, phase6b_adversary und phase7_validate uebersprungen
+            # (Doku-Workflows brauchen weder Tests noch Adversary noch Validate).
+            skip_pairs = [
+                ("phase0_idle", "phase1_context"),
+                ("phase1_context", "phase2_analyse"),
+                ("phase2_analyse", "phase3_spec"),
+                ("phase4_approved", "phase5_tdd_red"),
+                ("phase5_tdd_red", "phase6b_adversary"),
+                ("phase6b_adversary", "phase7_validate"),
+            ]
+            data["current_phase"] = "phase3_spec"
+        for frm, to in skip_pairs:
+            data["phase_transitions"].append({
+                "from": frm,
+                "to": to,
+                "at": now,
+                "trigger": "auto:type_skip",
+            })
+
     _atomic_write(_workflow_file(name), data)
     _set_active(name)
     _write_session_workflow(name)
-    print(f"Started workflow: {name}")
+    print(f"Started workflow: {name} (type: {wf_type})")
     if swept:
         print(f"  (Aufgeraeumt: {swept} alte/erledigte Workflow(s) archiviert)")
     print(
@@ -892,6 +987,9 @@ def cmd_write_log(args: list[str]) -> None:
         "scope_files_changed": len(affected_files),
         "scope_loc_delta": data.get("scope_loc_delta") or "+0",
         "outcome": outcome,
+        # Issue #465 (B1): Phasen-Dauern + Workflow-Typ ins Log
+        "phase_durations": _compute_phase_durations(transitions),
+        "workflow_type": data.get("workflow_type", "feature"),
     }
 
     date = datetime.now().strftime("%Y-%m-%d")
@@ -1141,6 +1239,126 @@ def cmd_clear_stale_lock(args: list[str]) -> None:
     )
 
 
+def cmd_stats(args: list[str]) -> None:
+    """Issue #465 (C): Aggregat ueber _log/*.yaml — Verdict-Rate, Fix-Loops.
+
+    Flags:
+      --json     Maschinenlesbare Ausgabe
+      --days=N   Filter: nur Logs der letzten N Tage (mtime)
+    """
+    import yaml as _yaml
+    log_dir = _get_workflows_root() / "_log"
+    as_json = "--json" in args
+
+    yamls = list(log_dir.glob("*.yaml")) if log_dir.exists() else []
+    for a in args:
+        if a.startswith("--days="):
+            try:
+                days = int(a.split("=", 1)[1])
+                from datetime import timedelta
+                cutoff = datetime.now() - timedelta(days=days)
+                yamls = [p for p in yamls if datetime.fromtimestamp(p.stat().st_mtime) >= cutoff]
+            except (ValueError, OSError):
+                pass
+            break
+
+    total = len(yamls)
+    verdicts: dict = {"VERIFIED": 0, "BROKEN": 0, "AMBIGUOUS": 0, "none": 0}
+    fix_loops: list = []
+
+    for p in yamls:
+        try:
+            d = _yaml.safe_load(p.read_text()) or {}
+        except Exception:
+            continue
+        v = str(d.get("adversary_verdict") or "none")
+        if v not in verdicts:
+            v = "none"
+        verdicts[v] += 1
+        fl = d.get("adversary_fix_loop_iterations")
+        if isinstance(fl, int):
+            fix_loops.append(fl)
+
+    verdict_rate = {k: round(v / total, 2) if total else 0.0 for k, v in verdicts.items()}
+    avg_fix = round(sum(fix_loops) / len(fix_loops), 1) if fix_loops else None
+
+    result = {
+        "total_workflows": total,
+        "verdicts": verdicts,
+        "verdict_rate": verdict_rate,
+        "avg_fix_loop_iterations": avg_fix,
+    }
+
+    if as_json:
+        import json as _json
+        print(_json.dumps(result, indent=2))
+    else:
+        print(f"Total workflows: {total}")
+        for k, v in verdicts.items():
+            pct = round(v / total * 100) if total else 0
+            print(f"  {k}: {v} ({pct}%)")
+        if avg_fix is not None:
+            print(f"Avg fix-loop iterations: {avg_fix}")
+
+
+def cmd_auto_advance_spec(args: list[str]) -> None:
+    """Issue #465 (D1): Advance Phase 1->2 oder 2->3 bei aktiviertem Flag.
+
+    Liest ``workflow.spec_auto_advance`` aus ``openspec.yaml``. Wenn das Flag
+    fehlt oder false ist: kein-op (Exit 0). Wenn die aktuelle Phase nicht in
+    {phase1_context, phase2_analyse} ist: kein-op.
+    """
+    try:
+        hooks_dir = Path(__file__).resolve().parent
+        if str(hooks_dir) not in sys.path:
+            sys.path.insert(0, str(hooks_dir))
+        from config_loader import get_spec_auto_advance
+        if not get_spec_auto_advance():
+            sys.exit(0)  # kein-op
+    except Exception:
+        sys.exit(0)  # fail-soft
+
+    data, name = _read_active()
+    current = data.get("current_phase", "phase0_idle")
+
+    advance_map = {
+        "phase1_context": "phase2_analyse",
+        "phase2_analyse": "phase3_spec",
+    }
+    if current not in advance_map:
+        sys.exit(0)  # kein-op
+
+    target = advance_map[current]
+    transitions = data.get("phase_transitions") or []
+    transitions.append({
+        "from": current,
+        "to": target,
+        "at": datetime.now().isoformat(),
+        "trigger": "auto:spec_advance",
+    })
+    data["phase_transitions"] = transitions
+    data["current_phase"] = target
+    data["last_updated"] = datetime.now().isoformat()
+    _save(data)
+    print(f"auto-advance-spec: {current} -> {target}")
+
+
+def cmd_set_type(args: list[str]) -> None:
+    """Issue #465 (A1): Setzt workflow_type im aktiven Workflow.
+
+    Aendert KEINE Phasen-Transitions — nur das Typ-Feld.
+    """
+    valid = {"feature", "bugfix", "docs"}
+    if not args or args[0] not in valid:
+        print(f"Usage: workflow.py set-type <{'|'.join(sorted(valid))}>", file=sys.stderr)
+        sys.exit(1)
+    data, name = _read_active()
+    data["workflow_type"] = args[0]
+    data["last_updated"] = datetime.now().isoformat()
+    _save(data)
+    print(f"workflow_type set to: {args[0]}")
+
+
 COMMANDS = {
     "start": cmd_start,
     "switch": cmd_switch,
@@ -1162,6 +1380,10 @@ COMMANDS = {
     "pause": cmd_pause,
     "reset": cmd_reset,
     "clear-stale-lock": cmd_clear_stale_lock,
+    # Issue #465: neue Subcommands
+    "stats": cmd_stats,
+    "auto-advance-spec": cmd_auto_advance_spec,
+    "set-type": cmd_set_type,
 }
 
 
