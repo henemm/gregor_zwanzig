@@ -3,7 +3,7 @@
 	// Kanal-Tabelle (Email ∞ / Telegram 8 / Signal 6 / SMS 0).
 	// Design: docs/design/epic_331_output_layout/screen-metrics-editor.jsx
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import { Eyebrow } from '$lib/components/ui/eyebrow/index.js';
+	import { Eyebrow } from '$lib/components/atoms';
 
 	interface Props {
 		open: boolean;

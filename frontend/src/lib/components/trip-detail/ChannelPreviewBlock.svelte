@@ -5,7 +5,7 @@
 	// Auf schmalen Viewports (<900px): Kanal-Dropdown + 1 Karte statt 4er-Grid.
 	// Design: docs/design/epic_331_output_layout/screen-metrics-editor.jsx (Z. 555-650)
 	import * as Card from '$lib/components/ui/card/index.js';
-	import { Eyebrow } from '$lib/components/ui/eyebrow/index.js';
+	import { Eyebrow } from '$lib/components/atoms';
 	import { Select } from '$lib/components/ui/select';
 	import { CHANNEL_COL_BUDGET, type MetricEntry } from './metricsEditor.ts';
 	import ChannelPreviewCard from './ChannelPreviewCard.svelte';

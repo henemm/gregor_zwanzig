@@ -15,7 +15,7 @@
 	// Issue #435 bringt das echte 4-Optionen-Datenmodell.
 
 	import { getContext, onMount } from 'svelte';
-	import { Eyebrow } from '$lib/components/ui/eyebrow';
+	import { Eyebrow } from '$lib/components/atoms';
 	import { Field } from '$lib/components/molecules';
 	import { Select } from '$lib/components/ui/select';
 	import { api } from '$lib/api';

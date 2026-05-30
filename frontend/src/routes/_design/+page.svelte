@@ -1,22 +1,14 @@
 <script lang="ts">
-	import { Btn } from '$lib/components/ui/btn';
+	import { Btn, Dot, ElevSparkline, Eyebrow, Input, Pill, Segmented, TopoBg, WIcon } from '$lib/components/atoms';
 	import { GCard } from '$lib/components/ui/g-card';
-	import { Pill } from '$lib/components/ui/pill';
-	import { Eyebrow } from '$lib/components/ui/eyebrow';
-	import { Dot } from '$lib/components/ui/dot';
-	import { TopoBg } from '$lib/components/ui/topo';
-	import { ElevSparkline } from '$lib/components/ui/elev-sparkline';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import { profileSignature } from '$lib/utils/profileSignature';
 	import type { ActivityProfile } from '$lib/types';
 
 	import { Badge } from '$lib/components/ui/badge';
 	import { Checkbox } from '$lib/components/ui/checkbox';
-	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import { Select } from '$lib/components/ui/select';
-	import Segmented from '$lib/components/ui/segmented';
-	import { WIcon } from '$lib/components/ui/wicon';
 	import Wordmark from '$lib/components/ui/wordmark/Wordmark.svelte';
 	import BrandWordmark from '$lib/brand/BrandWordmark.svelte';
 	import * as Card from '$lib/components/ui/card/index.js';

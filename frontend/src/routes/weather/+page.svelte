@@ -1,9 +1,8 @@
 <script lang="ts">
 	import type { Location, ForecastResponse } from '$lib/types.js';
 	import { api } from '$lib/api.js';
-	import { Btn } from '$lib/components/ui/btn/index.js';
+	import { Btn, WIcon } from '$lib/components/atoms';
 	import * as Table from '$lib/components/ui/table/index.js';
-	import { WIcon } from '$lib/components/ui/wicon/index.js';
 	import { wmoToWIconKind, degToCardinal } from '$lib/utils/weatherUtils.js';
 	import { Select } from '$lib/components/ui/select';
 

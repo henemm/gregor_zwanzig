@@ -5,7 +5,7 @@
 	//              gefiltert per horizonsMap[id][day]. CSS-Grid stapelt < 1100 px.
 	// Spec: docs/specs/modules/epic_138_174_178_metriken_ui.md §5
 	//       docs/specs/modules/issue_343_horizon_chip_ui.md §4
-	import { Eyebrow } from '$lib/components/ui/eyebrow/index.js';
+	import { Eyebrow } from '$lib/components/atoms';
 	import type { Horizons, MetricEntry } from '$lib/types';
 	import { HORIZONS_ALL } from '$lib/types';
 

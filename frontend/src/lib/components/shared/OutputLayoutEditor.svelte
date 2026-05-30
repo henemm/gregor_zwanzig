@@ -9,8 +9,7 @@
 	//
 	// SMS-Sonderzweig: statt Bucket-Editor eine flache priorisierte Liste mit
 	// 140-Zeichen-Budget-Anzeige (Spec §6 / AC-9).
-	import { Btn } from '$lib/components/ui/btn/index.js';
-	import { Eyebrow } from '$lib/components/ui/eyebrow/index.js';
+	import { Btn, Eyebrow } from '$lib/components/atoms';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import BucketSection from '$lib/components/trip-detail/BucketSection.svelte';
 	import BucketSectionOff from '$lib/components/trip-detail/BucketSectionOff.svelte';

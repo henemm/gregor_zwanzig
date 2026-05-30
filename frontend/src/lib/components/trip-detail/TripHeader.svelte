@@ -4,8 +4,7 @@
 	//
 	// Zweispaltig: Links Breadcrumb + H1 + Statuszeile + Meta. Rechts 3 Buttons.
 	// Pause/Archive-Logik ist in +page.svelte als Danger-Zone gewandert.
-	import { Btn } from '$lib/components/ui/btn/index.js';
-	import { Eyebrow } from '$lib/components/ui/eyebrow';
+	import { Btn, Eyebrow } from '$lib/components/atoms';
 	import TripStatusBadge from './TripStatusBadge.svelte';
 	import { formatDateRange, getDaysLabel } from '$lib/utils/tripHero';
 	import { computeTripStats } from '$lib/utils/tripStats';

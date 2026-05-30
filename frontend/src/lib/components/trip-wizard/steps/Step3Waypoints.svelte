@@ -19,8 +19,7 @@
 	// Safari/Factory: benannte Handler (siehe StageRow.svelte als Vorbild).
 
 	import { getContext } from 'svelte';
-	import { Pill } from '$lib/components/ui/pill';
-	import { Eyebrow } from '$lib/components/ui/eyebrow';
+	import { Eyebrow, Pill } from '$lib/components/atoms';
 	import type { Stage } from '$lib/types';
 	import type { WizardState } from '../wizardState.svelte';
 	import { formatStageNumber, isPauseStage } from '../wizardHelpers.ts';

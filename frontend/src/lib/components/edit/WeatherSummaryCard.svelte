@@ -8,8 +8,7 @@
 	// den einzigen Bearbeitungs-Ort: Tour-Detail → Tab „Wetter-Briefing"
 	// (/trips/{id}#weather). KEINE bearbeitbaren Toggles (AP-013).
 	import { goto } from '$app/navigation';
-	import { Btn } from '$lib/components/ui/btn/index.js';
-	import { Eyebrow } from '$lib/components/ui/eyebrow/index.js';
+	import { Btn, Eyebrow } from '$lib/components/atoms';
 	import { summarizeTripWeather, type DisplayConfigLike } from './weatherSummary.js';
 
 	interface Props {

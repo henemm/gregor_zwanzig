@@ -9,8 +9,7 @@
 	import type { Trip, MetricPreset } from '$lib/types';
 	import MSwitch from '$lib/components/mobile/MSwitch.svelte';
 	import MIcon from '$lib/components/mobile/MIcon.svelte';
-	import { Btn } from '$lib/components/ui/btn/index.js';
-	import { Eyebrow } from '$lib/components/ui/eyebrow/index.js';
+	import { Btn, Eyebrow } from '$lib/components/atoms';
 	import {
 		CATEGORY_ORDER, CATEGORY_LABELS,
 		type Buckets, type MetricEntry, type MetricCatalog,

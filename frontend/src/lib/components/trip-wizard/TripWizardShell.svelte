@@ -14,9 +14,7 @@
 
 	import { getContext } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { Btn } from '$lib/components/ui/btn';
-	import { Eyebrow } from '$lib/components/ui/eyebrow';
-	import { TopoBg } from '$lib/components/ui/topo';
+	import { Btn, Eyebrow, TopoBg } from '$lib/components/atoms';
 	import type { WizardState } from './wizardState.svelte';
 	import Stepper from './Stepper.svelte';
 	import Step1Profile from './steps/Step1Profile.svelte';

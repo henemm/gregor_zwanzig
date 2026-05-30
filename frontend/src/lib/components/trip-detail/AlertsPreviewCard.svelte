@@ -4,8 +4,7 @@
 
 	import type { Trip, AlertRule } from '$lib/types';
 	import { GCard } from '$lib/components/ui/g-card';
-	import { Eyebrow } from '$lib/components/ui/eyebrow';
-	import { Pill } from '$lib/components/ui/pill';
+	import { Eyebrow, Pill } from '$lib/components/atoms';
 	import {
 		ALERT_METRIC_LABELS,
 		ALERT_SEVERITY_TONE,

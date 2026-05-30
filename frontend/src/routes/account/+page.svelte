@@ -2,7 +2,7 @@
 	import * as Card from '$lib/components/ui/card/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
-	import { Btn } from '$lib/components/ui/btn/index.js';
+	import { Btn } from '$lib/components/atoms';
 	import { api } from '$lib/api.js';
 	import { onMount } from 'svelte';
 	import PencilIcon from '@lucide/svelte/icons/pencil';

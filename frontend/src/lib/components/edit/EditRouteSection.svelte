@@ -1,8 +1,7 @@
 <script lang="ts">
 	import type { Stage } from '$lib/types.js';
 	import { uploadGpx } from '$lib/api.js';
-	import { Btn } from '$lib/components/ui/btn/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
+	import { Btn, Input } from '$lib/components/atoms';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { naturalSort } from '$lib/utils/naturalSort.js';
 	import UploadIcon from '@lucide/svelte/icons/upload';

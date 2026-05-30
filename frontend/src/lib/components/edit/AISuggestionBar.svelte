@@ -6,7 +6,7 @@
 	// Zeigt Infos zum ersten Vorschlag + zwei Buttons (Uebernehmen / Verwerfen).
 	// Nach Bestaetigung/Verwerfung verschwindet die Bar reaktiv (hasSuggested → false).
 
-	import { Btn } from '$lib/components/ui/btn';
+	import { Btn } from '$lib/components/atoms';
 	import { computeArrivalTimes } from '$lib/utils/naismith';
 	import type { Stage } from '$lib/types';
 

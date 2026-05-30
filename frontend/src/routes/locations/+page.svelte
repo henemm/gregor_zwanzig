@@ -1,8 +1,7 @@
 <script lang="ts">
 	import type { Location } from '$lib/types.js';
 	import { api } from '$lib/api.js';
-	import { Btn } from '$lib/components/ui/btn/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
+	import { Btn, Input } from '$lib/components/atoms';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';

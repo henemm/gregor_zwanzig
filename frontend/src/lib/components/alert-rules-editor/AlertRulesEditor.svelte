@@ -12,7 +12,7 @@
 	import type { AlertRule } from '$lib/types';
 	import AlertRuleRow from './AlertRuleRow.svelte';
 	import { newDefaultRule } from './alertRuleDefaults';
-	import { Btn } from '$lib/components/ui/btn';
+	import { Btn } from '$lib/components/atoms';
 
 	let { rules = $bindable<AlertRule[]>([]) }: { rules: AlertRule[] } = $props();
 

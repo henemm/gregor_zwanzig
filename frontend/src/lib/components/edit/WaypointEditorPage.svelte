@@ -15,7 +15,7 @@
 	import ProfileEditor from '$lib/components/trip-detail/waypoints/ProfileEditor.svelte';
 	import WaypointCard from '$lib/components/trip-detail/waypoints/WaypointCard.svelte';
 	import PauseStageView from '$lib/components/trip-detail/waypoints/PauseStageView.svelte';
-	import { Btn } from '$lib/components/ui/btn';
+	import { Btn } from '$lib/components/atoms';
 	import StageNavDropdown from './StageNavDropdown.svelte';
 	import AISuggestionBar from './AISuggestionBar.svelte';
 	import { isPauseStage } from '$lib/components/trip-wizard/wizardHelpers';

@@ -5,7 +5,7 @@
 	// Zeigt die aktive Etappe als <Select>-Dropdown flankiert von Prev/Next-Pfeil-Buttons.
 	// Prev/Next disabled an den Listen-Grenzen.
 
-	import { Btn } from '$lib/components/ui/btn';
+	import { Btn } from '$lib/components/atoms';
 	import { Select } from '$lib/components/ui/select';
 	import ChevronLeftIcon from '@lucide/svelte/icons/chevron-left';
 	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';

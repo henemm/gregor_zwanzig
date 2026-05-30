@@ -1,8 +1,7 @@
 <script lang="ts">
 	import type { Subscription, Location, ActivityProfile } from '$lib/types.js';
 	import { ACTIVITY_PROFILE_OPTIONS } from '$lib/types.js';
-	import { Btn } from '$lib/components/ui/btn/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
+	import { Btn, Input } from '$lib/components/atoms';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { Select } from '$lib/components/ui/select';

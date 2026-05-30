@@ -6,7 +6,7 @@
 	//              den Metrik-Namen, eingerueckt auf Namens-Hoehe.
 	// Spec: docs/specs/modules/epic_138_174_178_metriken_ui.md §3
 	//       docs/specs/modules/issue_343_horizon_chip_ui.md §2
-	import { Pill } from '$lib/components/ui/pill/index.js';
+	import { Pill } from '$lib/components/atoms';
 	import { HorizonChip } from '$lib/components/ui/horizon-chip/index.js';
 	import type { Horizons, MetricEntry } from '$lib/types';
 

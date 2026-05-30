@@ -11,7 +11,7 @@
 	import CheckIcon from '@lucide/svelte/icons/check';
 	import XIcon from '@lucide/svelte/icons/x';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
-	import { Btn } from '$lib/components/ui/btn';
+	import { Btn } from '$lib/components/atoms';
 	import WaypointPin from './WaypointPin.svelte';
 	import type { Waypoint } from '$lib/types';
 

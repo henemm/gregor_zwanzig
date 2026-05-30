@@ -5,7 +5,7 @@
 	// Zeigt: Eyebrow "Pausentag", Stage-Name, Datum,
 	//        Standort aus Vorgaenger-Etappe, Weiter-nach aus Folge-Etappe.
 
-	import { Eyebrow } from '$lib/components/ui/eyebrow';
+	import { Eyebrow } from '$lib/components/atoms';
 	import type { Stage } from '$lib/types';
 
 	interface Props {

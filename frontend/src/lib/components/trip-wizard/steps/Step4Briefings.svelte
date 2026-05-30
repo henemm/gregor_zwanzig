@@ -15,7 +15,7 @@
 	// Save-Button kommt aus TripWizardShell, nicht hier (state.save()).
 
 	import { getContext } from 'svelte';
-	import { Eyebrow } from '$lib/components/ui/eyebrow';
+	import { Eyebrow } from '$lib/components/atoms';
 	import { GCard } from '$lib/components/ui/g-card';
 	import type { WizardState, BriefingConfig } from '../wizardState.svelte';
 	import ChannelToggle from './ChannelToggle.svelte';

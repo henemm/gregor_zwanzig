@@ -2,7 +2,7 @@
 	// Epic #138 Issue #174 — Strukturierte Kategorie-Gruppe für WeatherMetricsTab.
 	// Spec: docs/specs/modules/epic_138_174_178_metriken_ui.md §2
 	import type { Snippet } from 'svelte';
-	import { Eyebrow } from '$lib/components/ui/eyebrow/index.js';
+	import { Eyebrow } from '$lib/components/atoms';
 
 	interface Props {
 		slug: string;

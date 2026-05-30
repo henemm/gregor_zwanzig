@@ -8,9 +8,7 @@
 	import { api } from '$lib/api.js';
 	import type { Trip, MetricPreset, Horizons } from '$lib/types';
 	import { HORIZONS_ALL } from '$lib/types';
-	import { Pill } from '$lib/components/ui/pill/index.js';
-	import { Eyebrow } from '$lib/components/ui/eyebrow/index.js';
-	import { Btn } from '$lib/components/ui/btn/index.js';
+	import { Btn, Eyebrow, Pill } from '$lib/components/atoms';
 	import PresetRow from './PresetRow.svelte';
 	import SavePresetDialog from './SavePresetDialog.svelte';
 	import AboutOutputLayout from './AboutOutputLayout.svelte';

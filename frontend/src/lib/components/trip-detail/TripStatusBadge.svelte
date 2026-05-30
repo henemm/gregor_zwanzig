@@ -1,7 +1,7 @@
 <script lang="ts">
 	// Spec: docs/specs/modules/epic_135_step2_trip_detail_actions.md (§5)
 	// Thin-Wrapper um Pill mit Tone-Mapping und deutschem Label pro Status.
-	import Pill from '$lib/components/ui/pill/Pill.svelte';
+	import { Pill } from '$lib/components/atoms';
 	import { deriveTripStatus, type TripStatus } from '$lib/utils/tripStatus';
 	import type { Trip } from '$lib/types';
 

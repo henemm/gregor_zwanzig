@@ -123,9 +123,16 @@ def test_ac3_advanced_toggle_imports_btn():
     MUSS ROT sein: Btn-Import ist noch nicht vorhanden.
     """
     content = COMPONENT.read_text()
-    assert "from '$lib/components/ui/btn" in content or 'from "$lib/components/ui/btn' in content, (
+    # Akzeptiert sowohl atoms/-Barrel (bevorzugt seit #470) als auch alten ui/-Pfad
+    has_btn = (
+        "from '$lib/components/atoms'" in content
+        or 'from "$lib/components/atoms"' in content
+        or "from '$lib/components/ui/btn" in content
+        or 'from "$lib/components/ui/btn' in content
+    )
+    assert has_btn, (
         "EditReportConfigSection.svelte importiert Btn noch nicht. "
-        "Import muss für den Ghost-Toggle-Button ergänzt werden (Issue #299 AC-3)."
+        "Import muss aus $lib/components/atoms oder $lib/components/ui/btn kommen."
     )
 
 

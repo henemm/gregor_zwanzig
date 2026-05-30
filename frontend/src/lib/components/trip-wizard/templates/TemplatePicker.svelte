@@ -10,9 +10,7 @@
 
 	import { getContext } from 'svelte';
 	import { GCard } from '$lib/components/ui/g-card';
-	import { Btn } from '$lib/components/ui/btn';
-	import { Eyebrow } from '$lib/components/ui/eyebrow';
-	import { Pill } from '$lib/components/ui/pill';
+	import { Btn, Eyebrow, Pill } from '$lib/components/atoms';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { TRIP_TEMPLATES, type TripTemplate } from './tripTemplates.ts';
 	import type { WizardState } from '../wizardState.svelte.ts';

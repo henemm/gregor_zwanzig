@@ -17,7 +17,7 @@
 	// persistiert via `wizard.trendEnabled` → `report_config.multi_day_trend_evening`.
 
 	import { getContext } from 'svelte';
-	import { Eyebrow } from '$lib/components/ui/eyebrow';
+	import { Eyebrow } from '$lib/components/atoms';
 	import { GCard } from '$lib/components/ui/g-card';
 	import { maskPhone } from '../wizardHelpers';
 	import type { WizardState } from '../wizardState.svelte';

@@ -10,7 +10,7 @@
 	import { HORIZONS_ALL } from '$lib/types';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox';
-	import { Eyebrow } from '$lib/components/ui/eyebrow/index.js';
+	import { Eyebrow } from '$lib/components/atoms';
 	import { computeHorizonSummary, dotsForHorizons } from '$lib/utils/horizonHelpers';
 	import { buildBucketSummary, type Buckets } from './metricsEditor.ts';
 

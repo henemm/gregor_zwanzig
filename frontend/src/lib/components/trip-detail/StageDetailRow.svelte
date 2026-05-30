@@ -7,8 +7,7 @@
 
 	import type { Stage, StageWeatherResult } from '$lib/types';
 	import { computeHeaderStats } from '$lib/components/email-preview/headerStats';
-	import { Pill } from '$lib/components/ui/pill';
-	import { WIcon } from '$lib/components/ui/wicon/index.js';
+	import { Pill, WIcon } from '$lib/components/atoms';
 	import { wmoToWIconKind } from '$lib/utils/weatherUtils.js';
 
 	interface Props {

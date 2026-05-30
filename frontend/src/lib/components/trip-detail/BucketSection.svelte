@@ -3,7 +3,7 @@
 	// (secondary). Header (Eyebrow/Title/Count/Hint) + optional ChannelLimit-
 	// Markers + Signal-Trenner ab der 6. Spalte + Zeilen.
 	// Design: docs/design/epic_331_output_layout/screen-metrics-editor.jsx
-	import { Eyebrow } from '$lib/components/ui/eyebrow/index.js';
+	import { Eyebrow } from '$lib/components/atoms';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import ActiveMetricRow from './ActiveMetricRow.svelte';
 	import { CHANNEL_COL_BUDGET, type MetricEntry } from './metricsEditor.ts';

@@ -4,8 +4,7 @@
 	//
 	// Eyebrow + Titel + Liste aus {label, meta?, state?} + Aktions-Link.
 	// Tokens ausschliesslich `var(--g-*)` — keine Inline-Hex, keine Magic-Pixel.
-	import { Eyebrow } from '$lib/components/ui/eyebrow';
-	import { Dot } from '$lib/components/ui/dot';
+	import { Dot, Eyebrow } from '$lib/components/atoms';
 
 	export type DetailCardItemState = 'on' | 'off' | 'warn';
 

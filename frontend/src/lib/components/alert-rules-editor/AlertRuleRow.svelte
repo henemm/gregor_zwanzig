@@ -12,10 +12,9 @@
 	// F004-Guard: {#if info} um alles — unbekannte Metric crasht nicht.
 
 	import type { AlertRule, AlertMetric } from '$lib/types';
-	import { Pill } from '$lib/components/ui/pill';
+	import { Btn, Pill } from '$lib/components/atoms';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { Select } from '$lib/components/ui/select';
-	import { Btn } from '$lib/components/ui/btn';
 	import {
 		ALERT_METRIC_LABELS,
 		ALERT_SEVERITY_TONE,

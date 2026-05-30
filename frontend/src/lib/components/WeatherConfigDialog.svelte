@@ -1,10 +1,9 @@
 <script lang="ts">
 	import { api } from '$lib/api.js';
-	import { Btn } from '$lib/components/ui/btn/index.js';
+	import { Btn, Segmented } from '$lib/components/atoms';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { Select } from '$lib/components/ui/select';
-	import Segmented from '$lib/components/ui/segmented';
 	import { buildScoreMap } from '$lib/utils/scoreToggleHelpers.js';
 	import { CATEGORY_LABELS, CATEGORY_ORDER } from '$lib/components/trip-detail/metricsEditor';
 	// Issue #435 — Single Source of Truth in $lib/types.ts (Adversary F002).

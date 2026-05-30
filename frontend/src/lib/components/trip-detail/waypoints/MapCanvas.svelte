@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { buildMapPositions } from '$lib/utils/waypointEditor';
-	import { TopoBg } from '$lib/components/ui/topo';
+	import { TopoBg } from '$lib/components/atoms';
 	import WaypointPin from './WaypointPin.svelte';
 	import type { Stage } from '$lib/types';
 

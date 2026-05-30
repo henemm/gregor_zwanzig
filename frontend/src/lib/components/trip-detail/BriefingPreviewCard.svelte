@@ -6,7 +6,7 @@
 
 	import type { Trip } from '$lib/types';
 	import { GCard } from '$lib/components/ui/g-card';
-	import { Eyebrow } from '$lib/components/ui/eyebrow';
+	import { Eyebrow } from '$lib/components/atoms';
 	import { getReportSchedule } from '$lib/utils/rightColumn';
 
 	interface Props {

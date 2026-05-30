@@ -4,7 +4,7 @@
 	import { toHHMMSS } from '$lib/utils/time';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import * as Card from '$lib/components/ui/card/index.js';
-	import { Btn } from '$lib/components/ui/btn/index.js';
+	import { Btn } from '$lib/components/atoms';
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 
 	interface Props {

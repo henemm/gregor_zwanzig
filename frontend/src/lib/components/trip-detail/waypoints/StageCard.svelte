@@ -2,8 +2,7 @@
 	// StageCard — kompakte Etappen-Karte für Wegpunkt-Editor Sidebar.
 	// Spec: docs/specs/modules/epic_137_wegpunkt_editor.md
 
-	import { ElevSparkline } from '$lib/components/ui/elev-sparkline';
-	import { Pill } from '$lib/components/ui/pill';
+	import { ElevSparkline, Pill } from '$lib/components/atoms';
 	import { isPauseStage, formatStageNumber } from '$lib/components/trip-wizard/wizardHelpers';
 	import type { Stage } from '$lib/types';
 

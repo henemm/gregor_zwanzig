@@ -6,8 +6,7 @@
 
 	import type { Trip } from '$lib/types';
 	import { GCard } from '$lib/components/ui/g-card';
-	import { Eyebrow } from '$lib/components/ui/eyebrow';
-	import { Pill } from '$lib/components/ui/pill';
+	import { Eyebrow, Pill } from '$lib/components/atoms';
 	import { getPresetLabel, getActiveMetrics, prettyLabel } from '$lib/utils/rightColumn';
 
 	interface Props {

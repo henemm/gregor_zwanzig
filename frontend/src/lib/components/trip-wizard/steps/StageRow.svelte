@@ -21,7 +21,7 @@
 
 	import GripVertical from '@lucide/svelte/icons/grip-vertical';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
-	import { Pill } from '$lib/components/ui/pill';
+	import { Pill } from '$lib/components/atoms';
 	import type { Stage } from '$lib/types';
 	import { formatStageNumber, isPauseStage } from '../wizardHelpers.ts';
 
