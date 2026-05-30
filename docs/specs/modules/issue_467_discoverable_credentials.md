@@ -3,7 +3,7 @@ entity_id: issue_467_discoverable_credentials
 type: module
 created: 2026-05-30
 updated: 2026-05-30
-status: draft
+status: implemented
 version: "1.0"
 tags: [go, sveltekit, auth, webauthn, fido2, passkey, conditional-ui, discoverable-credentials, security]
 ---

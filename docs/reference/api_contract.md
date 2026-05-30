@@ -1229,13 +1229,82 @@ User login with username + password, returns session cookie.
 
 ### B) Passkey Authentication (WebAuthn/FIDO2)
 
-Issue #450 — Add WebAuthn (Face ID, Touch ID, Windows Hello, etc.) as alternative auth method alongside password. V1 is add-on (existing users keep passwords); discoverable credentials (login without username) are future-scope.
+**Issue #450** — Add WebAuthn (Face ID, Touch ID, Windows Hello, etc.) as alternative auth method alongside password. V1 is add-on (existing users keep passwords).
+
+**Issue #467** — Discoverable credentials (login without username) via Conditional UI. Browser shows Passkeys as native autofill suggestions on username field focus (`mediation: 'conditional'`).
 
 **Key Configuration:**
 - **RP-ID (Relying Party):** Prod `gregor20.henemm.com`, Staging `staging.gregor20.henemm.com` (isolated)
-- **Rate-Limit:** 30 requests/hour per IP (all 5 endpoints)
+- **Rate-Limit:** 30 requests/hour per IP (all 7 endpoints)
 - **Body-Size-Cap:** 64 KB (`http.MaxBytesReader`)
 - **Challenge-TTL:** 5 minutes (in-memory store with garbage collection)
+
+#### POST /api/auth/passkey/discoverable/begin
+
+Initiate discoverable passkey login (no username required, public endpoint). Browser shows registered passkeys as native autofill suggestions on username field focus.
+
+**Request Body:** `{}` (empty)
+
+**Response 200:**
+```json
+{
+  "mediation": "conditional",
+  "publicKey": {
+    "challenge": "<base64url-string>",
+    "timeout": 300000,
+    "rpId": "gregor20.henemm.com",
+    "userVerification": "preferred"
+  }
+}
+```
+
+**Key Difference from V1 Login:** Top-level includes `"mediation":"conditional"` (required for browser to show autofill picker). No `allowCredentials` array (browser discovers all passkeys for this RP-ID).
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 429 | `{"error":"rate_limit_exceeded"}` with `Retry-After` header | Too many requests from this IP |
+| 500 | `{"error":"begin_failed"}` | WebAuthn library error (rare) |
+
+#### POST /api/auth/passkey/discoverable/finish
+
+Complete discoverable passkey login. Browser provides `userHandle` from stored credential; backend looks up user by `userHandle`.
+
+**Request Body:**
+```json
+{
+  "id": "<base64url-credentialId>",
+  "rawId": "<base64url-raw>",
+  "response": {
+    "clientDataJSON": "<base64url-json>",
+    "authenticatorData": "<base64url-data>",
+    "signature": "<base64url-sig>",
+    "userHandle": "<base64url-userId>"
+  },
+  "type": "public-key"
+}
+```
+
+**Response 200:**
+```json
+{"id": "alice"}
+```
+
+**Side Effects:**
+- Sets `Set-Cookie: gz_session=<userId>.<timestamp>.<hmacSig>; HttpOnly; SameSite=Lax; MaxAge=86400; Secure`
+- Updates `last_used_at` timestamp on the used credential
+- Increments `sign_count` on the credential (cloning detection)
+- ChallengeStore entry is destroyed after successful `Take()` (replay protection)
+
+**Implementation Note:** Backend calls `DiscoverableUserHandler` callback with `userHandle` ([] byte) from response to load user by ID. User lookup fails if `userHandle` is empty or user does not exist.
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 401 | `{"error":"invalid_credentials"}` | Challenge invalid, expired (5 min), signature verification failed, user handle empty/invalid, or user not found |
+| 429 | `{"error":"rate_limit_exceeded"}` with `Retry-After` header | Too many requests from this IP |
 
 #### POST /api/auth/passkey/register/begin
 
@@ -1490,6 +1559,7 @@ type WebAuthnCredential struct {
 
 ## Changelog
 
+- 2026-05-30: Issue #467 — Passkey V3 Discoverable Credentials + Conditional UI: 2 new public endpoints (`POST /api/auth/passkey/discoverable/begin` and `/finish`) enable login without username. Browser shows registered passkeys as native autofill suggestions on username field focus via WebAuthn `mediation: 'conditional'`. Begin returns full assertion object with top-level `"mediation":"conditional"` flag. Finish accepts `userHandle` from authenticator and looks up user via `DiscoverableUserHandler` callback. Rate-limit 30/h per IP (same as V1). Frontend: `loginWithDiscoverablePasskey()` function in `passkey.ts` + `onMount` conditional UI init in login page with `autocomplete="username webauthn"` attribute. Tests: 6 mock-free roundtrip tests covering success path, empty userHandle, unknown user, challenge replay, and TTL expiry. See `docs/specs/modules/issue_467_discoverable_credentials.md`.
 - 2026-05-30: Issue #464 — Compare-E-Mail Observability-Endpoint `POST /api/_validator/compare-email-preview` (Tooling-API, nicht versionsstabil): Macht den Compare-HTML-Renderer von außen direkt aufrufbar für Validator-Observability. Go-Proxy + Python-Handler (validator.py). Request-Body: `{profile, time_window, target_date, winner_tags}`. Response: `{html: "..."}` mit gerendertem HTML. Stub-LocationResult mit score=85, keine echten Wetterdaten. AC-1/2/3 prüfbar per `curl | grep`. Siehe `docs/specs/modules/issue_464_compare_email_preview_validator.md`.
 - 2026-05-30: Issue #468 — AAGUID-Labels in der Passkey-Liste: GET `/api/auth/profile` Passkey-Einträge zeigen neu optionales Feld `authenticator_name` (z.B. "iCloud Keychain", "Windows Hello") basierend auf AAGUID-Mapping. Field omitempty bei Zero/Unknown-AAGUID. Frontend zeigt kombiniert `"{authenticator_name} · {label}"`. Siehe `docs/specs/modules/aaguid_labels.md`. Implementation: ~90 LoC (`aaguid.go`, `auth.go`, `account/+page.svelte`).
 - 2026-05-30: Issue #461 — Compare-Presets Daily Dispatch (Cronjob): New `POST /api/scheduler/compare-presets-daily` endpoint (section 17) triggered daily by Go scheduler at 06:00 UTC. Filters presets by `schedule='daily'`, runs Compare Engine, renders/sends emails via Resend, updates `letzter_versand` and `top_ort_letzter_versand` fields. Per-preset error isolation; BetterStack Heartbeat pinged only on `error_count==0` (Readiness Principle). Config field `HeartbeatComparePresets` added to Go config; Go scheduler job count increased from 5 to 6. Tests: 11 new comprehensive tests in `test_issue_461_compare_preset_dispatch.py`.

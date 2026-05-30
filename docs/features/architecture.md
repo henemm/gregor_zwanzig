@@ -1,6 +1,6 @@
 # Architektur – Gregor Zwanzig
 
-**Updated:** 2026-05-29 (Compare-Wizard Step 3 hinzugefügt)
+**Updated:** 2026-05-30 (Passkey V3 Discoverable Credentials hinzugefügt)
 
 ## Überblick
 Gregor Zwanzig ist ein verteiltes System mit separaten Backend (Go) und Frontend (SvelteKit):
@@ -190,7 +190,9 @@ HTML + Client-Side Interactivity
 
 **Auth Methods:**
 - **Username/Password:** `/api/auth/register` + `/api/auth/login` (traditional, bcrypt-hashed)
-- **Passkey/WebAuthn (Issue #450):** `/api/auth/passkey/register/begin|finish` (Face ID, Touch ID, Windows Hello, YubiKey), `/api/auth/passkey/login/begin|finish`, `/api/auth/passkey/credentials/{id}` (delete passkey)
+- **Passkey/WebAuthn (Issues #450, #467):** 
+  - V1 Identifier-First: `/api/auth/passkey/register/begin|finish` (Face ID, Touch ID, Windows Hello, YubiKey), `/api/auth/passkey/login/begin|finish`, `/api/auth/passkey/credentials/{id}` (delete)
+  - V3 Discoverable (login without username): `/api/auth/passkey/discoverable/begin|finish` (Conditional UI with native autofill picker)
 - **Google OAuth (Issue #425, feature-gated via `GZ_GOOGLE_CLIENT_ID`):** OAuth 2.0 Authorization Code flow
   - Init: GET `/api/auth/google/init` → redirect to Google consent
   - Callback: GET `/api/auth/google/callback?code=...&state=...` → create/lookup user, issue session
@@ -270,7 +272,8 @@ The frontend includes two configurable wizard systems:
 *Authentication:*
 - `/api/auth/register`, `/api/auth/login`, `/api/auth/logout` — Password-based auth
 - `/api/auth/passkey/register/begin|finish` — WebAuthn passkey registration (Issue #450)
-- `/api/auth/passkey/login/begin|finish` — WebAuthn passkey login
+- `/api/auth/passkey/login/begin|finish` — WebAuthn passkey login (Identifier-First)
+- `/api/auth/passkey/discoverable/begin|finish` — WebAuthn passkey login (Conditional UI, login without username) (Issue #467)
 - `/api/auth/passkey/credentials/{id}` — Passkey management (delete)
 - `/api/auth/google/init|callback` — Google OAuth (Issue #425, feature-gated)
 - `/api/auth/magic-link`, `/api/auth/magic-link/verify` — Magic Link OTP (Issue #449)
