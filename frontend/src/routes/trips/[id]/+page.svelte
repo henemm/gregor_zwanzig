@@ -5,8 +5,7 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { TripHeader, TripTabs } from '$lib/components/trip-detail';
-	import { Btn } from '$lib/components/ui/btn/index.js';
-	import { Eyebrow } from '$lib/components/ui/eyebrow';
+	import { Btn, Eyebrow } from '$lib/components/atoms';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { deriveTripStatus } from '$lib/utils/tripStatus';
 	import type { Trip } from '$lib/types';

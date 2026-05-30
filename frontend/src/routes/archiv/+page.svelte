@@ -10,10 +10,8 @@
 
 	import type { PageData } from './$types.js';
 	import type { Trip } from '$lib/types.js';
-	import Segmented from '$lib/components/ui/segmented/index.js';
-	import { Btn } from '$lib/components/ui/btn/index.js';
+	import { Segmented, Btn, Eyebrow } from '$lib/components/atoms';
 	import { Stat } from '$lib/components/molecules';
-	import { Eyebrow } from '$lib/components/ui/eyebrow/index.js';
 	import HistoryIcon from '@lucide/svelte/icons/history';
 	import CopyIcon from '@lucide/svelte/icons/copy';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';

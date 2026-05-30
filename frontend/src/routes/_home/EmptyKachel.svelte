@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { EmptyState } from '$lib/components/ui/empty-state/index.js';
-	import { Btn } from '$lib/components/ui/btn/index.js';
+	import { Btn } from '$lib/components/atoms';
 </script>
 
 <EmptyState title="Willkommen bei Gregor 20" description="Leg deinen ersten Trip an oder starte einen Orts-Vergleich.">
