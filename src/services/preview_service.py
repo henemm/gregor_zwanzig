@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 from datetime import date
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from app.config import Settings
@@ -22,6 +23,10 @@ logger = logging.getLogger(__name__)
 
 
 VALID_REPORT_TYPES = ("morning", "evening")
+
+# Issue #483: Demo-Mode-Fixtures liegen in <repo>/fixtures/openmeteo/.
+# parents[2] = src/services/preview_service.py → src/services → src → <repo>.
+_FIXTURE_DIR = Path(__file__).resolve().parents[2] / "fixtures" / "openmeteo"
 
 
 class PreviewService:
@@ -65,8 +70,22 @@ class PreviewService:
             return s.date if isinstance(s.date, date) else date.fromisoformat(str(s.date))
         raise ValueError(f"Trip '{trip.id}' hat keine Stages")
 
-    def _build_report(self, trip: "Trip", target: date, report_type: str):
+    def _build_report(
+        self,
+        trip: "Trip",
+        target: date,
+        report_type: str,
+        demo: bool = False,
+    ):
         """Gemeinsame Pipeline: segments → weather → format_email → TripReport.
+
+        Args:
+            trip: Trip-Modell
+            target: Ziel-Datum
+            report_type: 'morning' | 'evening'
+            demo: Wenn True (Issue #483), wird der FixtureProvider statt der
+                Live-OpenMeteo-API genutzt. Damit ist die Vorschau immer
+                verfügbar — unabhängig von API-Limit oder Datum.
 
         Returns: (report, segment_weather, stage_name, trip_tz) — segment_weather,
         stage_name und trip_tz werden von render_sms_preview wiederverwendet
@@ -80,7 +99,12 @@ class PreviewService:
                 f"Keine Stage am {target.isoformat()} im Trip '{trip.id}'"
             )
 
-        segment_weather = scheduler._fetch_weather(segments)
+        if demo:
+            from providers.fixture import FixtureProvider
+            provider = FixtureProvider(str(_FIXTURE_DIR))
+        else:
+            provider = None
+        segment_weather = scheduler._fetch_weather(segments, provider=provider)
         if not segment_weather:
             raise RuntimeError(
                 f"Wetterdaten nicht verfügbar für Trip '{trip.id}' am {target.isoformat()}"
@@ -115,13 +139,16 @@ class PreviewService:
         user_id: str = "default",
         report_type: str = "morning",
         target_date: str | None = None,
+        demo: bool = False,
     ) -> str:
         """Rendert die Email-HTML-Vorschau identisch zur echten Mail."""
         if report_type not in VALID_REPORT_TYPES:
             raise ValueError(f"Ungültiger report_type '{report_type}'")
         trip = self._load_trip(trip_id, user_id)
         target = self._resolve_target_date(trip, target_date)
-        report, _segments, _stage_name, _trip_tz = self._build_report(trip, target, report_type)
+        report, _segments, _stage_name, _trip_tz = self._build_report(
+            trip, target, report_type, demo=demo,
+        )
         return report.email_html
 
     def render_sms_preview(
@@ -131,6 +158,7 @@ class PreviewService:
         user_id: str = "default",
         report_type: str = "morning",
         target_date: str | None = None,
+        demo: bool = False,
     ) -> tuple[str, str]:
         """Rendert die SMS-Vorschau via echter Spec-Token-Pipeline (Issue #188).
 
@@ -142,7 +170,7 @@ class PreviewService:
         trip = self._load_trip(trip_id, user_id)
         target = self._resolve_target_date(trip, target_date)
         report, segment_weather, stage_name, trip_tz = self._build_report(
-            trip, target, report_type
+            trip, target, report_type, demo=demo,
         )
 
         from src.formatters.sms_trip import SMSTripFormatter
@@ -166,6 +194,7 @@ class PreviewService:
         user_id: str = "default",
         report_type: str = "morning",
         target_date: str | None = None,
+        demo: bool = False,
     ) -> tuple[str, str]:
         """Rendert die Signal-Vorschau via #360-Narrow-Renderer (kein Versand).
 
@@ -176,7 +205,9 @@ class PreviewService:
             raise ValueError(f"Ungültiger report_type '{report_type}'")
         trip = self._load_trip(trip_id, user_id)
         target = self._resolve_target_date(trip, target_date)
-        report, _segments, _stage_name, _trip_tz = self._build_report(trip, target, report_type)
+        report, _segments, _stage_name, _trip_tz = self._build_report(
+            trip, target, report_type, demo=demo,
+        )
         return report.email_subject, (report.signal_text or "")
 
     def render_telegram_preview(
@@ -186,6 +217,7 @@ class PreviewService:
         user_id: str = "default",
         report_type: str = "morning",
         target_date: str | None = None,
+        demo: bool = False,
     ) -> tuple[str, str]:
         """Rendert die Telegram-Vorschau via #360-Narrow-Renderer (kein Versand).
 
@@ -195,5 +227,7 @@ class PreviewService:
             raise ValueError(f"Ungültiger report_type '{report_type}'")
         trip = self._load_trip(trip_id, user_id)
         target = self._resolve_target_date(trip, target_date)
-        report, _segments, _stage_name, _trip_tz = self._build_report(trip, target, report_type)
+        report, _segments, _stage_name, _trip_tz = self._build_report(
+            trip, target, report_type, demo=demo,
+        )
         return report.email_subject, (report.telegram_text or "")

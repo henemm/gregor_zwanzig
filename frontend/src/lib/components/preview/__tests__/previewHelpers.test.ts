@@ -251,3 +251,39 @@ for (const [name, src] of [
 		assert.match(src, /AbortError/);
 	});
 }
+
+// ============================================================================
+// Issue #483: Demo-Modus — buildPreviewUrl mit demo-Parameter
+// TDD RED: Diese Tests MÜSSEN FEHLSCHLAGEN bis die Implementierung existiert.
+// buildPreviewUrl akzeptiert noch keinen 5. Parameter, demo=1 fehlt in der URL.
+// ============================================================================
+
+test('#483 AC-4: buildPreviewUrl mit demo=true hängt demo=1 an die URL', () => {
+	const url = buildPreviewUrl('email', 'gr20', 'morning', undefined, true);
+	assert.ok(
+		url.includes('demo=1'),
+		`URL muss demo=1 enthalten, war: ${url}`
+	);
+});
+
+test('#483 AC-4: buildPreviewUrl mit demo=true und date enthält beide Parameter', () => {
+	const url = buildPreviewUrl('sms', 'gr20', 'evening', '2026-06-10', true);
+	assert.ok(url.includes('demo=1'), `URL muss demo=1 enthalten, war: ${url}`);
+	assert.ok(url.includes('date=2026-06-10'), `URL muss date enthalten, war: ${url}`);
+});
+
+test('#483 AC-5: buildPreviewUrl ohne demo enthält keinen demo-Parameter', () => {
+	const url = buildPreviewUrl('email', 'gr20', 'morning');
+	assert.ok(
+		!url.includes('demo'),
+		`URL darf kein demo enthalten wenn nicht übergeben, war: ${url}`
+	);
+});
+
+test('#483 AC-5: buildPreviewUrl mit demo=false hängt keinen demo-Param an', () => {
+	const url = buildPreviewUrl('email', 'gr20', 'morning', undefined, false);
+	assert.ok(
+		!url.includes('demo'),
+		`URL darf kein demo enthalten bei demo=false, war: ${url}`
+	);
+});

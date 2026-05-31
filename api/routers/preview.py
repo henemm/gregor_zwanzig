@@ -31,13 +31,14 @@ async def preview_email(
     user_id: str = Query(..., description="Session-User (vom Go-Proxy injiziert)"),
     type: str = Query("morning", description="morning | evening"),
     date: str | None = Query(None, description="ISO-Datum, default: nächste Stage"),
+    demo: bool = Query(False, description="Issue #483: Fixture-Daten statt Live-API"),
 ):
     if type not in VALID_REPORT_TYPES:
         raise HTTPException(status_code=422, detail=f"Ungültiger type '{type}'")
     service = _build_service(user_id)
     try:
         html = service.render_email_preview(
-            trip_id, user_id=user_id, report_type=type, target_date=date,
+            trip_id, user_id=user_id, report_type=type, target_date=date, demo=demo,
         )
         return HTMLResponse(content=html)
     except FileNotFoundError as e:
@@ -56,13 +57,14 @@ async def preview_sms(
     user_id: str = Query(...),
     type: str = Query("morning"),
     date: str | None = Query(None),
+    demo: bool = Query(False, description="Issue #483: Fixture-Daten statt Live-API"),
 ):
     if type not in VALID_REPORT_TYPES:
         raise HTTPException(status_code=422, detail=f"Ungültiger type '{type}'")
     service = _build_service(user_id)
     try:
         subject, token_line = service.render_sms_preview(
-            trip_id, user_id=user_id, report_type=type, target_date=date,
+            trip_id, user_id=user_id, report_type=type, target_date=date, demo=demo,
         )
         return {
             "subject": subject,
@@ -97,13 +99,14 @@ async def preview_signal(
     user_id: str = Query(...),
     type: str = Query("morning"),
     date: str | None = Query(None),
+    demo: bool = Query(False, description="Issue #483: Fixture-Daten statt Live-API"),
 ):
     if type not in VALID_REPORT_TYPES:
         raise HTTPException(status_code=422, detail=f"Ungültiger type '{type}'")
     service = _build_service(user_id)
     try:
         subject, body = service.render_signal_preview(
-            trip_id, user_id=user_id, report_type=type, target_date=date,
+            trip_id, user_id=user_id, report_type=type, target_date=date, demo=demo,
         )
         return _narrow_payload(subject, body)
     except FileNotFoundError as e:
@@ -122,13 +125,14 @@ async def preview_telegram(
     user_id: str = Query(...),
     type: str = Query("morning"),
     date: str | None = Query(None),
+    demo: bool = Query(False, description="Issue #483: Fixture-Daten statt Live-API"),
 ):
     if type not in VALID_REPORT_TYPES:
         raise HTTPException(status_code=422, detail=f"Ungültiger type '{type}'")
     service = _build_service(user_id)
     try:
         subject, body = service.render_telegram_preview(
-            trip_id, user_id=user_id, report_type=type, target_date=date,
+            trip_id, user_id=user_id, report_type=type, target_date=date, demo=demo,
         )
         return _narrow_payload(subject, body)
     except FileNotFoundError as e:

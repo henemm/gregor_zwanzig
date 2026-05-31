@@ -283,3 +283,98 @@ class TestT5SmsTokenPipeline:
             assert data["char_count"] == len(data["token_line"]), (
                 f"char_count {data['char_count']} ≠ len(token_line) {len(data['token_line'])}"
             )
+
+
+# ---------- T6: Demo-Modus (Issue #483) ------------------------------------
+
+
+class TestT6DemoMode:
+    """TDD RED: Issue #483 — Demo-Modus via ?demo=1.
+
+    Spec: docs/specs/modules/issue_483_demo_mode_preview.md
+
+    Diese Tests MÜSSEN FEHLSCHLAGEN bis die Implementierung existiert:
+    - render_email_preview/render_sms_preview akzeptieren noch kein `demo`-Kwarg
+    - _fetch_weather akzeptiert noch keinen `provider`-Parameter
+    """
+
+    def test_ac3_render_email_preview_accepts_demo_flag(self, service):
+        """AC-3: render_email_preview muss `demo=True` akzeptieren und HTML zurückgeben.
+
+        ERWARTET FEHLSCHLAG: TypeError — `demo` ist noch kein gültiger Parameter.
+        """
+        html = service.render_email_preview(
+            "gr221-mallorca",
+            user_id="default",
+            report_type="morning",
+            demo=True,
+        )
+        assert isinstance(html, str), "render_email_preview muss HTML-String zurückgeben"
+        assert len(html) > 100, f"HTML zu kurz: {len(html)} Zeichen"
+
+    def test_ac3_render_sms_preview_accepts_demo_flag(self, service):
+        """AC-3: render_sms_preview muss `demo=True` akzeptieren.
+
+        ERWARTET FEHLSCHLAG: TypeError — `demo` ist noch kein gültiger Parameter.
+        """
+        subject, token_line = service.render_sms_preview(
+            "gr221-mallorca",
+            user_id="default",
+            report_type="morning",
+            demo=True,
+        )
+        assert isinstance(subject, str)
+        assert isinstance(token_line, str)
+
+    def test_ac3_fetch_weather_accepts_provider_injection(self, service):
+        """AC-3: _fetch_weather muss einen optionalen `provider`-Parameter akzeptieren.
+
+        ERWARTET FEHLSCHLAG: TypeError — `provider` ist noch kein gültiger Parameter.
+        """
+        from providers.fixture import FixtureProvider
+        from pathlib import Path
+        fixture_dir = str(Path(__file__).resolve().parents[2] / "fixtures" / "openmeteo")
+        fixture_provider = FixtureProvider(fixture_dir)
+
+        from services.trip_report_scheduler import TripReportSchedulerService
+        from app.config import Settings
+        scheduler = TripReportSchedulerService(Settings())
+        trip = service._load_trip("gr221-mallorca", user_id="default")
+        from datetime import date
+        target = date.today()
+        segments = scheduler._convert_trip_to_segments(trip, target)
+        if not segments:
+            pytest.skip("Keine Segmente für heute — Trip in der Vergangenheit")
+
+        # Dies muss fehlschlagen bis provider-Param implementiert ist:
+        result = scheduler._fetch_weather(segments, provider=fixture_provider)
+        assert isinstance(result, list), "_fetch_weather mit provider muss Liste zurückgeben"
+        assert len(result) > 0
+
+    def test_ac3_demo_endpoint_email_returns_200(self, client):
+        """AC-3: GET /api/preview/{trip_id}/email?demo=1 muss immer HTTP 200 zurückgeben.
+
+        ERWARTET FEHLSCHLAG: Endpoint verarbeitet demo-Param noch nicht —
+        Service wirft TypeError bei demo=True.
+        """
+        resp = client.get(
+            "/api/preview/gr221-mallorca/email",
+            params={"type": "morning", "user_id": "default", "demo": "1"},
+        )
+        assert resp.status_code == 200, (
+            f"Demo-Endpoint muss 200 zurückgeben, war: {resp.status_code}\n{resp.text[:300]}"
+        )
+        assert len(resp.text) > 100, "Demo-HTML darf nicht leer sein"
+
+    def test_ac3_demo_endpoint_sms_returns_200(self, client):
+        """AC-3: GET /api/preview/{trip_id}/sms?demo=1 muss immer HTTP 200 zurückgeben."""
+        resp = client.get(
+            "/api/preview/gr221-mallorca/sms",
+            params={"type": "morning", "user_id": "default", "demo": "1"},
+        )
+        assert resp.status_code == 200, (
+            f"Demo-SMS-Endpoint muss 200 zurückgeben, war: {resp.status_code}\n{resp.text[:300]}"
+        )
+        data = resp.json()
+        assert "token_line" in data
+        assert "char_count" in data

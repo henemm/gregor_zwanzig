@@ -82,6 +82,10 @@
 	// (z.B. hash-only navigation ohne Re-Mount).
 	let activeTab = $state<string>('overview');
 	let previewType = $state<ReportType>(defaultReportType());
+	// Issue #483: Vorschau-Tab startet im Demo-Modus (Fixture-Daten), damit
+	// die Vorschau auch dann zuverlässig funktioniert, wenn der Trip in der
+	// Vergangenheit liegt oder die OpenMeteo-API gerade nicht erreichbar ist.
+	let demoMode = $state(true);
 
 	$effect(() => {
 		activeTab = resolve(initialTab);
@@ -114,6 +118,19 @@
 					<BriefingsTab {trip} />
 				{:else if tab.value === 'preview' && trip}
 					<div class="preview-shell">
+						{#if demoMode}
+							<div class="demo-banner" role="status" data-testid="preview-demo-banner">
+								<span>Vorschau mit Beispieldaten.</span>
+								<button
+									type="button"
+									class="demo-banner-action"
+									onclick={() => (demoMode = false)}
+									data-testid="preview-demo-disable"
+								>
+									Echte Wetterdaten laden
+								</button>
+							</div>
+						{/if}
 						<div class="preview-controls" data-testid="preview-controls">
 							<label>
 								<input type="radio" bind:group={previewType} value="morning" /> Morgen
@@ -123,8 +140,8 @@
 							</label>
 						</div>
 						<div class="preview-grid">
-							<EmailIframe tripId={trip.id} type={previewType} />
-							<SmsPhoneFrame tripId={trip.id} type={previewType} />
+							<EmailIframe tripId={trip.id} type={previewType} demo={demoMode} />
+							<SmsPhoneFrame tripId={trip.id} type={previewType} demo={demoMode} />
 						</div>
 					</div>
 				{:else}
@@ -174,6 +191,32 @@
 		flex-direction: column;
 		gap: 1rem;
 		padding: 1rem;
+	}
+	.demo-banner {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		padding: 0.625rem 0.875rem;
+		background: var(--g-warning-soft, #fef3c7);
+		color: var(--g-ink, #1a1a18);
+		border: 1px solid var(--g-warning, #f59e0b);
+		border-radius: var(--g-r-2, 0.5rem);
+		font-size: 0.875rem;
+	}
+	.demo-banner-action {
+		flex-shrink: 0;
+		padding: 0.375rem 0.75rem;
+		background: var(--g-ink, #1a1a18);
+		color: var(--g-paper, #f6f4ee);
+		border: 0;
+		border-radius: var(--g-r-1, 0.375rem);
+		font-size: 0.8125rem;
+		font-weight: 500;
+		cursor: pointer;
+	}
+	.demo-banner-action:hover {
+		background: var(--g-ink-strong, #000);
 	}
 	.preview-controls {
 		display: flex;

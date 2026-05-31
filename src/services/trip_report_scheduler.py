@@ -715,7 +715,8 @@ class TripReportSchedulerService:
 
     def _fetch_weather(
         self,
-        segments: List[TripSegment]
+        segments: List[TripSegment],
+        provider=None,
     ) -> List[SegmentWeatherData]:
         """
         Fetch weather data for all segments.
@@ -724,6 +725,10 @@ class TripReportSchedulerService:
 
         Args:
             segments: List of TripSegment objects
+            provider: Optional WeatherProvider instance. When None (default),
+                the standard OpenMeteo provider is used. Injecting a
+                FixtureProvider here enables the Demo-Mode (Issue #483)
+                without any Live-API call.
 
         Returns:
             List of SegmentWeatherData objects
@@ -732,7 +737,9 @@ class TripReportSchedulerService:
         from services.segment_weather import SegmentWeatherService
 
         # OpenMeteo with automatic regional model selection (AROME, ICON-D2, ECMWF)
-        provider = get_provider("openmeteo")
+        # — unless caller injects an alternative provider (Issue #483: Demo-Mode).
+        if provider is None:
+            provider = get_provider("openmeteo")
         service = SegmentWeatherService(provider)
 
         weather_data = []

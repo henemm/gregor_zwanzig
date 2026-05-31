@@ -1,6 +1,8 @@
 
 # API Contract — Gregor Zwanzig
 
+**Updated:** 2026-05-31 (Issue #483 — Preview Endpoints mit Demo-Modus)
+
 ## 0) Konventionen
 - Zeit: ISO-8601 UTC (`Z`)
 - Einheiten im Feldnamen: `*_c`, `*_kmh`, `*_mmph`, `*_mm`, `*_pct`, `*_hpa`, `*_jkg`, `*_m`, `*_cm`
@@ -1558,8 +1560,109 @@ type WebAuthnCredential struct {
 
 ---
 
+## 20) Preview Endpoints (Issue #189, #483)
+
+Provides preview rendering of trip reports in Email, SMS, Signal, or Telegram formats. Supports both live weather and fixture-based demo mode.
+
+**Handler:** `api/routers/preview.py` | **Routing:** `cmd/server/main.go`
+
+### GET /api/preview/{trip_id}/email
+
+Render trip report preview in HTML format (Email).
+
+**Query Parameters:**
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| type | enum | no | Report type: `morning` or `evening` (default: `morning`) |
+| date | string | no | Target date ISO-8601 (default: today, format: `YYYY-MM-DD`) |
+| demo | boolean | no | Use fixture data instead of live weather (default: `false`, Issue #483) |
+
+**Response 200:**
+
+```
+Content-Type: text/html
+<html>...</html>  <!-- Full HTML rendered trip report -->
+```
+
+**Example:**
+```
+GET /api/preview/gr20/email?type=morning&date=2026-05-31&demo=1
+GET /api/preview/gr20/email?type=evening
+```
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 400 | `{"error":"invalid_trip_or_date"}` | Trip not found or date unparseable |
+| 400 | `{"error":"invalid_type"}` | `type` parameter not in `["morning", "evening"]` |
+| 400 | `{"error":"no_segments"}` | Trip has no stages/segments for the given date |
+| 503 | `{"error":"weather_unavailable"}` | Weather provider API unreachable (only when `demo=false`) |
+
+**Notes:**
+
+- `demo=1` (or any truthy value) enables fixture-based demo mode (Issue #483): FixtureProvider loads predefined weather data from `fixtures/openmeteo/` instead of calling live APIs
+- `demo=0` or absent: live weather via configured provider (GEOSPHERE, MET, etc.)
+- If weather fetch fails with `demo=false`, the endpoint returns 503; with `demo=true`, it returns 400 if fixtures are unavailable
+- Demo mode is ideal for testing preview rendering on past trips (where live weather is unavailable)
+
+### GET /api/preview/{trip_id}/sms
+
+Render trip report preview as SMS text (≤160 characters per message).
+
+**Query Parameters:** Same as `/email` (type, date, demo)
+
+**Response 200:**
+
+```
+Content-Type: text/plain
+Grüße! Morgen: 18°C, Wind 22 km/h, Regenwahrscheinlichkeit 20%.
+```
+
+**Error Responses:** Same as `/email`
+
+### GET /api/preview/{trip_id}/signal
+
+Render trip report preview for Signal channel.
+
+**Query Parameters:** Same as `/email` (type, date, demo)
+
+**Response 200:**
+
+```
+Content-Type: text/plain
+<Signal-formatted message>
+```
+
+**Error Responses:** Same as `/email`
+
+### GET /api/preview/{trip_id}/telegram
+
+Render trip report preview for Telegram channel.
+
+**Query Parameters:** Same as `/email` (type, date, demo)
+
+**Response 200:**
+
+```
+Content-Type: text/plain
+<Telegram-formatted message (may include markdown or HTML)>
+```
+
+**Error Responses:** Same as `/email`
+
+**Notes:**
+
+- All preview endpoints are **read-only** and do not send messages or modify state
+- Preview rendering uses the same Report Formatter and Channel Renderers as the scheduler (integrity guarantee)
+- Frontend may call multiple preview endpoints (e.g., email + SMS) to render side-by-side tabs
+
+---
+
 ## Changelog
 
+- 2026-05-31: Issue #483 — Demo-Modus im Vorschau-Tab: Added `demo: bool` Query-Parameter to all 4 preview endpoints (`/api/preview/{trip_id}/[email|sms|signal|telegram]`). When `demo=1`, endpoints use FixtureProvider instead of live weather; demo mode ideal for testing preview rendering on past trips. Supports AC-1–AC-6 for demo banner UX and fallback to live weather. See section 20 (new) and `docs/specs/modules/issue_483_demo_mode_preview.md`.
 - 2026-05-30: Issue #467 — Passkey V3 Discoverable Credentials + Conditional UI: 2 new public endpoints (`POST /api/auth/passkey/discoverable/begin` and `/finish`) enable login without username. Browser shows registered passkeys as native autofill suggestions on username field focus via WebAuthn `mediation: 'conditional'`. Begin returns full assertion object with top-level `"mediation":"conditional"` flag. Finish accepts `userHandle` from authenticator and looks up user via `DiscoverableUserHandler` callback. Rate-limit 30/h per IP (same as V1). Frontend: `loginWithDiscoverablePasskey()` function in `passkey.ts` + `onMount` conditional UI init in login page with `autocomplete="username webauthn"` attribute. Tests: 6 mock-free roundtrip tests covering success path, empty userHandle, unknown user, challenge replay, and TTL expiry. See `docs/specs/modules/issue_467_discoverable_credentials.md`.
 - 2026-05-30: Issue #464 — Compare-E-Mail Observability-Endpoint `POST /api/_validator/compare-email-preview` (Tooling-API, nicht versionsstabil): Macht den Compare-HTML-Renderer von außen direkt aufrufbar für Validator-Observability. Go-Proxy + Python-Handler (validator.py). Request-Body: `{profile, time_window, target_date, winner_tags}`. Response: `{html: "..."}` mit gerendertem HTML. Stub-LocationResult mit score=85, keine echten Wetterdaten. AC-1/2/3 prüfbar per `curl | grep`. Siehe `docs/specs/modules/issue_464_compare_email_preview_validator.md`.
 - 2026-05-30: Issue #468 — AAGUID-Labels in der Passkey-Liste: GET `/api/auth/profile` Passkey-Einträge zeigen neu optionales Feld `authenticator_name` (z.B. "iCloud Keychain", "Windows Hello") basierend auf AAGUID-Mapping. Field omitempty bei Zero/Unknown-AAGUID. Frontend zeigt kombiniert `"{authenticator_name} · {label}"`. Siehe `docs/specs/modules/aaguid_labels.md`. Implementation: ~90 LoC (`aaguid.go`, `auth.go`, `account/+page.svelte`).

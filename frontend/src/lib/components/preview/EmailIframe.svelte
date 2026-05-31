@@ -3,8 +3,8 @@
 	// Spec: docs/specs/modules/issue_189_preview_tab_integration.md
 	import { buildPreviewUrl, friendlyPreviewError, PREVIEW_ERROR_GENERIC, type ReportType } from './previewHelpers';
 
-	interface Props { tripId: string; type: ReportType; date?: string; }
-	let { tripId, type, date }: Props = $props();
+	interface Props { tripId: string; type: ReportType; date?: string; demo?: boolean; }
+	let { tripId, type, date, demo }: Props = $props();
 
 	let html = $state<string>('');
 	let loading = $state<boolean>(true);
@@ -12,7 +12,7 @@
 
 	$effect(() => {
 		const controller = new AbortController();
-		const url = buildPreviewUrl('email', tripId, type, date);
+		const url = buildPreviewUrl('email', tripId, type, date, demo);
 		loading = true; error = null; html = '';
 		fetch(url, { credentials: 'same-origin', signal: controller.signal }).then(async (res) => {
 			if (!res.ok) {

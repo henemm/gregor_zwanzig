@@ -7,14 +7,17 @@ export type CharCountStatus = 'ok' | 'warn' | 'over';
 
 // Baut URL zum Go-Proxy. Session-Cookie geht automatisch mit, user_id wird
 // serverseitig injiziert — Frontend hängt keinen user_id-Query an.
+// Issue #483: optionales `demo` hängt `demo=1` an die URL (Fixture-Daten).
 export function buildPreviewUrl(
 	channel: 'email' | 'sms' | 'signal' | 'telegram',
 	tripId: string,
 	type: ReportType,
-	date?: string
+	date?: string,
+	demo?: boolean
 ): string {
 	const qs = new URLSearchParams({ type });
 	if (date) qs.set('date', date);
+	if (demo) qs.set('demo', '1');
 	return `/api/preview/${encodeURIComponent(tripId)}/${channel}?${qs.toString()}`;
 }
 

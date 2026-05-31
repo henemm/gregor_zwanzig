@@ -1,6 +1,6 @@
 # Architektur – Gregor Zwanzig
 
-**Updated:** 2026-05-31 (Issue #475 — OutputLayoutEditor zu Organisms hinzugefügt)
+**Updated:** 2026-05-31 (Issue #483 — Demo-Modus im Vorschau-Tab, Preview-Endpoints dokumentiert)
 
 ## Überblick
 Gregor Zwanzig ist ein verteiltes System mit separaten Backend (Go) und Frontend (SvelteKit):
@@ -335,6 +335,7 @@ The frontend includes two configurable wizard systems:
 | `/api/subscriptions` | GET/POST | Create/list subscriptions (compare) |
 | `/api/subscriptions/{id}` | GET/PUT/DELETE | Individual subscription |
 | `/api/subscriptions/{id}/preview` | POST | Preview comparison output |
+| `/api/preview/{id}/email\|sms\|signal\|telegram` | GET | Trip report preview rendering (demo mode optional) |
 | `/api/account` | GET/PUT | User account |
 | `/api/scheduler/status` | GET | Job status monitoring |
 

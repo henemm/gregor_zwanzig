@@ -7,8 +7,9 @@
 		tripId: string;
 		type: ReportType;
 		date?: string;
+		demo?: boolean;
 	}
-	let { tripId, type, date }: Props = $props();
+	let { tripId, type, date, demo }: Props = $props();
 
 	interface SmsPayload { subject: string; token_line: string; char_count: number; }
 
@@ -18,7 +19,7 @@
 
 	$effect(() => {
 		const controller = new AbortController();
-		const url = buildPreviewUrl('sms', tripId, type, date);
+		const url = buildPreviewUrl('sms', tripId, type, date, demo);
 		loading = true; error = null; payload = null;
 		fetch(url, { credentials: 'same-origin', signal: controller.signal }).then(async (res) => {
 			if (!res.ok) {
