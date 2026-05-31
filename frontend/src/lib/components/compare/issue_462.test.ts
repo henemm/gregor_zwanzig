@@ -147,11 +147,13 @@ test('AC-1: Komponenten ohne Atom-Pendant (Card-NS, Dialog, Table, Checkbox) ble
 		matrix.includes('ui/card') || matrix.includes("from '$lib/components/ui/card"),
 		'CompareMatrix.svelte: Card-Namespace-Import aus ui/ fehlt (darf nicht migriert werden)'
 	);
-	// CompareList nutzt Dialog + Table + EmptyState
-	const list = readFile(join(COMPARE_DIR, 'CompareList.svelte'));
+	// CompareGrid (Nachfolger von CompareList seit #490) nutzt den
+	// ConfirmDialog-Molecule-Wrapper statt direkt ui/dialog — das
+	// Molecule selbst stützt sich weiter auf ui/dialog (kein Atom-Pendant).
+	const grid = readFile(join(COMPARE_DIR, 'CompareGrid.svelte'));
 	assert.ok(
-		list.includes('ui/dialog') || list.includes('ui/table'),
-		'CompareList.svelte: Dialog/Table-Import aus ui/ fehlt (darf nicht migriert werden)'
+		grid.includes('ConfirmDialog'),
+		'CompareGrid.svelte: ConfirmDialog-Molecule-Import fehlt (Wrapper um ui/dialog)'
 	);
 	// GroupSection nutzt Checkbox
 	const group = readFile(join(COMPARE_DIR, 'GroupSection.svelte'));

@@ -2,7 +2,7 @@
 	// Issue #472 — /compare Listenansicht (Design: screen-compare-list.jsx)
 	import type { ComparePreset } from '$lib/types.js';
 	import { Eyebrow, Btn } from '$lib/components/atoms';
-	import CompareList from '$lib/components/compare/CompareList.svelte';
+	import CompareGrid from '$lib/components/compare/CompareGrid.svelte';
 	import { deriveStatusFromPreset } from '$lib/components/compare/subscriptionHelpers.js';
 
 	let { data } = $props();
@@ -46,5 +46,5 @@
 		</div>
 	{/if}
 
-	<CompareList bind:presets />
+	<CompareGrid bind:presets />
 </div>
