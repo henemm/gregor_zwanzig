@@ -15,7 +15,7 @@
 	import { getContext, onMount } from 'svelte';
 	import { api } from '$lib/api';
 	import { Eyebrow } from '$lib/components/atoms';
-	import OutputLayoutEditor from '$lib/components/shared/OutputLayoutEditor.svelte';
+	import { OutputLayoutEditor } from '$lib/components/organisms';
 	import ChannelPreviewBlock from '$lib/components/trip-detail/ChannelPreviewBlock.svelte';
 	import {
 		autoAssign,

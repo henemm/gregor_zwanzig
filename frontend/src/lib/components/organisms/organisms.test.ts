@@ -87,6 +87,24 @@ const CONSUMERS = [
 		mustContain: /from ['"](\$lib\/components\/organisms)['"]/,
 		mustNotContain: /from ['"].*alert-rules-editor\/AlertRulesEditor\.svelte['"]/,
 	},
+	{
+		label: 'compare/steps/Step4Layout.svelte — OutputLayoutEditor aus organisms',
+		path: join(componentsRoot, 'compare', 'steps', 'Step4Layout.svelte'),
+		mustContain: /from ['"](\$lib\/components\/organisms)['"]/,
+		mustNotContain: /OutputLayoutEditor.*from.*shared|from.*shared.*OutputLayoutEditor/,
+	},
+	{
+		label: 'trip-detail/WeatherMetricsTab.svelte — OutputLayoutEditor aus organisms',
+		path: join(componentsRoot, 'trip-detail', 'WeatherMetricsTab.svelte'),
+		mustContain: /from ['"](\$lib\/components\/organisms)['"]/,
+		mustNotContain: /OutputLayoutEditor.*from.*shared|from.*shared.*OutputLayoutEditor/,
+	},
+	{
+		label: 'trip-wizard/steps/Step4Layout.svelte — OutputLayoutEditor aus organisms',
+		path: join(componentsRoot, 'trip-wizard', 'steps', 'Step4Layout.svelte'),
+		mustContain: /from ['"](\$lib\/components\/organisms)['"]/,
+		mustNotContain: /OutputLayoutEditor.*from.*shared|from.*shared.*OutputLayoutEditor/,
+	},
 ];
 
 describe('#471 AC-4: Konsumenten-Imports zeigen auf organisms/', () => {

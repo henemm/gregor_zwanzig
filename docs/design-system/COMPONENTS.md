@@ -157,6 +157,7 @@ Komplexe Zusammenbauten aus Atoms und Molecules, kanonisch im Barrel `$lib/compo
 | `<TripHeader>` | `$lib/components/organisms` | `trip`, `onEdit` | Trip-Kopfzeile mit Trip-Name, Statistiken (Etappen, Wegpunkte, Distanz), Edit-Button. Physisch in `trip-detail/TripHeader.svelte`. |
 | `<TripWizardShell>` | `$lib/components/organisms` | `step: 1-4`, `onNext`, `onPrev`, `onClose`, Children | Wizard-Hülle für Trip-Erstellung/Bearbeitung (Stepper + Step-Content + Footer-Navigation). Physisch in `trip-wizard/TripWizardShell.svelte`. |
 | `<AlertRulesEditor>` | `$lib/components/organisms` | `rules: AlertRule[]`, `onChange`, `onAdd`, `onRemove` | Alert-Konfiguration: Alerttyp (Lightning, Rain, Terrain, etc.), Schwellwert, Aktivierung. Physisch in `alert-rules-editor/AlertRulesEditor.svelte`. |
+| `<OutputLayoutEditor>` | `$lib/components/organisms` | `layout: OutputLayout`, `onChange` | Konfigurationsoberfläche für die Briefing-Ausgabe-Formatierung (Kanal-Reihenfolge, Metrik-Anzahl pro Kanal). Physisch in `shared/OutputLayoutEditor.svelte` (Issue #475). |
 
 **Schicht-Regeln (Epic #471):**
 - Organisms importieren **NICHT** direkt aus `ui/` (shadcn/Primitives)

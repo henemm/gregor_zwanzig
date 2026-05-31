@@ -9,8 +9,7 @@
 	//
 	// SMS-Sonderzweig: statt Bucket-Editor eine flache priorisierte Liste mit
 	// 140-Zeichen-Budget-Anzeige (Spec §6 / AC-9).
-	import { Btn, Eyebrow } from '$lib/components/atoms';
-	import * as Card from '$lib/components/ui/card/index.js';
+	import { Btn, Card, Eyebrow } from '$lib/components/atoms';
 	import BucketSection from '$lib/components/trip-detail/BucketSection.svelte';
 	import BucketSectionOff from '$lib/components/trip-detail/BucketSectionOff.svelte';
 	import PresetRow from '$lib/components/trip-detail/PresetRow.svelte';
@@ -105,7 +104,7 @@
 {#if channel === 'sms'}
 	<!-- SMS-Sonderzweig: flache priorisierte Liste, kein Bucket-Editor -->
 	<div data-testid="output-layout-editor-sms" class="sms-editor">
-		<Card.Root>
+		<Card>
 			<div class="head">
 				<Eyebrow>SMS · Priorisierte Liste</Eyebrow>
 				<div class="title">Reihenfolge</div>
@@ -168,7 +167,7 @@
 					{/each}
 				</div>
 			{/if}
-		</Card.Root>
+		</Card>
 
 		<BucketSectionOff
 			items={buckets.off}

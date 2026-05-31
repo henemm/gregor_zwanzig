@@ -1002,7 +1002,7 @@ interface Props {
 | ChannelPreviewBlock | `trip-detail/ChannelPreviewBlock.svelte` | Kanal-Vorschau-Block |
 | ChannelLimitMarkers | `trip-detail/ChannelLimitMarkers.svelte` | Zeichen-Limit-Marker (SMS) |
 | PreviewCard | `trip-detail/PreviewCard.svelte` | Generische Vorschau-Karte |
-| OutputLayoutEditor | `trip-detail/OutputLayoutEditor.svelte` | Universal Layout-Editor mit Channel-Tabs + Bucket-Reorder (Issue #431, reused in Compare Issue #442) |
+| OutputLayoutEditor | `shared/OutputLayoutEditor.svelte` (re-exported via `organisms/index.ts`, Issue #475) | Universal Layout-Editor mit Channel-Tabs + Bucket-Reorder (Issue #431, reused in Compare Issue #442) |
 | metricsEditor.ts | `trip-detail/metricsEditor.ts` | Metriken-Editor-Logik (Helper) — `autoAssign`, `buildWeatherConfigMetrics`, `move`, `reorder`, `CHANNEL_COL_BUDGET` |
 
 ### trip-detail/waypoints/ — Wegpunkt-Editor (Epic #137)

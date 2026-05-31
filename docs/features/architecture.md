@@ -1,6 +1,6 @@
 # Architektur – Gregor Zwanzig
 
-**Updated:** 2026-05-31 (Epic #471 — Organisms-Schicht Atomic Design Level 3 dokumentiert)
+**Updated:** 2026-05-31 (Issue #475 — OutputLayoutEditor zu Organisms hinzugefügt)
 
 ## Überblick
 Gregor Zwanzig ist ein verteiltes System mit separaten Backend (Go) und Frontend (SvelteKit):
@@ -161,14 +161,15 @@ Frontend components follow Atomic Design principles with 3 explicit layers:
 - **Routes** should prefer importing from `organisms/` and `molecules/`, using `atoms/` only for rare custom layouts
 
 **Organism Barrel** (`components/organisms/index.ts`):
-Re-exports 3 core organisms without moving their physical source files:
+Re-exports 4 core organisms without moving their physical source files:
 ```typescript
 export { default as TripHeader } from '../trip-detail/TripHeader.svelte';
 export { default as TripWizardShell } from '../trip-wizard/TripWizardShell.svelte';
 export { default as AlertRulesEditor } from '../alert-rules-editor/AlertRulesEditor.svelte';
+export { default as OutputLayoutEditor } from '../shared/OutputLayoutEditor.svelte';
 ```
 
-Consumers import via: `import { TripHeader } from '$lib/components/organisms'`
+Consumers import via: `import { TripHeader, OutputLayoutEditor } from '$lib/components/organisms'`
 
 See `docs/design-system/COMPONENTS.md` for the canonical component catalog.
 

@@ -30,6 +30,7 @@ tags: [frontend, atomic-design, organisms, epic-471, issue-471]
 - `frontend/src/lib/components/trip-detail/TripHeader.svelte`
 - `frontend/src/lib/components/trip-wizard/TripWizardShell.svelte`
 - `frontend/src/lib/components/alert-rules-editor/AlertRulesEditor.svelte`
+- `frontend/src/lib/components/shared/OutputLayoutEditor.svelte` (Issue #475)
 
 **Geänderte Dateien (Konsumenten-Imports + Barrel-Bereinigung):**
 - `frontend/src/routes/trips/[id]/+page.svelte` (TripHeader-Import auf organisms/)
@@ -37,6 +38,9 @@ tags: [frontend, atomic-design, organisms, epic-471, issue-471]
 - `frontend/src/lib/components/edit/TripEditView.svelte` (AlertRulesEditor-Import auf organisms/)
 - `frontend/src/lib/components/trip-wizard/steps/Step4Briefings.svelte` (AlertRulesEditor-Import auf organisms/)
 - `frontend/src/lib/components/trip-detail/index.ts` (TripHeader-Export entfernen)
+- `frontend/src/lib/components/compare/steps/Step4Layout.svelte` (OutputLayoutEditor-Import auf organisms/, Issue #475)
+- `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte` (OutputLayoutEditor-Import auf organisms/, Issue #475)
+- `frontend/src/lib/components/trip-wizard/steps/Step4Layout.svelte` (OutputLayoutEditor-Import auf organisms/, Issue #475)
 
 > **Schicht-Hinweis:** Reine Frontend-Änderung (SvelteKit `frontend/src/lib/components/`). Keine Go/Python-Schicht betroffen.
 
@@ -138,14 +142,13 @@ Muss ohne Fehler durchlaufen. Anschließend organisms.test.ts via `node --test` 
 
 ### Nicht in diesem Epic (explizite Ausschlüsse)
 
-- **OutputLayoutEditor** (`shared/OutputLayoutEditor.svelte`): importiert `$lib/components/ui/card` direkt → verletzt AC-2. Bleibt in `shared/` bis ein Folge-Issue die ui/-Abhängigkeit auflöst.
 - **CompareMatrix** (`compare/CompareMatrix.svelte`): importiert `$lib/components/ui/card` und `$lib/components/ui/table` → verletzt AC-2. Bleibt in `compare/`.
 
 ## Expected Behavior
 
 - **Input:** keiner zur Laufzeit (reine Komponenten und Barrel-Datei).
-- **Output:** `import { TripHeader, TripWizardShell, AlertRulesEditor } from '$lib/components/organisms'` liefert alle 3 Organisms; `npm run build` ist grün; organisms.test.ts läuft ohne Fehler.
-- **Side effects:** TripHeader ist nach Abschluss nicht mehr über `$lib/components/trip-detail` erreichbar (trip-detail barrel bereinigt). Bestehende Funktionalität der 3 Organisms bleibt unverändert (kein Code-Move, nur Import-Kanonisierung).
+- **Output:** `import { TripHeader, TripWizardShell, AlertRulesEditor, OutputLayoutEditor } from '$lib/components/organisms'` liefert alle 4 Organisms; `npm run build` ist grün; organisms.test.ts läuft ohne Fehler.
+- **Side effects:** TripHeader ist nach Abschluss nicht mehr über `$lib/components/trip-detail` erreichbar (trip-detail barrel bereinigt). OutputLayoutEditor wird aus `$lib/components/organisms` importiert (physischer Pfad bleibt `shared/`). Bestehende Funktionalität der 4 Organisms bleibt unverändert (kein Code-Move, nur Import-Kanonisierung).
 
 ## Acceptance Criteria
 
@@ -171,4 +174,5 @@ Muss ohne Fehler durchlaufen. Anschließend organisms.test.ts via `node --test` 
 
 ## Changelog
 
+- 2026-05-31: OutputLayoutEditor hinzugefügt (Issue #475, ui/card-Abhängigkeit aufgelöst, 4. Organism)
 - 2026-05-31: Initial spec created (Epic #471, Organisms-Schicht Atomic Design Ebene 3)

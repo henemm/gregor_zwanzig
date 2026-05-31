@@ -17,7 +17,7 @@
 	// Issue #431: Bucket-Editor wandert in `shared/` (siehe Import unten) —
 	// dieser Tab wird zum duennen Wrapper (channel="email" fix), Wizard nutzt
 	// dieselbe Komponente mit 4 Kanal-Tabs.
-	import OutputLayoutEditor from '$lib/components/shared/OutputLayoutEditor.svelte';
+	import { OutputLayoutEditor } from '$lib/components/organisms';
 	// Issue #433: leitet `onDndReorder` an die Shared-Komponente durch.
 	import {
 		autoAssign, move, reorder, buildWeatherConfigMetrics,
