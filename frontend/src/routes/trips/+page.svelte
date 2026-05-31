@@ -5,6 +5,7 @@
 	import { Btn, Input, Dot, Eyebrow, Pill } from '$lib/components/atoms';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
+	import { DropdownMenu } from 'bits-ui';
 	import SearchIcon from '@lucide/svelte/icons/search';
 	import RouteIcon from '@lucide/svelte/icons/route';
 	import BellIcon from '@lucide/svelte/icons/bell';
@@ -76,8 +77,6 @@
 	// Mobile Action Sheet (Issue #268)
 	let sheetTrip: Trip | null = $state(null);
 
-	// Bug #295: Kebab-Menü State
-	let kebabOpenId: string | null = $state(null);
 	let primaryActionLoading: string | null = $state(null);
 
 	function statusTone(trip: Trip): 'success' | 'info' | 'warning' | 'danger' {
@@ -246,12 +245,6 @@
 
 </script>
 
-<svelte:window
-	onkeydown={(e: KeyboardEvent) => {
-		if (e.key === 'Escape' && kebabOpenId !== null) kebabOpenId = null;
-	}}
-/>
-
 <div class="space-y-4">
 	<div class="flex items-start justify-between gap-4">
 		<div>
@@ -407,58 +400,51 @@
 									onclick={() => handlePrimaryAction(trip)}
 									disabled={primaryActionLoading === trip.id}
 								>{primaryLabel(trip)}</Btn>
-								<div class="relative">
-									<Btn
-										variant="ghost"
-										size="icon-sm"
-										title="Weitere Aktionen"
-										aria-label="Weitere Aktionen"
-										onclick={(e: MouseEvent) => {
-											e.stopPropagation();
-											kebabOpenId = kebabOpenId === trip.id ? null : trip.id;
-										}}
-									>⋯</Btn>
-									{#if kebabOpenId === trip.id}
-										<div
-											role="menu"
-											class="absolute right-0 top-full mt-1 z-50 min-w-[200px] rounded-md border bg-popover shadow-md py-1"
-											tabindex="-1"
-											onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') kebabOpenId = null; }}
-											onfocusout={(e: FocusEvent) => {
-												if (!(e.currentTarget as Element).contains(e.relatedTarget as Node)) {
-													kebabOpenId = null;
-												}
-											}}
-										>
-											<button
-												data-testid="trip-edit-btn"
-												class="w-full text-left px-3 py-1.5 text-sm hover:bg-muted"
-												onclick={() => { kebabOpenId = null; openEdit(trip); }}
-											>Bearbeiten</button>
-											<button
-												class="w-full text-left px-3 py-1.5 text-sm hover:bg-muted"
-												onclick={() => { kebabOpenId = null; runTestReport(trip, 7); }}
-											>Test-Briefing Morgen</button>
-											<button
-												class="w-full text-left px-3 py-1.5 text-sm hover:bg-muted"
-												onclick={() => { kebabOpenId = null; runTestReport(trip, 18); }}
-											>Test-Briefing Abend</button>
-											<button
-												class="w-full text-left px-3 py-1.5 text-sm hover:bg-muted"
-												onclick={() => { kebabOpenId = null; goto(`/trips/${trip.id}#weather`); }}
-											>Wetter-Konfiguration</button>
-											<button
-												class="w-full text-left px-3 py-1.5 text-sm hover:bg-muted"
-												onclick={() => { kebabOpenId = null; openReportConfig(trip); }}
-											>Report-Konfiguration</button>
-											<hr class="my-1 border-border" />
-											<button
-												class="w-full text-left px-3 py-1.5 text-sm text-destructive hover:bg-muted"
-												onclick={() => { kebabOpenId = null; deleteTarget = trip; }}
-											>Löschen</button>
-										</div>
-									{/if}
-								</div>
+								<DropdownMenu.Root>
+									<DropdownMenu.Trigger>
+										{#snippet child({ props })}
+											<Btn
+												{...props}
+												variant="ghost"
+												size="icon-sm"
+												title="Weitere Aktionen"
+												aria-label="Weitere Aktionen"
+											>⋯</Btn>
+										{/snippet}
+									</DropdownMenu.Trigger>
+									<DropdownMenu.Content
+										align="end"
+										sideOffset={4}
+										class="z-50 min-w-[200px] rounded-md border bg-popover shadow-md py-1"
+									>
+										<DropdownMenu.Item
+											data-testid="trip-edit-btn"
+											class="w-full text-left px-3 py-1.5 text-sm hover:bg-muted cursor-default outline-none"
+											onSelect={() => openEdit(trip)}
+										>Bearbeiten</DropdownMenu.Item>
+										<DropdownMenu.Item
+											class="w-full text-left px-3 py-1.5 text-sm hover:bg-muted cursor-default outline-none"
+											onSelect={() => runTestReport(trip, 7)}
+										>Test-Briefing Morgen</DropdownMenu.Item>
+										<DropdownMenu.Item
+											class="w-full text-left px-3 py-1.5 text-sm hover:bg-muted cursor-default outline-none"
+											onSelect={() => runTestReport(trip, 18)}
+										>Test-Briefing Abend</DropdownMenu.Item>
+										<DropdownMenu.Item
+											class="w-full text-left px-3 py-1.5 text-sm hover:bg-muted cursor-default outline-none"
+											onSelect={() => goto(`/trips/${trip.id}#weather`)}
+										>Wetter-Konfiguration</DropdownMenu.Item>
+										<DropdownMenu.Item
+											class="w-full text-left px-3 py-1.5 text-sm hover:bg-muted cursor-default outline-none"
+											onSelect={() => openReportConfig(trip)}
+										>Report-Konfiguration</DropdownMenu.Item>
+										<DropdownMenu.Separator class="my-1 h-px bg-border" />
+										<DropdownMenu.Item
+											class="w-full text-left px-3 py-1.5 text-sm text-destructive hover:bg-muted cursor-default outline-none"
+											onSelect={() => { deleteTarget = trip; }}
+										>Löschen</DropdownMenu.Item>
+									</DropdownMenu.Content>
+								</DropdownMenu.Root>
 							</div>
 						</Table.Cell>
 					</Table.Row>
