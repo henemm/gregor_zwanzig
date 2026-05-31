@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, time, timezone
 from enum import Enum
-from typing import List, Literal, Optional, Tuple
+from typing import List, Literal, Optional
 
 # Re-export Location for convenience. Canonical definition lives in app.config.
 from app.config import Location  # noqa: F401
@@ -765,18 +765,21 @@ class AlertRule:
     unit: str = ""
 
 
-# --- F12: Großwetterlage / Stabilitäts-Label (Issue #122) -------------------
+# --- F12: Großwetterlage / Stabilitäts-Label (Issue #122, refactored #479) --
 
 @dataclass(frozen=True)
 class StabilityResult:
-    """F12: Ergebnis der Großwetterlage-Berechnung.
+    """F12: Ergebnis der Stabilitäts-Berechnung aus Konfidenz-Daten.
 
-    SPEC: docs/specs/modules/weather_pattern.md v1.0
+    SPEC: docs/specs/modules/issue_479_f12_confidence_refactor.md v1.0
 
     Immutable Dataclass, das das Stabilitäts-Label für die nächsten Etappen
     eines Trips trägt. Wird nicht persistiert (wird bei jedem Report-Lauf
-    frisch von WeatherPatternService.compute_for_trip() berechnet).
+    frisch von compute_stability() / WeatherPatternService berechnet).
+
+    Issue #479: Z500-Ensemble-Logik entfernt; Label wird jetzt aus
+    `min(confidence_pct_min)` über die Folge-Etappen abgeleitet.
+    Schwellen:  >= 75 → STABIL, 50–74 → WECHSELHAFT, < 50 → FRAGIL
     """
     label: Literal["STABIL", "WECHSELHAFT", "FRAGIL"]
-    score: int                          # 0–4 Gesamt-Score
-    component_scores: Tuple[int, int]   # (tendency_score, spread_score)
+    confidence_pct: int   # min(confidence_pct_min) über Folge-Etappen

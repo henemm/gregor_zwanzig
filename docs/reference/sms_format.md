@@ -1,7 +1,7 @@
 ---
 entity_id: sms_format
 type: reference
-version: "2.2"
+version: "2.3"
 status: active
 created: 2025-12-27
 updated: 2026-05-31
@@ -13,7 +13,7 @@ tags: [sms, compact, tokens, single-source-of-truth]
 - [x] Approved (v2.0 am 2026-04-25)
 - [x] Implementiert in SMS-Adapter via `src/output/renderers/sms/` (β3, 2026-04-28)
 
-# SMS / Kompakt-Format Specification (v2.2)
+# SMS / Kompakt-Format Specification (v2.3)
 
 **Single Source of Truth** für die kompakte Token-Zeile, die in allen Channels (SMS, Satellit, E-Mail-Header, Push) identisch verwendet wird. Alle anderen Repräsentationen (E-Mail-Body, Tabellen, Push-Titel) leiten sich aus dieser Token-Zeile ab.
 
@@ -37,7 +37,7 @@ Diese Spec ersetzt v1.0 und integriert das Format aus dem Vorgänger-Projekt (`w
 ## 2. Token-Reihenfolge (fix)
 
 ```
-{Name}: N D R PR W G TH: TH+: C WL HR:TH: Z: M: [SN SN24+ SFL AV WC] DBG
+{Name}: N D R PR W G TH: TH+: C HR:TH: Z: M: [SN SN24+ SFL AV WC] DBG
 ```
 
 | Block | Tokens | Pflicht? |
@@ -45,7 +45,6 @@ Diese Spec ersetzt v1.0 und integriert das Format aus dem Vorgänger-Projekt (`w
 | Header | `{Name}:` | immer |
 | Forecast | `N D R PR W G TH: TH+:` | immer (bei `-` als Null-Wert) |
 | Confidence | `C` | nur wenn Provider Konfidenz liefert (Issue #121, v2.1) |
-| Großwetterlage | `WL` | nur bei Mehretappen-Trip mit verfügbaren Ensemble-Daten (Issue #122, v2.2) |
 | Risks (Vigilance) | `HR:TH:` (zusammenhängend, kein Leerzeichen zwischen den beiden) | nur bei FR-Provider |
 | Fire-Zonen | `Z: M:` | nur Korsika, weglassen wenn leer |
 | Wintersport | `SN SN24+ SFL AV WC` | optional |
@@ -136,25 +135,6 @@ Aggregation: `min()` der stündlichen `confidence_pct` über alle Segmente des T
 
 Beispiel mit niedriger Konfidenz: `Etappe: N12 D22 R0.5 W15 G25 C?`
 
-### 3.4c Großwetterlage-Symbol `WL` (v2.2, Issue #122)
-
-Einzelnes Zeichen, das die synoptische Stabilität (Großwetterlage) für die kommenden Etappen signalisiert. Position: **nach `C` (Confidence), vor `HR:`/Vigilance-Tokens**.
-
-Quelle: `WeatherPatternService.compute_for_trip()` aus Z500-Ensemble-Daten der OpenMeteo Ensemble API. Zwei Komponenten (Tendenz + Spread), Score 0–4 wird auf Label und Symbol gemappt.
-
-| Label | Symbol | Bedeutung |
-|-------|--------|-----------|
-| `STABIL` (Score 3–4) | `WL+` | Stabile Großwetterlage, Prognosen verlässlich |
-| `WECHSELHAFT` (Score 2) | `WL~` | Lage im Übergang, ab Tag 3 unsicher |
-| `FRAGIL` (Score 0–1) | `WL-` | Schnelle Frontverlagerung möglich, ab Tag 2 konservativ planen |
-| keine Daten / letzte Etappe | _(Token weggelassen)_ | Kein Multi-Day-Ausblick verfügbar |
-
-**GSM-7-konform** — `+`, `~`, `-` sind alle Standard-GSM-7-Zeichen.
-
-**Geltung:** Nur ausgegeben wenn der Trip mindestens eine zukünftige Etappe besitzt und die Ensemble-API valide Daten liefert. Bei letzter Etappe (keine Folgetage) komplett weggelassen — kein `WL-`-Fallback.
-
-Beispiel mit stabiler Lage: `Etappe: N12 D22 R0.5 W15 G25 C+ WL+`
-
 ### 3.5 Fire-Risk-Tokens (Korsika-spezifisch)
 
 Optional, nur für Trips in Korsika ausgegeben. Quelle: `risque-prevention-incendie.fr` (täglicher JSON-Feed).
@@ -205,7 +185,6 @@ Nur in Dry-Run / Debug-Modus angehängt, ansonsten weggelassen.
 | `R` / `PR` | `R-` / `PR-` | Bei fehlendem oder Sub-Threshold-Niederschlag |
 | `W` / `G` | `W-` / `G-` | Bei fehlendem oder Sub-Threshold-Wind |
 | `TH` / `TH+` | `TH:-` / `TH+:-` | Bei fehlendem oder Sub-Threshold-Gewitter |
-| `WL` | komplett weglassen | Kein `WL-`-Fallback bei fehlenden Daten/letzter Etappe (FRAGIL bleibt valider Wert mit `WL-`) |
 | `HR` / `TH` (Vigilance) | `HR:-TH:-` | Bei keiner Vigilance-Warnung; immer paarweise |
 | `Z` / `M` (Fire) | komplett weglassen | Kein `Z:-`, einfach Block entfernen |
 | `SN`/`SN24`/`SFL`/`AV`/`WC` | komplett weglassen | Wintersport-Tokens nicht zwingend |
@@ -245,9 +224,8 @@ Wenn die zusammengesetzte Token-Zeile >160 Zeichen ist, werden Tokens in dieser 
 2. Wintersport-Tokens (`WC`, `AV`, `SFL`, `SN24+`, `SN`)
 3. Fire-Block komplett (`Z:HIGH...`, `MAX...`, `M:...`)
 4. Peak-Werte `(max@h)` (Threshold-Werte bleiben erhalten)
-5. `WL` (Großwetterlage, Issue #122; nach `C`, vor `PR`)
-6. `PR` (Regenwahrscheinlichkeit)
-7. `D`, `N` (Temperaturen)
+5. `PR` (Regenwahrscheinlichkeit)
+6. `D`, `N` (Temperaturen)
 
 `{Name}:` plus mindestens **ein** Risk- oder Wert-Token ist Pflicht. Wenn nach allen Truncation-Schritten immer noch >160 Zeichen: ValueError.
 
@@ -306,24 +284,6 @@ Monte: N15 D25 R- PR20%@14 W22@14(28@16) G35@14(48@17) TH:M@14 TH+:- DBG[MET MED
 Ballone: N9 D16 R- PR- W- G- TH:- TH+:-
 ```
 **Länge:** 38 Zeichen.
-
-### 8.8 Mit Großwetterlage-Token (v2.2, Issue #122)
-```
-GR: N-2 D8 R0 W15 G25 C+ WL+
-```
-**Länge:** 28 Zeichen.
-
-Mit allen Standard-Tokens und WL+:
-```
-Paliri: N8 D24 R0.2@6(1.4@16) PR20%@11(100%@17) W10@11(15@17) G20@11(30@17) TH:M@16(H@18) TH+:M@14(H@17) C+ WL+
-```
-**Länge:** 109 Zeichen.
-
-FRAGIL-Lage (WL-):
-```
-GR: N-2 D8 R0 W15 G25 C~ WL-
-```
-**Länge:** 28 Zeichen.
 
 ---
 
@@ -386,6 +346,7 @@ Implementationen, die SMS-Text und E-Mail-Subject getrennt erzeugen, sind als **
 | 2.0 | 2026-04-25 | Vigilance-Block (HR/TH), Fire-Block (Z/M), Wintersport-Sektion, Disambiguierungs-Regel, vollständiges Datenquellen-Mapping |
 | 2.1 | 2026-05-15 | Confidence-Symbol `C` (Issue #121) — GSM-7-konformes `+`/`~`/`?` nach `TH+:` |
 | 2.2 | 2026-05-31 | WL-Token für Großwetterlage (Issue #122) — `+`/`~`/`-` nach `C`, vor `HR:`; Truncation NACH `C` aber VOR `PR` |
+| 2.3 | 2026-05-31 | WL-Token aus SMS entfernt (Issue #479) — `C+/C~/C?` deckt den Stabilitäts-Use-Case ab; WL-Block bleibt nur in der E-Mail erhalten, jetzt aus `min(confidence_pct_min)` der Folge-Etappen abgeleitet statt aus Z500-Ensemble-API |
 
 **Quellen für v2.0:**
 - Vorgänger-Repo `henemm/weather_email_autobot`:

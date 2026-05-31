@@ -61,11 +61,6 @@ def _truncate(tokens: list[Token], stage: str, mx: int) -> tuple[list[Token], bo
         truncated = True
         if len(_draw(stage, tokens)) <= mx:
             return tokens, True
-    # §6.5: WL (Großwetterlage, Issue #122) — nach C, vor PR streichen.
-    while _drop_first(tokens, "WL"):
-        truncated = True
-        if len(_draw(stage, tokens)) <= mx:
-            return tokens, True
     while _drop_first(tokens, "PR"):
         truncated = True
         if len(_draw(stage, tokens)) <= mx:
