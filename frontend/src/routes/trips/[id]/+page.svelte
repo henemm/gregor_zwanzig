@@ -4,7 +4,8 @@
 	// (Briefing-Vorschau, Bearbeiten, Test-Briefing) leben in der neuen Header-Komponente.
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { TripHeader, TripTabs } from '$lib/components/trip-detail';
+	import { TripHeader } from '$lib/components/organisms';
+	import { TripTabs } from '$lib/components/trip-detail';
 	import { Btn, Eyebrow } from '$lib/components/atoms';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { deriveTripStatus } from '$lib/utils/tripStatus';

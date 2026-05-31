@@ -1,6 +1,6 @@
 # Architektur – Gregor Zwanzig
 
-**Updated:** 2026-05-30 (Passkey V3 Discoverable Credentials hinzugefügt)
+**Updated:** 2026-05-31 (Epic #471 — Organisms-Schicht Atomic Design Level 3 dokumentiert)
 
 ## Überblick
 Gregor Zwanzig ist ein verteiltes System mit separaten Backend (Go) und Frontend (SvelteKit):
@@ -82,50 +82,95 @@ frontend/
 │   ├── app.html                   # HTML shell (Fonts: Inter Tight, JetBrains Mono)
 │   ├── lib/
 │   │   ├── components/
-│   │   │   ├── ui/               # Component library
+│   │   │   ├── ui/               # Atom Library (shadcn + Gregor atoms)
 │   │   │   │   ├── button/, card/, dialog/, badge/  # shadcn imports
 │   │   │   │   ├── btn/, g-card/, pill/, eyebrow/, dot/, topo/, elev-sparkline/  # Gregor atoms (Epic #133)
 │   │   │   │   └── sidebar/      # Main navigation (Issue #145)
-│   │   │   ├── trip-wizard/      # Trip creation/editing wizard
+│   │   │   ├── atoms/             # Atom-Schicht (Atomic Design Level 1, Epic #371)
+│   │   │   │   └── *.svelte       # Token-basierte UI-Primitive (Button, Label, Badge, etc.)
+│   │   │   ├── molecules/         # Molecule-Schicht (Atomic Design Level 2, Epic #372)
+│   │   │   │   └── *.svelte       # Combinations of atoms (FieldGroup, StatCard, etc.)
+│   │   │   ├── organisms/         # Organism-Schicht (Atomic Design Level 3, Epic #471)
+│   │   │   │   ├── index.ts       # Barrel re-export (TripHeader, TripWizardShell, AlertRulesEditor)
+│   │   │   │   └── organisms.test.ts  # Source-inspection tests (no ui/ imports)
+│   │   │   ├── trip-wizard/       # Trip creation/editing wizard
+│   │   │   │   ├── TripWizardShell.svelte
 │   │   │   │   ├── Stepper.svelte
-│   │   │   │   └── steps/*.svelte
-│   │   │   └── compare/          # Compare-Wizard (Epic #438)
-│   │   │       ├── CompareWizard.svelte
-│   │   │       ├── compareWizardState.svelte.ts
-│   │   │       ├── compareMetricDefs.ts        # Shared metric definitions + defaults
-│   │   │       ├── CompareMatrix.svelte        # Read-only comparison matrix
-│   │   │       ├── steps/
-│   │   │       │   ├── Step1Vergleich.svelte   # Name + Activity Profile
-│   │   │       │   ├── Step2Orte.svelte        # Location selection
-│   │   │       │   ├── Step3Idealwerte.svelte  # Min/Max ideal ranges (DONE #441)
-│   │   │       │   ├── Step4Layout.svelte      # Output formatting (TBD #442)
-│   │   │       │   └── Step5Versand.svelte     # Schedule + delivery (TBD #443)
-│   │   │       └── __tests__/
-│   │   │           ├── issue_440_*.test.ts
-│   │   │           └── issue_441_*.test.ts
-│   │   ├── utils/                # Helpers (cn(), type utilities)
-│   │   ├── types.ts              # Shared TypeScript types
-│   │   └── stores/               # Svelte Stores (auth, theme, etc.)
+│   │   │   │   ├── steps/*.svelte
+│   │   │   │   └── templates/
+│   │   │   ├── trip-detail/       # Trip display & editing
+│   │   │   │   ├── TripHeader.svelte
+│   │   │   │   ├── TripTabs.svelte
+│   │   │   │   ├── waypoints/
+│   │   │   │   └── index.ts       # Barrel (TripHeader re-exported in organisms/)
+│   │   │   ├── alert-rules-editor/  # Alert configuration
+│   │   │   │   ├── AlertRulesEditor.svelte
+│   │   │   │   └── components/
+│   │   │   ├── compare/           # Compare-Wizard (Epic #438)
+│   │   │   │   ├── CompareWizard.svelte
+│   │   │   │   ├── CompareMatrix.svelte
+│   │   │   │   ├── compareWizardState.svelte.ts
+│   │   │   │   ├── compareMetricDefs.ts
+│   │   │   │   ├── steps/
+│   │   │   │   └── __tests__/
+│   │   │   ├── shared/            # Cross-feature components (OutputLayoutEditor, etc.)
+│   │   │   ├── preview/           # Email/SMS preview renderers
+│   │   │   ├── email-preview/     # Email rendering
+│   │   │   ├── mobile/            # Mobile-only components
+│   │   │   ├── edit/              # Form & edit views
+│   │   │   ├── briefings-tab/     # Briefings configuration
+│   │   │   ├── alerts-tab/        # Alerts configuration
+│   │   │   └── utils/             # Helpers (cn(), type utilities)
+│   │   ├── types.ts               # Shared TypeScript types
+│   │   └── stores/                # Svelte Stores (auth, theme, etc.)
 │   └── routes/
-│       ├── +layout.svelte        # Root layout (includes Sidebar)
-│       ├── +page.svelte          # Home (Trip Cockpit Dashboard, Epic #134)
-│       ├── trips/                # Trip management (CRUD wizard)
-│       ├── compare/              # Compare wizard + subscription list
-│       │   ├── +page.svelte      # Create new comparison
+│       ├── +layout.svelte         # Root layout (includes Sidebar)
+│       ├── +page.svelte           # Home (Trip Cockpit Dashboard, Epic #134)
+│       ├── trips/                 # Trip management (CRUD wizard)
+│       ├── compare/               # Compare wizard + subscription list
+│       │   ├── +page.svelte       # Create new comparison
 │       │   ├── [id]/
 │       │   │   └── edit/
 │       │   │       ├── +page.svelte
 │       │   │       └── +page.server.ts
 │       │   └── +page.server.ts
-│       ├── account/              # User account settings
-│       └── _design/              # Component showcase (dev-only)
-├── e2e/                          # Playwright E2E tests
-│   ├── helpers.ts                # Auth helpers, shared utilities
+│       ├── account/               # User account settings
+│       └── _design/               # Component showcase (dev-only)
+├── e2e/                           # Playwright E2E tests
+│   ├── helpers.ts                 # Auth helpers, shared utilities
 │   ├── design-system-lauf-a.spec.ts
 │   ├── design-system-lauf-b.spec.ts
-│   └── *.spec.ts                 # Feature tests
-└── package.json                  # Dependencies (SvelteKit, Tailwind, shadcn, bits-ui, etc.)
+│   └── *.spec.ts                  # Feature tests
+└── package.json                   # Dependencies (SvelteKit, Tailwind, shadcn, bits-ui, etc.)
 ```
+
+### Atomic Design Layers (Epic #368, #371, #372, #471)
+
+Frontend components follow Atomic Design principles with 3 explicit layers:
+
+| Layer | Location | Purpose | Examples | Epic |
+|-------|----------|---------|----------|------|
+| **Atoms** | `components/atoms/` | Base UI primitives | Button, Label, Badge, Icon | #371 |
+| **Molecules** | `components/molecules/` | Combinations of atoms | FieldGroup, StatCard, Tabs | #372 |
+| **Organisms** | `components/organisms/` | Complex page sections | TripHeader, TripWizardShell, AlertRulesEditor | #471 |
+
+**Import Rules:**
+- **Atoms** may import from `ui/` (shadcn + gregor primitives)
+- **Molecules** may import from `atoms/` and `ui/`
+- **Organisms** may import from `atoms/`, `molecules/`, and other `organisms/` — **never** directly from `ui/`
+- **Routes** should prefer importing from `organisms/` and `molecules/`, using `atoms/` only for rare custom layouts
+
+**Organism Barrel** (`components/organisms/index.ts`):
+Re-exports 3 core organisms without moving their physical source files:
+```typescript
+export { default as TripHeader } from '../trip-detail/TripHeader.svelte';
+export { default as TripWizardShell } from '../trip-wizard/TripWizardShell.svelte';
+export { default as AlertRulesEditor } from '../alert-rules-editor/AlertRulesEditor.svelte';
+```
+
+Consumers import via: `import { TripHeader } from '$lib/components/organisms'`
+
+See `docs/design-system/COMPONENTS.md` for the canonical component catalog.
 
 ### Component Library (Epic #133)
 

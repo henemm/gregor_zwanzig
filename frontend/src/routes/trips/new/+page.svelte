@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { setContext } from 'svelte';
 	import { WizardState } from '$lib/components/trip-wizard/wizardState.svelte';
-	import TripWizardShell from '$lib/components/trip-wizard/TripWizardShell.svelte';
+	import { TripWizardShell } from '$lib/components/organisms';
 
 	let { data } = $props();
 

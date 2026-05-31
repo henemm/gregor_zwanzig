@@ -6,15 +6,17 @@
 
 ## Lese-Reihenfolge
 
-Die Datei ist in 7 Schichten gegliedert, von Token → Atom → Molekül → Page-Chrome → Mobile-Shell:
+Die Datei ist in 9 Kategorien gegliedert, von Brand → Atoms → Organisms → Domain-Komponenten:
 
 1. **Brand** — Wordmark, Sidebar, User-Badge
 2. **Page-Chrome** — Seiten-Skelett (Header, Section, Tile-Grid, Empty)
-3. **Atoms** — Btn, Eyebrow, Pill, Dot, KV, Card, Sparkline
+3. **Atoms** — Btn, Eyebrow, Pill, Dot, KV, Card, Sparkline (siehe auch `components/atoms/`, Epic #371)
 4. **Forms** — Input, Field, Checkbox, Select, Switch, Segmented (Props: `options`/`selected`/`onselect`)
 5. **Feedback** — Toast, Dialog
 6. **Overlay** — DropdownMenu, Sheet, Tooltip
 7. **Mobile-Shell** — PhoneFrame, TopAppBar, BottomNav, Drawer, MInput, MBtn
+8. **Organisms** — TripHeader, TripWizardShell, AlertRulesEditor (Atomic Design Level 3, Epic #471)
+9. **Domain-Komponenten** — App-spezifische Bausteine (Trip-, Compare-, Email-Komponenten)
 
 ## Tabellen-Konvention
 
@@ -117,7 +119,27 @@ Slots werden in der "Was sie tut"-Spalte erwähnt.
 
 ---
 
-## 8 · Domain-Komponenten (App-spezifisch)
+## 8 · Organisms (Atomic Design Level 3, Epic #471)
+
+Komplexe Zusammenbauten aus Atoms und Molecules, kanonisch im Barrel `$lib/components/organisms/index.ts`:
+
+| Komponente | Import | Props | Was sie tut |
+|---|---|---|---|
+| `<TripHeader>` | `$lib/components/organisms` | `trip`, `onEdit` | Trip-Kopfzeile mit Trip-Name, Statistiken (Etappen, Wegpunkte, Distanz), Edit-Button. Physisch in `trip-detail/TripHeader.svelte`. |
+| `<TripWizardShell>` | `$lib/components/organisms` | `step: 1-4`, `onNext`, `onPrev`, `onClose`, Children | Wizard-Hülle für Trip-Erstellung/Bearbeitung (Stepper + Step-Content + Footer-Navigation). Physisch in `trip-wizard/TripWizardShell.svelte`. |
+| `<AlertRulesEditor>` | `$lib/components/organisms` | `rules: AlertRule[]`, `onChange`, `onAdd`, `onRemove` | Alert-Konfiguration: Alerttyp (Lightning, Rain, Terrain, etc.), Schwellwert, Aktivierung. Physisch in `alert-rules-editor/AlertRulesEditor.svelte`. |
+
+**Schicht-Regeln (Epic #471):**
+- Organisms importieren **NICHT** direkt aus `ui/` (shadcn/Primitives)
+- Imports erfolgen von `atoms/`, `molecules/`, oder anderen `organisms/`
+- Der physische Speicherort bleibt im jeweiligen Feature-Ordner (z.B. `trip-detail/TripHeader.svelte`)
+- Der Barrel `organisms/index.ts` ist das Verteilzentrum — Konsumenten verwenden diesen Pfad
+
+Siehe `frontend/src/lib/components/organisms/organisms.test.ts` für statische Quellcode-Validierung.
+
+---
+
+## 9 · Domain-Komponenten (App-spezifisch)
 
 Diese sind nicht Foundation, aber kanonisch:
 
@@ -137,7 +159,7 @@ Diese sind nicht Foundation, aber kanonisch:
 
 ---
 
-## 9 · Verbotene Patterns (Cross-Reference)
+## 10 · Verbotene Patterns (Cross-Reference)
 
 Siehe `ANTI-PATTERNS.md`:
 
@@ -146,7 +168,7 @@ Siehe `ANTI-PATTERNS.md`:
 
 ---
 
-## 10 · Erweiterungs-Prozess
+## 11 · Erweiterungs-Prozess
 
 Neue Komponente braucht:
 

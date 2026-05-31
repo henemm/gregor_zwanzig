@@ -20,7 +20,7 @@
 	import type { WizardState, BriefingConfig } from '../wizardState.svelte';
 	import ChannelToggle from './ChannelToggle.svelte';
 	import ReportRow from './ReportRow.svelte';
-	import AlertRulesEditor from '$lib/components/alert-rules-editor/AlertRulesEditor.svelte';
+	import { AlertRulesEditor } from '$lib/components/organisms';
 
 	const wizard = getContext<WizardState>('trip-wizard-state');
 

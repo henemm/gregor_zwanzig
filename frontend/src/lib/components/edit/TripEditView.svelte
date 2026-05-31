@@ -7,7 +7,7 @@
 	import EditStagesPanelNew from './EditStagesPanelNew.svelte';
 	import WeatherSummaryCard from './WeatherSummaryCard.svelte';
 	import EditReportConfigSection from './EditReportConfigSection.svelte';
-	import AlertRulesEditor from '$lib/components/alert-rules-editor/AlertRulesEditor.svelte';
+	import { AlertRulesEditor } from '$lib/components/organisms';
 	import { normalizeAlertMetric } from '$lib/utils/alertMetricLabels';
 	import { stripSuggested } from '$lib/utils/waypointEditor';
 
