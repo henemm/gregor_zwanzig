@@ -1,8 +1,7 @@
 <script lang="ts">
 	import Menu from '@lucide/svelte/icons/menu';
 	import XIcon from '@lucide/svelte/icons/x';
-	import MoonIcon from '@lucide/svelte/icons/moon';
-	import SunIcon from '@lucide/svelte/icons/sun';
+	import MIcon from '$lib/components/mobile/MIcon.svelte';
 	import Wordmark from '$lib/components/ui/wordmark/Wordmark.svelte';
 
 	interface Props {
@@ -67,15 +66,19 @@
 		{@render right()}
 	{/if}
 	<button
-		data-testid="top-app-bar-toggle-dark"
-		onclick={ontoggleDark}
-		class="rounded-md p-1.5 hover:bg-accent"
-		aria-label="Dark Mode"
+		disabled
+		data-testid="top-app-bar-bell"
+		aria-label="Benachrichtigungen"
+		class="rounded-md p-1.5 opacity-40"
 	>
-		{#if darkMode}
-			<SunIcon class="h-5 w-5" />
-		{:else}
-			<MoonIcon class="h-5 w-5" />
-		{/if}
+		<MIcon kind="bell" size={20} />
 	</button>
+	<a
+		href="/trips/new"
+		data-testid="top-app-bar-new-trip"
+		aria-label="Neuer Trip"
+		class="rounded-md p-1.5 hover:bg-accent"
+	>
+		<MIcon kind="plus" size={20} />
+	</a>
 </div>

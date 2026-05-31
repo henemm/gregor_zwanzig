@@ -240,7 +240,7 @@
 | Heutiger Etappen-Block mit Höhenprofil fehlt | BLOCKER |
 | "Was geht raus"-Briefing-Liste fehlt | BLOCKER |
 | Bottom-Nav Icons: SOLL Haus; IST Raster (4 Quadrate) | LOW |
-| Header: SOLL Hamburger + Glocke + Plus; IST Hamburger + Wordmark + Mond-Icon | MEDIUM |
+| Header: SOLL Hamburger + Glocke + Plus; IST Hamburger + Wordmark + Mond-Icon ✓ LIVE (Issue #481) | — |
 
 ### Mobile Trips-Liste
 | Finding | Schwere |
@@ -359,7 +359,7 @@
 | M-06 | Wizard Step 4: Uhrzeit-Format 12h → 24h (06:00 PM → 18:00) | MEDIUM |
 | M-07 | E-Mail/SMS-Vorschau: Fehlermeldung auf Deutsch + benutzerfreundlich | MEDIUM |
 | M-08 | Archiv: Suchfeld-Breite auf volle Breite setzen | MEDIUM |
-| M-09 | Mobile Home: Header-Struktur (Glocke + Plus statt Mond-Icon) | MEDIUM |
+| M-09 | Mobile Home: Header-Struktur (Glocke + Plus statt Mond-Icon) ✓ LIVE (Issue #481) | DONE |
 | M-10 | Mobile Wizard Step 2: Badge-Farbe Etappe orange statt blau | MEDIUM |
 
 ### Offen / Klärung PO erforderlich
