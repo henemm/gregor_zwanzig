@@ -85,7 +85,7 @@ export function formatLastSent(iso?: string | null): string {
 
 /** ComparePreset → Status (rein frontend-seitig abgeleitet). */
 export function deriveStatusFromPreset(p: ComparePreset): CompareStatus {
-	if (!p.name || p.location_ids.length === 0 || p.empfaenger.length === 0) return 'draft';
+	if (!p.name || p.location_ids.length === 0) return 'draft';
 	if (p.schedule === 'manual') return 'paused';
 	return 'active';
 }
