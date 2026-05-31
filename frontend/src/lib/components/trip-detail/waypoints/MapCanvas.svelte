@@ -1,114 +1,95 @@
 <script lang="ts">
-	import { buildMapPositions } from '$lib/utils/waypointEditor';
-	import { TopoBg } from '$lib/components/atoms';
-	import WaypointPin from './WaypointPin.svelte';
+	import { browser } from '$app/environment';
 	import type { Stage } from '$lib/types';
+	import type * as LeafletNS from 'leaflet';
 
 	interface Props {
 		stage: Stage;
 		activeWaypointId: string | null;
 		onWaypointActivate: (waypointId: string) => void;
 	}
-	let { stage, activeWaypointId, onWaypointActivate }: Props = $props();
+	let { stage, activeWaypointId: _activeWaypointId, onWaypointActivate }: Props = $props();
 
-	let zoomLevel = $state(1.0);
-	let showTopo = $state(true);
+	let mapEl: HTMLDivElement;
+	let map: LeafletNS.Map | null = null;
 
-	const positions = $derived(buildMapPositions(stage, 400, 300));
-	const polylinePoints = $derived(
-		positions.length >= 2 ? positions.map((p) => `${p.x},${p.y}`).join(' ') : ''
-	);
-
-	function handleZoomIn(): void {
-		zoomLevel = Math.min(3.0, zoomLevel + 0.25);
-	}
-	function handleZoomOut(): void {
-		zoomLevel = Math.max(0.5, zoomLevel - 0.25);
-	}
-	function handleLayerToggle(): void {
-		showTopo = !showTopo;
-	}
-	function makeWaypointClickHandler(waypointId: string) {
-		return function handleWaypointClick() {
+	function makeMarkerClickHandler(waypointId: string) {
+		return function handleMarkerClick() {
 			onWaypointActivate(waypointId);
 		};
 	}
-	function makeWaypointKeyHandler(waypointId: string) {
-		return function handleWaypointKey(e: KeyboardEvent) {
-			if (e.key === 'Enter' || e.key === ' ') {
-				onWaypointActivate(waypointId);
+
+	$effect(() => {
+		// SSR-Guard: Leaflet greift auf window zu — nur im Browser ausführen.
+		if (!browser || !mapEl) return;
+
+		// Dynamischer Import: hält Leaflet-Bundle (inkl. window-Zugriffen) vom SSR-Build fern.
+		(async () => {
+			const L = (await import('leaflet')).default;
+			await import('leaflet/dist/leaflet.css');
+			const iconUrl = (await import('leaflet/dist/images/marker-icon.png')).default;
+			const iconRetinaUrl = (await import('leaflet/dist/images/marker-icon-2x.png')).default;
+			const shadowUrl = (await import('leaflet/dist/images/marker-shadow.png')).default;
+
+			// Marker-Icon Fix (Leaflet/Vite-Problem): Standardpfade durch gebundelte Assets ersetzen
+			delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
+			L.Icon.Default.mergeOptions({ iconUrl, iconRetinaUrl, shadowUrl });
+
+			// Abbruch wenn Effekt zwischenzeitlich aufgeräumt wurde (mapEl entfernt)
+			if (!mapEl) return;
+
+			map = L.map(mapEl, { zoomControl: true });
+
+			L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+				attribution:
+					'Kartendaten: © <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende, ' +
+					'SRTM | Kartendarstellung: © <a href="http://opentopomap.org">OpenTopoMap</a> ' +
+					'(<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)',
+				maxZoom: 17
+			}).addTo(map);
+
+			const waypoints = stage.waypoints;
+			if (waypoints.length >= 2) {
+				const latlngs = waypoints.map((w) => [w.lat, w.lon] as LeafletNS.LatLngTuple);
+
+				// Verbindungslinie in Etappen-Reihenfolge
+				// --g-accent hex, CSS-Variablen werden von Leaflet nicht aufgelöst
+				L.polyline(latlngs, { color: '#c45a2a', weight: 2 }).addTo(map);
+
+				// Marker pro Wegpunkt
+				waypoints.forEach((w, i) => {
+					const marker = L.marker([w.lat, w.lon])
+						.addTo(map!)
+						.bindPopup(`${i + 1}. ${w.name ?? ''}`);
+					marker.on('click', makeMarkerClickHandler(w.id));
+				});
+
+				// Karte auf alle Wegpunkte einpassen
+				map.fitBounds(L.latLngBounds(latlngs), { padding: [24, 24] });
+			} else if (waypoints.length === 1) {
+				const w = waypoints[0];
+				const marker = L.marker([w.lat, w.lon])
+					.addTo(map)
+					.bindPopup(`1. ${w.name ?? ''}`);
+				marker.on('click', makeMarkerClickHandler(w.id));
+				map.setView([w.lat, w.lon], 12);
+			} else {
+				// Fallback: Europa-Zentrum
+				map.setView([47.0, 10.0], 5);
 			}
+		})();
+
+		// Synchroner Cleanup (Svelte greift sonst nicht): map-Ref ausserhalb des async-IIFE halten
+		return () => {
+			map?.remove();
+			map = null;
 		};
-	}
+	});
 </script>
 
 <div
 	data-testid="map-canvas"
-	class="relative rounded border border-[var(--g-ink-faint)]/20 overflow-hidden"
+	bind:this={mapEl}
+	class="rounded border border-[var(--g-ink-faint)]/20"
 	style="width:400px;height:300px;"
->
-	{#if showTopo}
-		<TopoBg />
-	{/if}
-
-	<svg
-		viewBox="0 0 400 300"
-		width="400"
-		height="300"
-		class="absolute inset-0"
-		style="transform: scale({zoomLevel}); transform-origin: center;"
-		role="img"
-		aria-label="Karte für Etappe {stage.name} mit {positions.length} Wegpunkten"
-	>
-		{#if polylinePoints}
-			<polyline
-				points={polylinePoints}
-				fill="none"
-				stroke="var(--g-accent)"
-				stroke-width="2"
-				stroke-linejoin="round"
-				stroke-linecap="round"
-			/>
-		{/if}
-
-		{#each positions as pos, i (pos.waypointId)}
-			{@const wp = stage.waypoints.find((w) => w.id === pos.waypointId)}
-			{@const isActive = pos.waypointId === activeWaypointId}
-			{@const isSuggested = wp?.suggested === true}
-			<g
-				data-testid="map-waypoint-pin-{i}"
-				transform="translate({pos.x - 10},{pos.y - 28})"
-			>
-				<WaypointPin
-					index={i + 1}
-					active={isActive}
-					suggested={isSuggested}
-					onclick={makeWaypointClickHandler(pos.waypointId)}
-				/>
-			</g>
-		{/each}
-	</svg>
-
-	<div class="absolute top-2 right-2 flex flex-col gap-1">
-		<button
-			data-testid="map-zoom-in"
-			onclick={handleZoomIn}
-			aria-label="Heranzoomen"
-			class="rounded bg-white/80 px-2 py-1 text-sm shadow hover:bg-white"
-		>+</button>
-		<button
-			data-testid="map-zoom-out"
-			onclick={handleZoomOut}
-			aria-label="Herauszoomen"
-			class="rounded bg-white/80 px-2 py-1 text-sm shadow hover:bg-white"
-		>−</button>
-	</div>
-	<button
-		data-testid="map-layer-toggle"
-		onclick={handleLayerToggle}
-		class="absolute bottom-2 right-2 rounded bg-white/80 px-2 py-1 text-xs shadow hover:bg-white"
-		aria-label={showTopo ? 'Auf Standardkarte wechseln' : 'Auf Topokarte wechseln'}
-	>
-		{showTopo ? 'Sat' : 'Topo'}
-	</button>
-</div>
+></div>

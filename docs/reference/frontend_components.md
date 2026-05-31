@@ -1010,7 +1010,7 @@ interface Props {
 | Komponente | Pfad rel. zu components/ | Kurzbeschreibung |
 |---|---|---|
 | EtappenStrip | `trip-detail/waypoints/EtappenStrip.svelte` | Etappen-Strip mit Drag-Drop |
-| MapCanvas | `trip-detail/waypoints/MapCanvas.svelte` | SVG-Karte der Route |
+| MapCanvas | `trip-detail/waypoints/MapCanvas.svelte` | Leaflet-Karte mit OpenTopoMap-Tiles (Issue #495) |
 | WaypointPin | `trip-detail/waypoints/WaypointPin.svelte` | Wegpunkt-Marker auf der Karte |
 | PauseStageView | `trip-detail/waypoints/PauseStageView.svelte` | Ansicht fuer Pausen-Etappen |
 | ProfileEditor | `trip-detail/waypoints/ProfileEditor.svelte` | Hoehenprofil-Editor |

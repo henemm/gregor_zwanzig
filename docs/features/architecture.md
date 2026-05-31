@@ -1,6 +1,6 @@
 # Architektur – Gregor Zwanzig
 
-**Updated:** 2026-05-31 (Issue #483 — Demo-Modus im Vorschau-Tab, Preview-Endpoints dokumentiert)
+**Updated:** 2026-05-31 (Issue #483 — Demo-Modus im Vorschau-Tab; Issue #495 — MapCanvas Leaflet-Karte; Issue #475 — OutputLayoutEditor zu Organisms)
 
 ## Überblick
 Gregor Zwanzig ist ein verteiltes System mit separaten Backend (Go) und Frontend (SvelteKit):
@@ -102,6 +102,8 @@ frontend/
 │   │   │   │   ├── TripHeader.svelte
 │   │   │   │   ├── TripTabs.svelte
 │   │   │   │   ├── waypoints/
+│   │   │   │   │   ├── MapCanvas.svelte    # Leaflet-Karte mit OpenTopoMap-Tiles (Issue #495)
+│   │   │   │   │   └── ...
 │   │   │   │   └── index.ts       # Barrel (TripHeader re-exported in organisms/)
 │   │   │   ├── alert-rules-editor/  # Alert configuration
 │   │   │   │   ├── AlertRulesEditor.svelte
@@ -268,6 +270,22 @@ HTML + Client-Side Interactivity
 - Test token application (computed styles, not hardcoded colors)
 
 **Example:** `frontend/e2e/design-system-lauf-b.spec.ts` (10 tests)
+
+### Frontend Dependencies
+
+**Key libraries:**
+- **SvelteKit 5:** React framework + SSR
+- **Svelte 5:** Runes-based reactivity
+- **Tailwind CSS:** Utility-first styling
+- **Leaflet (~1.9.4):** Interactive maps for waypoint editing (Issue #495)
+  - Tile layer: OpenTopoMap (topographic tiles with contour lines)
+  - Waypoint markers and polyline routing
+  - Zoom control and bounds fitting
+- **@types/leaflet:** TypeScript types for Leaflet
+- **shadcn/svelte:** Pre-built accessible components (buttons, dialogs, etc.)
+- **bits-ui:** Headless component library
+- **@lucide/svelte:** Icon library
+- **svelte-dnd-action:** Drag-and-drop utilities
 
 ### Build & Deployment
 

@@ -1,10 +1,7 @@
-// TDD RED: Epic #137 — Wegpunkt-Editor Pure Functions (AC-14, AC-15)
+// Tests: Epic #137 — Wegpunkt-Editor Pure Functions (AC-14)
 //
 // Spec: docs/specs/modules/epic_137_wegpunkt_editor.md
-// Issues: #166–#172
-// Workflow: Phase 5 (TDD RED) — Tests MÜSSEN FEHLSCHLAGEN bis Phase 6.
-//
-// `waypointEditor.ts` existiert noch NICHT → Import-Fehler = RED.
+// Issue #495: SVG-Projektions-Tests entfernt — Leaflet ersetzt sie.
 //
 // Ausführung:
 //   cd frontend && node --experimental-strip-types --test \
@@ -13,7 +10,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { stripSuggested, buildMapPositions, boundingBox } from './waypointEditor.ts';
+import { stripSuggested, boundingBox } from './waypointEditor.ts';
 
 import type { Stage, Waypoint } from '../types.ts';
 
@@ -105,77 +102,6 @@ test('AC-14: stripSuggested mutiert das Original-Array nicht (gibt neue Stages z
 	stripSuggested(stages);
 	// Original bleibt unberührt
 	assert.equal(originalWp.suggested, true, 'Original-Waypoint sollte nicht mutiert werden');
-});
-
-// =============================================================================
-// AC-15: buildMapPositions
-// =============================================================================
-
-test('AC-15: buildMapPositions normiert Koordinaten auf SVG-Viewport [0,400]x[0,300]', () => {
-	const s = stage('s1', '2026-06-01', [
-		wp('w1', 'Start', 42.0, 9.0, 800),
-		wp('w2', 'Mitte', 42.1, 9.1, 1000),
-		wp('w3', 'Ende', 42.2, 9.2, 600)
-	]);
-	const positions = buildMapPositions(s, 400, 300);
-	assert.equal(positions.length, 3);
-	for (const pos of positions) {
-		assert.ok(pos.x >= 0 && pos.x <= 400, `x=${pos.x} außerhalb [0, 400]`);
-		assert.ok(pos.y >= 0 && pos.y <= 300, `y=${pos.y} außerhalb [0, 300]`);
-		assert.equal(typeof pos.waypointId, 'string');
-	}
-});
-
-test('AC-15: buildMapPositions mit leeren Waypoints → leeres Array', () => {
-	const s = stage('s1', '2026-06-01', []);
-	const positions = buildMapPositions(s, 400, 300);
-	assert.deepEqual(positions, []);
-});
-
-test('AC-15: buildMapPositions mit 1 Waypoint → auf Mittelpunkt (200, 150)', () => {
-	const s = stage('s1', '2026-06-01', [wp('w1', 'Einzeln', 42.0, 9.0, 800)]);
-	const positions = buildMapPositions(s, 400, 300);
-	assert.equal(positions.length, 1);
-	assert.ok(Math.abs(positions[0].x - 200) < 1, `x=${positions[0].x} nicht ~200`);
-	assert.ok(Math.abs(positions[0].y - 150) < 1, `y=${positions[0].y} nicht ~150`);
-});
-
-test('AC-15: buildMapPositions wenn alle Waypoints gleiche Koordinaten → alle auf Mittelpunkt', () => {
-	const s = stage('s1', '2026-06-01', [
-		wp('w1', 'A', 42.0, 9.0, 800),
-		wp('w2', 'B', 42.0, 9.0, 900),
-		wp('w3', 'C', 42.0, 9.0, 700)
-	]);
-	const positions = buildMapPositions(s, 400, 300);
-	assert.equal(positions.length, 3);
-	for (const pos of positions) {
-		assert.ok(Math.abs(pos.x - 200) < 1, `x=${pos.x} nicht ~200`);
-		assert.ok(Math.abs(pos.y - 150) < 1, `y=${pos.y} nicht ~150`);
-	}
-});
-
-test('AC-15: buildMapPositions waypointId entspricht Waypoint-ID', () => {
-	const s = stage('s1', '2026-06-01', [
-		wp('id-alpha', 'A', 42.0, 9.0, 800),
-		wp('id-beta', 'B', 42.1, 9.1, 900)
-	]);
-	const positions = buildMapPositions(s, 400, 300);
-	assert.equal(positions[0].waypointId, 'id-alpha');
-	assert.equal(positions[1].waypointId, 'id-beta');
-});
-
-test('AC-15: buildMapPositions Reihenfolge entspricht Waypoint-Reihenfolge', () => {
-	const waypoints = [
-		wp('w1', 'A', 42.0, 9.0, 800),
-		wp('w2', 'B', 42.1, 9.1, 900),
-		wp('w3', 'C', 42.2, 9.2, 700)
-	];
-	const s = stage('s1', '2026-06-01', waypoints);
-	const positions = buildMapPositions(s, 400, 300);
-	assert.equal(positions.length, 3);
-	assert.equal(positions[0].waypointId, 'w1');
-	assert.equal(positions[1].waypointId, 'w2');
-	assert.equal(positions[2].waypointId, 'w3');
 });
 
 // =============================================================================

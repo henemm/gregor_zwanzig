@@ -1,13 +1,10 @@
 // waypointEditor.ts — Pure Functions for Waypoint-Editor (Epic #137)
-// Spec: docs/specs/modules/epic_137_wegpunkt_editor.md AC-14, AC-15
+// Spec: docs/specs/modules/epic_137_wegpunkt_editor.md AC-14
+//
+// Issue #495: SVG-Projektion entfernt — Leaflet übernimmt sie.
+// `boundingBox` bleibt (eigene Tests).
 
 import type { Stage, Waypoint } from '$lib/types';
-
-export interface MapPosition {
-	waypointId: string;
-	x: number;
-	y: number;
-}
 
 export interface BoundingBox {
 	minLat: number;
@@ -104,47 +101,3 @@ export function interpolateWaypoint(
 	};
 }
 
-/**
- * Normiert Waypoint-Koordinaten einer Stage auf SVG-Viewport-Koordinaten.
- * Padding: 8px von allen Seiten. cosLat-Korrektur für x-Achse.
- */
-export function buildMapPositions(
-	stage: Stage,
-	svgWidth: number,
-	svgHeight: number
-): MapPosition[] {
-	const waypoints = stage.waypoints;
-	if (waypoints.length === 0) return [];
-
-	const padding = 8;
-	const innerW = svgWidth - 2 * padding;
-	const innerH = svgHeight - 2 * padding;
-
-	if (waypoints.length === 1) {
-		return [{ waypointId: waypoints[0].id, x: svgWidth / 2, y: svgHeight / 2 }];
-	}
-
-	const bb = boundingBox(waypoints);
-	const xRange = (bb.maxLon - bb.minLon) * bb.cosLat;
-	const yRange = bb.maxLat - bb.minLat;
-
-	return waypoints.map((w) => {
-		let x: number;
-		let y: number;
-
-		if (xRange === 0) {
-			x = svgWidth / 2;
-		} else {
-			x = padding + ((w.lon - bb.minLon) * bb.cosLat / xRange) * innerW;
-		}
-
-		if (yRange === 0) {
-			y = svgHeight / 2;
-		} else {
-			// Lat wächst nach Norden → y invertieren (SVG-Ursprung oben links)
-			y = padding + ((bb.maxLat - w.lat) / yRange) * innerH;
-		}
-
-		return { waypointId: w.id, x, y };
-	});
-}
