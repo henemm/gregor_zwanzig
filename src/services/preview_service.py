@@ -120,6 +120,15 @@ class PreviewService:
         if trip.display_config and trip.report_config:
             trip.display_config.show_compact_summary = trip.report_config.show_compact_summary
 
+        # Issue #474: F12 Wetterlage-Label vor format_email berechnen.
+        try:
+            from services.weather_pattern import WeatherPatternService
+            stability_result = WeatherPatternService().compute_for_trip(
+                trip, target, segment_weather
+            )
+        except Exception:
+            stability_result = None
+
         report = scheduler._formatter.format_email(
             segments=segment_weather,
             trip_name=trip.name,
@@ -129,6 +138,7 @@ class PreviewService:
             stage_stats=stage_stats,
             tz=trip_tz,
             profile=trip.aggregation.profile,
+            stability_result=stability_result,
         )
         return report, segment_weather, stage_name, trip_tz
 

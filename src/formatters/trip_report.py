@@ -157,6 +157,7 @@ class TripReportFormatter:
             tz=self._tz,
             trip_name=trip_name,
             friendly_keys=self._friendly_keys,
+            stability_result=stability_result,
         )
         telegram_text = render_narrow(
             "telegram",
@@ -167,6 +168,7 @@ class TripReportFormatter:
             tz=self._tz,
             trip_name=trip_name,
             friendly_keys=self._friendly_keys,
+            stability_result=stability_result,
         )
 
         return TripReport(

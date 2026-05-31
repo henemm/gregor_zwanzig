@@ -9,7 +9,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, time, timezone
 from enum import Enum
-from typing import List, Literal, Optional
+from typing import Any, List, Literal, Optional
+from zoneinfo import ZoneInfo
 
 # Re-export Location for convenience. Canonical definition lives in app.config.
 from app.config import Location  # noqa: F401
@@ -783,3 +784,24 @@ class StabilityResult:
     """
     label: Literal["STABIL", "WECHSELHAFT", "FRAGIL"]
     confidence_pct: int   # min(confidence_pct_min) über Folge-Etappen
+
+
+# --- Issue #474: ReportContext — Datentopf für die Report-Pipeline ---------
+
+@dataclass(frozen=True)
+class ReportContext:
+    """Issue #474: Gemeinsamer Datentopf für die Report-Pipeline.
+
+    Frozen dataclass, das alle zwischen Formatter und Renderer reichenden
+    Felder bündelt, damit keine impliziten Seiteneffekte mehr zwischen
+    den Pipeline-Stufen entstehen.
+    """
+    seg_tables: list[list[dict]]
+    night_rows: list[dict]
+    highlights: list[str]
+    compact_summary: Optional[str]
+    token_line: Optional[Any]
+    stability_result: Optional["StabilityResult"]
+    friendly_keys: set[str]
+    tz: "ZoneInfo"
+    exposed_sections: Optional[list[Any]]

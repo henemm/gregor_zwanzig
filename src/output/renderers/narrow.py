@@ -17,7 +17,7 @@ from typing import Optional
 from zoneinfo import ZoneInfo
 
 from app.metric_catalog import get_metric
-from app.models import SegmentWeatherData, UnifiedWeatherDisplayConfig
+from app.models import SegmentWeatherData, StabilityResult, UnifiedWeatherDisplayConfig
 from utils.timezone import local_fmt
 
 from src.output.renderers.channel_layout import CHANNEL_LIMITS, render_for_channel
@@ -151,6 +151,7 @@ def render_narrow(
     tz: ZoneInfo,
     trip_name: str = "",
     friendly_keys: Optional[set[str]] = None,
+    stability_result: Optional[StabilityResult] = None,
 ) -> str:
     """Render kompakten Signal/Telegram-Body. Pure function.
 
@@ -178,6 +179,10 @@ def render_narrow(
     head2 = f"{report_type.title()} {report_date}".strip()
     if head2:
         lines.extend(_wrap(head2, width))
+
+    # Issue #474: F12 Wetterlage-Label (WL) direkt nach Header.
+    if stability_result is not None:
+        lines.extend(_wrap(f"WL: {stability_result.label}", width))
 
     for seg_data, rows in zip(segments, seg_tables):
         seg = seg_data.segment
