@@ -29,3 +29,5 @@ export { default as CompareKebab }      from '../compare/CompareKebab.svelte';
 export { default as CompareLocationRow } from './CompareLocationRow.svelte';
 export { default as CompareIdealRow } from './CompareIdealRow.svelte';
 export { default as CompareLayoutRow } from './CompareLayoutRow.svelte';
+export { default as ReportConfigDialog } from './ReportConfigDialog.svelte';
+export { default as TestReportDialog } from './TestReportDialog.svelte';

@@ -95,14 +95,7 @@ test('AC-3: <Dot> mit tone-Prop ist noch vorhanden (Mobile Card-Stack)', () => {
 	assert.ok(/<Dot[^>]*tone=/.test(src), '<Dot> ohne tone-Prop gefunden');
 });
 
-// ── AC-4: Nicht-atomisierte Komponenten bleiben unverändert aus ui/ ───────────
-
-test('AC-4: Table/Dialog/Select/EmptyState/Checkbox bleiben aus ui/ importiert', () => {
-	const src = readPage();
-	for (const uiPath of ['ui/table', 'ui/dialog', 'ui/select', 'ui/empty-state', 'ui/checkbox']) {
-		assert.ok(
-			src.includes(uiPath),
-			`Import aus '$lib/components/${uiPath}' fehlt — diese Komponenten haben kein Atom-Pendant und müssen aus ui/ bleiben`
-		);
-	}
-});
+// ── AC-4: durch #477 superseded ──────────────────────────────────────────────
+// Table/Dialog/Select/EmptyState/Checkbox wurden per #477+#486 aus +page.svelte
+// entfernt und in ReportConfigDialog / TestReportDialog / native HTML gekapselt.
+// Gegenbeweis: issue_477_486.test.ts AC-1 prüft die Abwesenheit explizit.

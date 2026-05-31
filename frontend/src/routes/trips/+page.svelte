@@ -3,11 +3,9 @@
 	import { api } from '$lib/api.js';
 	import { goto } from '$app/navigation';
 	import { Btn, Input, Dot, Eyebrow, Pill } from '$lib/components/atoms';
-	import * as Table from '$lib/components/ui/table/index.js';
-	import * as Dialog from '$lib/components/ui/dialog/index.js';
+	import { ConfirmDialog, ReportConfigDialog, TestReportDialog } from '$lib/components/molecules';
 	import { DropdownMenu } from 'bits-ui';
 	import SearchIcon from '@lucide/svelte/icons/search';
-	import RouteIcon from '@lucide/svelte/icons/route';
 	import BellIcon from '@lucide/svelte/icons/bell';
 	import CloudSunIcon from '@lucide/svelte/icons/cloud-sun';
 	import PlayIcon from '@lucide/svelte/icons/play';
@@ -16,9 +14,6 @@
 	import EllipsisVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
 	import SendIcon from '@lucide/svelte/icons/send';
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
-	import { Checkbox } from '$lib/components/ui/checkbox';
-	import { Select } from '$lib/components/ui/select';
-	import { EmptyState } from '$lib/components/ui/empty-state/index.js';
 	import { deriveTripStatus, tripStatus, type HomeTripStatus } from '$lib/utils/tripStatus';
 
 	const now = new Date();
@@ -88,16 +83,20 @@
 	}
 
 	function primaryLabel(trip: Trip): string {
-		const s = deriveTripStatus(trip, now);
-		if (s === 'active' || s === 'planned') return 'Briefing-Vorschau';
-		if (s === 'paused') return 'Reaktivieren';
-		return 'Dearchivieren';
+		const s = tripStatus(trip, now);
+		if (s === 'aktiv' || s === 'geplant') return 'Briefing-Vorschau';
+		if (s === 'draft') return 'Fertigstellen';
+		return trip.archived_at ? 'Dearchivieren' : 'Archivieren';
 	}
 
 	async function handlePrimaryAction(trip: Trip) {
-		const s = deriveTripStatus(trip, now);
-		if (s === 'active' || s === 'planned') {
+		const s = tripStatus(trip, now);
+		if (s === 'aktiv' || s === 'geplant') {
 			goto(`/trips/${trip.id}#preview`);
+			return;
+		}
+		if (s === 'draft') {
+			goto(`/trips/${trip.id}/wizard`);
 			return;
 		}
 		primaryActionLoading = trip.id;
@@ -105,7 +104,7 @@
 			const res = await fetch(`/api/trips/${trip.id}/state`, {
 				method: 'PATCH',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(s === 'paused' ? { paused: false } : { archived: false })
+				body: JSON.stringify(trip.archived_at ? { archived: false } : { archived: true })
 			});
 			if (!res.ok) throw new Error(`PATCH failed: ${res.status}`);
 			await refetchTrips();
@@ -113,6 +112,20 @@
 			error = (e as Error).message ?? 'Fehler beim Statuswechsel';
 		} finally {
 			primaryActionLoading = null;
+		}
+	}
+
+	async function handlePauseToggle(trip: Trip) {
+		try {
+			const res = await fetch(`/api/trips/${trip.id}/state`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ paused: !trip.paused_at })
+			});
+			if (!res.ok) throw new Error(`PATCH failed: ${res.status}`);
+			await refetchTrips();
+		} catch (e: unknown) {
+			error = (e as Error).message ?? 'Fehler beim Pausieren';
 		}
 	}
 
@@ -215,16 +228,6 @@
 		}
 	}
 
-	function getHour(timeStr: string): number {
-		return parseInt(timeStr.split(':')[0], 10);
-	}
-
-	function setHour(timeStr: string, hour: number): string {
-		const parts = timeStr.split(':');
-		parts[0] = String(hour).padStart(2, '0');
-		return parts.join(':');
-	}
-
 	async function runTestReport(trip: Trip, hour: 7 | 18) {
 		testReportTarget = trip;
 		testReportHour = hour;
@@ -277,9 +280,11 @@
 	{/if}
 
 	{#if trips.length === 0}
-		<EmptyState icon={RouteIcon} title="Noch kein Trip." description="Lege deinen ersten Trip an — Wizard in 4 Schritten.">
-			<Btn variant="outline" onclick={() => goto('/trips/new')}>+ Neuer Trip</Btn>
-		</EmptyState>
+		<div class="flex flex-col items-center gap-3 py-12">
+			<Eyebrow>Noch keine Trips</Eyebrow>
+			<p class="text-sm text-muted-foreground mt-1">Erstelle deinen ersten Trip, um Briefings zu erhalten.</p>
+			<Btn onclick={openCreate} variant="primary">Neuer Trip</Btn>
+		</div>
 	{:else}
 		<div class="relative mb-3 max-w-[380px]">
 			<SearchIcon class="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
@@ -368,31 +373,33 @@
 			{/each}
 		</div>
 		<div class="hidden desktop:block overflow-x-auto -mx-4 px-4 desktop:mx-0 desktop:px-0">
-		<Table.Root>
-			<Table.Header>
-				<Table.Row>
-					<Table.Head>Name</Table.Head>
-					<Table.Head class="hidden sm:table-cell">Zeitraum</Table.Head>
-					<Table.Head class="text-right">Aktionen</Table.Head>
-				</Table.Row>
-			</Table.Header>
-			<Table.Body>
+		<table class="w-full caption-bottom text-sm">
+			<thead class="[&_tr]:border-b">
+				<tr class="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+					<th class="h-10 px-2 text-left align-middle font-medium text-muted-foreground">Name</th>
+					<th class="h-10 px-2 text-left align-middle font-medium text-muted-foreground hidden sm:table-cell">Zeitraum</th>
+					<th class="h-10 px-2 text-right align-middle font-medium text-muted-foreground">Aktionen</th>
+				</tr>
+			</thead>
+			<tbody class="[&_tr:last-child]:border-0">
 				{#each filteredTrips as trip}
-					<Table.Row>
-						<Table.Cell>
+					<tr class="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+						<td class="p-2 align-middle">
 							<div class="flex flex-col min-w-0">
-								<a href="/trips/{trip.id}" class="font-medium truncate hover:underline decoration-[var(--g-accent)] underline-offset-2">
-									{trip.name}
-								</a>
+								<div class="flex items-baseline gap-0">
+									<a href="/trips/{trip.id}" class="trip-link font-medium truncate hover:underline decoration-[var(--g-accent)] underline-offset-2">
+										{trip.name}
+									</a><span class="status-caption font-mono text-[9px] uppercase tracking-widest text-[var(--g-ink-4)] ml-1.5">· {tripStatus(trip, now)}</span>
+								</div>
 								<span class="font-mono text-xs text-muted-foreground tabular-nums">
 									{trip.stages?.length ?? 0} Etappen
 								</span>
 							</div>
-						</Table.Cell>
-						<Table.Cell class="hidden sm:table-cell font-mono tabular-nums text-sm text-muted-foreground">
+						</td>
+						<td class="p-2 align-middle hidden sm:table-cell font-mono tabular-nums text-sm text-muted-foreground">
 							{dateRange(trip)}
-						</Table.Cell>
-						<Table.Cell class="text-right">
+						</td>
+						<td class="p-2 align-middle text-right">
 							<div class="inline-flex items-center gap-2">
 								<Btn
 									variant="outline"
@@ -424,6 +431,10 @@
 										>Bearbeiten</DropdownMenu.Item>
 										<DropdownMenu.Item
 											class="w-full text-left px-3 py-1.5 text-sm hover:bg-muted cursor-default outline-none"
+											onSelect={() => handlePauseToggle(trip)}
+										>{trip.paused_at ? 'Reaktivieren' : 'Pausieren'}</DropdownMenu.Item>
+										<DropdownMenu.Item
+											class="w-full text-left px-3 py-1.5 text-sm hover:bg-muted cursor-default outline-none"
 											onSelect={() => runTestReport(trip, 7)}
 										>Test-Briefing Morgen</DropdownMenu.Item>
 										<DropdownMenu.Item
@@ -437,7 +448,7 @@
 										<DropdownMenu.Item
 											class="w-full text-left px-3 py-1.5 text-sm hover:bg-muted cursor-default outline-none"
 											onSelect={() => openReportConfig(trip)}
-										>Report-Konfiguration</DropdownMenu.Item>
+										>Alerts justieren</DropdownMenu.Item>
 										<DropdownMenu.Separator class="my-1 h-px bg-border" />
 										<DropdownMenu.Item
 											class="w-full text-left px-3 py-1.5 text-sm text-destructive hover:bg-muted cursor-default outline-none"
@@ -446,188 +457,51 @@
 									</DropdownMenu.Content>
 								</DropdownMenu.Root>
 							</div>
-						</Table.Cell>
-					</Table.Row>
+						</td>
+					</tr>
 				{/each}
-			</Table.Body>
-		</Table.Root>
-		<p class="hidden desktop:block mt-2 font-mono text-xs uppercase tracking-wide text-muted-foreground">
-			{filteredTrips.length} von {trips.length} Trips
+			</tbody>
+		</table>
+		<p class="hidden desktop:block mt-2">
+			<span class="font-mono text-xs uppercase tracking-widest">
+				{filteredTrips.length} Trips · {trips.length - filteredTrips.length} versteckt
+			</span>
 		</p>
 		</div>
 		{/if}
 	{/if}
 </div>
 
-<!-- Delete Confirmation Dialog -->
-<Dialog.Root
+<ConfirmDialog
 	open={deleteTarget !== null}
-	onOpenChange={(open) => { if (!open) deleteTarget = null; }}
->
-	<Dialog.Content>
-		<Dialog.Header>
-			<Dialog.Title>Trip löschen</Dialog.Title>
-			<Dialog.Description>
-				Möchtest du "{deleteTarget?.name}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
-			</Dialog.Description>
-		</Dialog.Header>
-		<Dialog.Footer>
-			<Btn variant="outline" onclick={() => (deleteTarget = null)}>Abbrechen</Btn>
-			<Btn variant="destructive" onclick={handleDelete}>Löschen</Btn>
-		</Dialog.Footer>
-	</Dialog.Content>
-</Dialog.Root>
+	title="Trip löschen"
+	description="Diese Aktion kann nicht rückgängig gemacht werden."
+	confirmLabel="Löschen"
+	confirmVariant="destructive"
+	onConfirm={handleDelete}
+	onCancel={() => (deleteTarget = null)}
+	onOpenChange={(o) => { if (!o) deleteTarget = null; }}
+/>
 
-<!-- Report Config Dialog -->
-<Dialog.Root
+<ReportConfigDialog
 	open={reportConfigTarget !== null}
-	onOpenChange={(open) => { if (!open) reportConfigTarget = null; }}
->
-	<Dialog.Content class="max-h-[85vh] max-w-lg overflow-y-auto">
-		<Dialog.Header>
-			<Dialog.Title>Report-Konfiguration — {reportConfigTarget?.name}</Dialog.Title>
-			<Dialog.Description>Zeiten und Kanäle für automatische Wetterreports</Dialog.Description>
-		</Dialog.Header>
+	trip={reportConfigTarget}
+	bind:config={reportConfig}
+	loading={reportConfigLoading}
+	saving={reportConfigSaving}
+	error={reportConfigError}
+	onSave={saveReportConfig}
+	onClose={() => (reportConfigTarget = null)}
+/>
 
-		{#if reportConfigLoading}
-			<p class="py-4 text-sm text-muted-foreground">Lade Konfiguration…</p>
-		{:else}
-			<div class="space-y-5 py-2">
-				<!-- Times -->
-				<div class="grid grid-cols-2 gap-4">
-					<div class="space-y-1">
-						<label class="text-sm font-medium" for="morning-hour">Morgen-Report (Stunde)</label>
-						<Select
-							id="morning-hour"
-							class="w-full"
-							value={getHour(reportConfig.morning_time)}
-							onchange={(e) => {
-								reportConfig.morning_time = setHour(reportConfig.morning_time, Number((e.target as HTMLSelectElement).value));
-							}}
-						>
-							{#each Array.from({ length: 24 }, (_, i) => i) as h}
-								<option value={h}>{String(h).padStart(2, '0')}:00</option>
-							{/each}
-						</Select>
-					</div>
-					<div class="space-y-1">
-						<label class="text-sm font-medium" for="evening-hour">Abend-Report (Stunde)</label>
-						<Select
-							id="evening-hour"
-							class="w-full"
-							value={getHour(reportConfig.evening_time)}
-							onchange={(e) => {
-								reportConfig.evening_time = setHour(reportConfig.evening_time, Number((e.target as HTMLSelectElement).value));
-							}}
-						>
-							{#each Array.from({ length: 24 }, (_, i) => i) as h}
-								<option value={h}>{String(h).padStart(2, '0')}:00</option>
-							{/each}
-						</Select>
-					</div>
-				</div>
-
-				<!-- Enabled -->
-				<div class="flex items-center gap-3 text-sm font-medium">
-					<Checkbox bind:checked={reportConfig.enabled}>Reports aktiv</Checkbox>
-				</div>
-
-				<!-- Channels -->
-				<div class="space-y-2">
-					<p class="text-sm font-medium">Kanäle</p>
-					<div class="space-y-2 text-sm">
-						<div><Checkbox bind:checked={reportConfig.send_email}>E-Mail senden</Checkbox></div>
-						<div><Checkbox bind:checked={reportConfig.send_signal}>Signal senden</Checkbox></div>
-						<div><Checkbox bind:checked={reportConfig.send_telegram}>Telegram senden</Checkbox></div>
-					</div>
-				</div>
-
-				<!-- Options -->
-				<div class="space-y-2">
-					<p class="text-sm font-medium">Optionen</p>
-					<div class="space-y-2 text-sm">
-						<div><Checkbox bind:checked={reportConfig.alert_on_changes}>Alert bei Änderungen</Checkbox></div>
-						<div><Checkbox bind:checked={reportConfig.show_compact_summary}>Kompakte Zusammenfassung anzeigen</Checkbox></div>
-						<div><Checkbox bind:checked={reportConfig.show_daylight}>Tageslicht anzeigen</Checkbox></div>
-					</div>
-				</div>
-
-				<!-- Thresholds -->
-				<div class="space-y-2">
-					<p class="text-sm font-medium">Änderungs-Schwellwerte</p>
-					<div class="grid grid-cols-3 gap-3">
-						<div class="space-y-1">
-							<label class="text-xs text-muted-foreground" for="thresh-temp">Temperatur (°C)</label>
-							<input
-								id="thresh-temp"
-								type="number"
-								class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
-								bind:value={reportConfig.change_threshold_temp_c}
-							/>
-						</div>
-						<div class="space-y-1">
-							<label class="text-xs text-muted-foreground" for="thresh-wind">Wind (km/h)</label>
-							<input
-								id="thresh-wind"
-								type="number"
-								class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
-								bind:value={reportConfig.change_threshold_wind_kmh}
-							/>
-						</div>
-						<div class="space-y-1">
-							<label class="text-xs text-muted-foreground" for="thresh-precip">Niederschlag (mm)</label>
-							<input
-								id="thresh-precip"
-								type="number"
-								class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
-								bind:value={reportConfig.change_threshold_precip_mm}
-							/>
-						</div>
-					</div>
-				</div>
-
-				{#if reportConfigError}
-					<p class="text-sm text-destructive">{reportConfigError}</p>
-				{/if}
-			</div>
-		{/if}
-
-		<Dialog.Footer>
-			<Btn variant="outline" onclick={() => (reportConfigTarget = null)}>Abbrechen</Btn>
-			<Btn variant="primary" onclick={saveReportConfig} disabled={reportConfigLoading || reportConfigSaving}>
-				{reportConfigSaving ? 'Speichern…' : 'Speichern'}
-			</Btn>
-		</Dialog.Footer>
-	</Dialog.Content>
-</Dialog.Root>
-
-<!-- Test Report Result Dialog -->
-<Dialog.Root
+<TestReportDialog
 	open={testReportTarget !== null}
-	onOpenChange={(open) => { if (!open) { testReportTarget = null; testReportResult = null; testReportError = null; } }}
->
-	<Dialog.Content class="max-w-sm">
-		<Dialog.Header>
-			<Dialog.Title>
-				Test-Report — {testReportHour === 7 ? 'Morgen' : 'Abend'}
-			</Dialog.Title>
-		</Dialog.Header>
-		<div class="py-4 text-sm">
-			{#if testReportRunning}
-				<p class="text-muted-foreground">Report wird ausgelöst…</p>
-			{:else if testReportResult}
-				<p class="text-green-700 dark:text-green-400">{testReportResult}</p>
-			{:else if testReportError}
-				<p class="text-destructive">{testReportError}</p>
-			{/if}
-		</div>
-		<Dialog.Footer>
-			<Btn variant="primary" onclick={() => { testReportTarget = null; testReportResult = null; testReportError = null; }}>
-				Schließen
-			</Btn>
-		</Dialog.Footer>
-	</Dialog.Content>
-</Dialog.Root>
+	hour={testReportHour}
+	running={testReportRunning}
+	result={testReportResult}
+	error={testReportError}
+	onClose={() => { testReportTarget = null; testReportResult = null; testReportError = null; }}
+/>
 
 <!-- Bottom-Sheet Backdrop + Panel (Issue #268) -->
 {#if sheetTrip !== null}
@@ -652,7 +526,7 @@
 	<div class="py-2">
 		<button class="w-full flex items-center gap-3 px-4 min-h-[44px] text-sm hover:bg-muted/60 active:bg-muted"
 			onclick={() => { const t = sheetTrip!; sheetTrip = null; openReportConfig(t); }}>
-			<BellIcon class="size-4 text-muted-foreground shrink-0" /> Report-Konfiguration
+			<BellIcon class="size-4 text-muted-foreground shrink-0" /> Alerts justieren
 		</button>
 		<button class="w-full flex items-center gap-3 px-4 min-h-[44px] text-sm hover:bg-muted/60 active:bg-muted"
 			onclick={() => { const t = sheetTrip!; sheetTrip = null; goto(`/trips/${t.id}#weather`); }}>
