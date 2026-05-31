@@ -74,7 +74,7 @@
 		</span>
 	{:else}
 		<span data-testid="trip-wizard-step2-stage-pill-{index}">
-			<Pill tone="info">{formatStageNumber(nonPauseIndex)}</Pill>
+			<Pill tone="accent">{formatStageNumber(nonPauseIndex)}</Pill>
 		</span>
 	{/if}
 

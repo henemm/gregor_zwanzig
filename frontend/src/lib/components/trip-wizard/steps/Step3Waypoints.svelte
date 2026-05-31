@@ -111,7 +111,7 @@
 								: 'border-[var(--g-ink-faint)]/30 hover:bg-[var(--g-ink-faint)]/5'}"
 						>
 							<span data-testid="trip-wizard-step3-stage-pill-{i}">
-								<Pill tone="info">{formatStageNumber(nonPauseIndices[i])}</Pill>
+								<Pill tone="accent">{formatStageNumber(nonPauseIndices[i])}</Pill>
 							</span>
 							<span class="text-sm truncate w-full">{stage.name}</span>
 							{#if stage.date}
