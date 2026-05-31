@@ -181,7 +181,12 @@ export class CompareWizardState {
 				await api.post('/api/subscriptions', payload);
 			}
 			this.saveStatus = 'ok';
-			await goto('/compare');
+			// Issue #492 — Im Edit-Modus zurück zur Detail-Seite des Vergleichs.
+			await goto(
+				this.isEditMode && this.subscriptionId
+					? '/compare/' + this.subscriptionId
+					: '/compare'
+			);
 		} catch (e: unknown) {
 			this.saveStatus = 'error';
 			this.saveError = extractErrorMessage(e);

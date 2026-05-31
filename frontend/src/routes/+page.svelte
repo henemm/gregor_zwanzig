@@ -1,7 +1,8 @@
 <script lang="ts">
-	import type { Trip, Subscription, StagesWeatherResponse, CockpitStatus } from '$lib/types.js';
+	import type { Trip, ComparePreset, StagesWeatherResponse, CockpitStatus } from '$lib/types.js';
 	import { Card, Pill, Dot, Eyebrow, Btn, ElevSparkline, SectionH } from '$lib/components/atoms';
 	import { StagePill, BriefingTimelineRow } from '$lib/components/molecules';
+	import { deriveStatusFromPreset } from '$lib/components/compare/subscriptionHelpers.js';
 	import {
 		tripStatus,
 		activeOrNextTrip,
@@ -25,10 +26,16 @@
 
 	const now = new Date();
 	const trips = $derived((data.trips ?? []) as Trip[]);
-	const subscriptions = $derived((data.subscriptions ?? []) as Subscription[]);
+	// Issue #492 — ComparePreset (vom /api/compare/presets-Endpoint) statt
+	// Subscription. Home zeigt nur aktive Vergleiche, gefiltert via
+	// deriveStatusFromPreset (Block A, #488).
+	const presets = $derived((data.presets ?? []) as ComparePreset[]);
+	const activePresets = $derived(
+		presets.filter((p) => deriveStatusFromPreset(p) === 'active')
+	);
 	const heroWeather = null as StagesWeatherResponse | null; // Issue 395: kein Live-Wetter auf der Website (dormant; späteres On-Demand-Laden separat)
 	const cockpitStatus = $derived((data.cockpitStatus ?? null) as CockpitStatus | null);
-	const isEmpty = $derived(trips.length === 0 && subscriptions.length === 0);
+	const isEmpty = $derived(trips.length === 0 && presets.length === 0);
 
 	const todayPretty = now.toLocaleDateString('de-DE', {
 		weekday: 'short',
@@ -364,11 +371,21 @@
 			</section>
 		{/if}
 
-		{#if subscriptions.length > 0}
+		{#if activePresets.length > 0}
 			<section style:margin-bottom="32px">
-				<div class="kachel-grid">
-					{#each subscriptions as sub (sub.id)}
-						<CompareKachel {sub} />
+				<SectionH
+					eyebrow="WORKSPACE"
+					title="Aktive Orts-Vergleiche"
+					kicker="Laufen automatisch — Briefing kommt in die Kanäle"
+					right={compareAllLink}
+				/>
+				<div
+					style:display="grid"
+					style:grid-template-columns="repeat(3, 1fr)"
+					style:gap="16px"
+				>
+					{#each activePresets as preset (preset.id)}
+						<CompareKachel sub={preset} />
 					{/each}
 				</div>
 			</section>
@@ -383,6 +400,10 @@
 
 {#snippet archiveLink()}
 	<Btn href="/trips" variant="quiet" size="sm">Alle anzeigen</Btn>
+{/snippet}
+
+{#snippet compareAllLink()}
+	<Btn href="/compare" variant="quiet" size="sm">Alle anzeigen</Btn>
 {/snippet}
 
 <style>

@@ -9,6 +9,7 @@
 	import { getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { Btn, Eyebrow, TopoBg } from '$lib/components/atoms';
+	import { ConfirmDialog } from '$lib/components/molecules';
 	import type { CompareWizardState } from './compareWizardState.svelte';
 	import Stepper from '$lib/components/trip-wizard/Stepper.svelte';
 	import Step1Vergleich from './steps/Step1Vergleich.svelte';
@@ -23,7 +24,7 @@
 	}
 	let { locations = [] }: Props = $props();
 
-	const state = getContext<CompareWizardState>('compare-wizard-state');
+	const wiz = getContext<CompareWizardState>('compare-wizard-state');
 
 	const stepLabels = ['Vergleich', 'Orte', 'Idealwerte', 'Layout', 'Versand'];
 	const stepSubLabels = [
@@ -43,42 +44,49 @@
 	};
 
 	const eyebrow = $derived(
-		state.isEditMode
+		wiz.isEditMode
 			? 'ORTS-VERGLEICH · BEARBEITEN'
-			: `SCHRITT ${state.currentStep} VON 5 · NEUER ORTS-VERGLEICH`
+			: `SCHRITT ${wiz.currentStep} VON 5 · NEUER ORTS-VERGLEICH`
 	);
 
-	const saveLabel = $derived(state.saveStatus === 'saving' ? 'Speichern...' : 'Speichern');
+	const saveLabel = $derived(wiz.saveStatus === 'saving' ? 'Speichern...' : 'Speichern');
+
+	// Issue #492 — Modaler Bestätigungsdialog statt nativer Browser-Abfrage
+	// (lässt sich in modernen Browsern ausblenden und bietet keine Gestaltung).
+	let cancelDialogOpen = $state(false);
+	let discardDialogOpen = $state(false);
 
 	function handleCancel() {
 		const isDirty =
-			state.name !== '' ||
-			state.pickedIds.length > 0 ||
-			state.region !== '' ||
-			state.activityProfile !== null;
-		if (isDirty && !confirm('Änderungen verwerfen?')) return;
-		void goto('/compare');
+			wiz.name !== '' ||
+			wiz.pickedIds.length > 0 ||
+			wiz.region !== '' ||
+			wiz.activityProfile !== null;
+		if (isDirty) {
+			cancelDialogOpen = true;
+		} else {
+			void goto('/compare');
+		}
 	}
 
 	function handleDiscard() {
-		if (!confirm('Alle Änderungen verwerfen?')) return;
-		void goto('/compare');
+		discardDialogOpen = true;
 	}
 
 	function handleNext() {
-		state.nextStep();
+		wiz.nextStep();
 	}
 
 	function handleSave() {
-		void state.save();
+		void wiz.save();
 	}
 
 	function handleStepClick(step: number) {
-		state.goToStep(step);
+		wiz.goToStep(step);
 	}
 
 	function handleToggleEnabled() {
-		void state.toggleEnabled();
+		void wiz.toggleEnabled();
 	}
 </script>
 
@@ -87,47 +95,47 @@
 		<div class="p-6 rounded-lg mb-6">
 			<header class="space-y-1 mb-4">
 				<Eyebrow data-testid="compare-wizard-header-eyebrow">{eyebrow}</Eyebrow>
-				{#if state.isEditMode}
+				{#if wiz.isEditMode}
 					<div class="flex items-center gap-2">
 						<h1 data-testid="compare-wizard-header-h1" class="text-2xl font-bold">
-							{state.name}
+							{wiz.name}
 						</h1>
 						<span
 							data-testid="compare-wizard-header-status-pill"
 							class={`text-xs font-mono px-2 py-0.5 rounded-full ${
-								state.subscriptionEnabled
+								wiz.subscriptionEnabled
 									? 'bg-[var(--g-success)]/15 text-[var(--g-success)]'
 									: 'bg-[var(--g-ink-faint)]/20 text-[var(--g-ink-muted)]'
 							}`}
 						>
-							{state.subscriptionEnabled ? 'aktiv' : 'pausiert'}
+							{wiz.subscriptionEnabled ? 'aktiv' : 'pausiert'}
 						</span>
 					</div>
 					<h2 class="text-base text-[var(--g-ink-muted)] mt-1">
-						{stepTitles[state.currentStep]}
+						{stepTitles[wiz.currentStep]}
 					</h2>
 				{:else}
 					<h1 data-testid="compare-wizard-header-h1" class="text-2xl font-bold">
-						{stepTitles[state.currentStep]}
+						{stepTitles[wiz.currentStep]}
 					</h1>
 				{/if}
 			</header>
 
 			<Stepper
-				current={state.currentStep}
+				current={wiz.currentStep}
 				labels={stepLabels}
 				subLabels={stepSubLabels}
-				onStepClick={state.isEditMode ? handleStepClick : undefined}
+				onStepClick={wiz.isEditMode ? handleStepClick : undefined}
 				testidPrefix="compare-wizard"
 			/>
 
-			{#if state.isEditMode}
+			{#if wiz.isEditMode}
 				<div class="flex gap-2 justify-end mt-3">
 					<Btn variant="outline" size="sm" disabled>
 						Briefing-Vorschau
 					</Btn>
 					<Btn variant="outline" size="sm" onclick={handleToggleEnabled}>
-						{state.subscriptionEnabled ? 'Pausieren' : 'Aktivieren'}
+						{wiz.subscriptionEnabled ? 'Pausieren' : 'Aktivieren'}
 					</Btn>
 				</div>
 			{/if}
@@ -135,28 +143,28 @@
 	</TopoBg>
 
 	<div class="min-h-[300px] mt-6">
-		{#if state.currentStep === 1}
+		{#if wiz.currentStep === 1}
 			<Step1Vergleich />
-		{:else if state.currentStep === 2}
+		{:else if wiz.currentStep === 2}
 			<Step2Orte {locations} />
-		{:else if state.currentStep === 3}
+		{:else if wiz.currentStep === 3}
 			<Step3Idealwerte />
-		{:else if state.currentStep === 4}
+		{:else if wiz.currentStep === 4}
 			<Step4Layout />
-		{:else if state.currentStep === 5}
+		{:else if wiz.currentStep === 5}
 			<Step5Versand />
 		{:else}
 			<div class="text-[var(--g-ink-muted)] text-center py-12">
-				Schritt {state.currentStep} — folgt in einem weiteren Issue.
+				Schritt {wiz.currentStep} — folgt in einem weiteren Issue.
 			</div>
 		{/if}
 	</div>
 
-	{#if state.saveStatus !== 'idle'}
+	{#if wiz.saveStatus !== 'idle'}
 		<div role="status" aria-live="polite" class="mt-4 min-h-[1.5rem] text-sm">
-			{#if state.saveStatus === 'error'}
-				<span class="text-[var(--g-danger)]">{state.saveError}</span>
-			{:else if state.saveStatus === 'ok'}
+			{#if wiz.saveStatus === 'error'}
+				<span class="text-[var(--g-danger)]">{wiz.saveError}</span>
+			{:else if wiz.saveStatus === 'ok'}
 				<span class="text-[var(--g-success)]">Gespeichert</span>
 			{/if}
 		</div>
@@ -165,7 +173,7 @@
 	<div
 		class="flex items-center justify-between mt-8 pt-4 border-t border-[var(--g-ink-faint)]/30"
 	>
-		{#if state.isEditMode}
+		{#if wiz.isEditMode}
 			<Btn
 				data-testid="compare-wizard-footer-discard"
 				variant="ghost"
@@ -174,19 +182,37 @@
 			>
 				Verwerfen
 			</Btn>
-			<div class="flex flex-col items-center gap-1">
+			<div style:display="flex" style:gap="8px" style:align-items="center">
+				{#if wiz.currentStep > 1}
+					<Btn
+						data-testid="compare-wizard-footer-prev"
+						variant="outline"
+						size="md"
+						onclick={() => wiz.prevStep()}
+					>
+						← Zurück
+					</Btn>
+				{/if}
+				{#if wiz.currentStep < 5}
+					<Btn
+						data-testid="compare-wizard-footer-next-edit"
+						variant="outline"
+						size="md"
+						onclick={handleNext}
+						disabled={!wiz.canAdvanceCurrent}
+					>
+						Weiter →
+					</Btn>
+				{/if}
 				<Btn
 					data-testid="compare-wizard-footer-save"
 					variant="accent"
 					size="md"
 					onclick={handleSave}
-					disabled={state.saveStatus === 'saving'}
+					disabled={wiz.saveStatus === 'saving'}
 				>
 					{saveLabel}
 				</Btn>
-				<p class="text-xs text-[var(--g-ink-muted)]">
-					Änderungen werden beim Speichern übernommen
-				</p>
 			</div>
 		{:else}
 			<Btn
@@ -197,13 +223,13 @@
 			>
 				Abbrechen
 			</Btn>
-			{#if state.currentStep < 5}
+			{#if wiz.currentStep < 5}
 				<Btn
 					data-testid="compare-wizard-footer-next"
 					variant="accent"
 					size="md"
 					onclick={handleNext}
-					disabled={!state.canAdvanceCurrent}
+					disabled={!wiz.canAdvanceCurrent}
 				>
 					Weiter →
 				</Btn>
@@ -213,11 +239,49 @@
 					variant="accent"
 					size="md"
 					onclick={handleSave}
-					disabled={!state.canAdvanceStep5 || state.saveStatus === 'saving'}
+					disabled={!wiz.canAdvanceStep5 || wiz.saveStatus === 'saving'}
 				>
 					Briefing aktivieren →
 				</Btn>
 			{/if}
 		{/if}
 	</div>
+
+	<ConfirmDialog
+		open={cancelDialogOpen}
+		title="Wizard abbrechen?"
+		description="Deine Eingaben gehen verloren."
+		confirmLabel="Abbrechen"
+		confirmVariant="destructive"
+		cancelLabel="Weiter ausfüllen"
+		onConfirm={() => {
+			cancelDialogOpen = false;
+			void goto('/compare');
+		}}
+		onCancel={() => (cancelDialogOpen = false)}
+		onOpenChange={(open) => {
+			if (!open) cancelDialogOpen = false;
+		}}
+	/>
+
+	<ConfirmDialog
+		open={discardDialogOpen}
+		title="Änderungen verwerfen?"
+		description="Alle Änderungen an diesem Vergleich werden verworfen."
+		confirmLabel="Verwerfen"
+		confirmVariant="destructive"
+		cancelLabel="Weiter bearbeiten"
+		onConfirm={() => {
+			discardDialogOpen = false;
+			void goto(
+				wiz.isEditMode && wiz.subscriptionId
+					? '/compare/' + wiz.subscriptionId
+					: '/compare'
+			);
+		}}
+		onCancel={() => (discardDialogOpen = false)}
+		onOpenChange={(open) => {
+			if (!open) discardDialogOpen = false;
+		}}
+	/>
 </div>

@@ -1,98 +1,22 @@
 <script lang="ts">
-	import type { Subscription } from '$lib/types.js';
+	// Issue #492 — Thin-Wrapper auf CompareTile (Block A, #488).
+	// Spec: docs/specs/modules/issue_492_home_umbau_wizard_feinschliff.md
+	//
+	// Delegiert Rendering und Aktionen vollständig an CompareTile.
+	// Klick navigiert zur Compare-Detail-Seite, Kebab "Bearbeiten" zur Edit-Route.
 
-	let { sub }: { sub: Subscription } = $props();
+	import { goto } from '$app/navigation';
+	import CompareTile from '$lib/components/compare/CompareTile.svelte';
+	import type { ComparePreset } from '$lib/types.js';
 
-	const DAYS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
-
-	function scheduleLabel(s: Subscription): string {
-		if (s.schedule === 'daily_morning') return 'tägl. 07:00';
-		if (s.schedule === 'daily_evening') return 'tägl. 18:00';
-		if (s.schedule === 'weekly') {
-			const day = DAYS[s.weekday ?? 0];
-			const hour = String(s.time_window_start ?? 7).padStart(2, '0');
-			return `${day} ${hour}:00`;
-		}
-		return s.schedule;
-	}
-
-	const label = $derived(scheduleLabel(sub));
-	const firstLoc = $derived(
-		sub.locations?.length > 0 && sub.locations[0] !== '*' ? sub.locations[0] : null
-	);
-	const statusColor = $derived(sub.enabled ? 'var(--g-success)' : 'var(--g-ink-muted)');
-	const statusLabel = $derived(sub.enabled ? 'aktiv' : 'pausiert');
+	let { sub }: { sub: ComparePreset } = $props();
 </script>
 
-<a href="/compare" data-testid="subscription-card" data-slot="g-card">
-	<div class="kachel__row">
-		<span class="kachel__type">Vergleich</span>
-		<span class="kachel__status" style:color={statusColor}>
-			<span class="kachel__dot" style:background={statusColor}></span>
-			{statusLabel}
-		</span>
-	</div>
-	<div class="kachel__name">{sub.name}</div>
-	<div class="kachel__when">{label}</div>
-	{#if firstLoc}
-		<div class="kachel__meta">{firstLoc}</div>
-	{/if}
-</a>
-
-<style>
-	[data-slot="g-card"] {
-		display: flex;
-		flex-direction: column;
-		gap: var(--g-s-2);
-		padding: var(--g-s-4);
-		border: 1px solid var(--g-ink-faint);
-		text-decoration: none;
-		color: var(--g-ink);
-		box-shadow: none;
-		transition: border-color 120ms, box-shadow 120ms;
-	}
-	[data-slot="g-card"]:hover {
-		border-color: var(--g-accent);
-		box-shadow: var(--g-elev-1);
-	}
-	.kachel__row {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-	}
-	.kachel__type {
-		font-family: var(--g-font-data);
-		font-size: 10px;
-		letter-spacing: 0.14em;
-		text-transform: uppercase;
-		color: var(--g-ink-muted);
-	}
-	.kachel__status {
-		display: inline-flex;
-		align-items: center;
-		gap: var(--g-s-1);
-		font-family: var(--g-font-data);
-		font-size: 9px;
-		letter-spacing: 0.16em;
-		text-transform: uppercase;
-	}
-	.kachel__dot {
-		width: 6px;
-		height: 6px;
-		border-radius: 50%;
-		flex-shrink: 0;
-	}
-	.kachel__name {
-		font-size: 15px;
-		font-weight: 600;
-	}
-	.kachel__when {
-		font-family: var(--g-font-data);
-		font-size: 12px;
-		color: var(--g-ink-muted);
-	}
-	.kachel__meta {
-		font-size: 12px;
-		color: var(--g-ink-muted);
-	}
-</style>
+<CompareTile
+	{sub}
+	compact
+	onclick={() => goto('/compare/' + sub.id)}
+	onAction={(id) => {
+		if (id === 'edit') goto('/compare/' + sub.id + '/edit');
+	}}
+/>
