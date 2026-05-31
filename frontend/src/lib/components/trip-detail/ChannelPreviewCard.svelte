@@ -1,203 +1,213 @@
 <script lang="ts">
-	// Issue #365 — eine Kanal-Karte in der 4-Kanal-Live-Vorschau. Zeigt Label +
-	// Spalten-Zähler, Mono-Mini-Tabelle (Kürzel-Header + 1 repräsentative Zeile),
-	// ·-Detail-Zeile und Warn-Badge bei Überlauf. SMS = flache Textzeile.
-	// Werte sind repräsentativ (Layout-Vorschau), nicht die Live-Wetterdaten.
-	// Design: docs/design/epic_331_output_layout/screen-metrics-editor.jsx (Z. 582-650)
+	// Issue #496 — Konsequenz-Kachel (Schicht 1) der "Pro Kanal"-Vorschau.
+	// Statt einer Mini-Tabelle pro Karte zeigen die 4 Kacheln nun NUR die
+	// Konsequenz der aktuellen Konfiguration je Kanal: "wie viele rutschen
+	// raus?" Per Klick aktiviert der Nutzer Schicht 2 (Fidelity-Vorschau).
 	import { applyChannel, type MetricEntry } from './metricsEditor.ts';
 
 	interface Props {
-		label: string;
 		channelId: 'email' | 'telegram' | 'signal' | 'sms';
-		budget: number;
-		hint: string;
+		label: string;
+		glyph: string;
+		maxCols: number;
 		primary: string[];
 		secondary: string[];
 		metricById: Record<string, MetricEntry>;
-		shortById: Record<string, string>;
-		sampleById: Record<string, string>;
+		active: boolean;
+		onSelect: () => void;
 	}
 	let {
-		label, channelId, budget, hint, primary, secondary,
-		metricById, shortById, sampleById,
+		channelId, label, glyph, maxCols, primary, secondary,
+		metricById, active, onSelect,
 	}: Props = $props();
 
-	const layout = $derived(applyChannel(primary, secondary, budget));
+	// SMS-Token-Tabelle (entscheidungskritische Metriken) — gespiegelt aus
+	// ChannelFidelitySMS.svelte. Wird hier nur fuer den Zaehler verwendet.
+	const SMS_TOK: Record<string, string> = {
+		temperature: 'N8 D11',
+		precipitation: 'R3.2',
+		rain_probability: 'PR53%@12',
+		wind: 'W12@11(24@13)',
+		gust: 'G25@12(43@14)',
+		thunder: 'TH5%@12',
+	};
+	const SMS_PREFIX = 'KHW03:';
+	const SMS_TAIL = 'Z:WATCH:2447';
+	const SMS_MAX = 140;
+
+	function smsCounters(prim: string[], sec: string[]) {
+		const order = [...prim, ...sec];
+		const carried: string[] = [];
+		let tokens: string[] = [];
+		let dropped = 0;
+		const lenWith = (toks: string[]) =>
+			`${SMS_PREFIX} ${[...toks, SMS_TAIL].join(' ')}`.length;
+		for (const id of order) {
+			const tok = SMS_TOK[id];
+			if (!tok) { dropped++; continue; }
+			if (lenWith([...tokens, tok]) > SMS_MAX) { dropped++; continue; }
+			tokens.push(tok);
+			carried.push(id);
+		}
+		return { carried: carried.length, dropped, total: order.length };
+	}
+
 	const isSMS = $derived(channelId === 'sms');
 
-	function shortOf(id: string): string {
-		return shortById[id] ?? metricById[id]?.label.slice(0, 5) ?? id.slice(0, 5);
-	}
-	function sampleOf(id: string): string {
-		return sampleById[id] ?? '—';
-	}
-	function labelOf(id: string): string {
-		return metricById[id]?.label ?? id;
-	}
+	// Spaltenbasierte Kanäle (Email/Telegram/Signal): applyChannel teilt
+	// primary in inTable (passt rein) + überzählige primary werden in
+	// "detail" eingereiht. Anzahl der Demoteten = layout.demoted (number).
+	const layout = $derived(applyChannel(primary, secondary, maxCols));
+	const smsCount = $derived(smsCounters(primary, secondary));
 
-	const counterText = $derived(
-		isSMS ? 'flach' : `${layout.inTable.length}/${budget === Infinity ? '∞' : budget} Spalten`,
+	const bigNum = $derived(
+		isSMS ? smsCount.carried : layout.inTable.length,
 	);
-	// Mono-Mini-Tabelle: Kürzel-Header + eine repräsentative Werte-Zeile.
-	const headerLine = $derived(
-		layout.inTable.map((id) => shortOf(id).slice(0, 5).padEnd(6, ' ')).join(''),
+	const bigSub = $derived(
+		isSMS
+			? `/ ${smsCount.total} als Code`
+			: maxCols === Infinity
+				? 'Spalten'
+				: `/ ${maxCols} Spalten`,
 	);
-	const valueLine = $derived(
-		layout.inTable.map((id) => sampleOf(id).padEnd(6, ' ')).join(''),
+	const tone = $derived(
+		isSMS
+			? smsCount.dropped > 0 ? 'warn' : 'ok'
+			: layout.demoted > 0 ? 'warn' : 'ok',
 	);
-	const smsLine = $derived(
-		[...primary, ...secondary].slice(0, 8).map((id) => `${shortOf(id)} ${sampleOf(id)}`).join(' · '),
+	const statusText = $derived(
+		isSMS
+			? smsCount.dropped > 0
+				? `${smsCount.dropped} ${smsCount.dropped === 1 ? 'fällt' : 'fallen'} weg`
+				: 'alle haben Code'
+			: layout.demoted > 0
+				? `${layout.demoted} ${layout.demoted === 1 ? 'rutscht' : 'rutschen'}`
+				: 'alle als Spalte',
 	);
-	const smsTruncated = $derived(primary.length + secondary.length > 8);
+	// "Detail-Zeile" (in Schicht 2): bei Spalten-Kanaelen = overflow + secondary,
+	// bei SMS = alle die keinen Code haben oder ueber Limit fallen.
+	const detailCount = $derived(
+		isSMS ? smsCount.dropped : layout.demoted + secondary.length,
+	);
 </script>
 
-<div class="card" data-testid="channel-preview-card-{channelId}">
-	<div class="card-head">
-		<div class="head-row">
-			<div class="ch-label">{label}</div>
-			<span
-				class="counter mono"
-				class:warn={layout.demoted > 0}
-				data-testid="channel-counter-{channelId}"
-			>{counterText}</span>
-		</div>
-		<div class="hint mono">{hint}</div>
+<button
+	type="button"
+	class="card"
+	class:active
+	class:warn={tone === 'warn'}
+	data-testid="channel-consequence-{channelId}"
+	aria-pressed={active}
+	onclick={onSelect}
+>
+	<div class="head">
+		<span class="glyph" aria-hidden="true">{glyph}</span>
+		<span class="label">{label}</span>
+		<span class="dot" class:dot-warn={tone === 'warn'} aria-hidden="true"></span>
 	</div>
 
-	<div class="card-body">
-		{#if !isSMS && layout.inTable.length > 0}
-			<div class="mini-table mono" data-testid="channel-table-{channelId}">{headerLine}{'\n'}{valueLine}</div>
-		{/if}
+	<div class="metric">
+		<span class="big mono">{bigNum}</span>
+		<span class="sub mono">{bigSub}</span>
+	</div>
 
-		{#if !isSMS && layout.detail.length > 0}
-			<div class="detail">
-				<span class="detail-eyebrow mono">Detail:</span>
-				{layout.detail.map((id) => `${labelOf(id)} ${sampleOf(id)}`).join(' · ')}
-			</div>
-		{/if}
-
-		{#if isSMS}
-			<div class="sms-line" data-testid="channel-sms-{channelId}">
-				{smsLine}{#if smsTruncated}<span class="ellipsis"> …</span>{/if}
-			</div>
-		{/if}
-
-		{#if layout.demoted > 0}
-			<div class="demote-badge" data-testid="channel-demote-{channelId}">
-				⚠ {layout.demoted} {layout.demoted === 1 ? 'Spalte' : 'Spalten'} verschoben in Detail
-			</div>
+	<div class="status">
+		<span class="pill mono" class:pill-warn={tone === 'warn'}>{statusText}</span>
+		{#if detailCount > 0}
+			<span class="detail-count mono">+{detailCount} Detail</span>
 		{/if}
 	</div>
-</div>
+</button>
 
 <style>
 	.card {
-		background: var(--g-surface-0);
-		border: 1px solid var(--g-ink-faint);
+		display: flex;
+		flex-direction: column;
+		gap: var(--g-s-2);
+		padding: var(--g-s-3);
+		border: 1px solid var(--g-rule-soft);
+		border-left: 3px solid transparent;
 		border-radius: var(--g-radius-sm);
-		overflow: hidden;
+		background: transparent;
+		text-align: left;
+		cursor: pointer;
+		transition: border-color 120ms, background 120ms, box-shadow 120ms;
+		font-family: inherit;
+		color: inherit;
+		width: 100%;
+	}
+	.card:hover {
+		background: var(--g-card);
+	}
+	.card.active {
+		border-left: 3px solid var(--g-accent);
+		background: var(--g-card);
+		box-shadow: var(--g-shadow-1);
+	}
+	.head {
 		display: flex;
-		flex-direction: column;
+		align-items: center;
+		gap: var(--g-s-2);
 	}
-	.card-head {
-		padding: var(--g-s-2) var(--g-s-3);
-		border-bottom: 1px solid var(--g-rule-soft);
+	.glyph {
+		font-size: var(--g-text-md);
+		color: var(--g-ink-muted);
+		width: 18px;
+		text-align: center;
 	}
-	.head-row {
-		/* Vertikal gestapelt: Label (Zeile 1) + Zähler-Badge (Zeile 2) konkurrieren
-		   NICHT um die Breite → beide vollständig, auch "Telegram" im 4er-Grid. */
-		display: flex;
-		flex-direction: column;
-		align-items: flex-start;
-		gap: var(--g-s-1);
-	}
-	.ch-label {
+	.label {
 		font-size: var(--g-text-sm);
 		font-weight: 600;
 		color: var(--g-ink);
-		/* Voller Kanalname, kein Truncate. */
-		white-space: nowrap;
+		flex: 1;
 	}
-	.counter {
-		padding: 2px 6px;
-		font-size: 10px;
-		border-radius: var(--g-radius-pill);
-		background: var(--g-surface-1);
-		color: var(--g-ink-muted);
-		font-weight: 600;
-		/* Badge nur so breit wie sein Inhalt; "X/Y Spalten" stets vollständig. */
-		align-self: flex-start;
-		white-space: nowrap;
+	.dot {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		background: var(--g-success, #2f7d4f);
 		flex-shrink: 0;
 	}
-	.counter.warn {
+	.dot-warn {
+		background: var(--g-warning);
+	}
+	.metric {
+		display: flex;
+		align-items: baseline;
+		gap: var(--g-s-1);
+	}
+	.big {
+		font-size: var(--g-text-2xl);
+		font-weight: 700;
+		color: var(--g-ink);
+		font-variant-numeric: tabular-nums;
+		line-height: 1;
+	}
+	.sub {
+		font-size: var(--g-text-xs);
+		color: var(--g-ink-muted);
+	}
+	.status {
+		display: flex;
+		align-items: center;
+		gap: var(--g-s-2);
+		flex-wrap: wrap;
+	}
+	.pill {
+		font-size: 10px;
+		padding: 2px 6px;
+		border-radius: var(--g-radius-pill);
+		background: color-mix(in srgb, var(--g-success, #2f7d4f) 12%, transparent);
+		color: var(--g-success, #2f7d4f);
+		font-weight: 600;
+		letter-spacing: var(--g-track-wide);
+	}
+	.pill-warn {
 		background: color-mix(in srgb, var(--g-warning) 15%, transparent);
 		color: var(--g-warning);
 	}
-	.hint {
-		font-size: var(--g-text-xs);
-		color: var(--g-ink-muted);
-		margin-top: var(--g-s-1);
-		letter-spacing: var(--g-track-wide);
-	}
-	.card-body {
-		padding: var(--g-s-3);
-		flex: 1;
-		font-size: var(--g-text-xs);
-		display: flex;
-		flex-direction: column;
-	}
-	.mini-table {
-		background: var(--g-paper-deep);
-		border-radius: var(--g-radius-xs);
-		padding: var(--g-s-1) var(--g-s-2);
+	.detail-count {
 		font-size: 10px;
-		line-height: 1.5;
-		overflow-x: auto;
-		white-space: pre;
-		color: var(--g-ink);
-	}
-	.detail {
-		margin-top: var(--g-s-2);
-		font-size: var(--g-text-xs);
 		color: var(--g-ink-muted);
-		line-height: 1.5;
-		font-style: italic;
-		/* Detail-Bereich nimmt den Rest-Platz, damit alle 4 Karten gleich hoch
-		   wirken; lange Detail-Zeilen (Email) werden auf 5 Zeilen geclamped. */
-		flex: 1;
-		display: -webkit-box;
-		-webkit-box-orient: vertical;
-		-webkit-line-clamp: 5;
-		line-clamp: 5;
-		overflow: hidden;
-	}
-	.sms-line {
-		flex: 1;
-	}
-	.detail-eyebrow {
-		font-size: 9px;
-		color: var(--g-ink-muted);
-		letter-spacing: var(--g-track-caps);
-		text-transform: uppercase;
-		margin-right: var(--g-s-1);
-	}
-	.sms-line {
-		font-size: var(--g-text-xs);
-		color: var(--g-ink-muted);
-		line-height: 1.5;
-	}
-	.ellipsis {
-		color: var(--g-ink-muted);
-	}
-	.demote-badge {
-		/* mt:auto schiebt den Warn-Hinweis unten bündig → Karten gleich hoch. */
-		margin-top: auto;
-		padding: var(--g-s-1) var(--g-s-2);
-		background: color-mix(in srgb, var(--g-warning) 8%, transparent);
-		border-left: 2px solid var(--g-warning);
-		font-size: var(--g-text-xs);
-		color: var(--g-warning);
-		font-weight: 600;
 	}
 </style>
