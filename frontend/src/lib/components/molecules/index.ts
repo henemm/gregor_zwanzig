@@ -19,8 +19,6 @@ export { default as ThresholdRow } from './ThresholdRow.svelte';
 export { default as Stat } from './Stat.svelte';
 export { default as AlertRow } from './AlertRow.svelte';
 export { default as ConfirmDialog } from './ConfirmDialog.svelte';
-export { default as ReportConfigDialog } from './ReportConfigDialog.svelte';
-export { default as TestReportDialog } from './TestReportDialog.svelte';
 
 // Issue #488 — Compare-Kachel-Atome (Epic #485 Block A).
 // Cross-Verzeichnis-Re-Export, damit alle Downstream-Issues (#485-B/C/D)
