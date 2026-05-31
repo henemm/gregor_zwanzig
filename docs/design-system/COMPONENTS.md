@@ -6,12 +6,13 @@
 
 ## Lese-Reihenfolge
 
-Die Datei ist in 9 Kategorien gegliedert, von Brand → Atoms → Organisms → Domain-Komponenten:
+Die Datei ist in 10 Kategorien gegliedert, von Brand → Atoms → Molecules → Organisms → Domain-Komponenten:
 
 1. **Brand** — Wordmark, Sidebar, User-Badge
 2. **Page-Chrome** — Seiten-Skelett (Header, Section, Tile-Grid, Empty)
 3. **Atoms** — Btn, Eyebrow, Pill, Dot, KV, Card, Sparkline (siehe auch `components/atoms/`, Epic #371)
 4. **Forms** — Input, Field, Checkbox, Select, Switch, Segmented (Props: `options`/`selected`/`onselect`)
+4.5 **Molecules** — DetailRow, Field, StagePill, ChannelRow, ChannelChip, BriefingTimelineRow, BriefingScheduleRow, ThresholdRow, Stat, AlertRow, ConfirmDialog (Atomic Design Level 2, Epic #368/372)
 5. **Feedback** — Toast, Dialog
 6. **Overlay** — DropdownMenu, Sheet, Tooltip
 7. **Mobile-Shell** — PhoneFrame, TopAppBar, BottomNav, Drawer, MInput, MBtn
@@ -81,7 +82,35 @@ Slots werden in der "Was sie tut"-Spalte erwähnt.
 
 ---
 
-## 5 · Feedback
+## 4.5 · Molecules (Atomic Design Level 2, Epic #368/372)
+
+Zusammenbauten aus Atoms und `ui/`-Primitives, kanonisch im Barrel `$lib/components/molecules/index.ts`:
+
+| Komponente | Props | Was sie tut |
+|---|---|---|
+| `<DetailRow>` | `label: string`, `value: ReactNode`, `sub: string`, `icon: ReactNode`, `right: ReactNode`, `mono: boolean` (default `true`), `divider: "dashed" \| "solid" \| "none"` (default `"solid"`) | Key-Value-Zeile mit Label, Value, Optional-Icon, optionaler Divider. |
+| `<Field>` — *Molecule* | `label: string`, `hint: string`, `error: string`, Slot `side`, `dense: boolean` | Form-Field mit Label-Bar, Hint, Error-Text; `dense` entfernt Vertical-Padding. |
+| `<StagePill>` | `stage: {code: string, risk: string}`, `state: "active" \| "done" \| "future" \| "muted"`, `data-state` attribute | Etappen-Badge mit Risk-Farbe und State-Icon. |
+| `<ChannelRow>` | `kind: string`, `target: string`, `active: boolean`, `sub: string`, `onToggle: () => void`, `dense: boolean`, `last: boolean` | Benachrichtigungs-Kanal-Zeile mit Switch; ohne `dense` = Card-Layout, mit `dense` = Reihe mit Unterlinie. |
+| `<ChannelChip>` | `kind: string`, `active: boolean`, `compact: boolean` (default `false`) | Kleine Kanal-Pille; `compact` = 24×24-Tile für Timeline-Reihen. |
+| `<BriefingTimelineRow>` | `report: {when, kind, etappe, channels, status}`, `dense: boolean` | Briefing-Verlauf-Zeile mit Zeitstempel, Kanal-Chips, Status. |
+| `<BriefingScheduleRow>` | `label: string`, `sub: string`, `time: string`, `enabled: boolean`, `onToggle: () => void`, `last: boolean` | Scheduler-Zeile mit Uhrzeit und Enable-Toggle. |
+| `<ThresholdRow>` | `label: string`, `value: string \| number`, `divider: boolean`, `last: boolean`, `editable: boolean`, `onEdit: () => void` | Schwellwert-Zeile (Alert-Limits). |
+| `<Stat>` | `label: string`, `value: string \| number`, `sub: string`, `unit: string`, `tone: "default" \| "accent"` (default `"default"`), `layout: "stack" \| "inline"` (default `"stack"`), `size: "sm" \| "md" \| "lg"` (default `"md"`), `mono: boolean` (default `true`) | Statistik-Anzeige (Etappen-Anzahl, Distanz, etc.); leerer `value` → Em-Dash. |
+| `<AlertRow>` | `alert: {kind, when, msg, channel?}`, `variant: "icon" \| "dot" \| "plain"` (default `"icon"`), `divider: boolean`, `last: boolean` | Alert-Konfiguration-Zeile. |
+| `<ConfirmDialog>` | `open: boolean`, `title: string`, `description: string`, `confirmLabel: string`, `confirmVariant: "primary" \| "destructive"` (default `"primary"`), `cancelLabel: string` (default `"Abbrechen"`), `disabled: boolean`, `data-testid: string`, `cancelTestid: string`, `confirmTestid: string`, `onConfirm: () => void`, `onCancel: () => void`, `onOpenChange: (open: boolean) => void` | Modal-Dialog für destruktive Bestätigungen (Archivieren, Löschen). Kapselt `ui/dialog`-Primitives + Btn-Atome. |
+
+**Schicht-Regeln (Epic #368):**
+- Molecules importieren **NICHT** direkt aus Page-Layouts oder Routes
+- Imports erfolgen von `atoms/` oder `ui/`-Primitives
+- Der physische Speicherort ist `frontend/src/lib/components/molecules/` mit Barrel-Export in `index.ts`
+- Konsumenten verwenden `import { ConfirmDialog } from '$lib/components/molecules'`
+
+Siehe `frontend/src/lib/components/molecules.test.ts` für statische Quellcode-Validierung.
+
+---
+
+## 5 · Feedback (Atoms)
 
 | Komponente | Props | Was sie tut |
 |---|---|---|
@@ -185,4 +214,5 @@ Neue Komponente braucht:
 
 | Version | Datum | Anmerkung |
 |---|---|---|
+| v1.1 | 2026-05-31 | Molecules-Sektion (Epic #368/372) + ConfirmDialog (Issue #478) hinzugefügt; bestehende 10 Molecules dokumentiert |
 | v1.0 | 2026-05-21 | Initialer Katalog — Runde 1 |

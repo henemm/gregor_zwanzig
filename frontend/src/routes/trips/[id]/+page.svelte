@@ -7,7 +7,7 @@
 	import { TripHeader } from '$lib/components/organisms';
 	import { TripTabs } from '$lib/components/trip-detail';
 	import { Btn, Eyebrow } from '$lib/components/atoms';
-	import * as Dialog from '$lib/components/ui/dialog/index.js';
+	import { ConfirmDialog } from '$lib/components/molecules';
 	import { deriveTripStatus } from '$lib/utils/tripStatus';
 	import type { Trip } from '$lib/types';
 
@@ -155,65 +155,37 @@
 	</section>
 </main>
 
-<Dialog.Root open={archiveDialogOpen} onOpenChange={handleArchiveDialogOpenChange}>
-	<Dialog.Content data-testid="trip-detail-archive-confirm-dialog">
-		<Dialog.Header>
-			<Dialog.Title>
-				{status === 'archived' ? 'Trip reaktivieren?' : 'Trip archivieren?'}
-			</Dialog.Title>
-			<Dialog.Description>
-				{status === 'archived'
-					? 'Der Trip wird aus dem Archiv zurückgeholt und ist wieder aktiv.'
-					: 'Der Trip wird ins Archiv verschoben — er kann später reaktiviert werden.'}
-			</Dialog.Description>
-		</Dialog.Header>
-		<Dialog.Footer>
-			<Btn
-				variant="outline"
-				data-testid="trip-detail-archive-confirm-cancel"
-				onclick={handleArchiveCancel}
-			>
-				Abbrechen
-			</Btn>
-			<Btn
-				variant="primary"
-				data-testid="trip-detail-archive-confirm-yes"
-				onclick={handleArchiveConfirm}
-				disabled={isLoading}
-			>
-				Bestätigen
-			</Btn>
-		</Dialog.Footer>
-	</Dialog.Content>
-</Dialog.Root>
+<ConfirmDialog
+	open={archiveDialogOpen}
+	title={status === 'archived' ? 'Trip reaktivieren?' : 'Trip archivieren?'}
+	description={status === 'archived'
+		? 'Der Trip wird aus dem Archiv zurückgeholt und ist wieder aktiv.'
+		: 'Der Trip wird ins Archiv verschoben — er kann später reaktiviert werden.'}
+	confirmLabel="Bestätigen"
+	confirmVariant="primary"
+	data-testid="trip-detail-archive-confirm-dialog"
+	cancelTestid="trip-detail-archive-confirm-cancel"
+	confirmTestid="trip-detail-archive-confirm-yes"
+	disabled={isLoading}
+	onConfirm={handleArchiveConfirm}
+	onCancel={handleArchiveCancel}
+	onOpenChange={handleArchiveDialogOpenChange}
+/>
 
-<Dialog.Root open={deleteDialogOpen} onOpenChange={handleDeleteDialogOpenChange}>
-	<Dialog.Content data-testid="trip-detail-delete-confirm-dialog">
-		<Dialog.Header>
-			<Dialog.Title>Trip endgültig löschen?</Dialog.Title>
-			<Dialog.Description>
-				Dieser Schritt löscht den Trip dauerhaft und kann nicht rückgängig gemacht werden.
-			</Dialog.Description>
-		</Dialog.Header>
-		<Dialog.Footer>
-			<Btn
-				variant="outline"
-				data-testid="trip-detail-delete-confirm-cancel"
-				onclick={handleDeleteCancel}
-			>
-				Abbrechen
-			</Btn>
-			<Btn
-				variant="destructive"
-				data-testid="trip-detail-delete-confirm-yes"
-				onclick={handleDeleteConfirm}
-				disabled={isLoading}
-			>
-				Löschen
-			</Btn>
-		</Dialog.Footer>
-	</Dialog.Content>
-</Dialog.Root>
+<ConfirmDialog
+	open={deleteDialogOpen}
+	title="Trip endgültig löschen?"
+	description="Dieser Schritt löscht den Trip dauerhaft und kann nicht rückgängig gemacht werden."
+	confirmLabel="Löschen"
+	confirmVariant="destructive"
+	data-testid="trip-detail-delete-confirm-dialog"
+	cancelTestid="trip-detail-delete-confirm-cancel"
+	confirmTestid="trip-detail-delete-confirm-yes"
+	disabled={isLoading}
+	onConfirm={handleDeleteConfirm}
+	onCancel={handleDeleteCancel}
+	onOpenChange={handleDeleteDialogOpenChange}
+/>
 
 <style>
 	.danger-zone {

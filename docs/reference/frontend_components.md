@@ -1,7 +1,7 @@
 # Frontend Components Reference
 
-**Updated:** 2026-05-29  
-**Version:** 1.6
+**Updated:** 2026-05-31  
+**Version:** 1.7
 
 ## Overview
 
@@ -326,6 +326,82 @@ interface ElevSparklineProps {
 - `data-active={active}` (for conditional styling if needed)
 - `viewBox="0 0 {width} {height}"` — responsive scaling
 - `aria-hidden="true"` — decorative, not announced
+
+---
+
+## Gregor Molecules (Epic #368/372)
+
+Molecules are composite components built from atoms and `ui/` primitives. They encapsulate common UI patterns and free consumers from direct `ui/` imports.
+
+All molecules export from the barrel `$lib/components/molecules/index.ts`.
+
+### Import Pattern
+
+```typescript
+import { ConfirmDialog, DetailRow, StagePill, ChannelRow, AlertRow, Stat } from '$lib/components/molecules';
+```
+
+### ConfirmDialog Component
+
+**File:** `frontend/src/lib/components/molecules/ConfirmDialog.svelte`
+
+Modal dialog for destructive confirmations (archive, delete). Wraps `ui/dialog` primitives + `Btn` atoms.
+
+**Props:**
+```typescript
+interface ConfirmDialogProps {
+  open: boolean;
+  title: string;
+  description: string;
+  confirmLabel: string;
+  confirmVariant?: 'primary' | 'destructive';  // default: 'primary'
+  cancelLabel?: string;                        // default: 'Abbrechen'
+  disabled?: boolean;
+  'data-testid'?: string;
+  cancelTestid?: string;
+  confirmTestid?: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  onOpenChange: (open: boolean) => void;
+}
+```
+
+**Example:**
+```svelte
+<ConfirmDialog
+  open={archiveDialogOpen}
+  title="Trip archivieren?"
+  description="Diese Tour kann später aus dem Archiv wiederhergestellt werden."
+  confirmLabel="Ja, archivieren"
+  confirmVariant="destructive"
+  onConfirm={handleArchiveConfirm}
+  onCancel={handleArchiveCancel}
+  onOpenChange={handleArchiveDialogOpenChange}
+  data-testid="trip-detail-archive-confirm-dialog"
+  confirmTestid="trip-detail-archive-confirm-yes"
+  cancelTestid="trip-detail-archive-confirm-cancel"
+/>
+```
+
+**Usage:** Issue #478 migrated Trip-Detail page away from direct `ui/dialog` imports; ConfirmDialog now encapsulates the pattern.
+
+---
+
+### Other Molecules
+
+Additional molecules available:
+- `<DetailRow>` — Key-value pair with label, value, optional icon
+- `<StagePill>` — Stage badge with risk color + state icon
+- `<ChannelRow>` — Notification channel row with toggle switch
+- `<ChannelChip>` — Small channel indicator (compact mode for timelines)
+- `<BriefingTimelineRow>` — Briefing history row with timestamp + channels
+- `<BriefingScheduleRow>` — Scheduler row with time + toggle
+- `<ThresholdRow>` — Alert limit configuration row
+- `<Stat>` — Statistics display (counts, distances, etc.)
+- `<AlertRow>` — Alert configuration row
+- `<Field>` — Form field with label, hint, error
+
+See `docs/design-system/COMPONENTS.md` §4.5 for full spec.
 
 ---
 
