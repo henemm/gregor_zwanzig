@@ -25,6 +25,9 @@ export { default as MobileShell } from './MobileShell.svelte';
 export { default as TopAppBar } from './TopAppBar.svelte';
 export { default as BottomNav } from './BottomNav.svelte';
 
+// Issue #493 — Compare Bottom-Sheet (Block E, Epic #485)
+export { default as MCompareActionSheet } from './MCompareActionSheet.svelte';
+
 // Typen aus neuen Primitiven
 export type { MBtnVariant, MBtnSize } from './MBtn.svelte';
 export type { MIconKind } from './MIcon.svelte';

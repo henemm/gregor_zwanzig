@@ -1,8 +1,10 @@
 <script lang="ts">
-	// Issue #472 — /compare Listenansicht (Design: screen-compare-list.jsx)
+	// Issue #490 — /compare Übersicht mit Kachel-Grid (Block B, Epic #485).
+	// Issue #493 — Mobile-Responsive: Stack unter 900 px (Block E).
 	import type { ComparePreset } from '$lib/types.js';
 	import { Eyebrow, Btn } from '$lib/components/atoms';
 	import CompareGrid from '$lib/components/compare/CompareGrid.svelte';
+	import CompareTile from '$lib/components/compare/CompareTile.svelte';
 	import { deriveStatusFromPreset } from '$lib/components/compare/subscriptionHelpers.js';
 
 	let { data } = $props();
@@ -46,5 +48,17 @@
 		</div>
 	{/if}
 
-	<CompareGrid bind:presets />
+	<!-- Mobiler Kachel-Stack (#493): vertikal, unter 900 px -->
+	<div class="desktop:hidden flex flex-col gap-3">
+		{#each presets as preset (preset.id)}
+			<a href="/compare/{preset.id}" class="block min-h-[44px]">
+				<CompareTile sub={preset} dense={true} />
+			</a>
+		{/each}
+	</div>
+
+	<!-- Desktop Kachel-Grid (#490) -->
+	<div class="hidden desktop:block">
+		<CompareGrid bind:presets />
+	</div>
 </div>
