@@ -1,7 +1,9 @@
 # Design Request — Issue #496: "Pro Kanal"-Vorschau neu denken
 
 **Priorität:** Medium  
-**Bezug:** Issue #496, Component `ChannelPreviewBlock.svelte` + `ChannelPreviewCard.svelte`  
+**GitHub Issue:** #496 — "Trip editieren, Vorschau 'VORSCHAU · SO KOMMT ES BEIM EMPFÄNGER AN Pro Kanal'"  
+*(Claude Design hat keinen Zugriff auf GitHub Issues — alle relevanten Infos stehen vollständig in diesem Dokument.)*  
+**Bezug:** Component `ChannelPreviewBlock.svelte` + `ChannelPreviewCard.svelte`  
 **Kontext:** Trip editieren → Wetter-Metriken-Tab → Block "VORSCHAU · SO KOMMT ES BEIM EMPFÄNGER AN · Pro Kanal"
 
 ---
@@ -62,8 +64,9 @@ Statt "wie sieht es aus" → "was passiert mit deinen Metriken":
 
 ## Entscheidungs-Grundlage für Claude Design
 
-- **Nutzungskontext:** Desktop-Planungstool (kein Mobile-first). Side-by-Side-Layouts sind normal.
-- **Nutzungsmoment:** Nutzer konfiguriert den Trip VOR dem Urlaub. Er schaut sich die Konfiguration einmal an — braucht ein klares Signal, ob seine Metriken-Auswahl "passt".
+- **Nutzungskontext:** Desktop-Planungstool — Nutzer plant den Trip am Rechner, BEVOR er in den Urlaub fährt. Unterwegs liest er nur E-Mail/SMS, keine Website.
+- **Viewport-Anforderung:** Lösung muss für **Desktop UND Mobile** funktionieren. Auf Desktop sind Side-by-Side-Layouts normal; auf Mobile (< 900 px) gibt es aktuell bereits ein Dropdown + 1 Karte statt des 4er-Grids — diese Logik bleibt oder wird durch das neue Pattern ersetzt.
+- **Nutzungsmoment:** Einmalige Konfiguration VOR dem Urlaub. Braucht ein klares Signal, ob die Metriken-Auswahl "passt" — keine wiederholte Nutzung unterwegs.
 - **Primäre Frage:** Rutschen wichtige Metriken in die Detail-Zeile oder gar weg? Wenn ja: welche?
 - **Kein Live-Wetter:** Der Block soll keine echten Wetterdaten zeigen — nur die Layout-Konsequenz der Konfiguration.
 
@@ -79,5 +82,6 @@ Design-Leitprinzip: **Lesbarkeit über Optik** — Inhalt muss unter Zeitdruck k
 Einen oder zwei Mockups (Svelte-JSX-Format wie in `docs/design/`), die zeigen:
 1. Wie die Konsequenz der Kanal-Kapazität kommuniziert wird
 2. Ob eine Vorschau sinnvoll möglich ist oder ein anderes Pattern besser passt
+3. **Beide Viewports:** Desktop-Variante + Mobile-Variante (< 900 px) — auch wenn die Lösung auf Mobile radikal anders aussieht
 
 Die Entscheidung, welche Option, liegt bei Claude Design — bitte mit kurzer Begründung.
