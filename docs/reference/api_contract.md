@@ -865,6 +865,7 @@ type ComparePreset struct {
 | Method | Path | Status | Description |
 |--------|------|--------|-------------|
 | GET | `/api/compare/presets` | 200 | List all presets for authenticated user ([] if none) |
+| GET | `/api/compare/presets/{id}` | 200 / 404 | Get single preset by ID (for detail-page view, Issue #491) |
 | POST | `/api/compare/presets` | 201 / 400 | Create new preset; ID auto-generated, user_id from auth context |
 | PUT | `/api/compare/presets/{id}` | 200 / 400 / 404 | Update preset (user_id, created_at preserved from stored record) |
 | DELETE | `/api/compare/presets/{id}` | 204 / 404 | Delete preset |

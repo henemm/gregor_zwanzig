@@ -8,6 +8,7 @@
 - `docs/specs/modules/issue_443_compare_wizard_step5_versand.md` (Step 5 — Versand)
 - `docs/specs/modules/issue_455_compare_main_stage.md` (Compare-Hauptbühne Frontend)
 - `docs/specs/modules/issue_458_compare_preset_backend.md` (Backend CRUD + persistence)
+- `docs/specs/modules/issue_491_compare_detail.md` (Detail-Seite Frontend `/compare/[id]`)
 
 **Child Issues:** #440 ✓, #441 ✓, #442 ✓, #443 ✓, #455 ✓, #458 ✓ (alle geschlossen)
 

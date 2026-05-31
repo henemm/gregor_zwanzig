@@ -207,6 +207,25 @@ func DeleteComparePresetHandler(s *store.Store) http.HandlerFunc {
 	}
 }
 
+// GET /api/compare/presets/{id}
+func GetComparePresetHandler(s *store.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
+		id := chi.URLParam(r, "id")
+		presets, err := s.LoadComparePresets()
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
+			return
+		}
+		idx := findComparePresetIdx(presets, id)
+		if idx < 0 {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": "not_found"})
+			return
+		}
+		writeJSON(w, http.StatusOK, presets[idx])
+	}
+}
+
 // POST /api/compare/presets/{id}/send — Stub (echte Logik folgt in #461).
 func SendComparePresetHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

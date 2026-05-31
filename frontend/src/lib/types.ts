@@ -455,4 +455,5 @@ export interface ComparePreset {
 	letzter_versand?: string;           // ISO-8601
 	top_ort_letzter_versand?: string | null;
 	created_at: string;
+	display_config?: Record<string, unknown>;  // ideal_ranges, channel_layouts, region
 }

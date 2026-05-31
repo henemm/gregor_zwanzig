@@ -1,0 +1,28 @@
+// Issue #491 — Compare-Preset Detail-Seite: SSR-Loader.
+import { env } from '$env/dynamic/private';
+import { error } from '@sveltejs/kit';
+import type { PageServerLoad } from './$types.js';
+import type { ComparePreset, Location } from '$lib/types.js';
+
+const API = () => env.GZ_API_BASE ?? 'http://localhost:8090';
+
+export const load: PageServerLoad = async ({ cookies, params }) => {
+	const session = cookies.get('gz_session');
+	const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+	if (session) headers['Cookie'] = `gz_session=${session}`;
+
+	const [presetRes, locsRes] = await Promise.all([
+		fetch(`${API()}/api/compare/presets/${params.id}`, { headers }).catch(() => null),
+		fetch(`${API()}/api/locations`, { headers }).catch(() => null)
+	]);
+
+	if (!presetRes?.ok) {
+		error(presetRes?.status === 404 ? 404 : 500, 'Orts-Vergleich nicht gefunden');
+	}
+
+	const preset: ComparePreset = await presetRes.json();
+	const rawLocs = locsRes?.ok ? await locsRes.json() : [];
+	const locations: Location[] = Array.isArray(rawLocs) ? rawLocs : [];
+
+	return { preset, locations };
+};

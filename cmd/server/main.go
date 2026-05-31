@@ -207,6 +207,7 @@ func main() {
 	r.Delete("/api/metric-presets/{id}", handler.DeleteMetricPresetHandler(s))
 	// Issue #458: ComparePreset CRUD (List/Create/Update/Delete/Send-Stub)
 	r.Get("/api/compare/presets", handler.ListComparePresetsHandler(s))
+	r.Get("/api/compare/presets/{id}", handler.GetComparePresetHandler(s))
 	r.Post("/api/compare/presets", handler.CreateComparePresetHandler(s))
 	r.Put("/api/compare/presets/{id}", handler.UpdateComparePresetHandler(s))
 	r.Delete("/api/compare/presets/{id}", handler.DeleteComparePresetHandler(s))
