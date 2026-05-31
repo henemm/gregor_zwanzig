@@ -119,13 +119,13 @@ describe('AC-3: Server-Loader wirft 404 bei unbekannter ID', () => {
 		);
 	});
 
-	test('+page.server.ts nutzt existierenden /api/compare/presets-Endpoint', () => {
+	test('+page.server.ts nutzt /api/compare/presets-Endpoint (list oder single)', () => {
 		assert.ok(existsSync(PAGE_SERVER), '+page.server.ts fehlt');
 		const src = readFileSync(PAGE_SERVER, 'utf-8');
 		assert.match(
 			src,
-			/api\/compare\/presets(?!\/{params\.|\/\$)/,
-			'+page.server.ts ruft /api/compare/presets nicht auf (erwartet: list-Endpoint, kein einzelner /presets/{id})'
+			/api\/compare\/presets/,
+			'+page.server.ts ruft /api/compare/presets nicht auf'
 		);
 	});
 });

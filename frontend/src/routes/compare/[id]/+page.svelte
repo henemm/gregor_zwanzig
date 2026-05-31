@@ -4,6 +4,7 @@
 	import { Eyebrow, Btn, Card, KV, Dot } from '$lib/components/atoms';
 	import CompareDetail from '$lib/components/compare/CompareDetail.svelte';
 	import CompareStatusPill from '$lib/components/compare/CompareStatusPill.svelte';
+	import CompareKebab from '$lib/components/compare/CompareKebab.svelte';
 	import CompareLocationRow from '$lib/components/molecules/CompareLocationRow.svelte';
 	import { MCompareActionSheet } from '$lib/components/mobile';
 	import {
@@ -47,7 +48,10 @@
 				{data.preset.display_config?.region ?? '—'} · {data.preset.profil} · {data.preset.location_ids.length} {data.preset.location_ids.length === 1 ? 'Ort' : 'Orte'}
 			</p>
 		</div>
-		<Btn variant="primary" href="/compare/{data.preset.id}/edit">Bearbeiten</Btn>
+		<div class="flex items-center gap-2">
+			<Btn variant="primary" href="/compare/{data.preset.id}/edit">Bearbeiten</Btn>
+			<CompareKebab {status} onSelect={handleAction} />
+		</div>
 	</div>
 
 	<CompareDetail preset={data.preset} locations={data.locations} />

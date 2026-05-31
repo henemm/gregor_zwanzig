@@ -22,7 +22,9 @@ export const load: PageServerLoad = async ({ cookies, params }) => {
 
 	const preset: ComparePreset = await presetRes.json();
 	const rawLocs = locsRes?.ok ? await locsRes.json() : [];
-	const locations: Location[] = Array.isArray(rawLocs) ? rawLocs : [];
+	const allLocations: Location[] = Array.isArray(rawLocs) ? rawLocs : [];
+	const location_ids: string[] = preset.location_ids ?? [];
+	const locations = allLocations.filter((l) => location_ids.includes(l.id));
 
 	return { preset, locations };
 };
