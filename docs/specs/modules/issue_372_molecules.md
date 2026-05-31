@@ -24,9 +24,9 @@ tags: [frontend, atomic-design, molecules, epic-368, issue-372]
 
 **Kanonische Vorlage:** `docs/design-requests/issue_15_atomic_design/spec/molecules.jsx` (React/JSX → Svelte 5) + `body-15-atomic-design-library.md` §Molecules.
 
-**Neue Dateien (10 Molecules + Barrel):**
+**Neue Dateien (10 Molecules + Barrel + Issue #489 Add-ons):**
 - `frontend/src/lib/components/molecules/Field.svelte`, `DetailRow.svelte`, `StagePill.svelte`, `ChannelRow.svelte`, `ChannelChip.svelte`, `BriefingTimelineRow.svelte`, `BriefingScheduleRow.svelte`, `ThresholdRow.svelte`, `Stat.svelte`, `AlertRow.svelte`
-- `frontend/src/lib/components/molecules/index.ts` (re-exportiert alle 10)
+- `frontend/src/lib/components/molecules/index.ts` (re-exportiert alle 10 + Issue #489: CompareLocationRow, CompareIdealRow, CompareLayoutRow)
 
 **Atom-Abhängigkeiten (Import aus `$lib/components/atoms`, #371 auf main):**
 - ChannelRow → Switch · BriefingScheduleRow → Switch · BriefingTimelineRow → Dot + ChannelChip · AlertRow → WIcon · DetailRow → optional WIcon.
@@ -99,4 +99,5 @@ tags: [frontend, atomic-design, molecules, epic-368, issue-372]
 
 ## Changelog
 
+- 2026-05-31: Issue #489 add-ons (CompareLocationRow, CompareIdealRow, CompareLayoutRow) integrated into molecules barrel; Block A2 Epic #485 Compare-Detail prep
 - 2026-05-26: Initial spec created (Issue #372, Molecules-Schicht)

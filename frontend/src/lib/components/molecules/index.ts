@@ -28,3 +28,6 @@ export { default as TestReportDialog } from './TestReportDialog.svelte';
 export { default as CompareTile }       from '../compare/CompareTile.svelte';
 export { default as CompareStatusPill } from '../compare/CompareStatusPill.svelte';
 export { default as CompareKebab }      from '../compare/CompareKebab.svelte';
+export { default as CompareLocationRow } from './CompareLocationRow.svelte';
+export { default as CompareIdealRow } from './CompareIdealRow.svelte';
+export { default as CompareLayoutRow } from './CompareLayoutRow.svelte';
