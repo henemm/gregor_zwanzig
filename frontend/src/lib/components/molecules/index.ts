@@ -19,3 +19,12 @@ export { default as ThresholdRow } from './ThresholdRow.svelte';
 export { default as Stat } from './Stat.svelte';
 export { default as AlertRow } from './AlertRow.svelte';
 export { default as ConfirmDialog } from './ConfirmDialog.svelte';
+export { default as ReportConfigDialog } from './ReportConfigDialog.svelte';
+export { default as TestReportDialog } from './TestReportDialog.svelte';
+
+// Issue #488 — Compare-Kachel-Atome (Epic #485 Block A).
+// Cross-Verzeichnis-Re-Export, damit alle Downstream-Issues (#485-B/C/D)
+// die Molecule-API einheitlich aus `$lib/components/molecules` importieren.
+export { default as CompareTile }       from '../compare/CompareTile.svelte';
+export { default as CompareStatusPill } from '../compare/CompareStatusPill.svelte';
+export { default as CompareKebab }      from '../compare/CompareKebab.svelte';

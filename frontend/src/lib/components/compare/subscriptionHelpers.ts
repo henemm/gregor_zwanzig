@@ -94,3 +94,29 @@ export function deriveStatusFromPreset(p: ComparePreset): CompareStatus {
 export function presetLocationsLabel(p: ComparePreset): string {
 	return `${p.location_ids.length} ${p.location_ids.length === 1 ? 'Ort' : 'Orte'}`;
 }
+
+// Issue #488 — Kebab-Aktionen für die Compare-Kachel.
+// Spec: docs/specs/modules/issue_488_compare_tile_atoms.md §1
+//
+// Die Kebab-Komponente emittiert nur `onSelect(id)` — die Elternkomponente
+// ist für API-Calls und Confirm-Dialoge zuständig. `danger: true` markiert
+// destruktive Aktionen (Löschen) für rote Texteinfärbung im Menü.
+
+export type CompareAction = { id: string; label: string; danger?: boolean };
+
+export function compareActions(status: CompareStatus): CompareAction[] {
+	if (status === 'draft') {
+		return [
+			{ id: 'setup', label: 'Setup fortsetzen' },
+			{ id: 'delete', label: 'Löschen', danger: true }
+		];
+	}
+	// 'active' und 'paused' liefern dieselbe 5-Element-Liste
+	return [
+		{ id: 'pause', label: 'Pausieren' },
+		{ id: 'send', label: 'Briefing jetzt senden' },
+		{ id: 'preview', label: 'Vorschau öffnen' },
+		{ id: 'edit', label: 'Bearbeiten' },
+		{ id: 'delete', label: 'Löschen', danger: true }
+	];
+}
