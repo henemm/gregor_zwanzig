@@ -68,13 +68,6 @@ export function presetScheduleLabel(preset: ComparePreset): string {
 	return 'Manuell';
 }
 
-/** ComparePreset → CompareStatus (active/paused/draft). */
-export function deriveStatusFromPreset(preset: ComparePreset): CompareStatus {
-	if (!preset.name || preset.location_ids.length === 0) return 'draft';
-	if (preset.empfaenger.length === 0) return 'paused';
-	return 'active';
-}
-
 /** ISO-Timestamp → kurzes deutsches Datum (de-DE) | "Noch kein Versand" wenn leer/ungültig. */
 export function formatLastSent(iso?: string | null): string {
 	if (!iso) return 'Noch kein Versand';
