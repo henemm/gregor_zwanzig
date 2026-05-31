@@ -1,16 +1,15 @@
 # Epic 438: Orts-Vergleich Wizard (Compare Subscription System)
 
-**Status:** In Progress  
-**Completion Target:** 2026-06-30  
+**Status:** ✓ Completed (2026-05-29)  
 **Related Specs:**
 - `docs/specs/modules/issue_440_compare_wizard_shell_step1_step2.md` (Shell + Steps 1–2)
 - `docs/specs/modules/issue_441_compare_wizard_step3_idealwerte.md` (Step 3 — Idealwerte)
-- `docs/specs/modules/issue_442_...` (Step 4 — Layout, TBD)
-- `docs/specs/modules/issue_443_...` (Step 5 — Versand, TBD)
+- `docs/specs/modules/issue_442_compare_wizard_step4_layout.md` (Step 4 — Layout)
+- `docs/specs/modules/issue_443_compare_wizard_step5_versand.md` (Step 5 — Versand)
 - `docs/specs/modules/issue_455_compare_main_stage.md` (Compare-Hauptbühne Frontend)
 - `docs/specs/modules/issue_458_compare_preset_backend.md` (Backend CRUD + persistence)
 
-**Child Issues:** #440, #441, #442, #443, #455, #458 (backend foundation)
+**Child Issues:** #440 ✓, #441 ✓, #442 ✓, #443 ✓, #455 ✓, #458 ✓ (alle geschlossen)
 
 ---
 
@@ -37,11 +36,11 @@ Epic #438 implementiert ein **5-Schritt-Wizard-System** zur Konfiguration von **
 │ Step 3: Idealwerte ✓                     │  Min/Max pro Metrik (profil-spezifisch)
 │ "Metriken konfigurieren" (DONE #441)     │  Default-Vorschläge aus IDEAL_DEFAULTS
 ├──────────────────────────────────────────┤
-│ Step 4: Layout                           │  Spalten-Reihenfolge, Formatierung
-│ "Ausgabe gestalten" (TBD #442)           │  Schwellwert-Anzeige, Farbcodierung
+│ Step 4: Layout ✓                         │  Spalten-Reihenfolge, Formatierung
+│ "Ausgabe gestalten" (DONE #442)          │  Schwellwert-Anzeige, Farbcodierung
 ├──────────────────────────────────────────┤
-│ Step 5: Versand                          │  E-Mail/SMS, Zeitpunkt, Empfänger
-│ "Briefings aktivieren" (TBD #443)        │  Cron-Ausdruck oder vordefinierte Zeit
+│ Step 5: Versand ✓                        │  E-Mail/SMS, Zeitpunkt, Empfänger
+│ "Briefings aktivieren" (DONE #443)       │  Cron-Ausdruck oder vordefinierte Zeit
 └──────────────────────────────────────────┘
 ```
 
@@ -101,8 +100,8 @@ frontend/src/lib/components/compare/
 │   ├── Step1Vergleich.svelte (DONE #440 — Name, Profil)
 │   ├── Step2Orte.svelte (DONE #440 — Ort-Auswahl)
 │   ├── Step3Idealwerte.svelte (DONE #441 — Min/Max-Eingaben)
-│   ├── Step4Layout.svelte (TBD #442)
-│   └── Step5Versand.svelte (TBD #443)
+│   ├── Step4Layout.svelte (DONE #442)
+│   └── Step5Versand.svelte (DONE #443)
 └── __tests__/
     ├── issue_440_*.test.ts
     ├── issue_441_step3_idealwerte.test.ts
@@ -228,15 +227,15 @@ const IDEAL_DEFAULTS: Record<ProfileKey, Record<string, IdealRange>> = {
 
 ---
 
-## Planned Steps (Future Issues)
+## Completed Steps
 
-### Step 4: Layout (Issue #442)
+### Step 4: Layout (Issue #442 ✓)
 
-**Placeholder:** Spalten-Konfiguration, Anzeigeformat für Zahlenwerte, Farbschwellen
+Kanal-Tabs (E-Mail/SMS) + Spalten-Switches: OutputLayoutEditor-Komponente, Metrik-Spalten pro Kanal konfigurierbar. Implementiert 2026-05-29.
 
-### Step 5: Versand (Issue #443)
+### Step 5: Versand (Issue #443 ✓)
 
-**Placeholder:** Zeitplan (Cron oder vordefinierte Zeiten), Kanal-Auswahl (E-Mail/SMS), Empfänger
+Zeitplan (vordefinierte Zeiten), Kanal-Auswahl (E-Mail/SMS), Empfänger-Konfiguration. Aktivierungs-Toggle für die Subscription. Implementiert 2026-05-29.
 
 ---
 
@@ -442,8 +441,7 @@ None—pure frontend changes for Steps 1–3. Backend endpoints are opaque (no s
 
 ## Future Enhancements
 
-1. **Step 4–5 Completion** — Layout customization, schedule configuration
-2. **Compare Algorithm Backend** — Score calculation and ranking
+1. **Compare Algorithm Backend** — Score calculation and ranking
 3. **Preview Endpoint** — Sample comparison output before saving
 4. **Non-Linear Wizard** — Skip steps conditionally
 5. **Mobile Optimization** — Responsive grid for small screens
@@ -463,4 +461,5 @@ None—pure frontend changes for Steps 1–3. Backend endpoints are opaque (no s
 | 2026-05-29 | Compare-Hauptbühne Frontend implemented: `/compare` route rebuilt from 49-line subscription list to full 3-column interactive layout (LocationsRail \| CompareMatrix/Banner/HourlyMatrix \| AutoReportsOverview), 156 net LoC. Issue #455 ✓ |
 | 2026-05-29 | Step 3 (Idealwerte) implemented: compareMetricDefs.ts, Step3Idealwerte.svelte, ~305 LoC, 10 AC fulfilled. Issue #441 ✓ |
 | 2026-05-27 | Wizard shell + Steps 1–2 implemented: CompareWizard.svelte, Step1Vergleich.svelte, Step2Orte.svelte, State management. Issue #440 ✓ |
-| 2026-05-?? | Steps 4–5 planned (Issues #442, #443) |
+| 2026-05-29 | Steps 4–5 implementiert: Step4Layout.svelte (Kanal-Tabs + Spalten-Switches), Step5Versand.svelte (Zeitplan + Aktivierung). Issues #442 ✓, #443 ✓ |
+| 2026-05-31 | Compare-Hauptbühne Regression gefixt (#472 ✓): #455-Migration hatte #439-Listenansicht überschrieben |
