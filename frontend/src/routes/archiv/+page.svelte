@@ -89,7 +89,7 @@
 
 	<!-- Toolbar: Suche + Sortierung -->
 	<div style="display:flex;gap:16px;align-items:center;margin-bottom:20px">
-		<div style="position:relative;flex:0 0 380px">
+		<div style="position:relative;flex:1">
 			<span style="position:absolute;top:9px;left:12px;color:var(--g-ink-muted);display:inline-flex">
 				<SearchIcon size={14} />
 			</span>
