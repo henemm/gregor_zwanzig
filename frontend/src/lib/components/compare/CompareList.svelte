@@ -1,11 +1,13 @@
 <script lang="ts">
-	// Issue #439 — Tabellen-Skelett der Orts-Vergleich-Übersicht.
+	// Issue #472 — Tabellen-Skelett der Orts-Vergleich-Übersicht (ComparePreset-basiert).
 	//
-	// Spec: docs/specs/modules/issue_439_compare_uebersicht.md §3
+	// Spec: docs/specs/modules/issue_472_compare_list_restore.md §3
 	// Eltern-Komponente: routes/compare/+page.svelte
 	// Kind-Komponente: CompareRow.svelte
+	//
+	// History: Ursprünglich #439 (Subscription); auf ComparePreset migriert in #472.
 
-	import type { Subscription } from '$lib/types.js';
+	import type { ComparePreset } from '$lib/types.js';
 	import { api } from '$lib/api.js';
 	import { Input, Btn } from '$lib/components/atoms';
 	import * as Table from '$lib/components/ui/table/index.js';
@@ -16,40 +18,26 @@
 	import CompareRow from './CompareRow.svelte';
 
 	interface Props {
-		subscriptions: Subscription[];
+		presets: ComparePreset[];
 	}
 
-	let { subscriptions = $bindable([]) }: Props = $props();
+	let { presets = $bindable([]) }: Props = $props();
 
 	let search = $state('');
-	let deleteTarget: Subscription | null = $state(null);
+	let deleteTarget: ComparePreset | null = $state(null);
 	let error: string | null = $state(null);
 
 	let items = $derived(
-		subscriptions.filter((s) => (s.name ?? '').toLowerCase().includes(search.toLowerCase()))
+		presets.filter((p) => (p.name ?? '').toLowerCase().includes(search.toLowerCase()))
 	);
-
-	async function toggleEnabled(sub: Subscription) {
-		error = null;
-		const previous = subscriptions;
-		const updated: Subscription = { ...sub, enabled: !sub.enabled };
-		// Optimistic update
-		subscriptions = subscriptions.map((s) => (s.id === sub.id ? updated : s));
-		try {
-			await api.put<Subscription>(`/api/subscriptions/${sub.id}`, updated);
-		} catch {
-			subscriptions = previous;
-			error = 'Toggle fehlgeschlagen';
-		}
-	}
 
 	async function confirmDelete() {
 		if (!deleteTarget) return;
 		error = null;
 		const target = deleteTarget;
 		try {
-			await api.del(`/api/subscriptions/${target.id}`);
-			subscriptions = subscriptions.filter((s) => s.id !== target.id);
+			await api.del(`/api/compare/presets/${target.id}`);
+			presets = presets.filter((p) => p.id !== target.id);
 			deleteTarget = null;
 		} catch {
 			error = 'Löschen fehlgeschlagen';
@@ -57,7 +45,7 @@
 	}
 </script>
 
-{#if subscriptions.length > 0}
+{#if presets.length > 0}
 	<div class="relative mb-3 max-w-[380px]">
 		<SearchIcon class="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
 		<Input placeholder="Suchen..." class="pl-8 rounded-full" bind:value={search} />
@@ -68,11 +56,11 @@
 	<p class="text-sm text-destructive">{error}</p>
 {/if}
 
-{#if subscriptions.length === 0}
+{#if presets.length === 0}
 	<EmptyState
 		icon={MapPinIcon}
 		title="Noch kein Orts-Vergleich"
-		description="Lege deinen ersten Orts-Vergleich an — Wizard folgt in #440."
+		description="Lege deinen ersten Orts-Vergleich an."
 	>
 		<Btn variant="outline" href="/compare/new">+ Neuer Vergleich</Btn>
 	</EmptyState>
@@ -92,11 +80,10 @@
 				</Table.Row>
 			</Table.Header>
 			<Table.Body>
-				{#each items as sub (sub.id)}
+				{#each items as preset (preset.id)}
 					<CompareRow
-						{sub}
-						ontoggle={() => toggleEnabled(sub)}
-						ondelete={() => (deleteTarget = sub)}
+						{preset}
+						ondelete={() => (deleteTarget = preset)}
 					/>
 				{/each}
 			</Table.Body>

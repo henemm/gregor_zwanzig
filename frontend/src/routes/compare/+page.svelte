@@ -1,216 +1,50 @@
 <script lang="ts">
-	// Issue #455 — Compare-Hauptbühne: 3-Spalten-Layout (Rail | Hauptbereich | Sidepanel).
-	// Spec: docs/specs/modules/issue_455_compare_main_stage.md
-
-	import { goto, invalidateAll } from '$app/navigation';
-	import { today } from '$lib/components/trip-wizard/wizardHelpers.js';
-	import { groupLocations } from '$lib/components/compare/locationHelpers.js';
-	import { api } from '$lib/api.js';
-	import { toCompareProfile } from '$lib/types.js';
-	import type { ActivityProfile, CompareResult, CompareMetrics, CompareRow, RankingEntry, Location, Group } from '$lib/types.js';
-	import LocationsRail from '$lib/components/compare/LocationsRail.svelte';
-	import PresetHeader from '$lib/components/compare/PresetHeader.svelte';
-	import RecommendationBanner from '$lib/components/compare/RecommendationBanner.svelte';
-	import CompareMatrix from '$lib/components/compare/CompareMatrix.svelte';
-	import HourlyMatrix from '$lib/components/compare/HourlyMatrix.svelte';
-	import AutoReportsOverview from '$lib/components/compare/AutoReportsOverview.svelte';
-	import NewLocationWizard from '$lib/components/compare/NewLocationWizard.svelte';
+	// Issue #472 — /compare Listenansicht (Design: screen-compare-list.jsx)
+	import type { ComparePreset } from '$lib/types.js';
+	import { Eyebrow, Btn } from '$lib/components/atoms';
+	import CompareList from '$lib/components/compare/CompareList.svelte';
+	import { deriveStatusFromPreset } from '$lib/components/compare/subscriptionHelpers.js';
 
 	let { data } = $props();
-	let locations: Location[] = $state(data.locations ?? []);
-	let groups: Group[] = $state(data.groups ?? []);
+	let presets: ComparePreset[] = $state(data.presets ?? []);
 
-	let selectedIds: string[]        = $state([]);
-	let openGroups: Set<string>      = $state(new Set());
-	let compareDate: string          = $state(today());
-	let twStart: number              = $state(9);
-	let twEnd: number                = $state(16);
-	let forecastHours: number        = $state(48);
-	let activityProfile: ActivityProfile = $state('allgemein');
-	let result: CompareResult | null = $state(null);
-	let loading: boolean             = $state(false);
-	let error: string | null         = $state(null);
-	let wizardOpen: boolean          = $state(false);
-
-	let groupedLocations = $derived(groupLocations(locations, groups));
-	let allSelected = $derived(selectedIds.length === locations.length && locations.length > 0);
-	let matrixRows: CompareRow[] = $derived.by(() => {
-		if (!result) return [];
-		return result.ranking.map((r, i) => ({
-			location_id: r.location_id,
-			score: r.score,
-			rank: i + 1,
-			metrics: (result!.matrix.find((m) => m.location_id === r.location_id)?.metrics ?? {}) as CompareMetrics,
-		}));
+	let counts = $derived({
+		active: presets.filter((p) => deriveStatusFromPreset(p) === 'active').length,
+		paused: presets.filter((p) => deriveStatusFromPreset(p) === 'paused').length,
+		draft: presets.filter((p) => deriveStatusFromPreset(p) === 'draft').length
 	});
-	let topEntry: RankingEntry | null = $derived.by(() => result?.ranking?.[0] ?? null);
-
-	// Event-Handler für LocationsRail
-	function handleToggleAll() {
-		selectedIds = allSelected ? [] : locations.map((l) => l.id);
-	}
-	function handleToggleLocation(id: string) {
-		selectedIds = selectedIds.includes(id)
-			? selectedIds.filter((x) => x !== id)
-			: [...selectedIds, id];
-	}
-	function handleToggleGroup(id: string) {
-		const next = new Set(openGroups);
-		if (next.has(id)) {
-			next.delete(id);
-		} else {
-			next.add(id);
-		}
-		openGroups = next;
-	}
-	function handleToggleGroupSelection(id: string) {
-		const inGroup = locations.filter((l) => l.group_id === id).map((l) => l.id);
-		const allIn = inGroup.every((x) => selectedIds.includes(x));
-		selectedIds = allIn
-			? selectedIds.filter((x) => !inGroup.includes(x))
-			: [...new Set([...selectedIds, ...inGroup])];
-	}
-	function handleShowWeather(_id: string) {
-		/* no-op: Wetter-Route leitet zurück */
-	}
-	function handleEditLocation(_loc: Location) {
-		goto('/locations');
-	}
-	function handleNewLocation() {
-		wizardOpen = true;
-	}
-	async function handleGroupCreated(_group: Group) {
-		await invalidateAll();
-	}
-	function handleSaveBriefing() {
-		goto('/compare/new');
-	}
-
-	async function runComparison() {
-		if (selectedIds.length < 2) return;
-		error = null;
-		loading = true;
-		try {
-			result = await api.post<CompareResult>('/api/compare/run', {
-				location_ids: selectedIds,
-				date_from:    compareDate,
-				date_to:      compareDate,
-				hour_from:    twStart,
-				hour_to:      twEnd,
-				profile:      toCompareProfile(activityProfile),
-			});
-		} catch (e) {
-			error = (e as { error?: string }).error ?? 'Vergleich fehlgeschlagen';
-		} finally {
-			loading = false;
-		}
-	}
 </script>
 
-<!-- Desktop: 3-Spalten-Grid -->
-<div
-	class="hidden desktop:grid h-full gap-4 p-4"
-	style="grid-template-columns: 320px 1fr 320px"
-	data-testid="compare-main-stage"
->
-	<!-- Linke Spalte: Standort-Rail -->
-	<LocationsRail
-		{locations}
-		{groups}
-		{selectedIds}
-		{groupedLocations}
-		{openGroups}
-		{allSelected}
-		onToggleAll={handleToggleAll}
-		onToggleLocation={handleToggleLocation}
-		onToggleGroup={handleToggleGroup}
-		onToggleGroupSelection={handleToggleGroupSelection}
-		onShowWeather={handleShowWeather}
-		onEditLocation={handleEditLocation}
-		onNewLocation={handleNewLocation}
-		onGroupCreated={handleGroupCreated}
-	/>
-
-	<!-- Mittlere Spalte: Vergleichsbereich -->
-	<div class="flex flex-col gap-4 overflow-y-auto" data-testid="compare-center">
-		<PresetHeader
-			bind:compareDate
-			bind:twStart
-			bind:twEnd
-			bind:forecastHours
-			bind:activityProfile
-			locationCount={selectedIds.length}
-			{loading}
-			onrun={runComparison}
-			onsavebriefing={handleSaveBriefing}
-		/>
-
-		{#if selectedIds.length < 2 && !result}
-			<div
-				class="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground"
-				data-testid="compare-empty-hint"
-			>
-				Wähle mindestens 2 Orte aus, um den Vergleich zu starten.
-			</div>
-		{/if}
-
-		{#if error}
-			<div
-				class="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive"
-				data-testid="compare-error"
-			>
-				{error}
-			</div>
-		{/if}
-
-		{#if topEntry}
-			<RecommendationBanner
-				{topEntry}
-				{locations}
-			/>
-		{/if}
-
-		{#if matrixRows.length}
-			<CompareMatrix
-				rows={matrixRows}
-				{locations}
-				profile={activityProfile}
-			/>
-		{/if}
-
-		{#if result?.stunden_verlauf?.length}
-			<HourlyMatrix
-				stunden_verlauf={result.stunden_verlauf}
-				{locations}
-			/>
-		{/if}
+<div class="p-8 max-w-5xl mx-auto">
+	<div class="flex items-start justify-between mb-6">
+		<div>
+			<Eyebrow>WORKSPACE · ORTS-VERGLEICHE</Eyebrow>
+			<h1 class="text-3xl font-semibold tracking-tight mt-1">Orts-Vergleiche</h1>
+			<p class="text-sm text-[var(--g-ink-3)] mt-2 max-w-[560px]">
+				Tägliche Briefings, die mehrere Orte gegeneinander stellen und eine Empfehlung mitliefern.
+				Einmalig eingerichtet, läuft pro Vergleich automatisch.
+			</p>
+		</div>
+		<Btn variant="primary" href="/compare/new">+ Neuer Vergleich</Btn>
 	</div>
 
-	<!-- Rechte Spalte: Auto-Briefings Sidepanel -->
-	<div class="overflow-y-auto" data-testid="compare-sidebar">
-		<AutoReportsOverview presets={data.presets} />
-	</div>
-</div>
+	<!-- Stats-Zeile -->
+	{#if presets.length > 0}
+		<div class="flex gap-6 mb-5 pb-4 border-b border-[var(--g-rule-soft)]">
+			<div class="flex items-baseline gap-2">
+				<span class="text-2xl font-semibold text-[var(--g-accent)]">{counts.active}</span>
+				<span class="text-xs font-mono uppercase tracking-widest text-[var(--g-ink-3)]">Aktiv</span>
+			</div>
+			<div class="flex items-baseline gap-2">
+				<span class="text-2xl font-semibold">{counts.paused}</span>
+				<span class="text-xs font-mono uppercase tracking-widest text-[var(--g-ink-3)]">Pausiert</span>
+			</div>
+			<div class="flex items-baseline gap-2">
+				<span class="text-2xl font-semibold">{counts.draft}</span>
+				<span class="text-xs font-mono uppercase tracking-widest text-[var(--g-ink-3)]">Drafts</span>
+			</div>
+		</div>
+	{/if}
 
-<!-- Mobile-Fallback -->
-<div
-	class="desktop:hidden p-6 text-center text-sm text-muted-foreground"
-	data-testid="compare-mobile-fallback"
->
-	<p>Orts-Vergleich ist auf dem Desktop verfügbar.</p>
+	<CompareList bind:presets />
 </div>
-
-<!-- Neuen Standort anlegen -->
-{#if wizardOpen}
-	<NewLocationWizard
-		{locations}
-		{groups}
-		onsave={(loc: Location) => {
-			locations = [...locations, loc];
-			wizardOpen = false;
-		}}
-		oncancel={() => {
-			wizardOpen = false;
-		}}
-	/>
-{/if}

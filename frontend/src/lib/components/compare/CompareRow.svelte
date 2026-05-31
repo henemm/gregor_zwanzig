@@ -1,51 +1,48 @@
 <script lang="ts">
-	// Issue #439 — Eine Tabellenzeile der Orts-Vergleich-Übersicht.
+	// Issue #472 — Eine Tabellenzeile der Orts-Vergleich-Übersicht (ComparePreset-basiert).
 	//
-	// Spec: docs/specs/modules/issue_439_compare_uebersicht.md §4
-	// Eltern-Komponente: CompareList.svelte (Toggle + Delete werden dort gehandhabt).
+	// Spec: docs/specs/modules/issue_472_compare_list_restore.md §4
+	// Eltern-Komponente: CompareList.svelte (Delete wird dort gehandhabt).
+	//
+	// History: Ursprünglich #439 (Subscription); auf ComparePreset migriert in #472.
 
-	import type { Subscription } from '$lib/types.js';
-	import { goto } from '$app/navigation';
+	import type { ComparePreset } from '$lib/types.js';
 	import { Pill } from '$lib/components/atoms';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import {
 		STATUS_MAP,
-		deriveStatus,
-		scheduleLabel,
-		locationsLabel,
-		formatLastRun
+		deriveStatusFromPreset,
+		presetScheduleLabel,
+		presetLocationsLabel,
+		formatLastSent
 	} from './subscriptionHelpers.js';
 
-	// Status-Dot-Tokens (Spec §2, single source: subscriptionHelpers.STATUS_MAP):
+	// Status-Dot-Tokens (single source: subscriptionHelpers.STATUS_MAP):
 	//   active  → var(--g-accent)
 	//   paused  → var(--g-ink-3)
 	//   draft   → var(--g-ink-4)
 
 	import PauseIcon from '@lucide/svelte/icons/pause';
-	import PlayIcon from '@lucide/svelte/icons/play';
 	import EyeIcon from '@lucide/svelte/icons/eye';
 	import SendIcon from '@lucide/svelte/icons/send';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 
 	interface Props {
-		sub: Subscription;
-		ontoggle?: () => void;
+		preset: ComparePreset;
 		ondelete?: () => void;
 	}
 
-	let { sub, ontoggle, ondelete }: Props = $props();
+	let { preset, ondelete }: Props = $props();
 
-	let status = $derived(deriveStatus(sub));
+	let status = $derived(deriveStatusFromPreset(preset));
 	let statusInfo = $derived(STATUS_MAP[status]);
 
+	// Aus preset.empfaenger ableiten: enthält E-Mail-Adressen → "E-Mail";
+	// Signal/Telegram aktuell nicht im ComparePreset abgebildet.
 	let activeChannels = $derived(
-		[
-			sub.send_email ? 'E-Mail' : null,
-			sub.send_signal ? 'Signal' : null,
-			sub.send_telegram ? 'Telegram' : null
-		].filter((c): c is string => c !== null)
+		preset.empfaenger.length > 0 ? ['E-Mail'] : []
 	);
 
 	let sendOpen = $state(false);
@@ -53,6 +50,8 @@
 
 	const ACTION_BTN =
 		'inline-flex items-center justify-center w-[30px] h-[30px] rounded-[var(--g-r-2)] border border-[var(--g-rule-soft)] hover:bg-muted/60 transition-colors';
+	const ACTION_BTN_DISABLED =
+		'inline-flex items-center justify-center w-[30px] h-[30px] rounded-[var(--g-r-2)] border border-[var(--g-rule-soft)] text-[var(--g-ink-4)] opacity-50 cursor-not-allowed';
 </script>
 
 <Table.Row>
@@ -66,18 +65,20 @@
 			></span>
 			<div class="flex flex-col min-w-0">
 				<div class="flex items-center gap-2 min-w-0">
-					<span class="font-semibold truncate">{sub.name || '(ohne Namen)'}</span>
+					<span class="font-semibold truncate">{preset.name || '(ohne Namen)'}</span>
 					<Pill>{statusInfo.label}</Pill>
 				</div>
 			</div>
 		</div>
 	</Table.Cell>
 
-	<!-- Orte -->
-	<Table.Cell class="text-sm">{locationsLabel(sub)}</Table.Cell>
+	<!-- Orte (basiert auf preset.location_ids.length) -->
+	<Table.Cell class="text-sm" data-location-count={preset.location_ids.length}
+		>{presetLocationsLabel(preset)}</Table.Cell
+	>
 
 	<!-- Profil -->
-	<Table.Cell class="text-sm">{sub.activity_profile ?? '—'}</Table.Cell>
+	<Table.Cell class="text-sm">{preset.profil ?? '—'}</Table.Cell>
 
 	<!-- Kanäle -->
 	<Table.Cell>
@@ -95,10 +96,8 @@
 	<!-- Versand -->
 	<Table.Cell>
 		<div class="flex flex-col">
-			<span class="font-mono tabular-nums text-sm">{scheduleLabel(sub)}</span>
-			{#if sub.last_run}
-				<span class="text-xs text-muted-foreground">Zuletzt: {formatLastRun(sub.last_run)}</span>
-			{/if}
+			<span class="font-mono tabular-nums text-sm">{presetScheduleLabel(preset)}</span>
+			<span class="text-xs text-muted-foreground">Zuletzt: {formatLastSent(preset.letzter_versand)}</span>
 		</div>
 	</Table.Cell>
 
@@ -107,16 +106,12 @@
 		<div class="inline-flex items-center gap-1">
 			<button
 				type="button"
-				class={ACTION_BTN}
-				title={sub.enabled ? 'Pausieren' : 'Aktivieren'}
-				aria-label={sub.enabled ? 'Pausieren' : 'Aktivieren'}
-				onclick={() => ontoggle?.()}
+				class={ACTION_BTN_DISABLED}
+				title="Pause/Aktivieren — folgt"
+				aria-label="Pause/Aktivieren — folgt"
+				disabled
 			>
-				{#if sub.enabled}
-					<PauseIcon class="size-3.5" />
-				{:else}
-					<PlayIcon class="size-3.5" />
-				{/if}
+				<PauseIcon class="size-3.5" />
 			</button>
 			<button
 				type="button"
@@ -139,10 +134,11 @@
 			<span aria-hidden="true" class="text-muted-foreground mx-0.5">|</span>
 			<button
 				type="button"
-				class={ACTION_BTN}
-				title="Bearbeiten"
-				aria-label="Bearbeiten"
-				onclick={() => goto('/compare/' + sub.id + '/edit')}
+				class={ACTION_BTN_DISABLED}
+				title="Bearbeiten — folgt"
+				aria-label="Bearbeiten — folgt"
+				disabled
+				data-edit-href={'/compare/' + preset.id + '/edit'}
 			>
 				<PencilIcon class="size-3.5" />
 			</button>

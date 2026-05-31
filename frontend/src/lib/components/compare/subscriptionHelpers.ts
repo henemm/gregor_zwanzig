@@ -79,3 +79,18 @@ export function formatLastSent(iso?: string | null): string {
 		year: 'numeric'
 	});
 }
+
+// Issue #472 — ComparePreset-Status-Ableitung + Orte-Label für die Listenansicht.
+// Spec: docs/specs/modules/issue_472_compare_list_restore.md (§2 + §6)
+
+/** ComparePreset → Status (rein frontend-seitig abgeleitet). */
+export function deriveStatusFromPreset(p: ComparePreset): CompareStatus {
+	if (!p.name || p.location_ids.length === 0 || p.empfaenger.length === 0) return 'draft';
+	if (p.schedule === 'manual') return 'paused';
+	return 'active';
+}
+
+/** ComparePreset → "N Orte" */
+export function presetLocationsLabel(p: ComparePreset): string {
+	return `${p.location_ids.length} ${p.location_ids.length === 1 ? 'Ort' : 'Orte'}`;
+}
