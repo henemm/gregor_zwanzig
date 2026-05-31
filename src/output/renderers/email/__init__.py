@@ -8,7 +8,7 @@ adapter; the renderer receives already-derived values via keyword args.
 """
 from __future__ import annotations
 
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 from zoneinfo import ZoneInfo
 
 from app.models import (
@@ -22,6 +22,9 @@ from src.output.renderers.email.helpers import build_format_modes
 from src.output.renderers.email.html import render_html
 from src.output.renderers.email.plain import render_plain
 from src.output.tokens.dto import TokenLine
+
+if TYPE_CHECKING:
+    from app.models import StabilityResult
 
 
 def render_email(
@@ -43,6 +46,7 @@ def render_email(
     exposed_sections: Optional[list[ExposedSection]] = None,
     friendly_keys: set[str],
     profile: Optional[ActivityProfile] = None,
+    stability_result: Optional["StabilityResult"] = None,
 ) -> tuple[str, str]:
     """Returns (html_body, plain_body). Pure function.
 
@@ -81,6 +85,7 @@ def render_email(
         friendly_keys=friendly_keys,
         format_modes=format_modes,
         profile=profile,
+        stability_result=stability_result,
     )
     plain_body = render_plain(
         segments=segments,
@@ -101,6 +106,7 @@ def render_email(
         friendly_keys=friendly_keys,
         format_modes=format_modes,
         profile=profile,
+        stability_result=stability_result,
     )
     return html_body, plain_body
 

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import html as _html
 from datetime import datetime, timezone
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 from zoneinfo import ZoneInfo
 
 from app.metric_catalog import get_label_for_field, get_metric
@@ -16,6 +16,9 @@ from app.models import (
     SegmentWeatherData, ThunderLevel, UnifiedWeatherDisplayConfig,
     WeatherChange,
 )
+
+if TYPE_CHECKING:
+    from app.models import StabilityResult
 from app.profile import ActivityProfile
 from services.daylight_service import DaylightWindow
 from utils.timezone import local_fmt
@@ -32,6 +35,47 @@ from src.output.renderers.email.design_tokens import (
     FONT_UI, FONT_DATA, WEB_FONT_LINK,
 )
 from src.output.renderers.email.profile_signature import profile_signature
+
+
+def render_stability_label_html(result: Optional["StabilityResult"]) -> str:
+    """F12 / Issue #122: Rendert farbige WL-Box.
+
+    Liefert leeren String wenn ``result`` None ist (kein Platzhalter,
+    kein leeres div) — sodass der Aufrufer den Block ungerendert weglassen
+    kann (Spec AC-9).
+    """
+    if result is None:
+        return ""
+
+    colors = {
+        "STABIL": {"bg": "#d4edda", "border": "#28a745", "text": "#155724"},
+        "WECHSELHAFT": {"bg": "#fff3cd", "border": "#ffc107", "text": "#856404"},
+        "FRAGIL": {"bg": "#f8d7da", "border": "#dc3545", "text": "#721c24"},
+    }
+    c = colors[result.label]
+
+    texts = {
+        "STABIL": (
+            "Wetterlage: STABIL — Die Großwetterlage ist stabil. "
+            "Prognosen für die nächsten Etappen sind verlässlich."
+        ),
+        "WECHSELHAFT": (
+            "Wetterlage: WECHSELHAFT — Die Lage ist im Übergang. "
+            "Prognosen ab Tag 3 mit Vorsicht behandeln."
+        ),
+        "FRAGIL": (
+            "Wetterlage: FRAGIL — Schnelle Frontverlagerung möglich. "
+            "Prognosen ab Tag 2 konservativ planen."
+        ),
+    }
+    text = _html.escape(texts[result.label])
+
+    return (
+        f'<div class="section" style="background:{c["bg"]};'
+        f'border-left:4px solid {c["border"]};padding:12px;margin:8px 0;">'
+        f'<p style="margin:0;font-size:14px;line-height:1.6;'
+        f'color:{c["text"]};font-weight:600;">{text}</p></div>'
+    )
 
 
 def _format_daylight_html(dl: DaylightWindow, *, tz: ZoneInfo) -> str:
@@ -218,6 +262,7 @@ def render_html(
     friendly_keys: set[str],
     format_modes: Optional[dict[str, str]] = None,
     profile: Optional[ActivityProfile] = None,
+    stability_result: Optional["StabilityResult"] = None,
 ) -> str:
     """Render full HTML e-mail body. Pure function."""
     sig = profile_signature(profile)
@@ -385,6 +430,10 @@ def render_html(
             f'{_html.escape(confidence_hint)}</p></div>'
         )
 
+    # Issue #122 / F12: Großwetterlage-Label (vor dem Confidence-Hinweis,
+    # erstes inhaltliches Element — Spec AC-8).
+    stability_html = render_stability_label_html(stability_result)
+
     daylight_html = ""
     if daylight:
         daylight_html = _format_daylight_html(daylight, tz=tz)
@@ -448,6 +497,7 @@ def render_html(
             <p>{report_type.title()} Report – {report_date}{" | " + stats_line if stats_line else ""}</p>
         </div>
 
+        {stability_html}
         {summary_html}
         {confidence_hint_html}
         {daylight_html}

@@ -1,7 +1,7 @@
 """Token builder per sms_format.md v2.0 §2/§3 (POSITIONAL)."""
 from __future__ import annotations
 
-from typing import Iterable, Optional
+from typing import TYPE_CHECKING, Iterable, Optional
 
 from src.output.tokens.dto import (
     DailyForecast, MetricSpec, NormalizedForecast, Profile, ReportType,
@@ -10,6 +10,9 @@ from src.output.tokens.dto import (
 from src.output.tokens.metrics import (
     render_temperature, render_threshold_peak_value, render_int,
 )
+
+if TYPE_CHECKING:
+    from app.models import StabilityResult
 
 FORECAST_TH = "TH:"
 FORECAST_THP = "TH+:"
@@ -26,6 +29,14 @@ _UMLAUT = str.maketrans({
 def _sanitize_stage_name(name: str) -> str:
     """Replace Umlauts FIRST, then truncate to 10 chars (sms_format.md SSOT)."""
     return name.translate(_UMLAUT)[:10].strip()
+
+
+def _stability_symbol(label: str) -> str:
+    """Issue #122 / F12: Map StabilityResult.label to SMS-Token-Symbol.
+
+    STABIL -> '+', WECHSELHAFT -> '~', FRAGIL -> '-'.
+    """
+    return {"STABIL": "+", "WECHSELHAFT": "~", "FRAGIL": "-"}[label]
 
 
 def _confidence_symbol(pct: Optional[int]) -> Optional[str]:
@@ -49,7 +60,8 @@ def _confidence_symbol(pct: Optional[int]) -> Optional[str]:
 # Truncation priority §6: lower drops first.
 PRIORITY = {
     "DBG": 1, "WC": 2, "AV": 2, "SFL": 2, "SN24+": 2, "SN": 2,
-    "Z:": 3, "MAX": 3, "M:": 3, "C": 4, "PR": 5, "D": 6, "N": 6, "R": 7,
+    "Z:": 3, "MAX": 3, "M:": 3, "C": 4, "WL": 4, "PR": 5,
+    "D": 6, "N": 6, "R": 7,
     "W": 8, "G": 8, FORECAST_THP: 9, VIGI_HR: 10, FORECAST_TH: 10,
 }
 
@@ -59,6 +71,7 @@ POSITIONAL = [
     ("PR", "forecast"), ("W", "forecast"), ("G", "forecast"),
     (FORECAST_TH, "forecast"), (FORECAST_THP, "forecast"),
     ("C", "forecast"),  # Issue #121: confidence symbol
+    ("WL", "forecast"),  # Issue #122: F12 Großwetterlage-Label
     (VIGI_HR, "vigilance"), (VIGI_TH, "vigilance"),
     ("Z:", "fire"), ("MAX", "fire"), ("M:", "fire"),
     ("SN", "wintersport"), ("SN24+", "wintersport"),
@@ -166,6 +179,7 @@ def build_token_line(
     stage_name: str,
     profile: Profile = "standard",
     risk_engine: object | None = None,
+    stability_result: Optional["StabilityResult"] = None,
 ) -> TokenLine:
     """Build the canonical TokenLine per sms_format.md v2.0.
 
@@ -222,6 +236,20 @@ def build_token_line(
                 value=conf_symbol,
                 category="forecast",
                 priority=PRIORITY["C"],
+                morning_visible=spec.morning_enabled if spec else True,
+                evening_visible=spec.evening_enabled if spec else True,
+            ))
+
+    # Issue #122 / F12: Großwetterlage-Token (WL+/WL~/WL-) nach dem C-Token,
+    # vor Vigilance. Bei stability_result=None wird nichts emittiert.
+    if stability_result is not None:
+        spec = by_sym.get("WL")
+        if _visible(spec, report_type):
+            tokens.append(Token(
+                symbol="WL",
+                value=_stability_symbol(stability_result.label),
+                category="forecast",
+                priority=PRIORITY["WL"],
                 morning_visible=spec.morning_enabled if spec else True,
                 evening_visible=spec.evening_enabled if spec else True,
             ))

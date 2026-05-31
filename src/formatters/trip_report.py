@@ -29,6 +29,7 @@ from app.models import (
     RiskLevel,
     RiskType,
     SegmentWeatherData,
+    StabilityResult,
     ThunderLevel,
     TripReport,
     UnifiedWeatherDisplayConfig,
@@ -63,6 +64,7 @@ class TripReportFormatter:
         daylight: Optional[DaylightWindow] = None,
         tz: Optional[ZoneInfo] = None,
         profile: Optional[ActivityProfile] = None,
+        stability_result: Optional[StabilityResult] = None,
     ) -> TripReport:
         """Format trip segments into HTML + plain-text email."""
         if not segments:
@@ -131,6 +133,7 @@ class TripReportFormatter:
             exposed_sections=exposed_sections,
             friendly_keys=self._friendly_keys,
             profile=profile,
+            stability_result=stability_result,
         )
         first_agg = segments[0].aggregated
         email_subject = self._generate_subject(

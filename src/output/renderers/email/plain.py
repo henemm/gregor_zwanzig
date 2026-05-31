@@ -8,7 +8,7 @@ Bit-identical to TripReportFormatter._render_plain() pre-β3.
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 from zoneinfo import ZoneInfo
 
 from app.metric_catalog import get_label_for_field
@@ -16,6 +16,9 @@ from app.models import (
     SegmentWeatherData, ThunderLevel, UnifiedWeatherDisplayConfig,
     WeatherChange,
 )
+
+if TYPE_CHECKING:
+    from app.models import StabilityResult
 from app.profile import ActivityProfile
 from services.daylight_service import DaylightWindow
 from utils.timezone import local_fmt
@@ -119,6 +122,7 @@ def render_plain(
     friendly_keys: set[str],
     format_modes: Optional[dict[str, str]] = None,
     profile: Optional[ActivityProfile] = None,
+    stability_result: Optional["StabilityResult"] = None,
 ) -> str:
     """Render full plain-text e-mail body. Pure function."""
     sig = profile_signature(profile)
@@ -145,6 +149,27 @@ def render_plain(
 
     if compact_summary:
         lines.append(compact_summary)
+        lines.append("")
+
+    # Issue #122 / F12: Stabilitäts-Label (vor dem Konfidenz-Hinweis).
+    if stability_result is not None:
+        stability_texts = {
+            "STABIL": (
+                "Wetterlage: STABIL — Die Großwetterlage ist stabil. "
+                "Prognosen für die nächsten Etappen sind verlässlich."
+            ),
+            "WECHSELHAFT": (
+                "Wetterlage: WECHSELHAFT — Die Lage ist im Übergang. "
+                "Prognosen ab Tag 3 mit Vorsicht behandeln."
+            ),
+            "FRAGIL": (
+                "Wetterlage: FRAGIL — Schnelle Frontverlagerung möglich. "
+                "Prognosen ab Tag 2 konservativ planen."
+            ),
+        }
+        lines.append("---")
+        lines.append(stability_texts[stability_result.label])
+        lines.append("---")
         lines.append("")
 
     # Issue #121 / AC-12 + AC-13: confidence hint (only when uncertain).

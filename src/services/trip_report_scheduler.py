@@ -354,6 +354,20 @@ class TripReportSchedulerService:
         # 2b. Ensemble-Anreicherung: 1 API-Call für letzten Waypoint der letzten Etappe
         self._enrich_ensemble_for_trip(trip, segment_weather)
 
+        # 2c. F12 / Issue #122: Großwetterlage-/Stabilitätslabel für die
+        # kommenden Etappen (best-effort; bei API-Fehler liefert der Service
+        # None und der Report läuft ohne WL-Label weiter).
+        stability_result = None
+        try:
+            from services.weather_pattern import WeatherPatternService
+            from providers.openmeteo import OpenMeteoProvider as _OMProvider
+            _wp_provider = _OMProvider()
+            stability_result = WeatherPatternService(
+                provider=_wp_provider
+            ).compute_for_trip(trip, target_date)
+        except Exception as e:
+            logger.warning(f"WeatherPatternService failed for {trip.id}: {e}")
+
         # 3. Stage info for header
         stage = trip.get_stage_for_date(target_date)
         stage_name = stage.name if stage else None
@@ -426,6 +440,7 @@ class TripReportSchedulerService:
             daylight=daylight_window,
             tz=trip_tz,
             profile=trip.aggregation.profile,
+            stability_result=stability_result,
         )
 
         # 7. Send via configured channels

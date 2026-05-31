@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, time, timezone
 from enum import Enum
-from typing import List, Optional
+from typing import List, Literal, Optional, Tuple
 
 # Re-export Location for convenience. Canonical definition lives in app.config.
 from app.config import Location  # noqa: F401
@@ -763,3 +763,20 @@ class AlertRule:
     severity: AlertSeverity
     enabled: bool
     unit: str = ""
+
+
+# --- F12: Großwetterlage / Stabilitäts-Label (Issue #122) -------------------
+
+@dataclass(frozen=True)
+class StabilityResult:
+    """F12: Ergebnis der Großwetterlage-Berechnung.
+
+    SPEC: docs/specs/modules/weather_pattern.md v1.0
+
+    Immutable Dataclass, das das Stabilitäts-Label für die nächsten Etappen
+    eines Trips trägt. Wird nicht persistiert (wird bei jedem Report-Lauf
+    frisch von WeatherPatternService.compute_for_trip() berechnet).
+    """
+    label: Literal["STABIL", "WECHSELHAFT", "FRAGIL"]
+    score: int                          # 0–4 Gesamt-Score
+    component_scores: Tuple[int, int]   # (tendency_score, spread_score)

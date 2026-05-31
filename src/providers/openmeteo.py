@@ -593,6 +593,70 @@ class OpenMeteoProvider:
             logger.warning("Ensemble parse failed: %s", e)
             return {}
 
+    def _fetch_ensemble_with_z500(
+        self,
+        lat: float,
+        lon: float,
+    ) -> Optional[dict]:
+        """Fetch Z500 geopotential height from OpenMeteo Ensemble API.
+
+        F12 / Issue #122. Best-effort, graceful degradation.
+
+        Returns:
+            Dict mit
+              "time": list[str]            ISO-8601 UTC Zeitstempel,
+              "z500_members": list[list[float]]  je Stunde die Werte aller
+                                                 verfügbaren Ensemble-Member.
+            None bei JEDEM Fehler (HTTP, Timeout, Parse, leere Daten).
+        """
+        params = {
+            "latitude": lat,
+            "longitude": lon,
+            "hourly": "geopotential_height_500hPa",
+            "models": "ecmwf_ifs04,icon_seamless,gfs_seamless",
+            "forecast_days": 4,
+            "timezone": "UTC",
+        }
+        url = f"{self._ensemble_host}/v1/ensemble"
+        try:
+            response = self._client.get(url, params=params, timeout=ENSEMBLE_TIMEOUT)
+            self._log_api_call(url, response.status_code)
+            response.raise_for_status()
+            data = response.json()
+        except Exception as e:
+            logger.debug("Z500 ensemble fetch failed: %s", e)
+            return None
+
+        try:
+            hourly = data.get("hourly", {})
+            times = hourly.get("time", [])
+            if not times:
+                return None
+
+            z500_keys = [
+                k for k in hourly.keys()
+                if k.startswith("geopotential_height_500hPa")
+            ]
+            if not z500_keys:
+                return None
+
+            z500_members: List[List[float]] = []
+            for i in range(len(times)):
+                hour_vals: List[float] = []
+                for k in z500_keys:
+                    arr = hourly.get(k, [])
+                    if i < len(arr) and arr[i] is not None:
+                        try:
+                            hour_vals.append(float(arr[i]))
+                        except (ValueError, TypeError):
+                            pass
+                z500_members.append(hour_vals)
+
+            return {"time": times, "z500_members": z500_members}
+        except Exception as e:
+            logger.debug("Z500 ensemble parse failed: %s", e)
+            return None
+
     def _fetch_uv_data(
         self, lat: float, lon: float, start: datetime, end: datetime
     ) -> Optional[Dict[str, Any]]:
