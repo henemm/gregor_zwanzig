@@ -440,9 +440,8 @@ test.describe('AC-9 — EditWeatherSection: use_friendly_format in displayConfig
 		try {
 			await page.goto(`/trips/${EDIT_TRIP_ID}/edit`);
 
-			// Wetter-Sektion öffnen
-			const weatherSection = page.getByTestId('edit-section-wetter-header');
-			await weatherSection.click();
+			// Wetter-Tab öffnen (Issue #494: Accordion → Tab-Navigation)
+			await page.locator('[data-testid="edit-tabs"] [data-value="wetter"]').click();
 			await expect(page.getByTestId('edit-weather-section')).toBeVisible();
 
 			// Auf PUT-Request warten (Speichern)

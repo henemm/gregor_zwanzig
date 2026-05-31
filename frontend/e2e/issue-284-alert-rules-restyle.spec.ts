@@ -68,7 +68,7 @@ test.describe('Issue #284: AlertRulesEditor Restyle', () => {
 		]);
 		try {
 			await page.goto(`/trips/${id}/edit`);
-			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="edit-tabs"] [data-value="alarmregeln"]').click();
 			const row = page.locator('[data-testid="alert-rule-row"]').first();
 			// MUSS rot sein: "Warnung" ist noch nicht implementiert (zeigt "warning")
 			await expect(row).toContainText('Warnung');
@@ -93,7 +93,7 @@ test.describe('Issue #284: AlertRulesEditor Restyle', () => {
 		]);
 		try {
 			await page.goto(`/trips/${id}/edit`);
-			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="edit-tabs"] [data-value="alarmregeln"]').click();
 			const row = page.locator('[data-testid="alert-rule-row"]').first();
 			// MUSS rot sein: data-outlined ist noch nicht implementiert
 			await expect(
@@ -120,7 +120,7 @@ test.describe('Issue #284: AlertRulesEditor Restyle', () => {
 		]);
 		try {
 			await page.goto(`/trips/${id}/edit`);
-			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="edit-tabs"] [data-value="alarmregeln"]').click();
 			const pill = page
 				.locator('[data-testid="alert-rule-row"]')
 				.first()
@@ -149,7 +149,7 @@ test.describe('Issue #284: AlertRulesEditor Restyle', () => {
 		]);
 		try {
 			await page.goto(`/trips/${id}/edit`);
-			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="edit-tabs"] [data-value="alarmregeln"]').click();
 			const row = page.locator('[data-testid="alert-rule-row"]').first();
 			// MUSS rot sein: Kind-Badge hat noch kein data-outlined
 			await expect(
@@ -177,7 +177,7 @@ test.describe('Issue #284: AlertRulesEditor Restyle', () => {
 		]);
 		try {
 			await page.goto(`/trips/${id}/edit`);
-			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="edit-tabs"] [data-value="alarmregeln"]').click();
 			await page.locator('[data-testid="alert-rule-kebab-trigger"]').first().click();
 			await page.locator('[data-testid="alert-rule-edit-btn"]').first().click();
 			const saveBtn = page.locator('[data-testid="alert-rule-save"]');
@@ -205,7 +205,7 @@ test.describe('Issue #284: AlertRulesEditor Restyle', () => {
 		]);
 		try {
 			await page.goto(`/trips/${id}/edit`);
-			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="edit-tabs"] [data-value="alarmregeln"]').click();
 			await page.locator('[data-testid="alert-rule-kebab-trigger"]').first().click();
 			await page.locator('[data-testid="alert-rule-edit-btn"]').first().click();
 			const cancelBtn = page.locator('[data-testid="alert-rule-cancel"]');
@@ -233,7 +233,7 @@ test.describe('Issue #284: AlertRulesEditor Restyle', () => {
 		]);
 		try {
 			await page.goto(`/trips/${id}/edit`);
-			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="edit-tabs"] [data-value="alarmregeln"]').click();
 			await page.locator('[data-testid="alert-rule-kebab-trigger"]').first().click();
 			const editBtn = page.locator('[data-testid="alert-rule-edit-btn"]').first();
 			// MUSS rot sein: aktuell plain <button class="btn-secondary">
@@ -249,7 +249,7 @@ test.describe('Issue #284: AlertRulesEditor Restyle', () => {
 		await createTrip(request, id, []);
 		try {
 			await page.goto(`/trips/${id}/edit`);
-			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="edit-tabs"] [data-value="alarmregeln"]').click();
 			const addBtn = page.locator('[data-testid="alert-rules-editor-add"]');
 			// MUSS rot sein: aktuell plain <button class="add-button">
 			await expect(addBtn).toHaveAttribute('data-slot', 'btn');
@@ -275,7 +275,7 @@ test.describe('Issue #284: AlertRulesEditor Restyle', () => {
 		]);
 		try {
 			await page.goto(`/trips/${id}/edit`);
-			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="edit-tabs"] [data-value="alarmregeln"]').click();
 			await page.locator('[data-testid="alert-rule-kebab-trigger"]').first().click();
 			await page.locator('[data-testid="alert-rule-edit-btn"]').first().click();
 			// ModeCard (absolut) ist standard-ausgewählt
@@ -309,7 +309,7 @@ test.describe('Issue #284: AlertRulesEditor Restyle', () => {
 		]);
 		try {
 			await page.goto(`/trips/${id}/edit`);
-			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="edit-tabs"] [data-value="alarmregeln"]').click();
 			const row = page.locator('[data-testid="alert-rule-row"]').first();
 			// MUSS rot sein: .threshold hat aktuell keinen Mono-Font definiert
 			const fontFamily = await row.evaluate((el) => {

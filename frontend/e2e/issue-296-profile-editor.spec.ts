@@ -22,13 +22,14 @@ import { login } from './helpers.js';
 const TRIP_ID = 'e2e-cockpit-test';
 const EDIT_URL = `/trips/${TRIP_ID}/edit`;
 
-// Etappen ist Default-offen; nur klicken wenn geschlossen.
+// Etappen ist Default-Tab; nur klicken wenn Panel noch nicht sichtbar
+// (Issue #494: Accordion → Tab-Navigation).
 async function ensureEtappenOpen(page: import('@playwright/test').Page) {
-	const header = page.getByTestId('edit-section-etappen-header');
-	await expect(header).toBeVisible();
+	const tab = page.locator('[data-testid="edit-tabs"] [data-value="etappen"]');
+	await expect(tab).toBeVisible();
 	const panel = page.getByTestId('edit-stages-panel');
 	if (!(await panel.isVisible({ timeout: 500 }).catch(() => false))) {
-		await header.click();
+		await tab.click();
 		await expect(panel).toBeVisible();
 	}
 }

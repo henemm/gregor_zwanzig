@@ -1,7 +1,7 @@
 <script lang="ts">
-	import WaypointEditorPage from '$lib/components/edit/WaypointEditorPage.svelte';
+	import TripEditView from '$lib/components/edit/TripEditView.svelte';
 
 	let { data } = $props();
 </script>
 
-<WaypointEditorPage trip={data.trip} />
+<TripEditView trip={data.trip} />

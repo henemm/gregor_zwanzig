@@ -2,14 +2,17 @@
 	import type { Trip, Stage, AlertRule, ReportConfig } from '$lib/types.js';
 	import { api } from '$lib/api.js';
 	import { goto } from '$app/navigation';
-	import AccordionSection from './AccordionSection.svelte';
 	import EditRouteSection from './EditRouteSection.svelte';
 	import EditStagesPanelNew from './EditStagesPanelNew.svelte';
 	import WeatherSummaryCard from './WeatherSummaryCard.svelte';
 	import EditReportConfigSection from './EditReportConfigSection.svelte';
 	import { AlertRulesEditor } from '$lib/components/organisms';
+	import { Segmented } from '$lib/components/atoms';
 	import { normalizeAlertMetric } from '$lib/utils/alertMetricLabels';
 	import { stripSuggested } from '$lib/utils/waypointEditor';
+	import { computeTripStats } from '$lib/utils/tripStats';
+	import { formatDateRange } from '$lib/utils/tripHero';
+	import { getReportSchedule } from '$lib/utils/rightColumn';
 
 	interface Props {
 		trip: Trip;
@@ -34,19 +37,26 @@
 			: []
 	);
 
-	type SectionId = 'route' | 'etappen' | 'wetter' | 'alerts' | 'reports';
-	let openSection: SectionId | null = $state('etappen');
+	type TabId = 'route' | 'etappen' | 'wetter' | 'reports' | 'alarmregeln';
+	let activeTab: TabId = $state('etappen');
 
 	let saveError: string | null = $state(null);
 	let saving = $state(false);
 
-	// Factory Pattern fuer onToggle (Safari-Closure-Binding-Schutz, siehe CLAUDE.md)
-	function makeToggleHandler(section: SectionId) {
-		return function doToggle() {
-			openSection = openSection === section ? null : section;
-		};
-	}
+	// Statistiken (derived, damit bei stages/alertRules-Updates aktualisiert)
+	const stats = $derived(computeTripStats(trip));
+	const dateRange = $derived(formatDateRange(trip));
+	const reportSchedule = $derived(getReportSchedule(trip));
 
+	const tabOptions = $derived([
+		{ value: 'route',       label: 'Route',                              testid: 'edit-tab-route' },
+		{ value: 'etappen',     label: `Etappen ${stats.stages}`,            testid: 'edit-tab-etappen' },
+		{ value: 'wetter',      label: 'Wetter',                             testid: 'edit-tab-wetter' },
+		{ value: 'reports',     label: 'Reports',                            testid: 'edit-tab-reports' },
+		{ value: 'alarmregeln', label: `Alarmregeln ${alertRules.length}`,   testid: 'edit-tab-alarmregeln' },
+	]);
+
+	// Factory Pattern fuer Handler (Safari-Closure-Binding-Schutz, siehe CLAUDE.md)
 	function makeSaveHandler() {
 		return async function doSave() {
 			saveError = null;
@@ -81,68 +91,31 @@
 		};
 	}
 
+	function makeTabSelectHandler() {
+		return function doSelect(v: string) {
+			activeTab = v as TabId;
+		};
+	}
+
 	const onSave = makeSaveHandler();
 	const onCancel = makeCancelHandler();
+	const onTabSelect = makeTabSelectHandler();
 </script>
 
-<div data-testid="trip-edit-view" class="max-w-3xl mx-auto p-4 pb-24">
-	<h1 class="text-xl font-semibold mb-4">Trip bearbeiten: {trip.name}</h1>
+<div data-testid="trip-edit-view" class="max-w-5xl mx-auto p-4">
+	<!-- Breadcrumb -->
+	<nav data-testid="edit-breadcrumb"
+		class="text-xs uppercase tracking-wider text-muted-foreground mb-3">
+		<a href="/trips" class="hover:underline">MEINE TOUREN</a>
+		<span> · TRIP BEARBEITEN</span>
+	</nav>
 
-	<AccordionSection
-		id="route"
-		title="Route"
-		open={openSection === 'route'}
-		onToggle={makeToggleHandler('route')}
-	>
-		<EditRouteSection bind:tripName bind:stages mode="edit" />
-	</AccordionSection>
-
-	<AccordionSection
-		id="etappen"
-		title="Etappen"
-		open={openSection === 'etappen'}
-		onToggle={makeToggleHandler('etappen')}
-	>
-		<EditStagesPanelNew bind:stages />
-	</AccordionSection>
-
-	<AccordionSection
-		id="wetter"
-		title="Wetter"
-		open={openSection === 'wetter'}
-		onToggle={makeToggleHandler('wetter')}
-	>
-		<WeatherSummaryCard displayConfig={trip.display_config} tripId={trip.id} />
-	</AccordionSection>
-
-	<AccordionSection
-		id="alerts"
-		title="Alarmregeln"
-		open={openSection === 'alerts'}
-		onToggle={makeToggleHandler('alerts')}
-	>
-		<AlertRulesEditor bind:rules={alertRules} />
-	</AccordionSection>
-
-	<AccordionSection
-		id="reports"
-		title="Reports"
-		open={openSection === 'reports'}
-		onToggle={makeToggleHandler('reports')}
-	>
-		<EditReportConfigSection bind:reportConfig mode="edit" />
-	</AccordionSection>
-
-	{#if saveError}
-		<div class="mt-4 p-3 rounded bg-destructive/10 text-destructive text-sm">
-			{saveError}
-		</div>
-	{/if}
-
-	<div class="fixed bottom-0 left-0 right-0 bg-background border-t p-3
-	            flex gap-2 justify-end"
-	     style="padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));">
-		<div class="max-w-3xl mx-auto w-full flex gap-2 justify-end">
+	<!-- Header: H1 + Buttons oben rechts -->
+	<div data-testid="edit-header" class="flex items-start justify-between mb-4 gap-4">
+		<h1 data-testid="edit-trip-title" class="text-2xl font-semibold">
+			{trip.name}
+		</h1>
+		<div data-testid="edit-header-actions" class="flex gap-2 items-center shrink-0">
 			<button
 				type="button"
 				data-testid="edit-cancel-btn"
@@ -163,4 +136,50 @@
 			</button>
 		</div>
 	</div>
+
+	<!-- Horizontale Tabs via Segmented -->
+	<div data-testid="edit-tabs" class="mb-4">
+		<Segmented options={tabOptions} selected={activeTab} onselect={onTabSelect} />
+	</div>
+
+	<!-- Statistik-Karte (immer sichtbar, unabhängig vom Tab) -->
+	<div data-testid="edit-stats-card"
+		class="flex flex-wrap items-center gap-x-3 gap-y-1 p-3 rounded-md border bg-card text-sm mb-4">
+		<span data-testid="edit-stats-distance">{stats.kmTotal.toFixed(1)} km</span>
+		<span aria-hidden="true">·</span>
+		<span data-testid="edit-stats-ascent">↑{stats.ascentM} m</span>
+		<span aria-hidden="true">·</span>
+		<span data-testid="edit-stats-daterange">{dateRange}</span>
+		<span aria-hidden="true">·</span>
+		<span data-testid="edit-stats-days">{stats.stages} Tage</span>
+		{#if reportSchedule.enabled}
+			<span data-testid="edit-stats-reports-badge"
+				class="ml-auto inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-xs uppercase tracking-wider">
+				REPORTS KONFIGURIERT
+			</span>
+		{/if}
+	</div>
+
+	<!-- Tab-Inhalte -->
+	<div data-testid="edit-tab-content">
+		{#if activeTab === 'route'}
+			<EditRouteSection bind:tripName bind:stages mode="edit" />
+		{:else if activeTab === 'etappen'}
+			<EditStagesPanelNew bind:stages />
+		{:else if activeTab === 'wetter'}
+			<WeatherSummaryCard displayConfig={trip.display_config} tripId={trip.id} />
+		{:else if activeTab === 'reports'}
+			<EditReportConfigSection bind:reportConfig mode="edit" />
+		{:else if activeTab === 'alarmregeln'}
+			<AlertRulesEditor bind:rules={alertRules} />
+		{/if}
+	</div>
+
+	<!-- Fehleranzeige -->
+	{#if saveError}
+		<div data-testid="edit-save-error"
+			class="mt-4 p-3 rounded bg-destructive/10 text-destructive text-sm">
+			{saveError}
+		</div>
+	{/if}
 </div>

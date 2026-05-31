@@ -39,9 +39,12 @@
   {#each resolvedItems as item}
     <button
       type="button"
+      role="tab"
       data-slot="segmented-item"
+      data-value={item.value ?? undefined}
       data-active={item.value === resolvedValue ? "true" : "false"}
       data-state={item.value === resolvedValue ? "active" : "inactive"}
+      aria-selected={item.value === resolvedValue ? "true" : "false"}
       data-testid={item.testid ?? undefined}
       onclick={() => resolvedChange(item.value ?? '')}
     >{item.label}{#if item.badge !== undefined && item.badge >= 1}<span data-slot="segmented-badge" data-testid={item.badge_testid ?? undefined}>{item.badge}</span>{/if}</button>

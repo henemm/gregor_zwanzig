@@ -10,6 +10,8 @@
 // Abgedeckte ACs: AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, AC-7, AC-8, AC-9,
 //                 AC-10, AC-11, AC-12
 
+// Deaktiviert in #494: WaypointEditorPage ist nicht mehr der Einstieg auf /edit.
+// Navigation Etappen-Kachel → WaypointEditor folgt in Folge-Issue.
 import { test, expect, devices } from '@playwright/test';
 import { login } from './helpers.js';
 
@@ -24,7 +26,7 @@ test.beforeEach(async ({ page }) => {
 // AC-1: Desktop — WaypointEditorPage ersetzt Akkordeon-Maske
 // =============================================================================
 
-test('AC-1: Desktop zeigt WaypointEditorPage, nicht Akkordeon-Maske', async ({ page }) => {
+test.skip('AC-1: Desktop zeigt WaypointEditorPage, nicht Akkordeon-Maske', async ({ page }) => {
 	await page.goto(EDIT_URL);
 
 	// NEU: Wegpunkt-Editor-Container muss sichtbar sein
@@ -44,7 +46,7 @@ test('AC-1: Desktop zeigt WaypointEditorPage, nicht Akkordeon-Maske', async ({ p
 // AC-2: Etappen-Auswahl synchronisiert Karte, Profil und Sidebar
 // =============================================================================
 
-test('AC-2: Etappen-Auswahl synchronisiert alle Panels', async ({ page }) => {
+test.skip('AC-2: Etappen-Auswahl synchronisiert alle Panels', async ({ page }) => {
 	await page.goto(EDIT_URL);
 	await expect(page.getByTestId('waypoint-editor-page')).toBeVisible();
 
@@ -65,7 +67,7 @@ test('AC-2: Etappen-Auswahl synchronisiert alle Panels', async ({ page }) => {
 // AC-3: Mobile — KI-Vorschlag-Bar erscheint bei suggested Waypoints
 // =============================================================================
 
-test('AC-3: Mobile Bottom-Sheet + KI-Vorschlag-Bar bei suggested Waypoints', async ({ browser }) => {
+test.skip('AC-3: Mobile Bottom-Sheet + KI-Vorschlag-Bar bei suggested Waypoints', async ({ browser }) => {
 	// Staged: Trip mit einem suggested Waypoint patchen
 	const apiCtx = await browser.newContext();
 	const apiPage = await apiCtx.newPage();
@@ -106,7 +108,7 @@ test('AC-3: Mobile Bottom-Sheet + KI-Vorschlag-Bar bei suggested Waypoints', asy
 // AC-4: KI-Vorschlag übernehmen → Bar verschwindet reaktiv
 // =============================================================================
 
-test('AC-4: KI-Vorschlag übernehmen entfernt suggested-Flag reaktiv', async ({ browser }) => {
+test.skip('AC-4: KI-Vorschlag übernehmen entfernt suggested-Flag reaktiv', async ({ browser }) => {
 	// Trip mit suggested Waypoint vorbereiten
 	const apiCtx = await browser.newContext();
 	const apiPage = await apiCtx.newPage();
@@ -144,7 +146,7 @@ test('AC-4: KI-Vorschlag übernehmen entfernt suggested-Flag reaktiv', async ({ 
 // AC-5: Speichern — PUT ohne suggested-Flags, redirect zu /trips
 // =============================================================================
 
-test('AC-5: Speichern sendet PUT ohne suggested-Flags, redirectet zu /trips', async ({ page }) => {
+test.skip('AC-5: Speichern sendet PUT ohne suggested-Flags, redirectet zu /trips', async ({ page }) => {
 	await page.goto(EDIT_URL);
 	await expect(page.getByTestId('waypoint-editor-page')).toBeVisible();
 
@@ -174,7 +176,7 @@ test('AC-5: Speichern sendet PUT ohne suggested-Flags, redirectet zu /trips', as
 // AC-6: Saving-State — Buttons disabled während PUT läuft
 // =============================================================================
 
-test('AC-6: Speichern-Button ist disabled während des PUT-Calls', async ({ page }) => {
+test.skip('AC-6: Speichern-Button ist disabled während des PUT-Calls', async ({ page }) => {
 	await page.goto(EDIT_URL);
 	await expect(page.getByTestId('waypoint-editor-page')).toBeVisible();
 
@@ -198,7 +200,7 @@ test('AC-6: Speichern-Button ist disabled während des PUT-Calls', async ({ page
 // AC-7: Fehlerfall — saveError wird im Footer angezeigt
 // =============================================================================
 
-test('AC-7: PUT-Fehler zeigt lesbare Fehlermeldung im Footer', async ({ page }) => {
+test.skip('AC-7: PUT-Fehler zeigt lesbare Fehlermeldung im Footer', async ({ page }) => {
 	await page.goto(EDIT_URL);
 	await expect(page.getByTestId('waypoint-editor-page')).toBeVisible();
 
@@ -215,7 +217,7 @@ test('AC-7: PUT-Fehler zeigt lesbare Fehlermeldung im Footer', async ({ page }) 
 // AC-8: Abbrechen — kein PUT, redirect zu /trips
 // =============================================================================
 
-test('AC-8: Abbrechen navigiert ohne PUT zu /trips', async ({ page }) => {
+test.skip('AC-8: Abbrechen navigiert ohne PUT zu /trips', async ({ page }) => {
 	await page.goto(EDIT_URL);
 	await expect(page.getByTestId('waypoint-editor-page')).toBeVisible();
 
@@ -234,7 +236,7 @@ test('AC-8: Abbrechen navigiert ohne PUT zu /trips', async ({ page }) => {
 // AC-9: Mobile — TopAppBar mit Titel + StageNavDropdown
 // =============================================================================
 
-test('AC-9: Mobile zeigt TopAppBar "Wegpunkt-Editor" + StageNavDropdown', async ({ browser }) => {
+test.skip('AC-9: Mobile zeigt TopAppBar "Wegpunkt-Editor" + StageNavDropdown', async ({ browser }) => {
 	const ctx = await browser.newContext({
 		...devices['iPhone SE'],
 		viewport: { width: 390, height: 844 },
@@ -263,7 +265,7 @@ test('AC-9: Mobile zeigt TopAppBar "Wegpunkt-Editor" + StageNavDropdown', async 
 // AC-10: Pausenetappe — PauseStageView, kein MapCanvas, kein Profil
 // =============================================================================
 
-test('AC-10: Pausenetappe zeigt PauseStageView, kein Karte/Profil', async ({ page }) => {
+test.skip('AC-10: Pausenetappe zeigt PauseStageView, kein Karte/Profil', async ({ page }) => {
 	// Pause-Stage via Index aktivieren (e2e-cockpit-test hat Pause an Index 2)
 	await page.goto(EDIT_URL);
 	await expect(page.getByTestId('waypoint-editor-page')).toBeVisible();
@@ -288,7 +290,7 @@ test('AC-10: Pausenetappe zeigt PauseStageView, kein Karte/Profil', async ({ pag
 // AC-11: Prev/Next Navigation — wechselt Stage, disables bei Grenzen
 // =============================================================================
 
-test('AC-11: Next-Button wechselt Stage; bei letzter Etappe disabled', async ({ browser }) => {
+test.skip('AC-11: Next-Button wechselt Stage; bei letzter Etappe disabled', async ({ browser }) => {
 	const ctx = await browser.newContext({
 		...devices['iPhone SE'],
 		viewport: { width: 390, height: 844 },
@@ -322,7 +324,7 @@ test('AC-11: Next-Button wechselt Stage; bei letzter Etappe disabled', async ({ 
 // AC-12: Kein Akkordeon für Wetter/Alarmregeln/Reports in Edit-Route
 // =============================================================================
 
-test('AC-12: Edit-Route hat keine Wetter/Alarmregeln/Reports-Sektionen', async ({ page }) => {
+test.skip('AC-12: Edit-Route hat keine Wetter/Alarmregeln/Reports-Sektionen', async ({ page }) => {
 	await page.goto(EDIT_URL);
 	await expect(page.getByTestId('waypoint-editor-page')).toBeVisible();
 

@@ -27,7 +27,14 @@ async function gotoSeedEdit(page: import('@playwright/test').Page) {
 	await page.waitForURL(/\/trips\/[^/]+\/edit/);
 }
 
-test.describe('Trip Edit View (Issue #91)', () => {
+function tabByValue(page: import('@playwright/test').Page, value: string) {
+	return page
+		.getByTestId('edit-tabs')
+		.locator(`[data-value="${value}"], [role="tab"]:has-text("${value}")`)
+		.first();
+}
+
+test.describe('Trip Edit View (Issue #91 / #494)', () => {
 	test.beforeEach(async ({ page }) => {
 		await login(page);
 		await page.goto('/trips');
@@ -37,7 +44,7 @@ test.describe('Trip Edit View (Issue #91)', () => {
 		}
 	});
 
-	// AC-1: Edit zeigt EditView, kein Wizard-Stepper
+	// AC-1: Edit zeigt TripEditView, kein Wizard-Stepper
 	test('AC-1: edit page renders TripEditView, not wizard stepper', async ({ page }) => {
 		await gotoSeedEdit(page);
 
@@ -50,55 +57,58 @@ test.describe('Trip Edit View (Issue #91)', () => {
 		await expect(nextBtn).not.toBeVisible();
 	});
 
-	// AC-2: Vier Akkordeon-Sektionen, "Etappen" initial offen
-	test('AC-2: four accordion sections, "Etappen" initially open', async ({ page }) => {
+	// AC-2 (Issue #494): Fünf horizontale Tabs, "Etappen" initial aktiv
+	test('AC-2: five horizontal tabs, "Etappen" initially active', async ({ page }) => {
 		await gotoSeedEdit(page);
 
-		for (const id of ['route', 'etappen', 'wetter', 'reports']) {
-			await expect(page.locator(`[data-testid="edit-section-${id}"]`)).toBeVisible();
+		await expect(page.getByTestId('edit-tabs')).toBeVisible();
+
+		for (const id of ['route', 'etappen', 'wetter', 'reports', 'alarmregeln']) {
+			await expect(tabByValue(page, id)).toBeVisible();
 		}
 
-		const etappenHeader = page.locator('[data-testid="edit-section-etappen-header"]');
-		await expect(etappenHeader).toHaveAttribute('aria-expanded', 'true');
+		// Default-Tab "etappen" zeigt seinen Inhalt (Stage-Cards) sofort
+		await expect(page.locator('[data-testid^="stage-card-"]').first()).toBeVisible();
 
-		for (const id of ['route', 'wetter', 'reports']) {
-			const header = page.locator(`[data-testid="edit-section-${id}-header"]`);
-			await expect(header).toHaveAttribute('aria-expanded', 'false');
-		}
+		// Andere Tab-Inhalte sind nicht sichtbar (Route-Input erscheint erst beim Tab-Wechsel)
+		await expect(page.locator('[data-testid="trip-name-input"]')).toHaveCount(0);
 	});
 
-	// Akkordeon-Verhalten: Tap auf andere Sektion schließt aktuelle, öffnet neue
-	test('accordion: tapping another section closes current, opens new', async ({ page }) => {
+	// Tab-Verhalten: Klick auf anderen Tab zeigt neuen Inhalt
+	test('tabs: clicking another tab shows its content', async ({ page }) => {
 		await gotoSeedEdit(page);
 
-		await page.locator('[data-testid="edit-section-wetter-header"]').click();
+		await tabByValue(page, 'wetter').click();
 
-		await expect(page.locator('[data-testid="edit-section-wetter-header"]'))
-			.toHaveAttribute('aria-expanded', 'true');
-		await expect(page.locator('[data-testid="edit-section-etappen-header"]'))
-			.toHaveAttribute('aria-expanded', 'false');
+		// Wetter-Tab: Stage-Cards aus dem Etappen-Tab sind nun weg
+		await expect(page.locator('[data-testid^="stage-card-"]')).toHaveCount(0);
+
+		// Stats-Karte bleibt sichtbar (Tab-übergreifend)
+		await expect(page.getByTestId('edit-stats-card')).toBeVisible();
 	});
 
-	// Akkordeon-Verhalten: Tap auf offenen Header schließt ihn
-	test('accordion: tapping open header closes it', async ({ page }) => {
+	// Tab-Verhalten: Wechsel zurück auf Etappen
+	test('tabs: switching back to Etappen restores its content', async ({ page }) => {
 		await gotoSeedEdit(page);
 
-		await page.locator('[data-testid="edit-section-etappen-header"]').click();
-		await expect(page.locator('[data-testid="edit-section-etappen-header"]'))
-			.toHaveAttribute('aria-expanded', 'false');
+		await tabByValue(page, 'route').click();
+		await expect(page.locator('[data-testid="trip-name-input"]')).toBeVisible();
+
+		await tabByValue(page, 'etappen').click();
+		await expect(page.locator('[data-testid^="stage-card-"]').first()).toBeVisible();
 	});
 
-	// AC-3: Bestehende Trip-Daten sind vorgeladen
+	// AC-3: Bestehende Trip-Daten sind vorgeladen (im Route-Tab)
 	test('AC-3: existing trip data is prefilled', async ({ page }) => {
 		await gotoSeedEdit(page);
 
-		await page.locator('[data-testid="edit-section-route-header"]').click();
+		await tabByValue(page, 'route').click();
 
 		const nameInput = page.locator('[data-testid="trip-name-input"]');
 		await expect(nameInput).toBeVisible();
 		await expect(nameInput).toHaveValue(SEED_TRIP_NAME);
 
-		await page.locator('[data-testid="edit-section-etappen-header"]').click();
+		await tabByValue(page, 'etappen').click();
 		const stageCard = page.locator('[data-testid^="stage-card-"]').first();
 		await expect(stageCard).toBeVisible();
 	});
@@ -140,7 +150,7 @@ test.describe('Trip Edit View (Issue #91)', () => {
 		expect(putCalled).toBe(false);
 	});
 
-	// AC-6: Mobile-Viewport (375px)
+	// AC-6: Mobile-Viewport (375px) — Tabs bleiben tappable
 	test('AC-6: works on mobile viewport (375x667)', async ({ browser }) => {
 		const context = await browser.newContext({
 			...devices['iPhone SE'],
@@ -149,24 +159,26 @@ test.describe('Trip Edit View (Issue #91)', () => {
 		const page = await context.newPage();
 		await login(page);
 
+		// Auf Mobile zeigt /trips Card-Stack statt Tabelle.
 		await page.goto('/trips');
-		const seedRow = page.locator(`tr:has-text("${SEED_TRIP_NAME}")`).first();
-		await expect(seedRow).toBeVisible();
-		// trip-edit-btn liegt im Kebab-Menü (#295)
-		await seedRow.getByTitle('Weitere Aktionen').click();
-		await seedRow.locator('[data-testid="trip-edit-btn"]').click();
+		const card = page.locator(`[data-testid="trip-card"]:has-text("${SEED_TRIP_NAME}")`).first();
+		await expect(card).toBeVisible();
+		await card.locator('[data-testid="trip-card-menu-btn"]').click();
+		const sheet = page.getByTestId('trip-action-sheet');
+		await expect(sheet).toBeVisible();
+		await sheet.getByRole('button', { name: /Bearbeiten/i }).click();
 		await page.waitForURL(/\/trips\/[^/]+\/edit/);
 
-		for (const id of ['route', 'etappen', 'wetter', 'reports']) {
-			const header = page.locator(`[data-testid="edit-section-${id}-header"]`);
-			await expect(header).toBeVisible();
-			const box = await header.boundingBox();
-			expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+		await expect(page.getByTestId('edit-tabs')).toBeVisible();
+
+		// Tab-Buttons sind tappable
+		for (const id of ['route', 'etappen', 'wetter', 'reports', 'alarmregeln']) {
+			await expect(tabByValue(page, id)).toBeVisible();
 		}
 
-		await page.locator('[data-testid="edit-section-wetter-header"]').tap();
-		await expect(page.locator('[data-testid="edit-section-wetter-header"]'))
-			.toHaveAttribute('aria-expanded', 'true');
+		await tabByValue(page, 'wetter').tap();
+		// Nach Tap auf Wetter-Tab: keine Stage-Cards mehr sichtbar
+		await expect(page.locator('[data-testid^="stage-card-"]')).toHaveCount(0);
 
 		await context.close();
 	});

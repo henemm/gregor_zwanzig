@@ -60,7 +60,7 @@ test.describe('Issue #223: AlertRulesEditor', () => {
 		await createTrip(request, id, []);
 		try {
 			await page.goto(`/trips/${id}/edit`);
-			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="edit-tabs"] [data-value="alarmregeln"]').click();
 			await expect(page.locator('[data-testid="alert-rules-editor"]')).toBeVisible();
 			await expect(page.locator('[data-testid="alert-rules-editor-empty"]')).toContainText(
 				'Noch keine Alarmregeln'
@@ -87,7 +87,7 @@ test.describe('Issue #223: AlertRulesEditor', () => {
 		]);
 		try {
 			await page.goto(`/trips/${id}/edit`);
-			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="edit-tabs"] [data-value="alarmregeln"]').click();
 			const row = page.locator('[data-testid="alert-rule-row"]');
 			await expect(row).toHaveCount(1);
 			await expect(row.first()).toContainText('Böen');
@@ -106,7 +106,7 @@ test.describe('Issue #223: AlertRulesEditor', () => {
 		await createTrip(request, id, []);
 		try {
 			await page.goto(`/trips/${id}/edit`);
-			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="edit-tabs"] [data-value="alarmregeln"]').click();
 			await page.locator('[data-testid="alert-rules-editor-add"]').click();
 			const row = page.locator('[data-testid="alert-rule-row"]');
 			await expect(row).toHaveCount(1);
@@ -135,7 +135,7 @@ test.describe('Issue #223: AlertRulesEditor', () => {
 		]);
 		try {
 			await page.goto(`/trips/${id}/edit`);
-			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="edit-tabs"] [data-value="alarmregeln"]').click();
 			await page.locator('[data-testid="alert-rule-kebab-trigger"]').first().click();
 			await page.locator('[data-testid="alert-rule-delete"]').first().click();
 			await expect(page.locator('[data-testid="alert-rule-row"]')).toHaveCount(0);
@@ -164,7 +164,7 @@ test.describe('Issue #223: AlertRulesEditor', () => {
 		]);
 		try {
 			await page.goto(`/trips/${id}/edit`);
-			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="edit-tabs"] [data-value="alarmregeln"]').click();
 			await page.locator('[data-testid="alert-rule-kebab-trigger"]').first().click();
 			await page.locator('[data-testid="alert-rule-edit-btn"]').first().click();
 			await expect(page.locator('[data-testid="alert-rule-edit"]')).toBeVisible();
@@ -194,7 +194,7 @@ test.describe('Issue #223: AlertRulesEditor', () => {
 		]);
 		try {
 			await page.goto(`/trips/${id}/edit`);
-			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="edit-tabs"] [data-value="alarmregeln"]').click();
 			await page.locator('[data-testid="alert-rule-kebab-trigger"]').first().click();
 			await page.locator('[data-testid="alert-rule-edit-btn"]').first().click();
 			await page.locator('[data-testid="alert-rule-threshold"]').first().fill('99');
@@ -211,7 +211,7 @@ test.describe('Issue #223: AlertRulesEditor', () => {
 		await createTrip(request, id, []);
 		try {
 			await page.goto(`/trips/${id}/edit`);
-			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="edit-tabs"] [data-value="alarmregeln"]').click();
 			await page.locator('[data-testid="alert-rules-editor-add"]').click();
 			await expect(page.locator('[data-testid="alert-rule-row"]')).toHaveCount(1);
 
@@ -229,7 +229,7 @@ test.describe('Issue #223: AlertRulesEditor', () => {
 
 			// Reload: Rule muss persistiert sein
 			await page.goto(`/trips/${id}/edit`);
-			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="edit-tabs"] [data-value="alarmregeln"]').click();
 			await expect(page.locator('[data-testid="alert-rule-row"]')).toHaveCount(1);
 		} finally {
 			await deleteTrip(request, id);
@@ -277,7 +277,7 @@ test.describe('Issue #223: AlertRulesEditor', () => {
 		]);
 		try {
 			await page.goto(`/trips/${id}/edit`);
-			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="edit-tabs"] [data-value="alarmregeln"]').click();
 			const toggle = page.locator('[data-testid="alert-rule-row"] input[type="checkbox"]').first();
 			await expect(toggle).toBeChecked();
 			await toggle.click();
@@ -308,7 +308,7 @@ test.describe('Issue #223: AlertRulesEditor', () => {
 		]);
 		try {
 			await page.goto(`/trips/${id}/edit`);
-			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="edit-tabs"] [data-value="alarmregeln"]').click();
 			const row = page.locator('[data-testid="alert-rule-row"]').first();
 			await expect(row).toContainText('HOCH');
 			await expect(row).not.toContainText('> 2');
@@ -350,7 +350,7 @@ test.describe('Issue #297: AlertRulesEditor — mode=both mit zwei Threshold-Fel
 		]);
 		try {
 			await page.goto(`/trips/${id}/edit`);
-			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="edit-tabs"] [data-value="alarmregeln"]').click();
 			await page.locator('[data-testid="alert-rule-kebab-trigger"]').first().click();
 			await page.locator('[data-testid="alert-rule-edit-btn"]').first().click();
 			await expect(page.locator('[data-testid="alert-rule-edit"]')).toBeVisible();
@@ -383,7 +383,7 @@ test.describe('Issue #297: AlertRulesEditor — mode=both mit zwei Threshold-Fel
 		]);
 		try {
 			await page.goto(`/trips/${id}/edit`);
-			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="edit-tabs"] [data-value="alarmregeln"]').click();
 			await page.locator('[data-testid="alert-rule-kebab-trigger"]').first().click();
 			await page.locator('[data-testid="alert-rule-edit-btn"]').first().click();
 			// Erst Speichern-Button bei mode='absolute' prüfen
@@ -404,7 +404,7 @@ test.describe('Issue #297: AlertRulesEditor — mode=both mit zwei Threshold-Fel
 		await createTrip(request, id, []);
 		try {
 			await page.goto(`/trips/${id}/edit`);
-			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="edit-tabs"] [data-value="alarmregeln"]').click();
 			// Neue Rule hinzufügen
 			await page.locator('[data-testid="alert-rules-editor-add"]').click();
 			await page.locator('[data-testid="alert-rule-kebab-trigger"]').first().click();
@@ -442,7 +442,7 @@ test.describe('Issue #297: AlertRulesEditor — mode=both mit zwei Threshold-Fel
 		]);
 		try {
 			await page.goto(`/trips/${id}/edit`);
-			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="edit-tabs"] [data-value="alarmregeln"]').click();
 			await page.locator('[data-testid="alert-rule-kebab-trigger"]').first().click();
 			await page.locator('[data-testid="alert-rule-edit-btn"]').first().click();
 			// ModeCard 'both' muss Badge "3 Felder" zeigen
@@ -531,7 +531,7 @@ test.describe('Issue #319: Kebab-Menue (AC-1 bis AC-6)', () => {
 		]);
 		try {
 			await page.goto(`/trips/${id}/edit`);
-			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="edit-tabs"] [data-value="alarmregeln"]').click();
 			const row = page.locator('[data-testid="alert-rule-row"]').first();
 			// Kebab-Trigger muss sichtbar sein
 			await expect(row.locator('[data-testid="alert-rule-kebab-trigger"]')).toBeVisible();
@@ -562,7 +562,7 @@ test.describe('Issue #319: Kebab-Menue (AC-1 bis AC-6)', () => {
 		]);
 		try {
 			await page.goto(`/trips/${id}/edit`);
-			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="edit-tabs"] [data-value="alarmregeln"]').click();
 			// Vor Klick: Dropdown-Eintraege nicht sichtbar
 			await expect(page.locator('[data-testid="alert-rule-edit-btn"]')).not.toBeVisible();
 			await expect(page.locator('[data-testid="alert-rule-delete"]')).not.toBeVisible();
@@ -594,7 +594,7 @@ test.describe('Issue #319: Kebab-Menue (AC-1 bis AC-6)', () => {
 		]);
 		try {
 			await page.goto(`/trips/${id}/edit`);
-			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="edit-tabs"] [data-value="alarmregeln"]').click();
 			await page.locator('[data-testid="alert-rule-kebab-trigger"]').first().click();
 			await page.locator('[data-testid="alert-rule-edit-btn"]').click();
 			// Dropdown geschlossen
@@ -623,7 +623,7 @@ test.describe('Issue #319: Kebab-Menue (AC-1 bis AC-6)', () => {
 		]);
 		try {
 			await page.goto(`/trips/${id}/edit`);
-			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="edit-tabs"] [data-value="alarmregeln"]').click();
 			await page.locator('[data-testid="alert-rule-kebab-trigger"]').first().click();
 			await page.locator('[data-testid="alert-rule-delete"]').click();
 			// Regel entfernt
@@ -650,7 +650,7 @@ test.describe('Issue #319: Kebab-Menue (AC-1 bis AC-6)', () => {
 		]);
 		try {
 			await page.goto(`/trips/${id}/edit`);
-			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="edit-tabs"] [data-value="alarmregeln"]').click();
 			await page.locator('[data-testid="alert-rule-kebab-trigger"]').first().click();
 			// Dropdown ist offen
 			await expect(page.locator('[role="menu"]')).toBeVisible();
@@ -685,7 +685,7 @@ test.describe('Issue #319: Kebab-Menue (AC-1 bis AC-6)', () => {
 		]);
 		try {
 			await page.goto(`/trips/${id}/edit`);
-			await page.locator('[data-testid="edit-section-alerts-header"]').click();
+			await page.locator('[data-testid="edit-tabs"] [data-value="alarmregeln"]').click();
 			const row = page.locator('[data-testid="alert-rule-row"]').first();
 			// Kebab-Trigger muss sichtbar sein
 			await expect(row.locator('[data-testid="alert-rule-kebab-trigger"]')).toBeVisible();
