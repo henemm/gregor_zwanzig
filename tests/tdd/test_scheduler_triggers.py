@@ -23,28 +23,6 @@ class TestSchedulerTriggerEndpoints:
         from fastapi.testclient import TestClient
         return TestClient(app)
 
-    def test_morning_subscriptions_endpoint_exists(self, client):
-        """
-        GIVEN: FastAPI app running
-        WHEN: POST /api/scheduler/morning-subscriptions
-        THEN: Returns 200 with status field
-        """
-        resp = client.post("/api/scheduler/morning-subscriptions")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert "status" in data
-
-    def test_evening_subscriptions_endpoint_exists(self, client):
-        """
-        GIVEN: FastAPI app running
-        WHEN: POST /api/scheduler/evening-subscriptions
-        THEN: Returns 200 with status field
-        """
-        resp = client.post("/api/scheduler/evening-subscriptions")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert "status" in data
-
     def test_trip_reports_endpoint_exists(self, client):
         """
         GIVEN: FastAPI app running

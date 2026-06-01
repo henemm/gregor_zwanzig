@@ -72,8 +72,8 @@ func TestTriggerEndpoint_Success(t *testing.T) {
 		if r.Method != http.MethodPost {
 			t.Errorf("Expected POST, got %s", r.Method)
 		}
-		if r.URL.Path != "/api/scheduler/morning-subscriptions" {
-			t.Errorf("Expected path /api/scheduler/morning-subscriptions, got %s", r.URL.Path)
+		if r.URL.Path != "/api/scheduler/trip-reports" {
+			t.Errorf("Expected path /api/scheduler/trip-reports, got %s", r.URL.Path)
 		}
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprint(w, `{"status":"ok","count":2}`)
@@ -89,7 +89,7 @@ func TestTriggerEndpoint_Success(t *testing.T) {
 		t.Fatalf("New() error: %v", err)
 	}
 
-	err = sched.triggerEndpointForUser("/api/scheduler/morning-subscriptions", "default")
+	err = sched.triggerEndpointForUser("/api/scheduler/trip-reports", "default")
 	if err != nil {
 		t.Fatalf("triggerEndpoint() returned error: %v", err)
 	}
@@ -172,8 +172,8 @@ func TestStatus(t *testing.T) {
 	if !ok {
 		t.Fatalf("Status jobs should be a slice, got %T", status["jobs"])
 	}
-	if len(jobs) != 6 {
-		t.Fatalf("Expected 6 jobs, got %d", len(jobs))
+	if len(jobs) != 4 {
+		t.Fatalf("Expected 4 jobs, got %d", len(jobs))
 	}
 
 	// Each job should have id, name, next_run, last_run
@@ -254,68 +254,6 @@ func TestRecordRun_Failure(t *testing.T) {
 	}
 }
 
-// --- Test: morningSubscriptions records run + triggers endpoint ---
-
-func TestMorningSubscriptions_RecordsRun(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprint(w, `{"status":"ok"}`)
-	}))
-	defer server.Close()
-
-	cfg := &config.Config{
-		PythonCoreURL:     server.URL,
-		SchedulerTimezone: "Europe/Vienna",
-	}
-	sched, err := New(cfg, testStore(t))
-	if err != nil {
-		t.Fatalf("New() error: %v", err)
-	}
-
-	sched.morningSubscriptions()
-
-	sched.mu.RLock()
-	defer sched.mu.RUnlock()
-	lr, ok := sched.lastRuns["morning_subscriptions"]
-	if !ok {
-		t.Fatal("morningSubscriptions should record last run")
-	}
-	if lr.Status != "ok" {
-		t.Fatalf("Expected status ok, got %s", lr.Status)
-	}
-}
-
-// --- Test: Failed trigger records error ---
-
-func TestMorningSubscriptions_FailedTrigger_RecordsError(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprint(w, `{"error":"boom"}`)
-	}))
-	defer server.Close()
-
-	cfg := &config.Config{
-		PythonCoreURL:     server.URL,
-		SchedulerTimezone: "Europe/Vienna",
-	}
-	sched, err := New(cfg, testStore(t))
-	if err != nil {
-		t.Fatalf("New() error: %v", err)
-	}
-
-	sched.morningSubscriptions()
-
-	sched.mu.RLock()
-	defer sched.mu.RUnlock()
-	lr, ok := sched.lastRuns["morning_subscriptions"]
-	if !ok {
-		t.Fatal("morningSubscriptions should record last run even on failure")
-	}
-	if lr.Status != "error" {
-		t.Fatalf("Expected status error, got %s", lr.Status)
-	}
-}
-
 // --- Test: pingHeartbeat success ---
 
 func TestPingHeartbeat_Success(t *testing.T) {
@@ -330,16 +268,16 @@ func TestPingHeartbeat_Success(t *testing.T) {
 	defer server.Close()
 
 	cfg := &config.Config{
-		PythonCoreURL:     "http://localhost:8000",
-		HeartbeatMorning:  server.URL + "/heartbeat/morning",
-		SchedulerTimezone: "Europe/Vienna",
+		PythonCoreURL:           "http://localhost:8000",
+		HeartbeatComparePresets: server.URL + "/heartbeat/compare-presets",
+		SchedulerTimezone:       "Europe/Vienna",
 	}
 	sched, err := New(cfg, testStore(t))
 	if err != nil {
 		t.Fatalf("New() error: %v", err)
 	}
 
-	sched.pingHeartbeat("morning_subscriptions", sched.heartbeatMorning)
+	sched.pingHeartbeat("compare_presets_daily", sched.heartbeatComparePresets)
 	if !pinged {
 		t.Fatal("Heartbeat server was not pinged")
 	}
@@ -349,9 +287,9 @@ func TestPingHeartbeat_Success(t *testing.T) {
 
 func TestPingHeartbeat_Failure(t *testing.T) {
 	cfg := &config.Config{
-		PythonCoreURL:     "http://localhost:8000",
-		HeartbeatMorning:  "http://localhost:19999/heartbeat/nope",
-		SchedulerTimezone: "Europe/Vienna",
+		PythonCoreURL:           "http://localhost:8000",
+		HeartbeatComparePresets: "http://localhost:19999/heartbeat/nope",
+		SchedulerTimezone:       "Europe/Vienna",
 	}
 	sched, err := New(cfg, testStore(t))
 	if err != nil {
@@ -359,7 +297,7 @@ func TestPingHeartbeat_Failure(t *testing.T) {
 	}
 
 	// Should not panic — fire-and-forget with logging
-	sched.pingHeartbeat("morning_subscriptions", sched.heartbeatMorning)
+	sched.pingHeartbeat("compare_presets_daily", sched.heartbeatComparePresets)
 }
 
 // --- Test: pingHeartbeat with empty URL is a no-op (no HTTP request) ---
@@ -377,7 +315,7 @@ func TestPingHeartbeat_EmptyURL(t *testing.T) {
 	sched.notifier = func(_, _, _, _, _ string) error { return nil }
 
 	// Should not panic or make any HTTP request
-	sched.pingHeartbeat("morning_subscriptions", "")
+	sched.pingHeartbeat("compare_presets_daily", "")
 }
 
 // ---------------------------------------------------------------------------
@@ -410,7 +348,7 @@ func TestPingHeartbeat_EmptyURL_TriggersNotifier(t *testing.T) {
 	}
 
 	// New signature: (jobName, url) — RED: current signature is (url) only
-	sched.pingHeartbeat("morning_subscriptions", "")
+	sched.pingHeartbeat("compare_presets_daily", "")
 
 	if len(calls) != 1 {
 		t.Fatalf("expected 1 notifier call for empty URL, got %d", len(calls))
@@ -440,16 +378,16 @@ func TestPingHeartbeat_EmptyURL_OnlyOncePerJob(t *testing.T) {
 		return nil
 	}
 
-	sched.pingHeartbeat("morning_subscriptions", "")
-	sched.pingHeartbeat("morning_subscriptions", "")
-	sched.pingHeartbeat("morning_subscriptions", "")
+	sched.pingHeartbeat("compare_presets_daily", "")
+	sched.pingHeartbeat("compare_presets_daily", "")
+	sched.pingHeartbeat("compare_presets_daily", "")
 
 	if count != 1 {
 		t.Fatalf("expected sync.Once: exactly 1 call for same job, got %d", count)
 	}
 }
 
-// TestPingHeartbeat_EmptyURL_DifferentJobsSeparate — morning und evening
+// TestPingHeartbeat_EmptyURL_DifferentJobsSeparate — verschiedene Jobs
 // haben separate sync.Once: jeweils einer pro Job.
 func TestPingHeartbeat_EmptyURL_DifferentJobsSeparate(t *testing.T) {
 	var count int
@@ -468,79 +406,11 @@ func TestPingHeartbeat_EmptyURL_DifferentJobsSeparate(t *testing.T) {
 		return nil
 	}
 
-	sched.pingHeartbeat("morning_subscriptions", "")
-	sched.pingHeartbeat("evening_subscriptions", "")
+	sched.pingHeartbeat("compare_presets_daily", "")
+	sched.pingHeartbeat("another_job", "")
 
 	if count != 2 {
-		t.Fatalf("expected 2 calls (morning + evening), got %d", count)
-	}
-}
-
-// --- Test: morningSubscriptions triggers endpoint + heartbeat ---
-
-func TestMorningSubscriptions_TriggersHeartbeat(t *testing.T) {
-	var calls []string
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		calls = append(calls, r.Method+" "+r.URL.Path)
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprint(w, `{"status":"ok"}`)
-	}))
-	defer server.Close()
-
-	cfg := &config.Config{
-		PythonCoreURL:     server.URL,
-		HeartbeatMorning:  server.URL + "/heartbeat/morning",
-		HeartbeatEvening:  server.URL + "/heartbeat/evening",
-		SchedulerTimezone: "Europe/Vienna",
-	}
-	sched, err := New(cfg, testStore(t))
-	if err != nil {
-		t.Fatalf("New() error: %v", err)
-	}
-
-	sched.morningSubscriptions()
-
-	if len(calls) != 2 {
-		t.Fatalf("Expected 2 calls (trigger + heartbeat), got %d: %v", len(calls), calls)
-	}
-	if calls[0] != "POST /api/scheduler/morning-subscriptions" {
-		t.Errorf("First call should be POST trigger, got %s", calls[0])
-	}
-	if calls[1] != "GET /heartbeat/morning" {
-		t.Errorf("Second call should be GET heartbeat, got %s", calls[1])
-	}
-}
-
-// --- Test: Failed trigger skips heartbeat ---
-
-func TestMorningSubscriptions_FailedTrigger_SkipsHeartbeat(t *testing.T) {
-	triggerServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprint(w, `{"error":"boom"}`)
-	}))
-	defer triggerServer.Close()
-
-	var heartbeatPinged bool
-	heartbeatServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		heartbeatPinged = true
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer heartbeatServer.Close()
-
-	cfg := &config.Config{
-		PythonCoreURL:     triggerServer.URL,
-		HeartbeatMorning:  heartbeatServer.URL + "/heartbeat/morning",
-		SchedulerTimezone: "Europe/Vienna",
-	}
-	sched, err := New(cfg, testStore(t))
-	if err != nil {
-		t.Fatalf("New() error: %v", err)
-	}
-
-	sched.morningSubscriptions()
-
-	if heartbeatPinged {
-		t.Fatal("Heartbeat should NOT be pinged when trigger fails")
+		t.Fatalf("expected 2 calls (different jobs), got %d", count)
 	}
 }
 
@@ -723,19 +593,19 @@ func TestStatus_IncludesLastRun(t *testing.T) {
 	defer sched.Stop()
 
 	// Trigger a job manually
-	sched.morningSubscriptions()
+	sched.comparePresetsDaily()
 
 	status := sched.Status()
 	jobs := status["jobs"].([]map[string]any)
 
-	// Find morning_subscriptions job
+	// Find compare_presets_daily job
 	var found bool
 	for _, job := range jobs {
-		if job["id"] == "morning_subscriptions" {
+		if job["id"] == "compare_presets_daily" {
 			found = true
 			lr, ok := job["last_run"].(map[string]any)
 			if !ok || lr == nil {
-				t.Fatal("morning_subscriptions should have last_run after execution")
+				t.Fatal("compare_presets_daily should have last_run after execution")
 			}
 			if lr["status"] != "ok" {
 				t.Fatalf("Expected last_run status ok, got %v", lr["status"])
@@ -743,7 +613,7 @@ func TestStatus_IncludesLastRun(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatal("morning_subscriptions job not found in status")
+		t.Fatal("compare_presets_daily job not found in status")
 	}
 }
 

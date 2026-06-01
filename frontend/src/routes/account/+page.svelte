@@ -258,8 +258,6 @@
 	}
 
 	const userJobs: Record<string, string> = {
-		morning_subscriptions: 'Morgen-Report',
-		evening_subscriptions: 'Abend-Report',
 		trip_reports_hourly: 'Trip-Checks',
 	};
 

@@ -238,33 +238,6 @@ class TestHeartbeatIntegration:
             if env_backup is not None:
                 os.environ["GZ_HEARTBEAT_COMPARE"] = env_backup
 
-    def test_ac4_kein_ping_bei_keinen_subscriptions(self, monkeypatch):
-        """
-        AC-4: Given kein erfolgreicher Versand (success_count=0) /
-        When Scheduler-Lauf endet /
-        Then wird _ping_heartbeat_compare() NICHT aufgerufen.
-        """
-        from api.routers import scheduler as sched_module
-        from app.user import Schedule
-
-        if not hasattr(sched_module, "_ping_heartbeat_compare"):
-            pytest.fail("_ping_heartbeat_compare nicht in scheduler.py gefunden")
-
-        ping_called = []
-
-        def fake_ping():
-            ping_called.append(True)
-
-        monkeypatch.setattr(sched_module, "_ping_heartbeat_compare", fake_ping)
-
-        # User ohne Subscriptions -> success_count=0 -> kein Ping
-        sched_module._run_subscriptions_by_schedule(
-            Schedule.DAILY_MORNING, user_id="nonexistent_user_253"
-        )
-
-        assert len(ping_called) == 0, \
-            "Bei success_count==0 darf kein Heartbeat-Ping gesendet werden"
-
 
 # ---------------------------------------------------------------------------
 # AC-8 -- Echter E2E-Test (SMTP + IMAP)

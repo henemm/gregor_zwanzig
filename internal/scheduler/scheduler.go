@@ -42,8 +42,6 @@ type jobMeta struct {
 type Scheduler struct {
 	cron             *cron.Cron
 	pythonURL        string
-	heartbeatMorning        string
-	heartbeatEvening        string
 	heartbeatComparePresets string
 	client           *http.Client
 	store            *store.Store
@@ -71,8 +69,6 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 	s := &Scheduler{
 		cron:             cron.New(cron.WithLocation(loc)),
 		pythonURL:        cfg.PythonCoreURL,
-		heartbeatMorning:        cfg.HeartbeatMorning,
-		heartbeatEvening:        cfg.HeartbeatEvening,
 		heartbeatComparePresets: cfg.HeartbeatComparePresets,
 		client:           &http.Client{Timeout: 120 * time.Second},
 		store:            st,
@@ -92,8 +88,6 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 		name string
 	}
 	jobs := []jobDef{
-		{"0 7 * * *", s.morningSubscriptions, "morning_subscriptions", "Morning Subscriptions (07:00)"},
-		{"0 18 * * *", s.eveningSubscriptions, "evening_subscriptions", "Evening Subscriptions (18:00)"},
 		{"0 * * * *", s.tripReports, "trip_reports_hourly", "Trip Reports (hourly check)"},
 		{"0,30 * * * *", s.alertChecks, "alert_checks", "Alert Checks (every 30 min)"},
 		{"*/5 * * * *", s.inboundCommands, "inbound_command_poll", "Inbound Command Poll (every 5min)"},
@@ -110,7 +104,7 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 // Start begins cron scheduling.
 func (s *Scheduler) Start() {
 	s.cron.Start()
-	log.Printf("[scheduler] Started: 6 jobs, timezone %s", s.cron.Location())
+	log.Printf("[scheduler] Started: 4 jobs, timezone %s", s.cron.Location())
 }
 
 // Stop gracefully shuts down the scheduler and waits for running jobs.
@@ -143,32 +137,6 @@ func (s *Scheduler) runForAllUsers(jobID, path string) error {
 		}
 	}
 	return firstErr
-}
-
-func (s *Scheduler) morningSubscriptions() {
-	log.Println("[scheduler] Running morning subscriptions...")
-	s.recordRun("morning_subscriptions", func() error {
-		return s.runForAllUsers("morning_subscriptions", "/api/scheduler/morning-subscriptions")
-	})
-	s.mu.RLock()
-	lr := s.lastRuns["morning_subscriptions"]
-	s.mu.RUnlock()
-	if lr != nil && lr.Status == "ok" {
-		s.pingHeartbeat("morning_subscriptions", s.heartbeatMorning)
-	}
-}
-
-func (s *Scheduler) eveningSubscriptions() {
-	log.Println("[scheduler] Running evening subscriptions...")
-	s.recordRun("evening_subscriptions", func() error {
-		return s.runForAllUsers("evening_subscriptions", "/api/scheduler/evening-subscriptions")
-	})
-	s.mu.RLock()
-	lr := s.lastRuns["evening_subscriptions"]
-	s.mu.RUnlock()
-	if lr != nil && lr.Status == "ok" {
-		s.pingHeartbeat("evening_subscriptions", s.heartbeatEvening)
-	}
 }
 
 func (s *Scheduler) tripReports() {

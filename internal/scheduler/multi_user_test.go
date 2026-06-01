@@ -66,7 +66,7 @@ func TestTriggerEndpointForUser_SendsUserID(t *testing.T) {
 	sched, _ := New(cfg, s)
 
 	// WHEN: Triggering endpoint for user "alice"
-	err := sched.triggerEndpointForUser("/api/scheduler/morning-subscriptions", "alice")
+	err := sched.triggerEndpointForUser("/api/scheduler/trip-reports", "alice")
 
 	// THEN: user_id=alice was sent
 	if err != nil {
@@ -77,7 +77,7 @@ func TestTriggerEndpointForUser_SendsUserID(t *testing.T) {
 	}
 }
 
-func TestMorningSubscriptions_IteratesOverAllUsers(t *testing.T) {
+func TestTripReports_IteratesOverAllUsers(t *testing.T) {
 	// GIVEN: Two registered users and a server that records user_ids
 	var mu sync.Mutex
 	var receivedUserIDs []string
@@ -102,8 +102,8 @@ func TestMorningSubscriptions_IteratesOverAllUsers(t *testing.T) {
 	}
 	sched, _ := New(cfg, s)
 
-	// WHEN: Running morning subscriptions
-	sched.morningSubscriptions()
+	// WHEN: Running trip reports
+	sched.tripReports()
 
 	// THEN: Both users triggered
 	if len(receivedUserIDs) != 2 {
@@ -115,7 +115,7 @@ func TestMorningSubscriptions_IteratesOverAllUsers(t *testing.T) {
 	}
 }
 
-func TestMorningSubscriptions_ContinuesOnUserError(t *testing.T) {
+func TestTripReports_ContinuesOnUserError(t *testing.T) {
 	// GIVEN: Two users, first user's request fails
 	var mu sync.Mutex
 	var receivedUserIDs []string
@@ -149,8 +149,8 @@ func TestMorningSubscriptions_ContinuesOnUserError(t *testing.T) {
 	}
 	sched, _ := New(cfg, s)
 
-	// WHEN: Running morning subscriptions (first fails, second succeeds)
-	sched.morningSubscriptions()
+	// WHEN: Running trip reports (first fails, second succeeds)
+	sched.tripReports()
 
 	// THEN: Both users were processed (continue-on-error)
 	if len(receivedUserIDs) != 2 {
@@ -158,7 +158,7 @@ func TestMorningSubscriptions_ContinuesOnUserError(t *testing.T) {
 	}
 }
 
-func TestMorningSubscriptions_NoUsers_Noop(t *testing.T) {
+func TestTripReports_NoUsers_Noop(t *testing.T) {
 	// GIVEN: No registered users
 	var requestsMade int
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -176,8 +176,8 @@ func TestMorningSubscriptions_NoUsers_Noop(t *testing.T) {
 	}
 	sched, _ := New(cfg, s)
 
-	// WHEN: Running morning subscriptions with no users
-	sched.morningSubscriptions()
+	// WHEN: Running trip reports with no users
+	sched.tripReports()
 
 	// THEN: No HTTP requests made
 	if requestsMade != 0 {

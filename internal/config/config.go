@@ -16,8 +16,6 @@ type Config struct {
 	SessionSecret     string `envconfig:"SESSION_SECRET" default:"dev-secret-change-me"`
 	AuthUser          string `envconfig:"AUTH_USER" default:"admin"`
 	AuthPass          string `envconfig:"AUTH_PASS" default:""`
-	HeartbeatMorning        string `envconfig:"HEARTBEAT_MORNING" default:""`
-	HeartbeatEvening        string `envconfig:"HEARTBEAT_EVENING" default:""`
 	HeartbeatComparePresets string `envconfig:"HEARTBEAT_COMPARE_PRESETS" default:""`
 	SchedulerTimezone string `envconfig:"SCHEDULER_TIMEZONE" default:"Europe/Vienna"`
 	SMTPHost          string `envconfig:"SMTP_HOST" default:""`
