@@ -13,6 +13,7 @@
 		presetScheduleLabel,
 		formatLastSent
 	} from '$lib/components/compare/subscriptionHelpers.js';
+	import { page } from '$app/state';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import MoreHorizontalIcon from '@lucide/svelte/icons/more-horizontal';
@@ -20,6 +21,9 @@
 	let { data } = $props();
 	let status = $derived(deriveStatusFromPreset(data.preset));
 	let statusInfo = $derived(STATUS_MAP[status]);
+
+	// Issue #517 — ?tab=-Query-Parameter lesen und an CompareDetail/CompareTabs weitergeben.
+	const initialTab = $derived(page.url.searchParams.get('tab') ?? 'uebersicht');
 
 	let actionSheetOpen = $state(false);
 
@@ -54,7 +58,7 @@
 		</div>
 	</div>
 
-	<CompareDetail preset={data.preset} locations={data.locations} />
+	<CompareDetail preset={data.preset} locations={data.locations} {initialTab} />
 </div>
 
 <!-- Mobile-Layout (#493) -->
