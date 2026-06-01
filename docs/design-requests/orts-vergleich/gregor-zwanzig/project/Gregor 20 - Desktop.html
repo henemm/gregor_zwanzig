@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<title>Gregor 20 — Desktop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  html, body { background: #f0eee9; height: 100%; }
+  #root { min-height: 100%; }
+</style>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="mock-data.jsx"></script>
+<script type="text/babel" src="mock-locations.jsx"></script>
+<script type="text/babel" src="brand-kit.jsx"></script>
+<script type="text/babel" src="atoms.jsx"></script>
+<script type="text/babel" src="molecules.jsx"></script>
+<script type="text/babel" src="organisms.jsx"></script>
+<script type="text/babel" src="sidebar.jsx"></script>
+<script type="text/babel" src="nav-map.jsx"></script>
+<script type="text/babel" src="screen-home.jsx"></script>
+<script type="text/babel" src="screen-trips.jsx"></script>
+<script type="text/babel" src="screen-trip-detail.jsx"></script>
+<script type="text/babel" src="screen-waypoint-editor.jsx"></script>
+<script type="text/babel" src="screen-trip-wizard.jsx"></script>
+<script type="text/babel" src="screen-output-preview.jsx"></script>
+<script type="text/babel" src="screen-channel-preview-redesign.jsx"></script>
+<script type="text/babel" src="screen-metrics-editor.jsx"></script>
+<script type="text/babel" src="screen-alert-config.jsx"></script>
+<script type="text/babel" src="screen-compare-list.jsx"></script>
+<script type="text/babel" src="screen-compare-detail.jsx"></script>
+<script type="text/babel" src="screen-compare-wizard.jsx"></script>
+<script type="text/babel" src="screen-location-new.jsx"></script>
+<script type="text/babel" src="screen-archive.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="screen-compare-email.jsx"></script>
+
+<script type="text/babel">
+  function App() {
+    return (
+      <DesignCanvas>
+        <DCSection id="nav-map" title="00 · Navigations-Karte" subtitle="Kanonische Informations-Architektur für Desktop. Erklärt alle Sektionen darunter: Erstellen (Wizard) · Ansehen (Trip-Detail · Tab Übersicht) · Bearbeiten (übrige Tabs). Jeder Knoten ist an seine echte screen-*.jsx gebunden.">
+          <DCArtboard id="nav-map-desktop" label="IA · Single-Source · Desktop" width={1440} height={1680}>
+            <NavMap platform="desktop" />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="trip-hub" title="01 · Trip-Detail · klickbarer Hub" subtitle="Was du siehst, wenn du auf einen bestehenden Trip klickst: EIN Container, sechs schaltende Tabs. Tab 1 (Übersicht) = read-only Cockpit mit ‚Bearbeiten →‘-Links; die übrigen Tabs SIND die Editoren (Wegpunkte · Wetter-Metriken · Zeitplan · Alerts) + Vorschau. Die Tabs sind klickbar — jede Karte zeigt den Hub auf einem anderen Tab.">
+          <DCArtboard id="hub-uebersicht" label="Klick auf Trip → Übersicht (read-only Cockpit)" width={1440} height={1520}>
+            <ScreenTripDetail initialTab="uebersicht" />
+          </DCArtboard>
+          <DCArtboard id="hub-etappen" label="Tab · Etappen & Wegpunkte (Karte + Profil + Wegpunkte)" width={1440} height={1360}>
+            <ScreenTripDetail initialTab="etappen" />
+          </DCArtboard>
+          <DCArtboard id="hub-metriken" label="Tab · Wetter-Metriken (Spalten / Detail / Aus + Multi-Channel-Vorschau)" width={1440} height={3040}>
+            <ScreenTripDetail initialTab="metriken" />
+          </DCArtboard>
+          <DCArtboard id="hub-zeitplan" label="Tab · Briefing-Zeitplan" width={1440} height={820}>
+            <ScreenTripDetail initialTab="zeitplan" />
+          </DCArtboard>
+          <DCArtboard id="hub-alerts" label="Tab · Alerts (Δ vs. absolut)" width={1440} height={2360}>
+            <ScreenTripDetail initialTab="alerts" />
+          </DCArtboard>
+          <DCArtboard id="hub-vorschau" label="Tab · Vorschau (Verifikation — Email / SMS umschaltbar)" width={1440} height={1720}>
+            <ScreenTripDetail initialTab="vorschau" />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="hero-screens" title="02 · Weitere Hauptscreens" subtitle="Startseite (Cockpit), Trips-Übersicht und Archiv. Das Trip-Detail liegt jetzt oben als eigener Hub (01).">
+          <DCArtboard id="home" label="Heute · Startseite" width={1440} height={1480}>
+            <ScreenHome />
+          </DCArtboard>
+          <DCArtboard id="trips-list" label="Trips · Übersicht (alle Trips)" width={1440} height={900}>
+            <ScreenTrips />
+          </DCArtboard>
+          <DCArtboard id="archive" label="Archiv · Vergangene Trips (retrospektiv)" width={1440} height={900}>
+            <ScreenArchive />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="wizard" title="03 · Trip-Wizard" subtitle="5 Schritte: Route → Etappen → Wetter → Layout → Reports. Spec issue_407_422 + PO-Korrektur · 2026-05-27.">
+          <DCArtboard id="wizard-step1" label="Schritt 1 · Route (Name + Region + GPX)" width={1440} height={1100}>
+            <ScreenTripWizard initialStep={1} />
+          </DCArtboard>
+          <DCArtboard id="wizard-step2" label="Schritt 2 · Etappen (Liste + Vorlagen)" width={1440} height={1200}>
+            <ScreenTripWizard initialStep={2} />
+          </DCArtboard>
+          <DCArtboard id="wizard-step3" label="Schritt 3 · Wetter (Auswahl + Format pro Metrik, scrollbar)" width={1440} height={1280}>
+            <ScreenTripWizard initialStep={3} />
+          </DCArtboard>
+          <DCArtboard id="wizard-step4" label="Schritt 4 · Layout (4 Kanal-Tabs + Drag-Reihenfolge + Live-Preview)" width={1440} height={1400}>
+            <ScreenTripWizard initialStep={4} />
+          </DCArtboard>
+          <DCArtboard id="wizard-step5" label="Schritt 5 · Reports (3 Cards: Abend mit 3–7-Tage-Toggle, Morgen, Warnungen)" width={1440} height={1100}>
+            <ScreenTripWizard initialStep={5} />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="compare" title="04 · Ortsvergleich" subtitle="Übersicht → Detail → Wizard (neu) → Wizard (Edit). Kachel-Klick öffnet die Detail-Seite (Setup + Status + Aktionen) — nicht das Tages-Briefing. Charter §3, Änderung 2026-05-31.">
+          <DCArtboard id="compare-list" label="Übersicht · alle Orts-Vergleiche" width={1440} height={900}>
+            <ScreenCompareList />
+          </DCArtboard>
+          <DCArtboard id="compare-detail" label="Detail · Klick-Ziel einer Kachel (aktiv)" width={1440} height={1280}>
+            <ScreenCompareDetail subId="skitour-hochkoenig" />
+          </DCArtboard>
+          <DCArtboard id="compare-detail-menu" label="Detail · Sekundär-Aktionen (Kebab offen)" width={1440} height={1280}>
+            <ScreenCompareDetail subId="skigebiete-vergleich" menuOpen={true} />
+          </DCArtboard>
+          <DCArtboard id="compare-detail-paused" label="Detail · pausierter Vergleich" width={1440} height={1200}>
+            <ScreenCompareDetail subId="mallorca-trail" />
+          </DCArtboard>
+          <DCArtboard id="compare-wiz-1" label="Neu · Schritt 1 · Vergleich benennen" width={1440} height={1100}>
+            <ScreenCompareWizard initialStep={1} />
+          </DCArtboard>
+          <DCArtboard id="compare-wiz-2" label="Neu · Schritt 2 · Orte sammeln" width={1440} height={1500}>
+            <ScreenCompareWizard initialStep={2} />
+          </DCArtboard>
+          <DCArtboard id="compare-wiz-3" label="Neu · Schritt 3 · Idealwerte" width={1440} height={1200}>
+            <ScreenCompareWizard initialStep={3} />
+          </DCArtboard>
+          <DCArtboard id="compare-wiz-4" label="Neu · Schritt 4 · Layout pro Kanal" width={1440} height={1300}>
+            <ScreenCompareWizard initialStep={4} />
+          </DCArtboard>
+          <DCArtboard id="compare-wiz-5" label="Neu · Schritt 5 · Versand & Aktivierung" width={1440} height={1200}>
+            <ScreenCompareWizard initialStep={5} />
+          </DCArtboard>
+          <DCArtboard id="compare-wiz-5-active" label="Neu · Schritt 5 · Aktivierter Final-State" width={1440} height={1200}>
+            <ScreenCompareWizard initialStep={5} activated />
+          </DCArtboard>
+          <DCArtboard id="compare-edit-1" label="Bearbeiten · Schritt 1 · Eckdaten" width={1440} height={1100}>
+            <ScreenCompareWizard mode="edit" initialStep={1} activated editingName="Skitouren Hochkönig" />
+          </DCArtboard>
+          <DCArtboard id="compare-edit-3" label="Bearbeiten · Schritt 3 · Idealwerte (Direkt-Sprung)" width={1440} height={1200}>
+            <ScreenCompareWizard mode="edit" initialStep={3} activated editingName="Skitouren Hochkönig" />
+          </DCArtboard>
+          <DCArtboard id="location-new" label="POI anlegen · Smart-Import" width={1680} height={1200}>
+            <ScreenLocationNew />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="compare-email" title="05 · Compare-Email · Orts-Vergleich" subtitle="Dieselbe Email-Logik für unterschiedliche Aktivitäts-Profile. Spalten und Score-Modell richten sich nach dem Profil. Jede Variante einmal Desktop-Inbox und einmal iPhone-Mail.app.">
+          <DCArtboard id="compare-email-winter" label="Wintersport · Desktop" width={760} height={1500}>
+            <div style={{ padding: 24, background: "#e9e6dc", minHeight: "100%" }}>
+              <CompareEmail profileId="wintersport-glacier" subscriptionName="Skigebiete-Vergleich" schedule="Sa 06:00" />
+            </div>
+          </DCArtboard>
+          <DCArtboard id="compare-email-winter-mobile" label="Wintersport · iPhone" width={440} height={1500}>
+            <CEPhoneFrame>
+              <CompareEmail profileId="wintersport-glacier" subscriptionName="Skigebiete-Vergleich" schedule="Sa 06:00" mobile />
+            </CEPhoneFrame>
+          </DCArtboard>
+
+          <DCArtboard id="compare-email-skitour" label="Skitour · Desktop" width={760} height={1500}>
+            <div style={{ padding: 24, background: "#e9e6dc", minHeight: "100%" }}>
+              <CompareEmail profileId="alpine-touring" subscriptionName="Skitouren Wochenende" schedule="Fr 18:00" />
+            </div>
+          </DCArtboard>
+          <DCArtboard id="compare-email-skitour-mobile" label="Skitour · iPhone" width={440} height={1500}>
+            <CEPhoneFrame>
+              <CompareEmail profileId="alpine-touring" subscriptionName="Skitouren Wochenende" schedule="Fr 18:00" mobile />
+            </CEPhoneFrame>
+          </DCArtboard>
+
+          <DCArtboard id="compare-email-trail" label="Trail-Running · Desktop" width={760} height={1500}>
+            <div style={{ padding: 24, background: "#e9e6dc", minHeight: "100%" }}>
+              <CompareEmail profileId="trail-running" subscriptionName="Mallorca Trail" schedule="Sa 06:00" />
+            </div>
+          </DCArtboard>
+          <DCArtboard id="compare-email-trail-mobile" label="Trail-Running · iPhone" width={440} height={1500}>
+            <CEPhoneFrame>
+              <CompareEmail profileId="trail-running" subscriptionName="Mallorca Trail" schedule="Sa 06:00" mobile />
+            </CEPhoneFrame>
+          </DCArtboard>
+        </DCSection>
+      </DesignCanvas>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

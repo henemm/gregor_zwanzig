@@ -1,0 +1,152 @@
+[
+  {
+    "index": 4,
+    "stable_id": "screen-trips-list",
+    "status": "existing-or-update",
+    "source": "05-screen-trips-list.md",
+    "title": "Refresh Trips-Listenseite mit aktuellen Trip-Cards",
+    "labels": [
+      "design-compliance",
+      "feature",
+      "area:trips",
+      "priority:medium"
+    ],
+    "body_file": "issue-bodies/body-04.md"
+  },
+  {
+    "index": 10,
+    "stable_id": "ortsvergleich-wizard",
+    "status": "new",
+    "source": "body-10.md",
+    "title": "Orts-Vergleich · Startseite-Kacheln + Übersicht (Kachel-Grid) + Detail-Seite + Wizard + Mobile — Charter §3 v1.1",
+    "labels": [
+      "design-compliance",
+      "feature",
+      "breaking-change",
+      "area:compare",
+      "area:home",
+      "area:mobile",
+      "priority:high"
+    ],
+    "body_file": "issue-bodies/body-10.md"
+  },
+  {
+    "index": 11,
+    "stable_id": "trip-detail-page",
+    "status": "existing-or-update",
+    "source": "12-trip-detail-page.md",
+    "title": "Trip-Detail-Seite – Layout, Tabs & Briefing-Ansicht",
+    "labels": [
+      "design-compliance",
+      "feature",
+      "area:trips",
+      "priority:high"
+    ],
+    "body_file": "issue-bodies/body-11.md"
+  },
+  {
+    "index": 14,
+    "stable_id": "output-layout-system",
+    "status": "existing-or-update",
+    "source": "body-14-output-layout-system.md",
+    "title": "Output-Layout-System (Spalten / Detail / Aus) + Kanal-Constraints",
+    "labels": [
+      "feature",
+      "design-compliance",
+      "backend-coordination",
+      "area:output",
+      "priority:high"
+    ],
+    "body_file": "issue-bodies/body-14-output-layout-system.md"
+  },
+  {
+    "index": 16,
+    "stable_id": "ink-contrast-audit",
+    "status": "existing-or-update",
+    "source": "body-16-contrast-audit-ink-scale.md",
+    "title": "Contrast-Audit der Ink-Skala — WCAG-AA-Konformität auf weißer Card",
+    "labels": [
+      "accessibility",
+      "design-compliance",
+      "area:tokens",
+      "area:components",
+      "priority:medium"
+    ],
+    "body_file": "issue-bodies/body-16-contrast-audit-ink-scale.md"
+  },
+  {
+    "index": 17,
+    "stable_id": "surface-stack-migration",
+    "status": "new",
+    "source": "body-17-surface-stack-migration.md",
+    "title": "Surface-Stack-Migration — weiße Cards auf warmer Off-White-Page",
+    "labels": [
+      "foundation",
+      "design-compliance",
+      "area:tokens",
+      "priority:high"
+    ],
+    "body_file": "issue-bodies/body-17-surface-stack-migration.md"
+  },
+  {
+    "index": 407,
+    "stable_id": "wizard-screens-update-407-422",
+    "status": "existing-or-update",
+    "source": "issue_407_422_wizard_screens_update.md",
+    "title": "Trip-Wizard auf aktuelle Spec aktualisieren (5-stufig, Layout-Step neu)",
+    "labels": [
+      "design-compliance",
+      "feature",
+      "area:trips",
+      "area:output",
+      "priority:high"
+    ],
+    "body_file": "issue-bodies/body-407-422-wizard-update.md"
+  },
+  {
+    "index": 18,
+    "stable_id": "stage-date-edit",
+    "status": "new",
+    "source": "docs/design-requests/stage_date_edit.md",
+    "title": "Etappen-Datum bearbeiten — editierbares Datum in Etappen-Detail (normal + Pausentag) + Kaskaden-Vorschlag",
+    "labels": [
+      "design-compliance",
+      "feature",
+      "area:editor",
+      "area:trips",
+      "priority:medium"
+    ],
+    "body_file": "issue-bodies/body-18-stage-date-edit.md"
+  },
+  {
+    "index": 496,
+    "stable_id": "issue-496-channel-preview",
+    "status": "existing-or-update",
+    "source": "docs/design-requests/issue_496_channel_preview_redesign.md",
+    "title": "„Pro Kanal\"-Vorschau neu denken — Konsequenz-Leiste + ehrliche Ein-Kanal-Vorschau (Desktop + Mobile, SMS-Token-Format)",
+    "labels": [
+      "design-compliance",
+      "feature",
+      "area:output",
+      "area:mobile",
+      "priority:medium"
+    ],
+    "body_file": "issue-bodies/body-496-channel-preview.md"
+  },
+  {
+    "index": 20,
+    "stable_id": "canonical-ia-navigation",
+    "status": "new",
+    "source": "nav-map.jsx",
+    "title": "Kanonische Navigations-Architektur — ein Trip-Detail-Tab-Set + Erstellen/Ansehen/Bearbeiten-Modell (Desktop + Mobile)",
+    "labels": [
+      "design-compliance",
+      "foundation",
+      "area:trips",
+      "area:compare",
+      "area:mobile",
+      "priority:high"
+    ],
+    "body_file": "issue-bodies/body-20-canonical-ia-navigation.md"
+  }
+]

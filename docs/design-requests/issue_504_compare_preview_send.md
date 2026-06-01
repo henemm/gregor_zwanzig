@@ -1,131 +1,124 @@
-# Design Request — Briefing-Vorschau + Versandauslösung im Orts-Vergleich
+# Antwort · Design-Request #504 — Ortsvergleich: Vorschau & Versand
 
-**Priorität:** Medium  
-**GitHub Issue:** #514 — Bug: CompareDetail zeigt falschen Platzhalter  
-**Bezug:** `/compare/[id]` Detail-Seite + `/compare` Listenansicht  
-*(Claude Design hat keinen Zugriff auf GitHub Issues — alle relevanten Infos stehen vollständig in diesem Dokument.)*
-
----
-
-## Die offene Lücke
-
-Die Detail-Seite eines Orts-Vergleichs (`/compare/[id]`) hat eine Card „Vorschau · Prüfung", die nur einen leeren Platzhalter zeigt. Die Funktion dahinter — eine Vorschau des Briefing-E-Mails anzeigen und den Versand manuell auslösen — ist nie gebaut worden.
-
-Gleichzeitig zeigt das bestehende Design-System-File `screen-compare-list.jsx` genau diese beiden Aktionen als **Icon-Buttons in jeder Zeile der Listenansicht**:
-
-```
-[Pause/Play] [Briefing jetzt senden ✈] [Briefing-Vorschau 👁] | [Bearbeiten] [Löschen]
-```
-
-Es gibt also eine Design-Entscheidung zu treffen: **Wo sollen diese Aktionen leben?**
+**Status:** geplant · 2026-06-01 (Mockup-Bau folgt: Ortsvergleich-Hub)
+**Bezug:** Issue #504 · Schwester zu #503 (Wegpunkt-Editor-Architektur)
+**Mockup (Ziel):** `Gregor 20 - Desktop.html` → Sektion „Ortsvergleich" (Compare-Hub),
+`Gregor 20 - Mobile.html` → Compare-Detail. CompareEmail-Quelle: `screen-compare-email.jsx`.
 
 ---
 
-## Was heute existiert
+## TL;DR — Empfehlung
 
-### Die Listenansicht `/compare`
+> **Vorschau und Versand sind zwei Tabs im Ortsvergleich-Hub — analog zum Trip-Hub.**
+> Der Vergleich hat **eine** Detail-Fläche mit Tabs; „Vorschau" ist ein
+> **Verifikations-Tab** (kein Konsum-Surface), „Versand" ist ein **Bearbeiten-Tab**.
+> Die **CompareEmail** wandert als Inhalt des Vorschau-Tabs in den Hub — die
+> bisherige Standalone-Sektion „Compare-Email" entfällt.
 
-Zeigt alle Orts-Vergleiche als Kachel-Grid (`CompareGrid`). Jede Kachel zeigt Name, Status, Orte, letzter Versand, Kanäle. Ein Kebab-Menü (⋯) bietet: Bearbeiten, Briefing jetzt senden, Pausieren, Löschen.
-
-**Fehlt:** Briefing-Vorschau als Aktion im Kebab oder als sichtbarer Button.
-
-### Die Detail-Seite `/compare/[id]`
-
-2-Spalten-Desktop-Layout (1.7fr / 1fr):
-
-**Linke Spalte:**
-- Card „Verglichene Orte" — Rang + Name + Höhe
-- Card „Idealwerte" — Min-Max pro Metrik
-- Card „Layout pro Kanal" — Metriken-Zuordnung
-
-**Rechte Spalte:**
-- Card „Versand" — Zeitplan, Profil, Empfänger-Adressen
-- Card „Vorschau · Prüfung" — **aktuell: leerer Platzhalter**
-
-### Vorhandene Backend-Infrastruktur
-
-| Endpoint | Zweck |
-|----------|-------|
-| `POST /api/compare/presets/{id}/send` | Briefing sofort versenden |
-| `POST /api/_validator/compare-email-preview` | E-Mail-Vorschau generieren (HTML) |
-
-Die Vorschau-Infrastruktur existiert also — sie fehlt nur im UI.
+Eine Fläche pro Vergleich. Lesen passiert im Kanal, nicht in der App
+(CLAUDE.md · Produkt-Grundverständnis).
 
 ---
 
-## Was ein Orts-Vergleichs-Briefing zeigt
+## Einordnung ins kanonische Modell
 
-Das Briefing vergleicht mehrere Orte (z.B. Mallorca-Wanderrouten) für denselben Zeitraum. Die E-Mail enthält eine Tabelle mit einer Spalte pro Ort und einer Zeile pro Metrik (Wind, Regen, Temperatur etc.). Der Nutzer will vor dem Versand sehen:
+Gleiches Drei-Rollen-Modell wie der Trip-Hub (`docs/.../canonical-ia`):
 
-- Sieht die Tabelle vernünftig aus?
-- Sind alle gewählten Orte drin?
-- Ist die Formatierung wie erwartet?
+| Rolle | Wo im Compare-Hub |
+|---|---|
+| **Ansehen** | Tab „Übersicht" — Monitoring-Streifen (läuft / pausiert · nächster Versand · zuletzt raus · Kanal-Health) + Zusammenfassung |
+| **Bearbeiten** | Tabs „Orte" · „Idealwerte" · „Layout" · „Versand" |
+| **Verifizieren** | Tab „Vorschau" — CompareEmail zum Gegencheck |
+| **Lesen** *(außerhalb der App)* | Email · Telegram · Signal · SMS |
 
-Das ist vergleichbar mit der „Pro Kanal"-Vorschau beim Trip-Editor (`ChannelPreviewBlock`), aber die Vergleichs-Vorschau zeigt **E-Mail-Format mit mehreren Spalten**, keine Kanal-Auswahl.
-
----
-
-## Vergleich: Trip-Editor hat eine ähnliche Vorschau
-
-Für Trips (nicht Orts-Vergleiche) gibt es bereits `ChannelPreviewBlock.svelte` im Trip-Editor-Tab „Wetter-Metriken". Dieser Block zeigt eine Briefing-Vorschau mit Beispieldaten, aufgeteilt nach Kanal (E-Mail / Telegram / Signal / SMS) — umgesetzt in Issue #496 als 2-Schicht-Design (Schicht 1: Konsequenz, Schicht 2: Fidelity).
-
-Referenz im Design-System: `screen-compare-email.jsx` enthält das Orts-Vergleichs-E-Mail-Format.
+**Charter §3 v1.1 bleibt gültig:** Kachel-Klick in der Übersichtsliste öffnet das
+**Setup/Detail** (diesen Hub), **nicht** das Tages-Briefing.
 
 ---
 
-## Die Design-Frage
+## Tab-Set (kanonisch, exakt diese Reihenfolge)
 
-**Wo und wie sollen „Briefing-Vorschau" und „Briefing jetzt senden" im Orts-Vergleich erscheinen?**
+`Übersicht · Orte · Idealwerte · Layout · Versand · Vorschau`
 
-### Option A: Nur auf der Detail-Seite
+| # | Tab | Rolle | Inhalt |
+|---|---|---|---|
+| 1 | **Übersicht** | Ansehen | Monitoring-Streifen + kompakte Zusammenfassung (Orte-Anzahl, Profil, aktive Kanäle), je Sektion `Bearbeiten →`-Link |
+| 2 | **Orte** | Bearbeiten | Verglichene Orte (Ranking-Reihenfolge), hinzufügen/entfernen/sortieren |
+| 3 | **Idealwerte** | Bearbeiten | Was „gut" bedeutet — Score-Modell pro Metrik, profilabhängige Defaults |
+| 4 | **Layout** | Bearbeiten | Spalten pro Kanal (Email ∞ · Telegram 8 · Signal 6 · SMS 0) |
+| 5 | **Versand** | Bearbeiten | Rhythmus · Vorausschau · Kanäle · Aktivierung |
+| 6 | **Vorschau** | Verifizieren | `CompareEmail` (profilabhängig). **Kein Klick-Ziel aus Listen.** |
 
-Die Card „Vorschau · Prüfung" auf der rechten Seite der Detail-Seite wird zur echten Vorschau:
-- Zeigt eine kompakte E-Mail-Vorschau (ähnlich wie bei Trips: Beispieldaten)
-- Darunter ein Button „Briefing jetzt senden" (mit Bestätigungs-Feedback)
-- In der Listenansicht bleibt nur „Bearbeiten" und „Löschen" im Kebab; die Versand-Aktionen sind auf der Detail-Seite
-
-**Vorteil:** Alle Informationen + Aktionen an einem Ort. Kein Kontextwechsel.  
-**Nachteil:** Nutzer muss die Detail-Seite aufrufen, um schnell ein Briefing auszulösen.
-
-### Option B: Nur in der Listenansicht
-
-Die Kacheln im `/compare` Grid bekommen Aktions-Buttons (wie im ursprünglichen Design geplant):
-- „Briefing-Vorschau" öffnet ein Modal/Panel
-- „Briefing jetzt senden" ist direkt klickbar mit Bestätigung
-- Die Platzhalter-Card auf der Detail-Seite entfällt ersatzlos
-
-**Vorteil:** Schnellzugriff ohne Seitenwechsel. Entspricht dem ursprünglichen Design-Intent aus `screen-compare-list.jsx`.  
-**Nachteil:** Kachel-Grid wird aktionsreicher; Modal-Vorschau braucht eigenes Design.
-
-### Option C: Beides — gestuft
-
-- Listenansicht: Nur „Briefing jetzt senden" als Schnellzugriff (kein Preview)
-- Detail-Seite: Volle Vorschau + Versand-Button mit Statusanzeige (letzter Versand, nächster Versand)
+Reuse der vorhandenen Compare-Domain-Molecules (`CompareLocationRow`,
+`CompareIdealRow`, `CompareLayoutRow`, `CompareStatusPill`, `compareActions`,
+`DetailRow`) — nichts neu erfinden.
 
 ---
 
-## Entscheidungs-Grundlage
+## Vorschau (Tab 6) — Verhalten
 
-- **Nutzungskontext:** Desktop-Planungstool, Nutzer konfiguriert vor dem Urlaub. Unterwegs liest er nur E-Mail — keine Website.
-- **Nutzungsmoment für Versand:** Gelegentlich während Konfiguration (Test), einmalig vor Abreise (echter Versand). Nicht täglich.
-- **Nutzungsmoment für Vorschau:** Einmalig nach Einrichtung: „Sieht die Vergleichs-Tabelle vernünftig aus?"
-- **Viewport:** Desktop-First; Mobile ist vorhanden aber sekundär für Konfiguration.
-- **Design-Leitprinzip:** Lesbarkeit über Optik. Die Vorschau soll zeigen, was der Empfänger wirklich bekommt — nicht dekorativ.
+- **Profil treibt Layout & Score.** `CompareEmail` rendert je `profileId`
+  unterschiedliche Spalten und Score-Modell (Wintersport · Skitour · Trail-Running …).
+  Der Hub mappt `sub.profileId` → einen gültigen CompareEmail-Profilschlüssel
+  (Fallback, falls ein Profil noch kein CE-Datenset hat).
+- **Kanal-Umschalter.** Email (Desktop-Inbox / iPhone-Mail) · Signal/Telegram-Bubble
+  · SMS (Token-Format, ≤ 140 Z.). Gleiche Constraint-Logik wie beim Trip-Briefing
+  (Organism #496) — Spalten, die ein Kanal nicht trägt, fallen weg.
+- **Verifikation, nicht Konsum.** Klarer Hinweis: „So sieht dein Briefing aus —
+  gelesen wird es unterwegs im Postfach, nicht hier." Plus „Test-Briefing jetzt senden".
+
+## Versand (Tab 5) — Verhalten
+
+- **Rhythmus** (z. B. „Sa 06:00", „tägl 07:00", „Fr 18:00") + **Vorausschau-Horizont**.
+- **Kanäle** an/aus mit Health-Indikator (verifiziert / fehlt).
+- **Aktivierung** als Schwelle: Entwurf → aktiv (Banner). Pausieren/Archivieren
+  über die Hub-Header-Aktionen (analog Trip-Hub: Pausieren · Archivieren · Test senden).
+- Versand erzeugt **kein** In-App-Reader-Surface — er schickt in die Kanäle.
 
 ---
 
-## Bestehendes Design-System
+## Abgrenzung Trip-Briefing ↔ Compare-Briefing
 
-Referenz: `docs/design-system/` (CHARTER, COMPONENTS, TOKENS, SCREENS.json)  
-Vorschau-Referenz für Trips: `screen-compare-email.jsx` + implementierter `ChannelPreviewBlock` (Issue #496)  
-Bestehende Detail-Seite: `frontend/src/lib/components/compare/CompareDetail.svelte`  
-Bestehende Listenansicht: `frontend/src/routes/compare/+page.svelte` + `CompareGrid.svelte`
+| | Trip-Briefing | Compare-Briefing |
+|---|---|---|
+| Frage | „Wie wird das Wetter auf **meiner Etappe**?" | „**Wo** ist es am besten?" |
+| Zeilen | Stunden/Wegpunkte einer Route | Orte (Ranking, bester zuerst) |
+| Score | — | profilabhängiges Ideal-Modell bestimmt das Ranking |
+| Vorschau-Tab | Email/SMS des Tages-Briefings | CompareEmail mit Orts-Ranking |
+
+Beide nutzen dieselbe Kanal-Constraint-Logik und dasselbe „Vorschau = Verifikation"-Prinzip.
 
 ---
 
-## Deliverable
+## Umsetzungs-Schritte (für Claude Code)
 
-1. **Entscheidung** welcher Ansatz (A / B / C oder ein anderer), mit kurzer Begründung
-2. **Mockup(s)** für die gewählte Lösung — Svelte-JSX-Format wie in `docs/design-requests/orts-vergleich/gregor-zwanzig/project/`
-3. **Desktop-Variante** ist Pflicht; Mobile wenn sinnvoll
-4. Für die Vorschau: zeigen wie die Orts-Vergleichs-Tabelle in der Vorschau-Card dargestellt wird (Platzbedarf, Scroll oder Kompakt?)
+1. **Compare-Detail → Hub:** `ScreenCompareDetail` (Desktop) + `ScreenCompareDetailMobile`
+   auf die kanonische Tab-Leiste umstellen (6 Tabs, Query-Param `?tab=`).
+2. **Vorschau-Tab** rendert `CompareEmail` (profil-gemappt) mit Kanal-Umschalter
+   (Email/Signal/SMS), `viewport`-aware.
+3. **Versand-Tab** aus den bestehenden Versand-/Kanal-Cards zusammensetzen
+   (DetailRow + Channel-Pills + Aktivierungs-Banner).
+4. **Standalone „Compare-Email"-Sektion entfernen**, sobald der Vorschau-Tab steht
+   (Single-Source: CompareEmail im Hub).
+5. **`COMPONENTS.md` / `SCREENS.json`** auf das neue Tab-Set ziehen
+   (Vertrag: Mockup-Name = Code-Name = Katalog-Name).
+
+---
+
+## Acceptance Criteria
+
+- [ ] Compare-Detail rendert genau die 6 kanonischen Tabs (Desktop + Mobile), `?tab=`-gesteuert.
+- [ ] „Übersicht" ist read-only (Monitoring + Zusammenfassung + `Bearbeiten →`).
+- [ ] „Vorschau" zeigt `CompareEmail` profilabhängig, mit Kanal-Umschalter; nirgends als Listen-Klick-Ziel verlinkt.
+- [ ] „Versand" trägt Rhythmus · Horizont · Kanäle · Aktivierung; kein Reader-Surface.
+- [ ] Kanal-Constraints (Email ∞ · Telegram 8 · Signal 6 · SMS 0) identisch zum Trip-Briefing.
+- [ ] Standalone „Compare-Email"-Sektion existiert nicht mehr.
+- [ ] Kachel-Klick (Liste) öffnet den Hub, nicht das Tages-Briefing (Charter §3).
+
+---
+
+## Out of Scope (Folge-Issues)
+
+- Echtes Score-Tuning pro Profil (Backend-Daten-Logik).
+- Pro-Kanal-Layout-Overrides (V2 — Default ist eine Config, die der Renderer kanalspezifisch kappt).
+- Push-/Zustellungs-Logik der Kanäle.

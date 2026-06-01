@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<title>Gregor 20 — Mobile</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  html, body { background: #f0eee9; height: 100%; }
+  #root { min-height: 100%; }
+</style>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="mock-data.jsx"></script>
+<script type="text/babel" src="mock-locations.jsx"></script>
+<script type="text/babel" src="brand-kit.jsx"></script>
+<script type="text/babel" src="atoms.jsx"></script>
+<script type="text/babel" src="molecules.jsx"></script>
+<script type="text/babel" src="organisms.jsx"></script>
+<script type="text/babel" src="mobile-shell.jsx"></script>
+<script type="text/babel" src="nav-map.jsx"></script>
+<script type="text/babel" src="screen-login-mobile.jsx"></script>
+<script type="text/babel" src="screen-home-mobile.jsx"></script>
+<script type="text/babel" src="screen-trips-mobile.jsx"></script>
+<script type="text/babel" src="screen-trip-detail-mobile.jsx"></script>
+<script type="text/babel" src="screen-trip-wizard-mobile.jsx"></script>
+<script type="text/babel" src="screen-waypoint-editor-mobile.jsx"></script>
+<script type="text/babel" src="screen-channel-preview-redesign.jsx"></script>
+<script type="text/babel" src="screen-metrics-editor-mobile.jsx"></script>
+<script type="text/babel" src="screen-alert-config-mobile.jsx"></script>
+<script type="text/babel" src="screen-compare-list-mobile.jsx"></script>
+<script type="text/babel" src="screen-compare-detail-mobile.jsx"></script>
+<script type="text/babel" src="screen-location-new-mobile.jsx"></script>
+<script type="text/babel" src="screen-output-preview-mobile.jsx"></script>
+<script type="text/babel" src="screen-patterns-mobile.jsx"></script>
+
+<script type="text/babel">
+  const PHONE_W = 387;   // 375 + 12 (Bezel 6px je Seite)
+
+  function App() {
+    return (
+      <DesignCanvas>
+        <DCSection id="nav-map" title="00 · Navigations-Karte" subtitle="Kanonische Informations-Architektur für Mobile. Gleiches Lebenszyklus-Skelett wie Desktop, aber mit Mobile-Chrome: Bottom-Nav + Drawer, Pill-Tab-Scroller, Wizard als Vollbild-Screens, Editoren als Bottom-Sheet / Accordion. Jeder Knoten ist an seine echte screen-*-mobile.jsx gebunden.">
+          <DCArtboard id="nav-map-mobile" label="IA · Single-Source · Mobile" width={1440} height={1680}>
+            <NavMap platform="mobile" />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="intro" title="Mobile-Erweiterung · Übersicht" subtitle="11 Screens + übergreifende Patterns bei 375 px. tokens.css unverändert. Komponenten-Showcase + Mobile-Atoms liegen auf eigener Seite (Gregor 20 - Komponenten.html).">
+          <DCArtboard id="m-readme" label="Readme · Pattern-Entscheidungen" width={760} height={1100}>
+            <ReadmeCard/>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="auth-and-shell" title="01 · Auth & App-Shell" subtitle="Login (frisch designt) und übergreifende Shell-Patterns: Bottom-Nav + Drawer (Hybrid-Navigation).">
+          <DCArtboard id="m-login" label="Login · Magic-Link / Passkey" width={PHONE_W} height={840}>
+            <ScreenLoginMobile/>
+          </DCArtboard>
+          <DCArtboard id="m-shell" label="App-Shell · Drawer offen" width={PHONE_W} height={840}>
+            <PatternAppShellDrawer/>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="hauptscreens" title="02 · Hauptscreens" subtitle="Übersicht, Trips-Liste, Trip-Detail. Bottom-Nav: home / trips / compare / archive.">
+          <DCArtboard id="m-home" label="Übersicht (screen-home)" width={PHONE_W} height={840}>
+            <ScreenHomeMobile/>
+          </DCArtboard>
+          <DCArtboard id="m-trips" label="Trips-Liste (screen-trips · Card-Stack)" width={PHONE_W} height={840}>
+            <ScreenTripsMobile/>
+          </DCArtboard>
+          <DCArtboard id="m-trip-detail" label="Trip-Detail (screen-trip-detail · Tab-Scroller)" width={PHONE_W} height={840}>
+            <ScreenTripDetailMobile/>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="wizard" title="03 · Trip-Wizard · 5 Vollbild-Schritte" subtitle="Jeder Schritt = eigener Screen. Sticky Top-Indicator, Sticky Bottom-Actions. Spec issue_407_422 + PO-Korrektur · 2026-05-27.">
+          <DCArtboard id="m-wiz-1" label="Wizard · Schritt 1 · Route" width={PHONE_W} height={840}>
+            <ScreenTripWizardMobile initialStep={1}/>
+          </DCArtboard>
+          <DCArtboard id="m-wiz-2" label="Wizard · Schritt 2 · Etappen" width={PHONE_W} height={840}>
+            <ScreenTripWizardMobile initialStep={2}/>
+          </DCArtboard>
+          <DCArtboard id="m-wiz-3" label="Wizard · Schritt 3 · Wetter" width={PHONE_W} height={840}>
+            <ScreenTripWizardMobile initialStep={3}/>
+          </DCArtboard>
+          <DCArtboard id="m-wiz-4" label="Wizard · Schritt 4 · Layout (Kanal-Tabs + Reihenfolge + Preview)" width={PHONE_W} height={1200}>
+            <ScreenTripWizardMobile initialStep={4}/>
+          </DCArtboard>
+          <DCArtboard id="m-wiz-5" label="Wizard · Schritt 5 · Reports" width={PHONE_W} height={1000}>
+            <ScreenTripWizardMobile initialStep={5}/>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="editors" title="04 · Editoren · Trip-Konfiguration" subtitle="Wegpunkte (Master/Detail mit Bottom-Sheet), Metriken (Accordion), Alerts (Modus-Cards). Etappen-Datum editierbar — dieselbe StageDateField-Molecule wie Desktop, size=lg (44px Touch).">
+          <DCArtboard id="m-wp-editor" label="Wegpunkt-Editor · normale Etappe (Datum-Strip + Karte/Sheet)" width={PHONE_W} height={840}>
+            <ScreenWaypointEditorMobile initialActive={1}/>
+          </DCArtboard>
+          <DCArtboard id="m-wp-editor-pause" label="Pausentag · editierbares Datum + Standort-Karte" width={PHONE_W} height={840}>
+            <ScreenWaypointEditorMobile initialActive={3}/>
+          </DCArtboard>
+          <DCArtboard id="m-wp-editor-cascade" label="Tourstart verschoben · Kaskaden-Vorschlag inline" width={PHONE_W} height={900}>
+            <ScreenWaypointEditorMobile initialActive={0} demoCascade={true}/>
+          </DCArtboard>
+          <DCArtboard id="m-metrics" label="Wetter-Metriken-Editor" width={PHONE_W} height={840}>
+            <ScreenMetricsEditorMobile/>
+          </DCArtboard>
+          <DCArtboard id="m-alerts" label="Alert-Konfigurator" width={PHONE_W} height={840}>
+            <ScreenAlertConfigMobile/>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="compare" title="05 · Ortsvergleich" subtitle="Liste (Kachel-Stack) → Detail (Setup + Monitoring + Aktionen). Charter §3 v1.1 — Klick auf eine Kachel öffnet das Setup, nicht das Tages-Briefing. Locations-Import als Modal-Flow.">
+          <DCArtboard id="m-compare-list" label="Übersicht · Kachel-Stack" width={PHONE_W} height={840}>
+            <ScreenCompareListMobile/>
+          </DCArtboard>
+          <DCArtboard id="m-compare-detail" label="Detail · Klick-Ziel einer Kachel (aktiv)" width={PHONE_W} height={1180}>
+            <ScreenCompareDetailMobile subId="skitour-hochkoenig"/>
+          </DCArtboard>
+          <DCArtboard id="m-compare-detail-paused" label="Detail · pausierter Vergleich" width={PHONE_W} height={1100}>
+            <ScreenCompareDetailMobile subId="mallorca-trail"/>
+          </DCArtboard>
+          <DCArtboard id="m-location-new" label="POI anlegen · Smart-Import (Modal-Flow)" width={PHONE_W} height={840}>
+            <ScreenLocationNewMobile/>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="output" title="06 · Output-Vorschau" subtitle="Email · SMS · Signal in einem Screen. Segmented Control zum Wechseln.">
+          <DCArtboard id="m-output" label="Briefing-Vorschau · Multi-Kanal" width={PHONE_W} height={840}>
+            <ScreenOutputPreviewMobile/>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="channel-preview" title="07 · Kanal-Vorschau · Vorschau-Organism (Issue #496)" subtitle="Dasselbe <ChannelPreviewRedesign>, das im Mobile-Metriken-Editor steckt — hier isoliert je Kanal. Konsequenz-Leiste wird 2-spaltig, Vorschau darunter. Email rendert am Handy gestapelt (keine 10-Spalten-Tabelle möglich, aber nichts geht verloren).">
+          <DCArtboard id="m-cp-signal" label="Signal aktiv · 4 Spalten rutschen in Detail" width={390} height={720}>
+            <div style={{ background: "var(--g-paper)", minHeight: "100%", padding: 14 }}>
+              <ChannelPreviewRedesign primary={CP_DEMO_PRIMARY} secondary={CP_DEMO_SECONDARY} viewport="mobile" initialChannel="signal"/>
+            </div>
+          </DCArtboard>
+          <DCArtboard id="m-cp-email" label="Email aktiv · gestapelt, nichts verloren" width={390} height={760}>
+            <div style={{ background: "var(--g-paper)", minHeight: "100%", padding: 14 }}>
+              <ChannelPreviewRedesign primary={CP_DEMO_PRIMARY} secondary={CP_DEMO_SECONDARY} viewport="mobile" initialChannel="email"/>
+            </div>
+          </DCArtboard>
+          <DCArtboard id="m-cp-sms" label="SMS aktiv · Token-Code · Metriken ohne Code fallen weg" width={390} height={720}>
+            <div style={{ background: "var(--g-paper)", minHeight: "100%", padding: 14 }}>
+              <ChannelPreviewRedesign primary={CP_DEMO_PRIMARY} secondary={CP_DEMO_SECONDARY} viewport="mobile" initialChannel="sms"/>
+            </div>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="patterns" title="08 · Übergreifende Patterns" subtitle="Modal · Bottom-Sheet · Toasts · States · Wizard-Abbruch · Push-Permission. Verbindlich für alle Mobile-Flows.">
+          <DCArtboard id="m-modal" label="Modal · Bestätigungs-Dialog" width={PHONE_W} height={840}>
+            <PatternModal/>
+          </DCArtboard>
+          <DCArtboard id="m-sheet" label="Bottom-Sheet · Half-Snap mit Aktionen" width={PHONE_W} height={840}>
+            <PatternBottomSheet/>
+          </DCArtboard>
+          <DCArtboard id="m-wiz-cancel" label="Wizard-Abbruch · Entwurf / Verwerfen / Weiter" width={PHONE_W} height={840}>
+            <PatternWizardCancel/>
+          </DCArtboard>
+          <DCArtboard id="m-push" label="Push-Permission · Pre-Prompt (Soft-Ask)" width={PHONE_W} height={840}>
+            <PatternPushPermission/>
+          </DCArtboard>
+          <DCArtboard id="m-toasts" label="Toasts · Info / Success / Warn / Error" width={PHONE_W} height={840}>
+            <PatternToasts/>
+          </DCArtboard>
+          <DCArtboard id="m-states" label="States · Loading / Empty / Error / Permission" width={PHONE_W} height={1130}>
+            <PatternStates/>
+          </DCArtboard>
+        </DCSection>
+      </DesignCanvas>
+    );
+  }
+
+  function ReadmeCard() {
+    return (
+      <div style={{ padding: 32, background: "var(--g-card)", height: "100%", overflow: "auto", border: "1px solid var(--g-rule)", borderRadius: 6 }}>
+        <div className="mono" style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--g-ink-3)", marginBottom: 8 }}>Mobile-Erweiterung · v1</div>
+        <h1 style={{ fontSize: 28, fontWeight: 600, letterSpacing: "-0.02em", margin: "0 0 16px" }}>
+          Pattern-Entscheidungen
+        </h1>
+        <div style={{ fontSize: 14, lineHeight: 1.6, color: "var(--g-ink-2)", marginBottom: 24 }}>
+          Best-Practice-Defaults, abgeleitet aus iOS HIG / Material Guidelines und der bestehenden Desktop-Sprache.
+          Alle Tokens aus <code style={{ fontFamily: "var(--g-font-mono)", background: "var(--g-card-alt)", padding: "1px 5px", border: "1px solid var(--g-rule)" }}>tokens.css</code> unverändert.
+        </div>
+
+        <ReadmeRow tag="A · Navigation" verdict="Hybrid"
+          text="Bottom-Nav für Übersicht / Trips / Vergleich / Archiv (≥ 44 px Touch). Drawer (Hamburger oben links) für Kanäle, Einstellungen, Account. Hybrid ist iOS-HIG / Material Standard bei 3–5 Top-Destinationen + sekundärer Konfig-Navigation."/>
+
+        <ReadmeRow tag="B · Listen & Tabellen" verdict="Card-Stack + H-Scroll"
+          text="Trip-Liste, Etappen, Wegpunkte, Metriken → Card-Stack mit Chevron / mehr-Menü. Dichte Vergleichs- und Stunden-Matrizen → H-Scroll mit fixierter 1. Spalte (Standard für Data-Tables auf Mobile)."/>
+
+        <ReadmeRow tag="C · Wizard" verdict="Jeder Schritt eigener Screen"
+          text="4 Schritte = 4 Screens, sticky Indikator oben + sticky Action-Bar unten. Bottom-Nav während Wizard ausgeblendet. Verhindert Tiefen-Verschachtelung; Mobile-User wollen klare Linearität."/>
+
+        <ReadmeRow tag="D · Wegpunkt-Editor" verdict="Karte + Bottom-Sheet"
+          text="Karte vollflächig, Höhenprofil + Wegpunktliste im 3-stufigen Sheet (peek 92 / half 320 / full 540). Standardpattern aus Maps-Apps (Google Maps, Apple Maps, Komoot)."/>
+
+        <ReadmeRow tag="E · Compare" verdict="H-Scroll-Matrix"
+          text="Locations-Auswahl in Bottom-Sheet. Empfehlungs-Banner als Hero. Matrix H-Scroll mit sticky Metrik-Spalte. Stunden-Verlauf Top-3 ebenfalls als Tabelle mit sticky Zeit-Spalte."/>
+
+        <ReadmeRow tag="F · Modal vs. Sheet" verdict="Klare Trennung"
+          text="Modal-Flow (Vollbild) für lineare Flows wie Wizard, POI-Import, Bestätigung-Dialoge. Bottom-Sheet für kontextbezogene Auswahl / Aktionen / Quick-Edit (Drag-Handle, dismiss durch Backdrop-Tap)."/>
+
+        <ReadmeRow tag="G · Progressive Disclosure" verdict="Accordions + Tabs"
+          text="Trip-Detail in 6 Tabs (Pill-Scroller). Metriken (26 Spalten) in 5 Kategorien-Accordions. Etappen-Card zeigt nur Eckdaten; Summary erst nach Tap."/>
+
+        <ReadmeRow tag="H · Breakpoints" verdict="≤ 599 / 600–899 / ≥ 900"
+          text="Mobile primär 375 px, sekundär 414 / 768. Layout bei 768 px gleich Mobile (kein Splitscreen), aber Cards optional zweispaltig wo sinnvoll. ≥ 900 → bestehendes Desktop."/>
+
+        <ReadmeRow tag="I · Touch & Type" verdict="44 / 48 / 56 px, 16 px Inputs"
+          text="Buttons mindestens 44 × 44 (size=md), Primär-CTAs 48 (size=lg), Focus-CTAs 56 (size=xl). Alle Inputs fontSize 16 px (kein iOS-Zoom). Safe-Areas via env(safe-area-inset-*)."/>
+      </div>
+    );
+  }
+
+  function ReadmeRow({ tag, verdict, text }) {
+    return (
+      <div style={{ display: "grid", gridTemplateColumns: "160px 1fr", gap: 16, padding: "14px 0", borderTop: "1px solid var(--g-rule-soft)" }}>
+        <div>
+          <div className="mono" style={{ fontSize: 11, color: "var(--g-accent)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>{tag}</div>
+          <div style={{ fontSize: 13, fontWeight: 600, marginTop: 4, color: "var(--g-ink)" }}>{verdict}</div>
+        </div>
+        <div style={{ fontSize: 13, color: "var(--g-ink-2)", lineHeight: 1.6 }}>{text}</div>
+      </div>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
