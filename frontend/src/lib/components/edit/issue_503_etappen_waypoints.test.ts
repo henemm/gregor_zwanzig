@@ -26,6 +26,10 @@ const WAYPOINT_EDITOR_PAGE = join(here, 'WaypointEditorPage.svelte');
 const AI_SUGGESTION_BAR = join(here, 'AISuggestionBar.svelte');
 const STAGE_NAV_DROPDOWN = join(here, 'StageNavDropdown.svelte');
 
+// Issue #522 — Wegpunkt-Karte Visual-Redesign
+const WAYPOINT_CARD = join(here, '..', 'trip-detail', 'waypoints', 'WaypointCard.svelte');
+const WAYPOINT_PIN = join(here, '..', 'trip-detail', 'waypoints', 'WaypointPin.svelte');
+
 // ────────────────────────────────────────────────────────────────────────────
 // Tab-Umbenennung (TripEditView)
 // ────────────────────────────────────────────────────────────────────────────
@@ -219,6 +223,130 @@ describe('#503 Toter Code entfernt', () => {
 		assert.ok(
 			!existsSync(STAGE_NAV_DROPDOWN),
 			'StageNavDropdown.svelte muss gelöscht sein (mobile-Editor entfällt)'
+		);
+	});
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// #522 — WaypointCard Visual-Redesign
+// ────────────────────────────────────────────────────────────────────────────
+
+describe('#522 WaypointCard Visual-Redesign', () => {
+	test('importiert WaypointPin NICHT mehr', () => {
+		const src = readFileSync(WAYPOINT_CARD, 'utf-8');
+		assert.ok(
+			!/import\s+WaypointPin\s+from/.test(src),
+			'WaypointCard.svelte darf WaypointPin NICHT mehr importieren (Kreis-Pin als inline span)'
+		);
+	});
+
+	test('rendert Kreis-Pin als CSS-Klasse waypoint-pin (kein SVG-Pfad mit stroke-dasharray)', () => {
+		const src = readFileSync(WAYPOINT_CARD, 'utf-8');
+		assert.ok(
+			/class="[^"]*waypoint-pin\b/.test(src),
+			'WaypointCard.svelte muss den Kreis-Pin via CSS-Klasse "waypoint-pin" rendern'
+		);
+		assert.ok(
+			!src.includes('stroke-dasharray'),
+			'WaypointCard.svelte darf kein stroke-dasharray (gestrichelt) mehr enthalten'
+		);
+	});
+
+	test('hat Text-Buttons "Umbenennen", "Verschieben", "Löschen" (keine Icons mehr)', () => {
+		const src = readFileSync(WAYPOINT_CARD, 'utf-8');
+		assert.ok(src.includes('Umbenennen'), 'WaypointCard.svelte muss Text "Umbenennen" enthalten');
+		assert.ok(src.includes('Verschieben'), 'WaypointCard.svelte muss Text "Verschieben" enthalten');
+		assert.ok(src.includes('Löschen'), 'WaypointCard.svelte muss Text "Löschen" enthalten');
+	});
+
+	test('Action-Buttons sind nur bei active sichtbar ({#if active})', () => {
+		const src = readFileSync(WAYPOINT_CARD, 'utf-8');
+		// Action-Block (mit "Umbenennen") muss in einem {#if active}-Block stehen
+		const hasActiveGate = /\{#if\s+active\s*\}[\s\S]*Umbenennen[\s\S]*\{\/if\}/.test(src);
+		assert.ok(
+			hasActiveGate,
+			'WaypointCard.svelte muss die Action-Buttons in einem {#if active}-Block kapseln'
+		);
+	});
+
+	test('hat data-testid="waypoint-move-{index}" für Verschieben-Button', () => {
+		const src = readFileSync(WAYPOINT_CARD, 'utf-8');
+		assert.ok(
+			/data-testid=["']waypoint-move-\{index\}["']/.test(src),
+			'WaypointCard.svelte muss data-testid="waypoint-move-{index}" haben'
+		);
+	});
+
+	test('behält bestehende data-testids waypoint-card/rename/delete', () => {
+		const src = readFileSync(WAYPOINT_CARD, 'utf-8');
+		assert.ok(
+			/data-testid=["']waypoint-card-\{index\}["']/.test(src),
+			'data-testid="waypoint-card-{index}" muss erhalten bleiben'
+		);
+		assert.ok(
+			/data-testid=["']waypoint-rename-\{index\}["']/.test(src),
+			'data-testid="waypoint-rename-{index}" muss erhalten bleiben'
+		);
+		assert.ok(
+			/data-testid=["']waypoint-delete-\{index\}["']/.test(src),
+			'data-testid="waypoint-delete-{index}" muss erhalten bleiben'
+		);
+	});
+
+	test('onConfirm/onReject bleiben als optionale @deprecated Props (Backward-Compat)', () => {
+		const src = readFileSync(WAYPOINT_CARD, 'utf-8');
+		assert.ok(
+			/onConfirm\?:\s*\(\)\s*=>\s*void/.test(src),
+			'WaypointCard.svelte muss onConfirm?: () => void als optionales Prop behalten'
+		);
+		assert.ok(
+			/onReject\?:\s*\(\)\s*=>\s*void/.test(src),
+			'WaypointCard.svelte muss onReject?: () => void als optionales Prop behalten'
+		);
+	});
+
+	test('Left-Border-Accent-Indikator: border-left mit var(--g-accent) im aktiven Zustand', () => {
+		const src = readFileSync(WAYPOINT_CARD, 'utf-8');
+		// CSS muss eine border-left-Regel haben, die im active-State auf --g-accent geht.
+		const hasBorderLeft = /border-left[^;]*var\(--g-accent\)/.test(src) ||
+			/border-left-color:\s*var\(--g-accent\)/.test(src);
+		assert.ok(
+			hasBorderLeft,
+			'WaypointCard.svelte muss einen Left-Border-Indikator mit var(--g-accent) haben'
+		);
+	});
+});
+
+describe('#522 WaypointPin Cleanup (suggested-Branch raus)', () => {
+	test('hat kein suggested Prop mehr', () => {
+		const src = readFileSync(WAYPOINT_PIN, 'utf-8');
+		assert.ok(
+			!/suggested\??:\s*boolean/.test(src),
+			'WaypointPin.svelte darf kein "suggested?: boolean" Prop mehr deklarieren'
+		);
+	});
+
+	test('hat keinen stroke-dasharray-Branch mehr', () => {
+		const src = readFileSync(WAYPOINT_PIN, 'utf-8');
+		assert.ok(
+			!src.includes('stroke-dasharray'),
+			'WaypointPin.svelte darf kein stroke-dasharray (gestrichelter suggested-Pin) mehr enthalten'
+		);
+	});
+
+	test('hat keinen {#if suggested}-Branch mehr', () => {
+		const src = readFileSync(WAYPOINT_PIN, 'utf-8');
+		assert.ok(
+			!/\{#if\s+suggested\b/.test(src),
+			'WaypointPin.svelte darf keinen {#if suggested}-Block mehr haben'
+		);
+	});
+
+	test('aria-label hat keinen suggested-Zweig mehr', () => {
+		const src = readFileSync(WAYPOINT_PIN, 'utf-8');
+		assert.ok(
+			!/Vorgeschlagener\s+Wegpunkt/.test(src),
+			'WaypointPin.svelte darf kein "Vorgeschlagener Wegpunkt"-aria-label mehr enthalten'
 		);
 	});
 });

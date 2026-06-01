@@ -54,15 +54,21 @@ class TestAC2PencilIconAlias:
             + "\n".join(hits)
         )
 
-    def test_pencil_icon_alias_present_in_waypointcard(self):
+    def test_waypoint_card_uses_text_buttons_not_pencil_icon(self):
         """
         GIVEN: WaypointCard.svelte
-        WHEN:  grep auf PencilIcon
-        THEN:  mindestens 1 Treffer
+        WHEN:  grep auf PencilIcon / grep auf Text-Button „Umbenennen"
+        THEN:  Issue #522 ersetzte Icon-Buttons durch Text-Buttons →
+               PencilIcon muss FEHLEN, „Umbenennen" muss vorhanden sein
         """
         waypointcard = FRONTEND_SRC / "lib/components/trip-detail/waypoints/WaypointCard.svelte"
-        hits = _grep_count("PencilIcon", waypointcard, include="*.svelte")
-        assert hits, "PencilIcon fehlt in WaypointCard.svelte"
+        pencil_hits = _grep_count("PencilIcon", waypointcard, include="*.svelte")
+        assert pencil_hits == [], (
+            "PencilIcon darf seit Issue #522 nicht mehr in WaypointCard sein "
+            "(Text-Buttons ersetzen Icon-Buttons):\n" + "\n".join(pencil_hits)
+        )
+        rename_hits = _grep_count("Umbenennen", waypointcard, include="*.svelte")
+        assert rename_hits, "Text-Button 'Umbenennen' fehlt in WaypointCard.svelte (Issue #522)"
 
     def test_pencil_icon_alias_present_in_design_page(self):
         """
