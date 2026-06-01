@@ -72,7 +72,7 @@
 	.sms-shell { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
 	.stub-pill {
 		display: inline-block; padding: 0.25rem 0.625rem; font-size: 0.75rem; font-weight: 500;
-		color: var(--g-ink); background: var(--g-warning); border-radius: 99rem;
+		color: var(--g-ink); background: var(--g-warn); border-radius: 99rem;
 	}
 	.phone-frame {
 		position: relative; width: 320px; background: var(--g-ink); border-radius: 36px;
@@ -100,7 +100,7 @@
 		font-size: 0.8125rem; margin: 0;
 	}
 	.char-count-ok { color: var(--g-ink); }
-	.char-count-warn { color: var(--g-warning); }
+	.char-count-warn { color: var(--g-warn); }
 	.char-count-over { color: var(--g-danger); }
 	.legend {
 		max-width: 320px; font-size: 0.6875rem; line-height: 1.4;

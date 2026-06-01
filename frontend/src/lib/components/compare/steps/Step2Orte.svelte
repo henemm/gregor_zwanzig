@@ -241,7 +241,7 @@
 			state.pickedIds.length < 2
 				? 'text-[var(--g-danger)]'
 				: state.pickedIds.length <= 5
-					? 'text-[var(--g-success)]'
+					? 'text-[var(--g-good)]'
 					: 'text-[var(--g-ink-muted)]'
 		}`}
 	>

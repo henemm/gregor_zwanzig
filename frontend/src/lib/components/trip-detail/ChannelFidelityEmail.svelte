@@ -248,9 +248,9 @@
 	.footer-ok {
 		padding: var(--g-s-2) var(--g-s-3);
 		border-top: 1px solid var(--g-rule-soft);
-		background: color-mix(in srgb, var(--g-success, #2f7d4f) 8%, transparent);
+		background: color-mix(in srgb, var(--g-good, #2f7d4f) 8%, transparent);
 		font-size: var(--g-text-xs);
-		color: var(--g-success, #2f7d4f);
+		color: var(--g-good, #2f7d4f);
 		font-weight: 600;
 	}
 

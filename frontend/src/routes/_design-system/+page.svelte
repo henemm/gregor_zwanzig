@@ -95,11 +95,11 @@
 		{ v: 'var(--g-info)', n: 'info', hex: '#2c5a8c' }
 	];
 	const WEATHER_COLORS = [
-		{ v: 'var(--g-weather-rain)', n: 'rain', hex: '#4a7ab8' },
-		{ v: 'var(--g-weather-snow)', n: 'snow', hex: '#8aa4c0' },
-		{ v: 'var(--g-weather-thunder)', n: 'thunder', hex: '#c43a2a' },
-		{ v: 'var(--g-weather-sun)', n: 'sun', hex: '#d99a2a' },
-		{ v: 'var(--g-weather-cloud)', n: 'cloud', hex: '#9a958a' }
+		{ v: 'var(--g-wx-rain)', n: 'rain', hex: '#4a7fb5' },
+		{ v: 'var(--g-wx-snow)', n: 'snow', hex: '#a8c8e8' },
+		{ v: 'var(--g-wx-thunder)', n: 'thunder', hex: '#c43a2a' },
+		{ v: 'var(--g-wx-sun)', n: 'sun', hex: '#e8a820' },
+		{ v: 'var(--g-wx-fog)', n: 'fog', hex: '#9a9a8a' }
 	];
 
 	const WICON_KINDS = ['sun', 'cloud', 'rain', 'thunder', 'snow', 'wind', 'moon', 'headlamp'] as const;

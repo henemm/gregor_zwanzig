@@ -48,7 +48,7 @@
 		</ul>
 	{/if}
 
-	<a href="#briefings" data-testid="right-card-briefings-edit-link" class="edit-link">
+	<a href="?tab=briefings" data-testid="right-card-briefings-edit-link" class="edit-link">
 		Bearbeiten →
 	</a>
 </GCard>
@@ -95,7 +95,7 @@
 		background: var(--g-ink-faint, #9ca3af);
 	}
 	.dot[data-tone='success'] {
-		background: var(--g-success, #16a34a);
+		background: var(--g-good, #16a34a);
 	}
 	.edit-link {
 		display: inline-block;

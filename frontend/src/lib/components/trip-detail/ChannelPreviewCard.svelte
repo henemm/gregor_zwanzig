@@ -165,11 +165,11 @@
 		width: 8px;
 		height: 8px;
 		border-radius: 50%;
-		background: var(--g-success, #2f7d4f);
+		background: var(--g-good, #2f7d4f);
 		flex-shrink: 0;
 	}
 	.dot-warn {
-		background: var(--g-warning);
+		background: var(--g-warn);
 	}
 	.metric {
 		display: flex;
@@ -197,14 +197,14 @@
 		font-size: 10px;
 		padding: 2px 6px;
 		border-radius: var(--g-radius-pill);
-		background: color-mix(in srgb, var(--g-success, #2f7d4f) 12%, transparent);
-		color: var(--g-success, #2f7d4f);
+		background: color-mix(in srgb, var(--g-good, #2f7d4f) 12%, transparent);
+		color: var(--g-good, #2f7d4f);
 		font-weight: 600;
 		letter-spacing: var(--g-track-wide);
 	}
 	.pill-warn {
-		background: color-mix(in srgb, var(--g-warning) 15%, transparent);
-		color: var(--g-warning);
+		background: color-mix(in srgb, var(--g-warn) 15%, transparent);
+		color: var(--g-warn);
 	}
 	.detail-count {
 		font-size: 10px;

@@ -179,7 +179,7 @@
 		cursor: not-allowed;
 	}
 	.success-msg {
-		color: var(--g-success, #16a34a);
+		color: var(--g-good, #16a34a);
 		font-size: 0.875rem;
 	}
 	.error-msg {

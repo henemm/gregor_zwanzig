@@ -169,10 +169,10 @@
 		border-bottom: 1px solid var(--g-rule-soft);
 	}
 	.col-head.ok {
-		color: var(--g-success, #2f7d4f);
+		color: var(--g-good, #2f7d4f);
 	}
 	.col-head.warn {
-		color: var(--g-warning);
+		color: var(--g-warn);
 	}
 	.row {
 		display: flex;
@@ -202,8 +202,8 @@
 		border-radius: var(--g-radius-sm);
 		font-size: var(--g-text-xs);
 		line-height: 1.5;
-		background: color-mix(in srgb, var(--g-warning) 8%, transparent);
-		border-left: 3px solid var(--g-warning);
+		background: color-mix(in srgb, var(--g-warn) 8%, transparent);
+		border-left: 3px solid var(--g-warn);
 		color: var(--g-ink);
 	}
 	.legend {

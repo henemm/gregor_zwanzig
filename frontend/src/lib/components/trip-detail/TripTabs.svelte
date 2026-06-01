@@ -1,16 +1,18 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { Segmented } from '$lib/components/atoms';
 	import TripOverview from './TripOverview.svelte';
 	import WeatherMetricsTab from './WeatherMetricsTab.svelte';
 	import AlertsTab from '$lib/components/alerts-tab/AlertsTab.svelte';
 	import BriefingsTab from '$lib/components/briefings-tab/BriefingsTab.svelte';
+	import EditStagesPanelNew from '$lib/components/edit/EditStagesPanelNew.svelte';
 	import {
 		EmailIframe,
 		SmsPhoneFrame,
 		defaultReportType,
 		type ReportType
 	} from '$lib/components/preview';
-	import type { Trip } from '$lib/types';
+	import type { Trip, Stage } from '$lib/types';
 
 	interface Badges {
 		overview?: number;
@@ -47,7 +49,7 @@
 	//   alerts    -> "Alarmregeln" (war: "Alerts")
 	const TABS = [
 		{ value: 'overview', label: 'Übersicht' },
-		{ value: 'stages', label: 'Etappen' },
+		{ value: 'stages', label: 'Etappen & Wegpunkte' },
 		{ value: 'weather', label: 'Wetter-Briefing' },
 		{ value: 'briefings', label: 'Reports & Kanäle' },
 		{ value: 'alerts', label: 'Alarmregeln' },
@@ -86,17 +88,20 @@
 	// Vergangenheit liegt oder die OpenMeteo-API gerade nicht erreichbar ist.
 	let demoMode = $state(true);
 
+	// Issue #516: lokale stages-Kopie für den Etappen-Tab. Wird via bind:stages
+	// von EditStagesPanelNew mutiert. Tiefe Kopie verhindert Bleed in trip prop.
+	let localStages = $state<Stage[]>(JSON.parse(JSON.stringify(trip?.stages ?? [])));
+
 	$effect(() => {
 		activeTab = resolve(initialTab);
 	});
 
 	function handleValueChange(value: string): void {
 		activeTab = value;
-		// Update URL hash without triggering SvelteKit navigation — avoids
-		// focus loss after keyboard navigation and avoids component re-mount.
-		if (typeof window !== 'undefined') {
-			history.replaceState(history.state, '', `#${value}`);
-		}
+		// Issue #516: kanonisches URL-Modell — ?tab=<value> statt #hash.
+		// replaceState verhindert History-Spam; noScroll + keepFocus erhalten
+		// die Keyboard-Navigation und Scroll-Position.
+		void goto(`?tab=${value}`, { replaceState: true, noScroll: true, keepFocus: true });
 	}
 </script>
 
@@ -107,11 +112,10 @@
 			<div data-testid="trip-detail-panel-{tab.value}">
 				{#if tab.value === 'overview' && trip}
 					<TripOverview {trip} />
-				{:else if tab.value === 'stages' && trip}
-					<div class="stages-redirect" data-testid="stages-redirect">
-						<p>Etappen und Wegpunkte werden im Editor bearbeitet.</p>
-						<a href="/trips/{trip.id}/edit" class="stages-redirect-link">Wegpunkt-Editor öffnen →</a>
-					</div>
+				{:else if tab.value === 'stages'}
+					{#if trip}
+						<EditStagesPanelNew bind:stages={localStages} tripId={trip.id} showSave={true} />
+					{/if}
 				{:else if tab.value === 'weather' && trip}
 					<WeatherMetricsTab {trip} />
 				{:else if tab.value === 'alerts' && trip}
@@ -202,7 +206,7 @@
 		padding: 0.625rem 0.875rem;
 		background: var(--g-warning-soft, #fef3c7);
 		color: var(--g-ink, #1a1a18);
-		border: 1px solid var(--g-warning, #f59e0b);
+		border: 1px solid var(--g-warn, #f59e0b);
 		border-radius: var(--g-r-2, 0.5rem);
 		font-size: 0.875rem;
 	}
@@ -237,20 +241,6 @@
 		gap: 1.5rem;
 		grid-template-columns: minmax(0, 1fr) 360px;
 		align-items: start;
-	}
-	.stages-redirect {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-		padding: 1.5rem;
-		font-size: 0.875rem;
-		color: var(--g-ink, #1a1a18);
-	}
-	.stages-redirect-link {
-		align-self: flex-start;
-		color: var(--g-accent);
-		text-decoration: underline;
-		font-weight: 500;
 	}
 	@media (max-width: 960px) {
 		.preview-grid {

@@ -52,7 +52,7 @@
 					data-segment-state={seg}
 					class={`h-1 flex-1 rounded-full transition-colors ${
 						seg === 'done'
-							? 'bg-[var(--g-success)]'
+							? 'bg-[var(--g-good)]'
 							: seg === 'active'
 								? 'bg-[var(--g-accent)]'
 								: 'bg-[var(--g-ink-faint)]/30'
@@ -80,9 +80,9 @@
 			>
 				{#if state === 'done'}
 					<span
-						class="w-8 h-8 rounded-full bg-[var(--g-success)]/15 flex items-center justify-center"
+						class="w-8 h-8 rounded-full bg-[var(--g-good)]/15 flex items-center justify-center"
 					>
-						<CheckIcon class="size-4 text-[var(--g-success)]" />
+						<CheckIcon class="size-4 text-[var(--g-good)]" />
 					</span>
 				{:else if state === 'active'}
 					<span

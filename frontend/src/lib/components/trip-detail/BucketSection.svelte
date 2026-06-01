@@ -147,9 +147,9 @@
 		font-size: var(--g-text-xs);
 		letter-spacing: var(--g-track-caps);
 		text-transform: uppercase;
-		color: var(--g-warning);
-		background: color-mix(in srgb, var(--g-warning) 6%, transparent);
-		border-top: 1px dashed var(--g-warning);
-		border-bottom: 1px dashed var(--g-warning);
+		color: var(--g-warn);
+		background: color-mix(in srgb, var(--g-warn) 6%, transparent);
+		border-top: 1px dashed var(--g-warn);
+		border-bottom: 1px dashed var(--g-warn);
 	}
 </style>

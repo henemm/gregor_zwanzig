@@ -60,8 +60,8 @@
 		white-space: nowrap;
 	}
 	.marker.exceeded {
-		background: color-mix(in srgb, var(--g-warning) 15%, transparent);
-		color: var(--g-warning);
-		border-color: var(--g-warning);
+		background: color-mix(in srgb, var(--g-warn) 15%, transparent);
+		color: var(--g-warn);
+		border-color: var(--g-warn);
 	}
 </style>

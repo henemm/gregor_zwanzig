@@ -70,9 +70,9 @@
     --g-surface-raised: #faf8f1;
 
     /* Semantic */
-    --g-success:      #3a7d44;
-    --g-warning:      #c8882a;
-    --g-danger:       #b33a2a;
+    --g-success:      var(--g-good);   /* Alias auf #3d6b3a */
+    --g-warning:      var(--g-warn);   /* Alias auf #c08a1a */
+    --g-danger:       var(--g-bad);    /* Alias auf #a83232 */
     --g-info:         #2a6cb3;
 
     /* Wetter-Farben */

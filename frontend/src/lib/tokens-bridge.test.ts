@@ -80,7 +80,7 @@ test('Bridge: Elevation-Shadows vorhanden', () => {
 
 test('Regression: bestehende Tokens unveraendert vorhanden', () => {
 	assert.ok(hasDecl('--g-surface-1', '#ffffff'), '--g-surface-1 ist nach #378 reinweiss (Surface-Stack-Migration)');
-	assert.ok(hasDecl('--g-success', '#3a7d44'), '--g-success bleibt');
+	assert.ok(hasDecl('--g-success', 'var(--g-good)'), '--g-success ist Alias auf --g-good (#519)');
 	assert.ok(hasDecl('--g-wx-thunder', '#c43a2a'), '--g-wx-thunder bleibt');
 });
 

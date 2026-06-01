@@ -36,7 +36,7 @@
 		<!-- Suggested: dashed warning border, white fill -->
 		<path
 			d="M{dim.w / 2},{dim.h} C{dim.w / 2},{dim.h - dim.r * 0.7} {dim.w},{dim.h / 2} {dim.w},{dim.r} A{dim.r},{dim.r} 0 1 0 0,{dim.r} C0,{dim.h / 2} {dim.w / 2},{dim.h - dim.r * 0.7} {dim.w / 2},{dim.h} Z"
-			stroke="var(--g-warning)"
+			stroke="var(--g-warn)"
 			stroke-width="1.5"
 			stroke-dasharray="4,3"
 			fill="white"
@@ -48,7 +48,7 @@
 			dominant-baseline="middle"
 			font-size={dim.fs}
 			font-family="var(--g-font-ui)"
-			fill="var(--g-warning)"
+			fill="var(--g-warn)"
 			font-weight="600"
 		>{index}</text>
 	{:else}
