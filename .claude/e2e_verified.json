@@ -1,14 +1,17 @@
 {
-  "verified_at": "2026-05-29T05:30:28.225252+00:00",
+  "verified_at": "2026-06-01T15:07:47.921920+00:00",
   "environment": "staging",
   "scope": "frontend-only",
   "checks": [
     "staging_smoke",
-    "bundle_grep"
+    "visual"
   ],
   "feature_checks": [
-    "ROOT 302 / HEALTH 200 OK",
-    "Bundle 19.Bz77p-9C.js enth\u00e4lt: trip-header-mobile-metrics (1x), metric-etappe (1x), metric-briefing (1x), metric-start (1x), mobile-metrics (3x), ETAPPE (2x), BRIEFING (3x), START IN (2x)",
-    "Tiles sind mobile-only (display:none auf Desktop \u2014 kein visueller Check via Playwright m\u00f6glich)"
+    "6 Tabs in korrekter Reihenfolge (\u00dcbersicht\u00b7Orte\u00b7Idealwerte\u00b7Layout\u00b7Versand\u00b7Vorschau)",
+    "URL-Sync via ?tab= nach Tab-Klick (Orte/Versand/Vorschau)",
+    "\u00dcbersicht-Tab zeigt Monitoring-Labels (N\u00e4chster Versand / Zuletzt / Kan\u00e4le)",
+    "Deep-Link ?tab=orte aktiviert richtigen Tab direkt",
+    "Ung\u00fcltiger ?tab=-Wert \u2192 kein Absturz (Fallback greift)",
+    "/compare-Liste ohne Regression erreichbar"
   ]
 }
