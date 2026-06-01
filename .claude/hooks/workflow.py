@@ -998,6 +998,20 @@ def cmd_write_log(args: list[str]) -> None:
     _atomic_write_yaml(log_path, log_data)
     print(f"Execution log written: {log_path}")
 
+    # Issue #508: Warnung wenn phase6b lief aber adversary_verdict fehlt
+    transitions_for_check = data.get("phase_transitions") or []
+    phase6b_ran = any(
+        isinstance(t, dict) and "phase6b" in (t.get("to") or "")
+        for t in transitions_for_check
+    )
+    if not data.get("adversary_verdict") and phase6b_ran:
+        print(
+            "WARNING: adversary_verdict ist None — qa_gate.py wurde nicht aufgerufen.\n"
+            "         Fuehre aus: python3 .claude/hooks/qa_gate.py /tmp/test_output.txt",
+            file=sys.stderr,
+        )
+
+
 
 def cmd_complete(args: list[str]) -> None:
     if args:

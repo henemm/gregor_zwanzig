@@ -272,6 +272,41 @@ def _check_ambiguous_block(workflow_data: dict) -> tuple[bool, str]:
     )
 
 
+
+def _phase6b_was_run(workflow_data: dict) -> bool:
+    """Return True if phase6b_adversary appears in phase_transitions."""
+    transitions = workflow_data.get("phase_transitions") or []
+    return any(
+        isinstance(t, dict) and "phase6b" in (t.get("to") or "")
+        for t in transitions
+    )
+
+
+def _check_none_verdict_block(workflow_data: dict) -> tuple[bool, str]:
+    """Issue #508 — Block commit if phase6b ran but adversary_verdict is missing/BROKEN.
+
+    Returns (allowed, reason).
+    - verdict present and not BROKEN: allowed
+    - BROKEN: blocked
+    - verdict missing + no phase6b: allowed (Infra/Doku-Workflow)
+    - verdict missing + phase6b ran: blocked
+    """
+    verdict = (workflow_data.get("adversary_verdict") or "").upper()
+    if verdict and verdict != "BROKEN":
+        return True, "verdict present"
+    if verdict == "BROKEN":
+        return False, (
+            "Adversary-Verdict ist BROKEN. Implementierung korrigieren bevor Commit."
+        )
+    if not _phase6b_was_run(workflow_data):
+        return True, "phase6b did not run"
+    return False, (
+        "Adversary-Verdict fehlt (None). "
+        "qa_gate.py wurde nicht aufgerufen. "
+        "Speichere den Test-Output und fuehre aus: "
+        "python3 .claude/hooks/qa_gate.py /tmp/test_output.txt"
+    )
+
 def _load_active_workflow() -> dict:
     """Load active workflow state via workflow_state_multi wrapper (Issue #196)."""
     try:
@@ -314,6 +349,17 @@ def main():
     if not ok:
         print("=" * 70, file=sys.stderr)
         print("BLOCKED - Adversary AMBIGUOUS", file=sys.stderr)
+        print("=" * 70, file=sys.stderr)
+        print(f"{reason}", file=sys.stderr)
+        print("=" * 70, file=sys.stderr)
+        sys.exit(2)
+
+
+    # Issue #508 — None/BROKEN-Verdict-Block: phase6b ohne qa_gate-Aufruf
+    ok, reason = _check_none_verdict_block(wf)
+    if not ok:
+        print("=" * 70, file=sys.stderr)
+        print("BLOCKED - Adversary-Verdict fehlt oder BROKEN", file=sys.stderr)
         print("=" * 70, file=sys.stderr)
         print(f"{reason}", file=sys.stderr)
         print("=" * 70, file=sys.stderr)

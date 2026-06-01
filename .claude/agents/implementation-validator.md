@@ -30,7 +30,7 @@ Parse the Expected Behavior checklist — every point must be proven.
 cd /home/hem/gregor_zwanzig && uv run pytest --tb=short -q
 ```
 
-**Save the FULL output** — the qa_gate hook will validate it.
+**Save the FULL output** to /tmp/ — Step 6 ruft qa_gate.py explizit auf.
 
 ### Step 3: Probe Edge Cases
 
@@ -59,6 +59,19 @@ For each Expected Behavior point from the spec:
 - Mark each point: PROVEN / DISPROVEN / AMBIGUOUS
 
 **Early-Agreement Skepticism:** If everything passes on round 1, you MUST explicitly demonstrate that you checked each point with rigor. Premature convergence is the most common failure mode.
+
+### Step 6 (PFLICHT): Verdict im Workflow registrieren
+
+```bash
+# Test-Output speichern (falls noch nicht in /tmp/ geschehen)
+uv run pytest --tb=short -q > /tmp/test_output.txt 2>&1
+
+# Verdict setzen — setzt adversary_verdict im Workflow-State
+python3 .claude/hooks/qa_gate.py /tmp/test_output.txt
+```
+
+Ohne diesen Aufruf bleibt `adversary_verdict = null` und `pre_commit_gate`
+blockiert den nächsten Commit.
 
 ## Structured Findings
 
