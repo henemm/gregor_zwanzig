@@ -74,32 +74,6 @@
 	}
 
 	// Waypoint-Mutations (Factory-Pattern fuer WaypointCard-Callbacks)
-	function makeConfirmHandler(stageId: string, waypointId: string) {
-		return function handleConfirm() {
-			localStages = localStages.map((s) =>
-				s.id !== stageId
-					? s
-					: {
-							...s,
-							waypoints: s.waypoints.map((w) =>
-								w.id !== waypointId ? w : { ...w, suggested: undefined }
-							)
-						}
-			);
-		};
-	}
-	function makeRejectHandler(stageId: string, waypointId: string) {
-		return function handleReject() {
-			localStages = localStages.map((s) =>
-				s.id !== stageId
-					? s
-					: {
-							...s,
-							waypoints: s.waypoints.filter((w) => w.id !== waypointId)
-						}
-			);
-		};
-	}
 	function makeRenameHandler(stageId: string, waypointId: string) {
 		return function handleRename() {
 			const newName = prompt('Neuer Name:');
@@ -192,8 +166,6 @@
 							index={i}
 							active={waypoint.id === activeWaypointId}
 							onActivate={makeActivateHandler(waypoint.id)}
-							onConfirm={makeConfirmHandler(activeStage.id, waypoint.id)}
-							onReject={makeRejectHandler(activeStage.id, waypoint.id)}
 							onRename={makeRenameHandler(activeStage.id, waypoint.id)}
 							onDelete={makeDeleteHandler(activeStage.id, waypoint.id)}
 						/>

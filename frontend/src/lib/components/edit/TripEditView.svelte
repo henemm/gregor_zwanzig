@@ -50,7 +50,7 @@
 
 	const tabOptions = $derived([
 		{ value: 'route',       label: 'Route',                              testid: 'edit-tab-route' },
-		{ value: 'etappen',     label: `Etappen ${stats.stages}`,            testid: 'edit-tab-etappen' },
+		{ value: 'etappen',     label: `Etappen & Wegpunkte ${stats.stages}`, testid: 'edit-tab-etappen' },
 		{ value: 'wetter',      label: 'Wetter',                             testid: 'edit-tab-wetter' },
 		{ value: 'reports',     label: 'Reports',                            testid: 'edit-tab-reports' },
 		{ value: 'alarmregeln', label: `Alarmregeln ${alertRules.length}`,   testid: 'edit-tab-alarmregeln' },

@@ -20,10 +20,10 @@
 	}
 
 	$effect(() => {
-		// SSR-Guard: Leaflet greift auf window zu — nur im Browser ausführen.
 		if (!browser || !mapEl) return;
 
-		// Dynamischer Import: hält Leaflet-Bundle (inkl. window-Zugriffen) vom SSR-Build fern.
+		let aborted = false;
+
 		(async () => {
 			const L = (await import('leaflet')).default;
 			await import('leaflet/dist/leaflet.css');
@@ -31,12 +31,10 @@
 			const iconRetinaUrl = (await import('leaflet/dist/images/marker-icon-2x.png')).default;
 			const shadowUrl = (await import('leaflet/dist/images/marker-shadow.png')).default;
 
-			// Marker-Icon Fix (Leaflet/Vite-Problem): Standardpfade durch gebundelte Assets ersetzen
+			if (aborted || !mapEl) return;
+
 			delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
 			L.Icon.Default.mergeOptions({ iconUrl, iconRetinaUrl, shadowUrl });
-
-			// Abbruch wenn Effekt zwischenzeitlich aufgeräumt wurde (mapEl entfernt)
-			if (!mapEl) return;
 
 			map = L.map(mapEl, { zoomControl: true });
 
@@ -51,20 +49,13 @@
 			const waypoints = stage.waypoints;
 			if (waypoints.length >= 2) {
 				const latlngs = waypoints.map((w) => [w.lat, w.lon] as LeafletNS.LatLngTuple);
-
-				// Verbindungslinie in Etappen-Reihenfolge
-				// --g-accent hex, CSS-Variablen werden von Leaflet nicht aufgelöst
 				L.polyline(latlngs, { color: '#c45a2a', weight: 2 }).addTo(map);
-
-				// Marker pro Wegpunkt
 				waypoints.forEach((w, i) => {
 					const marker = L.marker([w.lat, w.lon])
 						.addTo(map!)
 						.bindPopup(`${i + 1}. ${w.name ?? ''}`);
 					marker.on('click', makeMarkerClickHandler(w.id));
 				});
-
-				// Karte auf alle Wegpunkte einpassen
 				map.fitBounds(L.latLngBounds(latlngs), { padding: [24, 24] });
 			} else if (waypoints.length === 1) {
 				const w = waypoints[0];
@@ -74,13 +65,12 @@
 				marker.on('click', makeMarkerClickHandler(w.id));
 				map.setView([w.lat, w.lon], 12);
 			} else {
-				// Fallback: Europa-Zentrum
 				map.setView([47.0, 10.0], 5);
 			}
 		})();
 
-		// Synchroner Cleanup (Svelte greift sonst nicht): map-Ref ausserhalb des async-IIFE halten
 		return () => {
+			aborted = true;
 			map?.remove();
 			map = null;
 		};

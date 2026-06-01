@@ -2,13 +2,15 @@
 	// WaypointCard — Listeneintrag fuer einen Wegpunkt in der rechten Spalte.
 	// Spec: docs/specs/modules/epic_137_wegpunkt_editor.md §7
 	//
+	// Issue #503: Die KI/Auto/Manuell-Unterscheidung wurde entfernt. Alle Wegpunkte
+	// sind gleichwertig — Aktionen sind einheitlich Umbenennen + Löschen.
 	// Layout (horizontal):
-	//   [Kreis-Pin (SVG 14px)] [Name] [Hoehe?] [Bestaetigen+Verwerfen | Umbenennen+Loeschen]
+	//   [Kreis-Pin (SVG 14px)] [Name] [Hoehe?] [Ankunft?] [Umbenennen] [Löschen]
 	//
 	// Aktiv-Hervorhebung: bg-[var(--g-surface-raised)] wenn active === true
-	// Pin-Stil: suggested → gestrichelt orange; sonst solid ink-strong
+	// `onConfirm`/`onReject` bleiben als optionale No-Op-Props erhalten (Backward-Compat
+	// mit WaypointsPanel.svelte) — werden im UI nicht mehr ausgelöst.
 
-	import CheckIcon from '@lucide/svelte/icons/check';
 	import XIcon from '@lucide/svelte/icons/x';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import { Btn } from '$lib/components/atoms';
@@ -20,8 +22,10 @@
 		index: number;
 		active?: boolean;
 		onActivate: () => void;
-		onConfirm: () => void;
-		onReject: () => void;
+		/** @deprecated Issue #503: KI-Bestätigen entfernt; Prop bleibt für Backward-Compat. */
+		onConfirm?: () => void;
+		/** @deprecated Issue #503: KI-Verwerfen entfernt; Prop bleibt für Backward-Compat. */
+		onReject?: () => void;
 		onRename: () => void;
 		onDelete: () => void;
 		// Issue #296-FE: berechnete Ankunftszeit "HH:MM" (computeArrivalTimes).
@@ -34,14 +38,10 @@
 		index,
 		active = false,
 		onActivate,
-		onConfirm,
-		onReject,
 		onRename,
 		onDelete,
 		arrival = null
 	}: Props = $props();
-
-	const isSuggested = $derived(waypoint.suggested === true);
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
@@ -52,9 +52,9 @@
 		: ''}"
 	onclick={onActivate}
 >
-	<!-- WaypointPin-Indikator (sm) -->
+	<!-- WaypointPin-Indikator (sm) — Issue #503: kein suggested-Stil mehr. -->
 	<svg width="14" height="20" role="img" aria-hidden="true">
-		<WaypointPin index={index + 1} suggested={isSuggested} active={active} size="sm" />
+		<WaypointPin index={index + 1} suggested={false} active={active} size="sm" />
 	</svg>
 
 	<!-- Name -->
@@ -73,57 +73,29 @@
 		>{arrival}</span>
 	{/if}
 
-	<!-- Aktionen fuer vorgeschlagene Wegpunkte -->
-	{#if isSuggested}
-		<Btn
-			variant="primary"
-			size="xs"
-			data-testid="waypoint-confirm-{index}"
-			onclick={(e: MouseEvent) => {
-				e.stopPropagation();
-				onConfirm();
-			}}
-			aria-label="Wegpunkt bestätigen"
-		>
-			<CheckIcon class="size-3" />
-		</Btn>
-		<Btn
-			variant="ghost"
-			size="xs"
-			data-testid="waypoint-reject-{index}"
-			onclick={(e: MouseEvent) => {
-				e.stopPropagation();
-				onReject();
-			}}
-			aria-label="Wegpunkt verwerfen"
-		>
-			<XIcon class="size-3" />
-		</Btn>
-	{:else}
-		<!-- Aktionen fuer manuelle (bestaetigte) Wegpunkte -->
-		<Btn
-			variant="ghost"
-			size="xs"
-			data-testid="waypoint-rename-{index}"
-			onclick={(e: MouseEvent) => {
-				e.stopPropagation();
-				onRename();
-			}}
-			aria-label="Wegpunkt umbenennen"
-		>
-			<PencilIcon class="size-3" />
-		</Btn>
-		<Btn
-			variant="ghost"
-			size="xs"
-			data-testid="waypoint-delete-{index}"
-			onclick={(e: MouseEvent) => {
-				e.stopPropagation();
-				onDelete();
-			}}
-			aria-label="Wegpunkt löschen"
-		>
-			<XIcon class="size-3" />
-		</Btn>
-	{/if}
+	<!-- Issue #503: einheitliche Aktionen (Umbenennen + Löschen) für ALLE Wegpunkte. -->
+	<Btn
+		variant="ghost"
+		size="xs"
+		data-testid="waypoint-rename-{index}"
+		onclick={(e: MouseEvent) => {
+			e.stopPropagation();
+			onRename();
+		}}
+		aria-label="Wegpunkt umbenennen"
+	>
+		<PencilIcon class="size-3" />
+	</Btn>
+	<Btn
+		variant="ghost"
+		size="xs"
+		data-testid="waypoint-delete-{index}"
+		onclick={(e: MouseEvent) => {
+			e.stopPropagation();
+			onDelete();
+		}}
+		aria-label="Wegpunkt löschen"
+	>
+		<XIcon class="size-3" />
+	</Btn>
 </div>

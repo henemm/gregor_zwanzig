@@ -1,20 +1,25 @@
 <script lang="ts">
-	// EditStagesPanelNew — Profil-basierter Etappen-Editor (Issue #296-FE, KEINE Karte).
-	// Spec: docs/specs/modules/issue_296_fe_profile_editor.md §5
+	// EditStagesPanelNew — Tab-Inhalt "Etappen & Wegpunkte" (Issue #503).
+	// Spec: docs/specs/modules/issue_503_etappen_waypoints.md (Option B von Claude Design)
 	//
-	// Architektur-Vorbild: WaypointsPanel.svelte (epic_137). Unterschiede:
-	//   - KEIN MapCanvas (nur Hoehenprofil)
-	//   - KEIN eigener Save — `stages` ist gebunden, Container (TripEditView) speichert
-	//   - ProfileEditor erhaelt onProfileAdd → Klick auf Profil fuegt Wegpunkt ein
-	//   - WaypointCard erhaelt arrival (computeArrivalTimes)
+	// Architektur: Karte + Höhenprofil + Wegpunkt-Sidebar als Tab-Inhalt (kein eigener
+	// Screen, keine 6. Tab-Position). Page-Chrome (Speichern/Abbrechen) liegt in
+	// TripEditView; dieses Panel kümmert sich nur um den Editor-Kern.
+	//
+	// Wichtige Änderungen ggü. #296-FE:
+	//   - MapCanvas (Leaflet/OpenTopoMap) ist eingebunden
+	//   - Layout: grid 1fr / 360px (links Karte+Profil-Cards, rechts Wegpunkte)
+	//   - KI/Auto/Manuell-Unterscheidung entfernt — alle Wegpunkte gleichwertig
+	//   - ProfileEditor.onProfileAdd fügt einen Wegpunkt OHNE suggested-Flag ein
 
 	import EtappenStrip from '$lib/components/trip-detail/waypoints/EtappenStrip.svelte';
+	import MapCanvas from '$lib/components/trip-detail/waypoints/MapCanvas.svelte';
 	import ProfileEditor from '$lib/components/trip-detail/waypoints/ProfileEditor.svelte';
 	import WaypointCard from '$lib/components/trip-detail/waypoints/WaypointCard.svelte';
 	import PauseStageView from '$lib/components/trip-detail/waypoints/PauseStageView.svelte';
 	import StageDateField from './StageDateField.svelte';
 	import { addDays, computeCascadeDelta } from './cascade.ts';
-	import { Eyebrow, Btn, Dot } from '$lib/components/atoms';
+	import { Eyebrow, Btn, Dot, Pill } from '$lib/components/atoms';
 	import { computeArrivalTimes } from '$lib/utils/naismith';
 	import { interpolateWaypoint } from '$lib/utils/waypointEditor';
 	import type { Stage, Waypoint } from '$lib/types';
@@ -106,7 +111,8 @@
 		stages = updated;
 	}
 
-	// Profil-Klick → interpolierten Wegpunkt einfuegen (suggested).
+	// Profil-Klick → interpolierten Wegpunkt einfügen.
+	// Issue #503: KEIN suggested-Flag mehr — alle Wegpunkte sind gleichwertig.
 	function handleProfileAdd(fraction: number): void {
 		if (!activeStage) return;
 		const { lat, lon, elevation_m, insertAfterIndex } = interpolateWaypoint(
@@ -118,8 +124,7 @@
 			name: 'Neuer Punkt',
 			lat,
 			lon,
-			elevation_m,
-			suggested: true
+			elevation_m
 		};
 		stages = stages.map((s) => {
 			if (s.id !== activeStage.id) return s;
@@ -130,36 +135,15 @@
 		activeWaypointId = newWp.id;
 	}
 
-	// ProfileEditor erwartet (waypointId) => void — direkte Funktion (kein Factory).
 	function handleWaypointActivate(waypointId: string): void {
 		activeWaypointId = waypointId;
 	}
 
 	// Waypoint-Mutations (Factory-Pattern fuer WaypointCard-Callbacks).
+	// Issue #503: nur noch Umbenennen + Löschen — kein Confirm/Reject mehr.
 	function makeActivateHandler(waypointId: string) {
 		return function handleActivate() {
 			activeWaypointId = waypointId;
-		};
-	}
-	function makeConfirmHandler(stageId: string, waypointId: string) {
-		return function handleConfirm() {
-			stages = stages.map((s) =>
-				s.id !== stageId
-					? s
-					: {
-							...s,
-							waypoints: s.waypoints.map((w) =>
-								w.id !== waypointId ? w : { ...w, suggested: undefined }
-							)
-						}
-			);
-		};
-	}
-	function makeRejectHandler(stageId: string, waypointId: string) {
-		return function handleReject() {
-			stages = stages.map((s) =>
-				s.id !== stageId ? s : { ...s, waypoints: s.waypoints.filter((w) => w.id !== waypointId) }
-			);
 		};
 	}
 	function makeRenameHandler(stageId: string, waypointId: string) {
@@ -183,10 +167,15 @@
 			);
 		};
 	}
+	// No-Op-Handler für WaypointCard onConfirm/onReject (Pflicht-Props,
+	// werden nach #503 nicht mehr ausgelöst — der bedingte UI-Branch ist weg).
+	function noop(): void {
+		/* no-op (Issue #503: keine KI/Auto-Aktionen mehr) */
+	}
 </script>
 
 <div data-testid="edit-stages-panel" class="flex flex-col gap-4">
-	<!-- EtappenStrip -->
+	<!-- EtappenStrip (volle Breite, eigene Navigations-Achse) -->
 	<EtappenStrip
 		{stages}
 		{activeStageId}
@@ -204,7 +193,7 @@
 				onDateChange={(newDate) => handleDateChange(activeStage!.id, newDate)}
 			/>
 		{:else}
-			<!-- Issue #498 — Etappen-Header mit editierbarem Datum oben rechts -->
+			<!-- Etappen-Header mit editierbarem Datum (Issue #498) -->
 			<div class="flex items-start justify-between gap-8">
 				<div class="min-w-0 flex-1">
 					<Eyebrow>Etappe</Eyebrow>
@@ -245,35 +234,66 @@
 				{/if}
 			{/if}
 
-			<div class="flex gap-4">
-				<!-- Links: Hoehenprofil mit Add-Klick -->
-				<div class="flex-1">
-					<ProfileEditor
-						stage={activeStage}
-						{activeWaypointId}
-						onWaypointActivate={handleWaypointActivate}
-						onProfileAdd={handleProfileAdd}
-					/>
+			<!-- Issue #503: Grid 1fr / 360px — Karte+Profil links, Wegpunkte rechts -->
+			<div class="editor-grid" data-testid="editor-grid">
+				<!-- Linke Spalte: Karte-Card + Profil-Card -->
+				<div class="editor-left">
+					<!-- Karten-Card (Leaflet/OpenTopoMap) -->
+					<div class="editor-card" data-testid="map-card">
+						<div class="editor-card-header">
+							<Eyebrow>Karte · OpenTopoMap (OSM + SRTM)</Eyebrow>
+							<Pill tone="ghost">Topo</Pill>
+						</div>
+						<MapCanvas
+							stage={activeStage}
+							{activeWaypointId}
+							onWaypointActivate={handleWaypointActivate}
+						/>
+					</div>
+
+					<!-- Profil-Card (Höhenprofil) -->
+					<div class="editor-card editor-card--padded" data-testid="profile-card">
+						<div class="editor-card-header editor-card-header--inline">
+							<Eyebrow>Höhenprofil · synchron mit Karte</Eyebrow>
+						</div>
+						<ProfileEditor
+							stage={activeStage}
+							{activeWaypointId}
+							onWaypointActivate={handleWaypointActivate}
+							onProfileAdd={handleProfileAdd}
+						/>
+					</div>
 				</div>
 
-				<!-- Rechts: Wegpunkt-Liste mit Ankunftszeiten -->
-				<div class="flex w-64 flex-col gap-1">
-					{#each activeStage.waypoints as waypoint, i (waypoint.id)}
-						<WaypointCard
-							{waypoint}
-							index={i}
-							active={waypoint.id === activeWaypointId}
-							arrival={arrivals[i] ?? null}
-							onActivate={makeActivateHandler(waypoint.id)}
-							onConfirm={makeConfirmHandler(activeStage.id, waypoint.id)}
-							onReject={makeRejectHandler(activeStage.id, waypoint.id)}
-							onRename={makeRenameHandler(activeStage.id, waypoint.id)}
-							onDelete={makeDeleteHandler(activeStage.id, waypoint.id)}
-						/>
-					{/each}
-					{#if activeStage.waypoints.length === 0}
-						<p class="text-sm text-[var(--g-ink-muted)]">Keine Wegpunkte.</p>
-					{/if}
+				<!-- Rechte Spalte: Wegpunkt-Sidebar-Card -->
+				<div class="editor-card editor-sidebar" data-testid="waypoint-sidebar">
+					<div class="editor-card-header sidebar-header">
+						<div>
+							<Eyebrow>Wegpunkte</Eyebrow>
+							<div class="sidebar-count">{activeStage.waypoints.length} insgesamt</div>
+						</div>
+						<Btn variant="ghost" size="sm" data-testid="waypoint-add-on-route-btn" disabled>
+							+ auf Route
+						</Btn>
+					</div>
+					<div class="sidebar-list">
+						{#each activeStage.waypoints as waypoint, i (waypoint.id)}
+							<WaypointCard
+								{waypoint}
+								index={i}
+								active={waypoint.id === activeWaypointId}
+								arrival={arrivals[i] ?? null}
+								onActivate={makeActivateHandler(waypoint.id)}
+								onConfirm={noop}
+								onReject={noop}
+								onRename={makeRenameHandler(activeStage.id, waypoint.id)}
+								onDelete={makeDeleteHandler(activeStage.id, waypoint.id)}
+							/>
+						{/each}
+						{#if activeStage.waypoints.length === 0}
+							<p class="sidebar-empty">Keine Wegpunkte.</p>
+						{/if}
+					</div>
 				</div>
 			</div>
 		{/if}
@@ -306,5 +326,78 @@
 	}
 	.cascade-done span {
 		flex: 1;
+	}
+
+	/* Issue #503 — Grid-Layout: Karte+Profil links (1fr), Wegpunkte rechts (360px). */
+	.editor-grid {
+		display: grid;
+		grid-template-columns: 1fr 360px;
+		gap: 24px;
+		align-items: start;
+	}
+	.editor-left {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+		min-width: 0;
+	}
+
+	/* Issue #503 — Karten-/Profil-/Wegpunkt-Cards (weiße Surface, hoher Kontrast). */
+	.editor-card {
+		background: var(--g-card, #ffffff);
+		border: 1px solid var(--g-ink-faint);
+		border-radius: var(--g-radius-md, 6px);
+		overflow: hidden;
+		box-shadow: var(--g-shadow-1, 0 1px 3px rgba(0, 0, 0, 0.08));
+	}
+	.editor-card--padded {
+		padding-bottom: 8px;
+	}
+	.editor-card-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 12px 18px;
+		border-bottom: 1px solid var(--g-ink-faint);
+	}
+	.editor-card-header--inline {
+		border-bottom: none;
+		padding-bottom: 4px;
+	}
+
+	.editor-sidebar {
+		display: flex;
+		flex-direction: column;
+		min-height: 0;
+	}
+	.sidebar-header {
+		gap: 12px;
+	}
+	.sidebar-count {
+		font-size: 14px;
+		font-weight: 600;
+		color: var(--g-ink);
+		margin-top: 2px;
+	}
+	.sidebar-list {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		padding: 4px 6px 8px;
+		overflow-y: auto;
+	}
+	.sidebar-empty {
+		padding: 14px;
+		font-size: var(--g-text-sm, 13px);
+		color: var(--g-ink-muted);
+		margin: 0;
+	}
+
+	/* Mobile: stack auf eine Spalte (Tab-Inhalt im TripEditView).
+	   Die Karte bleibt zuerst sichtbar; Profil + Wegpunkte folgen darunter. */
+	@media (max-width: 899px) {
+		.editor-grid {
+			grid-template-columns: 1fr;
+		}
 	}
 </style>

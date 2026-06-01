@@ -70,7 +70,7 @@
 
 <style>
 	/* AC-8: semi-transparent weisser Hintergrund + Blur — Strip schwebt ueber dem Editor.
-	   Das Wrapper-Element in WaypointEditorPage rendert den Eyebrow + Zaehler darum herum. */
+	   Das Wrapper-Element rendert den Eyebrow + Zaehler darum herum (siehe EditStagesPanelNew). */
 	.etappen-strip {
 		background: rgba(255, 255, 255, 0.4);
 		backdrop-filter: blur(2px);

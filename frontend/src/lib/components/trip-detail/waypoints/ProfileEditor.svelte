@@ -7,9 +7,8 @@
 	//   - Aktiver Pin: r=7 statt r=5
 	//
 	// Pin-Style:
-	//   - suggested === true:  stroke=warning, dasharray=3,3, fill=white, stroke-width=2
-	//   - bestaetigt:         fill=ink-strong, stroke=ink-strong
-	//   - aktiv:              r=7
+	//   - fill=ink-strong, stroke=ink-strong, stroke-width=2
+	//   - aktiv: r=7
 	//
 	// Edge-Cases (wie ProfileChart §8d/e):
 	//   - 0 Wegpunkte  → keine Polyline, keine Pins
@@ -174,15 +173,13 @@
 
 	{#each positions as p (p.wp.id)}
 		{@const isActive = p.wp.id === activeWaypointId}
-		{@const isSuggested = p.wp.suggested === true}
 		<circle
 			cx={p.x}
 			cy={p.y}
 			r={isActive ? 7 : 5}
-			fill={isSuggested ? 'white' : 'var(--g-ink-strong)'}
-			stroke={isSuggested ? 'var(--g-warning)' : 'var(--g-ink-strong)'}
+			fill="var(--g-ink-strong)"
+			stroke="var(--g-ink-strong)"
 			stroke-width="2"
-			stroke-dasharray={isSuggested ? '3,3' : undefined}
 			onclick={makeWaypointClickHandler(p.wp.id)}
 			onkeydown={makeWaypointKeyHandler(p.wp.id)}
 			role="button"
