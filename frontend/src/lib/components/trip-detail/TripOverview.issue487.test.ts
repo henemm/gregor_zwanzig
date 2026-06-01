@@ -118,10 +118,16 @@ describe('AC-5: Action-Links zu Tab-Hashes', () => {
 		);
 	});
 
-	test('Stages-Karte verlinkt auf #stages', () => {
+	test('Stages-Karte verlinkt auf /trips/[id]/edit (Issue #503)', () => {
+		// Issue #503 AC-1: "Etappen öffnen" navigiert nicht mehr zum #stages-Tab,
+		// sondern direkt in den Wegpunkt-Editor /trips/{trip.id}/edit.
+		const hasEditLink =
+			source.includes('/trips/${trip.id}/edit') ||
+			source.includes('/trips/{trip.id}/edit') ||
+			/\/trips\/\$\{[a-zA-Z_.]+\}\/edit/.test(source);
 		assert.ok(
-			source.includes('#stages'),
-			'Karte "Route & Etappen" muss einen Link zu "#stages" haben'
+			hasEditLink,
+			'Karte "Route & Etappen" muss auf /trips/{trip.id}/edit verlinken (Issue #503 AC-1)'
 		);
 	});
 

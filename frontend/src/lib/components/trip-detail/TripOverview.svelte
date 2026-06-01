@@ -155,7 +155,7 @@
 			title="Route & Etappen"
 			items={stageItems}
 			actionText="Etappen öffnen"
-			actionHref="#stages"
+			actionHref="/trips/{trip.id}/edit"
 			testid="card-stages"
 		/>
 		<DetailCard

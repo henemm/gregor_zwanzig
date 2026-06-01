@@ -42,7 +42,7 @@
 
 <div
 	data-testid="etappen-strip"
-	class="flex flex-row gap-2 overflow-x-auto pb-2"
+	class="etappen-strip flex flex-row gap-2 overflow-x-auto pb-2"
 	use:dndzone={{ items: stages, flipDurationMs: 150, dropTargetStyle: {}, type: 'horizontal' }}
 	onconsider={handleDndConsider}
 	onfinalize={handleDndFinalize}
@@ -67,3 +67,13 @@
 		</div>
 	{/each}
 </div>
+
+<style>
+	/* AC-8: semi-transparent weisser Hintergrund + Blur — Strip schwebt ueber dem Editor.
+	   Das Wrapper-Element in WaypointEditorPage rendert den Eyebrow + Zaehler darum herum. */
+	.etappen-strip {
+		background: rgba(255, 255, 255, 0.4);
+		backdrop-filter: blur(2px);
+		-webkit-backdrop-filter: blur(2px);
+	}
+</style>

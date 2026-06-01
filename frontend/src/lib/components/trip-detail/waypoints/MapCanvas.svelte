@@ -91,5 +91,5 @@
 	data-testid="map-canvas"
 	bind:this={mapEl}
 	class="rounded border border-[var(--g-ink-faint)]/20"
-	style="width:400px;height:300px;"
+	style="width:100%;height:440px;"
 ></div>

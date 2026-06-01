@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { Segmented } from '$lib/components/atoms';
 	import TripOverview from './TripOverview.svelte';
-	import WaypointsPanel from './WaypointsPanel.svelte';
 	import WeatherMetricsTab from './WeatherMetricsTab.svelte';
 	import AlertsTab from '$lib/components/alerts-tab/AlertsTab.svelte';
 	import BriefingsTab from '$lib/components/briefings-tab/BriefingsTab.svelte';
@@ -109,7 +108,10 @@
 				{#if tab.value === 'overview' && trip}
 					<TripOverview {trip} />
 				{:else if tab.value === 'stages' && trip}
-					<WaypointsPanel {trip} />
+					<div class="stages-redirect" data-testid="stages-redirect">
+						<p>Etappen und Wegpunkte werden im Editor bearbeitet.</p>
+						<a href="/trips/{trip.id}/edit" class="stages-redirect-link">Wegpunkt-Editor öffnen →</a>
+					</div>
 				{:else if tab.value === 'weather' && trip}
 					<WeatherMetricsTab {trip} />
 				{:else if tab.value === 'alerts' && trip}
@@ -235,6 +237,20 @@
 		gap: 1.5rem;
 		grid-template-columns: minmax(0, 1fr) 360px;
 		align-items: start;
+	}
+	.stages-redirect {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		padding: 1.5rem;
+		font-size: 0.875rem;
+		color: var(--g-ink, #1a1a18);
+	}
+	.stages-redirect-link {
+		align-self: flex-start;
+		color: var(--g-accent);
+		text-decoration: underline;
+		font-weight: 500;
 	}
 	@media (max-width: 960px) {
 		.preview-grid {
