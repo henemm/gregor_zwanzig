@@ -1,6 +1,7 @@
 # Design Request — Briefing-Vorschau + Versandauslösung im Orts-Vergleich
 
 **Priorität:** Medium  
+**GitHub Issue:** #514 — Bug: CompareDetail zeigt falschen Platzhalter  
 **Bezug:** `/compare/[id]` Detail-Seite + `/compare` Listenansicht  
 *(Claude Design hat keinen Zugriff auf GitHub Issues — alle relevanten Infos stehen vollständig in diesem Dokument.)*
 
