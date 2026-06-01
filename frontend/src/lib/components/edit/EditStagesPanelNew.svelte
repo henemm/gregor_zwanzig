@@ -440,7 +440,7 @@
 	}
 	.save-ok {
 		font-size: 0.875rem;
-		color: var(--g-success, #2d8a4e);
+		color: var(--g-good);
 	}
 	.save-err {
 		font-size: 0.875rem;
