@@ -298,3 +298,63 @@ class TestDetectCommittedScope:
         assert any(s in scope for s in valid_scopes), (
             f"Unbekannter Scope-Wert: {scope!r}"
         )
+
+
+class TestE2EVerifiedPersistence:
+    """Regression-Tests: .claude/e2e_verified.json muss gitignored + untracked bleiben.
+
+    Hintergrund: In e0c72c8 wurde die Datei aus dem Git-Index entfernt (Issue #525).
+    Diese Tests stellen sicher, dass das Gate-Artefakt nie wieder versehentlich
+    committed wird und dass git reset --hard es nicht loescht.
+    """
+
+    def test_e2e_verified_is_not_git_tracked(self):
+        """AC-2: git ls-files --error-unmatch schlaegt fehl → Datei ist untracked."""
+        result = subprocess.run(
+            ["git", "ls-files", "--error-unmatch", ".claude/e2e_verified.json"],
+            cwd=str(REPO_DIR),
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode != 0, (
+            ".claude/e2e_verified.json ist im Git-Index — muss untracked bleiben "
+            "(Sofortfix e0c72c8 wurde rueckgaengig gemacht?). "
+            f"Ausgabe: {result.stderr}"
+        )
+
+    def test_e2e_verified_survives_git_reset_hard(self, tmp_path):
+        """AC-1: git reset --hard loescht untracked+gitignored Dateien nicht."""
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        subprocess.run(["git", "init"], cwd=str(repo), check=True, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@test.com"],
+            cwd=str(repo), check=True, capture_output=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Test"],
+            cwd=str(repo), check=True, capture_output=True,
+        )
+        gitignore = repo / ".gitignore"
+        gitignore.write_text(".claude/e2e_verified.json\n")
+        subprocess.run(["git", "add", ".gitignore"], cwd=str(repo), check=True, capture_output=True)
+        subprocess.run(
+            ["git", "commit", "-m", "init"],
+            cwd=str(repo), check=True, capture_output=True,
+        )
+        claude_dir = repo / ".claude"
+        claude_dir.mkdir()
+        verified = claude_dir / "e2e_verified.json"
+        verified.write_text('{"verified_commit": "abc123", "staging_verdict": "VERIFIED"}')
+        subprocess.run(
+            ["git", "reset", "--hard", "HEAD"],
+            cwd=str(repo), check=True, capture_output=True,
+        )
+        assert verified.exists(), (
+            ".claude/e2e_verified.json wurde durch git reset --hard geloescht — "
+            "sie muss als untracked Datei erhalten bleiben."
+        )
+        content = verified.read_text()
+        assert "abc123" in content, (
+            f"Dateiinhalt wurde veraendert — erwartet 'abc123', bekam: {content!r}"
+        )
