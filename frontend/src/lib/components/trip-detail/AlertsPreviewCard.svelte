@@ -59,7 +59,7 @@
 		</ul>
 	{/if}
 
-	<a href="#alerts" data-testid="right-card-alerts-edit-link" class="edit-link">
+	<a href="?tab=alerts" data-testid="right-card-alerts-edit-link" class="edit-link">
 		Regeln bearbeiten →
 	</a>
 </GCard>

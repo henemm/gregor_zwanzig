@@ -21,13 +21,35 @@
 	import { addDays, computeCascadeDelta } from './cascade.ts';
 	import { Eyebrow, Btn, Dot, Pill } from '$lib/components/atoms';
 	import { computeArrivalTimes } from '$lib/utils/naismith';
-	import { interpolateWaypoint } from '$lib/utils/waypointEditor';
+	import { interpolateWaypoint, stripSuggested } from '$lib/utils/waypointEditor';
 	import type { Stage, Waypoint } from '$lib/types';
+	import { api } from '$lib/api.js';
 
 	interface Props {
 		stages: Stage[];
+		tripId?: string;
+		showSave?: boolean;
 	}
-	let { stages = $bindable() }: Props = $props();
+	let { stages = $bindable(), tripId, showSave = true }: Props = $props();
+
+	let saving = $state(false);
+	let saveSuccess = $state(false);
+	let saveError = $state<string | null>(null);
+
+	async function save(): Promise<void> {
+		if (!tripId) return;
+		saving = true;
+		saveError = null;
+		try {
+			await api.put(`/api/trips/${tripId}`, { stages: stripSuggested(stages) });
+			saveSuccess = true;
+			setTimeout(() => { saveSuccess = false; }, 3000);
+		} catch (e: unknown) {
+			saveError = e instanceof Error ? e.message : 'Speichern fehlgeschlagen';
+		} finally {
+			saving = false;
+		}
+	}
 
 	// Pausentag = Etappe ohne Wegpunkte (Spec-Definition §5/AC-10).
 	const isPause = (s: Stage): boolean => s.waypoints.length === 0;
@@ -298,6 +320,16 @@
 			</div>
 		{/if}
 	{/if}
+
+	{#if showSave}
+		<div class="save-bar">
+			<Btn variant="primary" size="sm" onclick={save} disabled={saving || !tripId}>
+				{saving ? 'Speichern …' : 'Etappen speichern'}
+			</Btn>
+			{#if saveSuccess}<span class="save-ok">Gespeichert ✓</span>{/if}
+			{#if saveError}<span class="save-err">{saveError}</span>{/if}
+		</div>
+	{/if}
 </div>
 
 <style>
@@ -399,5 +431,19 @@
 		.editor-grid {
 			grid-template-columns: 1fr;
 		}
+	}
+	.save-bar {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		padding-top: 0.5rem;
+	}
+	.save-ok {
+		font-size: 0.875rem;
+		color: var(--g-success, #2d8a4e);
+	}
+	.save-err {
+		font-size: 0.875rem;
+		color: var(--g-danger, #b34a2a);
 	}
 </style>

@@ -165,7 +165,7 @@
 		{#if activeTab === 'route'}
 			<EditRouteSection bind:tripName bind:stages mode="edit" />
 		{:else if activeTab === 'etappen'}
-			<EditStagesPanelNew bind:stages />
+			<EditStagesPanelNew bind:stages tripId={trip.id} showSave={false} />
 		{:else if activeTab === 'wetter'}
 			<WeatherSummaryCard displayConfig={trip.display_config} tripId={trip.id} />
 		{:else if activeTab === 'reports'}

@@ -17,8 +17,9 @@
 	// reaktiv ohne Page-Reload sichtbar werden.
 	let trip = $state<Trip>(data.trip);
 
-	// Initial-Tab aus URL-Hash. $derived bleibt reaktiv falls user navigation triggert.
-	const initialTab = $derived((page.url.hash || '').replace(/^#/, '') || 'overview');
+	// Issue #516 — Initial-Tab aus ?tab=…-Query (kanonisches Schema, kein #hash mehr).
+	// $derived bleibt reaktiv falls user navigation triggert.
+	const initialTab = $derived(page.url.searchParams.get('tab') || 'overview');
 
 	const now = new Date();
 	const status = $derived(deriveTripStatus(trip, now));

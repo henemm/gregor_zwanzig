@@ -23,7 +23,7 @@
 
 	<div class="cta-stack">
 		<a
-			href="#preview"
+			href="?tab=preview"
 			data-channel="email"
 			data-testid="right-card-preview-email"
 			class="cta-link"
@@ -31,7 +31,7 @@
 			E-Mail-Vorschau →
 		</a>
 		<a
-			href="#preview"
+			href="?tab=preview"
 			data-channel="sms"
 			data-testid="right-card-preview-sms"
 			class="cta-link"

@@ -35,7 +35,7 @@
 		</div>
 	{/if}
 
-	<a href="#weather" data-testid="right-card-weather-edit-link" class="edit-link">
+	<a href="?tab=weather" data-testid="right-card-weather-edit-link" class="edit-link">
 		Bearbeiten →
 	</a>
 </GCard>
