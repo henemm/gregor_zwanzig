@@ -10,7 +10,7 @@
 	//   - MapCanvas (Leaflet/OpenTopoMap) ist eingebunden
 	//   - Layout: grid 1fr / 360px (links Karte+Profil-Cards, rechts Wegpunkte)
 	//   - KI/Auto/Manuell-Unterscheidung entfernt — alle Wegpunkte gleichwertig
-	//   - ProfileEditor.onProfileAdd fügt einen Wegpunkt OHNE suggested-Flag ein
+	//   - ProfileEditor.onProfileAdd fügt einen Wegpunkt ohne KI-Markierung ein
 
 	import EtappenStrip from '$lib/components/trip-detail/waypoints/EtappenStrip.svelte';
 	import MapCanvas from '$lib/components/trip-detail/waypoints/MapCanvas.svelte';
@@ -21,7 +21,7 @@
 	import { addDays, computeCascadeDelta } from './cascade.ts';
 	import { Eyebrow, Btn, Dot, Pill } from '$lib/components/atoms';
 	import { computeArrivalTimes } from '$lib/utils/naismith';
-	import { interpolateWaypoint, stripSuggested } from '$lib/utils/waypointEditor';
+	import { interpolateWaypoint } from '$lib/utils/waypointEditor';
 	import type { Stage, Waypoint } from '$lib/types';
 	import { api } from '$lib/api.js';
 
@@ -41,7 +41,7 @@
 		saving = true;
 		saveError = null;
 		try {
-			await api.put(`/api/trips/${tripId}`, { stages: stripSuggested(stages) });
+			await api.put(`/api/trips/${tripId}`, { stages: stages });
 			saveSuccess = true;
 			setTimeout(() => { saveSuccess = false; }, 3000);
 		} catch (e: unknown) {

@@ -2,9 +2,8 @@
 	// WaypointPin — SVG-Pin-Marker (Kreis + Zahl + spitzer Fuß) für Wegpunkt-Editor.
 	// Spec: docs/specs/modules/epic_137_wegpunkt_editor.md
 	//
-	// Issue #522: Der gestrichelte `suggested`-Branch wurde entfernt (toter Code
-	// nach Issue #503 — alle Wegpunkte sind gleichwertig). Komponente bleibt für
-	// zukünftige Leaflet Custom Marker bestehen.
+	// Issue #522/#523: Dashed-Pin-Branch entfernt (toter Code nach #503 / C8 aus #506).
+	// Komponente bleibt für zukünftige Leaflet Custom Marker bestehen.
 
 	interface Props {
 		index: number;
