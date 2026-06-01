@@ -126,6 +126,10 @@ class FixtureProvider:
                     dni_wm2=p.get("dni_wm2"),
                     uv_index=p.get("uv_index"),
                     snow_depth_cm=p.get("snow_depth_cm"),
+                    cloud_low_pct=_maybe_int(p.get("cloud_low_pct")),
+                    pop_pct=_maybe_int(p.get("pop_pct")),
+                    snowfall_limit_m=_maybe_int(p.get("snowfall_limit_m")),
+                    wind_dir_deg=p.get("wind_dir_deg"),
                 )
             )
 

@@ -184,9 +184,12 @@ class PreviewService:
         )
 
         from src.formatters.sms_trip import SMSTripFormatter
-        # Input-Hygiene: ':' aus Stage-Namen entfernen, damit der Prefix-
-        # Separator ':' in sms_format.md §3.1 eindeutig bleibt.
-        clean_stage = (stage_name or "Etappe").replace(":", "").strip()
+        # Input-Hygiene: Bei "ID: Beschreibung"-Stage-Namen (z.B. "KHW_10:
+        # von Egger Alm...") nur den Teil vor dem ersten ':' nehmen, damit
+        # der Prefix-Separator ':' in sms_format.md §3.1 eindeutig bleibt
+        # und das nachgelagerte [:10]-Slice (_sanitize_stage_name) nicht
+        # bereits gekürzte Beschreibungen produziert. Issue #497.
+        clean_stage = (stage_name or "Etappe").split(":", 1)[0].strip()
         # Bug #397 (F001): tz durchreichen, sonst rendern die Stunden-Token UTC
         # statt Ortszeit (z.B. R5.0@8 statt @10 für CEST).
         token_line = SMSTripFormatter().format_sms(

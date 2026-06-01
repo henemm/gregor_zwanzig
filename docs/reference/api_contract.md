@@ -90,6 +90,13 @@ Ein **Normalized Forecast Timeseries**-Objekt (siehe unten), bestehend aus `meta
 | wind_chill_c       | float           | Gefuehlte Temperatur [°C]                      |
 | visibility_m       | integer         | Sichtweite [m]                                 |
 
+#### Zusätzliche Felder (optional, aus Issue #497)
+| Feld               | Typ              | Beschreibung                                   |
+|--------------------|-----------------|------------------------------------------------|
+| cloud_low_pct      | integer (0–100) | Tiefwolken-Anteil [%]                          |
+| pop_pct            | integer (0–100) | Niederschlagswahrscheinlichkeit [%] (Duplikat deprecated — siehe pop_pct Basis-Feld) |
+| wind_dir_deg       | integer (0–359) | Windrichtung [Grad]                            |
+
 ### Provenance (Meta, Pflicht)
 - `provider`, `model`, `run`, `interp`, `grid_res_km`, optional `stations_used[]`
 
@@ -1662,6 +1669,7 @@ Content-Type: text/plain
 
 ## Changelog
 
+- 2026-06-01: Issue #497 (BugFix) — Preview SMS Stage-Name + Fixture Fields: ForecastDataPoint from FixtureProvider now reads all 4 demo-mode fields (`cloud_low_pct`, `pop_pct`, `snowfall_limit_m`, `wind_dir_deg`) from fixture JSONs. Preview SMS rendering fixed: `.split(":", 1)[0].strip()` for correct Stage-Name extraction.
 - 2026-05-31: Issue #483 — Demo-Modus im Vorschau-Tab: Added `demo: bool` Query-Parameter to all 4 preview endpoints (`/api/preview/{trip_id}/[email|sms|signal|telegram]`). When `demo=1`, endpoints use FixtureProvider instead of live weather; demo mode ideal for testing preview rendering on past trips. Supports AC-1–AC-6 for demo banner UX and fallback to live weather. See section 20 (new) and `docs/specs/modules/issue_483_demo_mode_preview.md`.
 - 2026-05-31: Issue #495 — MapCanvas Leaflet-Karte: `MapCanvas.svelte` vollständig auf Leaflet 1.9.4 mit OpenTopoMap-Tiles umgestellt. `buildMapPositions()` und `MapPosition`-Typ aus `frontend/src/lib/utils/waypointEditor.ts` entfernt — Leaflet übernimmt Projektion und Zoom. Wegpunkt-Editor zeigt jetzt geografisch korrekte Höhenschichtlinien-Karte mit Marker-Popups und Polyline. 3 Dateien geändert: `package.json` (+leaflet, +@types/leaflet), `MapCanvas.svelte` (~180 LoC Rewrite), `waypointEditor.ts` (-buildMapPositions, -MapPosition).
 - 2026-05-30: Issue #467 — Passkey V3 Discoverable Credentials + Conditional UI: 2 new public endpoints (`POST /api/auth/passkey/discoverable/begin` and `/finish`) enable login without username. Browser shows registered passkeys as native autofill suggestions on username field focus via WebAuthn `mediation: 'conditional'`. Begin returns full assertion object with top-level `"mediation":"conditional"` flag. Finish accepts `userHandle` from authenticator and looks up user via `DiscoverableUserHandler` callback. Rate-limit 30/h per IP (same as V1). Frontend: `loginWithDiscoverablePasskey()` function in `passkey.ts` + `onMount` conditional UI init in login page with `autocomplete="username webauthn"` attribute. Tests: 6 mock-free roundtrip tests covering success path, empty userHandle, unknown user, challenge replay, and TTL expiry. See `docs/specs/modules/issue_467_discoverable_credentials.md`.
