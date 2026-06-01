@@ -92,22 +92,6 @@ test('Alle Vorlagen haben nicht-leeren shortcode (max 20 Zeichen)', () => {
 	}
 });
 
-// --- AC-14: Kein suggested-Flag ------------------------------------------------
-
-test('Kein Waypoint einer Vorlage hat suggested=true', () => {
-	for (const tpl of TRIP_TEMPLATES) {
-		for (const stage of tpl.stages()) {
-			for (const wp of stage.waypoints) {
-				assert.equal(
-					(wp as unknown as Record<string, unknown>)['suggested'],
-					undefined,
-					`${tpl.id} Waypoint hat suggested gesetzt`
-				);
-			}
-		}
-	}
-});
-
 // --- AC-13: Factory-Funktion — frische IDs -----------------------------------
 
 test('stages() liefert jedes Mal neue Stage-IDs (Factory-Funktion)', () => {

@@ -12,7 +12,6 @@ import type {
 	ReportConfig,
 	Stage,
 	Trip,
-	Waypoint,
 	WeatherConfigMetric
 } from '$lib/types';
 import { addDays, mapActivityToProfile, newId } from './wizardHelpers.ts';
@@ -113,11 +112,8 @@ export class WizardState {
 
 	/**
 	 * Sub-Spec #163 §3.4: Step 3 darf immer weitergeschaltet werden — keine
-	 * Mindest-Bestaetigung erzwingen (User-Entscheidung 2026-05-10). Begruendung:
-	 * `stripSuggested` in `toTripPayload` entfernt das `suggested`-Flag sowieso —
-	 * unbestaetigte Waypoints werden beim Save automatisch ohne Flag persistiert,
-	 * d.h. faktisch akzeptiert. Explizites Verwerfen ist die einzige Aktion mit
-	 * fachlicher Konsequenz.
+	 * Mindest-Bestaetigung erzwingen (User-Entscheidung 2026-05-10). Explizites
+	 * Verwerfen ist die einzige Aktion mit fachlicher Konsequenz.
 	 *
 	 * Getter (nicht $derived) — siehe canAdvanceStep1 fuer Begruendung.
 	 */
@@ -182,40 +178,7 @@ export class WizardState {
 		// Backend liefert keine id zurueck (POST /api/gpx/parse) — wir vergeben
 		// sie hier konsistent. Falls Caller bereits eine id hat, respektieren.
 		const stageWithId: Stage = stage.id ? stage : { ...stage, id: newId() };
-		// Sub-Spec #163 §3.1: Waypoints aus GPX-Upload als automatische Vorschlaege
-		// markieren. Zentralisiert (Variante A, User-Entscheidung 2026-05-10) statt
-		// Mount-Hook in Step 3 — funktioniert auch fuer zukuenftige Pfade
-		// (z.B. #165 Vorlagen). Explizit gesetzte Werte (true|false) bleiben.
-		const withSuggested: Stage = {
-			...stageWithId,
-			waypoints: stageWithId.waypoints.map((wp) =>
-				wp.suggested !== undefined ? wp : { ...wp, suggested: true }
-			)
-		};
-		this.stages = [...this.stages, withSuggested];
-	}
-
-	/**
-	 * Sub-Spec #163 §3.2: Entfernt das `suggested`-Flag aus einem Wegpunkt.
-	 * Der Wegpunkt gilt danach als bestaetigt. Falsche stageId/waypointId:
-	 * No-op (kein Crash, State unveraendert).
-	 *
-	 * Wichtig: Property wird via Destructuring vollstaendig entfernt — NICHT auf
-	 * `false` gesetzt — sonst zaehlt `Object.prototype.hasOwnProperty('suggested')`
-	 * weiterhin als true (siehe AC#14a).
-	 */
-	confirmWaypoint(stageId: string, waypointId: string): void {
-		this.stages = this.stages.map((stage) => {
-			if (stage.id !== stageId) return stage;
-			return {
-				...stage,
-				waypoints: stage.waypoints.map((wp) => {
-					if (wp.id !== waypointId) return wp;
-					const { suggested: _ignored, ...rest } = wp;
-					return rest;
-				})
-			};
-		});
+		this.stages = [...this.stages, stageWithId];
 	}
 
 	/**
@@ -328,7 +291,6 @@ export class WizardState {
 
 	/**
 	 * Baut einen persistierbaren Trip aus dem aktuellen Wizard-State.
-	 * - strippt das transiente `suggested`-Flag aus jedem Wegpunkt
 	 * - leitet `aggregation.profile` aus `activity` ab (sofern gesetzt)
 	 * - leerer Shortcode wird zu undefined (omitempty-Symmetrie)
 	 * - generiert eine neue Trip-ID via newId()
@@ -337,7 +299,7 @@ export class WizardState {
 		const cleanedStages: Stage[] = this.stages.map((stage) =>
 			stripDateOverridden({
 				...stage,
-				waypoints: stage.waypoints.map((wp) => stripSuggested(wp))
+				waypoints: [...stage.waypoints]
 			})
 		);
 
@@ -420,15 +382,9 @@ export class WizardState {
 	}
 }
 
-function stripSuggested(wp: Waypoint): Waypoint {
-	const { suggested: _ignored, ...rest } = wp;
-	return rest;
-}
-
 /**
  * Strippt das transiente `dateOverridden`-Flag aus einer Stage.
- * Wird beim Save (`toTripPayload`) angewendet — analog `stripSuggested` bei Waypoints.
- * Sub-Spec #162 §2.
+ * Wird beim Save (`toTripPayload`) angewendet. Sub-Spec #162 §2.
  */
 function stripDateOverridden(stage: Stage): Stage {
 	const { dateOverridden: _ignored, ...rest } = stage;

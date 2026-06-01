@@ -8,8 +8,7 @@
 	//
 	// State:
 	//   - activeStageId — lokaler $state, init = erste Nicht-Pause-Stage
-	//   - WizardState.stages[i].waypoints[j].suggested wird via
-	//     wizard.confirmWaypoint / wizard.rejectWaypoint mutiert
+	//   - WizardState.stages[i].waypoints wird via wizard.rejectWaypoint mutiert
 	//
 	// Empty-States (Spec §8):
 	//   - §8a: keine Stages
@@ -57,12 +56,6 @@
 		return function handleStageSelect() {
 			if (isPauseStage(stage)) return;
 			activeStageId = stage.id;
-		};
-	}
-
-	function makeConfirmHandler(stageId: string, waypointId: string) {
-		return function handleConfirm() {
-			wizard.confirmWaypoint(stageId, waypointId);
 		};
 	}
 
@@ -145,7 +138,6 @@
 							<WaypointRow
 								{waypoint}
 								index={i}
-								onConfirm={makeConfirmHandler(activeStage.id, waypoint.id)}
 								onReject={makeRejectHandler(activeStage.id, waypoint.id)}
 							/>
 						{/each}

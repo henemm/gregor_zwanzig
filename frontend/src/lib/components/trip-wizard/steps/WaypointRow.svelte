@@ -1,40 +1,27 @@
 <script lang="ts">
-	// WaypointRow — eine Zeile in der Waypoint-Confirm-UI rechts (Sub-Spec #163 §6).
+	// WaypointRow — eine Zeile in der Waypoint-Liste rechts (Step 3).
 	//
 	// Props:
-	//   waypoint   — Waypoint-Objekt (suggested?: boolean)
+	//   waypoint   — Waypoint-Objekt
 	//   index      — Position in der Liste (0-basiert) — fuer TestIDs
-	//   onConfirm  — () => void
-	//   onReject   — () => void
+	//   onReject   — () => void (Löschen-Aktion)
 	//
 	// Layout (horizontal):
-	//   [Pin-Indikator (Inline-SVG)] [Name] [Hoehe] [Zeit] [Bestaetigen-Btn?] [Verwerfen-Btn]
+	//   [Pin-Indikator (Inline-SVG)] [Name] [Hoehe] [Zeit] [Verwerfen-Btn]
 	//
-	// Pin-Style entspricht ProfileChart (Spec §5):
-	//   - suggested:  stroke=warning, dasharray=3,3, fill=white
-	//   - bestaetigt: stroke=ink-strong, fill=ink-strong, kein dash
-	//
-	// Bestaetigen-Btn: nur sichtbar wenn waypoint.suggested === true (AC#11).
+	// Pin-Style: einheitlich solid (Issue #518): stroke=ink-strong, fill=ink-strong.
 	// Verwerfen-Btn: immer sichtbar.
 
-	import CheckIcon from '@lucide/svelte/icons/check';
 	import XIcon from '@lucide/svelte/icons/x';
 	import type { Waypoint } from '$lib/types';
 
 	interface Props {
 		waypoint: Waypoint;
 		index: number;
-		onConfirm: () => void;
 		onReject: () => void;
 	}
 
-	let { waypoint, index, onConfirm, onReject }: Props = $props();
-
-	const isSuggested = $derived(waypoint.suggested === true);
-
-	function handleConfirm() {
-		onConfirm();
-	}
+	let { waypoint, index, onReject }: Props = $props();
 
 	function handleReject() {
 		onReject();
@@ -46,27 +33,9 @@
 	data-waypoint-index={index}
 	class="flex items-center gap-3 border border-[var(--g-ink-faint)]/30 rounded-md px-3 py-2 bg-white/40"
 >
-	<!-- Pin-Indikator (Inline-SVG, gleiche Style-Logik wie ProfileChart) -->
-	<svg
-		width="14"
-		height="14"
-		viewBox="0 0 14 14"
-		aria-label={isSuggested ? 'Vorschlag (unbestätigt)' : 'Bestätigt'}
-		role="img"
-	>
-		{#if isSuggested}
-			<circle
-				cx="7"
-				cy="7"
-				r="5"
-				stroke="var(--g-warning)"
-				stroke-dasharray="3,3"
-				stroke-width="2"
-				fill="white"
-			/>
-		{:else}
-			<circle cx="7" cy="7" r="5" stroke="var(--g-ink-strong)" fill="var(--g-ink-strong)" />
-		{/if}
+	<!-- Pin-Indikator (Inline-SVG, einheitlich solid) -->
+	<svg width="14" height="14" viewBox="0 0 14 14" aria-label="Wegpunkt" role="img">
+		<circle cx="7" cy="7" r="5" stroke="var(--g-ink-strong)" fill="var(--g-ink-strong)" />
 	</svg>
 
 	<span class="flex-1 truncate text-sm">{waypoint.name}</span>
@@ -77,19 +46,6 @@
 
 	{#if waypoint.time_window}
 		<span class="text-sm text-[var(--g-ink-muted)]">{waypoint.time_window}</span>
-	{/if}
-
-	{#if isSuggested}
-		<button
-			type="button"
-			data-testid="trip-wizard-step3-confirm-{index}"
-			onclick={handleConfirm}
-			aria-label="Vorschlag bestätigen"
-			data-audit="audit:exempt: Icon (§1.4.11, 3:1)"
-			class="rounded p-1 text-[var(--g-accent)] hover:bg-[var(--g-accent)]/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--g-accent)]"
-		>
-			<CheckIcon class="size-4" />
-		</button>
 	{/if}
 
 	<button

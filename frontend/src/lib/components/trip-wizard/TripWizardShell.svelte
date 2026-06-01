@@ -48,7 +48,7 @@
 
 	const stepHints: Record<number, string | null> = {
 		1: 'GPX-Upload empfohlen — manuelle Eingabe geht auch.',
-		2: 'Algorithmische Wegpunkte sind orange gestrichelt — bestätigen oder verwerfen.',
+		2: null,
 		3: null,
 		4: null,
 		5: 'Unterwegs läuft alles autark. Kein Eingreifen nötig.'

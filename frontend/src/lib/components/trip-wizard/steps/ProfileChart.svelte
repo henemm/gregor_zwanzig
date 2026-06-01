@@ -4,9 +4,7 @@
 	// Default 360x120, Padding 8px allseits → innere Zeichenflaeche 344x104.
 	// Polyline + ein <circle r=5> pro Wegpunkt.
 	//
-	// Pin-Style:
-	//   - suggested === true:  stroke=warning, dasharray=3,3, fill=white, stroke-width=2
-	//   - sonst (bestaetigt):  stroke=ink-strong, fill=ink-strong
+	// Pin-Style: einheitlich solid (Issue #518): stroke=ink-strong, fill=ink-strong.
 	//
 	// Edge-Cases (Spec §8d/e):
 	//   - 0 Wegpunkte  → keine Polyline, keine Pins (leere Zeichenflaeche)
@@ -82,18 +80,6 @@
 		/>
 	{/if}
 	{#each positions as p (p.wp.id)}
-		{#if p.wp.suggested === true}
-			<circle
-				cx={p.x}
-				cy={p.y}
-				r="5"
-				stroke="var(--g-warning)"
-				stroke-dasharray="3,3"
-				stroke-width="2"
-				fill="white"
-			/>
-		{:else}
-			<circle cx={p.x} cy={p.y} r="5" stroke="var(--g-ink-strong)" fill="var(--g-ink-strong)" />
-		{/if}
+		<circle cx={p.x} cy={p.y} r="5" stroke="var(--g-ink-strong)" fill="var(--g-ink-strong)" />
 	{/each}
 </svg>

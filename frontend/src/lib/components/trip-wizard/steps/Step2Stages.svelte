@@ -4,8 +4,7 @@
 	//
 	// Layout (#300 §"Step 2 — Etappen"):
 	//   - Header: "N ETAPPEN ERKANNT AUS N GPX" (Badge-Stil)
-	//   - Etappen-Liste (DnD-sortierbar) mit Pause-Inserter zwischen Rows;
-	//     pro Etappe eine "+N Vorschläge"-Pill bei vorhandenen Wegpunkt-Vorschlägen
+	//   - Etappen-Liste (DnD-sortierbar) mit Pause-Inserter zwischen Rows
 	//   - TemplatePicker (rechte Spalte, unverändert)
 	//
 	// AC-3 #300: Der GPX-Upload (Drop-Zone + Pending-Region) wurde nach Step 1
@@ -20,7 +19,7 @@
 
 	import { getContext } from 'svelte';
 	import PlusIcon from '@lucide/svelte/icons/plus';
-	import { Pill, Btn } from '$lib/components/atoms';
+	import { Btn } from '$lib/components/atoms';
 	import { dndzone, type DndEvent } from 'svelte-dnd-action';
 	import { flip } from 'svelte/animate';
 	import type { Stage } from '$lib/types';
@@ -49,12 +48,6 @@
 	}
 
 	const stageCount = $derived(countNonPauseStages(wizard.stages));
-
-	// --- Vorschläge-Pill (AC-4) ---------------------------------------------
-
-	function suggestedCount(stage: Stage): number {
-		return (stage.waypoints ?? []).filter((wp) => wp.suggested).length;
-	}
 
 	// --- DnD-Handler --------------------------------------------------------
 
@@ -128,7 +121,6 @@
 			onfinalize={handleDndFinalize}
 		>
 			{#each wizard.stages as stage, i (stage.id)}
-				{@const suggested = suggestedCount(stage)}
 				<div animate:flip={{ duration: 200 }} class="flex flex-col">
 					<div class="flex items-center gap-2">
 						<div class="flex-1">
@@ -140,16 +132,6 @@
 								onDelete={handleStageDelete}
 							/>
 						</div>
-						{#if suggested > 0}
-							<Pill
-								tone="accent"
-								data-outlined
-								class="border-dashed shrink-0"
-								data-testid="trip-wizard-step2-suggested-pill-{i}"
-							>
-								+{suggested} Vorschläge
-							</Pill>
-						{/if}
 					</div>
 					<div class="flex justify-center py-1">
 						<button
