@@ -3,7 +3,7 @@ entity_id: issue_519_token_konsolidierung
 type: module
 created: 2026-06-01
 updated: 2026-06-01
-status: draft
+status: active
 version: "1.0"
 tags: [frontend, design-tokens, css, app.css, cleanup, consolidation]
 ---
@@ -12,7 +12,7 @@ tags: [frontend, design-tokens, css, app.css, cleanup, consolidation]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved
 
 ## Purpose
 
@@ -143,19 +143,19 @@ In `docs/design-system/TOKENS.md` die Wetter-Token-Sektion aktualisieren: `--g-w
 ## Acceptance Criteria
 
 - **AC-1:** Given app.css ist geladen, When `--g-success`, `--g-warning`, `--g-danger` ausgelesen werden, Then verweisen alle drei auf kanonische Werte: `--g-success` = `var(--g-good)`, `--g-warning` = `var(--g-warn)`, `--g-danger` = `var(--g-bad)`.
-  - Test: (populated after /tdd-red)
+  - Test: `frontend/src/lib/issue_519_token_konsolidierung.test.ts`
 
 - **AC-2:** Given alle Svelte-Dateien in `frontend/src/`, When nach `var(--g-success)` oder `var(--g-warning)` gesucht wird, Then gibt es keine Fundstelle in einer `*.svelte`-Datei.
-  - Test: (populated after /tdd-red)
+  - Test: `frontend/src/lib/issue_519_token_konsolidierung.test.ts`
 
 - **AC-3:** Given app.css ist geladen, When `--color-destructive` ausgelesen wird, Then ist der Wert `var(--g-danger)` (shadcn-Bridge bleibt erhalten; transitiv: `--g-danger` → `var(--g-bad)` → `#a83232`).
-  - Test: (populated after /tdd-red)
+  - Test: `frontend/src/lib/issue_519_token_konsolidierung.test.ts`
 
 - **AC-4:** Given `_design-system/+page.svelte` ist der aktuelle Quellstand, When das Wetter-Token-Array ausgelesen wird, Then nutzen alle 5 Token-Referenzen `var(--g-wx-*)` — keine Referenz auf `var(--g-weather-*)` bleibt übrig.
-  - Test: (populated after /tdd-red)
+  - Test: `frontend/src/lib/issue_519_token_konsolidierung.test.ts`
 
 - **AC-5:** Given app.css ist geladen, When `--g-good`, `--g-warn`, `--g-bad` ausgelesen werden, Then sind die Werte exakt `#3d6b3a`, `#c08a1a`, `#a83232` (kanonische Werte unverändert).
-  - Test: (populated after /tdd-red)
+  - Test: `frontend/src/lib/issue_519_token_konsolidierung.test.ts`
 
 ## Known Limitations
 
@@ -166,3 +166,4 @@ In `docs/design-system/TOKENS.md` die Wetter-Token-Sektion aktualisieren: `--g-w
 ## Changelog
 
 - 2026-06-01: Initial spec created
+- 2026-06-01: Implementiert und VERIFIED durch Adversary
