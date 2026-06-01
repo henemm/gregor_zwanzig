@@ -64,34 +64,10 @@ test('AC-4b: WizardState hat keine confirmWaypoint-Methode mehr', () => {
 	);
 });
 
-// --- AC-4c: Explizit gesetztes suggested-Flag aus externem Import bleibt beim Save erhalten ---
-// (Regression: toTripPayload darf Wegpunkt-Daten nicht mehr verändern, weil stripSuggested weg ist.)
-// ERWARTET: toTripPayload lässt suggested-Flag unverändert durch (wird nicht gestrippt).
-// AKTUELL (vor Fix): toTripPayload ruft stripSuggested auf → suggested-Flag wird ENTFERNT → FAIL.
-
-test('AC-4c: toTripPayload entfernt suggested-Flag nicht mehr (kein stripSuggested)', () => {
-	const s = new WizardState();
-	s.name = 'Test-Trip';
-	// Direkt in stages schreiben (umgeht addStage-Logik), um suggested:true zu simulieren
-	// (z.B. von einem Backend-Import, der das Feld noch mitschickt).
-	s.stages = [
-		{
-			id: 'st-1',
-			name: 'Etappe 1',
-			date: '2026-06-01',
-			waypoints: [
-				{ id: 'w1', name: 'Gipfel', lat: 45.0, lon: 6.5, elevation_m: 2400, suggested: true }
-			]
-		}
-	];
-	const payload = s.toTripPayload();
-	// Nach dem Fix: suggested bleibt erhalten (kein stripSuggested).
-	assert.equal(
-		payload.stages[0].waypoints[0].suggested,
-		true,
-		'toTripPayload darf suggested nicht mehr entfernen (stripSuggested ist gelöscht)'
-	);
-});
+// --- AC-4c entfernt (Issue #523): Der Test testete, dass `stripSuggested` NICHT
+// mehr aufgerufen wird. Nach #523-Cleanup ist `stripSuggested` komplett entfernt
+// UND das suggested-Property aus dem Waypoint-Typ entfernt — der Test ist obsolet
+// und würde TypeScript-Fehler werfen (Object literal may only specify known properties).
 
 // --- AC-5a: rejectWaypoint existiert noch und löscht den Wegpunkt --------------
 // ERWARTET: bleibt erhalten und funktioniert (Regression).

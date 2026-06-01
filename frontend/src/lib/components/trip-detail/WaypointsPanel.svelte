@@ -10,7 +10,6 @@
 	import WaypointCard from './waypoints/WaypointCard.svelte';
 	import PauseStageView from './waypoints/PauseStageView.svelte';
 	import { isPauseStage } from '$lib/components/trip-wizard/wizardHelpers';
-	import { stripSuggested } from '$lib/utils/waypointEditor';
 	import type { Trip, Stage } from '$lib/types';
 
 	interface Props {
@@ -40,7 +39,7 @@
 		saving = true;
 		saveError = null;
 		try {
-			await api.put(`/api/trips/${trip.id}`, { ...trip, stages: stripSuggested(localStages) });
+			await api.put(`/api/trips/${trip.id}`, { ...trip, stages: localStages });
 			await invalidateAll();
 			onSaved?.();
 		} catch (e) {

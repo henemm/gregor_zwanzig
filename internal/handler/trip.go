@@ -328,8 +328,6 @@ type confirmWaypointRequest struct {
 // ConfirmWaypointHandler confirms (or unconfirms) a waypoint suggestion and
 // optionally stores a manual arrival_override. Issue #303 §5.
 //
-// Legacy compatibility: a waypoint with suggested==true and empty Origin is
-// normalized to Origin="algorithmic"/SuggestionReason="legacy_suggested".
 // arrival_calculated is recomputed via ComputeStageArrivals so the persisted
 // Naismith value stays current alongside the user override.
 func ConfirmWaypointHandler(s *store.Store) http.HandlerFunc {
@@ -358,12 +356,6 @@ func ConfirmWaypointHandler(s *store.Store) http.HandlerFunc {
 					continue
 				}
 				found = true
-				// Legacy-Normalisierung: Suggested=true + leeres Origin → "algorithmic".
-				if wp.Origin == "" && wp.Suggested {
-					wp.Origin = "algorithmic"
-					reason := "legacy_suggested"
-					wp.SuggestionReason = &reason
-				}
 				confirmed := req.Confirmed
 				wp.Confirmed = &confirmed
 				if req.Confirmed {

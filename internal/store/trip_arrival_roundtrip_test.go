@@ -37,7 +37,7 @@ func TestTripRoundTrip_PreservesFieldsWithoutArrival(t *testing.T) {
 				"name": "Tag 1",
 				"date": "2026-05-23",
 				"waypoints": [
-					{"id":"W1","name":"Start","lat":47.0,"lon":11.0,"elevation_m":500,"suggested":true},
+					{"id":"W1","name":"Start","lat":47.0,"lon":11.0,"elevation_m":500},
 					{"id":"W2","name":"Ziel","lat":47.036,"lon":11.0,"elevation_m":800}
 				]
 			}
@@ -82,9 +82,6 @@ func TestTripRoundTrip_PreservesFieldsWithoutArrival(t *testing.T) {
 	}
 	if wps[0].Lat != 47.0 || wps[0].Lon != 11.0 || wps[0].ElevationM != 500 {
 		t.Fatalf("wp[0] lat/lon/elevation verändert: %+v", wps[0])
-	}
-	if !wps[0].Suggested {
-		t.Fatalf("wp[0] suggested ging verloren: %+v", wps[0])
 	}
 	if wps[1].ID != "W2" || wps[1].ElevationM != 800 {
 		t.Fatalf("wp[1] verändert: %+v", wps[1])
@@ -154,10 +151,9 @@ func TestTripRoundTrip_WithConfirmationFields(t *testing.T) {
 				"waypoints": [
 					{"id":"W1","name":"Start","lat":47.0,"lon":11.0,"elevation_m":500,
 					 "origin":"algorithmic","confirmed":true,
-					 "suggestion_reason":"detected_peak","arrival_override":"11:45"},
+					 "arrival_override":"11:45"},
 					{"id":"W2","name":"Tal","lat":47.05,"lon":11.05,"elevation_m":800,
-					 "origin":"algorithmic","confirmed":false,
-					 "suggestion_reason":"detected_valley"}
+					 "origin":"algorithmic","confirmed":false}
 				]
 			}
 		]
@@ -191,9 +187,6 @@ func TestTripRoundTrip_WithConfirmationFields(t *testing.T) {
 	if wps[0].Confirmed == nil || !*wps[0].Confirmed {
 		t.Fatalf("W1 confirmed=true ging verloren: %v", wps[0].Confirmed)
 	}
-	if wps[0].SuggestionReason == nil || *wps[0].SuggestionReason != "detected_peak" {
-		t.Fatalf("W1 suggestion_reason ging verloren: %v", wps[0].SuggestionReason)
-	}
 	if wps[0].ArrivalOverride == nil || *wps[0].ArrivalOverride != "11:45" {
 		t.Fatalf("W1 arrival_override ging verloren: %v", wps[0].ArrivalOverride)
 	}
@@ -201,8 +194,5 @@ func TestTripRoundTrip_WithConfirmationFields(t *testing.T) {
 	// W2 — confirmed=false MUSS erhalten bleiben (*bool, nicht bool+omitempty).
 	if wps[1].Confirmed == nil || *wps[1].Confirmed {
 		t.Fatalf("W2 confirmed=false ging durch Roundtrip verloren: %v", wps[1].Confirmed)
-	}
-	if wps[1].SuggestionReason == nil || *wps[1].SuggestionReason != "detected_valley" {
-		t.Fatalf("W2 suggestion_reason ging verloren: %v", wps[1].SuggestionReason)
 	}
 }

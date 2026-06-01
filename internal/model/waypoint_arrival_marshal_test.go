@@ -12,8 +12,6 @@ import (
 // behauptete, origin/confirmed dürften NICHT im JSON erscheinen. Nach #303 ist
 // das falsch — die Felder sind reguläre, additive omitempty-Felder.
 
-func ptrStr(s string) *string { return &s }
-
 func ptrBool(b bool) *bool { return &b }
 
 // TestWaypointJSON_NewFieldsMarshalAndOmit prüft beide Richtungen:
@@ -21,14 +19,13 @@ func ptrBool(b bool) *bool { return &b }
 func TestWaypointJSON_NewFieldsMarshalAndOmit(t *testing.T) {
 	// Gesetzte Felder → alle drei Keys im JSON.
 	wp := Waypoint{
-		ID:               "W1",
-		Name:             "Gipfel",
-		Lat:              47.0,
-		Lon:              11.0,
-		ElevationM:       2500,
-		Origin:           "algorithmic",
-		Confirmed:        ptrBool(true),
-		SuggestionReason: ptrStr("detected_peak"),
+		ID:         "W1",
+		Name:       "Gipfel",
+		Lat:        47.0,
+		Lon:        11.0,
+		ElevationM: 2500,
+		Origin:     "algorithmic",
+		Confirmed:  ptrBool(true),
 	}
 	b, err := json.Marshal(wp)
 	if err != nil {
@@ -40,9 +37,6 @@ func TestWaypointJSON_NewFieldsMarshalAndOmit(t *testing.T) {
 	}
 	if !strings.Contains(js, `"confirmed":true`) {
 		t.Fatalf("confirmed fehlt im JSON, war: %s", js)
-	}
-	if !strings.Contains(js, `"suggestion_reason":"detected_peak"`) {
-		t.Fatalf("suggestion_reason fehlt im JSON, war: %s", js)
 	}
 
 	// confirmed=false MUSS serialisierbar sein (*bool, nicht bool+omitempty).
@@ -63,7 +57,7 @@ func TestWaypointJSON_NewFieldsMarshalAndOmit(t *testing.T) {
 		t.Fatalf("marshal zero: %v", err)
 	}
 	jz := string(bz)
-	for _, key := range []string{`"origin"`, `"confirmed"`, `"suggestion_reason"`, `"arrival_override"`} {
+	for _, key := range []string{`"origin"`, `"confirmed"`, `"arrival_override"`} {
 		if strings.Contains(jz, key) {
 			t.Fatalf("Zero-Value darf %s nicht enthalten, war: %s", key, jz)
 		}

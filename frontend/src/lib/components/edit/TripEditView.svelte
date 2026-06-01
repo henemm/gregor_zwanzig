@@ -9,7 +9,6 @@
 	import { AlertRulesEditor } from '$lib/components/organisms';
 	import { Segmented } from '$lib/components/atoms';
 	import { normalizeAlertMetric } from '$lib/utils/alertMetricLabels';
-	import { stripSuggested } from '$lib/utils/waypointEditor';
 	import { computeTripStats } from '$lib/utils/tripStats';
 	import { formatDateRange } from '$lib/utils/tripHero';
 	import { getReportSchedule } from '$lib/utils/rightColumn';
@@ -65,8 +64,7 @@
 				const updated: Trip = {
 					...trip,
 					name: tripName,
-					// Issue #296-FE: transientes `suggested`-Flag nicht persistieren.
-					stages: stripSuggested(stages),
+					stages: stages,
 					// Issue #345 / AC-2: display_config unverändert aus dem geladenen trip
 					// durchreichen (via `...trip` bereits enthalten) — KEIN Überschreiben
 					// der im Wetter-Tab gesetzten Buckets/Horizonte.

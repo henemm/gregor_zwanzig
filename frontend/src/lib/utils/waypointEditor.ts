@@ -4,7 +4,7 @@
 // Issue #495: SVG-Projektion entfernt — Leaflet übernimmt sie.
 // `boundingBox` bleibt (eigene Tests).
 
-import type { Stage, Waypoint } from '$lib/types';
+import type { Waypoint } from '$lib/types';
 
 export interface BoundingBox {
 	minLat: number;
@@ -12,32 +12,6 @@ export interface BoundingBox {
 	minLon: number;
 	maxLon: number;
 	cosLat: number;
-}
-
-/**
- * Entfernt `suggested` und die vom Backend gesetzten Vorschlags-Felder
- * (`origin`, `confirmed`, `suggestion_reason` — Issue #303) aus allen
- * Waypoints aller Stages. Gibt neue Stage-Objekte zurück — mutiert das
- * Original nicht. `suggested: false` wird ebenfalls entfernt (sauber
- * gestrippte Payload).
- *
- * `arrival_override` wird NICHT gestrippt: es ist ein User-Wert, der über
- * den confirm-Endpoint gesetzt wird und nicht über PUT transportiert wird.
- */
-export function stripSuggested(stages: Stage[]): Stage[] {
-	return stages.map((s) => ({
-		...s,
-		waypoints: s.waypoints.map((w) => {
-			const {
-				suggested: _suggested,
-				origin: _origin,
-				confirmed: _confirmed,
-				suggestion_reason: _suggestionReason,
-				...rest
-			} = w;
-			return rest as Waypoint;
-		})
-	}));
 }
 
 /**

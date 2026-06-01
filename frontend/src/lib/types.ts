@@ -33,15 +33,12 @@ export interface Waypoint {
 	lon: number;
 	elevation_m: number;
 	time_window?: string;
-	/** @deprecated — wird von stripSuggested() gestrippt, keine UI liest dieses Feld mehr */
-	suggested?: boolean;
 	// Issue #296 — vom Backend (Naismith) persistierte Ankunftszeit "HH:MM".
 	// Editor zeigt clientseitig live (computeArrivalTimes), BE ist authoritative.
 	arrival_calculated?: string;
 	// Issue #303 — algorithmische Wegpunktvorschläge + User-Override.
 	origin?: string;              // 'manual' | 'algorithmic'
 	confirmed?: boolean;          // true = vom User bestätigt
-	suggestion_reason?: string;   // 'detected_peak' | 'detected_valley' | 'detected_pass' | 'legacy_suggested'
 	arrival_override?: string;    // User-Override "HH:MM"
 }
 
@@ -55,7 +52,7 @@ export interface Stage {
 	 * Transientes Wizard-Flag (Step 2 / Sub-Spec #162):
 	 * `true` wenn der User das Datum manuell ueberschrieben hat — Auto-Datierung
 	 * (recomputeStageDates) laesst dieses Stage in Ruhe. Wird beim Save (Step 4)
-	 * via `toTripPayload()` gestrippt — analog `Waypoint.suggested`.
+	 * via `toTripPayload()` gestrippt.
 	 */
 	dateOverridden?: boolean;
 }
