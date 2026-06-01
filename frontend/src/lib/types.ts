@@ -33,6 +33,7 @@ export interface Waypoint {
 	lon: number;
 	elevation_m: number;
 	time_window?: string;
+	/** @deprecated — wird von stripSuggested() gestrippt, keine UI liest dieses Feld mehr */
 	suggested?: boolean;
 	// Issue #296 — vom Backend (Naismith) persistierte Ankunftszeit "HH:MM".
 	// Editor zeigt clientseitig live (computeArrivalTimes), BE ist authoritative.

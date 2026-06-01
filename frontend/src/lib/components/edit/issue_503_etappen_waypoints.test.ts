@@ -293,18 +293,6 @@ describe('#522 WaypointCard Visual-Redesign', () => {
 		);
 	});
 
-	test('onConfirm/onReject bleiben als optionale @deprecated Props (Backward-Compat)', () => {
-		const src = readFileSync(WAYPOINT_CARD, 'utf-8');
-		assert.ok(
-			/onConfirm\?:\s*\(\)\s*=>\s*void/.test(src),
-			'WaypointCard.svelte muss onConfirm?: () => void als optionales Prop behalten'
-		);
-		assert.ok(
-			/onReject\?:\s*\(\)\s*=>\s*void/.test(src),
-			'WaypointCard.svelte muss onReject?: () => void als optionales Prop behalten'
-		);
-	});
-
 	test('Left-Border-Accent-Indikator: border-left mit var(--g-accent) im aktiven Zustand', () => {
 		const src = readFileSync(WAYPOINT_CARD, 'utf-8');
 		// CSS muss eine border-left-Regel haben, die im active-State auf --g-accent geht.

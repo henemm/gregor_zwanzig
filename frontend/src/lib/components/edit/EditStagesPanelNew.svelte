@@ -189,11 +189,6 @@
 			);
 		};
 	}
-	// No-Op-Handler für WaypointCard onConfirm/onReject (Pflicht-Props,
-	// werden nach #503 nicht mehr ausgelöst — der bedingte UI-Branch ist weg).
-	function noop(): void {
-		/* no-op (Issue #503: keine KI/Auto-Aktionen mehr) */
-	}
 </script>
 
 <div data-testid="edit-stages-panel" class="flex flex-col gap-4">
@@ -306,8 +301,6 @@
 								active={waypoint.id === activeWaypointId}
 								arrival={arrivals[i] ?? null}
 								onActivate={makeActivateHandler(waypoint.id)}
-								onConfirm={noop}
-								onReject={noop}
 								onRename={makeRenameHandler(activeStage.id, waypoint.id)}
 								onDelete={makeDeleteHandler(activeStage.id, waypoint.id)}
 							/>

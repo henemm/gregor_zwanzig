@@ -5,9 +5,6 @@
 	// Visual-Redesign (Issue #522):
 	//   Normal:   [Kreis-Pin (weiß+accent-Rand+accent-Zahl)] NAME / Typ · Höhe · Ankunft
 	//   Aktiv:    Left-Border accent 3px + leichter Tint + Text-Buttons (Umbenennen / Verschieben / Löschen)
-	//
-	// `onConfirm`/`onReject` bleiben als optionale @deprecated Props erhalten
-	// (Backward-Compat mit WaypointsPanel.svelte / EditStagesPanelNew.svelte).
 
 	import { Btn } from '$lib/components/atoms';
 	import type { Waypoint } from '$lib/types';
@@ -17,10 +14,6 @@
 		index: number;
 		active?: boolean;
 		onActivate: () => void;
-		/** @deprecated Issue #503: KI-Bestätigen entfernt; Prop bleibt für Backward-Compat. */
-		onConfirm?: () => void;
-		/** @deprecated Issue #503: KI-Verwerfen entfernt; Prop bleibt für Backward-Compat. */
-		onReject?: () => void;
 		onRename: () => void;
 		onDelete: () => void;
 		// Issue #296-FE: berechnete Ankunftszeit "HH:MM" (computeArrivalTimes).
