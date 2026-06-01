@@ -124,13 +124,31 @@ def manual_send_subscription(subscription_id: str, user_id: str = Query("default
         raise HTTPException(status_code=500, detail=str(e))
 
 
-def _run_subscriptions_by_schedule(schedule, user_id: str = "default") -> int:
-    """Run all subscriptions matching the given schedule. Returns count."""
+def _run_subscriptions_by_schedule(schedule, user_id: str = "default", data_root: str | None = None) -> int:
+    """Run all subscriptions matching the given schedule. Returns count.
+
+    Issue #509: Wenn `data/users/<user_id>/compare_presets.json` existiert und
+    nicht-leer ist, wird der Lauf uebersprungen (Doppelversand-Guard — das
+    presets-System ist fuer diesen User die kanonische Quelle).
+    """
     from datetime import datetime
 
     from app.config import Settings
     from app.loader import load_all_locations, load_compare_subscriptions
     from services.compare_subscription import run_comparison_for_subscription
+
+    # Issue #509: Doppelversand-Guard — wenn presets.json (nicht leer) existiert,
+    # uebernimmt das presets-System und subscriptions werden uebersprungen.
+    import json as _json
+    from pathlib import Path as _Path
+    _preset_path = _Path(data_root or "data") / "users" / user_id / "compare_presets.json"
+    if _preset_path.exists():
+        try:
+            if _json.loads(_preset_path.read_text(encoding="utf-8")):
+                logger.info("Presets-System aktiv fuer %s — subscriptions uebersprungen", user_id)
+                return 0
+        except Exception:
+            pass  # Korrupte presets.json: Fallback auf subscriptions
 
     count = 0
     success_count = 0
@@ -171,14 +189,29 @@ def _run_subscriptions_by_schedule(schedule, user_id: str = "default") -> int:
     return count
 
 
-def _run_weekly_subscriptions(user_id: str = "default") -> int:
-    """Run WEEKLY subscriptions if today matches the weekday. Returns count."""
+def _run_weekly_subscriptions(user_id: str = "default", data_root: str | None = None) -> int:
+    """Run WEEKLY subscriptions if today matches the weekday. Returns count.
+
+    Issue #509: Doppelversand-Guard analog zu `_run_subscriptions_by_schedule`.
+    """
     from datetime import datetime
 
     from app.config import Settings
     from app.loader import load_all_locations, load_compare_subscriptions
     from app.user import Schedule
     from services.compare_subscription import run_comparison_for_subscription
+
+    # Issue #509: Doppelversand-Guard (identisch zu _run_subscriptions_by_schedule)
+    import json as _json
+    from pathlib import Path as _Path
+    _preset_path = _Path(data_root or "data") / "users" / user_id / "compare_presets.json"
+    if _preset_path.exists():
+        try:
+            if _json.loads(_preset_path.read_text(encoding="utf-8")):
+                logger.info("Presets-System aktiv fuer %s — weekly subscriptions uebersprungen", user_id)
+                return 0
+        except Exception:
+            pass  # Korrupte presets.json: Fallback auf subscriptions
 
     current_weekday = datetime.now().weekday()
     count = 0
@@ -391,6 +424,16 @@ def _run_compare_presets_daily(user_id: str = "default", data_root: str | None =
             logger.warning("Preset %s has no location_ids — skipping", preset_id)
             continue
 
+        # Issue #509: empfaenger-Check VOR location-Resolution + mail_to-Fallback
+        empfaenger = preset.get("empfaenger") or []
+        if not empfaenger:
+            default_to = getattr(settings, "mail_to", None)
+            if not default_to:
+                logger.warning("Preset %s: keine empfaenger und kein mail_to — skip", preset_id)
+                continue
+            empfaenger = [default_to]
+            logger.info("Preset %s: empfaenger leer, nutze mail_to=%s", preset_id, default_to)
+
         if all_locations is None:
             all_locations = load_all_locations(user_id=user_id)
         locations = [loc for loc in all_locations if loc.id in location_ids]
@@ -403,10 +446,6 @@ def _run_compare_presets_daily(user_id: str = "default", data_root: str | None =
             profile = _parse_activity_profile(profil_str)
             hour_from = preset.get("hour_from", 9)
             hour_to = preset.get("hour_to", 16)
-            empfaenger = preset.get("empfaenger") or []
-            if not empfaenger:
-                logger.warning("Preset %s has no empfaenger — skipping", preset_id)
-                continue
 
             result = ComparisonEngine.run(
                 locations=locations,
