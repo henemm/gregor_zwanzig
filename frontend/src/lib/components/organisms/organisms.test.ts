@@ -124,6 +124,72 @@ describe('#471 AC-4: Konsumenten-Imports zeigen auf organisms/', () => {
 	}
 });
 
+// ── Issue #520 AC-1: 5 neue Organisms im Barrel ──────────────────────────────
+//
+// Spec: docs/specs/modules/issue_520_organisms_barrel_completeness.md
+//
+// Nur Export-Existence-Tests. Kein ui/-Import-Check fuer ChannelPreviewBlock
+// und MetricCheckbox (bekannte C2-Verstaesse, Constraint C3 — werden nicht
+// angefasst, Fixes in Folge-Issues).
+
+const ORGANISMS_520_SOURCES = [
+	{ name: 'WeatherMetricsTab',  path: join(componentsRoot, 'trip-detail', 'WeatherMetricsTab.svelte') },
+	{ name: 'ChannelPreviewBlock', path: join(componentsRoot, 'trip-detail', 'ChannelPreviewBlock.svelte') },
+	{ name: 'ChannelPreviewCard', path: join(componentsRoot, 'trip-detail', 'ChannelPreviewCard.svelte') },
+	{ name: 'MetricGroup',        path: join(componentsRoot, 'trip-detail', 'MetricGroup.svelte') },
+	{ name: 'MetricCheckbox',     path: join(componentsRoot, 'trip-detail', 'MetricCheckbox.svelte') },
+];
+
+test('#520 AC-1: Quell-Dateien der 5 neuen Organisms existieren', () => {
+	for (const o of ORGANISMS_520_SOURCES) {
+		assert.ok(has(o.path), `Quell-Datei fehlt: ${o.path}`);
+	}
+});
+
+test('#520 AC-1: index.ts re-exportiert alle 5 neuen Organisms', () => {
+	const barrel = read(join(here, 'index.ts'));
+	for (const o of ORGANISMS_520_SOURCES) {
+		assert.ok(
+			new RegExp(`\\b${o.name}\\b`).test(barrel),
+			`organisms/index.ts exportiert ${o.name} nicht — Barrel noch nicht aktualisiert`,
+		);
+	}
+});
+
+// C2-Konformitaets-Check nur fuer die 3 Organisms OHNE bekannte C2-Verstaesse
+const ORGANISMS_520_C2_CLEAN = [
+	{ name: 'WeatherMetricsTab',  path: join(componentsRoot, 'trip-detail', 'WeatherMetricsTab.svelte') },
+	{ name: 'ChannelPreviewCard', path: join(componentsRoot, 'trip-detail', 'ChannelPreviewCard.svelte') },
+	{ name: 'MetricGroup',        path: join(componentsRoot, 'trip-detail', 'MetricGroup.svelte') },
+];
+
+describe('#520 AC-1: kein ui/-Import in C2-konformen neuen Organisms', () => {
+	for (const o of ORGANISMS_520_C2_CLEAN) {
+		test(`${o.name} hat keinen $lib/components/ui/-Import`, () => {
+			assert.ok(has(o.path), `Quell-Datei fehlt: ${o.path}`);
+			const src = read(o.path);
+			assert.ok(
+				!src.includes('$lib/components/ui/'),
+				`${o.name} importiert verboten: $lib/components/ui/`,
+			);
+		});
+	}
+});
+
+// ── Issue #520 AC-3: COMPONENTS.md Organisms-Tabelle vollstaendig ─────────────
+
+test('#520 AC-3: COMPONENTS.md listet alle 5 neuen Organisms', () => {
+	const docsPath = join(here, '..', '..', '..', '..', '..', 'docs', 'design-system', 'COMPONENTS.md');
+	assert.ok(has(docsPath), `COMPONENTS.md fehlt: ${docsPath}`);
+	const doc = read(docsPath);
+	for (const o of ORGANISMS_520_SOURCES) {
+		assert.ok(
+			doc.includes(o.name),
+			`COMPONENTS.md erwaehnt ${o.name} nicht — Organisms-Tabelle unvollstaendig`,
+		);
+	}
+});
+
 // ── AC-5: TripHeader NICHT mehr in trip-detail/index.ts ──────────────────────
 
 test('#471 AC-5: trip-detail/index.ts exportiert TripHeader nicht mehr', () => {
