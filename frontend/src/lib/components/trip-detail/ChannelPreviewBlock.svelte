@@ -32,7 +32,7 @@
 	const activeMeta = $derived(CHANNELS.find((c) => c.id === activeChannel) ?? CHANNELS[2]);
 </script>
 
-<Card.Root data-testid="channel-preview-block">
+<Card.Root class="overflow-visible" data-testid="channel-preview-block">
 	<div class="head">
 		<Eyebrow>Vorschau · so kommt es beim Empfänger an</Eyebrow>
 		<div class="title-row">

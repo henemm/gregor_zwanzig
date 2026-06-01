@@ -348,14 +348,18 @@
 					{onMode}
 					{onDndReorder}
 				/>
-
-				<ChannelPreviewBlock
-					primary={buckets.primary}
-					secondary={buckets.secondary}
-					{metricById}
-					{shortById}
-				/>
 			</div>
+		</div>
+
+		<!-- Issue #496 Layout-Fix: ChannelPreviewBlock außerhalb des `.layout`-Grids,
+		     damit der Block volle Tab-Breite nutzt statt nur die schmale editor-col. -->
+		<div class="preview-row">
+			<ChannelPreviewBlock
+				primary={buckets.primary}
+				secondary={buckets.secondary}
+				{metricById}
+				{shortById}
+			/>
 		</div>
 
 		<SavePresetDialog
@@ -492,6 +496,9 @@
 		display: flex;
 		flex-direction: column;
 		gap: var(--g-s-6);
+	}
+	.preview-row {
+		margin-top: var(--g-s-6);
 	}
 	.confirm-overlay {
 		position: fixed;
