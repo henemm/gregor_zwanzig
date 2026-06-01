@@ -49,6 +49,10 @@ python3 .claude/hooks/e2e_commit_gate.py <<< '{"tool_input":{"command":"git comm
 
 ## Schritt 3a: frontend-only — visuelle Pruefung
 
+**Alternativ (empfohlen):** `staging-validator` Agent via `/5-implement` Step 9 — loggt sich automatisch in Staging ein, prüft alle ACs aus der Spec via Playwright und schreibt `e2e_verified.json` mit `verified_commit` (aktueller HEAD-SHA). Voraussetzung: aktiver Workflow mit genehmigter Spec mit AC-Format `**AC-N:** Given.../When.../Then...`.
+
+Manuell (Fallback):
+
 Playwright/Screenshot gegen Staging. Die Basis-URL kommt aus `GZ_SVELTE_BASE`:
 
 ```bash
@@ -87,12 +91,18 @@ Den auf Staging angelegten Test-Trip wieder loeschen, damit Staging sauber bleib
 ## Schritt 5: Nachweis schreiben
 
 NUR wenn alle relevanten Schritte erfolgreich waren — als Nachweis fuer den
-Pre-Prod-Schritt:
+Pre-Prod-Schritt. Die Datei MUSS die Felder `verified_commit`, `staging_verdict` und strukturierte `findings` enthalten (Issue #521):
 
 ```bash
 python3 -c "
-import json, datetime
+import json, datetime, subprocess
+verified_commit = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode().strip()
 data = {
+    'verified_commit': verified_commit,
+    'staging_verdict': 'VERIFIED: alle frontend-ACs gruen',
+    'findings': [
+        {'ac': 'AC-1', 'status': 'PASS', 'url': '/url:AC-1', 'evidence': 'Element sichtbar'}
+    ],
     'verified_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
     'environment': 'staging',
     'scope': 'frontend-only',  # oder 'backend' / 'full-stack'

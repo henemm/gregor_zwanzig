@@ -1,0 +1,300 @@
+"""
+TDD RED: Tests fuer staging_gate.py (Issue #521 — Staging Validator Agent).
+
+Mocks sind in diesem Projekt VERBOTEN. Alle Tests laufen gegen das echte Script.
+staging_gate.py existiert noch nicht — alle Tests muessen FAIL sein (RED Phase).
+
+Getestete ACs:
+  AC-2: verified_commit + staging_verdict in e2e_verified.json nach Write-Verdict
+  AC-3: verified_commit != HEAD → --check exit 1
+  AC-4: staging_verdict != VERIFIED → --check exit 1
+  AC-5: GZ_SKIP_E2E_GATE=1 → --check exit 0 + Warn-Log
+  AC-6: BROKEN → kein VERIFIED-Artefakt geschrieben
+  AC-7: docs-only scope → --check exit 0
+"""
+
+import json
+import os
+import subprocess
+import tempfile
+from datetime import datetime, timezone, timedelta
+from pathlib import Path
+
+import pytest
+
+STAGING_GATE = Path("/home/hem/gregor_zwanzig/.claude/hooks/staging_gate.py")
+REPO_DIR = Path("/home/hem/gregor_zwanzig")
+
+
+def _head_sha() -> str:
+    result = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        capture_output=True, text=True, cwd=REPO_DIR
+    )
+    return result.stdout.strip()
+
+
+def _run_gate(args: list[str], env_extra: dict | None = None) -> tuple[int, str, str]:
+    env = os.environ.copy()
+    env["GZ_ACTIVE_WORKFLOW"] = "issue-521-staging-validator"
+    if env_extra:
+        env.update(env_extra)
+    result = subprocess.run(
+        ["python3", str(STAGING_GATE)] + args,
+        capture_output=True, text=True,
+        cwd=str(REPO_DIR), env=env
+    )
+    return result.returncode, result.stdout, result.stderr
+
+
+def _write_e2e_json(tmp_path: Path, **overrides) -> Path:
+    """Schreibt eine e2e_verified.json mit kontrollierten Inhalten."""
+    data = {
+        "verified_commit": _head_sha(),
+        "staging_verdict": "VERIFIED: alle ACs grün",
+        "verified_at": datetime.now(timezone.utc).isoformat(),
+        "environment": "staging",
+        "scope": "frontend-only",
+        "checks": ["playwright_login", "ac_checks"],
+        "feature_checks": ["AC-1: PASS", "AC-2: PASS"],
+        "findings": [],
+    }
+    data.update(overrides)
+    json_file = tmp_path / "e2e_verified.json"
+    json_file.write_text(json.dumps(data, indent=2))
+    return json_file
+
+
+class TestStagingGateScriptExists:
+    """Das Script muss existieren, sonst schlagen alle anderen Tests aus dem falschen Grund fehl."""
+
+    def test_staging_gate_script_exists(self):
+        """AC-Grundlage: staging_gate.py muss vorhanden sein."""
+        assert STAGING_GATE.exists(), (
+            f"staging_gate.py nicht gefunden unter {STAGING_GATE}. "
+            "Implementation fehlt noch (RED-Phase korrekt)."
+        )
+
+    def test_staging_gate_script_is_executable(self):
+        """staging_gate.py muss syntaktisch korrekt sein."""
+        result = subprocess.run(
+            ["python3", "-c", f"import ast; ast.parse(open('{STAGING_GATE}').read())"],
+            capture_output=True, text=True
+        )
+        assert result.returncode == 0, f"Syntaxfehler in staging_gate.py: {result.stderr}"
+
+
+class TestGateCheckModeB:
+    """Mode B: --check — aufgerufen von deploy-gregor-prod.sh (AC-3, AC-4, AC-5, AC-7)."""
+
+    def test_gate_blocks_when_file_missing(self, tmp_path, monkeypatch):
+        """AC-3/AC-4: Fehlende e2e_verified.json → Exit 1."""
+        nonexistent = str(tmp_path / "does_not_exist.json")
+        rc, out, err = _run_gate(
+            ["--check", f"--e2e-path={nonexistent}"]
+        )
+        assert rc == 1, f"Erwartet Exit 1 bei fehlender Datei, bekam {rc}"
+        combined = out + err
+        assert any(w in combined.lower() for w in ["e2e_verified", "fehler", "error", "missing"]), (
+            f"Fehlermeldung erwartet, bekam: {combined}"
+        )
+
+    def test_gate_blocks_when_commit_mismatch(self, tmp_path):
+        """AC-3: verified_commit != HEAD → Exit 1."""
+        json_file = _write_e2e_json(
+            tmp_path,
+            verified_commit="0000000000000000000000000000000000000000"
+        )
+        rc, out, err = _run_gate(["--check", f"--e2e-path={json_file}"])
+        assert rc == 1, f"Erwartet Exit 1 bei falschem Commit, bekam {rc}"
+        combined = out + err
+        assert any(w in combined.lower() for w in ["commit", "sha", "mismatch", "verifizier"]), (
+            f"Hinweis auf Commit-Mismatch erwartet, bekam: {combined}"
+        )
+
+    def test_gate_blocks_when_verdict_broken(self, tmp_path):
+        """AC-4: staging_verdict = BROKEN → Exit 1."""
+        json_file = _write_e2e_json(
+            tmp_path,
+            staging_verdict="BROKEN: AC-2 fehlgeschlagen"
+        )
+        rc, out, err = _run_gate(["--check", f"--e2e-path={json_file}"])
+        assert rc == 1, f"Erwartet Exit 1 bei BROKEN, bekam {rc}"
+
+    def test_gate_blocks_when_verdict_ambiguous(self, tmp_path):
+        """AC-4: staging_verdict = AMBIGUOUS → Exit 1 (kein stilles Durchlaufen)."""
+        json_file = _write_e2e_json(
+            tmp_path,
+            staging_verdict="AMBIGUOUS: Screenshot nicht auswertbar"
+        )
+        rc, out, err = _run_gate(["--check", f"--e2e-path={json_file}"])
+        assert rc == 1, f"Erwartet Exit 1 bei AMBIGUOUS, bekam {rc}"
+
+    def test_gate_blocks_when_verdict_missing(self, tmp_path):
+        """AC-4: staging_verdict fehlt komplett → Exit 1."""
+        data = {
+            "verified_commit": _head_sha(),
+            "verified_at": datetime.now(timezone.utc).isoformat(),
+            "environment": "staging",
+        }
+        json_file = tmp_path / "e2e_verified.json"
+        json_file.write_text(json.dumps(data))
+        rc, out, err = _run_gate(["--check", f"--e2e-path={json_file}"])
+        assert rc == 1, f"Erwartet Exit 1 bei fehlendem staging_verdict, bekam {rc}"
+
+    def test_gate_blocks_when_stale(self, tmp_path):
+        """AC-4/TTL: verified_at älter als 24h → Exit 1."""
+        stale_time = datetime.now(timezone.utc) - timedelta(hours=25)
+        json_file = _write_e2e_json(
+            tmp_path,
+            verified_at=stale_time.isoformat()
+        )
+        rc, out, err = _run_gate(["--check", f"--e2e-path={json_file}"])
+        assert rc == 1, f"Erwartet Exit 1 bei abgelaufenem Artefakt, bekam {rc}"
+        combined = out + err
+        assert any(w in combined.lower() for w in ["alt", "stale", "abgelaufen", "24"]), (
+            f"Hinweis auf abgelaufenes Artefakt erwartet, bekam: {combined}"
+        )
+
+    def test_gate_passes_when_verified_and_matching_commit(self, tmp_path):
+        """AC-2/AC-3: Korrekter Commit + VERIFIED → Exit 0."""
+        json_file = _write_e2e_json(tmp_path)
+        rc, out, err = _run_gate(["--check", f"--e2e-path={json_file}"])
+        assert rc == 0, (
+            f"Erwartet Exit 0 bei korrektem Commit + VERIFIED, bekam {rc}.\n"
+            f"stdout: {out}\nstderr: {err}"
+        )
+
+    def test_gate_skip_env_allows_deploy_with_warning(self, tmp_path):
+        """AC-5: GZ_SKIP_E2E_GATE=1 → Exit 0, aber Warn-Nachricht in Ausgabe."""
+        json_file = _write_e2e_json(
+            tmp_path,
+            verified_commit="0000000000000000000000000000000000000000"
+        )
+        rc, out, err = _run_gate(
+            ["--check", f"--e2e-path={json_file}"],
+            env_extra={"GZ_SKIP_E2E_GATE": "1"}
+        )
+        assert rc == 0, f"Erwartet Exit 0 bei GZ_SKIP_E2E_GATE=1, bekam {rc}"
+        combined = out + err
+        assert any(w in combined.lower() for w in ["warn", "skip", "override", "bypass", "ueberspring"]), (
+            f"Warn-Hinweis erwartet bei GZ_SKIP_E2E_GATE=1, bekam: {combined}"
+        )
+
+    def test_gate_docs_only_scope_skips_check(self, tmp_path):
+        """AC-7: scope=docs-only → Exit 0 ohne Gate-Block (auch wenn kein VERIFIED-Artefakt)."""
+        nonexistent = str(tmp_path / "does_not_exist.json")
+        rc, out, err = _run_gate(
+            ["--check", f"--e2e-path={nonexistent}", "--scope=docs-only"]
+        )
+        assert rc == 0, (
+            f"Erwartet Exit 0 bei docs-only Scope, bekam {rc}.\n"
+            f"stdout: {out}\nstderr: {err}"
+        )
+        combined = out + err
+        assert any(w in combined.lower() for w in ["docs", "skip", "ueberspring"]), (
+            f"Docs-only-Hinweis erwartet, bekam: {combined}"
+        )
+
+
+class TestGateWriteVerdictModeA:
+    """Mode A: --write-verdict — aufgerufen vom Staging Validator Agent (AC-2, AC-6)."""
+
+    def test_write_verdict_verified_creates_file(self, tmp_path):
+        """AC-2: --write-verdict VERIFIED schreibt e2e_verified.json mit verified_commit."""
+        findings = tmp_path / "findings.json"
+        findings.write_text(json.dumps([
+            {"ac": "AC-1", "status": "PASS", "url": "https://staging.gregor20.henemm.com/trips:AC-1", "evidence": "button gefunden"},
+        ]))
+        out_path = tmp_path / "e2e_verified.json"
+        rc, out, err = _run_gate([
+            "--write-verdict", "VERIFIED: 1/1 ACs grün",
+            "--findings-json", str(findings),
+            "--e2e-path", str(out_path),
+        ])
+        assert rc == 0, f"Erwartet Exit 0 bei VERIFIED, bekam {rc}.\nstdout: {out}\nstderr: {err}"
+        assert out_path.exists(), "e2e_verified.json wurde nicht geschrieben"
+        data = json.loads(out_path.read_text())
+        assert "verified_commit" in data, "verified_commit fehlt in geschriebener Datei"
+        assert data["verified_commit"] == _head_sha(), (
+            f"verified_commit soll HEAD-SHA sein, bekam: {data['verified_commit']}"
+        )
+        assert "staging_verdict" in data, "staging_verdict fehlt"
+        assert data["staging_verdict"].startswith("VERIFIED"), (
+            f"staging_verdict soll mit VERIFIED beginnen, bekam: {data['staging_verdict']}"
+        )
+        assert "findings" in data, "findings[] fehlt"
+        assert isinstance(data["findings"], list), "findings muss eine Liste sein"
+
+    def test_write_verdict_verified_includes_timestamp(self, tmp_path):
+        """AC-2: e2e_verified.json enthält verified_at als ISO-Timestamp."""
+        findings = tmp_path / "findings.json"
+        findings.write_text(json.dumps([]))
+        out_path = tmp_path / "e2e_verified.json"
+        _run_gate([
+            "--write-verdict", "VERIFIED: smoke only",
+            "--findings-json", str(findings),
+            "--e2e-path", str(out_path),
+        ])
+        assert out_path.exists()
+        data = json.loads(out_path.read_text())
+        assert "verified_at" in data, "verified_at fehlt"
+        datetime.fromisoformat(data["verified_at"])
+
+    def test_write_verdict_broken_returns_exit1(self, tmp_path):
+        """AC-6: --write-verdict BROKEN → Exit 1."""
+        findings = tmp_path / "findings.json"
+        findings.write_text(json.dumps([
+            {"ac": "AC-1", "status": "FAIL", "url": "https://staging.gregor20.henemm.com/trips:AC-1", "evidence": "Element nicht gefunden"},
+        ]))
+        out_path = tmp_path / "e2e_verified.json"
+        rc, out, err = _run_gate([
+            "--write-verdict", "BROKEN: AC-1 fehlgeschlagen",
+            "--findings-json", str(findings),
+            "--e2e-path", str(out_path),
+        ])
+        assert rc == 1, f"Erwartet Exit 1 bei BROKEN, bekam {rc}"
+
+    def test_write_verdict_broken_does_not_write_verified_artifact(self, tmp_path):
+        """AC-6: Bei BROKEN wird KEIN VERIFIED-Artefakt geschrieben."""
+        findings = tmp_path / "findings.json"
+        findings.write_text(json.dumps([
+            {"ac": "AC-1", "status": "FAIL", "url": "https://staging.gregor20.henemm.com/trips:AC-1", "evidence": "button fehlt"},
+        ]))
+        out_path = tmp_path / "e2e_verified.json"
+        _run_gate([
+            "--write-verdict", "BROKEN: AC-1 fehlgeschlagen",
+            "--findings-json", str(findings),
+            "--e2e-path", str(out_path),
+        ])
+        if out_path.exists():
+            data = json.loads(out_path.read_text())
+            assert not data.get("staging_verdict", "").startswith("VERIFIED"), (
+                "BROKEN-Lauf darf kein VERIFIED-Artefakt hinterlassen"
+            )
+
+    def test_write_verdict_ambiguous_returns_exit0(self, tmp_path):
+        """AMBIGUOUS → Exit 0 (kein harter Block, aber kein VERIFIED)."""
+        findings = tmp_path / "findings.json"
+        findings.write_text(json.dumps([]))
+        out_path = tmp_path / "e2e_verified.json"
+        rc, _, _ = _run_gate([
+            "--write-verdict", "AMBIGUOUS: Screenshot nicht auswertbar",
+            "--findings-json", str(findings),
+            "--e2e-path", str(out_path),
+        ])
+        assert rc == 0, f"AMBIGUOUS soll Exit 0 liefern, bekam {rc}"
+
+
+class TestDetectCommittedScope:
+    """_detect_committed_scope() — wird intern von --check ohne --scope verwendet."""
+
+    def test_scope_detection_returns_valid_string(self):
+        """detect_scope muss einen der erwarteten Scope-Strings zurückgeben."""
+        rc, out, err = _run_gate(["--detect-scope"])
+        assert rc == 0, f"--detect-scope schlug fehl: {err}"
+        scope = (out + err).strip().lower()
+        valid_scopes = {"frontend-only", "backend", "full-stack", "docs-only"}
+        assert any(s in scope for s in valid_scopes), (
+            f"Unbekannter Scope-Wert: {scope!r}"
+        )

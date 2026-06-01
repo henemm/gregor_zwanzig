@@ -126,15 +126,17 @@ lokalen Neustart des Live-Servers (auf dieser Maschine = Produktion). Siehe Issu
 
 1. Smoke gegen Staging (`/` + `/api/health`)
 2. Scope bestimmen (frontend-only vs. backend/full-stack)
-3. frontend-only → visuelle Pruefung (Playwright/Screenshot), keine Mail
+3. frontend-only → `staging-validator` Agent prüft alle ACs aus der Spec via Playwright; schreibt `e2e_verified.json` mit `verified_commit` + `staging_verdict`
 4. backend/full-stack → Test-Trip auf Staging, Mail nur an `gregor-test@henemm.com`, IMAP-Pruefung
-5. Nachweis in `.claude/e2e_verified.json`
+5. Nachweis in `.claude/e2e_verified.json` mit `verified_commit` (HEAD-SHA), `staging_verdict` und strukturierten Findings pro AC
 
 Basis-URL fuer Browser-Checks via `GZ_SVELTE_BASE` (Default Staging):
 ```bash
 GZ_SVELTE_BASE=https://staging.gregor20.henemm.com \
   uv run python3 .claude/hooks/e2e_browser_test.py browser --check "Feature" --url "/"
 ```
+
+`deploy-gregor-prod.sh` liest `e2e_verified.json` und blockiert den Prod-Deploy als Hard Gate wenn `verified_commit` nicht dem aktuellem HEAD entspricht oder `staging_verdict` nicht mit `VERIFIED` beginnt (Issue #521).
 
 **VERBOTEN:**
 - Den lokalen Live-Server stoppen oder neu starten
