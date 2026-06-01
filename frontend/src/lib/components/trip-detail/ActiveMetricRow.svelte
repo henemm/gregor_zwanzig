@@ -42,7 +42,7 @@
 
 	<div class="mode-cell">
 		{#if hasIndicator}
-			<div class="mode-toggle" role="group" aria-label="Roh oder Skala">
+			<div class="mode-toggle" role="group" aria-label="Roh oder Einfach">
 				<button
 					type="button"
 					class="mode-btn mono"
@@ -56,7 +56,7 @@
 					class:active={useIndicator}
 					data-testid="metric-mode-scale-{metric.id}"
 					onclick={() => onMode(true)}
-				>Skala</button>
+				>Einfach</button>
 			</div>
 		{:else}
 			<span class="raw-only mono">nur Rohwert</span>

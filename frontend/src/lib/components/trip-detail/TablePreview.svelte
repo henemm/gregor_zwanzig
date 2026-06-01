@@ -105,7 +105,7 @@
 												<div class="col-unit">{col.unit}</div>
 											{/if}
 											{#if indicatorCapable(col.id) && friendlyMap[col.id]}
-												<span class="th-suffix">·skala</span>
+												<span class="th-suffix">·einfach</span>
 											{/if}
 										</th>
 									{/each}

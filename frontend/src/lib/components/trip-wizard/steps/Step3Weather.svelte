@@ -78,7 +78,7 @@
 	// Issue #435: Label-Map für die Dropdown-Anzeige.
 	const FORMAT_MODE_LABELS: Record<string, string> = {
 		raw: 'Roh',
-		scale: 'Skala',
+		scale: 'Einfach',
 		simplified: 'Vereinfacht',
 		symbol: 'Symbol'
 	};

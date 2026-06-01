@@ -1,0 +1,120 @@
+// TDD RED — Bug #499: Label "Skala" → "Einfach" in allen UI-Stellen.
+// SPEC: docs/specs/modules/bug_499_skala_label.md (AC-1 bis AC-4)
+//
+// Diese Tests scheitern solange "Skala" noch in den Quelldateien steht.
+//
+// Ausführung:
+//   cd frontend && node --experimental-strip-types --test \
+//     src/lib/components/trip-detail/bug_499_skala_label.test.ts
+
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+const here = dirname(fileURLToPath(import.meta.url));
+
+const ACTIVE_METRIC_ROW  = join(here, 'ActiveMetricRow.svelte');
+const WEATHER_CONFIG_DLG = join(here, '..', 'WeatherConfigDialog.svelte');
+const STEP3_WEATHER      = join(here, '..', 'trip-wizard', 'steps', 'Step3Weather.svelte');
+const SAVE_PRESET_DLG    = join(here, 'SavePresetDialog.svelte');
+const TABLE_PREVIEW      = join(here, 'TablePreview.svelte');
+
+// --- AC-1: Toggle in ActiveMetricRow ---
+
+test('AC-1: ActiveMetricRow zeigt Button-Label "Einfach" statt "Skala"', () => {
+	const src = readFileSync(ACTIVE_METRIC_ROW, 'utf-8');
+	assert.ok(
+		src.includes('>Einfach<'),
+		'AC-1 RED: Button-Label muss ">Einfach<" enthalten'
+	);
+});
+
+test('AC-1: ActiveMetricRow enthält kein Button-Label "Skala" mehr', () => {
+	const src = readFileSync(ACTIVE_METRIC_ROW, 'utf-8');
+	assert.ok(
+		!src.includes('>Skala<'),
+		'AC-1 RED: Button-Label ">Skala<" muss entfernt sein'
+	);
+});
+
+test('AC-1: ActiveMetricRow aria-label verwendet "Einfach" statt "Skala"', () => {
+	const src = readFileSync(ACTIVE_METRIC_ROW, 'utf-8');
+	assert.ok(
+		src.includes('Roh oder Einfach'),
+		'AC-1 RED: aria-label muss "Roh oder Einfach" enthalten'
+	);
+});
+
+// --- AC-2: Format-Dropdown WeatherConfigDialog ---
+
+test('AC-2: WeatherConfigDialog hat scale-Label "Einfach" statt "Skala"', () => {
+	const src = readFileSync(WEATHER_CONFIG_DLG, 'utf-8');
+	assert.ok(
+		src.includes("scale: 'Einfach'"),
+		"AC-2 RED: WeatherConfigDialog muss scale: 'Einfach' enthalten"
+	);
+});
+
+test('AC-2: WeatherConfigDialog enthält kein scale-Label "Skala" mehr', () => {
+	const src = readFileSync(WEATHER_CONFIG_DLG, 'utf-8');
+	assert.ok(
+		!src.includes("scale: 'Skala'"),
+		"AC-2 RED: WeatherConfigDialog darf scale: 'Skala' nicht mehr enthalten"
+	);
+});
+
+// --- AC-2: Format-Dropdown Step3Weather ---
+
+test('AC-2: Step3Weather hat scale-Label "Einfach" statt "Skala"', () => {
+	const src = readFileSync(STEP3_WEATHER, 'utf-8');
+	assert.ok(
+		src.includes("scale: 'Einfach'"),
+		"AC-2 RED: Step3Weather muss scale: 'Einfach' enthalten"
+	);
+});
+
+test('AC-2: Step3Weather enthält kein scale-Label "Skala" mehr', () => {
+	const src = readFileSync(STEP3_WEATHER, 'utf-8');
+	assert.ok(
+		!src.includes("scale: 'Skala'"),
+		"AC-2 RED: Step3Weather darf scale: 'Skala' nicht mehr enthalten"
+	);
+});
+
+// --- AC-3: Preset-Zusammenfassung SavePresetDialog ---
+
+test('AC-3: SavePresetDialog zeigt "als Einfach" statt "als Skala"', () => {
+	const src = readFileSync(SAVE_PRESET_DLG, 'utf-8');
+	assert.ok(
+		src.includes('als Einfach'),
+		'AC-3 RED: SavePresetDialog muss "als Einfach" enthalten'
+	);
+});
+
+test('AC-3: SavePresetDialog enthält kein "als Skala" mehr', () => {
+	const src = readFileSync(SAVE_PRESET_DLG, 'utf-8');
+	assert.ok(
+		!src.includes('als Skala'),
+		'AC-3 RED: SavePresetDialog darf "als Skala" nicht mehr enthalten'
+	);
+});
+
+// --- AC-4: Tabellen-Vorschau TablePreview ---
+
+test('AC-4: TablePreview zeigt Suffix "·einfach" statt "·skala"', () => {
+	const src = readFileSync(TABLE_PREVIEW, 'utf-8');
+	assert.ok(
+		src.includes('·einfach'),
+		'AC-4 RED: TablePreview muss "·einfach" enthalten'
+	);
+});
+
+test('AC-4: TablePreview enthält kein "·skala" mehr', () => {
+	const src = readFileSync(TABLE_PREVIEW, 'utf-8');
+	assert.ok(
+		!src.includes('·skala'),
+		'AC-4 RED: TablePreview darf "·skala" nicht mehr enthalten'
+	);
+});

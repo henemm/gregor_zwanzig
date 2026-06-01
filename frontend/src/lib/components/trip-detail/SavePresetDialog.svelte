@@ -168,7 +168,7 @@
 					<div class="status" data-testid="save-preset-bucket-summary">
 						<strong>{bucketSummary.spalten}</strong> Spalten ·
 						<strong>{bucketSummary.detail}</strong> Detail ·
-						<strong>{bucketSummary.skala}</strong> als Skala
+						<strong>{bucketSummary.skala}</strong> als Einfach
 					</div>
 				{/if}
 				<hr />
