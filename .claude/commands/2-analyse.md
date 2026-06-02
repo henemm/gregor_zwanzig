@@ -85,11 +85,11 @@ Synthesize all results into:
 
 Gib **immer** diese 3 Sätze aus — in Alltagssprache, kein Fachjargon:
 
-> **Das Problem:** [Was ist kaputt oder fehlt, aus Nutzersicht in 1 Satz]
-> **Warum das wichtig ist:** [Auswirkung auf den Nutzer in 1 Satz]
-> **Was ich vorhabe:** [Was ich bauen werde in 1 Satz]
->
-> Sage **'go'** um fortzufahren — oder korrigiere mich.
+**Das Problem:** [Was ist kaputt oder fehlt, aus Nutzersicht in 1 Satz]
+**Warum das wichtig ist:** [Auswirkung auf den Nutzer in 1 Satz]
+**Was ich vorhabe:** [Was ich bauen werde in 1 Satz]
+
+Sage **'go'** um fortzufahren — oder korrigiere mich.
 
 **STOP: Warte auf User-Antwort. Nicht automatisch mit /write-spec fortfahren!**
 

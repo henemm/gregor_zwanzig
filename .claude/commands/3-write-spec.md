@@ -83,13 +83,13 @@ python3 .claude/hooks/workflow_state_multi.py phase phase3_spec
 
 Extrahiere alle `**AC-N:**`-Einträge aus der Spec und formuliere sie als lesbare Sätze:
 
-> **Was die Software tun muss:**
-> - AC-1: [AC-Text in einfachem Deutsch, ohne technische Begriffe]
-> - AC-2: [AC-Text in einfachem Deutsch]
-> - ...
->
-> Spec gespeichert unter `[path]`.
-> Sage **'go'** um fortzufahren — oder gib mir Feedback.
+**Was die Software tun muss:**
+- AC-1: [AC-Text in einfachem Deutsch, ohne technische Begriffe]
+- AC-2: [AC-Text in einfachem Deutsch]
+- ...
+
+Spec gespeichert unter `[path]`.
+Sage **'go'** um fortzufahren — oder gib mir Feedback.
 
 **IMPORTANT:** Do NOT implement until the user explicitly approves!
 
