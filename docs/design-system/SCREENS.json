@@ -144,7 +144,7 @@
       "copy": {
         "eyebrow_pattern": "TOUR · {NAME}",
         "primary_cta": "Tour bearbeiten",
-        "etappen_section_title": "Etappen"
+        "etappen_section_title": "Etappen & Wegpunkte"
       },
       "charter_checks": {
         "uses_page_chrome": true,
