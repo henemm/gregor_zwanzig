@@ -136,11 +136,17 @@ Task(subagent_type="docs-updater", model="haiku", prompt="
 ")
 ```
 
-## Step 3b: Issue Tracking (GitHub)
+## Step 3b: Issue-Kommentar (GitHub)
 
-Erledigte Features werden direkt im GitHub Issue dokumentiert (Kommentar +
-`gh issue close`). Die fruehere Datei `ACTIVE-roadmap.md` ist seit 2026-05-02
-stillgelegt (Issue #114) — kein Roadmap-Update-Schritt mehr noetig.
+Kommentiere den Fortschritt im GitHub Issue (Commit-SHA + kurze Zusammenfassung),
+aber schließe es noch **nicht** — das passiert erst nach Prod-Deploy in `/7-deploy`.
+
+```bash
+gh issue comment <ISSUE_NR> --body "Implementiert & validiert — Commit $(git rev-parse --short HEAD). Staging-Deploy läuft, Prod-Deploy folgt."
+```
+
+Die frühere Datei `ACTIVE-roadmap.md` ist seit 2026-05-02 stillgelegt (Issue #114)
+— kein Roadmap-Update-Schritt mehr nötig.
 
 ## Step 4: Present Results
 
@@ -150,16 +156,16 @@ Show the user:
 2. **Auto-fix results** - If any fixes were attempted
 3. **Docs updated** - What documentation was changed
 
-## Step 5: Commit & Complete
+## Step 5: Commit & Übergabe an Deploy
 
 After successful validation:
 
-1. **Commit** the changes (ask user for confirmation)
-2. **Tell the user** validation is complete
-3. **User says** "deployed", "fertig", "done", or "erledigt"
-4. The `workflow_state_updater.py` hook automatically transitions to `phase8_complete`
+1. **Commit & Push** the changes
+2. **Dem User mitteilen:** Validierung abgeschlossen — bereit für Deploy
+3. **NICHT** "Fertig und live" oder "abgeschlossen" sagen — das passiert erst nach Prod-Deploy
+4. **Nächster Schritt:** `/7-deploy` — dort wird auf Staging gewartet, E2E-Verifikation durchgeführt, Prod deployed und dann erst das Issue geschlossen
 
-**DO NOT manually edit workflow_state.json!** The hook handles the transition.
+**Das Issue bleibt offen bis `/7-deploy` abgeschlossen ist.**
 
 ## On Failure
 

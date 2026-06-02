@@ -78,6 +78,21 @@ Was das Skript macht:
    journalctl -u gregor-api -u gregor-python -u gregor-frontend -f --since "5 minutes ago"
    ```
 
+## Abschluss: Issue schließen + "Fertig und live"
+
+**Erst hier** — nach bestätigtem Prod-Deploy — das GitHub Issue schließen und dem User Bescheid geben:
+
+```bash
+gh issue close <ISSUE_NR> --comment "Fertig und live — $(git rev-parse --short HEAD) auf Production."
+```
+
+Danach dem User mitteilen:
+
+> **Fertig und live.** Issue #N — [Titel] ist abgeschlossen.
+> Was geliefert wurde: [1-2 Sätze Nutzerperspektive]
+
+**NICHT früher "Fertig und live" sagen — nicht nach /6-validate, nicht nach Push, nicht wenn Staging noch nicht deployt hat.**
+
 ## Rollback
 
 ```bash
