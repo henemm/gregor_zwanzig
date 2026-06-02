@@ -228,20 +228,14 @@ def test_ac2_single_stage_trip_no_index_error():
 # Nach _enrich_ensemble_for_trip() muessen confidence_pct_min-Werte gesetzt sein
 # ---------------------------------------------------------------------------
 
-@pytest.mark.xfail(
-    strict=False,
-    reason="Bug #557: _enrich_ensemble_for_trip() setzt confidence_pct_min nicht",
-)
 def test_ac3_confidence_propagated_to_all_segments_after_enrichment():
     """
-    AC-3: Nach _enrich_ensemble_for_trip() haben SegmentWeatherSummaries
+    AC-3: Nach _apply_ensemble_spreads() haben SegmentWeatherSummaries
     confidence_pct_min gesetzt (nicht None).
 
     GIVEN: Trip + 1 SegmentWeatherData ohne Ensemble-Daten
-    WHEN:  _enrich_ensemble_for_trip(trip, weather_data) aufgerufen
+    WHEN:  _apply_ensemble_spreads(weather_data, spreads_naive, now_utc) aufgerufen
     THEN:  weather_data[0].aggregated.confidence_pct_min ist nicht None
-
-    RED: AttributeError weil Methode nicht existiert
     """
     from app.models import SegmentWeatherData, SegmentWeatherSummary
     from services.trip_report_scheduler import TripReportSchedulerService
@@ -262,11 +256,16 @@ def test_ac3_confidence_propagated_to_all_segments_after_enrichment():
         has_error=False,
     )
 
+    # Spreads mitten im Segment-Fenster (segment.start_time ist now.replace(hour=6))
+    mid_naive = (segment.start_time + timedelta(hours=4)).replace(tzinfo=None)
+    spreads_naive = {mid_naive: (1.5, 0.8)}
+    now_utc = datetime.now(timezone.utc)
+
     svc = _make_scheduler()
-    svc._enrich_ensemble_for_trip(trip=trip, weather_data=[weather_item])
+    svc._apply_ensemble_spreads([weather_item], spreads_naive, now_utc)
 
     assert weather_item.aggregated.confidence_pct_min is not None, (
-        "confidence_pct_min sollte nach _enrich_ensemble_for_trip() gesetzt sein, ist aber None"
+        "confidence_pct_min sollte nach _apply_ensemble_spreads() gesetzt sein, ist aber None"
     )
 
 

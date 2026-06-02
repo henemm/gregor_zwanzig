@@ -882,6 +882,21 @@ class TripReportSchedulerService:
             k_naive = k.replace(tzinfo=None) if k.tzinfo is not None else k
             spreads_naive[k_naive] = v
 
+        self._apply_ensemble_spreads(weather_data, spreads_naive, now_utc)
+
+    def _apply_ensemble_spreads(
+        self,
+        weather_data: List[SegmentWeatherData],
+        spreads_naive: Dict[datetime, Tuple[Optional[float], Optional[float]]],
+        now_utc: datetime,
+    ) -> None:
+        """Propagate pre-computed ensemble spreads onto DataPoints and set confidence_pct_min.
+
+        No API call — works exclusively on provided data. Extracted from
+        _enrich_ensemble_for_trip() to allow direct testing without a live provider.
+        """
+        from providers.openmeteo import compute_confidence_pct
+
         # 5. Propagate confidence onto every DataPoint of every segment
         for weather_item in weather_data:
             seg = weather_item.segment
