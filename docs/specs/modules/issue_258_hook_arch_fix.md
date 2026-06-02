@@ -202,3 +202,4 @@ Tests in `tests/tdd/test_issue_258_hook_arch.py` — Fixtures nach Pattern `test
 ## Changelog
 
 - 2026-05-18: Initial spec erstellt — Issue #258
+- 2026-06-02: Test-Fixes aus retrospektivem Adversary-Audit #510 eingespielt (Issue #537) — hardcoded Datum durch `datetime.now()` ersetzt, Tests jetzt evergreen

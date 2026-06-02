@@ -112,7 +112,7 @@ def test_build_segment_label_local_time_cest():
     seg_data = _make_seg_data()
 
     # tz als drittes Argument — existiert noch nicht → TypeError erwartet im RED
-    label = build_segment_label(change, [seg_data], _CEST)
+    label = build_segment_label(change, [seg_data], tz=_CEST)
 
     # Nach dem Fix muss die lokale CEST-Zeit erscheinen, nicht UTC
     assert _LOCAL_START in label, (

@@ -29,6 +29,7 @@ import json
 import os
 import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -109,8 +110,8 @@ def _create_workflow(
         "fix_loop_iterations": 0,
         "phases_completed": [],
         "affected_files": [],
-        "created": "2026-05-18T10:00:00",
-        "last_updated": "2026-05-18T10:00:00",
+        "created": datetime.now().isoformat(),
+        "last_updated": datetime.now().isoformat(),
     }
     p.write_text(json.dumps(data, indent=2))
     return p
@@ -129,7 +130,7 @@ def _write_valid_log(repo: Path, name: str) -> Path:
     durch die Epic-191-Log-Gate blockiert wird."""
     log_dir = repo / ".claude" / "workflows" / "_log"
     log_dir.mkdir(parents=True, exist_ok=True)
-    log_path = log_dir / f"2026-05-18_{name}.yaml"
+    log_path = log_dir / f"{datetime.now().strftime('%Y-%m-%d')}_{name}.yaml"
     log_path.write_text(
         "workflow_id: " + name + "\n"
         "outcome: success\n"

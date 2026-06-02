@@ -48,3 +48,4 @@ uv run pytest tests/tdd/test_issue_397_segment_timezone.py -v
 ## Changelog
 
 - 2026-05-26: Initial test manifest erstellt für Bug #397 (Zeitzonen-Versatz Segment-Header).
+- 2026-06-02: Test-Fix aus retrospektivem Adversary-Audit #510 eingespielt (Issue #551) — positionales Argument `_CEST` korrigiert zu keyword-Argument `tz=_CEST` (seit #397 keyword-only).

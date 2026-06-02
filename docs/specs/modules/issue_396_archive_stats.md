@@ -128,3 +128,4 @@ Auth: gleiche Session-Auth wie alle anderen `/api/`-Endpoints.
 
 - 2026-05-27: Spec erstellt. Scope bewusst auf Zähler beschränkt — Accuracy/Schlagzeilen
   ausgeschlossen (Claude Design hatte Kreativitätsüberschuss in der ursprünglichen Issue-Beschreibung).
+- 2026-06-02: Test-Fix aus retrospektivem Adversary-Audit #510 eingespielt (Issue #553) — `test_append_alert_log_purges_entries_older_than_48h` auf neue Semantik angepasst (kein Purge mehr, alle Einträge bleiben erhalten).

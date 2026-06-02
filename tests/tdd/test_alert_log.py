@@ -96,7 +96,7 @@ def test_append_alert_log_purges_entries_older_than_48h(tmp_path, monkeypatch):
     """
     GIVEN: alert_log.json enthält Einträge, darunter einen älter als 48h
     WHEN: _append_alert_log aufgerufen
-    THEN: Eintrag älter als 48h wird entfernt, neue + frische Einträge bleiben
+    THEN: Alle Einträge bleiben erhalten (kein Purge seit #396)
     """
     monkeypatch.chdir(tmp_path)
     user_dir = tmp_path / "data" / "users" / "test-user"
@@ -128,10 +128,10 @@ def test_append_alert_log_purges_entries_older_than_48h(tmp_path, monkeypatch):
     svc._append_alert_log("trip-abc", 3, "HIGH")
 
     data = json.loads((user_dir / "alert_log.json").read_text())
-    # Alter Eintrag weg, frischer und neuer vorhanden
-    assert len(data["entries"]) == 2
+    # Kein Purge mehr seit #396 — alle Einträge bleiben erhalten
+    assert len(data["entries"]) == 3
     severities = [e["severity"] for e in data["entries"]]
-    assert "LOW" not in severities, "Eintrag älter als 48h sollte entfernt sein"
+    assert "LOW" in severities    # alter Eintrag bleibt
     assert "MODERATE" in severities
     assert "HIGH" in severities
 

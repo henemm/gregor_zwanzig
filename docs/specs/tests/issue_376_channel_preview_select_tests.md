@@ -2,8 +2,8 @@
 entity_id: issue_376_channel_preview_select_tests
 type: tests
 created: 2026-05-25
-updated: 2026-05-25
-status: draft
+updated: 2026-06-02
+status: obsolete
 version: "1.0"
 tags: [tests, frontend, svelte5, select, design-system, issue-376, issue-278, issue-272]
 parent: issue_376_channel_preview_select
@@ -70,3 +70,4 @@ uv run pytest tests/tdd/test_issue_376_channel_preview_select.py -v
 ## Changelog
 
 - 2026-05-25: Initial test manifest erstellt für Issue #376 (Select-Migration ChannelPreviewBlock).
+- 2026-06-02: Gelöscht im Rahmen des retrospektiven Adversary-Audits #510 (Issue #552) — die Anforderung (native `<select>` → `Select.svelte`) wurde durch Issue #496-Redesign intentional aufgegeben zugunsten tab-basierter Kanalauswahl. Die Testdatei `tests/tdd/test_issue_376_channel_preview_select.py` wurde gelöscht; Issue #496 hat eigene ACs, die diese Testdatei ersetzen.
