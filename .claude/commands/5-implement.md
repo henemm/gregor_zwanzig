@@ -21,6 +21,16 @@ python3 .claude/hooks/workflow_state_multi.py status
 
 **If TDD RED artifacts are missing, the `tdd_enforcement` hook will BLOCK edits!**
 
+### Kontext komprimieren (JETZT — vor allen anderen Schritten)
+
+Die Phasen 1–4 haben viel Analyse- und Diskussions-Kontext angehäuft, der ab jetzt nicht mehr gebraucht wird — die Spec ist die einzige Quelle der Wahrheit. Komprimiere den Kontext:
+
+```
+/compact
+```
+
+Danach normal weiterfahren. Der Workflow-State und die Spec-Datei bleiben erhalten.
+
 ## Your Tasks
 
 ### 0. Workflow-Name pinnen (ZUERST — vor allem anderen!)
@@ -85,7 +95,7 @@ python3 .claude/hooks/workflow.py status
 
 Notiere den `Workflow:`-Wert (z.B. `issue_294_home_kachel`). Dieser wird als `GZ_ACTIVE_WORKFLOW` an den Developer Agent übergeben.
 
-### 4. Delegate to Developer Agent (Opus, kein Worktree)
+### 4. Delegate to Developer Agent (Sonnet, kein Worktree)
 
 **DU implementierst NICHT selbst!** Spawne den Developer Agent — **OHNE** `isolation="worktree"` (Worktrees kennen den Workflow-State nicht):
 

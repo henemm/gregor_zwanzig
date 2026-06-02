@@ -1,7 +1,7 @@
 ---
 name: developer
 description: Implementiert Code nach Spec in Worktree-Isolation. Einziger Agent mit Schreibzugriff auf src/. Folgt TDD GREEN Prinzip.
-model: opus
+model: sonnet
 tools:
   - Read
   - Edit
