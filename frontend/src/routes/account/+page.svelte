@@ -682,7 +682,7 @@
 					</div>
 					<div class="flex items-center justify-between text-sm">
 						<span>Aktive Abos</span>
-						<a href="/subscriptions" class="font-medium hover:underline">{data.subscriptions.filter((s: any) => s.enabled).length}</a>
+						<a href="/compare" class="font-medium hover:underline">{data.subscriptions.filter((s: any) => s.enabled).length}</a>
 					</div>
 					<div class="flex items-center justify-between text-sm">
 						<span>Locations</span>
