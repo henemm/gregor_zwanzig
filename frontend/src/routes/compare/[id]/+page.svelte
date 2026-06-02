@@ -27,6 +27,23 @@
 
 	let actionSheetOpen = $state(false);
 
+	// Issue #528 — Status-abhängige Header-Primäraktion.
+	let isSending = $state(false);
+	let sendMsg = $state<string | null>(null);
+
+	async function handleTestSend() {
+		isSending = true;
+		sendMsg = null;
+		try {
+			const res = await fetch(`/api/compare/presets/${data.preset.id}/send`, { method: 'POST' });
+			sendMsg = res.ok ? 'Test-Briefing gesendet' : 'Fehler beim Senden';
+		} catch {
+			sendMsg = 'Netzwerkfehler';
+		} finally {
+			isSending = false;
+		}
+	}
+
 	function handleAction(id: string) {
 		if (id === 'edit' || id === 'setup') {
 			window.location.href = `/compare/${data.preset.id}/edit`;
@@ -53,10 +70,19 @@
 			</p>
 		</div>
 		<div class="flex items-center gap-2">
-			<Btn variant="primary" href="/compare/{data.preset.id}/edit">Bearbeiten</Btn>
+			{#if status === 'draft'}
+				<Btn variant="primary" onclick={() => { window.location.href = `?tab=versand`; }}>Setup abschließen</Btn>
+			{:else}
+				<Btn variant="primary" onclick={handleTestSend} disabled={isSending}>
+					{isSending ? 'Wird gesendet…' : 'Test senden'}
+				</Btn>
+			{/if}
 			<CompareKebab {status} onSelect={handleAction} />
 		</div>
 	</div>
+	{#if sendMsg}
+		<div class="text-sm mt-2 text-[var(--g-ink-3)]">{sendMsg}</div>
+	{/if}
 
 	<CompareDetail preset={data.preset} locations={data.locations} {initialTab} />
 </div>

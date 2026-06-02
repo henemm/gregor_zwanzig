@@ -147,7 +147,7 @@
 				{/each}
 			{/if}
 			<div class="footer-link">
-				<a href="/compare/{preset.id}/edit">Im Wizard bearbeiten →</a>
+				<Btn variant="ghost" size="sm">Ort hinzufügen</Btn>
 			</div>
 		</div>
 	{/if}
@@ -168,7 +168,7 @@
 				<p class="empty-state">Keine Idealwerte konfiguriert.</p>
 			{/if}
 			<div class="footer-link">
-				<a href="/compare/{preset.id}/edit">Im Wizard bearbeiten →</a>
+				<Btn variant="ghost" size="sm">Metrik hinzufügen</Btn>
 			</div>
 		</div>
 	{/if}
@@ -178,9 +178,6 @@
 			{#each channels as ch}
 				<CompareLayoutRow channel={ch} cols={CHANNEL_COLS[ch]} />
 			{/each}
-			<div class="footer-link">
-				<a href="/compare/{preset.id}/edit">Im Wizard bearbeiten →</a>
-			</div>
 		</div>
 	{/if}
 
@@ -207,9 +204,6 @@
 			{#if deriveStatusFromPreset(preset) === 'draft'}
 				<p class="draft-hint">Noch nicht aktiv</p>
 			{/if}
-			<div class="footer-link">
-				<a href="/compare/{preset.id}/edit">Im Wizard bearbeiten →</a>
-			</div>
 		</div>
 	{/if}
 

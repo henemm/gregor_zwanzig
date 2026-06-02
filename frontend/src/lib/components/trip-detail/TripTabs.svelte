@@ -42,17 +42,17 @@
 		preview: badgesProp.preview
 	});
 
-	// Issue #302 — Labels & Badges nach Soll-Mockup:
-	//   stages    -> "Etappen" (war: "Etappen & Wegpunkte")
-	//   weather   -> "Wetter-Briefing" (war: "Wetter-Metriken")
-	//   briefings -> "Reports & Kanäle" (war: "Briefing-Zeitplan")
-	//   alerts    -> "Alarmregeln" (war: "Alerts")
+	// Issue #529 — Kanonische Tab-Namen aus nav-map.jsx (Single Source of Truth):
+	//   weather   -> "Wetter-Metriken" (war: "Wetter-Briefing")
+	//   briefings -> "Briefing-Zeitplan" (war: "Reports & Kanäle")
+	//   alerts    -> "Alerts" (war: "Alarmregeln")
+	// `value`-Schlüssel bleiben unverändert — URL-Parameter und Test-IDs nicht betroffen.
 	const TABS = [
 		{ value: 'overview', label: 'Übersicht' },
 		{ value: 'stages', label: 'Etappen & Wegpunkte' },
-		{ value: 'weather', label: 'Wetter-Briefing' },
-		{ value: 'briefings', label: 'Reports & Kanäle' },
-		{ value: 'alerts', label: 'Alarmregeln' },
+		{ value: 'weather', label: 'Wetter-Metriken' },
+		{ value: 'briefings', label: 'Briefing-Zeitplan' },
+		{ value: 'alerts', label: 'Alerts' },
 		{ value: 'preview', label: 'Vorschau' }
 	] as const;
 

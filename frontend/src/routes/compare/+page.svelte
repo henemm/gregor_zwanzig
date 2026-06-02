@@ -15,6 +15,16 @@
 		paused: presets.filter((p) => deriveStatusFromPreset(p) === 'paused').length,
 		draft: presets.filter((p) => deriveStatusFromPreset(p) === 'draft').length
 	});
+
+	// Issue #531 — Suchleiste: lokaler case-insensitive Name-Filter,
+	// nur sichtbar wenn mehr als 3 Vergleiche vorhanden sind.
+	let searchQuery = $state('');
+	const showSearch = $derived(presets.length > 3);
+	const filteredPresets = $derived(
+		searchQuery
+			? presets.filter((p) => p.name.toLowerCase().includes(searchQuery.toLowerCase()))
+			: presets
+	);
 </script>
 
 <div class="p-8 max-w-5xl mx-auto">
@@ -29,6 +39,21 @@
 		</div>
 		<Btn variant="primary" href="/compare/new">+ Neuer Vergleich</Btn>
 	</div>
+
+	<!-- Issue #531 — Suchfeld (nur sichtbar bei mehr als 3 Vergleichen) -->
+	{#if showSearch}
+		<div class="relative max-w-[380px] mb-4">
+			<svg class="absolute top-[11px] left-3 w-3.5 h-3.5 text-[var(--g-ink-4)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+				<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>
+			</svg>
+			<input
+				type="text"
+				bind:value={searchQuery}
+				placeholder="Suchen…"
+				class="w-full py-2 pr-4 pl-8 border border-[var(--g-rule)] rounded-full bg-[var(--g-card)] text-sm text-[var(--g-ink)] outline-none"
+			/>
+		</div>
+	{/if}
 
 	<!-- Stats-Zeile -->
 	{#if presets.length > 0}
@@ -50,15 +75,21 @@
 
 	<!-- Mobiler Kachel-Stack (#493): vertikal, unter 900 px -->
 	<div class="desktop:hidden flex flex-col gap-3">
-		{#each presets as preset (preset.id)}
-			<a href="/compare/{preset.id}" class="block min-h-[44px]">
-				<CompareTile sub={preset} dense={true} />
-			</a>
-		{/each}
+		{#if filteredPresets.length === 0 && searchQuery}
+			<div class="text-sm text-center text-[var(--g-ink-3)] py-8 border border-[var(--g-rule)] rounded-lg">
+				Keine Vergleiche für »{searchQuery}« gefunden.
+			</div>
+		{:else}
+			{#each filteredPresets as preset (preset.id)}
+				<a href="/compare/{preset.id}" class="block min-h-[44px]">
+					<CompareTile sub={preset} dense={true} />
+				</a>
+			{/each}
+		{/if}
 	</div>
 
 	<!-- Desktop Kachel-Grid (#490) -->
 	<div class="hidden desktop:block">
-		<CompareGrid bind:presets />
+		<CompareGrid bind:presets {searchQuery} />
 	</div>
 </div>

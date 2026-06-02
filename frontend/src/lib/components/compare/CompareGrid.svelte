@@ -11,25 +11,29 @@
 	import { goto } from '$app/navigation';
 	import type { ComparePreset } from '$lib/types.js';
 	import { api } from '$lib/api.js';
-	import { Input, Btn } from '$lib/components/atoms';
+	import { Btn } from '$lib/components/atoms';
 	import { ConfirmDialog } from '$lib/components/molecules';
 	import CompareTile from './CompareTile.svelte';
 	import { deriveStatusFromPreset } from './subscriptionHelpers.js';
-	import SearchIcon from '@lucide/svelte/icons/search';
 	import MapPinIcon from '@lucide/svelte/icons/map-pin';
 
 	interface Props {
 		presets: ComparePreset[];
+		searchQuery?: string;
 	}
 
-	let { presets = $bindable([]) }: Props = $props();
+	// Issue #531 — Such-Input lebt jetzt in /compare/+page.svelte;
+	// CompareGrid bekommt den Query als Prop und filtert intern.
+	// `bind:presets` bleibt erhalten — Lösch-Operationen modifizieren die Liste.
+	let { presets = $bindable([]), searchQuery = '' }: Props = $props();
 
-	let search = $state('');
 	let deleteTarget: ComparePreset | null = $state(null);
 	let error: string | null = $state(null);
 
 	const items = $derived(
-		presets.filter((p) => (p.name ?? '').toLowerCase().includes(search.toLowerCase()))
+		searchQuery
+			? presets.filter((p) => (p.name ?? '').toLowerCase().includes(searchQuery.toLowerCase()))
+			: presets
 	);
 
 	function handleAction(preset: ComparePreset, id: string) {
@@ -54,13 +58,6 @@
 	}
 </script>
 
-{#if presets.length > 0}
-	<div class="relative mb-4 max-w-[380px]">
-		<SearchIcon class="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-		<Input placeholder="Vergleich suchen …" class="pl-8 rounded-full" bind:value={search} />
-	</div>
-{/if}
-
 {#if error}
 	<p class="text-sm text-destructive mb-3">{error}</p>
 {/if}
@@ -72,7 +69,7 @@
 		<Btn variant="outline" href="/compare/new">+ Neuer Vergleich</Btn>
 	</div>
 {:else if items.length === 0}
-	<p class="text-sm text-[var(--g-ink-3)]">Keine Vergleiche für »{search}« gefunden.</p>
+	<p class="text-sm text-[var(--g-ink-3)]">Keine Vergleiche für »{searchQuery}« gefunden.</p>
 {:else}
 	<div
 		style:display="grid"

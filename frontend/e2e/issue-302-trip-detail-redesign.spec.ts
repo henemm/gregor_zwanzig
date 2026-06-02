@@ -69,22 +69,26 @@ test.describe('Issue #302 — Trip-Detail-Seite Redesign', () => {
 		expect(text).not.toContain('& Wegpunkte');
 	});
 
-	test('AC-3b: Tab "weather" heißt "Wetter-Briefing" (nicht "Wetter-Metriken")', async ({ page }) => {
+	// Issue #529 — Kanonische Tab-Namen (nav-map.jsx Drift aufgelöst).
+	test('AC-3b: Tab "weather" heißt "Wetter-Metriken" (nicht "Wetter-Briefing")', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
 		const weatherTab = page.getByTestId('trip-detail-tab-weather');
-		await expect(weatherTab).toContainText('Wetter-Briefing');
+		await expect(weatherTab).toContainText('Wetter-Metriken');
+		await expect(weatherTab).not.toContainText('Wetter-Briefing');
 	});
 
-	test('AC-3c: Tab "briefings" heißt "Reports & Kanäle" (nicht "Briefing-Zeitplan")', async ({ page }) => {
+	test('AC-3c: Tab "briefings" heißt "Briefing-Zeitplan" (nicht "Reports & Kanäle")', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
 		const briefingsTab = page.getByTestId('trip-detail-tab-briefings');
-		await expect(briefingsTab).toContainText('Reports & Kanäle');
+		await expect(briefingsTab).toContainText('Briefing-Zeitplan');
+		await expect(briefingsTab).not.toContainText('Reports & Kanäle');
 	});
 
-	test('AC-3d: Tab "alerts" heißt "Alarmregeln" (nicht "Alerts")', async ({ page }) => {
+	test('AC-3d: Tab "alerts" heißt "Alerts" (nicht "Alarmregeln")', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
 		const alertsTab = page.getByTestId('trip-detail-tab-alerts');
-		await expect(alertsTab).toContainText('Alarmregeln');
+		await expect(alertsTab).toContainText('Alerts');
+		await expect(alertsTab).not.toContainText('Alarmregeln');
 	});
 
 	test('AC-3e: Etappen-Tab hat Badge mit Etappenanzahl', async ({ page }) => {
