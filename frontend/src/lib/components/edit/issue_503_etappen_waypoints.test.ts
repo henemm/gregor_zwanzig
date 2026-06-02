@@ -338,3 +338,60 @@ describe('#522 WaypointPin Cleanup (suggested-Branch raus)', () => {
 		);
 	});
 });
+
+// ────────────────────────────────────────────────────────────────────────────
+// #524 — WaypointSidebar „+ auf Route" Button entsperren
+// ────────────────────────────────────────────────────────────────────────────
+
+describe('#524 waypoint-add-on-route-btn entsperren', () => {
+	test('AC-1: Button hat KEIN disabled-Attribut', () => {
+		const src = readFileSync(EDIT_STAGES_PANEL, 'utf-8');
+		const hasDisabled =
+			/<Btn[^>]*data-testid=["']waypoint-add-on-route-btn["'][^>]*\bdisabled\b/.test(src) ||
+			/\bdisabled\b[^>]*data-testid=["']waypoint-add-on-route-btn["']/.test(src);
+		assert.ok(
+			!hasDisabled,
+			'waypoint-add-on-route-btn darf kein disabled-Attribut haben (Bug #524)'
+		);
+	});
+
+	test('AC-1: Button setzt addModeHint = true beim Klick', () => {
+		const src = readFileSync(EDIT_STAGES_PANEL, 'utf-8');
+		assert.ok(
+			src.includes('addModeHint = true'),
+			'EditStagesPanelNew.svelte muss onclick mit addModeHint = true am waypoint-add-on-route-btn haben'
+		);
+	});
+
+	test('AC-2: addModeHint als $state(false) deklariert', () => {
+		const src = readFileSync(EDIT_STAGES_PANEL, 'utf-8');
+		assert.ok(
+			/addModeHint\s*=\s*\$state\(false\)/.test(src),
+			'EditStagesPanelNew.svelte muss addModeHint = $state(false) enthalten'
+		);
+	});
+
+	test('AC-2: Info-Strip-Text "Klicke im Höhenprofil" vorhanden', () => {
+		const src = readFileSync(EDIT_STAGES_PANEL, 'utf-8');
+		assert.ok(
+			src.includes('Klicke im Höhenprofil'),
+			'EditStagesPanelNew.svelte muss den Info-Strip-Text "Klicke im Höhenprofil" enthalten'
+		);
+	});
+
+	test('AC-3: data-testid="waypoint-add-on-route-btn" bleibt erhalten', () => {
+		const src = readFileSync(EDIT_STAGES_PANEL, 'utf-8');
+		assert.ok(
+			src.includes('data-testid="waypoint-add-on-route-btn"'),
+			'waypoint-add-on-route-btn muss seine data-testid behalten'
+		);
+	});
+
+	test('AC-4: handleProfileAdd setzt addModeHint = false', () => {
+		const src = readFileSync(EDIT_STAGES_PANEL, 'utf-8');
+		assert.ok(
+			src.includes('addModeHint = false'),
+			'handleProfileAdd muss addModeHint = false setzen wenn Wegpunkt eingefügt wurde'
+		);
+	});
+});

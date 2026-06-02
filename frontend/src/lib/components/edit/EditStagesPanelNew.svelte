@@ -35,6 +35,7 @@
 	let saving = $state(false);
 	let saveSuccess = $state(false);
 	let saveError = $state<string | null>(null);
+	let addModeHint = $state(false);
 
 	async function save(): Promise<void> {
 		if (!tripId) return;
@@ -155,6 +156,7 @@
 			return { ...s, waypoints: wps };
 		});
 		activeWaypointId = newWp.id;
+		addModeHint = false;
 	}
 
 	function handleWaypointActivate(waypointId: string): void {
@@ -268,6 +270,13 @@
 						/>
 					</div>
 
+					{#if addModeHint}
+						<div class="add-mode-hint" role="status" data-testid="add-mode-hint">
+							<span>Klicke im Höhenprofil, um einen Wegpunkt einzufügen</span>
+							<button class="add-mode-hint-close" aria-label="Hinweis schließen" onclick={() => { addModeHint = false; }}>×</button>
+						</div>
+					{/if}
+
 					<!-- Profil-Card (Höhenprofil) -->
 					<div class="editor-card editor-card--padded" data-testid="profile-card">
 						<div class="editor-card-header editor-card-header--inline">
@@ -289,7 +298,7 @@
 							<Eyebrow>Wegpunkte</Eyebrow>
 							<div class="sidebar-count">{activeStage.waypoints.length} insgesamt</div>
 						</div>
-						<Btn variant="ghost" size="sm" data-testid="waypoint-add-on-route-btn" disabled>
+						<Btn variant="ghost" size="sm" data-testid="waypoint-add-on-route-btn" onclick={() => { addModeHint = true; }}>
 							+ auf Route
 						</Btn>
 					</div>
@@ -438,5 +447,28 @@
 	.save-err {
 		font-size: 0.875rem;
 		color: var(--g-danger, #b34a2a);
+	}
+
+	/* Bug #524 — Info-Strip „+ auf Route" Klick-Hinweis */
+	.add-mode-hint {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 6px 12px;
+		background: var(--g-surface-2, #f0ede8);
+		border-left: 3px solid var(--g-accent);
+		font-size: 13px;
+		color: var(--g-ink-2);
+		margin-bottom: 4px;
+		border-radius: 3px;
+	}
+	.add-mode-hint-close {
+		background: none;
+		border: none;
+		cursor: pointer;
+		font-size: 16px;
+		line-height: 1;
+		color: var(--g-ink-3);
+		padding: 0 4px;
 	}
 </style>
