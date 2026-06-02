@@ -446,6 +446,7 @@ export interface ComparePreset {
 	name: string;
 	location_ids: string[];
 	schedule: 'daily' | 'weekly' | 'manual';
+	weekday?: number;  // 0=Montag … 6=Sonntag; nur relevant wenn schedule='weekly'
 	profil: ActivityProfile;
 	hour_from: number;
 	hour_to: number;

@@ -478,6 +478,15 @@ func (s *Store) LoadComparePresets() ([]model.ComparePreset, error) {
 	if presets == nil {
 		presets = []model.ComparePreset{}
 	}
+	four := 4
+	for i := range presets {
+		// Issue #511 F001: *int statt int — nil bedeutet "Feld fehlt in JSON" (Altdaten),
+		// 0 bedeutet "User hat explizit Montag gewählt". Migration darf nur nil-Fälle
+		// auf Freitag-Default setzen, niemals einen expliziten Montag (0) überschreiben.
+		if presets[i].Weekday == nil && presets[i].Schedule == "weekly" {
+			presets[i].Weekday = &four
+		}
+	}
 	return presets, nil
 }
 

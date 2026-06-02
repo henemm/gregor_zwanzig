@@ -36,6 +36,7 @@ def _make_preset(
     hour_from: int = 9,
     hour_to: int = 16,
     name: str = "Test Preset",
+    weekday: int = 4,
 ) -> dict:
     return {
         "id": preset_id,
@@ -43,6 +44,7 @@ def _make_preset(
         "user_id": "default",
         "location_ids": location_ids or ["loc-a", "loc-b"],
         "schedule": schedule,
+        "weekday": weekday,
         "profil": profil,
         "hour_from": hour_from,
         "hour_to": hour_to,
@@ -210,23 +212,27 @@ class TestComparePresetsFilterLogic:
     Fehler bei einem Preset stoppen den Lauf der anderen nicht.
     """
 
-    def test_only_daily_presets_are_processed(self, tmp_path):
+    def test_manual_presets_are_always_skipped(self, tmp_path, caplog):
         """
-        GIVEN: compare_presets.json mit einem daily- und einem weekly-Preset
-        WHEN: _run_compare_presets_daily(user_id) aufgerufen (mit leerer Location-Liste)
-        THEN: Nur das daily-Preset wird verarbeitet (count=0 wegen leerer Locations, aber kein Fehler für weekly)
+        GIVEN: compare_presets.json mit einem manual-Preset
+        WHEN: _run_compare_presets_daily(user_id) aufgerufen
+        THEN: Manual-Preset wird still übersprungen — kein Log-Eintrag, kein Fehler
+
+        (Issue #511: weekly-Logik wird in test_issue_511_weekly_scheduler.py separat getestet.)
         """
+        import logging
         from api.routers.scheduler import _run_compare_presets_daily
 
-        daily_preset = _make_preset(preset_id="cp-daily", schedule="daily", location_ids=[])
-        weekly_preset = _make_preset(preset_id="cp-weekly", schedule="weekly", location_ids=[])
-        manual_preset = _make_preset(preset_id="cp-manual", schedule="manual", location_ids=[])
-        _write_presets(tmp_path, "default", [daily_preset, weekly_preset, manual_preset])
+        manual_preset = _make_preset(preset_id="cp-manual-skip", schedule="manual", location_ids=[])
+        _write_presets(tmp_path, "default", [manual_preset])
 
-        # Läuft durch ohne Exception — weekly und manual werden still übersprungen
-        count = _run_compare_presets_daily(user_id="default", data_root=str(tmp_path))
+        with caplog.at_level(logging.WARNING):
+            count = _run_compare_presets_daily(user_id="default", data_root=str(tmp_path))
 
-        # count=0 weil location_ids leer → Preset übersprungen, aber kein Crash
+        # Manual-Preset darf keinen Log-Eintrag erzeugen (still übersprungen)
+        assert not any("cp-manual-skip" in r.message for r in caplog.records), (
+            "Manual-Preset muss still übersprungen werden (kein Log-Eintrag)"
+        )
         assert isinstance(count, int)
 
     def test_empty_location_ids_logged_not_crashed(self, tmp_path):

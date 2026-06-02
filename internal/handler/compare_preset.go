@@ -53,6 +53,9 @@ func validateComparePreset(p model.ComparePreset) error {
 	if p.HourTo < p.HourFrom {
 		return fmt.Errorf("hour_to must be >= hour_from")
 	}
+	if p.Schedule == "weekly" && p.Weekday != nil && (*p.Weekday < 0 || *p.Weekday > 6) {
+		return fmt.Errorf("weekday must be between 0 and 6 for weekly presets")
+	}
 	for _, e := range p.Empfaenger {
 		if !strings.Contains(e, "@") {
 			return fmt.Errorf("empfaenger entry %q is not a valid email address", e)
@@ -110,6 +113,14 @@ func CreateComparePresetHandler(s *store.Store) http.HandlerFunc {
 			preset.Empfaenger = []string{}
 		}
 
+		// Issue #511 F001: Default weekday=4 (Freitag) für weekly-Presets ohne
+		// explizit gesetztes weekday-Feld. weekday=0 (Montag) bleibt erhalten,
+		// weil JSON-Decode in *int nur dann nil liefert, wenn das Feld FEHLT.
+		if preset.Schedule == "weekly" && preset.Weekday == nil {
+			four := 4
+			preset.Weekday = &four
+		}
+
 		if err := validateComparePreset(preset); err != nil {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "validation_error", "detail": err.Error()})
 			return
@@ -165,6 +176,13 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		}
 		if updated.Empfaenger == nil {
 			updated.Empfaenger = []string{}
+		}
+
+		// Issue #511 F001: Default weekday=4 (Freitag) für weekly-Presets ohne
+		// explizit gesetztes weekday-Feld (analog Create).
+		if updated.Schedule == "weekly" && updated.Weekday == nil {
+			four := 4
+			updated.Weekday = &four
 		}
 
 		if err := validateComparePreset(updated); err != nil {

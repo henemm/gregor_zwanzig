@@ -268,8 +268,16 @@ def _run_compare_presets_daily(user_id: str = "default", data_root: str | None =
     all_locations = None  # lazy: only load when a daily preset with location_ids is found
 
     for preset in presets:
-        if preset.get("schedule") != "daily":
-            continue
+        schedule = preset.get("schedule", "")
+        if schedule == "daily":
+            pass  # wie bisher
+        elif schedule == "weekly":
+            today_weekday = date.today().weekday()  # 0=Montag … 6=Sonntag
+            preset_weekday = preset.get("weekday", 4)
+            if preset_weekday != today_weekday:
+                continue  # nicht fällig heute
+        else:
+            continue  # manual und unbekannte Typen überspringen
 
         preset_id = preset.get("id", "")
         location_ids = preset.get("location_ids") or []

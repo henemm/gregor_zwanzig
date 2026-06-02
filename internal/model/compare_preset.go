@@ -19,6 +19,7 @@ type ComparePreset struct {
 	Profil               string     `json:"profil"`   // ActivityProfile als string
 	HourFrom             int        `json:"hour_from"`
 	HourTo               int        `json:"hour_to"`
+	Weekday              *int       `json:"weekday,omitempty"` // 0=Montag … 6=Sonntag; nur relevant wenn Schedule="weekly"; nil=kein Wert gesetzt (Default 4=Freitag wird in Store/Handler gesetzt)
 	Empfaenger           []string   `json:"empfaenger"`
 	LetzterVersand       *time.Time `json:"letzter_versand,omitempty"`
 	TopOrtLetzterVersand *string    `json:"top_ort_letzter_versand,omitempty"`

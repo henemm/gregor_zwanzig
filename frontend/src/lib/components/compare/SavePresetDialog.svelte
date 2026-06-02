@@ -23,6 +23,7 @@
 	let schedule: 'daily' | 'weekly' | 'manual' = $state('daily');
 	let hour_from = $state(9);
 	let hour_to = $state(16);
+	let weekday = $state(4);  // Default Freitag
 	let empfaenger = $state('');
 	let saving = $state(false);
 	let error: string | null = $state(null);
@@ -34,6 +35,7 @@
 		schedule = 'daily';
 		hour_from = 9;
 		hour_to = 16;
+		weekday = 4;
 		empfaenger = '';
 		saving = false;
 		error = null;
@@ -54,6 +56,7 @@
 				schedule,
 				hour_from: schedule === 'daily' ? hour_from : 0,
 				hour_to: schedule === 'daily' ? hour_to : 0,
+				weekday: schedule === 'weekly' ? weekday : 0,
 				empfaenger: empfaenger.split(',').map((e) => e.trim()).filter(Boolean)
 			});
 			open = false;
@@ -118,6 +121,21 @@
 						/>
 					</label>
 				</div>
+			{/if}
+
+			{#if schedule === 'weekly'}
+				<label class="field">
+					<span class="field-label">Wochentag</span>
+					<Select bind:value={weekday} class="w-full">
+						<option value={0}>Montag</option>
+						<option value={1}>Dienstag</option>
+						<option value={2}>Mittwoch</option>
+						<option value={3}>Donnerstag</option>
+						<option value={4}>Freitag</option>
+						<option value={5}>Samstag</option>
+						<option value={6}>Sonntag</option>
+					</Select>
+				</label>
 			{/if}
 
 			<label class="field">
