@@ -17,7 +17,7 @@
 	import Step3Idealwerte from './steps/Step3Idealwerte.svelte';
 	import Step4Layout from './steps/Step4Layout.svelte';
 	import Step5Versand from './steps/Step5Versand.svelte';
-	import type { Location } from '$lib/types';
+	import type { ActivityProfile, Location } from '$lib/types';
 
 	interface Props {
 		locations?: Location[];
@@ -55,6 +55,54 @@
 	// (lässt sich in modernen Browsern ausblenden und bietet keine Gestaltung).
 	let cancelDialogOpen = $state(false);
 	let discardDialogOpen = $state(false);
+
+	// Issue #547 AC-8: Override-Flag — true wenn Nutzer das Profil in Step 1
+	// manuell gewählt hat. Blockiert den Auto-Apply-$effect bis pickedIds sich
+	// erneut ändert (AC-9 Reset).
+	let profileManuallyOverridden = $state(false);
+
+	// Issue #547 AC-6/7: dominantProfile — das Aktivitätsprofil, das von mehr
+	// als 50 % der ausgewählten Locations getragen wird. "allgemein" und
+	// Locations ohne Profil zählen nicht zur Mehrheit. Bei 50/50 oder leerer
+	// Auswahl: null (kein Auto-Set).
+	const dominantProfile = $derived.by((): ActivityProfile | null => {
+		const profiled = wiz.pickedIds
+			.map((id) => locations.find((l) => l.id === id)?.activity_profile)
+			.filter((p): p is ActivityProfile => Boolean(p) && p !== 'allgemein');
+		if (profiled.length === 0) return null;
+		const counts = new Map<ActivityProfile, number>();
+		for (const p of profiled) counts.set(p, (counts.get(p) ?? 0) + 1);
+		const [top] = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+		return top[1] / profiled.length > 0.5 ? top[0] : null;
+	});
+
+	// Issue #547 AC-6: Auto-Apply — setzt wiz.activityProfile auf dominantProfile,
+	// solange kein manuelles Override aktiv ist und keine Idealwerte bereits
+	// konfiguriert wurden (Edit-Schutz: laufende Step-3-Konfiguration bleibt
+	// unberührt).
+	$effect(() => {
+		if (
+			!profileManuallyOverridden &&
+			dominantProfile &&
+			wiz.activityProfile !== dominantProfile &&
+			Object.keys(wiz.idealRanges).length === 0
+		) {
+			wiz.activityProfile = dominantProfile;
+		}
+	});
+
+	// Issue #547 AC-9: Override-Reset — wenn der Nutzer in Step 2 die
+	// Location-Auswahl ändert, wird das manuelle Override verworfen und der
+	// Auto-Apply-$effect kann beim nächsten dominantProfile-Wechsel wieder
+	// greifen.
+	$effect(() => {
+		wiz.pickedIds; // Abhängigkeit tracken
+		profileManuallyOverridden = false;
+	});
+
+	function handleManualProfileChange() {
+		profileManuallyOverridden = true;
+	}
 
 	function handleCancel() {
 		const isDirty =
@@ -144,7 +192,7 @@
 
 	<div class="min-h-[300px] mt-6">
 		{#if wiz.currentStep === 1}
-			<Step1Vergleich />
+			<Step1Vergleich onManualProfileChange={handleManualProfileChange} />
 		{:else if wiz.currentStep === 2}
 			<Step2Orte {locations} />
 		{:else if wiz.currentStep === 3}

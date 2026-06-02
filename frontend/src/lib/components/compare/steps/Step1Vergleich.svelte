@@ -8,6 +8,15 @@
 
 	const state = getContext<CompareWizardState>('compare-wizard-state');
 
+	// Issue #547 AC-8: Callback an Eltern-Komponente (CompareWizard) — wird
+	// gefeuert wenn der Nutzer manuell ein Profil wählt, damit das Override-
+	// Flag dort gesetzt werden kann und ein nachfolgender Auto-Set des
+	// dominantProfile-$effect blockiert wird.
+	interface Props {
+		onManualProfileChange?: () => void;
+	}
+	let { onManualProfileChange }: Props = $props();
+
 	// F005 (Spec §6): Compare-Wizard-spezifische Labels. Trip-Wizard nutzt
 	// weiterhin die generischen ACTIVITY_PROFILE_OPTIONS.label-Werte.
 	const COMPARE_PROFILE_LABELS: Record<string, string> = {
@@ -35,6 +44,7 @@
 			state.idealRanges = {};
 		}
 		state.activityProfile = value;
+		onManualProfileChange?.();
 	}
 </script>
 
