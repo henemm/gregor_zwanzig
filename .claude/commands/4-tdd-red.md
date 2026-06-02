@@ -100,7 +100,7 @@ Gib nach dem Artifact-Register immer diese Übersicht aus:
 
 Das ist korrekt so — die Tests schlagen fehl, weil das Feature noch nicht gebaut ist.
 
-Ich starte jetzt direkt mit der Implementierung (kein Gate — ACs wurden bereits freigegeben).
+**Schreib `go` um die Implementierung zu starten.**
 
 ## Artifact Requirements
 
@@ -122,12 +122,7 @@ Before proceeding to implementation:
 
 ## Next Step
 
-After RED phase is complete:
-> "TDD RED complete. [N] tests written, all failing as expected. Artifacts captured. Ready for `/implement`."
-
-```bash
-python3 .claude/hooks/workflow_state_multi.py phase phase6_implement
-```
+Phase 5 abgeschlossen — warte auf `go` vom User. Dann `/5-implement` aufrufen.
 
 ## Common Mistakes
 
