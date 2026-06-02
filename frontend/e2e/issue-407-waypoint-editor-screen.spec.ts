@@ -10,8 +10,11 @@
 // Abgedeckte ACs: AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, AC-7, AC-8, AC-9,
 //                 AC-10, AC-11, AC-12
 
-// Deaktiviert in #494: WaypointEditorPage ist nicht mehr der Einstieg auf /edit.
-// Navigation Etappen-Kachel → WaypointEditor folgt in Folge-Issue.
+// Deaktiviert in #494: Diese Tests beschreiben eine verworfene Architektur,
+// in der /edit direkt WaypointEditorPage als Root-View öffnete.
+// Die aktuelle Architektur (ab #500) lädt die TripEditView auf /edit;
+// der WaypointEditor wird über Etappen-Kachel-Klick aktiviert.
+// Tests NICHT löschen (historische Referenz) und NICHT aktivieren (Architektur überholt).
 import { test, expect, devices } from '@playwright/test';
 import { login } from './helpers.js';
 

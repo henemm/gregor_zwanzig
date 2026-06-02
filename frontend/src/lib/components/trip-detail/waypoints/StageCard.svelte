@@ -77,6 +77,7 @@
 		data-testid="stage-card-pause-{index}"
 		class="stage-card stage-card--pause"
 		class:stage-card--active={active}
+		class:stage-card--clickable={!!onclick}
 		role={onclick ? 'button' : undefined}
 		tabindex={onclick ? 0 : undefined}
 		onclick={onclick ? handleClick : undefined}
@@ -91,6 +92,7 @@
 		data-testid="stage-card-{index}"
 		class="stage-card"
 		class:stage-card--active={active}
+		class:stage-card--clickable={!!onclick}
 		role={onclick ? 'button' : undefined}
 		tabindex={onclick ? 0 : undefined}
 		onclick={onclick ? handleClick : undefined}
@@ -132,6 +134,15 @@
 	.stage-card--active {
 		outline: 2px solid var(--g-accent);
 		outline-offset: 1px;
+	}
+
+	.stage-card--clickable {
+		cursor: pointer;
+	}
+
+	.stage-card--clickable:hover {
+		background: var(--g-paper-alt, #f0ede6);
+		border-color: var(--g-ink-subtle, #a0998c);
 	}
 
 	.stage-card--pause {

@@ -136,24 +136,28 @@ test('AC-3d: trips/[id]/+page.svelte liest NICHT aus page.url.hash', () => {
 });
 
 // ---------------------------------------------------------------------------
-// AC-4: /trips/[id]/edit → HTTP-301-Redirect
+// AC-4: /trips/[id]/edit → Trip laden (kein Redirect — ab Issue #500)
+//
+// Issue #516 hatte hier einen redirect(301) auf ?tab=stages.
+// Issue #500 ersetzt diesen Redirect durch einen echten Trip-Load,
+// damit TripEditView erreichbar ist. Der Redirect ist absichtlich weg.
 // ---------------------------------------------------------------------------
 
-test('AC-4a: edit/+page.server.ts enthält redirect(301', () => {
+test('AC-4a: edit/+page.server.ts hat KEINEN redirect(301 mehr (ab #500)', () => {
 	const src = readFrontend('routes/trips/[id]/edit/+page.server.ts');
 	assert.equal(
 		src.includes('redirect(301'),
-		true,
-		'edit/+page.server.ts muss redirect(301 enthalten'
+		false,
+		'edit/+page.server.ts darf redirect(301 NICHT mehr enthalten — ab #500 lädt die Seite den Trip direkt'
 	);
 });
 
-test('AC-4b: edit/+page.server.ts redirectet auf ?tab=stages', () => {
+test('AC-4b: edit/+page.server.ts lädt Trip-Daten und gibt { trip } zurück (ab #500)', () => {
 	const src = readFrontend('routes/trips/[id]/edit/+page.server.ts');
 	assert.equal(
-		src.includes('?tab=stages'),
+		src.includes('return { trip }'),
 		true,
-		'edit/+page.server.ts muss auf ?tab=stages redirecten'
+		'edit/+page.server.ts muss return { trip } enthalten — TripEditView erwartet data.trip'
 	);
 });
 
