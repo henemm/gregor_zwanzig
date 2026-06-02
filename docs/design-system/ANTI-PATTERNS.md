@@ -246,9 +246,28 @@
 
 ## AP-012 · Floating Action Button (FAB)
 
-**Verboten:** Auch auf Mobile — kein schwebender Plus-Knopf unten rechts.
+**Verboten:** Der Primäraktions-FAB — ein Akzent-gefärbter, schwebender Kreis unten rechts, der die eine Screen-Primäraktion aus dem Page-Header herauslöst.
 
-**Warum:** Charter §6. Primäraktion gehört in den Page-Header, auch auf Mobile (rechts neben Title als Icon-Button, falls Platz knapp).
+**Warum:** Charter §6. Die zentrale Aktion soll nicht an zwei konkurrierenden Stellen leben (Header + schwebender Knopf).
+
+**Ausnahme — `<MapControl>`:** Neutrale Karten-Overlay-Werkzeuge auf einer Vollbild-Karte sind erlaubt und heißen `<MapControl>`, nicht FAB. Bedingungen müssen **alle** erfüllt sein:
+- Card-farbig (`--g-card`), kein Akzent
+- Gleichgewichtige Werkzeuge (kein einzelner Knopf hervorgehoben)
+- Oben verankert (nicht unten rechts)
+- Quadratisch ≥ 44 × 44 px
+- Komponente heißt `<MapControl>` — der Name `FAB` bleibt für das verbotene Muster reserviert
+
+**Falsch:**
+```svelte
+<!-- Primäraktion als schwebender Akzent-Kreis -->
+<button class="fab-primary">+</button>
+```
+
+**Richtig:**
+```svelte
+<!-- Karten-Werkzeuge als neutraler MapControl-Cluster -->
+<MapControl tools={['add-waypoint', 'map-style', 'search']} position="top-right" />
+```
 
 ---
 

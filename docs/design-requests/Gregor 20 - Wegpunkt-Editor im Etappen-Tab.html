@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<title>Gregor 20 — Wegpunkt-Editor im Etappen-Tab (#503)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  html, body { background: #f0eee9; height: 100%; }
+  #root { min-height: 100%; }
+</style>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="mock-data.jsx"></script>
+<script type="text/babel" src="mock-locations.jsx"></script>
+<script type="text/babel" src="brand-kit.jsx"></script>
+<script type="text/babel" src="atoms.jsx"></script>
+<script type="text/babel" src="molecules.jsx"></script>
+<script type="text/babel" src="organisms.jsx"></script>
+<script type="text/babel" src="sidebar.jsx"></script>
+<script type="text/babel" src="mobile-shell.jsx"></script>
+<script type="text/babel" src="screen-waypoint-editor.jsx"></script>
+<script type="text/babel" src="screen-waypoint-editor-mobile.jsx"></script>
+<script type="text/babel" src="screen-trip-edit-tabs.jsx"></script>
+
+<script type="text/babel">
+  function App() {
+    return (
+      <DesignCanvas>
+        <DCSection id="entscheid" title="00 · Entscheidung" subtitle="Antwort auf Design-Request #503 — eine Empfehlung, kurz begründet. Detail-Antwort für Claude Code liegt in docs/design-requests/issue_503_ANTWORT.md.">
+          <DCArtboard id="rationale" label="Empfehlung · Option B (mit Begründung A/B/C)" width={720} height={900}>
+            <TripEditRationale/>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="desktop" title={`01 · Desktop — Tab „Etappen & Wegpunkte“`} subtitle="TripEditView-Chrome (Breadcrumb + Hero + Tab-Leiste) hält den fertigen Editor. EtappenStrip + Karte/Profil (1fr) + Wegpunkt-Sidebar (360px). Speichern wandert in die Page-Chrome.">
+          <DCArtboard id="desktop-edit" label="Trip bearbeiten · Etappen & Wegpunkte (1440)" width={1440} height={1280}>
+            <ScreenTripEditWaypoints initialActiveIdx={1}/>
+          </DCArtboard>
+          <DCArtboard id="desktop-edit-pause" label="Gleiche Hülle · Pausentag-Etappe (keine Karte/Wegpunkte)" width={1440} height={900}>
+            <ScreenTripEditWaypoints initialActiveIdx={3}/>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="mobile" title="02 · Mobile — derselbe Tab" subtitle="TopAppBar + scrollbare Tab-Leiste (MTab). Tab-Inhalt = Karte fullscreen + Etappen-Switcher + Bottom-Sheet mit Höhenprofil & Wegpunkten + 3 FABs. Kein eigener Screen, nur Tab-Inhalt.">
+          <DCArtboard id="mobile-edit" label="Trip bearbeiten · Etappen & Wegpunkte (390)" width={430} height={900}>
+            <ScreenTripEditWaypointsMobile initialActive={1}/>
+          </DCArtboard>
+        </DCSection>
+      </DesignCanvas>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

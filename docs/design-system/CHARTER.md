@@ -93,7 +93,7 @@ Für Touren, Vergleiche, Archiv, Templates: **Kachel-Grid, keine Tabelle**.
 |---|---|
 | Primäraktion pro Screen | **Genau eine.** Visuell prominent. Position: rechts neben Page-Header. |
 | Sekundäraktionen | Aus dem `<DropdownMenu>` (Kebab `⋯`). |
-| Floating Action Button (FAB) | **Verboten.** Auch auf Mobile. |
+| Floating Action Button (FAB) | **Verboten** — der Primäraktions-FAB (Akzent-Farbe, unten rechts). Ausnahme: `<MapControl>` auf Vollbild-Karten (neutral, oben, gleichgewichtig — siehe AP-012). |
 | Listen-Items | Klick auf den Namen öffnet Detail. **Keine** Icon-Soup auf jeder Zeile. |
 | Inline-Edit | Bevorzugt vor Modal-Dialog. Modal nur, wenn der Edit-Prozess mehrstufig oder destruktiv ist. |
 | Bestätigung destruktiver Aktionen | Inline-Confirm oder Modal mit explizitem rotem Button-Label ("Konto löschen") — kein "OK"/"Bestätigen". |

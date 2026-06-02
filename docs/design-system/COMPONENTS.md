@@ -185,6 +185,10 @@ Diese sind nicht Foundation, aber kanonisch:
 | `<WxDrillDownPanel>` | Slide-Panel (Desktop) / Bottom-Sheet (Mobile) für Wetter aus Trip-Detail / Compare. |
 | `<TripStageCard>` | Etappen-Zeile in Trip-Detail. |
 | `<MapEditor>` | Karten-Editor für Wegpunkte. Keine Lat/Lon-Inputs. |
+| `<MapControl>` | Neutraler Karten-Werkzeug-Cluster auf Vollbild-Karten. `tools: string[]` (z.B. `['add-waypoint', 'map-style', 'search']`), `position: 'top-right'`. 44×44 px je Button, `--g-card` Hintergrund, kein Akzent. **Kein FAB** — siehe AP-012. |
+| `<ProfileSheetEmbedded>` | Bottom-Sheet im Wegpunkt-Editor (Mobile). Snaps: `peek: 92px`, `half: 320px`, `full: 540px`. Enthält `<EditorProfileSVG>` + Wegpunkt-Liste. |
+| `<EditorProfileSVG>` | Vereinfachtes Höhenprofil für Mobile-Bottom-Sheet. `width: 343px`, `height: 70px`. Synchron mit Karte via `selectedIndex`. |
+| `<EtappenStrip>` | Horizontaler Etappen-Umschalter im Editor (Drag-Sort + Pause-Insert). 70 px hoch, `StageCard` je Etappe. Sitzt direkt unter der Tab-Leiste. |
 | `<CompareMatrix>` | Kachel-Grid mit Score, Metrics, Winner-Highlight. |
 | `<CompareLocationsRail>` | Linke 280-px-Sidebar mit Gruppen + Orten. |
 | `<CompareRecBanner>` | Empfehlungs-Banner über der Matrix. |
@@ -220,5 +224,6 @@ Neue Komponente braucht:
 
 | Version | Datum | Anmerkung |
 |---|---|---|
+| v1.2 | 2026-06-02 | MapControl, ProfileSheetEmbedded, EditorProfileSVG, EtappenStrip aus Wegpunkt-Editor-Handoff (#503) ergänzt |
 | v1.1 | 2026-05-31 | Molecules-Sektion (Epic #368/372) + ConfirmDialog (Issue #478) hinzugefügt; bestehende 10 Molecules dokumentiert |
 | v1.0 | 2026-05-21 | Initialer Katalog — Runde 1 |
