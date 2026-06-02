@@ -8,7 +8,7 @@
 	//
 	// Spec: docs/specs/modules/issue_517_compare_hub.md
 
-	import { Segmented, Dot, Pill, Btn } from '$lib/components/atoms';
+	import { Segmented, Dot, Pill, Btn, Eyebrow } from '$lib/components/atoms';
 	import CompareLocationRow from '$lib/components/molecules/CompareLocationRow.svelte';
 	import CompareIdealRow from '$lib/components/molecules/CompareIdealRow.svelte';
 	import CompareLayoutRow from '$lib/components/molecules/CompareLayoutRow.svelte';
@@ -19,6 +19,7 @@
 		STATUS_MAP
 	} from '$lib/components/compare/subscriptionHelpers.js';
 	import type { ComparePreset, Location } from '$lib/types.js';
+	import { api } from '$lib/api.js';
 
 	interface Props {
 		preset: ComparePreset;
@@ -90,6 +91,64 @@
 		sms: 0
 	};
 	const channels = ['email', 'telegram', 'signal', 'sms'];
+
+	// ── Vorschau-Tab (Issue #514) ────────────────────────────────────────────────
+	let previewChannel = $state<'email' | 'sms'>('email');
+	let previewHtml = $state('');
+	let previewLoading = $state(false);
+	let previewError = $state<string | null>(null);
+	let sendQueued = $state(false);
+	let sendLoading = $state(false);
+	let sendError = $state<string | null>(null);
+
+	const PREVIEW_CHANNELS = [
+		{ value: 'email', label: 'Email' },
+		{ value: 'sms', label: 'SMS / Signal' }
+	];
+
+	$effect(() => {
+		if (activeTab !== 'vorschau') return;
+		previewHtml = '';
+		previewError = null;
+		previewLoading = true;
+		api
+			.post<{ html: string }>('/api/_validator/compare-email-preview', {
+				profile: preset.profil,
+				time_window: [preset.hour_from, preset.hour_to],
+				target_date: new Date().toISOString().slice(0, 10),
+				winner_tags: []
+			})
+			.then((r) => {
+				previewHtml = r.html;
+			})
+			.catch((e: unknown) => {
+				previewError =
+					e && typeof e === 'object' && 'error' in e
+						? String((e as { error: unknown }).error)
+						: e instanceof Error
+							? e.message
+							: 'Vorschau konnte nicht geladen werden';
+			})
+			.finally(() => {
+				previewLoading = false;
+			});
+	});
+
+	async function handleSend() {
+		if (sendLoading) return;
+		sendLoading = true;
+		sendError = null;
+		sendQueued = false;
+		try {
+			await api.post(`/api/compare/presets/${preset.id}/send`, {});
+			sendQueued = true;
+		} catch (e: unknown) {
+			const body = e as { detail?: string; error?: string };
+			sendError = body?.detail ?? body?.error ?? 'Versand fehlgeschlagen';
+		} finally {
+			sendLoading = false;
+		}
+	}
 </script>
 
 <div class="compare-tabs" data-testid="compare-detail-tab-list">
@@ -202,10 +261,70 @@
 
 	{#if activeTab === 'vorschau'}
 		<div class="tab-panel" data-testid="compare-detail-panel-vorschau">
-			<p class="placeholder">E-Mail-Vorschau folgt, sobald CompareEmail implementiert ist.</p>
-			<p class="hint">Dein Briefing wird im Postfach gelesen — nicht hier.</p>
-			<div class="footer-link">
-				<Btn href="/compare/{preset.id}/edit">Test-Briefing senden</Btn>
+			<!-- Header: Eyebrow + Titel + Untertitel | Kanal-Umschalter + Disclaimer -->
+			<div class="preview-header">
+				<div class="preview-header-text">
+					<Eyebrow>Vorschau · Verifikation</Eyebrow>
+					<h2 class="preview-title">So sieht dein nächstes Briefing aus</h2>
+					<p class="preview-subtitle">
+						Pixel-Vorschau zum Gegencheck deiner Konfiguration.
+						Gelesen wird das echte Briefing im jeweiligen Kanal.
+					</p>
+				</div>
+				<div class="preview-header-right">
+					<Segmented
+						options={PREVIEW_CHANNELS}
+						selected={previewChannel}
+						onselect={(v) => (previewChannel = v as 'email' | 'sms')}
+					/>
+					<span class="preview-disclaimer">Beispielwerte · kein Live-Wetter</span>
+				</div>
+			</div>
+
+			<!-- Preview-Fläche: warmes Grau, zentriert -->
+			<div class="preview-stage">
+				{#if previewLoading}
+					<p class="preview-loading" data-testid="compare-preview-loading">
+						Vorschau wird geladen…
+					</p>
+				{:else if previewError !== null}
+					<p class="preview-error" data-testid="compare-preview-error">{previewError}</p>
+				{:else if previewHtml !== '' && previewChannel === 'email'}
+					<div style="width: 680px; max-width: 100%;">
+						<iframe
+							data-testid="compare-preview-iframe"
+							srcdoc={previewHtml}
+							sandbox="allow-same-origin"
+							title="E-Mail-Vorschau"
+						></iframe>
+					</div>
+				{/if}
+				{#if previewChannel === 'sms'}
+					<p class="preview-sms-hint" data-testid="compare-preview-sms-hint">
+						SMS/Signal-Vorschau ist noch nicht verfügbar.
+					</p>
+				{/if}
+			</div>
+
+			<!-- Test-Briefing senden -->
+			<div class="preview-send">
+				{#if sendQueued}
+					<p class="send-success" data-testid="compare-send-success">
+						Briefing wurde zur Zustellung vorgemerkt.
+					</p>
+				{:else}
+					<Btn
+						variant="quiet"
+						disabled={sendLoading}
+						onclick={handleSend}
+						data-testid="compare-send-btn"
+					>
+						{sendLoading ? 'Wird gesendet…' : 'Test-Briefing jetzt senden'}
+					</Btn>
+				{/if}
+				{#if sendError !== null}
+					<p class="send-error" data-testid="compare-send-error">{sendError}</p>
+				{/if}
 			</div>
 		</div>
 	{/if}
@@ -389,6 +508,110 @@
 
 		.monitoring-strip {
 			gap: 1rem;
+		}
+	}
+
+	/* ── Vorschau-Tab (Issue #514) — Design nach HubPreview ─────────────────── */
+	.preview-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-end;
+		gap: 24px;
+		margin-bottom: 20px;
+		flex-wrap: wrap;
+	}
+	.preview-header-text {
+		max-width: 680px;
+	}
+	.preview-title {
+		font-size: 1.5rem;
+		font-weight: 600;
+		letter-spacing: -0.02em;
+		margin: 6px 0 6px;
+		color: var(--g-ink);
+	}
+	.preview-subtitle {
+		font-size: 0.84375rem;
+		color: var(--g-ink-3);
+		line-height: 1.5;
+		margin: 0;
+	}
+	.preview-header-right {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+		gap: 6px;
+		flex-shrink: 0;
+	}
+	.preview-disclaimer {
+		font-family: var(--g-font-mono);
+		font-size: 0.625rem;
+		color: var(--g-ink-4);
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+	}
+	.preview-stage {
+		display: flex;
+		justify-content: center;
+		padding: 24px;
+		background: #e9e6dc;
+		border-radius: var(--g-r-3, 0.75rem);
+		border: 1px solid var(--g-rule, #d8d3c7);
+		margin-bottom: 1rem;
+		min-height: 120px;
+		flex-direction: column;
+		align-items: center;
+	}
+	.preview-stage iframe {
+		width: 100%;
+		min-height: 500px;
+		border: 0;
+		display: block;
+	}
+	.preview-loading {
+		font-size: 0.875rem;
+		color: var(--g-ink-3);
+		margin: 0;
+	}
+	.preview-error {
+		font-size: 0.875rem;
+		color: var(--g-danger, #dc2626);
+		margin: 0;
+	}
+	.preview-sms-hint {
+		font-size: 0.875rem;
+		color: var(--g-ink-3);
+		margin: 0.5rem 0 0;
+		font-style: italic;
+	}
+	.preview-send {
+		margin-top: 0.5rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		align-items: flex-start;
+	}
+	.send-success {
+		font-size: 0.875rem;
+		color: var(--g-good, #16a34a);
+		margin: 0;
+	}
+	.send-error {
+		font-size: 0.875rem;
+		color: var(--g-danger, #dc2626);
+		margin: 0;
+	}
+
+	@media (max-width: 899px) {
+		.preview-header {
+			flex-direction: column;
+			align-items: flex-start;
+		}
+		.preview-header-right {
+			align-items: flex-start;
+		}
+		.preview-stage {
+			padding: 12px;
 		}
 	}
 </style>

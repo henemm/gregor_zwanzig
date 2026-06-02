@@ -265,24 +265,31 @@ describe('AC-7: Versand-Tab — Zeitplan, Zeitfenster, Empfänger, Draft-Hinweis
 
 // ── AC-8: Vorschau-Tab — statischer Placeholder ───────────────────────────────
 
-describe('AC-8: Vorschau-Tab — CompareEmail-Placeholder', () => {
+describe('AC-8: Vorschau-Tab — Monitoring-Strings', () => {
 	let src: string;
 	function getSrc() {
 		if (!src) src = existsSync(COMPARE_TABS) ? readFileSync(COMPARE_TABS, 'utf-8') : '';
 		return src;
 	}
 
-	test("Placeholder-Text 'CompareEmail implementiert ist' vorhanden", () => {
+	test("Preview-Endpoint referenziert", () => {
 		assert.ok(
-			getSrc().includes('CompareEmail implementiert ist'),
-			"CompareTabs.svelte enthält nicht den Vorschau-Placeholder-Text"
+			getSrc().includes('/api/_validator/compare-email-preview'),
+			"CompareTabs.svelte enthält nicht den Preview-Endpoint"
 		);
 	});
 
-	test("Hinweis 'Postfach gelesen' vorhanden", () => {
+	test("iframe srcdoc vorhanden", () => {
 		assert.ok(
-			getSrc().includes('Postfach gelesen'),
-			"CompareTabs.svelte enthält nicht den Hinweis 'Postfach gelesen'"
+			getSrc().includes('srcdoc'),
+			"CompareTabs.svelte enthält kein srcdoc"
+		);
+	});
+
+	test("Hinweis 'jeweiligen Kanal' vorhanden", () => {
+		assert.ok(
+			getSrc().includes('jeweiligen Kanal'),
+			"CompareTabs.svelte enthält nicht den Verifikations-Hinweis"
 		);
 	});
 
