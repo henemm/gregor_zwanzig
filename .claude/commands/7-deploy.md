@@ -2,13 +2,57 @@
 
 Deploy current main to production via henemm-infra deploy script.
 
-## Tech-Lead-Brief für den PO (PFLICHT — vor allem anderen ausgeben)
+## Schritt 0: E2E-Verifikation (ZWINGEND ZUERST — vor Brief, vor allem)
 
-Bevor du irgendeinen Deploy-Schritt ausführst, gib diesen Brief aus:
+**Der Tech-Lead-Brief darf erst ausgegeben werden, wenn E2E VERIFIED ist.**
+Das ist der einzige echte Nachweis, dass der Code auf Staging funktioniert.
+
+### 0a. Prüfen ob E2E bereits für diesen Commit läuft
+
+```bash
+HEAD=$(git rev-parse HEAD)
+python3 -c "
+import json, sys
+try:
+    d = json.load(open('.claude/e2e_verified.json'))
+    if d.get('verified_commit') == '$HEAD' and d.get('staging_verdict','').startswith('VERIFIED'):
+        print('E2E bereits VERIFIED für', '$HEAD'[:7])
+    else:
+        print('E2E FEHLT oder veraltet — muss jetzt laufen')
+        sys.exit(1)
+except FileNotFoundError:
+    print('e2e_verified.json nicht vorhanden — muss jetzt laufen')
+    sys.exit(1)
+"
+```
+
+### 0b. Falls E2E fehlt oder veraltet: JETZT ausführen
+
+Rufe das Skill `/e2e-verify` auf. **Nicht weitergehen bis Verdict = VERIFIED.**
+
+Staging-Auto-Deploy läuft alle 5 Minuten. Falls noch nicht durch:
+```bash
+# Warten bis Staging den neuen Commit hat
+EXPECTED=$(git rev-parse HEAD)
+curl -s https://staging.gregor20.henemm.com/api/health | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('commit','?'))"
+```
+Wenn der Commit noch nicht übereinstimmt: 2 Minuten warten, nochmal prüfen.
+
+**STOP bei BROKEN oder wenn E2E nicht durchführbar.** Fehlerbehebung zuerst.
+
+### 0c. E2E-Ergebnis für den Brief notieren
+
+Aus `.claude/e2e_verified.json` auslesen:
+- `staging_verdict` → für "Staging validiert"-Zeile im Brief
+- `verified_at` → Zeitstempel
+
+---
+
+## Tech-Lead-Brief für den PO (erst nach E2E VERIFIED ausgeben)
 
 **Was wurde gebaut:** [1-2 Sätze aus Nutzerperspektive — was kann der Nutzer jetzt tun, was vorher nicht ging?]
 
-**Staging validiert:** ja — [Datum/Uhrzeit des letzten Staging-Checks]
+**Staging validiert:** [staging_verdict aus e2e_verified.json] — [verified_at]
 
 **Tests:** [N] bestanden, 0 fehlgeschlagen
 
@@ -35,18 +79,6 @@ git log HEAD..origin/main --oneline  # zeigt was deployt wird
 - Branch != main → erst checkout main
 - Uncommitted Changes → erst committen oder stashen
 - Tests rot → erst fixen
-
-## Staging-Validierung (Pflicht!)
-
-Staging deployt automatisch (Cron alle 5min, `auto-deploy-gregor-staging.sh`).
-
-```bash
-# Staging-Status prüfen
-curl -s https://staging.gregor20.henemm.com/api/health
-# Manuell im Browser: https://staging.gregor20.henemm.com
-```
-
-**Erst weitermachen wenn Staging die geänderte Funktionalität korrekt zeigt.**
 
 ## Production-Deploy
 
