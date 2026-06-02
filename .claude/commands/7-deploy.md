@@ -98,8 +98,8 @@ gh issue close <ISSUE_NR> --comment "Fertig und live — $(git rev-parse --short
 
 Danach dem User mitteilen:
 
-> **Fertig und live.** Issue #N — [Titel] ist abgeschlossen.
-> Was geliefert wurde: [1-2 Sätze Nutzerperspektive]
+**Fertig und live.** Issue #N — [Titel] ist abgeschlossen.
+Was geliefert wurde: [1-2 Sätze Nutzerperspektive]
 
 **NICHT früher "Fertig und live" sagen.**
 

@@ -194,8 +194,8 @@ ein Validator-Lauf gegen Production prueft also alten Code. Die ehrliche Variant
 
 Zeige das Verdict:
 
-> **Validator-Ergebnis:** [VERIFIED / BROKEN / AMBIGUOUS]
-> Spec: [SPEC_PATH]
+**Validator-Ergebnis:** [VERIFIED / BROKEN / AMBIGUOUS]
+Spec: [SPEC_PATH]
 
 - **VERIFIED** → Direkt weiter zu Phase 7 (`/validate`). Kein "go" nötig.
 - **BROKEN** → Developer Agent erneut spawnen mit Findings, dann erneut validieren.
@@ -240,7 +240,7 @@ Merke dir:
 ## Next Step
 
 After adversary verification:
-> "Implementation complete. Adversary verified. Ready for `/validate`."
+Implementation complete. Adversary verified. Ready for `/validate`.
 
 ## Common Mistakes
 
