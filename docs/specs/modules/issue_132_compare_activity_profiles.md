@@ -261,4 +261,5 @@ Playwright-Spec mit mindestens diesen Test-Cases:
 
 ## Changelog
 
+- 2026-06-02: AC-6–9 in separatem Wizard-Issue #547 implementiert — dies Spec bleibt der Referenz-Status für die orphaned Compare-Screen-Komponenten (AC-1–5). Wizard-Implementierung siehe `docs/specs/modules/issue_547_auto_profile_preselect.md`.
 - 2026-05-20: Initial spec erstellt (Issue #132 — Compare-Screen Aktivitätsprofil-Integration).

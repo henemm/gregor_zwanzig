@@ -456,6 +456,7 @@ None—pure frontend changes for Steps 1–3. Backend endpoints are opaque (no s
 
 | Date | Change |
 |------|--------|
+| 2026-06-02 | Auto-Profil-Vorauswahl im Wizard implemented (AC-6–9 aus #132): CompareWizard.svelte (`profileManuallyOverridden`, `dominantProfile`, 2 $effects), Step1Vergleich.svelte (`onManualProfileChange` callback), 18 Unit-Tests. Issue #547 ✓ |
 | 2026-05-30 | Compare-Komponenten-Migration abgeschlossen: 14 Dateien in `compare/` und `compare/steps/` importieren `Btn`, `Eyebrow`, `Pill`, `Input`, `TopoBg` jetzt aus kanonischem Atom-Barrel (`$lib/components/atoms`) statt direkt aus `ui/`-Unterordnern. Reine Import-Pfad-Migration, kein Verhalten geändert. Sentinel-Test `issue_462.test.ts` verhindert Zurückrutschen. Sub-Issue von Epic #368 Phase 2 Compare-Zweig. Issue #462 ✓ |
 | 2026-05-30 | Auto-Briefings Sidepanel Frontend implemented: AutoReportsOverview rebuilt for ComparePreset-system (from #458), includes SavePresetDialog, manuellen Versand-Button, subscriptionHelpers für Schedule-Labels. Issue #459 ✓ |
 | 2026-05-30 | ComparePreset CRUD backend foundation: 5 Endpoints (List/Create/Update/Delete/Send-Stub), compare_presets.json, User-Isolation. Issue #458 ✓ |

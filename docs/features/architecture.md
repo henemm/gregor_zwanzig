@@ -312,11 +312,11 @@ The frontend includes two configurable wizard systems:
 - **Component:** `frontend/src/lib/components/compare/`
 - **Persistence:** `/api/subscriptions` POST/PUT
 - **Current Status:**
-  - ✓ Step 1: Name + Activity Profile (Issue #440)
+  - ✓ Step 1: Name + Activity Profile (Issue #440, auto-preselect via #547)
   - ✓ Step 2: Location selection (Issue #440)
   - ✓ Step 3: Ideal value ranges per metric (Issue #441, uses `compareMetricDefs.ts`)
-  - ⏳ Step 4: Output formatting layout (Issue #442)
-  - ⏳ Step 5: Schedule + delivery config (Issue #443)
+  - ✓ Step 4: Output formatting layout (Issue #442)
+  - ✓ Step 5: Schedule + delivery config (Issue #443)
 
 **Key Data Structures:**
 - `ActivityProfile` — Enum type for activity categories (WINTERSPORT, ALPINE_TOURING, SUMMER_TREKKING, ALLGEMEIN)
