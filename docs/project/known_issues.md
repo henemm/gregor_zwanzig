@@ -138,6 +138,57 @@ Falls vorher gefixt: `timezonefinder` + `TimezoneService` + Formatter-Anpassunge
 
 ---
 
+## BUG-TEST-554: test_env_playwright_vorhanden mit Hard Assert (fehlende Credentials)
+
+**Status:** RESOLVED (2026-06-02) | **Severity:** Low | **GitHub Issue:** #554
+
+### Symptom
+
+`test_env_playwright_vorhanden` schlägt dauerhaft fehl mit `AssertionError: .env.playwright fehlt` — die Datei liegt absichtlich nicht im Repo (enthält Credentials).
+
+### Root Cause
+
+Test nutzte `assert env.exists()` statt `pytest.skip()`. Die Datei wird in Staging injiziert, ist aber in lokalen Test-Läufen nicht vorhanden. Ein fehlgeschlagener Test blockt die Testsuite unnötig.
+
+### Fix (Committed 2026-06-02)
+
+```python
+def test_env_playwright_vorhanden():
+    """Voraussetzung: Staging-Credentials-Datei vorhanden."""
+    env = REPO_ROOT / "frontend/.env.playwright"
+    if not env.exists():
+        pytest.skip(".env.playwright fehlt — E2E-Screenshot-Tests übersprungen")
+    content = env.read_text()
+    assert "E2E_USER" in content
+    assert "E2E_PASS" in content
+```
+
+Test wird jetzt mit Status `SKIPPED` übersprungen, wenn `.env.playwright` fehlt.
+
+### Files Changed
+
+`tests/tdd/test_epic_404_phase2_ist_screenshots.py`
+
+---
+
+## BUG-TEST-556: Sidebar-Test-Drift (bereits behoben)
+
+**Status:** RESOLVED (2026-06-02) | **Severity:** Low | **GitHub Issue:** #556
+
+### Symptom
+
+`test_sidebar_uses_trips_label` prüfte auf Literal-String statt Config-Array. War bereits durch Sidebar-Migration (#386) gelöst, aber Issue nicht geschlossen.
+
+### Root Cause
+
+Commit `a871fd6` (2026-06-02) hatte Sidebar-Config mit `'Meine Touren'`-Array aktualisiert; Test passte automatisch an. Issue #556 war damit erledig, aber nicht geschlossen.
+
+### Resolution
+
+GitHub Issue #556 manuell geschlossen — kein Code-Fix erforderlich.
+
+---
+
 ## BUG-TOKEN-01: Alte Farb-Token-Aliasse nicht bereinigt (#541, #543, #544)
 
 **Status:** RESOLVED (2026-06-02) | **Severity:** Low | **GitHub Issues:** #541, #543, #544
