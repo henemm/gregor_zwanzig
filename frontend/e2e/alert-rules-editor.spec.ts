@@ -236,7 +236,7 @@ test.describe('Issue #223: AlertRulesEditor', () => {
 		}
 	});
 
-	test('AC-8: AlertsPreviewCard hat Edit-Link auf /trips/[id]/edit#alerts', async ({
+	test('AC-8: TripOverview Alerts-Karte hat Edit-Link auf ?tab=alerts (Bug #502)', async ({
 		page,
 		request
 	}) => {
@@ -254,9 +254,9 @@ test.describe('Issue #223: AlertRulesEditor', () => {
 		]);
 		try {
 			await page.goto(`/trips/${id}`);
-			const link = page.locator('[data-testid="right-card-alerts-edit-link"]');
+			const link = page.locator('[data-testid="detail-card-action-card-alerts"]');
 			await expect(link).toBeVisible();
-			await expect(link).toHaveAttribute('href', `/trips/${id}/edit#alerts`);
+			await expect(link).toHaveAttribute('href', '?tab=alerts');
 		} finally {
 			await deleteTrip(request, id);
 		}

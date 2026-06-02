@@ -111,10 +111,10 @@ describe('AC-5: Action-Links zu Tab-Hashes', () => {
 		);
 	});
 
-	test('Alerts-Karte verlinkt auf #alerts', () => {
+	test('Alerts-Karte verlinkt auf ?tab=alerts (Bug #502 — Issue #516 Konsistenz)', () => {
 		assert.ok(
-			source.includes('#alerts'),
-			'Karte "Alarm-Schwellen" muss einen Link zu "#alerts" haben'
+			source.includes('?tab=alerts'),
+			'Karte "Wachhund-Schwellen" muss ?tab=alerts verwenden (nicht #alerts)'
 		);
 	});
 

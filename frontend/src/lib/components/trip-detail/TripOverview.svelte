@@ -147,7 +147,7 @@
 			title="Alarm-Schwellen"
 			items={alertItems}
 			actionText="Alarmregeln verwalten"
-			actionHref="#alerts"
+			actionHref="?tab=alerts"
 			testid="card-alerts"
 		/>
 		<DetailCard
