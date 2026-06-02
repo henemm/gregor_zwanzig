@@ -561,6 +561,37 @@ func TestNormalizeMetricsPayload_PartialHorizons_ExactValuePreserved(t *testing.
 }
 
 // =============================================================================
+// Bug #350 (AC-1) — LoadMetricPresets gibt Fehler bei korruptem JSON zurück.
+// Issue #540: Fehlender direkter Test für AC-1.
+// =============================================================================
+
+// TestStore_LoadMetricPresets_CorruptJSON (AC-1)
+//
+// Given: eine korrupte metric_presets.json (ungültiges JSON) auf der Platte.
+// When:  s.LoadMetricPresets() aufgerufen wird.
+// Then:  Rückgabe ist (nil, error) — kein stilles Schlucken des Fehlers.
+func TestStore_LoadMetricPresets_CorruptJSON(t *testing.T) {
+	tmpDir := t.TempDir()
+	s := store.New(tmpDir, "test")
+
+	presetsPath := filepath.Join(tmpDir, "users", "test", "metric_presets.json")
+	if err := os.MkdirAll(filepath.Dir(presetsPath), 0755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	if err := os.WriteFile(presetsPath, []byte(`{kaputt — nicht-valides json`), 0644); err != nil {
+		t.Fatalf("write corrupt file: %v", err)
+	}
+
+	presets, err := s.LoadMetricPresets()
+	if err == nil {
+		t.Fatal("LoadMetricPresets sollte bei korruptem JSON einen Fehler liefern, hat aber nil")
+	}
+	if presets != nil {
+		t.Errorf("LoadMetricPresets sollte bei Fehler nil zurückgeben, hat aber %v", presets)
+	}
+}
+
+// =============================================================================
 // Helpers
 // =============================================================================
 

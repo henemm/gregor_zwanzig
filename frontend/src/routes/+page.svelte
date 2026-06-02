@@ -108,7 +108,7 @@
 		<div>
 			<Eyebrow>Übersicht · {todayPretty}</Eyebrow>
 			<div style:font-size="22px" style:font-weight="600" style:margin-top="2px" style:letter-spacing="-0.005em">
-				Deine Trips & Vergleiche
+				Deine Touren & Vergleiche
 			</div>
 			<div style:font-size="0.9375rem" style:color="var(--g-ink-muted)" style:margin-top="4px" style:line-height="1.5">
 				Was du jetzt vorbereitest, läuft unterwegs autark. Briefings gehen per Email oder Signal, du musst am Berg nichts tun.

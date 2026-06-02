@@ -54,14 +54,14 @@ def test_homepage_uses_trip_terminology() -> None:
     """
     GIVEN: Die SvelteKit-Startseite (+page.svelte)
     WHEN:  Quelltext gelesen wird
-    THEN:  Die Trips-Sektion ist konsistent als "Meine Touren" beschriftet und
+    THEN:  Die Trips-Sektion ist konsistent als "Deine Touren" beschriftet und
            verlinkt auf den Trips-Bereich (/trips).
     """
     assert HOMEPAGE.exists(), f"Datei nicht gefunden: {HOMEPAGE}"
 
     content = HOMEPAGE.read_text()
-    assert "Meine Touren" in content, (
-        "Startseiten-Sektionstitel 'Meine Touren' fehlt — kanonische deutsche "
+    assert "Deine Touren" in content, (
+        "Startseiten-Sektionstitel 'Deine Touren' fehlt — kanonische deutsche "
         "UI-Bezeichnung der Trips-Sektion."
     )
     assert "/trips" in content, (

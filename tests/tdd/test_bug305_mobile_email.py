@@ -573,3 +573,133 @@ class TestMobileCompactLayoutPlaywright:
                 f"  scrollWidth={el['scrollWidth']}px, clientWidth={el['clientWidth']}px\n"
                 f"  Screenshot: /tmp/bug305v2_mobile_375px.png"
             )
+
+
+# ---------------------------------------------------------------------------
+# Bug #463 / Issue #538 — include_header-Parameter (fehlende Tests)
+# AC-1: include_header=True + sichtbare Spalten → Header mit "Zeit" vor Daten
+# AC-2: Night-Rows via render_html → Header vorhanden
+# AC-3: Leere Rows + include_header=True → kein Header
+# AC-4: include_header=False (Default) → kein Header-Div
+# AC-5: Nur sichtbare Spalten im Header
+# ---------------------------------------------------------------------------
+
+_HEADER_TEST_ROW = {
+    "time": "08:00",
+    "temp": "15",
+    "wind": "12",
+    "gust": "30",
+    "precip": "0.2",
+    "pop": "10",
+    "confidence": "ok",
+    "thunder": None,
+    "snow_limit": None,
+    "cloud": "50",
+    "cloud_low": None,
+    "visibility": None,
+    "uv": None,
+    "freeze_lvl": None,
+}
+
+
+class TestMobileCompactHeader:
+    """AC-1..AC-5: include_header-Parameter in _render_mobile_compact_rows (Issue #538)."""
+
+    def test_header_present_when_include_header_true(self):
+        """
+        AC-1: include_header=True + sichtbare Spalten → Header-Element mit Label "Zeit".
+
+        GIVEN _render_mobile_compact_rows mit einer Zeile und include_header=True
+        WHEN  das Ergebnis ausgewertet wird
+        THEN  enthält es ein Header-Element mit dem Label "Zeit" (font-size:11px)
+        """
+        from src.output.renderers.email.html import _render_mobile_compact_rows
+
+        result = _render_mobile_compact_rows(
+            [_HEADER_TEST_ROW], friendly_keys=set(), include_header=True
+        )
+        assert "Zeit" in result, (
+            "Header-Label 'Zeit' fehlt bei include_header=True"
+        )
+        assert "font-size:11px" in result, (
+            "Header-Div (font-size:11px) fehlt bei include_header=True"
+        )
+
+    def test_header_appears_before_data_rows(self):
+        """
+        AC-1: Header-Div (font-size:11px) muss vor Daten-Rows (font-size:12px) erscheinen.
+
+        GIVEN _render_mobile_compact_rows mit include_header=True
+        WHEN  das Ergebnis auf Reihenfolge geprüft wird
+        THEN  liegt 'font-size:11px' (Header) vor 'font-size:12px' (Daten-Row)
+        """
+        from src.output.renderers.email.html import _render_mobile_compact_rows
+
+        result = _render_mobile_compact_rows(
+            [_HEADER_TEST_ROW], friendly_keys=set(), include_header=True
+        )
+        header_pos = result.find("font-size:11px")
+        data_pos = result.find("font-size:12px")
+        assert header_pos != -1, "Kein Header (font-size:11px) im Output"
+        assert data_pos != -1, "Keine Daten-Row (font-size:12px) im Output"
+        assert header_pos < data_pos, (
+            f"Header@{header_pos} liegt NACH Daten-Row@{data_pos} — Header muss zuerst kommen"
+        )
+
+    def test_no_header_when_rows_empty(self):
+        """
+        AC-3: Leere Rows-Liste + include_header=True → kein Header, leerer/kurzer String.
+
+        GIVEN _render_mobile_compact_rows mit rows=[] und include_header=True
+        WHEN  das Ergebnis geprüft wird
+        THEN  enthält es kein "Zeit"-Label (kein Header erzeugt)
+        """
+        from src.output.renderers.email.html import _render_mobile_compact_rows
+
+        result = _render_mobile_compact_rows([], friendly_keys=set(), include_header=True)
+        assert "Zeit" not in result, (
+            f"Header unerwartet erzeugt bei leerer Rows-Liste — Output: {result!r}"
+        )
+
+    def test_no_header_when_include_header_false(self):
+        """
+        AC-4: include_header=False (Default) → kein Header-Div.
+
+        GIVEN _render_mobile_compact_rows mit Daten-Rows und include_header=False
+        WHEN  das Ergebnis auf Header geprüft wird
+        THEN  enthält es kein Header-Div mit font-size:11px
+              (Daten-Rows selbst haben font-size:12px → unterscheidbar)
+        """
+        from src.output.renderers.email.html import _render_mobile_compact_rows
+
+        result = _render_mobile_compact_rows(
+            [_HEADER_TEST_ROW], friendly_keys=set(), include_header=False
+        )
+        assert "font-size:11px" not in result, (
+            "Header-Div (font-size:11px) unerwartet vorhanden bei include_header=False"
+        )
+
+    def test_only_allowed_columns_in_header(self):
+        """
+        AC-5: Wenn allowed_col_keys gesetzt, erscheinen nur diese Spalten im Header.
+
+        GIVEN _render_mobile_compact_rows mit allowed_col_keys={"temp", "wind"}
+        WHEN  include_header=True gerendert wird
+        THEN  enthält der Header "Temp" und "Wind",
+              aber nicht "Thunder" (nicht in allowed_col_keys)
+        """
+        from src.output.renderers.email.html import _render_mobile_compact_rows
+
+        rows = [_HEADER_TEST_ROW]
+        result = _render_mobile_compact_rows(
+            rows,
+            friendly_keys=set(),
+            allowed_col_keys={"temp", "wind"},
+            include_header=True,
+        )
+        assert "Zeit" in result, "Header-Label 'Zeit' fehlt"
+        assert "Temp" in result, "Spalten-Label 'Temp' fehlt im Header"
+        assert "Wind" in result, "Spalten-Label 'Wind' fehlt im Header"
+        assert "Thunder" not in result, (
+            "'Thunder' darf nicht im Header erscheinen — nicht in allowed_col_keys"
+        )
