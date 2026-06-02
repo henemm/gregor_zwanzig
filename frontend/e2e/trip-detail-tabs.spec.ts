@@ -41,8 +41,8 @@ test.describe('Issue #155 — Trip-Detail Tab-Navigation', () => {
 		await expect(panel).toBeVisible();
 	});
 
-	test('AC-4: Aufruf mit #alerts → Alerts-Tab initial aktiv', async ({ page }) => {
-		await page.goto(`/trips/${TRIP_ID}#alerts`);
+	test('AC-4: Aufruf mit ?tab=alerts → Alerts-Tab initial aktiv (Bug #534 — Issue #516)', async ({ page }) => {
+		await page.goto(`/trips/${TRIP_ID}?tab=alerts`);
 		await expect(page.getByTestId('trip-detail-tab-alerts')).toHaveAttribute('data-state', 'active');
 		await expect(page.getByTestId('trip-detail-panel-alerts')).toBeVisible();
 	});
@@ -113,7 +113,7 @@ test.describe('Issue #155 — Trip-Detail Tab-Navigation', () => {
 			path: 'docs/artifacts/epic-135-step1-tab-navigation/screenshot-tabs-overview.png',
 			fullPage: false
 		});
-		await page.goto(`/trips/${TRIP_ID}#alerts`);
+		await page.goto(`/trips/${TRIP_ID}?tab=alerts`);
 		await page.waitForSelector('[data-testid="trip-detail-panel-alerts"]');
 		await page.screenshot({
 			path: 'docs/artifacts/epic-135-step1-tab-navigation/screenshot-tabs-alerts.png',

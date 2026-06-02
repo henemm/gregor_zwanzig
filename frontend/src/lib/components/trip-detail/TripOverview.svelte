@@ -139,7 +139,7 @@
 			title="Was geht raus"
 			items={reportItems}
 			actionText="Reports & Kanäle"
-			actionHref="#briefings"
+			actionHref="?tab=briefings"
 			testid="card-reports"
 		/>
 		<DetailCard
@@ -155,7 +155,7 @@
 			title="Route & Etappen"
 			items={stageItems}
 			actionText="Etappen öffnen"
-			actionHref="?tab=stages"
+			actionHref="/trips/{trip.id}/edit"
 			testid="card-stages"
 		/>
 		<DetailCard
@@ -163,7 +163,7 @@
 			title="Datenstand"
 			items={scheduleItems}
 			actionText="Briefing-Vorschau"
-			actionHref="#preview"
+			actionHref="?tab=preview"
 			testid="card-schedule"
 		/>
 	</div>

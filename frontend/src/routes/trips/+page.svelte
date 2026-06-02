@@ -92,7 +92,7 @@
 	async function handlePrimaryAction(trip: Trip) {
 		const s = tripStatus(trip, now);
 		if (s === 'aktiv' || s === 'geplant') {
-			goto(`/trips/${trip.id}#preview`);
+			goto(`/trips/${trip.id}?tab=preview`);
 			return;
 		}
 		if (s === 'draft') {
@@ -351,7 +351,7 @@
 						<div class="flex gap-1 pt-2 border-t border-muted mt-2">
 							<button
 								class="flex-1 flex items-center justify-center gap-1.5 min-h-[40px] text-xs rounded-lg hover:bg-muted/60"
-								onclick={() => goto(`/trips/${trip.id}#preview`)}
+								onclick={() => goto(`/trips/${trip.id}?tab=preview`)}
 							>
 								<SendIcon class="size-3.5" /> Briefing senden
 							</button>
@@ -363,7 +363,7 @@
 							</button>
 							<button
 								class="flex-1 flex items-center justify-center gap-1.5 min-h-[40px] text-xs rounded-lg hover:bg-muted/60"
-								onclick={() => goto(`/trips/${trip.id}#alerts`)}
+								onclick={() => goto(`/trips/${trip.id}?tab=alerts`)}
 							>
 								<BellIcon class="size-3.5" /> Alerts
 							</button>

@@ -104,10 +104,10 @@ describe('AC-1: testid-Attribute der 4 Karten', () => {
 // ─────────────────────────────────────────────────────────────
 
 describe('AC-5: Action-Links zu Tab-Hashes', () => {
-	test('Reports-Karte verlinkt auf #briefings', () => {
+	test('Reports-Karte verlinkt auf ?tab=briefings (Bug #533 — Issue #516 Konsistenz)', () => {
 		assert.ok(
-			source.includes('#briefings'),
-			'Karte "Was geht raus" muss einen Link zu "#briefings" haben'
+			source.includes('?tab=briefings'),
+			'Karte "Was geht raus" muss ?tab=briefings verwenden (nicht #briefings)'
 		);
 	});
 
@@ -131,10 +131,10 @@ describe('AC-5: Action-Links zu Tab-Hashes', () => {
 		);
 	});
 
-	test('Datenstand-Karte verlinkt auf #preview', () => {
+	test('Datenstand-Karte verlinkt auf ?tab=preview (Bug #533 — Issue #516 Konsistenz)', () => {
 		assert.ok(
-			source.includes('#preview'),
-			'Karte "Datenstand" muss einen Link zu "#preview" haben'
+			source.includes('?tab=preview'),
+			'Karte "Datenstand" muss ?tab=preview verwenden (nicht #preview)'
 		);
 	});
 });
