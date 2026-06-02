@@ -7,8 +7,10 @@
 		stage: Stage;
 		activeWaypointId: string | null;
 		onWaypointActivate: (waypointId: string) => void;
+		onMapClick?: (lat: number, lon: number) => void;
+		sizeKey?: unknown;
 	}
-	let { stage, activeWaypointId: _activeWaypointId, onWaypointActivate }: Props = $props();
+	let { stage, activeWaypointId: _activeWaypointId, onWaypointActivate, onMapClick = undefined, sizeKey = undefined }: Props = $props();
 
 	let mapEl: HTMLDivElement;
 	let map: LeafletNS.Map | null = null;
@@ -67,6 +69,12 @@
 			} else {
 				map.setView([47.0, 10.0], 5);
 			}
+
+			if (onMapClick) {
+				map.on('click', (e: LeafletNS.LeafletMouseEvent) => {
+					onMapClick!(e.latlng.lat, e.latlng.lng);
+				});
+			}
 		})();
 
 		return () => {
@@ -74,6 +82,11 @@
 			map?.remove();
 			map = null;
 		};
+	});
+
+	$effect(() => {
+		void sizeKey;
+		if (map) { map.invalidateSize(); }
 	});
 </script>
 

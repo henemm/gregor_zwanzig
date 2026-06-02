@@ -17,6 +17,9 @@
 	import ProfileEditor from '$lib/components/trip-detail/waypoints/ProfileEditor.svelte';
 	import WaypointCard from '$lib/components/trip-detail/waypoints/WaypointCard.svelte';
 	import PauseStageView from '$lib/components/trip-detail/waypoints/PauseStageView.svelte';
+	import MapControl from './MapControl.svelte';
+	import ProfileSheetEmbedded from './ProfileSheetEmbedded.svelte';
+	import StageSelectSheet from './StageSelectSheet.svelte';
 	import StageDateField from './StageDateField.svelte';
 	import { addDays, computeCascadeDelta } from './cascade.ts';
 	import { Eyebrow, Btn, Dot, Pill } from '$lib/components/atoms';
@@ -36,6 +39,9 @@
 	let saveSuccess = $state(false);
 	let saveError = $state<string | null>(null);
 	let addModeHint = $state(false);
+	let mobileSnap = $state<'peek' | 'half' | 'full'>('half');
+	let mobileSizeKey = $state(0);
+	let stageSheetOpen = $state(false);
 
 	async function save(): Promise<void> {
 		if (!tripId) return;
@@ -163,6 +169,16 @@
 		activeWaypointId = waypointId;
 	}
 
+	function handleMapClick(lat: number, lon: number): void {
+		if (!activeStage || activeIsPause) return;
+		const stage = activeStage;
+		const newWp: Waypoint = { id: newId(), name: '', lat, lon, elevation_m: 0 };
+		stages = stages.map((s) =>
+			s.id !== stage.id ? s : { ...s, waypoints: [...s.waypoints, newWp] }
+		);
+		activeWaypointId = newWp.id;
+	}
+
 	// Waypoint-Mutations (Factory-Pattern fuer WaypointCard-Callbacks).
 	// Issue #503: nur noch Umbenennen + Löschen — kein Confirm/Reject mehr.
 	function makeActivateHandler(waypointId: string) {
@@ -252,6 +268,38 @@
 					</div>
 				{/if}
 			{/if}
+
+			<!-- Issue #542: Mobile-Editor (@media max-width: 899px) -->
+			<div class="mobile-editor" data-testid="mobile-editor">
+				<div class="mobile-map-wrap" style="position:relative;width:100%;height:calc(100dvh - 56px)">
+					<MapCanvas
+						stage={activeStage}
+						{activeWaypointId}
+						onWaypointActivate={handleWaypointActivate}
+						onMapClick={handleMapClick}
+						sizeKey={mobileSizeKey}
+					/>
+					{#if !activeIsPause}
+						<MapControl onAddWaypoint={() => { addModeHint = true; }} />
+					{/if}
+				</div>
+				<ProfileSheetEmbedded
+					stage={activeStage}
+					{activeWaypointId}
+					snapPosition={mobileSnap}
+					onWaypointActivate={handleWaypointActivate}
+					onProfileAdd={handleProfileAdd}
+					onSnapChange={(snap) => { mobileSnap = snap; mobileSizeKey++; }}
+				/>
+				{#if stageSheetOpen}
+					<StageSelectSheet
+						{stages}
+						activeIndex={activeStageIndex}
+						onSelect={(i) => { activeStageId = stages[i].id; stageSheetOpen = false; }}
+						onClose={() => { stageSheetOpen = false; }}
+					/>
+				{/if}
+			</div>
 
 			<!-- Issue #503: Grid 1fr / 360px — Karte+Profil links, Wegpunkte rechts -->
 			<div class="editor-grid" data-testid="editor-grid">
@@ -427,11 +475,18 @@
 		margin: 0;
 	}
 
-	/* Mobile: stack auf eine Spalte (Tab-Inhalt im TripEditView).
-	   Die Karte bleibt zuerst sichtbar; Profil + Wegpunkte folgen darunter. */
+	/* Issue #542: Mobile-Editor — Vollbild-Karte + Bottom-Sheet */
+	.mobile-editor {
+		display: none;
+	}
+
+	/* Mobile: zeige Mobile-Editor, verstecke Desktop-Grid */
 	@media (max-width: 899px) {
+		.mobile-editor {
+			display: block;
+		}
 		.editor-grid {
-			grid-template-columns: 1fr;
+			display: none;
 		}
 	}
 	.save-bar {
