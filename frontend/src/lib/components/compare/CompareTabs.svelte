@@ -151,16 +151,19 @@
 		}
 	}
 
-	// Issue #527 — Pause/Aktivieren (localSchedule als reaktive Kopie)
+	// Issue #527/#558 — Pause/Aktivieren mit Schedule-Gedächtnis
+	let previousSchedule = $state<string>((preset.schedule && preset.schedule !== 'manual') ? preset.schedule : 'daily');
 	let localSchedule = $state<string>(preset.schedule ?? 'manual');
 
 	async function handleToggleActive() {
-		const next = localSchedule === 'manual' ? 'daily' : 'manual';
+		const isPausing = localSchedule !== 'manual';
+		if (isPausing) previousSchedule = localSchedule;
+		const next = isPausing ? 'manual' : previousSchedule;
 		try {
 			await api.put(`/api/compare/presets/${preset.id}`, { ...preset, schedule: next });
 			localSchedule = next;
 		} catch {
-			// Fehler ignorieren, State bleibt unverändert
+			// State bleibt unverändert bei Fehler
 		}
 	}
 </script>
