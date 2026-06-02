@@ -304,6 +304,7 @@
 					<StageSelectSheet
 						{stages}
 						activeIndex={activeStageIndex}
+						open={true}
 						onSelect={(i) => { activeStageId = stages[i].id; stageSheetOpen = false; }}
 						onClose={() => { stageSheetOpen = false; }}
 					/>
