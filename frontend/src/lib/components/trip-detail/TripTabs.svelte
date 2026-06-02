@@ -5,14 +5,13 @@
 	import WeatherMetricsTab from './WeatherMetricsTab.svelte';
 	import AlertsTab from '$lib/components/alerts-tab/AlertsTab.svelte';
 	import BriefingsTab from '$lib/components/briefings-tab/BriefingsTab.svelte';
-	import EditStagesPanelNew from '$lib/components/edit/EditStagesPanelNew.svelte';
 	import {
 		EmailIframe,
 		SmsPhoneFrame,
 		defaultReportType,
 		type ReportType
 	} from '$lib/components/preview';
-	import type { Trip, Stage } from '$lib/types';
+	import type { Trip } from '$lib/types';
 
 	interface Badges {
 		overview?: number;
@@ -88,10 +87,6 @@
 	// Vergangenheit liegt oder die OpenMeteo-API gerade nicht erreichbar ist.
 	let demoMode = $state(true);
 
-	// Issue #516: lokale stages-Kopie für den Etappen-Tab. Wird via bind:stages
-	// von EditStagesPanelNew mutiert. Tiefe Kopie verhindert Bleed in trip prop.
-	let localStages = $state<Stage[]>(JSON.parse(JSON.stringify(trip?.stages ?? [])));
-
 	$effect(() => {
 		activeTab = resolve(initialTab);
 	});
@@ -114,7 +109,10 @@
 					<TripOverview {trip} />
 				{:else if tab.value === 'stages'}
 					{#if trip}
-						<EditStagesPanelNew bind:stages={localStages} tripId={trip.id} showSave={true} />
+						<div class="stages-redirect" data-testid="stages-redirect-hint">
+							<p>Etappen und Wegpunkte bearbeiten</p>
+							<a href="/trips/{trip.id}/edit" class="stages-redirect-link">Zum Editor →</a>
+						</div>
 					{/if}
 				{:else if tab.value === 'weather' && trip}
 					<WeatherMetricsTab {trip} />

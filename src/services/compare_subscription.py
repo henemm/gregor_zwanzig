@@ -121,14 +121,13 @@ def run_comparison_for_subscription(
             f"⚠️ {len(failed_locations)} Standort(e) nicht verfügbar: {failed_names}"
         )
 
-    # Issue #457: Auto-generierte Begründungs-Tags für Winner-Card.
-    # _generate_winner_tags gibt list[tuple[str,str]] zurück; render_compare_html
-    # erwartet list[dict] (Issue #460 Format).
-    winner_tags_tuples = _generate_winner_tags(
+    # Issue #457 / Bug #545: Auto-generierte Begründungs-Tags für Winner-Card.
+    # _generate_winner_tags liefert direkt list[dict] im Issue #460 Format
+    # ({"tone", "label"}) — keine Konvertierung mehr nötig.
+    winner_tags_dicts = _generate_winner_tags(
         result.winner,
         getattr(sub, 'activity_profile', None),
     )
-    winner_tags_dicts = [{"tone": t, "label": l} for t, l in winner_tags_tuples]
 
     html_body = render_compare_html(
         result,

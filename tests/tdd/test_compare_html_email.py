@@ -503,12 +503,12 @@ class TestWinnerTags:
 
         tags = _generate_winner_tags(winner, ActivityProfile.WANDERN)
 
-        tones = [t for t, _ in tags]
-        labels = [l for _, l in tags]
+        tones = [t["tone"] for t in tags]
+        labels = [t["label"] for t in tags]
 
-        assert ("good", "Temp. 18°C") in tags, \
+        assert {"tone": "good", "label": "Temp. 18°C"} in tags, \
             "WANDERN: temp_max=18 (5..22°C) → good-Tag 'Temp. 18°C'"
-        assert ("warn", "Wind 45 km/h") in tags, \
+        assert {"tone": "warn", "label": "Wind 45 km/h"} in tags, \
             "WANDERN: wind_max=45 > 40 → warn-Tag 'Wind 45 km/h'"
         # good vor warn
         good_idx = next(i for i, t in enumerate(tones) if t == "good")
@@ -591,7 +591,7 @@ class TestWinnerTags:
 
         tags = _generate_winner_tags(winner, ActivityProfile.WINTERSPORT)
 
-        assert ("good", "Über den Wolken") in tags, \
+        assert {"tone": "good", "label": "Über den Wolken"} in tags, \
             "WINTERSPORT: above_low_clouds=True → ('good', 'Über den Wolken')"
 
     def test_ac2_keine_tags_bei_harmlosen_werten(self):
@@ -618,3 +618,34 @@ class TestWinnerTags:
 
         assert tags == [], \
             f"Keine Schwellwerte überschritten → leere Liste erwartet, aber: {tags}"
+
+    def test_bug545_ac2_return_format_ist_dict_liste(self):
+        """
+        Bug #545 AC-2: Given _generate_winner_tags() wird mit WINTERSPORT-Profil und
+        snow_depth_cm=120 aufgerufen / When der Rückgabewert inspiziert wird / Then
+        ist er list[dict] mit Schlüsseln "tone" und "label" — keine Tupel.
+        SPEC: docs/specs/modules/bug_545_549_550_retrospective_fixes.md AC-2
+        TDD RED: Schlägt fehl weil _generate_winner_tags() aktuell Tupel zurückgibt.
+        """
+        from output.renderers.email.compare_html import _generate_winner_tags
+        from app.user import LocationResult, SavedLocation
+
+        loc = SavedLocation(id="loc1", name="Gipfel", lat=47.0, lon=11.0, elevation_m=2500)
+        winner = LocationResult(
+            location=loc,
+            score=85,
+            snow_depth_cm=120.0,
+            sunny_hours=7,
+        )
+
+        tags = _generate_winner_tags(winner, ActivityProfile.WINTERSPORT)
+
+        assert len(tags) > 0, "WINTERSPORT mit snow_depth_cm=120 muss mindestens 1 Tag erzeugen"
+        first_tag = tags[0]
+        assert isinstance(first_tag, dict), (
+            f"Tags müssen dicts sein, aber erster Tag ist: "
+            f"{type(first_tag).__name__} = {first_tag!r}. "
+            f"Fix: return [{{\"tone\": t, \"label\": l}} for t, l in tags]"
+        )
+        assert "tone" in first_tag, "Dict muss Schlüssel 'tone' haben"
+        assert "label" in first_tag, "Dict muss Schlüssel 'label' haben"

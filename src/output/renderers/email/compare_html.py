@@ -143,8 +143,8 @@ def _render_warning_banner(warning_text: str) -> str:
 def _generate_winner_tags(
     winner: LocationResult,
     profile: Optional[ActivityProfile],
-) -> list[tuple[str, str]]:
-    """Erzeugt bis zu 4 (tone, label)-Tupel aus Winner-Metriken.
+) -> list[dict[str, str]]:
+    """Erzeugt bis zu 4 Tag-Dicts (`{"tone", "label"}`) aus Winner-Metriken.
 
     Profilspezifisch (WINTERSPORT / WANDERN / sonst). Sortierung good > warn > info.
     Leere Liste wenn winner oder profile None ist. SPEC: issue_457 §1.
@@ -216,7 +216,7 @@ def _generate_winner_tags(
         result = good_tags + warn_tags
         result = result + info_tags
         result = result[:4]
-    return result
+    return [{"tone": t, "label": l} for t, l in result]
 
 
 def _render_tag(tone: str, label: str) -> str:
