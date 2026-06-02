@@ -237,7 +237,7 @@ onMount(async () => {
       <ChannelChips bind:channels={wizard.briefings.channels} />
     </GCard>
 
-    <!-- Card 3: Warnungen (Wachhund) -->
+    <!-- Card 3: Warnungen (Alerts) -->
     <GCard data-testid="card-alerts">
       <Eyebrow>Warnungen</Eyebrow>
       <Pill variant="outlined">AUTARK</Pill>

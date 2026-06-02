@@ -50,7 +50,7 @@
 		}
 	]);
 
-	// Karte 2: Alert Rules — „Wachhund-Schwellen"
+	// Karte 2: Alert Rules — „Alarm-Schwellen"
 	const enabledRules = $derived((trip.alert_rules ?? []).filter((r) => r.enabled).slice(0, 4));
 	const alertCount = $derived(enabledRules.length);
 
@@ -144,7 +144,7 @@
 		/>
 		<DetailCard
 			eyebrow="{alertCount} Alarmregeln"
-			title="Wachhund-Schwellen"
+			title="Alarm-Schwellen"
 			items={alertItems}
 			actionText="Alarmregeln verwalten"
 			actionHref="#alerts"

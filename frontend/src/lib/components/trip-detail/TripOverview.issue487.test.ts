@@ -80,7 +80,7 @@ describe('AC-1: testid-Attribute der 4 Karten', () => {
 	test('card-alerts vorhanden', () => {
 		assert.ok(
 			source.includes('card-alerts'),
-			'Karte "Wachhund-Schwellen" braucht testid="card-alerts"'
+			'Karte "Alarm-Schwellen" braucht testid="card-alerts"'
 		);
 	});
 
@@ -114,7 +114,7 @@ describe('AC-5: Action-Links zu Tab-Hashes', () => {
 	test('Alerts-Karte verlinkt auf #alerts', () => {
 		assert.ok(
 			source.includes('#alerts'),
-			'Karte "Wachhund-Schwellen" muss einen Link zu "#alerts" haben'
+			'Karte "Alarm-Schwellen" muss einen Link zu "#alerts" haben'
 		);
 	});
 
@@ -158,7 +158,7 @@ describe('AC-2/3/4: Richtige Utilities genutzt', () => {
 		);
 	});
 
-	test('nutzt alert_rules für Wachhund-Schwellen-Karte', () => {
+	test('nutzt alert_rules für Alarm-Schwellen-Karte', () => {
 		assert.ok(
 			source.includes('alert_rules'),
 			'TripOverview muss trip.alert_rules für die Alarmregeln-Karte verwenden'

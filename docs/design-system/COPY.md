@@ -135,7 +135,7 @@
 
 ---
 
-## 9. Verbotene Worte (Drift-Wachhund)
+## 9. Verbotene Worte (Terminologie-Drift)
 
 Diese Wörter erscheinen **nirgendwo** im Produkt-UI (Mockups, Implementierung, Issue-Bodies):
 

@@ -73,7 +73,7 @@ Nicht geändert:
 <section data-testid="trip-overview" class="trip-overview">
   <div class="overview-grid">
     <DetailCard eyebrow="Reports" title="Was geht raus" … testid="card-reports" />
-    <DetailCard eyebrow="Alarmregeln · N" title="Wachhund-Schwellen" … testid="card-alerts" />
+    <DetailCard eyebrow="Alarmregeln · N" title="Alarm-Schwellen" … testid="card-alerts" />
     <DetailCard eyebrow="N Etappen" title="Route & Etappen" … testid="card-stages" />
     <DetailCard eyebrow="Briefings" title="Datenstand" … testid="card-schedule" />
   </div>
@@ -100,10 +100,10 @@ CSS: `grid-template-columns: 1fr 1fr` (Desktop), `1fr` (≤ 899px).
 
 Falls `schedule.enabled === false`: alle Items mit `state: 'off'`, meta `"deaktiviert"`.
 
-### Karte 2 — „Wachhund-Schwellen" (Alert Rules)
+### Karte 2 — „Alarm-Schwellen" (Alert Rules)
 
 **Eyebrow:** `N + " Alarmregeln"` (N = Anzahl enabled rules, min 0)
-**Title:** `"Wachhund-Schwellen"`
+**Title:** `"Alarm-Schwellen"`
 **testid:** `"card-alerts"`
 **actionText:** `"Alarmregeln verwalten"`
 **actionHref:** `"#alerts"`
@@ -152,7 +152,7 @@ Falls `stages.length === 0`: alle Items `state: 'off'`, meta `"—"`.
 
 **AC-2:** Given eine Karte „Was geht raus", When evening_enabled=true und morning_enabled=false, Then zeigt `[data-testid="detail-card-card-reports"]` das Evening-Item mit state='on' und das Morning-Item mit state='off'.
 
-**AC-3:** Given Karte „Wachhund-Schwellen" mit 3 aktiven Regeln, When der Tab geladen wird, Then zeigt `[data-testid="detail-card-card-alerts"]` genau 3 Zeilen mit state='on'.
+**AC-3:** Given Karte „Alarm-Schwellen" mit 3 aktiven Regeln, When der Tab geladen wird, Then zeigt `[data-testid="detail-card-card-alerts"]` genau 3 Zeilen mit state='on'.
 
 **AC-4:** Given Karte „Route & Etappen" mit 5 Stages, When der Tab geladen wird, Then zeigt `[data-testid="detail-card-card-stages"]` Distanz, Aufstieg und Etappenanzahl.
 

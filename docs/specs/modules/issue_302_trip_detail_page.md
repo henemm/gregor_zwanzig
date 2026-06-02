@@ -223,7 +223,7 @@ Beispiel-Rows: "Abend-Briefing · 18:00 · Email+Signal" (state='on'),
 **Karte 2 — Alarmregeln:**
 ```typescript
 eyebrow={`ALARMREGELN · ${enabledAlertCount}`}
-title="Wachhund-Schwellen"
+title="Alarm-Schwellen"
 items={buildAlertItems(trip.alert_rules ?? [])}
 actionText="Regeln verwalten →"
 actionHref="?tab=alarms"
