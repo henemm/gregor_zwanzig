@@ -279,6 +279,15 @@
 						onMapClick={handleMapClick}
 						sizeKey={mobileSizeKey}
 					/>
+					<!-- EtappenSwitcher-Pill oben links (AC-3/AC-4) -->
+					<button
+						type="button"
+						class="stage-switcher-pill"
+						data-testid="stage-switcher-pill"
+						onclick={() => { stageSheetOpen = true; }}
+					>
+						{activeStageIndex + 1} / {stages.length} · {activeStage.name}
+					</button>
 					{#if !activeIsPause}
 						<MapControl onAddWaypoint={() => { addModeHint = true; }} />
 					{/if}
@@ -478,6 +487,24 @@
 	/* Issue #542: Mobile-Editor — Vollbild-Karte + Bottom-Sheet */
 	.mobile-editor {
 		display: none;
+	}
+
+	.stage-switcher-pill {
+		position: absolute;
+		top: 12px;
+		left: 12px;
+		z-index: 20;
+		padding: 6px 14px;
+		background: var(--g-card);
+		border: 1px solid var(--g-rule);
+		border-radius: 20px;
+		box-shadow: var(--g-shadow-2, 0 2px 6px rgba(26, 26, 24, 0.12));
+		font-size: 13px;
+		font-weight: 600;
+		color: var(--g-ink);
+		cursor: pointer;
+		white-space: nowrap;
+		font-family: var(--g-font-mono, 'JetBrains Mono', monospace);
 	}
 
 	/* Mobile: zeige Mobile-Editor, verstecke Desktop-Grid */
