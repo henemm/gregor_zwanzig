@@ -12,7 +12,6 @@
 	import { getReportSchedule } from '$lib/utils/rightColumn';
 	import Stat from '$lib/components/molecules/Stat.svelte';
 	import { api } from '$lib/api';
-	import { goto } from '$app/navigation';
 	import type { Trip } from '$lib/types';
 
 	interface Props {
@@ -94,13 +93,6 @@
 		}
 	}
 
-	function handlePreview(): void {
-		void goto(`/trips/${trip.id}#preview`);
-	}
-
-	function handleEdit(): void {
-		void goto(`/trips/${trip.id}/edit`);
-	}
 </script>
 
 <header class="trip-header">
@@ -134,22 +126,6 @@
 		</div>
 
 		<div class="header-actions">
-			<Btn
-				variant="outline"
-				size="sm"
-				data-testid="trip-detail-action-preview"
-				onclick={handlePreview}
-			>
-				Briefing-Vorschau
-			</Btn>
-			<Btn
-				variant="outline"
-				size="sm"
-				data-testid="trip-detail-action-edit"
-				onclick={handleEdit}
-			>
-				Bearbeiten
-			</Btn>
 			<Btn
 				variant="accent"
 				size="sm"

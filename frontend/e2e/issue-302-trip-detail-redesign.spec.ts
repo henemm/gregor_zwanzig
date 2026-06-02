@@ -51,11 +51,12 @@ test.describe('Issue #302 — Trip-Detail-Seite Redesign', () => {
 		await expect(btn).toContainText('Test-Briefing');
 	});
 
-	test('AC-10: Bearbeiten-Button mit data-testid="trip-detail-action-edit" vorhanden', async ({ page }) => {
+	// Bug #505: "Bearbeiten"-Button wurde laut Design-Vorgabe aus dem Header entfernt.
+	// Editing geschieht inline in den Tabs; /trips/[id]/edit redirectet auf ?tab=stages.
+	test('AC-10: Kein "Bearbeiten"-Button im Header (bug #505)', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
 		const btn = page.getByTestId('trip-detail-action-edit');
-		await expect(btn).toBeVisible();
-		await expect(btn).toContainText('Bearbeiten');
+		await expect(btn).not.toBeVisible();
 	});
 
 	// -------------------------------------------------------------------------
