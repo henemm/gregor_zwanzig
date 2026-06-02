@@ -8,10 +8,11 @@
 	//
 	// Spec: docs/specs/modules/issue_517_compare_hub.md
 
-	import { Segmented, Dot, Pill, Btn, Eyebrow } from '$lib/components/atoms';
+	import { Segmented, Dot, Pill, Btn, Eyebrow, Card, Switch } from '$lib/components/atoms';
 	import CompareLocationRow from '$lib/components/molecules/CompareLocationRow.svelte';
 	import CompareIdealRow from '$lib/components/molecules/CompareIdealRow.svelte';
 	import CompareLayoutRow from '$lib/components/molecules/CompareLayoutRow.svelte';
+	import DetailRow from '$lib/components/molecules/DetailRow.svelte';
 	import {
 		deriveStatusFromPreset,
 		presetScheduleLabel,
@@ -149,6 +150,19 @@
 			sendLoading = false;
 		}
 	}
+
+	// Issue #527 — Pause/Aktivieren (localSchedule als reaktive Kopie)
+	let localSchedule = $state<string>(preset.schedule ?? 'manual');
+
+	async function handleToggleActive() {
+		const next = localSchedule === 'manual' ? 'daily' : 'manual';
+		try {
+			await api.put(`/api/compare/presets/${preset.id}`, { ...preset, schedule: next });
+			localSchedule = next;
+		} catch {
+			// Fehler ignorieren, State bleibt unverändert
+		}
+	}
 </script>
 
 <div class="compare-tabs" data-testid="compare-detail-tab-list">
@@ -156,34 +170,64 @@
 
 	{#if activeTab === 'uebersicht'}
 		<div class="tab-panel" data-testid="compare-detail-panel-uebersicht">
-			<!-- Monitoring-Streifen -->
-			<div class="monitoring-strip">
-				<div class="monitoring-item">
-					<Dot style="background:{statusInfo.dot}" />
-					<span class="monitoring-label-inline">{statusInfo.label}</span>
+			<!-- Monitoring-Card (weiß statt off-white Streifen) -->
+			<Card padding={16} class="monitoring-card">
+				<div class="monitoring-row">
+					<div class="monitoring-item">
+						<Dot tone={status === 'active' ? 'good' : 'neutral'} />
+						<span class="monitoring-label-inline">{statusInfo.label}</span>
+					</div>
+					<div class="monitoring-item-col">
+						<span class="monitoring-label">Nächster Versand</span>
+						<span class="monitoring-value">{presetScheduleLabel(preset)}</span>
+					</div>
+					<div class="monitoring-item-col">
+						<span class="monitoring-label">Zuletzt</span>
+						<span class="monitoring-value">{formatLastSent(preset.letzter_versand)}</span>
+					</div>
+					<div class="monitoring-item-col">
+						<span class="monitoring-label">Kanäle</span>
+						<span class="monitoring-value">{preset.empfaenger.length}</span>
+					</div>
 				</div>
-				<div class="monitoring-item-col">
-					<span class="monitoring-label">Nächster Versand</span>
-					<span class="monitoring-value">{presetScheduleLabel(preset)}</span>
-				</div>
-				<div class="monitoring-item-col">
-					<span class="monitoring-label">Zuletzt</span>
-					<span class="monitoring-value">{formatLastSent(preset.letzter_versand)}</span>
-				</div>
-				<div class="monitoring-item-col">
-					<span class="monitoring-label">Kanäle</span>
-					<span class="monitoring-value">{preset.empfaenger.length}</span>
-				</div>
+			</Card>
+
+			<!-- 2×2 SummaryCard-Grid -->
+			<div class="summary-grid">
+				<Card padding={20}>
+					<Eyebrow>Orte</Eyebrow>
+					<p class="summary-value">{preset.location_ids.length} Kandidaten</p>
+					<p class="summary-sub">{resolvedLocations[0]?.loc?.name ?? '—'}</p>
+					<Btn variant="ghost" size="sm" onclick={() => handleValueChange('orte')}>Bearbeiten →</Btn>
+				</Card>
+
+				<Card padding={20}>
+					<Eyebrow>Idealwerte</Eyebrow>
+					<p class="summary-value">{preset.profil}</p>
+					<p class="summary-sub">{Object.keys(idealRanges ?? {}).length} Metriken konfiguriert</p>
+					<Btn variant="ghost" size="sm" onclick={() => handleValueChange('idealwerte')}>Bearbeiten →</Btn>
+				</Card>
+
+				<Card padding={20}>
+					<Eyebrow>Layout</Eyebrow>
+					<p class="summary-value">{channels.join(' · ')}</p>
+					<p class="summary-sub">Spalten pro Kanal</p>
+					<Btn variant="ghost" size="sm" onclick={() => handleValueChange('layout')}>Bearbeiten →</Btn>
+				</Card>
+
+				<Card padding={20}>
+					<Eyebrow>Versand</Eyebrow>
+					<p class="summary-value">{presetScheduleLabel(preset)}</p>
+					<p class="summary-sub">{preset.hour_from}–{preset.hour_to} Uhr</p>
+					<Btn variant="ghost" size="sm" onclick={() => handleValueChange('versand')}>Bearbeiten →</Btn>
+				</Card>
 			</div>
 
-			<!-- Summary -->
-			<div class="summary">
-				<p>
-					{preset.display_config?.region ?? '—'} · {preset.profil} · {preset.location_ids.length}
-					{preset.location_ids.length === 1 ? 'Ort' : 'Orte'}
-				</p>
-			</div>
-
+			<!-- Hinweis-Box -->
+			<Card accent={true} padding={20} class="hint-box">
+				<p class="hint-text">Gelesen wird das Briefing unterwegs im Postfach. Tab Vorschau dient nur zum Prüfen der Konfiguration.</p>
+				<Btn variant="ghost" size="sm" onclick={() => handleValueChange('vorschau')}>Vorschau prüfen →</Btn>
+			</Card>
 		</div>
 	{/if}
 
@@ -235,27 +279,95 @@
 
 	{#if activeTab === 'versand'}
 		<div class="tab-panel" data-testid="compare-detail-panel-versand">
-			<dl class="kv-list">
-				<dt>Zeitplan</dt>
-				<dd>{presetScheduleLabel(preset)}</dd>
-				<dt>Zeitfenster</dt>
-				<dd>{preset.hour_from}–{preset.hour_to} Uhr</dd>
-				<dt>Profil</dt>
-				<dd>{preset.profil}</dd>
-			</dl>
-			<div class="empfaenger-block">
-				<span class="monitoring-label">Empfänger</span>
-				<div class="pill-row">
-					{#each preset.empfaenger as e}
-						<Pill>{e}</Pill>
+			<div class="versand-grid">
+				<!-- Linke Spalte -->
+				<div class="versand-left">
+					<!-- Rhythmus & Vorausschau -->
+					<Card padding={20}>
+						<Eyebrow>Rhythmus & Vorausschau</Eyebrow>
+						<DetailRow label="Zeitplan" value={presetScheduleLabel(preset)} />
+						<DetailRow label="Zeitfenster" value="{preset.hour_from}–{preset.hour_to} Uhr" />
+						<DetailRow label="Nächster Versand" value={presetScheduleLabel(preset)} divider="none" />
+					</Card>
+
+					<!-- Kanäle -->
+					<Card padding={20} class="channel-card">
+						<Eyebrow>Kanäle</Eyebrow>
+						<div class="channel-row">
+							<Dot tone={preset.empfaenger.length > 0 ? 'good' : 'neutral'} />
+							<span class="channel-name">Email</span>
+							<span class="channel-status">{preset.empfaenger.length > 0 ? 'verifiziert' : 'nicht verbunden'}</span>
+							<Switch checked={preset.empfaenger.length > 0} disabled={true} size="sm" aria-label="Email-Kanal" />
+						</div>
+						<div class="channel-row">
+							<Dot tone="neutral" />
+							<span class="channel-name">Signal</span>
+							<span class="channel-status">nicht verbunden</span>
+							<Switch checked={false} disabled={true} size="sm" aria-label="Signal-Kanal" />
+						</div>
+						<div class="channel-row">
+							<Dot tone="neutral" />
+							<span class="channel-name">Telegram</span>
+							<span class="channel-status">nicht verbunden</span>
+							<Switch checked={false} disabled={true} size="sm" aria-label="Telegram-Kanal" />
+						</div>
+						<div class="channel-row">
+							<Dot tone="neutral" />
+							<span class="channel-name">SMS</span>
+							<span class="channel-status">nicht verbunden</span>
+							<Switch checked={false} disabled={true} size="sm" aria-label="SMS-Kanal" />
+						</div>
+					</Card>
+				</div>
+
+				<!-- Rechte Spalte -->
+				<div class="versand-right">
+					<Card padding={20}>
+						<Eyebrow>Aktivierung</Eyebrow>
+						{#if localSchedule !== 'manual' && preset.name && preset.location_ids.length > 0}
+							<div class="activation-status">
+								<Dot tone="good" />
+								<span class="activation-label">Aktiv</span>
+							</div>
+							<p class="activation-desc">Läuft automatisch</p>
+							<Btn variant="quiet" size="sm" onclick={handleToggleActive}>Pausieren</Btn>
+						{:else if !preset.name || preset.location_ids.length === 0}
+							<div class="activation-status">
+								<Dot tone="neutral" />
+								<span class="activation-label">Entwurf</span>
+							</div>
+							<p class="activation-desc">Noch nicht aktiv</p>
+							<Btn variant="primary" size="sm" onclick={handleToggleActive}>Aktivieren</Btn>
+						{:else}
+							<div class="activation-status">
+								<Dot tone="neutral" />
+								<span class="activation-label">Pausiert</span>
+							</div>
+							<Btn variant="primary" size="sm" onclick={handleToggleActive}>Aktivieren</Btn>
+						{/if}
+					</Card>
+
+					<!-- Test-Briefing senden -->
+					{#if sendQueued}
+						<p class="send-success" data-testid="compare-send-success-versand">
+							Briefing wurde zur Zustellung vorgemerkt.
+						</p>
 					{:else}
-						<span class="empty-state">Keine Empfänger</span>
-					{/each}
+						<Btn
+							variant="quiet"
+							size="sm"
+							disabled={sendLoading}
+							onclick={handleSend}
+							data-testid="compare-send-btn-versand"
+						>
+							{sendLoading ? 'Wird gesendet…' : 'Test-Briefing jetzt senden'}
+						</Btn>
+					{/if}
+					{#if sendError !== null}
+						<p class="send-error">{sendError}</p>
+					{/if}
 				</div>
 			</div>
-			{#if deriveStatusFromPreset(preset) === 'draft'}
-				<p class="draft-hint">Noch nicht aktiv</p>
-			{/if}
 		</div>
 	{/if}
 
@@ -357,17 +469,6 @@
 		padding: 1.5rem 0;
 	}
 
-	.monitoring-strip {
-		display: flex;
-		gap: 2rem;
-		padding: 0.75rem 1rem;
-		margin-bottom: 1.5rem;
-		border-radius: var(--g-r-2, 0.5rem);
-		background: var(--g-paper, #f6f4ee);
-		border: 1px solid var(--g-rule-soft);
-		font-size: 0.875rem;
-		flex-wrap: wrap;
-	}
 	.monitoring-item {
 		display: flex;
 		align-items: center;
@@ -391,26 +492,6 @@
 		font-size: 0.875rem;
 	}
 
-	.summary {
-		margin-bottom: 1.5rem;
-		font-size: 0.875rem;
-		color: var(--g-ink-3);
-	}
-
-	.edit-links {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
-	.edit-links a {
-		color: var(--g-accent);
-		font-size: 0.875rem;
-		text-decoration: none;
-	}
-	.edit-links a:hover {
-		text-decoration: underline;
-	}
-
 	.empty-state {
 		font-size: 0.875rem;
 		color: var(--g-ink-3);
@@ -427,42 +508,6 @@
 	}
 	.footer-link a:hover {
 		text-decoration: underline;
-	}
-
-	.kv-list {
-		display: grid;
-		grid-template-columns: max-content 1fr;
-		column-gap: 1.5rem;
-		row-gap: 0.5rem;
-		margin: 0 0 1rem 0;
-		font-size: 0.875rem;
-	}
-	.kv-list dt {
-		color: var(--g-ink-3);
-		font-family: var(--g-font-mono);
-		font-size: 0.75rem;
-		text-transform: uppercase;
-		letter-spacing: 0.06em;
-	}
-	.kv-list dd {
-		margin: 0;
-	}
-
-	.empfaenger-block {
-		margin-bottom: 1rem;
-	}
-	.pill-row {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.25rem;
-		margin-top: 0.5rem;
-	}
-
-	.draft-hint {
-		font-size: 0.875rem;
-		color: var(--g-ink-3);
-		font-style: italic;
-		margin: 0.5rem 0;
 	}
 
 	.placeholder {
@@ -504,10 +549,6 @@
 			background: var(--g-accent);
 			color: var(--g-paper, #f6f4ee);
 			border-bottom-color: transparent;
-		}
-
-		.monitoring-strip {
-			gap: 1rem;
 		}
 	}
 
@@ -612,6 +653,112 @@
 		}
 		.preview-stage {
 			padding: 12px;
+		}
+	}
+
+	/* ── Issue #526 — Übersicht-Tab ─────────────────────────────────────────── */
+	.monitoring-card {
+		margin-bottom: 1.5rem;
+	}
+	.monitoring-row {
+		display: flex;
+		gap: 2rem;
+		flex-wrap: wrap;
+		align-items: center;
+	}
+
+	.summary-grid {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 1rem;
+		margin-bottom: 1.5rem;
+	}
+	.summary-value {
+		font-size: 1rem;
+		font-weight: 600;
+		margin: 0.5rem 0 0.25rem;
+		color: var(--g-ink);
+	}
+	.summary-sub {
+		font-size: 0.8125rem;
+		color: var(--g-ink-3);
+		margin: 0 0 0.75rem;
+	}
+
+	.hint-box {
+		margin-top: 0.5rem;
+	}
+	.hint-text {
+		font-size: 0.875rem;
+		color: var(--g-ink-2);
+		line-height: 1.5;
+		margin: 0 0 0.75rem;
+	}
+
+	/* ── Issue #527 — Versand-Tab ────────────────────────────────────────────── */
+	.versand-grid {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 1.5rem;
+		align-items: start;
+	}
+	.versand-left {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+	.versand-right {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+
+	.channel-card {
+		margin-top: 0;
+	}
+	.channel-row {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0.5rem 0;
+		border-bottom: 1px dashed var(--g-rule-soft);
+	}
+	.channel-row:last-child {
+		border-bottom: none;
+	}
+	.channel-name {
+		flex: 1;
+		font-size: 0.875rem;
+		font-weight: 500;
+	}
+	.channel-status {
+		font-size: 0.75rem;
+		color: var(--g-ink-3);
+		font-family: var(--g-font-mono);
+	}
+
+	.activation-status {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin-bottom: 0.5rem;
+	}
+	.activation-label {
+		font-weight: 600;
+		font-size: 0.9375rem;
+	}
+	.activation-desc {
+		font-size: 0.875rem;
+		color: var(--g-ink-3);
+		margin: 0 0 0.75rem;
+	}
+
+	@media (max-width: 899px) {
+		.summary-grid {
+			grid-template-columns: 1fr;
+		}
+		.versand-grid {
+			grid-template-columns: 1fr;
 		}
 	}
 </style>
