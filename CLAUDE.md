@@ -12,17 +12,16 @@
 
 Dieses Projekt nutzt den **OpenSpec 8-Phasen-Workflow** mit Adversary Verification:
 
-| Phase | Command | Purpose |
-|-------|---------|---------|
-| 1 | `/1-context` | Kontext sammeln |
-| 2 | `/2-analyse` | Request verstehen, Codebase recherchieren |
-| 3 | `/3-write-spec` | Spezifikation erstellen |
-| 4 | User: "approved" | Spec freigeben |
-| 5 | `/4-tdd-red` | Fehlschlagende Tests schreiben (RED) |
-| 6 | `/5-implement` | Implementieren (GREEN) + User sagt "go" |
-| 6b | Adversary Dialog | QA-Agent versucht Implementierung zu brechen |
-| 7 | `/6-validate` | Validieren vor Commit |
-| 8 | `/7-deploy` | Deployment |
+| Phase | Command | Purpose | PO-Eingriff |
+|-------|---------|---------|-------------|
+| 1 | `/1-context` | Kontext sammeln | — |
+| 2 | `/2-analyse` | Request verstehen, Codebase recherchieren | Optional: 3-Satz-Zusammenfassung korrigieren |
+| 3 | `/3-write-spec` | Spezifikation erstellen | **Pflicht: ACs auf Deutsch freigeben** ('approved') |
+| 4 | — | Spec freigegeben | — |
+| 5 | `/4-tdd-red` | Fehlschlagende Tests schreiben (RED) | Optional: AC-Test-Mapping lesen |
+| 6 | `/5-implement` | Implementieren (GREEN) + Adversary | — (läuft automatisch durch) |
+| 7 | `/6-validate` | Validieren vor Commit | — |
+| 8 | `/7-deploy` | Deployment | **Pflicht: Tech-Lead-Brief lesen + 'ja' sagen** |
 
 **Adversary Verification:** Nach Implementation fuehrt ein unabhaengiger `implementation-validator` Agent (Sonnet) einen strukturierten Dialog, um die Implementierung aktiv zu brechen. Tri-State Verdict: VERIFIED / BROKEN / AMBIGUOUS. Details: `docs/features/openspec_workflow.md`
 

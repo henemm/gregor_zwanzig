@@ -146,43 +146,13 @@ add_test_artifact(active, {
 "
 ```
 
-### 7. User-Freigabe der GREEN-Ergebnisse (PFLICHT)
-
-**STOP! Du darfst NICHT weitermachen ohne User-Freigabe!**
-
-Praesentiere dem User eine verstaendliche Zusammenfassung:
-
-```markdown
-## TDD GREEN Ergebnisse
-
-### Was wurde implementiert?
-- [Feature/Bug in User-Sprache beschreiben]
-
-### Was hat der Developer Agent gemacht?
-- [Geaenderte Dateien auflisten]
-- [Kurze Beschreibung der Aenderungen]
-
-### Test-Ergebnisse
-- Tests: [N] bestanden, [N] fehlgeschlagen
-
-### Auffaelligkeiten / Warnungen
-- [Alles was aufgefallen ist, inkl. Abweichungen von Spec]
-
-Sage "go" wenn du mit den Ergebnissen zufrieden bist.
-```
-
-**WICHTIG:**
-- Du darfst NICHT selbst entscheiden ob Auffaelligkeiten relevant sind
-- Du darfst NICHT "go" simulieren oder die Freigabe umgehen
-- Der User gibt frei mit: "go", "weiter", "tests ok", "green ok"
-
-### 8. Update Workflow State to Adversary Phase
+### 7. Update Workflow State to Adversary Phase
 
 ```bash
 GZ_ACTIVE_WORKFLOW=<name> python3 .claude/hooks/workflow.py phase phase6b_adversary
 ```
 
-### 9. External Validator (MANDATORY)
+### 8. External Validator (MANDATORY)
 
 **Du startest den Validator per Bash — der Output ist fuer den User sichtbar.**
 
@@ -210,38 +180,31 @@ ein Validator-Lauf gegen Production prueft also alten Code. Die ehrliche Variant
 
 **Setup (einmalig):** `cp .claude/validator.env.example .claude/validator.env`, Passwort eintragen, dann `bash scripts/setup-validator-user.sh`. Der Launcher loggt sich danach automatisch ein und uebergibt dem Validator das Cookie.
 
-#### 8b. Ergebnis praesentieren
+#### 8b. Ergebnis präsentieren und weiterfahren
 
-Zeige dem User das Verdict und frage:
+Zeige das Verdict:
 
-```markdown
-## External Validator Ergebnis
+> **Validator-Ergebnis:** [VERIFIED / BROKEN / AMBIGUOUS]
+> Spec: [SPEC_PATH]
 
-**Verdict:** [VERIFIED / BROKEN / AMBIGUOUS]
-**Spec:** [SPEC_PATH]
+- **VERIFIED** → Direkt weiter zu Phase 7 (`/validate`). Kein "go" nötig.
+- **BROKEN** → Developer Agent erneut spawnen mit Findings, dann erneut validieren.
+- **AMBIGUOUS** → Developer Agent erneut spawnen, dann erneut validieren.
 
-[Validator-Output ist oben im Bash-Result vollstaendig sichtbar]
-
-- **"go"** → ich committe/pushe
-- **"fix needed"** → Developer Agent fixt die Probleme
-- **"broken"** → Developer Agent muss nochmal ran
-```
-
-**Warte auf User-Antwort!**
-
-#### 8c. Nach User-Antwort
-
-- **"go"** → Weiter zu Phase 7 (`/validate`)
-- **"fix needed"** + Findings → Developer Agent erneut spawnen mit Findings, dann erneut Step 8
-- **"broken"** → Developer Agent erneut spawnen, komplette Ueberarbeitung
+Bei VERIFIED: sofort `GZ_ACTIVE_WORKFLOW=<name> python3 .claude/hooks/workflow.py phase phase7_validate` ausführen und Tech-Lead-Brief vorbereiten (siehe `/7-deploy`).
 
 **Circuit Breaker (max 3 Iterationen):**
 Wenn nach 3 Fix-Loops immer noch Probleme: Eskalation mit allen Findings an den User.
 
-**Wenn "go":**
-```bash
-GZ_ACTIVE_WORKFLOW=<name> python3 .claude/hooks/workflow.py phase phase7_validate
-```
+### Abschluss: Tech-Lead-Brief vorbereiten
+
+Wenn VERIFIED und bereit für Deploy, bereite den Brief vor (wird in `/validate` und `/7-deploy` ausgegeben):
+
+Merke dir:
+- Was wurde gebaut (1-2 Sätze Nutzerperspektive)
+- Welche ACs wurden erfüllt
+- Welche Nebenbefunde entdeckt und als Issue erfasst
+- Risikobewertung
 
 #### Warum ist das trotzdem unabhaengig?
 

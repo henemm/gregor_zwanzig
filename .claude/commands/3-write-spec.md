@@ -77,10 +77,19 @@ _w._save(data)
 python3 .claude/hooks/workflow_state_multi.py phase phase3_spec
 ```
 
-### Step 5: Present to User
+### Step 5: Akzeptanzkriterien für PO präsentieren (PFLICHT)
 
-Show the spec content to the user and ask:
-> "Spec erstellt: `[path]`. Bitte pruefen und mit 'approved' oder 'freigabe' bestaetigen."
+**NICHT** die volle Spec zeigen. Stattdessen NUR die Acceptance Criteria, übersetzt in Alltagssprache:
+
+Extrahiere alle `**AC-N:**`-Einträge aus der Spec und formuliere sie als lesbare Sätze:
+
+> **Was die Software tun muss:**
+> - AC-1: [AC-Text in einfachem Deutsch, ohne technische Begriffe]
+> - AC-2: [AC-Text in einfachem Deutsch]
+> - ...
+>
+> Spec gespeichert unter `[path]`.
+> Sage **'approved'** oder **'freigabe'** um fortzufahren — oder gib mir Feedback.
 
 **IMPORTANT:** Do NOT implement until the user explicitly approves!
 

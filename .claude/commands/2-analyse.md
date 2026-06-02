@@ -81,6 +81,16 @@ Synthesize all results into:
 3. **Scope estimate** - Files and LoC (flag if exceeding limits)
 4. **Risks** - Only if significant
 
+### PO-Zusammenfassung (PFLICHT am Ende von Phase 2)
+
+Gib **immer** diese 3 Sätze aus — in Alltagssprache, kein Fachjargon:
+
+> **Das Problem:** [Was ist kaputt oder fehlt, aus Nutzersicht in 1 Satz]
+> **Warum das wichtig ist:** [Auswirkung auf den Nutzer in 1 Satz]
+> **Was ich vorhabe:** [Was ich bauen werde in 1 Satz]
+>
+> Ich schreibe jetzt die Spec. Stopp mich wenn etwas falsch klingt.
+
 ### Step 5: Document & Update Workflow State
 
 Update or create `docs/context/[workflow-name].md` with analysis results.

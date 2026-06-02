@@ -2,6 +2,26 @@
 
 Deploy current main to production via henemm-infra deploy script.
 
+## Tech-Lead-Brief für den PO (PFLICHT — vor allem anderen ausgeben)
+
+Bevor du irgendeinen Deploy-Schritt ausführst, gib diesen Brief aus:
+
+> **Was wurde gebaut:** [1-2 Sätze aus Nutzerperspektive — was kann der Nutzer jetzt tun, was vorher nicht ging?]
+>
+> **Staging validiert:** ja — [Datum/Uhrzeit des letzten Staging-Checks]
+>
+> **Tests:** [N] bestanden, 0 fehlgeschlagen
+>
+> **Offene Punkte:** [keine] ODER [Issue #N wurde erstellt für: X]
+>
+> **Risiko:** niedrig / mittel / hoch — [1 Satz Begründung, z.B. "nur Frontend, kein Daten-Schema berührt"]
+>
+> **Empfehlung:** Deploy auf Production.
+>
+> Sage **'ja'** oder **'deploy'** um fortzufahren.
+
+**Erst nach Bestätigung durch den PO die Pre-Flight Checks starten!**
+
 ## Pre-Flight Checks
 
 ```bash

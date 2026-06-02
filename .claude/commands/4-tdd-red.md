@@ -87,6 +87,22 @@ print('Artifact registered')
 "
 ```
 
+### 6. PO-Zusammenfassung ausgeben (PFLICHT)
+
+Gib nach dem Artifact-Register immer diese Übersicht aus:
+
+> **Tests geschrieben — was sie prüfen:**
+>
+> | AC | Was getestet wird | Status |
+> |---|---|---|
+> | AC-1: [AC-Text kurz] | [Was der Test konkret prüft, in Nutzerworten] | ❌ Fehlgeschlagen (erwartet) |
+> | AC-2: [AC-Text kurz] | [Was der Test konkret prüft] | ❌ Fehlgeschlagen (erwartet) |
+>
+> Das ist korrekt so — die Tests schlagen fehl, weil das Feature noch nicht gebaut ist.
+> Ich starte jetzt die Implementierung.
+
+Kein User-Gate, keine Warteschleife. Direkt mit Phase 6 fortfahren.
+
 ## Artifact Requirements
 
 Each artifact MUST:
