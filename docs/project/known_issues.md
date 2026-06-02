@@ -135,3 +135,46 @@ Multi-point failure across 5 files:
 
 Wird moeglicherweise durch Tech-Stack-Migration (M2, #23) direkt geloest.
 Falls vorher gefixt: `timezonefinder` + `TimezoneService` + Formatter-Anpassungen.
+
+---
+
+## BUG-TOKEN-01: Alte Farb-Token-Aliasse nicht bereinigt (#541, #543, #544)
+
+**Status:** RESOLVED (2026-06-02) | **Severity:** Low | **GitHub Issues:** #541, #543, #544
+
+### Symptom
+
+Drei rückwirkend durch Adversary-Audit (#510) gefundene Regressions:
+1. Native HTML-Checkboxen in `Step3Weather.svelte` und `Step5Reports.svelte` statt Atomic-`Checkbox`-Komponente
+2. Tailwind-Residual (`hover:bg-muted/50`) in `WeatherConfigDialog.svelte` nach Token-Migration (#285)
+3. Alte Token-Aliasse (`--g-good`, `--g-warn`, `--g-bad`) in 35 Komponenten und `app.css` noch nicht durch kanonische Namen (`--g-success`, `--g-warning`, `--g-danger`) ersetzt, obwohl #519 die neuen Namen eingeführt hatte
+
+### Root Cause
+
+Atomic-Migration (#368) und Token-Konsolidierung (#519) waren teilweise unvollständig. Native Checkboxen wurden in zwei Wizard-Schritten übersehen. Alte Token-Aliasse wurden in der Übergangsphase als Brücke belassen, aber nicht aufgeräumt. Tailwind-Klasse war Residual aus einem früheren Refactor.
+
+### Fix (Committed 2026-06-02)
+
+**Commit:** [Details in Spec]
+
+1. **#543 — Checkbox-Migration:** Native `<input type="checkbox">` in `Step3Weather.svelte` und `Step5Reports.svelte` durch `<Checkbox>`-Komponente aus `$lib/components/ui/checkbox` ersetzt
+2. **#544 — Tailwind-Klasse:** `hover:bg-muted/50` in `WeatherConfigDialog.svelte` entfernt; Hover-Verhalten über scoped CSS mit `var(--g-surface-2)` implementiert
+3. **#541 — Token-Rename:** Alle 35 Komponenten und `app.css`:
+   - `var(--g-good)` → `var(--g-success)`
+   - `var(--g-warn)` → `var(--g-warning)`
+   - `var(--g-bad)` → `var(--g-danger)`
+   - Bridge-Aliasse aus `app.css` entfernt
+   - Pill/Dot-Farbregeln mit neuen Token-Namen aktualisiert
+
+### Files Changed
+
+- Frontend: 35 `.svelte` Komponenten (mechanisches Token-Rename)
+- Styles: `frontend/src/app.css` (Token-Definitionen + Pill/Dot-Regeln)
+- Tests: 3 TypeScript-Testdateien (Assertions aktualisiert)
+- Spec: `docs/specs/modules/bug-541-543-544-token-checkbox-tailwind.md` v1.0
+
+### Lessons Learned
+
+1. Atomic-Migration und Token-Refactorings brauchen abschließende Audits gegen die gesamte Codebasis (Grep-Suche, nicht nur visuelles Review)
+2. Temporäre Bridge-Aliasse sollten mit explizitem Verfallsdatum dokumentiert sein
+3. Guard-Tests gegen veraltete Token-Namen helfen, Regressions zu fangen

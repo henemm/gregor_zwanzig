@@ -167,3 +167,4 @@ In `docs/design-system/TOKENS.md` die Wetter-Token-Sektion aktualisieren: `--g-w
 
 - 2026-06-01: Initial spec created
 - 2026-06-01: Implementiert und VERIFIED durch Adversary
+- 2026-06-02: Bridge-Aliasse (`--g-success: var(--g-good)`, etc.) vollständig entfernt in Issue #541 — kanonische Token `--g-good/warn/bad` sind jetzt alleinig gültig

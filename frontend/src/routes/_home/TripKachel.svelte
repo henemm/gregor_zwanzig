@@ -18,7 +18,7 @@
 
 	const statusColors: Record<string, string> = {
 		aktiv: 'var(--g-accent-deep)',
-		geplant: 'var(--g-good)',
+		geplant: 'var(--g-success)',
 		fertig: 'var(--g-ink-muted)',
 		draft: 'var(--g-ink-muted)'
 	};

@@ -74,7 +74,7 @@
 		<span
 			style:font-family="var(--g-font-mono)"
 			style:font-size="11px"
-			style:color={isSent ? 'var(--g-good)' : 'var(--g-ink-3)'}
+			style:color={isSent ? 'var(--g-success)' : 'var(--g-ink-3)'}
 			style:min-width="60px"
 			style:text-align="right"
 			style:text-transform="uppercase"

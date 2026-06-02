@@ -142,11 +142,12 @@ test('AC-6: Step5 hat Aktivierungs-Banner mit testid compare-step5-activation-ba
 	);
 });
 
-test('AC-6: Aktivierungs-Banner verwendet var(--g-good)', () => {
+test('AC-6: Aktivierungs-Banner verwendet var(--g-success)', () => {
+	// #541: Token-Rename — --g-good wurde durch den kanonischen Namen --g-success ersetzt.
 	const src = read(STEP5, 'Step5Versand.svelte');
 	assert.ok(
-		/--g-good/.test(src),
-		'Aktivierungs-Banner muss var(--g-good) verwenden'
+		/--g-success/.test(src),
+		'Aktivierungs-Banner muss var(--g-success) verwenden (#541 Token-Rename)'
 	);
 });
 

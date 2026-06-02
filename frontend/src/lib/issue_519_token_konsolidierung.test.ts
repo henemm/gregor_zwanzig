@@ -1,21 +1,23 @@
-// TDD RED: Issue #519 — Token-Konsolidierung: Duale Semantik-Token-Systeme
+// Regression-Guard: Issue #519 + #541 — Token-Konsolidierung (kanonischer Zustand)
 //
 // Spec: docs/specs/modules/issue_519_token_konsolidierung.md
+// Folge-Spec: docs/specs/modules/bug-541-543-544-token-checkbox-tailwind.md
 //
-// Source-Inspection-Test (Pattern wie tokens-bridge.test.ts / trip-terminology.test.ts):
+// HISTORIE:
+//   #519 (2026-05-xx) führte die kanonischen Token-Namen --g-success/warning/danger
+//        als Brücken-Aliasse auf --g-good/warn/bad ein. Übergangszustand: alte Namen
+//        blieben in app.css als Quelldefinition erhalten.
+//   #541 (2026-06-02) schloss die Konsolidierung ab: Aliasse wurden zu direkten
+//        Hex-Definitionen umgeschrieben, die alten Namen --g-good/warn/bad entfernt,
+//        und alle 35 Svelte-Dateien auf die kanonischen Namen umgestellt.
+//
+// Source-Inspection-Test (Pattern wie tokens-bridge.test.ts):
 // liest app.css und Svelte-Quelltext und prueft, dass:
-//   AC-1: --g-success/warning/danger sind Aliases in app.css (nicht mehr Literal-Hex)
-//   AC-2: kein Svelte-File nutzt var(--g-success) oder var(--g-warning) direkt
-//   AC-3: --color-destructive zeigt weiterhin auf var(--g-danger) (shadcn-Bridge)
-//   AC-4: _design-system/+page.svelte nutzt --g-wx-* statt --g-weather-*
-//   AC-5: kanonische Token --g-good/warn/bad haben unveraenderte Werte
-//
-// RED: Vor der Implementierung:
-//   AC-1 FAILS  — --g-success: #3a7d44 (kein Alias)
-//   AC-2 FAILS  — ~37 Svelte-Dateien nutzen noch var(--g-success)/var(--g-warning)
-//   AC-3 PASSES — Regression Guard (muss nach dem Fix erhalten bleiben)
-//   AC-4 FAILS  — _design-system/+page.svelte nutzt noch --g-weather-*
-//   AC-5 PASSES — Regression Guard (kanonische Werte unveraendert)
+//   AC-1 (#541): --g-success/warning/danger sind direkte Hex-Definitionen in app.css
+//   AC-2 (#541): keine Svelte-Datei nutzt var(--g-good)/var(--g-warn)/var(--g-bad) mehr
+//   AC-3 (#519):  --color-destructive zeigt auf var(--g-danger) (shadcn-Bridge)
+//   AC-4 (#519):  _design-system/+page.svelte nutzt --g-wx-* statt --g-weather-*
+//   AC-5 (#541): die alten Token-Namen --g-good/warn/bad existieren nicht mehr in app.css
 //
 // Ausfuehrung:
 //   cd frontend && node --experimental-strip-types --test src/lib/issue_519_token_konsolidierung.test.ts
@@ -57,38 +59,42 @@ const ALL_SVELTE = collectSvelte(SRC);
 // ── AC-1 ─────────────────────────────────────────────────────────────────────
 // GIVEN app.css geladen
 // WHEN --g-success, --g-warning, --g-danger ausgelesen
-// THEN alle drei verweisen auf kanonische Alias-Werte
+// THEN alle drei sind direkte Hex-Definitionen (kanonischer Endzustand nach #541)
 
-test('AC-1: --g-success ist Alias auf var(--g-good)', () => {
+test('AC-1: --g-success ist direkte Hex-Definition #3d6b3a (#541)', () => {
 	assert.ok(
-		hasDecl('--g-success', 'var(--g-good)'),
-		'--g-success muss var(--g-good) sein, war #3a7d44'
+		hasDecl('--g-success', '#3d6b3a'),
+		'--g-success muss direkte Hex-Definition sein (war Bridge-Alias zu --g-good, nach #541 aufgelöst)'
 	);
 });
 
-test('AC-1: --g-warning ist Alias auf var(--g-warn)', () => {
+test('AC-1: --g-warning ist direkte Hex-Definition #c08a1a (#541)', () => {
 	assert.ok(
-		hasDecl('--g-warning', 'var(--g-warn)'),
-		'--g-warning muss var(--g-warn) sein, war #c8882a'
+		hasDecl('--g-warning', '#c08a1a'),
+		'--g-warning muss direkte Hex-Definition sein (war Bridge-Alias zu --g-warn, nach #541 aufgelöst)'
 	);
 });
 
-test('AC-1: --g-danger ist Alias auf var(--g-bad)', () => {
+test('AC-1: --g-danger ist direkte Hex-Definition #a83232 (#541)', () => {
 	assert.ok(
-		hasDecl('--g-danger', 'var(--g-bad)'),
-		'--g-danger muss var(--g-bad) sein, war #b33a2a'
+		hasDecl('--g-danger', '#a83232'),
+		'--g-danger muss direkte Hex-Definition sein (war Bridge-Alias zu --g-bad, nach #541 aufgelöst)'
 	);
 });
 
 // ── AC-2 ─────────────────────────────────────────────────────────────────────
 // GIVEN alle Svelte-Dateien in frontend/src/
-// WHEN nach var(--g-success) oder var(--g-warning) gesucht wird
-// THEN keine Fundstelle in einer .svelte-Datei
+// WHEN nach var(--g-good), var(--g-warn) oder var(--g-bad) gesucht wird
+// THEN keine Fundstelle in einer .svelte-Datei (kanonische Namen --g-success/warning/danger sind Pflicht)
+//
+// Nach #541 sind die alten Alias-Tokens entfernt — jede Verwendung in einer
+// Svelte-Datei würde zu einem ungültigen Token-Ref führen.
 
-function findAltTokensInSvelte(): string[] {
+function findOldTokensInSvelte(): string[] {
 	const hits: string[] = [];
-	const patternSuccess = /var\(--g-success[,)]/g;
-	const patternWarning = /var\(--g-warning[,)]/g;
+	const patternGood = /var\(--g-good[,)]/g;
+	const patternWarn = /var\(--g-warn[,)]/g;
+	const patternBad = /var\(--g-bad[,)]/g;
 	for (const file of ALL_SVELTE) {
 		const content = readFileSync(file, 'utf-8');
 		const lines = content.split('\n');
@@ -97,9 +103,10 @@ function findAltTokensInSvelte(): string[] {
 			// Kommentare ueberspringen
 			const trimmed = line.trim();
 			if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('<!--')) continue;
-			patternSuccess.lastIndex = 0;
-			patternWarning.lastIndex = 0;
-			if (patternSuccess.test(line) || patternWarning.test(line)) {
+			patternGood.lastIndex = 0;
+			patternWarn.lastIndex = 0;
+			patternBad.lastIndex = 0;
+			if (patternGood.test(line) || patternWarn.test(line) || patternBad.test(line)) {
 				hits.push(`${file.replace(SRC, '')}:${i + 1}  ${line.trim()}`);
 			}
 		}
@@ -107,12 +114,12 @@ function findAltTokensInSvelte(): string[] {
 	return hits;
 }
 
-test('AC-2: kein Svelte-File nutzt var(--g-success) oder var(--g-warning) direkt', () => {
-	const found = findAltTokensInSvelte();
+test('AC-2 (#541): kein Svelte-File nutzt var(--g-good)/var(--g-warn)/var(--g-bad) — kanonische Namen sind Pflicht', () => {
+	const found = findOldTokensInSvelte();
 	assert.equal(
 		found.length,
 		0,
-		`var(--g-success) / var(--g-warning) noch in Svelte-Dateien:\n  ${found.join('\n  ')}`
+		`var(--g-good) / var(--g-warn) / var(--g-bad) noch in Svelte-Dateien (nach #541 verboten — nutze --g-success/warning/danger):\n  ${found.join('\n  ')}`
 	);
 });
 
@@ -152,19 +159,20 @@ test('AC-4: _design-system/+page.svelte nutzt --g-wx-* statt --g-weather-*', () 
 });
 
 // ── AC-5 ─────────────────────────────────────────────────────────────────────
-// Regression Guard — kanonische Werte unveraendert (C2/C3)
+// Regression Guard — alte Token-Namen existieren nicht mehr in app.css (#541)
 // GIVEN app.css geladen
-// WHEN --g-good, --g-warn, --g-bad ausgelesen
-// THEN exakt die durch Contrast-Audit #377 bestaettigten Werte
+// WHEN nach --g-good, --g-warn, --g-bad als Token-Definition gesucht
+// THEN keine Fundstelle (die kanonischen Werte aus Contrast-Audit #377 leben jetzt
+//      direkt in --g-success/--g-warning/--g-danger)
 
-test('AC-5 (Regression Guard): --g-good ist #3d6b3a (kanonisch)', () => {
-	assert.ok(hasDecl('--g-good', '#3d6b3a'), '--g-good muss #3d6b3a bleiben (C2/C3)');
+test('AC-5 (#541): --g-good ist nicht mehr in app.css definiert', () => {
+	assert.ok(!/--g-good(?![a-z-])\s*:/.test(css), '--g-good darf nicht mehr in app.css existieren (durch --g-success ersetzt)');
 });
 
-test('AC-5 (Regression Guard): --g-warn ist #c08a1a (kanonisch)', () => {
-	assert.ok(hasDecl('--g-warn', '#c08a1a'), '--g-warn muss #c08a1a bleiben (C2/C3)');
+test('AC-5 (#541): --g-warn ist nicht mehr in app.css definiert', () => {
+	assert.ok(!/--g-warn(?![a-z-])\s*:/.test(css), '--g-warn darf nicht mehr in app.css existieren (durch --g-warning ersetzt)');
 });
 
-test('AC-5 (Regression Guard): --g-bad ist #a83232 (kanonisch)', () => {
-	assert.ok(hasDecl('--g-bad', '#a83232'), '--g-bad muss #a83232 bleiben (C2/C3)');
+test('AC-5 (#541): --g-bad ist nicht mehr in app.css definiert', () => {
+	assert.ok(!/--g-bad(?![a-z-])\s*:/.test(css), '--g-bad darf nicht mehr in app.css existieren (durch --g-danger ersetzt)');
 });

@@ -222,7 +222,7 @@
 						<p class="text-sm font-semibold">{CATEGORY_LABELS[cat] ?? cat}</p>
 						<div class="grid grid-cols-1 gap-1 sm:grid-cols-2">
 							{#each catalog[cat] as metric}
-								<div class="flex items-center gap-2 rounded px-1 py-0.5 text-sm hover:bg-muted/50">
+								<div class="metric-row flex items-center gap-2 rounded px-1 py-0.5 text-sm">
 									<div class="flex items-center gap-2 flex-1 min-w-0">
 										<Checkbox
 											checked={enabledMap[metric.id] ?? false}
@@ -280,3 +280,9 @@
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>
+
+<style>
+	.metric-row:hover {
+		background: var(--g-surface-2);
+	}
+</style>

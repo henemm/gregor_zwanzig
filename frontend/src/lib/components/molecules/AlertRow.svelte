@@ -55,7 +55,7 @@
 		'thunder_level': 'bad',
 	};
 	const tone = $derived<'bad' | 'warn'>(TONE_MAP[alert.kind] ?? 'warn');
-	const toneColor = $derived(tone === 'bad' ? 'var(--g-bad)' : 'var(--g-warn)');
+	const toneColor = $derived(tone === 'bad' ? 'var(--g-danger)' : 'var(--g-warning)');
 
 	const KIND_MAP: Record<string, WIconKind> = {
 		'thunder': 'thunder',

@@ -22,9 +22,9 @@
 
 	const map = {
 		info: { bg: 'var(--g-ink)', fg: 'var(--g-paper)' },
-		success: { bg: 'var(--g-good)', fg: '#fff' },
-		warn: { bg: 'var(--g-warn)', fg: '#fff' },
-		error: { bg: 'var(--g-bad)', fg: '#fff' }
+		success: { bg: 'var(--g-success)', fg: '#fff' },
+		warn: { bg: 'var(--g-warning)', fg: '#fff' },
+		error: { bg: 'var(--g-danger)', fg: '#fff' }
 	} as const;
 
 	const t = $derived(map[kind] ?? map.info);

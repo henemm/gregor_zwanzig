@@ -46,9 +46,11 @@ test('Bridge: Accent-Abstufungen', () => {
 });
 
 test('Bridge: Semantik', () => {
-	assert.ok(hasDecl('--g-good', '#3d6b3a'), '--g-good fehlt');
-	assert.ok(hasDecl('--g-warn', '#c08a1a'), '--g-warn fehlt');
-	assert.ok(hasDecl('--g-bad', '#a83232'), '--g-bad fehlt');
+	// #541: Token-Rename — kanonische Namen sind jetzt --g-success/--g-warning/--g-danger.
+	// Die alten --g-good/--g-warn/--g-bad Aliasse wurden entfernt (siehe AC-7).
+	assert.ok(hasDecl('--g-success', '#3d6b3a'), '--g-success fehlt');
+	assert.ok(hasDecl('--g-warning', '#c08a1a'), '--g-warning fehlt');
+	assert.ok(hasDecl('--g-danger', '#a83232'), '--g-danger fehlt');
 });
 
 test('Bridge: Wetterfarben inkl. cloud + thunder-Alias', () => {
@@ -80,8 +82,18 @@ test('Bridge: Elevation-Shadows vorhanden', () => {
 
 test('Regression: bestehende Tokens unveraendert vorhanden', () => {
 	assert.ok(hasDecl('--g-surface-1', '#ffffff'), '--g-surface-1 ist nach #378 reinweiss (Surface-Stack-Migration)');
-	assert.ok(hasDecl('--g-success', 'var(--g-good)'), '--g-success ist Alias auf --g-good (#519)');
+	// #541: --g-success ist jetzt direkte Hex-Definition (kein Alias mehr).
+	// Die Bridge-Aliase aus #519 wurden im Zuge von #541 abgebaut.
+	assert.ok(hasDecl('--g-success', '#3d6b3a'), '--g-success ist direkte Hex-Definition (#541)');
 	assert.ok(hasDecl('--g-wx-thunder', '#c43a2a'), '--g-wx-thunder bleibt');
+});
+
+test('#541: alte Alias-Tokens --g-good/warn/bad existieren nicht mehr', () => {
+	// Nach #541-Token-Rename dürfen die alten Alias-Namen nicht mehr in app.css stehen.
+	// Wortgrenzen-Boundary mit [^a-z-] verhindert Match auf --g-warning/--g-good-*.
+	assert.ok(!/--g-good(?![a-z-])\s*:/.test(css), '--g-good darf nicht mehr in app.css existieren (#541 AC-7)');
+	assert.ok(!/--g-warn(?![a-z-])\s*:/.test(css), '--g-warn darf nicht mehr in app.css existieren (#541 AC-7)');
+	assert.ok(!/--g-bad(?![a-z-])\s*:/.test(css), '--g-bad darf nicht mehr in app.css existieren (#541 AC-7)');
 });
 
 test('Kollisionen NICHT auf Sandbox-Werte umdefiniert', () => {

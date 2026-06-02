@@ -190,13 +190,13 @@
 		line-height: 1.5;
 	}
 	.banner.warn {
-		background: color-mix(in srgb, var(--g-warn) 10%, transparent);
-		border-left: 3px solid var(--g-warn);
+		background: color-mix(in srgb, var(--g-warning) 10%, transparent);
+		border-left: 3px solid var(--g-warning);
 		color: var(--g-ink);
 	}
 	.banner.ok {
-		background: color-mix(in srgb, var(--g-good, #2f7d4f) 10%, transparent);
-		border-left: 3px solid var(--g-good, #2f7d4f);
+		background: color-mix(in srgb, var(--g-success, #2f7d4f) 10%, transparent);
+		border-left: 3px solid var(--g-success, #2f7d4f);
 		color: var(--g-ink);
 	}
 </style>

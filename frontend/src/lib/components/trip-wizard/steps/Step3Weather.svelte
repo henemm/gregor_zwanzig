@@ -18,6 +18,7 @@
 	import { Eyebrow } from '$lib/components/atoms';
 	import { Field } from '$lib/components/molecules';
 	import { Select } from '$lib/components/ui/select';
+	import Checkbox from '$lib/components/ui/checkbox/Checkbox.svelte';
 	import { api } from '$lib/api';
 	import {
 		CATEGORY_ORDER,
@@ -222,14 +223,14 @@
 									data-testid={`metric-row-${m.id}`}
 									class="flex flex-wrap items-center gap-3 rounded-md border border-[var(--g-ink-faint)]/20 px-3 py-2 mb-1"
 								>
-									<label class="flex items-center gap-2 text-sm min-w-[10rem]">
-										<input
-											type="checkbox"
+									<div class="flex items-center gap-2 text-sm min-w-[10rem]">
+										<Checkbox
 											checked={wm?.enabled ?? false}
 											onchange={makeToggleEnabled(m.id)}
-										/>
-										<span>{m.label}</span>
-									</label>
+										>
+											{m.label}
+										</Checkbox>
+									</div>
 
 									<Select
 										data-testid={`metric-format-select-${m.id}`}

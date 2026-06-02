@@ -159,7 +159,7 @@
 		<div
 			data-testid="compare-step5-activation-banner"
 			class="rounded-md p-4 text-white text-sm"
-			style:background="var(--g-good)"
+			style:background="var(--g-success)"
 		>
 			Nach dem Aktivieren erhältst du ab dem nächsten Versandzeitpunkt automatisch dein
 			Briefing.

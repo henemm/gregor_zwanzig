@@ -525,7 +525,7 @@
 	}
 	.save-ok {
 		font-size: 0.875rem;
-		color: var(--g-good);
+		color: var(--g-success);
 	}
 	.save-err {
 		font-size: 0.875rem;

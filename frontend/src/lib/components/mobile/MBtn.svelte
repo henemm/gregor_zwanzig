@@ -39,7 +39,7 @@
 		accent: { bg: 'var(--g-accent)', fg: '#fff', border: '1px solid var(--g-accent)' },
 		ghost: { bg: 'transparent', fg: 'var(--g-ink)', border: '1px solid var(--g-rule)' },
 		quiet: { bg: 'transparent', fg: 'var(--g-ink-2)', border: '1px solid transparent' },
-		danger: { bg: 'transparent', fg: 'var(--g-bad)', border: '1px solid var(--g-rule)' }
+		danger: { bg: 'transparent', fg: 'var(--g-danger)', border: '1px solid var(--g-rule)' }
 	} as const;
 
 	const s = $derived(sizes[size] ?? sizes.lg);

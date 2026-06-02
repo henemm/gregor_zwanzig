@@ -3,6 +3,7 @@
 	// Spec: docs/specs/modules/issue_440_compare_wizard_shell_step1_step2.md §7
 	import { getContext } from 'svelte';
 	import { api } from '$lib/api';
+	import Checkbox from '$lib/components/ui/checkbox/Checkbox.svelte';
 	import type { CompareWizardState } from '../compareWizardState.svelte';
 	import type { Location } from '$lib/types';
 
@@ -219,12 +220,10 @@
 				<ul data-testid="compare-step2-library" class="space-y-1">
 					{#each locations as loc (loc.id)}
 						<li class="flex items-center gap-2">
-							<input
-								type="checkbox"
+							<Checkbox
 								id={`loc-${loc.id}`}
 								checked={state.pickedIds.includes(loc.id)}
 								onchange={() => togglePick(loc.id)}
-								class="rounded"
 							/>
 							<label for={`loc-${loc.id}`} class="text-sm cursor-pointer">{loc.name}</label>
 						</li>
@@ -241,7 +240,7 @@
 			state.pickedIds.length < 2
 				? 'text-[var(--g-danger)]'
 				: state.pickedIds.length <= 5
-					? 'text-[var(--g-good)]'
+					? 'text-[var(--g-success)]'
 					: 'text-[var(--g-ink-muted)]'
 		}`}
 	>

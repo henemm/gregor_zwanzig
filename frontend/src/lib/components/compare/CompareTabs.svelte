@@ -634,7 +634,7 @@
 	}
 	.send-success {
 		font-size: 0.875rem;
-		color: var(--g-good, #16a34a);
+		color: var(--g-success, #16a34a);
 		margin: 0;
 	}
 	.send-error {

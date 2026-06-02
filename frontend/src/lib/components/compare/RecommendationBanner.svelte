@@ -20,12 +20,12 @@
 
 <Card.Root
 	data-testid="compare-recommendation-banner"
-	class="border-l-4 border-l-[color:var(--g-good)] bg-[color:color-mix(in_oklab,var(--g-good)_8%,var(--g-surface-2))]"
+	class="border-l-4 border-l-[color:var(--g-success)] bg-[color:color-mix(in_oklab,var(--g-success)_8%,var(--g-surface-2))]"
 >
 	<Card.Content class="flex flex-wrap items-center gap-4 py-4">
 		<div
 			data-testid="compare-banner-score"
-			class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[color:var(--g-good)] text-xl font-bold text-white"
+			class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[color:var(--g-success)] text-xl font-bold text-white"
 		>
 			{Math.round(topEntry.score)}
 		</div>

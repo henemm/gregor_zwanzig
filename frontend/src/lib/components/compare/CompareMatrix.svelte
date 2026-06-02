@@ -174,10 +174,10 @@
 
 <style>
 	:global([data-best='true']) {
-		background-color: color-mix(in oklab, var(--g-good) 12%, transparent);
+		background-color: color-mix(in oklab, var(--g-success) 12%, transparent);
 	}
 	:global(.best-value .best-marker) {
-		color: var(--g-good);
+		color: var(--g-success);
 		font-weight: 600;
 	}
 	:global(.mini-bar) {

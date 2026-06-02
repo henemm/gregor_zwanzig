@@ -478,7 +478,7 @@
 					</div>
 					<span
 						class="ml-auto rounded"
-						style="font-family: var(--g-font-data); font-size: 10px; font-weight: 600; padding: 2px 6px; color: {pass ? 'var(--g-good)' : 'var(--g-bad)'}; background: {pass ? 'rgba(61,107,58,0.12)' : 'rgba(168,50,50,0.12)'};"
+						style="font-family: var(--g-font-data); font-size: 10px; font-weight: 600; padding: 2px 6px; color: {pass ? 'var(--g-success)' : 'var(--g-danger)'}; background: {pass ? 'rgba(61,107,58,0.12)' : 'rgba(168,50,50,0.12)'};"
 					>{pass ? `${t.cls} ✓` : 'FAIL'}</span>
 				</div>
 			{/each}

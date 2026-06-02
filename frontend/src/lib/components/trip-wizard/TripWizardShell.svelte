@@ -119,7 +119,7 @@
 			{:else if state.saveStatus === 'error'}
 				<span class="text-[var(--g-danger)]">{state.saveError}</span>
 			{:else if state.saveStatus === 'ok'}
-				<span class="text-[var(--g-good)]">Gespeichert</span>
+				<span class="text-[var(--g-success)]">Gespeichert</span>
 			{/if}
 		</div>
 	{/if}

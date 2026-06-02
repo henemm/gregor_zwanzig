@@ -153,7 +153,7 @@
 							data-testid="compare-wizard-header-status-pill"
 							class={`text-xs font-mono px-2 py-0.5 rounded-full ${
 								wiz.subscriptionEnabled
-									? 'bg-[var(--g-good)]/15 text-[var(--g-good)]'
+									? 'bg-[var(--g-success)]/15 text-[var(--g-success)]'
 									: 'bg-[var(--g-ink-faint)]/20 text-[var(--g-ink-muted)]'
 							}`}
 						>
@@ -214,7 +214,7 @@
 			{#if wiz.saveStatus === 'error'}
 				<span class="text-[var(--g-danger)]">{wiz.saveError}</span>
 			{:else if wiz.saveStatus === 'ok'}
-				<span class="text-[var(--g-good)]">Gespeichert</span>
+				<span class="text-[var(--g-success)]">Gespeichert</span>
 			{/if}
 		</div>
 	{/if}

@@ -205,7 +205,7 @@
 		padding: 0.625rem 0.875rem;
 		background: var(--g-warning-soft, #fef3c7);
 		color: var(--g-ink, #1a1a18);
-		border: 1px solid var(--g-warn, #f59e0b);
+		border: 1px solid var(--g-warning, #f59e0b);
 		border-radius: var(--g-r-2, 0.5rem);
 		font-size: 0.875rem;
 	}

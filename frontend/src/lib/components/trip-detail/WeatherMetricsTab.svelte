@@ -458,7 +458,7 @@
 	}
 	.save-success {
 		font-size: var(--g-text-sm);
-		color: var(--g-good);
+		color: var(--g-success);
 	}
 	.save-error {
 		font-size: var(--g-text-sm);

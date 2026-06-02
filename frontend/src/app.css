@@ -70,9 +70,6 @@
     --g-surface-raised: #faf8f1;
 
     /* Semantic */
-    --g-success:      var(--g-good);   /* Alias auf #3d6b3a */
-    --g-warning:      var(--g-warn);   /* Alias auf #c08a1a */
-    --g-danger:       var(--g-bad);    /* Alias auf #a83232 */
     --g-info:         #2a6cb3;
 
     /* Wetter-Farben */
@@ -155,9 +152,9 @@
     --g-accent-soft: #f3d9c8;
     --g-accent-tint: rgba(196, 90, 42, 0.08);
     /* Semantik */
-    --g-good:        #3d6b3a;
-    --g-warn:        #c08a1a;
-    --g-bad:         #a83232;
+    --g-success:     #3d6b3a;
+    --g-warning:     #c08a1a;
+    --g-danger:      #a83232;
     /* Wetter */
     --g-weather-rain:    #4a7ab8;
     --g-weather-snow:    #8aa4c0;
@@ -367,8 +364,8 @@
     white-space: nowrap;
   }
   [data-slot="pill"][data-tone="default"]  { background: var(--g-surface-2);   color: var(--g-ink); }
-  [data-slot="pill"][data-tone="success"]  { background: var(--g-good);     color: #fff; }
-  [data-slot="pill"][data-tone="warning"]  { background: var(--g-warn);     color: var(--g-ink); }
+  [data-slot="pill"][data-tone="success"]  { background: var(--g-success);     color: #fff; }
+  [data-slot="pill"][data-tone="warning"]  { background: var(--g-warning);     color: var(--g-ink); }
   [data-slot="pill"][data-tone="danger"]   { background: var(--g-danger);      color: #fff; }
   [data-slot="pill"][data-tone="info"]     { background: var(--g-info);        color: #fff; }
   [data-slot="pill"][data-tone="accent"]   { background: var(--g-accent);      color: var(--g-ink); }
@@ -380,7 +377,7 @@
     background: transparent;
     border: 1px solid currentColor;
   }
-  [data-slot="pill"][data-outlined][data-tone="warning"]  { color: var(--g-warn); }
+  [data-slot="pill"][data-outlined][data-tone="warning"]  { color: var(--g-warning); }
   [data-slot="pill"][data-outlined][data-tone="danger"]   { color: var(--g-danger); }
   [data-slot="pill"][data-outlined][data-tone="info"]     { color: var(--g-info); }
   [data-slot="pill"][data-outlined][data-tone="default"]  { color: var(--g-ink-muted); }
@@ -452,8 +449,8 @@
   [data-slot="dot"][data-tone="thunder"] { background: var(--g-wx-thunder); }
   [data-slot="dot"][data-tone="fog"]     { background: var(--g-wx-fog); }
   [data-slot="dot"][data-tone="default"] { background: var(--g-ink-faint); }
-  [data-slot="dot"][data-tone="success"] { background: var(--g-good); }
-  [data-slot="dot"][data-tone="warning"] { background: var(--g-warn); }
+  [data-slot="dot"][data-tone="success"] { background: var(--g-success); }
+  [data-slot="dot"][data-tone="warning"] { background: var(--g-warning); }
   [data-slot="dot"][data-tone="danger"]  { background: var(--g-danger); }
   [data-slot="dot"][data-tone="info"]    { background: var(--g-info); }
 

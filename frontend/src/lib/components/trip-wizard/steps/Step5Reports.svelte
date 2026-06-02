@@ -19,6 +19,7 @@
 	import { getContext } from 'svelte';
 	import { Eyebrow } from '$lib/components/atoms';
 	import { GCard } from '$lib/components/ui/g-card';
+	import Checkbox from '$lib/components/ui/checkbox/Checkbox.svelte';
 	import { maskPhone } from '../wizardHelpers';
 	import type { WizardState } from '../wizardState.svelte';
 
@@ -74,14 +75,14 @@
 			class="rounded-md border border-[var(--g-ink-faint)]/20 p-4 flex flex-col gap-3"
 		>
 			<Eyebrow>Abend-Briefing</Eyebrow>
-			<label class="flex items-center gap-2 text-sm">
-				<input
-					type="checkbox"
+			<div class="flex items-center gap-2 text-sm">
+				<Checkbox
 					checked={wizard.briefings.reports.evening.enabled}
 					onchange={makeEnabledHandler('evening')}
-				/>
-				Aktiv
-			</label>
+				>
+					Aktiv
+				</Checkbox>
+			</div>
 			<label class="flex flex-col gap-1 text-sm">
 				<span class="text-[var(--g-ink-muted)]">Uhrzeit</span>
 				<input
@@ -94,19 +95,22 @@
 			</label>
 
 			<!-- Mehrtages-Trend-Toggle (Issue #432 Scope-Erw., persistiert in
-			     wizard.trendEnabled → report_config.multi_day_trend_evening) -->
-			<label
+			     wizard.trendEnabled → report_config.multi_day_trend_evening).
+			     bind:checked ist hier korrekt: wizard.trendEnabled ist ein direkt
+			     mutierbares $state-Feld auf dem WizardState (siehe wizardState.svelte.ts:69)
+			     und wird ohne Mittlerschicht in toTripPayload geschrieben.
+			     Test-Garant: issue_432_trend_persistence.test.ts AC-19. -->
+			<div
 				class="trend-toggle flex items-center gap-2 text-sm"
 				data-testid="trend-toggle-row"
 			>
-				<input
-					type="checkbox"
+				<Checkbox
 					bind:checked={wizard.trendEnabled}
 					data-testid="evening-trend-toggle"
 					aria-label="3–7-Tage-Ausblick enthalten"
 				/>
 				<span class="text-[var(--g-ink-muted)]">3–7-Tage-Ausblick enthalten</span>
-			</label>
+			</div>
 
 			{@render channelChips('evening')}
 		</GCard>
@@ -117,14 +121,14 @@
 			class="rounded-md border border-[var(--g-ink-faint)]/20 p-4 flex flex-col gap-3"
 		>
 			<Eyebrow>Morgen-Update</Eyebrow>
-			<label class="flex items-center gap-2 text-sm">
-				<input
-					type="checkbox"
+			<div class="flex items-center gap-2 text-sm">
+				<Checkbox
 					checked={wizard.briefings.reports.morning.enabled}
 					onchange={makeEnabledHandler('morning')}
-				/>
-				Aktiv
-			</label>
+				>
+					Aktiv
+				</Checkbox>
+			</div>
 			<label class="flex flex-col gap-1 text-sm">
 				<span class="text-[var(--g-ink-muted)]">Uhrzeit</span>
 				<input
@@ -166,8 +170,7 @@
 				data-testid={`channel-chip-${reportKey}-${row.key}`}
 				data-channel={row.key}
 			>
-				<input
-					type="checkbox"
+				<Checkbox
 					checked={wizard.briefings.channels[row.key]}
 					onchange={makeChannelHandler(row.key)}
 					disabled={!row.contact}

@@ -89,9 +89,9 @@
 		{ v: 'var(--g-accent-soft)', n: 'accent-soft', hex: '#f3d9c8' }
 	];
 	const SEMANTIC_COLORS = [
-		{ v: 'var(--g-good)', n: 'good', hex: '#3d6b3a' },
-		{ v: 'var(--g-warn)', n: 'warn', hex: '#c08a1a' },
-		{ v: 'var(--g-bad)', n: 'bad', hex: '#a83232' },
+		{ v: 'var(--g-success)', n: 'good', hex: '#3d6b3a' },
+		{ v: 'var(--g-warning)', n: 'warn', hex: '#c08a1a' },
+		{ v: 'var(--g-danger)', n: 'bad', hex: '#a83232' },
 		{ v: 'var(--g-info)', n: 'info', hex: '#2c5a8c' }
 	];
 	const WEATHER_COLORS = [
@@ -715,14 +715,14 @@
 				<div
 					style:background="var(--g-card)"
 					style:border="1px solid var(--g-rule)"
-					style:border-left="3px solid var(--g-good)"
+					style:border-left="3px solid var(--g-success)"
 					style:border-radius="var(--g-r-3)"
 					style:padding="20px"
 				>
 					<div
 						class="mono"
 						style:font-size="11px"
-						style:color="var(--g-good)"
+						style:color="var(--g-success)"
 						style:letter-spacing="var(--g-track-caps)"
 						style:text-transform="uppercase"
 						style:margin-bottom="8px">Tun</div
@@ -736,14 +736,14 @@
 				<div
 					style:background="var(--g-card)"
 					style:border="1px solid var(--g-rule)"
-					style:border-left="3px solid var(--g-bad)"
+					style:border-left="3px solid var(--g-danger)"
 					style:border-radius="var(--g-r-3)"
 					style:padding="20px"
 				>
 					<div
 						class="mono"
 						style:font-size="11px"
-						style:color="var(--g-bad)"
+						style:color="var(--g-danger)"
 						style:letter-spacing="var(--g-track-caps)"
 						style:text-transform="uppercase"
 						style:margin-bottom="8px">Lassen</div

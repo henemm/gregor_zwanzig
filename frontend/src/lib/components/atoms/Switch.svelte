@@ -38,11 +38,11 @@
 	} as const;
 
 	const toneColors = {
-		good: 'var(--g-good)',
+		good: 'var(--g-success)',
 		accent: 'var(--g-accent)', // audit:exempt — Switch-Track-Hintergrund (§1.4.11, kein Text)
 		info: 'var(--g-info)',
-		warn: 'var(--g-warn)',
-		bad: 'var(--g-bad)'
+		warn: 'var(--g-warning)',
+		bad: 'var(--g-danger)'
 	} as const;
 
 	// Unbekannte size/tone -> Default-Fallback (md/good), kein Crash.

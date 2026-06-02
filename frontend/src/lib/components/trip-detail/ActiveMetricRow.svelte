@@ -106,7 +106,7 @@
 		grid-template-columns: 30px 1fr 200px 150px 76px;
 	}
 	.row.over-limit {
-		background: color-mix(in srgb, var(--g-warn) 4%, transparent);
+		background: color-mix(in srgb, var(--g-warning) 4%, transparent);
 	}
 	.idx {
 		font-size: var(--g-text-xs);
@@ -115,7 +115,7 @@
 		text-align: right;
 	}
 	.idx.warn {
-		color: var(--g-warn);
+		color: var(--g-warning);
 	}
 	.label-cell {
 		min-width: 0;

@@ -295,7 +295,7 @@
 		text-transform: uppercase;
 	}
 	.budget-bar.exceeded .budget-value {
-		color: var(--g-warn);
+		color: var(--g-warning);
 		font-weight: 600;
 	}
 	.empty {

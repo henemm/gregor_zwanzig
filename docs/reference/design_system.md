@@ -61,8 +61,7 @@ wenn benötigt, eigener Issue.
 | `--g-danger` | `#b33a2a` | Alarm, kritisch |
 | `--g-info` | `#2a6cb3` | Neutrale Daten-Highlight |
 
-**Hinweis:** Anthropic-Vision hatte `--g-good`/`--g-warn`/`--g-bad` — Ist
-verwendet Tailwind-konforme Namen (`success`/`warning`/`danger`).
+**Status (2026-06-02):** Alte Namen `--g-good`/`--g-warn`/`--g-bad` wurden vollständig durch Tailwind-konforme Namen ersetzt (Issue #541, #543, #544). Alle Komponenten und `app.css` verwenden die kanonischen Token.
 
 ### Wetter (aus echten Email-Reports abgeleitet)
 | Token | Hex | Bedeutung |

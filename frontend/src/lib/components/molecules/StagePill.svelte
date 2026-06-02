@@ -46,10 +46,10 @@
 
 	const riskTone = $derived(
 		stage.risk === 'high'
-			? 'var(--g-bad)'
+			? 'var(--g-danger)'
 			: stage.risk === 'med'
-				? 'var(--g-warn)'
-				: 'var(--g-good)'
+				? 'var(--g-warning)'
+				: 'var(--g-success)'
 	);
 
 	const background = $derived(

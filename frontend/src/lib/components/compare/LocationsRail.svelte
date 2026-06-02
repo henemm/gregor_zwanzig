@@ -124,7 +124,7 @@
 		class="text-xs {locations.length < 2
 			? 'text-[var(--g-danger)]'
 			: locations.length <= 8
-				? 'text-[var(--g-good)]'
+				? 'text-[var(--g-success)]'
 				: 'text-[var(--g-ink-muted)]'}"
 	>
 		{locations.length} Orte · min. 2 / max. 8

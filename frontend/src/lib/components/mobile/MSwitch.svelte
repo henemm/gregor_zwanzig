@@ -48,7 +48,7 @@
 		style:width="44px"
 		style:height="26px"
 		style:border-radius="13px"
-		style:background={checked ? 'var(--g-good)' : 'var(--g-rule)'}
+		style:background={checked ? 'var(--g-success)' : 'var(--g-rule)'}
 		style:position="relative"
 		style:flex-shrink="0"
 		style:transition="background 120ms"
