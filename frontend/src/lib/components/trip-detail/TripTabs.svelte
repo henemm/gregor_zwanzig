@@ -11,7 +11,8 @@
 		defaultReportType,
 		type ReportType
 	} from '$lib/components/preview';
-	import type { Trip } from '$lib/types';
+	import type { Trip, Stage } from '$lib/types';
+	import EditStagesSection from '../edit/EditStagesSection.svelte';
 
 	interface Badges {
 		overview?: number;
@@ -29,6 +30,9 @@
 	}
 
 	let { initialTab = 'overview', badges: badgesProp = {}, trip }: Props = $props();
+
+	// Lokale Kopie der Etappen für den Stages-Tab (EditStagesSection braucht $bindable).
+	let localStages = $state<Stage[]>(trip?.stages ?? []);
 
 	// Issue #302 — Auto-Badges aus Trip ableiten (Etappenanzahl + enabled Alerts).
 	// Explizite Werte in der `badges` Prop ueberschreiben die Auto-Ableitung.
@@ -109,10 +113,7 @@
 					<TripOverview {trip} />
 				{:else if tab.value === 'stages'}
 					{#if trip}
-						<div class="stages-redirect" data-testid="stages-redirect-hint">
-							<p>Etappen und Wegpunkte bearbeiten</p>
-							<a href="/trips/{trip.id}/edit" class="stages-redirect-link">Zum Editor →</a>
-						</div>
+						<EditStagesSection bind:stages={localStages} tripId={trip.id} showSave={true} />
 					{/if}
 				{:else if tab.value === 'weather' && trip}
 					<WeatherMetricsTab {trip} />
