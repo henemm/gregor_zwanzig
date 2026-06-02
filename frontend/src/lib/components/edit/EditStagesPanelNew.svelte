@@ -130,8 +130,10 @@
 		stages = reordered;
 	}
 	function handleStageActivate(stageId: string): void {
+		if (stageId === activeStageId) return;
 		activeStageId = stageId;
 		activeWaypointId = null;
+		addModeHint = false;
 	}
 	function handlePauseInsert(afterIndex: number): void {
 		const newPause: Stage = { id: newId(), name: 'Pausentag', date: '', waypoints: [] };
@@ -305,7 +307,7 @@
 						{stages}
 						activeIndex={activeStageIndex}
 						open={true}
-						onSelect={(i) => { activeStageId = stages[i].id; stageSheetOpen = false; }}
+						onSelect={(i) => { handleStageActivate(stages[i].id); stageSheetOpen = false; }}
 						onClose={() => { stageSheetOpen = false; }}
 					/>
 				{/if}
