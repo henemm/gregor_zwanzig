@@ -2,53 +2,60 @@
 
 Deploy current main to production via henemm-infra deploy script.
 
-## Schritt 0: E2E-Verifikation (ZWINGEND ZUERST — vor Brief, vor allem)
+## Ablauf (alles in dieser Session, kein Warten auf Cron)
 
-**Der Tech-Lead-Brief darf erst ausgegeben werden, wenn E2E VERIFIED ist.**
-Das ist der einzige echte Nachweis, dass der Code auf Staging funktioniert.
-
-### 0a. Prüfen ob E2E bereits für diesen Commit läuft
-
-```bash
-HEAD=$(git rev-parse HEAD)
-python3 -c "
-import json, sys
-try:
-    d = json.load(open('.claude/e2e_verified.json'))
-    if d.get('verified_commit') == '$HEAD' and d.get('staging_verdict','').startswith('VERIFIED'):
-        print('E2E bereits VERIFIED für', '$HEAD'[:7])
-    else:
-        print('E2E FEHLT oder veraltet — muss jetzt laufen')
-        sys.exit(1)
-except FileNotFoundError:
-    print('e2e_verified.json nicht vorhanden — muss jetzt laufen')
-    sys.exit(1)
-"
 ```
-
-### 0b. Falls E2E fehlt oder veraltet: JETZT ausführen
-
-Rufe das Skill `/e2e-verify` auf. **Nicht weitergehen bis Verdict = VERIFIED.**
-
-Staging-Auto-Deploy läuft alle 5 Minuten. Falls noch nicht durch:
-```bash
-# Warten bis Staging den neuen Commit hat
-EXPECTED=$(git rev-parse HEAD)
-curl -s https://staging.gregor20.henemm.com/api/health | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('commit','?'))"
+1. Staging-Deploy sofort triggern
+2. ~90 Sekunden warten bis Build durch
+3. E2E gegen Staging ausführen (/e2e-verify)
+4. Tech-Lead-Brief ausgeben (erst nach E2E VERIFIED)
+5. Auf 'go' warten
+6. Prod-Deploy
+7. Issue schließen
 ```
-Wenn der Commit noch nicht übereinstimmt: 2 Minuten warten, nochmal prüfen.
-
-**STOP bei BROKEN oder wenn E2E nicht durchführbar.** Fehlerbehebung zuerst.
-
-### 0c. E2E-Ergebnis für den Brief notieren
-
-Aus `.claude/e2e_verified.json` auslesen:
-- `staging_verdict` → für "Staging validiert"-Zeile im Brief
-- `verified_at` → Zeitstempel
 
 ---
 
-## Tech-Lead-Brief für den PO (erst nach E2E VERIFIED ausgeben)
+## Schritt 1: Staging-Deploy sofort triggern
+
+Nicht auf den 5-Minuten-Cron warten — Deploy jetzt starten:
+
+```bash
+bash /home/hem/henemm-infra/scripts/auto-deploy-gregor-staging.sh
+```
+
+Das Script prüft selbst ob etwas zu deployen ist. Falls Staging schon aktuell ist,
+kommt sofort Exit 0 — dann direkt zu Schritt 2.
+
+## Schritt 2: Auf Staging-Deploy warten
+
+```bash
+# Commit auf Staging prüfen
+EXPECTED=$(git rev-parse HEAD)
+for i in 1 2 3 4 5; do
+  STAGING=$(curl -s https://staging.gregor20.henemm.com/api/health | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('commit','?'))" 2>/dev/null)
+  echo "Staging: $STAGING | Erwartet: ${EXPECTED:0:7}"
+  [ "${STAGING:0:7}" = "${EXPECTED:0:7}" ] && echo "✓ Staging aktuell" && break
+  echo "Warte 30s..."
+  sleep 30
+done
+```
+
+Falls nach 5 Versuchen (2,5 Min) noch nicht aktuell: Staging-Logs prüfen.
+
+## Schritt 3: E2E gegen Staging ausführen
+
+Rufe das Skill `/e2e-verify` auf. **Kein Weitergehen bis Verdict = VERIFIED.**
+
+- Bei VERIFIED → Schritt 4
+- Bei BROKEN → Fehler beheben, neu pushen, Schritt 1 wiederholen
+- Bei AMBIGUOUS → Findings prüfen, ggf. trotzdem weitermachen mit Begründung
+
+## Schritt 4: Tech-Lead-Brief ausgeben
+
+**Erst nach E2E VERIFIED:**
+
+---
 
 **Was wurde gebaut:** [1-2 Sätze aus Nutzerperspektive — was kann der Nutzer jetzt tun, was vorher nicht ging?]
 
@@ -58,61 +65,32 @@ Aus `.claude/e2e_verified.json` auslesen:
 
 **Offene Punkte:** [keine] ODER [Issue #N wurde erstellt für: X]
 
-**Risiko:** niedrig / mittel / hoch — [1 Satz Begründung, z.B. "nur Frontend, kein Daten-Schema berührt"]
+**Risiko:** niedrig / mittel / hoch — [1 Satz Begründung]
 
 **Empfehlung:** Deploy auf Production.
 
 Sage **'go'** um zu deployen.
 
-**Erst nach Bestätigung durch den PO die Pre-Flight Checks starten!**
+---
 
-## Pre-Flight Checks
+## Schritt 5: Pre-Flight + Prod-Deploy (nach 'go')
 
 ```bash
-git branch --show-current        # muss "main" sein
-git status --porcelain           # muss leer sein
-git fetch origin main
-git log HEAD..origin/main --oneline  # zeigt was deployt wird
+git branch --show-current      # muss "main" sein
+git status --porcelain         # muss leer sein
 ```
-
-**STOP wenn:**
-- Branch != main → erst checkout main
-- Uncommitted Changes → erst committen oder stashen
-- Tests rot → erst fixen
-
-## Production-Deploy
 
 ```bash
 bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh
 ```
 
-Was das Skript macht:
-1. Pre-Flight (Branch, Uncommitted Changes)
-2. `git pull origin main`
-3. `go build -o gregor-api ./cmd/server`
-4. `npm install && npm run build` im Frontend
-5. `systemctl restart gregor-python` → `gregor-api` → `gregor-frontend` (in dieser Reihenfolge mit Sleeps)
-6. Smoke-Test gegen `https://gregor20.henemm.com/`
-7. Live-Commit-Hash ausgeben
+## Schritt 6: Post-Deploy-Smoke
 
-## Post-Deployment Verification
+```bash
+curl https://gregor20.henemm.com/api/health
+```
 
-1. **Healthcheck:**
-   ```bash
-   curl https://gregor20.henemm.com/api/health
-   bash /home/hem/henemm-infra/scripts/check-gregor20.sh  # alert bei Code-Drift
-   ```
-
-2. **Browser-Test:** Geänderte Funktionalität öffnen und prüfen.
-
-3. **Logs überwachen:**
-   ```bash
-   journalctl -u gregor-api -u gregor-python -u gregor-frontend -f --since "5 minutes ago"
-   ```
-
-## Abschluss: Issue schließen + "Fertig und live"
-
-**Erst hier** — nach bestätigtem Prod-Deploy — das GitHub Issue schließen und dem User Bescheid geben:
+## Schritt 7: Issue schließen
 
 ```bash
 gh issue close <ISSUE_NR> --comment "Fertig und live — $(git rev-parse --short HEAD) auf Production."
@@ -123,21 +101,18 @@ Danach dem User mitteilen:
 > **Fertig und live.** Issue #N — [Titel] ist abgeschlossen.
 > Was geliefert wurde: [1-2 Sätze Nutzerperspektive]
 
-**NICHT früher "Fertig und live" sagen — nicht nach /6-validate, nicht nach Push, nicht wenn Staging noch nicht deployt hat.**
+**NICHT früher "Fertig und live" sagen.**
+
+---
 
 ## Rollback
 
 ```bash
-cd /home/hem/gregor_zwanzig
-git revert HEAD
-git push origin main
+git revert HEAD && git push origin main
 bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh
 ```
 
 ## Drift-Detection
 
-`check-gregor20.sh` (cron alle 5min) vergleicht Binary-mtime mit `origin/main`-Commit-Zeit. Bei Drift > 1h → BetterStack-Alert via Telegram. Selbst wenn der Deploy vergessen wird, fängt das Monitoring es.
-
-## Konvention
-
-**Nach jedem Feature/Bug der live gehen soll:** Dieses Skill ausführen. Sonst rennt Production hinter Staging her.
+`check-gregor20.sh` (cron alle 5min) vergleicht Binary-mtime mit `origin/main`-Commit-Zeit.
+Bei Drift > 1h → BetterStack-Alert via Telegram.

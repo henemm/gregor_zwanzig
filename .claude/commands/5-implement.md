@@ -201,21 +201,7 @@ Zeige das Verdict:
 - **BROKEN** → Developer Agent erneut spawnen mit Findings, dann erneut validieren.
 - **AMBIGUOUS** → Developer Agent erneut spawnen, dann erneut validieren.
 
-Bei VERIFIED: sofort `GZ_ACTIVE_WORKFLOW=<name> python3 .claude/hooks/workflow.py phase phase7_validate` ausführen und dann:
-
-### E2E automatisch einplanen (ZWINGEND nach jedem Push)
-
-Sobald der Push auf `origin/main` durch ist, ruf **ScheduleWakeup** auf:
-
-```
-ScheduleWakeup(
-  delaySeconds=300,
-  prompt="/e2e-verify",
-  reason="Staging-Auto-Deploy abwarten (~5 Min), dann E2E gegen Staging"
-)
-```
-
-Das stellt sicher, dass `/e2e-verify` in 5 Minuten automatisch läuft — auch wenn die Session danach inaktiv ist. `/7-deploy` kann danach die `e2e_verified.json` als Nachweis lesen.
+Bei VERIFIED: sofort `GZ_ACTIVE_WORKFLOW=<name> python3 .claude/hooks/workflow.py phase phase7_validate` ausführen.
 
 **Circuit Breaker (max 3 Iterationen):**
 Wenn nach 3 Fix-Loops immer noch Probleme: Eskalation mit allen Findings an den User.
