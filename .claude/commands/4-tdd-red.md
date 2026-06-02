@@ -99,9 +99,8 @@ Gib nach dem Artifact-Register immer diese Übersicht aus:
 | AC-2: [AC-Text kurz] | [Was der Test konkret prüft] | ❌ Fehlgeschlagen (erwartet) |
 
 Das ist korrekt so — die Tests schlagen fehl, weil das Feature noch nicht gebaut ist.
-Ich starte jetzt die Implementierung.
 
-**STOP: Sage 'go' um mit der Implementierung fortzufahren — oder korrigiere mich wenn ein Test am Ziel vorbeigeht.**
+Ich starte jetzt direkt mit der Implementierung (kein Gate — ACs wurden bereits freigegeben).
 
 ## Artifact Requirements
 
