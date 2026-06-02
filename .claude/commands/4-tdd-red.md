@@ -101,7 +101,7 @@ Gib nach dem Artifact-Register immer diese Übersicht aus:
 > Das ist korrekt so — die Tests schlagen fehl, weil das Feature noch nicht gebaut ist.
 > Ich starte jetzt die Implementierung.
 
-Kein User-Gate, keine Warteschleife. Direkt mit Phase 6 fortfahren.
+**STOP: Sage 'go' um mit der Implementierung fortzufahren — oder korrigiere mich wenn ein Test am Ziel vorbeigeht.**
 
 ## Artifact Requirements
 

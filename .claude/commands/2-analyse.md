@@ -89,11 +89,15 @@ Gib **immer** diese 3 Sätze aus — in Alltagssprache, kein Fachjargon:
 > **Warum das wichtig ist:** [Auswirkung auf den Nutzer in 1 Satz]
 > **Was ich vorhabe:** [Was ich bauen werde in 1 Satz]
 >
-> Ich schreibe jetzt die Spec. Stopp mich wenn etwas falsch klingt.
+> Sage **'go'** um fortzufahren — oder korrigiere mich.
+
+**STOP: Warte auf User-Antwort. Nicht automatisch mit /write-spec fortfahren!**
 
 ### Step 5: Document & Update Workflow State
 
 Update or create `docs/context/[workflow-name].md` with analysis results.
+
+**Erst ausführen nachdem der User 'go' gesagt hat!**
 
 ```bash
 python3 .claude/hooks/workflow_state_multi.py phase phase3_spec

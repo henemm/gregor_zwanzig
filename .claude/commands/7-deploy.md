@@ -18,7 +18,7 @@ Bevor du irgendeinen Deploy-Schritt ausführst, gib diesen Brief aus:
 >
 > **Empfehlung:** Deploy auf Production.
 >
-> Sage **'ja'** oder **'deploy'** um fortzufahren.
+> Sage **'go'** um zu deployen.
 
 **Erst nach Bestätigung durch den PO die Pre-Flight Checks starten!**
 

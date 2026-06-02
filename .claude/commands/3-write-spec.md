@@ -89,7 +89,7 @@ Extrahiere alle `**AC-N:**`-Einträge aus der Spec und formuliere sie als lesbar
 > - ...
 >
 > Spec gespeichert unter `[path]`.
-> Sage **'approved'** oder **'freigabe'** um fortzufahren — oder gib mir Feedback.
+> Sage **'go'** um fortzufahren — oder gib mir Feedback.
 
 **IMPORTANT:** Do NOT implement until the user explicitly approves!
 

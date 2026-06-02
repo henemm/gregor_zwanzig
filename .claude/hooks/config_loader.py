@@ -177,7 +177,7 @@ def get_default_config() -> dict:
                 "validated"
             ],
             "approval_phrases": [
-                "approved", "freigabe", "spec ok", "lgtm", "looks good"
+                "go", "approved", "freigabe", "spec ok", "lgtm", "looks good"
             ],
         },
         "protected_paths": [],

@@ -207,7 +207,7 @@ def get_phase_error(state: dict, file_path: str) -> str | None:
 ║  Spec: {spec_file[:55]:<55}║
 ║                                                                  ║
 ║  USER must confirm with one of:                                  ║
-║    "approved" | "freigabe" | "spec ok" | "lgtm"                  ║
+║    "go" | "approved" | "freigabe"                                 ║
 ║                                                                  ║
 ║  Claude CANNOT approve specs - only the user can!                ║
 ╚══════════════════════════════════════════════════════════════════╝
