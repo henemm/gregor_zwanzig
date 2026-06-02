@@ -150,13 +150,13 @@ test.describe('Epic #135 Step 5 — Trip-Detail Overview, rechte Spalte (#158 + 
 		await expect(page.getByTestId('right-card-weather-chip-precip_sum')).toBeVisible();
 	});
 
-	test('AC-7: Klick auf Wetter-Bearbeiten-Link → URL-Hash #weather + Tab aktiv', async ({
+	test('AC-7: Klick auf Wetter-Bearbeiten-Link → ?tab=weather + Tab aktiv', async ({
 		page
 	}) => {
 		await page.goto(`/trips/${TRIP_ID}`);
 		await page.getByTestId('right-card-weather-edit-link').click();
 
-		await expect(page).toHaveURL(/#weather$/);
+		await expect(page).toHaveURL(/\?tab=weather$/);
 		await expect(page.getByTestId('trip-detail-tab-weather')).toHaveAttribute(
 			'data-state',
 			'active'
