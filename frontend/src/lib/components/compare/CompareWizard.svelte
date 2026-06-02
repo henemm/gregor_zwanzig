@@ -83,6 +83,7 @@
 	$effect(() => {
 		if (
 			!profileManuallyOverridden &&
+			!wiz.isEditMode &&
 			dominantProfile &&
 			wiz.activityProfile !== dominantProfile &&
 			Object.keys(wiz.idealRanges).length === 0
