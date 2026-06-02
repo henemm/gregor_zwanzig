@@ -22,12 +22,17 @@ const handler: RequestHandler = async ({ request, params, cookies, url: reqUrl }
 		duplex: request.method !== 'GET' && request.method !== 'HEAD' ? 'half' : undefined
 	});
 
+	const responseHeaders = new Headers();
+	res.headers.forEach((value, key) => {
+		if (key.toLowerCase() !== 'transfer-encoding') {
+			responseHeaders.set(key, value);
+		}
+	});
+
 	return new Response(res.body, {
 		status: res.status,
 		statusText: res.statusText,
-		headers: {
-			'Content-Type': res.headers.get('Content-Type') ?? 'application/json'
-		}
+		headers: responseHeaders
 	});
 };
 

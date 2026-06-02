@@ -63,6 +63,7 @@
 
 <div
 	class={'compare-tile ' + (compact ? 'compact ' : '') + (dense ? 'dense ' : '') + className}
+	data-testid="compare-tile-{sub.id}"
 	data-status={status}
 	role={onclick ? 'button' : undefined}
 	tabindex={onclick ? 0 : undefined}

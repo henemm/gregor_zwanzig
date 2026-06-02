@@ -125,13 +125,6 @@
 				</p>
 			</div>
 
-			<!-- Edit-Links -->
-			<div class="edit-links">
-				<a href="?tab=orte">Orte bearbeiten →</a>
-				<a href="?tab=idealwerte">Idealwerte bearbeiten →</a>
-				<a href="?tab=layout">Layout bearbeiten →</a>
-				<a href="?tab=versand">Versand bearbeiten →</a>
-			</div>
 		</div>
 	{/if}
 

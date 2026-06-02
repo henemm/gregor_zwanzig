@@ -1,17 +1,12 @@
-// TDD RED: Design-Compliance-Korrekturen Gruppe A
+// TDD GREEN: Design-Compliance-Korrekturen Gruppe A
 //
 // Issues: #528 (Compare Hub Header CTA), #529 (Trip Tab Names),
 //         #530 (Compare Hub Wizard Links entfernen), #531 (Compare List Suche)
 // Spec: docs/specs/modules/design_compliance_group_a.md
 // Workflow: design-compliance-fixes
 //
-// Diese Tests schlagen in RED fehl, weil:
-//   - Tab "weather" heißt noch "Wetter-Briefing" statt "Wetter-Metriken"
-//   - Tab "briefings" heißt noch "Reports & Kanäle" statt "Briefing-Zeitplan"
-//   - Tab "alerts" heißt noch "Alarmregeln" statt "Alerts"
-//   - Compare Hub Header zeigt "Bearbeiten" statt kontextabhängiger CTA
-//   - Compare Hub Tabs haben noch Wizard-Links "/edit"
-//   - Compare Liste hat kein Suchfeld
+// Segmented-Tabs rendern mit role="tab" (nicht "button").
+// Alle Korrekturen sind implementiert und deployt.
 
 import { test, expect } from '@playwright/test';
 
@@ -32,7 +27,7 @@ async function seedComparePresets(request: import('@playwright/test').APIRequest
 			name: 'E2E Active Preset',
 			location_ids: ['e2e-loc-innsbruck', 'e2e-loc-stubai'],
 			schedule: 'daily',
-			profil: 'wandern',
+			profil: 'ALLGEMEIN',
 			hour_from: 6,
 			hour_to: 8,
 			empfaenger: ['e2e@henemm.com'],
@@ -48,7 +43,7 @@ async function seedComparePresets(request: import('@playwright/test').APIRequest
 			name: 'E2E Draft Preset',
 			location_ids: [],
 			schedule: 'daily',
-			profil: 'wandern',
+			profil: 'ALLGEMEIN',
 			hour_from: 6,
 			hour_to: 8,
 			empfaenger: [],
@@ -65,7 +60,7 @@ async function seedComparePresets(request: import('@playwright/test').APIRequest
 				name: `E2E Extra Preset ${i + 1}`,
 				location_ids: ['e2e-loc-zillertal'],
 				schedule: 'daily',
-				profil: 'wandern',
+				profil: 'ALLGEMEIN',
 				hour_from: 6,
 				hour_to: 8,
 				empfaenger: []
@@ -83,6 +78,9 @@ async function cleanupComparePresets(request: import('@playwright/test').APIRequ
 			await request.delete(`/api/compare/presets/${p.id}`);
 		}
 	}
+	// IDs zurücksetzen damit nachfolgende beforeAll-Checks re-seeden
+	activePresetId = '';
+	draftPresetId = '';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -94,22 +92,22 @@ test.describe('#529 Trip-Detail · Kanonische Tab-Namen (nav-map.jsx)', () => {
 		page
 	}) => {
 		await page.goto(`/trips/${TRIP_ID}`);
-		await expect(page.getByRole('button', { name: 'Wetter-Metriken' })).toBeVisible();
-		await expect(page.getByRole('button', { name: 'Wetter-Briefing' })).not.toBeVisible();
+		await expect(page.getByRole('tab', { name: 'Wetter-Metriken' })).toBeVisible();
+		await expect(page.getByRole('tab', { name: 'Wetter-Briefing' })).not.toBeVisible();
 	});
 
 	test('AC-1b: Tab "briefings" heißt "Briefing-Zeitplan" (nicht "Reports & Kanäle")', async ({
 		page
 	}) => {
 		await page.goto(`/trips/${TRIP_ID}`);
-		await expect(page.getByRole('button', { name: 'Briefing-Zeitplan' })).toBeVisible();
-		await expect(page.getByRole('button', { name: 'Reports & Kanäle' })).not.toBeVisible();
+		await expect(page.getByRole('tab', { name: 'Briefing-Zeitplan' })).toBeVisible();
+		await expect(page.getByRole('tab', { name: 'Reports & Kanäle' })).not.toBeVisible();
 	});
 
 	test('AC-1c: Tab "alerts" heißt "Alerts" (nicht "Alarmregeln")', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
-		await expect(page.getByRole('button', { name: 'Alerts' })).toBeVisible();
-		await expect(page.getByRole('button', { name: 'Alarmregeln' })).not.toBeVisible();
+		await expect(page.getByRole('tab', { name: 'Alerts' })).toBeVisible();
+		await expect(page.getByRole('tab', { name: 'Alarmregeln' })).not.toBeVisible();
 	});
 });
 
@@ -186,8 +184,8 @@ test.describe('#531 Compare-Liste · Suchleiste', () => {
 	test('AC-7: Suchfeld filtert Kacheln nach name (case-insensitive)', async ({ page }) => {
 		await page.goto('/compare');
 		await page.getByPlaceholder('Suchen…').fill('E2E Active Preset');
-		// Exakt 1 Kachel verbleibt
-		const tiles = page.locator('[data-testid^="compare-tile-"]');
+		// Exakt 1 sichtbare Kachel verbleibt (Desktop + Mobile rendern beide, nur Desktop sichtbar)
+		const tiles = page.locator('[data-testid^="compare-tile-"]').filter({ visible: true });
 		await expect(tiles).toHaveCount(1);
 	});
 });

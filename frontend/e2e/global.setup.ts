@@ -1,18 +1,39 @@
-import { test as setup, expect } from '@playwright/test';
+import { test as setup, expect, request as playwrightRequest } from '@playwright/test';
+import * as fs from 'fs';
 
 const authFile = 'playwright/.auth/admin.json';
 const TRIP_ID = 'e2e-cockpit-test';
 
+function isAuthFileValid(): boolean {
+	if (!fs.existsSync(authFile)) return false;
+	try {
+		const state = JSON.parse(fs.readFileSync(authFile, 'utf-8'));
+		const cookies = state.cookies ?? [];
+		const sessionCookie = cookies.find((c: { name: string; expires: number }) => c.name === 'gz_session');
+		if (!sessionCookie) return false;
+		return sessionCookie.expires * 1000 > Date.now() + 60_000;
+	} catch {
+		return false;
+	}
+}
+
 setup('authenticate and seed test data', async ({ page }) => {
 	const user = process.env.E2E_USER ?? 'admin';
 	const pass = process.env.E2E_PASS ?? 'test1234';
-	await page.goto('/login');
-	await page.fill('input[name="username"]', user);
-	await page.fill('input[name="password"]', pass);
-	await page.click('button[type="submit"]');
-	await page.waitForURL('/');
-	await expect(page).toHaveURL('/');
-	await page.context().storageState({ path: authFile });
+
+	if (!isAuthFileValid()) {
+		await page.goto('/login');
+		await page.fill('input[name="username"]', user);
+		await page.fill('input[name="password"]', pass);
+		await page.click('button[type="submit"]');
+		await page.waitForURL('/');
+		await expect(page).toHaveURL('/');
+		await page.context().storageState({ path: authFile });
+	} else {
+		await page.context().addCookies(
+			JSON.parse(fs.readFileSync(authFile, 'utf-8')).cookies
+		);
+	}
 
 	// Seed: E2E-Test-Locations für Compare-Tests (Issue #263).
 	// IDs sind stabil — FixtureProvider liefert per nearest-Lookup
