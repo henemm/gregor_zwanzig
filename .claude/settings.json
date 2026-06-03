@@ -181,6 +181,16 @@
             "timeout": 30
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/edit_verify.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/edit_verify.py\"; fi",
+            "timeout": 5
+          }
+        ]
       }
     ]
   }
