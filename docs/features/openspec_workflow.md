@@ -105,9 +105,9 @@ Das Gregor Zwanzig Projekt nutzt den OpenSpec Framework Workflow, der aus 8 sequ
 
 **Fresh Eyes Inspector:** Bei UI-Änderungen zusätzlich `fresh-eyes-inspector` Agent — beschreibt Screenshots NEUTRAL ohne Bug-Kontext.
 
-### 6. Validieren (`/6-validate`)
+### 6. Validieren & Deployen (`/6-validate`)
 
-**Ziel:** Alles prüfen, Auto-Fix, Doku aktualisieren
+**Ziel:** Alles prüfen, Auto-Fix, Doku aktualisieren, Deployment automatisch durchführen
 
 **Ablauf:**
 1. **4x Parallel Validation:**
@@ -119,8 +119,16 @@ Das Gregor Zwanzig Projekt nutzt den OpenSpec Framework Workflow, der aus 8 sequ
    - general-purpose/sonnet: Ein Fix-Versuch
    - Re-Run Tests
 3. **Documentation Update:**
-   - docs-updater/sonnet aktualisiert betroffene Docs
-4. **Output:** Validierungs-Report + workflow_state.json Update
+   - docs-updater/haiku aktualisiert betroffene Docs
+4. **Commit & Push:**
+   - Änderungen werden auf `main` committed und gepushed
+5. **Inline Deployment (Issue #563):**
+   - Staging-Deploy wird sofort getriggert
+   - E2E-Verifikation gegen Staging läuft automatisch
+   - Nach E2E VERIFIED: Tech-Lead-Brief wird ausgegeben
+   - PO sagt `go` → Prod-Deploy läuft automatisch
+   - Issue wird nach erfolgreichem Prod-Deploy automatisch geschlossen
+6. **Output:** Validierungs-Report + workflow_state.json Update + Live-Deployment
 
 ## Model Selection Strategy
 
@@ -172,8 +180,8 @@ User Command → Skill (.claude/commands/N_*.md)
 | **spec-validator** | Spec file path | VALID/INVALID + Errors | haiku |
 | **implementation-validator** | Spec + Test outputs (NO implementer reasoning) | VERDICT: VERIFIED/BROKEN/AMBIGUOUS + Findings | sonnet |
 | **fresh-eyes-inspector** | Screenshot only (NO bug context) | Neutral UI observation report | sonnet |
-| **docs-updater** | Changed files, Summary, Spec path | Updated doc paths | sonnet |
-| **bug-intake** | Bug description, Error messages | Investigation report | haiku |
+| **docs-updater** | Changed files, Summary, Spec path | Updated doc paths | haiku |
+| **bug-intake** | Bug description, Error messages | Investigation report | sonnet |
 
 ## Known Limitations
 
