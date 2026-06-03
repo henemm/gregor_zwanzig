@@ -79,7 +79,7 @@
 		if (!firstIncomplete) return '/compare';
 		const firstOpen = setupStepsCompare.findIndex((s) => !s.done);
 		const step = firstOpen < 0 ? 1 : firstOpen + 1;
-		return `/compare/${firstIncomplete.id}/edit?step=${step}`;
+		return `/compare/${firstIncomplete.id}/edit`;
 	}
 
 	const tripCtaHref = $derived(buildTripCtaHref());
@@ -110,7 +110,7 @@
 	});
 </script>
 
-<div style:position="relative" style:padding="0 0 80px" style:max-width="1320px">
+<div class="page-root" style:position="relative" style:max-width="1320px">
 	<!-- Topbar -->
 	<header
 		style:display="flex"
@@ -516,7 +516,14 @@
 			grid-template-columns: repeat(2, 1fr);
 		}
 	}
+	.page-root {
+		padding: 0 0 80px;
+	}
 	@media (max-width: 640px) {
+		.page-root {
+			/* F002: Inhalt darf nicht hinter der fixen Mobile-Bottom-Nav verschwinden (64px + Safe Area) */
+			padding-bottom: 120px;
+		}
 		.quick-grid {
 			grid-template-columns: 1fr;
 		}
