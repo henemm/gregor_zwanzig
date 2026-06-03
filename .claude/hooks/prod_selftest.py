@@ -149,8 +149,11 @@ def _check_health() -> tuple[bool, str]:
 
 
 def _write_report(report_path: Path, content: str) -> None:
-    report_path.parent.mkdir(parents=True, exist_ok=True)
-    report_path.write_text(content)
+    try:
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(content)
+    except OSError as exc:
+        _log(f"WARN: Bericht konnte nicht geschrieben werden: {exc}", stream=sys.stderr)
 
 
 def _render_fail_commit_mismatch(
@@ -220,7 +223,7 @@ def _render_full_report(
             "Kein PASS-Block — Issue-Close freigegeben."
         )
     else:  # PARTIAL
-        fails = [p for p in probes if p.get("prod_status") == "FAIL"]
+        fails = [p for p in probes if p.get("status") == "PASS" and p.get("prod_status") == "FAIL"]
         lines.append(
             f"PARTIAL: {len(fails)} von {len(probes)} ACs nicht erreichbar in Produktion. "
             "Issue NICHT schließen. Infrastruktur prüfen."
