@@ -118,6 +118,59 @@ class TestNoBlockquoteInPOSummaries:
         )
 
 
+    def test_deploy_no_blockquote_in_fertig_und_live(self):
+        """AC-1: 7-deploy.md Abschluss-Ausgabe 'Fertig und live.' ohne > Prefix."""
+        filepath = COMMANDS_DIR / "7-deploy.md"
+        assert filepath.exists(), f"Command-Datei fehlt: {filepath}"
+        content = filepath.read_text(encoding="utf-8")
+
+        start = content.find("Fertig und live")
+        assert start != -1, "Fertig und live Abschnitt nicht gefunden"
+
+        section = content[start:start + 300]
+        blockquote_lines = [
+            line for line in section.splitlines()
+            if line.strip().startswith(">")
+            and any(kw in line for kw in ["Fertig und live", "abgeschlossen", "geliefert"])
+        ]
+        assert blockquote_lines == [], (
+            f"Abschluss-Ausgabe in 7-deploy.md enthält Blockquote-Zeilen:\n"
+            + "\n".join(blockquote_lines)
+        )
+
+    def test_implement_no_blockquote_in_validator_result(self):
+        """AC-1: 5-implement.md Validator-Ergebnis und Abschluss-Zeile ohne > Prefix."""
+        filepath = COMMANDS_DIR / "5-implement.md"
+        assert filepath.exists(), f"Command-Datei fehlt: {filepath}"
+        content = filepath.read_text(encoding="utf-8")
+
+        start = content.find("Validator-Ergebnis")
+        assert start != -1, "Validator-Ergebnis Abschnitt nicht gefunden"
+
+        section = content[start:start + 500]
+        blockquote_lines = [
+            line for line in section.splitlines()
+            if line.strip().startswith(">")
+            and any(kw in line for kw in [
+                "Validator-Ergebnis", "VERIFIED", "BROKEN", "AMBIGUOUS",
+                "Implementation complete", "Adversary verified"
+            ])
+        ]
+        assert blockquote_lines == [], (
+            f"Validator-Ergebnis in 5-implement.md enthält Blockquote-Zeilen:\n"
+            + "\n".join(blockquote_lines)
+        )
+
+        # Zweiter Anker: "Implementation complete. Adversary verified." — line-level scan
+        impl_lines = [l for l in content.splitlines() if "Implementation complete. Adversary verified." in l]
+        assert impl_lines, "Implementation complete Zeile nicht gefunden in 5-implement.md"
+        impl_blockquote_lines = [l for l in impl_lines if l.strip().startswith(">")]
+        assert impl_blockquote_lines == [], (
+            f"Abschluss-Zeile in 5-implement.md enthält Blockquote-Zeilen:\n"
+            + "\n".join(impl_blockquote_lines)
+        )
+
+
 class TestGoKeywordInOpenspec:
     """Nebenbefund: 'go' muss in openspec.yaml approval_phrases stehen."""
 
