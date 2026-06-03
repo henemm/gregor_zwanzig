@@ -59,9 +59,21 @@ export function formatStageNumber(index: number): string {
 /**
  * Pausentag-Heuristik: Etappe ohne Wegpunkte zaehlt als Pause.
  * Kein neues Modellfeld — UI-Logik aus Master-Spec §3.2.
+ *
+ * Ausnahme (Issue #559 AC-2): Eine Etappe mit einem konkreten Namen (nicht 'Pause'
+ * und nicht leer) gilt NICHT als Pause — auch wenn sie noch keine Wegpunkte hat.
+ * Betrifft Vorlage-Etappen aus fromTemplate(), die namentlich belegt sind aber
+ * noch keine Wegpunkte besitzen.
  */
-export function isPauseStage(stage: Pick<Stage, 'waypoints'>): boolean {
-	return !stage.waypoints || stage.waypoints.length === 0;
+export function isPauseStage(stage: Pick<Stage, 'waypoints' | 'name'>): boolean {
+	if (!stage.waypoints || stage.waypoints.length === 0) {
+		// Benannte Etappe (nicht leer, nicht 'Pause') ist keine Pause —
+		// z.B. Vorlage-Etappen aus fromTemplate() mit Namen aber noch ohne Wegpunkte.
+		const name = stage.name?.trim() ?? '';
+		if (name.length > 0 && name !== 'Pause') return false;
+		return true;
+	}
+	return false;
 }
 
 /**
