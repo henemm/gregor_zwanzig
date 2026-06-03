@@ -179,26 +179,29 @@ Show the user:
 
 Commit und Push auf `main`.
 
-### Schritt 2: Staging-Deploy sofort triggern
+### Schritt 2: Staging aktuell machen
 
-```bash
-bash /home/hem/henemm-infra/scripts/auto-deploy-gregor-staging.sh
-```
-
-### Schritt 3: Auf Staging-Deploy warten
+**Keine Ankündigung "ich warte X Minuten". Sofort ausführen:**
 
 ```bash
 EXPECTED=$(git rev-parse HEAD)
-for i in 1 2 3 4 5; do
-  STAGING=$(curl -s https://staging.gregor20.henemm.com/api/health | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('commit','?'))" 2>/dev/null)
-  echo "Staging: $STAGING | Erwartet: ${EXPECTED:0:7}"
-  [ "${STAGING:0:7}" = "${EXPECTED:0:7}" ] && echo "Staging aktuell" && break
-  echo "Warte 30s..."
-  sleep 30
-done
+STAGING=$(curl -s https://staging.gregor20.henemm.com/api/health | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('commit','?'))" 2>/dev/null)
+echo "Staging: ${STAGING:0:7} | Erwartet: ${EXPECTED:0:7}"
+if [ "${STAGING:0:7}" != "${EXPECTED:0:7}" ]; then
+  echo "→ Deploy triggern..."
+  bash /home/hem/henemm-infra/scripts/auto-deploy-gregor-staging.sh
+  for i in 1 2 3 4 5; do
+    sleep 30
+    STAGING=$(curl -s https://staging.gregor20.henemm.com/api/health | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('commit','?'))" 2>/dev/null)
+    echo "Versuch $i: ${STAGING:0:7}"
+    [ "${STAGING:0:7}" = "${EXPECTED:0:7}" ] && echo "✓ Staging aktuell" && break
+  done
+else
+  echo "✓ Staging bereits aktuell"
+fi
 ```
 
-### Schritt 4: E2E gegen Staging ausführen
+### Schritt 3: E2E gegen Staging ausführen
 
 Rufe `/e2e-verify` auf. **Kein Weitergehen bis Verdict = VERIFIED.**
 

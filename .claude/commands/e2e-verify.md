@@ -6,14 +6,15 @@ tatsaechlich funktioniert. Sie ersetzt die fruehere lokale Prod-Verifikation
 
 ## Wann ausfuehren
 
-NACH `git push origin main`, sobald der Staging-Auto-Deploy (~5 Min via Cron)
-durch ist — und VOR `deploy-gregor-prod.sh`.
+NACH `git push origin main` und VOR `deploy-gregor-prod.sh`.
+
+**KEIN passives Warten!** Staging könnte bereits aktuell sein — sofort prüfen.
+Der Poll-Loop in Schritt 1 läuft so lang wie nötig (0 bis 150 Sek), kein manuelles "5 Minuten warten".
 
 Ablauf:
 1. `git push origin main`
-2. ~5 Min warten (Auto-Deploy auf Staging)
-3. Diese Prozedur (`/e2e-verify`) gegen Staging
-4. `deploy-gregor-prod.sh`
+2. Sofort `/e2e-verify` starten — Schritt 1 prüft Staging-Status und wartet aktiv
+3. `deploy-gregor-prod.sh`
 
 ## Ziel-Umgebung
 
@@ -21,16 +22,31 @@ Ablauf:
 - **Override:** `GZ_SVELTE_BASE` bzw. `GZ_VALIDATION_URL` (z. B. fuer einen anderen
   Staging-Host). Niemals auf die Live-Produktions-URL umstellen.
 
-## Schritt 1: Smoke gegen Staging
+## Schritt 1: Staging-Aktualität sicherstellen + Smoke
+
+**Keine Ankündigung "ich warte X Minuten". Sofort ausführen:**
 
 ```bash
 BASE="${GZ_SVELTE_BASE:-https://staging.gregor20.henemm.com}"
+EXPECTED=$(git rev-parse HEAD)
+STAGING=$(curl -s "$BASE/api/health" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('commit','?'))" 2>/dev/null)
+echo "Staging: ${STAGING:0:7} | Erwartet: ${EXPECTED:0:7}"
+if [ "${STAGING:0:7}" != "${EXPECTED:0:7}" ]; then
+  echo "→ Deploy triggern..."
+  bash /home/hem/henemm-infra/scripts/auto-deploy-gregor-staging.sh
+  for i in 1 2 3 4 5; do
+    sleep 30
+    STAGING=$(curl -s "$BASE/api/health" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('commit','?'))" 2>/dev/null)
+    echo "Versuch $i: ${STAGING:0:7}"
+    [ "${STAGING:0:7}" = "${EXPECTED:0:7}" ] && break
+  done
+fi
+echo "Staging-Status: ${STAGING:0:7}"
 curl -s -o /dev/null -w "ROOT %{http_code}\n" "$BASE/"
 curl -s -o /dev/null -w "HEALTH %{http_code}\n" "$BASE/api/health"
 ```
 
-**STOP wenn:** ROOT nicht `200`/`302` oder HEALTH nicht `200`. Auto-Deploy noch
-nicht durch oder fehlgeschlagen — warten bzw. Staging-Logs pruefen.
+**STOP wenn:** ROOT nicht `200`/`302` oder HEALTH nicht `200` oder Staging-Commit nach 5 Versuchen falsch.
 
 ## Schritt 2: Scope bestimmen
 

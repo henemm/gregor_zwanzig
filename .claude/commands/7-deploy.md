@@ -29,34 +29,31 @@ python3 .claude/hooks/workflow_state_multi.py status
 
 ---
 
-## Schritt 1: Staging-Deploy sofort triggern
+## Schritt 1: Staging aktuell machen
 
-Nicht auf den 5-Minuten-Cron warten — Deploy jetzt starten:
-
-```bash
-bash /home/hem/henemm-infra/scripts/auto-deploy-gregor-staging.sh
-```
-
-Das Script prüft selbst ob etwas zu deployen ist. Falls Staging schon aktuell ist,
-kommt sofort Exit 0 — dann direkt zu Schritt 2.
-
-## Schritt 2: Auf Staging-Deploy warten
+**Keine Ankündigung "ich warte X Minuten". Sofort ausführen:**
 
 ```bash
-# Commit auf Staging prüfen
 EXPECTED=$(git rev-parse HEAD)
-for i in 1 2 3 4 5; do
-  STAGING=$(curl -s https://staging.gregor20.henemm.com/api/health | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('commit','?'))" 2>/dev/null)
-  echo "Staging: $STAGING | Erwartet: ${EXPECTED:0:7}"
-  [ "${STAGING:0:7}" = "${EXPECTED:0:7}" ] && echo "✓ Staging aktuell" && break
-  echo "Warte 30s..."
-  sleep 30
-done
+STAGING=$(curl -s https://staging.gregor20.henemm.com/api/health | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('commit','?'))" 2>/dev/null)
+echo "Staging: ${STAGING:0:7} | Erwartet: ${EXPECTED:0:7}"
+if [ "${STAGING:0:7}" != "${EXPECTED:0:7}" ]; then
+  echo "→ Deploy triggern..."
+  bash /home/hem/henemm-infra/scripts/auto-deploy-gregor-staging.sh
+  for i in 1 2 3 4 5; do
+    sleep 30
+    STAGING=$(curl -s https://staging.gregor20.henemm.com/api/health | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('commit','?'))" 2>/dev/null)
+    echo "Versuch $i: ${STAGING:0:7}"
+    [ "${STAGING:0:7}" = "${EXPECTED:0:7}" ] && echo "✓ Staging aktuell" && break
+  done
+else
+  echo "✓ Staging bereits aktuell"
+fi
 ```
 
-Falls nach 5 Versuchen (2,5 Min) noch nicht aktuell: Staging-Logs prüfen.
+Falls nach 5 Versuchen noch nicht aktuell: Staging-Logs prüfen.
 
-## Schritt 3: E2E gegen Staging ausführen
+## Schritt 2: E2E gegen Staging ausführen
 
 Rufe das Skill `/e2e-verify` auf. **Kein Weitergehen bis Verdict = VERIFIED.**
 
