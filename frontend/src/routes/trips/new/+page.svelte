@@ -21,4 +21,17 @@
 	setContext('trip-wizard-profile', profile);
 </script>
 
+{#if data.templateTrip}
+	<p class="template-hint">Vorlage: {data.templateTrip.name}</p>
+{/if}
+
 <TripWizardShell />
+
+<style>
+	.template-hint {
+		text-align: center;
+		color: var(--g-ink-3);
+		font-size: 0.85rem;
+		margin: 0.5rem 0 0;
+	}
+</style>
