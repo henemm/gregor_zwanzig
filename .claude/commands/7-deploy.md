@@ -2,6 +2,19 @@
 
 Deploy current main to production via henemm-infra deploy script.
 
+## Kontext löschen (ZUERST — vor allen anderen Schritten)
+
+Die vorigen Phasen (Implementierung, Validierung) haben viel Kontext angehäuft. `/clear` löscht die History vollständig — alle relevanten Infos liegen in Dateien.
+
+```
+/clear
+```
+
+**Direkt nach `/clear` ausführen:**
+```bash
+python3 .claude/hooks/workflow_state_multi.py status
+```
+
 ## Ablauf (alles in dieser Session, kein Warten auf Cron)
 
 ```

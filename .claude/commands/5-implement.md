@@ -21,15 +21,22 @@ python3 .claude/hooks/workflow_state_multi.py status
 
 **If TDD RED artifacts are missing, the `tdd_enforcement` hook will BLOCK edits!**
 
-### Kontext komprimieren (JETZT — vor allen anderen Schritten)
+### Kontext löschen (JETZT — vor allen anderen Schritten)
 
-Die Phasen 1–4 haben viel Analyse- und Diskussions-Kontext angehäuft, der ab jetzt nicht mehr gebraucht wird — die Spec ist die einzige Quelle der Wahrheit. Komprimiere den Kontext:
+Die Phasen 1–4 haben viel Analyse- und Diskussions-Kontext angehäuft. `/clear` löscht die History vollständig — alle relevanten Infos liegen in Dateien und werden danach neu eingelesen.
 
 ```
-/compact
+/clear
 ```
 
-Danach normal weiterfahren. Der Workflow-State und die Spec-Datei bleiben erhalten.
+**Direkt nach `/clear` ausführen:**
+```bash
+python3 .claude/hooks/workflow_state_multi.py status
+# Spec-Pfad aus dem Status-Output lesen und Spec einlesen:
+# cat <spec_file aus Status>
+```
+
+Danach normal weiterfahren.
 
 ## Your Tasks
 
