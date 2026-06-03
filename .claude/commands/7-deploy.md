@@ -90,6 +90,18 @@ bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh
 curl https://gregor20.henemm.com/api/health
 ```
 
+## Schritt 6b: Post-Deploy-Selbsttest
+
+```bash
+python3 .claude/hooks/prod_selftest.py
+```
+
+- **Exit 0 (PASS):** Weiter mit Schritt 7
+- **Exit 1 (FAIL/PARTIAL):** Issue NICHT schließen
+  - Bericht in `docs/artifacts/<workflow>/prod-selftest.md` prüfen
+  - Bei Commit-Mismatch: `/e2e-verify` erneut ausführen, dann `deploy-gregor-prod.sh`
+  - Bei Partial/Health-Fail: Infrastruktur prüfen, Rollback erwägen
+
 ## Schritt 7: Issue schließen
 
 ```bash

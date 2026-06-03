@@ -124,11 +124,12 @@ Das Gregor Zwanzig Projekt nutzt den OpenSpec Framework Workflow, der aus 8 sequ
    - Änderungen werden auf `main` committed und gepushed
 5. **Inline Deployment (Issue #563):**
    - Staging-Deploy wird sofort getriggert
-   - E2E-Verifikation gegen Staging läuft automatisch
+   - E2E-Verifikation gegen Staging läuft automatisch (staging-validator Agent)
    - Nach E2E VERIFIED: Tech-Lead-Brief wird ausgegeben
    - PO sagt `go` → Prod-Deploy läuft automatisch
-   - Issue wird nach erfolgreichem Prod-Deploy automatisch geschlossen
-6. **Output:** Validierungs-Report + workflow_state.json Update + Live-Deployment
+   - **Post-Deploy-Selftest (Issue #564):** Automatische Nachverifikation gegen Produktion (Commit-Attestation, Health-Check, AC-HTTP-Probes)
+   - Issue wird nur nach erfolgreichem Prod-Deploy + Selftest-PASS automatisch geschlossen
+6. **Output:** Validierungs-Report + workflow_state.json Update + Live-Deployment + Prod-Selftest-Report
 
 ## Model Selection Strategy
 

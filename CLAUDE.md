@@ -119,7 +119,7 @@ die Staging-Umgebung (`https://staging.gregor20.henemm.com`) — **nie** durch e
 lokalen Neustart des Live-Servers (auf dieser Maschine = Produktion). Siehe Issue #339.
 
 **Ablauf:** `git push origin main` → ~5 Min Staging-Auto-Deploy abwarten →
-`/e2e-verify` (gegen Staging) → `deploy-gregor-prod.sh`.
+`/e2e-verify` (gegen Staging) → `deploy-gregor-prod.sh` → Post-Deploy-Selftest (Issue #564) → Issue close.
 
 **E2E-Verifikation (`/e2e-verify`):**
 
@@ -141,6 +141,27 @@ GZ_SVELTE_BASE=https://staging.gregor20.henemm.com \
 - Den lokalen Live-Server stoppen oder neu starten
 - Sammel-Versand ueber alle Touren — nur der Test-Trip darf eine Mail bekommen
 - "E2E Test erfolgreich" sagen ohne Verifikation gegen Staging
+
+## Post-Deploy-Selftest (Issue #564)
+
+Nach jedem Prod-Deploy erfolgt eine automatische Nachverifikation gegen Produktion — ohne Playwright (kein Risiko für echte Sessions), stattdessen via Commit-Attestation, Health-Check und parallele HTTP-Probes auf alle aus der Staging-Verifikation bekannten AC-Pfade.
+
+**Ablauf (integriert in `/7-deploy`):**
+
+1. Commit-Attestation: `git HEAD` muss mit `e2e_verified.json[verified_commit]` übereinstimmen
+2. Health-Check: `https://gregor20.henemm.com/api/health` muss HTTP 200 + `status=ok` antworten
+3. AC-Attestation: pro Staging-Finding (max 5 parallel) HTTP GET auf entsprechende Prod-URL (erwartet 200 oder 302)
+4. Bericht: Markdown-Tabelle in `docs/artifacts/<workflow>/prod-selftest.md` mit pro-AC-Status
+5. Exit-Code: 0 = alle ACs bestätigt (PASS) oder alle ACs übersprungen (docs-only); 1 = Mismatch/Fehler
+
+**Verdict-Ableitung:**
+
+- **PASS:** alle PASS-Findings bestätigt sich in Produktion
+- **PARTIAL:** mind. ein PASS-Finding fehlt oder ist unerreichbar in Produktion
+- **FAIL:** Commit-Mismatch oder Health unreachable
+- **SKIP:** `e2e_verified.json` nicht vorhanden (docs-only Deploy)
+
+**Schutzwirkung:** Issue-Close erfolgt nur bei Exit 0. Bei PARTIAL/FAIL wird der Bericht untersucht und ggf. Rollback eingeleitet, bevor das Issue geschlossen wird. Verhindert, dass Issues geschlossen werden obwohl der Deploy still fehlschlug oder der falsche Code-Stand deployed wurde. Siehe Spec Issue #564 für technische Details.
 
 ## E-MAIL SPEC VALIDATOR (ZWINGEND!)
 
@@ -295,6 +316,8 @@ Globale Server-Infos und Monitoring-Anleitung stehen in `~/.claude/CLAUDE.md`.
 | 2 | Auto-Deploy auf Staging abwarten (~5 Min) | Cron `*/5` ruft `auto-deploy-gregor-staging.sh` |
 | 3 | Staging-Validierung | siehe Definition unten |
 | 4 | Prod-Deploy | `bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh` |
+| 4b | Post-Deploy-Selftest | `python3 .claude/hooks/prod_selftest.py` (Commit/Health/AC-Attestation) — nur Exit 0 fährt weiter |
+| 5 | Issue schließen | `gh issue close <N>` — nur wenn 4b Exit 0 |
 
 `systemctl restart` allein **reicht nie** — `deploy-gregor-prod.sh` macht `flock-Lock → hart auf origin/main syncen (Daten unberührt, WIP gesichert) → Go-Binary bauen → Frontend bauen → alle 3 Services restarten → Smoke-Test`. Ohne diesen vollen Lauf entsteht Code-Drift, den `check-gregor20.sh` als BetterStack-Alert meldet (siehe Issue #113). Das Script ist **parallel-session-sicher**: es blockiert nicht mehr bei „dirty" Arbeitsbaum und serialisiert gleichzeitige Deploys über `flock`. Schritt 4 darf daher aus jeder Session jederzeit laufen.
 
