@@ -5,7 +5,7 @@ GR20 E1
 
 GR20 E1: 2–9°C, 🌥️, trocken, Regen ab 6:00, mäßiger Wind 35 km/h, Böen bis 70 km/h ab 6:00, ⚡ möglich 0:00–24:00
 
-━━ Segment 1: 06:00–10:00 | 4.2 km | ↑400m → 1200m ━━
+━━ Segment 1: km 0.0–0.0 | 06:00–10:00 | ↑400m → 1200m ━━
   Time   Temp   Feels   Wind   Gust   Rain   Thunder   SnowL   Cloud   Sun 
   -----  -----  ------  -----  -----  -----  --------  ------  ------  ----
   06     16.8   11.2    15     70     18.5   ⚡ mögl.   –       ⛅       –   

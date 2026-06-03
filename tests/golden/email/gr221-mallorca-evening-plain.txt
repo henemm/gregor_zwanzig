@@ -5,7 +5,7 @@ GR221 Tag1
 
 GR221 Tag1: 8–15°C, 🌥️, trocken, mäßiger Wind 25 km/h, Böen bis 55 km/h ab 23:00
 
-━━ Segment 1: 09:00–14:00 | 4.2 km | ↑200m → 900m ━━
+━━ Segment 1: km 0.0–0.0 | 09:00–14:00 | ↑200m → 900m ━━
   Time   Temp   Feels   Wind   Gust   Rain   Thunder   SnowL   Cloud   Sun 
   -----  -----  ------  -----  -----  -----  --------  ------  ------  ----
   09     17.7   11.8    16     39     0.0    –         –       ⛅       –   

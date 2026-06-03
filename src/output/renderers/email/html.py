@@ -315,9 +315,9 @@ def render_html(
         else:
             seg_header = (
                 "Segment " + str(seg.segment_id) + ": "
-                + local_fmt(seg.start_time, tz)
+                + f"km {seg.start_point.distance_from_start_km:.1f}–{seg.end_point.distance_from_start_km:.1f}"
+                + " | " + local_fmt(seg.start_time, tz)
                 + "–" + local_fmt(seg.end_time, tz)
-                + " | " + f"{seg.distance_km:.1f}" + " km"
                 + " | ↑" + str(s_elev) + "m → " + str(e_elev) + "m"
             )
             desktop_div = (
