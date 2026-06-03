@@ -14,7 +14,8 @@
 	import {
 		BriefingTimelineRow,
 		QuickAction,
-		SetupResumeCard
+		SetupResumeCard,
+		CompareStatusRow
 	} from '$lib/components/molecules';
 	import { deriveStatusFromPreset } from '$lib/components/compare/subscriptionHelpers.js';
 	import { tripStatus, activeOrNextTrip, todayStageIndex } from '$lib/utils/tripStatus.js';
@@ -24,7 +25,8 @@
 		setupStepTrip,
 		setupStepCompare,
 		nextPlannedTrip,
-		firstIncompleteCompare
+		firstIncompleteCompare,
+		liveTrip
 	} from '$lib/utils/cockpitHelpers568.js';
 	import TripKachel from './_home/TripKachel.svelte';
 	import CompareKachel from './_home/CompareKachel.svelte';
@@ -48,9 +50,29 @@
 		year: 'numeric'
 	});
 
+	// --- Hero-Modus: trip > compare > planning --------------------------------
+	// Aktiver Trip: heute im Reise-Zeitraum (liveTrip)
+	const activeLiveTrip = $derived(liveTrip(trips, now));
+
+	// Hero-Modus
+	const mode = $derived(
+		activeLiveTrip ? 'trip' : (activePresets.length > 0 ? 'compare' : 'planning')
+	);
+
+	// Compare-Hero (erster aktiver Vergleich)
+	const compareHero = $derived(mode === 'compare' ? activePresets[0] : null);
+
+	// "Außerdem beobachtet"-Reihe
+	// - trip-Modus: ALLE aktiven Vergleiche
+	// - compare-Modus: aktive Vergleiche MINUS compareHero
+	const alsoWatched = $derived(
+		mode === 'trip' ? activePresets :
+		mode === 'compare' ? activePresets.slice(1) : []
+	);
+
 	// --- Hero-Tour (aktiv oder nächste) -------------------------------------
-	const hero = $derived(activeOrNextTrip(trips, now));
-	const heroIsActive = $derived(hero ? tripStatus(hero, now) === 'aktiv' : false);
+	const hero = $derived(mode === 'trip' ? activeLiveTrip : null);
+	const heroIsActive = $derived(mode === 'trip');
 	const heroStages = $derived(hero?.stages ?? []);
 	const todayIdx = $derived(hero ? todayStageIndex(hero, now) : -1);
 	const heroStageIdx = $derived(todayIdx >= 0 ? todayIdx : 0);
@@ -235,7 +257,7 @@
 				<div style:display="flex" style:flex-direction="column" style:gap="16px">
 					<Card>
 						<div style:padding="20px">
-							<SectionH eyebrow="Heute" title="Was geht raus" />
+							<SectionH eyebrow="Heute" title="Was geht raus · {hero?.name ?? ''}" />
 							{#if briefings.length > 0}
 								<div style:display="flex" style:flex-direction="column" style:gap="8px">
 									{#each briefings as r, i (i)}
@@ -336,8 +358,70 @@
 			</section>
 		{/if}
 
+		<!-- Zustand C: Compare-Hero (kein aktiver Trip, aber aktive Vergleiche) -->
+		{#if mode === 'compare' && compareHero}
+			<div class="cockpit-hero" style:margin-bottom="24px">
+				<!-- Linke Spalte: Hero-Karte -->
+				<Card>
+					<div style:padding="20px">
+						<div style:display="flex" style:align-items="center" style:gap="8px" style:margin-bottom="12px">
+							<Pill tone="ok">Aktiv</Pill>
+							<span style:font-size="14px" style:color="var(--g-ink-2)">{compareHero.location_ids.length} Orte</span>
+						</div>
+						<div style:font-size="20px" style:font-weight="700" style:margin-bottom="8px">{compareHero.name}</div>
+						<!-- Region falls vorhanden -->
+						{#if (compareHero.display_config as Record<string,unknown> | undefined)?.region}
+							<div style:font-size="13px" style:color="var(--g-ink-2)" style:margin-bottom="8px">
+								{(compareHero.display_config as Record<string,unknown>).region as string}
+							</div>
+						{/if}
+						<!-- Zeitplan-Zeile -->
+						<div style:font-family="var(--g-font-mono)" style:font-size="12px" style:color="var(--g-ink-3)" style:margin-bottom="16px">
+							{compareHero.schedule === 'daily' ? 'täglich' : compareHero.schedule === 'weekly' ? 'wöchentlich' : 'manuell'}
+							{#if compareHero.schedule !== 'manual'} · {String(compareHero.hour_from).padStart(2,'0')}:00{/if}
+						</div>
+						<!-- Kanal-Footer -->
+						<div style:display="flex" style:gap="6px" style:flex-wrap="wrap">
+							{#each compareHero.empfaenger as emp}
+								<span style:font-size="11px" style:padding="2px 8px" style:background="var(--g-card-alt)" style:border="1px solid var(--g-rule-soft)" style:border-radius="4px">{emp}</span>
+							{/each}
+						</div>
+					</div>
+				</Card>
+				<!-- Rechte Spalte: Was geht raus + Alerts -->
+				<div style:display="flex" style:flex-direction="column" style:gap="16px">
+					<Card>
+						<div style:padding="20px">
+							<SectionH eyebrow="Versand" title="Was geht raus · {compareHero.name}" />
+							<div style:font-size="13px" style:color="var(--g-ink-2)" style:margin-top="8px">
+								Versand läuft automatisch gemäß Zeitplan.
+							</div>
+						</div>
+					</Card>
+					<Card>
+						<div style:padding="20px">
+							<SectionH eyebrow="Alarme · letzte 24 h" title="Keine Alarme" />
+							<div style:font-size="13px" style:color="var(--g-ink-2)" style:margin-top="8px">
+								Keine Alerts für diesen Vergleich aktiv.
+							</div>
+						</div>
+					</Card>
+				</div>
+			</div>
+			<!-- QuickActions für Compare -->
+			<section style:margin="0 0 32px">
+				<Eyebrow>Schnellaktionen</Eyebrow>
+				<div class="quick-grid" style:margin-top="10px">
+					<QuickAction glyph="route" label="Orte bearbeiten" sub="Verglichene Orte" href="/compare/{compareHero.id}/edit" />
+					<QuickAction glyph="metrics" label="Ideal-Werte ändern" sub="Ideal-Profil" href="/compare/{compareHero.id}/edit#idealwerte" />
+					<QuickAction glyph="clock" label="Briefing-Zeitplan" sub="Zeitplan & Kanäle" href="/compare/{compareHero.id}/edit#schedule" />
+					<QuickAction glyph="eye" label="Vorschau prüfen" sub="So wirkt das Briefing" href="/compare/{compareHero.id}?tab=preview" />
+				</div>
+			</section>
+		{/if}
+
 		<!-- Zustand B: Planungs-/Leerzustand (kein aktiver Trip) ------------- -->
-		{#if !heroIsActive}
+		{#if mode === 'planning'}
 			<div
 				style:margin="0 0 24px"
 				style:padding="16px 20px"
@@ -388,22 +472,13 @@
 			</div>
 		{/if}
 
-		<!-- Vergleiche (immer sichtbar) -->
-		{#if activePresets.length > 0}
+		<!-- Außerdem beobachtet (immer sichtbar wenn alsoWatched nicht leer) -->
+		{#if alsoWatched.length > 0}
 			<section style:margin-bottom="32px">
-				<SectionH
-					eyebrow="WORKSPACE"
-					title="Aktive Orts-Vergleiche"
-					kicker="Laufen automatisch — Briefing kommt in die Kanäle"
-					right={compareAllLink}
-				/>
-				<div
-					style:display="grid"
-					style:grid-template-columns="repeat(3, 1fr)"
-					style:gap="16px"
-				>
-					{#each activePresets as preset (preset.id)}
-						<CompareKachel sub={preset} />
+				<Eyebrow>Außerdem beobachtet</Eyebrow>
+				<div style:display="flex" style:flex-direction="column" style:gap="8px" style:margin-top="10px">
+					{#each alsoWatched as preset (preset.id)}
+						<CompareStatusRow {preset} />
 					{/each}
 				</div>
 			</section>
@@ -471,9 +546,6 @@
 	<Btn href="/trips" variant="quiet" size="sm">Alle anzeigen</Btn>
 {/snippet}
 
-{#snippet compareAllLink()}
-	<Btn href="/compare" variant="quiet" size="sm">Alle anzeigen</Btn>
-{/snippet}
 
 <style>
 	.cockpit-hero {
@@ -481,6 +553,7 @@
 		grid-template-columns: 1.4fr 1fr;
 		gap: 24px;
 		margin-bottom: 24px;
+		align-items: start;
 	}
 	.quick-grid {
 		display: grid;

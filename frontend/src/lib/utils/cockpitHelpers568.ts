@@ -157,3 +157,54 @@ export function firstIncompleteCompare(presets: ComparePreset[]): ComparePreset 
 	}
 	return null;
 }
+
+/**
+ * Gibt den ersten Trip zurück, dessen Zeitraum heute enthält (status === 'aktiv').
+ * Verwendet tripStatus() aus './tripStatus.ts'.
+ */
+export function liveTrip(trips: Trip[], now: Date): Trip | null {
+	for (const t of trips ?? []) {
+		if (tripStatus(t, now) === 'aktiv') return t;
+	}
+	return null;
+}
+
+/**
+ * Berechnet den nächsten Versand-Zeitstempel aus dem Preset-Schedule.
+ * - 'daily': heute um hour_from wenn noch nicht vorbei, sonst morgen
+ * - 'weekly': nächster passender Wochentag (preset.weekday, 0=Montag) um hour_from
+ * - 'manual': null
+ * - fehlende Felder: null
+ */
+export function deriveNextSend(preset: ComparePreset, now: Date): Date | null {
+	if (!preset || preset.schedule === 'manual') return null;
+	const hourFrom = preset.hour_from;
+	if (hourFrom == null) return null;
+
+	if (preset.schedule === 'daily') {
+		// Heute um hour_from wenn noch nicht vorbei, sonst morgen
+		const candidate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hourFrom, 0, 0, 0);
+		if (now < candidate) return candidate;
+		// Morgen
+		const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, hourFrom, 0, 0, 0);
+		return tomorrow;
+	}
+
+	if (preset.schedule === 'weekly') {
+		const targetWeekday = preset.weekday; // 0=Montag
+		if (targetWeekday == null) return null;
+		// JS: 0=Sonntag, 1=Montag... convert: preset 0=Mon → JS 1=Mon
+		const jsWeekday = (targetWeekday + 1) % 7;
+		const nowJsDay = now.getDay();
+		let daysUntil = (jsWeekday - nowJsDay + 7) % 7;
+		// If same day, check if hour has passed
+		if (daysUntil === 0) {
+			const candidate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hourFrom, 0, 0, 0);
+			if (now < candidate) return candidate;
+			daysUntil = 7;
+		}
+		return new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysUntil, hourFrom, 0, 0, 0);
+	}
+
+	return null;
+}

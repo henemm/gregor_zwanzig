@@ -200,10 +200,10 @@ test('AC-6: Alarm-Karte zeigt sauberen Leerzustand, KEINEN Fake-Zähler', () => 
 	assert.doesNotMatch(src, /2 ausgelöst/, 'Fake-Alarm-Zähler "2 ausgelöst" aus Mock übernommen');
 });
 
-test('AC-12: Rückwärtskompatibilität — TripKachel + CompareKachel bleiben erreichbar', () => {
+test('AC-12: Rückwärtskompatibilität — TripKachel bleibt erreichbar; aktive Vergleiche via CompareStatusRow (ersetzt CompareKachel-Grid, Issue #571)', () => {
 	const src = readPage();
 	assert.match(src, /TripKachel/, 'TripKachel (Weitere Trips) fehlt');
-	assert.match(src, /CompareKachel/, 'CompareKachel (Orts-Vergleiche) fehlt');
+	assert.match(src, /CompareStatusRow/, 'CompareStatusRow (aktive Vergleiche) fehlt — ersetzt CompareKachel-Grid seit #571');
 });
 
 test('AC-8: Leerzustand bleibt erhalten (EmptyKachel)', () => {

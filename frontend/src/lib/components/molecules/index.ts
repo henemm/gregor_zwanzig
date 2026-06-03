@@ -35,3 +35,7 @@ export { default as TestReportDialog } from './TestReportDialog.svelte';
 // Issue #568 — Startseite-Cockpit-Molecules (Spec: docs/specs/modules/issue_568_home_redesign.md).
 export { default as QuickAction } from './QuickAction.svelte';
 export { default as SetupResumeCard } from './SetupResumeCard.svelte';
+
+// Issue #571 — Home Cockpit Hero (Compare-Modus + CompareStatusRow + Stretch-Fix).
+export { default as CompareStatusRow } from './CompareStatusRow.svelte';
+
