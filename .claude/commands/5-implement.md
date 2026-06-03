@@ -102,6 +102,34 @@ python3 .claude/hooks/workflow.py status
 
 Notiere den `Workflow:`-Wert (z.B. `issue_294_home_kachel`). Dieser wird als `GZ_ACTIVE_WORKFLOW` an den Developer Agent übergeben.
 
+### 3.5 UI-Änderungen: JSX-Vorlage ist PFLICHT
+
+**Gilt wenn der Change Dateien in `frontend/src/` betrifft.**
+
+Das Developer-Agent-Briefing MUSS folgende Abschnitte enthalten — ohne sie NICHT spawnen:
+
+```
+## PFLICHT: JSX-Vorlage lesen (BEVOR du eine Zeile Svelte schreibst!)
+
+Alle relevanten Dateien liegen unter:
+  claude-code-handoff/soll-audit-2026-05-27/handoff-5/gregor-zwanzig/project/
+
+Für diesen Screen lies:
+  - [screen-X.jsx]          ← Haupt-Screen-Implementierung
+  - atoms.jsx               ← Alle Atom-Komponenten mit Styling
+  - molecules.jsx           ← Alle Molecule-Komponenten
+  - tokens.css              ← Kanonische CSS-Token-Werte
+
+Deine Aufgabe ist 1:1-Übersetzung JSX → Svelte:
+  - Inline-Styles aus JSX werden 1:1 übernommen — KEIN Interpretieren
+  - CSS-Variablen-Werte aus tokens.css sind bindend
+  - Layout-Struktur (grid, flex, gap, padding) 1:1 übernehmen
+  - KEINE eigenen Design-Entscheidungen
+  - KEINE Abweichungen weil "in Svelte macht man das anders"
+```
+
+Wenn kein passender Screen existiert (z.B. reine Backend-Änderung): Section überspringen.
+
 ### 4. Delegate to Developer Agent (Sonnet, kein Worktree)
 
 **DU implementierst NICHT selbst!** Spawne den Developer Agent — **OHNE** `isolation="worktree"` (Worktrees kennen den Workflow-State nicht):
@@ -115,6 +143,13 @@ Agent(subagent_type="developer", prompt="
 
   ## Spec
   Pfad: [SPEC_PATH]
+
+  ## PFLICHT bei Frontend-Änderungen: JSX-Vorlage lesen (BEVOR du eine Zeile Svelte schreibst!)
+  Alle relevanten Dateien unter:
+    claude-code-handoff/soll-audit-2026-05-27/handoff-5/gregor-zwanzig/project/
+  Für diesen Screen: [screen-X.jsx], atoms.jsx, molecules.jsx, tokens.css
+  Aufgabe = 1:1-Übersetzung JSX → Svelte. Inline-Styles und Layout 1:1 übernehmen.
+  KEINE eigenen Design-Entscheidungen. KEINE Abweichungen.
 
   ## Context (aus Step 2)
   [CONTEXT_SUMMARY: Code-Konventionen, Import-Patterns, betroffene Dateien]
@@ -232,7 +267,30 @@ Merke dir:
 - Prompt ist geschuetzt in openspec.yaml
 - **User sieht den vollstaendigen Output** — Orchestrierer kann nichts filtern
 
-**Bei UI-Aenderungen:** Der User kann zusaetzlich den `fresh-eyes-inspector` in der Validator-Session nutzen.
+**Bei UI-Aenderungen — PFLICHT:** Nach VERIFIED sofort SOLL-IST-Vergleich durchfuehren:
+
+```bash
+# 1. IST-Screenshot nehmen (Staging)
+GZ_SVELTE_BASE=https://staging.gregor20.henemm.com \
+  uv run python3 .claude/hooks/e2e_browser_test.py browser \
+  --check "any-text" --url "/[route-des-geaenderten-screens]"
+# Screenshot: /tmp/e2e_test_<timestamp>.png
+
+# 2. SOLL-Screenshot aus Handoff
+# SOLL: claude-code-handoff/soll-audit-2026-05-27/soll-screenshots/desktop-[screen].png
+```
+
+```
+Agent(subagent_type="fresh-eyes-inspector", prompt="
+  SOLL-IST-Vergleich fuer Screen [SCREEN_NAME].
+  SOLL: claude-code-handoff/soll-audit-2026-05-27/soll-screenshots/desktop-[screen].png
+  IST:  /tmp/e2e_test_[timestamp].png
+  Bitte Modus 2 (SOLL-IST-Vergleich) verwenden und Verdict ausgeben.
+")
+```
+
+Bei **FAIL**: Developer Agent erneut spawnen mit den konkreten Abweichungen aus dem Verdict.
+Bei **PASS**: weiter zu Phase 7.
 
 ## Deine Rolle als Orchestrierer
 
