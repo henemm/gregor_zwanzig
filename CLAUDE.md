@@ -16,12 +16,12 @@ Dieses Projekt nutzt den **OpenSpec 8-Phasen-Workflow** mit Adversary Verificati
 |-------|---------|---------|-------------|
 | 1 | `/1-context` | Kontext sammeln | — |
 | 2 | `/2-analyse` | Request verstehen, Codebase recherchieren | Optional: 3-Satz-Zusammenfassung korrigieren |
-| 3 | `/3-write-spec` | Spezifikation erstellen | **Pflicht: ACs auf Deutsch freigeben** ('approved') |
+| 3 | `/3-write-spec` | Spezifikation erstellen | **Pflicht: ACs auf Deutsch freigeben** ('go') |
 | 4 | — | Spec freigegeben | — |
 | 5 | `/4-tdd-red` | Fehlschlagende Tests schreiben (RED) | Optional: AC-Test-Mapping lesen |
 | 6 | `/5-implement` | Implementieren (GREEN) + Adversary | — (läuft automatisch durch) |
 | 7 | `/6-validate` | Validieren vor Commit | — |
-| 8 | `/7-deploy` | Deployment | **Pflicht: Tech-Lead-Brief lesen + 'ja' sagen** |
+| 8 | — | Deployment (inline in `/6-validate` Step 5) | **Pflicht: Tech-Lead-Brief lesen + 'go' sagen** |
 
 **Adversary Verification:** Nach Implementation fuehrt ein unabhaengiger `implementation-validator` Agent (Sonnet) einen strukturierten Dialog, um die Implementierung aktiv zu brechen. Tri-State Verdict: VERIFIED / BROKEN / AMBIGUOUS. Details: `docs/features/openspec_workflow.md`
 

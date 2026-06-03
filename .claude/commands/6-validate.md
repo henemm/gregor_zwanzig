@@ -139,7 +139,7 @@ Task(subagent_type="docs-updater", model="haiku", prompt="
 ## Step 3b: Issue-Kommentar (GitHub)
 
 Kommentiere den Fortschritt im GitHub Issue (Commit-SHA + kurze Zusammenfassung),
-aber schließe es noch **nicht** — das passiert erst nach Prod-Deploy in `/7-deploy`.
+aber schließe es noch **nicht** — das passiert erst nach Prod-Deploy in Step 5.
 
 ```bash
 gh issue comment <ISSUE_NR> --body "Implementiert & validiert — Commit $(git rev-parse --short HEAD). Staging-Deploy läuft, Prod-Deploy folgt."
@@ -156,16 +156,78 @@ Show the user:
 2. **Auto-fix results** - If any fixes were attempted
 3. **Docs updated** - What documentation was changed
 
-## Step 5: Commit & Übergabe an Deploy
+## Step 5: Commit, Push & Deploy
 
-After successful validation:
+**Docs-only-Ausnahme:** Wenn der Commit ausschließlich `.md`-Dateien, `docs/`, `.claude/`-Inhalte oder `.gitignore` ändert (kein Code in `src/`, `api/`, `internal/`, `frontend/`, `cmd/`), entfallen Schritte 2–8. In diesem Fall nach dem Push fertig — kein Staging-Deploy, kein E2E, kein Prod-Deploy nötig.
 
-1. **Commit & Push** the changes
-2. **Dem User mitteilen:** Validierung abgeschlossen — bereit für Deploy
-3. **NICHT** "Fertig und live" oder "abgeschlossen" sagen — das passiert erst nach Prod-Deploy
-4. **Nächster Schritt:** `/7-deploy` — dort wird auf Staging gewartet, E2E-Verifikation durchgeführt, Prod deployed und dann erst das Issue geschlossen
+### Schritt 1: Commit & Push
 
-**Das Issue bleibt offen bis `/7-deploy` abgeschlossen ist.**
+Commit und Push auf `main`.
+
+### Schritt 2: Staging-Deploy sofort triggern
+
+```bash
+bash /home/hem/henemm-infra/scripts/auto-deploy-gregor-staging.sh
+```
+
+### Schritt 3: Auf Staging-Deploy warten
+
+```bash
+EXPECTED=$(git rev-parse HEAD)
+for i in 1 2 3 4 5; do
+  STAGING=$(curl -s https://staging.gregor20.henemm.com/api/health | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('commit','?'))" 2>/dev/null)
+  echo "Staging: $STAGING | Erwartet: ${EXPECTED:0:7}"
+  [ "${STAGING:0:7}" = "${EXPECTED:0:7}" ] && echo "Staging aktuell" && break
+  echo "Warte 30s..."
+  sleep 30
+done
+```
+
+### Schritt 4: E2E gegen Staging ausführen
+
+Rufe `/e2e-verify` auf. **Kein Weitergehen bis Verdict = VERIFIED.**
+
+- Bei VERIFIED → Schritt 5
+- Bei BROKEN → Fehler beheben, neu pushen, Schritt 2 wiederholen
+- Bei AMBIGUOUS → Findings prüfen, ggf. weitermachen mit Begründung
+
+### Schritt 5: Tech-Lead-Brief ausgeben (nach E2E VERIFIED)
+
+**Was wurde gebaut:** [1-2 Sätze aus Nutzerperspektive]
+
+**Staging validiert:** [staging_verdict] — [verified_at]
+
+**Tests:** [N] bestanden, 0 fehlgeschlagen
+
+**Risiko:** niedrig / mittel / hoch — [1 Satz Begründung]
+
+**Empfehlung:** Deploy auf Production.
+
+Sage **'go'** um zu deployen.
+
+### Schritt 6: Prod-Deploy (nach 'go')
+
+```bash
+git branch --show-current      # muss "main" sein
+git status --porcelain         # muss leer sein
+bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh
+```
+
+### Schritt 7: Post-Deploy-Smoke
+
+```bash
+curl https://gregor20.henemm.com/api/health
+```
+
+### Schritt 8: Issue schließen
+
+```bash
+gh issue close <ISSUE_NR> --comment "Fertig und live — $(git rev-parse --short HEAD) auf Production."
+```
+
+**NICHT früher "Fertig und live" sagen.**
+
+**Das Issue bleibt offen bis Schritt 8 abgeschlossen ist.**
 
 ## On Failure
 
