@@ -62,7 +62,7 @@ class CommandResult:
 
 _COMMAND_PATTERN = re.compile(r"^###\s+(\S+?)(?:[:\s]\s*(.+))?$")
 
-_VALID_COMMANDS = {"ruhetag", "report", "startdatum", "abbruch"}
+_VALID_COMMANDS = {"ruhetag", "report", "startdatum", "abbruch", "status", "hilfe"}
 
 
 # ---------------------------------------------------------------------------
@@ -83,10 +83,14 @@ class TripCommandProcessor:
                 confirmation_subject="Unbekannter Befehl",
                 confirmation_body=(
                     "Befehlsformat: ### key: value\n"
-                    "Verfuegbar: ruhetag, report, startdatum, abbruch"
+                    "Verfuegbar: ruhetag, report, startdatum, abbruch, status, hilfe"
                 ),
                 trip_name=msg.trip_name,
             )
+
+        # hilfe braucht keinen Trip-Lookup
+        if key == "hilfe":
+            return self._show_help()
 
         if key not in _VALID_COMMANDS:
             return CommandResult(
@@ -94,7 +98,7 @@ class TripCommandProcessor:
                 confirmation_subject=f"[{msg.trip_name}] Unbekannter Befehl",
                 confirmation_body=(
                     f"'{key}' ist kein gueltiger Befehl.\n"
-                    "Verfuegbar: ruhetag, report, startdatum, abbruch"
+                    "Verfuegbar: ruhetag, report, startdatum, abbruch, status, hilfe"
                 ),
                 trip_name=msg.trip_name,
             )
@@ -119,6 +123,8 @@ class TripCommandProcessor:
             return self._shift_start(trip, value)
         elif key == "abbruch":
             return self._cancel_trip(trip)
+        elif key == "status":
+            return self._show_status(trip)
 
         # Should not reach here due to whitelist check above
         return CommandResult(
@@ -270,6 +276,35 @@ class TripCommandProcessor:
             confirmation_subject=f"[{trip.name}] Startdatum geaendert",
             confirmation_body="\n".join(lines),
             trip_name=trip.name, shifts=shifts,
+        )
+
+    def _show_status(self, trip: Trip) -> CommandResult:
+        """Listet alle Etappen mit Datum."""
+        lines = [f"Status: {trip.name}", ""]
+        for stage in trip.stages:
+            lines.append(f"  {stage.date:%d.%m.%Y} – {stage.name}")
+        return CommandResult(
+            success=True, command="status",
+            confirmation_subject=f"[{trip.name}] Status",
+            confirmation_body="\n".join(lines),
+            trip_name=trip.name,
+        )
+
+    def _show_help(self) -> CommandResult:
+        """Listet alle verfügbaren Befehle mit Syntax."""
+        body = (
+            "Verfügbare Befehle:\n\n"
+            "  ruhetag [N]           – Etappen um N Tage verschieben (Standard: 1)\n"
+            "  startdatum YYYY-MM-DD – Neues Startdatum setzen\n"
+            "  report morning|evening – Sofortigen Bericht anfordern\n"
+            "  status                – Aktuelle Etappenübersicht\n"
+            "  abbruch               – Scheduling deaktivieren\n"
+            "  hilfe                 – Diese Hilfe anzeigen"
+        )
+        return CommandResult(
+            success=True, command="hilfe",
+            confirmation_subject="Hilfe",
+            confirmation_body=body,
         )
 
     def _cancel_trip(self, trip: Trip) -> CommandResult:

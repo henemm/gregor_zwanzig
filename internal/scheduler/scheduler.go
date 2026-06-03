@@ -91,6 +91,7 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 		{"0 * * * *", s.tripReports, "trip_reports_hourly", "Trip Reports (hourly check)"},
 		{"0,30 * * * *", s.alertChecks, "alert_checks", "Alert Checks (every 30 min)"},
 		{"*/5 * * * *", s.inboundCommands, "inbound_command_poll", "Inbound Command Poll (every 5min)"},
+		{"@every 30s", s.inboundTelegram, "inbound_telegram_poll", "Inbound Telegram Poll (every 30s)"},
 		{"0 6 * * *", s.comparePresetsDaily, "compare_presets_daily", "Compare Presets Daily (06:00)"},
 	}
 	for _, j := range jobs {
@@ -104,7 +105,7 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 // Start begins cron scheduling.
 func (s *Scheduler) Start() {
 	s.cron.Start()
-	log.Printf("[scheduler] Started: 4 jobs, timezone %s", s.cron.Location())
+	log.Printf("[scheduler] Started: 5 jobs, timezone %s", s.cron.Location())
 }
 
 // Stop gracefully shuts down the scheduler and waits for running jobs.
@@ -154,6 +155,12 @@ func (s *Scheduler) alertChecks() {
 func (s *Scheduler) inboundCommands() {
 	s.recordRun("inbound_command_poll", func() error {
 		return s.triggerGlobalEndpoint("/api/scheduler/inbound-commands")
+	})
+}
+
+func (s *Scheduler) inboundTelegram() {
+	s.recordRun("inbound_telegram_poll", func() error {
+		return s.triggerGlobalEndpoint("/api/scheduler/inbound-telegram")
 	})
 }
 

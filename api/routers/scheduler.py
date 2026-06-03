@@ -60,6 +60,20 @@ def trigger_inbound():
     return {"status": "ok", "count": count}
 
 
+@router.post("/inbound-telegram")
+def trigger_inbound_telegram():
+    """Trigger Telegram Bot polling."""
+    from app.config import Settings
+    from services.inbound_telegram_reader import InboundTelegramReader
+
+    settings = Settings()
+    if not settings.can_send_telegram():
+        return {"status": "skipped", "reason": "telegram not configured"}
+    reader = InboundTelegramReader()
+    count = reader.poll_and_process(settings)
+    return {"status": "ok", "processed": count}
+
+
 @router.post("/compare-presets-daily")
 def trigger_compare_presets_daily(user_id: str = "default"):
     """Trigger daily compare preset dispatch (called by Go scheduler at 06:00)."""
