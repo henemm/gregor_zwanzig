@@ -71,7 +71,7 @@ def test_find_active_trip_today_overlap(monkeypatch):
 
     monkeypatch.setattr(
         "services.inbound_telegram_reader.load_all_trips",
-        lambda: [trip],
+        lambda user_id="default": [trip],
     )
 
     from services.inbound_telegram_reader import InboundTelegramReader
@@ -101,7 +101,7 @@ def test_find_active_trip_next_future(monkeypatch):
 
     monkeypatch.setattr(
         "services.inbound_telegram_reader.load_all_trips",
-        lambda: [far_trip, near_trip],
+        lambda user_id="default": [far_trip, near_trip],
     )
 
     from services.inbound_telegram_reader import InboundTelegramReader
@@ -123,7 +123,7 @@ def test_find_active_trip_no_trips_returns_none(monkeypatch):
     """
     monkeypatch.setattr(
         "services.inbound_telegram_reader.load_all_trips",
-        lambda: [],
+        lambda user_id="default": [],
     )
 
     from services.inbound_telegram_reader import InboundTelegramReader
@@ -243,7 +243,7 @@ def test_inbound_message_channel_is_telegram(monkeypatch):
 
     monkeypatch.setattr(
         "services.inbound_telegram_reader.load_all_trips",
-        lambda: [trip],
+        lambda user_id="default": [trip],
     )
     monkeypatch.setattr(
         "services.trip_command_processor.TripCommandProcessor.process",

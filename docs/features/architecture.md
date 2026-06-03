@@ -1,6 +1,6 @@
 # Architektur – Gregor Zwanzig
 
-**Updated:** 2026-05-31 (Issue #483 — Demo-Modus im Vorschau-Tab; Issue #495 — MapCanvas Leaflet-Karte; Issue #475 — OutputLayoutEditor zu Organisms)
+**Updated:** 2026-06-03 (Issue #572 — Inbound-Handler Multi-User Routing); 2026-05-31 (Issue #483 — Demo-Modus im Vorschau-Tab; Issue #495 — MapCanvas Leaflet-Karte; Issue #475 — OutputLayoutEditor zu Organisms)
 
 ## Überblick
 Gregor Zwanzig ist ein verteiltes System mit separaten Backend (Go) und Frontend (SvelteKit):
@@ -64,6 +64,36 @@ Channel (E-Mail / Console / SMS)
 - Console = vollständige Ausgabe
 - E-Mail = 1:1 identisches Subset
 - Kern-Debug-Zeilen (immer enthalten): `cfg.path`, `report`, `channel`, `debug`, `dry_run`
+
+## Inbound-Handler (Multi-User Routing)
+
+**Komponenten:** `src/services/inbound_email_reader.py`, `src/services/inbound_telegram_reader.py`
+
+**Zweck:** Eingehende Befehle (E-Mail-Replies, Telegram-Nachrichten) dem richtigen User zuordnen und verarbeiten.
+
+**Workflow:**
+
+1. **Email-Handler** (`InboundEmailReader.poll_and_process()`)
+   - Liest IMAP-Inbox (shared mailbox)
+   - Pro Nachricht: `lookup_user_by_email(from_addr)` → sucht User-Profil mit passender `mail_to`
+   - Fallback: `user_id = "default"` wenn kein User gefunden
+   - Ladet Trips des Nutzers via `load_all_trips(user_id)`
+   - Verarbeitet Befehl (z. B. "status", "help")
+   - Antwortet an die aufgelöste User-Adresse
+
+2. **Telegram-Handler** (`InboundTelegramReader._process_update()`)
+   - Empfängt Telegram-Updates (Webhook oder Polling)
+   - Extrahiert Chat-ID
+   - `lookup_user_by_telegram_chat_id(chat_id)` → findet User-Profil
+   - Fallback: `user_id = "default"` wenn kein User gefunden
+   - Ladet Trips des Nutzers und verarbeitet Befehl
+
+**Lookup-Funktionen** (`src/app/loader.py`):
+- `list_all_user_ids(data_dir)` – alle User-IDs unter `data/users/` (ausschließt test_ / _ Präfixe)
+- `lookup_user_by_email(email)` – sucht User mit `mail_to == email` (case-insensitive)
+- `lookup_user_by_telegram_chat_id(chat_id)` – sucht User mit `telegram_chat_id == chat_id`
+
+**Konfiguration:** Nutzer-Profile liegen in `data/users/<user_id>/user.json` mit Feldern `mail_to` und `telegram_chat_id`.
 
 ---
 

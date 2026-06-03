@@ -92,9 +92,10 @@ class InboundEmailReader:
         _, msg_data = imap.fetch(uid, "(RFC822)")
         msg = email.message_from_bytes(msg_data[0][1])
 
-        # 1. Authorize sender
+        # 1. Resolve user-scoped settings for sender, then authorize
         from_addr = self._parse_sender(msg.get("From", ""))
-        if not self._authorize(from_addr, settings):
+        _user_id, user_settings = self._resolve_settings_for_sender(from_addr, settings)
+        if not self._authorize(from_addr, user_settings):
             imap.store(uid, "+FLAGS", "\\Seen")
             return 0
 
@@ -107,7 +108,7 @@ class InboundEmailReader:
             return 0
 
         # 3. Find trip — error reply if not found
-        trip_id = self._find_trip_id(trip_name)
+        trip_id = self._find_trip_id(trip_name, _user_id)
         if not trip_id:
             result = CommandResult(
                 success=False, command="trip_not_found",
@@ -118,8 +119,8 @@ class InboundEmailReader:
                 ),
                 trip_name=trip_name,
             )
-            if settings.can_send_email():
-                self._send_email_reply(result, settings)
+            if user_settings.can_send_email():
+                self._send_email_reply(result, user_settings)
             imap.store(uid, "+FLAGS", "\\Seen")
             return 0
 
@@ -138,8 +139,8 @@ class InboundEmailReader:
         result = processor.process(inbound)
 
         # 6. Reply on same channel — ALWAYS send (success and error)
-        if settings.can_send_email():
-            self._send_email_reply(result, settings)
+        if user_settings.can_send_email():
+            self._send_email_reply(result, user_settings)
 
         # 7. Mark as read
         imap.store(uid, "+FLAGS", "\\Seen")
@@ -205,10 +206,27 @@ class InboundEmailReader:
                 return payload.decode(charset, errors="replace")
         return ""
 
-    def _find_trip_id(self, trip_name: str) -> str | None:
-        """Case-insensitive name to trip-ID lookup."""
-        for trip in load_all_trips():
+    def _resolve_settings_for_sender(
+        self, from_addr: str, base_settings: Settings, data_dir: str = "data"
+    ) -> tuple[str, Settings]:
+        """Resolve user_id and user-scoped Settings for an incoming sender address.
+
+        Args:
+            from_addr: Sender email address (lowercase expected)
+            base_settings: Base Settings object to derive user profile from
+            data_dir: Root data directory (default: "data")
+
+        Returns:
+            (user_id, user_scoped_settings) — user_id is "default" if no match
+        """
+        from app.loader import lookup_user_by_email
+        user_id = lookup_user_by_email(from_addr, data_dir=data_dir) or "default"
+        return user_id, base_settings.with_user_profile(user_id)
+
+    def _find_trip_id(self, trip_name: str, user_id: str = "default") -> str | None:
+        """Case-insensitive name to trip-ID lookup for the given user."""
+        for trip in load_all_trips(user_id):
             if trip.name.lower() == trip_name.lower():
                 return trip.id
-        logger.warning(f"No trip found for name: {trip_name!r}")
+        logger.warning(f"No trip found for name: {trip_name!r} (user={user_id!r})")
         return None

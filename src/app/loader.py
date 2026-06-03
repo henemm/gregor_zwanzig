@@ -693,6 +693,70 @@ def get_snapshots_dir(user_id: str = "default") -> Path:
     return get_data_dir(user_id) / "weather_snapshots"
 
 
+def list_all_user_ids(data_dir: str = "data") -> list[str]:
+    """Return all user IDs found under data/users/, excluding test and internal users.
+
+    Args:
+        data_dir: Root data directory (default: "data")
+
+    Returns:
+        List of user_id strings (excludes entries starting with 'test' or '_')
+    """
+    users_root = Path(data_dir) / "users"
+    if not users_root.exists():
+        return []
+    return [
+        d.name for d in users_root.iterdir()
+        if d.is_dir()
+        and not d.name.startswith("_")
+        and not d.name.startswith("test")
+    ]
+
+
+def lookup_user_by_email(email: str, data_dir: str = "data") -> str | None:
+    """Find user_id whose mail_to matches the given email address (case-insensitive).
+
+    Args:
+        email: Sender email address to match against user profiles
+        data_dir: Root data directory (default: "data")
+
+    Returns:
+        Matching user_id or None if no match found
+    """
+    for uid in list_all_user_ids(data_dir):
+        profile_path = Path(data_dir) / "users" / uid / "user.json"
+        if profile_path.exists():
+            try:
+                profile = json.loads(profile_path.read_text(encoding="utf-8"))
+                if profile.get("mail_to", "").lower() == email.lower():
+                    return uid
+            except Exception:
+                continue
+    return None
+
+
+def lookup_user_by_telegram_chat_id(chat_id: str, data_dir: str = "data") -> str | None:
+    """Find user_id whose telegram_chat_id matches the given chat_id (int/str-tolerant).
+
+    Args:
+        chat_id: Telegram chat ID to match (compared as strings)
+        data_dir: Root data directory (default: "data")
+
+    Returns:
+        Matching user_id or None if no match found
+    """
+    for uid in list_all_user_ids(data_dir):
+        profile_path = Path(data_dir) / "users" / uid / "user.json"
+        if profile_path.exists():
+            try:
+                profile = json.loads(profile_path.read_text(encoding="utf-8"))
+                if str(profile.get("telegram_chat_id", "")) == str(chat_id):
+                    return uid
+            except Exception:
+                continue
+    return None
+
+
 # =============================================================================
 # Location CRUD
 # =============================================================================

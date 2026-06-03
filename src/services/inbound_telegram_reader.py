@@ -100,10 +100,13 @@ class InboundTelegramReader:
         if not text or not chat_id:
             return False
 
-        # Aktiven Trip ermitteln
-        trip = self._find_active_trip()
+        # Resolve user-scoped settings for this chat_id
+        user_id, user_settings = self._resolve_user_for_chat(chat_id, settings)
+
+        # Aktiven Trip ermitteln (user-scoped)
+        trip = self._find_active_trip(user_id)
         if not trip:
-            TelegramOutput(settings).send(
+            TelegramOutput(user_settings).send(
                 "Fehler",
                 "Kein aktiver Trip gefunden. Erstelle oder aktiviere einen Trip auf gregor20.henemm.com",
             )
@@ -112,7 +115,7 @@ class InboundTelegramReader:
         # Befehl parsen
         key, value = self._parse_command(text)
         if key is None:
-            TelegramOutput(settings).send(
+            TelegramOutput(user_settings).send(
                 "Unbekannter Befehl",
                 "Bekannte Befehle: ruhetag, startdatum, report, abbruch, status, hilfe",
             )
@@ -128,20 +131,20 @@ class InboundTelegramReader:
         )
         result: CommandResult = TripCommandProcessor().process(inbound)
 
-        TelegramOutput(settings).send(
+        TelegramOutput(user_settings).send(
             result.confirmation_subject,
             result.confirmation_body,
         )
         return True
 
-    def _find_active_trip(self) -> Trip | None:
+    def _find_active_trip(self, user_id: str = "default") -> Trip | None:
         """Aktiver Trip = erster Trip mit Datum-Overlap.
 
         Fallback: nächster zukünftiger Trip.
         Gibt None zurück wenn keine Trips existieren.
         """
         today = date.today()
-        trips = load_all_trips()
+        trips = load_all_trips(user_id)
         if not trips:
             return None
 
@@ -158,6 +161,23 @@ class InboundTelegramReader:
             return min(future, key=lambda t: t.stages[0].date)
 
         return None
+
+    def _resolve_user_for_chat(
+        self, chat_id: str, base_settings: Settings, data_dir: str = "data"
+    ) -> tuple[str, Settings]:
+        """Resolve user_id and user-scoped Settings for an incoming Telegram chat ID.
+
+        Args:
+            chat_id: Telegram chat ID (as string)
+            base_settings: Base Settings object to derive user profile from
+            data_dir: Root data directory (default: "data")
+
+        Returns:
+            (user_id, user_scoped_settings) — user_id is "default" if no match
+        """
+        from app.loader import lookup_user_by_telegram_chat_id
+        user_id = lookup_user_by_telegram_chat_id(chat_id, data_dir=data_dir) or "default"
+        return user_id, base_settings.with_user_profile(user_id)
 
     def _parse_command(self, text: str) -> tuple[str | None, str | None]:
         """Parst ersten nicht-leeren Satz: 'ruhetag 2' → ('ruhetag', '2').
