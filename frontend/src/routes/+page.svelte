@@ -348,7 +348,7 @@
 					<div style:padding="20px">
 						<div style:display="flex" style:align-items="center" style:gap="8px" style:margin-bottom="12px">
 							<Pill tone="ok">Aktiv</Pill>
-							<span style:font-size="14px" style:color="var(--g-ink-2)">{compareHero.location_ids.length} Orte</span>
+							<span style:font-size="var(--g-text-sm)" style:color="var(--g-ink-2)">{compareHero.location_ids.length} Orte</span>
 						</div>
 						<div style:font-size="20px" style:font-weight="700" style:margin-bottom="8px">{compareHero.name}</div>
 						<!-- Region falls vorhanden -->
@@ -358,7 +358,7 @@
 							</div>
 						{/if}
 						<!-- Zeitplan-Zeile -->
-						<div style:font-family="var(--g-font-mono)" style:font-size="12px" style:color="var(--g-ink-3)" style:margin-bottom="16px">
+						<div style:font-family="var(--g-font-mono)" style:font-size="var(--g-text-xs)" style:color="var(--g-ink-3)" style:margin-bottom="16px">
 							{compareHero.schedule === 'daily' ? 'täglich' : compareHero.schedule === 'weekly' ? 'wöchentlich' : 'manuell'}
 							{#if compareHero.schedule !== 'manual'} · {String(compareHero.hour_from).padStart(2,'0')}:00{/if}
 						</div>
@@ -497,14 +497,14 @@
 								>
 									<div
 										style:font-family="var(--g-font-mono)"
-										style:font-size="10px"
+										style:font-size="var(--g-text-xs)"
 										style:color="var(--g-ink-3)"
 										style:text-transform="uppercase"
-										style:letter-spacing="0.1em"
+										style:letter-spacing="var(--g-track-caps)"
 										style:margin-bottom="4px"
 									>{t.dates}</div>
 									<div
-										style:font-size="14px"
+										style:font-size="var(--g-text-sm)"
 										style:font-weight="600"
 										style:line-height="1.3"
 										style:margin-bottom="6px"
