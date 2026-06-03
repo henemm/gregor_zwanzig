@@ -31,6 +31,27 @@ if TYPE_CHECKING:
 logger = logging.getLogger("trip_report_scheduler")
 
 
+def _deg_to_compass(degrees) -> str:
+    """Converts wind degrees to 8-point compass direction."""
+    if degrees is None:
+        return ""
+    directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+    idx = round(float(degrees) / 45) % 8
+    return directions[idx]
+
+
+def _trend_note(thunder: str, precip_mm: float, wind_kmh: int) -> str | None:
+    """Returns a hint text when conditions are notable, else None."""
+    notes = []
+    if thunder != "NONE":
+        notes.append("Gewitter möglich")
+    if precip_mm > 5:
+        notes.append(f"Regen {precip_mm:.0f} mm")
+    if wind_kmh > 40:
+        notes.append(f"Böen bis {wind_kmh} km/h")
+    return " · ".join(notes) if notes else None
+
+
 def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Calculate great-circle distance between two points in km."""
     R = 6371.0
@@ -957,22 +978,18 @@ class TripReportSchedulerService:
         tz=None,
     ) -> Optional[list[dict]]:
         """
-        Build trend rows for each future stage using CompactSummaryFormatter.
+        Build trend rows for each future stage (v4.0 column layout).
 
-        Same algorithm as the daily compact summary (F2) — DRY principle.
-
-        SPEC: docs/specs/modules/multi_day_trend.md v3.0
+        SPEC: docs/specs/modules/multi_day_trend.md v4.0
         """
-        from formatters.compact_summary import CompactSummaryFormatter
         from app.metric_catalog import build_default_display_config
         from providers.openmeteo import (
             OPENMETEO_MAX_FORECAST_DAYS,
             is_within_forecast_horizon,
         )
+        from services.weather_metrics import aggregate_stage
 
         WEEKDAYS_DE = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
-        formatter = CompactSummaryFormatter()
-        dc = trip.display_config or build_default_display_config()
 
         future_stages = trip.get_future_stages(target_date)
         if not future_stages:
@@ -980,7 +997,7 @@ class TripReportSchedulerService:
 
         trend = []
         today = date.today()
-        for stage in future_stages:
+        for stage in future_stages[:3]:
             if not is_within_forecast_horizon(stage.date, today):
                 logger.debug(
                     "Stage %s (%s) beyond Open-Meteo forecast horizon (today+%d), skipping trend",
@@ -996,14 +1013,28 @@ class TripReportSchedulerService:
                 if not seg_weather:
                     continue
 
-                summary = formatter.format_stage_summary(seg_weather, stage.name, dc, tz=tz)
+                agg = aggregate_stage(seg_weather)
 
-                trend.append({
-                    "weekday": WEEKDAYS_DE[stage.date.weekday()],
-                    "date": stage.date,
-                    "stage_name": stage.name,
-                    "summary": summary,
-                })
+                temp_lo = int(agg.temp_min_c) if agg.temp_min_c is not None else None
+                temp_hi = int(agg.temp_max_c) if agg.temp_max_c is not None else None
+                precip_mm = float(agg.precip_sum_mm or 0.0)
+                wind_kmh = int(agg.wind_max_kmh or 0)
+                wind_dir = _deg_to_compass(agg.wind_direction_avg_deg)
+                thunder_level = agg.thunder_level_max
+                thunder = thunder_level.name if thunder_level is not None else "NONE"
+                note = _trend_note(thunder, precip_mm, wind_kmh)
+
+                trend.append(dict(
+                    weekday=WEEKDAYS_DE[stage.date.weekday()],
+                    name=stage.name,
+                    temp_lo=temp_lo,
+                    temp_hi=temp_hi,
+                    precip_mm=precip_mm,
+                    wind_dir=wind_dir,
+                    wind_kmh=wind_kmh,
+                    thunder=thunder,
+                    note=note,
+                ))
             except Exception as e:
                 logger.warning(f"Failed to build trend for stage {stage.id}: {e}")
                 continue

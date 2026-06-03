@@ -380,26 +380,101 @@ def render_html(
 
     trend_html = ""
     if multi_day_trend:
-        trend_rows = []
-        for day in multi_day_trend:
-            stage_name_short = shorten_stage_name(day.get("stage_name", ""))
-            summary = day.get("summary", "")
-            trend_rows.append(
-                f'<tr>'
-                f'<td style="vertical-align:top;font-weight:bold;padding:6px 8px">{day["weekday"]}</td>'
-                f'<td style="padding:6px 8px">'
-                f'<div style="font-weight:600">{stage_name_short}</div>'
-                f'<div style="color:{G_INK_MUTED};font-size:12px">{summary}</div>'
-                f'</td>'
-                f'</tr>'
+        trend_rows = ""
+        for i, stage in enumerate(multi_day_trend):
+            sep = 'border-top:1px solid #e7e2d3;' if i > 0 else ''
+
+            # Precip formatting
+            pm = stage.get("precip_mm", 0)
+            if pm and pm > 0:
+                if pm > 1:
+                    precip_html = f'<span style="color:#2c5a8c;font-weight:700">{pm:g}&thinsp;mm</span>'
+                else:
+                    precip_html = f'{pm:g}&thinsp;mm'
+            else:
+                precip_html = '<span style="color:#9a958a">&ndash;</span>'
+
+            # Wind formatting
+            wk = stage.get("wind_kmh", 0) or 0
+            wd = stage.get("wind_dir", "") or ""
+            if wk > 30:
+                wind_html = f'<span style="color:#c45a2a;font-weight:700">{wd}&thinsp;{wk}</span>'
+            else:
+                wind_html = f'{wd}&thinsp;{wk}'
+
+            # Temp formatting
+            tl = stage.get("temp_lo")
+            th = stage.get("temp_hi")
+            if tl is not None and th is not None:
+                temp_html = f'{tl}&#8211;{th}&thinsp;°C'
+            elif th is not None:
+                temp_html = f'{th}&thinsp;°C'
+            else:
+                temp_html = '&ndash;'
+
+            # Thunder ampel
+            thunder = stage.get("thunder", "NONE") or "NONE"
+            thunder_map = {
+                "NONE": ("#9a958a", "kein", "#6b675c"),
+                "MED":  ("#c08a1a", "MED",  "#8c3e1a"),
+                "HIGH": ("#a83232", "HIGH", "#a83232"),
+            }
+            sq_color, thunder_word, word_color = thunder_map.get(thunder, thunder_map["NONE"])
+            thunder_html = (
+                f'<span style="display:inline-block;width:8px;height:8px;'
+                f'background:{sq_color};vertical-align:middle;margin-right:4px"></span>'
+                f'<span style="color:{word_color}">{thunder_word}</span>'
             )
+
+            # Note row
+            note = stage.get("note")
+            note_row = ""
+            if note:
+                note_row = (
+                    f'<tr><td colspan="4" style="padding:2px 0 6px;'
+                    f'font-size:12px;color:#6b675c;font-style:italic">{note}</td></tr>'
+                )
+
+            name = stage.get("name", "")
+            weekday = stage.get("weekday", "")
+
+            trend_rows += f"""
+        <tr style="{sep}">
+          <td colspan="4" style="padding:{('12px' if i > 0 else '8px')} 0 2px;
+            font-size:14px;font-weight:600;color:#1a1a18;font-family:Inter,sans-serif">
+            {weekday} &middot; {name}
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:2px 8px 8px 0;font-size:13px;font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums">{temp_html}</td>
+          <td style="padding:2px 8px 8px 0;font-size:13px;font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums">{precip_html}</td>
+          <td style="padding:2px 8px 8px 0;font-size:13px;font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums">{wind_html}</td>
+          <td style="padding:2px 0 8px;font-size:13px">{thunder_html}</td>
+        </tr>
+        {note_row}
+        """
+
         trend_html = f"""
-            <div style="margin:16px;padding:12px;background:{G_PAPER};border-radius:8px;">
-                <h3 style="margin:0 0 8px 0;font-size:14px;color:{G_INK}">🔮 Naechste Etappen</h3>
-                <table style="width:100%;border-collapse:collapse;font-size:13px">
-                    {"".join(trend_rows)}
-                </table>
-            </div>"""
+    <div style="background:#f6f4ee;border-top:2px solid #1a1a18;padding:22px 28px 24px;margin-top:24px">
+      <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:#9a958a;font-family:'JetBrains Mono',monospace;margin-bottom:4px">05 &middot; Ausblick</div>
+      <div style="font-size:18px;font-weight:700;color:#1a1a18;font-family:Inter,sans-serif;margin-bottom:16px">Nächste Etappen</div>
+      <table width="100%" cellpadding="0" cellspacing="0" style="table-layout:fixed;border-collapse:collapse">
+        <colgroup>
+          <col style="width:120px">
+          <col style="width:84px">
+          <col style="width:112px">
+          <col>
+        </colgroup>
+        <tr style="border-bottom:1px solid #d8d3c2">
+          <th style="text-align:left;padding:0 8px 6px 0;font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:#9a958a;font-family:'JetBrains Mono',monospace;font-weight:400">TEMP</th>
+          <th style="text-align:left;padding:0 8px 6px 0;font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:#9a958a;font-family:'JetBrains Mono',monospace;font-weight:400">REGEN</th>
+          <th style="text-align:left;padding:0 8px 6px 0;font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:#9a958a;font-family:'JetBrains Mono',monospace;font-weight:400">WIND</th>
+          <th style="text-align:left;padding:0 0 6px;font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:#9a958a;font-family:'JetBrains Mono',monospace;font-weight:400">GEWITTER</th>
+        </tr>
+        {trend_rows}
+      </table>
+    </div>
+    """
 
     highlights_html = ""
     if highlights:

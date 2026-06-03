@@ -226,12 +226,36 @@ def render_plain(
         lines.append("")
 
     if multi_day_trend:
-        lines.append("━━ Naechste Etappen ━━")
-        for day in multi_day_trend:
-            stage_name_short = shorten_stage_name(day.get("stage_name", ""))
-            summary = day.get("summary", "")
-            lines.append(f"  {day['weekday']}  {stage_name_short}")
-            lines.append(f"      {summary}")
+        lines.append("")
+        lines.append("Nächste Etappen")
+        for stage in multi_day_trend:
+            weekday = stage.get("weekday", "")
+            name = stage.get("name", "")
+            tl = stage.get("temp_lo")
+            th = stage.get("temp_hi")
+            pm = stage.get("precip_mm", 0)
+            wd = stage.get("wind_dir", "")
+            wk = stage.get("wind_kmh", 0) or 0
+            thunder = stage.get("thunder", "NONE") or "NONE"
+            thunder_map = {"NONE": "⚡–", "MED": "⚡MED", "HIGH": "⚡HIGH"}
+            thunder_str = thunder_map.get(thunder, "⚡–")
+
+            if tl is not None and th is not None:
+                temp_str = f"{tl}–{th}°C"
+            elif th is not None:
+                temp_str = f"{th}°C"
+            else:
+                temp_str = "–"
+
+            precip_str = f"{pm:g}mm" if pm and pm > 0 else "–"
+            wind_str = f"{wd}{wk}" if wd else f"{wk}"
+
+            line = f"{weekday:<3} {name:<26} {temp_str:<8} {precip_str:<5} {wind_str:<5} {thunder_str}"
+            lines.append(line)
+
+            note = stage.get("note")
+            if note:
+                lines.append(f"    ↳ {note}")
         lines.append("")
 
     if highlights:
