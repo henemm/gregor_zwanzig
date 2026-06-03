@@ -1,24 +1,25 @@
 <script lang="ts" module>
-	// Glyph-Mapping: Slug → Mono-Symbol (ASCII/Unicode-Fallback, kein Lucide-Hard-Dep).
+	// Glyph-Mapping: Slug → Mono-Symbol (ASCII, kein Lucide-Hard-Dep).
+	// Issue #573 — Charter-Fix: Unicode-Sonderzeichen durch druckbares ASCII ersetzt.
 	// Hält die Komponente leichtgewichtig und SSR-sicher.
 	export function quickActionGlyph(slug: string): string {
 		switch (String(slug || '').toLowerCase()) {
 			case 'route':
-				return '◆';
+				return '->';
 			case 'metrics':
-				return '~';
+				return '##';
 			case 'clock':
-				return '◷';
+				return '>>';
 			case 'eye':
-				return '◉';
+				return '[]';
 			case 'bell':
-				return '◐';
+				return '/!';
 			case 'send':
-				return '▸';
+				return '>>';
 			case 'pause':
-				return '‖';
+				return '||';
 			default:
-				return '·';
+				return '.';
 		}
 	}
 </script>
@@ -66,7 +67,7 @@
 	data-size={size}
 	style:display="flex"
 	style:align-items="center"
-	style:gap="12px"
+	style:gap="var(--g-s-3)"
 	style:min-height={minH}
 	style:padding="{padY} 14px"
 	style:background="var(--g-card)"
@@ -87,13 +88,13 @@
 		style:background={isAccent ? 'var(--g-accent-tint)' : 'var(--g-paper-deep)'}
 		style:color={isAccent ? 'var(--g-accent-deep)' : 'var(--g-ink-2)'}
 		style:font-family="var(--g-font-mono)"
-		style:font-size="15px"
+		style:font-size="var(--g-text-md)"
 		style:font-weight="600"
 	>{symbol}</span>
 
 	<span style:flex="1" style:min-width="0" style:display="flex" style:flex-direction="column" style:gap="2px">
 		<span
-			style:font-size="14px"
+			style:font-size="var(--g-text-sm)"
 			style:font-weight="600"
 			style:line-height="1.25"
 			style:color="var(--g-ink)"
@@ -102,7 +103,7 @@
 			style:text-overflow="ellipsis"
 		>{label}</span>
 		<span
-			style:font-size="12px"
+			style:font-size="var(--g-text-xs)"
 			style:line-height="1.3"
 			style:color="var(--g-ink-3)"
 			style:white-space="nowrap"
@@ -113,7 +114,7 @@
 
 	<span
 		style:font-family="var(--g-font-mono)"
-		style:font-size="14px"
+		style:font-size="var(--g-text-sm)"
 		style:color="var(--g-ink-3)"
 		style:flex-shrink="0"
 		aria-hidden="true"

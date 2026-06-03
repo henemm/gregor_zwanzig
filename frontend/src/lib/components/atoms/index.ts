@@ -27,6 +27,9 @@ export { default as ElevSparkline } from './ElevSparkline.svelte';
 export { default as TopoBg } from './TopoBg.svelte';
 export { default as Segmented } from './Segmented.svelte';
 
+// Issue #573 — PageHeader Atom
+export { default as PageHeader } from './PageHeader.svelte';
+
 // Typen aus neuen Atomen
 export type { SwitchSize, SwitchTone } from './Switch.svelte';
 export type { AvatarUser } from './AvatarStack.svelte';

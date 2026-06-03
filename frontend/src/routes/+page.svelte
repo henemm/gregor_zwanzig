@@ -10,7 +10,7 @@
 	// - Vergleiche-Sektion + Archiv bleiben unverändert.
 
 	import type { Trip, ComparePreset, CockpitStatus } from '$lib/types.js';
-	import { Card, Pill, Dot, Eyebrow, Btn, SectionH } from '$lib/components/atoms';
+	import { Card, Pill, Dot, Eyebrow, Btn, SectionH, PageHeader } from '$lib/components/atoms';
 	import {
 		BriefingTimelineRow,
 		QuickAction,
@@ -134,34 +134,16 @@
 
 <div class="page-root" style:position="relative" style:max-width="1320px">
 	<!-- Topbar -->
-	<header
-		style:display="flex"
-		style:align-items="center"
-		style:justify-content="space-between"
-		style:padding="20px 0"
-		style:border-bottom="1px solid var(--g-rule-soft)"
-		style:margin-bottom="32px"
+	<PageHeader
+		eyebrow="Übersicht · {todayPretty}"
+		title="Deine Touren & Vergleiche"
+		sub="Was du jetzt vorbereitest, läuft unterwegs autark. Briefings gehen per Email oder Signal, du musst am Berg nichts tun."
 	>
-		<div>
-			<Eyebrow>Übersicht · {todayPretty}</Eyebrow>
-			<div
-				style:font-size="22px"
-				style:font-weight="600"
-				style:margin-top="2px"
-				style:letter-spacing="-0.005em"
-			>Deine Touren & Vergleiche</div>
-			<div
-				style:font-size="0.9375rem"
-				style:color="var(--g-ink-muted)"
-				style:margin-top="4px"
-				style:line-height="1.5"
-			>Was du jetzt vorbereitest, läuft unterwegs autark. Briefings gehen per Email oder Signal, du musst am Berg nichts tun.</div>
-		</div>
-		<div style:display="flex" style:gap="10px" style:align-items="center">
+		{#snippet right()}
 			<Btn href="/compare" variant="ghost" size="sm">Neuer Vergleich</Btn>
 			<Btn href="/trips/new" variant="primary" size="sm">+ Neuer Trip</Btn>
-		</div>
-	</header>
+		{/snippet}
+	</PageHeader>
 
 	{#if isEmpty}
 		<EmptyKachel />
@@ -179,7 +161,7 @@
 							style:margin-bottom="10px"
 						>
 							<Pill tone="accent">
-								<Dot tone="bad" size={6} /> Live · Tag {dayX} von {dayY}
+								<Dot tone="good" size={6} /> Live · Tag {dayX} von {dayY}
 							</Pill>
 						</div>
 
@@ -203,9 +185,9 @@
 						<a
 							href="/trips/{hero.id}?tab=overview"
 							style:display="block"
-							style:font-size="28px"
+							style:font-size="var(--g-text-2xl)"
 							style:font-weight="600"
-							style:letter-spacing="-0.02em"
+							style:letter-spacing="var(--g-track-tight)"
 							style:line-height="1.1"
 							style:margin-bottom="6px"
 							style:color="var(--g-ink)"
@@ -213,7 +195,7 @@
 						>{hero.name}</a>
 						{#if hero.region}
 							<div
-								style:font-size="14px"
+								style:font-size="var(--g-text-sm)"
 								style:color="var(--g-ink-2)"
 								style:margin-bottom="12px"
 							>{hero.region}</div>
