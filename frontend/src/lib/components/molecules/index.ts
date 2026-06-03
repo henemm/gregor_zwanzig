@@ -31,3 +31,7 @@ export { default as CompareIdealRow } from './CompareIdealRow.svelte';
 export { default as CompareLayoutRow } from './CompareLayoutRow.svelte';
 export { default as ReportConfigDialog } from './ReportConfigDialog.svelte';
 export { default as TestReportDialog } from './TestReportDialog.svelte';
+
+// Issue #568 — Startseite-Cockpit-Molecules (Spec: docs/specs/modules/issue_568_home_redesign.md).
+export { default as QuickAction } from './QuickAction.svelte';
+export { default as SetupResumeCard } from './SetupResumeCard.svelte';
