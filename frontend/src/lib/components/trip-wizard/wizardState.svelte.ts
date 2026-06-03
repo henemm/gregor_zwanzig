@@ -290,6 +290,34 @@ export class WizardState {
 	}
 
 	/**
+	 * Füllt den Wizard-State aus einem archivierten Trip (Vorlage).
+	 * Kopiert: activity, Etappen-Namen (keine Waypoints/Daten), alertRules,
+	 * weatherMetrics, channelLayouts. Name/Datum werden NICHT übernommen.
+	 * Issue #559 AC-2, AC-5.
+	 */
+	fromTemplate(trip: Trip): void {
+		this.activity = (trip.activity as ActivityType) ?? null;
+
+		this.stages = (trip.stages ?? []).map((s) => ({
+			id: newId(),
+			name: s.name,
+			date: '',
+			waypoints: [],
+			start_time: undefined as string | undefined
+		}));
+
+		this.alertRules = structuredClone(trip.alert_rules ?? []);
+
+		const dc = trip.display_config as Record<string, unknown> | undefined;
+		if (Array.isArray(dc?.metrics)) {
+			this.weatherMetrics = structuredClone(dc.metrics as WeatherConfigMetric[]);
+		}
+		if (dc?.channel_layouts) {
+			this.channelLayouts = structuredClone(dc.channel_layouts as ChannelLayouts);
+		}
+	}
+
+	/**
 	 * Baut einen persistierbaren Trip aus dem aktuellen Wizard-State.
 	 * - leitet `aggregation.profile` aus `activity` ab (sofern gesetzt)
 	 * - leerer Shortcode wird zu undefined (omitempty-Symmetrie)

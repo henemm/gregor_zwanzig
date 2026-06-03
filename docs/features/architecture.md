@@ -349,6 +349,7 @@ The frontend includes two configurable wizard systems:
 | `/api/trips` | GET/POST | Trip CRUD |
 | `/api/trips/{id}` | GET/PUT/DELETE | Individual trip |
 | `/api/trips/{id}/stages` | GET/POST | Stage management |
+| `/api/trips/{id}/briefing-history` | GET | Briefing delivery log for archived trip (Issue #559) |
 | `/api/locations` | GET/POST | Location library (for compare) |
 | `/api/subscriptions` | GET/POST | Create/list subscriptions (compare) |
 | `/api/subscriptions/{id}` | GET/PUT/DELETE | Individual subscription |
@@ -423,6 +424,7 @@ See `~/.claude/CLAUDE.md` → Monitoring for details.
 
 ## Related Issues
 
+- **#559:** Archive page completion — Briefing-Verlauf modal, Template copy, Event summary ✓
 - **#440:** Compare Wizard shell + Steps 1–2 ✓
 - **#441:** Compare Wizard Step 3 (Ideal Ranges) ✓
 - **#442:** Compare Wizard Step 4 (Layout) — planned

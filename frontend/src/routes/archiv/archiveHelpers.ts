@@ -41,3 +41,14 @@ export function sortArchive(trips: Trip[], mode: ArchiveSortMode): Trip[] {
 	// 'recent' — Enddatum absteigend; leeres Enddatum landet hinten.
 	return list.sort((a, b) => endDate(b).localeCompare(endDate(a)));
 }
+
+/**
+ * Erzeugt die Ereignis-Zusammenfassung für die "Was passiert ist"-Spalte.
+ * Issue #559 AC-3.
+ */
+export function formatEventSummary(briefings: number, alerts: number): string {
+	if (!briefings && !alerts) return '—';
+	const b = `${briefings} Briefing${briefings !== 1 ? 's' : ''}`;
+	if (!alerts) return b;
+	return `${b} · ${alerts} Alert${alerts !== 1 ? 's' : ''}`;
+}

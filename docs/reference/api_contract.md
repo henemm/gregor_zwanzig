@@ -1667,8 +1667,69 @@ Content-Type: text/plain
 
 ---
 
+---
+
+## 21) Briefing History Endpoint (Issue #559)
+
+Lists all sent briefings (morning/evening) for an archived trip, ordered chronologically.
+
+**Handler:** `internal/handler/briefing_history.go` | **Routing:** `cmd/server/main.go`
+
+### GET /api/trips/{id}/briefing-history
+
+Retrieves briefing delivery log for a specific trip (archived or active).
+
+**Path Parameter:**
+- `id`: Trip identifier
+
+**Response 200:**
+
+```json
+[
+  {
+    "sent_at": "2026-06-01T07:00:00Z",
+    "kind": "morning",
+    "channels": ["email"]
+  },
+  {
+    "sent_at": "2026-06-01T18:15:00Z",
+    "kind": "evening",
+    "channels": ["email"]
+  }
+]
+```
+
+**Field Definitions:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| sent_at | datetime | ISO-8601 UTC timestamp of briefing send |
+| kind | enum | Briefing type: `"morning"` or `"evening"` |
+| channels | string[] | Delivery channels used (e.g., `["email"]`, `["email", "signal"]`) |
+
+**Failure Modes:**
+
+- Trip not found or no briefing log: returns empty array `[]` (fail-soft, Issue #559 AC-4)
+- Missing log file on disk: returns `[]` (never 500 error)
+- Unauthorized (no session): HTTP 401
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 401 | (via `AuthMiddleware`) | No valid session cookie |
+
+**Notes:**
+
+- Endpoint is read-only; designed for archive page "Briefing-Verlauf" modal (Issue #559 AC-1)
+- Order: chronological ascending (oldest first)
+- Returns `[]` if trip ID matches no entries (no 404 distinction for missing logs vs. no entries)
+
+---
+
 ## Changelog
 
+- 2026-06-02: Issue #559 — Archive page completion: (1) Added `GET /api/trips/{id}/briefing-history` endpoint (section 21) to display chronological list of sent briefings (morning/evening) with timestamps and channels; (2) Frontend `BriefingHistoryDialog.svelte` modal with formatted timestamps (DD.MM.YYYY HH:MM) and localized kind labels; (3) "Als Vorlage" (Use as Template) button on archive page copies trip config via query param `?from={id}` to wizard page, with `templateTrip` loaded in `+page.server.ts`; (4) "Was passiert ist" (What Happened) column shows formatted event summary via `formatEventSummary(briefings, alerts)` helper. See `docs/specs/modules/issue_559_archiv_fertigstellen.md`.
 - 2026-06-01: Issue #523 — Code-Debt Cleanup: Removed `Waypoint.Suggested` (bool) and `Waypoint.SuggestionReason` (*string) fields from backend Go model (`internal/model/trip.go`). Legacy normalization block in `ConfirmWaypointHandler` removed. Frontend TypeScript `Waypoint` interface no longer declares `suggested?` and `suggestion_reason?` properties. Utility function `stripSuggested()` and all callers removed from waypoint editor. UI component `WaypointPin.suggested` property and dashed-stroke visualization deleted. Cleanup fulfills Constraint C8 from Issue #506 (Remove AI-Suggestion UI). 13 files edited, ~-190 LoC net deletion. Backward compatibility: bestandsdaten mit `"suggested":true` im JSON bleiben lesbar (Go ignoriert unknown JSON fields bei deserialisierung). See `docs/specs/modules/issue_523_suggested_flag_cleanup.md`.
 - 2026-06-01: Issue #497 (BugFix) — Preview SMS Stage-Name + Fixture Fields: ForecastDataPoint from FixtureProvider now reads all 4 demo-mode fields (`cloud_low_pct`, `pop_pct`, `snowfall_limit_m`, `wind_dir_deg`) from fixture JSONs. Preview SMS rendering fixed: `.split(":", 1)[0].strip()` for correct Stage-Name extraction.
 - 2026-05-31: Issue #483 — Demo-Modus im Vorschau-Tab: Added `demo: bool` Query-Parameter to all 4 preview endpoints (`/api/preview/{trip_id}/[email|sms|signal|telegram]`). When `demo=1`, endpoints use FixtureProvider instead of live weather; demo mode ideal for testing preview rendering on past trips. Supports AC-1–AC-6 for demo banner UX and fallback to live weather. See section 20 (new) and `docs/specs/modules/issue_483_demo_mode_preview.md`.

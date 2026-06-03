@@ -16,6 +16,8 @@
 	import CopyIcon from '@lucide/svelte/icons/copy';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 	import SearchIcon from '@lucide/svelte/icons/search';
+	import BriefingHistoryDialog from '$lib/components/briefing-history/BriefingHistoryDialog.svelte';
+	import { formatEventSummary } from './archiveHelpers.js';
 
 	let { data }: { data: PageData } = $props();
 
@@ -31,6 +33,8 @@
 
 	let query = $state('');
 	let sort = $state('recent');
+	let historyTripId = $state<string | null>(null);
+	let historyTripName = $state('');
 
 	// Tour-Zeitraum aus den Etappen-Daten (kein eigenes from/to im Trip-Modell).
 	function stageDates(t: Trip): string[] {
@@ -155,6 +159,13 @@
 	>
 		{filtered.length} von {totalTrips} archivierten Trips · auto-archiviert nach Trip-Ende
 	</div>
+
+	<BriefingHistoryDialog
+		open={historyTripId !== null}
+		tripId={historyTripId ?? ''}
+		tripName={historyTripName}
+		onclose={() => (historyTripId = null)}
+	/>
 </main>
 
 <!-- ArchiveRow: Tabellenzeile, identisches 6-Spalten-Grid wie Kopfzeile. -->
@@ -198,13 +209,14 @@
 		<div
 			style="font-size:12px;color:var(--g-ink-3);line-height:1.4;padding-right:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
 		>
-			—
+			{formatEventSummary(archiveStats.briefings[trip.id] ?? 0, archiveStats.alerts[trip.id] ?? 0)}
 		</div>
 		<div style="display:flex;gap:4px;justify-content:flex-end">
-			<Btn variant="quiet" size="icon-sm" title="Briefing-Verlauf öffnen">
+			<Btn variant="quiet" size="icon-sm" title="Briefing-Verlauf öffnen"
+				onclick={() => { historyTripId = trip.id; historyTripName = trip.name; }}>
 				<HistoryIcon size={14} />
 			</Btn>
-			<Btn variant="quiet" size="icon-sm" title="Als Vorlage neu anlegen">
+			<Btn variant="quiet" size="icon-sm" title="Als Vorlage neu anlegen" href="/trips/new?from={trip.id}">
 				<CopyIcon size={14} />
 			</Btn>
 			<span style="width:1px;height:18px;background:var(--g-rule);margin:0 4px"></span>

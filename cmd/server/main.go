@@ -168,6 +168,7 @@ func main() {
 	r.Patch("/api/trips/{id}/waypoints/{waypointId}/confirm", handler.ConfirmWaypointHandler(s))
 	r.Delete("/api/trips/{id}", handler.DeleteTripHandler(s))
 	r.Get("/api/trips/{id}/stages/weather", handler.StagesWeatherHandler(s, weatherProvider))
+	r.Get("/api/trips/{id}/briefing-history", handler.BriefingHistoryHandler(s))
 	r.Get("/api/subscriptions", handler.SubscriptionsHandler(s))
 	r.Get("/api/subscriptions/{id}", handler.SubscriptionHandler(s))
 	r.Post("/api/subscriptions", handler.CreateSubscriptionHandler(s))

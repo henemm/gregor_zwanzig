@@ -8,6 +8,9 @@
 	// Factory-Pattern: pro Page-Mount eine eigene State-Instanz.
 	// NIEMALS top-level: Safari-Reaktivitaetsrisiko mit Svelte-5-Runen.
 	const state = new WizardState();
+	if (data.templateTrip) {
+		state.fromTemplate(data.templateTrip);
+	}
 	setContext('trip-wizard-state', state);
 
 	// Issue #412 — Profil (Kontaktdaten je Kanal) fuer Step 4 bereitstellen.
