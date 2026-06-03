@@ -79,7 +79,14 @@ python3 .claude/hooks/workflow_state_multi.py phase phase2_analyse
 
 ## Next Step
 
-Inform the user:
-> "Context gathered. Found [N] related files. Next: `/analyse` for detailed analysis."
+Kurze Status-Meldung: „Kontext gesammelt ([N] Dateien). Starte Analyse..."
 
-**IMPORTANT:** Do NOT skip to implementation. Context → Analyse → Spec → Implement.
+Dann SOFORT Phase 2 Analyse ausführen — **kein Gate, nicht den User auffordern `/2-analyse` einzutippen.**
+
+Führe alle Schritte aus `/2-analyse` inline aus:
+1. Bug oder Feature bestimmen → parallele Recherche starten
+2. Strategische Synthese (Plan/sonnet)
+3. PO-Zusammenfassung ausgeben (3 Sätze: Problem / Warum wichtig / Was ich vorhabe)
+4. Auf **'go'** warten — danach zu Phase 3 (Spec) weiterfahren
+
+**WICHTIG:** Der User tippt nach `/1-context` KEINEN weiteren Befehl. Das nächste Gate ist die PO-Zusammenfassung am Ende der Analyse.

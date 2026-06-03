@@ -122,7 +122,7 @@ Before proceeding to implementation:
 
 ## Next Step
 
-Phase 5 abgeschlossen — warte auf `go` vom User. Dann `/5-implement` aufrufen.
+Phase 5 abgeschlossen — warte auf **'go'**. Danach SOFORT Implementierung starten — **NICHT warten, dass der User `/5-implement` eingibt.** Alle Schritte aus `/5-implement` inline ausführen.
 
 ## Common Mistakes
 

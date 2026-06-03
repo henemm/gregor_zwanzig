@@ -42,14 +42,21 @@ Analyze a bug following the **Analysis-First** principle.
 - **Effort:** [Small/Medium/Large]
 ```
 
-## Phase 4: Fix (only after approval!)
+## Phase 4: Übergabe an Workflow
 
-After documentation and user approval:
-1. `/analyse` - Start workflow
-2. `/write-spec` - Specify fix
-3. User: "approved"
-4. `/implement` - Implement fix
-5. `/validate` - Test
+Nach der Dokumentation: PO-Zusammenfassung ausgeben und auf **'go'** warten.
+
+**Das Problem:** [Was ist kaputt, aus Nutzersicht in 1 Satz]
+**Warum das wichtig ist:** [Auswirkung auf den Nutzer in 1 Satz]
+**Was ich vorhabe:** [Was ich bauen werde in 1 Satz]
+
+Sage **'go'** um fortzufahren — oder korrigiere mich.
+
+**STOP: Warte auf 'go'. Danach SOFORT den Workflow starten — kein Befehl vom User nötig:**
+1. Kontext sammeln (Phase 1) + Analyse (Phase 2) → inline ausführen
+2. Spec schreiben + ACs zeigen (Phase 3) → 'go'-Gate
+3. TDD RED + Implementierung + Adversary → automatisch
+4. Validierung + Deploy (Phase 7) → 'go'-Gate vor Produktion
 
 ## STOP Conditions
 

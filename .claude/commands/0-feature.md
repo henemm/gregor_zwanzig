@@ -97,13 +97,24 @@ The feature-planner agent automatically detects the mode:
 - "Add SMS channel + push notifications + risk engine"
 - "Refactor all providers + add caching + add retry logic"
 
-## Integration with Workflow
+## Integration mit Workflow
 
-After feature planning completes:
+Nach Abschluss der Feature-Planung:
 
-1. Feature-planner creates/updates roadmap entry
-2. Feature-planner starts workflow with `/analyse` (or hands off to you)
-3. Follow normal workflow: analyse → write-spec → approve → implement → validate
+1. GitHub Issue anlegen (falls noch nicht vorhanden)
+2. PO-Zusammenfassung ausgeben und auf **'go'** warten:
+
+**Das Feature:** [Was der Nutzer damit tun kann in 1 Satz]
+**Warum das wichtig ist:** [Mehrwert in 1 Satz]
+**Was ich vorhabe:** [Umsetzungsansatz in 1 Satz]
+
+Sage **'go'** um fortzufahren — oder korrigiere mich.
+
+**STOP: Warte auf 'go'. Danach SOFORT den Workflow starten — kein weiterer Befehl vom User nötig:**
+- Kontext sammeln + Analyse (Phasen 1+2, auto-proceed)
+- Spec + ACs zeigen (Phase 3 → 'go'-Gate)
+- TDD RED + Implementierung (automatisch)
+- Validierung + Deploy (Phase 7 → 'go'-Gate vor Produktion)
 
 ## STOP Conditions
 

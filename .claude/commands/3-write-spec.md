@@ -95,11 +95,13 @@ Sage **'go'** um fortzufahren — oder gib mir Feedback.
 
 ## After Approval
 
-When user approves:
+When user says 'go':
 1. `workflow_state_updater` hook detects approval phrase
 2. State advances to `phase4_approved`
-3. Next: `/tdd-red` to write failing tests
+3. SOFORT TDD RED beginnen — **NICHT den User auffordern `/4-tdd-red` einzutippen**
+4. Alle Schritte aus `/4-tdd-red` inline ausführen, danach automatisch zu `/5-implement`
 
 **IMPORTANT:**
 - Do NOT implement until approved
 - Do NOT skip TDD RED phase after approval
+- Do NOT ask user to type any command after approval

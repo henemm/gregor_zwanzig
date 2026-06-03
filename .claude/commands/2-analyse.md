@@ -91,23 +91,22 @@ Gib **immer** diese 3 Sätze aus — in Alltagssprache, kein Fachjargon:
 
 Sage **'go'** um fortzufahren — oder korrigiere mich.
 
-**STOP: Warte auf User-Antwort. Nicht automatisch mit /write-spec fortfahren!**
+**STOP: Warte auf 'go'. Nach 'go' SOFORT weitermachen — NICHT den User auffordern `/3-write-spec` einzutippen.**
 
-### Step 5: Document & Update Workflow State
+### Step 5: Document & Update Workflow State (nach 'go')
 
 Update or create `docs/context/[workflow-name].md` with analysis results.
-
-**Erst ausführen nachdem der User 'go' gesagt hat!**
 
 ```bash
 python3 .claude/hooks/workflow_state_multi.py phase phase3_spec
 ```
 
+Dann direkt mit Spec-Schreiben beginnen (alle Schritte aus `/3-write-spec` inline ausführen).
+
 ## Next Step
 
-When analysis is complete:
-> "Analysis complete. Scope: [N] files, ~[N] LoC. Next: `/write-spec` to create the specification."
+Wenn Analyse abgeschlossen und User 'go' gesagt hat: direkt mit Spec-Schreiben beginnen.
 
-If you have open questions, ask the user before proceeding.
+Bei offenen Fragen: zuerst klären, dann weiter.
 
-**IMPORTANT:** Do NOT start implementation. Analysis → Spec → Approve → TDD RED → Implement.
+**IMPORTANT:** Do NOT start implementation. NEVER ask user to type `/3-write-spec` or any other command to proceed.
