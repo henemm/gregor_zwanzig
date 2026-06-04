@@ -45,6 +45,7 @@
 	const donePct = $derived(total > 0 ? Math.round((doneCount / total) * 100) : 0);
 
 	const barColor = $derived(isAccent ? 'var(--g-accent)' : 'var(--g-ink-2)');
+	const nextStep = $derived(steps.find((s) => !s.done));
 </script>
 
 <article
@@ -139,7 +140,6 @@
 	</div>
 
 	<!-- Footer-Leiste -->
-	{@const nextStep = steps.find(s => !s.done)}
 	<div
 		style:border-top="1px solid var(--g-rule-soft)"
 		style:padding="14px 26px"

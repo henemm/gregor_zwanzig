@@ -36,7 +36,7 @@
 		style:width="6px"
 		style:height="6px"
 		style:border-radius="50%"
-		style:background={on ? 'var(--g-accent)' : 'var(--g-rule)'} <!-- audit:exempt: dot indicator background -->
+		style:background={on ? 'var(--g-accent)' : 'var(--g-rule)'}
 	></span>
 	{on ? 'Im Score' : 'Nicht im Score'}
 </button>

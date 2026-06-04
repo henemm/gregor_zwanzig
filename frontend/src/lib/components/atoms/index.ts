@@ -30,6 +30,9 @@ export { default as Segmented } from './Segmented.svelte';
 // Issue #573 — PageHeader Atom
 export { default as PageHeader } from './PageHeader.svelte';
 
+// Issue #578 — Stat Atom
+export { default as Stat } from './Stat.svelte';
+
 // Typen aus neuen Atomen
 export type { SwitchSize, SwitchTone } from './Switch.svelte';
 export type { AvatarUser } from './AvatarStack.svelte';
