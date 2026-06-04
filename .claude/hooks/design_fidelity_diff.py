@@ -18,15 +18,54 @@ import sys
 from pathlib import Path
 
 SCREEN_URL_MAP = {
-    "G-compare-uebersicht-kacheln": "/compare",
+    # Home (D) — gleiche Route, verschiedene Cockpit-Varianten
     "D-home-trip": "/",
     "D-home-compare": "/",
     "D-home-planning": "/",
+
+    # Trips-Liste (E)
     "E-trips-list-variant": "/trips",
+
+    # Trip-Detail (F) — Standard auf erstem Trip, Tab-Varianten als Hinweis
     "F-trip-detail-overview": "/trips",
+    "F-trip-detail-wetter": "/trips",
+    "F-trip-detail-reports-collapsed": "/trips",
+    "F-trip-detail-reports-expanded": "/trips",
+    "F-trip-detail-editor-top": "/trips",
+
+    # Compare (G)
+    "G-compare-uebersicht-kacheln": "/compare",
+    "G-compare-detail": "/compare",
+    "G-compare-edit": "/compare",
+    "G-compare-edit-locations": "/compare",
+    "G-compare-edit-step1": "/compare/new",
+    "G-compare-new": "/compare/new",
     "G-compare-wizard-step1": "/compare/new",
-    "H-archive": "/archive",
+
+    # Archiv (H) — KORREKTER Route-Pfad ist /archiv (Deutsch), nicht /archive
+    "H-archive": "/archiv",
+
+    # Trip-Wizard (I)
     "I-wizard-step1-route": "/trips/new",
+    "I-wizard-step2-etappen": "/trips/new",
+    "I-wizard-step3-wetter": "/trips/new",
+    "I-wizard-step4-layout": "/trips/new",
+    "I-wizard-step5-reports": "/trips/new",
+
+    # Waypoint-Editor (J) — Trip-Edit Etappen-Tab
+    "J-waypoint-editor-etappen-tab": "/trips",
+
+    # Alert-Config (K) — als Tab im Trip-Detail
+    "K-alert-config-list": "/trips",
+
+    # Metrics-Editor (L) — als Tab im Trip-Detail mit Varianten
+    "L-metrics-editor-table-preview": "/trips",
+    "L-metrics-editor-sms-preview": "/trips",
+    "L-metrics-editor-signal-preview": "/trips",
+    "L-metrics-editor-save-preset": "/trips",
+
+    # Location-New (M) — Modal aus /locations
+    "M-location-new": "/locations",
 }
 
 
