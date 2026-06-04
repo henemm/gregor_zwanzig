@@ -23,3 +23,12 @@ export { default as ChannelPreviewBlock } from '../trip-detail/ChannelPreviewBlo
 export { default as ChannelPreviewCard }  from '../trip-detail/ChannelPreviewCard.svelte';
 export { default as MetricGroup }         from '../trip-detail/MetricGroup.svelte';
 export { default as MetricCheckbox }      from '../trip-detail/MetricCheckbox.svelte';
+
+// Issue #578 — Block C: neue Home-Organisms + Metrics-Organisms
+export { default as HomeHeroTrip }             from './HomeHeroTrip.svelte';
+export { default as HomeHeroCompare }          from './HomeHeroCompare.svelte';
+export { default as OutboxCard }               from './OutboxCard.svelte';
+export { default as AlertsCard }               from './AlertsCard.svelte';
+export { default as PresetRail }               from './PresetRail.svelte';
+export { default as MetricOffShelf }           from './MetricOffShelf.svelte';
+export { default as MetricsEditorContextBar }  from './MetricsEditorContextBar.svelte';

@@ -8,7 +8,7 @@
 	// CTA-Button („Setup fortsetzen"). tone='accent' = Trip (Akzent-Farbe),
 	// tone='default' = Vergleich. CTA-Touch-Target ≥ 44 px (AC-7).
 
-	import { Dot, Btn } from '$lib/components/atoms';
+	import { Btn } from '$lib/components/atoms';
 
 	interface Step {
 		label: string;
@@ -51,12 +51,14 @@
 	class={className}
 	data-tone={tone}
 	style:background="var(--g-card)"
-	style:border="1px solid var(--g-rule-soft)"
+	style:border="1px solid var(--g-rule)"
+	style:border-left={isAccent ? '3px solid var(--g-accent)' : undefined}
 	style:border-radius="var(--g-r-3)"
 	style:padding="var(--g-s-5) var(--g-s-6)"
 	style:display="flex"
 	style:flex-direction="column"
 	style:gap="var(--g-s-3)"
+	style:box-shadow="var(--g-shadow-1)"
 >
 	<header style:display="flex" style:flex-direction="column" style:gap="var(--g-s-1)">
 		<span
@@ -104,45 +106,60 @@
 		>{doneCount} von {total} Schritten</div>
 	</div>
 
-	<!-- Schritt-Checkliste -->
-	<ul
-		style:list-style="none"
-		style:margin="0"
-		style:padding="0"
-		style:display="flex"
-		style:flex-direction="column"
-		style:gap="var(--g-s-1)"
-	>
+	<!-- Schritt-Chips -->
+	<div style:display="flex" style:flex-wrap="wrap" style:gap="7px">
 		{#each steps as step (step.label)}
-			<li
-				style:display="flex"
-				style:align-items="center"
-				style:gap="var(--g-s-2)"
-				style:font-size="var(--g-text-sm)"
-				style:color={step.done ? 'var(--g-ink-3)' : 'var(--g-ink)'}
-			>
-				<Dot tone={step.done ? 'good' : 'neutral'} size={8} />
-				<span>{step.label}</span>
-			</li>
-		{/each}
-	</ul>
-
-	<!-- CTAs -->
-	<div style:display="flex" style:gap="var(--g-s-2)" style:align-items="center" style:margin-top="var(--g-s-1)">
-		<Btn href={ctaHref} variant={isAccent ? 'accent' : 'primary'} size="md">
-			{ctaLabel} →
-		</Btn>
-		{#if secondary}
-			<a
-				href={secondary.href}
-				style:font-size="var(--g-text-sm)"
-				style:color="var(--g-ink-3)"
-				style:text-decoration="none"
-				style:padding="var(--g-s-2) var(--g-s-2)"
-				style:min-height="44px"
+			<span
 				style:display="inline-flex"
 				style:align-items="center"
-			>{secondary.label}</a>
-		{/if}
+				style:gap="6px"
+				style:padding="5px 11px 5px 8px"
+				style:border-radius="var(--g-r-pill)"
+				style:font-size="12px"
+				style:font-weight="500"
+				style:border="1px solid {step.done ? 'var(--g-rule-soft)' : 'var(--g-rule)'}"
+				style:background="{step.done ? 'var(--g-card-alt)' : 'var(--g-card)'}"
+				style:color="{step.done ? 'var(--g-ink-3)' : 'var(--g-ink)'}"
+			>
+				{#if step.done}
+					<span style:width="15px" style:height="15px" style:border-radius="50%"
+						style:background="var(--g-good)" style:display="inline-flex"
+						style:align-items="center" style:justify-content="center" style:flex-shrink="0">
+						<svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2.4">
+							<path d="M2 6l3 3 5-6"/>
+						</svg>
+					</span>
+				{:else}
+					<span style:width="15px" style:height="15px" style:border-radius="50%"
+						style:border="1.5px dashed var(--g-ink-4)" style:flex-shrink="0"></span>
+				{/if}
+				{step.label}
+			</span>
+		{/each}
+	</div>
+
+	<!-- Footer-Leiste -->
+	{@const nextStep = steps.find(s => !s.done)}
+	<div
+		style:border-top="1px solid var(--g-rule-soft)"
+		style:padding="14px 26px"
+		style:background="var(--g-card-alt)"
+		style:display="flex"
+		style:align-items="center"
+		style:justify-content="space-between"
+		style:gap="12px"
+		style:margin="0 calc(-1 * var(--g-s-6)) calc(-1 * var(--g-s-5))"
+		style:border-radius="0 0 var(--g-r-3) var(--g-r-3)"
+	>
+		<span style:font-family="var(--g-font-mono)" style:font-size="11px" style:color="var(--g-ink-3)">
+			{#if nextStep}Weiter bei: <span style:color="var(--g-ink-2)" style:font-weight="600">{nextStep.label}</span>
+			{:else}Bereit zum Aktivieren{/if}
+		</span>
+		<div style:display="flex" style:gap="8px">
+			{#if secondary}
+				<Btn href={secondary.href} variant="ghost" size="sm">{secondary.label}</Btn>
+			{/if}
+			<Btn href={ctaHref} variant={isAccent ? 'accent' : 'primary'} size="sm">{ctaLabel} →</Btn>
+		</div>
 	</div>
 </article>

@@ -39,3 +39,13 @@ export { default as SetupResumeCard } from './SetupResumeCard.svelte';
 // Issue #571 — Home Cockpit Hero (Compare-Modus + CompareStatusRow + Stretch-Fix).
 export { default as CompareStatusRow } from './CompareStatusRow.svelte';
 
+// Issue #578 — Block B: neue Molecules
+export { default as StageCascadeNotice }    from './StageCascadeNotice.svelte';
+export { default as HorizonChips }          from './HorizonChips.svelte';
+export { default as ScoreToggle }           from './ScoreToggle.svelte';
+export { default as CompareChannelSwitch }  from './CompareChannelSwitch.svelte';
+export { default as ComparePreviewMissing } from './ComparePreviewMissing.svelte';
+export { default as CompareChatBubble }     from './CompareChatBubble.svelte';
+export { default as CompareSmsPreview }     from './CompareSmsPreview.svelte';
+export { default as CompareBriefingPreview } from './CompareBriefingPreview.svelte';
+

@@ -50,21 +50,22 @@
 	style:min-height={minH}
 	style:padding="{padY} 14px"
 	style:background="var(--g-card)"
-	style:border="1px solid var(--g-rule-soft)"
+	style:border="1px solid var(--g-rule)"
 	style:border-radius="var(--g-r-3)"
 	style:color="var(--g-ink)"
 	style:text-decoration="none"
-	style:transition="border-color 150ms ease"
+	style:transition="border-color 150ms ease, box-shadow 150ms ease"
+	style:box-shadow="var(--g-shadow-1)"
 >
 	<span
 		style:display="inline-flex"
 		style:align-items="center"
 		style:justify-content="center"
-		style:width="32px"
-		style:height="32px"
+		style:width={isLarge ? '42px' : '38px'}
+		style:height={isLarge ? '42px' : '38px'}
 		style:flex-shrink="0"
 		style:border-radius="var(--g-r-2)"
-		style:background={isAccent ? 'var(--g-accent-tint)' : 'var(--g-paper-deep)'}
+		style:background={isAccent ? 'var(--g-accent-tint)' : 'var(--g-card-alt)'}
 	>
 		{#if glyph === 'pause'}
 		<svg width={svgSize} height={svgSize} viewBox="0 0 24 24" fill="none" stroke={svgColor} stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -118,7 +119,10 @@
 			style:text-overflow="ellipsis"
 		>{label}</span>
 		<span
-			style:font-size="var(--g-text-xs)"
+			style:font-family="var(--g-font-mono)"
+			style:font-size="10.5px"
+			style:text-transform="uppercase"
+			style:letter-spacing="0.04em"
 			style:line-height="1.3"
 			style:color="var(--g-ink-3)"
 			style:white-space="nowrap"
@@ -127,18 +131,15 @@
 		>{sub}</span>
 	</span>
 
-	<span
-		style:font-family="var(--g-font-mono)"
-		style:font-size="var(--g-text-sm)"
-		style:color="var(--g-ink-3)"
-		style:flex-shrink="0"
-		aria-hidden="true"
-	>›</span>
+	<span style:flex-shrink="0" aria-hidden="true">
+		<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-4)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+	</span>
 </a>
 
 <style>
 	a:hover {
-		border-color: var(--g-accent) !important;
+		border-color: var(--g-ink-3) !important;
+		box-shadow: var(--g-shadow-2) !important;
 	}
 	a:focus-visible {
 		outline: 2px solid var(--g-accent);

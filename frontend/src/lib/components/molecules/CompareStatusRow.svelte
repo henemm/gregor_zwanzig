@@ -65,16 +65,18 @@
 	</span>
 
 	<!-- Kanal-Chips -->
-	{#each preset.empfaenger as emp (emp)}
-		<span
-			style:font-size="11px"
-			style:padding="2px 6px"
-			style:background="var(--g-card-alt)"
-			style:border="1px solid var(--g-rule-soft)"
-			style:border-radius="3px"
-			style:white-space="nowrap"
-		>{emp}</span>
-	{/each}
+	{#if preset.empfaenger && preset.empfaenger.length > 0}
+		{#each preset.empfaenger as emp (emp)}
+			<span
+				style:font-size="11px"
+				style:padding="2px 6px"
+				style:background="var(--g-card-alt)"
+				style:border="1px solid var(--g-rule-soft)"
+				style:border-radius="3px"
+				style:white-space="nowrap"
+			>{emp}</span>
+		{/each}
+	{/if}
 
 	<!-- Pfeil -->
 	<span style:color="var(--g-ink-3)" style:font-size="14px">→</span>
