@@ -195,6 +195,14 @@ class InboundTelegramReader:
             )
             if resp.status_code == 200:
                 logger.info(f"Telegram chat_id {chat_id} via token registriert")
+                try:
+                    confirm_settings = settings.model_copy(update={"telegram_chat_id": chat_id})
+                    TelegramOutput(confirm_settings).send(
+                        "Verbunden",
+                        "✓ Du bist jetzt mit Gregor verbunden! Sende 'hilfe' für verfügbare Befehle.",
+                    )
+                except Exception as ce:
+                    logger.warning(f"Bestätigungsnachricht fehlgeschlagen: {ce}")
             else:
                 logger.warning(f"telegram-connect returned {resp.status_code}")
         except Exception as e:

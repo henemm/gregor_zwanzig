@@ -31,6 +31,7 @@ func main() {
 	}
 
 	s := store.New(cfg.DataDir, cfg.UserID)
+	handler.InitTelegramTokenStore(cfg.DataDir)
 
 	// Seed default user from ENV credentials on first run
 	if !s.UserExists(cfg.UserID) && cfg.AuthPass != "" {

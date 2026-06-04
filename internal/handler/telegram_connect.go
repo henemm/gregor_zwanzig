@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -15,8 +16,50 @@ import (
 )
 
 type pendingTelegramToken struct {
-	UserID    string
-	ExpiresAt time.Time
+	UserID    string    `json:"user_id"`
+	ExpiresAt time.Time `json:"expires_at"`
+}
+
+var telegramTokensPath string
+
+func InitTelegramTokenStore(dataDir string) {
+	telegramTokensPath = filepath.Join(dataDir, "telegram_tokens.json")
+	loadTelegramTokens()
+}
+
+func loadTelegramTokens() {
+	if telegramTokensPath == "" {
+		return
+	}
+	data, err := os.ReadFile(telegramTokensPath)
+	if err != nil {
+		return // fail-soft: file not yet created
+	}
+	var saved map[string]pendingTelegramToken
+	if err := json.Unmarshal(data, &saved); err != nil {
+		return
+	}
+	telegramTokensMu.Lock()
+	defer telegramTokensMu.Unlock()
+	now := time.Now()
+	for k, v := range saved {
+		if now.Before(v.ExpiresAt) {
+			telegramTokens[k] = v
+		}
+	}
+}
+
+func saveTelegramTokens() {
+	if telegramTokensPath == "" {
+		return
+	}
+	telegramTokensMu.Lock()
+	data, err := json.Marshal(telegramTokens)
+	telegramTokensMu.Unlock()
+	if err != nil {
+		return
+	}
+	_ = os.WriteFile(telegramTokensPath, data, 0600)
 }
 
 var (
@@ -56,6 +99,7 @@ func GetTelegramLinkHandler(s *store.Store) http.HandlerFunc {
 		telegramTokensMu.Lock()
 		telegramTokens[token] = pendingTelegramToken{UserID: userID, ExpiresAt: time.Now().Add(24 * time.Hour)}
 		telegramTokensMu.Unlock()
+		saveTelegramTokens()
 
 		connected := user.TelegramChatID != ""
 		suffix := ""
@@ -125,6 +169,7 @@ func PostTelegramConnectHandler(s *store.Store) http.HandlerFunc {
 			delete(telegramTokens, body.Token)
 		}
 		telegramTokensMu.Unlock()
+		saveTelegramTokens()
 
 		if !ok || time.Now().After(pt.ExpiresAt) {
 			http.Error(w, "token invalid or expired", http.StatusUnprocessableEntity)

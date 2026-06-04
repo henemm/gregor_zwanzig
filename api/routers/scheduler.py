@@ -13,8 +13,12 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
 
+from app.config import Settings
+
 router = APIRouter(prefix="/api/scheduler", tags=["scheduler"])
 logger = logging.getLogger("scheduler.trigger")
+
+_telegram_reader = None
 
 
 @router.post("/trip-reports")
@@ -63,14 +67,15 @@ def trigger_inbound():
 @router.post("/inbound-telegram")
 def trigger_inbound_telegram():
     """Trigger Telegram Bot polling."""
-    from app.config import Settings
+    global _telegram_reader
     from services.inbound_telegram_reader import InboundTelegramReader
 
     settings = Settings()
     if not settings.can_send_telegram():
         return {"status": "skipped", "reason": "telegram not configured"}
-    reader = InboundTelegramReader()
-    count = reader.poll_and_process(settings)
+    if _telegram_reader is None:
+        _telegram_reader = InboundTelegramReader()
+    count = _telegram_reader.poll_and_process(settings)
     return {"status": "ok", "processed": count}
 
 
