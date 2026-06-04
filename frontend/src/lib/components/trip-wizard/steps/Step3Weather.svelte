@@ -87,7 +87,8 @@
 	onMount(async () => {
 		try {
 			catalog = await api.get<MetricCatalog>('/api/metrics');
-		} catch {
+		} catch (e) {
+			console.error(e);
 			catalog = {};
 		} finally {
 			loading = false;

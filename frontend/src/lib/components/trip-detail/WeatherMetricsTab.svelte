@@ -154,6 +154,7 @@
 			userPresets = presetData;
 			initFromTrip();
 		} catch (e: unknown) {
+			console.error(e);
 			saveError = (e as { error?: string })?.error ?? 'Fehler beim Laden';
 		} finally {
 			loading = false;
@@ -229,7 +230,8 @@
 			buckets = snap.buckets;
 			friendlyMap = snap.friendlyMap;
 			horizonsMap = snap.horizonsMap ?? {};
-		} catch {
+		} catch (e) {
+			console.error(e);
 			initFromTrip();
 		}
 	}

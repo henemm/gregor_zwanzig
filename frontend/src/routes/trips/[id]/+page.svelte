@@ -107,7 +107,8 @@
 	async function handleTestBriefing(): Promise<void> {
 		try {
 			await fetch('/api/scheduler/trip-reports?hour=18', { method: 'POST' });
-		} catch {
+		} catch (e) {
+			console.error(e);
 			// fail silently
 		}
 	}

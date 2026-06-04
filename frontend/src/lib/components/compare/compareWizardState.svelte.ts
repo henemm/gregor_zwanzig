@@ -128,7 +128,8 @@ export class CompareWizardState {
 				send_telegram: this.sendTelegram
 			});
 			this.subscriptionEnabled = newEnabled;
-		} catch {
+		} catch (e) {
+			console.error(e);
 			// Fehler still — kein saveError hier (Sofort-Aktion ohne sichtbares Feedback)
 		}
 	}

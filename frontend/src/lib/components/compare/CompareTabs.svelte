@@ -39,7 +39,8 @@
 		try {
 			const data = await api.get<{ mail_to?: string; email?: string; telegram_chat_id?: string }>('/api/auth/profile');
 			userProfile = data;
-		} catch {
+		} catch (e) {
+			console.error(e);
 			// Profil nicht erreichbar — Fallback auf preset-Daten
 		}
 	});
