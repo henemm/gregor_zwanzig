@@ -79,7 +79,7 @@
 
 	// Tab-Daten ──────────────────────────────────────────────────────────────────
 
-	const status = $derived(deriveStatusFromPreset(preset));
+	const status = $derived(deriveStatusFromPreset({ ...preset, schedule: localSchedule as ComparePreset['schedule'] }));
 	const statusInfo = $derived(STATUS_MAP[status]);
 
 	// Orts-Auflösung: location_ids → locations[] (mit elevation_m für CompareLocationRow).
@@ -169,8 +169,8 @@
 		try {
 			await api.put(`/api/compare/presets/${preset.id}`, { ...preset, schedule: next });
 			localSchedule = next;
-		} catch {
-			// State bleibt unverändert bei Fehler
+		} catch (e) {
+			console.error('[CompareTabs] toggleActive failed:', e);
 		}
 	}
 </script>

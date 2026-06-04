@@ -495,3 +495,148 @@ func TestCreateComparePreset_AppearsInList(t *testing.T) {
 
 // Compile-time import guard — ensures time package is used
 var _ = time.Now
+
+// =============================================================================
+// Bug #591 — Round-Trip: Lowercase profil muss PUT akzeptieren (AC-1)
+// =============================================================================
+
+// TestUpdateComparePreset_LowercaseProfil_RoundTrip prüft dass ein per Store
+// direkt angelegtes Preset mit lowercase profil ("allgemein") per PUT
+// aktualisiert werden kann — HTTP 200, kein 400 validation_error.
+// Simuliert bestehende Daten die vor Einführung der API-Validation angelegt wurden.
+func TestUpdateComparePreset_LowercaseProfil_RoundTrip(t *testing.T) {
+	s := newTestStore(t).WithUser("user1")
+
+	// Direkt in den Store schreiben (simuliert migrierte/geseedete Daten mit lowercase profil)
+	seeded := model.ComparePreset{
+		ID:          "cp-seed-allgemein",
+		UserID:      "user1",
+		Name:        "Mallorca Test",
+		LocationIDs: []string{"loc-a", "loc-b"},
+		Schedule:    "daily",
+		Profil:      "allgemein", // Lowercase — wie in bestehenden Daten
+		HourFrom:    9,
+		HourTo:      16,
+		Empfaenger:  []string{"test@example.com"},
+		CreatedAt:   time.Now().UTC(),
+	}
+	if err := s.SaveComparePresets([]model.ComparePreset{seeded}); err != nil {
+		t.Fatalf("setup: SaveComparePresets: %v", err)
+	}
+
+	// PUT mit demselben lowercase profil + schedule auf "manual"
+	updateBody := map[string]interface{}{
+		"name":         seeded.Name,
+		"location_ids": seeded.LocationIDs,
+		"schedule":     "manual",
+		"profil":       "allgemein", // Lowercase wie im Preset gespeichert
+		"hour_from":    seeded.HourFrom,
+		"hour_to":      seeded.HourTo,
+		"empfaenger":   seeded.Empfaenger,
+	}
+
+	r := chi.NewRouter()
+	r.Put("/api/compare/presets/{id}", UpdateComparePresetHandler(s))
+	req := httptest.NewRequest("PUT", "/api/compare/presets/"+seeded.ID, jsonBody(t, updateBody))
+	req.Header.Set("Content-Type", "application/json")
+	req = addUserToContext(req, "user1")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("AC-1 FAIL: expected 200 for lowercase profil, got %d: %s", w.Code, w.Body.String())
+	}
+	var updated model.ComparePreset
+	if err := json.Unmarshal(w.Body.Bytes(), &updated); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if updated.Schedule != "manual" {
+		t.Errorf("AC-2 FAIL: expected schedule=manual, got %q", updated.Schedule)
+	}
+}
+
+// TestUpdateComparePreset_LowercaseWintersport_RoundTrip prüft "wintersport" (lowercase).
+func TestUpdateComparePreset_LowercaseWintersport_RoundTrip(t *testing.T) {
+	s := newTestStore(t).WithUser("user1")
+
+	seeded := model.ComparePreset{
+		ID:          "cp-seed-wintersport",
+		UserID:      "user1",
+		Name:        "Zillertal",
+		LocationIDs: []string{"loc-z"},
+		Schedule:    "daily",
+		Profil:      "wintersport", // Lowercase
+		HourFrom:    8,
+		HourTo:      14,
+		Empfaenger:  []string{},
+		CreatedAt:   time.Now().UTC(),
+	}
+	if err := s.SaveComparePresets([]model.ComparePreset{seeded}); err != nil {
+		t.Fatalf("setup: SaveComparePresets: %v", err)
+	}
+
+	updateBody := map[string]interface{}{
+		"name":         seeded.Name,
+		"location_ids": seeded.LocationIDs,
+		"schedule":     "manual",
+		"profil":       "wintersport",
+		"hour_from":    seeded.HourFrom,
+		"hour_to":      seeded.HourTo,
+		"empfaenger":   seeded.Empfaenger,
+	}
+
+	r := chi.NewRouter()
+	r.Put("/api/compare/presets/{id}", UpdateComparePresetHandler(s))
+	req := httptest.NewRequest("PUT", "/api/compare/presets/"+seeded.ID, jsonBody(t, updateBody))
+	req.Header.Set("Content-Type", "application/json")
+	req = addUserToContext(req, "user1")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("AC-1 FAIL: expected 200 for lowercase wintersport, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+// TestUpdateComparePreset_LowercaseWandern_RoundTrip prüft "wandern" → ALPINE_TOURING mapping.
+func TestUpdateComparePreset_LowercaseWandern_RoundTrip(t *testing.T) {
+	s := newTestStore(t).WithUser("user1")
+
+	seeded := model.ComparePreset{
+		ID:          "cp-seed-wandern",
+		UserID:      "user1",
+		Name:        "Alpen",
+		LocationIDs: []string{"loc-a"},
+		Schedule:    "daily",
+		Profil:      "wandern",
+		HourFrom:    7,
+		HourTo:      17,
+		Empfaenger:  []string{},
+		CreatedAt:   time.Now().UTC(),
+	}
+	if err := s.SaveComparePresets([]model.ComparePreset{seeded}); err != nil {
+		t.Fatalf("setup: SaveComparePresets: %v", err)
+	}
+
+	updateBody := map[string]interface{}{
+		"name":         seeded.Name,
+		"location_ids": seeded.LocationIDs,
+		"schedule":     "manual",
+		"profil":       "wandern",
+		"hour_from":    seeded.HourFrom,
+		"hour_to":      seeded.HourTo,
+		"empfaenger":   seeded.Empfaenger,
+	}
+
+	r := chi.NewRouter()
+	r.Put("/api/compare/presets/{id}", UpdateComparePresetHandler(s))
+	req := httptest.NewRequest("PUT", "/api/compare/presets/"+seeded.ID, jsonBody(t, updateBody))
+	req.Header.Set("Content-Type", "application/json")
+	req = addUserToContext(req, "user1")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("AC-1 FAIL: expected 200 for lowercase wandern, got %d: %s", w.Code, w.Body.String())
+	}
+}

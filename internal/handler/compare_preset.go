@@ -34,6 +34,27 @@ func newComparePresetID() string {
 	return "cp-" + hex.EncodeToString(b)
 }
 
+// profileNormMap maps frontend/storage lowercase profile names to engine uppercase constants.
+// Accepts both frontend namespace ("allgemein") and engine namespace ("ALLGEMEIN").
+var profileNormMap = map[string]string{
+	"allgemein":       "ALLGEMEIN",
+	"wintersport":     "WINTERSPORT",
+	"wandern":         "ALPINE_TOURING",
+	"summer_trekking": "SUMMER_TREKKING",
+	// engine namespace passthrough
+	"ALLGEMEIN":      "ALLGEMEIN",
+	"WINTERSPORT":    "WINTERSPORT",
+	"ALPINE_TOURING": "ALPINE_TOURING",
+	"SUMMER_TREKKING": "SUMMER_TREKKING",
+}
+
+func normalizeProfile(s string) string {
+	if norm, ok := profileNormMap[s]; ok {
+		return norm
+	}
+	return s
+}
+
 func validateComparePreset(p model.ComparePreset) error {
 	if strings.TrimSpace(p.Name) == "" {
 		return fmt.Errorf("name is required")
@@ -41,7 +62,7 @@ func validateComparePreset(p model.ComparePreset) error {
 	if p.Schedule != "daily" && p.Schedule != "weekly" && p.Schedule != "manual" {
 		return fmt.Errorf("schedule must be daily, weekly, or manual")
 	}
-	if !compare.IsValidProfile(compare.ActivityProfile(p.Profil)) {
+	if !compare.IsValidProfile(compare.ActivityProfile(normalizeProfile(p.Profil))) {
 		return fmt.Errorf("profil is not a valid activity profile")
 	}
 	if p.HourFrom < 0 || p.HourFrom > 23 {
