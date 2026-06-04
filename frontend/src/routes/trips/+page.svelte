@@ -2,13 +2,13 @@
 	import type { Trip } from '$lib/types.js';
 	import { api } from '$lib/api.js';
 	import { goto } from '$app/navigation';
-	import { Btn, Input, Dot, Eyebrow, Pill } from '$lib/components/atoms';
+	import { Btn, Input, Dot, Eyebrow, Pill, Stat, Card } from '$lib/components/atoms';
 	import { ConfirmDialog, ReportConfigDialog, TestReportDialog } from '$lib/components/molecules';
-	import { DropdownMenu } from 'bits-ui';
 	import SearchIcon from '@lucide/svelte/icons/search';
 	import BellIcon from '@lucide/svelte/icons/bell';
 	import CloudSunIcon from '@lucide/svelte/icons/cloud-sun';
 	import PlayIcon from '@lucide/svelte/icons/play';
+import PauseIcon from '@lucide/svelte/icons/pause';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 	import EllipsisVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
@@ -274,26 +274,22 @@
 	<div class="flex items-start justify-between gap-4">
 		<div>
 			<Eyebrow>WORKSPACE · TRIPS</Eyebrow>
-			<h1 class="text-3xl font-semibold tracking-tight mt-1">Meine Trips</h1>
+			<h1 style="font-size: 32px; font-weight: 600; letter-spacing: -0.025em; margin-top: 4px;">Trips</h1>
 			<p class="text-sm text-muted-foreground mt-1">Alle Trips auf einen Blick — Status, Zeitraum und Aktionen.</p>
 		</div>
 		<Btn variant="accent" onclick={() => goto('/trips/new')}>+ Neuer Trip</Btn>
 	</div>
 
 	{#if trips.length > 0}
-		<div class="hidden desktop:flex items-center gap-6 pb-3 border-b border-muted">
-			{#each [
-				{ label: 'Aktiv',         status: 'aktiv'   as const },
-				{ label: 'Geplant',       status: 'geplant' as const },
-				{ label: 'Abgeschlossen', status: 'fertig'  as const },
-				{ label: 'Drafts',        status: 'draft'   as const },
-			] as stat (stat.status)}
-				{@const count = trips.filter(t => tripStatus(t, now) === stat.status).length}
-				<div class="flex items-center gap-2">
-					<span style="font-size:22px;font-weight:700;color:var(--g-accent);line-height:1">{count}</span>
-					<span style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--g-ink-muted)">{stat.label}</span>
-				</div>
-			{/each}
+		<div class="hidden desktop:flex" style="gap: 24px; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--g-rule-soft);">
+			{@const countAktiv = trips.filter(t => tripStatus(t, now) === 'aktiv').length}
+			{@const countGeplant = trips.filter(t => tripStatus(t, now) === 'geplant').length}
+			{@const countFertig = trips.filter(t => tripStatus(t, now) === 'fertig').length}
+			{@const countDraft = trips.filter(t => tripStatus(t, now) === 'draft').length}
+			<Stat label="Aktiv"        value={countAktiv}   layout="inline" tone="accent" />
+			<Stat label="Geplant"      value={countGeplant} layout="inline" />
+			<Stat label="Abgeschlossen" value={countFertig} layout="inline" />
+			<Stat label="Drafts"       value={countDraft}   layout="inline" />
 		</div>
 	{/if}
 
@@ -372,101 +368,74 @@
 				</div>
 			{/each}
 		</div>
-		<div class="hidden desktop:block overflow-x-auto -mx-4 px-4 desktop:mx-0 desktop:px-0">
-		<table class="w-full caption-bottom text-sm">
-			<thead class="[&_tr]:border-b">
-				<tr class="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-					<th class="h-10 px-2 text-left align-middle font-medium text-muted-foreground">Name</th>
-					<th class="h-10 px-2 text-left align-middle font-medium text-muted-foreground hidden sm:table-cell">Zeitraum</th>
-					<th class="h-10 px-2 text-right align-middle font-medium text-muted-foreground">Aktionen</th>
-				</tr>
-			</thead>
-			<tbody class="[&_tr:last-child]:border-0">
-				{#each filteredTrips as trip}
-					<tr onclick={function() { goto(`/trips/${trip.id}`); }} class="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted cursor-pointer">
-						<td class="p-2 align-middle">
-							<div class="flex flex-col min-w-0">
-								<div class="flex items-baseline gap-0">
-									<a href="/trips/{trip.id}" class="trip-link font-medium truncate hover:underline decoration-[var(--g-accent)] underline-offset-2">
-										{trip.name}
-									</a><span class="status-caption font-mono text-[9px] uppercase tracking-widest text-[var(--g-ink-4)] ml-1.5">· {tripStatus(trip, now)}</span>
-								</div>
-								<span class="font-mono text-xs text-muted-foreground tabular-nums">
-									{trip.stages?.length ?? 0} Etappen
-								</span>
-							</div>
-						</td>
-						<td class="p-2 align-middle hidden sm:table-cell font-mono tabular-nums text-sm text-muted-foreground">
-							{dateRange(trip)}
-						</td>
-						<td class="p-2 align-middle text-right" onclick={(e) => e.stopPropagation()}>
-							<div class="inline-flex items-center gap-2">
-								<Btn
-									variant="outline"
-									size="sm"
-									onclick={() => handlePrimaryAction(trip)}
-									disabled={primaryActionLoading === trip.id}
-								>{primaryLabel(trip)}</Btn>
-								<DropdownMenu.Root>
-									<DropdownMenu.Trigger>
-										{#snippet child({ props })}
-											<Btn
-												{...props}
-												variant="ghost"
-												size="icon-sm"
-												title="Weitere Aktionen"
-												aria-label="Weitere Aktionen"
-											>⋯</Btn>
-										{/snippet}
-									</DropdownMenu.Trigger>
-									<DropdownMenu.Content
-										align="end"
-										sideOffset={4}
-										class="z-50 min-w-[200px] rounded-md border bg-popover shadow-md py-1"
-									>
-										<DropdownMenu.Item
-											data-testid="trip-edit-btn"
-											class="w-full text-left px-3 py-1.5 text-sm hover:bg-muted cursor-default outline-none"
-											onSelect={() => openEdit(trip)}
-										>Bearbeiten</DropdownMenu.Item>
-										<DropdownMenu.Item
-											class="w-full text-left px-3 py-1.5 text-sm hover:bg-muted cursor-default outline-none"
-											onSelect={() => handlePauseToggle(trip)}
-										>{trip.paused_at ? 'Reaktivieren' : 'Pausieren'}</DropdownMenu.Item>
-										<DropdownMenu.Item
-											class="w-full text-left px-3 py-1.5 text-sm hover:bg-muted cursor-default outline-none"
-											onSelect={() => runTestReport(trip, 7)}
-										>Test-Briefing Morgen</DropdownMenu.Item>
-										<DropdownMenu.Item
-											class="w-full text-left px-3 py-1.5 text-sm hover:bg-muted cursor-default outline-none"
-											onSelect={() => runTestReport(trip, 18)}
-										>Test-Briefing Abend</DropdownMenu.Item>
-										<DropdownMenu.Item
-											class="w-full text-left px-3 py-1.5 text-sm hover:bg-muted cursor-default outline-none"
-											onSelect={() => goto(`/trips/${trip.id}#weather`)}
-										>Wetter-Konfiguration</DropdownMenu.Item>
-										<DropdownMenu.Item
-											class="w-full text-left px-3 py-1.5 text-sm hover:bg-muted cursor-default outline-none"
-											onSelect={() => openReportConfig(trip)}
-										>Alerts justieren</DropdownMenu.Item>
-										<DropdownMenu.Separator class="my-1 h-px bg-border" />
-										<DropdownMenu.Item
-											class="w-full text-left px-3 py-1.5 text-sm text-destructive hover:bg-muted cursor-default outline-none"
-											onSelect={() => { deleteTarget = trip; }}
-										>Löschen</DropdownMenu.Item>
-									</DropdownMenu.Content>
-								</DropdownMenu.Root>
-							</div>
-						</td>
-					</tr>
-				{/each}
-			</tbody>
-		</table>
-		<p class="hidden desktop:block mt-2">
-			<span class="font-mono text-xs uppercase tracking-widest">
-				{filteredTrips.length} Trips · {trips.length - filteredTrips.length} versteckt
-			</span>
-		</p>
+		<!-- Desktop Grid-Tabelle (Issue #580) -->
+		<div class="hidden desktop:block">
+		<Card padding={0} style="overflow: hidden;">
+			<!-- Header-Zeile -->
+			<div style="display: grid; grid-template-columns: 1.6fr 0.8fr 1.4fr auto; gap: 0; padding: 12px 20px; background: var(--g-paper-deep); font-size: 11px; font-family: var(--g-font-mono); letter-spacing: 0.18em; text-transform: uppercase; color: var(--g-ink-3); font-weight: 500; border-bottom: 1px solid var(--g-rule);">
+				<div>Name</div>
+				<div>Etappen</div>
+				<div>Zeitraum</div>
+				<div style="text-align: right;">Aktionen</div>
+			</div>
+			<!-- Trip-Zeilen -->
+			{#each filteredTrips as trip, i (trip.id)}
+				{@const st = tripStatus(trip, now)}
+				{@const dotColor = st === 'aktiv' ? 'var(--g-accent)' : st === 'geplant' ? '#3d6b3a' : st === 'fertig' ? 'var(--g-ink-3)' : 'var(--g-ink-4)'}
+				<div style="display: grid; grid-template-columns: 1.6fr 0.8fr 1.4fr auto; align-items: center; padding: 16px 20px; background: {i % 2 === 1 ? 'var(--g-paper-deep)' : 'transparent'}; border-bottom: 1px solid var(--g-rule-soft); gap: 0;">
+					<!-- Spalte 1: Name -->
+					<div style="display: flex; align-items: center; gap: 10px;">
+						<span style="width: 7px; height: 7px; border-radius: 50%; background: {dotColor}; flex-shrink: 0;"></span>
+						<span style="font-size: 14px; font-weight: 600; letter-spacing: -0.01em;">{trip.name}</span>
+						<span class="status-caption" style="font-size: 10px; font-family: var(--g-font-mono); color: var(--g-ink-4); text-transform: uppercase; letter-spacing: 0.16em;">· {st}</span>
+					</div>
+					<!-- Spalte 2: Etappen -->
+					<div style="font-size: 13px; color: var(--g-ink-2); font-variant-numeric: tabular-nums;">
+						{trip.stages?.length ?? 0} {(trip.stages?.length ?? 0) === 1 ? 'Etappe' : 'Etappen'}
+					</div>
+					<!-- Spalte 3: Zeitraum -->
+					<div style="font-size: 13px; color: var(--g-ink-2); font-family: var(--g-font-mono); letter-spacing: 0.02em;">
+						{dateRange(trip)}
+					</div>
+					<!-- Spalte 4: Aktionen -->
+					<div style="display: flex; gap: 4px; justify-content: flex-end;" onclick={(e) => e.stopPropagation()}>
+						<!-- alert -->
+						<button title="Alert-Konfiguration" onclick={() => openReportConfig(trip)} style="width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: 1px solid var(--g-rule-soft); border-radius: var(--g-r-2); cursor: pointer;">
+							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>
+						</button>
+						<!-- weather -->
+						<button title="Wetter-Konfiguration" onclick={() => goto(`/trips/${trip.id}#weather`)} style="width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: 1px solid var(--g-rule-soft); border-radius: var(--g-r-2); cursor: pointer;">
+							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.5"/><path d="M12 4v1.5M12 18.5V20M4 12h1.5M18.5 12H20M6 6l1 1M17 17l1 1M6 18l1-1M17 7l1-1"/></svg>
+						</button>
+						<!-- play -->
+						<button title="Briefing jetzt senden" onclick={() => runTestReport(trip, 7)} style="width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: 1px solid var(--g-rule-soft); border-radius: var(--g-r-2); cursor: pointer;">
+							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-2)" stroke-width="1.7" stroke-linejoin="round"><path d="M7 5l12 7-12 7z"/></svg>
+						</button>
+						<!-- preview -->
+						<button title="Email-Vorschau" onclick={() => goto(`/trips/${trip.id}?tab=preview`)} style="width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: 1px solid var(--g-rule-soft); border-radius: var(--g-r-2); cursor: pointer;">
+							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-2)" stroke-width="1.7" stroke-linejoin="round"><path d="M7 5l12 7-12 7z" fill="none"/><line x1="14" y1="12" x2="20" y2="12" opacity="0.4"/></svg>
+						</button>
+						<span style="width: 1px; height: 18px; background: var(--g-rule); margin: 0 4px;"></span>
+						<!-- edit -->
+						<button data-testid="trip-edit-btn" title="Bearbeiten" onclick={() => openEdit(trip)} style="width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: 1px solid var(--g-rule-soft); border-radius: var(--g-r-2); cursor: pointer;">
+							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4l6 6L9 21H3v-6z"/></svg>
+						</button>
+						<!-- trash -->
+						<button title="Löschen" onclick={() => { deleteTarget = trip; }} style="width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: 1px solid var(--g-rule-soft); border-radius: var(--g-r-2); cursor: pointer;">
+							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-3)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/></svg>
+						</button>
+					</div>
+				</div>
+			{/each}
+			{#if filteredTrips.length === 0}
+				<div style="padding: 40px; text-align: center; color: var(--g-ink-3); font-size: 13px;">
+					Keine Trips für »{search}« gefunden.
+				</div>
+			{/if}
+		</Card>
+		<div style="margin-top: 14px; font-size: 11px; color: var(--g-ink-4); font-family: var(--g-font-mono); letter-spacing: 0.06em;">
+			{filteredTrips.length} von {trips.length} Trips
+		</div>
 		</div>
 		{/if}
 	{/if}
@@ -549,6 +518,10 @@
 		<button class="w-full flex items-center gap-3 px-4 min-h-[44px] text-sm hover:bg-muted/60 active:bg-muted"
 			onclick={() => { const t = sheetTrip!; sheetTrip = null; openEdit(t); }}>
 			<PencilIcon class="size-4 text-muted-foreground shrink-0" /> Bearbeiten
+		</button>
+		<button class="w-full flex items-center gap-3 px-4 min-h-[44px] text-sm hover:bg-muted/60 active:bg-muted"
+			onclick={() => { const t = sheetTrip!; sheetTrip = null; handlePauseToggle(t); }}>
+			<PauseIcon class="size-4 text-muted-foreground shrink-0" /> {sheetTrip?.paused_at ? 'Reaktivieren' : 'Pausieren'}
 		</button>
 		<div class="h-px mx-4 bg-border"></div>
 		<button class="w-full flex items-center gap-3 px-4 min-h-[44px] text-sm hover:bg-muted/60 active:bg-muted"

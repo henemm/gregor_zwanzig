@@ -102,9 +102,11 @@ test('#411 AC-2/AC-3: Stats-Strip verwendet HomeTripStatus-Werte (aktiv/geplant/
 	}
 });
 
-test('#411 AC-1: Kein <Stat> mehr im Markup (Inline-HTML statt Komponente)', () => {
+test('#411 AC-1 (superseded by #580): <Stat>-Atom für Stats-Bar vorhanden', () => {
+	// Issue #580 kehrt die #411-Anforderung um: Stat-Atoms sind jetzt canonical per #578/#580.
+	// Stat-Atom mit layout="inline" muss vorhanden sein (siehe issue_580.test.ts AC-1b).
 	const src = readPage();
-	assert.ok(!src.includes('<Stat'), '<Stat>-Komponente noch vorhanden — durch Inline-<span> ersetzen');
+	assert.ok(src.includes('<Stat'), '<Stat>-Atom fehlt — Stats-Bar muss Stat-Atoms nutzen (superseded #411 by #580)');
 });
 
 // ── #413: Mobile Filter-Pills ─────────────────────────────────────────────────
