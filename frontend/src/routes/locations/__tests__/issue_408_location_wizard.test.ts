@@ -1,16 +1,11 @@
-// TDD RED: Issue #408 — Locations-Seite: NewLocationWizard verdrahten
+// Issue #408 — Locations-Seite: NewLocationWizard verdrahten
+// Aktualisiert durch Issue #588: NewLocationWizard → LocationNewModal ersetzt.
 //
 // Spec: docs/specs/modules/issue_408_location_wizard.md
+//       docs/specs/modules/issue_588_location_new.md
 //
 // Source-Inspection-Tests: lesen echte .svelte-Datei und pruefen, dass
-// NewLocationWizard korrekt fuer den Create-Pfad verdrahtet ist.
-//
-// RED-Erwartung (vor Implementation):
-//   - +page.svelte importiert NewLocationWizard nicht → AC-1 FAIL
-//   - Create-Dialog nutzt noch LocationForm statt NewLocationWizard → AC-1 FAIL
-//   - handleNewLocationSave existiert nicht → AC-2 FAIL
-//   - groups={[]} im Wizard-Aufruf fehlt → AC-4 FAIL
-//   (AC-3 Edit-Pfad bleibt bestehen, AC-5 via svelte-check)
+// LocationNewModal korrekt fuer den Create-Pfad verdrahtet ist.
 //
 // Ausfuehrung:
 //   cd frontend && node --experimental-strip-types --test \
@@ -26,36 +21,35 @@ const FRONTEND = fileURLToPath(new URL('../../../../', import.meta.url)); // -> 
 
 const LOCATIONS_PAGE = join(FRONTEND, 'src/routes/locations/+page.svelte');
 
-// ── AC-1: NewLocationWizard importiert und im Create-Dialog verwendet ──────
+// ── AC-1: LocationNewModal importiert und im Create-Pfad verwendet ──────────
 
-test('AC-1: +page.svelte importiert NewLocationWizard', () => {
+test('AC-1: +page.svelte importiert LocationNewModal', () => {
 	const src = readFileSync(LOCATIONS_PAGE, 'utf-8');
 	assert.match(
 		src,
-		/import\s+NewLocationWizard\s+from\s+['"][^'"]*compare\/NewLocationWizard[^'"]*['"]/,
-		'+page.svelte muss NewLocationWizard aus compare/NewLocationWizard.svelte importieren'
+		/import\s+LocationNewModal\s+from\s+['"][^'"]*compare\/LocationNewModal[^'"]*['"]/,
+		'+page.svelte muss LocationNewModal aus compare/LocationNewModal.svelte importieren'
 	);
 });
 
-test('AC-1: Create-Dialog rendert <NewLocationWizard statt nur <LocationForm', () => {
+test('AC-1: Create-Pfad rendert <LocationNewModal', () => {
 	const src = readFileSync(LOCATIONS_PAGE, 'utf-8');
 	assert.match(
 		src,
-		/<NewLocationWizard/,
-		'+page.svelte muss <NewLocationWizard> im Create-Dialog enthalten'
+		/<LocationNewModal/,
+		'+page.svelte muss <LocationNewModal> im Create-Pfad enthalten'
 	);
 });
 
-test('AC-1: <NewLocationWizard> ist an dialogMode === "create" gekoppelt', () => {
+test('AC-1: <LocationNewModal> ist an dialogMode === "create" gekoppelt', () => {
 	const src = readFileSync(LOCATIONS_PAGE, 'utf-8');
-	// Create-Block muss NewLocationWizard enthalten — pruefen dass create+NewLocationWizard zusammen vorkommen
 	const createBlock =
-		src.match(/dialogMode\s*===\s*['"]create['"][\s\S]{0,600}?<NewLocationWizard/)?.[0] ??
-		src.match(/<NewLocationWizard[\s\S]{0,600}?dialogMode\s*===\s*['"]create['"]/)?.[0] ??
+		src.match(/dialogMode\s*===\s*['"]create['"][\s\S]{0,600}?<LocationNewModal/)?.[0] ??
+		src.match(/<LocationNewModal[\s\S]{0,600}?dialogMode\s*===\s*['"]create['"]/)?.[0] ??
 		'';
 	assert.ok(
 		createBlock.length > 0,
-		'<NewLocationWizard> muss im dialogMode === "create" Block verwendet werden'
+		'<LocationNewModal> muss im dialogMode === "create" Block verwendet werden'
 	);
 });
 
@@ -72,7 +66,6 @@ test('AC-2: handleNewLocationSave Funktion existiert in +page.svelte', () => {
 
 test('AC-2: handleNewLocationSave enthaelt keinen api.post-Call (kein doppelter POST)', () => {
 	const src = readFileSync(LOCATIONS_PAGE, 'utf-8');
-	// Die Funktion handleNewLocationSave extrahieren und auf api.post pruefen
 	const fnMatch = src.match(
 		/function\s+handleNewLocationSave\s*\([^)]*\)\s*\{([\s\S]*?)(?=\n\t*function\s|\n\t*async\s+function\s|\n<\/script>)/
 	);
@@ -80,7 +73,7 @@ test('AC-2: handleNewLocationSave enthaelt keinen api.post-Call (kein doppelter 
 	assert.doesNotMatch(
 		fnBody,
 		/api\.post/,
-		'handleNewLocationSave darf keinen api.post-Call machen (Wizard speichert intern)'
+		'handleNewLocationSave darf keinen api.post-Call machen (Modal speichert intern)'
 	);
 });
 
@@ -101,7 +94,6 @@ test('AC-2: handleNewLocationSave ruft refetchLocations() auf', () => {
 
 test('AC-3: LocationForm bleibt im Edit-Pfad erhalten', () => {
 	const src = readFileSync(LOCATIONS_PAGE, 'utf-8');
-	// LocationForm muss nach wie vor vorkommen (Edit-Modus)
 	assert.match(
 		src,
 		/<LocationForm/,
@@ -121,16 +113,15 @@ test('AC-3: <LocationForm> ist an dialogMode === "edit" gekoppelt', () => {
 	);
 });
 
-// ── AC-4: groups={[]} an NewLocationWizard ────────────────────────────────
+// ── AC-4: LocationNewModal empfaengt onsave und oncancel ─────────────────
 
-test('AC-4: NewLocationWizard erhaelt groups={[]} (keine Gruppen-Daten auf /locations)', () => {
+test('AC-4: LocationNewModal empfaengt onsave-Callback', () => {
 	const src = readFileSync(LOCATIONS_PAGE, 'utf-8');
-	// Suche nach groups={[]} oder groups=\{[]\} in der Naehe von NewLocationWizard
-	const wizardBlock = src.match(/<NewLocationWizard[\s\S]{0,400}?\/>/)?.[0] ?? '';
-	assert.ok(wizardBlock.length > 0, '<NewLocationWizard ... /> Block nicht gefunden');
+	const modalBlock = src.match(/<LocationNewModal[\s\S]{0,400}?\/>/)?.[0] ?? '';
+	assert.ok(modalBlock.length > 0, '<LocationNewModal ... /> Block nicht gefunden');
 	assert.match(
-		wizardBlock,
-		/groups=\{?\[\]/,
-		'NewLocationWizard muss groups={[]} erhalten (Locations-Seite hat keine Gruppen)'
+		modalBlock,
+		/onsave=/,
+		'LocationNewModal muss onsave-Prop erhalten'
 	);
 });
