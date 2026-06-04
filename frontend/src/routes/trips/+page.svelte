@@ -13,7 +13,6 @@
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 	import EllipsisVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
 	import SendIcon from '@lucide/svelte/icons/send';
-	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
 	import { deriveTripStatus, tripStatus, type HomeTripStatus } from '$lib/utils/tripStatus';
 
 	const now = new Date();
@@ -35,7 +34,6 @@
 	let mobileFiltered = $derived(
 		filteredTrips.filter(t => mobileFilter === 'all' || tripStatus(t, now) === mobileFilter)
 	);
-	let expandedCardId = $state<string | null>(null);
 	let deleteTarget: Trip | null = $state(null);
 	let error: string | null = $state(null);
 
@@ -308,7 +306,7 @@
 				<button
 					class="shrink-0 cursor-pointer"
 					aria-pressed={mobileFilter === f.value}
-					onclick={() => { mobileFilter = f.value; expandedCardId = null; }}
+					onclick={() => { mobileFilter = f.value; }}
 				>
 					<Pill tone={mobileFilter === f.value ? 'accent' : 'default'}>
 						{f.label} ({f.count})
@@ -325,7 +323,7 @@
 						<button
 							data-testid="trip-card-content-btn"
 							class="flex-1 flex flex-col items-start text-left min-h-[44px] justify-center min-w-0"
-							onclick={() => (expandedCardId = expandedCardId === trip.id ? null : trip.id)}
+							onclick={() => goto(`/trips/${trip.id}`)}
 						>
 							<span class="font-medium text-sm truncate w-full">
 								{trip.name}
@@ -347,28 +345,6 @@
 							<EllipsisVerticalIcon class="size-5" />
 						</button>
 					</div>
-					{#if expandedCardId === trip.id}
-						<div class="flex gap-1 pt-2 border-t border-muted mt-2">
-							<button
-								class="flex-1 flex items-center justify-center gap-1.5 min-h-[40px] text-xs rounded-lg hover:bg-muted/60"
-								onclick={() => goto(`/trips/${trip.id}?tab=preview`)}
-							>
-								<SendIcon class="size-3.5" /> Briefing senden
-							</button>
-							<button
-								class="flex-1 flex items-center justify-center gap-1.5 min-h-[40px] text-xs rounded-lg hover:bg-muted/60"
-								onclick={() => goto(`/trips/${trip.id}`)}
-							>
-								<ExternalLinkIcon class="size-3.5" /> Vorschau
-							</button>
-							<button
-								class="flex-1 flex items-center justify-center gap-1.5 min-h-[40px] text-xs rounded-lg hover:bg-muted/60"
-								onclick={() => goto(`/trips/${trip.id}?tab=alerts`)}
-							>
-								<BellIcon class="size-3.5" /> Alerts
-							</button>
-						</div>
-					{/if}
 				</div>
 			{/each}
 		</div>
@@ -383,7 +359,7 @@
 			</thead>
 			<tbody class="[&_tr:last-child]:border-0">
 				{#each filteredTrips as trip}
-					<tr class="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+					<tr onclick={function() { goto(`/trips/${trip.id}`); }} class="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted cursor-pointer">
 						<td class="p-2 align-middle">
 							<div class="flex flex-col min-w-0">
 								<div class="flex items-baseline gap-0">
@@ -399,7 +375,7 @@
 						<td class="p-2 align-middle hidden sm:table-cell font-mono tabular-nums text-sm text-muted-foreground">
 							{dateRange(trip)}
 						</td>
-						<td class="p-2 align-middle text-right">
+						<td class="p-2 align-middle text-right" onclick={(e) => e.stopPropagation()}>
 							<div class="inline-flex items-center gap-2">
 								<Btn
 									variant="outline"
@@ -524,6 +500,10 @@
 	<div class="px-4 py-2 text-sm font-semibold truncate">{sheetTrip?.name ?? ''}</div>
 	<div class="h-px mx-4 bg-border"></div>
 	<div class="py-2">
+		<button class="w-full flex items-center gap-3 px-4 min-h-[44px] text-sm hover:bg-muted/60 active:bg-muted"
+			onclick={() => { const t = sheetTrip!; sheetTrip = null; goto(`/trips/${t.id}?tab=preview`); }}>
+			<SendIcon class="size-4 text-muted-foreground shrink-0" /> Briefing senden
+		</button>
 		<button class="w-full flex items-center gap-3 px-4 min-h-[44px] text-sm hover:bg-muted/60 active:bg-muted"
 			onclick={() => { const t = sheetTrip!; sheetTrip = null; openReportConfig(t); }}>
 			<BellIcon class="size-4 text-muted-foreground shrink-0" /> Alerts justieren
