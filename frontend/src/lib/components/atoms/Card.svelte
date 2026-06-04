@@ -24,9 +24,9 @@
 	style:background="var(--g-card)"
 	style:border-radius="var(--g-r-3)"
 	style:box-shadow="var(--g-shadow-1)"
-	style:overflow="hidden"
 	style:padding="{padding}px"
-	style:border-left={accent ? '3px solid var(--g-accent)' : '1px solid var(--g-rule)'}
+	style:border="1px solid var(--g-rule)"
+	style:border-left={accent ? '3px solid var(--g-accent)' : undefined}
 	{...restProps}
 >
 	{@render children?.()}

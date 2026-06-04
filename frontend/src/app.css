@@ -153,8 +153,12 @@
     --g-accent-tint: rgba(196, 90, 42, 0.08);
     /* Semantik */
     --g-success:     #3d6b3a;
+    --g-good:        #3d6b3a;
     --g-warning:     #c08a1a;
+    --g-warn:        #c08a1a;
+    --g-warn-deep:   #8a6210;  /* dunkleres Amber für Pill[warn] FG */
     --g-danger:      #a83232;
+    --g-bad:         #a83232;
     /* Wetter */
     --g-weather-rain:    #4a7ab8;
     --g-weather-snow:    #8aa4c0;
@@ -276,7 +280,7 @@
   [data-slot="btn"][data-variant="ghost"] {
     background-color: transparent;
     color: var(--g-ink);
-    border-color: transparent;
+    border-color: var(--g-rule);
   }
   [data-slot="btn"][data-variant="ghost"]:hover {
     background-color: var(--g-surface-2);
@@ -356,21 +360,29 @@
     align-items: center;
     padding: 0.125rem 0.5rem;
     border-radius: var(--g-radius-pill);
-    font-family: var(--g-font-ui);
-    font-size: 0.75rem;
+    font-family: var(--g-font-mono);
+    font-size: 11px;
     font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
     max-width: 100%;
     min-width: 0;
     white-space: nowrap;
   }
+  /* Legacy-Tone-Aliases (bestehende Komponenten) */
   [data-slot="pill"][data-tone="default"]  { background: var(--g-surface-2);   color: var(--g-ink); }
   [data-slot="pill"][data-tone="success"]  { background: var(--g-success);     color: #fff; }
   [data-slot="pill"][data-tone="warning"]  { background: var(--g-warning);     color: var(--g-ink); }
   [data-slot="pill"][data-tone="danger"]   { background: var(--g-danger);      color: #fff; }
   [data-slot="pill"][data-tone="info"]     { background: var(--g-info);        color: #fff; }
-  [data-slot="pill"][data-tone="accent"]   { background: var(--g-accent);      color: var(--g-ink); }
+  /* atoms.jsx-Tones (neu, #577) */
+  [data-slot="pill"][data-tone="neutral"]  { background: rgba(26,26,24,0.06);          color: var(--g-ink-2); }
+  [data-slot="pill"][data-tone="accent"]   { background: var(--g-accent-tint);         color: var(--g-accent-deep); }
+  [data-slot="pill"][data-tone="good"]     { background: rgba(61,107,58,0.10);         color: var(--g-good); }
+  [data-slot="pill"][data-tone="warn"]     { background: rgba(192,138,26,0.12);        color: var(--g-warn-deep); }
+  [data-slot="pill"][data-tone="bad"]      { background: rgba(168,50,50,0.10);         color: var(--g-bad); }
   /* #371: ghost-Tone (Sandbox atoms.jsx::Pill) — transparent mit Rule-Border */
-  [data-slot="pill"][data-tone="ghost"]    { background: transparent;          color: var(--g-ink-3); border: 1px solid var(--g-rule); }
+  [data-slot="pill"][data-tone="ghost"]    { background: transparent;                  color: var(--g-ink-3); border: 1px solid var(--g-rule); }
 
   /* === Issue #284: Pill outlined-Variante === */
   [data-slot="pill"][data-outlined] {
@@ -422,13 +434,13 @@
     font-size: var(--g-text-sm);
   }
 
-  /* === Issue #144: Eyebrow === */
+  /* === Issue #144: Eyebrow (Issue #577: 11px, font-weight 500, var(--g-track-caps)) === */
   [data-slot="eyebrow"] {
     display: block;
     font-family: var(--g-font-data);
-    font-size: 0.625rem;
-    font-weight: 400;
-    letter-spacing: 0.1em;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: var(--g-track-caps);
     text-transform: uppercase;
     color: var(--g-ink-muted);
   }
