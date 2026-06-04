@@ -161,8 +161,8 @@
 	title={status === 'archived' ? 'Trip reaktivieren?' : 'Trip archivieren?'}
 	description={status === 'archived'
 		? 'Der Trip wird aus dem Archiv zurückgeholt und ist wieder aktiv.'
-		: 'Der Trip wird ins Archiv verschoben — er kann später reaktiviert werden.'}
-	confirmLabel="Bestätigen"
+		: 'Archivierte Trips erhalten keine Briefings mehr.'}
+	confirmLabel={status === 'archived' ? 'Reaktivieren' : 'Archivieren'}
 	confirmVariant="primary"
 	data-testid="trip-detail-archive-confirm-dialog"
 	cancelTestid="trip-detail-archive-confirm-cancel"
