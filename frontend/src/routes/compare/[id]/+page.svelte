@@ -1,7 +1,7 @@
 <script lang="ts">
 	// Issue #491 — Compare-Preset Detail-Seite.
 	// Issue #493 — Mobile-Responsive: TopBar + 2×2-Grid + MCompareActionSheet.
-	import { Eyebrow, Btn, Card, KV, Dot } from '$lib/components/atoms';
+	import { Btn, Card, KV, Dot } from '$lib/components/atoms';
 	import CompareDetail from '$lib/components/compare/CompareDetail.svelte';
 	import CompareStatusPill from '$lib/components/compare/CompareStatusPill.svelte';
 	import CompareKebab from '$lib/components/compare/CompareKebab.svelte';
@@ -51,33 +51,29 @@
 	}
 </script>
 
-<!-- Desktop-Layout (#491) -->
-<div class="hidden desktop:block p-8 max-w-5xl mx-auto">
-	<nav aria-label="Breadcrumb">
-		<Eyebrow>
-			<a href="/" class="breadcrumb-link">WORKSPACE</a>
-			<span aria-hidden="true"> · </span>
-			<a href="/compare" class="breadcrumb-link">ORTS-VERGLEICHE</a>
-			<span aria-hidden="true"> / </span>
-			<span>DETAIL</span>
-		</Eyebrow>
-	</nav>
-	<div class="flex items-start justify-between mt-1 mb-6">
-		<div>
-			<h1 class="text-3xl font-semibold tracking-tight">
-				{data.preset.name}
-			</h1>
-			<span
-				class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full"
-				style="background: {statusInfo.dot}1a; color: {statusInfo.dot}; border: 1px solid {statusInfo.dot}40"
-			>
-				{statusInfo.label}
-			</span>
-			<p class="text-sm text-[var(--g-ink-3)] mt-1">
+<!-- Desktop-Layout (#491, #582) — full-width Header nach JSX-Vorlage -->
+<div class="hidden desktop:block" style="position: relative; padding: 22px 40px 0; border-bottom: 1px solid var(--g-rule)">
+	<!-- Breadcrumb (Issue #582 + Bug #589) -->
+	<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px">
+		<a href="/" style="font-size: 11px; font-family: var(--g-font-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--g-ink-4); text-decoration: none" class="breadcrumb-link">WORKSPACE</a>
+		<span style="color: var(--g-ink-4); font-size: 11px"> · </span>
+		<a href="/compare" style="font-size: 11px; font-family: var(--g-font-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--g-ink-3); text-decoration: none" class="breadcrumb-link">ORTS-VERGLEICHE</a>
+		<span style="color: var(--g-ink-4); font-size: 11px">/</span>
+		<span style="font-size: 11px; font-family: var(--g-font-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--g-ink-4)">Hub</span>
+	</div>
+
+	<div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 24px">
+		<div style="min-width: 0; flex: 1">
+			<div style="display: flex; align-items: center; gap: 12px">
+				<h1 style="font-size: 30px; font-weight: 600; letter-spacing: -0.025em; line-height: 1.1; margin: 0">{data.preset.name}</h1>
+				<span style="flex-shrink: 0"><CompareStatusPill {status}/></span>
+			</div>
+			<div style="font-size: 14px; color: var(--g-ink-3); margin: 8px 0 18px">
 				{data.preset.display_config?.region ?? '—'} · {data.preset.profil} · {data.preset.location_ids.length} {data.preset.location_ids.length === 1 ? 'Ort' : 'Orte'}
-			</p>
+			</div>
 		</div>
-		<div class="flex items-center gap-2">
+
+		<div style="display: flex; gap: 8px; flex-shrink: 0">
 			{#if status === 'draft'}
 				<Btn variant="primary" onclick={() => { window.location.href = `?tab=versand`; }}>Setup abschließen</Btn>
 			{:else}
@@ -88,8 +84,9 @@
 			<CompareKebab {status} onSelect={handleAction} />
 		</div>
 	</div>
+
 	{#if sendMsg}
-		<div class="text-sm mt-2 text-[var(--g-ink-3)]">{sendMsg}</div>
+		<div style="font-size: 14px; color: var(--g-ink-3); margin-bottom: 8px">{sendMsg}</div>
 	{/if}
 
 	<CompareDetail preset={data.preset} locations={data.locations} {initialTab} />
@@ -167,11 +164,8 @@
 />
 
 <style>
-	.breadcrumb-link {
-		color: inherit;
-		text-decoration: none;
-	}
 	.breadcrumb-link:hover {
 		text-decoration: underline;
 	}
 </style>
+

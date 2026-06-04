@@ -8,7 +8,9 @@
 	//
 	// Spec: docs/specs/modules/issue_517_compare_hub.md
 
-	import { Segmented, Dot, Pill, Btn, Eyebrow, Card, Switch } from '$lib/components/atoms';
+	import { Dot, Pill, Btn, Eyebrow, Card, Switch } from '$lib/components/atoms';
+	import CompareChannelSwitch from '$lib/components/molecules/CompareChannelSwitch.svelte';
+	import CompareBriefingPreview from '$lib/components/molecules/CompareBriefingPreview.svelte';
 	import CompareLocationRow from '$lib/components/molecules/CompareLocationRow.svelte';
 	import CompareIdealRow from '$lib/components/molecules/CompareIdealRow.svelte';
 	import CompareLayoutRow from '$lib/components/molecules/CompareLayoutRow.svelte';
@@ -56,14 +58,6 @@
 		{ value: 'vorschau', label: 'Vorschau' }
 	] as const;
 
-	const segmentedOptions = $derived(
-		TABS.map((tab) => ({
-			value: tab.value,
-			label: tab.label,
-			testid: `compare-detail-tab-${tab.value}`
-		}))
-	);
-
 	const VALID_VALUES: readonly string[] = TABS.map((t) => t.value);
 	function resolve(value: string): string {
 		return VALID_VALUES.includes(value) ? value : 'uebersicht';
@@ -109,19 +103,15 @@
 	};
 	const channels = ['email', 'telegram', 'sms'];
 
-	// ── Vorschau-Tab (Issue #514) ────────────────────────────────────────────────
+	// ── Vorschau-Tab (Issue #514, #582) ─────────────────────────────────────────
 	let previewChannel = $state<'email' | 'sms'>('email');
+	let emailView = $state('desktop');
 	let previewHtml = $state('');
 	let previewLoading = $state(false);
 	let previewError = $state<string | null>(null);
 	let sendQueued = $state(false);
 	let sendLoading = $state(false);
 	let sendError = $state<string | null>(null);
-
-	const PREVIEW_CHANNELS = [
-		{ value: 'email', label: 'Email' },
-		{ value: 'sms', label: 'SMS' }
-	];
 
 	$effect(() => {
 		if (activeTab !== 'vorschau') return;
@@ -185,68 +175,119 @@
 </script>
 
 <div class="compare-tabs" data-testid="compare-detail-tab-list">
-	<Segmented options={segmentedOptions} selected={activeTab} onselect={handleValueChange} />
+	<!-- Tab-Leiste — custom buttons mit Underline-Indikator (Issue #582) -->
+	<div style="display: flex; gap: 0">
+		{#each TABS as t}
+			{@const on = activeTab === t.value}
+			<button
+				onclick={() => handleValueChange(t.value)}
+				data-testid="compare-detail-tab-{t.value}"
+				style="padding: 12px 16px; cursor: pointer; font-size: 13px; font-weight: {on ? 600 : 500}; background: transparent; border: none; font-family: var(--g-font-sans); color: {on ? 'var(--g-ink)' : 'var(--g-ink-3)'}; border-bottom: {on ? '2px solid var(--g-accent)' : '2px solid transparent'}; margin-bottom: -1px; display: flex; align-items: center; gap: 7px"
+			>
+				{t.label}
+				{#if t.value === 'orte'}
+					<span style="font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 3px; background: var(--g-paper-deep); color: var(--g-ink-3); font-family: var(--g-font-mono)">{preset.location_ids.length}</span>
+				{/if}
+			</button>
+		{/each}
+	</div>
+
+	<!-- Tab-Inhalte — Wrapper mit Padding nach JSX-Vorlage (Issue #582) -->
+	<div style="position: relative; padding: 28px 40px 80px; max-width: 1320px">
 
 	{#if activeTab === 'uebersicht'}
-		<div class="tab-panel" data-testid="compare-detail-panel-uebersicht">
-			<!-- Monitoring-Card (weiß statt off-white Streifen) -->
-			<Card padding={16} class="monitoring-card">
-				<div class="monitoring-row">
-					<div class="monitoring-item">
-						<Dot tone={status === 'active' ? 'good' : 'neutral'} />
-						<span class="monitoring-label-inline">{statusInfo.label}</span>
+		<div data-testid="compare-detail-panel-uebersicht">
+			<div style="display: flex; flex-direction: column; gap: 22px">
+				<!-- Monitoring-Streifen -->
+				<Card padding={0} style="overflow: hidden">
+					<div style="padding: 18px 24px; display: flex; align-items: center; gap: 40px; flex-wrap: wrap">
+						<!-- Status -->
+						<div>
+							<div style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 5px; font-family: var(--g-font-mono)">Status</div>
+							<div style="font-size: 14px; color: var(--g-ink); font-weight: 500">
+								{#if status === 'active'}
+									<span style="display: inline-flex; align-items: center; gap: 7px"><Dot tone="good" size={7}/> Läuft automatisch</span>
+								{:else if status === 'draft'}
+									<span style="display: inline-flex; align-items: center; gap: 7px"><Dot tone="neutral" size={7}/> Entwurf · nicht aktiv</span>
+								{:else}
+									<span style="display: inline-flex; align-items: center; gap: 7px"><Dot tone="neutral" size={7}/> Pausiert</span>
+								{/if}
+							</div>
+						</div>
+						<!-- Nächster Versand -->
+						<div>
+							<div style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 5px; font-family: var(--g-font-mono)">Nächster Versand</div>
+							<div style="font-size: 14px; color: var(--g-ink); font-weight: 500">{presetScheduleLabel(preset)}</div>
+						</div>
+						<!-- Zuletzt raus -->
+						<div>
+							<div style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 5px; font-family: var(--g-font-mono)">Zuletzt raus</div>
+							<div style="font-size: 14px; color: var(--g-ink); font-weight: 500">{formatLastSent(preset.letzter_versand)}</div>
+						</div>
+						<!-- Kanäle -->
+						<div>
+							<div style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 5px; font-family: var(--g-font-mono)">Kanäle</div>
+							<div style="font-size: 14px; color: var(--g-ink); font-weight: 500">
+								{#if preset.empfaenger.length === 0}
+									—
+								{:else}
+									<span style="display: inline-flex; align-items: center; gap: 7px">
+										<Dot tone="good" size={7}/>
+										{preset.empfaenger.length} {preset.empfaenger.length === 1 ? 'Kanal' : 'Kanäle'}
+									</span>
+								{/if}
+							</div>
+						</div>
 					</div>
-					<div class="monitoring-item-col">
-						<span class="monitoring-label">Nächster Versand</span>
-						<span class="monitoring-value">{presetScheduleLabel(preset)}</span>
-					</div>
-					<div class="monitoring-item-col">
-						<span class="monitoring-label">Zuletzt</span>
-						<span class="monitoring-value">{formatLastSent(preset.letzter_versand)}</span>
-					</div>
-					<div class="monitoring-item-col">
-						<span class="monitoring-label">Kanäle</span>
-						<span class="monitoring-value">{preset.empfaenger.length}</span>
-					</div>
+				</Card>
+
+				<!-- 2×2 SummaryCard-Grid -->
+				<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px">
+					<Card padding={20} style="display: flex; flex-direction: column">
+						<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px">
+							<Eyebrow>Orte</Eyebrow>
+							<button onclick={() => handleValueChange('orte')} style="background: none; border: none; cursor: pointer; padding: 0; font-size: 12px; font-weight: 600; color: var(--g-accent-deep); font-family: var(--g-font-sans)">Bearbeiten →</button>
+						</div>
+						<div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.01em">{preset.location_ids.length} Kandidaten</div>
+						<div style="font-size: 13px; color: var(--g-ink-2); line-height: 1.6">{resolvedLocations.slice(0, 3).map(({loc}) => loc?.name ?? '—').join(' · ')}</div>
+					</Card>
+
+					<Card padding={20} style="display: flex; flex-direction: column">
+						<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px">
+							<Eyebrow>Idealwerte</Eyebrow>
+							<button onclick={() => handleValueChange('idealwerte')} style="background: none; border: none; cursor: pointer; padding: 0; font-size: 12px; font-weight: 600; color: var(--g-accent-deep); font-family: var(--g-font-sans)">Bearbeiten →</button>
+						</div>
+						<div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.01em">{preset.profil}</div>
+						<div style="font-size: 13px; color: var(--g-ink-2); line-height: 1.6">{Object.keys(idealRanges ?? {}).length} Metriken bestimmen das Ranking</div>
+					</Card>
+
+					<Card padding={20} style="display: flex; flex-direction: column">
+						<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px">
+							<Eyebrow>Layout pro Kanal</Eyebrow>
+							<button onclick={() => handleValueChange('layout')} style="background: none; border: none; cursor: pointer; padding: 0; font-size: 12px; font-weight: 600; color: var(--g-accent-deep); font-family: var(--g-font-sans)">Bearbeiten →</button>
+						</div>
+						<div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.01em">{channels.join(' · ')}</div>
+						<div style="font-size: 13px; color: var(--g-ink-2); line-height: 1.6">Engere Kanäle zeigen automatisch weniger Spalten</div>
+					</Card>
+
+					<Card padding={20} style="display: flex; flex-direction: column">
+						<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px">
+							<Eyebrow>Versand</Eyebrow>
+							<button onclick={() => handleValueChange('versand')} style="background: none; border: none; cursor: pointer; padding: 0; font-size: 12px; font-weight: 600; color: var(--g-accent-deep); font-family: var(--g-font-sans)">Bearbeiten →</button>
+						</div>
+						<div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.01em">{presetScheduleLabel(preset)}</div>
+						<div style="font-size: 13px; color: var(--g-ink-2); line-height: 1.6">{preset.hour_from}–{preset.hour_to} Uhr</div>
+					</Card>
 				</div>
-			</Card>
 
-			<!-- 2×2 SummaryCard-Grid -->
-			<div class="summary-grid">
-				<Card padding={20}>
-					<Eyebrow>Orte</Eyebrow>
-					<p class="summary-value">{preset.location_ids.length} Kandidaten</p>
-					<p class="summary-sub">{resolvedLocations[0]?.loc?.name ?? '—'}</p>
-					<Btn variant="ghost" size="sm" onclick={() => handleValueChange('orte')}>Bearbeiten →</Btn>
-				</Card>
-
-				<Card padding={20}>
-					<Eyebrow>Idealwerte</Eyebrow>
-					<p class="summary-value">{preset.profil}</p>
-					<p class="summary-sub">{Object.keys(idealRanges ?? {}).length} Metriken konfiguriert</p>
-					<Btn variant="ghost" size="sm" onclick={() => handleValueChange('idealwerte')}>Bearbeiten →</Btn>
-				</Card>
-
-				<Card padding={20}>
-					<Eyebrow>Layout</Eyebrow>
-					<p class="summary-value">{channels.join(' · ')}</p>
-					<p class="summary-sub">Spalten pro Kanal</p>
-					<Btn variant="ghost" size="sm" onclick={() => handleValueChange('layout')}>Bearbeiten →</Btn>
-				</Card>
-
-				<Card padding={20}>
-					<Eyebrow>Versand</Eyebrow>
-					<p class="summary-value">{presetScheduleLabel(preset)}</p>
-					<p class="summary-sub">{preset.hour_from}–{preset.hour_to} Uhr</p>
-					<Btn variant="ghost" size="sm" onclick={() => handleValueChange('versand')}>Bearbeiten →</Btn>
-				</Card>
+				<!-- Verifikations-Hinweis -->
+				<div style="display: flex; align-items: center; gap: 14px; padding: 14px 18px; background: var(--g-card); border: 1px solid var(--g-rule); border-left: 3px solid var(--g-accent); border-radius: var(--g-r-3)">
+					<div style="font-size: 13px; color: var(--g-ink-2); flex: 1; line-height: 1.5">
+						Gelesen wird das Briefing unterwegs im Postfach — nicht hier. Der Tab <strong>Vorschau</strong> dient nur zum Prüfen der Konfiguration.
+					</div>
+					<Btn variant="ghost" size="sm" onclick={() => handleValueChange('vorschau')}>Vorschau prüfen →</Btn>
+				</div>
 			</div>
-
-			<!-- Hinweis-Box -->
-			<Card accent={true} padding={20} class="hint-box">
-				<p class="hint-text">Gelesen wird das Briefing unterwegs im Postfach. Tab Vorschau dient nur zum Prüfen der Konfiguration.</p>
-				<Btn variant="ghost" size="sm" onclick={() => handleValueChange('vorschau')}>Vorschau prüfen →</Btn>
-			</Card>
 		</div>
 	{/if}
 
@@ -385,35 +426,53 @@
 	{/if}
 
 	{#if activeTab === 'vorschau'}
-		<div class="tab-panel" data-testid="compare-detail-panel-vorschau">
-			<!-- Header: Eyebrow + Titel + Untertitel | Kanal-Umschalter + Disclaimer -->
-			<div class="preview-header">
-				<div class="preview-header-text">
-					<Eyebrow>Vorschau · Verifikation</Eyebrow>
-					<h2 class="preview-title">So sieht dein nächstes Briefing aus</h2>
-					<p class="preview-subtitle">
-						Pixel-Vorschau zum Gegencheck deiner Konfiguration.
-						Gelesen wird das echte Briefing im jeweiligen Kanal.
-					</p>
+		<div data-testid="compare-detail-panel-vorschau">
+			<!-- Verifikations-Hinweis (Issue #582) -->
+			<div style="display: flex; align-items: center; gap: 14px; padding: 13px 18px; background: var(--g-card); border: 1px solid var(--g-rule); border-left: 3px solid var(--g-accent); border-radius: var(--g-r-3); margin-bottom: 20px">
+				<Eyebrow style="flex-shrink: 0">Vorschau · Prüfung</Eyebrow>
+				<div style="font-size: 13px; color: var(--g-ink-2); flex: 1; line-height: 1.5">
+					So sieht dein Briefing aus — gelesen wird es unterwegs im Postfach, nicht hier.
 				</div>
-				<div class="preview-header-right">
-					<Segmented
-						options={PREVIEW_CHANNELS}
-						selected={previewChannel}
-						onselect={(v) => (previewChannel = v as 'email' | 'sms')}
-					/>
-					<span class="preview-disclaimer">Beispielwerte · kein Live-Wetter</span>
-				</div>
+				<Btn variant="ghost" size="sm" onclick={handleSend} disabled={sendLoading}>
+					{sendLoading ? 'Wird gesendet…' : 'Test-Briefing senden'}
+				</Btn>
 			</div>
 
-			<!-- Preview-Fläche: warmes Grau, zentriert -->
-			<div class="preview-stage">
+			{#if sendQueued}
+				<p style="font-size: 0.875rem; color: var(--g-success, #16a34a); margin: 0 0 12px" data-testid="compare-send-success">
+					Briefing wurde zur Zustellung vorgemerkt.
+				</p>
+			{/if}
+			{#if sendError !== null}
+				<p style="font-size: 0.875rem; color: var(--g-danger, #dc2626); margin: 0 0 12px" data-testid="compare-send-error">{sendError}</p>
+			{/if}
+
+			<!-- Kanal-Umschalter + Email-View-Toggle (Issue #582) -->
+			<div style="display: flex; align-items: center; gap: 16px; margin-bottom: 20px; flex-wrap: wrap">
+				<CompareChannelSwitch
+					value={previewChannel}
+					onchange={(v: string) => (previewChannel = v as 'email' | 'sms')}
+					channels={['email', 'sms']}
+				/>
+				{#if previewChannel === 'email'}
+					<div style="display: inline-flex; background: var(--g-paper-deep); border: 1px solid var(--g-rule); border-radius: var(--g-r-2); padding: 3px; gap: 2px; margin-left: 12px">
+						{#each [['desktop', 'Desktop-Inbox'], ['iphone', 'iPhone-Mail']] as [v, l]}
+							<button onclick={() => (emailView = v)} style="padding: 7px 13px; border: none; cursor: pointer; border-radius: 4px; font-size: 12.5px; font-family: var(--g-font-sans); font-weight: {emailView === v ? 600 : 500}; background: {emailView === v ? 'var(--g-card)' : 'transparent'}; box-shadow: {emailView === v ? 'var(--g-shadow-1)' : 'none'}; color: {emailView === v ? 'var(--g-ink)' : 'var(--g-ink-3)'}">
+								{l}
+							</button>
+						{/each}
+					</div>
+				{/if}
+			</div>
+
+			<!-- Render-Fläche -->
+			<div style="padding: {previewChannel === 'email' && emailView === 'desktop' ? '24px' : '0'}; background: {previewChannel === 'email' && emailView === 'desktop' ? 'var(--g-paper-deep)' : 'transparent'}; border-radius: var(--g-r-3)">
 				{#if previewLoading}
-					<p class="preview-loading" data-testid="compare-preview-loading">
+					<p style="font-size: 0.875rem; color: var(--g-ink-3); margin: 0" data-testid="compare-preview-loading">
 						Vorschau wird geladen…
 					</p>
 				{:else if previewError !== null}
-					<p class="preview-error" data-testid="compare-preview-error">{previewError}</p>
+					<p style="font-size: 0.875rem; color: var(--g-danger, #dc2626); margin: 0" data-testid="compare-preview-error">{previewError}</p>
 				{:else if previewHtml !== '' && previewChannel === 'email'}
 					<div style="width: 680px; max-width: 100%;">
 						<iframe
@@ -421,62 +480,31 @@
 							srcdoc={previewHtml}
 							sandbox="allow-same-origin"
 							title="E-Mail-Vorschau"
+							style="width: 100%; min-height: 500px; border: 0; display: block"
 						></iframe>
 					</div>
 				{/if}
 				{#if previewChannel === 'sms'}
-					<p class="preview-sms-hint" data-testid="compare-preview-sms-hint">
+					<p style="font-size: 0.875rem; color: var(--g-ink-3); margin: 0.5rem 0 0; font-style: italic" data-testid="compare-preview-sms-hint">
 						SMS-Vorschau ist noch nicht verfügbar.
 					</p>
 				{/if}
-			</div>
 
-			<!-- Test-Briefing senden -->
-			<div class="preview-send">
-				{#if sendQueued}
-					<p class="send-success" data-testid="compare-send-success">
-						Briefing wurde zur Zustellung vorgemerkt.
-					</p>
-				{:else}
-					<Btn
-						variant="quiet"
-						disabled={sendLoading}
-						onclick={handleSend}
-						data-testid="compare-send-btn"
-					>
-						{sendLoading ? 'Wird gesendet…' : 'Test-Briefing jetzt senden'}
-					</Btn>
-				{/if}
-				{#if sendError !== null}
-					<p class="send-error" data-testid="compare-send-error">{sendError}</p>
-				{/if}
+				<CompareBriefingPreview
+					profileId={preset.profil}
+					channel={previewChannel}
+					subscriptionName={preset.name}
+					{emailView}
+				/>
 			</div>
 		</div>
 	{/if}
+
+	</div>
 </div>
 
 <style>
-	.compare-tabs :global([data-slot='segmented']) {
-		display: flex;
-		border-bottom: 1px solid var(--g-ink-faint);
-	}
-	.compare-tabs :global([data-slot='segmented-item']) {
-		position: relative;
-		padding: 0.5rem 1rem;
-		font-size: 0.875rem;
-		font-weight: 500;
-		border-bottom: 2px solid transparent;
-		background: transparent;
-		color: var(--g-ink);
-		cursor: pointer;
-	}
-	.compare-tabs :global([data-slot='segmented-item'][data-active='true']) {
-		background: transparent;
-		color: var(--g-ink);
-	}
-	.compare-tabs :global([data-slot='segmented-item'][data-state='active']) {
-		border-bottom-color: var(--g-accent);
-	}
+	/* Tab-Leiste: Segmented entfernt — custom buttons in Template (Issue #582) */
 
 	.tab-panel {
 		padding: 1.5rem 0;
@@ -535,34 +563,7 @@
 	}
 
 	@media (max-width: 899px) {
-		/* Scrollbares Tab-Band */
-		.compare-tabs :global([data-slot='segmented']) {
-			overflow-x: auto;
-			white-space: nowrap;
-			scrollbar-width: none;
-			-ms-overflow-style: none;
-			scroll-snap-type: x mandatory;
-		}
-		.compare-tabs :global([data-slot='segmented'])::-webkit-scrollbar {
-			display: none;
-		}
-
-		/* Pill-Trigger: einzeilig, nicht schrumpfbar */
-		.compare-tabs :global([data-slot='segmented-item']) {
-			white-space: nowrap;
-			flex-shrink: 0;
-			scroll-snap-align: start;
-			border-bottom: none;
-			border-radius: var(--g-radius-pill, 99rem);
-			padding: 0.375rem 0.875rem;
-		}
-
-		/* Aktiver Pill: gefüllt mit Akzentfarbe */
-		.compare-tabs :global([data-slot='segmented-item'][data-state='active']) {
-			background: var(--g-accent);
-			color: var(--g-paper, #f6f4ee);
-			border-bottom-color: transparent;
-		}
+		/* Mobile: Tab-Leiste horizontal scrollbar */
 	}
 
 	/* ── Vorschau-Tab (Issue #514) — Design nach HubPreview ─────────────────── */

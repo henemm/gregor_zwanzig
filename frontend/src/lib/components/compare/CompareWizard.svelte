@@ -11,7 +11,6 @@
 	import { Btn, Eyebrow, TopoBg } from '$lib/components/atoms';
 	import { ConfirmDialog } from '$lib/components/molecules';
 	import type { CompareWizardState } from './compareWizardState.svelte';
-	import Stepper from '$lib/components/trip-wizard/Stepper.svelte';
 	import Step1Vergleich from './steps/Step1Vergleich.svelte';
 	import Step2Orte from './steps/Step2Orte.svelte';
 	import Step3Idealwerte from './steps/Step3Idealwerte.svelte';
@@ -142,50 +141,54 @@
 <div data-testid="compare-wizard-shell" class="max-w-3xl mx-auto py-6 px-4">
 	<TopoBg opacity={0.4}>
 		<div class="p-6 rounded-lg mb-6">
-			<header class="space-y-1 mb-4">
-				<Eyebrow data-testid="compare-wizard-header-eyebrow">{eyebrow}</Eyebrow>
-				{#if wiz.isEditMode}
-					<div class="flex items-center gap-2">
-						<h1 data-testid="compare-wizard-header-h1" class="text-2xl font-bold">
-							{wiz.name}
-						</h1>
-						<span
-							data-testid="compare-wizard-header-status-pill"
-							class={`text-xs font-mono px-2 py-0.5 rounded-full ${
-								wiz.subscriptionEnabled
-									? 'bg-[var(--g-success)]/15 text-[var(--g-success)]'
-									: 'bg-[var(--g-ink-faint)]/20 text-[var(--g-ink-muted)]'
-							}`}
-						>
-							{wiz.subscriptionEnabled ? 'aktiv' : 'pausiert'}
-						</span>
+			<!-- Edit-Header (Issue #582 — CW_EditHeader) -->
+			{#if wiz.isEditMode}<!-- Edit-Header: Speichern + Abbrechen -->
+				<div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 8px">
+					<div style="min-width: 0; flex: 1">
+						<Eyebrow data-testid="compare-wizard-header-eyebrow" style="margin-bottom: 6px">ORTS-VERGLEICH · BEARBEITEN</Eyebrow>
+						<div style="display: flex; align-items: center; gap: 10px">
+							<h1 data-testid="compare-wizard-header-h1" style="font-size: 30px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; margin: 0">{wiz.name || 'Unbenannt'}</h1>
+						</div>
 					</div>
-					<h2 class="text-base text-[var(--g-ink-muted)] mt-1">
-						{stepTitles[wiz.currentStep]}
-					</h2>
-				{:else}
-					<h1 data-testid="compare-wizard-header-h1" class="text-2xl font-bold">
-						{stepTitles[wiz.currentStep]}
-					</h1>
-				{/if}
-			</header>
+					<div style="display: flex; gap: 8px; flex-shrink: 0">
+						<Btn variant="ghost" size="md" onclick={handleCancel}>Abbrechen</Btn>
+						<Btn variant="primary" size="md" onclick={handleSave}>{saveLabel}</Btn>
+					</div>
+				</div>
+			{:else}
+				<Eyebrow data-testid="compare-wizard-header-eyebrow" style="margin-bottom: 8px">Schritt {wiz.currentStep} von 5 · Neuer Orts-Vergleich</Eyebrow>
+				<div data-testid="compare-wizard-header-h1" style="font-size: 30px; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 28px; color: var(--g-ink); text-wrap: balance">
+					{stepTitles[wiz.currentStep]}
+				</div>
+			{/if}
 
-			<Stepper
-				current={wiz.currentStep}
-				labels={stepLabels}
-				subLabels={stepSubLabels}
-				onStepClick={wiz.isEditMode ? handleStepClick : undefined}
-				testidPrefix="compare-wizard"
-			/>
+			<!-- Custom Stepper (Issue #582 — CW_Stepper, eigene Implementierung) -->
+			<div style="display: flex; align-items: flex-start; gap: 0; padding: 8px 0; margin-bottom: {wiz.isEditMode ? 4 : 40}px">
+				{#each stepLabels as label, i}
+					{@const n = i + 1}
+					{@const state = wiz.isEditMode ? (n === wiz.currentStep ? 'current' : 'done') : (n < wiz.currentStep ? 'done' : n === wiz.currentStep ? 'current' : 'upcoming')}
+					{@const clickable = wiz.isEditMode || n <= wiz.currentStep}
+					<button
+						data-testid="compare-wizard-step-{n}"
+						onclick={() => clickable && wiz.goToStep(n)}
+						disabled={!clickable}
+						style="display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 0; background: none; border: none; cursor: {clickable ? 'pointer' : 'default'}; flex-shrink: 0; width: 80px"
+					>
+						<div style="width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; font-family: var(--g-font-sans); background: {state === 'upcoming' ? 'var(--g-rule)' : 'var(--g-accent)'}; color: {state === 'upcoming' ? 'var(--g-ink-3)' : 'white'}">
+							{#if state === 'done'}✓{:else}{n}{/if}
+						</div>
+						<span style="font-size: 11px; font-weight: {state === 'current' ? 600 : 500}; color: {state === 'current' ? 'var(--g-ink)' : 'var(--g-ink-3)'}; font-family: var(--g-font-sans); text-align: center">{label}</span>
+					</button>
+					{#if i < stepLabels.length - 1}
+						<div style="flex: 1; height: 1px; margin-top: 16px; min-width: 24px; background: {(wiz.isEditMode || i + 1 < wiz.currentStep) ? 'var(--g-ink-3)' : 'var(--g-rule)'}; opacity: {(wiz.isEditMode || i + 1 < wiz.currentStep) ? 0.5 : 1}">
+						</div>
+					{/if}
+				{/each}
+			</div>
 
 			{#if wiz.isEditMode}
-				<div class="flex gap-2 justify-end mt-3">
-					<Btn variant="outline" size="sm" disabled>
-						Briefing-Vorschau
-					</Btn>
-					<Btn variant="outline" size="sm" onclick={handleToggleEnabled}>
-						{wiz.subscriptionEnabled ? 'Pausieren' : 'Aktivieren'}
-					</Btn>
+				<div style="margin-top: 24px; margin-bottom: 4px; font-size: 22px; font-weight: 600; letter-spacing: -0.02em; color: var(--g-ink)">
+					{stepTitles[wiz.currentStep]}
 				</div>
 			{/if}
 		</div>
