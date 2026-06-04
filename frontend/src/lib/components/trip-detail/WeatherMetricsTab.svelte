@@ -18,6 +18,8 @@
 	// dieser Tab wird zum duennen Wrapper (channel="email" fix), Wizard nutzt
 	// dieselbe Komponente mit 4 Kanal-Tabs.
 	import { OutputLayoutEditor } from '$lib/components/organisms';
+	// Issue #587: TablePreview einbinden (war ungenutzt nach #343).
+	import TablePreview from './TablePreview.svelte';
 	// Issue #433: leitet `onDndReorder` an die Shared-Komponente durch.
 	import {
 		autoAssign, move, reorder, buildWeatherConfigMetrics,
@@ -347,6 +349,16 @@
 					onMove={(id, target) => onMove(id, target)}
 					{onMode}
 					{onDndReorder}
+				/>
+				<!-- Issue #587: TablePreview einbinden nach BucketSection "Detail-Werte",
+				     vor ChannelPreviewBlock. Alle Props als State-Variablen vorhanden. -->
+				<TablePreview
+					{catalog}
+					{enabledMap}
+					{friendlyMap}
+					{horizonsMap}
+					categoryOrder={CATEGORY_ORDER}
+					{indicatorCapable}
 				/>
 			</div>
 		</div>
