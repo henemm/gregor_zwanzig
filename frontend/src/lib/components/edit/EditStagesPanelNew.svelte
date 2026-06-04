@@ -292,13 +292,15 @@
 			<!-- Issue #542: Mobile-Editor (@media max-width: 899px) -->
 			<div class="mobile-editor" data-testid="mobile-editor">
 				<div class="mobile-map-wrap" style="position:relative;width:100%;height:calc(100dvh - 56px)">
-					<MapCanvas
-						stage={activeStage}
-						{activeWaypointId}
-						onWaypointActivate={handleWaypointActivate}
-						onMapClick={handleMapClick}
-						sizeKey={mobileSizeKey}
-					/>
+					{#key activeStageId}
+						<MapCanvas
+							stage={activeStage}
+							{activeWaypointId}
+							onWaypointActivate={handleWaypointActivate}
+							onMapClick={handleMapClick}
+							sizeKey={mobileSizeKey}
+						/>
+					{/key}
 					<!-- EtappenSwitcher-Pill oben links (AC-3/AC-4) -->
 					<button
 						type="button"
@@ -341,11 +343,13 @@
 							<Eyebrow>Karte · OpenTopoMap (OSM + SRTM)</Eyebrow>
 							<Pill tone="ghost">Topo</Pill>
 						</div>
+						{#key activeStageId}
 						<MapCanvas
 							stage={activeStage}
 							{activeWaypointId}
 							onWaypointActivate={handleWaypointActivate}
 						/>
+					{/key}
 					</div>
 
 					{#if addModeHint}
