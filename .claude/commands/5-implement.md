@@ -294,7 +294,8 @@ Wenn Adversary VERIFIED (oder AMBIGUOUS mit User-OK): gib exakt folgendes als le
 ✅ Phase 6 (Implementierung) abgeschlossen — Adversary VERIFIED.
 
 Nächster Schritt:
-1. `/6-validate`
+1. `/compact` (Kontext komprimieren, Workflow-Identität bleibt erhalten)
+2. `/6-validate`
 ---
 
 **NICHT** selbst mit der Validierung beginnen. Warte bis der User `/6-validate` tippt.
