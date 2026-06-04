@@ -140,6 +140,7 @@ Agent(subagent_type="developer", prompt="
 
   ## Pflicht: Workflow-Kontext setzen (ZUERST ausführen!)
   export GZ_ACTIVE_WORKFLOW=[WORKFLOW_NAME]
+  export GZ_AGENT_ROLE=developer
 
   ## Spec
   Pfad: [SPEC_PATH]

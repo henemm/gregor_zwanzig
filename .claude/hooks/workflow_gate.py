@@ -344,6 +344,15 @@ def main():
                       "phase5_tdd_red", "phase6_implement", "phase6b_adversary", "phase7_validate", "phase8_complete"]
 
     if phase in allowed_phases:
+        # Orchestrierer-Warnung: In phase6 sollte nur der Developer Agent editieren.
+        # Fehlt GZ_AGENT_ROLE=developer, wurde der Workflow umgangen.
+        if phase == "phase6_implement" and os.environ.get("GZ_AGENT_ROLE", "") != "developer":
+            print(
+                "⚠️  ORCHESTRIERER-WARNUNG: Code-Edit direkt im Orchestrierer (phase6_implement).\n"
+                "   Richtig: Developer Agent spawnen mit `export GZ_AGENT_ROLE=developer`.\n"
+                "   Edit wird erlaubt — bitte Workflow-Disziplin beachten.",
+                file=sys.stderr,
+            )
         sys.exit(0)  # Workflow correct, allow through
 
     # Block with appropriate error message
