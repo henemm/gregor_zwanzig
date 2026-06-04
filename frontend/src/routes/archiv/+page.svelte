@@ -97,7 +97,7 @@
 
 	<!-- Toolbar: Suche + Sortierung -->
 	<div style="display:flex;gap:16px;align-items:center;margin-bottom:20px">
-		<div style="position:relative;flex:1">
+		<div style="position:relative;flex:0 0 380px">
 			<span style="position:absolute;top:9px;left:12px;color:var(--g-ink-4);display:inline-flex">
 				<SearchIcon size={14} />
 			</span>
@@ -206,11 +206,11 @@
 		>
 			{rangeFrom(trip)} → {rangeTo(trip)}
 		</div>
-		{@render accuracyBar()}
+		{@render accuracyBar(trip)}
 		<div
 			style="font-size:12px;color:var(--g-ink-3);line-height:1.4;padding-right:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
 		>
-			{formatEventSummary(archiveStats.briefings[trip.id] ?? 0, archiveStats.alerts[trip.id] ?? 0)}
+			{trip.headline || formatEventSummary(archiveStats.briefings[trip.id] ?? 0, archiveStats.alerts[trip.id] ?? 0)}
 		</div>
 		<div style="display:flex;gap:4px;justify-content:flex-end">
 			<Btn variant="quiet" size="icon-sm" title="Briefing-Verlauf öffnen"
@@ -228,21 +228,14 @@
 	</div>
 {/snippet}
 
-<!-- AccuracyBar: accuracy-Daten ausstehend (kein Backend-Feld). -->
-<!-- Track sichtbar (0 %-Streifen), Zahl zeigt Em-Dash statt 0%. -->
-{#snippet accuracyBar()}
+<!-- AccuracyBar: zeigt accuracy_pct aus Trip-Daten oder Em-Dash wenn nicht gesetzt. -->
+{#snippet accuracyBar(trip: Trip)}
+	{@const value = trip.accuracy_pct ?? null}
+	{@const color = value == null ? 'var(--g-ink-4)' : value >= 90 ? '#3d6b3a' : value >= 80 ? 'var(--g-ink-2)' : '#c08a1a'}
 	<div style="display:flex;align-items:center;gap:10px;padding-right:16px">
-		<div
-			style="flex:1;height:4px;background:var(--g-rule-soft);border-radius:var(--g-r-pill);overflow:hidden;max-width:80px"
-		>
-			<div style="width:0%;height:100%;background:var(--g-ink)"></div>
+		<div style="flex:1;height:4px;background:var(--g-rule-soft);border-radius:var(--g-r-pill);overflow:hidden;max-width:80px">
+			<div style="width:{value ?? 0}%;height:100%;background:{color}"></div>
 		</div>
-		<span
-			style:font-family="var(--g-font-mono)"
-			style:font-size="12px"
-			style:font-weight="600"
-			style:font-variant-numeric="tabular-nums"
-			style:color="var(--g-ink-3)">—</span
-		>
+		<span style="font-family:var(--g-font-mono);font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;color:{color}">{value != null ? `${value}%` : '—'}</span>
 	</div>
 {/snippet}

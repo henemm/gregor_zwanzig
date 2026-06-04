@@ -1,0 +1,28 @@
+{
+  "id": "gardasee-2024",
+  "name": "Gardasee Klettersteige",
+  "stages": [
+    {
+      "id": "S1",
+      "name": "Etappe 1",
+      "date": "2024-04-19",
+      "waypoints": []
+    },
+    {
+      "id": "S2",
+      "name": "Etappe 2",
+      "date": "2024-04-20",
+      "waypoints": []
+    },
+    {
+      "id": "S3",
+      "name": "Etappe 3",
+      "date": "2024-04-21",
+      "waypoints": []
+    }
+  ],
+  "alert_rules": [],
+  "accuracy_pct": 71,
+  "headline": "Wind unterschätzt, Bocchette gesperrt — kurzfristig umgeplant",
+  "archived_at": "2024-04-22T00:00:00Z"
+}
