@@ -714,6 +714,23 @@
 					/>
 				</div>
 			</div>
+
+			<!-- Laufende Orts-Vergleiche (falls vorhanden) -->
+			{#if activePresets.length > 0}
+				<div style:margin-bottom="36px">
+					<SectionH
+						eyebrow="Läuft automatisch"
+						title="Laufende Orts-Vergleiche"
+						kicker="Vergleiche laufen unabhängig von Trips weiter — Briefing kommt in die Kanäle"
+						right={compareAllLink}
+					/>
+					<div class="kachel-grid-3">
+						{#each activePresets as preset (preset.id)}
+							<CompareKachel {preset} />
+						{/each}
+					</div>
+				</div>
+			{/if}
 		{/if}
 
 		<!-- AC-5/V5: "Außerdem beobachtet" in Card mit Titel + Link -->
@@ -752,8 +769,8 @@
 			</Card>
 		{/if}
 
-		<!-- Weitere Trips (nicht hero, nicht fertig) -->
-		{#if otherTrips.length > 0}
+		<!-- Weitere Trips (nicht hero, nicht fertig) — nur im Trip/Compare-Modus -->
+		{#if mode !== 'planning' && otherTrips.length > 0}
 			<section style:margin-bottom="32px">
 				<div class="kachel-grid">
 					{#each otherTrips as trip (trip.id)}
@@ -810,6 +827,10 @@
 	<Btn href="/trips" variant="quiet" size="sm">Alle anzeigen</Btn>
 {/snippet}
 
+{#snippet compareAllLink()}
+	<Btn href="/compare" variant="quiet" size="sm">Alle anzeigen</Btn>
+{/snippet}
+
 
 <style>
 	.cockpit-hero {
@@ -838,6 +859,11 @@
 		grid-template-columns: 1fr;
 		gap: 0.75rem;
 	}
+	.kachel-grid-3 {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 16px;
+	}
 	@media (max-width: 899px) {
 		.cockpit-hero {
 			grid-template-columns: 1fr;
@@ -851,6 +877,9 @@
 		.archive-grid {
 			grid-template-columns: repeat(2, 1fr);
 		}
+		.kachel-grid-3 {
+			grid-template-columns: 1fr 1fr;
+		}
 	}
 	.page-root {
 		padding: 0 0 80px;
@@ -861,6 +890,9 @@
 			padding-bottom: 120px;
 		}
 		.quick-create-grid {
+			grid-template-columns: 1fr;
+		}
+		.kachel-grid-3 {
 			grid-template-columns: 1fr;
 		}
 	}
