@@ -281,11 +281,11 @@ import PauseIcon from '@lucide/svelte/icons/pause';
 	</div>
 
 	{#if trips.length > 0}
+		{@const countAktiv = trips.filter(t => tripStatus(t, now) === 'aktiv').length}
+		{@const countGeplant = trips.filter(t => tripStatus(t, now) === 'geplant').length}
+		{@const countFertig = trips.filter(t => tripStatus(t, now) === 'fertig').length}
+		{@const countDraft = trips.filter(t => tripStatus(t, now) === 'draft').length}
 		<div class="hidden desktop:flex" style="gap: 24px; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--g-rule-soft);">
-			{@const countAktiv = trips.filter(t => tripStatus(t, now) === 'aktiv').length}
-			{@const countGeplant = trips.filter(t => tripStatus(t, now) === 'geplant').length}
-			{@const countFertig = trips.filter(t => tripStatus(t, now) === 'fertig').length}
-			{@const countDraft = trips.filter(t => tripStatus(t, now) === 'draft').length}
 			<Stat label="Aktiv"        value={countAktiv}   layout="inline" tone="accent" />
 			<Stat label="Geplant"      value={countGeplant} layout="inline" />
 			<Stat label="Abgeschlossen" value={countFertig} layout="inline" />
