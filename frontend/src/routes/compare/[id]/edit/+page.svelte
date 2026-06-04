@@ -1,8 +1,6 @@
 <script lang="ts">
-	// Issue #440 — Compare-Wizard Edit-Modus Mount-Punkt.
-	// Spec: docs/specs/modules/issue_440_compare_wizard_shell_step1_step2.md §1
-	//
-	// Factory-Pattern: State im script-Block instanziiert + aus Subscription prefilled.
+	// Issue #582 — Compare-Edit-Route: auf ComparePreset umgestellt (war: Subscription).
+	// Fix: data.preset.* statt data.subscription.*
 
 	import { setContext } from 'svelte';
 	import { CompareWizardState } from '$lib/components/compare/compareWizardState.svelte';
@@ -14,31 +12,23 @@
 
 	const state = new CompareWizardState();
 	state.isEditMode = true;
-	state.subscriptionId = data.subscription.id;
-	state.name = data.subscription.name;
-	state.activityProfile =
-		(data.subscription.activity_profile as ActivityProfile | null) ?? null;
-	state.pickedIds = data.subscription.locations ?? [];
-	state.subscriptionEnabled = data.subscription.enabled;
-	state.existingDisplayConfig =
-		(data.subscription.display_config as Record<string, unknown>) ?? {};
+	state.subscriptionId = data.preset.id;
+	state.name = data.preset.name ?? '';
+	state.activityProfile = (data.preset.profil as ActivityProfile | null) ?? null;
+	state.pickedIds = data.preset.location_ids ?? [];
+	state.subscriptionEnabled = true; // ComparePreset hat kein enabled-Feld
+	state.existingDisplayConfig = (data.preset.display_config as Record<string, unknown>) ?? {};
 	state.region = (state.existingDisplayConfig.region as string) ?? '';
 	state.idealRanges =
 		(state.existingDisplayConfig.ideal_ranges as Record<string, IdealRange>) ?? {};
 
-	// Issue #443 — Step-5-Versand-Felder prefüllen
-	state.sendEmail = data.subscription.send_email ?? true;
-	state.sendSignal = data.subscription.send_signal ?? false;
-	state.sendTelegram = data.subscription.send_telegram ?? false;
-	state.timeWindowStart = data.subscription.time_window_start ?? 9;
-	state.timeWindowEnd = data.subscription.time_window_end ?? 16;
-	state.forecastHours = data.subscription.forecast_hours ?? 48;
-	state.schedule = data.subscription.schedule ?? 'daily_morning';
-	state.weekday = data.subscription.weekday ?? 0;
-	state.includeHourly = data.subscription.include_hourly ?? false;
-	state.topN = data.subscription.top_n ?? 3;
+	// Versand-Felder aus preset mappen
+	state.schedule = data.preset.schedule ?? 'daily';
+	state.weekday = data.preset.weekday ?? 0;
+	state.timeWindowStart = data.preset.hour_from ?? 9;
+	state.timeWindowEnd = data.preset.hour_to ?? 16;
 
-	// Issue #442: Pro-Kanal-Layouts aus display_config.channel_layouts prefillen.
+	// Kanal-Layouts aus display_config
 	const savedLayouts = state.existingDisplayConfig.channel_layouts as
 		| ChannelLayouts
 		| undefined;
