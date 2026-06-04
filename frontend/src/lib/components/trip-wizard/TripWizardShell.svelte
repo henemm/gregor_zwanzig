@@ -59,7 +59,7 @@
 			? 'Speichern...'
 			: state.saveStatus === 'ok'
 				? 'Gespeichert'
-				: 'Trip speichern'
+				: 'Tour speichern'
 	);
 
 	// Factory-Handler (CLAUDE.md NiceGUI/Safari-Pattern auf Svelte-Klassen erweitert):
@@ -81,109 +81,114 @@
 	}
 </script>
 
-<div data-testid="trip-wizard-shell" class="max-w-3xl mx-auto py-6 px-4">
-	<TopoBg opacity={0.4}>
-		<div class="p-6 rounded-lg mb-6">
-			<header class="space-y-1 mb-4">
-				<Eyebrow>SCHRITT {state.currentStep} VON 5 · NEUER TRIP</Eyebrow>
-				<h1 class="text-2xl font-bold">{stepTitles[state.currentStep]}</h1>
+<div data-testid="trip-wizard-shell" style="display: flex; min-height: 100%; background: var(--g-paper);">
+	<main style="flex: 1; position: relative;">
+		<TopoBg opacity={0.16} />
+
+		<div style="position: relative; padding: 32px 80px 60px; max-width: 1180px; margin: 0 auto;">
+			<header style="margin-bottom: 28px;">
+				<Eyebrow style="margin-bottom: 8px;">Schritt {state.currentStep} von 5 · Neue Tour</Eyebrow>
+				<div style="font-size: 30px; font-weight: 600; letter-spacing: -0.02em; color: var(--g-ink);">
+					{stepTitles[state.currentStep]}
+				</div>
 			</header>
 
 			<Stepper current={state.currentStep} labels={stepLabels} subLabels={stepSubLabels} />
-		</div>
-	</TopoBg>
 
-	<div class="min-h-[300px] mt-6">
-		{#if state.currentStep === 1}
-			<Step1Profile />
-		{:else if state.currentStep === 2}
-			<Step2Stages />
-		{:else if state.currentStep === 3}
-			<Step3Weather />
-		{:else if state.currentStep === 4}
-			<Step4Layout />
-		{:else if state.currentStep === 5}
-			<Step5Reports />
-		{/if}
-	</div>
+			<div style="margin-top: 40px;">
+				{#if state.currentStep === 1}
+					<Step1Profile />
+				{:else if state.currentStep === 2}
+					<Step2Stages />
+				{:else if state.currentStep === 3}
+					<Step3Weather />
+				{:else if state.currentStep === 4}
+					<Step4Layout />
+				{:else if state.currentStep === 5}
+					<Step5Reports />
+				{/if}
+			</div>
 
-	{#if state.saveStatus !== 'idle'}
-		<div
-			data-testid="trip-wizard-save-status"
-			role="status"
-			aria-live="polite"
-			class="mt-4 min-h-[1.5rem] text-sm"
-		>
-			{#if state.saveStatus === 'saving'}
-				<span>Speichern...</span>
-			{:else if state.saveStatus === 'error'}
-				<span class="text-[var(--g-danger)]">{state.saveError}</span>
-			{:else if state.saveStatus === 'ok'}
-				<span class="text-[var(--g-success)]">Gespeichert</span>
+			{#if state.currentStep === 5}
+				<div style="margin-top: 36px; text-align: center; font-size: 13px; color: var(--g-ink-3); font-style: italic;">
+					Unterwegs läuft alles autark. Kein Eingreifen nötig.
+				</div>
 			{/if}
-		</div>
-	{/if}
 
-	<div
-		class="flex items-center justify-between mt-8 pt-4 border-t border-[var(--g-ink-faint)]/30
-		       sticky bottom-0 bg-[var(--g-paper)] mobile:py-3 mobile:px-4 mobile:mx-[-1rem]"
-		style="padding-bottom: env(safe-area-inset-bottom, 0px);"
-	>
-		<div>
-			{#if state.currentStep > 1}
-				<Btn
-					data-testid="trip-wizard-back"
-					variant="outline"
-					size="md"
-					onclick={handleBack}
-					class="mobile:min-h-[44px]"
+			{#if state.saveStatus !== 'idle'}
+				<div
+					data-testid="trip-wizard-save-status"
+					role="status"
+					aria-live="polite"
+					class="mt-4 min-h-[1.5rem] text-sm"
 				>
-					Zurück
-				</Btn>
+					{#if state.saveStatus === 'saving'}
+						<span>Speichern...</span>
+					{:else if state.saveStatus === 'error'}
+						<span class="text-[var(--g-danger)]">{state.saveError}</span>
+					{:else if state.saveStatus === 'ok'}
+						<span class="text-[var(--g-success)]">Gespeichert</span>
+					{/if}
+				</div>
 			{/if}
-		</div>
-		<div class="flex items-center gap-2">
-			<Btn
-				data-testid="trip-wizard-cancel"
-				variant="ghost"
-				size="md"
-				onclick={handleCancel}
-				class="mobile:min-h-[44px]"
+
+			<!-- Footer: 3-Spalten-Grid (JSX: 1fr auto 1fr) -->
+			<div
+				style="margin-top: 36px; padding-top: 20px; border-top: 1px solid var(--g-rule);
+				       display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px;"
 			>
-				Abbrechen
-			</Btn>
-			{#if state.currentStep < 5}
-				<Btn
-					data-testid="trip-wizard-next"
-					variant="accent"
-					size="md"
-					onclick={handleNext}
-					disabled={!state.canAdvanceCurrent}
-					class="mobile:min-h-[44px]"
-				>
-					Weiter
-				</Btn>
-			{:else}
-				<Btn
-					data-testid="trip-wizard-save"
-					variant="accent"
-					size="md"
-					onclick={handleSave}
-					disabled={state.saveStatus === 'saving'}
-					class="mobile:min-h-[44px]"
-				>
-					{saveLabel}
-				</Btn>
-			{/if}
+				<!-- Linke Spalte: Zurück -->
+				<div>
+					{#if state.currentStep > 1}
+						<Btn
+							data-testid="trip-wizard-back"
+							variant="ghost"
+							size="md"
+							onclick={handleBack}
+						>
+							← Zurück
+						</Btn>
+					{/if}
+				</div>
+				<!-- Mittlere Spalte: Step-spezifischer Extra-Slot -->
+				<div>
+					{#if state.currentStep === 2}
+						<Btn variant="ghost" size="md">+ Pausentag einfügen</Btn>
+					{/if}
+				</div>
+				<!-- Rechte Spalte: Abbrechen + Weiter/Speichern -->
+				<div style="display: flex; justify-content: flex-end; gap: 10px;">
+					<Btn
+						data-testid="trip-wizard-cancel"
+						variant="quiet"
+						size="md"
+						onclick={handleCancel}
+					>
+						Abbrechen
+					</Btn>
+					{#if state.currentStep < 5}
+						<Btn
+							data-testid="trip-wizard-next"
+							variant="accent"
+							size="md"
+							onclick={handleNext}
+							disabled={!state.canAdvanceCurrent}
+						>
+							Weiter →
+						</Btn>
+					{:else}
+						<Btn
+							data-testid="trip-wizard-save"
+							variant="accent"
+							size="md"
+							onclick={handleSave}
+							disabled={state.saveStatus === 'saving'}
+						>
+							{saveLabel}
+						</Btn>
+					{/if}
+				</div>
+			</div>
 		</div>
-	</div>
-
-	{#if stepHints[state.currentStep]}
-		<p
-			data-testid="trip-wizard-step-hint"
-			class="mt-3 text-center text-sm italic text-[var(--g-ink-muted)]"
-		>
-			{stepHints[state.currentStep]}
-		</p>
-	{/if}
+	</main>
 </div>

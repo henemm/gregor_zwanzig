@@ -278,13 +278,17 @@
 	{:else if loadError}
 		<p class="error" data-testid="step4-error">{loadError}</p>
 	{:else}
+		<!-- AC-7 #584: Channel-Tabs als 4-Spalten-Grid (repeat(4, 1fr)), kein gap -->
 		<div
-			class="channel-tabs"
 			role="tablist"
 			aria-label="Kanal-Auswahl"
 			data-testid="channel-tabs"
+			style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0;
+			       border: 1px solid var(--g-rule); border-radius: var(--g-r-2);
+			       background: var(--g-paper); margin-bottom: 20px; overflow: hidden;"
 		>
 			{#each CHANNELS as ch (ch.id)}
+				<!-- borderBottom: active ? "2px solid var(--g-accent)" : "2px solid transparent" -->
 				<button
 					type="button"
 					role="tab"
@@ -292,17 +296,22 @@
 					aria-pressed={activeChannel === ch.id}
 					data-channel={ch.id}
 					data-testid={`channel-tab-${ch.id}`}
-					class="channel-tab"
-					class:active={activeChannel === ch.id}
 					onclick={() => handleSelectChannel(ch.id)}
+					style="padding: 12px 14px; text-align: left; cursor: pointer;
+					       background: {activeChannel === ch.id ? 'var(--g-card)' : 'transparent'};
+					       border: none; border-right: 1px solid var(--g-rule-soft);
+					       border-bottom: {activeChannel === ch.id ? '2px solid var(--g-accent)' : '2px solid transparent'};
+					       transition: all 120ms; font-family: inherit;"
 				>
-					<span class="ch-label">{ch.label}</span>
-					<span class="ch-constraint">{ch.constraint}</span>
+					<span class="ch-label" style="font-size: 13px; font-weight: 600;
+					      color: {activeChannel === ch.id ? 'var(--g-ink)' : 'var(--g-ink-2)'};">{ch.label}</span>
+					<span class="ch-constraint" style="display: block; font-size: 9.5px; color: var(--g-ink-3); margin-top: 4px;">{ch.constraint}</span>
 				</button>
 			{/each}
 		</div>
 
-		<div class="editor-row">
+		<!-- AC-8 #584: 2-Spalten-Body (1fr 380px), rechte Spalte sticky top 24 -->
+		<div style="display: grid; grid-template-columns: 1fr 380px; gap: 28px; align-items: start;">
 			<div class="editor-col" data-testid="layout-editor">
 				<OutputLayoutEditor
 					{catalog}
@@ -319,7 +328,7 @@
 					onDndReorder={handleDndReorder}
 				/>
 			</div>
-			<aside class="preview-col" data-testid="layout-preview">
+			<aside class="preview-col" data-testid="layout-preview" style="position: sticky; top: 24px;">
 				<ChannelPreviewBlock
 					primary={channelBuckets[activeChannel].primary}
 					secondary={channelBuckets[activeChannel].secondary}
@@ -355,71 +364,11 @@
 	.error {
 		color: var(--g-danger);
 	}
-	.channel-tabs {
-		display: flex;
-		gap: var(--g-s-2);
-		overflow-x: auto;
-		padding-bottom: var(--g-s-1);
-	}
-	.channel-tab {
-		display: flex;
-		flex-direction: column;
-		align-items: flex-start;
-		min-width: 160px;
-		padding: var(--g-s-3) var(--g-s-4);
-		border: 1px solid var(--g-ink-faint);
-		border-radius: var(--g-radius-md);
-		background: var(--g-paper);
-		cursor: pointer;
-		text-align: left;
-		font-family: inherit;
-		min-height: 44px;
-		transition:
-			border-color 0.15s,
-			background 0.15s;
-	}
-	.channel-tab:hover {
-		border-color: var(--g-ink-muted);
-	}
-	.channel-tab.active {
-		border-color: var(--g-accent);
-		background: color-mix(in srgb, var(--g-accent) 8%, transparent);
-	}
-	.ch-label {
-		font-size: var(--g-text-base);
-		font-weight: 600;
-		color: var(--g-ink);
-	}
-	.ch-constraint {
-		font-size: var(--g-text-xs);
-		color: var(--g-ink-muted);
-		margin-top: 2px;
-	}
-	.editor-row {
-		display: grid;
-		grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-		gap: var(--g-s-5);
-		align-items: start;
-	}
 	.editor-col,
 	.preview-col {
 		display: flex;
 		flex-direction: column;
 		gap: var(--g-s-4);
 		min-width: 0;
-	}
-	@media (max-width: 899px) {
-		.editor-row {
-			grid-template-columns: 1fr;
-		}
-		.preview-col {
-			order: -1;
-		}
-		.channel-tabs {
-			margin-left: calc(var(--g-s-4) * -1);
-			margin-right: calc(var(--g-s-4) * -1);
-			padding-left: var(--g-s-4);
-			padding-right: var(--g-s-4);
-		}
 	}
 </style>

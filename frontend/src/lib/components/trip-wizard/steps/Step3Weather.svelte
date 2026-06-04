@@ -171,27 +171,32 @@
 	}
 </script>
 
-<div class="step3-weather flex flex-col gap-6 py-4" data-testid="step3-weather">
-	<section class="flex flex-col gap-2">
-		<Field label="AKTIVITÄTSPROFIL">
+<div class="step3-weather" data-testid="step3-weather" style="max-width: 920px; margin: 0 auto;">
+	<!-- AC-5 #584: 2-Spalten-Grid für Aktivitätsprofil + Beschreibungstext (260px 1fr) -->
+	<div style="display: grid; grid-template-columns: 260px 1fr; gap: 32px; align-items: start; margin-bottom: 24px;">
+		<div>
+			<Eyebrow style="margin-bottom: 8px;">Aktivitätsprofil</Eyebrow>
 			<Select
 				data-testid="activity-dropdown"
 				bind:value={selectedOption}
 				onchange={handleActivityChange}
-				class="max-w-xs"
 			>
 				{#each ACTIVITY_OPTIONS as opt (opt.value)}
 					<option value={opt.value}>{opt.label}</option>
 				{/each}
 			</Select>
-		</Field>
-
-		{#if wizard.activity === null}
-			<p class="text-sm text-[var(--g-ink-muted)]" data-testid="activity-hint">
-				Standard-Metriken werden verwendet.
-			</p>
-		{/if}
-	</section>
+		</div>
+		<div style="padding-top: 22px;">
+			<!-- Beschreibungstext rechts: fontSize 13, ink-2, lineHeight 1.55 -->
+			<div style="font-size: 13px; color: var(--g-ink-2); line-height: 1.55;" data-testid="activity-hint">
+				{#if wizard.activity === null || wizard.activity === undefined}
+					Standard-Metriken werden verwendet. Wähle ein Profil für eine kuratierte Auswahl — du kannst sie unten frei anpassen.
+				{:else}
+					Profil geladen. Anpassbar.
+				{/if}
+			</div>
+		</div>
+	</div>
 
 	<section class="flex flex-col gap-2">
 		<div class="flex items-center justify-between">
@@ -206,31 +211,43 @@
 			</p>
 		{:else}
 			<div
-				class="metrics-scroll relative max-h-[480px] overflow-y-auto"
+				class="metrics-scroll relative"
+				style="max-height: 540px; overflow-y: auto; border: 1px solid var(--g-rule); border-radius: var(--g-r-2); background: var(--g-paper);"
 				data-testid="step3-metrics-scroll"
 			>
 				{#each CATEGORY_ORDER as catKey (catKey)}
 					{@const catMetrics = metricsForCategory(catKey)}
 					{#if catMetrics.length > 0}
 						<div class="metric-group" data-testid={`metric-group-${catKey}`}>
-							<div class="sticky-header" data-testid={`metric-group-header-${catKey}`}>
-								<Eyebrow>{CATEGORY_LABELS[catKey] ?? catKey}</Eyebrow>
+							<!-- AC-6 #584: Gruppen-Header mit g-card-alt, sticky, g-rule-soft border -->
+							<div
+								class="mono"
+								data-testid={`metric-group-header-${catKey}`}
+								style="padding: 10px 16px 6px; font-size: 10px; font-weight: 600;
+								       color: var(--g-ink-3); letter-spacing: 0.08em; text-transform: uppercase;
+								       background: var(--g-card-alt); border-bottom: 1px solid var(--g-rule-soft);
+								       position: sticky; top: 0; z-index: 1;"
+							>
+								{CATEGORY_LABELS[catKey] ?? catKey}
 							</div>
 
 							{#each catMetrics as m (m.id)}
 								{@const wm = findMetric(m.id)}
+								<!-- AC-6 #584: g-card wenn enabled, opacity 0.55 wenn disabled -->
 								<div
 									data-testid={`metric-row-${m.id}`}
-									class="flex flex-wrap items-center gap-3 rounded-md border border-[var(--g-ink-faint)]/20 px-3 py-2 mb-1"
+									style="display: grid; grid-template-columns: 28px 1fr 220px;
+									       gap: 16px; padding: 10px 16px; align-items: center;
+									       background: {wm?.enabled ? 'var(--g-card)' : 'transparent'};
+									       border-bottom: 1px solid var(--g-rule-soft);
+									       opacity: {wm?.enabled ? 1 : 0.55};
+									       transition: opacity 120ms, background 120ms;"
 								>
-									<div class="flex items-center gap-2 text-sm min-w-[10rem]">
-										<Checkbox
-											checked={wm?.enabled ?? false}
-											onchange={makeToggleEnabled(m.id)}
-										>
-											{m.label}
-										</Checkbox>
-									</div>
+									<Checkbox
+										checked={wm?.enabled ?? false}
+										onchange={makeToggleEnabled(m.id)}
+									/>
+									<span style="font-size: 14px; font-weight: 500;">{m.label}</span>
 
 									<Select
 										data-testid={`metric-format-select-${m.id}`}
@@ -259,20 +276,10 @@
 
 <style>
 	.metrics-scroll {
-		/* Scrollbarer Container für die Metrik-Gruppen. */
 		position: relative;
 	}
 
-	.sticky-header {
-		position: sticky;
-		top: 0;
-		z-index: 2;
-		background: var(--g-paper);
-		padding: var(--g-s-2, 0.5rem) 0;
-	}
-
 	.scroll-fade {
-		/* Fade-Indikator am unteren Rand zum Andeuten von weiterem Inhalt. */
 		position: sticky;
 		bottom: 0;
 		height: 1.5rem;

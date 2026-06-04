@@ -1,25 +1,14 @@
 <script lang="ts">
 	// Step 5: Reports (Issue #432 — 3 Cards, Trend-Toggle, Kanal-Chips pro Card).
-	// Quelle: docs/specs/modules/issue_432_step3_step5_polish.md §B
-	//
-	// Aufbau (3 Cards in einer Reihe):
-	//   1. Abend-Briefing  (card-evening)  — Checkbox + Uhrzeit + Trend-Toggle + Kanal-Chips
-	//   2. Morgen-Update   (card-morning)  — Checkbox + Uhrzeit + Kanal-Chips
-	//   3. Warnungen       (card-alerts)   — Hinweis + Kanal-Chips
-	//
-	// State: getContext('trip-wizard-state'). Reports mutieren
-	// wizard.briefings.reports.{morning|evening}.{enabled|time}. Kanäle teilen
-	// alle Briefings: wizard.briefings.channels.{email|signal|telegram|sms}.
-	// Kontaktdaten kommen aus getContext('trip-wizard-profile') (null-tolerant).
-	// Save-Button kommt aus TripWizardShell (state.save()).
-	//
-	// Issue #432 (Scope-Erweiterung, schließt #437): Der Mehrtages-Trend-Toggle
-	// persistiert via `wizard.trendEnabled` → `report_config.multi_day_trend_evening`.
+	// Issue #584: Design-Fidelity 1:1 nach screen-trip-wizard.jsx
+	//   - Card-Titel: "Vor dem Schlafen" / "Vor Etappenstart" / "Sofort, wenn nötig"
+	//   - Uhrzeit: große Mono-Zahl (22px) + "24h"-Label + "Ändern"-Button
+	//   - Trend-Toggle: g-card-alt Block + g-rule-soft Border
+	//   - Kanal-Chips: <span>-Elemente (nicht Checkbox-Label), accent-tint/rule-border
 
 	import { getContext } from 'svelte';
-	import { Eyebrow } from '$lib/components/atoms';
-	import { GCard } from '$lib/components/ui/g-card';
-	import Checkbox from '$lib/components/ui/checkbox/Checkbox.svelte';
+	import { Eyebrow, Btn, Card } from '$lib/components/atoms';
+	import Switch from '$lib/components/atoms/Switch.svelte';
 	import { maskPhone } from '../wizardHelpers';
 	import type { WizardState } from '../wizardState.svelte';
 
@@ -35,184 +24,190 @@
 		email?: string;
 	} | null>('trip-wizard-profile');
 
-	// Kanal-Zeilen in fester Reihenfolge. `contact` ist die anzuzeigende
-	// Kontaktangabe (maskiert bei Telefonnummern); leer ⇒ Chip disabled.
-	const channelRows: { key: ChannelKey; label: string; contact: string }[] = [
-		{ key: 'email',    label: 'E-Mail',   contact: profile?.mail_to || profile?.email || '' },
-		{ key: 'signal',   label: 'Signal',   contact: maskPhone(profile?.signal_phone) },
-		{ key: 'telegram', label: 'Telegram', contact: profile?.telegram_chat_id || '' },
-		{ key: 'sms',      label: 'SMS',      contact: maskPhone(profile?.signal_phone) }
+	// Kanal-Chip-Reihenfolge (JSX: Email, Signal, Telegram, SMS) — AC-12 #584
+	const CHANNEL_CHIPS: { id: ChannelKey; label: string }[] = [
+		{ id: 'email',    label: '✉ Email' },
+		{ id: 'signal',   label: '▲ Signal' },
+		{ id: 'telegram', label: '→ Telegram' },
+		{ id: 'sms',      label: '* SMS' },
 	];
 
-	// Typsichere ChannelKey-Liste — wird in template-Komponenten als `data-channels`-
-	// Attribut benutzt, damit jede Report-Card explizit ihr Kanal-Inventory deklariert.
-	// Siehe Snippet `channelChipsRow` unten.
+	// Typsichere ChannelKey-Liste — Backward-Compat für data-channels-Attribut
 	const CHANNEL_KEYS: readonly ChannelKey[] = ['email', 'signal', 'telegram', 'sms'] as const;
 
-	// --- Factory-Handler (Safari/Factory: benannte Handler) -----------------
-
+	// Factory-Handler — Switch calls onchange with boolean (not Event)
 	function makeEnabledHandler(report: 'morning' | 'evening') {
-		return function handleToggleEnabled(e: Event) {
-			wizard.briefings.reports[report].enabled = (e.target as HTMLInputElement).checked;
+		return function handleToggleEnabled(checked: boolean) {
+			wizard.briefings.reports[report].enabled = checked;
 		};
 	}
 
-	function makeChannelHandler(key: ChannelKey) {
-		return function handleToggleChannel(e: Event) {
-			wizard.briefings.channels[key] = (e.target as HTMLInputElement).checked;
+	function makeChannelToggle(key: ChannelKey) {
+		return function handleToggleChannel() {
+			wizard.briefings.channels[key] = !wizard.briefings.channels[key];
 		};
 	}
 </script>
 
 <div class="step5-reports py-4" data-testid="step5-reports">
+	<!-- AC-9 #584: 3-Spalten-Grid, je Card minHeight 280, flex column -->
 	<div
-		class="reports-grid grid gap-4 sm:grid-cols-3"
+		class="reports-grid"
 		data-testid="reports-grid"
+		style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;"
 	>
-		<!-- Card 1: Abend-Briefing -->
-		<GCard
+		<!-- Card 1: Abend-Briefing — AC-9: "Vor dem Schlafen" -->
+		<Card
+			padding={18}
 			data-testid="card-evening"
-			class="rounded-md border border-[var(--g-ink-faint)]/20 p-4 flex flex-col gap-3"
+			style="min-height: 280px; display: flex; flex-direction: column;"
 		>
-			<Eyebrow>Abend-Briefing</Eyebrow>
-			<div class="flex items-center gap-2 text-sm">
-				<Checkbox
+			<div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 8px;">
+				<div>
+					<Eyebrow>Abend-Briefing</Eyebrow>
+					<div style="font-size: 16px; font-weight: 600; margin-top: 4px; letter-spacing: -0.01em;">Vor dem Schlafen</div>
+				</div>
+				<Switch
 					checked={wizard.briefings.reports.evening.enabled}
 					onchange={makeEnabledHandler('evening')}
-				>
-					Aktiv
-				</Checkbox>
-			</div>
-			<label class="flex flex-col gap-1 text-sm">
-				<span class="text-[var(--g-ink-muted)]">Uhrzeit</span>
-				<input
-					type="time"
-					lang="de"
-					data-testid="evening-time"
-					bind:value={wizard.briefings.reports.evening.time}
-					class="h-9 w-36 rounded-lg border border-[var(--g-ink-faint)]/40 bg-transparent px-2.5 font-mono outline-none focus-visible:ring-2 focus-visible:ring-[var(--g-accent)]"
+					tone="accent"
 				/>
-			</label>
+			</div>
 
-			<!-- Mehrtages-Trend-Toggle (Issue #432 Scope-Erw., persistiert in
-			     wizard.trendEnabled → report_config.multi_day_trend_evening).
-			     bind:checked ist hier korrekt: wizard.trendEnabled ist ein direkt
-			     mutierbares $state-Feld auf dem WizardState (siehe wizardState.svelte.ts:69)
-			     und wird ohne Mittlerschicht in toTripPayload geschrieben.
-			     Test-Garant: issue_432_trend_persistence.test.ts AC-19. -->
+			<!-- Sub-Text — AC-9 -->
+			<div style="font-size: 13px; color: var(--g-ink-3); line-height: 1.5; margin-bottom: 14px;">
+				Plan &amp; Vorhersage für morgen.
+			</div>
+
+			<!-- Uhrzeit als große Mono-Zahl — AC-10 -->
+			<div style="display: flex; align-items: baseline; gap: 12px; margin-bottom: 12px;">
+				<div style="flex: 1;">
+					<div class="mono" style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.06em; text-transform: uppercase;">Uhrzeit</div>
+					<div class="mono" style="font-size: 22px; font-weight: 600; color: var(--g-ink); margin-top: 4px; letter-spacing: 0.02em;">
+						{wizard.briefings.reports.evening.time || '18:00'}<span style="font-size: 11px; color: var(--g-ink-4); margin-left: 6px; font-weight: 400;">24h</span>
+					</div>
+				</div>
+				<Btn variant="ghost" size="sm">Ändern</Btn>
+			</div>
+
+			<!-- Trend-Toggle in eigenem g-card-alt Block — AC-11 -->
 			<div
-				class="trend-toggle flex items-center gap-2 text-sm"
 				data-testid="trend-toggle-row"
+				style="padding: 10px 12px; margin-bottom: 12px;
+				       background: var(--g-card-alt); border: 1px solid var(--g-rule-soft);
+				       border-radius: var(--g-r-2);
+				       display: flex; align-items: center; gap: 10px;"
 			>
-				<Checkbox
-					bind:checked={wizard.trendEnabled}
-					data-testid="evening-trend-toggle"
+				<Switch
+					checked={wizard.trendEnabled}
+					onchange={(v) => { wizard.trendEnabled = v; }}
+					tone="accent"
+					size="sm"
 					aria-label="3–7-Tage-Ausblick enthalten"
 				/>
-				<span class="text-[var(--g-ink-muted)]">3–7-Tage-Ausblick enthalten</span>
+				<div style="flex: 1; min-width: 0;">
+					<div style="font-size: 12.5px; font-weight: 500; color: var(--g-ink);">
+						3–7-Tage-Ausblick enthalten
+					</div>
+					<div style="font-size: 11px; color: var(--g-ink-3); margin-top: 1px;">
+						Mehrtages-Trend wird mitgeschickt
+					</div>
+				</div>
 			</div>
 
-			{@render channelChips('evening')}
-		</GCard>
+			<!-- Kanal-Chips — AC-12 -->
+			<div style="margin-top: auto;">
+				{@render channelChipRow('evening')}
+			</div>
+		</Card>
 
-		<!-- Card 2: Morgen-Update -->
-		<GCard
+		<!-- Card 2: Morgen-Update — AC-9: "Vor Etappenstart" -->
+		<Card
+			padding={18}
 			data-testid="card-morning"
-			class="rounded-md border border-[var(--g-ink-faint)]/20 p-4 flex flex-col gap-3"
+			style="min-height: 280px; display: flex; flex-direction: column;"
 		>
-			<Eyebrow>Morgen-Update</Eyebrow>
-			<div class="flex items-center gap-2 text-sm">
-				<Checkbox
+			<div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 8px;">
+				<div>
+					<Eyebrow>Morgen-Update</Eyebrow>
+					<div style="font-size: 16px; font-weight: 600; margin-top: 4px; letter-spacing: -0.01em;">Vor Etappenstart</div>
+				</div>
+				<Switch
 					checked={wizard.briefings.reports.morning.enabled}
 					onchange={makeEnabledHandler('morning')}
-				>
-					Aktiv
-				</Checkbox>
-			</div>
-			<label class="flex flex-col gap-1 text-sm">
-				<span class="text-[var(--g-ink-muted)]">Uhrzeit</span>
-				<input
-					type="time"
-					lang="de"
-					data-testid="morning-time"
-					bind:value={wizard.briefings.reports.morning.time}
-					class="h-9 w-36 rounded-lg border border-[var(--g-ink-faint)]/40 bg-transparent px-2.5 font-mono outline-none focus-visible:ring-2 focus-visible:ring-[var(--g-accent)]"
+					tone="accent"
 				/>
-			</label>
+			</div>
 
-			{@render channelChips('morning')}
-		</GCard>
+			<!-- Sub-Text — AC-9 -->
+			<div style="font-size: 13px; color: var(--g-ink-3); line-height: 1.5; margin-bottom: 14px;">
+				Aktuelle Bedingungen für heute.
+			</div>
 
-		<!-- Card 3: Warnungen -->
-		<GCard
+			<!-- Uhrzeit als große Mono-Zahl — AC-10 -->
+			<div style="display: flex; align-items: baseline; gap: 12px; margin-bottom: 12px;">
+				<div style="flex: 1;">
+					<div class="mono" style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.06em; text-transform: uppercase;">Uhrzeit</div>
+					<div class="mono" style="font-size: 22px; font-weight: 600; color: var(--g-ink); margin-top: 4px; letter-spacing: 0.02em;">
+						{wizard.briefings.reports.morning.time || '06:00'}<span style="font-size: 11px; color: var(--g-ink-4); margin-left: 6px; font-weight: 400;">24h</span>
+					</div>
+				</div>
+				<Btn variant="ghost" size="sm">Ändern</Btn>
+			</div>
+
+			<!-- Kanal-Chips — AC-12 -->
+			<div style="margin-top: auto;">
+				{@render channelChipRow('morning')}
+			</div>
+		</Card>
+
+		<!-- Card 3: Warnungen — AC-9: "Sofort, wenn nötig" -->
+		<Card
+			padding={18}
 			data-testid="card-alerts"
-			class="rounded-md border border-[var(--g-ink-faint)]/20 p-4 flex flex-col gap-3"
+			style="min-height: 280px; display: flex; flex-direction: column;"
 		>
-			<Eyebrow>Warnungen</Eyebrow>
-			<p class="text-sm text-[var(--g-ink-muted)]">
-				Warnungen werden automatisch ausgelöst, sobald eine Alarmregel überschritten wird.
-			</p>
+			<div style="margin-bottom: 8px;">
+				<Eyebrow>Warnungen</Eyebrow>
+				<div style="font-size: 16px; font-weight: 600; margin-top: 4px; letter-spacing: -0.01em;">Sofort, wenn nötig</div>
+			</div>
 
-			{@render channelChips('alerts')}
-		</GCard>
+			<div style="font-size: 13px; color: var(--g-ink-3); line-height: 1.5; margin-bottom: 14px;">
+				Alert, sobald eine Alarmregel überschritten wird.
+			</div>
+
+			<!-- Kanal-Chips — AC-12 -->
+			<div style="margin-top: auto;">
+				{@render channelChipRow('alerts')}
+			</div>
+		</Card>
 	</div>
 </div>
 
-{#snippet channelChips(reportKey: ReportKey)}
+{#snippet channelChipRow(reportKey: ReportKey)}
+	<!-- AC-12 #584: <span>-Chips (kein Checkbox-Label), accent-tint aktiv / rule inaktiv -->
 	<div
-		class="channel-chips flex flex-wrap gap-1 mt-2"
+		class="channel-chips"
 		data-testid={`channel-chips-${reportKey}`}
 		data-channels={CHANNEL_KEYS.join(',')}
+		style="display: flex; gap: 6px; flex-wrap: wrap;"
 	>
-		{#each channelRows as row (row.key)}
-			<label
-				class="chip"
-				data-testid={`channel-chip-${reportKey}-${row.key}`}
-				data-channel={row.key}
-			>
-				<Checkbox
-					checked={wizard.briefings.channels[row.key]}
-					onchange={makeChannelHandler(row.key)}
-					disabled={!row.contact}
-					aria-label={row.label}
-				/>
-				<span class="chip-label">{row.label}</span>
-				{#if row.contact}
-					<span
-						class="chip-contact"
-						data-testid={`channel-contact-${reportKey}-${row.key}`}
-					>
-						{row.contact}
-					</span>
-				{/if}
-			</label>
+		{#each CHANNEL_CHIPS as chip (chip.id)}
+			{@const on = wizard.briefings.channels[chip.id]}
+			<span
+				class="mono"
+				role="button"
+				tabindex="0"
+				data-testid={`channel-chip-${reportKey}-${chip.id}`}
+				data-channel={chip.id}
+				onclick={makeChannelToggle(chip.id)}
+				onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') makeChannelToggle(chip.id)(); }}
+				style="padding: 4px 10px; border-radius: 999px;
+				       font-size: 10px; font-weight: 600; letter-spacing: 0.04em; cursor: pointer;
+				       border: {on ? '1px solid var(--g-accent)' : '1px solid var(--g-rule)'};
+				       background: {on ? 'var(--g-accent-tint)' : 'transparent'};
+				       color: {on ? 'var(--g-accent-deep)' : 'var(--g-ink-4)'};"
+			>{chip.label}</span>
 		{/each}
 	</div>
 {/snippet}
-
-<style>
-	.channel-chips {
-		/* Chip-Reihe pro Card. */
-	}
-
-	.chip {
-		display: inline-flex;
-		align-items: center;
-		gap: var(--g-s-1, 0.25rem);
-		padding: var(--g-s-1, 0.25rem) var(--g-s-2, 0.5rem);
-		border: 1px solid var(--g-ink-faint);
-		border-radius: 9999px;
-		font-size: 0.75rem;
-		cursor: pointer;
-	}
-
-	.chip-contact {
-		color: var(--g-ink-muted);
-		font-family: var(--g-font-mono, ui-monospace, SFMono-Regular, monospace);
-		margin-left: var(--g-s-1, 0.25rem);
-	}
-
-	.trend-toggle {
-		/* Toggle „3–7-Tage-Ausblick enthalten" */
-	}
-</style>

@@ -20,8 +20,8 @@
 	// Safari/Factory: benannte Handler statt anonymer Closures.
 
 	import { getContext } from 'svelte';
-	import UploadIcon from '@lucide/svelte/icons/upload';
 	import { Field } from '$lib/components/molecules';
+	import { Btn } from '$lib/components/atoms';
 	import { uploadGpx } from '$lib/api';
 	import { naturalSort } from '$lib/utils/naturalSort.js';
 	import type { Stage } from '$lib/types';
@@ -187,37 +187,73 @@
 	</section>
 
 	<!-- GPX-Upload (AC-3 #300: von Step 2 hierher verschoben) -->
+	<!-- Issue #584: Drop-Zone 1:1 nach JSX (dashed accent, accent-tint, WizUploadGlyph) -->
 	<section class="flex flex-col gap-3">
 		<span class="text-xs uppercase tracking-wide text-[var(--g-ink-muted)]">GPX-Upload</span>
 
-		<!-- Drop-Zone -->
-		<div
-			data-testid="trip-wizard-step1-gpx-drop"
-			role="button"
-			tabindex="0"
-			aria-label="GPX-Dateien hierher ziehen oder klicken zum Auswählen"
-			class="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
-				{dragOver
-				? 'border-[var(--g-accent)] bg-[var(--g-accent)]/5'
-				: 'border-[var(--g-ink-faint)]/30 hover:border-[var(--g-accent)]/50'}"
-			ondrop={handleDrop}
-			ondragover={handleDragOver}
-			ondragleave={handleDragLeave}
-			onclick={handleDropZoneClick}
-			onkeydown={handleDropZoneKeydown}
-		>
-			<UploadIcon class="mx-auto mb-2 size-8 text-[var(--g-ink-muted)]" />
-			<p class="font-medium">GPX-Dateien hierher ziehen</p>
-			<p class="text-sm text-[var(--g-ink-muted)] mt-1">oder klicken zum Auswählen</p>
-			<input
-				bind:this={fileInputEl}
-				type="file"
-				accept=".gpx"
-				multiple
-				class="hidden"
-				onchange={handleFileInput}
-			/>
-		</div>
+		{#if wizard.stages.length > 0}
+			<!-- GPX geladen: Card mit Badge + "Andere Datei wählen" (AC-4 #584) -->
+			<div style="padding: 18px 22px; border-radius: var(--g-r-3);
+			            background: var(--g-card); border: 1px solid var(--g-rule);
+			            display: flex; align-items: center; gap: 14px;">
+				<div style="width: 36px; height: 36px; border-radius: 8px; background: var(--g-accent-tint);
+				            display: flex; align-items: center; justify-content: center;
+				            color: var(--g-accent-deep); font-family: var(--g-font-mono); font-size: 11px; font-weight: 700;">
+					GPX
+				</div>
+				<div style="flex: 1;">
+					<div style="font-size: 14px; font-weight: 600;">{wizard.stages.length} Etappe(n) geladen</div>
+					<div class="mono" style="font-size: 11px; color: var(--g-ink-3); margin-top: 2px;">
+						{wizard.stages.length} Etappe(n) erkannt
+					</div>
+				</div>
+				<Btn variant="ghost" size="sm" onclick={handleDropZoneClick}>Andere Datei wählen</Btn>
+			</div>
+		{:else}
+			<!-- Drop-Zone (AC-3 #584): dashed accent border + accent-tint bg + WizUploadGlyph -->
+			<div
+				data-testid="trip-wizard-step1-gpx-drop"
+				role="button"
+				tabindex="0"
+				aria-label="GPX-Dateien hierher ziehen oder klicken zum Auswählen"
+				class="border-dashed"
+				style="padding: 44px 24px; border-radius: var(--g-r-3);
+				       border: 1.5px dashed var(--g-accent); background: var(--g-accent-tint);
+				       text-align: center; cursor: pointer; transition: background 120ms;"
+				ondrop={handleDrop}
+				ondragover={handleDragOver}
+				ondragleave={handleDragLeave}
+				onclick={handleDropZoneClick}
+				onkeydown={handleDropZoneKeydown}
+			>
+				<!-- WizUploadGlyph SVG: Pfeil nach oben + Tray, stroke accent-deep -->
+				<svg width="36" height="36" viewBox="0 0 24 24" fill="none"
+				     stroke="var(--g-accent-deep)" stroke-width="1.6"
+				     stroke-linecap="round" stroke-linejoin="round"
+				     style="margin: 0 auto;">
+					<path d="M12 16V4M7 9l5-5 5 5"/>
+					<path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>
+				</svg>
+				<p style="font-size: 15px; font-weight: 600; color: var(--g-ink); margin-top: 12px;">
+					GPX-Datei hierher ziehen
+				</p>
+				<p style="font-size: 13px; color: var(--g-ink-3); margin-top: 4px;">
+					oder <span style="color: var(--g-accent-deep); text-decoration: underline;">aus Dateisystem wählen</span>
+				</p>
+				<div class="mono" style="font-size: 10px; color: var(--g-ink-4); margin-top: 10px; letter-spacing: 0.04em;">
+					.GPX · Komoot · Outdooractive · Garmin · FootPath
+				</div>
+			</div>
+		{/if}
+
+		<input
+			bind:this={fileInputEl}
+			type="file"
+			accept=".gpx"
+			multiple
+			class="hidden"
+			onchange={handleFileInput}
+		/>
 
 		<!-- Pending-Region -->
 		{#if pendingFiles.length > 0}
