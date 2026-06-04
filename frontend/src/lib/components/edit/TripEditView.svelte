@@ -104,7 +104,7 @@
 	<!-- Breadcrumb -->
 	<nav data-testid="edit-breadcrumb"
 		class="text-xs uppercase tracking-wider text-muted-foreground mb-3">
-		<a href="/trips" class="hover:underline">MEINE TOUREN</a>
+		<a href="/trips" class="hover:underline">MEINE TRIPS</a>
 		<span> · TRIP BEARBEITEN</span>
 	</nav>
 
