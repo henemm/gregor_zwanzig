@@ -7,6 +7,7 @@
 	import EditReportConfigSection from './EditReportConfigSection.svelte';
 	import { AlertRulesEditor } from '$lib/components/organisms';
 	import EtappenStrip from '$lib/components/trip-detail/waypoints/EtappenStrip.svelte';
+	import EditStagesPanelNew from './EditStagesPanelNew.svelte';
 	import { normalizeAlertMetric } from '$lib/utils/alertMetricLabels';
 	import { computeTripStats } from '$lib/utils/tripStats';
 	import { formatDateRange } from '$lib/utils/tripHero';
@@ -170,15 +171,7 @@
 		{#if activeTab === 'route'}
 			<EditRouteSection bind:tripName bind:stages mode="edit" />
 		{:else if activeTab === 'etappen'}
-			<div style="padding: 24px 40px;">
-				<p style="font-size: 13px; color: var(--g-ink-2); margin-bottom: 16px;">Klicke auf eine Etappe, um Wegpunkte visuell zu bearbeiten.</p>
-				<EtappenStrip
-					{stages}
-					activeStageId={stages[0]?.id ?? ''}
-					onStagesReorder={(s) => (stages = s)}
-					onStageActivate={(_id) => {}}
-				/>
-			</div>
+			<EditStagesPanelNew bind:stages tripId={trip.id} showSave={false} />
 		{:else if activeTab === 'wetter'}
 			<WeatherSummaryCard displayConfig={trip.display_config} tripId={trip.id} />
 		{:else if activeTab === 'reports'}
