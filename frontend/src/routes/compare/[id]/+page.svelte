@@ -53,7 +53,15 @@
 
 <!-- Desktop-Layout (#491) -->
 <div class="hidden desktop:block p-8 max-w-5xl mx-auto">
-	<Eyebrow>WORKSPACE · ORTS-VERGLEICHE / DETAIL</Eyebrow>
+	<nav aria-label="Breadcrumb">
+		<Eyebrow>
+			<a href="/" class="breadcrumb-link">WORKSPACE</a>
+			<span aria-hidden="true"> · </span>
+			<a href="/compare" class="breadcrumb-link">ORTS-VERGLEICHE</a>
+			<span aria-hidden="true"> / </span>
+			<span>DETAIL</span>
+		</Eyebrow>
+	</nav>
 	<div class="flex items-start justify-between mt-1 mb-6">
 		<div>
 			<h1 class="text-3xl font-semibold tracking-tight">
@@ -157,3 +165,13 @@
 	onAction={handleAction}
 	presetName={data.preset.name}
 />
+
+<style>
+	.breadcrumb-link {
+		color: inherit;
+		text-decoration: none;
+	}
+	.breadcrumb-link:hover {
+		text-decoration: underline;
+	}
+</style>
