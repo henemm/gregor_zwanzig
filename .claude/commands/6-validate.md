@@ -2,21 +2,6 @@
 
 You are starting the **Validation Phase**.
 
-## Kontext löschen (ZUERST — vor allen anderen Schritten)
-
-Die vorigen Phasen haben viel Kontext angehäuft (Developer-Agent-Output, Adversary-Logs). `/clear` löscht die History vollständig — alle relevanten Infos liegen in Dateien.
-
-```
-/clear
-```
-
-**Direkt nach `/clear` ausführen:**
-```bash
-python3 .claude/hooks/workflow_state_multi.py status
-# Spec-Pfad aus dem Status-Output lesen und Spec einlesen (für AC-Liste):
-# cat <spec_file aus Status>
-```
-
 ## Prerequisites
 
 Check workflow status:

@@ -21,23 +21,6 @@ python3 .claude/hooks/workflow_state_multi.py status
 
 **If TDD RED artifacts are missing, the `tdd_enforcement` hook will BLOCK edits!**
 
-### Kontext löschen (JETZT — vor allen anderen Schritten)
-
-Die Phasen 1–4 haben viel Analyse- und Diskussions-Kontext angehäuft. `/clear` löscht die History vollständig — alle relevanten Infos liegen in Dateien und werden danach neu eingelesen.
-
-```
-/clear
-```
-
-**Direkt nach `/clear` ausführen:**
-```bash
-python3 .claude/hooks/workflow_state_multi.py status
-# Spec-Pfad aus dem Status-Output lesen und Spec einlesen:
-# cat <spec_file aus Status>
-```
-
-Danach normal weiterfahren.
-
 ## Your Tasks
 
 ### 0. Workflow-Name pinnen (ZUERST — vor allem anderen!)
@@ -305,8 +288,17 @@ Bei **PASS**: weiter zu Phase 7.
 
 ## Next Step
 
-After adversary verification:
-Implementation complete. Adversary verified. Ready for `/validate`.
+Wenn Adversary VERIFIED (oder AMBIGUOUS mit User-OK): gib exakt folgendes als letzten Output aus — dann STOPP:
+
+---
+✅ Phase 6 (Implementierung) abgeschlossen — Adversary VERIFIED.
+
+Nächster Schritt:
+1. `/clear`
+2. `/6-validate`
+---
+
+**NICHT** selbst mit der Validierung beginnen. Warte bis der User `/6-validate` tippt.
 
 ## Common Mistakes
 

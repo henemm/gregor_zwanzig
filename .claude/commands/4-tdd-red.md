@@ -122,7 +122,17 @@ Before proceeding to implementation:
 
 ## Next Step
 
-Phase 5 abgeschlossen — warte auf **'go'**. Danach SOFORT Implementierung starten — **NICHT warten, dass der User `/5-implement` eingibt.** Alle Schritte aus `/5-implement` inline ausführen.
+Sobald der User **'go'** schreibt, gib exakt folgendes als letzten Output aus — dann STOPP:
+
+---
+✅ Phase 5 (TDD RED) abgeschlossen.
+
+Nächster Schritt:
+1. `/clear`
+2. `/5-implement`
+---
+
+**NICHT** selbst mit der Implementierung beginnen. **NICHT** `/5-implement` inline ausführen. Warte bis der User `/5-implement` tippt.
 
 ## Common Mistakes
 
