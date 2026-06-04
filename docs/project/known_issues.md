@@ -189,6 +189,41 @@ GitHub Issue #556 manuell geschlossen — kein Code-Fix erforderlich.
 
 ---
 
+## BUG-594-598: Test-Briefing-Feedback & Archivieren-Dialog
+
+**Status:** RESOLVED (2026-06-04) | **Severity:** Low | **GitHub Issues:** #594, #598
+
+### Symptom
+
+**#594:** Der Button „Test-Briefing senden" auf der Trip-Detailseite zeigte eine Erfolgs- oder Fehlermeldung mit `color: var(--g-ink-muted)` — zu niedrig kontrastiert (WCAG-Verstoß), Nutzer erkannte nicht ob Versand funktioniert.
+
+**#598:** Der Button „Archivieren" in der Trips-Liste führte die Aktion sofort aus. Keine Bestätigung wie beim Löschen — Nutzer konnte versehentlich archivieren.
+
+### Root Cause
+
+- **#594:** CSS-Styling der `.briefing-msg` nutzte durchgehend muted-Ink statt kontrastierter Farbe
+- **#598:** `handlePrimaryAction()` für Archivieren hatte kein ConfirmDialog wie das Delete-Pattern
+
+### Fix (Committed 2026-06-04)
+
+**#594 — `TripHeader.svelte`:**
+- `testBriefingKind: 'success' | 'error' | null` State hinzugefügt
+- CSS: `kind='success'` → `--g-success` (grün, WCAG AA); `kind='error'` → `--g-danger` (rot, WCAG AA)
+
+**#598 — `trips/+page.svelte`:**
+- `archiveTarget: Trip | null` State hinzugefügt
+- `handlePrimaryAction()` setzt `archiveTarget = trip` statt sofort zu patchen
+- `handleArchive()` führt PATCH aus, lädt Liste neu, setzt `archiveTarget = null`
+- ConfirmDialog mit Text „Archivierte Trips erhalten keine Briefings mehr."
+- Dearchivieren bleibt sofort (reversibel, kein Dialog nötig)
+
+### Files Changed
+
+- `frontend/src/lib/components/trip-detail/TripHeader.svelte` (+11/-2)
+- `frontend/src/routes/trips/+page.svelte` (+36/-1)
+
+---
+
 ## BUG-TOKEN-01: Alte Farb-Token-Aliasse nicht bereinigt (#541, #543, #544)
 
 **Status:** RESOLVED (2026-06-02) | **Severity:** Low | **GitHub Issues:** #541, #543, #544

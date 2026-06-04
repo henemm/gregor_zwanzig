@@ -35,6 +35,7 @@
 		filteredTrips.filter(t => mobileFilter === 'all' || tripStatus(t, now) === mobileFilter)
 	);
 	let deleteTarget: Trip | null = $state(null);
+	let archiveTarget: Trip | null = $state(null);
 	let error: string | null = $state(null);
 
 	// Report Config Dialog
@@ -97,17 +98,40 @@
 			goto(`/trips/${trip.id}/wizard`);
 			return;
 		}
+		if (!trip.archived_at) {
+			archiveTarget = trip;
+			return;
+		}
 		primaryActionLoading = trip.id;
 		try {
 			const res = await fetch(`/api/trips/${trip.id}/state`, {
 				method: 'PATCH',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(trip.archived_at ? { archived: false } : { archived: true })
+				body: JSON.stringify({ archived: false })
 			});
 			if (!res.ok) throw new Error(`PATCH failed: ${res.status}`);
 			await refetchTrips();
 		} catch (e: unknown) {
 			error = (e as Error).message ?? 'Fehler beim Statuswechsel';
+		} finally {
+			primaryActionLoading = null;
+		}
+	}
+
+	async function handleArchive() {
+		if (!archiveTarget) return;
+		primaryActionLoading = archiveTarget.id;
+		try {
+			const res = await fetch(`/api/trips/${archiveTarget.id}/state`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ archived: true })
+			});
+			if (!res.ok) throw new Error(`PATCH failed: ${res.status}`);
+			archiveTarget = null;
+			await refetchTrips();
+		} catch (e: unknown) {
+			error = (e as Error).message ?? 'Fehler beim Archivieren';
 		} finally {
 			primaryActionLoading = null;
 		}
@@ -457,6 +481,16 @@
 	onConfirm={handleDelete}
 	onCancel={() => (deleteTarget = null)}
 	onOpenChange={(o) => { if (!o) deleteTarget = null; }}
+/>
+
+<ConfirmDialog
+	open={archiveTarget !== null}
+	title="Trip archivieren?"
+	description="Archivierte Trips erhalten keine Briefings mehr."
+	confirmLabel="Archivieren"
+	onConfirm={handleArchive}
+	onCancel={() => (archiveTarget = null)}
+	onOpenChange={(o) => { if (!o) archiveTarget = null; }}
 />
 
 <ReportConfigDialog

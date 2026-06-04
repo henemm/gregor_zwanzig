@@ -79,15 +79,19 @@
 
 	let testBriefingLoading = $state(false);
 	let testBriefingMsg = $state<string | null>(null);
+	let testBriefingKind = $state<'success' | 'error' | null>(null);
 
 	async function handleTestBriefing(): Promise<void> {
 		testBriefingLoading = true;
 		testBriefingMsg = null;
+		testBriefingKind = null;
 		try {
 			await api.post('/api/scheduler/trip-reports?hour=18', {});
 			testBriefingMsg = 'Briefings für alle aktiven Trips ausgelöst.';
+			testBriefingKind = 'success';
 		} catch {
 			testBriefingMsg = 'Fehler beim Senden.';
+			testBriefingKind = 'error';
 		} finally {
 			testBriefingLoading = false;
 		}
@@ -151,7 +155,11 @@
 	</div>
 
 	{#if testBriefingMsg}
-		<p class="briefing-msg" data-testid="trip-detail-test-briefing-msg">{testBriefingMsg}</p>
+		<p
+			class="briefing-msg"
+			data-testid="trip-detail-test-briefing-msg"
+			style:color={testBriefingKind === 'success' ? 'var(--g-success)' : 'var(--g-danger)'}
+		>{testBriefingMsg}</p>
 	{/if}
 </header>
 
@@ -222,7 +230,6 @@
 	.briefing-msg {
 		margin: 0;
 		font-size: var(--g-text-sm);
-		color: var(--g-ink-muted);
 	}
 	.mobile-metrics {
 		display: none;
