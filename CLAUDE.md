@@ -112,6 +112,14 @@ uv run pytest
 
 **NIEMALS `Mock()`, `patch()`, oder `MagicMock` fuer E-Mail/API Tests verwenden!**
 
+**Dateiinhalt-Checks sind ebenfalls VERBOTEN:**
+`assert 'xyz' in file.read_text()` — das ist Code-Analyse, kein Verhaltensnachweis.
+TDD-Tests MÜSSEN das tatsächliche Verhalten beweisen:
+- Frontend-Bug: Playwright-E2E gegen Staging als eingeloggter Nutzer
+- Backend-Bug: echter HTTP-Call, echter DB-Zustand prüfen
+- Mindestens ein Test muss den Bug aus Nutzerperspektive reproduzieren (rot vor Fix, grün nach Fix)
+- **Ausnahme:** Dokumentations-Compliance-Tests die Workflow-Dateien selbst als Artefakt prüfen (z.B. "enthält CLAUDE.md die Regel X?"). Diese müssen mit `# doc-compliance-test` markiert sein.
+
 ## E2E-Verifikation (Post-Push auf Staging)
 
 Die echte "funktioniert es wirklich"-Verifikation laeuft **nach** dem Push gegen

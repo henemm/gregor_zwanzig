@@ -57,10 +57,10 @@ tags: []
 ## Acceptance Criteria
 
 - **AC-1:** Given <precondition> / When <action> / Then <observable outcome>
-  - Test: (populated after /tdd-red)
+  - Test: [Konkretes Nutzerverhalten das bewiesen wird — kein Dateiinhalt-Check]
 
 - **AC-2:** Given <precondition> / When <action> / Then <observable outcome>
-  - Test: (populated after /tdd-red)
+  - Test: [Konkretes Nutzerverhalten das bewiesen wird — kein Dateiinhalt-Check]
 
 ## Known Limitations
 

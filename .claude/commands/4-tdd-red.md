@@ -53,6 +53,11 @@ pytest tests/test_[feature].py -v > docs/artifacts/[workflow]/test-output-red.tx
 
 **Expected:** Tests FAIL with clear error messages.
 
+**Verhaltenstest-Pflicht:** Mindestens ein Test muss den Fehler aus Nutzerperspektive beweisen.
+- Frontend-Bug: Playwright-E2E gegen Staging
+- Backend-Bug: echter HTTP-Call
+- VERBOTEN: `assert 'xyz' in file.read_text()` (Code-Analyse ≠ Verhaltensnachweis)
+
 ### 4. Capture REAL Artifacts
 
 Save actual test output as artifacts:
