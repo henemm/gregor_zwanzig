@@ -40,7 +40,8 @@ func AuthMiddleware(secret string) func(http.Handler) http.Handler {
 				r.URL.Path == "/api/auth/passkey/login/begin" || r.URL.Path == "/api/auth/passkey/login/finish" ||
 				r.URL.Path == "/api/auth/passkey/register/public/begin" ||
 				r.URL.Path == "/api/auth/passkey/register/public/finish" ||
-				r.URL.Path == "/api/auth/passkey/discoverable/begin" || r.URL.Path == "/api/auth/passkey/discoverable/finish" {
+				r.URL.Path == "/api/auth/passkey/discoverable/begin" || r.URL.Path == "/api/auth/passkey/discoverable/finish" ||
+				strings.HasPrefix(r.URL.Path, "/api/internal/") {
 				next.ServeHTTP(w, r)
 				return
 			}
