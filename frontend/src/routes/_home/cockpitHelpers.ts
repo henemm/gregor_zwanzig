@@ -131,7 +131,7 @@ export function plannedBriefings(
 	const rows: BriefingReport[] = [];
 	if (rc.morning_enabled) {
 		rows.push({
-			when: rc.morning_time || '07:00',
+			when: (rc.morning_time || '07:00').slice(0, 5),
 			kind: 'morgen',
 			channels,
 			status: isSent('morning') ? 'sent' : 'planned'
@@ -139,7 +139,7 @@ export function plannedBriefings(
 	}
 	if (rc.evening_enabled) {
 		rows.push({
-			when: rc.evening_time || '18:00',
+			when: (rc.evening_time || '18:00').slice(0, 5),
 			kind: 'abend',
 			channels,
 			status: isSent('evening') ? 'sent' : 'planned'
