@@ -32,7 +32,6 @@
 
 	// Channels
 	let send_email = $state(true);
-	let send_signal = $state(false);
 	let send_telegram = $state(false);
 	let send_sms = $state(false);
 
@@ -45,7 +44,6 @@
 	// --- Profile (Channel-Verfuegbarkeit) --------------------------------------
 	interface Profile {
 		mail_to?: string;
-		signal_phone?: string;
 		telegram_chat_id?: string;
 		sms_phone?: string;
 	}
@@ -53,7 +51,6 @@
 
 	let availableChannels = $derived({
 		email: !!profile?.mail_to,
-		signal: !!profile?.signal_phone,
 		telegram: !!profile?.telegram_chat_id,
 		sms: !!profile?.sms_phone
 	});
@@ -82,7 +79,6 @@
 			if (typeof c.evening_time === 'string') evening_time = c.evening_time.slice(0, 5);
 
 			if (typeof c.send_email === 'boolean') send_email = c.send_email;
-			if (typeof c.send_signal === 'boolean') send_signal = c.send_signal;
 			if (typeof c.send_telegram === 'boolean') send_telegram = c.send_telegram;
 			if (typeof c.send_sms === 'boolean') send_sms = c.send_sms;
 
@@ -129,7 +125,6 @@
 			morning_time: toHHMMSS(morning_time),
 			evening_time: toHHMMSS(evening_time),
 			send_email,
-			send_signal,
 			send_telegram,
 			send_sms,
 			multi_day_trend_morning,
@@ -284,22 +279,6 @@
 		{#if !availableChannels.email}
 			<div data-testid="channel-email-hint" class="pl-6 text-xs text-muted-foreground">
 				E-Mail-Adresse fehlt — <a href="/account" style="color:var(--g-accent);text-decoration:underline;text-underline-offset:2px">im Account einrichten</a>
-			</div>
-		{/if}
-
-		<!-- Signal -->
-		<div class="text-sm">
-			<span data-testid="channel-signal" class="inline-flex items-center gap-2">
-				<Checkbox
-					checked={send_signal}
-					disabled={!availableChannels.signal}
-					onchange={(e) => { send_signal = (e.target as HTMLInputElement).checked; }}
-				>Signal{profile?.signal_phone ? ` (${profile.signal_phone})` : ''}</Checkbox>
-			</span>
-		</div>
-		{#if !availableChannels.signal}
-			<div data-testid="channel-signal-hint" class="pl-6 text-xs text-muted-foreground">
-				Signal-Nummer fehlt — <a href="/account" style="color:var(--g-accent);text-decoration:underline;text-underline-offset:2px">im Account einrichten</a>
 			</div>
 		{/if}
 
