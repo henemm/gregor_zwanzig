@@ -166,3 +166,56 @@ def test_scheduler_send_report_ignores_signal_silently():
     assert not hasattr(s, "signal_api_key"), (
         "Settings hat noch signal_api_key"
     )
+
+
+# ──────────────────────────────────────────────────────────────
+# AC-6: Signal aus Compare-Frontend-Dateien entfernt
+# ──────────────────────────────────────────────────────────────
+
+FRONTEND = Path(__file__).parent.parent.parent / "frontend" / "src"
+
+
+def test_compare_tabs_has_no_signal_channel_row():
+    """
+    AC-6: CompareTabs.svelte (Versand-Tab) darf keinen Signal-Channel-Eintrag mehr zeigen.
+    """
+    path = FRONTEND / "lib" / "components" / "compare" / "CompareTabs.svelte"
+    assert path.exists(), f"CompareTabs.svelte nicht gefunden: {path}"
+    content = path.read_text(encoding="utf-8")
+    assert "Signal" not in content, (
+        "CompareTabs.svelte enthält noch 'Signal' — Signal-Zeile muss entfernt werden"
+    )
+
+
+def test_compare_tabs_has_no_signal_in_channels_array():
+    """
+    AC-6: CompareTabs.svelte darf 'signal' nicht mehr im channels-Array enthalten.
+    """
+    path = FRONTEND / "lib" / "components" / "compare" / "CompareTabs.svelte"
+    content = path.read_text(encoding="utf-8")
+    assert "'signal'" not in content, (
+        "CompareTabs.svelte hat noch 'signal' im channels-Array — muss entfernt werden"
+    )
+
+
+def test_step5_versand_has_no_signal_toggle():
+    """
+    AC-6: Step5Versand.svelte darf keinen Signal-ChannelToggle mehr enthalten.
+    """
+    path = FRONTEND / "lib" / "components" / "compare" / "steps" / "Step5Versand.svelte"
+    assert path.exists(), f"Step5Versand.svelte nicht gefunden: {path}"
+    content = path.read_text(encoding="utf-8")
+    assert "sendSignal" not in content, (
+        "Step5Versand.svelte enthält noch sendSignal — Signal-Toggle muss entfernt werden"
+    )
+
+
+def test_step5_versand_has_no_signal_channel_toggle():
+    """
+    AC-6: Step5Versand.svelte darf kein 'signal_phone' mehr in den Props enthalten.
+    """
+    path = FRONTEND / "lib" / "components" / "compare" / "steps" / "Step5Versand.svelte"
+    content = path.read_text(encoding="utf-8")
+    assert "signal_phone" not in content, (
+        "Step5Versand.svelte hat noch signal_phone in Props — muss entfernt werden"
+    )

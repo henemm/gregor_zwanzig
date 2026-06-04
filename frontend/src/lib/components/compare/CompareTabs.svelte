@@ -88,10 +88,9 @@
 	const CHANNEL_COLS: Record<string, number> = {
 		email: 99,
 		telegram: 8,
-		signal: 6,
 		sms: 0
 	};
-	const channels = ['email', 'telegram', 'signal', 'sms'];
+	const channels = ['email', 'telegram', 'sms'];
 
 	// ── Vorschau-Tab (Issue #514) ────────────────────────────────────────────────
 	let previewChannel = $state<'email' | 'sms'>('email');
@@ -104,7 +103,7 @@
 
 	const PREVIEW_CHANNELS = [
 		{ value: 'email', label: 'Email' },
-		{ value: 'sms', label: 'SMS / Signal' }
+		{ value: 'sms', label: 'SMS' }
 	];
 
 	$effect(() => {
@@ -304,12 +303,6 @@
 						</div>
 						<div class="channel-row">
 							<Dot tone="neutral" />
-							<span class="channel-name">Signal</span>
-							<span class="channel-status">nicht verbunden</span>
-							<Switch checked={false} disabled={true} size="sm" aria-label="Signal-Kanal" />
-						</div>
-						<div class="channel-row">
-							<Dot tone="neutral" />
 							<span class="channel-name">Telegram</span>
 							<span class="channel-status">nicht verbunden</span>
 							<Switch checked={false} disabled={true} size="sm" aria-label="Telegram-Kanal" />
@@ -416,7 +409,7 @@
 				{/if}
 				{#if previewChannel === 'sms'}
 					<p class="preview-sms-hint" data-testid="compare-preview-sms-hint">
-						SMS/Signal-Vorschau ist noch nicht verfügbar.
+						SMS-Vorschau ist noch nicht verfügbar.
 					</p>
 				{/if}
 			</div>

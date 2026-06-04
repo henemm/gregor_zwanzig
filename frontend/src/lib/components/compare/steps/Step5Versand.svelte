@@ -12,17 +12,16 @@
 
 	const profile = getContext<{
 		mail_to?: string;
-		signal_phone?: string;
 		telegram_chat_id?: string;
 		email?: string;
 	} | null>('compare-wizard-profile');
 
 	// Abgeleitete Werte (Svelte $derived für Overlap-Check)
 	const hasTimeOverlap = $derived(state.timeWindowStart >= state.timeWindowEnd);
-	const allChannelsOff = $derived(!state.sendEmail && !state.sendSignal && !state.sendTelegram);
+	const allChannelsOff = $derived(!state.sendEmail && !state.sendTelegram);
 
 	// Factory-Handler (Safari-Pattern)
-	function makeChannelHandler(field: 'sendEmail' | 'sendSignal' | 'sendTelegram') {
+	function makeChannelHandler(field: 'sendEmail' | 'sendTelegram') {
 		return function handleChannel(checked: boolean): void {
 			state[field] = checked;
 		};
@@ -41,13 +40,6 @@
 					onchange={makeChannelHandler('sendEmail')}
 					testid="compare-step5-channel-email"
 					hint={profile?.mail_to || profile?.email || undefined}
-				/>
-				<ChannelToggle
-					label="Signal"
-					checked={state.sendSignal}
-					onchange={makeChannelHandler('sendSignal')}
-					testid="compare-step5-channel-signal"
-					hint={maskPhone(profile?.signal_phone) || undefined}
 				/>
 				<ChannelToggle
 					label="Telegram"
