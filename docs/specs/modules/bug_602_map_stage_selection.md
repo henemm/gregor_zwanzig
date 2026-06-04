@@ -10,21 +10,24 @@ Im Wegpunkt-Editor zeigt die Leaflet-Karte immer Etappe 1, unabhängig von der a
 
 ## Fix
 
-In `WaypointsPanel.svelte` einen `{#key activeStageId}`-Block um `MapCanvas` (und zur Konsistenz auch um `ProfileEditor`) legen. Der `{#key}`-Block zerstört und re-erstellt die Komponente bei jedem Wechsel von `activeStageId`, was den `$effect` neu auslöst.
+In `EditStagesPanelNew.svelte` `{#key activeStageId}`-Blöcke um beide MapCanvas-Instanzen (mobile + desktop) legen. Der `{#key}`-Block zerstört und re-erstellt die Komponente bei jedem Wechsel von `activeStageId`, was den `$effect` neu auslöst.
+
+Hinweis: `WaypointsPanel.svelte` ist Dead Code (wird von keiner Route importiert). Der aktive Component-Pfad ist `TripTabs → EditStagesSection → EditStagesPanelNew`.
 
 ## Acceptance Criteria
 
-**AC-1:** Given ein Trip mit ≥2 nicht-Pause-Etappen / When der User auf Etappe 2 im EtappenStrip klickt / Then zeigt die Karte die Wegpunkte von Etappe 2 (nicht von Etappe 1).
+**AC-1:** Given ein Trip mit ≥2 nicht-Pause-Etappen / When der User auf Etappe 2 im EtappenStrip klickt / Then wird map-canvas remounted (neues DOM-Element, Karte zeigt Etappe-2-Wegpunkte).
 
-**AC-2:** Given der User wechselt zwischen Etappe 1 und Etappe 3 / When er auf Etappe 1 zurückklickt / Then zeigt die Karte wieder Etappe 1 (korrekte Rückkehr).
+**AC-2:** Given der User wechselt zwischen Etappe 1 und Etappe 3 / When er auf Etappe 1 zurückklickt / Then wird map-canvas erneut remounted (korrekte Rückkehr, kein DOM-Fingerprint aus Etappe 2).
 
-**AC-3:** Given eine Etappe ohne Wegpunkte / When der User diese Etappe wählt / Then zeigt die Karte die Default-Ansicht (keine Wegpunkte, Zentrierung auf Europa) — kein Absturz.
+**AC-3:** Given eine Etappe ohne Wegpunkte (Pausenetappe) / When der User diese Etappe wählt / Then zeigt das Panel die PauseStageView (kein MapCanvas, kein Absturz, Panel bleibt bedienbar).
 
 ## Affected Files
 
-- `frontend/src/lib/components/trip-detail/WaypointsPanel.svelte` — Fix-Stelle
+- `frontend/src/lib/components/edit/EditStagesPanelNew.svelte` — Fix-Stelle (beide MapCanvas-Instanzen)
 
 ## Out of Scope
 
+- `WaypointsPanel.svelte` ist Dead Code — keine Änderung nötig oder sinnvoll
 - `ProfileEditor.svelte` ist nicht betroffen (nutzt `$derived`, ist reaktiv)
 - `MapCanvas.svelte` selbst wird nicht geändert
