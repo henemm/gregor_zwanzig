@@ -115,6 +115,7 @@
 
 	$effect(() => {
 		if (activeTab !== 'vorschau') return;
+		if (preset.location_ids.length === 0) return;
 		previewHtml = '';
 		previewError = null;
 		previewLoading = true;
@@ -427,6 +428,11 @@
 
 	{#if activeTab === 'vorschau'}
 		<div data-testid="compare-detail-panel-vorschau">
+			{#if preset.location_ids.length === 0}
+				<div style="padding: 32px; text-align: center; color: var(--g-ink-3); font-size: 13px">
+					Noch keine Orte konfiguriert — Tab <strong>Orte</strong> besuchen um Kandidaten hinzuzufügen.
+				</div>
+			{:else}
 			<!-- Verifikations-Hinweis (Issue #582) -->
 			<div style="display: flex; align-items: center; gap: 14px; padding: 13px 18px; background: var(--g-card); border: 1px solid var(--g-rule); border-left: 3px solid var(--g-accent); border-radius: var(--g-r-3); margin-bottom: 20px">
 				<Eyebrow style="flex-shrink: 0">Vorschau · Prüfung</Eyebrow>
@@ -497,6 +503,7 @@
 					{emailView}
 				/>
 			</div>
+			{/if}
 		</div>
 	{/if}
 

@@ -27,7 +27,7 @@ import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 
 const ROUTES_COMPARE = join(fileURLToPath(import.meta.url), '..', '..', '..');
-const COMPARE_DIR = join(ROUTES_COMPARE, '..', '..', 'lib', 'components', 'compare');
+const COMPARE_DIR = join(ROUTES_COMPARE, '..', 'lib', 'components', 'compare');
 
 const LIST_PAGE    = join(ROUTES_COMPARE, 'compare', '+page.svelte');
 const HUB_PAGE     = join(ROUTES_COMPARE, 'compare', '[id]', '+page.svelte');
