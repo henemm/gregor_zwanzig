@@ -1,10 +1,7 @@
 <script lang="ts">
 	// Issue #180 — Tabelle aller AlertMetric-Zeilen.
 	// Spec: docs/specs/modules/issue_180_alert_metric_table.md §AlertMetricTable.svelte.
-	//
-	// Initialisiert Row-State aus `alertRules` und reicht jede Zeile in eine
-	// AlertMetricRow weiter. $effect spiegelt Row-State-Aenderungen zurueck nach
-	// `alertRules` (bind aufwaerts an AlertsTab).
+	// Issue #586 — Card-Wrapper + Header-Row nach JSX.
 
 	import type { AlertRule } from '$lib/types';
 	import {
@@ -14,25 +11,17 @@
 		ALL_ALERT_METRICS
 	} from './alertMetricTable.ts';
 	import AlertMetricRow from './AlertMetricRow.svelte';
+	import { Card, Eyebrow } from '$lib/components/atoms';
 
-	// Prop heisst `alert_rules` (Underscore), spiegelbildlich zu Trip.alert_rules
-	// und konsistent mit AlertCooldownCard (cooldown_minutes) / AlertQuietHoursCard.
-	// Issue #414: optionaler requestedMode steuert die abs/delta-Flags aller Zeilen.
 	let { alert_rules = $bindable<AlertRule[]>([]), requestedMode }: { alert_rules: AlertRule[]; requestedMode?: 'absolute' | 'delta' | 'both' } = $props();
 
-	// `existing` wird beim Mount eingefroren, damit IDs ueber spaetere
-	// Row-State-Aenderungen hinweg stabil bleiben (Save-Pfad).
 	const existing: AlertRule[] = [...(alert_rules ?? [])];
 	let rowState = $state(alertRulesToRowState(alert_rules ?? [], existing));
 
-	// Nach jeder Row-State-Aenderung: alert_rules zurueckschreiben.
 	$effect(() => {
 		alert_rules = rowStateToAlertRules(rowState, existing);
 	});
 
-	// Issue #414: Modus-Wechsel von aussen (AlertsTab-Picker) auf alle Zeilen anwenden.
-	// F001: Erste $effect-Ausfuehrung (initial mount) ueberspringen, sonst wuerden
-	// bestehende Trip-Konfigurationen beim blossen Oeffnen des Tabs ueberschrieben.
 	let _hasModeApplied = false;
 	$effect(() => {
 		if (requestedMode !== undefined) {
@@ -45,18 +34,33 @@
 	});
 </script>
 
-<div class="alert-metric-table" data-testid="alert-metric-table">
-	{#each ALL_ALERT_METRICS as m (m)}
-		<AlertMetricRow metric={m} bind:state={rowState[m]} />
-	{/each}
-</div>
+<Card padding={0}>
+	<div class="table-header">
+		<div></div>
+		<Eyebrow>Metrik</Eyebrow>
+		<Eyebrow>Δ-Änderung (seit letztem Briefing)</Eyebrow>
+		<Eyebrow>Absoluter Schwellwert</Eyebrow>
+		<div></div>
+	</div>
+	<div class="alert-metric-table" data-testid="alert-metric-table">
+		{#each ALL_ALERT_METRICS as m (m)}
+			<AlertMetricRow metric={m} bind:state={rowState[m]} />
+		{/each}
+	</div>
+</Card>
 
 <style>
+	.table-header {
+		display: grid;
+		grid-template-columns: 32px 200px 1fr 1fr auto;
+		gap: 0;
+		padding: 12px 20px;
+		background: var(--g-card-alt);
+		border-bottom: 1px solid var(--g-rule);
+		align-items: center;
+	}
 	.alert-metric-table {
 		display: flex;
 		flex-direction: column;
-		border: 1px solid var(--g-ink-faint);
-		border-radius: 0.5rem;
-		background: var(--g-surface-1, #fff);
 	}
 </style>

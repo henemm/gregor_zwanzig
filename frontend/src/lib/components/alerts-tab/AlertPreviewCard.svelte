@@ -1,10 +1,6 @@
 <script lang="ts">
 	// Issue #182 — Alert-Konfigurator: Alert-Vorschau (Email).
-	// Spec: docs/specs/modules/issue_182_alert_preview.md
-	//
-	// Rendert eine Vorschau der Alert-E-Mail in einem sandgeboxten iframe.
-	// Nutzt buildAlertPreviewPayload() + POST /api/trips/{id}/alert-preview.
-	// Kein Speichern, kein Versand — reine Vorschau auf Basis der lokalen alertRules.
+	// Issue #586 — h4 entfernt, Card-Styling nach JSX.
 
 	import { api } from '$lib/api';
 	import type { Trip, AlertRule } from '$lib/types';
@@ -43,8 +39,6 @@
 </script>
 
 <div class="preview-card" data-testid="alert-preview-card">
-	<h4 class="card-title">Alert-Vorschau</h4>
-
 	{#if enabledRules.length === 0}
 		<p class="empty" data-testid="alert-preview-empty">
 			Aktiviere mindestens eine Alert-Regel, um die Vorschau zu laden.
@@ -81,18 +75,13 @@
 <style>
 	.preview-card {
 		padding: 1rem;
-		border: 1px solid var(--g-ink-faint);
+		border: 1px solid var(--g-rule);
 		border-radius: var(--g-radius-md, 0.5rem);
 		background: var(--g-surface-1, #fff);
-		box-shadow: var(--g-elev-1, 0 1px 2px rgba(0, 0, 0, 0.05));
+		max-width: 720px;
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
-	}
-	.card-title {
-		font-size: 0.875rem;
-		font-weight: 600;
-		margin: 0;
 	}
 	.btn {
 		align-self: flex-start;

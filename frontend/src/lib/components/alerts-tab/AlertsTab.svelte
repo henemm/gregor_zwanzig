@@ -1,16 +1,13 @@
 <script lang="ts">
 	// Issue #180 — Container fuer den Alerts-Tab im Trip-Detail.
 	// Spec: docs/specs/modules/issue_180_alert_metric_table.md §AlertsTab.svelte.
-	//
-	// Aufgaben:
-	//  - Lokaler State fuer alertRules, cooldown, quiet_from, quiet_to
-	//  - Speichern via PUT /api/trips/{id}
-	//  - Inline-Erfolg (3s Flash) + Inline-Fehler
+	// Issue #586 — Design-Fidelity 1:1 nach screen-alert-config.jsx.
 
 	import AlertMetricTable from './AlertMetricTable.svelte';
 	import AlertCooldownCard from './AlertCooldownCard.svelte';
 	import AlertQuietHoursCard from './AlertQuietHoursCard.svelte';
 	import AlertPreviewCard from './AlertPreviewCard.svelte';
+	import { SectionH, Eyebrow } from '$lib/components/atoms';
 	import { api } from '$lib/api';
 	import { normalizeAlertMetric } from '$lib/utils/alertMetricLabels';
 	import { deriveAlertMode } from './alertMetricTable.js';
@@ -69,10 +66,20 @@
 </script>
 
 <div class="alerts-tab" data-testid="alerts-tab">
+	<!-- Desktop-Header (Issue #586 — immer sichtbar auf Desktop, ausgeblendet auf Mobile) -->
+	<div class="desktop-header">
+		<Eyebrow>Alert-Briefings · Sofort-Benachrichtigung</Eyebrow>
+		<h1 class="desktop-h1">Wann soll ein Alert ausgelöst werden?</h1>
+		<p class="desktop-subtext">Alerts kommen zwischen Morning- und Abend-Briefing. Du wählst, ob sie auf <strong>Änderungen seit letztem Briefing</strong> (Δ) reagieren, auf <strong>absolute Schwellwerte</strong>, oder beides.</p>
+	</div>
+
+	<!-- Mobile-only header (Issue #414) -->
 	<div class="mobile-header" data-testid="alerts-tab-mobile-header">
 		<h1 class="mobile-h1">Wann soll ein Alert ausgelöst werden?</h1>
 		<p class="mobile-subtext">Alerts kommen zwischen Morgen- und Abend-Briefing. Wähle den Modus.</p>
 	</div>
+
+	<SectionH eyebrow="Auslöse-Modus" title="Was triggert einen Alert?" />
 
 	<div class="mode-picker" role="radiogroup" aria-label="Auslöse-Modus" data-testid="mode-picker">
 		{#each MODES as m}
@@ -85,7 +92,12 @@
 				onclick={() => { selectedMode = m.id; }}
 				data-testid="mode-card-{m.id}"
 			>
-				<span class="mode-eyebrow">{m.eyebrow}</span>
+				<div class="mode-header-row">
+					<Eyebrow>{m.eyebrow}</Eyebrow>
+					<span class="mode-radio-dot" class:on={selectedMode === m.id}>
+						{#if selectedMode === m.id}<span class="mode-radio-inner"></span>{/if}
+					</span>
+				</div>
 				<span class="mode-title">{m.title}</span>
 				<span class="mode-desc">{m.desc}</span>
 				<span class="mode-example">{m.example}</span>
@@ -93,7 +105,7 @@
 		{/each}
 	</div>
 
-	<p class="section-heading" data-testid="metrics-section-heading">METRIKEN &amp; SCHWELLEN</p>
+	<SectionH eyebrow="Schwellwerte" title="Pro Metrik festlegen" />
 
 	<AlertMetricTable bind:alert_rules={alertRules} requestedMode={selectedMode} />
 
@@ -102,6 +114,7 @@
 		<AlertQuietHoursCard bind:quiet_from={quietFrom} bind:quiet_to={quietTo} />
 	</div>
 
+	<SectionH eyebrow="Beispiel-Alert" title="So sieht ein ausgelöster Alert aus" />
 	<AlertPreviewCard {trip} {alertRules} />
 
 	<div class="actions">
@@ -149,6 +162,99 @@
 		gap: 1rem;
 		padding: 1rem;
 	}
+
+	/* Issue #586 — Desktop-Header (sichtbar auf Desktop, ausgeblendet auf Mobile) */
+	.desktop-header {
+		margin-bottom: 8px;
+	}
+	.desktop-h1 {
+		font-size: 1.75rem;
+		font-weight: 700;
+		letter-spacing: -0.025em;
+		color: var(--g-ink);
+		margin: 4px 0 8px 0;
+	}
+	.desktop-subtext {
+		font-size: 0.9375rem;
+		color: var(--g-ink-2);
+		line-height: 1.6;
+		margin: 0;
+		max-width: 720px;
+	}
+
+	/* Issue #586 — ModeCard-Grid: Desktop 3-Spalten, immer sichtbar */
+	.mode-picker {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 12px;
+		margin-bottom: 32px;
+	}
+	.mode-card {
+		padding: 18px;
+		border-radius: 4px;
+		cursor: pointer;
+		background: transparent;
+		border: 1px solid var(--g-rule);
+		transition: all 120ms;
+		text-align: left;
+		font: inherit;
+		color: inherit;
+		display: flex;
+		flex-direction: column;
+	}
+	.mode-card.active {
+		background: var(--g-card);
+		border: 2px solid var(--g-accent);
+	}
+	.mode-header-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 8px;
+	}
+	.mode-radio-dot {
+		width: 18px;
+		height: 18px;
+		border-radius: 50%;
+		border: 2px solid var(--g-rule);
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+	}
+	.mode-card.active .mode-radio-dot {
+		border-color: var(--g-accent);
+	}
+	.mode-radio-inner {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		background: var(--g-accent);
+	}
+	.mode-title {
+		font-size: 18px;
+		font-weight: 600;
+		margin-bottom: 6px;
+		color: var(--g-ink);
+	}
+	.mode-card.active .mode-title {
+		color: var(--g-accent-deep);
+	}
+	.mode-desc {
+		font-size: 13px;
+		color: var(--g-ink-2);
+		line-height: 1.5;
+		margin-bottom: 10px;
+	}
+	.mode-example {
+		font-size: 11px;
+		color: var(--g-ink-3);
+		padding-top: 10px;
+		border-top: 1px solid var(--g-rule-soft);
+		line-height: 1.5;
+		font-family: var(--g-font-mono);
+	}
+
 	.cards-row {
 		display: grid;
 		gap: 1rem;
@@ -187,24 +293,8 @@
 		font-size: 0.875rem;
 	}
 
-	/* F002 — Sektions-Heading nur auf Mobile sichtbar. */
-	.section-heading {
-		display: none;
-	}
-	@media (max-width: 899px) {
-		.section-heading {
-			display: block;
-			font-size: 0.65rem;
-			text-transform: uppercase;
-			letter-spacing: 0.1em;
-			color: var(--g-ink-muted);
-			margin: var(--g-s-3) 0 var(--g-s-1) 0;
-		}
-	}
-
-	/* Issue #414 — Mobile-only Header, Modus-Picker, fixierter Footer. */
+	/* Issue #414 — Mobile-only Header, fixierter Footer. */
 	.mobile-header,
-	.mode-picker,
 	.mobile-footer {
 		display: none;
 	}
@@ -212,6 +302,10 @@
 	@media (max-width: 899px) {
 		.alerts-tab {
 			padding-bottom: 120px;
+		}
+		/* Hide desktop header on mobile */
+		.desktop-header {
+			display: none;
 		}
 		.mobile-header {
 			display: block;
@@ -228,46 +322,13 @@
 			color: var(--g-ink-muted);
 			margin: 0;
 		}
+		/* Override grid to flex on mobile */
 		.mode-picker {
 			display: flex;
 			gap: var(--g-s-2);
 		}
 		.mode-card {
 			flex: 1;
-			display: flex;
-			flex-direction: column;
-			gap: 0.2rem;
-			padding: var(--g-s-3);
-			border: 1px solid var(--g-ink-faint);
-			border-radius: var(--g-radius-md, 0.5rem);
-			background: var(--g-surface-1, #fff);
-			text-align: left;
-			cursor: pointer;
-			font: inherit;
-			color: inherit;
-		}
-		.mode-card.active {
-			border-color: var(--g-accent);
-			box-shadow: 0 0 0 1px var(--g-accent) inset;
-		}
-		.mode-eyebrow {
-			font-size: 0.6rem;
-			text-transform: uppercase;
-			letter-spacing: 0.08em;
-			color: var(--g-ink-muted);
-		}
-		.mode-title {
-			font-weight: 600;
-			font-size: 0.875rem;
-		}
-		.mode-desc {
-			font-size: 0.75rem;
-			color: var(--g-ink-muted);
-		}
-		.mode-example {
-			font-size: 0.7rem;
-			color: var(--g-ink-muted);
-			font-family: var(--g-font-data, monospace);
 		}
 		.mobile-footer {
 			display: flex;
