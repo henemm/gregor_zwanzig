@@ -143,11 +143,13 @@
 				{#if activeIsPause}
 					<PauseStageView stage={activeStage} {prevStage} {nextStage} />
 				{:else}
-					<MapCanvas
-						stage={activeStage}
-						{activeWaypointId}
-						onWaypointActivate={handleWaypointActivate}
-					/>
+					{#key activeStageId}
+						<MapCanvas
+							stage={activeStage}
+							{activeWaypointId}
+							onWaypointActivate={handleWaypointActivate}
+						/>
+					{/key}
 					<ProfileEditor
 						stage={activeStage}
 						{activeWaypointId}
