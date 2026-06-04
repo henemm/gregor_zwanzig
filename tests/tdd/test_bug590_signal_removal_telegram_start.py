@@ -219,3 +219,46 @@ def test_step5_versand_has_no_signal_channel_toggle():
     assert "signal_phone" not in content, (
         "Step5Versand.svelte hat noch signal_phone in Props — muss entfernt werden"
     )
+
+
+# ──────────────────────────────────────────────────────────────
+# AC-8: Kanal-Status im Versand-Tab muss aus Nutzerprofil kommen
+# ──────────────────────────────────────────────────────────────
+
+
+def test_compare_tabs_telegram_not_hardcoded_disconnected():
+    """
+    AC-8: Telegram-Status darf nicht hardcoded 'nicht verbunden' sein.
+    CompareTabs.svelte muss den Status aus dem Nutzerprofil (telegram_chat_id) ableiten.
+    """
+    path = FRONTEND / "lib" / "components" / "compare" / "CompareTabs.svelte"
+    content = path.read_text(encoding="utf-8")
+    assert 'checked={false} disabled={true} size="sm" aria-label="Telegram-Kanal"' not in content, (
+        "Telegram-Status ist hardcoded auf false — muss aus Nutzerprofil (telegram_chat_id) kommen"
+    )
+
+
+def test_compare_tabs_loads_user_profile_for_channel_status():
+    """
+    AC-8: CompareTabs.svelte muss das Nutzerprofil laden um den richtigen Kanal-Status
+    anzuzeigen — telegram_chat_id muss im Code referenziert werden.
+    """
+    path = FRONTEND / "lib" / "components" / "compare" / "CompareTabs.svelte"
+    content = path.read_text(encoding="utf-8")
+    assert "telegram_chat_id" in content, (
+        "CompareTabs.svelte referenziert telegram_chat_id nicht — "
+        "Profil muss geladen werden um Kanal-Status korrekt anzuzeigen"
+    )
+
+
+def test_compare_tabs_email_not_based_only_on_preset_empfaenger():
+    """
+    AC-8: Email-Status darf nicht allein von preset.empfaenger abhängen.
+    CompareTabs.svelte muss auch profile.email / profile.mail_to prüfen.
+    """
+    path = FRONTEND / "lib" / "components" / "compare" / "CompareTabs.svelte"
+    content = path.read_text(encoding="utf-8")
+    assert ("mail_to" in content or "profile.email" in content), (
+        "CompareTabs.svelte zeigt Email-Status nur auf Basis von preset.empfaenger — "
+        "muss auch Nutzerprofil (mail_to/email) berücksichtigen"
+    )

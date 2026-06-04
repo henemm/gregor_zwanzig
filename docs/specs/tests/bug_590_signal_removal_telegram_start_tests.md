@@ -47,6 +47,9 @@ Parent-Spec: `docs/specs/modules/bug_590_kanal_settings.md`.
 | `test_compare_tabs_has_no_signal_in_channels_array` | AC-6 | CompareTabs.svelte enthält kein 'signal' im channels-Array |
 | `test_step5_versand_has_no_signal_toggle` | AC-6 | Step5Versand.svelte enthält keinen Signal-Toggle mehr |
 | `test_step5_versand_has_no_signal_channel_toggle` | AC-6 | Step5Versand.svelte enthält kein sendSignal mehr |
+| `test_compare_tabs_telegram_not_hardcoded_disconnected` | AC-8 | Telegram-Status nicht hardcoded false — muss aus Profil kommen |
+| `test_compare_tabs_loads_user_profile_for_channel_status` | AC-8 | CompareTabs.svelte referenziert telegram_chat_id aus Profil |
+| `test_compare_tabs_email_not_based_only_on_preset_empfaenger` | AC-8 | Email-Status berücksichtigt auch Nutzerprofil (mail_to/email) |
 
 ## Expected RED-State (vor GREEN-Phase)
 

@@ -21,6 +21,7 @@
 	} from '$lib/components/compare/subscriptionHelpers.js';
 	import type { ComparePreset, Location } from '$lib/types.js';
 	import { api } from '$lib/api.js';
+	import { onMount } from 'svelte';
 
 	interface Props {
 		preset: ComparePreset;
@@ -29,6 +30,22 @@
 	}
 
 	let { preset, locations, initialTab = 'uebersicht' }: Props = $props();
+
+	// Nutzerprofil für Kanal-Status (AC-8)
+	let userProfile = $state<{ mail_to?: string; email?: string; telegram_chat_id?: string } | null>(null);
+	onMount(async () => {
+		try {
+			const data = await api.get<{ mail_to?: string; email?: string; telegram_chat_id?: string }>('/api/auth/profile');
+			userProfile = data;
+		} catch {
+			// Profil nicht erreichbar — Fallback auf preset-Daten
+		}
+	});
+
+	const emailConnected = $derived(
+		(userProfile?.mail_to ?? userProfile?.email) ? true : preset.empfaenger.length > 0
+	);
+	const telegramConnected = $derived(!!userProfile?.telegram_chat_id);
 
 	const TABS = [
 		{ value: 'uebersicht', label: 'Übersicht' },
@@ -296,16 +313,16 @@
 					<Card padding={20} class="channel-card">
 						<Eyebrow>Kanäle</Eyebrow>
 						<div class="channel-row">
-							<Dot tone={preset.empfaenger.length > 0 ? 'good' : 'neutral'} />
+							<Dot tone={emailConnected ? 'good' : 'neutral'} />
 							<span class="channel-name">Email</span>
-							<span class="channel-status">{preset.empfaenger.length > 0 ? 'verifiziert' : 'nicht verbunden'}</span>
-							<Switch checked={preset.empfaenger.length > 0} disabled={true} size="sm" aria-label="Email-Kanal" />
+							<span class="channel-status">{emailConnected ? 'verifiziert' : 'nicht verbunden'}</span>
+							<Switch checked={emailConnected} disabled={true} size="sm" aria-label="Email-Kanal" />
 						</div>
 						<div class="channel-row">
-							<Dot tone="neutral" />
+							<Dot tone={telegramConnected ? 'good' : 'neutral'} />
 							<span class="channel-name">Telegram</span>
-							<span class="channel-status">nicht verbunden</span>
-							<Switch checked={false} disabled={true} size="sm" aria-label="Telegram-Kanal" />
+							<span class="channel-status">{telegramConnected ? 'verbunden' : 'nicht verbunden'}</span>
+							<Switch checked={telegramConnected} disabled={true} size="sm" aria-label="Telegram-Kanal" />
 						</div>
 						<div class="channel-row">
 							<Dot tone="neutral" />
