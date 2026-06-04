@@ -10,7 +10,9 @@
 
 	import type { PageData } from './$types.js';
 	import type { Trip } from '$lib/types.js';
-	import { Segmented, Btn, Eyebrow } from '$lib/components/atoms';
+	import Segmented from '$lib/components/atoms/Segmented.svelte';
+	import { Btn } from '$lib/components/atoms';
+	import { Card, Eyebrow } from '$lib/components/atoms';
 	import { Stat } from '$lib/components/molecules';
 	import HistoryIcon from '@lucide/svelte/icons/history';
 	import CopyIcon from '@lucide/svelte/icons/copy';
@@ -75,26 +77,28 @@
 
 <main style="padding:32px 40px;overflow:auto">
 	<!-- Header -->
-	<div style="margin-bottom:28px">
-		<Eyebrow>Workspace · Vergangene Trips</Eyebrow>
-		<h1
-			style="font-size:32px;font-weight:600;letter-spacing:-0.025em;margin-top:4px"
-		>
-			Archiv
-		</h1>
-		<p
-			style="font-size:14px;color:var(--g-ink-3);margin-top:6px;max-width:620px;line-height:1.5"
-		>
-			Trips, deren Enddatum vorbei ist. Hier siehst du nachträglich, wie gut die
-			Briefings getroffen haben, und kannst einen Trip als Vorlage für eine neue
-			Planung übernehmen.
-		</p>
+	<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px">
+		<div>
+			<Eyebrow>Workspace · Vergangene Trips</Eyebrow>
+			<h1
+				style="font-size:32px;font-weight:600;letter-spacing:-0.025em;margin-top:4px"
+			>
+				Archiv
+			</h1>
+			<p
+				style="font-size:14px;color:var(--g-ink-3);margin-top:6px;max-width:620px;line-height:1.5"
+			>
+				Trips, deren Enddatum vorbei ist. Hier siehst du nachträglich, wie gut die
+				Briefings getroffen haben, und kannst einen Trip als Vorlage für eine neue
+				Planung übernehmen.
+			</p>
+		</div>
 	</div>
 
 	<!-- Toolbar: Suche + Sortierung -->
 	<div style="display:flex;gap:16px;align-items:center;margin-bottom:20px">
 		<div style="position:relative;flex:1">
-			<span style="position:absolute;top:9px;left:12px;color:var(--g-ink-muted);display:inline-flex">
+			<span style="position:absolute;top:9px;left:12px;color:var(--g-ink-4);display:inline-flex">
 				<SearchIcon size={14} />
 			</span>
 			<input
@@ -122,10 +126,7 @@
 	</div>
 
 	<!-- Tabelle -->
-	<div
-		data-slot="card"
-		style="overflow:hidden;background:var(--g-card);border:1px solid var(--g-rule);border-radius:var(--g-r-3)"
-	>
+	<Card padding={0} style="overflow:hidden">
 		<!-- Kopfzeile -->
 		<div
 			style="display:grid;grid-template-columns:1.7fr 0.7fr 1.1fr 0.9fr 1.6fr auto;gap:0;padding:12px 20px;background:var(--g-paper-deep);font-size:11px;font-family:var(--g-font-mono);letter-spacing:0.18em;text-transform:uppercase;color:var(--g-ink-3);font-weight:500;border-bottom:1px solid var(--g-rule)"
@@ -151,11 +152,11 @@
 				{/if}
 			</div>
 		{/if}
-	</div>
+	</Card>
 
 	<!-- Footer-Zaehler -->
 	<div
-		style="margin-top:14px;font-size:11px;color:var(--g-ink-muted);font-family:var(--g-font-mono);letter-spacing:0.06em"
+		style="margin-top:14px;font-size:11px;color:var(--g-ink-4);font-family:var(--g-font-mono);letter-spacing:0.06em"
 	>
 		{filtered.length} von {totalTrips} archivierten Trips · auto-archiviert nach Trip-Ende
 	</div>
