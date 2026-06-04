@@ -1,10 +1,14 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import Wordmark from '$lib/components/ui/wordmark/Wordmark.svelte';
 	let { form } = $props();
 </script>
 
 <div class="flex min-h-screen items-center justify-center">
 	<div class="w-full max-w-sm space-y-4 p-6">
+		<div class="space-y-2 text-center">
+			<Wordmark size="lg" href="/" />
+		</div>
 		<h1 class="text-xl font-bold">Passwort vergessen</h1>
 
 		{#if form?.success}

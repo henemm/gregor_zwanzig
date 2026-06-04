@@ -1,10 +1,14 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import Wordmark from '$lib/components/ui/wordmark/Wordmark.svelte';
 	let { data, form } = $props();
 </script>
 
 <div class="flex min-h-screen items-center justify-center">
 	<div class="w-full max-w-sm space-y-4 p-6">
+		<div class="space-y-2 text-center">
+			<Wordmark size="lg" href="/" />
+		</div>
 		<h1 class="text-xl font-bold">Neues Passwort setzen</h1>
 
 		{#if form?.success}
@@ -25,14 +29,17 @@
 					class="w-full rounded-md border px-3 py-2 text-sm"
 					required
 				/>
-				<input
-					name="token"
-					type="text"
-					placeholder="Reset-Token"
-					value={form?.token ?? data.token}
-					class="w-full rounded-md border px-3 py-2 text-sm"
-					required
-				/>
+				{#if form?.token || data.token}
+					<input name="token" type="hidden" value={form?.token ?? data.token} required />
+				{:else}
+					<input
+						name="token"
+						type="text"
+						placeholder="Reset-Token"
+						class="w-full rounded-md border px-3 py-2 text-sm"
+						required
+					/>
+				{/if}
 				<input
 					name="new_password"
 					type="password"
