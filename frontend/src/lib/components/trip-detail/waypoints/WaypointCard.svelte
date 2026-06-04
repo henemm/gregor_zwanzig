@@ -57,6 +57,12 @@
 			onDelete();
 		};
 	}
+
+	// Issue #585 — Typ-Label-Mapping (waypoint.type → lesbares Label)
+	const TYPE_LABELS: Record<string, string> = {
+		start: 'Start', end: 'Ziel', summit: 'Gipfel', pass: 'Pass', valley: 'Tal', hut: 'Hütte'
+	};
+	const typeLabel = $derived(waypoint.type ? (TYPE_LABELS[waypoint.type] ?? 'Wegpunkt') : null);
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -77,10 +83,11 @@
 		<!-- Text-Block: Name + Meta -->
 		<div class="waypoint-body">
 			<div class="waypoint-name">{waypoint.name}</div>
-			{#if waypoint.elevation_m || arrival}
+			{#if typeLabel || waypoint.elevation_m || arrival}
 				<div class="waypoint-meta">
+					{#if typeLabel}<span>{typeLabel}</span><span class="waypoint-meta-sep">·</span>{/if}
 					{#if waypoint.elevation_m}<span>{waypoint.elevation_m} m</span>{/if}
-					{#if waypoint.elevation_m && arrival}
+					{#if (waypoint.elevation_m) && arrival}
 						<span class="waypoint-meta-sep">·</span>
 					{/if}
 					{#if arrival}

@@ -40,6 +40,8 @@ export interface Waypoint {
 	origin?: string;              // 'manual' | 'algorithmic'
 	confirmed?: boolean;          // true = vom User bestätigt
 	arrival_override?: string;    // User-Override "HH:MM"
+	// Issue #585 — Wegpunkt-Typ (Gipfel, Pass, Hütte, etc.)
+	type?: string;                // 'start' | 'end' | 'summit' | 'pass' | 'valley' | 'hut'
 }
 
 export interface Stage {
@@ -55,6 +57,9 @@ export interface Stage {
 	 * via `toTripPayload()` gestrippt.
 	 */
 	dateOverridden?: boolean;
+	// Issue #585 — Etappen-Code (z.B. "GR20-N01") und Standort für Pausentage
+	code?: string;
+	location?: string;
 }
 
 // Alert Rules (Issue #205) — typisierte Alarm-Regeln pro Trip

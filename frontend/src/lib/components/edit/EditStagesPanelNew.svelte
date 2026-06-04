@@ -141,6 +141,17 @@
 		updated.splice(afterIndex + 1, 0, newPause);
 		stages = updated;
 	}
+	// Issue #585 — Etappe entfernen + Etappe hinzufügen
+	function handleRemoveStage(stageId: string): void {
+		stages = stages.filter(s => s.id !== stageId);
+		if (activeStageId === stageId) {
+			activeStageId = stages[0]?.id ?? '';
+		}
+	}
+	function handleAddStage(): void {
+		const newStage: Stage = { id: newId(), name: 'Neue Etappe', date: '', waypoints: [] };
+		stages = [...stages, newStage];
+	}
 
 	// Profil-Klick → interpolierten Wegpunkt einfügen.
 	// Issue #503: KEIN suggested-Flag mehr — alle Wegpunkte sind gleichwertig.
@@ -219,6 +230,8 @@
 		onStagesReorder={handleStagesReorder}
 		onStageActivate={handleStageActivate}
 		onPauseInsert={handlePauseInsert}
+		onRemoveStage={handleRemoveStage}
+		onAddStage={handleAddStage}
 	/>
 
 	{#if activeStage}
@@ -230,11 +243,16 @@
 				onDateChange={(newDate) => handleDateChange(activeStage!.id, newDate)}
 			/>
 		{:else}
+			<!-- Issue #585: Inhaltsbereich mit Padding 20/40/60 + maxWidth 1480 -->
+			<div style="position:relative; padding:20px 40px 60px; max-width:1480px;">
 			<!-- Etappen-Header mit editierbarem Datum (Issue #498) -->
 			<div class="flex items-start justify-between gap-8">
 				<div class="min-w-0 flex-1">
-					<Eyebrow>Etappe</Eyebrow>
-					<p class="truncate text-lg font-semibold">{activeStage.name}</p>
+					<Eyebrow>Etappe · {activeStage.code ?? ''}</Eyebrow>
+					<p style="font-size:32px; font-weight:600; letter-spacing:-0.02em;" class="truncate">{activeStage.name}</p>
+					<div style="font-size:14px; color:var(--g-ink-3); margin-top:4px; max-width:680px;">
+						Wegpunkte sind <strong style="color:var(--g-ink)">Wetterscheiden</strong> — Punkte, an denen sich Höhe, Exposition oder Geländekammer ändert. Aus der GPX sind {activeStage.waypoints.length} Wegpunkte entstanden — du kannst sie umbenennen, verschieben, löschen oder eigene ergänzen.
+					</div>
 				</div>
 				<StageDateField
 					value={activeStage.date}
@@ -380,6 +398,7 @@
 					</div>
 				</div>
 			</div>
+			</div><!-- /Issue #585 content wrapper -->
 		{/if}
 	{/if}
 
