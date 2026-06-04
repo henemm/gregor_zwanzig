@@ -110,6 +110,11 @@
             "type": "command",
             "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/e2e_commit_gate.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/e2e_commit_gate.py\"; fi",
             "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/pre_issue_close_design_gate.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/pre_issue_close_design_gate.py\"; fi",
+            "timeout": 10
           }
         ]
       },

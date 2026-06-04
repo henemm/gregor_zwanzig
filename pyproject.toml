@@ -20,6 +20,7 @@ dependencies = [
     # War vor Epic #129 A.3 transitive via uvicorn[standard] v0.40.0; in
     # uvicorn 0.47+ nicht mehr enthalten — daher direkt gepflegt.
     "pyyaml>=6.0",
+    "pillow>=10.0.0",
 ]
 
 [tool.uv]
