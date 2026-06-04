@@ -496,19 +496,8 @@ test('toTripPayload #164 AC#15a: report_config.send_email = briefings.channels.e
 	assert.equal(rc2.send_email, false);
 });
 
-test('toTripPayload #164 AC#15b: report_config.send_signal = briefings.channels.signal', () => {
-	const s = makeStateWithDefaults();
-	s.briefings.channels.signal = true;
-	const rc = s.toTripPayload().report_config as Record<string, unknown> | undefined;
-	assert.ok(rc, 'report_config muss vorhanden sein');
-	assert.equal(rc.send_signal, true);
-
-	const s2 = makeStateWithDefaults();
-	s2.briefings.channels.signal = false;
-	const rc2 = s2.toTripPayload().report_config as Record<string, unknown> | undefined;
-	assert.ok(rc2);
-	assert.equal(rc2.send_signal, false);
-});
+// Bug #590: AC#15b removed — Signal-Kanal wurde entfernt.
+// send_signal existiert nicht mehr in BriefingConfig.channels oder toTripPayload().
 
 test('toTripPayload #164 AC#15c: report_config.send_telegram = briefings.channels.telegram', () => {
 	const s = makeStateWithDefaults();

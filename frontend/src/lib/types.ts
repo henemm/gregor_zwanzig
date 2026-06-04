@@ -166,7 +166,6 @@ export interface ReportConfig {
 	morning_time?: string;
 	evening_time?: string;
 	send_email?: boolean;
-	send_signal?: boolean;
 	send_telegram?: boolean;
 	send_sms?: boolean;
 	alert_on_changes?: boolean;
@@ -187,7 +186,6 @@ export interface ReportConfig {
 export interface ChannelLayouts {
 	email?: WeatherConfigMetric[];
 	telegram?: WeatherConfigMetric[];
-	signal?: WeatherConfigMetric[];
 	sms?: WeatherConfigMetric[];
 }
 
@@ -258,7 +256,6 @@ export interface Subscription {
 	include_hourly: boolean;
 	top_n: number;
 	send_email: boolean;
-	send_signal: boolean;
 	send_telegram: boolean;
 	display_config?: Record<string, unknown>;
 	activity_profile?: ActivityProfile;

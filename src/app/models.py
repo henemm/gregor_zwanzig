@@ -662,8 +662,7 @@ class TripReport:
     email_html: str
     email_plain: str
     sms_text: Optional[str] = None  # Feature 3.2 will populate
-    # Issue #360: kanal-bewusster Narrow-Body fuer Signal/Telegram.
-    signal_text: Optional[str] = None
+    signal_text: Optional[str] = None  # Deprecated (Bug #590): kept for backward compat, always None
     telegram_text: Optional[str] = None
 
     # Metadata
@@ -690,7 +689,7 @@ class TripReportConfig:
             change_threshold_temp_c=5.0,
         )
     """
-    trip_id: str
+    trip_id: str = ""
     enabled: bool = True
 
     # Schedule
@@ -700,7 +699,6 @@ class TripReportConfig:
     # Channels
     send_email: bool = True
     send_sms: bool = False
-    send_signal: bool = False
     send_telegram: bool = False
 
     # Alerts

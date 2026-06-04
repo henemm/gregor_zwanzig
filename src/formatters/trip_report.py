@@ -145,7 +145,8 @@ class TripReportFormatter:
             tz=self._tz,
         )
 
-        # Issue #360: kanal-bewusster Narrow-Body fuer Signal/Telegram.
+        # Issue #360: kanal-bewusster Narrow-Body fuer Telegram.
+        # signal_text wird noch befüllt (Bug #590: deprecated, backward compat).
         # Reine Zusatzberechnung — email_plain bleibt unveraendert.
         from src.output.renderers.narrow import render_narrow
         signal_text = render_narrow(

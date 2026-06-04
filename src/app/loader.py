@@ -348,7 +348,6 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
             evening_time=time.fromisoformat(rc_data.get("evening_time", "18:00:00")),
             send_email=rc_data.get("send_email", True),
             send_sms=rc_data.get("send_sms", False),
-            send_signal=rc_data.get("send_signal", False),
             send_telegram=rc_data.get("send_telegram", False),
             alert_on_changes=rc_data.get("alert_on_changes", True),
             change_threshold_temp_c=rc_data.get("change_threshold_temp_c", 5.0),
@@ -1027,7 +1026,6 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             "evening_time": trip.report_config.evening_time.isoformat(),
             "send_email": trip.report_config.send_email,
             "send_sms": trip.report_config.send_sms,
-            "send_signal": trip.report_config.send_signal,
             "send_telegram": trip.report_config.send_telegram,
             "alert_on_changes": trip.report_config.alert_on_changes,
             "change_threshold_temp_c": trip.report_config.change_threshold_temp_c,
@@ -1162,7 +1160,6 @@ def load_compare_subscriptions(user_id: str = "default") -> List[CompareSubscrip
             include_hourly=sub_data.get("include_hourly", True),
             top_n=sub_data.get("top_n", 3),
             send_email=sub_data.get("send_email", True),
-            send_signal=sub_data.get("send_signal", False),
             send_telegram=sub_data.get("send_telegram", False),
             display_config=_parse_display_config(sub_data["display_config"]) if sub_data.get("display_config") else None,
             activity_profile=_parse_activity_profile(sub_data.get("activity_profile")),
@@ -1206,7 +1203,6 @@ def save_compare_subscriptions(
             "include_hourly": sub.include_hourly,
             "top_n": sub.top_n,
             "send_email": sub.send_email,
-            "send_signal": sub.send_signal,
             "send_telegram": sub.send_telegram,
         }
         if sub.activity_profile is not None:

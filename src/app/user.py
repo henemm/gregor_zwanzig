@@ -132,7 +132,6 @@ class CompareSubscription:
     include_hourly: bool = True  # Include hourly details in email
     top_n: int = 3  # Number of locations to show hourly details for
     send_email: bool = True
-    send_signal: bool = False
     send_telegram: bool = False
     display_config: Optional["UnifiedWeatherDisplayConfig"] = None
     activity_profile: Optional[ActivityProfile] = None

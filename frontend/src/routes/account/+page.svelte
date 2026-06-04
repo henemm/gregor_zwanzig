@@ -71,16 +71,21 @@
 	}
 
 	let mailTo = $state(data.profile?.mail_to ?? '');
-	let signalPhone = $state(data.profile?.signal_phone ?? '');
-	let signalApiKey = $state('');
-	let telegramChatId = $state(data.profile?.telegram_chat_id ?? '');
+	let telegramConnected = $state(!!data.profile?.telegram_chat_id);
+	let telegramChatIdSuffix = $state(
+		data.profile?.telegram_chat_id
+			? '...' + data.profile.telegram_chat_id.slice(-3)
+			: ''
+	);
+	let telegramConnecting = $state(false);
+	let telegramPollInterval: ReturnType<typeof setInterval> | null = null;
 	let successMsg = $state<string | null>(null);
 	let errorMsg = $state<string | null>(null);
 	let deleteErrorMsg = $state<string | null>(null);
 
 	type TestStatus = 'idle' | 'loading' | 'ok' | 'error';
-	let testStatus = $state<Record<string, TestStatus>>({email: 'idle', signal: 'idle', telegram: 'idle'});
-	let testError = $state<Record<string, string | null>>({email: null, signal: null, telegram: null});
+	let testStatus = $state<Record<string, TestStatus>>({email: 'idle', telegram: 'idle'});
+	let testError = $state<Record<string, string | null>>({email: null, telegram: null});
 
 	// Issue #344 — Wetter-Profile (User-MetricPresets)
 	let presets = $state<MetricPreset[]>(data.metricPresets ?? []);
@@ -202,22 +207,52 @@
 		errorMsg = null;
 		successMsg = null;
 		try {
-			const payload: Record<string, string> = {
+			await api.put('/api/auth/profile', {
 				mail_to: mailTo,
-				signal_phone: signalPhone,
-				telegram_chat_id: telegramChatId,
-			};
-			if (signalApiKey !== '') {
-				payload.signal_api_key = signalApiKey;
-			}
-			await api.put('/api/auth/profile', payload);
-			signalApiKey = '';
+			});
 			successMsg = 'Profil gespeichert';
 			setTimeout(() => (successMsg = null), 4000);
 		} catch (e: unknown) {
 			const body = e as { detail?: string; error?: string };
 			errorMsg = body?.detail ?? body?.error ?? 'Speichern fehlgeschlagen';
 		}
+	}
+
+	async function connectTelegram() {
+		telegramConnecting = true;
+		try {
+			const resp = await api.get<{ link: string }>('/api/auth/telegram-link');
+			window.open(resp.link, '_blank');
+			let attempts = 0;
+			telegramPollInterval = setInterval(async () => {
+				attempts++;
+				try {
+					const status = await api.get<{ connected: boolean; chat_id_suffix?: string }>(
+						'/api/auth/telegram-status'
+					);
+					if (status.connected) {
+						telegramConnected = true;
+						telegramChatIdSuffix = status.chat_id_suffix ?? '';
+						telegramConnecting = false;
+						clearInterval(telegramPollInterval!);
+					} else if (attempts >= 20) {
+						telegramConnecting = false;
+						clearInterval(telegramPollInterval!);
+					}
+				} catch {
+					telegramConnecting = false;
+					clearInterval(telegramPollInterval!);
+				}
+			}, 3000);
+		} catch {
+			telegramConnecting = false;
+		}
+	}
+
+	async function disconnectTelegram() {
+		await api.put('/api/auth/profile', { telegram_chat_id: '' });
+		telegramConnected = false;
+		telegramChatIdSuffix = '';
 	}
 
 	// --- System-Status helpers (migrated from settings) ---
@@ -344,59 +379,10 @@
 			</div>
 
 			<div class="space-y-2">
-				<label for="signalPhone" class="text-sm font-medium">Signal-Nummer</label>
-				<div class="flex items-center gap-2">
-					<input
-						id="signalPhone"
-						name="signal_phone"
-						type="text"
-						bind:value={signalPhone}
-						placeholder="z.B. +43664..."
-						class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-					/>
-					{#if signalPhone}
-						<button
-							onclick={() => sendTest('signal')}
-							disabled={testStatus.signal === 'loading'}
-							class="shrink-0 text-sm text-blue-600 hover:underline disabled:opacity-50"
-						>
-							{testStatus.signal === 'loading' ? '...' : 'Test senden'}
-						</button>
-					{/if}
-				</div>
-				{#if testStatus.signal === 'ok'}
-					<span class="text-sm text-green-600">Gesendet</span>
-				{/if}
-				{#if testStatus.signal === 'error'}
-					<span class="text-sm text-red-600">{testError.signal}</span>
-				{/if}
-			</div>
-
-			<div class="space-y-2">
-				<label for="signalApiKey" class="text-sm font-medium">Signal API Key</label>
-				<input
-					id="signalApiKey"
-					name="signal_api_key"
-					type="password"
-					bind:value={signalApiKey}
-					placeholder="Callmebot API Key"
-					class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-				/>
-				<p class="text-xs text-muted-foreground">Callmebot API Key für Signal-Benachrichtigungen</p>
-			</div>
-
-			<div class="space-y-2">
-				<label for="telegramChatId" class="text-sm font-medium">Telegram-ID</label>
-				<div class="flex items-center gap-2">
-					<input
-						id="telegramChatId"
-						name="telegram_chat_id"
-						type="text"
-						bind:value={telegramChatId}
-						placeholder="z.B. 123456789"
-						class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-					/>
-					{#if telegramChatId}
+				<label class="text-sm font-medium">Telegram</label>
+				{#if telegramConnected}
+					<div class="flex items-center gap-3">
+						<span class="text-sm text-green-700">Verbunden ({telegramChatIdSuffix})</span>
 						<button
 							onclick={() => sendTest('telegram')}
 							disabled={testStatus.telegram === 'loading'}
@@ -404,8 +390,25 @@
 						>
 							{testStatus.telegram === 'loading' ? '...' : 'Test senden'}
 						</button>
-					{/if}
-				</div>
+						<button
+							onclick={disconnectTelegram}
+							class="shrink-0 text-sm text-destructive hover:underline"
+						>
+							Trennen
+						</button>
+					</div>
+				{:else}
+					<div class="flex items-center gap-3">
+						<span class="text-sm text-muted-foreground">Nicht verbunden</span>
+						<button
+							onclick={connectTelegram}
+							disabled={telegramConnecting}
+							class="shrink-0 text-sm text-blue-600 hover:underline disabled:opacity-50"
+						>
+							{telegramConnecting ? 'Warte auf Verbindung…' : 'Mit Telegram verbinden'}
+						</button>
+					</div>
+				{/if}
 				{#if testStatus.telegram === 'ok'}
 					<span class="text-sm text-green-600">Gesendet</span>
 				{/if}
@@ -693,16 +696,13 @@
 				<!-- Benachrichtigungskanäle -->
 				<div data-testid="channels" class="mb-4">
 					<p class="text-sm font-medium mb-2">Benachrichtigungen</p>
-					{#if data.profile && (data.profile.mail_to || data.profile.signal_phone || data.profile.telegram_chat_id)}
+					{#if data.profile && (data.profile.mail_to || data.profile.telegram_chat_id)}
 						<div class="flex flex-wrap gap-2">
 							{#if data.profile.mail_to}
 								<Badge variant="secondary">E-Mail: {data.profile.mail_to}</Badge>
 							{/if}
-							{#if data.profile.signal_phone}
-								<Badge variant="secondary">Signal: {data.profile.signal_phone}</Badge>
-							{/if}
 							{#if data.profile.telegram_chat_id}
-								<Badge variant="secondary">Telegram: {data.profile.telegram_chat_id}</Badge>
+								<Badge variant="secondary">Telegram: ...{data.profile.telegram_chat_id.slice(-3)}</Badge>
 							{/if}
 						</div>
 					{:else}

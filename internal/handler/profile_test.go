@@ -22,7 +22,7 @@ func TestGetProfileHandler(t *testing.T) {
 	dir := filepath.Join(s.DataDir, "users", "alice")
 	os.MkdirAll(dir, 0755)
 	os.WriteFile(filepath.Join(dir, "user.json"),
-		[]byte(`{"id":"alice","password_hash":"`+string(hash)+`","mail_to":"alice@example.com","signal_phone":"+43123","telegram_chat_id":"999"}`), 0644)
+		[]byte(`{"id":"alice","password_hash":"`+string(hash)+`","mail_to":"alice@example.com","telegram_chat_id":"999"}`), 0644)
 
 	h := GetProfileHandler(s)
 
@@ -45,9 +45,6 @@ func TestGetProfileHandler(t *testing.T) {
 	}
 	if resp["mail_to"] != "alice@example.com" {
 		t.Errorf("expected mail_to, got '%v'", resp["mail_to"])
-	}
-	if resp["signal_phone"] != "+43123" {
-		t.Errorf("expected signal_phone, got '%v'", resp["signal_phone"])
 	}
 	if resp["telegram_chat_id"] != "999" {
 		t.Errorf("expected telegram_chat_id, got '%v'", resp["telegram_chat_id"])

@@ -8,7 +8,6 @@ from pydantic import BaseModel
 
 from src.app.config import Settings
 from src.outputs.email import EmailOutput
-from src.outputs.signal import SignalOutput
 from src.outputs.telegram import TelegramOutput
 
 router = APIRouter()
@@ -18,7 +17,7 @@ BODY = "Dein Kanal funktioniert!"
 
 
 class TestRequest(BaseModel):
-    channel: str  # "email" | "signal" | "telegram"
+    channel: str  # "email" | "telegram"
 
 
 @router.post("/api/notify/test")
@@ -34,9 +33,6 @@ async def test_notify(
         if req.channel == "email":
             output = EmailOutput(settings)
             output.send(SUBJECT, BODY, html=False)
-        elif req.channel == "signal":
-            output = SignalOutput(settings)
-            output.send(SUBJECT, BODY)
         elif req.channel == "telegram":
             output = TelegramOutput(settings)
             output.send(SUBJECT, BODY)

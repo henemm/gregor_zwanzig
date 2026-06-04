@@ -20,7 +20,6 @@
 		enabled: boolean;
 		send_email: boolean;
 		send_sms: boolean;
-		send_signal: boolean;
 		send_telegram: boolean;
 		alert_on_changes: boolean;
 		change_threshold_temp_c: number;
@@ -123,7 +122,6 @@
 					<p class="text-sm font-medium">Kanäle</p>
 					<div class="space-y-2 text-sm">
 						<div><Checkbox bind:checked={config.send_email}>E-Mail senden</Checkbox></div>
-						<div><Checkbox bind:checked={config.send_signal}>Signal senden</Checkbox></div>
 						<div><Checkbox bind:checked={config.send_telegram}>Telegram senden</Checkbox></div>
 					</div>
 				</div>

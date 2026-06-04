@@ -107,11 +107,6 @@ class Settings(BaseSettings):
     sms_from: Optional[str] = Field(default=None, description="SMS sender ID or number")
     sms_to: Optional[str] = Field(default=None, description="SMS recipient phone number")
 
-    # Signal settings (for signal channel via Callmebot)
-    signal_phone: str = Field(default="", description="Signal recipient phone (E.164 format)")
-    signal_api_key: str = Field(default="", description="Callmebot API key")
-    signal_api_url: str = Field(default="", description="Callmebot API URL (default built-in)")
-
     # Telegram settings (for telegram channel via Bot API)
     telegram_bot_token: str = Field(default="", description="Telegram Bot API token from @BotFather")
     telegram_chat_id: str = Field(default="", description="Telegram chat ID of recipient")
@@ -166,7 +161,7 @@ class Settings(BaseSettings):
         """Return a copy with recipient settings from user profile.
 
         Loads data/users/{user_id}/user.json and overrides recipient fields.
-        SMTP/Signal/Telegram infrastructure stays global.
+        SMTP/Telegram infrastructure stays global.
         Test users automatically use Stalwart test credentials instead of Resend.
         Falls back to global settings if profile doesn't exist or fields are empty.
         """
@@ -188,10 +183,6 @@ class Settings(BaseSettings):
         overrides = {}
         if profile.get("mail_to"):
             overrides["mail_to"] = profile["mail_to"]
-        if profile.get("signal_phone"):
-            overrides["signal_phone"] = profile["signal_phone"]
-        if profile.get("signal_api_key"):
-            overrides["signal_api_key"] = profile["signal_api_key"]
         if profile.get("telegram_chat_id"):
             overrides["telegram_chat_id"] = profile["telegram_chat_id"]
 
@@ -208,17 +199,13 @@ class Settings(BaseSettings):
             self.sms_to,
         ])
 
-    def can_send_signal(self) -> bool:
-        """Check if Signal configuration is complete."""
-        return bool(self.signal_phone and self.signal_api_key)
-
     def can_send_telegram(self) -> bool:
         """Check if Telegram configuration is complete."""
         return bool(self.telegram_bot_token and self.telegram_chat_id)
 
     _SENSITIVE_FIELDS = {
         "smtp_pass", "imap_pass", "test_smtp_pass", "test_imap_pass",
-        "sms_api_key", "signal_api_key", "telegram_bot_token",
+        "sms_api_key", "telegram_bot_token",
     }
 
     def __repr__(self) -> str:

@@ -23,7 +23,7 @@ import { toHHMMSS } from '$lib/utils/time';
 // `$lib/api`-Client beim Modul-Import aufgeloest werden muessen.
 
 export interface BriefingConfig {
-	channels: { email: boolean; signal: boolean; telegram: boolean; sms: boolean };
+	channels: { email: boolean; telegram: boolean; sms: boolean };
 	reports: {
 		morning: { enabled: boolean; time: string }; // 'HH:MM' z.B. '06:00'
 		evening: { enabled: boolean; time: string }; // 'HH:MM' z.B. '18:00'
@@ -33,7 +33,7 @@ export interface BriefingConfig {
 }
 
 export const defaultBriefingConfig: BriefingConfig = {
-	channels: { email: true, signal: false, telegram: false, sms: false },
+	channels: { email: true, telegram: false, sms: false },
 	reports: {
 		morning: { enabled: true, time: '06:00' },
 		evening: { enabled: true, time: '18:00' }
@@ -371,7 +371,6 @@ export class WizardState {
 			morning_time: toHHMMSS(b.reports.morning.time),
 			evening_time: toHHMMSS(b.reports.evening.time),
 			send_email: b.channels.email,
-			send_signal: b.channels.signal,
 			send_telegram: b.channels.telegram,
 			send_sms: b.channels.sms
 		};

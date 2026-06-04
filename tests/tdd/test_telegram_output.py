@@ -142,7 +142,7 @@ class TestLoaderTelegramRoundTrip:
 
         sub = CompareSubscription(
             id="telegram-test", name="Telegram Test",
-            send_email=True, send_signal=False, send_telegram=True,
+            send_email=True, send_telegram=True,
         )
         save_compare_subscription(sub, user_id="__test_telegram__")
         loaded = load_compare_subscriptions(user_id="__test_telegram__")
@@ -151,7 +151,6 @@ class TestLoaderTelegramRoundTrip:
         assert len(found) == 1
         assert found[0].send_telegram is True
         assert found[0].send_email is True
-        assert found[0].send_signal is False
 
     def test_subscription_json_contains_send_telegram(self):
         """

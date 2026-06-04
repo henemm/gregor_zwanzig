@@ -100,6 +100,10 @@ func main() {
 	r.Get("/api/auth/profile", handler.GetProfileHandler(s))
 	r.Put("/api/auth/profile", handler.UpdateProfileHandler(s))
 	r.Put("/api/auth/password", handler.ChangePasswordHandler(s, bcrypt.DefaultCost))
+	// Bug #590: Telegram /start-Flow — link generation + status polling + internal connect
+	r.Get("/api/auth/telegram-link", handler.GetTelegramLinkHandler(s))
+	r.Get("/api/auth/telegram-status", handler.GetTelegramStatusHandler(s))
+	r.Post("/api/internal/telegram-connect", handler.PostTelegramConnectHandler(s))
 	r.Get("/api/auth/google/init", handler.GoogleOAuthInitHandler(cfg))
 	r.Get("/api/auth/google/callback", handler.GoogleOAuthCallbackHandler(cfg, s))
 	magicLinkLimiter := authmw.NewIPRateLimiter(5, 15*time.Minute)

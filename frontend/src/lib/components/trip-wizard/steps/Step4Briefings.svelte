@@ -65,12 +65,6 @@
 					testid="trip-wizard-step4-channel-email"
 				/>
 				<ChannelToggle
-					label="Signal"
-					checked={wizard.briefings.channels.signal}
-					onchange={makeChannelHandler('signal')}
-					testid="trip-wizard-step4-channel-signal"
-				/>
-				<ChannelToggle
 					label="Telegram"
 					checked={wizard.briefings.channels.telegram}
 					onchange={makeChannelHandler('telegram')}

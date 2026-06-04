@@ -34,7 +34,6 @@ function makeSub(overrides: Partial<Subscription> = {}): Subscription {
 		include_hourly: false,
 		top_n: 3,
 		send_email: true,
-		send_signal: false,
 		send_telegram: false,
 		...overrides
 	};

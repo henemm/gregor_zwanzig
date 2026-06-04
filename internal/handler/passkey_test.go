@@ -519,8 +519,6 @@ func TestPasskeyAddPreservesUserFields(t *testing.T) {
 		Email:          "alice@example.com",
 		PasswordHash:   "$2a$10$existing-hash",
 		MailTo:         "alerts@example.com",
-		SignalPhone:    "+436601234567",
-		SignalAPIKey:   "sk-existing",
 		TelegramChatID: "12345",
 		CreatedAt:      created,
 	}
@@ -544,12 +542,6 @@ func TestPasskeyAddPreservesUserFields(t *testing.T) {
 	}
 	if reloaded.MailTo != "alerts@example.com" {
 		t.Errorf("AC-3: MailTo changed: %q", reloaded.MailTo)
-	}
-	if reloaded.SignalPhone != "+436601234567" {
-		t.Errorf("AC-3: SignalPhone changed: %q", reloaded.SignalPhone)
-	}
-	if reloaded.SignalAPIKey != "sk-existing" {
-		t.Errorf("AC-3: SignalAPIKey changed: %q", reloaded.SignalAPIKey)
 	}
 	if reloaded.TelegramChatID != "12345" {
 		t.Errorf("AC-3: TelegramChatID changed: %q", reloaded.TelegramChatID)

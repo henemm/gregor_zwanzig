@@ -15,7 +15,6 @@ type CompareSubscription struct {
 	IncludeHourly   bool                   `json:"include_hourly"`
 	TopN            int                    `json:"top_n"`
 	SendEmail       bool                   `json:"send_email"`
-	SendSignal      bool                   `json:"send_signal"`
 	SendTelegram    bool                   `json:"send_telegram"`
 	DisplayConfig   map[string]interface{} `json:"display_config,omitempty"`
 	ActivityProfile *string                `json:"activity_profile,omitempty"`

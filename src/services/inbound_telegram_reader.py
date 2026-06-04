@@ -100,6 +100,12 @@ class InboundTelegramReader:
         if not text or not chat_id:
             return False
 
+        # /start TOKEN Handling — VOR user-resolve (user noch nicht bekannt)
+        if text.startswith("/start "):
+            token = text[len("/start "):].strip()
+            if token:
+                return self._process_start_command(token=token, chat_id=chat_id, settings=settings)
+
         # Resolve user-scoped settings for this chat_id
         user_id, user_settings = self._resolve_user_for_chat(chat_id, settings)
 
@@ -178,6 +184,22 @@ class InboundTelegramReader:
         from app.loader import lookup_user_by_telegram_chat_id
         user_id = lookup_user_by_telegram_chat_id(chat_id, data_dir=data_dir) or "default"
         return user_id, base_settings.with_user_profile(user_id)
+
+    def _process_start_command(self, token: str, chat_id: str, settings: Settings) -> bool:
+        """Verarbeitet /start TOKEN — registriert chat_id beim Go-Backend."""
+        try:
+            resp = httpx.post(
+                "http://localhost:8090/api/internal/telegram-connect",
+                json={"token": token, "chat_id": chat_id},
+                timeout=5,
+            )
+            if resp.status_code == 200:
+                logger.info(f"Telegram chat_id {chat_id} via token registriert")
+            else:
+                logger.warning(f"telegram-connect returned {resp.status_code}")
+        except Exception as e:
+            logger.error(f"telegram-connect Fehler: {e}")
+        return True
 
     def _parse_command(self, text: str) -> tuple[str | None, str | None]:
         """Parst ersten nicht-leeren Satz: 'ruhetag 2' → ('ruhetag', '2').

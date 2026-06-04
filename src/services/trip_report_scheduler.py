@@ -475,17 +475,6 @@ class TripReportSchedulerService:
                 plain_text_body=report.email_plain,
             )
 
-        # 7b. Send Signal if configured (Issue #360: kanal-bewusster Body)
-        if config and config.send_signal and self._settings.can_send_signal():
-            try:
-                from outputs.signal import SignalOutput
-                SignalOutput(self._settings).send(
-                    subject=report.email_subject,
-                    body=report.signal_text or report.email_plain,
-                )
-            except Exception as e:
-                logger.error(f"Signal send failed for {trip.name}: {e}")
-
         # 7c. Send Telegram if configured (Issue #360: kanal-bewusster Body)
         if config and config.send_telegram and self._settings.can_send_telegram():
             try:
@@ -502,8 +491,6 @@ class TripReportSchedulerService:
         sent_channels: List[str] = []
         if not config or config.send_email:
             sent_channels.append("email")
-        if config and config.send_signal and self._settings.can_send_signal():
-            sent_channels.append("signal")
         if config and config.send_telegram and self._settings.can_send_telegram():
             sent_channels.append("telegram")
         self._append_briefing_log(trip.id, report_type, sent_channels)

@@ -357,7 +357,6 @@ type profileResponse struct {
 	ID             string                 `json:"id"`
 	Email          string                 `json:"email,omitempty"`
 	MailTo         string                 `json:"mail_to,omitempty"`
-	SignalPhone    string                 `json:"signal_phone,omitempty"`
 	TelegramChatID string                 `json:"telegram_chat_id,omitempty"`
 	CreatedAt      string                 `json:"created_at"`
 	HasPasskey     bool                   `json:"has_passkey"`
@@ -392,7 +391,6 @@ func toProfileResponse(u *model.User) profileResponse {
 		ID:             u.ID,
 		Email:          u.Email,
 		MailTo:         u.MailTo,
-		SignalPhone:    u.SignalPhone,
 		TelegramChatID: u.TelegramChatID,
 		CreatedAt:      u.CreatedAt.Format(time.RFC3339),
 		HasPasskey:     len(u.PasskeyCredentials) > 0,
@@ -430,8 +428,6 @@ func UpdateProfileHandler(s *store.Store) http.HandlerFunc {
 		var update struct {
 			Email          *string `json:"email"`
 			MailTo         *string `json:"mail_to"`
-			SignalPhone    *string `json:"signal_phone"`
-			SignalAPIKey   *string `json:"signal_api_key"`
 			TelegramChatID *string `json:"telegram_chat_id"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&update); err != nil {
@@ -446,12 +442,6 @@ func UpdateProfileHandler(s *store.Store) http.HandlerFunc {
 		}
 		if update.MailTo != nil {
 			user.MailTo = *update.MailTo
-		}
-		if update.SignalPhone != nil {
-			user.SignalPhone = *update.SignalPhone
-		}
-		if update.SignalAPIKey != nil {
-			user.SignalAPIKey = *update.SignalAPIKey
 		}
 		if update.TelegramChatID != nil {
 			user.TelegramChatID = *update.TelegramChatID
