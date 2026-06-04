@@ -122,7 +122,7 @@ test('#378 AC-2b: --g-surface-raised verweist NICHT mehr auf var(--g-surface-1)'
 test('#378 AC-4: nicht-migrierte Tokens bleiben unveraendert', () => {
 	assert.ok(hasDecl('--g-surface-0', '#f6f4ee'), '--g-surface-0 bleibt #f6f4ee');
 	assert.ok(hasDecl('--g-rule', '#d8d3c2'), '--g-rule bleibt #d8d3c2');
-	assert.ok(hasDecl('--g-paper-deep', '#ede9df'), '--g-paper-deep bleibt #ede9df (nicht im #378-Scope, C1)');
+	assert.ok(hasDecl('--g-paper-deep', '#ecead9'), '--g-paper-deep auf tokens.css-Wert #ecead9 (#576)');
 });
 
 test('#378 AC-7: keine alten beigen Surface-Fallbacks in @property (rgb-Form, F002)', () => {

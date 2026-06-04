@@ -133,7 +133,7 @@
     --g-s-20: 80px;
 
     /* Issue #267 — Mobile App-Shell Tokens */
-    --g-paper-deep: #ede9df;
+    --g-paper-deep: #ecead9;  /* #576: tokens.css-Sync */
     --g-rule-soft: #e7e2d3;  /* #378: opak, ersetzt rgba(26,26,24,0.08) */
 
     /* === Atomic-Design-Bridge (#369) — Sandbox-Token-Namen + -Werte, additiv.
