@@ -7,12 +7,14 @@
 		children,
 		padding = 20,
 		accent = false,
+		background,
 		class: className,
 		...restProps
 	}: {
 		children?: Snippet;
 		padding?: number;
 		accent?: boolean;
+		background?: string;
 		class?: string;
 		[key: string]: unknown;
 	} = $props();
@@ -21,7 +23,7 @@
 <div
 	data-slot="card"
 	class={className}
-	style:background="var(--g-card)"
+	style:background={background ?? "var(--g-card)"}
 	style:border-radius="var(--g-r-3)"
 	style:box-shadow="var(--g-shadow-1)"
 	style:padding="{padding}px"

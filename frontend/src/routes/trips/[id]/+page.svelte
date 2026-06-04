@@ -6,7 +6,7 @@
 	import { goto } from '$app/navigation';
 	import { TripHeader } from '$lib/components/organisms';
 	import { TripTabs } from '$lib/components/trip-detail';
-	import { Btn, Eyebrow } from '$lib/components/atoms';
+	import { Btn, TopoBg } from '$lib/components/atoms';
 	import { ConfirmDialog } from '$lib/components/molecules';
 	import { deriveTripStatus } from '$lib/utils/tripStatus';
 	import type { Trip } from '$lib/types';
@@ -103,57 +103,38 @@
 	function handleStatusChange(updated: Trip): void {
 		trip = updated;
 	}
+
+	async function handleTestBriefing(): Promise<void> {
+		try {
+			await fetch('/api/scheduler/trip-reports?hour=18', { method: 'POST' });
+		} catch {
+			// fail silently
+		}
+	}
 </script>
 
 <svelte:head><title>{trip.name} — Gregor Zwanzig</title></svelte:head>
 
-<main class="container mx-auto max-w-5xl p-4">
+<main style="position: relative; overflow: hidden;">
+	<TopoBg opacity={0.14} />
+	<div class="breadcrumb-bar" data-testid="trip-detail-breadcrumb-bar">
+		<div class="mono breadcrumb-path" style="font-size: 11px; color: var(--g-ink-3); letter-spacing: 0.06em;">
+			<span style="opacity: 0.6;">Trips</span>
+			<span style="margin: 0 8px;">/</span>
+			<span style="color: var(--g-ink);">{trip.shortcode ?? trip.name}</span>
+		</div>
+		<div class="breadcrumb-actions">
+			<Btn variant="ghost" size="sm" onclick={handlePauseClick} disabled={isLoading || status === 'archived'}>
+				{status === 'paused' ? 'Fortsetzen' : 'Pausieren'}
+			</Btn>
+			<Btn variant="ghost" size="sm" onclick={handleArchiveClick} disabled={isLoading}>
+				{status === 'archived' ? 'Reaktivieren' : 'Archivieren'}
+			</Btn>
+			<Btn variant="accent" size="sm" onclick={handleTestBriefing}>Test-Briefing senden</Btn>
+		</div>
+	</div>
 	<TripHeader {trip} {now} onStatusChange={handleStatusChange} />
 	<TripTabs {initialTab} badges={{}} {trip} />
-
-	<section class="danger-zone" data-testid="danger-zone">
-		<div class="danger-zone-header">
-			<Eyebrow>Selten gebraucht</Eyebrow>
-		</div>
-		<div class="danger-zone-actions">
-			<div class="danger-zone-left">
-				<Btn variant="outline" size="sm" disabled>Trip duplizieren</Btn>
-				<Btn variant="outline" size="sm" disabled>GPX neu importieren</Btn>
-				<Btn
-					variant="outline"
-					size="sm"
-					data-testid="trip-detail-action-pause"
-					onclick={handlePauseClick}
-					disabled={isLoading || status === 'archived'}
-				>
-					{status === 'paused' ? 'Fortsetzen' : 'Briefings pausieren'}
-				</Btn>
-				<Btn
-					variant="outline"
-					size="sm"
-					data-testid="trip-detail-action-archive"
-					onclick={handleArchiveClick}
-					disabled={isLoading}
-				>
-					{status === 'archived' ? 'Reaktivieren' : 'Archivieren'}
-				</Btn>
-			</div>
-			<div class="danger-zone-right">
-				<Btn
-					variant="destructive"
-					size="sm"
-					data-testid="trip-detail-action-delete"
-					onclick={handleDeleteClick}
-					disabled={isLoading}
-				>
-					Trip löschen
-				</Btn>
-			</div>
-		</div>
-		{#if errorMsg}
-			<p class="danger-zone-error" data-testid="danger-zone-error">{errorMsg}</p>
-		{/if}
-	</section>
 </main>
 
 <ConfirmDialog
@@ -189,31 +170,18 @@
 />
 
 <style>
-	.danger-zone {
-		margin-top: 2.5rem;
-		padding: 1.25rem 0 1.5rem;
-		border-top: 1px solid var(--g-ink-faint);
+	.breadcrumb-bar {
 		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-	}
-	.danger-zone-actions {
-		display: flex;
-		gap: 1rem;
+		align-items: center;
 		justify-content: space-between;
+		padding: 10px 40px;
+		border-bottom: 1px solid var(--g-rule-soft);
+		gap: 16px;
 		flex-wrap: wrap;
 	}
-	.danger-zone-left {
+	.breadcrumb-actions {
 		display: flex;
-		gap: 0.5rem;
+		gap: 8px;
 		flex-wrap: wrap;
-	}
-	.danger-zone-right {
-		display: flex;
-	}
-	.danger-zone-error {
-		margin: 0;
-		font-size: 0.875rem;
-		color: var(--g-danger, #b34a2a);
 	}
 </style>

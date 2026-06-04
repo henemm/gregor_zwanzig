@@ -2,6 +2,8 @@
 	import { goto } from '$app/navigation';
 	import { Segmented } from '$lib/components/atoms';
 	import TripOverview from './TripOverview.svelte';
+	import HubOverview from './HubOverview.svelte';
+	import HubSchedule from './HubSchedule.svelte';
 	import WeatherMetricsTab from './WeatherMetricsTab.svelte';
 	import AlertsTab from '$lib/components/alerts-tab/AlertsTab.svelte';
 	import BriefingsTab from '$lib/components/briefings-tab/BriefingsTab.svelte';
@@ -110,7 +112,7 @@
 		{#if activeTab === tab.value}
 			<div data-testid="trip-detail-panel-{tab.value}">
 				{#if tab.value === 'overview' && trip}
-					<TripOverview {trip} />
+					<HubOverview {trip} onJump={handleValueChange} />
 				{:else if tab.value === 'stages'}
 					{#if trip}
 						<EditStagesSection bind:stages={localStages} tripId={trip.id} showSave={true} />
@@ -120,7 +122,7 @@
 				{:else if tab.value === 'alerts' && trip}
 					<AlertsTab {trip} />
 				{:else if tab.value === 'briefings' && trip}
-					<BriefingsTab {trip} />
+					<HubSchedule {trip} />
 				{:else if tab.value === 'preview' && trip}
 					<div class="preview-shell">
 						{#if demoMode}

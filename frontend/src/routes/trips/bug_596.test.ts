@@ -17,15 +17,15 @@ const TRIPS_DIR = dirname(fileURLToPath(import.meta.url));
 const TRIP_EDIT_VIEW = resolve(TRIPS_DIR, '../../lib/components/edit/TripEditView.svelte');
 const FRONTEND_SRC = resolve(TRIPS_DIR, '../..');
 
-test('AC-1: edit-breadcrumb enthält "MEINE TRIPS", nicht "MEINE TOUREN"', () => {
+test('AC-1: edit-breadcrumb enthält "Bearbeiten" im neuen mono-Format (Issue #581 AC-6)', () => {
 	const src = readFileSync(TRIP_EDIT_VIEW, 'utf-8');
 	assert.ok(
 		!src.includes('MEINE TOUREN'),
-		'TripEditView.svelte enthält noch "MEINE TOUREN" — muss "MEINE TRIPS" sein'
+		'TripEditView.svelte enthält noch "MEINE TOUREN" — verboten'
 	);
 	assert.ok(
-		src.includes('MEINE TRIPS'),
-		'TripEditView.svelte enthält kein "MEINE TRIPS" im Breadcrumb'
+		src.includes('Bearbeiten'),
+		'TripEditView.svelte muss "Bearbeiten" im mono-Breadcrumb "Trips / Name / Bearbeiten" enthalten'
 	);
 });
 

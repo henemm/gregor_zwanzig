@@ -52,11 +52,11 @@ describe('#503 Tab-Umbenennung', () => {
 		);
 	});
 
-	test('TripEditView bindet den Editor-Tab an EditStagesPanelNew', () => {
+	test('TripEditView bindet den Editor-Tab an EtappenStrip (Issue #581 AC-7)', () => {
 		const src = readFileSync(TRIP_EDIT_VIEW, 'utf-8');
 		assert.ok(
-			src.includes('EditStagesPanelNew'),
-			'TripEditView.svelte muss EditStagesPanelNew als Tab-Inhalt rendern'
+			src.includes('EtappenStrip'),
+			'TripEditView.svelte muss EtappenStrip als Tab-Inhalt rendern (EditStagesPanelNew durch #581 abgelöst)'
 		);
 	});
 });

@@ -4,14 +4,13 @@
 	//
 	// Zweispaltig: Links Breadcrumb + H1 + Statuszeile + Meta. Rechts 3 Buttons.
 	// Pause/Archive-Logik ist in +page.svelte als Danger-Zone gewandert.
-	import { Btn, Eyebrow } from '$lib/components/atoms';
+	import { Eyebrow } from '$lib/components/atoms';
 	import TripStatusBadge from './TripStatusBadge.svelte';
 	import { formatDateRange, getDaysLabel } from '$lib/utils/tripHero';
 	import { computeTripStats } from '$lib/utils/tripStats';
 	import { deriveTripStatus, todayStageIndex } from '$lib/utils/tripStatus';
 	import { getReportSchedule } from '$lib/utils/rightColumn';
 	import Stat from '$lib/components/molecules/Stat.svelte';
-	import { api } from '$lib/api';
 	import type { Trip } from '$lib/types';
 
 	interface Props {
@@ -77,25 +76,6 @@
 		return '—';
 	})());
 
-	let testBriefingLoading = $state(false);
-	let testBriefingMsg = $state<string | null>(null);
-	let testBriefingKind = $state<'success' | 'error' | null>(null);
-
-	async function handleTestBriefing(): Promise<void> {
-		testBriefingLoading = true;
-		testBriefingMsg = null;
-		testBriefingKind = null;
-		try {
-			await api.post('/api/scheduler/trip-reports?hour=18', {});
-			testBriefingMsg = 'Briefings für alle aktiven Trips ausgelöst.';
-			testBriefingKind = 'success';
-		} catch {
-			testBriefingMsg = 'Fehler beim Senden.';
-			testBriefingKind = 'error';
-		} finally {
-			testBriefingLoading = false;
-		}
-	}
 
 </script>
 
@@ -111,6 +91,9 @@
 					</span>
 				</Eyebrow>
 			</nav>
+			<div class="trip-eyebrow-region">
+				Trip · {trip.region ?? ''}
+			</div>
 
 			<h1 class="trip-h1" data-testid="trip-detail-h1">
 				{#if trip.shortcode}<span class="h1-shortcode">{trip.shortcode}</span> ·&nbsp;{/if}{trip.name}
@@ -129,17 +112,6 @@
 			</div>
 		</div>
 
-		<div class="header-actions">
-			<Btn
-				variant="accent"
-				size="sm"
-				data-testid="trip-detail-action-test-briefing"
-				onclick={handleTestBriefing}
-				disabled={testBriefingLoading}
-			>
-				Test-Briefing senden
-			</Btn>
-		</div>
 	</div>
 
 	<div class="mobile-metrics" data-testid="trip-header-mobile-metrics">
@@ -154,13 +126,6 @@
 		</div>
 	</div>
 
-	{#if testBriefingMsg}
-		<p
-			class="briefing-msg"
-			data-testid="trip-detail-test-briefing-msg"
-			style:color={testBriefingKind === 'success' ? 'var(--g-success)' : 'var(--g-danger)'}
-		>{testBriefingMsg}</p>
-	{/if}
 </header>
 
 <style>
@@ -169,6 +134,7 @@
 		flex-direction: column;
 		gap: 0.5rem;
 		margin-bottom: 1.25rem;
+		padding: 26px 40px 18px;
 	}
 	.header-main {
 		display: flex;
@@ -193,9 +159,9 @@
 	}
 	.trip-h1 {
 		margin: 0;
-		font-size: var(--g-text-3xl);
+		font-size: 38px;
 		font-weight: 700;
-		letter-spacing: -0.025em;
+		letter-spacing: -0.02em;
 		color: var(--g-ink);
 		line-height: 1.15;
 	}
@@ -230,6 +196,13 @@
 	.briefing-msg {
 		margin: 0;
 		font-size: var(--g-text-sm);
+	}
+	.trip-eyebrow-region {
+		font-size: 11px;
+		font-family: var(--g-font-mono, ui-monospace, monospace);
+		color: var(--g-ink-3);
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
 	}
 	.mobile-metrics {
 		display: none;

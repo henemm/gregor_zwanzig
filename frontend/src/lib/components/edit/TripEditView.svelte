@@ -3,11 +3,10 @@
 	import { api } from '$lib/api.js';
 	import { goto } from '$app/navigation';
 	import EditRouteSection from './EditRouteSection.svelte';
-	import EditStagesPanelNew from './EditStagesPanelNew.svelte';
 	import WeatherSummaryCard from './WeatherSummaryCard.svelte';
 	import EditReportConfigSection from './EditReportConfigSection.svelte';
 	import { AlertRulesEditor } from '$lib/components/organisms';
-	import { Segmented } from '$lib/components/atoms';
+	import EtappenStrip from '$lib/components/trip-detail/waypoints/EtappenStrip.svelte';
 	import { normalizeAlertMetric } from '$lib/utils/alertMetricLabels';
 	import { computeTripStats } from '$lib/utils/tripStats';
 	import { formatDateRange } from '$lib/utils/tripHero';
@@ -47,12 +46,13 @@
 	const dateRange = $derived(formatDateRange(trip));
 	const reportSchedule = $derived(getReportSchedule(trip));
 
+	// Tab options without inline counts — badges rendered as separate elements
 	const tabOptions = $derived([
-		{ value: 'route',       label: 'Route',                              testid: 'edit-tab-route' },
-		{ value: 'etappen',     label: `Etappen & Wegpunkte ${stats.stages}`, testid: 'edit-tab-etappen' },
-		{ value: 'wetter',      label: 'Wetter',                             testid: 'edit-tab-wetter' },
-		{ value: 'reports',     label: 'Reports',                            testid: 'edit-tab-reports' },
-		{ value: 'alarmregeln', label: `Alarmregeln ${alertRules.length}`,   testid: 'edit-tab-alarmregeln' },
+		{ id: 'route',       label: 'Route',                  badge: '',                           accent: false },
+		{ id: 'etappen',     label: 'Etappen & Wegpunkte',    badge: String(stats.stages),         accent: false },
+		{ id: 'wetter',      label: 'Wetter',                 badge: '',                           accent: false },
+		{ id: 'reports',     label: 'Reports',                badge: '',                           accent: false },
+		{ id: 'alarmregeln', label: 'Alarmregeln',            badge: String(alertRules.length),    accent: true },
 	]);
 
 	// Factory Pattern fuer Handler (Safari-Closure-Binding-Schutz, siehe CLAUDE.md)
@@ -100,24 +100,22 @@
 	const onTabSelect = makeTabSelectHandler();
 </script>
 
-<div data-testid="trip-edit-view" class="max-w-5xl mx-auto p-4">
+<div data-testid="trip-edit-view" style="position: relative; padding: 0;">
 	<!-- Breadcrumb -->
-	<nav data-testid="edit-breadcrumb"
-		class="text-xs uppercase tracking-wider text-muted-foreground mb-3">
-		<a href="/trips" class="hover:underline">MEINE TRIPS</a>
-		<span> · TRIP BEARBEITEN</span>
+	<nav data-testid="edit-breadcrumb" class="mono" style="font-size: 11px; color: var(--g-ink-3); padding: 16px 40px; border-bottom: 1px solid var(--g-rule-soft); letter-spacing: 0.06em;">
+		<span style="opacity: 0.6;">Trips</span> / <span style="opacity: 0.6;">{trip.shortcode ?? (trip as Trip & { shortCode?: string }).shortCode ?? trip.name}</span> / <span>Bearbeiten</span>
 	</nav>
 
 	<!-- Header: H1 + Buttons oben rechts -->
-	<div data-testid="edit-header" class="flex items-start justify-between mb-4 gap-4">
-		<h1 data-testid="edit-trip-title" class="text-2xl font-semibold">
+	<div data-testid="edit-header" style="display: flex; align-items: flex-start; justify-content: space-between; padding: 20px 40px 16px; gap: 16px; flex-wrap: wrap;">
+		<h1 data-testid="edit-trip-title" style="font-size: 24px; font-weight: 600; margin: 0;">
 			{trip.name}
 		</h1>
-		<div data-testid="edit-header-actions" class="flex gap-2 items-center shrink-0">
+		<div data-testid="edit-header-actions" style="display: flex; gap: 8px; align-items: center; flex-shrink: 0;">
 			<button
 				type="button"
 				data-testid="edit-cancel-btn"
-				class="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 min-h-[44px] text-sm font-medium hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
+				style="padding: 10px 16px; border-radius: 6px; border: 1px solid var(--g-rule); background: transparent; font-size: 14px; font-weight: 500; cursor: pointer;"
 				onclick={onCancel}
 				disabled={saving}
 			>
@@ -126,7 +124,7 @@
 			<button
 				type="button"
 				data-testid="edit-save-btn"
-				class="inline-flex items-center justify-center rounded-md bg-primary px-4 min-h-[44px] text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+				style="padding: 10px 16px; border-radius: 6px; border: none; background: var(--g-ink); color: var(--g-paper); font-size: 14px; font-weight: 500; cursor: pointer;"
 				onclick={onSave}
 				disabled={saving}
 			>
@@ -135,27 +133,36 @@
 		</div>
 	</div>
 
-	<!-- Horizontale Tabs via Segmented -->
-	<div data-testid="edit-tabs" class="mb-4">
-		<Segmented options={tabOptions} selected={activeTab} onselect={onTabSelect} />
+	<!-- Stats-Karte (GESAMT / ZEITRAUM) -->
+	<div data-testid="edit-stats-card" style="display: flex; gap: 32px; padding: 18px 40px; border-bottom: 1px solid var(--g-rule-soft); align-items: center; background: var(--g-card); margin-bottom: 0;">
+		<div>
+			<div style="font-size: 10px; font-family: var(--g-font-mono); color: var(--g-ink-3); letter-spacing: 0.08em; margin-bottom: 4px;">GESAMT</div>
+			<div style="font-size: 18px; font-weight: 600;" data-testid="edit-stats-distance">{stats.kmTotal.toFixed(1)} km · ↑{stats.ascentM} m</div>
+		</div>
+		<div>
+			<div style="font-size: 10px; font-family: var(--g-font-mono); color: var(--g-ink-3); letter-spacing: 0.08em; margin-bottom: 4px;">ZEITRAUM</div>
+			<div style="font-size: 18px; font-weight: 600;" data-testid="edit-stats-daterange">{dateRange} · {stats.stages} Tage</div>
+		</div>
+		{#if reportSchedule.enabled}
+			<span data-testid="edit-stats-reports-badge" style="margin-left: auto; font-size: 10px; font-family: var(--g-font-mono); letter-spacing: 0.08em; padding: 4px 10px; border-radius: 99px; border: 1px solid var(--g-ink-3); color: var(--g-ink-3);">REPORTS KONFIGURIERT</span>
+		{/if}
 	</div>
 
-	<!-- Statistik-Karte (immer sichtbar, unabhängig vom Tab) -->
-	<div data-testid="edit-stats-card"
-		class="flex flex-wrap items-center gap-x-3 gap-y-1 p-3 rounded-md border bg-card text-sm mb-4">
-		<span data-testid="edit-stats-distance">{stats.kmTotal.toFixed(1)} km</span>
-		<span aria-hidden="true">·</span>
-		<span data-testid="edit-stats-ascent">↑{stats.ascentM} m</span>
-		<span aria-hidden="true">·</span>
-		<span data-testid="edit-stats-daterange">{dateRange}</span>
-		<span aria-hidden="true">·</span>
-		<span data-testid="edit-stats-days">{stats.stages} Tage</span>
-		{#if reportSchedule.enabled}
-			<span data-testid="edit-stats-reports-badge"
-				class="ml-auto inline-flex items-center rounded-full bg-primary/10 text-primary px-2 py-0.5 text-xs uppercase tracking-wider">
-				REPORTS KONFIGURIERT
-			</span>
-		{/if}
+	<!-- Tab-Leiste (eigene Implementierung analog JSX TripEditTabBar) -->
+	<div data-testid="edit-tabs" style="border-bottom: 1px solid var(--g-rule); padding: 0 40px; display: flex; gap: 0;">
+		{#each tabOptions as tab}
+			<button
+				type="button"
+				data-testid="edit-tab-{tab.id}"
+				onclick={() => (activeTab = tab.id as TabId)}
+				style="padding: 12px 16px; cursor: pointer; font-size: 13px; font-weight: {activeTab === tab.id ? 600 : 500}; color: {activeTab === tab.id ? 'var(--g-ink)' : 'var(--g-ink-3)'}; border: none; background: transparent; border-bottom: {activeTab === tab.id ? '2px solid var(--g-accent)' : '2px solid transparent'}; margin-bottom: -1px; display: inline-flex; align-items: center; gap: 6px;"
+			>
+				{tab.label}
+				{#if tab.badge}
+					<span data-testid="edit-tab-badge-{tab.id}" style="font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 3px; background: {tab.accent ? 'var(--g-accent)' : 'var(--g-paper-deep)'}; color: {tab.accent ? '#fff' : 'var(--g-ink-3)'}; font-family: var(--g-font-mono);">{tab.badge}</span>
+				{/if}
+			</button>
+		{/each}
 	</div>
 
 	<!-- Tab-Inhalte -->
@@ -163,7 +170,15 @@
 		{#if activeTab === 'route'}
 			<EditRouteSection bind:tripName bind:stages mode="edit" />
 		{:else if activeTab === 'etappen'}
-			<EditStagesPanelNew bind:stages tripId={trip.id} showSave={false} />
+			<div style="padding: 24px 40px;">
+				<p style="font-size: 13px; color: var(--g-ink-2); margin-bottom: 16px;">Klicke auf eine Etappe, um Wegpunkte visuell zu bearbeiten.</p>
+				<EtappenStrip
+					{stages}
+					activeStageId={stages[0]?.id ?? ''}
+					onStagesReorder={(s) => (stages = s)}
+					onStageActivate={(_id) => {}}
+				/>
+			</div>
 		{:else if activeTab === 'wetter'}
 			<WeatherSummaryCard displayConfig={trip.display_config} tripId={trip.id} />
 		{:else if activeTab === 'reports'}
@@ -176,7 +191,7 @@
 	<!-- Fehleranzeige -->
 	{#if saveError}
 		<div data-testid="edit-save-error"
-			class="mt-4 p-3 rounded bg-destructive/10 text-destructive text-sm">
+			style="margin: 16px 40px; padding: 12px; border-radius: 6px; background: rgba(179,74,42,0.1); color: var(--g-danger, #b34a2a); font-size: 14px;">
 			{saveError}
 		</div>
 	{/if}
