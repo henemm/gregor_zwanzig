@@ -490,6 +490,97 @@ def _new_workflow(name: str) -> dict:
     }
 
 
+_GATE_DEFINITIONS = [
+    {
+        "gate_id": "analyse_summary",
+        "label": "Gate 1: Analyse-Zusammenfassung (phase2→phase3)",
+        "from_phase": "phase2_analyse",
+        "to_phase": "phase3_spec",
+        "required": False,
+    },
+    {
+        "gate_id": "spec_approval",
+        "label": "Gate 2: AC-Freigabe (phase3→phase4)",
+        "from_phase": "phase3_spec",
+        "to_phase": "phase4_approved",
+        "required": True,
+    },
+    {
+        "gate_id": "deploy_approval",
+        "label": "Gate 3: Tech-Lead-Brief / Deploy (phase7→complete)",
+        "from_phase": "phase7_validate",
+        "to_phase": "phase8_complete",
+        "required": True,
+    },
+]
+
+
+def _compute_gate_history(transitions: list) -> "tuple[dict, int]":
+    """Analysiert phase_transitions und gibt Gate-Status + Anomalie-Zähler zurück.
+
+    Returns: (gate_history_dict, anomaly_count)
+    Status: user_approved | bypassed | traversed | not_reached | not_required
+    bypassed = Pflicht-Gate per command-Trigger übersprungen (Anomalie).
+    traversed = optionales Gate automatisch durchlaufen (normal, kein Symbol).
+    matching[-1] = letzte Transition maßgeblich (Re-Traversal nach Rollback).
+    """
+    gate_history: dict = {}
+    anomalies = 0
+
+    for gate in _GATE_DEFINITIONS:
+        gid = gate["gate_id"]
+        from_p = gate["from_phase"]
+        to_p = gate["to_phase"]
+        required = gate["required"]
+
+        matching = [
+            t for t in transitions
+            if isinstance(t, dict) and t.get("from") == from_p and t.get("to") == to_p
+        ]
+
+        if matching:
+            t = matching[-1]
+            trigger = t.get("trigger", "unknown")
+            if trigger == "user_keyword":
+                status = "user_approved"
+            elif required:
+                status = "bypassed"
+                anomalies += 1
+            else:
+                status = "traversed"
+            gate_history[gid] = {
+                "status": status,
+                "trigger": trigger,
+                "at": t.get("at"),
+                "required": required,
+            }
+        else:
+            skipped = [
+                t for t in transitions
+                if isinstance(t, dict) and t.get("from") == from_p and t.get("to") != to_p
+            ]
+            if skipped and required:
+                t = skipped[-1]
+                status = "bypassed"
+                anomalies += 1
+                gate_history[gid] = {
+                    "status": status,
+                    "trigger": t.get("trigger", "unknown"),
+                    "at": t.get("at"),
+                    "required": required,
+                }
+            else:
+                status = "not_reached" if required else "not_required"
+                gate_history[gid] = {
+                    "status": status,
+                    "trigger": None,
+                    "at": None,
+                    "required": required,
+                }
+
+    return gate_history, anomalies
+
+
 def _compute_phase_durations(transitions: list) -> dict:
     """Berechnet Verweildauer pro Phase in Sekunden aus phase_transitions[].at.
 
@@ -990,6 +1081,8 @@ def cmd_write_log(args: list[str]) -> None:
         # Issue #465 (B1): Phasen-Dauern + Workflow-Typ ins Log
         "phase_durations": _compute_phase_durations(transitions),
         "workflow_type": data.get("workflow_type", "feature"),
+        # Gate-History: zeigt welche User-Gates korrekt durchlaufen wurden
+        **dict(zip(["gate_history", "gate_anomalies"], _compute_gate_history(transitions))),
     }
 
     date = datetime.now().strftime("%Y-%m-%d")
@@ -1011,6 +1104,39 @@ def cmd_write_log(args: list[str]) -> None:
             file=sys.stderr,
         )
 
+
+
+def cmd_gates(args: list[str]) -> None:
+    """Zeigt Gate-Status des aktiven Workflows. Usage: workflow.py gates"""
+    data, name = _read_active()
+    transitions = data.get("phase_transitions") or []
+    gate_history, anomalies = _compute_gate_history(transitions)
+    current_phase = data.get("current_phase", "?")
+    print(f"=== Gate-Status: {name} (Phase: {current_phase}) ===\n")
+    status_symbols = {
+        "user_approved": "✓  USER APPROVED",
+        "bypassed":      "⚠  BYPASSED",
+        "traversed":     "→  traversed",
+        "not_reached":   "—  NOT REACHED",
+        "not_required":  "·  not required",
+    }
+    for i, gate in enumerate(_GATE_DEFINITIONS, 1):
+        gid = gate["gate_id"]
+        pflicht = "PFLICHT  " if gate["required"] else "optional "
+        entry = gate_history.get(gid, {})
+        status = entry.get("status", "not_reached")
+        symbol = status_symbols.get(status, status.upper())
+        at = entry.get("at") or ""
+        if at and "T" in at:
+            at = at.split("T")[1][:5]
+        trigger = entry.get("trigger") or ""
+        detail = f"  (trigger: {trigger}, {at})" if trigger and at else (f"  (trigger: {trigger})" if trigger else "")
+        print(f"Gate {i} | {gid:<20} | {pflicht} | {symbol} [{status}]{detail}")
+    print()
+    if anomalies:
+        print(f"⚠  Anomalien: {anomalies} Pflicht-Gate(s) übersprungen!")
+    else:
+        print("✓  Keine Anomalien.")
 
 
 def cmd_complete(args: list[str]) -> None:
@@ -1398,6 +1524,7 @@ COMMANDS = {
     "stats": cmd_stats,
     "auto-advance-spec": cmd_auto_advance_spec,
     "set-type": cmd_set_type,
+    "gates": cmd_gates,
 }
 
 

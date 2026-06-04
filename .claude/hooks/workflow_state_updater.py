@@ -170,11 +170,12 @@ def main():
         sys.exit(0)
 
     workflow = state["workflows"][active_name]
+    current_phase = workflow.get("current_phase", "?")
+    transition_fired = False
 
     # Handle spec approval (phase3_spec -> phase4_approved)
-    if is_approval and workflow.get("current_phase") == "phase3_spec":
+    if is_approval and current_phase == "phase3_spec":
         set_phase(active_name, "phase4_approved", trigger="user_keyword")
-        # Reload to update spec_approved + phases_completed flags
         state2 = load_state()
         wf2 = state2["workflows"][active_name]
         wf2["spec_approved"] = True
@@ -184,35 +185,36 @@ def main():
         wf2["last_updated"] = datetime.now().isoformat()
         save_state(state2)
         print(f"[Workflow: {active_name}] Spec approved! (phase3_spec → phase4_approved) You may now run /tdd-red")
+        transition_fired = True
 
     # Handle GREEN approval (phase6_implement -> green_approved)
-    elif is_green and workflow.get("current_phase") == "phase6_implement":
+    elif is_green and current_phase == "phase6_implement":
         workflow["green_approved"] = True
         workflow["last_updated"] = datetime.now().isoformat()
         save_state(state)
         print(f"[Workflow: {active_name}] GREEN tests approved! Adversary verification next.")
+        transition_fired = True
 
     # Handle workflow completion (phase7_validate -> phase8_complete)
-    elif is_complete and workflow.get("current_phase") == "phase7_validate":
-        # Auto-write-log with fail-soft behaviour: complete should still try
+    elif is_complete and current_phase == "phase7_validate":
         try:
             subprocess.run(
-                [
-                    sys.executable,
-                    str(HOOKS_DIR / "workflow.py"),
-                    "write-log",
-                    "user_keyword:deployed",
-                ],
-                timeout=15,
-                check=False,
-                capture_output=True,
+                [sys.executable, str(HOOKS_DIR / "workflow.py"), "write-log", "user_keyword:deployed"],
+                timeout=15, check=False, capture_output=True,
             )
         except Exception:
-            pass  # fail-soft
+            pass
 
         from workflow_state_multi import complete_workflow
         complete_workflow(active_name)
         print(f"Workflow '{active_name}' completed! Phase set to phase8_complete.")
+        transition_fired = True
+
+    if not transition_fired:
+        print(
+            f"[DEBUG go] Erkannt aber kein Übergang: phase={current_phase} workflow={active_name}",
+            file=sys.stderr,
+        )
 
     sys.exit(0)
 
