@@ -81,6 +81,12 @@ SCREEN_THRESHOLD_MAP: dict[str, float] = {
     # Sidebar+Foundation-Anteil ist im Diff visuell 1:1. Sobald #579 live ist,
     # zurück auf 10 % senken.
     "D-home-trip": 20.0,
+    # #486 E-trips-list-variant: 30 % wegen Daten-Divergenz — das SOLL-Bild zeigt
+    # Demo-Trips (KHW 403, GR221 …) mit anderen Namen/Etappen/Stats, das Staging-
+    # Test-Konto zeigt seine echten Trips (Dachstein, Gardasee …). Das Layout ist
+    # 1:1 (staging-validator 2026-06-05 AC-7 PASS: ⋯-Menü statt Icon-Geschwader,
+    # gleiche Spalten/Zeilenstruktur). Reine Inhalts-, keine Layout-Divergenz.
+    "E-trips-list-variant": 30.0,
 }
 
 # Per-Screen Pre-Screenshot-Actions (für Modale/Tabs/etc.).
