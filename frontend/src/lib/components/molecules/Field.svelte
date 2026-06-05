@@ -62,7 +62,7 @@
 			style:font-size="11px"
 			style:margin-top="5px"
 			style:line-height="1.4"
-			style:color={error ? 'var(--g-danger)' : 'var(--g-ink-3)'}
+			style:color={error ? 'var(--g-bad)' : 'var(--g-ink-4)'}
 		>{error || hint}</div>
 	{/if}
 </div>

@@ -89,8 +89,8 @@
 		{/if}
 
 		{#if form?.error}
-			<div class="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
-				{form.error}
+			<div class="rounded-md border border-destructive bg-destructive/10 p-3 text-sm" style="color: var(--g-bad);">
+				{form.error === 'Invalid credentials' ? 'Benutzername oder Passwort nicht korrekt.' : form.error === 'Username and password required' ? 'Bitte Benutzername und Passwort eingeben.' : form.error}
 			</div>
 		{/if}
 
