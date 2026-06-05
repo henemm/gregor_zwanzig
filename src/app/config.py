@@ -102,7 +102,7 @@ class Settings(BaseSettings):
     is_test_mode: bool = Field(default=False, description="Test-Modus: blockiert Resend-Versand")
 
     # SMS settings (for sms channel)
-    sms_gateway_url: Optional[str] = Field(default=None, description="SMS gateway HTTP endpoint")
+    sms_gateway_url: str = Field(default="https://gateway.seven.io/api/sms", description="SMS gateway HTTP endpoint")
     sms_api_key: Optional[str] = Field(default=None, description="SMS gateway API key")
     sms_from: Optional[str] = Field(default=None, description="SMS sender ID or number")
     sms_to: Optional[str] = Field(default=None, description="SMS recipient phone number")
