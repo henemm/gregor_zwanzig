@@ -227,7 +227,7 @@
     font-family: inherit;
     font-weight: 500;
     line-height: 1.2;
-    border-radius: var(--g-radius-md);
+    border-radius: var(--g-r-2);
     border: 1px solid transparent;
     cursor: pointer;
     user-select: none;
@@ -240,11 +240,11 @@
     outline-offset: 2px;
   }
 
-  /* Sizes */
-  [data-slot="btn"][data-size="xs"]      { padding: 4px 8px;   font-size: var(--g-text-xs, 11px); min-height: 24px; }
-  [data-slot="btn"][data-size="sm"]      { padding: 6px 10px;  font-size: var(--g-text-sm, 13px); min-height: 28px; }
-  [data-slot="btn"][data-size="md"]      { padding: 8px 14px;  font-size: var(--g-text-sm, 13px); min-height: 32px; }
-  [data-slot="btn"][data-size="lg"]      { padding: 10px 18px; font-size: var(--g-text-md, 15px); min-height: 36px; }
+  /* Sizes — JSX-konform (Issue #577): xs 11/sm 12/md 13/lg 14, padY 4/6/9/12, padX 8/10/14/20 */
+  [data-slot="btn"][data-size="xs"]      { padding: 4px 8px;   font-size: 11px; min-height: 24px; }
+  [data-slot="btn"][data-size="sm"]      { padding: 6px 10px;  font-size: 12px; min-height: 28px; }
+  [data-slot="btn"][data-size="md"]      { padding: 9px 14px;  font-size: 13px; min-height: 32px; }
+  [data-slot="btn"][data-size="lg"]      { padding: 12px 20px; font-size: 14px; min-height: 36px; }
   [data-slot="btn"][data-size="icon"]    { padding: 0; width: 32px; height: 32px; min-height: 32px; }
   [data-slot="btn"][data-size="icon-xs"] { padding: 0; width: 24px; height: 24px; min-height: 24px; }
   [data-slot="btn"][data-size="icon-sm"] { padding: 0; width: 28px; height: 28px; min-height: 28px; }
@@ -262,7 +262,7 @@
 
   [data-slot="btn"][data-variant="accent"] {
     background-color: var(--g-accent);
-    color: var(--g-paper);
+    color: #fff;
     border-color: var(--g-accent);
   }
   [data-slot="btn"][data-variant="accent"]:hover {
@@ -348,9 +348,10 @@
   /* === Issue #144: GCard === */
   [data-slot="g-card"] {
     background: var(--g-surface-1);
-    border-radius: var(--g-radius-lg);
+    border: 1px solid var(--g-rule);
+    border-radius: var(--g-r-3);
     box-shadow: var(--g-elev-1);
-    padding: 1rem;
+    padding: 20px;
     transition: box-shadow 0.15s ease;
   }
   [data-slot="g-card"]:hover { box-shadow: var(--g-elev-2); }
@@ -359,7 +360,7 @@
   [data-slot="pill"] {
     display: inline-flex;
     align-items: center;
-    padding: 0.125rem 0.5rem;
+    padding: 3px 9px;
     border-radius: var(--g-radius-pill);
     font-family: var(--g-font-mono);
     font-size: 11px;
@@ -435,7 +436,7 @@
     font-size: var(--g-text-sm);
   }
 
-  /* === Issue #144: Eyebrow (Issue #577: 11px, font-weight 500, var(--g-track-caps)) === */
+  /* === Issue #144: Eyebrow — JSX-konform: color = var(--g-ink-3), nicht --g-ink-muted (Issue #577) === */
   [data-slot="eyebrow"] {
     display: block;
     font-family: var(--g-font-data);
@@ -443,7 +444,7 @@
     font-weight: 500;
     letter-spacing: var(--g-track-caps);
     text-transform: uppercase;
-    color: var(--g-ink-muted);
+    color: var(--g-ink-3);
   }
 
   /* === Issue #144: Dot === */
