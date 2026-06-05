@@ -14,12 +14,12 @@ Phase-based workflow for feature development:
 | 1 | `/1-context` | Gather context for feature |
 | 2 | `/2-analyse` | Analyze requirements |
 | 3 | `/3-write-spec` | Create specification |
-| 4 | User: "approved" | Approve specification |
+| 4 | User: "go" | Approve specification |
 | 5 | `/4-tdd-red` | Write failing tests (RED) |
 | 6 | `/5-implement` | Implement feature (GREEN) + User: "go" |
 | 6b | Adversary Dialog | QA-Agent tries to break implementation |
-| 7 | `/6-validate` | Validate implementation |
-| 8 | `/7-deploy` | Deploy to production |
+| 7 | `/6-validate` | Validate implementation + Deploy (Step 5 inline) |
+| 8 | — | Deploy ist inline in `/6-validate` Step 5; eigener Deploy-Command entfaellt |
 
 ### Planning Commands (Phase 0)
 
@@ -64,7 +64,7 @@ High-level planning before workflow:
 /1-context          # Or /analyse
 /2-analyse          # Or let feature-planner do it
 /3-write-spec
-# User: "approved"
+# User: "go"
 /4-tdd-red
 /5-implement
 /6-validate
@@ -88,7 +88,7 @@ High-level planning before workflow:
 # 2. Follow workflow
 /2-analyse
 /3-write-spec
-# User: "approved"
+# User: "go"
 /4-tdd-red
 /5-implement
 /6-validate
@@ -188,11 +188,10 @@ Commands interact with workflow state:
 - `/1-context` - Advance to phase1_context
 - `/2-analyse` - Advance to phase2_analyse
 - `/3-write-spec` - Advance to phase3_spec
-- User "approved" - Advance to phase4_approved
+- User "go" - Advance to phase4_approved
 - `/4-tdd-red` - Advance to phase5_tdd_red
 - `/5-implement` - Advance to phase6_implement → User "go" → phase6b_adversary
-- `/6-validate` - Advance to phase7_validate (requires adversary VERIFIED/AMBIGUOUS)
-- Deploy complete - Advance to phase8_complete
+- `/6-validate` - Advance to phase7_validate (requires adversary VERIFIED/AMBIGUOUS); Step 5 deployt inline → phase8_complete
 
 ## Command Best Practices
 

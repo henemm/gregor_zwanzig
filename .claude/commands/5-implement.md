@@ -234,7 +234,7 @@ Wenn nach 3 Fix-Loops immer noch Probleme: Eskalation mit allen Findings an den 
 
 ### Abschluss: Tech-Lead-Brief vorbereiten
 
-Wenn VERIFIED und bereit für Deploy, bereite den Brief vor (wird in `/7-deploy` ausgegeben):
+Wenn VERIFIED und bereit für Deploy, bereite den Brief vor (wird in `/6-validate` Step 5 ausgegeben):
 
 Merke dir:
 - Was wurde gebaut (1-2 Sätze Nutzerperspektive)
