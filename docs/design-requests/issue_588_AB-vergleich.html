@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<title>#588 · LocationNew A/B-Vergleich</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../tokens.css">
+<style>
+  :root { --w: #c45a2a; }
+  html, body { margin:0; background:#e7e5de; font-family:"Inter Tight", system-ui, sans-serif; color:#1a1a18; }
+  .wrap { max-width: 1640px; margin: 0 auto; padding: 32px 32px 80px; }
+  .mono { font-family:"JetBrains Mono", monospace; }
+
+  header.hd { margin-bottom: 8px; }
+  .eyebrow { font-family:"JetBrains Mono", monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:#8a8478; }
+  h1 { font-size:30px; font-weight:700; letter-spacing:-0.02em; margin:6px 0 0; }
+  .sub { font-size:15px; color:#5c574d; margin-top:6px; max-width: 860px; line-height:1.5; }
+
+  .verdict {
+    margin:24px 0 28px; background:#fff; border:1px solid #e2ddd2; border-left:4px solid var(--w);
+    border-radius:12px; padding:18px 22px; box-shadow:0 1px 0 rgba(0,0,0,.02);
+  }
+  .verdict .tag { display:inline-block; background:var(--w); color:#fff; font-family:"JetBrains Mono",monospace;
+    font-size:11px; letter-spacing:.1em; text-transform:uppercase; padding:4px 9px; border-radius:6px; }
+  .verdict p { margin:12px 0 0; font-size:15px; line-height:1.55; }
+  .verdict b { color:#1a1a18; }
+
+  .grid { display:grid; grid-template-columns: 1fr 1fr; gap:24px; align-items:start; }
+  @media (max-width:1180px){ .grid { grid-template-columns:1fr; } }
+
+  .col { background:#fff; border:1px solid #e2ddd2; border-radius:14px; overflow:hidden; box-shadow:0 2px 14px rgba(40,36,28,.05); }
+  .col .bar { padding:14px 18px; border-bottom:1px solid #eee8db; display:flex; justify-content:space-between; align-items:center; gap:12px; }
+  .col .bar .name { font-size:15px; font-weight:600; }
+  .col .bar .name small { display:block; font-weight:400; color:#8a8478; font-size:12px; margin-top:2px; }
+  .chip { font-family:"JetBrains Mono",monospace; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; padding:5px 9px; border-radius:999px; }
+  .chip.win { background:#e8f3ea; color:#2f7d4d; border:1px solid #bfe0c8; }
+  .chip.out { background:#f3eee6; color:#8a8478; border:1px solid #e2ddd2; }
+
+  .stage { background:#e8e6df; padding:0; }
+  .stage.b { display:flex; align-items:center; justify-content:center; min-height: 560px; }
+  .stage.b img { width:100%; height:auto; display:block; }
+
+  /* A live render area */
+  #aMount { position:relative; height: 1180px; transform-origin: top center; }
+  .aScale { overflow:hidden; }
+
+  .notes { padding:16px 18px; border-top:1px solid #eee8db; }
+  .notes ul { margin:0; padding-left:18px; }
+  .notes li { font-size:13px; color:#4a4640; line-height:1.6; margin:3px 0; }
+  .notes li b { color:#1a1a18; }
+  .delta { font-size:11px; color:#a89f4a; }
+</style>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="wrap">
+  <header class="hd">
+    <div class="eyebrow">Issue #588 · Epic #575 Design-Fidelity · Tech-Lead-Klärung</div>
+    <h1>LocationNew-Modal — welche Variante ist die Wahrheit?</h1>
+    <p class="sub">Links die <b>Live-JSX</b> (Variante A, real gerendert). Rechts das <b>SOLL-PNG</b> (Variante B). Das Diff-Tool meldete 62,95 % Pixel-Diff — fast ausschließlich aus dem <b>Layout</b>, nicht aus fehlender Funktion.</p>
+  </header>
+
+  <div class="verdict">
+    <span class="tag">Entscheidung · A gewinnt</span>
+    <p><b>Variante A (Smart-Import) ist die Wahrheit — JSX gewinnt.</b> Die JSX enthält bereits Name + Gruppe + Aktivitätsprofil; B führt sie <b>nicht</b> neu ein. Der echte Unterschied ist nur die Eingabe­methode (Paste/Coords vs. Klick-auf-Karte) und ein <b>Phantom-Feld „Wetter-Template"</b>, das im Live-Produkt nirgends existiert. <b>Aktion:</b> JSX unverändert lassen, das SOLL-PNG neu erzeugen, #588 als „1:1 erfüllt" schließen. Details in <span class="mono">issue_588_ENTSCHEIDUNG.md</span>.</p>
+  </div>
+
+  <div class="grid">
+    <!-- Variante A -->
+    <div class="col">
+      <div class="bar">
+        <div class="name">Variante A · Smart-Import <small>screen-location-new.jsx — live, JSX-konform</small></div>
+        <span class="chip win">✓ Wahrheit</span>
+      </div>
+      <div class="stage">
+        <div class="aScale"><div id="aMount"></div></div>
+      </div>
+      <div class="notes">
+        <ul>
+          <li><b>Eingabe:</b> URL/Koordinaten-Paste + 6 Format-Chips (Komoot · GMaps · DMS · Dezimal · UTM · GPX)</li>
+          <li><b>Präzision:</b> Erkannt-Vorschau mit DEM-Höhe, Zeitzone, Daten-Quelle — kritisch für Briefings</li>
+          <li><b>Bereits enthalten:</b> Name, Gruppe, Aktivitätsprofil (Steps 2 + 3)</li>
+          <li><b>Konsistent</b> mit Compare-Wizard, der ebenfalls Smart-Import nutzt</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Variante B -->
+    <div class="col">
+      <div class="bar">
+        <div class="name">Variante B · Karte + Formular <small>M-location-new.png — SOLL-Mockup, ohne Code-Deckung</small></div>
+        <span class="chip out">verworfen</span>
+      </div>
+      <div class="stage b">
+        <img src="_assets/M-location-new-SOLL.png" alt="Variante B SOLL-PNG" />
+      </div>
+      <div class="notes">
+        <ul>
+          <li><b>Eingabe:</b> Klick auf Karte / Adresse — zu unscharf für Gipfel &amp; Gletscher</li>
+          <li><b>Kein Smart-Import</b>, keine Format-Vielfalt, keine DEM-Vorschau</li>
+          <li><span class="delta">⚠ Phantom:</span> Feld „Wetter-Template (Skitouren Basis)" existiert nirgends im Produkt — Aktivitätsprofil ist schon der Metrik-Setter</li>
+          <li>Einzige Klick-auf-Karte-Fläche im ganzen Produkt — Fremdkörper</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Komponenten für Live-Render von Variante A -->
+<script type="text/babel" src="../../mock-data.jsx"></script>
+<script type="text/babel" src="../../mock-locations.jsx"></script>
+<script type="text/babel" src="../../brand-kit.jsx"></script>
+<script type="text/babel" src="../../atoms.jsx"></script>
+<script type="text/babel" src="../../molecules.jsx"></script>
+<script type="text/babel" src="../../organisms.jsx"></script>
+<script type="text/babel" src="../../screen-compare-list.jsx"></script>
+<script type="text/babel" src="../../screen-location-new.jsx"></script>
+<script type="text/babel">
+  ReactDOM.createRoot(document.getElementById("aMount")).render(<ScreenLocationNew />);
+  // Skaliere das 720px-Modal-Render passend in die Spalte
+  function fit(){
+    const mount = document.getElementById("aMount");
+    const scaleBox = mount.parentElement; // .aScale
+    const colW = scaleBox.clientWidth;
+    const s = Math.min(1, colW / 720);
+    mount.style.transform = "scale(" + s + ")";
+    mount.style.width = "720px";
+    mount.style.margin = "0 auto";
+    scaleBox.style.height = (mount.scrollHeight * s) + "px";
+  }
+  setTimeout(fit, 300); window.addEventListener("resize", fit);
+</script>
+</body>
+</html>
