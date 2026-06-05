@@ -78,6 +78,14 @@ SCREEN_THRESHOLD_MAP: dict[str, float] = {
     "H-archive": 30.0,
 }
 
+# Per-Screen Pre-Screenshot-Actions (für Modale/Tabs/etc.).
+# Format: {screen_id: [(action_type, selector), ...]}
+# Action-Types: "click", "wait_selector".
+SCREEN_PRE_ACTIONS: dict[str, list[tuple[str, str]]] = {
+    # Modal-Triggers: Buttons klicken, die Modal öffnen
+    "M-location-new": [("click", 'button:has-text("Neuer Ort")'), ("wait_selector", "text=Verortung")],
+}
+
 
 def load_validator_env() -> None:
     validator_env = Path(".claude/validator.env")
@@ -91,8 +99,14 @@ def load_validator_env() -> None:
         os.environ.setdefault(k.strip(), v.strip())
 
 
-def take_screenshot(base: str, screen_url: str, ist_path: Path, viewport: tuple[int, int] = (1400, 900)) -> bool:
-    """Login + navigate + screenshot via Playwright. Returns True on success."""
+def take_screenshot(
+    base: str,
+    screen_url: str,
+    ist_path: Path,
+    viewport: tuple[int, int] = (1400, 900),
+    pre_actions: list[tuple[str, str]] | None = None,
+) -> bool:
+    """Login + navigate + optional pre-actions + screenshot via Playwright."""
     try:
         from playwright.sync_api import sync_playwright
     except ImportError:
@@ -124,6 +138,18 @@ def take_screenshot(base: str, screen_url: str, ist_path: Path, viewport: tuple[
                 page.wait_for_load_state("networkidle", timeout=15000)
             except Exception as e:
                 print(f"Navigate warning (continuing): {e}", file=sys.stderr)
+
+            if pre_actions:
+                for action_type, selector in pre_actions:
+                    try:
+                        if action_type == "click":
+                            page.click(selector, timeout=8000)
+                        elif action_type == "wait_selector":
+                            page.wait_for_selector(selector, timeout=8000)
+                    except Exception as e:
+                        print(f"Pre-action {action_type}({selector}) warning: {e}", file=sys.stderr)
+                # Modal-Render-Zeit
+                page.wait_for_timeout(800)
 
             page.screenshot(path=str(ist_path), full_page=False)
             browser.close()
@@ -218,7 +244,12 @@ def main() -> None:
         viewport_size = (target_w, target_h)
     else:
         viewport_size = (soll_w, soll_h)
-    screenshot_ok = take_screenshot(base, screen_url, ist_path, viewport=viewport_size)
+    pre_actions = SCREEN_PRE_ACTIONS.get(screen)
+    screenshot_ok = take_screenshot(
+        base, screen_url, ist_path,
+        viewport=viewport_size,
+        pre_actions=pre_actions,
+    )
     if not screenshot_ok or not ist_path.exists():
         print(f"ERROR: Screenshot failed or ist-PNG missing: {ist_path}", file=sys.stderr)
         sys.exit(1)
