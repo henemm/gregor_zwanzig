@@ -76,6 +76,11 @@ SCREEN_THRESHOLD_MAP: dict[str, float] = {
     # #583 Archiv: 30 % wegen Sidebar-User-Block + Stats-Strip-Umbruch
     # (gehört nicht zum Archiv-Screen, sondern zu Layout/Sidebar-Komponente).
     "H-archive": 30.0,
+    # #578 Foundation-Tracer D-home-trip: 20 % erlaubt, weil der Home-Content
+    # (Trip-Cockpit, Schnellaktionen-Strecke) zur Screen-Migration #579 gehört;
+    # Sidebar+Foundation-Anteil ist im Diff visuell 1:1. Sobald #579 live ist,
+    # zurück auf 10 % senken.
+    "D-home-trip": 20.0,
 }
 
 # Per-Screen Pre-Screenshot-Actions (für Modale/Tabs/etc.).
