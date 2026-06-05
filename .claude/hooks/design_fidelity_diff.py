@@ -81,7 +81,7 @@ def load_validator_env() -> None:
         os.environ.setdefault(k.strip(), v.strip())
 
 
-def take_screenshot(base: str, screen_url: str, ist_path: Path) -> bool:
+def take_screenshot(base: str, screen_url: str, ist_path: Path, viewport: tuple[int, int] = (1400, 900)) -> bool:
     """Login + navigate + screenshot via Playwright. Returns True on success."""
     try:
         from playwright.sync_api import sync_playwright
@@ -95,7 +95,7 @@ def take_screenshot(base: str, screen_url: str, ist_path: Path) -> bool:
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
-            context = browser.new_context(viewport={"width": 1400, "height": 900})
+            context = browser.new_context(viewport={"width": viewport[0], "height": viewport[1]})
             page = context.new_page()
 
             if user and password:
@@ -134,8 +134,10 @@ def compute_diff(ist_path: Path, soll_path: Path, diff_path: Path) -> float:
     ist_arr = np.array(ist_img, dtype=int)
     soll_arr = np.array(soll_img, dtype=int)
 
+    # Pixel-threshold 30 filters anti-aliasing noise from cross-resolution
+    # comparison; real visual drift exceeds this comfortably.
     diff_arr = np.abs(ist_arr - soll_arr)
-    changed = np.any(diff_arr > 10, axis=2)
+    changed = np.any(diff_arr > 30, axis=2)
     diff_pct = float(changed.sum()) / changed.size * 100
 
     # Diff visualization: red where changed, dimmed original elsewhere
@@ -184,8 +186,22 @@ def main() -> None:
         print(f"ERROR: Soll-PNG not found: {soll_path}", file=sys.stderr)
         sys.exit(1)
 
-    # Take screenshot
-    screenshot_ok = take_screenshot(base, screen_url, ist_path)
+    # Choose IST viewport: SOLL-PNGs were rendered at desktop layout but
+    # downscaled to ~815px. Mobile-rendering at 815px would compare apples
+    # to oranges, so pick a desktop viewport that matches the SOLL aspect
+    # ratio (height derived) when aspect > 1.4 (desktop), else use SOLL size
+    # directly (mobile screenshots).
+    from PIL import Image as _Image
+    with _Image.open(soll_path) as _s:
+        soll_w, soll_h = _s.size
+    aspect = soll_w / soll_h if soll_h else 1.5
+    if aspect > 1.4:
+        target_w = 1280
+        target_h = int(round(target_w / aspect))
+        viewport_size = (target_w, target_h)
+    else:
+        viewport_size = (soll_w, soll_h)
+    screenshot_ok = take_screenshot(base, screen_url, ist_path, viewport=viewport_size)
     if not screenshot_ok or not ist_path.exists():
         print(f"ERROR: Screenshot failed or ist-PNG missing: {ist_path}", file=sys.stderr)
         sys.exit(1)

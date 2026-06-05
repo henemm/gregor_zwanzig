@@ -51,7 +51,12 @@
 		return d.length ? d[d.length - 1] : (t.archived_at ?? '').slice(0, 10);
 	}
 	function alertCount(t: Trip): number {
-		return archiveStats.alerts[t.id] ?? 0;
+		// Demo-Trips bringen alerts_count direkt mit (Issue #583).
+		// Echte Trips zählen über archiveStats (Briefing-Log).
+		return t.alerts_count ?? archiveStats.alerts[t.id] ?? 0;
+	}
+	function briefingCount(t: Trip): number {
+		return t.briefings_count ?? archiveStats.briefings[t.id] ?? 0;
 	}
 
 	const filtered = $derived(
@@ -68,11 +73,17 @@
 
 	const totalTrips = $derived((data.trips as Trip[]).length);
 	const totalBriefings = $derived(
-		Object.values(archiveStats.briefings).reduce((s, n) => s + n, 0)
+		(data.trips as Trip[]).reduce((s, t) => s + briefingCount(t), 0)
 	);
 	const totalAlerts = $derived(
-		Object.values(archiveStats.alerts).reduce((s, n) => s + n, 0)
+		(data.trips as Trip[]).reduce((s, t) => s + alertCount(t), 0)
 	);
+	const avgAccuracy = $derived.by(() => {
+		const accs = (data.trips as Trip[])
+			.map((t) => t.accuracy_pct)
+			.filter((v): v is number => typeof v === 'number');
+		return accs.length ? Math.round(accs.reduce((s, n) => s + n, 0) / accs.length) : null;
+	});
 </script>
 
 <main style="padding:32px 40px;overflow:auto">
@@ -121,7 +132,12 @@
 	>
 		<Stat layout="inline" label="Trips" value={totalTrips} />
 		<Stat layout="inline" label="Briefings gesendet" value={totalBriefings} />
-		<Stat layout="inline" label="Forecast-Treffer Ø" value={null} tone="accent" />
+		<Stat
+			layout="inline"
+			label="Forecast-Treffer Ø"
+			value={avgAccuracy != null ? `${avgAccuracy}%` : null}
+			tone="accent"
+		/>
 		<Stat layout="inline" label="Alarme ausgelöst" value={totalAlerts} />
 	</div>
 

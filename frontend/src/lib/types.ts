@@ -248,6 +248,8 @@ export interface Trip {
 	archived_at?: string;
 	accuracy_pct?: number;
 	headline?: string;
+	briefings_count?: number;
+	alerts_count?: number;
 }
 
 export interface Subscription {

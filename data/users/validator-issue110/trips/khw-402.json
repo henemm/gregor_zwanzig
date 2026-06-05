@@ -84,5 +84,7 @@
   "alert_rules": [],
   "accuracy_pct": 86,
   "headline": "Drei Gewitter-Tage, davon zwei Tage vorher avisiert",
+  "briefings_count": 38,
+  "alerts_count": 3,
   "archived_at": "2024-05-19T00:00:00Z"
 }

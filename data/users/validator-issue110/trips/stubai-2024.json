@@ -54,5 +54,7 @@
   "alert_rules": [],
   "accuracy_pct": 81,
   "headline": "Kaltlufteinbruch Tag 5 erkannt, Etappe 6 umgeplant",
+  "briefings_count": 22,
+  "alerts_count": 2,
   "archived_at": "2024-09-07T00:00:00Z"
 }

@@ -36,5 +36,7 @@
   "alert_rules": [],
   "accuracy_pct": 94,
   "headline": "Stabile Schönwetter-Phase, Briefings ohne Korrektur",
+  "briefings_count": 18,
+  "alerts_count": 0,
   "archived_at": "2024-07-23T00:00:00Z"
 }

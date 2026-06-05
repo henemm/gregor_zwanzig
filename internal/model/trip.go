@@ -90,4 +90,6 @@ type Trip struct {
 	ArchivedAt       *time.Time             `json:"archived_at,omitempty"`
 	AccuracyPct      *int                   `json:"accuracy_pct,omitempty"`
 	Headline         string                 `json:"headline,omitempty"`
+	BriefingsCount   *int                   `json:"briefings_count,omitempty"`
+	AlertsCount      *int                   `json:"alerts_count,omitempty"`
 }
