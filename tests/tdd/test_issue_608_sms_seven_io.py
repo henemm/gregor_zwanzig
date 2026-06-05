@@ -19,7 +19,7 @@ def _settings_with_sms(**overrides) -> Settings:
     """Erstellt Settings mit minimalem SMS-Konfiguration."""
     defaults = {
         "sms_gateway_url": "https://gateway.seven.io/api/sms",
-        "sms_api_key": "test-key",
+        "seven_api_key": "test-key",
         "sms_to": "+49000000000",
     }
     defaults.update(overrides)
@@ -72,12 +72,12 @@ class TestSmsConfigValidation:
 
     def test_missing_api_key_raises_config_error(self):
         """
-        GIVEN: sms_api_key fehlt
+        GIVEN: seven_api_key fehlt
         WHEN: SMSOutput(settings) instanziiert wird
         THEN: OutputConfigError geworfen, kein HTTP-Request
         """
         from outputs.sms import SMSOutput
-        settings = _settings_with_sms(sms_api_key=None)
+        settings = _settings_with_sms(seven_api_key=None)
         with pytest.raises(OutputConfigError):
             SMSOutput(settings)
 
@@ -108,7 +108,7 @@ class TestSmsErrorHandling:
         Kein Mock — seven.io liefert echten Fehler bei ungültigem Key.
         """
         from outputs.sms import SMSOutput
-        settings = _settings_with_sms(sms_api_key="invalid-fake-key-for-test")
+        settings = _settings_with_sms(seven_api_key="invalid-fake-key-for-test")
         output = SMSOutput(settings)
         with pytest.raises(OutputError):
             output.send("test", "Gregor Zwanzig Test")
@@ -152,7 +152,7 @@ class TestSmsLiveDelivery:
         """
         AC-4: Versand ohne Absender-Name — SMS trotzdem zugestellt.
 
-        GIVEN: sms_from ist leer, aber sms_api_key + sms_to vorhanden
+        GIVEN: sms_from ist leer, aber seven_api_key + sms_to vorhanden
         WHEN: send() aufgerufen wird
         THEN: Kein Exception — seven.io wählt Standard-Absender
         """

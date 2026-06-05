@@ -40,7 +40,7 @@ class SMSOutput:
 
         response = httpx.post(
             self._settings.sms_gateway_url,
-            headers={"X-Api-Key": self._settings.sms_api_key},
+            headers={"X-Api-Key": self._settings.seven_api_key},
             data=payload,
             timeout=10,
         )

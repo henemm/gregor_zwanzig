@@ -103,7 +103,7 @@ class Settings(BaseSettings):
 
     # SMS settings (for sms channel)
     sms_gateway_url: str = Field(default="https://gateway.seven.io/api/sms", description="SMS gateway HTTP endpoint")
-    sms_api_key: Optional[str] = Field(default=None, description="SMS gateway API key")
+    seven_api_key: Optional[str] = Field(default=None, description="seven.io API key (env: GZ_SEVEN_API_KEY)")
     sms_from: Optional[str] = Field(default=None, description="SMS sender ID or number")
     sms_to: Optional[str] = Field(default=None, description="SMS recipient phone number")
 
@@ -185,6 +185,8 @@ class Settings(BaseSettings):
             overrides["mail_to"] = profile["mail_to"]
         if profile.get("telegram_chat_id"):
             overrides["telegram_chat_id"] = profile["telegram_chat_id"]
+        if profile.get("sms_to"):
+            overrides["sms_to"] = profile["sms_to"]
 
         if not overrides:
             return base
@@ -195,7 +197,7 @@ class Settings(BaseSettings):
         """Check if SMS configuration is complete."""
         return all([
             self.sms_gateway_url,
-            self.sms_api_key,
+            self.seven_api_key,
             self.sms_to,
         ])
 
@@ -205,7 +207,7 @@ class Settings(BaseSettings):
 
     _SENSITIVE_FIELDS = {
         "smtp_pass", "imap_pass", "test_smtp_pass", "test_imap_pass",
-        "sms_api_key", "telegram_bot_token",
+        "seven_api_key", "telegram_bot_token",
     }
 
     def __repr__(self) -> str:
