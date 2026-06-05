@@ -70,7 +70,7 @@
     --g-surface-raised: #faf8f1;
 
     /* Semantic */
-    --g-info:         #2a6cb3;
+    --g-info:         #2c5a8c;  /* JSX-konform (Issue #576) */
     --g-info-deep:    #1a4a7a;
 
     /* Wetter-Farben */
