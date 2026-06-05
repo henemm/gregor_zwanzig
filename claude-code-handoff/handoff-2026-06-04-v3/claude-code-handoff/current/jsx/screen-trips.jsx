@@ -1,6 +1,8 @@
 /* Screen: Trips — Übersichtsliste aller Trips.
- * Tabelle mit Name, Etappen, Zeitraum, Aktionen (Alert / Briefing-jetzt /
- * Test-Senden / Vorschau / Bearbeiten / Löschen).
+ * Cockpit-Prinzip: ganze Zeile ist klickbar → öffnet Trip-Detail/Setup.
+ * Aktionen kollabieren in EIN Overflow-Menü (kein Icon-Geschwader pro Zeile);
+ * der aktive Trip zeigt zusätzlich eine inline Quick-Action „Briefing senden".
+ * Spiegelt das kanonische Mobile-Muster (TripCardM + TripActionsSheet).
  */
 
 const TRIPS_LIST = [
@@ -96,6 +98,8 @@ function SummaryStat({ label, value, tone }) {
 }
 
 function TripRow({ trip, alt }) {
+  const [hover, setHover] = React.useState(false);
+  const [menuOpen, setMenuOpen] = React.useState(false);
   const range = trip.to ? `${trip.from} — ${trip.to}` : trip.from;
   const statusMap = {
     active:    { label: "aktiv",     dot: "var(--g-accent)" },
@@ -104,14 +108,21 @@ function TripRow({ trip, alt }) {
     draft:     { label: "draft",     dot: "var(--g-ink-4)" },
   };
   const st = statusMap[trip.status] || statusMap.draft;
+  const isActive = trip.status === "active";
+  const stop = e => e.stopPropagation();
 
   return (
-    <div style={{
-      display: "grid", gridTemplateColumns: "1.6fr 0.8fr 1.4fr auto",
-      alignItems: "center", padding: "16px 20px",
-      background: alt ? "var(--g-paper-deep)" : "transparent",
-      borderBottom: "1px solid var(--g-rule-soft)", gap: 0,
-    }}>
+    <div
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      role="button" tabIndex={0} title={`${trip.name} öffnen`}
+      style={{
+        display: "grid", gridTemplateColumns: "1.6fr 0.8fr 1.4fr auto",
+        alignItems: "center", padding: "16px 20px",
+        background: hover ? "var(--g-card-alt, #f1eee6)" : (alt ? "var(--g-paper-deep)" : "transparent"),
+        borderBottom: "1px solid var(--g-rule-soft)", gap: 0,
+        cursor: "pointer", transition: "background 120ms",
+      }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <span style={{ width: 7, height: 7, borderRadius: "50%", background: st.dot, flexShrink: 0 }}/>
         <span style={{ fontSize: 14, fontWeight: 600, letterSpacing: "-0.01em" }}>{trip.name}</span>
@@ -124,36 +135,87 @@ function TripRow({ trip, alt }) {
       <div style={{ fontSize: 13, color: "var(--g-ink-2)", fontFamily: "var(--g-font-mono)", letterSpacing: "0.02em" }}>
         {range}
       </div>
-      <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
-        <ActionBtn kind="alert"   title="Alert-Konfiguration"/>
-        <ActionBtn kind="weather" title="Aktuelles Wetter"/>
-        <ActionBtn kind="play"    title="Briefing jetzt senden"/>
-        <ActionBtn kind="preview" title="Email-Vorschau"/>
-        <span style={{ width: 1, height: 18, background: "var(--g-rule)", margin: "0 4px" }}/>
-        <ActionBtn kind="edit"    title="Bearbeiten"/>
-        <ActionBtn kind="trash"   title="Löschen" danger/>
+      <div onClick={stop} style={{ display: "flex", gap: 8, justifyContent: "flex-end", alignItems: "center", position: "relative" }}>
+        {isActive && (
+          <Btn variant="ghost" size="sm" icon={tripsIcon("play", "var(--g-ink)")}>Briefing senden</Btn>
+        )}
+        <button
+          title="Aktionen" aria-haspopup="menu" aria-expanded={menuOpen}
+          onClick={() => setMenuOpen(o => !o)}
+          style={{
+            width: 32, height: 32, display: "inline-flex", alignItems: "center", justifyContent: "center",
+            background: menuOpen ? "var(--g-paper-deep)" : "transparent",
+            border: "1px solid var(--g-rule)", borderRadius: "var(--g-r-2)", cursor: "pointer",
+          }}>
+          {tripsIcon("more", "var(--g-ink-2)")}
+        </button>
+        <span style={{ display: "inline-flex", color: hover ? "var(--g-ink-3)" : "var(--g-ink-4)", marginLeft: 2 }}>
+          {tripsIcon("chevron", "currentColor")}
+        </span>
+        {menuOpen && <TripsActionsMenu trip={trip} onClose={() => setMenuOpen(false)}/>}
       </div>
     </div>
   );
 }
 
-function ActionBtn({ kind, title, danger }) {
-  const c = danger ? "var(--g-ink-3)" : "var(--g-ink-2)";
-  const ic = {
-    alert:   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>,
-    weather: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3.5"/><path d="M12 4v1.5M12 18.5V20M4 12h1.5M18.5 12H20M6 6l1 1M17 17l1 1M6 18l1-1M17 7l1-1"/></svg>,
-    play:    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.7" strokeLinejoin="round"><path d="M7 5l12 7-12 7z"/></svg>,
-    preview: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.7" strokeLinejoin="round"><path d="M7 5l12 7-12 7z" fill="none"/><line x1="14" y1="12" x2="20" y2="12" opacity="0.4"/></svg>,
-    edit:    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M14 4l6 6L9 21H3v-6z"/></svg>,
-    trash:   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/></svg>,
-  };
+/* Overflow-Aktionsmenü — Desktop-Pendant zum Mobile TripActionsSheet.
+ * Gleiche Item-Liste, als anker-positioniertes Popover. */
+function TripsActionsMenu({ trip, onClose }) {
+  const items = [
+    { kind: "play",    label: "Briefing jetzt senden" },
+    { kind: "preview", label: "Email-Vorschau" },
+    { kind: "alert",   label: "Alert-Konfiguration" },
+    { kind: "weather", label: "Wetter-Metriken" },
+    { kind: "edit",    label: "Bearbeiten" },
+    { kind: "trash",   label: "Löschen", danger: true },
+  ];
   return (
-    <button title={title} style={{
-      width: 30, height: 30, display: "inline-flex", alignItems: "center", justifyContent: "center",
-      background: "transparent", border: "1px solid var(--g-rule-soft)",
-      borderRadius: "var(--g-r-2)", cursor: "pointer",
-    }}>{ic[kind]}</button>
+    <React.Fragment>
+      <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 40 }}/>
+      <div role="menu" style={{
+        position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 41,
+        minWidth: 232, background: "var(--g-card)", border: "1px solid var(--g-rule)",
+        borderRadius: "var(--g-r-3)", boxShadow: "var(--g-shadow-2, 0 8px 28px rgba(30,26,18,.16))",
+        padding: 6, overflow: "hidden",
+      }}>
+        {items.map((it, i) => (
+          <React.Fragment key={it.kind}>
+            {it.danger && <div style={{ height: 1, background: "var(--g-rule-soft)", margin: "6px 8px" }}/>}
+            <button role="menuitem" onClick={onClose} style={{
+              display: "flex", alignItems: "center", gap: 10, width: "100%",
+              padding: "9px 10px", minHeight: 40, textAlign: "left",
+              background: "transparent", border: "none", borderRadius: "var(--g-r-2)",
+              cursor: "pointer", fontSize: 13, fontFamily: "var(--g-font-sans)",
+              color: it.danger ? "var(--g-bad, #a83232)" : "var(--g-ink)",
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = "var(--g-paper-deep)"}
+            onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+              <span style={{ display: "inline-flex", flexShrink: 0 }}>
+                {tripsIcon(it.kind, it.danger ? "var(--g-bad, #a83232)" : "var(--g-ink-2)")}
+              </span>
+              {it.label}
+            </button>
+          </React.Fragment>
+        ))}
+      </div>
+    </React.Fragment>
   );
+}
+
+function tripsIcon(kind, c = "var(--g-ink-2)") {
+  const p = { width: 15, height: 15, viewBox: "0 0 24 24", fill: "none", stroke: c,
+              strokeWidth: 1.7, strokeLinecap: "round", strokeLinejoin: "round" };
+  const map = {
+    alert:   <svg {...p}><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>,
+    weather: <svg {...p}><circle cx="12" cy="12" r="3.5"/><path d="M12 4v1.5M12 18.5V20M4 12h1.5M18.5 12H20M6 6l1 1M17 17l1 1M6 18l1-1M17 7l1-1"/></svg>,
+    play:    <svg {...p} strokeLinecap="round"><path d="M7 5l12 7-12 7z"/></svg>,
+    preview: <svg {...p}><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>,
+    edit:    <svg {...p}><path d="M14 4l6 6L9 21H3v-6z"/></svg>,
+    trash:   <svg {...p}><path d="M4 7h16M9 7V4h6v3M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/></svg>,
+    more:    <svg {...p}><circle cx="5" cy="12" r="1.4" fill={c} stroke="none"/><circle cx="12" cy="12" r="1.4" fill={c} stroke="none"/><circle cx="19" cy="12" r="1.4" fill={c} stroke="none"/></svg>,
+    chevron: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6"/></svg>,
+  };
+  return map[kind] || null;
 }
 
 window.ScreenTrips = ScreenTrips;
