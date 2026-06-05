@@ -34,10 +34,10 @@
 	let { preset, locations, initialTab = 'uebersicht' }: Props = $props();
 
 	// Nutzerprofil für Kanal-Status (AC-8)
-	let userProfile = $state<{ mail_to?: string; email?: string; telegram_chat_id?: string } | null>(null);
+	let userProfile = $state<{ mail_to?: string; email?: string; telegram_chat_id?: string; sms_to?: string } | null>(null);
 	onMount(async () => {
 		try {
-			const data = await api.get<{ mail_to?: string; email?: string; telegram_chat_id?: string }>('/api/auth/profile');
+			const data = await api.get<{ mail_to?: string; email?: string; telegram_chat_id?: string; sms_to?: string }>('/api/auth/profile');
 			userProfile = data;
 		} catch (e) {
 			console.error(e);
@@ -49,6 +49,7 @@
 		(userProfile?.mail_to ?? userProfile?.email) ? true : preset.empfaenger.length > 0
 	);
 	const telegramConnected = $derived(!!userProfile?.telegram_chat_id);
+	const smsConnected = $derived(!!userProfile?.sms_to);
 
 	const TABS = [
 		{ value: 'uebersicht', label: 'Übersicht' },
@@ -368,10 +369,10 @@
 							<Switch checked={telegramConnected} disabled={true} size="sm" aria-label="Telegram-Kanal" />
 						</div>
 						<div class="channel-row">
-							<Dot tone="neutral" />
+							<Dot tone={smsConnected ? 'good' : 'neutral'} />
 							<span class="channel-name">SMS</span>
-							<span class="channel-status">nicht verbunden</span>
-							<Switch checked={false} disabled={true} size="sm" aria-label="SMS-Kanal" />
+							<span class="channel-status">{smsConnected ? userProfile?.sms_to : 'nicht verbunden'}</span>
+							<Switch checked={smsConnected} disabled={true} size="sm" aria-label="SMS-Kanal" />
 						</div>
 					</Card>
 				</div>

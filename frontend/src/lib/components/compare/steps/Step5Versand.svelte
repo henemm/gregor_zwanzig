@@ -14,14 +14,15 @@
 		mail_to?: string;
 		telegram_chat_id?: string;
 		email?: string;
+		sms_to?: string;
 	} | null>('compare-wizard-profile');
 
 	// Abgeleitete Werte (Svelte $derived für Overlap-Check)
 	const hasTimeOverlap = $derived(state.timeWindowStart >= state.timeWindowEnd);
-	const allChannelsOff = $derived(!state.sendEmail && !state.sendTelegram);
+	const allChannelsOff = $derived(!state.sendEmail && !state.sendTelegram && !state.sendSms);
 
 	// Factory-Handler (Safari-Pattern)
-	function makeChannelHandler(field: 'sendEmail' | 'sendTelegram') {
+	function makeChannelHandler(field: 'sendEmail' | 'sendTelegram' | 'sendSms') {
 		return function handleChannel(checked: boolean): void {
 			state[field] = checked;
 		};
@@ -47,6 +48,14 @@
 					onchange={makeChannelHandler('sendTelegram')}
 					testid="compare-step5-channel-telegram"
 					hint={profile?.telegram_chat_id || undefined}
+				/>
+				<ChannelToggle
+					label="SMS"
+					checked={state.sendSms}
+					onchange={makeChannelHandler('sendSms')}
+					testid="compare-step5-channel-sms"
+					hint={profile?.sms_to || undefined}
+					disabled={!profile?.sms_to}
 				/>
 			</div>
 			{#if allChannelsOff}

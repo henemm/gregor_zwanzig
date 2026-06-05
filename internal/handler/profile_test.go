@@ -141,6 +141,129 @@ func TestUpdateProfilePreservesPasswordHash(t *testing.T) {
 	}
 }
 
+// ============================================================================
+// Issue #609 — SMS-Rufnummer im Nutzerprofil (TDD RED)
+// ============================================================================
+
+// AC-2: PUT /api/auth/profile mit sms_to => persistiert, GET liefert es zurueck
+func TestUpdateProfileSetsSmsTo(t *testing.T) {
+	s := newTestStore(t)
+	hash, _ := bcrypt.GenerateFromPassword([]byte("geheim123"), bcrypt.MinCost)
+	dir := filepath.Join(s.DataDir, "users", "dora")
+	os.MkdirAll(dir, 0755)
+	os.WriteFile(filepath.Join(dir, "user.json"),
+		[]byte(`{"id":"dora","password_hash":"`+string(hash)+`"}`), 0644)
+
+	h := UpdateProfileHandler(s)
+
+	body := `{"sms_to":"+49151TESTXXXX"}`
+	req := httptest.NewRequest("PUT", "/api/auth/profile", strings.NewReader(body))
+	ctx := middleware.ContextWithUserID(req.Context(), "dora")
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	if resp["sms_to"] != "+49151TESTXXXX" {
+		t.Errorf("expected sms_to '+49151TESTXXXX' in response, got '%v'", resp["sms_to"])
+	}
+
+	// Persistenz pruefen: in user.json muss sms_to stehen
+	data, _ := os.ReadFile(filepath.Join(dir, "user.json"))
+	if !strings.Contains(string(data), `"sms_to"`) || !strings.Contains(string(data), `"+49151TESTXXXX"`) {
+		t.Errorf("expected sms_to to be persisted in user.json, got: %s", string(data))
+	}
+}
+
+// AC-1 + AC-2: GET liefert gespeicherten sms_to-Wert
+func TestGetProfileReturnsSmsTo(t *testing.T) {
+	s := newTestStore(t)
+	hash, _ := bcrypt.GenerateFromPassword([]byte("geheim123"), bcrypt.MinCost)
+	dir := filepath.Join(s.DataDir, "users", "erika")
+	os.MkdirAll(dir, 0755)
+	os.WriteFile(filepath.Join(dir, "user.json"),
+		[]byte(`{"id":"erika","password_hash":"`+string(hash)+`","sms_to":"+4915199998888"}`), 0644)
+
+	h := GetProfileHandler(s)
+	req := httptest.NewRequest("GET", "/api/auth/profile", nil)
+	ctx := middleware.ContextWithUserID(req.Context(), "erika")
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	if resp["sms_to"] != "+4915199998888" {
+		t.Errorf("expected sms_to '+4915199998888' in profile, got '%v'", resp["sms_to"])
+	}
+}
+
+// AC-3: leerer sms_to-String ist erlaubt (Loeschen) und gibt 200 zurueck
+func TestUpdateProfileAcceptsEmptySmsTo(t *testing.T) {
+	s := newTestStore(t)
+	hash, _ := bcrypt.GenerateFromPassword([]byte("geheim123"), bcrypt.MinCost)
+	dir := filepath.Join(s.DataDir, "users", "frida")
+	os.MkdirAll(dir, 0755)
+	os.WriteFile(filepath.Join(dir, "user.json"),
+		[]byte(`{"id":"frida","password_hash":"`+string(hash)+`","sms_to":"+49151OLDNUM"}`), 0644)
+
+	h := UpdateProfileHandler(s)
+	body := `{"sms_to":""}`
+	req := httptest.NewRequest("PUT", "/api/auth/profile", strings.NewReader(body))
+	ctx := middleware.ContextWithUserID(req.Context(), "frida")
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+
+	if w.Code != 200 {
+		t.Fatalf("expected 200 for empty sms_to, got %d: %s", w.Code, w.Body.String())
+	}
+	// Persistenz: alte Nummer geloescht
+	data, _ := os.ReadFile(filepath.Join(dir, "user.json"))
+	if strings.Contains(string(data), "+49151OLDNUM") {
+		t.Errorf("expected sms_to to be cleared, but old number still present: %s", string(data))
+	}
+}
+
+// AC-4: bestehende user.json ohne sms_to-Feld laedt fehlerfrei
+func TestGetProfileWorksWithoutSmsToField(t *testing.T) {
+	s := newTestStore(t)
+	hash, _ := bcrypt.GenerateFromPassword([]byte("geheim123"), bcrypt.MinCost)
+	dir := filepath.Join(s.DataDir, "users", "greta")
+	os.MkdirAll(dir, 0755)
+	// Legacy-user.json: kein sms_to-Feld
+	os.WriteFile(filepath.Join(dir, "user.json"),
+		[]byte(`{"id":"greta","password_hash":"`+string(hash)+`","mail_to":"greta@example.com"}`), 0644)
+
+	h := GetProfileHandler(s)
+	req := httptest.NewRequest("GET", "/api/auth/profile", nil)
+	ctx := middleware.ContextWithUserID(req.Context(), "greta")
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+
+	if w.Code != 200 {
+		t.Fatalf("legacy profile without sms_to must load, got HTTP %d", w.Code)
+	}
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	// mail_to muss erhalten sein
+	if resp["mail_to"] != "greta@example.com" {
+		t.Errorf("mail_to must remain intact, got '%v'", resp["mail_to"])
+	}
+	// sms_to darf entweder fehlen oder leer sein — beides ist OK
+	if v, ok := resp["sms_to"]; ok && v != "" {
+		t.Errorf("expected sms_to absent or empty, got '%v'", v)
+	}
+}
+
 func TestRegisterCreatesUserDirs(t *testing.T) {
 	s := newTestStore(t)
 	h := RegisterHandler(s, bcrypt.MinCost)

@@ -45,14 +45,14 @@
 	interface Profile {
 		mail_to?: string;
 		telegram_chat_id?: string;
-		sms_phone?: string;
+		sms_to?: string;
 	}
 	let profile = $state<Profile | null>(null);
 
 	let availableChannels = $derived({
 		email: !!profile?.mail_to,
 		telegram: !!profile?.telegram_chat_id,
-		sms: !!profile?.sms_phone
+		sms: !!profile?.sms_to
 	});
 
 	// --- Initial-Load ----------------------------------------------------------
@@ -295,6 +295,22 @@
 		{#if !availableChannels.telegram}
 			<div data-testid="channel-telegram-hint" class="pl-6 text-xs text-muted-foreground">
 				Telegram-Chat-ID fehlt — <a href="/account" style="color:var(--g-accent);text-decoration:underline;text-underline-offset:2px">im Account einrichten</a>
+			</div>
+		{/if}
+
+		<!-- SMS -->
+		<div class="text-sm">
+			<span data-testid="channel-sms" class="inline-flex items-center gap-2">
+				<Checkbox
+					checked={send_sms}
+					disabled={!availableChannels.sms}
+					onchange={(e) => { send_sms = (e.target as HTMLInputElement).checked; }}
+				>SMS{profile?.sms_to ? ` (${profile.sms_to})` : ''}</Checkbox>
+			</span>
+		</div>
+		{#if !availableChannels.sms}
+			<div data-testid="channel-sms-hint" class="pl-6 text-xs text-muted-foreground">
+				Handynummer fehlt — <a href="/account" style="color:var(--g-accent);text-decoration:underline;text-underline-offset:2px">im Account einrichten</a>
 			</div>
 		{/if}
 	</Card.Root>

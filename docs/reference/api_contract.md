@@ -1,7 +1,7 @@
 
 # API Contract — Gregor Zwanzig
 
-**Updated:** 2026-05-31 (Issue #483 — Preview Endpoints mit Demo-Modus)
+**Updated:** 2026-06-05 (Issue #609 — SMS phone number in user profile)
 
 ## 0) Konventionen
 - Zeit: ISO-8601 UTC (`Z`)
@@ -1503,6 +1503,8 @@ Returns authenticated user profile (requires valid session cookie).
 {
   "id": "alice",
   "email": "alice@example.com",
+  "mail_to": "alice@example.com",
+  "sms_to": "+49151XXXXXXXX",
   "has_passkey": true,
   "passkeys": [
     {
@@ -1523,10 +1525,48 @@ Returns authenticated user profile (requires valid session cookie).
 }
 ```
 
+**Field Definitions:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| id | string | User identifier |
+| email | string | Email address (for display only) |
+| mail_to | string | Email recipient for trip reports (can differ from email) |
+| sms_to | string | SMS recipient phone number (international format, e.g. `+49151XXXXXXXX`); empty if not configured |
+| has_passkey | bool | Whether user has registered any passkeys |
+| passkeys | array | List of registered WebAuthn credentials (empty if `has_passkey=false`) |
+
 **Error Responses:**
 
 | Status | Body | Scenario |
 |--------|------|----------|
+| 401 | (via `AuthMiddleware`) | No valid session cookie or session expired |
+
+#### PUT /api/auth/profile
+
+Update authenticated user profile (requires valid session cookie).
+
+**Request Body:**
+```json
+{
+  "mail_to": "alice+briefings@example.com",
+  "sms_to": "+49151XXXXXXXX"
+}
+```
+
+**Response 200:**
+Returns updated profile object (same as `GET /api/auth/profile`).
+
+**Validation:**
+- `mail_to`: Optional, any non-empty string (no format validation)
+- `sms_to`: Optional, any non-empty string (no format validation; validation happens during send via SMS provider)
+- Empty strings allowed (unset field)
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 400 | `{"error":"bad_request"}` | JSON not decodable |
 | 401 | (via `AuthMiddleware`) | No valid session cookie or session expired |
 
 ### User Model Extensions
@@ -1541,6 +1581,7 @@ type User struct {
     PasskeyCredentials []WebAuthnCredential   `json:"passkey_credentials,omitempty"`  // NEW (Issue #450)
     CreatedAt          time.Time              `json:"created_at"`
     MailTo             string                 `json:"mail_to,omitempty"`
+    SmsTo              string                 `json:"sms_to,omitempty"`  // NEW (Issue #609) — SMS recipient phone number
     SignalPhone        string                 `json:"signal_phone,omitempty"`
     SignalAPIKey       string                 `json:"signal_api_key,omitempty"`
     TelegramChatID     string                 `json:"telegram_chat_id,omitempty"`

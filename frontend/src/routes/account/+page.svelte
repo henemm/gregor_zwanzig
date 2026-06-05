@@ -71,6 +71,7 @@
 	}
 
 	let mailTo = $state(data.profile?.mail_to ?? '');
+	let smsTo = $state(data.profile?.sms_to ?? '');
 	let telegramConnected = $state(!!data.profile?.telegram_chat_id);
 	let telegramChatIdSuffix = $state(
 		data.profile?.telegram_chat_id
@@ -209,6 +210,7 @@
 		try {
 			await api.put('/api/auth/profile', {
 				mail_to: mailTo,
+				sms_to: smsTo,
 			});
 			successMsg = 'Profil gespeichert';
 			setTimeout(() => (successMsg = null), 4000);
@@ -376,6 +378,19 @@
 				{#if testStatus.email === 'error'}
 					<span class="text-sm text-red-600">{testError.email}</span>
 				{/if}
+			</div>
+
+			<div class="space-y-2">
+				<label for="smsTo" class="block text-sm font-medium">Handynummer (SMS)</label>
+				<input
+					id="smsTo"
+					name="sms_to"
+					type="tel"
+					bind:value={smsTo}
+					placeholder="+49XXXXXXXXXX"
+					class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+				/>
+				<p class="mt-1 text-xs text-gray-500">Internationales Format, z.B. +49151XXXXXXXX</p>
 			</div>
 
 			<div class="space-y-2">

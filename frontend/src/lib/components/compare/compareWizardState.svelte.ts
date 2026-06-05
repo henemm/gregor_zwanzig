@@ -28,6 +28,7 @@ export class CompareWizardState {
 	sendEmail = $state(true);
 	sendSignal = $state(false);
 	sendTelegram = $state(false);
+	sendSms = $state(false);
 	timeWindowStart = $state(9);
 	timeWindowEnd = $state(16);
 	forecastHours = $state(48);
@@ -49,7 +50,7 @@ export class CompareWizardState {
 	}
 
 	get canAdvanceStep5(): boolean {
-		return this.sendEmail || this.sendSignal || this.sendTelegram;
+		return this.sendEmail || this.sendSignal || this.sendTelegram || this.sendSms;
 	}
 
 	get canAdvanceCurrent(): boolean {
@@ -125,7 +126,8 @@ export class CompareWizardState {
 				top_n: this.topN,
 				send_email: this.sendEmail,
 				send_signal: this.sendSignal,
-				send_telegram: this.sendTelegram
+				send_telegram: this.sendTelegram,
+				send_sms: this.sendSms
 			});
 			this.subscriptionEnabled = newEnabled;
 		} catch (e) {
@@ -168,7 +170,8 @@ export class CompareWizardState {
 			top_n: this.topN,
 			send_email: this.sendEmail,
 			send_signal: this.sendSignal,
-			send_telegram: this.sendTelegram
+			send_telegram: this.sendTelegram,
+			send_sms: this.sendSms
 		};
 		if (!this.isEditMode) {
 			payload.id = crypto.randomUUID();

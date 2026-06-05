@@ -357,6 +357,7 @@ type profileResponse struct {
 	ID             string                 `json:"id"`
 	Email          string                 `json:"email,omitempty"`
 	MailTo         string                 `json:"mail_to,omitempty"`
+	SmsTo          string                 `json:"sms_to,omitempty"`
 	TelegramChatID string                 `json:"telegram_chat_id,omitempty"`
 	CreatedAt      string                 `json:"created_at"`
 	HasPasskey     bool                   `json:"has_passkey"`
@@ -391,6 +392,7 @@ func toProfileResponse(u *model.User) profileResponse {
 		ID:             u.ID,
 		Email:          u.Email,
 		MailTo:         u.MailTo,
+		SmsTo:          u.SmsTo,
 		TelegramChatID: u.TelegramChatID,
 		CreatedAt:      u.CreatedAt.Format(time.RFC3339),
 		HasPasskey:     len(u.PasskeyCredentials) > 0,
@@ -428,6 +430,7 @@ func UpdateProfileHandler(s *store.Store) http.HandlerFunc {
 		var update struct {
 			Email          *string `json:"email"`
 			MailTo         *string `json:"mail_to"`
+			SmsTo          *string `json:"sms_to"`
 			TelegramChatID *string `json:"telegram_chat_id"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&update); err != nil {
@@ -442,6 +445,9 @@ func UpdateProfileHandler(s *store.Store) http.HandlerFunc {
 		}
 		if update.MailTo != nil {
 			user.MailTo = *update.MailTo
+		}
+		if update.SmsTo != nil {
+			user.SmsTo = *update.SmsTo
 		}
 		if update.TelegramChatID != nil {
 			user.TelegramChatID = *update.TelegramChatID
