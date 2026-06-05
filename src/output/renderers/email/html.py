@@ -586,6 +586,7 @@ def render_html(
         <div class="footer">
             Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')} | Data: {segments[0].provider} ({segments[0].timeseries.meta.model if segments[0].timeseries else 'n/a'}){(' | Fallback ' + ', '.join(segments[0].timeseries.meta.fallback_metrics) + ': ' + segments[0].timeseries.meta.fallback_model) if segments[0].timeseries and segments[0].timeseries.meta.fallback_model else ''}
             {('<br><span style="font-size:10px;color:rgba(255,255,255,0.6)">' + legend_text + '</span>') if legend_text else ''}
+            <br><span style="font-size:10px;color:rgba(255,255,255,0.5)">Befehle (auf diese Mail antworten): report morning &middot; report evening &middot; status &middot; hilfe</span>
         </div>
     </div>
 </body>

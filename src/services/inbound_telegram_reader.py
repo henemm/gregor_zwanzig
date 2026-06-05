@@ -134,6 +134,7 @@ class InboundTelegramReader:
             body=f"### {key}: {value}" if value else f"### {key}",
             sender=chat_id,
             received_at=datetime.now(tz=timezone.utc),
+            user_id=user_id,
         )
         result: CommandResult = TripCommandProcessor().process(inbound)
 

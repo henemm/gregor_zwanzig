@@ -205,6 +205,13 @@ def render_narrow(
                 _detail_lines(layout.detail_metrics, rows[0], fkeys, width)
             )
 
+    # Issue #612: Befehls-Hinweis nur für Telegram (nicht Signal).
+    # Pipe-Zeichen als Trenner vermieden: _wrap kann Zeilenanfang mit "|" erzeugen.
+    if channel == "telegram":
+        cmd_hint = "Befehle: report morning, report evening, status, hilfe"
+        lines.append("")
+        lines.extend(_wrap(cmd_hint, width))
+
     body = "\n".join(lines)
 
     # Ueberlaengen-Schutz auf max_chars (wie heute in SignalOutput).

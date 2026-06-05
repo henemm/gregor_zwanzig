@@ -35,6 +35,7 @@ class InboundMessage:
     sender: str
     channel: str            # "email" or "sms"
     received_at: datetime
+    user_id: str = "default"
 
 
 @dataclass
@@ -104,7 +105,7 @@ class TripCommandProcessor:
             )
 
         # 2. Lookup trip
-        trip = self._find_trip(msg.trip_name)
+        trip = self._find_trip(msg.trip_name, msg.user_id)
         if not trip:
             return CommandResult(
                 success=False, command=key,
@@ -118,7 +119,7 @@ class TripCommandProcessor:
         if key == "ruhetag":
             return self._apply_ruhetag(trip, value, command_date)
         elif key == "report":
-            return self._trigger_report(trip, value)
+            return self._trigger_report(trip, value, msg.user_id)
         elif key == "startdatum":
             return self._shift_start(trip, value)
         elif key == "abbruch":
@@ -144,12 +145,12 @@ class TripCommandProcessor:
             return None, None
         return match.group(1).lower(), (match.group(2) or "").strip() or None
 
-    def _find_trip(self, trip_name: str) -> Optional[Trip]:
-        """Case-insensitive trip name lookup."""
-        for trip in load_all_trips():
+    def _find_trip(self, trip_name: str, user_id: str = "default") -> Optional[Trip]:
+        """Case-insensitive trip name lookup, user-scoped."""
+        for trip in load_all_trips(user_id):
             if trip.name.lower() == trip_name.lower():
                 return trip
-        logger.warning(f"No trip found for name: {trip_name!r}")
+        logger.warning(f"No trip found for name: {trip_name!r} (user: {user_id!r})")
         return None
 
     # -----------------------------------------------------------------------
@@ -212,9 +213,11 @@ class TripCommandProcessor:
             trip_name=trip.name, shifts=shifts,
         )
 
-    def _trigger_report(self, trip: Trip, value: Optional[str]) -> CommandResult:
+    def _trigger_report(
+        self, trip: Trip, value: Optional[str], user_id: str = "default",
+    ) -> CommandResult:
         """Trigger an immediate morning/evening report."""
-        report_type = value or "morning"
+        report_type = (value or "morning").lower()
         if report_type not in ("morning", "evening"):
             return CommandResult(
                 success=False, command="report",
@@ -224,7 +227,7 @@ class TripCommandProcessor:
             )
 
         from services.trip_report_scheduler import TripReportSchedulerService
-        service = TripReportSchedulerService()
+        service = TripReportSchedulerService(user_id=user_id)
         service.send_test_report(trip, report_type)
 
         return CommandResult(

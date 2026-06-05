@@ -134,6 +134,7 @@ class InboundEmailReader:
             sender=from_addr,
             channel="email",
             received_at=datetime.now(tz=timezone.utc),
+            user_id=_user_id,
         )
         processor = TripCommandProcessor()
         result = processor.process(inbound)

@@ -324,7 +324,7 @@ def test_status_command_in_processor(monkeypatch):
 
     monkeypatch.setattr(
         "services.trip_command_processor.load_all_trips",
-        lambda: [trip],
+        lambda user_id="default": [trip],
     )
 
     msg = InboundMessage(
