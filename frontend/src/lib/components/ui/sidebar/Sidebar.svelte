@@ -141,7 +141,7 @@
 	<div style="padding: 16px 18px; border-top: 1px solid var(--g-rule-soft); position: relative;">
 		<button
 			onclick={() => userMenuOpen = !userMenuOpen}
-			class="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm hover:bg-sidebar-accent transition-colors"
+			class="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors hover:bg-[rgba(196,90,42,0.10)]"
 		>
 			<span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
 				{userInitial(userId)}
