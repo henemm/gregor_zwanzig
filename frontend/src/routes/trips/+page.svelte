@@ -71,6 +71,9 @@ import PauseIcon from '@lucide/svelte/icons/pause';
 	// Mobile Action Sheet (Issue #268)
 	let sheetTrip: Trip | null = $state(null);
 
+	// Desktop Overflow-Menü (Issue #486): welche Trip-ID hat ihr Menü gerade offen
+	let openMenuId: string | null = $state(null);
+
 	let primaryActionLoading: string | null = $state(null);
 
 	function statusTone(trip: Trip): 'success' | 'info' | 'warning' | 'danger' {
@@ -378,11 +381,21 @@ import PauseIcon from '@lucide/svelte/icons/pause';
 				<div>Zeitraum</div>
 				<div style="text-align: right;">Aktionen</div>
 			</div>
-			<!-- Trip-Zeilen -->
+			<!-- Trip-Zeilen (Issue #486: Overflow-Menü statt Icon-Geschwader) -->
 			{#each filteredTrips as trip, i (trip.id)}
 				{@const st = tripStatus(trip, now)}
+				{@const isActive = st === 'aktiv'}
 				{@const dotColor = st === 'aktiv' ? 'var(--g-accent)' : st === 'geplant' ? '#3d6b3a' : st === 'fertig' ? 'var(--g-ink-3)' : 'var(--g-ink-4)'}
-				<div style="display: grid; grid-template-columns: 1.6fr 0.8fr 1.4fr auto; align-items: center; padding: 16px 20px; background: {i % 2 === 1 ? 'var(--g-paper-deep)' : 'transparent'}; border-bottom: 1px solid var(--g-rule-soft); gap: 0;">
+				<div
+					role="button"
+					tabindex="0"
+					title="{trip.name} öffnen"
+					onclick={() => goto(`/trips/${trip.id}`)}
+					onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goto(`/trips/${trip.id}`); } }}
+					style="display: grid; grid-template-columns: 1.6fr 0.8fr 1.4fr auto; align-items: center; padding: 16px 20px; background: {i % 2 === 1 ? 'var(--g-paper-deep)' : 'transparent'}; border-bottom: 1px solid var(--g-rule-soft); gap: 0; cursor: pointer; transition: background 120ms;"
+					onmouseenter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--g-card-alt, #f1eee6)'; }}
+					onmouseleave={(e) => { (e.currentTarget as HTMLElement).style.background = i % 2 === 1 ? 'var(--g-paper-deep)' : 'transparent'; }}
+				>
 					<!-- Spalte 1: Name -->
 					<div style="display: flex; align-items: center; gap: 10px;">
 						<span style="width: 7px; height: 7px; border-radius: 50%; background: {dotColor}; flex-shrink: 0;"></span>
@@ -397,33 +410,83 @@ import PauseIcon from '@lucide/svelte/icons/pause';
 					<div style="font-size: 13px; color: var(--g-ink-2); font-family: var(--g-font-mono); letter-spacing: 0.02em;">
 						{dateRange(trip)}
 					</div>
-					<!-- Spalte 4: Aktionen -->
-					<div style="display: flex; gap: 4px; justify-content: flex-end;" onclick={(e) => e.stopPropagation()}>
-						<!-- alert -->
-						<button title="Alert-Konfiguration" onclick={() => openReportConfig(trip)} style="width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: 1px solid var(--g-rule-soft); border-radius: var(--g-r-2); cursor: pointer;">
-							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>
+					<!-- Spalte 4: Aktionen (stopPropagation verhindert Zeilen-Navigation) -->
+					<div role="presentation" onclick={(e) => e.stopPropagation()} style="display: flex; gap: 8px; justify-content: flex-end; align-items: center; position: relative;">
+						{#if isActive}
+							<button onclick={(e) => { e.stopPropagation(); runTestReport(trip, 7); }} style="display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; height: 32px; background: transparent; border: 1px solid var(--g-rule); border-radius: var(--g-r-2); cursor: pointer; font-size: 13px; font-family: var(--g-font-sans); color: var(--g-ink); white-space: nowrap;">
+								<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink)" stroke-width="1.7" stroke-linecap="round"><path d="M7 5l12 7-12 7z"/></svg>
+								Briefing senden
+							</button>
+						{/if}
+						<button
+							data-testid="trip-row-menu-btn"
+							title="Aktionen"
+							aria-haspopup="menu"
+							aria-expanded={openMenuId === trip.id}
+							onclick={(e) => { e.stopPropagation(); openMenuId = openMenuId === trip.id ? null : trip.id; }}
+							style="width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; background: {openMenuId === trip.id ? 'var(--g-paper-deep)' : 'transparent'}; border: 1px solid var(--g-rule); border-radius: var(--g-r-2); cursor: pointer;"
+						>
+							<!-- three-dot icon -->
+							<svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+								<circle cx="5" cy="12" r="1.4" fill="var(--g-ink-2)"/>
+								<circle cx="12" cy="12" r="1.4" fill="var(--g-ink-2)"/>
+								<circle cx="19" cy="12" r="1.4" fill="var(--g-ink-2)"/>
+							</svg>
 						</button>
-						<!-- weather -->
-						<button title="Wetter-Konfiguration" onclick={() => goto(`/trips/${trip.id}#weather`)} style="width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: 1px solid var(--g-rule-soft); border-radius: var(--g-r-2); cursor: pointer;">
-							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.5"/><path d="M12 4v1.5M12 18.5V20M4 12h1.5M18.5 12H20M6 6l1 1M17 17l1 1M6 18l1-1M17 7l1-1"/></svg>
-						</button>
-						<!-- play -->
-						<button title="Briefing jetzt senden" onclick={() => runTestReport(trip, 7)} style="width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: 1px solid var(--g-rule-soft); border-radius: var(--g-r-2); cursor: pointer;">
-							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-2)" stroke-width="1.7" stroke-linejoin="round"><path d="M7 5l12 7-12 7z"/></svg>
-						</button>
-						<!-- preview -->
-						<button title="Email-Vorschau" onclick={() => goto(`/trips/${trip.id}?tab=preview`)} style="width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: 1px solid var(--g-rule-soft); border-radius: var(--g-r-2); cursor: pointer;">
-							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-2)" stroke-width="1.7" stroke-linejoin="round"><path d="M7 5l12 7-12 7z" fill="none"/><line x1="14" y1="12" x2="20" y2="12" opacity="0.4"/></svg>
-						</button>
-						<span style="width: 1px; height: 18px; background: var(--g-rule); margin: 0 4px;"></span>
-						<!-- edit -->
-						<button data-testid="trip-edit-btn" title="Bearbeiten" onclick={() => openEdit(trip)} style="width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: 1px solid var(--g-rule-soft); border-radius: var(--g-r-2); cursor: pointer;">
-							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4l6 6L9 21H3v-6z"/></svg>
-						</button>
-						<!-- trash -->
-						<button title="Löschen" onclick={() => { deleteTarget = trip; }} style="width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: 1px solid var(--g-rule-soft); border-radius: var(--g-r-2); cursor: pointer;">
-							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-3)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/></svg>
-						</button>
+						<span style="display: inline-flex; color: var(--g-ink-4); margin-left: 2px;">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+						</span>
+						{#if openMenuId === trip.id}
+							<!-- Overlay zum Schließen bei Außenklick -->
+							<div role="presentation" onkeydown={(e)=>{ if(e.key==='Escape') openMenuId=null; }} onclick={(e) => { e.stopPropagation(); openMenuId = null; }} style="position: fixed; inset: 0; z-index: 40;"></div>
+							<!-- Overflow-Menü -->
+							<div role="menu" style="position: absolute; top: calc(100% + 6px); right: 0; z-index: 41; min-width: 232px; background: var(--g-card); border: 1px solid var(--g-rule); border-radius: var(--g-r-3); box-shadow: var(--g-shadow-2, 0 8px 28px rgba(30,26,18,.16)); padding: 6px; overflow: hidden;">
+								<!-- Briefing jetzt senden -->
+								<button role="menuitem" onclick={(e) => { e.stopPropagation(); openMenuId = null; runTestReport(trip, 7); }} style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; min-height: 40px; text-align: left; background: transparent; border: none; border-radius: var(--g-r-2); cursor: pointer; font-size: 13px; font-family: var(--g-font-sans); color: var(--g-ink);"
+									onmouseenter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--g-paper-deep)'; }}
+									onmouseleave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
+									<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-2)" stroke-width="1.7" stroke-linecap="round"><path d="M7 5l12 7-12 7z"/></svg>
+									Briefing jetzt senden
+								</button>
+								<!-- Email-Vorschau -->
+								<button role="menuitem" onclick={(e) => { e.stopPropagation(); openMenuId = null; goto(`/trips/${trip.id}?tab=preview`); }} style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; min-height: 40px; text-align: left; background: transparent; border: none; border-radius: var(--g-r-2); cursor: pointer; font-size: 13px; font-family: var(--g-font-sans); color: var(--g-ink);"
+									onmouseenter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--g-paper-deep)'; }}
+									onmouseleave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
+									<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+									Email-Vorschau
+								</button>
+								<!-- Alert-Konfiguration -->
+								<button role="menuitem" onclick={(e) => { e.stopPropagation(); openMenuId = null; openReportConfig(trip); }} style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; min-height: 40px; text-align: left; background: transparent; border: none; border-radius: var(--g-r-2); cursor: pointer; font-size: 13px; font-family: var(--g-font-sans); color: var(--g-ink);"
+									onmouseenter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--g-paper-deep)'; }}
+									onmouseleave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
+									<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>
+									Alert-Konfiguration
+								</button>
+								<!-- Wetter-Metriken -->
+								<button role="menuitem" onclick={(e) => { e.stopPropagation(); openMenuId = null; goto(`/trips/${trip.id}#weather`); }} style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; min-height: 40px; text-align: left; background: transparent; border: none; border-radius: var(--g-r-2); cursor: pointer; font-size: 13px; font-family: var(--g-font-sans); color: var(--g-ink);"
+									onmouseenter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--g-paper-deep)'; }}
+									onmouseleave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
+									<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.5"/><path d="M12 4v1.5M12 18.5V20M4 12h1.5M18.5 12H20M6 6l1 1M17 17l1 1M6 18l1-1M17 7l1-1"/></svg>
+									Wetter-Metriken
+								</button>
+								<!-- Bearbeiten -->
+								<button data-testid="trip-edit-btn" role="menuitem" onclick={(e) => { e.stopPropagation(); openMenuId = null; openEdit(trip); }} style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; min-height: 40px; text-align: left; background: transparent; border: none; border-radius: var(--g-r-2); cursor: pointer; font-size: 13px; font-family: var(--g-font-sans); color: var(--g-ink);"
+									onmouseenter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--g-paper-deep)'; }}
+									onmouseleave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
+									<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4l6 6L9 21H3v-6z"/></svg>
+									Bearbeiten
+								</button>
+								<!-- Trenner -->
+								<div style="height: 1px; background: var(--g-rule-soft); margin: 6px 8px;"></div>
+								<!-- Löschen (danger) -->
+								<button role="menuitem" onclick={(e) => { e.stopPropagation(); openMenuId = null; deleteTarget = trip; }} style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; min-height: 40px; text-align: left; background: transparent; border: none; border-radius: var(--g-r-2); cursor: pointer; font-size: 13px; font-family: var(--g-font-sans); color: var(--g-bad, #a83232);"
+									onmouseenter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--g-paper-deep)'; }}
+									onmouseleave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
+									<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--g-bad, #a83232)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/></svg>
+									Löschen
+								</button>
+							</div>
+						{/if}
 					</div>
 				</div>
 			{/each}
