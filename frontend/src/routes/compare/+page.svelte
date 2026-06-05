@@ -24,6 +24,22 @@
 			? presets.filter((p) => p.name.toLowerCase().includes(searchQuery.toLowerCase()))
 			: presets
 	);
+
+	// Issue #611 — Archivieren aus dem mobilen Kachel-Stack (Desktop läuft über
+	// CompareGrid). Setzt archived_at und entfernt den Vergleich aus der Liste.
+	async function handleTileAction(preset: ComparePreset, id: string) {
+		if (id !== 'archive') return;
+		try {
+			const res = await fetch(`/api/compare/presets/${preset.id}/state`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ archived: true })
+			});
+			if (res.ok) presets = presets.filter((p) => p.id !== preset.id);
+		} catch {
+			/* fail-soft: Liste bleibt unverändert */
+		}
+	}
 </script>
 
 <div style="background: var(--g-paper)">
@@ -70,7 +86,11 @@
 			{:else}
 				{#each filteredPresets as preset (preset.id)}
 					<a href="/compare/{preset.id}" class="block min-h-[44px]">
-						<CompareTile sub={preset} dense={true} />
+						<CompareTile
+							sub={preset}
+							dense={true}
+							onAction={(id) => handleTileAction(preset, id)}
+						/>
 					</a>
 				{/each}
 			{/if}

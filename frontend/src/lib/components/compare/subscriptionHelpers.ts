@@ -111,12 +111,13 @@ export function compareActions(status: CompareStatus): CompareAction[] {
 			{ id: 'delete', label: 'Löschen', danger: true }
 		];
 	}
-	// 'active' und 'paused' liefern dieselbe 5-Element-Liste
+	// 'active' und 'paused' liefern dieselbe Liste (Issue #611: + Archivieren)
 	return [
 		{ id: 'pause', label: 'Pausieren' },
 		{ id: 'send', label: 'Briefing jetzt senden' },
 		{ id: 'preview', label: 'Vorschau öffnen' },
 		{ id: 'edit', label: 'Bearbeiten' },
+		{ id: 'archive', label: 'Archivieren' },
 		{ id: 'delete', label: 'Löschen', danger: true }
 	];
 }

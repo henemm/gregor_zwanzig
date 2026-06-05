@@ -24,4 +24,6 @@ type ComparePreset struct {
 	LetzterVersand       *time.Time `json:"letzter_versand,omitempty"`
 	TopOrtLetzterVersand *string    `json:"top_ort_letzter_versand,omitempty"`
 	CreatedAt            time.Time  `json:"created_at"`
+	// Issue #611 — manuell ins Archiv verschoben. nil = aktiv, gesetzt = archiviert.
+	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 }

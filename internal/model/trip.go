@@ -88,8 +88,4 @@ type Trip struct {
 	Region           string                 `json:"region,omitempty"`
 	PausedAt         *time.Time             `json:"paused_at,omitempty"`
 	ArchivedAt       *time.Time             `json:"archived_at,omitempty"`
-	AccuracyPct      *int                   `json:"accuracy_pct,omitempty"`
-	Headline         string                 `json:"headline,omitempty"`
-	BriefingsCount   *int                   `json:"briefings_count,omitempty"`
-	AlertsCount      *int                   `json:"alerts_count,omitempty"`
 }

@@ -246,10 +246,6 @@ export interface Trip {
 	alert_quiet_to?: string;
 	paused_at?: string;
 	archived_at?: string;
-	accuracy_pct?: number;
-	headline?: string;
-	briefings_count?: number;
-	alerts_count?: number;
 }
 
 export interface Subscription {
@@ -460,5 +456,6 @@ export interface ComparePreset {
 	letzter_versand?: string;           // ISO-8601
 	top_ort_letzter_versand?: string | null;
 	created_at: string;
+	archived_at?: string;               // Issue #611 — gesetzt = archiviert
 	display_config?: Record<string, unknown>;  // ideal_ranges, channel_layouts, region
 }

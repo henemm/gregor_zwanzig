@@ -246,6 +246,55 @@ func DeleteComparePresetHandler(s *store.Store) http.HandlerFunc {
 	}
 }
 
+// comparePresetStateRequest is the PATCH /api/compare/presets/{id}/state input DTO.
+// Pointer field distinguishes "absent in body" (nil) from "explicitly sent",
+// analog zu tripStateRequest (Issue #611).
+type comparePresetStateRequest struct {
+	Archived *bool `json:"archived"`
+}
+
+// UpdateComparePresetStateHandler handles PATCH /api/compare/presets/{id}/state.
+// Only archived_at is mutated; all other preset fields stay untouched
+// (read-modify-write), analog zu UpdateTripStateHandler (Issue #611).
+func UpdateComparePresetStateHandler(s *store.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
+		id := chi.URLParam(r, "id")
+
+		presets, err := s.LoadComparePresets()
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
+			return
+		}
+		idx := findComparePresetIdx(presets, id)
+		if idx < 0 {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": "not_found"})
+			return
+		}
+
+		var req comparePresetStateRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request"})
+			return
+		}
+
+		if req.Archived != nil {
+			if *req.Archived {
+				now := time.Now().UTC()
+				presets[idx].ArchivedAt = &now
+			} else {
+				presets[idx].ArchivedAt = nil
+			}
+		}
+
+		if err := s.SaveComparePresets(presets); err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
+			return
+		}
+		writeJSON(w, http.StatusOK, presets[idx])
+	}
+}
+
 // GET /api/compare/presets/{id}
 func GetComparePresetHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

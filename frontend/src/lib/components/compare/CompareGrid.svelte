@@ -39,8 +39,27 @@
 	function handleAction(preset: ComparePreset, id: string) {
 		if (id === 'delete') {
 			deleteTarget = preset;
+		} else if (id === 'archive') {
+			void archivePreset(preset);
 		}
 		// Weitere Aktionen (pause, send, preview, edit) folgen in späteren Issues
+	}
+
+	// Issue #611 — Vergleich archivieren: archived_at serverseitig setzen, danach
+	// aus der aktiven Liste entfernen (er erscheint dann im Archiv).
+	async function archivePreset(preset: ComparePreset) {
+		error = null;
+		try {
+			const res = await fetch(`/api/compare/presets/${preset.id}/state`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ archived: true })
+			});
+			if (!res.ok) throw new Error(`PATCH failed: ${res.status}`);
+			presets = presets.filter((p) => p.id !== preset.id);
+		} catch {
+			error = 'Archivieren fehlgeschlagen. Bitte versuche es erneut.';
+		}
 	}
 
 	async function confirmDelete() {

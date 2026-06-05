@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
-"""Seed demo archive trips for the validator account.
+"""Seed demo archive entries (Trips + Orts-Vergleiche) for the validator account.
 
-Issue #583 — Archiv-Screen 1:1 nach screen-archive.jsx.
+Issue #611 — reines Archiv für Trips UND Vergleiche (screen-archive.jsx).
+Die #583-Forecast-Analytik-Felder (accuracy_pct/headline/briefings_count/
+alerts_count) wurden entfernt; das Archiv zeigt nur noch Name/Umfang/Datum.
+
 CLI: python3 scripts/seed_validator_archive.py --data-dir <DIR> --user <USERNAME>
 
-Writes 8 archived Trip JSONs matching the JSX ARCHIVE_LIST mock data.
-Idempotent: existing trips are overwritten on re-run.
+Writes archived Trip JSONs + archived ComparePreset JSONs so the staging
+archive lists both types. Idempotent: existing entries are overwritten.
 """
 import argparse
 import json
@@ -14,54 +17,33 @@ from pathlib import Path
 
 
 TRIPS = [
-    {
-        "id": "ortler-2025", "name": "Ortler-Überquerung", "stage_count": 4,
-        "date_from": "2025-09-12", "date_to": "2025-09-15",
-        "accuracy_pct": 92, "briefings_count": 12, "alerts_count": 1,
-        "headline": "Gewitter Tag 2 wie prognostiziert — Aufstieg vorgezogen",
-    },
-    {
-        "id": "zillertal-2025", "name": "Zillertal mit Steffi", "stage_count": 1,
-        "date_from": "2025-12-28", "date_to": "2025-12-30",
-        "accuracy_pct": 88, "briefings_count": 6, "alerts_count": 0,
-        "headline": "Sonnig wie vorhergesagt, leichter Föhn ab Mittag",
-    },
-    {
-        "id": "rofan-2025", "name": "Rofan Tageswanderung", "stage_count": 1,
-        "date_from": "2025-08-23", "date_to": "2025-08-23",
-        "accuracy_pct": 76, "briefings_count": 3, "alerts_count": 1,
-        "headline": "Niederschlag 4 h früher als prognostiziert eingetroffen",
-    },
-    {
-        "id": "venediger-2024", "name": "Großvenediger Rundtour", "stage_count": 5,
-        "date_from": "2024-07-18", "date_to": "2024-07-22",
-        "accuracy_pct": 94, "briefings_count": 18, "alerts_count": 0,
-        "headline": "Stabile Schönwetter-Phase, Briefings ohne Korrektur",
-    },
-    {
-        "id": "stubai-2024", "name": "Stubaier Höhenweg", "stage_count": 8,
-        "date_from": "2024-08-30", "date_to": "2024-09-06",
-        "accuracy_pct": 81, "briefings_count": 22, "alerts_count": 2,
-        "headline": "Kaltlufteinbruch Tag 5 erkannt, Etappe 6 umgeplant",
-    },
-    {
-        "id": "khw-402", "name": "KHW 402", "stage_count": 13,
-        "date_from": "2024-05-05", "date_to": "2024-05-18",
-        "accuracy_pct": 86, "briefings_count": 38, "alerts_count": 3,
-        "headline": "Drei Gewitter-Tage, davon zwei Tage vorher avisiert",
-    },
-    {
-        "id": "gardasee-2024", "name": "Gardasee Klettersteige", "stage_count": 3,
-        "date_from": "2024-04-19", "date_to": "2024-04-21",
-        "accuracy_pct": 71, "briefings_count": 9, "alerts_count": 1,
-        "headline": "Wind unterschätzt, Bocchette gesperrt — kurzfristig umgeplant",
-    },
-    {
-        "id": "dachstein-2023", "name": "Dachstein Überschreitung", "stage_count": 2,
-        "date_from": "2023-09-08", "date_to": "2023-09-09",
-        "accuracy_pct": 95, "briefings_count": 6, "alerts_count": 0,
-        "headline": "Bilderbuch-Bedingungen — präzise getroffen",
-    },
+    {"id": "ortler-2025", "name": "Ortler-Überquerung", "stage_count": 4,
+     "date_from": "2025-09-12", "date_to": "2025-09-15"},
+    {"id": "zillertal-2025", "name": "Zillertal mit Steffi", "stage_count": 1,
+     "date_from": "2025-12-28", "date_to": "2025-12-30"},
+    {"id": "rofan-2025", "name": "Rofan Tageswanderung", "stage_count": 1,
+     "date_from": "2025-08-23", "date_to": "2025-08-23"},
+    {"id": "venediger-2024", "name": "Großvenediger Rundtour", "stage_count": 5,
+     "date_from": "2024-07-18", "date_to": "2024-07-22"},
+    {"id": "stubai-2024", "name": "Stubaier Höhenweg", "stage_count": 8,
+     "date_from": "2024-08-30", "date_to": "2024-09-06"},
+    {"id": "khw-402", "name": "KHW 402", "stage_count": 13,
+     "date_from": "2024-05-05", "date_to": "2024-05-18"},
+    {"id": "gardasee-2024", "name": "Gardasee Klettersteige", "stage_count": 3,
+     "date_from": "2024-04-19", "date_to": "2024-04-21"},
+    {"id": "dachstein-2023", "name": "Dachstein Überschreitung", "stage_count": 2,
+     "date_from": "2023-09-08", "date_to": "2023-09-09"},
+]
+
+# Issue #611 — archivierte Orts-Vergleiche, damit das Archiv beide Typen zeigt.
+COMPARE_PRESETS = [
+    {"id": "cmp-skitirol", "name": "Skigebiete Tirol",
+     "location_ids": ["loc-stubai", "loc-soelden", "loc-ischgl", "loc-kitzbuehel",
+                      "loc-axamer", "loc-obergurgl"],
+     "archived_at": "2025-11-04T00:00:00Z"},
+    {"id": "cmp-wochenende", "name": "Wochenend-Touren Süd",
+     "location_ids": ["loc-gardasee", "loc-dolomiten", "loc-comer", "loc-tessin"],
+     "archived_at": "2024-10-12T00:00:00Z"},
 ]
 
 
@@ -87,7 +69,8 @@ def _build_stages(trip_id: str, date_from: str, date_to: str, count: int) -> lis
 
 
 def seed(data_dir: str, user: str) -> None:
-    trips_dir = Path(data_dir) / "users" / user / "trips"
+    user_dir = Path(data_dir) / "users" / user
+    trips_dir = user_dir / "trips"
     trips_dir.mkdir(parents=True, exist_ok=True)
 
     for t in TRIPS:
@@ -100,10 +83,6 @@ def seed(data_dir: str, user: str) -> None:
             "name": t["name"],
             "stages": stages,
             "alert_rules": [],
-            "accuracy_pct": t["accuracy_pct"],
-            "headline": t["headline"],
-            "briefings_count": t["briefings_count"],
-            "alerts_count": t["alerts_count"],
             "archived_at": archived_at,
         }
 
@@ -111,7 +90,38 @@ def seed(data_dir: str, user: str) -> None:
         path.write_text(json.dumps(trip_json, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"  wrote {path.name}")
 
-    print(f"Seeded {len(TRIPS)} archive trips → {trips_dir}")
+    # Issue #611 — archivierte Vergleiche (merge in bestehende compare_presets.json).
+    presets_path = user_dir / "compare_presets.json"
+    existing = []
+    if presets_path.exists():
+        try:
+            existing = json.loads(presets_path.read_text(encoding="utf-8")) or []
+        except (json.JSONDecodeError, OSError):
+            existing = []
+    by_id = {p.get("id"): p for p in existing if isinstance(p, dict)}
+    for c in COMPARE_PRESETS:
+        by_id[c["id"]] = {
+            "id": c["id"],
+            "name": c["name"],
+            "user_id": user,
+            "location_ids": c["location_ids"],
+            "schedule": "manual",
+            "profil": "SUMMER_TREKKING",
+            "hour_from": 6,
+            "hour_to": 18,
+            "empfaenger": [],
+            "created_at": c["archived_at"],
+            "archived_at": c["archived_at"],
+        }
+    presets_path.write_text(
+        json.dumps(list(by_id.values()), ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    for c in COMPARE_PRESETS:
+        print(f"  wrote compare preset {c['id']}")
+
+    print(
+        f"Seeded {len(TRIPS)} archive trips + {len(COMPARE_PRESETS)} compare presets → {user_dir}"
+    )
 
 
 def main() -> None:

@@ -11,9 +11,12 @@ export const load: PageServerLoad = async ({ cookies }) => {
 
 	const presetsRes = await fetch(`${API()}/api/compare/presets`, { headers }).catch(() => null);
 	const rawPresets = presetsRes?.ok ? await presetsRes.json() : [];
-	const presets: ComparePreset[] = Array.isArray(rawPresets)
+	const all: ComparePreset[] = Array.isArray(rawPresets)
 		? rawPresets
 		: (rawPresets?.presets ?? []);
+
+	// Issue #611 — archivierte Vergleiche erscheinen nicht in der aktiven Liste.
+	const presets = all.filter((p) => p.archived_at == null);
 
 	return { presets };
 };

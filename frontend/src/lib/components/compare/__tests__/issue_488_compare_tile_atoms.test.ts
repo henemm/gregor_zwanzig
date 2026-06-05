@@ -175,13 +175,15 @@ test('#488 AC-4: CompareAction-Typ ist in subscriptionHelpers.ts exportiert', ()
 });
 
 // Direkter Funktionsaufruf — scheitert im RED weil compareActions noch nicht existiert
-test('#488 AC-4: compareActions("active") liefert 5 Einträge', async () => {
+// Issue #611 — compareActions("active"/"paused") liefert jetzt 6 Einträge
+// (zusätzlich "Archivieren" als Archiv-Einstiegspunkt).
+test('#488 AC-4: compareActions("active") liefert 6 Einträge', async () => {
 	const { compareActions } = await import('../subscriptionHelpers.ts');
 	const actions = compareActions('active');
-	assert.equal(actions.length, 5, 'compareActions("active") muss genau 5 Aktionen liefern');
+	assert.equal(actions.length, 6, 'compareActions("active") muss genau 6 Aktionen liefern');
 });
 
-test('#488 AC-4: compareActions("active") enthält pause, send, preview, edit, delete', async () => {
+test('#488 AC-4: compareActions("active") enthält pause, send, preview, edit, archive, delete', async () => {
 	const { compareActions } = await import('../subscriptionHelpers.ts');
 	const actions = compareActions('active');
 	const ids = actions.map((a: { id: string }) => a.id);
@@ -189,13 +191,14 @@ test('#488 AC-4: compareActions("active") enthält pause, send, preview, edit, d
 	assert.ok(ids.includes('send'),    'compareActions("active") muss "send" enthalten');
 	assert.ok(ids.includes('preview'), 'compareActions("active") muss "preview" enthalten');
 	assert.ok(ids.includes('edit'),    'compareActions("active") muss "edit" enthalten');
+	assert.ok(ids.includes('archive'), 'compareActions("active") muss "archive" enthalten');
 	assert.ok(ids.includes('delete'),  'compareActions("active") muss "delete" enthalten');
 });
 
-test('#488 AC-4: compareActions("paused") liefert 5 Einträge (identisch zu active)', async () => {
+test('#488 AC-4: compareActions("paused") liefert 6 Einträge (identisch zu active)', async () => {
 	const { compareActions } = await import('../subscriptionHelpers.ts');
 	const actions = compareActions('paused');
-	assert.equal(actions.length, 5, 'compareActions("paused") muss genau 5 Aktionen liefern');
+	assert.equal(actions.length, 6, 'compareActions("paused") muss genau 6 Aktionen liefern');
 });
 
 test('#488 AC-4: compareActions("draft") liefert 2 Einträge', async () => {

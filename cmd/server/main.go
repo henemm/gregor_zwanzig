@@ -216,6 +216,7 @@ func main() {
 	r.Get("/api/compare/presets/{id}", handler.GetComparePresetHandler(s))
 	r.Post("/api/compare/presets", handler.CreateComparePresetHandler(s))
 	r.Put("/api/compare/presets/{id}", handler.UpdateComparePresetHandler(s))
+	r.Patch("/api/compare/presets/{id}/state", handler.UpdateComparePresetStateHandler(s)) // Issue #611
 	r.Delete("/api/compare/presets/{id}", handler.DeleteComparePresetHandler(s))
 	r.Post("/api/compare/presets/{id}/send", handler.SendComparePresetHandler(s))
 	// Issue #393: Cockpit-Kacheln — Versandstatus + Alarm-Historie (read-only Logs)

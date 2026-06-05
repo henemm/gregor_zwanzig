@@ -1,6 +1,7 @@
 """TDD RED — Issue #583 AC-1: Demo-Archiv-Trips Seed-Script.
+Aktualisiert für #611: ohne Analytik-Felder (accuracy_pct, headline).
 
-Spec: docs/specs/modules/issue_583_archiv_1to1.md (AC-1)
+Spec: docs/specs/modules/issue_611_archiv_entruempeln.md (AC-9)
 Test-Manifest: docs/specs/tests/issue_583_archive_demo_data_tests.md
 """
 import json
@@ -14,14 +15,14 @@ REPO = Path(__file__).resolve().parents[2]
 SEED_SCRIPT = REPO / "scripts" / "seed_validator_archive.py"
 
 EXPECTED_TRIPS = [
-    ("ortler-2025", "Ortler-Überquerung", 92, "Gewitter Tag 2 wie prognostiziert"),
-    ("zillertal-2025", "Zillertal mit Steffi", 88, "Sonnig wie vorhergesagt"),
-    ("rofan-2025", "Rofan Tageswanderung", 76, "Niederschlag 4 h früher"),
-    ("venediger-2024", "Großvenediger Rundtour", 94, "Stabile Schönwetter-Phase"),
-    ("stubai-2024", "Stubaier Höhenweg", 81, "Kaltlufteinbruch Tag 5 erkannt"),
-    ("khw-402", "KHW 402", 86, "Drei Gewitter-Tage"),
-    ("gardasee-2024", "Gardasee Klettersteige", 71, "Wind unterschätzt"),
-    ("dachstein-2023", "Dachstein Überschreitung", 95, "Bilderbuch-Bedingungen"),
+    ("ortler-2025", "Ortler-Überquerung"),
+    ("zillertal-2025", "Zillertal mit Steffi"),
+    ("rofan-2025", "Rofan Tageswanderung"),
+    ("venediger-2024", "Großvenediger Rundtour"),
+    ("stubai-2024", "Stubaier Höhenweg"),
+    ("khw-402", "KHW 402"),
+    ("gardasee-2024", "Gardasee Klettersteige"),
+    ("dachstein-2023", "Dachstein Überschreitung"),
 ]
 
 
@@ -49,16 +50,10 @@ def test_issue_583_ac1_creates_8_archived_trips(tmp_path: Path) -> None:
 
     by_id = {p.stem: json.loads(p.read_text()) for p in written}
 
-    for trip_id, name, accuracy, headline_fragment in EXPECTED_TRIPS:
+    for trip_id, name in EXPECTED_TRIPS:
         assert trip_id in by_id, f"Missing trip {trip_id} in {list(by_id.keys())}"
         trip = by_id[trip_id]
         assert trip["name"] == name, f"{trip_id}: name {trip['name']!r} != {name!r}"
-        assert trip.get("accuracy_pct") == accuracy, (
-            f"{trip_id}: accuracy_pct {trip.get('accuracy_pct')} != {accuracy}"
-        )
-        assert headline_fragment in trip.get("headline", ""), (
-            f"{trip_id}: headline missing fragment {headline_fragment!r}, got {trip.get('headline')!r}"
-        )
         assert trip.get("archived_at"), f"{trip_id}: archived_at not set"
 
 
@@ -77,3 +72,34 @@ def test_issue_583_ac1_idempotent(tmp_path: Path) -> None:
 
     target_dir = tmp_path / "users" / "validator-issue110" / "trips"
     assert len(list(target_dir.glob("*.json"))) == 8
+
+
+def test_issue_611_seeds_archived_compare_presets(tmp_path: Path) -> None:
+    """AC-2: Seed-Script schreibt archivierte Orts-Vergleiche (beide Typen im Archiv).
+
+    Verhaltensnachweis: compare_presets.json muss nach dem Seed mindestens 2 Einträge
+    enthalten, jeder mit gesetztem archived_at und nicht-leerer location_ids-Liste.
+    """
+    if not SEED_SCRIPT.exists():
+        pytest.fail("Seed-Script fehlt")
+
+    result = subprocess.run(
+        [sys.executable, str(SEED_SCRIPT), "--data-dir", str(tmp_path), "--user", "validator-issue110"],
+        capture_output=True, text=True, cwd=str(REPO),
+    )
+    assert result.returncode == 0, f"Seed-Script failed: {result.stderr}"
+
+    presets_path = tmp_path / "users" / "validator-issue110" / "compare_presets.json"
+    assert presets_path.exists(), f"compare_presets.json fehlt: {presets_path}"
+
+    presets = json.loads(presets_path.read_text(encoding="utf-8"))
+    assert len(presets) >= 2, f"Erwarte mindestens 2 Vergleiche, got {len(presets)}"
+
+    for preset in presets:
+        assert preset.get("archived_at"), (
+            f"Preset {preset.get('id')!r}: archived_at fehlt oder leer"
+        )
+        location_ids = preset.get("location_ids", [])
+        assert isinstance(location_ids, list) and len(location_ids) > 0, (
+            f"Preset {preset.get('id')!r}: location_ids ist leer oder kein Array"
+        )
