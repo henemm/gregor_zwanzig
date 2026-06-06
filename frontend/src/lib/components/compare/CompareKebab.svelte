@@ -55,19 +55,22 @@
 		{/snippet}
 	</DropdownMenu.Trigger>
 
-	<DropdownMenu.Content
-		align="end"
-		sideOffset={4}
-		class="z-50 min-w-[180px] rounded-md border bg-popover shadow-md py-1"
-	>
-		{#each actions as action (action.id)}
-			<DropdownMenu.Item
-				class={'w-full text-left px-3 py-1.5 text-sm cursor-default outline-none hover:bg-muted ' +
-					(action.danger ? 'text-destructive' : '')}
-				onSelect={() => onSelect?.(action.id)}
-			>
-				{action.label}
-			</DropdownMenu.Item>
-		{/each}
-	</DropdownMenu.Content>
+	<DropdownMenu.Portal>
+		<DropdownMenu.Content
+			align="end"
+			sideOffset={4}
+			class="z-50 min-w-[180px] rounded-md border bg-popover shadow-md py-1"
+		>
+			{#each actions as action (action.id)}
+				<DropdownMenu.Item
+					class={'w-full text-left px-3 py-1.5 text-sm cursor-default outline-none hover:bg-muted ' +
+						(action.danger ? 'text-destructive' : '')}
+					onSelect={() => onSelect?.(action.id)}
+					onclick={(e: MouseEvent) => e.stopPropagation()}
+				>
+					{action.label}
+				</DropdownMenu.Item>
+			{/each}
+		</DropdownMenu.Content>
+	</DropdownMenu.Portal>
 </DropdownMenu.Root>
