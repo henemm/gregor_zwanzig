@@ -124,6 +124,8 @@ class TestCompareSubscriptionExtraction:
             enabled=True,
         )
         locations = load_all_locations()
+        if not locations:
+            pytest.skip("Keine Locations konfiguriert")
         result = run_comparison_for_subscription(sub, locations)
 
         assert isinstance(result, tuple)

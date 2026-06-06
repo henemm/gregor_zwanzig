@@ -8,10 +8,19 @@ SPEC: docs/specs/modules/go_scheduler.md v1.0 (Step 0: Extraction)
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List
+from datetime import date, datetime
+from typing import TYPE_CHECKING, List, Union
 
 if TYPE_CHECKING:
     from app.user import CompareSubscription, SavedLocation
+
+
+def build_compare_subject(name: str, when: Union[datetime, date]) -> str:
+    """Pure function: build the email subject for a compare briefing.
+
+    Returns exactly: 'Wetter-Vergleich: <name> (<dd.mm.yyyy>)'
+    """
+    return f"Wetter-Vergleich: {name} ({when.strftime('%d.%m.%Y')})"
 
 
 def run_comparison_for_subscription(
@@ -155,7 +164,7 @@ def run_comparison_for_subscription(
         )
         text_body = text_body.replace("=" * 24, "=" * 24 + warning_text, 1)
 
-    subject = f"Wetter-Vergleich: {sub.name} ({now.strftime('%d.%m.%Y')})"
+    subject = build_compare_subject(sub.name, now)
     # Issue #456: Winner-Name als 4. Tupel-Element fuer Top-Ort-Anzeige.
     winner_name = result.winner.location.name if result.winner else None
     return subject, html_body, text_body, winner_name

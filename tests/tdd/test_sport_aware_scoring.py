@@ -292,19 +292,16 @@ class TestEmailSubject:
 
     def test_subject_is_wetter_vergleich(self):
         """
-        GIVEN: run_comparison_for_subscription
-        WHEN: Generating email
-        THEN: Subject starts with 'Wetter-Vergleich' not 'Ski Resort'
+        GIVEN: build_compare_subject pure function
+        WHEN: Called with a name and a fixed date
+        THEN: Subject contains 'Wetter-Vergleich' and does not contain 'Ski'
+        No network, no locations, no ValueError.
         """
-        from services.compare_subscription import run_comparison_for_subscription
-        from app.user import CompareSubscription, Schedule
+        from datetime import date
+        from services.compare_subscription import build_compare_subject
 
-        sub = CompareSubscription(
-            id="test-subject",
-            name="Test",
-            locations=[],
-            schedule=Schedule.DAILY_MORNING,
-        )
-        subject, _, _, _ = run_comparison_for_subscription(sub)
+        subject = build_compare_subject("Alpen Tour", date(2026, 6, 6))
         assert "Wetter-Vergleich" in subject, f"Subject should contain 'Wetter-Vergleich', got: {subject}"
         assert "Ski" not in subject, f"Subject should not contain 'Ski', got: {subject}"
+        # AC-3: verify the exact format matches the old inline f-string
+        assert subject == "Wetter-Vergleich: Alpen Tour (06.06.2026)", f"Unexpected format: {subject}"
