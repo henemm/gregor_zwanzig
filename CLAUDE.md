@@ -6,7 +6,7 @@
 
 - **Zielgruppe:** Weitwanderer (z.B. GR20), eingeschraenkte Konnektivitaet
 - **Stack:** Python, uv, pytest
-- **Channels:** E-Mail (MVP), spaeter SMS/Push, Signal (verfügbar via Callmebot)
+- **Channels:** E-Mail (MVP), Telegram, SMS. (Signal wurde 2026-06-06 app-weit als Kanal entfernt — PO-Entscheidung, Issue #610.)
 
 ## Workflow
 
@@ -364,12 +364,11 @@ Konkrete Konsequenzen (Quelle: `docs/design-requests/issue_15_atomic_design/RESP
 
 Folge-Arbeit (Reihenfolge laut Claude Design): Surface-Stack-Migration (app.css-Werte auf weiße Karten, **vor** Atom-Migration) → Token-Rename (Code-Namen gewinnen, Mapping in RESPONSE-FROM-CLAUDE-DESIGN.md) → Atom-Migration (Epic #368). Kontrast-Audit (#16) parallel möglich.
 
-## Signal als Channel (Feature-Idee)
+## Signal als Channel — ENTFERNT (2026-06-06, Issue #610)
 
-Signal-Benachrichtigungen sind als zusätzlicher Channel neben E-Mail und SMS verfügbar. Infrastruktur steht bereit:
-- Callmebot API: `https://signal.callmebot.com/signal/send.php?phone=PHONE&apikey=KEY&text=MSG`
-- Credentials in `/home/hem/henemm-infra/.env` (CALLMEBOT_PHONE, CALLMEBOT_APIKEY)
-- Referenz-Implementierung: `oebb-nightjet-monitor/notify.go` (Go) oder `henemm-infra/scripts/notify-signal.sh` (Bash)
+**Signal ist app-weit als Kanal entfernt** (PO-Entscheidung, Issue #610). Kanäle sind nur noch **E-Mail · Telegram · SMS**. Frontend (Schritt 1/2) und Backend (Schritt 2/2) wurden bereinigt: keine Kanal-Auswahl, keine `SignalOutput`, kein `signal_text`/`send_signal`, kein `/api/preview/{trip}/signal`.
+
+Die Callmebot-Infrastruktur existiert weiterhin auf Server-Ebene (`/home/hem/henemm-infra/.env`, `notify-signal.sh`) und wird von anderen Diensten genutzt — aber **nicht** mehr von Gregor Zwanzig als Briefing-Kanal. Eine etwaige Wiedereinführung müsste neu spezifiziert werden.
 
 ## Messaging
 
