@@ -26,7 +26,7 @@ from utils.timezone import local_fmt
 from src.output.renderers.email.helpers import (
     build_confidence_hint, build_daily_aggregates, build_quick_take_chips,
     build_segment_label, build_units_legend,
-    derive_horizon, fmt_val, format_change_line, pill_html,
+    derive_horizon, fmt_val, format_change_line, format_trend_tokens, pill_html,
     shorten_stage_name, visible_cols,
 )
 from src.output.renderers.email.design_tokens import (
@@ -290,6 +290,7 @@ def render_html(
     show_stability: bool = True,
     show_highlights: bool = True,
     daily_summary_metrics: Optional[list[str]] = None,
+    sent_at: Optional[datetime] = None,
 ) -> str:
     """Render full HTML e-mail body. Pure function."""
     sig = profile_signature(profile)
@@ -432,43 +433,43 @@ def render_html(
         trend_rows = ""
         for i, stage in enumerate(multi_day_trend):
             sep = 'border-top:1px solid #e7e2d3;' if i > 0 else ''
+            tok = format_trend_tokens(stage)
 
-            # Precip formatting
-            pm = stage.get("precip_mm", 0)
-            if pm and pm > 0:
-                if pm > 1:
-                    precip_html = f'<span style="color:#2c5a8c;font-weight:700">{pm:g}&thinsp;mm</span>'
-                else:
-                    precip_html = f'{pm:g}&thinsp;mm'
-            else:
+            # Precip HTML
+            # Precip HTML — zero/highlight decision entirely from format_trend_tokens
+            if tok["precip_str"] == "–":
                 precip_html = '<span style="color:#9a958a">&ndash;</span>'
+            elif tok["precip_highlight"]:
+                _pval = tok["precip_str"][:-2]  # strip "mm"
+                precip_html = f'<span style="color:#2c5a8c;font-weight:700">{_pval}&thinsp;mm</span>'
+            else:
+                _pval = tok["precip_str"][:-2]  # strip "mm"
+                precip_html = f'{_pval}&thinsp;mm'
 
-            # Wind formatting
+            # Wind HTML — highlight decision from format_trend_tokens
             wk = stage.get("wind_kmh", 0) or 0
             wd = stage.get("wind_dir", "") or ""
-            if wk > 30:
+            if tok["wind_highlight"]:
                 wind_html = f'<span style="color:#c45a2a;font-weight:700">{wd}&thinsp;{wk}</span>'
             else:
                 wind_html = f'{wd}&thinsp;{wk}'
 
-            # Temp formatting
-            tl = stage.get("temp_lo")
-            th = stage.get("temp_hi")
-            if tl is not None and th is not None:
-                temp_html = f'{tl}&#8211;{th}&thinsp;°C'
-            elif th is not None:
-                temp_html = f'{th}&thinsp;°C'
-            else:
+            # Temp HTML — string already decided by format_trend_tokens
+            _ts = tok["temp_str"]
+            if _ts == "–":
                 temp_html = '&ndash;'
+            elif "–" in _ts:
+                # lo–hi°C → render with HTML en-dash entity and thinsp
+                _lo, _rest = _ts.split("–", 1)
+                _hi = _rest.rstrip("°C")
+                temp_html = f'{_lo}&#8211;{_hi}&thinsp;°C'
+            else:
+                temp_html = f'{_ts[:-2]}&thinsp;°C'
 
-            # Thunder ampel
-            thunder = stage.get("thunder", "NONE") or "NONE"
-            thunder_map = {
-                "NONE": ("#9a958a", "kein", "#6b675c"),
-                "MED":  ("#c08a1a", "MED",  "#8c3e1a"),
-                "HIGH": ("#a83232", "HIGH", "#a83232"),
-            }
-            sq_color, thunder_word, word_color = thunder_map.get(thunder, thunder_map["NONE"])
+            # Thunder HTML (via tokens)
+            sq_color = tok["thunder_sq_color"]
+            word_color = tok["thunder_word_color"]
+            thunder_word = tok["thunder_word"]
             thunder_html = (
                 f'<span style="display:inline-block;width:8px;height:8px;'
                 f'background:{sq_color};vertical-align:middle;margin-right:4px"></span>'
@@ -503,10 +504,25 @@ def render_html(
         {note_row}
         """
 
+        # AC-5: Context label with sent_at (optional — omitted when None for test determinism)
+        _weekday_de_short = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
+        context_label_html = ""
+        if sent_at is not None:
+            local_sent = sent_at.astimezone(tz)
+            wd_short = _weekday_de_short[local_sent.weekday()]
+            time_str = local_sent.strftime("%H:%M")
+            context_label_html = (
+                f'<div style="float:right;font-family:\'JetBrains Mono\',monospace;'
+                f'font-size:9px;color:#9a958a;text-align:right;line-height:1.6">'
+                f'3-Tage-Trend<br>'
+                f'gesendet {wd_short} · {time_str}</div>'
+                f'<div style="clear:both"></div>'
+            )
+
         trend_html = f"""
     <div style="background:#f6f4ee;border-top:2px solid #1a1a18;padding:22px 28px 24px;margin-top:24px">
       <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:#9a958a;font-family:'JetBrains Mono',monospace;margin-bottom:4px">05 &middot; Ausblick</div>
-      <div style="font-size:18px;font-weight:700;color:#1a1a18;font-family:Inter,sans-serif;margin-bottom:16px">Nächste Etappen</div>
+      {context_label_html}<div style="font-size:18px;font-weight:700;color:#1a1a18;font-family:Inter,sans-serif;margin-bottom:16px">Nächste Etappen</div>
       <table width="100%" cellpadding="0" cellspacing="0" style="table-layout:fixed;border-collapse:collapse">
         <colgroup>
           <col style="width:120px">

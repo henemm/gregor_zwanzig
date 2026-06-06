@@ -19,7 +19,7 @@ from app.models import SegmentWeatherData, StabilityResult, UnifiedWeatherDispla
 from utils.timezone import local_fmt
 
 from src.output.renderers.channel_layout import CHANNEL_LIMITS, render_for_channel
-from src.output.renderers.email.helpers import fmt_val
+from src.output.renderers.email.helpers import fmt_val, format_trend_tokens
 from utils.timezone import local_fmt
 
 # Maximale Zeilenbreite pro Kanal (Bubble-Constraint).
@@ -150,6 +150,7 @@ def render_narrow(
     trip_name: str = "",
     friendly_keys: Optional[set[str]] = None,
     stability_result: Optional[StabilityResult] = None,
+    multi_day_trend: Optional[list[dict]] = None,
 ) -> str:
     """Render kompakten Telegram-Body. Pure function.
 
@@ -161,6 +162,7 @@ def render_narrow(
         dc: Display-Config mit bucket/order pro Metrik.
         report_type: "morning"/"evening"/"alert".
         tz: Zielzeitzone.
+        multi_day_trend: list of trend stage dicts (only rendered for telegram, AC-8).
     """
     width = _LINE_WIDTH.get(channel, 40)
     fkeys = friendly_keys if friendly_keys is not None else set()
@@ -202,6 +204,26 @@ def render_narrow(
             lines.extend(
                 _detail_lines(layout.detail_metrics, rows[0], fkeys, width)
             )
+
+    # Issue #623: Trend block — nur für Telegram (AC-8: Signal bekommt keinen Trend).
+    if channel == "telegram" and multi_day_trend:
+        lines.append("")
+        lines.extend(_wrap("Nächste Etappen", width))
+        for stage in multi_day_trend:
+            tok = format_trend_tokens(stage)
+            weekday = stage.get("weekday", "")
+            name = stage.get("name", "")
+            # Precip str — zero decision from format_trend_tokens
+            precip_str = tok["precip_str"]
+            # Build compact line: Mo  Sóller→Tossals  8–16°C  3mm  W20  ⚡–
+            trend_line = (
+                f"{weekday}  {name}  {tok['temp_str']}  "
+                f"{precip_str}  {tok['wind_str']}  {tok['thunder_plain']}"
+            )
+            lines.extend(_wrap(trend_line, width))
+            note = stage.get("note")
+            if note:
+                lines.extend(_wrap(f"    ↳ {note}", width))
 
     # Issue #612: Befehls-Hinweis nur für Telegram (nicht Signal).
     # Pipe-Zeichen als Trenner vermieden: _wrap kann Zeilenanfang mit "|" erzeugen.

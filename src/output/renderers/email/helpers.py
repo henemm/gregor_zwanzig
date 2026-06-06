@@ -512,6 +512,100 @@ def shorten_stage_name(name: str, max_len: int = 25) -> str:
     return name[:max_len] if len(name) > max_len else name
 
 
+# Issue #623: Shared trend-token function — single source of truth for all channels.
+_THUNDER_MAP = {
+    "NONE": {
+        "word": "kein",
+        "sq_color": "#9a958a",
+        "word_color": "#6b675c",
+        "plain": "⚡–",
+        "sms": None,
+    },
+    "MED": {
+        "word": "MED",
+        "sq_color": "#c08a1a",
+        "word_color": "#8c3e1a",
+        "plain": "⚡MED",
+        "sms": "GEW-MED",
+    },
+    "HIGH": {
+        "word": "HIGH",
+        "sq_color": "#a83232",
+        "word_color": "#a83232",
+        "plain": "⚡HIGH",
+        "sms": "GEW-HIGH",
+    },
+}
+
+
+def format_trend_tokens(stage: dict) -> dict:
+    """Issue #623: Compute all display tokens for one trend stage.
+
+    Single source of truth for trend semantics across HTML, plain-text,
+    Telegram and SMS renderers. All thresholds and ampel-map live here.
+
+    Args:
+        stage: dict with keys weekday, name, temp_lo, temp_hi, precip_mm,
+               wind_dir, wind_kmh, thunder ('NONE'|'MED'|'HIGH'), note.
+
+    Returns:
+        dict with keys:
+            temp_str        — '8–16°C' / '16°C' / '–'
+            precip_str      — '3mm' / '–'
+            precip_highlight — bool (precip_mm > 1)
+            wind_str        — 'W20' / '20'
+            wind_highlight  — bool (wind_kmh > 30)
+            wind_risk       — bool (wind_kmh >= 50)
+            thunder_word    — 'kein' / 'MED' / 'HIGH'
+            thunder_sq_color — HTML hex for ampel square
+            thunder_word_color — HTML hex for word text
+            thunder_plain   — '⚡–' / '⚡MED' / '⚡HIGH'
+            thunder_sms     — 'GEW-MED' / 'GEW-HIGH' / None (absent for NONE)
+    """
+    # Temperature
+    tl = stage.get("temp_lo")
+    th = stage.get("temp_hi")
+    if tl is not None and th is not None:
+        temp_str = f"{tl}–{th}°C"
+    elif th is not None:
+        temp_str = f"{th}°C"
+    else:
+        temp_str = "–"
+
+    # Precipitation
+    pm = stage.get("precip_mm", 0) or 0
+    if pm > 0:
+        precip_str = f"{pm:g}mm"
+    else:
+        precip_str = "–"
+    precip_highlight = bool(pm > 1)
+
+    # Wind
+    wk = stage.get("wind_kmh", 0) or 0
+    wd = stage.get("wind_dir", "") or ""
+    wind_str = f"{wd}{wk}" if wd else f"{wk}"
+    wind_highlight = bool(wk > 30)
+    wind_risk = bool(wk >= 50)
+
+    # Thunder
+    thunder = (stage.get("thunder", "NONE") or "NONE").upper()
+    t_data = _THUNDER_MAP.get(thunder, _THUNDER_MAP["NONE"])
+
+    return {
+        "temp_str": temp_str,
+        "precip_str": precip_str,
+        "precip_highlight": precip_highlight,
+        "wind_str": wind_str,
+        "wind_highlight": wind_highlight,
+        "wind_risk": wind_risk,
+        "thunder_word": t_data["word"],
+        "thunder_sq_color": t_data["sq_color"],
+        "thunder_word_color": t_data["word_color"],
+        "thunder_plain": t_data["plain"],
+        "thunder_sms": t_data["sms"],
+    }
+
+
 def format_change_line(change, segment_label: str) -> str:
     """
     Eine Zeile für eine erkannte Wetteränderung (SSoT für HTML + Plain).

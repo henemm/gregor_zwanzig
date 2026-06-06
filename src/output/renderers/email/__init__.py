@@ -8,6 +8,7 @@ adapter; the renderer receives already-derived values via keyword args.
 """
 from __future__ import annotations
 
+from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 from zoneinfo import ZoneInfo
 
@@ -52,6 +53,7 @@ def render_email(
     show_stability: bool = True,
     show_highlights: bool = True,
     daily_summary_metrics: Optional[list[str]] = None,
+    sent_at: Optional[datetime] = None,
 ) -> tuple[str, str]:
     """Returns (html_body, plain_body). Pure function.
 
@@ -96,6 +98,7 @@ def render_email(
         show_stability=show_stability,
         show_highlights=show_highlights,
         daily_summary_metrics=daily_summary_metrics,
+        sent_at=sent_at,
     )
     plain_body = render_plain(
         segments=segments,

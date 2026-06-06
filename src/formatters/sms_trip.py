@@ -113,6 +113,7 @@ class SMSTripFormatter:
         stage_name: Optional[str] = None,
         report_type: str = "evening",
         tz: ZoneInfo = ZoneInfo("UTC"),
+        multi_day_trend: Optional[list[dict]] = None,
     ) -> str:
         """Generate v2.0 SMS via TokenLine pipeline.
 
@@ -124,6 +125,10 @@ class SMSTripFormatter:
             report_type: 'morning' or 'evening' (default 'evening').
             tz: Zielzeitzone für Stunden-Token (Bug #398). Default UTC
                 (abwärtskompatibel: UTC→UTC = keine Verschiebung).
+            multi_day_trend: optional list of trend stage dicts. When set,
+                a compact 'Trend 3T:' block is appended (Issue #623).
+                NOTE: the telegram_kurzform path must NOT pass this argument
+                (AC-4 double-render guard).
 
         Returns:
             v2.0 wire-format string, ≤ max_length chars.
@@ -163,7 +168,38 @@ class SMSTripFormatter:
             report_type=report_type,
             stage_name=stage_name or "Etappe",
         )
-        return render_sms(token_line, max_length=max_length)
+        base = render_sms(token_line, max_length=max_length)
+
+        # Issue #623 AC-4: optionaler Trend-Block (NUR wenn multi_day_trend übergeben).
+        # Der telegram_kurzform-Pfad übergibt KEIN multi_day_trend → kein doppelter Block.
+        if not multi_day_trend:
+            return base
+
+        from src.output.renderers.email.helpers import format_trend_tokens
+        parts = ["Trend 3T:"]
+        for stage in multi_day_trend:
+            tok = format_trend_tokens(stage)
+            weekday = stage.get("weekday", "")
+            pm = stage.get("precip_mm", 0) or 0
+            precip_str = f"R{pm:g}" if pm > 0 else "R–"
+            wk = stage.get("wind_kmh", 0) or 0
+            wind_str = f"W{wk}"
+            entry = f"{weekday} {tok['temp_str']} {precip_str} {wind_str}"
+            if tok["thunder_sms"]:
+                entry += f" {tok['thunder_sms']}"
+            parts.append(entry)
+
+        trend_block = " ".join(parts)
+        candidate = f"{base} {trend_block}"
+        if len(candidate) <= max_length:
+            return candidate
+
+        # Overflow: drop stage names (already absent in compact form), try minimal
+        # Fallback: keep base + "Trend 3T:" header only if even that fits
+        if len(f"{base} Trend 3T:") <= max_length:
+            remaining = max_length - len(base) - 1
+            return (base + " " + trend_block)[:max_length]
+        return base
 
     def format_alert_sms(
         self,
