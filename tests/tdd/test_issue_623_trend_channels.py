@@ -689,8 +689,12 @@ class TestTelegramTrendPipeline:
             "F001: telegram_text missing trend — multi_day_trend not passed to render_narrow"
         )
 
-    def test_format_email_signal_text_no_trend_heading(self):
-        """AC-8: format_email with trend must NOT put trend in signal_text."""
+    def test_signal_channel_removed_trend_cannot_leak(self):
+        """AC-8: Signal channel removed (#610) — TripReport has no signal_text field.
+
+        Regression guard: trend is in telegram_text but Signal no longer exists
+        as a channel, so there is no surface for trend to leak into.
+        """
         from src.formatters.trip_report import TripReportFormatter
         segs = self._make_segments()
         trend = [_trend_stage()]
@@ -700,9 +704,11 @@ class TestTelegramTrendPipeline:
             report_type="evening",
             multi_day_trend=trend,
         )
-        assert "Nächste Etappen" not in report.signal_text, (
-            "AC-8 violated: signal_text must not contain trend block"
+        assert not hasattr(report, "signal_text"), (
+            "AC-8: signal_text must not exist — Signal channel fully removed (#610)"
         )
+        # Confirm trend is correctly in telegram (not leaked elsewhere)
+        assert "Nächste Etappen" in report.telegram_text
 
     def test_format_email_no_trend_no_heading_in_telegram(self):
         """AC-7: format_email without trend — telegram_text has no 'Nächste Etappen'."""

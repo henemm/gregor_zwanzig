@@ -90,7 +90,7 @@ einen beliebigen Kanal (E-Mail, Telegram, SMS) erzeugt wird, Then erscheint kein
 Trend-Heading und kein leerer Block.
 
 **AC-8:** Given der Signal-Kanal, When ein Briefing erzeugt wird, Then bleibt der
-Signal-Body unverändert (kein Trend-Block), da Signal als Kanal im Abbau ist (#610).
+Signal-Body unverändert (kein Trend-Block), da Signal als Kanal entfernt ist (#610).
 
 **AC-9:** Given das reale Gewitter-Modell (`ThunderLevel` = NONE/MED/HIGH), When Tokens
 gebildet werden, Then existiert keine „LOW"-Stufe im Code (kein toter Pfad); gültige
