@@ -6,6 +6,11 @@
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { Btn } from '$lib/components/atoms';
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
+	import {
+		DAILY_SUMMARY_METRICS,
+		DEFAULT_DAILY_SUMMARY_METRICS,
+		toggleDailySummaryMetric,
+	} from './reportConfigWrite.ts';
 
 	interface Props {
 		reportConfig: ReportConfig | undefined;
@@ -40,6 +45,13 @@
 	let show_compact_summary = $state(true);
 	let show_daylight = $state(true);
 	let wind_exposition_min_elevation_m: number | null = $state(null);
+
+	// E-Mail-Elemente (Issue #619 — Backend seit #621 live)
+	let show_stage_stats = $state(true);
+	let show_quick_take_tags = $state(true);
+	let show_stability = $state(true);
+	let show_highlights = $state(true);
+	let dailySummaryMetrics = $state<string[]>([...DEFAULT_DAILY_SUMMARY_METRICS]);
 
 	// --- Profile (Channel-Verfuegbarkeit) --------------------------------------
 	interface Profile {
@@ -99,6 +111,13 @@
 			} else if (Array.isArray(c.multi_day_trend_reports)) {
 				multi_day_trend_evening = c.multi_day_trend_reports.includes('evening');
 			}
+
+			// Issue #619: E-Mail-Elemente
+			if (typeof c.show_stage_stats === 'boolean') show_stage_stats = c.show_stage_stats;
+			if (typeof c.show_quick_take_tags === 'boolean') show_quick_take_tags = c.show_quick_take_tags;
+			if (typeof c.show_stability === 'boolean') show_stability = c.show_stability;
+			if (typeof c.show_highlights === 'boolean') show_highlights = c.show_highlights;
+			dailySummaryMetrics = [...(c.daily_summary_metrics ?? DEFAULT_DAILY_SUMMARY_METRICS)];
 		}
 
 		// Profile laden (Channel-Verfuegbarkeit). Fail-soft: bei Fehler bleiben
@@ -132,7 +151,13 @@
 			multi_day_trend_reports,
 			show_compact_summary,
 			show_daylight,
-			wind_exposition_min_elevation_m
+			wind_exposition_min_elevation_m,
+			// Issue #619: E-Mail-Elemente
+			show_stage_stats,
+			show_quick_take_tags,
+			show_stability,
+			show_highlights,
+			daily_summary_metrics: [...dailySummaryMetrics],
 		};
 	});
 
@@ -313,6 +338,68 @@
 				Handynummer fehlt — <a href="/account" style="color:var(--g-accent);text-decoration:underline;text-underline-offset:2px">im Account einrichten</a>
 			</div>
 		{/if}
+	</Card.Root>
+
+	<!-- ====================================================================== -->
+	<!-- E-Mail-Inhalt (Issue #619)                                            -->
+	<!-- ====================================================================== -->
+	<Card.Root class="p-3 space-y-2 hover:translate-y-0 hover:shadow-none" data-testid="report-mail-content">
+		<h3 class="text-sm font-semibold">E-Mail-Inhalt</h3>
+
+		<div class="text-sm">
+			<span data-testid="report-show-stage-stats" class="inline-flex items-center gap-2">
+				<Checkbox
+					checked={show_stage_stats}
+					onchange={(e) => { show_stage_stats = (e.target as HTMLInputElement).checked; }}
+				>Etappen-Kennzahlen</Checkbox>
+			</span>
+		</div>
+		<div class="text-sm">
+			<span data-testid="report-show-quick-take" class="inline-flex items-center gap-2">
+				<Checkbox
+					checked={show_quick_take_tags}
+					onchange={(e) => { show_quick_take_tags = (e.target as HTMLInputElement).checked; }}
+				>Quick-Take-Chips</Checkbox>
+			</span>
+		</div>
+		<div class="text-sm">
+			<span data-testid="report-show-stability" class="inline-flex items-center gap-2">
+				<Checkbox
+					checked={show_stability}
+					onchange={(e) => { show_stability = (e.target as HTMLInputElement).checked; }}
+				>Großwetterlage</Checkbox>
+			</span>
+		</div>
+		<div class="text-sm">
+			<span data-testid="report-show-highlights" class="inline-flex items-center gap-2">
+				<Checkbox
+					checked={show_highlights}
+					onchange={(e) => { show_highlights = (e.target as HTMLInputElement).checked; }}
+				>Zusammenfassung</Checkbox>
+			</span>
+		</div>
+
+		<h4 class="text-sm font-medium pt-1">Tages-Summe — Kennzahlen</h4>
+		{#each DAILY_SUMMARY_METRICS as metricId}
+			<div class="text-sm">
+				<span data-testid="daily-summary-metric-{metricId}" class="inline-flex items-center gap-2">
+					<Checkbox
+						checked={dailySummaryMetrics.includes(metricId)}
+						onchange={(e) => {
+							dailySummaryMetrics = toggleDailySummaryMetric(
+								dailySummaryMetrics,
+								metricId,
+								(e.target as HTMLInputElement).checked
+							);
+						}}
+					>{metricId === 'precipitation' ? 'Niederschlag'
+						: metricId === 'wind' ? 'Wind'
+						: metricId === 'visibility' ? 'Sicht'
+						: metricId === 'thunder' ? 'Gewitter'
+						: 'Temperatur'}</Checkbox>
+				</span>
+			</div>
+		{/each}
 	</Card.Root>
 
 	<!-- ====================================================================== -->

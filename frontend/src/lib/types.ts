@@ -183,6 +183,12 @@ export interface ReportConfig {
 	multi_day_trend_morning?: boolean;
 	multi_day_trend_evening?: boolean;
 	multi_day_trend_reports?: string[];
+	// Issue #619 — E-Mail-Elemente abschaltbar (Backend seit #621 live)
+	show_stage_stats?: boolean;
+	show_quick_take_tags?: boolean;
+	show_stability?: boolean;
+	show_highlights?: boolean;
+	daily_summary_metrics?: string[];
 }
 
 // Issue #429 — kanal-spezifische Layout-Listen (snake_case auf der Wire).
