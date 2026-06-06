@@ -798,3 +798,90 @@ class TestTokenConsolidation:
             "F002: Renderer(s) still evaluate thresholds directly:\n"
             + "\n".join(violations)
         )
+
+
+# ---------------------------------------------------------------------------
+# Issue #633: Telegram-Trend ohne Etappennamen (AC-1..AC-4)
+# ---------------------------------------------------------------------------
+
+class TestTelegramTrendNoNames:
+    """#633: Telegram trend rows must NOT include the stage name."""
+
+    LONG_NAME = "KHW_07: von Zollnersee Hütte nach Straniger Alm"
+
+    def test_telegram_trend_no_stage_name(self):
+        """AC-1: Given a long stage name, When telegram trend rendered,
+        Then neither the full name nor its distinctive fragment appears."""
+        body = _render_narrow(
+            "telegram",
+            trend=[_trend_stage(name=self.LONG_NAME)],
+        )
+        # Full name must not appear (even if split across lines, fragments must not be there)
+        assert "KHW_07" not in body, (
+            f"Stage name fragment 'KHW_07' must not appear in telegram trend. Got:\n{body}"
+        )
+
+    def test_telegram_trend_no_name_fragment(self):
+        """AC-1: Even a distinctive fragment of the name must not appear."""
+        body = _render_narrow(
+            "telegram",
+            trend=[_trend_stage(name=self.LONG_NAME)],
+        )
+        assert "Zollnersee" not in body, (
+            f"Name fragment 'Zollnersee' must not appear in telegram trend:\n{body}"
+        )
+
+    def test_telegram_trend_weekday_still_present(self):
+        """AC-1: Weekday must still appear after name removal."""
+        body = _render_narrow(
+            "telegram",
+            trend=[_trend_stage(name=self.LONG_NAME, weekday="Di")],
+        )
+        assert "Di" in body
+
+    def test_telegram_trend_temp_still_present(self):
+        """AC-1: Temperature values must still appear."""
+        body = _render_narrow(
+            "telegram",
+            trend=[_trend_stage(name=self.LONG_NAME, temp_lo=8, temp_hi=16)],
+        )
+        assert "8" in body and "16" in body
+
+    def test_telegram_trend_line_fits_without_name(self):
+        """AC-2: No line exceeds 40 chars with long name input."""
+        body = _render_narrow(
+            "telegram",
+            trend=[_trend_stage(name=self.LONG_NAME)],
+        )
+        for line in body.split("\n"):
+            assert len(line) <= 40, f"Line too long ({len(line)}): {line!r}"
+
+    def test_telegram_trend_heading_retained(self):
+        """AC-3: 'Nächste Etappen' heading must still appear."""
+        body = _render_narrow(
+            "telegram",
+            trend=[_trend_stage(name=self.LONG_NAME)],
+        )
+        assert "Nächste Etappen" in body
+
+    def test_telegram_trend_thunder_token_retained(self):
+        """AC-3: thunder_plain token (⚡–) must still appear."""
+        body = _render_narrow(
+            "telegram",
+            trend=[_trend_stage(name=self.LONG_NAME, thunder="NONE")],
+        )
+        assert "⚡–" in body
+
+    def test_email_html_still_has_name(self):
+        """AC-4: E-Mail HTML trend must still contain the stage name."""
+        html = _render_html([_trend_stage(name=self.LONG_NAME)])
+        assert "Zollnersee" in html or self.LONG_NAME in html, (
+            "AC-4: E-Mail HTML must still show the stage name"
+        )
+
+    def test_email_plain_still_has_name(self):
+        """AC-4: E-Mail plain trend must still contain the stage name."""
+        plain = _render_plain([_trend_stage(name=self.LONG_NAME)])
+        assert "Zollnersee" in plain or self.LONG_NAME in plain, (
+            "AC-4: E-Mail plain must still show the stage name"
+        )

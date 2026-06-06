@@ -212,12 +212,12 @@ def render_narrow(
         for stage in multi_day_trend:
             tok = format_trend_tokens(stage)
             weekday = stage.get("weekday", "")
-            name = stage.get("name", "")
             # Precip str — zero decision from format_trend_tokens
             precip_str = tok["precip_str"]
-            # Build compact line: Mo  Sóller→Tossals  8–16°C  3mm  W20  ⚡–
+            # Issue #633: no stage name in Telegram (like SMS). Keep weekday + values only.
+            # Build compact line: Mo  8–16°C  3mm  W20  ⚡–
             trend_line = (
-                f"{weekday}  {name}  {tok['temp_str']}  "
+                f"{weekday}  {tok['temp_str']}  "
                 f"{precip_str}  {tok['wind_str']}  {tok['thunder_plain']}"
             )
             lines.extend(_wrap(trend_line, width))
