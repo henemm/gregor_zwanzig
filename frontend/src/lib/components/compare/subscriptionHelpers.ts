@@ -111,10 +111,10 @@ export function compareActions(status: CompareStatus): CompareAction[] {
 			{ id: 'delete', label: 'Löschen', danger: true }
 		];
 	}
-	// 'active' und 'paused' liefern dieselbe Liste (Issue #611: + Archivieren)
+	// Bug #626: Toggle-Label kontextabhängig; 'send' entfernt (→ #627).
+	const pauseLabel = status === 'paused' ? 'Aktivieren' : 'Pausieren';
 	return [
-		{ id: 'pause', label: 'Pausieren' },
-		{ id: 'send', label: 'Briefing jetzt senden' },
+		{ id: 'pause', label: pauseLabel },
 		{ id: 'preview', label: 'Vorschau öffnen' },
 		{ id: 'edit', label: 'Bearbeiten' },
 		{ id: 'archive', label: 'Archivieren' },

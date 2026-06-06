@@ -7,6 +7,7 @@
 - **Zielgruppe:** Weitwanderer (z.B. GR20), eingeschraenkte Konnektivitaet
 - **Stack:** Python, uv, pytest
 - **Channels:** E-Mail (MVP), Telegram, SMS. (Signal wurde 2026-06-06 app-weit als Kanal entfernt — PO-Entscheidung, Issue #610.)
+- **Multi-User-Produkt:** Gregor Zwanzig ist **mandantenfähig** — jeder Nutzer hat eigene Trips, Orte, Orts-Vergleiche, Empfänger und Settings. Persistenz pro Nutzer unter `data/users/<user_id>/`. Das Backend isoliert **konsequent** über `s.WithUser(middleware.UserIDFromContext(r.Context()))` (Go) bzw. den `user_id`-Parameter (Python-Scheduler/-Router). **PFLICHT bei jedem nutzerbezogenen Endpoint:** echte `user_id` aus dem Auth-Kontext durchreichen, **niemals** auf `"default"` zurückfallen — ein `"default"`-Fallback in einem authentifizierten Pfad ist ein Cross-User-Datenleck. Jeder neue Endpoint, der Daten lädt/schreibt/versendet, MUSS mandantengetrennt arbeiten und mit **zwei verschiedenen Nutzern** getestet werden. Konsequenz fürs Produkt-Denken: Es gibt kein systemseitiges „an mich" — der eingeloggte Nutzer sieht nur seine eigenen Daten; „senden" heißt immer „an die von diesem Nutzer konfigurierten Empfänger". (Single-User-Annahmen wie „Test an mich vs. an die Empfänger" sind gegenstandslos.)
 
 ## Workflow
 

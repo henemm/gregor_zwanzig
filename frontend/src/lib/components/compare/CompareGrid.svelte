@@ -41,8 +41,34 @@
 			deleteTarget = preset;
 		} else if (id === 'archive') {
 			void archivePreset(preset);
+		} else if (id === 'edit' || id === 'setup') {
+			void goto('/compare/' + preset.id + '/edit');
+		} else if (id === 'preview') {
+			void goto('/compare/' + preset.id + '?tab=vorschau');
+		} else if (id === 'pause') {
+			void togglePause(preset);
 		}
-		// Weitere Aktionen (pause, send, preview, edit) folgen in späteren Issues
+	}
+
+	// Bug #626 — Pause/Aktivieren: Read-Modify-Write, nur schedule überschreiben.
+	// Muster wie CompareTabs.handleToggleActive (schedule 'manual' = pausiert).
+	async function togglePause(preset: ComparePreset) {
+		error = null;
+		const isPaused = deriveStatusFromPreset(preset) === 'paused';
+		const nextSchedule = isPaused ? 'daily' : 'manual';
+		try {
+			const res = await fetch(`/api/compare/presets/${preset.id}`, {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ ...preset, schedule: nextSchedule })
+			});
+			if (!res.ok) throw new Error(`PUT failed: ${res.status}`);
+			presets = presets.map((p) =>
+				p.id === preset.id ? { ...p, schedule: nextSchedule } : p
+			);
+		} catch {
+			error = 'Status-Änderung fehlgeschlagen. Bitte versuche es erneut.';
+		}
 	}
 
 	// Issue #611 — Vergleich archivieren: archived_at serverseitig setzen, danach
