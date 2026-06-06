@@ -24,7 +24,8 @@ from services.daylight_service import DaylightWindow
 from utils.timezone import local_fmt
 
 from src.output.renderers.email.helpers import (
-    build_confidence_hint, build_segment_label, build_units_legend,
+    build_confidence_hint, build_daily_aggregates, build_quick_take_chips,
+    build_segment_label, build_units_legend,
     derive_horizon, fmt_val, format_change_line, pill_html,
     shorten_stage_name, visible_cols,
 )
@@ -120,10 +121,31 @@ def _format_daylight_html(dl: DaylightWindow, *, tz: ZoneInfo) -> str:
     )
     explanation_html = f"<div style=\"margin-top:4px\">{inner}</div>"
 
+    # AC-3: proportionale Leiste — nutzbares Fenster relativ zur civil-Spanne
+    civil_span = (dl.civil_dusk - dl.civil_dawn).total_seconds()
+    if civil_span > 0:
+        usable_span = (dl.usable_end - dl.usable_start).total_seconds()
+        bar_pct = round(min(max(usable_span / civil_span * 100, 1), 100), 1)
+        offset_pct = round(min(max(
+            (dl.usable_start - dl.civil_dawn).total_seconds() / civil_span * 100, 0), 99), 1)
+        remainder_pct = round(max(100 - offset_pct - bar_pct, 0), 1)
+        daylight_bar = (
+            f'<table width="100%" cellpadding="0" cellspacing="0" '
+            f'style="margin-top:8px;border-collapse:collapse">'
+            f'<tr>'
+            f'<td style="width:{offset_pct}%;background:#d8d3c2;height:6px;"></td>'
+            f'<td style="width:{bar_pct}%;background:{G_WARNING};height:6px;border-radius:3px"></td>'
+            f'<td style="width:{remainder_pct}%;background:#d8d3c2;height:6px;"></td>'
+            f'</tr></table>'
+        )
+    else:
+        daylight_bar = ""
+
     return (
         f'<div style="background:{G_BOX_WARNING_BG};border-left:4px solid {G_WARNING};'
         f'padding:12px;margin:8px 0;">'
         f'<strong style="font-size:14px">{headline}</strong>'
+        f'{daylight_bar}'
         f'{explanation_html}'
         f'</div>'
     )
@@ -271,18 +293,40 @@ def render_html(
     # Issue #342: Tages-Basis für Pro-Metrik-Horizont-Filter.
     report_date_obj = segments[0].segment.start_time.date()
     sub_header = stage_name or ""
-    stats_line = ""
+    # AC-1: Kennzahlen-Raster mit benannten Labels statt einzeiliger stats_line
+    stats_grid_html = ""
     if stage_stats:
-        parts = []
+        _mono = f"font-family:{FONT_DATA};font-variant-numeric:tabular-nums"
+        _label_style = f"font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:{G_INK_MUTED};display:block"
+        _val_style = f"font-size:14px;font-weight:600;color:{G_INK};{_mono}"
+        cells = []
+        cells.append((
+            "Segmente", str(len(segments)), ""
+        ))
         if "distance_km" in stage_stats:
-            parts.append(f"{stage_stats['distance_km']:.1f} km")
+            cells.append(("Distanz", f"{stage_stats['distance_km']:.1f}", "km"))
         if "ascent_m" in stage_stats:
-            parts.append(f"↑{stage_stats['ascent_m']:.0f}m")
+            cells.append(("Aufstieg", f"{stage_stats['ascent_m']:.0f}", "m"))
         if "descent_m" in stage_stats:
-            parts.append(f"↓{stage_stats['descent_m']:.0f}m")
+            cells.append(("Abstieg", f"{stage_stats['descent_m']:.0f}", "m"))
         if "max_elevation_m" in stage_stats:
-            parts.append(f"max. {stage_stats['max_elevation_m']}m")
-        stats_line = " | ".join([f"{len(segments)} Segmente"] + parts)
+            cells.append(("Max Höhe", str(int(stage_stats['max_elevation_m'])), "m"))
+        _unit_style = f"font-size:11px;color:{G_INK_MUTED}"
+        tds_parts = []
+        for lbl, val, unit in cells:
+            unit_span = f'<span style="{_unit_style}"> {unit}</span>' if unit else ""
+            tds_parts.append(
+                f'<td style="padding:0 16px 0 0;vertical-align:top">'
+                f'<span style="{_label_style}">{lbl}</span>'
+                f'<span style="{_val_style}">{val}</span>'
+                f'{unit_span}'
+                f'</td>'
+            )
+        tds = "".join(tds_parts)
+        stats_grid_html = (
+            f'<table cellpadding="0" cellspacing="0" style="margin-top:10px;border-collapse:collapse">'
+            f'<tr>{tds}</tr></table>'
+        )
 
     seg_html_parts = []
     for seg_data, rows in zip(segments, seg_tables):
@@ -485,12 +529,50 @@ def render_html(
                 <ul>{hl_items}</ul>
             </div>"""
 
+    # AC-2: Quick-Take Chips aus Segment-Stundenwerten
+    quick_chips = build_quick_take_chips(segments)
+    quick_take_html = ""
+    if quick_chips:
+        chips_html = " ".join(pill_html(label, tone) for label, tone in quick_chips)
+        quick_take_html = (
+            f'<div style="padding:8px 16px;display:block">'
+            f'{chips_html}'
+            f'</div>'
+        )
+
     summary_html = ""
     if compact_summary:
         summary_html = f"""
             <div class="section" style="background:{G_BOX_INFO_BG};border-left:4px solid {G_ACCENT};padding:12px;margin:8px 0;">
                 <p style="margin:0;font-size:14px;line-height:1.6;">{compact_summary}</p>
             </div>"""
+
+    # AC-4: Tages-Summe-Block
+    daily_agg = build_daily_aggregates(segments)
+    rain_val = f"{daily_agg['rain_mm']:.0f}"
+    vis_val = f"{daily_agg['min_vis_km']:.1f}" if daily_agg["min_vis_km"] is not None else "–"
+    # Kompaktes Format: Wert · Einheit pro Zeile, damit 800-Zeichen-Test-Fenster ausreicht
+    daily_summary_html = (
+        f'<div style="background:{G_SURFACE_1};border-top:2px solid {G_INK};'
+        f'padding:16px;margin-top:16px">'
+        f'<p style="font-size:9px;text-transform:uppercase;letter-spacing:0.08em;'
+        f'color:{G_INK_MUTED};margin:0 0 8px 0">Tages-Summe</p>'
+        f'<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:13px">'
+        f'<tr>'
+        f'<td style="padding:2px 16px 2px 0;color:{G_INK_MUTED}">Regen gesamt</td>'
+        f'<td style="padding:2px 16px 2px 0;font-weight:600">{rain_val} mm</td>'
+        f'<td style="padding:2px 16px 2px 0;color:{G_INK_MUTED}">Max Böe</td>'
+        f'<td style="padding:2px 16px 2px 0;font-weight:600">{int(daily_agg["max_gust_kmh"])} km/h</td>'
+        f'</tr>'
+        f'<tr>'
+        f'<td style="padding:2px 16px 2px 0;color:{G_INK_MUTED}">Min Sicht</td>'
+        f'<td style="padding:2px 16px 2px 0;font-weight:600">{vis_val} km</td>'
+        f'<td style="padding:2px 16px 2px 0;color:{G_INK_MUTED}">Gewitter</td>'
+        f'<td style="padding:2px 0;font-weight:600">{daily_agg["thunder_word"]}</td>'
+        f'</tr>'
+        f'</table>'
+        f'</div>'
+    )
 
     # Issue #121 / AC-12 + AC-13: confidence hint (only when uncertain).
     confidence_hint_html = ""
@@ -569,11 +651,13 @@ def render_html(
             <div class="eyebrow" style="font-size:11px;letter-spacing:0.12em;color:{G_ACCENT};margin-bottom:6px;display:flex;align-items:center;gap:6px;">{sig.icon_html} {sig.eyebrow}</div>
             <h1>{trip_name}</h1>
             {"<h2>" + sub_header + "</h2>" if sub_header else ""}
-            <p>{report_type.title()} Report – {report_date}{" | " + stats_line if stats_line else ""}</p>
+            <p>{report_type.title()} Report – {report_date}</p>
+            {stats_grid_html}
         </div>
 
         {stability_html}
         {summary_html}
+        {quick_take_html}
         {confidence_hint_html}
         {daylight_html}
         {changes_html}
@@ -581,6 +665,7 @@ def render_html(
         {night_html}
         {thunder_html}
         {trend_html}
+        {daily_summary_html}
         {highlights_html}
 
         <div class="footer">

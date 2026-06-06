@@ -11,6 +11,7 @@ as explicit keyword args (spec §A6 "Pure Functions").
 """
 from __future__ import annotations
 
+import html as _html
 import math
 import re
 from collections import OrderedDict
@@ -588,6 +589,78 @@ def build_format_modes(dc: UnifiedWeatherDisplayConfig) -> dict[str, str]:
     return out
 
 
+def build_daily_aggregates(segments: list) -> dict:
+    """AC-4/AC-7: Aggregiere Stundenwerte über alle Segmente.
+
+    Returns dict mit: rain_mm, max_gust_kmh, min_vis_km, thunder_word.
+    """
+    rain_total = 0.0
+    max_gust = 0.0
+    min_vis: Optional[float] = None
+    max_thunder = ThunderLevel.NONE
+    severity = {ThunderLevel.NONE: 0, ThunderLevel.MED: 1, ThunderLevel.HIGH: 2}
+
+    for seg in segments:
+        ts = getattr(seg, "timeseries", None)
+        if ts is None:
+            continue
+        for dp in ts.data:
+            rain_total += (dp.precip_1h_mm or 0.0)
+            if dp.gust_kmh is not None:
+                max_gust = max(max_gust, dp.gust_kmh)
+            if dp.visibility_m is not None:
+                vis_km = dp.visibility_m / 1000.0
+                min_vis = vis_km if min_vis is None else min(min_vis, vis_km)
+            if dp.thunder_level is not None:
+                if severity.get(dp.thunder_level, 0) > severity.get(max_thunder, 0):
+                    max_thunder = dp.thunder_level
+
+    thunder_map = {ThunderLevel.NONE: "kein", ThunderLevel.MED: "MED", ThunderLevel.HIGH: "HIGH"}
+    return {
+        "rain_mm": rain_total,
+        "max_gust_kmh": max_gust,
+        "min_vis_km": min_vis,
+        "thunder_word": thunder_map.get(max_thunder, "kein"),
+    }
+
+
+def build_quick_take_chips(segments: list) -> list[tuple[str, str]]:
+    """AC-2: Ableitung farbiger Quick-Take-Chips aus Segment-Stundenwerten.
+
+    Returns list of (label, tone) tuples.
+    """
+    chips: list[tuple[str, str]] = []
+    has_thunder = False
+    max_gust = 0.0
+    first_rain_hour: Optional[int] = None
+    min_freeze: Optional[int] = None
+    severity = {ThunderLevel.NONE: 0, ThunderLevel.MED: 1, ThunderLevel.HIGH: 2}
+
+    for seg in segments:
+        ts = getattr(seg, "timeseries", None)
+        if ts is None:
+            continue
+        for dp in ts.data:
+            if dp.thunder_level is not None and severity.get(dp.thunder_level, 0) > 0:
+                has_thunder = True
+            if dp.gust_kmh is not None:
+                max_gust = max(max_gust, dp.gust_kmh)
+            if dp.precip_1h_mm is not None and dp.precip_1h_mm > 0 and first_rain_hour is None:
+                first_rain_hour = dp.ts.hour
+            if dp.freezing_level_m is not None:
+                fl = int(dp.freezing_level_m)
+                min_freeze = fl if min_freeze is None else min(min_freeze, fl)
+
+    chips.append(("Gewitter möglich", "warn") if has_thunder else ("Kein Gewitter", "good"))
+    if max_gust >= 25:
+        chips.append((f"Böen bis {int(max_gust)} km/h", "warn"))
+    if first_rain_hour is not None:
+        chips.append((f"Regen ab {first_rain_hour:02d}:00", "warn"))
+    if min_freeze is not None:
+        chips.append((f"0°-Linie {min_freeze} m", "info"))
+    return chips
+
+
 def pill_html(label: str, tone: str) -> str:
     """Outlook-kompatibler Pill/Tag-Baustein fuer Segment-Risk-Anzeigen.
 
@@ -610,5 +683,5 @@ def pill_html(label: str, tone: str) -> str:
         f'<span style="background:{bg};color:{fg};border-radius:99px;'
         f'padding:2px 8px;font-size:11px;font-weight:600;'
         f'display:inline-block;line-height:1.4;">'
-        f'{label}</span>'
+        f'{_html.escape(label)}</span>'
     )

@@ -24,8 +24,9 @@ from services.daylight_service import DaylightWindow
 from utils.timezone import local_fmt
 
 from src.output.renderers.email.helpers import (
-    build_confidence_hint, build_segment_label, build_units_legend, fmt_val,
-    format_change_line, shorten_stage_name, visible_cols,
+    build_confidence_hint, build_daily_aggregates, build_segment_label,
+    build_units_legend, fmt_val, format_change_line, shorten_stage_name,
+    visible_cols,
 )
 from src.output.renderers.email.profile_signature import profile_signature
 
@@ -263,6 +264,17 @@ def render_plain(
         for h in highlights:
             lines.append(f"  {h}")
         lines.append("")
+
+    # AC-7: Tages-Summe in Plain-Text
+    daily_agg = build_daily_aggregates(segments)
+    rain_val = f"{daily_agg['rain_mm']:.0f}"
+    vis_val = f"{daily_agg['min_vis_km']:.1f}" if daily_agg["min_vis_km"] is not None else "–"
+    lines.append("━━ Tages-Summe ━━")
+    lines.append(f"  Regen gesamt: {rain_val} mm")
+    lines.append(f"  Max Böe:      {int(daily_agg['max_gust_kmh'])} km/h")
+    lines.append(f"  Min Sicht:    {vis_val} km")
+    lines.append(f"  Gewitter:     {daily_agg['thunder_word']}")
+    lines.append("")
 
     all_rows = [r for tbl in seg_tables for r in tbl]
     legend_text = build_units_legend(all_rows) if all_rows else ""

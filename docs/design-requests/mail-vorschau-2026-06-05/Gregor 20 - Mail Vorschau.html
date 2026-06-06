@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8"/>
+<title>Gregor 20 — Mail-Vorschau</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  html, body { background: var(--g-paper); margin: 0; }
+  .mv-section { padding: 48px 40px 0; max-width: 1680px; }
+  .mv-eyebrow { font-family: var(--g-font-mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--g-accent); font-weight: 600; margin-bottom: 6px; }
+  .mv-title { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 4px; }
+  .mv-sub { font-size: 13px; color: var(--g-ink-3); line-height: 1.5; margin: 0 0 20px; }
+  .mv-grid { display: flex; gap: 32px; flex-wrap: wrap; align-items: flex-start; }
+  .mv-label { font-family: var(--g-font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--g-ink-4); font-weight: 600; margin-bottom: 10px; }
+  .mv-frame { background: #e9e6dc; padding: 20px; border-radius: var(--g-r-3); display: inline-block; }
+  hr.mv { border: none; border-top: 1px solid var(--g-rule-soft); margin: 48px 0 0; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" src="mock-data.jsx"></script>
+<script type="text/babel" src="brand-kit.jsx"></script>
+<script type="text/babel" src="atoms.jsx"></script>
+<script type="text/babel" src="molecules.jsx"></script>
+<script type="text/babel" src="organisms.jsx"></script>
+<script type="text/babel" src="mobile-shell.jsx"></script>
+<script type="text/babel" src="screen-output-preview.jsx"></script>
+<script type="text/babel" src="screen-trip-edit-v2-weather.jsx"></script>
+<script type="text/babel">
+
+/* ──────────────────────────────────────────────
+ *  CONFIG-VARIANTEN für die live-geränderten Vorschauen
+ * ────────────────────────────────────────────── */
+const MV_KHW_ALL = {
+  label: "KHW 403 · deine aktuelle Konfiguration",
+  sub: "15 Metriken — vollständige Auswahl wie in deiner echten KHW 403-Mail",
+  primary: ["temperature","wind_chill","wind","gust","precipitation","rain_probability",
+            "thunder","cloud_total","cloud_low","visibility","uv_index","freezing_level",
+            "humidity","dewpoint","sunshine"],
+  secondary: [],
+  mode: {},
+};
+const MV_WANDERN = {
+  label: "Profil: Wandern",
+  sub: "6 aktive Metriken — fokussiert auf das Entscheidungskritische",
+  primary: ["temperature","wind_chill","wind","gust","precipitation","rain_probability"],
+  mode: {},
+};
+const MV_TELEGRAM_GRENZE = {
+  label: "Telegram-Grenze + Tages-Max aktiviert",
+  sub: "11 Metriken — Tabelle zeigt erste 8, übrige 3 als Tages-Max-Zeile",
+  primary: ["temperature","wind_chill","wind","gust","precipitation","rain_probability",
+            "thunder","cloud_total","visibility","uv_index","freezing_level"],
+  telegramSuffix: true,
+  secondary: [],
+  mode: {},
+};
+const MV_EINFACH = {
+  label: `Darstellung: Einfach statt Roh`,
+  sub: "Wind + Regen als Kategorie statt Zahl",
+  primary: ["temperature","wind_chill","wind","gust","rain_probability","precipitation"],
+  secondary: ["cloud_total","visibility"],
+  mode: { wind: "indicator", gust: "indicator", rain_probability: "indicator" },
+};
+
+const MV_CONFIGS = [MV_KHW_ALL, MV_TELEGRAM_GRENZE, MV_WANDERN, MV_EINFACH];
+
+/* ──────────────────────────────────────────────
+ *  Kanal-Anzeige-Umschalter
+ * ────────────────────────────────────────────── */
+function MV_Tabs({ value, onChange, primary }) {
+  return (
+    <div style={{ display: "flex", gap: 4, marginBottom: 16 }}>
+      {WM2_CHANNELS.map(ch => {
+        const on = ch.id === value;
+        const over = ch.max < 99 && primary.length > ch.max;
+        return (
+          <button key={ch.id} onClick={() => onChange(ch.id)} style={{
+            padding: "7px 14px", cursor: "pointer", fontSize: 13, fontWeight: on ? 600 : 500,
+            border: `1px solid ${on ? "var(--g-ink)" : "var(--g-rule)"}`,
+            borderBottom: on ? "2px solid var(--g-accent)" : "1px solid var(--g-rule)",
+            borderRadius: "var(--g-r-2)", background: on ? "var(--g-card)" : "transparent",
+            color: on ? "var(--g-ink)" : "var(--g-ink-3)",
+            display: "inline-flex", alignItems: "center", gap: 6,
+          }}>
+            {ch.label}
+            {over && <span className="mono" style={{ fontSize: 9.5, padding: "1px 5px", borderRadius: 999, background: "rgba(192,138,26,0.15)", color: "#8a6210", fontWeight: 600 }}>−{primary.length - ch.max}</span>}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ──────────────────────────────────────────────
+ *  Eine Konfigurations-Karte (Email / TG / SMS umschaltbar)
+ * ────────────────────────────────────────────── */
+function MV_ConfigCard({ cfg }) {
+  const [ch, setCh] = React.useState("email");
+  return (
+    <div style={{ flex: "1 1 520px", minWidth: 340 }}>
+      <div style={{ marginBottom: 4, fontSize: 14, fontWeight: 600, color: "var(--g-ink)" }}>{cfg.label}</div>
+      <div style={{ fontSize: 12.5, color: "var(--g-ink-3)", marginBottom: 14 }}>{cfg.sub}</div>
+      <MV_Tabs value={ch} onChange={setCh} primary={cfg.primary}/>
+      {ch === "email"    && <WM2_EmailTable    primary={cfg.primary} mode={cfg.mode || {}}/>}
+      {ch === "telegram" && <WM2_TelegramBubble primary={cfg.primary} mode={cfg.mode || {}} telegramSuffix={cfg.telegramSuffix || false}/>}
+      {ch === "sms"      && <WM2_SMSLine primary={cfg.primary}/>}
+    </div>
+  );
+}
+
+/* ──────────────────────────────────────────────
+ *  Haupt-App
+ * ────────────────────────────────────────────── */
+function App() {
+  const mockTrip = typeof MOCK_TRIP !== "undefined" ? MOCK_TRIP : { name: "KHW 403", shortName: "KHW 403" };
+  const mockStage = mockTrip.stages ? mockTrip.stages[0] : {};
+
+  return (
+    <div style={{ paddingBottom: 80 }}>
+
+      {/* ── 1 · Vollständige Email (Desktop + Mobile) ── */}
+      <div className="mv-section">
+        <div className="mv-eyebrow">01 · Vollständige Trip-Email</div>
+        <h2 className="mv-title">Volle Briefing-Email · so landet sie im Postfach</h2>
+        <p className="mv-sub">Links: Desktop-Client (680 px). Rechts: Mobile-Client (380 px, iPhone Mail). Gleicher Inhalt, gleiche Segmente — nur Breite und Layout unterscheiden sich.</p>
+        <div className="mv-grid">
+          <div>
+            <div className="mv-label">Email · Desktop-Client · 680 px</div>
+            <div style={{ border: "1px solid var(--g-rule)", borderRadius: "var(--g-r-3)", overflow: "hidden", display: "inline-block" }}>
+              <EmailPreview stage={mockStage} trip={mockTrip} mobile={false}/>
+            </div>
+          </div>
+          <div>
+            <div className="mv-label">Email · Mobile-Client · 380 px</div>
+            <div className="mv-frame">
+              <PhoneFrame height={700} time="08:14" style={{ transform: "scale(0.85)", transformOrigin: "top left" }}>
+                <div style={{ position: "absolute", inset: 0, overflowY: "auto", background: "#fff" }}>
+                  <EmailPreview stage={mockStage} trip={mockTrip} mobile={true}/>
+                </div>
+              </PhoneFrame>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <hr className="mv"/>
+
+      {/* ── 2 · SMS ── */}
+      <div className="mv-section">
+        <div className="mv-eyebrow">02 · SMS-Format</div>
+        <h2 className="mv-title">SMS · 140 Zeichen · kein Raster</h2>
+        <p className="mv-sub">Kein Tabellen-Layout. Nur entscheidungskritische Werte als kompakte Tokens. Reihenfolge und Spalten-Konfiguration spielen hier keine Rolle.</p>
+        <div className="mv-grid">
+          <div>
+            <div className="mv-label">SMS · iPhone</div>
+            <div className="mv-frame">
+              <SMSPreview stage={mockStage} trip={mockTrip}/>
+            </div>
+          </div>
+          <div style={{ flex: "1 1 360px", padding: "16px 20px", background: "var(--g-card)", border: "1px solid var(--g-rule-soft)", borderRadius: "var(--g-r-3)", fontSize: 13.5, color: "var(--g-ink-2)", lineHeight: 1.6 }}>
+            <div style={{ fontWeight: 600, color: "var(--g-ink)", marginBottom: 8 }}>Warum SMS so kurz?</div>
+            Nur entscheidungskritische Werte haben feste Kurzcodes (N = Temperatur, W = Wind, PR = Regenwahrscheinlichkeit …).
+            Alles andere fällt weg — unabhängig davon, was du in Wetter-Metriken konfiguriert hast.
+            <div style={{ marginTop: 12, padding: "10px 12px", background: "var(--g-card-alt)", borderRadius: 4, fontFamily: "var(--g-font-mono)", fontSize: 11.5, color: "var(--g-ink)" }}>
+              KHW403: N6.5 W10(23) PR100%@09 Z:WATCH:2447
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <hr className="mv"/>
+
+      {/* ── 3 · Konfigurations-Varianten ── */}
+      <div className="mv-section">
+        <div className="mv-eyebrow">03 · Konfigurations-Varianten</div>
+        <h2 className="mv-title">Wie ändert sich die Mail bei anderer Konfiguration?</h2>
+        <p className="mv-sub">Vier Varianten desselben Trips — unterschiedliche Metriken, Reihenfolge, Darstellung. Kanal-Umschalter zeigt Email · Telegram · SMS je Variante. Bei Telegram siehst du, ab wann Metriken nicht mehr in die Tabelle passen — und ob du Tages-Max-Werte aktiviert hast.</p>
+        <div className="mv-grid">
+          {MV_CONFIGS.map(cfg => <MV_ConfigCard key={cfg.label} cfg={cfg}/>)}
+        </div>
+      </div>
+
+      <div style={{ height: 80 }}/>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
