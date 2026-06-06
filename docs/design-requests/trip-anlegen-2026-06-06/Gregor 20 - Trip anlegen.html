@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8"/>
+<title>Gregor 20 — Neue Tour anlegen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  html, body { background: var(--g-paper); min-height: 100%; margin: 0; }
+  #root { min-height: 100%; }
+
+  /* Preset-Switcher */
+  .ps {
+    position: fixed; bottom: 18px; right: 18px; z-index: 300;
+    display: inline-flex; gap: 2px; padding: 3px;
+    background: var(--g-card); border: 1px solid var(--g-rule);
+    border-radius: var(--g-r-pill); box-shadow: var(--g-shadow-2);
+  }
+  .ps button {
+    border: none; background: transparent; cursor: pointer;
+    font-family: var(--g-font-mono); font-size: 10.5px;
+    letter-spacing: 0.04em; padding: 6px 13px;
+    border-radius: var(--g-r-pill);
+    color: var(--g-ink-3); font-weight: 600;
+    white-space: nowrap;
+  }
+  .ps button[data-active="1"] { background: var(--g-ink); color: var(--g-paper); }
+
+  /* Analyse-Banner */
+  .analyse-banner {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 400;
+    background: var(--g-ink); color: var(--g-paper);
+    font-family: var(--g-font-mono); font-size: 11.5px;
+    letter-spacing: 0.03em; line-height: 1.55;
+    padding: 11px 24px;
+    display: flex; align-items: flex-start; gap: 18px;
+    border-bottom: 2px solid var(--g-accent);
+  }
+  .analyse-banner .ab-label {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--g-accent);
+    white-space: nowrap; padding-top: 1px;
+  }
+  .analyse-banner .ab-body { flex: 1; opacity: 0.85; }
+  .analyse-banner strong { color: #fff; opacity: 1; }
+  .analyse-banner button {
+    background: transparent; border: 1px solid rgba(255,255,255,0.2);
+    color: rgba(255,255,255,0.6); cursor: pointer; border-radius: 3px;
+    font-family: var(--g-font-mono); font-size: 10px; padding: 4px 10px;
+    white-space: nowrap; align-self: center; flex-shrink: 0;
+  }
+  .analyse-banner button:hover { color: #fff; border-color: rgba(255,255,255,0.5); }
+  body.banner-hidden .analyse-banner { display: none; }
+  body.banner-hidden #root { padding-top: 0 !important; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+
+<!-- Analyse-Banner -->
+<div class="analyse-banner" id="analyseBanner">
+  <span class="ab-label">Dev-Preview</span>
+  <span class="ab-body">
+    <strong>Kanonische Quelle: Gregor 20 - Desktop.html · Sektion 03.</strong>
+    Diese Seite ist ein Entwicklungs-Werkzeug mit Preset-Switcher.
+    Für Design-Reviews und Handoff bitte die Desktop-Canvas verwenden.
+  </span>
+  <button onclick="document.body.classList.add('banner-hidden')">OK</button>
+</div>
+
+<div id="root" style="padding-top: 44px;"></div>
+
+<script type="text/babel" src="mock-data.jsx"></script>
+<script type="text/babel" src="brand-kit.jsx"></script>
+<script type="text/babel" src="atoms.jsx"></script>
+<script type="text/babel" src="molecules.jsx"></script>
+<script type="text/babel" src="organisms.jsx"></script>
+<script type="text/babel" src="sidebar.jsx"></script>
+<script type="text/babel" src="mobile-shell.jsx"></script>
+<script type="text/babel" src="screen-trip-edit-v2-weather.jsx"></script>
+<script type="text/babel" src="screen-waypoint-editor.jsx"></script>
+<script type="text/babel" src="screen-trip-edit-v2-main.jsx"></script>
+<script type="text/babel" src="screen-trip-new-v2.jsx"></script>
+<script type="text/babel" src="screen-trip-edit-v2-mobile.jsx"></script>
+<script type="text/babel" src="screen-trip-new-v2-mobile.jsx"></script>
+
+<script type="text/babel">
+  const PRESET_LABELS = [
+    { id: "empty",        label: "Leer" },
+    { id: "name_entered", label: "Name ✓" },
+    { id: "etappen_done", label: "GPX ✓ → Wegpunkte" },
+    { id: "wetter_done",  label: "Wetter ✓" },
+    { id: "all_done",     label: "Eingerichtet" },
+  ];
+
+  function App() {
+    const [preset,   setPreset]   = React.useState("etappen_done");
+    const [platform, setPlatform] = React.useState("desktop");
+    return (
+      <React.Fragment>
+        {platform === "desktop"
+          ? <ScreenTripNewV2 key={"d-" + preset} preset={preset}/>
+          : <div style={{ padding: "40px 0 80px", display: "flex", justifyContent: "center", background: "var(--g-paper)", minHeight: "100vh" }}>
+              <ScreenTripNewV2Mobile key={"m-" + preset} preset={preset}/>
+            </div>}
+
+        <div className="ps">
+          <button data-active={platform === "desktop" ? 1 : 0} onClick={() => setPlatform("desktop")}>DESKTOP</button>
+          <button data-active={platform === "mobile"  ? 1 : 0} onClick={() => setPlatform("mobile")}>MOBILE</button>
+          <span style={{ width: 1, background: "var(--g-rule)", display: "inline-block", margin: "2px 3px", alignSelf: "stretch" }}/>
+          {PRESET_LABELS.map(p => (
+            <button
+              key={p.id}
+              data-active={preset === p.id ? 1 : 0}
+              onClick={() => setPreset(p.id)}>
+              {p.label}
+            </button>
+          ))}
+        </div>
+      </React.Fragment>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+
+</body>
+</html>
