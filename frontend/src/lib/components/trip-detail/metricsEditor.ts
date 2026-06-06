@@ -425,6 +425,90 @@ export interface BucketSummary {
  * - skala:   aktive (primary+secondary) Metriken mit friendlyMap[id]===true.
  *            off-Metriken zählen NICHT.
  */
+
+// =============================================================================
+// Issue #587 AC-2 — diffHighlight (Diff-Aufleuchten)
+// =============================================================================
+
+export type HighlightKind = 'added' | 'removed' | 'moved' | 'mode' | 'preset';
+
+export interface Highlight {
+	id: string | null;
+	kind: HighlightKind;
+}
+
+export interface WeatherSnapshot {
+	columns: string[];
+	mode: Record<string, 'raw' | 'indicator'>;
+	presetId: string;
+}
+
+/**
+ * Vergleicht zwei WeatherSnapshot-Objekte und liefert eine Highlight-Beschreibung
+ * der ersten relevanten Änderung zurück.
+ *
+ * Präzedenz (oben = höher):
+ * 1. presetId≠ UND Spaltenmenge unterschiedlich → { id:null, kind:'preset' }
+ * 2. genau eine neue id → { id, kind:'added' }
+ * 3. genau eine entfernte id → { id, kind:'removed' }
+ * 4. gleiche Menge, andere Reihenfolge → { id:<erste verschobene>, kind:'moved' }
+ * 5. gleiche Spalten, ein mode[id] unterschiedlich → { id, kind:'mode' }
+ * 6. sonst → null
+ */
+export function diffHighlight(prev: WeatherSnapshot, next: WeatherSnapshot): Highlight | null {
+	// F001-Härtung: Duplikate in columns entfernen (erstes Vorkommen behalten),
+	// damit der moved-Vergleich keine Phantom-Ergebnisse durch undefined liefert.
+	const dedupCols = (cols: string[]) => [...new Set(cols)];
+	const prevCols = dedupCols(prev.columns);
+	const nextCols = dedupCols(next.columns);
+
+	const prevSet = new Set(prevCols);
+	const nextSet = new Set(nextCols);
+
+	// Regel 1: preset gewechselt + Spaltenmenge geändert
+	if (prev.presetId !== next.presetId) {
+		const setsEqual = prevSet.size === nextSet.size && [...prevSet].every((id) => nextSet.has(id));
+		if (!setsEqual) {
+			return { id: null, kind: 'preset' };
+		}
+	}
+
+	// Diff der Mengen
+	const added = nextCols.filter((id) => !prevSet.has(id));
+	const removed = prevCols.filter((id) => !nextSet.has(id));
+
+	// Regel 2: genau eine Spalte hinzugefügt
+	if (added.length === 1 && removed.length === 0) {
+		return { id: added[0], kind: 'added' };
+	}
+
+	// Regel 3: genau eine Spalte entfernt
+	if (removed.length === 1 && added.length === 0) {
+		return { id: removed[0], kind: 'removed' };
+	}
+
+	// Regel 4: gleiche Menge, andere Reihenfolge
+	if (added.length === 0 && removed.length === 0) {
+		for (let i = 0; i < prevCols.length; i++) {
+			if (prevCols[i] !== nextCols[i]) {
+				return { id: prevCols[i], kind: 'moved' };
+			}
+		}
+
+		// Regel 5: gleiche Spalten + gleiche Reihenfolge, aber ein mode geändert
+		const allIds = prevCols;
+		for (const id of allIds) {
+			const prevMode = prev.mode[id] ?? 'raw';
+			const nextMode = next.mode[id] ?? 'raw';
+			if (prevMode !== nextMode) {
+				return { id, kind: 'mode' };
+			}
+		}
+	}
+
+	return null;
+}
+
 export function buildBucketSummary(
 	buckets: Buckets,
 	friendlyMap: Record<string, boolean>,

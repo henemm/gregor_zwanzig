@@ -1,37 +1,39 @@
 <script lang="ts">
-	// Issue #364 (Schritt B von #361) — Bucket-Editor: Spalten / Detail-Werte /
-	// Nicht im Briefing + Reihenfolge + Roh/Skala. Ersetzt den Kategorie-Checkbox-
-	// Editor. bucket/order reisen additiv durch die Go-API in display_config und
-	// werden vom Python-Loader (#360) gelesen — kein Backend-Umbau.
-	// Spec: docs/specs/modules/issue_364_metrics_editor_buckets.md
-	// Design: docs/design/epic_331_output_layout/screen-metrics-editor.jsx
+	// Issue #587 v2 — Wetter-Metriken-Tab: 4-Abschnitte-Editor + Live-Mail-Vorschau (Desktop).
+	// LÖST AB: OutputLayoutEditor-basiertes Layout (Issue #364/#431).
+	// BEWAHRT: initFromTrip, handleSave, bucketsToColumns-Migration, telegramKurzform,
+	//          read-modify-write-Payload, SavePresetDialog, WeatherMetricsMobileView.
+	// SCHÜTZT: OutputLayoutEditor, BucketSection*, ActiveMetricRow bleiben UNVERÄNDERT
+	//          (Wizard + Orts-Vergleich nutzen sie).
+	// Spec: docs/specs/modules/issue_587_weather_tab_v2.md
 	import { api } from '$lib/api.js';
 	import type { Trip, MetricPreset, Horizons } from '$lib/types';
 	import { HORIZONS_ALL } from '$lib/types';
-	import { Btn, Eyebrow, Pill } from '$lib/components/atoms';
-	import { Checkbox } from '$lib/components/ui/checkbox';
-	import PresetRow from './PresetRow.svelte';
+	import { Btn, Card, Eyebrow, Pill } from '$lib/components/atoms';
 	import SavePresetDialog from './SavePresetDialog.svelte';
-	import AboutOutputLayout from './AboutOutputLayout.svelte';
-	import ChannelPreviewBlock from './ChannelPreviewBlock.svelte';
 	import WeatherMetricsMobileView from './WeatherMetricsMobileView.svelte';
-	// Issue #431: Bucket-Editor wandert in `shared/` (siehe Import unten) —
-	// dieser Tab wird zum duennen Wrapper (channel="email" fix), Wizard nutzt
-	// dieselbe Komponente mit 4 Kanal-Tabs.
-	import { OutputLayoutEditor } from '$lib/components/organisms';
-	// Issue #587: TablePreview einbinden (war ungenutzt nach #343).
-	import TablePreview from './TablePreview.svelte';
-	// Issue #433: leitet `onDndReorder` an die Shared-Komponente durch.
+	// v2 Sub-Komponenten (neu, standalone, keine Abhängigkeit von OutputLayoutEditor)
+	import WeatherV2PresetBar from './WeatherV2PresetBar.svelte';
+	import WeatherV2Grundauswahl from './WeatherV2Grundauswahl.svelte';
+	import WeatherV2Reihenfolge from './WeatherV2Reihenfolge.svelte';
+	import WeatherV2Kanaele from './WeatherV2Kanaele.svelte';
+	import WeatherV2MailPreview from './WeatherV2MailPreview.svelte';
 	import {
 		autoAssign, bucketsToColumns, move, reorder, buildWeatherConfigMetrics,
-		CATEGORY_LABELS, CATEGORY_ORDER, INDICATOR_MAP, indicatorCapable,
-		type Buckets, type MetricEntry, type MetricCatalog,
+		diffHighlight,
+		CATEGORY_LABELS, CATEGORY_ORDER, indicatorCapable,
+		type Buckets, type MetricEntry, type MetricCatalog, type Highlight, type WeatherSnapshot,
 	} from './metricsEditor.ts';
 
 	interface Template {
 		id: string;
 		label: string;
 		metrics: string[];
+	}
+	interface ChannelConfig {
+		email: boolean;
+		telegram: boolean;
+		sms: boolean;
 	}
 	interface Props {
 		trip: Trip;
@@ -46,11 +48,17 @@
 	let saveSuccess = $state(false);
 	let saveError: string | null = $state(null);
 
-	// Bucket-State (ersetzt enabledMap). friendlyMap = Roh/Skala, horizonsMap bleibt.
+	// Bucket-State (secondary IMMER leer nach #587 — kein Detail-Bucket).
 	let buckets: Buckets = $state({ primary: [], secondary: [], off: [] });
 	let friendlyMap: Record<string, boolean> = $state({});
 	let horizonsMap: Record<string, Horizons> = $state({});
 	let selectedTemplate = $state('');
+	// Issue #587: Kanal-Konfiguration (kein Signal). display_config ist additiv
+	// — channels wird als unbekanntes Feld durchgereicht, daher Cast über unknown.
+	let channels: ChannelConfig = $state(
+		((trip.display_config as unknown as Record<string, unknown>)?.channels as ChannelConfig | undefined)
+			?? { email: true, telegram: true, sms: false }
+	);
 	// Issue #614: Telegram Kurzform-Toggle (SMS-Tages-Max als Anhang).
 	let telegramKurzform = $state<boolean>(trip.display_config?.telegram_kurzform ?? false);
 	// Issue #624: konfigurierbare Schwellwerte pro Metrik (nur threshold-fähige).
@@ -58,17 +66,47 @@
 	let smsThresholds = $state<Record<string, string>>({});
 	let savedSnapshot = $state('');
 	let showSavePresetDialog = $state(false);
-	let showAbout = $state(false);
-	let pendingPreset: string | null = $state(null);
 	let showMobileView = $state(false);
+	let pendingPreset: string | null = $state(null);
 
-	// Abgeleitete Lookups für die Komponenten.
+	// AC-2 Diff-Highlight: 2,5s Aufleuchten nach jeder Änderung.
+	let highlight: Highlight | null = $state(null);
+	let highlightTimer: ReturnType<typeof setTimeout> | null = null;
+
+	function flash(h: Highlight | null) {
+		if (highlightTimer) clearTimeout(highlightTimer);
+		highlight = h;
+		if (h) {
+			highlightTimer = setTimeout(() => { highlight = null; highlightTimer = null; }, 2500);
+		}
+	}
+
+	function prevSnapshot(): WeatherSnapshot {
+		return {
+			columns: [...buckets.primary],
+			mode: Object.fromEntries(
+				buckets.primary.map(id => [id, friendlyMap[id] === true ? 'indicator' : 'raw'])
+			) as Record<string, 'raw' | 'indicator'>,
+			presetId: selectedTemplate,
+		};
+	}
+
+	function applyDiff(nextCols: string[], nextMode: Record<string, boolean>, nextPresetId: string) {
+		const prev = prevSnapshot();
+		const next: WeatherSnapshot = {
+			columns: nextCols,
+			mode: Object.fromEntries(nextCols.map(id => [id, nextMode[id] === true ? 'indicator' : 'raw'])) as Record<string, 'raw' | 'indicator'>,
+			presetId: nextPresetId,
+		};
+		flash(diffHighlight(prev, next));
+	}
+
+	// Abgeleitete Lookups.
 	const metricById = $derived.by(() => {
 		const map: Record<string, MetricEntry> = {};
 		for (const ms of Object.values(catalog)) for (const m of ms) map[m.id] = m;
 		return map;
 	});
-	// Kürzel (Design "Kürzel"): aus dem Label abgeleitet — kein Backend-Feld.
 	const shortById = $derived.by(() => {
 		const map: Record<string, string> = {};
 		for (const id of Object.keys(metricById)) {
@@ -78,12 +116,16 @@
 		return map;
 	});
 
+	// Conflict 1 resolved: BEIDE Felder in isDirty + snapshot.
 	const isDirty = $derived(
-		JSON.stringify({ buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds }) !== savedSnapshot,
+		JSON.stringify({ buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, channels }) !== savedSnapshot,
 	);
 
-	function snapshot(b: Buckets, f: Record<string, boolean>, h: Record<string, Horizons>, tk: boolean, st: Record<string, string>): string {
-		return JSON.stringify({ buckets: b, friendlyMap: f, horizonsMap: h, telegramKurzform: tk, smsThresholds: st });
+	function snapshot(
+		b: Buckets, f: Record<string, boolean>, h: Record<string, Horizons>,
+		tk: boolean, st: Record<string, string>, ch: ChannelConfig
+	): string {
+		return JSON.stringify({ buckets: b, friendlyMap: f, horizonsMap: h, telegramKurzform: tk, smsThresholds: st, channels: ch });
 	}
 
 	function allCatalogIds(): string[] {
@@ -105,14 +147,12 @@
 		const hasBuckets = savedMetrics?.some((m) => m.bucket || m.order !== undefined);
 
 		if (savedMetrics && hasBuckets) {
-			// bucket/order vorhanden → direkt übernehmen (order-sortiert).
 			const prim = savedMetrics
 				.filter((m) => m.enabled && m.bucket === 'primary')
 				.sort((a, b2) => (a.order ?? 0) - (b2.order ?? 0));
 			const sec = savedMetrics
 				.filter((m) => m.enabled && m.bucket === 'secondary')
 				.sort((a, b2) => (a.order ?? 0) - (b2.order ?? 0));
-			// enabled ohne expliziten bucket → secondary (defensiv), wie #360-Loader.
 			const looseActive = savedMetrics.filter(
 				(m) => m.enabled && m.bucket !== 'primary' && m.bucket !== 'secondary',
 			);
@@ -123,11 +163,9 @@
 				off: allCatalogIds().filter((id) => !activeIds.has(id)),
 			};
 		} else if (savedMetrics && savedMetrics.length) {
-			// Legacy ohne bucket/order → autoAssign auf aktive IDs.
 			const activeIds = savedMetrics.filter((m) => m.enabled).map((m) => m.metric_id);
 			b = autoAssign(activeIds, catalog);
 		} else {
-			// Kein gespeicherter Stand → Default-enabled aus Katalog.
 			const activeIds = allCatalogIds().filter((id) => metricById[id]?.default_enabled);
 			b = autoAssign(activeIds, catalog);
 		}
@@ -145,8 +183,7 @@
 		}
 
 		// Issue #587: WeatherMetricsTab arbeitet ohne Detail-Bucket (hideDetailBucket=true).
-		// Bestehende secondary-Metriken werden verlustfrei nach primary migriert
-		// (bucketsToColumns: primary zuerst, dann secondary, Duplikate entfernt).
+		// Bestehende secondary-Metriken werden verlustfrei nach primary migriert.
 		const mergedColumns = bucketsToColumns(b);
 		b = { primary: mergedColumns, secondary: [], off: b.off };
 
@@ -155,8 +192,9 @@
 		buckets = b;
 		friendlyMap = fMap;
 		horizonsMap = hMap;
+		// Conflict 2 resolved: BEIDE Zuweisungen.
 		smsThresholds = thrMap;
-		savedSnapshot = snapshot(b, fMap, hMap, telegramKurzform, thrMap);
+		savedSnapshot = snapshot(b, fMap, hMap, telegramKurzform, thrMap, channels);
 	}
 
 	async function load() {
@@ -183,29 +221,29 @@
 		if (Object.keys(catalog).length === 0) load();
 	});
 
-	// --- Preset-Auswahl: autoAssign überschreibt Buckets (Confirm wenn dirty) ---
+	// Preset-Auswahl
 	function applyPreset(id: string) {
 		const userP = userPresets.find((p) => p.id === id);
 		const tmpl = templates.find((t) => t.id === id);
 		const activeIds = userP
 			? userP.metrics.filter((m) => m.enabled).map((m) => m.metric_id)
 			: (tmpl ? tmpl.metrics : []);
-		buckets = autoAssign(activeIds, catalog);
-		// Issue #587: WeatherMetricsTab hat keinen Detail-Bucket — secondary nach primary migrieren.
-		buckets = { primary: bucketsToColumns(buckets), secondary: [], off: buckets.off };
+		let newBuckets = autoAssign(activeIds, catalog);
+		newBuckets = { primary: bucketsToColumns(newBuckets), secondary: [], off: newBuckets.off };
+		const newFriendly = { ...friendlyMap };
 		if (userP) {
 			for (const m of userP.metrics) {
-				friendlyMap = { ...friendlyMap, [m.metric_id]: m.use_friendly_format };
+				newFriendly[m.metric_id] = m.use_friendly_format;
 			}
 		}
+		applyDiff(newBuckets.primary, newFriendly, id);
+		buckets = newBuckets;
+		friendlyMap = newFriendly;
 		selectedTemplate = id;
 	}
 
 	function onSelectPreset(id: string) {
-		if (isDirty) {
-			pendingPreset = id;
-			return;
-		}
+		if (isDirty) { pendingPreset = id; return; }
 		applyPreset(id);
 	}
 
@@ -215,34 +253,37 @@
 	}
 
 	function onMode(id: string, useIndicator: boolean) {
-		friendlyMap = { ...friendlyMap, [id]: useIndicator };
+		const newFriendly = { ...friendlyMap, [id]: useIndicator };
+		applyDiff(buckets.primary, newFriendly, selectedTemplate);
+		friendlyMap = newFriendly;
 	}
 
-	// Issue #415 — Mobile-Toggle: aktiviert -> primary-Bucket, deaktiviert -> off.
-	// Issue #587: Ziel war früher 'secondary', jetzt 'primary' (kein Detail-Bucket).
-	function onToggleMetric(id: string, active: boolean) {
-		const from: keyof Buckets = buckets.primary.includes(id)
-			? 'primary'
-			: buckets.secondary.includes(id) ? 'secondary' : 'off';
-		const to: keyof Buckets = active ? 'primary' : 'off';
-		if (from !== to) buckets = move(buckets, id, from, to);
+	// Toggle: Metrik aktivieren (→ primary) oder deaktivieren (→ off).
+	// secondary ist nach #587 immer leer — kein secondary-Zweig nötig (F002).
+	function onToggleMetric(id: string, wasOn: boolean) {
+		const from: keyof Buckets = buckets.primary.includes(id) ? 'primary' : 'off';
+		const to: keyof Buckets = wasOn ? 'off' : 'primary';
+		if (from !== to) {
+			const newBuckets = move(buckets, id, from, to);
+			applyDiff(newBuckets.primary, friendlyMap, selectedTemplate);
+			buckets = newBuckets;
+		}
 		if (selectedTemplate) selectedTemplate = '';
 	}
 
-	function onMove(id: string, target: 'primary' | 'secondary' | 'off') {
-		const from: keyof Buckets = buckets.primary.includes(id)
-			? 'primary'
-			: buckets.secondary.includes(id) ? 'secondary' : 'off';
-		buckets = move(buckets, id, from, target);
+	// Aus Abschnitt 3 entfernen (→ off).
+	function onRemove(id: string) {
+		const newBuckets = move(buckets, id, 'primary', 'off');
+		applyDiff(newBuckets.primary, friendlyMap, selectedTemplate);
+		buckets = newBuckets;
 		if (selectedTemplate) selectedTemplate = '';
 	}
 
-	function onReorder(bucket: keyof Buckets, id: string, dir: -1 | 1) {
-		buckets = reorder(buckets, bucket, id, dir);
-	}
-
-	function onDndReorder(bucket: 'primary' | 'secondary', newOrder: string[]) {
-		buckets = { ...buckets, [bucket]: newOrder };
+	// Reihenfolge ▲▼.
+	function onReorder(id: string, dir: -1 | 1) {
+		const newBuckets = reorder(buckets, 'primary', id, dir);
+		applyDiff(newBuckets.primary, friendlyMap, selectedTemplate);
+		buckets = newBuckets;
 	}
 
 	function handleDiscard() {
@@ -252,7 +293,9 @@
 			friendlyMap = snap.friendlyMap;
 			horizonsMap = snap.horizonsMap ?? {};
 			telegramKurzform = snap.telegramKurzform ?? false;
+			// Conflict 3 resolved: BEIDE Felder wiederherstellen.
 			smsThresholds = snap.smsThresholds ?? {};
+			channels = snap.channels ?? { email: true, telegram: true, sms: false };
 		} catch (e) {
 			console.error(e);
 			initFromTrip();
@@ -282,10 +325,12 @@
 				metrics,
 				preset_name: selectedTemplate || undefined,
 				telegram_kurzform: telegramKurzform,
+				channels,
 			};
 			await api.put(`/api/trips/${trip.id}/weather-config`, payload);
 			saveSuccess = true;
-			savedSnapshot = snapshot(buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds);
+			// Conflict 4 resolved: BEIDE Felder im snapshot-Aufruf.
+			savedSnapshot = snapshot(buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, channels);
 			setTimeout(() => { saveSuccess = false; }, 3000);
 		} catch (e: unknown) {
 			saveError = (e as { error?: string })?.error ?? 'Speichern fehlgeschlagen';
@@ -298,11 +343,11 @@
 		userPresets = [preset, ...userPresets];
 	}
 
-	// Für SavePresetDialog (erwartet enabledMap): aktive = primary+secondary.
+	// Für SavePresetDialog (erwartet enabledMap): aktive = primary.
 	const enabledMap = $derived.by(() => {
 		const map: Record<string, boolean> = {};
 		for (const id of allCatalogIds()) map[id] = false;
-		for (const id of [...buckets.primary, ...buckets.secondary]) map[id] = true;
+		for (const id of buckets.primary) map[id] = true;
 		return map;
 	});
 </script>
@@ -313,189 +358,172 @@
 	</div>
 {:else}
 	<div data-testid="weather-metrics-tab" class="metrics-tab">
+		<!-- Mobile Trigger (behält WeatherMetricsMobileView, eigenes Issue #618) -->
 		<button class="mobile-metrics-trigger" data-testid="mobile-metrics-trigger" onclick={() => (showMobileView = true)}>
-			Metriken konfigurieren ({buckets.primary.length + buckets.secondary.length} aktiv)
+			Metriken konfigurieren ({buckets.primary.length} aktiv)
 		</button>
-		<header class="tab-head">
-			<div class="intro">
-				<Eyebrow>Wetter-Metriken</Eyebrow>
-				<h2 class="h1">Welche Werte gehen in das Briefing — und wie?</h2>
-				<p class="lede">
-					Jede Metrik landet als <strong>eigene Spalte</strong> in der Tabelle oder als
-					<strong>Detail-Wert</strong> in einer kompakten Zeile darunter. Email zeigt beides
-					vollständig; Telegram hat Spalten-Limits — was nicht passt, wandert
-					automatisch in die Detail-Zeile.
-					<button type="button" class="link-btn" data-testid="about-trigger" onclick={() => (showAbout = true)}>
-						Wie funktioniert das genau?
-					</button>
-				</p>
-			</div>
-			<div class="actions">
-				{#if isDirty}
-					<Pill tone="warning" data-testid="weather-metrics-dirty-pill">Ungespeicherte Änderungen</Pill>
-					<Btn variant="ghost" size="sm" data-testid="weather-metrics-discard" onclick={handleDiscard}>Verwerfen</Btn>
-				{/if}
-				{#if saveSuccess}
-					<span data-testid="weather-metrics-tab-success" class="save-success">Gespeichert</span>
-				{/if}
-				{#if saveError}
-					<span data-testid="weather-metrics-tab-error" class="save-error">{saveError}</span>
-				{/if}
-				<Btn variant="primary" size="sm" data-testid="weather-metrics-tab-save" disabled={saving || !isDirty} onclick={handleSave}>
-					{saving ? 'Speichern…' : 'Speichern'}
-				</Btn>
-			</div>
-		</header>
 
-		<div class="layout">
-			<!-- Preset-Spalte -->
-			<aside class="preset-col">
-				<Eyebrow>Preset-Auswahl</Eyebrow>
-				<div class="preset-list" data-testid="weather-metrics-preset-list">
-					{#each userPresets as p}
-						<PresetRow id={p.id} label={p.name} metricCount={p.metrics.length} isActive={selectedTemplate === p.id} onSelect={onSelectPreset} />
-					{/each}
-					{#each templates as t}
-						<PresetRow id={t.id} label={t.label} metricCount={t.metrics.length} isActive={selectedTemplate === t.id} onSelect={onSelectPreset} />
-					{/each}
-				</div>
-				<div class="preset-save-box">
-					<Eyebrow>Eigenes Preset</Eyebrow>
-					<p class="preset-save-hint">
-						Aktuelle Auswahl ({buckets.primary.length + buckets.secondary.length} Metriken)
-						speichern und auf andere Trips anwenden.
-					</p>
-					<Btn variant="ghost" size="sm" class="full" data-testid="save-preset-dialog-trigger" onclick={() => (showSavePresetDialog = true)}>
-						+ Als Preset speichern
-					</Btn>
-				</div>
-			</aside>
+		<!-- Save-Bar (oben, schmal) -->
+		<div class="save-bar">
+			{#if isDirty}
+				<Pill tone="warning" data-testid="weather-metrics-dirty-pill">Ungespeicherte Änderungen</Pill>
+				<Btn variant="ghost" size="sm" data-testid="weather-metrics-discard" onclick={handleDiscard}>Verwerfen</Btn>
+			{/if}
+			{#if saveSuccess}
+				<span data-testid="weather-metrics-tab-success" class="save-success">Gespeichert</span>
+			{/if}
+			{#if saveError}
+				<span data-testid="weather-metrics-tab-error" class="save-error">{saveError}</span>
+			{/if}
+			<Btn variant="primary" size="sm" data-testid="weather-metrics-tab-save" disabled={saving || !isDirty} onclick={handleSave}>
+				{saving ? 'Speichern…' : 'Speichern'}
+			</Btn>
+		</div>
 
-			<!-- Editor — Issue #431: shared OutputLayoutEditor (channel="email" fix).
-			     Preset-Liste (Templates + User-Presets) bleibt links in der
-			     preset-col oben — wir geben hier KEINE preset-Daten an den
-			     Editor weiter, damit es keine doppelte Preset-Anzeige gibt. -->
+		<!-- Desktop 2-Spalten-Layout -->
+		<!-- Conflict 5 resolved: v2-Struktur erhalten, SMS-Schwellwerte als neue Card nach 04. -->
+		<div class="v2-layout">
+			<!-- LINKS: Abschnitte -->
 			<div class="editor-col">
-				<OutputLayoutEditor
-					channel="email"
-					{catalog}
-					bind:buckets
-					bind:friendlyMap
-					bind:selectedTemplate
-					categoryLabels={CATEGORY_LABELS}
-					hideDetailBucket={true}
-					onReorder={(bucket, id, dir) => onReorder(bucket, id, dir)}
-					onMove={(id, target) => onMove(id, target)}
-					{onMode}
-					{onDndReorder}
-				/>
-				<!-- Issue #587: TablePreview einbinden nach BucketSection "Detail-Werte",
-				     vor ChannelPreviewBlock. Alle Props als State-Variablen vorhanden. -->
-				<TablePreview
-					{catalog}
-					{enabledMap}
-					{friendlyMap}
-					{horizonsMap}
-					categoryOrder={CATEGORY_ORDER}
-					{indicatorCapable}
-				/>
-				<!-- Issue #614: Telegram-Optionen (kanal-spezifische Einstellungen). -->
-				<div class="telegram-options" data-testid="telegram-options">
-					<Eyebrow>Telegram-Optionen</Eyebrow>
-					<div class="telegram-option-row">
-						<Checkbox
-							id="telegram-kurzform"
-							data-testid="telegram-kurzform-toggle"
-							checked={telegramKurzform}
-							onchange={(e) => { telegramKurzform = (e.target as HTMLInputElement).checked; }}
-						>Kurzform anhängen (Tages-Max)</Checkbox>
-						<p class="option-hint">
-							Hängt nach der Tabelle eine kompakte SMS-Kurzform mit allen Metriken an —
-							auch jene, die über das Spalten-Limit hinausgehen.
-						</p>
+				<!-- 01 Profil -->
+				<Card padding={18}>
+					<Eyebrow style="margin-bottom:10px">01 — Profil</Eyebrow>
+					<WeatherV2PresetBar
+						{selectedTemplate}
+						dirty={isDirty}
+						{templates}
+						{userPresets}
+						onSelectPreset={onSelectPreset}
+						onOpenSaveDialog={() => (showSavePresetDialog = true)}
+					/>
+				</Card>
+
+				<!-- 02 Grundauswahl -->
+				<Card padding={18}>
+					<Eyebrow style="margin-bottom:4px">02 — Grundauswahl</Eyebrow>
+					<WeatherV2Grundauswahl
+						{catalog}
+						primaryColumns={buckets.primary}
+						{highlight}
+						onToggle={(id, wasOn) => onToggleMetric(id, wasOn)}
+					/>
+				</Card>
+
+				<!-- 03 Reihenfolge & Darstellung -->
+				<Card padding={0}>
+					<div class="card-head">
+						<Eyebrow>03 — Reihenfolge & Darstellung</Eyebrow>
+						<div class="card-subhead">Reihenfolge · Roh/Einfach</div>
 					</div>
-				</div>
-				<!-- Issue #624: SMS/Telegram Schwellwerte pro Metrik. -->
-				<div class="sms-thresholds" data-testid="sms-thresholds">
-					<Eyebrow>SMS-Schwellwerte</Eyebrow>
+					<WeatherV2Reihenfolge
+						primaryColumns={buckets.primary}
+						{metricById}
+						{friendlyMap}
+						activeChannel="telegram"
+						{highlight}
+						onRemove={onRemove}
+						onReorder={onReorder}
+						{onMode}
+					/>
+				</Card>
+
+				<!-- 04 Kanäle -->
+				<Card padding={18}>
+					<Eyebrow style="margin-bottom:4px">04 — Kanäle</Eyebrow>
+					<div class="kanaele-subhead">Wohin geht das Briefing?</div>
+					<WeatherV2Kanaele
+						{channels}
+						primaryCount={buckets.primary.length}
+						{telegramKurzform}
+						onChange={(ch) => { channels = ch; }}
+						onKurzformChange={(v) => { telegramKurzform = v; }}
+					/>
+				</Card>
+
+				<!-- 05 SMS-Schwellwerte (Issue #624) -->
+				<Card padding={18}>
+					<Eyebrow style="margin-bottom:8px">SMS-Schwellwerte</Eyebrow>
 					<p class="option-hint">
 						Ab welchem Wert gilt eine Metrik in der Kurzform als „erste Überschreitung"?
 						Leer = Standard-Schwellwert.
 					</p>
-					<div class="sms-threshold-fields">
-						<div class="sms-threshold-row">
-							<label class="sms-threshold-label" for="sms-thr-wind">Wind (km/h)</label>
-							<input
-								id="sms-thr-wind"
-								data-testid="sms-threshold-wind"
-								type="number"
-								min="0"
-								step="1"
-								class="sms-threshold-input"
-								placeholder="Standard"
-								value={smsThresholds['wind'] ?? ''}
-								oninput={(e) => { smsThresholds = { ...smsThresholds, wind: (e.target as HTMLInputElement).value }; }}
-							/>
-						</div>
-						<div class="sms-threshold-row">
-							<label class="sms-threshold-label" for="sms-thr-gust">Böen (km/h)</label>
-							<input
-								id="sms-thr-gust"
-								data-testid="sms-threshold-gust"
-								type="number"
-								min="0"
-								step="1"
-								class="sms-threshold-input"
-								placeholder="Standard"
-								value={smsThresholds['gust'] ?? ''}
-								oninput={(e) => { smsThresholds = { ...smsThresholds, gust: (e.target as HTMLInputElement).value }; }}
-							/>
-						</div>
-						<div class="sms-threshold-row">
-							<label class="sms-threshold-label" for="sms-thr-precip">Niederschlag (mm)</label>
-							<input
-								id="sms-thr-precip"
-								data-testid="sms-threshold-precipitation"
-								type="number"
-								min="0"
-								step="0.1"
-								class="sms-threshold-input"
-								placeholder="Standard"
-								value={smsThresholds['precipitation'] ?? ''}
-								oninput={(e) => { smsThresholds = { ...smsThresholds, precipitation: (e.target as HTMLInputElement).value }; }}
-							/>
-						</div>
-						<div class="sms-threshold-row">
-							<label class="sms-threshold-label" for="sms-thr-rain-prob">Regenw. (%)</label>
-							<input
-								id="sms-thr-rain-prob"
-								data-testid="sms-threshold-rain-probability"
-								type="number"
-								min="0"
-								max="100"
-								step="1"
-								class="sms-threshold-input"
-								placeholder="Standard"
-								value={smsThresholds['rain_probability'] ?? ''}
-								oninput={(e) => { smsThresholds = { ...smsThresholds, rain_probability: (e.target as HTMLInputElement).value }; }}
-							/>
+					<div class="sms-thresholds" data-testid="sms-thresholds">
+						<div class="sms-threshold-fields">
+							<div class="sms-threshold-row">
+								<label class="sms-threshold-label" for="sms-thr-wind">Wind (km/h)</label>
+								<input
+									id="sms-thr-wind"
+									data-testid="sms-threshold-wind"
+									type="number"
+									min="0"
+									step="1"
+									class="sms-threshold-input"
+									placeholder="Standard"
+									value={smsThresholds['wind'] ?? ''}
+									oninput={(e) => { smsThresholds = { ...smsThresholds, wind: (e.target as HTMLInputElement).value }; }}
+								/>
+							</div>
+							<div class="sms-threshold-row">
+								<label class="sms-threshold-label" for="sms-thr-gust">Böen (km/h)</label>
+								<input
+									id="sms-thr-gust"
+									data-testid="sms-threshold-gust"
+									type="number"
+									min="0"
+									step="1"
+									class="sms-threshold-input"
+									placeholder="Standard"
+									value={smsThresholds['gust'] ?? ''}
+									oninput={(e) => { smsThresholds = { ...smsThresholds, gust: (e.target as HTMLInputElement).value }; }}
+								/>
+							</div>
+							<div class="sms-threshold-row">
+								<label class="sms-threshold-label" for="sms-thr-precip">Niederschlag (mm)</label>
+								<input
+									id="sms-thr-precip"
+									data-testid="sms-threshold-precipitation"
+									type="number"
+									min="0"
+									step="0.1"
+									class="sms-threshold-input"
+									placeholder="Standard"
+									value={smsThresholds['precipitation'] ?? ''}
+									oninput={(e) => { smsThresholds = { ...smsThresholds, precipitation: (e.target as HTMLInputElement).value }; }}
+								/>
+							</div>
+							<div class="sms-threshold-row">
+								<label class="sms-threshold-label" for="sms-thr-rain-prob">Regenw. (%)</label>
+								<input
+									id="sms-thr-rain-prob"
+									data-testid="sms-threshold-rain-probability"
+									type="number"
+									min="0"
+									max="100"
+									step="1"
+									class="sms-threshold-input"
+									placeholder="Standard"
+									value={smsThresholds['rain_probability'] ?? ''}
+									oninput={(e) => { smsThresholds = { ...smsThresholds, rain_probability: (e.target as HTMLInputElement).value }; }}
+								/>
+							</div>
 						</div>
 					</div>
-				</div>
+				</Card>
+			</div>
+
+			<!-- RECHTS: Live-Mail-Vorschau (sticky) -->
+			<div class="preview-col">
+				<WeatherV2MailPreview
+					primaryColumns={buckets.primary}
+					{metricById}
+					{friendlyMap}
+					{telegramKurzform}
+					{highlight}
+				/>
 			</div>
 		</div>
 
-		<!-- Issue #496 Layout-Fix: ChannelPreviewBlock außerhalb des `.layout`-Grids,
-		     damit der Block volle Tab-Breite nutzt statt nur die schmale editor-col. -->
-		<div class="preview-row">
-			<ChannelPreviewBlock
-				primary={buckets.primary}
-				secondary={buckets.secondary}
-				{metricById}
-				{shortById}
-			/>
-		</div>
-
+		<!-- Dialoge & Overlays -->
 		<SavePresetDialog
 			bind:open={showSavePresetDialog}
 			{enabledMap}
@@ -507,8 +535,6 @@
 			onClose={() => (showSavePresetDialog = false)}
 			onSaved={onPresetSaved}
 		/>
-
-		<AboutOutputLayout bind:open={showAbout} onClose={() => (showAbout = false)} />
 
 		{#if pendingPreset}
 			<div class="confirm-overlay" role="dialog" aria-modal="true" data-testid="preset-confirm">
@@ -548,47 +574,20 @@
 {/if}
 
 <style>
-	.metrics-tab {
+	.loading-shell {
 		padding: var(--g-s-4);
 	}
-	.tab-head {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-		gap: var(--g-s-6);
-		margin-bottom: var(--g-s-6);
-		flex-wrap: wrap;
+	.mobile-metrics-trigger {
+		display: none;
 	}
-	.intro {
-		max-width: 760px;
-	}
-	.h1 {
-		font-size: var(--g-text-2xl);
-		font-weight: 600;
-		letter-spacing: var(--g-track-tight);
-		margin: var(--g-s-1) 0 var(--g-s-2);
-	}
-	.lede {
-		font-size: var(--g-text-sm);
-		color: var(--g-ink-muted);
-		line-height: 1.55;
-	}
-	.link-btn {
-		margin-left: var(--g-s-1);
-		color: var(--g-accent);
-		background: none;
-		border: none;
-		cursor: pointer;
-		padding: 0;
-		font-size: var(--g-text-sm);
-		text-decoration: underline;
-		text-underline-offset: 2px;
-	}
-	.actions {
+	.save-bar {
 		display: flex;
 		gap: var(--g-s-2);
 		align-items: center;
 		flex-wrap: wrap;
+		padding: var(--g-s-3) var(--g-s-10);
+		border-bottom: 1px solid var(--g-rule-soft);
+		margin-bottom: 0;
 	}
 	.save-success {
 		font-size: var(--g-text-sm);
@@ -598,41 +597,35 @@
 		font-size: var(--g-text-sm);
 		color: var(--g-danger);
 	}
-	.layout {
+	/* Desktop 2-Spalten-Layout (1:1 nach JSX WetterMetrikenTabV2) */
+	.v2-layout {
 		display: grid;
-		grid-template-columns: 300px 1fr;
-		gap: var(--g-s-8);
+		grid-template-columns: minmax(460px, 1fr) minmax(420px, 1fr);
+		gap: 36px;
+		padding: 28px 40px 60px;
+		max-width: 1480px;
 		align-items: start;
-	}
-	.preset-list {
-		display: flex;
-		flex-direction: column;
-		gap: var(--g-s-1);
-		margin-top: var(--g-s-2);
-	}
-	.preset-save-box {
-		margin-top: var(--g-s-6);
-		padding: var(--g-s-4);
-		background: var(--g-surface-1);
-		border-radius: var(--g-radius-sm);
-		border: 1px dashed var(--g-ink-faint);
-	}
-	.preset-save-hint {
-		font-size: var(--g-text-sm);
-		color: var(--g-ink-muted);
-		margin: var(--g-s-2) 0;
-		line-height: 1.4;
-	}
-	:global(.preset-save-box .full) {
-		width: 100%;
 	}
 	.editor-col {
 		display: flex;
 		flex-direction: column;
-		gap: var(--g-s-6);
+		gap: 20px;
 	}
-	.preview-row {
-		margin-top: var(--g-s-6);
+	.card-head {
+		padding: 14px 16px 10px;
+		border-bottom: 1px solid var(--g-rule-soft);
+	}
+	.card-subhead {
+		font-size: 15px;
+		font-weight: 600;
+		margin-top: 2px;
+		color: var(--g-ink);
+	}
+	.kanaele-subhead {
+		font-size: 15px;
+		font-weight: 600;
+		margin-bottom: 14px;
+		color: var(--g-ink);
 	}
 	.confirm-overlay {
 		position: fixed;
@@ -663,54 +656,18 @@
 		justify-content: flex-end;
 		gap: var(--g-s-2);
 	}
-	.mobile-metrics-trigger {
-		display: none;
-	}
-	@media (max-width: 899px) {
-		.layout {
-			grid-template-columns: 1fr;
-			gap: var(--g-s-6);
-		}
-		.mobile-metrics-trigger {
-			display: flex;
-			align-items: center;
-			justify-content: space-between;
-			width: 100%;
-			padding: var(--g-s-3) var(--g-s-4);
-			background: var(--g-paper);
-			border: 1px solid var(--g-ink-faint);
-			border-radius: var(--g-radius-md);
-			font-size: var(--g-text-sm);
-			font-weight: 500;
-			cursor: pointer;
-			color: var(--g-ink);
-			margin-bottom: var(--g-s-4);
-		}
-	}
-	/* Issue #614: Telegram-Optionen-Block */
-	.telegram-options {
-		display: flex;
-		flex-direction: column;
-		gap: var(--g-s-2);
-	}
-	.telegram-option-row {
-		display: flex;
-		flex-direction: column;
-		gap: var(--g-s-1);
-	}
+	/* Conflict 6 resolved: v2-CSS + #624-Klassen, ohne telegram-options */
 	.option-hint {
 		font-size: var(--g-text-sm);
 		color: var(--g-ink-muted);
 		line-height: 1.5;
-		margin: 0;
-		padding-left: calc(var(--g-s-4) + 2px); /* align under checkbox label */
+		margin: 0 0 var(--g-s-3);
 	}
-	/* Issue #624: SMS-Schwellwerte-Block */
+	/* Issue #624: SMS-Schwellwerte */
 	.sms-thresholds {
 		display: flex;
 		flex-direction: column;
 		gap: var(--g-s-2);
-		margin-top: var(--g-s-4);
 	}
 	.sms-threshold-fields {
 		display: flex;
@@ -731,7 +688,7 @@
 		width: 100px;
 		padding: var(--g-s-1) var(--g-s-2);
 		font-size: var(--g-text-sm);
-		border: 1px solid var(--g-border);
+		border: 1px solid var(--g-rule);
 		border-radius: var(--g-radius-sm);
 		background: var(--g-card);
 		color: var(--g-ink);
@@ -740,5 +697,30 @@
 		outline: 2px solid var(--g-accent);
 		outline-offset: 1px;
 		border-color: var(--g-accent);
+	}
+	@media (max-width: 899px) {
+		.v2-layout {
+			grid-template-columns: 1fr;
+			gap: var(--g-s-6);
+			padding: var(--g-s-4);
+		}
+		.save-bar {
+			padding: var(--g-s-3) var(--g-s-4);
+		}
+		.mobile-metrics-trigger {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			width: 100%;
+			padding: var(--g-s-3) var(--g-s-4);
+			background: var(--g-paper);
+			border: 1px solid var(--g-ink-faint);
+			border-radius: var(--g-radius-md);
+			font-size: var(--g-text-sm);
+			font-weight: 500;
+			cursor: pointer;
+			color: var(--g-ink);
+			margin-bottom: var(--g-s-4);
+		}
 	}
 </style>
