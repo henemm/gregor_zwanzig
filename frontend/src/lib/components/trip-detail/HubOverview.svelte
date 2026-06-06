@@ -75,9 +75,9 @@
 	<div style="display: flex; flex-direction: column; gap: 20px;">
 		<Card padding={18}>
 			<Eyebrow style="margin-bottom: 10px;">Briefings laufen</Eyebrow>
-			<ReportLine kind="morning" time="06:00" channels={['email', 'signal']} active />
+			<ReportLine kind="morning" time="06:00" channels={['email', 'telegram']} active />
 			<ReportLine kind="evening" time="18:00" channels={['email']} active />
-			<ReportLine kind="alert" time="bei Δ" channels={['signal']} active alert />
+			<ReportLine kind="alert" time="bei Δ" channels={['telegram']} active alert />
 			<div style="margin-top: 12px;">
 				<Btn variant="ghost" size="sm" onclick={makeJumpHandler('briefings')}>Zeitplan bearbeiten →</Btn>
 			</div>

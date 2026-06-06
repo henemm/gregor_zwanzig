@@ -220,13 +220,12 @@ const PRIMARY_SLOTS = 5;
 
 /**
  * Waehlbare Metrik-Spalten je Kanal (Uhrzeit NICHT mitgezaehlt — deckt sich
- * mit #360: Signal total 6 = 5 Metriken + Zeit, Telegram total 8 = 7 + Zeit).
+ * mit #360: Telegram total 8 = 7 + Zeit). Signal entfernt (#610).
  * Anzeige-Budget, KEIN hartes Limit — der Renderer demotet kanalspezifisch.
  */
-export const CHANNEL_COL_BUDGET: Record<'email' | 'telegram' | 'signal' | 'sms', number> = {
+export const CHANNEL_COL_BUDGET: Record<'email' | 'telegram' | 'sms', number> = {
 	email: Infinity,
 	telegram: 7,
-	signal: 5,
 	sms: 0,
 };
 
@@ -301,15 +300,14 @@ export function reorder(b: Buckets, bucket: keyof Buckets, id: string, dir: -1 |
 
 /**
  * AC-5: Liefert je Kanal, ob die primary-Spaltenzahl das Budget ueberschreitet.
- * `> budget` (nicht `>=`) — exakt am Budget ist noch ok.
+ * `> budget` (nicht `>=`) — exakt am Budget ist noch ok. Signal entfernt (#610).
  */
 export function channelOverflow(
 	primaryCount: number,
-): { email: boolean; telegram: boolean; signal: boolean; sms: boolean } {
+): { email: boolean; telegram: boolean; sms: boolean } {
 	return {
 		email: primaryCount > CHANNEL_COL_BUDGET.email,
 		telegram: primaryCount > CHANNEL_COL_BUDGET.telegram,
-		signal: primaryCount > CHANNEL_COL_BUDGET.signal,
 		sms: primaryCount > CHANNEL_COL_BUDGET.sms,
 	};
 }
@@ -380,7 +378,7 @@ export interface ChannelLayout {
  * Deckt sich mit Backend render_for_channel (#360):
  * - budget === Infinity (Email): alles als Spalte, kein Demote.
  * - budget === 0 (SMS): keine Tabelle, alles flach in detail, demoted == |primary|.
- * - sonst (Signal 5 / Telegram 7): inTable gekappt; überzählige primary vorne
+ * - sonst (Telegram 7): inTable gekappt; überzählige primary vorne
  *   in detail (vor secondary), demoted == overflow.
  */
 export function applyChannel(

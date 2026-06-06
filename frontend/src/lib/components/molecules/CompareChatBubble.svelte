@@ -31,19 +31,17 @@
 	}
 
 	interface Props {
-		channel?: 'signal' | 'telegram';
+		channel?: 'telegram';
 		profile: Profile;
 		data: Data;
 		subscriptionName?: string;
 		class?: string;
 	}
 
-	let { channel = 'signal', profile, data, subscriptionName, class: className = '' }: Props = $props();
+	let { channel = 'telegram', profile, data, subscriptionName, class: className = '' }: Props = $props();
 
-	const isSignal = $derived(channel === 'signal');
-
-	// Kanal-Constraints: Signal max 6 Spalten, Telegram max 8 (minus 2 für Rang+Ort)
-	const MAXCOLS: Record<string, number> = { signal: 6, telegram: 8 };
+	// Kanal-Constraints: Telegram max 8 (minus 2 für Rang+Ort). Signal entfernt (#610).
+	const MAXCOLS: Record<string, number> = { telegram: 8 };
 
 	function compareShownCols(prof: Profile, ch: string): Col[] {
 		const max = MAXCOLS[ch] ?? 8;
@@ -54,11 +52,11 @@
 
 	const shown = $derived(compareShownCols(profile, channel));
 
-	// Farben
-	const backdrop = $derived(isSignal ? '#0b0b0d' : '#17212b');
-	const bubbleBg = $derived(isSignal ? '#26252b' : '#1e2c3a');
-	const accent = $derived(isSignal ? '#2c6bed' : '#5ea9dd');
-	const maxLabel = $derived(isSignal ? 'Signal · max 6 Spalten' : 'Telegram · max 8 Spalten');
+	// Farben Telegram
+	const backdrop = '#17212b';
+	const bubbleBg = '#1e2c3a';
+	const accent = '#5ea9dd';
+	const maxLabel = 'Telegram · max 8 Spalten';
 
 	function fmt(col: Col, row: Row): string {
 		return String(row[col.key] ?? '—');

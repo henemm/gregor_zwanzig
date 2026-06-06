@@ -111,7 +111,7 @@
 	];
 
 	const REPORT_TIMELINE = [
-		{ when: '06:00', kind: 'morning', etappe: 'KHW_03 · Obstanser See', channels: ['email', 'signal'], status: 'sent' },
+		{ when: '06:00', kind: 'morning', etappe: 'KHW_03 · Obstanser See', channels: ['email'], status: 'sent' },
 		{ when: '18:00', kind: 'evening', etappe: 'KHW_04 · Filmoor', channels: ['email'], status: 'planned' }
 	];
 
@@ -572,7 +572,6 @@
 				{#snippet channelRowBody()}
 					<div style:display="flex" style:flex-direction="column" style:gap="8px">
 						<ChannelRow kind="Email" target="gregor_zwanzig@henemm.com" active />
-						<ChannelRow kind="Signal" target="+49 151 ••• 8847" active />
 						<ChannelRow kind="Telegram" target="@gregor_henemm" />
 						<ChannelRow kind="SMS" target="+49 151 ••• 8847" sub="Fallback wenn andere Kanäle ausfallen" />
 					</div>
@@ -583,13 +582,11 @@
 				{#snippet chipThresholdBody()}
 					<div style:display="flex" style:flex-wrap="wrap" style:gap="6px" style:margin-bottom="14px">
 						<ChannelChip kind="email" />
-						<ChannelChip kind="signal" />
 						<ChannelChip kind="telegram" />
 						<ChannelChip kind="sms" active={false} />
 					</div>
 					<div style:display="flex" style:gap="6px" style:margin-bottom="18px">
 						<ChannelChip kind="email" compact />
-						<ChannelChip kind="signal" compact />
 						<ChannelChip kind="telegram" compact />
 						<ChannelChip kind="sms" compact active={false} />
 						{@render MonoTag('compact')}
@@ -633,7 +630,7 @@
 				<div style:display="grid" style:grid-template-columns="1fr 1fr 1fr" style:gap="24px">
 					<div>
 						{@render MonoTag('variant="icon"')}
-						<AlertRow alert={{ kind: 'thunder', when: 'Heute 14:00', channel: 'signal', msg: 'Gewitter-Wahrscheinlichkeit 78% — Briefing-Sonderlauf um 13:00.' }} />
+						<AlertRow alert={{ kind: 'thunder', when: 'Heute 14:00', channel: 'email', msg: 'Gewitter-Wahrscheinlichkeit 78% — Briefing-Sonderlauf um 13:00.' }} />
 						<AlertRow alert={{ kind: 'wind', when: 'Morgen 17:00', channel: 'email', msg: 'Böen 50 km/h NW — Helmhotel exponiert.' }} last />
 					</div>
 					<div>
@@ -661,7 +658,6 @@
 					<div>
 						{@render MonoTag('ChannelRow dense')}
 						<ChannelRow dense kind="Email" target="gregor_zwanzig@henemm.com" active />
-						<ChannelRow dense kind="Signal" target="+49 151 ••• 8847" active />
 						<ChannelRow dense kind="Telegram" target="@gregor_henemm" />
 						<ChannelRow dense kind="SMS" target="+49 151 ••• 8847" sub="Fallback" last />
 					</div>
@@ -728,7 +724,7 @@
 						style:margin-bottom="8px">Tun</div
 					>
 					<ul style:margin="0" style:padding-left="18px" style:font-size="14px" style:line-height="1.6" style:color="var(--g-ink-2)">
-						<li>"Heute 18:00 geht ein Abend-Briefing an Email + Signal."</li>
+						<li>"Heute 18:00 geht ein Abend-Briefing an Email + Telegram."</li>
 						<li>"Böen bis 47 km/h ab 17:00."</li>
 						<li>"Ohne Stirnlampe: 05:43 – 21:10."</li>
 					</ul>

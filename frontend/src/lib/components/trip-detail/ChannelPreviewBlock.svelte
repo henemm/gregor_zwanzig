@@ -19,17 +19,16 @@
 	}
 	let { primary, secondary, metricById, shortById }: Props = $props();
 
-	type ChannelId = 'email' | 'telegram' | 'signal' | 'sms';
+	type ChannelId = 'email' | 'telegram' | 'sms';
 
 	const CHANNELS: Array<{ id: ChannelId; label: string; glyph: string; maxCols: number }> = [
 		{ id: 'email',    label: 'Email',    glyph: '✉', maxCols: CHANNEL_COL_BUDGET.email },
 		{ id: 'telegram', label: 'Telegram', glyph: '✈', maxCols: CHANNEL_COL_BUDGET.telegram },
-		{ id: 'signal',   label: 'Signal',   glyph: '▲', maxCols: CHANNEL_COL_BUDGET.signal },
 		{ id: 'sms',      label: 'SMS',      glyph: '✱', maxCols: CHANNEL_COL_BUDGET.sms },
 	];
 
-	let activeChannel = $state<ChannelId>('signal');
-	const activeMeta = $derived(CHANNELS.find((c) => c.id === activeChannel) ?? CHANNELS[2]);
+	let activeChannel = $state<ChannelId>('telegram');
+	const activeMeta = $derived(CHANNELS.find((c) => c.id === activeChannel) ?? CHANNELS[0]);
 </script>
 
 <Card.Root class="overflow-visible" data-testid="channel-preview-block">
@@ -42,7 +41,7 @@
 			</div>
 		</div>
 		<p class="hint">
-			Eine Konfiguration, vier Kanäle mit unterschiedlicher Kapazität. Links
+			Eine Konfiguration, drei Kanäle mit unterschiedlicher Kapazität. Links
 			siehst du <strong>für jeden Kanal die Konsequenz</strong> deiner Auswahl —
 			klick einen Kanal an, um <strong>die echte Vorschau</strong> in
 			Original-Breite zu sehen.

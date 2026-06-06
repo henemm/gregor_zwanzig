@@ -6,7 +6,7 @@
 	import { applyChannel, type MetricEntry } from './metricsEditor.ts';
 
 	interface Props {
-		channelId: 'email' | 'telegram' | 'signal' | 'sms';
+		channelId: 'email' | 'telegram' | 'sms';
 		label: string;
 		glyph: string;
 		maxCols: number;
@@ -54,7 +54,7 @@
 
 	const isSMS = $derived(channelId === 'sms');
 
-	// Spaltenbasierte Kanäle (Email/Telegram/Signal): applyChannel teilt
+	// Spaltenbasierte Kanäle (Email/Telegram): applyChannel teilt
 	// primary in inTable (passt rein) + überzählige primary werden in
 	// "detail" eingereiht. Anzahl der Demoteten = layout.demoted (number).
 	const layout = $derived(applyChannel(primary, secondary, maxCols));

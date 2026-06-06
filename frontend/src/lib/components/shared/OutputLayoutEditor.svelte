@@ -34,7 +34,7 @@
 		buckets: Buckets;
 		friendlyMap: Record<string, boolean>;
 		selectedTemplate?: string;
-		channel: 'email' | 'telegram' | 'signal' | 'sms';
+		channel: 'email' | 'telegram' | 'sms';
 		templates?: Template[];
 		userPresets?: MetricPreset[];
 		// Optional: Caller darf eigene Labels durchreichen (Pre-existing #392 test
@@ -179,7 +179,7 @@
 		/>
 	</div>
 {:else}
-	<!-- Standard-Mode: Bucket-Editor (Email/Telegram/Signal) -->
+	<!-- Standard-Mode: Bucket-Editor (Email/Telegram/SMS) -->
 	<div data-testid="output-layout-editor-standard" class="standard-editor">
 		{#if userPresets.length > 0 || templates.length > 0}
 			<div class="preset-list" data-testid="output-layout-preset-list">

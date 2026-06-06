@@ -206,8 +206,8 @@ describe('AC-6: Layout-Tab — CompareLayoutRow, CHANNEL_COLS, Kanal-Constraints
 		);
 	});
 
-	// Constraints: email 99 (∞), telegram 8, signal 6, sms 0
-	for (const [channel, cols] of [['email', '99'], ['telegram', '8'], ['signal', '6'], ['sms', '0']] as const) {
+	// Constraints: email 99 (∞), telegram 8, sms 0 — signal entfernt (#610)
+	for (const [channel, cols] of [['email', '99'], ['telegram', '8'], ['sms', '0']] as const) {
 		test(`Kanal '${channel}' mit Spaltenwert ${cols} definiert`, () => {
 			const s = getSrc();
 			assert.ok(
@@ -216,6 +216,15 @@ describe('AC-6: Layout-Tab — CompareLayoutRow, CHANNEL_COLS, Kanal-Constraints
 			);
 		});
 	}
+	// #610: signal darf nicht mehr in CHANNEL_COLS sein
+	test("Kanal 'signal' nicht mehr in CHANNEL_COLS (#610)", () => {
+		const s = getSrc();
+		// signal should not appear alongside a cols value of 6
+		assert.ok(
+			!s.includes("signal: 6") && !s.includes("signal:6") && !s.includes("'signal', 6"),
+			"CompareTabs.svelte darf nach #610 keinen signal-Kanal mit cols=6 mehr enthalten"
+		);
+	});
 });
 
 // ── AC-7: Versand-Tab — presetScheduleLabel, hour_from, empfaenger, draft-Hint

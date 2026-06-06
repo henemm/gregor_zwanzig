@@ -24,7 +24,7 @@
 	<ComparePreviewMissing class={className} />
 {:else if channel === 'email'}
 	<ComparePreviewMissing class={className} note="E-Mail-Vorschau wird separat gerendert." />
-{:else if channel === 'signal' || channel === 'telegram'}
+{:else if channel === 'telegram'}
 	<CompareChatBubble class={className} {channel} profile={profile as any} data={data as any} {subscriptionName} />
 {:else if channel === 'sms'}
 	<CompareSmsPreview class={className} profile={profile as any} data={data as any} />

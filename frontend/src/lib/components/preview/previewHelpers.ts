@@ -9,7 +9,7 @@ export type CharCountStatus = 'ok' | 'warn' | 'over';
 // serverseitig injiziert — Frontend hängt keinen user_id-Query an.
 // Issue #483: optionales `demo` hängt `demo=1` an die URL (Fixture-Daten).
 export function buildPreviewUrl(
-	channel: 'email' | 'sms' | 'signal' | 'telegram',
+	channel: 'email' | 'sms' | 'telegram',
 	tripId: string,
 	type: ReportType,
 	date?: string,
@@ -41,7 +41,7 @@ export const PREVIEW_ERROR_NO_WAYPOINTS =
 	'mindestens einen Start- und Zielpunkt festlegen.';
 
 // Übersetzt einen HTTP-Fehler der Vorschau-Endpoints in verständliches Deutsch.
-// Schlüsselt auf den inhaltlichen Signal-Text (detail enthält "waypoint"),
+// Schlüsselt auf den inhaltlichen Detail-Text (detail enthält "waypoint"),
 // nicht auf den numerischen Code — resilient gegen Status-Drift im Backend.
 // Parst body defensiv als JSON; wirft niemals.
 export function friendlyPreviewError(status: number, body: string): string {

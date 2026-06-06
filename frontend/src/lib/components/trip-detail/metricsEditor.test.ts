@@ -368,23 +368,24 @@ test('AC-3: reorder am unteren Rand ist No-Op', () => {
 
 // ---------- AC-5: channelOverflow / CHANNEL_COL_BUDGET ------------------------
 
-test('AC-5: CHANNEL_COL_BUDGET — signal 5, telegram 7, sms 0, email unbegrenzt', () => {
-	assert.equal(editor.CHANNEL_COL_BUDGET.signal, 5);
+test('AC-5: CHANNEL_COL_BUDGET — telegram 7, sms 0, email unbegrenzt (#610: kein signal)', () => {
 	assert.equal(editor.CHANNEL_COL_BUDGET.telegram, 7);
 	assert.equal(editor.CHANNEL_COL_BUDGET.sms, 0);
 	assert.equal(editor.CHANNEL_COL_BUDGET.email, Infinity);
+	assert.ok(!('signal' in editor.CHANNEL_COL_BUDGET), 'signal darf nicht in CHANNEL_COL_BUDGET sein');
 });
 
-test('AC-5: channelOverflow bei 6 primary → Signal überschritten, Telegram nicht', () => {
-	const ov = editor.channelOverflow(6);
-	assert.equal(ov.signal, true, 'Signal-Budget 5 überschritten bei 6 Spalten');
-	assert.equal(ov.telegram, false, 'Telegram-Budget 7 nicht überschritten bei 6 Spalten');
+test('AC-5: channelOverflow bei 8 primary → Telegram überschritten', () => {
+	const ov = editor.channelOverflow(8);
+	assert.equal(ov.telegram, true, 'Telegram-Budget 7 überschritten bei 8 Spalten');
+	assert.equal(ov.email, false, 'Email-Budget unbegrenzt');
+	assert.ok(!('signal' in ov), 'signal darf nicht in channelOverflow sein');
 });
 
-test('AC-5: channelOverflow bei 5 primary → Signal exakt am Limit (nicht überschritten)', () => {
-	const ov = editor.channelOverflow(5);
-	assert.equal(ov.signal, false, '5 == Budget ist noch ok');
-	assert.equal(ov.telegram, false);
+test('AC-5: channelOverflow bei 7 primary → Telegram exakt am Limit (nicht überschritten)', () => {
+	const ov = editor.channelOverflow(7);
+	assert.equal(ov.telegram, false, '7 == Budget ist noch ok');
+	assert.equal(ov.email, false);
 });
 
 // ---------- AC-7 / AC-4: buildWeatherConfigMetrics (Round-Trip-Shape) ---------
@@ -489,10 +490,10 @@ test('AC-1: applyChannel SMS (0) → inTable==[], detail==alles, demoted==primar
 	assert.equal(r.demoted, primary.length);
 });
 
-test('AC-1: applyChannel Signal (5) kappt inTable, demoted==overflow', () => {
+test('AC-1: applyChannel mit Budget 5 kappt inTable, demoted==overflow', () => {
 	const primary = ['temperature', 'wind', 'gust', 'rain_probability', 'precipitation', 'wind_chill'];
 	const secondary = ['cloud_total'];
-	const r = editor.applyChannel(primary, secondary, editor.CHANNEL_COL_BUDGET.signal);
+	const r = editor.applyChannel(primary, secondary, 5);
 	assert.equal(r.inTable.length, 5);
 	assert.deepEqual(r.inTable, ['temperature', 'wind', 'gust', 'rain_probability', 'precipitation']);
 	// Overflow (wind_chill) landet VORNE in detail, vor secondary.
@@ -507,17 +508,17 @@ test('AC-1: applyChannel Telegram (7) kappt erst ab der 8. Spalte', () => {
 	assert.equal(r.demoted, 0);
 });
 
-// ---------- AC-2: 7 primary, Signal 5 → 2 demoted vorne in detail -------------
+// ---------- AC-2: 7 primary, Budget 5 → 2 demoted vorne in detail -------------
 
-test('AC-2: 7 primary bei Signal-Budget 5 → demoted==2, 2 überzählige vorne in detail', () => {
+test('AC-2: 7 primary bei Budget 5 → demoted==2, 2 überzählige vorne in detail', () => {
 	const primary = ['temperature', 'wind', 'gust', 'rain_probability', 'precipitation', 'wind_chill', 'cloud_total'];
 	const secondary = ['humidity'];
-	const sig = editor.applyChannel(primary, secondary, editor.CHANNEL_COL_BUDGET.signal);
-	assert.equal(sig.inTable.length, 5);
-	assert.equal(sig.demoted, 2);
+	const r5 = editor.applyChannel(primary, secondary, 5);
+	assert.equal(r5.inTable.length, 5);
+	assert.equal(r5.demoted, 2);
 	// Die 2 überzähligen (wind_chill, cloud_total) stehen VOR secondary.
-	assert.deepEqual(sig.detail.slice(0, 2), ['wind_chill', 'cloud_total']);
-	assert.equal(sig.detail[2], 'humidity');
+	assert.deepEqual(r5.detail.slice(0, 2), ['wind_chill', 'cloud_total']);
+	assert.equal(r5.detail[2], 'humidity');
 
 	// Email zeigt alle 7 ohne Demote.
 	const mail = editor.applyChannel(primary, secondary, editor.CHANNEL_COL_BUDGET.email);

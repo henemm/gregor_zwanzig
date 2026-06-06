@@ -35,7 +35,7 @@
 	import { HORIZONS_ALL } from '$lib/types';
 	import type { CompareWizardState } from '../compareWizardState.svelte';
 
-	type ChannelId = 'email' | 'telegram' | 'signal' | 'sms';
+	type ChannelId = 'email' | 'telegram' | 'sms';
 	interface Template {
 		id: string;
 		label: string;
@@ -47,7 +47,6 @@
 	const CHANNELS: { id: ChannelId; label: string; constraint: string }[] = [
 		{ id: 'email', label: 'Email', constraint: 'Keine Begrenzung — zeigt alles' },
 		{ id: 'telegram', label: 'Telegram', constraint: 'max 7 Spalten' },
-		{ id: 'signal', label: 'Signal', constraint: 'max 5 Spalten' },
 		{ id: 'sms', label: 'SMS', constraint: '≤ 140 Zeichen, Listen-Modus' },
 	];
 
@@ -63,25 +62,21 @@
 	let channelBuckets: Record<ChannelId, Buckets> = $state({
 		email: { primary: [], secondary: [], off: [] },
 		telegram: { primary: [], secondary: [], off: [] },
-		signal: { primary: [], secondary: [], off: [] },
 		sms: { primary: [], secondary: [], off: [] },
 	});
 	let channelFriendly: Record<ChannelId, Record<string, boolean>> = $state({
 		email: {},
 		telegram: {},
-		signal: {},
 		sms: {},
 	});
 	let channelHorizons: Record<ChannelId, Record<string, Horizons>> = $state({
 		email: {},
 		telegram: {},
-		signal: {},
 		sms: {},
 	});
 	let channelSelectedPreset: Record<ChannelId, string> = $state({
 		email: '',
 		telegram: '',
-		signal: '',
 		sms: '',
 	});
 

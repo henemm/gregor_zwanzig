@@ -113,7 +113,6 @@
 		const out: string[] = [];
 		if (rc.morning_enabled || rc.evening_enabled) {
 			if (rc.send_email !== false) out.push('Email');
-			if (rc.send_signal) out.push('Signal');
 			if (rc.send_telegram) out.push('Telegram');
 			if (rc.send_sms) out.push('SMS');
 		}

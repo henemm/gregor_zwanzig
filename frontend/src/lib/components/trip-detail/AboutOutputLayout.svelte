@@ -1,6 +1,6 @@
 <script lang="ts">
 	// Issue #364 — Erklär-Dialog "Wie kommt was wohin": Spalte/Detail/Aus +
-	// Kanal-Tabelle (Email ∞ / Telegram 8 / Signal 6 / SMS 0).
+	// Kanal-Tabelle (Email ∞ / Telegram 8 / SMS 0).
 	// Design: docs/design/epic_331_output_layout/screen-metrics-editor.jsx
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Eyebrow } from '$lib/components/atoms';
@@ -11,11 +11,10 @@
 	}
 	let { open = $bindable(false), onClose }: Props = $props();
 
-	// Gesamt-Spalten inkl. Uhrzeit (User-Sicht, deckt sich mit #360).
+	// Gesamt-Spalten inkl. Uhrzeit (User-Sicht, deckt sich mit #360). Signal entfernt (#610).
 	const channels = [
 		{ label: 'Email', max: '∞', behavior: 'Alles als Spalten + Detail-Zeile darunter' },
 		{ label: 'Telegram', max: '8', behavior: 'Erste 8 als Spalten, Rest wandert in Detail' },
-		{ label: 'Signal', max: '6', behavior: 'Erste 6 als Spalten, Rest in Detail' },
 		{ label: 'SMS', max: '0', behavior: 'Keine Tabelle, alles in flacher Zeile bis 140 Zeichen' },
 	];
 </script>

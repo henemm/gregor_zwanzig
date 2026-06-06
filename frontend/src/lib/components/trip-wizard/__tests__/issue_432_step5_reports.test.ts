@@ -115,18 +115,20 @@ test('AC-10: Step5Reports enthält keinen Eyebrow „DEINE KANÄLE" mehr', () =>
 // AC-11: Kanal-Chips pro Card
 // =============================================================================
 
-test('AC-11: Step5Reports enthält Kanal-Chips pro Card (alle 4 Kanal-Identifier sichtbar)', () => {
+// #610: Signal-Kanal entfernt — 3 Kanal-Chips pro Card
+test('AC-11 #610: Step5Reports enthält Email/Telegram/SMS-Chips (kein Signal)', () => {
 	const src = read5();
-	// Wir prüfen die Existenz der 4 Kanal-Strings im Template — heute sind sie nur
-	// in der oberen „DEINE KANÄLE"-Karte; nach #432 müssen sie pro Card erscheinen.
-	for (const ch of ['email', 'signal', 'telegram', 'sms']) {
+	for (const ch of ['email', 'telegram', 'sms']) {
 		assert.ok(
 			src.includes(`'${ch}'`) || src.includes(`"${ch}"`),
 			`Step5Reports muss Channel-Identifier '${ch}' enthalten (in Kanal-Chip pro Card)`,
 		);
 	}
-	// Pattern-Check: gibt es einen Snippet, eine Schleife, oder pro Card eine Chip-Reihe?
-	// Mindestens 2 Vorkommen jedes Kanal-Strings (pro 3 Cards mehrfach — Anzeige).
+	assert.ok(
+		!src.includes("'signal'") && !src.includes('"signal"'),
+		'Step5Reports darf nach #610 keinen Signal-Kanal-Identifier mehr enthalten',
+	);
+	// Pattern-Check: mindestens 2 Vorkommen von 'email'
 	const emailMatches = (src.match(/['"]email['"]/g) || []).length;
 	assert.ok(
 		emailMatches >= 2,

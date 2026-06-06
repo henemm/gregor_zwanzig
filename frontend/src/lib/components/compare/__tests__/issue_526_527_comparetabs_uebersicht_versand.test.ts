@@ -259,16 +259,15 @@ describe('AC-6: Kanal-Card mit Email/Signal/Telegram/SMS + Switch-Toggle', () =>
 		);
 	});
 
-	test("'Signal' als Kanalname im Versand-Tab vorhanden", () => {
+	test("'Signal' NICHT mehr im Versand-Tab (#610)", () => {
 		const content = src();
 		const versandBlock = content.slice(
 			content.indexOf("activeTab === 'versand'"),
 			content.indexOf("activeTab === 'vorschau'")
 		);
-		assert.match(
-			versandBlock,
-			/\bSignal\b/,
-			"Kanal 'Signal' fehlt im Versand-Tab Kanal-Card"
+		assert.ok(
+			!/\bSignal\b/.test(versandBlock),
+			"Kanal 'Signal' darf nach #610 nicht mehr im Versand-Tab sein"
 		);
 	});
 

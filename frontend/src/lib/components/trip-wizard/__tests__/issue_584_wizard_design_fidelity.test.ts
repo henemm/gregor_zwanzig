@@ -274,9 +274,9 @@ test('AC-12: Step5 Kanal-Chips sind <span>-Elemente mit accent-tint (aktiv) und 
 	// background: on ? "var(--g-accent-tint)" : "transparent"
 	// Aktuell: <label class="chip"> mit Checkbox inside
 	const hasWizChip = src.includes('--g-accent-tint') || src.includes('accent-tint');
-	// Muss auch "Signal", "Telegram" als Chip-Labels haben (nicht als Checkbox-Label)
-	const hasChannelChips = src.includes('✉ Email') || src.includes('▲ Signal') || src.includes('→ Telegram');
-	assert.ok(hasChannelChips, 'Kanal-Chips müssen Icon-Prefix haben: ✉ Email, ▲ Signal, → Telegram (JSX)');
+	// Email, Telegram, SMS als Chip-Labels (#610: Signal entfernt)
+	const hasChannelChips = src.includes('✉ Email') || src.includes('→ Telegram') || src.includes('* SMS');
+	assert.ok(hasChannelChips, 'Kanal-Chips müssen Icon-Prefix haben: ✉ Email, → Telegram, * SMS (#610: kein Signal)');
 	assert.ok(hasWizChip, 'Aktive Kanal-Chips müssen --g-accent-tint Hintergrund haben (JSX)');
 });
 

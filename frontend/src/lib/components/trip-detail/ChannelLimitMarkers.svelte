@@ -10,10 +10,9 @@
 	}
 	let { count }: Props = $props();
 
-	// Nur Kanäle mit endlichem Spalten-Budget > 0 anzeigen (Telegram, Signal).
+	// Nur Kanäle mit endlichem Spalten-Budget > 0 anzeigen (Telegram). Signal entfernt (#610).
 	const channels = [
 		{ id: 'telegram', label: 'Telegram', budget: CHANNEL_COL_BUDGET.telegram },
-		{ id: 'signal', label: 'Signal', budget: CHANNEL_COL_BUDGET.signal },
 	];
 	const overflow = $derived(channelOverflow(count));
 </script>
@@ -25,7 +24,7 @@
 	{#each channels as c}
 		<span
 			class="marker"
-			class:exceeded={overflow[c.id as 'telegram' | 'signal']}
+			class:exceeded={overflow[c.id as 'telegram']}
 			data-testid="channel-marker-{c.id}"
 			title="{c.label}: max {c.budget} Spalten"
 		>

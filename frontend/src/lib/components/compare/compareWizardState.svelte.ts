@@ -26,7 +26,6 @@ export class CompareWizardState {
 	channelLayouts = $state<ChannelLayouts | null>(null);
 	// Issue #443 — Step 5 Versand-Felder
 	sendEmail = $state(true);
-	sendSignal = $state(false);
 	sendTelegram = $state(false);
 	sendSms = $state(false);
 	timeWindowStart = $state(9);
@@ -50,7 +49,7 @@ export class CompareWizardState {
 	}
 
 	get canAdvanceStep5(): boolean {
-		return this.sendEmail || this.sendSignal || this.sendTelegram || this.sendSms;
+		return this.sendEmail || this.sendTelegram || this.sendSms;
 	}
 
 	get canAdvanceCurrent(): boolean {
@@ -125,7 +124,6 @@ export class CompareWizardState {
 				include_hourly: this.includeHourly,
 				top_n: this.topN,
 				send_email: this.sendEmail,
-				send_signal: this.sendSignal,
 				send_telegram: this.sendTelegram,
 				send_sms: this.sendSms
 			});
@@ -169,7 +167,6 @@ export class CompareWizardState {
 			include_hourly: this.includeHourly,
 			top_n: this.topN,
 			send_email: this.sendEmail,
-			send_signal: this.sendSignal,
 			send_telegram: this.sendTelegram,
 			send_sms: this.sendSms
 		};

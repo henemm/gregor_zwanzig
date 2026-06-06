@@ -116,11 +116,11 @@ describe('AC-3: Design-Heading nach screen-trip-detail.jsx HubPreview', () => {
 });
 
 // ── AC-4: Kanal-Umschalter ─────────────────────────────────────────────────────
-describe('AC-4: Segmented Kanal-Umschalter Email | SMS / Signal', () => {
-	test("Source enthält 'SMS / Signal'", () => {
+describe('AC-4: Segmented Kanal-Umschalter Email | SMS (#610: kein Signal)', () => {
+	test("Source enthält channels=['email', 'sms'] — Signal entfernt (#610)", () => {
 		assert.ok(
-			getSrc().includes('SMS / Signal'),
-			"CompareTabs.svelte enthält nicht 'SMS / Signal' — Kanal-Umschalter fehlt"
+			getSrc().includes("channels={['email', 'sms']}"),
+			"CompareTabs.svelte: Kanal-Umschalter muss channels=['email','sms'] ohne Signal haben"
 		);
 	});
 
@@ -189,9 +189,9 @@ describe('AC-7: SMS/Signal-Kanal zeigt Hinweis', () => {
 		);
 	});
 
-	test("Hinweis-Text 'SMS/Signal-Vorschau ist noch nicht verfügbar' vorhanden", () => {
+	test("Hinweis-Text 'SMS-Vorschau ist noch nicht verfügbar' vorhanden (#610)", () => {
 		assert.ok(
-			getSrc().includes('SMS/Signal-Vorschau ist noch nicht verf'),
+			getSrc().includes('SMS-Vorschau ist noch nicht verf'),
 			"CompareTabs.svelte enthält nicht den SMS-Hinweis-Text"
 		);
 	});

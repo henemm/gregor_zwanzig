@@ -35,14 +35,19 @@ test('AC-7: Step4Layout.svelte existiert unter steps/', () => {
 	assert.ok(existsSync(STEP4_LAYOUT), `Step4Layout.svelte fehlt: ${STEP4_LAYOUT}`);
 });
 
-test('AC-7: Step4Layout enthält alle 4 Channel-Identifier (email/telegram/signal/sms)', () => {
+// #610: Signal entfernt — nur noch 3 Kanäle
+test('AC-7 #610: Step4Layout enthält Email/Telegram/SMS (kein Signal)', () => {
 	const src = read(STEP4_LAYOUT);
-	for (const ch of ['email', 'telegram', 'signal', 'sms']) {
+	for (const ch of ['email', 'telegram', 'sms']) {
 		assert.ok(
 			src.includes(`'${ch}'`) || src.includes(`"${ch}"`),
 			`Step4Layout sollte den Channel-Identifier '${ch}' enthalten.`,
 		);
 	}
+	assert.ok(
+		!src.includes("'signal'") && !src.includes('"signal"'),
+		'Step4Layout darf nach #610 keinen signal-Channel-Identifier mehr enthalten',
+	);
 });
 
 // =============================================================================

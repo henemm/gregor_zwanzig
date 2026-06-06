@@ -26,7 +26,7 @@ test('WizardState: Initial-State entspricht Spec-Defaults', () => {
 	assert.equal(s.currentStep, 1);
 	assert.equal(s.activity, null);
 	assert.equal(s.briefings.channels.email, true);
-	assert.equal(s.briefings.channels.signal, false);
+	// #610: signal aus channels entfernt
 	assert.equal(s.briefings.channels.telegram, false);
 	assert.equal(s.briefings.channels.sms, false);
 	assert.equal(s.briefings.reports.morning.enabled, true);
@@ -98,10 +98,11 @@ test('WizardState: addPauseStage() fuegt Stage mit leeren Wegpunkten hinzu', () 
 test('WizardState: defaultBriefingConfig ist nicht geteilt (Klone unabhaengig)', () => {
 	const a = new WizardState();
 	const b = new WizardState();
-	a.briefings.channels.signal = true;
-	assert.equal(b.briefings.channels.signal, false, 'jede Instanz haelt eigene briefings');
+	// #610: signal aus channels entfernt — teste mit telegram statt signal
+	a.briefings.channels.telegram = true;
+	assert.equal(b.briefings.channels.telegram, false, 'jede Instanz haelt eigene briefings');
 	// defaultBriefingConfig selbst ist auch unangetastet:
-	assert.equal(defaultBriefingConfig.channels.signal, false);
+	assert.equal(defaultBriefingConfig.channels.telegram, false);
 });
 
 // --- canAdvanceStep1 (Sub-Spec #161 §6, AC#15) -----------------------------
@@ -448,7 +449,7 @@ test('canAdvanceStep4 #164 AC#1: neuer State → true', () => {
 test('canAdvanceStep4 #164 AC#1b: alle Kanaele aus → trotzdem true', () => {
 	const s = new WizardState();
 	s.briefings.channels.email = false;
-	s.briefings.channels.signal = false;
+	// #610: signal aus channels entfernt
 	s.briefings.channels.telegram = false;
 	s.briefings.channels.sms = false;
 	assert.equal(s.canAdvanceStep4, true);

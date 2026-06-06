@@ -3,7 +3,6 @@
 	export function channelGlyph(kind: string): string {
 		const k = String(kind).toLowerCase();
 		if (k.startsWith('email')) return '✉'; // ✉
-		if (k.startsWith('signal')) return '▲'; // ▲
 		if (k.startsWith('telegram')) return '✈'; // ✈
 		if (k.startsWith('sms')) return '✱'; // ✱
 		return '·'; // ·
@@ -20,7 +19,7 @@
 	// Spec: docs/specs/modules/issue_372_molecules.md (AC-1)
 
 	interface Props {
-		kind: string; // "Email" | "Signal" | "Telegram" | "SMS"
+		kind: string; // "Email" | "Telegram" | "SMS"
 		active?: boolean;
 		compact?: boolean;
 		class?: string;

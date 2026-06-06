@@ -55,11 +55,12 @@ test('AC-1: Step5 hat E-Mail-Toggle mit testid compare-step5-channel-email', () 
 	);
 });
 
-test('AC-1: Step5 hat Signal-Toggle mit testid compare-step5-channel-signal', () => {
+// #610: Signal-Kanal entfernt — compare-step5-channel-signal darf nicht mehr vorhanden sein
+test('AC-1 #610: Step5 hat keinen Signal-Toggle mehr', () => {
 	const src = read(STEP5, 'Step5Versand.svelte');
 	assert.ok(
-		/compare-step5-channel-signal/.test(src),
-		'Step5 muss compare-step5-channel-signal enthalten'
+		!/compare-step5-channel-signal/.test(src),
+		'Step5 darf nach #610 keinen compare-step5-channel-signal-Toggle mehr enthalten'
 	);
 });
 
@@ -187,11 +188,11 @@ test('AC-1+2: sendEmail als $state-Feld in compareWizardState', () => {
 	);
 });
 
-test('AC-1+2: sendSignal als $state-Feld in compareWizardState', () => {
+test('AC-1+2: kein sendSignal-Feld mehr in compareWizardState (#610)', () => {
 	const src = read(STATE, 'compareWizardState.svelte.ts');
 	assert.ok(
-		/sendSignal\s*=\s*\$state/.test(src),
-		'compareWizardState muss sendSignal als $state-Feld haben'
+		!/sendSignal\s*=\s*\$state/.test(src),
+		'compareWizardState darf sendSignal nicht mehr als $state-Feld haben'
 	);
 });
 
@@ -243,13 +244,16 @@ test('AC-2: canAdvanceStep5 Getter in compareWizardState', () => {
 	);
 });
 
-test('AC-2: canAdvanceStep5 prüft sendEmail || sendSignal || sendTelegram', () => {
+test('AC-2: canAdvanceStep5 prüft sendEmail || sendTelegram || sendSms (#610: kein Signal)', () => {
 	const src = read(STATE, 'compareWizardState.svelte.ts');
-	const hasCheck = /canAdvanceStep5[\s\S]{0,200}sendEmail[\s\S]{0,50}sendSignal[\s\S]{0,50}sendTelegram/.test(src)
-		|| /canAdvanceStep5[\s\S]{0,200}(sendEmail|sendSignal|sendTelegram)/.test(src);
+	const hasCheck = /canAdvanceStep5[\s\S]{0,200}sendEmail[\s\S]{0,50}sendTelegram/.test(src);
 	assert.ok(
 		hasCheck,
-		'canAdvanceStep5 muss sendEmail, sendSignal, sendTelegram prüfen'
+		'canAdvanceStep5 muss sendEmail und sendTelegram prüfen (kein sendSignal mehr)'
+	);
+	assert.ok(
+		!/sendSignal/.test(src.match(/canAdvanceStep5[\s\S]{0,300}/)?.[0] ?? ''),
+		'canAdvanceStep5 darf sendSignal nicht mehr referenzieren'
 	);
 });
 

@@ -15,10 +15,10 @@
 
 	let { value, onChange, channels = [], dense = false, class: className = '' }: Props = $props();
 
-	const all = ['email', 'signal', 'telegram', 'sms'];
+	// #610: signal entfernt — 3 Kanäle
+	const all = ['email', 'telegram', 'sms'];
 	const LABELS: Record<string, string> = {
 		email: 'Email',
-		signal: 'Signal',
 		telegram: 'Telegram',
 		sms: 'SMS',
 	};

@@ -287,7 +287,7 @@
 				<p class="lede">
 					Jede Metrik landet als <strong>eigene Spalte</strong> in der Tabelle oder als
 					<strong>Detail-Wert</strong> in einer kompakten Zeile darunter. Email zeigt beides
-					vollständig; Signal/Telegram haben Spalten-Limits — was nicht passt, wandert
+					vollständig; Telegram hat Spalten-Limits — was nicht passt, wandert
 					automatisch in die Detail-Zeile.
 					<button type="button" class="link-btn" data-testid="about-trigger" onclick={() => (showAbout = true)}>
 						Wie funktioniert das genau?

@@ -278,11 +278,13 @@ describe('AC-9: CompareChannelSwitch — neues Molecule', () => {
 		assert.ok(/g-shadow-1/.test(src), 'CompareChannelSwitch: --g-shadow-1 für aktiven Kanal fehlt');
 		assert.ok(/g-card/.test(src), 'CompareChannelSwitch: --g-card für aktiven Kanal fehlt');
 	});
-	test('CompareChannelSwitch rendert alle 4 Kanäle (email, signal, telegram, sms)', () => {
+	// #610: signal entfernt — CompareChannelSwitch zeigt nur noch 3 Kanäle
+	test('CompareChannelSwitch rendert Email, Telegram, SMS (kein Signal, #610)', () => {
 		const src = readMol('CompareChannelSwitch.svelte');
-		for (const ch of ['email', 'signal', 'telegram', 'sms']) {
+		for (const ch of ['email', 'telegram', 'sms']) {
 			assert.ok(src.includes(ch), `CompareChannelSwitch: Kanal "${ch}" fehlt`);
 		}
+		assert.ok(!src.includes("'signal'") && !src.includes('"signal"'), 'CompareChannelSwitch darf nach #610 kein Signal mehr enthalten');
 	});
 	test('CompareChannelSwitch in molecules/index.ts exportiert', () => {
 		const idx = readMol('index.ts');
@@ -317,11 +319,8 @@ describe('AC-10–13: Compare-Briefing-Vorschau-Molecules', () => {
 		});
 	}
 
-	test('AC-11: CompareChatBubble hat Signal + Telegram-Farben', () => {
+	test('AC-11: CompareChatBubble hat Telegram-Farben (#610: Signal-Farben entfernt)', () => {
 		const src = readMol('CompareChatBubble.svelte');
-		assert.ok(/#0b0b0d/.test(src), 'CompareChatBubble: Signal-Backdrop #0b0b0d fehlt');
-		assert.ok(/#26252b/.test(src), 'CompareChatBubble: Signal-Bubble #26252b fehlt');
-		assert.ok(/#2c6bed/.test(src), 'CompareChatBubble: Signal-Accent #2c6bed fehlt');
 		assert.ok(/#17212b/.test(src), 'CompareChatBubble: Telegram-Backdrop #17212b fehlt');
 		assert.ok(/#5ea9dd/.test(src), 'CompareChatBubble: Telegram-Accent #5ea9dd fehlt');
 	});

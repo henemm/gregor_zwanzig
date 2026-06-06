@@ -14,7 +14,7 @@
 	import { Switch } from '$lib/components/atoms';
 
 	interface Props {
-		kind: string; // "Email" | "Signal" | "Telegram" | "SMS"
+		kind: string; // "Email" | "Telegram" | "SMS"
 		target?: string; // z. B. "gregor_zwanzig@henemm.com"
 		active?: boolean;
 		sub?: string;

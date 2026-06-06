@@ -94,11 +94,10 @@ export interface BriefingReport {
 	etappe?: string;
 }
 
-/** Aktive Kanäle aus report_config (email/signal/telegram/sms). */
+/** Aktive Kanäle aus report_config (email/telegram/sms). Signal ist entfernt (#610). */
 export function reportChannels(rc: ReportConfig | undefined): string[] {
 	const out: string[] = [];
 	if (rc?.send_email) out.push('email');
-	if (rc?.send_signal) out.push('signal');
 	if (rc?.send_telegram) out.push('telegram');
 	if (rc?.send_sms) out.push('sms');
 	return out;

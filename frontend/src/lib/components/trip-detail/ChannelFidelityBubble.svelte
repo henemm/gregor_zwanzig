@@ -5,7 +5,7 @@
 	import { applyChannel, CHANNEL_COL_BUDGET, type MetricEntry } from './metricsEditor.ts';
 
 	interface Props {
-		channelId: 'telegram' | 'signal';
+		channelId: 'telegram';
 		primary: string[];
 		secondary: string[];
 		metricById: Record<string, MetricEntry>;
@@ -40,10 +40,10 @@
 	};
 	const HOURS = ['08', '12', '15'];
 
-	const bubbleW = $derived(channelId === 'signal' ? 272 : 330);
-	const accent = $derived(channelId === 'signal' ? '#3a76f0' : '#2aabee');
+	const bubbleW = 330;
+	const accent = '#2aabee';
 	const maxCols = $derived(CHANNEL_COL_BUDGET[channelId]);
-	const channelLabel = $derived(channelId === 'signal' ? 'Signal' : 'Telegram');
+	const channelLabel = 'Telegram';
 
 	const layout = $derived(applyChannel(primary, secondary, maxCols));
 
@@ -75,7 +75,7 @@
 		<div class="bubble" style:max-width="{bubbleW}px" style:border-left-color={accent}>
 			<div class="meta">
 				<span class="avatar" style:background={accent} aria-hidden="true">
-					{channelId === 'signal' ? '▲' : '✈'}
+					✈
 				</span>
 				<span class="sender">Gregor Zwanzig</span>
 			</div>

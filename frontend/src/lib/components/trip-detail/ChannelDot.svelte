@@ -1,12 +1,11 @@
 <script lang="ts">
 	interface Props {
-		kind: 'email' | 'signal' | 'telegram' | 'sms';
+		kind: 'email' | 'telegram' | 'sms';
 	}
 	let { kind }: Props = $props();
 
 	const icons: Record<string, string> = {
 		email: '✉',
-		signal: '▲',
 		telegram: '✈',
 		sms: '·'
 	};

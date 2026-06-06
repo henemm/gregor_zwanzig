@@ -24,16 +24,15 @@
 		email?: string;
 	} | null>('trip-wizard-profile');
 
-	// Kanal-Chip-Reihenfolge (JSX: Email, Signal, Telegram, SMS) — AC-12 #584
+	// Kanal-Chip-Reihenfolge — Email, Telegram, SMS (#610: Signal entfernt)
 	const CHANNEL_CHIPS: { id: ChannelKey; label: string }[] = [
 		{ id: 'email',    label: '✉ Email' },
-		{ id: 'signal',   label: '▲ Signal' },
 		{ id: 'telegram', label: '→ Telegram' },
 		{ id: 'sms',      label: '* SMS' },
 	];
 
 	// Typsichere ChannelKey-Liste — Backward-Compat für data-channels-Attribut
-	const CHANNEL_KEYS: readonly ChannelKey[] = ['email', 'signal', 'telegram', 'sms'] as const;
+	const CHANNEL_KEYS: readonly ChannelKey[] = ['email', 'telegram', 'sms'] as const;
 
 	// Factory-Handler — Switch calls onchange with boolean (not Event)
 	function makeEnabledHandler(report: 'morning' | 'evening') {

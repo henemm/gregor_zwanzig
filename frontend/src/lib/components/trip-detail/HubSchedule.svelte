@@ -22,7 +22,7 @@
 			title: 'Morgen-Briefing',
 			time: '06:00',
 			sub: 'Vor Etappenstart — alles für den Tag',
-			channels: ['email', 'signal'],
+			channels: ['email', 'telegram'],
 			on: true
 		},
 		{
@@ -36,7 +36,7 @@
 			title: 'Alert-Trigger',
 			time: 'bei Δ / Schwellwert',
 			sub: 'Sofort bei kritischer Änderung',
-			channels: ['signal'],
+			channels: ['telegram'],
 			on: true,
 			alert: true
 		},
@@ -127,7 +127,7 @@
 					>{card.time}</span>
 					<div style="display: flex; gap: 4px;">
 						{#each card.channels as ch}
-							<ChannelDot kind={ch as 'email' | 'signal' | 'telegram' | 'sms'} />
+							<ChannelDot kind={ch as 'email' | 'telegram' | 'sms'} />
 						{/each}
 					</div>
 				</div>

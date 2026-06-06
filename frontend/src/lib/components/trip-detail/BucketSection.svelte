@@ -33,7 +33,7 @@
 		onMode, onMove, onReorder, onDndReorder,
 	}: Props = $props();
 
-	const signalBudget = CHANNEL_COL_BUDGET.signal; // 5 wählbare Spalten
+	const telegramBudget = CHANNEL_COL_BUDGET.telegram; // 7 wählbare Spalten
 
 	// dndzone braucht Array<{id: string}>. Ein $effect (NICHT die abgeleitete
 	// Variante!) synct items in den lokalen DnD-State, weil dndzone die Liste
@@ -79,9 +79,9 @@
 		>
 			{#each dndItems as item, i (item.id)}
 				<div animate:flip={{ duration: 200 }}>
-					{#if bucket === 'primary' && i === signalBudget}
-						<div class="signal-divider mono" data-testid="signal-divider">
-							↓ ab hier bei <strong>Signal</strong> automatisch als Detail-Zeile (max {signalBudget} Spalten)
+					{#if bucket === 'primary' && i === telegramBudget}
+						<div class="telegram-divider mono" data-testid="telegram-divider">
+							↓ ab hier bei <strong>Telegram</strong> automatisch als Detail-Zeile (max {telegramBudget} Spalten)
 						</div>
 					{/if}
 					{#if metricById[item.id]}
@@ -92,7 +92,7 @@
 							index={i}
 							isFirst={i === 0}
 							isLast={i === items.length - 1}
-							isOverLimit={bucket === 'primary' && i >= signalBudget}
+							isOverLimit={bucket === 'primary' && i >= telegramBudget}
 							hasIndicator={indicatorCapable(item.id)}
 							useIndicator={friendlyMap[item.id] ?? true}
 							onMode={(v) => onMode(item.id, v)}
@@ -142,7 +142,7 @@
 		font-style: italic;
 		text-align: center;
 	}
-	.signal-divider {
+	.telegram-divider {
 		padding: var(--g-s-1) var(--g-s-5);
 		font-size: var(--g-text-xs);
 		letter-spacing: var(--g-track-caps);
