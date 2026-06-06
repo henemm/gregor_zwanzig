@@ -59,7 +59,10 @@ async function deleteTrip(
 
 async function openReportsSection(page: import('@playwright/test').Page, id: string) {
 	await page.goto(`/trips/${id}/edit`);
-	await page.locator('[data-testid="edit-section-reports-header"]').click();
+	// Editor nutzt einen Tab-Editor (TripEditView.svelte), nicht ein Accordion:
+	// Reports-Tab via data-testid="edit-tab-reports" aktivieren.
+	await page.locator('[data-testid="edit-tab-reports"]').click();
+	await page.locator('[data-testid="report-mail-content"]').waitFor({ state: 'visible' });
 }
 
 test.describe('Issue #619: E-Mail-Elemente konfigurierbar', () => {
