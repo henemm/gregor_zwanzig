@@ -20,6 +20,12 @@ Corsica E5: 18–32°C, 🌥️, trocken, Regen ab 10:00, mäßiger Wind 30 km/h
   💨 Böen bis 85 km/h (10:00)
   🌧 Regen gesamt: 8.0 mm
 
+━━ Tages-Summe ━━
+  Regen gesamt: 8 mm
+  Max Böe:      85 km/h
+  Min Sicht:    –
+  Gewitter:     HIGH
+
 Einheiten: Temp, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun h
 ------------------------------------------------------------
 Generated: <TIMESTAMP> UTC

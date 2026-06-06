@@ -19,6 +19,12 @@ GR20 E1: 2–9°C, 🌥️, trocken, Regen ab 6:00, mäßiger Wind 35 km/h, Böe
   💨 Böen bis 70 km/h (06:00)
   🌧 Regen gesamt: 18.5 mm
 
+━━ Tages-Summe ━━
+  Regen gesamt: 18 mm
+  Max Böe:      70 km/h
+  Min Sicht:    –
+  Gewitter:     MED
+
 Einheiten: Temp, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun h
 ------------------------------------------------------------
 Generated: <TIMESTAMP> UTC

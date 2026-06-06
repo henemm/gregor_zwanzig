@@ -25,6 +25,12 @@ GR20 E3: trocken, ⚡ möglich
 ━━ Zusammenfassung ━━
   🌧 Regen gesamt: 2.5 mm
 
+━━ Tages-Summe ━━
+  Regen gesamt: 2 mm
+  Max Böe:      53 km/h
+  Min Sicht:    –
+  Gewitter:     kein
+
 Einheiten: Temp, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun h
 ------------------------------------------------------------
 Generated: <TIMESTAMP> UTC
