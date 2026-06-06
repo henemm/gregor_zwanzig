@@ -3,7 +3,8 @@
 	import { api } from '$lib/api.js';
 	import { goto } from '$app/navigation';
 	import EditRouteSection from './EditRouteSection.svelte';
-	import WeatherSummaryCard from './WeatherSummaryCard.svelte';
+	// Issue #587: WeatherMetricsTab ersetzt WeatherSummaryCard im Wetter-Tab
+	import WeatherMetricsTab from '$lib/components/trip-detail/WeatherMetricsTab.svelte';
 	import EditReportConfigSection from './EditReportConfigSection.svelte';
 	import { AlertRulesEditor } from '$lib/components/organisms';
 	import EtappenStrip from '$lib/components/trip-detail/waypoints/EtappenStrip.svelte';
@@ -173,7 +174,7 @@
 		{:else if activeTab === 'etappen'}
 			<EditStagesPanelNew bind:stages tripId={trip.id} showSave={false} />
 		{:else if activeTab === 'wetter'}
-			<WeatherSummaryCard displayConfig={trip.display_config} tripId={trip.id} />
+			<WeatherMetricsTab {trip} />
 		{:else if activeTab === 'reports'}
 			<EditReportConfigSection bind:reportConfig mode="edit" />
 		{:else if activeTab === 'alarmregeln'}

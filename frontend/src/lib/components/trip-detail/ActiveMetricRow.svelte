@@ -15,13 +15,16 @@
 		isOverLimit: boolean;
 		hasIndicator: boolean;
 		useIndicator: boolean;
+		/** Issue #587: wenn true, wird der "→ Detail"-Knopf in primary ausgeblendet. */
+		hideDetailButton?: boolean;
 		onMode: (useIndicator: boolean) => void;
 		onMove: (target: 'primary' | 'secondary' | 'off') => void;
 		onReorder: (dir: -1 | 1) => void;
 	}
 	let {
 		metric, short, bucket, index, isFirst, isLast, isOverLimit,
-		hasIndicator, useIndicator, onMode, onMove, onReorder,
+		hasIndicator, useIndicator, hideDetailButton = false,
+		onMode, onMove, onReorder,
 	}: Props = $props();
 </script>
 
@@ -65,7 +68,9 @@
 
 	<div class="move-cell">
 		{#if bucket === 'primary'}
-			<button type="button" class="text-btn" data-testid="metric-to-detail-{metric.id}" onclick={() => onMove('secondary')}>→ Detail</button>
+			{#if !hideDetailButton}
+				<button type="button" class="text-btn" data-testid="metric-to-detail-{metric.id}" onclick={() => onMove('secondary')}>→ Detail</button>
+			{/if}
 			<button type="button" class="text-btn" data-testid="metric-to-off-{metric.id}" onclick={() => onMove('off')}>✕</button>
 		{:else}
 			<button type="button" class="text-btn" data-testid="metric-to-column-{metric.id}" onclick={() => onMove('primary')}>↑ Spalte</button>

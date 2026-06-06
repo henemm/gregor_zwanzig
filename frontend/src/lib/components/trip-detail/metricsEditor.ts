@@ -219,15 +219,32 @@ export const METRIC_PRIORITY: Record<string, number> = {
 const PRIMARY_SLOTS = 5;
 
 /**
- * Waehlbare Metrik-Spalten je Kanal (Uhrzeit NICHT mitgezaehlt — deckt sich
- * mit #360: Telegram total 8 = 7 + Zeit). Signal entfernt (#610).
- * Anzeige-Budget, KEIN hartes Limit — der Renderer demotet kanalspezifisch.
+ * Waehlbare Metrik-Spalten je Kanal (Uhrzeit NICHT mitgezaehlt).
+ * Telegram-Budget = 8 (#587: Signal entfernt, Budget von 7→8 angehoben).
+ * Signal entfernt (#610). Anzeige-Budget, KEIN hartes Limit.
  */
 export const CHANNEL_COL_BUDGET: Record<'email' | 'telegram' | 'sms', number> = {
 	email: Infinity,
-	telegram: 7,
+	telegram: 8,
 	sms: 0,
 };
+
+/**
+ * AC-7 / #587: Verlustfreie Migration des alten Bucket-Modells (primary/secondary/off)
+ * in eine geordnete Spaltenliste. primary zuerst, dann secondary, off weggelassen.
+ * Dubletten werden entfernt (erstes Vorkommen behalten).
+ */
+export function bucketsToColumns(buckets: { primary: string[]; secondary: string[]; off: string[] }): string[] {
+	const seen = new Set<string>();
+	const result: string[] = [];
+	for (const id of [...buckets.primary, ...buckets.secondary]) {
+		if (!seen.has(id)) {
+			seen.add(id);
+			result.push(id);
+		}
+	}
+	return result;
+}
 
 /** Flache Liste aller Katalog-IDs (Insertion-Order der Kategorien). */
 function allCatalogIds(catalog: MetricCatalog): string[] {

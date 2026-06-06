@@ -41,6 +41,13 @@
 		// erwartet, dass WeatherMetricsTab `categoryLabels={CATEGORY_LABELS}` setzt).
 		// Default = importierte CATEGORY_LABELS aus metricsEditor.ts.
 		categoryLabels?: Record<string, string>;
+		/**
+		 * Issue #587: Wenn true, wird der secondary-Abschnitt ("Detail-Werte")
+		 * komplett ausgeblendet und "→ Detail"-Knöpfe entfernt. Alle aktiven
+		 * Metriken sind genau eine Spaltenliste. Default false → Wizard/Compare
+		 * bleiben unverändert.
+		 */
+		hideDetailBucket?: boolean;
 		onReorder?: (bucket: 'primary' | 'secondary', id: string, dir: -1 | 1) => void;
 		onMove?: (id: string, target: 'primary' | 'secondary' | 'off') => void;
 		onMode?: (id: string, useIndicator: boolean) => void;
@@ -57,6 +64,7 @@
 		templates = [],
 		userPresets = [],
 		categoryLabels = CATEGORY_LABELS,
+		hideDetailBucket = false,
 		onReorder,
 		onMove,
 		onMode,
@@ -216,27 +224,30 @@
 			{friendlyMap}
 			{indicatorCapable}
 			showLimitMarkers
+			hideDetailButton={hideDetailBucket}
 			onMode={(id, useIndicator) => onMode?.(id, useIndicator)}
 			onMove={(id, target) => onMove?.(id, target)}
 			onReorder={(id, dir) => onReorder?.('primary', id, dir)}
 			onDndReorder={(newOrder) => onDndReorder?.('primary', newOrder)}
 		/>
 
-		<BucketSection
-			eyebrow="Im Briefing als Detail"
-			title="Detail-Werte"
-			hint="Erscheinen als kompakte Zeile direkt unter der Tabelle."
-			bucket="secondary"
-			items={buckets.secondary}
-			{metricById}
-			{shortById}
-			{friendlyMap}
-			{indicatorCapable}
-			onMode={(id, useIndicator) => onMode?.(id, useIndicator)}
-			onMove={(id, target) => onMove?.(id, target)}
-			onReorder={(id, dir) => onReorder?.('secondary', id, dir)}
-			onDndReorder={(newOrder) => onDndReorder?.('secondary', newOrder)}
-		/>
+		{#if !hideDetailBucket}
+			<BucketSection
+				eyebrow="Im Briefing als Detail"
+				title="Detail-Werte"
+				hint="Erscheinen als kompakte Zeile direkt unter der Tabelle."
+				bucket="secondary"
+				items={buckets.secondary}
+				{metricById}
+				{shortById}
+				{friendlyMap}
+				{indicatorCapable}
+				onMode={(id, useIndicator) => onMode?.(id, useIndicator)}
+				onMove={(id, target) => onMove?.(id, target)}
+				onReorder={(id, dir) => onReorder?.('secondary', id, dir)}
+				onDndReorder={(newOrder) => onDndReorder?.('secondary', newOrder)}
+			/>
+		{/if}
 
 		<BucketSectionOff
 			items={buckets.off}
@@ -244,6 +255,7 @@
 			{shortById}
 			{categoryLabels}
 			categoryOrder={[...CATEGORY_ORDER]}
+			hideDetailButton={hideDetailBucket}
 			onAdd={(id, target) => onMove?.(id, target)}
 		/>
 	</div>

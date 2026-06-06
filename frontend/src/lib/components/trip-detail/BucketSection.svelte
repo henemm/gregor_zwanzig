@@ -22,6 +22,8 @@
 		friendlyMap: Record<string, boolean>;
 		indicatorCapable: (id: string) => boolean;
 		showLimitMarkers?: boolean;
+		/** Issue #587: wenn true, wird der "→ Detail"-Knopf in jeder Zeile ausgeblendet. */
+		hideDetailButton?: boolean;
 		onMode: (id: string, useIndicator: boolean) => void;
 		onMove: (id: string, target: 'primary' | 'secondary' | 'off') => void;
 		onReorder: (id: string, dir: -1 | 1) => void;
@@ -30,10 +32,11 @@
 	let {
 		eyebrow, title, hint, bucket, items, metricById, shortById,
 		friendlyMap, indicatorCapable, showLimitMarkers = false,
+		hideDetailButton = false,
 		onMode, onMove, onReorder, onDndReorder,
 	}: Props = $props();
 
-	const telegramBudget = CHANNEL_COL_BUDGET.telegram; // 7 wählbare Spalten
+	const telegramBudget = CHANNEL_COL_BUDGET.telegram; // #587: 8 wählbare Spalten (war 7)
 
 	// dndzone braucht Array<{id: string}>. Ein $effect (NICHT die abgeleitete
 	// Variante!) synct items in den lokalen DnD-State, weil dndzone die Liste
@@ -81,7 +84,7 @@
 				<div animate:flip={{ duration: 200 }}>
 					{#if bucket === 'primary' && i === telegramBudget}
 						<div class="telegram-divider mono" data-testid="telegram-divider">
-							↓ ab hier bei <strong>Telegram</strong> automatisch als Detail-Zeile (max {telegramBudget} Spalten)
+							✂ ab hier bei <strong>Telegram</strong> abgeschnitten (max {telegramBudget} Spalten)
 						</div>
 					{/if}
 					{#if metricById[item.id]}
@@ -95,6 +98,7 @@
 							isOverLimit={bucket === 'primary' && i >= telegramBudget}
 							hasIndicator={indicatorCapable(item.id)}
 							useIndicator={friendlyMap[item.id] ?? true}
+							{hideDetailButton}
 							onMode={(v) => onMode(item.id, v)}
 							onMove={(t) => onMove(item.id, t)}
 							onReorder={(d) => onReorder(item.id, d)}

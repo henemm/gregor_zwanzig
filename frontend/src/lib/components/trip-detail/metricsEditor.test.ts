@@ -368,23 +368,25 @@ test('AC-3: reorder am unteren Rand ist No-Op', () => {
 
 // ---------- AC-5: channelOverflow / CHANNEL_COL_BUDGET ------------------------
 
-test('AC-5: CHANNEL_COL_BUDGET — telegram 7, sms 0, email unbegrenzt (#610: kein signal)', () => {
-	assert.equal(editor.CHANNEL_COL_BUDGET.telegram, 7);
+// #587: Telegram-Budget von 7→8 angehoben (Signal entfernt).
+test('AC-5: CHANNEL_COL_BUDGET — telegram 8, sms 0, email unbegrenzt (#610: kein signal)', () => {
+	assert.equal(editor.CHANNEL_COL_BUDGET.telegram, 8);
 	assert.equal(editor.CHANNEL_COL_BUDGET.sms, 0);
 	assert.equal(editor.CHANNEL_COL_BUDGET.email, Infinity);
 	assert.ok(!('signal' in editor.CHANNEL_COL_BUDGET), 'signal darf nicht in CHANNEL_COL_BUDGET sein');
 });
 
-test('AC-5: channelOverflow bei 8 primary → Telegram überschritten', () => {
-	const ov = editor.channelOverflow(8);
-	assert.equal(ov.telegram, true, 'Telegram-Budget 7 überschritten bei 8 Spalten');
+// #587: Budget=8, daher erst ab 9 Spalten überschritten.
+test('AC-5: channelOverflow bei 9 primary → Telegram überschritten', () => {
+	const ov = editor.channelOverflow(9);
+	assert.equal(ov.telegram, true, 'Telegram-Budget 8 überschritten bei 9 Spalten');
 	assert.equal(ov.email, false, 'Email-Budget unbegrenzt');
 	assert.ok(!('signal' in ov), 'signal darf nicht in channelOverflow sein');
 });
 
-test('AC-5: channelOverflow bei 7 primary → Telegram exakt am Limit (nicht überschritten)', () => {
-	const ov = editor.channelOverflow(7);
-	assert.equal(ov.telegram, false, '7 == Budget ist noch ok');
+test('AC-5: channelOverflow bei 8 primary → Telegram exakt am Limit (nicht überschritten)', () => {
+	const ov = editor.channelOverflow(8);
+	assert.equal(ov.telegram, false, '8 == Budget ist noch ok');
 	assert.equal(ov.email, false);
 });
 
@@ -452,6 +454,68 @@ test('AC-8: autoAssign aus Preset-Metriken liefert frische Buckets (überschreib
 });
 
 // =============================================================================
+// Issue #587 — bucketsToColumns: verlustfreie Migration secondary → primary
+// =============================================================================
+
+test('bucketsToColumns: primary zuerst, dann secondary, off ignoriert', () => {
+	const b = { primary: ['temperature', 'wind'], secondary: ['cloud_total'], off: ['humidity'] };
+	const cols = editor.bucketsToColumns(b);
+	assert.deepEqual(cols, ['temperature', 'wind', 'cloud_total']);
+});
+
+test('bucketsToColumns: Duplikate zwischen primary und secondary werden entfernt', () => {
+	const b = { primary: ['temperature', 'wind'], secondary: ['wind', 'cloud_total'], off: [] };
+	const cols = editor.bucketsToColumns(b);
+	// 'wind' kommt nur einmal vor (erstes Vorkommen = primary behält Vorrang)
+	assert.deepEqual(cols, ['temperature', 'wind', 'cloud_total']);
+});
+
+test('bucketsToColumns: leere primary + leere secondary → leeres Array', () => {
+	const b = { primary: [], secondary: [], off: ['humidity'] };
+	const cols = editor.bucketsToColumns(b);
+	assert.deepEqual(cols, []);
+});
+
+test('bucketsToColumns: nur secondary → secondary wird zu Spaltenliste', () => {
+	const b = { primary: [], secondary: ['cloud_total', 'wind_chill'], off: [] };
+	const cols = editor.bucketsToColumns(b);
+	assert.deepEqual(cols, ['cloud_total', 'wind_chill']);
+});
+
+test('bucketsToColumns: migriertes Ergebnis hat leere secondary (WeatherMetricsTab-Muster)', () => {
+	// Simuliert initFromTrip: nach bucketsToColumns wird secondary=[].
+	const b = { primary: ['temperature'], secondary: ['cloud_total'], off: ['humidity'] };
+	const merged = editor.bucketsToColumns(b);
+	const migratedBuckets = { primary: merged, secondary: [] as string[], off: b.off };
+	assert.deepEqual(migratedBuckets.secondary, []);
+	assert.ok(migratedBuckets.primary.includes('temperature'));
+	assert.ok(migratedBuckets.primary.includes('cloud_total'));
+	assert.ok(migratedBuckets.off.includes('humidity'));
+});
+
+// F001-Fix: applyPreset normalisiert nach autoAssign — kein Metrik landet in secondary
+test('F001-fix: autoAssign + bucketsToColumns — secondary ist leer nach Preset-Apply (>5 Metriken)', () => {
+	const catalog = buildCatalog();
+	// 7 aktive IDs → autoAssign legt Top-5 in primary, Rest in secondary
+	const activeIds = ['temperature', 'wind', 'gust', 'rain_probability', 'precipitation', 'wind_chill', 'cloud_total'];
+	const raw = editor.autoAssign(activeIds, catalog);
+	// Wie WeatherMetricsTab nach applyPreset: normalisieren
+	const normalized = { primary: editor.bucketsToColumns(raw), secondary: [] as string[], off: raw.off };
+	assert.deepEqual(normalized.secondary, [], 'secondary muss nach Normalisierung leer sein');
+	assert.equal(normalized.primary.length, 7, 'alle 7 aktiven Metriken landen in primary');
+});
+
+// F002-Fix: onToggleMetric mit active=true → primary, nie secondary
+test('F002-fix: move off→primary (toggle active=true) — keine Metrik landet in secondary', () => {
+	// Simuliert onToggleMetric: from='off', to='primary' (nach #587-Fix)
+	const b: editor.Buckets = { primary: ['temperature'], secondary: [], off: ['humidity'] };
+	const result = editor.move(b, 'humidity', 'off', 'primary');
+	assert.equal(result.secondary.length, 0, 'secondary bleibt leer nach Toggle-Aktivierung');
+	assert.ok(result.primary.includes('humidity'), 'humidity landet in primary');
+	assert.equal(result.off.includes('humidity'), false, 'humidity nicht mehr in off');
+});
+
+// =============================================================================
 // Issue #365 (Schritt C von #361) — 4-Kanal-Live-Vorschau (AC-1..AC-4)
 // =============================================================================
 //
@@ -501,10 +565,11 @@ test('AC-1: applyChannel mit Budget 5 kappt inTable, demoted==overflow', () => {
 	assert.equal(r.demoted, 1);
 });
 
-test('AC-1: applyChannel Telegram (7) kappt erst ab der 8. Spalte', () => {
-	const primary = ['a', 'b', 'c', 'd', 'e', 'f', 'g']; // genau 7
+// #587: Budget=8, daher passt genau 8 in inTable ohne Demote.
+test('AC-1: applyChannel Telegram (8) kappt erst ab der 9. Spalte', () => {
+	const primary = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']; // genau 8
 	const r = editor.applyChannel(primary, [], editor.CHANNEL_COL_BUDGET.telegram);
-	assert.equal(r.inTable.length, 7);
+	assert.equal(r.inTable.length, 8);
 	assert.equal(r.demoted, 0);
 });
 

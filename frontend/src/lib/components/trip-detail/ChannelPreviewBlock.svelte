@@ -37,7 +37,7 @@
 		<div class="title-row">
 			<div class="title">Pro Kanal</div>
 			<div class="counts mono">
-				{primary.length} {primary.length === 1 ? 'Spalte' : 'Spalten'} · {secondary.length} Detail
+				{primary.length + secondary.length} {(primary.length + secondary.length) === 1 ? 'Spalte' : 'Spalten'}
 			</div>
 		</div>
 		<p class="hint">

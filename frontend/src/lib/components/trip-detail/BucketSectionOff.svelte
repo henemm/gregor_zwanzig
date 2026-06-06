@@ -11,9 +11,11 @@
 		shortById: Record<string, string>;
 		categoryLabels: Record<string, string>;
 		categoryOrder: string[];
+		/** Issue #587: wenn true, wird der "+ Detail"-Knopf ausgeblendet. */
+		hideDetailButton?: boolean;
 		onAdd: (id: string, target: 'primary' | 'secondary') => void;
 	}
-	let { items, metricById, shortById, categoryLabels, categoryOrder, onAdd }: Props = $props();
+	let { items, metricById, shortById, categoryLabels, categoryOrder, hideDetailButton = false, onAdd }: Props = $props();
 
 	let open = $state(false);
 
@@ -62,7 +64,9 @@
 									<div class="off-meta mono">{m.unit || '—'} · {shortById[m.id] ?? m.label.slice(0, 5)}</div>
 								</div>
 								<button type="button" class="text-btn" data-testid="off-add-column-{m.id}" onclick={() => onAdd(m.id, 'primary')}>+ Spalte</button>
-								<button type="button" class="text-btn" data-testid="off-add-detail-{m.id}" onclick={() => onAdd(m.id, 'secondary')}>+ Detail</button>
+								{#if !hideDetailButton}
+									<button type="button" class="text-btn" data-testid="off-add-detail-{m.id}" onclick={() => onAdd(m.id, 'secondary')}>+ Detail</button>
+								{/if}
 							</div>
 						{/each}
 					</div>

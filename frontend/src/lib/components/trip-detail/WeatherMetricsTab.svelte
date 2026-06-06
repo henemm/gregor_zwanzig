@@ -23,7 +23,7 @@
 	import TablePreview from './TablePreview.svelte';
 	// Issue #433: leitet `onDndReorder` an die Shared-Komponente durch.
 	import {
-		autoAssign, move, reorder, buildWeatherConfigMetrics,
+		autoAssign, bucketsToColumns, move, reorder, buildWeatherConfigMetrics,
 		CATEGORY_LABELS, CATEGORY_ORDER, INDICATOR_MAP, indicatorCapable,
 		type Buckets, type MetricEntry, type MetricCatalog,
 	} from './metricsEditor.ts';
@@ -136,6 +136,12 @@
 			}
 		}
 
+		// Issue #587: WeatherMetricsTab arbeitet ohne Detail-Bucket (hideDetailBucket=true).
+		// Bestehende secondary-Metriken werden verlustfrei nach primary migriert
+		// (bucketsToColumns: primary zuerst, dann secondary, Duplikate entfernt).
+		const mergedColumns = bucketsToColumns(b);
+		b = { primary: mergedColumns, secondary: [], off: b.off };
+
 		const savedPreset = trip.display_config?.preset_name;
 		selectedTemplate = savedPreset ?? '';
 		buckets = b;
@@ -176,6 +182,8 @@
 			? userP.metrics.filter((m) => m.enabled).map((m) => m.metric_id)
 			: (tmpl ? tmpl.metrics : []);
 		buckets = autoAssign(activeIds, catalog);
+		// Issue #587: WeatherMetricsTab hat keinen Detail-Bucket — secondary nach primary migrieren.
+		buckets = { primary: bucketsToColumns(buckets), secondary: [], off: buckets.off };
 		if (userP) {
 			for (const m of userP.metrics) {
 				friendlyMap = { ...friendlyMap, [m.metric_id]: m.use_friendly_format };
@@ -201,12 +209,13 @@
 		friendlyMap = { ...friendlyMap, [id]: useIndicator };
 	}
 
-	// Issue #415 — Mobile-Toggle: aktiviert -> secondary-Bucket, deaktiviert -> off.
+	// Issue #415 — Mobile-Toggle: aktiviert -> primary-Bucket, deaktiviert -> off.
+	// Issue #587: Ziel war früher 'secondary', jetzt 'primary' (kein Detail-Bucket).
 	function onToggleMetric(id: string, active: boolean) {
 		const from: keyof Buckets = buckets.primary.includes(id)
 			? 'primary'
 			: buckets.secondary.includes(id) ? 'secondary' : 'off';
-		const to: keyof Buckets = active ? 'secondary' : 'off';
+		const to: keyof Buckets = active ? 'primary' : 'off';
 		if (from !== to) buckets = move(buckets, id, from, to);
 		if (selectedTemplate) selectedTemplate = '';
 	}
@@ -353,6 +362,7 @@
 					bind:friendlyMap
 					bind:selectedTemplate
 					categoryLabels={CATEGORY_LABELS}
+					hideDetailBucket={true}
 					onReorder={(bucket, id, dir) => onReorder(bucket, id, dir)}
 					onMove={(id, target) => onMove(id, target)}
 					{onMode}
