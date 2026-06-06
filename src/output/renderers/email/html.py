@@ -285,6 +285,11 @@ def render_html(
     format_modes: Optional[dict[str, str]] = None,
     profile: Optional[ActivityProfile] = None,
     stability_result: Optional["StabilityResult"] = None,
+    show_stage_stats: bool = True,
+    show_quick_take_tags: bool = True,
+    show_stability: bool = True,
+    show_highlights: bool = True,
+    daily_summary_metrics: Optional[list[str]] = None,
 ) -> str:
     """Render full HTML e-mail body. Pure function."""
     sig = profile_signature(profile)
@@ -295,7 +300,7 @@ def render_html(
     sub_header = stage_name or ""
     # AC-1: Kennzahlen-Raster mit benannten Labels statt einzeiliger stats_line
     stats_grid_html = ""
-    if stage_stats:
+    if stage_stats and show_stage_stats:
         _mono = f"font-family:{FONT_DATA};font-variant-numeric:tabular-nums"
         _label_style = f"font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:{G_INK_MUTED};display:block"
         _val_style = f"font-size:14px;font-weight:600;color:{G_INK};{_mono}"
@@ -521,7 +526,7 @@ def render_html(
     """
 
     highlights_html = ""
-    if highlights:
+    if highlights and show_highlights:
         hl_items = "".join(f"<li>{h}</li>" for h in highlights)
         highlights_html = f"""
             <div class="section">
@@ -532,7 +537,7 @@ def render_html(
     # AC-2: Quick-Take Chips aus Segment-Stundenwerten
     quick_chips = build_quick_take_chips(segments)
     quick_take_html = ""
-    if quick_chips:
+    if quick_chips and show_quick_take_tags:
         chips_html = " ".join(pill_html(label, tone) for label, tone in quick_chips)
         quick_take_html = (
             f'<div style="padding:8px 16px;display:block">'
@@ -547,32 +552,71 @@ def render_html(
                 <p style="margin:0;font-size:14px;line-height:1.6;">{compact_summary}</p>
             </div>"""
 
-    # AC-4: Tages-Summe-Block
-    daily_agg = build_daily_aggregates(segments)
-    rain_val = f"{daily_agg['rain_mm']:.0f}"
-    vis_val = f"{daily_agg['min_vis_km']:.1f}" if daily_agg["min_vis_km"] is not None else "–"
-    # Kompaktes Format: Wert · Einheit pro Zeile, damit 800-Zeichen-Test-Fenster ausreicht
-    daily_summary_html = (
-        f'<div style="background:{G_SURFACE_1};border-top:2px solid {G_INK};'
-        f'padding:16px;margin-top:16px">'
-        f'<p style="font-size:9px;text-transform:uppercase;letter-spacing:0.08em;'
-        f'color:{G_INK_MUTED};margin:0 0 8px 0">Tages-Summe</p>'
-        f'<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:13px">'
-        f'<tr>'
-        f'<td style="padding:2px 16px 2px 0;color:{G_INK_MUTED}">Regen gesamt</td>'
-        f'<td style="padding:2px 16px 2px 0;font-weight:600">{rain_val} mm</td>'
-        f'<td style="padding:2px 16px 2px 0;color:{G_INK_MUTED}">Max Böe</td>'
-        f'<td style="padding:2px 16px 2px 0;font-weight:600">{int(daily_agg["max_gust_kmh"])} km/h</td>'
-        f'</tr>'
-        f'<tr>'
-        f'<td style="padding:2px 16px 2px 0;color:{G_INK_MUTED}">Min Sicht</td>'
-        f'<td style="padding:2px 16px 2px 0;font-weight:600">{vis_val} km</td>'
-        f'<td style="padding:2px 16px 2px 0;color:{G_INK_MUTED}">Gewitter</td>'
-        f'<td style="padding:2px 0;font-weight:600">{daily_agg["thunder_word"]}</td>'
-        f'</tr>'
-        f'</table>'
-        f'</div>'
-    )
+    # AC-4: Tages-Summe-Block — metrik-getrieben (Issue #621)
+    # F001: feste Katalog-Reihenfolge; Eingabe-Reihenfolge irrelevant.
+    # F002: Block nur emittieren wenn nach dem Filtern mind. eine gültige Zelle vorhanden.
+    _METRIC_ORDER = ["precipitation", "wind", "visibility", "thunder", "temperature"]
+    _dsm_set = set(daily_summary_metrics) if daily_summary_metrics is not None else {
+        "precipitation", "wind", "visibility", "thunder"
+    }
+    _daily_agg = build_daily_aggregates(segments)
+    _td_lbl = f'style="padding:2px 16px 2px 0;color:{G_INK_MUTED}"'
+    _td_val = 'style="padding:2px 16px 2px 0;font-weight:600"'
+    _td_val_last = 'style="padding:2px 0;font-weight:600"'
+    _metric_cells: list[tuple[str, str]] = []
+    for _m in _METRIC_ORDER:
+        if _m not in _dsm_set:
+            continue
+        if _m == "precipitation":
+            _metric_cells.append(("Regen gesamt", f'{_daily_agg["rain_mm"]:.0f} mm'))
+        elif _m == "wind":
+            _metric_cells.append(("Max Böe", f'{int(_daily_agg["max_gust_kmh"])} km/h'))
+        elif _m == "visibility":
+            _vis = (f'{_daily_agg["min_vis_km"]:.1f} km'
+                    if _daily_agg["min_vis_km"] is not None else "–")
+            _metric_cells.append(("Min Sicht", _vis))
+        elif _m == "thunder":
+            _metric_cells.append(("Gewitter", _daily_agg["thunder_word"]))
+        elif _m == "temperature":
+            _mn = _daily_agg.get("min_temp_c")
+            _mx = _daily_agg.get("max_temp_c")
+            if _mn is not None and _mx is not None:
+                _metric_cells.append(("Temp", f'{int(round(_mn))}–{int(round(_mx))} °C'))
+            else:
+                _metric_cells.append(("Temp", "–"))
+    if _metric_cells:
+        # Baue Zeilen mit je 2 Zellen (label+wert), letzte Zeile mit _td_val_last
+        _rows_html = ""
+        for _i in range(0, len(_metric_cells), 2):
+            pair = _metric_cells[_i:_i + 2]
+            if len(pair) == 2:
+                l1, v1 = pair[0]
+                l2, v2 = pair[1]
+                _rows_html += (
+                    f'<tr>'
+                    f'<td {_td_lbl}>{l1}</td><td {_td_val}>{v1}</td>'
+                    f'<td {_td_lbl}>{l2}</td><td {_td_val_last}>{v2}</td>'
+                    f'</tr>'
+                )
+            else:
+                l1, v1 = pair[0]
+                _rows_html += (
+                    f'<tr>'
+                    f'<td {_td_lbl}>{l1}</td><td {_td_val_last}>{v1}</td>'
+                    f'</tr>'
+                )
+        daily_summary_html = (
+            f'<div style="background:{G_SURFACE_1};border-top:2px solid {G_INK};'
+            f'padding:16px;margin-top:16px">'
+            f'<p style="font-size:9px;text-transform:uppercase;letter-spacing:0.08em;'
+            f'color:{G_INK_MUTED};margin:0 0 8px 0">Tages-Summe</p>'
+            f'<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:13px">'
+            f'{_rows_html}'
+            f'</table>'
+            f'</div>'
+        )
+    else:
+        daily_summary_html = ""
 
     # Issue #121 / AC-12 + AC-13: confidence hint (only when uncertain).
     confidence_hint_html = ""
@@ -589,7 +633,7 @@ def render_html(
 
     # Issue #122 / F12: Großwetterlage-Label (vor dem Confidence-Hinweis,
     # erstes inhaltliches Element — Spec AC-8).
-    stability_html = render_stability_label_html(stability_result)
+    stability_html = render_stability_label_html(stability_result if show_stability else None)
 
     daylight_html = ""
     if daylight:

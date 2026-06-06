@@ -461,6 +461,7 @@ class TripReportSchedulerService:
             tz=trip_tz,
             profile=trip.aggregation.profile,
             stability_result=stability_result,
+            report_config=trip.report_config,
         )
 
         # 7. Send via configured channels

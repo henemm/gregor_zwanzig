@@ -363,6 +363,14 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
                 "multi_day_trend_reports",
                 dc_data.get("multi_day_trend_reports", ["evening"]),
             ),
+            show_stage_stats=rc_data.get("show_stage_stats", True),
+            show_quick_take_tags=rc_data.get("show_quick_take_tags", True),
+            show_stability=rc_data.get("show_stability", True),
+            show_highlights=rc_data.get("show_highlights", True),
+            daily_summary_metrics=rc_data.get(
+                "daily_summary_metrics",
+                ["precipitation", "wind", "visibility", "thunder"],
+            ),
             updated_at=datetime.fromisoformat(rc_data["updated_at"]) if "updated_at" in rc_data else datetime.now(),
         )
 

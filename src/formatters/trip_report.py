@@ -32,6 +32,7 @@ from app.models import (
     StabilityResult,
     ThunderLevel,
     TripReport,
+    TripReportConfig,
     UnifiedWeatherDisplayConfig,
     WeatherChange,
 )
@@ -65,6 +66,7 @@ class TripReportFormatter:
         tz: Optional[ZoneInfo] = None,
         profile: Optional[ActivityProfile] = None,
         stability_result: Optional[StabilityResult] = None,
+        report_config: Optional[TripReportConfig] = None,
     ) -> TripReport:
         """Format trip segments into HTML + plain-text email."""
         if not segments:
@@ -115,6 +117,12 @@ class TripReportFormatter:
             report_type=report_type,  # type: ignore[arg-type]
             trip_name=trip_name,
         )
+        # Issue #621: Toggles aus report_config ableiten (None → Defaults = alles an)
+        _show_stage_stats = report_config.show_stage_stats if report_config else True
+        _show_quick_take_tags = report_config.show_quick_take_tags if report_config else True
+        _show_stability = report_config.show_stability if report_config else True
+        _show_highlights = report_config.show_highlights if report_config else True
+        _daily_summary_metrics = report_config.daily_summary_metrics if report_config else None
         email_html, email_plain = render_email(
             token_line,
             segments=segments,
@@ -134,6 +142,11 @@ class TripReportFormatter:
             friendly_keys=self._friendly_keys,
             profile=profile,
             stability_result=stability_result,
+            show_stage_stats=_show_stage_stats,
+            show_quick_take_tags=_show_quick_take_tags,
+            show_stability=_show_stability,
+            show_highlights=_show_highlights,
+            daily_summary_metrics=_daily_summary_metrics,
         )
         first_agg = segments[0].aggregated
         email_subject = self._generate_subject(

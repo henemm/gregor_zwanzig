@@ -47,6 +47,11 @@ def render_email(
     friendly_keys: set[str],
     profile: Optional[ActivityProfile] = None,
     stability_result: Optional["StabilityResult"] = None,
+    show_stage_stats: bool = True,
+    show_quick_take_tags: bool = True,
+    show_stability: bool = True,
+    show_highlights: bool = True,
+    daily_summary_metrics: Optional[list[str]] = None,
 ) -> tuple[str, str]:
     """Returns (html_body, plain_body). Pure function.
 
@@ -86,6 +91,11 @@ def render_email(
         format_modes=format_modes,
         profile=profile,
         stability_result=stability_result,
+        show_stage_stats=show_stage_stats,
+        show_quick_take_tags=show_quick_take_tags,
+        show_stability=show_stability,
+        show_highlights=show_highlights,
+        daily_summary_metrics=daily_summary_metrics,
     )
     plain_body = render_plain(
         segments=segments,
@@ -107,6 +117,10 @@ def render_email(
         format_modes=format_modes,
         profile=profile,
         stability_result=stability_result,
+        show_stage_stats=show_stage_stats,
+        show_stability=show_stability,
+        show_highlights=show_highlights,
+        daily_summary_metrics=daily_summary_metrics,
     )
     return html_body, plain_body
 

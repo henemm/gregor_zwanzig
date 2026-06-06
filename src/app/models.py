@@ -717,6 +717,15 @@ class TripReportConfig:
         default_factory=lambda: ["evening"]
     )                                           # F3: Etappen-Ausblick morning/evening
 
+    # Mail-Elemente abschaltbar (Issue #621) — Default = alles an (bisheriges Verhalten)
+    show_stage_stats: bool = True               # Etappen-Kennzahlen-Raster
+    show_quick_take_tags: bool = True           # Quick-Take-Chips (nur HTML)
+    show_stability: bool = True                 # Großwetterlage-Label
+    show_highlights: bool = True                # Zusammenfassung (Highlights)
+    daily_summary_metrics: list[str] = field(
+        default_factory=lambda: ["precipitation", "wind", "visibility", "thunder"]
+    )                                           # Tages-Summe-Auswahl
+
     # Metadata
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 

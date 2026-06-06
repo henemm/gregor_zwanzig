@@ -139,6 +139,7 @@ class PreviewService:
             tz=trip_tz,
             profile=trip.aggregation.profile,
             stability_result=stability_result,
+            report_config=trip.report_config,
         )
         return report, segment_weather, stage_name, trip_tz
 

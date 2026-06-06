@@ -592,13 +592,16 @@ def build_format_modes(dc: UnifiedWeatherDisplayConfig) -> dict[str, str]:
 def build_daily_aggregates(segments: list) -> dict:
     """AC-4/AC-7: Aggregiere Stundenwerte über alle Segmente.
 
-    Returns dict mit: rain_mm, max_gust_kmh, min_vis_km, thunder_word.
+    Returns dict mit: rain_mm, max_gust_kmh, min_vis_km, thunder_word,
+    min_temp_c, max_temp_c.
     """
     rain_total = 0.0
     max_gust = 0.0
     min_vis: Optional[float] = None
     max_thunder = ThunderLevel.NONE
     severity = {ThunderLevel.NONE: 0, ThunderLevel.MED: 1, ThunderLevel.HIGH: 2}
+    min_temp: Optional[float] = None
+    max_temp: Optional[float] = None
 
     for seg in segments:
         ts = getattr(seg, "timeseries", None)
@@ -614,6 +617,9 @@ def build_daily_aggregates(segments: list) -> dict:
             if dp.thunder_level is not None:
                 if severity.get(dp.thunder_level, 0) > severity.get(max_thunder, 0):
                     max_thunder = dp.thunder_level
+            if dp.t2m_c is not None:
+                min_temp = dp.t2m_c if min_temp is None else min(min_temp, dp.t2m_c)
+                max_temp = dp.t2m_c if max_temp is None else max(max_temp, dp.t2m_c)
 
     thunder_map = {ThunderLevel.NONE: "kein", ThunderLevel.MED: "MED", ThunderLevel.HIGH: "HIGH"}
     return {
@@ -621,6 +627,8 @@ def build_daily_aggregates(segments: list) -> dict:
         "max_gust_kmh": max_gust,
         "min_vis_km": min_vis,
         "thunder_word": thunder_map.get(max_thunder, "kein"),
+        "min_temp_c": min_temp,
+        "max_temp_c": max_temp,
     }
 
 
