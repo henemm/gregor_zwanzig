@@ -49,3 +49,33 @@ die Wizard und Editor teilen — kein paralleler alter Pfad.
 ## Bezug
 Paket „Trip bearbeiten": #587 (Wetter-Metriken-Tab v2), #616 (Tab-IA), #617 (Kanal-Verkettung),
 #618 (Mobile), #610 (Signal app-weit entfernen). Wizard-Fidelity bisher: #584. Format-Modi: #435.
+
+---
+
+## Auflösung / PO-Entscheidung (2026-06-06)
+
+Claude Design hat die harmonisierten Quellen geliefert: `docs/design-requests/trip-anlegen-2026-06-06/`
+(`screen-trip-edit-v2-{main,weather,mobile}.jsx`, `screen-trip-new-v2{,-mobile}.jsx`,
+`body-24-trip-new-progressive-editor.md`). Damit sind die fünf Auftragspunkte wie folgt geklärt:
+
+1. **Signal entfernen** — ✅ erledigt (Design Signal-frei; Code app-weit raus via #610).
+2. **Ein Metrik-/Format-Modell (Verhältnis zu #435)** — ✅ **entschieden (PO, 2026-06-06):**
+   Die App nutzt künftig **ein** Modell mit nur noch **zwei** Anzeige-Modi in der Oberfläche:
+   **Roh** (`raw`) und **Einfach** (`simplified`). Die bisher aus #435 ausgelieferten Modi
+   **Skala** (`scale`) und **Symbol** (`symbol`) werden **stillgelegt** (nicht mehr in der UI
+   angeboten). **Bestandsdaten:** Touren, die heute auf `scale` oder `symbol` stehen, werden auf
+   den **`default_format_mode` der jeweiligen Metrik** zurückgesetzt (vorhandene Fallback-Logik
+   `loader._resolve_format_mode` / `MetricConfig.format_mode = None`). Kein willkürliches Mapping,
+   kein Datenverlust. Verbindlich für Erstellen- UND Bearbeiten-Pfad.
+3. **Wetterschritt = geteilte v2-Komponente** — ✅ erledigt (Design-Doc C6: Tabs 4–6 sind
+   *dieselben* Svelte-Komponenten wie im Edit-Flow; festgehalten in #622-Spec AC-6).
+4. **Struktur-Kohärenz (Alerts/Zeitplan-Position)** — ✅ erledigt (vollständige Tab-Struktur +
+   progressiver Lock-State in `body-24-trip-new-progressive-editor.md`).
+5. **Mobile** — 🟡 Bearbeiten-Mobile als #618 spezifiziert; Erstellen-Mobile bewusst auf V1.5
+   vertagt (Mockup `screen-trip-new-v2-mobile.jsx` liegt bereits vor).
+
+**Umsetzungs-Folge:** Die Design-/Entscheidungs-Ebene (#620) ist damit abgeschlossen. Die
+tatsächliche Code-Umstellung (Skala/Symbol aus UI entfernen + datensichere Migration der
+Bestandskonfigurationen mit Roundtrip-Test gemäß Schema-Rework-Regel) läuft als eigenes
+Umsetzungs-Issue **#629**, verzahnt mit #587. #620 ist mit dem Festhalten dieser Entscheidung
+abgeschlossen.
