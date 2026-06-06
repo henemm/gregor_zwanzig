@@ -300,7 +300,7 @@ async def alert_preview(
 @router.get("/api/_validator/metrics-for-channel")
 async def metrics_for_channel(
     trip: str = Query(..., description="Trip-ID"),
-    channel: str = Query(..., description="email|telegram|signal|sms"),
+    channel: str = Query(..., description="email|telegram|sms"),
     report: str = Query(..., description="morning|evening"),
     user_id: str = Query(..., description="Vom Go-Proxy injiziert (Anti-Spoofing)"),
 ):

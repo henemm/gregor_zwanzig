@@ -16,11 +16,10 @@ if TYPE_CHECKING:  # pragma: no cover - nur fuer Typannotation
 
 
 # Kanal-Constraints. ``max_table_cols`` zaehlt die GESAMT-Spalten inkl. der
-# impliziten Zeit-Spalte (Signal 6 = Zeit + 5 Metriken).
+# impliziten Zeit-Spalte (Telegram 8 = Zeit + 7 Metriken).
 CHANNEL_LIMITS = {
     "email":    {"max_table_cols": None, "max_chars": None},   # unbegrenzt
     "telegram": {"max_table_cols": 8,    "max_chars": 4096},
-    "signal":   {"max_table_cols": 6,    "max_chars": 1800},
     "sms":      {"max_table_cols": 0,    "max_chars": 140},
 }
 
@@ -36,8 +35,7 @@ METRIC_PRIORITY = {
     "pressure": 18, "cape": 15, "cloud_mid": 12, "cloud_high": 10, "confidence": 8,
 }
 
-# Anzahl Metriken, die die Auto-Verteilung als ``primary`` markiert
-# (= Signal-Limit 6 minus Zeit-Spalte ⇒ Signal-safe).
+# Anzahl Metriken, die die Auto-Verteilung als ``primary`` markiert.
 _PRIMARY_SLOTS = 5
 
 
@@ -66,12 +64,13 @@ def render_for_channel(
         [m for m in enabled if m.bucket == "secondary"], key=lambda m: m.order,
     )
 
-    limit = CHANNEL_LIMITS[channel]["max_table_cols"]
+    channel_cfg = CHANNEL_LIMITS.get(channel, CHANNEL_LIMITS["telegram"])
+    limit = channel_cfg["max_table_cols"]
     if limit is None:                       # Email: kein Limit
         table, overflow = primary, []
     elif limit == 0:                        # SMS: keine Tabelle
         table, overflow = [], primary
-    else:                                   # Signal/Telegram: Slot 0 = Zeit
+    else:                                   # Telegram (und unbekannte Kanaele): Slot 0 = Zeit
         metric_slots = limit - 1
         table, overflow = primary[:metric_slots], primary[metric_slots:]
 

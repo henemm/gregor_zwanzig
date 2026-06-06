@@ -392,12 +392,10 @@ class TestAC6ChannelConsistency:
         assert "10:00" in report.email_plain and "12:00" in report.email_plain
         assert "08:00" not in report.email_plain
 
+    @pytest.mark.skip(reason="Signal-Kanal entfernt (Bug #610 Schritt 2/2) — TripReport.signal_text nicht mehr vorhanden")
     def test_signal_local_header(self, report):
-        assert report.signal_text is not None
-        assert "10:00" in report.signal_text and "12:00" in report.signal_text, (
-            f"Signal-Kanal zeigt nicht die Ortszeit: {report.signal_text!r}"
-        )
-        assert "08:00" not in report.signal_text, "Signal-Kanal zeigt noch UTC (Bug #397)"
+        """OBSOLET: Signal-Kanal und TripReport.signal_text wurden in Bug #610 entfernt."""
+        pass
 
     def test_telegram_local_header(self, report):
         assert report.telegram_text is not None
@@ -413,11 +411,12 @@ class TestAC6ChannelConsistency:
         buggy header (08:00–10:00), so it is NOT a reliable discriminator. The
         local END 12:00 is — it only appears once the header is converted to
         local time. So this asserts true channel consistency on the fix.
+
+        Signal-Kanal entfernt in Bug #610 (Schritt 2/2).
         """
         channels = {
             "email_html": report.email_html,
             "email_plain": report.email_plain,
-            "signal": report.signal_text,
             "telegram": report.telegram_text,
         }
         missing = [name for name, txt in channels.items() if not txt or "12:00" not in txt]

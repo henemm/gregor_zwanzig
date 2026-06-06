@@ -664,7 +664,6 @@ class TripReport:
     email_html: str
     email_plain: str
     sms_text: Optional[str] = None  # Feature 3.2 will populate
-    signal_text: Optional[str] = None  # Deprecated (Bug #590): kept for backward compat, always None
     telegram_text: Optional[str] = None
 
     # Metadata

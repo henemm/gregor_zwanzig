@@ -25,6 +25,8 @@ from datetime import date, datetime, time, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+import pytest
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -156,26 +158,16 @@ def test_ac1_signal_five_primary_all_in_table():
 # ===========================================================================
 
 
+@pytest.mark.skip(reason="Signal-Kanal entfernt (Bug #610 Schritt 2/2) — Signal-spezifisches Limit (6 Spalten) nicht mehr relevant")
 def test_ac2_signal_nine_primary_caps_at_five():
     """GIVEN eine Tour mit 9 aktiven primary-Metriken
     WHEN render_for_channel("signal", dc, "morning") läuft
     THEN enthält table_columns genau 5 Einträge (Zeit + 5 = 6 Spalten),
-         detail_metrics die übrigen 4 und demoted_count == 4."""
-    from src.output.renderers.channel_layout import render_for_channel
+         detail_metrics die übrigen 4 und demoted_count == 4.
 
-    dc = _build_dc(_NINE_PRIMARY)
-
-    layout = render_for_channel("signal", dc, "morning")
-
-    assert len(layout.table_columns) == 5
-    assert layout.table_columns == [
-        "temperature", "wind", "gust", "rain_probability", "precipitation",
-    ]
-    assert len(layout.detail_metrics) == 4
-    assert layout.detail_metrics == [
-        "wind_chill", "cloud_total", "thunder", "fresh_snow",
-    ]
-    assert layout.demoted_count == 4
+    OBSOLET: Signal-Kanal wurde in Bug #610 (Schritt 2/2) entfernt.
+    """
+    pass
 
 
 # ===========================================================================
@@ -225,57 +217,10 @@ def test_ac4_sms_pushes_everything_to_detail():
 # ===========================================================================
 
 
+@pytest.mark.skip(reason="Signal-Kanal entfernt (Bug #610 Schritt 2/2) — Signal-26-Zeichen-Constraint nicht mehr relevant")
 def test_ac5_render_narrow_signal_line_width_and_detail_trailer():
-    """GIVEN eine Tour mit 9 primary-Metriken
-    WHEN render_narrow("signal", ...) den Body baut
-    THEN ist jede Body-Zeile <=26 Zeichen breit (Signal-Bubble-Constraint),
-         der Body endet mit einer ·-getrennten Detail-Zeile UND enthält echte
-         Werte (nicht nur '–')."""
-    from formatters.trip_report import TripReportFormatter
-    from src.output.renderers.narrow import render_narrow
-
-    dc = _build_dc(_NINE_PRIMARY)
-    segment = _make_segment_data()
-
-    # F001: seg_tables mit dem ECHTEN Row-Builder bauen (genau die Rows, die
-    # format_email/render_plain nutzen) — Keys sind die Katalog-col_keys, damit
-    # die Zellen echte Werte rendern statt durchgängig '–'.
-    formatter = TripReportFormatter()
-    tz = ZoneInfo("Europe/Vienna")
-    formatter._tz = tz
-    from src.output.renderers.email.helpers import build_friendly_keys
-    formatter._friendly_keys = build_friendly_keys(dc)
-    seg_tables = [formatter._extract_hourly_rows(segment, dc)]
-    assert seg_tables[0], "Row-Builder muss echte Rows liefern"
-
-    body = render_narrow(
-        "signal",
-        segments=[segment],
-        seg_tables=seg_tables,
-        dc=dc,
-        report_type="morning",
-        tz=tz,
-        friendly_keys=formatter._friendly_keys,
-    )
-
-    assert isinstance(body, str)
-    lines = body.splitlines()
-    assert lines, "render_narrow must produce a non-empty body"
-    too_wide = [ln for ln in lines if len(ln) > 26]
-    assert not too_wide, (
-        f"Signal-Bubble erlaubt max. 26 Zeichen pro Zeile, zu breit: {too_wide}"
-    )
-    # Body endet mit einer Detail-Zeile (·-getrennt), weil 4 Metriken demoted sind.
-    assert "·" in lines[-1], (
-        f"Letzte Zeile muss die ·-getrennte Detail-Zeile sein, war: {lines[-1]!r}"
-    )
-    # F001: echte Werte müssen erscheinen — Temperatur startet bei 15.0 °C.
-    assert "15" in body, (
-        f"Body muss echte Werte enthalten (Temp 15), nicht nur '–': {body!r}"
-    )
-    assert body.count("–") < len(seg_tables[0]) * 9, (
-        "Body darf nicht durchgängig aus '–'-Platzhaltern bestehen"
-    )
+    """OBSOLET: Signal-Kanal wurde in Bug #610 (Schritt 2/2) entfernt."""
+    pass
 
 
 # ===========================================================================
@@ -283,29 +228,10 @@ def test_ac5_render_narrow_signal_line_width_and_detail_trailer():
 # ===========================================================================
 
 
+@pytest.mark.skip(reason="Signal-Kanal entfernt (Bug #610 Schritt 2/2) — TripReport.signal_text Feld entfernt")
 def test_ac6_format_email_populates_signal_text():
-    """GIVEN ein echtes Segment-Fixture + dc mit 9 primary-Metriken
-    WHEN TripReportFormatter.format_email(...) den Report baut
-    THEN ist report.signal_text gesetzt und ungleich report.email_plain
-         (reiner Formatter-Test, KEIN Netzversand)."""
-    from formatters.trip_report import TripReportFormatter
-
-    dc = _build_dc(_NINE_PRIMARY)
-    segment = _make_segment_data()
-    formatter = TripReportFormatter()
-
-    report = formatter.format_email(
-        segments=[segment],
-        trip_name="Test Trip",
-        report_type="morning",
-        display_config=dc,
-    )
-
-    assert report.signal_text is not None, "format_email muss signal_text befüllen"
-    assert report.signal_text != "", "signal_text darf nicht leer sein"
-    assert report.signal_text != report.email_plain, (
-        "signal_text muss der kompakte Narrow-Body sein, nicht der E-Mail-Text"
-    )
+    """OBSOLET: Signal-Kanal und TripReport.signal_text wurden in Bug #610 (Schritt 2/2) entfernt."""
+    pass
 
 
 # ===========================================================================

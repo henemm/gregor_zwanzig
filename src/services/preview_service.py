@@ -201,29 +201,6 @@ class PreviewService:
         )
         return report.email_subject, token_line
 
-    def render_signal_preview(
-        self,
-        trip_id: str,
-        *,
-        user_id: str = "default",
-        report_type: str = "morning",
-        target_date: str | None = None,
-        demo: bool = False,
-    ) -> tuple[str, str]:
-        """Rendert die Signal-Vorschau via #360-Narrow-Renderer (kein Versand).
-
-        Returns: (email_subject, signal_text). signal_text ist der schmale
-        Monospace-Body aus render_narrow (≤26 Zeichen pro Zeile).
-        """
-        if report_type not in VALID_REPORT_TYPES:
-            raise ValueError(f"Ungültiger report_type '{report_type}'")
-        trip = self._load_trip(trip_id, user_id)
-        target = self._resolve_target_date(trip, target_date)
-        report, _segments, _stage_name, _trip_tz = self._build_report(
-            trip, target, report_type, demo=demo,
-        )
-        return report.email_subject, (report.signal_text or "")
-
     def render_telegram_preview(
         self,
         trip_id: str,

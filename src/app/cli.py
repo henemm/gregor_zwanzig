@@ -62,7 +62,7 @@ def create_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--channel",
-        choices=["console", "email", "signal", "none"],
+        choices=["console", "email", "none"],
         help="Output channel",
     )
     parser.add_argument(

@@ -142,18 +142,6 @@ def _send_subscription(sub, subject: str, html_body: str, text_body: str, settin
         else:
             logger.error(f"Email requested but SMTP not configured: {sub.name}")
 
-    if sub.send_signal:
-        if settings.can_send_signal():
-            try:
-                from outputs.signal import SignalOutput
-
-                SignalOutput(settings).send(subject, text_body)
-                logger.info(f"Signal sent for: {sub.name}")
-            except Exception as e:
-                logger.error(f"Signal failed for {sub.name}: {e}")
-        else:
-            logger.warning(f"Signal requested but not configured: {sub.name}")
-
     if sub.send_telegram:
         if settings.can_send_telegram():
             try:

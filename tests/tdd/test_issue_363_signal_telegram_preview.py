@@ -50,10 +50,9 @@ def service():
 # ===========================================================================
 
 
+@pytest.mark.skip(reason="Signal-Kanal entfernt (Bug #610 Schritt 2/2) — /api/preview/{trip}/signal Route existiert nicht mehr")
 def test_ac1_signal_endpoint_body_equals_signal_text_and_narrow(client, service):
-    """GIVEN ein existierender Trip
-    WHEN GET /api/preview/{trip}/signal?type=morning aufgerufen wird
-    THEN 200 mit body == report.signal_text und jede Body-Zeile ≤26 Zeichen."""
+    """OBSOLET: Signal-Kanal wurde in Bug #610 (Schritt 2/2) entfernt."""
     resp = client.get(
         f"/api/preview/{TRIP_ID}/signal",
         params={"type": "morning", "user_id": "default"},
@@ -125,11 +124,9 @@ def test_ac2_telegram_endpoint_body_equals_telegram_text(client, service):
 # ===========================================================================
 
 
+@pytest.mark.skip(reason="Signal-Kanal entfernt (Bug #610 Schritt 2/2) — Signal-Endpoint nicht mehr vorhanden")
 def test_ac3_signal_body_differs_from_sms_and_email(client):
-    """GIVEN derselbe Trip
-    WHEN signal-, sms- und email-Vorschau abgerufen werden
-    THEN unterscheidet sich der Signal-body vom sms-token_line und vom
-         email-HTML (eigenständiges Kanal-Rendering)."""
+    """OBSOLET: Signal-Kanal wurde in Bug #610 (Schritt 2/2) entfernt."""
     params = {"type": "morning", "user_id": "default"}
     sig = client.get(f"/api/preview/{TRIP_ID}/signal", params=params)
     sms = client.get(f"/api/preview/{TRIP_ID}/sms", params=params)
@@ -165,10 +162,9 @@ def test_ac3_signal_body_differs_from_sms_and_email(client):
 # ===========================================================================
 
 
+@pytest.mark.skip(reason="Signal-Kanal entfernt (Bug #610 Schritt 2/2) — Signal-Endpoint nicht mehr vorhanden")
 def test_ac4_signal_invalid_type_returns_422(client):
-    """GIVEN ein ungültiger type
-    WHEN der signal-Endpoint aufgerufen wird
-    THEN 422 (konsistent mit email/sms)."""
+    """OBSOLET: Signal-Kanal wurde in Bug #610 (Schritt 2/2) entfernt."""
     resp = client.get(
         f"/api/preview/{TRIP_ID}/signal",
         params={"type": "wrong-type", "user_id": "default"},
@@ -191,15 +187,9 @@ def test_ac4_telegram_invalid_type_returns_422(client):
     )
 
 
+@pytest.mark.skip(reason="Signal-Kanal entfernt (Bug #610 Schritt 2/2) — Signal-Endpoint nicht mehr vorhanden")
 def test_ac4_signal_unknown_trip_returns_404(client):
-    """GIVEN eine unbekannte trip_id
-    WHEN der signal-Endpoint aufgerufen wird
-    THEN 404 — UND der Endpoint existiert tatsächlich (bekannter Trip liefert
-         kein Route-404, sondern 200/503).
-
-    Die Existenz-Vorbedingung verhindert ein falsches Grün in RED: ohne Route
-    würde auch der bekannte Trip 404 liefern und der reine 404-Check wäre
-    trivial erfüllt."""
+    """OBSOLET: Signal-Kanal wurde in Bug #610 (Schritt 2/2) entfernt."""
     known = client.get(
         f"/api/preview/{TRIP_ID}/signal",
         params={"type": "morning", "user_id": "default"},
@@ -245,11 +235,9 @@ def test_ac4_telegram_unknown_trip_returns_404(client):
 # ===========================================================================
 
 
+@pytest.mark.skip(reason="Signal-Kanal entfernt (Bug #610 Schritt 2/2) — render_signal_preview aus PreviewService entfernt")
 def test_service_has_render_signal_preview(service):
-    """GIVEN den PreviewService
-    WHEN render_signal_preview für einen echten Trip aufgerufen wird
-    THEN liefert er (subject, signal_text) — Methode muss existieren
-         (RED: fehlt noch → AttributeError)."""
+    """OBSOLET: render_signal_preview wurde in Bug #610 (Schritt 2/2) aus PreviewService entfernt."""
     assert hasattr(type(service), "render_signal_preview"), (
         "PreviewService.render_signal_preview muss existieren"
     )

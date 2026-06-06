@@ -1,12 +1,10 @@
-"""Narrow Monospace-Renderer fuer Signal/Telegram (Issue #360).
+"""Narrow Monospace-Renderer fuer Telegram (Issue #360).
 
 SPEC: docs/specs/modules/issue_360_signal_channel_renderer.md §5.
 
 Baut einen kompakten Monospace-Body: Header (Trip/Report/Datum), pro Segment
 eine schmale Tabelle (Zeit + ``table_columns``) und darunter — falls
-``detail_metrics`` nicht leer — eine ``·``-getrennte Detail-Zeile. Bei Signal
-darf KEINE Zeile breiter als die Bubble (26 Zeichen) werden; zu lange
-Detail-Zeilen werden auf mehrere ≤26-Zeilen umgebrochen.
+``detail_metrics`` nicht leer — eine ``·``-getrennte Detail-Zeile.
 
 Pure function (keine I/O). Werte werden ueber das bestehende ``fmt_val`` und
 die Katalog-``compact_label`` gemappt.
@@ -24,9 +22,9 @@ from src.output.renderers.channel_layout import CHANNEL_LIMITS, render_for_chann
 from src.output.renderers.email.helpers import fmt_val
 from utils.timezone import local_fmt
 
-# Maximale Zeilenbreite pro Kanal (Bubble-Constraint). Signal-Blase ~26 Zeichen
-# Monospace; Telegram ist breiter, wir halten uns trotzdem an ein lesbares Mass.
-_LINE_WIDTH = {"signal": 26, "telegram": 40}
+# Maximale Zeilenbreite pro Kanal (Bubble-Constraint).
+# Telegram-Blase: lesbares Mass ~40 Zeichen Monospace.
+_LINE_WIDTH = {"telegram": 40}
 
 
 def _col_key(metric_id: str) -> Optional[str]:
@@ -111,8 +109,8 @@ def _narrow_table(
 ) -> list[str]:
     """Schmale Monospace-Tabelle: Zeit + gekappte Metrik-Spalten.
 
-    Spaltenbreiten werden an den breitesten Zellinhalt angepasst; bei Signal
-    werden ueberbreite Tabellen-Zeilen anschliessend hart umgebrochen.
+    Spaltenbreiten werden an den breitesten Zellinhalt angepasst; zu breite
+    Zeilen werden anschliessend hart umgebrochen (width-Constraint).
     """
     headers = ["Zt"] + [_compact_label(m) for m in table_columns]
     matrix: list[list[str]] = []
@@ -134,7 +132,7 @@ def _narrow_table(
     for cells in matrix:
         lines.append(_join(cells))
 
-    # Bubble-Constraint hart durchsetzen (Signal): zu breite Zeilen zerteilen.
+    # Bubble-Constraint hart durchsetzen: zu breite Zeilen zerteilen.
     out: list[str] = []
     for ln in lines:
         out.extend(_wrap(ln, width) if len(ln) > width else [ln])
@@ -153,10 +151,10 @@ def render_narrow(
     friendly_keys: Optional[set[str]] = None,
     stability_result: Optional[StabilityResult] = None,
 ) -> str:
-    """Render kompakten Signal/Telegram-Body. Pure function.
+    """Render kompakten Telegram-Body. Pure function.
 
     Args:
-        channel: "signal" oder "telegram".
+        channel: "telegram".
         segments: Segment-Wetterdaten (fuer Header/Datum).
         seg_tables: pro Segment die Tabellen-Rows (col_key -> Wert), wie vom
             Formatter berechnet.
@@ -214,7 +212,7 @@ def render_narrow(
 
     body = "\n".join(lines)
 
-    # Ueberlaengen-Schutz auf max_chars (wie heute in SignalOutput).
+    # Ueberlaengen-Schutz auf max_chars.
     max_chars = CHANNEL_LIMITS.get(channel, {}).get("max_chars")
     if max_chars is not None and len(body) > max_chars:
         body = body[: max_chars - 1] + "…"
