@@ -502,6 +502,9 @@ class MetricConfig:
     # Issue #360: kanal-bewusster Renderer — Spalten-Datenmodell.
     bucket: str = "primary"   # "primary" (eigene Spalte) | "secondary" (Detail-Zeile)
     order: int = 0            # Sortier-Reihenfolge innerhalb des Buckets
+    # Issue #624: Konfigurierter Schwellwert für SMS-/Telegram-Kurzform-Token.
+    # None = bisheriger DEFAULTS-Fallback in builder.py (bit-identisch).
+    sms_threshold: Optional[float] = None
 
 
 def _filter_metrics_by_report_type(

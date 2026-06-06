@@ -184,13 +184,20 @@ class PreviewService:
             trip, target, report_type, demo=demo,
         )
 
-        from src.formatters.sms_trip import SMSTripFormatter
+        from src.formatters.sms_trip import SMSTripFormatter, SMS_SYMBOL_BY_METRIC
         # Input-Hygiene: Bei "ID: Beschreibung"-Stage-Namen (z.B. "KHW_10:
         # von Egger Alm...") nur den Teil vor dem ersten ':' nehmen, damit
         # der Prefix-Separator ':' in sms_format.md §3.1 eindeutig bleibt
         # und das nachgelagerte [:10]-Slice (_sanitize_stage_name) nicht
         # bereits gekürzte Beschreibungen produziert. Issue #497.
         clean_stage = (stage_name or "Etappe").split(":", 1)[0].strip()
+        # Issue #624 (F001): konfigurierte Schwellwerte aus DisplayConfig übergeben.
+        dc = trip.display_config
+        _thr = {
+            SMS_SYMBOL_BY_METRIC[m.metric_id]: m.sms_threshold
+            for m in (dc.metrics if dc else [])
+            if m.metric_id in SMS_SYMBOL_BY_METRIC and m.sms_threshold is not None
+        }
         # Bug #397 (F001): tz durchreichen, sonst rendern die Stunden-Token UTC
         # statt Ortszeit (z.B. R5.0@8 statt @10 für CEST).
         token_line = SMSTripFormatter().format_sms(
@@ -198,6 +205,7 @@ class PreviewService:
             stage_name=clean_stage,
             report_type=report_type,
             tz=trip_tz,
+            thresholds=_thr or None,
         )
         return report.email_subject, token_line
 

@@ -53,6 +53,9 @@
 	let selectedTemplate = $state('');
 	// Issue #614: Telegram Kurzform-Toggle (SMS-Tages-Max als Anhang).
 	let telegramKurzform = $state<boolean>(trip.display_config?.telegram_kurzform ?? false);
+	// Issue #624: konfigurierbare Schwellwerte pro Metrik (nur threshold-fähige).
+	const SMS_THRESHOLD_METRIC_IDS = ['precipitation', 'rain_probability', 'wind', 'gust'];
+	let smsThresholds = $state<Record<string, string>>({});
 	let savedSnapshot = $state('');
 	let showSavePresetDialog = $state(false);
 	let showAbout = $state(false);
@@ -76,11 +79,11 @@
 	});
 
 	const isDirty = $derived(
-		JSON.stringify({ buckets, friendlyMap, horizonsMap, telegramKurzform }) !== savedSnapshot,
+		JSON.stringify({ buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds }) !== savedSnapshot,
 	);
 
-	function snapshot(b: Buckets, f: Record<string, boolean>, h: Record<string, Horizons>, tk: boolean): string {
-		return JSON.stringify({ buckets: b, friendlyMap: f, horizonsMap: h, telegramKurzform: tk });
+	function snapshot(b: Buckets, f: Record<string, boolean>, h: Record<string, Horizons>, tk: boolean, st: Record<string, string>): string {
+		return JSON.stringify({ buckets: b, friendlyMap: f, horizonsMap: h, telegramKurzform: tk, smsThresholds: st });
 	}
 
 	function allCatalogIds(): string[] {
@@ -129,10 +132,15 @@
 			b = autoAssign(activeIds, catalog);
 		}
 
+		const thrMap: Record<string, string> = {};
 		if (savedMetrics) {
 			for (const m of savedMetrics) {
 				fMap[m.metric_id] = m.use_friendly_format ?? true;
 				hMap[m.metric_id] = m.horizons ? { ...m.horizons } : { ...HORIZONS_ALL };
+				// Issue #624: sms_threshold laden (nur threshold-fähige Metriken).
+				if (SMS_THRESHOLD_METRIC_IDS.includes(m.metric_id) && m.sms_threshold != null) {
+					thrMap[m.metric_id] = String(m.sms_threshold);
+				}
 			}
 		}
 
@@ -147,7 +155,8 @@
 		buckets = b;
 		friendlyMap = fMap;
 		horizonsMap = hMap;
-		savedSnapshot = snapshot(b, fMap, hMap, telegramKurzform);
+		smsThresholds = thrMap;
+		savedSnapshot = snapshot(b, fMap, hMap, telegramKurzform, thrMap);
 	}
 
 	async function load() {
@@ -243,10 +252,12 @@
 			friendlyMap = snap.friendlyMap;
 			horizonsMap = snap.horizonsMap ?? {};
 			telegramKurzform = snap.telegramKurzform ?? false;
+			smsThresholds = snap.smsThresholds ?? {};
 		} catch (e) {
 			console.error(e);
 			initFromTrip();
 			telegramKurzform = trip.display_config?.telegram_kurzform ?? false;
+			smsThresholds = {};
 		}
 	}
 
@@ -255,7 +266,17 @@
 		saveSuccess = false;
 		saveError = null;
 		try {
-			const metrics = buildWeatherConfigMetrics(buckets, friendlyMap, horizonsMap, catalog);
+			const baseMetrics = buildWeatherConfigMetrics(buckets, friendlyMap, horizonsMap, catalog);
+			// Issue #624: sms_threshold pro Metrik in Payload schreiben (additiv, Read-Modify-Write).
+			const metrics = baseMetrics.map((m) => {
+				if (!SMS_THRESHOLD_METRIC_IDS.includes(m.metric_id)) return m;
+				const rawThr = smsThresholds[m.metric_id];
+				const parsed = rawThr !== undefined && rawThr !== '' ? parseFloat(rawThr) : null;
+				if (parsed !== null && !isNaN(parsed)) {
+					return { ...m, sms_threshold: parsed };
+				}
+				return m;
+			});
 			const payload = {
 				...(trip.display_config ?? {}),
 				metrics,
@@ -264,7 +285,7 @@
 			};
 			await api.put(`/api/trips/${trip.id}/weather-config`, payload);
 			saveSuccess = true;
-			savedSnapshot = snapshot(buckets, friendlyMap, horizonsMap, telegramKurzform);
+			savedSnapshot = snapshot(buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds);
 			setTimeout(() => { saveSuccess = false; }, 3000);
 		} catch (e: unknown) {
 			saveError = (e as { error?: string })?.error ?? 'Speichern fehlgeschlagen';
@@ -392,6 +413,73 @@
 							Hängt nach der Tabelle eine kompakte SMS-Kurzform mit allen Metriken an —
 							auch jene, die über das Spalten-Limit hinausgehen.
 						</p>
+					</div>
+				</div>
+				<!-- Issue #624: SMS/Telegram Schwellwerte pro Metrik. -->
+				<div class="sms-thresholds" data-testid="sms-thresholds">
+					<Eyebrow>SMS-Schwellwerte</Eyebrow>
+					<p class="option-hint">
+						Ab welchem Wert gilt eine Metrik in der Kurzform als „erste Überschreitung"?
+						Leer = Standard-Schwellwert.
+					</p>
+					<div class="sms-threshold-fields">
+						<div class="sms-threshold-row">
+							<label class="sms-threshold-label" for="sms-thr-wind">Wind (km/h)</label>
+							<input
+								id="sms-thr-wind"
+								data-testid="sms-threshold-wind"
+								type="number"
+								min="0"
+								step="1"
+								class="sms-threshold-input"
+								placeholder="Standard"
+								value={smsThresholds['wind'] ?? ''}
+								oninput={(e) => { smsThresholds = { ...smsThresholds, wind: (e.target as HTMLInputElement).value }; }}
+							/>
+						</div>
+						<div class="sms-threshold-row">
+							<label class="sms-threshold-label" for="sms-thr-gust">Böen (km/h)</label>
+							<input
+								id="sms-thr-gust"
+								data-testid="sms-threshold-gust"
+								type="number"
+								min="0"
+								step="1"
+								class="sms-threshold-input"
+								placeholder="Standard"
+								value={smsThresholds['gust'] ?? ''}
+								oninput={(e) => { smsThresholds = { ...smsThresholds, gust: (e.target as HTMLInputElement).value }; }}
+							/>
+						</div>
+						<div class="sms-threshold-row">
+							<label class="sms-threshold-label" for="sms-thr-precip">Niederschlag (mm)</label>
+							<input
+								id="sms-thr-precip"
+								data-testid="sms-threshold-precipitation"
+								type="number"
+								min="0"
+								step="0.1"
+								class="sms-threshold-input"
+								placeholder="Standard"
+								value={smsThresholds['precipitation'] ?? ''}
+								oninput={(e) => { smsThresholds = { ...smsThresholds, precipitation: (e.target as HTMLInputElement).value }; }}
+							/>
+						</div>
+						<div class="sms-threshold-row">
+							<label class="sms-threshold-label" for="sms-thr-rain-prob">Regenw. (%)</label>
+							<input
+								id="sms-thr-rain-prob"
+								data-testid="sms-threshold-rain-probability"
+								type="number"
+								min="0"
+								max="100"
+								step="1"
+								class="sms-threshold-input"
+								placeholder="Standard"
+								value={smsThresholds['rain_probability'] ?? ''}
+								oninput={(e) => { smsThresholds = { ...smsThresholds, rain_probability: (e.target as HTMLInputElement).value }; }}
+							/>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -616,5 +704,41 @@
 		line-height: 1.5;
 		margin: 0;
 		padding-left: calc(var(--g-s-4) + 2px); /* align under checkbox label */
+	}
+	/* Issue #624: SMS-Schwellwerte-Block */
+	.sms-thresholds {
+		display: flex;
+		flex-direction: column;
+		gap: var(--g-s-2);
+		margin-top: var(--g-s-4);
+	}
+	.sms-threshold-fields {
+		display: flex;
+		flex-direction: column;
+		gap: var(--g-s-2);
+	}
+	.sms-threshold-row {
+		display: flex;
+		align-items: center;
+		gap: var(--g-s-3);
+	}
+	.sms-threshold-label {
+		font-size: var(--g-text-sm);
+		color: var(--g-ink);
+		min-width: 160px;
+	}
+	.sms-threshold-input {
+		width: 100px;
+		padding: var(--g-s-1) var(--g-s-2);
+		font-size: var(--g-text-sm);
+		border: 1px solid var(--g-border);
+		border-radius: var(--g-radius-sm);
+		background: var(--g-card);
+		color: var(--g-ink);
+	}
+	.sms-threshold-input:focus {
+		outline: 2px solid var(--g-accent);
+		outline-offset: 1px;
+		border-color: var(--g-accent);
 	}
 </style>

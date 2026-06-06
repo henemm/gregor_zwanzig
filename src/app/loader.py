@@ -113,6 +113,9 @@ def _metric_to_dict(mc) -> dict:
     }
     if mode is not None:
         out["format_mode"] = mode
+    # Issue #624: sms_threshold nur schreiben wenn gesetzt (additiv, kein Datenverlust).
+    if mc.sms_threshold is not None:
+        out["sms_threshold"] = mc.sms_threshold
     return out
 
 
@@ -440,6 +443,7 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
             horizons=mc_data.get("horizons"),
             bucket=bucket,
             order=order,
+            sms_threshold=mc_data.get("sms_threshold"),
         ))
 
     # Issue #429: kanal-spezifische Layouts laden (optional, backward-compat).
@@ -472,6 +476,7 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
                     horizons=mc_data.get("horizons"),
                     bucket=mc_data.get("bucket", "primary"),
                     order=mc_data.get("order", 0),
+                    sms_threshold=mc_data.get("sms_threshold"),
                 ))
             per_channel_layouts[ch] = ch_parsed
 
@@ -501,6 +506,7 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
                         horizons=mc_data.get("horizons"),
                         bucket=mc_data.get("bucket", "primary"),
                         order=mc_data.get("order", 0),
+                        sms_threshold=mc_data.get("sms_threshold"),
                     )
                     for mc_data in ch_metrics
                 ]

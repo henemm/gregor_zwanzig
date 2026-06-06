@@ -158,6 +158,8 @@ export interface WeatherConfigMetric {
 	bucket?: 'primary' | 'secondary';
 	order?: number;
 	score_member?: boolean;
+	/** Issue #624: Konfigurierter Schwellwert für SMS-/Telegram-Kurzform (erste-Überschreitung). */
+	sms_threshold?: number;
 }
 
 export interface WeatherConfig {

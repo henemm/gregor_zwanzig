@@ -85,6 +85,8 @@ Levels für `TH`/`TH+`:
 
 **Threshold-Logik:** `R`, `PR`, `W`, `G`, `TH`, `TH+` zeigen den **ersten Zeitpunkt** im Tagesfenster, an dem der konfigurierte Threshold erreicht/überschritten wird, gefolgt vom **Tagesmaximum** in Klammern. Wenn kein Wert ≥ Threshold: Token ist `R-` / `W-` / etc.
 
+**Threshold-Konfiguration (Issue #624):** Die Schwellwerte für `R`, `PR`, `W`, `G` sind pro Trip und Metrik im Trip-Editor (Wetter-Metriken-Tab) optional konfigurierbar über `MetricConfig.sms_threshold`. Leeres Feld → bisheriges fest eingebautes Standardverhalten (Fallback auf `DEFAULTS` in builder.py). E-Mail-Tabelle nutzt weiterhin das separate `display_thresholds`-Farbkonzept (nicht vereinheitlicht).
+
 ### 3.3 Risk-Tokens (Vigilance-Warnungen, nur Frankreich)
 
 Die zwei Tokens bilden einen **zusammenhängenden Block** ohne Leerzeichen dazwischen:
@@ -347,6 +349,7 @@ Implementationen, die SMS-Text und E-Mail-Subject getrennt erzeugen, sind als **
 | 2.1 | 2026-05-15 | Confidence-Symbol `C` (Issue #121) — GSM-7-konformes `+`/`~`/`?` nach `TH+:` |
 | 2.2 | 2026-05-31 | WL-Token für Großwetterlage (Issue #122) — `+`/`~`/`-` nach `C`, vor `HR:`; Truncation NACH `C` aber VOR `PR` |
 | 2.3 | 2026-05-31 | WL-Token aus SMS entfernt (Issue #479) — `C+/C~/C?` deckt den Stabilitäts-Use-Case ab; WL-Block bleibt nur in der E-Mail erhalten, jetzt aus `min(confidence_pct_min)` der Folge-Etappen abgeleitet statt aus Z500-Ensemble-API |
+| 2.4 | 2026-06-06 | Konfigurierbare Threshold pro Metrik (Issue #624) — `MetricConfig.sms_threshold` optional per Metrik in `display_config` (Trip-Editor), Fallback auf `DEFAULTS`; E-Mail-Tabelle bleibt separate Logik |
 
 **Quellen für v2.0:**
 - Vorgänger-Repo `henemm/weather_email_autobot`:

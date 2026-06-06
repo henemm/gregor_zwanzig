@@ -29,6 +29,14 @@ from src.output.tokens.dto import (
 if TYPE_CHECKING:
     from app.models import WeatherChange
 
+# Issue #624: metric_id -> SMS-Symbol für threshold-fähige Metriken.
+SMS_SYMBOL_BY_METRIC: dict[str, str] = {
+    "precipitation": "R",
+    "rain_probability": "PR",
+    "wind": "W",
+    "gust": "G",
+}
+
 # RiskType → SMS risk label (German, ultra-compact). Used by format_alert_sms.
 _SMS_RISK_LABELS: dict[tuple[RiskType, RiskLevel], str] = {
     (RiskType.THUNDERSTORM, RiskLevel.HIGH): "Gewitter",
@@ -114,6 +122,7 @@ class SMSTripFormatter:
         report_type: str = "evening",
         tz: ZoneInfo = ZoneInfo("UTC"),
         multi_day_trend: Optional[list[dict]] = None,
+        thresholds: Optional[dict[str, float]] = None,
     ) -> str:
         """Generate v2.0 SMS via TokenLine pipeline.
 
@@ -129,6 +138,8 @@ class SMSTripFormatter:
                 a compact 'Trend 3T:' block is appended (Issue #623).
                 NOTE: the telegram_kurzform path must NOT pass this argument
                 (AC-4 double-render guard).
+            thresholds: Issue #624 — optionale Map {SMS-Symbol: Schwellwert}.
+                None = bisheriges DEFAULTS-Verhalten (bit-identisch).
 
         Returns:
             v2.0 wire-format string, ≤ max_length chars.
@@ -153,18 +164,40 @@ class SMSTripFormatter:
                     break
                 we_label = "GratWind"
 
-        # MetricSpec-Config nur wenn WIND_EXPOSITION erkannt
-        config = None
+        # MetricSpec-Config: WE-Label + Issue #624 per-Symbol-Schwellwerte.
+        config: list[MetricSpec] = []
         if we_label is not None:
-            config = [MetricSpec(
+            config.append(MetricSpec(
                 symbol="WE",
                 use_friendly_format=True,
                 friendly_label=we_label,
-            )]
+            ))
+        # Issue #624: threshold-fähige Symbole mit konfiguriertem Schwellwert
+        # als MetricSpec in die Config mergen (additiv, bestehende WE-Spec bleibt).
+        if thresholds:
+            existing_syms = {s.symbol for s in config}
+            for sym, thr in thresholds.items():
+                if sym in existing_syms:
+                    # Bestehende Spec aktualisieren (threshold setzen, Rest erhalten).
+                    config = [
+                        MetricSpec(
+                            symbol=s.symbol,
+                            enabled=s.enabled,
+                            morning_enabled=s.morning_enabled,
+                            evening_enabled=s.evening_enabled,
+                            threshold=thr if s.symbol == sym else s.threshold,
+                            use_friendly_format=s.use_friendly_format,
+                            friendly_label=s.friendly_label,
+                            format_mode=s.format_mode,
+                        )
+                        for s in config
+                    ]
+                else:
+                    config.append(MetricSpec(symbol=sym, threshold=thr))
 
         token_line = build_token_line(
             forecast,
-            config,
+            config if config else None,
             report_type=report_type,
             stage_name=stage_name or "Etappe",
         )

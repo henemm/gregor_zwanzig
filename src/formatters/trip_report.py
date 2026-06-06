@@ -179,13 +179,20 @@ class TripReportFormatter:
 
         # Issue #614: Tages-Max-Kurzform anhängen wenn konfiguriert.
         if dc.telegram_kurzform:
-            from src.formatters.sms_trip import SMSTripFormatter
+            from src.formatters.sms_trip import SMSTripFormatter, SMS_SYMBOL_BY_METRIC
+            # Issue #624: konfigurierte Schwellwerte aus MetricConfig ableiten.
+            _thr = {
+                SMS_SYMBOL_BY_METRIC[m.metric_id]: m.sms_threshold
+                for m in dc.metrics
+                if m.metric_id in SMS_SYMBOL_BY_METRIC and m.sms_threshold is not None
+            }
             kurzform = SMSTripFormatter().format_sms(
                 segments,
                 stage_name=stage_name or trip_name,
                 report_type=report_type,
                 tz=self._tz,
                 max_length=4000,
+                thresholds=_thr or None,
             )
             telegram_text = f"{telegram_text}\n\nTages-Max:\n{kurzform}"
 

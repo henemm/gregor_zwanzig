@@ -396,7 +396,7 @@ Lawinenlagebericht als eigenstaendiges Datenobjekt (nicht Teil von NormalizedTim
 | wind_exposition_min_elevation_m | float/null  | Wind-Exposition Höhen-Schwelle [m]; null = 1500m (F7c)|
 | updated_at                      | datetime    | Zeitpunkt der letzten Config-Änderung                  |
 
-#### MetricConfig (Issue #435)
+#### MetricConfig (Issue #435, erweitert Issue #624)
 | Feld                | Typ              | Beschreibung                                          |
 |---------------------|------------------|-------------------------------------------------------|
 | metric_id           | str              | Metrik-ID (z.B. `wind`, `cloud_total`, `sunshine`)     |
@@ -411,6 +411,7 @@ Lawinenlagebericht als eigenstaendiges Datenobjekt (nicht Teil von NormalizedTim
 | horizons            | dict \| None     | Pro-Metrik-Zeithorizont-Filter (None = alle sichtbar)  |
 | bucket              | str              | Spalten-Gruppierung: `"primary"` (eigene Spalte) \| `"secondary"` (Detail-Zeile), default: `"primary"` |
 | order               | int              | Sortier-Reihenfolge innerhalb des Buckets (default: 0) |
+| sms_threshold       | float \| None    | **Neu Issue #624:** Schwellenwert für SMS-/Telegram-Kurzform (R/PR/W/G). None = Catalog/DEFAULTS-Fallback. Nur für threshold-fähige Metriken sichtbar (Niederschlag, Regenwahrscheinlichkeit, Wind, Böen) |
 
 **Format Mode Details:**
 - `raw`: Numerischer Wert mit Einheit (z.B. `18.5°C`, `22 km/h`)
