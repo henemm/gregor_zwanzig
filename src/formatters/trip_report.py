@@ -185,6 +185,18 @@ class TripReportFormatter:
             stability_result=stability_result,
         )
 
+        # Issue #614: Tages-Max-Kurzform anhängen wenn konfiguriert.
+        if dc.telegram_kurzform:
+            from src.formatters.sms_trip import SMSTripFormatter
+            kurzform = SMSTripFormatter().format_sms(
+                segments,
+                stage_name=stage_name or trip_name,
+                report_type=report_type,
+                tz=self._tz,
+                max_length=4000,
+            )
+            telegram_text = f"{telegram_text}\n\nTages-Max:\n{kurzform}"
+
         return TripReport(
             trip_id=trip_id,
             trip_name=trip_name,

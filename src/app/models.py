@@ -561,6 +561,8 @@ class UnifiedWeatherDisplayConfig:
     # Struktur: { "morning": { "email": [...] }, "evening": { "email": [...] } }.
     # None = kein per-report-Override → nächste Kaskadenebene (per_channel_layouts).
     per_report_layouts: Optional[dict[str, dict[str, list[MetricConfig]]]] = None
+    # Issue #614: optionale Kurzform (SMS-Tages-Max) als Anhang an Telegram-Briefings.
+    telegram_kurzform: bool = False
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     def is_metric_enabled(self, metric_id: str) -> bool:

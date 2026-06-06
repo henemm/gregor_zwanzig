@@ -518,6 +518,7 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
         sms_metrics=data.get("sms_metrics", []),
         per_channel_layouts=per_channel_layouts,
         per_report_layouts=per_report_layouts,
+        telegram_kurzform=data.get("telegram_kurzform", False),
         updated_at=_dt.fromisoformat(data["updated_at"]) if "updated_at" in data else _dt.now(),
     )
 
@@ -842,6 +843,7 @@ def save_location(location: SavedLocation, user_id: str = "default") -> Path:
             "thunder_forecast_days": dc.thunder_forecast_days,
             "multi_day_trend_reports": dc.multi_day_trend_reports,
             "sms_metrics": dc.sms_metrics,
+            "telegram_kurzform": dc.telegram_kurzform,
             "updated_at": dc.updated_at.isoformat(),
         }
         # Issue #429: per_channel_layouts serialisieren (latenter Bug-Fix)
@@ -984,6 +986,7 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             "thunder_forecast_days": dc.thunder_forecast_days,
             "multi_day_trend_reports": dc.multi_day_trend_reports,
             "sms_metrics": dc.sms_metrics,
+            "telegram_kurzform": dc.telegram_kurzform,
             "updated_at": dc.updated_at.isoformat(),
             **({"preset_name": dc.preset_name} if dc.preset_name is not None else {}),
         }

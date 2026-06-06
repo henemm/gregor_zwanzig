@@ -9,6 +9,7 @@
 	import type { Trip, MetricPreset, Horizons } from '$lib/types';
 	import { HORIZONS_ALL } from '$lib/types';
 	import { Btn, Eyebrow, Pill } from '$lib/components/atoms';
+	import { Checkbox } from '$lib/components/ui/checkbox';
 	import PresetRow from './PresetRow.svelte';
 	import SavePresetDialog from './SavePresetDialog.svelte';
 	import AboutOutputLayout from './AboutOutputLayout.svelte';
@@ -50,6 +51,8 @@
 	let friendlyMap: Record<string, boolean> = $state({});
 	let horizonsMap: Record<string, Horizons> = $state({});
 	let selectedTemplate = $state('');
+	// Issue #614: Telegram Kurzform-Toggle (SMS-Tages-Max als Anhang).
+	let telegramKurzform = $state<boolean>(trip.display_config?.telegram_kurzform ?? false);
 	let savedSnapshot = $state('');
 	let showSavePresetDialog = $state(false);
 	let showAbout = $state(false);
@@ -73,11 +76,11 @@
 	});
 
 	const isDirty = $derived(
-		JSON.stringify({ buckets, friendlyMap, horizonsMap }) !== savedSnapshot,
+		JSON.stringify({ buckets, friendlyMap, horizonsMap, telegramKurzform }) !== savedSnapshot,
 	);
 
-	function snapshot(b: Buckets, f: Record<string, boolean>, h: Record<string, Horizons>): string {
-		return JSON.stringify({ buckets: b, friendlyMap: f, horizonsMap: h });
+	function snapshot(b: Buckets, f: Record<string, boolean>, h: Record<string, Horizons>, tk: boolean): string {
+		return JSON.stringify({ buckets: b, friendlyMap: f, horizonsMap: h, telegramKurzform: tk });
 	}
 
 	function allCatalogIds(): string[] {
@@ -138,7 +141,7 @@
 		buckets = b;
 		friendlyMap = fMap;
 		horizonsMap = hMap;
-		savedSnapshot = snapshot(b, fMap, hMap);
+		savedSnapshot = snapshot(b, fMap, hMap, telegramKurzform);
 	}
 
 	async function load() {
@@ -230,9 +233,11 @@
 			buckets = snap.buckets;
 			friendlyMap = snap.friendlyMap;
 			horizonsMap = snap.horizonsMap ?? {};
+			telegramKurzform = snap.telegramKurzform ?? false;
 		} catch (e) {
 			console.error(e);
 			initFromTrip();
+			telegramKurzform = trip.display_config?.telegram_kurzform ?? false;
 		}
 	}
 
@@ -246,10 +251,11 @@
 				...(trip.display_config ?? {}),
 				metrics,
 				preset_name: selectedTemplate || undefined,
+				telegram_kurzform: telegramKurzform,
 			};
 			await api.put(`/api/trips/${trip.id}/weather-config`, payload);
 			saveSuccess = true;
-			savedSnapshot = snapshot(buckets, friendlyMap, horizonsMap);
+			savedSnapshot = snapshot(buckets, friendlyMap, horizonsMap, telegramKurzform);
 			setTimeout(() => { saveSuccess = false; }, 3000);
 		} catch (e: unknown) {
 			saveError = (e as { error?: string })?.error ?? 'Speichern fehlgeschlagen';
@@ -362,6 +368,22 @@
 					categoryOrder={CATEGORY_ORDER}
 					{indicatorCapable}
 				/>
+				<!-- Issue #614: Telegram-Optionen (kanal-spezifische Einstellungen). -->
+				<div class="telegram-options" data-testid="telegram-options">
+					<Eyebrow>Telegram-Optionen</Eyebrow>
+					<div class="telegram-option-row">
+						<Checkbox
+							id="telegram-kurzform"
+							data-testid="telegram-kurzform-toggle"
+							checked={telegramKurzform}
+							onchange={(e) => { telegramKurzform = (e.target as HTMLInputElement).checked; }}
+						>Kurzform anhängen (Tages-Max)</Checkbox>
+						<p class="option-hint">
+							Hängt nach der Tabelle eine kompakte SMS-Kurzform mit allen Metriken an —
+							auch jene, die über das Spalten-Limit hinausgehen.
+						</p>
+					</div>
+				</div>
 			</div>
 		</div>
 
@@ -566,5 +588,23 @@
 			color: var(--g-ink);
 			margin-bottom: var(--g-s-4);
 		}
+	}
+	/* Issue #614: Telegram-Optionen-Block */
+	.telegram-options {
+		display: flex;
+		flex-direction: column;
+		gap: var(--g-s-2);
+	}
+	.telegram-option-row {
+		display: flex;
+		flex-direction: column;
+		gap: var(--g-s-1);
+	}
+	.option-hint {
+		font-size: var(--g-text-sm);
+		color: var(--g-ink-muted);
+		line-height: 1.5;
+		margin: 0;
+		padding-left: calc(var(--g-s-4) + 2px); /* align under checkbox label */
 	}
 </style>

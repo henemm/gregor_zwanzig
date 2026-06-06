@@ -205,6 +205,7 @@ export interface DisplayConfig {
 	metrics?: WeatherConfigMetric[];
 	channel_layouts?: ChannelLayouts; // Issue #429
 	channel_layouts_per_report?: ChannelLayoutsPerReport; // Issue #434
+	telegram_kurzform?: boolean; // Issue #614: SMS-Kurzform als Tages-Max-Anhang
 }
 
 // Epic #138 Issue #177 — User-definierte Metric-Presets (Server-seitig persistiert).
