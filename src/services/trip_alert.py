@@ -27,6 +27,12 @@ if TYPE_CHECKING:
 logger = logging.getLogger("trip_alert")
 
 
+def radar_alert_due(result: object, threshold_min: int) -> bool:
+    """Return True when rain onset is within threshold_min minutes."""
+    onset = getattr(result, "onset_minutes", None)
+    return onset is not None and onset <= threshold_min
+
+
 class TripAlertService:
     """
     Service for sending weather change alerts.
@@ -48,6 +54,7 @@ class TripAlertService:
         settings: Optional[Settings] = None,
         throttle_hours: int = 2,
         user_id: str = "default",
+        radar_service: Optional[object] = None,
     ) -> None:
         """
         Initialize the alert service.
@@ -56,6 +63,7 @@ class TripAlertService:
             settings: App settings (default: load from config)
             throttle_hours: Minimum hours between alerts per trip (default: 2)
             user_id: User identifier for data scoping
+            radar_service: Optional RadarNowcastService (DI seam; lazy default)
         """
         self._settings = settings if settings else Settings().with_user_profile(user_id)
         self._formatter = TripReportFormatter()
@@ -64,6 +72,10 @@ class TripAlertService:
         self._user_id = user_id
         self.THROTTLE_FILE = Path(f"data/users/{user_id}/alert_throttle.json")
         self._last_alert_times: dict[str, datetime] = self._load_throttle_times()
+        # Radar nowcast service (DI seam)
+        self._radar_service = radar_service
+        self._RADAR_THROTTLE_FILE = Path(f"data/users/{user_id}/radar_alert_throttle.json")
+        self._radar_throttle_times: dict[str, datetime] = self._load_radar_throttle()
 
     def check_and_send_alerts(
         self,
@@ -442,6 +454,137 @@ class TripAlertService:
             "severity": severity,
         })
         path.write_text(json.dumps(data, indent=2))
+
+    # --- Radar Nowcast ---
+
+    def _get_radar_service(self):
+        """Lazy-init radar service."""
+        if self._radar_service is None:
+            from services.radar_service import RadarNowcastService
+            self._radar_service = RadarNowcastService()
+        return self._radar_service
+
+    def _load_radar_throttle(self) -> dict[str, datetime]:
+        """Load radar throttle times from file."""
+        if not self._RADAR_THROTTLE_FILE.exists():
+            return {}
+        try:
+            data = json.loads(self._RADAR_THROTTLE_FILE.read_text())
+            return {k: datetime.fromisoformat(v) for k, v in data.items()}
+        except (json.JSONDecodeError, ValueError, OSError) as e:
+            logger.warning(f"Failed to load radar throttle file: {e}")
+            return {}
+
+    def _save_radar_throttle(self) -> None:
+        """Persist radar throttle times to file."""
+        try:
+            self._RADAR_THROTTLE_FILE.parent.mkdir(parents=True, exist_ok=True)
+            data = {k: v.isoformat() for k, v in self._radar_throttle_times.items()}
+            self._RADAR_THROTTLE_FILE.write_text(json.dumps(data, indent=2))
+        except OSError as e:
+            logger.error(f"Failed to save radar throttle file: {e}")
+
+    def _is_radar_throttled(self, trip_id: str, cooldown_min: int = 120) -> bool:
+        """Return True if radar alert was sent within cooldown window."""
+        last = self._radar_throttle_times.get(trip_id)
+        if last is None:
+            return False
+        return datetime.now(timezone.utc) - last < timedelta(minutes=cooldown_min)
+
+    def clear_radar_throttle(self, trip_id: str) -> None:
+        """Clear radar throttle for a trip (test helper / manual override)."""
+        self._radar_throttle_times.pop(trip_id, None)
+        self._save_radar_throttle()
+
+    def check_radar_alerts(self) -> int:
+        """
+        Check all trips with a current stage for radar-based alerts.
+
+        Sicherheits-Semantik (F001): alert_log + Throttle werden IMMER gesetzt,
+        sobald ein Alert fällt und mindestens ein Kanal konfiguriert ist — unabhängig
+        davon, ob der Versand technisch gelingt. Transiente Kanal-Fehler (SMTP-Rate-
+        Limit, Netz-Timeout) dürfen einen Sicherheits-Alert nicht verschlucken.
+        Echte Zustellverifikation erfolgt separat im Staging-E2E.
+
+        Returns the number of radar alerts triggered.
+        """
+        from datetime import date as date_type
+        from app.loader import load_all_trips
+
+        today = date_type.today()
+        sent = 0
+
+        for trip in load_all_trips(user_id=self._user_id):
+            try:
+                stage = trip.get_stage_for_date(today)
+            except Exception:
+                stage = None
+            if not stage or not stage.waypoints:
+                continue
+
+            # QuietHours check (reuse existing)
+            if self._is_quiet_hours(trip, datetime.now(timezone.utc)):
+                logger.debug(f"Radar alert suppressed (quiet hours) for trip {trip.id}")
+                continue
+
+            cooldown_min = (
+                trip.alert_cooldown_minutes
+                if trip.alert_cooldown_minutes is not None
+                else self._throttle_hours * 60
+            )
+            if self._is_radar_throttled(trip.id, cooldown_min=cooldown_min):
+                logger.debug(f"Radar alert throttled for trip {trip.id}")
+                continue
+
+            wp = stage.waypoints[0]
+            try:
+                svc = self._get_radar_service()
+                result = svc.get_nowcast(wp.lat, wp.lon)
+            except Exception as e:
+                logger.error(f"Radar nowcast failed for trip {trip.id}: {e}")
+                continue
+
+            if not radar_alert_due(result, threshold_min=20):
+                continue
+
+            # Kein Kanal konfiguriert → kein Alert (nichts zu recorden)
+            can_email = self._settings.can_send_email()
+            can_telegram = self._settings.can_send_telegram()
+            if not can_email and not can_telegram:
+                logger.warning(f"No channel configured; skipping radar alert for {trip.id}")
+                continue
+
+            # Best-Effort-Zustellung: Kanalfehler unterdrücken das Recording NICHT
+            radar_svc = self._get_radar_service()
+            body = radar_svc.format_now_text(result)
+            subject = f"[{trip.name}] Radar-Warnung"
+            full_body = body + "\n\nDieser Alert wird nur einmal pro Cooldown-Fenster gesendet."
+            config = trip.report_config
+
+            if can_email and (not config or getattr(config, "send_email", True)):
+                try:
+                    EmailOutput(self._settings).send(
+                        subject=subject,
+                        body=full_body,
+                        plain_text_body=full_body,
+                    )
+                except Exception as e:
+                    logger.error(f"Radar alert email failed for {trip.id}: {e}")
+
+            if can_telegram and config and getattr(config, "send_telegram", False):
+                try:
+                    from outputs.telegram import TelegramOutput
+                    TelegramOutput(self._settings).send(subject=subject, body=body)
+                except Exception as e:
+                    logger.error(f"Radar alert telegram failed for {trip.id}: {e}")
+
+            # Recording IMMER nach Best-Effort-Zustellung
+            self._append_alert_log(trip.id, 1, "HIGH")
+            self._radar_throttle_times[trip.id] = datetime.now(timezone.utc)
+            self._save_radar_throttle()
+            sent += 1
+
+        return sent
 
     def _fetch_fresh_weather(
         self,

@@ -63,7 +63,7 @@ class CommandResult:
 
 _COMMAND_PATTERN = re.compile(r"^###\s+(\S+?)(?:[:\s]\s*(.+))?$")
 
-_VALID_COMMANDS = {"ruhetag", "report", "startdatum", "abbruch", "status", "hilfe"}
+_VALID_COMMANDS = {"ruhetag", "report", "startdatum", "abbruch", "status", "hilfe", "now"}
 
 
 # ---------------------------------------------------------------------------
@@ -126,6 +126,8 @@ class TripCommandProcessor:
             return self._cancel_trip(trip)
         elif key == "status":
             return self._show_status(trip)
+        elif key == "now":
+            return self._show_now(trip)
 
         # Should not reach here due to whitelist check above
         return CommandResult(
@@ -308,6 +310,33 @@ class TripCommandProcessor:
             success=True, command="hilfe",
             confirmation_subject="Hilfe",
             confirmation_body=body,
+        )
+
+    def _show_now(self, trip: Trip) -> CommandResult:
+        """Fetch radar nowcast for today's stage position."""
+        from services.radar_service import RadarNowcastService
+        today = date.today()
+        stage = trip.get_stage_for_date(today)
+        if not stage or not stage.waypoints:
+            return CommandResult(
+                success=False, command="now",
+                confirmation_subject=f"[{trip.name}] Kein heutiger Standort",
+                confirmation_body=(
+                    "Keine heutige Etappe gefunden. "
+                    "Aktueller Position/Standort unbekannt — "
+                    "bitte Etappenplan prüfen."
+                ),
+                trip_name=trip.name,
+            )
+        wp = stage.waypoints[0]
+        svc = RadarNowcastService()
+        result = svc.get_nowcast(wp.lat, wp.lon)
+        body = svc.format_now_text(result)
+        return CommandResult(
+            success=True, command="now",
+            confirmation_subject=f"[{trip.name}] Nowcast",
+            confirmation_body=body,
+            trip_name=trip.name,
         )
 
     def _cancel_trip(self, trip: Trip) -> CommandResult:
