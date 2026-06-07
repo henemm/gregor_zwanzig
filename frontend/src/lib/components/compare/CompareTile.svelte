@@ -171,7 +171,7 @@
 		style:color="var(--g-ink-2)"
 		style:letter-spacing="0.02em"
 		style:padding-left="17px"
-	>{locationsText} · {profileLabel}</div>
+	>{locationsText}{profileLabel ? ` · ${profileLabel}` : ''}</div>
 
 	<!-- Kanal-Pills (nicht im compact-Modus) -->
 	{#if !compact}

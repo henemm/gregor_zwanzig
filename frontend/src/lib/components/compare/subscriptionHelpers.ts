@@ -114,9 +114,14 @@ const PROFILE_LABELS: Record<string, string> = {
 	summer_trekking: 'Sommer-Trekking',
 };
 
-/** ActivityProfile-Key → lesbares deutsches Label (nie roher Key). */
-export function presetProfileLabel(profil: ActivityProfile): string {
-	return PROFILE_LABELS[profil] ?? 'Profil';
+/**
+ * ActivityProfile-Key → lesbares deutsches Label.
+ * Case-insensitive: "SUMMER_TREKKING" == "summer_trekking" → "Sommer-Trekking".
+ * Leeres/unbekanntes profil → "" (kein Platzhalter; Kachel zeigt nur "N Orte").
+ */
+export function presetProfileLabel(profil: ActivityProfile | string | undefined): string {
+	if (!profil) return '';
+	return PROFILE_LABELS[String(profil).toLowerCase()] ?? '';
 }
 
 /**

@@ -67,6 +67,25 @@ test('presetProfileLabel: summer_trekking → lesbares deutsches Label (kein Roh
 	assert.ok(label.length > 0, 'nicht leer');
 });
 
+// Staging-Bug: Großgeschriebene Legacy-Werte (case-insensitive-Fix)
+test('presetProfileLabel: SUMMER_TREKKING (Großbuchstaben) → "Sommer-Trekking"', () => {
+	const label = presetProfileLabel('SUMMER_TREKKING' as ActivityProfile);
+	assert.equal(label, 'Sommer-Trekking', 'Großbuchstaben müssen case-insensitive aufgelöst werden');
+});
+
+test('presetProfileLabel: WINTERSPORT (Großbuchstaben) → "Wintersport"', () => {
+	const label = presetProfileLabel('WINTERSPORT' as ActivityProfile);
+	assert.equal(label, 'Wintersport');
+});
+
+test('presetProfileLabel: leerer String → ""', () => {
+	assert.equal(presetProfileLabel('' as ActivityProfile), '');
+});
+
+test('presetProfileLabel: undefined → ""', () => {
+	assert.equal(presetProfileLabel(undefined as unknown as ActivityProfile), '');
+});
+
 // ─── 2) presetScheduleLabel (Rhythmus-Kurzlabel) ─────────────────────────────
 
 test('presetTileScheduleLabel: daily/06 → enthält "tägl." und "06"', () => {
