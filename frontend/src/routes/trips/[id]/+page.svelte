@@ -104,6 +104,10 @@
 		trip = updated;
 	}
 
+	function handleTripUpdate(updated: Trip): void {
+		trip = updated;
+	}
+
 	async function handleTestBriefing(): Promise<void> {
 		try {
 			await fetch('/api/scheduler/trip-reports?hour=18', { method: 'POST' });
@@ -134,8 +138,8 @@
 			<Btn variant="accent" size="sm" onclick={handleTestBriefing}>Test-Briefing senden</Btn>
 		</div>
 	</div>
-	<TripHeader {trip} {now} onStatusChange={handleStatusChange} />
-	<TripTabs {initialTab} badges={{}} {trip} />
+	<TripHeader {trip} {now} onStatusChange={handleStatusChange} onTripUpdate={handleTripUpdate} />
+	<TripTabs {initialTab} badges={{}} {trip} onTripUpdate={handleTripUpdate} />
 </main>
 
 <ConfirmDialog

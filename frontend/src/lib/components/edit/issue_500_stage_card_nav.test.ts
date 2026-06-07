@@ -24,34 +24,37 @@ const ETAPPEN_STRIP = join(here, '..', 'trip-detail', 'waypoints', 'EtappenStrip
 const ISSUE_407_SPEC = join(here, '..', '..', '..', '..', 'e2e', 'issue-407-waypoint-editor-screen.spec.ts');
 
 // ────────────────────────────────────────────────────────────────────────────
-// AC-1: +page.server.ts liefert Trip-Daten statt 301-Redirect
+// AC-1: +page.server.ts leitet auf die eine kanonische Trip-Oberfläche um
+//
+// Issue #616 hat /trips/[id]/edit stillgelegt: der Server-Loader führt jetzt
+// einen 307-Redirect auf /trips/[id] durch (EINE Trip-Oberfläche).
+// AC-1b/AC-1c (Trip-Loader + Cookie) sind damit obsolet — der Loader lädt
+// keinen Trip mehr, sondern leitet nur um.
 // ────────────────────────────────────────────────────────────────────────────
 
-describe('#500 AC-1: Edit-Seite ohne Redirect erreichbar', () => {
+describe('#500 AC-1: Edit-Seite leitet auf die kanonische Trip-Oberfläche um (#616)', () => {
 	test('AC-1a: +page.server.ts enthält keinen 301-Redirect mehr', () => {
 		const src = readFileSync(PAGE_SERVER, 'utf-8');
 		assert.ok(
 			!src.includes('redirect(301'),
-			'+page.server.ts darf keinen redirect(301, ...) mehr enthalten — ' +
-				'die Edit-Seite muss direkt die TripEditView laden (Issue #500 AC-1)'
+			'+page.server.ts darf keinen redirect(301, ...) mehr enthalten'
 		);
 	});
 
-	test('AC-1b: +page.server.ts lädt den Trip über die API', () => {
+	test('AC-1b: +page.server.ts leitet mit 307 auf /trips/[id] um (Issue #616)', () => {
 		const src = readFileSync(PAGE_SERVER, 'utf-8');
 		assert.ok(
-			src.includes('/api/trips/') && src.includes('return { trip }'),
-			'+page.server.ts muss den Trip via fetch("/api/trips/...") laden und { trip } zurückgeben ' +
-				'(Issue #500 AC-1)'
+			src.includes('redirect(307') && src.includes('/trips/'),
+			'+page.server.ts muss einen redirect(307, "/trips/...") enthalten — ' +
+				'die /edit-URL ist seit #616 stillgelegt, eine Oberfläche'
 		);
 	});
 
-	test('AC-1c: +page.server.ts leitet Session-Cookie weiter', () => {
+	test('AC-1c: +page.server.ts ist ein Server-Loader (export const load)', () => {
 		const src = readFileSync(PAGE_SERVER, 'utf-8');
 		assert.ok(
-			src.includes('gz_session') && src.includes('cookies.get'),
-			'+page.server.ts muss das gz_session-Cookie an den API-Aufruf weitergeben ' +
-				'(Issue #500 AC-1, Auth-Invariante)'
+			src.includes('export const load') || src.includes('export async function load'),
+			'+page.server.ts muss eine export const load-Funktion exportieren'
 		);
 	});
 });

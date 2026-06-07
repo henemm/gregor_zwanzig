@@ -177,7 +177,7 @@ import PauseIcon from '@lucide/svelte/icons/pause';
 	}
 
 	function openEdit(trip: Trip) {
-		goto(`/trips/${trip.id}/edit`);
+		goto(`/trips/${trip.id}`);
 	}
 
 	async function openReportConfig(trip: Trip) {

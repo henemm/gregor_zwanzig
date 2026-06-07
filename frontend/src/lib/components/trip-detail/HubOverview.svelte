@@ -43,7 +43,7 @@
 	<div>
 		<SectionH eyebrow="Etappen" title="Reihenfolge & Profil">
 			{#snippet right()}
-				<Btn variant="ghost" size="sm" onclick={makeJumpHandler('etappen')}>Im Editor öffnen →</Btn>
+				<Btn variant="ghost" size="sm" onclick={makeJumpHandler('stages')}>Im Editor öffnen →</Btn>
 			{/snippet}
 		</SectionH>
 

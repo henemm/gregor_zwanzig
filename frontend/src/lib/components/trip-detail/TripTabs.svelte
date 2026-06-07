@@ -1,9 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { Segmented } from '$lib/components/atoms';
-	import TripOverview from './TripOverview.svelte';
 	import HubOverview from './HubOverview.svelte';
-	import HubSchedule from './HubSchedule.svelte';
+	import BriefingScheduleTab from './BriefingScheduleTab.svelte';
 	import WeatherMetricsTab from './WeatherMetricsTab.svelte';
 	import AlertsTab from '$lib/components/alerts-tab/AlertsTab.svelte';
 	import BriefingsTab from '$lib/components/briefings-tab/BriefingsTab.svelte';
@@ -29,9 +28,10 @@
 		initialTab?: string;
 		badges?: Badges;
 		trip?: Trip;
+		onTripUpdate?: (updated: Trip) => void;
 	}
 
-	let { initialTab = 'overview', badges: badgesProp = {}, trip }: Props = $props();
+	let { initialTab = 'overview', badges: badgesProp = {}, trip, onTripUpdate }: Props = $props();
 
 	// Lokale Kopie der Etappen für den Stages-Tab (EditStagesSection braucht $bindable).
 	let localStages = $state<Stage[]>(trip?.stages ?? []);
@@ -122,7 +122,7 @@
 				{:else if tab.value === 'alerts' && trip}
 					<AlertsTab {trip} />
 				{:else if tab.value === 'briefings' && trip}
-					<HubSchedule {trip} />
+					<BriefingScheduleTab {trip} {onTripUpdate} />
 				{:else if tab.value === 'preview' && trip}
 					<div class="preview-shell">
 						{#if demoMode}

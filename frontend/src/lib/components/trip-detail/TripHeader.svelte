@@ -4,8 +4,9 @@
 	//
 	// Zweispaltig: Links Breadcrumb + H1 + Statuszeile + Meta. Rechts 3 Buttons.
 	// Pause/Archive-Logik ist in +page.svelte als Danger-Zone gewandert.
-	import { Eyebrow } from '$lib/components/atoms';
+	import { Eyebrow, Btn } from '$lib/components/atoms';
 	import TripStatusBadge from './TripStatusBadge.svelte';
+	import { api } from '$lib/api.js';
 	import { formatDateRange, getDaysLabel } from '$lib/utils/tripHero';
 	import { computeTripStats } from '$lib/utils/tripStats';
 	import { deriveTripStatus, todayStageIndex } from '$lib/utils/tripStatus';
@@ -18,10 +19,27 @@
 		// onStatusChange ist obsolet — Pause/Archive haben die Komponente verlassen.
 		// Prop bleibt zur Backward-Compatibility, wird nicht mehr ausgelöst.
 		onStatusChange?: (updated: Trip) => void;
+		onTripUpdate?: (updated: Trip) => void;
 		now?: Date;
 	}
 
-	let { trip, now = new Date() }: Props = $props();
+	let { trip, onTripUpdate, now = new Date() }: Props = $props();
+
+	// AC-6 — Inline Trip-Name-Bearbeitung (kein separater /edit-Screen mehr)
+	let editName = $state(trip.name);
+	let nameSaving = $state(false);
+
+	function makeNameSaveHandler() {
+		return async function doNameSave() {
+			nameSaving = true;
+			try {
+				await api.put(`/api/trips/${trip.id}`, { ...trip, name: editName });
+				onTripUpdate?.({ ...trip, name: editName });
+			} finally {
+				nameSaving = false;
+			}
+		};
+	}
 
 	const stats = $derived(computeTripStats(trip));
 	const dateRange = $derived(formatDateRange(trip));
@@ -98,6 +116,23 @@
 			<h1 class="trip-h1" data-testid="trip-detail-h1">
 				{#if trip.shortcode}<span class="h1-shortcode">{trip.shortcode}</span> ·&nbsp;{/if}{trip.name}
 			</h1>
+
+			<div class="name-edit-row">
+				<input
+					type="text"
+					data-testid="trip-name-edit"
+					class="name-edit-input"
+					bind:value={editName}
+					aria-label="Trip-Name bearbeiten"
+				/>
+				<Btn
+					variant="ghost"
+					size="sm"
+					data-testid="trip-name-save"
+					disabled={nameSaving}
+					onclick={makeNameSaveHandler()}
+				>{nameSaving ? '…' : 'Umbenennen'}</Btn>
+			</div>
 
 			<div class="status-line">
 				<span class="status-supplement" data-testid="trip-detail-status-supplement">
@@ -203,6 +238,26 @@
 		color: var(--g-ink-3);
 		letter-spacing: 0.06em;
 		text-transform: uppercase;
+	}
+	.name-edit-row {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		margin-top: 2px;
+	}
+	.name-edit-input {
+		flex: 1 1 auto;
+		max-width: 380px;
+		font-size: var(--g-text-sm);
+		color: var(--g-ink);
+		border: 1px solid var(--g-rule);
+		border-radius: var(--g-r-1, 0.375rem);
+		background: var(--g-card, #fff);
+		padding: 4px 8px;
+		outline: none;
+	}
+	.name-edit-input:focus {
+		border-color: var(--g-accent);
 	}
 	.mobile-metrics {
 		display: none;
