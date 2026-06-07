@@ -105,6 +105,8 @@ func main() {
 	r.Get("/api/auth/telegram-link", handler.GetTelegramLinkHandler(s))
 	r.Get("/api/auth/telegram-status", handler.GetTelegramStatusHandler(s))
 	r.Post("/api/internal/telegram-connect", handler.PostTelegramConnectHandler(s))
+	// Issue #637: Telegram Inbound Webhook (public, secret-header-protected)
+	r.Post("/api/webhooks/telegram/{secret}", handler.TelegramWebhookHandler(cfg.PythonCoreURL))
 	r.Get("/api/auth/google/init", handler.GoogleOAuthInitHandler(cfg))
 	r.Get("/api/auth/google/callback", handler.GoogleOAuthCallbackHandler(cfg, s))
 	magicLinkLimiter := authmw.NewIPRateLimiter(5, 15*time.Minute)

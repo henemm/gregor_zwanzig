@@ -2,14 +2,21 @@
 entity_id: inbound_telegram_reader
 type: module
 created: 2026-06-03
-updated: 2026-06-03
-status: draft
+updated: 2026-06-07
+status: deprecated
 version: "1.0"
 tags: [telegram, inbound, bot, polling, channel, f7, issue-570]
 github_issue: 570
+related_issue: 637
+deprecated_by: telegram_webhook_inbound
 ---
 
-# Inbound Telegram Reader
+# Inbound Telegram Reader (DEPRECATED)
+
+> **⚠️ DEPRECATED:** Diese Spec beschreibt die Polling-basierte Implementierung (Issue #570).
+> Seit **Issue #637** (2026-06-07) erfolgt der Telegram-Inbound via **Webhook** (push-basiert, kein Polling).
+> Die alte `InboundTelegramReader.poll_and_process()`-Schleife ist deaktiviert (Notfall-Fallback nur).
+> Siehe: `docs/specs/modules/telegram_webhook_inbound.md` für die aktuellen Specs und `docs/runbooks/telegram-webhook.md` für Betrieb.
 
 ## Approval
 
