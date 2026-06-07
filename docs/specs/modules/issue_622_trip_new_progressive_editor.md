@@ -1,6 +1,6 @@
 # Spec: Neue Tour anlegen — Progressive Tab Editor (#622)
 
-**Status:** Entwurf — Spec/Plan, noch kein Code (PO 2026-06-06)
+**Status:** Freigegeben für Umsetzung — **Desktop-Scope** (PO 2026-06-07). Blocker #587/#616/#617 sind live.
 **Issue:** #622 (`trip-new-progressive-editor`)
 **Design-Quelle (verbindlich, 1:1):** `docs/design-requests/trip-anlegen-2026-06-06/` — `Gregor 20 - Trip anlegen.html`, `screen-trip-new-v2.jsx` (+ `-mobile`), `screen-trip-edit-v2-weather.jsx` (Roh/Einfach, kein Detail)
 **Baut auf / wiederverwendet:** #587 (`WetterMetrikenTabV2`), #616 (Tab-IA), #617 (`TE2_ZeitplanTab`/`TE2_AlertsTab`), #585/#503 (`ScreenWaypointEditor` embedded). **Ersetzt** den 5-Schritt-Wizard (`screen-trip-wizard.jsx` → deprecated).
@@ -26,6 +26,25 @@ Wegpunkte + Wetter schalten **gleichzeitig** frei (beide nach allen GPX). Gesper
 - **GPX pro Etappe** statt Gesamt-Trip-GPX. Jede Etappe hat ihre eigene `.gpx`.
 - **Startdatum** (Pflicht) → Etappen-Datum = Startdatum + Index-Tage (auto, 1:1 `TN_stageDate`).
 
+### Persistenz-Architektur (festgelegt 2026-06-07)
+Die verbindliche JSX (`screen-trip-new-v2.jsx`) hält **allen Anlege-State lokal** (eigene
+`useState` pro Tab, GPX gemockt, **kein** inkrementelles Speichern) und persistiert **einmal am
+Ende** per `POST /api/trips`. → Der Anlege-Flow nutzt **„lokaler State im Shell + ein POST am
+Schluss"** (wie der alte `WizardState`), **nicht** das inkrementelle PUT-Muster des Edit-Flows.
+
+**Konsequenz für die Wiederverwendung (AC-6):** Die Edit-Tabs unterscheiden sich im Create-Reifegrad:
+| Komponente | Create-tauglich? | Anpassung |
+|---|---|---|
+| `EditReportConfigSection` (Zeitplan) | ✅ hat `mode='create'`, bindable | keine |
+| `AlertRulesEditor` | ✅ bindable `rules` | keine |
+| `WeatherMetricsTab` | ⚠️ PUT auf `/api/trips/{id}/weather-config` | **Create-Modus:** Config per Binding/`onChange` emittieren statt PUT; zusätzlich `onChannelsChange`-Output für Kanal-Weitergabe |
+| `EditStagesPanelNew` | ⚠️ PUT auf `/api/trips/{id}` | **Create-Modus:** Etappen/GPX nur per Binding halten, kein PUT; im Anlege-Flow ggf. schlankerer Etappen-Tab nach JSX statt voller Editor |
+
+Anpassungen an geteilten Edit-Komponenten erfolgen **additiv** (neue optionale Props, Default =
+bisheriges Edit-Verhalten) — kein Bruch des Edit-Flows. **Backend: kein Schema-Change** nötig
+(`POST /api/trips` existiert; GPX wird über `/api/gpx/parse?stage_date=` pro Etappe geparst →
+`stage.Waypoints`).
+
 ## Acceptance Criteria
 
 **AC-1:** Given ein eingeloggter Nutzer öffnet `/trips/new`, When die Seite lädt, Then erscheint der Tab-Editor (Sidebar + Breadcrumb „Trips / Neue Tour" + Hero „Neue Tour anlegen" + Fortschrittsbalken) mit 6 Tabs — **kein** mehrstufiger Wizard-Stepper.
@@ -44,14 +63,31 @@ Wegpunkte + Wetter schalten **gleichzeitig** frei (beide nach allen GPX). Gesper
 
 **AC-8:** Given der alte Wizard, When der neue Flow live ist, Then ist `/trips/new` der Progressive-Tab-Editor und der alte 5-Schritt-Wizard (`screen-trip-wizard.jsx`-Pendant im Frontend) wird nicht mehr verwendet (deprecated/entfernt) — kein paralleler Anlege-Pfad (PO: „ein Trip-Pfad").
 
-**AC-9 (Mobile):** Given ein Handy-Viewport, When `/trips/new` geöffnet wird, Then gilt volle Parität gemäß `screen-trip-new-v2-mobile.jsx`.
+**AC-9 (Mobile) — VERSCHOBEN auf Folge-Slice:** Mobile-Parität gemäß `screen-trip-new-v2-mobile.jsx`.
+Der Issue-Text stuft Mobile-Adaption selbst als „V1.5 / Out of Scope" ein → eigenes Folge-Issue,
+**nicht** Teil dieser Umsetzung (Desktop-Scope, PO 2026-06-07).
+
+## Slice-Plan (Desktop)
+
+Wegen 250-LoC-Workflow-Grenze in zwei Slices:
+
+- **Slice 1 (dieser Workflow):** Editor-Shell + Lock-/Done-State (`TN_unlocked`/`TN_doneSet`) +
+  TabBar (Flash/Tooltip) + Fortschrittsbalken + **Route-Tab** + **Etappen-&-GPX-Tab** (Create-Modus,
+  lokaler State, Auto-Datum) + **Reuse-Tabs** Wetter/Zeitplan/Alerts im Create-Modus (Kanal-Binding)
+  + **Speichern** (`POST /api/trips`) + alter Wizard deprecated. → AC-1, 2, 3, 4, 6, 7, 8.
+- **Slice 2 (Folge-Issue):** Optionaler **Wegpunkte-Tab** (`ScreenWaypointEditor embedded`, AC-5)
+  + Mobile-Parität (AC-9).
+
+LoC: Slice 1 wird die 250 voraussichtlich überschreiten (Shell + State + Route + Etappen +
+Create-Adapter). Override nur mit PO-Permission oder weitere Teilung — wird zu Beginn der
+Umsetzung entschieden.
 
 ## Pixel-Fidelity
 Inline-Styles 1:1 aus `screen-trip-new-v2.jsx` (nur `var(--g-*)`-Tokens). Playwright-Pixel-Diff gegen Soll-Bilder (`soll-trip-new-route-tab.png`, `-etappen-tab.png`, `-wegpunkte-tab.png`) als Hard-Gate.
 
 ## Abhängigkeiten & Risiken (PLAN-relevant)
 - **Reuse-Abhängigkeit:** `WetterMetrikenTabV2`/`TE2_ZeitplanTab`/`TE2_AlertsTab` baut die Parallel-Session in #587 — #622 importiert sie, editiert sie nicht (Kollisionsrisiko gering, aber #587 muss stabil sein).
-- **Backend (GPX pro Etappe):** Upload-Pfad + Persistenz „GPX je Etappe" statt Gesamt-Trip-GPX — vermutlich eigener Backend-Slice / Koordination nötig. **Vor Umsetzung Datenmodell prüfen** (`src/app/models.py`, Stage-GPX-Felder) — Daten-Schema-Pflicht.
+- **Backend (GPX pro Etappe): GEKLÄRT — kein Schema-Change.** `POST /api/trips` existiert; GPX wird heute schon pro Etappe über `/api/gpx/parse?stage_date=&start_hour=` geparst → abgeleitete `stage.Waypoints`. Go-`Stage` trägt kein rohes GPX-Feld (nur `Waypoints`) und braucht keins.
 - **Startdatum → Etappen-Datum:** existiert teils schon (#498 „Etappen-Datum bearbeitbar"); abgleichen.
 
 ## Out of Scope (mögliche Folge-Slices)

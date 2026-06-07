@@ -39,8 +39,11 @@
 	}
 	interface Props {
 		trip: Trip;
+		/** Issue #622: Create-Modus — kein PUT; Kanäle per onChannelsChange nach oben emittieren */
+		createMode?: boolean;
+		onChannelsChange?: (c: ChannelConfig) => void;
 	}
-	let { trip }: Props = $props();
+	let { trip, createMode = false, onChannelsChange }: Props = $props();
 
 	let catalog: MetricCatalog = $state({});
 	let templates: Template[] = $state([]);
@@ -223,6 +226,13 @@
 		if (Object.keys(catalog).length === 0) load();
 	});
 
+	// Issue #622: Create-Modus — Kanal-Änderungen nach oben propagieren.
+	$effect(() => {
+		if (createMode && onChannelsChange) {
+			onChannelsChange({ ...channels });
+		}
+	});
+
 	// Preset-Auswahl
 	function applyPreset(id: string) {
 		const userP = userPresets.find((p) => p.id === id);
@@ -329,7 +339,10 @@
 				telegram_kurzform: telegramKurzform,
 				channels,
 			};
-			await api.put(`/api/trips/${trip.id}/weather-config`, payload);
+			// Issue #622: Create-Modus — kein PUT, State per Binding gehalten.
+			if (!createMode) {
+				await api.put(`/api/trips/${trip.id}/weather-config`, payload);
+			}
 			saveSuccess = true;
 			// Conflict 4 resolved: BEIDE Felder im snapshot-Aufruf.
 			savedSnapshot = snapshot(buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, channels);
