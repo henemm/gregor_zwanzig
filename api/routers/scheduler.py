@@ -250,11 +250,7 @@ def _run_compare_presets_daily(user_id: str = "default", data_root: str | None =
     from pathlib import Path
 
     from app.config import Settings
-    from app.loader import _parse_activity_profile, load_all_locations
-    from output.renderers.email.compare_html import render_compare_html
-    from outputs.email import EmailOutput
-    from services.comparison_engine import ComparisonEngine
-    from services.comparison_renderers import render_comparison_text
+    from app.loader import load_all_locations
 
     if data_root is None:
         data_root = "data"
@@ -287,59 +283,23 @@ def _run_compare_presets_daily(user_id: str = "default", data_root: str | None =
             continue  # manual und unbekannte Typen überspringen
 
         preset_id = preset.get("id", "")
-        location_ids = preset.get("location_ids") or []
-        if not location_ids:
-            logger.warning("Preset %s has no location_ids — skipping", preset_id)
-            continue
 
-        # Issue #509: empfaenger-Check VOR location-Resolution + mail_to-Fallback
-        empfaenger = preset.get("empfaenger") or []
-        if not empfaenger:
-            default_to = getattr(settings, "mail_to", None)
-            if not default_to:
-                logger.warning("Preset %s: keine empfaenger und kein mail_to — skip", preset_id)
-                continue
-            empfaenger = [default_to]
-            logger.info("Preset %s: empfaenger leer, nutze mail_to=%s", preset_id, default_to)
-
+        # Lazy: erst laden, wenn ein faelliges Preset zu verarbeiten ist (#649).
         if all_locations is None:
             all_locations = load_all_locations(user_id=user_id)
-        locations = [loc for loc in all_locations if loc.id in location_ids]
-        if not locations:
-            logger.warning("Preset %s: none of %s resolved — skipping", preset_id, location_ids)
-            continue
 
         try:
-            profil_str = preset.get("profil", "").lower()
-            profile = _parse_activity_profile(profil_str)
-            hour_from = preset.get("hour_from", 9)
-            hour_to = preset.get("hour_to", 16)
-
-            result = ComparisonEngine.run(
-                locations=locations,
-                time_window=(hour_from, hour_to),
-                target_date=date.today(),
-                forecast_hours=48,
-                profile=profile,
+            _send_one_compare_preset(
+                preset,
+                settings,
+                user_id,
+                data_root,
+                all_locations_cache=all_locations,
             )
-
-            top_ort = result.locations[0].location.name if result.locations else None
-
-            name = preset.get("name", preset_id)
-            from datetime import datetime as _datetime
-            subject = f"Wetter-Vergleich: {name} ({_datetime.now().strftime('%d.%m.%Y')})"
-            html_body = render_compare_html(result, profile=profile)
-            text_body = render_comparison_text(result, profile=profile)
-            EmailOutput(settings).send(
-                subject,
-                html_body,
-                plain_text_body=text_body,
-                to=empfaenger,
-            )
-
-            _save_preset_status(user_id, preset_id, top_ort, data_root=data_root)
             success_count += 1
-            logger.info("Compare preset %s sent to %s", preset_id, empfaenger)
+        except ValueError as e:
+            # Helper-Skip-Pfade: kein Empfaenger / Orte nicht aufloesbar → ueberspringen.
+            logger.warning("%s", e)
         except Exception as e:
             logger.error("Compare preset %s failed: %s", preset_id, e)
 
