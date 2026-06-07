@@ -16,7 +16,7 @@
  * Lokale Helfer tragen CHub_-Prefix (Babel-Scope-Disziplin).
  */
 
-const CHUB_CHANNEL_LABEL = { email: "Email", signal: "Signal", telegram: "Telegram", sms: "SMS" };
+const CHUB_CHANNEL_LABEL = { email: "Email", telegram: "Telegram", sms: "SMS" };
 
 /* Lebenszyklus-Aktionen für den Hub-Header (Charter §6). Bearbeiten passiert in
  * den Tabs, Vorschau/Senden sind eigene Affordanzen → Kebab = nur Lifecycle. */
@@ -239,7 +239,7 @@ function CHub_IdealsTab({ ctx }) {
 /* ════════════════════ Tab 4 · Layout (Bearbeiten) ════════════════════ */
 function CHub_LayoutTab({ ctx }) {
   const { sub } = ctx;
-  const limits = [["Email", "alle Spalten"], ["Telegram", "max 8"], ["Signal", "max 6"], ["SMS", "flach · 0"]];
+  const limits = [["Email", "alle Spalten"], ["Telegram", "max 8"], ["SMS", "flach · 0"]];
   return (
     <CHub_EditSection title="Spalten pro Kanal" hint="eine Konfiguration — der Renderer kappt je Kanal">
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 18 }}>
@@ -263,7 +263,7 @@ function CHub_LayoutTab({ ctx }) {
 /* ════════════════════ Tab 5 · Versand (Bearbeiten) ════════════════════ */
 function CHub_SendTab({ ctx }) {
   const { sub, isActive, isDraft } = ctx;
-  const allCh = ["email", "telegram", "signal", "sms"];
+  const allCh = ["email", "telegram", "sms"];
 
   const banner = isDraft
     ? { tone: "accent", bg: "var(--g-accent-tint)", border: "var(--g-accent)", text: "Noch nicht aktiv. Sobald Orte, Idealwerte und mindestens ein Kanal stehen, kannst du den Vergleich aktivieren.", cta: "Aktivieren" }

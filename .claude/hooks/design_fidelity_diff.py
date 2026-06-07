@@ -118,6 +118,16 @@ SCREEN_THRESHOLD_MAP: dict[str, float] = {
 SCREEN_PRE_ACTIONS: dict[str, list[tuple[str, str]]] = {
     # Modal-Triggers: Buttons klicken, die Modal öffnen
     "M-location-new": [("click", 'button:has-text("Neuer Ort")'), ("wait_selector", "text=Verortung")],
+    # #646: G-compare-detail mappt auf /compare (Liste). Von dort in die erste
+    # SICHTBARE Vergleichs-Kachel klicken → /compare/[id] (Detail-Hub). Die
+    # Desktop-Kacheln (CompareGrid) navigieren per onclick→goto, der <a href>-
+    # Wrapper existiert nur im Mobile-Stack (bei Desktop ausgeblendet) — darum
+    # auf das sichtbare data-testid="compare-tile-*" zielen, sonst screenshottet
+    # der Diff fälschlich die Liste statt des Detail-Hubs.
+    "G-compare-detail": [
+        ("click", '[data-testid^="compare-tile-"]:visible'),
+        ("wait_selector", '[data-testid="compare-detail-tab-list"]'),
+    ],
 }
 
 
