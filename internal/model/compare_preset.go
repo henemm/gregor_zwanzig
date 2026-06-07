@@ -26,4 +26,7 @@ type ComparePreset struct {
 	CreatedAt            time.Time  `json:"created_at"`
 	// Issue #611 — manuell ins Archiv verschoben. nil = aktiv, gesetzt = archiviert.
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
+	// Issue #582 — Frontend-Konfiguration (Region, channel_layouts, ideal_ranges u.a.).
+	// omitempty: Altdaten ohne Feld bleiben nil; kein Schema-Bruch.
+	DisplayConfig map[string]interface{} `json:"display_config,omitempty"`
 }

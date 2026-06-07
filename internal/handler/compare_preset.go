@@ -191,6 +191,13 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		updated.CreatedAt = original.CreatedAt
 		updated.LetzterVersand = original.LetzterVersand
 		updated.TopOrtLetzterVersand = original.TopOrtLetzterVersand
+		// Issue #582 — Read-Modify-Write: display_config aus Original erhalten wenn
+		// der Client es nicht mitsschickt (nil nach Decode = Feld fehlte im Request).
+		// Verhindert clobbern von Region/channel_layouts durch Clients die display_config
+		// nicht kennen (z.B. Editor-Tabs die nur Scheduler-Felder senden).
+		if updated.DisplayConfig == nil {
+			updated.DisplayConfig = original.DisplayConfig
+		}
 
 		if updated.LocationIDs == nil {
 			updated.LocationIDs = []string{}
