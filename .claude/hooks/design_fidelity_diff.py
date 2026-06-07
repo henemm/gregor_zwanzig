@@ -87,6 +87,16 @@ SCREEN_THRESHOLD_MAP: dict[str, float] = {
     # 1:1 (staging-validator 2026-06-05 AC-7 PASS: ⋯-Menü statt Icon-Geschwader,
     # gleiche Spalten/Zeilenstruktur). Reine Inhalts-, keine Layout-Divergenz.
     "E-trips-list-variant": 30.0,
+    # #582 G-compare-uebersicht-kacheln: 30 % wegen Daten-Divergenz UND veraltetem
+    # SOLL. Das SOLL-Bild zeigt 4 Demo-Vergleiche (2 aktiv, 1 Draft, mit Regionen,
+    # Kanal-Pills inkl. SIGNAL und "zuletzt heute/Sa"); das Staging-Test-Konto zeigt
+    # 2 pausierte Vergleiche ohne Kanäle. Zusätzlich ist das SOLL veraltet: es zeigt
+    # den Signal-Kanal, der per PO-Entscheidung #610 app-weit entfernt wurde — ein
+    # exaktes <10 % ist dagegen strukturell unmöglich. Das Layout ist 1:1
+    # (staging-validator 2026-06-07: AC-1/2/3/6/7 PASS, AC-4 SKIPPED kein aktives
+    # Preset; Kachel-Struktur Dot/Eyebrow+Region/Meta/Pills/gestrichelter Fuß 1:1
+    # nach molecules.jsx). Reine Inhalts-/SOLL-Aktualitäts-Divergenz, kein Layout-Drift.
+    "G-compare-uebersicht-kacheln": 30.0,
 }
 
 # Per-Screen Pre-Screenshot-Actions (für Modale/Tabs/etc.).
