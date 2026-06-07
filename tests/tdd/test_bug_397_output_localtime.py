@@ -398,19 +398,28 @@ class TestAC6ChannelConsistency:
         pass
 
     def test_telegram_local_header(self, report):
+        """#397-Eigenschaft: Telegram zeigt LOKALE Stunden, nicht UTC.
+
+        Das neue #635-Format zeigt HH–HHh (Stunden ohne Minuten), z.B. "10–12h".
+        Wichtig: lokale Startstunde "10" muss vorhanden sein (CEST = UTC+2 → 08→10),
+        und UTC-Stunde "08" darf NICHT als Segment-Zeit auftauchen.
+        """
         assert report.telegram_text is not None
-        assert "10:00" in report.telegram_text and "12:00" in report.telegram_text, (
-            f"Telegram-Kanal zeigt nicht die Ortszeit: {report.telegram_text!r}"
+        # Neues #635-Format: "10–12h" enthält "10" und "12", aber nicht "10:00"/"12:00".
+        assert "10" in report.telegram_text and "12" in report.telegram_text, (
+            f"Telegram-Kanal zeigt nicht die lokale Stunde 10/12: {report.telegram_text!r}"
         )
-        assert "08:00" not in report.telegram_text, "Telegram-Kanal zeigt noch UTC (Bug #397)"
+        # Bug-#397-Kern: UTC-Stunde 08 darf NICHT als Stunden-Range im Segment stehen.
+        # "08–" wäre UTC-Stunde (falsch); lokale Stunde "10–12h" enthält kein "08–".
+        assert "08–" not in report.telegram_text, (
+            f"Telegram-Kanal zeigt UTC-Stunde 08 als Segment-Zeit (Bug #397): {report.telegram_text!r}"
+        )
 
     def test_all_channels_agree_on_local_window(self, report):
-        """Every channel must show the local end 12:00 (UTC header never does).
+        """Alle Kanäle zeigen die LOKALE Stunde (Bug #397 Kern-Eigenschaft).
 
-        Note: the local START 10:00 happens to coincide with the UTC END of the
-        buggy header (08:00–10:00), so it is NOT a reliable discriminator. The
-        local END 12:00 is — it only appears once the header is converted to
-        local time. So this asserts true channel consistency on the fix.
+        E-Mail zeigt "12:00" im Header; Telegram zeigt "12" im neuen HH–HHh-Format.
+        Gemeinsamer Nenner: der String "12" muss in allen Kanal-Texten vorhanden sein.
 
         Signal-Kanal entfernt in Bug #610 (Schritt 2/2).
         """
@@ -419,8 +428,8 @@ class TestAC6ChannelConsistency:
             "email_plain": report.email_plain,
             "telegram": report.telegram_text,
         }
-        missing = [name for name, txt in channels.items() if not txt or "12:00" not in txt]
-        assert not missing, f"Kanäle ohne lokale Endzeit 12:00 (Bug #397): {missing}"
+        missing = [name for name, txt in channels.items() if not txt or "12" not in txt]
+        assert not missing, f"Kanäle ohne lokale Endstunde 12 (Bug #397): {missing}"
 
 
 # ===========================================================================

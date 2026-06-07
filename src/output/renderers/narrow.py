@@ -15,16 +15,22 @@ from typing import Optional
 from zoneinfo import ZoneInfo
 
 from app.metric_catalog import get_metric
-from app.models import SegmentWeatherData, StabilityResult, UnifiedWeatherDisplayConfig
+from app.models import SegmentWeatherData, SegmentWeatherSummary, StabilityResult, ThunderLevel, UnifiedWeatherDisplayConfig
 from utils.timezone import local_fmt
 
 from src.output.renderers.channel_layout import CHANNEL_LIMITS, render_for_channel
-from src.output.renderers.email.helpers import fmt_val, format_trend_tokens
+from src.output.renderers.email.helpers import degrees_to_compass, fmt_val, format_trend_tokens
 from utils.timezone import local_fmt
 
 # Maximale Zeilenbreite pro Kanal (Bubble-Constraint).
 # Telegram-Blase: lesbares Mass ~40 Zeichen Monospace.
 _LINE_WIDTH = {"telegram": 40}
+
+# Großzügige Wrap-Breite für Telegram-Wetter-Prosa-Zeilen (#635).
+# Telegram sendet Klartext (proportional) und reflowt selbst — normale
+# Alpendaten (~46 Zeichen) sollen auf einer Zeile bleiben. Pathologisch
+# lange Zeilen werden bei 56 Zeichen als Sicherheitsnetz umbrochen.
+_TG_PROSE_WIDTH = 56
 
 
 def _col_key(metric_id: str) -> Optional[str]:
@@ -139,6 +145,171 @@ def _narrow_table(
     return out
 
 
+def _cloud_emoji(cloud_pct: Optional[int]) -> str:
+    """Wolken-Emoji nach gleicher Skala wie email/helpers.py fmt_val(cloud)."""
+    if cloud_pct is None:
+        return "⛅"
+    if cloud_pct <= 10:
+        return "☀️"
+    if cloud_pct <= 30:
+        return "🌤️"
+    if cloud_pct <= 70:
+        return "⛅"
+    if cloud_pct <= 90:
+        return "🌥️"
+    return "☁️"
+
+
+def _thunder_severity(level: Optional[ThunderLevel]) -> int:
+    _sev = {ThunderLevel.NONE: 0, ThunderLevel.MED: 1, ThunderLevel.HIGH: 2}
+    return _sev.get(level, 0) if level is not None else 0
+
+
+def _tg_segment_line(
+    seg_data: SegmentWeatherData,
+    rows: list[dict],
+    tz: "ZoneInfo",
+) -> str:
+    """Baue EINE Telegram-Segment-Zeile: {Emoji} {HH}–{HH}h  {Temp} · Wind {Wind} {Richtung} · {Regen}."""
+    agg: SegmentWeatherSummary = seg_data.aggregated
+    seg = seg_data.segment
+
+    # --- Zeit-Range (F004: identische Stunden → nur eine ausgeben) ---
+    start_hh = local_fmt(seg.start_time, tz, "%H")
+    end_hh = local_fmt(seg.end_time, tz, "%H")
+
+    # --- Temperatur (AC-2) ---
+    if rows:
+        t_start = rows[0].get("temp")
+        t_end = rows[-1].get("temp")
+        if t_start is not None and t_end is not None:
+            ts = round(float(t_start))
+            te = round(float(t_end))
+            if abs(te - ts) < 1:
+                temp_str = f"{ts}°C"
+            else:
+                temp_str = f"{ts}→{te}°C"
+        else:
+            temp_str = _temp_fallback(agg)
+    else:
+        temp_str = _temp_fallback(agg)
+
+    # --- Wind (AC-3) ---
+    if rows:
+        winds = [r.get("wind") for r in rows if r.get("wind") is not None]
+        dirs = [r.get("wind_dir") for r in rows if r.get("wind_dir") is not None]
+    else:
+        winds = []
+        dirs = []
+
+    if winds:
+        w_min = round(min(float(w) for w in winds))
+        w_max = round(max(float(w) for w in winds))
+        wind_kmh = f"{w_min}–{w_max}" if w_min != w_max else str(w_min)
+    else:
+        w_val = agg.wind_max_kmh
+        wind_kmh = str(round(float(w_val))) if w_val is not None else "?"
+
+    dominant_dir: Optional[int] = None
+    if dirs:
+        dominant_dir = round(sum(float(d) for d in dirs) / len(dirs))
+    elif agg.wind_direction_avg_deg is not None:
+        dominant_dir = agg.wind_direction_avg_deg
+
+    compass = degrees_to_compass(dominant_dir) if dominant_dir is not None else ""
+    wind_str = f"{wind_kmh} {compass}".strip() if compass else wind_kmh
+
+    # --- Regen (AC-4) ---
+    thunder_lvl = agg.thunder_level_max
+    precip = agg.precip_sum_mm if agg.precip_sum_mm is not None else 0.0
+    if thunder_lvl is not None and _thunder_severity(thunder_lvl) >= 1:
+        precip_str = "Gewitter"
+    elif precip < 0.2:
+        precip_str = "trocken"
+    elif precip < 2.0:
+        precip_str = "etwas Regen"
+    else:
+        precip_str = "Regen"
+
+    # --- Emoji (AC-5): Regen >= 0.5 → 🌧️, sonst Wolken-Skala ---
+    cloud_val = agg.cloud_avg_pct
+    if rows and cloud_val is None:
+        clouds = [r.get("cloud") for r in rows if r.get("cloud") is not None]
+        if clouds:
+            cloud_val = round(sum(float(c) for c in clouds) / len(clouds))
+
+    if precip >= 0.5:
+        emoji = "🌧️"
+    else:
+        emoji = _cloud_emoji(cloud_val)
+
+    # F004: identische lokale Stunde → nur eine ausgeben (z.B. "10h" statt "10–10h").
+    time_str = f"{start_hh}h" if start_hh == end_hh else f"{start_hh}–{end_hh}h"
+    return f"{emoji} {time_str}  {temp_str} · Wind {wind_str} · {precip_str}"
+
+
+def _temp_fallback(agg: SegmentWeatherSummary) -> str:
+    """Fallback-Temp aus Summary wenn keine rows."""
+    lo = agg.temp_min_c
+    hi = agg.temp_max_c
+    if lo is not None and hi is not None:
+        if abs(round(float(hi)) - round(float(lo))) < 1:
+            return f"{round(float(lo))}°C"
+        return f"{round(float(lo))}→{round(float(hi))}°C"
+    if lo is not None:
+        return f"{round(float(lo))}°C"
+    if hi is not None:
+        return f"{round(float(hi))}°C"
+    return "?°C"
+
+
+def _tg_day_footer(segments: list[SegmentWeatherData]) -> Optional[str]:
+    """Fußzeile mit Tageswerten (AC-6): ⚡ kein|MED|HIGH · Sicht gut|… · 0°C-Grenze N m."""
+    max_thunder_sev = 0
+    min_vis: Optional[int] = None
+    rep_freeze: Optional[int] = None
+
+    for sd in segments:
+        agg = sd.aggregated
+        sev = _thunder_severity(agg.thunder_level_max)
+        if sev > max_thunder_sev:
+            max_thunder_sev = sev
+        if agg.visibility_min_m is not None:
+            if min_vis is None or agg.visibility_min_m < min_vis:
+                min_vis = agg.visibility_min_m
+        if rep_freeze is None and agg.freezing_level_m is not None:
+            rep_freeze = agg.freezing_level_m
+
+    parts: list[str] = []
+
+    # Gewitter
+    if max_thunder_sev == 0:
+        thunder_word = "kein"
+    elif max_thunder_sev == 1:
+        thunder_word = "MED"
+    else:
+        thunder_word = "HIGH"
+    parts.append(f"⚡ {thunder_word}")
+
+    # Sicht
+    if min_vis is not None:
+        if min_vis >= 10000:
+            vis_word = "gut"
+        elif min_vis >= 4000:
+            vis_word = "mäßig"
+        else:
+            vis_word = "schlecht"
+        parts.append(f"Sicht {vis_word}")
+
+    # 0°C-Grenze
+    if rep_freeze is not None:
+        parts.append(f"0°C-Grenze {rep_freeze} m")
+
+    if not parts:
+        return None
+    return " · ".join(parts)
+
+
 def render_narrow(
     channel: str,
     *,
@@ -189,21 +360,35 @@ def render_narrow(
         if seg_data.has_error:
             lines.extend(_wrap(f"Seg {seg.segment_id}: keine Daten", width))
             continue
-        start = local_fmt(seg.start_time, tz)
-        end = local_fmt(seg.end_time, tz)
-        if str(seg.segment_id) == "Ziel":
-            lines.extend(_wrap(f"Ziel {start}", width))
+
+        if channel == "telegram":
+            # AC-1..AC-5: pro Segment EINE lesbare Zeile statt Stundentabelle.
+            # Prosa-Zeilen erhalten eine großzügigere Wrap-Breite (56) damit normale
+            # Alpendaten (~46 Zeichen) ungeteilt bleiben; pathologisch lange Zeilen
+            # werden trotzdem als Sicherheitsnetz umbrochen.
+            lines.extend(_wrap(_tg_segment_line(seg_data, rows, tz), _TG_PROSE_WIDTH))
         else:
-            lines.extend(_wrap(f"Seg {seg.segment_id} {start}-{end}", width))
+            start = local_fmt(seg.start_time, tz)
+            end = local_fmt(seg.end_time, tz)
+            if str(seg.segment_id) == "Ziel":
+                lines.extend(_wrap(f"Ziel {start}", width))
+            else:
+                lines.extend(_wrap(f"Seg {seg.segment_id} {start}-{end}", width))
 
-        if layout.table_columns and rows:
-            lines.extend(_narrow_table(layout.table_columns, rows, fkeys, width))
+            if layout.table_columns and rows:
+                lines.extend(_narrow_table(layout.table_columns, rows, fkeys, width))
 
-        if layout.detail_metrics and rows:
-            # Detail-Zeile aus dem ersten Row des Segments (kompakter Trailer).
-            lines.extend(
-                _detail_lines(layout.detail_metrics, rows[0], fkeys, width)
-            )
+            if layout.detail_metrics and rows:
+                # Detail-Zeile aus dem ersten Row des Segments (kompakter Trailer).
+                lines.extend(
+                    _detail_lines(layout.detail_metrics, rows[0], fkeys, width)
+                )
+
+    # AC-6: Fußzeile (Tageswerte) nur für Telegram — ebenfalls großzügige Breite.
+    if channel == "telegram" and segments:
+        footer = _tg_day_footer([sd for sd in segments if not sd.has_error])
+        if footer:
+            lines.extend(_wrap(footer, _TG_PROSE_WIDTH))
 
     # Issue #623: Trend block — nur für Telegram (AC-8: Signal bekommt keinen Trend).
     if channel == "telegram" and multi_day_trend:
