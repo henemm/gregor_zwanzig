@@ -616,7 +616,7 @@
 						<div style:display="flex" style:gap="32px" style:margin-top="10px">
 							<Stat layout="inline" label="Trips" value="12" />
 							<Stat layout="inline" label="Briefings" value="486" />
-							<Stat layout="inline" label="Treffer Ø" tone="accent" value="87%" />
+							<Stat layout="inline" label="Etappen" tone="accent" value="8" />
 						</div>
 					</div>
 				</div>
