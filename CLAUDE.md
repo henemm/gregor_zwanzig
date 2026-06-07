@@ -374,3 +374,17 @@ Die Callmebot-Infrastruktur existiert weiterhin auf Server-Ebene (`/home/hem/hen
 ## Messaging
 
 Diese Instanz heißt `gregor`. Siehe `~/.claude/CLAUDE.md` → "Inter-Instance Messaging" für Details.
+
+# Compact instructions
+
+Diese Sektion wird von `/compact` automatisch als Zusammenfassungs-Anleitung gelesen (dokumentiertes Claude-Code-Feature). Sie greift bei jedem `/compact` — du musst also **nie** einen langen `/compact <Text>` tippen, einfaches `/compact` genügt.
+
+Wenn gerade ein OpenSpec-Workflow läuft (`GZ_ACTIVE_WORKFLOW` gesetzt), bewahre beim Komprimieren IMMER:
+
+- **Workflow-Identität:** Issue-Nummer, Workflow-Name (`GZ_ACTIVE_WORKFLOW`), aktuelle Phase.
+- **Spec & Akzeptanz:** die freigegebenen ACs (AC-N) und alle Designentscheidungen aus der Analyse-Phase.
+- **TDD-Stand:** welche Tests rot sind und **warum** (Bug-Reproduktion aus Nutzersicht), die betroffenen Source-/Test-Dateipfade, RED-Artefakt-Pfade, das LoC-Limit.
+- **Implementierung & QA:** welche Dateien geändert wurden, das Adversary-Verdict, offene Fix-Loop-Punkte.
+- **Deploy-relevant:** den Scope (frontend-only vs. full-stack — entscheidet den E2E-Pfad), `verified_commit`-Status, Staging-Verdict.
+
+Verwirf dagegen: rohe Tool-Output-Dumps, allgemeines Hin-und-Her und Implementierungs-Detail-Diskussionen, die bereits im Code oder in den State-Dateien (`.claude/workflows/<name>.json`, `e2e_verified.json`, `docs/artifacts/`) stehen — diese überleben den Compact ohnehin auf der Platte.
