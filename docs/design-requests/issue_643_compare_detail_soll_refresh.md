@@ -20,9 +20,18 @@ Die Handoff-Quellen widersprechen diesem Live-Stand:
 Ein „1:1"-Nachbau wäre eine **Regression**: er holte Signal und das überholte
 Einseiten-Layout zurück.
 
+## Maßgebliche Design-Quelle (PO 2026-06-07)
+
+Die verbindliche, aktuelle Vorlage ist das Design-Bundle **`Gregor 20 - Desktop.html`**:
+<https://api.anthropic.com/v1/design/h/BYeix0AvHSM9cTgWhy0jiA?open_file=Gregor+20+-+Desktop.html>
+
+Dort ist der Ortsvergleich-Detail-Screen bereits korrekt (kein Signal, Tab-Hub).
+Die im Repo liegenden Handoff-Dateien (`screen-compare-detail.jsx` + `G-compare-detail.png`)
+sind ein **veralteter Export** dieses Bundles und müssen daraus neu gezogen werden.
+
 ## Bitte um frischen SOLL
 
-Für eine künftige echte Fidelity-Prüfung des **aktuellen Tab-Hubs** wird benötigt:
+Aus dem o. g. Design-Bundle exportieren für die Fidelity-Prüfung des **Tab-Hubs**:
 
 1. **Aktualisierte JSX** `screen-compare-detail.jsx` ohne Signal (Kanäle nur Email · Telegram · SMS).
 2. **Frischer SOLL** `G-compare-detail.png`, gerendert vom aktuellen Tab-Hub
