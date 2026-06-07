@@ -1,17 +1,19 @@
 <script lang="ts">
 	// Issue #587 v2 — Wetter-Metriken-Tab: 4-Abschnitte-Editor + Live-Mail-Vorschau (Desktop).
+	// Issue #618 — Mobile: 4 Abschnitte vertikal + Mail-Bottom-Sheet (Legacy #415 entfernt).
 	// LÖST AB: OutputLayoutEditor-basiertes Layout (Issue #364/#431).
 	// BEWAHRT: initFromTrip, handleSave, bucketsToColumns-Migration, telegramKurzform,
-	//          read-modify-write-Payload, SavePresetDialog, WeatherMetricsMobileView.
+	//          read-modify-write-Payload, SavePresetDialog.
 	// SCHÜTZT: OutputLayoutEditor, BucketSection*, ActiveMetricRow bleiben UNVERÄNDERT
 	//          (Wizard + Orts-Vergleich nutzen sie).
 	// Spec: docs/specs/modules/issue_587_weather_tab_v2.md
+	// Spec: docs/specs/modules/issue_618_mobile_weather_tab.md
 	import { api } from '$lib/api.js';
 	import type { Trip, MetricPreset, Horizons } from '$lib/types';
 	import { HORIZONS_ALL } from '$lib/types';
 	import { Btn, Card, Eyebrow, Pill } from '$lib/components/atoms';
 	import SavePresetDialog from './SavePresetDialog.svelte';
-	import WeatherMetricsMobileView from './WeatherMetricsMobileView.svelte';
+	import Sheet from '$lib/components/mobile/Sheet.svelte';
 	// v2 Sub-Komponenten (neu, standalone, keine Abhängigkeit von OutputLayoutEditor)
 	import WeatherV2PresetBar from './WeatherV2PresetBar.svelte';
 	import WeatherV2Grundauswahl from './WeatherV2Grundauswahl.svelte';
@@ -66,7 +68,7 @@
 	let smsThresholds = $state<Record<string, string>>({});
 	let savedSnapshot = $state('');
 	let showSavePresetDialog = $state(false);
-	let showMobileView = $state(false);
+	let mailSheetOpen = $state(false);
 	let pendingPreset: string | null = $state(null);
 
 	// AC-2 Diff-Highlight: 2,5s Aufleuchten nach jeder Änderung.
@@ -358,11 +360,6 @@
 	</div>
 {:else}
 	<div data-testid="weather-metrics-tab" class="metrics-tab">
-		<!-- Mobile Trigger (behält WeatherMetricsMobileView, eigenes Issue #618) -->
-		<button class="mobile-metrics-trigger" data-testid="mobile-metrics-trigger" onclick={() => (showMobileView = true)}>
-			Metriken konfigurieren ({buckets.primary.length} aktiv)
-		</button>
-
 		<!-- Save-Bar (oben, schmal) -->
 		<div class="save-bar">
 			{#if isDirty}
@@ -523,6 +520,23 @@
 			</div>
 		</div>
 
+		<!-- Mobile: fixierter "So kommt es an"-Button → Mail-Vorschau als Bottom-Sheet (#618) -->
+		<button class="mobile-mail-fab" data-testid="mobile-mail-fab" onclick={() => (mailSheetOpen = true)}>
+			<span>So kommt es an</span>
+			<span class="mobile-mail-fab__badge">{buckets.primary.length + (buckets.secondary?.length ?? 0)} Metriken</span>
+		</button>
+		<Sheet open={mailSheetOpen} onClose={() => (mailSheetOpen = false)} title="So kommt es an">
+			<div data-testid="mobile-mail-sheet" style="padding: 4px 16px 24px;">
+				<WeatherV2MailPreview
+					primaryColumns={buckets.primary}
+					{metricById}
+					{friendlyMap}
+					{telegramKurzform}
+					{highlight}
+				/>
+			</div>
+		</Sheet>
+
 		<!-- Dialoge & Overlays -->
 		<SavePresetDialog
 			bind:open={showSavePresetDialog}
@@ -548,28 +562,6 @@
 				</div>
 			</div>
 		{/if}
-
-		{#if showMobileView}
-			<WeatherMetricsMobileView
-				{trip}
-				{catalog}
-				{templates}
-				{userPresets}
-				{buckets}
-				{friendlyMap}
-				{metricById}
-				{selectedTemplate}
-				{savedSnapshot}
-				{isDirty}
-				{saving}
-				{onToggleMetric}
-				onSelectPreset={applyPreset}
-				onSave={handleSave}
-				onDiscard={handleDiscard}
-				onClose={() => (showMobileView = false)}
-				onOpenSavePresetDialog={() => (showSavePresetDialog = true)}
-			/>
-		{/if}
 	</div>
 {/if}
 
@@ -577,7 +569,8 @@
 	.loading-shell {
 		padding: var(--g-s-4);
 	}
-	.mobile-metrics-trigger {
+	/* Issue #618: FAB auf Desktop versteckt */
+	.mobile-mail-fab {
 		display: none;
 	}
 	.save-bar {
@@ -703,24 +696,43 @@
 			grid-template-columns: 1fr;
 			gap: var(--g-s-6);
 			padding: var(--g-s-4);
+			padding-bottom: 88px;
 		}
 		.save-bar {
 			padding: var(--g-s-3) var(--g-s-4);
 		}
-		.mobile-metrics-trigger {
+		/* Inline-Vorschau auf Mobil verstecken (kommt stattdessen als Sheet) */
+		.preview-col {
+			display: none;
+		}
+		/* Issue #618: Floating FAB mobil */
+		.mobile-mail-fab {
+			position: fixed;
+			bottom: 16px;
+			left: 14px;
+			right: 14px;
+			z-index: 20;
 			display: flex;
 			align-items: center;
-			justify-content: space-between;
-			width: 100%;
-			padding: var(--g-s-3) var(--g-s-4);
-			background: var(--g-paper);
-			border: 1px solid var(--g-ink-faint);
-			border-radius: var(--g-radius-md);
-			font-size: var(--g-text-sm);
-			font-weight: 500;
+			justify-content: center;
+			gap: 10px;
+			padding: 14px;
+			border: none;
+			border-radius: var(--g-r-pill);
+			background: var(--g-ink);
+			color: var(--g-paper);
+			font-size: 14px;
+			font-weight: 600;
 			cursor: pointer;
-			color: var(--g-ink);
-			margin-bottom: var(--g-s-4);
+			box-shadow: 0 4px 20px rgba(26, 26, 24, 0.25);
+		}
+		.mobile-mail-fab__badge {
+			font-family: var(--g-font-mono);
+			font-size: 11px;
+			opacity: 0.7;
+			background: rgba(255, 255, 255, 0.15);
+			padding: 2px 8px;
+			border-radius: 999px;
 		}
 	}
 </style>
