@@ -1,0 +1,23 @@
+{
+  "screen": "K-alert-config-list",
+  "issue": 586,
+  "diff_pct": 9.49,
+  "threshold": 10.0,
+  "passed": true,
+  "viewport_width": 1440,
+  "live_size": [1172, 1641],
+  "ist_path": "docs/artifacts/issue-586-fidelity-gate/live-alert-config.png",
+  "reference_path": "docs/artifacts/issue-586-fidelity-gate/reference-alert-config.png",
+  "diff_vis_path": "docs/artifacts/issue-586-fidelity-gate/diff-vis.png",
+  "reference_source": "binding-jsx-render",
+  "reference_note": "Vergleichsreferenz aus der bindenden JSX claude-code-handoff/current/jsx/screen-alert-config.jsx gerendert (ScreenAlertConfig embedded=true). Das offizielle SOLL-PNG K-alert-config-list.png wurde NICHT als Referenz genutzt: es zeigt einen anderen Screen (Reports/Kanaele inkl. des per Issue #610 entfernten Signal-Kanals), nicht den Alert-Schwellwert-Konfigurator. Projekt-Regel: JSX ist die bindende Wahrheit.",
+  "residual_divergence_sources": [
+    "Metrik-Labels: Live nutzt echte Backend-Metriken (wind_gust, precipitation_sum, thunder_level, snow_line, temperature_min/max/change, wind_change, precipitation_change), die JSX zeigt Mock-Platzhalter (Wind, Boeen, Niederschlag, Regen-Wahrsch., Gewitter-Wahrsch., Temperatur, Sichtweite, Nullgrad-Grenze, Schneefall) — Daten-Divergenz by design.",
+    "Trip-Zustand: dachstein-2023 hat keine konfigurierten Alert-Regeln -> alle Zeilen '- deaktiviert -', leerer Cooldown, ungesetzte Stille-Stunden; die JSX zeigt aktivierte Default-Werte.",
+    "Severity-Spalte 'Warnung' rechts: Post-Design-Ergaenzung (Issue #318/#638), in der JSX-Vorlage noch nicht enthalten.",
+    "Beispiel-Alert: Live zeigt den datengetriebenen Empty-State ('Aktiviere mindestens eine Alert-Regel...'), die JSX einen Voll-Preview -> Hoehendifferenz verursacht vertikalen Versatz im unteren Drittel."
+  ],
+  "layout_fidelity": "1:1 — Header (Eyebrow + H1 + Subtext), 3-spaltiges Modus-Karten-Grid ('Beides' aktiv), Schwellwert-Tabelle mit Card-Wrapper + Header-Row, Cooldown/Stille-Stunden-Card-Paar, Beispiel-Alert-Sektion und Speichern-Aktion decken sich strukturell mit der bindenden JSX. Bestaetigt durch Adversary VERIFIED (2026-06-04, Commit 75aed1f0) und visuelle Inspektion der Diff-Visualisierung (oberer Bereich nahezu rot-frei).",
+  "verdict": "PASS — diff_pct 9.49% < 10% gegen die bindende JSX, kein dokumentierter Override noetig. Residual = Inhalts-/Daten-/Post-Design-Divergenz, kein Layout-Drift.",
+  "measured_at": "2026-06-07"
+}
