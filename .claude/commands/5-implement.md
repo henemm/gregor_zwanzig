@@ -294,7 +294,7 @@ Wenn Adversary VERIFIED (oder AMBIGUOUS mit User-OK): gib exakt folgendes als le
 ✅ Phase 6 (Implementierung) abgeschlossen — Adversary VERIFIED.
 
 Nächster Schritt:
-1. `/compact` (Kontext komprimieren, Workflow-Identität bleibt erhalten)
+1. `/compact Behalte: Issue-Nummer + GZ_ACTIVE_WORKFLOW, das Adversary-Verdict, WELCHE Dateien geändert wurden, den Scope (frontend-only vs. full-stack — entscheidet den E2E-Pfad), die ACs für den staging-validator sowie offene Fix-Loop-Punkte. Verwirf Implementierungs-Detail-Diskussionen, die schon im Code stehen.` (Workflow-Identität bleibt erhalten)
 2. `/6-validate`
 ---
 

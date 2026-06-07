@@ -133,7 +133,7 @@ Sobald der User **'go'** schreibt, gib exakt folgendes als letzten Output aus �
 ✅ Phase 5 (TDD RED) abgeschlossen.
 
 Nächster Schritt:
-1. `/compact` (Kontext komprimieren, Workflow-Identität bleibt erhalten)
+1. `/compact Behalte: Issue-Nummer + GZ_ACTIVE_WORKFLOW, die freigegebenen ACs, welche Tests rot sind und WARUM (Bug-Reproduktion aus Nutzersicht), die betroffenen Source-/Test-Dateipfade, das LoC-Limit sowie alle Designentscheidungen aus der Analyse-Phase. Verwirf allgemeines Hin-und-Her und Tool-Output-Dumps.` (Workflow-Identität bleibt erhalten)
 2. `/5-implement`
 ---
 
