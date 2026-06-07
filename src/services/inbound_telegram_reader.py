@@ -28,7 +28,8 @@ logger = logging.getLogger(__name__)
 TELEGRAM_API_BASE = "https://api.telegram.org"
 
 _VALID_COMMANDS = {"ruhetag", "startdatum", "report", "abbruch", "status", "hilfe",
-                   "glance", "heute", "morgen", "heute_gewitter"}
+                   "glance", "heute", "morgen", "heute_gewitter",
+                   "timeline_heute", "timeline_morgen"}
 
 _SHORTCUT_MAP = {
     "/s": "glance",
@@ -36,6 +37,8 @@ _SHORTCUT_MAP = {
     "/h": "heute",
     "/m": "morgen",
     "/hg": "heute_gewitter",
+    "/th": "timeline_heute",
+    "/tm": "timeline_morgen",
 }
 
 

@@ -66,7 +66,8 @@ _COMMAND_PATTERN = re.compile(r"^###\s+(\S+?)(?:[:\s]\s*(.+))?$")
 
 _VALID_COMMANDS = {"ruhetag", "report", "startdatum", "abbruch", "status", "hilfe", "now"}
 
-_QUERY_KEYS = {"glance", "heute", "morgen", "heute_gewitter"}
+_QUERY_KEYS = {"glance", "heute", "morgen", "heute_gewitter",
+               "timeline_heute", "timeline_morgen"}
 
 _GLANCE_BUTTONS = {
     "inline_keyboard": [[
@@ -238,6 +239,24 @@ class TripCommandProcessor:
                 confirmation_body=body,
                 trip_name=trip.name,
             )
+        elif query_key == "timeline_heute":
+            body = self._fmt_timeline(timeline, today, "Heute", "today")
+            return CommandResult(
+                success=True, command="timeline_heute",
+                confirmation_subject=f"[{trip.name}] Timeline heute",
+                confirmation_body=body,
+                trip_name=trip.name,
+                reply_markup=self._timeline_buttons(timeline, today, "today"),
+            )
+        elif query_key == "timeline_morgen":
+            body = self._fmt_timeline(timeline, tomorrow, "Morgen", "tomorrow")
+            return CommandResult(
+                success=True, command="timeline_morgen",
+                confirmation_subject=f"[{trip.name}] Timeline morgen",
+                confirmation_body=body,
+                trip_name=trip.name,
+                reply_markup=self._timeline_buttons(timeline, tomorrow, "tomorrow"),
+            )
         # Fallback (should not reach)
         return CommandResult(
             success=False, command=query_key,
@@ -317,6 +336,63 @@ class TripCommandProcessor:
         thunder = agg["thunder"]
         label = _THUNDER_LABEL.get(thunder.value if thunder else "NONE", "?")
         return f"⛈ Gewitter heute ({today:%d.%m}): {label}"
+
+    def _fmt_timeline(self, timeline, target_date, label: str, day_token: str) -> str:
+        """Vertikale Timeline: pro Wegpunkt zwei Zeilen (Zeit/Höhe + Metriken)."""
+        if not timeline.available:
+            return (
+                "Kein Wetter-Snapshot verfügbar. "
+                "Bitte einen Report anfordern um aktuelle Wetterdaten zu laden."
+            )
+        pts = sorted(
+            [p for p in timeline.points if p.arrival_time.date() == target_date],
+            key=lambda p: p.arrival_time,
+        )
+        if not pts:
+            return f"{label} ({target_date:%d.%m}): Keine Etappe geplant"
+
+        lines = [f"📋 Timeline · {label} ({target_date:%d.%m})", ""]
+        for p in pts:
+            if p.elevation_m is not None:
+                lines.append(f"🕐 {p.arrival_time:%H:%M} · {int(p.elevation_m)} m")
+            else:
+                lines.append(f"🕐 {p.arrival_time:%H:%M}")
+            m = p.metrics
+            t_min = f"{m.temp_min_c:.0f}" if m.temp_min_c is not None else "?"
+            t_max = f"{m.temp_max_c:.0f}" if m.temp_max_c is not None else "?"
+            wind = f"{m.wind_max_kmh:.0f}" if m.wind_max_kmh is not None else "?"
+            precip = f"{m.precip_sum_mm:.1f}" if m.precip_sum_mm is not None else "0.0"
+            thunder = m.thunder_level_max
+            t_label = _THUNDER_LABEL.get(thunder.value if thunder else "NONE", "?")
+            lines.append(
+                f"   🌡 {t_min}–{t_max} °C  💨 {wind} km/h  "
+                f"🌧 {precip} mm  ⛈ {t_label}"
+            )
+        return "\n".join(lines)
+
+    def _timeline_buttons(self, timeline, target_date, day_token: str) -> dict:
+        """Drilldown-Buttons je kritischer Metrik + immer Zurück."""
+        from app.models import ThunderLevel
+        back = {"text": "⬅️ Zurück", "callback_data": "glance"}
+        agg = self._aggregate_day(timeline, target_date) if timeline.available else None
+        if not agg:
+            return {"inline_keyboard": [[back]]}
+
+        drilldown: list[dict] = []
+        thunder_order = [ThunderLevel.NONE, ThunderLevel.MED, ThunderLevel.HIGH]
+        thunder = agg["thunder"]
+        if thunder is not None and thunder_order.index(thunder) >= thunder_order.index(ThunderLevel.MED):
+            drilldown.append({"text": "🔍 Gewitter", "callback_data": f"dd_thunder_{day_token}"})
+        if agg["wind_max"] is not None and agg["wind_max"] >= 40:
+            drilldown.append({"text": "🔍 Wind", "callback_data": f"dd_wind_{day_token}"})
+        if (agg["pop"] or 0) >= 30 or (agg["precip"] or 0) >= 1.0:
+            drilldown.append({"text": "🔍 Niederschlag", "callback_data": f"dd_precip_{day_token}"})
+
+        rows = []
+        if drilldown:
+            rows.append(drilldown)
+        rows.append([back])
+        return {"inline_keyboard": rows}
 
     # -----------------------------------------------------------------------
     # Commands
