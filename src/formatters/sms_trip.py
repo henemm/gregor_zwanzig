@@ -52,23 +52,6 @@ _SMS_RISK_LABELS: dict[tuple[RiskType, RiskLevel], str] = {
 }
 
 
-def _sms_peak_only(token: str) -> str:
-    """Issue #640 AC-6: Extract peak part from a threshold token for SMS.
-
-    Token formats:
-        '{erst}@{h}({peak}@{h})' → return '{peak}@{h}' (peak inside parens)
-        '{val}@{h}'              → return '{val}@{h}' (erst==peak, already is peak)
-        '-'                      → return '-' (caller handles compact fallback)
-    """
-    if "(" in token:
-        # Extract content inside the last parentheses pair
-        start = token.rfind("(")
-        end = token.rfind(")")
-        if start != -1 and end != -1 and end > start:
-            return token[start + 1:end]
-    return token
-
-
 def _segments_to_normalized_forecast(
     segments: list[SegmentWeatherData],
     *,
@@ -138,7 +121,6 @@ class SMSTripFormatter:
         stage_name: Optional[str] = None,
         report_type: str = "evening",
         tz: ZoneInfo = ZoneInfo("UTC"),
-        multi_day_trend: Optional[list[dict]] = None,
         thresholds: Optional[dict[str, float]] = None,
     ) -> str:
         """Generate v2.0 SMS via TokenLine pipeline.
@@ -151,10 +133,6 @@ class SMSTripFormatter:
             report_type: 'morning' or 'evening' (default 'evening').
             tz: Zielzeitzone für Stunden-Token (Bug #398). Default UTC
                 (abwärtskompatibel: UTC→UTC = keine Verschiebung).
-            multi_day_trend: optional list of trend stage dicts. When set,
-                a compact 'Trend 3T:' block is appended (Issue #623).
-                NOTE: the telegram_kurzform path must NOT pass this argument
-                (AC-4 double-render guard).
             thresholds: Issue #624 — optionale Map {SMS-Symbol: Schwellwert}.
                 None = bisheriges DEFAULTS-Verhalten (bit-identisch).
 
@@ -218,45 +196,7 @@ class SMSTripFormatter:
             report_type=report_type,
             stage_name=stage_name or "Etappe",
         )
-        base = render_sms(token_line, max_length=max_length)
-
-        # Issue #623 AC-4: optionaler Trend-Block (NUR wenn multi_day_trend übergeben).
-        # Der telegram_kurzform-Pfad übergibt KEIN multi_day_trend → kein doppelter Block.
-        if not multi_day_trend:
-            return base
-
-        from src.output.renderers.email.helpers import format_trend_tokens
-        parts = ["Trend 3T:"]
-        for stage in multi_day_trend:
-            tok = format_trend_tokens(stage)
-            weekday = stage.get("weekday", "")
-            # Issue #640 AC-6: SMS shows only Peak@Std from precip_token/wind_token.
-            # Extract peak part: "erst@h(peak@h)" -> "peak@h"; "val@h" -> "val@h"; "-" -> compact.
-            pt = tok.get("precip_token", "-")
-            wt = tok.get("wind_token", "-")
-            precip_str = f"R{_sms_peak_only(pt)}" if pt != "-" else "R–"
-            wind_str = f"W{_sms_peak_only(wt)}" if wt != "-" else (
-                f"W{stage.get('wind_kmh', 0) or 0}"
-            )
-            entry = f"{weekday} {tok['temp_str']} {precip_str} {wind_str}"
-            tt = tok.get("thunder_token", "-")
-            if tt != "-":
-                entry += f" GEW-{_sms_peak_only(tt)}"
-            elif tok["thunder_sms"]:
-                entry += f" {tok['thunder_sms']}"
-            parts.append(entry)
-
-        trend_block = " ".join(parts)
-        candidate = f"{base} {trend_block}"
-        if len(candidate) <= max_length:
-            return candidate
-
-        # Overflow: drop stage names (already absent in compact form), try minimal
-        # Fallback: keep base + "Trend 3T:" header only if even that fits
-        if len(f"{base} Trend 3T:") <= max_length:
-            remaining = max_length - len(base) - 1
-            return (base + " " + trend_block)[:max_length]
-        return base
+        return render_sms(token_line, max_length=max_length)
 
     def format_alert_sms(
         self,

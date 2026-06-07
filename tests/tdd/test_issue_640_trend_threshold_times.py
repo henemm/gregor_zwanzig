@@ -82,17 +82,6 @@ def _render_narrow(channel, trend=None):
     )
 
 
-def _format_sms(trend):
-    from src.formatters.sms_trip import SMSTripFormatter
-    from tests.unit.test_renderers_email import _make_segment_weather
-    segments = [_make_segment_weather()]
-    return SMSTripFormatter().format_sms(
-        segments,
-        max_length=500,
-        multi_day_trend=trend,
-    )
-
-
 # ---------------------------------------------------------------------------
 # AC-1: format_trend_tokens liefert Zeiten-Tokens aus Stundenwerten
 # ---------------------------------------------------------------------------
@@ -485,91 +474,6 @@ class TestEmailCellsWithTokens:
         temp_cells = re.findall(r'12.{0,5}15', html)
         for cell in temp_cells:
             assert "@" not in cell, f"@ found near temp values: {cell!r}"
-
-
-# ---------------------------------------------------------------------------
-# AC-6: SMS-Trend — nur Peak@Std, kein Erst-Wert
-# ---------------------------------------------------------------------------
-
-class TestSmsTrendPeakOnly:
-    """AC-6: SMS trend shows only peak@hour, not first-crossing hour."""
-
-    def test_sms_shows_peak_not_erst(self):
-        """AC-6: Given precip at h10=0.5 (erst crossing) and h15=6.0 (peak),
-        SMS shows '@15' (peak), NOT '@10' (erst)."""
-        trend = [_trend_stage_with_hourly(
-            weekday="Di",
-            hourly_precip=(_hv(10, 0.5), _hv(15, 6.0)),
-        )]
-        sms = _format_sms(trend)
-        # Peak is at h15 — that's what SMS should show
-        assert "@15" in sms, f"SMS missing peak hour @15: {sms!r}"
-        # Erst hour @10 should NOT appear
-        assert "@10" not in sms, f"SMS must not show erst hour @10: {sms!r}"
-
-    def test_sms_wind_peak_only(self):
-        """AC-6: Wind erst at h14=31, peak at h16=42 — SMS shows @16."""
-        trend = [_trend_stage_with_hourly(
-            weekday="Di",
-            hourly_wind=(_hv(14, 31.0), _hv(16, 42.0)),
-        )]
-        sms = _format_sms(trend)
-        assert "@16" in sms, f"SMS missing wind peak hour @16: {sms!r}"
-        assert "@14" not in sms, f"SMS must not show wind erst @14: {sms!r}"
-
-    def test_sms_no_threshold_no_at(self):
-        """AC-4/AC-6: When threshold never crossed, no @ in SMS trend section."""
-        trend = [_trend_stage_with_hourly(
-            weekday="Mo",
-            hourly_precip=(_hv(10, 0.1),),  # below 0.5 threshold
-        )]
-        sms = _format_sms(trend)
-        # Trend header is still present but no @ in the TREND section for this metric
-        if "Trend" in sms:
-            trend_section = sms.split("Trend")[1]
-            assert "@" not in trend_section, (
-                f"Unexpected @ in trend section of SMS: {trend_section!r}"
-            )
-
-    def test_sms_respects_length_limit(self):
-        """AC-6: SMS with @-tokens still fits within 160 chars."""
-        trend = [
-            _trend_stage_with_hourly(
-                weekday="Di",
-                hourly_precip=(_hv(10, 0.5), _hv(15, 6.0)),
-                hourly_wind=(_hv(14, 35.0), _hv(16, 42.0)),
-            ),
-            _trend_stage_with_hourly(
-                weekday="Mi",
-                hourly_precip=(_hv(8, 1.0),),
-                hourly_wind=(_hv(12, 50.0),),
-            ),
-        ]
-        from src.formatters.sms_trip import SMSTripFormatter
-        from tests.unit.test_renderers_email import _make_segment_weather
-        segments = [_make_segment_weather()]
-        sms = SMSTripFormatter().format_sms(segments, max_length=160, multi_day_trend=trend)
-        assert len(sms) <= 160, f"SMS too long ({len(sms)}): {sms!r}"
-
-    def test_sms_thunder_peak_uses_high_label(self):
-        """F001/F002: SMS GEW token shows 'HIGH' (peak label), not 'M' (vigilance scale)."""
-        trend = [_trend_stage_with_hourly(
-            weekday="Di",
-            hourly_thunder=(_hv(14, 1.0), _hv(16, 2.0)),  # MED→1 erst, HIGH→2 peak
-            thunder="HIGH",
-        )]
-        sms = _format_sms(trend)
-        trend_section = sms.split("Trend")[1] if "Trend" in sms else sms
-        assert "HIGH" in trend_section, (
-            f"Expected 'HIGH' in SMS trend thunder token: {trend_section!r}"
-        )
-        assert "@16" in trend_section, (
-            f"Expected peak hour @16 in SMS trend: {trend_section!r}"
-        )
-        # Must not use SMS vigilance letter labels
-        assert "GEW-M@" not in trend_section, (
-            f"SMS vigilance 'M' label found instead of 'HIGH': {trend_section!r}"
-        )
 
 
 # ---------------------------------------------------------------------------
