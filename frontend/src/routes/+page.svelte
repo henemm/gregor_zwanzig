@@ -779,42 +779,39 @@
 			</section>
 		{/if}
 
-		<!-- AC-6/V7: Archiv ohne Card-Wrapper -->
-		{#if archive.length > 0}
+		<!-- AC-2 (Trip-Modus): Einrichten / Frühere Trips -->
+		{#if mode === 'trip' && archive.length > 0}
+			<div style:margin-bottom="40px">
+				<SectionH eyebrow="Einrichten" title="Frühere Trips" kicker="{archive.length} abgeschlossene Mehrtages-Trips" right={archiveLink} />
+				<div class="archive-grid">
+					{#each archive as t (t.id)}
+						{@render archiveCard(t)}
+					{/each}
+				</div>
+			</div>
+		{/if}
+
+		<!-- AC-1 + AC-3 (Compare-Modus): Einrichten / Kein Trip geplant — Kopf immer sichtbar -->
+		{#if mode === 'compare'}
+			<div style:margin-bottom="40px">
+				<SectionH eyebrow="Einrichten" title="Kein Trip geplant" kicker="Sobald ein Mehrtages-Trip ansteht, übernimmt er das Cockpit" right={newTripLink} />
+				{#if archive.length > 0}
+					<div class="archive-grid">
+						{#each archive as t (t.id)}
+							{@render archiveCard(t)}
+						{/each}
+					</div>
+				{/if}
+			</div>
+		{/if}
+
+		<!-- Planning-Modus: unverändert -->
+		{#if mode === 'planning' && archive.length > 0}
 			<div style:margin-bottom="40px">
 				<SectionH eyebrow="Archiv" title="Frühere Trips" kicker="{archive.length} abgeschlossene Trips" right={archiveLink} />
 				<div class="archive-grid">
 					{#each archive as t (t.id)}
-						<a
-							href="/trips/{t.id}"
-							style:padding="14px 16px"
-							style:border="1px solid var(--g-rule-soft)"
-							style:border-radius="var(--g-r-2)"
-							style:background="var(--g-card-alt)"
-							style:text-decoration="none"
-							style:color="var(--g-ink)"
-							style:display="block"
-						>
-							<div
-								style:font-family="var(--g-font-mono)"
-								style:font-size="var(--g-text-xs)"
-								style:color="var(--g-ink-3)"
-								style:text-transform="uppercase"
-								style:letter-spacing="var(--g-track-caps)"
-								style:margin-bottom="4px"
-							>{t.dates}</div>
-							<div
-								style:font-size="var(--g-text-sm)"
-								style:font-weight="600"
-								style:line-height="1.3"
-								style:margin-bottom="6px"
-							>{t.name}</div>
-							<div
-								style:font-family="var(--g-font-mono)"
-								style:font-size="11px"
-								style:color="var(--g-ink-3)"
-							>{t.stages} {t.stages === 1 ? 'Etappe' : 'Etappen'}</div>
-						</a>
+						{@render archiveCard(t)}
 					{/each}
 				</div>
 			</div>
@@ -824,6 +821,43 @@
 
 {#snippet archiveLink()}
 	<Btn href="/trips" variant="quiet" size="sm">Alle anzeigen</Btn>
+{/snippet}
+
+{#snippet newTripLink()}
+	<Btn href="/trips/new" variant="primary" size="sm">Neuer Trip</Btn>
+{/snippet}
+
+{#snippet archiveCard(t: { id: string; dates: string; name: string; stages: number })}
+	<a
+		href="/trips/{t.id}"
+		style:padding="14px 16px"
+		style:border="1px solid var(--g-rule-soft)"
+		style:border-radius="var(--g-r-2)"
+		style:background="var(--g-card-alt)"
+		style:text-decoration="none"
+		style:color="var(--g-ink)"
+		style:display="block"
+	>
+		<div
+			style:font-family="var(--g-font-mono)"
+			style:font-size="var(--g-text-xs)"
+			style:color="var(--g-ink-3)"
+			style:text-transform="uppercase"
+			style:letter-spacing="var(--g-track-caps)"
+			style:margin-bottom="4px"
+		>{t.dates}</div>
+		<div
+			style:font-size="var(--g-text-sm)"
+			style:font-weight="600"
+			style:line-height="1.3"
+			style:margin-bottom="6px"
+		>{t.name}</div>
+		<div
+			style:font-family="var(--g-font-mono)"
+			style:font-size="11px"
+			style:color="var(--g-ink-3)"
+		>{t.stages} {t.stages === 1 ? 'Etappe' : 'Etappen'}</div>
+	</a>
 {/snippet}
 
 {#snippet compareAllLink()}
