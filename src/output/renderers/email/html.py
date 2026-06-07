@@ -435,26 +435,29 @@ def render_html(
             sep = 'border-top:1px solid #e7e2d3;' if i > 0 else ''
             tok = format_trend_tokens(stage)
 
-            # Precip HTML
-            # Precip HTML — zero/highlight decision entirely from format_trend_tokens
+            # Precip HTML — Issue #640: use precip_token (@-times) when available.
+            # Zero/highlight decision entirely from format_trend_tokens.
+            pt = tok.get("precip_token", "-")
             if tok["precip_str"] == "–":
                 precip_html = '<span style="color:#9a958a">&ndash;</span>'
             elif tok["precip_highlight"]:
-                _pval = tok["precip_str"][:-2]  # strip "mm"
-                precip_html = f'<span style="color:#2c5a8c;font-weight:700">{_pval}&thinsp;mm</span>'
+                _pval = pt if pt != "-" else tok["precip_str"][:-2]
+                precip_html = f'<span style="color:#2c5a8c;font-weight:700">{_pval}</span>'
             else:
-                _pval = tok["precip_str"][:-2]  # strip "mm"
-                precip_html = f'{_pval}&thinsp;mm'
+                _pval = pt if pt != "-" else tok["precip_str"][:-2]
+                precip_html = f'{_pval}'
 
-            # Wind HTML — highlight decision from format_trend_tokens
+            # Wind HTML — Issue #640: use wind_token (@-times) when available.
             wk = stage.get("wind_kmh", 0) or 0
             wd = stage.get("wind_dir", "") or ""
+            wt = tok.get("wind_token", "-")
+            _wind_val = wt if wt != "-" else f"{wd}{wk}" if wd else f"{wk}"
             if tok["wind_highlight"]:
-                wind_html = f'<span style="color:#c45a2a;font-weight:700">{wd}&thinsp;{wk}</span>'
+                wind_html = f'<span style="color:#c45a2a;font-weight:700">{_wind_val}</span>'
             else:
-                wind_html = f'{wd}&thinsp;{wk}'
+                wind_html = f'{_wind_val}'
 
-            # Temp HTML — string already decided by format_trend_tokens
+            # Temp HTML — string already decided by format_trend_tokens (no @ for temp)
             _ts = tok["temp_str"]
             if _ts == "–":
                 temp_html = '&ndash;'
@@ -466,14 +469,18 @@ def render_html(
             else:
                 temp_html = f'{_ts[:-2]}&thinsp;°C'
 
-            # Thunder HTML (via tokens)
+            # Thunder HTML — Issue #640: use thunder_token (@-times) when available.
             sq_color = tok["thunder_sq_color"]
             word_color = tok["thunder_word_color"]
-            thunder_word = tok["thunder_word"]
+            tt = tok.get("thunder_token", "-")
+            if tt != "-":
+                thunder_display = tt
+            else:
+                thunder_display = tok["thunder_word"]
             thunder_html = (
                 f'<span style="display:inline-block;width:8px;height:8px;'
                 f'background:{sq_color};vertical-align:middle;margin-right:4px"></span>'
-                f'<span style="color:{word_color}">{thunder_word}</span>'
+                f'<span style="color:{word_color}">{thunder_display}</span>'
             )
 
             # Note row

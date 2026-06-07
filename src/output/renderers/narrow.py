@@ -390,25 +390,43 @@ def render_narrow(
         if footer:
             lines.extend(_wrap(footer, _TG_PROSE_WIDTH))
 
-    # Issue #623: Trend block — nur für Telegram (AC-8: Signal bekommt keinen Trend).
+    # Issue #623/#640: Trend block — nur für Telegram (AC-8: Signal bekommt keinen Trend).
     if channel == "telegram" and multi_day_trend:
         lines.append("")
         lines.extend(_wrap("Nächste Etappen", width))
         for stage in multi_day_trend:
             tok = format_trend_tokens(stage)
             weekday = stage.get("weekday", "")
-            # Precip str — zero decision from format_trend_tokens
-            precip_str = tok["precip_str"]
-            # Issue #633: no stage name in Telegram (like SMS). Keep weekday + values only.
-            # Build compact line: Mo  8–16°C  3mm  W20  ⚡–
+            # Issue #640: Use @-time tokens inline when available (AC-3/AC-4).
+            # Fallback to compact form when threshold never crossed (token=='-').
+            pt = tok["precip_token"]
+            wt = tok["wind_token"]
+            tt = tok["thunder_token"]
+            # Precip inline: "R0.5@10(6@15)" if crossed else "R–"
+            if pt != "-":
+                precip_part = f"R{pt}"
+            else:
+                precip_part = tok["precip_str"] if tok["precip_str"] != "–" else "R–"
+            # Wind inline: "W17@16" if crossed else plain value
+            if wt != "-":
+                wind_part = f"W{wt}"
+            else:
+                wind_part = tok["wind_str"]
+            # Thunder inline: "⚡M@14(H@16)" if crossed else "⚡–"
+            if tt != "-":
+                thunder_part = f"⚡{tt}"
+            else:
+                thunder_part = tok["thunder_plain"]
+            # Issue #633: no stage name in Telegram. Keep weekday + values only.
+            # Build: Di  12–15°C  R0.5@10(6@15)  W17@16  ⚡M@14
             trend_line = (
                 f"{weekday}  {tok['temp_str']}  "
-                f"{precip_str}  {tok['wind_str']}  {tok['thunder_plain']}"
+                f"{precip_part}  {wind_part}  {thunder_part}"
             )
-            lines.extend(_wrap(trend_line, width))
+            lines.extend(_wrap(trend_line, _TG_PROSE_WIDTH))
             note = stage.get("note")
             if note:
-                lines.extend(_wrap(f"    ↳ {note}", width))
+                lines.extend(_wrap(f"    ↳ {note}", _TG_PROSE_WIDTH))
 
     # Issue #612: Befehls-Hinweis nur für Telegram (nicht Signal).
     # Pipe-Zeichen als Trenner vermieden: _wrap kann Zeilenanfang mit "|" erzeugen.

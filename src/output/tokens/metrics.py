@@ -29,8 +29,21 @@ def _level(value: float) -> str:
 def render_threshold_peak_value(
     symbol: str, samples: tuple[HourlyValue, ...],
     threshold: Optional[float], *, is_level: bool = False,
+    level_labels: Optional[dict] = None,
 ) -> str:
-    """Render value-tail per §5. '-' for null form."""
+    """Render value-tail per §5. '-' for null form.
+
+    Args:
+        symbol:       Metric symbol (e.g. 'R', 'W', 'TH').
+        samples:      Hourly samples (HourlyValue tuples).
+        threshold:    Minimum value to trigger first-crossing detection.
+                      None → use peak as first (no threshold filter).
+        is_level:     True → format values as level labels rather than numbers.
+                      Default label map: LEVELS = {0:'-', 1:'L', 2:'M', 3:'H'}.
+        level_labels: Optional override map int→str for is_level=True rendering.
+                      Pass e.g. {1: 'MED', 2: 'HIGH'} to get trend-style labels.
+                      Does NOT affect callers that omit this param (bit-identical).
+    """
     if not samples:
         return "-"
     peak = max(samples, key=lambda s: (s.value, -s.hour))
@@ -44,7 +57,9 @@ def render_threshold_peak_value(
         if first is None:
             return "-"
     if is_level:
-        f_str, p_str = _level(first.value), _level(peak.value)
+        _lmap = level_labels if level_labels is not None else LEVELS
+        f_str = _lmap.get(int(round(first.value)), "-")
+        p_str = _lmap.get(int(round(peak.value)), "-")
     else:
         f_str, p_str = _fmt_num(symbol, first.value), _fmt_num(symbol, peak.value)
     if f_str == p_str and first.hour == peak.hour:

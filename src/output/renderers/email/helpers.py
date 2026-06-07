@@ -539,14 +539,22 @@ _THUNDER_MAP = {
 
 
 def format_trend_tokens(stage: dict) -> dict:
-    """Issue #623: Compute all display tokens for one trend stage.
+    """Issue #623/#640: Compute all display tokens for one trend stage.
 
     Single source of truth for trend semantics across HTML, plain-text,
     Telegram and SMS renderers. All thresholds and ampel-map live here.
 
+    Issue #640 adds @-time tokens: precip_token, wind_token, gust_token,
+    thunder_token — computed from hourly_precip/hourly_wind/hourly_gust/
+    hourly_thunder sample tuples (HourlyValue). Per-metric custom threshold
+    via sms_threshold_precip / sms_threshold_wind / sms_threshold_gust keys.
+
     Args:
         stage: dict with keys weekday, name, temp_lo, temp_hi, precip_mm,
-               wind_dir, wind_kmh, thunder ('NONE'|'MED'|'HIGH'), note.
+               wind_dir, wind_kmh, thunder ('NONE'|'MED'|'HIGH'), note,
+               and optionally: hourly_precip, hourly_wind, hourly_gust,
+               hourly_thunder (tuples of HourlyValue), sms_threshold_precip,
+               sms_threshold_wind, sms_threshold_gust.
 
     Returns:
         dict with keys:
@@ -561,7 +569,19 @@ def format_trend_tokens(stage: dict) -> dict:
             thunder_word_color — HTML hex for word text
             thunder_plain   — '⚡–' / '⚡MED' / '⚡HIGH'
             thunder_sms     — 'GEW-MED' / 'GEW-HIGH' / None (absent for NONE)
+            precip_token    — '{erst}@{h}({peak}@{h})' or '-' (#640)
+            wind_token      — '{v}@{h}(...)' or '-' (#640)
+            gust_token      — '{v}@{h}(...)' or '-' (#640)
+            thunder_token   — 'M@{h}(H@{h})' or '-' (#640)
     """
+    from src.output.tokens.metrics import render_threshold_peak_value
+
+    # Default thresholds (AC-2)
+    _DEFAULT_PRECIP_THR = 0.5   # mm
+    _DEFAULT_WIND_THR = 30.0    # km/h
+    _DEFAULT_GUST_THR = 50.0    # km/h
+    # Thunder threshold: MED = level >= 1 (is_level=True)
+
     # Temperature
     tl = stage.get("temp_lo")
     th = stage.get("temp_hi")
@@ -591,6 +611,28 @@ def format_trend_tokens(stage: dict) -> dict:
     thunder = (stage.get("thunder", "NONE") or "NONE").upper()
     t_data = _THUNDER_MAP.get(thunder, _THUNDER_MAP["NONE"])
 
+    # Issue #640: Time tokens from hourly samples
+    hourly_precip = stage.get("hourly_precip") or ()
+    hourly_wind = stage.get("hourly_wind") or ()
+    hourly_gust = stage.get("hourly_gust") or ()
+    hourly_thunder = stage.get("hourly_thunder") or ()
+
+    precip_thr = stage.get("sms_threshold_precip", _DEFAULT_PRECIP_THR)
+    wind_thr = stage.get("sms_threshold_wind", _DEFAULT_WIND_THR)
+    gust_thr = stage.get("sms_threshold_gust", _DEFAULT_GUST_THR)
+
+    precip_token = render_threshold_peak_value("R", hourly_precip, precip_thr)
+    wind_token = render_threshold_peak_value("W", hourly_wind, wind_thr)
+    gust_token = render_threshold_peak_value("G", hourly_gust, gust_thr)
+    # Thunder: is_level=True, threshold=1 (MED is the first notable level).
+    # Issue #640 F001: use MED/HIGH labels (not the SMS L/M/H vigilance scale).
+    # _TREND_THUNDER_LABELS aligns with _THUNDER_MAP above and #623 plain tokens.
+    _TREND_THUNDER_LABELS = {1: "MED", 2: "HIGH"}
+    thunder_token = render_threshold_peak_value(
+        "TH", hourly_thunder, threshold=1.0, is_level=True,
+        level_labels=_TREND_THUNDER_LABELS,
+    )
+
     return {
         "temp_str": temp_str,
         "precip_str": precip_str,
@@ -603,6 +645,11 @@ def format_trend_tokens(stage: dict) -> dict:
         "thunder_word_color": t_data["word_color"],
         "thunder_plain": t_data["plain"],
         "thunder_sms": t_data["sms"],
+        # Issue #640: @-time tokens (single source of truth)
+        "precip_token": precip_token,
+        "wind_token": wind_token,
+        "gust_token": gust_token,
+        "thunder_token": thunder_token,
     }
 
 

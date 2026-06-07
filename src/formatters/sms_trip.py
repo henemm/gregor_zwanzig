@@ -52,6 +52,23 @@ _SMS_RISK_LABELS: dict[tuple[RiskType, RiskLevel], str] = {
 }
 
 
+def _sms_peak_only(token: str) -> str:
+    """Issue #640 AC-6: Extract peak part from a threshold token for SMS.
+
+    Token formats:
+        '{erst}@{h}({peak}@{h})' → return '{peak}@{h}' (peak inside parens)
+        '{val}@{h}'              → return '{val}@{h}' (erst==peak, already is peak)
+        '-'                      → return '-' (caller handles compact fallback)
+    """
+    if "(" in token:
+        # Extract content inside the last parentheses pair
+        start = token.rfind("(")
+        end = token.rfind(")")
+        if start != -1 and end != -1 and end > start:
+            return token[start + 1:end]
+    return token
+
+
 def _segments_to_normalized_forecast(
     segments: list[SegmentWeatherData],
     *,
@@ -213,12 +230,19 @@ class SMSTripFormatter:
         for stage in multi_day_trend:
             tok = format_trend_tokens(stage)
             weekday = stage.get("weekday", "")
-            pm = stage.get("precip_mm", 0) or 0
-            precip_str = f"R{pm:g}" if pm > 0 else "R–"
-            wk = stage.get("wind_kmh", 0) or 0
-            wind_str = f"W{wk}"
+            # Issue #640 AC-6: SMS shows only Peak@Std from precip_token/wind_token.
+            # Extract peak part: "erst@h(peak@h)" -> "peak@h"; "val@h" -> "val@h"; "-" -> compact.
+            pt = tok.get("precip_token", "-")
+            wt = tok.get("wind_token", "-")
+            precip_str = f"R{_sms_peak_only(pt)}" if pt != "-" else "R–"
+            wind_str = f"W{_sms_peak_only(wt)}" if wt != "-" else (
+                f"W{stage.get('wind_kmh', 0) or 0}"
+            )
             entry = f"{weekday} {tok['temp_str']} {precip_str} {wind_str}"
-            if tok["thunder_sms"]:
+            tt = tok.get("thunder_token", "-")
+            if tt != "-":
+                entry += f" GEW-{_sms_peak_only(tt)}"
+            elif tok["thunder_sms"]:
                 entry += f" {tok['thunder_sms']}"
             parts.append(entry)
 

@@ -1012,6 +1012,41 @@ class TripReportSchedulerService:
                 thunder = thunder_level.name if thunder_level is not None else "NONE"
                 note = _trend_note(thunder, precip_mm, wind_kmh)
 
+                # Issue #640: Build HourlyValue samples from timeseries for @-time tokens.
+                # Uses local hours (Bug #398/#401: tz required). No extra API call.
+                from src.output.tokens.dto import HourlyValue
+                from app.models import ThunderLevel as _TL
+                from utils.timezone import local_hour as _lh
+                _tz = tz if tz is not None else __import__("zoneinfo").ZoneInfo("UTC")
+                _hourly_precip: list = []
+                _hourly_wind: list = []
+                _hourly_gust: list = []
+                _hourly_thunder: list = []
+                _THUNDER_NUM = {_TL.NONE: 0, _TL.MED: 1, _TL.HIGH: 2}
+                for sw in seg_weather:
+                    if sw.timeseries is None:
+                        continue
+                    for dp in sw.timeseries.data:
+                        lh = _lh(dp.ts, _tz)
+                        if dp.precip_1h_mm is not None:
+                            _hourly_precip.append(HourlyValue(hour=lh, value=dp.precip_1h_mm))
+                        if dp.wind10m_kmh is not None:
+                            _hourly_wind.append(HourlyValue(hour=lh, value=dp.wind10m_kmh))
+                        if dp.gust_kmh is not None:
+                            _hourly_gust.append(HourlyValue(hour=lh, value=dp.gust_kmh))
+                        if dp.thunder_level is not None:
+                            _hourly_thunder.append(HourlyValue(
+                                hour=lh, value=float(_THUNDER_NUM.get(dp.thunder_level, 0))
+                            ))
+
+                # Resolve per-metric sms_threshold from trip display config (AC-2)
+                _sms_thr: dict = {}
+                dc = getattr(trip, "display_config", None)
+                if dc is not None:
+                    for mc in dc.metrics:
+                        if mc.sms_threshold is not None:
+                            _sms_thr[mc.metric_id] = mc.sms_threshold
+
                 trend.append(dict(
                     weekday=WEEKDAYS_DE[stage.date.weekday()],
                     name=stage.name,
@@ -1022,6 +1057,15 @@ class TripReportSchedulerService:
                     wind_kmh=wind_kmh,
                     thunder=thunder,
                     note=note,
+                    hourly_precip=tuple(_hourly_precip),
+                    hourly_wind=tuple(_hourly_wind),
+                    hourly_gust=tuple(_hourly_gust),
+                    hourly_thunder=tuple(_hourly_thunder),
+                    **{k: v for k, v in {
+                        "sms_threshold_precip": _sms_thr.get("precipitation"),
+                        "sms_threshold_wind": _sms_thr.get("wind"),
+                        "sms_threshold_gust": _sms_thr.get("gust"),
+                    }.items() if v is not None},
                 ))
             except Exception as e:
                 logger.warning(f"Failed to build trend for stage {stage.id}: {e}")
