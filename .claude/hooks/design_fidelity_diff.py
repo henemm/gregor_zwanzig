@@ -76,11 +76,24 @@ SCREEN_THRESHOLD_MAP: dict[str, float] = {
     # #583 Archiv: 30 % wegen Sidebar-User-Block + Stats-Strip-Umbruch
     # (gehört nicht zum Archiv-Screen, sondern zu Layout/Sidebar-Komponente).
     "H-archive": 30.0,
-    # #578 Foundation-Tracer D-home-trip: 20 % erlaubt, weil der Home-Content
-    # (Trip-Cockpit, Schnellaktionen-Strecke) zur Screen-Migration #579 gehört;
-    # Sidebar+Foundation-Anteil ist im Diff visuell 1:1. Sobald #579 live ist,
-    # zurück auf 10 % senken.
-    "D-home-trip": 20.0,
+    # #579 Home-Screen (alle 3 Modi trip/compare/planning teilen die Route "/"):
+    # 30 % dokumentierter Override. Ein exaktes <10 % ist strukturell unmöglich:
+    #   (a) SOLL-PNGs sind veraltet — sie zeigen durchgehend den per PO-Entscheidung
+    #       #610 app-weit entfernten Signal-Kanal (Kanal-Pills, "signal"-Versandzeilen).
+    #   (b) Daten-Divergenz: das Staging-Test-Konto ist dünn (1 Vergleich, keine
+    #       Region, kein Archiv, keine Sende-Historie) gegenüber datenreichem SOLL
+    #       (KHW-403-Trip, 8 Archiv-Trips, Briefing-Timeline).
+    #   (c) 3 Modi / 1 URL: das Konto ist zu einem Zeitpunkt nur in EINEM Modus
+    #       (aktuell compare) — trip/planning werden gegen ein Wrong-Mode-SOLL
+    #       gemessen und sind nie apple-to-apple.
+    # Das LAYOUT ist 1:1 zur JSX bestätigt: staging-validator 2026-06-07 (#579)
+    # AC-1/AC-3/AC-4 PASS (Compare-Empty-State "Kein Trip geplant" + primary
+    # "Neuer Trip", Eyebrow "Einrichten", Hero/Outbox/Alerts/5 Schnellaktionen).
+    # Reine Inhalts-/SOLL-Aktualitäts-Divergenz, kein Layout-Drift.
+    # (Ersetzt den temporären #578-Override von 20 %.)
+    "D-home-trip": 30.0,
+    "D-home-compare": 30.0,
+    "D-home-planning": 30.0,
     # #486 E-trips-list-variant: 30 % wegen Daten-Divergenz — das SOLL-Bild zeigt
     # Demo-Trips (KHW 403, GR221 …) mit anderen Namen/Etappen/Stats, das Staging-
     # Test-Konto zeigt seine echten Trips (Dachstein, Gardasee …). Das Layout ist
