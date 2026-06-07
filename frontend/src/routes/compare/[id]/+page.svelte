@@ -11,9 +11,11 @@
 		deriveStatusFromPreset,
 		STATUS_MAP,
 		presetScheduleLabel,
-		formatLastSent
+		formatLastSent,
+		computePauseToggle
 	} from '$lib/components/compare/subscriptionHelpers.js';
 	import { page } from '$app/state';
+	import { invalidateAll } from '$app/navigation';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import MoreHorizontalIcon from '@lucide/svelte/icons/more-horizontal';
@@ -44,9 +46,65 @@
 		}
 	}
 
+	let isPausing = $state(false);
+	let pauseError = $state<string | null>(null);
+
+	async function togglePause() {
+		isPausing = true;
+		pauseError = null;
+		const next = computePauseToggle(data.preset);
+		try {
+			const res = await fetch(`/api/compare/presets/${data.preset.id}`, {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ ...data.preset, ...next })
+			});
+			if (!res.ok) throw new Error(`PUT failed: ${res.status}`);
+			await invalidateAll();
+		} catch {
+			pauseError = 'Status-Änderung fehlgeschlagen. Bitte versuche es erneut.';
+		} finally {
+			isPausing = false;
+		}
+	}
+
 	function handleAction(id: string) {
 		if (id === 'edit' || id === 'setup') {
 			window.location.href = `/compare/${data.preset.id}/edit`;
+		} else if (id === 'pause') {
+			void togglePause();
+		} else if (id === 'send') {
+			void handleTestSend();
+		} else if (id === 'preview') {
+			window.location.href = '/compare/' + data.preset.id + '?tab=vorschau';
+		} else if (id === 'archive') {
+			void archivePreset();
+		} else if (id === 'delete') {
+			void deletePreset();
+		}
+	}
+
+	async function archivePreset() {
+		try {
+			const res = await fetch(`/api/compare/presets/${data.preset.id}/state`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ archived: true })
+			});
+			if (!res.ok) throw new Error(`PATCH failed: ${res.status}`);
+			window.location.href = '/compare';
+		} catch {
+			sendMsg = 'Archivieren fehlgeschlagen.';
+		}
+	}
+
+	async function deletePreset() {
+		try {
+			const res = await fetch(`/api/compare/presets/${data.preset.id}`, { method: 'DELETE' });
+			if (!res.ok) throw new Error(`DELETE failed: ${res.status}`);
+			window.location.href = '/compare';
+		} catch {
+			sendMsg = 'Löschen fehlgeschlagen.';
 		}
 	}
 </script>
@@ -87,6 +145,9 @@
 
 	{#if sendMsg}
 		<div style="font-size: 14px; color: var(--g-ink-3); margin-bottom: 8px">{sendMsg}</div>
+	{/if}
+	{#if pauseError}
+		<div style="font-size: 14px; color: var(--g-bad); margin-bottom: 8px">{pauseError}</div>
 	{/if}
 
 	<CompareDetail preset={data.preset} locations={data.locations} {initialTab} />
