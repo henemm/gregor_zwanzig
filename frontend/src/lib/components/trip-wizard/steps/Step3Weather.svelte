@@ -5,24 +5,24 @@
 	// Dedizierter Wetter-Konfigurations-Schritt:
 	//   - Aktivitätsprofil-Dropdown (schreibt wizard.activity)
 	//   - Metrik-Tabelle aus /api/metrics-Katalog (5 Kategorien-Gruppen)
-	//   - Pro Metrik: Checkbox (enabled) + Format-Dropdown (raw/scale/simplified/symbol)
+	//   - Pro Metrik: Checkbox (enabled) + Boolean-Toggle Roh/Einfach (Issue #629)
 	//   - Sticky-Header pro Gruppe, Fade-Indikator unten
 	//   - Zähler-Header „METRIKEN · N AKTIV VON M"
 	//
 	// State: getContext('trip-wizard-state'). Metrik-Änderungen mutieren
-	// wizard.weatherMetrics. `formatModeMap` ist UI-only (4 Optionen) und wird
-	// beim Save auf use_friendly_format: boolean reduziert (raw→false, sonst true).
-	// Issue #435 bringt das echte 4-Optionen-Datenmodell.
+	// wizard.weatherMetrics. Issue #629: Darstellung ist nur noch Boolean
+	// Roh/Einfach (use_friendly_format), kein 4-Wert-format_mode mehr in der UI.
+	// Toggle nur für indicatorCapable-Metriken; alle übrigen zeigen „nur Rohwert".
 
 	import { getContext, onMount } from 'svelte';
-	import { Eyebrow } from '$lib/components/atoms';
-	import { Field } from '$lib/components/molecules';
-	import { Select } from '$lib/components/ui/select';
+	import { Eyebrow, Segmented } from '$lib/components/atoms';
 	import Checkbox from '$lib/components/ui/checkbox/Checkbox.svelte';
+	import { Select } from '$lib/components/ui/select';
 	import { api } from '$lib/api';
 	import {
 		CATEGORY_ORDER,
 		CATEGORY_LABELS,
+		indicatorCapable,
 		type MetricCatalog,
 		type MetricEntry
 	} from '$lib/components/trip-detail/metricsEditor';
@@ -69,20 +69,9 @@
 	let catalog = $state<MetricCatalog>({});
 	let loading = $state(true);
 
-	// Format-Modus pro Metrik. Werte: raw / scale / simplified / symbol.
-	// Issue #435: persistiert jetzt in WeatherConfigMetric.format_mode parallel
-	// zu use_friendly_format (Backward-Compat). Dropdown-Optionen werden pro
-	// Metrik aus m.format_modes (Katalog) iteriert.
-	type FormatMode = 'raw' | 'scale' | 'simplified' | 'symbol';
-	let formatModeMap = $state<Record<string, FormatMode>>({});
-
-	// Issue #435: Label-Map für die Dropdown-Anzeige.
-	const FORMAT_MODE_LABELS: Record<string, string> = {
-		raw: 'Roh',
-		scale: 'Einfach',
-		simplified: 'Vereinfacht',
-		symbol: 'Symbol'
-	};
+	// Issue #629: Darstellung pro Metrik ist nur noch Boolean Roh/Einfach
+	// (use_friendly_format). Kein 4-Wert-format_mode mehr in der UI.
+	let friendlyMap = $state<Record<string, boolean>>({});
 
 	onMount(async () => {
 		try {
@@ -97,39 +86,29 @@
 	});
 
 	function initFromCatalog() {
-		// Issue #435: Initial-Modus pro Metrik = default_format_mode aus Katalog
-		// (Fallback raw, wenn Backend-Katalog noch alt ist).
-		const modes: Record<string, FormatMode> = {};
+		// Issue #629: Initial-Darstellung = Einfach (true), außer persistiert.
+		const friendly: Record<string, boolean> = {};
 		for (const cat of Object.values(catalog)) {
 			for (const m of cat) {
-				const def = (m.default_format_mode ?? (m.has_friendly_format ? 'scale' : 'raw')) as FormatMode;
-				modes[m.id] = def;
+				friendly[m.id] = true;
 			}
 		}
-		// Bereits persistierten format_mode (oder Legacy-Bool) zurückspiegeln.
 		for (const m of wizard.weatherMetrics) {
-			if (modes[m.metric_id] !== undefined) {
-				if (m.format_mode) {
-					modes[m.metric_id] = m.format_mode as FormatMode;
-				} else if (m.use_friendly_format === false) {
-					modes[m.metric_id] = 'raw';
-				}
-				// (use_friendly_format=true ohne format_mode → Katalog-Default)
+			if (friendly[m.metric_id] !== undefined) {
+				friendly[m.metric_id] = m.use_friendly_format ?? true;
 			}
 		}
-		formatModeMap = modes;
+		friendlyMap = friendly;
 
 		// wizard.weatherMetrics aus Katalog befüllen, wenn noch leer
 		if (wizard.weatherMetrics.length === 0) {
 			const all: WeatherConfigMetric[] = [];
 			for (const catKey of CATEGORY_ORDER) {
 				for (const m of catalog[catKey] ?? []) {
-					const def = (m.default_format_mode ?? (m.has_friendly_format ? 'scale' : 'raw'));
 					all.push({
 						metric_id: m.id,
 						enabled: true,
-						use_friendly_format: def !== 'raw',
-						format_mode: def
+						use_friendly_format: true
 					});
 				}
 			}
@@ -159,15 +138,11 @@
 	}
 
 	function makeFormatChange(metricId: string) {
-		return function handleFormatChange(e: Event) {
-			const mode = (e.target as HTMLSelectElement).value as FormatMode;
-			formatModeMap[metricId] = mode;
+		return function handleFormatChange(useIndicator: boolean) {
+			// Issue #629: nur noch Boolean use_friendly_format (Roh/Einfach).
+			friendlyMap[metricId] = useIndicator;
 			const m = findMetric(metricId);
-			if (m) {
-				// Issue #435: schreibe format_mode (neu) UND use_friendly_format (BC).
-				m.format_mode = mode;
-				m.use_friendly_format = mode !== 'raw';
-			}
+			if (m) m.use_friendly_format = useIndicator;
 		};
 	}
 </script>
@@ -250,15 +225,20 @@
 									/>
 									<span style="font-size: 14px; font-weight: 500;">{m.label}</span>
 
-									<Select
-										data-testid={`metric-format-select-${m.id}`}
-										value={formatModeMap[m.id] ?? (m.default_format_mode ?? 'raw')}
-										onchange={makeFormatChange(m.id)}
-									>
-										{#each (m.format_modes ?? ['raw']) as mode (mode)}
-											<option value={mode}>{FORMAT_MODE_LABELS[mode] ?? mode}</option>
-										{/each}
-									</Select>
+									{#if indicatorCapable(m.id)}
+										<!-- Issue #629: Boolean-Toggle Roh/Einfach (wie v2-Tab). -->
+										<Segmented
+											size="sm"
+											value={(friendlyMap[m.id] ?? true) ? 'indicator' : 'raw'}
+											onChange={(v: string) => makeFormatChange(m.id)(v === 'indicator')}
+											items={[{ id: 'raw', label: 'Roh' }, { id: 'indicator', label: 'Einfach' }]}
+										/>
+									{:else}
+										<span
+											data-testid={`metric-format-rawonly-${m.id}`}
+											style="font-size: 12px; color: var(--g-ink-4);"
+										>nur Rohwert</span>
+									{/if}
 								</div>
 							{/each}
 						</div>

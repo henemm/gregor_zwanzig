@@ -47,40 +47,36 @@ test('AC-1: ActiveMetricRow aria-label verwendet "Einfach" statt "Skala"', () =>
 	);
 });
 
-// --- AC-2: Format-Dropdown WeatherConfigDialog ---
+// --- AC-2: Issue #629 — scale/symbol-Dropdown durch Roh/Einfach-Toggle ersetzt ---
+// Das ursprüngliche #499-Label "Skala"→"Einfach" betraf das 4-Wert-Dropdown.
+// #629 entfernt scale/symbol komplett aus der UI (Boolean-Toggle Roh/Einfach),
+// damit ist die #499-Intention ("kein 'Skala'") verschärft erfüllt: es gibt gar
+// keine scale/symbol-Option mehr.
 
-test('AC-2: WeatherConfigDialog hat scale-Label "Einfach" statt "Skala"', () => {
+test('AC-2 (#629): WeatherConfigDialog bietet kein scale/symbol-Label mehr', () => {
 	const src = readFileSync(WEATHER_CONFIG_DLG, 'utf-8');
-	assert.ok(
-		src.includes("scale: 'Einfach'"),
-		"AC-2 RED: WeatherConfigDialog muss scale: 'Einfach' enthalten"
-	);
+	assert.ok(!src.includes("scale: '"), 'WeatherConfigDialog darf kein scale-Label mehr haben');
+	assert.ok(!src.includes("symbol: '"), 'WeatherConfigDialog darf kein symbol-Label mehr haben');
+	assert.ok(!src.includes("scale: 'Skala'"), "WeatherConfigDialog darf scale: 'Skala' nicht enthalten");
 });
 
-test('AC-2: WeatherConfigDialog enthält kein scale-Label "Skala" mehr', () => {
+test('AC-2 (#629): WeatherConfigDialog bietet Roh/Einfach-Toggle', () => {
 	const src = readFileSync(WEATHER_CONFIG_DLG, 'utf-8');
-	assert.ok(
-		!src.includes("scale: 'Skala'"),
-		"AC-2 RED: WeatherConfigDialog darf scale: 'Skala' nicht mehr enthalten"
-	);
+	assert.ok(src.includes('Einfach'), 'WeatherConfigDialog muss Toggle-Label "Einfach" enthalten');
+	assert.ok(src.includes('Roh'), 'WeatherConfigDialog muss Toggle-Label "Roh" enthalten');
 });
 
-// --- AC-2: Format-Dropdown Step3Weather ---
-
-test('AC-2: Step3Weather hat scale-Label "Einfach" statt "Skala"', () => {
+test('AC-2 (#629): Step3Weather bietet kein scale/symbol-Label mehr', () => {
 	const src = readFileSync(STEP3_WEATHER, 'utf-8');
-	assert.ok(
-		src.includes("scale: 'Einfach'"),
-		"AC-2 RED: Step3Weather muss scale: 'Einfach' enthalten"
-	);
+	assert.ok(!src.includes("scale: '"), 'Step3Weather darf kein scale-Label mehr haben');
+	assert.ok(!src.includes("symbol: '"), 'Step3Weather darf kein symbol-Label mehr haben');
+	assert.ok(!src.includes("scale: 'Skala'"), "Step3Weather darf scale: 'Skala' nicht enthalten");
 });
 
-test('AC-2: Step3Weather enthält kein scale-Label "Skala" mehr', () => {
+test('AC-2 (#629): Step3Weather bietet Roh/Einfach-Toggle', () => {
 	const src = readFileSync(STEP3_WEATHER, 'utf-8');
-	assert.ok(
-		!src.includes("scale: 'Skala'"),
-		"AC-2 RED: Step3Weather darf scale: 'Skala' nicht mehr enthalten"
-	);
+	assert.ok(src.includes('Einfach'), 'Step3Weather muss Toggle-Label "Einfach" enthalten');
+	assert.ok(src.includes('Roh'), 'Step3Weather muss Toggle-Label "Roh" enthalten');
 });
 
 // --- AC-3: Preset-Zusammenfassung SavePresetDialog ---

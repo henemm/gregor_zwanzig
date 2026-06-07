@@ -397,6 +397,21 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
     return trip
 
 
+# Issue #629: Legacy-Modi scale/symbol verschwinden aus der UI. Beim Laden werden
+# sie auf None normalisiert (Rückfall auf default_format_mode, der für diese
+# Metriken GENAU scale/symbol ist) + use_friendly_format=True → bit-identische
+# Briefing-Darstellung, aber keine wählbaren scale/symbol-Reste in der Persistenz.
+_LEGACY_FORMAT_MODES = {"scale", "symbol"}
+
+
+def _normalize_legacy_mode(mc_data: Dict[str, Any]) -> tuple[Optional[str], bool]:
+    """(format_mode, use_friendly_format) mit scale/symbol→None+friendly-Migration."""
+    mode = mc_data.get("format_mode")
+    if mode in _LEGACY_FORMAT_MODES:
+        return None, True
+    return mode, mc_data.get("use_friendly_format", True)
+
+
 def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig":
     """Parse UnifiedWeatherDisplayConfig from dict."""
     from datetime import datetime as _dt
@@ -429,14 +444,15 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
             bucket, order = bucket_order_by_id.get(mid, ("secondary", 0))
         # Issue #435: nur explizite format_mode-Felder ins Modell übernehmen,
         # damit Roundtrip-Tests use_friendly_format bit-identisch erhalten.
-        explicit_mode = mc_data.get("format_mode")
+        # Issue #629: scale/symbol → None + use_friendly_format=True normalisieren.
+        explicit_mode, friendly = _normalize_legacy_mode(mc_data)
         metrics.append(MetricConfig(
             metric_id=mid,
             enabled=mc_data.get("enabled", True),
             aggregations=mc_data.get("aggregations", ["min", "max"]),
             morning_enabled=mc_data.get("morning_enabled"),
             evening_enabled=mc_data.get("evening_enabled"),
-            use_friendly_format=mc_data.get("use_friendly_format", True),
+            use_friendly_format=friendly,
             format_mode=explicit_mode,
             alert_enabled=mc_data.get("alert_enabled", False),
             alert_threshold=mc_data.get("alert_threshold"),
@@ -462,14 +478,14 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
                 continue
             ch_parsed: List[MetricConfig] = []
             for mc_data in ch_metrics:
-                ch_explicit_mode = mc_data.get("format_mode")
+                ch_explicit_mode, ch_friendly = _normalize_legacy_mode(mc_data)
                 ch_parsed.append(MetricConfig(
                     metric_id=mc_data["metric_id"],
                     enabled=mc_data.get("enabled", True),
                     aggregations=mc_data.get("aggregations", ["min", "max"]),
                     morning_enabled=mc_data.get("morning_enabled"),
                     evening_enabled=mc_data.get("evening_enabled"),
-                    use_friendly_format=mc_data.get("use_friendly_format", True),
+                    use_friendly_format=ch_friendly,
                     format_mode=ch_explicit_mode,
                     alert_enabled=mc_data.get("alert_enabled", False),
                     alert_threshold=mc_data.get("alert_threshold"),
@@ -492,24 +508,25 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
             for ch, ch_metrics in channels_dict.items():
                 if not isinstance(ch_metrics, list):
                     continue
-                per_report_layouts[report_type][ch] = [
-                    MetricConfig(
+                pr_parsed: List[MetricConfig] = []
+                for mc_data in ch_metrics:
+                    pr_mode, pr_friendly = _normalize_legacy_mode(mc_data)
+                    pr_parsed.append(MetricConfig(
                         metric_id=mc_data["metric_id"],
                         enabled=mc_data.get("enabled", True),
                         aggregations=mc_data.get("aggregations", ["min", "max"]),
                         morning_enabled=mc_data.get("morning_enabled"),
                         evening_enabled=mc_data.get("evening_enabled"),
-                        use_friendly_format=mc_data.get("use_friendly_format", True),
-                        format_mode=mc_data.get("format_mode"),
+                        use_friendly_format=pr_friendly,
+                        format_mode=pr_mode,
                         alert_enabled=mc_data.get("alert_enabled", False),
                         alert_threshold=mc_data.get("alert_threshold"),
                         horizons=mc_data.get("horizons"),
                         bucket=mc_data.get("bucket", "primary"),
                         order=mc_data.get("order", 0),
                         sms_threshold=mc_data.get("sms_threshold"),
-                    )
-                    for mc_data in ch_metrics
-                ]
+                    ))
+                per_report_layouts[report_type][ch] = pr_parsed
         if not per_report_layouts:
             per_report_layouts = None
 
