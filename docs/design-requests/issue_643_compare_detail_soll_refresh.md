@@ -2,6 +2,7 @@
 
 **Auslöser:** Issue #643 (Paket 2 von #582, Epic #575) — als „überholt" geschlossen, weil
 JSX-Vorlage und SOLL-Screenshot den Live-Stand nicht mehr abbilden.
+**Tracking der Folge-Umsetzung:** Issue #646 (blockiert bis dieser Design-Request geliefert ist).
 
 ## Problem mit dem aktuellen Handoff
 
