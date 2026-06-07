@@ -11,12 +11,22 @@
 		DEFAULT_DAILY_SUMMARY_METRICS,
 		toggleDailySummaryMetric,
 	} from './reportConfigWrite.ts';
+	import {
+		visibleChannels,
+		activeChannelLabels,
+		hasNoActiveChannel,
+		syncSendFlags,
+		type ChannelConfig,
+	} from '../trip-detail/briefingChannelGating.ts';
 
 	interface Props {
 		reportConfig: ReportConfig | undefined;
 		mode?: 'create' | 'edit';
+		/** Wetter-aktive Kanäle aus display_config.channels (#617).
+		 *  Wenn nicht gesetzt: Altverhalten (alle drei Kanäle sichtbar, kein Banner). */
+		weatherChannels?: ChannelConfig;
 	}
-	let { reportConfig = $bindable(), mode = 'create' }: Props = $props();
+	let { reportConfig = $bindable(), mode = 'create', weatherChannels }: Props = $props();
 
 	// --- Original-Blob fuer Read-Modify-Write -----------------------------------
 	// Alle nicht UI-gepflegten Felder (insb. change_threshold_*, custom_unknown_*)
@@ -66,6 +76,13 @@
 		telegram: !!profile?.telegram_chat_id,
 		sms: !!profile?.sms_to
 	});
+
+	// Issue #617: Wetter-Kanal-Gating (nur wenn weatherChannels gesetzt)
+	let weatherVisible = $derived(visibleChannels(weatherChannels));
+	let weatherLabels = $derived(
+		weatherChannels !== undefined ? activeChannelLabels(weatherChannels) : []
+	);
+	let weatherEmpty = $derived(hasNoActiveChannel(weatherChannels));
 
 	// --- Initial-Load ----------------------------------------------------------
 	onMount(() => {
@@ -136,7 +153,7 @@
 
 		// Original-Blob als Basis -> UI-Felder darueber mergen.
 		// So bleiben change_threshold_* und alle anderen unbekannten Felder erhalten.
-		reportConfig = {
+		const merged: Record<string, unknown> = {
 			...originalReportConfig,
 			enabled: morning_enabled || evening_enabled,
 			morning_enabled,
@@ -159,6 +176,10 @@
 			show_highlights,
 			daily_summary_metrics: [...dailySummaryMetrics],
 		};
+
+		// Issue #617: verwaiste Kanäle (nicht Wetter-aktiv) auf false synchronisieren.
+		// syncSendFlags gibt merged unverändert zurück wenn weatherChannels undefined.
+		reportConfig = syncSendFlags(merged, weatherChannels) as ReportConfig;
 	});
 
 	// --- Quick-Pick-Handler (Factory Pattern fuer Safari-Closure-Schutz) -------
@@ -291,52 +312,78 @@
 	<Card.Root class="p-3 space-y-2 hover:translate-y-0 hover:shadow-none">
 		<h3 class="text-sm font-semibold">Kanäle</h3>
 
-		<!-- E-Mail -->
-		<div class="text-sm">
-			<span data-testid="channel-email" class="inline-flex items-center gap-2">
-				<Checkbox
-					checked={send_email}
-					disabled={!availableChannels.email}
-					onchange={(e) => { send_email = (e.target as HTMLInputElement).checked; }}
-				>E-Mail{profile?.mail_to ? ` (${profile.mail_to})` : ''}</Checkbox>
-			</span>
-		</div>
-		{#if !availableChannels.email}
-			<div data-testid="channel-email-hint" class="pl-6 text-xs text-muted-foreground">
-				E-Mail-Adresse fehlt — <a href="/account" style="color:var(--g-accent);text-decoration:underline;text-underline-offset:2px">im Account einrichten</a>
+		{#if weatherChannels !== undefined && weatherEmpty}
+			<!-- AC-3: Kein Kanal aktiv → Warnzustand -->
+			<div data-testid="briefings-channel-empty" style="padding: 8px 10px; background: var(--g-surface-warn, #fff8e1); border: 1px solid var(--g-warn, #f9a825); border-radius: 6px; font-size: 13px; color: var(--g-ink);">
+				Kein Kanal aktiv. Aktiviere zuerst mindestens einen Kanal im Tab Wetter-Metriken.
+				<a
+					data-testid="briefings-channel-empty-link"
+					href="?tab=weather"
+					style="display: inline-block; margin-top: 4px; color: var(--g-accent); text-decoration: underline; text-underline-offset: 2px;"
+				>Zu Wetter-Metriken wechseln</a>
 			</div>
-		{/if}
+		{:else}
+			{#if weatherChannels !== undefined}
+				<!-- AC-2: Hinweis-Banner (≥1 aktiver Kanal) -->
+				<div data-testid="briefings-channel-hint" style="padding: 6px 10px; background: var(--g-surface-2, #f6f4ee); border: 1px solid var(--g-ink-faint, #e0ddd5); border-radius: 6px; font-size: 12px; color: var(--g-ink-muted);">
+					Nur Kanäle, die du in Wetter-Metriken aktiviert hast, stehen hier zur Auswahl:
+					{weatherLabels.join(' · ')}
+				</div>
+			{/if}
 
-		<!-- Telegram -->
-		<div class="text-sm">
-			<span data-testid="channel-telegram" class="inline-flex items-center gap-2">
-				<Checkbox
-					checked={send_telegram}
-					disabled={!availableChannels.telegram}
-					onchange={(e) => { send_telegram = (e.target as HTMLInputElement).checked; }}
-				>Telegram{profile?.telegram_chat_id ? ` (${profile.telegram_chat_id})` : ''}</Checkbox>
-			</span>
-		</div>
-		{#if !availableChannels.telegram}
-			<div data-testid="channel-telegram-hint" class="pl-6 text-xs text-muted-foreground">
-				Telegram-Chat-ID fehlt — <a href="/account" style="color:var(--g-accent);text-decoration:underline;text-underline-offset:2px">im Account einrichten</a>
-			</div>
-		{/if}
+			<!-- E-Mail (nur wenn Wetter-aktiv oder kein Gating) -->
+			{#if weatherVisible.email}
+				<div class="text-sm">
+					<span data-testid="channel-email" class="inline-flex items-center gap-2">
+						<Checkbox
+							checked={send_email}
+							disabled={!availableChannels.email}
+							onchange={(e) => { send_email = (e.target as HTMLInputElement).checked; }}
+						>E-Mail{profile?.mail_to ? ` (${profile.mail_to})` : ''}</Checkbox>
+					</span>
+				</div>
+				{#if !availableChannels.email}
+					<div data-testid="channel-email-hint" class="pl-6 text-xs text-muted-foreground">
+						E-Mail-Adresse fehlt — <a href="/account" style="color:var(--g-accent);text-decoration:underline;text-underline-offset:2px">im Account einrichten</a>
+					</div>
+				{/if}
+			{/if}
 
-		<!-- SMS -->
-		<div class="text-sm">
-			<span data-testid="channel-sms" class="inline-flex items-center gap-2">
-				<Checkbox
-					checked={send_sms}
-					disabled={!availableChannels.sms}
-					onchange={(e) => { send_sms = (e.target as HTMLInputElement).checked; }}
-				>SMS{profile?.sms_to ? ` (${profile.sms_to})` : ''}</Checkbox>
-			</span>
-		</div>
-		{#if !availableChannels.sms}
-			<div data-testid="channel-sms-hint" class="pl-6 text-xs text-muted-foreground">
-				Handynummer fehlt — <a href="/account" style="color:var(--g-accent);text-decoration:underline;text-underline-offset:2px">im Account einrichten</a>
-			</div>
+			<!-- Telegram (nur wenn Wetter-aktiv oder kein Gating) -->
+			{#if weatherVisible.telegram}
+				<div class="text-sm">
+					<span data-testid="channel-telegram" class="inline-flex items-center gap-2">
+						<Checkbox
+							checked={send_telegram}
+							disabled={!availableChannels.telegram}
+							onchange={(e) => { send_telegram = (e.target as HTMLInputElement).checked; }}
+						>Telegram{profile?.telegram_chat_id ? ` (${profile.telegram_chat_id})` : ''}</Checkbox>
+					</span>
+				</div>
+				{#if !availableChannels.telegram}
+					<div data-testid="channel-telegram-hint" class="pl-6 text-xs text-muted-foreground">
+						Telegram-Chat-ID fehlt — <a href="/account" style="color:var(--g-accent);text-decoration:underline;text-underline-offset:2px">im Account einrichten</a>
+					</div>
+				{/if}
+			{/if}
+
+			<!-- SMS (nur wenn Wetter-aktiv oder kein Gating) -->
+			{#if weatherVisible.sms}
+				<div class="text-sm">
+					<span data-testid="channel-sms" class="inline-flex items-center gap-2">
+						<Checkbox
+							checked={send_sms}
+							disabled={!availableChannels.sms}
+							onchange={(e) => { send_sms = (e.target as HTMLInputElement).checked; }}
+						>SMS{profile?.sms_to ? ` (${profile.sms_to})` : ''}</Checkbox>
+					</span>
+				</div>
+				{#if !availableChannels.sms}
+					<div data-testid="channel-sms-hint" class="pl-6 text-xs text-muted-foreground">
+						Handynummer fehlt — <a href="/account" style="color:var(--g-accent);text-decoration:underline;text-underline-offset:2px">im Account einrichten</a>
+					</div>
+				{/if}
+			{/if}
 		{/if}
 	</Card.Root>
 
