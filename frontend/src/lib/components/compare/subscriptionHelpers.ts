@@ -6,7 +6,7 @@
 //
 // Spec: docs/specs/modules/issue_301b_auto_reports_overview.md (§1)
 
-import type { Subscription, ComparePreset } from '../../types.js';
+import type { Subscription, ComparePreset, ActivityProfile } from '../../types.js';
 
 // Konvention 0=Montag (authoritativ: SubscriptionForm.svelte:19 +
 // subscriptions/+page.svelte:19). NICHT Sonntag-first.
@@ -101,6 +101,89 @@ export function presetLocationsLabel(p: ComparePreset): string {
 // Die Kebab-Komponente emittiert nur `onSelect(id)` — die Elternkomponente
 // ist für API-Calls und Confirm-Dialoge zuständig. `danger: true` markiert
 // destruktive Aktionen (Löschen) für rote Texteinfärbung im Menü.
+
+// Issue #582 — Kachel-Helfer für die Compare-Liste (Design-Fidelity 1:1).
+// Spec: docs/specs/modules/issue_582_compare_list_fidelity.md
+
+// Inline-Map statt Import aus types.ts (vermeidet value-Import-Auflösungsproblem
+// bei node --experimental-strip-types, das .js nicht auf .ts mappt).
+const PROFILE_LABELS: Record<string, string> = {
+	allgemein:       'Allgemein',
+	wintersport:     'Wintersport',
+	wandern:         'Wandern',
+	summer_trekking: 'Sommer-Trekking',
+};
+
+/** ActivityProfile-Key → lesbares deutsches Label (nie roher Key). */
+export function presetProfileLabel(profil: ActivityProfile): string {
+	return PROFILE_LABELS[profil] ?? 'Profil';
+}
+
+/**
+ * ComparePreset → kompaktes Rhythmus-Kurzlabel für die Kachel (AC-5).
+ * Unterscheidet sich von presetScheduleLabel (#459 Sidepanel-Lang-Label):
+ *   daily   → "tägl. HH" (zweistellige Stunde, kein –bis)
+ *   weekly  → Wochentag-Name
+ *   manual  → "manuell"
+ */
+export function presetTileScheduleLabel(preset: ComparePreset): string {
+	if (preset.schedule === 'daily') {
+		const h = String(preset.hour_from).padStart(2, '0');
+		return `tägl. ${h}`;
+	}
+	if (preset.schedule === 'weekly') {
+		return WEEKDAYS[preset.weekday ?? 0] ?? 'wöchentl.';
+	}
+	return 'manuell';
+}
+
+/**
+ * ISO-Timestamp → relatives deutsches Label.
+ *   heute        → "heute"
+ *   gestern      → "gestern"
+ *   diese Woche  → Wochentag-Name
+ *   ältere Daten → "vor N Wochen"
+ *   undefined    → ''
+ */
+export function relativeLastSent(iso: string | undefined): string {
+	if (!iso) return '';
+	const d = new Date(iso);
+	if (isNaN(d.getTime())) return '';
+
+	const now = new Date();
+	// Tages-Differenz ohne Uhrzeit
+	const diffMs = now.setHours(0, 0, 0, 0) - new Date(d).setHours(0, 0, 0, 0);
+	const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+	if (diffDays <= 0) return 'heute';
+	if (diffDays === 1) return 'gestern';
+	if (diffDays < 7) return WEEKDAYS[d.getDay() === 0 ? 6 : d.getDay() - 1] ?? 'diese Woche';
+	const weeks = Math.floor(diffDays / 7);
+	return `vor ${weeks} ${weeks === 1 ? 'Woche' : 'Wochen'}`;
+}
+
+/** Kanal-Keys aus empfaenger + channel_layouts. Signal NIEMALS (PO #610). */
+export function presetChannels(preset: ComparePreset): string[] {
+	const result: string[] = [];
+	// E-Mail: mind. ein Eintrag mit "@"
+	// Jede Adresse mit "@" gilt als E-Mail. Signal-Block läuft ausschließlich
+	// über den channel_layouts-Key-Allowlist (ALLOWED-Map unten) — nicht via
+	// Substring-Match auf Adressen, der legitime Adressen wie signal@firma.com sperrt.
+	if (preset.empfaenger.some((e) => e.includes('@'))) {
+		result.push('Email');
+	}
+	// Sonstige Kanäle aus display_config.channel_layouts
+	const layouts = (preset.display_config as Record<string, unknown> | undefined)
+		?.channel_layouts as Record<string, unknown> | undefined;
+	if (layouts) {
+		const ALLOWED: Record<string, string> = { telegram: 'Telegram', sms: 'SMS' };
+		for (const key of Object.keys(layouts)) {
+			const label = ALLOWED[key.toLowerCase()];
+			if (label && !result.includes(label)) result.push(label);
+		}
+	}
+	return result;
+}
 
 export type CompareAction = { id: string; label: string; danger?: boolean };
 

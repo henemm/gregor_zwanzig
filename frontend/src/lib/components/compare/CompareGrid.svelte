@@ -11,11 +11,10 @@
 	import { goto } from '$app/navigation';
 	import type { ComparePreset } from '$lib/types.js';
 	import { api } from '$lib/api.js';
-	import { Btn } from '$lib/components/atoms';
 	import { ConfirmDialog } from '$lib/components/molecules';
 	import CompareTile from './CompareTile.svelte';
 	import { deriveStatusFromPreset } from './subscriptionHelpers.js';
-	import MapPinIcon from '@lucide/svelte/icons/map-pin';
+	import { Card } from '$lib/components/atoms';
 
 	interface Props {
 		presets: ComparePreset[];
@@ -108,13 +107,13 @@
 {/if}
 
 {#if presets.length === 0}
-	<div class="flex flex-col items-center gap-3 py-12 text-center">
-		<MapPinIcon class="size-8 text-[var(--g-ink-4)]" />
-		<p class="text-sm text-[var(--g-ink-3)]">Noch keine Orts-Vergleiche — leg deinen ersten an</p>
-		<Btn variant="outline" href="/compare/new">+ Neuer Vergleich</Btn>
-	</div>
+	<Card padding={40} style="text-align: center; color: var(--g-ink-3); font-size: 13px">
+		Noch keine Orts-Vergleiche — leg deinen ersten an.
+	</Card>
 {:else if items.length === 0}
-	<p class="text-sm text-[var(--g-ink-3)]">Keine Vergleiche für »{searchQuery}« gefunden.</p>
+	<Card padding={40} style="text-align: center; color: var(--g-ink-3); font-size: 13px">
+		Keine Vergleiche für »{searchQuery}« gefunden.
+	</Card>
 {:else}
 	<div
 		style:display="grid"
