@@ -55,6 +55,7 @@ class CommandResult:
     confirmation_body: str
     trip_name: Optional[str] = None
     shifts: Optional[list[StageShift]] = None
+    reply_markup: Optional[dict] = None
 
 
 # ---------------------------------------------------------------------------
@@ -64,6 +65,21 @@ class CommandResult:
 _COMMAND_PATTERN = re.compile(r"^###\s+(\S+?)(?:[:\s]\s*(.+))?$")
 
 _VALID_COMMANDS = {"ruhetag", "report", "startdatum", "abbruch", "status", "hilfe", "now"}
+
+_QUERY_KEYS = {"glance", "heute", "morgen", "heute_gewitter"}
+
+_GLANCE_BUTTONS = {
+    "inline_keyboard": [[
+        {"text": "📋 Timeline heute", "callback_data": "tl_today"},
+        {"text": "📋 Timeline morgen", "callback_data": "tl_tomorrow"},
+    ]]
+}
+
+_THUNDER_LABEL = {
+    "NONE": "kein",
+    "MED": "mäßig",
+    "HIGH": "hoch",
+}
 
 
 # ---------------------------------------------------------------------------
@@ -88,6 +104,25 @@ class TripCommandProcessor:
                 ),
                 trip_name=msg.trip_name,
             )
+
+        # Query-Keys: key=="query" mit value als Query-Key ODER direkter Query-Key
+        actual_query_key = None
+        if key == "query" and value and value.lower() in _QUERY_KEYS:
+            actual_query_key = value.lower()
+        elif key in _QUERY_KEYS:
+            actual_query_key = key
+
+        if actual_query_key is not None:
+            trip = self._find_trip(msg.trip_name, msg.user_id)
+            if not trip:
+                return CommandResult(
+                    success=False, command=actual_query_key,
+                    confirmation_subject=f"[{msg.trip_name}] Trip nicht gefunden",
+                    confirmation_body=f"Kein Trip mit Name '{msg.trip_name}' gefunden.",
+                    trip_name=msg.trip_name,
+                    reply_markup=_GLANCE_BUTTONS,
+                )
+            return self._handle_query(trip, actual_query_key, msg.received_at, msg.user_id)
 
         # hilfe braucht keinen Trip-Lookup
         if key == "hilfe":
@@ -154,6 +189,134 @@ class TripCommandProcessor:
                 return trip
         logger.warning(f"No trip found for name: {trip_name!r} (user: {user_id!r})")
         return None
+
+    # -----------------------------------------------------------------------
+    # Query (read-only) — no save_trip, no _append_command_log, no _delete_snapshot
+    # -----------------------------------------------------------------------
+
+    def _handle_query(
+        self, trip: Trip, query_key: str, received_at: datetime, user_id: str,
+    ) -> CommandResult:
+        """Dispatch read-only query. Never mutates trip state."""
+        from services.weather_extractor import WeatherExtractor
+        extractor = WeatherExtractor(user_id=user_id)
+        timeline = extractor.timeline(trip.id)
+
+        today = received_at.date()
+        tomorrow = today + timedelta(days=1)
+
+        if query_key == "glance":
+            body = self._fmt_glance(timeline, today, tomorrow)
+            return CommandResult(
+                success=True, command="glance",
+                confirmation_subject=f"[{trip.name}] Glance",
+                confirmation_body=body,
+                trip_name=trip.name,
+                reply_markup=_GLANCE_BUTTONS,
+            )
+        elif query_key == "heute":
+            body = self._fmt_day(timeline, today, "Heute")
+            return CommandResult(
+                success=True, command="heute",
+                confirmation_subject=f"[{trip.name}] Heute",
+                confirmation_body=body,
+                trip_name=trip.name,
+            )
+        elif query_key == "morgen":
+            body = self._fmt_day(timeline, tomorrow, "Morgen")
+            return CommandResult(
+                success=True, command="morgen",
+                confirmation_subject=f"[{trip.name}] Morgen",
+                confirmation_body=body,
+                trip_name=trip.name,
+            )
+        elif query_key == "heute_gewitter":
+            body = self._fmt_gewitter(timeline, today)
+            return CommandResult(
+                success=True, command="heute_gewitter",
+                confirmation_subject=f"[{trip.name}] Gewitter heute",
+                confirmation_body=body,
+                trip_name=trip.name,
+            )
+        # Fallback (should not reach)
+        return CommandResult(
+            success=False, command=query_key,
+            confirmation_subject="Fehler",
+            confirmation_body="Unbekannter Query-Key.",
+            trip_name=trip.name,
+        )
+
+    def _aggregate_day(self, timeline, target_date) -> Optional[dict]:
+        """Aggregiere Timeline-Punkte für target_date. None wenn keine Punkte."""
+        from app.models import ThunderLevel as TL
+        points = [p for p in timeline.points if p.arrival_time.date() == target_date]
+        if not points:
+            return None
+        temp_max = max((p.metrics.temp_max_c for p in points if p.metrics.temp_max_c is not None), default=None)
+        temp_min = min((p.metrics.temp_min_c for p in points if p.metrics.temp_min_c is not None), default=None)
+        wind_max = max((p.metrics.wind_max_kmh for p in points if p.metrics.wind_max_kmh is not None), default=None)
+        thunder_order = [TL.NONE, TL.MED, TL.HIGH]
+        thunder_vals = [p.metrics.thunder_level_max for p in points if p.metrics.thunder_level_max is not None]
+        thunder = max(thunder_vals, key=lambda t: thunder_order.index(t)) if thunder_vals else TL.NONE
+        precip = sum(p.metrics.precip_sum_mm for p in points if p.metrics.precip_sum_mm is not None)
+        pop = max((p.metrics.pop_max_pct for p in points if p.metrics.pop_max_pct is not None), default=None)
+        return {"temp_max": temp_max, "temp_min": temp_min, "wind_max": wind_max,
+                "thunder": thunder, "precip": precip, "pop": pop}
+
+    def _fmt_day_agg(self, agg: dict, label: str) -> str:
+        """Formatiert Tages-Aggregat als kompakte Zeile."""
+        t_max = f"{agg['temp_max']:.0f}" if agg['temp_max'] is not None else "?"
+        t_min = f"{agg['temp_min']:.0f}" if agg['temp_min'] is not None else "?"
+        wind = f"{agg['wind_max']:.0f}" if agg['wind_max'] is not None else "?"
+        thunder_label = _THUNDER_LABEL.get(agg['thunder'].value if agg['thunder'] else "NONE", "?")
+        precip = f"{agg['precip']:.1f}" if agg.get('precip') else "0.0"
+        return (
+            f"{label}: 🌡 {t_min}–{t_max}°C  💨 {wind} km/h  "
+            f"🌧 {precip}mm  ⛈ Gewitter: {thunder_label}"
+        )
+
+    def _fmt_glance(self, timeline, today, tomorrow) -> str:
+        if not timeline.available:
+            return (
+                "Kein Wetter-Snapshot verfügbar. "
+                "Bitte einen Report anfordern um aktuelle Daten zu laden."
+            )
+        agg_heute = self._aggregate_day(timeline, today)
+        agg_morgen = self._aggregate_day(timeline, tomorrow)
+        lines = ["🗓 Glance — heute & morgen", ""]
+        if agg_heute:
+            lines.append(self._fmt_day_agg(agg_heute, f"heute ({today:%d.%m})"))
+        else:
+            lines.append(f"heute ({today:%d.%m}): Keine Etappe geplant")
+        if agg_morgen:
+            lines.append(self._fmt_day_agg(agg_morgen, f"morgen ({tomorrow:%d.%m})"))
+        else:
+            lines.append(f"morgen ({tomorrow:%d.%m}): Keine Etappe geplant")
+        return "\n".join(lines)
+
+    def _fmt_day(self, timeline, target_date, label: str) -> str:
+        if not timeline.available:
+            return (
+                "Kein Wetter-Snapshot verfügbar. "
+                "Bitte einen Report anfordern um aktuelle Daten zu laden."
+            )
+        agg = self._aggregate_day(timeline, target_date)
+        if not agg:
+            return f"{label} ({target_date:%d.%m}): Keine Etappe geplant"
+        return self._fmt_day_agg(agg, f"{label} ({target_date:%d.%m})")
+
+    def _fmt_gewitter(self, timeline, today) -> str:
+        if not timeline.available:
+            return (
+                "Kein Wetter-Snapshot verfügbar. "
+                "Bitte einen Report anfordern um aktuelle Daten zu laden."
+            )
+        agg = self._aggregate_day(timeline, today)
+        if not agg:
+            return f"Heute ({today:%d.%m}): Keine Etappe geplant — kein Gewitter-Status."
+        thunder = agg["thunder"]
+        label = _THUNDER_LABEL.get(thunder.value if thunder else "NONE", "?")
+        return f"⛈ Gewitter heute ({today:%d.%m}): {label}"
 
     # -----------------------------------------------------------------------
     # Commands

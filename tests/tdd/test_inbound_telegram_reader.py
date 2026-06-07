@@ -251,7 +251,7 @@ def test_inbound_message_channel_is_telegram(monkeypatch):
     )
     monkeypatch.setattr(
         "services.inbound_telegram_reader.TelegramOutput.send",
-        lambda self, subject, body: None,
+        lambda self, subject, body, **kwargs: None,
     )
 
     from services.inbound_telegram_reader import InboundTelegramReader

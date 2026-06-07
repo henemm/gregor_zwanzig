@@ -27,7 +27,16 @@ logger = logging.getLogger(__name__)
 
 TELEGRAM_API_BASE = "https://api.telegram.org"
 
-_VALID_COMMANDS = {"ruhetag", "startdatum", "report", "abbruch", "status", "hilfe"}
+_VALID_COMMANDS = {"ruhetag", "startdatum", "report", "abbruch", "status", "hilfe",
+                   "glance", "heute", "morgen", "heute_gewitter"}
+
+_SHORTCUT_MAP = {
+    "/s": "glance",
+    "/status": "glance",  # AC-1: /status (mit Slash) ist Glance-Alias; nacktes "status" bleibt Etappenliste
+    "/h": "heute",
+    "/m": "morgen",
+    "/hg": "heute_gewitter",
+}
 
 
 class InboundTelegramReader:
@@ -128,10 +137,19 @@ class InboundTelegramReader:
             return True
 
         # InboundMessage bauen und verarbeiten
+        # Query-Keys werden als "### query: <key>" kodiert
+        from services.trip_command_processor import _QUERY_KEYS
+        if key in _QUERY_KEYS:
+            body = f"### query: {key}"
+        elif value:
+            body = f"### {key}: {value}"
+        else:
+            body = f"### {key}"
+
         inbound = InboundMessage(
             channel="telegram",
             trip_name=trip.name,
-            body=f"### {key}: {value}" if value else f"### {key}",
+            body=body,
             sender=chat_id,
             received_at=datetime.now(tz=timezone.utc),
             user_id=user_id,
@@ -141,6 +159,7 @@ class InboundTelegramReader:
         TelegramOutput(user_settings).send(
             result.confirmation_subject,
             result.confirmation_body,
+            reply_markup=result.reply_markup,
         )
         return True
 
@@ -214,7 +233,8 @@ class InboundTelegramReader:
         """Parst ersten nicht-leeren Satz: 'ruhetag 2' → ('ruhetag', '2').
 
         Immer lowercase. Unbekannte Befehle → (None, None).
-        Bekannte Befehle: ruhetag, startdatum, report, abbruch, status, hilfe.
+        Bekannte Befehle: ruhetag, startdatum, report, abbruch, status, hilfe,
+        sowie Query-Kurzbefehle: /s /h /m /hg.
         Kein '### ' Prefix nötig — Freitext.
         """
         first_line = next(
@@ -224,7 +244,12 @@ class InboundTelegramReader:
         if not first_line:
             return None, None
 
-        parts = first_line.lower().split(None, 1)
+        # Kurzbefehl-Mapping: /s /h /m /hg
+        lower_first = first_line.lower()
+        if lower_first in _SHORTCUT_MAP:
+            return _SHORTCUT_MAP[lower_first], None
+
+        parts = lower_first.split(None, 1)
         key = parts[0]
         value = parts[1].strip() if len(parts) > 1 else None
 
