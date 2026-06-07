@@ -11,6 +11,20 @@ logger = logging.getLogger(__name__)
 TELEGRAM_API_BASE = "https://api.telegram.org"
 MAX_MESSAGE_LENGTH = 4096
 
+BOT_COMMANDS = [
+    {"command": "briefing", "description": "🌤️ Aktuelles Briefing"},
+    {"command": "wetter", "description": "📊 Wetter-Details"},
+    {"command": "hilfe", "description": "ℹ️ Verfügbare Befehle"},
+]
+
+
+def _api_ok(response: httpx.Response) -> bool:
+    """True wenn die Bot-API-Antwort ein ok:true-JSON ist (HTTP 200 garantiert kein Erfolg)."""
+    try:
+        return bool(response.json().get("ok"))
+    except ValueError:
+        return False
+
 
 class TelegramOutput:
     """Sends messages via the Telegram Bot API.
@@ -28,8 +42,15 @@ class TelegramOutput:
     def name(self) -> str:
         return "telegram"
 
-    def send(self, subject: str, body: str) -> None:
-        """Send a Telegram message via Bot API."""
+    def send(self, subject: str, body: str, reply_markup: dict | None = None) -> None:
+        """Send a Telegram message via Bot API.
+
+        Args:
+            subject: Message subject shown as header.
+            body: Message body text.
+            reply_markup: Optional Inline-Keyboard dict (Telegram Bot API format).
+                          If None, payload is identical to the legacy format (no key added).
+        """
         token = self._settings.telegram_bot_token
         chat_id = self._settings.telegram_chat_id
         url = f"{TELEGRAM_API_BASE}/bot{token}/sendMessage"
@@ -39,7 +60,9 @@ class TelegramOutput:
             message = message[:MAX_MESSAGE_LENGTH]
             logger.warning("Telegram message truncated to %d chars", MAX_MESSAGE_LENGTH)
 
-        payload = {"chat_id": chat_id, "text": message}
+        payload: dict = {"chat_id": chat_id, "text": message}
+        if reply_markup is not None:
+            payload["reply_markup"] = reply_markup
 
         try:
             response = httpx.post(url, json=payload, timeout=self._timeout)
@@ -58,3 +81,52 @@ class TelegramOutput:
         except httpx.HTTPError as exc:
             logger.error("Telegram send failed: %s", exc)
             raise OutputError("telegram", f"Telegram send failed: {exc}") from exc
+
+    def set_my_commands(self, commands: list[dict] | None = None) -> None:
+        """Register Bot-Menü commands via setMyCommands.
+
+        Args:
+            commands: List of command dicts with 'command' and 'description' keys.
+                      Defaults to BOT_COMMANDS when None.
+        """
+        token = self._settings.telegram_bot_token
+        url = f"{TELEGRAM_API_BASE}/bot{token}/setMyCommands"
+        payload = {"commands": commands if commands is not None else BOT_COMMANDS}
+
+        try:
+            response = httpx.post(url, json=payload, timeout=self._timeout)
+            if response.status_code != 200:
+                raise OutputError("telegram", f"setMyCommands returned status {response.status_code}")
+            # Bot-API kann HTTP 200 mit ok:false liefern → als Fehler behandeln.
+            if not _api_ok(response):
+                raise OutputError("telegram", f"setMyCommands rejected: {response.text[:200]}")
+            logger.info("Telegram setMyCommands succeeded (%d commands)", len(payload["commands"]))
+        except httpx.TimeoutException:
+            raise OutputError("telegram", f"setMyCommands timed out after {self._timeout}s")
+        except httpx.HTTPError as exc:
+            raise OutputError("telegram", f"setMyCommands failed: {exc}") from exc
+
+    def get_my_commands(self) -> list[dict]:
+        """Fetch the currently registered Bot-Menü commands via getMyCommands.
+
+        Returns:
+            List of command dicts as returned by the Telegram Bot API.
+        """
+        token = self._settings.telegram_bot_token
+        url = f"{TELEGRAM_API_BASE}/bot{token}/getMyCommands"
+
+        try:
+            response = httpx.post(url, json={}, timeout=self._timeout)
+            if response.status_code != 200:
+                raise OutputError("telegram", f"getMyCommands returned status {response.status_code}")
+            try:
+                data = response.json()
+            except ValueError as exc:  # nicht-JSON-Body → sauberer OutputError statt rohem Decode-Fehler
+                raise OutputError("telegram", f"getMyCommands returned non-JSON body: {exc}") from exc
+            if not data.get("ok"):
+                raise OutputError("telegram", f"getMyCommands rejected: {response.text[:200]}")
+            return data.get("result", [])
+        except httpx.TimeoutException:
+            raise OutputError("telegram", f"getMyCommands timed out after {self._timeout}s")
+        except httpx.HTTPError as exc:
+            raise OutputError("telegram", f"getMyCommands failed: {exc}") from exc
