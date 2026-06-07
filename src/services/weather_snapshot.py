@@ -17,8 +17,12 @@ from typing import TYPE_CHECKING, List, Optional
 
 from app.loader import get_snapshots_dir
 from app.models import (
+    ForecastDataPoint,
+    ForecastMeta,
     GPXPoint,
+    NormalizedTimeseries,
     PrecipType,
+    Provider,
     SegmentWeatherData,
     SegmentWeatherSummary,
     ThunderLevel,
@@ -30,11 +34,21 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Fields that hold Enum values and their types
+# Fields that hold Enum values and their types (aggregated summary)
 _ENUM_FIELDS: dict[str, type] = {
     "thunder_level_max": ThunderLevel,
     "precip_type_dominant": PrecipType,
 }
+
+# Fields that hold Enum values in ForecastDataPoint
+_HOURLY_ENUM_FIELDS: dict[str, type] = {
+    "thunder_level": ThunderLevel,
+    "precip_type": PrecipType,
+}
+
+# Provider string → Provider enum mapping
+_PROVIDER_MAP: dict[str, Provider] = {p.value.lower(): p for p in Provider}
+_PROVIDER_MAP.update({p.value: p for p in Provider})
 
 
 class WeatherSnapshotService:
@@ -60,18 +74,7 @@ class WeatherSnapshotService:
                 "snapshot_at": datetime.now(timezone.utc).isoformat(),
                 "provider": segments[0].provider if segments else "unknown",
                 "segments": [
-                    {
-                        "segment_id": seg.segment.segment_id,
-                        "start_time": seg.segment.start_time.isoformat(),
-                        "end_time": seg.segment.end_time.isoformat(),
-                        "start_lat": seg.segment.start_point.lat,
-                        "start_lon": seg.segment.start_point.lon,
-                        "start_elevation_m": seg.segment.start_point.elevation_m,
-                        "end_lat": seg.segment.end_point.lat,
-                        "end_lon": seg.segment.end_point.lon,
-                        "end_elevation_m": seg.segment.end_point.elevation_m,
-                        "aggregated": _serialize_summary(seg.aggregated),
-                    }
+                    _serialize_segment(seg)
                     for seg in segments
                 ],
             }
@@ -99,10 +102,11 @@ class WeatherSnapshotService:
             for seg_data in data["segments"]:
                 segment = _reconstruct_segment(seg_data)
                 aggregated = _deserialize_summary(seg_data["aggregated"])
+                timeseries = _deserialize_timeseries(seg_data, provider)
                 result.append(
                     SegmentWeatherData(
                         segment=segment,
-                        timeseries=None,
+                        timeseries=timeseries,
                         aggregated=aggregated,
                         fetched_at=snapshot_at,
                         provider=provider,
@@ -140,6 +144,63 @@ def _deserialize_summary(data: dict) -> SegmentWeatherSummary:
         else:
             kwargs[key] = value
     return SegmentWeatherSummary(**kwargs)
+
+
+def _serialize_segment(seg: SegmentWeatherData) -> dict:
+    """Serialize a single SegmentWeatherData to dict, with optional hourly."""
+    entry: dict = {
+        "segment_id": seg.segment.segment_id,
+        "start_time": seg.segment.start_time.isoformat(),
+        "end_time": seg.segment.end_time.isoformat(),
+        "start_lat": seg.segment.start_point.lat,
+        "start_lon": seg.segment.start_point.lon,
+        "start_elevation_m": seg.segment.start_point.elevation_m,
+        "end_lat": seg.segment.end_point.lat,
+        "end_lon": seg.segment.end_point.lon,
+        "end_elevation_m": seg.segment.end_point.elevation_m,
+        "aggregated": _serialize_summary(seg.aggregated),
+    }
+    if seg.timeseries is not None:
+        start = seg.segment.start_time
+        end = seg.segment.end_time
+        hourly = []
+        for p in seg.timeseries.data:
+            if p.ts < start or p.ts > end:
+                continue
+            pt: dict = {"ts": p.ts.isoformat()}
+            for fname, fval in vars(p).items():
+                if fname == "ts" or fval is None:
+                    continue
+                if isinstance(fval, Enum):
+                    pt[fname] = fval.name
+                else:
+                    pt[fname] = fval
+            hourly.append(pt)
+        entry["hourly"] = hourly
+    return entry
+
+
+def _deserialize_timeseries(
+    seg_data: dict, provider_str: str
+) -> Optional[NormalizedTimeseries]:
+    """Reconstruct NormalizedTimeseries from segment dict, or None if absent."""
+    raw_hourly = seg_data.get("hourly")
+    if not raw_hourly:
+        return None
+    provider_enum = _PROVIDER_MAP.get(provider_str.lower(), Provider.OPENMETEO)
+    meta = ForecastMeta(provider=provider_enum, model="snapshot", grid_res_km=0.0)
+    points: List[ForecastDataPoint] = []
+    for h in raw_hourly:
+        kwargs: dict = {}
+        for key, val in h.items():
+            if key == "ts":
+                continue
+            if key in _HOURLY_ENUM_FIELDS and isinstance(val, str):
+                kwargs[key] = _HOURLY_ENUM_FIELDS[key][val]
+            else:
+                kwargs[key] = val
+        points.append(ForecastDataPoint(ts=datetime.fromisoformat(h["ts"]), **kwargs))
+    return NormalizedTimeseries(meta=meta, data=points)
 
 
 def _reconstruct_segment(seg_data: dict) -> TripSegment:
