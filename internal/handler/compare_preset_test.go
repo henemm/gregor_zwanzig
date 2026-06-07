@@ -365,30 +365,22 @@ func TestDeleteComparePreset_NotFound(t *testing.T) {
 }
 
 // =============================================================================
-// AC-12: POST /{id}/send — Stub → 200 {"status":"queued"}
+// AC-12: POST /{id}/send — Proxy → leitet an Python weiter, gibt Body durch
+// (Issue #627: SendComparePresetHandler ist jetzt ein Proxy, kein Stub mehr)
 // =============================================================================
 
 func TestSendComparePreset_Success(t *testing.T) {
-	s := newTestStore(t)
+	// Fake Python upstream, der 200 {"status":"ok"} zurückgibt.
+	fakePython := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":"ok","winner":"Zermatt"}`))
+	}))
+	defer fakePython.Close()
 
-	// Erst anlegen
-	createRouter := chi.NewRouter()
-	createRouter.Post("/api/compare/presets", CreateComparePresetHandler(s))
-	createReq := httptest.NewRequest("POST", "/api/compare/presets", jsonBody(t, validPresetBody()))
-	createReq.Header.Set("Content-Type", "application/json")
-	createReq = addUserToContext(createReq, "user1")
-	createW := httptest.NewRecorder()
-	createRouter.ServeHTTP(createW, createReq)
-	if createW.Code != http.StatusCreated {
-		t.Fatalf("setup: create failed with %d", createW.Code)
-	}
-	var preset model.ComparePreset
-	json.Unmarshal(createW.Body.Bytes(), &preset)
-
-	// Dann send aufrufen
 	r := chi.NewRouter()
-	r.Post("/api/compare/presets/{id}/send", SendComparePresetHandler(s))
-	req := httptest.NewRequest("POST", "/api/compare/presets/"+preset.ID+"/send", nil)
+	r.Post("/api/compare/presets/{id}/send", SendComparePresetHandler(fakePython.URL))
+	req := httptest.NewRequest("POST", "/api/compare/presets/cp-test/send", nil)
 	req = addUserToContext(req, "user1")
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -396,24 +388,31 @@ func TestSendComparePreset_Success(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
 	}
-	var resp map[string]string
+	var resp map[string]interface{}
 	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
 		t.Fatalf("unmarshal response: %v", err)
 	}
-	if resp["status"] != "queued" {
-		t.Errorf("expected status='queued', got %q", resp["status"])
+	if resp["status"] != "ok" {
+		t.Errorf("expected status='ok' from proxy, got %q", resp["status"])
 	}
 }
 
 // =============================================================================
-// AC-13: POST /{id}/send — unbekannte ID → 404
+// AC-13: POST /{id}/send — Proxy leitet 404 vom Upstream durch
+// (Issue #627: Lookup passiert jetzt in Python, nicht im Go-Handler)
 // =============================================================================
 
 func TestSendComparePreset_NotFound(t *testing.T) {
-	s := newTestStore(t)
-	r := chi.NewRouter()
-	r.Post("/api/compare/presets/{id}/send", SendComparePresetHandler(s))
+	// Fake Python upstream, der 404 zurückgibt (unbekannte Preset-ID).
+	fakePython := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte(`{"detail":"Compare-Preset cp-doesnotexist nicht gefunden"}`))
+	}))
+	defer fakePython.Close()
 
+	r := chi.NewRouter()
+	r.Post("/api/compare/presets/{id}/send", SendComparePresetHandler(fakePython.URL))
 	req := httptest.NewRequest("POST", "/api/compare/presets/cp-doesnotexist/send", nil)
 	req = addUserToContext(req, "user1")
 	w := httptest.NewRecorder()

@@ -160,8 +160,11 @@
 		}
 	}
 
-	// Issue #527/#558 — Pause/Aktivieren mit Schedule-Gedächtnis
-	let previousSchedule = $state<string>((preset.schedule && preset.schedule !== 'manual') ? preset.schedule : 'daily');
+	// Issue #527/#558 + #631 — Pause/Aktivieren mit Schedule-Gedächtnis (persistiert).
+	// previousSchedule initialisiert aus Backend-Feld (überlebt Reload).
+	let previousSchedule = $state<string>(
+		preset.previous_schedule || ((preset.schedule && preset.schedule !== 'manual') ? preset.schedule : 'daily')
+	);
 	let localSchedule = $state<string>(preset.schedule ?? 'manual');
 
 	async function handleToggleActive() {
@@ -169,7 +172,11 @@
 		if (isPausing) previousSchedule = localSchedule;
 		const next = isPausing ? 'manual' : previousSchedule;
 		try {
-			await api.put(`/api/compare/presets/${preset.id}`, { ...preset, schedule: next });
+			await api.put(`/api/compare/presets/${preset.id}`, {
+				...preset,
+				schedule: next,
+				previous_schedule: previousSchedule
+			});
 			localSchedule = next;
 		} catch (e) {
 			console.error('[CompareTabs] toggleActive failed:', e);

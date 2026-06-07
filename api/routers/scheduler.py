@@ -384,3 +384,125 @@ def _save_preset_status(
             _json.dump(presets, f, indent=2, ensure_ascii=False)
     except OSError as e:
         logger.error("Failed to write compare_presets.json %s: %s", path, e)
+
+
+def _send_one_compare_preset(
+    preset: dict,
+    settings,
+    user_id: str,
+    data_root: str,
+    all_locations_cache=None,
+) -> tuple:
+    """Fuehrt den Versand fuer ein einzelnes Compare-Preset durch.
+
+    Gemeinsame Versandlogik fuer Daily-Loop und Einzelversand (#627).
+    Gibt (top_ort, empfaenger) zurueck. Wirft ValueError wenn kein Empfaenger konfiguriert.
+    """
+    import json as _json
+    from datetime import date
+    from pathlib import Path
+
+    from app.loader import _parse_activity_profile, load_all_locations
+    from output.renderers.email.compare_html import render_compare_html
+    from outputs.email import EmailOutput
+    from services.comparison_engine import ComparisonEngine
+    from services.comparison_renderers import render_comparison_text
+
+    preset_id = preset.get("id", "")
+    location_ids = preset.get("location_ids") or []
+
+    # Empfaenger-Check + mail_to-Fallback
+    empfaenger = preset.get("empfaenger") or []
+    if not empfaenger:
+        default_to = getattr(settings, "mail_to", None)
+        if not default_to:
+            raise ValueError(f"Preset {preset_id}: keine empfaenger und kein mail_to-Fallback")
+        empfaenger = [default_to]
+        logger.info("Preset %s: empfaenger leer, nutze mail_to=%s", preset_id, default_to)
+
+    if all_locations_cache is None:
+        all_locations_cache = load_all_locations(user_id=user_id)
+    locations = [loc for loc in all_locations_cache if loc.id in location_ids]
+    if not locations:
+        raise ValueError(f"Preset {preset_id}: Orte {location_ids} nicht aufloesbar")
+
+    profil_str = preset.get("profil", "").lower()
+    profile = _parse_activity_profile(profil_str)
+    hour_from = preset.get("hour_from", 9)
+    hour_to = preset.get("hour_to", 16)
+
+    result = ComparisonEngine.run(
+        locations=locations,
+        time_window=(hour_from, hour_to),
+        target_date=date.today(),
+        forecast_hours=48,
+        profile=profile,
+    )
+
+    top_ort = result.locations[0].location.name if result.locations else None
+
+    name = preset.get("name", preset_id)
+    from datetime import datetime as _datetime
+    subject = f"Wetter-Vergleich: {name} ({_datetime.now().strftime('%d.%m.%Y')})"
+    html_body = render_compare_html(result, profile=profile)
+    text_body = render_comparison_text(result, profile=profile)
+    EmailOutput(settings).send(
+        subject,
+        html_body,
+        plain_text_body=text_body,
+        to=empfaenger,
+    )
+
+    _save_preset_status(user_id, preset_id, top_ort, data_root=data_root)
+    logger.info("Compare preset %s sent to %s (top_ort=%s)", preset_id, empfaenger, top_ort)
+    return top_ort, empfaenger
+
+
+def _send_compare_preset(
+    user_id: str,
+    preset_id: str,
+    data_root: str | None = None,
+) -> dict:
+    """Einzelversand fuer ein Compare-Preset — ignoriert schedule.
+
+    Endpoint: POST /api/scheduler/compare-presets/{id}/send (#627).
+    Wirft KeyError wenn Preset nicht gefunden, ValueError wenn kein Empfaenger.
+    """
+    import json as _json
+    from pathlib import Path
+
+    from app.config import Settings
+
+    if data_root is None:
+        data_root = "data"
+
+    preset_path = Path(data_root) / "users" / user_id / "compare_presets.json"
+    if not preset_path.exists():
+        raise KeyError(f"Compare-Preset {preset_id} nicht gefunden")
+
+    try:
+        presets = _json.loads(preset_path.read_text(encoding="utf-8"))
+    except Exception as e:
+        raise KeyError(f"Compare-Preset {preset_id} nicht ladbar: {e}") from e
+
+    preset = next((p for p in presets if p.get("id") == preset_id), None)
+    if preset is None:
+        raise KeyError(f"Compare-Preset {preset_id} nicht gefunden")
+
+    settings = Settings().with_user_profile(user_id)
+    top_ort, actual_empfaenger = _send_one_compare_preset(preset, settings, user_id, data_root)
+    return {"status": "ok", "winner": top_ort or "", "empfaenger_count": len(actual_empfaenger)}
+
+
+@router.post("/compare-presets/{preset_id}/send")
+def manual_send_compare_preset(preset_id: str, user_id: str = Query("default")):
+    """Einzelversand-Trigger fuer ein Compare-Preset. Issue #627.
+
+    Ignoriert schedule — sendet sofort, egal ob daily/weekly/manual.
+    """
+    try:
+        return _send_compare_preset(user_id, preset_id)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))

@@ -15,8 +15,9 @@ type ComparePreset struct {
 	Name                 string     `json:"name"`
 	UserID               string     `json:"user_id"`
 	LocationIDs          []string   `json:"location_ids"`
-	Schedule             string     `json:"schedule"` // "daily"|"weekly"|"manual"
-	Profil               string     `json:"profil"`   // ActivityProfile als string
+	Schedule             string     `json:"schedule"`                     // "daily"|"weekly"|"manual"
+	PreviousSchedule     string     `json:"previous_schedule,omitempty"`  // #631: konserviert Rhythmus über Pause hinweg
+	Profil               string     `json:"profil"`                       // ActivityProfile als string
 	HourFrom             int        `json:"hour_from"`
 	HourTo               int        `json:"hour_to"`
 	Weekday              *int       `json:"weekday,omitempty"` // 0=Montag … 6=Sonntag; nur relevant wenn Schedule="weekly"; nil=kein Wert gesetzt (Default 4=Freitag wird in Store/Handler gesetzt)

@@ -13,7 +13,7 @@
 	import { api } from '$lib/api.js';
 	import { ConfirmDialog } from '$lib/components/molecules';
 	import CompareTile from './CompareTile.svelte';
-	import { deriveStatusFromPreset } from './subscriptionHelpers.js';
+	import { deriveStatusFromPreset, computePauseToggle } from './subscriptionHelpers.js';
 	import { Card } from '$lib/components/atoms';
 
 	interface Props {
@@ -27,6 +27,8 @@
 	let { presets = $bindable([]), searchQuery = '' }: Props = $props();
 
 	let deleteTarget: ComparePreset | null = $state(null);
+	let sendTarget: ComparePreset | null = $state(null);
+	let sendInfo: string | null = $state(null);
 	let error: string | null = $state(null);
 
 	const items = $derived(
@@ -46,27 +48,41 @@
 			void goto('/compare/' + preset.id + '?tab=vorschau');
 		} else if (id === 'pause') {
 			void togglePause(preset);
+		} else if (id === 'send') {
+			sendTarget = preset;
 		}
 	}
 
-	// Bug #626 — Pause/Aktivieren: Read-Modify-Write, nur schedule überschreiben.
-	// Muster wie CompareTabs.handleToggleActive (schedule 'manual' = pausiert).
+	// Issue #631 — Pause/Aktivieren: computePauseToggle merkt sich den Rhythmus.
 	async function togglePause(preset: ComparePreset) {
 		error = null;
-		const isPaused = deriveStatusFromPreset(preset) === 'paused';
-		const nextSchedule = isPaused ? 'daily' : 'manual';
+		const next = computePauseToggle(preset);
 		try {
 			const res = await fetch(`/api/compare/presets/${preset.id}`, {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ ...preset, schedule: nextSchedule })
+				body: JSON.stringify({ ...preset, ...next })
 			});
 			if (!res.ok) throw new Error(`PUT failed: ${res.status}`);
-			presets = presets.map((p) =>
-				p.id === preset.id ? { ...p, schedule: nextSchedule } : p
-			);
+			presets = presets.map((p) => (p.id === preset.id ? { ...p, ...next } : p));
 		} catch {
 			error = 'Status-Änderung fehlgeschlagen. Bitte versuche es erneut.';
+		}
+	}
+
+	// Issue #627 — Einzel-Sofortversand.
+	async function confirmSend() {
+		if (!sendTarget) return;
+		const target = sendTarget;
+		sendTarget = null;
+		error = null;
+		sendInfo = null;
+		try {
+			const res = await fetch(`/api/compare/presets/${target.id}/send`, { method: 'POST' });
+			if (!res.ok) throw new Error(`send failed: ${res.status}`);
+			sendInfo = 'Briefing wurde versendet.';
+		} catch {
+			error = 'Versand fehlgeschlagen. Bitte versuche es erneut.';
 		}
 	}
 
@@ -105,6 +121,9 @@
 {#if error}
 	<p class="text-sm text-destructive mb-3">{error}</p>
 {/if}
+{#if sendInfo}
+	<p class="text-sm mb-3" style="color: var(--g-accent)">{sendInfo}</p>
+{/if}
 
 {#if presets.length === 0}
 	<Card padding={40} style="text-align: center; color: var(--g-ink-3); font-size: 13px">
@@ -140,4 +159,14 @@
 	onConfirm={confirmDelete}
 	onCancel={() => (deleteTarget = null)}
 	onOpenChange={(open) => { if (!open) deleteTarget = null; }}
+/>
+
+<ConfirmDialog
+	open={sendTarget !== null}
+	title="Briefing jetzt senden?"
+	description={'An ' + (sendTarget?.empfaenger?.length ?? 0) + ' Empfänger senden?'}
+	confirmLabel="Senden"
+	onConfirm={confirmSend}
+	onCancel={() => (sendTarget = null)}
+	onOpenChange={(open) => { if (!open) sendTarget = null; }}
 />

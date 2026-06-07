@@ -220,7 +220,7 @@ func main() {
 	r.Put("/api/compare/presets/{id}", handler.UpdateComparePresetHandler(s))
 	r.Patch("/api/compare/presets/{id}/state", handler.UpdateComparePresetStateHandler(s)) // Issue #611
 	r.Delete("/api/compare/presets/{id}", handler.DeleteComparePresetHandler(s))
-	r.Post("/api/compare/presets/{id}/send", handler.SendComparePresetHandler(s))
+	r.Post("/api/compare/presets/{id}/send", handler.SendComparePresetHandler(cfg.PythonCoreURL))
 	// Issue #393: Cockpit-Kacheln — Versandstatus + Alarm-Historie (read-only Logs)
 	r.Get("/api/cockpit/status", handler.CockpitStatusHandler(s))
 	// Issue #396: Archiv-Statistiken — Briefings + Alarme pro Tour (Gesamtzahl, kein Zeitfilter)

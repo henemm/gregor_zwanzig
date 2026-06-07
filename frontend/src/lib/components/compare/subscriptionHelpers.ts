@@ -199,13 +199,33 @@ export function compareActions(status: CompareStatus): CompareAction[] {
 			{ id: 'delete', label: 'Löschen', danger: true }
 		];
 	}
-	// Bug #626: Toggle-Label kontextabhängig; 'send' entfernt (→ #627).
+	// Issue #626: Toggle-Label kontextabhängig; Issue #627: 'send' wieder aufgenommen.
 	const pauseLabel = status === 'paused' ? 'Aktivieren' : 'Pausieren';
 	return [
 		{ id: 'pause', label: pauseLabel },
+		{ id: 'send', label: 'Briefing jetzt senden' },
 		{ id: 'preview', label: 'Vorschau öffnen' },
 		{ id: 'edit', label: 'Bearbeiten' },
 		{ id: 'archive', label: 'Archivieren' },
 		{ id: 'delete', label: 'Löschen', danger: true }
 	];
+}
+
+/**
+ * Berechnet den naechsten { schedule, previous_schedule }-Zustand beim Pause-Toggle.
+ *
+ * - Pausieren (schedule != 'manual'): setzt schedule='manual', merkt altes schedule.
+ * - Reaktivieren (schedule == 'manual'): stellt previous_schedule wieder her (Fallback 'daily').
+ *
+ * Issue #631 — Wochen-Rhythmus ueber Pause hinweg erhalten.
+ */
+export function computePauseToggle(preset: {
+	schedule: string;
+	previous_schedule?: string;
+}): { schedule: string; previous_schedule?: string } {
+	if (preset.schedule !== 'manual') {
+		return { schedule: 'manual', previous_schedule: preset.schedule };
+	}
+	const restored = preset.previous_schedule || 'daily';
+	return { schedule: restored, previous_schedule: preset.previous_schedule };
 }

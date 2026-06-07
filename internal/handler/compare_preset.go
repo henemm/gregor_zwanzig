@@ -14,6 +14,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -198,6 +199,10 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		if updated.DisplayConfig == nil {
 			updated.DisplayConfig = original.DisplayConfig
 		}
+		// #631: previous_schedule erhalten wenn Body es nicht trägt (Datenverlust-Schutz).
+		if updated.PreviousSchedule == "" {
+			updated.PreviousSchedule = original.PreviousSchedule
+		}
 
 		if updated.LocationIDs == nil {
 			updated.LocationIDs = []string{}
@@ -321,21 +326,42 @@ func GetComparePresetHandler(s *store.Store) http.HandlerFunc {
 	}
 }
 
-// POST /api/compare/presets/{id}/send — Stub (echte Logik folgt in #461).
-func SendComparePresetHandler(s *store.Store) http.HandlerFunc {
+// POST /api/compare/presets/{id}/send — Proxy to Python Core. Issue #627.
+// Vorbild: SendSubscriptionProxyHandler in proxy.go.
+func SendComparePresetHandler(pythonURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		s = s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+		query := appendUserID(r.URL.RawQuery, middleware.UserIDFromContext(r.Context()))
+		url := pythonURL + "/api/scheduler/compare-presets/" + id + "/send"
+		if query != "" {
+			url += "?" + query
+		}
 
-		presets, err := s.LoadComparePresets()
+		req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, url, nil)
 		if err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(`{"error":"proxy_error"}`))
 			return
 		}
-		if findComparePresetIdx(presets, id) < 0 {
-			writeJSON(w, http.StatusNotFound, map[string]string{"error": "not_found"})
+		req.Header.Set("Content-Type", "application/json")
+
+		client := &http.Client{Timeout: 120 * time.Second}
+		resp, err := client.Do(req)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadGateway)
+			w.Write([]byte(`{"error":"upstream unreachable"}`))
 			return
 		}
-		writeJSON(w, http.StatusOK, map[string]string{"status": "queued"})
+		defer resp.Body.Close()
+
+		ct := resp.Header.Get("Content-Type")
+		if ct == "" {
+			ct = "application/json"
+		}
+		w.Header().Set("Content-Type", ct)
+		w.WriteHeader(resp.StatusCode)
+		io.Copy(w, resp.Body)
 	}
 }

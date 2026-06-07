@@ -1,7 +1,7 @@
 
 # API Contract — Gregor Zwanzig
 
-**Updated:** 2026-06-05 (Issue #609 — SMS phone number in user profile)
+**Updated:** 2026-06-07 (Issues #627/#631 — Compare-Preset Sofortversand + Wochen-Rhythmus-Erhalt)
 
 ## 0) Konventionen
 - Zeit: ISO-8601 UTC (`Z`)
@@ -860,6 +860,7 @@ type ComparePreset struct {
     UserID               string     `json:"user_id"`                               // set from Auth-Context, server-managed
     LocationIDs          []string   `json:"location_ids"`                          // 2+ locations to compare
     Schedule             string     `json:"schedule"`                              // "daily" | "weekly" | "manual"
+    PreviousSchedule     string     `json:"previous_schedule,omitempty"`           // schedule saved before pause (Issue #631, server-managed)
     Profil               string     `json:"profil"`                                // ActivityProfile: WINTERSPORT|ALPINE_TOURING|SUMMER_TREKKING|ALLGEMEIN
     HourFrom             int        `json:"hour_from"`                             // 0..23
     HourTo               int        `json:"hour_to"`                               // 0..23, >= HourFrom
@@ -879,7 +880,7 @@ type ComparePreset struct {
 | POST | `/api/compare/presets` | 201 / 400 | Create new preset; ID auto-generated, user_id from auth context |
 | PUT | `/api/compare/presets/{id}` | 200 / 400 / 404 | Update preset (user_id, created_at preserved from stored record) |
 | DELETE | `/api/compare/presets/{id}` | 204 / 404 | Delete preset |
-| POST | `/api/compare/presets/{id}/send` | 200 / 404 | Queue manual send (stub: returns `{"status":"queued"}`, actual send in #461) |
+| POST | `/api/compare/presets/{id}/send` | 200 / 400 / 404 | Immediate send: executes comparison & emails all configured recipients regardless of schedule (Issue #627); ignores `schedule='manual'` |
 
 ### Validation Rules (POST/PUT)
 
@@ -904,9 +905,10 @@ type ComparePreset struct {
 ### Notes
 
 - **User Isolation:** Every preset belongs to one user (read from Auth-Context). No user can see/modify another user's presets.
-- **Server-Managed Fields:** On CREATE, `id` is auto-generated (`cp-{hex}`) and `user_id` is set from context. On UPDATE, `user_id` and `created_at` are never overwritten from request body.
-- **send Endpoint is Stub:** Returns `{"status":"queued"}` immediately. Actual comparison execution and email dispatch is Issue #461.
-- **LocationIDs Validation:** Backend does not validate that referenced location IDs exist in `data/users/{userID}/locations.json`. Invalid IDs cause errors only during send (Issue #461).
+- **Server-Managed Fields:** On CREATE, `id` is auto-generated (`cp-{hex}`) and `user_id` is set from context. On UPDATE, `user_id` and `created_at` are never overwritten from request body. `letzter_versand`, `top_ort_letzter_versand`, and `previous_schedule` are server-managed (not client-writable).
+- **POST /api/compare/presets/{id}/send:** Immediate send endpoint (Issue #627). Executes comparison engine and emails all configured `empfaenger` immediately, regardless of `schedule` value (bypasses time-based gating). If no recipients configured, returns HTTP 400. Returns HTTP 200 with `{"status":"ok","winner":"<top_location>","empfaenger_count":N}` on success. Updates `letzter_versand` and `top_ort_letzter_versand` server-side.
+- **previous_schedule Field (Issue #631):** When a preset is paused (`schedule='manual'`), the frontend sets `previous_schedule` to the prior schedule value (`"daily"` or `"weekly"`). On reactivation, `schedule` is restored from `previous_schedule`. This field is preserved across reloads (backend-persistent); altdata without this field remain unaffected (omitempty).
+- **LocationIDs Validation:** Backend does not validate that referenced location IDs exist in `data/users/{userID}/locations.json`. Invalid IDs cause errors only during send.
 
 ### Source Files
 
@@ -1178,6 +1180,75 @@ Processes all daily Compare-Presets for a user: filters by `schedule='daily'`, r
 - Endpoint always returns HTTP 200 regardless of `error_count` (job success tracked by Go scheduler via `recordRun()`)
 - Python-side heartbeat ping (`GZ_HEARTBEAT_COMPARE_PRESETS` ENV) is not called by Python; Go scheduler handles this via `pingHeartbeat()` on the full job result
 - BetterStack Heartbeat is pinged only when `error_count == 0` — any preset-level error blocks the ping (Readiness Principle)
+
+---
+
+## 18) Compare-Preset Immediate Send (Issue #627)
+
+On-demand send for a single Compare-Preset: triggers comparison engine and emails all configured recipients immediately, bypassing schedule-based gating.
+
+**Handler:** `api/routers/scheduler.py` (Python endpoint) | `internal/handler/compare_preset.go` (Go proxy) | **Routing:** `cmd/server/main.go`
+
+### POST /api/scheduler/compare-presets/{id}/send
+
+Executes comparison and sends report for a single preset immediately (regardless of `schedule` value).
+
+**Query Parameters:**
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| user_id | string | yes (via appendUserID) | User identifier (appended by Go proxy; anti-spoofing via Auth-Context) |
+
+**Response 200 (Success):**
+
+```json
+{
+  "status": "ok",
+  "winner": "Säntis",
+  "empfaenger_count": 2
+}
+```
+
+**Field Definitions:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| status | enum | `"ok"` on success |
+| winner | string | Highest-ranked location name from comparison |
+| empfaenger_count | int | Number of recipients the email was sent to |
+
+**Behavior:**
+
+1. Go proxy (`SendComparePresetHandler`) extracts `{id}` from URL, appends `user_id` from Auth-Context to query string
+2. Proxy forwards POST to Python endpoint: `/api/scheduler/compare-presets/{id}/send?user_id=...`
+3. Python endpoint:
+   - Loads `data/users/{user_id}/compare_presets.json`
+   - Finds preset by `id` (404 if not found)
+   - Validates `empfaenger[]` exists and is non-empty; falls back to `mail_to` from user profile (400 if neither)
+   - Calls Compare Engine with `target_date=today`, `forecast_hours=48` (uses preset's `hour_from`, `hour_to`, `profil`)
+   - Renders Compare-Email template and sends via Resend to all recipients
+   - Updates `letzter_versand` (current ISO-datetime UTC) and `top_ort_letzter_versand` (winner) in preset
+   - Returns HTTP 200 with winner and recipient count
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 400 | `{"error":"no_recipients"}` | No `empfaenger` configured and no user `mail_to` fallback |
+| 404 | `{"error":"not_found"}` | Preset ID not found in user's preset list |
+| 500 | `{"error":"send_failed","detail":"..."}` | Email dispatch failed (network/Resend error) |
+
+**Side Effects:**
+
+- Email sent to all recipients in `preset["empfaenger"]` (or user's `mail_to` fallback)
+- `data/users/{user_id}/compare_presets.json` updated with `letzter_versand` (ISO-datetime) and `top_ort_letzter_versand` (location name)
+- No effect on `schedule` — paused presets (`schedule='manual'`) can still be sent immediately
+
+**Notes:**
+
+- Ignores `schedule` value entirely (sends even if `schedule='manual'` or `'weekly'`)
+- User isolation enforced via Go proxy's `appendUserID()` function — client cannot spoof another user's `user_id`
+- Idempotent for recipients (same email list re-sent on retry), but updates `letzter_versand` each time
 
 ---
 
