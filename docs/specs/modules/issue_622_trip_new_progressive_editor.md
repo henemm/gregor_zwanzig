@@ -71,12 +71,13 @@ Der Issue-Text stuft Mobile-Adaption selbst als „V1.5 / Out of Scope" ein → 
 
 Wegen 250-LoC-Workflow-Grenze in zwei Slices:
 
-- **Slice 1 (dieser Workflow):** Editor-Shell + Lock-/Done-State (`TN_unlocked`/`TN_doneSet`) +
+- **Slice 1 ✅ LIVE (11edbfe7, 2026-06-07):** Editor-Shell + Lock-/Done-State (`TN_unlocked`/`TN_doneSet`) +
   TabBar (Flash/Tooltip) + Fortschrittsbalken + **Route-Tab** + **Etappen-&-GPX-Tab** (Create-Modus,
   lokaler State, Auto-Datum) + **Reuse-Tabs** Wetter/Zeitplan/Alerts im Create-Modus (Kanal-Binding)
   + **Speichern** (`POST /api/trips`) + alter Wizard deprecated. → AC-1, 2, 3, 4, 6, 7, 8.
-- **Slice 2 (Folge-Issue):** Optionaler **Wegpunkte-Tab** (`ScreenWaypointEditor embedded`, AC-5)
-  + Mobile-Parität (AC-9).
+- **Slice 2 ✅ LIVE (2026-06-08, Issue #658):** Optionaler **Wegpunkte-Tab** (`EditStagesPanelNew embedded`, AC-5)
+  + Persistenz der aus GPX berechneten (ggf. editierten) Wegpunkte im `POST /api/trips`-Payload.
+  + Mobile-Parität (AC-9) → separates Issue.
 
 LoC: Slice 1 wird die 250 voraussichtlich überschreiten (Shell + State + Route + Etappen +
 Create-Adapter). Override nur mit PO-Permission oder weitere Teilung — wird zu Beginn der

@@ -3,7 +3,7 @@
 // (docs/design-requests/trip-anlegen-2026-06-06/screen-trip-new-v2.jsx).
 // Keine Seiteneffekte, keine Svelte-Imports — testbar mit node:test.
 
-import type { Trip, WeatherConfigMetric, ReportConfig, AlertRule } from '$lib/types';
+import type { Trip, WeatherConfigMetric, ReportConfig, AlertRule, Waypoint } from '$lib/types';
 
 // ── TabId ────────────────────────────────────────────────────────────────────
 
@@ -74,6 +74,9 @@ export function canSave(done: Set<TabId>): boolean {
 export interface CreateTripStage {
 	id: number;
 	name: string;
+	// Issue #658 — aus GPX berechnete (ggf. editierte) Wegpunkte je Etappe.
+	// Optional, damit Slice-1-Aufrufer ohne Wegpunkte typkompatibel bleiben.
+	waypoints?: Waypoint[];
 }
 
 export interface CreateTripChannels {
@@ -115,7 +118,8 @@ export function buildCreateTripPayload(state: CreateTripState): Trip {
 			id: newId(),
 			name: s.name,
 			date: addDaysISO(state.startDate, idx),
-			waypoints: [],
+			// Issue #658 — GPX-Wegpunkte (ggf. editiert) persistieren statt verwerfen.
+			waypoints: s.waypoints ?? [],
 		})),
 	};
 

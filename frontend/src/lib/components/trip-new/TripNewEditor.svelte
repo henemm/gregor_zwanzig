@@ -9,8 +9,9 @@
 	import { Eyebrow, Btn, Input, TopoBg } from '$lib/components/atoms';
 	import WeatherMetricsTab from '$lib/components/trip-detail/WeatherMetricsTab.svelte';
 	import EditReportConfigSection from '$lib/components/edit/EditReportConfigSection.svelte';
+	import EditStagesPanelNew from '$lib/components/edit/EditStagesPanelNew.svelte';
 	import { AlertRulesEditor } from '$lib/components/organisms';
-	import type { Trip, ReportConfig, AlertRule, WeatherConfigMetric } from '$lib/types';
+	import type { Trip, ReportConfig, AlertRule, WeatherConfigMetric, Stage, Waypoint } from '$lib/types';
 	import {
 		type TabId,
 		type CreateTripState,
@@ -37,10 +38,10 @@
 	let region = $state('');
 	let startDate = $state('');
 
-	interface StageLocal { id: number; name: string; gpx: { file: string; km: number; asc: number } | null }
+	interface StageLocal { id: number; name: string; gpx: { file: string; km: number; asc: number } | null; waypoints: Waypoint[] }
 	let stages = $state<StageLocal[]>([
-		{ id: 1, name: '', gpx: null },
-		{ id: 2, name: '', gpx: null },
+		{ id: 1, name: '', gpx: null, waypoints: [] },
+		{ id: 2, name: '', gpx: null, waypoints: [] },
 	]);
 
 	let weatherMetrics = $state<WeatherConfigMetric[]>([]);
@@ -81,9 +82,7 @@
 	function makeTabHandler(id: TabId) {
 		return function doSwitch() {
 			if (unlocked.has(id)) {
-				activeTab = id;
-				if (id === 'metriken') wtVisited = true;
-				if (id === 'zeitplan') ztVisited = true;
+				switchTab(id);
 			} else {
 				flashTab = id;
 				setTimeout(() => { flashTab = null; }, 500);
@@ -92,9 +91,50 @@
 	}
 
 	function switchTab(id: TabId) {
+		const prev = activeTab;
+		// Issue #658 — beim Verlassen des Wegpunkte-Tabs Editor-Edits zurückschreiben.
+		if (prev === 'wegpunkte' && id !== 'wegpunkte') syncEditorBack();
 		activeTab = id;
+		// Issue #658 F001-Fix: Rebuild nur bei echtem Tab-EINTRITT (prev !== 'wegpunkte'),
+		// damit ein erneuter Klick auf den bereits aktiven Tab keine ungespeicherten
+		// Wegpunkt-Edits verwirft.
+		if (id === 'wegpunkte' && prev !== 'wegpunkte') editorStages = buildEditorStages();
 		if (id === 'metriken') wtVisited = true;
 		if (id === 'zeitplan') ztVisited = true;
+	}
+
+	// ── Stage-Brücke: lokaler Create-State ⇄ EditStagesPanelNew (Issue #658) ──
+	// EditStagesPanelNew arbeitet auf Stage[] (string-IDs, waypoints[]) und mutiert
+	// das Array per bind:stages in place. Wir spiegeln den kanonischen lokalen State
+	// (StageLocal, numerische IDs) beim Öffnen des Tabs in `editorStages` und
+	// schreiben Wegpunkt-Edits per Index zurück — kein PUT (kein tripId), Persistenz
+	// erst beim finalen POST. String-ID = `s<numerische id>` (stabile Brücke).
+	let editorStages = $state<Stage[]>([]);
+
+	function buildEditorStages(): Stage[] {
+		return stages.map((s, idx) => ({
+			id: `s${s.id}`,
+			name: s.name || `Etappe ${idx + 1}`,
+			date: stageDateISO(startDate, idx),
+			waypoints: s.waypoints ?? [],
+		}));
+	}
+
+	function stageDateISO(start: string, offset: number): string {
+		if (!start) return '';
+		const parts = start.split('-').map(Number);
+		const dt = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+		dt.setUTCDate(dt.getUTCDate() + offset);
+		return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`;
+	}
+
+	// Editor-Mutationen (Wegpunkt-Edits) per Index in den kanonischen State zurück.
+	function syncEditorBack(): void {
+		if (editorStages.length === 0) return;
+		stages = stages.map((s, idx) => {
+			const es = editorStages[idx];
+			return es ? { ...s, waypoints: es.waypoints } : s;
+		});
 	}
 
 	// ── Route-Tab-Handlers ────────────────────────────────────────────────────
@@ -128,7 +168,9 @@
 					const data = await resp.json();
 					const km = data.distance_km ?? data.km ?? '–';
 					const asc = data.ascent_m ?? data.asc ?? '–';
-					stages = stages.map(s => s.id === stageId ? { ...s, gpx: { file: file.name, km, asc } } : s);
+					// Issue #658 — aus GPX berechnete Wegpunkte je Etappe in den lokalen State.
+					const waypoints: Waypoint[] = (data.waypoints ?? []) as Waypoint[];
+					stages = stages.map(s => s.id === stageId ? { ...s, gpx: { file: file.name, km, asc }, waypoints } : s);
 				}
 			} catch {
 				// Upload fehlgeschlagen — GPX-Slot bleibt leer
@@ -147,7 +189,7 @@
 	function makeAddStageHandler() {
 		return () => {
 			const nextId = (stages.length ? Math.max(...stages.map(s => s.id)) : 0) + 1;
-			stages = [...stages, { id: nextId, name: '', gpx: null }];
+			stages = [...stages, { id: nextId, name: '', gpx: null, waypoints: [] }];
 		};
 	}
 
@@ -166,12 +208,14 @@
 			if (!ready) return;
 			saveError = null;
 			saving = true;
+			// Issue #658 — etwaige offene Editor-Edits vor dem POST in den State holen.
+			if (activeTab === 'wegpunkte') syncEditorBack();
 			try {
 				const state: CreateTripState = {
 					name,
 					region: region || undefined,
 					startDate,
-					stages: stages.map(s => ({ id: s.id, name: s.name })),
+					stages: stages.map(s => ({ id: s.id, name: s.name, waypoints: s.waypoints })),
 					weatherMetrics,
 					channels,
 					reportConfig,
@@ -471,14 +515,45 @@
 			</div>
 
 		{:else if activeTab === 'wegpunkte'}
-			<!-- Wegpunkte-Tab (Slice 2 / AC-5 — Platzhalter) -->
-			<div style="padding: 40px; max-width: 640px;">
-				<Eyebrow>Wegpunkte prüfen</Eyebrow>
-				<p style="color: var(--g-ink-3); font-size: 14px; margin-top: 8px;">Wegpunkte-Editor folgt in Slice 2 (Issue #622).</p>
-				<button type="button" onclick={makeEtappenContinueHandler('metriken')}
-					style="margin-top: 16px; padding: 8px 16px; border-radius: var(--g-r-2); border: none; background: var(--g-accent); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer;">
-					Weiter zu Wetter-Metriken →
-				</button>
+			<!-- Wegpunkte-Tab (Issue #658) — Info-Banner + eingebetteter Editor + Footer -->
+			<div style="position: relative;">
+				<!-- Info-Banner (1:1 TN_WegpunkteTab) -->
+				<div style="padding: 14px 40px; background: var(--g-card); border-bottom: 1px solid var(--g-rule-soft); display: flex; justify-content: space-between; align-items: center; gap: 24px;">
+					<div style="flex: 1;">
+						<div style="font-size: 13.5px; font-weight: 600; margin-bottom: 3px;">
+							Wegpunkte aus GPX berechnet — optional prüfen
+						</div>
+						<div class="mono" style="font-size: 11px; color: var(--g-ink-3); line-height: 1.55;">
+							Wegpunkte sind Wetterscheiden — Punkte, an denen sich Höhe, Exposition oder Geländekammer ändert.
+							Du kannst sie umbenennen, verschieben oder ergänzen. Diesen Schritt kannst du auch überspringen.
+						</div>
+					</div>
+					<div style="display: flex; gap: 8px; flex-shrink: 0;">
+						<button type="button" onclick={makeEtappenContinueHandler('metriken')}
+							style="padding: 6px 12px; border-radius: var(--g-r-2); border: 1px solid var(--g-rule); background: transparent; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--g-ink-3);">
+							Überspringen →
+						</button>
+						<button type="button" onclick={makeEtappenContinueHandler('metriken')}
+							style="padding: 6px 12px; border-radius: var(--g-r-2); border: none; background: var(--g-accent); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer;">
+							Wegpunkte übernehmen →
+						</button>
+					</div>
+				</div>
+
+				<!-- Eingebetteter Wegpunkt-Editor: kein tripId → kein PUT, kein Save-Bar -->
+				<EditStagesPanelNew bind:stages={editorStages} showSave={false} />
+
+				<!-- Footer (1:1 TN_WegpunkteTab) -->
+				<div style="padding: 20px 40px; border-top: 1px solid var(--g-rule); background: var(--g-card); display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
+					<button type="button" onclick={makeEtappenContinueHandler('metriken')}
+						style="padding: 8px 16px; border-radius: var(--g-r-2); border: 1px solid var(--g-rule); background: transparent; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--g-ink-3);">
+						Überspringen
+					</button>
+					<button type="button" onclick={makeEtappenContinueHandler('metriken')}
+						style="padding: 8px 16px; border-radius: var(--g-r-2); border: none; background: var(--g-accent); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer;">
+						Wegpunkte übernehmen →
+					</button>
+				</div>
 			</div>
 
 		{:else if activeTab === 'metriken'}

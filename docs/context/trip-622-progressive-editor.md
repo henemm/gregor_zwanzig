@@ -19,10 +19,21 @@ abschließen.
   messen — könnte PASS sein oder dokumentierte SOLL-/Daten-Divergenz (bekanntes Muster, siehe Memory
   `feedback_design_fidelity_1to1.md` / `feedback_no_threshold_manipulation.md`).
 
-### #622 — Progressive Tab Editor (NEU, Spec freigegeben)
+### #622 — Progressive Tab Editor (Slice 1 ✅ LIVE, Slice 2 ✅ LIVE)
+
+#### Slice 1 (2026-06-07, Commit 11edbfe7)
 - Spec: `docs/specs/modules/issue_622_trip_new_progressive_editor.md` (9 ACs, PO-freigegeben 2026-06-06).
-- Blocker #587/#616/#617 sind inzwischen **alle live** → umsetzbar.
-- 1:1-Quellen im Repo: `docs/design-requests/trip-anlegen-2026-06-06/`
+- **✅ LIVE:** Shell + Route-Tab + Etappen-Tab (Create-Modus) + Wetter/Zeitplan/Alerts-Reuse + Speichern (POST). ACs 1–4, 6–8 implementiert.
+- Blocker #587/#616/#617 waren live.
+
+#### Slice 2 (2026-06-08, Issue #658)
+- Spec: `docs/specs/modules/issue_658_trip_new_wegpunkte_tab.md` (8 ACs, PO-freigegeben 2026-06-07).
+- **✅ LIVE (2026-06-08):** Optionaler Wegpunkte-Tab mit eingebettetem `EditStagesPanelNew` (embedded, kein PUT) + Persistenz der bearbeiteten Wegpunkte in `buildCreateTripPayload`.
+- Schließt AC-5 von #622 + behöbe stille Datenlücke (Wegpunkte wurden vorher verworfen).
+- Remaining: AC-9 (Mobile) → separates Folge-Issue.
+
+#### Design-Quellen
+1:1-Quellen im Repo: `docs/design-requests/trip-anlegen-2026-06-06/`
   (`Gregor 20 - Trip anlegen.html`, `screen-trip-new-v2{,-mobile}.jsx`).
 
 ## Reuse-Landkarte (#622)
