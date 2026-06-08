@@ -42,6 +42,8 @@ import _e2e_paths
 REPO_DIR = Path("/home/hem/gregor_zwanzig")
 CANONICAL_E2E_PATH = REPO_DIR / ".claude" / "e2e_verified.json"
 STALE_HOURS = 24
+# Issue #666: max. behaltene commit-getaggte Attestationen (analog .backups/-Pattern)
+ATTESTATION_RETENTION = 20
 
 
 def _log(msg: str, stream=sys.stdout) -> None:
@@ -113,6 +115,30 @@ def _detect_committed_scope() -> str:
     return "docs-only"
 
 
+def prune_old_attestations(tagged_dir: Path, retention: int = ATTESTATION_RETENTION) -> None:
+    """Issue #666: Hält das commit-getaggte Attestation-Verzeichnis auf `retention`
+    Dateien (analog data_schema_backup.prune_old_backups).
+
+    Sortiert nach mtime absteigend und löscht alles jenseits der jüngsten N. Die
+    gerade geschriebene HEAD-Datei ist immer die jüngste und wird daher nie
+    geprunt. Löschfehler werden geschluckt — das Verdict-Schreiben bleibt davon
+    unberührt. Greift NUR im 'e2e_verified'-Verzeichnis (schützt vor einem
+    --e2e-path-Override, der woanders hinschreibt) — nie im Singleton-Fallback.
+    """
+    if tagged_dir.name != "e2e_verified" or not tagged_dir.is_dir():
+        return
+    files = sorted(
+        tagged_dir.glob("*.json"),
+        key=lambda f: f.stat().st_mtime,
+        reverse=True,
+    )
+    for old in files[retention:]:
+        try:
+            old.unlink()
+        except OSError:
+            pass
+
+
 def write_verdict(verdict: str, findings_path: Path, e2e_path: Path | None = None) -> int:
     """Mode A: Verdict in e2e_verified.json schreiben."""
     if e2e_path is None:
@@ -141,6 +167,13 @@ def write_verdict(verdict: str, findings_path: Path, e2e_path: Path | None = Non
     e2e_path.parent.mkdir(parents=True, exist_ok=True)
     e2e_path.write_text(json.dumps(payload, indent=2))
     _log(f"Verdict geschrieben: {verdict} (commit={payload['verified_commit'][:8]}, scope={scope})")
+    try:
+        prune_old_attestations(e2e_path.parent)
+    except OSError:
+        # Pruning ist Best-Effort — ein Fehler (z.B. stat() auf einer Datei, die
+        # zwischen glob() und stat() verschwindet) darf das geschriebene Verdict
+        # nie kippen (AC-4-Intention).
+        pass
     return 0
 
 
