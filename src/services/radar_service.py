@@ -47,6 +47,7 @@ class NowcastResult:
     intensity_label: str            # human-readable intensity
     source: str                     # "radar", "INCA", "minutely_15"
     frames: list = field(default_factory=list)
+    is_convective: bool = False     # True when nowcast indicates thunderstorm/hail
 
 
 class RadarNowcastService:
@@ -67,8 +68,14 @@ class RadarNowcastService:
     # Public API
     # ------------------------------------------------------------------
 
-    def intensity_to_text(self, mm_per_h: float) -> str:
-        """Map mm/h rate to German intensity label."""
+    def intensity_to_text(self, mm_per_h: float, is_convective: bool = False) -> str:
+        """Map mm/h rate to German intensity label.
+
+        Convective flag (thunderstorm/hail WMO 95/96/99) overrides all rate-based
+        stages — even at very low precipitation rates.
+        """
+        if is_convective:
+            return "Starker Hagel/Gewitter"
         # Guard: NaN or non-numeric input → treat as dry
         if not isinstance(mm_per_h, (int, float)) or mm_per_h != mm_per_h:
             return "Kein Niederschlag"
@@ -79,6 +86,10 @@ class RadarNowcastService:
         if mm_per_h < 4.0:
             return "Mäßiger Regen"
         return "Starker Regen"
+
+    def _is_convective_weathercode(self, code) -> bool:
+        """Return True if WMO weather code indicates convective activity (thunderstorm/hail)."""
+        return code in (95, 96, 99)
 
     def get_nowcast(self, lat: float, lon: float) -> NowcastResult:
         """
@@ -176,7 +187,7 @@ class RadarNowcastService:
             url = (
                 f"https://api.open-meteo.com/v1/forecast"
                 f"?latitude={lat}&longitude={lon}"
-                f"&minutely_15=precipitation"
+                f"&minutely_15=precipitation,weather_code"
                 f"&timezone=UTC&forecast_minutely_15=96"
             )
             with httpx.Client(timeout=HTTPX_TIMEOUT) as client:
@@ -186,6 +197,7 @@ class RadarNowcastService:
             m15 = data.get("minutely_15", {})
             times = m15.get("time", [])
             precip_vals = m15.get("precipitation", [])
+            wcodes = m15.get("weather_code", [])
             frames = []
             for i, t_str in enumerate(times):
                 dt = datetime.fromisoformat(t_str)
@@ -196,7 +208,9 @@ class RadarNowcastService:
                     raw = 0.0
                 # precipitation is mm per 15 min -> mm/h
                 mm_h = float(raw) * 4.0
-                frames.append(RadarFrame(timestamp=dt, precip_mm_h=mm_h))
+                code = wcodes[i] if i < len(wcodes) else None
+                is_convective = self._is_convective_weathercode(code)
+                frames.append(RadarFrame(timestamp=dt, precip_mm_h=mm_h, is_convective=is_convective))
             return frames
         except Exception as e:
             logger.warning(f"Open-Meteo minutely_15 failed: {e}")
@@ -223,13 +237,20 @@ class RadarNowcastService:
 
         # Max rate in window
         max_rate = max((f.precip_mm_h for f in window), default=0.0)
-        intensity_label = self.intensity_to_text(max_rate)
+
+        # Convective flag: any wet frame in window with convective indicator
+        is_convective = any(
+            f.is_convective for f in window if f.precip_mm_h >= _DRY_THRESHOLD_MM_H
+        )
+
+        intensity_label = self.intensity_to_text(max_rate, is_convective=is_convective)
 
         return NowcastResult(
             onset_minutes=onset_minutes,
             intensity_label=intensity_label,
             source=source,
             frames=frames,
+            is_convective=is_convective,
         )
 
 

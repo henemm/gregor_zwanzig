@@ -35,6 +35,7 @@ class RadarFrame:
     """Single radar frame with precipitation rate."""
     timestamp: datetime   # tz-aware UTC
     precip_mm_h: float    # mm/h
+    is_convective: bool = False  # True when WMO code indicates thunderstorm/hail
 
 
 def within_radolan_coverage(lat: float, lon: float) -> bool:

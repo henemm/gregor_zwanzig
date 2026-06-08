@@ -2,7 +2,7 @@
 entity_id: radar_nowcast
 type: module
 created: 2026-06-07
-updated: 2026-06-07
+updated: 2026-06-08
 status: draft
 version: "1.0"
 tags: [providers, alerts, weather, nowcast, radar]
@@ -60,8 +60,8 @@ def select_nowcast_source(lat, lon):
 - Registriert sich via `register_provider("brightsky", BrightSkyProvider)`.
 
 ### RadarNowcastService (`src/services/radar_service.py`)
-- `get_nowcast(lat, lon) -> NowcastResult{onset_minutes, intensity_label, source, frames}`: holt Quelle, bestimmt Niederschlagsbeginn/-ende, übersetzt Intensität in Text.
-- `intensity_to_text(mm_per_h)`: Schwellen → "Kein Niederschlag" / "Leichter Regen" / "Mäßiger Regen" / "Starker Regen". Eine 5. Stufe "Starker Hagel/Gewitter" ist als künftige Erweiterung vorgesehen, erfordert aber einen Konvektions-Indikator (z. B. `pt`-Parameter), der in BrightSky-plain und Open-Meteo-minutely_15 nicht verfügbar ist — siehe Known Limitations.
+- `get_nowcast(lat, lon) -> NowcastResult{onset_minutes, intensity_label, source, frames, is_convective}`: holt Quelle, bestimmt Niederschlagsbeginn/-ende, übersetzt Intensität in Text.
+- `intensity_to_text(mm_per_h, is_convective=False)`: Schwellen → "Kein Niederschlag" / "Leichter Regen" / "Mäßiger Regen" / "Starker Regen" / "Starker Hagel/Gewitter" (neu, bei konvektiven Frames). Die 5. Stufe basiert auf WMO-weather_code aus Open-Meteo `minutely_15` — siehe Issue #660 für Details.
 - `format_now_text(result)`: 2–3 Zeilen, z. B. "Aktuell trocken. Regen ab ca. 14:40 (mäßig). Quelle: Radar."
 
 ### `### now` Befehl (`trip_command_processor.py`)
@@ -85,7 +85,7 @@ def select_nowcast_source(lat, lon):
 - **AC-1:** Given eine reale Koordinate innerhalb der RADOLAN-Abdeckung (Deutschland) / When der BrightSky-Provider `fetch_radar(lat, lon)` aufruft / Then liefert er eine nicht-leere Zeitreihe echter Radar-Frames mit Zeitstempel und Niederschlagsrate (mm/h ≥ 0) für die nächsten Minuten.
   - Test: Echter HTTP-Call gegen `api.brightsky.dev/radar` mit fester DE-Koordinate; assert ≥ 1 Frame, Zeitstempel monoton, Raten numerisch ≥ 0. Kein Mock.
 
-- **AC-2:** Given Niederschlagsraten aus einer Nowcast-Quelle / When `RadarNowcastService.intensity_to_text` und `format_now_text` sie übersetzen / Then entsteht ein deterministischer deutscher Text, der die korrekte Intensitätsstufe ("Kein Niederschlag"…"Starker Regen"/"Gewitter") und — falls Niederschlag bevorsteht — den ungefähren Beginn nennt.
+- **AC-2:** Given Niederschlagsraten und optional Konvektions-Indikatoren aus einer Nowcast-Quelle / When `RadarNowcastService.intensity_to_text` und `format_now_text` sie übersetzen / Then entsteht ein deterministischer deutscher Text, der die korrekte Intensitätsstufe ("Kein Niederschlag"…"Starker Hagel/Gewitter") und — falls Niederschlag bevorsteht — den ungefähren Beginn nennt.
   - Test: Pure-Function-Test mit realen Beispielraten (0.0, 0.3, 2.5, 8.0 mm/h) → erwartete Stufen-Strings; bei Onset-Reihe erwartete Beginn-Zeit im Text. Deterministisch, kein Netz, kein Dateiinhalt-Check.
 
 - **AC-3:** Given ein Trip mit heutiger Etappe und eine Inbound-Nachricht mit Body `### now` / When `TripCommandProcessor.process` sie verarbeitet / Then liefert sie in unter 10 Sekunden ein erfolgreiches `CommandResult`, dessen Body die Nowcast-Aussage für die Etappen-Position enthält (inkl. Quellen-Angabe).
@@ -109,10 +109,11 @@ Testdatei: `tests/tdd/test_feature_656_radar_nowcast.py` (mock-frei).
 
 - "Aktuelle Position" = repräsentativer Punkt der heutigen Etappe, kein Live-GPS.
 - "Kollisionskurs" im MVP = Onset-/Annäherungs-Trend im Punkt-Nowcast, kein voll-physikalisches Zell-Tracking mit Bewegungsvektor.
-- RADOLAN deckt nur DE + Grenzregionen, INCA nur AT; außerhalb (z. B. GR20/Korsika) liefert ausschließlich `minutely_15` — geringere räumliche Auflösung.
+- RADOLAN deckt nur DE + Grenzregionen, INCA nur AT; außerhalb (z. B. GR20/Korsika) liefert ausschließlich `minutely_15` — geringere räumliche Auflösung. Konvektions-Indikator (WMO-weather_code) ist in Open-Meteo verfügbar, BrightSky/GeoSphere-Pfade haben kein Konvektions-Feld.
 - Latenz-AC (< 10 s) abhängig von Fremd-API-Verfügbarkeit; Fallback-Kette bei Timeout/Leerantwort.
-- **Gewitter/Hagel-Stufe nicht implementiert:** Eine 5. Intensitätsstufe "Starker Hagel/Gewitter" erfordert einen Konvektions-Indikator (z. B. `pt`-Feld bei BrightSky oder Konvektions-Parameter bei Open-Meteo), der in den aktuell genutzten Endpunkten (BrightSky `format=plain`, Open-Meteo `minutely_15`) nicht enthalten ist. Bewusst zurückgestellt bis ein geeigneter Konvektions-Feed integriert wird.
+- WMO-Codes sind eine Modell-Klassifikation, kein Live-Blitz-Detektor; Genauigkeit hängt vom Open-Meteo-Modell ab.
 
 ## Changelog
 
 - 2026-06-07: Initial spec created (Issue #656)
+- 2026-06-08: Known Limitation "Gewitter/Hagel-Stufe" aufgelöst durch Issue #660 (WMO-weather_code Konvektions-Indikator integriert); AC-2 angepasst

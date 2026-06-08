@@ -557,7 +557,11 @@ class TripAlertService:
             # Best-Effort-Zustellung: Kanalfehler unterdrücken das Recording NICHT
             radar_svc = self._get_radar_service()
             body = radar_svc.format_now_text(result)
-            subject = f"[{trip.name}] Radar-Warnung"
+            subject = (
+                f"[{trip.name}] ⚠️ Gewitter — Radar-Warnung"
+                if result.is_convective
+                else f"[{trip.name}] Radar-Warnung"
+            )
             full_body = body + "\n\nDieser Alert wird nur einmal pro Cooldown-Fenster gesendet."
             config = trip.report_config
 

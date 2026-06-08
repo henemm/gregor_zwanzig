@@ -2,7 +2,7 @@
 entity_id: feature_656_radar_nowcast_tests
 type: tests
 created: 2026-06-07
-updated: 2026-06-07
+updated: 2026-06-08
 status: draft
 version: "1.0"
 tags: [tests, feature, radar, nowcast, issue-656]
@@ -45,9 +45,7 @@ sie auflösen kann.
 | `ac4_radar_alert_due_pure_logic` | AC-4 | Reine Entscheidungsfunktion `radar_alert_due`: Onset ≤ Schwelle → True, sonst False. |
 | `ac4_check_radar_alerts_sends_once_then_throttles` | AC-4 | `check_radar_alerts` sendet genau 1 Alert + schreibt 1 alert_log-Eintrag (HIGH); zweiter Lauf throttelt (0). |
 
-## Expected RED-State (vor GREEN-Phase)
+## Changelog
 
-Alle Tests schlagen in Phase 5 fehl mit `ImportError`/`AttributeError`, weil die
-Module `providers.brightsky` und `services.radar_service` sowie die Erweiterungen
-`### now` (trip_command_processor) und `radar_alert_due` / `check_radar_alerts`
-(trip_alert) noch nicht existieren.
+- 2026-06-07: Initial test manifest (Issue #656)
+- 2026-06-08: Implementation complete — all AC tests passing, mock-free verification confirmed; Gewitter-Stufe folgt in Issue #660
