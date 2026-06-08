@@ -319,7 +319,7 @@ class TestProductionPathUserIdPropagation:
         )
         monkeypatch.setattr(
             "services.inbound_telegram_reader.TelegramOutput.send",
-            lambda self, subject, body: None,
+            lambda self, subject, body, reply_markup=None: None,
         )
         # Patch resolver to return user_id "henning" for chat 12345
         monkeypatch.setattr(
@@ -385,7 +385,7 @@ class TestProductionPathUserIdPropagation:
         )
         monkeypatch.setattr(
             "services.inbound_telegram_reader.TelegramOutput.send",
-            lambda self, subject, body: None,
+            lambda self, subject, body, reply_markup=None: None,
         )
         # Resolver returns "default" for unknown chat
         monkeypatch.setattr(
