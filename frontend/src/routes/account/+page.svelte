@@ -70,6 +70,7 @@
 		}
 	}
 
+	let displayName = $state(data.profile?.display_name ?? '');
 	let mailTo = $state(data.profile?.mail_to ?? '');
 	let smsTo = $state(data.profile?.sms_to ?? '');
 	let telegramConnected = $state(!!data.profile?.telegram_chat_id);
@@ -209,6 +210,7 @@
 		successMsg = null;
 		try {
 			await api.put('/api/auth/profile', {
+				display_name: displayName,
 				mail_to: mailTo,
 				sms_to: smsTo,
 			});
@@ -337,6 +339,18 @@
 			<div class="grid gap-1">
 				<span class="text-sm font-medium text-muted-foreground">Benutzername</span>
 				<span class="text-sm">{data.profile?.id ?? '—'}</span>
+			</div>
+			<div class="space-y-2">
+				<label for="displayName" class="text-sm font-medium">Anzeigename</label>
+				<input
+					id="displayName"
+					name="display_name"
+					type="text"
+					maxlength="50"
+					bind:value={displayName}
+					placeholder={data.profile?.id ?? 'Anzeigename'}
+					class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+				/>
 			</div>
 			<div class="grid gap-1">
 				<span class="text-sm font-medium text-muted-foreground">Mitglied seit</span>

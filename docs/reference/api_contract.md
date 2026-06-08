@@ -1,7 +1,7 @@
 
 # API Contract — Gregor Zwanzig
 
-**Updated:** 2026-06-08 (Issue #655 — Telegram Hybrid-Navigation: callback_query + editMessageText); 2026-06-07 (Issues #627/#631 — Compare-Preset Sofortversand + Wochen-Rhythmus-Erhalt)
+**Updated:** 2026-06-08 (Issue #642 — User-Anzeigename: display_name Feld in Profil); 2026-06-08 (Issue #655 — Telegram Hybrid-Navigation: callback_query + editMessageText); 2026-06-07 (Issues #627/#631 — Compare-Preset Sofortversand + Wochen-Rhythmus-Erhalt)
 
 ## 0) Konventionen
 - Zeit: ISO-8601 UTC (`Z`)
@@ -1574,6 +1574,7 @@ Returns authenticated user profile (requires valid session cookie).
 ```json
 {
   "id": "alice",
+  "display_name": "Alice Schmidt",
   "email": "alice@example.com",
   "mail_to": "alice@example.com",
   "sms_to": "+49151XXXXXXXX",
@@ -1601,7 +1602,8 @@ Returns authenticated user profile (requires valid session cookie).
 
 | Field | Type | Description |
 |-------|------|-------------|
-| id | string | User identifier |
+| id | string | User identifier (immutable; also used as fallback display if `display_name` empty) |
+| display_name | string | User's chosen display name (optional, max 50 chars); shown in UI instead of `id` if set; null/empty if not configured |
 | email | string | Email address (for display only) |
 | mail_to | string | Email recipient for trip reports (can differ from email) |
 | sms_to | string | SMS recipient phone number (international format, e.g. `+49151XXXXXXXX`); empty if not configured |
@@ -1621,6 +1623,7 @@ Update authenticated user profile (requires valid session cookie).
 **Request Body:**
 ```json
 {
+  "display_name": "Alice S.",
   "mail_to": "alice+briefings@example.com",
   "sms_to": "+49151XXXXXXXX"
 }
@@ -1630,6 +1633,7 @@ Update authenticated user profile (requires valid session cookie).
 Returns updated profile object (same as `GET /api/auth/profile`).
 
 **Validation:**
+- `display_name`: Optional, max 50 characters; trimmed (leading/trailing whitespace removed); empty or whitespace-only strings unset the field (reverts to fallback: `id`)
 - `mail_to`: Optional, any non-empty string (no format validation)
 - `sms_to`: Optional, any non-empty string (no format validation; validation happens during send via SMS provider)
 - Empty strings allowed (unset field)
@@ -1648,6 +1652,7 @@ Returns updated profile object (same as `GET /api/auth/profile`).
 ```go
 type User struct {
     ID                 string                 `json:"id"`
+    DisplayName        string                 `json:"display_name,omitempty"`  // NEW (Issue #642) — user's chosen display name; omitempty if not set
     Email              string                 `json:"email,omitempty"`
     PasswordHash       string                 `json:"password_hash,omitempty"`  // now optional (omitempty)
     PasskeyCredentials []WebAuthnCredential   `json:"passkey_credentials,omitempty"`  // NEW (Issue #450)

@@ -12,13 +12,17 @@
 
 	interface SidebarProps {
 		userId: string | null | undefined;
+		displayName?: string | null | undefined;
 		currentPath: string;
 		darkMode: boolean;
 		ontoggleDark: () => void;
 		mobileMenuOpen: boolean;
 	}
 
-	let { userId, currentPath, darkMode, ontoggleDark, mobileMenuOpen = $bindable(false) }: SidebarProps = $props();
+	let { userId, displayName, currentPath, darkMode, ontoggleDark, mobileMenuOpen = $bindable(false) }: SidebarProps = $props();
+
+	// Issue #642 — Anzeigename hat Vorrang vor dem Login-Namen.
+	const shownName = $derived((displayName && displayName.trim()) || userId || '');
 
 	let userMenuOpen = $state(false);
 
@@ -144,9 +148,9 @@
 			class="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors hover:bg-[rgba(196,90,42,0.10)]"
 		>
 			<span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-				{userInitial(userId)}
+				{userInitial(shownName)}
 			</span>
-			<span class="truncate">{userId ?? ''}</span>
+			<span class="truncate">{shownName}</span>
 			<ChevronUp class="ml-auto size-4 text-muted-foreground transition-transform {userMenuOpen ? '' : 'rotate-180'}" />
 		</button>
 

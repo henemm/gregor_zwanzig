@@ -7,7 +7,10 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -356,6 +359,7 @@ func LogoutHandler() http.HandlerFunc {
 type profileResponse struct {
 	ID             string                 `json:"id"`
 	Email          string                 `json:"email,omitempty"`
+	DisplayName    string                 `json:"display_name,omitempty"`
 	MailTo         string                 `json:"mail_to,omitempty"`
 	SmsTo          string                 `json:"sms_to,omitempty"`
 	TelegramChatID string                 `json:"telegram_chat_id,omitempty"`
@@ -391,6 +395,7 @@ func toProfileResponse(u *model.User) profileResponse {
 	return profileResponse{
 		ID:             u.ID,
 		Email:          u.Email,
+		DisplayName:    u.DisplayName,
 		MailTo:         u.MailTo,
 		SmsTo:          u.SmsTo,
 		TelegramChatID: u.TelegramChatID,
@@ -429,6 +434,7 @@ func UpdateProfileHandler(s *store.Store) http.HandlerFunc {
 
 		var update struct {
 			Email          *string `json:"email"`
+			DisplayName    *string `json:"display_name"`
 			MailTo         *string `json:"mail_to"`
 			SmsTo          *string `json:"sms_to"`
 			TelegramChatID *string `json:"telegram_chat_id"`
@@ -438,6 +444,20 @@ func UpdateProfileHandler(s *store.Store) http.HandlerFunc {
 			w.WriteHeader(400)
 			w.Write([]byte(`{"error":"invalid request"}`))
 			return
+		}
+
+		if update.DisplayName != nil {
+			name := strings.TrimSpace(*update.DisplayName)
+			if name == "" {
+				user.DisplayName = "" // Fallback auf Login-Name
+			} else if utf8.RuneCountInString(name) > 50 || hasControlChars(name) {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(400)
+				w.Write([]byte(`{"error":"invalid display_name"}`))
+				return
+			} else {
+				user.DisplayName = name
+			}
 		}
 
 		if update.Email != nil {
@@ -463,6 +483,17 @@ func UpdateProfileHandler(s *store.Store) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(toProfileResponse(user))
 	}
+}
+
+// hasControlChars reports whether s contains any Unicode control character
+// (incl. newlines/tabs) — disallowed in a display name (Issue #642).
+func hasControlChars(s string) bool {
+	for _, r := range s {
+		if unicode.IsControl(r) {
+			return true
+		}
+	}
+	return false
 }
 
 func ChangePasswordHandler(s *store.Store, bcryptCost int) http.HandlerFunc {

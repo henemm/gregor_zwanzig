@@ -71,6 +71,7 @@
 	<div class="flex h-screen">
 		<Sidebar
 			userId={data.userId}
+			displayName={data.displayName}
 			currentPath={page.url.pathname}
 			{darkMode}
 			ontoggleDark={toggleDark}
