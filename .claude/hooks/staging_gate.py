@@ -141,8 +141,9 @@ def prune_old_attestations(tagged_dir: Path, retention: int = ATTESTATION_RETENT
 
 def write_verdict(verdict: str, findings_path: Path, e2e_path: Path | None = None) -> int:
     """Mode A: Verdict in e2e_verified.json schreiben."""
+    sha = _head_sha()
     if e2e_path is None:
-        e2e_path = _commit_e2e_path()
+        e2e_path = _commit_e2e_path(sha)
     verdict_upper = verdict.strip().upper()
     if verdict_upper.startswith("BROKEN"):
         _log(f"BROKEN-Verdict erhalten: {verdict}")
@@ -157,7 +158,7 @@ def write_verdict(verdict: str, findings_path: Path, e2e_path: Path | None = Non
 
     scope = _detect_committed_scope()
     payload = {
-        "verified_commit": _head_sha(),
+        "verified_commit": sha,
         "staging_verdict": verdict,
         "findings": findings,
         "verified_at": datetime.now(timezone.utc).isoformat(),
