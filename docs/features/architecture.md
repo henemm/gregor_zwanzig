@@ -1,6 +1,6 @@
 # Architektur – Gregor Zwanzig
 
-**Updated:** 2026-06-07 (Issue #637 — Telegram Webhook Migration); 2026-06-03 (Issue #572 — Inbound-Handler Multi-User Routing); 2026-05-31 (Issue #483 — Demo-Modus im Vorschau-Tab; Issue #495 — MapCanvas Leaflet-Karte; Issue #475 — OutputLayoutEditor zu Organisms)
+**Updated:** 2026-06-08 (Issue #655 — Telegram callback_query + editMessageText Zoom-Navigation); 2026-06-07 (Issue #637 — Telegram Webhook Migration); 2026-06-03 (Issue #572 — Inbound-Handler Multi-User Routing); 2026-05-31 (Issue #483 — Demo-Modus im Vorschau-Tab; Issue #495 — MapCanvas Leaflet-Karte; Issue #475 — OutputLayoutEditor zu Organisms)
 
 ## Überblick
 Gregor Zwanzig ist ein verteiltes System mit separaten Backend (Go) und Frontend (SvelteKit):
@@ -89,6 +89,11 @@ Channel (E-Mail / Console / SMS)
    - Fallback: `user_id = "default"` wenn kein User gefunden
    - Ladet Trips des Nutzers und verarbeitet Befehl
    - Idempotenz via `update_id`-Watermark → keine Doppel-Zustellung
+   - **Hybrid-Navigation via callback_query** (seit Issue #655):
+     - Button-Klicks (Tier-1 Glance, Tier-2 Timeline, Tier-3 Drilldown, Zurück) kommen als `callback_query`
+     - `_process_callback_query()` mappt `callback_data` → Processor-Body (z.B. `tl_today` → `### query: timeline_heute`)
+     - `TelegramOutput.edit_message_text()` ersetzt Nachricht in-place (statt neue zu senden) → Zoom-Navigation
+     - `TelegramOutput.answer_callback_query()` wird immer aufgerufen → Telegram-Lade-Spinner stoppt (auch bei unbekannten Buttons)
 
 **Lookup-Funktionen** (`src/app/loader.py`):
 - `list_all_user_ids(data_dir)` – alle User-IDs unter `data/users/` (ausschließt test_ / _ Präfixe)

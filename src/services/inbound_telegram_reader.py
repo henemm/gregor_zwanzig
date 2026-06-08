@@ -9,6 +9,7 @@ SPEC: docs/specs/modules/inbound_telegram_reader.md v1.0
 from __future__ import annotations
 
 import logging
+import re
 from datetime import date, datetime, timezone
 
 import httpx
@@ -40,6 +41,15 @@ _SHORTCUT_MAP = {
     "/th": "timeline_heute",
     "/tm": "timeline_morgen",
 }
+
+
+_CALLBACK_QUERY_MAP = {
+    "tl_today": "### query: timeline_heute",
+    "tl_tomorrow": "### query: timeline_morgen",
+    "glance": "### query: glance",
+}
+
+_CALLBACK_DRILLDOWN_PATTERN = re.compile(r"^dd_(thunder|wind|precip)_(today|tomorrow)$")
 
 
 class InboundTelegramReader:
@@ -103,6 +113,10 @@ class InboundTelegramReader:
 
         Returns True wenn Update verarbeitet (nicht: ob Befehl erfolgreich).
         """
+        callback = update.get("callback_query")
+        if callback:
+            return self._process_callback_query(callback, settings)
+
         message = update.get("message")
         if not message:
             return False
@@ -165,6 +179,54 @@ class InboundTelegramReader:
             reply_markup=result.reply_markup,
         )
         return True
+
+    def _process_callback_query(self, callback: dict, settings: Settings) -> bool:
+        """Verarbeitet einen Button-Klick (callback_query) — Zoom-Navigation.
+
+        editMessageText ersetzt die Nachricht in-place; answerCallbackQuery wird
+        IMMER aufgerufen (AC-2: Spinner beenden, auch im Fehlerpfad).
+        Returns True (Update verarbeitet).
+        """
+        cq_id = callback.get("id")
+        data = (callback.get("data") or "").strip()
+        msg = callback.get("message") or {}
+        chat_id = str(msg.get("chat", {}).get("id", ""))
+        message_id = msg.get("message_id")
+
+        user_id, user_settings = self._resolve_user_for_chat(chat_id, settings)
+        out = TelegramOutput(user_settings)
+        try:
+            body = self._callback_to_body(data)  # None bei unbekannt
+            if body and message_id is not None and chat_id:
+                trip = self._find_active_trip(user_id)
+                if trip:
+                    inbound = InboundMessage(
+                        channel="telegram",
+                        trip_name=trip.name,
+                        body=body,
+                        sender=chat_id,
+                        received_at=datetime.now(tz=timezone.utc),
+                        user_id=user_id,
+                    )
+                    result: CommandResult = TripCommandProcessor().process(inbound)
+                    out.edit_message_text(
+                        chat_id,
+                        message_id,
+                        f"[{result.confirmation_subject}]\n\n{result.confirmation_body}",
+                        reply_markup=result.reply_markup,
+                    )
+        finally:
+            if cq_id:
+                out.answer_callback_query(cq_id)
+        return True
+
+    def _callback_to_body(self, data: str) -> str | None:
+        """Mappt callback_data auf einen Processor-Body. None bei unbekanntem Wert."""
+        if data in _CALLBACK_QUERY_MAP:
+            return _CALLBACK_QUERY_MAP[data]
+        if _CALLBACK_DRILLDOWN_PATTERN.match(data):
+            return f"### {data}"
+        return None
 
     def _find_active_trip(self, user_id: str = "default") -> Trip | None:
         """Aktiver Trip = erster Trip mit Datum-Overlap.
