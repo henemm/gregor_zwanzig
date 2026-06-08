@@ -10,16 +10,20 @@
 		SetupResumeCard,
 		CompareStatusRow
 	} from '$lib/components/molecules';
-	import { deriveStatusFromPreset } from '$lib/components/compare/subscriptionHelpers.js';
+	import {
+		deriveStatusFromPreset,
+		formatNextSend
+	} from '$lib/components/compare/subscriptionHelpers.js';
 	import { tripStatus, activeOrNextTrip, todayStageIndex } from '$lib/utils/tripStatus.js';
-	import { plannedBriefings, archivedTrips } from './_home/cockpitHelpers.js';
+	import { plannedBriefings, archivedTrips, homeCompareTimeline } from './_home/cockpitHelpers.js';
 	import {
 		dayProgress,
 		setupStepTrip,
 		setupStepCompare,
 		nextPlannedTrip,
 		firstIncompleteCompare,
-		liveTrip
+		liveTrip,
+		deriveNextSend
 	} from '$lib/utils/cockpitHelpers568.js';
 	import TripKachel from './_home/TripKachel.svelte';
 	import CompareKachel from './_home/CompareKachel.svelte';
@@ -495,7 +499,7 @@
 										style:letter-spacing="0.1em"
 										style:margin-bottom="5px"
 									>Nächster Versand</div>
-									<div style:font-size="15px" style:font-weight="600">—</div>
+									<div style:font-size="15px" style:font-weight="600">{formatNextSend(deriveNextSend(compareHero, now))}</div>
 								</div>
 							</div>
 						</div>
@@ -603,9 +607,22 @@
 							</div>
 							<Pill tone="good">Alle Kanäle ok</Pill>
 						</div>
-						<div style:font-size="13px" style:color="var(--g-ink-2)" style:margin-top="8px">
-							Versand läuft automatisch gemäß Zeitplan.
-						</div>
+						{#if homeCompareTimeline(compareHero, now).length > 0}
+							<div
+								style:display="flex"
+								style:flex-direction="column"
+								style:gap="8px"
+								style:margin-top="8px"
+							>
+								{#each homeCompareTimeline(compareHero, now) as r, i (i)}
+									<BriefingTimelineRow report={r} />
+								{/each}
+							</div>
+						{:else}
+							<div style:font-size="13px" style:color="var(--g-ink-2)" style:margin-top="8px">
+								Versand läuft automatisch gemäß Zeitplan.
+							</div>
+						{/if}
 					</Card>
 					<Card padding={20}>
 						<div
@@ -805,16 +822,18 @@
 			</div>
 		{/if}
 
-		<!-- Planning-Modus: unverändert -->
+		<!-- Planning-Modus: Archiv in Card (1:1 screen-home-planning.jsx Z.133) -->
 		{#if mode === 'planning' && archive.length > 0}
-			<div style:margin-bottom="40px">
-				<SectionH eyebrow="Archiv" title="Frühere Trips" kicker="{archive.length} abgeschlossene Trips" right={archiveLink} />
-				<div class="archive-grid">
-					{#each archive as t (t.id)}
-						{@render archiveCard(t)}
-					{/each}
+			<Card padding={20}>
+				<div style:margin-bottom="40px">
+					<SectionH eyebrow="Archiv" title="Frühere Trips" kicker="{archive.length} abgeschlossene Trips" right={archiveLink} />
+					<div class="archive-grid">
+						{#each archive as t (t.id)}
+							{@render archiveCard(t)}
+						{/each}
+					</div>
 				</div>
-			</div>
+			</Card>
 		{/if}
 	{/if}
 </div>

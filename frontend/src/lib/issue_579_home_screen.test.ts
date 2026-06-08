@@ -141,19 +141,22 @@ test('AC-5: "Außerdem beobachtet"-Sektion ist in einer Card eingebettet mit Tit
 
 // ─── V7 / AC-6: Archiv ohne Card-Ummantelung ─────────────────────────────────
 
-test('AC-6: Archiv-Sektion nutzt SectionH direkt, kein Card-Wrapper', () => {
+test('AC-6: Trip-/Compare-Archiv nutzt SectionH direkt, kein Card-Wrapper', () => {
 	const src = readPage();
-	// Alte Struktur: <Card><div style:padding="20px"><SectionH eyebrow="Archiv"...
-	// Neue Struktur: <SectionH eyebrow="Archiv"... direkt, dann Grid
-	// Prüfen: SectionH mit eyebrow="Archiv" ist NICHT innerhalb einer Card
-	const archivSectionHIdx = src.indexOf('eyebrow="Archiv"');
-	assert.ok(archivSectionHIdx !== -1, 'SectionH mit eyebrow="Archiv" muss vorhanden sein');
+	// #647 (PO-go 2026-06-08) supersedet AC-6 NUR für das Planning-Modus-Archiv
+	// (eyebrow="Archiv"): dieses wird per screen-home-planning.jsx Z.133 jetzt in
+	// <Card padding={20}> gewrappt. Der ursprüngliche AC-6-Vertrag — Trip-/Compare-
+	// Modus-Archiv bleibt cardlos (screen-home.jsx) — gilt unverändert. Dieser Test
+	// prüft daher das Trip-/Compare-Archiv (eyebrow="Einrichten", title="Frühere Trips").
+	const archivSectionHIdx = src.indexOf('eyebrow="Einrichten" title="Frühere Trips"');
+	assert.ok(archivSectionHIdx !== -1,
+		'Trip-Archiv-SectionH (eyebrow="Einrichten" title="Frühere Trips") muss vorhanden sein');
 
-	// Die 300 Zeichen vor SectionH eyebrow="Archiv" dürfen kein <Card öffnen
+	// Die 300 Zeichen vor dieser SectionH dürfen keine noch offene <Card enthalten.
 	const before = src.slice(Math.max(0, archivSectionHIdx - 300), archivSectionHIdx);
 	const hasCardWrapper = before.includes('<Card') && !before.includes('</Card');
 	assert.ok(!hasCardWrapper,
-		'Archiv-Sektion darf keinen Card-Wrapper um SectionH haben (AC-6/V7)');
+		'Trip-/Compare-Archiv darf keinen Card-Wrapper um SectionH haben (AC-6/V7)');
 });
 
 // ─── V9+V10 / AC-7: PageHeader ohne sub, beide Buttons ghost ─────────────────

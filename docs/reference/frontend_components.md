@@ -1,7 +1,7 @@
 # Frontend Components Reference
 
-**Updated:** 2026-05-31  
-**Version:** 1.7
+**Updated:** 2026-06-08 (Issue #647 — Home-Screen Fidelity: homeCompareTimeline Helper); 2026-05-31  
+**Version:** 1.8
 
 ## Overview
 
@@ -811,7 +811,7 @@ interface WordmarkProps {
 | PresetHeader | `compare/PresetHeader.svelte` | Kopfzeile fuer Compare-Preset |
 | RecommendationBanner | `compare/RecommendationBanner.svelte` | Empfehlungs-Banner (Winner-Tags) |
 | locationHelpers.ts | `compare/locationHelpers.ts` | Location-Logik inkl. isCoordsValid() (Helper) |
-| subscriptionHelpers.ts | `compare/subscriptionHelpers.ts` | Subscription- und Preset-Logik: presetScheduleLabel, formatLastSent (Issue #459) |
+| subscriptionHelpers.ts | `compare/subscriptionHelpers.ts` | Subscription- und Preset-Logik: presetScheduleLabel, formatLastSent, formatNextSend (Issue #459, #647) |
 
 #### Orts-Vergleich-Wizard (Issue #440 — Create/Edit Mode)
 
@@ -1048,7 +1048,7 @@ Architektur + Detail siehe Abschnitt „Trip-Wizard Components" oben. Inventar-E
 | SubscriptionForm | `SubscriptionForm.svelte` | Formular fuer Abonnement-/Empfaenger-Daten |
 | WeatherConfigDialog | `WeatherConfigDialog.svelte` | Dialog fuer Wetter-Konfiguration, Issue #285 |
 
-### routes/_home/ — Route-lokale Kacheln
+### routes/_home/ — Route-lokale Kacheln & Helpers
 
 Pfade relativ zu `frontend/src/routes/_home/`.
 
@@ -1057,6 +1057,7 @@ Pfade relativ zu `frontend/src/routes/_home/`.
 | TripKachel | `TripKachel.svelte` | Trip-Kachel auf der Startseite |
 | CompareKachel | `CompareKachel.svelte` | Vergleichs-Kachel auf der Startseite |
 | EmptyKachel | `EmptyKachel.svelte` | Platzhalter-Kachel (kein Inhalt) |
+| cockpitHelpers.ts | `cockpitHelpers.ts` | Pure Helpers: `liveTrip`, `deriveNextSend` (Issue #571), `homeCompareTimeline` (Issue #647) |
 
 ## Atomic-Design-Bibliothek (Epic #368)
 

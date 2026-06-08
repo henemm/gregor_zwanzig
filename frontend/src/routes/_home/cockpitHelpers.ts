@@ -4,12 +4,21 @@
 // Reine Funktionen (seiteneffektfrei) für die Hero-/Briefing-/Archiv-Ableitung.
 // Keine Mocks, kein Render — gegen echte Trip/Stage/ReportConfig-DTO-Form.
 
-import type { Trip, Stage, ReportConfig, StageWeatherResult, BriefingLogEntry } from '$lib/types';
+import type {
+	Trip,
+	Stage,
+	ReportConfig,
+	StageWeatherResult,
+	BriefingLogEntry,
+	ComparePreset
+} from '$lib/types';
 // Relative Wert-Importe (statt $lib-Alias), damit die reinen Helfer auch unter
 // dem Node-Test-Runner (`node --test --experimental-strip-types`) auflösbar
 // bleiben. Vite löst $lib-Alias und relativen Pfad zur Laufzeit identisch auf.
 import { computeHeaderStats } from '../../lib/components/email-preview/headerStats.ts';
 import { tripStatus } from '../../lib/utils/tripStatus.ts';
+import { deriveNextSend } from '../../lib/utils/cockpitHelpers568.ts';
+import { formatNextSend } from '../../lib/components/compare/subscriptionHelpers.ts';
 
 /** Höhen-Array (number[]) einer Etappe für ElevSparkline. Leer wenn keine Wegpunkte. */
 export function stageProfile(stage: Stage | null | undefined): number[] {
@@ -170,6 +179,60 @@ function shortRange(trip: Trip): string {
 	return dates.length === 1 || fmt(dates[0]) === fmt(dates[dates.length - 1])
 		? fmt(dates[0])
 		: `${fmt(dates[0])} – ${fmt(dates[dates.length - 1])}`;
+}
+
+// Issue #647 — Compare-Outbox-Timeline für die Home-Seite (Compare-Modus).
+// Spec: docs/specs/modules/issue_647_home_fidelity.md
+//
+// Reine Ableitung aus echten ComparePreset-DTO-Feldern (letzter_versand =
+// Versand-Historie, schedule/hour_from → deriveNextSend). Kein Mock, kein Netz.
+// Zeilen-Typ passt zur Report-Schnittstelle von BriefingTimelineRow.svelte.
+
+export interface CompareTimelineRow {
+	when: string;
+	kind: string;
+	etappe?: string;
+	channels?: string[];
+	status?: 'sent' | 'planned' | string;
+}
+
+/**
+ * Versand-Timeline (Zuletzt/Nächster) für einen aktiven ComparePreset.
+ *   - letzter_versand gesetzt → "Zuletzt · …"-Zeile (status='sent').
+ *   - deriveNextSend liefert ein Datum → "Nächster · …"-Zeile (status='planned').
+ * Keine Fake-Zeile: fehlt letzter_versand → nur Nächster; manual (next=null) →
+ * nur Zuletzt; weder noch → leeres Array (Aufrufer zeigt Platzhalter).
+ */
+export function homeCompareTimeline(preset: ComparePreset, now: Date): CompareTimelineRow[] {
+	const region = (preset.display_config as Record<string, unknown> | undefined)?.region as
+		| string
+		| undefined;
+	const place = `${preset.location_ids.length} Orte` + (region ? ` · ${region}` : '');
+
+	const rows: CompareTimelineRow[] = [];
+
+	if (preset.letzter_versand) {
+		rows.push({
+			when: `Zuletzt · ${formatNextSend(new Date(preset.letzter_versand))}`,
+			kind: 'Vergleich',
+			channels: preset.empfaenger,
+			status: 'sent',
+			etappe: place
+		});
+	}
+
+	const next = deriveNextSend(preset, now);
+	if (next) {
+		rows.push({
+			when: `Nächster · ${formatNextSend(next)}`,
+			kind: 'Vergleich',
+			channels: preset.empfaenger,
+			status: 'planned',
+			etappe: place
+		});
+	}
+
+	return rows;
 }
 
 /**

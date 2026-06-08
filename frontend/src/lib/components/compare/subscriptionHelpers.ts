@@ -68,6 +68,19 @@ export function presetScheduleLabel(preset: ComparePreset): string {
 	return 'Manuell';
 }
 
+/**
+ * Date → kompakter Versand-String "D.M. HH:00" | "manuell" wenn null.
+ *
+ * Issue #647 — DRY: vorher lokal in CompareStatusRow.svelte dupliziert.
+ * Wird in der Home-Compare-Outbox (homeCompareTimeline) und im Compare-Hero
+ * wiederverwendet.
+ */
+export function formatNextSend(d: Date | null): string {
+	if (!d) return 'manuell';
+	const pad = (n: number) => String(n).padStart(2, '0');
+	return `${d.getDate()}.${d.getMonth() + 1}. ${pad(d.getHours())}:00`;
+}
+
 /** ISO-Timestamp → kurzes deutsches Datum (de-DE) | "Noch kein Versand" wenn leer/ungültig. */
 export function formatLastSent(iso?: string | null): string {
 	if (!iso) return 'Noch kein Versand';

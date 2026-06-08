@@ -8,6 +8,7 @@
 	import type { ComparePreset } from '$lib/types.js';
 	import { Dot } from '$lib/components/atoms';
 	import { deriveNextSend } from '$lib/utils/cockpitHelpers568.js';
+	import { formatNextSend } from '$lib/components/compare/subscriptionHelpers.js';
 
 	interface Props {
 		preset: ComparePreset;
@@ -18,12 +19,6 @@
 
 	const now = new Date();
 	const nextSend = $derived(deriveNextSend(preset, now));
-
-	function formatNextSend(d: Date | null): string {
-		if (!d) return 'manuell';
-		const pad = (n: number) => String(n).padStart(2, '0');
-		return `${d.getDate()}.${d.getMonth() + 1}. ${pad(d.getHours())}:00`;
-	}
 </script>
 
 <a
