@@ -3,7 +3,7 @@ entity_id: telegram_tier3_drilldown
 type: module
 created: 2026-06-07
 updated: 2026-06-08
-status: draft
+status: live
 version: "2.0"
 tags: [telegram, drilldown, weather, epic-639]
 ---

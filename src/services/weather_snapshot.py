@@ -161,12 +161,8 @@ def _serialize_segment(seg: SegmentWeatherData) -> dict:
         "aggregated": _serialize_summary(seg.aggregated),
     }
     if seg.timeseries is not None:
-        start = seg.segment.start_time
-        end = seg.segment.end_time
         hourly = []
         for p in seg.timeseries.data:
-            if p.ts < start or p.ts > end:
-                continue
             pt: dict = {"ts": p.ts.isoformat()}
             for fname, fval in vars(p).items():
                 if fname == "ts" or fval is None:

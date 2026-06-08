@@ -51,8 +51,8 @@ SvelteKit-Beteiligung in dieser Datenschicht.
 ### 1. Snapshot-Erweiterung (additiv, rückwärtskompatibel)
 
 `WeatherSnapshotService.save` schreibt pro Segment zusätzlich `hourly: [...]` — eine
-kompakte Liste der `ForecastDataPoint`s aus `seg.timeseries.data`, **begrenzt auf das
-Segment-Zeitfenster** `[start_time, end_time]`. Pro Stundenpunkt werden `ts` (ISO) plus die
+kompakte Liste **aller** `ForecastDataPoint`s aus `seg.timeseries.data` (seit #667 nicht
+mehr auf das Segment-Zeitfenster beschnitten). Pro Stundenpunkt werden `ts` (ISO) plus die
 metrik-relevanten Felder serialisiert (None ausgelassen, Enums als `.name`). Fehlt
 `seg.timeseries` (Provider-Fehler), wird `hourly` weggelassen.
 
