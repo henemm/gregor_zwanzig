@@ -56,12 +56,17 @@ test.describe('Issue #661 — /trips/new Mobile-Parität', () => {
 		await page.goto('/trips/new');
 
 		// "Etappen" ist ohne Tour-Name/Datum gesperrt.
-		const etappenTab = page.getByRole('tab', { name: /Etappen/ });
+		// Explizit den mobilen Tab ansteuern (Desktop-Tab ist ebenfalls im DOM, aber
+		// display:none — nutzt anderen Handler ohne Toast).
+		const mobileTabbar = page.getByTestId('tn-mobile-tabbar');
+		const etappenTab = mobileTabbar.getByRole('tab', { name: /Etappen/ });
 		const box = await etappenTab.boundingBox();
 		expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
 
-		await etappenTab.click();
-		await expect(page.getByTestId('tn-lock-toast')).toBeVisible();
+		await etappenTab.click({ force: true });
+		// Toast-Wrapper hat position:absolute Kind → zero-height → toBeVisible auf
+		// dem inneren role="status" prüfen (beweist Toast tatsächlich gerendert).
+		await expect(page.getByTestId('tn-lock-toast').getByRole('status')).toBeVisible();
 		// Route-Tab bleibt aktiv (Route-Eingabe weiterhin sichtbar).
 		await expect(page.getByTestId('trip-new-name-input')).toBeVisible();
 	});
@@ -98,7 +103,7 @@ test.describe('Issue #661 — /trips/new Mobile-Parität', () => {
 
 		await card.getByTestId('tn-mobile-stage-name').click();
 		const sheet = page.getByTestId('tn-mobile-stage-sheet');
-		await expect(sheet).toBeVisible();
+		await expect(sheet.getByTestId('tn-mobile-stage-sheet-input')).toBeVisible();
 
 		await sheet.getByTestId('tn-mobile-stage-sheet-input').fill('Hütte A → Hütte B');
 		await sheet.getByTestId('tn-mobile-stage-sheet-apply').click();
