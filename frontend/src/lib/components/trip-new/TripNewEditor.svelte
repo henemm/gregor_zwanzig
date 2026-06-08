@@ -1,7 +1,10 @@
 <script lang="ts">
 	// Issue #622 — Progressive Tab Editor für /trips/new (Desktop, Slice 1).
+	// Issue #661 — Mobile-Parität (AC-9): paralleles Mobile-Markup per CSS.
 	// Spec: docs/specs/modules/issue_622_trip_new_progressive_editor.md
+	// Spec: docs/specs/modules/issue_661_trip_new_mobile.md
 	// Design: docs/design-requests/trip-anlegen-2026-06-06/screen-trip-new-v2.jsx
+	// Design: docs/design-requests/trip-anlegen-2026-06-06/screen-trip-new-v2-mobile.jsx
 	// Factory-Pattern für alle Event-Handler (Safari-Closure-Schutz, CLAUDE.md).
 
 	import { goto } from '$app/navigation';
@@ -11,6 +14,11 @@
 	import EditReportConfigSection from '$lib/components/edit/EditReportConfigSection.svelte';
 	import EditStagesPanelNew from '$lib/components/edit/EditStagesPanelNew.svelte';
 	import { AlertRulesEditor } from '$lib/components/organisms';
+	import Sheet from '$lib/components/mobile/Sheet.svelte';
+	import MBtn from '$lib/components/mobile/MBtn.svelte';
+	import MInput from '$lib/components/mobile/MInput.svelte';
+	import MField from '$lib/components/mobile/MField.svelte';
+	import Toast from '$lib/components/mobile/Toast.svelte';
 	import type { Trip, ReportConfig, AlertRule, WeatherConfigMetric, Stage, Waypoint } from '$lib/types';
 	import {
 		type TabId,
@@ -78,6 +86,15 @@
 	// Flash-State für gesperrte Tabs
 	let flashTab = $state<TabId | null>(null);
 
+	// ── Mobile-only State (Issue #661) ────────────────────────────────────────
+	// Lock-Toast (2s bei Tap auf gesperrten Tab)
+	let lockToastMsg = $state<string | null>(null);
+	let lockToastTimer: ReturnType<typeof setTimeout> | null = null;
+	// Stage-Sheet (Bottom-Sheet für Etappenname-Eingabe)
+	let mobileSheetStageId = $state<number | null>(null);
+	// Temp-Input für den aktuell im Sheet bearbeiteten Etappennamen
+	let mobileSheetStageName = $state('');
+
 	// ── Tab-Wechsel (Factory-Pattern) ─────────────────────────────────────────
 	function makeTabHandler(id: TabId) {
 		return function doSwitch() {
@@ -88,6 +105,52 @@
 				setTimeout(() => { flashTab = null; }, 500);
 			}
 		};
+	}
+
+	// Mobile Tab-Handler: gesperrter Tab → Toast statt Flash (Issue #661)
+	function makeMobileTabHandler(id: TabId) {
+		return function doMobileSwitch() {
+			if (unlocked.has(id)) {
+				switchTab(id);
+			} else {
+				const hint = TAB_DEFS.find(t => t.id === id)?.lockHint ?? 'Schritt noch gesperrt';
+				if (lockToastTimer) clearTimeout(lockToastTimer);
+				lockToastMsg = hint;
+				lockToastTimer = setTimeout(() => { lockToastMsg = null; }, 2000);
+			}
+		};
+	}
+
+	// Mobile Stage-Sheet: öffnen (Factory-Pattern)
+	function makeMobileOpenSheetHandler(stageId: number, stageName: string) {
+		return function doOpenSheet() {
+			mobileSheetStageId = stageId;
+			mobileSheetStageName = stageName;
+		};
+	}
+
+	// Mobile Stage-Sheet: Übernehmen (Factory-Pattern)
+	function makeMobileApplySheetHandler() {
+		return function doApplySheet() {
+			if (mobileSheetStageId !== null) {
+				stages = stages.map(s => s.id === mobileSheetStageId
+					? { ...s, name: mobileSheetStageName }
+					: s
+				);
+			}
+			mobileSheetStageId = null;
+		};
+	}
+
+	// Mobile Route-CTA: weiter zu Etappen (Factory-Pattern)
+	// Guard: nur weiterschalten wenn Name+Datum gesetzt — spiegelt Desktop-disabled-CTA (AC-3).
+	function makeMobileRouteContinueHandler() {
+		return () => { if (name.trim() && startDate) switchTab('etappen'); };
+	}
+
+	// Mobile Wegpunkte CTA: weiter zu metriken (Factory-Pattern)
+	function makeMobileWegpunkteContinueHandler() {
+		return () => switchTab('metriken');
 	}
 
 	function switchTab(id: TabId) {
@@ -245,8 +308,8 @@
 	<main style="flex: 1; position: relative; overflow-y: auto; overflow-x: hidden;">
 		<TopoBg opacity={0.12} />
 
-		<!-- Breadcrumb + Aktionen -->
-		<div style="position: relative; padding: 14px 40px; border-bottom: 1px solid var(--g-rule-soft); display: flex; justify-content: space-between; align-items: center;">
+		<!-- Breadcrumb + Aktionen (Desktop only) -->
+		<div class="tn-desktop" data-testid="tn-desktop-breadcrumb" style="position: relative; padding: 14px 40px; border-bottom: 1px solid var(--g-rule-soft); display: flex; justify-content: space-between; align-items: center;">
 			<div class="mono" style="font-size: 11px; color: var(--g-ink-3); letter-spacing: 0.06em;">
 				<span style="opacity: 0.6;">Trips</span>
 				<span style="margin: 0 8px;">/</span>
@@ -268,8 +331,35 @@
 			</div>
 		</div>
 
-		<!-- Hero -->
-		<div style="position: relative; padding: 20px 40px 14px;">
+		<!-- Mobile App-Leiste (Mobile only, Issue #661) -->
+		<div class="tn-mobile tn-mobile-flex" data-testid="tn-mobile-appbar" style="position: relative; align-items: center; height: 52px; padding: 0 4px; border-bottom: 1px solid var(--g-rule-soft); background: var(--g-paper); flex-shrink: 0; z-index: 10;">
+			<!-- Back-Button -->
+			<button type="button" onclick={makeCancelHandler()}
+				style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; background: transparent; border: none; cursor: pointer; color: var(--g-ink-3); flex-shrink: 0;">
+				<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M19 12H5M12 5l-7 7 7 7"/>
+				</svg>
+			</button>
+			<!-- Titel-Gruppe -->
+			<div style="flex: 1; min-width: 0; padding: 0 8px; display: flex; flex-direction: column; justify-content: center;">
+				<div class="mono" style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.06em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+					{name.trim() || 'Neue Tour'}
+				</div>
+				<div style="font-size: 15px; font-weight: 600; color: var(--g-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+					{TAB_DEFS.find(t => t.id === activeTab)?.label ?? 'Route'}
+				</div>
+			</div>
+			<!-- Speichern-Button -->
+			<button type="button" onclick={makeSaveHandler()}
+				data-testid="tn-mobile-save"
+				disabled={!ready || saving}
+				style="height: 44px; padding: 0 14px; border: none; background: transparent; color: {ready ? 'var(--g-accent)' : 'var(--g-ink-4)'}; font-weight: 600; font-size: 14px; cursor: {ready ? 'pointer' : 'default'}; font-family: var(--g-font-sans); flex-shrink: 0;">
+				{saving ? 'Speichere…' : 'Speichern'}
+			</button>
+		</div>
+
+		<!-- Hero (Desktop only) -->
+		<div class="tn-desktop" style="position: relative; padding: 20px 40px 14px;">
 			<Eyebrow>Neue Tour anlegen</Eyebrow>
 			<h1 style="font-size: 32px; font-weight: 600; letter-spacing: -0.02em; margin: 4px 0 0; line-height: 1.1; color: {name.trim() ? 'var(--g-ink)' : 'var(--g-ink-4)'};">
 				{name.trim() || 'Noch kein Name'}
@@ -287,8 +377,18 @@
 			</div>
 		</div>
 
-		<!-- Tab-Bar (TN_TabBar) -->
-		<div style="border-bottom: 1px solid var(--g-rule); padding: 0 40px; display: flex; gap: 0; overflow-x: auto;">
+		<!-- Mobile Fortschrittsbalken (TNM_Progress, Issue #661) -->
+		<div class="tn-mobile tn-mobile-flex" style="align-items: center; gap: 8px; padding: 8px 16px 0;">
+			<div style="display: flex; gap: 3px; flex: 1;">
+				{#each ['route', 'etappen', 'metriken', 'zeitplan'] as step}
+					<div style="flex: 1; height: 3px; border-radius: 2px; background: {done.has(step as TabId) ? 'var(--g-accent)' : 'var(--g-rule)'}; transition: background 350ms;"></div>
+				{/each}
+			</div>
+			<span class="mono" style="font-size: 10px; color: var(--g-ink-4); flex-shrink: 0;">{progressN}/4</span>
+		</div>
+
+		<!-- Tab-Bar (Desktop only, TN_TabBar) -->
+		<div class="tn-desktop" style="border-bottom: 1px solid var(--g-rule); padding: 0 40px; display: flex; gap: 0; overflow-x: auto;">
 			{#each TAB_DEFS as t}
 				{@const isActive = t.id === activeTab}
 				{@const isOpen = unlocked.has(t.id)}
@@ -315,6 +415,29 @@
 			{/each}
 		</div>
 
+		<!-- Mobile Tab-Bar (TNM_TabBar, Issue #661) -->
+		<div class="tn-mobile tn-mobile-flex" data-testid="tn-mobile-tabbar" style="gap: 0; overflow-x: auto; border-bottom: 1px solid var(--g-rule-soft); -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-shrink: 0;">
+			{#each TAB_DEFS as t}
+				{@const isActive = t.id === activeTab}
+				{@const isOpen = unlocked.has(t.id)}
+				{@const isDone = done.has(t.id) && !isActive}
+				<button
+					type="button"
+					role="tab"
+					aria-selected={isActive}
+					onclick={makeMobileTabHandler(t.id)}
+					style="display: inline-flex; align-items: center; gap: 5px; padding: 13px 13px; min-height: 44px; flex-shrink: 0; background: transparent; border: none; border-bottom: {isActive ? '2px solid var(--g-accent)' : '2px solid transparent'}; margin-bottom: -1px; cursor: {isOpen ? 'pointer' : 'default'}; font-size: 14px; font-weight: {isActive ? 600 : 500}; color: {isActive ? 'var(--g-ink)' : isOpen ? 'var(--g-ink-3)' : 'var(--g-ink-4)'}; white-space: nowrap; font-family: var(--g-font-sans); opacity: {isOpen ? 1 : 0.35};">
+					{t.label}
+					{#if t.optional && isOpen}
+						<span class="mono" style="font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 3px; background: rgba(196,90,42,0.12); color: var(--g-accent-deep); letter-spacing: 0.06em; text-transform: uppercase;">opt</span>
+					{/if}
+					{#if !isOpen}
+						<span class="mono" style="font-size: 10px; opacity: 0.8;">⊘</span>
+					{/if}
+				</button>
+			{/each}
+		</div>
+
 		<!-- Fehler-Banner -->
 		{#if saveError}
 			<div style="padding: 10px 40px; background: rgba(180,30,30,0.08); border-bottom: 1px solid rgba(180,30,30,0.2);">
@@ -322,7 +445,10 @@
 			</div>
 		{/if}
 
-		<!-- Tab-Inhalt -->
+		<!-- ══════════════════════════════════════════════════════
+		     Desktop Tab-Inhalt (Issue #622, Slice 1)
+		     ══════════════════════════════════════════════════════ -->
+		<div class="tn-desktop">
 		{#if activeTab === 'route'}
 			<!-- Route-Tab (TN_RouteTab) -->
 			<div style="position: relative; padding: 28px 40px 60px;">
@@ -336,7 +462,6 @@
 						</label>
 						<input type="text" value={name} oninput={makeNameHandler()}
 							placeholder="z.B. Karnischer Höhenweg 2026"
-							data-testid="trip-new-name-input"
 							autofocus
 							style="width: 100%; box-sizing: border-box; padding: 9px 12px; font-size: 14px; font-family: var(--g-font-sans); border: 1.5px solid var(--g-rule); border-radius: var(--g-r-2); background: var(--g-card); color: var(--g-ink); outline: none;" />
 					</div>
@@ -357,7 +482,6 @@
 							Startdatum <span style="color: var(--g-bad);">*</span>
 						</label>
 						<input type="date" value={startDate} onchange={makeDateHandler()}
-							data-testid="trip-new-date-input"
 							style="width: 100%; box-sizing: border-box; padding: 9px 12px; font-size: 14px; font-family: var(--g-font-mono); border: 1.5px solid var(--g-rule); border-radius: var(--g-r-2); background: var(--g-card); color: var(--g-ink); outline: none; appearance: none; -webkit-appearance: none;" />
 						{#if startDate}
 							<div class="mono" style="font-size: 11px; color: var(--g-ink-3); margin-top: 6px;">
@@ -572,5 +696,232 @@
 				<AlertRulesEditor bind:rules={alertRules} />
 			</div>
 		{/if}
+		</div><!-- /.tn-desktop -->
+
+		<!-- ══════════════════════════════════════════════════════
+		     Mobile Tab-Inhalt (Issue #661, AC-9)
+		     CSS-only Switch: .tn-mobile sichtbar bei ≤899px.
+		     ══════════════════════════════════════════════════════ -->
+		<div class="tn-mobile" style="position: relative; min-height: 100vh;">
+
+			{#if activeTab === 'route'}
+				<!-- Mobile Route-Tab (TNM_RouteTab) -->
+				<div style="position: relative; padding: 16px 16px 88px;">
+					<MField label="Tour-Name">
+						<!-- data-testid geteilt: Desktop-Input im .tn-desktop ist display:none auf ≤899px,
+						     dieser hier ist sichtbar → Playwright findet genau diesen einen sichtbaren. -->
+						<div style="display: flex; align-items: center; gap: 10px; background: var(--g-card); border: 1px solid var(--g-rule); border-radius: var(--g-r-3); padding: 0 14px; min-height: 48px;">
+							<input type="text" value={name} oninput={makeNameHandler()}
+								placeholder="z.B. Karnischer Höhenweg 2026"
+								data-testid="trip-new-name-input"
+								style="flex: 1; border: none; outline: none; background: transparent; font-size: 16px; font-family: var(--g-font-sans); color: var(--g-ink); min-height: 44px; padding: 0;" />
+						</div>
+					</MField>
+
+					<MField label="Region" sub="optional · max 50 Zeichen">
+						<MInput bind:value={region} oninput={makeRegionHandler()} placeholder="z.B. Karnische Alpen" />
+					</MField>
+
+					<MField label="Startdatum" sub={startDate ? `Etappe 1 startet am ${stageDate(startDate, 0)?.replace(/\.$/, '')} — jede folgende +1 Tag` : undefined}>
+						<input type="date" value={startDate} onchange={makeDateHandler()}
+							data-testid="trip-new-date-input"
+							style="display: block; width: 100%; box-sizing: border-box; background: var(--g-card); border: 1px solid var(--g-rule); border-radius: var(--g-r-3); padding: 12px 14px; font-size: 16px; font-family: var(--g-font-mono); color: var(--g-ink); outline: none; min-height: 48px; appearance: none; -webkit-appearance: none;" />
+					</MField>
+
+					<div style="padding: 12px 14px; border-radius: var(--g-r-2); background: var(--g-accent-tint); border: 1px solid var(--g-accent-rule); margin-bottom: 20px;">
+						<div class="mono" style="font-size: 11px; color: var(--g-accent-deep); line-height: 1.6;">
+							GPX-Dateien lädst du im nächsten Schritt hoch — eine Datei pro Etappe.
+						</div>
+					</div>
+
+					<!-- Floating CTA -->
+					<div data-testid="tn-mobile-route-cta" style="position: absolute; bottom: 16px; left: 16px; right: 16px; z-index: 10;">
+						<MBtn block variant={name.trim() && startDate ? 'primary' : 'quiet'} size="xl"
+							onclick={makeMobileRouteContinueHandler()}>
+							{name.trim() && startDate ? 'Etappen anlegen →' : (!name.trim() ? 'Tour-Name eingeben' : 'Startdatum wählen')}
+						</MBtn>
+					</div>
+				</div>
+
+			{:else if activeTab === 'etappen'}
+				<!-- Mobile Etappen-Tab (TNM_EtappenTab) -->
+				<div style="position: relative; padding: 14px 14px 88px;">
+
+					<!-- Counter -->
+					<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+						<div class="mono" style="font-size: 11px; color: var(--g-ink-3); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;">{stages.length} Etappen</div>
+						<span class="mono" style="font-size: 11px; color: {etDone ? 'var(--g-good)' : 'var(--g-ink-4)'};">{gpxCount}/{stages.length} GPX</span>
+					</div>
+
+					<!-- Etappen-Karten -->
+					<div style="display: flex; flex-direction: column; gap: 10px;">
+						{#each stages as s, idx}
+							{@const dateStr = stageDate(startDate, idx)}
+							{@const hasName = s.name.trim().length > 0}
+							<div data-testid="tn-mobile-stage-card" style="background: var(--g-card); border: 1px solid {s.gpx ? 'rgba(61,107,58,0.2)' : 'var(--g-rule)'}; border-radius: var(--g-r-3); overflow: hidden; transition: border-color 200ms;">
+								<!-- Header-Zeile -->
+								<div style="display: flex; align-items: center; padding: 11px 14px 7px; gap: 10px;">
+									<span class="mono" style="font-size: 10px; font-weight: 700; flex-shrink: 0; color: var(--g-accent-deep); background: var(--g-accent-tint); padding: 2px 6px; border-radius: 999px;">
+										T{String(idx + 1).padStart(2, '0')}
+									</span>
+									<button type="button" data-testid="tn-mobile-stage-name"
+										onclick={makeMobileOpenSheetHandler(s.id, s.name)}
+										style="flex: 1; text-align: left; background: transparent; border: none; cursor: pointer; min-height: 36px; padding: 0;">
+										<div style="font-size: 14.5px; font-weight: {hasName ? 500 : 400}; color: {hasName ? 'var(--g-ink)' : 'var(--g-ink-4)'};">
+											{hasName ? s.name : `Etappe ${idx + 1} benennen …`}
+										</div>
+									</button>
+									{#if dateStr}
+										<span class="mono" style="font-size: 11px; color: var(--g-ink-3); flex-shrink: 0;">{dateStr}</span>
+									{/if}
+								</div>
+								<!-- GPX-Slot (volle Zeile) -->
+								<div style="padding: 0 12px 12px;">
+									{#if s.gpx}
+										<div style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; min-height: 56px; background: rgba(61,107,58,0.07); border: 1px solid rgba(61,107,58,0.22); border-radius: var(--g-r-2);">
+											<div style="width: 32px; height: 32px; border-radius: 6px; flex-shrink: 0; background: var(--g-good); display: flex; align-items: center; justify-content: center;">
+												<svg width="14" height="14" viewBox="0 0 10 10" fill="none"><polyline points="1.5,5.5 4,8 8.5,2" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+											</div>
+											<div style="flex: 1; min-width: 0;">
+												<div class="mono" style="font-size: 12px; font-weight: 600; color: var(--g-ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{s.gpx.file}</div>
+												<div class="mono" style="font-size: 10.5px; color: var(--g-ink-3); margin-top: 1px;">{s.gpx.km} km · ↑{s.gpx.asc} m</div>
+											</div>
+											<button type="button" onclick={makeGpxRemoveHandler(s.id)}
+												style="background: transparent; border: none; cursor: pointer; color: var(--g-ink-4); font-size: 18px; padding: 4px 6px; line-height: 1; min-height: 44px; flex-shrink: 0;">×</button>
+										</div>
+									{:else}
+										<label style="display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; min-height: 52px; background: var(--g-card); border: 1.5px dashed var(--g-rule); border-radius: var(--g-r-2); cursor: pointer; box-sizing: border-box;">
+											<div style="width: 32px; height: 32px; border-radius: 6px; flex-shrink: 0; background: var(--g-accent-tint); border: 1px dashed var(--g-accent); display: flex; align-items: center; justify-content: center;">
+												<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--g-accent-deep)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+													<path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>
+												</svg>
+											</div>
+											<span class="mono" style="font-size: 13px; font-weight: 600; color: var(--g-accent-deep); letter-spacing: 0.02em;">GPX hochladen</span>
+											<input type="file" accept=".gpx" style="display: none;" onchange={makeGpxUploadHandler(idx, s.id)} />
+										</label>
+									{/if}
+								</div>
+							</div>
+						{/each}
+					</div>
+
+					<!-- Etappe hinzufügen -->
+					<button type="button" onclick={makeAddStageHandler()}
+						style="display: block; width: 100%; margin-top: 10px; padding: 13px; border: 1px dashed var(--g-rule); border-radius: var(--g-r-3); background: transparent; color: var(--g-ink-3); font-size: 14px; cursor: pointer; min-height: 48px;">
+						+ Etappe hinzufügen
+					</button>
+
+					{#if !etDone && stages.length > 0}
+						<div style="margin-top: 14px; padding: 11px 14px; border-radius: var(--g-r-2); background: var(--g-paper-deep, var(--g-paper)); border: 1px solid var(--g-rule);">
+							<span class="mono" style="font-size: 11px; color: var(--g-ink-3);">⊘ Noch {stages.length - gpxCount} GPX fehlen — danach Wegpunkte prüfen oder direkt zu Wetter.</span>
+						</div>
+					{/if}
+					{#if etDone && stages.length > 0}
+						<div style="margin-top: 14px; padding: 11px 14px; border-radius: var(--g-r-2); background: rgba(61,107,58,0.08); border: 1px solid rgba(61,107,58,0.2);">
+							<span class="mono" style="font-size: 11px; color: var(--g-good);">✓ Alle GPX geladen — Wegpunkte werden berechnet.</span>
+						</div>
+					{/if}
+
+					<!-- Floating CTAs bei etDone -->
+					{#if etDone}
+						<div style="position: absolute; bottom: 16px; left: 16px; right: 16px; z-index: 10; display: flex; flex-direction: column; gap: 8px;">
+							<MBtn block variant="primary" size="xl" onclick={makeEtappenContinueHandler('wegpunkte')}>Wegpunkte prüfen →</MBtn>
+							<MBtn block variant="ghost" size="lg" onclick={makeEtappenContinueHandler('metriken')}>Direkt zu Wetter</MBtn>
+						</div>
+					{/if}
+				</div>
+
+				<!-- Stage-Name-Sheet (Bottom-Sheet)
+				     data-testid="tn-mobile-stage-sheet" auf dem äusseren Wrapper (vor Sheet),
+				     damit scoped locator sheet.getByTestId('tn-mobile-stage-sheet-input') und
+				     sheet.getByTestId('tn-mobile-stage-sheet-apply') beide gefunden werden. -->
+				{#if mobileSheetStageId !== null}
+					<div data-testid="tn-mobile-stage-sheet">
+						<Sheet open={mobileSheetStageId !== null} onClose={() => { mobileSheetStageId = null; }}
+							title="Etappenname" snap="half">
+							{#snippet footer()}
+								<button type="button" data-testid="tn-mobile-stage-sheet-apply"
+									onclick={makeMobileApplySheetHandler()}
+									style="display: flex; align-items: center; justify-content: center; width: 100%; min-height: 48px; padding: 14px 18px; background: var(--g-ink); color: var(--g-paper); border: none; border-radius: var(--g-r-3); font-size: 15px; font-weight: 600; font-family: var(--g-font-sans); cursor: pointer;">
+									Übernehmen
+								</button>
+							{/snippet}
+							<div style="padding-top: 8px;">
+								<input type="text" data-testid="tn-mobile-stage-sheet-input"
+									value={mobileSheetStageName}
+									oninput={(e) => { mobileSheetStageName = (e.target as HTMLInputElement).value; }}
+									placeholder="z.B. Toblach → Helmhotel"
+									style="display: block; width: 100%; box-sizing: border-box; background: var(--g-card); border: 1px solid var(--g-rule); border-radius: var(--g-r-3); padding: 12px 14px; font-size: 16px; font-family: var(--g-font-sans); color: var(--g-ink); outline: none; min-height: 48px;" />
+							</div>
+						</Sheet>
+					</div>
+				{/if}
+
+			{:else if activeTab === 'wegpunkte'}
+				<!-- Mobile Wegpunkte-Tab: eingebetteter Editor mit eigenem Mobile-Layout (L1) -->
+				<div style="position: relative; padding: 0 0 80px;">
+					<div style="padding: 12px 16px; background: var(--g-accent-tint); border-bottom: 1px solid var(--g-accent-rule);">
+						<div class="mono" style="font-size: 10.5px; color: var(--g-accent-deep); line-height: 1.55;">
+							Wegpunkte automatisch berechnet. Namen anpassen oder überspringen.
+						</div>
+					</div>
+					<EditStagesPanelNew bind:stages={editorStages} showSave={false} />
+					<!-- Floating CTAs -->
+					<div style="position: absolute; bottom: 16px; left: 16px; right: 16px; z-index: 10; display: flex; flex-direction: column; gap: 8px;">
+						<MBtn block variant="primary" size="xl" onclick={makeMobileWegpunkteContinueHandler()}>Wegpunkte übernehmen →</MBtn>
+						<MBtn block variant="ghost" size="lg" onclick={makeMobileWegpunkteContinueHandler()}>Überspringen</MBtn>
+					</div>
+				</div>
+
+			{:else if activeTab === 'metriken'}
+				<!-- Mobile Wetter-Tab: WeatherMetricsTab (bereits mobil, #618) -->
+				<WeatherMetricsTab trip={stubTrip} createMode={true} onChannelsChange={handleChannelsChange} />
+
+			{:else if activeTab === 'zeitplan'}
+				<!-- Mobile Zeitplan-Tab: Wrapper mit mobilem Padding -->
+				<div style="padding: 16px 16px 60px;">
+					<EditReportConfigSection bind:reportConfig mode="create" weatherChannels={channels} />
+				</div>
+
+			{:else if activeTab === 'alerts'}
+				<!-- Mobile Alerts-Tab: Wrapper mit mobilem Padding -->
+				<div style="padding: 16px 16px 60px;">
+					<AlertRulesEditor bind:rules={alertRules} />
+				</div>
+			{/if}
+
+			<!-- Lock-Toast (2s bei Tap auf gesperrten Tab) -->
+			{#if lockToastMsg}
+				<div data-testid="tn-lock-toast">
+					<Toast kind="info" msg={lockToastMsg} />
+				</div>
+			{/if}
+
+		</div><!-- /.tn-mobile -->
+
 	</main>
 </div>
+
+<style>
+	/* ── Issue #661: Responsive Mobile/Desktop Switching ────────────────────
+	   Desktop-Markup ist sichtbar (≥900px), Mobile-Markup hidden.
+	   Auf ≤899px: umgekehrt. CSS-only, kein JS-Viewport-Switch.
+	   !important nötig, da .tn-mobile Elemente teilweise inline display:flex
+	   haben (z.B. AppBar, TabBar) — !important schlägt Inline-Styles.
+	   ─────────────────────────────────────────────────────────────────────── */
+	.tn-mobile {
+		display: none !important;
+	}
+	@media (max-width: 899px) {
+		.tn-desktop {
+			display: none !important;
+		}
+		/* Inline-style-Override: Elemente mit display:flex bleiben flex, andere block. */
+		.tn-mobile {
+			display: block !important;
+		}
+		.tn-mobile-flex {
+			display: flex !important;
+		}
+	}
+</style>

@@ -63,25 +63,25 @@ bisheriges Edit-Verhalten) — kein Bruch des Edit-Flows. **Backend: kein Schema
 
 **AC-8:** Given der alte Wizard, When der neue Flow live ist, Then ist `/trips/new` der Progressive-Tab-Editor und der alte 5-Schritt-Wizard (`screen-trip-wizard.jsx`-Pendant im Frontend) wird nicht mehr verwendet (deprecated/entfernt) — kein paralleler Anlege-Pfad (PO: „ein Trip-Pfad").
 
-**AC-9 (Mobile) — VERSCHOBEN auf Folge-Slice:** Mobile-Parität gemäß `screen-trip-new-v2-mobile.jsx`.
-Der Issue-Text stuft Mobile-Adaption selbst als „V1.5 / Out of Scope" ein → eigenes Folge-Issue,
-**nicht** Teil dieser Umsetzung (Desktop-Scope, PO 2026-06-07).
+**AC-9 (Mobile) — ✅ LIVE (2026-06-08, Issue #661):** Mobile-Parität gemäß `screen-trip-new-v2-mobile.jsx`.
+Der ursprüngliche Issue-Text stufte Mobile-Adaption als „V1.5 / Out of Scope" ein → eigenes Folge-Issue.
+Slice 3 (Issue #661) implementierte responsive Layout @ 899px Breakpoint (CSS-only). Alle 9 ACs des #622-Pakets sind nun abgeschlossen.
 
-## Slice-Plan (Desktop)
+## Slice-Plan (Desktop + Mobile)
 
-Wegen 250-LoC-Workflow-Grenze in zwei Slices:
+Wegen 250-LoC-Workflow-Grenze in drei Slices:
 
 - **Slice 1 ✅ LIVE (11edbfe7, 2026-06-07):** Editor-Shell + Lock-/Done-State (`TN_unlocked`/`TN_doneSet`) +
   TabBar (Flash/Tooltip) + Fortschrittsbalken + **Route-Tab** + **Etappen-&-GPX-Tab** (Create-Modus,
   lokaler State, Auto-Datum) + **Reuse-Tabs** Wetter/Zeitplan/Alerts im Create-Modus (Kanal-Binding)
   + **Speichern** (`POST /api/trips`) + alter Wizard deprecated. → AC-1, 2, 3, 4, 6, 7, 8.
 - **Slice 2 ✅ LIVE (2026-06-08, Issue #658):** Optionaler **Wegpunkte-Tab** (`EditStagesPanelNew embedded`, AC-5)
-  + Persistenz der aus GPX berechneten (ggf. editierten) Wegpunkte im `POST /api/trips`-Payload.
-  + Mobile-Parität (AC-9) → separates Issue.
+  + Persistenz der aus GPX berechneten (ggf. editierten) Wegpunkte im `POST /api/trips`-Payload. → AC-5.
+- **Slice 3 ✅ LIVE (2026-06-08, Issue #661):** **Mobile-Parität** (≤899px, CSS-only responsive Layout)
+  + App-Leiste statt Breadcrumb + Floating-CTAs + vertikale Karten + Bottom-Sheet-Etappennamen
+  + Touch-bedienbare TabBar → AC-9.
 
-LoC: Slice 1 wird die 250 voraussichtlich überschreiten (Shell + State + Route + Etappen +
-Create-Adapter). Override nur mit PO-Permission oder weitere Teilung — wird zu Beginn der
-Umsetzung entschieden.
+**#622-Paket komplett: Alle 9 ACs (Desktop + Mobile) abgeschlossen.**
 
 ## Pixel-Fidelity
 Inline-Styles 1:1 aus `screen-trip-new-v2.jsx` (nur `var(--g-*)`-Tokens). Playwright-Pixel-Diff gegen Soll-Bilder (`soll-trip-new-route-tab.png`, `-etappen-tab.png`, `-wegpunkte-tab.png`) als Hard-Gate.

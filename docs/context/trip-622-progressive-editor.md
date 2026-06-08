@@ -19,7 +19,7 @@ abschließen.
   messen — könnte PASS sein oder dokumentierte SOLL-/Daten-Divergenz (bekanntes Muster, siehe Memory
   `feedback_design_fidelity_1to1.md` / `feedback_no_threshold_manipulation.md`).
 
-### #622 — Progressive Tab Editor (Slice 1 ✅ LIVE, Slice 2 ✅ LIVE)
+### #622 — Progressive Tab Editor (Slice 1 ✅ LIVE, Slice 2 ✅ LIVE, Slice 3 ✅ LIVE)
 
 #### Slice 1 (2026-06-07, Commit 11edbfe7)
 - Spec: `docs/specs/modules/issue_622_trip_new_progressive_editor.md` (9 ACs, PO-freigegeben 2026-06-06).
@@ -30,7 +30,13 @@ abschließen.
 - Spec: `docs/specs/modules/issue_658_trip_new_wegpunkte_tab.md` (8 ACs, PO-freigegeben 2026-06-07).
 - **✅ LIVE (2026-06-08):** Optionaler Wegpunkte-Tab mit eingebettetem `EditStagesPanelNew` (embedded, kein PUT) + Persistenz der bearbeiteten Wegpunkte in `buildCreateTripPayload`.
 - Schließt AC-5 von #622 + behöbe stille Datenlücke (Wegpunkte wurden vorher verworfen).
-- Remaining: AC-9 (Mobile) → separates Folge-Issue.
+
+#### Slice 3 (2026-06-08, Issue #661)
+- Spec: `docs/specs/modules/issue_661_trip_new_mobile.md` (9 ACs, PO-freigegeben 2026-06-08).
+- **✅ LIVE (2026-06-08):** Mobile-Parität für `/trips/new` (≤899px, CSS-only responsive).
+  App-Leiste statt Breadcrumb, gestapelte Route-Eingabe mit Floating-CTA, Etappen als vertikale Karten
+  mit Bottom-Sheet-Namenseingabe, scrollbare TabBar, Lock-Tab→Toast (statt Flash).
+- Schließt AC-9 (Mobile) von #622. **#622-Paket komplett: alle 9 ACs abgeschlossen.**
 
 #### Design-Quellen
 1:1-Quellen im Repo: `docs/design-requests/trip-anlegen-2026-06-06/`
