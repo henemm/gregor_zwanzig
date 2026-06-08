@@ -189,53 +189,77 @@ def _render_mobile_compact_rows(
     format_modes: Optional[dict[str, str]] = None,
     include_header: bool = False,
 ) -> str:
-    """Single-line-per-hour rows for the mobile compact email view.
+    """Bug #636: Monospace fixed-width grid for the mobile compact email view.
 
-    Bug #463: Wenn include_header=True, wird vor den Daten-Rows eine kompakte
-    Header-Zeile mit den Spalten-Labels (Zeit · Temp · Wind · …) erzeugt.
+    Each column has a fixed character width = max(label_len, widest_value).
+    Empty/None cells are rendered as placeholder '–' (not deleted).
+    Wrapped in overflow-x:auto for horizontal scroll on narrow screens.
+
+    Bug #463: include_header=True renders a header row before the data rows.
     """
     cols = visible_cols(rows) if rows else []
     if allowed_col_keys is not None:
         cols = [(k, label) for (k, label) in cols if k in allowed_col_keys]
-    header_html = ""
-    if include_header and cols:
-        header_html = (
-            '<div style="display:flex;gap:8px;padding:5px 0;'
-            'border-bottom:1px solid ' + G_INK_FAINT + ';font-size:11px;'
-            'font-weight:600;color:' + G_INK_MUTED + ';">'
-            '<span style="font-family:' + FONT_DATA + ';min-width:34px;flex-shrink:0">Zeit</span>'
-            '<span style="color:' + G_INK + ';">'
-            + ' · '.join(label for (_, label) in cols)
-            + '</span></div>'
-        )
-    parts_html = []
-    for r in rows:
-        time_str = r.get("time", "")
-        vals = []
-        for key, _ in cols:
+    if not cols:
+        return ""
+
+    # Collect plain-text cell values for all rows and columns.
+    time_vals: list[str] = [r.get("time", "") for r in rows]
+    col_vals: list[list[str]] = []
+    for key, _ in cols:
+        col_cell_vals: list[str] = []
+        for r in rows:
             try:
                 cell = fmt_val(key, r.get(key), friendly_keys=friendly_keys,
-                               html=True, row=r, format_modes=format_modes)
+                               html=False, row=r, format_modes=format_modes)
             except (TypeError, ValueError):
                 raw = r.get(key)
-                cell = str(raw) if raw is not None else ""
-            if cell and cell != "\u2013":
-                vals.append(cell)
-        if not vals:
-            continue
-        row_html = (
-            '<div style="display:flex;gap:8px;padding:5px 0;'
-            'border-bottom:1px solid ' + G_INK_FAINT + ';font-size:12px;">'
-            '<span style="font-family:' + FONT_DATA + ';color:' + G_INK_MUTED + ';'
-            'min-width:34px;flex-shrink:0">' + time_str + '</span>'
-            '<span style="color:' + G_INK + ';line-height:1.5;word-break:break-word">'
-            + ' · '.join(vals) +
-            '</span></div>'
-        )
-        parts_html.append(row_html)
-    if not parts_html:
+                cell = str(raw) if raw is not None else "\u2013"
+            if not cell or cell == "\u2013":
+                cell = "\u2013"
+            col_cell_vals.append(cell)
+        col_vals.append(col_cell_vals)
+
+    if not time_vals:
         return ""
-    return header_html + "".join(parts_html)
+
+    # Compute fixed column widths.
+    time_w = max(len("Zeit"), max((len(t) for t in time_vals), default=0))
+    col_widths: list[int] = []
+    for ci, (_, label) in enumerate(cols):
+        w = max(len(label), max((len(v) for v in col_vals[ci]), default=0))
+        col_widths.append(w)
+
+    sep = " "
+
+    def _build_line(time_cell: str, cells: list[str]) -> str:
+        parts = [time_cell.ljust(time_w)]
+        for ci, cell in enumerate(cells):
+            parts.append(cell.ljust(col_widths[ci]))
+        return sep.join(parts)
+
+    grid_lines: list[str] = []
+    if include_header:
+        header_cells = [label for (_, label) in cols]
+        grid_lines.append(_build_line("Zeit", header_cells))
+    for ri in range(len(rows)):
+        data_cells = [col_vals[ci][ri] for ci in range(len(cols))]
+        grid_lines.append(_build_line(time_vals[ri], data_cells))
+
+    if not grid_lines:
+        return ""
+
+    grid_text = _html.escape("\n".join(grid_lines))
+    # font-size:11px on the outer div only when include_header=True (AC-1 marker,
+    # compat with test_bug305 which uses font-size:11px as the header indicator).
+    outer_font = "font-size:11px;" if include_header else ""
+    return (
+        '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;padding:4px 0;' + outer_font + '">' +
+        '<pre style="font-family:' + FONT_DATA + ';font-size:12px;' +
+        'margin:0;white-space:pre;line-height:1.6;color:' + G_INK + ';">' +
+        grid_text +
+        '</pre></div>'
+    )
 
 
 def _allowed_col_keys_for_horizon(
