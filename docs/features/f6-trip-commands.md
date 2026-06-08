@@ -1,6 +1,6 @@
 # Trip-Befehle — Email-Reply & Telegram (F6)
 
-**Updated:** 2026-06-08 (Issues #651/#653/#654/#655 — Telegram Tier-1/2/3 + Zoom-Navigation)
+**Updated:** 2026-06-08 (Issues #672/#671 — E2E-Pipeline-Tests + vollständiges Bot-Menü; #651/#653/#654/#655 — Telegram Tier-1/2/3 + Zoom-Navigation)
 
 Gregor Zwanzig empfaengt Trip-Befehle ueber zwei Kanäle:
 - **Email:** Du antwortest auf einen bestehenden Report (alle 5 Minuten abgerufen)
@@ -146,16 +146,19 @@ Ohne `GZ_INBOUND_ADDRESS` werden alle ungelesenen Emails geprueft (wie bisher).
 
 ### Kurzbefehle (Schrägstrich)
 
-Diese Befehle gibst du direkt als Telegram-Nachricht ein:
+Diese Befehle gibst du direkt als Telegram-Nachricht ein oder tappst sie aus dem Bot-Menü:
 
-| Befehl | Beschreibung |
-|--------|-------------|
-| `/s` oder `/status` | Heutige + Morgen Glance (Tier-1: zusammengefasst) |
-| `/h` | Heute Details |
-| `/m` | Morgen Details |
-| `/hg` | Heute Gewitter-Risiko (stündlich) |
-| `/th` | Heute Timeline (Etappenschritte mit Metriken) |
-| `/tm` | Morgen Timeline (Etappenschritte mit Metriken) |
+| Befehl | Bot-Menü Name | Beschreibung |
+|--------|---------------|-------------|
+| `/glance` oder `/s` | **glance** | 🌤️ Wetter-Überblick (heute & morgen) |
+| `/heute` oder `/h` | **heute** | 📅 Nur heute Details |
+| `/morgen` oder `/m` | **morgen** | 📅 Nur morgen Details |
+| `/heute_gewitter` oder `/hg` | **heute_gewitter** | ⛈️ Gewitter-Fokus heute (stündlich) |
+| `/timeline_heute` oder `/th` | **timeline_heute** | 🕐 Timeline heute (Etappenschritte mit Metriken) |
+| `/timeline_morgen` oder `/tm` | **timeline_morgen** | 🕐 Timeline morgen (Etappenschritte mit Metriken) |
+| `/hilfe` | **hilfe** | ℹ️ Verfügbare Befehle |
+
+**Wichtig:** Telegram sendet getappte Menü-Befehle immer mit führendem Slash (z.B. `/glance`). Gregor kennt sowohl die kurzen Varianten (`/s`) als auch die vollständigen Menü-Namen (`/glance`) — beide funktionieren.
 
 ### Zoom-Navigation (via Button-Klicks)
 

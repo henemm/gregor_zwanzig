@@ -12,8 +12,12 @@ TELEGRAM_API_BASE = "https://api.telegram.org"
 MAX_MESSAGE_LENGTH = 4096
 
 BOT_COMMANDS = [
-    {"command": "briefing", "description": "🌤️ Aktuelles Briefing"},
-    {"command": "wetter", "description": "📊 Wetter-Details"},
+    {"command": "glance", "description": "🌤️ Wetter-Überblick (heute & morgen)"},
+    {"command": "heute", "description": "📅 Nur heute"},
+    {"command": "morgen", "description": "📅 Nur morgen"},
+    {"command": "heute_gewitter", "description": "⛈️ Gewitter-Fokus heute"},
+    {"command": "timeline_heute", "description": "🕐 Timeline heute"},
+    {"command": "timeline_morgen", "description": "🕐 Timeline morgen"},
     {"command": "hilfe", "description": "ℹ️ Verfügbare Befehle"},
 ]
 

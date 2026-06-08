@@ -40,6 +40,14 @@ _SHORTCUT_MAP = {
     "/hg": "heute_gewitter",
     "/th": "timeline_heute",
     "/tm": "timeline_morgen",
+    # Slash-Varianten der Menü-Befehle (Telegram sendet getappte Befehle mit führendem Slash)
+    "/glance": "glance",
+    "/heute": "heute",
+    "/morgen": "morgen",
+    "/heute_gewitter": "heute_gewitter",
+    "/timeline_heute": "timeline_heute",
+    "/timeline_morgen": "timeline_morgen",
+    "/hilfe": "hilfe",
 }
 
 
