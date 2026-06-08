@@ -204,13 +204,13 @@ class TripCommandProcessor:
         # 3. Dispatch
         command_date = msg.received_at.date()
         if key == "ruhetag":
-            return self._apply_ruhetag(trip, value, command_date)
+            return self._apply_ruhetag(trip, value, command_date, msg.user_id)
         elif key == "report":
             return self._trigger_report(trip, value, msg.user_id)
         elif key == "startdatum":
-            return self._shift_start(trip, value)
+            return self._shift_start(trip, value, msg.user_id)
         elif key == "abbruch":
-            return self._cancel_trip(trip)
+            return self._cancel_trip(trip, msg.user_id)
         elif key == "status":
             return self._show_status(trip)
         elif key == "now":
@@ -514,12 +514,13 @@ class TripCommandProcessor:
 
     def _apply_ruhetag(
         self, trip: Trip, value: Optional[str], command_date: date,
+        user_id: str = "default",
     ) -> CommandResult:
         """Shift all stages after command_date by +N days (default: 1)."""
         shift_days = int(value) if value and value.isdigit() else 1
 
         # Idempotency check
-        if self._is_already_applied(trip.id, "ruhetag", command_date):
+        if self._is_already_applied(trip.id, "ruhetag", command_date, user_id):
             return CommandResult(
                 success=False, command="ruhetag",
                 confirmation_subject=f"[{trip.name}] Ruhetag bereits eingetragen",
@@ -547,9 +548,9 @@ class TripCommandProcessor:
             )
 
         new_trip = dataclasses.replace(trip, stages=new_stages)
-        save_trip(new_trip)
-        self._delete_snapshot(trip.id)
-        self._append_command_log(trip.id, "ruhetag", command_date)
+        save_trip(new_trip, user_id)
+        self._delete_snapshot(trip.id, user_id)
+        self._append_command_log(trip.id, "ruhetag", command_date, user_id)
 
         tage_wort = "Tag" if shift_days == 1 else "Tage"
         lines = [f"Ruhetag eingetragen: +{shift_days} {tage_wort}.", ""]
@@ -592,7 +593,9 @@ class TripCommandProcessor:
             trip_name=trip.name,
         )
 
-    def _shift_start(self, trip: Trip, value: Optional[str]) -> CommandResult:
+    def _shift_start(
+        self, trip: Trip, value: Optional[str], user_id: str = "default",
+    ) -> CommandResult:
         """Shift all stages relative to a new start date."""
         if not value:
             return CommandResult(
@@ -621,8 +624,8 @@ class TripCommandProcessor:
             shifts.append(StageShift(stage.name, stage.date, new_date))
 
         new_trip = dataclasses.replace(trip, stages=new_stages)
-        save_trip(new_trip)
-        self._delete_snapshot(trip.id)
+        save_trip(new_trip, user_id)
+        self._delete_snapshot(trip.id, user_id)
 
         lines = [f"Startdatum verschoben: {old_start:%d.%m.%Y} -> {new_start:%d.%m.%Y}", ""]
         lines.append("Neue Etappen-Daten:")
@@ -692,12 +695,12 @@ class TripCommandProcessor:
             trip_name=trip.name,
         )
 
-    def _cancel_trip(self, trip: Trip) -> CommandResult:
+    def _cancel_trip(self, trip: Trip, user_id: str = "default") -> CommandResult:
         """Disable report scheduling for the trip."""
         if trip.report_config:
             new_config = dataclasses.replace(trip.report_config, enabled=False)
             new_trip = dataclasses.replace(trip, report_config=new_config)
-            save_trip(new_trip)
+            save_trip(new_trip, user_id)
 
         return CommandResult(
             success=True, command="abbruch",
@@ -710,9 +713,9 @@ class TripCommandProcessor:
     # Helpers
     # -----------------------------------------------------------------------
 
-    def _delete_snapshot(self, trip_id: str) -> None:
+    def _delete_snapshot(self, trip_id: str, user_id: str = "default") -> None:
         """Delete cached weather snapshot after date changes."""
-        snapshot_path = get_snapshots_dir() / f"{trip_id}.json"
+        snapshot_path = get_snapshots_dir(user_id) / f"{trip_id}.json"
         try:
             if snapshot_path.exists():
                 snapshot_path.unlink()
@@ -720,13 +723,13 @@ class TripCommandProcessor:
         except OSError as e:
             logger.error(f"Failed to delete snapshot {snapshot_path}: {e}")
 
-    def _get_command_log_path(self) -> Path:
+    def _get_command_log_path(self, user_id: str = "default") -> Path:
         """Get path to command_log.json."""
-        return get_data_dir() / "command_log.json"
+        return get_data_dir(user_id) / "command_log.json"
 
-    def _load_command_log(self) -> list[dict]:
+    def _load_command_log(self, user_id: str = "default") -> list[dict]:
         """Load command log entries."""
-        path = self._get_command_log_path()
+        path = self._get_command_log_path(user_id)
         if not path.exists():
             return []
         try:
@@ -737,25 +740,27 @@ class TripCommandProcessor:
 
     def _append_command_log(
         self, trip_id: str, command: str, command_date: date,
+        user_id: str = "default",
     ) -> None:
         """Append entry to command log for idempotency tracking."""
-        entries = self._load_command_log()
+        entries = self._load_command_log(user_id)
         entries.append({
             "trip_id": trip_id,
             "command": command,
             "date": command_date.isoformat(),
             "applied_at": datetime.now(tz=timezone.utc).isoformat(),
         })
-        path = self._get_command_log_path()
+        path = self._get_command_log_path(user_id)
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "w", encoding="utf-8") as f:
             json.dump(entries, f, indent=2, ensure_ascii=False)
 
     def _is_already_applied(
         self, trip_id: str, command: str, command_date: date,
+        user_id: str = "default",
     ) -> bool:
         """Check if command was already applied today (idempotency)."""
-        for entry in self._load_command_log():
+        for entry in self._load_command_log(user_id):
             if (
                 entry.get("trip_id") == trip_id
                 and entry.get("command") == command
