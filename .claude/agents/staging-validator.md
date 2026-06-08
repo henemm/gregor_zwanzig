@@ -88,7 +88,7 @@ python3 .claude/hooks/staging_gate.py \
   --findings-json /tmp/staging_findings_${GZ_ACTIVE_WORKFLOW}.json
 ```
 
-Exit 0 means the artifact landed in `.claude/e2e_verified.json`. Exit 1 means BROKEN — no artifact written, deploy stays blocked until you re-run after a fix.
+Exit 0 means the artifact landed in `.claude/e2e_verified/<sha>.json` (commit-tagged, no parallel-session collisions). Exit 1 means BROKEN — no artifact written, deploy stays blocked until you re-run after a fix.
 
 ### Step 8: Emit a structured report
 
@@ -104,7 +104,7 @@ Findings:
   F002 | Severity: HIGH     | URL:AC-3 | Submit button missing aria-label
 
 Screenshots: docs/artifacts/${GZ_ACTIVE_WORKFLOW}/
-Artifact:    .claude/e2e_verified.json (commit=<sha8>, verdict=...)
+Artifact:    .claude/e2e_verified/<sha>.json (commit=<sha8>, verdict=...)
 ```
 
 ## Findings-Format (Pflicht)

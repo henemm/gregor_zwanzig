@@ -54,6 +54,28 @@ def _head_sha() -> str:
     return result.stdout.strip()
 
 
+def _commit_e2e_path(sha: str | None = None) -> Path:
+    """Commit-getaggter Attestation-Pfad: .claude/e2e_verified/<sha>.json"""
+    sha = sha or _head_sha()
+    return REPO_DIR / ".claude" / "e2e_verified" / f"{sha}.json"
+
+
+def _default_e2e_path() -> Path:
+    """Default-Pfad-Auflösung: commit-getaggt (Vorrang), sonst Singleton-Fallback.
+
+    Existiert die commit-getaggte Datei für HEAD → diese (auch wenn ihr Inhalt
+    veraltet ist; das prüft gate_check). Sonst, wenn das alte Singleton existiert
+    → Fallback (Migration). Sonst die (nicht existente) getaggte Datei → wird von
+    gate_check als 'fehlt' behandelt.
+    """
+    tagged = _commit_e2e_path(_head_sha())
+    if tagged.exists():
+        return tagged
+    if CANONICAL_E2E_PATH.exists():
+        return CANONICAL_E2E_PATH
+    return tagged
+
+
 def _detect_committed_scope() -> str:
     """Klassifiziert den letzten Commit (HEAD~1..HEAD) in einen Scope.
 
@@ -99,8 +121,10 @@ def _detect_committed_scope() -> str:
     return "docs-only"
 
 
-def write_verdict(verdict: str, findings_path: Path, e2e_path: Path) -> int:
+def write_verdict(verdict: str, findings_path: Path, e2e_path: Path | None = None) -> int:
     """Mode A: Verdict in e2e_verified.json schreiben."""
+    if e2e_path is None:
+        e2e_path = _commit_e2e_path()
     verdict_upper = verdict.strip().upper()
     if verdict_upper.startswith("BROKEN"):
         _log(f"BROKEN-Verdict erhalten: {verdict}")
@@ -128,7 +152,7 @@ def write_verdict(verdict: str, findings_path: Path, e2e_path: Path) -> int:
     return 0
 
 
-def gate_check(e2e_path: Path, scope_override: str | None) -> int:
+def gate_check(e2e_path: Path | None, scope_override: str | None) -> int:
     """Mode B: Gate-Check für deploy-gregor-prod.sh."""
     if os.environ.get("GZ_SKIP_E2E_GATE") == "1":
         _log("WARN: GZ_SKIP_E2E_GATE=1 — Staging-Gate übersprungen (Notfall-Override).", stream=sys.stderr)
@@ -138,6 +162,9 @@ def gate_check(e2e_path: Path, scope_override: str | None) -> int:
     if scope == "docs-only":
         _log(f"Scope '{scope}' — Staging-Gate übersprungen (kein UI/Backend-Change).")
         return 0
+
+    if e2e_path is None:
+        e2e_path = _default_e2e_path()
 
     if not e2e_path.exists():
         _log(
@@ -204,7 +231,7 @@ def main() -> int:
     parser.add_argument("--detect-scope", action="store_true", help="Mode C: Scope ausgeben")
     args = parser.parse_args()
 
-    e2e_path = Path(args.e2e_path) if args.e2e_path else CANONICAL_E2E_PATH
+    e2e_path = Path(args.e2e_path) if args.e2e_path else None
 
     if args.detect_scope:
         print(_detect_committed_scope())

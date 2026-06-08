@@ -109,26 +109,23 @@ Den auf Staging angelegten Test-Trip wieder loeschen, damit Staging sauber bleib
 NUR wenn alle relevanten Schritte erfolgreich waren — als Nachweis fuer den
 Pre-Prod-Schritt. Die Datei MUSS die Felder `verified_commit`, `staging_verdict` und strukturierte `findings` enthalten (Issue #521):
 
+Die Attestation wird **commit-getaggt** unter `.claude/e2e_verified/<HEAD>.json`
+abgelegt (Issue #662) — so überschreiben parallele Sessions sich nicht mehr. Den
+Pfad löst `staging_gate.py` selbst aus dem aktuellen HEAD ab; kein dupliziertes
+Pfad-Wissen mehr.
+
 ```bash
-python3 -c "
-import json, datetime, subprocess
-verified_commit = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode().strip()
-data = {
-    'verified_commit': verified_commit,
-    'staging_verdict': 'VERIFIED: alle frontend-ACs gruen',
-    'findings': [
-        {'ac': 'AC-1', 'status': 'PASS', 'url': '/url:AC-1', 'evidence': 'Element sichtbar'}
-    ],
-    'verified_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
-    'environment': 'staging',
-    'scope': 'frontend-only',  # oder 'backend' / 'full-stack'
-    'checks': ['staging_smoke', 'visual'],  # backend zusaetzlich: 'test_trip', 'test_mail', 'imap'
-    'feature_checks': ['HIER BESCHREIBEN WAS GEPRUEFT WURDE']
-}
-with open('.claude/e2e_verified.json', 'w') as f:
-    json.dump(data, f, indent=2)
-print('e2e_verified.json geschrieben')
-"
+# Findings als JSON-Array vorbereiten (was auf Staging geprüft wurde):
+cat > /tmp/e2e_findings.json <<'EOF'
+[
+  {"ac": "AC-1", "status": "PASS", "url": "/", "evidence": "HIER BESCHREIBEN WAS GEPRÜFT WURDE"}
+]
+EOF
+
+# Attestation commit-getaggt schreiben (.claude/e2e_verified/<HEAD>.json):
+python3 .claude/hooks/staging_gate.py \
+  --write-verdict "VERIFIED: <kurze Begründung>" \
+  --findings-json /tmp/e2e_findings.json
 ```
 
 ## VERBOTEN

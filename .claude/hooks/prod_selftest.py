@@ -56,6 +56,27 @@ def _head_sha() -> str:
     return result.stdout.strip()
 
 
+def _commit_e2e_path(sha: str | None = None) -> Path:
+    """Commit-getaggter Attestation-Pfad: .claude/e2e_verified/<sha>.json"""
+    sha = sha or _head_sha()
+    return REPO_DIR / ".claude" / "e2e_verified" / f"{sha}.json"
+
+
+def _default_e2e_path() -> Path:
+    """Default-Pfad-Auflösung: commit-getaggt (Vorrang), sonst Singleton-Fallback.
+
+    Existiert die commit-getaggte Datei für HEAD → diese. Sonst, wenn das alte
+    Singleton existiert → Fallback (Migration). Sonst die (nicht existente)
+    getaggte Datei → wird von run_selftest als 'fehlt' behandelt.
+    """
+    tagged = _commit_e2e_path(_head_sha())
+    if tagged.exists():
+        return tagged
+    if CANONICAL_E2E_PATH.exists():
+        return CANONICAL_E2E_PATH
+    return tagged
+
+
 def _strip_ac_suffix(url: str) -> str:
     """Entfernt ':AC-N' aus URL — staging-URLs nutzen das als Marker."""
     idx = url.rfind(":AC-")
@@ -326,7 +347,7 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    e2e_path = Path(args.e2e_path) if args.e2e_path else CANONICAL_E2E_PATH
+    e2e_path = Path(args.e2e_path) if args.e2e_path else _default_e2e_path()
 
     workflow = args.workflow or os.environ.get("GZ_ACTIVE_WORKFLOW")
     if not workflow:
