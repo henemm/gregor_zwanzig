@@ -24,7 +24,6 @@ CLI:
 import argparse
 import json
 import os
-import subprocess
 import sys
 import urllib.error
 import urllib.request
@@ -32,6 +31,8 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlparse
+
+import _e2e_paths
 
 REPO_DIR = Path("/home/hem/gregor_zwanzig")
 CANONICAL_E2E_PATH = REPO_DIR / ".claude" / "e2e_verified.json"
@@ -46,20 +47,12 @@ def _log(msg: str, stream=sys.stdout) -> None:
 
 
 def _head_sha() -> str:
-    result = subprocess.run(
-        ["git", "rev-parse", "HEAD"],
-        capture_output=True, text=True, cwd=str(REPO_DIR),
-    )
-    if result.returncode != 0:
-        _log(f"WARN: git rev-parse HEAD fehlgeschlagen (code {result.returncode}): {result.stderr.strip()}", stream=sys.stderr)
-        return "UNKNOWN"
-    return result.stdout.strip()
+    return _e2e_paths.head_sha(REPO_DIR)
 
 
 def _commit_e2e_path(sha: str | None = None) -> Path:
     """Commit-getaggter Attestation-Pfad: .claude/e2e_verified/<sha>.json"""
-    sha = sha or _head_sha()
-    return REPO_DIR / ".claude" / "e2e_verified" / f"{sha}.json"
+    return _e2e_paths.commit_e2e_path(REPO_DIR, sha or _head_sha())
 
 
 def _default_e2e_path() -> Path:
@@ -69,12 +62,7 @@ def _default_e2e_path() -> Path:
     Singleton existiert → Fallback (Migration). Sonst die (nicht existente)
     getaggte Datei → wird von run_selftest als 'fehlt' behandelt.
     """
-    tagged = _commit_e2e_path(_head_sha())
-    if tagged.exists():
-        return tagged
-    if CANONICAL_E2E_PATH.exists():
-        return CANONICAL_E2E_PATH
-    return tagged
+    return _e2e_paths.default_e2e_path(REPO_DIR, CANONICAL_E2E_PATH, _head_sha())
 
 
 def _strip_ac_suffix(url: str) -> str:

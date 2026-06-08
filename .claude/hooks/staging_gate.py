@@ -20,7 +20,7 @@ Mode B — Gate-Check (von deploy-gregor-prod.sh aufgerufen):
       1. GZ_SKIP_E2E_GATE=1 → Warn + Exit 0
       2. --scope=docs-only ODER detect_scope==docs-only → Exit 0
       3. e2e_verified.json fehlt → Exit 1
-      4. verified_commit != git rev-parse HEAD → Exit 1
+      4. verified_commit != HEAD-SHA → Exit 1
       5. staging_verdict beginnt nicht mit VERIFIED → Exit 1
       6. verified_at älter als 24h → Exit 1
       7. Alle OK → Exit 0
@@ -37,6 +37,8 @@ import sys
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
+import _e2e_paths
+
 REPO_DIR = Path("/home/hem/gregor_zwanzig")
 CANONICAL_E2E_PATH = REPO_DIR / ".claude" / "e2e_verified.json"
 STALE_HOURS = 24
@@ -47,17 +49,12 @@ def _log(msg: str, stream=sys.stdout) -> None:
 
 
 def _head_sha() -> str:
-    result = subprocess.run(
-        ["git", "rev-parse", "HEAD"],
-        capture_output=True, text=True, cwd=str(REPO_DIR),
-    )
-    return result.stdout.strip()
+    return _e2e_paths.head_sha(REPO_DIR)
 
 
 def _commit_e2e_path(sha: str | None = None) -> Path:
     """Commit-getaggter Attestation-Pfad: .claude/e2e_verified/<sha>.json"""
-    sha = sha or _head_sha()
-    return REPO_DIR / ".claude" / "e2e_verified" / f"{sha}.json"
+    return _e2e_paths.commit_e2e_path(REPO_DIR, sha or _head_sha())
 
 
 def _default_e2e_path() -> Path:
@@ -68,12 +65,7 @@ def _default_e2e_path() -> Path:
     → Fallback (Migration). Sonst die (nicht existente) getaggte Datei → wird von
     gate_check als 'fehlt' behandelt.
     """
-    tagged = _commit_e2e_path(_head_sha())
-    if tagged.exists():
-        return tagged
-    if CANONICAL_E2E_PATH.exists():
-        return CANONICAL_E2E_PATH
-    return tagged
+    return _e2e_paths.default_e2e_path(REPO_DIR, CANONICAL_E2E_PATH, _head_sha())
 
 
 def _detect_committed_scope() -> str:
