@@ -82,6 +82,35 @@ _THUNDER_LABEL = {
     "HIGH": "hoch",
 }
 
+_DRILLDOWN_PATTERN = re.compile(r"^dd_(thunder|wind|precip)_(today|tomorrow)$")
+
+
+def _thunder_fmt(value) -> str:
+    """Formatiert ThunderLevel (Enum oder String nach Roundtrip) als deutsches Label."""
+    _MAP = {"NONE": "⚪ keins", "MED": "🟡 mäßig", "HIGH": "🔴 hoch"}
+    if value is None:
+        return "· keine Daten"
+    key = value.value if hasattr(value, "value") else str(value)
+    return _MAP.get(key, "· keine Daten")
+
+
+def _num_fmt(unit: str):
+    """Gibt einen Formatter zurück der numerische Werte mit Einheit formatiert."""
+    def _fmt(value) -> str:
+        if value is None:
+            return "· keine Daten"
+        if unit == "km/h":
+            return f"{round(float(value))} km/h"
+        return f"{float(value):.1f} {unit}"
+    return _fmt
+
+
+_DRILLDOWN_METRICS: dict[str, tuple] = {
+    "thunder": ("thunder_level", "⛈️ Gewitter", _thunder_fmt),
+    "wind":    ("wind10m_kmh",   "💨 Wind",      _num_fmt("km/h")),
+    "precip":  ("precip_1h_mm",  "🌧 Niederschlag", _num_fmt("mm")),
+}
+
 
 # ---------------------------------------------------------------------------
 # Processor
@@ -104,6 +133,28 @@ class TripCommandProcessor:
                     "Verfuegbar: ruhetag, report, startdatum, abbruch, status, hilfe"
                 ),
                 trip_name=msg.trip_name,
+            )
+
+        # Drilldown-Tokens: dd_<metric>_<day> — via "### query: dd_..." ODER direkt
+        actual_drilldown_token = None
+        if key == "query" and value and _DRILLDOWN_PATTERN.match(value.lower()):
+            actual_drilldown_token = value.lower()
+        elif _DRILLDOWN_PATTERN.match(key):
+            actual_drilldown_token = key
+
+        if actual_drilldown_token is not None:
+            m = _DRILLDOWN_PATTERN.match(actual_drilldown_token)
+            metric, day_token = m.group(1), m.group(2)
+            trip = self._find_trip(msg.trip_name, msg.user_id)
+            if not trip:
+                return CommandResult(
+                    success=False, command=actual_drilldown_token,
+                    confirmation_subject=f"[{msg.trip_name}] Trip nicht gefunden",
+                    confirmation_body=f"Kein Trip mit Name '{msg.trip_name}' gefunden.",
+                    trip_name=msg.trip_name,
+                )
+            return self._handle_drilldown(
+                trip, metric, day_token, msg.received_at, msg.user_id
             )
 
         # Query-Keys: key=="query" mit value als Query-Key ODER direkter Query-Key
@@ -264,6 +315,69 @@ class TripCommandProcessor:
             confirmation_body="Unbekannter Query-Key.",
             trip_name=trip.name,
         )
+
+    # -----------------------------------------------------------------------
+    # Drilldown (read-only) — stündliche Einzelmetrik-Liste
+    # -----------------------------------------------------------------------
+
+    def _handle_drilldown(
+        self,
+        trip: Trip,
+        metric: str,
+        day_token: str,
+        received_at: datetime,
+        user_id: str,
+    ) -> CommandResult:
+        """Stündliche Drilldown-Liste für eine Metrik (thunder/wind/precip)."""
+        from services.weather_extractor import WeatherExtractor
+        field, header, fmt = _DRILLDOWN_METRICS[metric]
+
+        if day_token == "today":
+            from_time = received_at
+            hours = 12
+        else:  # tomorrow
+            # Morgen ab 00:00 in der Sende-Zeitzone, 24h Fenster
+            tomorrow = (received_at + timedelta(days=1)).date()
+            tz = received_at.tzinfo
+            from_time = datetime(
+                tomorrow.year, tomorrow.month, tomorrow.day, 0, 0, tzinfo=tz
+            )
+            hours = 24
+
+        res = WeatherExtractor(user_id).drilldown(
+            trip.id, field, from_time=from_time, hours=hours
+        )
+        if not res.available:
+            return CommandResult(
+                success=False,
+                command=f"dd_{metric}_{day_token}",
+                confirmation_subject=f"[{trip.name}] Keine stündlichen Daten",
+                confirmation_body=(
+                    "Keine stündlichen Daten verfügbar. "
+                    "Bitte einen Report anfordern um aktuelle Daten zu laden."
+                ),
+                trip_name=trip.name,
+            )
+
+        body = self._format_drilldown(res, header, fmt)
+        back = "tl_today" if day_token == "today" else "tl_tomorrow"
+        markup = {"inline_keyboard": [[{"text": "⬅️ Zurück", "callback_data": back}]]}
+        return CommandResult(
+            success=True,
+            command=f"dd_{metric}_{day_token}",
+            confirmation_subject=f"[{trip.name}] {header} stündlich",
+            confirmation_body=body,
+            reply_markup=markup,
+            trip_name=trip.name,
+        )
+
+    def _format_drilldown(self, res, header: str, fmt) -> str:
+        """Formatiert DrilldownResult als stündliche Liste."""
+        lines = [f"{header} — stündlich"]
+        for pt in res.points:
+            time_str = pt.ts.astimezone().strftime("%H:%M")
+            lines.append(f"{time_str}  {fmt(pt.value)}")
+        return "\n".join(lines)
 
     def _aggregate_day(self, timeline, target_date) -> Optional[dict]:
         """Aggregiere Timeline-Punkte für target_date. None wenn keine Punkte."""
