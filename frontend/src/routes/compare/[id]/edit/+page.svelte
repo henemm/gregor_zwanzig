@@ -1,10 +1,15 @@
 <script lang="ts">
-	// Issue #582 — Compare-Edit-Route: auf ComparePreset umgestellt (war: Subscription).
-	// Fix: data.preset.* statt data.subscription.*
+	// Issue #679 — Compare-Edit-Route: CompareWizard → CompareEditor mode="edit".
+	// Spec: docs/specs/modules/issue_679_compare_editor_edit.md
+	// Löst: (1) save() traf /api/subscriptions statt /api/compare/presets,
+	//        (2) empfaenger wurde beim Speichern gelöscht (fehlender Round-Trip-Spread).
+	//
+	// State-Initialisierung aus data.preset.* unverändert.
+	// data.preset wird zusätzlich als Prop an CompareEditor gegeben (Round-Trip-Spread + Status-Dot).
 
 	import { setContext } from 'svelte';
 	import { CompareWizardState } from '$lib/components/compare/compareWizardState.svelte';
-	import CompareWizard from '$lib/components/compare/CompareWizard.svelte';
+	import CompareEditor from '$lib/components/compare/CompareEditor.svelte';
 	import type { IdealRange } from '$lib/components/compare/compareMetricDefs';
 	import type { ActivityProfile, ChannelLayouts } from '$lib/types';
 
@@ -38,4 +43,4 @@
 	setContext('compare-wizard-profile', data.profile ?? null);
 </script>
 
-<CompareWizard locations={data.locations} />
+<CompareEditor mode="edit" locations={data.locations} preset={data.preset} />

@@ -1,17 +1,13 @@
 <script lang="ts">
 	// Compare-Editor — Gerüst + Lock-Engine + Tab „Vergleich" (Issue #678, Epic #677).
-	// Spec: docs/specs/modules/issue_678_compare_editor_shell.md
-	// Design-Quelle: claude-code-handoff/current/jsx/screen-compare-editor.jsx
-	//   (ScreenCompareEditor / CE_TabBar / CE_Progress / CE_VergleichTab, create-Zweig).
-	//
-	// Ersetzt die Stepper-Shell durch EINEN Editor mit 5 Tabs. Slice 1 liefert das
-	// Gerüst + die voll funktionsfähige Tab „Vergleich". Tabs 2–5 mounten die
-	// bestehenden Step-Komponenten (kein Funktionsverlust).
+	// Edit-Modus + Dirty/Save-Flow (Issue #679, Epic #677).
+	// Spec: docs/specs/modules/issue_679_compare_editor_edit.md
+	// Design-Quelle: claude-code-handoff/current/jsx/screen-compare-editor.jsx Z. 640-700.
 
 	import { getContext } from 'svelte';
 	import { Btn, Eyebrow, TopoBg } from '$lib/components/atoms';
-	import { Field } from '$lib/components/molecules';
-	import { ACTIVITY_PROFILE_OPTIONS, type ActivityProfile, type Location } from '$lib/types';
+	import { Field, ConfirmDialog } from '$lib/components/molecules';
+	import { ACTIVITY_PROFILE_OPTIONS, type ActivityProfile, type Location, type ComparePreset } from '$lib/types';
 	import type { CompareWizardState } from './compareWizardState.svelte';
 	import {
 		TAB_ORDER,
@@ -27,8 +23,9 @@
 	interface Props {
 		mode?: 'create' | 'edit';
 		locations?: Location[];
+		preset?: ComparePreset;
 	}
-	let { mode = 'create', locations = [] }: Props = $props();
+	let { mode = 'create', locations = [], preset }: Props = $props();
 
 	const wiz = getContext<CompareWizardState>('compare-wizard-state');
 
@@ -48,6 +45,33 @@
 	let versandVisited = $state(false);
 
 	let activeTab = $state<CompareTabId>('vergleich');
+
+	// Dirty-Tracking (AC-2): Snapshot der editierbaren Felder beim Mount erfassen.
+	// $derived statt manueller markDirty-Wrapper — deckt alle Tabs ab und markiert
+	// NICHT bei reiner Tab-Navigation (AC-Semantik: Feldänderung → Pill).
+	const initial = {
+		name: wiz.name,
+		region: wiz.region,
+		profile: wiz.activityProfile,
+		picked: [...wiz.pickedIds].join(','),
+		ideals: JSON.stringify(wiz.idealRanges),
+		layouts: JSON.stringify(wiz.channelLayouts)
+	};
+	const dirty = $derived(
+		isEdit &&
+			(wiz.name !== initial.name ||
+				wiz.region !== initial.region ||
+				wiz.activityProfile !== initial.profile ||
+				[...wiz.pickedIds].join(',') !== initial.picked ||
+				JSON.stringify(wiz.idealRanges) !== initial.ideals ||
+				JSON.stringify(wiz.channelLayouts) !== initial.layouts)
+	);
+
+	// Status-Dot (AC-6): aus dem preset-Prop lesen (nicht wiz.schedule — type-gemangelt).
+	const paused = $derived(preset?.schedule === 'manual');
+
+	// ConfirmDialog für Verwerfen (AC-4).
+	let discardOpen = $state(false);
 
 	const unlocked = $derived(
 		unlockedTabs({
@@ -80,6 +104,14 @@
 		wiz.activityProfile = value;
 	}
 
+	function handleDiscard() {
+		discardOpen = true;
+	}
+
+	function handleSave() {
+		if (preset) void wiz.saveComparePreset(preset);
+	}
+
 	const canContinue = $derived(wiz.name.trim().length > 0);
 </script>
 
@@ -90,11 +122,14 @@
 	style:background="var(--g-paper)"
 >
 	<TopoBg opacity={0.12}>
-		<!-- Breadcrumb -->
+		<!-- Breadcrumb + Aktionen (JSX Z. 649-676) -->
 		<div
 			style:position="relative"
 			style:padding="14px 40px"
 			style:border-bottom="1px solid var(--g-rule-soft)"
+			style:display="flex"
+			style:justify-content="space-between"
+			style:align-items="center"
 		>
 			<div
 				class="mono"
@@ -104,13 +139,62 @@
 			>
 				<span style:opacity="0.6">Orts-Vergleiche</span>
 				<span style:margin="0 8px">/</span>
-				<span style:color="var(--g-ink)">Neuer Vergleich</span>
+				<span style:color="var(--g-ink)"
+					>{isEdit ? (wiz.name.trim() || 'Vergleich') : 'Neuer Vergleich'}</span
+				>
 			</div>
+
+			{#if isEdit}
+				<!-- Aktionsleiste im Edit-Modus (JSX Z. 657-664) -->
+				<div style:display="flex" style:gap="8px" style:align-items="center">
+					{#if dirty}
+						<span
+							data-testid="compare-editor-dirty-pill"
+							class="mono"
+							style:font-size="11px"
+							style:font-weight="600"
+							style:padding="3px 8px"
+							style:border-radius="4px"
+							style:background="rgba(200,140,0,0.12)"
+							style:color="var(--g-warn, #b87800)"
+							style:letter-spacing="0.04em"
+						>Ungespeichert</span>
+					{/if}
+					<!-- Status-Dot (AC-6): 7×7px, Farbe laut JSX Z. 660 -->
+					<span
+						data-testid="compare-editor-status-dot"
+						data-status={paused ? 'paused' : 'active'}
+						style:width="7px"
+						style:height="7px"
+						style:border-radius="50%"
+						style:display="inline-block"
+						style:background={paused ? 'var(--g-ink-4)' : 'var(--g-good)'}
+					></span>
+					<span
+						class="mono"
+						style:font-size="11px"
+						style:color="var(--g-ink-3)"
+						style:letter-spacing="0.04em"
+					>{paused ? 'pausiert' : 'aktiv'}</span>
+					<Btn
+						variant="ghost"
+						size="sm"
+						data-testid="compare-editor-discard"
+						onclick={handleDiscard}
+					>Verwerfen</Btn>
+					<Btn
+						variant="primary"
+						size="sm"
+						data-testid="compare-editor-save"
+						onclick={handleSave}
+					>Speichern</Btn>
+				</div>
+			{/if}
 		</div>
 
 		<!-- Hero -->
 		<div style:position="relative" style:padding="20px 40px 14px">
-			<Eyebrow>Neuer Orts-Vergleich</Eyebrow>
+			<Eyebrow>{isEdit ? 'Orts-Vergleich bearbeiten' : 'Neuer Orts-Vergleich'}</Eyebrow>
 			<h1
 				style:font-size="32px"
 				style:font-weight="600"
@@ -122,37 +206,39 @@
 				{wiz.name.trim() || 'Noch kein Name'}
 			</h1>
 
-			<!-- Fortschrittsbalken -->
-			<div
-				data-testid="compare-editor-progress"
-				style:display="flex"
-				style:align-items="center"
-				style:gap="10px"
-				style:margin-top="7px"
-			>
-				<div style:display="flex" style:gap="3px">
-					{#each TAB_ORDER as t (t)}
-						<div
-							data-testid="compare-editor-progress-segment"
-							style:width="24px"
-							style:height="3px"
-							style:border-radius="2px"
-							style:background={done.has(t) ? 'var(--g-accent)' : 'var(--g-rule)'}
-							style:transition="background 350ms"
-						></div>
-					{/each}
-				</div>
-				<span
-					class="mono"
-					style:font-size="10.5px"
-					style:color="var(--g-ink-4)"
-					style:letter-spacing="0.04em"
+			<!-- Fortschrittsbalken: KEIN Render im Edit-Modus (AC-1) -->
+			{#if !isEdit}
+				<div
+					data-testid="compare-editor-progress"
+					style:display="flex"
+					style:align-items="center"
+					style:gap="10px"
+					style:margin-top="7px"
 				>
-					{doneCount === 0
-						? 'Noch nichts eingerichtet'
-						: `${doneCount} / ${TAB_ORDER.length} Abschnitte eingerichtet`}
-				</span>
-			</div>
+					<div style:display="flex" style:gap="3px">
+						{#each TAB_ORDER as t (t)}
+							<div
+								data-testid="compare-editor-progress-segment"
+								style:width="24px"
+								style:height="3px"
+								style:border-radius="2px"
+								style:background={done.has(t) ? 'var(--g-accent)' : 'var(--g-rule)'}
+								style:transition="background 350ms"
+							></div>
+						{/each}
+					</div>
+					<span
+						class="mono"
+						style:font-size="10.5px"
+						style:color="var(--g-ink-4)"
+						style:letter-spacing="0.04em"
+					>
+						{doneCount === 0
+							? 'Noch nichts eingerichtet'
+							: `${doneCount} / ${TAB_ORDER.length} Abschnitte eingerichtet`}
+					</span>
+				</div>
+			{/if}
 		</div>
 
 		<!-- Tab-Bar -->
@@ -302,7 +388,7 @@
 								⊘ Name fehlt
 							</span>
 						{/if}
-						{#if canContinue}
+						{#if canContinue && !isEdit}
 							<Btn
 								data-testid="compare-editor-continue-orte"
 								variant="accent"
@@ -326,3 +412,24 @@
 		<Step5Versand />
 	{/if}
 </div>
+
+<!-- ConfirmDialog: Änderungen verwerfen (AC-4) -->
+<ConfirmDialog
+	open={discardOpen}
+	title="Änderungen verwerfen?"
+	description="Alle Änderungen an diesem Vergleich werden verworfen."
+	confirmLabel="Verwerfen"
+	confirmVariant="destructive"
+	cancelLabel="Weiter bearbeiten"
+	onConfirm={async () => {
+		discardOpen = false;
+		const { goto } = await import('$app/navigation');
+		void goto('/compare/' + (preset?.id ?? ''));
+	}}
+	onCancel={() => {
+		discardOpen = false;
+	}}
+	onOpenChange={(o) => {
+		if (!o) discardOpen = false;
+	}}
+/>

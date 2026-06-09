@@ -3,7 +3,7 @@ entity_id: issue_678_compare_editor_shell
 type: module
 created: 2026-06-09
 updated: 2026-06-09
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, compare, editor, design-compliance]
 ---

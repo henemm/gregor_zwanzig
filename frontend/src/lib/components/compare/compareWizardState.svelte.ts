@@ -4,8 +4,9 @@
 // Factory-Pattern: Instanziierung im +page.svelte mount (Safari-Reaktivitaets-Fix).
 // Lazy imports von goto/api damit Unit-Tests die Klasse ohne Browser-APIs testen.
 
-import type { ActivityProfile, ChannelLayouts } from '$lib/types';
+import type { ActivityProfile, ChannelLayouts, ComparePreset } from '$lib/types';
 import type { IdealRange } from './compareMetricDefs';
+import { buildComparePresetSavePayload } from './compareEditorSave';
 
 export type SaveStatus = 'idle' | 'saving' | 'ok' | 'error';
 
@@ -189,6 +190,35 @@ export class CompareWizardState {
 					: '/compare'
 			);
 		} catch (e: unknown) {
+			this.saveStatus = 'error';
+			this.saveError = extractErrorMessage(e);
+		}
+	}
+
+	/**
+	 * Edit-Modus: speichert Preset via PUT /api/compare/presets/{id}.
+	 * Round-Trip-Spread via buildComparePresetSavePayload — nicht editierte Felder
+	 * (empfaenger, schedule, hour_from/to, weekday) bleiben erhalten.
+	 * Issue #679.
+	 */
+	async saveComparePreset(original: ComparePreset): Promise<void> {
+		this.saveStatus = 'saving';
+		this.saveError = null;
+		const { url, body } = buildComparePresetSavePayload(original, {
+			name: this.name,
+			activityProfile: this.activityProfile,
+			pickedIds: this.pickedIds,
+			region: this.region,
+			idealRanges: this.idealRanges,
+			channelLayouts: this.channelLayouts
+		});
+		try {
+			const { api } = await import('$lib/api');
+			const { goto } = await import('$app/navigation');
+			await api.put(url, body);
+			this.saveStatus = 'ok';
+			await goto('/compare/' + original.id);
+		} catch (e) {
 			this.saveStatus = 'error';
 			this.saveError = extractErrorMessage(e);
 		}

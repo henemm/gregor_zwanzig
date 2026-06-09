@@ -452,10 +452,29 @@ None—pure frontend changes for Steps 1–3. Backend endpoints are opaque (no s
 
 ---
 
+## Migration to Tab-Editor (Epic #677)
+
+**Starting 2026-06-09**, Epic #438's 5-Step-Wizard is being gradually replaced by a Tab-Editor (Epic #677, analog to Trip-Editor #616/#622). The Wizard component remains functional until Slice 6 of #677 is complete, ensuring no service interruption.
+
+**Status:**
+- Slice 1 (#678): Compare-Editor Gerüst + Lock-Engine ✓
+- Slice 2 (#679): Edit-Modus + Dirty/Save-Flow ✓
+- Slices 3–6: In progress (see `docs/features/epic-677-compare-editor.md`)
+
+**Key Differences (Tab-Editor):**
+- All 5 tabs immediately visible (no linear 5-step progression)
+- Progressive Lock: tabs unlock based on validation (Create mode) or all unlocked (Edit mode)
+- Dirty/Save-Flow: changes tracked and require explicit save (Edit mode)
+- No progress bar in Edit mode
+- Reuses Step 1–5 components internally — no functional loss
+
+---
+
 ## Changelog
 
 | Date | Change |
 |------|--------|
+| 2026-06-09 | **Migration starts:** Epic #677 (Compare-Editor Tab-UI) launches. Issues #678 ✓, #679 ✓. Wizard remains available until Slice 6 completion. See `docs/features/epic-677-compare-editor.md`. |
 | 2026-06-02 | Auto-Profil-Vorauswahl im Wizard implemented (AC-6–9 aus #132): CompareWizard.svelte (`profileManuallyOverridden`, `dominantProfile`, 2 $effects), Step1Vergleich.svelte (`onManualProfileChange` callback), 18 Unit-Tests. Issue #547 ✓ |
 | 2026-05-30 | Compare-Komponenten-Migration abgeschlossen: 14 Dateien in `compare/` und `compare/steps/` importieren `Btn`, `Eyebrow`, `Pill`, `Input`, `TopoBg` jetzt aus kanonischem Atom-Barrel (`$lib/components/atoms`) statt direkt aus `ui/`-Unterordnern. Reine Import-Pfad-Migration, kein Verhalten geändert. Sentinel-Test `issue_462.test.ts` verhindert Zurückrutschen. Sub-Issue von Epic #368 Phase 2 Compare-Zweig. Issue #462 ✓ |
 | 2026-05-30 | Auto-Briefings Sidepanel Frontend implemented: AutoReportsOverview rebuilt for ComparePreset-system (from #458), includes SavePresetDialog, manuellen Versand-Button, subscriptionHelpers für Schedule-Labels. Issue #459 ✓ |
