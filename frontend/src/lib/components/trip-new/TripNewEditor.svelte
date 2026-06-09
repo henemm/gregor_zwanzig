@@ -19,7 +19,8 @@
 	import MInput from '$lib/components/mobile/MInput.svelte';
 	import MField from '$lib/components/mobile/MField.svelte';
 	import Toast from '$lib/components/mobile/Toast.svelte';
-	import type { Trip, ReportConfig, AlertRule, WeatherConfigMetric, Stage, Waypoint } from '$lib/types';
+	import Select from '$lib/components/ui/select/Select.svelte';
+	import type { Trip, ReportConfig, AlertRule, WeatherConfigMetric, Stage, Waypoint, ActivityType } from '$lib/types';
 	import {
 		type TabId,
 		type CreateTripState,
@@ -56,6 +57,8 @@
 	let channels = $state({ email: true, telegram: true, sms: false });
 	let reportConfig = $state<ReportConfig | undefined>(undefined);
 	let alertRules = $state<AlertRule[]>([]);
+	// Issue #674 — Aktivitätstyp aus WeatherMetricsTab übernehmen (Fahrrad/Wanderer).
+	let selectedActivity = $state<ActivityType | undefined>(undefined);
 
 	// Visited-Flags (Tab-Besuch setzt done)
 	let wtVisited = $state(false);
@@ -283,6 +286,7 @@
 					channels,
 					reportConfig,
 					alertRules: alertRules.length > 0 ? alertRules : undefined,
+					activity: selectedActivity,
 				};
 				const payload = buildCreateTripPayload(state);
 				const created = await api.post<Trip>('/api/trips', payload);
@@ -463,6 +467,7 @@
 						<input type="text" value={name} oninput={makeNameHandler()}
 							placeholder="z.B. Karnischer Höhenweg 2026"
 							autofocus
+							data-testid="trip-new-name-input"
 							style="width: 100%; box-sizing: border-box; padding: 9px 12px; font-size: 14px; font-family: var(--g-font-sans); border: 1.5px solid var(--g-rule); border-radius: var(--g-r-2); background: var(--g-card); color: var(--g-ink); outline: none;" />
 					</div>
 
@@ -665,7 +670,8 @@
 				</div>
 
 				<!-- Eingebetteter Wegpunkt-Editor: kein tripId → kein PUT, kein Save-Bar -->
-				<EditStagesPanelNew bind:stages={editorStages} showSave={false} />
+				<!-- Issue #674 — activityType für korrekte Naismith-Ankunftszeiten im Editor -->
+				<EditStagesPanelNew bind:stages={editorStages} showSave={false} activityType={selectedActivity} />
 
 				<!-- Footer (1:1 TN_WegpunkteTab) -->
 				<div style="padding: 20px 40px; border-top: 1px solid var(--g-rule); background: var(--g-card); display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
@@ -682,6 +688,23 @@
 
 		{:else if activeTab === 'metriken'}
 			<!-- Wetter-Tab: reuse WeatherMetricsTab im createMode -->
+			<!-- Activity-Auswahl für korrekte Naismith-Ankunftszeiten (#674) -->
+			<div style="padding: 24px 40px 0;">
+				<label style="font-size: 13px; font-weight: 600; color: var(--g-ink-2); display: block; margin-bottom: 6px;">Aktivitätstyp</label>
+				<Select data-testid="activity-dropdown"
+					value={selectedActivity ?? ''}
+					onchange={(e) => { selectedActivity = (e.target as HTMLSelectElement).value as ActivityType || undefined; }}
+					style="width: 100%; max-width: 320px;">
+					<option value="">Wandern (4 km/h)</option>
+					<option value="fahrrad_15">Fahrrad (15 km/h)</option>
+					<option value="fahrrad_20">Fahrrad (20 km/h)</option>
+					<option value="fahrrad_25">Fahrrad (25 km/h)</option>
+					<option value="skitour">Skitour</option>
+					<option value="hochtour">Hochtour</option>
+					<option value="klettersteig">Klettersteig</option>
+					<option value="mtb">MTB</option>
+				</Select>
+			</div>
 			<WeatherMetricsTab trip={stubTrip} createMode={true} onChannelsChange={handleChannelsChange} />
 
 		{:else if activeTab === 'zeitplan'}
@@ -875,6 +898,23 @@
 
 			{:else if activeTab === 'metriken'}
 				<!-- Mobile Wetter-Tab: WeatherMetricsTab (bereits mobil, #618) -->
+				<!-- Activity-Auswahl für korrekte Naismith-Ankunftszeiten (#674) -->
+				<div style="padding: 16px 16px 0;">
+					<label style="font-size: 13px; font-weight: 600; color: var(--g-ink-2); display: block; margin-bottom: 6px;">Aktivitätstyp</label>
+					<Select data-testid="activity-dropdown"
+						value={selectedActivity ?? ''}
+						onchange={(e) => { selectedActivity = (e.target as HTMLSelectElement).value as ActivityType || undefined; }}
+						style="width: 100%;">
+						<option value="">Wandern (4 km/h)</option>
+						<option value="fahrrad_15">Fahrrad (15 km/h)</option>
+						<option value="fahrrad_20">Fahrrad (20 km/h)</option>
+						<option value="fahrrad_25">Fahrrad (25 km/h)</option>
+						<option value="skitour">Skitour</option>
+						<option value="hochtour">Hochtour</option>
+						<option value="klettersteig">Klettersteig</option>
+						<option value="mtb">MTB</option>
+					</Select>
+				</div>
 				<WeatherMetricsTab trip={stubTrip} createMode={true} onChannelsChange={handleChannelsChange} />
 
 			{:else if activeTab === 'zeitplan'}

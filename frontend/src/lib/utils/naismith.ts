@@ -11,7 +11,7 @@
 // Distanz: gemeinsame haversineKm aus headerStats.ts (DRY, kein eigener Haversine).
 
 import { haversineKm } from '../components/email-preview/headerStats.ts';
-import type { Stage } from '../types';
+import type { ActivityType, Stage } from '../types';
 
 const SPEED_FLAT_KMH = 4.0;
 const SPEED_ASCENT_MH = 300.0;
@@ -20,9 +20,28 @@ const SPEED_DESCENT_MH = 500.0;
 const DEFAULT_START_TIME = '08:00';
 const MAX_MINUTES = 24 * 60 - 1; // "23:59" — Clamp analog naismith.go::formatHHMM
 
+/**
+ * Liefert die Flachgeschwindigkeit (km/h) für eine Aktivität.
+ * Issue #674: Fahrrad-Stufen 15/20/25 km/h; alle anderen → Wanderer-Default 4.0.
+ * Querverweis Go: internal/model/naismith.go::ActivitySpeed.
+ */
+export function activityToSpeed(activity?: ActivityType): number {
+	switch (activity) {
+		case 'fahrrad_25': return 25.0;
+		case 'fahrrad_20': return 20.0;
+		case 'fahrrad_15': return 15.0;
+		default: return SPEED_FLAT_KMH; // 4.0 — Wandern, MTB, Ski, alle anderen
+	}
+}
+
 /** Angepasste Naismith's Rule (SUMME, nicht max!). distKm + Höhenmeter → Stunden. */
+function naismithHoursInternal(distKm: number, ascentM: number, descentM: number, speedFlat = SPEED_FLAT_KMH): number {
+	return distKm / speedFlat + ascentM / SPEED_ASCENT_MH + descentM / SPEED_DESCENT_MH;
+}
+
+/** @deprecated Verwende naismithHoursInternal intern. Exportiert für Abwärts-Kompatibilität (Tests). */
 export function naismithHours(distKm: number, ascentM: number, descentM: number): number {
-	return distKm / SPEED_FLAT_KMH + ascentM / SPEED_ASCENT_MH + descentM / SPEED_DESCENT_MH;
+	return naismithHoursInternal(distKm, ascentM, descentM);
 }
 
 /** Parst "HH:MM" in Minuten ab Mitternacht; unsinnige Zeit → Default. (naismith.go::parseStartMinutes) */
@@ -52,12 +71,14 @@ function formatHHMM(totalMin: number): string {
  * Kumulative Ankunftszeiten pro Wegpunkt einer Stage als "HH:MM".
  * startTime "HH:MM" (default "08:00"). Distanz via haversineKm (headerStats).
  * Pausentag (0 Wegpunkte) → []. Erster Wegpunkt = startTime.
+ * speedFlatKmh: optional, default SPEED_FLAT_KMH (4.0). Nutze activityToSpeed().
  * Spiegelt naismith.go::ComputeStageArrivals.
  */
-export function computeArrivalTimes(stage: Stage, startTime?: string): string[] {
+export function computeArrivalTimes(stage: Stage, startTime?: string, speedFlatKmh?: number): string[] {
 	const wps = stage.waypoints;
 	if (!wps || wps.length === 0) return [];
 
+	const speed = speedFlatKmh ?? SPEED_FLAT_KMH;
 	let cur = parseStartMinutes(startTime);
 	const arrivals: string[] = [formatHHMM(Math.round(cur))];
 
@@ -68,7 +89,7 @@ export function computeArrivalTimes(stage: Stage, startTime?: string): string[] 
 		const dElev = wp.elevation_m - prev.elevation_m;
 		const ascent = Math.max(0, dElev);
 		const descent = Math.max(0, -dElev);
-		cur += naismithHours(dist, ascent, descent) * 60.0;
+		cur += naismithHoursInternal(dist, ascent, descent, speed) * 60.0;
 		arrivals.push(formatHHMM(Math.round(cur)));
 	}
 

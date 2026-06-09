@@ -24,17 +24,18 @@
 	import StageTimeField from './StageTimeField.svelte';
 	import { addDays, computeCascadeDelta } from './cascade.ts';
 	import { Eyebrow, Btn, Dot, Pill } from '$lib/components/atoms';
-	import { computeArrivalTimes } from '$lib/utils/naismith';
+	import { computeArrivalTimes, activityToSpeed } from '$lib/utils/naismith';
 	import { interpolateWaypoint } from '$lib/utils/waypointEditor';
-	import type { Stage, Waypoint } from '$lib/types';
+	import type { ActivityType, Stage, Waypoint } from '$lib/types';
 	import { api } from '$lib/api.js';
 
 	interface Props {
 		stages: Stage[];
 		tripId?: string;
 		showSave?: boolean;
+		activityType?: ActivityType;
 	}
-	let { stages = $bindable(), tripId, showSave = true }: Props = $props();
+	let { stages = $bindable(), tripId, showSave = true, activityType }: Props = $props();
 
 	let saving = $state(false);
 	let saveSuccess = $state(false);
@@ -76,8 +77,11 @@
 			? stages[activeStageIndex + 1]
 			: null
 	);
+	// Issue #674 — Speed aus activityType ableiten (Fahrrad/Wanderer-Default).
 	const arrivals = $derived(
-		activeStage ? computeArrivalTimes(activeStage, activeStage.start_time) : []
+		activeStage
+			? computeArrivalTimes(activeStage, activeStage.start_time, activityToSpeed(activityType))
+			: []
 	);
 
 	const newId = (): string => crypto.randomUUID().slice(0, 8);

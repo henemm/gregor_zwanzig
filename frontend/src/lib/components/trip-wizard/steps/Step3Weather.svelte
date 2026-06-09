@@ -38,14 +38,22 @@
 		{ value: 'trekking', label: 'Alpen-Trekking' },
 		{ value: 'ski_touring', label: 'Skitouren' },
 		{ value: 'hiking', label: 'Wandern' },
-		{ value: 'mountaineering', label: 'Hochtour' }
+		{ value: 'mountaineering', label: 'Hochtour' },
+		// Issue #674 — Fahrrad-Aktivitätstypen
+		{ value: 'fahrrad_15', label: 'Fahrrad (15 km/h)' },
+		{ value: 'fahrrad_20', label: 'Fahrrad (20 km/h)' },
+		{ value: 'fahrrad_25', label: 'Fahrrad (25 km/h)' }
 	];
 
 	const OPTION_TO_ACTIVITY: Record<string, ActivityType> = {
 		trekking: 'trekking',
 		ski_touring: 'skitour',
 		hiking: 'trekking',
-		mountaineering: 'hochtour'
+		mountaineering: 'hochtour',
+		// Issue #674
+		fahrrad_15: 'fahrrad_15',
+		fahrrad_20: 'fahrrad_20',
+		fahrrad_25: 'fahrrad_25'
 	};
 
 	const ACTIVITY_TO_OPTION: Record<ActivityType, string> = {
@@ -53,7 +61,11 @@
 		skitour: 'ski_touring',
 		hochtour: 'mountaineering',
 		klettersteig: '',
-		mtb: ''
+		mtb: '',
+		// Issue #674
+		fahrrad_15: 'fahrrad_15',
+		fahrrad_20: 'fahrrad_20',
+		fahrrad_25: 'fahrrad_25'
 	};
 
 	let selectedOption = $state<string>(

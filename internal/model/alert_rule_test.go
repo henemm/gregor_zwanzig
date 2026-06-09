@@ -2,6 +2,7 @@ package model
 
 import (
 	"encoding/json"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -42,7 +43,7 @@ func TestAlertRule_JSONRoundtrip(t *testing.T) {
 	if err := json.Unmarshal(b, &out); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	if out != in {
+	if !reflect.DeepEqual(out, in) {
 		t.Fatalf("Roundtrip nicht identisch:\n in: %+v\nout: %+v", in, out)
 	}
 }

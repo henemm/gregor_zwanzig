@@ -1,7 +1,7 @@
 
 # API Contract — Gregor Zwanzig
 
-**Updated:** 2026-06-09 (Issue #680 — Compare-Editor Slice 3 Fidelity: display_config.active_metrics — ausgewählte Metriken pro Vergleich; #675 — Etappen-Startzeiten editierbar; #671 — Bot-Menü automatisch beim Service-Start; #638 — Alerts-Tab Karten-Modell, Severity-Falle, pro-Alert Kanäle; #664 — Metriken-Überblick-Pille; #621 — E-Mail-Elemente abschaltbar); 2026-06-08 (Issues #672/#671 — Telegram E2E-Pipeline-Tests + Bot-Menü-Vertrag; #642 — User-Anzeigename display_name; #655 — Telegram Hybrid-Navigation: callback_query + editMessageText); 2026-06-07 (Issues #627/#631 — Compare-Preset Sofortversand + Wochen-Rhythmus-Erhalt)
+**Updated:** 2026-06-09 (Issue #674 — Fahrradtour als Aktivitätstyp: 3 neue ActivityType-Varianten (fahrrad_15/20/25 km/h) mit korrekten Naismith-Raten (600/1000 Hm/h); #680 — Compare-Editor Slice 3 Fidelity: display_config.active_metrics — ausgewählte Metriken pro Vergleich; #675 — Etappen-Startzeiten editierbar; #671 — Bot-Menü automatisch beim Service-Start; #638 — Alerts-Tab Karten-Modell, Severity-Falle, pro-Alert Kanäle; #664 — Metriken-Überblick-Pille; #621 — E-Mail-Elemente abschaltbar); 2026-06-08 (Issues #672/#671 — Telegram E2E-Pipeline-Tests + Bot-Menü-Vertrag; #642 — User-Anzeigename display_name; #655 — Telegram Hybrid-Navigation: callback_query + editMessageText); 2026-06-07 (Issues #627/#631 — Compare-Preset Sofortversand + Wochen-Rhythmus-Erhalt)
 
 ## 0) Konventionen
 - Zeit: ISO-8601 UTC (`Z`)
@@ -564,6 +564,110 @@ type CompareSubscription struct {
 | `cmd/server/main.go` | +5 Route-Registrierungen |
 
 ---
+
+---
+
+## 10.5) Trip Model and Activity Types (Issue #674)
+
+Trip-Daten werden als JSON unter `data/users/{userID}/trips/{trip_id}.json` gespeichert. Das Kernmodell definiert Etappen, Wegpunkte und Konfiguration.
+
+### Trip DTO
+
+```go
+type Trip struct {
+    ID                      string                 `json:"id"`
+    Name                    string                 `json:"name"`
+    Stages                  []Stage                `json:"stages"`
+    AvalancheRegions        []string               `json:"avalanche_regions,omitempty"`
+    Aggregation             map[string]interface{} `json:"aggregation,omitempty"`
+    WeatherConfig           map[string]interface{} `json:"weather_config,omitempty"`
+    DisplayConfig           map[string]interface{} `json:"display_config,omitempty"`
+    ReportConfig            map[string]interface{} `json:"report_config,omitempty"`
+    AlertRules              []AlertRule            `json:"alert_rules"`
+    AlertCooldownMinutes    *int                   `json:"alert_cooldown_minutes,omitempty"`
+    AlertQuietFrom          *string                `json:"alert_quiet_from,omitempty"`
+    AlertQuietTo            *string                `json:"alert_quiet_to,omitempty"`
+    Shortcode               string                 `json:"shortcode,omitempty"`
+    Activity                string                 `json:"activity,omitempty"`
+    Region                  string                 `json:"region,omitempty"`
+    PausedAt                *time.Time             `json:"paused_at,omitempty"`
+    ArchivedAt              *time.Time             `json:"archived_at,omitempty"`
+}
+```
+
+### Activity Types (Issue #674)
+
+Das Feld `activity` definiert die Art der Fortbewegung und damit die Geschwindigkeitsannahmen für Ankunftszeit-Berechnungen (Naismith-Formel).
+
+| ActivityType | Flachgeschwindigkeit | Aufstieg [m/h] | Abstieg [m/h] | Verwendungsfall |
+|---|---|---|---|---|
+| `"trekking"` | 4.0 km/h | 300 | 500 | Standard-Wanderung (default) |
+| `"skitour"` | 3.5 km/h | 250 | 400 | Skitour ohne Trails |
+| `"hochtour"` | 3.0 km/h | 300 | 400 | Hochgebirgstouren mit Felsen/Schnee |
+| `"klettersteig"` | 2.0 km/h | 150 | 200 | Klettersteig-Passagen |
+| `"mtb"` | 4.0 km/h | 300 | 500 | Mountainbike (aktuell Wandertempo) |
+| `"fahrrad_15"` | **15.0 km/h** | **600** | **1000** | Tourenrad, moderate Tempo (Issue #674) |
+| `"fahrrad_20"` | **20.0 km/h** | **600** | **1000** | Tourenrad, zügig (Issue #674) |
+| `"fahrrad_25"` | **25.0 km/h** | **600** | **1000** | Tourenrad, schnell (Issue #674) |
+
+**Leeres oder unbekanntes Activity-Feld:** Fallback auf `"trekking"` (4.0 km/h, 300/500 m/h) für Backward Compatibility mit bestehenden Trips.
+
+**Naismith-Formel:**
+```
+Fahrzeit [h] = Distanz [km] / FlatKmh + Aufstieg [m] / AscentMh + Abstieg [m] / DescentMh
+```
+
+**Höhenmeter-Begründung für Fahrradtypen:** Radfahrer überwinden Steigungen effizienter als Fußgänger (bessere Kraftübertragung, Schwungtechnik bei Abfahrten). Die 600/1000-Raten entsprechen der doppelten Geschwindigkeit von Wanderern (300/500).
+
+### Stage DTO
+
+```go
+type Stage struct {
+    ID                string       `json:"id"`
+    Name              string       `json:"name"`
+    Date              string       `json:"date"`        // YYYY-MM-DD
+    StartTime         string       `json:"start_time,omitempty"` // HH:MM (Issue #675)
+    Waypoints         []Waypoint   `json:"waypoints"`
+    Distance          float64      `json:"distance_km"`
+    Ascent            float64      `json:"ascent_m"`
+    Descent           float64      `json:"descent_m"`
+    DurationMinutes   *int         `json:"duration_minutes,omitempty"`
+    ArrivalCalculated string       `json:"arrival_calculated,omitempty"` // HH:MM
+}
+```
+
+### Waypoint DTO
+
+```go
+type Waypoint struct {
+    ID                  string     `json:"id"`
+    Name                string     `json:"name"`
+    Lat                 float64    `json:"lat"`
+    Lon                 float64    `json:"lon"`
+    ElevationM          *float64   `json:"elevation_m,omitempty"`
+    DistanceFromStartKm float64    `json:"distance_from_start_km"`
+    ArrivalCalculated   string     `json:"arrival_calculated,omitempty"` // HH:MM (berechnet aus Activity)
+}
+```
+
+**Berechnung `arrival_calculated`:**
+- Frontend: `computeArrivalTimes(stage, startTime, activityToSpeed(trip.activity))` → gibt Array von HH:MM-Strings
+- Backend (Go): `ComputeStageArrivals(stage, ActivitySpeed(trip.activity))` → mutiert Waypoints mit berechneter Zeit
+- TypeScript: `function activityToSpeed(activity?: ActivityType): number` — 15/20/25 für Fahrrad, 4.0 default
+
+**Beispiel (Fahrrad 20 km/h):**
+```json
+{
+  "id": "w1",
+  "name": "Alp Blenio",
+  "lat": 46.45,
+  "lon": 8.65,
+  "elevation_m": 1500,
+  "distance_from_start_km": 20,
+  "arrival_calculated": "09:00"
+}
+```
+Bei `start_time = "08:00"` und `activity = "fahrrad_20"`: 20 km ÷ 20 km/h = 1 h → 09:00 ✓
 
 ---
 
@@ -1985,6 +2089,7 @@ export interface AlertRule {
 
 ## Changelog
 
+- 2026-06-09: Issue #674 — Fahrradtouren als Aktivitätstypen (15 / 20 / 25 km/h): Neue `ActivityType`-Werte `"fahrrad_15"`, `"fahrrad_20"`, `"fahrrad_25"` in Go + TypeScript mit korrekten Naismith-Raten (600 m/h Aufstieg, 1000 m/h Abstieg — doppelt so schnell wie Wanderer). Section 10.5 hinzugefügt (Trip Model und Activity Types). Trip.activity Feld existierte bereits (Epic #136), wird jetzt dokumentiert mit vollständiger Aktivitäts-Tabelle. `ComputeStageArrivals()` Signatur erweitert auf `ActivitySpeeds`-Parameter statt hardcodiert; `ActivitySpeed(trip.activity)` Hilfsfunktion in Go. Frontend: `activityToSpeed(activityType?)` Hilfsfunktion, `computeArrivalTimes()` akzeptiert optionalen `speedFlatKmh`-Parameter. Wizard Step 3 zeigt 3 neue Fahrrad-Optionen im Dropdown. EditStagesPanelNew erhält `activityType`-Prop, leitet Speed weiter. Backward-Compatibility: unbekannte/leere Activity → Wanderer-Default (4.0 km/h, 300/500 Hm/h). Keine Python-Erweiterung (OUT OF SCOPE, Folge-Issue für EtappenConfig). See `docs/specs/modules/issue_674_aktivitaetstyp_fahrrad.md`.
 - 2026-06-09: Issue #680 — Compare-Editor Slice 3 Fidelity-Tabs „Orte" + „Idealwerte" (Epic #677): ComparePreset DTO erweitert um opaque `display_config` field (Section 16). Keys: `active_metrics` ([]string — ausgewählte Metriken pro Vergleich), `ideal_ranges` (min/max-Idealwerte für Bewertung), zukünftig `output_layout` + `schedule_config`. Frontend RMW-Semantik: nur geänderte Felder senden, Server roundtrippt alles (bestandsfelder erhalten). Zero-schema-validation im Backend. Neue UI-Komponenten: `RangeSlider.svelte` (Dual-Handle für range-Metriken), Segmented-Control (Enum-Metriken). compareMetricDefs.ts: `ALL_METRICS`-Katalog + `deriveIdealText()`. compareWizardState.svelte.ts: `activeMetricKeys`, `metricsManuallyEdited`. Step2Orte: nummerierte Picked-Liste mit Entfernen, Region-gruppierte Bibliothek (Checkbox). Step3Idealwerte: Slider, Add/Remove-Metrik, Persistenz. See `docs/specs/modules/issue_680_compare_editor_slice3.md`.
 - 2026-06-09: Issue #675 — Etappen-Startzeiten editierbar (Frontend-only, no API changes): (1) New `StageTimeField.svelte` component (analog `StageDateField`) renders `<input type="time">` within `.box` wrapper with label "STARTZEIT"; (2) Editor displays default `08:00` when `stage.start_time` is unset (displayValue fallback); (3) `EditStagesPanelNew.svelte` handler `handleStartTimeChange()` implements immutable update: setting empty string removes `start_time` (returns to default), otherwise sets to user-chosen time; (4) Component renders in both Desktop header (.stage-header-fields) and Mobile markup (@media ≤899px) for Desktop–Mobile parity; (5) Skipped for pause stages (`activeIsPause === true`); (6) Live Naismith `$derived arrivals` recalculates from changed `start_time` without explicit save (feature display); (7) Existing `Stage.start_time?: string` field (already present in model, Naismith, and Backend RMW) requires no data migration; unset trips remain byte-equal on open+save (alt-treu). ACs 1–7 verified via Playwright E2E + staging_validator. See `docs/specs/modules/issue_675_etappen_startzeiten.md`.
 - 2026-06-09: Issue #638 — Alerts-Tab Karten-Modell + Severity-Falle + pro-Alert Kanäle: (1) Added section 22 — AlertRule DTO with new `channels: list[str]` field (empty = inherit active briefing channels; non-empty = override); (2) `AlertRule.severity` now label-only (not used for send filtering anymore — eliminates severity trap where info-alerts were silently dropped); (3) Frontend Alerts-Tab moved from table paradigm to card model via AlertCard.svelte; Severity dropdown UI removed; Channel chips per alert with toggle UI; (4) Versand-Logik: per-alert kanal-routing via `trip_alert.py:_send_alert()` gruppiert Changes nach effektiven Kanälen; (5) Backward compatibility: bestandsdaten ohne `channels` laden mit leerer Liste (RMW bei Versand); `severity` bleibt lesbar. See `docs/specs/modules/issue_638_alerts_redesign.md`.

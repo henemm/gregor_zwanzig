@@ -113,5 +113,10 @@ export function mapActivityToProfile(activity: ActivityType): AggregationProfile
 			return 'summer_trekking';
 		case 'mtb':
 			return 'allgemein';
+		// Issue #674 — Fahrrad-Varianten → allgemein (identisch zu mtb)
+		case 'fahrrad_15':
+		case 'fahrrad_20':
+		case 'fahrrad_25':
+			return 'allgemein';
 	}
 }

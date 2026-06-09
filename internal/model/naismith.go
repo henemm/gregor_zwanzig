@@ -24,10 +24,35 @@ const (
 	defaultStartTime = "08:00"
 )
 
+// ActivitySpeeds bündelt die drei Tempoparameter einer Aktivität.
+// Issue #674: Fahrrad-Stufen (15/20/25 km/h) + Wanderer-Default (4/300/500).
+// Querverweis TS: frontend/src/lib/utils/naismith.ts::activityToSpeed.
+type ActivitySpeeds struct {
+	FlatKmh   float64
+	AscentMh  float64
+	DescentMh float64
+}
+
+// ActivitySpeed liefert die Tempoparameter für eine Trip.Activity.
+// Unbekannte oder leere Werte → Wanderer-Default (gespiegelt aus EtappenConfig).
+// Fahrrad-Höhenmeter: 600/1000 Hm/h (doppelt so schnell wie Wanderer).
+func ActivitySpeed(activity string) ActivitySpeeds {
+	switch activity {
+	case "fahrrad_15":
+		return ActivitySpeeds{FlatKmh: 15.0, AscentMh: 600.0, DescentMh: 1000.0}
+	case "fahrrad_20":
+		return ActivitySpeeds{FlatKmh: 20.0, AscentMh: 600.0, DescentMh: 1000.0}
+	case "fahrrad_25":
+		return ActivitySpeeds{FlatKmh: 25.0, AscentMh: 600.0, DescentMh: 1000.0}
+	default:
+		return ActivitySpeeds{FlatKmh: speedFlatKmh, AscentMh: speedAscentMh, DescentMh: speedDescentMh}
+	}
+}
+
 // naismithHours: angepasste Naismith's Rule als SUMME (nicht max!).
 // Querverweis: src/core/segment_builder.py compute_hiking_time.
-func naismithHours(distKm, ascentM, descentM float64) float64 {
-	return distKm/speedFlatKmh + ascentM/speedAscentMh + descentM/speedDescentMh
+func naismithHours(distKm, ascentM, descentM float64, sp ActivitySpeeds) float64 {
+	return distKm/sp.FlatKmh + ascentM/sp.AscentMh + descentM/sp.DescentMh
 }
 
 // haversineKm berechnet die Großkreis-Distanz in km zwischen zwei lat/lon.
@@ -75,7 +100,8 @@ func formatHHMM(totalMin int) string {
 // Start = stage.StartTime (parse "HH:MM") oder Default "08:00".
 // arrival[0] = Start; arrival[i] = arrival[i-1] + naismithHours(dist, asc, desc).
 // Pausentag (0 Wegpunkte): keine Berechnung, kein Feld.
-func ComputeStageArrivals(stage *Stage) {
+// sp: Tempoparameter aus ActivitySpeed(trip.Activity).
+func ComputeStageArrivals(stage *Stage, sp ActivitySpeeds) {
 	if stage == nil || len(stage.Waypoints) == 0 {
 		return
 	}
@@ -89,7 +115,7 @@ func ComputeStageArrivals(stage *Stage) {
 		dElev := float64(wp.ElevationM - prev.ElevationM)
 		asc := math.Max(0, dElev)
 		desc := math.Max(0, -dElev)
-		cur += naismithHours(dist, asc, desc) * 60.0
+		cur += naismithHours(dist, asc, desc, sp) * 60.0
 		v := formatHHMM(int(math.Round(cur)))
 		stage.Waypoints[i].ArrivalCalculated = &v
 	}

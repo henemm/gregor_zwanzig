@@ -3,7 +3,7 @@
 // (docs/design-requests/trip-anlegen-2026-06-06/screen-trip-new-v2.jsx).
 // Keine Seiteneffekte, keine Svelte-Imports — testbar mit node:test.
 
-import type { Trip, WeatherConfigMetric, ReportConfig, AlertRule, Waypoint } from '$lib/types';
+import type { Trip, WeatherConfigMetric, ReportConfig, AlertRule, Waypoint, ActivityType } from '$lib/types';
 
 // ── TabId ────────────────────────────────────────────────────────────────────
 
@@ -96,6 +96,8 @@ export interface CreateTripState {
 	channels: CreateTripChannels;
 	reportConfig?: ReportConfig;
 	alertRules?: AlertRule[];
+	// Issue #674 — Aktivitätstyp (Fahrrad/Wanderer) für Naismith-Berechnung.
+	activity?: ActivityType;
 }
 
 function newId(): string {
@@ -129,6 +131,11 @@ export function buildCreateTripPayload(state: CreateTripState): Trip {
 
 	if (state.region && state.region.trim().length > 0) {
 		trip.region = state.region.trim();
+	}
+
+	// Issue #674 — Aktivitätstyp persistieren (Fahrrad/Wanderer).
+	if (state.activity) {
+		trip.activity = state.activity;
 	}
 
 	// display_config: metriken + kanäle (channels als extra-Feld, additiv)

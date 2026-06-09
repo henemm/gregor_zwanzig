@@ -24,7 +24,10 @@ export interface Group {
 	order: number;
 }
 
-export type ActivityType = 'trekking' | 'skitour' | 'hochtour' | 'klettersteig' | 'mtb';
+// Issue #674 — Fahrrad-Aktivitätstypen (drei Geschwindigkeitsstufen).
+export type ActivityType =
+	| 'trekking' | 'skitour' | 'hochtour' | 'klettersteig' | 'mtb'
+	| 'fahrrad_15' | 'fahrrad_20' | 'fahrrad_25';
 
 export interface Waypoint {
 	id: string;

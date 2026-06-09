@@ -20,6 +20,7 @@ func strPtr(s string) *string { return &s }
 // TestNaismithHours prüft die angepasste Naismith-Formel als SUMME (nicht max!).
 // AC-3 / AC-6: dist/4 + ascent/300 + descent/500.
 func TestNaismithHours(t *testing.T) {
+	sp := ActivitySpeed("") // Wanderer-Default
 	cases := []struct {
 		name                       string
 		distKm, ascentM, descentM float64
@@ -32,7 +33,7 @@ func TestNaismithHours(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			got := naismithHours(c.distKm, c.ascentM, c.descentM)
+			got := naismithHours(c.distKm, c.ascentM, c.descentM, sp)
 			if diff := got - c.want; diff > arrivalEps || diff < -arrivalEps {
 				t.Fatalf("naismithHours(%v,%v,%v) = %v, want %v",
 					c.distKm, c.ascentM, c.descentM, got, c.want)
@@ -53,7 +54,7 @@ func TestComputeStageArrivals_Flat(t *testing.T) {
 			{ID: "W2", Name: "Ziel", Lat: 47.036, Lon: 11.0, ElevationM: 1000},
 		},
 	}
-	ComputeStageArrivals(stage)
+	ComputeStageArrivals(stage, ActivitySpeed(""))
 
 	if stage.Waypoints[0].ArrivalCalculated == nil ||
 		*stage.Waypoints[0].ArrivalCalculated != "08:00" {
@@ -76,7 +77,7 @@ func TestComputeStageArrivals_DefaultStart(t *testing.T) {
 			{ID: "W1", Name: "Start", Lat: 47.0, Lon: 11.0, ElevationM: 1000},
 		},
 	}
-	ComputeStageArrivals(stage)
+	ComputeStageArrivals(stage, ActivitySpeed(""))
 
 	if stage.Waypoints[0].ArrivalCalculated == nil {
 		t.Fatal("wp[0] ArrivalCalculated == nil, want Default 08:00")
@@ -97,7 +98,7 @@ func TestComputeStageArrivals_Ascent(t *testing.T) {
 			{ID: "W2", Name: "Gipfel", Lat: 47.0, Lon: 11.0, ElevationM: 1300},
 		},
 	}
-	ComputeStageArrivals(stage)
+	ComputeStageArrivals(stage, ActivitySpeed(""))
 
 	if stage.Waypoints[1].ArrivalCalculated == nil {
 		t.Fatal("wp[1] ArrivalCalculated == nil, want gesetzt")
@@ -115,7 +116,7 @@ func TestComputeStageArrivals_Pause(t *testing.T) {
 		Waypoints: []Waypoint{},
 	}
 	// Darf nicht paniken.
-	ComputeStageArrivals(stage)
+	ComputeStageArrivals(stage, ActivitySpeed(""))
 
 	if len(stage.Waypoints) != 0 {
 		t.Fatalf("Pausentag soll 0 Wegpunkte behalten, hat %d", len(stage.Waypoints))
@@ -135,7 +136,7 @@ func TestComputeStageArrivals_Monotonic(t *testing.T) {
 			{ID: "W3", Name: "Ziel", Lat: 47.072, Lon: 11.0, ElevationM: 1300},
 		},
 	}
-	ComputeStageArrivals(stage)
+	ComputeStageArrivals(stage, ActivitySpeed(""))
 
 	prev := -1
 	for i, wp := range stage.Waypoints {
@@ -171,7 +172,7 @@ func TestFormatHHMM_ClampsOverflow(t *testing.T) {
 			{ID: "W2", Name: "Fern", Lat: 47.9, Lon: 11.0, ElevationM: 1000},
 		},
 	}
-	ComputeStageArrivals(stage)
+	ComputeStageArrivals(stage, ActivitySpeed(""))
 
 	if stage.Waypoints[1].ArrivalCalculated == nil {
 		t.Fatal("wp[1] ArrivalCalculated == nil, want geclampten Wert")
@@ -198,7 +199,7 @@ func TestParseStartMinutes_RejectsNonsense(t *testing.T) {
 			{ID: "W1", Name: "Start", Lat: 47.0, Lon: 11.0, ElevationM: 1000},
 		},
 	}
-	ComputeStageArrivals(stage)
+	ComputeStageArrivals(stage, ActivitySpeed(""))
 
 	if stage.Waypoints[0].ArrivalCalculated == nil {
 		t.Fatal("wp[0] ArrivalCalculated == nil, want Default 08:00")

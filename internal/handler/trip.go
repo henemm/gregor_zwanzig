@@ -150,6 +150,7 @@ type tripUpdateRequest struct {
 	AlertQuietFrom          *string                 `json:"alert_quiet_from,omitempty"`
 	AlertQuietTo            *string                 `json:"alert_quiet_to,omitempty"`
 	Region                  *string                 `json:"region,omitempty"`
+	Activity                *string                 `json:"activity,omitempty"`
 }
 
 func UpdateTripHandler(s *store.Store) http.HandlerFunc {
@@ -216,13 +217,19 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 		if req.Region != nil {
 			existing.Region = *req.Region
 		}
+		// Issue #674 — Activity-Feld aus PUT-Body übernehmen (F001-Fix).
+		if req.Activity != nil {
+			existing.Activity = *req.Activity
+		}
 		existing.ID = id
 
 		// Issue #296-BE — Naismith-Ankunftszeiten frisch aus den (ggf. neuen)
 		// Wegpunkten berechnen, nach dem Stage-Merge, vor SaveTrip.
 		// arrival_calculated ist abgeleitet, nicht user-geliefert.
+		// Issue #674 — ActivitySpeed aus trip.Activity ableiten (Fahrrad/Wanderer).
+		speeds := model.ActivitySpeed(existing.Activity)
 		for i := range existing.Stages {
-			model.ComputeStageArrivals(&existing.Stages[i])
+			model.ComputeStageArrivals(&existing.Stages[i], speeds)
 		}
 
 		if err := validateTrip(*existing); err != nil {
@@ -371,8 +378,10 @@ func ConfirmWaypointHandler(s *store.Store) http.HandlerFunc {
 		}
 
 		// Naismith-Ankunftszeiten nach der Änderung aktuell halten.
+		// Issue #674 — ActivitySpeed aus trip.Activity ableiten (Fahrrad/Wanderer).
+		waypointSpeeds := model.ActivitySpeed(trip.Activity)
 		for si := range trip.Stages {
-			model.ComputeStageArrivals(&trip.Stages[si])
+			model.ComputeStageArrivals(&trip.Stages[si], waypointSpeeds)
 		}
 
 		if err := s.SaveTrip(*trip); err != nil {
