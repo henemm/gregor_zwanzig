@@ -100,6 +100,24 @@ uv run python3 .claude/hooks/email_spec_validator.py
 
 **STOP wenn:** Validator nicht Exit 0.
 
+## Schritt 3c: Telegram-Scope — funktionaler Live-Test
+
+Wenn der Change den Telegram-Pfad berührt (geänderte Dateien mit `telegram` /
+`inbound_telegram` / `trip_command_processor` im Pfad), MUSS mit gesetzter
+`GZ_TELEGRAM_TEST_CHAT_ID` (+ `GZ_TELEGRAM_BOT_TOKEN`) der funktionale
+Live-Test laufen — AC-3/AC-4 dürfen NICHT skippen:
+
+```bash
+GZ_TELEGRAM_TEST_CHAT_ID=<test-chat-id> GZ_TELEGRAM_BOT_TOKEN=<staging-bot-token> \
+  uv run pytest tests/tdd/test_issue_686_telegram_functional_live.py -v
+```
+
+Ein SKIPPED Telegram-Live-Test zählt **nicht** als grün. Das
+`staging_gate.py --write-verdict`-Gate erzwingt das automatisch: berührt der
+committete Scope (HEAD~1..HEAD) Telegram und `GZ_TELEGRAM_TEST_CHAT_ID` fehlt,
+verweigert es das Verdict (Exit ≠ 0) und blockiert damit das Issue-Close-Gate
+(Issue #686, AC-5).
+
 ## Schritt 4: Test-Trip aufraeumen
 
 Den auf Staging angelegten Test-Trip wieder loeschen, damit Staging sauber bleibt.

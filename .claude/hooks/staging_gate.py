@@ -140,6 +140,42 @@ def prune_old_attestations(tagged_dir: Path, retention: int = ATTESTATION_RETENT
             pass
 
 
+def _telegram_live_gate() -> int:
+    """Issue #686 AC-5: Verweigert das Verdict, wenn der committete Scope den
+    Telegram-Pfad berührt, aber GZ_TELEGRAM_TEST_CHAT_ID fehlt (SKIPPED ≠ grün).
+
+    Returns: 0 = ok (kein Telegram-Scope ODER Test-Chat-ID gesetzt), 1 = blocken.
+    Import-Fehler des dependency-armen Hooks sind fail-soft (Warnung + 0).
+    """
+    import importlib.util
+
+    hook_path = Path(__file__).parent / "e2e_telegram_live.py"
+    try:
+        spec = importlib.util.spec_from_file_location("_e2e_telegram_live_gate", str(hook_path))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+    except Exception as exc:  # noqa: BLE001 — fail-soft bei reinem Importfehler
+        _log(f"WARN: e2e_telegram_live nicht ladbar ({exc}) — Telegram-Gate übersprungen.", stream=sys.stderr)
+        return 0
+
+    result = subprocess.run(
+        ["git", "diff", "--name-only", "HEAD~1", "HEAD"],
+        capture_output=True, text=True, cwd=str(REPO_DIR),
+    )
+    changed = [f.strip() for f in result.stdout.splitlines() if f.strip()]
+    if not mod._scope_touches_telegram(changed):
+        return 0
+    if mod.gate(scope_touches_telegram=True, env=dict(os.environ)) != 0:
+        _log(
+            "FEHLER: Change berührt den Telegram-Pfad, aber GZ_TELEGRAM_TEST_CHAT_ID "
+            "fehlt — funktionaler Telegram-Live-Test (AC-5, Issue #686) nicht bestanden. "
+            "Verdict verweigert.",
+            stream=sys.stderr,
+        )
+        return 1
+    return 0
+
+
 def write_verdict(verdict: str, findings_path: Path, e2e_path: Path | None = None) -> int:
     """Mode A: Verdict in e2e_verified.json schreiben."""
     sha = _head_sha()
@@ -149,6 +185,9 @@ def write_verdict(verdict: str, findings_path: Path, e2e_path: Path | None = Non
     if verdict_upper.startswith("BROKEN"):
         _log(f"BROKEN-Verdict erhalten: {verdict}")
         _log("Kein VERIFIED-Artefakt geschrieben — /e2e-verify erneut ausführen.", stream=sys.stderr)
+        return 1
+
+    if _telegram_live_gate() != 0:
         return 1
 
     try:

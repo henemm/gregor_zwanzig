@@ -65,6 +65,7 @@ class InboundTelegramReader:
 
     def __init__(self) -> None:
         self._offset: int = 0
+        self.sent_message_ids: list[int] = []  # Issue #686: collected for observability + cleanup
 
     def poll_and_process(self, settings: Settings) -> int:
         """Long-polling: holt neue Updates, verarbeitet Befehle.
@@ -146,19 +147,23 @@ class InboundTelegramReader:
         # Aktiven Trip ermitteln (user-scoped)
         trip = self._find_active_trip(user_id)
         if not trip:
-            TelegramOutput(user_settings).send(
+            mid = TelegramOutput(user_settings).send(
                 "Fehler",
                 "Kein aktiver Trip gefunden. Erstelle oder aktiviere einen Trip auf gregor20.henemm.com",
             )
+            if mid is not None:
+                self.sent_message_ids.append(mid)
             return True
 
         # Befehl parsen
         key, value = self._parse_command(text)
         if key is None:
-            TelegramOutput(user_settings).send(
+            mid = TelegramOutput(user_settings).send(
                 "Unbekannter Befehl",
                 "Bekannte Befehle: ruhetag, startdatum, report, abbruch, status, hilfe",
             )
+            if mid is not None:
+                self.sent_message_ids.append(mid)
             return True
 
         # InboundMessage bauen und verarbeiten
@@ -181,11 +186,13 @@ class InboundTelegramReader:
         )
         result: CommandResult = TripCommandProcessor().process(inbound)
 
-        TelegramOutput(user_settings).send(
+        mid = TelegramOutput(user_settings).send(
             result.confirmation_subject,
             result.confirmation_body,
             reply_markup=result.reply_markup,
         )
+        if mid is not None:
+            self.sent_message_ids.append(mid)
         return True
 
     def _process_callback_query(self, callback: dict, settings: Settings) -> bool:

@@ -46,7 +46,7 @@ class TelegramOutput:
     def name(self) -> str:
         return "telegram"
 
-    def send(self, subject: str, body: str, reply_markup: dict | None = None) -> None:
+    def send(self, subject: str, body: str, reply_markup: dict | None = None) -> int | None:
         """Send a Telegram message via Bot API.
 
         Args:
@@ -54,6 +54,10 @@ class TelegramOutput:
             body: Message body text.
             reply_markup: Optional Inline-Keyboard dict (Telegram Bot API format).
                           If None, payload is identical to the legacy format (no key added).
+
+        Returns:
+            message_id (int) on success (HTTP 200 + ok:true), None otherwise.
+            Backward-compatible: existing callers that ignore the return value are unaffected.
         """
         token = self._settings.telegram_bot_token
         chat_id = self._settings.telegram_chat_id
@@ -70,8 +74,12 @@ class TelegramOutput:
 
         try:
             response = httpx.post(url, json=payload, timeout=self._timeout)
-            if response.status_code == 200:
+            if response.status_code == 200 and _api_ok(response):
                 logger.info("Telegram message sent (subject=%r)", subject)
+                try:
+                    return int(response.json()["result"]["message_id"])
+                except (KeyError, TypeError, ValueError):
+                    return None
             else:
                 logger.error(
                     "Telegram API returned status %d: %s",
@@ -85,6 +93,38 @@ class TelegramOutput:
         except httpx.HTTPError as exc:
             logger.error("Telegram send failed: %s", exc)
             raise OutputError("telegram", f"Telegram send failed: {exc}") from exc
+
+    def delete_message(self, chat_id, message_id) -> bool:
+        """Delete a message via deleteMessage.
+
+        fail-soft: returns False on any error (non-200, API rejection, network issues).
+        Used by the test fixture for cleanup after delivering test messages.
+
+        Args:
+            chat_id: Telegram chat ID (str or int).
+            message_id: ID of the message to delete (int).
+
+        Returns:
+            True on HTTP 200 + ok:true, False otherwise.
+        """
+        token = self._settings.telegram_bot_token
+        url = f"{TELEGRAM_API_BASE}/bot{token}/deleteMessage"
+        payload: dict = {"chat_id": chat_id, "message_id": message_id}
+
+        try:
+            response = httpx.post(url, json=payload, timeout=self._timeout)
+            if response.status_code == 200 and _api_ok(response):
+                logger.info("Telegram deleteMessage ok (message_id=%r)", message_id)
+                return True
+            logger.warning(
+                "deleteMessage returned status %d: %s",
+                response.status_code,
+                response.text[:200],
+            )
+            return False
+        except httpx.HTTPError as exc:
+            logger.warning("deleteMessage failed (fail-soft): %s", exc)
+            return False
 
     def edit_message_text(
         self, chat_id, message_id, text: str, reply_markup: dict | None = None
