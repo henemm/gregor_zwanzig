@@ -18,6 +18,11 @@
         "hooks": [
           {
             "type": "command",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/worktree_write_guard.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/worktree_write_guard.py\"; fi",
+            "timeout": 5
+          },
+          {
+            "type": "command",
             "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/workflow_gate.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/workflow_gate.py\"; fi",
             "timeout": 5
           },
