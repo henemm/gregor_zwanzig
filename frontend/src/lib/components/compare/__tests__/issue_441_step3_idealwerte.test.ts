@@ -178,8 +178,8 @@ test('AC-4: Step3 hat $effect für Default-Befüllung aus IDEAL_DEFAULTS', () =>
 
 test('AC-4: $effect schreibt nur wenn Key noch nicht belegt (kein Überschreiben)', () => {
 	const src = readOrThrow(STEP3, 'Step3Idealwerte.svelte');
-	// Muss einen "key in state.idealRanges" oder "!(key in ...)" Guard haben
-	const hasGuard = /in\s+state\.idealRanges|hasOwnProperty|idealRanges\[.*\]\s*===\s*undefined/.test(src);
+	// Muss einen "key in ws.idealRanges"/"key in state.idealRanges" oder "!(key in ...)" Guard haben
+	const hasGuard = /in\s+(?:state|ws)\.idealRanges|hasOwnProperty|idealRanges\[.*\]\s*===\s*undefined/.test(src);
 	assert.ok(
 		hasGuard,
 		'$effect muss prüfen ob Key bereits belegt ist (Edit-Modus-Schutz, AC-5)'

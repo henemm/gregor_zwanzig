@@ -12,7 +12,7 @@
 	}
 	let { locations }: Props = $props();
 
-	const state = getContext<CompareWizardState>('compare-wizard-state');
+	const ws = getContext<CompareWizardState>('compare-wizard-state');
 
 	interface ResolveResult {
 		lat: number;
@@ -34,19 +34,19 @@
 
 	// AC-2: Counter-Text nach CE_OrteTab-Fidelity
 	const counterText = $derived.by(() => {
-		const n = state.pickedIds.length;
+		const n = ws.pickedIds.length;
 		if (n < 2) return 'min. 2 erforderlich';
 		if (n <= 5) return 'passt';
 		return 'viel — Empfehlung 3–5';
 	});
 
 	const counterColor = $derived(
-		state.pickedIds.length < 2 ? 'var(--g-warn)' : 'var(--g-ink-4)'
+		ws.pickedIds.length < 2 ? 'var(--g-warn)' : 'var(--g-ink-4)'
 	);
 
 	// Picked-Orte aus der Locations-Liste aufgelöst
 	const pickedLocations = $derived(
-		state.pickedIds.map((id) => locations.find((l) => l.id === id)).filter(Boolean) as Location[]
+		ws.pickedIds.map((id) => locations.find((l) => l.id === id)).filter(Boolean) as Location[]
 	);
 
 	// AC-3: Bibliotheks-Grid nach Region gruppiert
@@ -94,7 +94,7 @@
 				timezone: preview.timezone,
 				region: preview.region
 			});
-			state.pickedIds = [...state.pickedIds, loc.id];
+			ws.pickedIds = [...ws.pickedIds, loc.id];
 			importInput = '';
 			preview = null;
 		} catch (e: unknown) {
@@ -115,7 +115,7 @@
 				lat,
 				lon
 			});
-			state.pickedIds = [...state.pickedIds, loc.id];
+			ws.pickedIds = [...ws.pickedIds, loc.id];
 			importInput = '';
 			resolveError = null;
 			fallbackLat = '';
@@ -128,10 +128,10 @@
 	}
 
 	function togglePick(id: string) {
-		if (state.pickedIds.includes(id)) {
-			state.pickedIds = state.pickedIds.filter((x) => x !== id);
+		if (ws.pickedIds.includes(id)) {
+			ws.pickedIds = ws.pickedIds.filter((x) => x !== id);
 		} else {
-			state.pickedIds = [...state.pickedIds, id];
+			ws.pickedIds = [...ws.pickedIds, id];
 		}
 	}
 
@@ -254,7 +254,7 @@
 								<button
 									data-testid={`compare-step2-picked-remove-${loc.id}`}
 									type="button"
-									onclick={() => { state.pickedIds = state.pickedIds.filter((x) => x !== loc.id); }}
+									onclick={() => { ws.pickedIds = ws.pickedIds.filter((x) => x !== loc.id); }}
 									style="background:transparent; border:none; padding:6px; color:var(--g-ink-4); cursor:pointer; font-size:12px;"
 								>✕</button>
 							</div>
@@ -283,7 +283,7 @@
 						</div>
 						<div style="display:flex; flex-direction:column; gap:4px;">
 							{#each groupLocs as loc (loc.id)}
-								{@const on = state.pickedIds.includes(loc.id)}
+								{@const on = ws.pickedIds.includes(loc.id)}
 								<button
 									type="button"
 									onclick={() => togglePick(loc.id)}

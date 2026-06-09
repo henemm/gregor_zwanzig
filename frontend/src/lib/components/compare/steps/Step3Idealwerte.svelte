@@ -15,12 +15,12 @@
 	import { toCompareProfile } from '$lib/types';
 	import RangeSlider from '../RangeSlider.svelte';
 
-	const state = getContext<CompareWizardState>('compare-wizard-state');
+	const ws = getContext<CompareWizardState>('compare-wizard-state');
 
 	// Profil-Mapping: ActivityProfile → ProfileKey, Fallback ALLGEMEIN.
 	const profileKey = $derived<ProfileKey>(
-		state.activityProfile
-			? (toCompareProfile(state.activityProfile) as ProfileKey)
+		ws.activityProfile
+			? (toCompareProfile(ws.activityProfile) as ProfileKey)
 			: 'ALLGEMEIN'
 	);
 
@@ -28,11 +28,11 @@
 		PROFILE_METRICS_WITH_SCALES[profileKey] ?? PROFILE_METRICS_WITH_SCALES.ALLGEMEIN
 	);
 
-	// Defaults aus IDEAL_DEFAULTS in state.idealRanges schreiben — nur wenn Key
+	// Defaults aus IDEAL_DEFAULTS in ws.idealRanges schreiben — nur wenn Key
 	// noch nicht belegt ist (sonst würden Edit-Modus-Werte überschrieben).
 	$effect(() => {
 		const defaults = IDEAL_DEFAULTS[profileKey] ?? {};
-		let next = state.idealRanges;
+		let next = ws.idealRanges;
 		let changed = false;
 		for (const [key, range] of Object.entries(defaults)) {
 			if (!(key in next)) {
@@ -43,13 +43,13 @@
 				next[key] = range;
 			}
 		}
-		if (changed) state.idealRanges = next;
+		if (changed) ws.idealRanges = next;
 	});
 
 	// AC-4/AC-5: activeMetricKeys aus Profil-Defaults initialisieren (nur wenn nicht manuell geändert)
 	$effect(() => {
-		if (state.activeMetricKeys.length === 0 && !state.metricsManuallyEdited) {
-			state.activeMetricKeys = metrics.map((m) => m.key);
+		if (ws.activeMetricKeys.length === 0 && !ws.metricsManuallyEdited) {
+			ws.activeMetricKeys = metrics.map((m) => m.key);
 		}
 	});
 
@@ -57,57 +57,57 @@
 	$effect(() => {
 		// Zugriff auf profileKey registriert die Abhängigkeit
 		const currentProfileKey = profileKey;
-		if (!state.metricsManuallyEdited && state.activeMetricKeys.length > 0) {
+		if (!ws.metricsManuallyEdited && ws.activeMetricKeys.length > 0) {
 			const profileMetricKeys = (
 				PROFILE_METRICS_WITH_SCALES[currentProfileKey] ??
 				PROFILE_METRICS_WITH_SCALES.ALLGEMEIN
 			).map((m) => m.key);
 			// Nur zurücksetzen wenn Profil tatsächlich wechselte (andere Keys)
 			const same =
-				profileMetricKeys.length === state.activeMetricKeys.length &&
-				profileMetricKeys.every((k) => state.activeMetricKeys.includes(k));
+				profileMetricKeys.length === ws.activeMetricKeys.length &&
+				profileMetricKeys.every((k) => ws.activeMetricKeys.includes(k));
 			if (!same) {
-				state.activeMetricKeys = profileMetricKeys;
+				ws.activeMetricKeys = profileMetricKeys;
 			}
 		}
 	});
 
 	// Aktive Metriken: aus ALL_METRICS filtern nach activeMetricKeys
 	const activeMetrics = $derived(
-		ALL_METRICS.filter((m) => state.activeMetricKeys.includes(m.key))
+		ALL_METRICS.filter((m) => ws.activeMetricKeys.includes(m.key))
 	);
 
 	// Verfügbare Metriken für "hinzufügen"
 	const availableMetrics = $derived(
-		ALL_METRICS.filter((m) => !state.activeMetricKeys.includes(m.key))
+		ALL_METRICS.filter((m) => !ws.activeMetricKeys.includes(m.key))
 	);
 
 	let showAddMenu = $state(false);
 
 	function setMin(key: string, raw: number) {
 		const val = Number.isNaN(raw) ? null : raw;
-		const prev = state.idealRanges[key] ?? {};
-		state.idealRanges = { ...state.idealRanges, [key]: { ...prev, min: val } };
+		const prev = ws.idealRanges[key] ?? {};
+		ws.idealRanges = { ...ws.idealRanges, [key]: { ...prev, min: val } };
 	}
 
 	function setMax(key: string, raw: number) {
 		const val = Number.isNaN(raw) ? null : raw;
-		const prev = state.idealRanges[key] ?? {};
-		state.idealRanges = { ...state.idealRanges, [key]: { ...prev, max: val } };
+		const prev = ws.idealRanges[key] ?? {};
+		ws.idealRanges = { ...ws.idealRanges, [key]: { ...prev, max: val } };
 	}
 
 	function setEnumMax(key: string, val: string) {
-		state.idealRanges = { ...state.idealRanges, [key]: { max: val } };
+		ws.idealRanges = { ...ws.idealRanges, [key]: { max: val } };
 	}
 
 	function removeMetric(key: string) {
-		state.activeMetricKeys = state.activeMetricKeys.filter((k) => k !== key);
-		state.metricsManuallyEdited = true;
+		ws.activeMetricKeys = ws.activeMetricKeys.filter((k) => k !== key);
+		ws.metricsManuallyEdited = true;
 	}
 
 	function addMetric(key: string) {
-		state.activeMetricKeys = [...state.activeMetricKeys, key];
-		state.metricsManuallyEdited = true;
+		ws.activeMetricKeys = [...ws.activeMetricKeys, key];
+		ws.metricsManuallyEdited = true;
 		showAddMenu = false;
 	}
 </script>
@@ -170,8 +170,8 @@
 								min={metric.rangeMin ?? 0}
 								max={metric.rangeMax ?? 100}
 								step={metric.step ?? 1}
-								valueMin={state.idealRanges[metric.key]?.min ?? metric.rangeMin ?? 0}
-								valueMax={state.idealRanges[metric.key]?.max as number ?? metric.rangeMax ?? 100}
+								valueMin={ws.idealRanges[metric.key]?.min ?? metric.rangeMin ?? 0}
+								valueMax={ws.idealRanges[metric.key]?.max as number ?? metric.rangeMax ?? 100}
 								metricKey={metric.key}
 								onchange={(vMin, vMax) => { setMin(metric.key, vMin); setMax(metric.key, vMax); }}
 							/>
@@ -181,8 +181,8 @@
 								<span data-testid={`compare-step3-scale-max-${metric.key}`}>{metric.rangeMax}</span>
 							</div>
 							<!-- Hidden compat inputs for existing tests -->
-							<input type="hidden" data-testid={`compare-step3-min-${metric.key}`} value={state.idealRanges[metric.key]?.min ?? ''} />
-							<input type="hidden" data-testid={`compare-step3-max-${metric.key}`} value={state.idealRanges[metric.key]?.max ?? ''} />
+							<input type="hidden" data-testid={`compare-step3-min-${metric.key}`} value={ws.idealRanges[metric.key]?.min ?? ''} />
+							<input type="hidden" data-testid={`compare-step3-max-${metric.key}`} value={ws.idealRanges[metric.key]?.max ?? ''} />
 						</div>
 					{:else if metric.kind === 'enum'}
 						<div style="display:flex; gap:4px;" data-testid={`compare-step3-max-${metric.key}`}>
@@ -190,7 +190,7 @@
 								<button
 									type="button"
 									onclick={() => setEnumMax(metric.key, val)}
-									style="padding:5px 10px; font-size:12px; font-family:var(--g-font-mono); border-radius:var(--g-r-2); cursor:pointer; border:1.5px solid {(state.idealRanges[metric.key]?.max as string) === val ? 'var(--g-accent)' : 'var(--g-rule)'}; background:{(state.idealRanges[metric.key]?.max as string) === val ? 'var(--g-accent-tint)' : 'transparent'}; color:{(state.idealRanges[metric.key]?.max as string) === val ? 'var(--g-accent-deep)' : 'var(--g-ink-3)'};"
+									style="padding:5px 10px; font-size:12px; font-family:var(--g-font-mono); border-radius:var(--g-r-2); cursor:pointer; border:1.5px solid {(ws.idealRanges[metric.key]?.max as string) === val ? 'var(--g-accent)' : 'var(--g-rule)'}; background:{(ws.idealRanges[metric.key]?.max as string) === val ? 'var(--g-accent-tint)' : 'transparent'}; color:{(ws.idealRanges[metric.key]?.max as string) === val ? 'var(--g-accent-deep)' : 'var(--g-ink-3)'};"
 								>{val}</button>
 							{/each}
 							<!-- Hidden min compat testid -->
@@ -204,7 +204,7 @@
 					<span
 						data-testid={`compare-step3-ideal-text-${metric.key}`}
 						style="font-family:var(--g-font-mono); font-size:12.5px; font-weight:600; color:var(--g-accent-deep); text-align:right;"
-					>{deriveIdealText(state.idealRanges[metric.key] ?? {}, metric.unit)}</span>
+					>{deriveIdealText(ws.idealRanges[metric.key] ?? {}, metric.unit)}</span>
 
 					<!-- ✕ Metrik entfernen -->
 					<button
