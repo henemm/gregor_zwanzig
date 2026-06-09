@@ -30,8 +30,11 @@ from app.trip import Stage, TimeWindow, Trip, Waypoint
 class TestFilterSignificantChanges:
     """Test filtering of significant changes."""
 
-    def test_filter_keeps_moderate_and_major(self) -> None:
-        """MODERATE and MAJOR severity should be kept."""
+    def test_filter_keeps_all_changes(self) -> None:
+        """Issue #638: All changes pass — severity is label only, not filter criterion.
+
+        The old MODERATE/MAJOR-only filter was the Severity-Falle (silent Info-alert drop).
+        """
         from services.trip_alert import TripAlertService
 
         service = TripAlertService()
@@ -44,11 +47,10 @@ class TestFilterSignificantChanges:
 
         filtered = service._filter_significant_changes(changes)
 
-        assert len(filtered) == 2
-        assert all(c.severity in [ChangeSeverity.MODERATE, ChangeSeverity.MAJOR] for c in filtered)
+        assert len(filtered) == 3, "Issue #638: All changes must pass, including MINOR"
 
-    def test_filter_removes_minor(self) -> None:
-        """MINOR severity should be filtered out."""
+    def test_filter_keeps_minor_changes(self) -> None:
+        """Issue #638: MINOR changes are no longer silently dropped."""
         from services.trip_alert import TripAlertService
 
         service = TripAlertService()
@@ -60,7 +62,7 @@ class TestFilterSignificantChanges:
 
         filtered = service._filter_significant_changes(changes)
 
-        assert len(filtered) == 0
+        assert len(filtered) == 2, "Issue #638: MINOR changes must not be filtered out"
 
     def test_filter_empty_list(self) -> None:
         """Empty list should return empty."""

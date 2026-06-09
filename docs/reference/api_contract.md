@@ -1,7 +1,7 @@
 
 # API Contract — Gregor Zwanzig
 
-**Updated:** 2026-06-09 (Issues #664 — Metriken-Überblick-Pille; #621 — E-Mail-Elemente abschaltbar); 2026-06-08 (Issues #672/#671 — Telegram E2E-Pipeline-Tests + Bot-Menü-Vertrag; #642 — User-Anzeigename display_name; #655 — Telegram Hybrid-Navigation: callback_query + editMessageText); 2026-06-07 (Issues #627/#631 — Compare-Preset Sofortversand + Wochen-Rhythmus-Erhalt)
+**Updated:** 2026-06-09 (Issue #638 — Alerts-Tab Karten-Modell, Severity-Falle, pro-Alert Kanäle; Issues #664 — Metriken-Überblick-Pille; #621 — E-Mail-Elemente abschaltbar); 2026-06-08 (Issues #672/#671 — Telegram E2E-Pipeline-Tests + Bot-Menü-Vertrag; #642 — User-Anzeigename display_name; #655 — Telegram Hybrid-Navigation: callback_query + editMessageText); 2026-06-07 (Issues #627/#631 — Compare-Preset Sofortversand + Wochen-Rhythmus-Erhalt)
 
 ## 0) Konventionen
 - Zeit: ISO-8601 UTC (`Z`)
@@ -1851,8 +1851,133 @@ Retrieves briefing delivery log for a specific trip (archived or active).
 
 ---
 
+## 22) Alert Rules (Issue #638)
+
+**Alerts-Tab Redesign: Karten-Modell, Severity-Falle beseitigen, pro-Alert Kanäle**
+
+Alerts sind personalisierbare Benachrichtigungen bei Wetteränderungen auf einem Trip. Jeder Alert hat eine Metrik (z.B. Wind-Böen), einen Schwellenwert, und wird jetzt mit eigenen Kanälen versandt (vorbelegt aus Briefing-Kanälen).
+
+### AlertRule DTO
+
+```go
+// internal/model/trip.go (Go)
+type AlertRule struct {
+    ID       string   `json:"id"`
+    Kind     string   `json:"kind"`           // "absolute" | "delta"
+    Metric   string   `json:"metric"`         // WIND_GUST, PRECIPITATION_SUM, ...
+    Threshold float64 `json:"threshold"`
+    Severity string   `json:"severity"`       // "info", "warning", "critical" (Label nur; nicht mehr für Versand-Entscheidung)
+    Enabled  bool     `json:"enabled"`
+    Unit     string   `json:"unit,omitempty"`
+    Channels []string `json:"channels,omitempty"` // NEW: pro-Alert Kanal-Override (empty = erbe Briefing-Kanäle)
+}
+```
+
+```python
+# src/app/models.py (Python)
+@dataclass
+class AlertRule:
+    id: str
+    kind: AlertRuleKind         # ABSOLUTE | DELTA
+    metric: AlertMetric         # WIND_GUST, PRECIPITATION_SUM, etc.
+    threshold: float
+    severity: AlertSeverity     # INFO | WARNING | CRITICAL (Label only; not used for send decision)
+    enabled: bool
+    unit: str = ""
+    channels: list[str] = field(default_factory=list)  # NEW: pro-Alert Kanal-Override
+```
+
+```typescript
+// frontend/src/lib/types.ts
+export interface AlertRule {
+  id: string;
+  kind: "absolute" | "delta";
+  metric: string;
+  threshold: number;
+  severity: "info" | "warning" | "critical";
+  enabled: boolean;
+  unit?: string;
+  channels?: string[];  // NEW: pro-Alert Kanal-Override
+}
+```
+
+### Feldliste
+
+| Feld | Typ | Beschreibung |
+|------|-----|------------|
+| id | string | Eindeutige Alert-ID (z.B. `alert-gust-1`) |
+| kind | enum | `"absolute"` (Schwellenwert überschritten) oder `"delta"` (Änderung größer als Schwelle) |
+| metric | enum | Gemessene Metrik: WIND_GUST, PRECIPITATION_SUM, TEMPERATURE_MIN/MAX, THUNDER_LEVEL, SNOW_LINE, TEMPERATURE/WIND/PRECIPITATION_CHANGE |
+| threshold | float | Schwellenwert (z.B. `50.0` für 50 km/h Wind-Böen) |
+| severity | enum | `"info"`, `"warning"`, `"critical"` — nur noch Label am Alert, **nicht mehr** für Versand-Filterung (behebt Severity-Falle: Info-Alerts werden nicht mehr still verschluckt) |
+| enabled | bool | Alert aktiv? (default: true) |
+| unit | string | Einheit (optional, z.B. `"km/h"`, `"mm"`) |
+| channels | string[] | **NEW (Issue #638):** Kanäle für diesen Alert (`["email", "telegram"]`). Leer = erbe aktive Briefing-Kanäle aus `TripReportConfig`. Pro Alert überschreibbar. |
+
+### Versand-Logik (Kanal pro Alert)
+
+**Effektive Kanäle eines Alerts:**
+- Falls `alert.channels` nicht leer: nutze exakt diese Kanäle
+- Falls `alert.channels` leer oder nicht gesetzt: erbe aktive Briefing-Kanäle aus `report_config` (`send_email`, `send_telegram`, `send_sms`)
+
+**Beispiel:**
+```json
+{
+  "report_config": {
+    "send_email": true,
+    "send_telegram": false,
+    "send_sms": false
+  },
+  "alert_rules": [
+    {
+      "id": "alert-gust-1",
+      "metric": "wind_gust",
+      "threshold": 50,
+      "channels": [],  // leer → erbe Email (send_email=true)
+      "enabled": true
+    },
+    {
+      "id": "alert-thunder-1",
+      "metric": "thunder_level",
+      "threshold": "HIGH",
+      "channels": ["telegram"],  // überschreibe: versand nur über Telegram, auch wenn Email aktiv ist
+      "enabled": true
+    }
+  ]
+}
+```
+
+### Migration & Backward Compatibility
+
+- **Bestands-Alerts ohne `channels`-Feld:** Laden mit `channels: []` (default). Bei Versand erben sie die aktiven Briefing-Kanäle (RMW — Read-Modify-Write).
+- **`severity` bleibt erhalten:** Bestandsdaten mit `"severity":"info"` bleiben lesbar. Die Ableitung von `severity` folgt weiterhin der Logik in `weather_change_detection.py`, wird aber **nicht mehr** für Versand-Filterung genutzt (Severity-Falle beseitigt).
+
+### Frontend Alerts-Tab (JSX / Karten-Modell)
+
+**Komponente:** `AlertsTab.svelte` → `AlertCard.svelte` pro Alert
+
+**Karten-Struktur:**
+- Label + `Metrik · Bedingung` (Monospace-Schriftart)
+- An/Aus-Switch (`enabled` toggle)
+- Kanal-Chips (toggle pro aktivem Briefing-Kanal)
+- Infozeile: „Alert-Kanäle werden mit den aktiven Kanälen aus Wetter-Metriken vorgefüllt — jeder Alert kann separate Kanäle haben"
+- „+ Neuen Alert hinzufügen"-Button (entfernt die alte Severity-Dropdown-UI)
+
+**Keine Severity-Auswahl mehr:** Die alte UI-Severity-Auswahl ist entfernt (beseitigt die Severity-Falle, die Info-Alerts still verschluckt hat).
+
+### Behavioral Changes (Issue #638)
+
+| Aspekt | Vorher | Nachher |
+|--------|--------|---------|
+| **Severity-Filter** | `trip_alert.py:_filter_significant_changes` gab nur MODERATE/MAJOR durch; INFO-Alerts wurden still verschluckt | Jeder von einer aktiven Regel ausgelöste Change wird durchgereicht (kein MINOR/INFO-Filter mehr) |
+| **Kanal-Routing** | Ein Alert = alle Briefing-Kanäle | Ein Alert = pro-Alert Kanal-Override; vorbelegt aus Briefing-Kanälen |
+| **Severity in UI** | User konnte Severity wählen | Severity ist jetzt rein Label; wird von `weather_change_detection.py` abgeleitet |
+
+---
+
 ## Changelog
 
+- 2026-06-09: Issue #638 — Alerts-Tab Karten-Modell + Severity-Falle + pro-Alert Kanäle: (1) Added section 22 — AlertRule DTO with new `channels: list[str]` field (empty = inherit active briefing channels; non-empty = override); (2) `AlertRule.severity` now label-only (not used for send filtering anymore — eliminates severity trap where info-alerts were silently dropped); (3) Frontend Alerts-Tab moved from table paradigm to card model via AlertCard.svelte; Severity dropdown UI removed; Channel chips per alert with toggle UI; (4) Versand-Logik: per-alert kanal-routing via `trip_alert.py:_send_alert()` gruppiert Changes nach effektiven Kanälen; (5) Backward compatibility: bestandsdaten ohne `channels` laden mit leerer Liste (RMW bei Versand); `severity` bleibt lesbar. See `docs/specs/modules/issue_638_alerts_redesign.md`.
 - 2026-06-02: Issue #559 — Archive page completion: (1) Added `GET /api/trips/{id}/briefing-history` endpoint (section 21) to display chronological list of sent briefings (morning/evening) with timestamps and channels; (2) Frontend `BriefingHistoryDialog.svelte` modal with formatted timestamps (DD.MM.YYYY HH:MM) and localized kind labels; (3) "Als Vorlage" (Use as Template) button on archive page copies trip config via query param `?from={id}` to wizard page, with `templateTrip` loaded in `+page.server.ts`; (4) "Was passiert ist" (What Happened) column shows formatted event summary via `formatEventSummary(briefings, alerts)` helper. See `docs/specs/modules/issue_559_archiv_fertigstellen.md`.
 - 2026-06-01: Issue #523 — Code-Debt Cleanup: Removed `Waypoint.Suggested` (bool) and `Waypoint.SuggestionReason` (*string) fields from backend Go model (`internal/model/trip.go`). Legacy normalization block in `ConfirmWaypointHandler` removed. Frontend TypeScript `Waypoint` interface no longer declares `suggested?` and `suggestion_reason?` properties. Utility function `stripSuggested()` and all callers removed from waypoint editor. UI component `WaypointPin.suggested` property and dashed-stroke visualization deleted. Cleanup fulfills Constraint C8 from Issue #506 (Remove AI-Suggestion UI). 13 files edited, ~-190 LoC net deletion. Backward compatibility: bestandsdaten mit `"suggested":true` im JSON bleiben lesbar (Go ignoriert unknown JSON fields bei deserialisierung). See `docs/specs/modules/issue_523_suggested_flag_cleanup.md`.
 - 2026-06-01: Issue #497 (BugFix) — Preview SMS Stage-Name + Fixture Fields: ForecastDataPoint from FixtureProvider now reads all 4 demo-mode fields (`cloud_low_pct`, `pop_pct`, `snowfall_limit_m`, `wind_dir_deg`) from fixture JSONs. Preview SMS rendering fixed: `.split(":", 1)[0].strip()` for correct Stage-Name extraction.

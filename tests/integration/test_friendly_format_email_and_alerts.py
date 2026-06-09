@@ -798,8 +798,11 @@ class TestAlertFlowWithSimulatedData:
         seg1_changes = [c for c in changes if "temp_max" in c.metric]
         assert len(seg1_changes) >= 1
 
-    def test_filter_significant_keeps_moderate_major(self):
-        """Only MODERATE and MAJOR changes pass the filter."""
+    def test_filter_significant_keeps_all_changes(self):
+        """Issue #638: All changes pass — severity is label only, not filter criterion.
+
+        The old MODERATE/MAJOR filter was the Severity-Falle silently dropping Info-alerts.
+        """
         from services.trip_alert import TripAlertService
 
         service = TripAlertService()
@@ -818,8 +821,7 @@ class TestAlertFlowWithSimulatedData:
 
         significant = service._filter_significant_changes(changes)
 
-        assert len(significant) == 2
-        assert all(c.severity != ChangeSeverity.MINOR for c in significant)
+        assert len(significant) == 3, "Issue #638: All changes must pass including MINOR"
 
     def test_per_metric_alert_config_used_in_detection(self):
         """

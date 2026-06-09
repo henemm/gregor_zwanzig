@@ -120,15 +120,19 @@ def _metric_to_dict(mc) -> dict:
 
 
 def _alert_rule_from_dict(d: Dict[str, Any]) -> AlertRule:
-    """Parse a single AlertRule from a JSON dict."""
+    """Parse a single AlertRule from a JSON dict.
+
+    Issue #638: channels parsed with empty-list default for Bestands-Daten (BUG-DATALOSS-GR221).
+    """
     return AlertRule(
         id=d["id"],
         kind=AlertRuleKind(d["kind"]),
         metric=AlertMetric(d["metric"]),
         threshold=float(d["threshold"]),
         unit=d.get("unit", ""),
-        severity=AlertSeverity(d["severity"]),
+        severity=AlertSeverity(d.get("severity", "warning")),
         enabled=bool(d["enabled"]),
+        channels=list(d.get("channels", [])),
     )
 
 
@@ -1040,7 +1044,7 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
     if trip.alert_quiet_to is not None:
         data["alert_quiet_to"] = trip.alert_quiet_to
 
-    # Serialize alert_rules (Issue #205) — always emit, even if empty
+    # Serialize alert_rules (Issue #205/#638) — always emit, even if empty
     data["alert_rules"] = [
         {
             "id": r.id,
@@ -1050,6 +1054,7 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             "unit": r.unit,
             "severity": r.severity.value,
             "enabled": r.enabled,
+            "channels": list(r.channels),
         }
         for r in trip.alert_rules
     ]

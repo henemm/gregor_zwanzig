@@ -36,6 +36,7 @@ const (
 
 // AlertRule is a single configurable alert rule on a Trip (Issue #205).
 // Issue #297 — PairID + DeltaWindow als optionale Felder (omitempty) ergänzt.
+// Issue #638 — Channels: per-alert channel override (empty = inherit from report_config).
 type AlertRule struct {
 	ID          string        `json:"id"`
 	Kind        AlertRuleKind `json:"kind"`
@@ -46,6 +47,7 @@ type AlertRule struct {
 	Enabled     bool          `json:"enabled"`
 	PairID      *string       `json:"pair_id,omitempty"`
 	DeltaWindow *string       `json:"delta_window,omitempty"`
+	Channels    []string      `json:"channels,omitempty"`
 }
 
 type Waypoint struct {

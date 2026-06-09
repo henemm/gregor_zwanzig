@@ -772,6 +772,7 @@ class AlertRule:
     """Single configurable alert rule attached to a Trip.
 
     See docs/specs/modules/issue_205_alert_rules.md.
+    Issue #638: channels — per-alert channel override. Empty list = inherit from report_config.
     """
     id: str
     kind: AlertRuleKind
@@ -780,6 +781,7 @@ class AlertRule:
     severity: AlertSeverity
     enabled: bool
     unit: str = ""
+    channels: list[str] = field(default_factory=list)
 
 
 # --- F12: Großwetterlage / Stabilitäts-Label (Issue #122, refactored #479) --

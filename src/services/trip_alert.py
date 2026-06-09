@@ -94,8 +94,10 @@ class TripAlertService:
         Returns:
             True if alert was sent, False otherwise
         """
-        if not self._settings.can_send_email():
-            logger.error("SMTP not configured, cannot send alerts")
+        # Issue #638 F001: Guard nur abbrechen wenn KEIN Kanal verfügbar ist.
+        # Vorher: SMTP-only-Guard → Telegram-only-Nutzer bekam gar keinen Alert.
+        if not self._settings.can_send_email() and not self._settings.can_send_telegram():
+            logger.error("No alert channel configured (neither SMTP nor Telegram)")
             return False
 
         # 1a. Create change detector with per-trip priority (Issue #222 W1)
@@ -134,7 +136,7 @@ class TripAlertService:
         # 3. Detect changes across all segments
         all_changes = self._detect_all_changes(cached_weather, fresh_weather)
 
-        # 4. Filter significant changes (MODERATE or MAJOR only)
+        # 4. Issue #638: alle Changes durchreichen (kein Severity-Filter mehr)
         significant = self._filter_significant_changes(all_changes)
 
         if not significant:
@@ -412,16 +414,17 @@ class TripAlertService:
         changes: List[WeatherChange],
     ) -> List[WeatherChange]:
         """
-        Filter to only significant changes (MODERATE or MAJOR).
+        Issue #638: Return all changes — any change from an active, configured rule
+        is significant regardless of severity. The MODERATE/MAJOR-only filter
+        was silently dropping INFO/MINOR alerts (Severity-Falle).
 
         Args:
             changes: All detected changes
 
         Returns:
-            Only changes with severity >= MODERATE
+            All detected changes (severity is label only, not filter criterion)
         """
-        significant_severities = {ChangeSeverity.MODERATE, ChangeSeverity.MAJOR}
-        return [c for c in changes if c.severity in significant_severities]
+        return list(changes)
 
     @staticmethod
     def _highest_severity(changes: List[WeatherChange]) -> str:
@@ -667,17 +670,26 @@ class TripAlertService:
 
         config = trip.report_config
 
-        # Email (bugfix: respect per-trip send_email flag)
-        if not config or config.send_email:
-            email_output = EmailOutput(self._settings)
-            email_output.send(
-                subject=report.email_subject,
-                body=report.email_html,
-                plain_text_body=report.email_plain,
-            )
+        # Issue #638: Effective channels — per-alert override beats briefing channels.
+        # Aggregate channels across all active rules; empty channels = inherit briefing.
+        effective_channels = self._effective_alert_channels(trip)
+
+        # Email (fail-soft: ein Kanal-Fehler bricht nicht den gesamten Alert-Lauf)
+        send_email = "email" in effective_channels
+        if send_email:
+            try:
+                email_output = EmailOutput(self._settings)
+                email_output.send(
+                    subject=report.email_subject,
+                    body=report.email_html,
+                    plain_text_body=report.email_plain,
+                )
+            except Exception as e:
+                logger.error(f"Email alert failed for {trip.name}: {e}")
 
         # Telegram (Issue #360: kanal-bewusster Body, Fallback email_plain)
-        if config and config.send_telegram and self._settings.can_send_telegram():
+        send_telegram = "telegram" in effective_channels
+        if send_telegram and self._settings.can_send_telegram():
             try:
                 from outputs.telegram import TelegramOutput
                 TelegramOutput(self._settings).send(
@@ -687,6 +699,62 @@ class TripAlertService:
             except Exception as e:
                 logger.error(f"Telegram alert failed for {trip.name}: {e}")
 
+        # F003: Nicht-zustellbare Kanäle (sms, unbekannte) still protokollieren.
+        known_channels = {"email", "telegram"}
+        undeliverable = effective_channels - known_channels
+        if undeliverable:
+            logger.debug(
+                f"Alert channels not yet deliverable (out-of-scope): {sorted(undeliverable)}"
+            )
+
         logger.info(
-            f"Alert sent for trip {trip.name}: {len(changes)} changes detected"
+            f"Alert sent for trip {trip.name}: {len(changes)} changes detected "
+            f"via channels={sorted(effective_channels)}"
         )
+
+    def _effective_alert_channels(self, trip: "Trip") -> set[str]:
+        """Issue #638: Compute effective alert channels for a trip.
+
+        Semantik: Union über jede aktive Regel ihrer individuell effektiven Kanäle.
+        Pro Regel: rule.channels falls nicht leer, SONST geerbte Briefing-Kanäle aus
+        report_config. Kein globaler Override-Shortcut — sonst verschluckt ein Trip mit
+        [Regel-A: telegram, Regel-B: []/briefing-email] den E-Mail-Kanal von Regel-B.
+
+        Legacy-Pfad (keine aktiven alert_rules): erbt die Briefing-Kanäle aus
+        report_config; falls report_config None ist → Default {"email"} (altes Verhalten:
+        "not report_config or report_config.send_email" → E-Mail-Default nur bei
+        report_config=None; existiert report_config mit allen Kanälen aus, wird nichts
+        versendet — der Nutzer hat explizit alle Kanäle abgeschaltet).
+
+        Returns:
+            Set of channel names ("email", "telegram", "sms") to use for alert dispatch.
+        """
+        active_rules = [r for r in (trip.alert_rules or []) if r.enabled]
+        briefing = self._briefing_channels(trip.report_config)
+
+        # Legacy-Pfad: keine aktiven alert_rules → erbe Briefing-Kanäle (oder E-Mail-Default)
+        # E-Mail-Default gilt NUR wenn report_config None ist (kein explizites Ausschalten).
+        if not active_rules:
+            return briefing if (briefing or trip.report_config is not None) else {"email"}
+
+        result: set[str] = set()
+        for rule in active_rules:
+            if rule.channels:
+                result.update(rule.channels)
+            else:
+                result.update(briefing)
+        return result
+
+    @staticmethod
+    def _briefing_channels(config) -> set[str]:
+        """Return the set of active briefing channels from report_config (or empty set)."""
+        channels: set[str] = set()
+        if config is None:
+            return channels
+        if config.send_email:
+            channels.add("email")
+        if config.send_telegram:
+            channels.add("telegram")
+        if getattr(config, "send_sms", False):
+            channels.add("sms")
+        return channels

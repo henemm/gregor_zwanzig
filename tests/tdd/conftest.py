@@ -23,3 +23,23 @@ from validation import GroundTruthFetcher
 def ground_truth() -> GroundTruthFetcher:
     """Ground truth fetcher for TDD tests (cached per session)."""
     return GroundTruthFetcher()
+
+
+# Issue #638: Clean throttle files for test users before each test run.
+# TripAlertService throttle files persist between runs; tdd-638-* users
+# are synthetic test users whose throttle must reset each test invocation.
+_TDD_638_USERS = ["tdd-638-ac1", "tdd-638-ac2", "tdd-638-ac3", "tdd-638-ac4",
+                  "tdd-638-ac5", "tdd-638-userA", "tdd-638-userB",
+                  "tdd-638-mixed", "tdd-638-f001", "tdd-638-legacy",
+                  "tdd-638-alloff"]
+
+
+@pytest.fixture(autouse=True)
+def _clear_tdd_638_throttle():
+    """Auto-reset alert throttle for synthetic #638 test users (runs before each test)."""
+    data_root = Path(__file__).resolve().parents[2] / "data" / "users"
+    for uid in _TDD_638_USERS:
+        throttle = data_root / uid / "alert_throttle.json"
+        if throttle.exists():
+            throttle.unlink(missing_ok=True)
+    yield
