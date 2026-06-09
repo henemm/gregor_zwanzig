@@ -21,6 +21,7 @@
 	import ProfileSheetEmbedded from './ProfileSheetEmbedded.svelte';
 	import StageSelectSheet from './StageSelectSheet.svelte';
 	import StageDateField from './StageDateField.svelte';
+	import StageTimeField from './StageTimeField.svelte';
 	import { addDays, computeCascadeDelta } from './cascade.ts';
 	import { Eyebrow, Btn, Dot, Pill } from '$lib/components/atoms';
 	import { computeArrivalTimes } from '$lib/utils/naismith';
@@ -108,6 +109,19 @@
 				cascade = null; // F001: stalen Cascade zurücksetzen wenn delta=0
 			}
 		}
+	}
+
+	// Issue #675 — Startzeit je Etappe setzen (keine Kaskade, strikt pro Etappe).
+	function handleStartTimeChange(stageId: string, newTime: string): void {
+		const idx = stages.findIndex((s) => s.id === stageId);
+		if (idx < 0) return;
+		stages = stages.map((s, i) =>
+			i === idx
+				? newTime === ''
+					? { ...s, start_time: undefined }
+					: { ...s, start_time: newTime }
+				: s,
+		);
 	}
 
 	function applyCascade(): void {
@@ -254,11 +268,17 @@
 						Wegpunkte sind <strong style="color:var(--g-ink)">Wetterscheiden</strong> — Punkte, an denen sich Höhe, Exposition oder Geländekammer ändert. Aus der GPX sind {activeStage.waypoints.length} Wegpunkte entstanden — du kannst sie umbenennen, verschieben, löschen oder eigene ergänzen.
 					</div>
 				</div>
-				<StageDateField
-					value={activeStage.date}
-					isFirst={activeStageIndex === 0}
-					onchange={(newDate) => handleDateChange(activeStage!.id, newDate)}
-				/>
+				<div class="stage-header-fields">
+					<StageDateField
+						value={activeStage.date}
+						isFirst={activeStageIndex === 0}
+						onchange={(newDate) => handleDateChange(activeStage!.id, newDate)}
+					/>
+					<StageTimeField
+						value={activeStage.start_time}
+						onchange={(newTime) => handleStartTimeChange(activeStage!.id, newTime)}
+					/>
+				</div>
 			</div>
 
 			{#if cascade && activeStageIndex === 0}
@@ -418,6 +438,13 @@
 </div>
 
 <style>
+	/* Issue #675 — Startzeit-Feld neben Datum-Feld im Header */
+	.stage-header-fields {
+		display: inline-flex;
+		align-items: flex-end;
+		gap: 8px;
+	}
+
 	/* Issue #498 — Cascade-Strip (Tourstart-Verschiebung Folge-Etappen?) */
 	.cascade-prompt,
 	.cascade-done {
