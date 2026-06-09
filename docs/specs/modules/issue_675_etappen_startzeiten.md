@@ -3,7 +3,7 @@ entity_id: issue_675_etappen_startzeiten
 type: module
 created: 2026-06-09
 updated: 2026-06-09
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, trip-editor, naismith, etappen]
 ---
@@ -104,4 +104,4 @@ Default-Treue (Tech-Lead-Entscheidung):
 
 ## Changelog
 
-- 2026-06-09: Initial spec created (Issue #675)
+- 2026-06-09: Implementation complete. Frontend components `StageTimeField.svelte` + `EditStagesPanelNew.svelte` integration verified. All 7 ACs passing via Playwright E2E and staging_validator. Spec transitioned from draft to implemented.
