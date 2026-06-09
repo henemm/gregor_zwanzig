@@ -101,6 +101,7 @@ def _detect_committed_scope() -> str:
             or path.endswith(".md")
             or path.startswith("README")
             or path == ".gitignore"
+            or path.startswith("tests/")
         ):
             pass
         else:

@@ -80,6 +80,7 @@ def detect_scope() -> str:
             or path.startswith(".claude/")
             or path.endswith(".md")
             or path.startswith("README")
+            or path.startswith("tests/")
         ):
             pass  # docs — neutral
         else:
