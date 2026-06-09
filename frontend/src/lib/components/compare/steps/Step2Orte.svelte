@@ -266,13 +266,13 @@
 	</div>
 
 	<!-- Bibliothek: Region-Gruppiert (AC-3) -->
+	<div data-testid="compare-step2-library">
 	<div style="font-family:var(--g-font-mono); font-size:10px; letter-spacing:0.10em; text-transform:uppercase; color:var(--g-ink-3); font-weight:600; margin-bottom:12px;">… oder aus gespeicherten Orten wählen</div>
 
 	{#if locations.length === 0}
 		<p style="font-size:13px; color:var(--g-ink-4);">Noch keine Orte gespeichert.</p>
 	{:else}
 		<div
-			data-testid="compare-step2-library"
 			style="background:var(--g-card); border:1px solid var(--g-rule); border-radius:var(--g-r-3); padding:14px 18px;"
 		>
 			<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:18px;">
@@ -303,4 +303,5 @@
 			</div>
 		</div>
 	{/if}
+	</div>
 </div>
