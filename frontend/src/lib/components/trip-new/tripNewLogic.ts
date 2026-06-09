@@ -77,6 +77,8 @@ export interface CreateTripStage {
 	// Issue #658 — aus GPX berechnete (ggf. editierte) Wegpunkte je Etappe.
 	// Optional, damit Slice-1-Aufrufer ohne Wegpunkte typkompatibel bleiben.
 	waypoints?: Waypoint[];
+	// Issue #675 — Startzeit je Etappe (HH:MM), nur setzen wenn vorhanden.
+	start_time?: string;
 }
 
 export interface CreateTripChannels {
@@ -120,6 +122,8 @@ export function buildCreateTripPayload(state: CreateTripState): Trip {
 			date: addDaysISO(state.startDate, idx),
 			// Issue #658 — GPX-Wegpunkte (ggf. editiert) persistieren statt verwerfen.
 			waypoints: s.waypoints ?? [],
+			// Issue #675 — Startzeit nur wenn explizit gesetzt (kein leerer String).
+			...(s.start_time ? { start_time: s.start_time } : {}),
 		})),
 	};
 
