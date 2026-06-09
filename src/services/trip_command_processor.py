@@ -64,7 +64,19 @@ class CommandResult:
 
 _COMMAND_PATTERN = re.compile(r"^###\s+(\S+?)(?:[:\s]\s*(.+))?$")
 
-_VALID_COMMANDS = {"ruhetag", "report", "startdatum", "abbruch", "status", "hilfe", "now"}
+_VALID_COMMANDS = {"ruhetag", "report", "startdatum", "abbruch", "status", "hilfe", "now", "pause", "skip", "config"}
+
+# Bare-keyword mapping (case-insensitive): ENGLISH → internal key + value
+_BARE_KEYWORD_MAP = {
+    "pause":  "pause",
+    "skip":   "skip",
+    "stop":   "abbruch",
+    "status": "status",
+    "config": "config",
+    "help":   "hilfe",
+}
+
+_PAUSE_DURATION_RE = re.compile(r"^(\d+)\s*([dh]?)$")
 
 _QUERY_KEYS = {"glance", "heute", "morgen", "heute_gewitter",
                "timeline_heute", "timeline_morgen"}
@@ -215,6 +227,12 @@ class TripCommandProcessor:
             return self._show_status(trip)
         elif key == "now":
             return self._show_now(trip)
+        elif key == "pause":
+            return self._apply_pause(trip, value, msg.user_id)
+        elif key == "skip":
+            return self._apply_skip(trip, msg.user_id)
+        elif key == "config":
+            return self._show_config(trip)
 
         # Should not reach here due to whitelist check above
         return CommandResult(
@@ -224,15 +242,24 @@ class TripCommandProcessor:
         )
 
     def _parse_command(self, body: str) -> tuple[Optional[str], Optional[str]]:
-        """Parse first non-blank line for ### key: value format."""
+        """Parse first non-blank line for ### key: value OR bare KEYWORD format."""
         first_line = next(
             (line.strip() for line in body.splitlines() if line.strip()),
             "",
         )
+        # ###-Pfad hat Vorrang
         match = _COMMAND_PATTERN.match(first_line)
-        if not match:
-            return None, None
-        return match.group(1).lower(), (match.group(2) or "").strip() or None
+        if match:
+            return match.group(1).lower(), (match.group(2) or "").strip() or None
+        # Bare-keyword: erstes Token (case-insensitiv), Rest = value
+        parts = first_line.split(None, 1)
+        if parts:
+            keyword = parts[0].lower()
+            internal = _BARE_KEYWORD_MAP.get(keyword)
+            if internal is not None:
+                rest = parts[1].strip() if len(parts) > 1 else None
+                return internal, rest or None
+        return None, None
 
     def _find_trip(self, trip_name: str, user_id: str = "default") -> Optional[Trip]:
         """Case-insensitive trip name lookup, user-scoped."""
@@ -655,10 +682,16 @@ class TripCommandProcessor:
         """Listet alle verfügbaren Befehle mit Syntax."""
         body = (
             "Verfügbare Befehle:\n\n"
+            "  PAUSE <dauer>         – Briefings pausieren (z.B. PAUSE 2d / PAUSE 12h)\n"
+            "  SKIP                  – Nächsten Versand einmalig überspringen\n"
+            "  STOP                  – Briefings dauerhaft deaktivieren\n"
+            "  STATUS                – Aktuelle Etappenübersicht\n"
+            "  CONFIG                – Link zu den Trip-Einstellungen\n"
+            "  HELP                  – Diese Hilfe anzeigen\n\n"
+            "Erweiterte Befehle (### key: value):\n"
             "  ruhetag [N]           – Etappen um N Tage verschieben (Standard: 1)\n"
             "  startdatum YYYY-MM-DD – Neues Startdatum setzen\n"
             "  report morning|evening – Sofortigen Bericht anfordern\n"
-            "  status                – Aktuelle Etappenübersicht\n"
             "  abbruch               – Scheduling deaktivieren\n"
             "  hilfe                 – Diese Hilfe anzeigen"
         )
@@ -666,6 +699,104 @@ class TripCommandProcessor:
             success=True, command="hilfe",
             confirmation_subject="Hilfe",
             confirmation_body=body,
+        )
+
+    def _apply_pause(
+        self, trip: Trip, value: Optional[str], user_id: str,
+    ) -> CommandResult:
+        """Pause reports until paused_until (via RMW)."""
+        if not value:
+            return CommandResult(
+                success=False, command="pause",
+                confirmation_subject=f"[{trip.name}] PAUSE: Dauer fehlt",
+                confirmation_body=(
+                    "Bitte Dauer angeben, z.B. PAUSE 2d oder PAUSE 12h.\n"
+                    "Format: N d (Tage) oder N h (Stunden)."
+                ),
+                trip_name=trip.name,
+            )
+        if not trip.report_config:
+            return CommandResult(
+                success=False, command="pause",
+                confirmation_subject=f"[{trip.name}] Kein report_config",
+                confirmation_body="Für diesen Trip ist kein Berichts-Zeitplan konfiguriert.",
+                trip_name=trip.name,
+            )
+        m = _PAUSE_DURATION_RE.match(value.strip())
+        if not m:
+            return CommandResult(
+                success=False, command="pause",
+                confirmation_subject=f"[{trip.name}] PAUSE: Ungültige Dauer",
+                confirmation_body=(
+                    f"'{value}' ist keine gültige Dauer.\n"
+                    "Beispiele: PAUSE 2d (2 Tage) oder PAUSE 12h (12 Stunden)."
+                ),
+                trip_name=trip.name,
+            )
+        n = int(m.group(1))
+        if n <= 0:
+            return CommandResult(
+                success=False, command="pause",
+                confirmation_subject=f"[{trip.name}] PAUSE: Dauer muss > 0 sein",
+                confirmation_body=(
+                    "Die Pause-Dauer muss größer als 0 sein.\n"
+                    "Beispiele: PAUSE 2d (2 Tage) oder PAUSE 12h (12 Stunden)."
+                ),
+                trip_name=trip.name,
+            )
+        unit = m.group(2) or "d"
+        if unit == "h":
+            delta = timedelta(hours=n)
+        else:
+            delta = timedelta(days=n)
+        paused_until = datetime.now(timezone.utc) + delta
+        new_rc = dataclasses.replace(trip.report_config, paused_until=paused_until)
+        new_trip = dataclasses.replace(trip, report_config=new_rc)
+        save_trip(new_trip, user_id)
+        return CommandResult(
+            success=True, command="pause",
+            confirmation_subject=f"[{trip.name}] Briefings pausiert",
+            confirmation_body=(
+                f"Briefings für '{trip.name}' pausiert bis "
+                f"{paused_until.strftime('%d.%m.%Y %H:%M')} UTC.\n"
+                "Zum Fortsetzen: STOP (dauerhaft) oder warte bis die Pause abläuft."
+            ),
+            trip_name=trip.name,
+        )
+
+    def _apply_skip(self, trip: Trip, user_id: str) -> CommandResult:
+        """Skip the next scheduled send (one-shot, idempotent)."""
+        if not trip.report_config:
+            return CommandResult(
+                success=False, command="skip",
+                confirmation_subject=f"[{trip.name}] Kein report_config",
+                confirmation_body="Für diesen Trip ist kein Berichts-Zeitplan konfiguriert.",
+                trip_name=trip.name,
+            )
+        new_rc = dataclasses.replace(trip.report_config, skip_next=True)
+        new_trip = dataclasses.replace(trip, report_config=new_rc)
+        save_trip(new_trip, user_id)
+        return CommandResult(
+            success=True, command="skip",
+            confirmation_subject=f"[{trip.name}] Nächster Versand übersprungen",
+            confirmation_body=(
+                f"Das nächste Briefing für '{trip.name}' wird übersprungen.\n"
+                "Danach läuft der Zeitplan wieder normal."
+            ),
+            trip_name=trip.name,
+        )
+
+    def _show_config(self, trip: Trip) -> CommandResult:
+        """Return a link to trip settings — read-only, no save_trip."""
+        url = f"https://gregor20.henemm.com/trips/{trip.id}"
+        return CommandResult(
+            success=True, command="config",
+            confirmation_subject=f"[{trip.name}] Trip-Einstellungen",
+            confirmation_body=(
+                f"Einstellungen für '{trip.name}':\n{url}\n\n"
+                "Dort kannst du Zeitplan, Kanäle und Alarm-Schwellen anpassen."
+            ),
+            trip_name=trip.name,
         )
 
     def _show_now(self, trip: Trip) -> CommandResult:

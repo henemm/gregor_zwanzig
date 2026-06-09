@@ -8,6 +8,7 @@ SPEC: docs/specs/modules/trip_report_scheduler.md v1.0
 """
 from __future__ import annotations
 
+import dataclasses
 import json
 import logging
 import math
@@ -16,7 +17,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from app.config import Settings
-from app.loader import load_all_trips
+from app.loader import load_all_trips, save_trip
 from app.models import GPXPoint, NormalizedTimeseries, SegmentWeatherData, SegmentWeatherSummary, TripSegment
 from formatters.trip_report import TripReportFormatter
 from output.renderers.email.design_tokens import (
@@ -254,11 +255,30 @@ class TripReportSchedulerService:
         """
         all_trips = load_all_trips(user_id=self._user_id)
         target_date = self._get_target_date(report_type)
+        now_utc = datetime.now(timezone.utc)
 
-        active = [
-            trip for trip in all_trips
-            if trip.get_stage_for_date(target_date) is not None
-        ]
+        active = []
+        for trip in all_trips:
+            if trip.get_stage_for_date(target_date) is None:
+                continue
+            rc = trip.report_config
+            if rc is not None:
+                if rc.enabled is False:
+                    continue
+                if rc.paused_until is not None:
+                    # Ensure tz-aware comparison
+                    pu = rc.paused_until
+                    if pu.tzinfo is None:
+                        pu = pu.replace(tzinfo=timezone.utc)
+                    if now_utc < pu:
+                        continue
+                if rc.skip_next is True:
+                    # Consume the flag: RMW
+                    new_rc = dataclasses.replace(rc, skip_next=False)
+                    new_trip = dataclasses.replace(trip, report_config=new_rc)
+                    save_trip(new_trip, user_id=self._user_id)
+                    continue
+            active.append(trip)
 
         logger.debug(f"Active trips for {target_date}: {[t.id for t in active]}")
         return active

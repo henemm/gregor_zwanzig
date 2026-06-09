@@ -731,6 +731,10 @@ class TripReportConfig:
     )                                           # Tages-Summe-Auswahl
     show_metrics_summary: bool = False          # Metriken-Überblick (Issue #664)
 
+    # Inbound-Kommandos (Issue #670)
+    paused_until: Optional[datetime] = None     # PAUSE: ruht bis dieser UTC-Zeitpunkt
+    skip_next: bool = False                     # SKIP: einmaliges Überspringen
+
     # Metadata
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 

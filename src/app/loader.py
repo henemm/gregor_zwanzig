@@ -375,6 +375,8 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
                 ["precipitation", "wind", "visibility", "thunder"],
             ),
             show_metrics_summary=rc_data.get("show_metrics_summary", False),
+            paused_until=datetime.fromisoformat(rc_data["paused_until"]) if rc_data.get("paused_until") else None,
+            skip_next=rc_data.get("skip_next", False),
             updated_at=datetime.fromisoformat(rc_data["updated_at"]) if "updated_at" in rc_data else datetime.now(),
         )
 
@@ -1076,6 +1078,8 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             "show_highlights": trip.report_config.show_highlights,
             "daily_summary_metrics": trip.report_config.daily_summary_metrics,
             "show_metrics_summary": trip.report_config.show_metrics_summary,
+            "paused_until": trip.report_config.paused_until.isoformat() if trip.report_config.paused_until else None,
+            "skip_next": trip.report_config.skip_next,
             "updated_at": trip.report_config.updated_at.isoformat(),
         }
 
