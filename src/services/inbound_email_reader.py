@@ -180,13 +180,16 @@ class InboundEmailReader:
         return addr.lower()
 
     def _authorize(self, sender: str, settings: Settings) -> bool:
-        """Single-user: sender must match mail_to, inbound_address, or mail_from."""
+        """Single-user: sender must match mail_to or inbound_address (only if distinct from mail_from)."""
+        mail_from_lower = (settings.mail_from or "").lower()
+        if mail_from_lower and sender == mail_from_lower:
+            return False
+        if not settings.mail_to:
+            return False
         allowed = {settings.mail_to.lower()}
         inbound = settings.get_inbound_address()
-        if inbound:
+        if inbound and inbound.lower() != mail_from_lower:
             allowed.add(inbound.lower())
-        if settings.mail_from:
-            allowed.add(settings.mail_from.lower())
         authorized = sender in allowed
         if not authorized:
             logger.debug(f"Ignoring email from: {sender!r}")
