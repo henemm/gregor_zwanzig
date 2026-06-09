@@ -22,6 +22,7 @@ CLI:
 """
 
 import argparse
+import ast
 import json
 import os
 import sys
@@ -231,6 +232,10 @@ def _render_full_report(
             "Alle Findings sind SKIPPED (Backend-/E-Mail-ACs ohne HTTP-Nachweis). "
             "Kein PASS-Block — Issue-Close freigegeben."
         )
+    elif verdict == "FAIL":
+        lines.append(
+            "FAIL: Regression in Produktion (Bot-Menü oder AC). Issue NICHT schließen."
+        )
     else:  # PARTIAL
         fails = [p for p in probes if p.get("status") == "PASS" and p.get("prod_status") == "FAIL"]
         lines.append(
@@ -393,13 +398,28 @@ def _read_prod_bot_token() -> str:
 
 
 def _load_bot_commands() -> list[dict] | None:
-    """Importiert BOT_COMMANDS aus src/outputs/telegram.py (best-effort)."""
-    src_dir = str(REPO_DIR / "src")
-    if src_dir not in sys.path:
-        sys.path.insert(0, src_dir)
+    """Liest BOT_COMMANDS dependency-frei per AST aus src/outputs/telegram.py.
+
+    Kein Import der outputs-Pakete; kein pydantic nötig. Single Source of Truth
+    bleibt telegram.py. Bei jedem Fehler (Datei fehlt, SyntaxError, kein
+    literal-auswertbares BOT_COMMANDS) wird None zurückgegeben (fail-soft).
+    """
+    telegram_py = REPO_DIR / "src" / "outputs" / "telegram.py"
     try:
-        from outputs.telegram import BOT_COMMANDS  # noqa: PLC0415
-        return BOT_COMMANDS
+        source = telegram_py.read_text(encoding="utf-8")
+        tree = ast.parse(source, filename=str(telegram_py))
+        for node in tree.body:
+            # ast.Assign: BOT_COMMANDS = [...]
+            if isinstance(node, ast.Assign):
+                for target in node.targets:
+                    if isinstance(target, ast.Name) and target.id == "BOT_COMMANDS":
+                        return ast.literal_eval(node.value)
+            # ast.AnnAssign: BOT_COMMANDS: list[...] = [...]
+            elif isinstance(node, ast.AnnAssign):
+                if isinstance(node.target, ast.Name) and node.target.id == "BOT_COMMANDS":
+                    if node.value is not None:
+                        return ast.literal_eval(node.value)
+        return None  # BOT_COMMANDS nicht gefunden
     except Exception:  # noqa: BLE001
         return None
 
