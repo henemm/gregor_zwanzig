@@ -39,17 +39,19 @@ export function toggleDailySummaryMetric(
 	return DAILY_SUMMARY_METRICS.filter((m) => updated.includes(m));
 }
 
-/** UI-State der 5 neuen Report-Konfig-Felder. */
+/** UI-State der Report-Konfig-Felder (Issue #619 + #664). */
 export interface MailElementUi {
 	show_stage_stats: boolean;
 	show_quick_take_tags: boolean;
 	show_stability: boolean;
 	show_highlights: boolean;
 	daily_summary_metrics: string[];
+	/** Issue #664: Metriken-Überblick (ersetzt Quick-Take + Tages-Summe). Default false. */
+	show_metrics_summary?: boolean;
 }
 
 /**
- * Read-Modify-Write: original-Blob als Basis, die 5 neuen Felder darueber mergen.
+ * Read-Modify-Write: original-Blob als Basis, die Felder darueber mergen.
  * Alle Fremdfelder (change_threshold_*, custom_*, enabled, morning_time, …) bleiben erhalten.
  */
 export function buildMailElementWrite(
@@ -63,5 +65,6 @@ export function buildMailElementWrite(
 		show_stability: ui.show_stability,
 		show_highlights: ui.show_highlights,
 		daily_summary_metrics: ui.daily_summary_metrics,
+		show_metrics_summary: ui.show_metrics_summary ?? false,
 	};
 }

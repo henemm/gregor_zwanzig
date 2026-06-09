@@ -62,6 +62,8 @@
 	let show_stability = $state(true);
 	let show_highlights = $state(true);
 	let dailySummaryMetrics = $state<string[]>([...DEFAULT_DAILY_SUMMARY_METRICS]);
+	// Issue #664: Metriken-Überblick (ersetzt Quick-Take + Tages-Summe)
+	let show_metrics_summary = $state(false);
 
 	// --- Profile (Channel-Verfuegbarkeit) --------------------------------------
 	interface Profile {
@@ -135,6 +137,8 @@
 			if (typeof c.show_stability === 'boolean') show_stability = c.show_stability;
 			if (typeof c.show_highlights === 'boolean') show_highlights = c.show_highlights;
 			dailySummaryMetrics = [...(c.daily_summary_metrics ?? DEFAULT_DAILY_SUMMARY_METRICS)];
+			// Issue #664: Metriken-Überblick
+			if (typeof c.show_metrics_summary === 'boolean') show_metrics_summary = c.show_metrics_summary;
 		}
 
 		// Profile laden (Channel-Verfuegbarkeit). Fail-soft: bei Fehler bleiben
@@ -175,6 +179,8 @@
 			show_stability,
 			show_highlights,
 			daily_summary_metrics: [...dailySummaryMetrics],
+			// Issue #664: Metriken-Überblick
+			show_metrics_summary,
 		};
 
 		// Issue #617: verwaiste Kanäle (nicht Wetter-aktiv) auf false synchronisieren.
@@ -408,6 +414,17 @@
 					onchange={(e) => { show_quick_take_tags = (e.target as HTMLInputElement).checked; }}
 				>Quick-Take-Chips</Checkbox>
 			</span>
+		</div>
+		<div class="text-sm">
+			<span data-testid="report-show-metrics-summary" class="inline-flex items-center gap-2">
+				<Checkbox
+					checked={show_metrics_summary}
+					onchange={(e) => { show_metrics_summary = (e.target as HTMLInputElement).checked; }}
+				>Metriken-Überblick</Checkbox>
+			</span>
+			{#if show_metrics_summary}
+				<p class="pl-6 text-xs text-muted-foreground mt-0.5">Ersetzt Quick-Take-Chips und Tages-Summe durch eine farbige Pille je aktiver Metrik.</p>
+			{/if}
 		</div>
 		<div class="text-sm">
 			<span data-testid="report-show-stability" class="inline-flex items-center gap-2">

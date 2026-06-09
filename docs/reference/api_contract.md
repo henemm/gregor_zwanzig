@@ -1,7 +1,7 @@
 
 # API Contract — Gregor Zwanzig
 
-**Updated:** 2026-06-08 (Issues #672/#671 — Telegram E2E-Pipeline-Tests + Bot-Menü-Vertrag; #642 — User-Anzeigename display_name; #655 — Telegram Hybrid-Navigation: callback_query + editMessageText); 2026-06-07 (Issues #627/#631 — Compare-Preset Sofortversand + Wochen-Rhythmus-Erhalt)
+**Updated:** 2026-06-09 (Issues #664 — Metriken-Überblick-Pille; #621 — E-Mail-Elemente abschaltbar); 2026-06-08 (Issues #672/#671 — Telegram E2E-Pipeline-Tests + Bot-Menü-Vertrag; #642 — User-Anzeigename display_name; #655 — Telegram Hybrid-Navigation: callback_query + editMessageText); 2026-06-07 (Issues #627/#631 — Compare-Preset Sofortversand + Wochen-Rhythmus-Erhalt)
 
 ## 0) Konventionen
 - Zeit: ISO-8601 UTC (`Z`)
@@ -394,6 +394,12 @@ Lawinenlagebericht als eigenstaendiges Datenobjekt (nicht Teil von NormalizedTim
 | change_threshold_precip_mm      | float       | Niederschlags-Schwelle [mm] (default: 10.0)            |
 | include_metrics                 | list[str]   | Anzuzeigende Metriken (default: 5 Basis-Metriken)      |
 | wind_exposition_min_elevation_m | float/null  | Wind-Exposition Höhen-Schwelle [m]; null = 1500m (F7c)|
+| show_stage_stats                | bool        | Etappen-Kennzahlen-Raster anzeigen? (default: true, Issue #621) |
+| show_quick_take_tags            | bool        | Quick-Take-Chips in HTML anzeigen? (default: true, Issue #621) |
+| show_stability                  | bool        | Großwetterlage-Label anzeigen? (default: true, Issue #621) |
+| show_highlights                 | bool        | Highlights/Zusammenfassung anzeigen? (default: true, Issue #621) |
+| daily_summary_metrics           | list[str]   | Metriken in der Tages-Summe (default: `["precipitation","wind","visibility","thunder"]`, Issue #621) |
+| show_metrics_summary            | bool        | Optionaler Metriken-Überblick am Beginn (default: false, Issue #664) — wenn true: farbige Pillen pro konfigurierter Metrik; ersetzt Quick-Take und blendet Tages-Summe aus |
 | updated_at                      | datetime    | Zeitpunkt der letzten Config-Änderung                  |
 
 #### MetricConfig (Issue #435, erweitert Issue #624)

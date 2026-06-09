@@ -123,6 +123,8 @@ class TripReportFormatter:
         _show_stability = report_config.show_stability if report_config else True
         _show_highlights = report_config.show_highlights if report_config else True
         _daily_summary_metrics = report_config.daily_summary_metrics if report_config else None
+        # Issue #664: Metriken-Überblick
+        _show_metrics_summary = report_config.show_metrics_summary if report_config else False
         # Issue #623 AC-5: Sendezeit für das Kontext-Label im HTML-Trend-Block.
         _sent_at = datetime.now(timezone.utc)
         email_html, email_plain = render_email(
@@ -150,6 +152,7 @@ class TripReportFormatter:
             show_highlights=_show_highlights,
             daily_summary_metrics=_daily_summary_metrics,
             sent_at=_sent_at,
+            show_metrics_summary=_show_metrics_summary,
         )
         first_agg = segments[0].aggregated
         email_subject = self._generate_subject(

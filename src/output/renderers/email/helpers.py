@@ -834,3 +834,244 @@ def pill_html(label: str, tone: str) -> str:
         f'display:inline-block;line-height:1.4;">'
         f'{_html.escape(label)}</span>'
     )
+
+
+# Issue #664 — Metriken-Überblick Helper
+# Katalog-Reihenfolge für die Pill-Ausgabe
+_PILL_CATALOG_ORDER = [
+    "temperature", "wind_chill", "wind", "gust", "precipitation",
+    "rain_probability", "thunder", "cloud_total", "cloud_low",
+    "visibility", "uv_index", "freezing_level", "humidity",
+    "dewpoint", "sunshine",
+]
+
+_PILL_DEFAULTS: dict[str, float] = {
+    "wind": 20.0,
+    "gust": 30.0,
+    "rain_probability": 50.0,
+    "visibility": 2.0,   # km
+    "humidity": 90.0,
+}
+# ThunderLevel.MED ≈ ordinal 1 as numeric proxy
+_THUNDER_THRESHOLD_DEFAULT = 1  # MED
+
+
+def _thr(metric_id: str, thresholds: dict) -> Optional[float]:
+    """Return threshold for metric_id from thresholds dict or default."""
+    if metric_id in thresholds:
+        val = thresholds[metric_id]
+        return float(val) if val is not None else None
+    return _PILL_DEFAULTS.get(metric_id)
+
+
+def _pill_for_metric(
+    metric_id: str,
+    thresholds: dict,
+    all_dps: list,
+    *,
+    tz: "ZoneInfo",
+) -> Optional[tuple[str, str]]:
+    """Compute (text, tone) pill for a single metric from all data-points."""
+    from app.models import ThunderLevel
+    severity = {ThunderLevel.NONE: 0, ThunderLevel.MED: 1, ThunderLevel.HIGH: 2}
+
+    if metric_id == "temperature":
+        vals = [(dp.t2m_c, dp.ts) for dp in all_dps if dp.t2m_c is not None]
+        if not vals:
+            return None
+        min_v = min(v for v, _ in vals)
+        max_v, max_ts = max(vals, key=lambda x: x[0])
+        hh = local_hour(max_ts, tz)
+        return (f"{int(round(min_v))}–{int(round(max_v))}°C · Max {hh:02d}:00", "info")
+
+    elif metric_id == "wind_chill":
+        vals = [(getattr(dp, "wind_chill_c", None), dp.ts) for dp in all_dps]
+        vals = [(v, ts) for v, ts in vals if v is not None]
+        if not vals:
+            return None
+        min_v, min_ts = min(vals, key=lambda x: x[0])
+        hh = local_hour(min_ts, tz)
+        return (f"gef. min {int(round(min_v))}°C · {hh:02d}:00", "info")
+
+    elif metric_id in ("wind", "gust"):
+        field = "wind10m_kmh" if metric_id == "wind" else "gust_kmh"
+        label = "Wind" if metric_id == "wind" else "Böe"
+        vals = [(getattr(dp, field, None), dp.ts) for dp in all_dps]
+        vals = [(v, ts) for v, ts in vals if v is not None]
+        if not vals:
+            return None
+        thr = _thr(metric_id, thresholds)
+        max_v, max_ts = max(vals, key=lambda x: x[0])
+        max_hh = local_hour(max_ts, tz)
+        if thr is not None:
+            crossing = next(((v, ts) for v, ts in vals if v > thr), None)
+            if crossing:
+                cross_hh = local_hour(crossing[1], tz)
+                return (
+                    f"{label} >{int(thr)} km/h ab {cross_hh:02d}:00 · max {int(max_v)}",
+                    "warn",
+                )
+        return (f"{label} max {int(max_v)} km/h ({max_hh:02d}:00)", "good")
+
+    elif metric_id == "precipitation":
+        precip_vals = [(dp.precip_1h_mm or 0.0, dp.ts) for dp in all_dps]
+        total = sum(v for v, _ in precip_vals)
+        first_rain = next((ts for v, ts in precip_vals if v > 0), None)
+        if first_rain is not None:
+            hh = local_hour(first_rain, tz)
+            return (f"Regen ab {hh:02d}:00 · {total:.0f} mm", "warn")
+        return ("kein Regen", "good")
+
+    elif metric_id == "rain_probability":
+        vals = [(dp.pop_pct, dp.ts) for dp in all_dps if dp.pop_pct is not None]
+        if not vals:
+            return None
+        thr = _thr(metric_id, thresholds)
+        max_v, max_ts = max(vals, key=lambda x: x[0])
+        max_hh = local_hour(max_ts, tz)
+        if thr is not None:
+            crossing = next(((v, ts) for v, ts in vals if v > thr), None)
+            if crossing:
+                cross_hh = local_hour(crossing[1], tz)
+                return (
+                    f"Regen-W. >{int(thr)}% ab {cross_hh:02d} · max {int(max_v)}%",
+                    "warn",
+                )
+        return (f"Regen-W. max {int(max_v)}%", "good")
+
+    elif metric_id == "thunder":
+        max_lvl = ThunderLevel.NONE
+        first_thunder_ts = None
+        for dp in all_dps:
+            if dp.thunder_level is not None:
+                if severity.get(dp.thunder_level, 0) > severity.get(max_lvl, 0):
+                    max_lvl = dp.thunder_level
+                    first_thunder_ts = dp.ts
+        thr = _THUNDER_THRESHOLD_DEFAULT
+        if severity.get(max_lvl, 0) >= thr and first_thunder_ts is not None:
+            hh = local_hour(first_thunder_ts, tz)
+            return (f"Gewitter ab {hh:02d}:00", "bad")
+        if max_lvl != ThunderLevel.NONE:
+            return (f"Gewitter max {max_lvl.value}", "bad")
+        return ("kein Gewitter", "good")
+
+    elif metric_id == "cloud_total":
+        vals = [(dp.cloud_total_pct, dp.ts) for dp in all_dps if dp.cloud_total_pct is not None]
+        if not vals:
+            return None
+        min_v = min(v for v, _ in vals)
+        max_v, max_ts = max(vals, key=lambda x: x[0])
+        hh = local_hour(max_ts, tz)
+        return (f"{int(min_v)}–{int(max_v)}% bewölkt · Max {hh:02d}:00", "info")
+
+    elif metric_id == "cloud_low":
+        vals = [(dp.cloud_low_pct, dp.ts) for dp in all_dps if dp.cloud_low_pct is not None]
+        if not vals:
+            return None
+        max_v, max_ts = max(vals, key=lambda x: x[0])
+        hh = local_hour(max_ts, tz)
+        return (f"Tiefe Wolken max {int(max_v)}% ({hh:02d}:00)", "info")
+
+    elif metric_id == "visibility":
+        vals = [(dp.visibility_m, dp.ts) for dp in all_dps if dp.visibility_m is not None]
+        if not vals:
+            return None
+        thr = _thr(metric_id, thresholds)  # km
+        min_v, min_ts = min(vals, key=lambda x: x[0])
+        min_km = min_v / 1000.0
+        if thr is not None:
+            thr_m = thr * 1000.0
+            crossing = next(((v, ts) for v, ts in vals if v < thr_m), None)
+            if crossing:
+                cross_hh = local_hour(crossing[1], tz)
+                return (
+                    f"Sicht <{thr:.0f} km ab {cross_hh:02d}:00 · min {min_km:.1f} km",
+                    "warn",
+                )
+        return (f"Sicht min {min_km:.1f} km", "info")
+
+    elif metric_id == "uv_index":
+        vals = [(dp.uv_index, dp.ts) for dp in all_dps if dp.uv_index is not None]
+        if not vals:
+            return None
+        max_v, max_ts = max(vals, key=lambda x: x[0])
+        hh = local_hour(max_ts, tz)
+        return (f"UV max {int(max_v)} ({hh:02d}:00)", "info")
+
+    elif metric_id == "freezing_level":
+        vals = [(dp.freezing_level_m, dp.ts) for dp in all_dps
+                if dp.freezing_level_m is not None]
+        if not vals:
+            return None
+        min_v = int(min(v for v, _ in vals))
+        max_v, max_ts = max(vals, key=lambda x: x[0])
+        hh = local_hour(max_ts, tz)
+        return (f"0°-Linie {min_v}–{int(max_v)} m · Max {hh:02d}:00", "info")
+
+    elif metric_id == "humidity":
+        vals = [(dp.humidity_pct, dp.ts) for dp in all_dps if dp.humidity_pct is not None]
+        if not vals:
+            return None
+        thr = _thr(metric_id, thresholds)
+        if thr is not None:
+            crossing = next(((v, ts) for v, ts in vals if v > thr), None)
+            if crossing:
+                cross_hh = local_hour(crossing[1], tz)
+                return (f"Feuchte >{int(thr)}% ab {cross_hh:02d}:00", "warn")
+        min_v = int(min(v for v, _ in vals))
+        max_v = int(max(v for v, _ in vals))
+        return (f"Feuchte {min_v}–{max_v}%", "info")
+
+    elif metric_id == "dewpoint":
+        vals = [(dp.dewpoint_c, dp.ts) for dp in all_dps if dp.dewpoint_c is not None]
+        if not vals:
+            return None
+        min_v, min_ts = min(vals, key=lambda x: x[0])
+        hh = local_hour(min_ts, tz)
+        return (f"Taupunkt min {int(round(min_v))}°C ({hh:02d}:00)", "info")
+
+    elif metric_id == "sunshine":
+        # sunshine uses _sunny_hours from row-dicts — not on ForecastDataPoint directly
+        # use dni_wm2 as proxy: if any > 0 => there is sunshine
+        total = sum(
+            (dp._sunny_hours if hasattr(dp, "_sunny_hours") else 0.0)
+            for dp in all_dps
+        )
+        if total > 0:
+            return (f"{int(total * 60)} min Sonne", "good")
+        return ("kein Sonnenschein", "info")
+
+    return None
+
+
+def build_metrics_summary_pills(
+    segments: list,
+    metric_ids: list[str],
+    thresholds: dict,
+    *,
+    tz: "ZoneInfo",
+) -> list[tuple[str, str]]:
+    """Issue #664: Build one (text, tone) pill per metric from segment data.
+
+    metric_ids: list of metric IDs to render (from display_config, E-Mail enabled).
+    thresholds: dict[metric_id -> float] with alert thresholds (or empty for defaults).
+    tz: local timezone for hour formatting.
+    Returns list of (text, tone) tuples in catalog order.
+    """
+    # Collect all data-points from all segments
+    all_dps = []
+    for seg in segments:
+        ts = getattr(seg, "timeseries", None)
+        if ts is not None:
+            all_dps.extend(ts.data)
+
+    # Render in catalog order
+    ids_set = set(metric_ids)
+    pills = []
+    for mid in _PILL_CATALOG_ORDER:
+        if mid not in ids_set:
+            continue
+        pill = _pill_for_metric(mid, thresholds, all_dps, tz=tz)
+        if pill is not None:
+            pills.append(pill)
+    return pills

@@ -1,0 +1,474 @@
+"""
+TDD RED — Issue #664: Metriken-Überblick am Beginn der E-Mail.
+
+Vertrag (NOCH NICHT implementiert):
+- TripReportConfig.show_metrics_summary: bool = False  (models.py)
+- loader lädt/serialisiert das Feld (loader.py)
+- build_metrics_summary_pills(segments, metric_ids, thresholds) in helpers.py
+- render_html(..., show_metrics_summary=bool) in html.py
+- render_plain(..., show_metrics_summary=bool) in plain.py
+
+Mock-frei: echte ForecastDataPoint/SegmentWeatherData/TripSegment-Objekte.
+Fixture-Muster aus tests/tdd/test_issue_621_email_toggles.py übernommen.
+Spec: docs/specs/modules/email_metrics_summary_664.md
+"""
+from __future__ import annotations
+
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+from zoneinfo import ZoneInfo
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO_ROOT))
+sys.path.insert(0, str(REPO_ROOT / "src"))
+
+TZ = ZoneInfo("Europe/Berlin")
+
+
+# ---------------------------------------------------------------------------
+# Fixtures — Segmente mit bekannten Stundenwerten
+#
+# Regen-Summe         = 0+1+2 + 3+0+0       = 6.0 mm
+# Max Böe (gust)      = max(10,20,30,40,15,15) = 40.0 km/h
+# Max Wind (wind10m)  = max(5,10,15,20,7,7)   = 20.0 km/h   (gust * 0.5)
+# Min Sicht           = min(2000,1500,1200,3000,2500,1800) = 1200 m
+# Temp                = aus `temps`-Liste (Default 12.0 konstant)
+# Stunden (UTC)       = 6,7,8 (seg1) + 8,9,10 (seg2)
+# Max-Böe-Stunde      = 8 (UTC) → 10 (CEST)
+# Max-Wind-Stunde     = 8 (UTC) → 10 (CEST)
+# ---------------------------------------------------------------------------
+
+def _build_segments(temps=None, wind_override=None):
+    """Zwei Segmente mit bekannten Werten (identisch zu #621-Fixture)."""
+    from app.models import (
+        ForecastDataPoint, ForecastMeta, GPXPoint, NormalizedTimeseries,
+        Provider, SegmentWeatherData, SegmentWeatherSummary, ThunderLevel,
+        TripSegment,
+    )
+
+    def _dp(h, precip, gust, vis, temp):
+        return ForecastDataPoint(
+            ts=datetime(2026, 7, 11, h, 0, tzinfo=timezone.utc),
+            t2m_c=float(temp), wind10m_kmh=gust * 0.5, gust_kmh=float(gust),
+            precip_1h_mm=float(precip), pop_pct=int(min(precip * 20, 100)),
+            cloud_total_pct=60, thunder_level=ThunderLevel.NONE,
+            visibility_m=vis, freezing_level_m=2500,
+        )
+
+    def _make_seg(seg_id, start_km, end_km, start_h, end_h, rows):
+        seg = TripSegment(
+            segment_id=seg_id,
+            start_point=GPXPoint(lat=42.13, lon=9.13, elevation_m=400.0,
+                                 distance_from_start_km=start_km),
+            end_point=GPXPoint(lat=42.10, lon=9.18, elevation_m=1200.0,
+                               distance_from_start_km=end_km),
+            start_time=datetime(2026, 7, 11, start_h, 0, tzinfo=timezone.utc),
+            end_time=datetime(2026, 7, 11, end_h, 0, tzinfo=timezone.utc),
+            duration_hours=float(end_h - start_h),
+            distance_km=round(end_km - start_km, 1),
+            ascent_m=800.0, descent_m=0.0,
+        )
+        meta = ForecastMeta(provider=Provider.OPENMETEO, model="demo",
+                            grid_res_km=1.3,
+                            run=datetime(2026, 7, 11, 0, 0, tzinfo=timezone.utc))
+        ts = NormalizedTimeseries(meta=meta, data=rows)
+        agg = SegmentWeatherSummary(
+            temp_min_c=10.0, temp_max_c=14.0, temp_avg_c=12.0,
+            wind_max_kmh=20.0, gust_max_kmh=40.0,
+            precip_sum_mm=6.0, cloud_avg_pct=60, humidity_avg_pct=55,
+            thunder_level_max=ThunderLevel.NONE,
+        )
+        return SegmentWeatherData(segment=seg, timeseries=ts, aggregated=agg,
+                                  fetched_at=datetime.now(timezone.utc),
+                                  provider="demo")
+
+    t = temps or [12.0] * 6
+    seg1_rows = [_dp(6, 0, 10, 2000, t[0]), _dp(7, 1, 20, 1500, t[1]),
+                 _dp(8, 2, 30, 1200, t[2])]
+    seg2_rows = [_dp(8, 3, 40, 3000, t[3]), _dp(9, 0, 15, 2500, t[4]),
+                 _dp(10, 0, 15, 1800, t[5])]
+    return [
+        _make_seg(1, 0.0, 4.2, 6, 8, seg1_rows),
+        _make_seg(2, 4.2, 9.3, 8, 10, seg2_rows),
+    ]
+
+
+_SIMPLE_ROWS = [{
+    "time": "06:00", "temp": 12.0, "_wind_dir_deg": None, "_is_day": True,
+    "_dni_wm2": None, "_sunny_hours": 0.0, "_wmo_code": None,
+}]
+
+_STATS = {"distance_km": 9.3, "ascent_m": 1600.0, "descent_m": 0.0,
+          "max_elevation_m": 1200}
+
+
+def _render_html(segs, **kwargs):
+    from app.metric_catalog import build_default_display_config
+    from output.renderers.email.html import render_html
+    params = dict(
+        segments=segs, seg_tables=[_SIMPLE_ROWS] * len(segs),
+        trip_name="GR20 Test", report_type="morning",
+        dc=build_default_display_config(), night_rows=[],
+        thunder_forecast=None, highlights=[], changes=None,
+        stage_name=None, stage_stats=None, multi_day_trend=None,
+        compact_summary=None, daylight=None, tz=TZ, friendly_keys=set(),
+    )
+    params.update(kwargs)
+    return render_html(**params)
+
+
+def _render_plain(segs, **kwargs):
+    from app.metric_catalog import build_default_display_config
+    from output.renderers.email.plain import render_plain
+    params = dict(
+        segments=segs, seg_tables=[_SIMPLE_ROWS] * len(segs),
+        trip_name="GR20 Test", report_type="morning",
+        dc=build_default_display_config(), night_rows=[],
+        thunder_forecast=None, highlights=[], changes=None,
+        stage_name=None, stage_stats=None, multi_day_trend=None,
+        compact_summary=None, daylight=None, tz=TZ, friendly_keys=set(),
+    )
+    params.update(kwargs)
+    return render_plain(**params)
+
+
+# ---------------------------------------------------------------------------
+# AC-1: Loader-Roundtrip — show_metrics_summary Default + Persistenz
+# ---------------------------------------------------------------------------
+
+class TestAC1LoaderRoundtrip:
+    """TripReportConfig.show_metrics_summary: bool = False muss existieren
+    und loader.py muss das Feld laden/serialisieren.
+
+    RED: AttributeError — TripReportConfig hat kein show_metrics_summary-Feld.
+    """
+
+    def _trip_dict(self, *, with_field: bool = False, value: bool = False):
+        rc = {
+            "trip_id": "test-664",
+            "morning_time": "07:00:00",
+            "evening_time": "18:00:00",
+        }
+        if with_field:
+            rc["show_metrics_summary"] = value
+        return {
+            "trip": {
+                "id": "test-664",
+                "name": "Test Trip",
+                "report_config": rc,
+                "stages": [{
+                    "id": "S1", "name": "Etappe 1", "date": "2026-07-11",
+                    "waypoints": [{
+                        "id": "W1", "name": "Start",
+                        "lat": 42.0, "lon": 9.0, "elevation_m": 400,
+                    }],
+                }],
+            }
+        }
+
+    def test_default_is_false_without_field(self):
+        """Feld fehlt im JSON → Default False."""
+        from app.loader import load_trip_from_dict
+        trip = load_trip_from_dict(self._trip_dict(with_field=False))
+        # RED: AttributeError — TripReportConfig hat show_metrics_summary nicht
+        assert trip.report_config.show_metrics_summary is False
+
+    def test_true_roundtrip(self):
+        """Wert True überlebt load→dump→load."""
+        from app.loader import load_trip_from_dict, dump_trip_to_dict
+        trip = load_trip_from_dict(self._trip_dict(with_field=True, value=True))
+        # RED: AttributeError — TripReportConfig hat show_metrics_summary nicht
+        assert trip.report_config.show_metrics_summary is True
+        dumped = dump_trip_to_dict(trip)
+        # dump muss Feld serialisieren
+        assert "show_metrics_summary" in dumped["report_config"]
+        assert dumped["report_config"]["show_metrics_summary"] is True
+        # Roundtrip: erneut laden
+        trip2 = load_trip_from_dict({"trip": dumped})
+        assert trip2.report_config.show_metrics_summary is True
+
+    def test_false_roundtrip(self):
+        """Wert False überlebt load→dump→load."""
+        from app.loader import load_trip_from_dict, dump_trip_to_dict
+        trip = load_trip_from_dict(self._trip_dict(with_field=True, value=False))
+        assert trip.report_config.show_metrics_summary is False
+        dumped = dump_trip_to_dict(trip)
+        assert dumped["report_config"]["show_metrics_summary"] is False
+
+    def test_dataclass_default(self):
+        """TripReportConfig() direkt — Default False."""
+        from app.models import TripReportConfig
+        rc = TripReportConfig(trip_id="x")
+        # RED: AttributeError — Feld existiert nicht
+        assert rc.show_metrics_summary is False
+
+
+# ---------------------------------------------------------------------------
+# AC-3: Helper-Werte — build_metrics_summary_pills
+# ---------------------------------------------------------------------------
+
+class TestAC3HelperValues:
+    """build_metrics_summary_pills muss Pillen aus echten Segment-Daten ableiten.
+
+    RED: ImportError — build_metrics_summary_pills existiert nicht in helpers.py.
+
+    Fixtures-Aggregate (aus _build_segments Default-12°C):
+      temperature: min=12°C, max=12°C  (stündliche Werte: alle 12.0)
+      wind: max gust=40, bei h=8 UTC → Ortszeit "10:00"
+      gust: analog Wind
+      precipitation: Summe=6 mm, erste Regen-Stunde h=7 UTC → "09:00" CEST
+    """
+
+    def test_import_exists(self):
+        """Helper ist importierbar."""
+        # RED: ImportError
+        from output.renderers.email.helpers import build_metrics_summary_pills  # noqa
+        assert callable(build_metrics_summary_pills)
+
+    def test_temperature_pill_text(self):
+        """temperature-Pille: '{min}–{max}°C · Max {hh}:00'."""
+        from output.renderers.email.helpers import build_metrics_summary_pills
+        segs = _build_segments(temps=[8.0, 9.0, 10.0, 11.0, 12.0, 15.0])
+        # Erwartung: min=8°C, max=15°C; t2m_c-Maximum bei h=10 UTC → 12:00 CEST
+        pills = build_metrics_summary_pills(segs, ["temperature"], {}, tz=TZ)
+        texts = [t for t, _ in pills]
+        # Pille enthält Minimaltemperatur
+        assert any("8" in t for t in texts), f"8°C (min) nicht in Pillen: {texts}"
+        # Pille enthält Maximaltemperatur
+        assert any("15" in t for t in texts), f"15°C (max) nicht in Pillen: {texts}"
+
+    def test_temperature_tone_is_info(self):
+        """temperature-Tone ist immer 'info'."""
+        from output.renderers.email.helpers import build_metrics_summary_pills
+        segs = _build_segments()
+        pills = build_metrics_summary_pills(segs, ["temperature"], {}, tz=TZ)
+        tones = [tone for _, tone in pills]
+        assert any(tone == "info" for tone in tones), f"Tone 'info' erwartet, got: {tones}"
+
+    def test_precipitation_pill_with_rain(self):
+        """precipitation-Pille bei Regen: enthält Summe '6 mm'."""
+        from output.renderers.email.helpers import build_metrics_summary_pills
+        segs = _build_segments()
+        pills = build_metrics_summary_pills(segs, ["precipitation"], {}, tz=TZ)
+        texts = [t for t, _ in pills]
+        assert any("6" in t for t in texts), f"6 mm nicht in Pillen: {texts}"
+
+    def test_gust_pill_has_max_value(self):
+        """gust-Pille: max Böe = 40 km/h muss enthalten sein."""
+        from output.renderers.email.helpers import build_metrics_summary_pills
+        segs = _build_segments()
+        pills = build_metrics_summary_pills(segs, ["gust"], {}, tz=TZ)
+        texts = [t for t, _ in pills]
+        assert any("40" in t for t in texts), f"40 km/h (max gust) nicht in Pillen: {texts}"
+
+    def test_metric_order_follows_catalog(self):
+        """Reihenfolge der Pillen folgt Katalog, nicht Eingabe-Reihenfolge."""
+        from output.renderers.email.helpers import build_metrics_summary_pills
+        # Eingabe umgekehrt: precipitation NACH temperature
+        segs = _build_segments()
+        pills = build_metrics_summary_pills(
+            segs, ["precipitation", "temperature"], {}, tz=TZ
+        )
+        ids_order = [t for t, _ in pills]
+        # temperature kommt im Katalog vor precipitation → temperature zuerst
+        # Prüfe, dass der temperature-Wert (enthält "°C") vor precipitation (enthält "mm" oder "Regen")
+        temp_pos = next((i for i, t in enumerate(ids_order) if "°C" in t), None)
+        rain_pos = next((i for i, t in enumerate(ids_order) if "mm" in t or "Regen" in t.lower()), None)
+        if temp_pos is not None and rain_pos is not None:
+            assert temp_pos < rain_pos, (
+                f"temperature muss vor precipitation stehen (Katalog-Reihenfolge): {ids_order}"
+            )
+
+
+# ---------------------------------------------------------------------------
+# AC-4: Schwellwert-Crossing → Tone warn + Text ">thr ab hh"
+# ---------------------------------------------------------------------------
+
+class TestAC4ThresholdCrossing:
+    """Wenn Wind-Schwelle unterschritten → Tone 'good'; überschritten → 'warn'.
+
+    Fixture: max gust=40 km/h; threshold wind=15 → Crossing bei 20 km/h (h=7 UTC)
+    oder gust=10 km/h (h=6 UTC) — aber max gust über alle Stunden = 40 > 15 → warn.
+
+    RED: ImportError — build_metrics_summary_pills existiert nicht.
+    """
+
+    def test_wind_crossing_tone_is_warn(self):
+        """Gust-Crossing über threshold=15 → Tone 'warn'."""
+        from output.renderers.email.helpers import build_metrics_summary_pills
+        segs = _build_segments()
+        # threshold gust=15 km/h; max gust=40 km/h → Crossing
+        pills = build_metrics_summary_pills(
+            segs, ["gust"], {"gust": 15.0}, tz=TZ
+        )
+        tones = [tone for _, tone in pills]
+        assert any(tone == "warn" for tone in tones), (
+            f"Tone 'warn' bei Crossing erwartet, got: {tones}"
+        )
+
+    def test_wind_crossing_text_contains_threshold(self):
+        """Crossing-Text enthält '>15'."""
+        from output.renderers.email.helpers import build_metrics_summary_pills
+        segs = _build_segments()
+        pills = build_metrics_summary_pills(
+            segs, ["gust"], {"gust": 15.0}, tz=TZ
+        )
+        texts = [t for t, _ in pills]
+        assert any("15" in t for t in texts), (
+            f"Schwellwert '15' muss im Crossing-Text stehen: {texts}"
+        )
+
+    def test_wind_crossing_text_contains_hour(self):
+        """Crossing-Text enthält 'ab {hh}' für die erste Überschreitungsstunde."""
+        from output.renderers.email.helpers import build_metrics_summary_pills
+        segs = _build_segments()
+        pills = build_metrics_summary_pills(
+            segs, ["gust"], {"gust": 15.0}, tz=TZ
+        )
+        texts = [t for t, _ in pills]
+        # Erste Überschreitung: h=7 UTC (gust=20) → 09:00 CEST, oder h=8 (gust=30) → 10:00
+        # Mindestens eine Stunde mit "ab" oder ":00" enthalten
+        assert any("ab" in t.lower() or ":00" in t for t in texts), (
+            f"'ab {hh}:00' muss im Crossing-Text stehen: {texts}"
+        )
+
+    def test_wind_no_crossing_tone_is_good(self):
+        """Wenn max gust < threshold → Tone 'good', kein 'ab'-Text."""
+        from output.renderers.email.helpers import build_metrics_summary_pills
+        # Segmente mit max gust=10; threshold=50 → kein Crossing
+        from app.models import (
+            ForecastDataPoint, ForecastMeta, GPXPoint, NormalizedTimeseries,
+            Provider, SegmentWeatherData, SegmentWeatherSummary, ThunderLevel,
+            TripSegment,
+        )
+        seg = _build_segments()  # max gust=40
+        # threshold weit über max → kein Crossing
+        pills = build_metrics_summary_pills(
+            seg, ["gust"], {"gust": 100.0}, tz=TZ
+        )
+        tones = [tone for _, tone in pills]
+        assert any(tone == "good" for tone in tones), (
+            f"Tone 'good' bei kein Crossing erwartet, got: {tones}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# AC-2 + AC-5: render_html mit show_metrics_summary=True
+# ---------------------------------------------------------------------------
+
+class TestAC2AC5RenderHtmlActive:
+    """render_html muss show_metrics_summary-Parameter akzeptieren.
+
+    RED: TypeError — unbekannter Keyword-Argument 'show_metrics_summary'.
+
+    Wenn aktiv:
+    - Body enthält Eyebrow "Metriken-Überblick"
+    - Quick-Take-Chips NICHT vorhanden (Marker "Kein Gewitter" oder "Böen")
+    - Tages-Summe NICHT vorhanden (Marker "Tages-Summe")
+    """
+
+    def test_eyebrow_present_when_active(self):
+        """Body enthält 'Metriken-Überblick' wenn show_metrics_summary=True."""
+        # RED: TypeError — Parameter existiert nicht
+        html = _render_html(_build_segments(), show_metrics_summary=True)
+        assert "Metriken-Überblick" in html, (
+            "Eyebrow 'Metriken-Überblick' muss im HTML sein wenn aktiv"
+        )
+
+    def test_quick_take_absent_when_active(self):
+        """Quick-Take-Chips sind NICHT vorhanden wenn show_metrics_summary=True."""
+        # RED: TypeError
+        html = _render_html(_build_segments(), show_metrics_summary=True,
+                            show_quick_take_tags=True)
+        # "Kein Gewitter" ist der eindeutige Quick-Take-Chip-Text (ThunderLevel.NONE)
+        assert "Kein Gewitter" not in html, (
+            "Quick-Take-Chips dürfen bei show_metrics_summary=True nicht erscheinen"
+        )
+
+    def test_daily_summary_absent_when_active(self):
+        """Tages-Summe-Block ist NICHT vorhanden wenn show_metrics_summary=True."""
+        # RED: TypeError
+        html = _render_html(
+            _build_segments(), show_metrics_summary=True,
+            daily_summary_metrics=["precipitation", "wind", "visibility", "thunder"],
+        )
+        # "Tages-Summe" ist der eindeutige Eyebrow-Text des Tages-Summe-Blocks
+        assert "Tages-Summe" not in html, (
+            "Tages-Summe-Block darf bei show_metrics_summary=True nicht erscheinen"
+        )
+
+
+# ---------------------------------------------------------------------------
+# AC-6: Default-Verhalten unverändert (show_metrics_summary=False)
+# ---------------------------------------------------------------------------
+
+class TestAC6DefaultUnchanged:
+    """render_html(..., show_metrics_summary=False) → kein Metriken-Überblick,
+    Quick-Take + Tages-Summe vorhanden.
+
+    RED: TypeError — Parameter existiert nicht.
+    """
+
+    def test_no_eyebrow_when_inactive(self):
+        """'Metriken-Überblick' darf NICHT erscheinen wenn show_metrics_summary=False."""
+        # RED: TypeError
+        html = _render_html(_build_segments(), show_metrics_summary=False)
+        assert "Metriken-Überblick" not in html
+
+    def test_quick_take_present_when_inactive(self):
+        """Quick-Take-Chips erscheinen wenn show_metrics_summary=False."""
+        # RED: TypeError
+        html = _render_html(_build_segments(), show_metrics_summary=False,
+                            show_quick_take_tags=True)
+        # Mindestens ein Chip muss vorhanden sein (ThunderLevel.NONE → "Kein Gewitter")
+        assert "Kein Gewitter" in html or "Böen" in html, (
+            "Quick-Take-Chips müssen bei show_metrics_summary=False erscheinen"
+        )
+
+    def test_daily_summary_present_when_inactive(self):
+        """Tages-Summe-Block erscheint wenn show_metrics_summary=False."""
+        # RED: TypeError
+        html = _render_html(
+            _build_segments(), show_metrics_summary=False,
+            daily_summary_metrics=["precipitation", "wind"],
+        )
+        assert "Tages-Summe" in html, (
+            "Tages-Summe-Block muss bei show_metrics_summary=False erscheinen"
+        )
+
+
+# ---------------------------------------------------------------------------
+# AC-8: Plaintext-Variante enthält Metriken-Überblick
+# ---------------------------------------------------------------------------
+
+class TestAC8PlainTextSummary:
+    """render_plain muss show_metrics_summary-Parameter akzeptieren.
+
+    RED: TypeError — unbekannter Keyword-Argument 'show_metrics_summary'.
+    """
+
+    def test_plain_contains_uebersicht_when_active(self):
+        """Plaintext enthält 'Metriken-Überblick' wenn show_metrics_summary=True."""
+        # RED: TypeError — Parameter existiert nicht
+        plain = _render_plain(_build_segments(), show_metrics_summary=True)
+        assert "Metriken-Überblick" in plain, (
+            "'Metriken-Überblick' muss im Plaintext sein wenn aktiv"
+        )
+
+    def test_plain_no_eyebrow_when_inactive(self):
+        """Plaintext enthält NICHT 'Metriken-Überblick' wenn show_metrics_summary=False."""
+        # RED: TypeError
+        plain = _render_plain(_build_segments(), show_metrics_summary=False)
+        assert "Metriken-Überblick" not in plain
+
+    def test_plain_daily_summary_absent_when_active(self):
+        """Tages-Summe im Plaintext fehlt wenn show_metrics_summary=True."""
+        # RED: TypeError
+        plain = _render_plain(
+            _build_segments(), show_metrics_summary=True,
+            daily_summary_metrics=["precipitation", "wind"],
+        )
+        assert "Tages-Summe" not in plain, (
+            "Tages-Summe darf im Plaintext nicht erscheinen wenn show_metrics_summary=True"
+        )

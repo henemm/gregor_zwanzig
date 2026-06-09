@@ -24,7 +24,8 @@ from services.daylight_service import DaylightWindow
 from utils.timezone import local_fmt
 
 from src.output.renderers.email.helpers import (
-    build_confidence_hint, build_daily_aggregates, build_quick_take_chips,
+    build_confidence_hint, build_daily_aggregates, build_metrics_summary_pills,
+    build_quick_take_chips,
     build_segment_label, build_units_legend,
     derive_horizon, fmt_val, format_change_line, format_trend_tokens, pill_html,
     shorten_stage_name, visible_cols,
@@ -315,6 +316,7 @@ def render_html(
     show_highlights: bool = True,
     daily_summary_metrics: Optional[list[str]] = None,
     sent_at: Optional[datetime] = None,
+    show_metrics_summary: bool = False,
 ) -> str:
     """Render full HTML e-mail body. Pure function."""
     sig = profile_signature(profile)
@@ -581,16 +583,45 @@ def render_html(
                 <ul>{hl_items}</ul>
             </div>"""
 
-    # AC-2: Quick-Take Chips aus Segment-Stundenwerten
-    quick_chips = build_quick_take_chips(segments)
+    # Issue #664: Metriken-Überblick replaces Quick-Take + Tages-Summe when active
     quick_take_html = ""
-    if quick_chips and show_quick_take_tags:
-        chips_html = " ".join(pill_html(label, tone) for label, tone in quick_chips)
-        quick_take_html = (
-            f'<div style="padding:8px 16px;display:block">'
-            f'{chips_html}'
-            f'</div>'
+    if show_metrics_summary:
+        # Build pills from all enabled E-Mail metric IDs (use dc.metrics order = catalog)
+        _pill_metric_ids = [mc.metric_id for mc in dc.metrics if mc.enabled]
+        _pill_thresholds = {
+            mc.metric_id: mc.alert_threshold
+            for mc in dc.metrics
+            if mc.alert_enabled and mc.alert_threshold is not None
+        }
+        _pills = build_metrics_summary_pills(
+            segments, _pill_metric_ids, _pill_thresholds, tz=tz
         )
+        if _pills:
+            _chips_html = " ".join(pill_html(lbl, tone) for lbl, tone in _pills)
+            quick_take_html = (
+                f'<div style="padding:8px 16px;display:block">'
+                f'<p style="font-size:9px;text-transform:uppercase;letter-spacing:0.08em;'
+                f'color:{G_INK_MUTED};margin:0 0 6px 0">Metriken-Überblick</p>'
+                f'{_chips_html}'
+                f'</div>'
+            )
+        else:
+            quick_take_html = (
+                f'<div style="padding:8px 16px;display:block">'
+                f'<p style="font-size:9px;text-transform:uppercase;letter-spacing:0.08em;'
+                f'color:{G_INK_MUTED};margin:0">Metriken-Überblick</p>'
+                f'</div>'
+            )
+    else:
+        # AC-2: Quick-Take Chips aus Segment-Stundenwerten
+        quick_chips = build_quick_take_chips(segments)
+        if quick_chips and show_quick_take_tags:
+            chips_html = " ".join(pill_html(label, tone) for label, tone in quick_chips)
+            quick_take_html = (
+                f'<div style="padding:8px 16px;display:block">'
+                f'{chips_html}'
+                f'</div>'
+            )
 
     summary_html = ""
     if compact_summary:
@@ -599,9 +630,10 @@ def render_html(
                 <p style="margin:0;font-size:14px;line-height:1.6;">{compact_summary}</p>
             </div>"""
 
-    # AC-4: Tages-Summe-Block — metrik-getrieben (Issue #621)
+    # AC-4/Issue #664: Tages-Summe-Block — metrik-getrieben (Issue #621)
     # F001: feste Katalog-Reihenfolge; Eingabe-Reihenfolge irrelevant.
     # F002: Block nur emittieren wenn nach dem Filtern mind. eine gültige Zelle vorhanden.
+    # F003 (Issue #664): Block nicht rendern wenn show_metrics_summary=True
     _METRIC_ORDER = ["precipitation", "wind", "visibility", "thunder", "temperature"]
     _dsm_set = set(daily_summary_metrics) if daily_summary_metrics is not None else {
         "precipitation", "wind", "visibility", "thunder"
@@ -663,6 +695,9 @@ def render_html(
             f'</div>'
         )
     else:
+        daily_summary_html = ""
+    # Issue #664: suppress Tages-Summe when Metriken-Überblick is active
+    if show_metrics_summary:
         daily_summary_html = ""
 
     # Issue #121 / AC-12 + AC-13: confidence hint (only when uncertain).

@@ -54,6 +54,7 @@ def render_email(
     show_highlights: bool = True,
     daily_summary_metrics: Optional[list[str]] = None,
     sent_at: Optional[datetime] = None,
+    show_metrics_summary: bool = False,
 ) -> tuple[str, str]:
     """Returns (html_body, plain_body). Pure function.
 
@@ -99,6 +100,7 @@ def render_email(
         show_highlights=show_highlights,
         daily_summary_metrics=daily_summary_metrics,
         sent_at=sent_at,
+        show_metrics_summary=show_metrics_summary,
     )
     plain_body = render_plain(
         segments=segments,
@@ -124,6 +126,7 @@ def render_email(
         show_stability=show_stability,
         show_highlights=show_highlights,
         daily_summary_metrics=daily_summary_metrics,
+        show_metrics_summary=show_metrics_summary,
     )
     return html_body, plain_body
 

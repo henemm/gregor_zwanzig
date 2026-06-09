@@ -24,7 +24,8 @@ from services.daylight_service import DaylightWindow
 from utils.timezone import local_fmt
 
 from src.output.renderers.email.helpers import (
-    build_confidence_hint, build_daily_aggregates, build_segment_label,
+    build_confidence_hint, build_daily_aggregates, build_metrics_summary_pills,
+    build_segment_label,
     build_units_legend, fmt_val, format_change_line, format_trend_tokens,
     shorten_stage_name, visible_cols,
 )
@@ -128,6 +129,7 @@ def render_plain(
     show_stability: bool = True,
     show_highlights: bool = True,
     daily_summary_metrics: Optional[list[str]] = None,
+    show_metrics_summary: bool = False,
 ) -> str:
     """Render full plain-text e-mail body. Pure function."""
     sig = profile_signature(profile)
@@ -258,38 +260,54 @@ def render_plain(
             lines.append(f"  {h}")
         lines.append("")
 
-    # AC-7: Tages-Summe in Plain-Text — metrik-getrieben (Issue #621)
-    # F001: feste Katalog-Reihenfolge; F002: Block nur wenn mind. eine gültige Zeile.
-    _METRIC_ORDER_P = ["precipitation", "wind", "visibility", "thunder", "temperature"]
-    _dsm_set_p = set(daily_summary_metrics) if daily_summary_metrics is not None else {
-        "precipitation", "wind", "visibility", "thunder"
-    }
-    _plain_lines: list[str] = []
-    _daily_agg_p = build_daily_aggregates(segments)
-    for _m in _METRIC_ORDER_P:
-        if _m not in _dsm_set_p:
-            continue
-        if _m == "precipitation":
-            _plain_lines.append(f"  Regen gesamt: {_daily_agg_p['rain_mm']:.0f} mm")
-        elif _m == "wind":
-            _plain_lines.append(f"  Max Böe:      {int(_daily_agg_p['max_gust_kmh'])} km/h")
-        elif _m == "visibility":
-            _vis = (f"{_daily_agg_p['min_vis_km']:.1f} km"
-                    if _daily_agg_p["min_vis_km"] is not None else "–")
-            _plain_lines.append(f"  Min Sicht:    {_vis}")
-        elif _m == "thunder":
-            _plain_lines.append(f"  Gewitter:     {_daily_agg_p['thunder_word']}")
-        elif _m == "temperature":
-            _mn = _daily_agg_p.get("min_temp_c")
-            _mx = _daily_agg_p.get("max_temp_c")
-            if _mn is not None and _mx is not None:
-                _plain_lines.append(f"  Temp:         {int(round(_mn))}–{int(round(_mx))} °C")
-            else:
-                _plain_lines.append("  Temp:         –")
-    if _plain_lines:
-        lines.append("━━ Tages-Summe ━━")
-        lines.extend(_plain_lines)
+    # Issue #664: Metriken-Überblick (Plain) — replaces Tages-Summe when active
+    if show_metrics_summary:
+        _pill_metric_ids = [mc.metric_id for mc in dc.metrics if mc.enabled]
+        _pill_thresholds = {
+            mc.metric_id: mc.alert_threshold
+            for mc in dc.metrics
+            if mc.alert_enabled and mc.alert_threshold is not None
+        }
+        _plain_pills = build_metrics_summary_pills(
+            segments, _pill_metric_ids, _pill_thresholds, tz=tz
+        )
+        lines.append("━━ Metriken-Überblick ━━")
+        for _lbl, _tone in _plain_pills:
+            lines.append(f"  [{_tone.upper()}] {_lbl}")
         lines.append("")
+    else:
+        # AC-7: Tages-Summe in Plain-Text — metrik-getrieben (Issue #621)
+        # F001: feste Katalog-Reihenfolge; F002: Block nur wenn mind. eine gültige Zeile.
+        _METRIC_ORDER_P = ["precipitation", "wind", "visibility", "thunder", "temperature"]
+        _dsm_set_p = set(daily_summary_metrics) if daily_summary_metrics is not None else {
+            "precipitation", "wind", "visibility", "thunder"
+        }
+        _plain_lines: list[str] = []
+        _daily_agg_p = build_daily_aggregates(segments)
+        for _m in _METRIC_ORDER_P:
+            if _m not in _dsm_set_p:
+                continue
+            if _m == "precipitation":
+                _plain_lines.append(f"  Regen gesamt: {_daily_agg_p['rain_mm']:.0f} mm")
+            elif _m == "wind":
+                _plain_lines.append(f"  Max Böe:      {int(_daily_agg_p['max_gust_kmh'])} km/h")
+            elif _m == "visibility":
+                _vis = (f"{_daily_agg_p['min_vis_km']:.1f} km"
+                        if _daily_agg_p["min_vis_km"] is not None else "–")
+                _plain_lines.append(f"  Min Sicht:    {_vis}")
+            elif _m == "thunder":
+                _plain_lines.append(f"  Gewitter:     {_daily_agg_p['thunder_word']}")
+            elif _m == "temperature":
+                _mn = _daily_agg_p.get("min_temp_c")
+                _mx = _daily_agg_p.get("max_temp_c")
+                if _mn is not None and _mx is not None:
+                    _plain_lines.append(f"  Temp:         {int(round(_mn))}–{int(round(_mx))} °C")
+                else:
+                    _plain_lines.append("  Temp:         –")
+        if _plain_lines:
+            lines.append("━━ Tages-Summe ━━")
+            lines.extend(_plain_lines)
+            lines.append("")
 
     all_rows = [r for tbl in seg_tables for r in tbl]
     legend_text = build_units_legend(all_rows) if all_rows else ""

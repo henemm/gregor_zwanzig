@@ -374,6 +374,7 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
                 "daily_summary_metrics",
                 ["precipitation", "wind", "visibility", "thunder"],
             ),
+            show_metrics_summary=rc_data.get("show_metrics_summary", False),
             updated_at=datetime.fromisoformat(rc_data["updated_at"]) if "updated_at" in rc_data else datetime.now(),
         )
 
@@ -1069,6 +1070,12 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             "show_compact_summary": trip.report_config.show_compact_summary,
             "show_daylight": trip.report_config.show_daylight,
             "multi_day_trend_reports": trip.report_config.multi_day_trend_reports,
+            "show_stage_stats": trip.report_config.show_stage_stats,
+            "show_quick_take_tags": trip.report_config.show_quick_take_tags,
+            "show_stability": trip.report_config.show_stability,
+            "show_highlights": trip.report_config.show_highlights,
+            "daily_summary_metrics": trip.report_config.daily_summary_metrics,
+            "show_metrics_summary": trip.report_config.show_metrics_summary,
             "updated_at": trip.report_config.updated_at.isoformat(),
         }
 
@@ -1324,3 +1331,6 @@ def delete_compare_subscription(sub_id: str, user_id: str = "default") -> None:
     subs = load_compare_subscriptions(user_id)
     subs = [s for s in subs if s.id != sub_id]
     save_compare_subscriptions(subs, user_id)
+
+# Public alias for _trip_to_dict (Issue #664 — tests import this name)
+dump_trip_to_dict = _trip_to_dict

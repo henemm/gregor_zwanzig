@@ -191,6 +191,8 @@ export interface ReportConfig {
 	show_stability?: boolean;
 	show_highlights?: boolean;
 	daily_summary_metrics?: string[];
+	// Issue #664 — Metriken-Überblick (ersetzt Quick-Take + Tages-Summe)
+	show_metrics_summary?: boolean;
 }
 
 // Issue #429 — kanal-spezifische Layout-Listen (snake_case auf der Wire).

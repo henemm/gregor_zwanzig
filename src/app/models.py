@@ -729,6 +729,7 @@ class TripReportConfig:
     daily_summary_metrics: list[str] = field(
         default_factory=lambda: ["precipitation", "wind", "visibility", "thunder"]
     )                                           # Tages-Summe-Auswahl
+    show_metrics_summary: bool = False          # Metriken-Überblick (Issue #664)
 
     # Metadata
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
