@@ -147,11 +147,14 @@ class TripAlertService:
             f"Detected {len(significant)} significant changes for trip {trip.id}"
         )
 
-        # 5. Send alert
-        try:
-            self._send_alert(trip, fresh_weather, significant)
-        except Exception as e:
-            logger.error(f"Failed to send alert for {trip.id}: {e}")
+        # 5. Send alert; guard: only record throttle/log when at least one
+        # configured channel was reachable (AC-1 symmetry with Telegram/Radar).
+        delivered = self._send_alert(trip, fresh_weather, significant)
+        if not delivered:
+            logger.warning(
+                f"Alert not deliverable on any effective channel for trip "
+                f"{trip.id} — kein Throttle/Log"
+            )
             return False
 
         # 6. Update snapshot so next alert compares against THIS weather
@@ -636,14 +639,15 @@ class TripAlertService:
         trip: "Trip",
         weather: List[SegmentWeatherData],
         changes: List[WeatherChange],
-    ) -> None:
+    ) -> bool:
         """
-        Format and send alert email.
+        Format and send alert via all configured effective channels.
 
-        Args:
-            trip: Trip object
-            weather: Current weather data
-            changes: Detected changes to include
+        Returns:
+            True if at least one configured channel was reachable (deliverable),
+            False if no effective channel has a working configuration.
+            Send errors on a configured channel are logged but do NOT suppress
+            recording (best-effort, Anti-Pattern #656).
         """
         alert_date = weather[0].segment.start_time.date()
         matched_stage = trip.get_stage_for_date(alert_date)
@@ -668,18 +672,18 @@ class TripAlertService:
             tz=alert_tz,
         )
 
-        config = trip.report_config
-
         # Issue #638: Effective channels — per-alert override beats briefing channels.
-        # Aggregate channels across all active rules; empty channels = inherit briefing.
         effective_channels = self._effective_alert_channels(trip)
-
-        # Email (fail-soft: ein Kanal-Fehler bricht nicht den gesamten Alert-Lauf)
         send_email = "email" in effective_channels
-        if send_email:
+        send_telegram = "telegram" in effective_channels
+
+        deliverable_any = False
+
+        # Email: NEU mit can_send_email()-Guard (Symmetrie zu Telegram/Radar, Issue #684)
+        if send_email and self._settings.can_send_email():
+            deliverable_any = True
             try:
-                email_output = EmailOutput(self._settings)
-                email_output.send(
+                EmailOutput(self._settings).send(
                     subject=report.email_subject,
                     body=report.email_html,
                     plain_text_body=report.email_plain,
@@ -688,8 +692,8 @@ class TripAlertService:
                 logger.error(f"Email alert failed for {trip.name}: {e}")
 
         # Telegram (Issue #360: kanal-bewusster Body, Fallback email_plain)
-        send_telegram = "telegram" in effective_channels
         if send_telegram and self._settings.can_send_telegram():
+            deliverable_any = True
             try:
                 from outputs.telegram import TelegramOutput
                 TelegramOutput(self._settings).send(
@@ -707,10 +711,13 @@ class TripAlertService:
                 f"Alert channels not yet deliverable (out-of-scope): {sorted(undeliverable)}"
             )
 
-        logger.info(
-            f"Alert sent for trip {trip.name}: {len(changes)} changes detected "
-            f"via channels={sorted(effective_channels)}"
-        )
+        if deliverable_any:
+            logger.info(
+                f"Alert sent for trip {trip.name}: {len(changes)} changes detected "
+                f"via channels={sorted(effective_channels)}"
+            )
+
+        return deliverable_any
 
     def _effective_alert_channels(self, trip: "Trip") -> set[str]:
         """Issue #638: Compute effective alert channels for a trip.
