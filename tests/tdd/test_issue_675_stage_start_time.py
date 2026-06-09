@@ -29,7 +29,7 @@ def _login(page) -> None:
     page.goto(f"{BASE}/login", wait_until="networkidle")
     time.sleep(2)
     inp = (
-        page.query_selector("input[name='identifier']")
+        page.query_selector("input[name='username']")
         or page.query_selector("input[type='text']")
     )
     inp.click()
