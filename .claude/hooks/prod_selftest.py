@@ -241,6 +241,45 @@ def _render_full_report(
     return "\n".join(lines) + "\n"
 
 
+def check_bot_menu(
+    token: str,
+    expected: list[dict],
+    api_base: str = "https://api.telegram.org",
+) -> dict:
+    """Prüft ob das Live-Bot-Menü mit `expected` übereinstimmt (AC-4).
+
+    Returns:
+        dict mit "check", "status" ("PASS" | "FAIL" | "SKIPPED"), "detail".
+    """
+    if not token:
+        return {"check": "bot_menu", "status": "SKIPPED", "detail": "kein Token"}
+
+    url = f"{api_base}/bot{token}/getMyCommands"
+    try:
+        status, body = _http_get(url, follow_redirects=False)
+        payload = json.loads(body.decode("utf-8", errors="replace"))
+        result = payload.get("result", [])
+        live_names = [c["command"] for c in result]
+        expected_names = [c["command"] for c in expected]
+        if live_names == expected_names:
+            return {
+                "check": "bot_menu",
+                "status": "PASS",
+                "detail": f"Live-Menü stimmt überein ({len(live_names)} Befehle)",
+            }
+        return {
+            "check": "bot_menu",
+            "status": "FAIL",
+            "detail": f"live={live_names} expected={expected_names}",
+        }
+    except Exception as exc:  # noqa: BLE001
+        return {
+            "check": "bot_menu",
+            "status": "FAIL",
+            "detail": f"Fehler beim Abrufen: {exc}",
+        }
+
+
 def _derive_verdict(probes: list[dict]) -> str:
     pass_probes = [p for p in probes if p.get("status") == "PASS"]
     skipped_probes = [p for p in probes if p.get("status") == "SKIPPED"]
@@ -314,13 +353,55 @@ def run_selftest(e2e_path: Path, workflow: str) -> int:
         probes = list(pool.map(_probe_ac, findings))
 
     verdict = _derive_verdict(probes)
-    _write_report(
-        report_path,
-        _render_full_report(workflow, head, health_msg, verdict, probes),
+
+    # Phase 4: Bot-Menü-Check (additiv, gated)
+    menu_finding = _check_bot_menu_prod()
+    menu_line = (
+        f"\n## Bot-Menü-Check\n\n"
+        f"Status: **{menu_finding['status']}** — {menu_finding['detail']}\n"
     )
+    if menu_finding["status"] == "FAIL":
+        verdict = "FAIL"
+
+    report_content = _render_full_report(workflow, head, health_msg, verdict, probes) + menu_line
+    _write_report(report_path, report_content)
 
     _log(f"Verdict={verdict} (Bericht: {report_path})")
     return 0 if verdict in ("PASS", "SKIPPED_ALL") else 1
+
+
+def _check_bot_menu_prod() -> dict:
+    """Liest Prod-Bot-Token aus .env und prüft das Live-Menü (best-effort)."""
+    token = _read_prod_bot_token()
+    expected = _load_bot_commands()
+    if expected is None:
+        return {"check": "bot_menu", "status": "SKIPPED", "detail": "BOT_COMMANDS nicht ladbar"}
+    return check_bot_menu(token, expected)
+
+
+def _read_prod_bot_token() -> str:
+    """Liest GZ_TELEGRAM_BOT_TOKEN aus /home/hem/gregor_zwanzig/.env (best-effort)."""
+    env_path = REPO_DIR / ".env"
+    try:
+        for line in env_path.read_text().splitlines():
+            line = line.strip()
+            if line.startswith("GZ_TELEGRAM_BOT_TOKEN="):
+                return line.split("=", 1)[1].strip()
+    except OSError:
+        pass
+    return ""
+
+
+def _load_bot_commands() -> list[dict] | None:
+    """Importiert BOT_COMMANDS aus src/outputs/telegram.py (best-effort)."""
+    src_dir = str(REPO_DIR / "src")
+    if src_dir not in sys.path:
+        sys.path.insert(0, src_dir)
+    try:
+        from outputs.telegram import BOT_COMMANDS  # noqa: PLC0415
+        return BOT_COMMANDS
+    except Exception:  # noqa: BLE001
+        return None
 
 
 def main() -> int:

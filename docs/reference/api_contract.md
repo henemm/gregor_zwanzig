@@ -1,7 +1,7 @@
 
 # API Contract — Gregor Zwanzig
 
-**Updated:** 2026-06-09 (Issue #638 — Alerts-Tab Karten-Modell, Severity-Falle, pro-Alert Kanäle; Issues #664 — Metriken-Überblick-Pille; #621 — E-Mail-Elemente abschaltbar); 2026-06-08 (Issues #672/#671 — Telegram E2E-Pipeline-Tests + Bot-Menü-Vertrag; #642 — User-Anzeigename display_name; #655 — Telegram Hybrid-Navigation: callback_query + editMessageText); 2026-06-07 (Issues #627/#631 — Compare-Preset Sofortversand + Wochen-Rhythmus-Erhalt)
+**Updated:** 2026-06-09 (Issue #671 — Bot-Menü automatisch beim Service-Start; Issue #638 — Alerts-Tab Karten-Modell, Severity-Falle, pro-Alert Kanäle; Issues #664 — Metriken-Überblick-Pille; #621 — E-Mail-Elemente abschaltbar); 2026-06-08 (Issues #672/#671 — Telegram E2E-Pipeline-Tests + Bot-Menü-Vertrag; #642 — User-Anzeigename display_name; #655 — Telegram Hybrid-Navigation: callback_query + editMessageText); 2026-06-07 (Issues #627/#631 — Compare-Preset Sofortversand + Wochen-Rhythmus-Erhalt)
 
 ## 0) Konventionen
 - Zeit: ISO-8601 UTC (`Z`)

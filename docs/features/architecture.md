@@ -1,6 +1,6 @@
 # Architektur – Gregor Zwanzig
 
-**Updated:** 2026-06-08 (Issue #655 — Telegram callback_query + editMessageText Zoom-Navigation); 2026-06-07 (Issue #637 — Telegram Webhook Migration); 2026-06-03 (Issue #572 — Inbound-Handler Multi-User Routing); 2026-05-31 (Issue #483 — Demo-Modus im Vorschau-Tab; Issue #495 — MapCanvas Leaflet-Karte; Issue #475 — OutputLayoutEditor zu Organisms)
+**Updated:** 2026-06-09 (Issue #671 — Bot-Menü automatisch beim Service-Start + Live-Selftest); 2026-06-08 (Issue #655 — Telegram callback_query + editMessageText Zoom-Navigation); 2026-06-07 (Issue #637 — Telegram Webhook Migration); 2026-06-03 (Issue #572 — Inbound-Handler Multi-User Routing); 2026-05-31 (Issue #483 — Demo-Modus im Vorschau-Tab; Issue #495 — MapCanvas Leaflet-Karte; Issue #475 — OutputLayoutEditor zu Organisms)
 
 ## Überblick
 Gregor Zwanzig ist ein verteiltes System mit separaten Backend (Go) und Frontend (SvelteKit):
@@ -101,6 +101,20 @@ Channel (E-Mail / Console / SMS)
 - `lookup_user_by_telegram_chat_id(chat_id)` – sucht User mit `telegram_chat_id == chat_id`
 
 **Konfiguration:** Nutzer-Profile liegen in `data/users/<user_id>/user.json` mit Feldern `mail_to` und `telegram_chat_id`.
+
+### Telegram Bot-Menü (Automatisches Setup)
+
+**Neu seit Issue #671 (2026-06-09):** Das Telegram-Bot-Menü wird **automatisch beim FastAPI-Service-Start**
+aus `BOT_COMMANDS` gesetzt und verifiziert:
+
+- **Startup-Hook** (`api/main.py`, Lifespan): ruft `TelegramOutput.set_my_commands()` auf
+- **Quelle:** `BOT_COMMANDS` in `src/outputs/telegram.py` (7 Befehle: glance, hg, dd, now, status, config, help)
+- **Idempotent:** jeder Deploy/Restart stellt das Menü sicher
+- **Fail-soft:** fehlender Bot-Token blockt den Service-Start nicht
+- **Live-Verifikation (Post-Deploy):** Der Selftest prüft via `getMyCommands` gegen den Prod-Bot,
+  ob das Live-Menü dem erwarteten Stand entspricht (Issue #671, AC-4)
+
+Manuelle Verwaltung ist nur noch im Notfall nötig — siehe `docs/runbooks/telegram-webhook.md` → „Bot-Menü".
 
 ---
 

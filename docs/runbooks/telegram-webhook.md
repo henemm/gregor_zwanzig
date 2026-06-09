@@ -71,11 +71,49 @@ Telegram erlaubt **kein** Parallelbetrieb (ein Bot = eine URL; `getUpdates` lief
 - ENV `TELEGRAM_BOT_TOKEN` + `TELEGRAM_WEBHOOK_SECRET` für den Staging-Prozess separat setzen.
 - `GZ_PUBLIC_BASE_URL=https://staging.gregor20.henemm.com` beim Setup-Script.
 
+## Bot-Menü (Slash-Befehle)
+
+Telegram-Bots können ein Menü mit 6–7 Befehlen anzeigen, die Nutzer per Tap auswählen.
+Das Menü wird **automatisch beim Service-Start** aus `BOT_COMMANDS` gesetzt (Issue #671,
+2026-06-09).
+
+**Automatisches Setup (Produktions-Standard):**
+
+- FastAPI-Lifespan-Hook (`api/main.py`) ruft beim Service-Start `TelegramOutput.set_my_commands()` auf
+- `setMyCommands`-Payload nutzt `BOT_COMMANDS` aus `src/outputs/telegram.py` (7 Befehle)
+- Idempotent: jeder Deploy/Service-Restart stellt das Menü sicher
+- Fail-soft: fehlender Token blockt den Service-Start nicht
+
+**Manuelle Verwaltung (nur Notfall, normalerweise nicht nötig):**
+
+```bash
+# Befehl-Menü gegen echten Bot setzen (nur nötig bei lokalem Debugging)
+export TELEGRAM_BOT_TOKEN=...
+scripts/telegram_set_commands.sh set
+
+# Aktuelles Menü prüfen
+scripts/telegram_set_commands.sh get
+
+# Menü zurücksetzen (beide Bots)
+scripts/telegram_set_commands.sh reset
+```
+
+**Verifikation:** Nach Deploy prüft der Post-Deploy-Selftest das Live-Menü gegen
+den Prod-Bot via `getMyCommands` (AC-4 in Issue #671). Abweichung vom erwarteten
+Menü meldet FAIL und blockiert Issue-Close.
+
+**Häufige Probleme:**
+- Alte Worktrees/Workspaces mit altem Code können das Menü temporär überschreiben,
+  wenn dort manuell `telegram_set_commands.sh set` läuft. Der nächste Prod-Deploy heilt das.
+- Staging-Bot-Token liegt in `gregor_zwanzig_staging/.env` (separater Bot, nicht mit Prod teilen).
+
 ## Monitoring
 
 - **403-Zähler:** abgewiesene Requests im Go-Log (`[telegram-webhook] 403 rejected (count=N)`),
   exponiert über `handler.RejectedTelegramWebhookCount()` → Anomalie-/Angriffs-Alert.
 - **Healthcheck:** periodischer `getWebhookInfo` → `last_error_message`/`pending_update_count`
   → BetterStack (Liveness-Ersatz für den entfallenen `last_run` des Poll-Jobs).
+- **Bot-Menü-Selftest:** Nach Deploy `getMyCommands` gegen Prod-Bot → Regression-Alert
+  wenn Live-Menü nicht mit `BOT_COMMANDS` übereinstimmt (Issue #671).
 - **Nginx (henemm-infra):** IP-Allowlist auf Telegram-Ranges + `limit_req` auf dem
   Webhook-Pfad (gegen offizielle Telegram-Doku verifizieren).
