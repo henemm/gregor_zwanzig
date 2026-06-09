@@ -1,12 +1,13 @@
 # Epic 677: Compare-Editor — Tab-Basierte Oberfläche
 
-**Status:** In Progress (Slice 2/6 Complete — 2026-06-09)  
+**Status:** In Progress (Slice 3/6 Complete — 2026-06-09)  
 **Epic Scope:** Umbau der Orts-Vergleich-Schnittstelle von 5-Schritt-Wizard zu Tab-Editor (analog zu Trip-Editor #616/#622)  
 **Related Specs:**
 - `docs/specs/modules/issue_678_compare_editor_shell.md` (Slice 1 — Gerüst + Lock-Engine + Tab 1)
 - `docs/specs/modules/issue_679_compare_editor_edit.md` (Slice 2 — Edit-Modus + Dirty/Save-Flow)
+- `docs/specs/modules/issue_680_compare_editor_slice3.md` (Slice 3 — Fidelity Tabs „Orte" + „Idealwerte")
 
-**Child Issues:** #678 ✓, #679 ✓ (in progress)
+**Child Issues:** #678 ✓, #679 ✓, #680 ✓ (Slices 1–3 complete)
 
 ---
 
@@ -63,9 +64,21 @@ Epic #677 ersetzt die linearen 5-Schritt-Wizards des Orts-Vergleichs durch einen
 1. **#644 F1:** `state.save()` traf falschen Store (`/api/subscriptions/{id}` → 404) — jetzt `/api/compare/presets/{id}`
 2. **#644 F2:** Empfänger wurden beim Speichern gelöscht — jetzt vollständiger Preset-Spread
 
-### Slice 3–4: Fidelity (planned)
+### Slice 3: Fidelity Tabs „Orte" + „Idealwerte" (Issue #680 ✓)
 
-Visuelle + Layout-Feinschliffe der Tab-Inhalte (Orte, Idealwerte, Layout), Validierungsmeldungen.
+**Status:** ✓ Completed 2026-06-09
+
+- **Step2Orte.svelte:** Nummerierte Picked-Liste mit Entfernen-Button, Region-gruppierte Bibliothek (Checkbox-Buttons), Counter mit Warn-Hinweis
+- **Step3Idealwerte.svelte:** Vollständig verdrahtet — Dual-Handle-Slider für Range-Metriken, Segmented-Control für Enum-Metriken, hinzufügen/entfernen von Metriken, Persistenz in `display_config.active_metrics`
+- **New Component:** `RangeSlider.svelte` — reine UI-Komponente mit Pointer-Events, Tastatur-Navigation, ARIA-Labels
+- **Neue Katalog-Module:** `ALL_METRICS`, `deriveIdealText()` in compareMetricDefs.ts
+- **State Erweiterung:** `activeMetricKeys`, `metricsManuallyEdited` in compareWizardState.svelte.ts
+- **LoC:** ~550
+- **Key Decision:** PO-Direktive „optisch angedeutet aber nicht funktional ist nicht akzeptiert" — alle Funktionen vollständig verdrahtet (Slider-Drag, Add/Remove-Metrik, Persistenz)
+
+### Slice 4: Validierungsmeldungen (planned)
+
+Fehlermeldungen für Grenzwert-Verletzungen, Min > Max, etc.  Warnsystem für unplausible Idealwertbereiche.
 
 ### Slice 5: Mobile (planned)
 
@@ -73,7 +86,7 @@ Responsive Tab-Editor für kleine Viewports (<900px).
 
 ### Slice 6: Cleanup (planned)
 
-Entfernung von `CompareWizard.svelte` nach Vollständigkeit aller Slices.
+Entfernung von `CompareWizard.svelte` nach Vollständigkeit aller Slices. Finalisierung Tab-Editor-Umstieg.
 
 ---
 
@@ -312,6 +325,7 @@ No special migration needed — pure frontend + endpoint routing fix. Legacy `Co
 
 | Date | Slice | Change |
 |------|-------|--------|
+| 2026-06-09 | 3 | Fidelity Tabs „Orte" + „Idealwerte": nummerierte Picked-Liste + Region-Gruppierung, Dual-Handle-Slider, Segmented-Control, Add/Remove-Metrik, Persistenz display_config.active_metrics. RangeSlider.svelte neu. ALL_METRICS Katalog. Issue #680 ✓ |
 | 2026-06-09 | 2 | Edit-Modus implementiert, Dirty/Save-Flow, Endpoint-Fix #644, Round-Trip-Spread. Issue #679 ✓ |
 | 2026-06-09 | 1 | Compare-Editor Gerüst + Lock-Engine + Tab 1 (Vergleich). Issue #678 ✓ |
 
@@ -319,8 +333,8 @@ No special migration needed — pure frontend + endpoint routing fix. Legacy `Co
 
 ## Future Work
 
-- **Slice 3–4:** Layout + Validierung Feinschliffe
+- **Slice 4:** Validierungsmeldungen (Min > Max, Grenzwert-Verletzungen)
 - **Slice 5:** Mobile-Responsive Editor
 - **Slice 6:** CompareWizard-Deletion, Full Tab-Editor-Umstieg
-- **Follow-ups:** Step 5 (Versand) Edit-Support, Voransicht vor Speichern, Template-Library
+- **Follow-ups:** Step 5 (Versand) Edit-Support, Voransicht vor Speichern, Template-Library, Metrik-Sortierung (Drag)
 

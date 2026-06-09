@@ -38,6 +38,29 @@ const UV_INDEX:      MetricDef = { label: 'UV-Index max',   key: 'uv_index_max',
 const TEMP_MAX:      MetricDef = { label: 'Temperatur max', key: 'temp_max_c',        unit: '°C',  decimals: 0, higherIsBetter: true,  kind: 'range', rangeMin: -20,   rangeMax: 45,    step: 1   };
 const THUNDER:       MetricDef = { label: 'Gewitter',       key: 'thunder_level_max', unit: '',    decimals: 0, higherIsBetter: false, kind: 'enum',  enumValues: ['NONE', 'MED', 'HIGH'] };
 
+// Issue #680: Slice 3 — flaches Array aller anwählbaren Metriken (AC-8/AC-9)
+export const ALL_METRICS: MetricDef[] = [
+	SNOW_DEPTH, SNOW_NEW, SUNNY_HOURS, WIND_MAX,
+	CLOUD_AVG, VISIBILITY, PRECIP_SUM, UV_INDEX, TEMP_MAX, THUNDER
+];
+
+/**
+ * Leitet einen lesbaren Ideal-Text aus einem Range-Objekt + Einheit ab (AC-6).
+ * Wichtig: min === 0 ist ein gültiger Wert und wird als Untergrenze behandelt.
+ */
+export function deriveIdealText(
+	range: { min?: number | null; max?: number | string | null },
+	unit: string
+): string {
+	const hasMin = range.min != null && range.min !== undefined;
+	const hasMax = range.max != null && range.max !== undefined;
+	const unitSuffix = unit ? ' ' + unit : '';
+	if (hasMin && hasMax) return `${range.min}–${range.max}${unitSuffix}`;
+	if (hasMin) return `≥ ${range.min}${unitSuffix}`;
+	if (hasMax) return `≤ ${range.max}${unitSuffix}`;
+	return '–';
+}
+
 export const PROFILE_METRICS_WITH_SCALES: Record<ProfileKey, MetricDef[]> = {
 	WINTERSPORT:     [SNOW_DEPTH, SNOW_NEW, SUNNY_HOURS, WIND_MAX, CLOUD_AVG],
 	ALPINE_TOURING:  [SNOW_NEW, VISIBILITY, WIND_MAX],

@@ -459,7 +459,8 @@ None—pure frontend changes for Steps 1–3. Backend endpoints are opaque (no s
 **Status:**
 - Slice 1 (#678): Compare-Editor Gerüst + Lock-Engine ✓
 - Slice 2 (#679): Edit-Modus + Dirty/Save-Flow ✓
-- Slices 3–6: In progress (see `docs/features/epic-677-compare-editor.md`)
+- Slice 3 (#680): Fidelity Tabs „Orte" + „Idealwerte" — nummerierte Picked-Liste, Region-Gruppierung, Dual-Handle-Slider, Add/Remove-Metrik ✓
+- Slices 4–6: In progress (see `docs/features/epic-677-compare-editor.md`)
 
 **Key Differences (Tab-Editor):**
 - All 5 tabs immediately visible (no linear 5-step progression)
@@ -474,7 +475,8 @@ None—pure frontend changes for Steps 1–3. Backend endpoints are opaque (no s
 
 | Date | Change |
 |------|--------|
-| 2026-06-09 | **Migration starts:** Epic #677 (Compare-Editor Tab-UI) launches. Issues #678 ✓, #679 ✓. Wizard remains available until Slice 6 completion. See `docs/features/epic-677-compare-editor.md`. |
+| 2026-06-09 | **Slice 3 of #677 complete:** Issue #680 ✓ — Fidelity Tabs „Orte" + „Idealwerte" implementiert. Nummerierte Picked-Liste, Region-Gruppierung, Dual-Handle-Slider, Add/Remove-Metrik, display_config.active_metrics-Persistenz. RangeSlider.svelte neu, ALL_METRICS Katalog. Step-Komponenten jetzt auch im Tab-Editor voll funktional. |
+| 2026-06-09 | **Migration in progress:** Epic #677 (Compare-Editor Tab-UI). Issues #678 ✓, #679 ✓, #680 ✓. Wizard remains available until Slice 6 completion. |
 | 2026-06-02 | Auto-Profil-Vorauswahl im Wizard implemented (AC-6–9 aus #132): CompareWizard.svelte (`profileManuallyOverridden`, `dominantProfile`, 2 $effects), Step1Vergleich.svelte (`onManualProfileChange` callback), 18 Unit-Tests. Issue #547 ✓ |
 | 2026-05-30 | Compare-Komponenten-Migration abgeschlossen: 14 Dateien in `compare/` und `compare/steps/` importieren `Btn`, `Eyebrow`, `Pill`, `Input`, `TopoBg` jetzt aus kanonischem Atom-Barrel (`$lib/components/atoms`) statt direkt aus `ui/`-Unterordnern. Reine Import-Pfad-Migration, kein Verhalten geändert. Sentinel-Test `issue_462.test.ts` verhindert Zurückrutschen. Sub-Issue von Epic #368 Phase 2 Compare-Zweig. Issue #462 ✓ |
 | 2026-05-30 | Auto-Briefings Sidepanel Frontend implemented: AutoReportsOverview rebuilt for ComparePreset-system (from #458), includes SavePresetDialog, manuellen Versand-Button, subscriptionHelpers für Schedule-Labels. Issue #459 ✓ |

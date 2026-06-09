@@ -39,6 +39,13 @@
 		| undefined;
 	if (savedLayouts) state.channelLayouts = savedLayouts;
 
+	// Issue #680: Slice 3 — active_metrics aus display_config wiederherstellen (AC-10)
+	const savedActiveMetrics = state.existingDisplayConfig.active_metrics as string[] | undefined;
+	if (savedActiveMetrics && savedActiveMetrics.length > 0) {
+		state.activeMetricKeys = savedActiveMetrics;
+		state.metricsManuallyEdited = true;
+	}
+
 	setContext('compare-wizard-state', state);
 	setContext('compare-wizard-profile', data.profile ?? null);
 </script>

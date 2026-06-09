@@ -1,7 +1,7 @@
 
 # API Contract — Gregor Zwanzig
 
-**Updated:** 2026-06-09 (Issues #675 — Etappen-Startzeiten editierbar; #671 — Bot-Menü automatisch beim Service-Start; #638 — Alerts-Tab Karten-Modell, Severity-Falle, pro-Alert Kanäle; #664 — Metriken-Überblick-Pille; #621 — E-Mail-Elemente abschaltbar); 2026-06-08 (Issues #672/#671 — Telegram E2E-Pipeline-Tests + Bot-Menü-Vertrag; #642 — User-Anzeigename display_name; #655 — Telegram Hybrid-Navigation: callback_query + editMessageText); 2026-06-07 (Issues #627/#631 — Compare-Preset Sofortversand + Wochen-Rhythmus-Erhalt)
+**Updated:** 2026-06-09 (Issue #680 — Compare-Editor Slice 3 Fidelity: display_config.active_metrics — ausgewählte Metriken pro Vergleich; #675 — Etappen-Startzeiten editierbar; #671 — Bot-Menü automatisch beim Service-Start; #638 — Alerts-Tab Karten-Modell, Severity-Falle, pro-Alert Kanäle; #664 — Metriken-Überblick-Pille; #621 — E-Mail-Elemente abschaltbar); 2026-06-08 (Issues #672/#671 — Telegram E2E-Pipeline-Tests + Bot-Menü-Vertrag; #642 — User-Anzeigename display_name; #655 — Telegram Hybrid-Navigation: callback_query + editMessageText); 2026-06-07 (Issues #627/#631 — Compare-Preset Sofortversand + Wochen-Rhythmus-Erhalt)
 
 ## 0) Konventionen
 - Zeit: ISO-8601 UTC (`Z`)
@@ -861,21 +861,28 @@ Manages persisted Compare-Preset configurations for automatic, multi-location co
 
 ```go
 type ComparePreset struct {
-    ID                   string     `json:"id"`                                    // "cp-{hex}", auto-generated
-    Name                 string     `json:"name"`
-    UserID               string     `json:"user_id"`                               // set from Auth-Context, server-managed
-    LocationIDs          []string   `json:"location_ids"`                          // 2+ locations to compare
-    Schedule             string     `json:"schedule"`                              // "daily" | "weekly" | "manual"
-    PreviousSchedule     string     `json:"previous_schedule,omitempty"`           // schedule saved before pause (Issue #631, server-managed)
-    Profil               string     `json:"profil"`                                // ActivityProfile: WINTERSPORT|ALPINE_TOURING|SUMMER_TREKKING|ALLGEMEIN
-    HourFrom             int        `json:"hour_from"`                             // 0..23
-    HourTo               int        `json:"hour_to"`                               // 0..23, >= HourFrom
-    Empfaenger           []string   `json:"empfaenger"`                            // Email addresses for delivery
-    LetzterVersand       *time.Time `json:"letzter_versand,omitempty"`             // last send timestamp (server-managed)
-    TopOrtLetzterVersand *string    `json:"top_ort_letzter_versand,omitempty"`     // highest-ranked location from last send (server-managed)
-    CreatedAt            time.Time  `json:"created_at"`
+    ID                   string                 `json:"id"`                                    // "cp-{hex}", auto-generated
+    Name                 string                 `json:"name"`
+    UserID               string                 `json:"user_id"`                               // set from Auth-Context, server-managed
+    LocationIDs          []string               `json:"location_ids"`                          // 2+ locations to compare
+    Schedule             string                 `json:"schedule"`                              // "daily" | "weekly" | "manual"
+    PreviousSchedule     string                 `json:"previous_schedule,omitempty"`           // schedule saved before pause (Issue #631, server-managed)
+    Profil               string                 `json:"profil"`                                // ActivityProfile: WINTERSPORT|ALPINE_TOURING|SUMMER_TREKKING|ALLGEMEIN
+    HourFrom             int                    `json:"hour_from"`                             // 0..23
+    HourTo               int                    `json:"hour_to"`                               // 0..23, >= HourFrom
+    Empfaenger           []string               `json:"empfaenger"`                            // Email addresses for delivery
+    LetzterVersand       *time.Time             `json:"letzter_versand,omitempty"`             // last send timestamp (server-managed)
+    TopOrtLetzterVersand *string                `json:"top_ort_letzter_versand,omitempty"`     // highest-ranked location from last send (server-managed)
+    DisplayConfig        map[string]interface{} `json:"display_config,omitempty"`              // opaque config (Issue #680: active_metrics, ideal_ranges, etc.)
+    CreatedAt            time.Time              `json:"created_at"`
 }
 ```
+
+**DisplayConfig Keys (Issue #680 onwards):**
+- `active_metrics`: `[]string` — Ausgewählte Metrik-Keys für Vergleich (z.B. `["temp_max_c", "wind_max_kmh", "precip_sum_mm"]`). Default: Profil-spezifische Metriken aus `PROFILE_METRICS_WITH_SCALES`.
+- `ideal_ranges`: `Record<string, IdealRange>` — Min/Max-Idealwerte pro Metrik (z.B. `{"temp_max_c": {"min": 15, "max": 35}, ...}`). Wird vom Compare-Engine zur Bewertung verwendet.
+- `output_layout`: opaque (zukünftig) — Spalten-Reihenfolge, Formatierung per Kanal
+- `schedule_config`: opaque (zukünftig) — Wiederholungs-Details
 
 ### Endpoints
 
@@ -912,6 +919,7 @@ type ComparePreset struct {
 
 - **User Isolation:** Every preset belongs to one user (read from Auth-Context). No user can see/modify another user's presets.
 - **Server-Managed Fields:** On CREATE, `id` is auto-generated (`cp-{hex}`) and `user_id` is set from context. On UPDATE, `user_id` and `created_at` are never overwritten from request body. `letzter_versand`, `top_ort_letzter_versand`, and `previous_schedule` are server-managed (not client-writable).
+- **display_config (Issue #680):** Opaque JSON object stored as `map[string]interface{}` (no server-side schema validation). Contains `active_metrics` (persisted Metrik-Auswahl), `ideal_ranges` (Bewertungs-Schwellwerte), und zukünftig `output_layout` + `schedule_config`. Round-Trip beim Update: Server gibt `display_config` unverändert zurück, Frontend reicht nur geänderte Felder. Bestandsfelder erhalten sich automatisch (RMW-Semantik).
 - **POST /api/compare/presets/{id}/send:** Immediate send endpoint (Issue #627). Executes comparison engine and emails all configured `empfaenger` immediately, regardless of `schedule` value (bypasses time-based gating). If no recipients configured, returns HTTP 400. Returns HTTP 200 with `{"status":"ok","winner":"<top_location>","empfaenger_count":N}` on success. Updates `letzter_versand` and `top_ort_letzter_versand` server-side.
 - **previous_schedule Field (Issue #631):** When a preset is paused (`schedule='manual'`), the frontend sets `previous_schedule` to the prior schedule value (`"daily"` or `"weekly"`). On reactivation, `schedule` is restored from `previous_schedule`. This field is preserved across reloads (backend-persistent); altdata without this field remain unaffected (omitempty).
 - **LocationIDs Validation:** Backend does not validate that referenced location IDs exist in `data/users/{userID}/locations.json`. Invalid IDs cause errors only during send.
@@ -1977,6 +1985,7 @@ export interface AlertRule {
 
 ## Changelog
 
+- 2026-06-09: Issue #680 — Compare-Editor Slice 3 Fidelity-Tabs „Orte" + „Idealwerte" (Epic #677): ComparePreset DTO erweitert um opaque `display_config` field (Section 16). Keys: `active_metrics` ([]string — ausgewählte Metriken pro Vergleich), `ideal_ranges` (min/max-Idealwerte für Bewertung), zukünftig `output_layout` + `schedule_config`. Frontend RMW-Semantik: nur geänderte Felder senden, Server roundtrippt alles (bestandsfelder erhalten). Zero-schema-validation im Backend. Neue UI-Komponenten: `RangeSlider.svelte` (Dual-Handle für range-Metriken), Segmented-Control (Enum-Metriken). compareMetricDefs.ts: `ALL_METRICS`-Katalog + `deriveIdealText()`. compareWizardState.svelte.ts: `activeMetricKeys`, `metricsManuallyEdited`. Step2Orte: nummerierte Picked-Liste mit Entfernen, Region-gruppierte Bibliothek (Checkbox). Step3Idealwerte: Slider, Add/Remove-Metrik, Persistenz. See `docs/specs/modules/issue_680_compare_editor_slice3.md`.
 - 2026-06-09: Issue #675 — Etappen-Startzeiten editierbar (Frontend-only, no API changes): (1) New `StageTimeField.svelte` component (analog `StageDateField`) renders `<input type="time">` within `.box` wrapper with label "STARTZEIT"; (2) Editor displays default `08:00` when `stage.start_time` is unset (displayValue fallback); (3) `EditStagesPanelNew.svelte` handler `handleStartTimeChange()` implements immutable update: setting empty string removes `start_time` (returns to default), otherwise sets to user-chosen time; (4) Component renders in both Desktop header (.stage-header-fields) and Mobile markup (@media ≤899px) for Desktop–Mobile parity; (5) Skipped for pause stages (`activeIsPause === true`); (6) Live Naismith `$derived arrivals` recalculates from changed `start_time` without explicit save (feature display); (7) Existing `Stage.start_time?: string` field (already present in model, Naismith, and Backend RMW) requires no data migration; unset trips remain byte-equal on open+save (alt-treu). ACs 1–7 verified via Playwright E2E + staging_validator. See `docs/specs/modules/issue_675_etappen_startzeiten.md`.
 - 2026-06-09: Issue #638 — Alerts-Tab Karten-Modell + Severity-Falle + pro-Alert Kanäle: (1) Added section 22 — AlertRule DTO with new `channels: list[str]` field (empty = inherit active briefing channels; non-empty = override); (2) `AlertRule.severity` now label-only (not used for send filtering anymore — eliminates severity trap where info-alerts were silently dropped); (3) Frontend Alerts-Tab moved from table paradigm to card model via AlertCard.svelte; Severity dropdown UI removed; Channel chips per alert with toggle UI; (4) Versand-Logik: per-alert kanal-routing via `trip_alert.py:_send_alert()` gruppiert Changes nach effektiven Kanälen; (5) Backward compatibility: bestandsdaten ohne `channels` laden mit leerer Liste (RMW bei Versand); `severity` bleibt lesbar. See `docs/specs/modules/issue_638_alerts_redesign.md`.
 - 2026-06-02: Issue #559 — Archive page completion: (1) Added `GET /api/trips/{id}/briefing-history` endpoint (section 21) to display chronological list of sent briefings (morning/evening) with timestamps and channels; (2) Frontend `BriefingHistoryDialog.svelte` modal with formatted timestamps (DD.MM.YYYY HH:MM) and localized kind labels; (3) "Als Vorlage" (Use as Template) button on archive page copies trip config via query param `?from={id}` to wizard page, with `templateTrip` loaded in `+page.server.ts`; (4) "Was passiert ist" (What Happened) column shows formatted event summary via `formatEventSummary(briefings, alerts)` helper. See `docs/specs/modules/issue_559_archiv_fertigstellen.md`.

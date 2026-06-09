@@ -155,10 +155,17 @@ test('AC-2: Step3 hat testid compare-step3-max-{key}', () => {
 	);
 });
 
-test('AC-3: Step3 hat Select für thunder_level_max (enum-Sonderfall)', () => {
+test('AC-3: Step3 hat Segmented-Control für thunder_level_max (enum-Sonderfall)', () => {
+	// Issue #680 AC-7: Segmented-Control (Buttons) statt Select für enum-Metriken.
+	// # doc-compliance-test
 	const src = readOrThrow(STEP3, 'Step3Idealwerte.svelte');
-	const hasSelect = /<select|Select\.svelte|Select\s+/.test(src);
-	assert.ok(hasSelect, 'Step3 muss ein Select-Element für den enum-Sonderfall haben');
+	// Segmented-Control: data-testid="compare-step3-max-{key}" als Container-div + Buttons
+	const hasEnumControl =
+		/compare-step3-max-/.test(src) && /setEnumMax|kind.*enum/.test(src);
+	assert.ok(
+		hasEnumControl,
+		'Step3 muss einen Segmented-Control-Container (compare-step3-max-*) für enum-Metriken haben'
+	);
 });
 
 test('AC-4: Step3 hat $effect für Default-Befüllung aus IDEAL_DEFAULTS', () => {

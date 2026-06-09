@@ -17,6 +17,8 @@ export interface CompareEditorEdits {
 	region: string;
 	idealRanges: Record<string, IdealRange>;
 	channelLayouts: ChannelLayouts | null;
+	// Issue #680: Slice 3 — aktive Metriken (AC-10). Optional → rückwärtskompatibel.
+	activeMetricKeys?: string[];
 }
 
 /**
@@ -42,6 +44,15 @@ export function buildComparePresetSavePayload(
 
 	if (edits.channelLayouts !== null) {
 		displayConfig.channel_layouts = edits.channelLayouts;
+	}
+
+	if (edits.activeMetricKeys !== undefined) {
+		if (edits.activeMetricKeys.length > 0) {
+			displayConfig.active_metrics = edits.activeMetricKeys;
+		} else {
+			// Leere Auswahl: active_metrics aus dem Spread entfernen, damit kein Datenschrott bleibt
+			delete displayConfig.active_metrics;
+		}
 	}
 
 	const body: ComparePreset = {

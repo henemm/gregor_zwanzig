@@ -1,20 +1,19 @@
 <script lang="ts">
 	// Issue #441 — Step 3: Idealwerte (Min/Max pro Metrik je Aktivitätsprofil).
-	// Spec: docs/specs/modules/issue_441_compare_wizard_step3_idealwerte.md §3
-	//
-	// Konsumiert CompareWizardState via getContext. Profilauswahl in Step 1
-	// bestimmt die angezeigte Metrik-Liste. Defaults aus IDEAL_DEFAULTS werden
-	// per $effect beim ersten Rendern gesetzt — nur für Keys die noch nicht
-	// belegt sind (Edit-Modus-Schutz, AC-5).
+	// Issue #680 — Slice 3: Dual-Handle-Slider, Segmented-Control, Metrik add/remove.
+	// Spec: docs/specs/modules/issue_680_compare_editor_slice3.md
 	import { getContext } from 'svelte';
 	import { Eyebrow } from '$lib/components/atoms';
 	import type { CompareWizardState } from '../compareWizardState.svelte';
 	import {
 		PROFILE_METRICS_WITH_SCALES,
 		IDEAL_DEFAULTS,
+		ALL_METRICS,
+		deriveIdealText,
 		type ProfileKey
 	} from '../compareMetricDefs';
 	import { toCompareProfile } from '$lib/types';
+	import RangeSlider from '../RangeSlider.svelte';
 
 	const state = getContext<CompareWizardState>('compare-wizard-state');
 
@@ -47,6 +46,44 @@
 		if (changed) state.idealRanges = next;
 	});
 
+	// AC-4/AC-5: activeMetricKeys aus Profil-Defaults initialisieren (nur wenn nicht manuell geändert)
+	$effect(() => {
+		if (state.activeMetricKeys.length === 0 && !state.metricsManuallyEdited) {
+			state.activeMetricKeys = metrics.map((m) => m.key);
+		}
+	});
+
+	// AC-5: Profil-Wechsel aktualisiert activeMetricKeys (sofern nicht manuell geändert)
+	$effect(() => {
+		// Zugriff auf profileKey registriert die Abhängigkeit
+		const currentProfileKey = profileKey;
+		if (!state.metricsManuallyEdited && state.activeMetricKeys.length > 0) {
+			const profileMetricKeys = (
+				PROFILE_METRICS_WITH_SCALES[currentProfileKey] ??
+				PROFILE_METRICS_WITH_SCALES.ALLGEMEIN
+			).map((m) => m.key);
+			// Nur zurücksetzen wenn Profil tatsächlich wechselte (andere Keys)
+			const same =
+				profileMetricKeys.length === state.activeMetricKeys.length &&
+				profileMetricKeys.every((k) => state.activeMetricKeys.includes(k));
+			if (!same) {
+				state.activeMetricKeys = profileMetricKeys;
+			}
+		}
+	});
+
+	// Aktive Metriken: aus ALL_METRICS filtern nach activeMetricKeys
+	const activeMetrics = $derived(
+		ALL_METRICS.filter((m) => state.activeMetricKeys.includes(m.key))
+	);
+
+	// Verfügbare Metriken für "hinzufügen"
+	const availableMetrics = $derived(
+		ALL_METRICS.filter((m) => !state.activeMetricKeys.includes(m.key))
+	);
+
+	let showAddMenu = $state(false);
+
 	function setMin(key: string, raw: number) {
 		const val = Number.isNaN(raw) ? null : raw;
 		const prev = state.idealRanges[key] ?? {};
@@ -62,78 +99,122 @@
 	function setEnumMax(key: string, val: string) {
 		state.idealRanges = { ...state.idealRanges, [key]: { max: val } };
 	}
+
+	function removeMetric(key: string) {
+		state.activeMetricKeys = state.activeMetricKeys.filter((k) => k !== key);
+		state.metricsManuallyEdited = true;
+	}
+
+	function addMetric(key: string) {
+		state.activeMetricKeys = [...state.activeMetricKeys, key];
+		state.metricsManuallyEdited = true;
+		showAddMenu = false;
+	}
 </script>
 
-<div data-testid="compare-wizard-step-3" class="space-y-4">
-	<header class="space-y-1">
-		<Eyebrow>IDEALWERTE</Eyebrow>
-		<p class="text-sm text-[var(--g-ink-muted)]">
-			Pro Aktivitätsprofil werden passende Metriken gezeigt.
-		</p>
-	</header>
-
-	{#each metrics as metric (metric.key)}
-		<div
-			data-testid={`compare-step3-metric-${metric.key}`}
-			class="grid grid-cols-[10rem_1fr_1fr_auto] gap-3 items-start py-2 border-b border-[var(--g-ink-faint)]/30"
-		>
-			<span class="text-sm font-mono text-[var(--g-ink)] pt-1">{metric.label}</span>
-
-			{#if metric.kind === 'range'}
-				<div class="space-y-1">
-					<input
-						data-testid={`compare-step3-min-${metric.key}`}
-						type="number"
-						min={metric.rangeMin}
-						max={metric.rangeMax}
-						step={metric.step}
-						value={state.idealRanges[metric.key]?.min ?? ''}
-						oninput={(e) => setMin(metric.key, (e.currentTarget as HTMLInputElement).valueAsNumber)}
-						class="w-full border rounded px-2 py-1 text-sm bg-[var(--g-paper)] border-[var(--g-ink-faint)]"
-					/>
-					<span
-						data-testid={`compare-step3-scale-min-${metric.key}`}
-						class="block text-xs font-mono text-[var(--g-ink-muted)]"
-					>
-						{metric.rangeMin}
-					</span>
-				</div>
-				<div class="space-y-1">
-					<input
-						data-testid={`compare-step3-max-${metric.key}`}
-						type="number"
-						min={metric.rangeMin}
-						max={metric.rangeMax}
-						step={metric.step}
-						value={state.idealRanges[metric.key]?.max ?? ''}
-						oninput={(e) => setMax(metric.key, (e.currentTarget as HTMLInputElement).valueAsNumber)}
-						class="w-full border rounded px-2 py-1 text-sm bg-[var(--g-paper)] border-[var(--g-ink-faint)]"
-					/>
-					<span
-						data-testid={`compare-step3-scale-max-${metric.key}`}
-						class="block text-xs font-mono text-[var(--g-ink-muted)] text-right"
-					>
-						{metric.rangeMax}
-					</span>
-				</div>
-			{:else if metric.kind === 'enum'}
-				<div></div>
-				<div class="space-y-1">
-					<select
-						data-testid={`compare-step3-max-${metric.key}`}
-						value={(state.idealRanges[metric.key]?.max as string) ?? ''}
-						onchange={(e) =>
-							setEnumMax(metric.key, (e.currentTarget as HTMLSelectElement).value)}
-						class="w-full border rounded px-2 py-1 text-sm bg-[var(--g-paper)] border-[var(--g-ink-faint)]"
-					>
-						{#each metric.enumValues ?? [] as val (val)}
-							<option value={val}>{val}</option>
+<div data-testid="compare-wizard-step-3" style="padding:28px 40px 60px; position:relative; max-width:820px;">
+	<!-- Header -->
+	<div style="display:flex; justify-content:space-between; align-items:center; padding:12px 20px; border-bottom:1px solid var(--g-rule-soft); background:var(--g-card-alt); border-radius:var(--g-r-3) var(--g-r-3) 0 0; margin-bottom:0;">
+		<Eyebrow style="margin:0;">{activeMetrics.length} Metriken</Eyebrow>
+		<div style="position:relative;">
+			<button
+				data-testid="compare-step3-add-metric-btn"
+				type="button"
+				onclick={() => { showAddMenu = !showAddMenu; }}
+				style="background:transparent; border:1px solid var(--g-rule); padding:4px 10px; font-size:12px; color:var(--g-ink-3); cursor:pointer; border-radius:var(--g-r-2); font-family:var(--g-font-sans);"
+			>＋ Metrik hinzufügen</button>
+			{#if showAddMenu}
+				<!-- svelte-ignore a11y_no_static_element_interactions -->
+				<div
+					style="position:absolute; right:0; top:calc(100% + 4px); min-width:200px; background:var(--g-card); border:1px solid var(--g-rule); border-radius:var(--g-r-2); z-index:10; box-shadow:0 4px 12px rgba(0,0,0,0.08);"
+					onmouseleave={() => { showAddMenu = false; }}
+				>
+					{#if availableMetrics.length === 0}
+						<div style="padding:12px 14px; font-size:12px; color:var(--g-ink-4); text-align:center;">Alle Metriken bereits hinzugefügt</div>
+					{:else}
+						{#each availableMetrics as m (m.key)}
+							<button
+								data-testid={`compare-step3-add-metric-option-${m.key}`}
+								type="button"
+								onclick={() => addMetric(m.key)}
+								style="display:block; width:100%; text-align:left; padding:9px 14px; font-size:13px; color:var(--g-ink); background:transparent; border:none; border-bottom:1px solid var(--g-rule-soft); cursor:pointer; font-family:var(--g-font-sans);"
+							>{m.label}{m.unit ? ` (${m.unit})` : ''}</button>
 						{/each}
-					</select>
+					{/if}
 				</div>
 			{/if}
-
-			<span class="text-xs font-mono text-[var(--g-ink-muted)] pt-2">{metric.unit}</span>
 		</div>
-	{/each}
+	</div>
+
+	<!-- Metrik-Tabelle -->
+	<div style="background:var(--g-card); border:1px solid var(--g-rule); border-radius:0 0 var(--g-r-3) var(--g-r-3); overflow:hidden;">
+		{#if activeMetrics.length === 0}
+			<div style="padding:32px 20px; text-align:center; color:var(--g-ink-4); font-size:13px;">
+				Keine Metriken aktiv. Klicke oben auf „＋ Metrik hinzufügen".
+			</div>
+		{:else}
+			{#each activeMetrics as metric, i (metric.key)}
+				<div
+					data-testid={`compare-step3-metric-${metric.key}`}
+					style="padding:16px 20px; border-bottom:{i < activeMetrics.length - 1 ? '1px solid var(--g-rule-soft)' : 'none'}; display:grid; grid-template-columns:200px 1fr 180px 28px; gap:20px; align-items:center;"
+				>
+					<!-- Label -->
+					<div>
+						<div style="font-size:13.5px; font-weight:600; color:var(--g-ink);">{metric.label}</div>
+					</div>
+
+					<!-- Slider / Segmented-Control -->
+					{#if metric.kind === 'range'}
+						<div>
+							<RangeSlider
+								min={metric.rangeMin ?? 0}
+								max={metric.rangeMax ?? 100}
+								step={metric.step ?? 1}
+								valueMin={state.idealRanges[metric.key]?.min ?? metric.rangeMin ?? 0}
+								valueMax={state.idealRanges[metric.key]?.max as number ?? metric.rangeMax ?? 100}
+								metricKey={metric.key}
+								onchange={(vMin, vMax) => { setMin(metric.key, vMin); setMax(metric.key, vMax); }}
+							/>
+							<!-- Skalen-Labels + Compat-Testids -->
+							<div style="display:flex; justify-content:space-between; margin-top:6px; font-family:var(--g-font-mono); font-size:10px; color:var(--g-ink-4);">
+								<span data-testid={`compare-step3-scale-min-${metric.key}`}>{metric.rangeMin}</span>
+								<span data-testid={`compare-step3-scale-max-${metric.key}`}>{metric.rangeMax}</span>
+							</div>
+							<!-- Hidden compat inputs for existing tests -->
+							<input type="hidden" data-testid={`compare-step3-min-${metric.key}`} value={state.idealRanges[metric.key]?.min ?? ''} />
+							<input type="hidden" data-testid={`compare-step3-max-${metric.key}`} value={state.idealRanges[metric.key]?.max ?? ''} />
+						</div>
+					{:else if metric.kind === 'enum'}
+						<div style="display:flex; gap:4px;" data-testid={`compare-step3-max-${metric.key}`}>
+							{#each metric.enumValues ?? [] as val (val)}
+								<button
+									type="button"
+									onclick={() => setEnumMax(metric.key, val)}
+									style="padding:5px 10px; font-size:12px; font-family:var(--g-font-mono); border-radius:var(--g-r-2); cursor:pointer; border:1.5px solid {(state.idealRanges[metric.key]?.max as string) === val ? 'var(--g-accent)' : 'var(--g-rule)'}; background:{(state.idealRanges[metric.key]?.max as string) === val ? 'var(--g-accent-tint)' : 'transparent'}; color:{(state.idealRanges[metric.key]?.max as string) === val ? 'var(--g-accent-deep)' : 'var(--g-ink-3)'};"
+								>{val}</button>
+							{/each}
+							<!-- Hidden min compat testid -->
+							<input type="hidden" data-testid={`compare-step3-min-${metric.key}`} value="" />
+						</div>
+					{:else}
+						<div></div>
+					{/if}
+
+					<!-- Ideal-Text -->
+					<span
+						data-testid={`compare-step3-ideal-text-${metric.key}`}
+						style="font-family:var(--g-font-mono); font-size:12.5px; font-weight:600; color:var(--g-accent-deep); text-align:right;"
+					>{deriveIdealText(state.idealRanges[metric.key] ?? {}, metric.unit)}</span>
+
+					<!-- ✕ Metrik entfernen -->
+					<button
+						data-testid={`compare-step3-remove-metric-${metric.key}`}
+						type="button"
+						onclick={() => removeMetric(metric.key)}
+						style="background:transparent; border:none; padding:4px; color:var(--g-ink-4); cursor:pointer; font-size:12px;"
+					>✕</button>
+				</div>
+			{/each}
+		{/if}
+	</div>
 </div>

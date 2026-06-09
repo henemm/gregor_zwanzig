@@ -23,6 +23,9 @@ export class CompareWizardState {
 	existingDisplayConfig = $state<Record<string, unknown>>({});
 	// Issue #441: Idealwerte pro Metrik (Step 3); leer = nicht in display_config.
 	idealRanges = $state<Record<string, IdealRange>>({});
+	// Issue #680: Slice 3 — aktive Metriken-Auswahl (aus display_config.active_metrics)
+	activeMetricKeys = $state<string[]>([]);
+	metricsManuallyEdited = $state(false);
 	// Issue #442: Pro-Kanal-Layouts. null = Step 4 nicht besucht / nichts konfiguriert.
 	channelLayouts = $state<ChannelLayouts | null>(null);
 	// Issue #443 — Step 5 Versand-Felder
@@ -210,7 +213,8 @@ export class CompareWizardState {
 			pickedIds: this.pickedIds,
 			region: this.region,
 			idealRanges: this.idealRanges,
-			channelLayouts: this.channelLayouts
+			channelLayouts: this.channelLayouts,
+			activeMetricKeys: this.activeMetricKeys
 		});
 		try {
 			const { api } = await import('$lib/api');
