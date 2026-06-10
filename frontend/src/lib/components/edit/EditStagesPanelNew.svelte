@@ -28,6 +28,7 @@
 	import { interpolateWaypoint } from '$lib/utils/waypointEditor';
 	import type { ActivityType, Stage, Waypoint } from '$lib/types';
 	import { api } from '$lib/api.js';
+	import * as Dialog from '$lib/components/ui/dialog/index.js';
 
 	interface Props {
 		stages: Stage[];
@@ -41,6 +42,8 @@
 	let saveSuccess = $state(false);
 	let saveError = $state<string | null>(null);
 	let addModeHint = $state(false);
+	// Bug #708 — Etappen-Löschen mit Bestätigungs-Dialog (kein sofortiges Löschen)
+	let pendingRemoveStageId = $state<string | null>(null);
 	let mobileSnap = $state<'peek' | 'half' | 'full'>('half');
 	let mobileSizeKey = $state(0);
 	let stageSheetOpen = $state(false);
@@ -159,12 +162,15 @@
 		updated.splice(afterIndex + 1, 0, newPause);
 		stages = updated;
 	}
-	// Issue #585 — Etappe entfernen + Etappe hinzufügen
-	function handleRemoveStage(stageId: string): void {
+	// Bug #708 — Etappe entfernen: erst Dialog zeigen, dann per confirmRemoveStage löschen.
+	function confirmRemoveStage(): void {
+		if (!pendingRemoveStageId) return;
+		const stageId = pendingRemoveStageId;
 		stages = stages.filter(s => s.id !== stageId);
 		if (activeStageId === stageId) {
 			activeStageId = stages[0]?.id ?? '';
 		}
+		pendingRemoveStageId = null;
 	}
 	function handleAddStage(): void {
 		const newStage: Stage = { id: newId(), name: 'Neue Etappe', date: '', waypoints: [] };
@@ -248,7 +254,7 @@
 		onStagesReorder={handleStagesReorder}
 		onStageActivate={handleStageActivate}
 		onPauseInsert={handlePauseInsert}
-		onRemoveStage={handleRemoveStage}
+		onRemoveStage={(id) => { pendingRemoveStageId = id; }}
 		onAddStage={handleAddStage}
 	/>
 
@@ -440,6 +446,25 @@
 		</div>
 	{/if}
 </div>
+
+<!-- Bug #708 — Bestätigungs-Dialog für Etappen-Löschen -->
+<Dialog.Root
+	open={pendingRemoveStageId !== null}
+	onOpenChange={(open) => { if (!open) pendingRemoveStageId = null; }}
+>
+	<Dialog.Content>
+		<Dialog.Header>
+			<Dialog.Title>Etappe löschen</Dialog.Title>
+			<Dialog.Description>
+				Möchtest du „{stages.find(s => s.id === pendingRemoveStageId)?.name ?? ''}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+			</Dialog.Description>
+		</Dialog.Header>
+		<Dialog.Footer>
+			<Btn variant="outline" data-testid="cancel-delete-stage" onclick={() => { pendingRemoveStageId = null; }}>Abbrechen</Btn>
+			<Btn variant="destructive" data-testid="confirm-delete-stage" onclick={confirmRemoveStage}>Löschen</Btn>
+		</Dialog.Footer>
+	</Dialog.Content>
+</Dialog.Root>
 
 <style>
 	/* Issue #675 — Startzeit-Feld neben Datum-Feld im Header */

@@ -20,6 +20,7 @@
 	import MField from '$lib/components/mobile/MField.svelte';
 	import Toast from '$lib/components/mobile/Toast.svelte';
 	import Select from '$lib/components/ui/select/Select.svelte';
+	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import type { Trip, ReportConfig, AlertRule, WeatherConfigMetric, Stage, Waypoint, ActivityType } from '$lib/types';
 	import {
 		type TabId,
@@ -52,6 +53,8 @@
 		{ id: 1, name: '', gpx: null, waypoints: [] },
 		{ id: 2, name: '', gpx: null, waypoints: [] },
 	]);
+	// Bug #708 — Etappen-Löschen mit Bestätigungs-Dialog
+	let pendingRemoveStageId = $state<number | null>(null);
 
 	let weatherMetrics = $state<WeatherConfigMetric[]>([]);
 	let channels = $state({ email: true, telegram: true, sms: false });
@@ -253,7 +256,14 @@
 	}
 
 	function makeRemoveStageHandler(stageId: number) {
-		return () => { stages = stages.filter(s => s.id !== stageId); };
+		// Bug #708 — zeigt Bestätigungs-Dialog statt sofort löschen
+		return () => { pendingRemoveStageId = stageId; };
+	}
+
+	function confirmRemoveStage() {
+		if (pendingRemoveStageId === null) return;
+		stages = stages.filter(s => s.id !== pendingRemoveStageId);
+		pendingRemoveStageId = null;
 	}
 
 	function makeAddStageHandler() {
@@ -615,6 +625,8 @@
 
 								<!-- Entfernen -->
 								<button type="button" onclick={makeRemoveStageHandler(s.id)}
+									aria-label="Etappe entfernen"
+									data-testid={`tn-stage-remove-${idx}`}
 									style="background: transparent; border: none; cursor: pointer; color: var(--g-ink-4); font-size: 15px; padding: 2px 4px; line-height: 1; text-align: center;">×</button>
 							</div>
 						{/each}
@@ -962,6 +974,25 @@
 
 	</main>
 </div>
+
+<!-- Bug #708 — Bestätigungs-Dialog für Etappen-Löschen (/trips/new) -->
+<Dialog.Root
+	open={pendingRemoveStageId !== null}
+	onOpenChange={(open) => { if (!open) pendingRemoveStageId = null; }}
+>
+	<Dialog.Content>
+		<Dialog.Header>
+			<Dialog.Title>Etappe löschen</Dialog.Title>
+			<Dialog.Description>
+				Möchtest du diese Etappe wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+			</Dialog.Description>
+		</Dialog.Header>
+		<Dialog.Footer>
+			<Btn variant="outline" data-testid="cancel-delete-stage" onclick={() => { pendingRemoveStageId = null; }}>Abbrechen</Btn>
+			<Btn variant="destructive" data-testid="confirm-delete-stage" onclick={confirmRemoveStage}>Löschen</Btn>
+		</Dialog.Footer>
+	</Dialog.Content>
+</Dialog.Root>
 
 <style>
 	/* ── Issue #661: Responsive Mobile/Desktop Switching ────────────────────
