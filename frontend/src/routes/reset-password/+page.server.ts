@@ -26,9 +26,10 @@ export const actions = {
 			return fail(400, { error: 'Passwort muss mindestens 8 Zeichen haben', username, token });
 		}
 
+		const clientIP = request.headers.get('x-real-ip') ?? '';
 		const resp = await fetch(`${API()}/api/auth/reset-password`, {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
+			headers: { 'Content-Type': 'application/json', ...(clientIP && { 'X-Real-IP': clientIP }) },
 			body: JSON.stringify({ username, token, new_password: newPassword }),
 		});
 

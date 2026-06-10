@@ -13,10 +13,11 @@ export const actions = {
 			return fail(400, { error: 'E-Mail-Adresse erforderlich', email });
 		}
 
+		const clientIP = request.headers.get('x-real-ip') ?? '';
 		// Backend liefert immer 200 — Fehler still absorbieren, kein User-Enum.
 		await fetch(`${API()}/api/auth/magic-link`, {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
+			headers: { 'Content-Type': 'application/json', ...(clientIP && { 'X-Real-IP': clientIP }) },
 			body: JSON.stringify({ email })
 		}).catch(() => {});
 

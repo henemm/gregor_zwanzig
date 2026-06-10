@@ -11,7 +11,7 @@ export const load: PageServerLoad = async () => {
 };
 
 export const actions = {
-	default: async ({ request, cookies, getClientAddress }) => {
+	default: async ({ request, cookies }) => {
 		const data = await request.formData();
 		const username = data.get('username')?.toString() ?? '';
 		const password = data.get('password')?.toString() ?? '';
@@ -20,9 +20,10 @@ export const actions = {
 			return fail(400, { error: 'Username and password required', username });
 		}
 
+		const clientIP = request.headers.get('x-real-ip') ?? '';
 		const resp = await fetch(`${API()}/api/auth/login`, {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json', 'X-Real-IP': getClientAddress() },
+			headers: { 'Content-Type': 'application/json', ...(clientIP && { 'X-Real-IP': clientIP }) },
 			body: JSON.stringify({ username, password }),
 		});
 

@@ -18,9 +18,10 @@ export const actions = {
 			return fail(400, { error: 'E-Mail und Code erforderlich', email });
 		}
 
+		const clientIP = request.headers.get('x-real-ip') ?? '';
 		const resp = await fetch(`${API()}/api/auth/magic-link/verify`, {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
+			headers: { 'Content-Type': 'application/json', ...(clientIP && { 'X-Real-IP': clientIP }) },
 			body: JSON.stringify({ email, code })
 		});
 

@@ -11,7 +11,7 @@ export const load: PageServerLoad = async () => {
 };
 
 export const actions = {
-	default: async ({ request, getClientAddress }) => {
+	default: async ({ request }) => {
 		const data = await request.formData();
 		const username = data.get('username')?.toString() ?? '';
 		const password = data.get('password')?.toString() ?? '';
@@ -21,9 +21,10 @@ export const actions = {
 			return fail(400, { error: 'Passwörter stimmen nicht überein', username });
 		}
 
+		const clientIP = request.headers.get('x-real-ip') ?? '';
 		const resp = await fetch(`${API()}/api/auth/register`, {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json', 'X-Real-IP': getClientAddress() },
+			headers: { 'Content-Type': 'application/json', ...(clientIP && { 'X-Real-IP': clientIP }) },
 			body: JSON.stringify({ username, password }),
 		});
 
@@ -31,6 +32,9 @@ export const actions = {
 			redirect(302, '/login?registered=1');
 		}
 
+		if (resp.status === 429) {
+			return fail(429, { error: 'Zu viele Versuche — bitte in einigen Minuten erneut versuchen.', username });
+		}
 		if (resp.status === 409) {
 			return fail(409, { error: 'Benutzername bereits vergeben', username });
 		}

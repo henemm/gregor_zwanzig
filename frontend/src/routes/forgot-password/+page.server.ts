@@ -13,9 +13,10 @@ export const actions = {
 			return fail(400, { error: 'Username required', username });
 		}
 
+		const clientIP = request.headers.get('x-real-ip') ?? '';
 		await fetch(`${API()}/api/auth/forgot-password`, {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
+			headers: { 'Content-Type': 'application/json', ...(clientIP && { 'X-Real-IP': clientIP }) },
 			body: JSON.stringify({ username }),
 		});
 
