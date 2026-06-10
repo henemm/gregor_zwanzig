@@ -209,7 +209,8 @@ export class CompareWizardState {
 			name: this.name,
 			location_ids: this.pickedIds,
 			profil: this.activityProfile ?? 'wandern',
-			schedule: this.schedule,
+			// wiz.schedule ist 'daily_morning'|'daily_evening'|'weekly'; Preset-API erwartet 'daily'|'weekly'|'manual'
+			schedule: this.schedule.startsWith('daily') ? 'daily' : this.schedule === 'weekly' ? 'weekly' : 'manual',
 			hour_from: this.timeWindowStart,
 			hour_to: this.timeWindowEnd,
 			empfaenger: [],
