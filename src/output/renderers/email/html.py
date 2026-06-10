@@ -317,6 +317,7 @@ def render_html(
     daily_summary_metrics: Optional[list[str]] = None,
     sent_at: Optional[datetime] = None,
     show_metrics_summary: bool = False,
+    show_outlook: bool = True,
 ) -> str:
     """Render full HTML e-mail body. Pure function."""
     sig = profile_signature(profile)
@@ -520,12 +521,18 @@ def render_html(
 
             name = stage.get("name", "")
             weekday = stage.get("weekday", "")
+            conf_pct = stage.get("confidence_pct")
+            confidence_html = (
+                f'<span style="font-size:11px;font-weight:400;color:#6b675c;'
+                f'margin-left:8px">Sicherheit {conf_pct}%</span>'
+                if conf_pct is not None else ""
+            )
 
             trend_rows += f"""
         <tr style="{sep}">
           <td colspan="4" style="padding:{('12px' if i > 0 else '8px')} 0 2px;
             font-size:14px;font-weight:600;color:#1a1a18;font-family:Inter,sans-serif">
-            {weekday} &middot; {name}
+            {weekday} &middot; {name}{confidence_html}
           </td>
         </tr>
         <tr>
@@ -552,9 +559,16 @@ def render_html(
                 f'<div style="clear:both"></div>'
             )
 
+        # Issue #721: Stability label as head of the outlook block.
+        # show_stability=False suppresses the label even inside the trend block (#621-Vertrag).
+        _outlook_stability_html = ""
+        if show_outlook and show_stability and stability_result is not None:
+            _outlook_stability_html = render_stability_label_html(stability_result)
+
         trend_html = f"""
     <div style="background:#f6f4ee;border-top:2px solid #1a1a18;padding:22px 28px 24px;margin-top:24px">
       <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:#9a958a;font-family:'JetBrains Mono',monospace;margin-bottom:4px">05 &middot; Ausblick</div>
+      {_outlook_stability_html}
       {context_label_html}<div style="font-size:18px;font-weight:700;color:#1a1a18;font-family:Inter,sans-serif;margin-bottom:16px">Nächste Etappen</div>
       <table width="100%" cellpadding="0" cellspacing="0" style="table-layout:fixed;border-collapse:collapse">
         <colgroup>
@@ -715,7 +729,21 @@ def render_html(
 
     # Issue #122 / F12: Großwetterlage-Label (vor dem Confidence-Hinweis,
     # erstes inhaltliches Element — Spec AC-8).
-    stability_html = render_stability_label_html(stability_result if show_stability else None)
+    # Issue #721: When show_outlook=True, stability is rendered as head of the
+    # outlook block (trend_html) — suppress the separate block to avoid duplication.
+    # When show_outlook=False, the entire outlook (stability + trend) is suppressed.
+    if show_outlook:
+        # Stability moves into the trend block; no separate block needed
+        stability_html = ""
+        # If no trend data, render stability separately (only block available)
+        if not multi_day_trend:
+            stability_html = render_stability_label_html(
+                stability_result if show_stability else None
+            )
+    else:
+        # show_outlook=False → suppress everything (stability + trend)
+        stability_html = ""
+        trend_html = ""
 
     daylight_html = ""
     if daylight:

@@ -130,6 +130,7 @@ def render_plain(
     show_highlights: bool = True,
     daily_summary_metrics: Optional[list[str]] = None,
     show_metrics_summary: bool = False,
+    show_outlook: bool = True,
 ) -> str:
     """Render full plain-text e-mail body. Pure function."""
     sig = profile_signature(profile)
@@ -159,7 +160,8 @@ def render_plain(
         lines.append("")
 
     # Issue #122 / F12: Stabilitäts-Label (vor dem Konfidenz-Hinweis).
-    if stability_result is not None and show_stability:
+    # Issue #721: show_outlook gates the entire outlook block (stability + trend).
+    if show_outlook and stability_result is not None and show_stability:
         stability_texts = {
             "STABIL": (
                 "Wetterlage: STABIL — Die Großwetterlage ist stabil. "
@@ -232,7 +234,7 @@ def render_plain(
                 lines.append(f"  {fc['date']}: {icon}{fc['text']}")
         lines.append("")
 
-    if multi_day_trend:
+    if show_outlook and multi_day_trend:
         lines.append("")
         lines.append("Nächste Etappen")
         for stage in multi_day_trend:

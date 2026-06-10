@@ -730,6 +730,7 @@ class TripReportConfig:
         default_factory=lambda: ["precipitation", "wind", "visibility", "thunder"]
     )                                           # Tages-Summe-Auswahl
     show_metrics_summary: bool = False          # Metriken-Überblick (Issue #664)
+    show_outlook: bool = True                   # Issue #721: Ausblick-Block (Großwetterlage + nächste Etappen)
 
     # Inbound-Kommandos (Issue #670)
     paused_until: Optional[datetime] = None     # PAUSE: ruht bis dieser UTC-Zeitpunkt

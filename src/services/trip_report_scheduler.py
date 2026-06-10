@@ -1075,6 +1075,12 @@ class TripReportSchedulerService:
                         if mc.sms_threshold is not None:
                             _sms_thr[mc.metric_id] = mc.sms_threshold
 
+                # Issue #721: confidence_pct from stage-level aggregate (min over segments)
+                _conf_pct = (
+                    round(agg.confidence_pct_min)
+                    if agg.confidence_pct_min is not None else None
+                )
+
                 trend.append(dict(
                     weekday=WEEKDAYS_DE[stage.date.weekday()],
                     name=stage.name,
@@ -1093,6 +1099,7 @@ class TripReportSchedulerService:
                         "sms_threshold_precip": _sms_thr.get("precipitation"),
                         "sms_threshold_wind": _sms_thr.get("wind"),
                         "sms_threshold_gust": _sms_thr.get("gust"),
+                        "confidence_pct": _conf_pct,
                     }.items() if v is not None},
                 ))
             except Exception as e:
