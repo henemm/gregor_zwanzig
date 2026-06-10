@@ -48,6 +48,43 @@ describe('AC-1: keine zweite Breadcrumb mehr im TripHeader', () => {
 	});
 });
 
+describe('AC-3-follow-up: Meta-Zeile zeigt KEIN Datum mehr (nur Strecke + Höhenmeter)', () => {
+	// PO-Entscheidung: Datum nur einmal — in der Eyebrow. Die Meta-Zeile
+	// (data-testid="trip-detail-meta") darf dateRange nicht mehr rendern.
+	const lines = source.split('\n');
+	// Den meta-line-Block isolieren: von "meta-line" bis zur schließenden </div>
+	const metaStart = lines.findIndex((l) => l.includes('meta-line'));
+	const metaEnd = lines.findIndex((l, i) => i > metaStart && l.includes('</div>'));
+	const metaBlock = lines.slice(metaStart, metaEnd + 1).join('\n');
+
+	test('meta-line-Block enthält dateRange nicht mehr', () => {
+		assert.ok(metaStart >= 0, 'meta-line-Block nicht gefunden');
+		assert.ok(
+			!metaBlock.includes('dateRange'),
+			`Meta-Zeile darf dateRange nicht mehr rendern — Datum steht nur noch in der Eyebrow.\n` +
+				`Gefunden: ${JSON.stringify(metaBlock.trim())}`
+		);
+	});
+
+	test('meta-line-Block enthält kein {#if dateRange} mehr', () => {
+		assert.ok(metaStart >= 0, 'meta-line-Block nicht gefunden');
+		assert.ok(
+			!metaBlock.includes('{#if dateRange}'),
+			`Meta-Zeile darf keinen {#if dateRange}-Block mehr enthalten.\n` +
+				`Gefunden: ${JSON.stringify(metaBlock.trim())}`
+		);
+	});
+
+	test('eyebrowText-Derived nutzt dateRange weiterhin (kein verwaister Import)', () => {
+		// dateRange muss im eyebrowText-Kontext weiterhin vorkommen —
+		// weder die Variable noch formatDateRange dürfen verwaist sein.
+		assert.ok(
+			source.includes('eyebrowText') && source.includes('dateRange'),
+			'eyebrowText muss dateRange weiterhin referenzieren.'
+		);
+	});
+});
+
 describe('AC-2: Eyebrow zeigt REGION · DATUMSBEREICH', () => {
 	test('kein "Trip ·"-Präfix mehr in der Eyebrow', () => {
 		assert.ok(

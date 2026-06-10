@@ -137,7 +137,7 @@
 			</div>
 
 			<div class="meta-line" data-testid="trip-detail-meta">
-				{#if dateRange}<span>{dateRange}</span> · {/if}<span>{stats.kmTotal.toFixed(1)} km</span>
+				<span>{stats.kmTotal.toFixed(1)} km</span>
 				· <span>↑{Math.round(stats.ascentM).toLocaleString('de-DE')} m</span>
 			</div>
 		</div>
