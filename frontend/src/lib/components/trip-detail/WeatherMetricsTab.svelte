@@ -357,8 +357,10 @@
 		}
 	}
 
-	function onPresetSaved(preset: MetricPreset) {
+	async function onPresetSaved(preset: MetricPreset) {
 		userPresets = [preset, ...userPresets];
+		applyPreset(preset.id);
+		await handleSave();
 	}
 
 	// Für SavePresetDialog (erwartet enabledMap): aktive = primary.
@@ -562,6 +564,7 @@
 			{catalog}
 			{indicatorCapable}
 			{buckets}
+			existingNames={userPresets.map(p => p.name)}
 			onClose={() => (showSavePresetDialog = false)}
 			onSaved={onPresetSaved}
 		/>

@@ -11,6 +11,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -140,7 +141,8 @@ func CreateMetricPresetHandler(s *store.Store) http.HandlerFunc {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request"})
 			return
 		}
-		if req.Name == "" {
+		name := strings.TrimSpace(req.Name)
+		if name == "" {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "name_required"})
 			return
 		}
@@ -149,6 +151,15 @@ func CreateMetricPresetHandler(s *store.Store) http.HandlerFunc {
 		if err != nil {
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
 			return
+		}
+
+		// Issue #690: Eindeutigkeit pro Nutzer (case-insensitive, getrimmt).
+		nameLower := strings.ToLower(name)
+		for _, p := range presets {
+			if strings.ToLower(strings.TrimSpace(p.Name)) == nameLower {
+				writeJSON(w, http.StatusConflict, map[string]string{"error": "name_exists"})
+				return
+			}
 		}
 
 		// Wenn IsDefault=true → alle anderen auf false setzen (genau ein Default).
@@ -160,7 +171,7 @@ func CreateMetricPresetHandler(s *store.Store) http.HandlerFunc {
 
 		preset := model.MetricPreset{
 			ID:          newPresetID(),
-			Name:        req.Name,
+			Name:        name,
 			Description: req.Description,
 			IsDefault:   req.IsDefault,
 			Metrics:     normalizeMetricsPayload(req.Metrics, req.FriendlyIDs),

@@ -27,6 +27,8 @@
 		onSaved: (preset: MetricPreset) => void;
 		// Issue #365 — optional: bucket-bewusste Zusammenfassung (Spalten/Detail/Skala).
 		buckets?: Buckets;
+		// Issue #690 — client-seitige Eindeutigkeitsprüfung (case-insensitive, getrimmt).
+		existingNames?: string[];
 	}
 
 	let {
@@ -39,6 +41,7 @@
 		onClose,
 		onSaved,
 		buckets,
+		existingNames = [],
 	}: Props = $props();
 
 	// Issue #365 — Spalten/Detail/Skala-Zähler (nur wenn Buckets übergeben).
@@ -98,6 +101,13 @@
 		if (!canSubmit) return;
 		saving = true;
 		error = null;
+		// Issue #690: Client-seitige Eindeutigkeitsprüfung (case-insensitive, getrimmt).
+		const trimmedName = name.trim().toLowerCase();
+		if (existingNames.some(n => n.trim().toLowerCase() === trimmedName)) {
+			error = 'Ein Profil mit diesem Namen existiert bereits.';
+			saving = false;
+			return;
+		}
 		try {
 			// Issue #343 — Neues Schema (#342): metrics[] mit horizons statt
 			// metrics: string[] + friendly_ids: string[].
@@ -116,7 +126,12 @@
 			open = false;
 			reset();
 		} catch (e: unknown) {
-			error = (e as { error?: string })?.error ?? 'Speichern fehlgeschlagen';
+			const errToken = (e as { error?: string })?.error;
+			if (errToken === 'name_exists') {
+				error = 'Ein Profil mit diesem Namen existiert bereits.';
+			} else {
+				error = errToken ?? 'Speichern fehlgeschlagen';
+			}
 		} finally {
 			saving = false;
 		}

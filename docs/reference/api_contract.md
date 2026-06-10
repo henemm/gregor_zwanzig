@@ -1,7 +1,7 @@
 
 # API Contract — Gregor Zwanzig
 
-**Updated:** 2026-06-09 (Issue #674 — Fahrradtour als Aktivitätstyp: 3 neue ActivityType-Varianten (fahrrad_15/20/25 km/h) mit korrekten Naismith-Raten (600/1000 Hm/h); #680 — Compare-Editor Slice 3 Fidelity: display_config.active_metrics — ausgewählte Metriken pro Vergleich; #675 — Etappen-Startzeiten editierbar; #671 — Bot-Menü automatisch beim Service-Start; #638 — Alerts-Tab Karten-Modell, Severity-Falle, pro-Alert Kanäle; #664 — Metriken-Überblick-Pille; #621 — E-Mail-Elemente abschaltbar); 2026-06-08 (Issues #672/#671 — Telegram E2E-Pipeline-Tests + Bot-Menü-Vertrag; #642 — User-Anzeigename display_name; #655 — Telegram Hybrid-Navigation: callback_query + editMessageText); 2026-06-07 (Issues #627/#631 — Compare-Preset Sofortversand + Wochen-Rhythmus-Erhalt)
+**Updated:** 2026-06-10 (Issue #690 — Eigene Wetter-Metriken-Profile: eindeutiger Name (HTTP 409 name_exists, 400 name_required), Profil sofort aktiv + persistent, "Eigene"-Markierung in Preset-Leiste, trip-übergreifend pro Nutzer); 2026-06-09 (Issue #674 — Fahrradtour als Aktivitätstyp: 3 neue ActivityType-Varianten (fahrrad_15/20/25 km/h) mit korrekten Naismith-Raten (600/1000 Hm/h); #680 — Compare-Editor Slice 3 Fidelity: display_config.active_metrics — ausgewählte Metriken pro Vergleich; #675 — Etappen-Startzeiten editierbar; #671 — Bot-Menü automatisch beim Service-Start; #638 — Alerts-Tab Karten-Modell, Severity-Falle, pro-Alert Kanäle; #664 — Metriken-Überblick-Pille; #621 — E-Mail-Elemente abschaltbar); 2026-06-08 (Issues #672/#671 — Telegram E2E-Pipeline-Tests + Bot-Menü-Vertrag; #642 — User-Anzeigename display_name; #655 — Telegram Hybrid-Navigation: callback_query + editMessageText); 2026-06-07 (Issues #627/#631 — Compare-Preset Sofortversand + Wochen-Rhythmus-Erhalt)
 
 ## 0) Konventionen
 - Zeit: ISO-8601 UTC (`Z`)
@@ -952,6 +952,195 @@ Returns catalog of all available weather metrics with format mode options and de
 - Frontend uses `format_modes` to filter dropdown options in Wizard Step 3 and WeatherConfigDialog
 - `MetricConfig.format_mode` in persisted configs (e.g., `trips.json`, `locations.json`) refers to one of the values in the corresponding metric's `format_modes` array
 - Legacy code may use `MetricConfig.use_friendly_format` (deprecated boolean) — loader automatically maps to `format_mode` for backward compatibility
+
+---
+
+## 15.5) MetricPreset CRUD Endpoints (Issue #690)
+
+Manages persisted custom weather metric profiles (user's own presets for metric selection, format modes, and horizons).
+
+**Handler:** `internal/handler/metric_preset.go` | **Storage:** `data/users/{userID}/metric_presets.json` | **Routing:** `cmd/server/main.go`
+
+### MetricPreset DTO
+
+```go
+type MetricPreset struct {
+    ID          string           `json:"id"`                      // "p-{hex}", auto-generated
+    Name        string           `json:"name"`                    // User-chosen name, unique per user (case-insensitive, trimmed)
+    Description string           `json:"description,omitempty"`   // Optional user notes
+    IsDefault   bool             `json:"is_default"`              // Exactly one per user is marked as default
+    Metrics     []DisplayMetric  `json:"metrics"`                 // List of selected metrics with horizons + format modes
+    CreatedAt   time.Time        `json:"created_at"`              // Server-managed creation timestamp (UTC)
+}
+```
+
+**DisplayMetric** (per-metric config within preset):
+
+```go
+type DisplayMetric struct {
+    MetricID          string   `json:"metric_id"`            // e.g., "temperature", "wind_direction"
+    Enabled           bool     `json:"enabled"`              // Include in preset
+    UseFriendlyFormat bool     `json:"use_friendly_format"`  // Applies friendly format mode if available
+    Horizons          Horizons `json:"horizons"`             // Which forecast days to show
+}
+
+type Horizons struct {
+    Today     bool `json:"today"`
+    Tomorrow  bool `json:"tomorrow"`
+    DayAfter  bool `json:"day_after"`
+}
+```
+
+### GET /api/metric-presets
+
+Returns all metric presets for the authenticated user.
+
+**Response 200:**
+
+```json
+{
+  "presets": [
+    {
+      "id": "p-a1b2c3d4",
+      "name": "Bergtour",
+      "description": "Alpine with wind focus",
+      "is_default": false,
+      "metrics": [
+        {
+          "metric_id": "temperature",
+          "enabled": true,
+          "use_friendly_format": false,
+          "horizons": {"today": true, "tomorrow": true, "day_after": false}
+        },
+        {
+          "metric_id": "wind_direction",
+          "enabled": true,
+          "use_friendly_format": true,
+          "horizons": {"today": true, "tomorrow": true, "day_after": true}
+        }
+      ],
+      "created_at": "2026-06-10T14:32:45Z"
+    }
+  ]
+}
+```
+
+**Notes:**
+- Includes both built-in system presets (if exposed in future) and user's own custom presets
+- User is identified from Auth-Context (user_id); presets from other users are never returned
+
+### POST /api/metric-presets
+
+Creates a new custom metric preset for the authenticated user.
+
+**Request Body:**
+
+```json
+{
+  "name": "Bergtour",
+  "description": "Alpine with wind focus",
+  "is_default": false,
+  "metrics": [
+    {
+      "metric_id": "temperature",
+      "enabled": true,
+      "use_friendly_format": false,
+      "horizons": {"today": true, "tomorrow": true, "day_after": false}
+    },
+    {
+      "metric_id": "wind_direction",
+      "enabled": true,
+      "use_friendly_format": true,
+      "horizons": {"today": true, "tomorrow": true, "day_after": true}
+    }
+  ],
+  "friendly_ids": []
+}
+```
+
+**Field Definitions:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| name | string | Yes | Preset name; must be unique per user (case-insensitive match, leading/trailing whitespace trimmed); max 100 chars |
+| description | string | No | Optional user notes |
+| is_default | boolean | Yes | If `true`, all other presets for this user are set to `is_default=false` (exactly one default per user) |
+| metrics | array | Yes | List of metric configurations with horizons |
+| friendly_ids | array | No | Legacy field (deprecated); ignored if `metrics` is properly structured |
+
+**Response 201 (Created):**
+
+```json
+{
+  "id": "p-a1b2c3d4",
+  "name": "Bergtour",
+  "description": "Alpine with wind focus",
+  "is_default": false,
+  "metrics": [...],
+  "created_at": "2026-06-10T14:32:45Z"
+}
+```
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 400 | `{"error":"name_required"}` | `name` is empty or contains only whitespace |
+| 400 | `{"error":"bad_request"}` | Request body is malformed JSON |
+| 409 | `{"error":"name_exists"}` | A preset with this name (case-insensitive) already exists for this user |
+| 500 | `{"error":"store_error"}` | Internal storage error |
+
+**Notes:**
+- User ID is extracted from Auth-Context; no `user_id` field is accepted in the request
+- Name is trimmed and case-insensitive for uniqueness comparison (Issue #690)
+- Newly created preset becomes immediately active on the trip if workflow so directs (frontend responsibility)
+- If `is_default=true` and multiple presets exist, server atomically ensures exactly one default
+
+### DELETE /api/metric-presets/{id}
+
+Deletes a metric preset (must belong to authenticated user).
+
+**Response 204 (No Content):** Preset deleted successfully.
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 404 | `{"error":"not_found"}` | Preset does not exist or belongs to a different user |
+| 500 | `{"error":"store_error"}` | Internal storage error |
+
+### PATCH /api/metric-presets/{id}
+
+Updates selected fields of a metric preset (name, description, metrics, is_default).
+
+**Request Body (partial update):**
+
+```json
+{
+  "name": "Bergtour Updated",
+  "description": "Alpine with focus on wind and precipitation",
+  "metrics": [...]
+}
+```
+
+**Response 200:**
+
+```json
+{
+  "id": "p-a1b2c3d4",
+  "name": "Bergtour Updated",
+  ...
+}
+```
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 400 | `{"error":"name_required"}` | Attempted to set name to empty/whitespace only |
+| 404 | `{"error":"not_found"}` | Preset does not exist or belongs to a different user |
+| 409 | `{"error":"name_exists"}` | New name already exists for this user (case-insensitive) |
+| 500 | `{"error":"store_error"}` | Internal storage error |
 
 ---
 
@@ -2089,6 +2278,7 @@ export interface AlertRule {
 
 ## Changelog
 
+- 2026-06-10: Issue #690 — Eigene Wetter-Metriken-Profile (MetricPreset CRUD): Section 15.5 hinzugefügt. 4 REST-Endpoints: GET/POST/DELETE/PATCH `/api/metric-presets{/{id}}`. MetricPreset DTO mit Name (eindeutig pro Nutzer, case-insensitive, getrimmt), Metrics ([]DisplayMetric mit Horizons), is_default, CreatedAt. POST antwortet mit HTTP 201 bei Erfolg; HTTP 400 bei leerem Name (`"name_required"`); HTTP 409 bei Duplikat-Name (`"name_exists"`, case-insensitive). Bestands-Daten: Single-File Storage `metric_presets.json` pro Nutzer; User-Isolation via Auth-Context (`user_id`). Frontend: Dialog zeigt Client-Validierung (Duplikat-Check), neues Profil wird nach Speichern sofort aktiv auf Trip (`display_config.preset_name = preset.id`), "Eigene"-Markierung in Preset-Leiste (unterscheidet User-Profile von System-Vorlagen), trip-übergreifend sichtbar. See `docs/specs/modules/issue_690_custom_metric_presets.md`.
 - 2026-06-09: Issue #674 — Fahrradtouren als Aktivitätstypen (15 / 20 / 25 km/h): Neue `ActivityType`-Werte `"fahrrad_15"`, `"fahrrad_20"`, `"fahrrad_25"` in Go + TypeScript mit korrekten Naismith-Raten (600 m/h Aufstieg, 1000 m/h Abstieg — doppelt so schnell wie Wanderer). Section 10.5 hinzugefügt (Trip Model und Activity Types). Trip.activity Feld existierte bereits (Epic #136), wird jetzt dokumentiert mit vollständiger Aktivitäts-Tabelle. `ComputeStageArrivals()` Signatur erweitert auf `ActivitySpeeds`-Parameter statt hardcodiert; `ActivitySpeed(trip.activity)` Hilfsfunktion in Go. Frontend: `activityToSpeed(activityType?)` Hilfsfunktion, `computeArrivalTimes()` akzeptiert optionalen `speedFlatKmh`-Parameter. Wizard Step 3 zeigt 3 neue Fahrrad-Optionen im Dropdown. EditStagesPanelNew erhält `activityType`-Prop, leitet Speed weiter. Backward-Compatibility: unbekannte/leere Activity → Wanderer-Default (4.0 km/h, 300/500 Hm/h). Keine Python-Erweiterung (OUT OF SCOPE, Folge-Issue für EtappenConfig). See `docs/specs/modules/issue_674_aktivitaetstyp_fahrrad.md`.
 - 2026-06-09: Issue #680 — Compare-Editor Slice 3 Fidelity-Tabs „Orte" + „Idealwerte" (Epic #677): ComparePreset DTO erweitert um opaque `display_config` field (Section 16). Keys: `active_metrics` ([]string — ausgewählte Metriken pro Vergleich), `ideal_ranges` (min/max-Idealwerte für Bewertung), zukünftig `output_layout` + `schedule_config`. Frontend RMW-Semantik: nur geänderte Felder senden, Server roundtrippt alles (bestandsfelder erhalten). Zero-schema-validation im Backend. Neue UI-Komponenten: `RangeSlider.svelte` (Dual-Handle für range-Metriken), Segmented-Control (Enum-Metriken). compareMetricDefs.ts: `ALL_METRICS`-Katalog + `deriveIdealText()`. compareWizardState.svelte.ts: `activeMetricKeys`, `metricsManuallyEdited`. Step2Orte: nummerierte Picked-Liste mit Entfernen, Region-gruppierte Bibliothek (Checkbox). Step3Idealwerte: Slider, Add/Remove-Metrik, Persistenz. See `docs/specs/modules/issue_680_compare_editor_slice3.md`.
 - 2026-06-09: Issue #675 — Etappen-Startzeiten editierbar (Frontend-only, no API changes): (1) New `StageTimeField.svelte` component (analog `StageDateField`) renders `<input type="time">` within `.box` wrapper with label "STARTZEIT"; (2) Editor displays default `08:00` when `stage.start_time` is unset (displayValue fallback); (3) `EditStagesPanelNew.svelte` handler `handleStartTimeChange()` implements immutable update: setting empty string removes `start_time` (returns to default), otherwise sets to user-chosen time; (4) Component renders in both Desktop header (.stage-header-fields) and Mobile markup (@media ≤899px) for Desktop–Mobile parity; (5) Skipped for pause stages (`activeIsPause === true`); (6) Live Naismith `$derived arrivals` recalculates from changed `start_time` without explicit save (feature display); (7) Existing `Stage.start_time?: string` field (already present in model, Naismith, and Backend RMW) requires no data migration; unset trips remain byte-equal on open+save (alt-treu). ACs 1–7 verified via Playwright E2E + staging_validator. See `docs/specs/modules/issue_675_etappen_startzeiten.md`.

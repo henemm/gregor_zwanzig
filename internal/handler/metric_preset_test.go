@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/model"
 	"github.com/henemm/gregor-api/internal/store"
 )
@@ -286,10 +287,13 @@ func TestStore_LoadMetricPresets_EmptyWhenNoFile(t *testing.T) {
 // TestPatchMetricPreset_NameOnly (AC-5)
 //
 // Given: bestehendes Preset {Name: "Original", Metrics: [wind enabled],
-//        IsDefault: false}.
+//
+//	IsDefault: false}.
+//
 // When:  PATCH /api/metric-presets/{id} mit Body {"name": "Umbenannt"}.
 // Then:  HTTP 200, Response hat Name="Umbenannt", Metrics & IsDefault
-//        & CreatedAt unverändert. GET zeigt persistierten Zustand.
+//
+//	& CreatedAt unverändert. GET zeigt persistierten Zustand.
 func TestPatchMetricPreset_NameOnly(t *testing.T) {
 	s := newTestStore(t)
 
@@ -472,7 +476,8 @@ func TestPatchMetricPreset_IsDefaultExclusive(t *testing.T) {
 // Given: eine korrupte metric_presets.json (ungültiges JSON) auf der Platte.
 // When:  POST /api/metric-presets ein neues Preset anlegen will.
 // Then:  Der Handler antwortet 500 store_error UND die Datei auf der Platte
-//        bleibt byte-gleich (wird nicht mit der leeren Liste überschrieben).
+//
+//	bleibt byte-gleich (wird nicht mit der leeren Liste überschrieben).
 func TestCreateMetricPreset_CorruptFileNotOverwritten(t *testing.T) {
 	tmpDir := t.TempDir()
 	s := store.New(tmpDir, "test")
@@ -589,6 +594,196 @@ func TestStore_LoadMetricPresets_CorruptJSON(t *testing.T) {
 	if presets != nil {
 		t.Errorf("LoadMetricPresets sollte bei Fehler nil zurückgeben, hat aber %v", presets)
 	}
+}
+
+// =============================================================================
+// Issue #690 — Eindeutiger Profilname pro Nutzer (case-insensitive, getrimmt) + Isolation.
+// Spec: docs/specs/modules/issue_690_custom_metric_presets.md §AC-5, §AC-6
+//
+// RED: aktuell lehnt CreateMetricPresetHandler nur leere Namen ab
+// (metric_preset.go:143-146) und erlaubt Duplikate → zweiter POST mit gleichem
+// Namen liefert 201 statt erwarteter 409 → diese Tests scheitern absichtlich.
+//
+// Mock-frei: echter Store auf t.TempDir(), echter Auth-Kontext via
+// middleware.ContextWithUserID — keine httptest-Mocks des Stores, keine Patches.
+// =============================================================================
+
+// withUserBody baut eine authentifizierte Request: gleicher Pfad wie withBody,
+// aber mit echter user_id im Kontext (wie AuthMiddleware sie setzt).
+func withUserBody(t *testing.T, method, path, userID string, body []byte) *http.Request {
+	t.Helper()
+	req := withBody(t, method, path, body)
+	return req.WithContext(middleware.ContextWithUserID(req.Context(), userID))
+}
+
+// createPresetAs legt für userID ein Profil mit name an und gibt Status + Body zurück.
+func createPresetAs(t *testing.T, r chi.Router, userID, name string) (int, string) {
+	t.Helper()
+	body, _ := json.Marshal(map[string]interface{}{
+		"name":         name,
+		"metrics":      []string{"temperature", "wind"},
+		"friendly_ids": []string{},
+		"is_default":   false,
+	})
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, withUserBody(t, "POST", "/api/metric-presets", userID, body))
+	return w.Code, w.Body.String()
+}
+
+// listPresetsAs ruft die Profilliste für userID ab.
+func listPresetsAs(t *testing.T, r chi.Router, userID string) []model.MetricPreset {
+	t.Helper()
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/metric-presets", nil)
+	req = req.WithContext(middleware.ContextWithUserID(req.Context(), userID))
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("list for %s: expected 200, got %d: %s", userID, w.Code, w.Body.String())
+	}
+	var presets []model.MetricPreset
+	if err := json.Unmarshal(w.Body.Bytes(), &presets); err != nil {
+		t.Fatalf("list for %s: parse: %v", userID, err)
+	}
+	return presets
+}
+
+// TestMetricPreset_DuplicateName_Returns409 (AC-5)
+//
+// Given: Nutzer U1 hat bereits ein Profil "Bergtour".
+// When:  ein zweiter POST mit demselben Namen (case-insensitiv + umgebende
+//
+//	Leerzeichen, " bergtour ") gesendet wird.
+//
+// Then:  HTTP 409 {"error":"name_exists"}, und der Store enthält danach genau
+//
+//	EIN Profil mit diesem Namen (kein Duplikat).
+func TestMetricPreset_DuplicateName_Returns409(t *testing.T) {
+	s := newTestStore(t)
+
+	r := chi.NewRouter()
+	r.Get("/api/metric-presets", ListMetricPresetsHandler(s))
+	r.Post("/api/metric-presets", CreateMetricPresetHandler(s))
+
+	const user = "u1-dup"
+
+	// 1. Erstes Profil "Bergtour" → 201.
+	if code, body := createPresetAs(t, r, user, "Bergtour"); code != http.StatusCreated {
+		t.Fatalf("first create: expected 201, got %d: %s", code, body)
+	}
+
+	// 2. Dublette mit abweichender Schreibweise + Leerzeichen → erwartet 409.
+	code, body := createPresetAs(t, r, user, "  bergtour ")
+	if code != http.StatusConflict {
+		t.Errorf("AC-5 FAIL: duplicate name (case-insensitive, trimmed) should return 409, got %d: %s", code, body)
+	}
+	var resp map[string]string
+	_ = json.Unmarshal([]byte(body), &resp)
+	if resp["error"] != "name_exists" {
+		t.Errorf("AC-5 FAIL: expected body {\"error\":\"name_exists\"}, got %s", body)
+	}
+
+	// 3. Store darf kein zweites "Bergtour" enthalten.
+	presets := listPresetsAs(t, r, user)
+	count := 0
+	for _, p := range presets {
+		if normName(p.Name) == "bergtour" {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Errorf("AC-5 FAIL: expected exactly 1 'Bergtour' preset after duplicate attempt, got %d", count)
+	}
+}
+
+// TestMetricPreset_EmptyName_Returns400 (AC-5 Regression-Sicherung)
+//
+// Ein leerer Name muss weiterhin 400 {"error":"name_required"} liefern.
+func TestMetricPreset_EmptyName_Returns400(t *testing.T) {
+	s := newTestStore(t)
+
+	r := chi.NewRouter()
+	r.Post("/api/metric-presets", CreateMetricPresetHandler(s))
+
+	code, body := createPresetAs(t, r, "u1-empty", "")
+	if code != http.StatusBadRequest {
+		t.Fatalf("empty name should return 400, got %d: %s", code, body)
+	}
+	var resp map[string]string
+	_ = json.Unmarshal([]byte(body), &resp)
+	if resp["error"] != "name_required" {
+		t.Errorf("expected body {\"error\":\"name_required\"}, got %s", body)
+	}
+}
+
+// TestMetricPreset_SameNameDifferentUsers_BothAllowed (AC-6)
+//
+// Given: zwei verschiedene Nutzer U1 und U2.
+// When:  beide je ein Profil "Bergtour" anlegen.
+// Then:  beide 201 (Eindeutigkeit gilt strikt pro Nutzer), und U1 sieht via
+//
+//	List-Handler NUR sein eigenes Profil — keine Vermischung, kein
+//	default-Fallback im authentifizierten Pfad.
+func TestMetricPreset_SameNameDifferentUsers_BothAllowed(t *testing.T) {
+	s := newTestStore(t)
+
+	r := chi.NewRouter()
+	r.Get("/api/metric-presets", ListMetricPresetsHandler(s))
+	r.Post("/api/metric-presets", CreateMetricPresetHandler(s))
+
+	const u1, u2 = "u1-iso", "u2-iso"
+
+	if code, body := createPresetAs(t, r, u1, "Bergtour"); code != http.StatusCreated {
+		t.Fatalf("AC-6 FAIL: U1 create should return 201, got %d: %s", code, body)
+	}
+	if code, body := createPresetAs(t, r, u2, "Bergtour"); code != http.StatusCreated {
+		t.Fatalf("AC-6 FAIL: U2 create (same name, different user) should return 201, got %d: %s", code, body)
+	}
+
+	// U1 sieht genau sein eigenes Profil.
+	u1Presets := listPresetsAs(t, r, u1)
+	if len(u1Presets) != 1 {
+		t.Fatalf("AC-6 FAIL: U1 should see exactly 1 preset (own), got %d", len(u1Presets))
+	}
+	if u1Presets[0].Name != "Bergtour" {
+		t.Errorf("AC-6 FAIL: U1 preset name mismatch: got %q", u1Presets[0].Name)
+	}
+
+	// U2 sieht ebenfalls genau sein eigenes Profil (Isolation in beide Richtungen).
+	u2Presets := listPresetsAs(t, r, u2)
+	if len(u2Presets) != 1 {
+		t.Fatalf("AC-6 FAIL: U2 should see exactly 1 preset (own), got %d", len(u2Presets))
+	}
+
+	// IDs müssen verschieden sein → keine geteilte default-Datei.
+	if u1Presets[0].ID == u2Presets[0].ID {
+		t.Errorf("AC-6 FAIL: U1 and U2 share the same preset ID %q — cross-user leak / default fallback", u1Presets[0].ID)
+	}
+}
+
+// normName spiegelt die erwartete Normalisierung (trim + lowercase) für die
+// Uniqueness-Assertion im Test. Die produktive Implementierung muss dieselbe
+// Semantik anwenden.
+func normName(s string) string {
+	out := make([]rune, 0, len(s))
+	for _, r := range s {
+		if r == ' ' || r == '\t' || r == '\n' {
+			if len(out) == 0 {
+				continue
+			}
+		}
+		out = append(out, r)
+	}
+	// rechts trimmen
+	for len(out) > 0 && (out[len(out)-1] == ' ' || out[len(out)-1] == '\t' || out[len(out)-1] == '\n') {
+		out = out[:len(out)-1]
+	}
+	// lowercase (ASCII genügt für die Tests)
+	for i, r := range out {
+		if r >= 'A' && r <= 'Z' {
+			out[i] = r + ('a' - 'A')
+		}
+	}
+	return string(out)
 }
 
 // =============================================================================

@@ -32,8 +32,10 @@
 				class:active
 				onclick={() => onSelectPreset(p.id)}
 				title={p.name}
+				data-testid="weather-preset-pill-{p.id}"
 			>
 				{p.name}
+				<span class="own-badge" data-testid="weather-preset-own-badge-{p.id}">Eigene</span>
 			</button>
 		{/each}
 		{#each templates as t}
@@ -44,6 +46,7 @@
 				class:active
 				onclick={() => onSelectPreset(t.id)}
 				title={t.label}
+				data-testid="weather-preset-pill-{t.id}"
 			>
 				{t.label}
 			</button>
@@ -106,5 +109,20 @@
 		font-family: inherit;
 		text-decoration: underline;
 		text-underline-offset: 2px;
+	}
+	.own-badge {
+		display: inline-block;
+		margin-left: 5px;
+		padding: 1px 5px;
+		border-radius: 3px;
+		font-size: 10px;
+		font-family: var(--g-font-mono, monospace);
+		font-weight: 600;
+		letter-spacing: 0.04em;
+		color: var(--g-accent-deep, #1a5940);
+		background: var(--g-accent-tint, #e8f5ee);
+		border: 1px solid var(--g-accent, #2d7a55);
+		vertical-align: middle;
+		line-height: 1.2;
 	}
 </style>
