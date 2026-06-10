@@ -66,7 +66,7 @@
 	<!-- Infozeile (JSX) -->
 	<div class="info-row" data-testid="alerts-channel-info">
 		<span class="info-dot"></span>
-		Alert-Kanäle starten mit den aktiven Kanälen aus <strong>Wetter-Metriken</strong> als Vorbelegung — pro Alert überschreibbar.
+		Alert-Kanäle werden aus den <strong>Wetter-Metriken</strong>-Einstellungen übernommen.
 	</div>
 
 	<!-- Karten-Liste -->
@@ -79,13 +79,8 @@
 		{/each}
 	</div>
 
-	<!-- + Neuen Alert hinzufügen (Ghost-Button, JSX) -->
-	<button
-		type="button"
-		class="btn-ghost-add"
-		data-testid="alerts-add-rule"
-		disabled
-	>+ Neuen Alert hinzufügen</button>
+	<!-- Info: Alert-Regeln werden automatisch aus Metriken abgeleitet (Issue #701) -->
+	<p class="alerts-auto-info">Alert-Regeln werden automatisch aus den aktiven Wetter-Metriken abgeleitet.</p>
 
 	<div class="extra-cards">
 		<AlertCooldownCard bind:cooldown_minutes={cooldownMinutes} />
@@ -175,16 +170,10 @@
 		gap: 14px;
 	}
 
-	.btn-ghost-add {
-		align-self: flex-start;
-		font-size: 0.875rem;
-		padding: 6px 14px;
-		border-radius: 0.375rem;
-		border: 1px solid var(--g-rule, #d1d5db);
-		background: transparent;
-		color: var(--g-ink-2, #4b5563);
-		cursor: not-allowed;
-		opacity: 0.6;
+	.alerts-auto-info {
+		font-size: 0.85rem;
+		color: var(--g-ink-3, #666);
+		margin: 0.5rem 0 1rem;
 	}
 
 	.extra-cards {

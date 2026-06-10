@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/henemm/gregor-api/internal/middleware"
+	"github.com/henemm/gregor-api/internal/model"
 	"github.com/henemm/gregor-api/internal/store"
 )
 
@@ -58,6 +59,9 @@ func PutTripWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 		trip.DisplayConfig = cfg
+		// Sync alert_rules with active weather metrics (Issue #701)
+		activeIDs := extractActiveMetricIDs(cfg)
+		trip.AlertRules = model.SyncAlertRules(trip.AlertRules, activeIDs)
 		if err := s.SaveTrip(*trip); err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(500)
@@ -127,6 +131,34 @@ func PutLocationWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(loc.DisplayConfig)
 	}
+}
+
+// extractActiveMetricIDs reads cfg["metrics"] and returns IDs of all enabled=true metrics.
+func extractActiveMetricIDs(cfg map[string]interface{}) []string {
+	raw, ok := cfg["metrics"]
+	if !ok {
+		return nil
+	}
+	metrics, ok := raw.([]interface{})
+	if !ok {
+		return nil
+	}
+	var ids []string
+	for _, m := range metrics {
+		mm, ok := m.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		enabled, _ := mm["enabled"].(bool)
+		if !enabled {
+			continue
+		}
+		id, _ := mm["metric_id"].(string)
+		if id != "" {
+			ids = append(ids, id)
+		}
+	}
+	return ids
 }
 
 // --- Subscription Weather Config ---

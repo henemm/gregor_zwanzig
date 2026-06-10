@@ -1,6 +1,19 @@
 package model
 
-import "time"
+import (
+	"crypto/rand"
+	"encoding/hex"
+	"time"
+)
+
+// shortID generates a random 8-character hex string for new alert rule IDs.
+func shortID() string {
+	b := make([]byte, 4)
+	if _, err := rand.Read(b); err != nil {
+		panic("crypto/rand unavailable: " + err.Error())
+	}
+	return hex.EncodeToString(b)
+}
 
 // AlertRuleKind classifies an alert rule as absolute threshold or delta change.
 type AlertRuleKind string
@@ -90,4 +103,66 @@ type Trip struct {
 	Region           string                 `json:"region,omitempty"`
 	PausedAt         *time.Time             `json:"paused_at,omitempty"`
 	ArchivedAt       *time.Time             `json:"archived_at,omitempty"`
+}
+
+// AlertableMetrics are metrics that can receive an absolute alert rule.
+// Excluded: *_change metrics (delta-only), thunder_level (no meaningful absolute threshold).
+var AlertableMetrics = map[AlertMetric]struct{}{
+	AlertMetricWindGust:         {},
+	AlertMetricPrecipitationSum: {},
+	AlertMetricTemperatureMin:   {},
+	AlertMetricTemperatureMax:   {},
+	AlertMetricSnowLine:         {},
+}
+
+// DefaultAlertThreshold contains default values for new absolute alert rules.
+var DefaultAlertThreshold = map[AlertMetric]struct {
+	Threshold float64
+	Unit      string
+	Severity  AlertSeverity
+}{
+	AlertMetricWindGust:         {50, "km/h", AlertSeverityWarning},
+	AlertMetricPrecipitationSum: {20, "mm", AlertSeverityWarning},
+	AlertMetricTemperatureMin:   {-5, "°C", AlertSeverityWarning},
+	AlertMetricTemperatureMax:   {35, "°C", AlertSeverityInfo},
+	AlertMetricSnowLine:         {1500, "m", AlertSeverityInfo},
+}
+
+// SyncAlertRules synchronizes alert_rules with the active weather metrics.
+// Invariant: exactly one absolute rule per active alertable metric.
+// Existing absolute rules are preserved with their threshold (no default override).
+// Delta rules and rules for inactive metrics are removed.
+func SyncAlertRules(existing []AlertRule, activeMetricIDs []string) []AlertRule {
+	// Index existing absolute rules per metric (first match wins)
+	existingByMetric := map[AlertMetric]AlertRule{}
+	for _, r := range existing {
+		if r.Kind == AlertRuleKindAbsolute {
+			if _, seen := existingByMetric[r.Metric]; !seen {
+				existingByMetric[r.Metric] = r
+			}
+		}
+	}
+
+	result := []AlertRule{}
+	for _, id := range activeMetricIDs {
+		m := AlertMetric(id)
+		if _, alertable := AlertableMetrics[m]; !alertable {
+			continue
+		}
+		if ex, ok := existingByMetric[m]; ok {
+			result = append(result, ex)
+		} else {
+			def := DefaultAlertThreshold[m]
+			result = append(result, AlertRule{
+				ID:        shortID(),
+				Kind:      AlertRuleKindAbsolute,
+				Metric:    m,
+				Threshold: def.Threshold,
+				Unit:      def.Unit,
+				Severity:  def.Severity,
+				Enabled:   true,
+			})
+		}
+	}
+	return result
 }

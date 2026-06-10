@@ -12,26 +12,6 @@
 		activeChannels: string[];  // channels active in report_config
 	} = $props();
 
-	// Effective channels for this rule: rule.channels if set, else all activeChannels
-	const effectiveChannels = $derived(
-		rule.channels && rule.channels.length > 0
-			? rule.channels
-			: [...activeChannels]
-	);
-
-	function toggleChannel(ch: string) {
-		const current = rule.channels && rule.channels.length > 0
-			? [...rule.channels]
-			: [...activeChannels];
-		const idx = current.indexOf(ch);
-		if (idx >= 0) {
-			current.splice(idx, 1);
-		} else {
-			current.push(ch);
-		}
-		rule = { ...rule, channels: current };
-	}
-
 	function toggleEnabled() {
 		rule = { ...rule, enabled: !rule.enabled };
 	}
@@ -64,19 +44,33 @@
 		</button>
 	</div>
 
-	<!-- Trennlinie + Kanal-Chips -->
+	<!-- Threshold-Zeile (editierbar, Issue #701: Nutzer kann Schwellwert anpassen) -->
+	<div class="threshold-row">
+		<span class="threshold-label">Schwelle:</span>
+		<input
+			type="number"
+			class="threshold-input"
+			value={rule.threshold}
+			oninput={(e) => {
+				const n = parseFloat((e.target as HTMLInputElement).value);
+				if (!isNaN(n)) rule = { ...rule, threshold: n };
+			}}
+			step="1"
+			min="0"
+		/>
+		<span class="threshold-unit">{rule.unit ?? ''}</span>
+	</div>
+
+	<!-- Trennlinie + Kanal-Chips (read-only, Issue #701) -->
 	<div class="card-channels">
 		<span class="channel-label">Kanal:</span>
 		{#each activeChannels as ch}
-			<button
-				type="button"
-				class="channel-chip"
-				class:chip-active={effectiveChannels.includes(ch)}
-				onclick={() => toggleChannel(ch)}
-				data-testid="channel-chip-{rule.id}-{ch}"
+			<span
+				class="channel-chip chip-active"
+				data-testid="ch-ro-{rule.id}-{ch}"
 			>
 				{ch.charAt(0).toUpperCase() + ch.slice(1)}
-			</button>
+			</span>
 		{/each}
 	</div>
 </div>
@@ -137,6 +131,32 @@
 	.switch.switch-on .switch-thumb {
 		transform: translateX(16px);
 	}
+	/* Threshold row */
+	.threshold-row {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		margin-bottom: 12px;
+	}
+	.threshold-label {
+		font-size: 12px;
+		color: var(--g-ink-3);
+		min-width: 60px;
+	}
+	.threshold-input {
+		width: 72px;
+		border: 1px solid var(--g-rule);
+		border-radius: 4px;
+		padding: 4px 8px;
+		font-size: 14px;
+		font-family: var(--g-font-mono, monospace);
+		background: var(--g-card);
+		color: var(--g-ink);
+	}
+	.threshold-unit {
+		font-size: 12px;
+		color: var(--g-ink-3);
+	}
 	/* Channels row */
 	.card-channels {
 		padding-top: 12px;
@@ -155,11 +175,10 @@
 		font-weight: 500;
 		padding: 4px 10px;
 		border-radius: 4px;
-		cursor: pointer;
+		cursor: default;
 		background: var(--g-paper-deep);
 		color: var(--g-ink-4);
 		border: 1px solid var(--g-rule);
-		transition: background 100ms, color 100ms;
 	}
 	.channel-chip.chip-active {
 		background: var(--g-ink);
