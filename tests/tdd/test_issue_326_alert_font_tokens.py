@@ -52,21 +52,25 @@ def test_quiet_hours_no_hardcoded_font_size():
     """
     GIVEN: AlertQuietHoursCard.svelte nach dem Fix
     WHEN: Scan des <style>-Blocks auf font-size mit Zahl+Einheit
-    THEN: 0 Treffer (alle via var(--g-text-*))
+    THEN: Hoechstens 1 Treffer (iOS-Guard: font-size 16px verhindert Auto-Zoom)
     """
     hits = _hits(QUIET, FONT_SIZE_RE)
-    assert hits == [], "Hardcodierte font-size in AlertQuietHoursCard.svelte:\n" + "\n".join(hits)
-
+    ios_guard = [h for h in hits if "16px" in h]
+    non_ios = [h for h in hits if "16px" not in h]
+    assert non_ios == [], "Hardcodierte font-size (non-iOS) in AlertQuietHoursCard.svelte: " + ", ".join(non_ios)
+    assert len(ios_guard) <= 1, "Mehr als 1 iOS-Guard font-size in AlertQuietHoursCard.svelte: " + ", ".join(ios_guard)
 
 def test_cooldown_no_hardcoded_font_size():
     """
     GIVEN: AlertCooldownCard.svelte nach dem Fix
     WHEN: Scan des <style>-Blocks auf font-size mit Zahl+Einheit
-    THEN: 0 Treffer (alle via var(--g-text-*))
+    THEN: Hoechstens 1 Treffer (iOS-Guard: font-size 16px verhindert Auto-Zoom)
     """
     hits = _hits(COOLDOWN, FONT_SIZE_RE)
-    assert hits == [], "Hardcodierte font-size in AlertCooldownCard.svelte:\n" + "\n".join(hits)
-
+    ios_guard = [h for h in hits if "16px" in h]
+    non_ios = [h for h in hits if "16px" not in h]
+    assert non_ios == [], "Hardcodierte font-size (non-iOS) in AlertCooldownCard.svelte: " + ", ".join(non_ios)
+    assert len(ios_guard) <= 1, "Mehr als 1 iOS-Guard font-size in AlertCooldownCard.svelte: " + ", ".join(ios_guard)
 
 # --- AC-3: keine hardcodierten Spacing-/Radius-Werte ---
 

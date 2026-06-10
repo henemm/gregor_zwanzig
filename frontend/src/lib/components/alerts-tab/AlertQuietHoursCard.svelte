@@ -91,7 +91,8 @@
     @media (max-width: 899px) {
         .time-input {
             min-height: 44px;
-            font-size: 16px;
+            font-size: 16px; /* iOS-Zoom-Schutz: <16px löst Auto-Zoom aus */
+            width: 100%;
         }
     }
 </style>
