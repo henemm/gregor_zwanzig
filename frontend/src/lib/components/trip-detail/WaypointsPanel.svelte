@@ -39,7 +39,7 @@
 		saving = true;
 		saveError = null;
 		try {
-			await api.put(`/api/trips/${trip.id}`, { ...trip, stages: localStages });
+			await api.put(`/api/trips/${trip.id}`, { stages: localStages });
 			await invalidateAll();
 			onSaved?.();
 		} catch (e) {
