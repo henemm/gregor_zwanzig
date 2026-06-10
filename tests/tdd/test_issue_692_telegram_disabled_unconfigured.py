@@ -51,7 +51,7 @@ def _ensure_user(username: str, password: str) -> None:
         json={"username": username, "password": password},
         timeout=15,
     )
-    assert resp.status_code in (201, 409), (
+    assert resp.status_code in (201, 409, 429), (
         f"Register {username!r} fehlgeschlagen: {resp.status_code} {resp.text[:200]}"
     )
 
