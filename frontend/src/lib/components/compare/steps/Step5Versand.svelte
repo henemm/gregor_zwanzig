@@ -10,6 +10,8 @@
 
 	const state = getContext<CompareWizardState>('compare-wizard-state');
 
+	let { versandVisited = false }: { versandVisited?: boolean } = $props();
+
 	const profile = getContext<{
 		mail_to?: string;
 		telegram_chat_id?: string;
@@ -73,28 +75,37 @@
 		<Eyebrow>Kanäle</Eyebrow>
 		<GCard class="rounded-md border border-[var(--g-ink-faint)]/20 p-4">
 			<div class="space-y-3">
-				<ChannelToggle
-					label="E-Mail"
-					checked={state.sendEmail}
-					onchange={makeChannelHandler('sendEmail')}
-					testid="compare-step5-channel-email"
-					hint={profile?.mail_to || profile?.email || undefined}
-				/>
-				<ChannelToggle
-					label="Telegram"
-					checked={state.sendTelegram}
-					onchange={makeChannelHandler('sendTelegram')}
-					testid="compare-step5-channel-telegram"
-					hint={profile?.telegram_chat_id || undefined}
-				/>
-				<ChannelToggle
-					label="SMS"
-					checked={state.sendSms}
-					onchange={makeChannelHandler('sendSms')}
-					testid="compare-step5-channel-sms"
-					hint={profile?.sms_to || undefined}
-					disabled={!profile?.sms_to}
-				/>
+				<div>
+					<ChannelToggle
+						label="E-Mail"
+						checked={state.sendEmail}
+						onchange={makeChannelHandler('sendEmail')}
+						testid="compare-step5-channel-email"
+						hint={profile?.mail_to || profile?.email || undefined}
+					/>
+					<span class="mono" style:font-size="10.5px" style:color="var(--g-ink-4)">Layout · alle Spalten + Detail</span>
+				</div>
+				<div>
+					<ChannelToggle
+						label="Telegram"
+						checked={state.sendTelegram}
+						onchange={makeChannelHandler('sendTelegram')}
+						testid="compare-step5-channel-telegram"
+						hint={profile?.telegram_chat_id || undefined}
+					/>
+					<span class="mono" style:font-size="10.5px" style:color="var(--g-ink-4)">Layout · max 8 Spalten</span>
+				</div>
+				<div>
+					<ChannelToggle
+						label="SMS"
+						checked={state.sendSms}
+						onchange={makeChannelHandler('sendSms')}
+						testid="compare-step5-channel-sms"
+						hint={profile?.sms_to || undefined}
+						disabled={!profile?.sms_to}
+					/>
+					<span class="mono" style:font-size="10.5px" style:color="var(--g-ink-4)">Layout · flach, ≤ 140 Z.</span>
+				</div>
 			</div>
 			{#if allChannelsOff}
 				<p
@@ -197,7 +208,7 @@
 	{#if !state.isEditMode}
 		<div
 			data-testid="compare-step5-activation-banner"
-			data-ready="false"
+			data-ready={versandVisited ? 'true' : 'false'}
 			class="rounded-md p-4 text-white text-sm"
 			style:background="var(--g-ink)"
 		>

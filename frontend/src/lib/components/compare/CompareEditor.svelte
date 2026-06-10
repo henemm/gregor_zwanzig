@@ -113,9 +113,10 @@
 	}
 
 	// Issue #681: "Briefing aktivieren" im Create-Modus (AC-4).
+	// wiz.save() handhabt Create (POST) und Edit (PUT) — saveComparePreset(preset) nur für Edit.
 	function handleActivate() {
 		if (!versandVisited) return;
-		if (preset) void wiz.saveComparePreset(preset);
+		void wiz.save();
 	}
 
 	const canContinue = $derived(wiz.name.trim().length > 0);
@@ -435,7 +436,7 @@
 	{:else if activeTab === 'layout'}
 		<Step4Layout />
 	{:else if activeTab === 'versand'}
-		<Step5Versand />
+		<Step5Versand {versandVisited} />
 	{/if}
 
 	<!-- DOM-Anker für AC-5 isAttached()-Test (display:none, kein sichtbarer Inhalt).
