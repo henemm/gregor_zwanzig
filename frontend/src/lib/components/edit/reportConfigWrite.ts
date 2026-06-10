@@ -68,3 +68,68 @@ export function buildMailElementWrite(
 		show_metrics_summary: ui.show_metrics_summary ?? false,
 	};
 }
+
+// ── Issue #693: neue pure Helper ────────────────────────────────────────────
+
+/** Zentrale Label-Map für Tages-Summe-Kennzahlen (Deutsch). Unbekannt → ''. */
+export function dailySummaryMetricLabel(id: string): string {
+	const labels: Record<string, string> = {
+		precipitation: 'Niederschlag',
+		wind: 'Wind',
+		visibility: 'Sicht',
+		thunder: 'Gewitter',
+		temperature: 'Temperatur',
+	};
+	return labels[id] ?? '';
+}
+
+/**
+ * Aktive IDs in Katalog-Reihenfolge zu deutschen Labels auflösen,
+ * unbekannte IDs ignorieren, mit ' · ' verbinden.
+ * Leere/keine gültige Auswahl → 'Keine'.
+ */
+export function dailySummaryMetricsSummary(ids: string[]): string {
+	const labels = DAILY_SUMMARY_METRICS
+		.filter((m) => ids.includes(m))
+		.map((m) => dailySummaryMetricLabel(m))
+		.filter((l) => l.length > 0);
+	return labels.length > 0 ? labels.join(' · ') : 'Keine';
+}
+
+/**
+ * Zählt aktive Boolean-Schalter der Gruppe A (Inhalts-Bausteine).
+ * daily_summary_metrics zählt NICHT mit.
+ */
+export function countActiveContentModules(ui: MailElementUi): number {
+	return [
+		ui.show_stage_stats,
+		ui.show_quick_take_tags,
+		ui.show_metrics_summary ?? false,
+		ui.show_stability,
+		ui.show_highlights,
+	].filter(Boolean).length;
+}
+
+/** Beschreibungen für die 5 Inhalts-Bausteine (Gruppe A). */
+export const CONTENT_MODULE_DESCRIPTIONS: Record<string, { label: string; description: string }> = {
+	show_stage_stats: {
+		label: 'Etappen-Kennzahlen',
+		description: 'Distanz, Auf-/Abstieg und maximale Höhe der Etappe als Zahlenraster.',
+	},
+	show_quick_take_tags: {
+		label: 'Quick-Take-Chips',
+		description: 'Farbige Schlagwort-Pillen oben, z. B. „Trocken", „Windig".',
+	},
+	show_metrics_summary: {
+		label: 'Metriken-Überblick',
+		description: 'Ersetzt Quick-Take-Chips und Tages-Summe durch eine farbige Pille je aktiver Metrik.',
+	},
+	show_stability: {
+		label: 'Großwetterlage',
+		description: 'Einordnung der Wetterstabilität, z. B. „stabile Hochdrucklage".',
+	},
+	show_highlights: {
+		label: 'Zusammenfassung',
+		description: 'Kurzer Fließtext mit den wichtigsten Wetter-Highlights des Tages.',
+	},
+};

@@ -10,6 +10,10 @@
 		DAILY_SUMMARY_METRICS,
 		DEFAULT_DAILY_SUMMARY_METRICS,
 		toggleDailySummaryMetric,
+		dailySummaryMetricLabel,
+		dailySummaryMetricsSummary,
+		countActiveContentModules,
+		CONTENT_MODULE_DESCRIPTIONS,
 	} from './reportConfigWrite.ts';
 	import {
 		visibleChannels,
@@ -64,6 +68,10 @@
 	let dailySummaryMetrics = $state<string[]>([...DEFAULT_DAILY_SUMMARY_METRICS]);
 	// Issue #664: Metriken-Überblick (ersetzt Quick-Take + Tages-Summe)
 	let show_metrics_summary = $state(false);
+
+	// Issue #693: Collapse-State für E-Mail-Inhalt-Gruppen (reiner UI-State)
+	let contentModulesExpanded = $state(true);
+	let dailySummaryExpanded = $state(false);
 
 	// --- Profile (Channel-Verfuegbarkeit) --------------------------------------
 	interface Profile {
@@ -394,76 +402,110 @@
 	</Card.Root>
 
 	<!-- ====================================================================== -->
-	<!-- E-Mail-Inhalt (Issue #619)                                            -->
+	<!-- E-Mail-Inhalt (Issue #619, #693)                                      -->
 	<!-- ====================================================================== -->
 	<Card.Root class="p-3 space-y-2 hover:translate-y-0 hover:shadow-none" data-testid="report-mail-content">
 		<h3 class="text-sm font-semibold">E-Mail-Inhalt</h3>
 
-		<div class="text-sm">
-			<span data-testid="report-show-stage-stats" class="inline-flex items-center gap-2">
-				<Checkbox
-					checked={show_stage_stats}
-					onchange={(e) => { show_stage_stats = (e.target as HTMLInputElement).checked; }}
-				>Etappen-Kennzahlen</Checkbox>
-			</span>
-		</div>
-		<div class="text-sm">
-			<span data-testid="report-show-quick-take" class="inline-flex items-center gap-2">
-				<Checkbox
-					checked={show_quick_take_tags}
-					onchange={(e) => { show_quick_take_tags = (e.target as HTMLInputElement).checked; }}
-				>Quick-Take-Chips</Checkbox>
-			</span>
-		</div>
-		<div class="text-sm">
-			<span data-testid="report-show-metrics-summary" class="inline-flex items-center gap-2">
-				<Checkbox
-					checked={show_metrics_summary}
-					onchange={(e) => { show_metrics_summary = (e.target as HTMLInputElement).checked; }}
-				>Metriken-Überblick</Checkbox>
-			</span>
-			{#if show_metrics_summary}
-				<p class="pl-6 text-xs text-muted-foreground mt-0.5">Ersetzt Quick-Take-Chips und Tages-Summe durch eine farbige Pille je aktiver Metrik.</p>
+		<!-- Gruppe A: Inhalts-Bausteine -->
+		<div class="space-y-1">
+			<Btn variant="ghost" size="sm" data-testid="report-content-modules-toggle" onclick={() => { contentModulesExpanded = !contentModulesExpanded; }}>
+				Inhalts-Bausteine ({countActiveContentModules({ show_stage_stats, show_quick_take_tags, show_metrics_summary, show_stability, show_highlights, daily_summary_metrics: dailySummaryMetrics })} aktiv)
+				<ChevronDown style="transform: rotate({contentModulesExpanded ? 180 : 0}deg); transition: transform 150ms ease;" />
+			</Btn>
+			{#if contentModulesExpanded}
+				<div data-testid="report-content-modules-body" class="space-y-2 pl-2">
+					<div class="text-sm">
+						<span data-testid="report-show-stage-stats" class="inline-flex items-center gap-2">
+							<Checkbox
+								checked={show_stage_stats}
+								onchange={(e) => { show_stage_stats = (e.target as HTMLInputElement).checked; }}
+							>{CONTENT_MODULE_DESCRIPTIONS.show_stage_stats.label}</Checkbox>
+						</span>
+						<p class="pl-6 text-xs text-muted-foreground mt-0.5">{CONTENT_MODULE_DESCRIPTIONS.show_stage_stats.description}</p>
+					</div>
+					<div class="text-sm">
+						<span data-testid="report-show-quick-take" class="inline-flex items-center gap-2">
+							<Checkbox
+								checked={show_quick_take_tags}
+								onchange={(e) => { show_quick_take_tags = (e.target as HTMLInputElement).checked; }}
+							>{CONTENT_MODULE_DESCRIPTIONS.show_quick_take_tags.label}</Checkbox>
+						</span>
+						<p class="pl-6 text-xs text-muted-foreground mt-0.5">{CONTENT_MODULE_DESCRIPTIONS.show_quick_take_tags.description}</p>
+					</div>
+					<div class="text-sm">
+						<span data-testid="report-show-metrics-summary" class="inline-flex items-center gap-2">
+							<Checkbox
+								checked={show_metrics_summary}
+								onchange={(e) => { show_metrics_summary = (e.target as HTMLInputElement).checked; }}
+							>{CONTENT_MODULE_DESCRIPTIONS.show_metrics_summary.label}</Checkbox>
+						</span>
+						<p class="pl-6 text-xs text-muted-foreground mt-0.5">{CONTENT_MODULE_DESCRIPTIONS.show_metrics_summary.description}</p>
+					</div>
+					<div class="text-sm">
+						<span data-testid="report-show-stability" class="inline-flex items-center gap-2">
+							<Checkbox
+								checked={show_stability}
+								onchange={(e) => { show_stability = (e.target as HTMLInputElement).checked; }}
+							>{CONTENT_MODULE_DESCRIPTIONS.show_stability.label}</Checkbox>
+						</span>
+						<p class="pl-6 text-xs text-muted-foreground mt-0.5">{CONTENT_MODULE_DESCRIPTIONS.show_stability.description}</p>
+					</div>
+					<div class="text-sm">
+						<span data-testid="report-show-highlights" class="inline-flex items-center gap-2">
+							<Checkbox
+								checked={show_highlights}
+								onchange={(e) => { show_highlights = (e.target as HTMLInputElement).checked; }}
+							>{CONTENT_MODULE_DESCRIPTIONS.show_highlights.label}</Checkbox>
+						</span>
+						<p class="pl-6 text-xs text-muted-foreground mt-0.5">{CONTENT_MODULE_DESCRIPTIONS.show_highlights.description}</p>
+					</div>
+				</div>
 			{/if}
 		</div>
-		<div class="text-sm">
-			<span data-testid="report-show-stability" class="inline-flex items-center gap-2">
-				<Checkbox
-					checked={show_stability}
-					onchange={(e) => { show_stability = (e.target as HTMLInputElement).checked; }}
-				>Großwetterlage</Checkbox>
-			</span>
-		</div>
-		<div class="text-sm">
-			<span data-testid="report-show-highlights" class="inline-flex items-center gap-2">
-				<Checkbox
-					checked={show_highlights}
-					onchange={(e) => { show_highlights = (e.target as HTMLInputElement).checked; }}
-				>Zusammenfassung</Checkbox>
-			</span>
-		</div>
 
-		<h4 class="text-sm font-medium pt-1">Tages-Summe — Kennzahlen</h4>
-		{#each DAILY_SUMMARY_METRICS as metricId}
-			<div class="text-sm">
-				<span data-testid="daily-summary-metric-{metricId}" class="inline-flex items-center gap-2">
-					<Checkbox
-						checked={dailySummaryMetrics.includes(metricId)}
-						onchange={(e) => {
-							dailySummaryMetrics = toggleDailySummaryMetric(
-								dailySummaryMetrics,
-								metricId,
-								(e.target as HTMLInputElement).checked
-							);
-						}}
-					>{metricId === 'precipitation' ? 'Niederschlag'
-						: metricId === 'wind' ? 'Wind'
-						: metricId === 'visibility' ? 'Sicht'
-						: metricId === 'thunder' ? 'Gewitter'
-						: 'Temperatur'}</Checkbox>
-				</span>
-			</div>
-		{/each}
+		<!-- Gruppe B: Tages-Summe — Kennzahlen -->
+		<div class="space-y-1">
+			<Btn variant="ghost" size="sm" data-testid="report-daily-summary-toggle" onclick={() => { dailySummaryExpanded = !dailySummaryExpanded; }}>
+				{#if dailySummaryExpanded}
+					Tages-Summe — Kennzahlen
+				{:else}
+					Tages-Summe — Kennzahlen: {dailySummaryMetricsSummary(dailySummaryMetrics)}
+				{/if}
+				<ChevronDown style="transform: rotate({dailySummaryExpanded ? 180 : 0}deg); transition: transform 150ms ease;" />
+			</Btn>
+			{#if dailySummaryExpanded}
+				<div data-testid="report-daily-summary-body" class="space-y-2 pl-2">
+					{#each DAILY_SUMMARY_METRICS as metricId}
+						<div class="text-sm">
+							<span data-testid="daily-summary-metric-{metricId}" class="inline-flex items-center gap-2">
+								<Checkbox
+									checked={dailySummaryMetrics.includes(metricId)}
+									onchange={(e) => {
+										dailySummaryMetrics = toggleDailySummaryMetric(
+											dailySummaryMetrics,
+											metricId,
+											(e.target as HTMLInputElement).checked
+										);
+									}}
+								>{dailySummaryMetricLabel(metricId)}</Checkbox>
+							</span>
+							{#if metricId === 'precipitation'}
+								<p class="pl-6 text-xs text-muted-foreground mt-0.5">Tagessumme Regen in mm.</p>
+							{:else if metricId === 'wind'}
+								<p class="pl-6 text-xs text-muted-foreground mt-0.5">Stärkste Bö des Tages in km/h.</p>
+							{:else if metricId === 'visibility'}
+								<p class="pl-6 text-xs text-muted-foreground mt-0.5">Geringste Sichtweite des Tages.</p>
+							{:else if metricId === 'thunder'}
+								<p class="pl-6 text-xs text-muted-foreground mt-0.5">Gewitter-Wahrscheinlichkeit/Intensität des Tages.</p>
+							{:else if metricId === 'temperature'}
+								<p class="pl-6 text-xs text-muted-foreground mt-0.5">Höchst-/Tiefsttemperatur des Tages.</p>
+							{/if}
+						</div>
+					{/each}
+				</div>
+			{/if}
+		</div>
 	</Card.Root>
 
 	<!-- ====================================================================== -->
