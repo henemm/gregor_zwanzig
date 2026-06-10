@@ -772,18 +772,21 @@ interface WordmarkProps {
 | ModeCard | `alert-rules-editor/ModeCard.svelte` | Modus-Auswahl (Absolut/Δ/Beides), Issue #297 |
 | alertRuleDefaults.ts | `alert-rules-editor/alertRuleDefaults.ts` | Default-Werte + Metrik-Normalisierung (Helper) |
 
-### alerts-tab/ — Alarm-Tab (#180)
+### alerts-tab/ — Alarm-Tab (#180, #700–#701, #702)
 
 | Komponente | Pfad rel. zu components/ | Kurzbeschreibung |
 |---|---|---|
-| AlertsTab | `alerts-tab/AlertsTab.svelte` | Tab-Container fuer Alarm-Konfiguration |
+| AlertsTab | `alerts-tab/AlertsTab.svelte` | Tab-Container fuer Alarm-Konfiguration; mobil ≤899px: volle Breite, `.actions`-Bar hidden |
+| AlertCard | `alerts-tab/AlertCard.svelte` | Alert-Karte (Metrik + Schwellwert + Kanäle); mobil: Channel-Chips ≥36px, Inputs ≥120px (#701) |
+| AlertCooldownCard | `alerts-tab/AlertCooldownCard.svelte` | Cooldown-Minuten; mobil ≤899px: Eingabe ≥44px, font-size 16px (iOS-Zoom-Guard, #702) |
+| AlertQuietHoursCard | `alerts-tab/AlertQuietHoursCard.svelte` | Ruhezeiten; mobil ≤899px: Time-Inputs ≥44px, font-size 16px (#702) |
 | AlertMetricTable | `alerts-tab/AlertMetricTable.svelte` | Schwellwert-Tabelle mit Metrik-Zeilen |
 | AlertMetricRow | `alerts-tab/AlertMetricRow.svelte` | Einzelne Metrik-Zeile (Toggle + Schwellwert + Schweregrad) |
-| AlertCooldownCard | `alerts-tab/AlertCooldownCard.svelte` | Cooldown-Einstellung |
-| AlertQuietHoursCard | `alerts-tab/AlertQuietHoursCard.svelte` | Ruhezeiten-Einstellung |
 | AlertPreviewCard | `alerts-tab/AlertPreviewCard.svelte` | Vorschau ausgeloester Alarme |
 | alertMetricTable.ts | `alerts-tab/alertMetricTable.ts` | Tabellen-Logik (Helper) |
 | alertPreviewHelpers.ts | `alerts-tab/alertPreviewHelpers.ts` | Vorschau-Logik (Helper) |
+
+**Mobile Responsiveness (Issue #702):** AlertCard, AlertCooldownCard, AlertQuietHoursCard implementieren `@media (max-width: 899px)` mit Touch-Target-Vergrößerung (WCAG): Channel-Chips ≥36px Höhe, Threshold-Input ≥120px breit, Cooldown/Time-Inputs ≥44px Höhe + 16px font-size (verhindert iOS-Zoom). Desktop Layout bleibt unverändert.
 
 ### briefings-tab/ — Briefing-Zeitplan-Tab (#259)
 

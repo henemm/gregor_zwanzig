@@ -3,7 +3,8 @@ entity_id: issue_702_alerts_mobile_parity
 type: module
 created: 2026-06-10
 updated: 2026-06-10
-status: draft
+resolved_at: 2026-06-10
+status: resolved
 version: "1.0"
 tags: [alerts, mobile, frontend, epic-700]
 ---
@@ -12,7 +13,7 @@ tags: [alerts, mobile, frontend, epic-700]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (2026-06-10)
 
 ## Purpose
 
@@ -122,3 +123,4 @@ Playwright gegen Staging, Viewport 375×812px:
 | Version | Date | Change |
 |---------|------|--------|
 | 1.0 | 2026-06-10 | Initial spec |
+| 1.1 | 2026-06-10 | Implementation complete — CSS-only Touch-Target sizing across all alert cards |
