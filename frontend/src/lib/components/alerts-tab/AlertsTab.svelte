@@ -225,6 +225,7 @@
 		.alerts-tab {
 			padding: 1rem;
 			padding-bottom: 120px;
+			max-width: 100%;
 		}
 		.mobile-footer {
 			display: flex;
@@ -239,6 +240,9 @@
 			padding-bottom: calc(var(--g-s-4) + env(safe-area-inset-bottom, 0px));
 			background: var(--g-paper);
 			border-top: 1px solid var(--g-ink-faint);
+		}
+		.actions {
+			display: none;
 		}
 	}
 </style>

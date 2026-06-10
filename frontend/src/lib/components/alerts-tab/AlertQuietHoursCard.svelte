@@ -87,4 +87,11 @@
         font-family: var(--g-font-mono);
     }
     .midnight-hint { margin: var(--g-s-2) 0 0; font-size: var(--g-text-xs); color: var(--g-ink-muted); font-style: italic; }
+
+    @media (max-width: 899px) {
+        .time-input {
+            min-height: 44px;
+            font-size: 16px;
+        }
+    }
 </style>

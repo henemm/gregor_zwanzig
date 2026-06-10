@@ -185,4 +185,22 @@
 		color: var(--g-paper);
 		border-color: var(--g-ink);
 	}
+
+	@media (max-width: 899px) {
+		.alert-card {
+			padding: 14px;
+		}
+		.channel-chip {
+			min-height: 36px;
+			padding: 6px 12px;
+			font-size: 13px;
+			display: inline-flex;
+			align-items: center;
+		}
+		.threshold-input {
+			width: 120px;
+			min-height: 40px;
+			font-size: 15px;
+		}
+	}
 </style>

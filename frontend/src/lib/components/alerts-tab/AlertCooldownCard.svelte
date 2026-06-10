@@ -51,4 +51,12 @@
     }
     .unit { font-size: var(--g-text-sm); color: var(--g-ink-muted); }
     .hint { margin: var(--g-s-2) 0 0; font-size: var(--g-text-xs); color: var(--g-ink-muted); }
+
+    @media (max-width: 899px) {
+        .cooldown-input {
+            min-height: 44px;
+            font-size: 16px;
+            width: 100%;
+        }
+    }
 </style>
