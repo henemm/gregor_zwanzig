@@ -88,6 +88,30 @@ _GLANCE_BUTTONS = {
     ]]
 }
 
+_HEUTE_BUTTONS = {
+    "inline_keyboard": [
+        [
+            {"text": "⏱ Stunden", "callback_data": "dd_hours_today"},
+            {"text": "⛈ Gewitter", "callback_data": "dd_thunder_today"},
+            {"text": "💨 Wind", "callback_data": "dd_wind_today"},
+            {"text": "🌧 Regen", "callback_data": "dd_precip_today"},
+        ],
+        [{"text": "🕐 Timeline", "callback_data": "tl_today"}],
+    ]
+}
+
+_MORGEN_BUTTONS = {
+    "inline_keyboard": [
+        [
+            {"text": "⏱ Stunden", "callback_data": "dd_hours_tomorrow"},
+            {"text": "⛈ Gewitter", "callback_data": "dd_thunder_tomorrow"},
+            {"text": "💨 Wind", "callback_data": "dd_wind_tomorrow"},
+            {"text": "🌧 Regen", "callback_data": "dd_precip_tomorrow"},
+        ],
+        [{"text": "🕐 Timeline", "callback_data": "tl_tomorrow"}],
+    ]
+}
+
 _THUNDER_LABEL = {
     "NONE": "kein",
     "MED": "mäßig",
@@ -95,6 +119,7 @@ _THUNDER_LABEL = {
 }
 
 _DRILLDOWN_PATTERN = re.compile(r"^dd_(thunder|wind|precip)_(today|tomorrow)$")
+_HOURS_PATTERN = re.compile(r"^dd_hours_(today|tomorrow)$")
 
 
 def _thunder_fmt(value) -> str:
@@ -185,6 +210,26 @@ class TripCommandProcessor:
                 ),
                 trip_name=msg.trip_name,
             )
+
+        # Hours-Drilldown: dd_hours_<day> — direkt ODER via key
+        actual_hours_token = None
+        if _HOURS_PATTERN.match(key):
+            actual_hours_token = key
+        elif key == "query" and value and _HOURS_PATTERN.match(value.lower()):
+            actual_hours_token = value.lower()
+
+        if actual_hours_token is not None:
+            hm = _HOURS_PATTERN.match(actual_hours_token)
+            day_token = hm.group(1)
+            trip = self._find_trip(msg.trip_name, msg.user_id)
+            if not trip:
+                return CommandResult(
+                    success=False, command=actual_hours_token,
+                    confirmation_subject=f"[{msg.trip_name}] Trip nicht gefunden",
+                    confirmation_body=f"Kein Trip mit Name '{msg.trip_name}' gefunden.",
+                    trip_name=msg.trip_name,
+                )
+            return self._handle_hours_drilldown(trip, day_token, msg.received_at, msg.user_id)
 
         # Drilldown-Tokens: dd_<metric>_<day> — via "### query: dd_..." ODER direkt
         actual_drilldown_token = None
@@ -343,6 +388,7 @@ class TripCommandProcessor:
                 confirmation_subject=f"[{trip.name}] Heute",
                 confirmation_body=body,
                 trip_name=trip.name,
+                reply_markup=_HEUTE_BUTTONS,
             )
         elif query_key == "morgen":
             body = self._fmt_day(timeline, tomorrow, "Morgen")
@@ -351,6 +397,7 @@ class TripCommandProcessor:
                 confirmation_subject=f"[{trip.name}] Morgen",
                 confirmation_body=body,
                 trip_name=trip.name,
+                reply_markup=_MORGEN_BUTTONS,
             )
         elif query_key == "heute_gewitter":
             body = self._fmt_gewitter(timeline, today)
@@ -437,6 +484,82 @@ class TripCommandProcessor:
             command=f"dd_{metric}_{day_token}",
             confirmation_subject=f"[{trip.name}] {header} stündlich",
             confirmation_body=body,
+            reply_markup=markup,
+            trip_name=trip.name,
+        )
+
+    def _handle_hours_drilldown(
+        self,
+        trip: Trip,
+        day_token: str,
+        received_at: datetime,
+        user_id: str,
+    ) -> CommandResult:
+        """Stündliche Kompakttabelle: Zeit | Temp | Wind | Regen | Gewitter."""
+        from services.weather_extractor import WeatherExtractor
+
+        if day_token == "today":
+            from_time = received_at
+            hours = 12
+            back_btn = "⬅️ /heute"
+            back_cb = "heute"
+            label = "Heute"
+            today_date = received_at.date()
+        else:
+            tomorrow = (received_at + timedelta(days=1)).date()
+            tz = received_at.tzinfo
+            from_time = datetime(tomorrow.year, tomorrow.month, tomorrow.day, 0, 0, tzinfo=tz)
+            hours = 24
+            back_btn = "⬅️ /morgen"
+            back_cb = "morgen"
+            label = "Morgen"
+            today_date = tomorrow
+
+        ex = WeatherExtractor(user_id)
+        r_temp  = ex.drilldown(trip.id, "t2m_c",        from_time=from_time, hours=hours)
+        r_wind  = ex.drilldown(trip.id, "wind10m_kmh",  from_time=from_time, hours=hours)
+        r_rain  = ex.drilldown(trip.id, "precip_1h_mm", from_time=from_time, hours=hours)
+        r_thund = ex.drilldown(trip.id, "thunder_level", from_time=from_time, hours=hours)
+
+        if not r_temp.available:
+            return CommandResult(
+                success=False,
+                command=f"dd_hours_{day_token}",
+                confirmation_subject=f"[{trip.name}] Keine stündlichen Daten",
+                confirmation_body=(
+                    "Keine stündlichen Daten verfügbar. "
+                    "Bitte einen Report anfordern um aktuelle Daten zu laden."
+                ),
+                trip_name=trip.name,
+            )
+
+        wind_map  = {p.ts: p.value for p in r_wind.points}  if r_wind.available  else {}
+        rain_map  = {p.ts: p.value for p in r_rain.points}  if r_rain.available  else {}
+        thund_map = {p.ts: p.value for p in r_thund.points} if r_thund.available else {}
+
+        lines = [f"📅 Stunden · {label} ({today_date:%d.%m})", ""]
+        for pt in r_temp.points:
+            h = pt.ts.astimezone().strftime("%H")
+            temp = f"{pt.value:.0f}°C" if pt.value is not None else "?°C"
+            wind_val = wind_map.get(pt.ts)
+            wind = f"{wind_val:.0f}km/h" if wind_val is not None else "?"
+            rain_val = rain_map.get(pt.ts)
+            rain = f"{rain_val:.1f}mm" if rain_val is not None else "?"
+            thund_val = thund_map.get(pt.ts)
+            if thund_val is None or str(thund_val) in ("NONE", "ThunderLevel.NONE"):
+                t_sym = "—"
+            elif str(thund_val) in ("MED", "ThunderLevel.MED"):
+                t_sym = "🟡"
+            else:
+                t_sym = "🔴"
+            lines.append(f"{h}  {temp:<7} {wind:<8} {rain:<6} {t_sym}")
+
+        markup = {"inline_keyboard": [[{"text": back_btn, "callback_data": back_cb}]]}
+        return CommandResult(
+            success=True,
+            command=f"dd_hours_{day_token}",
+            confirmation_subject=f"[{trip.name}] Stunden {label}",
+            confirmation_body="\n".join(lines),
             reply_markup=markup,
             trip_name=trip.name,
         )
@@ -867,6 +990,7 @@ class TripCommandProcessor:
             confirmation_subject=f"[{trip.name}] Nowcast",
             confirmation_body=body,
             trip_name=trip.name,
+            reply_markup={"inline_keyboard": [[{"text": "🔄 Aktualisieren", "callback_data": "now"}]]},
         )
 
     def _cancel_trip(self, trip: Trip, user_id: str = "default") -> CommandResult:

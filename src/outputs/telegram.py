@@ -15,6 +15,7 @@ BOT_COMMANDS = [
     {"command": "glance", "description": "🌤️ Wetter-Überblick (heute & morgen)"},
     {"command": "heute", "description": "📅 Nur heute"},
     {"command": "morgen", "description": "📅 Nur morgen"},
+    {"command": "now", "description": "🌂 Nowcast — Regen/Gewitter in den nächsten 2h"},
     {"command": "heute_gewitter", "description": "⛈️ Gewitter-Fokus heute"},
     {"command": "timeline_heute", "description": "🕐 Timeline heute"},
     {"command": "timeline_morgen", "description": "🕐 Timeline morgen"},

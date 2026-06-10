@@ -30,7 +30,7 @@ TELEGRAM_API_BASE = "https://api.telegram.org"
 
 _VALID_COMMANDS = {"ruhetag", "startdatum", "report", "abbruch", "status", "hilfe",
                    "glance", "heute", "morgen", "heute_gewitter",
-                   "timeline_heute", "timeline_morgen"}
+                   "timeline_heute", "timeline_morgen", "now"}
 
 _SHORTCUT_MAP = {
     "/s": "glance",
@@ -44,6 +44,8 @@ _SHORTCUT_MAP = {
     "/glance": "glance",
     "/heute": "heute",
     "/morgen": "morgen",
+    "/now": "now",
+    "/n": "now",
     "/heute_gewitter": "heute_gewitter",
     "/timeline_heute": "timeline_heute",
     "/timeline_morgen": "timeline_morgen",
@@ -55,9 +57,12 @@ _CALLBACK_QUERY_MAP = {
     "tl_today": "### query: timeline_heute",
     "tl_tomorrow": "### query: timeline_morgen",
     "glance": "### query: glance",
+    "heute": "### query: heute",
+    "morgen": "### query: morgen",
+    "now": "### now",
 }
 
-_CALLBACK_DRILLDOWN_PATTERN = re.compile(r"^dd_(thunder|wind|precip)_(today|tomorrow)$")
+_CALLBACK_DRILLDOWN_PATTERN = re.compile(r"^dd_(thunder|wind|precip|hours)_(today|tomorrow)$")
 
 
 class InboundTelegramReader:
