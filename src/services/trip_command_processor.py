@@ -125,6 +125,45 @@ _DRILLDOWN_METRICS: dict[str, tuple] = {
 
 
 # ---------------------------------------------------------------------------
+# On-demand Fetch Helper (AC-5: cache-check before fetch)
+# ---------------------------------------------------------------------------
+
+def _fetch_and_save_snapshot(trip, user_id: str, today, tomorrow) -> None:
+    """Fetcht Wetterdaten on-demand und speichert als Snapshot. Fail-soft.
+
+    Cache-Check: existiert bereits ein Snapshot mit target_date == heute,
+    wird kein neuer Fetch ausgelöst. Verhindert redundante API-Calls.
+    """
+    from app.loader import get_snapshots_dir
+    from services.weather_snapshot import WeatherSnapshotService
+    from services.trip_report_scheduler import TripReportSchedulerService
+
+    # Cache-Check: rohe JSON-Datei prüfen (load() gibt keine target_date zurück)
+    snap_path = get_snapshots_dir(user_id) / f"{trip.id}.json"
+    if snap_path.exists():
+        try:
+            import json as _json
+            raw = _json.loads(snap_path.read_text(encoding="utf-8"))
+            if raw.get("target_date") == today.isoformat():
+                return  # Frischer Snapshot vorhanden — kein Re-Fetch
+        except Exception:
+            pass  # Im Zweifel: Fetch trotzdem versuchen
+
+    try:
+        scheduler = TripReportSchedulerService(user_id=user_id)
+        segments = scheduler._convert_trip_to_segments(trip, today)
+        segments_tomorrow = scheduler._convert_trip_to_segments(trip, tomorrow)
+        all_segments = segments + segments_tomorrow
+        if not all_segments:
+            return
+        segment_weather = scheduler._fetch_weather(all_segments)
+        if segment_weather:
+            WeatherSnapshotService(user_id).save(trip.id, segment_weather, today)
+    except Exception as exc:
+        logger.warning("on-demand fetch fehlgeschlagen für trip %s: %s", trip.id, exc)
+
+
+# ---------------------------------------------------------------------------
 # Processor
 # ---------------------------------------------------------------------------
 
@@ -283,6 +322,10 @@ class TripCommandProcessor:
 
         today = received_at.date()
         tomorrow = today + timedelta(days=1)
+
+        if not timeline.available:
+            _fetch_and_save_snapshot(trip=trip, user_id=user_id, today=today, tomorrow=tomorrow)
+            timeline = extractor.timeline(trip.id)
 
         if query_key == "glance":
             body = self._fmt_glance(timeline, today, tomorrow)

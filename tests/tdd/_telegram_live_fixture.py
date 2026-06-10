@@ -68,10 +68,6 @@ def ensure_test_user_with_active_trip(
         _create_active_trip(user_id=user_id, data_dir=data_dir)
         trip = active_trip_for(user_id=user_id, data_dir=data_dir)
 
-    # Wetter-Snapshot sicherstellen (F002: ohne Snapshot → "Kein Wetter-Snapshot verfügbar")
-    if trip is not None and data_dir == "data":
-        _ensure_weather_snapshot(trip=trip, user_id=user_id)
-
     return user_id
 
 
@@ -125,36 +121,46 @@ def run_command_through_pipeline(
     # Führenden Slash entfernen
     cmd = command.lstrip("/")
 
-    reader = InboundTelegramReader()
-    from app.loader import lookup_user_by_telegram_chat_id
+    import app.loader as _loader
+    _orig_get_data_dir = _loader.get_data_dir
 
-    user_id = lookup_user_by_telegram_chat_id(chat_id) or "default"
-    trip = reader._find_active_trip(user_id)
-    if trip is None:
-        return "Kein aktiver Trip"
+    if data_dir != "data":
+        _loader.get_data_dir = lambda uid="default": Path(data_dir) / "users" / uid
 
-    key, value = reader._parse_command(cmd)
-    if key is None:
-        return "Unbekannter Befehl"
+    try:
+        reader = InboundTelegramReader()
+        from app.loader import lookup_user_by_telegram_chat_id
 
-    # Body kodieren (exakt wie _process_update)
-    if key in _QUERY_KEYS:
-        body = f"### query: {key}"
-    elif value:
-        body = f"### {key}: {value}"
-    else:
-        body = f"### {key}"
+        user_id = lookup_user_by_telegram_chat_id(chat_id, data_dir=data_dir) or "default"
+        trip = reader._find_active_trip(user_id)
+        if trip is None:
+            return "Kein aktiver Trip"
 
-    inbound = InboundMessage(
-        channel="telegram",
-        trip_name=trip.name,
-        body=body,
-        sender=chat_id,
-        received_at=datetime.now(tz=timezone.utc),
-        user_id=user_id,
-    )
-    result = TripCommandProcessor().process(inbound)
-    return result.confirmation_body
+        key, value = reader._parse_command(cmd)
+        if key is None:
+            return "Unbekannter Befehl"
+
+        # Body kodieren (exakt wie _process_update)
+        if key in _QUERY_KEYS:
+            body = f"### query: {key}"
+        elif value:
+            body = f"### {key}: {value}"
+        else:
+            body = f"### {key}"
+
+        inbound = InboundMessage(
+            channel="telegram",
+            trip_name=trip.name,
+            body=body,
+            sender=chat_id,
+            received_at=datetime.now(tz=timezone.utc),
+            user_id=user_id,
+        )
+        result = TripCommandProcessor().process(inbound)
+        return result.confirmation_body
+    finally:
+        if data_dir != "data":
+            _loader.get_data_dir = _orig_get_data_dir
 
 
 def deliver_and_cleanup(

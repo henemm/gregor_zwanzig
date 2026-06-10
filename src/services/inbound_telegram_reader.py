@@ -184,15 +184,38 @@ class InboundTelegramReader:
             received_at=datetime.now(tz=timezone.utc),
             user_id=user_id,
         )
-        result: CommandResult = TripCommandProcessor().process(inbound)
 
-        mid = TelegramOutput(user_settings).send(
-            result.confirmation_subject,
-            result.confirmation_body,
-            reply_markup=result.reply_markup,
-        )
-        if mid is not None:
-            self.sent_message_ids.append(mid)
+        if key in _QUERY_KEYS:
+            # Loading-Message senden, dann Wetterdaten on-demand holen,
+            # dann in-place ersetzen (AC-4)
+            out = TelegramOutput(user_settings)
+            loading_mid = out.send("⏳", "⏳ Wetter wird geladen...")
+            result: CommandResult = TripCommandProcessor().process(inbound)
+            if loading_mid is not None:
+                out.edit_message_text(
+                    chat_id,
+                    loading_mid,
+                    f"[{result.confirmation_subject}]\n\n{result.confirmation_body}",
+                    reply_markup=result.reply_markup,
+                )
+                self.sent_message_ids.append(loading_mid)
+            else:
+                mid = TelegramOutput(user_settings).send(
+                    result.confirmation_subject,
+                    result.confirmation_body,
+                    reply_markup=result.reply_markup,
+                )
+                if mid is not None:
+                    self.sent_message_ids.append(mid)
+        else:
+            result = TripCommandProcessor().process(inbound)
+            mid = TelegramOutput(user_settings).send(
+                result.confirmation_subject,
+                result.confirmation_body,
+                reply_markup=result.reply_markup,
+            )
+            if mid is not None:
+                self.sent_message_ids.append(mid)
         return True
 
     def _process_callback_query(self, callback: dict, settings: Settings) -> bool:
