@@ -195,7 +195,10 @@ def _deserialize_timeseries(
                 kwargs[key] = _HOURLY_ENUM_FIELDS[key][val]
             else:
                 kwargs[key] = val
-        points.append(ForecastDataPoint(ts=datetime.fromisoformat(h["ts"]), **kwargs))
+        ts_dt = datetime.fromisoformat(h["ts"])
+        if ts_dt.tzinfo is None:
+            ts_dt = ts_dt.replace(tzinfo=timezone.utc)
+        points.append(ForecastDataPoint(ts=ts_dt, **kwargs))
     return NormalizedTimeseries(meta=meta, data=points)
 
 
