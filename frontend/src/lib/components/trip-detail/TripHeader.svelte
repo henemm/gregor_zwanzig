@@ -33,7 +33,7 @@
 		return async function doNameSave() {
 			nameSaving = true;
 			try {
-				await api.put(`/api/trips/${trip.id}`, { ...trip, name: editName });
+				await api.put(`/api/trips/${trip.id}`, { name: editName });
 				onTripUpdate?.({ ...trip, name: editName });
 			} finally {
 				nameSaving = false;

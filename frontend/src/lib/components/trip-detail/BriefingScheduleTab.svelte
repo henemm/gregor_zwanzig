@@ -28,7 +28,7 @@
 			saving = true;
 			statusMsg = '';
 			try {
-				await api.put<Trip>(`/api/trips/${trip.id}`, { ...trip, report_config: reportConfig });
+				await api.put<Trip>(`/api/trips/${trip.id}`, { report_config: reportConfig });
 				statusMsg = 'Gespeichert.';
 				onTripUpdate?.({ ...trip, report_config: reportConfig });
 			} catch (e: unknown) {
