@@ -18,24 +18,30 @@ import { test, expect } from '@playwright/test';
 
 const BURST = 30; // loginLimiter burst aus cmd/server/main.go
 
-// Erschöpft den Rate-Limit-Bucket für die aktuelle Test-IP durch schnelle
-// Form-POSTs via request-API (kein Browser-Overhead).
-async function exhaustRateLimit(
-	request: import('@playwright/test').APIRequestContext,
-	baseURL: string
-) {
-	for (let i = 0; i < BURST + 5; i++) {
-		await request.post(`${baseURL}/login`, {
-			form: { username: `probe_703_${i}`, password: 'wrongpassword_probe' },
-		});
-	}
+// Erschöpft den Rate-Limit-Bucket über Browser-Fetch-Calls von page.evaluate().
+// Browser-Fetch teilt denselben IP-Bucket wie Browser-Form-Submissions (gleiche IP
+// aus Nginx-Perspektive). Origin-Header wird vom Browser automatisch gesetzt → kein CSRF.
+async function exhaustRateLimitViaPage(page: import('@playwright/test').Page) {
+	await page.goto('/login');
+	await page.evaluate(async (burst: number) => {
+		for (let i = 0; i < burst + 2; i++) {
+			await fetch('/login', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+				body: new URLSearchParams({
+					username: `probe_703_${i}`,
+					password: 'wrongpassword_probe',
+				}).toString(),
+			});
+		}
+	}, BURST);
 }
 
 test.describe.serial('Bug #703: Login Rate-Limit Fehlermeldung', () => {
 	// AC-3 muss vor AC-2 laufen — danach ist der Bucket erschöpft.
 	test('AC-3: HTTP-401 zeigt "Benutzername oder Passwort nicht korrekt" (Regression)', async ({
 		page,
-	}) => {
+	}: { page: import('@playwright/test').Page }) => {
 		await page.goto('/login');
 		await page.fill('input[name="username"]', 'nonexistent_703_ac3');
 		await page.fill('input[name="password"]', 'wrongpassword_ac3');
@@ -52,11 +58,10 @@ test.describe.serial('Bug #703: Login Rate-Limit Fehlermeldung', () => {
 	// NACH FIX: zeigt "Zu viele Versuche" → GREEN
 	test('AC-2: HTTP-429 zeigt "Zu viele Versuche" statt "Passwort falsch" (RED vor Fix)', async ({
 		page,
-		request,
-		baseURL,
-	}) => {
-		// Bucket erschöpfen
-		await exhaustRateLimit(request, baseURL!);
+	}: { page: import('@playwright/test').Page }) => {
+		// Bucket via Browser-Fetch erschöpfen (page.evaluate) — teilt exakt denselben
+		// IP-Bucket wie Browser-Form-Submissions (Origin-Header auto-gesetzt).
+		await exhaustRateLimitViaPage(page);
 
 		// Letzter Versuch über die UI
 		await page.goto('/login');
