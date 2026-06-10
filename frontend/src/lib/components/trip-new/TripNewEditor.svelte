@@ -7,7 +7,7 @@
 	// Design: docs/design-requests/trip-anlegen-2026-06-06/screen-trip-new-v2-mobile.jsx
 	// Factory-Pattern für alle Event-Handler (Safari-Closure-Schutz, CLAUDE.md).
 
-	import { goto } from '$app/navigation';
+	import { goto, beforeNavigate } from '$app/navigation';
 	import { api } from '$lib/api.js';
 	import { Eyebrow, Btn, Input, TopoBg } from '$lib/components/atoms';
 	import WeatherMetricsTab from '$lib/components/trip-detail/WeatherMetricsTab.svelte';
@@ -77,6 +77,9 @@
 	// Saving state
 	let saving = $state(false);
 	let saveError: string | null = $state(null);
+	let savedTripId: string | null = $state(null);
+	// intentionalCancel: plain let (not $state) — read synchronously before goto
+	let intentionalCancel = false;
 
 	// ── Abgeleitete Zustandsgrößen ────────────────────────────────────────────
 	const etDone = $derived(stages.length > 0 && stages.every(s => s.gpx !== null));
@@ -270,39 +273,56 @@
 	}
 
 	// ── Speichern ─────────────────────────────────────────────────────────────
+	async function buildAndSave(): Promise<string | null> {
+		if (!ready || saving || savedTripId) return null;
+		saveError = null;
+		saving = true;
+		// Issue #658 — etwaige offene Editor-Edits vor dem POST in den State holen.
+		if (activeTab === 'wegpunkte') syncEditorBack();
+		try {
+			const state: CreateTripState = {
+				name,
+				region: region || undefined,
+				startDate,
+				stages: stages.map(s => ({ id: s.id, name: s.name, waypoints: s.waypoints })),
+				weatherMetrics,
+				channels,
+				reportConfig,
+				alertRules: alertRules.length > 0 ? alertRules : undefined,
+				activity: selectedActivity,
+			};
+			const payload = buildCreateTripPayload(state);
+			const created = await api.post<Trip>('/api/trips', payload);
+			savedTripId = created.id;
+			return created.id;
+		} catch (e: unknown) {
+			const err = e as { detail?: string; error?: string };
+			saveError = err.detail ?? err.error ?? 'Fehler beim Speichern';
+			return null;
+		} finally {
+			saving = false;
+		}
+	}
+
+	// beforeNavigate: auto-save when ready and not yet saved, skip on intentional cancel.
+	beforeNavigate(({ cancel, to }) => {
+		if (!ready || savedTripId || saving || !to || intentionalCancel) return;
+		cancel();
+		void (async () => {
+			const id = await buildAndSave();
+			if (id) await goto(to.url.href);
+		})();
+	});
+
 	function makeSaveHandler() {
 		return async function doSave() {
-			if (!ready) return;
-			saveError = null;
-			saving = true;
-			// Issue #658 — etwaige offene Editor-Edits vor dem POST in den State holen.
-			if (activeTab === 'wegpunkte') syncEditorBack();
-			try {
-				const state: CreateTripState = {
-					name,
-					region: region || undefined,
-					startDate,
-					stages: stages.map(s => ({ id: s.id, name: s.name, waypoints: s.waypoints })),
-					weatherMetrics,
-					channels,
-					reportConfig,
-					alertRules: alertRules.length > 0 ? alertRules : undefined,
-					activity: selectedActivity,
-				};
-				const payload = buildCreateTripPayload(state);
-				const created = await api.post<Trip>('/api/trips', payload);
-				await goto(`/trips/${created.id}`);
-			} catch (e: unknown) {
-				const err = e as { detail?: string; error?: string };
-				saveError = err.detail ?? err.error ?? 'Fehler beim Speichern';
-			} finally {
-				saving = false;
-			}
+			const id = await buildAndSave();
+			if (id) await goto(`/trips/${id}`);
 		};
 	}
 
 	function makeCancelHandler() {
-		return () => goto('/trips');
+		return () => { intentionalCancel = true; goto('/trips'); };
 	}
 
 	const onSave = makeSaveHandler();
@@ -331,7 +351,7 @@
 				<button type="button" onclick={onSave} disabled={!ready || saving}
 					data-testid="trip-new-save-btn"
 					style="padding: 6px 12px; border-radius: var(--g-r-2); border: none; background: var(--g-ink); color: var(--g-paper); font-size: 13px; font-weight: 500; cursor: {ready && !saving ? 'pointer' : 'not-allowed'}; opacity: {ready && !saving ? 1 : 0.4};">
-					{saving ? 'Speichere…' : 'Tour speichern'}
+					{saving ? 'Speichere…' : savedTripId ? 'Trip gespeichert' : 'Trip speichern'}
 				</button>
 			</div>
 		</div>
@@ -359,7 +379,7 @@
 				data-testid="tn-mobile-save"
 				disabled={!ready || saving}
 				style="height: 44px; padding: 0 14px; border: none; background: transparent; color: {ready ? 'var(--g-accent)' : 'var(--g-ink-4)'}; font-weight: 600; font-size: 14px; cursor: {ready ? 'pointer' : 'default'}; font-family: var(--g-font-sans); flex-shrink: 0;">
-				{saving ? 'Speichere…' : 'Speichern'}
+				{saving ? 'Speichere…' : savedTripId ? 'Trip gespeichert' : 'Speichern'}
 			</button>
 		</div>
 

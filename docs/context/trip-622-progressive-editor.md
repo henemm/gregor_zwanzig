@@ -38,6 +38,13 @@ abschließen.
   mit Bottom-Sheet-Namenseingabe, scrollbare TabBar, Lock-Tab→Toast (statt Flash).
 - Schließt AC-9 (Mobile) von #622. **#622-Paket komplett: alle 9 ACs abgeschlossen.**
 
+#### Slice 4 — Bug #691 (2026-06-10)
+- Spec: `docs/specs/modules/bug_691_autosave_trip_new.md` (7 ACs, PO-freigegeben 2026-06-10).
+- **✅ LIVE (2026-06-10):** Auto-Save bei interner Navigation (falls `ready === true`).
+  SvelteKit `beforeNavigate`-Hook + Button-Label-Update („Trip gespeichert" nach Speicher-Erfolg).
+  Verhindert Datenverlust beim Klick auf externe Links während der Tour-Anlage.
+- Frontend-only (+30 LoC). Nachzügler zur #622-Initiative (Verbesserung des Nutzer-Erlebens).
+
 #### Design-Quellen
 1:1-Quellen im Repo: `docs/design-requests/trip-anlegen-2026-06-06/`
   (`Gregor 20 - Trip anlegen.html`, `screen-trip-new-v2{,-mobile}.jsx`).
