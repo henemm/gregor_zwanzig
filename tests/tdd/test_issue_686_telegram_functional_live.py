@@ -155,10 +155,9 @@ def test_ac3_all_seven_commands_produce_meaningful_content():
     chat_id = os.environ["GZ_TELEGRAM_TEST_CHAT_ID"]
     ensure_test_user_with_active_trip(chat_id=chat_id)
 
-    # Wetter-Marker die in echten Antworten vorkommen (robust: Temp, Emoji, Niederschlag)
+    # Nur echte Wetterdaten-Marker — keine Formatierungs-/Header-Strings
     _WEATHER_MARKERS = ("°C", "km/h", "mm", "🌤", "⛈", "🌧", "🌨", "☀", "🌥", "⚡",
-                        "%", "Temp", "Wind", "Regen", "Schnee", "Gewitter", "Etappe",
-                        "heute", "morgen", "Timeline", "Glance")
+                        "%", "Temp", "Wind", "Regen", "Schnee", "Gewitter")
 
     failures = []
     for cmd in SEVEN_COMMANDS:
@@ -169,6 +168,8 @@ def test_ac3_all_seven_commands_produce_meaningful_content():
             failures.append(f"{cmd}: 'Unbekannter Befehl'")
         elif "Kein aktiver Trip" in body:
             failures.append(f"{cmd}: 'Kein aktiver Trip'")
+        elif "Keine Etappe geplant" in body:
+            failures.append(f"{cmd}: 'Keine Etappe geplant' — Fixture-Trip hat keine heutige Etappe")
         elif "Kein Wetter-Snapshot" in body:
             failures.append(f"{cmd}: 'Kein Wetter-Snapshot' — kein echter Wetter-Inhalt")
         elif cmd != "hilfe" and not any(m in body for m in _WEATHER_MARKERS):

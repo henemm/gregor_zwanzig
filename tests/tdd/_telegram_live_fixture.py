@@ -57,9 +57,14 @@ def ensure_test_user_with_active_trip(
     profile["telegram_chat_id"] = str(chat_id)
     user_file.write_text(json.dumps(profile, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    # Trip anlegen falls noch kein aktiver Trip existiert
+    # Trip immer neu anlegen damit heute + morgen immer eine Etappe haben
+    today = date.today()
+    tomorrow = today + timedelta(days=1)
     trip = active_trip_for(user_id=user_id, data_dir=data_dir)
-    if trip is None:
+    trip_stages = {getattr(s, "date", None) for s in trip.stages} if trip else set()
+    needs_refresh = not ({today, tomorrow} <= trip_stages)
+    if needs_refresh:
+        _delete_snapshot(user_id=user_id, trip_id="tg-live-e2e-trip", data_dir=data_dir)
         _create_active_trip(user_id=user_id, data_dir=data_dir)
         trip = active_trip_for(user_id=user_id, data_dir=data_dir)
 
@@ -226,11 +231,15 @@ def _ensure_weather_snapshot(trip, user_id: str) -> None:
     from services.weather_snapshot import WeatherSnapshotService
 
     svc = WeatherSnapshotService(user_id)
-    if svc.load(trip.id) is not None:
-        return  # Snapshot existiert bereits — nichts zu tun
+    today = date.today()
+    existing = svc.load(trip.id)
+    if existing is not None:
+        # Snapshot veraltet wenn target_date != heute → neu holen
+        snap_date = getattr(existing, "target_date", None)
+        if snap_date == today:
+            return
 
     # target_date = heute falls Stage vorhanden, sonst erster Stage-Tag
-    today = date.today()
     stage = trip.get_stage_for_date(today)
     if stage is None:
         # Ersten Stage im aktiven Fenster nehmen
@@ -243,12 +252,16 @@ def _ensure_weather_snapshot(trip, user_id: str) -> None:
 
     from services.trip_report_scheduler import TripReportSchedulerService
     scheduler = TripReportSchedulerService(user_id=user_id)
+    # Heute + morgen kombinieren damit /morgen Wetterdaten hat
     segments = scheduler._convert_trip_to_segments(trip, target_date)
-    if not segments:
+    tomorrow = target_date + timedelta(days=1)
+    segments_tomorrow = scheduler._convert_trip_to_segments(trip, tomorrow)
+    all_segments = segments + segments_tomorrow
+    if not all_segments:
         return
 
     try:
-        segment_weather = scheduler._fetch_weather(segments)
+        segment_weather = scheduler._fetch_weather(all_segments)
         if segment_weather:
             svc.save(trip.id, segment_weather, target_date)
     except Exception:
@@ -262,6 +275,7 @@ def _create_active_trip(user_id: str, data_dir: str) -> None:
     """
     today = date.today()
     start = today - timedelta(days=1)
+    tomorrow = today + timedelta(days=1)
     end = today + timedelta(days=2)
 
     trips_dir = Path(data_dir) / "users" / user_id / "trips"
@@ -323,7 +337,7 @@ def _create_active_trip(user_id: str, data_dir: str) -> None:
             {
                 "id": "s3",
                 "name": "Stage 3",
-                "date": str(end),
+                "date": str(tomorrow),
                 "waypoints": [
                     {
                         "id": "w4",
@@ -344,6 +358,30 @@ def _create_active_trip(user_id: str, data_dir: str) -> None:
                 ],
                 "start_time": "08:00",
             },
+            {
+                "id": "s4",
+                "name": "Stage 4",
+                "date": str(end),
+                "waypoints": [
+                    {
+                        "id": "w6",
+                        "name": "Corte",
+                        "lat": 42.30,
+                        "lon": 9.15,
+                        "elevation_m": 396,
+                        "arrival_calculated": "08:00",
+                    },
+                    {
+                        "id": "w7",
+                        "name": "Calacuccia",
+                        "lat": 42.35,
+                        "lon": 9.01,
+                        "elevation_m": 790,
+                        "arrival_calculated": "13:00",
+                    },
+                ],
+                "start_time": "08:00",
+            },
         ],
         "alert_rules": [],
         "region": "Korsika",
@@ -351,3 +389,9 @@ def _create_active_trip(user_id: str, data_dir: str) -> None:
 
     trip_file = trips_dir / f"{trip_id}.json"
     trip_file.write_text(json.dumps(trip_data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _delete_snapshot(user_id: str, trip_id: str, data_dir: str) -> None:
+    snapshot_file = Path(data_dir) / "users" / user_id / "weather_snapshots" / f"{trip_id}.json"
+    if snapshot_file.exists():
+        snapshot_file.unlink()
