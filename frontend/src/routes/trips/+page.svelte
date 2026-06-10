@@ -221,8 +221,8 @@ import PauseIcon from '@lucide/svelte/icons/pause';
 	}
 
 	function dateRange(trip: Trip): string {
-		if (!trip.stages.length) return '-';
-		const dates = trip.stages.map((s) => s.date).sort();
+		if (!trip.stages?.length) return '-';
+		const dates = (trip.stages?.map((s) => s.date) ?? []).sort();
 		if (dates.length === 1) return dates[0];
 		return `${dates[0]} — ${dates[dates.length - 1]}`;
 	}
@@ -420,7 +420,7 @@ import PauseIcon from '@lucide/svelte/icons/pause';
 								<span class="text-xs text-muted-foreground truncate w-full">{trip.region}</span>
 							{/if}
 							<span class="text-xs text-muted-foreground truncate w-full">
-								{trip.stages.length} Etappen · {dateRange(trip)}
+								{(trip.stages?.length ?? 0)} Etappen · {dateRange(trip)}
 							</span>
 						</button>
 						<button
