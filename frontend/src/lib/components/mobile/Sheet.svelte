@@ -45,14 +45,14 @@
 	<div
 		role="presentation"
 		onclick={onClose}
-		style:position="absolute"
+		style:position="fixed"
 		style:inset="0"
 		style:background="rgba(26,26,24,0.42)"
 		style:z-index="60"
 	></div>
 	<div
 		data-snap={snap}
-		style:position="absolute"
+		style:position="fixed"
 		style:left="0"
 		style:right="0"
 		style:bottom="0"
