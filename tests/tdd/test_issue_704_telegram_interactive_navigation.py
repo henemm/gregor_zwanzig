@@ -95,7 +95,7 @@ def _segment(
     )
     hourly_points = [
         ForecastDataPoint(
-            ts=datetime(day.year, day.month, day.day, h, 0, tzinfo=timezone.utc),
+            ts=datetime(day.year, day.month, day.day, h, 0),
             t2m_c=temp_c + (h - hour_start) * 0.5,
             wind10m_kmh=wind_kmh,
             precip_1h_mm=precip_mm,
