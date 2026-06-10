@@ -210,13 +210,12 @@
 			data-testid="compare-step5-activation-banner"
 			data-ready={versandVisited ? 'true' : 'false'}
 			class="rounded-md p-4 text-white text-sm"
-			style:background="var(--g-ink)"
+			style:background={versandVisited ? 'var(--g-good)' : 'var(--g-ink)'}
 		>
-			<!-- Bereit-State (data-ready="true"): background var(--g-success) -->
 			<div class="mono" style:font-size="10px" style:letter-spacing="0.12em" style:text-transform="uppercase" style:color="rgba(255,255,255,0.55)" style:margin-bottom="4px">Bereit zum Aktivieren</div>
 			<div style:font-size="15px" style:font-weight="600">„{state.name || 'Neuer Vergleich'}" · {state.pickedIds?.length ?? 0} Orte</div>
 			<div style:font-size="12.5px" style:color="rgba(255,255,255,0.75)" style:margin-top="4px" style:line-height="1.5">
-				Versand einrichten zum Aktivieren.
+				{#if versandVisited}Versand konfiguriert — klicke „Briefing aktivieren".{:else}Versand einrichten zum Aktivieren.{/if}
 			</div>
 		</div>
 	{/if}

@@ -113,10 +113,10 @@
 	}
 
 	// Issue #681: "Briefing aktivieren" im Create-Modus (AC-4).
-	// wiz.save() handhabt Create (POST) und Edit (PUT) — saveComparePreset(preset) nur für Edit.
+	// saveNewPreset() → POST /api/compare/presets (wiz.save() würde /api/subscriptions treffen!)
 	function handleActivate() {
 		if (!versandVisited) return;
-		void wiz.save();
+		void wiz.saveNewPreset();
 	}
 
 	const canContinue = $derived(wiz.name.trim().length > 0);

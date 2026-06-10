@@ -199,6 +199,40 @@ export class CompareWizardState {
 	}
 
 	/**
+	 * Issue #681: Create-Modus — legt neues Preset via POST /api/compare/presets an.
+	 * Wird von "Briefing aktivieren" im Header aufgerufen (nicht wiz.save() = subscriptions!).
+	 */
+	async saveNewPreset(): Promise<void> {
+		this.saveStatus = 'saving';
+		this.saveError = null;
+		const payload = {
+			name: this.name,
+			location_ids: this.pickedIds,
+			profil: this.activityProfile ?? 'wandern',
+			schedule: this.schedule,
+			hour_from: this.timeWindowStart,
+			hour_to: this.timeWindowEnd,
+			empfaenger: [],
+			display_config: {
+				region: this.region,
+				...(Object.keys(this.idealRanges).length > 0 ? { ideal_ranges: this.idealRanges } : {}),
+				...(this.channelLayouts !== null ? { channel_layouts: this.channelLayouts } : {}),
+				...(this.activeMetricKeys.length > 0 ? { active_metrics: this.activeMetricKeys } : {})
+			}
+		};
+		try {
+			const { api } = await import('$lib/api');
+			const { goto } = await import('$app/navigation');
+			const created = await api.post('/api/compare/presets', payload);
+			this.saveStatus = 'ok';
+			await goto('/compare/' + (created as { id: string }).id);
+		} catch (e) {
+			this.saveStatus = 'error';
+			this.saveError = extractErrorMessage(e);
+		}
+	}
+
+	/**
 	 * Edit-Modus: speichert Preset via PUT /api/compare/presets/{id}.
 	 * Round-Trip-Spread via buildComparePresetSavePayload — nicht editierte Felder
 	 * (empfaenger, schedule, hour_from/to, weekday) bleiben erhalten.
