@@ -42,8 +42,10 @@
 		/** Issue #622: Create-Modus — kein PUT; Kanäle per onChannelsChange nach oben emittieren */
 		createMode?: boolean;
 		onChannelsChange?: (c: ChannelConfig) => void;
+		/** Issue #694: Trip-State in +page.svelte nach erfolgreichem PUT aktualisieren */
+		onTripUpdate?: (t: Trip) => void;
 	}
-	let { trip, createMode = false, onChannelsChange }: Props = $props();
+	let { trip, createMode = false, onChannelsChange, onTripUpdate }: Props = $props();
 
 	let catalog: MetricCatalog = $state({});
 	let templates: Template[] = $state([]);
@@ -342,6 +344,7 @@
 			// Issue #622: Create-Modus — kein PUT, State per Binding gehalten.
 			if (!createMode) {
 				await api.put(`/api/trips/${trip.id}/weather-config`, payload);
+				onTripUpdate?.({ ...trip, display_config: payload });
 			}
 			saveSuccess = true;
 			// Conflict 4 resolved: BEIDE Felder im snapshot-Aufruf.

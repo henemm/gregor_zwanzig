@@ -118,7 +118,7 @@
 						<EditStagesSection bind:stages={localStages} tripId={trip.id} showSave={true} />
 					{/if}
 				{:else if tab.value === 'weather' && trip}
-					<WeatherMetricsTab {trip} />
+					<WeatherMetricsTab {trip} {onTripUpdate} />
 				{:else if tab.value === 'alerts' && trip}
 					<AlertsTab {trip} />
 				{:else if tab.value === 'briefings' && trip}
