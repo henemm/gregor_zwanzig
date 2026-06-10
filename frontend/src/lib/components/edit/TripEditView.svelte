@@ -68,17 +68,12 @@
 			saveError = null;
 			saving = true;
 			try {
-				const updated: Trip = {
-					...trip,
+				await api.put(`/api/trips/${trip.id}`, {
 					name: tripName,
 					stages: stages,
-					// Issue #345 / AC-2: display_config unverändert aus dem geladenen trip
-					// durchreichen (via `...trip` bereits enthalten) — KEIN Überschreiben
-					// der im Wetter-Tab gesetzten Buckets/Horizonte.
 					report_config: reportConfig,
 					alert_rules: alertRules,
-				};
-				await api.put(`/api/trips/${trip.id}`, updated);
+				});
 				goto('/trips');
 			} catch (e: unknown) {
 				saveError = (e as { detail?: string })?.detail

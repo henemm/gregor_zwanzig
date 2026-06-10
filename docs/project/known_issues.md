@@ -224,6 +224,62 @@ GitHub Issue #556 manuell geschlossen — kein Code-Fix erforderlich.
 
 ---
 
+## BUG-720-STALE-SPREAD: display_config wird in TripEditView beim Speichern zurückgesetzt
+
+**Status:** RESOLVED (2026-06-10) | **Severity:** Medium | **GitHub Issue:** #720 | **Spec:** `docs/specs/bugfix/bug720_tripeditview_spread_fix.md`
+
+### Symptom
+
+Wenn ein Nutzer auf dem Tab "Metriken-Auswahl" `display_config` speichert (über `WeatherMetricsTab`) und danach die Trip-Bearbeitung öffnet und speichert, wird die zuvor gespeicherte `display_config` stille zurückgesetzt auf den alten Stand vom Seiten-Load. Die Metrik-Auswahl ist nach dem Speichern in TripEditView wieder falsch.
+
+### Root Cause
+
+`TripEditView.svelte` sendete beim PUT-Request den kompletten `trip`-Spread:
+
+```typescript
+// FALSCH — sendet veraltete trip.display_config
+const updated: Trip = { ...trip, name, stages, report_config, alert_rules };
+await api.put(`/api/trips/${trip.id}`, updated);
+```
+
+`trip` ist der in-Memory-State beim initialen Seiten-Load. Wenn der Nutzer zwischenzeitlich auf einem anderen Tab (z.B. `WeatherMetricsTab`) `display_config` ändert und speichert, kennt `TripEditView` diese Änderungen nicht — `trip.display_config` bleibt veraltet. Der PUT-Request mit `{ ...trip, display_config: {...veraltet} }` überschreibt die aktuellen DB-Daten mit dem alten Stand.
+
+Das Go-Backend (`internal/handler/trip.go`, `UpdateTripHandler`) merged Pointer-Felder mit Nil-Check: ein gefülltes `display_config`-Objekt wird als neue Wahrheit behandelt und überschreibt aktuelle Konfigurationsdaten. Ein Code-Kommentar in TripEditView (Zeilen 75–77) dokumentierte sogar explizit „display_config KEIN Überschreiben" — der `...trip`-Spread tat genau das Gegenteil.
+
+Ein identisches Anti-Pattern wurde bereits in `TripHeader.svelte` (Issue #707) und `BriefingScheduleTab.svelte` (Issue #707) sowie `WaypointsPanel.svelte` (Issue #717) behoben — TripEditView war der vierte Fundort.
+
+### Fix (Committed 2026-06-10)
+
+```typescript
+// KORREKT — sendet nur die tatsächlich bearbeiteten Felder
+await api.put(`/api/trips/${trip.id}`, {
+    name: tripName,
+    stages: stages,
+    report_config: reportConfig,
+    alert_rules: alertRules,
+});
+goto('/trips');
+```
+
+Das `const updated: Trip`-Intermediate-Object wurde entfernt. Der minimale Body enthält nur die 4 tatsächlich von TripEditView bearbeiteten Felder. Das Go-Backend (korrekt implementiert) merged nur die gesendeten Felder; alle übrigen Felder (`display_config`, `activity`, `region`, `aggregation`, `weather_config`) bleiben unverändert.
+
+**Dateien geändert:**
+- `frontend/src/lib/components/edit/TripEditView.svelte` (makeSaveHandler, Zeile 71–81)
+
+### Lessons Learned
+
+1. **Partial Updates:** Nur das tatsächlich geänderte Feld im PUT-Body senden, nicht den kompletten Spread — verhindert stale-data-Überschreibung
+2. **Multi-Tab-State:** In einer Komponente ist der lokale `trip`-State unreliable, wenn ein anderer Tab dieselben Felder ändern kann. Minimaler Request-Body verhindert Konflikte.
+3. **Anti-Pattern-Recurring:** Dieses Bug-Muster trat 4× auf (#707, #717, #720, implizit). Ein Guard-Test gegen `{ ...trip,` in API-Calls wäre präventiv hilf­reich gewesen.
+
+### Testing
+
+- **AC-1:** Source-Code-Compliance: `{ ...trip,` nicht in `api.put()`-Aufrufen in TripEditView vorhanden (doc-compliance-test)
+- **AC-2:** Source-Code-Compliance: minimaler Body mit exakt 4 Feldern vorhanden (doc-compliance-test)
+- **AC-3:** Integrations-Nachweis: Trip mit `display_config` via HTTP PUT ohne `display_config` sendet → Backend antwortet mit unverändertem `display_config`
+
+---
+
 ## BUG-707-STALE-SPREAD: Trip-Datum wird bei Name-/Config-Speichern überschrieben
 
 **Status:** RESOLVED (2026-06-10) | **Severity:** Medium | **GitHub Issue:** #707 | **Spec:** `docs/specs/bugfix/bug707_trip_datum_overwrite.md`
