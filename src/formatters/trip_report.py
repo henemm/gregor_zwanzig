@@ -384,6 +384,11 @@ class TripReportFormatter:
                 metric_def = get_metric(mc.metric_id)
             except KeyError:
                 continue
+            # Issue #710/#715 PO-Regel: nicht-wählbare Metriken (selectable=False,
+            # z.B. confidence) werden beim Rendering still ignoriert — auch bei
+            # Bestands-display_config mit enabled=True (AC-4).
+            if not metric_def.selectable:
+                continue
             row[metric_def.col_key] = getattr(dp, metric_def.dp_field, None)
         if merge_wind_dir and "wind" in row:
             row["_wind_dir_deg"] = getattr(dp, "wind_direction_deg", None)

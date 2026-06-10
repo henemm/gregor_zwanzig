@@ -20,7 +20,7 @@
 		snowfall_limit: '2400', precip_type: '—',
 		cloud_total: '80', cloud_low: '30', cloud_mid: '45', cloud_high: '70',
 		visibility: 'gut', sunshine: '35', uv_index: '3', pressure: '1018',
-		freezing_level: '2400', snow_depth: '0', fresh_snow: '0', confidence: '85',
+		freezing_level: '2400', snow_depth: '0', fresh_snow: '0',
 	};
 	const SAMPLE_HOURS: Record<string, [string, string, string]> = {
 		temperature: ['8,2', '11,0', '9,9'],

@@ -22,7 +22,7 @@
 
 	const tgBudget = CHANNEL_COL_BUDGET.telegram;
 
-	// Sample data 1:1 from JSX (WM2_S)
+	// Sample data 1:1 from JSX (WM2_S) — Issue #711: ind-Werte spiegeln fmt_val()-Schwellen
 	const WM2_S: Record<string, { raw: string[]; ind?: string[] }> = {
 		temperature:     { raw: ['6,5', '6,8', '5,5'] },
 		wind_chill:      { raw: ['5,2', '4,7', '2,6'] },
@@ -31,7 +31,9 @@
 		precipitation:   { raw: ['1,1', '3,3', '1,8'] },
 		rain_probability:{ raw: ['100', '100', '98'],  ind: ['sehr w.','sehr w.','sehr w.'] },
 		thunder:         { raw: ['–',   '–',   '–'],   ind: ['nein','nein','nein'] },
-		cloud_total:     { raw: ['90',  '85',  '80'],  ind: ['bed.','bed.','bed.'] },
+		// cloud_total: ≤90 → 🌥️ (☀️≤10/🌤️≤30/⛅≤70/🌥️≤90/☁️>90)
+		cloud_total:     { raw: ['90',  '85',  '80'],  ind: ['🌥️','🌥️','🌥️'] },
+		// visibility: echtes Einfach-Rendering ist Text (good/fair/poor) — kein Emoji
 		visibility:      { raw: ['25',  '12',  '22'],  ind: ['gut','mäßig','gut'] },
 		uv_index:        { raw: ['0,2', '0,4', '0,9'] },
 		freezing_level:  { raw: ['2880','2890','2930'] },
@@ -39,16 +41,20 @@
 		dewpoint:        { raw: ['4',   '5',   '3'] },
 		wind_direction:  { raw: ['N',   'N',   'NO'] },
 		pressure:        { raw: ['1012','1010','1011'] },
-		sunshine:        { raw: ['0',   '0',   '5'] },
+		// sunshine: bei 0–5 Sonnenstunden + ~90% Bewölkung → bedecktes Emoji
+		sunshine:        { raw: ['0',   '0',   '5'],   ind: ['☁️','☁️','🌥️'] },
 		fresh_snow:      { raw: ['–',   '–',   '–'] },
 		snow_depth:      { raw: ['–',   '–',   '–'] },
 		snowfall_limit:  { raw: ['–',   '–',   '–'] },
-		cloud_low:       { raw: ['60',  '40',  '30'] },
-		cloud_mid:       { raw: ['20',  '15',  '10'] },
-		cloud_high:      { raw: ['5',   '5',   '5'] },
-		cape:            { raw: ['40',  '120', '80'],  ind: ['nied.','nied.','nied.'] },
+		// cloud_low: ☀️≤10/🌤️≤30/⛅≤70/🌥️≤90/☁️>90 → 60→⛅, 40→⛅, 30→🌤️
+		cloud_low:       { raw: ['60',  '40',  '30'],  ind: ['⛅','⛅','🌤️'] },
+		// cloud_mid: 20→🌤️, 15→🌤️, 10→☀️
+		cloud_mid:       { raw: ['20',  '15',  '10'],  ind: ['🌤️','🌤️','☀️'] },
+		// cloud_high: 5→☀️
+		cloud_high:      { raw: ['5',   '5',   '5'],   ind: ['☀️','☀️','☀️'] },
+		// cape: raw [40,120,80] alle ≤300 → 🟢 (grüne Ampel)
+		cape:            { raw: ['40',  '120', '80'],  ind: ['🟢','🟢','🟢'] },
 		precip_type:     { raw: ['Regen','Regen','Regen'] },
-		confidence:      { raw: ['82',  '78',  '74'] },
 	};
 	const SAMPLE_HOURS = ['08', '09', '10'];
 
@@ -130,12 +136,15 @@
 			const t = tok(id);
 			if (t) tokens.push(t);
 		}
-		return `KHW403: ${[...tokens, 'Z:WATCH'].join(' ')}`;
+		return `BSPTOUR: ${[...tokens, 'Z:WATCH'].join(' ')}`;
 	})());
 </script>
 
 <div class="mail-preview" data-testid="wm2-mail-preview">
-	<Eyebrow style="margin-bottom:8px">So kommt es an</Eyebrow>
+	<div class="preview-eyebrow-row">
+		<Eyebrow style="margin-bottom:8px">So kommt es an</Eyebrow>
+		<span class="sample-badge" data-testid="wm2-sample-badge">Beispieldaten</span>
+	</div>
 
 	<!-- Channel Tabs -->
 	<div class="ch-tabs">
@@ -184,12 +193,12 @@
 			<div class="email-frame" data-testid="wm2-email-table">
 				<div class="email-chrome">
 					<span class="mono chrome-l">✉ ABEND-BRIEFING</span>
-					<span class="mono chrome-r">KHW 403 · Segment 1</span>
+					<span class="mono chrome-r">Beispiel-Tour · Etappe 1</span>
 				</div>
 				<div class="email-body">
 					<div class="mono email-eyebrow">◷ Wetter-Briefing</div>
-					<div class="email-title">KHW 403</div>
-					<div class="email-sub">Etappe 4: Hochweißsteinhaus → Wolayersee · 08–10 h</div>
+					<div class="email-title">Beispiel-Tour</div>
+					<div class="email-sub">Beispiel-Etappe · 08–10 h</div>
 					<div class="table-scroll">
 						<table class="email-table mono tnum">
 							<thead>
@@ -239,7 +248,7 @@
 							<span class="tg-sender">Gregor Zwanzig</span>
 							<span class="tg-tag mono">Telegram</span>
 						</div>
-						<div class="tg-title mono">KHW 403 · Seg. 1 · 08–10 h</div>
+						<div class="tg-title mono">Beispiel-Tour · Seg. 1 · 08–10 h</div>
 						<div class="tg-table mono tnum">
 							<div class="tg-head">{tgHeadLine}</div>
 							{#each tgDataLines as line}
@@ -291,6 +300,22 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0;
+	}
+	.preview-eyebrow-row {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		margin-bottom: 8px;
+	}
+	.sample-badge {
+		font-size: 10px;
+		font-weight: 600;
+		padding: 2px 7px;
+		border-radius: 999px;
+		background: rgba(192, 138, 26, 0.14);
+		color: #8a6210;
+		letter-spacing: 0.03em;
+		white-space: nowrap;
 	}
 	.ch-tabs {
 		display: flex;

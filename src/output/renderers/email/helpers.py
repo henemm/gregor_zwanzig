@@ -103,6 +103,11 @@ def dp_to_row(dp: ForecastDataPoint, dc: UnifiedWeatherDisplayConfig,
             metric_def = get_metric(mc.metric_id)
         except KeyError:
             continue
+        # Issue #710/#715 PO-Regel: nicht-wählbare Metriken (selectable=False,
+        # z.B. confidence) werden beim Rendering still ignoriert — auch bei
+        # Bestands-display_config mit enabled=True (AC-4).
+        if not metric_def.selectable:
+            continue
         row[metric_def.col_key] = getattr(dp, metric_def.dp_field, None)
     if merge_wind_dir and "wind" in row:
         row["_wind_dir_deg"] = getattr(dp, "wind_direction_deg", None)
@@ -149,6 +154,10 @@ def aggregate_night_block(dps: list[ForecastDataPoint],
         try:
             metric_def = get_metric(mc.metric_id)
         except KeyError:
+            continue
+        # Issue #710/#715 PO-Regel: nicht-wählbare Metriken (selectable=False)
+        # werden beim Rendering still ignoriert (AC-4).
+        if not metric_def.selectable:
             continue
         values = [
             v for dp in dps
@@ -235,6 +244,7 @@ def visible_cols(rows_or_metrics: list[dict], horizon=_HORIZON_UNSET):
     # Neuer Pfad erkennt sich daran, dass das horizon-Keyword explizit
     # uebergeben wurde (auch bei horizon=None).
     if horizon is not _HORIZON_UNSET:
+        from app.metric_catalog import _METRICS_BY_ID
         out: list[str] = []
         for m in rows_or_metrics:
             if not m.get("enabled", True):
@@ -248,6 +258,11 @@ def visible_cols(rows_or_metrics: list[dict], horizon=_HORIZON_UNSET):
                     continue
             mid = m.get("metric_id")
             if mid:
+                # Issue #710/#715 PO-Regel: nicht-wählbare Metriken (selectable=False)
+                # werden auch im neuen Pfad still ignoriert (AC-4).
+                mdef = _METRICS_BY_ID.get(mid)
+                if mdef is not None and not mdef.selectable:
+                    continue
                 out.append(mid)
         return out
 

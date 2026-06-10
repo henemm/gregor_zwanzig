@@ -211,7 +211,7 @@ export const METRIC_PRIORITY: Record<string, number> = {
 	fresh_snow: 55, visibility: 55, freezing_level: 50, uv_index: 45,
 	wind_direction: 40, snow_depth: 35, precip_type: 35, snowfall_limit: 35,
 	cloud_low: 30, humidity: 25, sunshine: 25, dewpoint: 20,
-	pressure: 18, cape: 15, cloud_mid: 12, cloud_high: 10, confidence: 8,
+	pressure: 18, cape: 15, cloud_mid: 12, cloud_high: 10,
 };
 
 // Anzahl Metriken, die autoAssign als primary markiert (= Signal-Budget,

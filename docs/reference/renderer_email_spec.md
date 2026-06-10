@@ -49,17 +49,17 @@ Note: "Gregor Zwanzig" appears as the sender name and does not need to be repeat
   - Time (with **leading zeros**, e.g. `05:00`, `14:00`, `19:00`)
   - Point (name or ID)
   - T (°C), W (km/h), G (km/h), R (mm), PR (%), TH (L/M/H), Symbol
-  - **Sicherheit** (%, optional, Issue #121) — am Ende der Spalten-Reihenfolge, nur wenn `confidence` als Metric aktiviert ist. Quelle: `dp.confidence_pct` via MetricCatalog.
-- Example:
+  - **(ENTFERNT ab Issue #715)** Sicherheit (Spalte nicht mehr wählbar) — Vorhersage-Verlässlichkeit ist keine pro-Etappe wählbare Metrik mehr. Die Verlässlichkeit wird nur noch als Klartext-Hinweis (Abs. 4a) und SMS-Symbol (C+/C~/C?) dargestellt.
+- Example (nach Issue #715 ohne Sicherheit-Spalte):
 
-  | Time  | Point | T | W | G | R | PR | TH | Symbol     | Sicherheit |
-  |-------|-------|---|---|---|---|----|----|------------|------------|
-  | 14:00 | Monte |25 |22 |35 | 0 | 20 | M  | lightrain  | 82         |
-  | 16:00 | Pass  |24 |28 |48 | 0 | 20 | M  | cloudy     | 78         |
+  | Time  | Point | T | W | G | R | PR | TH | Symbol     |
+  |-------|-------|---|---|---|---|----|----|------------|
+  | 14:00 | Monte |25 |22 |35 | 0 | 20 | M  | lightrain  |
+  | 16:00 | Pass  |24 |28 |48 | 0 | 20 | M  | cloudy     |
 
-#### 4a) Klartext-Hinweis bei niedriger Konfidenz (Issue #121)
+#### 4a) Klartext-Hinweis bei niedriger Konfidenz (Issue #121, ab Issue #715 einziger Confidence-Output in Tabelle)
 
-Im E-Mail-Body wird **zusätzlich** ein Klartext-Hinweis ausgegeben, wenn an mindestens einer Stunde in T+0..72h `confidence_pct < 60` liegt. Andernfalls erscheint **kein** Hinweis (Visual-Noise-Vermeidung).
+Im E-Mail-Body wird ein Klartext-Hinweis ausgegeben, wenn an mindestens einer Stunde in T+0..72h `confidence_pct < 60` liegt. Dies ist der **einzige visuelle Confidence-Hinweis in der E-Mail-Tabelle** (Spalte wurde mit Issue #715 entfernt; Verlässlichkeit erscheint nur noch als Textblock und SMS-Token). Andernfalls erscheint **kein** Hinweis (Visual-Noise-Vermeidung).
 
 - Format: `"Ab {Wochentag} nimmt die Unsicherheit zu (Temperatur-Spreizung {N} °C)."`
 - Wochentag: erster betroffener Tag in T+0..72h (Deutsch: Montag–Sonntag).

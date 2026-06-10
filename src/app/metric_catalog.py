@@ -48,6 +48,11 @@ class MetricDefinition:
     # Erlaubte Werte: "raw" | "scale" | "simplified" | "symbol"
     format_modes: tuple[str, ...] = ("raw",)
     default_format_mode: str = "raw"
+    # Issue #710/#715: selectable=False excludes a metric from the user-visible
+    # catalog (get_all_metrics(), /api/metrics) while keeping it in _METRICS for
+    # internal computation/aggregation (e.g. confidence for forecast hints).
+    # PO-Regel (dauerhaft): confidence ist KEINE waehlbare Wetter-Metrik.
+    selectable: bool = True
 
     @property
     def has_friendly_format(self) -> bool:
@@ -168,6 +173,10 @@ _METRICS: list[MetricDefinition] = [
         risk_thresholds={"medium": 80},
     ),
     # === FORECAST CONFIDENCE (Issue #121) ===
+    # Issue #710/#715 PO-Regel (dauerhaft): confidence ist KEINE waehlbare
+    # Wetter-Metrik. selectable=False schliesst sie aus dem user-sichtbaren
+    # Katalog aus. Die MetricDefinition bleibt fuer interne Berechnung/
+    # Aggregation/Vorhersage-Hinweis (build_confidence_hint, SMS-Symbol) erhalten.
     MetricDefinition(
         id="confidence", label_de="Sicherheit", unit="%",
         dp_field="confidence_pct", category="atmosphere",
@@ -175,10 +184,8 @@ _METRICS: list[MetricDefinition] = [
         compact_label="Conf", col_key="confidence", col_label="Sicherheit",
         providers={"openmeteo": True, "geosphere": False},
         summary_fields={"min": "confidence_pct_min"},
-        # Issue #121: default_enabled=False — users opt in via dc.metrics
-        # or WeatherTemplate. Mirrors pop/rain_probability behaviour and
-        # preserves bit-identical goldens (output_channel_renderers §A7).
         default_enabled=False,
+        selectable=False,
     ),
     MetricDefinition(
         id="thunder", label_de="Gewitter", unit="",
@@ -377,8 +384,14 @@ def get_metric_by_col_key(col_key: str) -> MetricDefinition:
 
 
 def get_all_metrics() -> list[MetricDefinition]:
-    """Get all metric definitions in display order."""
-    return list(_METRICS)
+    """Get user-selectable metric definitions in display order.
+
+    Excludes metrics with selectable=False (e.g. confidence) which are
+    kept in _METRICS for internal computation but must not appear in the
+    user-visible catalog (/api/metrics) or any selection UI.
+    Use _METRICS directly when internal iteration over all metrics is needed.
+    """
+    return [m for m in _METRICS if m.selectable]
 
 
 def get_metrics_by_category(category: str) -> list[MetricDefinition]:

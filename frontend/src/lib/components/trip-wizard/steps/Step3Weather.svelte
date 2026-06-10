@@ -113,13 +113,15 @@
 		friendlyMap = friendly;
 
 		// wizard.weatherMetrics aus Katalog befüllen, wenn noch leer
+		// Defense-in-Depth (#715 AC-5): respektiert default_enabled des Backends,
+		// damit Metriken mit default_enabled=false nicht fälschlich aktiviert werden.
 		if (wizard.weatherMetrics.length === 0) {
 			const all: WeatherConfigMetric[] = [];
 			for (const catKey of CATEGORY_ORDER) {
 				for (const m of catalog[catKey] ?? []) {
 					all.push({
 						metric_id: m.id,
-						enabled: true,
+						enabled: m.default_enabled,
 						use_friendly_format: true
 					});
 				}

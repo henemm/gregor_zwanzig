@@ -371,6 +371,18 @@ Folge-Arbeit (Reihenfolge laut Claude Design): Surface-Stack-Migration (app.css-
 
 Die Callmebot-Infrastruktur existiert weiterhin auf Server-Ebene (`/home/hem/henemm-infra/.env`, `notify-signal.sh`) und wird von anderen Diensten genutzt — aber **nicht** mehr von Gregor Zwanzig als Briefing-Kanal. Eine etwaige Wiedereinführung müsste neu spezifiziert werden.
 
+## Confidence (Vorhersage-Verlässlichkeit) — NICHT wählbar als Metrik (2026-06-10, Issue #710)
+
+**Confidence (`confidence_pct`, Vorhersage-Verlässlichkeit aus Open-Meteo Ensemble API) ist KEINE pro-Etappe wählbare Wetter-Metrik.** Sie ist eine Meta-Aussage über die mehrtägige Ensemble-Divergenz (NICHT eine lokale Wettergröße wie Temperatur/Wind) und darf ausschließlich als:
+
+1. **Vorhersage-Verlässlichkeits-Hinweis** (E-Mail-Textblock: "Ab Mittwoch nimmt die Unsicherheit zu...")
+2. **SMS-Token** (C+/C~/C? für Sicherheit-Bands)
+3. **Interne Aggregation/Scoring** (Berechnungen, Persistenz)
+
+…erscheinen — **NIEMALS** wieder im Trip-Editor, Wizard Step 3, Metrik-Auswahl oder als per-Etappe-Spalte.
+
+**Implementierung (seit 2026-06-10):** `MetricDefinition.selectable=false` für `confidence`; GET `/api/metrics` filtert auf `selectable=true`. **Backward Compatibility:** Alte Trips mit aktiviertem `confidence` in `display_config` laden still, aber die Metrik wird in Render-Pfaden ignoriert (keine Spalte, keine Vorschau-Werte). **PO-Entscheidung, Final** — diese Regel verhindert Regress wie Issue #710 (confidence re-aktiviert nach Bug #424-Fix) und Issue #473 (unvollständiger Entfernung).
+
 ## Messaging
 
 Diese Instanz heißt `gregor`. Siehe `~/.claude/CLAUDE.md` → "Inter-Instance Messaging" für Details.

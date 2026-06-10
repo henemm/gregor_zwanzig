@@ -1,7 +1,7 @@
 
 # API Contract — Gregor Zwanzig
 
-**Updated:** 2026-06-10 (Bug #716 — Test-Briefing: stiller Versagensfall weg. POST /api/trips/{id}/send gibt jetzt HTTP 422 + detail-Feld zurück wenn keine Etappendaten für Zieldatum vorhanden (statt HTTP 200). Frontend zeigt konkrete Fehlermeldung im Toast; Issue #707 — Trip-Datum-Overwrite-Bug: PUT `/api/trips/{id}` mit minimalem Body (nur geänderte Felder) statt kompletter `trip`-Spread — verhindert stale-data-Überschreibung von Etappen; Issue #690 — Eigene Wetter-Metriken-Profile: eindeutiger Name (HTTP 409 name_exists, 400 name_required), Profil sofort aktiv + persistent, "Eigene"-Markierung in Preset-Leiste, trip-übergreifend pro Nutzer); 2026-06-09 (Issue #674 — Fahrradtour als Aktivitätstyp: 3 neue ActivityType-Varianten (fahrrad_15/20/25 km/h) mit korrekten Naismith-Raten (600/1000 Hm/h); #680 — Compare-Editor Slice 3 Fidelity: display_config.active_metrics — ausgewählte Metriken pro Vergleich; #675 — Etappen-Startzeiten editierbar; #671 — Bot-Menü automatisch beim Service-Start; #638 — Alerts-Tab Karten-Modell, Severity-Falle, pro-Alert Kanäle; #664 — Metriken-Überblick-Pille; #621 — E-Mail-Elemente abschaltbar); 2026-06-08 (Issues #672/#671 — Telegram E2E-Pipeline-Tests + Bot-Menü-Vertrag; #642 — User-Anzeigename display_name; #655 — Telegram Hybrid-Navigation: callback_query + editMessageText); 2026-06-07 (Issues #627/#631 — Compare-Preset Sofortversand + Wochen-Rhythmus-Erhalt)
+**Updated:** 2026-06-10 (Issue #715 — Wettermetriken-Darstellung: GET /api/metrics filtert auf `selectable=true` — `confidence` (Vorhersage-Verlässlichkeit/Ensemble) ist KEINE pro-Etappe wählbare Metrik mehr, nur noch Vorhersage-Hinweis + SMS-Symbol; Vorschau-Emojis in WeatherV2MailPreview + Step3Weather angepasst; Beispieldaten eindeutig gekennzeichnet; Bug #716 — Test-Briefing: stiller Versagensfall weg. POST /api/trips/{id}/send gibt jetzt HTTP 422 + detail-Feld zurück wenn keine Etappendaten für Zieldatum vorhanden (statt HTTP 200). Frontend zeigt konkrete Fehlermeldung im Toast; Issue #707 — Trip-Datum-Overwrite-Bug: PUT `/api/trips/{id}` mit minimalem Body (nur geänderte Felder) statt kompletter `trip`-Spread — verhindert stale-data-Überschreibung von Etappen; Issue #690 — Eigene Wetter-Metriken-Profile: eindeutiger Name (HTTP 409 name_exists, 400 name_required), Profil sofort aktiv + persistent, "Eigene"-Markierung in Preset-Leiste, trip-übergreifend pro Nutzer); 2026-06-09 (Issue #674 — Fahrradtour als Aktivitätstyp: 3 neue ActivityType-Varianten (fahrrad_15/20/25 km/h) mit korrekten Naismith-Raten (600/1000 Hm/h); #680 — Compare-Editor Slice 3 Fidelity: display_config.active_metrics — ausgewählte Metriken pro Vergleich; #675 — Etappen-Startzeiten editierbar; #671 — Bot-Menü automatisch beim Service-Start; #638 — Alerts-Tab Karten-Modell, Severity-Falle, pro-Alert Kanäle; #664 — Metriken-Überblick-Pille; #621 — E-Mail-Elemente abschaltbar); 2026-06-08 (Issues #672/#671 — Telegram E2E-Pipeline-Tests + Bot-Menü-Vertrag; #642 — User-Anzeigename display_name; #655 — Telegram Hybrid-Navigation: callback_query + editMessageText); 2026-06-07 (Issues #627/#631 — Compare-Preset Sofortversand + Wochen-Rhythmus-Erhalt)
 
 ## 0) Konventionen
 - Zeit: ISO-8601 UTC (`Z`)
@@ -974,12 +974,13 @@ Returns catalog of all available weather metrics with format mode options and de
 
 | Field | Type | Description |
 |-------|------|-------------|
-| metrics[] | array | List of available metrics |
+| metrics[] | array | List of available metrics (only selectable ones — meta-metrics like `confidence` are excluded) |
 | metrics[].id | string | Metric identifier (e.g., `wind_direction`, `cloud_total`) |
 | metrics[].name | string | Human-readable metric name |
 | metrics[].unit | string | Unit of measurement |
 | metrics[].format_modes | string[] | Supported format modes for this metric (`raw`, `scale`, `simplified`, `symbol`) |
 | metrics[].default_format_mode | string | Recommended default format mode (must be in `format_modes`) |
+| metrics[].selectable | bool | Whether this metric appears in the user-facing selector (Wizard/Editor). Backend internal metric (`confidence`) has `selectable=false` (Issue #710) — these are never returned by `/api/metrics` but used internally for aggregation/forecast-hints |
 
 **Format Mode Reference:**
 
@@ -1001,6 +1002,7 @@ Returns catalog of all available weather metrics with format mode options and de
 - Frontend uses `format_modes` to filter dropdown options in Wizard Step 3 and WeatherConfigDialog
 - `MetricConfig.format_mode` in persisted configs (e.g., `trips.json`, `locations.json`) refers to one of the values in the corresponding metric's `format_modes` array
 - Legacy code may use `MetricConfig.use_friendly_format` (deprecated boolean) — loader automatically maps to `format_mode` for backward compatibility
+- **Confidence (`confidence`) is NOT a selectable per-stage weather metric** (Issue #710): Forecast reliability is a meta-attribute (Ensemble API, multi-day validity) and appears only as forecast-reliability hints in email/SMS output (e.g., "From Wednesday, forecast confidence is lower") and as SMS icon indicators. The metric definition exists internally for aggregation/scoring but is marked `selectable=false` and filtered from `/api/metrics` — **never appears in Trip Editor/Wizard/Metric Selector UI, even for legacy trips with saved `confidence` metric configs** (configs load silently, metric ignored in render paths). This rule (since 2026-06-10) prevents the metric from re-appearing across future versions.
 
 ---
 
