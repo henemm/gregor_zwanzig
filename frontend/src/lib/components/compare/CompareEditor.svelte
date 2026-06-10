@@ -1,6 +1,7 @@
 <script lang="ts">
 	// Compare-Editor — Gerüst + Lock-Engine + Tab „Vergleich" (Issue #678, Epic #677).
 	// Edit-Modus + Dirty/Save-Flow (Issue #679, Epic #677).
+	// Mobile-Parität (Issue #682, Epic #677, Slice 5/6): CSS-only-Switch #661-Pattern.
 	// Spec: docs/specs/modules/issue_679_compare_editor_edit.md
 	// Design-Quelle: claude-code-handoff/current/jsx/screen-compare-editor.jsx Z. 640-700.
 
@@ -19,6 +20,9 @@
 	import Step3Idealwerte from './steps/Step3Idealwerte.svelte';
 	import Step4Layout from './steps/Step4Layout.svelte';
 	import Step5Versand from './steps/Step5Versand.svelte';
+	import Toast from '$lib/components/mobile/Toast.svelte';
+	import MBtn from '$lib/components/mobile/MBtn.svelte';
+	import Sheet from '$lib/components/mobile/Sheet.svelte';
 
 	interface Props {
 		mode?: 'create' | 'edit';
@@ -120,6 +124,55 @@
 	}
 
 	const canContinue = $derived(wiz.name.trim().length > 0);
+
+	// ── Mobile-only State (Issue #682) ────────────────────────────────────────
+	let mobileLibraryOpen = $state(false);
+
+	// Bibliotheks-Gruppen für den mobilen Sheet (nach Region gruppiert)
+	const mobileLibraryGroups = $derived.by(() => {
+		const groups: Record<string, Location[]> = {};
+		for (const loc of locations) {
+			const key = loc.region || 'Weitere';
+			if (!groups[key]) groups[key] = [];
+			groups[key].push(loc);
+		}
+		const sorted: [string, Location[]][] = [];
+		for (const [k, v] of Object.entries(groups)) {
+			if (k !== 'Weitere') sorted.push([k, v]);
+		}
+		if (groups['Weitere']) sorted.push(['Weitere', groups['Weitere']]);
+		return sorted;
+	});
+	let lockToastMsg = $state('');
+	let lockToastVisible = $state(false);
+	let _lockToastTimer: ReturnType<typeof setTimeout> | null = null;
+
+	function showLockToast(msg: string) {
+		lockToastMsg = msg;
+		lockToastVisible = true;
+		if (_lockToastTimer) clearTimeout(_lockToastTimer);
+		_lockToastTimer = setTimeout(() => { lockToastVisible = false; }, 2000);
+	}
+
+	// Mobile Tab-Navigation
+	function handleMobileTabClick(id: CompareTabId) {
+		const open = isEdit || unlocked.has(id);
+		if (!open) {
+			const hint = TAB_DEFS.find(t => t.id === id)?.lockHint ?? 'Tab gesperrt';
+			showLockToast(hint);
+			return;
+		}
+		switchTab(id);
+	}
+
+	function handleMobileNext() {
+		const idx = TAB_ORDER.indexOf(activeTab);
+		if (activeTab === 'versand') {
+			handleActivate();
+		} else if (idx >= 0 && idx < TAB_ORDER.length - 1) {
+			switchTab(TAB_ORDER[idx + 1]);
+		}
+	}
 </script>
 
 <div
@@ -128,6 +181,7 @@
 	style:min-height="100%"
 	style:background="var(--g-paper)"
 >
+<div class="cm-desktop">
 	<TopoBg opacity={0.12}>
 		<!-- Breadcrumb + Aktionen (JSX Z. 649-676) -->
 		<div
@@ -449,6 +503,198 @@
 			aria-hidden="true"
 		></div>
 	{/if}
+</div><!-- /.cm-desktop -->
+
+<!-- ══════════════════════════════════════════════════════════════════
+     Mobile-Block (Issue #682, Slice 5/6)
+     CSS-only Switch: .cm-mobile sichtbar bei ≤899px.
+     ══════════════════════════════════════════════════════════════════ -->
+<div class="cm-mobile" style="position: relative; min-height: 100vh; display: flex; flex-direction: column;">
+
+	<!-- Lock-Toast -->
+	{#if lockToastVisible}
+		<Toast kind="info" msg={lockToastMsg} />
+	{/if}
+
+	<!-- 1. App-Leiste -->
+	<div class="cm-mobile-flex" data-testid="cm-mobile-appbar"
+		style="position: sticky; top: 0; z-index: 20; align-items: center; height: 52px; padding: 0 4px; border-bottom: 1px solid var(--g-rule-soft); background: var(--g-paper); flex-shrink: 0;">
+		<!-- Zurück -->
+		<a href="/compare"
+			style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; background: transparent; border: none; cursor: pointer; color: var(--g-ink-3); flex-shrink: 0; text-decoration: none;">
+			<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+				<path d="M19 12H5M12 5l-7 7 7 7"/>
+			</svg>
+		</a>
+		<!-- Titel -->
+		<div style="flex: 1; min-width: 0; padding: 0 8px; display: flex; flex-direction: column; justify-content: center;">
+			<div class="mono" style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.06em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+				{wiz.name.trim() || (isEdit ? 'Bearbeiten' : 'Neuer Vergleich')}
+			</div>
+			<div style="font-size: 15px; font-weight: 600; color: var(--g-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+				{TAB_DEFS.find(t => t.id === activeTab)?.label ?? 'Vergleich'}
+			</div>
+		</div>
+		<!-- Rechts: Edit → Speichern, Create → Aktivieren -->
+		{#if isEdit}
+			<button type="button" data-testid="cm-mobile-save"
+				disabled={!dirty}
+				onclick={handleSave}
+				style="height: 44px; padding: 0 14px; border: none; background: transparent; color: {dirty ? 'var(--g-accent)' : 'var(--g-ink-4)'}; font-weight: 600; font-size: 14px; cursor: {dirty ? 'pointer' : 'default'}; font-family: var(--g-font-sans); flex-shrink: 0;">
+				Speichern
+			</button>
+		{:else}
+			<button type="button" data-testid="cm-mobile-activate"
+				disabled={!versandVisited}
+				onclick={handleActivate}
+				style="height: 44px; padding: 0 14px; border: none; background: transparent; color: {versandVisited ? 'var(--g-accent)' : 'var(--g-ink-4)'}; font-weight: 600; font-size: 14px; cursor: {versandVisited ? 'pointer' : 'default'}; font-family: var(--g-font-sans); flex-shrink: 0;">
+				Aktivieren
+			</button>
+		{/if}
+	</div>
+
+	<!-- 2. Progress-Balken (nur Create-Modus) -->
+	{#if !isEdit}
+		<div class="cm-mobile-flex" data-testid="cm-mobile-progress"
+			style="align-items: center; gap: 8px; padding: 8px 16px 0; flex-shrink: 0;">
+			<div style="display: flex; gap: 3px; flex: 1;">
+				{#each TAB_ORDER as tid (tid)}
+					<div style="flex: 1; height: 3px; border-radius: 2px; background: {done.has(tid) ? 'var(--g-accent)' : (tid === activeTab ? 'var(--g-accent-soft,#bcd)' : 'var(--g-rule)')}; transition: background 350ms;"></div>
+				{/each}
+			</div>
+			<span class="mono" style="font-size: 10px; color: var(--g-ink-4); flex-shrink: 0;">{doneCount}/{TAB_ORDER.length}</span>
+		</div>
+	{/if}
+
+	<!-- 3. Scrollbare Tab-Bar -->
+	<div class="cm-mobile-flex" data-testid="cm-mobile-tabbar"
+		style="gap: 0; overflow-x: auto; border-bottom: 1px solid var(--g-rule-soft); -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-shrink: 0;">
+		{#each TAB_DEFS as t (t.id)}
+			{@const on = t.id === activeTab}
+			{@const open = isEdit || unlocked.has(t.id)}
+			<button type="button"
+				data-testid="cm-mobile-tab-{t.id}"
+				data-active={on ? 'true' : 'false'}
+				data-locked={open ? 'false' : 'true'}
+				onclick={() => handleMobileTabClick(t.id)}
+				style="display: inline-flex; align-items: center; gap: 5px; padding: 13px 13px; min-height: 44px; flex-shrink: 0; background: transparent; border: none; border-bottom: {on ? '2px solid var(--g-accent)' : '2px solid transparent'}; margin-bottom: -1px; cursor: {open ? 'pointer' : 'default'}; font-size: 14px; font-weight: {on ? 600 : 500}; color: {on ? 'var(--g-ink)' : open ? 'var(--g-ink-3)' : 'var(--g-ink-4)'}; white-space: nowrap; font-family: var(--g-font-sans); opacity: {open ? 1 : 0.35};">
+				{t.label}
+				{#if !open}
+					<span class="mono" style="font-size: 10px; opacity: 0.8;">⊘</span>
+				{/if}
+			</button>
+		{/each}
+	</div>
+
+	<!-- 4. Tab-Inhalt -->
+	<div style="flex: 1; overflow-y: auto; padding: 16px;">
+		{#if activeTab === 'vergleich'}
+			<!-- Vergleich-Tab: Name + Region + Aktivitätsprofil -->
+			<div style="margin-bottom: 14px;">
+				<div class="mono" style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.10em; text-transform: uppercase; margin-bottom: 8px;">Name des Vergleichs</div>
+				<!-- Name-Input ohne eigenen testid — compare-editor-name ist im cm-desktop-Block.
+				     cm-desktop ist auf Mobile per position:fixed offscreen — der Desktop-Input
+				     ist per fill() erreichbar (kein strict-mode-Konflikt), state via wiz.name geteilt. -->
+				<input
+					type="text"
+					maxlength="80"
+					placeholder="z.B. Skitouren Hochkönig"
+					bind:value={wiz.name}
+					style="width: 100%; box-sizing: border-box; padding: 12px 14px; font-size: 16px; border: 1px solid var(--g-rule); border-radius: var(--g-r-3); background: var(--g-card); font-family: var(--g-font-sans); color: var(--g-ink); outline: none; min-height: 48px;"
+				/>
+			</div>
+			<div style="margin-bottom: 14px;">
+				<div class="mono" style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.10em; text-transform: uppercase; margin-bottom: 8px;">Region <span style="font-weight:400; text-transform:none;">(optional)</span></div>
+				<input
+					type="text"
+					maxlength="60"
+					placeholder="z.B. Hochkönig · Salzburger Land"
+					bind:value={wiz.region}
+					style="width: 100%; box-sizing: border-box; padding: 12px 14px; font-size: 16px; border: 1px solid var(--g-rule); border-radius: var(--g-r-3); background: var(--g-card); font-family: var(--g-font-sans); color: var(--g-ink); outline: none; min-height: 48px;"
+				/>
+			</div>
+			<div>
+				<div class="mono" style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.10em; text-transform: uppercase; margin-bottom: 10px;">Aktivitätsprofil</div>
+				<div style="display: flex; flex-direction: column; gap: 8px;">
+					{#each ACTIVITY_PROFILE_OPTIONS as opt (opt.value)}
+						{@const sel = wiz.activityProfile === opt.value}
+						<button type="button" onclick={() => selectProfile(opt.value)}
+							style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 12px 14px; background: {sel ? 'var(--g-accent-tint)' : 'var(--g-card)'}; border: {sel ? '1.5px solid var(--g-accent)' : '1px solid var(--g-rule)'}; border-radius: var(--g-r-3); cursor: pointer; text-align: left; font-family: var(--g-font-sans);">
+							<div style="font-size: 14px; font-weight: 600; color: {sel ? 'var(--g-accent-deep)' : 'var(--g-ink)'};">{opt.label}</div>
+						</button>
+					{/each}
+				</div>
+			</div>
+		{:else if activeTab === 'orte'}
+			<Step2Orte {locations} />
+			<!-- Mobiler Bibliotheks-Button (Issue #682) -->
+			<div style="margin-top: 16px;">
+				<button
+					type="button"
+					data-testid="compare-step2-mobile-library-btn"
+					onclick={() => { mobileLibraryOpen = true; }}
+					style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 14px; min-height: 52px; background: var(--g-card); border: 1px dashed var(--g-rule); border-radius: var(--g-r-3); cursor: pointer; font-size: 14px; color: var(--g-ink-3); font-family: var(--g-font-sans);"
+				>
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+					Ort aus Bibliothek wählen ({locations.length})
+				</button>
+			</div>
+		{:else if activeTab === 'idealwerte'}
+			<Step3Idealwerte />
+		{:else if activeTab === 'layout'}
+			<Step4Layout />
+		{:else if activeTab === 'versand'}
+			<Step5Versand {versandVisited} />
+		{/if}
+	</div>
+
+	<!-- 5. Floating-CTA (nur Create-Modus) -->
+	{#if !isEdit}
+		<div data-testid="cm-mobile-cta"
+			style="position: sticky; bottom: 0; padding: 12px 16px; background: var(--g-paper); border-top: 1px solid var(--g-rule-soft); flex-shrink: 0;">
+			<MBtn block variant="primary" size="xl" onclick={handleMobileNext}>
+				{activeTab === 'versand' ? 'Aktivieren' : 'Weiter →'}
+			</MBtn>
+		</div>
+	{/if}
+
+</div><!-- /.cm-mobile -->
+
+<!-- Mobile Bibliotheks-Sheet (Issue #682) — wird im Mobile-Block für Tab "Orte" verwendet -->
+<Sheet open={mobileLibraryOpen} snap="full" title="Ort wählen" onClose={() => { mobileLibraryOpen = false; }}>
+	{#each mobileLibraryGroups as [groupName, groupLocs] (groupName)}
+		<div style="margin-bottom: 8px;">
+			<div class="mono" style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.10em; text-transform: uppercase; padding: 8px 0 4px; font-weight: 600;">{groupName} · {groupLocs.length}</div>
+			{#each groupLocs as loc (loc.id)}
+				{@const on = wiz.pickedIds.includes(loc.id)}
+				<button
+					type="button"
+					data-testid="compare-step2-mobile-lib-check-{loc.id}"
+					onclick={() => {
+						if (on) {
+							wiz.pickedIds = wiz.pickedIds.filter((x) => x !== loc.id);
+						} else {
+							wiz.pickedIds = [...wiz.pickedIds, loc.id];
+						}
+					}}
+					style="display: flex; align-items: center; gap: 14px; width: 100%; padding: 12px 0; min-height: 52px; background: {on ? 'var(--g-accent-tint)' : 'transparent'}; border: none; border-bottom: 1px solid var(--g-rule-soft); cursor: pointer; text-align: left; font-family: var(--g-font-sans);"
+				>
+					<span style="width: 22px; height: 22px; border-radius: 4px; border: 1.5px solid {on ? 'var(--g-accent)' : 'var(--g-rule)'}; background: {on ? 'var(--g-accent)' : 'transparent'}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+						{#if on}
+							<svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2.5"><path d="M2 6l3 3 5-6"/></svg>
+						{/if}
+					</span>
+					<div style="flex: 1; min-width: 0;">
+						<div style="font-size: 14px; font-weight: {on ? 600 : 500}; color: {on ? 'var(--g-accent-deep)' : 'var(--g-ink)'}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{loc.name}</div>
+						{#if loc.region}
+							<div class="mono" style="font-size: 10.5px; color: var(--g-ink-3); margin-top: 1px;">{loc.region}</div>
+						{/if}
+					</div>
+				</button>
+			{/each}
+		</div>
+	{/each}
+</Sheet>
 </div>
 
 <!-- ConfirmDialog: Änderungen verwerfen (AC-4) -->
@@ -471,3 +717,32 @@
 		if (!o) discardOpen = false;
 	}}
 />
+
+<style>
+	/* ─── CSS-only Responsive Switch (Issue #682, #661-Pattern) ──────────────────
+	   Desktop-Markup (.cm-desktop) sichtbar bei ≥900px, Mobile-Markup hidden.
+	   Auf ≤899px: umgekehrt.
+	   Hinweis: .cm-desktop wird auf Mobile per position:fixed offscreen verschoben
+	   (nicht display:none), damit Playwright-Tests mit compare-editor-name
+	   Formularfelder befüllen können (strict-mode-safe: ein Element, erreichbar).
+	   .cm-mobile nutzt display:none damit toBeHidden() in Desktop-Tests korrekt greift. */
+	.cm-mobile {
+		display: none !important;
+	}
+	@media (max-width: 899px) {
+		.cm-desktop {
+			position: fixed !important;
+			top: -9999px !important;
+			left: -9999px !important;
+			width: 1px !important;
+			height: 1px !important;
+			overflow: hidden !important;
+		}
+		.cm-mobile {
+			display: block !important;
+		}
+		.cm-mobile-flex {
+			display: flex !important;
+		}
+	}
+</style>

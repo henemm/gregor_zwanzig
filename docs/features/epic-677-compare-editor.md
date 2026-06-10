@@ -1,13 +1,14 @@
 # Epic 677: Compare-Editor — Tab-Basierte Oberfläche
 
-**Status:** In Progress (Slice 3/6 Complete — 2026-06-09)  
+**Status:** In Progress (Slice 5/6 Complete — 2026-06-10)  
 **Epic Scope:** Umbau der Orts-Vergleich-Schnittstelle von 5-Schritt-Wizard zu Tab-Editor (analog zu Trip-Editor #616/#622)  
 **Related Specs:**
 - `docs/specs/modules/issue_678_compare_editor_shell.md` (Slice 1 — Gerüst + Lock-Engine + Tab 1)
 - `docs/specs/modules/issue_679_compare_editor_edit.md` (Slice 2 — Edit-Modus + Dirty/Save-Flow)
 - `docs/specs/modules/issue_680_compare_editor_slice3.md` (Slice 3 — Fidelity Tabs „Orte" + „Idealwerte")
+- `docs/specs/modules/issue_682_compare_editor_mobile.md` (Slice 5 — Mobile-Parität ≤899px)
 
-**Child Issues:** #678 ✓, #679 ✓, #680 ✓ (Slices 1–3 complete)
+**Child Issues:** #678 ✓, #679 ✓, #680 ✓, #682 ✓ (Slices 1–3 + Slice 5 complete)
 
 ---
 

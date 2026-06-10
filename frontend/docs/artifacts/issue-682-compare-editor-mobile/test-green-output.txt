@@ -1,0 +1,13 @@
+
+Running 8 tests using 1 worker
+
+  ✓  1 [setup] › e2e/global.setup.ts:20:1 › authenticate and seed test data (177ms)
+  ✓  2 [tests] › e2e/issue-682-compare-editor-mobile.spec.ts:64:2 › Issue #682 — Compare-Editor Mobile-Parität › AC-1: Mobile zeigt App-Leiste + Tab-Bar + Progress; Desktop-Breadcrumb verborgen (518ms)
+  ✓  3 [tests] › e2e/issue-682-compare-editor-mobile.spec.ts:94:2 › Issue #682 — Compare-Editor Mobile-Parität › AC-1b: Desktop (≥900px) unverändert — cm-mobile-appbar nicht sichtbar (323ms)
+  ✓  4 [tests] › e2e/issue-682-compare-editor-mobile.spec.ts:103:2 › Issue #682 — Compare-Editor Mobile-Parität › AC-2: Gesperrter Tab-Tap → Toast sichtbar, aktiver Tab bleibt "Vergleich" (361ms)
+  ✓  5 [tests] › e2e/issue-682-compare-editor-mobile.spec.ts:143:2 › Issue #682 — Compare-Editor Mobile-Parität › AC-3: Bibliotheks-Button öffnet Bottom-Sheet mit Orts-Checkboxen (356ms)
+  ✓  6 [tests] › e2e/issue-682-compare-editor-mobile.spec.ts:176:2 › Issue #682 — Compare-Editor Mobile-Parität › AC-4a: Floating-CTA im Create-Modus sichtbar; cm-mobile-activate in App-Leiste (289ms)
+  ✓  7 [tests] › e2e/issue-682-compare-editor-mobile.spec.ts:190:2 › Issue #682 — Compare-Editor Mobile-Parität › AC-4b: Edit-Modus hat Speichern in App-Leiste (orangé bei Änderung, grau ohne) (376ms)
+  ✓  8 [tests] › e2e/issue-682-compare-editor-mobile.spec.ts:224:2 › Issue #682 — Compare-Editor Mobile-Parität › AC-5: Mandantentrennung — Nutzer-A-Preset nicht bei Nutzer B sichtbar (939ms)
+
+  8 passed (19.9s)
