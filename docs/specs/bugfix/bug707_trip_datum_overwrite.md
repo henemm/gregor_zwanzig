@@ -25,10 +25,10 @@ neu gespeicherten Stage-Daten (z.B. angepasste Etappen-Daten) still und unwieder
 ## Source
 
 - **File:** `frontend/src/lib/components/trip-detail/TripHeader.svelte`
-- **Identifier:** `makeNameSaveHandler` (Zeile 36)
+- **Identifier:** `makeNameSaveHandler` (Zeile 32, fixed in 2026-06-10)
 
 - **File:** `frontend/src/lib/components/trip-detail/BriefingScheduleTab.svelte`
-- **Identifier:** `makeSaveHandler` (Zeile 31)
+- **Identifier:** `makeSaveHandler` (Zeile 26, fixed in 2026-06-10)
 
 ## Estimated Scope
 
