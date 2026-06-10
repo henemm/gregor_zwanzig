@@ -204,6 +204,7 @@ func main() {
 	r.Get("/api/_validator/detector-thresholds", handler.DetectorThresholdsProxyHandler(cfg.PythonCoreURL))
 	r.Get("/api/_validator/metrics-for-channel", handler.MetricsForChannelProxyHandler(cfg.PythonCoreURL))
 	r.Post("/api/_validator/compare-email-preview", handler.CompareEmailPreviewProxyHandler(cfg.PythonCoreURL))
+	r.Post("/api/trips/{id}/send", handler.SendTripReportProxyHandler(cfg.PythonCoreURL))
 	r.Post("/api/trips/{id}/alert-preview", handler.AlertPreviewProxyHandler(cfg.PythonCoreURL))
 	// Issue #140 / #189: Output-Vorschau Email + SMS
 	r.Get("/api/preview/{trip_id}/email", handler.PreviewProxyHandler(cfg.PythonCoreURL, "email"))

@@ -454,6 +454,33 @@ def _send_compare_preset(
     return {"status": "ok", "winner": top_ort or "", "empfaenger_count": len(actual_empfaenger)}
 
 
+@router.post("/trips/{trip_id}/send")
+def send_test_trip_report(trip_id: str, user_id: str = "default", report_type: str = "evening"):
+    """Test-Versand für einen spezifischen Trip. Issue #695."""
+    from app.config import Settings
+    from app.loader import load_all_trips
+    from services.trip_report_scheduler import TripReportSchedulerService
+
+    # AC-5: Trip-Existenz zuerst prüfen — vor SMTP-Check (F002-Fix)
+    all_trips = load_all_trips(user_id=user_id)
+    trip = next((t for t in all_trips if t.id == trip_id), None)
+    if trip is None:
+        raise HTTPException(status_code=404, detail=f"Trip {trip_id} not found")
+
+    # AC-6: SMTP-Check nach Trip-Lookup
+    settings = Settings().with_user_profile(user_id)
+    if not settings.can_send_email():
+        raise HTTPException(status_code=422, detail="SMTP not configured for this user")
+
+    service = TripReportSchedulerService(user_id=user_id)
+    try:
+        service.send_test_report(trip, report_type)
+    except ValueError as e:
+        # F003-Fix: Ungültiger report_type → 422 statt 500
+        raise HTTPException(status_code=422, detail=str(e))
+    return {"status": "ok", "trip_id": trip_id, "report_type": report_type}
+
+
 @router.post("/compare-presets/{preset_id}/send")
 def manual_send_compare_preset(preset_id: str, user_id: str = Query("default")):
     """Einzelversand-Trigger fuer ein Compare-Preset. Issue #627.

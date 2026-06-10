@@ -28,6 +28,9 @@
 	let deleteDialogOpen = $state(false);
 	let isLoading = $state(false);
 	let errorMsg = $state<string | null>(null);
+	let testBriefingLoading = $state(false);
+	let testBriefingStatus = $state<'idle' | 'ok' | 'error'>('idle');
+	let testBriefingTimer: ReturnType<typeof setTimeout> | undefined;
 
 	async function sendStateUpdate(paused?: boolean, archived?: boolean): Promise<void> {
 		const body: Record<string, boolean> = {};
@@ -109,12 +112,19 @@
 	}
 
 	async function handleTestBriefing(): Promise<void> {
+		clearTimeout(testBriefingTimer);
+		testBriefingLoading = true;
+		testBriefingStatus = 'idle';
 		try {
-			await fetch('/api/scheduler/trip-reports?hour=18', { method: 'POST' });
-		} catch (e) {
-			console.error(e);
-			// fail silently
+			const res = await fetch(`/api/trips/${trip.id}/send`, { method: 'POST' });
+			testBriefingStatus = res.ok ? 'ok' : 'error';
+		} catch {
+			testBriefingStatus = 'error';
+		} finally {
+			testBriefingLoading = false;
 		}
+		clearTimeout(testBriefingTimer);
+		testBriefingTimer = setTimeout(() => { testBriefingStatus = 'idle'; }, 4000);
 	}
 </script>
 
@@ -135,7 +145,14 @@
 			<Btn variant="ghost" size="sm" onclick={handleArchiveClick} disabled={isLoading}>
 				{status === 'archived' ? 'Reaktivieren' : 'Archivieren'}
 			</Btn>
-			<Btn variant="accent" size="sm" onclick={handleTestBriefing}>Test-Briefing senden</Btn>
+			<Btn variant="accent" size="sm" onclick={handleTestBriefing} disabled={testBriefingLoading}>
+				{testBriefingLoading ? 'Wird gesendet…' : 'Test-Briefing senden'}
+			</Btn>
+			{#if testBriefingStatus === 'ok'}
+				<span data-testid="test-briefing-success" style="font-size: 12px; color: var(--g-success, #2e7d32);">Test-Briefing gesendet!</span>
+			{:else if testBriefingStatus === 'error'}
+				<span data-testid="test-briefing-error" style="font-size: 12px; color: var(--g-error, #c62828);">Fehler beim Senden</span>
+			{/if}
 		</div>
 	</div>
 	<TripHeader {trip} {now} onStatusChange={handleStatusChange} onTripUpdate={handleTripUpdate} />
