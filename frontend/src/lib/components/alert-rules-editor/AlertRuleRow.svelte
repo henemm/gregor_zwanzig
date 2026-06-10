@@ -17,23 +17,26 @@
 	import { Select } from '$lib/components/ui/select';
 	import {
 		ALERT_METRIC_LABELS,
-		ALERT_SEVERITY_TONE,
-		SEVERITY_LABEL_DE,
 		thunderLevelLabel
 	} from '$lib/utils/alertMetricLabels';
 	import { DELTA_ONLY_METRICS, expandRules, type AlertRuleMode } from './alertRuleDefaults';
 	import ModeCard from './ModeCard.svelte';
+	import { effectiveAlertChannels, toggleAlertChannel } from './alertChannels';
+
+	const CHANNEL_LABEL_DE: Record<string, string> = { email: 'E-Mail', telegram: 'Telegram', sms: 'SMS' };
 
 	let {
 		rule,
 		onSave,
 		onDelete,
-		pairFollower = false
+		pairFollower = false,
+		activeChannels = []
 	}: {
 		rule: AlertRule;
 		onSave: (rules: AlertRule[]) => void;
 		onDelete: () => void;
 		pairFollower?: boolean;
+		activeChannels?: string[];
 	} = $props();
 
 	let editing = $state(false);
@@ -48,6 +51,7 @@
 	let draftDeltaWindow = $state<string>('6h');
 
 	let info = $derived(ALERT_METRIC_LABELS[rule.metric]);
+	let editChannels = $derived(effectiveAlertChannels(draft, activeChannels));
 	let valueText = $derived(
 		rule.metric === 'thunder_level'
 			? thunderLevelLabel(rule.threshold)
@@ -232,14 +236,14 @@
 					/>
 				{/if}
 
-				<Select
-					bind:value={draft.severity}
-					data-testid="alert-rule-severity"
-				>
-					<option value="info">Info</option>
-					<option value="warning">Warnung</option>
-					<option value="critical">Kritisch</option>
-				</Select>
+				{#each activeChannels as ch}
+					<button type="button"
+						data-testid="alert-rule-channel-{ch}"
+						aria-pressed={editChannels.includes(ch)}
+						class="channel-chip" class:chip-active={editChannels.includes(ch)}
+						onclick={() => (draft = toggleAlertChannel(draft, ch, activeChannels))}
+					>{CHANNEL_LABEL_DE[ch] ?? ch}</button>
+				{/each}
 
 				<Checkbox bind:checked={draft.enabled}>Aktiv</Checkbox>
 
@@ -278,9 +282,9 @@
 			<Pill tone="default" data-outlined>
 				{rule.kind === 'delta' ? 'Δ' : 'Abs'}
 			</Pill>
-			<Pill tone={ALERT_SEVERITY_TONE[rule.severity]} data-outlined
-				>{SEVERITY_LABEL_DE[rule.severity]}</Pill
-			>
+			{#each effectiveAlertChannels(rule, activeChannels) as ch}
+				<span class="channel-chip chip-active">{CHANNEL_LABEL_DE[ch] ?? ch}</span>
+			{/each}
 			<Checkbox
 				checked={rule.enabled}
 				onchange={toggleEnabled}
@@ -464,5 +468,26 @@
 		letter-spacing: 0.05em;
 		color: var(--g-accent-deep);
 		font-weight: 600;
+	}
+	.channel-chip {
+		display: inline-flex;
+		align-items: center;
+		padding: 2px 8px;
+		border-radius: 999px;
+		border: 1px solid var(--g-ink-faint);
+		background: var(--g-surface-1, #fff);
+		font-size: var(--g-text-xs, 0.75rem);
+		color: var(--g-ink-muted);
+		cursor: default;
+		user-select: none;
+	}
+	button.channel-chip {
+		cursor: pointer;
+	}
+	.channel-chip.chip-active {
+		background: var(--g-accent-soft, #e8f0fe);
+		border-color: var(--g-accent, #4a7fc1);
+		color: var(--g-accent-deep, #1a4f8a);
+		font-weight: 500;
 	}
 </style>

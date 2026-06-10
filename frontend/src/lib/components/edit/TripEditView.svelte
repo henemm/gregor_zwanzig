@@ -47,6 +47,11 @@
 	const stats = $derived(computeTripStats(trip));
 	const dateRange = $derived(formatDateRange(trip));
 	const reportSchedule = $derived(getReportSchedule(trip));
+	const activeAlertChannels = $derived(
+		(['email', 'telegram', 'sms'] as const).filter(
+			(c) => reportConfig?.[`send_${c}` as 'send_email' | 'send_telegram' | 'send_sms']
+		)
+	);
 
 	// Tab options without inline counts — badges rendered as separate elements
 	const tabOptions = $derived([
@@ -178,7 +183,7 @@
 		{:else if activeTab === 'reports'}
 			<EditReportConfigSection bind:reportConfig mode="edit" />
 		{:else if activeTab === 'alarmregeln'}
-			<AlertRulesEditor bind:rules={alertRules} />
+			<AlertRulesEditor bind:rules={alertRules} activeChannels={activeAlertChannels} />
 		{/if}
 	</div>
 

@@ -14,7 +14,7 @@
 	import { newDefaultRule } from './alertRuleDefaults';
 	import { Btn } from '$lib/components/atoms';
 
-	let { rules = $bindable<AlertRule[]>([]) }: { rules: AlertRule[] } = $props();
+	let { rules = $bindable<AlertRule[]>([]), activeChannels = [] }: { rules: AlertRule[]; activeChannels?: string[] } = $props();
 
 	function addRule() {
 		rules = [...rules, newDefaultRule()];
@@ -57,6 +57,7 @@
 							onSave={(updated) => updateRules(i, updated)}
 							onDelete={() => deleteRule(i)}
 							pairFollower={isPairFollower}
+							{activeChannels}
 						/>
 					</li>
 				{/each}

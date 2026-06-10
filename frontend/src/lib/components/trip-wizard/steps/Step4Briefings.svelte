@@ -48,6 +48,11 @@
 	function doNoopSmsToggle(_checked: boolean): void {
 		// intentional no-op — SMS-Channel ist in der UI gesperrt (Spec §7, AC#5)
 	}
+
+	// Issue #687 — aktive Kanäle aus Wizard-State ableiten (vorbelegen für Alert-Chips).
+	const activeAlertChannels = $derived(
+		(['email', 'telegram', 'sms'] as const).filter((c) => wizard.briefings.channels[c])
+	);
 </script>
 
 <div data-testid="trip-wizard-step4-container" class="space-y-6 py-4">
@@ -116,6 +121,6 @@
 		<Eyebrow class="text-xs uppercase tracking-wide text-[var(--g-ink-muted)]"
 			>Alarmregeln</Eyebrow
 		>
-		<AlertRulesEditor bind:rules={wizard.alertRules} />
+		<AlertRulesEditor bind:rules={wizard.alertRules} activeChannels={activeAlertChannels} />
 	</section>
 </div>

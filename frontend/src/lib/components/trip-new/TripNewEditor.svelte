@@ -85,6 +85,7 @@
 	const ready = $derived(canSave(done));
 	const gpxCount = $derived(stages.filter(s => s.gpx !== null).length);
 	const progressN = $derived(progressCount(done));
+	const activeAlertChannels = $derived((['email', 'telegram', 'sms'] as const).filter((c) => channels[c]));
 
 	// Flash-State für gesperrte Tabs
 	let flashTab = $state<TabId | null>(null);
@@ -716,7 +717,7 @@
 		{:else if activeTab === 'alerts'}
 			<!-- Alerts-Tab: reuse AlertRulesEditor mit bind:rules -->
 			<div style="padding: 32px 40px 60px;">
-				<AlertRulesEditor bind:rules={alertRules} />
+				<AlertRulesEditor bind:rules={alertRules} activeChannels={activeAlertChannels} />
 			</div>
 		{/if}
 		</div><!-- /.tn-desktop -->
@@ -926,7 +927,7 @@
 			{:else if activeTab === 'alerts'}
 				<!-- Mobile Alerts-Tab: Wrapper mit mobilem Padding -->
 				<div style="padding: 16px 16px 60px;">
-					<AlertRulesEditor bind:rules={alertRules} />
+					<AlertRulesEditor bind:rules={alertRules} activeChannels={activeAlertChannels} />
 				</div>
 			{/if}
 
