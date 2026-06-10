@@ -63,11 +63,16 @@ test.describe('Issue #714 — Trip-Editor UI-Kleinigkeiten', () => {
 		 *        Menü über den unteren Karten-Rand hinaus).
 		 * WHEN:  der "…"-Aktionsknopf der letzten Zeile geklickt wird
 		 * THEN:  der unterste Eintrag "Löschen" wird NICHT von der Karte
-		 *        (overflow:hidden) abgeschnitten.
-		 * RED-Grund: das Menü (position:absolute) liegt in <Card overflow:hidden>
-		 *            und wird an der letzten Zeile unten beschnitten.
+		 *        (overflow:hidden) abgeschnitten UND liegt vollständig im Viewport.
+		 *
+		 * Viewport 1440×600: schmal genug, damit selbst bei wenigen Trip-Zeilen
+		 * die letzte Zeile nah am unteren Rand liegt und das ~265px hohe Menü
+		 * ohne Flip-Logik unten aus dem Viewport herausragt (Bug reproduziert).
+		 * Nach Fix (Flip nach oben) muss "Löschen" vollständig im Viewport liegen.
 		 */
-		await page.setViewportSize(DESKTOP);
+		// Viewport bewusst niedrig (600px) statt DESKTOP-Höhe (900px) —
+		// dadurch ragt das Menü der letzten Zeile ohne Flip-Logik unter den Rand.
+		await page.setViewportSize({ width: 1440, height: 600 });
 		await login(page);
 		await page.goto('/trips');
 
@@ -77,7 +82,17 @@ test.describe('Issue #714 — Trip-Editor UI-Kleinigkeiten', () => {
 		const loeschen = page.getByRole('menuitem', { name: 'Löschen' });
 		await expect(loeschen).toBeVisible({ timeout: 8000 });
 
+		// 1) Kein overflow-Ancestor-Clipping (war der ursprüngliche #706-Bug)
 		expect(await isClippedByOverflowAncestor(loeschen)).toBe(false);
+
+		// 2) Viewport-Bounds: "Löschen" muss vollständig im Viewport liegen
+		//    Ohne Flip-Logik: menuPos.top = btnRect.bottom + 6, Menü ~265px hoch
+		//    → Löschen landet bei y_bottom ≈ viewport_bottom + delta → off-screen
+		const vp = page.viewportSize()!;
+		const box = await loeschen.boundingBox();
+		expect(box).not.toBeNull();
+		expect(box!.y).toBeGreaterThanOrEqual(0);
+		expect(box!.y + box!.height).toBeLessThanOrEqual(vp.height);
 	});
 
 	// ─── AC-2 (#713): Default-Zustand zeigt Stift-Icon, kein Eingabefeld ───
