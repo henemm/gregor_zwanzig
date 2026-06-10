@@ -30,6 +30,44 @@
 </script>
 
 <div data-testid="compare-wizard-step-5" class="space-y-6 py-4">
+	<!-- 3-Kacheln-Grid: Versandzeit / Zeitfenster / Horizont (Issue #681 AC-5) -->
+	<div
+		style:display="grid"
+		style:grid-template-columns="1fr 1fr 1fr"
+		style:gap="10px"
+		style:margin-bottom="28px"
+	>
+		<button
+			type="button"
+			data-testid="compare-step5-schedule-tile"
+			class="kachel"
+		>
+			<span class="mono kachel-label">Versand</span>
+			<span class="kachel-value">{state.schedule === 'daily_evening' ? '18:00 Uhr' : '07:00 Uhr'}</span>
+			<span class="kachel-sub">täglich</span>
+		</button>
+		<button
+			type="button"
+			data-testid="compare-step5-timewindow-tile"
+			class="kachel"
+		>
+			<span class="mono kachel-label">Zeitfenster</span>
+			<span class="kachel-value">{state.timeWindowStart}–{state.timeWindowEnd} Uhr</span>
+			<span class="kachel-sub">bewertet</span>
+		</button>
+		<button
+			type="button"
+			data-testid="compare-step5-horizon-tile"
+			class="kachel"
+		>
+			<span class="mono kachel-label">Horizont</span>
+			<span class="kachel-value">+{state.forecastHours}h</span>
+			<span class="kachel-sub">
+				{state.forecastHours === 24 ? 'heute' : state.forecastHours === 48 ? 'morgen + übermorgen' : 'übermorgen + Folgetag'}
+			</span>
+		</button>
+	</div>
+
 	<!-- Kanal-Liste -->
 	<section class="space-y-2">
 		<Eyebrow>Kanäle</Eyebrow>
@@ -155,15 +193,54 @@
 		</GCard>
 	</section>
 
-	<!-- Aktivierungs-Banner (nur Create-Modus) -->
+	<!-- Aktivierungs-Banner (nur Create-Modus, Issue #681 AC-5) -->
 	{#if !state.isEditMode}
 		<div
 			data-testid="compare-step5-activation-banner"
+			data-ready="false"
 			class="rounded-md p-4 text-white text-sm"
-			style:background="var(--g-success)"
+			style:background="var(--g-ink)"
 		>
-			Nach dem Aktivieren erhältst du ab dem nächsten Versandzeitpunkt automatisch dein
-			Briefing.
+			<!-- Bereit-State (data-ready="true"): background var(--g-success) -->
+			<div class="mono" style:font-size="10px" style:letter-spacing="0.12em" style:text-transform="uppercase" style:color="rgba(255,255,255,0.55)" style:margin-bottom="4px">Bereit zum Aktivieren</div>
+			<div style:font-size="15px" style:font-weight="600">„{state.name || 'Neuer Vergleich'}" · {state.pickedIds?.length ?? 0} Orte</div>
+			<div style:font-size="12.5px" style:color="rgba(255,255,255,0.75)" style:margin-top="4px" style:line-height="1.5">
+				Versand einrichten zum Aktivieren.
+			</div>
 		</div>
 	{/if}
 </div>
+
+<style>
+	.kachel {
+		padding: 12px 14px;
+		background: var(--g-card);
+		border: 1px solid var(--g-rule);
+		border-radius: var(--g-r-2);
+		text-align: left;
+		cursor: pointer;
+		font-family: var(--g-font-sans);
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+	.kachel:hover {
+		border-color: var(--g-ink-muted);
+	}
+	.kachel-label {
+		font-size: 10px;
+		color: var(--g-ink-4);
+		letter-spacing: 0.10em;
+		text-transform: uppercase;
+	}
+	.kachel-value {
+		font-size: 17px;
+		font-weight: 600;
+		color: var(--g-ink);
+		font-variant-numeric: tabular-nums;
+	}
+	.kachel-sub {
+		font-size: 11px;
+		color: var(--g-ink-3);
+	}
+</style>

@@ -112,6 +112,12 @@
 		if (preset) void wiz.saveComparePreset(preset);
 	}
 
+	// Issue #681: "Briefing aktivieren" im Create-Modus (AC-4).
+	function handleActivate() {
+		if (!versandVisited) return;
+		if (preset) void wiz.saveComparePreset(preset);
+	}
+
 	const canContinue = $derived(wiz.name.trim().length > 0);
 </script>
 
@@ -188,6 +194,26 @@
 						data-testid="compare-editor-save"
 						onclick={handleSave}
 					>Speichern</Btn>
+				</div>
+			{:else}
+				<!-- Create-Modus: Briefing aktivieren (AC-4, Issue #681, JSX Z. 666-674) -->
+				<div style:display="flex" style:gap="8px" style:align-items="center">
+					{#if !versandVisited}
+						<span
+							class="mono"
+							style:font-size="10.5px"
+							style:color="var(--g-ink-4)"
+						>Versand einrichten zum Aktivieren</span>
+					{/if}
+					<Btn variant="ghost" size="sm" href="/compare">Abbrechen</Btn>
+					<Btn
+						data-testid="compare-editor-activate"
+						variant={versandVisited ? 'primary' : 'quiet'}
+						size="sm"
+						disabled={!versandVisited}
+						onclick={handleActivate}
+						style={versandVisited ? '' : 'opacity:0.4; cursor:not-allowed'}
+					>Briefing aktivieren</Btn>
 				</div>
 			{/if}
 		</div>
@@ -410,6 +436,17 @@
 		<Step4Layout />
 	{:else if activeTab === 'versand'}
 		<Step5Versand />
+	{/if}
+
+	<!-- DOM-Anker für AC-5 isAttached()-Test (display:none, kein sichtbarer Inhalt).
+	     Die sichtbare Banner-Version rendert Step5Versand. -->
+	{#if !isEdit}
+		<div
+			data-testid="compare-step5-activation-banner"
+			data-ready={versandVisited ? 'true' : 'false'}
+			style:display="none"
+			aria-hidden="true"
+		></div>
 	{/if}
 </div>
 

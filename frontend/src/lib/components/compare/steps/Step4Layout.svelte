@@ -16,7 +16,7 @@
 	import { api } from '$lib/api';
 	import { Eyebrow } from '$lib/components/atoms';
 	import { OutputLayoutEditor } from '$lib/components/organisms';
-	import ChannelPreviewBlock from '$lib/components/trip-detail/ChannelPreviewBlock.svelte';
+	import LayoutPreview from '../LayoutPreview.svelte';
 	import {
 		autoAssign,
 		buildWeatherConfigMetrics,
@@ -44,10 +44,11 @@
 
 	const wizard = getContext<CompareWizardState>('compare-wizard-state');
 
-	const CHANNELS: { id: ChannelId; label: string; constraint: string }[] = [
-		{ id: 'email', label: 'Email', constraint: 'Keine Begrenzung — zeigt alles' },
-		{ id: 'telegram', label: 'Telegram', constraint: 'max 7 Spalten' },
-		{ id: 'sms', label: 'SMS', constraint: '≤ 140 Zeichen, Listen-Modus' },
+	// CE_CHANNELS: Kanaldefinitionen mit maxCols (Issue #681).
+	const CE_CHANNELS: { id: ChannelId; label: string; maxCols: number | typeof Infinity; hint: string }[] = [
+		{ id: 'email',    label: 'Email',    maxCols: Infinity, hint: 'alles · Empfehlung + Tabelle + Detail' },
+		{ id: 'telegram', label: 'Telegram', maxCols: 8,        hint: 'max 8 Spalten' },
+		{ id: 'sms',      label: 'SMS',      maxCols: 0,        hint: 'flach · ≤ 140 Zeichen' },
 	];
 
 	let catalog: MetricCatalog = $state({});
@@ -116,8 +117,9 @@
 			const off = allCatalogIds().filter((id) => !active.has(id));
 			return { primary: prim, secondary: sec, off };
 		}
-		// Kein weatherMetrics-Fallback im Compare-Kontext — neue Subscription startet leer.
-		return autoAssign([], catalog);
+		// AC-2: Alle Katalog-Metriken als Standard aktiv — damit ↳ Detail-Pills für
+		// Telegram sichtbar sind (>8 aktive Spalten nötig für pill-8).
+		return autoAssign(allCatalogIds(), catalog);
 	}
 
 	function friendlyMapForChannel(ch: ChannelId): Record<string, boolean> {
@@ -150,7 +152,7 @@
 		const next: Record<ChannelId, Buckets> = { ...channelBuckets };
 		const nextFriendly: Record<ChannelId, Record<string, boolean>> = { ...channelFriendly };
 		const nextHorizons: Record<ChannelId, Record<string, Horizons>> = { ...channelHorizons };
-		for (const c of CHANNELS) {
+		for (const c of CE_CHANNELS) {
 			next[c.id] = bucketsForChannel(c.id);
 			nextFriendly[c.id] = friendlyMapForChannel(c.id);
 			nextHorizons[c.id] = horizonsMapForChannel(c.id);
@@ -185,7 +187,7 @@
 	$effect(() => {
 		if (loading || Object.keys(catalog).length === 0) return;
 		const layouts: ChannelLayouts = {};
-		for (const c of CHANNELS) {
+		for (const c of CE_CHANNELS) {
 			const metrics: WeatherConfigMetric[] = buildWeatherConfigMetrics(
 				channelBuckets[c.id],
 				channelFriendly[c.id],
@@ -196,6 +198,35 @@
 		}
 		wizard.channelLayouts = layouts;
 	});
+
+	// --- Detail-Pill und Hinweis-Text (AC-2, Issue #681) --------------------
+
+	// Aktive Kanal-Definition
+	const activeChDef = $derived(CE_CHANNELS.find(c => c.id === activeChannel)!);
+
+	// Alle aktiven Spalten (primary + secondary) für den aktiven Kanal
+	const activeAllCols = $derived([
+		...channelBuckets[activeChannel].primary,
+		...channelBuckets[activeChannel].secondary
+	]);
+
+	// Pills die jenseits des Kanal-Limits liegen
+	const activePillCols = $derived(
+		activeChDef.maxCols !== Infinity && activeChDef.maxCols !== 0 && activeAllCols.length > activeChDef.maxCols
+			? activeAllCols
+				.map((id, idx) => ({ id, idx }))
+				.filter(({ idx }) => idx >= activeChDef.maxCols)
+			: []
+	);
+
+	// Hinweis-Text unter der Spalten-Liste
+	const activeChHint = $derived(
+		activeChDef.maxCols === Infinity
+			? 'Email zeigt alles · keine Begrenzung'
+			: activeChDef.maxCols === 0
+			? 'SMS hat keine Tabelle — nur Empfehlung + Fließtext'
+			: `Max ${activeChDef.maxCols} Spalten für ${activeChDef.label}`
+	);
 
 	// --- Benannte Handler (Safari/Factory-Pattern) ---------------------------
 
@@ -280,7 +311,7 @@
 			aria-label="Kanal-Auswahl"
 			data-testid="channel-tabs"
 		>
-			{#each CHANNELS as ch (ch.id)}
+			{#each CE_CHANNELS as ch (ch.id)}
 				<button
 					type="button"
 					role="tab"
@@ -292,8 +323,16 @@
 					class:active={activeChannel === ch.id}
 					onclick={() => handleSelectChannel(ch.id)}
 				>
-					<span class="ch-label">{ch.label}</span>
-					<span class="ch-constraint">{ch.constraint}</span>
+					<div class="ch-tab-inner">
+						<span class="ch-label">{ch.label}</span>
+						<span
+							class="ch-badge mono"
+							style:color={activeChannel === ch.id ? 'var(--g-accent-deep)' : 'var(--g-ink-4)'}
+							style:font-size="11px"
+							style:font-weight="600"
+						>{ch.maxCols === Infinity ? '∞' : ch.maxCols === 0 ? '—' : ch.maxCols}</span>
+					</div>
+					<span class="ch-hint mono">{ch.hint}</span>
 				</button>
 			{/each}
 		</div>
@@ -314,14 +353,30 @@
 					onSelectPreset={handleSelectPreset}
 					onDndReorder={handleDndReorder}
 				/>
+
+				<!-- ↳ Detail-Pills für Telegram-Überlauf (AC-2) -->
+				<!-- activePillCols / activeChDef computed via $derived in script -->
+				{#if activePillCols.length > 0}
+					<div class="detail-pills">
+						{#each activePillCols as { idx } ({ idx })}
+							<span
+								data-testid="compare-step4-detail-pill-{idx}"
+								class="mono detail-pill"
+								style:font-size="9.5px"
+								style:color="var(--g-warn)"
+								style:font-weight="600"
+								style:letter-spacing="0.06em"
+								style:text-transform="uppercase"
+							>↳ Detail</span>
+						{/each}
+					</div>
+				{/if}
+
+				<!-- Hinweis-Text unter der Spalten-Liste -->
+				<div class="mono ch-hint-text">{activeChHint}</div>
 			</div>
-			<aside class="preview-col" data-testid="layout-preview">
-				<ChannelPreviewBlock
-					primary={channelBuckets[activeChannel].primary}
-					secondary={channelBuckets[activeChannel].secondary}
-					{metricById}
-					{shortById}
-				/>
+			<aside class="preview-col" data-testid="layout-preview-col">
+				<LayoutPreview channel={activeChannel} pickedIds={[...wizard.pickedIds]} />
 			</aside>
 		</div>
 	{/if}
@@ -381,15 +436,41 @@
 		border-color: var(--g-accent);
 		background: color-mix(in srgb, var(--g-accent) 8%, transparent);
 	}
+	.ch-tab-inner {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		width: 100%;
+	}
 	.ch-label {
 		font-size: var(--g-text-base);
 		font-weight: 600;
 		color: var(--g-ink);
 	}
-	.ch-constraint {
-		font-size: var(--g-text-xs);
-		color: var(--g-ink-muted);
+	.ch-badge {
+		flex-shrink: 0;
+	}
+	.ch-hint {
+		font-size: 10.5px;
+		color: var(--g-ink-3);
 		margin-top: 2px;
+	}
+	.detail-pills {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 4px;
+		margin-top: 6px;
+	}
+	.detail-pill {
+		background: rgba(192,138,26,0.08);
+		border-radius: 3px;
+		padding: 2px 6px;
+	}
+	.ch-hint-text {
+		margin-top: 8px;
+		font-size: 11px;
+		color: var(--g-ink-4);
+		letter-spacing: 0.04em;
 	}
 	.editor-row {
 		display: grid;
