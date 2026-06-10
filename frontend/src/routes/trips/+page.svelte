@@ -15,6 +15,12 @@ import PauseIcon from '@lucide/svelte/icons/pause';
 	import SendIcon from '@lucide/svelte/icons/send';
 	import { deriveTripStatus, tripStatus, type HomeTripStatus } from '$lib/utils/tripStatus';
 
+	// #706 — Portal-Action: hängt das Element an document.body statt in den overflow-Baum
+	function portal(node: HTMLElement) {
+		document.body.appendChild(node);
+		return { destroy() { node.remove(); } };
+	}
+
 	const now = new Date();
 
 	let { data } = $props();
@@ -72,6 +78,36 @@ import PauseIcon from '@lucide/svelte/icons/pause';
 
 	// Desktop Overflow-Menü (Issue #486): welche Trip-ID hat ihr Menü gerade offen
 	let openMenuId: string | null = $state(null);
+	// #706 — position:fixed Menü-Koordinaten (rechtsbündig unterhalb des "…"-Buttons)
+	let menuPos = $state({ top: 0, right: 0 });
+	// Das aktive Trip-Objekt für das außerhalb-der-Card-Portal-Menü
+	let openMenuTrip = $derived(openMenuId ? (filteredTrips.find(t => t.id === openMenuId) ?? null) : null);
+
+	function openMenuAtBtn(e: MouseEvent, tripId: string) {
+		e.stopPropagation();
+		if (openMenuId === tripId) { openMenuId = null; return; }
+		const btn = e.currentTarget as HTMLElement;
+		const rect = btn.getBoundingClientRect();
+		menuPos = { top: rect.bottom + 6, right: window.innerWidth - rect.right };
+		openMenuId = tripId;
+	}
+
+	$effect(() => {
+		if (openMenuId === null) return;
+		const close = () => { openMenuId = null; };
+		// Defer scroll/resize listener by one frame so Playwright's scroll-into-view
+		// (triggered by the click) doesn't immediately close the freshly opened menu.
+		let timerId: ReturnType<typeof setTimeout>;
+		timerId = setTimeout(() => {
+			window.addEventListener('scroll', close, { capture: true, passive: true });
+			window.addEventListener('resize', close, { passive: true });
+		}, 0);
+		return () => {
+			clearTimeout(timerId);
+			window.removeEventListener('scroll', close, { capture: true });
+			window.removeEventListener('resize', close);
+		};
+	});
 
 	let primaryActionLoading: string | null = $state(null);
 
@@ -420,7 +456,7 @@ import PauseIcon from '@lucide/svelte/icons/pause';
 							title="Aktionen"
 							aria-haspopup="menu"
 							aria-expanded={openMenuId === trip.id}
-							onclick={(e) => { e.stopPropagation(); openMenuId = openMenuId === trip.id ? null : trip.id; }}
+							onclick={(e) => openMenuAtBtn(e, trip.id)}
 							style="width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; background: {openMenuId === trip.id ? 'var(--g-paper-deep)' : 'transparent'}; border: 1px solid var(--g-rule); border-radius: var(--g-r-2); cursor: pointer;"
 						>
 							<!-- three-dot icon -->
@@ -433,57 +469,6 @@ import PauseIcon from '@lucide/svelte/icons/pause';
 						<span style="display: inline-flex; color: var(--g-ink-4); margin-left: 2px;">
 							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
 						</span>
-						{#if openMenuId === trip.id}
-							<!-- Overlay zum Schließen bei Außenklick -->
-							<div role="presentation" onkeydown={(e)=>{ if(e.key==='Escape') openMenuId=null; }} onclick={(e) => { e.stopPropagation(); openMenuId = null; }} style="position: fixed; inset: 0; z-index: 40;"></div>
-							<!-- Overflow-Menü -->
-							<div role="menu" style="position: absolute; top: calc(100% + 6px); right: 0; z-index: 41; min-width: 232px; background: var(--g-card); border: 1px solid var(--g-rule); border-radius: var(--g-r-3); box-shadow: var(--g-shadow-2, 0 8px 28px rgba(30,26,18,.16)); padding: 6px; overflow: hidden;">
-								<!-- Briefing jetzt senden -->
-								<button role="menuitem" onclick={(e) => { e.stopPropagation(); openMenuId = null; runTestReport(trip, 7); }} style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; min-height: 40px; text-align: left; background: transparent; border: none; border-radius: var(--g-r-2); cursor: pointer; font-size: 13px; font-family: var(--g-font-sans); color: var(--g-ink);"
-									onmouseenter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--g-paper-deep)'; }}
-									onmouseleave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
-									<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-2)" stroke-width="1.7" stroke-linecap="round"><path d="M7 5l12 7-12 7z"/></svg>
-									Briefing jetzt senden
-								</button>
-								<!-- Email-Vorschau -->
-								<button role="menuitem" onclick={(e) => { e.stopPropagation(); openMenuId = null; goto(`/trips/${trip.id}?tab=preview`); }} style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; min-height: 40px; text-align: left; background: transparent; border: none; border-radius: var(--g-r-2); cursor: pointer; font-size: 13px; font-family: var(--g-font-sans); color: var(--g-ink);"
-									onmouseenter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--g-paper-deep)'; }}
-									onmouseleave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
-									<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
-									Email-Vorschau
-								</button>
-								<!-- Alert-Konfiguration -->
-								<button role="menuitem" onclick={(e) => { e.stopPropagation(); openMenuId = null; openReportConfig(trip); }} style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; min-height: 40px; text-align: left; background: transparent; border: none; border-radius: var(--g-r-2); cursor: pointer; font-size: 13px; font-family: var(--g-font-sans); color: var(--g-ink);"
-									onmouseenter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--g-paper-deep)'; }}
-									onmouseleave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
-									<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>
-									Alert-Konfiguration
-								</button>
-								<!-- Wetter-Metriken -->
-								<button role="menuitem" onclick={(e) => { e.stopPropagation(); openMenuId = null; goto(`/trips/${trip.id}#weather`); }} style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; min-height: 40px; text-align: left; background: transparent; border: none; border-radius: var(--g-r-2); cursor: pointer; font-size: 13px; font-family: var(--g-font-sans); color: var(--g-ink);"
-									onmouseenter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--g-paper-deep)'; }}
-									onmouseleave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
-									<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.5"/><path d="M12 4v1.5M12 18.5V20M4 12h1.5M18.5 12H20M6 6l1 1M17 17l1 1M6 18l1-1M17 7l1-1"/></svg>
-									Wetter-Metriken
-								</button>
-								<!-- Bearbeiten -->
-								<button data-testid="trip-edit-btn" role="menuitem" onclick={(e) => { e.stopPropagation(); openMenuId = null; openEdit(trip); }} style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; min-height: 40px; text-align: left; background: transparent; border: none; border-radius: var(--g-r-2); cursor: pointer; font-size: 13px; font-family: var(--g-font-sans); color: var(--g-ink);"
-									onmouseenter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--g-paper-deep)'; }}
-									onmouseleave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
-									<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4l6 6L9 21H3v-6z"/></svg>
-									Bearbeiten
-								</button>
-								<!-- Trenner -->
-								<div style="height: 1px; background: var(--g-rule-soft); margin: 6px 8px;"></div>
-								<!-- Löschen (danger) -->
-								<button role="menuitem" onclick={(e) => { e.stopPropagation(); openMenuId = null; deleteTarget = trip; }} style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; min-height: 40px; text-align: left; background: transparent; border: none; border-radius: var(--g-r-2); cursor: pointer; font-size: 13px; font-family: var(--g-font-sans); color: var(--g-bad, #a83232);"
-									onmouseenter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--g-paper-deep)'; }}
-									onmouseleave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
-									<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--g-bad, #a83232)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/></svg>
-									Löschen
-								</button>
-							</div>
-						{/if}
 					</div>
 				</div>
 			{/each}
@@ -500,6 +485,58 @@ import PauseIcon from '@lucide/svelte/icons/pause';
 		{/if}
 	{/if}
 </div>
+
+{#if openMenuTrip !== null}
+	<!-- Overlay zum Schließen bei Außenklick (portal → document.body) -->
+	<div use:portal role="presentation" onkeydown={(e)=>{ if(e.key==='Escape') openMenuId=null; }} onclick={(e) => { e.stopPropagation(); openMenuId = null; }} style="position: fixed; inset: 0; z-index: 40;"></div>
+	<!-- Overflow-Menü (#706: portal → document.body, kein overflow-Ancestor) -->
+	<div use:portal role="menu" style="position: fixed; top: {menuPos.top}px; right: {menuPos.right}px; z-index: 41; min-width: 232px; background: var(--g-card); border: 1px solid var(--g-rule); border-radius: var(--g-r-3); box-shadow: var(--g-shadow-2, 0 8px 28px rgba(30,26,18,.16)); padding: 6px;">
+		<!-- Briefing jetzt senden -->
+		<button role="menuitem" onclick={(e) => { const t = openMenuTrip; e.stopPropagation(); openMenuId = null; if (t) runTestReport(t, 7); }} style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; min-height: 40px; text-align: left; background: transparent; border: none; border-radius: var(--g-r-2); cursor: pointer; font-size: 13px; font-family: var(--g-font-sans); color: var(--g-ink);"
+			onmouseenter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--g-paper-deep)'; }}
+			onmouseleave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
+			<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-2)" stroke-width="1.7" stroke-linecap="round"><path d="M7 5l12 7-12 7z"/></svg>
+			Briefing jetzt senden
+		</button>
+		<!-- Email-Vorschau -->
+		<button role="menuitem" onclick={(e) => { const t = openMenuTrip; e.stopPropagation(); openMenuId = null; if (t) goto(`/trips/${t.id}?tab=preview`); }} style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; min-height: 40px; text-align: left; background: transparent; border: none; border-radius: var(--g-r-2); cursor: pointer; font-size: 13px; font-family: var(--g-font-sans); color: var(--g-ink);"
+			onmouseenter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--g-paper-deep)'; }}
+			onmouseleave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
+			<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+			Email-Vorschau
+		</button>
+		<!-- Alert-Konfiguration -->
+		<button role="menuitem" onclick={(e) => { const t = openMenuTrip; e.stopPropagation(); openMenuId = null; if (t) openReportConfig(t); }} style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; min-height: 40px; text-align: left; background: transparent; border: none; border-radius: var(--g-r-2); cursor: pointer; font-size: 13px; font-family: var(--g-font-sans); color: var(--g-ink);"
+			onmouseenter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--g-paper-deep)'; }}
+			onmouseleave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
+			<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>
+			Alert-Konfiguration
+		</button>
+		<!-- Wetter-Metriken -->
+		<button role="menuitem" onclick={(e) => { const t = openMenuTrip; e.stopPropagation(); openMenuId = null; if (t) goto(`/trips/${t.id}#weather`); }} style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; min-height: 40px; text-align: left; background: transparent; border: none; border-radius: var(--g-r-2); cursor: pointer; font-size: 13px; font-family: var(--g-font-sans); color: var(--g-ink);"
+			onmouseenter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--g-paper-deep)'; }}
+			onmouseleave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
+			<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.5"/><path d="M12 4v1.5M12 18.5V20M4 12h1.5M18.5 12H20M6 6l1 1M17 17l1 1M6 18l1-1M17 7l1-1"/></svg>
+			Wetter-Metriken
+		</button>
+		<!-- Bearbeiten -->
+		<button data-testid="trip-edit-btn" role="menuitem" onclick={(e) => { const t = openMenuTrip; e.stopPropagation(); openMenuId = null; if (t) openEdit(t); }} style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; min-height: 40px; text-align: left; background: transparent; border: none; border-radius: var(--g-r-2); cursor: pointer; font-size: 13px; font-family: var(--g-font-sans); color: var(--g-ink);"
+			onmouseenter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--g-paper-deep)'; }}
+			onmouseleave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
+			<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4l6 6L9 21H3v-6z"/></svg>
+			Bearbeiten
+		</button>
+		<!-- Trenner -->
+		<div style="height: 1px; background: var(--g-rule-soft); margin: 6px 8px;"></div>
+		<!-- Löschen (danger) -->
+		<button role="menuitem" onclick={(e) => { const t = openMenuTrip; e.stopPropagation(); openMenuId = null; if (t) deleteTarget = t; }} style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; min-height: 40px; text-align: left; background: transparent; border: none; border-radius: var(--g-r-2); cursor: pointer; font-size: 13px; font-family: var(--g-font-sans); color: var(--g-bad, #a83232);"
+			onmouseenter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--g-paper-deep)'; }}
+			onmouseleave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
+			<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--g-bad, #a83232)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/></svg>
+			Löschen
+		</button>
+	</div>
+{/if}
 
 <ConfirmDialog
 	open={deleteTarget !== null}

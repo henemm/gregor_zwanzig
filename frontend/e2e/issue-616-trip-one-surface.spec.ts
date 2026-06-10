@@ -139,6 +139,8 @@ test.describe('Issue #616 — EINE Trip-Seite', () => {
 		 * RED-Grund: Namens-Bearbeitung existiert heute nur auf der separaten /edit-Seite.
 		 */
 		await page.goto(DETAIL_URL);
+		// #713: Name-Edit ist hinter Stift-Toggle versteckt — erst öffnen
+		await page.getByTestId('trip-name-edit-toggle').click();
 		const nameEdit = page.getByTestId('trip-name-edit');
 		await expect(nameEdit).toBeVisible({ timeout: 8000 });
 		await nameEdit.fill('E2E Cockpit Test Trip — umbenannt');

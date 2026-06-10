@@ -977,7 +977,7 @@ interface Props {
 
 | Komponente | Pfad rel. zu components/ | Kurzbeschreibung |
 |---|---|---|
-| TripHeader | `trip-detail/TripHeader.svelte` | H1-Header mit Breadcrumb + Status + Aktionen |
+| TripHeader | `trip-detail/TripHeader.svelte` | H1-Header mit Breadcrumb + Status; Titel-Bearbeitung via Stift-Icon (Issue #713) |
 | TripOverview | `trip-detail/TripOverview.svelte` | 2×2 DetailCard-Grid (Uebersicht-Tab) |
 | TripTabs | `trip-detail/TripTabs.svelte` | Tab-Leiste mit Badge-Zaehlern |
 | TripStatusBadge | `trip-detail/TripStatusBadge.svelte` | Status-Badge des Trips |

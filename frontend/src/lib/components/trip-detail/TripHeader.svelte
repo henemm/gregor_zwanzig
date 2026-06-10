@@ -6,6 +6,7 @@
 	// Pause/Archive-Logik ist in +page.svelte als Danger-Zone gewandert.
 	import { Btn } from '$lib/components/atoms';
 	import TripStatusBadge from './TripStatusBadge.svelte';
+	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import { api } from '$lib/api.js';
 	import { formatDateRange, getDaysLabel } from '$lib/utils/tripHero';
 	import { computeTripStats } from '$lib/utils/tripStats';
@@ -26,8 +27,10 @@
 	let { trip, onTripUpdate, now = new Date() }: Props = $props();
 
 	// AC-6 — Inline Trip-Name-Bearbeitung (kein separater /edit-Screen mehr)
+	// #713 — toggle: nur via Stift-Icon editierbar (kein dauerhaftes Eingabefeld)
 	let editName = $state(trip.name);
 	let nameSaving = $state(false);
+	let isEditingName = $state(false);
 
 	function makeNameSaveHandler() {
 		return async function doNameSave() {
@@ -35,6 +38,7 @@
 			try {
 				await api.put(`/api/trips/${trip.id}`, { name: editName });
 				onTripUpdate?.({ ...trip, name: editName });
+				isEditingName = false;
 			} finally {
 				nameSaving = false;
 			}
@@ -108,10 +112,24 @@
 				{eyebrowText}
 			</div>
 
-			<h1 class="trip-h1" data-testid="trip-detail-h1">
-				{#if trip.shortcode}<span class="h1-shortcode">{trip.shortcode}</span> ·&nbsp;{/if}{trip.name}
-			</h1>
+			<div class="trip-h1-row">
+				<h1 class="trip-h1" data-testid="trip-detail-h1">
+					{#if trip.shortcode}<span class="h1-shortcode">{trip.shortcode}</span> ·&nbsp;{/if}{trip.name}
+				</h1>
+				{#if !isEditingName}
+					<button
+						type="button"
+						class="name-edit-toggle"
+						data-testid="trip-name-edit-toggle"
+						aria-label="Trip-Name bearbeiten"
+						onclick={() => { editName = trip.name; isEditingName = true; }}
+					>
+						<PencilIcon size={15} />
+					</button>
+				{/if}
+			</div>
 
+			{#if isEditingName}
 			<div class="name-edit-row">
 				<input
 					type="text"
@@ -127,7 +145,13 @@
 					disabled={nameSaving}
 					onclick={makeNameSaveHandler()}
 				>{nameSaving ? '…' : 'Umbenennen'}</Btn>
+				<Btn
+					variant="ghost"
+					size="sm"
+					onclick={() => { editName = trip.name; isEditingName = false; }}
+				>Abbrechen</Btn>
 			</div>
+			{/if}
 
 			<div class="status-line">
 				<span class="status-supplement" data-testid="trip-detail-status-supplement">
@@ -226,6 +250,28 @@
 		color: var(--g-ink-3);
 		letter-spacing: 0.06em;
 		text-transform: uppercase;
+	}
+	.trip-h1-row {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		flex-wrap: wrap;
+	}
+	.name-edit-toggle {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		background: transparent;
+		border: none;
+		cursor: pointer;
+		color: var(--g-ink-3);
+		padding: 4px;
+		border-radius: var(--g-r-1);
+		flex-shrink: 0;
+	}
+	.name-edit-toggle:hover {
+		color: var(--g-ink);
+		background: var(--g-paper-deep);
 	}
 	.name-edit-row {
 		display: flex;

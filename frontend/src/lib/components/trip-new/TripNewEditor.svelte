@@ -830,6 +830,12 @@
 									{#if dateStr}
 										<span class="mono" style="font-size: 11px; color: var(--g-ink-3); flex-shrink: 0;">{dateStr}</span>
 									{/if}
+									<!-- #719 — Etappen-Lösch-Button (löst #708-Bestätigungsdialog aus) -->
+									<button type="button"
+										data-testid="tn-mobile-stage-remove-{idx}"
+										aria-label="Etappe entfernen"
+										onclick={makeRemoveStageHandler(s.id)}
+										style="background: transparent; border: none; cursor: pointer; color: var(--g-ink-4); font-size: 18px; padding: 0; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; line-height: 1;">×</button>
 								</div>
 								<!-- GPX-Slot (volle Zeile) -->
 								<div style="padding: 0 12px 12px;">
