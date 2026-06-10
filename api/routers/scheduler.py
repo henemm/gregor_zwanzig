@@ -474,11 +474,16 @@ def send_test_trip_report(trip_id: str, user_id: str = "default", report_type: s
 
     service = TripReportSchedulerService(user_id=user_id)
     try:
-        service.send_test_report(trip, report_type)
+        sent = service.send_test_report(trip, report_type)
     except ValueError as e:
         # F003-Fix: Ungültiger report_type → 422 statt 500
         raise HTTPException(status_code=422, detail=str(e))
-    return {"status": "ok", "trip_id": trip_id, "report_type": report_type}
+    if not sent:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Kein Briefing für {report_type} — keine Etappendaten für das aktuelle Datum",
+        )
+    return {"status": "ok", "trip_id": trip_id, "report_type": report_type, "sent": True}
 
 
 @router.post("/compare-presets/{preset_id}/send")

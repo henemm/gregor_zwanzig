@@ -30,6 +30,7 @@
 	let errorMsg = $state<string | null>(null);
 	let testBriefingLoading = $state(false);
 	let testBriefingStatus = $state<'idle' | 'ok' | 'error'>('idle');
+	let testBriefingMessage = $state<string | null>(null);
 	let testBriefingTimer: ReturnType<typeof setTimeout> | undefined;
 
 	async function sendStateUpdate(paused?: boolean, archived?: boolean): Promise<void> {
@@ -117,9 +118,21 @@
 		testBriefingStatus = 'idle';
 		try {
 			const res = await fetch(`/api/trips/${trip.id}/send`, { method: 'POST' });
-			testBriefingStatus = res.ok ? 'ok' : 'error';
+			if (res.ok) {
+				testBriefingStatus = 'ok';
+				testBriefingMessage = null;
+			} else {
+				testBriefingStatus = 'error';
+				try {
+					const body = await res.json();
+					testBriefingMessage = body.detail ?? 'Fehler beim Senden';
+				} catch {
+					testBriefingMessage = 'Fehler beim Senden';
+				}
+			}
 		} catch {
 			testBriefingStatus = 'error';
+			testBriefingMessage = 'Fehler beim Senden';
 		} finally {
 			testBriefingLoading = false;
 		}
@@ -151,7 +164,7 @@
 			{#if testBriefingStatus === 'ok'}
 				<span data-testid="test-briefing-success" style="font-size: 12px; color: var(--g-success, #2e7d32);">Test-Briefing gesendet!</span>
 			{:else if testBriefingStatus === 'error'}
-				<span data-testid="test-briefing-error" style="font-size: 12px; color: var(--g-error, #c62828);">Fehler beim Senden</span>
+				<span data-testid="test-briefing-error" style="font-size: 12px; color: var(--g-error, #c62828);">{testBriefingMessage ?? 'Fehler beim Senden'}</span>
 			{/if}
 		</div>
 	</div>

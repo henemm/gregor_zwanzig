@@ -327,7 +327,7 @@ class TripReportSchedulerService:
             "max_elevation_m": max_elev,
         }
 
-    def send_test_report(self, trip: "Trip", report_type: str) -> None:
+    def send_test_report(self, trip: "Trip", report_type: str) -> bool:
         """
         Send a manual test report for a trip.
 
@@ -337,21 +337,27 @@ class TripReportSchedulerService:
             trip: Trip object
             report_type: "morning" or "evening"
 
+        Returns:
+            True if report was sent, False if no matching stage data found
+
         Raises:
             ValueError: If report_type is invalid
             Exception: If email sending fails
         """
         if report_type not in ("morning", "evening"):
             raise ValueError(f"Invalid report_type: {report_type}")
-        self._send_trip_report(trip, report_type)
+        return self._send_trip_report(trip, report_type)
 
-    def _send_trip_report(self, trip: "Trip", report_type: str) -> None:
+    def _send_trip_report(self, trip: "Trip", report_type: str) -> bool:
         """
         Generate and send report for a single trip.
 
         Args:
             trip: Trip object
             report_type: "morning" or "evening"
+
+        Returns:
+            True if report was sent, False if no matching stage/weather data found
 
         Raises:
             Exception: If weather fetch or email send fails
@@ -364,7 +370,7 @@ class TripReportSchedulerService:
 
         if not segments:
             logger.warning(f"No segments for trip {trip.id} on {target_date}")
-            return
+            return False
 
         logger.debug(f"Created {len(segments)} segments for {trip.id}")
 
@@ -390,7 +396,7 @@ class TripReportSchedulerService:
 
         if not segment_weather:
             logger.warning(f"No weather data for trip {trip.id}")
-            return
+            return False
 
         # 2b. Ensemble-Anreicherung: 1 API-Call für letzten Waypoint der letzten Etappe
         self._enrich_ensemble_for_trip(trip, segment_weather)
@@ -532,6 +538,8 @@ class TripReportSchedulerService:
             WeatherSnapshotService().save(trip.id, segment_weather, target_date)
         except Exception as e:
             logger.warning(f"Failed to save weather snapshot for {trip.id}: {e}")
+
+        return True
 
     def _append_briefing_log(self, trip_id: str, kind: str, channels: List[str]) -> None:
         """Issue #393: Hängt einen Briefing-Versand-Eintrag an briefing_log.json an.

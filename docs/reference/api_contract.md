@@ -1,7 +1,7 @@
 
 # API Contract — Gregor Zwanzig
 
-**Updated:** 2026-06-10 (Issue #707 — Trip-Datum-Overwrite-Bug: PUT `/api/trips/{id}` mit minimalem Body (nur geänderte Felder) statt kompletter `trip`-Spread — verhindert stale-data-Überschreibung von Etappen; Issue #690 — Eigene Wetter-Metriken-Profile: eindeutiger Name (HTTP 409 name_exists, 400 name_required), Profil sofort aktiv + persistent, "Eigene"-Markierung in Preset-Leiste, trip-übergreifend pro Nutzer); 2026-06-09 (Issue #674 — Fahrradtour als Aktivitätstyp: 3 neue ActivityType-Varianten (fahrrad_15/20/25 km/h) mit korrekten Naismith-Raten (600/1000 Hm/h); #680 — Compare-Editor Slice 3 Fidelity: display_config.active_metrics — ausgewählte Metriken pro Vergleich; #675 — Etappen-Startzeiten editierbar; #671 — Bot-Menü automatisch beim Service-Start; #638 — Alerts-Tab Karten-Modell, Severity-Falle, pro-Alert Kanäle; #664 — Metriken-Überblick-Pille; #621 — E-Mail-Elemente abschaltbar); 2026-06-08 (Issues #672/#671 — Telegram E2E-Pipeline-Tests + Bot-Menü-Vertrag; #642 — User-Anzeigename display_name; #655 — Telegram Hybrid-Navigation: callback_query + editMessageText); 2026-06-07 (Issues #627/#631 — Compare-Preset Sofortversand + Wochen-Rhythmus-Erhalt)
+**Updated:** 2026-06-10 (Bug #716 — Test-Briefing: stiller Versagensfall weg. POST /api/trips/{id}/send gibt jetzt HTTP 422 + detail-Feld zurück wenn keine Etappendaten für Zieldatum vorhanden (statt HTTP 200). Frontend zeigt konkrete Fehlermeldung im Toast; Issue #707 — Trip-Datum-Overwrite-Bug: PUT `/api/trips/{id}` mit minimalem Body (nur geänderte Felder) statt kompletter `trip`-Spread — verhindert stale-data-Überschreibung von Etappen; Issue #690 — Eigene Wetter-Metriken-Profile: eindeutiger Name (HTTP 409 name_exists, 400 name_required), Profil sofort aktiv + persistent, "Eigene"-Markierung in Preset-Leiste, trip-übergreifend pro Nutzer); 2026-06-09 (Issue #674 — Fahrradtour als Aktivitätstyp: 3 neue ActivityType-Varianten (fahrrad_15/20/25 km/h) mit korrekten Naismith-Raten (600/1000 Hm/h); #680 — Compare-Editor Slice 3 Fidelity: display_config.active_metrics — ausgewählte Metriken pro Vergleich; #675 — Etappen-Startzeiten editierbar; #671 — Bot-Menü automatisch beim Service-Start; #638 — Alerts-Tab Karten-Modell, Severity-Falle, pro-Alert Kanäle; #664 — Metriken-Überblick-Pille; #621 — E-Mail-Elemente abschaltbar); 2026-06-08 (Issues #672/#671 — Telegram E2E-Pipeline-Tests + Bot-Menü-Vertrag; #642 — User-Anzeigename display_name; #655 — Telegram Hybrid-Navigation: callback_query + editMessageText); 2026-06-07 (Issues #627/#631 — Compare-Preset Sofortversand + Wochen-Rhythmus-Erhalt)
 
 ## 0) Konventionen
 - Zeit: ISO-8601 UTC (`Z`)
@@ -871,6 +871,55 @@ Enqueues immediate trip report (morning/evening/alert) generation and send for a
 |--------|------|----------|
 | 400 | `{"error":"no_active_trip"}` | No trip with today's stage found |
 | 503 | `{"error":"scheduler_unavailable"}` | Scheduler not available |
+
+---
+
+## 14.5) Manual Test-Briefing Send Endpoint (Issue #695, Bug #716)
+
+Sends an immediate test briefing for a specific trip via the user's configured email.
+
+**Handler:** `api/routers/scheduler.py` | **Route:** `POST /api/trips/{trip_id}/send`
+
+### POST /api/trips/{trip_id}/send
+
+Triggers immediate test briefing send for one trip. Returns success/failure based on whether stage data exists for the target date.
+
+**Query Parameters:**
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `user_id` | string | `"default"` | User identifier (multi-tenant scoping) |
+| `report_type` | string | `"evening"` | `"morning"` (today's stages) or `"evening"` (tomorrow's stages) |
+
+**Response 200 (Success):**
+
+```json
+{
+  "status": "ok",
+  "trip_id": "gr20-2026",
+  "report_type": "evening",
+  "sent": true
+}
+```
+
+**Error Responses:**
+
+| Status | Scenario | Detail |
+|--------|----------|--------|
+| 404 | Trip `trip_id` not found for user | `"Trip {trip_id} not found"` |
+| 422 | SMTP not configured for user (Issue #474) | `"SMTP not configured for this user"` |
+| 422 | No stages for target date (Bug #716 — AC-1) | `"Kein Briefing für {report_type} — keine Etappendaten für das aktuelle Datum"` |
+| 422 | Invalid `report_type` | `"Invalid report_type: {value}"` |
+
+**Multi-Tenant Behavior:**
+- `user_id` query parameter determines which user's data (trip, email config) is used
+- Trip must exist in `data/users/{user_id}/trips/` directory
+- Email sent to `settings.mail_to` for that user (set via `/api/auth/profile`)
+- Default `user_id="default"` provided for backwards compatibility (e.g. test-mode without auth)
+
+**Bug #716 Fix (2026-06-10):**
+- Prior: silent failure (HTTP 200 even when no email sent) when stages missing for target date
+- Now: explicit HTTP 422 with descriptive error message in `detail` field (AC-1)
+- Frontend reads `detail` field and displays in error toast (AC-4, `frontend/src/routes/trips/[id]/+page.svelte`)
 
 ---
 
