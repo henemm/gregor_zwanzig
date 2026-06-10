@@ -201,32 +201,24 @@
 
 	// --- Detail-Pill und Hinweis-Text (AC-2, Issue #681) --------------------
 
-	// Aktive Kanal-Definition
-	const activeChDef = $derived(CE_CHANNELS.find(c => c.id === activeChannel)!);
-
-	// Alle aktiven Spalten (primary + secondary) für den aktiven Kanal
-	const activeAllCols = $derived([
-		...channelBuckets[activeChannel].primary,
-		...channelBuckets[activeChannel].secondary
-	]);
-
-	// Pills die jenseits des Kanal-Limits liegen
-	const activePillCols = $derived(
-		activeChDef.maxCols !== Infinity && activeChDef.maxCols !== 0 && activeAllCols.length > activeChDef.maxCols
-			? activeAllCols
-				.map((id, idx) => ({ id, idx }))
-				.filter(({ idx }) => idx >= activeChDef.maxCols)
-			: []
-	);
+	// Aktive Spalten des gewählten Kanals — explizit per Kanal um Svelte-5-Cache zu umgehen
+	const activeAllCols = $derived.by(() => {
+		if (activeChannel === 'email') {
+			return [...channelBuckets.email.primary, ...channelBuckets.email.secondary];
+		} else if (activeChannel === 'telegram') {
+			return [...channelBuckets.telegram.primary, ...channelBuckets.telegram.secondary];
+		}
+		return [...channelBuckets.sms.primary, ...channelBuckets.sms.secondary];
+	});
 
 	// Hinweis-Text unter der Spalten-Liste
-	const activeChHint = $derived(
-		activeChDef.maxCols === Infinity
-			? 'Email zeigt alles · keine Begrenzung'
-			: activeChDef.maxCols === 0
-			? 'SMS hat keine Tabelle — nur Empfehlung + Fließtext'
-			: `Max ${activeChDef.maxCols} Spalten für ${activeChDef.label}`
-	);
+	const activeChHint = $derived.by(() => {
+		const ch = CE_CHANNELS.find(c => c.id === activeChannel);
+		if (!ch) return '';
+		if (ch.maxCols === Infinity) return 'Email zeigt alles · keine Begrenzung';
+		if (ch.maxCols === 0) return 'SMS hat keine Tabelle — nur Empfehlung + Fließtext';
+		return `Max ${ch.maxCols} Spalten für ${ch.label}`;
+	});
 
 	// --- Benannte Handler (Safari/Factory-Pattern) ---------------------------
 
@@ -355,19 +347,21 @@
 				/>
 
 				<!-- ↳ Detail-Pills für Telegram-Überlauf (AC-2) -->
-				<!-- activePillCols / activeChDef computed via $derived in script -->
-				{#if activePillCols.length > 0}
+				{#if (CE_CHANNELS.find(c => c.id === activeChannel)?.maxCols ?? Infinity) !== Infinity && (CE_CHANNELS.find(c => c.id === activeChannel)?.maxCols ?? 0) !== 0 && activeAllCols.length > (CE_CHANNELS.find(c => c.id === activeChannel)?.maxCols ?? Infinity)}
+					{@const _maxCols = CE_CHANNELS.find(c => c.id === activeChannel)!.maxCols as number}
 					<div class="detail-pills">
-						{#each activePillCols as { idx } ({ idx })}
-							<span
-								data-testid="compare-step4-detail-pill-{idx}"
-								class="mono detail-pill"
-								style:font-size="9.5px"
-								style:color="var(--g-warn)"
-								style:font-weight="600"
-								style:letter-spacing="0.06em"
-								style:text-transform="uppercase"
-							>↳ Detail</span>
+						{#each activeAllCols as _id, _i}
+							{#if _i >= _maxCols}
+								<span
+									data-testid="compare-step4-detail-pill-{_i}"
+									class="mono detail-pill"
+									style:font-size="9.5px"
+									style:color="var(--g-warn)"
+									style:font-weight="600"
+									style:letter-spacing="0.06em"
+									style:text-transform="uppercase"
+								>↳ Detail</span>
+							{/if}
 						{/each}
 					</div>
 				{/if}
