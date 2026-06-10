@@ -11,7 +11,7 @@ export const load: PageServerLoad = async () => {
 };
 
 export const actions = {
-	default: async ({ request, cookies }) => {
+	default: async ({ request, cookies, getClientAddress }) => {
 		const data = await request.formData();
 		const username = data.get('username')?.toString() ?? '';
 		const password = data.get('password')?.toString() ?? '';
@@ -22,10 +22,13 @@ export const actions = {
 
 		const resp = await fetch(`${API()}/api/auth/login`, {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
+			headers: { 'Content-Type': 'application/json', 'X-Real-IP': getClientAddress() },
 			body: JSON.stringify({ username, password }),
 		});
 
+		if (resp.status === 429) {
+			return fail(429, { error: 'Rate limit exceeded', username });
+		}
 		if (!resp.ok) {
 			return fail(401, { error: 'Invalid credentials', username });
 		}

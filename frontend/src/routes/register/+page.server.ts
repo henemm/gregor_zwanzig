@@ -11,7 +11,7 @@ export const load: PageServerLoad = async () => {
 };
 
 export const actions = {
-	default: async ({ request }) => {
+	default: async ({ request, getClientAddress }) => {
 		const data = await request.formData();
 		const username = data.get('username')?.toString() ?? '';
 		const password = data.get('password')?.toString() ?? '';
@@ -23,7 +23,7 @@ export const actions = {
 
 		const resp = await fetch(`${API()}/api/auth/register`, {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
+			headers: { 'Content-Type': 'application/json', 'X-Real-IP': getClientAddress() },
 			body: JSON.stringify({ username, password }),
 		});
 
