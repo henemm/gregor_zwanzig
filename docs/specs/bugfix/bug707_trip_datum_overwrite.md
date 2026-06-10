@@ -3,7 +3,7 @@ entity_id: bug707_trip_datum_overwrite
 type: bugfix
 created: 2026-06-10
 updated: 2026-06-10
-status: draft
+status: resolved
 version: "1.0"
 tags: [frontend, trip, stages, data-integrity, partial-update]
 ---
@@ -12,7 +12,7 @@ tags: [frontend, trip, stages, data-integrity, partial-update]
 
 ## Approval
 
-- [ ] Approved
+- [x] VERIFIED & RESOLVED (2026-06-10)
 
 ## Problem
 
@@ -109,4 +109,4 @@ konstruiert, nicht die Datenbank beschreibt.
 
 ## Changelog
 
-- 2026-06-10: Initial spec created (Bug #707 — Trip-Datum-Overwrite durch stalen `trip`-Spread)
+- 2026-06-10: Spec RESOLVED — TripHeader + BriefingScheduleTab minimal PUT-Body Fix implementiert, Dateien geändert: TripHeader.svelte::makeNameSaveHandler, BriefingScheduleTab.svelte::makeSaveHandler. Alle AC VERIFIED in Staging-E2E-Tests.

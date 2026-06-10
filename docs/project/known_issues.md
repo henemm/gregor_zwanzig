@@ -224,6 +224,54 @@ GitHub Issue #556 manuell geschlossen — kein Code-Fix erforderlich.
 
 ---
 
+## BUG-707-STALE-SPREAD: Trip-Datum wird bei Name-/Config-Speichern überschrieben
+
+**Status:** RESOLVED (2026-06-10) | **Severity:** Medium | **GitHub Issue:** #707 | **Spec:** `docs/specs/bugfix/bug707_trip_datum_overwrite.md`
+
+### Symptom
+
+Wenn ein Nutzer das Stage-Datum einer Etappe ändert und speichert, und danach den Trip-Namen ändert oder die Briefing-Konfiguration speichert, werden die angepassten Stage-Daten stille zurückgesetzt auf den alten Stand vom Seiten-Load. Das Datum der Etappe ist nach dem Speichern wieder falsch.
+
+### Root Cause
+
+Die Komponenten `TripHeader.svelte` (Name-Save) und `BriefingScheduleTab.svelte` (Briefing-Config-Save) sendeten beim PUT-Request den kompletten `trip`-Spread:
+
+```typescript
+// FALSCH — sendet veralteten trip.stages
+await api.put(`/api/trips/${trip.id}`, { ...trip, name: editName });
+```
+
+`trip` ist der in-Memory-State beim initialen Seiten-Load. Wenn der Nutzer zwischenzeitlich auf einem anderen Tab (z.B. Etappen-Editor) Daten ändert und speichert, kennt `TripHeader` und `BriefingScheduleTab` diese Änderungen nicht — `trip.stages` bleibt veraltet. Der PUT-Request mit `{ ...trip, stages: [...veraltet] }` überschreibt die aktuellen DB-Daten mit dem alten Stand.
+
+Das Go-Backend (`internal/handler/trip.go`, `UpdateTripHandler`) merged Pointer-Felder mit Nil-Check: ein gefülltes `stages`-Array wird als neue Wahrheit behandelt und überschreibt aktuelle Stage-Daten.
+
+### Fix (Committed 2026-06-10)
+
+```typescript
+// KORREKT — sendet nur das geänderte Feld
+await api.put(`/api/trips/${trip.id}`, { name: editName });
+await api.put<Trip>(`/api/trips/${trip.id}`, { report_config: reportConfig });
+```
+
+**Dateien geändert:**
+- `frontend/src/lib/components/trip-detail/TripHeader.svelte` (makeNameSaveHandler, Zeile 36)
+- `frontend/src/lib/components/trip-detail/BriefingScheduleTab.svelte` (makeSaveHandler, Zeile 31)
+
+### Lessons Learned
+
+1. **Partial Updates:** Nur das tatsächlich geänderte Feld im PUT-Body senden, nicht den kompletten Spread — verhindert stale-data-Überschreibung
+2. **Multi-Tab-State:** In einer Komponente ist der lokale `trip`-State unreliable, wenn ein anderer Tab dieselben Felder ändern kann. Minimaler Request-Body verhindert Konflikte.
+3. **Backend-Merge:** Das Go-Backend ist korrekt implementiert (Nil-Check auf Pointer-Felder). Der Bug war Frontend-seitig.
+
+### Testing
+
+- **AC-1:** Stage-Datum ändern + speichern → Trip umbenennen → Seite neu laden → Stage-Datum bleibt erhalten
+- **AC-2:** Stage-Datum ändern + speichern → Briefing-Zeitplan speichern → Seite neu laden → Stage-Datum bleibt erhalten
+- **AC-3:** Trip mit mehreren Etappen umbenennen → alle Etappen unverändert
+- **AC-4:** Trip umbenennen + Briefing-Zeitplan speichern (hintereinander) → beide Änderungen gespeichert
+
+---
+
 ## BUG-TOKEN-01: Alte Farb-Token-Aliasse nicht bereinigt (#541, #543, #544)
 
 **Status:** RESOLVED (2026-06-02) | **Severity:** Low | **GitHub Issues:** #541, #543, #544
