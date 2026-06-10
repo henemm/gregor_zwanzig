@@ -25,10 +25,18 @@ fi
 cd "$(dirname "$0")/.."
 
 # Issue #110: Auth-Cookie via Login-Call (optional)
+# Capture any explicitly-passed env overrides before file source (env wins over file)
+_ENV_URL="${GZ_VALIDATION_URL:-}"
+_ENV_USER="${GZ_VALIDATOR_USER:-}"
+_ENV_PASS="${GZ_VALIDATOR_PASS:-}"
 ENV_FILE=".claude/validator.env"
 if [ -f "$ENV_FILE" ]; then
     set -a; source "$ENV_FILE"; set +a
 fi
+# Restore explicit env overrides (non-empty env vars take precedence over file)
+[ -n "$_ENV_URL" ] && GZ_VALIDATION_URL="$_ENV_URL"
+[ -n "$_ENV_USER" ] && GZ_VALIDATOR_USER="$_ENV_USER"
+[ -n "$_ENV_PASS" ] && GZ_VALIDATOR_PASS="$_ENV_PASS"
 
 VALIDATION_URL="${GZ_VALIDATION_URL:-https://staging.gregor20.henemm.com}"
 VALIDATOR_USER="${GZ_VALIDATOR_USER:-validator}"
@@ -40,8 +48,14 @@ if [ -n "$VALIDATOR_PASS" ]; then
         -H "Content-Type: application/json" \
         -d "{\"username\":\"$VALIDATOR_USER\",\"password\":\"$VALIDATOR_PASS\"}" || true)
     COOKIE=$(echo "$LOGIN_RESPONSE" | grep -i "^set-cookie:" | grep -oE "gz_session=[^;]+" | head -1 || true)
+    LOGIN_HTTP=$(echo "$LOGIN_RESPONSE" | head -1 | grep -oE '[0-9]{3}' | head -1 || true)
     if [ -z "$COOKIE" ]; then
-        echo "WARN: Login fehlgeschlagen — Validator laeuft ohne Auth (nur Public-Routen pruefbar)" >&2
+        if [ "$LOGIN_HTTP" = "429" ]; then
+            echo "WARN: Login-Endpunkt rate-limitiert (429) — Validator laeuft ohne Auth (nur Public-Routen pruefbar)" >&2
+        else
+            echo "FEHLER: Gregor-Login fehlgeschlagen (kein Cookie) — setup-validator-user.sh ausführen" >&2
+            exit 1
+        fi
     fi
 fi
 
@@ -86,4 +100,13 @@ echo "  Der Validator kennt nur: Spec + laufende App."
 echo "================================================"
 echo ""
 
-claude --print "$PROMPT"
+CLAUDE_OUT=$(claude --print "$PROMPT" 2>&1) && CLAUDE_EXIT=0 || CLAUDE_EXIT=$?
+if echo "$CLAUDE_OUT" | grep -qiE "failed to authenticate|401|invalid.*credential|api.?key"; then
+    echo "FEHLER: claude --print benötigt ANTHROPIC_API_KEY — Validator als Subagent spawnen statt dieses Script" >&2
+    exit 1
+fi
+if [ $CLAUDE_EXIT -ne 0 ]; then
+    echo "$CLAUDE_OUT" >&2
+    exit $CLAUDE_EXIT
+fi
+echo "$CLAUDE_OUT"
