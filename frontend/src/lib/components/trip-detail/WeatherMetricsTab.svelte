@@ -75,6 +75,13 @@
 	let showSavePresetDialog = $state(false);
 	let mailSheetOpen = $state(false);
 	let pendingPreset: string | null = $state(null);
+	let profile = $state<{ mail_to?: string; telegram_chat_id?: string; sms_to?: string } | null>(null);
+
+	let availableChannels = $derived({
+		email:    profile === null || !!profile.mail_to,
+		telegram: profile === null || !!profile.telegram_chat_id,
+		sms:      profile === null || !!profile.sms_to,
+	});
 
 	// AC-2 Diff-Highlight: 2,5s Aufleuchten nach jeder Änderung.
 	let highlight: Highlight | null = $state(null);
@@ -207,14 +214,18 @@
 	async function load() {
 		loading = true;
 		try {
-			const [catalogData, templateData, presetData] = await Promise.all([
+			const [catalogData, templateData, presetData, profileData] = await Promise.all([
 				api.get<MetricCatalog>('/api/metrics'),
 				api.get<Template[]>('/api/templates').catch(() => [] as Template[]),
 				api.get<MetricPreset[]>('/api/metric-presets').catch(() => [] as MetricPreset[]),
+				fetch('/api/auth/profile', { credentials: 'same-origin' })
+					.then((r) => (r.ok ? r.json() : null))
+					.catch(() => null),
 			]);
 			catalog = catalogData;
 			templates = templateData;
 			userPresets = presetData;
+			profile = profileData;
 			initFromTrip();
 		} catch (e: unknown) {
 			console.error(e);
@@ -452,6 +463,7 @@
 						{telegramKurzform}
 						onChange={(ch) => { channels = ch; }}
 						onKurzformChange={(v) => { telegramKurzform = v; }}
+						availability={availableChannels}
 					/>
 				</Card>
 

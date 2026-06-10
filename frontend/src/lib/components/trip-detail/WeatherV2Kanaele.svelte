@@ -18,9 +18,10 @@
 		telegramKurzform: boolean;
 		onChange: (updated: ChannelConfig) => void;
 		onKurzformChange: (v: boolean) => void;
+		availability?: { email: boolean; telegram: boolean; sms: boolean };
 	}
 
-	let { channels, primaryCount, telegramKurzform, onChange, onKurzformChange }: Props = $props();
+	let { channels, primaryCount, telegramKurzform, onChange, onKurzformChange, availability }: Props = $props();
 
 	const WM2_CHANNELS = [
 		{ id: 'email' as const,    label: 'Email',    glyph: '✉', max: 99,  note: 'alle Spalten · kein Limit' },
@@ -44,6 +45,7 @@
 				class="ch-row"
 				onclick={() => toggle(ch.id)}
 				aria-pressed={on}
+				disabled={!(availability?.[ch.id] ?? true)}
 			>
 				<span class="ch-glyph mono" class:active={on} aria-hidden="true">{ch.glyph}</span>
 				<div class="ch-info">
@@ -58,7 +60,13 @@
 					onchange={(v) => { if (v !== on) toggle(ch.id); }}
 				/>
 			</button>
-			{#if ch.id === 'telegram' && on && primaryCount > CHANNEL_COL_BUDGET.telegram}
+			{#if !(availability?.[ch.id] ?? true)}
+				<div class="ch-hint" data-testid="channel-{ch.id}-hint">
+					{ch.label} nicht konfiguriert —
+					<a href="/account">im Account einrichten</a>
+				</div>
+			{/if}
+			{#if ch.id === 'telegram' && on && (availability?.telegram ?? true) && primaryCount > CHANNEL_COL_BUDGET.telegram}
 				<div class="kurzform-row">
 					<Switch
 						checked={telegramKurzform}
@@ -159,6 +167,21 @@
 		color: var(--g-ink-3);
 		margin-top: 2px;
 		line-height: 1.45;
+	}
+	.ch-hint {
+		font-size: 12px;
+		color: var(--g-ink-3);
+		padding: 0 16px 12px 52px;
+		line-height: 1.45;
+	}
+	.ch-hint a {
+		color: var(--g-accent);
+		text-decoration: underline;
+		text-underline-offset: 2px;
+	}
+	.ch-row:disabled {
+		cursor: default;
+		opacity: 0.6;
 	}
 	.footnote {
 		font-size: 12px;
