@@ -43,7 +43,7 @@ func TestHealthHandlerPythonUp(t *testing.T) {
 	py := startFakePython()
 	defer py.Close()
 
-	h := HealthHandler(py.URL)
+	h := HealthHandler(py.URL, "test-sha")
 	req := httptest.NewRequest("GET", "/api/health", nil)
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)
@@ -64,10 +64,13 @@ func TestHealthHandlerPythonUp(t *testing.T) {
 	if body["version"] == nil {
 		t.Error("expected version to be set")
 	}
+	if body["commit"] != "test-sha" {
+		t.Errorf("expected commit test-sha, got %v", body["commit"])
+	}
 }
 
 func TestHealthHandlerPythonDown(t *testing.T) {
-	h := HealthHandler("http://127.0.0.1:19999")
+	h := HealthHandler("http://127.0.0.1:19999", "test-sha")
 	req := httptest.NewRequest("GET", "/api/health", nil)
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)

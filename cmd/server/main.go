@@ -24,6 +24,9 @@ import (
 	"github.com/henemm/gregor-api/internal/store"
 )
 
+// gitCommit is injected at build time via -ldflags "-X main.gitCommit=<sha>".
+var gitCommit = "dev"
+
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
@@ -151,7 +154,7 @@ func main() {
 		passkeyRegPubLimiter.Middleware(handler.PasskeyRegisterPublicFinishHandler(s, webAuthn, challengeStore, cfg.SessionSecret)).ServeHTTP,
 	)
 
-	r.Get("/api/health", handler.HealthHandler(cfg.PythonCoreURL))
+	r.Get("/api/health", handler.HealthHandler(cfg.PythonCoreURL, gitCommit))
 	r.Get("/api/config", handler.ProxyHandler(cfg.PythonCoreURL, "/config"))
 	r.Get("/api/metrics", handler.ProxyHandler(cfg.PythonCoreURL, "/metrics"))
 	r.Get("/api/templates", handler.ProxyHandler(cfg.PythonCoreURL, "/templates"))

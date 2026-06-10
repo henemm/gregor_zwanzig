@@ -14,7 +14,7 @@ import (
 
 const version = "0.1.0"
 
-func HealthHandler(pythonURL string) http.HandlerFunc {
+func HealthHandler(pythonURL string, gitCommit string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		client := &http.Client{Timeout: 2 * time.Second}
 		pythonStatus := "ok"
@@ -37,6 +37,7 @@ func HealthHandler(pythonURL string) http.HandlerFunc {
 			"status":      status,
 			"version":     version,
 			"python_core": pythonStatus,
+			"commit":      gitCommit,
 		})
 	}
 }
