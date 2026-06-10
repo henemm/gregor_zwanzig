@@ -319,6 +319,7 @@ test.describe('Epic #135 Step 5 — Trip-Detail Overview, rechte Spalte (#158 + 
 		}
 
 		// Step 2
-		await expect(page.getByTestId('trip-detail-breadcrumb')).toBeVisible();
+		// Issue #699: innere Duplikat-Breadcrumb entfernt → äußere Bar prüfen.
+		await expect(page.getByTestId('trip-detail-breadcrumb-bar')).toBeVisible();
 	});
 });

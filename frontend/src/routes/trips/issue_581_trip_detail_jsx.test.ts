@@ -123,11 +123,17 @@ describe('AC-2: TripHeader Hero-Typo', () => {
 		);
 	});
 
-	test('AC-2: Eyebrow enthält "Trip ·" als Muster', () => {
+	// Issue #699: Eyebrow-Format von "Trip · {region}" auf
+	// "{REGION} · {DATUMSBEREICH}" umgestellt — der alte Präfix entfällt.
+	test('AC-2: Eyebrow zeigt Region + Datumsbereich (kein "Trip ·"-Präfix mehr)', () => {
 		const src = readSrc(HEADER);
 		assert.ok(
-			src.includes('Trip ·') || src.includes("Trip ·"),
-			'TripHeader.svelte Eyebrow muss "Trip · {region}" enthalten'
+			!src.includes('Trip ·'),
+			'TripHeader.svelte Eyebrow darf das alte Format "Trip · {region}" nicht mehr enthalten (Issue #699)'
+		);
+		assert.ok(
+			src.includes('trip.region') && src.includes('dateRange'),
+			'TripHeader.svelte Eyebrow muss Region und Datumsbereich (dateRange) zusammen rendern'
 		);
 	});
 });

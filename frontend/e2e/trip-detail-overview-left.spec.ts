@@ -320,8 +320,8 @@ test.describe('Epic #135 Step 4 — Trip-Detail Overview, linke Spalte (#156 + #
 		for (const tab of ['overview', 'stages', 'weather', 'briefings', 'alerts', 'preview']) {
 			await expect(page.getByTestId(`trip-detail-tab-${tab}`)).toBeVisible();
 		}
-		// Step 2: Breadcrumb
-		await expect(page.getByTestId('trip-detail-breadcrumb')).toBeVisible();
+		// Step 2: Breadcrumb (Issue #699: innere nav entfernt → äußere Bar)
+		await expect(page.getByTestId('trip-detail-breadcrumb-bar')).toBeVisible();
 	});
 
 	test('AC-18: Active + Selected gleichzeitig möglich (heutige Stage angeklickt)', async ({

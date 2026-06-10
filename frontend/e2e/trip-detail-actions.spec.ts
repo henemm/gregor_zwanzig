@@ -26,27 +26,26 @@ test.describe('Issue #153 — Trip-Detail Header (Breadcrumb + Status + Aktionen
 		await resetTripState(request);
 	});
 
-	test('AC-10: Breadcrumb zeigt Shortcode wenn vorhanden', async ({ page }) => {
-		// Vorbedingung: e2e-cockpit-test hat KEINEN Shortcode in global.setup.ts —
-		// daher fällt dieser AC auf den Fallback-Pfad (siehe AC-11) zurück.
-		// Strenger Shortcode-Test braucht eigenen Test-Trip; dieser AC verifiziert
-		// nur, dass die Breadcrumb-Struktur korrekt aufgebaut ist.
+	test('AC-10: Breadcrumb-Bar ist sichtbar und zeigt "Trips" + Trip-Name', async ({ page }) => {
+		// Issue #699: Die innere Duplikat-Breadcrumb (trip-detail-breadcrumb) wurde
+		// entfernt. Die korrekte Breadcrumb ist die äußere Bar in +page.svelte
+		// (data-testid="trip-detail-breadcrumb-bar"), die „Trips / <Name>" zeigt.
 		await page.goto(`/trips/${TRIP_ID}`);
-		const breadcrumb = page.getByTestId('trip-detail-breadcrumb');
-		await expect(breadcrumb).toBeVisible();
-		const link = page.getByTestId('trip-detail-breadcrumb-link-trips');
-		await expect(link).toHaveAttribute('href', '/trips');
-		const current = page.getByTestId('trip-detail-breadcrumb-current');
-		await expect(current).toBeVisible();
+		const bar = page.getByTestId('trip-detail-breadcrumb-bar');
+		await expect(bar).toBeVisible();
+		await expect(bar).toContainText('Trips');
 		// Akzeptiert sowohl Shortcode als auch Name — die genaue Logik ist in AC-11.
 	});
 
-	test('AC-11: Breadcrumb zeigt Trip-Name wenn kein Shortcode', async ({ page }) => {
+	test('AC-11: Breadcrumb-Bar zeigt Trip-Name (Original-Schreibweise, nicht uppercase)', async ({
+		page
+	}) => {
 		// e2e-cockpit-test hat keinen Shortcode → Fallback auf Name.
-		// Issue #302: Breadcrumb rendert Eyebrow-style UPPERCASE.
+		// Issue #699: Die äußere Bar rendert den Namen NICHT uppercase
+		// (anders als die entfernte innere nav).
 		await page.goto(`/trips/${TRIP_ID}`);
-		const current = page.getByTestId('trip-detail-breadcrumb-current');
-		await expect(current).toContainText('E2E COCKPIT TEST TRIP');
+		const bar = page.getByTestId('trip-detail-breadcrumb-bar');
+		await expect(bar).toContainText('E2E Cockpit Test Trip');
 	});
 
 	test('AC-12: Status-Badge zeigt "Aktiv" für trip mit Stages umschliessend heute', async ({
@@ -207,7 +206,7 @@ test.describe('Issue #153 — Trip-Detail Header (Breadcrumb + Status + Aktionen
 
 	test('Screenshot der Trip-Header-Komponente für visuelle Verifikation', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
-		await page.waitForSelector('[data-testid="trip-detail-breadcrumb"]');
+		await page.waitForSelector('[data-testid="trip-detail-breadcrumb-bar"]');
 		await page.screenshot({
 			path: 'docs/artifacts/epic-135-step2-trip-detail-actions/screenshot-trip-header.png',
 			fullPage: false

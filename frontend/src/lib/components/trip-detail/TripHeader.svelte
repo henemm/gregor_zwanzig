@@ -4,7 +4,7 @@
 	//
 	// Zweispaltig: Links Breadcrumb + H1 + Statuszeile + Meta. Rechts 3 Buttons.
 	// Pause/Archive-Logik ist in +page.svelte als Danger-Zone gewandert.
-	import { Eyebrow, Btn } from '$lib/components/atoms';
+	import { Btn } from '$lib/components/atoms';
 	import TripStatusBadge from './TripStatusBadge.svelte';
 	import { api } from '$lib/api.js';
 	import { formatDateRange, getDaysLabel } from '$lib/utils/tripHero';
@@ -43,6 +43,10 @@
 
 	const stats = $derived(computeTripStats(trip));
 	const dateRange = $derived(formatDateRange(trip));
+
+	// Issue #699 — Eyebrow im Format "REGION · DATUMSBEREICH". Fehlt eine
+	// Komponente, bleibt nur die vorhandene ohne verwaistes "·"-Trennzeichen.
+	const eyebrowText = $derived([trip.region, dateRange].filter(Boolean).join(' · '));
 	const daysLabel = $derived(getDaysLabel(trip, now));
 
 	// Issue #416 — Mobile Kennzahlen-Kacheln (sichtbar nur ≤ 899px).
@@ -100,17 +104,8 @@
 <header class="trip-header">
 	<div class="header-main">
 		<div class="header-left">
-			<nav data-testid="trip-detail-breadcrumb" aria-label="Breadcrumb" class="breadcrumb">
-				<Eyebrow>
-					<a href="/trips" data-testid="trip-detail-breadcrumb-link-trips">MEINE TRIPS</a>
-					<span aria-hidden="true"> › </span>
-					<span data-testid="trip-detail-breadcrumb-current">
-						{(trip.shortcode ?? trip.name).toUpperCase()}
-					</span>
-				</Eyebrow>
-			</nav>
 			<div class="trip-eyebrow-region">
-				Trip · {trip.region ?? ''}
+				{eyebrowText}
 			</div>
 
 			<h1 class="trip-h1" data-testid="trip-detail-h1">
@@ -184,13 +179,6 @@
 		gap: 0.5rem;
 		min-width: 0;
 		flex: 1 1 320px;
-	}
-	.breadcrumb a {
-		color: inherit;
-		text-decoration: none;
-	}
-	.breadcrumb a:hover {
-		text-decoration: underline;
 	}
 	.trip-h1 {
 		margin: 0;
