@@ -1,14 +1,15 @@
 # Epic 677: Compare-Editor — Tab-Basierte Oberfläche
 
-**Status:** In Progress (Slice 5/6 Complete — 2026-06-10)  
+**Status:** In Progress (Slices 1–5 Complete — 2026-06-10)  
 **Epic Scope:** Umbau der Orts-Vergleich-Schnittstelle von 5-Schritt-Wizard zu Tab-Editor (analog zu Trip-Editor #616/#622)  
 **Related Specs:**
 - `docs/specs/modules/issue_678_compare_editor_shell.md` (Slice 1 — Gerüst + Lock-Engine + Tab 1)
 - `docs/specs/modules/issue_679_compare_editor_edit.md` (Slice 2 — Edit-Modus + Dirty/Save-Flow)
 - `docs/specs/modules/issue_680_compare_editor_slice3.md` (Slice 3 — Fidelity Tabs „Orte" + „Idealwerte")
+- `docs/specs/modules/issue_718_compare_editor_slice4_validierung.md` (Slice 4 — Validierungsmeldungen für Idealwerte)
 - `docs/specs/modules/issue_682_compare_editor_mobile.md` (Slice 5 — Mobile-Parität ≤899px)
 
-**Child Issues:** #678 ✓, #679 ✓, #680 ✓, #682 ✓ (Slices 1–3 + Slice 5 complete)
+**Child Issues:** #678 ✓, #679 ✓, #680 ✓, #718 ✓, #682 ✓ (Slices 1–5 complete)
 
 ---
 
@@ -77,13 +78,23 @@ Epic #677 ersetzt die linearen 5-Schritt-Wizards des Orts-Vergleichs durch einen
 - **LoC:** ~550
 - **Key Decision:** PO-Direktive „optisch angedeutet aber nicht funktional ist nicht akzeptiert" — alle Funktionen vollständig verdrahtet (Slider-Drag, Add/Remove-Metrik, Persistenz)
 
-### Slice 4: Validierungsmeldungen (planned)
+### Slice 4: Validierungsmeldungen (Issue #718 ✓)
 
-Fehlermeldungen für Grenzwert-Verletzungen, Min > Max, etc.  Warnsystem für unplausible Idealwertbereiche.
+**Status:** ✓ Completed 2026-06-10
 
-### Slice 5: Mobile (planned)
+- **New Validation Function:** `validateIdealRanges()` in compareMetricDefs.ts — prüft min > max in aktiven Metriken, keine Auto-Korrektur
+- **UI Integration:** Inline rote Fehlermeldung direkt unter Slider bei defekten Ranges
+- **State Extension:** `idealsValid?: boolean` in `CompareEditorProgress`; `canAdvanceStep3` Getter in compareWizardState.svelte.ts
+- **Tab-Completion Logic:** Tab „Idealwerte" gilt erst als done wenn `idealsVisited && idealsValid !== false`
+- **Weiter-Button:** Blockiert bei ungültigen Ranges; `canAdvanceStep3` gated auf `validateIdealRanges().valid`
+- **LoC:** ~60
+- **Key Decision:** Keine Warnstufe für unplausible Werte (per Slider unerreichbar); nur min > max (historische Fehlkonfigurationen aus API-Load)
 
-Responsive Tab-Editor für kleine Viewports (<900px).
+### Slice 5: Mobile (Issue #682 ✓)
+
+**Status:** ✓ Completed 2026-06-10
+
+Responsive Tab-Editor für kleine Viewports (≤899px).
 
 ### Slice 6: Cleanup (planned)
 
@@ -326,6 +337,8 @@ No special migration needed — pure frontend + endpoint routing fix. Legacy `Co
 
 | Date | Slice | Change |
 |------|-------|--------|
+| 2026-06-10 | 4 | Validierungsmeldungen für Idealwerte: `validateIdealRanges()` prüft min > max, inline rote Fehlermeldung unter Slider, Tab-Completion gated auf `idealsValid`, `canAdvanceStep3` Getter blockiert Weiter-Button bei Fehlern. Issue #718 ✓ |
+| 2026-06-10 | 5 | Mobile-Parität ≤899px mit progressiven Tab-Editor. Issue #682 ✓ |
 | 2026-06-09 | 3 | Fidelity Tabs „Orte" + „Idealwerte": nummerierte Picked-Liste + Region-Gruppierung, Dual-Handle-Slider, Segmented-Control, Add/Remove-Metrik, Persistenz display_config.active_metrics. RangeSlider.svelte neu. ALL_METRICS Katalog. Issue #680 ✓ |
 | 2026-06-09 | 2 | Edit-Modus implementiert, Dirty/Save-Flow, Endpoint-Fix #644, Round-Trip-Spread. Issue #679 ✓ |
 | 2026-06-09 | 1 | Compare-Editor Gerüst + Lock-Engine + Tab 1 (Vergleich). Issue #678 ✓ |

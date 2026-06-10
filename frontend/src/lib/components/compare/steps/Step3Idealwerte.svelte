@@ -10,6 +10,7 @@
 		IDEAL_DEFAULTS,
 		ALL_METRICS,
 		deriveIdealText,
+		validateIdealRanges,
 		type ProfileKey
 	} from '../compareMetricDefs';
 	import { toCompareProfile } from '$lib/types';
@@ -80,6 +81,11 @@
 	// Verfügbare Metriken für "hinzufügen"
 	const availableMetrics = $derived(
 		ALL_METRICS.filter((m) => !ws.activeMetricKeys.includes(m.key))
+	);
+
+	// Issue #718: Keys mit ungültigem min >= max (nur range-Metriken)
+	const invalidKeys = $derived(
+		validateIdealRanges(ws.idealRanges, ws.activeMetricKeys).invalidKeys
 	);
 
 	let showAddMenu = $state(false);
@@ -183,6 +189,15 @@
 							<!-- Hidden compat inputs for existing tests -->
 							<input type="hidden" data-testid={`compare-step3-min-${metric.key}`} value={ws.idealRanges[metric.key]?.min ?? ''} />
 							<input type="hidden" data-testid={`compare-step3-max-${metric.key}`} value={ws.idealRanges[metric.key]?.max ?? ''} />
+							<!-- Issue #718: Inline-Fehlermeldung bei min >= max -->
+							{#if invalidKeys.includes(metric.key)}
+								<div
+									data-testid={`compare-step3-error-${metric.key}`}
+									style="margin-top:4px; font-size:11.5px; color:var(--g-danger, #a83232); font-family:var(--g-font-sans);"
+								>
+									Min-Wert muss kleiner als Max-Wert sein
+								</div>
+							{/if}
 						</div>
 					{:else if metric.kind === 'enum'}
 						<div style="display:flex; gap:4px;" data-testid={`compare-step3-max-${metric.key}`}>

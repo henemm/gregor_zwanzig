@@ -68,6 +68,24 @@ export const PROFILE_METRICS_WITH_SCALES: Record<ProfileKey, MetricDef[]> = {
 	ALLGEMEIN:       [TEMP_MAX, WIND_MAX, PRECIP_SUM, VISIBILITY]
 };
 
+/**
+ * Issue #718 — Validiert idealRanges auf min >= max (ungültiger Bereich).
+ * Nur aktive Keys werden geprüft. Enum-Metriken ohne numerisches min werden übersprungen.
+ */
+export function validateIdealRanges(
+	ranges: Record<string, { min?: unknown; max?: unknown }>,
+	activeKeys: string[]
+): { valid: boolean; invalidKeys: string[] } {
+	const invalidKeys = activeKeys.filter((key) => {
+		const r = ranges[key];
+		if (!r) return false;
+		const min = typeof r.min === 'number' ? r.min : undefined;
+		const max = typeof r.max === 'number' ? r.max : undefined;
+		return min !== undefined && max !== undefined && min >= max;
+	});
+	return { valid: invalidKeys.length === 0, invalidKeys };
+}
+
 export const IDEAL_DEFAULTS: Record<ProfileKey, Record<string, IdealRange>> = {
 	WINTERSPORT: {
 		snow_depth_cm:   { min: 30, max: 200 },

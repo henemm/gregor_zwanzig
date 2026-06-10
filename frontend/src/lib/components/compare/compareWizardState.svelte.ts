@@ -6,6 +6,7 @@
 
 import type { ActivityProfile, ChannelLayouts, ComparePreset } from '$lib/types';
 import type { IdealRange } from './compareMetricDefs';
+import { validateIdealRanges } from './compareMetricDefs';
 import { buildComparePresetSavePayload } from './compareEditorSave';
 
 export type SaveStatus = 'idle' | 'saving' | 'ok' | 'error';
@@ -52,6 +53,10 @@ export class CompareWizardState {
 		return this.pickedIds.length >= 2;
 	}
 
+	get canAdvanceStep3(): boolean {
+		return validateIdealRanges(this.idealRanges, this.activeMetricKeys).valid;
+	}
+
 	get canAdvanceStep5(): boolean {
 		return this.sendEmail || this.sendTelegram || this.sendSms;
 	}
@@ -62,6 +67,8 @@ export class CompareWizardState {
 				return this.canAdvanceStep1;
 			case 2:
 				return this.canAdvanceStep2;
+			case 3:
+				return this.canAdvanceStep3;
 			case 5:
 				return this.canAdvanceStep5;
 			default:

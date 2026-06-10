@@ -16,6 +16,7 @@
 		doneTabs,
 		type CompareTabId
 	} from './compareEditorLogic';
+	import { validateIdealRanges } from './compareMetricDefs';
 	import Step2Orte from './steps/Step2Orte.svelte';
 	import Step3Idealwerte from './steps/Step3Idealwerte.svelte';
 	import Step4Layout from './steps/Step4Layout.svelte';
@@ -47,6 +48,9 @@
 	let idealsVisited = $state(false);
 	let layoutVisited = $state(false);
 	let versandVisited = $state(false);
+
+	// Issue #718: Validierungs-Status der Idealwerte — reaktiv, keine Seiteneffekte.
+	const idealsValid = $derived(validateIdealRanges(wiz.idealRanges, wiz.activeMetricKeys).valid);
 
 	let activeTab = $state<CompareTabId>('vergleich');
 
@@ -90,6 +94,7 @@
 			name: wiz.name,
 			pickedCount: wiz.pickedIds.length,
 			idealsVisited,
+			idealsValid,
 			layoutVisited,
 			versandVisited
 		})

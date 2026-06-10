@@ -15,6 +15,7 @@ export interface CompareEditorProgress {
 	idealsVisited: boolean;
 	layoutVisited: boolean;
 	versandVisited?: boolean;
+	idealsValid?: boolean; // Issue #718: undefined = rückwärtskompatibel (gilt als valid)
 }
 
 /** Welche Tabs sind im Create-Modus anklickbar (sequenzielle Freischaltung)? */
@@ -32,7 +33,7 @@ export function doneTabs(p: CompareEditorProgress): Set<CompareTabId> {
 	const s = new Set<CompareTabId>();
 	if (p.name.trim()) s.add('vergleich');
 	if (p.pickedCount >= 2) s.add('orte');
-	if (p.idealsVisited) s.add('idealwerte');
+	if (p.idealsVisited && p.idealsValid !== false) s.add('idealwerte');
 	if (p.layoutVisited) s.add('layout');
 	if (p.versandVisited) s.add('versand');
 	return s;
