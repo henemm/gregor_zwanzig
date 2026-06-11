@@ -319,6 +319,7 @@ def render_html(
     sent_at: Optional[datetime] = None,
     show_metrics_summary: bool = False,
     show_outlook: bool = True,
+    day_comparison: Optional["DayComparison"] = None,
 ) -> str:
     """Render full HTML e-mail body. Pure function."""
     sig = profile_signature(profile)
@@ -765,6 +766,9 @@ def render_html(
     all_rows = [r for tbl in seg_tables for r in tbl]
     legend_text = build_units_legend(all_rows) if all_rows else ""
 
+    # Issue #750: Vortag-Vergleich-Sektion (nach dem Ausblick-Block).
+    day_comparison_html = render_day_comparison_html(day_comparison)
+
     html = f"""<!DOCTYPE html>
 <html>
 <head>
@@ -820,6 +824,7 @@ def render_html(
         {night_html}
         {thunder_html}
         {trend_html}
+        {day_comparison_html}
         {daily_summary_html}
         {highlights_html}
 

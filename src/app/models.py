@@ -732,6 +732,7 @@ class TripReportConfig:
     show_metrics_summary: bool = False          # Metriken-Überblick (Issue #664)
     show_outlook: bool = True                   # Issue #721: Ausblick-Block (Großwetterlage + nächste Etappen)
     email_format: str = "full"                  # Issue #722: "full" | "compact"
+    show_yesterday_comparison: bool = True      # Issue #750: Vortag-Vergleich-Sektion
 
     # Inbound-Kommandos (Issue #670)
     paused_until: Optional[datetime] = None     # PAUSE: ruht bis dieser UTC-Zeitpunkt

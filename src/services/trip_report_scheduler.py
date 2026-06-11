@@ -471,6 +471,22 @@ class TripReportSchedulerService:
         if trip.display_config and trip.report_config:
             trip.display_config.show_compact_summary = trip.report_config.show_compact_summary
 
+        # 7b. Vortag-Vergleich (Issue #750): gestrigen Snapshot laden + Deltas
+        # berechnen. Fail-soft — fehlt der Vortag, bleibt day_comparison None.
+        day_comparison = None
+        show_yc = trip.report_config.show_yesterday_comparison if trip.report_config else True
+        if show_yc:
+            try:
+                from services.weather_snapshot import WeatherSnapshotService
+                from services.day_comparison import DayComparisonService
+                yday = WeatherSnapshotService(self._user_id).load_dated(
+                    trip.id, target_date - timedelta(days=1))
+                if yday:
+                    day_comparison = DayComparisonService().compare(segment_weather, yday)
+            except Exception as e:
+                logger.warning(f"Vortag-Vergleich übersprungen für {trip.id}: {e}")
+                day_comparison = None
+
         # 8. Format report (uses unified display config from trip)
         report = self._formatter.format_email(
             segments=segment_weather,
@@ -488,6 +504,7 @@ class TripReportSchedulerService:
             profile=trip.aggregation.profile,
             stability_result=stability_result,
             report_config=trip.report_config,
+            day_comparison=day_comparison,
         )
 
         # 7. Send via configured channels

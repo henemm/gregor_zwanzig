@@ -132,6 +132,7 @@ def render_plain(
     daily_summary_metrics: Optional[list[str]] = None,
     show_metrics_summary: bool = False,
     show_outlook: bool = True,
+    day_comparison: Optional["DayComparison"] = None,
 ) -> str:
     """Render full plain-text e-mail body. Pure function."""
     sig = profile_signature(profile)
@@ -255,6 +256,12 @@ def render_plain(
             note = stage.get("note")
             if note:
                 lines.append(f"    ↳ {note}")
+        lines.append("")
+
+    # Issue #750: Vortag-Vergleich-Sektion (nach dem Ausblick-Block).
+    _day_comparison_text = render_day_comparison_plain(day_comparison)
+    if _day_comparison_text:
+        lines.append(_day_comparison_text)
         lines.append("")
 
     if highlights and show_highlights:

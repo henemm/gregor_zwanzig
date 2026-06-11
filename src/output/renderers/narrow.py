@@ -11,8 +11,11 @@ die Katalog-``compact_label`` gemappt.
 """
 from __future__ import annotations
 
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 from zoneinfo import ZoneInfo
+
+if TYPE_CHECKING:
+    from services.day_comparison import DayComparison
 
 from app.metric_catalog import get_metric
 from app.models import SegmentWeatherData, SegmentWeatherSummary, StabilityResult, ThunderLevel, UnifiedWeatherDisplayConfig
@@ -310,6 +313,54 @@ def _tg_day_footer(segments: list[SegmentWeatherData]) -> Optional[str]:
     return " · ".join(parts)
 
 
+def _tg_vortag_line(day_comparison: Optional["DayComparison"]) -> Optional[str]:
+    """F6 (#752): Kompakte Vortag-Zeile für Telegram.
+
+    Sammelt alle abweichenden Metrik-Deltas über alle Segmente, sortiert
+    absteigend nach |delta| und nimmt die Top-3. Gibt None zurück wenn keine
+    abweichenden Metriken vorliegen (oder day_comparison None/leer).
+    """
+    from services.day_comparison import ComparisonDirection
+
+    if day_comparison is None or not day_comparison.entries:
+        return None
+
+    # (Label, MetricDelta) pro Metrik je Segment einsammeln.
+    _LABELS = [
+        ("precip_sum", "Regen", "mm"),
+        ("wind_max", "Wind", "km/h"),
+        ("gust_max", "Böen", "km/h"),
+        ("temp_max", "Temp max", "°C"),
+        ("temp_min", "Temp min", "°C"),
+        ("thunder", "Gewitter", ""),
+    ]
+
+    collected: list[tuple[float, str, str, float]] = []  # (|delta|, label, unit, delta)
+    for entry in day_comparison.entries:
+        for attr, label, unit in _LABELS:
+            md = getattr(entry, attr)
+            if md.direction == ComparisonDirection.MISSING or md.delta is None:
+                continue
+            if abs(md.delta) <= 0:
+                continue
+            collected.append((abs(md.delta), label, unit, md.delta))
+
+    if not collected:
+        return None
+
+    collected.sort(key=lambda t: t[0], reverse=True)
+    top = collected[:3]
+
+    parts = []
+    for _absd, label, unit, delta in top:
+        sign = "+" if delta > 0 else ""
+        if unit:
+            parts.append(f"{label} {sign}{delta}{unit}")
+        else:
+            parts.append(f"{label} {sign}{delta}")
+    return "Vortag: " + ", ".join(parts)
+
+
 def render_narrow(
     channel: str,
     *,
@@ -322,6 +373,7 @@ def render_narrow(
     friendly_keys: Optional[set[str]] = None,
     stability_result: Optional[StabilityResult] = None,
     multi_day_trend: Optional[list[dict]] = None,
+    day_comparison: Optional["DayComparison"] = None,
 ) -> str:
     """Render kompakten Telegram-Body. Pure function.
 
@@ -427,6 +479,13 @@ def render_narrow(
             note = stage.get("note")
             if note:
                 lines.extend(_wrap(f"    ↳ {note}", _TG_PROSE_WIDTH))
+
+    # F6 (#752): Vortag-Zeile nur für Telegram, max 3 Metriken nach |delta|.
+    if channel == "telegram":
+        vortag_line = _tg_vortag_line(day_comparison)
+        if vortag_line:
+            lines.append("")
+            lines.extend(_wrap(vortag_line, _TG_PROSE_WIDTH))
 
     # Issue #612: Befehls-Hinweis nur für Telegram (nicht Signal).
     # Pipe-Zeichen als Trenner vermieden: _wrap kann Zeilenanfang mit "|" erzeugen.

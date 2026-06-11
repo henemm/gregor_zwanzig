@@ -16,8 +16,11 @@ from __future__ import annotations
 
 import dataclasses
 from datetime import datetime, timezone
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 from zoneinfo import ZoneInfo
+
+if TYPE_CHECKING:
+    from services.day_comparison import DayComparison
 
 from utils.timezone import local_fmt, local_hour
 
@@ -67,6 +70,7 @@ class TripReportFormatter:
         profile: Optional[ActivityProfile] = None,
         stability_result: Optional[StabilityResult] = None,
         report_config: Optional[TripReportConfig] = None,
+        day_comparison: Optional["DayComparison"] = None,
     ) -> TripReport:
         """Format trip segments into HTML + plain-text email."""
         if not segments:
@@ -129,6 +133,11 @@ class TripReportFormatter:
         _show_outlook = report_config.show_outlook if report_config else True
         # Issue #722: E-Mail-Format
         _email_format = report_config.email_format if report_config else "full"
+        # F001/F002 (#750/#752): Defense-in-Depth für den Vortag-Vergleich-Toggle.
+        # AC-3 verlangt: show_yesterday_comparison=False → Sektion erscheint NICHT,
+        # auch wenn der Aufrufer ein DayComparison durchreicht.
+        if report_config is not None and not report_config.show_yesterday_comparison:
+            day_comparison = None
         # Issue #623 AC-5: Sendezeit für das Kontext-Label im HTML-Trend-Block.
         _sent_at = datetime.now(timezone.utc)
         email_html, email_plain = render_email(
@@ -159,6 +168,7 @@ class TripReportFormatter:
             show_metrics_summary=_show_metrics_summary,
             show_outlook=_show_outlook,
             email_format=_email_format,
+            day_comparison=day_comparison,
         )
         first_agg = segments[0].aggregated
         email_subject = self._generate_subject(
@@ -184,6 +194,7 @@ class TripReportFormatter:
             friendly_keys=self._friendly_keys,
             stability_result=stability_result,
             multi_day_trend=effective_trend,
+            day_comparison=day_comparison,
         )
 
         # Issue #614: Tages-Max-Kurzform anhängen wenn konfiguriert.

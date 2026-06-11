@@ -27,6 +27,7 @@ from src.output.tokens.dto import TokenLine
 
 if TYPE_CHECKING:
     from app.models import StabilityResult
+    from services.day_comparison import DayComparison
 
 
 def render_email(
@@ -58,6 +59,7 @@ def render_email(
     show_metrics_summary: bool = False,
     show_outlook: bool = True,
     email_format: str = "full",
+    day_comparison: Optional["DayComparison"] = None,
 ) -> tuple[str, str]:
     """Returns (html_body, plain_body). Pure function.
 
@@ -122,6 +124,7 @@ def render_email(
         sent_at=sent_at,
         show_metrics_summary=show_metrics_summary,
         show_outlook=show_outlook,
+        day_comparison=day_comparison,
     )
     plain_body = render_plain(
         segments=segments,
@@ -149,6 +152,7 @@ def render_email(
         daily_summary_metrics=daily_summary_metrics,
         show_metrics_summary=show_metrics_summary,
         show_outlook=show_outlook,
+        day_comparison=day_comparison,
     )
     return html_body, plain_body
 
