@@ -147,4 +147,5 @@ authentifizierten Pfaden.
 
 ## Changelog
 
+- 2026-06-11: **[OBSOLETE — superseded by Issue #731]** PAUSE/SKIP/CONFIG entfernt; abruf-zentrierter Befehlssatz (HEUTE/MORGEN/JETZT/GEWITTER/RUHETAG/STATUS/STOP/WEITER/HILFE) ersetzt alte Abonnenten-Befehle. Persistenzfelder `paused_until`/`skip_next` bleiben für Bestandsdaten erhalten. Siehe Issue #731 für aktuellen Befehlssatz.
 - 2026-06-09: Initial spec created (Issue #670)

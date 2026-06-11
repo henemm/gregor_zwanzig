@@ -1,6 +1,6 @@
 # Trip-Befehle — Email-Reply & Telegram (F6)
 
-**Updated:** 2026-06-08 (Issues #672/#671 — E2E-Pipeline-Tests + vollständiges Bot-Menü; #651/#653/#654/#655 — Telegram Tier-1/2/3 + Zoom-Navigation)
+**Updated:** 2026-06-11 (Issue #731 — Befehlssatz vereinheitlicht: abruf-zentriert (HEUTE/MORGEN/JETZT/GEWITTER/RUHETAG/STATUS/STOP/WEITER/HILFE), PAUSE/SKIP/CONFIG entfernt); 2026-06-08 (Issues #672/#671 — E2E-Pipeline-Tests + vollständiges Bot-Menü; #651/#653/#654/#655 — Telegram Tier-1/2/3 + Zoom-Navigation)
 
 Gregor Zwanzig empfaengt Trip-Befehle ueber zwei Kanäle:
 - **Email:** Du antwortest auf einen bestehenden Report (alle 5 Minuten abgerufen)
@@ -21,64 +21,109 @@ Gregor Zwanzig empfaengt Trip-Befehle ueber zwei Kanäle:
 
 ## Befehlsformat
 
+Zwei Arten sind moglich:
+
+**1. Bare Keywords (neu, ab #731)** — einfach das Schlüsselwort in die erste Zeile:
 ```
-### befehl: wert
+HEUTE
+MORGEN
+JETZT
+STATUS
 ```
 
-Drei Rauten, Leerzeichen, Befehlsname, optional Doppelpunkt mit Wert.
+**2. Klassisches Format** (weiterhin unterstützt) — Drei Rauten + Befehl:
+```
+### befehl: wert
+### ruhetag: 2
+```
+
+Gross-/Kleinschreibung ist egal. Der Befehl muss in der **ersten nicht-leeren Zeile** stehen.
+
+---
 
 ## Verfuegbare Befehle
 
-### `### ruhetag`
+### Abfrage-Befehle (Abruf-zentriert)
 
-Verschiebt alle **zukuenftigen** Etappen um 1 Tag nach hinten.
-Die heutige und vergangene Etappen bleiben unveraendert.
+Diese Befehle zeigen Wetter-Informationen **ohne** Trip-State zu veraendern.
 
+| Befehl | Wirkung |
+|--------|--------|
+| `HEUTE` | Wetter der heutigen Etappe |
+| `MORGEN` | Wetter der morgigen Etappe |
+| `JETZT` / `NOW` | Nowcast (Regen/Gewitter naechste ~2h) |
+| `GEWITTER` | Gewittergefahr heutige Etappe (stuendlich) |
+| `STATUS` | Heute + kommende Etappen (ohne vergangene) |
+| `HILFE` / `HELP` | Verfuegbare Befehle anzeigen |
+
+**Beispiel:**
 ```
-### ruhetag
+HEUTE
 ```
 
-Mit Anzahl Tage (z.B. 2 Ruhetage):
+Gregor antwortet mit dem Wetter fuer die heutige Etappe.
 
+---
+
+### Verwaltungs-Befehle
+
+Diese Befehle veraendern den Trip-Status.
+
+| Befehl | Syntax | Wirkung |
+|--------|--------|---------|
+| `RUHETAG` | `RUHETAG` oder `RUHETAG: 2` | Verschiebt zukuenftige Etappen um N Tage |
+| `STOP` | `STOP` | Deaktiviert den Versand (Reporter pausieren) |
+| `WEITER` | `WEITER` | Reaktiviert den Versand (nach STOP) |
+
+**Beispiel — RUHETAG:**
 ```
-### ruhetag: 2
+RUHETAG: 2
 ```
 
 **Bestaetigung:**
 ```
 [GR221 Mallorca] Ruhetag bestaetigt
 
-Ruhetag eingetragen: +1 Tag.
+Ruhetag eingetragen: +2 Tage.
 
 Verschobene Etappen:
-  Tag 3: 18.02.2026 -> 19.02.2026
-  Tag 4: 19.02.2026 -> 20.02.2026
+  Tag 3: 18.02.2026 -> 20.02.2026
+  Tag 4: 19.02.2026 -> 21.02.2026
 
 Naechster Report kommt planmaessig.
 ```
 
-**Idempotenz:** Ein zweiter `### ruhetag` am gleichen Tag wird abgelehnt
-(verhindert versehentliche Doppel-Verschiebung bei Email-Retry).
+**Beispiel — STOP:**
+```
+STOP
+```
+
+**Bestaetigung:**
+```
+[GR221 Mallorca] Trip beendet
+
+Reports fuer 'GR221 Mallorca' deaktiviert. Gute Heimreise!
+```
+
+**Beispiel — WEITER:**
+```
+WEITER
+```
+
+**Bestaetigung:**
+```
+[GR221 Mallorca] Versand reaktiviert
+
+Briefing-Reports sind wieder aktiv. Naechster Report kommt planmaessig.
+```
 
 ---
 
-### `### report: morning` / `### report: evening`
+### Klassische Befehle (weiterhin unterstützt)
 
-Loest sofort einen Report aus — ohne auf den naechsten Zeitplan zu warten.
+Fuer reine Etappen-Verwaltung (keine PAUSE/SKIP/CONFIG mehr — siehe Issue #731):
 
-```
-### report: morning
-```
-
-oder
-
-```
-### report: evening
-```
-
----
-
-### `### startdatum: YYYY-MM-DD`
+#### `### startdatum: YYYY-MM-DD`
 
 Verschiebt **alle** Etappen relativ zu einem neuen Startdatum.
 Die Abstande zwischen Etappen bleiben gleich.
@@ -102,19 +147,18 @@ Neue Etappen-Daten:
 
 ---
 
-### `### abbruch`
+#### `### report: morning` / `### report: evening`
 
-Deaktiviert alle automatischen Reports fuer diesen Trip.
+Loest sofort einen Report aus — ohne auf den naechsten Zeitplan zu warten.
 
 ```
-### abbruch
+### report: morning
 ```
 
-**Bestaetigung:**
-```
-[GR221 Mallorca] Trip beendet
+oder
 
-Reports fuer 'GR221 Mallorca' deaktiviert. Gute Heimreise!
+```
+### report: evening
 ```
 
 ## Einrichtung: Plus-Adresse (empfohlen)
@@ -184,15 +228,52 @@ Diese Zoom-Navigation ersetzt die Nachricht in-place — kein Nachrichten-Spam. 
 
 ---
 
-## Telegram-Steuer-Befehle
+## Telegram — Abruf-Befehle (Bare Keywords)
 
-Wie Email, aber direkt als Telegram-Text:
+Seit Issue #731 kannst du den Telegram-Bot mit den gleichen **bare Keywords** wie Email ansprechen:
 
 ```
-ruhetag
-ruhetag: 2
-startdatum: 2026-03-15
-abbruch
+HEUTE
+MORGEN
+JETZT (oder NOW)
+GEWITTER
+STATUS
+HILFE
 ```
 
-(Keine `###`-Präfixe nötig — Telegram erkennt die Befehle direkt.)
+Der Bot antwortet direkt — kein Reload nötig.
+
+**Beispiel:** Schreib `heute` → Bot zeigt Wetter der heutigen Etappe.
+
+---
+
+## Telegram — Verwaltungs-Befehle
+
+Wie Email:
+
+```
+RUHETAG
+RUHETAG: 2
+STOP
+WEITER
+```
+
+Keine `###`-Präfixe nötig — Telegram erkennt die Befehle direkt.
+
+---
+
+## Telegram — Klassische Befehle (via Bot-Menü)
+
+Das Bot-Menü bietet zusätzlich strukturierte Abfragen (ähnlich Query-Keys), die in der Email-Dokumentation als `### key` gelistet sind:
+
+| Bot-Menü Name | Beschreibung |
+|---------------|-------------|
+| **glance** | 🌤️ Schnell-Überblick (heute & morgen) |
+| **heute** | 📅 Heute Details |
+| **morgen** | 📅 Morgen Details |
+| **heute_gewitter** | ⛈️ Stündliche Gewitter-Serie heute |
+| **timeline_heute** | 🕐 Etappen mit Metriken heute |
+| **timeline_morgen** | 🕐 Etappen mit Metriken morgen |
+| **hilfe** | ℹ️ Verfügbare Befehle |
+
+Klick den Button im Bot-Menü oder tippe `/glance`, `/heute_gewitter` etc.

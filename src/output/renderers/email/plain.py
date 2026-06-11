@@ -311,6 +311,18 @@ def render_plain(
             lines.extend(_plain_lines)
             lines.append("")
 
+    # Antwort-Kommandos (Issue #731: abruf-zentrierter Grundbefehlssatz)
+    lines.append("")
+    lines.append("── Antwort-Kommandos ──")
+    lines.append("  HEUTE / MORGEN       – Wetter heutige/morgige Etappe")
+    lines.append("  JETZT / NOW          – Nowcast Regen/Gewitter ~2h")
+    lines.append("  GEWITTER             – Gewittergefahr heutige Etappe")
+    lines.append("  RUHETAG [N]          – Etappen um N Tage verschieben")
+    lines.append("  STATUS               – Heute und kommende Etappen")
+    lines.append("  STOP / WEITER        – Briefings deaktivieren / reaktivieren")
+    lines.append("  HILFE / HELP         – Alle Befehle anzeigen")
+    lines.append("")
+
     all_rows = [r for tbl in seg_tables for r in tbl]
     legend_text = build_units_legend(all_rows) if all_rows else ""
     if legend_text:

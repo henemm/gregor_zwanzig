@@ -825,19 +825,22 @@ def render_html(
         <div style="background:{G_BOX_INFO_BG};border-left:4px solid {G_ACCENT};padding:12px;margin:8px 0">
             <strong style="font-size:13px;">Antwort-Kommandos</strong>
             <div style="margin-top:6px;font-size:12px;line-height:1.6;">
-                <b>PAUSE</b> 2d / 12h &mdash; Briefings pausieren (Tage oder Stunden)<br>
-                <b>SKIP</b> &mdash; Nächsten Versand einmalig überspringen<br>
+                <b>HEUTE</b> &mdash; Wetter der heutigen Etappe<br>
+                <b>MORGEN</b> &mdash; Wetter der morgigen Etappe<br>
+                <b>JETZT</b> / <b>NOW</b> &mdash; Nowcast Regen/Gewitter nächste ~2h<br>
+                <b>GEWITTER</b> &mdash; Gewittergefahr heutige Etappe<br>
+                <b>RUHETAG [N]</b> &mdash; Etappen um N Tage verschieben<br>
+                <b>STATUS</b> &mdash; Heute und kommende Etappen<br>
                 <b>STOP</b> &mdash; Briefings dauerhaft deaktivieren<br>
-                <b>STATUS</b> &mdash; Aktuelle Etappenübersicht<br>
-                <b>CONFIG</b> &mdash; Link zu den Trip-Einstellungen<br>
-                <b>HELP</b> &mdash; Alle Befehle anzeigen
+                <b>WEITER</b> &mdash; Briefings reaktivieren<br>
+                <b>HILFE</b> / <b>HELP</b> &mdash; Alle Befehle anzeigen
             </div>
         </div>
 
         <div class="footer">
             Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')} | Data: {segments[0].provider} ({segments[0].timeseries.meta.model if segments[0].timeseries else 'n/a'}){(' | Fallback ' + ', '.join(segments[0].timeseries.meta.fallback_metrics) + ': ' + segments[0].timeseries.meta.fallback_model) if segments[0].timeseries and segments[0].timeseries.meta.fallback_model else ''}
             {('<br><span style="font-size:10px;color:rgba(255,255,255,0.6)">' + legend_text + '</span>') if legend_text else ''}
-            <br><span style="font-size:10px;color:rgba(255,255,255,0.5)">Auf diese Mail antworten mit: PAUSE 2d &middot; SKIP &middot; STOP &middot; STATUS &middot; CONFIG &middot; HELP</span>
+            <br><span style="font-size:10px;color:rgba(255,255,255,0.5)">Auf diese Mail antworten mit: HEUTE &middot; MORGEN &middot; JETZT &middot; GEWITTER &middot; RUHETAG &middot; STATUS &middot; STOP &middot; WEITER &middot; HILFE</span>
         </div>
     </div>
 </body>

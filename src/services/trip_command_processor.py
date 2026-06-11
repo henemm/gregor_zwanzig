@@ -64,16 +64,24 @@ class CommandResult:
 
 _COMMAND_PATTERN = re.compile(r"^###\s+(\S+?)(?:[:\s]\s*(.+))?$")
 
-_VALID_COMMANDS = {"ruhetag", "report", "startdatum", "abbruch", "status", "hilfe", "now", "pause", "skip", "config"}
+_VALID_COMMANDS = {"ruhetag", "report", "startdatum", "abbruch", "status", "hilfe", "now", "weiter"}
 
-# Bare-keyword mapping (case-insensitive): ENGLISH → internal key + value
+# Bare-keyword mapping (case-insensitive): keyword → internal key
+# Kanalübergreifender Grundbefehlssatz (Issue #731): HEUTE/MORGEN/JETZT/GEWITTER/RUHETAG/STATUS/STOP/WEITER/HILFE
+# Entfernt: pause, skip, config
 _BARE_KEYWORD_MAP = {
-    "pause":  "pause",
-    "skip":   "skip",
-    "stop":   "abbruch",
-    "status": "status",
-    "config": "config",
-    "help":   "hilfe",
+    "heute":    "heute",
+    "morgen":   "morgen",
+    "jetzt":    "now",
+    "now":      "now",
+    "gewitter": "heute_gewitter",
+    "ruhetag":  "ruhetag",
+    "status":   "status",
+    "stop":     "abbruch",
+    "weiter":   "weiter",
+    "hilfe":    "hilfe",
+    "help":     "hilfe",
+    "glance":   "glance",
 }
 
 _PAUSE_DURATION_RE = re.compile(r"^(\d+)\s*([dh]?)$")
@@ -311,12 +319,8 @@ class TripCommandProcessor:
             return self._show_status(trip)
         elif key == "now":
             return self._show_now(trip)
-        elif key == "pause":
-            return self._apply_pause(trip, value, msg.user_id)
-        elif key == "skip":
-            return self._apply_skip(trip, msg.user_id)
-        elif key == "config":
-            return self._show_config(trip)
+        elif key == "weiter":
+            return self._resume_trip(trip, msg.user_id)
 
         # Should not reach here due to whitelist check above
         return CommandResult(
@@ -833,10 +837,12 @@ class TripCommandProcessor:
         )
 
     def _show_status(self, trip: Trip) -> CommandResult:
-        """Listet alle Etappen mit Datum."""
+        """Listet heute und kommende Etappen (vergangene werden gefiltert)."""
+        today = date.today()
         lines = [f"Status: {trip.name}", ""]
         for stage in trip.stages:
-            lines.append(f"  {stage.date:%d.%m.%Y} – {stage.name}")
+            if stage.date >= today:
+                lines.append(f"  {stage.date:%d.%m.%Y} – {stage.name}")
         return CommandResult(
             success=True, command="status",
             confirmation_subject=f"[{trip.name}] Status",
@@ -845,21 +851,18 @@ class TripCommandProcessor:
         )
 
     def _show_help(self) -> CommandResult:
-        """Listet alle verfügbaren Befehle mit Syntax."""
+        """Listet alle verfügbaren Befehle mit Syntax (Issue #731: abruf-zentriert)."""
         body = (
             "Verfügbare Befehle:\n\n"
-            "  PAUSE <dauer>         – Briefings pausieren (z.B. PAUSE 2d / PAUSE 12h)\n"
-            "  SKIP                  – Nächsten Versand einmalig überspringen\n"
+            "  HEUTE                 – Wetter der heutigen Etappe\n"
+            "  MORGEN                – Wetter der morgigen Etappe\n"
+            "  JETZT                 – Nowcast Regen/Gewitter nächste ~2h\n"
+            "  GEWITTER              – Gewittergefahr heutige Etappe\n"
+            "  RUHETAG [N]           – Etappen um N Tage verschieben (Standard: 1)\n"
+            "  STATUS                – Heute und kommende Etappen\n"
             "  STOP                  – Briefings dauerhaft deaktivieren\n"
-            "  STATUS                – Aktuelle Etappenübersicht\n"
-            "  CONFIG                – Link zu den Trip-Einstellungen\n"
-            "  HELP                  – Diese Hilfe anzeigen\n\n"
-            "Erweiterte Befehle (### key: value):\n"
-            "  ruhetag [N]           – Etappen um N Tage verschieben (Standard: 1)\n"
-            "  startdatum YYYY-MM-DD – Neues Startdatum setzen\n"
-            "  report morning|evening – Sofortigen Bericht anfordern\n"
-            "  abbruch               – Scheduling deaktivieren\n"
-            "  hilfe                 – Diese Hilfe anzeigen"
+            "  WEITER                – Briefings reaktivieren\n"
+            "  HILFE                 – Diese Hilfe anzeigen"
         )
         return CommandResult(
             success=True, command="hilfe",
@@ -1004,6 +1007,20 @@ class TripCommandProcessor:
             success=True, command="abbruch",
             confirmation_subject=f"[{trip.name}] Trip beendet",
             confirmation_body=f"Reports fuer '{trip.name}' deaktiviert. Gute Heimreise!",
+            trip_name=trip.name,
+        )
+
+    def _resume_trip(self, trip: Trip, user_id: str = "default") -> CommandResult:
+        """Reaktiviert den Report-Versand für den Trip (enabled=True via RMW)."""
+        if trip.report_config:
+            new_config = dataclasses.replace(trip.report_config, enabled=True)
+            new_trip = dataclasses.replace(trip, report_config=new_config)
+            save_trip(new_trip, user_id)
+
+        return CommandResult(
+            success=True, command="weiter",
+            confirmation_subject=f"[{trip.name}] Briefings reaktiviert",
+            confirmation_body=f"Reports fuer '{trip.name}' wieder aktiviert. Viel Erfolg auf der Tour!",
             trip_name=trip.name,
         )
 

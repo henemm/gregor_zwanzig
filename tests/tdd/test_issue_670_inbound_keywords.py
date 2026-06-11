@@ -1,12 +1,19 @@
 """Issue #670 — Antwort-Kommandos als echte Inbound-Keywords.
 
-Bloße Schlüsselwörter am Zeilenanfang (PAUSE/SKIP/STOP/STATUS/CONFIG/HELP) lösen
-Aktionen aus — zusätzlich zum bestehenden ``### key: value``-Pfad. PAUSE/SKIP/STOP
-gaten erstmals den geplanten Scheduler-Versand über report_config-Felder.
+Bloße Schlüsselwörter am Zeilenanfang lösen Aktionen aus — zusätzlich zum
+bestehenden ``### key: value``-Pfad. STOP gated den geplanten Scheduler-Versand
+über ``report_config.enabled``.
+
+HINWEIS (Issue #731, 2026-06-11): Die Eingabe-Kommandos PAUSE/SKIP/CONFIG wurden
+durch #731 (abruf-zentrierter Befehlssatz) entfernt — ihre Eingabe-Tests sind
+nach test_issue_731_unified_commands.py (AC-7) gewandert. Die Persistenz-Felder
+``paused_until``/``skip_next`` bleiben aus Backward-Compat erhalten und werden vom
+Scheduler weiterhin respektiert; das ist hier über Pre-Set (statt Kommando)
+abgesichert.
 
 Mock-frei: echtes File-I/O mit zwei realen Nutzerverzeichnissen, echte
 ``TripCommandProcessor().process()``- und ``_get_active_trips``-Aufrufe.
-Spec: docs/specs/modules/issue_670_inbound_keywords.md
+Spec: docs/specs/modules/issue_670_inbound_keywords.md (PAUSE/SKIP/CONFIG: #731)
 """
 from __future__ import annotations
 
@@ -100,29 +107,20 @@ def _active_ids(user_id: str, report_type: str) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
-# AC-1: PAUSE wirkt — paused_until persistiert, Scheduler überspringt
+# AC-1: paused_until-Backward-Compat — Scheduler respektiert pausierte Trips
+# (PAUSE-Eingabe entfällt seit #731; Persistenzfeld bleibt erhalten)
 # ---------------------------------------------------------------------------
 
 class TestAC1Pause:
-    def test_pause_sets_paused_until_and_excludes_from_schedule(self):
-        save_trip(_make_trip(), user_id=_USER_A)
-        # Pre: Trip ist aktiv
-        assert _TRIP_ID in _active_ids(_USER_A, "morning")
-
-        result = TripCommandProcessor().process(_msg("PAUSE 2d", _USER_A))
-        assert result.success is True
-
-        loaded = _load_trip(_USER_A)
-        assert loaded.report_config.paused_until is not None
-        now = datetime.now(tz=timezone.utc)
-        delta = loaded.report_config.paused_until - now
-        assert timedelta(days=1, hours=22) < delta < timedelta(days=2, hours=2), \
-            f"paused_until ~jetzt+2d erwartet, war {loaded.report_config.paused_until}"
-
-        # Scheduler überspringt den pausierten Trip
+    def test_active_paused_until_excludes_from_schedule(self):
+        # Bestandsdaten-Trip mit gesetztem paused_until (z.B. aus Alt-PAUSE)
+        rc = TripReportConfig(
+            trip_id=_TRIP_ID, enabled=True,
+            paused_until=datetime.now(tz=timezone.utc) + timedelta(days=2),
+        )
+        save_trip(_make_trip(rc), user_id=_USER_A)
+        # Scheduler überspringt den pausierten Trip weiterhin
         assert _TRIP_ID not in _active_ids(_USER_A, "morning")
-        # Bestätigung nennt das Ende-Datum
-        assert result.confirmation_body, "Bestätigung darf nicht leer sein"
 
     def test_pause_expired_resumes_schedule(self):
         rc = TripReportConfig(
@@ -135,16 +133,15 @@ class TestAC1Pause:
 
 
 # ---------------------------------------------------------------------------
-# AC-2: SKIP überspringt genau den nächsten Versand (einmalig konsumiert)
+# AC-2: skip_next-Backward-Compat — Scheduler verbraucht das Flag einmalig
+# (SKIP-Eingabe entfällt seit #731; Persistenzfeld bleibt erhalten)
 # ---------------------------------------------------------------------------
 
 class TestAC2Skip:
-    def test_skip_one_shot_consumed(self):
-        save_trip(_make_trip(), user_id=_USER_A)
-
-        result = TripCommandProcessor().process(_msg("SKIP", _USER_A))
-        assert result.success is True
-        assert _load_trip(_USER_A).report_config.skip_next is True
+    def test_preset_skip_next_consumed_by_scheduler(self):
+        # Bestandsdaten-Trip mit gesetztem skip_next (z.B. aus Alt-SKIP)
+        rc = TripReportConfig(trip_id=_TRIP_ID, enabled=True, skip_next=True)
+        save_trip(_make_trip(rc), user_id=_USER_A)
 
         # Erster Lauf: Trip ausgelassen UND Flag verbraucht (persistiert)
         assert _TRIP_ID not in _active_ids(_USER_A, "morning")
@@ -173,35 +170,25 @@ class TestAC3Stop:
 
 
 # ---------------------------------------------------------------------------
-# AC-4: STATUS/HELP/CONFIG
+# AC-4: STATUS/HILFE (CONFIG-Eingabe entfällt seit #731)
 # ---------------------------------------------------------------------------
 
-class TestAC4StatusHelpConfig:
+class TestAC4StatusHelp:
     def test_status_lists_stages(self):
         save_trip(_make_trip(), user_id=_USER_A)
         result = TripCommandProcessor().process(_msg("STATUS", _USER_A))
         assert result.success is True
         assert "Tag 1" in result.confirmation_body
 
-    def test_help_lists_new_keywords(self):
-        result = TripCommandProcessor().process(_msg("HELP", _USER_A))
+    def test_help_lists_current_keywords(self):
+        result = TripCommandProcessor().process(_msg("HILFE", _USER_A))
         assert result.success is True
         body = result.confirmation_body.upper()
-        for kw in ("PAUSE", "SKIP", "STOP", "CONFIG"):
+        # Aktueller Befehlssatz (#731); PAUSE/SKIP/CONFIG dürfen NICHT mehr erscheinen
+        for kw in ("STATUS", "STOP", "HILFE"):
             assert kw in body, f"Hilfe muss {kw} nennen"
-
-    def test_config_returns_link_no_mutation(self):
-        save_trip(_make_trip(), user_id=_USER_A)
-        before = _load_trip(_USER_A).report_config
-
-        result = TripCommandProcessor().process(_msg("CONFIG", _USER_A))
-        assert result.success is True
-        assert _TRIP_ID in result.confirmation_body or "http" in result.confirmation_body.lower()
-
-        after = _load_trip(_USER_A).report_config
-        assert after.enabled == before.enabled
-        assert after.paused_until == before.paused_until
-        assert after.skip_next == before.skip_next
+        for gone in ("PAUSE", "SKIP", "CONFIG"):
+            assert gone not in body, f"Hilfe darf {gone} nicht mehr nennen"
 
 
 # ---------------------------------------------------------------------------
@@ -209,23 +196,6 @@ class TestAC4StatusHelpConfig:
 # ---------------------------------------------------------------------------
 
 class TestAC5UserIsolation:
-    def test_pause_only_affects_sender(self):
-        save_trip(_make_trip(), user_id=_USER_A)
-        save_trip(_make_trip(), user_id=_USER_B)
-
-        result = TripCommandProcessor().process(_msg("PAUSE 2d", _USER_A))
-        assert result.success is True
-
-        assert _load_trip(_USER_A).report_config.paused_until is not None
-        b_rc = _load_trip(_USER_B).report_config
-        assert b_rc.paused_until is None, "B darf nicht pausiert werden"
-        assert b_rc.enabled is True
-        assert _TRIP_ID in _active_ids(_USER_B, "morning")
-
-        # default unberührt
-        default_trip = get_trips_dir(_USER_DEFAULT) / f"{_TRIP_ID}.json"
-        assert not default_trip.exists(), "default darf nicht beschrieben werden"
-
     def test_stop_only_affects_sender(self):
         save_trip(_make_trip(), user_id=_USER_A)
         save_trip(_make_trip(), user_id=_USER_B)
@@ -234,6 +204,10 @@ class TestAC5UserIsolation:
 
         assert _load_trip(_USER_A).report_config.enabled is False
         assert _load_trip(_USER_B).report_config.enabled is True
+
+        # default unberührt
+        default_trip = get_trips_dir(_USER_DEFAULT) / f"{_TRIP_ID}.json"
+        assert not default_trip.exists(), "default darf nicht beschrieben werden"
 
 
 # ---------------------------------------------------------------------------
@@ -317,8 +291,13 @@ class TestAC7EmailBlock:
     def test_block_lists_all_keywords(self):
         html = self._render()
         assert "Antwort-Kommandos" in html
-        for kw in ("PAUSE", "SKIP", "STOP", "STATUS", "CONFIG", "HELP"):
+        # Aktueller Befehlssatz (#731)
+        for kw in ("HEUTE", "MORGEN", "JETZT", "GEWITTER", "STATUS", "STOP",
+                   "WEITER", "HILFE"):
             assert kw in html, f"Mail-Block muss {kw} enthalten"
+        # Abgelöste Verwaltungsbefehle dürfen NICHT mehr im Block stehen
+        for gone in ("PAUSE", "SKIP", "CONFIG"):
+            assert gone not in html, f"Mail-Block darf {gone} nicht mehr enthalten"
 
     def test_block_not_hidden_on_mobile(self):
         """Der Block darf nicht in einem display:none-Mobile-Wrapper verschwinden."""
@@ -329,24 +308,3 @@ class TestAC7EmailBlock:
         window = html[max(0, idx - 200):idx]
         assert "display:none" not in window, \
             "Antwort-Kommandos-Block darf nicht mobile-versteckt sein"
-
-
-# ---------------------------------------------------------------------------
-# AC-8: Ungültige PAUSE-Dauer → keine Mutation, Format-Hinweis
-# ---------------------------------------------------------------------------
-
-class TestAC8PauseInvalidDuration:
-    def test_invalid_duration_no_mutation(self):
-        save_trip(_make_trip(), user_id=_USER_A)
-        result = TripCommandProcessor().process(_msg("PAUSE xyz", _USER_A))
-        assert result.success is False
-        assert _load_trip(_USER_A).report_config.paused_until is None
-        # Format-Hinweis in der Antwort
-        assert "2d" in result.confirmation_body or "12h" in result.confirmation_body
-
-    def test_zero_duration_rejected(self):
-        save_trip(_make_trip(), user_id=_USER_A)
-        result = TripCommandProcessor().process(_msg("PAUSE 0d", _USER_A))
-        assert result.success is False
-        assert _load_trip(_USER_A).report_config.paused_until is None
-        assert "2d" in result.confirmation_body or "12h" in result.confirmation_body
