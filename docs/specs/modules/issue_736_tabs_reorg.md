@@ -161,7 +161,7 @@ Beim Write-Back: `onTripUpdate` mit `display_config.channels` + `reportConfig`-b
 - **AC-3:** Given der Versand-Reiter ("Briefing-Zeitplan"-Nachfolger) ist aktiv / When die Seite gerendert wird / Then sind die Kanal-Checkboxen (`channel-email`, `channel-telegram`, `channel-sms`) genau einmal sichtbar und die E-Mail-Inhalt-Karte (`report-mail-content`) ist nicht im DOM
   - Test: Playwright — Tab `briefings` öffnen; `locator('[data-testid="channel-email"]').count()` == 1; `locator('[data-testid="report-mail-content"]').count()` == 0
 
-- **AC-4:** Given ein Trip hat `display_config.channels.email = false` und `report_config.send_email = false` gespeichert / When der Nutzer im Versand-Reiter die E-Mail-Checkbox aktiviert und speichert / Then liefern sowohl GET `/api/trips/{id}` → `display_config.channels.email` als auch GET `/api/auth/profile` → `report_config.send_email` den Wert `true` — beide Felder werden synchron gesetzt
+- **AC-4:** Given ein Trip hat `display_config.channels.email = false` und `report_config.send_email = false` gespeichert / When der Nutzer im Versand-Reiter die E-Mail-Checkbox aktiviert und speichert / Then liefert GET `/api/trips/{id}` sowohl `display_config.channels.email` als auch `report_config.send_email` den Wert `true` — beide Felder hängen am Trip-Objekt und werden synchron gesetzt
   - Test: Playwright — E-Mail-Checkbox anklicken, `briefings-save` auslösen, dann beide GET-Endpunkte prüfen via `page.evaluate` oder direkten API-Calls
 
 - **AC-5:** Given der Abschnitt mit Schwellwert-Konfiguration im Inhalt-Reiter / When er gerendert wird / Then lautet die Überschrift "Schwellwerte" (nicht "SMS-Schwellwerte") und ein Hinweistext "Gelten für E-Mail, Telegram und SMS" ist sichtbar
