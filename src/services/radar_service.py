@@ -40,6 +40,13 @@ _AROME_FR_LAT_MAX = 51.5
 _AROME_FR_LON_MIN = -5.5
 _AROME_FR_LON_MAX = 10.0
 
+# ICON-D2 bounding box (Central Europe / Alps — DWD ICON-D2 ~2 km, Issue #761)
+# Conservative rectangle; exact (rotated) grid fidelity comes from the all-None guard.
+_ICON_D2_LAT_MIN = 44.0
+_ICON_D2_LAT_MAX = 58.0
+_ICON_D2_LON_MIN = 2.0
+_ICON_D2_LON_MAX = 19.0
+
 # Onset threshold: frames within 60 min from now considered "nowcast"
 _NOWCAST_HORIZON_MIN = 60
 _DRY_THRESHOLD_MM_H = 0.1
@@ -130,6 +137,7 @@ class RadarNowcastService:
             "radar": "Radar (DWD)",
             "INCA": "INCA (GeoSphere AT)",
             "AROME-FR": "Météo-France AROME (1,5 km)",
+            "ICON-D2": "DWD ICON-D2 (2 km)",
             "minutely_15": "Open-Meteo (global)",
         }.get(result.source, result.source)
         lines.append(f"Quelle: {source_label}.")
@@ -158,6 +166,11 @@ class RadarNowcastService:
             frames = self._fetch_arome_france_hd(lat, lon)
             if frames:
                 return frames, "AROME-FR"
+
+        if _within_icon_d2(lat, lon):
+            frames = self._fetch_icon_d2(lat, lon)
+            if frames:
+                return frames, "ICON-D2"
 
         frames = self._fetch_openmeteo_minutely15(lat, lon)
         return frames, "minutely_15"
@@ -200,6 +213,10 @@ class RadarNowcastService:
         """Fetch AROME-HD (1.5 km) minutely_15 nowcast via Open-Meteo. Fail-soft -> []."""
         return self._fetch_openmeteo_15(lat, lon, models="arome_france_hd")
 
+    def _fetch_icon_d2(self, lat: float, lon: float) -> list:
+        """Fetch DWD ICON-D2 (~2 km) minutely_15 nowcast via Open-Meteo. Fail-soft -> []."""
+        return self._fetch_openmeteo_15(lat, lon, models="icon_d2")
+
     def _fetch_openmeteo_15(
         self, lat: float, lon: float, models: Optional[str] = None
     ) -> list:
@@ -223,6 +240,13 @@ class RadarNowcastService:
             times = m15.get("time", [])
             precip_vals = m15.get("precipitation", [])
             wcodes = m15.get("weather_code", [])
+            # All-None guard: an explicit regional model (models set) returns
+            # precipitation=[None, ...] for points outside its (rotated) grid — no
+            # interpolation. Fall through to the global best_match instead of emitting
+            # fake-zero frames. Global best_match (models=None) interpolates and never
+            # returns all-None for land coords -> unchanged behavior (no regression).
+            if models and precip_vals and all(v is None for v in precip_vals):
+                return []
             frames = []
             for i, t_str in enumerate(times):
                 dt = datetime.fromisoformat(t_str)
@@ -297,4 +321,11 @@ def _within_arome_france(lat: float, lon: float) -> bool:
     return (
         _AROME_FR_LAT_MIN <= lat <= _AROME_FR_LAT_MAX
         and _AROME_FR_LON_MIN <= lon <= _AROME_FR_LON_MAX
+    )
+
+
+def _within_icon_d2(lat: float, lon: float) -> bool:
+    return (
+        _ICON_D2_LAT_MIN <= lat <= _ICON_D2_LAT_MAX
+        and _ICON_D2_LON_MIN <= lon <= _ICON_D2_LON_MAX
     )
