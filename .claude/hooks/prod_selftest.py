@@ -23,8 +23,10 @@ CLI:
 
 import argparse
 import ast
+import http.client
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -111,6 +113,26 @@ class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
         return None
 
 
+# Mirror von http.client: Steuerzeichen 0x00-0x20 (inkl. Space) und 0x7f (DEL)
+_DISALLOWED_URL_CHARS = re.compile(r"[\x00-\x20\x7f]")
+
+
+def _is_probeable_url(url: str) -> bool:
+    """True nur wenn die URL gefahrlos per HTTP-GET probebar ist.
+
+    Findings tragen teils Freitext (z.B. '/api/trips/{id} PUT/GET') statt echter
+    Pfade — urllib würde dann InvalidURL werfen. Solche URLs sind nicht probebar.
+    """
+    if not url or _DISALLOWED_URL_CHARS.search(url):
+        return False
+    parsed = urlparse(url)
+    return bool(
+        parsed.scheme in ("http", "https")
+        and parsed.netloc
+        and parsed.path.startswith("/")
+    )
+
+
 def _probe_ac(finding: dict) -> dict:
     """HTTP-Probe für ein Finding. SKIPPED → ATTESTED_SKIPPED ohne Netzwerk."""
     if finding.get("status") == "SKIPPED":
@@ -121,7 +143,27 @@ def _probe_ac(finding: dict) -> dict:
             "prod_status": "ATTESTED_SKIPPED",
         }
 
-    prod_url = _staging_to_prod_url(finding.get("url", ""))
+    raw_url = finding.get("url", "")
+    if not raw_url.strip():
+        return {
+            **finding,
+            "prod_url": "",
+            "prod_http": "—",
+            "prod_status": "SKIPPED_NO_URL",
+        }
+
+    prod_url = _staging_to_prod_url(raw_url)
+
+    # Validitäts-Gate: nicht-probebare URLs (Freitext, Leerzeichen, Steuerzeichen)
+    # werden übersprungen statt urllib.InvalidURL zu werfen (Bug #730).
+    if not _is_probeable_url(prod_url):
+        return {
+            **finding,
+            "prod_url": prod_url,
+            "prod_http": "—",
+            "prod_status": "SKIPPED_NO_URL",
+        }
+
     try:
         status, _ = _http_get(prod_url, follow_redirects=False)
         ok = status in (200, 302)
@@ -131,7 +173,7 @@ def _probe_ac(finding: dict) -> dict:
             "prod_http": status,
             "prod_status": "PASS" if ok else "FAIL",
         }
-    except (urllib.error.URLError, OSError) as exc:
+    except (urllib.error.URLError, OSError, http.client.InvalidURL, ValueError) as exc:
         return {
             **finding,
             "prod_url": prod_url,
