@@ -5,6 +5,58 @@
 >
 > Diese Datei bleibt als Detail-Referenz fuer Root-Cause-Analysen bestehen.
 
+## BUG-730-INVALIDURL: prod_selftest.py crasht bei nicht-probearen URLs
+
+**Status:** RESOLVED (2026-06-11) | **Severity:** Low | **GitHub Issue:** #730 | **Spec:** `docs/specs/modules/bug_730_prod_selftest_invalidurl.md`
+
+### Symptom
+
+`prod_selftest.py` (Post-Deploy-Selbsttest, Issue #564) crashte mit `http.client.InvalidURL`-Exception, wenn ein E2E-Attestation-Finding eine nicht-probebare URL trug (Freitext mit Leerzeichen/Steuerzeichen, z.B. Backend-AC-Beschreibung `/api/trips/{id} PUT/GET`). Das Crash-Exception-Traceback blockierte Issue-Close (Exit 1), obwohl der Deploy erfolgreich war.
+
+### Root Cause
+
+Staging-Validator (`staging_validator.py`) schreibt E2E-Attestation-Findings mit `url`-Feld. Für Backend-Only-ACs oder beschreibende Findings (keine echte probeable HTTP-Route) nutzt der Validator Freitext als URL-Marker.
+
+`prod_selftest.py` in Funktion `_probe_ac` (Z. 114–141) versuchte, alle Findings per HTTP-GET zu proben:
+```python
+prod_url = _staging_to_prod_url(raw_url)
+status, _ = _http_get(prod_url, ...)  # urllib.InvalidURL wenn prod_url Leerzeichen trägt
+```
+
+`urllib.request.Request()` wirft `http.client.InvalidURL` bei disallowed characters `[\x00-\x20\x7f]` (Space, Newline, etc.) — aber der `except (urllib.error.URLError, OSError)` in `_probe_ac` fing diesen Fehler **nicht** (es ist kein Subtyp von URLError oder OSError, sondern `HTTPException`). Exception propagierte → ThreadPoolExecutor re-raised → Script-Exit 1.
+
+### Fix (Committed 2026-06-11)
+
+**Zwei Schutzschichten:**
+
+1. **Präventiv:** Neuer Helper `_is_probeable_url(url: str) → bool` (Z. 120–133) — prüft vor HTTP-Probe ob die URL gefahrlos probebar ist. Mirror von `http.client`-Disallowed-Chars-Regex. Gibt False bei Leerzeichen/Steuerzeichen ODER wenn parsed-URL kein gültiges `http(s)://host/path`-Format hat.
+
+2. **Defense-in-Depth:** Exception-Handler in `_probe_ac` (Z. 176) erweitert um `http.client.InvalidURL` und `ValueError` (auch `urllib.parse.urlparse` wirft ValueError bei bestimmten Eingaben).
+
+**Verdict-Semantik:** Nicht-probebare Findings bekommen `prod_status="SKIPPED_NO_URL"` — dies zählt **nicht** als FAIL oder PARTIAL, sondern wird transparent als übersprungenes Finding geführt (ähnlich wie `ATTESTED_SKIPPED`).
+
+```python
+if not _is_probeable_url(prod_url):
+    return {
+        **finding,
+        "prod_url": prod_url,
+        "prod_http": "—",
+        "prod_status": "SKIPPED_NO_URL",
+    }
+```
+
+### Files Changed
+
+- `.claude/hooks/prod_selftest.py` (+25 LoC)
+
+### Lessons Learned
+
+1. **Staging-Attestation-URLs sind teils Freitext**, nicht immer echte HTTP-Pfade — Prod-Selftest muss idempotent damit umgehen
+2. **Exception-Typen:** `http.client.InvalidURL` ist Subtyp von `HTTPException`, nicht `URLError` — Defense-in-Depth im except erforderlich
+3. **SKIPPED_NO_URL** ergänzt die Verdict-Semantik ohne Regressions: nicht-probebare PASS-Findings führen nicht zu Verdikt-Verschlechterung (vgl. Issue #564 AC-2)
+
+---
+
 ## BUG-DATALOSS-GR221: 4 → 1 Stage Konsolidierung (GR221 Mallorca)
 
 **Status:** RESOLVED — Recovery (2026-04-29) | **Severity:** High | **GitHub Issue:** #102

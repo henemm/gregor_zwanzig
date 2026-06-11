@@ -12,7 +12,7 @@ tags: [bug, infra, tooling, prod-selftest, deploy]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — Complete (2026-06-11)
 
 ## Purpose
 
@@ -120,4 +120,4 @@ Eine PASS-Finding ohne probebare URL führt damit weder zu PARTIAL noch FAIL.
 
 ## Changelog
 
-- 2026-06-11: Initial-Spec für Bug #730 (prod_selftest InvalidURL-Crash → SKIP statt Crash).
+- 2026-06-11: Implementation complete. Helper `_is_probeable_url` + SKIPPED_NO_URL verdict added; defense-in-depth exception handler in `_probe_ac`. Tooling-only change. Spec marked complete.

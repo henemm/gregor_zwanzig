@@ -123,12 +123,18 @@ with ThreadPoolExecutor(max_workers=5) as pool:
 
 ```
 PASS:    alle Findings mit status=PASS liefern prod_status=PASS
-         (ATTESTED_SKIPPED zählen nicht gegen PASS)
+         (ATTESTED_SKIPPED und SKIPPED_NO_URL zählen nicht gegen PASS)
 PARTIAL: mind. ein PASS-Finding liefert prod_status=FAIL
 FAIL:    Health unreachable ODER Commit-Mismatch
 ```
 
-Exit-Codes: 0 = PASS (oder alle SKIPPED), 1 = FAIL oder PARTIAL
+prod_status-Werte:
+- **PASS:** HTTP 200 oder 302 für probeable Finding
+- **FAIL:** HTTP-Status ≠ 200/302, oder URLError/Netzwerkfehler
+- **ATTESTED_SKIPPED:** Finding hatte staging_status=SKIPPED (nicht geprobt)
+- **SKIPPED_NO_URL:** Prod-URL trägt Leerzeichen/Steuerzeichen → nicht probebar (Bug #730 fix)
+
+Exit-Codes: 0 = PASS (oder alle SKIPPED/SKIPPED_NO_URL), 1 = FAIL oder PARTIAL
 
 **Edge-Case: Kein e2e_verified.json / docs-only Scope**
 
