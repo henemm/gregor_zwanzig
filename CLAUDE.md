@@ -198,16 +198,38 @@ Credentials kommen aus den Settings (`GZ_IMAP_*`) — niemals im Klartext hier. 
 
 Einfache String-Checks beweisen NICHTS - sie pruefen nicht ob Daten SINNVOLL sind!
 
-### Nachweis für Trip-Briefing-Mail (NICHT dieser Validator)
+### BRIEFING-MAIL-VALIDATOR — gilt für die Trip-Briefing-Mail (seit #733)
 
-Für **Trip-Briefing-Mail**-Änderungen ist der etablierte Nachweis ein echter
-**IMAP-MIME-Verhaltenstest** gegen die tatsächlich zugestellte Mail (seit #722, #721, #636):
-**Content-Type/multipart** vs. `text/plain`, **Content-Transfer-Encoding** (CTE/Encoding),
-`isascii`, **Byte**-Größe und die erwarteten Inhaltsblöcke (present/absent). Der
-`email_spec_validator.py` ist hierfür **nicht** zuständig.
+**Geltungsbereich:** `.claude/hooks/briefing_mail_validator.py` ist das kanonische
+Acceptance-Gate für **Trip-Briefing-Mails** (beide Formate: `full` HTML / `compact`
+Nur-Text seit #722). Er dispatcht deterministisch über zwei Marker-Header, die
+`build_mime_message()` setzt: `X-GZ-Mail-Type: trip-briefing|compare` und
+`X-GZ-Format: full|compact`.
 
-Ein eigener Struktur-Validator für Trip-Briefing-Mails ist als Coverage-Lücke nach **#733**
-ausgegliedert.
+**PFLICHT vor „E2E Test bestanden" bei Trip-Briefing-Mail-Features:**
+
+```bash
+uv run python3 .claude/hooks/briefing_mail_validator.py
+```
+
+Prüft format-spezifisch auf **Plausibilität** (nicht bloß String-Presence) gegen die
+echt zugestellte Mail aus dem Stalwart-Test-Postfach (`GZ_IMAP_*`, kein Mock, kein Gmail):
+- **full:** `multipart/alternative`, je ein `text/html`- und `text/plain`-Part, ≥1
+  sequenzielle Stundentabelle (≥2 `HH:00`-Zeilen), Werte selbst-konsistent
+  (`temp_lo <= temp_hi`, Wind/Regen ≥ 0, nicht alle None/0), Subject nicht leer.
+- **compact:** single `text/plain`, 7bit (oder QP bei reinem ASCII), `isascii`, < 2 KB,
+  HART: Kopf + `== Metriken-Ueberblick ==` + Footer; Ausblick ist **optional** (der
+  Renderer lässt ihn legitim weg, wenn keine Stabilität/Trend-Daten vorliegen); **keine**
+  Stundentabelle.
+
+**Dispatch-Verhalten:** `compare`-getaggte Mail → sauberes No-Op (Exit 0, falscher
+Validator). Fehlender Marker-Header → Exit 1 (Mail nicht vom getaggten Renderer).
+Plausibilitäts-Schwellen sind bewusst weit kalibriert (gegen False-Positives, die
+Deploys fälschlich blockieren). **Nur bei Exit 0** darfst du „E2E Test bestanden" sagen.
+
+Der ergänzende `IMAP-MIME-Verhaltenstest` (seit #722, #721, #636) bleibt als
+Unit-/Integrationsbeweis gültig; der Validator kodifiziert genau dieses Muster als
+Gate. Der `email_spec_validator.py` ist für Trip-Briefing-Mails **nicht** zuständig.
 
 ## Specs
 

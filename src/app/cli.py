@@ -352,7 +352,8 @@ def _run_subscriptions(settings: Settings, debug: DebugBuffer) -> int:
                 print("=== END DRY RUN ===\n")
             else:
                 email_output = EmailOutput(settings)
-                email_output.send(subject, html_body, plain_text_body=text_body)
+                email_output.send(subject, html_body, plain_text_body=text_body,
+                                   mail_type="compare", mail_format="full")
                 print(f"Sent email for: {sub.name}")
 
             processed += 1

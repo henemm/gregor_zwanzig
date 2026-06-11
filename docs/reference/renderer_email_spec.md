@@ -2,6 +2,12 @@
 
 This document defines how E-Mail reports are generated in Gregor Zwanzig.
 
+**Acceptance Validators (seit Issue #733):**
+- **Trip-Briefing-Mail** (beide Formate: `full` HTML / `compact` Nur-Text): `.claude/hooks/briefing_mail_validator.py` (dispatcht auf `X-GZ-Mail-Type` + `X-GZ-Format` Header)
+- **Orts-Vergleich-Mail**: `.claude/hooks/email_spec_validator.py` (fest auf Vergleichstabelle/Winner-Box verdrahtet)
+
+Siehe CLAUDE.md für Scope-Details und Pflicht-Gate-Dokumentation.
+
 ---
 
 ## Principles
@@ -9,6 +15,7 @@ This document defines how E-Mail reports are generated in Gregor Zwanzig.
 - They always include the **compact token line** (identical to the SMS).
 - They may add **human-readable summaries** and **tables per stage/etappen points**.
 - Debug information is appended at the end in plain text, identical to console output.
+- Outgoing mails carry marker headers (`X-GZ-Mail-Type`, `X-GZ-Format`) for deterministic routing to acceptance validators.
 
 ---
 
@@ -101,3 +108,35 @@ Im E-Mail-Body wird ein Klartext-Hinweis ausgegeben, wenn an mindestens einer St
 - **Tables** may extend beyond 160 chars (no SMS limit).
 - **Times** in tables use **leading zeros** for clarity.
 - All numbers are integers unless explicitly defined as float (e.g. rainfall `R`).
+
+---
+
+## Marker Headers and Validation Routing (seit Issue #733)
+
+`build_mime_message()` in `src/outputs/email.py` setzt optionale Marker-Header zur deterministischen Klassifikation:
+
+### Header-Format
+
+```
+X-GZ-Mail-Type: trip-briefing | compare
+X-GZ-Format:    full | compact
+```
+
+### Routing
+
+| Mail-Typ | Format | Quelle | Validator |
+|----------|--------|--------|-----------|
+| `trip-briefing` | `full` | `trip_report_scheduler.py` (Briefing-Versand) | `.claude/hooks/briefing_mail_validator.py` (AC-1/4) |
+| `trip-briefing` | `compact` | `trip_report_scheduler.py` (compact-Renderer seit #722) | `.claude/hooks/briefing_mail_validator.py` (AC-2/6) |
+| `compare` | `full` | `src/app/cli.py` (Compare-Wizard Versand) | `.claude/hooks/email_spec_validator.py` (AC-3) |
+
+### Validierungslogik
+
+- **`briefing_mail_validator.py`** prüft Trip-Briefing-Mails format-spezifisch:
+  - `trip-briefing/full`: multipart/alternative, HTML + Plain Parts, ≥1 sequenzielle Stundentabelle, Werte selbst-konsistent
+  - `trip-briefing/compact`: single text/plain, 7bit, isascii, < 2 KB, Kopf + Metriken + Ausblick + Footer (keine Stundentabelle)
+  - `compare`-getaggte Mails: sauberes No-Op (Exit 0, falscher Validator)
+
+- **`email_spec_validator.py`** prüft Orts-Vergleich-Mails (Vergleichstabelle, Winner-Box, min-locations). Für andere Mail-Typen nicht zuständig.
+
+**Acceptance Gating:** Nur Exit 0 der entsprechenden Validator erlaubt „E2E Test bestanden".

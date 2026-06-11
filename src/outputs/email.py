@@ -29,11 +29,17 @@ def build_mime_message(
     reply_to: str | None,
     html: bool,
     plain_text_body: str | None,
+    mail_type: str | None = None,
+    mail_format: str | None = None,
 ):
     """Issue #722: Build a MIME message. Pure function, no SMTP side-effects.
 
     html=True  → MIMEMultipart("alternative") with plain + html parts (full path).
     html=False → single MIMEText("plain"), us-ascii/7bit for ASCII bodies.
+
+    Issue #733: Optionale Marker-Header X-GZ-Mail-Type / X-GZ-Format für den
+    kanonischen Briefing-Mail-Validator. Backward-Compat: ohne die Params bleibt
+    die Message header-frei.
     """
     if html:
         msg = MIMEMultipart("alternative")
@@ -42,6 +48,10 @@ def build_mime_message(
         msg["To"] = to_header
         if reply_to:
             msg["Reply-To"] = reply_to
+        if mail_type is not None:
+            msg["X-GZ-Mail-Type"] = mail_type
+        if mail_format is not None:
+            msg["X-GZ-Format"] = mail_format
         if plain_text_body:
             plain_text = plain_text_body
         else:
@@ -61,6 +71,10 @@ def build_mime_message(
         msg["To"] = to_header
         if reply_to:
             msg["Reply-To"] = reply_to
+        if mail_type is not None:
+            msg["X-GZ-Mail-Type"] = mail_type
+        if mail_format is not None:
+            msg["X-GZ-Format"] = mail_format
     return msg
 
 
@@ -122,6 +136,8 @@ class EmailOutput:
         html: bool = True,
         plain_text_body: str | None = None,
         to: list[str] | None = None,
+        mail_type: str | None = None,
+        mail_format: str | None = None,
     ) -> None:
         """
         Send email via SMTP with automatic retry on network errors.
@@ -160,6 +176,8 @@ class EmailOutput:
             reply_to=self._reply_to,
             html=html,
             plain_text_body=plain_text_body,
+            mail_type=mail_type,
+            mail_format=mail_format,
         )
 
         # Retry logic with exponential backoff

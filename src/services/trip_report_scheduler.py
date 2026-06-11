@@ -502,12 +502,16 @@ class TripReportSchedulerService:
                     subject=report.email_subject,
                     body=report.email_html,
                     plain_text_body=report.email_plain,
+                    mail_type="trip-briefing",
+                    mail_format="full",
                 )
             else:
                 email_output.send(
                     subject=report.email_subject,
                     body=report.email_plain,
                     html=False,
+                    mail_type="trip-briefing",
+                    mail_format="compact",
                 )
 
         # 7c. Send Telegram if configured (Issue #360: kanal-bewusster Body)
