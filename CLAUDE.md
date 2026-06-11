@@ -172,23 +172,42 @@ Nach jedem Prod-Deploy erfolgt eine automatische Nachverifikation gegen Produkti
 
 **Schutzwirkung:** Issue-Close erfolgt nur bei Exit 0. Bei PARTIAL/FAIL wird der Bericht untersucht und ggf. Rollback eingeleitet, bevor das Issue geschlossen wird. Verhindert, dass Issues geschlossen werden obwohl der Deploy still fehlschlug oder der falsche Code-Stand deployed wurde. Siehe Spec Issue #564 für technische Details.
 
-## E-MAIL SPEC VALIDATOR (ZWINGEND!)
+## E-MAIL SPEC VALIDATOR — gilt für die Orts-Vergleich-Mail (ZWINGEND!)
 
-**PFLICHT vor "E2E Test bestanden" bei E-Mail-Features:**
+**Geltungsbereich (WICHTIG):** `email_spec_validator.py` prüft **ausschließlich** den
+**Orts-Vergleich-Mail**-Pfad. Er ist fest auf dessen Struktur verdrahtet: zwei Tabellen,
+die **Vergleichstabelle**, die **Winner-Box** (Empfehlung) und mindestens `--min-locations`
+Orte (Default 3). Eine **Trip-Briefing-Mail** (anderer Versandpfad, n Stundentabellen pro
+Etappe, keine Winner-Box) kann diesen Validator **strukturell nie** bestehen → Dauer-Exit-1.
+Den Validator dort anzuwenden ist ein Fehler (führt zu falschem „Feature kaputt" oder
+Gate-Erosion).
+
+**PFLICHT vor "E2E Test bestanden" bei Orts-Vergleich-Mail-Features:**
 
 ```bash
 uv run python3 .claude/hooks/email_spec_validator.py
 ```
 
-Prueft: Struktur, Location-Anzahl, Plausibilitaet, Format, Vollstaendigkeit.
+Prueft: Struktur, Location-Anzahl, Plausibilitaet, Format, Vollstaendigkeit (der Orts-Vergleich-Mail).
 
 Laeuft in der Acceptance-Stage gegen die Staging-Mail: Test-Trip mit Empfaenger
 `gregor-test@henemm.com`, IMAP-Quelle ist das Stalwart-Test-Postfach (`mail.henemm.com`).
 Credentials kommen aus den Settings (`GZ_IMAP_*`) — niemals im Klartext hier. Kein Gmail.
 
-**NUR bei Exit 0 darfst du "E2E Test bestanden" sagen!**
+**Nur für den Orts-Vergleich-Mail-Pfad gilt:** Nur bei Exit 0 darfst du „E2E Test bestanden" sagen.
 
 Einfache String-Checks beweisen NICHTS - sie pruefen nicht ob Daten SINNVOLL sind!
+
+### Nachweis für Trip-Briefing-Mail (NICHT dieser Validator)
+
+Für **Trip-Briefing-Mail**-Änderungen ist der etablierte Nachweis ein echter
+**IMAP-MIME-Verhaltenstest** gegen die tatsächlich zugestellte Mail (seit #722, #721, #636):
+**Content-Type/multipart** vs. `text/plain`, **Content-Transfer-Encoding** (CTE/Encoding),
+`isascii`, **Byte**-Größe und die erwarteten Inhaltsblöcke (present/absent). Der
+`email_spec_validator.py` ist hierfür **nicht** zuständig.
+
+Ein eigener Struktur-Validator für Trip-Briefing-Mails ist als Coverage-Lücke nach **#733**
+ausgegliedert.
 
 ## Specs
 
