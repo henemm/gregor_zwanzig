@@ -2,8 +2,8 @@
 entity_id: issue_692_telegram_disabled_unconfigured
 type: module
 created: 2026-06-10
-updated: 2026-06-10
-status: draft
+updated: 2026-06-11
+status: complete
 version: "1.0"
 tags: [frontend, ux, channels, weather-metrics-tab]
 ---
@@ -12,7 +12,7 @@ tags: [frontend, ux, channels, weather-metrics-tab]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved & Implemented (2026-06-11)
 
 ## Purpose
 
@@ -162,3 +162,6 @@ Nutzer die fehlende Konfiguration in einem Schritt nachholen kann.
 ## Changelog
 
 - 2026-06-10: Initial spec created
+- 2026-06-11: Implementation complete
+  - `WeatherV2Kanaele.svelte`: Prop `availability` empfangen, disabled-State bei nicht konfigurierten Kanälen, Hint-Zeilen mit `/account`-Link
+  - `WeatherMetricsTab.svelte`: `profile`-State, Profil-Fetch in `load()` parallel integriert, fail-soft bei Fehler, `availableChannels` derived
