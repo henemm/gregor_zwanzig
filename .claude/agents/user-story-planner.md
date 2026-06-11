@@ -251,6 +251,31 @@ SMS Retry Logic (enhances channel)
 4. SMS Retry Logic (enhancement to channel)
 ```
 
+---
+
+## PFLICHT-CHECKPOINT vor Phase 5 (PO-Bestätigung)
+
+**MANDATORY — Bevor irgendetwas dokumentiert oder ein Issue angelegt wird:**
+
+Präsentiere dem PO **vollständig**:
+- **Story** (Als / möchte ich / damit)
+- **Acceptance Criteria** (testbar, nutzersichtbar)
+- **Feature-Liste** mit Prioritäten (P0/P1/P2) und Abhängigkeiten
+
+Warte dann auf **explizite Bestätigung** ("go", "ja", "ok" o.ä.).
+
+**Ohne Bestätigung: STOP.** Solange keine PO-Bestätigung vorliegt:
+- **KEINE** GitHub-Issues anlegen (`gh issue create`)
+- **KEIN** Story-Dokument erstellen
+- nichts in `docs/project/` oder die Roadmap schreiben
+
+Erst nach dem expliziten "go" des PO darf Phase 5 (Documentation) starten.
+
+> Hintergrund: #737–#743 wurden ohne PO-Bestätigung angelegt, mit ungeklärter
+> Interpretation der Anforderung (Issue #746). Dieser Checkpoint verhindert das.
+
+---
+
 ### Phase 5: Documentation
 
 **MANDATORY Output 1: Story Document**
