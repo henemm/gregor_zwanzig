@@ -8,6 +8,7 @@ Defines the structure for multi-waypoint trips/tours with support for:
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from datetime import date, time
 from enum import Enum
@@ -27,6 +28,12 @@ class AggregationFunc(str, Enum):
 
 
 from app.profile import ActivityProfile  # noqa: E402,F401  # re-export — siehe docs/specs/modules/activity_profile.md
+
+# Issue #760: Dedup-Pattern für Etappen-Präfixe (Etappe N / Tag N)
+_STAGE_PREFIX_RE = re.compile(
+    r"^\s*(?:Etappe|Tag)\s*\d+\s*[:.\-–—]?\s*(?P<rest>.*)$",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)
@@ -229,6 +236,24 @@ class Trip:
             [s for s in self.stages if s.date > from_date],
             key=lambda s: s.date,
         )
+
+    def numbered_stage_label(self, stage: "Stage") -> str:
+        """Etappen-Bezeichnung mit zwingender, dedupliziert vorangestellter Nummer.
+
+        Die Nummer ist die 1-basierte chronologische Position der Etappe innerhalb
+        der Tour (Etappen nach Datum sortiert). Trägt der Name bereits ein
+        'Etappe N'/'Tag N'-Präfix, wird dieses durch die korrekte 'Etappe N:'-Form
+        ersetzt (keine doppelte Nummer). Spec: docs/specs/modules/issue_760_stage_number.md
+        """
+        ordered = sorted(self.stages, key=lambda s: s.date)
+        try:
+            number = ordered.index(stage) + 1
+        except ValueError:
+            number = self.stages.index(stage) + 1  # Fallback: Listenposition
+        name = (stage.name or "").strip()
+        m = _STAGE_PREFIX_RE.match(name)
+        rest = m.group("rest").strip() if m else name
+        return f"Etappe {number}: {rest}" if rest else f"Etappe {number}"
 
     def __str__(self) -> str:
         dates = f"{self.start_date}" if self.start_date == self.end_date else f"{self.start_date} - {self.end_date}"

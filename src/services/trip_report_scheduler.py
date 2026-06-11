@@ -416,7 +416,7 @@ class TripReportSchedulerService:
 
         # 3. Stage info for header
         stage = trip.get_stage_for_date(target_date)
-        stage_name = stage.name if stage else None
+        stage_name = trip.numbered_stage_label(stage) if stage else None
         stage_stats = self._compute_stage_stats(stage) if stage else None
 
         # 4. Night weather (evening reports only)

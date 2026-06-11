@@ -114,7 +114,7 @@ class PreviewService:
         trip_tz = tz_for_coords(segments[0].start_point.lat, segments[0].start_point.lon)
 
         stage = trip.get_stage_for_date(target)
-        stage_name = stage.name if stage else None
+        stage_name = trip.numbered_stage_label(stage) if stage else None
         stage_stats = scheduler._compute_stage_stats(stage) if stage else None
 
         if trip.display_config and trip.report_config:
