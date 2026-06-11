@@ -9,7 +9,45 @@ IMPORTANT: NO mocks, NO patch, NO MagicMock. Real function calls only.
 from __future__ import annotations
 
 import pytest
+from pathlib import Path
 from zoneinfo import ZoneInfo
+
+# ---------------------------------------------------------------------------
+# Modul-weite Pfad-Symbole (portabel, kein hardkodierter Worktree-Pfad)
+# ---------------------------------------------------------------------------
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+
+_RENDERER_FILES = [
+    _REPO_ROOT / "src/output/renderers/email/html.py",
+    _REPO_ROOT / "src/output/renderers/email/plain.py",
+    _REPO_ROOT / "src/output/renderers/narrow.py",
+]
+
+_THRESHOLD_BAD_PATTERNS = [
+    r'pm\s*>\s*0',
+    r'pm\s*>\s*1',
+    r'wk\s*>\s*30',
+    r'wk\s*>=\s*50',
+    r'precip_mm.*>\s*[01]',
+]
+
+
+def _scan_threshold_violations(paths) -> list[str]:
+    """Scanne die gegebenen Dateien auf rohe Schwellenwert-Vergleiche.
+
+    Gibt eine Liste ``"<dateiname>:<zeile>: '<match>'"`` zurück (leer = sauber).
+    """
+    import re
+    violations = []
+    for fpath in paths:
+        fpath = Path(fpath)
+        src = fpath.read_text()
+        for pat in _THRESHOLD_BAD_PATTERNS:
+            for m in re.finditer(pat, src):
+                line_no = src[:m.start()].count("\n") + 1
+                violations.append(f"{fpath.name}:{line_no}: {m.group()!r}")
+    return violations
 
 
 # ---------------------------------------------------------------------------
@@ -681,27 +719,7 @@ class TestTokenConsolidation:
         precip/wind threshold expressions (> 1, > 30, >= 50, precip_mm ==).
         # doc-compliance-test
         """
-        import re
-        renderer_files = [
-            '/home/hem/gregor_zwanzig/.claude/worktrees/idempotent-strolling-cray/src/output/renderers/email/html.py',
-            '/home/hem/gregor_zwanzig/.claude/worktrees/idempotent-strolling-cray/src/output/renderers/email/plain.py',
-            '/home/hem/gregor_zwanzig/.claude/worktrees/idempotent-strolling-cray/src/output/renderers/narrow.py',
-        ]
-        # Pattern: bare numeric threshold checks that should live in format_trend_tokens
-        bad_patterns = [
-            r'pm\s*>\s*0',       # precip zero-check in renderer
-            r'pm\s*>\s*1',       # precip highlight threshold in renderer
-            r'wk\s*>\s*30',      # wind highlight threshold in renderer
-            r'wk\s*>=\s*50',     # wind risk threshold in renderer
-            r'precip_mm.*>\s*[01]',  # raw precip_mm comparison
-        ]
-        violations = []
-        for fpath in renderer_files:
-            src = open(fpath).read()
-            for pat in bad_patterns:
-                for m in re.finditer(pat, src):
-                    line_no = src[:m.start()].count("\n") + 1
-                    violations.append(f"{fpath.split('/')[-1]}:{line_no}: {m.group()!r}")
+        violations = _scan_threshold_violations(_RENDERER_FILES)
         assert not violations, (
             "F002: Renderer(s) still evaluate thresholds directly:\n"
             + "\n".join(violations)
