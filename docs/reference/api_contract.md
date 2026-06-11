@@ -1,7 +1,7 @@
 
 # API Contract — Gregor Zwanzig
 
-**Updated:** 2026-06-11 (Issue #723 — Frontend-only UI-Cleanup, siehe Changelog; Issue #731 — Abruf-zentrierte Befehle: bare Keywords (HEUTE/MORGEN/JETZT/GEWITTER/RUHETAG/STATUS/STOP/WEITER/HILFE) ersetzen alte Abonnenten-Befehle (PAUSE/SKIP/CONFIG). Persistenzfelder paused_until/skip_next bleiben für Bestandsdaten erhalten. TripCommandProcessor.process() neu mit _resume_trip() für WEITER-Befehl. Keine Datenstruktur-Änderungen. Siehe Issue #731.); 2026-06-10 (Issue #715 — Wettermetriken-Darstellung: GET /api/metrics filtert auf `selectable=true` — `confidence` (Vorhersage-Verlässlichkeit/Ensemble) ist KEINE pro-Etappe wählbare Metrik mehr, nur noch Vorhersage-Hinweis + SMS-Symbol; Vorschau-Emojis in WeatherV2MailPreview + Step3Weather angepasst; Beispieldaten eindeutig gekennzeichnet; Bug #716 — Test-Briefing: stiller Versagensfall weg. POST /api/trips/{id}/send gibt jetzt HTTP 422 + detail-Feld zurück wenn keine Etappendaten für Zieldatum vorhanden (statt HTTP 200). Frontend zeigt konkrete Fehlermeldung im Toast; Issue #707 — Trip-Datum-Overwrite-Bug: PUT `/api/trips/{id}` mit minimalem Body (nur geänderte Felder) statt kompletter `trip`-Spread — verhindert stale-data-Überschreibung von Etappen; Issue #690 — Eigene Wetter-Metriken-Profile: eindeutiger Name (HTTP 409 name_exists, 400 name_required), Profil sofort aktiv + persistent, "Eigene"-Markierung in Preset-Leiste, trip-übergreifend pro Nutzer); 2026-06-09 (Issue #674 — Fahrradtour als Aktivitätstyp: 3 neue ActivityType-Varianten (fahrrad_15/20/25 km/h) mit korrekten Naismith-Raten (600/1000 Hm/h); #680 — Compare-Editor Slice 3 Fidelity: display_config.active_metrics — ausgewählte Metriken pro Vergleich; #675 — Etappen-Startzeiten editierbar; #671 — Bot-Menü automatisch beim Service-Start; #638 — Alerts-Tab Karten-Modell, Severity-Falle, pro-Alert Kanäle; #664 — Metriken-Überblick-Pille; #621 — E-Mail-Elemente abschaltbar); 2026-06-08 (Issues #672/#671 — Telegram E2E-Pipeline-Tests + Bot-Menü-Vertrag; #642 — User-Anzeigename display_name; #655 — Telegram Hybrid-Navigation: callback_query + editMessageText); 2026-06-07 (Issues #627/#631 — Compare-Preset Sofortversand + Wochen-Rhythmus-Erhalt)
+**Updated:** 2026-06-11 (Issue #747 — Datierter Forecast-Snapshot-Speicher: WeatherSnapshotService erweitert um `save_dated(trip_id, target_date, segments)`, `load_dated(trip_id, target_date)` und `_prune_dated_snapshots(trip_id)`. Speichert Snapshots nach Datum (`{trip_id}_{YYYY-MM-DD}.json`, max. 7 Dateien pro Trip, mtime-sortiert). Fundament für Vortag-Vergleich im Trip-Briefing. Bestehende `save()`/`load()`-Methoden für Alert-Pfad bleiben byte-identisch. Scheduler ruft `save_dated()` nach bestehendem `save()` auf. Siehe Issue #747.); 2026-06-11 (Issue #731 — Abruf-zentrierte Befehle: bare Keywords (HEUTE/MORGEN/JETZT/GEWITTER/RUHETAG/STATUS/STOP/WEITER/HILFE) ersetzen alte Abonnenten-Befehle (PAUSE/SKIP/CONFIG). Persistenzfelder paused_until/skip_next bleiben für Bestandsdaten erhalten. TripCommandProcessor.process() neu mit _resume_trip() für WEITER-Befehl. Keine Datenstruktur-Änderungen. Siehe Issue #731.); 2026-06-10 (Issue #715 — Wettermetriken-Darstellung: GET /api/metrics filtert auf `selectable=true` — `confidence` (Vorhersage-Verlässlichkeit/Ensemble) ist KEINE pro-Etappe wählbare Metrik mehr, nur noch Vorhersage-Hinweis + SMS-Symbol; Vorschau-Emojis in WeatherV2MailPreview + Step3Weather angepasst; Beispieldaten eindeutig gekennzeichnet; Bug #716 — Test-Briefing: stiller Versagensfall weg. POST /api/trips/{id}/send gibt jetzt HTTP 422 + detail-Feld zurück wenn keine Etappendaten für Zieldatum vorhanden (statt HTTP 200). Frontend zeigt konkrete Fehlermeldung im Toast; Issue #707 — Trip-Datum-Overwrite-Bug: PUT `/api/trips/{id}` mit minimalem Body (nur geänderte Felder) statt kompletter `trip`-Spread — verhindert stale-data-Überschreibung von Etappen; Issue #690 — Eigene Wetter-Metriken-Profile: eindeutiger Name (HTTP 409 name_exists, 400 name_required), Profil sofort aktiv + persistent, "Eigene"-Markierung in Preset-Leiste, trip-übergreifend pro Nutzer); 2026-06-09 (Issue #674 — Fahrradtour als Aktivitätstyp: 3 neue ActivityType-Varianten (fahrrad_15/20/25 km/h) mit korrekten Naismith-Raten (600/1000 Hm/h); #680 — Compare-Editor Slice 3 Fidelity: display_config.active_metrics — ausgewählte Metriken pro Vergleich; #675 — Etappen-Startzeiten editierbar; #671 — Bot-Menü automatisch beim Service-Start; #638 — Alerts-Tab Karten-Modell, Severity-Falle, pro-Alert Kanäle; #664 — Metriken-Überblick-Pille; #621 — E-Mail-Elemente abschaltbar); 2026-06-08 (Issues #672/#671 — Telegram E2E-Pipeline-Tests + Bot-Menü-Vertrag; #642 — User-Anzeigename display_name; #655 — Telegram Hybrid-Navigation: callback_query + editMessageText); 2026-06-07 (Issues #627/#631 — Compare-Preset Sofortversand + Wochen-Rhythmus-Erhalt)
 
 ## 0) Konventionen
 - Zeit: ISO-8601 UTC (`Z`)
@@ -395,10 +395,10 @@ Lawinenlagebericht als eigenstaendiges Datenobjekt (nicht Teil von NormalizedTim
 | include_metrics                 | list[str]   | Anzuzeigende Metriken (default: 5 Basis-Metriken)      |
 | wind_exposition_min_elevation_m | float/null  | Wind-Exposition Höhen-Schwelle [m]; null = 1500m (F7c)|
 | show_stage_stats                | bool        | Etappen-Kennzahlen-Raster anzeigen? (default: true, Issue #621) |
-| show_quick_take_tags            | bool        | Quick-Take-Chips in HTML anzeigen? (default: true, Issue #621) — **nicht mehr im UI steuerbar seit Issue #723** (Bestandsdaten bleiben erhalten) |
-| show_stability                  | bool        | Großwetterlage-Label anzeigen? (default: true, Issue #621) — **nicht mehr im UI steuerbar seit Issue #723** (Bestandsdaten bleiben erhalten) |
-| show_highlights                 | bool        | Highlights/Zusammenfassung anzeigen? (default: true, Issue #621) — **nicht mehr im UI steuerbar seit Issue #723** (Bestandsdaten bleiben erhalten) |
-| daily_summary_metrics           | list[str]   | Metriken in der Tages-Summe (default: `["precipitation","wind","visibility","thunder"]`, Issue #621) — **nicht mehr im UI steuerbar seit Issue #723** (Bestandsdaten bleiben erhalten) |
+| show_quick_take_tags            | bool        | Quick-Take-Chips in HTML anzeigen? (default: true, Issue #621) |
+| show_stability                  | bool        | Großwetterlage-Label anzeigen? (default: true, Issue #621) |
+| show_highlights                 | bool        | Highlights/Zusammenfassung anzeigen? (default: true, Issue #621) |
+| daily_summary_metrics           | list[str]   | Metriken in der Tages-Summe (default: `["precipitation","wind","visibility","thunder"]`, Issue #621) |
 | show_metrics_summary            | bool        | Optionaler Metriken-Überblick am Beginn (default: false, Issue #664) — wenn true: farbige Pillen pro konfigurierter Metrik; ersetzt Quick-Take und blendet Tages-Summe aus |
 | show_outlook                    | bool        | Ausblick-Block anzeigen? (default: true, Issue #721) — verschmilzt Großwetterlage (Kopf) + Tabelle der nächsten Etappen mit Uhrzeiten und Vorhersage-Sicherheit (`confidence_pct` pro Etappe). Gilt für HTML **und** Plain-Text. `false` blendet den gesamten Block aus (Großwetterlage zusätzlich an `show_stability` gekoppelt). |
 | email_format                    | str         | E-Mail-Format-Schalter (default: `"full"`): `"full"` = multipart-HTML mit Stundentabellen (unverändert); `"compact"` = reine text/plain-Mail, nur ASCII, ohne HTML, mit fix Kopf + Metriken-Überblick + Ausblick + Footer, ~95% kleiner. Baustein-Toggles greifen bei compact NICHT. Siehe Issue #722. |
@@ -2331,7 +2331,6 @@ export interface AlertRule {
 
 ## Changelog
 
-- 2026-06-11: Issue #723 [#709 Slice 3] — E-Mail-Inhalt-Tab UI eindampfen (Frontend-only, keine API-Änderungen): `EditReportConfigSection.svelte` reduziert auf Format-Schalter + 3 statt 9 Bausteine (Metriken-Überblick, Ausblick, Etappen-Kennzahlen). Entfernte Felder (`show_quick_take_tags`, `show_stability`, `show_highlights`, `daily_summary_metrics`, `show_compact_summary`, etc.) bleiben in `TripReportConfig` erhalten (Backward Compatibility, kein Schema-Removal) — sind aber über das UI nicht mehr steuerbar. Neue UI-Struktur sichert Bestandsdaten via `originalReportConfig`-Spread beim Write-Back. Felder in API-Doku als "nicht mehr im UI steuerbar seit Issue #723" markiert. See `docs/specs/modules/issue_723_email_tab_eindampfen.md`.
 - 2026-06-11: Issue #722 [#709 Slice 2] — E-Mail-Format Kompakt (Nur-Text, minimal-Byte): Neuer Format-Schalter `TripReportConfig.email_format: 'full' | 'compact'` (default `'full'`). `'full'` = bestehende multipart-HTML-Mail mit stündlichen Werte-Tabellen (byte-identisch unverändert). `'compact'` = reine `text/plain`-Mail (single part, kein HTML, kein multipart), reines ASCII (7bit-CTE), mit fix nur Kopf + Metriken-Überblick + Ausblick + Footer (ohne Baustein-Toggles), ~95% kleiner (~1 KB für Wanderer mit schlechter Konnektivität). Backend: neuer isolierter `render_compact()`-Renderer (`src/output/renderers/email/compact.py`, ~50 LoC), `build_mime_message()` extrahiert (`html=False` → `us-ascii`/7bit), Scheduler leitet Email-Format durch. Frontend: Format-Schalter in `EditReportConfigSection.svelte`, Baustein-Gruppe bei compact deaktiviert (UI-Hinweis). Go-Modell `ReportConfig` Passthrough (no changes). Tests: Backend E2E gegen Staging (AC-1–5 Multipart-Strukturverifizierung + ASCII-Validierung + Baustein-Ignorance), Playwright E2E (AC-6 UI-Persistenz), Multi-User (AC-7). See `docs/specs/modules/issue_722_email_compact_format.md`.
 - 2026-06-10: Issue #702 — Alerts-Tab Mobile-Parität TM2 (Frontend CSS-only, Epic #700 Slice 2/2): `AlertsTab.svelte`, `AlertCard.svelte`, `AlertCooldownCard.svelte`, `AlertQuietHoursCard.svelte` mit `@media (max-width: 899px)` Breakpoint-spezifischen Touch-Target-Sizing: Channel-Chips ≥36px Höhe, Threshold-Input ≥120px breit, Cooldown/Time-Inputs ≥44px Höhe + 16px font-size (verhindert iOS-Auto-Zoom). Desktop Layout bleibt byte-identisch. `.actions`-Bar auf mobil ausgeblendet, Mobile-Footer-Button sichtbar (bestehend). Keine API/DTO-Änderungen. Tests: Playwright E2E gegen Staging @375px Viewport (AC-1/AC-2/AC-3/AC-5 Touch-Targets, AC-4 Desktop-Regression). See `docs/specs/modules/issue_702_alerts_mobile_parity.md`.
 - 2026-06-10: Issue #721 (Slice 1 von #709) — E-Mail-Ausblick verschmolzen: neues additives Feld `TripReportConfig.show_outlook` (bool, default true). Verschmilzt Großwetterlage (als Kopf), Tabelle der nächsten Etappen mit Uhrzeiten (`format_trend_tokens`, #640) und neuer Vorhersage-Sicherheit pro Etappe (`confidence_pct` aus `SegmentWeatherSummary.confidence_pct_min`, propagiert über `_build_stage_trend`) zu **einem** Ausblick-Block. `show_outlook=false` blendet den gesamten Block in HTML **und** Plain-Text aus (Großwetterlage zusätzlich an `show_stability` gekoppelt; fehlt `confidence_pct`, entfällt nur die Prozentangabe — kein „0%"). Altfelder (`show_stability`/`show_compact_summary`/`show_highlights`) bleiben erhalten (kein Schema-Removal). UI-Schalter folgt in Slice 3 (#723). See `docs/specs/modules/issue_721_email_outlook.md`.
@@ -2348,6 +2347,60 @@ export interface AlertRule {
 - 2026-05-30: Issue #467 — Passkey V3 Discoverable Credentials + Conditional UI: 2 new public endpoints (`POST /api/auth/passkey/discoverable/begin` and `/finish`) enable login without username. Browser shows registered passkeys as native autofill suggestions on username field focus via WebAuthn `mediation: 'conditional'`. Begin returns full assertion object with top-level `"mediation":"conditional"` flag. Finish accepts `userHandle` from authenticator and looks up user via `DiscoverableUserHandler` callback. Rate-limit 30/h per IP (same as V1). Frontend: `loginWithDiscoverablePasskey()` function in `passkey.ts` + `onMount` conditional UI init in login page with `autocomplete="username webauthn"` attribute. Tests: 6 mock-free roundtrip tests covering success path, empty userHandle, unknown user, challenge replay, and TTL expiry. See `docs/specs/modules/issue_467_discoverable_credentials.md`.
 - 2026-05-30: Issue #464 — Compare-E-Mail Observability-Endpoint `POST /api/_validator/compare-email-preview` (Tooling-API, nicht versionsstabil): Macht den Compare-HTML-Renderer von außen direkt aufrufbar für Validator-Observability. Go-Proxy + Python-Handler (validator.py). Request-Body: `{profile, time_window, target_date, winner_tags}`. Response: `{html: "..."}` mit gerendertem HTML. Stub-LocationResult mit score=85, keine echten Wetterdaten. AC-1/2/3 prüfbar per `curl | grep`. Siehe `docs/specs/modules/issue_464_compare_email_preview_validator.md`.
 - 2026-05-30: Issue #468 — AAGUID-Labels in der Passkey-Liste: GET `/api/auth/profile` Passkey-Einträge zeigen neu optionales Feld `authenticator_name` (z.B. "iCloud Keychain", "Windows Hello") basierend auf AAGUID-Mapping. Field omitempty bei Zero/Unknown-AAGUID. Frontend zeigt kombiniert `"{authenticator_name} · {label}"`. Siehe `docs/specs/modules/aaguid_labels.md`. Implementation: ~90 LoC (`aaguid.go`, `auth.go`, `account/+page.svelte`).
+
+---
+
+## Backend Services
+
+Diese Sektion dokumentiert interne Service-Klassen, die nicht über REST-Endpoints verfügbar sind.
+
+### WeatherSnapshotService — Dated Snapshot Storage (Issue #747)
+
+**Pfad:** `src/services/weather_snapshot.py`
+
+**Purpose:** Erweitert den bestehenden `WeatherSnapshotService` um datiertes Speichern und Laden von Wetter-Snapshots. Ermöglicht Abruf der gestrigen Vorhersage für Vortag-Vergleich im Trip-Briefing.
+
+**Datei-Schema:**
+- **Bestehend (Alert-Nutzung, unverändert):** `data/users/<user_id>/snapshots/{trip_id}.json`
+- **Neu (datiert):** `data/users/<user_id>/snapshots/{trip_id}_{YYYY-MM-DD}.json`
+
+**Methoden:**
+
+| Methode | Signatur | Verhalten |
+|---------|----------|----------|
+| `save_dated()` | `(trip_id: str, target_date: date, segments: List[SegmentWeatherData]) → None` | Schreibt datierte Kopie zu `{trip_id}_{YYYY-MM-DD}.json`. Ruft intern `_prune_dated_snapshots()` auf. Fehler werden geloggt, nicht geworfen. |
+| `load_dated()` | `(trip_id: str, target_date: date) → Optional[List[SegmentWeatherData]]` | Lädt datierte Snapshot-Datei für den angegebenen Tag. Gibt `None` zurück wenn Datei nicht vorhanden (kein Absturz). Deserialisialisiert `SegmentWeatherData` mit Enum-Rekonstruktion. |
+| `_prune_dated_snapshots()` | `(trip_id: str) → None` | Löscht älteste datierte Snapshots für diesen Trip, behält maximal 7 (mtime-sortiert). Fehler beim Löschen werden geloggt. |
+| `save()` | _(bestehend, unverändert)_ | Speichert auf `{trip_id}.json` für Alert-Pfad. Byte-identisch vor/nach Issue #747. |
+| `load()` | _(bestehend, unverändert)_ | Lädt von `{trip_id}.json` für Alert-Pfad. Byte-identisch vor/nach Issue #747. |
+
+**Retention-Policy:**
+
+Beim Aufruf von `save_dated()`:
+1. Snapshot wird geschrieben
+2. `_prune_dated_snapshots()` wird aufgerufen
+3. Alle Dateien `{trip_id}_*.json` werden nach `mtime` sortiert
+4. Nur die 7 jüngsten Dateien bleiben, älter werden gelöscht
+5. Fehler beim Löschen (OSError) werden geloggt, brechen nicht ab
+
+**Integration:**
+
+`trip_report_scheduler.py` ruft nach bestehendem `save()`-Aufruf zusätzlich `save_dated()` auf:
+```python
+_snapshot_svc = WeatherSnapshotService(self._user_id)
+_snapshot_svc.save(trip_id, segment_weather, target_date)        # bestehend
+_snapshot_svc.save_dated(trip_id, target_date, segment_weather)  # neu, Issue #747
+```
+
+**User-Isolation:**
+
+`WeatherSnapshotService.__init__(user_id)` empfängt `user_id` aus Auth-Kontext. Snapshots pro Nutzer isoliert unter `data/users/<user_id>/snapshots/`.
+
+**Backward Compatibility:**
+
+- Bestehende `save()`-/`load()`-Methoden sind byte-identisch
+- Alert-Pfad (`trip_alert.py`) nutzt nur `save()`/`load()` — keine Verhaltensänderung
+- Bestandsdaten in `{trip_id}.json` bleiben unverändert
 - 2026-05-30: Issue #461 — Compare-Presets Daily Dispatch (Cronjob): New `POST /api/scheduler/compare-presets-daily` endpoint (section 17) triggered daily by Go scheduler at 06:00 UTC. Filters presets by `schedule='daily'`, runs Compare Engine, renders/sends emails via Resend, updates `letzter_versand` and `top_ort_letzter_versand` fields. Per-preset error isolation; BetterStack Heartbeat pinged only on `error_count==0` (Readiness Principle). Config field `HeartbeatComparePresets` added to Go config; Go scheduler job count increased from 5 to 6. Tests: 11 new comprehensive tests in `test_issue_461_compare_preset_dispatch.py`.
 - 2026-05-30: Added section 18 — Authentication Endpoints (Issue #450 Passkey/WebAuthn V1): 5 passkey endpoints (register/begin|finish, login/begin|finish, delete), password auth methods (register, login), profile endpoint with `has_passkey`+`passkeys[]`. User model extended with `PasskeyCredentials[]` and `PasswordHash` now optional. Rate-limit 30/h per IP (alle 5 Endpoints), challenge TTL 5 min, RP-ID isolation (prod vs staging), 64 KB body cap.
 - 2026-05-30: Issue #459 — Auto-Briefings Sidepanel Frontend (ComparePreset-System): AutoReportsOverview, SavePresetDialog, subscriptionHelpers (presetScheduleLabel, formatLastSent), ComparePreset-Interface in types.ts; +page.server.ts lädt `/api/compare/presets`; AutoReportCard und AutoReportsOverview auf ComparePreset umgebaut mit manuellem Versand-Button. Spec #458-Backend-Endpoints vorausgesetzt (`GET /api/compare/presets`, `/send`).
