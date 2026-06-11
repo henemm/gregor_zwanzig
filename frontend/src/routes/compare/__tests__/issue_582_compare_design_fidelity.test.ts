@@ -13,8 +13,6 @@
 //   AC-5: FAIL — CompareTabs.svelte nutzt <Segmented statt Button-mit-Underline
 //   AC-6: FAIL — Übersicht-Tab hat kein g-r-3 border-left accent Verifikations-Hinweis
 //   AC-7: FAIL — Vorschau-Tab hat kein Email-View-Toggle Desktop/iPhone
-//   AC-8: FAIL — CompareWizard.svelte hat keinen Edit-Header mit H1 + Save/Cancel
-//   AC-9: FAIL — CompareWizard.svelte nutzt trip-wizard/Stepper statt custom CW_Stepper
 //
 // Ausführen:
 //   cd frontend && node --experimental-strip-types --test \
@@ -32,7 +30,6 @@ const COMPARE_DIR = join(ROUTES_COMPARE, '..', 'lib', 'components', 'compare');
 const LIST_PAGE    = join(ROUTES_COMPARE, 'compare', '+page.svelte');
 const HUB_PAGE     = join(ROUTES_COMPARE, 'compare', '[id]', '+page.svelte');
 const COMPARE_TABS = join(COMPARE_DIR, 'CompareTabs.svelte');
-const WIZARD       = join(COMPARE_DIR, 'CompareWizard.svelte');
 
 // ═══════════════════════════════════════════════════════════════════
 // Block A — Compare-Liste
@@ -217,58 +214,3 @@ describe('AC-7: Vorschau-Tab — ChannelSwitch + Email-Toggle + BriefingPreview'
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// Block D — Compare-Wizard
-// ═══════════════════════════════════════════════════════════════════
-
-describe('AC-8: Wizard Edit-Mode — Header mit H1 + Save/Cancel', () => {
-	test('AC-8a: Wizard hat Edit-Header-Block mit isEditMode-Bedingung', () => {
-		const src = readFileSync(WIZARD, 'utf-8');
-		// JSX: CW_EditHeader — in Svelte: separater Block wenn isEditMode/wiz.isEditMode
-		// Der aktuelle Code hat Eyebrow + H1, aber keinen separaten Edit-Header mit Save/Cancel
-		assert.match(
-			src,
-			/isEditMode.*Speichern|isEditMode.*Save|wiz\.isEditMode.*btn.*cancel/i,
-			'Wizard Edit-Header braucht Save + Cancel Buttons wenn isEditMode — IST: nicht vorhanden'
-		);
-	});
-
-	test('AC-8b: Wizard Edit-Header zeigt Vergleichs-Name als H1 mit font-size 30px', () => {
-		const src = readFileSync(WIZARD, 'utf-8');
-		assert.match(
-			src,
-			/30px.*font-weight.*600|font-size.*30|wiz\.name.*h1/i,
-			'Wizard Edit-Header braucht H1 mit font-size: 30px; font-weight: 600 für den Vergleichs-Namen'
-		);
-	});
-});
-
-describe('AC-9: Wizard Create-Mode — Custom Stepper mit done/current/upcoming States', () => {
-	test('AC-9a: Wizard nutzt KEINEN trip-wizard/Stepper mehr', () => {
-		const src = readFileSync(WIZARD, 'utf-8');
-		assert.doesNotMatch(
-			src,
-			/trip-wizard\/Stepper/,
-			'Wizard darf nicht mehr von trip-wizard/Stepper abhängen — JSX definiert eigenen CW_Stepper'
-		);
-	});
-
-	test('AC-9b: Wizard-Stepper hat done/current/upcoming State-Logik', () => {
-		const src = readFileSync(WIZARD, 'utf-8');
-		assert.match(
-			src,
-			/upcoming|done.*current|current.*upcoming/,
-			'Wizard-Stepper braucht done/current/upcoming Zustände — IST: trip-wizard/Stepper importiert'
-		);
-	});
-
-	test('AC-9c: Wizard-Stepper hat Connector-Linien zwischen Steps', () => {
-		const src = readFileSync(WIZARD, 'utf-8');
-		// Connector: schmale Linie zwischen Steps, background: var(--g-rule) oder --g-ink-3
-		assert.match(
-			src,
-			/connector|step.*line|g-rule.*connector|minWidth.*24|min-width.*24/i,
-			'Wizard-Stepper braucht Connector-Linien zwischen den Schritt-Kreisen'
-		);
-	});
-});

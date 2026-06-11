@@ -26,7 +26,7 @@ const SRC = fileURLToPath(new URL('..', import.meta.url)); // -> frontend/src/
 const API_CATCHES = [
   {
     file: 'lib/components/compare/compareWizardState.svelte.ts',
-    catchLine: 131,
+    catchLine: 82,
     label: 'compareWizardState PUT /api/subscriptions/{id}',
     window: 5,
   },

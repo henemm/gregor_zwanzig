@@ -6,13 +6,11 @@
 
 import type { ActivityProfile, ChannelLayouts, ComparePreset } from '$lib/types';
 import type { IdealRange } from './compareMetricDefs';
-import { validateIdealRanges } from './compareMetricDefs';
 import { buildComparePresetSavePayload } from './compareEditorSave';
 
 export type SaveStatus = 'idle' | 'saving' | 'ok' | 'error';
 
 export class CompareWizardState {
-	currentStep = $state<1 | 2 | 3 | 4 | 5>(1);
 	name = $state('');
 	region = $state(''); // mapped: display_config.region
 	activityProfile = $state<ActivityProfile | null>(null);
@@ -42,64 +40,6 @@ export class CompareWizardState {
 	topN = $state(3);
 	saveStatus = $state<SaveStatus>('idle');
 	saveError = $state<string | null>(null);
-
-	// --- Validation ---------------------------------------------------------
-
-	get canAdvanceStep1(): boolean {
-		return this.name.trim().length > 0;
-	}
-
-	get canAdvanceStep2(): boolean {
-		return this.pickedIds.length >= 2;
-	}
-
-	get canAdvanceStep3(): boolean {
-		return validateIdealRanges(this.idealRanges, this.activeMetricKeys).valid;
-	}
-
-	get canAdvanceStep5(): boolean {
-		return this.sendEmail || this.sendTelegram || this.sendSms;
-	}
-
-	get canAdvanceCurrent(): boolean {
-		switch (this.currentStep) {
-			case 1:
-				return this.canAdvanceStep1;
-			case 2:
-				return this.canAdvanceStep2;
-			case 3:
-				return this.canAdvanceStep3;
-			case 5:
-				return this.canAdvanceStep5;
-			default:
-				return true;
-		}
-	}
-
-	// --- Navigation ---------------------------------------------------------
-
-	nextStep(): void {
-		if (this.currentStep < 5) {
-			this.currentStep = (this.currentStep + 1) as 1 | 2 | 3 | 4 | 5;
-		}
-	}
-
-	prevStep(): void {
-		if (this.currentStep > 1) {
-			this.currentStep = (this.currentStep - 1) as 1 | 2 | 3 | 4 | 5;
-		}
-	}
-
-	/**
-	 * Tab-Verhalten im Edit-Modus: alle 5 Steps frei navigierbar.
-	 * Im Create-Modus blockiert (sequenzielle Bedienung).
-	 */
-	goToStep(n: number): void {
-		if (!this.isEditMode) return;
-		if (n >= 1 && n <= 5) {
-			this.currentStep = n as 1 | 2 | 3 | 4 | 5;
-		}
-	}
 
 	// --- API-Aktionen --------------------------------------------------------
 

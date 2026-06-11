@@ -27,7 +27,6 @@ const STEPS_DIR = join(COMPARE_DIR, 'steps');
 const MIGRATED_FILES: Array<{ path: string; components: string[] }> = [
 	{ path: join(COMPARE_DIR, 'AutoReportCard.svelte'),    components: ['Btn'] },
 	{ path: join(COMPARE_DIR, 'AutoReportsOverview.svelte'), components: ['Eyebrow'] },
-	{ path: join(COMPARE_DIR, 'CompareWizard.svelte'),     components: ['Btn', 'Eyebrow', 'TopoBg'] },
 	{ path: join(COMPARE_DIR, 'CreateGroupDialog.svelte'), components: ['Btn'] },
 	{ path: join(COMPARE_DIR, 'HourlyMatrix.svelte'),      components: ['Pill'] },
 	{ path: join(COMPARE_DIR, 'LocationPreviewMap.svelte'), components: ['TopoBg'] },
@@ -79,7 +78,7 @@ function namedImportsFrom(src: string, modulePath: string): string[] {
 
 // ── AC-1: Alle migrierten Komponenten kommen aus atoms ───────────────────────
 
-test('AC-1: Alle 14 Dateien importieren ihre Atom-Komponenten aus $lib/components/atoms', () => {
+test('AC-1: Alle 13 Dateien importieren ihre Atom-Komponenten aus $lib/components/atoms', () => {
 	const missing: string[] = [];
 	for (const { path, components } of MIGRATED_FILES) {
 		const src = readFile(path);
@@ -100,7 +99,7 @@ test('AC-1: Alle 14 Dateien importieren ihre Atom-Komponenten aus $lib/component
 
 // ── AC-1 (negativ): Kein direkter ui/-Import mehr für die 5 Atom-Namen ───────
 
-test('AC-1: Keine der 14 Dateien importiert Btn/Eyebrow/Pill/Input/TopoBg noch aus ui/', () => {
+test('AC-1: Keine der 13 Dateien importiert Btn/Eyebrow/Pill/Input/TopoBg noch aus ui/', () => {
 	const offenders: string[] = [];
 	for (const { path } of MIGRATED_FILES) {
 		const src = readFile(path);
@@ -115,26 +114,6 @@ test('AC-1: Keine der 14 Dateien importiert Btn/Eyebrow/Pill/Input/TopoBg noch a
 		offenders,
 		[],
 		`Folgende direkten ui/-Importe müssen auf atoms umgestellt werden:\n${offenders.join('\n')}`
-	);
-});
-
-// ── AC-1: CompareWizard konsolidiert 3 Imports in eine Zeile ─────────────────
-
-test('AC-1: CompareWizard.svelte importiert Btn, Eyebrow, TopoBg in einer einzigen atoms-Zeile', () => {
-	const src = readFile(join(COMPARE_DIR, 'CompareWizard.svelte'));
-	const atoms = namedImportsFrom(src, '$lib/components/atoms');
-	for (const name of ['Btn', 'Eyebrow', 'TopoBg']) {
-		assert.ok(
-			atoms.includes(name),
-			`CompareWizard.svelte: ${name} nicht im atoms-Barrel-Import (gefunden: [${atoms.join(', ')}])`
-		);
-	}
-	// Es darf nur einen atoms-Import geben (konsolidiert)
-	const atomsImportCount = (src.match(/from\s+['"][$]lib\/components\/atoms['"]/g) ?? []).length;
-	assert.equal(
-		atomsImportCount,
-		1,
-		`CompareWizard.svelte: Erwartet genau 1 atoms-Import, gefunden: ${atomsImportCount}`
 	);
 });
 
