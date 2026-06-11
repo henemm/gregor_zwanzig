@@ -7,6 +7,7 @@ Provides short-term precipitation forecasts ("fängt es in den nächsten
 Sources (coordinate-based, automatic):
 - BrightSky (RADOLAN) for Germany
 - GeoSphere INCA for Austria
+- Météo-France AROME-HD (via Open-Meteo) for France/Corsica/Benelux/NW-Italy
 - Open-Meteo minutely_15 for global/fallback
 
 Feature: Issue #656
@@ -33,6 +34,12 @@ _INCA_LAT_MAX = 49.1
 _INCA_LON_MIN = 9.5
 _INCA_LON_MAX = 17.2
 
+# AROME-HD bounding box (FR — incl. Corsica, FR-Alps, Pyrenees, Benelux, NW-Italy)
+_AROME_FR_LAT_MIN = 41.0
+_AROME_FR_LAT_MAX = 51.5
+_AROME_FR_LON_MIN = -5.5
+_AROME_FR_LON_MAX = 10.0
+
 # Onset threshold: frames within 60 min from now considered "nowcast"
 _NOWCAST_HORIZON_MIN = 60
 _DRY_THRESHOLD_MM_H = 0.1
@@ -45,7 +52,7 @@ class NowcastResult:
     """Result of a nowcast query."""
     onset_minutes: Optional[int]   # minutes until first wet frame, None if none
     intensity_label: str            # human-readable intensity
-    source: str                     # "radar", "INCA", "minutely_15"
+    source: str                     # "radar", "INCA", "AROME-FR", "minutely_15"
     frames: list = field(default_factory=list)
     is_convective: bool = False     # True when nowcast indicates thunderstorm/hail
 
@@ -122,7 +129,8 @@ class RadarNowcastService:
         source_label = {
             "radar": "Radar (DWD)",
             "INCA": "INCA (GeoSphere AT)",
-            "minutely_15": "Open-Meteo 15-min",
+            "AROME-FR": "Météo-France AROME (1,5 km)",
+            "minutely_15": "Open-Meteo (global)",
         }.get(result.source, result.source)
         lines.append(f"Quelle: {source_label}.")
 
@@ -145,6 +153,11 @@ class RadarNowcastService:
             frames = self._fetch_geosphere_inca(lat, lon)
             if frames:
                 return frames, "INCA"
+
+        if _within_arome_france(lat, lon):
+            frames = self._fetch_arome_france_hd(lat, lon)
+            if frames:
+                return frames, "AROME-FR"
 
         frames = self._fetch_openmeteo_minutely15(lat, lon)
         return frames, "minutely_15"
@@ -181,12 +194,24 @@ class RadarNowcastService:
             return []
 
     def _fetch_openmeteo_minutely15(self, lat: float, lon: float) -> list:
+        return self._fetch_openmeteo_15(lat, lon)
+
+    def _fetch_arome_france_hd(self, lat: float, lon: float) -> list:
+        """Fetch AROME-HD (1.5 km) minutely_15 nowcast via Open-Meteo. Fail-soft -> []."""
+        return self._fetch_openmeteo_15(lat, lon, models="arome_france_hd")
+
+    def _fetch_openmeteo_15(
+        self, lat: float, lon: float, models: Optional[str] = None
+    ) -> list:
+        """Shared Open-Meteo minutely_15 fetch/parse. Optional explicit model. Fail-soft -> []."""
         try:
             import httpx
             from providers.brightsky import RadarFrame
+            model_param = f"&models={models}" if models else ""
             url = (
                 f"https://api.open-meteo.com/v1/forecast"
                 f"?latitude={lat}&longitude={lon}"
+                f"{model_param}"
                 f"&minutely_15=precipitation,weather_code"
                 f"&timezone=UTC&forecast_minutely_15=96"
             )
@@ -213,7 +238,7 @@ class RadarNowcastService:
                 frames.append(RadarFrame(timestamp=dt, precip_mm_h=mm_h, is_convective=is_convective))
             return frames
         except Exception as e:
-            logger.warning(f"Open-Meteo minutely_15 failed: {e}")
+            logger.warning(f"Open-Meteo minutely_15 (models={models}) failed: {e}")
             return []
 
     def _derive_result(self, frames: list, source: str) -> NowcastResult:
@@ -265,4 +290,11 @@ def _within_inca(lat: float, lon: float) -> bool:
     return (
         _INCA_LAT_MIN <= lat <= _INCA_LAT_MAX
         and _INCA_LON_MIN <= lon <= _INCA_LON_MAX
+    )
+
+
+def _within_arome_france(lat: float, lon: float) -> bool:
+    return (
+        _AROME_FR_LAT_MIN <= lat <= _AROME_FR_LAT_MAX
+        and _AROME_FR_LON_MIN <= lon <= _AROME_FR_LON_MAX
     )
