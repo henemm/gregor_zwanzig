@@ -26,7 +26,7 @@
 	import { Eyebrow, Btn, Dot, Pill } from '$lib/components/atoms';
 	import { computeArrivalTimes, activityToSpeed } from '$lib/utils/naismith';
 	import { interpolateWaypoint } from '$lib/utils/waypointEditor';
-	import type { ActivityType, Stage, Waypoint } from '$lib/types';
+	import type { ActivityType, Stage, Trip, Waypoint } from '$lib/types';
 	import { api } from '$lib/api.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 
@@ -35,8 +35,9 @@
 		tripId?: string;
 		showSave?: boolean;
 		activityType?: ActivityType;
+		onTripUpdate?: (updated: Trip) => void;
 	}
-	let { stages = $bindable(), tripId, showSave = true, activityType }: Props = $props();
+	let { stages = $bindable(), tripId, showSave = true, activityType, onTripUpdate }: Props = $props();
 
 	let saving = $state(false);
 	let saveSuccess = $state(false);
@@ -48,16 +49,19 @@
 	let mobileSizeKey = $state(0);
 	let stageSheetOpen = $state(false);
 
-	async function save(): Promise<void> {
-		if (!tripId) return;
+	async function save(): Promise<Trip | null> {
+		if (!tripId) return null;
 		saving = true;
 		saveError = null;
 		try {
-			await api.put(`/api/trips/${tripId}`, { stages: stages });
+			const updatedTrip = await api.put<Trip>(`/api/trips/${tripId}`, { stages: stages });
 			saveSuccess = true;
 			setTimeout(() => { saveSuccess = false; }, 3000);
+			onTripUpdate?.(updatedTrip);
+			return updatedTrip;
 		} catch (e: unknown) {
 			saveError = e instanceof Error ? e.message : 'Speichern fehlgeschlagen';
+			return null;
 		} finally {
 			saving = false;
 		}
@@ -112,10 +116,15 @@
 			const delta = computeCascadeDelta(oldDate, newDate);
 			if (delta !== 0 && stages.length > 1) {
 				cascade = { days: delta, count: stages.length - 1, done: false };
+				// Erste Etappe sofort speichern; Folge-Etappen speichert applyCascade().
+				void save();
+				return;
 			} else {
 				cascade = null; // F001: stalen Cascade zurücksetzen wenn delta=0
 			}
 		}
+		// Keine Kaskade (mittlere Etappe / Pausentag / Δ=0): sofort auto-speichern.
+		void save();
 	}
 
 	// Issue #675 — Startzeit je Etappe setzen (keine Kaskade, strikt pro Etappe).
@@ -131,7 +140,7 @@
 		);
 	}
 
-	function applyCascade(): void {
+	async function applyCascade(): Promise<void> {
 		if (!cascade || cascade.done) return;
 		const days = cascade.days;
 		stages = stages.map((s, i) => {
@@ -139,7 +148,10 @@
 			if (!s.date) return s;
 			return { ...s, date: addDays(s.date, days), dateOverridden: true };
 		});
-		cascade = { ...cascade, done: true };
+		const result = await save();
+		if (result !== null) {
+			cascade = { ...cascade, done: true };
+		}
 	}
 
 	function dismissCascade(): void {

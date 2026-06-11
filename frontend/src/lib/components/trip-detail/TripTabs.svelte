@@ -115,7 +115,7 @@
 					<HubOverview {trip} onJump={handleValueChange} />
 				{:else if tab.value === 'stages'}
 					{#if trip}
-						<EditStagesSection bind:stages={localStages} tripId={trip.id} showSave={true} />
+						<EditStagesSection bind:stages={localStages} tripId={trip.id} showSave={true} {onTripUpdate} />
 					{/if}
 				{:else if tab.value === 'weather' && trip}
 					<WeatherMetricsTab {trip} {onTripUpdate} />
