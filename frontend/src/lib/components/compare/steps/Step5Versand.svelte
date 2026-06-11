@@ -4,6 +4,7 @@
 	import { getContext } from 'svelte';
 	import { Eyebrow } from '$lib/components/atoms';
 	import { GCard } from '$lib/components/ui/g-card';
+	import { Select } from '$lib/components/ui/select';
 	import ChannelToggle from '$lib/components/trip-wizard/steps/ChannelToggle.svelte';
 	import { maskPhone } from '$lib/components/trip-wizard/wizardHelpers';
 	import type { CompareWizardState } from '../compareWizardState.svelte';
@@ -122,15 +123,15 @@
 	<section class="space-y-2">
 		<Eyebrow>Horizont</Eyebrow>
 		<GCard class="rounded-md border border-[var(--g-ink-faint)]/20 p-4">
-			<select
+			<Select
 				data-testid="compare-step5-forecast-hours"
 				bind:value={state.forecastHours}
-				class="w-full border rounded px-3 py-2 text-base bg-[var(--g-paper)] border-[var(--g-ink-faint)]"
+				class="w-full"
 			>
 				<option value={24}>Heute (24 h)</option>
 				<option value={48}>Morgen (48 h)</option>
 				<option value={72}>Übermorgen (72 h)</option>
-			</select>
+			</Select>
 		</GCard>
 	</section>
 
