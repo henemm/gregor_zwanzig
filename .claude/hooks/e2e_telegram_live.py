@@ -66,10 +66,25 @@ def _scope_touches_telegram(changed_files: list[str] | None = None) -> bool:
 
     telegram_patterns = ("telegram", "inbound_telegram", "trip_command_processor")
     for f in changed_files:
+        if _is_neutral_path(f):
+            continue
         f_lower = f.lower()
         if any(p in f_lower for p in telegram_patterns):
             return True
     return False
+
+
+def _is_neutral_path(path: str) -> bool:
+    """Doku-/Tooling-Pfade, die NIE den Telegram-Code-Pfad bilden (analog
+    staging_gate._detect_committed_scope Neutral-Liste, Issue #728)."""
+    return (
+        path.startswith("docs/")
+        or path.startswith(".claude/")
+        or path.endswith(".md")
+        or path.startswith("README")
+        or path == ".gitignore"
+        or path.startswith("tests/")
+    )
 
 
 if __name__ == "__main__":
