@@ -78,19 +78,21 @@ test('#693: dailySummaryMetricsSummary ignoriert unbekannte IDs', () => {
 	assert.equal(summary, 'Wind');
 });
 
-// ── AC-6: Zählung aktiver Inhalts-Bausteine ───────────────────────────────────
+// ── AC-6: Zählung aktiver Inhalts-Bausteine (Issue #723: 3-Bausteine-Modell) ──
 
-test('#693: countActiveContentModules zählt aktive Boolean-Schalter', () => {
+test('#693: countActiveContentModules zählt nur die 3 verbleibenden Bausteine', () => {
 	const ui: MailElementUi = {
 		show_stage_stats: true,
+		// entfernte Felder (dürfen NICHT mitzählen):
 		show_quick_take_tags: true,
 		show_stability: false,
 		show_highlights: true,
 		show_metrics_summary: false,
+		show_outlook: false,
 		daily_summary_metrics: ['wind'],
 	};
-	// 3 aktiv: stage_stats + quick_take + highlights
-	assert.equal(countActiveContentModules(ui), 3);
+	// stage_stats=true, metrics_summary=false, outlook=false → 1 aktiv
+	assert.equal(countActiveContentModules(ui), 1);
 });
 
 test('#693: countActiveContentModules zählt show_metrics_summary mit', () => {
@@ -100,18 +102,20 @@ test('#693: countActiveContentModules zählt show_metrics_summary mit', () => {
 		show_stability: false,
 		show_highlights: false,
 		show_metrics_summary: true,
+		show_outlook: false,
 		daily_summary_metrics: [],
 	};
 	assert.equal(countActiveContentModules(ui), 1);
 });
 
-test('#693: countActiveContentModules = 0 wenn alle Schalter aus', () => {
+test('#693: countActiveContentModules = 0 wenn alle 3 Bausteine aus', () => {
 	const ui: MailElementUi = {
 		show_stage_stats: false,
 		show_quick_take_tags: false,
 		show_stability: false,
 		show_highlights: false,
 		show_metrics_summary: false,
+		show_outlook: false,
 		daily_summary_metrics: [],
 	};
 	assert.equal(countActiveContentModules(ui), 0);
@@ -124,16 +128,18 @@ test('#693: countActiveContentModules ignoriert daily_summary_metrics (keine Bau
 		show_stability: false,
 		show_highlights: false,
 		show_metrics_summary: false,
+		show_outlook: false,
 		daily_summary_metrics: ['precipitation', 'wind', 'visibility', 'thunder', 'temperature'],
 	};
-	// Nur 1 Baustein aktiv, die 5 Kennzahlen zählen NICHT als Baustein.
+	// Nur 1 Baustein aktiv (stage_stats), die 5 Kennzahlen zählen NICHT als Baustein.
 	assert.equal(countActiveContentModules(ui), 1);
 });
 
-// ── AC-3/AC-4: Erklärungs-Map vollständig (jede Option erklärt) ────────────────
+// ── AC-3/AC-4: Erklärungs-Map vollständig (aktive Bausteine erklärt, Issue #723) ─
 
-test('#693: CONTENT_MODULE_DESCRIPTIONS erklärt jeden der 5 Inhalts-Schalter nicht leer', () => {
-	for (const key of ['show_stage_stats', 'show_quick_take_tags', 'show_metrics_summary', 'show_stability', 'show_highlights']) {
+test('#693: CONTENT_MODULE_DESCRIPTIONS erklärt die 3 aktiven Bausteine inkl. show_outlook', () => {
+	// Mindest-Anforderung: die 3 verbleibenden Bausteine + show_outlook müssen vorhanden sein.
+	for (const key of ['show_stage_stats', 'show_metrics_summary', 'show_outlook']) {
 		const entry = CONTENT_MODULE_DESCRIPTIONS[key];
 		assert.ok(entry, `Eintrag fehlt für ${key}`);
 		assert.ok(entry.label && entry.label.length > 0, `Label fehlt für ${key}`);

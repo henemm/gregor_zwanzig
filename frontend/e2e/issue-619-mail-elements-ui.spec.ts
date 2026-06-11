@@ -70,8 +70,8 @@ test.describe('Issue #619: E-Mail-Elemente konfigurierbar', () => {
 		await login(page);
 	});
 
-	// ── AC-1: Vier An/Aus-Schalter für E-Mail-Elemente sichtbar ────────────────
-	test('AC-1: Vier Schalter (Etappen-Kennzahlen/Quick-Take/Großwetterlage/Zusammenfassung)', async ({
+	// ── AC-1: Drei verbleibende Bausteine + Ausblick sichtbar (Issue #723) ────────
+	test('AC-1: Drei Bausteine (Metriken-Überblick/Ausblick/Etappen-Kennzahlen) sichtbar', async ({
 		page,
 		request
 	}) => {
@@ -81,74 +81,83 @@ test.describe('Issue #619: E-Mail-Elemente konfigurierbar', () => {
 			morning_time: '07:00',
 			evening_time: '18:00',
 			show_stage_stats: true,
-			show_quick_take_tags: false,
-			show_stability: true,
-			show_highlights: false
+			show_metrics_summary: false,
+			show_outlook: true
 		});
 		try {
 			await openReportsSection(page, id);
 
 			const stageStats = page.locator('[data-testid="report-show-stage-stats"] input[type="checkbox"]');
-			const quickTake = page.locator('[data-testid="report-show-quick-take"] input[type="checkbox"]');
-			const stability = page.locator('[data-testid="report-show-stability"] input[type="checkbox"]');
-			const highlights = page.locator('[data-testid="report-show-highlights"] input[type="checkbox"]');
+			const metricsSummary = page.locator('[data-testid="report-show-metrics-summary"] input[type="checkbox"]');
+			const outlook = page.locator('[data-testid="report-show-outlook"] input[type="checkbox"]');
 
 			await expect(stageStats).toBeVisible();
-			await expect(quickTake).toBeVisible();
-			await expect(stability).toBeVisible();
-			await expect(highlights).toBeVisible();
+			await expect(metricsSummary).toBeVisible();
+			await expect(outlook).toBeVisible();
 
 			// Spiegeln den gespeicherten Stand
 			await expect(stageStats).toBeChecked();
-			await expect(quickTake).not.toBeChecked();
-			await expect(stability).toBeChecked();
-			await expect(highlights).not.toBeChecked();
+			await expect(metricsSummary).not.toBeChecked();
+			await expect(outlook).toBeChecked();
+
+			// Entfernte Optionen nicht mehr im DOM
+			await expect(page.locator('[data-testid="report-show-quick-take"]')).toHaveCount(0);
+			await expect(page.locator('[data-testid="report-show-stability"]')).toHaveCount(0);
+			await expect(page.locator('[data-testid="report-show-highlights"]')).toHaveCount(0);
 		} finally {
 			await deleteTrip(request, id);
 		}
 	});
 
-	// ── AC-2: Mehrfachauswahl der Tages-Summe-Metriken mit Default ─────────────
-	test('AC-2: Fünf Kennzahl-Schalter, Default Regen/Wind/Sicht/Gewitter aktiv, Temperatur aus', async ({
+	// ── AC-2: Tages-Summe-Metriken entfernt aus UI (Issue #723) ────────────────
+	// Kein UI-Test für daily_summary_metrics mehr (kein DOM-Zugang).
+	// Persistence-Test: Feld bleibt nach Save via Spread-Beibehaltung erhalten.
+	test('AC-2: daily_summary_metrics bleiben nach Save erhalten (Bestandsdaten-Schutz)', async ({
 		page,
 		request
 	}) => {
 		const id = tripId('ac2');
-		// Kein daily_summary_metrics → Default soll greifen.
-		await createTrip(request, id);
+		await createTrip(request, id, {
+			enabled: true,
+			morning_time: '07:00',
+			evening_time: '18:00',
+			daily_summary_metrics: ['precipitation', 'thunder']
+		});
 		try {
 			await openReportsSection(page, id);
 
-			const metric = (m: string) =>
-				page.locator(`[data-testid="daily-summary-metric-${m}"] input[type="checkbox"]`);
+			// show_stage_stats ändern (verbleibender Baustein) und speichern
+			await page.locator('[data-testid="report-show-stage-stats"] input[type="checkbox"]').click();
+			await page.locator('[data-testid="edit-save-btn"]').click();
+			await page.waitForURL('/trips', { timeout: 5000 });
 
-			for (const m of ['precipitation', 'wind', 'visibility', 'thunder', 'temperature']) {
-				await expect(metric(m)).toBeVisible();
-			}
-			await expect(metric('precipitation')).toBeChecked();
-			await expect(metric('wind')).toBeChecked();
-			await expect(metric('visibility')).toBeChecked();
-			await expect(metric('thunder')).toBeChecked();
-			await expect(metric('temperature')).not.toBeChecked();
+			const after = await request.get(`/api/trips/${id}`);
+			expect(after.ok()).toBe(true);
+			const rc = (await after.json()).report_config;
+			// daily_summary_metrics via Spread unverändert erhalten
+			expect([...rc.daily_summary_metrics].sort()).toEqual(['precipitation', 'thunder'].sort());
 		} finally {
 			await deleteTrip(request, id);
 		}
 	});
 
-	// ── AC-3: Ändern + Speichern + Neu-Laden = gewählte Werte persistiert ──────
-	test('AC-3: Schalter + Metrik-Auswahl ändern, speichern, persistiert', async ({
+	// ── AC-3: show_outlook umschalten + speichern + persistiert ────────────────
+	test('AC-3: Ausblick-Schalter ändern, speichern, persistiert', async ({
 		page,
 		request
 	}) => {
 		const id = tripId('ac3');
-		await createTrip(request, id);
+		await createTrip(request, id, {
+			enabled: true,
+			morning_time: '07:00',
+			evening_time: '18:00',
+			show_outlook: true
+		});
 		try {
 			await openReportsSection(page, id);
 
-			// Großwetterlage AUS, Temperatur AN, Wind AUS
-			await page.locator('[data-testid="report-show-stability"] input[type="checkbox"]').click();
-			await page.locator('[data-testid="daily-summary-metric-temperature"] input[type="checkbox"]').click();
-			await page.locator('[data-testid="daily-summary-metric-wind"] input[type="checkbox"]').click();
+			// Ausblick AUS
+			await page.locator('[data-testid="report-show-outlook"] input[type="checkbox"]').click();
 
 			const putPromise = page.waitForRequest(
 				(req) => req.method() === 'PUT' && req.url().endsWith(`/api/trips/${id}`)
@@ -157,9 +166,7 @@ test.describe('Issue #619: E-Mail-Elemente konfigurierbar', () => {
 			const putReq = await putPromise;
 			const body = JSON.parse(putReq.postData() || '{}');
 
-			expect(body.report_config.show_stability).toBe(false);
-			expect(body.report_config.daily_summary_metrics).toContain('temperature');
-			expect(body.report_config.daily_summary_metrics).not.toContain('wind');
+			expect(body.report_config.show_outlook).toBe(false);
 
 			await page.waitForURL('/trips', { timeout: 5000 });
 
@@ -167,9 +174,7 @@ test.describe('Issue #619: E-Mail-Elemente konfigurierbar', () => {
 			const after = await request.get(`/api/trips/${id}`);
 			expect(after.ok()).toBe(true);
 			const rc = (await after.json()).report_config;
-			expect(rc.show_stability).toBe(false);
-			expect(rc.daily_summary_metrics).toContain('temperature');
-			expect(rc.daily_summary_metrics).not.toContain('wind');
+			expect(rc.show_outlook).toBe(false);
 		} finally {
 			await deleteTrip(request, id);
 		}
@@ -192,8 +197,8 @@ test.describe('Issue #619: E-Mail-Elemente konfigurierbar', () => {
 		try {
 			await openReportsSection(page, id);
 
-			// Eine Mail-Element-Einstellung ändern, dann speichern
-			await page.locator('[data-testid="report-show-highlights"] input[type="checkbox"]').click();
+			// show_outlook ändern (verbleibender Baustein), dann speichern
+			await page.locator('[data-testid="report-show-outlook"] input[type="checkbox"]').click();
 			await page.locator('[data-testid="edit-save-btn"]').click();
 			await page.waitForURL('/trips', { timeout: 5000 });
 
@@ -208,28 +213,30 @@ test.describe('Issue #619: E-Mail-Elemente konfigurierbar', () => {
 		}
 	});
 
-	// ── AC-5: Tages-Summe in der Mail enthält nur gewählte Kennzahlen ──────────
-	// Persistenz-Vorbedingung hier; der eigentliche Mail-Inhaltsnachweis läuft
-	// in /e2e-verify (Render-Mitschnitt / email_spec) gegen Staging.
-	test('AC-5: daily_summary_metrics=[precipitation,thunder] wird exakt gespeichert', async ({
+	// ── AC-5: show_metrics_summary persistiert exakt ──────────────────────────
+	test('AC-5: show_metrics_summary=true wird exakt gespeichert', async ({
 		page,
 		request
 	}) => {
 		const id = tripId('ac5');
-		await createTrip(request, id);
+		await createTrip(request, id, {
+			enabled: true,
+			morning_time: '07:00',
+			evening_time: '18:00',
+			show_metrics_summary: false
+		});
 		try {
 			await openReportsSection(page, id);
 
-			// Nur Niederschlag + Gewitter aktiv lassen → Wind + Sicht abwählen
-			await page.locator('[data-testid="daily-summary-metric-wind"] input[type="checkbox"]').click();
-			await page.locator('[data-testid="daily-summary-metric-visibility"] input[type="checkbox"]').click();
+			// Metriken-Überblick AN
+			await page.locator('[data-testid="report-show-metrics-summary"] input[type="checkbox"]').click();
 
 			await page.locator('[data-testid="edit-save-btn"]').click();
 			await page.waitForURL('/trips', { timeout: 5000 });
 
 			const after = await request.get(`/api/trips/${id}`);
 			const rc = (await after.json()).report_config;
-			expect([...rc.daily_summary_metrics].sort()).toEqual(['precipitation', 'thunder'].sort());
+			expect(rc.show_metrics_summary).toBe(true);
 		} finally {
 			await deleteTrip(request, id);
 		}

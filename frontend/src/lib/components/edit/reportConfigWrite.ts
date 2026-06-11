@@ -39,15 +39,21 @@ export function toggleDailySummaryMetric(
 	return DAILY_SUMMARY_METRICS.filter((m) => updated.includes(m));
 }
 
-/** UI-State der Report-Konfig-Felder (Issue #619 + #664 + #722). */
+/** UI-State der Report-Konfig-Felder (Issue #619 + #664 + #722 + #723). */
 export interface MailElementUi {
 	show_stage_stats: boolean;
-	show_quick_take_tags: boolean;
-	show_stability: boolean;
-	show_highlights: boolean;
-	daily_summary_metrics: string[];
+	/** @deprecated Issue #723: aus dem UI entfernt, bleibt optional für Bestandsdaten-Schutz. */
+	show_quick_take_tags?: boolean;
+	/** @deprecated Issue #723: aus dem UI entfernt, bleibt optional für Bestandsdaten-Schutz. */
+	show_stability?: boolean;
+	/** @deprecated Issue #723: aus dem UI entfernt, bleibt optional für Bestandsdaten-Schutz. */
+	show_highlights?: boolean;
+	/** @deprecated Issue #723: aus dem UI entfernt, bleibt optional für Bestandsdaten-Schutz. */
+	daily_summary_metrics?: string[];
 	/** Issue #664: Metriken-Überblick (ersetzt Quick-Take + Tages-Summe). Default false. */
 	show_metrics_summary?: boolean;
+	/** Issue #721/#723: Ausblick-Block (Großwetterlage + nächste Etappen + Sicherheit%). Default true. */
+	show_outlook?: boolean;
 	/** Issue #722: E-Mail-Format. Default 'full'. */
 	email_format?: 'full' | 'compact';
 }
@@ -55,6 +61,7 @@ export interface MailElementUi {
 /**
  * Read-Modify-Write: original-Blob als Basis, die Felder darueber mergen.
  * Alle Fremdfelder (change_threshold_*, custom_*, enabled, morning_time, …) bleiben erhalten.
+ * Issue #723: show_outlook ergänzt; entfernte UI-Felder bleiben via original-Spread erhalten.
  */
 export function buildMailElementWrite(
 	original: Record<string, unknown>,
@@ -68,6 +75,7 @@ export function buildMailElementWrite(
 		show_highlights: ui.show_highlights,
 		daily_summary_metrics: ui.daily_summary_metrics,
 		show_metrics_summary: ui.show_metrics_summary ?? false,
+		show_outlook: ui.show_outlook ?? true,
 		email_format: ui.email_format ?? 'full',
 	};
 }
@@ -100,20 +108,19 @@ export function dailySummaryMetricsSummary(ids: string[]): string {
 }
 
 /**
- * Zählt aktive Boolean-Schalter der Gruppe A (Inhalts-Bausteine).
+ * Zählt aktive Boolean-Schalter der 3 verbleibenden Inhalts-Bausteine (Issue #723).
+ * Entfernte Schalter (quick_take, stability, highlights) zählen NICHT mehr mit.
  * daily_summary_metrics zählt NICHT mit.
  */
 export function countActiveContentModules(ui: MailElementUi): number {
 	return [
 		ui.show_stage_stats,
-		ui.show_quick_take_tags,
 		ui.show_metrics_summary ?? false,
-		ui.show_stability,
-		ui.show_highlights,
+		ui.show_outlook ?? true,
 	].filter(Boolean).length;
 }
 
-/** Beschreibungen für die 5 Inhalts-Bausteine (Gruppe A). */
+/** Beschreibungen für Inhalts-Bausteine (Issue #693 + #723). Rückwärtskompatibel — entfernte Einträge bleiben. */
 export const CONTENT_MODULE_DESCRIPTIONS: Record<string, { label: string; description: string }> = {
 	show_stage_stats: {
 		label: 'Etappen-Kennzahlen',
@@ -126,6 +133,10 @@ export const CONTENT_MODULE_DESCRIPTIONS: Record<string, { label: string; descri
 	show_metrics_summary: {
 		label: 'Metriken-Überblick',
 		description: 'Ersetzt Quick-Take-Chips und Tages-Summe durch eine farbige Pille je aktiver Metrik.',
+	},
+	show_outlook: {
+		label: 'Ausblick',
+		description: 'Großwetterlage-Kopf, nächste Etappen und Vorhersage-Sicherheit am Mail-Ende.',
 	},
 	show_stability: {
 		label: 'Großwetterlage',

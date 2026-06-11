@@ -7,11 +7,7 @@
 	import { Btn } from '$lib/components/atoms';
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import {
-		DAILY_SUMMARY_METRICS,
 		DEFAULT_DAILY_SUMMARY_METRICS,
-		toggleDailySummaryMetric,
-		dailySummaryMetricLabel,
-		dailySummaryMetricsSummary,
 		countActiveContentModules,
 		CONTENT_MODULE_DESCRIPTIONS,
 	} from './reportConfigWrite.ts';
@@ -54,8 +50,8 @@
 	let send_telegram = $state(false);
 	let send_sms = $state(false);
 
-	// Erweitert
-	let showAdvanced = $state(false);
+	// Bestandsdaten-Erhalt: diese States werden nicht mehr im UI gezeigt,
+	// aber weiterhin für den Read-Modify-Write im merged-Objekt benötigt.
 	let show_compact_summary = $state(true);
 	let show_daylight = $state(true);
 	let wind_exposition_min_elevation_m: number | null = $state(null);
@@ -68,10 +64,11 @@
 	let dailySummaryMetrics = $state<string[]>([...DEFAULT_DAILY_SUMMARY_METRICS]);
 	// Issue #664: Metriken-Überblick (ersetzt Quick-Take + Tages-Summe)
 	let show_metrics_summary = $state(false);
+	// Issue #721/#723: Ausblick-Block (Großwetterlage + nächste Etappen + Sicherheit%)
+	let show_outlook = $state(true);
 
 	// Issue #693: Collapse-State für E-Mail-Inhalt-Gruppen (reiner UI-State)
 	let contentModulesExpanded = $state(true);
-	let dailySummaryExpanded = $state(false);
 
 	// Issue #722: E-Mail-Format
 	let email_format = $state<'full' | 'compact'>('full');
@@ -150,6 +147,8 @@
 			dailySummaryMetrics = [...(c.daily_summary_metrics ?? DEFAULT_DAILY_SUMMARY_METRICS)];
 			// Issue #664: Metriken-Überblick
 			if (typeof c.show_metrics_summary === 'boolean') show_metrics_summary = c.show_metrics_summary;
+			// Issue #721/#723: Ausblick (Default true wenn fehlt)
+			if (typeof c.show_outlook === 'boolean') show_outlook = c.show_outlook;
 			// Issue #722: E-Mail-Format
 			if (c.email_format === 'compact' || c.email_format === 'full') email_format = c.email_format;
 		}
@@ -194,6 +193,8 @@
 			daily_summary_metrics: [...dailySummaryMetrics],
 			// Issue #664: Metriken-Überblick
 			show_metrics_summary,
+			// Issue #721/#723: Ausblick-Block
+			show_outlook,
 			// Issue #722: E-Mail-Format
 			email_format,
 		};
@@ -448,34 +449,14 @@
 			{/if}
 		</div>
 
-		<!-- Gruppe A: Inhalts-Bausteine -->
+		<!-- Gruppe A: Inhalts-Bausteine (Issue #723: genau 3) -->
 		<div class="space-y-1" style={email_format === 'compact' ? 'opacity:0.45;pointer-events:none' : ''}>
 			<Btn variant="ghost" size="sm" data-testid="report-content-modules-toggle" onclick={() => { contentModulesExpanded = !contentModulesExpanded; }} disabled={email_format === 'compact'}>
-				Inhalts-Bausteine ({countActiveContentModules({ show_stage_stats, show_quick_take_tags, show_metrics_summary, show_stability, show_highlights, daily_summary_metrics: dailySummaryMetrics })} aktiv)
+				Inhalts-Bausteine ({countActiveContentModules({ show_stage_stats, show_metrics_summary, show_outlook })} aktiv)
 				<ChevronDown style="transform: rotate({contentModulesExpanded ? 180 : 0}deg); transition: transform 150ms ease;" />
 			</Btn>
 			{#if contentModulesExpanded}
 				<div data-testid="report-content-modules-body" class="space-y-2 pl-2">
-					<div class="text-sm">
-						<span data-testid="report-show-stage-stats" class="inline-flex items-center gap-2">
-							<Checkbox
-								checked={show_stage_stats}
-								disabled={email_format === 'compact'}
-								onchange={(e) => { show_stage_stats = (e.target as HTMLInputElement).checked; }}
-							>{CONTENT_MODULE_DESCRIPTIONS.show_stage_stats.label}</Checkbox>
-						</span>
-						<p class="pl-6 text-xs text-muted-foreground mt-0.5">{CONTENT_MODULE_DESCRIPTIONS.show_stage_stats.description}</p>
-					</div>
-					<div class="text-sm">
-						<span data-testid="report-show-quick-take" class="inline-flex items-center gap-2">
-							<Checkbox
-								checked={show_quick_take_tags}
-								disabled={email_format === 'compact'}
-								onchange={(e) => { show_quick_take_tags = (e.target as HTMLInputElement).checked; }}
-							>{CONTENT_MODULE_DESCRIPTIONS.show_quick_take_tags.label}</Checkbox>
-						</span>
-						<p class="pl-6 text-xs text-muted-foreground mt-0.5">{CONTENT_MODULE_DESCRIPTIONS.show_quick_take_tags.description}</p>
-					</div>
 					<div class="text-sm">
 						<span data-testid="report-show-metrics-summary" class="inline-flex items-center gap-2">
 							<Checkbox
@@ -487,116 +468,29 @@
 						<p class="pl-6 text-xs text-muted-foreground mt-0.5">{CONTENT_MODULE_DESCRIPTIONS.show_metrics_summary.description}</p>
 					</div>
 					<div class="text-sm">
-						<span data-testid="report-show-stability" class="inline-flex items-center gap-2">
+						<span data-testid="report-show-outlook" class="inline-flex items-center gap-2">
 							<Checkbox
-								checked={show_stability}
+								checked={show_outlook}
 								disabled={email_format === 'compact'}
-								onchange={(e) => { show_stability = (e.target as HTMLInputElement).checked; }}
-							>{CONTENT_MODULE_DESCRIPTIONS.show_stability.label}</Checkbox>
+								onchange={(e) => { show_outlook = (e.target as HTMLInputElement).checked; }}
+							>{CONTENT_MODULE_DESCRIPTIONS.show_outlook.label}</Checkbox>
 						</span>
-						<p class="pl-6 text-xs text-muted-foreground mt-0.5">{CONTENT_MODULE_DESCRIPTIONS.show_stability.description}</p>
+						<p class="pl-6 text-xs text-muted-foreground mt-0.5">{CONTENT_MODULE_DESCRIPTIONS.show_outlook.description}</p>
 					</div>
 					<div class="text-sm">
-						<span data-testid="report-show-highlights" class="inline-flex items-center gap-2">
+						<span data-testid="report-show-stage-stats" class="inline-flex items-center gap-2">
 							<Checkbox
-								checked={show_highlights}
+								checked={show_stage_stats}
 								disabled={email_format === 'compact'}
-								onchange={(e) => { show_highlights = (e.target as HTMLInputElement).checked; }}
-							>{CONTENT_MODULE_DESCRIPTIONS.show_highlights.label}</Checkbox>
+								onchange={(e) => { show_stage_stats = (e.target as HTMLInputElement).checked; }}
+							>{CONTENT_MODULE_DESCRIPTIONS.show_stage_stats.label}</Checkbox>
 						</span>
-						<p class="pl-6 text-xs text-muted-foreground mt-0.5">{CONTENT_MODULE_DESCRIPTIONS.show_highlights.description}</p>
+						<p class="pl-6 text-xs text-muted-foreground mt-0.5">{CONTENT_MODULE_DESCRIPTIONS.show_stage_stats.description}</p>
 					</div>
-				</div>
-			{/if}
-		</div>
-
-		<!-- Gruppe B: Tages-Summe — Kennzahlen -->
-		<div class="space-y-1">
-			<Btn variant="ghost" size="sm" data-testid="report-daily-summary-toggle" onclick={() => { dailySummaryExpanded = !dailySummaryExpanded; }}>
-				{#if dailySummaryExpanded}
-					Tages-Summe — Kennzahlen
-				{:else}
-					Tages-Summe — Kennzahlen: {dailySummaryMetricsSummary(dailySummaryMetrics)}
-				{/if}
-				<ChevronDown style="transform: rotate({dailySummaryExpanded ? 180 : 0}deg); transition: transform 150ms ease;" />
-			</Btn>
-			{#if dailySummaryExpanded}
-				<div data-testid="report-daily-summary-body" class="space-y-2 pl-2">
-					{#each DAILY_SUMMARY_METRICS as metricId}
-						<div class="text-sm">
-							<span data-testid="daily-summary-metric-{metricId}" class="inline-flex items-center gap-2">
-								<Checkbox
-									checked={dailySummaryMetrics.includes(metricId)}
-									onchange={(e) => {
-										dailySummaryMetrics = toggleDailySummaryMetric(
-											dailySummaryMetrics,
-											metricId,
-											(e.target as HTMLInputElement).checked
-										);
-									}}
-								>{dailySummaryMetricLabel(metricId)}</Checkbox>
-							</span>
-							{#if metricId === 'precipitation'}
-								<p class="pl-6 text-xs text-muted-foreground mt-0.5">Tagessumme Regen in mm.</p>
-							{:else if metricId === 'wind'}
-								<p class="pl-6 text-xs text-muted-foreground mt-0.5">Stärkste Bö des Tages in km/h.</p>
-							{:else if metricId === 'visibility'}
-								<p class="pl-6 text-xs text-muted-foreground mt-0.5">Geringste Sichtweite des Tages.</p>
-							{:else if metricId === 'thunder'}
-								<p class="pl-6 text-xs text-muted-foreground mt-0.5">Gewitter-Wahrscheinlichkeit/Intensität des Tages.</p>
-							{:else if metricId === 'temperature'}
-								<p class="pl-6 text-xs text-muted-foreground mt-0.5">Höchst-/Tiefsttemperatur des Tages.</p>
-							{/if}
-						</div>
-					{/each}
 				</div>
 			{/if}
 		</div>
 	</Card.Root>
-
-	<!-- ====================================================================== -->
-	<!-- Erweitert                                                              -->
-	<!-- ====================================================================== -->
-	<div class="space-y-2">
-		<Btn variant="ghost" size="sm" data-testid="report-show-advanced" onclick={() => { showAdvanced = !showAdvanced; }}>
-			{showAdvanced ? 'Erweitert ausblenden' : 'Erweitert anzeigen'}
-			<ChevronDown style="transform: rotate({showAdvanced ? 180 : 0}deg); transition: transform 150ms ease;" />
-		</Btn>
-		{#if showAdvanced}
-			<div class="space-y-2 pl-2">
-				<div class="text-sm">
-					<Checkbox
-						data-testid="report-compact-summary"
-						checked={show_compact_summary}
-						onchange={(e) => { show_compact_summary = (e.target as HTMLInputElement).checked; }}
-					>Kompakte Zusammenfassung</Checkbox>
-				</div>
-				<div class="text-sm">
-					<Checkbox
-						data-testid="report-show-daylight"
-						checked={show_daylight}
-						onchange={(e) => { show_daylight = (e.target as HTMLInputElement).checked; }}
-					>Tageslicht anzeigen</Checkbox>
-				</div>
-				<div class="text-sm">
-					<span class="block text-muted-foreground">Wind-Exposition Mindesthöhe (m)</span>
-					<label class="g-num-with-unit block w-full max-w-xs">
-						<input
-							type="number"
-							data-testid="report-wind-exposition"
-							class="g-num-input w-full rounded-md border border-input bg-background px-2 py-1 text-sm pr-7"
-							value={wind_exposition_min_elevation_m ?? ''}
-							oninput={(e) => {
-								const v = (e.target as HTMLInputElement).value;
-								wind_exposition_min_elevation_m = v === '' ? null : Number(v);
-							}}
-						/>
-						<span class="g-num-unit" aria-hidden="true">m</span>
-					</label>
-				</div>
-			</div>
-		{/if}
-	</div>
 </div>
 
 <style>
@@ -615,18 +509,4 @@
 		color: var(--g-ink);
 	}
 
-	.g-num-with-unit {
-		position: relative;
-		display: block;
-	}
-	.g-num-unit {
-		position: absolute;
-		right: 8px;
-		top: 50%;
-		transform: translateY(-50%);
-		font-family: var(--g-font-data);
-		font-size: 11px;
-		color: var(--g-ink-muted);
-		pointer-events: none;
-	}
 </style>

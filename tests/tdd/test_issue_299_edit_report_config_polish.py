@@ -150,48 +150,11 @@ def test_ac3_advanced_toggle_imports_chevron_down():
 
 
 # ---------------------------------------------------------------------------
-# AC-5: Wind-Exposition — g-num-with-unit Wrapper + m-Suffix
-# ---------------------------------------------------------------------------
-
-def test_ac5_wind_exposition_has_g_num_with_unit_wrapper():
-    """
-    AC-5: Wind-Exposition-Input muss von g-num-with-unit-Label umschlossen sein.
-    MUSS ROT sein: g-num-with-unit ist noch nicht vorhanden.
-    """
-    content = COMPONENT.read_text()
-    assert 'g-num-with-unit' in content, (
-        "EditReportConfigSection.svelte enthält kein 'g-num-with-unit'. "
-        "Der Wind-Exposition-Input muss in <label class=\"g-num-with-unit ...\"> "
-        "eingeschlossen werden (Issue #299 AC-5)."
-    )
-
-
-def test_ac5_wind_exposition_has_m_unit_span():
-    """
-    AC-5: Ein <span class='g-num-unit'> mit 'm' muss als Einheitenbeschriftung vorhanden sein.
-    MUSS ROT sein: g-num-unit ist noch nicht vorhanden.
-    """
-    content = COMPONENT.read_text()
-    assert 'g-num-unit' in content, (
-        "EditReportConfigSection.svelte enthält kein 'g-num-unit'. "
-        "Der m-Suffix-Span muss als Einheitenbeschriftung für Wind-Exposition "
-        "ergänzt werden (Issue #299 AC-5)."
-    )
-
-
-def test_ac5_style_block_defines_g_num_unit():
-    """
-    AC-5: Der <style>-Block muss '.g-num-unit' und '.g-num-with-unit' definieren.
-    MUSS ROT sein: <style>-Block mit diesen Klassen existiert noch nicht.
-    """
-    content = COMPONENT.read_text()
-    assert '.g-num-unit' in content, (
-        "EditReportConfigSection.svelte hat keinen <style>-Block mit '.g-num-unit'. "
-        "CSS-Klasse muss spiegelbildlich zu EditStagesSection.svelte definiert werden "
-        "(Issue #299 AC-5)."
-    )
-
-
+# AC-5: Wind-Exposition — entfernt per Issue #723
+# Die Wind-Exposition-UI (g-num-with-unit/g-num-unit, report-wind-exposition)
+# wurde per #723-Spec aus dem UI entfernt. Das Feld bleibt im Modell für
+# Bestandsdaten, ist aber nicht mehr über das UI steuerbar.
+# Die drei Tests test_ac5_wind_exposition_* wurden daher entfernt.
 # ---------------------------------------------------------------------------
 # AC-6: Sektions-Container — Card.Root statt section border-input
 # ---------------------------------------------------------------------------
@@ -282,14 +245,12 @@ def test_regression_all_required_testids_present():
         "report-evening-trend",
         "channel-email",
         "channel-email-hint",
-        "channel-signal",
-        "channel-signal-hint",
+        # channel-signal/channel-signal-hint: entfernt per #610 (Signal app-weit entfernt)
         "channel-telegram",
         "channel-telegram-hint",
-        "report-show-advanced",
-        "report-compact-summary",
-        "report-show-daylight",
-        "report-wind-exposition",
+        # report-show-advanced, report-compact-summary, report-show-daylight,
+        # report-wind-exposition: entfernt per #723 (Erweitert-Sektion aus UI entfernt;
+        # Felder bleiben im Modell für Bestandsdaten)
     ]
     missing = [tid for tid in required_testids if f'data-testid="{tid}"' not in content]
     assert not missing, (

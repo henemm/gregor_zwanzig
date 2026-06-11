@@ -110,7 +110,7 @@ def _daylight(usable_start_h, usable_end_h):
 
 
 def _render(segs, *, stage_stats=None, compact_summary=None, daylight=None,
-            report_type="morning"):
+            report_type="morning", show_outlook=True, multi_day_trend=None):
     from app.metric_catalog import build_default_display_config
     from output.renderers.email.html import render_html
     return render_html(
@@ -118,10 +118,17 @@ def _render(segs, *, stage_stats=None, compact_summary=None, daylight=None,
         trip_name="GR20 Test", report_type=report_type,
         dc=build_default_display_config(), night_rows=[],
         thunder_forecast=None, highlights=[], changes=None,
-        stage_name=None, stage_stats=stage_stats, multi_day_trend=None,
+        stage_name=None, stage_stats=stage_stats, multi_day_trend=multi_day_trend,
         compact_summary=compact_summary, daylight=daylight, tz=TZ,
-        friendly_keys=set(),
+        friendly_keys=set(), show_outlook=show_outlook,
     )
+
+
+def _minimal_trend():
+    """Minimal multi_day_trend for outlook-block rendering."""
+    from datetime import date
+    return [{"weekday": "Mi", "date": date(2026, 7, 12),
+             "stage_name": "Nächste Etappe", "summary": "12–18°C, trocken"}]
 
 
 def _render_plain(segs, *, stage_stats=None):
@@ -317,21 +324,33 @@ class TestAC5KmRangePreserved:
 
 
 # ---------------------------------------------------------------------------
-# AC-6 (Regressionsschutz): bestehende Sektionen bleiben erhalten
+# AC-6 (Issue #723): show_outlook steuert Ausblick-Block im Renderer
 # ---------------------------------------------------------------------------
 
 class TestAC6SectionsPreserved:
 
-    def test_existing_sections_present(self):
-        """AC-6: Tageslicht- und Quick-Take-Sektion gehen nicht verloren.
+    def test_show_outlook_true_renders_outlook_block(self):
+        """AC-6a: show_outlook=True → Ausblick-Block vorhanden.
 
-        GIVEN Daylight + compact_summary gesetzt
+        GIVEN Renderer wird mit show_outlook=True und multi_day_trend aufgerufen
         WHEN HTML gerendert wird
-        THEN bleiben Tageslicht-Block und Footer-Befehle erhalten.
+        THEN enthält die Mail das Ausblick-Section-Label (Issue #721).
         """
-        html = _render(_build_rich_segments(),
-                       compact_summary="Test-Zusammenfassung.",
-                       daylight=_daylight(6, 20))
-        assert "Stirnlampe" in html, "Tageslicht-Sektion verloren."
-        assert "Test-Zusammenfassung." in html, "Quick-Take-Text verloren."
-        assert "report morning" in html, "Footer-Befehle verloren."
+        html = _render(_build_rich_segments(), show_outlook=True,
+                       multi_day_trend=_minimal_trend())
+        assert "Ausblick" in html, (
+            "Ausblick-Block fehlt bei show_outlook=True."
+        )
+
+    def test_show_outlook_false_suppresses_outlook_block(self):
+        """AC-6b: show_outlook=False → Ausblick-Block unterdrückt.
+
+        GIVEN Renderer wird mit show_outlook=False und multi_day_trend aufgerufen
+        WHEN HTML gerendert wird
+        THEN fehlt das Ausblick-Section-Label im HTML.
+        """
+        html = _render(_build_rich_segments(), show_outlook=False,
+                       multi_day_trend=_minimal_trend())
+        assert "Ausblick" not in html, (
+            "Ausblick-Block sollte bei show_outlook=False unterdrückt sein."
+        )
