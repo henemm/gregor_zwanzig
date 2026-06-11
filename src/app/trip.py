@@ -31,7 +31,7 @@ from app.profile import ActivityProfile  # noqa: E402,F401  # re-export — sieh
 
 # Issue #760: Dedup-Pattern für Etappen-Präfixe (Etappe N / Tag N)
 _STAGE_PREFIX_RE = re.compile(
-    r"^\s*(?:Etappe|Tag)\s*\d+\s*[:.\-–—]?\s*(?P<rest>.*)$",
+    r"^\s*(?:Etappe|Tag)\s*\d+\b\s*[:.\-–—]?\s*(?P<rest>.*)$",
     re.IGNORECASE,
 )
 
