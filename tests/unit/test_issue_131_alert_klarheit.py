@@ -245,12 +245,10 @@ def test_ac8_two_segments_render_two_distinct_lines():
     assert "15.680 m" in lines[1] and "39.160 m" in lines[1]
 
 
-def test_ac9_trip_report_legacy_change_block_removed():
-    """AC-9: Toter Renderer-Block in trip_report.py ist entfernt."""
-    from pathlib import Path
-
-    src = Path("src/formatters/trip_report.py").read_text(encoding="utf-8")
-    assert "Wetteränderungen" not in src, (
-        "Toter Change-Renderer-Block in trip_report.py muss entfernt sein "
-        "— der Renderer delegiert auf output/renderers/email/*."
-    )
+# AC-9 (test_ac9_trip_report_legacy_change_block_removed) — entfernt in #765.
+# Der Test las src/formatters/trip_report.py als Quelltext und prüfte die
+# Abwesenheit eines toten "Wetteränderungen"-Blocks (Datei-Inhalt-Anti-Pattern,
+# CLAUDE.md). Das tatsächliche Verhalten — Change-Zeilen werden über den neuen
+# output/renderers/email/*-Pfad (build_segment_label + format_change_line)
+# gerendert — ist durch test_ac7_format_change_line_with_segment_label und
+# test_ac8_two_segments_render_two_distinct_lines echt abgedeckt.

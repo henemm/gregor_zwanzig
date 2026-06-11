@@ -1,67 +1,27 @@
 """
-RED-Tests fuer Epic #129 Phase A.2 - GPX-Helper + Coordinates-Extraktion.
+Tests fuer Epic #129 Phase A.2 - GPX-Helper + Coordinates-Extraktion.
 Spec: docs/specs/epic_129a_2_gpx_helpers.md
 Test-Manifest: docs/specs/tests/epic_129a_2_gpx_helpers_tests.md
 
-Diese Tests pruefen die Modul-Struktur nach dem Refactor:
-  - test_gpx_helpers_externals_clean (AC-1) -> kein externer Import auf web.pages.{trips,gpx_upload} / web.utils
+Diese Tests pruefen die neue Modul-Struktur nach dem (abgeschlossenen) Refactor
+über echte Imports, das Vorhandensein der Helper-Funktionen und einen stabilen
+API-Contract:
   - test_coordinates_module (AC-2 a) -> services.coordinates.parse_dms_coordinates
   - test_gpx_processing_module (AC-2 b) -> 6 Funktionen in services.gpx_processing
   - test_gpx_to_stage_data_signature (AC-3) -> API-Contract stabil
-  - test_pages_loadable (AC-4) -> Re-Imports in gpx_upload.py + trips.py erhalten
-  - test_dead_format_decimal_to_dms_removed (AC-5 a) -> tote Funktion entfernt
-  - test_web_utils_file_removed (AC-5 b) -> src/web/utils.py geloescht oder leer
+  - test_web_utils_file_removed (AC-5 b) -> src/web/utils.py existiert nicht mehr
 
-Vor der GREEN-Phase muessen mindestens AC-2, AC-3 und AC-5 FAIL sein.
-
-Test-Namen verwenden Bezeichner aus der Spec, damit der spec-enforcement-Hook
-sie der zentralen Spec zuordnen kann.
+#765-Hinweis: Die früheren Quelltext-Greps (Datei-Inhalt-Asserts auf
+api/routers/gpx.py via read_text und grep --include=*.py für tote Funktionen)
+wurden entfernt — Datei-Inhalt-Anti-Pattern (CLAUDE.md). Die neue Struktur ist
+über echte Imports/Signaturen bewiesen; AC-1/AC-5(dead-fn) sind implizit erfüllt:
+die alten web.pages-Module existieren nicht mehr (SvelteKit-Rework, Issue #355).
 """
 import importlib
 import inspect
-import subprocess
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-
-
-def test_gpx_helpers_externals_clean():
-    """AC-1: 5 externe Importeure duerfen nicht mehr auf web.pages.{trips,gpx_upload}
-    oder web.utils zeigen.
-
-    Geprueft werden api/routers/gpx.py und 4 Test-Files.
-    """
-    files = [
-        "api/routers/gpx.py",
-        "tests/unit/test_gpx_upload_page.py",
-        "tests/unit/test_gpx_import_in_trip_dialog.py",
-        "tests/unit/test_etappen_config.py",
-        "tests/unit/test_trips_time_window_bugfix.py",
-    ]
-    # String-Konkat verhindert, dass dieser Negativ-Check selbst vom
-    # Epic-#129-A.3-Grep als Import-Treffer gemeldet wird.
-    _from = "from "
-    forbidden_patterns = [
-        _from + "web.pages.gpx_upload",
-        _from + "web.pages.trips",
-        _from + "web.utils",
-        _from + "src.web.pages.gpx_upload",
-        _from + "src.web.pages.trips",
-        _from + "src.web.utils",
-    ]
-    offenders = []
-    for f in files:
-        path = REPO / f
-        if not path.exists():
-            continue
-        content = path.read_text()
-        for pattern in forbidden_patterns:
-            if pattern in content:
-                offenders.append(f"{f}: '{pattern}'")
-    assert offenders == [], (
-        "Diese Dateien importieren noch aus web.pages.{trips,gpx_upload} "
-        f"oder web.utils:\n  - " + "\n  - ".join(offenders)
-    )
 
 
 def test_coordinates_module():
@@ -94,13 +54,9 @@ def test_gpx_to_stage_data_signature():
     """AC-3: API-Contract von gpx_to_stage_data bleibt stabil.
 
     Signatur-Parameter (aus src/web/pages/trips.py vor dem Refactor):
-      content: bytes
-      filename: str
-      stage_date: Optional[date] = None
-      start_hour: int = 8
-      upload_dir: Path = _GPX_UPLOAD_DIR
+      content, filename, stage_date, start_hour, upload_dir
 
-    api/routers/gpx.py:16 importiert diese Funktion fuer Production-Endpoint
+    api/routers/gpx.py importiert diese Funktion fuer Production-Endpoint
     POST /api/gpx/parse — Signatur DARF sich nicht aendern.
     """
     from services.gpx_processing import gpx_to_stage_data
@@ -115,69 +71,20 @@ def test_gpx_to_stage_data_signature():
             f"Aktuelle Signatur: {params}"
         )
 
-    # Anzahl der Parameter muss exakt stimmen (kein zusaetzlicher, kein fehlender)
     assert len(params) == len(expected_params), (
         f"Parameter-Anzahl von gpx_to_stage_data hat sich geaendert. "
         f"Erwartet: {expected_params}, Tatsaechlich: {params}"
     )
 
 
-# AC-4 (test_pages_loadable) — geloescht in Issue #355.
-# Der Test pruefte, dass die NiceGUI-Seiten src/web/pages/{gpx_upload,trips}.py
-# nach dem Epic-#129-Refactor weiterhin ladbar sind und Re-Imports enthalten.
-# Die gesamte NiceGUI-web/pages/-Schicht wurde im SvelteKit-Rework entfernt;
-# die Module web.pages.gpx_upload / web.pages.trips existieren nicht mehr.
-# AC-1..AC-3 + AC-5 (Service-Module coordinates/gpx_processing, API-Contract,
-# tote Funktionen, web/utils.py) bleiben gueltig und getestet.
-
-
-def test_dead_format_decimal_to_dms_removed():
-    """AC-5 (dead-fn): Tote Funktion `format_decimal_to_dms` ist im Produktiv-
-    Code (src/, api/) nicht mehr definiert.
-
-    Pattern enthaelt literales `(`, damit die grep-Regel sich nicht selbst
-    matcht. Tests-Verzeichnis ist ausgeschlossen, weil dieser Test selbst
-    den Bezeichner als Doku-Konstante enthaelt.
-    """
-    result = subprocess.run(
-        [
-            "grep",
-            "-rn",
-            "--include=*.py",
-            "--exclude-dir=.git",
-            "--exclude-dir=.claude",
-            "--exclude-dir=node_modules",
-            "--exclude-dir=htmlcov",
-            "--exclude-dir=.venv",
-            "--exclude-dir=tests",
-            "-E",
-            r"def format_decimal_to_dms\(",
-            str(REPO),
-        ],
-        capture_output=True,
-        text=True,
-    )
-    assert result.stdout == "", (
-        f"Tote Funktion format_decimal_to_dms noch definiert:\n{result.stdout}"
-    )
-
-
 def test_web_utils_file_removed():
-    """AC-5 (utils-file): src/web/utils.py existiert nicht mehr (oder ist leer)."""
+    """AC-5 (utils-file): src/web/utils.py existiert nicht mehr.
+
+    Reine Existenz-Prüfung (kein Quelltext-Read): die NiceGUI-web/-Schicht wurde
+    im SvelteKit-Rework (Issue #355) vollständig entfernt.
+    """
     utils_path = REPO / "src" / "web" / "utils.py"
-    if not utils_path.exists():
-        return  # Datei geloescht — perfekt
-    # Falls die Datei noch da ist, darf sie keinen ausfuehrbaren Code mehr enthalten
-    content = utils_path.read_text().strip()
-    # Nur leer oder reine Doku/Kommentare/Whitespace erlaubt
-    code_lines = [
-        line
-        for line in content.splitlines()
-        if line.strip()
-        and not line.strip().startswith("#")
-        and not line.strip().startswith('"""')
-        and not line.strip().startswith("'''")
-    ]
-    assert code_lines == [], (
-        f"src/web/utils.py existiert noch und enthaelt Code:\n{content}"
+    assert not utils_path.exists(), (
+        f"src/web/utils.py existiert noch ({utils_path}) — sollte mit der "
+        f"NiceGUI-web/-Schicht entfernt sein"
     )

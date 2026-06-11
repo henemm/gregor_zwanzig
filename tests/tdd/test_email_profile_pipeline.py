@@ -12,17 +12,10 @@ RED-Zustand (jetzt):
 """
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 
 from app.profile import ActivityProfile
 from tests.unit.test_renderers_email import _common_kwargs, _make_token_line
-
-
-REPO_ROOT = Path(__file__).resolve().parents[2]
-SCHEDULER_PY = REPO_ROOT / "src" / "services" / "trip_report_scheduler.py"
-PREVIEW_PY = REPO_ROOT / "src" / "services" / "preview_service.py"
 
 
 PROFILE_CASES = [
@@ -160,24 +153,13 @@ def test_ac4_format_email_passes_profile_through():
     )
 
 
-# --- AC-5: Scheduler übergibt trip.aggregation.profile (Source-Inspection) -
-
-def test_ac5_scheduler_passes_profile_to_formatter():
-    """
-    AC-5: trip_report_scheduler.py ruft format_email mit
-    profile=trip.aggregation.profile auf. Strukturelle Verifikation via
-    Source-Inspection (kein Mock, keine Real-Gmail-Abhängigkeit — letztere
-    ist via MQ 20834 deferred).
-    """
-    source = SCHEDULER_PY.read_text()
-    assert "trip.aggregation.profile" in source, (
-        "scheduler liest trip.aggregation.profile nicht — "
-        "Profil-Wert muss aus dem Trip an den Formatter weitergegeben werden"
-    )
-    assert "profile=trip.aggregation.profile" in source.replace(" ", ""), (
-        "format_email-Call muss profile=trip.aggregation.profile als kwarg "
-        "übergeben (Substring nicht gefunden)"
-    )
+# AC-5 (test_ac5_scheduler_passes_profile_to_formatter) — entfernt in #765.
+# Las src/services/trip_report_scheduler.py als Quelltext (Datei-Inhalt-Anti-
+# Pattern, CLAUDE.md). Das Durchreichen von profile durch die Render-Pipeline
+# ist durch test_ac4_format_email_passes_profile_through (TripReportFormatter.
+# format_email rendert den Profil-Accent) am echten Output abgedeckt; die
+# Scheduler-Verdrahtung selbst ist eine reine Source-Konstante ohne eigenes
+# beobachtbares Verhalten in diesem Modul.
 
 
 # --- AC-6: Eyebrow-Block steht vor <h1> im Header -------------------------
@@ -238,21 +220,11 @@ def test_ac8_render_email_without_profile_kwarg_backward_compat():
     assert "WETTER-BRIEFING" in html, "Default-Fallback Eyebrow 'WETTER-BRIEFING' fehlt im HTML"
 
 
-# --- AC-9: Preview-Service reicht profile durch (Source-Inspection) --------
-
-def test_ac9_preview_service_passes_profile_through():
-    """
-    AC-9: preview_service.py liest trip.aggregation.profile und reicht es
-    an den Formatter / Renderer durch. Strukturelle Verifikation.
-    """
-    source = PREVIEW_PY.read_text()
-    assert "aggregation.profile" in source or "ActivityProfile" in source, (
-        "preview_service kennt ActivityProfile nicht — "
-        "Profil wird nicht in den Preview-Iframe gereicht"
-    )
-    assert "profile=" in source.replace(" ", ""), (
-        "preview_service ruft Formatter/Renderer ohne profile-kwarg auf"
-    )
+# AC-9 (test_ac9_preview_service_passes_profile_through) — entfernt in #765.
+# Las src/services/preview_service.py als Quelltext (Datei-Inhalt-Anti-Pattern,
+# CLAUDE.md). Das eigentliche Profil-Durchreichen ist über render_email/
+# render_html (test_ac2_render_html_with_profile, test_ac3_render_email_passes_
+# profile_through) am echten gerenderten Output abgedeckt.
 
 
 # --- AC-10: Fallback bei None / unbekanntem Wert ---------------------------

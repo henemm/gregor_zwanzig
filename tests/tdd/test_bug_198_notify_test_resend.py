@@ -19,17 +19,12 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 class TestBug198NotifyTestUsesGmail:
 
-    def test_notify_router_source_uses_for_testing(self):
-        """AC-1: api/routers/notify.py muss .for_testing() in test_notify() aufrufen."""
-        src = (REPO_ROOT / "api" / "routers" / "notify.py").read_text()
-
-        # Settings-Initialisierung im test_notify Endpoint
-        assert "Settings()" in src and "with_user_profile" in src, \
-            "notify.py muss Settings().with_user_profile(...) nutzen"
-
-        # Pflicht: .for_testing() im Endpoint
-        assert ".for_testing()" in src, \
-            "notify.py: test_notify() muss .for_testing() anwenden — Test-Mails immer über Gmail"
+    # test_notify_router_source_uses_for_testing — entfernt in #765.
+    # Las api/routers/notify.py als Quelltext (Datei-Inhalt-Anti-Pattern,
+    # CLAUDE.md). Das relevante Verhalten — der Channel-Test routet über das
+    # Stalwart-Test-Konto statt über Resend — ist durch die echten Settings-
+    # Roundtrip-Tests unten (for_testing()/with_user_profile().for_testing())
+    # bewiesen.
 
     def test_for_testing_routes_to_gmail_smtp(self):
         """AC-2: for_testing() setzt smtp_user auf test_smtp_user (Stalwart-Test-Account)."""

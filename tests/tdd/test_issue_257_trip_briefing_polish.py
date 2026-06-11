@@ -23,7 +23,6 @@ from tests.unit.test_renderers_email import _common_kwargs, _make_token_line
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-HTML_PY = REPO_ROOT / "src" / "output" / "renderers" / "email" / "html.py"
 
 
 def _render_minimal_html(profile=None) -> str:
@@ -297,21 +296,11 @@ def test_ac7_no_hardcoded_eee():
     )
 
 
-def test_ac7_no_eee_in_source():
-    """
-    AC-7 (Quelltext): html.py-Quelltext enthält kein hartkodiertes #eee mehr.
-
-    GIVEN der Quelltext von src/output/renderers/email/html.py
-    WHEN nach '#eee' gesucht wird
-    THEN gibt es keinen Treffer
-    """
-    import re
-    source = HTML_PY.read_text()
-    matches = re.findall(r"#[Ee]{3}\b", source)
-    assert not matches, (
-        f"#eee noch {len(matches)}x in html.py — "
-        "durch G_INK_FAINT (#9c9a90) ersetzen"
-    )
+# AC-7 (test_ac7_no_eee_in_source) — entfernt in #765.
+# Las src/output/renderers/email/html.py als Quelltext (Datei-Inhalt-Anti-
+# Pattern, CLAUDE.md). Das relevante Verhalten — das GERENDERTE HTML enthält
+# kein hartkodiertes #eee — ist durch test_ac7_no_hardcoded_eee am echten
+# Render-Output abgedeckt.
 
 
 # ---------------------------------------------------------------------------

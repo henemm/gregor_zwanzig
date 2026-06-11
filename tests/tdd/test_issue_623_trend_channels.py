@@ -9,46 +9,7 @@ IMPORTANT: NO mocks, NO patch, NO MagicMock. Real function calls only.
 from __future__ import annotations
 
 import pytest
-from pathlib import Path
 from zoneinfo import ZoneInfo
-
-# ---------------------------------------------------------------------------
-# Modul-weite Pfad-Symbole (portabel, kein hardkodierter Worktree-Pfad)
-# ---------------------------------------------------------------------------
-
-_REPO_ROOT = Path(__file__).resolve().parents[2]
-
-_RENDERER_FILES = [
-    _REPO_ROOT / "src/output/renderers/email/html.py",
-    _REPO_ROOT / "src/output/renderers/email/plain.py",
-    _REPO_ROOT / "src/output/renderers/narrow.py",
-]
-
-_THRESHOLD_BAD_PATTERNS = [
-    r'pm\s*>\s*0',
-    r'pm\s*>\s*1',
-    r'wk\s*>\s*30',
-    r'wk\s*>=\s*50',
-    r'precip_mm.*>\s*[01]',
-]
-
-
-def _scan_threshold_violations(paths) -> list[str]:
-    """Scanne die gegebenen Dateien auf rohe Schwellenwert-Vergleiche.
-
-    Gibt eine Liste ``"<dateiname>:<zeile>: '<match>'"`` zurück (leer = sauber).
-    """
-    import re
-    violations = []
-    for fpath in paths:
-        fpath = Path(fpath)
-        src = fpath.read_text()
-        for pat in _THRESHOLD_BAD_PATTERNS:
-            for m in re.finditer(pat, src):
-                line_no = src[:m.start()].count("\n") + 1
-                violations.append(f"{fpath.name}:{line_no}: {m.group()!r}")
-    return violations
-
 
 # ---------------------------------------------------------------------------
 # Shared helpers
@@ -712,18 +673,15 @@ class TestTokenConsolidation:
         html = _render_html([_trend_stage(wind_kmh=31)])
         assert "#c45a2a" in html
 
-    def test_format_trend_tokens_is_sole_threshold_evaluator(self):
-        """F002 structural: renderers must not contain raw threshold comparisons.
-
-        Checks that the three channel renderer files do NOT contain bare
-        precip/wind threshold expressions (> 1, > 30, >= 50, precip_mm ==).
-        # doc-compliance-test
-        """
-        violations = _scan_threshold_violations(_RENDERER_FILES)
-        assert not violations, (
-            "F002: Renderer(s) still evaluate thresholds directly:\n"
-            + "\n".join(violations)
-        )
+    # test_format_trend_tokens_is_sole_threshold_evaluator — entfernt in #765.
+    # Scannte die Renderer-Quelltexte (html.py/plain.py/narrow.py) nach rohen
+    # Schwellenwert-Vergleichen (Datei-Inhalt-Anti-Pattern, CLAUDE.md). Dass
+    # die Schwellen-Semantik allein aus format_trend_tokens stammt, ist über
+    # die Verhaltens-Tests dieser Klasse echt abgedeckt: Renderer geben für
+    # precip_mm=0 ein Dash statt '0mm' (test_precip_zero_html_uses_ndash,
+    # _plain_uses_dash, _narrow_uses_dash) und highlighten Wind erst >30
+    # (test_wind_no_highlight_at_30_html, test_wind_highlight_at_31_html) —
+    # also exakt die Token-Schwellen, nicht eigene Renderer-Logik.
 
 
 # ---------------------------------------------------------------------------

@@ -11,31 +11,9 @@ RED-Zustand (jetzt):
 """
 from __future__ import annotations
 
-import re
-from pathlib import Path
-
 import pytest
 
 from tests.unit.test_renderers_email import _common_kwargs, _make_token_line
-
-
-REPO_ROOT = Path(__file__).resolve().parents[2]
-HTML_PY = REPO_ROOT / "src" / "output" / "renderers" / "email" / "html.py"
-
-OLD_HEX_LITERALS = [
-    "#1976d2",   # alter Header-Gradient-Start, h3-Border
-    "#42a5f5",   # alter Header-Gradient-Ende, Summary-Border
-    "#fffde7",   # alter Daylight-BG
-    "#f9a825",   # alter Daylight-Border
-    "#fff3e0",   # alter Error-BG
-    "#e65100",   # alter Error-Border + Text
-    "#f0f7ff",   # alter Compact-Summary-BG
-    "#fff8e1",   # alter Confidence-BG
-    "#fbc02d",   # alter Confidence-Border
-    "#f5f5f5",   # altes Body/Footer-Grau
-    "#e3f2fd",   # alter Table-Header-BG
-    "#90caf9",   # alter Table-Header-Border
-]
 
 
 # --- AC-1: Token-Modul exportiert alle Symbole ----------------------------
@@ -97,21 +75,13 @@ def test_ac1_design_tokens_fonts():
     assert "JetBrains+Mono" in WEB_FONT_LINK
 
 
-# --- AC-2: html.py-Quelltext frei von alten Hex-Literalen -----------------
-
-@pytest.mark.parametrize("hex_value", OLD_HEX_LITERALS)
-def test_ac2_no_old_hex_in_html_source(hex_value):
-    """
-    AC-2: src/output/renderers/email/html.py darf keine alten Hex-Literale
-    mehr enthalten — alles geht ueber design_tokens.py.
-    """
-    source = HTML_PY.read_text()
-    pattern = re.escape(hex_value)
-    matches = re.findall(pattern, source, flags=re.IGNORECASE)
-    assert not matches, (
-        f"Alter Hex-Wert {hex_value!r} ({len(matches)}x) noch in html.py — "
-        f"durch design_tokens.py-Konstante ersetzen"
-    )
+# AC-2 (test_ac2_no_old_hex_in_html_source) — entfernt in #765.
+# Der parametrisierte Test las src/output/renderers/email/html.py als Quelltext
+# und prüfte die Abwesenheit alter Hex-Literale (Datei-Inhalt-Anti-Pattern,
+# CLAUDE.md). Das relevante Verhalten — die GERENDERTE Mail enthält keine alten
+# Hex-Werte (#1976d2/#42a5f5/#f5f5f5) und stattdessen die Design-Tokens — ist
+# durch test_ac3_render_html_paper_background und test_ac3_render_html_no_old_gradient
+# am echten HTML-Output abgedeckt.
 
 
 # --- AC-3 / AC-4: Gerenderte Mail enthaelt neue Tokens ---------------------

@@ -84,27 +84,12 @@ def test_cli_compact_uses_pipeline(wintersport_trip_file: Path):
 
     Spec §A3 — Compact-Pfad bit-identisch durch Pipeline.
 
-    Adversary-Härtung: Test prüft *strukturell*, dass CLI das neue
-    Adapter-Modul importiert. Reine Output-Asserts greifen in RED nicht,
-    weil die Trip-Fixture ohne Provider-Key leeren Forecast liefert und
-    der Header-Trip-Name `Stubaier` fälschlicherweise die Body-Asserts
-    erfüllt. Erst der Pipeline-Wiring-Check macht den Test echt RED.
+    Der Verhaltensnachweis läuft über den echten CLI-Subprozess: der Output
+    trägt den Stage-Prefix `Stubaier:` aus build_token_line und enthält
+    NIEMALS die Legacy-WintersportFormatter-Form `T-15/-5`. (Die frühere
+    Source-Inspektion auf den Adapter-Import wurde in #765 entfernt —
+    Datei-Inhalt-Anti-Pattern; das Wiring beweist der Output selbst.)
     """
-    cli_source = (PROJECT_ROOT / "src" / "app" / "cli.py").read_text(
-        encoding="utf-8",
-    )
-    assert "from src.output.adapters.trip_result import" in cli_source or \
-           "from output.adapters.trip_result import" in cli_source, (
-        "CLI muss `_trip_result_to_normalized` aus "
-        "src.output.adapters.trip_result importieren — Pipeline noch nicht "
-        "gewired (Spec §A3)."
-    )
-    assert "from formatters.wintersport import WintersportFormatter" \
-        not in cli_source, (
-        "CLI darf `WintersportFormatter` nicht mehr importieren — "
-        "Big-Bang-Streichung §A1."
-    )
-
     proc = _run_cli(
         "--trip", str(wintersport_trip_file),
         "--compact",
@@ -146,17 +131,10 @@ def test_cli_long_report_contains_all_sections(wintersport_trip_file: Path):
            gewired); Output enthält 'ZUSAMMENFASSUNG', 'WEGPUNKT-DETAILS',
            'LAWINENREGIONEN', Trip-Name UPPERCASE, Token-Zeile sichtbar.
 
-    Spec §A4 — Long-Report-Inhaltserhalt.
+    Spec §A4 — Long-Report-Inhaltserhalt. Verhaltensnachweis über den echten
+    CLI-Subprozess-Output (Source-Inspektion auf den Renderer-Import in #765
+    entfernt — Datei-Inhalt-Anti-Pattern).
     """
-    cli_source = (PROJECT_ROOT / "src" / "app" / "cli.py").read_text(
-        encoding="utf-8",
-    )
-    assert "render_text_report" in cli_source, (
-        "CLI muss `render_text_report` aus "
-        "src.output.renderers.text_report importieren — Long-Report-Renderer "
-        "noch nicht gewired (Spec §A4)."
-    )
-
     proc = _run_cli(
         "--trip", str(wintersport_trip_file),
         "--dry-run",
@@ -191,32 +169,17 @@ def test_cli_no_wintersport_formatter_import():
     WHEN:  Modul `formatters.wintersport` wird importiert.
     THEN:  ModuleNotFoundError — wintersport.py ist gelöscht.
 
-    Zusätzlich: src/-Tree enthält keinen Import-String mehr.
-    Tests/ wird nicht durchsucht, weil dieser Adversary-Test seine eigenen
-    Suchstrings als Assertion-Texte enthält (Self-Reference-Vermeidung).
+    Verhaltensnachweis über echten Import: ist das Modul nicht mehr
+    importierbar, kann auch kein Produktcode es importieren. Der frühere
+    src/-Tree-Quelltext-Grep wurde in #765 entfernt (Datei-Inhalt-Anti-Pattern,
+    CLAUDE.md) — der Import-Beweis ist stärker und mock-frei.
     """
     import importlib
 
-    # Primary: Modul ist nicht mehr importierbar.
     with pytest.raises(ModuleNotFoundError):
         importlib.import_module("formatters.wintersport")
     with pytest.raises(ModuleNotFoundError):
         importlib.import_module("src.formatters.wintersport")
-
-    # Secondary: src/ enthält keine Referenzen mehr.
-    src_dir = PROJECT_ROOT / "src"
-    needles = (
-        "from formatters" + ".wintersport",
-        "import " + "WintersportFormatter",
-        "from src.formatters" + ".wintersport",
-    )
-    for py_file in src_dir.rglob("*.py"):
-        text = py_file.read_text(encoding="utf-8")
-        for needle in needles:
-            assert needle not in text, (
-                f"Big-Bang-Streichung verletzt: '{needle}' in "
-                f"{py_file.relative_to(PROJECT_ROOT)}"
-            )
 
 
 def test_cli_long_report_subject_unchanged(
@@ -229,15 +192,9 @@ def test_cli_long_report_subject_unchanged(
            `f"GZ Evening - {trip.name}"` (wie heute).
 
     Spec §5.3 Schritt 5: Subject im Long-Report-Pfad bleibt unverändert.
+    Verhaltensnachweis über den echten CLI-Subprozess-Output (Source-Inspektion
+    auf den Renderer-Import in #765 entfernt — Datei-Inhalt-Anti-Pattern).
     """
-    cli_source = (PROJECT_ROOT / "src" / "app" / "cli.py").read_text(
-        encoding="utf-8",
-    )
-    assert "render_text_report" in cli_source, (
-        "CLI muss `render_text_report` importieren — Long-Report-Pipeline "
-        "noch nicht gewired (Spec §5.3 Schritt 5)."
-    )
-
     proc = _run_cli(
         "--trip", str(wintersport_trip_file),
         "--dry-run",

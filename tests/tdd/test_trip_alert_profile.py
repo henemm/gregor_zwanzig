@@ -12,15 +12,9 @@ RED-Zustand (jetzt):
 """
 from __future__ import annotations
 
-from pathlib import Path
-
 from app.models import ChangeSeverity, WeatherChange
 from app.profile import ActivityProfile
 from tests.unit.test_renderers_email import _common_kwargs
-
-
-REPO_ROOT = Path(__file__).resolve().parents[2]
-TRIP_ALERT_PY = REPO_ROOT / "src" / "services" / "trip_alert.py"
 
 
 def _alert_change() -> WeatherChange:
@@ -35,21 +29,98 @@ def _alert_change() -> WeatherChange:
     )
 
 
-# --- AC-1: Source-Inspection ----------------------------------------------
+# --- AC-1: Echte Wiring-Verifikation via Recording-Formatter --------------
+# Kein Mock/patch: ein echter TripReportFormatter-Subtyp, der das tatsächlich
+# übergebene profile-kwarg festhält und an die echte format_email delegiert.
 
 def test_ac1_trip_alert_passes_profile_to_formatter():
     """
-    AC-1: trip_alert.py ruft format_email mit profile=trip.aggregation.profile
-    auf. Strukturelle Verifikation via Source-Inspection (kein Mock).
+    AC-1: TripAlertService._send_alert reicht trip.aggregation.profile an
+    format_email durch. Echter Aufruf (kein Mock): ein Recording-Formatter
+    (Subklasse, delegiert real) hält das übergebene profile fest, während
+    _send_alert eine WINTERSPORT-Tour verarbeitet.
     """
-    source = TRIP_ALERT_PY.read_text()
-    assert "trip.aggregation.profile" in source, (
-        "trip_alert liest trip.aggregation.profile nicht — "
-        "Profil muss aus dem Trip an den Formatter weitergegeben werden"
+    from datetime import date as date_type
+    from datetime import datetime, time, timedelta, timezone
+
+    from app.config import Settings
+    from app.models import (
+        ForecastDataPoint,
+        ForecastMeta,
+        GPXPoint,
+        NormalizedTimeseries,
+        Provider,
+        SegmentWeatherData,
+        SegmentWeatherSummary,
+        TripSegment,
     )
-    assert "profile=trip.aggregation.profile" in source.replace(" ", ""), (
-        "format_email-Call in trip_alert muss profile=trip.aggregation.profile "
-        "als kwarg übergeben (Substring nicht gefunden)"
+    from app.trip import AggregationConfig, Stage, TimeWindow, Trip, Waypoint
+    from src.formatters.trip_report import TripReportFormatter
+    from src.services.trip_alert import TripAlertService
+
+    class _RecordingFormatter(TripReportFormatter):
+        def __init__(self) -> None:
+            super().__init__()
+            self.seen_profile = "UNSET"
+
+        def format_email(self, *args, **kwargs):
+            self.seen_profile = kwargs.get("profile", None)
+            return super().format_email(*args, **kwargs)
+
+    now = datetime.now(timezone.utc)
+    seg = TripSegment(
+        segment_id=1,
+        start_point=GPXPoint(lat=47.0, lon=11.0, elevation_m=1000.0),
+        end_point=GPXPoint(lat=47.1, lon=11.1, elevation_m=1200.0),
+        start_time=now,
+        end_time=now + timedelta(hours=2),
+        duration_hours=2.0,
+        distance_km=5.0,
+        ascent_m=200.0,
+        descent_m=0.0,
+    )
+    weather = [
+        SegmentWeatherData(
+            segment=seg,
+            timeseries=NormalizedTimeseries(
+                meta=ForecastMeta(
+                    provider=Provider.OPENMETEO, model="test", run=now,
+                    grid_res_km=1.0, interp="point_grid",
+                ),
+                data=[ForecastDataPoint(ts=now, t2m_c=2.0, wind10m_kmh=10.0)],
+            ),
+            aggregated=SegmentWeatherSummary(
+                temp_min_c=-2.0, temp_max_c=2.0, temp_avg_c=0.0,
+                wind_max_kmh=10.0, precip_sum_mm=0.0,
+            ),
+            fetched_at=now,
+            provider="openmeteo",
+        )
+    ]
+
+    trip = Trip(
+        id="ws-trip", name="Skitour",
+        stages=[Stage(
+            id="T1", name="Tag 1", date=date_type.today(),
+            waypoints=[Waypoint(
+                id="G1", name="Start", lat=47.0, lon=11.0, elevation_m=1000.0,
+                time_window=TimeWindow(start=time(8, 0), end=time(10, 0)),
+            )],
+        )],
+        aggregation=AggregationConfig.for_profile(ActivityProfile.WINTERSPORT),
+    )
+
+    recorder = _RecordingFormatter()
+    # Settings ohne konfigurierte Kanäle → _send_alert baut den Report,
+    # findet aber keinen sendbaren Kanal (kein echter SMTP/Telegram-Call).
+    service = TripAlertService(settings=Settings())
+    service._formatter = recorder
+
+    service._send_alert(trip, weather, [_alert_change()])
+
+    assert recorder.seen_profile == ActivityProfile.WINTERSPORT, (
+        "trip_alert reicht trip.aggregation.profile nicht an format_email durch "
+        f"(gesehen: {recorder.seen_profile!r})"
     )
 
 

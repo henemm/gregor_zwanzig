@@ -15,7 +15,6 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 APP_CSS = REPO_ROOT / "frontend" / "src" / "app.css"
-DESIGN_TOKENS_PY = REPO_ROOT / "src" / "output" / "renderers" / "email" / "design_tokens.py"
 DESIGN_SYSTEM_MD = REPO_ROOT / "docs" / "reference" / "design_system.md"
 DESIGN_SYSTEM_TOKENS_CSS = REPO_ROOT / "docs" / "reference" / "design_system_tokens.css"
 
@@ -59,22 +58,12 @@ def test_ac2_design_tokens_py_constant():
     )
 
 
-# ---------------------------------------------------------------------------
-# AC-3: Kein violetter Wert mehr in design_tokens.py
-# ---------------------------------------------------------------------------
-
-def test_ac3_no_old_value_in_tokens_py():
-    """
-    AC-3: design_tokens.py enthält kein #5a3a7a mehr.
-
-    GIVEN src/output/renderers/email/design_tokens.py Quelltext
-    WHEN nach #5a3a7a gesucht wird
-    THEN gibt es keinen Treffer
-    """
-    content = DESIGN_TOKENS_PY.read_text(encoding="utf-8")
-    assert "#5a3a7a" not in content, (
-        "Veralteter Wert #5a3a7a (violett) noch in design_tokens.py"
-    )
+# AC-3 (test_ac3_no_old_value_in_tokens_py) — entfernt in #765.
+# Las src/output/renderers/email/design_tokens.py als Quelltext (Datei-Inhalt-
+# Anti-Pattern, CLAUDE.md). Das relevante Verhalten — die importierte Konstante
+# G_WX_THUNDER trägt den korrekten Rot-Wert #c43a2a (statt des alten Violett
+# #5a3a7a) — ist durch test_ac2_design_tokens_py_constant über den echten Import
+# abgedeckt.
 
 
 # ---------------------------------------------------------------------------
