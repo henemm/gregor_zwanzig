@@ -22,6 +22,7 @@ from services.trip_command_processor import (
     CommandResult,
     InboundMessage,
     TripCommandProcessor,
+    _BARE_KEYWORD_MAP,
 )
 
 logger = logging.getLogger(__name__)
@@ -167,7 +168,7 @@ class InboundTelegramReader:
         if key is None:
             mid = TelegramOutput(user_settings).send(
                 "Unbekannter Befehl",
-                "Bekannte Befehle: ruhetag, startdatum, report, abbruch, status, hilfe",
+                "Bekannte Befehle: heute, morgen, jetzt, gewitter, ruhetag, status, stop, weiter, hilfe",
             )
             if mid is not None:
                 self.sent_message_ids.append(mid)
@@ -343,8 +344,12 @@ class InboundTelegramReader:
         """Parst ersten nicht-leeren Satz: 'ruhetag 2' → ('ruhetag', '2').
 
         Immer lowercase. Unbekannte Befehle → (None, None).
-        Bekannte Befehle: ruhetag, startdatum, report, abbruch, status, hilfe,
-        sowie Query-Kurzbefehle: /s /h /m /hg.
+        Auflösungs-Reihenfolge:
+          1. Slash-Shortcuts (_SHORTCUT_MAP): /h, /m, /s, /hg, /jetzt, ...
+          2. Bare Keywords (_BARE_KEYWORD_MAP, channel-agnostisch wie E-Mail):
+             heute, morgen, jetzt, gewitter, stop, weiter, hilfe, status, ...
+             stop→abbruch, jetzt→now, gewitter→heute_gewitter etc.
+          3. _VALID_COMMANDS-Fallback: startdatum, report (nicht in _BARE_KEYWORD_MAP).
         Kein '### ' Prefix nötig — Freitext.
         """
         first_line = next(
@@ -362,6 +367,10 @@ class InboundTelegramReader:
         parts = lower_first.split(None, 1)
         key = parts[0]
         value = parts[1].strip() if len(parts) > 1 else None
+
+        # Bare keyword → resolve via shared _BARE_KEYWORD_MAP (channel-agnostic)
+        if key in _BARE_KEYWORD_MAP:
+            return _BARE_KEYWORD_MAP[key], value or None
 
         if key not in _VALID_COMMANDS:
             return None, None
