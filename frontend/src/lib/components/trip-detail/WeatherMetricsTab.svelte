@@ -526,8 +526,8 @@
 					</div>
 				</Card>
 
-				<!-- Issue #736: E-Mail-Inhalt-Karte im Inhalt-Reiter -->
-				<EditReportConfigSection bind:reportConfig mode="edit" showMailContent={true} />
+				<!-- Issue #736: E-Mail-Inhalt-Karte im Inhalt-Reiter, kein Kanal-Toggle -->
+				<EditReportConfigSection bind:reportConfig mode="edit" showMailContent={true} showChannels={false} />
 			</div>
 
 			<!-- RECHTS: Live-Mail-Vorschau (sticky) -->

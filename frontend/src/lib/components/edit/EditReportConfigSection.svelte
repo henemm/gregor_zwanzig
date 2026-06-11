@@ -27,10 +27,12 @@
 		weatherChannels?: ChannelConfig;
 		/** Issue #736: Steuert ob die E-Mail-Inhalt-Card gerendert wird (Default: true). */
 		showMailContent?: boolean;
+		/** Issue #736: Steuert ob die Kanal-Checkboxen gerendert werden (Default: true). */
+		showChannels?: boolean;
 		/** Issue #736: Callback bei Kanal-Toggle — für Auto-Save von display_config.channels. */
 		onChannelChange?: (channel: 'email' | 'telegram' | 'sms', value: boolean) => void;
 	}
-	let { reportConfig = $bindable(), mode = 'create', weatherChannels, showMailContent = true, onChannelChange }: Props = $props();
+	let { reportConfig = $bindable(), mode = 'create', weatherChannels, showMailContent = true, showChannels = true, onChannelChange }: Props = $props();
 
 	// --- Original-Blob fuer Read-Modify-Write -----------------------------------
 	// Alle nicht UI-gepflegten Felder (insb. change_threshold_*, custom_unknown_*)
@@ -333,8 +335,9 @@
 	</Card.Root>
 
 	<!-- ====================================================================== -->
-	<!-- Kanaele                                                                -->
+	<!-- Kanaele — Issue #736: nur wenn showChannels=true                      -->
 	<!-- ====================================================================== -->
+	{#if showChannels}
 	<Card.Root class="p-3 space-y-2 hover:translate-y-0 hover:shadow-none">
 		<h3 class="text-sm font-semibold">Kanäle</h3>
 
@@ -412,6 +415,7 @@
 			{/if}
 		{/if}
 	</Card.Root>
+	{/if}
 
 	<!-- ====================================================================== -->
 	<!-- E-Mail-Inhalt (Issue #619, #693, #722) — Issue #736: konditionell    -->
