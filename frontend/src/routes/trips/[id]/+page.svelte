@@ -130,7 +130,8 @@
 					testBriefingMessage = 'Fehler beim Senden';
 				}
 			}
-		} catch {
+		} catch (e) {
+			console.error(e);
 			testBriefingStatus = 'error';
 			testBriefingMessage = 'Fehler beim Senden';
 		} finally {

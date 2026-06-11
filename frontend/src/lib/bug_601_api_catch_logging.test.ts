@@ -32,7 +32,7 @@ const API_CATCHES = [
   },
   {
     file: 'routes/trips/[id]/+page.svelte',
-    catchLine: 110,
+    catchLine: 133,
     label: 'trips/[id] POST /api/scheduler/trip-reports',
     window: 5,
   },
@@ -44,13 +44,13 @@ const API_CATCHES = [
   },
   {
     file: 'lib/components/trip-detail/WeatherMetricsTab.svelte',
-    catchLine: 156,
+    catchLine: 364,
     label: 'WeatherMetricsTab GET /api/metrics',
     window: 5,
   },
   {
     file: 'lib/components/trip-wizard/steps/Step3Weather.svelte',
-    catchLine: 90,
+    catchLine: 91,
     label: 'Step3Weather GET /api/metrics',
     window: 5,
   },

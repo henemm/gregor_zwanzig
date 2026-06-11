@@ -362,6 +362,7 @@
 			savedSnapshot = snapshot(buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, channels);
 			setTimeout(() => { saveSuccess = false; }, 3000);
 		} catch (e: unknown) {
+			console.error(e);
 			saveError = (e as { error?: string })?.error ?? 'Speichern fehlgeschlagen';
 		} finally {
 			saving = false;
