@@ -31,14 +31,18 @@
 	let editName = $state(trip.name);
 	let nameSaving = $state(false);
 	let isEditingName = $state(false);
+	let nameSaveError: string | null = $state(null);
 
 	function makeNameSaveHandler() {
 		return async function doNameSave() {
 			nameSaving = true;
+			nameSaveError = null;
 			try {
 				await api.put(`/api/trips/${trip.id}`, { name: editName });
 				onTripUpdate?.({ ...trip, name: editName });
 				isEditingName = false;
+			} catch (e: unknown) {
+				nameSaveError = (e as { error?: string })?.error || 'Speichern fehlgeschlagen';
 			} finally {
 				nameSaving = false;
 			}
@@ -122,7 +126,7 @@
 						class="name-edit-toggle"
 						data-testid="trip-name-edit-toggle"
 						aria-label="Trip-Name bearbeiten"
-						onclick={() => { editName = trip.name; isEditingName = true; }}
+						onclick={() => { editName = trip.name; nameSaveError = null; isEditingName = true; }}
 					>
 						<PencilIcon size={15} />
 					</button>
@@ -148,9 +152,10 @@
 				<Btn
 					variant="ghost"
 					size="sm"
-					onclick={() => { editName = trip.name; isEditingName = false; }}
+					onclick={() => { editName = trip.name; nameSaveError = null; isEditingName = false; }}
 				>Abbrechen</Btn>
 			</div>
+			{#if nameSaveError}<div class="name-edit-error" data-testid="trip-name-save-error" role="alert">{nameSaveError}</div>{/if}
 			{/if}
 
 			<div class="status-line">
@@ -292,6 +297,11 @@
 	}
 	.name-edit-input:focus {
 		border-color: var(--g-accent);
+	}
+	.name-edit-error {
+		font-size: var(--g-text-sm);
+		color: var(--g-danger);
+		margin-top: 2px;
 	}
 	.mobile-metrics {
 		display: none;
