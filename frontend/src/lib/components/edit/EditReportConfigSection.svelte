@@ -25,8 +25,12 @@
 		/** Wetter-aktive Kanäle aus display_config.channels (#617).
 		 *  Wenn nicht gesetzt: Altverhalten (alle drei Kanäle sichtbar, kein Banner). */
 		weatherChannels?: ChannelConfig;
+		/** Issue #736: Steuert ob die E-Mail-Inhalt-Card gerendert wird (Default: true). */
+		showMailContent?: boolean;
+		/** Issue #736: Callback bei Kanal-Toggle — für Auto-Save von display_config.channels. */
+		onChannelChange?: (channel: 'email' | 'telegram' | 'sms', value: boolean) => void;
 	}
-	let { reportConfig = $bindable(), mode = 'create', weatherChannels }: Props = $props();
+	let { reportConfig = $bindable(), mode = 'create', weatherChannels, showMailContent = true, onChannelChange }: Props = $props();
 
 	// --- Original-Blob fuer Read-Modify-Write -----------------------------------
 	// Alle nicht UI-gepflegten Felder (insb. change_threshold_*, custom_unknown_*)
@@ -360,7 +364,7 @@
 						<Checkbox
 							checked={send_email}
 							disabled={!availableChannels.email}
-							onchange={(e) => { send_email = (e.target as HTMLInputElement).checked; }}
+							onchange={(e) => { const v = (e.target as HTMLInputElement).checked; send_email = v; onChannelChange?.('email', v); }}
 						>E-Mail{profile?.mail_to ? ` (${profile.mail_to})` : ''}</Checkbox>
 					</span>
 				</div>
@@ -378,7 +382,7 @@
 						<Checkbox
 							checked={send_telegram}
 							disabled={!availableChannels.telegram}
-							onchange={(e) => { send_telegram = (e.target as HTMLInputElement).checked; }}
+							onchange={(e) => { const v = (e.target as HTMLInputElement).checked; send_telegram = v; onChannelChange?.('telegram', v); }}
 						>Telegram{profile?.telegram_chat_id ? ` (${profile.telegram_chat_id})` : ''}</Checkbox>
 					</span>
 				</div>
@@ -396,7 +400,7 @@
 						<Checkbox
 							checked={send_sms}
 							disabled={!availableChannels.sms}
-							onchange={(e) => { send_sms = (e.target as HTMLInputElement).checked; }}
+							onchange={(e) => { const v = (e.target as HTMLInputElement).checked; send_sms = v; onChannelChange?.('sms', v); }}
 						>SMS{profile?.sms_to ? ` (${profile.sms_to})` : ''}</Checkbox>
 					</span>
 				</div>
@@ -410,8 +414,9 @@
 	</Card.Root>
 
 	<!-- ====================================================================== -->
-	<!-- E-Mail-Inhalt (Issue #619, #693, #722)                               -->
+	<!-- E-Mail-Inhalt (Issue #619, #693, #722) — Issue #736: konditionell    -->
 	<!-- ====================================================================== -->
+	{#if showMailContent}
 	<Card.Root class="p-3 space-y-2 hover:translate-y-0 hover:shadow-none" data-testid="report-mail-content">
 		<h3 class="text-sm font-semibold">E-Mail-Inhalt</h3>
 
@@ -491,6 +496,7 @@
 			{/if}
 		</div>
 	</Card.Root>
+	{/if}
 </div>
 
 <style>

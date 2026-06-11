@@ -9,7 +9,7 @@
 	// Spec: docs/specs/modules/issue_587_weather_tab_v2.md
 	// Spec: docs/specs/modules/issue_618_mobile_weather_tab.md
 	import { api } from '$lib/api.js';
-	import type { Trip, MetricPreset, Horizons } from '$lib/types';
+	import type { Trip, MetricPreset, Horizons, ReportConfig } from '$lib/types';
 	import { HORIZONS_ALL } from '$lib/types';
 	import { Btn, Card, Eyebrow, Pill } from '$lib/components/atoms';
 	import SavePresetDialog from './SavePresetDialog.svelte';
@@ -18,8 +18,9 @@
 	import WeatherV2PresetBar from './WeatherV2PresetBar.svelte';
 	import WeatherV2Grundauswahl from './WeatherV2Grundauswahl.svelte';
 	import WeatherV2Reihenfolge from './WeatherV2Reihenfolge.svelte';
-	import WeatherV2Kanaele from './WeatherV2Kanaele.svelte';
+	// WeatherV2Kanaele entfernt in Issue #736 (Kanal-Config → Versand-Reiter)
 	import WeatherV2MailPreview from './WeatherV2MailPreview.svelte';
+	import EditReportConfigSection from '$lib/components/edit/EditReportConfigSection.svelte';
 	import {
 		autoAssign, bucketsToColumns, move, reorder, buildWeatherConfigMetrics,
 		diffHighlight,
@@ -76,12 +77,12 @@
 	let mailSheetOpen = $state(false);
 	let pendingPreset: string | null = $state(null);
 	let profile = $state<{ mail_to?: string; telegram_chat_id?: string; sms_to?: string } | null>(null);
+	// Issue #736: E-Mail-Inhalt-Karte im Inhalt-Reiter (analog BriefingScheduleTab).
+	let reportConfig = $state<ReportConfig>(
+		trip.report_config ? JSON.parse(JSON.stringify(trip.report_config)) : {}
+	);
 
-	let availableChannels = $derived({
-		email:    profile === null || !!profile.mail_to,
-		telegram: profile === null || !!profile.telegram_chat_id,
-		sms:      profile === null || !!profile.sms_to,
-	});
+	// availableChannels entfernt in Issue #736 (WeatherV2Kanaele nicht mehr im Inhalt-Reiter)
 
 	// AC-2 Diff-Highlight: 2,5s Aufleuchten nach jeder Änderung.
 	let highlight: Highlight | null = $state(null);
@@ -130,16 +131,16 @@
 		return map;
 	});
 
-	// Conflict 1 resolved: BEIDE Felder in isDirty + snapshot.
+	// Issue #736: channels aus isDirty + snapshot entfernt (Kanal-Config lebt jetzt im Versand-Reiter).
 	const isDirty = $derived(
-		JSON.stringify({ buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, channels }) !== savedSnapshot,
+		JSON.stringify({ buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds }) !== savedSnapshot,
 	);
 
 	function snapshot(
 		b: Buckets, f: Record<string, boolean>, h: Record<string, Horizons>,
-		tk: boolean, st: Record<string, string>, ch: ChannelConfig
+		tk: boolean, st: Record<string, string>
 	): string {
-		return JSON.stringify({ buckets: b, friendlyMap: f, horizonsMap: h, telegramKurzform: tk, smsThresholds: st, channels: ch });
+		return JSON.stringify({ buckets: b, friendlyMap: f, horizonsMap: h, telegramKurzform: tk, smsThresholds: st });
 	}
 
 	function allCatalogIds(): string[] {
@@ -206,9 +207,9 @@
 		buckets = b;
 		friendlyMap = fMap;
 		horizonsMap = hMap;
-		// Conflict 2 resolved: BEIDE Zuweisungen.
+		// Issue #736: channels nicht mehr im snapshot (Conflict 2 entfällt).
 		smsThresholds = thrMap;
-		savedSnapshot = snapshot(b, fMap, hMap, telegramKurzform, thrMap, channels);
+		savedSnapshot = snapshot(b, fMap, hMap, telegramKurzform, thrMap);
 	}
 
 	async function load() {
@@ -318,9 +319,8 @@
 			friendlyMap = snap.friendlyMap;
 			horizonsMap = snap.horizonsMap ?? {};
 			telegramKurzform = snap.telegramKurzform ?? false;
-			// Conflict 3 resolved: BEIDE Felder wiederherstellen.
+			// Issue #736: channels nicht mehr im snapshot (Conflict 3 entfällt).
 			smsThresholds = snap.smsThresholds ?? {};
-			channels = snap.channels ?? { email: true, telegram: true, sms: false };
 		} catch (e) {
 			console.error(e);
 			initFromTrip();
@@ -350,7 +350,8 @@
 				metrics,
 				preset_name: selectedTemplate || undefined,
 				telegram_kurzform: telegramKurzform,
-				channels,
+				// Issue #736: channels nicht mehr von WeatherMetricsTab verwaltet.
+				// Bestehender channels-Wert aus display_config bleibt via Spread erhalten.
 			};
 			// Issue #622: Create-Modus — kein PUT, State per Binding gehalten.
 			if (!createMode) {
@@ -358,8 +359,8 @@
 				onTripUpdate?.({ ...trip, display_config: payload });
 			}
 			saveSuccess = true;
-			// Conflict 4 resolved: BEIDE Felder im snapshot-Aufruf.
-			savedSnapshot = snapshot(buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, channels);
+			// Issue #736: channels aus snapshot entfernt (Conflict 4 entfällt).
+			savedSnapshot = snapshot(buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds);
 			setTimeout(() => { saveSuccess = false; }, 3000);
 		} catch (e: unknown) {
 			console.error(e);
@@ -454,23 +455,10 @@
 					/>
 				</Card>
 
-				<!-- 04 Kanäle -->
+				<!-- 04 Schwellwerte (Issue #624, umbenannt in #736) -->
 				<Card padding={18}>
-					<Eyebrow style="margin-bottom:4px">04 — Kanäle</Eyebrow>
-					<div class="kanaele-subhead">Wohin geht das Briefing?</div>
-					<WeatherV2Kanaele
-						{channels}
-						primaryCount={buckets.primary.length}
-						{telegramKurzform}
-						onChange={(ch) => { channels = ch; }}
-						onKurzformChange={(v) => { telegramKurzform = v; }}
-						availability={availableChannels}
-					/>
-				</Card>
-
-				<!-- 05 SMS-Schwellwerte (Issue #624) -->
-				<Card padding={18}>
-					<Eyebrow style="margin-bottom:8px">SMS-Schwellwerte</Eyebrow>
+					<Eyebrow style="margin-bottom:8px">Schwellwerte</Eyebrow>
+					<p class="option-hint">Gelten für E-Mail, Telegram und SMS</p>
 					<p class="option-hint">
 						Ab welchem Wert gilt eine Metrik in der Kurzform als „erste Überschreitung"?
 						Leer = Standard-Schwellwert.
@@ -537,6 +525,9 @@
 						</div>
 					</div>
 				</Card>
+
+				<!-- Issue #736: E-Mail-Inhalt-Karte im Inhalt-Reiter -->
+				<EditReportConfigSection bind:reportConfig mode="edit" showMailContent={true} />
 			</div>
 
 			<!-- RECHTS: Live-Mail-Vorschau (sticky) -->

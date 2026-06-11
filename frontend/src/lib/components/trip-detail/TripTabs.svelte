@@ -48,15 +48,16 @@
 	});
 
 	// Issue #529 — Kanonische Tab-Namen aus nav-map.jsx (Single Source of Truth):
-	//   weather   -> "Wetter-Metriken" (war: "Wetter-Briefing")
-	//   briefings -> "Briefing-Zeitplan" (war: "Reports & Kanäle")
+	//   weather   -> "Inhalt" (war: "Wetter-Metriken")
+	//   briefings -> "Versand" (war: "Briefing-Zeitplan")
 	//   alerts    -> "Alerts" (war: "Alarmregeln")
+	// Issue #736 — Reiter-Reorganisation: Labels umbenannt, value-Schlüssel unverändert.
 	// `value`-Schlüssel bleiben unverändert — URL-Parameter und Test-IDs nicht betroffen.
 	const TABS = [
 		{ value: 'overview', label: 'Übersicht' },
 		{ value: 'stages', label: 'Etappen & Wegpunkte' },
-		{ value: 'weather', label: 'Wetter-Metriken' },
-		{ value: 'briefings', label: 'Briefing-Zeitplan' },
+		{ value: 'weather', label: 'Inhalt' },
+		{ value: 'briefings', label: 'Versand' },
 		{ value: 'alerts', label: 'Alerts' },
 		{ value: 'preview', label: 'Vorschau' }
 	] as const;

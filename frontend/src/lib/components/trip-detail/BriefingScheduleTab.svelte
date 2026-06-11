@@ -16,12 +16,29 @@
 	);
 
 	// Issue #617: Wetter-Kanäle aus display_config.channels durchreichen.
+	// Issue #736: Mutable state (nicht const) damit Auto-Save-Aktualisierungen sichtbar werden.
 	// Cast über unknown wie in WeatherMetricsTab (#587). Default: Email+Telegram aktiv, SMS aus.
-	const weatherChannels: ChannelConfig = (
-		(trip.display_config as unknown as Record<string, unknown>)?.channels as ChannelConfig | undefined
-	) ?? { email: true, telegram: true, sms: false };
+	let weatherChannels = $state<ChannelConfig>(
+		((trip.display_config as unknown as Record<string, unknown>)?.channels as ChannelConfig | undefined)
+		?? { email: true, telegram: true, sms: false }
+	);
 	let saving = $state(false);
 	let statusMsg = $state('');
+
+	// Issue #736: Auto-Save bei Kanal-Toggle — display_config.channels sofort persistieren.
+	async function handleChannelChange(channel: 'email' | 'telegram' | 'sms', value: boolean) {
+		weatherChannels = { ...weatherChannels, [channel]: value };
+		const updatedDisplayConfig = {
+			...(trip.display_config as unknown as Record<string, unknown> ?? {}),
+			channels: { ...weatherChannels },
+		};
+		try {
+			await api.put(`/api/trips/${trip.id}`, { display_config: updatedDisplayConfig });
+			onTripUpdate?.({ ...trip, display_config: updatedDisplayConfig as Trip['display_config'] });
+		} catch (e: unknown) {
+			console.error(e);
+		}
+	}
 
 	function makeSaveHandler() {
 		return async function doSave() {
@@ -42,7 +59,9 @@
 </script>
 
 <div class="briefing-schedule-tab" style="padding: 32px 40px 60px; max-width: 720px;">
-	<EditReportConfigSection bind:reportConfig mode="edit" {weatherChannels} />
+	<!-- Issue #736: weatherChannels NICHT übergeben (kein Gating mehr im Versand-Reiter).
+	     Alle 3 Kanäle sind immer sichtbar; Initialisierung über reportConfig.send_*. -->
+	<EditReportConfigSection bind:reportConfig mode="edit" showMailContent={false} onChannelChange={handleChannelChange} />
 
 	<div style="margin-top: 24px; display: flex; align-items: center; gap: 12px;">
 		<Btn
