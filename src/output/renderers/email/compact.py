@@ -81,6 +81,19 @@ def render_compact(
     Returns ASCII-only string (str.isascii() == True guaranteed).
     """
     sig = profile_signature(profile)
+
+    # --- Defensive Guard: leere Segment-Liste ---
+    if not segments:
+        guard_lines: list[str] = []
+        guard_lines.append(f"{sig.eyebrow}")
+        guard_lines.append(f"{trip_name} - {report_type.title()} Report")
+        if stage_name:
+            guard_lines.append(stage_name)
+        guard_lines.append("")
+        guard_lines.append("-" * 40)
+        guard_lines.append(f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}")
+        return _ascii("\n".join(guard_lines))
+
     lines: list[str] = []
 
     # --- Header ---
