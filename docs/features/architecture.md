@@ -1,6 +1,6 @@
 # Architektur – Gregor Zwanzig
 
-**Updated:** 2026-06-09 (Issue #675 — Etappen-Startzeiten Editor-Widget; Issue #671 — Bot-Menü automatisch beim Service-Start + Live-Selftest); 2026-06-08 (Issue #655 — Telegram callback_query + editMessageText Zoom-Navigation); 2026-06-07 (Issue #637 — Telegram Webhook Migration); 2026-06-03 (Issue #572 — Inbound-Handler Multi-User Routing); 2026-05-31 (Issue #483 — Demo-Modus im Vorschau-Tab; Issue #495 — MapCanvas Leaflet-Karte; Issue #475 — OutputLayoutEditor zu Organisms)
+**Updated:** 2026-06-11 (Issue #749 — Day Comparison Renderer: render_day_comparison_html/plain für Vortag-Vergleich-Sektion); 2026-06-09 (Issue #675 — Etappen-Startzeiten Editor-Widget; Issue #671 — Bot-Menü automatisch beim Service-Start + Live-Selftest); 2026-06-08 (Issue #655 — Telegram callback_query + editMessageText Zoom-Navigation); 2026-06-07 (Issue #637 — Telegram Webhook Migration); 2026-06-03 (Issue #572 — Inbound-Handler Multi-User Routing); 2026-05-31 (Issue #483 — Demo-Modus im Vorschau-Tab; Issue #495 — MapCanvas Leaflet-Karte; Issue #475 — OutputLayoutEditor zu Organisms)
 
 ## Überblick
 Gregor Zwanzig ist ein verteiltes System mit separaten Backend (Go) und Frontend (SvelteKit):
@@ -33,6 +33,9 @@ Kern-Geschäftslogik läuft im Go-API-Service (`gregor-api`), strukturiert in dr
    - **Channel Renderers** (`src/output/renderers/`) – β3: Pure-Function Renderer für E-Mail + SMS
    - `render_email()` – HTML + Plain-Text Körper (aus Token-Zeilen)
    - `render_sms()` – Kompaktes Format ≤160 Zeichen (v2.0 Wire-Format)
+   - **Day Comparison Renderers** (Issue #749) – neue Pure Functions für Vortag-Vergleich-Sektion:
+     - `render_day_comparison_html(comparison)` – HTML mit farblicher Richtungscodierung (BETTER/WORSE/EQUAL)
+     - `render_day_comparison_plain(comparison)` – Plain-Text Variante mit Pfeilen
    - Schnittstelle: TokenLine (aus Report Formatter) → Channel-spezifischer Output
 
 4. **Channels**

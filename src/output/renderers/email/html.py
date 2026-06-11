@@ -19,6 +19,7 @@ from app.models import (
 
 if TYPE_CHECKING:
     from app.models import StabilityResult
+    from services.day_comparison import DayComparison
 from app.profile import ActivityProfile
 from services.daylight_service import DaylightWindow
 from utils.timezone import local_fmt
@@ -32,7 +33,7 @@ from src.output.renderers.email.helpers import (
 )
 from src.output.renderers.email.design_tokens import (
     G_PAPER, G_SURFACE_1, G_INK, G_INK_MUTED, G_INK_FAINT,
-    G_ACCENT, G_WARNING, G_DANGER,
+    G_ACCENT, G_WARNING, G_DANGER, G_SUCCESS,
     G_BOX_WARNING_BG, G_BOX_DANGER_BG, G_BOX_INFO_BG,
     FONT_UI, FONT_DATA, WEB_FONT_LINK,
 )
@@ -846,3 +847,101 @@ def render_html(
 </body>
 </html>"""
     return html
+
+
+def render_day_comparison_html(comparison: Optional["DayComparison"]) -> str:
+    """Issue #749: Renders a compact Vortag-Vergleich section as HTML. Pure function.
+
+    Returns '' when comparison is None or has no entries.
+    MISSING metrics are silently omitted (no placeholder).
+    """
+    from services.day_comparison import ComparisonDirection
+
+    if comparison is None or not comparison.entries:
+        return ""
+
+    multi = len(comparison.entries) > 1
+
+    def _fmt_delta(delta: float, unit: str) -> str:
+        sign = "+" if delta > 0 else ""
+        return f"{sign}{delta} {unit}"
+
+    def _row(label: str, value_str: str, color: Optional[str]) -> str:
+        color_style = f"color:{color};" if color else ""
+        return (
+            f'<tr>'
+            f'<td style="padding:2px 16px 2px 0;color:{G_INK_MUTED}">{label}</td>'
+            f'<td style="padding:2px 0;font-weight:600;{color_style}">{value_str}</td>'
+            f'</tr>'
+        )
+
+    rows_html = ""
+    for entry in comparison.entries:
+        seg_rows = ""
+
+        # Temperatur (combined temp_min + temp_max, always EQUAL → no arrow)
+        if (entry.temp_min.direction != ComparisonDirection.MISSING
+                and entry.temp_max.direction != ComparisonDirection.MISSING):
+            sign_min = "+" if (entry.temp_min.delta or 0) > 0 else ""
+            sign_max = "+" if (entry.temp_max.delta or 0) > 0 else ""
+            val = f"{sign_min}{entry.temp_min.delta}°/{sign_max}{entry.temp_max.delta}°C"
+            seg_rows += _row("Temperatur", val, G_INK_MUTED)
+
+        # Niederschlag
+        if entry.precip_sum.direction != ComparisonDirection.MISSING:
+            d = entry.precip_sum.direction
+            arrow = "▲ " if d == ComparisonDirection.BETTER else ("▼ " if d == ComparisonDirection.WORSE else "")
+            color = G_SUCCESS if d == ComparisonDirection.BETTER else (G_DANGER if d == ComparisonDirection.WORSE else G_INK_MUTED)
+            seg_rows += _row("Niederschlag", arrow + _fmt_delta(entry.precip_sum.delta, "mm"), color)
+
+        # Wind
+        if entry.wind_max.direction != ComparisonDirection.MISSING:
+            d = entry.wind_max.direction
+            arrow = "▲ " if d == ComparisonDirection.BETTER else ("▼ " if d == ComparisonDirection.WORSE else "")
+            color = G_SUCCESS if d == ComparisonDirection.BETTER else (G_DANGER if d == ComparisonDirection.WORSE else G_INK_MUTED)
+            seg_rows += _row("Wind", arrow + _fmt_delta(entry.wind_max.delta, "km/h"), color)
+
+        # Böen
+        if entry.gust_max.direction != ComparisonDirection.MISSING:
+            d = entry.gust_max.direction
+            arrow = "▲ " if d == ComparisonDirection.BETTER else ("▼ " if d == ComparisonDirection.WORSE else "")
+            color = G_SUCCESS if d == ComparisonDirection.BETTER else (G_DANGER if d == ComparisonDirection.WORSE else G_INK_MUTED)
+            seg_rows += _row("Böen", arrow + _fmt_delta(entry.gust_max.delta, "km/h"), color)
+
+        # Gewitter (ordinal)
+        if entry.thunder.direction != ComparisonDirection.MISSING:
+            td = entry.thunder.delta or 0
+            if td == 0:
+                thunder_val = "unverändert"
+                color = G_INK_MUTED
+            elif td < 0:
+                thunder_val = f"−{int(abs(td))} Stufen"
+                color = G_SUCCESS
+            else:
+                thunder_val = f"+{int(td)} Stufen"
+                color = G_DANGER
+            seg_rows += _row("Gewitter", thunder_val, color)
+
+        if not seg_rows:
+            continue
+
+        if multi:
+            rows_html += (
+                f'<tr><td colspan="2" style="padding:6px 0 2px;font-weight:700">'
+                f'<b>Segment {entry.segment_id}:</b></td></tr>'
+            )
+        rows_html += seg_rows
+
+    if not rows_html:
+        return ""
+
+    return (
+        f'<div style="background:{G_SURFACE_1};border-top:2px solid {G_INK};'
+        f'padding:16px;margin-top:16px">'
+        f'<p style="font-size:9px;text-transform:uppercase;letter-spacing:0.08em;'
+        f'color:{G_INK_MUTED};margin:0 0 8px 0">Vortag-Vergleich</p>'
+        f'<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:13px">'
+        f'{rows_html}'
+        f'</table>'
+        f'</div>'
+    )

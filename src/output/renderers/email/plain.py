@@ -19,6 +19,7 @@ from app.models import (
 
 if TYPE_CHECKING:
     from app.models import StabilityResult
+    from services.day_comparison import DayComparison
 from app.profile import ActivityProfile
 from services.daylight_service import DaylightWindow
 from utils.timezone import local_fmt
@@ -335,3 +336,74 @@ def render_plain(
         fb = segments[0].timeseries.meta
         lines.append(f"Fallback {', '.join(fb.fallback_metrics)}: {fb.fallback_model}")
     return "\n".join(lines)
+
+
+def render_day_comparison_plain(comparison: Optional["DayComparison"]) -> str:
+    """Issue #749: Renders a compact Vortag-Vergleich section as plain text. Pure function.
+
+    Returns '' when comparison is None or has no entries.
+    MISSING metrics are silently omitted (no placeholder).
+    """
+    from services.day_comparison import ComparisonDirection
+
+    if comparison is None or not comparison.entries:
+        return ""
+
+    multi = len(comparison.entries) > 1
+
+    def _fmt_delta(delta: float, unit: str) -> str:
+        sign = "+" if delta > 0 else ""
+        return f"{sign}{delta} {unit}"
+
+    content_lines: list[str] = []
+
+    for entry in comparison.entries:
+        seg_lines: list[str] = []
+
+        # Temperatur (combined, always EQUAL → no arrow)
+        if (entry.temp_min.direction != ComparisonDirection.MISSING
+                and entry.temp_max.direction != ComparisonDirection.MISSING):
+            sign_min = "+" if (entry.temp_min.delta or 0) > 0 else ""
+            sign_max = "+" if (entry.temp_max.delta or 0) > 0 else ""
+            val = f"{sign_min}{entry.temp_min.delta}°/{sign_max}{entry.temp_max.delta}°C"
+            seg_lines.append(f"  Temperatur:   {val}")
+
+        # Niederschlag
+        if entry.precip_sum.direction != ComparisonDirection.MISSING:
+            d = entry.precip_sum.direction
+            arrow = "▲ " if d == ComparisonDirection.BETTER else ("▼ " if d == ComparisonDirection.WORSE else "")
+            seg_lines.append(f"  Niederschlag: {arrow}{_fmt_delta(entry.precip_sum.delta, 'mm')}")
+
+        # Wind
+        if entry.wind_max.direction != ComparisonDirection.MISSING:
+            d = entry.wind_max.direction
+            arrow = "▲ " if d == ComparisonDirection.BETTER else ("▼ " if d == ComparisonDirection.WORSE else "")
+            seg_lines.append(f"  Wind:         {arrow}{_fmt_delta(entry.wind_max.delta, 'km/h')}")
+
+        # Böen
+        if entry.gust_max.direction != ComparisonDirection.MISSING:
+            d = entry.gust_max.direction
+            arrow = "▲ " if d == ComparisonDirection.BETTER else ("▼ " if d == ComparisonDirection.WORSE else "")
+            seg_lines.append(f"  Böen:         {arrow}{_fmt_delta(entry.gust_max.delta, 'km/h')}")
+
+        # Gewitter (ordinal)
+        if entry.thunder.direction != ComparisonDirection.MISSING:
+            td = entry.thunder.delta or 0
+            if td == 0:
+                thunder_val = "unverändert"
+            elif td < 0:
+                thunder_val = f"▲ −{int(abs(td))} Stufen"
+            else:
+                thunder_val = f"▼ +{int(td)} Stufen"
+            seg_lines.append(f"  Gewitter:     {thunder_val}")
+
+        if not seg_lines:
+            continue
+        if multi:
+            content_lines.append(f"Segment {entry.segment_id}:")
+        content_lines.extend(seg_lines)
+
+    if not content_lines:
+        return ""
+
+    return "\n".join(["━━ Vortag-Vergleich ━━"] + content_lines)
