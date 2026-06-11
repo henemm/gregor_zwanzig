@@ -282,7 +282,9 @@ def test_hilfe_command_in_processor():
     """
     GIVEN: InboundMessage with body '### hilfe'
     WHEN: TripCommandProcessor.process() is called
-    THEN: CommandResult.success=True, body contains all commands
+    THEN: CommandResult.success=True, body contains the consolidated #731 command set:
+          HEUTE / MORGEN / JETZT / GEWITTER / RUHETAG / STATUS / STOP / WEITER / HILFE.
+          Entfernte Befehle (startdatum, config, pause, skip) tauchen NICHT mehr auf.
     """
     from services.trip_command_processor import TripCommandProcessor, InboundMessage
 
@@ -298,10 +300,18 @@ def test_hilfe_command_in_processor():
 
     assert result.success is True
     body_lower = result.confirmation_body.lower()
-    assert "ruhetag" in body_lower
-    assert "startdatum" in body_lower
-    assert "abbruch" in body_lower
-    assert "status" in body_lower
+    # Konsolidierter #731-Befehlssatz
+    assert "heute" in body_lower, "HEUTE fehlt im Hilfetext"
+    assert "morgen" in body_lower, "MORGEN fehlt im Hilfetext"
+    assert "jetzt" in body_lower, "JETZT fehlt im Hilfetext"
+    assert "gewitter" in body_lower, "GEWITTER fehlt im Hilfetext"
+    assert "ruhetag" in body_lower, "RUHETAG fehlt im Hilfetext"
+    assert "status" in body_lower, "STATUS fehlt im Hilfetext"
+    assert "stop" in body_lower, "STOP fehlt im Hilfetext"
+    assert "weiter" in body_lower, "WEITER fehlt im Hilfetext"
+    assert "hilfe" in body_lower, "HILFE fehlt im Hilfetext"
+    # Entfernte Befehle dürfen NICHT mehr erscheinen
+    assert "startdatum" not in body_lower, "startdatum wurde in #731 entfernt, darf nicht mehr im Hilfetext stehen"
 
 
 # =============================================================================

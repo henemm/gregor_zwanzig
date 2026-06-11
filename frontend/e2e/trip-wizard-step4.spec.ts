@@ -7,7 +7,6 @@
 //   trip-wizard-step4-container
 //   trip-wizard-step4-channels-list
 //   trip-wizard-step4-channel-email
-//   trip-wizard-step4-channel-signal
 //   trip-wizard-step4-channel-telegram
 //   trip-wizard-step4-channel-sms        (disabled)
 //   trip-wizard-step4-channel-sms-hint
@@ -59,13 +58,12 @@ test.describe('Trip-Wizard Step 4 — Briefings & Kanaele (#164)', () => {
 		await expect(page.getByTestId('trip-wizard-step4-container')).toBeVisible();
 	});
 
-	test('AC#2: 4 Channel-Toggles sind vorhanden (email, signal, telegram, sms)', async ({
+	test('AC#2: 3 Channel-Toggles sind vorhanden (email, telegram, sms) — Signal seit #610 entfernt', async ({
 		page
 	}) => {
 		await gotoStep4(page);
 		await expect(page.getByTestId('trip-wizard-step4-channels-list')).toBeVisible();
 		await expect(page.getByTestId('trip-wizard-step4-channel-email')).toBeVisible();
-		await expect(page.getByTestId('trip-wizard-step4-channel-signal')).toBeVisible();
 		await expect(page.getByTestId('trip-wizard-step4-channel-telegram')).toBeVisible();
 		await expect(page.getByTestId('trip-wizard-step4-channel-sms')).toBeVisible();
 	});

@@ -99,7 +99,9 @@ def api_session() -> httpx.Client:
             # .env lesen als Fallback
             env_file = Path(REPO_ROOT) / ".env"
             if env_file.exists():
-                for line in env_file.read_text().splitlines():
+                with open(env_file, encoding="utf-8") as _ef:
+                    _env_content = _ef.read()
+                for line in _env_content.splitlines():
                     if line.startswith("GZ_SESSION_SECRET="):
                         secret = line.split("=", 1)[1].strip().strip('"')
                         break

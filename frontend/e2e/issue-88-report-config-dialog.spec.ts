@@ -11,10 +11,10 @@
 //   report-morning-time, report-evening-time (existieren bereits)
 //   report-morning-quickpick-07, report-evening-quickpick-18
 //   report-morning-trend, report-evening-trend
-//   channel-email, channel-signal, channel-telegram
-//   channel-signal-hint, channel-telegram-hint
+//   channel-email, channel-telegram
 //
 // Alle Threshold-Inputs (change_threshold_*) sind in der Komponente entfernt.
+// Signal wurde in #610 app-weit entfernt — AC-4 (Signal-Kanal-Test) gelöscht.
 
 import { test, expect } from '@playwright/test';
 import { login } from './helpers.js';
@@ -183,46 +183,7 @@ test.describe('Issue #88: Report Config Dialog', () => {
 		}
 	});
 
-	// ----------------------------------------------------------------------------
-	// AC-4: Channel-Conditional — E-Mail enabled, Signal disabled bei fehlender Nummer
-	// ----------------------------------------------------------------------------
-	// Note: Der Default-Test-User `admin` hat im Account-Setup typischerweise
-	// `mail_to` gesetzt, aber `signal_phone` leer. Dieser Test verifiziert genau
-	// dieses Standardszenario. Falls der Default-User in Zukunft eine Signal-Nummer
-	// bekommt, muss der Test einen User mit leerem signal_phone benutzen (oder
-	// die Profile-Felder vor dem Test via /api/account leeren).
-	test('AC-4: Signal-Channel disabled bei fehlender signal_phone, Account-Link sichtbar', async ({
-		page,
-		request
-	}) => {
-		const id = tripId('ac4');
-		await createTrip(request, id);
-		try {
-			await openReportsSection(page, id);
-
-			// E-Mail-Channel-Checkbox ist enabled (Profile.mail_to vorhanden).
-			const emailChannel = page
-				.locator('[data-testid="channel-email"]')
-				.locator('input[type="checkbox"]');
-			await expect(emailChannel).toBeVisible();
-			await expect(emailChannel).not.toBeDisabled();
-
-			// Signal-Channel-Checkbox ist disabled (Profile.signal_phone leer).
-			const signalChannel = page
-				.locator('[data-testid="channel-signal"]')
-				.locator('input[type="checkbox"]');
-			await expect(signalChannel).toBeDisabled();
-
-			// Hinweis-Link "im Account einrichten" mit href="/account" sichtbar.
-			const signalHint = page.locator('[data-testid="channel-signal-hint"]');
-			await expect(signalHint).toBeVisible();
-			const accountLink = signalHint.locator('a[href="/account"]');
-			await expect(accountLink).toBeVisible();
-			await expect(accountLink).toContainText(/im Account einrichten/i);
-		} finally {
-			await deleteTrip(request, id);
-		}
-	});
+	// AC-4 (Signal-Channel) wurde in #610 app-weit entfernt — Test gelöscht.
 
 	// ----------------------------------------------------------------------------
 	// AC-5: Quick-Pick-Buttons setzen die Uhrzeit korrekt

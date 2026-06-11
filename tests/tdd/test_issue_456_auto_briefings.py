@@ -1,18 +1,20 @@
 """
-TDD RED: Issue #456 — Compare Auto-Briefings: Manueller Versand-Trigger + Top-Ort-Anzeige.
+Issue #456 — Compare Auto-Briefings: Manueller Versand-Trigger + Top-Ort-Anzeige.
 
 Spec: docs/specs/modules/issue_456_compare_auto_briefings.md
 
-Testet:
+Verhaltenstests (Python-Backend):
 - AC-4: CompareSubscription hat top_ort_letzter_versand-Feld mit None-Default
 - AC-4: load_compare_subscriptions() liest top_ort_letzter_versand aus JSON
 - AC-4: _save_subscription() schreibt top_ort_letzter_versand in JSON
 - AC-3: run_comparison_for_subscription() gibt 4-Tupel zurück (4. = Winner-Name)
 - AC-3: POST /api/scheduler/subscriptions/{id}/send-Endpoint existiert
 
+Sweep #754: Frontend-Quelltext-Checks (AutoReportCard.svelte, types.ts) entfernt.
+AC-2-Frontend-Coverage: orts-vergleich-c1.spec.ts / issue-301b-auto-reports-overview.spec.ts.
+
 Keine Mocks — alle Tests prüfen echte Klassen und reale Dateioperationen.
 """
-import inspect
 import json
 import os
 
@@ -221,27 +223,38 @@ class TestSaveSubscriptionTopOrtField:
 # AC-3: run_comparison_for_subscription() gibt 4-Tupel zurück
 # ---------------------------------------------------------------------------
 
+def _make_test_locations():
+    """Erstellt Fixture-Standorte für run_comparison-Tests (kein load_all_locations nötig)."""
+    from app.user import SavedLocation
+    return [
+        SavedLocation(id="loc-456-a", name="Innsbruck", lat=47.27, lon=11.40, elevation_m=574),
+        SavedLocation(id="loc-456-b", name="Chamonix", lat=45.92, lon=6.87, elevation_m=1035),
+    ]
+
+
 class TestRunComparisonReturnsWinnerName:
     """run_comparison_for_subscription() muss 4-Tupel (subject, html, text, winner) zurückgeben."""
 
     def test_returns_4_tuple(self):
         """
-        GIVEN: Gültige CompareSubscription mit echten Standorten
+        GIVEN: Gültige CompareSubscription mit 2 Fixture-Standorten
         WHEN: run_comparison_for_subscription(sub, locations) aufgerufen
-        THEN: Rückgabe ist 4-Tupel; 4. Element ist str oder None
+        THEN: Rückgabe ist 4-Tupel; 4. Element ist str oder None.
+
+        Fixture-Standorte werden direkt übergeben (kein load_all_locations).
+        Verhindert Fehlschlag wegen leerer Nutzerdaten in der Test-Umgebung.
         """
         from services.compare_subscription import run_comparison_for_subscription
         from app.user import CompareSubscription, Schedule
-        from app.loader import load_all_locations
 
+        locations = _make_test_locations()
         sub = CompareSubscription(
             id="test-456-tdd",
             name="TDD Issue 456",
-            locations=[],
+            locations=[loc.id for loc in locations],
             schedule=Schedule.DAILY_MORNING,
             enabled=True,
         )
-        locations = load_all_locations()
         result = run_comparison_for_subscription(sub, locations)
 
         assert isinstance(result, tuple), f"Kein Tupel: {type(result)}"
@@ -258,35 +271,29 @@ class TestRunComparisonReturnsWinnerName:
 
     def test_winner_name_matches_location_name(self):
         """
-        GIVEN: Subscription mit mindestens einem Standort
-        WHEN: run_comparison_for_subscription(sub, locations) aufgerufen und locations vorhanden
-        THEN: 4. Element (winner_name) ist str (Ortsname) oder None
+        GIVEN: Subscription mit 2 Fixture-Standorten
+        WHEN: run_comparison_for_subscription(sub, locations) aufgerufen
+        THEN: 4. Element (winner_name) ist str (bekannter Ortsname) oder None.
         """
         from services.compare_subscription import run_comparison_for_subscription
         from app.user import CompareSubscription, Schedule
-        from app.loader import load_all_locations
 
-        locations = load_all_locations()
-        # Mindestens 1 Standort wählen (existierende Daten)
-        loc_ids = [l.id for l in locations[:2]] if locations else []
-
+        locations = _make_test_locations()
         sub = CompareSubscription(
             id="test-456-tdd-winner",
             name="TDD Winner Test",
-            locations=loc_ids,
+            locations=[loc.id for loc in locations],
             schedule=Schedule.DAILY_MORNING,
             enabled=True,
         )
         result = run_comparison_for_subscription(sub, locations)
         _, _, _, winner_name = result
 
-        # Wenn Standorte vorhanden: winner_name muss ein bekannter Ortsname sein
-        if loc_ids and locations:
-            known_names = {l.name for l in locations}
-            if winner_name is not None:
-                assert winner_name in known_names, (
-                    f"winner_name '{winner_name}' ist kein bekannter Ortsname: {known_names}"
-                )
+        known_names = {loc.name for loc in locations}
+        if winner_name is not None:
+            assert winner_name in known_names, (
+                f"winner_name '{winner_name}' ist kein bekannter Ortsname: {known_names}"
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -342,73 +349,7 @@ class TestManualSendEndpoint:
         )
 
 
-# ---------------------------------------------------------------------------
-# AC-2: AutoReportCard — Top-Ort nur anzeigen wenn gesetzt
-# ---------------------------------------------------------------------------
-
-class TestAutoReportCardTopOrtRendering:
-    """AutoReportCard zeigt top_ort_letzter_versand nur wenn gesetzt (Source-Inspection)."""
-
-    def test_component_has_top_ort_conditional_block(self):
-        """
-        GIVEN: AutoReportCard.svelte ist implementiert
-        WHEN: Datei gelesen
-        THEN: {#if subscription.top_ort_letzter_versand} Block existiert
-        """
-        import pathlib
-        path = pathlib.Path("frontend/src/lib/components/compare/AutoReportCard.svelte")
-        assert path.exists(), "AutoReportCard.svelte nicht gefunden"
-        content = path.read_text()
-        assert "top_ort_letzter_versand" in content, (
-            "top_ort_letzter_versand fehlt in AutoReportCard.svelte"
-        )
-        # #459 refactored component from Subscription to ComparePreset
-        assert (
-            "{#if subscription.top_ort_letzter_versand}" in content
-            or "{#if preset.top_ort_letzter_versand}" in content
-        ), "Conditional block für top_ort_letzter_versand fehlt — wird immer angezeigt?"
-
-    def test_component_has_correct_testid(self):
-        """
-        GIVEN: AutoReportCard.svelte ist implementiert
-        WHEN: Datei gelesen
-        THEN: data-testid für top_ort_letzter_versand existiert
-        """
-        import pathlib
-        path = pathlib.Path("frontend/src/lib/components/compare/AutoReportCard.svelte")
-        content = path.read_text()
-        # #459 refactored: preset.id statt subscription.id
-        assert (
-            'data-testid="top-ort-{subscription.id}"' in content
-            or 'data-testid="card-top-ort-{preset.id}"' in content
-            or 'data-testid="top-ort-{preset.id}"' in content
-        ), "data-testid für top_ort_letzter_versand fehlt in AutoReportCard.svelte"
-
-    def test_component_nested_inside_last_run_block(self):
-        """
-        GIVEN: AutoReportCard.svelte ist implementiert
-        WHEN: Datei gelesen
-        THEN: top_ort_letzter_versand-Block ist bedingt gerendert
-        """
-        import pathlib
-        path = pathlib.Path("frontend/src/lib/components/compare/AutoReportCard.svelte")
-        content = path.read_text()
-        # #459 refactored: kein last_run-Block mehr, top_ort direkt bedingt
-        top_ort_cond = (
-            "{#if subscription.top_ort_letzter_versand}" in content
-            or "{#if preset.top_ort_letzter_versand}" in content
-        )
-        assert top_ort_cond, "{#if ...top_ort_letzter_versand} Block fehlt"
-
-    def test_subscription_type_has_top_ort_field(self):
-        """
-        GIVEN: frontend/src/lib/types.ts ist aktuell
-        WHEN: Datei gelesen
-        THEN: top_ort_letzter_versand?: string im Subscription-Interface
-        """
-        import pathlib
-        path = pathlib.Path("frontend/src/lib/types.ts")
-        content = path.read_text()
-        assert "top_ort_letzter_versand" in content, (
-            "top_ort_letzter_versand fehlt in frontend/src/lib/types.ts Subscription-Interface"
-        )
+# AC-2 Frontend-Quelltext-Checks (AutoReportCard.svelte, types.ts) wurden in #754
+# entfernt — Verhaltens-Coverage durch E2E:
+# - orts-vergleich-c1.spec.ts (Vergleichs-Karten mit top_ort_letzter_versand)
+# - issue-301b-auto-reports-overview.spec.ts (Auto-Report-Übersicht)

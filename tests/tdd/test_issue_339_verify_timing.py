@@ -1,3 +1,4 @@
+# doc-compliance-test
 """Issue #339 — Verifikation zum richtigen Zeitpunkt (Commit-Stage vs. Acceptance-Stage).
 
 Spec:  docs/specs/modules/issue_339_verify_timing.md

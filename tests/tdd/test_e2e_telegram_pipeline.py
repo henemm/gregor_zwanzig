@@ -3,18 +3,23 @@ Telegram E2E-Pipeline-Tests (Issue #672).
 
 Schließt die Test-Lücke im Telegram-Kanal: Treibt echte Text-Befehle durch die
 komplette Pipeline (Webhook → _process_update → _parse_command → _find_active_trip
-→ echter Processor → echter TelegramOutput) und beweist ausgehende sendMessage-Calls
+→ echter Processor → echter TelegramOutput) und beweist ausgehende Calls
 mit Inhalt und Inline-Keyboard.
 
 ACs:
-  - AC-1: Text `/s` → genau ein sendMessage mit Glance-Inhalt (heute + morgen)
-          und reply_markup.inline_keyboard ≥1 Button; kein editMessageText.
-  - AC-2: Text `/th` → sendMessage mit Timeline-Inhalt und ≥1 Button (dd_ oder tl_/glance).
+  - AC-1: Text `/s` → eine Loading-sendMessage (⏳) gefolgt von editMessageText
+          mit Glance-Inhalt (heute + morgen) und reply_markup.inline_keyboard ≥1 Button.
+  - AC-2: Text `/th` → Loading-sendMessage gefolgt von editMessageText mit Timeline-Inhalt
+          und ≥1 Button (dd_ oder tl_/glance).
   - AC-3: Jeder BOT_COMMANDS-Eintrag mit führendem Slash → sendMessage NICHT
           mit "Unbekannter Befehl" (behebt #671; rot vor Fix, grün nach Fix).
-  - AC-4: Alle callback_data aus der Glance-Antwort → _callback_to_body ≠ None
+  - AC-4: Alle callback_data aus der Glance editMessageText-Antwort → _callback_to_body ≠ None
           (kein toter Button).
   - AC-5: Live-Staging-Bot-Smoke (gated: GZ_TELEGRAM_BOT_TOKEN + GZ_TELEGRAM_TEST_CHAT_ID).
+
+Realer Flow (#697/#704): sendMessage(⏳ Loading) → on-demand Wetter holen →
+editMessageText(Inhalt + Buttons). Fixture liefert message_id damit der echte
+Edit-Pfad ausgeübt wird (nicht der Fallback-sendMessage).
 
 Spec: docs/specs/modules/issue_672_telegram_e2e_pipeline.md
 GitHub Issue: #672
@@ -144,6 +149,8 @@ def capture(monkeypatch):
     """Echter lokaler HTTP-Server fängt ausgehende Bot-API-Calls (Boundary-Capture)."""
     records: list[tuple[str, dict]] = []
 
+    msg_counter = [0]
+
     class _Handler(http.server.BaseHTTPRequestHandler):
         def do_POST(self):  # noqa: N802
             n = int(self.headers.get("Content-Length", 0))
@@ -157,7 +164,14 @@ def capture(monkeypatch):
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
-            self.wfile.write(b'{"ok":true,"result":{}}')
+            # sendMessage: echtes Telegram liefert immer eine message_id zurück —
+            # ohne sie fällt inbound_telegram_reader in den Fallback-sendMessage-Pfad.
+            if method == "sendMessage":
+                msg_counter[0] += 1
+                resp = json.dumps({"ok": True, "result": {"message_id": msg_counter[0]}})
+            else:
+                resp = json.dumps({"ok": True, "result": {}})
+            self.wfile.write(resp.encode())
 
         def log_message(self, *args):  # Stille
             return
@@ -192,76 +206,96 @@ def client():
 
 
 # ---------------------------------------------------------------------------
-# AC-1: Text-Befehl /s → sendMessage mit Glance + Buttons
+# AC-1: Text-Befehl /s → Loading-sendMessage + editMessageText mit Glance + Buttons
 # ---------------------------------------------------------------------------
 
 def test_ac1_glance_text_command_sends_message_with_buttons(env, capture, client):
     """
-    GIVEN: aktiver default-Trip + Snapshot
+    GIVEN: aktiver default-Trip + Snapshot; Fixture liefert message_id
     WHEN: Text-Update '/s' an /api/internal/telegram-webhook gepostet wird
-    THEN: genau ein sendMessage an chat_id 999999 mit Glance-Inhalt (heute + morgen)
-          und reply_markup.inline_keyboard ≥1 Button; KEIN editMessageText.
+    THEN: genau eine Loading-sendMessage (⏳) gefolgt von einem editMessageText
+          mit Glance-Inhalt (heute + morgen) und reply_markup.inline_keyboard ≥1 Button.
+
+    Realer On-demand-Flow (#697/#704): sendMessage(Loading) → Wetter holen →
+    editMessageText(Inhalt+Buttons). Ohne message_id in der Fixture würde
+    inbound_telegram_reader in den Fallback (zweites sendMessage) fallen.
     """
     # Eindeutige update_id (kein Clash mit #655-Tests: 7001-7005)
     resp = client.post(WEBHOOK_PATH, json=_msg_update(8001, "/s"))
     assert resp.status_code == 200, resp.text
 
+    # Schritt 1: Genau eine Loading-sendMessage
     sends = _calls_named(capture, "sendMessage")
     assert len(sends) == 1, (
-        f"Erwartet genau 1 sendMessage, bekam {len(sends)}. "
+        f"Erwartet genau 1 Loading-sendMessage, bekam {len(sends)}. "
         f"Calls: {[m for m, _ in capture]}"
     )
-    s = sends[0]
+    loading_msg = sends[0]
+    assert loading_msg.get("chat_id") is not None, "Loading-sendMessage hat keine chat_id"
+    loading_text = loading_msg.get("text", "")
+    assert "⏳" in loading_text or "wetter" in loading_text.lower(), (
+        f"Loading-sendMessage erwartet ⏳-Text, got: {loading_text!r}"
+    )
 
-    assert s.get("chat_id") is not None, "sendMessage hat keine chat_id"
-
-    text = s.get("text", "")
-    assert text, "sendMessage-Text ist leer"
+    # Schritt 2: editMessageText liefert den echten Glance-Inhalt
+    edits = _calls_named(capture, "editMessageText")
+    assert len(edits) == 1, (
+        f"Erwartet genau 1 editMessageText (Glance-Ergebnis), bekam {len(edits)}. "
+        f"Calls: {[m for m, _ in capture]}"
+    )
+    e = edits[0]
+    edit_text = e.get("text", "")
+    assert edit_text, "editMessageText-Text ist leer"
     # Glance-Antwort deckt BEIDE Tage ab (Spec AC-1: heute UND morgen).
-    text_lower = text.lower()
+    text_lower = edit_text.lower()
     assert "heute" in text_lower and "morgen" in text_lower, (
-        f"Glance-Inhalt erwartet (heute UND morgen), Text: {text!r}"
+        f"Glance-Inhalt erwartet (heute UND morgen), editMessageText: {edit_text!r}"
     )
 
     buttons = [
         b
-        for row in s.get("reply_markup", {}).get("inline_keyboard", [])
+        for row in e.get("reply_markup", {}).get("inline_keyboard", [])
         for b in row
     ]
-    assert buttons, f"reply_markup.inline_keyboard hat keine Buttons: {s.get('reply_markup')!r}"
-
-    edits = _calls_named(capture, "editMessageText")
-    assert not edits, f"Unerwartetes editMessageText (Text-Befehl soll sendMessage): {edits}"
+    assert buttons, f"reply_markup.inline_keyboard hat keine Buttons: {e.get('reply_markup')!r}"
 
 
 # ---------------------------------------------------------------------------
-# AC-2: Text-Befehl /th → sendMessage mit Timeline + Drilldown-Button
+# AC-2: Text-Befehl /th → Loading-sendMessage + editMessageText mit Timeline + Drilldown
 # ---------------------------------------------------------------------------
 
 def test_ac2_timeline_text_command_sends_message_with_drilldown_button(env, capture, client):
     """
-    GIVEN: aktiver default-Trip + Snapshot
+    GIVEN: aktiver default-Trip + Snapshot; Fixture liefert message_id
     WHEN: Text-Update '/th' (timeline_heute) an den Webhook gepostet wird
-    THEN: sendMessage mit Timeline-Inhalt und ≥1 Button mit callback_data=dd_* oder tl_/glance.
+    THEN: Loading-sendMessage gefolgt von editMessageText mit Timeline-Inhalt
+          und ≥1 Button mit callback_data=dd_* oder tl_/glance.
     """
     resp = client.post(WEBHOOK_PATH, json=_msg_update(8002, "/th"))
     assert resp.status_code == 200, resp.text
 
+    # Loading-sendMessage muss vorhanden sein
     sends = _calls_named(capture, "sendMessage")
     assert sends, (
-        f"sendMessage fehlt bei /th. Calls: {[m for m, _ in capture]}"
+        f"Loading-sendMessage fehlt bei /th. Calls: {[m for m, _ in capture]}"
     )
-    s = sends[0]
 
-    text = s.get("text", "")
-    assert text, "sendMessage-Text ist leer"
+    # Das Ergebnis kommt per editMessageText
+    edits = _calls_named(capture, "editMessageText")
+    assert edits, (
+        f"editMessageText fehlt bei /th (Timeline-Ergebnis). Calls: {[m for m, _ in capture]}"
+    )
+    e = edits[0]
+
+    text = e.get("text", "")
+    assert text, "editMessageText-Text ist leer"
 
     buttons = [
         b
-        for row in s.get("reply_markup", {}).get("inline_keyboard", [])
+        for row in e.get("reply_markup", {}).get("inline_keyboard", [])
         for b in row
     ]
-    assert buttons, f"Keine Buttons in Timeline-Antwort: {s.get('reply_markup')!r}"
+    assert buttons, f"Keine Buttons in Timeline-editMessageText-Antwort: {e.get('reply_markup')!r}"
 
     # Mindestens ein Button mit dd_ oder Navigations-callback_data
     nav_or_drill = [
@@ -318,23 +352,28 @@ def test_ac3_every_bot_menu_command_is_supported(env, capture, client):
 
 def test_ac4_glance_buttons_callback_data_all_handled(env, capture, client):
     """
-    GIVEN: aktiver default-Trip + Snapshot
-    WHEN: die Glance-Antwort (AC-1) abgeholt und jedes callback_data gegen
-          InboundTelegramReader._callback_to_body geprüft wird
+    GIVEN: aktiver default-Trip + Snapshot; Fixture liefert message_id
+    WHEN: die Glance-Antwort (editMessageText aus AC-1) abgeholt und jedes callback_data
+          gegen InboundTelegramReader._callback_to_body geprüft wird
     THEN: jedes callback_data liefert ≠ None (kein toter Button).
+
+    Inhaltliche Quelle ist das editMessageText (realer On-demand-Flow), nicht sendMessage.
     """
     resp = client.post(WEBHOOK_PATH, json=_msg_update(8200, "/s"))
     assert resp.status_code == 200, resp.text
 
-    sends = _calls_named(capture, "sendMessage")
-    assert sends, "sendMessage fehlt — kein Glance abrufbar"
+    edits = _calls_named(capture, "editMessageText")
+    assert edits, (
+        f"editMessageText fehlt — Glance-Ergebnis nicht via Edit. "
+        f"Calls: {[m for m, _ in capture]}"
+    )
 
     buttons = [
         b
-        for row in sends[0].get("reply_markup", {}).get("inline_keyboard", [])
+        for row in edits[0].get("reply_markup", {}).get("inline_keyboard", [])
         for b in row
     ]
-    assert buttons, "Keine Buttons in Glance-Antwort"
+    assert buttons, "Keine Buttons in Glance editMessageText-Antwort"
 
     from services.inbound_telegram_reader import InboundTelegramReader
     reader = InboundTelegramReader()
