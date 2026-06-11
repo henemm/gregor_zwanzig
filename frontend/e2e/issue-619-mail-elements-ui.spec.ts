@@ -58,10 +58,7 @@ async function deleteTrip(
 }
 
 async function openReportsSection(page: import('@playwright/test').Page, id: string) {
-	await page.goto(`/trips/${id}/edit`);
-	// Editor nutzt einen Tab-Editor (TripEditView.svelte), nicht ein Accordion:
-	// Reports-Tab via data-testid="edit-tab-reports" aktivieren.
-	await page.locator('[data-testid="edit-tab-reports"]').click();
+	await page.goto(`/trips/${id}?tab=briefings`);
 	await page.locator('[data-testid="report-mail-content"]').waitFor({ state: 'visible' });
 }
 
@@ -128,8 +125,11 @@ test.describe('Issue #619: E-Mail-Elemente konfigurierbar', () => {
 
 			// show_stage_stats ändern (verbleibender Baustein) und speichern
 			await page.locator('[data-testid="report-show-stage-stats"] input[type="checkbox"]').click();
-			await page.locator('[data-testid="edit-save-btn"]').click();
-			await page.waitForURL('/trips', { timeout: 5000 });
+			const putResponsePromise = page.waitForResponse(
+				(r) => r.url().endsWith(`/api/trips/${id}`) && r.request().method() === 'PUT' && r.ok()
+			);
+			await page.locator('[data-testid="briefings-save"]').click();
+			await putResponsePromise;
 
 			const after = await request.get(`/api/trips/${id}`);
 			expect(after.ok()).toBe(true);
@@ -159,16 +159,19 @@ test.describe('Issue #619: E-Mail-Elemente konfigurierbar', () => {
 			// Ausblick AUS
 			await page.locator('[data-testid="report-show-outlook"] input[type="checkbox"]').click();
 
-			const putPromise = page.waitForRequest(
+			const putRequestPromise = page.waitForRequest(
 				(req) => req.method() === 'PUT' && req.url().endsWith(`/api/trips/${id}`)
 			);
-			await page.locator('[data-testid="edit-save-btn"]').click();
-			const putReq = await putPromise;
+			const putResponsePromise = page.waitForResponse(
+				(r) => r.url().endsWith(`/api/trips/${id}`) && r.request().method() === 'PUT' && r.ok()
+			);
+			await page.locator('[data-testid="briefings-save"]').click();
+			const putReq = await putRequestPromise;
 			const body = JSON.parse(putReq.postData() || '{}');
 
 			expect(body.report_config.show_outlook).toBe(false);
 
-			await page.waitForURL('/trips', { timeout: 5000 });
+			await putResponsePromise;
 
 			// Reload via API: persistiert
 			const after = await request.get(`/api/trips/${id}`);
@@ -199,8 +202,11 @@ test.describe('Issue #619: E-Mail-Elemente konfigurierbar', () => {
 
 			// show_outlook ändern (verbleibender Baustein), dann speichern
 			await page.locator('[data-testid="report-show-outlook"] input[type="checkbox"]').click();
-			await page.locator('[data-testid="edit-save-btn"]').click();
-			await page.waitForURL('/trips', { timeout: 5000 });
+			const putResponsePromise = page.waitForResponse(
+				(r) => r.url().endsWith(`/api/trips/${id}`) && r.request().method() === 'PUT' && r.ok()
+			);
+			await page.locator('[data-testid="briefings-save"]').click();
+			await putResponsePromise;
 
 			const after = await request.get(`/api/trips/${id}`);
 			expect(after.ok()).toBe(true);
@@ -231,8 +237,11 @@ test.describe('Issue #619: E-Mail-Elemente konfigurierbar', () => {
 			// Metriken-Überblick AN
 			await page.locator('[data-testid="report-show-metrics-summary"] input[type="checkbox"]').click();
 
-			await page.locator('[data-testid="edit-save-btn"]').click();
-			await page.waitForURL('/trips', { timeout: 5000 });
+			const putResponsePromise = page.waitForResponse(
+				(r) => r.url().endsWith(`/api/trips/${id}`) && r.request().method() === 'PUT' && r.ok()
+			);
+			await page.locator('[data-testid="briefings-save"]').click();
+			await putResponsePromise;
 
 			const after = await request.get(`/api/trips/${id}`);
 			const rc = (await after.json()).report_config;

@@ -65,8 +65,7 @@ async function deleteTrip(
 }
 
 async function openReportsSection(page: import('@playwright/test').Page, id: string) {
-	await page.goto(`/trips/${id}/edit`);
-	await page.locator('[data-testid="edit-tab-reports"]').click();
+	await page.goto(`/trips/${id}?tab=briefings`);
 	await page.locator('[data-testid="report-mail-content"]').waitFor({ state: 'visible' });
 }
 
@@ -190,15 +189,18 @@ test.describe('Issue #723: E-Mail-Inhalt-Tab eingedampft', () => {
 			// Ausblick abwählen
 			await page.locator('[data-testid="report-show-outlook"] input[type="checkbox"]').click();
 
-			const putPromise = page.waitForRequest(
+			const putRequestPromise = page.waitForRequest(
 				(req) => req.method() === 'PUT' && req.url().endsWith(`/api/trips/${id}`)
 			);
-			await page.locator('[data-testid="edit-save-btn"]').click();
-			const putReq = await putPromise;
+			const putResponsePromise = page.waitForResponse(
+				(r) => r.url().endsWith(`/api/trips/${id}`) && r.request().method() === 'PUT' && r.ok()
+			);
+			await page.locator('[data-testid="briefings-save"]').click();
+			const putReq = await putRequestPromise;
 			const body = JSON.parse(putReq.postData() || '{}');
 			expect(body.report_config.show_outlook).toBe(false);
 
-			await page.waitForURL('/trips', { timeout: 5000 });
+			await putResponsePromise;
 
 			// Persistiert via API
 			const after = await request.get(`/api/trips/${id}`);
@@ -233,8 +235,11 @@ test.describe('Issue #723: E-Mail-Inhalt-Tab eingedampft', () => {
 
 			// Einen verbleibenden Baustein ändern, dann speichern
 			await page.locator('[data-testid="report-show-stage-stats"] input[type="checkbox"]').click();
-			await page.locator('[data-testid="edit-save-btn"]').click();
-			await page.waitForURL('/trips', { timeout: 5000 });
+			const putResponsePromise = page.waitForResponse(
+				(r) => r.url().endsWith(`/api/trips/${id}`) && r.request().method() === 'PUT' && r.ok()
+			);
+			await page.locator('[data-testid="briefings-save"]').click();
+			await putResponsePromise;
 
 			const after = await request.get(`/api/trips/${id}`);
 			expect(after.ok()).toBe(true);
