@@ -494,13 +494,21 @@ class TripReportSchedulerService:
         config = trip.report_config
 
         # 7a. Email (bugfix: respect send_email flag)
+        # Issue #722: compact format sends single text/plain (html="" → html=False path)
         if not config or config.send_email:
             email_output = EmailOutput(self._settings)
-            email_output.send(
-                subject=report.email_subject,
-                body=report.email_html,
-                plain_text_body=report.email_plain,
-            )
+            if report.email_html:
+                email_output.send(
+                    subject=report.email_subject,
+                    body=report.email_html,
+                    plain_text_body=report.email_plain,
+                )
+            else:
+                email_output.send(
+                    subject=report.email_subject,
+                    body=report.email_plain,
+                    html=False,
+                )
 
         # 7c. Send Telegram if configured (Issue #360: kanal-bewusster Body)
         if config and config.send_telegram and self._settings.can_send_telegram():

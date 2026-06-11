@@ -73,6 +73,9 @@
 	let contentModulesExpanded = $state(true);
 	let dailySummaryExpanded = $state(false);
 
+	// Issue #722: E-Mail-Format
+	let email_format = $state<'full' | 'compact'>('full');
+
 	// --- Profile (Channel-Verfuegbarkeit) --------------------------------------
 	interface Profile {
 		mail_to?: string;
@@ -147,6 +150,8 @@
 			dailySummaryMetrics = [...(c.daily_summary_metrics ?? DEFAULT_DAILY_SUMMARY_METRICS)];
 			// Issue #664: Metriken-Überblick
 			if (typeof c.show_metrics_summary === 'boolean') show_metrics_summary = c.show_metrics_summary;
+			// Issue #722: E-Mail-Format
+			if (c.email_format === 'compact' || c.email_format === 'full') email_format = c.email_format;
 		}
 
 		// Profile laden (Channel-Verfuegbarkeit). Fail-soft: bei Fehler bleiben
@@ -189,6 +194,8 @@
 			daily_summary_metrics: [...dailySummaryMetrics],
 			// Issue #664: Metriken-Überblick
 			show_metrics_summary,
+			// Issue #722: E-Mail-Format
+			email_format,
 		};
 
 		// Issue #617: verwaiste Kanäle (nicht Wetter-aktiv) auf false synchronisieren.
@@ -402,14 +409,48 @@
 	</Card.Root>
 
 	<!-- ====================================================================== -->
-	<!-- E-Mail-Inhalt (Issue #619, #693)                                      -->
+	<!-- E-Mail-Inhalt (Issue #619, #693, #722)                               -->
 	<!-- ====================================================================== -->
 	<Card.Root class="p-3 space-y-2 hover:translate-y-0 hover:shadow-none" data-testid="report-mail-content">
 		<h3 class="text-sm font-semibold">E-Mail-Inhalt</h3>
 
-		<!-- Gruppe A: Inhalts-Bausteine -->
+		<!-- Issue #722: Format-Schalter (full/compact) -->
 		<div class="space-y-1">
-			<Btn variant="ghost" size="sm" data-testid="report-content-modules-toggle" onclick={() => { contentModulesExpanded = !contentModulesExpanded; }}>
+			<p class="text-xs text-muted-foreground font-medium">Format</p>
+			<div class="flex gap-2" data-testid="report-email-format-switcher">
+				<label class="flex items-center gap-1.5 text-sm cursor-pointer">
+					<input
+						type="radio"
+						data-testid="report-email-format-full"
+						name="email_format"
+						value="full"
+						checked={email_format === 'full'}
+						onchange={() => { email_format = 'full'; }}
+					/>
+					Ausführlich (HTML)
+				</label>
+				<label class="flex items-center gap-1.5 text-sm cursor-pointer">
+					<input
+						type="radio"
+						data-testid="report-email-format-compact"
+						name="email_format"
+						value="compact"
+						checked={email_format === 'compact'}
+						onchange={() => { email_format = 'compact'; }}
+					/>
+					Kompakt (Nur-Text)
+				</label>
+			</div>
+			{#if email_format === 'compact'}
+				<p class="text-xs text-muted-foreground" data-testid="report-compact-hint">
+					Im Kompakt-Modus werden fix Metriken-Überblick + Ausblick gezeigt. Die Inhalts-Bausteine unten sind deaktiviert.
+				</p>
+			{/if}
+		</div>
+
+		<!-- Gruppe A: Inhalts-Bausteine -->
+		<div class="space-y-1" style={email_format === 'compact' ? 'opacity:0.45;pointer-events:none' : ''}>
+			<Btn variant="ghost" size="sm" data-testid="report-content-modules-toggle" onclick={() => { contentModulesExpanded = !contentModulesExpanded; }} disabled={email_format === 'compact'}>
 				Inhalts-Bausteine ({countActiveContentModules({ show_stage_stats, show_quick_take_tags, show_metrics_summary, show_stability, show_highlights, daily_summary_metrics: dailySummaryMetrics })} aktiv)
 				<ChevronDown style="transform: rotate({contentModulesExpanded ? 180 : 0}deg); transition: transform 150ms ease;" />
 			</Btn>
@@ -419,6 +460,7 @@
 						<span data-testid="report-show-stage-stats" class="inline-flex items-center gap-2">
 							<Checkbox
 								checked={show_stage_stats}
+								disabled={email_format === 'compact'}
 								onchange={(e) => { show_stage_stats = (e.target as HTMLInputElement).checked; }}
 							>{CONTENT_MODULE_DESCRIPTIONS.show_stage_stats.label}</Checkbox>
 						</span>
@@ -428,6 +470,7 @@
 						<span data-testid="report-show-quick-take" class="inline-flex items-center gap-2">
 							<Checkbox
 								checked={show_quick_take_tags}
+								disabled={email_format === 'compact'}
 								onchange={(e) => { show_quick_take_tags = (e.target as HTMLInputElement).checked; }}
 							>{CONTENT_MODULE_DESCRIPTIONS.show_quick_take_tags.label}</Checkbox>
 						</span>
@@ -437,6 +480,7 @@
 						<span data-testid="report-show-metrics-summary" class="inline-flex items-center gap-2">
 							<Checkbox
 								checked={show_metrics_summary}
+								disabled={email_format === 'compact'}
 								onchange={(e) => { show_metrics_summary = (e.target as HTMLInputElement).checked; }}
 							>{CONTENT_MODULE_DESCRIPTIONS.show_metrics_summary.label}</Checkbox>
 						</span>
@@ -446,6 +490,7 @@
 						<span data-testid="report-show-stability" class="inline-flex items-center gap-2">
 							<Checkbox
 								checked={show_stability}
+								disabled={email_format === 'compact'}
 								onchange={(e) => { show_stability = (e.target as HTMLInputElement).checked; }}
 							>{CONTENT_MODULE_DESCRIPTIONS.show_stability.label}</Checkbox>
 						</span>
@@ -455,6 +500,7 @@
 						<span data-testid="report-show-highlights" class="inline-flex items-center gap-2">
 							<Checkbox
 								checked={show_highlights}
+								disabled={email_format === 'compact'}
 								onchange={(e) => { show_highlights = (e.target as HTMLInputElement).checked; }}
 							>{CONTENT_MODULE_DESCRIPTIONS.show_highlights.label}</Checkbox>
 						</span>

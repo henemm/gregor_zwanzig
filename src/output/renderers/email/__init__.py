@@ -19,6 +19,7 @@ from app.models import (
 from app.profile import ActivityProfile
 from services.daylight_service import DaylightWindow
 
+from src.output.renderers.email.compact import render_compact
 from src.output.renderers.email.helpers import build_format_modes
 from src.output.renderers.email.html import render_html
 from src.output.renderers.email.plain import render_plain
@@ -56,6 +57,7 @@ def render_email(
     sent_at: Optional[datetime] = None,
     show_metrics_summary: bool = False,
     show_outlook: bool = True,
+    email_format: str = "full",
 ) -> tuple[str, str]:
     """Returns (html_body, plain_body). Pure function.
 
@@ -71,6 +73,23 @@ def render_email(
     trip_name = token_line.trip_name or token_line.stage_name
     report_type = token_line.report_type
     night_rows_list = night_rows if night_rows is not None else []
+
+    # Issue #722: compact format — text-only, no HTML, no hourly tables.
+    if email_format == "compact":
+        compact_text = render_compact(
+            segments=segments,
+            dc=display_config,
+            multi_day_trend=multi_day_trend,
+            stability_result=stability_result,
+            tz=tz,
+            report_type=report_type,
+            trip_name=trip_name,
+            stage_name=stage_name,
+            stage_stats=stage_stats,
+            profile=profile,
+        )
+        return "", compact_text
+
     # Issue #435: pro-Spalte effektiver format_mode (resolves explicit MetricConfig.format_mode
     # else catalog default; mirrors loader._resolve_format_mode semantics).
     format_modes = build_format_modes(display_config)

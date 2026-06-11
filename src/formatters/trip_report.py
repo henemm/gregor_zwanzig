@@ -127,6 +127,8 @@ class TripReportFormatter:
         _show_metrics_summary = report_config.show_metrics_summary if report_config else False
         # Issue #721: Ausblick-Block (Großwetterlage + nächste Etappen)
         _show_outlook = report_config.show_outlook if report_config else True
+        # Issue #722: E-Mail-Format
+        _email_format = report_config.email_format if report_config else "full"
         # Issue #623 AC-5: Sendezeit für das Kontext-Label im HTML-Trend-Block.
         _sent_at = datetime.now(timezone.utc)
         email_html, email_plain = render_email(
@@ -156,6 +158,7 @@ class TripReportFormatter:
             sent_at=_sent_at,
             show_metrics_summary=_show_metrics_summary,
             show_outlook=_show_outlook,
+            email_format=_email_format,
         )
         first_agg = segments[0].aggregated
         email_subject = self._generate_subject(

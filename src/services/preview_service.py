@@ -160,6 +160,10 @@ class PreviewService:
         report, _segments, _stage_name, _trip_tz = self._build_report(
             trip, target, report_type, demo=demo,
         )
+        # Issue #722: compact format — wrap plain text in <pre> for browser preview
+        if not report.email_html and report.email_plain:
+            import html as _html
+            return f"<pre style='font-family:monospace;white-space:pre-wrap;font-size:13px'>{_html.escape(report.email_plain)}</pre>"
         return report.email_html
 
     def render_sms_preview(

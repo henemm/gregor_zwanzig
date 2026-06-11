@@ -198,6 +198,8 @@ export interface ReportConfig {
 	daily_summary_metrics?: string[];
 	// Issue #664 — Metriken-Überblick (ersetzt Quick-Take + Tages-Summe)
 	show_metrics_summary?: boolean;
+	// Issue #722 — E-Mail-Format: "full" (HTML multipart) | "compact" (plain-text only)
+	email_format?: 'full' | 'compact';
 }
 
 // Issue #429 — kanal-spezifische Layout-Listen (snake_case auf der Wire).

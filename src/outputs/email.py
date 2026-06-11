@@ -21,6 +21,49 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def build_mime_message(
+    subject: str,
+    body: str,
+    from_addr: str,
+    to_header: str,
+    reply_to: str | None,
+    html: bool,
+    plain_text_body: str | None,
+):
+    """Issue #722: Build a MIME message. Pure function, no SMTP side-effects.
+
+    html=True  → MIMEMultipart("alternative") with plain + html parts (full path).
+    html=False → single MIMEText("plain"), us-ascii/7bit for ASCII bodies.
+    """
+    if html:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = from_addr
+        msg["To"] = to_header
+        if reply_to:
+            msg["Reply-To"] = reply_to
+        if plain_text_body:
+            plain_text = plain_text_body
+        else:
+            plain_text = re.sub(r'<style[^>]*>.*?</style>', '', body, flags=re.DOTALL | re.IGNORECASE)
+            plain_text = re.sub(r'<head[^>]*>.*?</head>', '', plain_text, flags=re.DOTALL | re.IGNORECASE)
+            plain_text = re.sub(r'<[^>]+>', '', plain_text)
+            plain_text = plain_text.replace('&nbsp;', ' ').replace('&deg;', '°')
+            plain_text = re.sub(r'\n\s*\n\s*\n', '\n\n', plain_text)
+            plain_text = plain_text.strip()
+        msg.attach(MIMEText(plain_text, "plain", "utf-8"))
+        msg.attach(MIMEText(body, "html", "utf-8"))
+    else:
+        charset = "us-ascii" if body.isascii() else "utf-8"
+        msg = MIMEText(body, "plain", charset)
+        msg["Subject"] = subject
+        msg["From"] = from_addr
+        msg["To"] = to_header
+        if reply_to:
+            msg["Reply-To"] = reply_to
+    return msg
+
+
 class EmailOutput:
     """
     Email output channel using SMTP.
@@ -109,43 +152,15 @@ class EmailOutput:
         recipients: list[str] = list(to) if to else [self._to]
         to_header = ", ".join(recipients)
 
-        if html:
-            msg = MIMEMultipart("alternative")
-            msg["Subject"] = subject
-            msg["From"] = from_addr
-            msg["To"] = to_header
-            if self._reply_to:
-                msg["Reply-To"] = self._reply_to
-
-            # Use explicit plain-text if provided, otherwise auto-generate
-            if plain_text_body:
-                plain_text = plain_text_body
-            else:
-                # Plain text fallback (strip HTML properly)
-                # 1. Remove <style>...</style> blocks completely
-                plain_text = re.sub(r'<style[^>]*>.*?</style>', '', body, flags=re.DOTALL | re.IGNORECASE)
-                # 2. Remove <head>...</head> blocks completely
-                plain_text = re.sub(r'<head[^>]*>.*?</head>', '', plain_text, flags=re.DOTALL | re.IGNORECASE)
-                # 3. Remove remaining HTML tags
-                plain_text = re.sub(r'<[^>]+>', '', plain_text)
-                # 4. Replace HTML entities
-                plain_text = plain_text.replace('&nbsp;', ' ').replace('&deg;', '°')
-                # 5. Clean up excessive whitespace
-                plain_text = re.sub(r'\n\s*\n\s*\n', '\n\n', plain_text)
-                plain_text = plain_text.strip()
-
-            part1 = MIMEText(plain_text, "plain", "utf-8")
-            part2 = MIMEText(body, "html", "utf-8")
-
-            msg.attach(part1)
-            msg.attach(part2)
-        else:
-            msg = MIMEText(body, "plain", "utf-8")
-            msg["Subject"] = subject
-            msg["From"] = from_addr
-            msg["To"] = to_header
-            if self._reply_to:
-                msg["Reply-To"] = self._reply_to
+        msg = build_mime_message(
+            subject=subject,
+            body=body,
+            from_addr=from_addr,
+            to_header=to_header,
+            reply_to=self._reply_to,
+            html=html,
+            plain_text_body=plain_text_body,
+        )
 
         # Retry logic with exponential backoff
         # max_attempts includes the first try, so 4 attempts = 3 retries

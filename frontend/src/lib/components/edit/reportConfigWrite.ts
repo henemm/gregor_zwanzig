@@ -39,7 +39,7 @@ export function toggleDailySummaryMetric(
 	return DAILY_SUMMARY_METRICS.filter((m) => updated.includes(m));
 }
 
-/** UI-State der Report-Konfig-Felder (Issue #619 + #664). */
+/** UI-State der Report-Konfig-Felder (Issue #619 + #664 + #722). */
 export interface MailElementUi {
 	show_stage_stats: boolean;
 	show_quick_take_tags: boolean;
@@ -48,6 +48,8 @@ export interface MailElementUi {
 	daily_summary_metrics: string[];
 	/** Issue #664: Metriken-Überblick (ersetzt Quick-Take + Tages-Summe). Default false. */
 	show_metrics_summary?: boolean;
+	/** Issue #722: E-Mail-Format. Default 'full'. */
+	email_format?: 'full' | 'compact';
 }
 
 /**
@@ -66,6 +68,7 @@ export function buildMailElementWrite(
 		show_highlights: ui.show_highlights,
 		daily_summary_metrics: ui.daily_summary_metrics,
 		show_metrics_summary: ui.show_metrics_summary ?? false,
+		email_format: ui.email_format ?? 'full',
 	};
 }
 
