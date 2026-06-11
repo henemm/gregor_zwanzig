@@ -543,7 +543,9 @@ class TripReportSchedulerService:
         # 9. Save weather snapshot for alert comparison
         try:
             from services.weather_snapshot import WeatherSnapshotService
-            WeatherSnapshotService().save(trip.id, segment_weather, target_date)
+            _snapshot_svc = WeatherSnapshotService(self._user_id)
+            _snapshot_svc.save(trip.id, segment_weather, target_date)
+            _snapshot_svc.save_dated(trip.id, target_date, segment_weather)
         except Exception as e:
             logger.warning(f"Failed to save weather snapshot for {trip.id}: {e}")
 

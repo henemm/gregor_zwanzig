@@ -85,6 +85,86 @@ class WeatherSnapshotService:
         except Exception as e:
             logger.warning(f"Failed to save snapshot {trip_id}: {e}")
 
+    def save_dated(
+        self,
+        trip_id: str,
+        target_date: date,
+        segments: List[SegmentWeatherData],
+    ) -> None:
+        """Save dated forecast snapshot to {trip_id}_{YYYY-MM-DD}.json."""
+        try:
+            self._snapshots_dir.mkdir(parents=True, exist_ok=True)
+
+            snapshot = {
+                "trip_id": trip_id,
+                "target_date": target_date.isoformat(),
+                "snapshot_at": datetime.now(timezone.utc).isoformat(),
+                "provider": segments[0].provider if segments else "unknown",
+                "segments": [
+                    _serialize_segment(seg)
+                    for seg in segments
+                ],
+            }
+
+            filepath = self._snapshots_dir / f"{trip_id}_{target_date.isoformat()}.json"
+            filepath.write_text(json.dumps(snapshot, indent=2))
+            logger.info(f"Dated snapshot saved: {filepath.name}")
+        except Exception as e:
+            logger.warning(f"Failed to save dated snapshot {trip_id} {target_date}: {e}")
+            return
+
+        self._prune_dated_snapshots(trip_id)
+
+    def load_dated(
+        self,
+        trip_id: str,
+        target_date: date,
+    ) -> Optional[List[SegmentWeatherData]]:
+        """Load dated forecast snapshot from {trip_id}_{YYYY-MM-DD}.json."""
+        filepath = self._snapshots_dir / f"{trip_id}_{target_date.isoformat()}.json"
+
+        if not filepath.exists():
+            logger.debug(f"No dated snapshot for {trip_id} {target_date}")
+            return None
+
+        try:
+            data = json.loads(filepath.read_text())
+            snapshot_at = datetime.fromisoformat(data["snapshot_at"])
+            provider = data.get("provider", "unknown")
+
+            result: List[SegmentWeatherData] = []
+            for seg_data in data["segments"]:
+                segment = _reconstruct_segment(seg_data)
+                aggregated = _deserialize_summary(seg_data["aggregated"])
+                timeseries = _deserialize_timeseries(seg_data, provider)
+                result.append(
+                    SegmentWeatherData(
+                        segment=segment,
+                        timeseries=timeseries,
+                        aggregated=aggregated,
+                        fetched_at=snapshot_at,
+                        provider=provider,
+                    )
+                )
+            return result
+        except (json.JSONDecodeError, ValueError, KeyError, OSError) as e:
+            logger.warning(f"Corrupt dated snapshot {trip_id} {target_date}: {e}")
+            return None
+
+    def _prune_dated_snapshots(self, trip_id: str) -> None:
+        """Delete oldest dated snapshots for trip_id, keeping max 7."""
+        pattern = f"{trip_id}_*.json"
+        dated_files = sorted(
+            self._snapshots_dir.glob(pattern),
+            key=lambda p: (p.stat().st_mtime, p.name),
+        )
+        for old_file in dated_files[:-7]:
+            try:
+                old_file.unlink()
+                logger.debug(f"Pruned dated snapshot: {old_file.name}")
+            except OSError as e:
+                logger.warning(f"Failed to prune dated snapshot {old_file}: {e}")
+
     def load(self, trip_id: str) -> Optional[List[SegmentWeatherData]]:
         """Load aggregated weather snapshot from JSON file."""
         filepath = self._snapshots_dir / f"{trip_id}.json"
