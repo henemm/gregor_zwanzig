@@ -68,7 +68,6 @@
 		flex: 0 0 220px;
 		background: var(--g-paper-deep);
 		border-right: 1px solid var(--g-rule);
-		display: flex;
 		flex-direction: column;
 		padding: 24px 0 0;
 		height: 100%;
