@@ -1,10 +1,29 @@
+---
+entity_id: issue_777_geosphere_nowcast_falsy
+type: module
+created: 2026-06-12
+updated: 2026-06-12
+status: approved
+version: 1.0
+issue: 777
+scope: backend-only
+---
+
 # Spec: GeoSphere-Nowcast — 0.0 ist ein echter Wert, kein None
 
 - **Issue:** #777
 - **Type:** Bug
 - **Created:** 2026-06-12
 - **Scope:** backend-only (`src/providers/geosphere.py`)
-- **Status:** draft
+- **Status:** approved
+
+## Dependencies
+
+| Richtung | Modul | Bezug |
+|----------|-------|-------|
+| Upstream | `src/app/models.py` (`ForecastDataPoint`, `NormalizedTimeseries`) | Zieltypen des Parsers (unverändert) |
+| Downstream | `weather_metrics.py`, `comparison_engine.py`, `trip_report_scheduler.py`, `aggregation.py` | Konsumenten, die `None` als „keine Daten" verwerfen — profitieren vom Fix |
+| Keine | — | Keine neuen externen Abhängigkeiten, keine Signatur-/Interface-Änderung |
 
 ## Problem
 
@@ -65,3 +84,13 @@ NOWCAST-Response (Struktur exakt wie GeoSphere liefert: `timestamps`, `features[
 parameters.{t2m,ff,fx,rr,...}.data`) wird durch den **echten** `_parse_nowcast_response`
 geschickt — kein Mock, keine gepatchte Methode, nur echte Parser-Logik auf echt-geformten
 Daten. Vor dem Fix liefert der Parser `None` für `0.0` (rot), nach dem Fix `0.0` (grün).
+
+## Approval Status
+
+- [x] Approved (PO 'go' 2026-06-12, Phase-Gate `spec_approval` USER APPROVED)
+
+## Changelog
+
+| Datum | Version | Änderung |
+|-------|---------|----------|
+| 2026-06-12 | 1.0 | Initiale Spec — Falsy-Zero-Fix für precip/wind/gust in `_parse_nowcast_response`. Nebenbefunde F001/F002 (`pressure_hpa`, `snow_depth_cm`) → Folge-Issue #782. |
