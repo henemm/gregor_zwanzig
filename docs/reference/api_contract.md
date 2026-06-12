@@ -1,7 +1,7 @@
 
 # API Contract — Gregor Zwanzig
 
-**Updated:** 2026-06-11 (Issue #747 — Datierter Forecast-Snapshot-Speicher: WeatherSnapshotService erweitert um `save_dated(trip_id, target_date, segments)`, `load_dated(trip_id, target_date)` und `_prune_dated_snapshots(trip_id)`. Speichert Snapshots nach Datum (`{trip_id}_{YYYY-MM-DD}.json`, max. 7 Dateien pro Trip, mtime-sortiert). Fundament für Vortag-Vergleich im Trip-Briefing. Bestehende `save()`/`load()`-Methoden für Alert-Pfad bleiben byte-identisch. Scheduler ruft `save_dated()` nach bestehendem `save()` auf. Siehe Issue #747.); 2026-06-11 (Issue #731 — Abruf-zentrierte Befehle: bare Keywords (HEUTE/MORGEN/JETZT/GEWITTER/RUHETAG/STATUS/STOP/WEITER/HILFE) ersetzen alte Abonnenten-Befehle (PAUSE/SKIP/CONFIG). Persistenzfelder paused_until/skip_next bleiben für Bestandsdaten erhalten. TripCommandProcessor.process() neu mit _resume_trip() für WEITER-Befehl. Keine Datenstruktur-Änderungen. Siehe Issue #731.); 2026-06-10 (Issue #715 — Wettermetriken-Darstellung: GET /api/metrics filtert auf `selectable=true` — `confidence` (Vorhersage-Verlässlichkeit/Ensemble) ist KEINE pro-Etappe wählbare Metrik mehr, nur noch Vorhersage-Hinweis + SMS-Symbol; Vorschau-Emojis in WeatherV2MailPreview + Step3Weather angepasst; Beispieldaten eindeutig gekennzeichnet; Bug #716 — Test-Briefing: stiller Versagensfall weg. POST /api/trips/{id}/send gibt jetzt HTTP 422 + detail-Feld zurück wenn keine Etappendaten für Zieldatum vorhanden (statt HTTP 200). Frontend zeigt konkrete Fehlermeldung im Toast; Issue #707 — Trip-Datum-Overwrite-Bug: PUT `/api/trips/{id}` mit minimalem Body (nur geänderte Felder) statt kompletter `trip`-Spread — verhindert stale-data-Überschreibung von Etappen; Issue #690 — Eigene Wetter-Metriken-Profile: eindeutiger Name (HTTP 409 name_exists, 400 name_required), Profil sofort aktiv + persistent, "Eigene"-Markierung in Preset-Leiste, trip-übergreifend pro Nutzer); 2026-06-09 (Issue #674 — Fahrradtour als Aktivitätstyp: 3 neue ActivityType-Varianten (fahrrad_15/20/25 km/h) mit korrekten Naismith-Raten (600/1000 Hm/h); #680 — Compare-Editor Slice 3 Fidelity: display_config.active_metrics — ausgewählte Metriken pro Vergleich; #675 — Etappen-Startzeiten editierbar; #671 — Bot-Menü automatisch beim Service-Start; #638 — Alerts-Tab Karten-Modell, Severity-Falle, pro-Alert Kanäle; #664 — Metriken-Überblick-Pille; #621 — E-Mail-Elemente abschaltbar); 2026-06-08 (Issues #672/#671 — Telegram E2E-Pipeline-Tests + Bot-Menü-Vertrag; #642 — User-Anzeigename display_name; #655 — Telegram Hybrid-Navigation: callback_query + editMessageText); 2026-06-07 (Issues #627/#631 — Compare-Preset Sofortversand + Wochen-Rhythmus-Erhalt)
+**Updated:** 2026-06-12 (Issue #764 — ComparePreset forecast_hours Persistierung: neues Feld im Go-Modell/TS-Type (24|48|72 h), Hydration im Editor, Konsum im Python-Scheduler, Legacy-Default 48 h; Horizont-Select im Editor auf Design-System Select.svelte umgestellt); 2026-06-11 (Issue #747 — Datierter Forecast-Snapshot-Speicher: WeatherSnapshotService erweitert um `save_dated(trip_id, target_date, segments)`, `load_dated(trip_id, target_date)` und `_prune_dated_snapshots(trip_id)`. Speichert Snapshots nach Datum (`{trip_id}_{YYYY-MM-DD}.json`, max. 7 Dateien pro Trip, mtime-sortiert). Fundament für Vortag-Vergleich im Trip-Briefing. Bestehende `save()`/`load()`-Methoden für Alert-Pfad bleiben byte-identisch. Scheduler ruft `save_dated()` nach bestehendem `save()` auf. Siehe Issue #747.); 2026-06-11 (Issue #731 — Abruf-zentrierte Befehle: bare Keywords (HEUTE/MORGEN/JETZT/GEWITTER/RUHETAG/STATUS/STOP/WEITER/HILFE) ersetzen alte Abonnenten-Befehle (PAUSE/SKIP/CONFIG). Persistenzfelder paused_until/skip_next bleiben für Bestandsdaten erhalten. TripCommandProcessor.process() neu mit _resume_trip() für WEITER-Befehl. Keine Datenstruktur-Änderungen. Siehe Issue #731.); 2026-06-10 (Issue #715 — Wettermetriken-Darstellung: GET /api/metrics filtert auf `selectable=true` — `confidence` (Vorhersage-Verlässlichkeit/Ensemble) ist KEINE pro-Etappe wählbare Metrik mehr, nur noch Vorhersage-Hinweis + SMS-Symbol; Vorschau-Emojis in WeatherV2MailPreview + Step3Weather angepasst; Beispieldaten eindeutig gekennzeichnet; Bug #716 — Test-Briefing: stiller Versagensfall weg. POST /api/trips/{id}/send gibt jetzt HTTP 422 + detail-Feld zurück wenn keine Etappendaten für Zieldatum vorhanden (statt HTTP 200). Frontend zeigt konkrete Fehlermeldung im Toast; Issue #707 — Trip-Datum-Overwrite-Bug: PUT `/api/trips/{id}` mit minimalem Body (nur geänderte Felder) statt kompletter `trip`-Spread — verhindert stale-data-Überschreibung von Etappen; Issue #690 — Eigene Wetter-Metriken-Profile: eindeutiger Name (HTTP 409 name_exists, 400 name_required), Profil sofort aktiv + persistent, "Eigene"-Markierung in Preset-Leiste, trip-übergreifend pro Nutzer); 2026-06-09 (Issue #674 — Fahrradtour als Aktivitätstyp: 3 neue ActivityType-Varianten (fahrrad_15/20/25 km/h) mit korrekten Naismith-Raten (600/1000 Hm/h); #680 — Compare-Editor Slice 3 Fidelity: display_config.active_metrics — ausgewählte Metriken pro Vergleich; #675 — Etappen-Startzeiten editierbar; #671 — Bot-Menü automatisch beim Service-Start; #638 — Alerts-Tab Karten-Modell, Severity-Falle, pro-Alert Kanäle; #664 — Metriken-Überblick-Pille; #621 — E-Mail-Elemente abschaltbar); 2026-06-08 (Issues #672/#671 — Telegram E2E-Pipeline-Tests + Bot-Menü-Vertrag; #642 — User-Anzeigename display_name; #655 — Telegram Hybrid-Navigation: callback_query + editMessageText); 2026-06-07 (Issues #627/#631 — Compare-Preset Sofortversand + Wochen-Rhythmus-Erhalt)
 
 ## 0) Konventionen
 - Zeit: ISO-8601 UTC (`Z`)
@@ -1217,6 +1217,7 @@ type ComparePreset struct {
     Profil               string                 `json:"profil"`                                // ActivityProfile: WINTERSPORT|ALPINE_TOURING|SUMMER_TREKKING|ALLGEMEIN
     HourFrom             int                    `json:"hour_from"`                             // 0..23
     HourTo               int                    `json:"hour_to"`                               // 0..23, >= HourFrom
+    ForecastHours        int                    `json:"forecast_hours"`                        // 24 | 48 | 72 — Vorhersage-Horizont für Compare-Versand (Issue #764, default 48)
     Empfaenger           []string               `json:"empfaenger"`                            // Email addresses for delivery
     LetzterVersand       *time.Time             `json:"letzter_versand,omitempty"`             // last send timestamp (server-managed)
     TopOrtLetzterVersand *string                `json:"top_ort_letzter_versand,omitempty"`     // highest-ranked location from last send (server-managed)
@@ -1230,6 +1231,8 @@ type ComparePreset struct {
 - `ideal_ranges`: `Record<string, IdealRange>` — Min/Max-Idealwerte pro Metrik (z.B. `{"temp_max_c": {"min": 15, "max": 35}, ...}`). Wird vom Compare-Engine zur Bewertung verwendet.
 - `output_layout`: opaque (zukünftig) — Spalten-Reihenfolge, Formatierung per Kanal
 - `schedule_config`: opaque (zukünftig) — Wiederholungs-Details
+
+**Note:** Das Feld `forecast_hours` (24|48|72 h) ist ein Top-Level-Feld von `ComparePreset`, nicht Teil von `display_config` (Issue #764).
 
 ### Endpoints
 
@@ -1252,6 +1255,7 @@ type ComparePreset struct {
 | `hour_from` | 0–23 |
 | `hour_to` | 0–23 |
 | — | `hour_to >= hour_from` |
+| `forecast_hours` | Frontend wählt nur `{24, 48, 72}`; Store defaultet `0 → 48` beim Load. Backend-Handler erzwingt den Wertebereich noch **nicht** (Folge-Issue #781). |
 | `empfaenger[]` | each contains `@` (basic email check) |
 
 ### Error Responses
@@ -1266,6 +1270,7 @@ type ComparePreset struct {
 
 - **User Isolation:** Every preset belongs to one user (read from Auth-Context). No user can see/modify another user's presets.
 - **Server-Managed Fields:** On CREATE, `id` is auto-generated (`cp-{hex}`) and `user_id` is set from context. On UPDATE, `user_id` and `created_at` are never overwritten from request body. `letzter_versand`, `top_ort_letzter_versand`, and `previous_schedule` are server-managed (not client-writable).
+- **forecast_hours (Issue #764):** Vorhersage-Horizont (24|48|72 Stunden) wird beim Orts-Vergleich-Versand verwendet. Beim Bearbeiten wird der Wert aus dem Preset hydratisiert; beim Speichern wird er persistiert. Legacy-Presets ohne dieses Feld laden als 48 h (Go-Store Default). Update-Handler bewahrt den Wert (Preserve-Semantik: wenn Body `forecast_hours == 0`, Original-Wert erhalten). Python-Scheduler (`_send_one_compare_preset`) konsumiert den Wert aus dem Preset statt hartkodiert 48 h.
 - **display_config (Issue #680):** Opaque JSON object stored as `map[string]interface{}` (no server-side schema validation). Contains `active_metrics` (persisted Metrik-Auswahl), `ideal_ranges` (Bewertungs-Schwellwerte), und zukünftig `output_layout` + `schedule_config`. Round-Trip beim Update: Server gibt `display_config` unverändert zurück, Frontend reicht nur geänderte Felder. Bestandsfelder erhalten sich automatisch (RMW-Semantik).
 - **POST /api/compare/presets/{id}/send:** Immediate send endpoint (Issue #627). Executes comparison engine and emails all configured `empfaenger` immediately, regardless of `schedule` value (bypasses time-based gating). If no recipients configured, returns HTTP 400. Returns HTTP 200 with `{"status":"ok","winner":"<top_location>","empfaenger_count":N}` on success. Updates `letzter_versand` and `top_ort_letzter_versand` server-side.
 - **previous_schedule Field (Issue #631):** When a preset is paused (`schedule='manual'`), the frontend sets `previous_schedule` to the prior schedule value (`"daily"` or `"weekly"`). On reactivation, `schedule` is restored from `previous_schedule`. This field is preserved across reloads (backend-persistent); altdata without this field remain unaffected (omitempty).
@@ -1516,7 +1521,7 @@ Processes all daily Compare-Presets for a user: filters by `schedule='daily'`, r
 3. For each matching preset:
    - Validate `location_ids` (warn if empty, increment `error_count`)
    - Convert `preset["profil"]` (Uppercase Go string → lowercase Python enum, fallback ALLGEMEIN)
-   - Call Compare Engine with `target_date=today`, `forecast_hours=48`, `hour_from`, `hour_to`, `activity_profile`
+   - Call Compare Engine with `target_date=today`, `forecast_hours=preset["forecast_hours"]` (gespeicherter Horizont, Default 48 — Issue #764), `hour_from`, `hour_to`, `activity_profile`
    - Render Compare-Email template
    - Send via Resend to all `preset["empfaenger"]`
    - Call `_save_preset_status(user_id, preset_id, top_ort)` to update JSON
@@ -1586,7 +1591,7 @@ Executes comparison and sends report for a single preset immediately (regardless
    - Loads `data/users/{user_id}/compare_presets.json`
    - Finds preset by `id` (404 if not found)
    - Validates `empfaenger[]` exists and is non-empty; falls back to `mail_to` from user profile (400 if neither)
-   - Calls Compare Engine with `target_date=today`, `forecast_hours=48` (uses preset's `hour_from`, `hour_to`, `profil`)
+   - Calls Compare Engine with `target_date=today`, `forecast_hours=preset["forecast_hours"]` (gespeicherter Horizont, Default 48 — Issue #764; uses preset's `hour_from`, `hour_to`, `profil`)
    - Renders Compare-Email template and sends via Resend to all recipients
    - Updates `letzter_versand` (current ISO-datetime UTC) and `top_ort_letzter_versand` (winner) in preset
    - Returns HTTP 200 with winner and recipient count

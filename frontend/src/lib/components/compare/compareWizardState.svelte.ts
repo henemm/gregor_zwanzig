@@ -160,6 +160,7 @@ export class CompareWizardState {
 			schedule: this.schedule.startsWith('daily') ? 'daily' : this.schedule === 'weekly' ? 'weekly' : 'manual',
 			hour_from: this.timeWindowStart,
 			hour_to: this.timeWindowEnd,
+			forecast_hours: this.forecastHours, // Issue #764: Horizont persistieren
 			empfaenger: [],
 			display_config: {
 				region: this.region,
@@ -196,7 +197,8 @@ export class CompareWizardState {
 			region: this.region,
 			idealRanges: this.idealRanges,
 			channelLayouts: this.channelLayouts,
-			activeMetricKeys: this.activeMetricKeys
+			activeMetricKeys: this.activeMetricKeys,
+			forecastHours: this.forecastHours // Issue #764
 		});
 		try {
 			const { api } = await import('$lib/api');

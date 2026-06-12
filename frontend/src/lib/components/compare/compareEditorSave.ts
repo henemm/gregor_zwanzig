@@ -19,6 +19,8 @@ export interface CompareEditorEdits {
 	channelLayouts: ChannelLayouts | null;
 	// Issue #680: Slice 3 — aktive Metriken (AC-10). Optional → rückwärtskompatibel.
 	activeMetricKeys?: string[];
+	// Issue #764: Vorhersage-Horizont. Optional → rückwärtskompatibel.
+	forecastHours?: number;
 }
 
 /**
@@ -60,7 +62,10 @@ export function buildComparePresetSavePayload(
 		name: edits.name,
 		location_ids: edits.pickedIds,
 		profil: edits.activityProfile ?? original.profil,
-		display_config: displayConfig
+		display_config: displayConfig,
+		// Issue #764: Edit-Wert überschreibt den Spread-Wert aus original.
+		// undefined → Feld fehlt in edits → Spread-Wert bleibt erhalten (Round-Trip).
+		...(edits.forecastHours !== undefined ? { forecast_hours: edits.forecastHours } : {})
 	};
 
 	return { url, body };

@@ -474,6 +474,7 @@ export interface ComparePreset {
 	hour_from: number;
 	hour_to: number;
 	empfaenger: string[];
+	forecast_hours: number;             // 24|48|72 — Vorhersage-Horizont; Issue #764
 	letzter_versand?: string;           // ISO-8601
 	top_ort_letzter_versand?: string | null;
 	created_at: string;

@@ -32,6 +32,7 @@
 	state.weekday = data.preset.weekday ?? 0;
 	state.timeWindowStart = data.preset.hour_from ?? 9;
 	state.timeWindowEnd = data.preset.hour_to ?? 16;
+	state.forecastHours = data.preset.forecast_hours ?? 48; // Issue #764
 
 	// Kanal-Layouts aus display_config
 	const savedLayouts = state.existingDisplayConfig.channel_layouts as

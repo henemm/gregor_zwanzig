@@ -203,6 +203,10 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		if updated.PreviousSchedule == "" {
 			updated.PreviousSchedule = original.PreviousSchedule
 		}
+		// Issue #764: forecast_hours erhalten wenn Body es nicht trägt (0 = Feld fehlte im Body).
+		if updated.ForecastHours == 0 {
+			updated.ForecastHours = original.ForecastHours
+		}
 
 		if updated.LocationIDs == nil {
 			updated.LocationIDs = []string{}

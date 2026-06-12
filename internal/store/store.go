@@ -486,6 +486,11 @@ func (s *Store) LoadComparePresets() ([]model.ComparePreset, error) {
 		if presets[i].Weekday == nil && presets[i].Schedule == "weekly" {
 			presets[i].Weekday = &four
 		}
+		// Issue #764: Legacy-Presets ohne forecast_hours-Feld → Go-Zero-Value 0 → Default 48.
+		// 0 ist kein gültiger Horizont; 24/48/72 sind die einzigen gültigen Werte.
+		if presets[i].ForecastHours == 0 {
+			presets[i].ForecastHours = 48
+		}
 	}
 	return presets, nil
 }
