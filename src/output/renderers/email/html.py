@@ -7,6 +7,7 @@ Bit-identical to TripReportFormatter._render_html() pre-β3.
 from __future__ import annotations
 
 import html as _html
+import re as _re
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional
 from zoneinfo import ZoneInfo
@@ -25,6 +26,7 @@ from services.daylight_service import DaylightWindow
 from utils.timezone import local_fmt
 
 from src.output.renderers.email.helpers import (
+    AMPEL_LEGEND,
     build_confidence_hint, build_daily_aggregates, build_metrics_summary_pills,
     build_quick_take_chips,
     build_segment_label, build_units_legend,
@@ -33,7 +35,7 @@ from src.output.renderers.email.helpers import (
 )
 from src.output.renderers.email.design_tokens import (
     G_PAPER, G_SURFACE_1, G_INK, G_INK_MUTED, G_INK_FAINT,
-    G_ACCENT, G_WARNING, G_DANGER, G_SUCCESS,
+    G_ACCENT, G_WARNING, G_DANGER, G_SUCCESS, G_WX_THUNDER,
     G_BOX_WARNING_BG, G_BOX_DANGER_BG, G_BOX_INFO_BG,
     FONT_UI, FONT_DATA, WEB_FONT_LINK,
 )
@@ -498,19 +500,35 @@ def render_html(
             else:
                 temp_html = f'{_ts[:-2]}&thinsp;°C'
 
-            # Thunder HTML — Issue #640: use thunder_token (@-times) when available.
+            # Thunder HTML — Issue #640/#669: use thunder_token (@-times) when available.
+            # Issue #669: wenn thunder_token != '-', roter ⚡-Badge mit Zeitfenster.
             sq_color = tok["thunder_sq_color"]
             word_color = tok["thunder_word_color"]
             tt = tok.get("thunder_token", "-")
             if tt != "-":
-                thunder_display = tt
+                # Parse @-Stunden aus thunder_token (z.B. 'MED@15(HIGH@16)')
+                _at_hours = _re.findall(r"@(\d+)", tt)
+                if len(_at_hours) >= 2:
+                    _first_h, _peak_h = int(_at_hours[0]), int(_at_hours[-1])
+                    _time_window = f"{_first_h:02d}:00–{_peak_h:02d}:00"
+                elif len(_at_hours) == 1:
+                    _time_window = f"{int(_at_hours[0]):02d}:00"
+                else:
+                    _time_window = tt
+                _thunder_cell_html = (
+                    f'<span style="background:{G_WX_THUNDER};color:#ffffff;'
+                    f'border-radius:4px;padding:2px 6px;font-size:12px;'
+                    f'font-weight:600;font-family:\'JetBrains Mono\',monospace;'
+                    f'display:inline-block;">'
+                    f'⚡ Gewitter möglich {_time_window}</span>'
+                )
             else:
                 thunder_display = tok["thunder_word"]
-            thunder_html = (
-                f'<span style="display:inline-block;width:8px;height:8px;'
-                f'background:{sq_color};vertical-align:middle;margin-right:4px"></span>'
-                f'<span style="color:{word_color}">{thunder_display}</span>'
-            )
+                _thunder_cell_html = (
+                    f'<span style="display:inline-block;width:8px;height:8px;'
+                    f'background:{sq_color};vertical-align:middle;margin-right:4px"></span>'
+                    f'<span style="color:{word_color}">{thunder_display}</span>'
+                )
 
             # Note row
             note = stage.get("note")
@@ -541,7 +559,7 @@ def render_html(
           <td style="padding:2px 8px 8px 0;font-size:13px;font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums">{temp_html}</td>
           <td style="padding:2px 8px 8px 0;font-size:13px;font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums">{precip_html}</td>
           <td style="padding:2px 8px 8px 0;font-size:13px;font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums">{wind_html}</td>
-          <td style="padding:2px 0 8px;font-size:13px">{thunder_html}</td>
+          <td style="padding:2px 0 8px;font-size:13px">{_thunder_cell_html}</td>
         </tr>
         {note_row}
         """
@@ -766,6 +784,12 @@ def render_html(
     all_rows = [r for tbl in seg_tables for r in tbl]
     legend_text = build_units_legend(all_rows) if all_rows else ""
 
+    # Issue #759: Ampel-Legende — immer einblenden (mind. Wind/Boen sind Standard-Metriken).
+    ampel_legend_html = (
+        f'<br><span style="font-size:10px;color:rgba(255,255,255,0.6)">'
+        f'{AMPEL_LEGEND}</span>'
+    )
+
     # Issue #750: Vortag-Vergleich-Sektion (nach dem Ausblick-Block).
     day_comparison_html = render_day_comparison_html(day_comparison)
 
@@ -846,6 +870,7 @@ def render_html(
         <div class="footer">
             Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')} | Data: {segments[0].provider} ({segments[0].timeseries.meta.model if segments[0].timeseries else 'n/a'}){(' | Fallback ' + ', '.join(segments[0].timeseries.meta.fallback_metrics) + ': ' + segments[0].timeseries.meta.fallback_model) if segments[0].timeseries and segments[0].timeseries.meta.fallback_model else ''}
             {('<br><span style="font-size:10px;color:rgba(255,255,255,0.6)">' + legend_text + '</span>') if legend_text else ''}
+            {ampel_legend_html}
             <br><span style="font-size:10px;color:rgba(255,255,255,0.5)">Auf diese Mail antworten mit: HEUTE &middot; MORGEN &middot; JETZT &middot; GEWITTER &middot; RUHETAG &middot; STATUS &middot; STOP &middot; WEITER &middot; HILFE</span>
         </div>
     </div>

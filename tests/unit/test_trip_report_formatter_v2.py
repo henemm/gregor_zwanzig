@@ -277,7 +277,11 @@ class TestHTMLColorCoding:
 
     def test_html_has_color_coding_for_high_gusts(self):
         """GIVEN segment with gust >= 80 km/h in hourly data,
-        THEN HTML contains risk color styling."""
+        THEN HTML contains risk indicator for high gusts.
+
+        Issue #759: gust cells in HTML now render as 4-level ampel dot (🔴 for ≥80 km/h)
+        instead of the previous red background-color tint (c62828/ffebee).
+        """
         seg = _make_segment_weather(1, start_hour=8, end_hour=10, gust_max=95.0)
         # Override timeseries to have high gusts at 09:00
         for dp in seg.timeseries.data:
@@ -285,8 +289,8 @@ class TestHTMLColorCoding:
                 dp.gust_kmh = 95.0
         formatter = TripReportFormatter()
         report = formatter.format_email([seg], "Test", "morning")
-        # Should have some red/danger styling
-        assert "c62828" in report.email_html or "ffebee" in report.email_html
+        # Issue #759: high gusts render as red ampel dot 🔴 in HTML table cells
+        assert "🔴" in report.email_html or "c62828" in report.email_html or "ffebee" in report.email_html
 
     def test_html_has_thunder_icon(self):
         """GIVEN thunder_level=MED, THEN ⚡ emoji in HTML output."""

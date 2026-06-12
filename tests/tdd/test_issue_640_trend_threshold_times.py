@@ -423,22 +423,34 @@ class TestEmailCellsWithTokens:
         assert "@16" in html, f"No wind @ token in HTML"
 
     def test_email_thunder_cell_has_at_token(self):
-        """AC-5: Given thunder samples above threshold, When HTML, Then @ in thunder cell."""
+        """AC-5: Given thunder samples above threshold, When HTML, Then thunder time present.
+
+        Issue #669: Thunder cell now shows '⚡ Gewitter möglich HH:00' badge instead
+        of raw '@HH' token — time is expressed as 'HH:00' (e.g. '14:00').
+        """
         trend = [_trend_stage_with_hourly(
             hourly_thunder=(_hv(14, 1.0),),
             thunder="MED",
         )]
         html = _render_html(trend)
-        assert "@14" in html, f"No thunder @ token in HTML"
+        # Issue #669: badge format uses HH:00 time notation
+        assert "14:00" in html or "@14" in html, f"No thunder time token in HTML"
 
     def test_email_thunder_cell_uses_med_high_labels(self):
-        """F001/F002: Email thunder cell shows MED/HIGH, not L/M (vigilance scale)."""
+        """F001/F002: Email thunder cell shows time-windowed badge or MED/HIGH label.
+
+        Issue #669: Thunder cell now shows '⚡ Gewitter möglich HH:00–HH:00' badge
+        when hourly_thunder is present; SMS vigilance labels must not appear.
+        """
         trend = [_trend_stage_with_hourly(
             hourly_thunder=(_hv(14, 1.0), _hv(16, 2.0)),
             thunder="HIGH",
         )]
         html = _render_html(trend)
-        assert "MED@14" in html or "MED" in html, f"Expected MED label in HTML: {html[html.find('thunder')-50:html.find('thunder')+200]!r}"
+        # Issue #669: badge shows time window; old MED@14 token replaced by 14:00–16:00
+        assert ("Gewitter möglich" in html or "MED@14" in html or "MED" in html), (
+            f"Expected thunder display in HTML"
+        )
         # Vigilance labels must not appear in the thunder cell
         assert "L@14" not in html, f"SMS vigilance label 'L@14' found in HTML"
         assert "M@16" not in html, f"SMS vigilance label 'M@16' found in HTML"

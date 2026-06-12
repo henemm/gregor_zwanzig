@@ -361,6 +361,46 @@ def build_units_legend(rows: list[dict]) -> str:
     return "Einheiten: " + " · ".join(parts)
 
 
+# Issue #759: 4-stufiger Ampelpunkt fuer Wind/Boen/Regen/Regenwahrscheinlichkeit.
+# Ampel-Legende fuer HTML-Mail-Footer.
+AMPEL_LEGEND = "🟢 unkritisch · 🟡 Achtung · 🟠 Warnung · 🔴 Gefahr"
+
+
+def ampel_dot(value, thresholds: dict) -> str:
+    """Return 4-level traffic-light emoji for a metric value.
+
+    Issue #759: SSoT fuer die Ampel-Logik (wind/gust/precip/pop).
+
+    Args:
+        value:      Numeric value or None.
+        thresholds: Dict with keys 'yellow', 'orange', 'red' (floats).
+
+    Returns:
+        '–' for None; one of 🟢🟡🟠🔴 based on thresholds.
+    """
+    if value is None:
+        return "–"
+    red = thresholds.get("red")
+    orange = thresholds.get("orange")
+    yellow = thresholds.get("yellow")
+    if red is not None and value >= red:
+        return "🔴"
+    if orange is not None and value >= orange:
+        return "🟠"
+    if yellow is not None and value >= yellow:
+        return "🟡"
+    return "🟢"
+
+
+# Mapping: fmt_val col_key → metric catalog id fuer Ampel-Lookup
+_AMPEL_KEY_TO_METRIC_ID = {
+    "wind": "wind",
+    "gust": "gust",
+    "precip": "precipitation",
+    "pop": "rain_probability",
+}
+
+
 # ----------------------------------------------------------------------
 # Cell value formatting
 # ----------------------------------------------------------------------
@@ -399,30 +439,27 @@ def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
         return f"{val:.1f}"
     if key in ("wind", "gust"):
         # Issue #435: simplified -> adjective only, kein km/h-Wert in Zelle.
-        if mode == "simplified":
+        if mode == "simplified" and not html:
             from services.weather_metrics import format_wind_strength
             return format_wind_strength(val)
+        # Issue #759: HTML-Pfad → 4-stufiger Ampelpunkt statt Zahl/Tint.
+        if html:
+            metric_id = _AMPEL_KEY_TO_METRIC_ID[key]
+            return ampel_dot(val, get_metric(metric_id).display_thresholds)
         s = f"{val:.0f}"
         if key == "wind" and row and "_wind_dir_deg" in row:
             compass = degrees_to_compass(row["_wind_dir_deg"])
             if compass:
                 s = f"{s} {compass}"
-        if html and key == "gust":
-            dt = get_metric("gust").display_thresholds
-            if val and dt.get("red") and val >= dt["red"]:
-                return f'<span style="background:#ffebee;color:#c62828;padding:2px 4px;border-radius:3px;font-weight:600">{s}</span>'
-            if val and dt.get("yellow") and val >= dt["yellow"]:
-                return f'<span style="background:#fff9c4;color:#f57f17;padding:2px 4px;border-radius:3px">{s}</span>'
         return s
     if key == "precip":
-        if mode == "simplified":
+        if mode == "simplified" and not html:
             from services.weather_metrics import format_precip_intensity
             return format_precip_intensity(val)
-        s = f"{val:.1f}"
-        dt = get_metric("precipitation").display_thresholds
-        if html and val and dt.get("blue") and val >= dt["blue"]:
-            return f'<span style="background:#e3f2fd;color:#1565c0;padding:2px 4px;border-radius:3px">{s}</span>'
-        return s
+        # Issue #759: HTML-Pfad → 4-stufiger Ampelpunkt statt Zahl/Tint.
+        if html:
+            return ampel_dot(val, get_metric("precipitation").display_thresholds)
+        return f"{val:.1f}"
     if key in ("snow_limit", "snow_depth"):
         return f"{val}" if val else "–"
     if key in ("cloud", "cloud_low", "cloud_mid", "cloud_high"):
@@ -459,11 +496,10 @@ def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
     if key == "pressure":
         return f"{val:.1f}" if val is not None else "–"
     if key == "pop":
-        s = f"{val:.0f}"
-        dt = get_metric("rain_probability").display_thresholds
-        if html and val is not None and dt.get("blue") and val >= dt["blue"]:
-            return f'<span style="background:#e3f2fd;color:#1565c0;padding:2px 4px;border-radius:3px">{s}</span>'
-        return s
+        # Issue #759: HTML-Pfad → 4-stufiger Ampelpunkt statt Zahl/Tint.
+        if html:
+            return ampel_dot(val, get_metric("rain_probability").display_thresholds)
+        return f"{val:.0f}"
     if key == "cape":
         if not use_friendly:
             s = f"{val:.0f}"

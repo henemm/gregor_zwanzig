@@ -1,0 +1,224 @@
+"""TDD tests for Issue #759 — 4-stufige Ampelpunkte fuer Wind/Boen/Regen/Regenwahrscheinlichkeit.
+
+RED phase: All tests fail until implementation is complete.
+
+SPEC: docs/specs/modules/issue_759_669_email_ampel_gewitter.md AC-1..AC-6
+IMPORTANT: NO mocks, NO patch, NO MagicMock. Real function calls only.
+"""
+from __future__ import annotations
+
+from zoneinfo import ZoneInfo
+
+
+# ---------------------------------------------------------------------------
+# Shared test helpers (adapted from test_issue_640_trend_threshold_times.py)
+# ---------------------------------------------------------------------------
+
+def _hv(hour: int, value: float):
+    """Shorthand for HourlyValue."""
+    from src.output.tokens.dto import HourlyValue
+    return HourlyValue(hour=hour, value=value)
+
+
+def _common_render_kwargs():
+    from tests.unit.test_renderers_email import _common_kwargs, _make_token_line
+    kw = _common_kwargs()
+    tl = _make_token_line()
+    return kw, tl
+
+
+def _render_html(trend=None):
+    kw, tl = _common_render_kwargs()
+    from src.output.renderers.email.html import render_html
+    return render_html(
+        segments=kw["segments"], seg_tables=kw["seg_tables"],
+        trip_name=tl.trip_name or "Test-Trip", report_type="evening",
+        dc=kw["display_config"], night_rows=[], thunder_forecast=None,
+        highlights=[], changes=None, stage_name=kw["stage_name"],
+        stage_stats=None, multi_day_trend=trend, compact_summary=None,
+        daylight=None, tz=ZoneInfo("Europe/Berlin"),
+        friendly_keys=kw["friendly_keys"], profile=None, stability_result=None,
+        sent_at=None,
+    )
+
+
+def _make_seg_table_with_values(wind=None, gust=None, precip=None, pop=None):
+    """Build a seg_table with one row containing specific metric values."""
+    from datetime import datetime, timezone
+    from app.metric_catalog import build_default_display_config
+    from app.models import (
+        ForecastDataPoint, ForecastMeta, GPXPoint, NormalizedTimeseries,
+        Provider, SegmentWeatherData, SegmentWeatherSummary, ThunderLevel, TripSegment,
+    )
+    from src.output.renderers.email.helpers import dp_to_row
+
+    dp = ForecastDataPoint(
+        ts=datetime(2026, 7, 11, 10, 0, tzinfo=timezone.utc),
+        t2m_c=15.0,
+        wind10m_kmh=wind,
+        gust_kmh=gust,
+        precip_1h_mm=precip,
+        pop_pct=pop,
+        cloud_total_pct=50,
+        thunder_level=ThunderLevel.NONE,
+        wind_chill_c=12.0,
+    )
+    dc = build_default_display_config()
+    row = dp_to_row(dp, dc, tz=ZoneInfo("Europe/Berlin"))
+    return [row]
+
+
+# ---------------------------------------------------------------------------
+# AC-1: Wind-Zellen zeigen Ampelpunkt im HTML
+# ---------------------------------------------------------------------------
+
+class TestWindAmpelDotFourLevels:
+    """AC-1: fmt_val('wind', ..., html=True) liefert Ampelpunkt statt km/h-Zahl."""
+
+    def test_issue759_wind_ampel_dot_four_levels(self):
+        """AC-1: Wind-Werte 20/40/60/75 km/h → Zellen zeigen 🟢/🟡/🟠/🔴."""
+        from src.output.renderers.email.helpers import fmt_val
+
+        # html=True muss Ampelpunkt liefern
+        assert fmt_val("wind", 20, html=True) == "🟢", f"Got: {fmt_val('wind', 20, html=True)!r}"
+        assert fmt_val("wind", 40, html=True) == "🟡", f"Got: {fmt_val('wind', 40, html=True)!r}"
+        assert fmt_val("wind", 60, html=True) == "🟠", f"Got: {fmt_val('wind', 60, html=True)!r}"
+        assert fmt_val("wind", 75, html=True) == "🔴", f"Got: {fmt_val('wind', 75, html=True)!r}"
+
+        # html=True darf KEINE km/h-Zahl enthalten
+        result_20 = fmt_val("wind", 20, html=True)
+        assert "km/h" not in result_20 and "20" not in result_20, (
+            f"html=True should NOT contain numeric value: {result_20!r}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# AC-2: Boen-Grenzwert ≥80 km/h → rot (Eckwert bewahrt)
+# ---------------------------------------------------------------------------
+
+class TestGustAmpelRedBoundary80:
+    """AC-2: Boen-Zellen zeigen Ampelpunkt; rote Stufe beginnt bei ≥80 km/h."""
+
+    def test_issue759_gust_ampel_red_boundary_80(self):
+        """AC-2: fmt_val('gust', 79, html=True) → 🟠; ('gust', 80, html=True) → 🔴."""
+        from src.output.renderers.email.helpers import fmt_val
+
+        result_79 = fmt_val("gust", 79, html=True)
+        result_80 = fmt_val("gust", 80, html=True)
+
+        assert result_79 == "🟠", f"79 km/h should be 🟠, got: {result_79!r}"
+        assert result_80 == "🔴", f"80 km/h should be 🔴, got: {result_80!r}"
+
+        # Vier Stufen: 40→🟢, 55→🟡, 70→🟠, 85→🔴
+        assert fmt_val("gust", 40, html=True) == "🟢"
+        assert fmt_val("gust", 55, html=True) == "🟡"
+        assert fmt_val("gust", 70, html=True) == "🟠"
+        assert fmt_val("gust", 85, html=True) == "🔴"
+
+
+# ---------------------------------------------------------------------------
+# AC-3: Regen-Zellen zeigen Ampelpunkt
+# ---------------------------------------------------------------------------
+
+class TestPrecipAmpelDotFourLevels:
+    """AC-3: fmt_val('precip', ..., html=True) liefert 4-stufigen Ampelpunkt."""
+
+    def test_issue759_precip_ampel_dot_four_levels(self):
+        """AC-3: Regen-Werte 0/2/6/12 mm → Zellen zeigen 🟢/🟡/🟠/🔴."""
+        from src.output.renderers.email.helpers import fmt_val
+
+        assert fmt_val("precip", 0.5, html=True) == "🟢", f"Got: {fmt_val('precip', 0.5, html=True)!r}"
+        assert fmt_val("precip", 2, html=True) == "🟡", f"Got: {fmt_val('precip', 2, html=True)!r}"
+        assert fmt_val("precip", 6, html=True) == "🟠", f"Got: {fmt_val('precip', 6, html=True)!r}"
+        assert fmt_val("precip", 12, html=True) == "🔴", f"Got: {fmt_val('precip', 12, html=True)!r}"
+
+        # Grenzen: <1 → 🟢, ≥1 → 🟡, ≥5 → 🟠, ≥10 → 🔴
+        assert fmt_val("precip", 0, html=True) == "🟢"
+        assert fmt_val("precip", 1, html=True) == "🟡"
+        assert fmt_val("precip", 5, html=True) == "🟠"
+        assert fmt_val("precip", 10, html=True) == "🔴"
+
+
+# ---------------------------------------------------------------------------
+# AC-4: Regenwahrscheinlichkeit-Zellen zeigen Ampelpunkt
+# ---------------------------------------------------------------------------
+
+class TestPopAmpelDotFourLevels:
+    """AC-4: fmt_val('pop', ..., html=True) liefert 4-stufigen Ampelpunkt."""
+
+    def test_issue759_pop_ampel_dot_four_levels(self):
+        """AC-4: pop-Werte 10/40/65/85 % → Zellen zeigen 🟢/🟡/🟠/🔴."""
+        from src.output.renderers.email.helpers import fmt_val
+
+        assert fmt_val("pop", 10, html=True) == "🟢", f"Got: {fmt_val('pop', 10, html=True)!r}"
+        assert fmt_val("pop", 40, html=True) == "🟡", f"Got: {fmt_val('pop', 40, html=True)!r}"
+        assert fmt_val("pop", 65, html=True) == "🟠", f"Got: {fmt_val('pop', 65, html=True)!r}"
+        assert fmt_val("pop", 85, html=True) == "🔴", f"Got: {fmt_val('pop', 85, html=True)!r}"
+
+        # Grenzen: <30 → 🟢, ≥30 → 🟡, ≥60 → 🟠, ≥80 → 🔴
+        assert fmt_val("pop", 0, html=True) == "🟢"
+        assert fmt_val("pop", 30, html=True) == "🟡"
+        assert fmt_val("pop", 60, html=True) == "🟠"
+        assert fmt_val("pop", 80, html=True) == "🔴"
+
+
+# ---------------------------------------------------------------------------
+# AC-5: Plain-Text bleibt numerisch und ASCII
+# ---------------------------------------------------------------------------
+
+class TestPlainTextStaysNumericAscii:
+    """AC-5: html=False liefert numerische Werte ohne Ampel-Emoji."""
+
+    def test_issue759_plain_text_stays_numeric_ascii(self):
+        """AC-5: fmt_val(..., html=False) fuer die 4 Keys liefert numerisch, kein Ampel-Emoji."""
+        from src.output.renderers.email.helpers import fmt_val
+
+        # Wind: numerisch
+        result_wind = fmt_val("wind", 40, html=False)
+        assert "40" in result_wind, f"Wind plain should contain '40': {result_wind!r}"
+        assert result_wind.isascii(), f"Wind plain should be ASCII: {result_wind!r}"
+        assert "🟡" not in result_wind and "🟢" not in result_wind, (
+            f"Wind plain must NOT contain ampel emoji: {result_wind!r}"
+        )
+
+        # Gust: numerisch
+        result_gust = fmt_val("gust", 55, html=False)
+        assert "55" in result_gust, f"Gust plain should contain '55': {result_gust!r}"
+        assert result_gust.isascii(), f"Gust plain should be ASCII: {result_gust!r}"
+        assert "🟡" not in result_gust, f"Gust plain must NOT contain ampel emoji: {result_gust!r}"
+
+        # Precip: numerisch
+        result_precip = fmt_val("precip", 2, html=False)
+        assert "2" in result_precip, f"Precip plain should contain '2': {result_precip!r}"
+        assert result_precip.isascii(), f"Precip plain should be ASCII: {result_precip!r}"
+        assert "🟡" not in result_precip, f"Precip plain must NOT contain ampel emoji: {result_precip!r}"
+
+        # Pop: numerisch
+        result_pop = fmt_val("pop", 40, html=False)
+        assert "40" in result_pop, f"Pop plain should contain '40': {result_pop!r}"
+        assert result_pop.isascii(), f"Pop plain should be ASCII: {result_pop!r}"
+        assert "🟡" not in result_pop, f"Pop plain must NOT contain ampel emoji: {result_pop!r}"
+
+
+# ---------------------------------------------------------------------------
+# AC-6: Ampel-Legende im HTML-Mail-Body
+# ---------------------------------------------------------------------------
+
+class TestAmpelLegendPresent:
+    """AC-6: HTML-Mail-Body enthaelt Ampel-Legende mit allen 4 Emojis + Labels."""
+
+    def test_issue759_ampel_legend_present(self):
+        """AC-6: render_html-Body enthaelt Legende mit allen vier Emojis + Labels."""
+        html = _render_html()
+
+        # Alle vier Ampel-Emojis muessen in der Legende vorkommen
+        assert "🟢" in html, "HTML body must contain 🟢"
+        assert "🟡" in html, "HTML body must contain 🟡"
+        assert "🟠" in html, "HTML body must contain 🟠"
+        assert "🔴" in html, "HTML body must contain 🔴"
+
+        # Die zugehoerigen Labels muessen vorkommen
+        assert "unkritisch" in html, "Legend must contain 'unkritisch'"
+        assert "Achtung" in html, "Legend must contain 'Achtung'"
+        assert "Warnung" in html, "Legend must contain 'Warnung'"
+        assert "Gefahr" in html, "Legend must contain 'Gefahr'"
