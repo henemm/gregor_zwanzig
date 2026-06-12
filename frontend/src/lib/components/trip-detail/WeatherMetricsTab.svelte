@@ -392,8 +392,9 @@
 		const payload = buildWeatherPayload();
 		saveController.schedule(async () => {
 			await api.put(`/api/trips/${trip.id}/weather-config`, payload);
-			onTripUpdate?.({ ...trip, display_config: payload });
-			savedSnapshot = snapshot(buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds);
+			await api.put(`/api/trips/${trip.id}`, { report_config: reportConfig });
+			onTripUpdate?.({ ...trip, display_config: payload, report_config: reportConfig });
+			savedSnapshot = snapshot(buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, reportConfig);
 		});
 	}
 
