@@ -617,15 +617,15 @@ class GeoSphereProvider:
             ptype = pt[i] if i < len(pt) else None
             humidity = rh[i] if i < len(rh) else None
 
-            wind_kmh = round(wind * 3.6, 1) if wind else None
-            gust_kmh = round(gust * 3.6, 1) if gust else None
+            wind_kmh = round(wind * 3.6, 1) if wind is not None else None
+            gust_kmh = round(gust * 3.6, 1) if gust is not None else None
 
             dp = ForecastDataPoint(
                 ts=ts,
                 t2m_c=round(temp, 1) if temp is not None else None,
                 wind10m_kmh=wind_kmh,
                 gust_kmh=gust_kmh,
-                precip_1h_mm=round(precip, 1) if precip else None,
+                precip_1h_mm=round(precip, 1) if precip is not None else None,
                 humidity_pct=int(humidity) if humidity is not None else None,
                 precip_type=_precip_type_from_code(ptype),
             )
