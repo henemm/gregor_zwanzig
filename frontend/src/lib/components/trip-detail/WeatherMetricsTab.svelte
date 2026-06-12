@@ -136,15 +136,16 @@
 	});
 
 	// Issue #736: channels aus isDirty + snapshot entfernt (Kanal-Config lebt jetzt im Versand-Reiter).
+	// Issue #776: reportConfig in isDirty einschliessen (Toggle-Persistenz).
 	const isDirty = $derived(
-		JSON.stringify({ buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds }) !== savedSnapshot,
+		JSON.stringify({ buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, reportConfig }) !== savedSnapshot,
 	);
 
 	function snapshot(
 		b: Buckets, f: Record<string, boolean>, h: Record<string, Horizons>,
-		tk: boolean, st: Record<string, string>
+		tk: boolean, st: Record<string, string>, rc?: ReportConfig
 	): string {
-		return JSON.stringify({ buckets: b, friendlyMap: f, horizonsMap: h, telegramKurzform: tk, smsThresholds: st });
+		return JSON.stringify({ buckets: b, friendlyMap: f, horizonsMap: h, telegramKurzform: tk, smsThresholds: st, reportConfig: rc ?? {} });
 	}
 
 	function allCatalogIds(): string[] {
@@ -213,7 +214,7 @@
 		horizonsMap = hMap;
 		// Issue #736: channels nicht mehr im snapshot (Conflict 2 entfällt).
 		smsThresholds = thrMap;
-		savedSnapshot = snapshot(b, fMap, hMap, telegramKurzform, thrMap);
+		savedSnapshot = snapshot(b, fMap, hMap, telegramKurzform, thrMap, reportConfig);
 	}
 
 	async function load() {
@@ -366,10 +367,14 @@
 			if (!createMode) {
 				await api.put(`/api/trips/${trip.id}/weather-config`, payload);
 				onTripUpdate?.({ ...trip, display_config: payload });
+				// Issue #776: report_config separat persistieren (zweiter PUT, Read-Modify-Write im Backend).
+				await api.put(`/api/trips/${trip.id}`, { report_config: reportConfig });
+				onTripUpdate?.({ ...trip, display_config: payload, report_config: reportConfig });
 			}
 			saveSuccess = true;
 			// Issue #736: channels aus snapshot entfernt (Conflict 4 entfällt).
-			savedSnapshot = snapshot(buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds);
+			// Issue #776: reportConfig in snapshot einschliessen.
+			savedSnapshot = snapshot(buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, reportConfig);
 			setTimeout(() => { saveSuccess = false; }, 3000);
 		} catch (e: unknown) {
 			console.error(e);

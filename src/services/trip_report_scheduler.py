@@ -721,19 +721,27 @@ class TripReportSchedulerService:
             wp2 = waypoints[i + 1]
 
             # Get wp1 start time. Priority: time_window > arrival_override
-            # (Issue #303, User) > persisted arrival_calculated (Issue #296,
-            # Go-Naismith) > interpolation. Interpolation uses a divergent
-            # max()-formula — the correct Naismith formula is the SUM (see
+            # (Issue #303, User) > stage.start_time (i==0, Bug #783) >
+            # persisted arrival_calculated (Issue #296, Go-Naismith) >
+            # interpolation. Interpolation uses a divergent max()-formula —
+            # the correct Naismith formula is the SUM (see
             # segment_builder.compute_hiking_time); persisted arrival_calculated
             # already carries the summed value.
-            wp1_arrival_str = (
-                getattr(wp1, "arrival_override", None) or wp1.arrival_calculated
-            )
-            wp1_arrival = _parse_hhmm(wp1_arrival_str) if wp1_arrival_str else None
+            wp1_override_str = getattr(wp1, "arrival_override", None)
+            wp1_override = _parse_hhmm(wp1_override_str) if wp1_override_str else None
+            wp1_calculated_str = wp1.arrival_calculated
+            wp1_calculated = _parse_hhmm(wp1_calculated_str) if wp1_calculated_str else None
             if wp1.time_window is not None:
                 wp1_start = wp1.time_window.start
-            elif wp1_arrival is not None:
-                wp1_start = wp1_arrival
+            elif wp1_override is not None:
+                wp1_start = wp1_override
+            elif i == 0 and stage.start_time:
+                # Bug #783: Etappen-Startzeit hat Vorrang vor stale arrival_calculated
+                # am Startpunkt (i==0). arrival_calculated trägt den alten Naismith-Wert
+                # (z.B. 07:00) — der Nutzer hat aber 14:00 als Startzeit konfiguriert.
+                wp1_start = stage.start_time
+            elif wp1_calculated is not None:
+                wp1_start = wp1_calculated
             elif i == 0:
                 wp1_start = default_start
             else:
