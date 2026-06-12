@@ -4,11 +4,8 @@
 	import { toHHMMSS } from '$lib/utils/time';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import * as Card from '$lib/components/ui/card/index.js';
-	import { Btn } from '$lib/components/atoms';
-	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import {
 		DEFAULT_DAILY_SUMMARY_METRICS,
-		countActiveContentModules,
 		CONTENT_MODULE_DESCRIPTIONS,
 	} from './reportConfigWrite.ts';
 	import {
@@ -72,9 +69,6 @@
 	let show_metrics_summary = $state(false);
 	// Issue #721/#723: Ausblick-Block (Großwetterlage + nächste Etappen + Sicherheit%)
 	let show_outlook = $state(true);
-
-	// Issue #693: Collapse-State für E-Mail-Inhalt-Gruppen (reiner UI-State)
-	let contentModulesExpanded = $state(true);
 
 	// Issue #722: E-Mail-Format
 	let email_format = $state<'full' | 'compact'>('full');
@@ -458,46 +452,40 @@
 			{/if}
 		</div>
 
-		<!-- Gruppe A: Inhalts-Bausteine (Issue #723: genau 3) -->
+		<!-- Gruppe A: Inhalts-Bausteine (Issue #723: genau 3, Issue #774: direkt ohne Einklapp-Toggle) -->
 		<div class="space-y-1" style={email_format === 'compact' ? 'opacity:0.45;pointer-events:none' : ''}>
-			<Btn variant="ghost" size="sm" data-testid="report-content-modules-toggle" onclick={() => { contentModulesExpanded = !contentModulesExpanded; }} disabled={email_format === 'compact'}>
-				Inhalts-Bausteine ({countActiveContentModules({ show_stage_stats, show_metrics_summary, show_outlook })} aktiv)
-				<ChevronDown style="transform: rotate({contentModulesExpanded ? 180 : 0}deg); transition: transform 150ms ease;" />
-			</Btn>
-			{#if contentModulesExpanded}
-				<div data-testid="report-content-modules-body" class="space-y-2 pl-2">
-					<div class="text-sm">
-						<span data-testid="report-show-metrics-summary" class="inline-flex items-center gap-2">
-							<Checkbox
-								checked={show_metrics_summary}
-								disabled={email_format === 'compact'}
-								onchange={(e) => { show_metrics_summary = (e.target as HTMLInputElement).checked; }}
-							>{CONTENT_MODULE_DESCRIPTIONS.show_metrics_summary.label}</Checkbox>
-						</span>
-						<p class="pl-6 text-xs text-muted-foreground mt-0.5">{CONTENT_MODULE_DESCRIPTIONS.show_metrics_summary.description}</p>
-					</div>
-					<div class="text-sm">
-						<span data-testid="report-show-outlook" class="inline-flex items-center gap-2">
-							<Checkbox
-								checked={show_outlook}
-								disabled={email_format === 'compact'}
-								onchange={(e) => { show_outlook = (e.target as HTMLInputElement).checked; }}
-							>{CONTENT_MODULE_DESCRIPTIONS.show_outlook.label}</Checkbox>
-						</span>
-						<p class="pl-6 text-xs text-muted-foreground mt-0.5">{CONTENT_MODULE_DESCRIPTIONS.show_outlook.description}</p>
-					</div>
-					<div class="text-sm">
-						<span data-testid="report-show-stage-stats" class="inline-flex items-center gap-2">
-							<Checkbox
-								checked={show_stage_stats}
-								disabled={email_format === 'compact'}
-								onchange={(e) => { show_stage_stats = (e.target as HTMLInputElement).checked; }}
-							>{CONTENT_MODULE_DESCRIPTIONS.show_stage_stats.label}</Checkbox>
-						</span>
-						<p class="pl-6 text-xs text-muted-foreground mt-0.5">{CONTENT_MODULE_DESCRIPTIONS.show_stage_stats.description}</p>
-					</div>
+			<div data-testid="report-content-modules-body" class="space-y-2 pl-2">
+				<div class="text-sm">
+					<span data-testid="report-show-metrics-summary" class="inline-flex items-center gap-2">
+						<Checkbox
+							checked={show_metrics_summary}
+							disabled={email_format === 'compact'}
+							onchange={(e) => { show_metrics_summary = (e.target as HTMLInputElement).checked; }}
+						>{CONTENT_MODULE_DESCRIPTIONS.show_metrics_summary.label}</Checkbox>
+					</span>
+					<p class="pl-6 text-xs text-muted-foreground mt-0.5">{CONTENT_MODULE_DESCRIPTIONS.show_metrics_summary.description}</p>
 				</div>
-			{/if}
+				<div class="text-sm">
+					<span data-testid="report-show-outlook" class="inline-flex items-center gap-2">
+						<Checkbox
+							checked={show_outlook}
+							disabled={email_format === 'compact'}
+							onchange={(e) => { show_outlook = (e.target as HTMLInputElement).checked; }}
+						>{CONTENT_MODULE_DESCRIPTIONS.show_outlook.label}</Checkbox>
+					</span>
+					<p class="pl-6 text-xs text-muted-foreground mt-0.5">{CONTENT_MODULE_DESCRIPTIONS.show_outlook.description}</p>
+				</div>
+				<div class="text-sm">
+					<span data-testid="report-show-stage-stats" class="inline-flex items-center gap-2">
+						<Checkbox
+							checked={show_stage_stats}
+							disabled={email_format === 'compact'}
+							onchange={(e) => { show_stage_stats = (e.target as HTMLInputElement).checked; }}
+						>{CONTENT_MODULE_DESCRIPTIONS.show_stage_stats.label}</Checkbox>
+					</span>
+					<p class="pl-6 text-xs text-muted-foreground mt-0.5">{CONTENT_MODULE_DESCRIPTIONS.show_stage_stats.description}</p>
+				</div>
+			</div>
 		</div>
 	</Card.Root>
 	{/if}

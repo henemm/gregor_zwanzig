@@ -5,6 +5,48 @@
 >
 > Diese Datei bleibt als Detail-Referenz fuer Root-Cause-Analysen bestehen.
 
+## BUG-774: Metriken-Überblick-Checkbox persistiert nicht
+
+**Status:** RESOLVED (2026-06-12) | **Severity:** Medium | **GitHub Issue:** #774 | **Spec:** `docs/specs/bugfix/issue_774_metrics_summary_persist.md`
+
+### Symptom
+
+Im Metriken-Reiter eines Trips wurde die Checkbox „Metriken-Überblick" (`report_config.show_metrics_summary`) nicht gespeichert. Nach dem Speichern war die Checkbox beim Reload wieder deaktiviert, obwohl der Nutzer sie aktiviert hatte. Der Speichern-Button blieb auch bei reinen Checkbox-Änderungen deaktiviert.
+
+### Root Cause
+
+Zwei Probleme:
+
+1. **Dirty-Tracking:** `isDirty` (Z.135) in `WeatherMetricsTab.svelte` und `snapshot()` (Z.139) berücksichtigten das `reportConfig`-Objekt nicht — eine Änderung an den Inhalts-Checkboxen markierte den Tab nicht als dirty, wodurch der Speichern-Button deaktiviert blieb.
+
+2. **Persistenz:** `handleSave()` sendete nur `display_config` via `PUT /api/trips/{id}/weather-config`, niemals das in `reportConfig` gepflegte `report_config`-Objekt.
+
+### Fix (Committed 2026-06-12)
+
+**WeatherMetricsTab.svelte:**
+- `isDirty` (Z.135) um Vergleich von `reportConfig` erweitert
+- `snapshot()` (Z.139) speichert nun auch `reportConfig` als Teil des Snapshots
+- `handleSave()` (Z.363) um zweiten PUT-Call ergänzt: `await api.put(/api/trips/{id}, { report_config: reportConfig })` (Merge via Go-Backend Issue #99)
+- `handleDiscard()` restauriert nun auch `reportConfig` aus dem gespeicherten Snapshot
+
+**EditReportConfigSection.svelte:**
+- Einklapp-Toggle `report-content-modules-toggle` entfernt
+- `contentModulesExpanded`-Block aufgelöst — die drei Inhalts-Checkboxen sind jetzt direkt sichtbar ohne Collapse
+- `ChevronDown`-Import und ungenutzter State entfernt
+
+### Files Changed
+
+- `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte` (+35 LoC)
+- `frontend/src/lib/components/edit/EditReportConfigSection.svelte` (-12 LoC)
+
+### Lessons Learned
+
+1. **Dirty-Tracking:** Mehrerer State-Objekte (`displayConfig`, `reportConfig`) müssen alle in `isDirty` und `snapshot()` erfasst sein — ein fehlender Vergleich deaktiviert Speichern.
+2. **Partial Persistence:** Der Trip-Editor spricht zwei verschiedene Endpoints an (`weather-config` für Display-Metriken, `/api/trips/{id}` für Report-Config). Beide müssen im Save-Handler aufgerufen werden.
+3. **UI-Redundanz:** Einklapp-Elemente, die keine Raumersparnis bringen, erschweren das UX. Direktes Rendering der Inhalte ist klarer.
+
+---
+
 ## BUG-730-INVALIDURL: prod_selftest.py crasht bei nicht-probearen URLs
 
 **Status:** RESOLVED (2026-06-11) | **Severity:** Low | **GitHub Issue:** #730 | **Spec:** `docs/specs/modules/bug_730_prod_selftest_invalidurl.md`

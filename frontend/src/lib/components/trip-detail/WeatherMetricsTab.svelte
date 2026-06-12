@@ -136,7 +136,7 @@
 	});
 
 	// Issue #736: channels aus isDirty + snapshot entfernt (Kanal-Config lebt jetzt im Versand-Reiter).
-	// Issue #776: reportConfig in isDirty einschliessen (Toggle-Persistenz).
+	// Issue #776/#774: reportConfig in isDirty einschliessen (Toggle-Persistenz, Checkbox-Änderung macht Tab dirty).
 	const isDirty = $derived(
 		JSON.stringify({ buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, reportConfig }) !== savedSnapshot,
 	);
@@ -213,6 +213,7 @@
 		friendlyMap = fMap;
 		horizonsMap = hMap;
 		// Issue #736: channels nicht mehr im snapshot (Conflict 2 entfällt).
+		// Issue #774: reportConfig in snapshot aufnehmen.
 		smsThresholds = thrMap;
 		savedSnapshot = snapshot(b, fMap, hMap, telegramKurzform, thrMap, reportConfig);
 	}
@@ -330,11 +331,14 @@
 			telegramKurzform = snap.telegramKurzform ?? false;
 			// Issue #736: channels nicht mehr im snapshot (Conflict 3 entfällt).
 			smsThresholds = snap.smsThresholds ?? {};
+			// Issue #774: reportConfig wiederherstellen (sonst bleibt Tab dirty nach Verwerfen).
+			reportConfig = snap.reportConfig ?? {};
 		} catch (e) {
 			console.error(e);
 			initFromTrip();
 			telegramKurzform = trip.display_config?.telegram_kurzform ?? false;
 			smsThresholds = {};
+			reportConfig = trip.report_config ? JSON.parse(JSON.stringify(trip.report_config)) : {};
 		}
 	}
 
@@ -366,14 +370,12 @@
 			// Issue #622: Create-Modus — kein PUT, State per Binding gehalten.
 			if (!createMode) {
 				await api.put(`/api/trips/${trip.id}/weather-config`, payload);
-				onTripUpdate?.({ ...trip, display_config: payload });
-				// Issue #776: report_config separat persistieren (zweiter PUT, Read-Modify-Write im Backend).
+				// Issue #776/#774: report_config separat persistieren (zweiter PUT, Read-Modify-Write im Backend).
 				await api.put(`/api/trips/${trip.id}`, { report_config: reportConfig });
 				onTripUpdate?.({ ...trip, display_config: payload, report_config: reportConfig });
 			}
 			saveSuccess = true;
 			// Issue #736: channels aus snapshot entfernt (Conflict 4 entfällt).
-			// Issue #776: reportConfig in snapshot einschliessen.
 			savedSnapshot = snapshot(buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, reportConfig);
 			setTimeout(() => { saveSuccess = false; }, 3000);
 		} catch (e: unknown) {
