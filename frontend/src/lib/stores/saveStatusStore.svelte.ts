@@ -58,8 +58,11 @@ export class SaveStatus {
 		return this._timer !== null;
 	}
 
-	/** Schedule a debounced save (700ms default). Calling again cancels previous timer. */
+	/** Schedule a debounced save (700ms default). Calling again cancels previous timer.
+	 *  SOFORT setSaving() — damit der Indikator nie "idle" (Gespeichert ✓) zeigt,
+	 *  während eine ungespeicherte Änderung im Debounce-Fenster wartet (AC-1). */
 	schedule(saveFn: () => Promise<void>, ms = 700): void {
+		this.setSaving();
 		this._pendingFn = saveFn;
 		if (this._timer !== null) clearTimeout(this._timer);
 		this._timer = setTimeout(() => { void this.doSave(saveFn); }, ms);
