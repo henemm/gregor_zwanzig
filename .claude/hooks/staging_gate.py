@@ -39,7 +39,8 @@ from pathlib import Path
 
 import _e2e_paths
 
-REPO_DIR = Path("/home/hem/gregor_zwanzig")
+_DEFAULT_REPO_DIR = Path("/home/hem/gregor_zwanzig")
+REPO_DIR = _DEFAULT_REPO_DIR
 CANONICAL_E2E_PATH = REPO_DIR / ".claude" / "e2e_verified.json"
 STALE_HOURS = 24
 # Issue #666: max. behaltene commit-getaggte Attestationen (analog .backups/-Pattern)
@@ -50,13 +51,39 @@ def _log(msg: str, stream=sys.stdout) -> None:
     print(f"[staging-gate] {msg}", file=stream)
 
 
+def _shared_repo_dir() -> Path:
+    """Datei-Ort der Attestation: geteiltes Hauptrepo.
+
+    Test-Override via REPO_DIR (monkeypatch ≠ Default) → Alt-Verhalten (ein Repo).
+    Sonst dynamisch via git, fail-soft auf REPO_DIR.
+    Sentinel-Vergleich ist Wert-basiert (Path.__eq__): ein Test, der REPO_DIR exakt
+    auf `_DEFAULT_REPO_DIR` setzt, gilt absichtlich als 'nicht umgebogen'.
+    """
+    if REPO_DIR != _DEFAULT_REPO_DIR:
+        return REPO_DIR
+    resolved = _e2e_paths.shared_repo_dir()
+    return resolved if resolved is not None else REPO_DIR
+
+
+def _verified_repo_dir() -> Path:
+    """Commit-/Scope-Quelle: aktueller Worktree (cwd).
+
+    Test-Override via REPO_DIR (monkeypatch ≠ Default) → Alt-Verhalten.
+    Sonst dynamisch via git, fail-soft.
+    """
+    if REPO_DIR != _DEFAULT_REPO_DIR:
+        return REPO_DIR
+    resolved = _e2e_paths.worktree_repo_dir()
+    return resolved if resolved is not None else REPO_DIR
+
+
 def _head_sha() -> str:
-    return _e2e_paths.head_sha(REPO_DIR)
+    return _e2e_paths.head_sha(_verified_repo_dir())
 
 
 def _commit_e2e_path(sha: str | None = None) -> Path:
     """Commit-getaggter Attestation-Pfad: .claude/e2e_verified/<sha>.json"""
-    return _e2e_paths.commit_e2e_path(REPO_DIR, sha or _head_sha())
+    return _e2e_paths.commit_e2e_path(_shared_repo_dir(), sha or _head_sha())
 
 
 def _default_e2e_path() -> Path:
@@ -67,7 +94,9 @@ def _default_e2e_path() -> Path:
     → Fallback (Migration). Sonst die (nicht existente) getaggte Datei → wird von
     gate_check als 'fehlt' behandelt.
     """
-    return _e2e_paths.default_e2e_path(REPO_DIR, CANONICAL_E2E_PATH, _head_sha())
+    shared = _shared_repo_dir()
+    canonical = CANONICAL_E2E_PATH if REPO_DIR != _DEFAULT_REPO_DIR else shared / ".claude" / "e2e_verified.json"
+    return _e2e_paths.default_e2e_path(shared, canonical, _head_sha())
 
 
 def _detect_committed_scope() -> str:
@@ -77,7 +106,7 @@ def _detect_committed_scope() -> str:
     """
     result = subprocess.run(
         ["git", "diff", "--name-only", "HEAD~1", "HEAD"],
-        capture_output=True, text=True, cwd=str(REPO_DIR),
+        capture_output=True, text=True, cwd=str(_verified_repo_dir()),
     )
     files = [f.strip() for f in result.stdout.splitlines() if f.strip()]
     if not files:
@@ -160,7 +189,7 @@ def _telegram_live_gate() -> int:
 
     result = subprocess.run(
         ["git", "diff", "--name-only", "HEAD~1", "HEAD"],
-        capture_output=True, text=True, cwd=str(REPO_DIR),
+        capture_output=True, text=True, cwd=str(_verified_repo_dir()),
     )
     changed = [f.strip() for f in result.stdout.splitlines() if f.strip()]
     if not mod._scope_touches_telegram(changed):
