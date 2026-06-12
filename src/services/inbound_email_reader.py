@@ -15,6 +15,7 @@ import imaplib
 import logging
 import re
 from datetime import datetime, timezone
+from email.header import decode_header, make_header
 
 from app.config import Settings
 from app.loader import load_all_trips
@@ -26,6 +27,11 @@ from services.trip_command_processor import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _norm(s: str) -> str:
+    """Normalisiert Trip-Namen: Leerzeichen↔Unterstrich, Mehrfach-WS, lowercase."""
+    return re.sub(r"\s+", " ", s.replace("_", " ")).strip().lower()
 
 
 class InboundEmailReader:
@@ -169,8 +175,13 @@ class InboundEmailReader:
             subject = cleaned
 
     def _extract_trip_name(self, subject: str) -> str | None:
-        """Extract trip name from '[Trip Name] Morning/Evening Report'."""
-        clean = self._strip_reply_prefixes(subject)
+        """Extract trip name from '[Trip Name] Morning/Evening Report'.
+
+        RFC-2047-dekodiert den Betreff zuerst (Bug #775: Em-Dash → Q-Encoding,
+        Leerzeichen→Underscore, Klammern→=5B/=5D).
+        """
+        decoded = str(make_header(decode_header(subject)))
+        clean = self._strip_reply_prefixes(decoded)
         match = self._SUBJECT_TRIP_RE.search(clean)
         return match.group(1) if match else None
 
@@ -228,9 +239,18 @@ class InboundEmailReader:
         return user_id, base_settings.with_user_profile(user_id)
 
     def _find_trip_id(self, trip_name: str, user_id: str = "default") -> str | None:
-        """Case-insensitive name to trip-ID lookup for the given user."""
-        for trip in load_all_trips(user_id):
-            if trip.name.lower() == trip_name.lower():
+        """Trip-Lookup: primär über GZ#-Shortcode, Fallback toleranter Namensvergleich."""
+        trips = load_all_trips(user_id)
+        # Shortcode-Routing: "GZ#HERM ..." → erstes Token ist der Code
+        first_token = trip_name.split()[0].upper() if trip_name.strip() else ""
+        if first_token.startswith("GZ#"):
+            for trip in trips:
+                if trip.shortcode.upper() == first_token:
+                    return trip.id
+        # Toleranter Namensvergleich (Leerzeichen ↔ Unterstrich, case-insensitiv)
+        query = _norm(trip_name)
+        for trip in trips:
+            if _norm(trip.name) == query:
                 return trip.id
         logger.warning(f"No trip found for name: {trip_name!r} (user={user_id!r})")
         return None

@@ -91,6 +91,7 @@ def _build_skeleton(
     report_de: str,
     risk_de: str | None,
     has_tokens: bool,
+    shortcode: str | None = None,
 ) -> str:
     """Build the non-token prefix: '[trip] stage — report — risk'.
 
@@ -100,7 +101,14 @@ def _build_skeleton(
     If risk is None AND no tokens follow, the trailing dash is dropped to avoid
     a dangling em-dash like '... — Abend —' (validator finding 2026-04-27).
     """
-    head = f"[{trip_name}] {stage_name}" if trip_name else stage_name
+    # Bug #775: Shortcode als primärer ASCII-Routing-Key im Klammern-Präfix.
+    # GZ#HERM ist immun gegen RFC-2047-Q-Encoding (keine Leerzeichen).
+    if shortcode:
+        head = f"[{shortcode}] {stage_name}"
+    elif trip_name:
+        head = f"[{trip_name}] {stage_name}"
+    else:
+        head = stage_name
     if risk_de:
         return f"{head} {_DASH} {report_de} {_DASH} {risk_de}"
     if has_tokens:
@@ -185,6 +193,7 @@ def build_email_subject(
         )
         skeleton = _build_skeleton(
             trip_name=token_line.trip_name if step["trip"] else None,
+            shortcode=token_line.shortcode if step["trip"] else None,
             stage_name=token_line.stage_name,
             report_de=report_de,
             risk_de=risk_de,

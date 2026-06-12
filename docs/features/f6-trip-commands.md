@@ -1,6 +1,6 @@
 # Trip-Befehle — Email-Reply & Telegram (F6)
 
-**Updated:** 2026-06-11 (Issue #731 — Befehlssatz vereinheitlicht: abruf-zentriert (HEUTE/MORGEN/JETZT/GEWITTER/RUHETAG/STATUS/STOP/WEITER/HILFE), PAUSE/SKIP/CONFIG entfernt); 2026-06-08 (Issues #672/#671 — E2E-Pipeline-Tests + vollständiges Bot-Menü; #651/#653/#654/#655 — Telegram Tier-1/2/3 + Zoom-Navigation)
+**Updated:** 2026-06-12 (Bug #775 — Trip-Shortcode-Routing: E-Mail-Betreff trägt neuen `[GZ#XXXX]`-Shortcode als primären Routing-Key, RFC-2047-Dekodierung, toleranter Whitespace-Lookup als Fallback); 2026-06-11 (Issue #731 — Befehlssatz vereinheitlicht: abruf-zentriert (HEUTE/MORGEN/JETZT/GEWITTER/RUHETAG/STATUS/STOP/WEITER/HILFE), PAUSE/SKIP/CONFIG entfernt); 2026-06-08 (Issues #672/#671 — E2E-Pipeline-Tests + vollständiges Bot-Menü; #651/#653/#654/#655 — Telegram Tier-1/2/3 + Zoom-Navigation)
 
 Gregor Zwanzig empfaengt Trip-Befehle ueber zwei Kanäle:
 - **Email:** Du antwortest auf einen bestehenden Report (alle 5 Minuten abgerufen)
@@ -8,10 +8,12 @@ Gregor Zwanzig empfaengt Trip-Befehle ueber zwei Kanäle:
 
 ## Email: So funktioniert's
 
-1. Du erhaeltst einen Report per Email (z.B. `[GR221 Mallorca] Morning Report`)
-2. Du antwortest auf diese Email
+1. Du erhaeltst einen Report per Email (z.B. `[GZ#GRANK] GR221 Mallorca — Morning Report`)
+2. Du antwortest auf diese Email (die Antwort-Mail erbt den Betreff)
 3. In die **erste Zeile** schreibst du den Befehl
-4. Gregor verarbeitet den Befehl und schickt dir eine Bestaetigung zurueck
+4. Gregor verarbeitet den Befehl über den Shortcode-Identifier und schickt dir eine Bestaetigung zurueck
+
+**Hinweis:** Der Betreff enthält seit Bug #775 einen eindeutigen Shortcode (`[GZ#XXXX]`), z.B. `[GZ#GRANK]` für „GR221 Mallorca". Das macht die Trip-Erkennung robust gegen RFC-2047-Encoding-Fehler (wenn Leerzeichen im Trip-Namen zu Unterstrichen werden). Der Shortcode wird aus dem Trip-Namen generiert und pro Nutzer eindeutig gehalten.
 
 ## Telegram: So funktioniert's
 
@@ -180,7 +182,7 @@ Ohne `GZ_INBOUND_ADDRESS` werden alle ungelesenen Emails geprueft (wie bisher).
 
 - Der Befehl muss in der **ersten nicht-leeren Zeile** stehen
 - Gross-/Kleinschreibung ist egal (`### RUHETAG` funktioniert auch)
-- Der Trip wird aus dem Email-Betreff erkannt: `[Trip Name]`
+- Der Trip wird aus dem Email-Betreff erkannt: **Primär über den Shortcode** `[GZ#XXXX]`, falls nicht vorhanden fallback auf Namensvergleich (robust gegen Whitespace-Variationen)
 - Nur Emails von deiner konfigurierten Adresse werden akzeptiert
 - Unbekannte Befehle werden mit einer Hilfe-Antwort beantwortet
 

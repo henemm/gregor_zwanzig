@@ -97,6 +97,7 @@ class TokenLine:
     full_length: int = 0
     main_risk: str | None = None  # β2: Top-Risk-Label aus RiskEngine (English; subject.py übersetzt zu DE)
     trip_name: str | None = None  # β2: Optional, für Subject-Präfix [{trip_name}]
+    shortcode: str | None = None  # Bug #775: GZ#XXXX — primärer Routing-Key im Betreff
 
     def render(self, max_length: int = 160) -> str:
         from src.output.tokens.render import render_line

@@ -402,6 +402,7 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
         alert_cooldown_minutes=data.get("alert_cooldown_minutes"),
         alert_quiet_from=data.get("alert_quiet_from"),
         alert_quiet_to=data.get("alert_quiet_to"),
+        shortcode=data.get("shortcode", ""),
     )
     return trip
 
@@ -998,6 +999,9 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             "profile": trip.aggregation.profile.value,
         },
     }
+
+    if trip.shortcode:
+        data["shortcode"] = trip.shortcode
 
     # Serialize weather config (Feature 2.6 legacy, preserved for migration)
     if trip.weather_config:

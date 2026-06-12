@@ -2,10 +2,10 @@
 entity_id: inbound_command_channels
 type: module
 created: 2026-02-17
-updated: 2026-04-12
+updated: 2026-06-12
 status: draft
-version: "1.1"
-tags: [f6, inbound, email, sms, imap, polling, channel]
+version: "1.2"
+tags: [f6, inbound, email, sms, imap, polling, channel, shortcode]
 ---
 
 # Inbound Command Channels
@@ -31,14 +31,16 @@ Kanal zurueck.
 
 | Entity | Type | Purpose |
 |--------|------|---------|
+| `trip_shortcode_routing.md` | spec | Shortcode-generierung, RFC-2047-Dekodierung, toleranter Trip-Lookup (Bug #775) |
 | `src/services/trip_command_processor.py` | module | Verarbeitet geparste Befehle, gibt CommandResult zurueck |
 | `src/app/config.py` | module | Settings: SMTP_USER, SMTP_PASS, MAIL_TO |
 | `src/app/loader.py` | module | load_all_trips() fuer Trip-Name → Trip-ID Lookup |
+| `src/app/shortcode.py` | module | generate_shortcode(trip_name, user_id) → GZ#-Code mit Kollisions-Guard |
 | `src/outputs/email.py` | module | EmailOutput fuer Bestaetigungs-Email (Reply) |
 | `src/web/scheduler.py` | module | APScheduler-Registrierung des Poll-Jobs |
 | `imaplib` (stdlib) | module | IMAP4_SSL Client |
-| `email` (stdlib) | module | email.message_from_bytes(), Header-Parsing |
-| `re` (stdlib) | module | Subject-Regex fuer Trip-Name-Extraktion |
+| `email` (stdlib) | module | email.message_from_bytes(), email.header.decode_header() für RFC-2047 (Bug #775) |
+| `re` (stdlib) | module | Subject-Regex fuer Trip-Name-Extraktion, Whitespace-Normalisierung |
 
 ## Architecture
 

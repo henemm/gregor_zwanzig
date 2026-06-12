@@ -23,6 +23,12 @@ from app.trip import Stage, Trip
 
 logger = logging.getLogger(__name__)
 
+
+def _norm(s: str) -> str:
+    """Normalisiert Trip-Namen: Leerzeichen↔Unterstrich, Mehrfach-WS, lowercase."""
+    return re.sub(r"\s+", " ", s.replace("_", " ")).strip().lower()
+
+
 # ---------------------------------------------------------------------------
 # DTOs
 # ---------------------------------------------------------------------------
@@ -350,9 +356,16 @@ class TripCommandProcessor:
         return None, None
 
     def _find_trip(self, trip_name: str, user_id: str = "default") -> Optional[Trip]:
-        """Case-insensitive trip name lookup, user-scoped."""
-        for trip in load_all_trips(user_id):
-            if trip.name.lower() == trip_name.lower():
+        """Trip-Lookup: primär über GZ#-Shortcode, Fallback toleranter Namensvergleich."""
+        trips = load_all_trips(user_id)
+        first_token = trip_name.split()[0].upper() if trip_name.strip() else ""
+        if first_token.startswith("GZ#"):
+            for trip in trips:
+                if trip.shortcode.upper() == first_token:
+                    return trip
+        query = _norm(trip_name)
+        for trip in trips:
+            if _norm(trip.name) == query:
                 return trip
         logger.warning(f"No trip found for name: {trip_name!r} (user: {user_id!r})")
         return None

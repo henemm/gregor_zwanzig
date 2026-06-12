@@ -2,10 +2,10 @@
 entity_id: output_token_builder
 type: module
 created: 2026-04-25
-updated: 2026-04-26
+updated: 2026-06-12
 status: draft
-version: "1.1"
-tags: [output, pipeline, refactor, epic-render-pipeline]
+version: "1.2"
+tags: [output, pipeline, refactor, epic-render-pipeline, shortcode]
 epic: render-pipeline-consolidation (#96)
 phase: β1
 ---
@@ -155,6 +155,9 @@ class TokenLine:
     tokens: tuple[Token, ...]         # In sms_format.md §2 POSITIONAL-Reihenfolge
     truncated: bool = False           # True wenn §6-Kürzung angewandt
     full_length: int = 0              # Länge OHNE Truncation (Subject-Filter)
+    main_risk: str | None = None      # NEU β2: Top-Risk-Label aus RiskEngine, deutsch (z.B. "Gewitter")
+    trip_name: str | None = None      # NEU β2: Optional, für Subject-Präfix [{trip_name}] (veraltet, siehe shortcode)
+    shortcode: str | None = None      # NEU Bug #775: Trip-Shortcode GZ#XXXX für Subject-Präfix [{shortcode}]
 
     def render(self, max_length: int = 160) -> str:
         """
@@ -369,6 +372,11 @@ Kein Feature-Flag nötig, da kein Caller umgestellt wird.
 | `weather_metrics_dialog_unification.md` v1.0 | Bug #89, parallel — UI-Schicht des Epics |
 
 ## Changelog
+
+### v1.2 (2026-06-12)
+
+- **TokenLine erweitert um `shortcode` Feld** (Bug #775) — neuer `shortcode: str | None`-Feld für Trip-Shortcode im Format `GZ#XXXX`. Der Builder füllt dieses Feld, damit `build_email_subject()` das Shortcode-Präfix im Subject nutzen kann. Shortcode hat Priorität über `trip_name` beim Subject-Bau.
+- **Bezug zu `trip_shortcode_routing.md`** — neuer Dependency-Link zu Bug-#775-Spec für Shortcode-Generierung und Routing-Logik.
 
 ### v1.1 (2026-04-26)
 

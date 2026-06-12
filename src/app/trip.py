@@ -197,6 +197,7 @@ class Trip:
     alert_cooldown_minutes: Optional[int] = None  # Issue #181: per-trip cooldown (0=no limit)
     alert_quiet_from: Optional[str] = None  # Issue #181: quiet hours start "HH:MM"
     alert_quiet_to: Optional[str] = None  # Issue #181: quiet hours end "HH:MM"
+    shortcode: str = ""  # Bug #775: GZ#XXXX — per-user eindeutig, ASCII, immun gegen Q-Encoding
 
     @property
     def start_date(self) -> date:

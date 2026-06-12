@@ -2,10 +2,10 @@
 entity_id: output_subject_filter
 type: module
 created: 2026-04-26
-updated: 2026-04-26
+updated: 2026-06-12
 status: draft
-version: "1.0"
-tags: [output, pipeline, refactor, epic-render-pipeline]
+version: "1.1"
+tags: [output, pipeline, refactor, epic-render-pipeline, shortcode]
 epic: render-pipeline-consolidation (#96)
 phase: β2
 ---
@@ -42,23 +42,25 @@ Heute baut `src/formatters/trip_report.py::_generate_subject()` ein triviales Su
 
 ## Architektur-Entscheidungen
 
-### A1. Subject-Schema (§11-konform, mit Trip-Präfix)
+### A1. Subject-Schema (§11-konform, mit Shortcode-Präfix)
 
-Das neue Subject-Format:
+Das neue Subject-Format (seit Bug #775):
 
 ```
-[{Trip}] {Etappen-Name} — {ReportType-DE} — {MainRisk} {D-Token} {W-Token} {G-Token} {TH:-Token}
+[{Shortcode}] {Etappen-Name} — {ReportType-DE} — {MainRisk} {D-Token} {W-Token} {G-Token} {TH:-Token}
 ```
 
 Beispiele:
 
 ```
-[GR221] Tag 3: Valldemossa → Sóller — Morgen — Thunder D24 W15 G30 TH:M
-[GR20] Étape 7: Vizzavona — Abend — Storm D18 W30@14 G55@15 TH:H HR:M@13TH:H@14
-[GR221] Tag 1: Port d'Andratx → Esporles — Update — D26 W08 G15
+[GZ#GRANK] Tag 3: Valldemossa → Sóller — Morgen — Gewitter D24 W15 G30 TH:M
+[GZ#GR20] Étape 7: Vizzavona — Abend — Sturm D18 W30@14 G55@15 TH:H HR:M@13TH:H@14
+[GZ#GRANK] Tag 1: Port d'Andratx → Esporles — Update — D26 W08 G15
 ```
 
-**Begründung:** §11 schlägt `{Etappe} – {ReportType} – {MainRisk} – D...` vor; das Trip-Präfix in eckigen Klammern wurde in Phase 2 als wichtig für Mail-Filter ergänzt (Postfach-Regeln greifen typischerweise auf `[GR221]`/`[GR20]` als Header). Der Etappen-Name dient als Hauptdiskriminator: Multi-Tag-Trips erzeugen N E-Mails — die Subjects müssen unterscheidbar sein, sonst kollabiert das Postfach zu einem unlesbaren Thread.
+**Begründung:** §11 schlägt `{Etappe} – {ReportType} – {MainRisk} – D...` vor; der Shortcode-Präfix in eckigen Klammern (Format `[GZ#XXXX]`) ersetzt das frühere Trip-Name-Präfix als eindeutiger, pro Nutzer stabiler Identifier für Email-Replies (Bug #775). Der Shortcode ist ASCII-robust gegen RFC-2047-Encoding-Artefakte. Für Mail-Filter greifen Benutzer üblicherweise auf Einträge wie `[GZ#GRANK]` zu. Der Etappen-Name dient als Hauptdiskriminator: Multi-Tag-Trips erzeugen N E-Mails — die Subjects müssen unterscheidbar sein, sonst kollabiert das Postfach zu einem unlesbaren Thread.
+
+**Hinweis auf Backward Compatibility:** Mails vor dem Bug-#775-Deploy tragen kein Shortcode-Präfix, sondern einen freien Trip-Namen oder sind ganz ohne Präfix. Der Inbound-Reader weicht bei fehlender Shortcode auf toleranten Namensvergleich aus (siehe `trip_shortcode_routing.md`).
 
 ### A2. ReportType-Mapping (Deutsch)
 
@@ -142,10 +144,11 @@ class TokenLine:
     truncated: bool = False
     full_length: int = 0
     main_risk: str | None = None  # NEU β2: Top-Risk-Label aus RiskEngine, deutsch
-    trip_name: str | None = None  # NEU β2: Optional, für Subject-Präfix [{trip_name}]
+    trip_name: str | None = None  # NEU β2: Optional, für Subject-Präfix [{trip_name}] (veraltet, siehe shortcode)
+    shortcode: str | None = None   # NEU Bug #775: Trip-Shortcode, Format GZ#XXXX, für Subject-Präfix [{shortcode}]
 ```
 
-Beide neuen Felder sind `Optional` mit Default `None` — bestehende Caller bleiben kompatibel. Der Builder (`build_token_line`) füllt sie wenn die Information verfügbar ist.
+Diese Felder sind `Optional` mit Default `None` — bestehende Caller bleiben kompatibel. Der Builder (`build_token_line`) füllt sie wenn die Information verfügbar ist. Der `shortcode` hat Priorität vor `trip_name` beim Subject-Präfix-Bau (Bug #775).
 
 ### Funktions-Signatur
 
@@ -154,26 +157,32 @@ def build_email_subject(token_line: TokenLine, *, max_length: int = 78) -> str:
     """
     Baut das E-Mail-Subject als Filter über TokenLine gemäß sms_format.md §11.
 
-    Format: '[{trip}] {stage_name} — {report_type_de} — {main_risk} D... W... G... TH:...'
+    Format: '[{shortcode}] {stage_name} — {report_type_de} — {main_risk} D... W... G... TH:...'
+    
+    Der {shortcode} (z.B. GZ#HERM) hat Priorität über trip_name (Bug #775).
+    Wenn beide vorhanden sind, wird shortcode für das Präfix verwendet.
 
     Hinweis: Hier ist D = Tag-Max-Temperatur (NICHT 'Debug').
 
-    Truncation §A5: Wetter-Tokens fallen zuerst, Trip-Präfix als letztes,
+    Truncation §A5: Wetter-Tokens fallen zuerst, Präfix als letztes,
     Etappen-Name niemals.
     """
 ```
 
 ### Algorithmus (deterministische Reihenfolge)
 
-1. **Subject-Skelett** zusammenbauen: `[{trip_name}] {stage_name} — {report_type_de} — {main_risk}`
-   - Trip-Präfix nur wenn `token_line.trip_name` gesetzt.
+1. **Präfix-Priorisierung** (Bug #775): 
+   - Wenn `token_line.shortcode` gesetzt: nutze `[{shortcode}]`
+   - Sonst wenn `token_line.trip_name` gesetzt: nutze `[{trip_name}]`
+   - Sonst: kein Präfix
+2. **Subject-Skelett** zusammenbauen: `[{shortcode_oder_trip}] {stage_name} — {report_type_de} — {main_risk}`
    - MainRisk nur wenn `token_line.main_risk` gesetzt; Übersetzung via `_RISK_DE`-Mapping.
    - ReportType-Übersetzung via fester Mapping-Konstante (`morning → Morgen`, etc.).
-2. **Whitelist-Tokens** aus `token_line.tokens` extrahieren: nur D, W, G, TH:/HR:.
-3. **Tokens in Whitelist-Reihenfolge anhängen** mit Space-Trennung (`D → W → G → TH:/HR:`).
-4. **HR:/TH:-Vigilance-Fusion** respektieren (kein Space zwischen `HR:`- und `TH:`-Token, analog `sms_format.md` §3.3).
-5. Wenn Länge ≤ `max_length`: zurückgeben.
-6. Sonst: **Truncation gemäß A5** (HR:/TH: → G → W → D → Trip-Präfix), bis ≤ `max_length` oder nichts mehr Streichbares übrig ist.
+3. **Whitelist-Tokens** aus `token_line.tokens` extrahieren: nur D, W, G, TH:/HR:.
+4. **Tokens in Whitelist-Reihenfolge anhängen** mit Space-Trennung (`D → W → G → TH:/HR:`).
+5. **HR:/TH:-Vigilance-Fusion** respektieren (kein Space zwischen `HR:`- und `TH:`-Token, analog `sms_format.md` §3.3).
+6. Wenn Länge ≤ `max_length`: zurückgeben.
+7. Sonst: **Truncation gemäß A5** (HR:/TH: → G → W → D → Präfix), bis ≤ `max_length` oder nichts mehr Streichbares übrig ist.
 
 Output ist deterministisch: gleiche `TokenLine` → bit-identisches Subject.
 
@@ -183,14 +192,16 @@ Output ist deterministisch: gleiche `TokenLine` → bit-identisches Subject.
 
 | Test | Vorbedingung | Erwartung |
 |---|---|---|
-| `test_subject_basic_format` | TokenLine mit `trip_name="GR221"`, `stage_name="Tag 1"`, `report_type=morning`, `main_risk="Thunder"`, leere Tokens | `[GR221] Tag 1 — Morgen — Gewitter` |
+| `test_subject_basic_format_with_shortcode` | TokenLine mit `shortcode="GZ#GRANK"`, `stage_name="Tag 1"`, `report_type=morning`, `main_risk="Thunder"`, leere Tokens | `[GZ#GRANK] Tag 1 — Morgen — Gewitter` |
+| `test_subject_shortcode_priority_over_tripname` | TokenLine mit `shortcode="GZ#GRANK"` UND `trip_name="GR221"` | `[GZ#GRANK]` wird benutzt, nicht `[GR221]` |
+| `test_subject_fallback_to_tripname` | TokenLine mit `trip_name="GR221"` (kein shortcode), `stage_name="Tag 1"`, `report_type=morning` | `[GR221] Tag 1 — Morgen` |
 | `test_subject_with_weather_tokens` | TokenLine mit D=24, W=15, G=30, TH:M | D/W/G/TH: erscheinen in Whitelist-Reihenfolge |
 | `test_subject_drops_non_whitelisted_tokens` | TokenLine mit N, R, PR, TH+ befüllt | N/R/PR/TH+ NICHT im Subject |
 | `test_subject_german_report_type_labels` | `report_type` für alle 3 in-scope Werte | `morning → Morgen`, `evening → Abend`, `update → Update` |
 | `test_subject_main_risk_german` | `main_risk="Thunder"` | Subject enthält `Gewitter`, nicht `Thunder` |
 | `test_subject_truncation_to_78_drops_weather_first` | Subject roh > 78 Zeichen | HR:/TH: → G → W → D in dieser Reihenfolge gestrichen |
 | `test_subject_truncation_keeps_stage_name_intact` | sehr langer Etappen-Name | Etappen-Name niemals gekürzt; ggf. Trip-Präfix gestrichen |
-| `test_subject_no_trip_prefix_when_trip_name_none` | `trip_name=None` | Kein `[…]`-Präfix am Anfang |
+| `test_subject_no_prefix_when_both_none` | `shortcode=None` und `trip_name=None` | Kein `[…]`-Präfix am Anfang |
 | `test_subject_hr_th_vigilance_fusion` | TokenLine mit HR und TH: (Vigilance) | `HR:M@13TH:H@14` als zusammenhängender Block (kein Space) |
 
 ### Neue Golden-Tests (`tests/golden/test_subject_golden.py`)
