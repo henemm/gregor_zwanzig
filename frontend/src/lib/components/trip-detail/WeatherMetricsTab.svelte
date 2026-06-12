@@ -398,6 +398,17 @@
 		});
 	}
 
+	// Issue #774: reportConfig-Änderungen (Checkboxen) triggern Auto-Save.
+	// Nicht-reaktive Vergleichsvariable vermeidet Rekursion.
+	let _lastReportConfigJson = JSON.stringify(reportConfig);
+	$effect(() => {
+		const cur = JSON.stringify(reportConfig);
+		if (cur !== _lastReportConfigJson) {
+			_lastReportConfigJson = cur;
+			scheduleAutoSave();
+		}
+	});
+
 	async function onPresetSaved(preset: MetricPreset) {
 		userPresets = [preset, ...userPresets];
 		applyPreset(preset.id);
