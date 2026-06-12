@@ -1,6 +1,6 @@
 # Architektur – Gregor Zwanzig
 
-**Updated:** 2026-06-11 (Issue #749 — Day Comparison Renderer: render_day_comparison_html/plain für Vortag-Vergleich-Sektion); 2026-06-09 (Issue #675 — Etappen-Startzeiten Editor-Widget; Issue #671 — Bot-Menü automatisch beim Service-Start + Live-Selftest); 2026-06-08 (Issue #655 — Telegram callback_query + editMessageText Zoom-Navigation); 2026-06-07 (Issue #637 — Telegram Webhook Migration); 2026-06-03 (Issue #572 — Inbound-Handler Multi-User Routing); 2026-05-31 (Issue #483 — Demo-Modus im Vorschau-Tab; Issue #495 — MapCanvas Leaflet-Karte; Issue #475 — OutputLayoutEditor zu Organisms)
+**Updated:** 2026-06-12 (Issue #758 — Einheitlicher Speicher-Status-Indikator + Trip-Editor Auto-Save; #733 Briefing-Mail-Validator Marker-Header); 2026-06-11 (Issue #749 — Day Comparison Renderer: render_day_comparison_html/plain für Vortag-Vergleich-Sektion); 2026-06-09 (Issue #675 — Etappen-Startzeiten Editor-Widget; Issue #671 — Bot-Menü automatisch beim Service-Start + Live-Selftest); 2026-06-08 (Issue #655 — Telegram callback_query + editMessageText Zoom-Navigation); 2026-06-07 (Issue #637 — Telegram Webhook Migration); 2026-06-03 (Issue #572 — Inbound-Handler Multi-User Routing); 2026-05-31 (Issue #483 — Demo-Modus im Vorschau-Tab; Issue #495 — MapCanvas Leaflet-Karte; Issue #475 — OutputLayoutEditor zu Organisms)
 
 ## Überblick
 Gregor Zwanzig ist ein verteiltes System mit separaten Backend (Go) und Frontend (SvelteKit):
@@ -245,6 +245,30 @@ See `docs/design-system/COMPONENTS.md` for the canonical component catalog.
   - Main navigation container
   - Responsive design, icon-based nav items
   - Extracted from `+layout.svelte` (Issue #145)
+
+### Trip-Editor & Compare-Editor Save-Strategien (Issue #758)
+
+**Trip-Editor (Auto-Save):**
+- **TripHeader.svelte** rendert einen einheitlichen `SaveIndicator` (zentral sichtbar über allen Tabs)
+- Alle Trip-Änderungen (Name, Etappen, Briefing, Metriken) triggern **Auto-Save** mit Debounce (~700 ms)
+- Zustände: `idle` (sauber) → `saving` (API-Call läuft) → `idle` (erfolgreich) oder `error` (Fehler)
+- Explizite Speichern-Buttons wurden aus Trip-Editor-Tabs entfernt
+- Flush vor Navigation: `beforeNavigate` leert Debounce-Queue, bevor der Nutzer einen anderen Tab/Trip aufruft (Datenverlust-Schutz)
+- **Store:** `saveStatusStore.svelte.ts` — zentraler State für beide Editoren, pro Editor-Instanz ein eigenes Objekt
+
+**Compare-Editor (Expliziter Save):**
+- Behält expliziten Speichern-Button
+- Nutzer-Änderungen zeigen `dirty`-Zustand, erst Speichern-Klick triggert Save
+- Gleiches `SaveIndicator`-Komponente wie Trip-Editor, aber andere Zustands-Quelle (`compareWizardState`)
+- Unabhängig vom Trip-Editor-Indikator (kein globales Sharing)
+
+**Implementierungs-Details:**
+- `SaveIndicator.svelte` ist Atom-Komponente (rendert nur UI-State)
+- `saveStatusStore.svelte.ts` exportiert Setter-Funktionen (`setSaving()`, `setSaved()`, `setError()`, `setDirty()`)
+- Auto-Save nutzt Try-Catch mit explizitem Error-Reporting statt `console.error`
+- Alle PUT-Endpunkte nutzen Read-Modify-Write-Semantik (Backend, `api.ts`), kein partielles Überschreiben
+
+Siehe `docs/specs/modules/issue_758_save_indicator.md` für technische Details.
 
 #### Design-System Lauf B (Issues #143, #144, #146)
 

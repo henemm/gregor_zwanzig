@@ -10,6 +10,8 @@
 	import { Field, ConfirmDialog } from '$lib/components/molecules';
 	import { ACTIVITY_PROFILE_OPTIONS, type ActivityProfile, type Location, type ComparePreset } from '$lib/types';
 	import type { CompareWizardState } from './compareWizardState.svelte';
+	import { createSaveStatus, extractMessage } from '$lib/stores/saveStatusStore.svelte';
+	import SaveIndicator from '$lib/components/ui/SaveIndicator.svelte';
 	import {
 		TAB_ORDER,
 		unlockedTabs,
@@ -17,6 +19,8 @@
 		type CompareTabId
 	} from './compareEditorLogic';
 	import { validateIdealRanges } from './compareMetricDefs';
+	import { buildComparePresetSavePayload } from './compareEditorSave';
+	import { api } from '$lib/api.js';
 	import Step2Orte from './steps/Step2Orte.svelte';
 	import Step3Idealwerte from './steps/Step3Idealwerte.svelte';
 	import Step4Layout from './steps/Step4Layout.svelte';
@@ -33,6 +37,9 @@
 	let { mode = 'create', locations = [], preset }: Props = $props();
 
 	const wiz = getContext<CompareWizardState>('compare-wizard-state');
+
+	// Issue #758: eigene SaveStatus-Instanz pro CompareEditor (AC-6: kein geteilter Singleton).
+	const compareSaveCtl = createSaveStatus();
 
 	const TAB_DEFS: { id: CompareTabId; label: string; lockHint: string | null }[] = [
 		{ id: 'vergleich', label: 'Vergleich', lockHint: null },
@@ -57,14 +64,16 @@
 	// Dirty-Tracking (AC-2): Snapshot der editierbaren Felder beim Mount erfassen.
 	// $derived statt manueller markDirty-Wrapper — deckt alle Tabs ab und markiert
 	// NICHT bei reiner Tab-Navigation (AC-Semantik: Feldänderung → Pill).
-	const initial = {
+	// Issue #758 F001: $state statt const — wird nach erfolgreichem Save aktualisiert,
+	// damit dirty zurück auf false springt und der Indikator stabil idle wird.
+	let initial = $state({
 		name: wiz.name,
 		region: wiz.region,
 		profile: wiz.activityProfile,
 		picked: [...wiz.pickedIds].join(','),
 		ideals: JSON.stringify(wiz.idealRanges),
 		layouts: JSON.stringify(wiz.channelLayouts)
-	};
+	});
 	const dirty = $derived(
 		isEdit &&
 			(wiz.name !== initial.name ||
@@ -74,6 +83,15 @@
 				JSON.stringify(wiz.idealRanges) !== initial.ideals ||
 				JSON.stringify(wiz.channelLayouts) !== initial.layouts)
 	);
+
+	// Issue #758: sync dirty state → compareSaveCtl (nur wenn nicht schon saving/error).
+	$effect(() => {
+		if (dirty && compareSaveCtl.state === 'idle') {
+			compareSaveCtl.setDirty();
+		} else if (!dirty && compareSaveCtl.state === 'dirty') {
+			compareSaveCtl.setSaved();
+		}
+	});
 
 	// Status-Dot (AC-6): aus dem preset-Prop lesen (nicht wiz.schedule — type-gemangelt).
 	const paused = $derived(preset?.schedule === 'manual');
@@ -118,7 +136,41 @@
 	}
 
 	function handleSave() {
-		if (preset) void wiz.saveComparePreset(preset);
+		if (!preset) return;
+		compareSaveCtl.setSaving();
+		// Issue #758: Save direkt via api.put (kein Redirect nach /compare/{id}).
+		// Round-Trip-Spread via buildComparePresetSavePayload bleibt erhalten.
+		// Snapshot aktuelle Werte vor dem async-Aufruf.
+		const savedName = wiz.name;
+		const savedRegion = wiz.region;
+		const savedProfile = wiz.activityProfile;
+		const savedPicked = [...wiz.pickedIds].join(',');
+		const savedIdeals = JSON.stringify(wiz.idealRanges);
+		const savedLayouts = JSON.stringify(wiz.channelLayouts);
+		const { url, body } = buildComparePresetSavePayload(preset, {
+			name: wiz.name,
+			activityProfile: wiz.activityProfile,
+			pickedIds: wiz.pickedIds,
+			region: wiz.region,
+			idealRanges: wiz.idealRanges,
+			channelLayouts: wiz.channelLayouts,
+			activeMetricKeys: wiz.activeMetricKeys
+		});
+		api.put(url, body)
+			.then(() => {
+				// F001: initial auf gespeicherte Werte setzen → dirty=false → Indikator idle.
+				initial.name = savedName;
+				initial.region = savedRegion;
+				initial.profile = savedProfile;
+				initial.picked = savedPicked;
+				initial.ideals = savedIdeals;
+				initial.layouts = savedLayouts;
+				compareSaveCtl.setSaved();
+			})
+			.catch((e: unknown) => {
+				// F003: extractMessage prüft .detail/.error/.message in richtiger Reihenfolge.
+				compareSaveCtl.setError(extractMessage(e));
+			});
 	}
 
 	// Issue #681: "Briefing aktivieren" im Create-Modus (AC-4).
@@ -213,19 +265,8 @@
 			{#if isEdit}
 				<!-- Aktionsleiste im Edit-Modus (JSX Z. 657-664) -->
 				<div style:display="flex" style:gap="8px" style:align-items="center">
-					{#if dirty}
-						<span
-							data-testid="compare-editor-dirty-pill"
-							class="mono"
-							style:font-size="11px"
-							style:font-weight="600"
-							style:padding="3px 8px"
-							style:border-radius="4px"
-							style:background="rgba(200,140,0,0.12)"
-							style:color="var(--g-warn, #b87800)"
-							style:letter-spacing="0.04em"
-						>Ungespeichert</span>
-					{/if}
+					<!-- Issue #758: SaveIndicator ersetzt dirty-Pill -->
+					<SaveIndicator controller={compareSaveCtl} />
 					<!-- Status-Dot (AC-6): 7×7px, Farbe laut JSX Z. 660 -->
 					<span
 						data-testid="compare-editor-status-dot"

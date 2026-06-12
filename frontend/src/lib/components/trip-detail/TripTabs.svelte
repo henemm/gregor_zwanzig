@@ -14,6 +14,7 @@
 	} from '$lib/components/preview';
 	import type { Trip, Stage } from '$lib/types';
 	import EditStagesSection from '../edit/EditStagesSection.svelte';
+	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 
 	interface Badges {
 		overview?: number;
@@ -29,9 +30,11 @@
 		badges?: Badges;
 		trip?: Trip;
 		onTripUpdate?: (updated: Trip) => void;
+		/** Issue #758: SaveStatus controller from +page.svelte — shared across all tabs. */
+		saveController?: SaveStatus;
 	}
 
-	let { initialTab = 'overview', badges: badgesProp = {}, trip, onTripUpdate }: Props = $props();
+	let { initialTab = 'overview', badges: badgesProp = {}, trip, onTripUpdate, saveController }: Props = $props();
 
 	// Lokale Kopie der Etappen für den Stages-Tab (EditStagesSection braucht $bindable).
 	let localStages = $state<Stage[]>(trip?.stages ?? []);
@@ -116,14 +119,14 @@
 					<HubOverview {trip} onJump={handleValueChange} />
 				{:else if tab.value === 'stages'}
 					{#if trip}
-						<EditStagesSection bind:stages={localStages} tripId={trip.id} showSave={true} {onTripUpdate} />
+						<EditStagesSection bind:stages={localStages} tripId={trip.id} showSave={true} {onTripUpdate} {saveController} />
 					{/if}
 				{:else if tab.value === 'weather' && trip}
-					<WeatherMetricsTab {trip} {onTripUpdate} />
+					<WeatherMetricsTab {trip} {onTripUpdate} {saveController} />
 				{:else if tab.value === 'alerts' && trip}
 					<AlertsTab {trip} />
 				{:else if tab.value === 'briefings' && trip}
-					<BriefingScheduleTab {trip} {onTripUpdate} />
+					<BriefingScheduleTab {trip} {onTripUpdate} {saveController} />
 				{:else if tab.value === 'preview' && trip}
 					<div class="preview-shell">
 						{#if demoMode}

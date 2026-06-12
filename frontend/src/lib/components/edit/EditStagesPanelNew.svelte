@@ -29,6 +29,7 @@
 	import type { ActivityType, Stage, Trip, Waypoint } from '$lib/types';
 	import { api } from '$lib/api.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
+	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 
 	interface Props {
 		stages: Stage[];
@@ -36,8 +37,10 @@
 		showSave?: boolean;
 		activityType?: ActivityType;
 		onTripUpdate?: (updated: Trip) => void;
+		/** Issue #758: SaveStatus controller from +page.svelte. When provided, removes explicit save button. */
+		saveController?: SaveStatus;
 	}
-	let { stages = $bindable(), tripId, showSave = true, activityType, onTripUpdate }: Props = $props();
+	let { stages = $bindable(), tripId, showSave = true, activityType, onTripUpdate, saveController }: Props = $props();
 
 	let saving = $state(false);
 	let saveSuccess = $state(false);
@@ -65,6 +68,16 @@
 		} finally {
 			saving = false;
 		}
+	}
+
+	// Issue #758: Auto-Save via controller (when saveController is provided).
+	function scheduleSave(): void {
+		if (!saveController || !tripId) return;
+		const currentStages = stages;
+		saveController.schedule(async () => {
+			const updatedTrip = await api.put<Trip>(`/api/trips/${tripId}`, { stages: currentStages });
+			onTripUpdate?.(updatedTrip);
+		});
 	}
 
 	// Pausentag = Etappe ohne Wegpunkte (Spec-Definition §5/AC-10).
@@ -117,14 +130,14 @@
 			if (delta !== 0 && stages.length > 1) {
 				cascade = { days: delta, count: stages.length - 1, done: false };
 				// Erste Etappe sofort speichern; Folge-Etappen speichert applyCascade().
-				void save();
+				if (saveController) scheduleSave(); else void save();
 				return;
 			} else {
 				cascade = null; // F001: stalen Cascade zurücksetzen wenn delta=0
 			}
 		}
 		// Keine Kaskade (mittlere Etappe / Pausentag / Δ=0): sofort auto-speichern.
-		void save();
+		if (saveController) scheduleSave(); else void save();
 	}
 
 	// Issue #675 — Startzeit je Etappe setzen (keine Kaskade, strikt pro Etappe).
@@ -148,9 +161,24 @@
 			if (!s.date) return s;
 			return { ...s, date: addDays(s.date, days), dateOverridden: true };
 		});
-		const result = await save();
-		if (result !== null) {
-			cascade = { ...cascade, done: true };
+		if (saveController) {
+			// Flush immediately (cascade = user intent, no debounce needed).
+			const currentStages = stages;
+			try {
+				saveController.setSaving();
+				const updatedTrip = await api.put<Trip>(`/api/trips/${tripId!}`, { stages: currentStages });
+				saveController.setSaved();
+				onTripUpdate?.(updatedTrip);
+				cascade = { ...cascade, done: true };
+			} catch (e: unknown) {
+				const msg = e instanceof Error ? e.message : 'Speichern fehlgeschlagen';
+				saveController.setError(msg);
+			}
+		} else {
+			const result = await save();
+			if (result !== null) {
+				cascade = { ...cascade, done: true };
+			}
 		}
 	}
 
@@ -448,7 +476,7 @@
 		{/if}
 	{/if}
 
-	{#if showSave}
+	{#if showSave && !saveController}
 		<div class="save-bar">
 			<Btn variant="primary" size="sm" onclick={save} disabled={saving || !tripId}>
 				{saving ? 'Speichern …' : 'Etappen speichern'}

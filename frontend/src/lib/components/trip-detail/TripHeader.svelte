@@ -14,6 +14,8 @@
 	import { getReportSchedule } from '$lib/utils/rightColumn';
 	import Stat from '$lib/components/molecules/Stat.svelte';
 	import type { Trip } from '$lib/types';
+	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
+	import SaveIndicator from '$lib/components/ui/SaveIndicator.svelte';
 
 	interface Props {
 		trip: Trip;
@@ -22,9 +24,11 @@
 		onStatusChange?: (updated: Trip) => void;
 		onTripUpdate?: (updated: Trip) => void;
 		now?: Date;
+		/** Issue #758: SaveStatus controller — rendert SaveIndicator in der Header-Zeile. */
+		saveController?: SaveStatus;
 	}
 
-	let { trip, onTripUpdate, now = new Date() }: Props = $props();
+	let { trip, onTripUpdate, now = new Date(), saveController }: Props = $props();
 
 	// AC-6 — Inline Trip-Name-Bearbeitung (kein separater /edit-Screen mehr)
 	// #713 — toggle: nur via Stift-Icon editierbar (kein dauerhaftes Eingabefeld)
@@ -163,6 +167,9 @@
 					{daysLabel}
 				</span>
 				<TripStatusBadge {trip} {now} />
+				{#if saveController}
+					<SaveIndicator controller={saveController} />
+				{/if}
 			</div>
 
 			<div class="meta-line" data-testid="trip-detail-meta">

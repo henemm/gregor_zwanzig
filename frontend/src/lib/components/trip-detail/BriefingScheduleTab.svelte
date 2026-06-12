@@ -4,12 +4,15 @@
 	import EditReportConfigSection from '$lib/components/edit/EditReportConfigSection.svelte';
 	import type { Trip, ReportConfig } from '$lib/types';
 	import type { ChannelConfig } from './briefingChannelGating.ts';
+	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 
 	interface Props {
 		trip: Trip;
 		onTripUpdate?: (updated: Trip) => void;
+		/** Issue #758: SaveStatus controller — wenn gesetzt, entfällt der Briefing-Zeitplan-Button. */
+		saveController?: SaveStatus;
 	}
-	let { trip, onTripUpdate }: Props = $props();
+	let { trip, onTripUpdate, saveController }: Props = $props();
 
 	let reportConfig = $state<ReportConfig>(
 		trip.report_config ? JSON.parse(JSON.stringify(trip.report_config)) : {}
@@ -22,22 +25,21 @@
 		((trip.display_config as unknown as Record<string, unknown>)?.channels as ChannelConfig | undefined)
 		?? { email: true, telegram: true, sms: false }
 	);
+
+	// Legacy save state (only used when saveController is not present)
 	let saving = $state(false);
 	let statusMsg = $state('');
 
-	// Issue #736: Auto-Save bei Kanal-Toggle — display_config.channels sofort persistieren.
-	async function handleChannelChange(channel: 'email' | 'telegram' | 'sms', value: boolean) {
-		weatherChannels = { ...weatherChannels, [channel]: value };
-		const updatedDisplayConfig = {
-			...(trip.display_config as unknown as Record<string, unknown> ?? {}),
-			channels: { ...weatherChannels },
+	// Issue #758: build save function for the current reportConfig state.
+	// F002: keepalive:true stellt sicher, dass der Fetch auch bei harter Browser-Navigation
+	// (page.goto) den Server erreicht — der Browser bricht einen normalen Fetch beim
+	// Seitenabbau ab, keepalive-Requests werden zu Ende gesendet.
+	function buildSaveFn() {
+		const configSnapshot = { ...reportConfig };
+		return async function doSaveReportConfig() {
+			await api.put<Trip>(`/api/trips/${trip.id}`, { report_config: configSnapshot }, { keepalive: true });
+			onTripUpdate?.({ ...trip, report_config: configSnapshot });
 		};
-		try {
-			await api.put(`/api/trips/${trip.id}`, { display_config: updatedDisplayConfig });
-			onTripUpdate?.({ ...trip, display_config: updatedDisplayConfig as Trip['display_config'] });
-		} catch (e: unknown) {
-			console.error(e);
-		}
 	}
 
 	function makeSaveHandler() {
@@ -45,9 +47,10 @@
 			saving = true;
 			statusMsg = '';
 			try {
-				await api.put<Trip>(`/api/trips/${trip.id}`, { report_config: reportConfig });
+				const configSnapshot = { ...reportConfig };
+				await api.put<Trip>(`/api/trips/${trip.id}`, { report_config: configSnapshot });
 				statusMsg = 'Gespeichert.';
-				onTripUpdate?.({ ...trip, report_config: reportConfig });
+				onTripUpdate?.({ ...trip, report_config: configSnapshot });
 			} catch (e: unknown) {
 				const err = e as { error?: string; detail?: string };
 				statusMsg = err.detail ?? err.error ?? 'Fehler beim Speichern';
@@ -56,6 +59,44 @@
 			}
 		};
 	}
+
+	// Issue #758: whenever reportConfig changes (via $effect), auto-save.
+	// AC-5: save fires synchronously (no debounce) so the fetch reaches the server
+	// even when the user navigates away immediately (hard navigation via page.goto).
+	// The server persists the data regardless of whether the client awaits the response.
+	let _prevConfigJson = JSON.stringify(reportConfig);
+	$effect(() => {
+		const currentJson = JSON.stringify(reportConfig);
+		if (currentJson === _prevConfigJson) return;
+		_prevConfigJson = currentJson;
+		if (saveController) {
+			// Fire-and-forget: doSave starts the fetch immediately.
+			// beforeNavigate + flush handles SvelteKit client-side navigations (AC-5 belt).
+			void saveController.doSave(buildSaveFn());
+		}
+	});
+
+	// Issue #736: Auto-Save bei Kanal-Toggle — display_config.channels sofort persistieren.
+	async function handleChannelChange(channel: 'email' | 'telegram' | 'sms', value: boolean) {
+		weatherChannels = { ...weatherChannels, [channel]: value };
+		const updatedDisplayConfig = {
+			...(trip.display_config as unknown as Record<string, unknown> ?? {}),
+			channels: { ...weatherChannels },
+		};
+		if (saveController) {
+			saveController.schedule(async () => {
+				await api.put(`/api/trips/${trip.id}`, { display_config: updatedDisplayConfig });
+				onTripUpdate?.({ ...trip, display_config: updatedDisplayConfig as Trip['display_config'] });
+			});
+		} else {
+			try {
+				await api.put(`/api/trips/${trip.id}`, { display_config: updatedDisplayConfig });
+				onTripUpdate?.({ ...trip, display_config: updatedDisplayConfig as Trip['display_config'] });
+			} catch (e: unknown) {
+				console.error(e);
+			}
+		}
+	}
 </script>
 
 <div class="briefing-schedule-tab" style="padding: 32px 40px 60px; max-width: 720px;">
@@ -63,17 +104,20 @@
 	     Alle 3 Kanäle sind immer sichtbar; Initialisierung über reportConfig.send_*. -->
 	<EditReportConfigSection bind:reportConfig mode="edit" showMailContent={false} onChannelChange={handleChannelChange} />
 
-	<div style="margin-top: 24px; display: flex; align-items: center; gap: 12px;">
-		<Btn
-			variant="primary"
-			data-testid="briefings-save"
-			disabled={saving}
-			onclick={makeSaveHandler()}
-		>
-			{saving ? 'Speichern …' : 'Briefing-Zeitplan speichern'}
-		</Btn>
-		{#if statusMsg}
-			<span style="font-size: 13px; color: var(--g-ink-muted);">{statusMsg}</span>
-		{/if}
-	</div>
+	<!-- Issue #758: Expliziter Speichern-Button nur ohne saveController (Backward-Compat). -->
+	{#if !saveController}
+		<div style="margin-top: 24px; display: flex; align-items: center; gap: 12px;">
+			<Btn
+				variant="primary"
+				data-testid="briefings-save"
+				disabled={saving}
+				onclick={makeSaveHandler()}
+			>
+				{saving ? 'Speichern …' : 'Briefing-Zeitplan speichern'}
+			</Btn>
+			{#if statusMsg}
+				<span style="font-size: 13px; color: var(--g-ink-muted);">{statusMsg}</span>
+			{/if}
+		</div>
+	{/if}
 </div>

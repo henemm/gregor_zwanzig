@@ -3,19 +3,35 @@
 	// Pause/Archive/Delete-Logik ist aus TripHeader hierhergewandert; Headerbuttons
 	// (Briefing-Vorschau, Bearbeiten, Test-Briefing) leben in der neuen Header-Komponente.
 	import { page } from '$app/state';
-	import { goto } from '$app/navigation';
+	import { goto, beforeNavigate } from '$app/navigation';
 	import { TripHeader } from '$lib/components/organisms';
 	import { TripTabs } from '$lib/components/trip-detail';
 	import { Btn, TopoBg } from '$lib/components/atoms';
 	import { ConfirmDialog } from '$lib/components/molecules';
 	import { deriveTripStatus } from '$lib/utils/tripStatus';
 	import type { Trip } from '$lib/types';
+	import { createSaveStatus } from '$lib/stores/saveStatusStore.svelte';
 
 	let { data } = $props();
 
 	// Trip in lokales $state heben, damit Status-Updates (Pause/Archive)
 	// reaktiv ohne Page-Reload sichtbar werden.
 	let trip = $state<Trip>(data.trip);
+
+	// Issue #758: SaveStatus-Controller — eine Instanz pro Trip-Seite (kein Singleton!).
+	const tripSaveCtl = createSaveStatus();
+
+	// Issue #758: Flush ausstehender Auto-Saves vor Navigation (AC-5).
+	beforeNavigate(({ cancel, to, willUnload }) => {
+		if (willUnload) return; // Browser-Navigation, kein Flush möglich
+		if (tripSaveCtl.hasPending) {
+			cancel();
+			const targetUrl = to?.url?.href ?? null;
+			void tripSaveCtl.flush().then(() => {
+				if (targetUrl) void goto(targetUrl);
+			});
+		}
+	});
 
 	// Issue #516 — Initial-Tab aus ?tab=…-Query (kanonisches Schema, kein #hash mehr).
 	// $derived bleibt reaktiv falls user navigation triggert.
@@ -215,8 +231,8 @@
 			{/if}
 		</div>
 	</div>
-	<TripHeader {trip} {now} onStatusChange={handleStatusChange} onTripUpdate={handleTripUpdate} />
-	<TripTabs {initialTab} badges={{}} {trip} onTripUpdate={handleTripUpdate} />
+	<TripHeader {trip} {now} onStatusChange={handleStatusChange} onTripUpdate={handleTripUpdate} saveController={tripSaveCtl} />
+	<TripTabs {initialTab} badges={{}} {trip} onTripUpdate={handleTripUpdate} saveController={tripSaveCtl} />
 </main>
 
 <ConfirmDialog

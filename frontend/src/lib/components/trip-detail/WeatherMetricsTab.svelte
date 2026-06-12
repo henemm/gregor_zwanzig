@@ -38,6 +38,8 @@
 		telegram: boolean;
 		sms: boolean;
 	}
+	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
+
 	interface Props {
 		trip: Trip;
 		/** Issue #622: Create-Modus — kein PUT; Kanäle per onChannelsChange nach oben emittieren */
@@ -45,8 +47,10 @@
 		onChannelsChange?: (c: ChannelConfig) => void;
 		/** Issue #694: Trip-State in +page.svelte nach erfolgreichem PUT aktualisieren */
 		onTripUpdate?: (t: Trip) => void;
+		/** Issue #758: SaveStatus controller — wenn gesetzt, entfällt der explizite Speichern-Button. */
+		saveController?: SaveStatus;
 	}
-	let { trip, createMode = false, onChannelsChange, onTripUpdate }: Props = $props();
+	let { trip, createMode = false, onChannelsChange, onTripUpdate, saveController }: Props = $props();
 
 	let catalog: MetricCatalog = $state({});
 	let templates: Template[] = $state([]);
@@ -282,6 +286,7 @@
 		const newFriendly = { ...friendlyMap, [id]: useIndicator };
 		applyDiff(buckets.primary, newFriendly, selectedTemplate);
 		friendlyMap = newFriendly;
+		scheduleAutoSave();
 	}
 
 	// Toggle: Metrik aktivieren (→ primary) oder deaktivieren (→ off).
@@ -295,6 +300,7 @@
 			buckets = newBuckets;
 		}
 		if (selectedTemplate) selectedTemplate = '';
+		scheduleAutoSave();
 	}
 
 	// Aus Abschnitt 3 entfernen (→ off).
@@ -303,6 +309,7 @@
 		applyDiff(newBuckets.primary, friendlyMap, selectedTemplate);
 		buckets = newBuckets;
 		if (selectedTemplate) selectedTemplate = '';
+		scheduleAutoSave();
 	}
 
 	// Reihenfolge ▲▼.
@@ -310,6 +317,7 @@
 		const newBuckets = reorder(buckets, 'primary', id, dir);
 		applyDiff(newBuckets.primary, friendlyMap, selectedTemplate);
 		buckets = newBuckets;
+		scheduleAutoSave();
 	}
 
 	function handleDiscard() {
@@ -329,30 +337,31 @@
 		}
 	}
 
+	function buildWeatherPayload() {
+		const baseMetrics = buildWeatherConfigMetrics(buckets, friendlyMap, horizonsMap, catalog);
+		const metrics = baseMetrics.map((m) => {
+			if (!SMS_THRESHOLD_METRIC_IDS.includes(m.metric_id)) return m;
+			const rawThr = smsThresholds[m.metric_id];
+			const parsed = rawThr !== undefined && rawThr !== '' ? parseFloat(rawThr) : null;
+			if (parsed !== null && !isNaN(parsed)) {
+				return { ...m, sms_threshold: parsed };
+			}
+			return m;
+		});
+		return {
+			...(trip.display_config ?? {}),
+			metrics,
+			preset_name: selectedTemplate || undefined,
+			telegram_kurzform: telegramKurzform,
+		};
+	}
+
 	async function handleSave() {
 		saving = true;
 		saveSuccess = false;
 		saveError = null;
 		try {
-			const baseMetrics = buildWeatherConfigMetrics(buckets, friendlyMap, horizonsMap, catalog);
-			// Issue #624: sms_threshold pro Metrik in Payload schreiben (additiv, Read-Modify-Write).
-			const metrics = baseMetrics.map((m) => {
-				if (!SMS_THRESHOLD_METRIC_IDS.includes(m.metric_id)) return m;
-				const rawThr = smsThresholds[m.metric_id];
-				const parsed = rawThr !== undefined && rawThr !== '' ? parseFloat(rawThr) : null;
-				if (parsed !== null && !isNaN(parsed)) {
-					return { ...m, sms_threshold: parsed };
-				}
-				return m;
-			});
-			const payload = {
-				...(trip.display_config ?? {}),
-				metrics,
-				preset_name: selectedTemplate || undefined,
-				telegram_kurzform: telegramKurzform,
-				// Issue #736: channels nicht mehr von WeatherMetricsTab verwaltet.
-				// Bestehender channels-Wert aus display_config bleibt via Spread erhalten.
-			};
+			const payload = buildWeatherPayload();
 			// Issue #622: Create-Modus — kein PUT, State per Binding gehalten.
 			if (!createMode) {
 				await api.put(`/api/trips/${trip.id}/weather-config`, payload);
@@ -370,10 +379,27 @@
 		}
 	}
 
+	// Issue #758: schedule auto-save via controller when metrics change.
+	function scheduleAutoSave() {
+		if (!saveController || createMode) return;
+		const payload = buildWeatherPayload();
+		saveController.schedule(async () => {
+			await api.put(`/api/trips/${trip.id}/weather-config`, payload);
+			onTripUpdate?.({ ...trip, display_config: payload });
+			savedSnapshot = snapshot(buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds);
+		});
+	}
+
 	async function onPresetSaved(preset: MetricPreset) {
 		userPresets = [preset, ...userPresets];
 		applyPreset(preset.id);
-		await handleSave();
+		// F004: wenn saveController vorhanden, über scheduleAutoSave routen,
+		// damit der Indikator korrekt Feedback gibt (handleSave kennt den Controller nicht).
+		if (saveController && !createMode) {
+			scheduleAutoSave();
+		} else {
+			await handleSave();
+		}
 	}
 
 	// Für SavePresetDialog (erwartet enabledMap): aktive = primary.
@@ -391,21 +417,23 @@
 	</div>
 {:else}
 	<div data-testid="weather-metrics-tab" class="metrics-tab">
-		<!-- Save-Bar (oben, schmal) -->
+		<!-- Save-Bar (oben, schmal) — expliziter Button nur ohne saveController (#758) -->
 		<div class="save-bar">
-			{#if isDirty}
+			{#if isDirty && !saveController}
 				<Pill tone="warning" data-testid="weather-metrics-dirty-pill">Ungespeicherte Änderungen</Pill>
 				<Btn variant="ghost" size="sm" data-testid="weather-metrics-discard" onclick={handleDiscard}>Verwerfen</Btn>
 			{/if}
-			{#if saveSuccess}
+			{#if saveSuccess && !saveController}
 				<span data-testid="weather-metrics-tab-success" class="save-success">Gespeichert</span>
 			{/if}
-			{#if saveError}
+			{#if saveError && !saveController}
 				<span data-testid="weather-metrics-tab-error" class="save-error">{saveError}</span>
 			{/if}
-			<Btn variant="primary" size="sm" data-testid="weather-metrics-tab-save" disabled={saving || !isDirty} onclick={handleSave}>
-				{saving ? 'Speichern…' : 'Speichern'}
-			</Btn>
+			{#if !saveController}
+				<Btn variant="primary" size="sm" data-testid="weather-metrics-tab-save" disabled={saving || !isDirty} onclick={handleSave}>
+					{saving ? 'Speichern…' : 'Speichern'}
+				</Btn>
+			{/if}
 		</div>
 
 		<!-- Desktop 2-Spalten-Layout -->
