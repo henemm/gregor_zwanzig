@@ -308,8 +308,11 @@ class TestAC5AC6RealSendAndMarking:
                 if ids:
                     _, msg = imap.fetch(ids[-1], "(RFC822)")
                     import email as _email
+                    from email.header import decode_header, make_header
                     parsed = _email.message_from_bytes(msg[0][1])
-                    subject = str(parsed.get("Subject", ""))
+                    # Subject ist RFC-2047-kodiert (=?utf-8?q?...?=), sobald er
+                    # Nicht-ASCII (z.B. Em-Dash) enthaelt — vor dem Pruefen decodieren.
+                    subject = str(make_header(decode_header(parsed.get("Subject", ""))))
                     for part in parsed.walk():
                         if part.get_content_type() in ("text/plain", "text/html"):
                             payload = part.get_payload(decode=True)
