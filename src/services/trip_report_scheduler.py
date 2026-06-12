@@ -27,7 +27,7 @@ from outputs.email import EmailOutput
 from utils.timezone import tz_for_coords
 
 if TYPE_CHECKING:
-    from app.trip import Trip
+    from app.trip import Stage, Trip
 
 logger = logging.getLogger("trip_report_scheduler")
 
@@ -327,11 +327,45 @@ class TripReportSchedulerService:
             "max_elevation_m": max_elev,
         }
 
+    def select_test_stage(self, trip: "Trip", report_type: str) -> Optional["Stage"]:
+        """Pick the stage to use for a TEST briefing when no stage matches today/tomorrow.
+
+        Issue #768 — Test-Pfad-Fallback (NICHT der reguläre Scheduler):
+
+        - Wählt die zeitlich **nächste kommende** Etappe mit ``date >= heute``
+          (kleinstes Datum). ``trip.get_future_stages`` ist strikt ``>`` und schließt
+          „heute" aus — daher hier eine eigene ``>=``-Auswahl.
+        - Liegen **alle** Etappen in der Vergangenheit, fällt es auf die chronologisch
+          **erste** (früheste) Etappe zurück.
+        - Leere ``stages`` → ``None``.
+
+        Args:
+            trip: Trip object.
+            report_type: "morning" or "evening" (nicht ausschlaggebend für die Wahl,
+                Teil des Kontrakts für Aufrufer-Symmetrie).
+
+        Returns:
+            Die gewählte Stage oder None bei leeren stages.
+        """
+        if not trip.stages:
+            return None
+        today = date.today()
+        upcoming = sorted(
+            (s for s in trip.stages if s.date >= today),
+            key=lambda s: s.date,
+        )
+        if upcoming:
+            return upcoming[0]
+        return min(trip.stages, key=lambda s: s.date)
+
     def send_test_report(self, trip: "Trip", report_type: str) -> bool:
         """
         Send a manual test report for a trip.
 
         Public wrapper around _send_trip_report for UI-triggered sends.
+
+        Issue #768: Test-Pfad aktiviert den Etappen-Fallback und kennzeichnet
+        die Mail als Vorschau ([TEST]-Präfix + Hinweiszeile).
 
         Args:
             trip: Trip object
@@ -346,9 +380,14 @@ class TripReportSchedulerService:
         """
         if report_type not in ("morning", "evening"):
             raise ValueError(f"Invalid report_type: {report_type}")
-        return self._send_trip_report(trip, report_type)
+        return self._send_trip_report(trip, report_type, allow_test_fallback=True)
 
-    def _send_trip_report(self, trip: "Trip", report_type: str) -> bool:
+    def _send_trip_report(
+        self,
+        trip: "Trip",
+        report_type: str,
+        allow_test_fallback: bool = False,
+    ) -> bool:
         """
         Generate and send report for a single trip.
 
@@ -367,6 +406,16 @@ class TripReportSchedulerService:
         # 1. Convert trip to segments
         target_date = self._get_target_date(report_type)
         segments = self._convert_trip_to_segments(trip, target_date)
+
+        # Issue #768: Test-Pfad-Fallback — wenn am regulären Zieldatum keine
+        # Etappe liegt, weicht NUR der Test-Versand auf die nächste kommende
+        # (bzw. früheste) Etappe aus. Der reguläre Scheduler (Default False)
+        # bleibt unberührt (AC-7).
+        if not segments and allow_test_fallback:
+            fb = self.select_test_stage(trip, report_type)
+            if fb is not None:
+                target_date = fb.date
+                segments = self._convert_trip_to_segments(trip, target_date)
 
         if not segments:
             logger.warning(f"No segments for trip {trip.id} on {target_date}")
@@ -506,6 +555,21 @@ class TripReportSchedulerService:
             report_config=trip.report_config,
             day_comparison=day_comparison,
         )
+
+        # Issue #768 (AC-6): Test-Pfad kennzeichnen — [TEST]-Betreff + Hinweiszeile
+        # mit der tatsächlich verwendeten Etappe + deren Datum. Nur im Test-Pfad.
+        if allow_test_fallback:
+            human_date = target_date.strftime("%d.%m.%Y")
+            hint = f"Test-Vorschau für {stage_name or 'Etappe'} am {human_date}"
+            report.email_subject = f"[TEST] {report.email_subject}"
+            if report.email_plain:
+                report.email_plain = f"{hint}\n\n{report.email_plain}"
+            if report.email_html:
+                report.email_html = report.email_html.replace(
+                    "<body>", f"<body><p>{hint}</p>", 1,
+                ) if "<body>" in report.email_html else f"<p>{hint}</p>{report.email_html}"
+            if getattr(report, "telegram_text", None):
+                report.telegram_text = f"{hint}\n\n{report.telegram_text}"
 
         # 7. Send via configured channels
         config = trip.report_config

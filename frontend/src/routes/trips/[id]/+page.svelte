@@ -32,6 +32,7 @@
 	let testBriefingStatus = $state<'idle' | 'ok' | 'error'>('idle');
 	let testBriefingMessage = $state<string | null>(null);
 	let testBriefingTimer: ReturnType<typeof setTimeout> | undefined;
+	let testBriefingMenuOpen = $state(false);
 
 	async function sendStateUpdate(paused?: boolean, archived?: boolean): Promise<void> {
 		const body: Record<string, boolean> = {};
@@ -112,28 +113,42 @@
 		trip = updated;
 	}
 
-	async function handleTestBriefing(): Promise<void> {
+	async function handleTestBriefing(reportType: 'morning' | 'evening'): Promise<void> {
+		testBriefingMenuOpen = false;
 		clearTimeout(testBriefingTimer);
 		testBriefingLoading = true;
 		testBriefingStatus = 'idle';
 		try {
-			const res = await fetch(`/api/trips/${trip.id}/send`, { method: 'POST' });
+			const res = await fetch(`/api/trips/${trip.id}/send?report_type=${reportType}`, {
+				method: 'POST'
+			});
 			if (res.ok) {
 				testBriefingStatus = 'ok';
 				testBriefingMessage = null;
 			} else {
 				testBriefingStatus = 'error';
+				let detail: string | undefined;
 				try {
 					const body = await res.json();
-					testBriefingMessage = body.detail ?? 'Fehler beim Senden';
+					detail = body?.detail;
 				} catch {
-					testBriefingMessage = 'Fehler beim Senden';
+					/* kein JSON-Body */
+				}
+				if (res.status >= 500) {
+					// AC-1/AC-3: Serverfehler → handlungsleitende Meldung, roher detail wird
+					// NICHT angezeigt; Statuscode + Rohtext werden observierbar geloggt.
+					console.error(`Test-Briefing fehlgeschlagen: HTTP ${res.status}`, detail);
+					testBriefingMessage = 'Versand fehlgeschlagen — Serverfehler, bitte später erneut versuchen.';
+				} else if (detail) {
+					testBriefingMessage = detail; // AC-2: qualifizierte 4xx-Meldung bleibt
+				} else {
+					testBriefingMessage = 'Versand fehlgeschlagen — bitte später erneut versuchen.';
 				}
 			}
 		} catch (e) {
 			console.error(e);
 			testBriefingStatus = 'error';
-			testBriefingMessage = 'Fehler beim Senden';
+			testBriefingMessage = 'Versand fehlgeschlagen — bitte später erneut versuchen.';
 		} finally {
 			testBriefingLoading = false;
 		}
@@ -159,9 +174,40 @@
 			<Btn variant="ghost" size="sm" onclick={handleArchiveClick} disabled={isLoading}>
 				{status === 'archived' ? 'Reaktivieren' : 'Archivieren'}
 			</Btn>
-			<Btn variant="accent" size="sm" onclick={handleTestBriefing} disabled={testBriefingLoading}>
-				{testBriefingLoading ? 'Wird gesendet…' : 'Test-Briefing senden'}
-			</Btn>
+			<div style="position: relative; display: inline-block;">
+				<Btn
+					variant="accent"
+					size="sm"
+					data-testid="test-briefing-menu-toggle"
+					onclick={() => { testBriefingMenuOpen = !testBriefingMenuOpen; }}
+					disabled={testBriefingLoading}
+				>
+					{testBriefingLoading ? 'Wird gesendet…' : 'Test-Briefing senden'}
+				</Btn>
+				{#if testBriefingMenuOpen}
+					<div
+						class="test-briefing-menu"
+						style="position: absolute; top: calc(100% + 4px); left: 0; z-index: 20; display: flex; flex-direction: column; gap: 4px; padding: 6px; background: var(--g-card, #ffffff); border: 1px solid var(--g-line, #d8d4ca); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.12);"
+					>
+						<Btn
+							variant="ghost"
+							size="sm"
+							data-testid="test-briefing-option-morning"
+							onclick={() => handleTestBriefing('morning')}
+						>
+							Morgen
+						</Btn>
+						<Btn
+							variant="ghost"
+							size="sm"
+							data-testid="test-briefing-option-evening"
+							onclick={() => handleTestBriefing('evening')}
+						>
+							Abend
+						</Btn>
+					</div>
+				{/if}
+			</div>
 			{#if testBriefingStatus === 'ok'}
 				<span data-testid="test-briefing-success" style="font-size: 12px; color: var(--g-success, #2e7d32);">Test-Briefing gesendet!</span>
 			{:else if testBriefingStatus === 'error'}
