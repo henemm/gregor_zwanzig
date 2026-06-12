@@ -47,6 +47,16 @@ def trigger_alert_checks(user_id: str = "default"):
     return {"status": "ok", "count": count}
 
 
+@router.post("/radar-alert-checks")
+def trigger_radar_alert_checks(user_id: str):
+    """Trigger radar/thunderstorm nowcast alert checks (proaktiv)."""
+    from services.trip_alert import TripAlertService
+
+    service = TripAlertService(user_id=user_id)
+    count = service.check_radar_alerts()
+    return {"status": "ok", "count": count}
+
+
 @router.post("/inbound-commands")
 def trigger_inbound():
     """Trigger inbound email command polling."""

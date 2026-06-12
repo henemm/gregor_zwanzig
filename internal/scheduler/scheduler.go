@@ -94,6 +94,7 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 		// Issue #637: inbound_telegram_poll entfernt — Telegram-Eingang läuft jetzt
 		// push-basiert über den Webhook (POST /api/webhooks/telegram/{secret}).
 		{"0 6 * * *", s.comparePresetsDaily, "compare_presets_daily", "Compare Presets Daily (06:00)"},
+		{"*/15 * * * *", s.radarAlertChecks, "radar_alert_checks", "Radar Alert Checks (every 15 min)"},
 	}
 	for _, j := range jobs {
 		eid, _ := s.cron.AddFunc(j.expr, j.fn)
@@ -106,7 +107,7 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 // Start begins cron scheduling.
 func (s *Scheduler) Start() {
 	s.cron.Start()
-	log.Printf("[scheduler] Started: 4 jobs, timezone %s", s.cron.Location())
+	log.Printf("[scheduler] Started: 5 jobs, timezone %s", s.cron.Location())
 }
 
 // Stop gracefully shuts down the scheduler and waits for running jobs.
@@ -150,6 +151,12 @@ func (s *Scheduler) tripReports() {
 func (s *Scheduler) alertChecks() {
 	s.recordRun("alert_checks", func() error {
 		return s.runForAllUsers("alert_checks", "/api/scheduler/alert-checks")
+	})
+}
+
+func (s *Scheduler) radarAlertChecks() {
+	s.recordRun("radar_alert_checks", func() error {
+		return s.runForAllUsers("radar_alert_checks", "/api/scheduler/radar-alert-checks")
 	})
 }
 
