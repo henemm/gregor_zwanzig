@@ -194,13 +194,11 @@ class RadarNowcastService:
                 return []
             frames = []
             for dp in ts.data:
-                if dp.precipitation_mm is not None:
-                    # Convert mm/interval to mm/h (INCA is 15-min steps)
-                    mm_h = float(dp.precipitation_mm) * 4.0
-                    frames.append(RadarFrame(
-                        timestamp=dp.time if dp.time.tzinfo else dp.time.replace(tzinfo=timezone.utc),
-                        precip_mm_h=mm_h,
-                    ))
+                raw = dp.precip_1h_mm
+                # Convert mm/interval to mm/h (INCA is 15-min steps); None -> dry frame
+                mm_h = float(raw) * 4.0 if raw is not None else 0.0
+                ts_val = dp.ts if dp.ts.tzinfo else dp.ts.replace(tzinfo=timezone.utc)
+                frames.append(RadarFrame(timestamp=ts_val, precip_mm_h=mm_h))
             return frames
         except Exception as e:
             logger.warning(f"GeoSphere INCA failed, falling back: {e}")
