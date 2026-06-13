@@ -239,12 +239,21 @@ class TestAC3HelperValues:
         assert any("15" in t for t in texts), f"15°C (max) nicht in Pillen: {texts}"
 
     def test_temperature_tone_is_info(self):
-        """temperature-Tone ist immer 'info'."""
-        from output.renderers.email.helpers import build_metrics_summary_pills
+        """Issue #795: temperature ist Klasse 2 (Bereich) → neutraler Tone.
+
+        Frueher 'info'; seit #795 trägt jede Bereichs-Metrik den neutralen
+        Tone (kein Schweregrad — die Ampelstufen sind den Ereignis-Metriken
+        vorbehalten, AC-9).
+        """
+        from output.renderers.email.helpers import (
+            _PILL_NEUTRAL_TONE, build_metrics_summary_pills,
+        )
         segs = _build_segments()
         pills = build_metrics_summary_pills(segs, ["temperature"], {}, tz=TZ)
         tones = [tone for _, tone in pills]
-        assert any(tone == "info" for tone in tones), f"Tone 'info' erwartet, got: {tones}"
+        assert any(tone == _PILL_NEUTRAL_TONE for tone in tones), (
+            f"neutraler Tone erwartet, got: {tones}"
+        )
 
     def test_precipitation_pill_with_rain(self):
         """precipitation-Pille bei Regen: enthält Summe '6 mm'."""
@@ -295,28 +304,36 @@ class TestAC4ThresholdCrossing:
     """
 
     def test_wind_crossing_tone_is_warn(self):
-        """Gust-Crossing über threshold=15 → Tone 'warn'."""
-        from output.renderers.email.helpers import build_metrics_summary_pills
-        segs = _build_segments()
-        # threshold gust=15 km/h; max gust=40 km/h → Crossing
-        pills = build_metrics_summary_pills(
-            segs, ["gust"], {"gust": 15.0}, tz=TZ
+        """Issue #795/AC-9: Gust-Pill-Stufe folgt der Ampel (display_thresholds).
+
+        Fixture max gust=40 km/h. Gust-Ampel: yellow 50 → 40 km/h liegt darunter
+        → Stufe GRÜN (ampel_green). Die FARBE folgt NICHT der Erwähnungs- oder
+        einer User-Schwelle, sondern ampel_dot(peak, display_thresholds).
+        """
+        from output.renderers.email.helpers import (
+            ampel_stage_tone, build_metrics_summary_pills,
         )
+        from app.metric_catalog import get_metric
+        segs = _build_segments()
+        pills = build_metrics_summary_pills(segs, ["gust"], {}, tz=TZ)
         tones = [tone for _, tone in pills]
-        assert any(tone == "warn" for tone in tones), (
-            f"Tone 'warn' bei Crossing erwartet, got: {tones}"
+        expected = ampel_stage_tone(40.0, get_metric("gust").display_thresholds)
+        assert any(tone == expected for tone in tones), (
+            f"Ampelstufe {expected} (peak 40 km/h) erwartet, got: {tones}"
         )
 
     def test_wind_crossing_text_contains_threshold(self):
-        """Crossing-Text enthält '>15'."""
+        """Issue #795: Über SMS-Schwelle (Böen ≥ 20) erscheint die Spitze.
+
+        Fixture max gust=40 → ausgeschriebene Ereignis-Form mit der Spitze
+        (kein '>thr'-Token mehr). '40' (Spitzenwert) muss im Text stehen.
+        """
         from output.renderers.email.helpers import build_metrics_summary_pills
         segs = _build_segments()
-        pills = build_metrics_summary_pills(
-            segs, ["gust"], {"gust": 15.0}, tz=TZ
-        )
+        pills = build_metrics_summary_pills(segs, ["gust"], {}, tz=TZ)
         texts = [t for t, _ in pills]
-        assert any("15" in t for t in texts), (
-            f"Schwellwert '15' muss im Crossing-Text stehen: {texts}"
+        assert any("40" in t and "Spitze" in t for t in texts), (
+            f"Spitzenwert '40' (ausgeschrieben) muss im Text stehen: {texts}"
         )
 
     def test_wind_crossing_text_contains_hour(self):
@@ -334,22 +351,28 @@ class TestAC4ThresholdCrossing:
         )
 
     def test_wind_no_crossing_tone_is_good(self):
-        """Wenn max gust < threshold → Tone 'good', kein 'ab'-Text."""
-        from output.renderers.email.helpers import build_metrics_summary_pills
-        # Segmente mit max gust=10; threshold=50 → kein Crossing
-        from app.models import (
-            ForecastDataPoint, ForecastMeta, GPXPoint, NormalizedTimeseries,
-            Provider, SegmentWeatherData, SegmentWeatherSummary, ThunderLevel,
-            TripSegment,
+        """Issue #795: Böen durchweg unter SMS-Schwelle (20) → ruhige Form + grün.
+
+        Die Erwähnungsschwelle ist seit #795 SMS-identisch (Böen ≥ 20), nicht
+        mehr User-konfigurierbar. Unter Schwelle → 'Böen ruhig', und da der
+        Spitzenwert klar unter der Ampel-Gelbschwelle (50) liegt → ampel_green.
+        """
+        from output.renderers.email.helpers import (
+            build_metrics_summary_pills,
         )
-        seg = _build_segments()  # max gust=40
-        # threshold weit über max → kein Crossing
-        pills = build_metrics_summary_pills(
-            seg, ["gust"], {"gust": 100.0}, tz=TZ
-        )
+        # max gust=10 (alle Stunden < 20 SMS-Schwelle, < 50 Ampel-Gelb).
+        segs = _build_segments(temps=[5.0] * 6)
+        for seg in segs:
+            for dp in seg.timeseries.data:
+                object.__setattr__(dp, "gust_kmh", 10.0)
+        pills = build_metrics_summary_pills(segs, ["gust"], {}, tz=TZ)
+        texts = [t for t, _ in pills]
         tones = [tone for _, tone in pills]
-        assert any(tone == "good" for tone in tones), (
-            f"Tone 'good' bei kein Crossing erwartet, got: {tones}"
+        assert any("Böen ruhig" in t for t in texts), (
+            f"ruhige Form 'Böen ruhig' erwartet: {texts}"
+        )
+        assert any(tone == "ampel_green" for tone in tones), (
+            f"ampel_green bei ruhiger Lage erwartet, got: {tones}"
         )
 
 

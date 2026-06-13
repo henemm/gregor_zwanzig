@@ -28,6 +28,10 @@ from pathlib import Path
 
 # Sequenzielle Stundentabellen-Heuristik: mind. 2 distinct HH:00-Treffer.
 _HOUR_RE = re.compile(r"\b([01]?\d|2[0-3]):00\b")
+# Compact-Plain: echte Tabellenzeile beginnt (ggf. eingerueckt) mit HH:00.
+# Pill-Ereigniszeiten ("Wind ab 00:00 … um 23:00", #795/AC-3/AC-10) stehen
+# mitten in der Zeile und sind KEINE Stundentabelle.
+_HOUR_LINE_RE = re.compile(r"^\s*([01]?\d|2[0-3]):00(\s|$)", re.MULTILINE)
 # Temperatur-Range: "12–18°C" / "12-18°C" / "12–18C" (Halbgeviert oder Bindestrich).
 _TEMP_RANGE_RE = re.compile(r"(-?\d{1,2})\s*[–-]\s*(-?\d{1,2})\s*°?C")
 _MAX_BYTES_DEFAULT = 2048
@@ -46,8 +50,22 @@ def _distinct_hours(text: str) -> list[str]:
 
 
 def _has_hourly_table(text: str) -> bool:
-    """Heuristik: >=2 distinct/sequenzielle HH:00 = Stundentabelle."""
+    """Heuristik: >=2 distinct/sequenzielle HH:00 = Stundentabelle.
+
+    HTML (full): jede Zelle, daher der breite \\bHH:00\\b-Treffer.
+    """
     return len(_distinct_hours(text)) >= 2
+
+
+def _has_hourly_table_plain(text: str) -> bool:
+    """Compact-Plain-Heuristik: >=2 Zeilen, die mit HH:00 BEGINNEN.
+
+    Schaerfer als _has_hourly_table, damit die ausgeschriebenen Pill-
+    Ereigniszeiten (mitten in der Zeile, #795) NICHT faelschlich als
+    Stundentabelle gewertet werden.
+    """
+    hours = {m.group(1) for m in _HOUR_LINE_RE.finditer(text)}
+    return len([m for m in _HOUR_LINE_RE.finditer(text)]) >= 2 and len(hours) >= 2
 
 
 def _part_text(part: Message) -> str:
@@ -137,8 +155,8 @@ def _validate_compact(msg: Message, max_bytes: int) -> tuple[bool, list[str]]:
     if size >= max_bytes:
         errors.append(f"COMPACT: Body {size} Byte >= Limit {max_bytes} Byte (zu gross)")
 
-    if _has_hourly_table(text):
-        errors.append("COMPACT: enthaelt sequenzielle Stundentabelle (>=2 HH:00) — verboten")
+    if _has_hourly_table_plain(text):
+        errors.append("COMPACT: enthaelt sequenzielle Stundentabelle (>=2 HH:00-Zeilen) — verboten")
 
     errors.extend(_check_compact_blocks(text))
 

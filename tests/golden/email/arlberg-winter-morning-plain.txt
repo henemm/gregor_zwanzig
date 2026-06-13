@@ -5,6 +5,16 @@ Arlberg
 
 Arlberg: -12–-4°C, 🌥️, trocken, starker Wind 45 km/h, Böen bis 110 km/h ab 8:00
 
+━━ Metriken-Überblick ━━
+  Temperatur 15–22 °C
+  Gefühlt 10–15 °C
+  🟢 Wind ab 00:00 · Spitze 23 km/h um 23:00
+  🔴 Böen ab 00:00 · Spitze 110 km/h um 08:00
+  🟢 kein Regen
+  🟢 kein Gewitter
+  Bewölkung 50 %
+  Sonne 0 min
+
 ━━ Segment 1: km 0.0–0.0 | 08:00–13:00 | ↑1500m → 2300m ━━
   Time   Temp   Feels   Wind   Gust   Rain   Thunder   SnowL   Cloud   Sun 
   -----  -----  ------  -----  -----  -----  --------  ------  ------  ----
@@ -14,16 +24,6 @@ Arlberg: -12–-4°C, 🌥️, trocken, starker Wind 45 km/h, Böen bis 110 km/h
   11     18.3   12.2    18     41     0.0    –         –       ⛅       –   
   12     18.6   12.4    18     42     0.0    –         –       ⛅       –   
   13     18.9   12.6    18     43     0.0    –         –       ⛅       –   
-
-━━ Metriken-Überblick ━━
-  [INFO] 15–22°C · Max 23:00
-  [INFO] gef. min 10°C · 00:00
-  [WARN] Wind >20 km/h ab 17:00 · max 23
-  [WARN] Böe >30 km/h ab 01:00 · max 110
-  [GOOD] kein Regen
-  [GOOD] kein Gewitter
-  [INFO] 50–50% bewölkt · Max 00:00
-  [INFO] kein Sonnenschein
 
 
 ── Antwort-Kommandos ──

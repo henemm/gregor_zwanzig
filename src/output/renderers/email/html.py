@@ -566,15 +566,19 @@ def render_html(
                 <p style="margin:0;font-size:14px;line-height:1.6;">{compact_summary}</p>
             </div>"""
 
-    # Issue #790: Vortag-Einordnung — eine Zeile direkt unter der Eine-Zeile-Summary.
+    # Issue #790/#795/RC4/AC-6: Vortag-Einordnung — eigene abgesetzte Box,
+    # prominent (≥14px, WCAG-AA Primärtext, eigener Rahmen), genau EINE Zeile.
+    # NICHT die schwache Fußnoten-Signatur (13px + G_INK_MUTED #5c5a52).
     from services.day_comparison import summarize_day_comparison
     _day_comparison_line = summarize_day_comparison(day_comparison)
     day_comparison_html = ""
     if _day_comparison_line:
         day_comparison_html = (
-            f'<div class="section" style="padding:4px 16px">'
-            f'<p style="margin:0;font-size:13px;color:{G_INK_MUTED}">'
-            f'{_html.escape(_day_comparison_line)}</p></div>'
+            f'<div class="section" style="padding:8px 16px">'
+            f'<div style="background:{G_BOX_INFO_BG};border-left:4px solid {G_ACCENT};'
+            f'padding:10px 12px;border-radius:4px">'
+            f'<p style="margin:0;font-size:15px;font-weight:600;color:{G_INK};'
+            f'line-height:1.5">{_html.escape(_day_comparison_line)}</p></div></div>'
         )
 
     # Issue #121 / AC-12 + AC-13: confidence hint (only when uncertain).

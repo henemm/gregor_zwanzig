@@ -112,10 +112,79 @@ class TestAC2OverviewAndOutlookNoHourly:
         assert "WECHSELHAFT" in plain, "Großwetterlage-Label fehlt im Ausblick"
 
     def test_compact_has_no_hourly_table(self):
-        """Given compact mit Stundendaten / Then keine Stundenzeile (08:00) im Body."""
+        """Given compact mit Stundendaten / Then keine echte Stundentabellen-Zeile.
+
+        #795/AC-10: robuster Check — der naive `"08:00"/"09:00"`-Match traf den
+        zeitabhaengigen `Generated: … HH:00 UTC`-Footer (flaky um volle Stunden).
+        Eine echte Stundentabelle hat MEHRERE Zeilen, die mit `HH:00` BEGINNEN
+        (ggf. eingerueckt). Die Pill-Ereigniszeiten („Wind ab 00:00 …") stehen
+        mitten in der Zeile und zaehlen NICHT als Tabelle.
+        """
+        import re
         _html, plain = _render_email("compact")
-        assert "08:00" not in plain, "Kompakt-Mail darf keine Stundentabelle enthalten"
-        assert "09:00" not in plain, "Kompakt-Mail darf keine Stundentabelle enthalten"
+        # Zeilen, die (nach optionaler Einrueckung) mit HH:00 BEGINNEN = Tabelle.
+        table_rows = [
+            ln for ln in plain.splitlines()
+            if re.match(r"^\s*\d{2}:00(\s|$)", ln)
+        ]
+        assert len(table_rows) == 0, (
+            "Kompakt-Mail darf keine Stundentabellen-Zeile enthalten, "
+            f"gefunden: {table_rows!r}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# AC-10: compact ASCII-Schwerezeichen statt roher [AMPEL_*]/[TONE]-Marker
+# ---------------------------------------------------------------------------
+
+class TestAC10CompactAsciiSeverity:
+    def test_no_raw_tone_markers(self):
+        """Given compact / Then keine rohen [AMPEL_*]/[TONE]-Marker im Body."""
+        _html, plain = _render_email("compact")
+        for marker in ("[AMPEL_", "[NEUTRAL]", "[WARN]", "[INFO]",
+                       "[GOOD]", "[BAD]", "[TONE]", "[OK]"):
+            assert marker not in plain, (
+                f"roher tone-Marker {marker!r} darf im Kompakt-Body nicht "
+                f"erscheinen — Body:\n{plain}"
+            )
+
+    def test_yellow_event_pill_has_bang_prefix(self):
+        """Given eine Ereignis-Pill ueber Gefahren-Gelbschwelle (Boeen 53 km/h,
+        Gelb-Schwelle 50) / Then traegt sie genau das `!`-Praefix und NICHT den
+        ausgeschriebenen Pill-Text verlieren."""
+        _html, plain = _render_email("compact")
+        lines = [ln.strip() for ln in plain.splitlines()]
+        boeen = [ln for ln in lines if ln.endswith("km/h um 23:00")
+                 and "Boeen" in ln]
+        assert boeen, f"Boeen-Pill nicht gefunden — Body:\n{plain}"
+        bln = boeen[0]
+        # Gelb (50 <= 53 < 65) -> genau ein '!'-Praefix, gruene Pills kein Praefix.
+        assert bln.startswith("! "), (
+            f"gelbe Ereignis-Pill muss '! '-Praefix tragen, got {bln!r}"
+        )
+        assert "Boeen ab 00:00" in bln, (
+            f"ausgeschriebener Pill-Text muss erhalten bleiben, got {bln!r}"
+        )
+
+    def test_green_event_pill_has_no_prefix(self):
+        """Given eine gruene Ereignis-Pill (Wind 23 km/h < Gelb 30) /
+        Then KEIN Schwerezeichen-Praefix."""
+        _html, plain = _render_email("compact")
+        lines = [ln.strip() for ln in plain.splitlines()]
+        wind = [ln for ln in lines
+                if ln.endswith("km/h um 23:00") and ln.startswith("Wind ab")]
+        assert wind, f"Wind-Pill nicht gefunden — Body:\n{plain}"
+        assert not wind[0].startswith("!"), (
+            f"gruene Pill darf kein '!'-Praefix tragen, got {wind[0]!r}"
+        )
+
+    def test_compact_body_ascii_and_under_2kb(self):
+        """Given compact / Then 7bit/ASCII und < 2 KB (AC-10 Struktur)."""
+        _html, plain = _render_email("compact")
+        assert plain.isascii(), "Kompakt-Body muss reines ASCII bleiben"
+        assert len(plain.encode()) < 2048, (
+            f"Kompakt-Body muss < 2 KB bleiben, got {len(plain.encode())} Bytes"
+        )
 
 
 # ---------------------------------------------------------------------------

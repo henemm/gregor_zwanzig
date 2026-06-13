@@ -13,6 +13,7 @@ RED-Zustand (jetzt):
 """
 from __future__ import annotations
 
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -23,6 +24,38 @@ from tests.unit.test_renderers_email import _common_kwargs, _make_token_line
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+# WCAG relative Luminanz / Kontrast — selbst berechnet (keine Tautologie gegen
+# gepinnte Hex-Werte). Issue #795/AC-8: Pill-Tests prüfen das *Verhalten*
+# (Vollfarb-Kapsel, weißer Text, Kontrast ≥ 4.5:1) statt exakter Farbcodes,
+# damit eine WCAG-konforme Farb-Justierung sie nicht mehr bricht.
+def _luminance(hex_color: str) -> float:
+    h = hex_color.lstrip("#")
+    rgb = [int(h[i:i + 2], 16) / 255.0 for i in (0, 2, 4)]
+    lin = [c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+           for c in rgb]
+    return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2]
+
+
+def _contrast_ratio(c1: str, c2: str) -> float:
+    l1, l2 = _luminance(c1), _luminance(c2)
+    hi, lo = max(l1, l2), min(l1, l2)
+    return (hi + 0.05) / (lo + 0.05)
+
+
+def _parse_pill_colors(html: str):
+    """Extrahiere (bg, fg) aus dem gerenderten pill_html-Span."""
+    bg = re.search(r"background:\s*(#[0-9a-fA-F]{6})", html)
+    fg = re.search(r"color:\s*(#[0-9a-fA-F]{6})", html)
+    assert bg and fg, f"bg/fg nicht parsebar:\n{html}"
+    return bg.group(1).lower(), fg.group(1).lower()
+
+
+# Die vier Ampelstufen-tones sind die einzigen Schweregrad-tones, die
+# _pill_for_metric tatsächlich erzeugt (SSoT #759-Tabelle). pill_html kennt
+# keine toten Legacy-tones (good/warn/bad/info) mehr.
+_AMPEL_STAGE_TONES = ("ampel_green", "ampel_yellow", "ampel_orange", "ampel_red")
 
 
 def _render_minimal_html(profile=None) -> str:
@@ -134,52 +167,66 @@ def test_ac2_color_scheme_meta_present():
 
 def test_ac3_pill_html_good_tone():
     """
-    AC-3: pill_html('OK', 'good') → #3a7d44 als BG, #ffffff als Textfarbe, <span>.
+    AC-3 (#795/AC-8): Ein Schweregrad-Tone erzeugt eine lesbare Vollfarb-Kapsel.
 
-    GIVEN pill_html('OK', 'good') aufgerufen
+    GIVEN pill_html('OK', 'ampel_green') aufgerufen (echter, vom Renderer
+          erzeugter Schweregrad-Tone — nicht der tote Legacy-Tone 'good')
     WHEN das Ergebnis geprüft wird
-    THEN enthält der String #3a7d44 als background, #ffffff als color,
-         beginnt mit <span und enthält kein var(--)
+    THEN beginnt es mit <span>, hat einen vollflächigen background mit weißem
+         Text (#ffffff), Kontrast ≥ 4.5:1 (WCAG-AA) und keine CSS-Variablen.
+
+    Verhaltens-/kontrastbasiert statt exakter Hex (#795/AC-8) — eine
+    WCAG-konforme Farb-Justierung bricht den Test nicht mehr. Die
+    ursprüngliche Absicht (korrekte, lesbare tone-Darstellung) bleibt erhalten.
     """
     from src.output.renderers.email.helpers import pill_html
-    result = pill_html("OK", "good")
+    result = pill_html("OK", "ampel_green")
     assert result.startswith("<span"), f"pill_html gibt kein <span> zurück: {result[:50]}"
-    assert "#3a7d44" in result, f"Kein #3a7d44 (G_SUCCESS) in pill_html('OK', 'good'): {result}"
-    assert "#ffffff" in result.lower(), f"Kein #ffffff (weiß) in pill_html result: {result}"
     assert "var(--" not in result, "pill_html enthält CSS-Custom-Properties — Outlook-inkompatibel"
+    bg, fg = _parse_pill_colors(result)
+    assert fg == "#ffffff", f"Schweregrad-Kapsel braucht weißen Text, fg={fg}"
+    assert _contrast_ratio(bg, fg) >= 4.5, (
+        f"Kontrast {round(_contrast_ratio(bg, fg), 2)}:1 < 4.5:1 (bg={bg}, fg={fg})"
+    )
 
 
 def test_ac3_pill_html_is_inline_span():
     """
-    AC-3 (Struktur): pill_html-Ergebnis hat border-radius und padding.
+    AC-3 (Struktur): pill_html-Ergebnis ist eine Vollfarb-Kapsel.
 
-    GIVEN pill_html mit beliebigen Werten
+    GIVEN pill_html mit einem echten tone
     WHEN das Ergebnis geprüft wird
-    THEN enthält es border-radius und padding (Pill-Styling)
+    THEN enthält es border-radius:99px (Vollfarb-Kapsel) und padding.
     """
     from src.output.renderers.email.helpers import pill_html
-    result = pill_html("Test", "info")
-    assert "border-radius" in result, "Pill hat kein border-radius"
+    result = pill_html("Test", "ampel_red")
+    assert "border-radius:99px" in result, "Pill hat keine Vollfarb-Kapselform (border-radius:99px)"
     assert "padding" in result, "Pill hat kein padding"
 
 
-@pytest.mark.parametrize("tone,expected_bg", [
-    ("warn", "#c8882a"),
-    ("bad",  "#b33a2a"),
-    ("info", "#2a6cb3"),
-])
-def test_ac4_pill_html_tones(tone, expected_bg):
+@pytest.mark.parametrize("tone", list(_AMPEL_STAGE_TONES))
+def test_ac4_pill_html_tones(tone):
     """
-    AC-4: pill_html mit warn/bad/info liefert korrekte Hex-Hintergrundfarben.
+    AC-4 (#795/AC-8): Jeder der vier echten Schweregrad-tones (ampel-Stufen)
+    erzeugt eine WCAG-AA-lesbare Vollfarb-Kapsel.
 
-    GIVEN pill_html(label, tone) mit tone='warn'/'bad'/'info'
+    GIVEN pill_html(label, tone) für ampel_green/yellow/orange/red
+          (die tatsächlich vom Renderer erzeugten Schweregrad-tones — die toten
+          Legacy-tones warn/bad/info existieren nicht mehr, #795/AC-8)
     WHEN das Ergebnis geprüft wird
-    THEN enthält der String den korrekten Hex-Wert als background
+    THEN ist es eine Vollfarb-Kapsel (vollflächiger bg + weißer Text,
+         border-radius:99px) mit Kontrast ≥ 4.5:1.
     """
     from src.output.renderers.email.helpers import pill_html
     result = pill_html("Label", tone)
-    assert expected_bg in result, (
-        f"Tone '{tone}': erwartet BG {expected_bg}, nicht in Ergebnis: {result}"
+    assert "border-radius:99px" in result, (
+        f"Tone '{tone}': Vollfarb-Kapselform (border-radius:99px) fehlt: {result}"
+    )
+    bg, fg = _parse_pill_colors(result)
+    assert fg == "#ffffff", f"Tone '{tone}': Vollfarb-Kapsel braucht weißen Text, fg={fg}"
+    assert _contrast_ratio(bg, fg) >= 4.5, (
+        f"Tone '{tone}': Kontrast {round(_contrast_ratio(bg, fg), 2)}:1 < 4.5:1 "
+        f"(bg={bg}, fg={fg})"
     )
 
 

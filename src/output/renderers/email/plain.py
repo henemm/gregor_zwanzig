@@ -27,7 +27,7 @@ from src.output.renderers.email.helpers import (
     build_confidence_hint, build_metrics_summary_pills,
     build_segment_label,
     build_units_legend, fmt_val, format_change_line, format_trend_tokens,
-    shorten_stage_name, visible_cols,
+    shorten_stage_name, tone_symbol, visible_cols,
 )
 from src.output.renderers.email.profile_signature import profile_signature
 
@@ -124,12 +124,35 @@ def render_plain(
         lines.append(compact_summary)
         lines.append("")
 
-    # Issue #790: Vortag-Einordnung — eine Zeile direkt unter der Summary.
+    # Issue #790/#795/RC4: Vortag-Einordnung — eigene abgesetzte Zeile oben,
+    # genau EINE Zeile (kein Block, keine graue Fußnote).
     from services.day_comparison import summarize_day_comparison
     _day_comparison_line = summarize_day_comparison(day_comparison)
     if _day_comparison_line:
         lines.append(_day_comparison_line)
         lines.append("")
+
+    # Issue #795/RC2/AC-1: Metriken-Überblick VOR den Segment-Tabellen
+    # (Hierarchie HTML==Plain). Der EINE feste Wetterblock, immer sichtbar.
+    _pill_metric_ids = [mc.metric_id for mc in dc.metrics if mc.enabled]
+    if not _pill_metric_ids:
+        _pill_metric_ids = [
+            "temperature", "wind", "gust", "precipitation",
+            "thunder", "freezing_level", "visibility",
+        ]
+    _pill_thresholds = {
+        mc.metric_id: mc.alert_threshold
+        for mc in dc.metrics
+        if mc.alert_enabled and mc.alert_threshold is not None
+    }
+    _plain_pills = build_metrics_summary_pills(
+        segments, _pill_metric_ids, _pill_thresholds, tz=tz
+    )
+    lines.append("━━ Metriken-Überblick ━━")
+    for _lbl, _tone in _plain_pills:
+        _sym = tone_symbol(_tone)
+        lines.append(f"  {_sym + ' ' if _sym else ''}{_lbl}")
+    lines.append("")
 
     # Issue #122 / F12: Stabilitäts-Label (vor dem Konfidenz-Hinweis).
     # Issue #721: show_outlook gates the entire outlook block (stability + trend).
@@ -223,26 +246,6 @@ def render_plain(
             if note:
                 lines.append(f"    ↳ {note}")
         lines.append("")
-
-    # Issue #790: Metriken-Überblick — der EINE feste Wetterblock, immer sichtbar.
-    _pill_metric_ids = [mc.metric_id for mc in dc.metrics if mc.enabled]
-    if not _pill_metric_ids:
-        _pill_metric_ids = [
-            "temperature", "wind", "gust", "precipitation",
-            "thunder", "freezing_level", "visibility",
-        ]
-    _pill_thresholds = {
-        mc.metric_id: mc.alert_threshold
-        for mc in dc.metrics
-        if mc.alert_enabled and mc.alert_threshold is not None
-    }
-    _plain_pills = build_metrics_summary_pills(
-        segments, _pill_metric_ids, _pill_thresholds, tz=tz
-    )
-    lines.append("━━ Metriken-Überblick ━━")
-    for _lbl, _tone in _plain_pills:
-        lines.append(f"  [{_tone.upper()}] {_lbl}")
-    lines.append("")
 
     # Antwort-Kommandos (Issue #731: abruf-zentrierter Grundbefehlssatz)
     lines.append("")

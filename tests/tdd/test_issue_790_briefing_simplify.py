@@ -240,8 +240,15 @@ class TestAC6MetricsAlwaysVisible:
         idx = plain.find("Metriken-Überblick")
         assert idx != -1
         block = plain[idx:idx + 600]
-        # Default-Satz liefert mehrere Pillen-Zeilen
-        assert block.count("[") >= 3, f"zu wenige Default-Pillen:\n{block}"
+        # Default-Satz liefert mehrere Pillen-Zeilen. Issue #795: die rohen
+        # [TONE]-Marker sind entfernt (AC-2) — gezählt werden eingerückte
+        # Pill-Zeilen (zwei führende Leerzeichen) bis zur Leerzeile.
+        pill_lines = [
+            ln for ln in block.splitlines()
+            if ln.startswith("  ") and ln.strip()
+            and "Metriken" not in ln
+        ]
+        assert len(pill_lines) >= 3, f"zu wenige Default-Pillen:\n{block}"
 
     def test_specific_metrics_rendered_html(self):
         """Bei gefüllter Auswahl erscheinen genau diese Metriken als Pillen.

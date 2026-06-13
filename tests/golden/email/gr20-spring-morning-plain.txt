@@ -5,6 +5,16 @@ GR20 E1
 
 GR20 E1: 2–9°C, 🌥️, trocken, Regen ab 6:00, mäßiger Wind 35 km/h, Böen bis 70 km/h ab 6:00, ⚡ möglich 0:00–24:00
 
+━━ Metriken-Überblick ━━
+  Temperatur 15–22 °C
+  Gefühlt 10–15 °C
+  🟢 Wind ab 00:00 · Spitze 23 km/h um 23:00
+  🟠 Böen ab 00:00 · Spitze 70 km/h um 06:00
+  🔴 Regen ab 06:00 · 18 mm gesamt, Spitze 06:00
+  🔴 Gewitter ab 00:00 · stärkste 00:00
+  Bewölkung 50 %
+  Sonne 0 min
+
 ━━ Segment 1: km 0.0–0.0 | 06:00–10:00 | ↑400m → 1200m ━━
   Time   Temp   Feels   Wind   Gust   Rain   Thunder   SnowL   Cloud   Sun 
   -----  -----  ------  -----  -----  -----  --------  ------  ------  ----
@@ -13,16 +23,6 @@ GR20 E1: 2–9°C, 🌥️, trocken, Regen ab 6:00, mäßiger Wind 35 km/h, Böe
   08     17.4   11.6    16     38     0.0    ⚡ mögl.   –       ⛅       –   
   09     17.7   11.8    16     39     0.0    ⚡ mögl.   –       ⛅       –   
   10     18.0   12.0    17     40     0.0    ⚡ mögl.   –       ⛅       –   
-
-━━ Metriken-Überblick ━━
-  [INFO] 15–22°C · Max 23:00
-  [INFO] gef. min 10°C · 00:00
-  [WARN] Wind >20 km/h ab 17:00 · max 23
-  [WARN] Böe >30 km/h ab 01:00 · max 70
-  [WARN] Regen ab 06:00 · 18 mm
-  [BAD] Gewitter ab 00:00
-  [INFO] 50–50% bewölkt · Max 00:00
-  [INFO] kein Sonnenschein
 
 
 ── Antwort-Kommandos ──

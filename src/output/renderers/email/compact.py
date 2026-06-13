@@ -17,7 +17,8 @@ from app.models import SegmentWeatherData, UnifiedWeatherDisplayConfig
 from utils.timezone import local_fmt
 
 from src.output.renderers.email.helpers import (
-    build_confidence_hint, build_metrics_summary_pills, format_trend_tokens,
+    _AMPEL_STAGE_TONES, build_confidence_hint, build_metrics_summary_pills,
+    format_trend_tokens,
 )
 from src.output.renderers.email.profile_signature import profile_signature
 
@@ -43,6 +44,22 @@ def _ascii(text: str) -> str:
     """Transliterate to pure ASCII: umlauts + common special chars, drop rest."""
     text = text.translate(_ASCII_MAP)
     return text.encode("ascii", errors="ignore").decode("ascii")
+
+
+# Issue #795/AC-10: ASCII-Schwerezeichen je Ampelstufe (compact, 7bit/ASCII).
+# Stufenindex 0..3 == _AMPEL_STAGE_TONES (SSoT mit der #759-Stundentabelle und
+# der HTML/Plain-Pill-Faerbung). gruen → "" · gelb → "!" · orange → "!!" ·
+# rot → "!!!". Klasse 2 / neutral / unbekannt → "" (kein Praefix).
+_AMPEL_ASCII_SEVERITY = ("", "!", "!!", "!!!")
+
+
+def _severity_prefix(tone: str) -> str:
+    """Leitet das ASCII-Schwerezeichen aus DERSELBEN Ampelstufe ab wie die
+    HTML/Plain-Pills (kein zweites Schwellen-Hardcoding). KEIN rohes
+    [AMPEL_*]/[TONE]-Marker mehr."""
+    if tone in _AMPEL_STAGE_TONES:
+        return _AMPEL_ASCII_SEVERITY[_AMPEL_STAGE_TONES.index(tone)]
+    return ""
 
 
 _STABILITY_TEXTS = {
@@ -125,7 +142,12 @@ def render_compact(
     pills = build_metrics_summary_pills(segments, metric_ids, thresholds, tz=tz)
     lines.append("== Metriken-Ueberblick ==")
     for label, tone in pills:
-        lines.append(f"  [{tone.upper()}] {label}")
+        # Issue #795/AC-10: dezentes ASCII-Schwerezeichen aus der Ampelstufe
+        # statt rohem [AMPEL_*]/[TONE]-Marker (gruen→kein, gelb→!, orange→!!,
+        # rot→!!!; Klasse 2/neutral→kein).
+        prefix = _severity_prefix(tone)
+        lead = f"{prefix} " if prefix else ""
+        lines.append(f"  {lead}{label}")
     lines.append("")
 
     # --- Ausblick: Grosswetterlage + Naechste Etappen ---
