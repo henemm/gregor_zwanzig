@@ -326,16 +326,18 @@ class TestPlainTextParity:
 
 
 class TestSummary:
-    """Spec: Summary shows only relevant highlights."""
+    """Issue #790: Highlights/Zusammenfassung-Block entfernt; stattdessen der
+    feste Metriken-Überblick-Block. Keine generische Empfehlungs-Sektion."""
 
-    def test_summary_highlights_only(self):
-        """GIVEN segment with high gusts, THEN summary mentions gusts.
-        No generic 'Recommendations' section."""
+    def test_metrics_overview_present(self):
+        """GIVEN ein Segment, THEN erscheint der Metriken-Überblick, KEINE
+        Zusammenfassung/Empfehlung."""
         seg = _make_segment_weather(1, gust_max=95.0)
         formatter = TripReportFormatter()
         report = formatter.format_email([seg], "Test", "morning")
         plain = report.email_plain
-        assert "Zusammenfassung" in plain or "Summary" in plain
+        assert "Metriken-Überblick" in plain
+        assert "Zusammenfassung" not in plain
         assert "Empfehlung" not in plain
         assert "Recommendation" not in plain
 
@@ -386,39 +388,26 @@ class TestHighlightsPopCape:
             fetched_at=datetime.now(timezone.utc), provider="openmeteo",
         )
 
-    def test_high_pop_highlight(self):
-        """GIVEN pop_max_pct=90, WHEN highlights computed, THEN pop highlight present."""
+    def test_high_pop_no_highlight_block(self):
+        """Issue #790: Highlights-Block entfernt — auch bei pop=90 erscheint
+        KEINE 'Regenwahrscheinlichkeit 90%'-Highlight-Zeile mehr."""
         seg = self._make_seg_with_pop_cape(pop=90)
         formatter = TripReportFormatter()
         report = formatter.format_email([seg], "Test", "morning")
-        assert "Regenwahrscheinlichkeit 90%" in report.email_html
-        assert "Regenwahrscheinlichkeit 90%" in report.email_plain
+        assert "Regenwahrscheinlichkeit 90%" not in report.email_plain
+        assert "Zusammenfassung" not in report.email_plain
 
-    def test_low_pop_no_highlight(self):
-        """GIVEN pop_max_pct=60, WHEN highlights computed, THEN no pop highlight."""
-        seg = self._make_seg_with_pop_cape(pop=60)
-        formatter = TripReportFormatter()
-        report = formatter.format_email([seg], "Test", "morning")
-        assert "Regenwahrscheinlichkeit" not in report.email_plain
-
-    def test_high_cape_highlight(self):
-        """GIVEN cape_max_jkg=1500, WHEN highlights computed, THEN cape highlight present."""
+    def test_high_cape_no_highlight_block(self):
+        """Issue #790: Highlights-Block entfernt — auch bei cape=1500 erscheint
+        KEINE 'CAPE 1500 J/kg'-Highlight-Zeile mehr."""
         seg = self._make_seg_with_pop_cape(cape=1500.0)
         formatter = TripReportFormatter()
         report = formatter.format_email([seg], "Test", "morning")
-        assert "CAPE 1500 J/kg" in report.email_html
-        assert "CAPE 1500 J/kg" in report.email_plain
-
-    def test_low_cape_no_highlight(self):
-        """GIVEN cape_max_jkg=500, WHEN highlights computed, THEN no cape highlight."""
-        seg = self._make_seg_with_pop_cape(cape=500.0)
-        formatter = TripReportFormatter()
-        report = formatter.format_email([seg], "Test", "morning")
-        assert "CAPE" not in report.email_plain
+        assert "CAPE 1500 J/kg" not in report.email_plain
         assert "Gewitterenergie" not in report.email_plain
 
     def test_none_pop_cape_no_highlight(self):
-        """GIVEN pop=None, cape=None, WHEN highlights computed, THEN no pop/cape highlights."""
+        """GIVEN pop=None, cape=None, THEN keine pop/cape-Highlights."""
         seg = self._make_seg_with_pop_cape(pop=None, cape=None)
         formatter = TripReportFormatter()
         report = formatter.format_email([seg], "Test", "morning")

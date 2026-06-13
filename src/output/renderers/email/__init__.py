@@ -17,7 +17,6 @@ from app.models import (
     WeatherChange,
 )
 from app.profile import ActivityProfile
-from services.daylight_service import DaylightWindow
 
 from src.output.renderers.email.compact import render_compact
 from src.output.renderers.email.helpers import build_format_modes
@@ -42,24 +41,19 @@ def render_email(
     changes: Optional[list[WeatherChange]] = None,
     stage_name: Optional[str] = None,
     stage_stats: Optional[dict] = None,
-    highlights: list[str],
     compact_summary: Optional[str] = None,
-    daylight: Optional[DaylightWindow] = None,
     tz: ZoneInfo,
     exposed_sections: Optional[list[ExposedSection]] = None,
     friendly_keys: set[str],
     profile: Optional[ActivityProfile] = None,
     stability_result: Optional["StabilityResult"] = None,
     show_stage_stats: bool = True,
-    show_quick_take_tags: bool = True,
     show_stability: bool = True,
-    show_highlights: bool = True,
-    daily_summary_metrics: Optional[list[str]] = None,
     sent_at: Optional[datetime] = None,
-    show_metrics_summary: bool = False,
     show_outlook: bool = True,
     email_format: str = "full",
     day_comparison: Optional["DayComparison"] = None,
+    **_ignored,
 ) -> tuple[str, str]:
     """Returns (html_body, plain_body). Pure function.
 
@@ -104,25 +98,19 @@ def render_email(
         dc=display_config,
         night_rows=night_rows_list,
         thunder_forecast=thunder_forecast,
-        highlights=highlights,
         changes=changes,
         stage_name=stage_name,
         stage_stats=stage_stats,
         multi_day_trend=multi_day_trend,
         compact_summary=compact_summary,
-        daylight=daylight,
         tz=tz,
         friendly_keys=friendly_keys,
         format_modes=format_modes,
         profile=profile,
         stability_result=stability_result,
         show_stage_stats=show_stage_stats,
-        show_quick_take_tags=show_quick_take_tags,
         show_stability=show_stability,
-        show_highlights=show_highlights,
-        daily_summary_metrics=daily_summary_metrics,
         sent_at=sent_at,
-        show_metrics_summary=show_metrics_summary,
         show_outlook=show_outlook,
         day_comparison=day_comparison,
     )
@@ -134,13 +122,11 @@ def render_email(
         dc=display_config,
         night_rows=night_rows_list,
         thunder_forecast=thunder_forecast,
-        highlights=highlights,
         changes=changes,
         stage_name=stage_name,
         stage_stats=stage_stats,
         multi_day_trend=multi_day_trend,
         compact_summary=compact_summary,
-        daylight=daylight,
         tz=tz,
         friendly_keys=friendly_keys,
         format_modes=format_modes,
@@ -148,9 +134,6 @@ def render_email(
         stability_result=stability_result,
         show_stage_stats=show_stage_stats,
         show_stability=show_stability,
-        show_highlights=show_highlights,
-        daily_summary_metrics=daily_summary_metrics,
-        show_metrics_summary=show_metrics_summary,
         show_outlook=show_outlook,
         day_comparison=day_comparison,
     )

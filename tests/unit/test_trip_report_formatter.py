@@ -158,16 +158,17 @@ class TestMetricsFiltering:
         assert ">Rain<" in html
 
     def test_summary_matches_visible_columns(self) -> None:
-        """Summary highlights reflect actual weather data."""
+        """Issue #790: Highlights/Zusammenfassung-Block entfernt; stattdessen
+        der feste Metriken-Überblick-Block."""
         from formatters.trip_report import TripReportFormatter
 
         formatter = TripReportFormatter()
         segments = [create_test_segment()]
         report = formatter.format_email(segments, "Trip", "morning")
 
-        # v2 summary uses highlights, not per-column "Max Temperature" labels
         plain = report.email_plain
-        assert "Zusammenfassung" in plain
+        assert "Zusammenfassung" not in plain
+        assert "Metriken-Überblick" in plain
 
     def test_plain_text_respects_config(self) -> None:
         """Plain-text version should also filter metrics."""

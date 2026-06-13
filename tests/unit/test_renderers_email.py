@@ -178,7 +178,8 @@ def test_render_email_plain_matches_html_data():
     GIVEN: Identische Inputs.
     WHEN:  render_email(...) aufgerufen.
     THEN:  Plain-Output enthält dieselben Stage-Daten wie HTML
-           (case-sensitive Stage-Name + Highlights).
+           (case-sensitive Stage-Name). Issue #790: Highlights-Block entfernt,
+           daher kein Highlights-Vergleich mehr.
     """
     from src.output.renderers.email import render_email
 
@@ -186,8 +187,6 @@ def test_render_email_plain_matches_html_data():
     html, plain = render_email(token_line, **_common_kwargs())
     assert "GR20 E3" in html
     assert "GR20 E3" in plain
-    assert "Wind moderat erwartet" in plain
-    assert "Wind moderat erwartet" in html
 
 
 def test_render_email_with_changes_renders_alert_block():

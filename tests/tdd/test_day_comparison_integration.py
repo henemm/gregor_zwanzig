@@ -98,11 +98,12 @@ def _format(day_comparison=..., segs=None, report_config=...):
 
 class TestAC1EmailSectionRendered:
 
-    def test_section_in_html_and_plain(self):
+    def test_one_line_in_html_and_plain(self):
         """
-        GIVEN heutige + gestrige Segmente mit echten Deltas
+        GIVEN heutige + gestrige Segmente mit echten Deltas (heute wärmer, trockener)
         WHEN format_email(day_comparison=...) erzeugt wird
-        THEN erscheint die Vortag-Vergleich-Sektion in HTML UND Plain
+        THEN erscheint die EINE Vortag-Einordnungszeile in HTML UND Plain —
+             KEINE alte Delta-pro-Segment-Tabelle (Issue #790).
         """
         today = [_segment_with_weather(1, temp_min_c=8.0, temp_max_c=18.0,
                                        wind_max_kmh=20.0, precip_sum_mm=2.0)]
@@ -112,10 +113,13 @@ class TestAC1EmailSectionRendered:
 
         report = _format(day_comparison=dc, segs=today)
 
-        assert "Vortag-Vergleich" in report.email_html, \
-            "HTML-Mail muss die Vortag-Vergleich-Sektion enthalten"
-        assert "Vortag-Vergleich" in report.email_plain, \
-            "Plain-Mail muss die Vortag-Vergleich-Sektion enthalten"
+        assert "Vortag: heute" in report.email_html, \
+            "HTML-Mail muss die Vortag-Einordnungszeile enthalten"
+        assert "Vortag: heute" in report.email_plain, \
+            "Plain-Mail muss die Vortag-Einordnungszeile enthalten"
+        # Alte Sektion/Segment-Tabelle darf nicht mehr erscheinen
+        assert "Vortag-Vergleich" not in report.email_html
+        assert "Vortag-Vergleich" not in report.email_plain
 
 
 # ===========================================================================

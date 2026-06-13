@@ -110,9 +110,9 @@ def _render_html(segs, **kwargs):
         segments=segs, seg_tables=[_SIMPLE_ROWS] * len(segs),
         trip_name="GR20 Test", report_type="morning",
         dc=build_default_display_config(), night_rows=[],
-        thunder_forecast=None, highlights=[], changes=None,
+        thunder_forecast=None, changes=None,
         stage_name=None, stage_stats=None, multi_day_trend=None,
-        compact_summary=None, daylight=None, tz=TZ, friendly_keys=set(),
+        compact_summary=None, tz=TZ, friendly_keys=set(),
     )
     params.update(kwargs)
     return render_html(**params)
@@ -125,9 +125,9 @@ def _render_plain(segs, **kwargs):
         segments=segs, seg_tables=[_SIMPLE_ROWS] * len(segs),
         trip_name="GR20 Test", report_type="morning",
         dc=build_default_display_config(), night_rows=[],
-        thunder_forecast=None, highlights=[], changes=None,
+        thunder_forecast=None, changes=None,
         stage_name=None, stage_stats=None, multi_day_trend=None,
-        compact_summary=None, daylight=None, tz=TZ, friendly_keys=set(),
+        compact_summary=None, tz=TZ, friendly_keys=set(),
     )
     params.update(kwargs)
     return render_plain(**params)
@@ -354,121 +354,34 @@ class TestAC4ThresholdCrossing:
 
 
 # ---------------------------------------------------------------------------
-# AC-2 + AC-5: render_html mit show_metrics_summary=True
+# Issue #790: Metriken-Überblick ist jetzt der EINE feste Block — IMMER an.
+# Quick-Take und Tages-Summe wurden komplett aus dem Render-Code entfernt.
 # ---------------------------------------------------------------------------
 
-class TestAC2AC5RenderHtmlActive:
-    """render_html muss show_metrics_summary-Parameter akzeptieren.
+class TestMetricsAlwaysOnHtml:
 
-    RED: TypeError — unbekannter Keyword-Argument 'show_metrics_summary'.
+    def test_eyebrow_always_present(self):
+        """Metriken-Überblick erscheint immer (kein Gate mehr)."""
+        html = _render_html(_build_segments())
+        assert "Metriken-Überblick" in html
 
-    Wenn aktiv:
-    - Body enthält Eyebrow "Metriken-Überblick"
-    - Quick-Take-Chips NICHT vorhanden (Marker "Kein Gewitter" oder "Böen")
-    - Tages-Summe NICHT vorhanden (Marker "Tages-Summe")
-    """
+    def test_no_quick_take_chips(self):
+        """Quick-Take-Chips wurden entfernt — 'Kein Gewitter' erscheint nie."""
+        html = _render_html(_build_segments())
+        assert "Kein Gewitter" not in html
 
-    def test_eyebrow_present_when_active(self):
-        """Body enthält 'Metriken-Überblick' wenn show_metrics_summary=True."""
-        # RED: TypeError — Parameter existiert nicht
-        html = _render_html(_build_segments(), show_metrics_summary=True)
-        assert "Metriken-Überblick" in html, (
-            "Eyebrow 'Metriken-Überblick' muss im HTML sein wenn aktiv"
-        )
-
-    def test_quick_take_absent_when_active(self):
-        """Quick-Take-Chips sind NICHT vorhanden wenn show_metrics_summary=True."""
-        # RED: TypeError
-        html = _render_html(_build_segments(), show_metrics_summary=True,
-                            show_quick_take_tags=True)
-        # "Kein Gewitter" ist der eindeutige Quick-Take-Chip-Text (ThunderLevel.NONE)
-        assert "Kein Gewitter" not in html, (
-            "Quick-Take-Chips dürfen bei show_metrics_summary=True nicht erscheinen"
-        )
-
-    def test_daily_summary_absent_when_active(self):
-        """Tages-Summe-Block ist NICHT vorhanden wenn show_metrics_summary=True."""
-        # RED: TypeError
-        html = _render_html(
-            _build_segments(), show_metrics_summary=True,
-            daily_summary_metrics=["precipitation", "wind", "visibility", "thunder"],
-        )
-        # "Tages-Summe" ist der eindeutige Eyebrow-Text des Tages-Summe-Blocks
-        assert "Tages-Summe" not in html, (
-            "Tages-Summe-Block darf bei show_metrics_summary=True nicht erscheinen"
-        )
+    def test_no_daily_summary_block(self):
+        """Tages-Summe-Block wurde entfernt."""
+        html = _render_html(_build_segments())
+        assert "Tages-Summe" not in html
 
 
-# ---------------------------------------------------------------------------
-# AC-6: Default-Verhalten unverändert (show_metrics_summary=False)
-# ---------------------------------------------------------------------------
+class TestMetricsAlwaysOnPlain:
 
-class TestAC6DefaultUnchanged:
-    """render_html(..., show_metrics_summary=False) → kein Metriken-Überblick,
-    Quick-Take + Tages-Summe vorhanden.
+    def test_plain_eyebrow_always_present(self):
+        plain = _render_plain(_build_segments())
+        assert "Metriken-Überblick" in plain
 
-    RED: TypeError — Parameter existiert nicht.
-    """
-
-    def test_no_eyebrow_when_inactive(self):
-        """'Metriken-Überblick' darf NICHT erscheinen wenn show_metrics_summary=False."""
-        # RED: TypeError
-        html = _render_html(_build_segments(), show_metrics_summary=False)
-        assert "Metriken-Überblick" not in html
-
-    def test_quick_take_present_when_inactive(self):
-        """Quick-Take-Chips erscheinen wenn show_metrics_summary=False."""
-        # RED: TypeError
-        html = _render_html(_build_segments(), show_metrics_summary=False,
-                            show_quick_take_tags=True)
-        # Mindestens ein Chip muss vorhanden sein (ThunderLevel.NONE → "Kein Gewitter")
-        assert "Kein Gewitter" in html or "Böen" in html, (
-            "Quick-Take-Chips müssen bei show_metrics_summary=False erscheinen"
-        )
-
-    def test_daily_summary_present_when_inactive(self):
-        """Tages-Summe-Block erscheint wenn show_metrics_summary=False."""
-        # RED: TypeError
-        html = _render_html(
-            _build_segments(), show_metrics_summary=False,
-            daily_summary_metrics=["precipitation", "wind"],
-        )
-        assert "Tages-Summe" in html, (
-            "Tages-Summe-Block muss bei show_metrics_summary=False erscheinen"
-        )
-
-
-# ---------------------------------------------------------------------------
-# AC-8: Plaintext-Variante enthält Metriken-Überblick
-# ---------------------------------------------------------------------------
-
-class TestAC8PlainTextSummary:
-    """render_plain muss show_metrics_summary-Parameter akzeptieren.
-
-    RED: TypeError — unbekannter Keyword-Argument 'show_metrics_summary'.
-    """
-
-    def test_plain_contains_uebersicht_when_active(self):
-        """Plaintext enthält 'Metriken-Überblick' wenn show_metrics_summary=True."""
-        # RED: TypeError — Parameter existiert nicht
-        plain = _render_plain(_build_segments(), show_metrics_summary=True)
-        assert "Metriken-Überblick" in plain, (
-            "'Metriken-Überblick' muss im Plaintext sein wenn aktiv"
-        )
-
-    def test_plain_no_eyebrow_when_inactive(self):
-        """Plaintext enthält NICHT 'Metriken-Überblick' wenn show_metrics_summary=False."""
-        # RED: TypeError
-        plain = _render_plain(_build_segments(), show_metrics_summary=False)
-        assert "Metriken-Überblick" not in plain
-
-    def test_plain_daily_summary_absent_when_active(self):
-        """Tages-Summe im Plaintext fehlt wenn show_metrics_summary=True."""
-        # RED: TypeError
-        plain = _render_plain(
-            _build_segments(), show_metrics_summary=True,
-            daily_summary_metrics=["precipitation", "wind"],
-        )
-        assert "Tages-Summe" not in plain, (
-            "Tages-Summe darf im Plaintext nicht erscheinen wenn show_metrics_summary=True"
-        )
+    def test_plain_no_daily_summary_block(self):
+        plain = _render_plain(_build_segments())
+        assert "Tages-Summe" not in plain

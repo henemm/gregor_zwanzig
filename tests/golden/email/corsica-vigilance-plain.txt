@@ -15,16 +15,25 @@ Corsica E5: 18–32°C, 🌥️, trocken, Regen ab 10:00, mäßiger Wind 30 km/h
   14     19.2   12.8    19     44     0.0    ⚡⚡        –       ⛅       –   
   15     19.5   13.0    20     45     0.0    ⚡⚡        –       ⛅       –   
 
-━━ Zusammenfassung ━━
-  ⚡ Gewitter möglich ab 10:00 (Segment 1, >400m)
-  💨 Böen bis 85 km/h (10:00)
-  🌧 Regen gesamt: 8.0 mm
+━━ Metriken-Überblick ━━
+  [INFO] 15–22°C · Max 23:00
+  [INFO] gef. min 10°C · 00:00
+  [WARN] Wind >20 km/h ab 17:00 · max 23
+  [WARN] Böe >30 km/h ab 01:00 · max 85
+  [WARN] Regen ab 10:00 · 8 mm
+  [BAD] Gewitter ab 00:00
+  [INFO] 50–50% bewölkt · Max 00:00
+  [INFO] kein Sonnenschein
 
-━━ Tages-Summe ━━
-  Regen gesamt: 8 mm
-  Max Böe:      85 km/h
-  Min Sicht:    –
-  Gewitter:     HIGH
+
+── Antwort-Kommandos ──
+  HEUTE / MORGEN       – Wetter heutige/morgige Etappe
+  JETZT / NOW          – Nowcast Regen/Gewitter ~2h
+  GEWITTER             – Gewittergefahr heutige Etappe
+  RUHETAG [N]          – Etappen um N Tage verschieben
+  STATUS               – Heute und kommende Etappen
+  STOP / WEITER        – Briefings deaktivieren / reaktivieren
+  HILFE / HELP         – Alle Befehle anzeigen
 
 Einheiten: Temp, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun h
 ------------------------------------------------------------

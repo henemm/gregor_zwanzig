@@ -109,7 +109,7 @@ def _daylight(usable_start_h, usable_end_h):
     )
 
 
-def _render(segs, *, stage_stats=None, compact_summary=None, daylight=None,
+def _render(segs, *, stage_stats=None, compact_summary=None,
             report_type="morning", show_outlook=True, multi_day_trend=None):
     from app.metric_catalog import build_default_display_config
     from output.renderers.email.html import render_html
@@ -117,9 +117,9 @@ def _render(segs, *, stage_stats=None, compact_summary=None, daylight=None,
         segments=segs, seg_tables=[_SIMPLE_ROWS] * len(segs),
         trip_name="GR20 Test", report_type=report_type,
         dc=build_default_display_config(), night_rows=[],
-        thunder_forecast=None, highlights=[], changes=None,
+        thunder_forecast=None, changes=None,
         stage_name=None, stage_stats=stage_stats, multi_day_trend=multi_day_trend,
-        compact_summary=compact_summary, daylight=daylight, tz=TZ,
+        compact_summary=compact_summary, tz=TZ,
         friendly_keys=set(), show_outlook=show_outlook,
     )
 
@@ -138,9 +138,9 @@ def _render_plain(segs, *, stage_stats=None):
         segments=segs, seg_tables=[_SIMPLE_ROWS] * len(segs),
         trip_name="GR20 Test", report_type="morning",
         dc=build_default_display_config(), night_rows=[],
-        thunder_forecast=None, highlights=[], changes=None,
+        thunder_forecast=None, changes=None,
         stage_name=None, stage_stats=stage_stats, multi_day_trend=None,
-        compact_summary=None, daylight=None, tz=TZ, friendly_keys=set(),
+        compact_summary=None, tz=TZ, friendly_keys=set(),
     )
 
 
@@ -171,138 +171,28 @@ class TestAC1StageStatsGrid:
 
 
 # ---------------------------------------------------------------------------
-# AC-2: Quick-Take Chips
+# Issue #790: Quick-Take-Chips, Tageslicht-Block und Tages-Summe wurden
+# vollständig aus dem Render-Code entfernt (Negativ-Regression).
 # ---------------------------------------------------------------------------
 
-class TestAC2QuickTakeChips:
+class TestIssue790RemovedBlocks:
 
-    def test_ok_chip_kein_gewitter_when_thunder_none(self):
-        """AC-2: ok-Chip 'Kein Gewitter' bei durchgehend keinem Gewitter.
-
-        GIVEN Quick-Take-Text + Wetterdaten ohne Gewitter
-        WHEN HTML gerendert wird
-        THEN enthält die Mail einen 'Kein Gewitter'-Chip.
-        """
+    def test_no_quick_take_chip(self):
         html = _render(_build_rich_segments(),
                        compact_summary="Wechselhaft mit Schauern.")
-        assert "Kein Gewitter" in html, (
-            "Quick-Take-Chip 'Kein Gewitter' fehlt (Chips noch nicht gebaut)."
-        )
+        assert "Kein Gewitter" not in html
 
-    def test_gust_chip_present_for_strong_gusts(self):
-        """AC-2: Böen-Chip bei starken Böen.
-
-        GIVEN Böen bis 40 km/h
-        WHEN HTML gerendert wird
-        THEN erscheint ein Chip mit 'Böen' (kommt aus den Daten, nicht aus der
-             Tabelle — seg_tables enthält keine Böen-Spalte).
-        """
-        html = _render(_build_rich_segments(),
-                       compact_summary="Wechselhaft mit Schauern.")
-        assert "Böen" in html, (
-            "Quick-Take-Chip 'Böen' fehlt trotz Böen bis 40 km/h."
-        )
-
-    def test_kein_gewitter_chip_is_green_not_neutral(self):
-        """F001-Regression: 'Kein Gewitter'-Chip muss grün (#3a7d44) sein.
-
-        GIVEN Wetterdaten ohne Gewitter (ThunderLevel.NONE überall)
-        WHEN HTML gerendert wird
-        THEN trägt der Span um 'Kein Gewitter' die Farbe #3a7d44 (good-Ton)
-             und NICHT #edeae1 (neutrales Grau — Fallback bei unbekanntem Ton).
-        """
-        html = _render(_build_rich_segments(),
-                       compact_summary="Sonnig.")
-        idx = html.find("Kein Gewitter")
-        assert idx != -1, "'Kein Gewitter'-Chip nicht im HTML."
-        # Suche rückwärts zum öffnenden <span style="background:...">
-        span_start = html.rfind("<span", 0, idx)
-        assert span_start != -1, "Kein öffnendes <span> vor 'Kein Gewitter' gefunden."
-        span_fragment = html[span_start:idx + len("Kein Gewitter")]
-        assert "#3a7d44" in span_fragment, (
-            f"'Kein Gewitter'-Chip hat nicht die grüne Farbe #3a7d44.\n"
-            f"Fragment: {span_fragment}"
-        )
-        assert "#edeae1" not in span_fragment, (
-            f"'Kein Gewitter'-Chip fällt auf neutrales Grau (#edeae1) zurück — "
-            f"Tonalität 'ok' statt 'good' übergeben.\nFragment: {span_fragment}"
-        )
-
-
-# ---------------------------------------------------------------------------
-# AC-3: Tageslicht-Leiste (proportionaler Balken)
-# ---------------------------------------------------------------------------
-
-class TestAC3DaylightBar:
-
-    @staticmethod
-    def _daylight_fragment(html):
-        idx = html.find("Stirnlampe")
-        assert idx != -1, "Tageslicht-Block nicht gefunden"
-        return html[max(0, idx - 200):idx + 1400]
-
-    @staticmethod
-    def _widths(fragment):
-        return re.findall(r"width:\s*([0-9]+(?:\.[0-9]+)?)%", fragment)
-
-    def test_daylight_bar_width_scales_with_usable_window(self):
-        """AC-3: Balkenbreite hängt vom nutzbaren Fenster ab.
-
-        GIVEN zwei verschieden lange nutzbare Tageslicht-Fenster
-        WHEN HTML gerendert wird
-        THEN unterscheidet sich die proportionale Balkenbreite (width:NN%)
-             im Tageslicht-Block (heute gibt es dort gar keinen Balken).
-        """
-        segs = _build_rich_segments()
-        half = self._daylight_fragment(_render(segs, daylight=_daylight(9, 17)))
-        full = self._daylight_fragment(_render(segs, daylight=_daylight(6, 20)))
-        w_half, w_full = self._widths(half), self._widths(full)
-        assert w_half, "Kein 'width:NN%'-Balken im Tageslicht-Block (RED)."
-        assert w_half != w_full, (
-            f"Balkenbreite skaliert nicht mit Fenstergröße: "
-            f"{w_half} vs {w_full}"
-        )
-
-
-# ---------------------------------------------------------------------------
-# AC-4: Tages-Summe-Block
-# ---------------------------------------------------------------------------
-
-class TestAC4DailySummary:
-
-    def test_daily_summary_block_with_correct_aggregates(self):
-        """AC-4: Tages-Summe mit korrekt berechneten Aggregaten.
-
-        GIVEN bekannte Stundenwerte (Regen Σ=6, Böe max=40, Sicht min=1.2 km)
-        WHEN HTML gerendert wird
-        THEN erscheint ein Tages-Summe-Block mit diesen Werten.
-        """
+    def test_no_daylight_block(self):
         html = _render(_build_rich_segments())
-        assert "Tages-Summe" in html, "Tages-Summe-Block fehlt."
-        block_idx = html.find("Tages-Summe")
-        block = html[block_idx:block_idx + 800]
-        assert re.search(r"\b6([.,]0)?\b", block), f"Regen-Summe 6 mm fehlt:\n{block}"
-        assert "40" in block, f"Max Wind 40 fehlt:\n{block}"
-        assert "1.2" in block or "1,2" in block, f"Min Sicht 1.2 km fehlt:\n{block}"
+        assert "Stirnlampe" not in html
 
+    def test_no_daily_summary_block_html(self):
+        html = _render(_build_rich_segments())
+        assert "Tages-Summe" not in html
 
-# ---------------------------------------------------------------------------
-# AC-7: Plain-Text-Parität für Tages-Summe
-# ---------------------------------------------------------------------------
-
-class TestAC7PlainTextDailySummary:
-
-    def test_plain_contains_daily_summary(self):
-        """AC-7: Plain-Text enthält die Tages-Summe ebenfalls.
-
-        GIVEN dieselben Stundenwerte
-        WHEN Plain-Text gerendert wird
-        THEN enthält der Text die Tages-Summe (Regen Σ=6).
-        """
+    def test_no_daily_summary_block_plain(self):
         text = _render_plain(_build_rich_segments(), stage_stats=_STATS)
-        assert "Tages-Summe" in text or "Tagessumme" in text, (
-            "Plain-Text enthält keine Tages-Summe."
-        )
+        assert "Tages-Summe" not in text and "Tagessumme" not in text
 
 
 # ---------------------------------------------------------------------------

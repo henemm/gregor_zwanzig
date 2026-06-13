@@ -112,9 +112,9 @@ def _render_html(segs, **kwargs):
         segments=segs, seg_tables=[_SIMPLE_ROWS] * len(segs),
         trip_name="GR20 Test", report_type="morning",
         dc=build_default_display_config(), night_rows=[],
-        thunder_forecast=None, highlights=[], changes=None,
+        thunder_forecast=None, changes=None,
         stage_name=None, stage_stats=None, multi_day_trend=None,
-        compact_summary=None, daylight=None, tz=TZ, friendly_keys=set(),
+        compact_summary=None, tz=TZ, friendly_keys=set(),
     )
     params.update(kwargs)
     return render_html(**params)
@@ -127,9 +127,9 @@ def _render_plain(segs, **kwargs):
         segments=segs, seg_tables=[_SIMPLE_ROWS] * len(segs),
         trip_name="GR20 Test", report_type="morning",
         dc=build_default_display_config(), night_rows=[],
-        thunder_forecast=None, highlights=[], changes=None,
+        thunder_forecast=None, changes=None,
         stage_name=None, stage_stats=None, multi_day_trend=None,
-        compact_summary=None, daylight=None, tz=TZ, friendly_keys=set(),
+        compact_summary=None, tz=TZ, friendly_keys=set(),
     )
     params.update(kwargs)
     return render_plain(**params)
@@ -159,21 +159,6 @@ class TestAC1StageStatsToggle:
 
 
 # ---------------------------------------------------------------------------
-# AC-2: show_quick_take_tags (nur HTML)
-# ---------------------------------------------------------------------------
-
-class TestAC2QuickTakeToggle:
-
-    def test_chips_present_when_on(self):
-        html = _render_html(_build_segments(), show_quick_take_tags=True)
-        assert "Kein Gewitter" in html and "Böen" in html
-
-    def test_chips_absent_when_off(self):
-        html = _render_html(_build_segments(), show_quick_take_tags=False)
-        assert "Kein Gewitter" not in html and "Böen" not in html
-
-
-# ---------------------------------------------------------------------------
 # AC-3: show_stability
 # ---------------------------------------------------------------------------
 
@@ -193,64 +178,6 @@ class TestAC3StabilityToggle:
         plain = _render_plain(_build_segments(), stability_result=_stability(),
                               show_stability=False)
         assert "Wetterlage: STABIL" not in plain
-
-
-# ---------------------------------------------------------------------------
-# AC-4: show_highlights
-# ---------------------------------------------------------------------------
-
-class TestAC4HighlightsToggle:
-
-    _HL = ["Markanter Höhepunkt-Eintrag XYZ"]
-
-    def test_highlights_present_when_on_html(self):
-        html = _render_html(_build_segments(), highlights=self._HL,
-                            show_highlights=True)
-        assert "Markanter Höhepunkt-Eintrag XYZ" in html
-
-    def test_highlights_absent_when_off_html(self):
-        html = _render_html(_build_segments(), highlights=self._HL,
-                            show_highlights=False)
-        assert "Markanter Höhepunkt-Eintrag XYZ" not in html
-
-    def test_highlights_absent_when_off_plain(self):
-        plain = _render_plain(_build_segments(), highlights=self._HL,
-                              show_highlights=False)
-        assert "Markanter Höhepunkt-Eintrag XYZ" not in plain
-
-
-# ---------------------------------------------------------------------------
-# AC-5: daily_summary_metrics — Teilauswahl
-# ---------------------------------------------------------------------------
-
-class TestAC5DailySummarySubset:
-
-    def test_only_selected_metrics_html(self):
-        html = _render_html(_build_segments(),
-                            daily_summary_metrics=["precipitation", "thunder"])
-        assert "Regen gesamt" in html and "Gewitter" in html
-        assert "Max Böe" not in html and "Min Sicht" not in html
-
-    def test_only_selected_metrics_plain(self):
-        plain = _render_plain(_build_segments(),
-                              daily_summary_metrics=["precipitation", "thunder"])
-        assert "Regen" in plain and "Gewitter" in plain
-        assert "Max Böe" not in plain and "Min Sicht" not in plain
-
-
-# ---------------------------------------------------------------------------
-# AC-6: daily_summary_metrics leer → kein Block
-# ---------------------------------------------------------------------------
-
-class TestAC6DailySummaryEmpty:
-
-    def test_no_block_when_empty_html(self):
-        html = _render_html(_build_segments(), daily_summary_metrics=[])
-        assert "Tages-Summe" not in html
-
-    def test_no_block_when_empty_plain(self):
-        plain = _render_plain(_build_segments(), daily_summary_metrics=[])
-        assert "Tages-Summe" not in plain
 
 
 # ---------------------------------------------------------------------------
@@ -301,67 +228,3 @@ class TestAC7LoaderDefaults:
         assert rc.daily_summary_metrics == [
             "precipitation", "wind", "visibility", "thunder"
         ]
-
-
-# ---------------------------------------------------------------------------
-# AC-8: temperature im Tages-Summe-Block
-# ---------------------------------------------------------------------------
-
-class TestAC8TemperatureMetric:
-
-    def test_temperature_min_max_html(self):
-        # Temps 8,9,10, 11,12,15 → min 8, max 15
-        segs = _build_segments(temps=[8.0, 9.0, 10.0, 11.0, 12.0, 15.0])
-        html = _render_html(segs, daily_summary_metrics=["temperature"])
-        assert "Temp" in html
-        assert "8" in html and "15" in html
-
-    def test_temperature_min_max_plain(self):
-        segs = _build_segments(temps=[8.0, 9.0, 10.0, 11.0, 12.0, 15.0])
-        plain = _render_plain(segs, daily_summary_metrics=["temperature"])
-        assert "Temp" in plain
-        assert "8" in plain and "15" in plain
-
-
-# ---------------------------------------------------------------------------
-# F001: feste Katalog-Reihenfolge (unabhängig von Eingabe-Reihenfolge)
-# ---------------------------------------------------------------------------
-
-class TestF001FixedOrder:
-
-    def test_fixed_order_independent_of_input_html(self):
-        # Eingabe umgekehrt: thunder vor precipitation — Ausgabe muss Regen VOR Gewitter
-        # im Tages-Summe-Block zeigen. Suche nur innerhalb dieses Blocks.
-        html = _render_html(_build_segments(),
-                            daily_summary_metrics=["thunder", "precipitation"])
-        # Tages-Summe-Block isolieren
-        block_start = html.find("Tages-Summe")
-        assert block_start != -1, "Tages-Summe-Block fehlt"
-        block = html[block_start:]
-        regen_pos = block.find("Regen gesamt")
-        gewitter_pos = block.find("Gewitter")
-        assert regen_pos != -1 and gewitter_pos != -1
-        assert regen_pos < gewitter_pos, "Regen muss vor Gewitter stehen (feste Reihenfolge)"
-
-    def test_fixed_order_independent_of_input_plain(self):
-        plain = _render_plain(_build_segments(),
-                              daily_summary_metrics=["thunder", "precipitation"])
-        regen_pos = plain.find("Regen")
-        gewitter_pos = plain.find("Gewitter")
-        assert regen_pos != -1 and gewitter_pos != -1
-        assert regen_pos < gewitter_pos, "Regen muss vor Gewitter stehen (feste Reihenfolge)"
-
-
-# ---------------------------------------------------------------------------
-# F002: nur unbekannte IDs → kein Block (kein leerer Header)
-# ---------------------------------------------------------------------------
-
-class TestF002UnknownIdsNoBlock:
-
-    def test_all_unknown_ids_no_block_html(self):
-        html = _render_html(_build_segments(), daily_summary_metrics=["foobar"])
-        assert "Tages-Summe" not in html
-
-    def test_all_unknown_ids_no_block_plain(self):
-        plain = _render_plain(_build_segments(), daily_summary_metrics=["foobar"])
-        assert "Tages-Summe" not in plain

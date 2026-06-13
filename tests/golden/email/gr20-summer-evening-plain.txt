@@ -22,14 +22,25 @@ GR20 E3: trocken, ⚡ möglich
   15     19.5   13.0    20     45     0.0    –         –       ⛅       –   
   16     19.8   13.2    20     46     0.0    –         –       ⛅       –   
 
-━━ Zusammenfassung ━━
-  🌧 Regen gesamt: 2.5 mm
+━━ Metriken-Überblick ━━
+  [INFO] 15–22°C · Max 23:00
+  [INFO] gef. min 10°C · 00:00
+  [WARN] Wind >20 km/h ab 17:00 · max 23
+  [WARN] Böe >30 km/h ab 01:00 · max 53
+  [WARN] Regen ab 09:00 · 2 mm
+  [GOOD] kein Gewitter
+  [INFO] 50–50% bewölkt · Max 00:00
+  [INFO] kein Sonnenschein
 
-━━ Tages-Summe ━━
-  Regen gesamt: 2 mm
-  Max Böe:      53 km/h
-  Min Sicht:    –
-  Gewitter:     kein
+
+── Antwort-Kommandos ──
+  HEUTE / MORGEN       – Wetter heutige/morgige Etappe
+  JETZT / NOW          – Nowcast Regen/Gewitter ~2h
+  GEWITTER             – Gewittergefahr heutige Etappe
+  RUHETAG [N]          – Etappen um N Tage verschieben
+  STATUS               – Heute und kommende Etappen
+  STOP / WEITER        – Briefings deaktivieren / reaktivieren
+  HILFE / HELP         – Alle Befehle anzeigen
 
 Einheiten: Temp, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun h
 ------------------------------------------------------------

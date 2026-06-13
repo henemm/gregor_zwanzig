@@ -21,53 +21,15 @@ if TYPE_CHECKING:
     from app.models import StabilityResult
     from services.day_comparison import DayComparison
 from app.profile import ActivityProfile
-from services.daylight_service import DaylightWindow
 from utils.timezone import local_fmt
 
 from src.output.renderers.email.helpers import (
-    build_confidence_hint, build_daily_aggregates, build_metrics_summary_pills,
+    build_confidence_hint, build_metrics_summary_pills,
     build_segment_label,
     build_units_legend, fmt_val, format_change_line, format_trend_tokens,
     shorten_stage_name, visible_cols,
 )
 from src.output.renderers.email.profile_signature import profile_signature
-
-
-def _format_daylight_plain(dl: DaylightWindow, *, tz: ZoneInfo) -> str:
-    hours = dl.duration_minutes // 60
-    mins = dl.duration_minutes % 60
-    lines = [
-        f"\U0001f304 Ohne Stirnlampe: {local_fmt(dl.usable_start, tz)} "
-        f"– {local_fmt(dl.usable_end, tz)} ({hours}h {mins:02d}m)"
-    ]
-    has_corrections = (
-        dl.terrain_dawn_penalty_min or dl.weather_dawn_penalty_min
-        or dl.terrain_dusk_penalty_min or dl.weather_dusk_penalty_min
-    )
-    if has_corrections:
-        if dl.terrain_dawn_penalty_min or dl.weather_dawn_penalty_min:
-            parts = [f"Dämmerung {local_fmt(dl.civil_dawn, tz)}"]
-            if dl.terrain_dawn_penalty_min:
-                parts.append(f"+ {dl.terrain_dawn_penalty_min}min (Tal)")
-            if dl.weather_dawn_penalty_min:
-                parts.append(f"+ {dl.weather_dawn_penalty_min}min (Wolken)")
-            parts.append(f"= {local_fmt(dl.usable_start, tz)}")
-            lines.append(f"   {' '.join(parts)}")
-        if dl.terrain_dusk_penalty_min or dl.weather_dusk_penalty_min:
-            parts = [f"Sonnenuntergang {local_fmt(dl.sunset, tz)}"]
-            if dl.terrain_dusk_penalty_min:
-                parts.append(f"– {dl.terrain_dusk_penalty_min}min (Tal)")
-            if dl.weather_dusk_penalty_min:
-                parts.append(f"– {dl.weather_dusk_penalty_min}min (Wolken)")
-            parts.append(f"= {local_fmt(dl.usable_end, tz)}")
-            lines.append(f"   {' '.join(parts)}")
-    else:
-        lines.append(
-            f"   Dämmerung {local_fmt(dl.civil_dawn, tz)} · "
-            f"Sonnenaufgang {local_fmt(dl.sunrise, tz)} · "
-            f"Sonnenuntergang {local_fmt(dl.sunset, tz)}"
-        )
-    return "\n".join(lines)
 
 
 def _render_text_table(rows: list[dict], *, friendly_keys: set[str],
@@ -114,13 +76,11 @@ def render_plain(
     dc: UnifiedWeatherDisplayConfig,
     night_rows: list[dict],
     thunder_forecast: Optional[dict],
-    highlights: list[str],
     changes: Optional[list[WeatherChange]],
     stage_name: Optional[str],
     stage_stats: Optional[dict],
     multi_day_trend: Optional[list[dict]],
     compact_summary: Optional[str],
-    daylight: Optional[DaylightWindow],
     tz: ZoneInfo,
     friendly_keys: set[str],
     format_modes: Optional[dict[str, str]] = None,
@@ -128,13 +88,16 @@ def render_plain(
     stability_result: Optional["StabilityResult"] = None,
     show_stage_stats: bool = True,
     show_stability: bool = True,
-    show_highlights: bool = True,
-    daily_summary_metrics: Optional[list[str]] = None,
-    show_metrics_summary: bool = False,
     show_outlook: bool = True,
     day_comparison: Optional["DayComparison"] = None,
+    **_ignored,
 ) -> str:
-    """Render full plain-text e-mail body. Pure function."""
+    """Render full plain-text e-mail body. Pure function.
+
+    Issue #790: removed parameters (highlights, daylight, show_highlights,
+    daily_summary_metrics, show_metrics_summary) are absorbed by **_ignored
+    for backward compatibility — they no longer affect output.
+    """
     sig = profile_signature(profile)
     lines = []
     # Bug #397: Datums-Header in Ortszeit (passt zu lokalen Segment-Zeiten).
@@ -159,6 +122,13 @@ def render_plain(
 
     if compact_summary:
         lines.append(compact_summary)
+        lines.append("")
+
+    # Issue #790: Vortag-Einordnung — eine Zeile direkt unter der Summary.
+    from services.day_comparison import summarize_day_comparison
+    _day_comparison_line = summarize_day_comparison(day_comparison)
+    if _day_comparison_line:
+        lines.append(_day_comparison_line)
         lines.append("")
 
     # Issue #122 / F12: Stabilitäts-Label (vor dem Konfidenz-Hinweis).
@@ -189,10 +159,6 @@ def render_plain(
     )
     if confidence_hint:
         lines.append(confidence_hint)
-        lines.append("")
-
-    if daylight:
-        lines.append(_format_daylight_plain(daylight, tz=tz))
         lines.append("")
 
     if changes:
@@ -258,66 +224,25 @@ def render_plain(
                 lines.append(f"    ↳ {note}")
         lines.append("")
 
-    # Issue #750: Vortag-Vergleich-Sektion (nach dem Ausblick-Block).
-    _day_comparison_text = render_day_comparison_plain(day_comparison)
-    if _day_comparison_text:
-        lines.append(_day_comparison_text)
-        lines.append("")
-
-    if highlights and show_highlights:
-        lines.append("━━ Zusammenfassung ━━")
-        for h in highlights:
-            lines.append(f"  {h}")
-        lines.append("")
-
-    # Issue #664: Metriken-Überblick (Plain) — replaces Tages-Summe when active
-    if show_metrics_summary:
-        _pill_metric_ids = [mc.metric_id for mc in dc.metrics if mc.enabled]
-        _pill_thresholds = {
-            mc.metric_id: mc.alert_threshold
-            for mc in dc.metrics
-            if mc.alert_enabled and mc.alert_threshold is not None
-        }
-        _plain_pills = build_metrics_summary_pills(
-            segments, _pill_metric_ids, _pill_thresholds, tz=tz
-        )
-        lines.append("━━ Metriken-Überblick ━━")
-        for _lbl, _tone in _plain_pills:
-            lines.append(f"  [{_tone.upper()}] {_lbl}")
-        lines.append("")
-    else:
-        # AC-7: Tages-Summe in Plain-Text — metrik-getrieben (Issue #621)
-        # F001: feste Katalog-Reihenfolge; F002: Block nur wenn mind. eine gültige Zeile.
-        _METRIC_ORDER_P = ["precipitation", "wind", "visibility", "thunder", "temperature"]
-        _dsm_set_p = set(daily_summary_metrics) if daily_summary_metrics is not None else {
-            "precipitation", "wind", "visibility", "thunder"
-        }
-        _plain_lines: list[str] = []
-        _daily_agg_p = build_daily_aggregates(segments)
-        for _m in _METRIC_ORDER_P:
-            if _m not in _dsm_set_p:
-                continue
-            if _m == "precipitation":
-                _plain_lines.append(f"  Regen gesamt: {_daily_agg_p['rain_mm']:.0f} mm")
-            elif _m == "wind":
-                _plain_lines.append(f"  Max Böe:      {int(_daily_agg_p['max_gust_kmh'])} km/h")
-            elif _m == "visibility":
-                _vis = (f"{_daily_agg_p['min_vis_km']:.1f} km"
-                        if _daily_agg_p["min_vis_km"] is not None else "–")
-                _plain_lines.append(f"  Min Sicht:    {_vis}")
-            elif _m == "thunder":
-                _plain_lines.append(f"  Gewitter:     {_daily_agg_p['thunder_word']}")
-            elif _m == "temperature":
-                _mn = _daily_agg_p.get("min_temp_c")
-                _mx = _daily_agg_p.get("max_temp_c")
-                if _mn is not None and _mx is not None:
-                    _plain_lines.append(f"  Temp:         {int(round(_mn))}–{int(round(_mx))} °C")
-                else:
-                    _plain_lines.append("  Temp:         –")
-        if _plain_lines:
-            lines.append("━━ Tages-Summe ━━")
-            lines.extend(_plain_lines)
-            lines.append("")
+    # Issue #790: Metriken-Überblick — der EINE feste Wetterblock, immer sichtbar.
+    _pill_metric_ids = [mc.metric_id for mc in dc.metrics if mc.enabled]
+    if not _pill_metric_ids:
+        _pill_metric_ids = [
+            "temperature", "wind", "gust", "precipitation",
+            "thunder", "freezing_level", "visibility",
+        ]
+    _pill_thresholds = {
+        mc.metric_id: mc.alert_threshold
+        for mc in dc.metrics
+        if mc.alert_enabled and mc.alert_threshold is not None
+    }
+    _plain_pills = build_metrics_summary_pills(
+        segments, _pill_metric_ids, _pill_thresholds, tz=tz
+    )
+    lines.append("━━ Metriken-Überblick ━━")
+    for _lbl, _tone in _plain_pills:
+        lines.append(f"  [{_tone.upper()}] {_lbl}")
+    lines.append("")
 
     # Antwort-Kommandos (Issue #731: abruf-zentrierter Grundbefehlssatz)
     lines.append("")
@@ -343,74 +268,3 @@ def render_plain(
         fb = segments[0].timeseries.meta
         lines.append(f"Fallback {', '.join(fb.fallback_metrics)}: {fb.fallback_model}")
     return "\n".join(lines)
-
-
-def render_day_comparison_plain(comparison: Optional["DayComparison"]) -> str:
-    """Issue #749: Renders a compact Vortag-Vergleich section as plain text. Pure function.
-
-    Returns '' when comparison is None or has no entries.
-    MISSING metrics are silently omitted (no placeholder).
-    """
-    from services.day_comparison import ComparisonDirection
-
-    if comparison is None or not comparison.entries:
-        return ""
-
-    multi = len(comparison.entries) > 1
-
-    def _fmt_delta(delta: float, unit: str) -> str:
-        sign = "+" if delta > 0 else ""
-        return f"{sign}{delta} {unit}"
-
-    content_lines: list[str] = []
-
-    for entry in comparison.entries:
-        seg_lines: list[str] = []
-
-        # Temperatur (combined, always EQUAL → no arrow)
-        if (entry.temp_min.direction != ComparisonDirection.MISSING
-                and entry.temp_max.direction != ComparisonDirection.MISSING):
-            sign_min = "+" if (entry.temp_min.delta or 0) > 0 else ""
-            sign_max = "+" if (entry.temp_max.delta or 0) > 0 else ""
-            val = f"{sign_min}{entry.temp_min.delta}°/{sign_max}{entry.temp_max.delta}°C"
-            seg_lines.append(f"  Temperatur:   {val}")
-
-        # Niederschlag
-        if entry.precip_sum.direction != ComparisonDirection.MISSING:
-            d = entry.precip_sum.direction
-            arrow = "▲ " if d == ComparisonDirection.BETTER else ("▼ " if d == ComparisonDirection.WORSE else "")
-            seg_lines.append(f"  Niederschlag: {arrow}{_fmt_delta(entry.precip_sum.delta, 'mm')}")
-
-        # Wind
-        if entry.wind_max.direction != ComparisonDirection.MISSING:
-            d = entry.wind_max.direction
-            arrow = "▲ " if d == ComparisonDirection.BETTER else ("▼ " if d == ComparisonDirection.WORSE else "")
-            seg_lines.append(f"  Wind:         {arrow}{_fmt_delta(entry.wind_max.delta, 'km/h')}")
-
-        # Böen
-        if entry.gust_max.direction != ComparisonDirection.MISSING:
-            d = entry.gust_max.direction
-            arrow = "▲ " if d == ComparisonDirection.BETTER else ("▼ " if d == ComparisonDirection.WORSE else "")
-            seg_lines.append(f"  Böen:         {arrow}{_fmt_delta(entry.gust_max.delta, 'km/h')}")
-
-        # Gewitter (ordinal)
-        if entry.thunder.direction != ComparisonDirection.MISSING:
-            td = entry.thunder.delta or 0
-            if td == 0:
-                thunder_val = "unverändert"
-            elif td < 0:
-                thunder_val = f"▲ −{int(abs(td))} Stufen"
-            else:
-                thunder_val = f"▼ +{int(td)} Stufen"
-            seg_lines.append(f"  Gewitter:     {thunder_val}")
-
-        if not seg_lines:
-            continue
-        if multi:
-            content_lines.append(f"Segment {entry.segment_id}:")
-        content_lines.extend(seg_lines)
-
-    if not content_lines:
-        return ""
-
-    return "\n".join(["━━ Vortag-Vergleich ━━"] + content_lines)

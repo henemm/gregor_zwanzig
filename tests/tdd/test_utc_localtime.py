@@ -86,69 +86,8 @@ class TestTimezoneUtility:
         assert local_fmt(dt_utc, tz) == "07:00"
 
 
-# ── Test 2: Daylight banner shows local time ──────────────────────────
-
-
-class TestDaylightBannerLocalTime:
-    """The daylight banner must display times in local timezone."""
-
-    def test_daylight_html_shows_local_times(self):
-        """
-        GIVEN: DaylightWindow with UTC times for Sóller (CET=UTC+1 in March)
-        WHEN: _format_daylight_html renders with CET timezone
-        THEN: All times are shifted +1h from UTC values
-        """
-        from services.daylight_service import DaylightWindow
-        from formatters.trip_report import TripReportFormatter
-
-        dl = DaylightWindow(
-            civil_dawn=datetime(2026, 3, 3, 5, 51, tzinfo=timezone.utc),
-            civil_dusk=datetime(2026, 3, 3, 17, 42, tzinfo=timezone.utc),
-            sunrise=datetime(2026, 3, 3, 6, 18, tzinfo=timezone.utc),
-            sunset=datetime(2026, 3, 3, 17, 15, tzinfo=timezone.utc),
-            usable_start=datetime(2026, 3, 3, 6, 6, tzinfo=timezone.utc),
-            usable_end=datetime(2026, 3, 3, 17, 27, tzinfo=timezone.utc),
-            duration_minutes=681,
-            terrain_dawn_penalty_min=15,
-            terrain_dusk_penalty_min=15,
-        )
-
-        formatter = TripReportFormatter()
-        formatter._tz = ZoneInfo("Europe/Madrid")
-        html = formatter._format_daylight_html(dl)
-
-        # Must show CET times (UTC+1), NOT UTC
-        assert "07:06" in html, f"usable_start should be 07:06 CET, got: {html}"
-        assert "18:27" in html, f"usable_end should be 18:27 CET, got: {html}"
-        assert "06:06" not in html, "Should not show UTC time 06:06"
-
-    def test_daylight_plain_shows_local_times(self):
-        """
-        GIVEN: DaylightWindow with UTC times
-        WHEN: _format_daylight_plain renders with CET timezone
-        THEN: Plain-text version also uses local times
-        """
-        from services.daylight_service import DaylightWindow
-        from formatters.trip_report import TripReportFormatter
-
-        dl = DaylightWindow(
-            civil_dawn=datetime(2026, 3, 3, 5, 51, tzinfo=timezone.utc),
-            civil_dusk=datetime(2026, 3, 3, 17, 42, tzinfo=timezone.utc),
-            sunrise=datetime(2026, 3, 3, 6, 18, tzinfo=timezone.utc),
-            sunset=datetime(2026, 3, 3, 17, 15, tzinfo=timezone.utc),
-            usable_start=datetime(2026, 3, 3, 6, 6, tzinfo=timezone.utc),
-            usable_end=datetime(2026, 3, 3, 17, 27, tzinfo=timezone.utc),
-            duration_minutes=681,
-            terrain_dawn_penalty_min=15,
-            terrain_dusk_penalty_min=15,
-        )
-
-        formatter = TripReportFormatter()
-        formatter._tz = ZoneInfo("Europe/Madrid")
-        plain = formatter._format_daylight_plain(dl)
-
-        assert "07:06" in plain, f"usable_start should be 07:06 CET, got: {plain}"
-        assert "06:06" not in plain, "Should not show UTC time 06:06"
+# ── Test 2 (Daylight banner) entfernt: Tageslicht-Block wurde mit #790
+#    aus der Briefing-Mail entfernt (_format_daylight_html/_plain gelöscht). ──
 
 
 # ── Test 3: Hourly table shows local hours ──────────────────────────

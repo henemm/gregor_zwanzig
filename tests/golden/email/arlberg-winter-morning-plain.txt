@@ -15,14 +15,25 @@ Arlberg: -12–-4°C, 🌥️, trocken, starker Wind 45 km/h, Böen bis 110 km/h
   12     18.6   12.4    18     42     0.0    –         –       ⛅       –   
   13     18.9   12.6    18     43     0.0    –         –       ⛅       –   
 
-━━ Zusammenfassung ━━
-  💨 Böen bis 110 km/h (08:00)
+━━ Metriken-Überblick ━━
+  [INFO] 15–22°C · Max 23:00
+  [INFO] gef. min 10°C · 00:00
+  [WARN] Wind >20 km/h ab 17:00 · max 23
+  [WARN] Böe >30 km/h ab 01:00 · max 110
+  [GOOD] kein Regen
+  [GOOD] kein Gewitter
+  [INFO] 50–50% bewölkt · Max 00:00
+  [INFO] kein Sonnenschein
 
-━━ Tages-Summe ━━
-  Regen gesamt: 0 mm
-  Max Böe:      110 km/h
-  Min Sicht:    –
-  Gewitter:     kein
+
+── Antwort-Kommandos ──
+  HEUTE / MORGEN       – Wetter heutige/morgige Etappe
+  JETZT / NOW          – Nowcast Regen/Gewitter ~2h
+  GEWITTER             – Gewittergefahr heutige Etappe
+  RUHETAG [N]          – Etappen um N Tage verschieben
+  STATUS               – Heute und kommende Etappen
+  STOP / WEITER        – Briefings deaktivieren / reaktivieren
+  HILFE / HELP         – Alle Befehle anzeigen
 
 Einheiten: Temp, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun h
 ------------------------------------------------------------

@@ -59,6 +59,59 @@ class DayComparison:
     entries: List[DayComparisonEntry] = field(default_factory=list)
 
 
+def summarize_day_comparison(comparison: Optional["DayComparison"]) -> str:
+    """Issue #790: Eine natursprachliche Vortag-Einordnungszeile.
+
+    Temp: Durchschnitt der temp_max.delta über alle Segmente (None überspringen).
+        >+1.5 → "wärmer", <-1.5 → "kälter", sonst "ähnlich temperiert".
+    Regen: Summe der precip_sum.delta.
+        >+1mm → "nasser", <-1mm → "trockener", sonst neutral.
+
+    Rückgabe "" wenn comparison None/keine entries.
+    """
+    if comparison is None or not comparison.entries:
+        return ""
+
+    temp_deltas = [
+        e.temp_max.delta for e in comparison.entries
+        if e.temp_max.delta is not None
+    ]
+    precip_deltas = [
+        e.precip_sum.delta for e in comparison.entries
+        if e.precip_sum.delta is not None
+    ]
+
+    temp_word: Optional[str] = None
+    if temp_deltas:
+        avg_temp = sum(temp_deltas) / len(temp_deltas)
+        if avg_temp > 1.5:
+            temp_word = "wärmer"
+        elif avg_temp < -1.5:
+            temp_word = "kälter"
+        else:
+            temp_word = "ähnlich temperiert"
+
+    rain_word: Optional[str] = None
+    if precip_deltas:
+        sum_precip = sum(precip_deltas)
+        if sum_precip > 1.0:
+            rain_word = "nasser"
+        elif sum_precip < -1.0:
+            rain_word = "trockener"
+
+    temp_neutral = temp_word in (None, "ähnlich temperiert")
+    rain_neutral = rain_word is None
+
+    if temp_neutral and rain_neutral:
+        return "Vortag: heute ähnliches Wetter wie gestern"
+
+    if not temp_neutral and not rain_neutral:
+        return f"Vortag: heute {temp_word} und {rain_word} als gestern"
+
+    only_word = temp_word if not temp_neutral else rain_word
+    return f"Vortag: heute {only_word} als gestern"
+
+
 def _direction(delta: float, key: str) -> ComparisonDirection:
     """Richtung anhand der Metrik-Semantik."""
     if key in _NEUTRAL:

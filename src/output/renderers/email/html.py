@@ -22,20 +22,18 @@ if TYPE_CHECKING:
     from app.models import StabilityResult
     from services.day_comparison import DayComparison
 from app.profile import ActivityProfile
-from services.daylight_service import DaylightWindow
 from utils.timezone import local_fmt
 
 from src.output.renderers.email.helpers import (
     AMPEL_LEGEND,
-    build_confidence_hint, build_daily_aggregates, build_metrics_summary_pills,
-    build_quick_take_chips,
+    build_confidence_hint, build_metrics_summary_pills,
     build_segment_label, build_units_legend,
     derive_horizon, fmt_val, format_change_line, format_trend_tokens, pill_html,
     shorten_stage_name, visible_cols,
 )
 from src.output.renderers.email.design_tokens import (
     G_PAPER, G_SURFACE_1, G_INK, G_INK_MUTED, G_INK_FAINT,
-    G_ACCENT, G_WARNING, G_DANGER, G_SUCCESS, G_WX_THUNDER,
+    G_ACCENT, G_WARNING, G_DANGER, G_WX_THUNDER,
     G_BOX_WARNING_BG, G_BOX_DANGER_BG, G_BOX_INFO_BG,
     FONT_UI, FONT_DATA, WEB_FONT_LINK,
 )
@@ -80,78 +78,6 @@ def render_stability_label_html(result: Optional["StabilityResult"]) -> str:
         f'border-left:4px solid {c["border"]};padding:12px;margin:8px 0;">'
         f'<p style="margin:0;font-size:14px;line-height:1.6;'
         f'color:{c["text"]};font-weight:600;">{text}</p></div>'
-    )
-
-
-def _format_daylight_html(dl: DaylightWindow, *, tz: ZoneInfo) -> str:
-    hours = dl.duration_minutes // 60
-    mins = dl.duration_minutes % 60
-    headline = (
-        f"\U0001f304 Ohne Stirnlampe: {local_fmt(dl.usable_start, tz)} "
-        f"– {local_fmt(dl.usable_end, tz)} ({hours}h {mins:02d}m)"
-    )
-    has_corrections = (
-        dl.terrain_dawn_penalty_min or dl.weather_dawn_penalty_min
-        or dl.terrain_dusk_penalty_min or dl.weather_dusk_penalty_min
-    )
-    explanation_parts: list[str] = []
-    if has_corrections:
-        if dl.terrain_dawn_penalty_min or dl.weather_dawn_penalty_min:
-            parts = [f"Dämmerung {local_fmt(dl.civil_dawn, tz)}"]
-            if dl.terrain_dawn_penalty_min:
-                parts.append(f"+ {dl.terrain_dawn_penalty_min}min (Tal)")
-            if dl.weather_dawn_penalty_min:
-                parts.append(f"+ {dl.weather_dawn_penalty_min}min (Wolken)")
-            parts.append(f"= {local_fmt(dl.usable_start, tz)}")
-            explanation_parts.append(" ".join(parts))
-        if dl.terrain_dusk_penalty_min or dl.weather_dusk_penalty_min:
-            parts = [f"Sonnenuntergang {local_fmt(dl.sunset, tz)}"]
-            if dl.terrain_dusk_penalty_min:
-                parts.append(f"– {dl.terrain_dusk_penalty_min}min (Tal)")
-            if dl.weather_dusk_penalty_min:
-                parts.append(f"– {dl.weather_dusk_penalty_min}min (Wolken)")
-            parts.append(f"= {local_fmt(dl.usable_end, tz)}")
-            explanation_parts.append(" ".join(parts))
-    else:
-        explanation_parts.append(
-            f"Dämmerung {local_fmt(dl.civil_dawn, tz)} · "
-            f"Sonnenaufgang {local_fmt(dl.sunrise, tz)} · "
-            f"Sonnenuntergang {local_fmt(dl.sunset, tz)}"
-        )
-
-    inner = "<br>".join(
-        f'<span style="font-size:12px;color:{G_INK_MUTED}">{p}</span>'
-        for p in explanation_parts
-    )
-    explanation_html = f"<div style=\"margin-top:4px\">{inner}</div>"
-
-    # AC-3: proportionale Leiste — nutzbares Fenster relativ zur civil-Spanne
-    civil_span = (dl.civil_dusk - dl.civil_dawn).total_seconds()
-    if civil_span > 0:
-        usable_span = (dl.usable_end - dl.usable_start).total_seconds()
-        bar_pct = round(min(max(usable_span / civil_span * 100, 1), 100), 1)
-        offset_pct = round(min(max(
-            (dl.usable_start - dl.civil_dawn).total_seconds() / civil_span * 100, 0), 99), 1)
-        remainder_pct = round(max(100 - offset_pct - bar_pct, 0), 1)
-        daylight_bar = (
-            f'<table width="100%" cellpadding="0" cellspacing="0" '
-            f'style="margin-top:8px;border-collapse:collapse">'
-            f'<tr>'
-            f'<td style="width:{offset_pct}%;background:#d8d3c2;height:6px;"></td>'
-            f'<td style="width:{bar_pct}%;background:{G_WARNING};height:6px;border-radius:3px"></td>'
-            f'<td style="width:{remainder_pct}%;background:#d8d3c2;height:6px;"></td>'
-            f'</tr></table>'
-        )
-    else:
-        daylight_bar = ""
-
-    return (
-        f'<div style="background:{G_BOX_WARNING_BG};border-left:4px solid {G_WARNING};'
-        f'padding:12px;margin:8px 0;">'
-        f'<strong style="font-size:14px">{headline}</strong>'
-        f'{daylight_bar}'
-        f'{explanation_html}'
-        f'</div>'
     )
 
 
@@ -301,29 +227,29 @@ def render_html(
     dc: UnifiedWeatherDisplayConfig,
     night_rows: list[dict],
     thunder_forecast: Optional[dict],
-    highlights: list[str],
     changes: Optional[list[WeatherChange]],
     stage_name: Optional[str],
     stage_stats: Optional[dict],
     multi_day_trend: Optional[list[dict]],
     compact_summary: Optional[str],
-    daylight: Optional[DaylightWindow],
     tz: ZoneInfo,
     friendly_keys: set[str],
     format_modes: Optional[dict[str, str]] = None,
     profile: Optional[ActivityProfile] = None,
     stability_result: Optional["StabilityResult"] = None,
     show_stage_stats: bool = True,
-    show_quick_take_tags: bool = True,
     show_stability: bool = True,
-    show_highlights: bool = True,
-    daily_summary_metrics: Optional[list[str]] = None,
     sent_at: Optional[datetime] = None,
-    show_metrics_summary: bool = False,
     show_outlook: bool = True,
     day_comparison: Optional["DayComparison"] = None,
+    **_ignored,
 ) -> str:
-    """Render full HTML e-mail body. Pure function."""
+    """Render full HTML e-mail body. Pure function.
+
+    Issue #790: removed parameters (highlights, daylight, show_quick_take_tags,
+    show_highlights, daily_summary_metrics, show_metrics_summary) are absorbed
+    by **_ignored for backward compatibility — they no longer affect output.
+    """
     sig = profile_signature(profile)
     # Bug #397: Datums-Header in Ortszeit (passt zu lokalen Segment-Zeiten).
     report_date = local_fmt(segments[0].segment.start_time, tz, "%d.%m.%Y")
@@ -608,54 +534,30 @@ def render_html(
     </div>
     """
 
-    highlights_html = ""
-    if highlights and show_highlights:
-        hl_items = "".join(f"<li>{h}</li>" for h in highlights)
-        highlights_html = f"""
-            <div class="section">
-                <h3>Zusammenfassung</h3>
-                <ul>{hl_items}</ul>
-            </div>"""
-
-    # Issue #664: Metriken-Überblick replaces Quick-Take + Tages-Summe when active
-    quick_take_html = ""
-    if show_metrics_summary:
-        # Build pills from all enabled E-Mail metric IDs (use dc.metrics order = catalog)
-        _pill_metric_ids = [mc.metric_id for mc in dc.metrics if mc.enabled]
-        _pill_thresholds = {
-            mc.metric_id: mc.alert_threshold
-            for mc in dc.metrics
-            if mc.alert_enabled and mc.alert_threshold is not None
-        }
-        _pills = build_metrics_summary_pills(
-            segments, _pill_metric_ids, _pill_thresholds, tz=tz
-        )
-        if _pills:
-            _chips_html = " ".join(pill_html(lbl, tone) for lbl, tone in _pills)
-            quick_take_html = (
-                f'<div style="padding:8px 16px;display:block">'
-                f'<p style="font-size:9px;text-transform:uppercase;letter-spacing:0.08em;'
-                f'color:{G_INK_MUTED};margin:0 0 6px 0">Metriken-Überblick</p>'
-                f'{_chips_html}'
-                f'</div>'
-            )
-        else:
-            quick_take_html = (
-                f'<div style="padding:8px 16px;display:block">'
-                f'<p style="font-size:9px;text-transform:uppercase;letter-spacing:0.08em;'
-                f'color:{G_INK_MUTED};margin:0">Metriken-Überblick</p>'
-                f'</div>'
-            )
-    else:
-        # AC-2: Quick-Take Chips aus Segment-Stundenwerten
-        quick_chips = build_quick_take_chips(segments)
-        if quick_chips and show_quick_take_tags:
-            chips_html = " ".join(pill_html(label, tone) for label, tone in quick_chips)
-            quick_take_html = (
-                f'<div style="padding:8px 16px;display:block">'
-                f'{chips_html}'
-                f'</div>'
-            )
+    # Issue #790: Metriken-Überblick — der EINE feste Wetterblock, immer sichtbar.
+    # metric_ids aus enabled dc.metrics; falls leer → Default-Satz.
+    _pill_metric_ids = [mc.metric_id for mc in dc.metrics if mc.enabled]
+    if not _pill_metric_ids:
+        _pill_metric_ids = [
+            "temperature", "wind", "gust", "precipitation",
+            "thunder", "freezing_level", "visibility",
+        ]
+    _pill_thresholds = {
+        mc.metric_id: mc.alert_threshold
+        for mc in dc.metrics
+        if mc.alert_enabled and mc.alert_threshold is not None
+    }
+    _pills = build_metrics_summary_pills(
+        segments, _pill_metric_ids, _pill_thresholds, tz=tz
+    )
+    _chips_html = " ".join(pill_html(lbl, tone) for lbl, tone in _pills)
+    metrics_summary_html = (
+        f'<div style="padding:8px 16px;display:block">'
+        f'<p style="font-size:9px;text-transform:uppercase;letter-spacing:0.08em;'
+        f'color:{G_INK_MUTED};margin:0 0 6px 0">Metriken-Überblick</p>'
+        f'{_chips_html}'
+        f'</div>'
+    )
 
     summary_html = ""
     if compact_summary:
@@ -664,75 +566,16 @@ def render_html(
                 <p style="margin:0;font-size:14px;line-height:1.6;">{compact_summary}</p>
             </div>"""
 
-    # AC-4/Issue #664: Tages-Summe-Block — metrik-getrieben (Issue #621)
-    # F001: feste Katalog-Reihenfolge; Eingabe-Reihenfolge irrelevant.
-    # F002: Block nur emittieren wenn nach dem Filtern mind. eine gültige Zelle vorhanden.
-    # F003 (Issue #664): Block nicht rendern wenn show_metrics_summary=True
-    _METRIC_ORDER = ["precipitation", "wind", "visibility", "thunder", "temperature"]
-    _dsm_set = set(daily_summary_metrics) if daily_summary_metrics is not None else {
-        "precipitation", "wind", "visibility", "thunder"
-    }
-    _daily_agg = build_daily_aggregates(segments)
-    _td_lbl = f'style="padding:2px 16px 2px 0;color:{G_INK_MUTED}"'
-    _td_val = 'style="padding:2px 16px 2px 0;font-weight:600"'
-    _td_val_last = 'style="padding:2px 0;font-weight:600"'
-    _metric_cells: list[tuple[str, str]] = []
-    for _m in _METRIC_ORDER:
-        if _m not in _dsm_set:
-            continue
-        if _m == "precipitation":
-            _metric_cells.append(("Regen gesamt", f'{_daily_agg["rain_mm"]:.0f} mm'))
-        elif _m == "wind":
-            _metric_cells.append(("Max Böe", f'{int(_daily_agg["max_gust_kmh"])} km/h'))
-        elif _m == "visibility":
-            _vis = (f'{_daily_agg["min_vis_km"]:.1f} km'
-                    if _daily_agg["min_vis_km"] is not None else "–")
-            _metric_cells.append(("Min Sicht", _vis))
-        elif _m == "thunder":
-            _metric_cells.append(("Gewitter", _daily_agg["thunder_word"]))
-        elif _m == "temperature":
-            _mn = _daily_agg.get("min_temp_c")
-            _mx = _daily_agg.get("max_temp_c")
-            if _mn is not None and _mx is not None:
-                _metric_cells.append(("Temp", f'{int(round(_mn))}–{int(round(_mx))} °C'))
-            else:
-                _metric_cells.append(("Temp", "–"))
-    if _metric_cells:
-        # Baue Zeilen mit je 2 Zellen (label+wert), letzte Zeile mit _td_val_last
-        _rows_html = ""
-        for _i in range(0, len(_metric_cells), 2):
-            pair = _metric_cells[_i:_i + 2]
-            if len(pair) == 2:
-                l1, v1 = pair[0]
-                l2, v2 = pair[1]
-                _rows_html += (
-                    f'<tr>'
-                    f'<td {_td_lbl}>{l1}</td><td {_td_val}>{v1}</td>'
-                    f'<td {_td_lbl}>{l2}</td><td {_td_val_last}>{v2}</td>'
-                    f'</tr>'
-                )
-            else:
-                l1, v1 = pair[0]
-                _rows_html += (
-                    f'<tr>'
-                    f'<td {_td_lbl}>{l1}</td><td {_td_val_last}>{v1}</td>'
-                    f'</tr>'
-                )
-        daily_summary_html = (
-            f'<div style="background:{G_SURFACE_1};border-top:2px solid {G_INK};'
-            f'padding:16px;margin-top:16px">'
-            f'<p style="font-size:9px;text-transform:uppercase;letter-spacing:0.08em;'
-            f'color:{G_INK_MUTED};margin:0 0 8px 0">Tages-Summe</p>'
-            f'<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:13px">'
-            f'{_rows_html}'
-            f'</table>'
-            f'</div>'
+    # Issue #790: Vortag-Einordnung — eine Zeile direkt unter der Eine-Zeile-Summary.
+    from services.day_comparison import summarize_day_comparison
+    _day_comparison_line = summarize_day_comparison(day_comparison)
+    day_comparison_html = ""
+    if _day_comparison_line:
+        day_comparison_html = (
+            f'<div class="section" style="padding:4px 16px">'
+            f'<p style="margin:0;font-size:13px;color:{G_INK_MUTED}">'
+            f'{_html.escape(_day_comparison_line)}</p></div>'
         )
-    else:
-        daily_summary_html = ""
-    # Issue #664: suppress Tages-Summe when Metriken-Überblick is active
-    if show_metrics_summary:
-        daily_summary_html = ""
 
     # Issue #121 / AC-12 + AC-13: confidence hint (only when uncertain).
     confidence_hint_html = ""
@@ -765,10 +608,6 @@ def render_html(
         stability_html = ""
         trend_html = ""
 
-    daylight_html = ""
-    if daylight:
-        daylight_html = _format_daylight_html(daylight, tz=tz)
-
     changes_html = ""
     if changes:
         ch_items = []
@@ -789,9 +628,6 @@ def render_html(
         f'<br><span style="font-size:10px;color:rgba(255,255,255,0.6)">'
         f'{AMPEL_LEGEND}</span>'
     )
-
-    # Issue #750: Vortag-Vergleich-Sektion (nach dem Ausblick-Block).
-    day_comparison_html = render_day_comparison_html(day_comparison)
 
     html = f"""<!DOCTYPE html>
 <html>
@@ -840,17 +676,14 @@ def render_html(
 
         {stability_html}
         {summary_html}
-        {quick_take_html}
+        {day_comparison_html}
+        {metrics_summary_html}
         {confidence_hint_html}
-        {daylight_html}
         {changes_html}
         {segments_html}
         {night_html}
         {thunder_html}
         {trend_html}
-        {day_comparison_html}
-        {daily_summary_html}
-        {highlights_html}
 
         <div style="background:{G_BOX_INFO_BG};border-left:4px solid {G_ACCENT};padding:12px;margin:8px 0">
             <strong style="font-size:13px;">Antwort-Kommandos</strong>
@@ -871,107 +704,8 @@ def render_html(
             Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')} | Data: {segments[0].provider} ({segments[0].timeseries.meta.model if segments[0].timeseries else 'n/a'}){(' | Fallback ' + ', '.join(segments[0].timeseries.meta.fallback_metrics) + ': ' + segments[0].timeseries.meta.fallback_model) if segments[0].timeseries and segments[0].timeseries.meta.fallback_model else ''}
             {('<br><span style="font-size:10px;color:rgba(255,255,255,0.6)">' + legend_text + '</span>') if legend_text else ''}
             {ampel_legend_html}
-            <br><span style="font-size:10px;color:rgba(255,255,255,0.5)">Auf diese Mail antworten mit: HEUTE &middot; MORGEN &middot; JETZT &middot; GEWITTER &middot; RUHETAG &middot; STATUS &middot; STOP &middot; WEITER &middot; HILFE</span>
         </div>
     </div>
 </body>
 </html>"""
     return html
-
-
-def render_day_comparison_html(comparison: Optional["DayComparison"]) -> str:
-    """Issue #749: Renders a compact Vortag-Vergleich section as HTML. Pure function.
-
-    Returns '' when comparison is None or has no entries.
-    MISSING metrics are silently omitted (no placeholder).
-    """
-    from services.day_comparison import ComparisonDirection
-
-    if comparison is None or not comparison.entries:
-        return ""
-
-    multi = len(comparison.entries) > 1
-
-    def _fmt_delta(delta: float, unit: str) -> str:
-        sign = "+" if delta > 0 else ""
-        return f"{sign}{delta} {unit}"
-
-    def _row(label: str, value_str: str, color: Optional[str]) -> str:
-        color_style = f"color:{color};" if color else ""
-        return (
-            f'<tr>'
-            f'<td style="padding:2px 16px 2px 0;color:{G_INK_MUTED}">{label}</td>'
-            f'<td style="padding:2px 0;font-weight:600;{color_style}">{value_str}</td>'
-            f'</tr>'
-        )
-
-    rows_html = ""
-    for entry in comparison.entries:
-        seg_rows = ""
-
-        # Temperatur (combined temp_min + temp_max, always EQUAL → no arrow)
-        if (entry.temp_min.direction != ComparisonDirection.MISSING
-                and entry.temp_max.direction != ComparisonDirection.MISSING):
-            sign_min = "+" if (entry.temp_min.delta or 0) > 0 else ""
-            sign_max = "+" if (entry.temp_max.delta or 0) > 0 else ""
-            val = f"{sign_min}{entry.temp_min.delta}°/{sign_max}{entry.temp_max.delta}°C"
-            seg_rows += _row("Temperatur", val, G_INK_MUTED)
-
-        # Niederschlag
-        if entry.precip_sum.direction != ComparisonDirection.MISSING:
-            d = entry.precip_sum.direction
-            arrow = "▲ " if d == ComparisonDirection.BETTER else ("▼ " if d == ComparisonDirection.WORSE else "")
-            color = G_SUCCESS if d == ComparisonDirection.BETTER else (G_DANGER if d == ComparisonDirection.WORSE else G_INK_MUTED)
-            seg_rows += _row("Niederschlag", arrow + _fmt_delta(entry.precip_sum.delta, "mm"), color)
-
-        # Wind
-        if entry.wind_max.direction != ComparisonDirection.MISSING:
-            d = entry.wind_max.direction
-            arrow = "▲ " if d == ComparisonDirection.BETTER else ("▼ " if d == ComparisonDirection.WORSE else "")
-            color = G_SUCCESS if d == ComparisonDirection.BETTER else (G_DANGER if d == ComparisonDirection.WORSE else G_INK_MUTED)
-            seg_rows += _row("Wind", arrow + _fmt_delta(entry.wind_max.delta, "km/h"), color)
-
-        # Böen
-        if entry.gust_max.direction != ComparisonDirection.MISSING:
-            d = entry.gust_max.direction
-            arrow = "▲ " if d == ComparisonDirection.BETTER else ("▼ " if d == ComparisonDirection.WORSE else "")
-            color = G_SUCCESS if d == ComparisonDirection.BETTER else (G_DANGER if d == ComparisonDirection.WORSE else G_INK_MUTED)
-            seg_rows += _row("Böen", arrow + _fmt_delta(entry.gust_max.delta, "km/h"), color)
-
-        # Gewitter (ordinal)
-        if entry.thunder.direction != ComparisonDirection.MISSING:
-            td = entry.thunder.delta or 0
-            if td == 0:
-                thunder_val = "unverändert"
-                color = G_INK_MUTED
-            elif td < 0:
-                thunder_val = f"−{int(abs(td))} Stufen"
-                color = G_SUCCESS
-            else:
-                thunder_val = f"+{int(td)} Stufen"
-                color = G_DANGER
-            seg_rows += _row("Gewitter", thunder_val, color)
-
-        if not seg_rows:
-            continue
-
-        if multi:
-            rows_html += (
-                f'<tr><td colspan="2" style="padding:6px 0 2px;font-weight:700">'
-                f'<b>Segment {entry.segment_id}:</b></td></tr>'
-            )
-        rows_html += seg_rows
-
-    if not rows_html:
-        return ""
-
-    return (
-        f'<div style="background:{G_SURFACE_1};border-top:2px solid {G_INK};'
-        f'padding:16px;margin-top:16px">'
-        f'<p style="font-size:9px;text-transform:uppercase;letter-spacing:0.08em;'
-        f'color:{G_INK_MUTED};margin:0 0 8px 0">Vortag-Vergleich</p>'
-        f'<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:13px">'
-        f'{rows_html}'
-        f'</table>'
-        f'</div>'
-    )

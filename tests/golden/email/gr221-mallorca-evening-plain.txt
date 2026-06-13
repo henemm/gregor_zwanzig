@@ -15,11 +15,25 @@ GR221 Tag1: 8–15°C, 🌥️, trocken, mäßiger Wind 25 km/h, Böen bis 55 km
   13     18.9   12.6    18     43     0.0    –         –       ⛅       –   
   14     19.2   12.8    19     44     0.0    –         –       ⛅       –   
 
-━━ Tages-Summe ━━
-  Regen gesamt: 0 mm
-  Max Böe:      53 km/h
-  Min Sicht:    –
-  Gewitter:     kein
+━━ Metriken-Überblick ━━
+  [INFO] 15–22°C · Max 23:00
+  [INFO] gef. min 10°C · 00:00
+  [WARN] Wind >20 km/h ab 17:00 · max 23
+  [WARN] Böe >30 km/h ab 01:00 · max 53
+  [GOOD] kein Regen
+  [GOOD] kein Gewitter
+  [INFO] 50–50% bewölkt · Max 00:00
+  [INFO] kein Sonnenschein
+
+
+── Antwort-Kommandos ──
+  HEUTE / MORGEN       – Wetter heutige/morgige Etappe
+  JETZT / NOW          – Nowcast Regen/Gewitter ~2h
+  GEWITTER             – Gewittergefahr heutige Etappe
+  RUHETAG [N]          – Etappen um N Tage verschieben
+  STATUS               – Heute und kommende Etappen
+  STOP / WEITER        – Briefings deaktivieren / reaktivieren
+  HILFE / HELP         – Alle Befehle anzeigen
 
 Einheiten: Temp, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun h
 ------------------------------------------------------------
