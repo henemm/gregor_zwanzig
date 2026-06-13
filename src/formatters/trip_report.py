@@ -483,22 +483,14 @@ class TripReportFormatter:
         else:
             stage = dt.strftime("%d.%m.%Y")
 
-        # Build D/W/G tokens from segment aggregates (whitelist for subject §11).
-        tokens: list[Token] = []
-        if temp_max_c is not None:
-            tokens.append(Token(symbol="D", value=str(int(temp_max_c)),
-                                category="forecast", priority=4))
-        if wind_max_kmh is not None:
-            tokens.append(Token(symbol="W", value=str(int(wind_max_kmh)),
-                                category="forecast", priority=4))
-        if gust_max_kmh is not None:
-            tokens.append(Token(symbol="G", value=str(int(gust_max_kmh)),
-                                category="forecast", priority=4))
+        # AC-2 (briefing-mail-inhalt): D/W/G-Kürzel entfernt — Betreff bleibt
+        # lesbar ohne kryptische Wetter-Token für Nicht-Techniker.
+        tokens: tuple[Token, ...] = ()
 
         line = TokenLine(
             stage_name=stage,
             report_type=rt,  # type: ignore[arg-type]
-            tokens=tuple(tokens),
+            tokens=tokens,
             trip_name=trip_name,
         )
         return build_email_subject(line)

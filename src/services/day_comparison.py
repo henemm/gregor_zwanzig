@@ -27,6 +27,44 @@ _NEUTRAL = frozenset({"temp_min_c", "temp_max_c"})
 # Floating-point Toleranz für EQUAL-Erkennung
 _FLOAT_EPS = 0.01
 
+# Mapping: metric_id → DayComparisonEntry-Attributname (AC-3/briefing-mail-inhalt)
+_METRIC_ID_TO_ENTRY_ATTR: Dict[str, str] = {
+    "wind": "wind_max",
+    "gust": "gust_max",
+    "precipitation": "precip_sum",
+    "temperature": "temp_max",
+    "wind_chill": "wind_chill_min",
+    "thunder": "thunder",
+    "cloud_total": "cloud_avg",
+    "rain_probability": "pop_max",
+    "uv_index": "uv_index_max",
+    "sunshine": "sunshine_sum",
+    "visibility": "visibility_min",
+    "dewpoint": "dewpoint_avg",
+    "freezing_level": "freezing_level",
+    "humidity": "humidity_avg",
+    "pressure": "pressure_avg",
+}
+
+# Richtungs-Wörter pro metric_id (höherer Wert → [0], niedrigerer → [1])
+_DIRECTION_WORDS: Dict[str, tuple[str, str]] = {
+    "wind": ("windiger", "ruhiger"),
+    "gust": ("böiger", "ruhiger"),
+    "precipitation": ("nasser", "trockener"),
+    "temperature": ("wärmer", "kälter"),
+    "wind_chill": ("gefühlt wärmer", "gefühlt kälter"),
+    "thunder": ("Gewittergefahr", "kein Gewitter mehr"),
+    "cloud_total": ("bewölkter", "sonniger"),
+    "rain_probability": ("höhere Regenwahrscheinlichkeit", "geringere Regenwahrscheinlichkeit"),
+    "uv_index": ("höherer UV", "niedrigerer UV"),
+    "sunshine": ("sonniger", "weniger Sonne"),
+    "visibility": ("bessere Sicht", "schlechtere Sicht"),
+    "dewpoint": ("feuchter", "trockener"),
+    "freezing_level": ("höhere Nullgradgrenze", "niedrigere Nullgradgrenze"),
+    "humidity": ("feuchter", "trockener"),
+    "pressure": ("höherer Luftdruck", "niedrigerer Luftdruck"),
+}
+
 
 class ComparisonDirection(str, Enum):
     BETTER = "BETTER"
@@ -42,6 +80,10 @@ class MetricDelta:
     direction: ComparisonDirection
 
 
+def _missing_delta() -> "MetricDelta":
+    return MetricDelta(delta=None, direction=ComparisonDirection.MISSING)
+
+
 @dataclass
 class DayComparisonEntry:
     """Vergleich für ein Segment (heute vs. gestern)."""
@@ -52,6 +94,17 @@ class DayComparisonEntry:
     gust_max: MetricDelta
     precip_sum: MetricDelta
     thunder: MetricDelta
+    # AC-3 (briefing-mail-inhalt): neue Felder, Default MISSING
+    wind_chill_min: MetricDelta = field(default_factory=_missing_delta)
+    cloud_avg: MetricDelta = field(default_factory=_missing_delta)
+    uv_index_max: MetricDelta = field(default_factory=_missing_delta)
+    sunshine_sum: MetricDelta = field(default_factory=_missing_delta)
+    pop_max: MetricDelta = field(default_factory=_missing_delta)
+    visibility_min: MetricDelta = field(default_factory=_missing_delta)
+    dewpoint_avg: MetricDelta = field(default_factory=_missing_delta)
+    freezing_level: MetricDelta = field(default_factory=_missing_delta)
+    humidity_avg: MetricDelta = field(default_factory=_missing_delta)
+    pressure_avg: MetricDelta = field(default_factory=_missing_delta)
 
 
 @dataclass
@@ -59,19 +112,31 @@ class DayComparison:
     entries: List[DayComparisonEntry] = field(default_factory=list)
 
 
-def summarize_day_comparison(comparison: Optional["DayComparison"]) -> str:
-    """Issue #790: Eine natursprachliche Vortag-Einordnungszeile.
+def summarize_day_comparison(
+    comparison: Optional["DayComparison"],
+    *,
+    selected_metrics: Optional[List[str]] = None,
+) -> str:
+    """Issue #790: Natursprachliche Vortag-Einordnungszeile.
 
-    Temp: Durchschnitt der temp_max.delta über alle Segmente (None überspringen).
-        >+1.5 → "wärmer", <-1.5 → "kälter", sonst "ähnlich temperiert".
-    Regen: Summe der precip_sum.delta.
-        >+1mm → "nasser", <-1mm → "trockener", sonst neutral.
+    selected_metrics=None  → Backward-Compat (AC-4): temp_max + precip, ohne Schwellen.
+    selected_metrics=[...] → AC-3: nur ausgewählte Metriken über Spürbarkeitsschwelle,
+                             max. 4–6 Treffer nach |avg_delta| absteigend sortiert.
+                             wind_chill verdrängt temperature wenn beide über Schwelle (AC-5).
 
     Rückgabe "" wenn comparison None/keine entries.
     """
     if comparison is None or not comparison.entries:
         return ""
 
+    if selected_metrics is None:
+        return _summarize_legacy(comparison)
+
+    return _summarize_metric_driven(comparison, selected_metrics)
+
+
+def _summarize_legacy(comparison: "DayComparison") -> str:
+    """Backward-Compat (AC-4): exakt bisherige temp+precip-Logik."""
     temp_deltas = [
         e.temp_max.delta for e in comparison.entries
         if e.temp_max.delta is not None
@@ -110,6 +175,74 @@ def summarize_day_comparison(comparison: Optional["DayComparison"]) -> str:
 
     only_word = temp_word if not temp_neutral else rain_word
     return f"Vortag: heute {only_word} als gestern"
+
+
+def _get_threshold(metric_id: str) -> float:
+    """Spürbarkeitsschwelle aus MetricCatalog; Fallback 5.0."""
+    try:
+        from app.metric_catalog import get_metric
+        m = get_metric(metric_id)
+        if m.default_change_threshold is not None:
+            return float(m.default_change_threshold)
+    except Exception:
+        pass
+    return 5.0
+
+
+def _summarize_metric_driven(
+    comparison: "DayComparison",
+    selected_metrics: List[str],
+) -> str:
+    """AC-3: metrik-getriebenes, relevanz-gefiltertes Summary."""
+    # Durchschnittsdelta pro Metrik über alle Segmente berechnen
+    avg_deltas: List[tuple[str, float]] = []
+    for mid in selected_metrics:
+        attr = _METRIC_ID_TO_ENTRY_ATTR.get(mid)
+        if attr is None:
+            continue
+        vals = [
+            getattr(e, attr).delta
+            for e in comparison.entries
+            if getattr(e, attr, None) is not None
+            and getattr(e, attr).delta is not None
+        ]
+        if not vals:
+            continue
+        avg = sum(vals) / len(vals)
+        avg_deltas.append((mid, avg))
+
+    # Relevanz-Filter: |avg| >= Schwelle
+    salient: List[tuple[str, float]] = []
+    for mid, avg in avg_deltas:
+        if mid == "thunder":
+            # Thunder nur bei echter Level-Änderung (ordinal-Delta != 0)
+            if abs(avg) >= 0.5:
+                salient.append((mid, avg))
+        else:
+            thr = _get_threshold(mid)
+            if abs(avg) >= thr:
+                salient.append((mid, avg))
+
+    # AC-5: wind_chill verdrängt temperature wenn beide über Schwelle
+    mid_set = {m for m, _ in salient}
+    if "wind_chill" in mid_set and "temperature" in mid_set:
+        salient = [(m, d) for m, d in salient if m != "temperature"]
+
+    # Nach |delta| absteigend sortieren, max. 6 nehmen
+    salient.sort(key=lambda x: abs(x[1]), reverse=True)
+    salient = salient[:6]
+
+    if not salient:
+        return "Vortag: heute ähnliches Wetter wie gestern"
+
+    parts: List[str] = []
+    for mid, avg in salient:
+        words = _DIRECTION_WORDS.get(mid, ("anders", "anders"))
+        word = words[0] if avg > 0 else words[1]
+        parts.append(word)
+
+    joined = " und ".join(parts) if len(parts) <= 2 else ", ".join(parts[:-1]) + " und " + parts[-1]
+    return f"Vortag: heute {joined} als gestern"
 
 
 def _direction(delta: float, key: str) -> ComparisonDirection:
@@ -192,6 +325,37 @@ class DayComparisonService:
                 gust_max=_float_delta(t.gust_max_kmh, y.gust_max_kmh, "gust_max_kmh"),
                 precip_sum=_float_delta(t.precip_sum_mm, y.precip_sum_mm, "precip_sum_mm"),
                 thunder=_thunder_delta(t.thunder_level_max, y.thunder_level_max),
+                # AC-3: neue Metriken aus SegmentWeatherSummary
+                wind_chill_min=_float_delta(t.wind_chill_min_c, y.wind_chill_min_c, "wind_chill_min_c"),
+                cloud_avg=_float_delta(
+                    float(t.cloud_avg_pct) if t.cloud_avg_pct is not None else None,
+                    float(y.cloud_avg_pct) if y.cloud_avg_pct is not None else None,
+                    "cloud_avg_pct",
+                ),
+                uv_index_max=_float_delta(t.uv_index_max, y.uv_index_max, "uv_index_max"),
+                sunshine_sum=_float_delta(t.sunny_hours, y.sunny_hours, "sunny_hours"),
+                pop_max=_float_delta(
+                    float(t.pop_max_pct) if t.pop_max_pct is not None else None,
+                    float(y.pop_max_pct) if y.pop_max_pct is not None else None,
+                    "pop_max_pct",
+                ),
+                visibility_min=_float_delta(
+                    float(t.visibility_min_m) if t.visibility_min_m is not None else None,
+                    float(y.visibility_min_m) if y.visibility_min_m is not None else None,
+                    "visibility_min_m",
+                ),
+                dewpoint_avg=_float_delta(t.dewpoint_avg_c, y.dewpoint_avg_c, "dewpoint_avg_c"),
+                freezing_level=_float_delta(
+                    float(t.freezing_level_m) if t.freezing_level_m is not None else None,
+                    float(y.freezing_level_m) if y.freezing_level_m is not None else None,
+                    "freezing_level_m",
+                ),
+                humidity_avg=_float_delta(
+                    float(t.humidity_avg_pct) if t.humidity_avg_pct is not None else None,
+                    float(y.humidity_avg_pct) if y.humidity_avg_pct is not None else None,
+                    "humidity_avg_pct",
+                ),
+                pressure_avg=_float_delta(t.pressure_avg_hpa, y.pressure_avg_hpa, "pressure_avg_hpa"),
             ))
 
         return DayComparison(entries=entries)

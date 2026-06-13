@@ -127,7 +127,10 @@ def render_plain(
     # Issue #790/#795/RC4: Vortag-Einordnung — eigene abgesetzte Zeile oben,
     # genau EINE Zeile (kein Block, keine graue Fußnote).
     from services.day_comparison import summarize_day_comparison
-    _day_comparison_line = summarize_day_comparison(day_comparison)
+    _day_comparison_line = summarize_day_comparison(
+        day_comparison,
+        selected_metrics=[mc.metric_id for mc in dc.metrics if mc.enabled],
+    )
     if _day_comparison_line:
         lines.append(_day_comparison_line)
         lines.append("")

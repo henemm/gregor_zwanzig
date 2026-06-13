@@ -335,7 +335,7 @@ def render_html(
             )
         compact_rows = _render_mobile_compact_rows(rows, friendly_keys=friendly_keys, allowed_col_keys=allowed_keys, format_modes=format_modes, include_header=True)
         mobile_div = (
-            '<div class="mobile-compact" style="display:none;padding:0 16px">'
+            '<div class="mobile-compact" style="padding:0 16px">'
             '<div style="font-size:12px;font-weight:600;color:' + G_INK
             + ';border-bottom:2px solid ' + G_ACCENT
             + ';padding:10px 0 6px 0;margin-top:12px">' + seg_header + '</div>'
@@ -362,7 +362,7 @@ def render_html(
             + _render_html_table(night_rows, friendly_keys=friendly_keys, format_modes=format_modes)
             + night_hint
             + "</div>"
-            '<div class="mobile-compact" style="display:none;padding:0 16px">'
+            '<div class="mobile-compact" style="padding:0 16px">'
             '<div style="font-size:12px;font-weight:600;color:' + G_INK
             + ';border-bottom:2px solid ' + G_ACCENT
             + ';padding:10px 0 6px 0;margin-top:12px">' + night_header + '</div>'
@@ -570,7 +570,10 @@ def render_html(
     # prominent (≥14px, WCAG-AA Primärtext, eigener Rahmen), genau EINE Zeile.
     # NICHT die schwache Fußnoten-Signatur (13px + G_INK_MUTED #5c5a52).
     from services.day_comparison import summarize_day_comparison
-    _day_comparison_line = summarize_day_comparison(day_comparison)
+    _day_comparison_line = summarize_day_comparison(
+        day_comparison,
+        selected_metrics=[mc.metric_id for mc in dc.metrics if mc.enabled],
+    )
     day_comparison_html = ""
     if _day_comparison_line:
         day_comparison_html = (
@@ -656,15 +659,15 @@ def render_html(
         .footer {{ background: {G_INK}; padding: 12px; text-align: center; color: #ffffff; font-size: 11px; }}
         ul {{ padding-left: 20px; }}
         li {{ margin: 4px 0; font-size: 14px; }}
-        .desktop-only {{ display: block; }}
-        .mobile-compact {{ display: none; }}
-        @media (max-width:600px) {{
-            body {{ padding:4px; }}
-            .container {{ border-radius:0; box-shadow:none; }}
-            .header h1 {{ font-size:18px; }}
-            .header h2 {{ font-size:13px; }}
-            .desktop-only {{ display: none !important; }}
-            .mobile-compact {{ display: block !important; }}
+        .desktop-only {{ display: none; }}
+        .mobile-compact {{ display: block; }}
+        @media (min-width:601px) {{
+            body {{ padding:16px; }}
+            .container {{ border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.1); }}
+            .header h1 {{ font-size:22px; }}
+            .header h2 {{ font-size:16px; }}
+            .desktop-only {{ display: block !important; }}
+            .mobile-compact {{ display: none !important; }}
         }}
     </style>
 </head>

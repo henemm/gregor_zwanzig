@@ -2,9 +2,9 @@
 entity_id: output_subject_filter
 type: module
 created: 2026-04-26
-updated: 2026-06-12
-status: draft
-version: "1.1"
+updated: 2026-06-13
+status: live
+version: "1.2"
 tags: [output, pipeline, refactor, epic-render-pipeline, shortcode]
 epic: render-pipeline-consolidation (#96)
 phase: β2
@@ -292,5 +292,6 @@ Kein Feature-Flag nötig, da das alte Subject-Format ohnehin §11 verletzt und k
 
 ## Changelog
 
+- 2026-06-13: v1.2 — A4/AC-6 D/W/G-Token-Erzeugung für E-Mail-Betreff abgelöst (Workflow briefing-mail-inhalt, Issue offen). `TripReportFormatter._generate_subject` erzeugt keine D/W/G-Token mehr — `tokens=()` immer leer. `subject.py` (Renderer) bleibt unverändert und behandelt leere Token-Liste korrekt. Lesbarer Betreff (Etappenname, ReportType-DE, MainRisk-Label) bleibt. Whitelist D/W/G gilt weiter für SMS-Kanal und Golden-Tests von `build_email_subject` (unverändert).
 - 2026-04-27: β2 Validator-Findings Fixed — Trailing dangling em-dash when `main_risk=None` + `tokens=()` (HIGH), missing D/W/G tokens from aggregated segment data in TripReportFormatter (CRITICAL). Spec aligned with A5 §4 (no trailing dash without risk/tokens), TripReportFormatter now passes aggregated max/min temps to TokenLine for subject rendering.
 - 2026-04-26: Initial spec created (β2 Output Subject Filter, Phase 2 abgeschlossen, Approval pending)

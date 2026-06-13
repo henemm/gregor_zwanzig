@@ -224,24 +224,22 @@ class TestMediaQueryBreakpoint:
 
     def test_mobile_breakpoint_covers_ios_mail_viewport(self):
         """
-        AC-4: @media-Breakpoint muss >= 600 px sein.
+        AC-4 (Mobile-First): Desktop-@media-Breakpoint muss >= 601px sein.
 
-        GIVEN ein gerendertes Trip-Briefing-HTML
-        WHEN der @media-Block auf den Breakpoint geprueft wird
-        THEN ist der Breakpoint mindestens 600px
+        GIVEN ein gerendertes Trip-Briefing-HTML (Mobile-First-Design)
+        WHEN der @media-Block auf den Desktop-Breakpoint geprueft wird
+        THEN gibt es einen @media (min-width) >= 601px (Desktop einblenden)
 
-        iOS Mail rendert E-Mails intern mit ~600 px virtueller Breite
-        und skaliert dann. Ein Breakpoint < 600 px feuert dort nie.
-        Aktuell: 480 px -> Media Query greift in iOS Mail nicht.
+        Mobile ist der Default — Desktop wird erst ab min-width eingeblendet.
+        Sinn: Mobil (< 601px) greift kein @media, Desktop erst darueber.
         """
         html = _render_full_html()
-        breakpoints = [int(m) for m in re.findall(r'max-width:\s*(\d+)px', html)]
-        assert breakpoints, "@media max-width-Regel fehlt komplett"
+        breakpoints = [int(m) for m in re.findall(r'min-width:\s*(\d+)px', html)]
+        assert breakpoints, "@media min-width-Regel fehlt komplett (Mobile-First erwartet)"
         max_breakpoint = max(breakpoints)
-        assert max_breakpoint >= 600, (
-            f"@media-Breakpoint ist {max_breakpoint}px -- zu klein fuer iOS Mail.\n"
-            f"iOS Mail virtuelle Renderbreite: ~600px. "
-            f"Breakpoint muss >= 600px sein, sonst feuert die Media Query nie."
+        assert max_breakpoint >= 601, (
+            f"Desktop @media-Breakpoint ist {max_breakpoint}px -- erwartet >= 601px.\n"
+            f"Mobile-First: Mobil ist Default, Desktop wird erst ab min-width eingeblendet."
         )
 
 
@@ -401,52 +399,54 @@ class TestMobileCompactLayout:
 
     def test_css_hides_desktop_on_mobile(self):
         """
-        AC-9: Der @media-Block muss .desktop-only verstecken.
+        AC-9 (Mobile-First): Basis-CSS (vor @media) muss .desktop-only verstecken.
 
         GIVEN render_html()
-        WHEN der CSS-Block auf Dual-Mode-Switch geprüft wird
-        THEN enthält der @media (max-width:600px)-Block 'desktop-only' mit 'none'
+        WHEN der CSS-Block VOR dem ersten @media-Block geprüft wird (Basis-CSS)
+        THEN enthält die Basis-Regel '.desktop-only' mit 'none' (standardmäßig versteckt)
 
-        Ohne diese Regel bleibt die Desktop-Tabelle auf Mobile sichtbar.
+        Mobile-First: Desktop ist standardmäßig versteckt, nur per @media eingeblendet.
+        Ohne diese Basis-Regel bleibt Desktop in @media-ignorierenden Clients sichtbar.
         """
         html = _render_full_html()
-        media_start = html.find("@media")
+        style_start = html.find("<style")
+        media_start = html.find("@media", style_start)
         assert media_start != -1, "Kein @media-Block gefunden"
-        media_block = html[media_start:html.find("</style>", media_start)]
-        assert "desktop-only" in media_block, (
-            "FEHLT: 'desktop-only' nicht im @media-Block.\n"
-            "Ohne diese Regel bleibt die Desktop-Tabelle auf Mobile sichtbar."
+        base_css = html[style_start:media_start].replace(" ", "")
+        do = re.search(r"\.desktop-only\{[^}]*\}", base_css)
+        assert do is not None, (
+            "FEHLT: '.desktop-only'-Regel im Basis-CSS (vor @media) nicht gefunden.\n"
+            "Mobile-First erwartet: .desktop-only { display: none; } als Basis."
         )
-        dt_pos = media_block.find("desktop-only")
-        chunk = media_block[dt_pos:dt_pos + 120]
-        assert "none" in chunk, (
-            f"FEHLT: 'none' nach 'desktop-only' im @media-Block nicht gefunden.\n"
-            f"Gefunden: {chunk!r}"
+        assert "none" in do.group(0), (
+            f"FEHLT: 'none' in '.desktop-only'-Basis-Regel nicht gefunden.\n"
+            f"Gefunden: {do.group(0)!r}"
         )
 
     def test_css_shows_compact_on_mobile(self):
         """
-        AC-10: Der @media-Block muss .mobile-compact einblenden.
+        AC-10 (Mobile-First): Basis-CSS (vor @media) muss .mobile-compact einblenden.
 
         GIVEN render_html()
-        WHEN der CSS-Block auf Dual-Mode-Switch geprüft wird
-        THEN enthält der @media (max-width:600px)-Block 'mobile-compact' mit 'block'
+        WHEN der CSS-Block VOR dem ersten @media-Block geprüft wird (Basis-CSS)
+        THEN enthält die Basis-Regel '.mobile-compact' mit 'block' (standardmäßig sichtbar)
 
-        Ohne diese Regel bleibt die Compact-Ansicht auch auf Mobile unsichtbar.
+        Mobile-First: Mobil-Variante ist der Default, Desktop wird per @media eingeblendet.
+        Ohne diese Basis-Regel bleibt die Compact-Ansicht in Gmail-artigen Clients versteckt.
         """
         html = _render_full_html()
-        media_start = html.find("@media")
+        style_start = html.find("<style")
+        media_start = html.find("@media", style_start)
         assert media_start != -1, "Kein @media-Block gefunden"
-        media_block = html[media_start:html.find("</style>", media_start)]
-        assert "mobile-compact" in media_block, (
-            "FEHLT: 'mobile-compact' nicht im @media-Block.\n"
-            "Ohne diese Regel bleibt die Compact-Ansicht auch auf Mobile versteckt."
+        base_css = html[style_start:media_start].replace(" ", "")
+        mc = re.search(r"\.mobile-compact\{[^}]*\}", base_css)
+        assert mc is not None, (
+            "FEHLT: '.mobile-compact'-Regel im Basis-CSS (vor @media) nicht gefunden.\n"
+            "Mobile-First erwartet: .mobile-compact { display: block; } als Basis."
         )
-        mc_pos = media_block.find("mobile-compact")
-        chunk = media_block[mc_pos:mc_pos + 120]
-        assert "block" in chunk, (
-            f"FEHLT: 'block' nach 'mobile-compact' im @media-Block nicht gefunden.\n"
-            f"Gefunden: {chunk!r}"
+        assert "block" in mc.group(0), (
+            f"FEHLT: 'block' in '.mobile-compact'-Basis-Regel nicht gefunden.\n"
+            f"Gefunden: {mc.group(0)!r}"
         )
 
     def test_mobile_compact_has_time_slots(self):
