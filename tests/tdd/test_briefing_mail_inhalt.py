@@ -510,3 +510,107 @@ class TestAC3WiringInRenderer:
         assert "ähnlich" not in low, (
             "Plain-Renderer nutzt Legacy-Pfad statt metrik-getrieben."
         )
+
+
+# ---------------------------------------------------------------------------
+# AC-3 vertieft: Deckelung (max 4-6), Sortierung nach Stärke, Wortwahl
+# ---------------------------------------------------------------------------
+
+def _comparison(today_kwargs: dict, yday_kwargs: dict):
+    from services.day_comparison import DayComparisonService
+    return DayComparisonService().compare(
+        [_make_segment(1, **today_kwargs)], [_make_segment(1, **yday_kwargs)]
+    )
+
+
+def _sentence_items(text: str) -> list[str]:
+    """Zerlegt 'Vortag: heute a, b und c als gestern' → ['a','b','c']."""
+    mid = text.split("heute ", 1)[1].rsplit(" als gestern", 1)[0]
+    return [p.strip() for p in mid.replace(" und ", ", ").split(", ") if p.strip()]
+
+
+class TestAC3CapSortWording:
+    """AC-3 vertieft: was der Nutzer tatsächlich liest."""
+
+    def test_max_six_changes_cap(self):
+        """
+        GIVEN acht spürbar veränderte, ausgewählte Metriken
+        WHEN summarize_day_comparison aufgerufen wird
+        THEN nennt der Satz HÖCHSTENS sechs Änderungen (Deckelung)
+        """
+        from services.day_comparison import summarize_day_comparison
+
+        # 8 Metriken alle über ihrer Spürbarkeitsschwelle
+        comp = _comparison(
+            dict(wind_max_kmh=50.0, gust_max_kmh=60.0, precip_sum_mm=20.0,
+                 cloud_avg_pct=80, pop_max_pct=70, uv_index_max=8.0,
+                 humidity_avg_pct=80, dewpoint_avg_c=18.0),
+            dict(wind_max_kmh=25.0, gust_max_kmh=35.0, precip_sum_mm=5.0,
+                 cloud_avg_pct=40, pop_max_pct=40, uv_index_max=3.0,
+                 humidity_avg_pct=50, dewpoint_avg_c=10.0),
+        )
+        sel = ["wind", "gust", "precipitation", "cloud_total",
+               "rain_probability", "uv_index", "humidity", "dewpoint"]
+        text = summarize_day_comparison(comp, selected_metrics=sel)
+        items = _sentence_items(text)
+        assert len(items) <= 6, (
+            f"Mehr als 6 Änderungen genannt ({len(items)}): {text!r}"
+        )
+        assert len(items) == 6, (
+            f"Deckelung greift nicht — erwartet genau 6 (von 8 spürbaren), "
+            f"bekam {len(items)}: {text!r}"
+        )
+
+    def test_sorted_by_magnitude_descending(self):
+        """
+        GIVEN drei spürbare Metriken mit klar verschiedener Delta-Stärke
+              (cloud +50, wind +30, precip +12)
+        WHEN summarize_day_comparison aufgerufen wird
+        THEN steht die stärkste Änderung zuerst (bewölkter → windiger → nasser)
+        """
+        from services.day_comparison import summarize_day_comparison
+
+        comp = _comparison(
+            dict(cloud_avg_pct=90, wind_max_kmh=55.0, precip_sum_mm=17.0),
+            dict(cloud_avg_pct=40, wind_max_kmh=25.0, precip_sum_mm=5.0),
+        )
+        text = summarize_day_comparison(
+            comp, selected_metrics=["wind", "precipitation", "cloud_total"]
+        )
+        items = _sentence_items(text)
+        assert items == ["bewölkter", "windiger", "nasser"], (
+            f"Sortierung nach |delta| (cloud 50 > wind 30 > precip 12) "
+            f"nicht eingehalten: {text!r} → {items}"
+        )
+
+    def test_wording_per_metric_direction(self):
+        """
+        GIVEN je eine Metrik mit bekannter Änderungsrichtung
+        WHEN summarize_day_comparison aufgerufen wird
+        THEN erscheint das erwartete deutsche Wort (das, was der Nutzer liest)
+        """
+        from app.models import ThunderLevel
+        from services.day_comparison import summarize_day_comparison
+
+        cases = [
+            # (today, yesterday, selected, erwartetes Wort)
+            (dict(wind_max_kmh=55.0), dict(wind_max_kmh=25.0), ["wind"], "windiger"),
+            (dict(wind_max_kmh=20.0), dict(wind_max_kmh=55.0), ["wind"], "ruhiger"),
+            (dict(temp_max_c=25.0), dict(temp_max_c=15.0), ["temperature"], "wärmer"),
+            (dict(temp_max_c=10.0), dict(temp_max_c=22.0), ["temperature"], "kälter"),
+            (dict(precip_sum_mm=20.0), dict(precip_sum_mm=2.0), ["precipitation"], "nasser"),
+            (dict(precip_sum_mm=1.0), dict(precip_sum_mm=18.0), ["precipitation"], "trockener"),
+            (dict(cloud_avg_pct=90), dict(cloud_avg_pct=30), ["cloud_total"], "bewölkter"),
+            (dict(cloud_avg_pct=20), dict(cloud_avg_pct=80), ["cloud_total"], "sonniger"),
+            (dict(thunder_level_max=ThunderLevel.MED),
+             dict(thunder_level_max=ThunderLevel.NONE), ["thunder"], "Gewittergefahr"),
+            (dict(thunder_level_max=ThunderLevel.NONE),
+             dict(thunder_level_max=ThunderLevel.HIGH), ["thunder"], "kein Gewitter mehr"),
+        ]
+        for today_kw, yday_kw, sel, expected in cases:
+            comp = _comparison(today_kw, yday_kw)
+            text = summarize_day_comparison(comp, selected_metrics=sel)
+            assert expected in text, (
+                f"Erwartetes Wort {expected!r} fehlt für {sel} "
+                f"(today={today_kw}, yday={yday_kw}): {text!r}"
+            )
