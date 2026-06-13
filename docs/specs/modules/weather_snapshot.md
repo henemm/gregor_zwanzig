@@ -462,12 +462,12 @@ def get_snapshots_dir(user_id: str = "default") -> Path:
 **Impact:** Cannot compare current weather to reports from 2+ runs ago.
 **Future Enhancement:** Could add timestamp to filename: `{trip_id}_{date}.json`
 
-### Limitation 3: Partial TripSegment Reconstruction
+### Limitation 3: TripSegment Reconstruction with Route Metadata
 
-**Description:** Loaded TripSegment has real coordinates (lat/lon/elevation_m) but distance_km=0, ascent_m=0, descent_m=0.
-**Reason:** Only coordinates and time bounds are stored; route geometry is not needed for alert API calls.
-**Impact:** Loaded segments cannot be used for distance/elevation route calculations.
-**Workaround:** If full segment data needed, reconstruct from trip.get_stage_for_date().
+**Description:** Loaded TripSegment has real coordinates (lat/lon/elevation_m) and route metadata (distance_km, ascent_m, descent_m, duration_hours) persisted since 2026-06-13 (#801).
+**Storage:** `start_distance_from_start_km`, `end_distance_from_start_km` on GPXPoints; `distance_km`, `ascent_m`, `descent_m`, `duration_hours` on TripSegment.
+**Backwards Compatibility:** Old snapshots without these fields fall back to 0.0 via `.get(..., 0.0)` — no crash.
+**Impact:** Alert mails now display correct km ranges (e.g., "km 12.3–18.7") instead of "km 0.0–0.0".
 **Note (2026-04-12):** Prior to the snapshot_missing_coordinates bugfix, GPXPoints were always dummy (lat=0, lon=0). Old snapshots without coordinate keys fall back to 0.0 via `.get(..., 0.0)`.
 
 ### Limitation 4: No Locking
@@ -579,3 +579,4 @@ return WeatherSnapshotService().load(trip.id)
 
 - 2026-02-14: v1.0 Initial spec created (ALERT-01)
 - 2026-04-12: v1.1 Bugfix snapshot_missing_coordinates — save() now persists lat/lon/elevation_m per segment endpoint; _reconstruct_segment() reads real coordinates with 0.0 fallback for old snapshots; trip_report.py guards int(elevation_m) with `or 0`
+- 2026-06-13: v1.2 Feature #801 — save() additionally persists `start_distance_from_start_km`, `end_distance_from_start_km`, `distance_km`, `ascent_m`, `descent_m`, `duration_hours` for accurate alert-mail segment headings; _reconstruct_segment() reads these fields with 0.0 fallback for backwards compatibility

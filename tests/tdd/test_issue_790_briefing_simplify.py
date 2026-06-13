@@ -301,7 +301,7 @@ class TestAC7VortagOneLine:
         yday = [_seg_for_compare(1, temp_min_c=6.0, temp_max_c=15.0,
                                  wind_max_kmh=20.0, precip_sum_mm=10.0)]
         line = summarize_day_comparison(_comparison(today, yday))
-        assert line == "Vortag: heute wärmer und trockener als gestern", line
+        assert line == "Vergleich zum Vortag: heute wärmer und trockener als gestern", line
 
     def test_colder_only_line(self):
         """nur Temperatur signifikant kälter, Regen neutral."""
@@ -311,7 +311,7 @@ class TestAC7VortagOneLine:
         yday = [_seg_for_compare(1, temp_min_c=8.0, temp_max_c=18.0,
                                  wind_max_kmh=20.0, precip_sum_mm=5.0)]
         line = summarize_day_comparison(_comparison(today, yday))
-        assert line == "Vortag: heute kälter als gestern", line
+        assert line == "Vergleich zum Vortag: heute kälter als gestern", line
 
     def test_similar_weather_line(self):
         """beide neutral → 'ähnliches Wetter'."""
@@ -321,7 +321,7 @@ class TestAC7VortagOneLine:
         yday = [_seg_for_compare(1, temp_min_c=8.0, temp_max_c=18.5,
                                  wind_max_kmh=20.0, precip_sum_mm=5.0)]
         line = summarize_day_comparison(_comparison(today, yday))
-        assert line == "Vortag: heute ähnliches Wetter wie gestern", line
+        assert line == "Vergleich zum Vortag: heute ähnliches Wetter wie gestern", line
 
     def test_none_returns_empty(self):
         from services.day_comparison import summarize_day_comparison

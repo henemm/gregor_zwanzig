@@ -235,9 +235,15 @@ def _serialize_segment(seg: SegmentWeatherData) -> dict:
         "start_lat": seg.segment.start_point.lat,
         "start_lon": seg.segment.start_point.lon,
         "start_elevation_m": seg.segment.start_point.elevation_m,
+        "start_distance_from_start_km": seg.segment.start_point.distance_from_start_km,
         "end_lat": seg.segment.end_point.lat,
         "end_lon": seg.segment.end_point.lon,
         "end_elevation_m": seg.segment.end_point.elevation_m,
+        "end_distance_from_start_km": seg.segment.end_point.distance_from_start_km,
+        "distance_km": seg.segment.distance_km,
+        "ascent_m": seg.segment.ascent_m,
+        "descent_m": seg.segment.descent_m,
+        "duration_hours": seg.segment.duration_hours,
         "aggregated": _serialize_summary(seg.aggregated),
     }
     if seg.timeseries is not None:
@@ -288,11 +294,13 @@ def _reconstruct_segment(seg_data: dict) -> TripSegment:
         lat=seg_data.get("start_lat", 0.0),
         lon=seg_data.get("start_lon", 0.0),
         elevation_m=seg_data.get("start_elevation_m"),
+        distance_from_start_km=seg_data.get("start_distance_from_start_km", 0.0),
     )
     end_point = GPXPoint(
         lat=seg_data.get("end_lat", 0.0),
         lon=seg_data.get("end_lon", 0.0),
         elevation_m=seg_data.get("end_elevation_m"),
+        distance_from_start_km=seg_data.get("end_distance_from_start_km", 0.0),
     )
     return TripSegment(
         segment_id=seg_data["segment_id"],
@@ -300,8 +308,8 @@ def _reconstruct_segment(seg_data: dict) -> TripSegment:
         end_point=end_point,
         start_time=datetime.fromisoformat(seg_data["start_time"]),
         end_time=datetime.fromisoformat(seg_data["end_time"]),
-        duration_hours=0.0,
-        distance_km=0.0,
-        ascent_m=0.0,
-        descent_m=0.0,
+        duration_hours=seg_data.get("duration_hours", 0.0),
+        distance_km=seg_data.get("distance_km", 0.0),
+        ascent_m=seg_data.get("ascent_m", 0.0),
+        descent_m=seg_data.get("descent_m", 0.0),
     )

@@ -168,25 +168,32 @@ def _summarize_legacy(comparison: "DayComparison") -> str:
     rain_neutral = rain_word is None
 
     if temp_neutral and rain_neutral:
-        return "Vortag: heute ähnliches Wetter wie gestern"
+        return "Vergleich zum Vortag: heute ähnliches Wetter wie gestern"
 
     if not temp_neutral and not rain_neutral:
-        return f"Vortag: heute {temp_word} und {rain_word} als gestern"
+        return f"Vergleich zum Vortag: heute {temp_word} und {rain_word} als gestern"
 
     only_word = temp_word if not temp_neutral else rain_word
-    return f"Vortag: heute {only_word} als gestern"
+    return f"Vergleich zum Vortag: heute {only_word} als gestern"
+
+
+_SALIENCE_FACTOR = 0.6
 
 
 def _get_threshold(metric_id: str) -> float:
-    """Spürbarkeitsschwelle aus MetricCatalog; Fallback 5.0."""
+    """Spürbarkeitsschwelle aus MetricCatalog × _SALIENCE_FACTOR; Fallback 3.0.
+
+    Wirkt ausschließlich im Anzeige-Pfad der Vortags-Zeile.
+    metric_catalog.default_change_threshold bleibt unverändert (AC-6).
+    """
     try:
         from app.metric_catalog import get_metric
         m = get_metric(metric_id)
         if m.default_change_threshold is not None:
-            return float(m.default_change_threshold)
+            return float(m.default_change_threshold) * _SALIENCE_FACTOR
     except Exception:
         pass
-    return 5.0
+    return 3.0
 
 
 def _summarize_metric_driven(
@@ -233,7 +240,7 @@ def _summarize_metric_driven(
     salient = salient[:6]
 
     if not salient:
-        return "Vortag: heute ähnliches Wetter wie gestern"
+        return "Vergleich zum Vortag: heute ähnliches Wetter wie gestern"
 
     parts: List[str] = []
     for mid, avg in salient:
@@ -242,7 +249,7 @@ def _summarize_metric_driven(
         parts.append(word)
 
     joined = " und ".join(parts) if len(parts) <= 2 else ", ".join(parts[:-1]) + " und " + parts[-1]
-    return f"Vortag: heute {joined} als gestern"
+    return f"Vergleich zum Vortag: heute {joined} als gestern"
 
 
 def _direction(delta: float, key: str) -> ComparisonDirection:

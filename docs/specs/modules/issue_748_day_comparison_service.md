@@ -116,6 +116,62 @@ class DayComparison:
 
 **AC-5:** Given `temp_max_c` gestern `15.0`, heute `22.0` / When `compare()` / Then `temp_max.direction == EQUAL` (Temperatur ist neutral), `delta == +7.0`.
 
+## Feature #803 — Enhanced summarize_day_comparison() (v1.1, 2026-06-13)
+
+### Purpose
+
+The `summarize_day_comparison()` function now produces more readable, **metric-driven** vortag-Vergleich
+lines in briefing/alert mails. It addresses two limitations from v1.0:
+
+1. **Coarse salience thresholds**: Using alert thresholds (Temp 5°C, Precip 10mm, Wind 20km/h) made
+   the vortag-line often empty, even for noticeable weather changes.
+2. **Misleading label**: "Vortag: ..." was ambiguous; users conflated it with segment timing.
+
+### Implementation
+
+- **Signature:**
+  ```python
+  def summarize_day_comparison(
+      comparison: Optional[DayComparison],
+      *,
+      selected_metrics: Optional[List[str]] = None,
+  ) -> str:
+  ```
+  
+- **Behavior:**
+  - `selected_metrics=None` → Backward-compatible legacy mode (temp_max + precip only, no thresholds)
+  - `selected_metrics=[...]` → Metric-driven mode: filters and sorts by salience
+
+- **Salience Calculation (_get_threshold):**
+  - `_SALIENCE_FACTOR = 0.6` — global multiplier **decoupled from Alert thresholds**
+  - Applied to `metric_catalog.default_change_threshold` per metric:
+    - Temperature: 5.0 × 0.6 = **3.0 °C**
+    - Precipitation: 10.0 × 0.6 = **6.0 mm**
+    - Wind: 20.0 × 0.6 = **12.0 km/h**
+  - Gust, Wind-chill, etc. scale proportionally from their default thresholds
+
+- **Label Changes:**
+  - Email/Plain text: "Vergleich zum Vortag: ..." (instead of "Vortag: ...")
+  - Telegram (`narrow.py`): "Ggü. Vortag: ..." (compact, space-efficient)
+
+- **Selection & Sorting:**
+  - Include only `selected_metrics` that pass salience threshold
+  - Sort by `|avg_delta|` (absolute magnitude, descending)
+  - Cap at 4–6 results (tunable via AC-3 feedback)
+  - Wind-chill preference: displaces temperature if both exceed threshold
+
+### Backwards Compatibility
+
+- Snapshots/reports without `selected_metrics` parameter → fallback to legacy mode (no salience filtering)
+- Alert thresholds (`default_change_threshold`) **remain unchanged** — alerts unaffected
+- Old mails with "Vortag: " label continue to render (legacy code path)
+
+### Integration Points
+
+- **Scheduler (trip_report_scheduler.py):** Passes `selected_metrics = trip.display_config.metrics` to `summarize_day_comparison()`
+- **Renderers (email/html.py, email/plain.py, narrow.py):** Call `summarize_day_comparison(..., selected_metrics=...)` and render the returned string
+
 ## Changelog
 
 - v1.0 (2026-06-11): Initial spec, Issue #748
+- v1.1 (2026-06-13): Feature #803 — Enhanced `summarize_day_comparison()` with metric-driven thresholds; Label changed from "Vortag: " to "Vergleich zum Vortag: "; Salienz-Faktor 0.6 (Temp 3°C, Precip 6mm, Wind 12km/h) decoupled from Alert thresholds; Telegram uses compact "Ggü. Vortag: " label

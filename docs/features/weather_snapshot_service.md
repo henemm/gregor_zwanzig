@@ -1,9 +1,10 @@
 # Feature: Weather Snapshot Service (ALERT-01)
 
-**Status:** open (Analyse abgeschlossen, Spec noch nicht geschrieben)
+**Status:** LIVE (v1.2 seit 2026-06-13)
 **Prioritaet:** HIGH
 **Kategorie:** Services / Alert System
 **Erstellt:** 2026-02-14
+**Spec:** `docs/specs/modules/weather_snapshot.md` (v1.2)
 
 ## Problem
 
@@ -147,13 +148,13 @@ def get_snapshots_dir(user_id: str = "default") -> Path:
     return get_data_dir(user_id) / "weather_snapshots"
 ```
 
-## Naechste Schritte
+## Status der Implementierung
 
-1. `/2-analyse` — Detailanalyse (Serialisierung, Edge Cases)
-2. `/3-write-spec` — Formale Spec erstellen
-3. User: "approved"
-4. `/5-implement` — Implementierung
-5. `/6-validate` — Validierung + Tests
+- **v1.0 (2026-02-14):** Initial spec and implementation (ALERT-01, single snapshot per trip)
+- **v1.1 (2026-04-12):** Bugfix snapshot_missing_coordinates — save() persists lat/lon/elevation_m; _reconstruct_segment() reads with 0.0 fallback
+- **v1.2 (2026-06-13):** Feature #801 — additionally persist start_distance_from_start_km, end_distance_from_start_km, distance_km, ascent_m, descent_m, duration_hours for accurate alert-mail km ranges
+
+See `docs/specs/modules/weather_snapshot.md` for full technical spec and changelog.
 
 ## Change Detection Thresholds (Referenz)
 

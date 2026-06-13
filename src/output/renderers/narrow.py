@@ -358,7 +358,7 @@ def _tg_vortag_line(day_comparison: Optional["DayComparison"]) -> Optional[str]:
             parts.append(f"{label} {sign}{delta}{unit}")
         else:
             parts.append(f"{label} {sign}{delta}")
-    return "Vortag: " + ", ".join(parts)
+    return "Ggü. Vortag: " + ", ".join(parts)
 
 
 def render_narrow(
