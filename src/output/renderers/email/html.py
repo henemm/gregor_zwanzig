@@ -87,6 +87,7 @@ def _render_html_table(
     friendly_keys: set[str],
     allowed_col_keys: Optional[set[str]] = None,
     format_modes: Optional[dict[str, str]] = None,
+    indicator_keys: Optional[set[str]] = None,
 ) -> str:
     if not rows:
         # Empty rows: render a minimal table skeleton so callers can still
@@ -102,7 +103,8 @@ def _render_html_table(
         for key, label in cols:
             try:
                 cell = fmt_val(key, r.get(key), friendly_keys=friendly_keys,
-                               html=True, row=r, format_modes=format_modes)
+                               html=True, row=r, format_modes=format_modes,
+                               indicator_keys=indicator_keys)
             except (TypeError, ValueError):
                 cell = str(r.get(key)) if r.get(key) is not None else "–"
             tds += f'<td data-label="{label}">{cell}</td>'
@@ -235,6 +237,7 @@ def render_html(
     tz: ZoneInfo,
     friendly_keys: set[str],
     format_modes: Optional[dict[str, str]] = None,
+    indicator_keys: Optional[set[str]] = None,
     profile: Optional[ActivityProfile] = None,
     stability_result: Optional["StabilityResult"] = None,
     show_stage_stats: bool = True,
@@ -316,7 +319,7 @@ def render_html(
             desktop_div = (
                 '<div class="section destination desktop-only">'
                 "<h3>" + seg_header + "</h3>"
-                + _render_html_table(rows, friendly_keys=friendly_keys, allowed_col_keys=allowed_keys, format_modes=format_modes)
+                + _render_html_table(rows, friendly_keys=friendly_keys, allowed_col_keys=allowed_keys, format_modes=format_modes, indicator_keys=indicator_keys)
                 + "</div>"
             )
         else:
@@ -330,7 +333,7 @@ def render_html(
             desktop_div = (
                 '<div class="section desktop-only">'
                 "<h3>" + seg_header + "</h3>"
-                + _render_html_table(rows, friendly_keys=friendly_keys, allowed_col_keys=allowed_keys, format_modes=format_modes)
+                + _render_html_table(rows, friendly_keys=friendly_keys, allowed_col_keys=allowed_keys, format_modes=format_modes, indicator_keys=indicator_keys)
                 + "</div>"
             )
         compact_rows = _render_mobile_compact_rows(rows, friendly_keys=friendly_keys, allowed_col_keys=allowed_keys, format_modes=format_modes, include_header=True)
@@ -359,7 +362,7 @@ def render_html(
             "<h3>" + night_header + "</h3>"
             '<p style="color:' + G_INK_MUTED + ';font-size:13px">Ankunft '
             + local_fmt(last_seg.end_time, tz) + " → Morgen 06:00</p>"
-            + _render_html_table(night_rows, friendly_keys=friendly_keys, format_modes=format_modes)
+            + _render_html_table(night_rows, friendly_keys=friendly_keys, format_modes=format_modes, indicator_keys=indicator_keys)
             + night_hint
             + "</div>"
             '<div class="mobile-compact" style="padding:0 16px">'

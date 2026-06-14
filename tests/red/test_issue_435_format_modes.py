@@ -855,16 +855,21 @@ class TestAC446FormatModeValidation:
         )
 
     def test_ac446_5_mode_not_in_restricted_format_modes_falls_back(self):
-        """AC-5: format_mode='raw' für thunder (nur 'symbol') → 'symbol' (Fallback)."""
+        """AC-5: format_mode='symbol' für temperature (nur 'raw') → 'raw' (Fallback).
+
+        Issue #814: thunder hat seit AC-6 ('Roh = deutsches Wort') den Modus 'raw'
+        legitimate in format_modes=('raw','symbol'). Testbeispiel auf temperature
+        umgestellt (nur 'raw', kein 'symbol') um das Fallback-Verhalten zu belegen.
+        """
         from app import loader
 
         mode = loader._resolve_format_mode(
-            {"format_mode": "raw"},
-            "thunder",
+            {"format_mode": "symbol"},
+            "temperature",
         )
-        assert mode == "symbol", (
-            f"AC-446-5: thunder hat nur format_modes=('symbol',) → "
-            f"'raw' muss auf 'symbol' fallen, war '{mode}'"
+        assert mode == "raw", (
+            f"AC-446-5: temperature hat nur format_modes=('raw',) → "
+            f"'symbol' muss auf 'raw' fallen, war '{mode}'"
         )
 
     # --- Hilfsmethoden ---

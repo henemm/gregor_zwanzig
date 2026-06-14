@@ -222,3 +222,142 @@ class TestAmpelLegendPresent:
         assert "Achtung" in html, "Legend must contain 'Achtung'"
         assert "Warnung" in html, "Legend must contain 'Warnung'"
         assert "Gefahr" in html, "Legend must contain 'Gefahr'"
+
+
+# ---------------------------------------------------------------------------
+# Issue #814 AC-10: fmt_val an neue Quelle use_friendly_format angleichen.
+#
+# Die bestehenden Tests koppeln Ampel an `html=True` OHNE format_modes.
+# Das zementiert den Bug: html=True allein reicht nicht — es muss
+# use_friendly_format=True (via build_format_modes → Ampel-Modus) kommen.
+#
+# Diese neuen Tests pruefen das SOLL-Verhalten nach dem Fix:
+#   - Roh (use_friendly_format=False) → Zahl auch in HTML (kein Ampel)
+#   - Einfach (use_friendly_format=True) → Ampel-Emoji in HTML
+# ---------------------------------------------------------------------------
+
+def _make_wind_dp_high():
+    """Datenpunkt mit Wind 55 km/h (ueber Gelb-Schwelle 30 km/h)."""
+    from datetime import datetime, timezone
+    from app.models import ForecastDataPoint, ThunderLevel
+    return ForecastDataPoint(
+        ts=datetime(2026, 7, 11, 10, 0, tzinfo=timezone.utc),
+        t2m_c=20.0, wind10m_kmh=55.0, gust_kmh=70.0, precip_1h_mm=0.0,
+        pop_pct=10, cloud_total_pct=40, thunder_level=ThunderLevel.NONE,
+        wind_chill_c=18.0,
+    )
+
+
+def _render_wind_via_render_email(*, use_friendly: bool):
+    """Rendert Wind via render_email — benutzt build_format_modes (KEIN fmt_val direkt).
+
+    Dies ist der korrekte Weg: Die Entscheidung Ampel/Zahl soll allein durch
+    use_friendly_format gesteuert werden, nicht durch html=True allein.
+    """
+    from datetime import datetime, timezone
+    from zoneinfo import ZoneInfo
+    from app.metric_catalog import build_default_display_config
+    from app.models import (
+        ForecastMeta, GPXPoint, NormalizedTimeseries, Provider,
+        SegmentWeatherData, SegmentWeatherSummary, ThunderLevel, TripSegment,
+    )
+    from src.output.renderers.email import render_email
+    from src.output.renderers.email.helpers import dp_to_row
+    from src.output.tokens.dto import TokenLine
+
+    dp = _make_wind_dp_high()
+    dc = build_default_display_config()
+    for mc in dc.metrics:
+        mc.enabled = mc.metric_id in ("temperature", "wind")
+        mc.use_friendly_format = use_friendly
+        mc.format_mode = None  # kein explizites format_mode → use_friendly_format wirkt
+
+    row = dp_to_row(dp, dc, tz=ZoneInfo("Europe/Berlin"))
+    seg = TripSegment(
+        segment_id=1,
+        start_point=GPXPoint(lat=47.0, lon=12.0, elevation_m=500.0),
+        end_point=GPXPoint(lat=47.1, lon=12.1, elevation_m=900.0),
+        start_time=datetime(2026, 7, 11, 8, 0, tzinfo=timezone.utc),
+        end_time=datetime(2026, 7, 11, 12, 0, tzinfo=timezone.utc),
+        duration_hours=4.0, distance_km=6.0, ascent_m=400.0, descent_m=0.0,
+    )
+    meta = ForecastMeta(
+        provider=Provider.OPENMETEO, model="test",
+        run=datetime(2026, 7, 11, 0, 0, tzinfo=timezone.utc),
+        grid_res_km=2.0, interp="point_grid",
+    )
+    ts = NormalizedTimeseries(meta=meta, data=[dp])
+    agg = SegmentWeatherSummary(
+        temp_min_c=14.0, temp_max_c=22.0, temp_avg_c=18.0,
+        wind_max_kmh=55.0, gust_max_kmh=70.0, precip_sum_mm=0.0,
+        cloud_avg_pct=40, humidity_avg_pct=50,
+        thunder_level_max=ThunderLevel.NONE, wind_chill_min_c=18.0,
+    )
+    seg_data = SegmentWeatherData(
+        segment=seg, timeseries=ts, aggregated=agg,
+        fetched_at=datetime.now(timezone.utc), provider="openmeteo",
+    )
+    tl = TokenLine(trip_name="759-Angleich-Test", report_type="evening", stage_name="Test")
+    return render_email(
+        tl, segments=[seg_data], seg_tables=[[row]],
+        display_config=dc, tz=ZoneInfo("Europe/Berlin"), friendly_keys=set(),
+        email_format="full", changes=None,
+    )
+
+
+def _data_cells_759(html: str) -> list[str]:
+    """Extrahiert Daten-Zellen der Stundentabelle (class='resp')."""
+    import re
+    m = re.search(r'<table class="resp">.*?</table>', html, re.S)
+    if not m:
+        return []
+    return re.findall(r'<td data-label="[^"]*">(.*?)</td>', m.group(0), re.S)
+
+
+_AMPEL_EMOJIS_759 = ("🟢", "🟡", "🟠", "🔴")
+
+
+class TestIssue759WindAmpelNeuQuelle:
+    """AC-10: #759-Test an neue Quelle use_friendly_format angleichen.
+
+    Die neuen Tests pruefen das SOLL-Verhalten via render_email (nicht direkt
+    fmt_val mit html=True), damit der Bug nicht erneut festgeschrieben wird.
+    """
+
+    def test_issue759_wind_ampel_roh_is_number(self):
+        """AC-10 RED: Wind Roh (use_friendly=False) = Zahl in HTML, kein Ampel-Emoji.
+
+        Schlaegt HEUTE fehl: build_format_modes gibt 'raw' fuer wind auch bei
+        use_friendly=False (weil es sowieso immer 'raw' gibt). Nach Fix muss
+        Roh explizit 'raw' ergeben (kein unbeabsichtigter Ampel-Modus).
+        Dieser Test sichert, dass Roh=Zahl stabil bleibt.
+        """
+        html, _plain = _render_wind_via_render_email(use_friendly=False)
+        cells = _data_cells_759(html)
+        assert cells, "HTML muss Wind-Zellen haben"
+        ampel_cells = [c for c in cells if any(e in c for e in _AMPEL_EMOJIS_759)]
+        assert not ampel_cells, (
+            f"AC-10: Wind Roh muss Zahl liefern, kein Ampel-Emoji. "
+            f"Daten-Zellen: {cells!r}"
+        )
+        # Muss numerisch sein (55 km/h)
+        numeric_cells = [c for c in cells if "55" in c or "km" in c.lower()]
+        assert numeric_cells, (
+            f"AC-10: Wind Roh muss '55' (km/h-Wert) enthalten. Daten-Zellen: {cells!r}"
+        )
+
+    def test_issue759_wind_ampel_einfach_html_is_emoji(self):
+        """AC-10 RED: Wind Einfach (use_friendly=True) = Ampel-Emoji in HTML.
+
+        Schlaegt HEUTE fehl: build_format_modes gibt 'raw' fuer wind auch bei
+        use_friendly=True → kein Ampel → Zahl statt Ampel.
+        """
+        html, _plain = _render_wind_via_render_email(use_friendly=True)
+        cells = _data_cells_759(html)
+        assert cells, "HTML muss Wind-Zellen haben"
+        ampel_cells = [c for c in cells if any(e in c for e in _AMPEL_EMOJIS_759)]
+        assert ampel_cells, (
+            f"AC-10 RED: Wind Einfach (use_friendly=True) muss Ampel-Emoji zeigen. "
+            f"Daten-Zellen: {cells!r}. "
+            f"(Bug: build_format_modes gibt 'raw' statt Ampel-Modus)"
+        )

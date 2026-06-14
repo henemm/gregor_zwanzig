@@ -140,3 +140,43 @@ X-GZ-Format:    full | compact
 - **`email_spec_validator.py`** prüft Orts-Vergleich-Mails (Vergleichstabelle, Winner-Box, min-locations). Für andere Mail-Typen nicht zuständig.
 
 **Acceptance Gating:** Nur Exit 0 der entsprechenden Validator erlaubt „E2E Test bestanden".
+
+---
+
+## Metric Display Contract (seit Issue #814)
+
+### Einfach (use_friendly_format=True) vs. Roh (use_friendly_format=False)
+
+Der vollständige Vertrag aller Wetter-Metriken in der Briefing-Mail wird hier **einmalig** festgelegt.
+Die **alleinige Quelle** der Anzeige-Entscheidung ist `use_friendly_format` in `MetricConfig`.
+
+**Single Source of Truth: Metrik-spezifische Anzeige-Regeln**
+
+| Kategorie | Metriken | Einfach (HTML) | Einfach (Plain) | Roh (HTML) | Roh (Plain) | Notiz |
+|---|---|---|---|---|---|---|
+| **Severity-Ampel** 🟢🟡🟠🔴 | wind, gust, precip, pop, cape | Ampelpunkt nach `display_thresholds` | Zahl + Einheit | Zahl + Einheit, **keine Markierung** | Zahl + Einheit | Nur HTML hat Ampel; Plain & Roh immer numerisch |
+| **Wetterbild-Piktogramm** | cloud_total, cloud_low, cloud_mid, cloud_high, sunshine | Emoji (☀️🌤️⛅🌥️☁️) | Emoji (gleich) | Zahl | Zahl | Emoji in Einfach (HTML+Plain), Zahl in Roh — unverändert seit #435 |
+| **Gewitter-Symbol** | thunder | ⚡ (MED=„⚡ mögl.", HIGH=„⚡⚡", NONE=„–") | ⚡ (gleiche Symbole) | deutsches Wort (kein / mögl. / hoch) | deutsches Wort (kein / mögl. / hoch) | ⚡-Symbol in Einfach (HTML+Plain); Roh immer deutsches Wort |
+| **Zahl (kein Modus-Unterschied)** | visibility, temperature, wind_chill, dewpoint, humidity, pressure, uv_index, freezing_level, snowfall_limit, snow_depth, fresh_snow, precip_type | Zahl + Einheit | Zahl + Einheit | Zahl + Einheit | Zahl + Einheit | Unverändert in beiden Modi |
+
+### Best-Practice-Schwellen (Ampelpunkte für Severity-Metriken)
+
+| Metrik | 🟡 (Gelb) | 🟠 (Orange) | 🔴 (Rot) | Basis |
+|---|---|---|---|---|
+| wind (km/h) | 30 | 50 | 70 | Beaufort 5/7/8–9 |
+| gust (km/h) | 50 | 65 | 80 | Böenklassifikation |
+| precip (mm/h) | 1 | 5 | 10 | Regenintensität leicht/mäßig/stark |
+| pop (%) | 30 | 60 | 80 | Niederschlagswahrscheinlichkeit |
+| cape (J/kg) | 1000 | 2500 | 3500 | Standard-Konvektionsskala (ersetzt seit #814 fest verdrahtete Leiter 300/1000/2000) |
+
+### Visibility wird bewusst NICHT ampeliert
+
+Echte Wetterdaten zeigen: Median 16–54 km, ≥10 km in 90–100 % aller Stunden, <1 km (Nebel) ~0 %.
+Eine Ampel wäre dauergrün und wertlos. Die nackte km-Zahl trägt mehr Information.
+Ein echter Nebel-/Diesigkeits-Wächter gehört in die Alarm-Ebene (Folge-Issue nach #814).
+
+### Implementierungs-Hinweis: „Roh ist Roh"
+
+Im Roh-Modus gibt es **bei keiner Metrik** inline-Farb- oder Hintergrund-Markierungen
+(insbesondere nicht Gelb-Highlight bei CAPE oder Orange-Highlight bei Sicht).
+Alle Roh-Ausgaben sind numerisch/textlich ohne Styling.

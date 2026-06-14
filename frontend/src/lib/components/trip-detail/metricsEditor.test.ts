@@ -38,15 +38,17 @@ test('INDICATOR_MAP > hat genau 12 Eintraege', () => {
 	assert.equal(Object.keys(INDICATOR_MAP).length, 12);
 });
 
-test('INDICATOR_MAP > enthaelt die 9 backend-eligible Metriken', () => {
+test('INDICATOR_MAP > enthaelt die 8 backend-eligible Metriken (Issue #814 AC-11: visibility entfernt)', () => {
+	// visibility entfernt: hat_friendly_format=false, zeigt immer km-Zahl (AC-11).
 	const backendEligible = [
 		'wind_direction', 'thunder', 'cape',
 		'cloud_total', 'cloud_low', 'cloud_mid', 'cloud_high',
-		'visibility', 'sunshine',
+		'sunshine',
 	];
 	for (const id of backendEligible) {
 		assert.ok(id in INDICATOR_MAP, `${id} fehlt in INDICATOR_MAP`);
 	}
+	assert.equal('visibility' in INDICATOR_MAP, false, 'AC-11: visibility darf nicht in INDICATOR_MAP sein');
 });
 
 test('INDICATOR_MAP > enthaelt die 3 frontend-erweiterten Metriken', () => {
@@ -64,8 +66,10 @@ test('INDICATOR_MAP > temperature ist NICHT enthalten', () => {
 	assert.equal('temperature' in INDICATOR_MAP, false);
 });
 
-test('INDICATOR_MAP > precipitation ist NICHT enthalten', () => {
-	assert.equal('precipitation' in INDICATOR_MAP, false);
+test('INDICATOR_MAP > precipitation ist enthalten (Issue #814 AC-12: Ampel-Metrik)', () => {
+	// Seit AC-12 ist precipitation eine Ampel-Metrik (leicht/mäßig/stark/extrem).
+	assert.ok('precipitation' in INDICATOR_MAP, 'AC-12: precipitation muss in INDICATOR_MAP sein');
+	assert.ok(INDICATOR_MAP['precipitation'].includes('leicht'), 'Skala beginnt mit "leicht"');
 });
 
 // =============================================================================
@@ -86,6 +90,37 @@ test('indicatorCapable > gibt false fuer temperature', () => {
 
 test('indicatorCapable > gibt false fuer unbekannte ID', () => {
 	assert.equal(indicatorCapable('nonexistent_metric'), false);
+});
+
+// =============================================================================
+// Issue #814 AC-11/AC-12 — INDICATOR_MAP Korrekturen (RED)
+// =============================================================================
+//
+// AC-11 RED: visibility darf KEINEN Umschalter haben (hat_friendly_format=false,
+//   Sicht zeigt immer km-Zahl — kein Ampel-System). Heute: true → FAIL.
+// AC-12 RED: precipitation (Regen mm/h) soll Umschalter haben, weil es eine
+//   Ampel-Metrik ist (wie wind/gust/rain_probability). Heute: false → FAIL.
+
+test('indicator_capable_visibility_is_false', () => {
+	// AC-11 RED: visibility zeigt immer km-Zahl, kein Roh/Einfach-Umschalter.
+	// Heute schlaegt dieser Test FEHL: indicatorCapable('visibility') === true
+	// (visibility ist in INDICATOR_MAP). Nach Fix: visibility entfernt → false.
+	assert.equal(
+		indicatorCapable('visibility'),
+		false,
+		'AC-11 RED: visibility darf KEINEN Indicator-Umschalter haben (heute: true, Bug)',
+	);
+});
+
+test('indicator_capable_precipitation_is_true', () => {
+	// AC-12 RED: precipitation (Regen mm/h) ist Ampel-Metrik und braucht Umschalter.
+	// Heute schlaegt dieser Test FEHL: indicatorCapable('precipitation') === false
+	// (precipitation fehlt in INDICATOR_MAP). Nach Fix: precipitation ergaenzt → true.
+	assert.equal(
+		indicatorCapable('precipitation'),
+		true,
+		'AC-12 RED: precipitation muss Indicator-Umschalter haben (heute: false, Bug)',
+	);
 });
 
 // =============================================================================

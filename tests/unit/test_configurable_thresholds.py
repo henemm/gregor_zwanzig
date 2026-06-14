@@ -88,9 +88,9 @@ class TestCatalogPopulation:
         assert md.highlight_threshold == 80.0
 
     def test_cape_display_thresholds(self) -> None:
-        """CAPE: yellow >= 1000 J/kg."""
+        """CAPE: 4-stufige Ampel yellow/orange/red — Best-Practice-Konvektionsskala (Issue #814 AC-4)."""
         md = get_metric("cape")
-        assert md.display_thresholds == {"yellow": 1000.0}
+        assert md.display_thresholds == {"yellow": 1000.0, "orange": 2500.0, "red": 3500.0}
 
     def test_cape_risk_thresholds(self) -> None:
         """CAPE risk: medium >= 1000, high >= 2000."""

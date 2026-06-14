@@ -19,7 +19,7 @@ from app.models import (
 from app.profile import ActivityProfile
 
 from src.output.renderers.email.compact import render_compact
-from src.output.renderers.email.helpers import build_format_modes
+from src.output.renderers.email.helpers import build_format_modes, build_html_indicator_keys
 from src.output.renderers.email.html import render_html
 from src.output.renderers.email.plain import render_plain
 from src.output.tokens.dto import TokenLine
@@ -90,6 +90,10 @@ def render_email(
     # else catalog default; mirrors loader._resolve_format_mode semantics).
     format_modes = build_format_modes(display_config)
 
+    # Issue #814: col_keys with HTML-Ampel active (use_friendly_format=True for
+    # Ampel-capable metrics). Independent of format_modes (which always yields 'raw').
+    indicator_keys = build_html_indicator_keys(display_config)
+
     html_body = render_html(
         segments=segments,
         seg_tables=seg_tables,
@@ -106,6 +110,7 @@ def render_email(
         tz=tz,
         friendly_keys=friendly_keys,
         format_modes=format_modes,
+        indicator_keys=indicator_keys,
         profile=profile,
         stability_result=stability_result,
         show_stage_stats=show_stage_stats,

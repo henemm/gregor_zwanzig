@@ -22,7 +22,7 @@ export type MetricCatalog = Record<string, MetricEntry[]>;
 // diese IDs stillschweigend und gibt Rohwerte aus. Der INDICATOR_MAP steuert
 // nur die Frontend-UI, nicht den Formatter (siehe Spec §4 / Known Limitations).
 export const INDICATOR_MAP: Record<string, string> = {
-	// 9 backend-eligible
+	// 8 backend-eligible (visibility entfernt — Issue #814 AC-11: immer km-Zahl)
 	wind_direction:   'N / O / S / W',
 	thunder:          'keins / mittel / hoch / extrem',
 	cape:             'niedrig / mittel / hoch / extrem',
@@ -30,12 +30,12 @@ export const INDICATOR_MAP: Record<string, string> = {
 	cloud_low:        'klar / teilw. / bewölkt / bedeckt',
 	cloud_mid:        'klar / teilw. / bewölkt / bedeckt',
 	cloud_high:       'klar / teilw. / bewölkt / bedeckt',
-	visibility:       'gut / eingeschränkt / schlecht / sehr schlecht',
 	sunshine:         'hell / wechselhaft / bedeckt',
-	// 3 frontend-erweitert
+	// 4 Ampel-Metriken (Issue #814 AC-12: precipitation ergänzt)
 	wind:             'ruhig / mäßig / stark / sturm',
 	gust:             'harmlos / mäßig / stark / orkan',
 	rain_probability: 'niedrig / mittel / hoch / sehr hoch',
+	precipitation:    'leicht / mäßig / stark / extrem',
 };
 
 // Kategorie-Reihenfolge fuer Tabellen-Vorschau (Spec §5 + AC-5).

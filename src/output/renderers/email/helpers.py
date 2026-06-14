@@ -407,12 +407,18 @@ _AMPEL_KEY_TO_METRIC_ID = {
 
 def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
             html: bool = False, row: dict | None = None,
-            format_modes: dict[str, str] | None = None) -> str:
+            format_modes: dict[str, str] | None = None,
+            indicator_keys: set[str] | None = None) -> str:
     """Format single cell value. Respects per-metric format_mode toggle.
 
     Issue #435: when `format_modes` is provided, the per-column mode wins
     over the `friendly_keys` set. The two parameters coexist for backward
     compatibility.
+
+    Issue #814: `indicator_keys` (col_keys where use_friendly_format=True for
+    Ampel-capable metrics) determines HTML-Ampel independently of format_modes.
+    When provided, HTML-Ampel fires iff key in indicator_keys (for wind/gust/
+    precip/pop/cape). Roh-Modus gets bare number, no highlight spans.
     """
     if val is None:
         return "–"
@@ -427,7 +433,26 @@ def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
         friendly_keys = set()
     use_friendly = (mode is not None and mode != "raw") or (mode is None and key in friendly_keys)
 
+    # Issue #814: indicator_keys determines Ampel for wind/gust/precip/pop/cape.
+    # Legacy path (indicator_keys is None): Ampel only when html=True AND mode != "raw"
+    #   (preserves #810 contract: explicit format_modes={"wind":"raw"} → Zahl, not Ampel).
+    # New path (indicator_keys set): Ampel only when key in indicator_keys.
+    # Fail-closed: no indicator_keys and raw mode → no Ampel.
+    _use_ampel = (
+        (indicator_keys is None and html and mode != "raw")
+        or (indicator_keys is not None and key in indicator_keys)
+    )
+
     if key == "thunder":
+        # Issue #814 AC-6: Roh → kurzes deutsches Wort, Einfach → Blitzsymbol.
+        # Thunder nutzt format_modes: mode=="raw" → Roh-Wort; mode=="symbol"/None → Blitzsymbol.
+        if mode == "raw":
+            if val == ThunderLevel.HIGH:
+                return "hoch"
+            if val == ThunderLevel.MED:
+                return "mögl."
+            return "kein"  # Issue #814 AC-6: NONE im Roh-Modus = deutsches Wort
+        # Einfach (mode=="symbol" oder Legacy mode==None): Blitzsymbol.
         if val == ThunderLevel.HIGH:
             t = "⚡⚡"
             return f'<span style="color:#c62828;font-weight:600">{t}</span>' if html else t
@@ -442,9 +467,9 @@ def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
         if mode == "simplified" and not html:
             from services.weather_metrics import format_wind_strength
             return format_wind_strength(val)
-        # Issue #759: HTML-Pfad → 4-stufiger Ampelpunkt statt Zahl/Tint.
-        # Issue #810: raw-Mode umgeht die Ampel (mode=="raw" nur wenn format_modes explizit gesetzt).
-        if html and mode != "raw":
+        # Issue #814: HTML-Ampel wird durch indicator_keys gesteuert (use_friendly_format),
+        # nicht durch mode (build_format_modes liefert immer 'raw' für diese Metriken).
+        if html and _use_ampel:
             metric_id = _AMPEL_KEY_TO_METRIC_ID[key]
             return ampel_dot(val, get_metric(metric_id).display_thresholds)
         s = f"{val:.0f}"
@@ -457,9 +482,8 @@ def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
         if mode == "simplified" and not html:
             from services.weather_metrics import format_precip_intensity
             return format_precip_intensity(val)
-        # Issue #759: HTML-Pfad → 4-stufiger Ampelpunkt statt Zahl/Tint.
-        # Issue #810: raw-Mode umgeht die Ampel (mode=="raw" nur wenn format_modes explizit gesetzt).
-        if html and mode != "raw":
+        # Issue #814: HTML-Ampel durch indicator_keys (use_friendly_format).
+        if html and _use_ampel:
             return ampel_dot(val, get_metric("precipitation").display_thresholds)
         return f"{val:.1f}"
     if key in ("snow_limit", "snow_depth"):
@@ -498,47 +522,23 @@ def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
     if key == "pressure":
         return f"{val:.1f}" if val is not None else "–"
     if key == "pop":
-        # Issue #759: HTML-Pfad → 4-stufiger Ampelpunkt statt Zahl/Tint.
-        # Issue #810: raw-Mode umgeht die Ampel (mode=="raw" nur wenn format_modes explizit gesetzt).
-        if html and mode != "raw":
+        # Issue #814: HTML-Ampel durch indicator_keys (use_friendly_format).
+        if html and _use_ampel:
             return ampel_dot(val, get_metric("rain_probability").display_thresholds)
         return f"{val:.0f}"
     if key == "cape":
-        if not use_friendly:
-            s = f"{val:.0f}"
-            dt = get_metric("cape").display_thresholds
-            if html and val is not None and dt.get("yellow") and val >= dt["yellow"]:
-                return f'<span style="background:#fff9c4;color:#f57f17;padding:2px 4px;border-radius:3px">{s}</span>'
-            return s
-        if val <= 300:
-            emoji = "🟢"
-        elif val <= 1000:
-            emoji = "🟡"
-        elif val <= 2000:
-            emoji = "🟠"
-        else:
-            emoji = "🔴"
-        return emoji
+        # Issue #814 AC-4: Einfach-HTML → Ampel via indicator_keys; Plain immer Zahl;
+        # Roh-HTML → nackte Zahl ohne Highlight-Span.
+        if html and _use_ampel:
+            return ampel_dot(val, get_metric("cape").display_thresholds)
+        # Plain (html=False) oder Roh-HTML: nackte Zahl, kein Span.
+        return f"{val:.0f}"
     if key == "visibility":
-        if not use_friendly:
-            if val >= 10000:
-                s = f"{val / 1000:.0f}"
-            elif val >= 1000:
-                s = f"{val / 1000:.1f}"
-            else:
-                s = f"{val / 1000:.1f}"
-            dt = get_metric("visibility").display_thresholds
-            if html and dt.get("orange_lt") and val < dt["orange_lt"]:
-                return f'<span style="background:#fff3e0;color:#e65100;padding:2px 4px;border-radius:3px">{s}</span>'
-            return s
+        # Issue #814 AC-5: Sicht zeigt immer km-Zahl — kein englisches Wort,
+        # keine Markierung (Ampel wäre dauergrün, AC-5 Spec-Begründung).
         if val >= 10000:
-            return "good"
-        elif val >= 4000:
-            return "fair"
-        elif val >= 1000:
-            return "poor"
-        else:
-            return "⚠️ fog"
+            return f"{val / 1000:.0f}"
+        return f"{val / 1000:.1f}"
     if key == "freeze_lvl":
         return f"{val:.0f}"
     if key == "wind_dir":
@@ -804,6 +804,30 @@ def build_format_modes(dc: UnifiedWeatherDisplayConfig) -> dict[str, str]:
             continue
         out[metric_def.col_key] = _effective_format_mode(mc)
     return out
+
+
+# Issue #814: Metrik-IDs die eine HTML-Ampel erhalten können.
+_AMPEL_CAPABLE_METRIC_IDS = frozenset({"wind", "gust", "precipitation", "rain_probability", "cape"})
+
+
+def build_html_indicator_keys(dc: UnifiedWeatherDisplayConfig) -> set[str]:
+    """Issue #814: col_keys for which HTML-Ampel is active (use_friendly_format=True).
+
+    Reads use_friendly_format DIRECTLY, independent of _effective_format_mode /
+    build_format_modes (which collapse Einfach+Roh both to 'raw' for these metrics).
+    Only metrics in _AMPEL_CAPABLE_METRIC_IDS are eligible.
+    """
+    keys: set[str] = set()
+    for mc in dc.metrics:
+        if mc.metric_id not in _AMPEL_CAPABLE_METRIC_IDS:
+            continue
+        if not getattr(mc, "use_friendly_format", True):
+            continue
+        try:
+            keys.add(get_metric(mc.metric_id).col_key)
+        except KeyError:
+            pass
+    return keys
 
 
 # Issue #795 (RC5/AC-7/AC-9): EIN Ampel-System fuer die ganze Mail.

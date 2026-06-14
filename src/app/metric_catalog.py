@@ -197,7 +197,11 @@ _METRICS: list[MetricDefinition] = [
         summary_fields={"max": "thunder_level_max"},
         default_change_threshold=1.0,
         friendly_label="⚡",
-        format_modes=("symbol",),
+        # Issue #814 AC-6: "raw" in format_modes erlaubt explizites format_mode="raw"
+        # im Renderer (matrix test setzt mc.format_mode="raw"). Der #435-Fallback-Test
+        # nutzt jetzt temperature als Beispiel-Metrik (thunder hat seit #814 legitimerweise
+        # raw+symbol). use_friendly_format=False-Pfad (loader.py:68) umgeht Validierung.
+        format_modes=("raw", "symbol"),
         default_format_mode="symbol",
     ),
     MetricDefinition(
@@ -210,7 +214,8 @@ _METRICS: list[MetricDefinition] = [
         friendly_label="\U0001f7e2\U0001f7e1\U0001f534",
         summary_fields={"max": "cape_max_jkg"},
         default_change_threshold=500.0,
-        display_thresholds={"yellow": 1000.0},
+        # Issue #814 AC-4: Best-Practice-Schwellen (Standard-Konvektionsskala).
+        display_thresholds={"yellow": 1000.0, "orange": 2500.0, "red": 3500.0},
         highlight_threshold=1000.0,
         risk_thresholds={"medium": 1000.0, "high": 2000.0},
         format_modes=("raw", "symbol"),
@@ -290,6 +295,8 @@ _METRICS: list[MetricDefinition] = [
         compact_label="V", col_key="visibility", col_label="Visib",
         providers={"openmeteo": True, "geosphere": False},
         default_enabled=False,
+        # Issue #814 AC-5: fmt_val-visibility-Zweig rendert IMMER km-Zahl (mode/use_friendly
+        # ignoriert). Katalog-Metadaten (#435) bleiben auf #811-Stand — kein Kollateralschaden.
         friendly_label="good/fog",
         display_unit="km",
         summary_fields={"min": "visibility_min_m"},

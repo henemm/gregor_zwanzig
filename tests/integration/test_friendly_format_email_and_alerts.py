@@ -229,10 +229,11 @@ class TestEmailFriendlyVsRawFormatting:
         assert "🟡" in report.email_html
 
     def test_all_friendly_visibility_level_in_html(self):
-        """Visibility 5000m → 'fair' when friendly ON."""
+        """Visibility 5000m → km-Zahl auch im Einfach-Modus (Issue #814 AC-5: kein Wort/Ampel)."""
         dc = self._make_config(True, True, True)
         report = self._generate_report(dc, visibility=5000.0)
-        assert "fair" in report.email_html
+        assert "5.0" in report.email_html
+        assert "fair" not in report.email_html
 
     # --- All Friendly OFF ---
 
@@ -272,11 +273,12 @@ class TestEmailFriendlyVsRawFormatting:
         assert "🟡" not in html    # CAPE raw (no emoji)
 
     def test_mixed_visibility_friendly_in_html(self):
-        """Visibility friendly ON + cloud/CAPE raw."""
+        """Visibility friendly ON → immer km-Zahl, kein Wort (Issue #814 AC-5)."""
         dc = self._make_config(False, False, True)
         report = self._generate_report(dc, visibility=5000.0)
         html = report.email_html
-        assert "fair" in html
+        assert "5.0" in html
+        assert "fair" not in html
 
     # --- Edge cases ---
 
@@ -303,10 +305,11 @@ class TestEmailFriendlyVsRawFormatting:
         assert "background" in html
 
     def test_visibility_fog_friendly_shows_warning(self):
-        """Visibility 300m → '⚠️ fog' when friendly ON."""
+        """Visibility 300m → km-Zahl auch im Einfach-Modus (Issue #814 AC-5: kein 'fog')."""
         dc = self._make_config(False, False, True)
         report = self._generate_report(dc, visibility=300.0)
-        assert "fog" in report.email_html
+        assert "0.3" in report.email_html
+        assert "fog" not in report.email_html
 
     def test_cloud_all_levels_friendly(self):
         """All cloud levels produce correct emoji."""
