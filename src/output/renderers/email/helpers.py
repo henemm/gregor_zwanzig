@@ -443,7 +443,8 @@ def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
             from services.weather_metrics import format_wind_strength
             return format_wind_strength(val)
         # Issue #759: HTML-Pfad → 4-stufiger Ampelpunkt statt Zahl/Tint.
-        if html:
+        # Issue #810: raw-Mode umgeht die Ampel (mode=="raw" nur wenn format_modes explizit gesetzt).
+        if html and mode != "raw":
             metric_id = _AMPEL_KEY_TO_METRIC_ID[key]
             return ampel_dot(val, get_metric(metric_id).display_thresholds)
         s = f"{val:.0f}"
@@ -457,7 +458,8 @@ def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
             from services.weather_metrics import format_precip_intensity
             return format_precip_intensity(val)
         # Issue #759: HTML-Pfad → 4-stufiger Ampelpunkt statt Zahl/Tint.
-        if html:
+        # Issue #810: raw-Mode umgeht die Ampel (mode=="raw" nur wenn format_modes explizit gesetzt).
+        if html and mode != "raw":
             return ampel_dot(val, get_metric("precipitation").display_thresholds)
         return f"{val:.1f}"
     if key in ("snow_limit", "snow_depth"):
@@ -497,7 +499,8 @@ def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
         return f"{val:.1f}" if val is not None else "–"
     if key == "pop":
         # Issue #759: HTML-Pfad → 4-stufiger Ampelpunkt statt Zahl/Tint.
-        if html:
+        # Issue #810: raw-Mode umgeht die Ampel (mode=="raw" nur wenn format_modes explizit gesetzt).
+        if html and mode != "raw":
             return ampel_dot(val, get_metric("rain_probability").display_thresholds)
         return f"{val:.0f}"
     if key == "cape":
