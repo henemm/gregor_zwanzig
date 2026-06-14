@@ -223,14 +223,8 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 		}
 		existing.ID = id
 
-		// Issue #296-BE — Naismith-Ankunftszeiten frisch aus den (ggf. neuen)
-		// Wegpunkten berechnen, nach dem Stage-Merge, vor SaveTrip.
-		// arrival_calculated ist abgeleitet, nicht user-geliefert.
-		// Issue #674 — ActivitySpeed aus trip.Activity ableiten (Fahrrad/Wanderer).
-		speeds := model.ActivitySpeed(existing.Activity)
-		for i := range existing.Stages {
-			model.ComputeStageArrivals(&existing.Stages[i], speeds)
-		}
+		// Issue #802: ComputeStageArrivals wird jetzt zentral in store.SaveTrip
+		// gerufen — hier nicht mehr nötig (Doppelberechnung vermeiden).
 
 		if err := validateTrip(*existing); err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -377,12 +371,8 @@ func ConfirmWaypointHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 
-		// Naismith-Ankunftszeiten nach der Änderung aktuell halten.
-		// Issue #674 — ActivitySpeed aus trip.Activity ableiten (Fahrrad/Wanderer).
-		waypointSpeeds := model.ActivitySpeed(trip.Activity)
-		for si := range trip.Stages {
-			model.ComputeStageArrivals(&trip.Stages[si], waypointSpeeds)
-		}
+		// Issue #802: ComputeStageArrivals wird jetzt zentral in store.SaveTrip
+		// gerufen — hier nicht mehr nötig (Doppelberechnung vermeiden).
 
 		if err := s.SaveTrip(*trip); err != nil {
 			http.Error(w, "internal error", http.StatusInternalServerError)

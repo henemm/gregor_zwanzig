@@ -168,6 +168,13 @@ func (s *Store) SaveTrip(trip model.Trip) error {
 		trip.AlertRules = []model.AlertRule{}
 	}
 
+	// Issue #802: Compute-on-Save — arrival_calculated für alle Stages setzen,
+	// zentral an einer Stelle (alle Go-Schreiber rufen SaveTrip).
+	speeds := model.ActivitySpeed(trip.Activity)
+	for i := range trip.Stages {
+		model.ComputeStageArrivals(&trip.Stages[i], speeds)
+	}
+
 	data, err := json.MarshalIndent(trip, "", "  ")
 	if err != nil {
 		return err

@@ -403,6 +403,7 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
         alert_quiet_from=data.get("alert_quiet_from"),
         alert_quiet_to=data.get("alert_quiet_to"),
         shortcode=data.get("shortcode", ""),
+        activity=data.get("activity", ""),  # Issue #802
     )
     return trip
 
@@ -1003,6 +1004,9 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
     if trip.shortcode:
         data["shortcode"] = trip.shortcode
 
+    if trip.activity:
+        data["activity"] = trip.activity
+
     # Serialize weather config (Feature 2.6 legacy, preserved for migration)
     if trip.weather_config:
         data["weather_config"] = {
@@ -1111,6 +1115,9 @@ def save_trip(
     ``{data_dir}/users/{user_id}/trips/{id}.json`` (test-isolation), otherwise
     the configured data root is used.
 
+    Issue #802: Compute-on-Save — arrival_calculated wird für jede Stage
+    vor der Serialisierung berechnet (bit-genau zu Go store.SaveTrip).
+
     Args:
         trip: Trip object to save
         user_id: User identifier (default: "default")
@@ -1119,6 +1126,15 @@ def save_trip(
     Returns:
         Path to the saved file
     """
+    import dataclasses
+    from core.naismith import compute_stage_arrivals
+
+    # Issue #802: Compute-on-Save — arrival_calculated für jede Stage berechnen.
+    trip = dataclasses.replace(
+        trip,
+        stages=[compute_stage_arrivals(s, trip.activity) for s in trip.stages],
+    )
+
     if data_dir is not None:
         trips_dir = Path(data_dir) / "users" / user_id / "trips"
     else:

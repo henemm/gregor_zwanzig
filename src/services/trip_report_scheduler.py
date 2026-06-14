@@ -652,37 +652,6 @@ class TripReportSchedulerService:
         })
         path.write_text(json.dumps(data, indent=2))
 
-    def _interpolate_arrival_time(
-        self,
-        from_wp,
-        to_wp,
-        base_time: time,
-    ) -> time:
-        """Estimate arrival time based on distance and elevation change.
-
-        Uses standard hiking speeds: 4 km/h flat, 300 Hm/h ascent, 500 Hm/h descent.
-        """
-        dist_km = _haversine_km(from_wp.lat, from_wp.lon, to_wp.lat, to_wp.lon)
-        elev_diff = (to_wp.elevation_m or 0) - (from_wp.elevation_m or 0)
-
-        # Hiking time from distance (flat terrain)
-        time_flat_h = dist_km / 4.0
-
-        # Hiking time from elevation
-        if elev_diff > 0:
-            time_elev_h = elev_diff / 300.0
-        else:
-            time_elev_h = abs(elev_diff) / 500.0
-
-        # Use the larger of flat vs elevation time (dominates hiking duration)
-        total_hours = max(time_flat_h, time_elev_h)
-        # Minimum 15 minutes between waypoints
-        total_hours = max(total_hours, 0.25)
-
-        base_dt = datetime.combine(date.today(), base_time)
-        arrival_dt = base_dt + timedelta(hours=total_hours)
-        return arrival_dt.time()
-
     def _convert_trip_to_segments(
         self,
         trip: "Trip",
@@ -708,6 +677,16 @@ class TripReportSchedulerService:
         if len(stage.waypoints) < 2:
             logger.warning(f"Stage {stage.id} has less than 2 waypoints")
             return []
+
+        # Issue #802 Self-Heal: fehlen ALLE persistierten arrival_calculated (Legacy-Fall,
+        # z.B. vor Migration oder Trips die nie über save_trip liefen), einmalig über
+        # die kanonische geteilte Funktion ableiten — NIE leeres Briefing.
+        # Feuert NUR wenn kein einziger Wegpunkt einen Wert trägt; Mischfälle
+        # (teilweise persistiert) übernimmt die Prioritätskette korrekt.
+        # trip.activity nutzen, damit Self-Heal aktivitätsgerecht ist.
+        if all(wp.arrival_calculated is None for wp in stage.waypoints):
+            from core.naismith import compute_stage_arrivals
+            stage = compute_stage_arrivals(stage, trip.activity)
 
         segments = []
         waypoints = stage.waypoints
@@ -745,10 +724,13 @@ class TripReportSchedulerService:
             elif i == 0:
                 wp1_start = default_start
             else:
-                wp1_start = self._interpolate_arrival_time(
-                    waypoints[i - 1], wp1, cumulative_time,
+                # Issue #802: kein hartkodiertes Tempo mehr — Scheduler ist reiner Leser.
+                # arrival_calculated fehlt → sicheres Degenerat: Null-Vorschub auf
+                # bisherige kumulative Zeit. end≤start-Guard überspringt das Segment.
+                logger.warning(
+                    f"Kein arrival_calculated/time_window für {wp1.id} — Segment wird übersprungen"
                 )
-                logger.info(f"Interpolated time for {wp1.id}: {wp1_start}")
+                wp1_start = cumulative_time
 
             cumulative_time = wp1_start
 
@@ -762,10 +744,13 @@ class TripReportSchedulerService:
             elif wp2_arrival is not None:
                 wp2_start = wp2_arrival
             else:
-                wp2_start = self._interpolate_arrival_time(
-                    wp1, wp2, wp1_start,
+                # Issue #802: kein hartkodiertes Tempo mehr — Scheduler ist reiner Leser.
+                # arrival_calculated fehlt → sicheres Degenerat: Null-Vorschub = wp1_start.
+                # end≤start-Guard überspringt das Segment sauber.
+                logger.warning(
+                    f"Kein arrival_calculated/time_window für {wp2.id} — Segment wird übersprungen"
                 )
-                logger.info(f"Interpolated time for {wp2.id}: {wp2_start}")
+                wp2_start = wp1_start
 
             # Bug #401: User-konfigurierte Zeiten sind LOKALE Zeiten (Wizard-Eingabe,
             # z.B. 08:00 CEST), nicht UTC. Korrekt lokal→UTC konvertieren, statt sie

@@ -87,14 +87,17 @@ func TestTripRoundTrip_PreservesFieldsWithoutArrival(t *testing.T) {
 		t.Fatalf("wp[1] verändert: %+v", wps[1])
 	}
 
-	// Legacy-Trip hatte kein arrival_calculated → darf nach Roundtrip
-	// (ohne Berechnung) nicht im File auftauchen (omitempty).
+	// Issue #802 (derive-on-write): SaveTrip berechnet arrival_calculated jetzt
+	// ZENTRAL bei jedem Schreibvorgang. Ein Legacy-Trip mit ≥2 Wegpunkten bekommt
+	// daher nach dem Roundtrip ein berechnetes arrival_calculated — das ist gewollt
+	// (ersetzt die alte #296-Annahme "ohne Berechnung kein Feld"). Die
+	// Bestandsfeld-Erhaltung oben (id/name/lat/lon/elevation) bleibt der #102-Schutz.
 	written, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read written: %v", err)
 	}
-	if strings.Contains(string(written), `"arrival_calculated"`) {
-		t.Fatalf("Legacy-Roundtrip darf kein arrival_calculated erzeugen, war: %s", string(written))
+	if !strings.Contains(string(written), `"arrival_calculated"`) {
+		t.Fatalf("Issue #802: SaveTrip muss arrival_calculated berechnen, war: %s", string(written))
 	}
 
 	// Persistierter arrival_calculated muss beim Laden erhalten bleiben (AC-4):

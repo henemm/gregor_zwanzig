@@ -198,6 +198,7 @@ class Trip:
     alert_quiet_from: Optional[str] = None  # Issue #181: quiet hours start "HH:MM"
     alert_quiet_to: Optional[str] = None  # Issue #181: quiet hours end "HH:MM"
     shortcode: str = ""  # Bug #775: GZ#XXXX — per-user eindeutig, ASCII, immun gegen Q-Encoding
+    activity: str = ""  # Issue #802: Aktivitätstyp (z.B. "fahrrad_20") für Segment-Tempo
 
     @property
     def start_date(self) -> date:
