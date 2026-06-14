@@ -231,6 +231,28 @@ Der ergänzende `IMAP-MIME-Verhaltenstest` (seit #722, #721, #636) bleibt als
 Unit-/Integrationsbeweis gültig; der Validator kodifiziert genau dieses Muster als
 Gate. Der `email_spec_validator.py` ist für Trip-Briefing-Mails **nicht** zuständig.
 
+### RENDERER MAIL GATE — Commit-Gate für Mail-Renderer (seit #811)
+
+**`renderer_mail_gate.py`** (Commit-Hook, PreToolUse→Bash-Kette nach `pre_commit_gate.py`) macht die
+oben dokumentierte Validator-„PFLICHT" technisch un-überspringbar: Sobald ein `git commit` eine
+Mail-Inhalts-Datei staged (`src/output/renderers/email/*.py`, `src/formatters/*.py`,
+`src/outputs/email.py`), **blockiert der Commit (Exit 2)**, bis im aktiven Workflow beide Nachweise
+vorliegen:
+
+1. der **Modus-Matrix-Vertragstest** (`tests/tdd/test_issue_811_mode_matrix.py`) lief grün — er rendert
+   die echte Mail über `{full,compact}×{Einfach,Roh}×{briefing,alert}` und erzwingt, dass der Roh-Modus
+   Zahlen statt Ampelpunkte zeigt (deckt **Briefing- UND Alert/„Update"-Mail** ab, da gemeinsamer
+   `render_email`-Pfad);
+2. ein erfolgreicher **`briefing_mail_validator.py`**-Lauf (`*_briefing_validation.yaml` mit `passed: true`).
+
+Anti-Stale: Der Matrix-Nachweis bindet an einen sha256 der Mail-Dateien, der Validator-Nachweis an seine
+`validated_at`-Frische — jede neue Renderer-Änderung invalidiert beide → Test + Validator müssen erneut laufen.
+**Kein globaler/ENV-Bypass.** Verhindert stille Mail-Format-Defekte vor dem Merge (Issue #810-Klasse).
+
+**Abhilfe bei Blockade** (kein Override): Vertragstest laufen lassen (`uv run pytest
+tests/tdd/test_issue_811_mode_matrix.py` — der Lauf schreibt den Matrix-Nachweis automatisch) und den
+`briefing_mail_validator.py` gegen die zugestellte Staging-Mail grün bekommen.
+
 ## Specs
 
 Alle Module benoetigen Specs vor Implementierung:

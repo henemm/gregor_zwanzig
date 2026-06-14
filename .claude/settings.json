@@ -103,6 +103,11 @@
           },
           {
             "type": "command",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/renderer_mail_gate.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/renderer_mail_gate.py\"; fi",
+            "timeout": 5
+          },
+          {
+            "type": "command",
             "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/pre_commit_validation.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/pre_commit_validation.py\"; fi",
             "timeout": 180
           },

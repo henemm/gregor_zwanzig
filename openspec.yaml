@@ -51,6 +51,8 @@ protected_paths:
     spec_type: "e2e_validators"
   - pattern: "\\.claude/hooks/e2e_browser_test\\.py$"
     spec_type: "e2e_validators"
+  - pattern: "\\.claude/hooks/renderer_mail_gate\\.py$"
+    spec_type: "e2e_validators"
   # External Validator - MUST NOT be weakened by implementer session!
   - pattern: "\\.claude/agents/external-validator\\.md$"
     spec_type: "e2e_validators"
