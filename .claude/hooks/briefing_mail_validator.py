@@ -195,13 +195,13 @@ def validate_message(msg: Message, max_bytes: int = _MAX_BYTES_DEFAULT) -> tuple
             "Marker-Header X-GZ-Mail-Type fehlt — Mail nicht vom getaggten Renderer"
         ]
 
-    if mail_type == "compare":
+    if mail_type in ("compare", "deviation-alert"):
         return True, [
-            "Keine Trip-Briefing-Mail (Typ=compare) — falscher Validator, uebersprungen"
+            f"Keine Trip-Briefing-Mail (Typ={mail_type}) — falscher Validator, uebersprungen"
         ]
 
     if mail_type != "trip-briefing":
-        return False, [f"Unbekannter Mail-Typ '{mail_type}' (erwartet trip-briefing/compare)"]
+        return False, [f"Unbekannter Mail-Typ '{mail_type}' (erwartet trip-briefing/compare/deviation-alert)"]
 
     mail_format = msg["X-GZ-Format"]
     if mail_format == "full":

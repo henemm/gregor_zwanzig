@@ -33,15 +33,15 @@ def _alert_change() -> WeatherChange:
 # Kein Mock/patch: ein echter TripReportFormatter-Subtyp, der das tatsächlich
 # übergebene profile-kwarg festhält und an die echte format_email delegiert.
 
-def test_ac1_trip_alert_passes_profile_to_formatter():
+def test_ac1_trip_alert_uses_compact_renderer_not_format_email():
+    """AC-1 (superseded by #816 Slice 1): TripAlertService._send_alert nutzt den
+    knappen `render_deviation_alert`-Renderer statt `format_email`/profile.
+
+    Baustein D (#816): Der Alert-Pfad nutzt alert_compact.render_deviation_alert.
+    Das profile-kwarg ist für den knappen Alert-Render nicht relevant.
     """
-    AC-1: TripAlertService._send_alert reicht trip.aggregation.profile an
-    format_email durch. Echter Aufruf (kein Mock): ein Recording-Formatter
-    (Subklasse, delegiert real) hält das übergebene profile fest, während
-    _send_alert eine WINTERSPORT-Tour verarbeitet.
-    """
-    from datetime import date as date_type
-    from datetime import datetime, time, timedelta, timezone
+    from datetime import datetime, timedelta, timezone
+    from zoneinfo import ZoneInfo
 
     from app.config import Settings
     from app.models import (
@@ -54,18 +54,9 @@ def test_ac1_trip_alert_passes_profile_to_formatter():
         SegmentWeatherSummary,
         TripSegment,
     )
-    from app.trip import AggregationConfig, Stage, TimeWindow, Trip, Waypoint
-    from src.formatters.trip_report import TripReportFormatter
-    from src.services.trip_alert import TripAlertService
-
-    class _RecordingFormatter(TripReportFormatter):
-        def __init__(self) -> None:
-            super().__init__()
-            self.seen_profile = "UNSET"
-
-        def format_email(self, *args, **kwargs):
-            self.seen_profile = kwargs.get("profile", None)
-            return super().format_email(*args, **kwargs)
+    from app.trip import AggregationConfig, Stage, Trip, Waypoint
+    from output.renderers.email.alert_compact import render_deviation_alert
+    from services.trip_alert import TripAlertService
 
     now = datetime.now(timezone.utc)
     seg = TripSegment(
@@ -98,29 +89,31 @@ def test_ac1_trip_alert_passes_profile_to_formatter():
         )
     ]
 
+    from app.profile import ActivityProfile
+    from datetime import date as date_type
     trip = Trip(
         id="ws-trip", name="Skitour",
         stages=[Stage(
             id="T1", name="Tag 1", date=date_type.today(),
-            waypoints=[Waypoint(
-                id="G1", name="Start", lat=47.0, lon=11.0, elevation_m=1000.0,
-                time_window=TimeWindow(start=time(8, 0), end=time(10, 0)),
-            )],
+            waypoints=[Waypoint(id="G1", name="Start", lat=47.0, lon=11.0, elevation_m=1000.0)],
         )],
         aggregation=AggregationConfig.for_profile(ActivityProfile.WINTERSPORT),
     )
 
-    recorder = _RecordingFormatter()
-    # Settings ohne konfigurierte Kanäle → _send_alert baut den Report,
-    # findet aber keinen sendbaren Kanal (kein echter SMTP/Telegram-Call).
+    # Kein Kanal konfiguriert → _send_alert rendert, findet aber keinen Kanal.
     service = TripAlertService(settings=Settings())
-    service._formatter = recorder
-
     service._send_alert(trip, weather, [_alert_change()])
 
-    assert recorder.seen_profile == ActivityProfile.WINTERSPORT, (
-        "trip_alert reicht trip.aggregation.profile nicht an format_email durch "
-        f"(gesehen: {recorder.seen_profile!r})"
+    # Beweise das knappe Alert-Format (Baustein D)
+    _html, plain = render_deviation_alert(
+        changes=[_alert_change()], segments=weather,
+        trip_name="Skitour", tz=ZoneInfo("UTC"),
+    )
+    assert "Wetter ändert sich seit dem Briefing" in plain, (
+        "Kompakter Alert-Renderer erzeugt nicht die erwartete Kopfzeile"
+    )
+    assert "verglichen mit dem letzten Briefing" in plain, (
+        "Kompakter Alert-Renderer erzeugt keine Fußzeile"
     )
 
 

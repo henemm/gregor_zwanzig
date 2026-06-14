@@ -147,9 +147,23 @@ class TripAlertService:
             f"Detected {len(significant)} significant changes for trip {trip.id}"
         )
 
+        # 4b. Issue #816 (B): Melde-Gedächtnis — Wiederholungs-Spam unterdrücken.
+        # Durchlassen nur bei neuem metric:segment-Key ODER Eskalation
+        # (|new_value − last_reported_value| ≥ threshold). Werden alle Changes
+        # unterdrückt → kein Alert (kein Throttle/Log).
+        from services.alert_state import AlertStateService
+        state_svc = AlertStateService(user_id=self._user_id)
+        alert_state = state_svc.load(trip.id)
+        to_report = self._filter_against_alert_state(significant, alert_state)
+        if not to_report:
+            logger.debug(
+                f"All changes suppressed by alert_state for trip {trip.id}"
+            )
+            return False
+
         # 5. Send alert; guard: only record throttle/log when at least one
         # configured channel was reachable (AC-1 symmetry with Telegram/Radar).
-        delivered = self._send_alert(trip, fresh_weather, significant)
+        delivered = self._send_alert(trip, fresh_weather, to_report)
         if not delivered:
             logger.warning(
                 f"Alert not deliverable on any effective channel for trip "
@@ -157,26 +171,49 @@ class TripAlertService:
             )
             return False
 
-        # 6. Update snapshot so next alert compares against THIS weather
-        try:
-            from services.weather_snapshot import WeatherSnapshotService
-            snapshot_date = fresh_weather[0].segment.start_time.date()
-            WeatherSnapshotService(user_id=self._user_id).save(
-                trip.id, fresh_weather, snapshot_date,
-            )
-        except Exception as e:
-            logger.warning(f"Failed to update snapshot after alert for {trip.id}: {e}")
+        # 6. Issue #816 (B): Melde-Gedächtnis fortschreiben (kein Snapshot-Write
+        # mehr — die Briefing-Referenz bleibt stabil bis zum nächsten Briefing).
+        now_iso = datetime.now(timezone.utc).isoformat()
+        for change in to_report:
+            key = f"{change.metric}:{change.segment_id}"
+            alert_state[key] = {
+                "last_reported_value": float(change.new_value),
+                "reported_at": now_iso,
+            }
+        state_svc.save(trip.id, alert_state)
 
         # 7. Update throttle (only on success) + persist
         self._last_alert_times[trip.id] = datetime.now(timezone.utc)
         self._save_throttle_times()
 
         # 8. Issue #393: Alert-Log für Cockpit-Kachel "Alarme · letzte 24 h".
-        # Nur nach erfolgreichem Versand; höchste Severity der significant-Liste.
-        severity = self._highest_severity(significant)
-        self._append_alert_log(trip.id, len(significant), severity)
+        # Nur nach erfolgreichem Versand; höchste Severity der gemeldeten Changes.
+        severity = self._highest_severity(to_report)
+        self._append_alert_log(trip.id, len(to_report), severity)
 
         return True
+
+    @staticmethod
+    def _filter_against_alert_state(
+        changes: List[WeatherChange],
+        alert_state: dict,
+    ) -> List[WeatherChange]:
+        """Issue #816 (B): Behalte nur Changes, die neu sind oder eskalieren.
+
+        Durchlassen bei (a) kein Eintrag für `<metric>:<segment_id>` ODER
+        (b) |new_value − last_reported_value| ≥ threshold der Metrik.
+        """
+        result: List[WeatherChange] = []
+        for change in changes:
+            key = f"{change.metric}:{change.segment_id}"
+            prev = alert_state.get(key)
+            if prev is None:
+                result.append(change)
+                continue
+            last = prev.get("last_reported_value")
+            if last is None or abs(change.new_value - last) >= change.threshold:
+                result.append(change)
+        return result
 
     def _select_change_detector(self, trip: "Trip") -> WeatherChangeDetectionService:
         """Return detector with priority alert_rules > display_config > report_config > defaults.
@@ -407,7 +444,10 @@ class TripAlertService:
             if fresh is None:
                 continue
 
-            changes = self._change_detector.detect_changes(cached, fresh)
+            # Issue #816 (C): Forecast-Alert ist Δ-only — absolute Regeln entfallen.
+            changes = self._change_detector.detect_changes(
+                cached, fresh, include_absolute=False
+            )
             all_changes.extend(changes)
 
         return all_changes
@@ -653,24 +693,23 @@ class TripAlertService:
         matched_stage = trip.get_stage_for_date(alert_date)
         stage_name = trip.numbered_stage_label(matched_stage) if matched_stage else None
 
-        # Bug #400: ohne tz= würde format_email den UTC-Default nutzen und
-        # Segment-Zeiten in UTC statt Lokalzeit anzeigen. Zeitzone aus den
-        # Koordinaten des ersten Segments bestimmen.
+        # Bug #400: ohne tz= würden Segment-Zeiten in UTC statt Lokalzeit erscheinen.
+        # Zeitzone aus den Koordinaten des ersten Segments bestimmen.
         alert_tz = tz_for_coords(
             weather[0].segment.start_point.lat,
             weather[0].segment.start_point.lon,
         )
 
-        report = self._formatter.format_email(
+        # Issue #816 (D): Knapper Abweichungs-Alert (kein volles Briefing).
+        from output.renderers.email.alert_compact import render_deviation_alert
+        html, plain = render_deviation_alert(
+            changes=changes,
             segments=weather,
             trip_name=trip.name,
-            report_type="alert",
-            display_config=trip.display_config,
-            changes=changes,
-            profile=trip.aggregation.profile,
-            stage_name=stage_name,
             tz=alert_tz,
+            stage_label=stage_name,
         )
+        subject = f"[{trip.name}] Wetter ändert sich seit dem Briefing"
 
         # Issue #638: Effective channels — per-alert override beats briefing channels.
         effective_channels = self._effective_alert_channels(trip)
@@ -684,21 +723,22 @@ class TripAlertService:
             deliverable_any = True
             try:
                 EmailOutput(self._settings).send(
-                    subject=report.email_subject,
-                    body=report.email_html,
-                    plain_text_body=report.email_plain,
+                    subject=subject,
+                    body=html,
+                    plain_text_body=plain,
+                    mail_type="deviation-alert",
                 )
             except Exception as e:
                 logger.error(f"Email alert failed for {trip.name}: {e}")
 
-        # Telegram (Issue #360: kanal-bewusster Body, Fallback email_plain)
+        # Telegram (Issue #360: plain-Text, gleiche knappe Struktur)
         if send_telegram and self._settings.can_send_telegram():
             deliverable_any = True
             try:
                 from outputs.telegram import TelegramOutput
                 TelegramOutput(self._settings).send(
-                    subject=report.email_subject,
-                    body=report.telegram_text or report.email_plain,
+                    subject=subject,
+                    body=plain,
                 )
             except Exception as e:
                 logger.error(f"Telegram alert failed for {trip.name}: {e}")

@@ -2,10 +2,10 @@
 entity_id: briefing_mail_validator
 type: module
 created: 2026-06-11
-updated: 2026-06-11
+updated: 2026-06-14
 status: draft
-version: "1.0"
-tags: [validator, email, acceptance-gate, trip-briefing]
+version: "1.1"
+tags: [validator, email, acceptance-gate, trip-briefing, deviation-alert]
 ---
 
 # Briefing-Mail-Validator (full + compact)
@@ -53,7 +53,7 @@ Plausibilität** (nicht bloß String-Presence). Schließt die Coverage-Lücke au
 
 ```
 build_mime_message(..., mail_type: str | None = None, mail_format: str | None = None)
-  → wenn gesetzt:  msg["X-GZ-Mail-Type"] = mail_type   # "trip-briefing" | "compare"
+  → wenn gesetzt:  msg["X-GZ-Mail-Type"] = mail_type   # "trip-briefing" | "compare" | "deviation-alert"
                    msg["X-GZ-Format"]    = mail_format  # "full" | "compact"
 ```
 
@@ -62,6 +62,7 @@ build_mime_message(..., mail_type: str | None = None, mail_format: str | None = 
 - **Briefing-Versand** (`trip_report_scheduler.py`): full-Pfad → `("trip-briefing","full")`,
   compact-Pfad → `("trip-briefing","compact")`.
 - **Orts-Vergleich-Versand** (`cli.py`): `("compare","full")`.
+- **Deviation-Alert-Versand** (`trip_alert.py`, Issue #816): `("deviation-alert","full")`.
 
 ### 2. Validator dispatcht auf den Header
 
@@ -69,7 +70,7 @@ build_mime_message(..., mail_type: str | None = None, mail_format: str | None = 
 
 - `fetch_latest_message()` → liefert das geparste `email.message.Message`-Objekt (nicht nur den HTML-Body), inkl. Header & alle MIME-Parts.
 - Liest `X-GZ-Mail-Type`:
-  - `compare` → **kein** struktureller Fehlversuch; Meldung „Keine Trip-Briefing-Mail (Typ=compare) — falscher Validator" und Exit 0 (sauberes No-Op, nicht Exit 1).
+  - `compare` oder `deviation-alert` → **kein** struktureller Fehlversuch; Meldung „Keine Trip-Briefing-Mail (Typ={type}) — falscher Validator, übersprungen" und Exit 0 (sauberes No-Op, nicht Exit 1).
   - fehlend → Exit 1 mit klarer Meldung („Marker-Header fehlt — Mail nicht vom getaggten Renderer").
   - `trip-briefing` → dispatch auf `X-GZ-Format`:
 
@@ -126,6 +127,9 @@ Trip-Briefing-Mail-Änderungen ist `briefing_mail_validator.py` das Acceptance-G
 - **AC-7:** Given eine `compare`-getaggte Mail, When `briefing_mail_validator` läuft, Then klassifiziert er sie NICHT fälschlich als kaputtes Briefing, sondern meldet „falscher Validator / kein Trip-Briefing" und beendet mit Exit 0 (sauberes No-Op statt struktureller Fehlalarm).
   - Test: compare-Mail zustellen → briefing_mail_validator → Exit 0 + No-Op-Meldung (kein struktureller Fehler).
 
+- **AC-8:** Given eine `deviation-alert`-getaggte Mail (Issue #816), When `briefing_mail_validator` läuft, Then klassifiziert er sie NICHT als kaputtes Briefing, sondern erkennt den Typ, meldet „Keine Trip-Briefing-Mail (Typ=deviation-alert) — falscher Validator, übersprungen" und beendet mit Exit 0 (sauberes No-Op).
+  - Test: deviation-alert-Mail zustellen → briefing_mail_validator → Exit 0 + No-Op-Meldung (kein struktureller Fehler).
+
 ## Known Limitations
 
 - Plausibilität prüft Selbst-Konsistenz, nicht meteorologische Korrektheit (kein externer Soll-Abgleich) — bewusst, um Trip-Kontext-Freiheit und False-Positive-Armut zu wahren.
@@ -134,4 +138,5 @@ Trip-Briefing-Mail-Änderungen ist `briefing_mail_validator.py` das Acceptance-G
 
 ## Changelog
 
+- 2026-06-14: v1.1 — Support für `deviation-alert` Mail-Typ (Issue #816); No-Op-Dispatch auch für Alert-Mails
 - 2026-06-11: Initial spec created (#733, ausgegliedert aus #732, Quelle #722)

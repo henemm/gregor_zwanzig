@@ -200,6 +200,9 @@ class WeatherChangeDetectionService:
             WeatherChangeDetectionService with only rule-driven thresholds
             (no MetricCatalog defaults — explicit opt-in via rules).
         """
+        from app.metric_catalog import get_change_detection_map
+        catalog_defaults = get_change_detection_map()
+
         thresholds: dict[str, float] = {}
         absolute_rules: list["AlertRule"] = []
         severity_overrides: dict[str, AlertSeverity] = {}
@@ -209,6 +212,15 @@ class WeatherChangeDetectionService:
                 continue
             if rule.kind == AlertRuleKind.ABSOLUTE:
                 absolute_rules.append(rule)
+                # Issue #816 (C): ABSOLUTE-Regeln liefern keine Δ-Schwellen; damit
+                # der Alert-Pfad (`include_absolute=False`) für Trips mit reinen
+                # absolute-rules trotzdem symmetrische Δ-Alerts produziert, tragen
+                # wir die MetricCatalog-Defaults für das betroffene Summary-Field ein.
+                # Invariante: ein Trip mit SyncAlertRules (#809 — nur ABSOLUTE) bekommt
+                # Δ-Alerts mit denselben Schwellen wie der MetricCatalog-Default.
+                field_name = _ALERT_METRIC_TO_SUMMARY_FIELD.get(rule.metric)
+                if field_name and field_name in catalog_defaults:
+                    thresholds.setdefault(field_name, catalog_defaults[field_name])
             elif rule.kind == AlertRuleKind.DELTA:
                 fields = _ALERT_DELTA_METRIC_TO_FIELDS.get(rule.metric, ())
                 if not fields:
@@ -233,6 +245,8 @@ class WeatherChangeDetectionService:
         self,
         old_data: "SegmentWeatherData",
         new_data: "SegmentWeatherData",
+        *,
+        include_absolute: bool = True,
     ) -> list[WeatherChange]:
         """
         Detect significant changes between old and new weather data.
@@ -240,6 +254,10 @@ class WeatherChangeDetectionService:
         Args:
             old_data: Cached weather data
             new_data: Fresh weather data
+            include_absolute: Issue #816 — wenn False, werden die absoluten
+                Regeln (`_detect_absolute_changes`) NICHT ausgewertet (nur die
+                symmetrische Δ-Erkennung). Der Forecast-Alert-Pfad nutzt False;
+                Default True bewahrt das Verhalten bestehender Aufrufer.
 
         Returns:
             List of WeatherChange objects for metrics exceeding thresholds.
@@ -300,7 +318,9 @@ class WeatherChangeDetectionService:
                 changes.append(change)
 
         # Issue #222 Workflow 1: Absolute-rule detection (new_value vs threshold)
-        changes.extend(self._detect_absolute_changes(new_summary, new_data))
+        # Issue #816: Im Δ-only-Alert-Pfad (include_absolute=False) ausgeschlossen.
+        if include_absolute:
+            changes.extend(self._detect_absolute_changes(new_summary, new_data))
 
         return changes
 

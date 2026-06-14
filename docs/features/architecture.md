@@ -1,6 +1,6 @@
 # Architektur – Gregor Zwanzig
 
-**Updated:** 2026-06-12 (Issue #758 — Einheitlicher Speicher-Status-Indikator + Trip-Editor Auto-Save; #733 Briefing-Mail-Validator Marker-Header); 2026-06-11 (Issue #749 — Day Comparison Renderer: render_day_comparison_html/plain für Vortag-Vergleich-Sektion); 2026-06-09 (Issue #675 — Etappen-Startzeiten Editor-Widget; Issue #671 — Bot-Menü automatisch beim Service-Start + Live-Selftest); 2026-06-08 (Issue #655 — Telegram callback_query + editMessageText Zoom-Navigation); 2026-06-07 (Issue #637 — Telegram Webhook Migration); 2026-06-03 (Issue #572 — Inbound-Handler Multi-User Routing); 2026-05-31 (Issue #483 — Demo-Modus im Vorschau-Tab; Issue #495 — MapCanvas Leaflet-Karte; Issue #475 — OutputLayoutEditor zu Organisms)
+**Updated:** 2026-06-14 (Issue #816 — Alert-Abweichungs-Kern: read-only Snapshot, alert_state Melde-Gedächtnis, knapper Render-Pfad); 2026-06-12 (Issue #758 — Einheitlicher Speicher-Status-Indikator + Trip-Editor Auto-Save; #733 Briefing-Mail-Validator Marker-Header); 2026-06-11 (Issue #749 — Day Comparison Renderer: render_day_comparison_html/plain für Vortag-Vergleich-Sektion); 2026-06-09 (Issue #675 — Etappen-Startzeiten Editor-Widget; Issue #671 — Bot-Menü automatisch beim Service-Start + Live-Selftest); 2026-06-08 (Issue #655 — Telegram callback_query + editMessageText Zoom-Navigation); 2026-06-07 (Issue #637 — Telegram Webhook Migration); 2026-06-03 (Issue #572 — Inbound-Handler Multi-User Routing); 2026-05-31 (Issue #483 — Demo-Modus im Vorschau-Tab; Issue #495 — MapCanvas Leaflet-Karte; Issue #475 — OutputLayoutEditor zu Organisms)
 
 ## Überblick
 Gregor Zwanzig ist ein verteiltes System mit separaten Backend (Go) und Frontend (SvelteKit):
@@ -118,6 +118,56 @@ aus `BOT_COMMANDS` gesetzt und verifiziert:
   ob das Live-Menü dem erwarteten Stand entspricht (Issue #671, AC-4)
 
 Manuelle Verwaltung ist nur noch im Notfall nötig — siehe `docs/runbooks/telegram-webhook.md` → „Bot-Menü".
+
+### Alert-System (Deviation-Kern, Issue #816)
+
+**Komponenten:** `src/services/alert_state.py`, `src/services/trip_alert.py`, `src/services/weather_change_detection.py`, `src/output/renderers/email/alert_compact.py`
+
+**Zweck:** Meldet **Abweichungen gegenüber dem letzten Briefing-Snapshot** statt absoluter Schwellwerte.
+
+**Architektur:**
+
+1. **Read-Only Briefing-Snapshot**
+   - `WeatherSnapshotService.save()` wird NUR vom Briefing-Scheduler aufgerufen (nicht vom Alert-Pfad)
+   - Snapshot bleibt stabil zwischen Briefings → erlaubt konsistente Δ-Vergleiche über mehrere Alert-Läufe
+
+2. **Melde-Gedächtnis (`alert_state`)**
+   - Persistenz: `data/users/<user_id>/alert_state/<trip_id>.json`
+   - Schema: `{ "<metric>:<segment_id>": { "last_reported_value": float, "reported_at": ISO-8601 } }`
+   - **Re-Alert-Logik:**
+     - Neu (kein Eintrag): Alert sent, Eintrag angelegt
+     - Stagnation (`|current - last| < threshold`): unterdrückt
+     - Eskalation (`|current - last| >= threshold`): erneut Alert, Wert aktualisiert
+   - **Reset:** beim Briefing-Versand komplette Datei löschen
+
+3. **Symmetrische Δ-Erkennung**
+   - `WeatherChangeDetectionService.detect_changes(cached, fresh, include_absolute=False)` — nur Δ, keine absoluten Regeln im Alert-Pfad
+   - Schwellen Slice 1 (MetricCatalog-Defaults): Temp ±5°C, Wind/Böen ±20 km/h, Regen ±10 mm, Schneefallgrenze ±20 m, Gewitter ±1
+
+4. **Knapper Alert-Render-Pfad**
+   - Renderer: `src/output/renderers/email/alert_compact.py`
+   - Enthält NICHT: Stundentabellen, Ausblick, Gewitter-Vorschau, Pills, Vortag-Vergleich, Statistik
+   - Enthält GENAU: Kopfzeile + Pro-Metrik-Zeilen (sortiert nach Stärke) + Fußzeile
+   - km-Erweiterung: `build_segment_label()` zeigt `"Etappe N, km X–Y, HH–HH"` wenn km vorhanden (Issue #801)
+   - Mail-Header: `X-GZ-Mail-Type: deviation-alert` (unterscheidet von `trip-briefing` und `compare`)
+
+**Datenfluss:**
+```
+check_and_send_alerts(trip, cached_weather)
+  ↓ load alert_state (leer oder mit Einträgen)
+  ↓ detect_changes(cached, fresh, include_absolute=False)
+  ↓ pro Change: Re-Alert-Logik (Neu/Stagnation/Eskalation)
+  ↓ render_deviation_alert() → (html, plain)
+  ↓ Versand + alert_state updaten
+
+_send_briefing_report() [trip_report_scheduler.py]
+  ↓ WeatherSnapshotService.save(snapshot)
+  ↓ AlertStateService.reset(trip_id)  ← NEU
+```
+
+**Mandantentrennung:** `AlertStateService(user_id=...)` lädt/speichert strikt unter `data/users/{user_id}/alert_state/`.
+
+Siehe: `docs/features/issue-816-alert-deviation-core.md`, `docs/specs/modules/issue_816_alert_deviation_core.md`
 
 ---
 

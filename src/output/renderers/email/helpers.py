@@ -729,6 +729,11 @@ def format_change_line(change, segment_label: str) -> str:
     )
 
 
+def _fmt_km(value: float) -> str:
+    """12.0 → '12', 12.3 → '12.3' (kein überflüssiges '.0')."""
+    return f"{value:.1f}".rstrip("0").rstrip(".")
+
+
 def build_segment_label(change, segments, *, tz: ZoneInfo = ZoneInfo("UTC")) -> str:
     """
     Liefert 'Segment N (HH:MM–HH:MM)' oder '🏁 Ziel (HH:MM)' aus segment_id +
@@ -736,6 +741,12 @@ def build_segment_label(change, segments, *, tz: ZoneInfo = ZoneInfo("UTC")) -> 
 
     Bug #397: Zeiten werden in Ortszeit (`tz`) gerendert; Default UTC bleibt
     abwärtskompatibel (UTC→UTC = keine Verschiebung).
+
+    Issue #816: Liegt eine echte km-Angabe vor (start_km is not None and
+    end_km is not None and (start_km > 0.0 or end_km > 0.0)), wird das Label
+    um den km-Bereich erweitert: 'Etappe N, km X–Y, HH:MM–HH:MM'.
+    Tag-1-Start (start_km=0.0, end_km=6.0) zeigt 'km 0–6'.
+    Beide=0.0 oder None bleibt 'Segment N (HH:MM–HH:MM)' (Briefing-Pfad).
     """
     for s in segments:
         if str(s.segment.segment_id) == change.segment_id:
@@ -743,6 +754,17 @@ def build_segment_label(change, segments, *, tz: ZoneInfo = ZoneInfo("UTC")) -> 
             end = local_fmt(s.segment.end_time, tz)
             if str(s.segment.segment_id) == "Ziel":
                 return f"🏁 Ziel ({start})"
+            start_km = getattr(s.segment.start_point, "distance_from_start_km", None)
+            end_km = getattr(s.segment.end_point, "distance_from_start_km", None)
+            if (
+                start_km is not None
+                and end_km is not None
+                and (start_km > 0.0 or end_km > 0.0)
+            ):
+                return (
+                    f"Etappe {s.segment.segment_id}, "
+                    f"km {_fmt_km(start_km)}–{_fmt_km(end_km)}, {start}–{end}"
+                )
             return f"Segment {s.segment.segment_id} ({start}–{end})"
     return f"Segment {change.segment_id}" if change.segment_id else "Unbekannt"
 

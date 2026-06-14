@@ -31,7 +31,8 @@ Parent-Spec: `docs/specs/modules/issue_242_trip_alert_profile.md` v1.0.0
 
 | Test-Funktion | AC | Was geprüft wird |
 |---|---|---|
-| `test_ac1_trip_alert_passes_profile_to_formatter` | AC-1 | Source-Inspection: `src/services/trip_alert.py` enthält `profile=trip.aggregation.profile` im `format_email`-Call (Substring-Check, keine Mocks) |
+| `test_ac1_trip_alert_passes_profile_to_formatter` | AC-1 | Source-Inspection: `src/services/trip_alert.py` enthält `profile=trip.aggregation.profile` im `format_email`-Call (Substring-Check, keine Mocks) — superseded by Issue #816 Slice 1 (s. unten) |
+| `test_ac1_trip_alert_uses_compact_renderer_not_format_email` | AC-1-816 | Issue #816 Slice 1: `_send_alert` nutzt `render_deviation_alert` statt `format_email`/profile. Beweist knappen Alert-Render-Pfad (Baustein D). |
 | `test_ac2_trip_alert_render_with_wintersport_profile` | AC-2 | `TripReportFormatter().format_email(report_type="alert", profile=WINTERSPORT, changes=[...])` → `report.email_html` enthält `#4a7fb5` und `Wintersport` |
 | `test_ac2_trip_alert_render_with_wandern_profile` | AC-2 | Analog für `WANDERN` → `report.email_html` enthält `#3a7d44` und `Wandern` |
 

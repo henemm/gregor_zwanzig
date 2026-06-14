@@ -634,7 +634,20 @@ class TripReportSchedulerService:
         except Exception as e:
             logger.warning(f"Failed to save weather snapshot for {trip.id}: {e}")
 
+        # 10. Issue #816 (B): Briefing = neue, stabile Alert-Referenz → das
+        # Melde-Gedächtnis des Trips zurücksetzen, damit der nächste Alert wieder
+        # gegen das frische Briefing vergleicht.
+        self._reset_alert_state_after_briefing(trip.id)
+
         return True
+
+    def _reset_alert_state_after_briefing(self, trip_id: str) -> None:
+        """Issue #816 (B): Alert-Melde-Gedächtnis nach Briefing-Versand löschen."""
+        try:
+            from services.alert_state import AlertStateService
+            AlertStateService(user_id=self._user_id).reset(trip_id)
+        except Exception as e:
+            logger.warning(f"Failed to reset alert_state for {trip_id}: {e}")
 
     def _append_briefing_log(self, trip_id: str, kind: str, channels: List[str]) -> None:
         """Issue #393: Hängt einen Briefing-Versand-Eintrag an briefing_log.json an.
