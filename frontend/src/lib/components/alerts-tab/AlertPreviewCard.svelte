@@ -14,6 +14,11 @@
 
 	const enabledRules = $derived(alertRules.filter((r) => r.enabled));
 
+	// Issue #809: Nach Self-Heal hat ein Trip ohne alert-fähige Metriken
+	// alert_rules=[] (kein Ergebnis aus SyncAlertRules).
+	// Leere alert_rules = keine alert-fähigen Metriken aktiv → ehrlicher Hinweis.
+	const hasNoAlertableMetrics = $derived(alertRules.length === 0);
+
 	async function loadPreview() {
 		loading = true;
 		error = null;
@@ -39,7 +44,14 @@
 </script>
 
 <div class="preview-card" data-testid="alert-preview-card">
-	{#if enabledRules.length === 0}
+	{#if hasNoAlertableMetrics}
+		<!-- Issue #809: Kein alert_rules nach Self-Heal = keine alert-fähigen Metriken -->
+		<p class="empty" data-testid="alert-preview-no-metrics">
+			Keine alert-fähigen Wetter-Metriken aktiv. Aktiviere zuerst
+			Wetter-Metriken (z.B. Windböen, Temperatur) im Tab
+			<strong>Wetter-Metriken</strong>.
+		</p>
+	{:else if enabledRules.length === 0}
 		<p class="empty" data-testid="alert-preview-empty">
 			Aktiviere mindestens eine Alert-Regel, um die Vorschau zu laden.
 		</p>

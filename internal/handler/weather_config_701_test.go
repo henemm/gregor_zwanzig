@@ -73,9 +73,13 @@ func TestPutTripWeatherConfig_SyncsAlertRules(t *testing.T) {
 }
 
 // AC-4: Bestehender Threshold bleibt erhalten UND neue Metrik wird angelegt (Sync hat stattgefunden)
+// Issue #809: display_config muss wind_gust als aktive Metrik enthalten, damit SaveTrip
+// die bestehende Regel preserved (SyncAlertRules Merge-Semantik). Ohne display_config
+// würde SyncAlertRules keine activeIDs finden → Regeln geleert.
 func TestPutTripWeatherConfig_PreservesExistingThreshold(t *testing.T) {
 	s := newTestStore(t)
 	// Trip mit bestehender wind_gust-Regel (Threshold nutzerseitig auf 70 gesetzt)
+	// + display_config mit wind_gust aktiv (damit SaveTrip die Regel preserved)
 	trip := model.Trip{
 		ID:   "trip-preserve-test",
 		Name: "Preserve Threshold Trip",
@@ -83,6 +87,11 @@ func TestPutTripWeatherConfig_PreservesExistingThreshold(t *testing.T) {
 			ID: "S1", Name: "D1", Date: "2026-06-15",
 			Waypoints: []model.Waypoint{{ID: "W1", Name: "P", Lat: 47.0, Lon: 11.0, ElevationM: 500}},
 		}},
+		DisplayConfig: map[string]interface{}{
+			"metrics": []interface{}{
+				map[string]interface{}{"metric_id": "wind_gust", "enabled": true},
+			},
+		},
 		AlertRules: []model.AlertRule{
 			{ID: "existing-rule", Kind: model.AlertRuleKindAbsolute, Metric: model.AlertMetricWindGust, Threshold: 70, Unit: "km/h", Enabled: true},
 		},

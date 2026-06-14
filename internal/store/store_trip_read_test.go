@@ -44,7 +44,11 @@ func TestLoadTrip_LegacyJSONCoercesNilAlertRulesToEmpty(t *testing.T) {
 	}
 }
 
-// AC-2: Existierende Rules werden NICHT überschrieben.
+// AC-2: Existierende Rules für aktive alert-fähige Metriken werden NICHT überschrieben.
+// Issue #809: display_config.metrics muss aktive alert-fähige Metriken enthalten,
+// damit der Self-Heal die bestehenden Regeln preserved (SyncAlertRules Merge-Semantik).
+// Nicht-alertable Metriken (thunder_level, wind_change als delta) werden durch
+// SyncAlertRules korrekt herausgefiltert — das ist beabsichtigtes Verhalten seit #701.
 func TestLoadTrip_PreservesExistingAlertRules(t *testing.T) {
 	tmpDir := t.TempDir()
 	s := New(tmpDir, "test")
@@ -53,14 +57,19 @@ func TestLoadTrip_PreservesExistingAlertRules(t *testing.T) {
 	if err := os.MkdirAll(tripDir, 0755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
+	// display_config enthält wind_gust als aktive alert-fähige Metrik.
+	// Die bestehende absolute wind_gust-Regel (threshold=50) muss erhalten bleiben.
 	withRules := `{
 		"id": "with-rules",
 		"name": "Trip mit Rules",
 		"stages": [],
+		"display_config": {
+			"metrics": [
+				{"metric_id": "wind_gust", "enabled": true}
+			]
+		},
 		"alert_rules": [
-			{"id":"r1","kind":"absolute","metric":"wind_gust","threshold":50,"unit":"km/h","severity":"critical","enabled":true},
-			{"id":"r2","kind":"delta","metric":"wind_change","threshold":20,"unit":"km/h","severity":"warning","enabled":false},
-			{"id":"r3","kind":"absolute","metric":"thunder_level","threshold":1,"severity":"info","enabled":true}
+			{"id":"r1","kind":"absolute","metric":"wind_gust","threshold":50,"unit":"km/h","severity":"critical","enabled":true}
 		]
 	}`
 	if err := os.WriteFile(filepath.Join(tripDir, "with-rules.json"), []byte(withRules), 0644); err != nil {
@@ -71,14 +80,15 @@ func TestLoadTrip_PreservesExistingAlertRules(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadTrip: %v", err)
 	}
-	if len(loaded.AlertRules) != 3 {
-		t.Fatalf("Erwartet 3 Rules, got %d", len(loaded.AlertRules))
+	// Nach Self-Heal: genau 1 absolute wind_gust-Regel mit unverändertem Threshold.
+	if len(loaded.AlertRules) != 1 {
+		t.Fatalf("Erwartet 1 Rule (wind_gust), got %d: %+v", len(loaded.AlertRules), loaded.AlertRules)
 	}
 	if loaded.AlertRules[0].Metric != model.AlertMetricWindGust {
 		t.Errorf("Rule 0 Metric falsch: %q", loaded.AlertRules[0].Metric)
 	}
-	if loaded.AlertRules[1].Threshold != 20 {
-		t.Errorf("Rule 1 Threshold falsch: %v", loaded.AlertRules[1].Threshold)
+	if loaded.AlertRules[0].Threshold != 50 {
+		t.Errorf("Rule 0 Threshold falsch (soll 50 bleiben): %v", loaded.AlertRules[0].Threshold)
 	}
 }
 

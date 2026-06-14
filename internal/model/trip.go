@@ -86,23 +86,23 @@ type Stage struct {
 }
 
 type Trip struct {
-	ID               string                 `json:"id"`
-	Name             string                 `json:"name"`
-	Stages           []Stage                `json:"stages"`
-	AvalancheRegions []string               `json:"avalanche_regions,omitempty"`
-	Aggregation      map[string]interface{} `json:"aggregation,omitempty"`
-	WeatherConfig    map[string]interface{} `json:"weather_config,omitempty"`
-	DisplayConfig    map[string]interface{} `json:"display_config,omitempty"`
-	ReportConfig     map[string]interface{} `json:"report_config,omitempty"`
-	AlertRules              []AlertRule            `json:"alert_rules"`
-	AlertCooldownMinutes    *int                   `json:"alert_cooldown_minutes,omitempty"`
-	AlertQuietFrom          *string                `json:"alert_quiet_from,omitempty"`
-	AlertQuietTo            *string                `json:"alert_quiet_to,omitempty"`
-	Shortcode               string                 `json:"shortcode,omitempty"`
-	Activity         string                 `json:"activity,omitempty"`
-	Region           string                 `json:"region,omitempty"`
-	PausedAt         *time.Time             `json:"paused_at,omitempty"`
-	ArchivedAt       *time.Time             `json:"archived_at,omitempty"`
+	ID                   string                 `json:"id"`
+	Name                 string                 `json:"name"`
+	Stages               []Stage                `json:"stages"`
+	AvalancheRegions     []string               `json:"avalanche_regions,omitempty"`
+	Aggregation          map[string]interface{} `json:"aggregation,omitempty"`
+	WeatherConfig        map[string]interface{} `json:"weather_config,omitempty"`
+	DisplayConfig        map[string]interface{} `json:"display_config,omitempty"`
+	ReportConfig         map[string]interface{} `json:"report_config,omitempty"`
+	AlertRules           []AlertRule            `json:"alert_rules"`
+	AlertCooldownMinutes *int                   `json:"alert_cooldown_minutes,omitempty"`
+	AlertQuietFrom       *string                `json:"alert_quiet_from,omitempty"`
+	AlertQuietTo         *string                `json:"alert_quiet_to,omitempty"`
+	Shortcode            string                 `json:"shortcode,omitempty"`
+	Activity             string                 `json:"activity,omitempty"`
+	Region               string                 `json:"region,omitempty"`
+	PausedAt             *time.Time             `json:"paused_at,omitempty"`
+	ArchivedAt           *time.Time             `json:"archived_at,omitempty"`
 }
 
 // AlertableMetrics are metrics that can receive an absolute alert rule.
@@ -126,6 +126,44 @@ var DefaultAlertThreshold = map[AlertMetric]struct {
 	AlertMetricTemperatureMin:   {-5, "°C", AlertSeverityWarning},
 	AlertMetricTemperatureMax:   {35, "°C", AlertSeverityInfo},
 	AlertMetricSnowLine:         {1500, "m", AlertSeverityInfo},
+}
+
+// ActiveAlertableMetricIDs reads display_config["metrics"] and returns the IDs
+// of all enabled=true metrics that are contained in AlertableMetrics.
+// This allows store.SaveTrip and store.LoadTrip to call SyncAlertRules centrally
+// without importing the handler package (which would create an import cycle).
+// Issue #809.
+func ActiveAlertableMetricIDs(displayConfig map[string]interface{}) []string {
+	if displayConfig == nil {
+		return nil
+	}
+	raw, ok := displayConfig["metrics"]
+	if !ok {
+		return nil
+	}
+	metrics, ok := raw.([]interface{})
+	if !ok {
+		return nil
+	}
+	var ids []string
+	for _, m := range metrics {
+		mm, ok := m.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		enabled, _ := mm["enabled"].(bool)
+		if !enabled {
+			continue
+		}
+		id, _ := mm["metric_id"].(string)
+		if id == "" {
+			continue
+		}
+		if _, alertable := AlertableMetrics[AlertMetric(id)]; alertable {
+			ids = append(ids, id)
+		}
+	}
+	return ids
 }
 
 // SyncAlertRules synchronizes alert_rules with the active weather metrics.

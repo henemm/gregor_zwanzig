@@ -153,6 +153,13 @@ func (s *Store) LoadTrip(id string) (*model.Trip, error) {
 		trip.AlertRules = []model.AlertRule{}
 	}
 
+	// Issue #809: Self-Heal — alert_rules mit aktiven Metriken synchronisieren.
+	// In-Memory only, kein Write-Back (analog nil-Coercion Issue #205).
+	// Bewirkt: GET /api/trips/{id} liefert immer konsistente Regeln,
+	// auch wenn trip.json vor #701 zuletzt geschrieben wurde.
+	activeIDs := model.ActiveAlertableMetricIDs(trip.DisplayConfig)
+	trip.AlertRules = model.SyncAlertRules(trip.AlertRules, activeIDs)
+
 	return &trip, nil
 }
 
@@ -167,6 +174,11 @@ func (s *Store) SaveTrip(trip model.Trip) error {
 	if trip.AlertRules == nil {
 		trip.AlertRules = []model.AlertRule{}
 	}
+
+	// Issue #809: Compute-on-Save — alert_rules zentral synchronisieren,
+	// analog zu ComputeStageArrivals (Issue #802).
+	activeIDs := model.ActiveAlertableMetricIDs(trip.DisplayConfig)
+	trip.AlertRules = model.SyncAlertRules(trip.AlertRules, activeIDs)
 
 	// Issue #802: Compute-on-Save — arrival_calculated für alle Stages setzen,
 	// zentral an einer Stelle (alle Go-Schreiber rufen SaveTrip).
