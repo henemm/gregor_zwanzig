@@ -180,3 +180,22 @@ Ein echter Nebel-/Diesigkeits-Wächter gehört in die Alarm-Ebene (Folge-Issue n
 Im Roh-Modus gibt es **bei keiner Metrik** inline-Farb- oder Hintergrund-Markierungen
 (insbesondere nicht Gelb-Highlight bei CAPE oder Orange-Highlight bei Sicht).
 Alle Roh-Ausgaben sind numerisch/textlich ohne Styling.
+
+---
+
+## Viewport-spezifisches Rendering (ab Issue #831)
+
+Die HTML-Briefing-Mail enthält zwei Stundentabellen-Varianten, die per CSS-Mediaqueries
+geschaltet werden:
+
+| Viewport | CSS-Klasse | Rendering | Display |
+|----------|-----------|-----------|---------|
+| Desktop (≥601px) | `.desktop-only` | `_render_html_table()` mit `html=True` | HTML-Tabelle mit Ampel-Emojis im Einfach-Modus |
+| Mobile (≤600px) | `.mobile-compact` | `_render_mobile_compact_rows()` mit `indicator_keys` (seit #831) | Einfach-Modus: HTML-Tabelle (identisch Desktop); Roh-Modus: Monospace-`<pre>`-Block |
+
+**Issue #831 — Mobile Einfach-Modus:** Der Mobile-Renderer (`_render_mobile_compact_rows`) respektiert
+jetzt den Einfach-Modus: wenn `indicator_keys` gesetzt ist (d.h. die Metriken sind mit `use_friendly_format=true`
+konfiguriert), delegiert er an `_render_html_table` und zeigt Ampel-Emojis (🟢🟡🟠🔴) — identisch zur Desktop-Ansicht.
+Im Roh-Modus (leere `indicator_keys`) verbleibt die Ausgabe im klassischen Monospace-`<pre>`-Block (Issue #636).
+
+**Resultat:** Kein Modus-Mismatch mehr zwischen Desktop- und Mobile-Ansicht derselben Nachricht.

@@ -120,6 +120,7 @@ def _render_mobile_compact_rows(
     allowed_col_keys: Optional[set[str]] = None,
     format_modes: Optional[dict[str, str]] = None,
     include_header: bool = False,
+    indicator_keys: Optional[set[str]] = None,
 ) -> str:
     """Bug #636: Monospace fixed-width grid for the mobile compact email view.
 
@@ -129,6 +130,15 @@ def _render_mobile_compact_rows(
 
     Bug #463: include_header=True renders a header row before the data rows.
     """
+    if indicator_keys:
+        # Einfach-Modus: Desktop-HTML-Tabelle wiederverwenden
+        return _render_html_table(
+            rows,
+            friendly_keys=friendly_keys,
+            allowed_col_keys=allowed_col_keys,
+            format_modes=format_modes,
+            indicator_keys=indicator_keys,
+        )
     cols = visible_cols(rows) if rows else []
     if allowed_col_keys is not None:
         cols = [(k, label) for (k, label) in cols if k in allowed_col_keys]
@@ -336,7 +346,7 @@ def render_html(
                 + _render_html_table(rows, friendly_keys=friendly_keys, allowed_col_keys=allowed_keys, format_modes=format_modes, indicator_keys=indicator_keys)
                 + "</div>"
             )
-        compact_rows = _render_mobile_compact_rows(rows, friendly_keys=friendly_keys, allowed_col_keys=allowed_keys, format_modes=format_modes, include_header=True)
+        compact_rows = _render_mobile_compact_rows(rows, friendly_keys=friendly_keys, allowed_col_keys=allowed_keys, format_modes=format_modes, include_header=True, indicator_keys=indicator_keys)
         mobile_div = (
             '<div class="mobile-compact" style="padding:0 16px">'
             '<div style="font-size:12px;font-weight:600;color:' + G_INK
@@ -356,7 +366,7 @@ def render_html(
             night_hint = f'<p style="color:{G_INK_FAINT};font-size:11px;margin-top:4px">* Temperatur/Nullgradgrenze: Minimum im 2h-Block</p>'
         night_elev = int(last_seg.end_point.elevation_m or 0)
         night_header = f"🌙 Nacht am Ziel ({night_elev}m)"
-        night_compact = _render_mobile_compact_rows(night_rows, friendly_keys=friendly_keys, format_modes=format_modes, include_header=True)
+        night_compact = _render_mobile_compact_rows(night_rows, friendly_keys=friendly_keys, format_modes=format_modes, include_header=True, indicator_keys=indicator_keys)
         night_html = (
             '<div class="section desktop-only">'
             "<h3>" + night_header + "</h3>"
