@@ -43,6 +43,7 @@ _CONVECTIVE_WMO = (95, 96, 99)
 # ---------------------------------------------------------------------------
 
 def _make_today_trip() -> Trip:
+    """Trip mit 2 Waypoints — Issue #822 erfordert >= 2 WP für segment-aware alerts."""
     today = date.today()
     stages = [
         Stage(
@@ -51,6 +52,8 @@ def _make_today_trip() -> Trip:
             date=today,
             waypoints=[
                 Waypoint(id="W1", name="Start", lat=_LAT, lon=_LON, elevation_m=520),
+                Waypoint(id="W2", name="Ziel", lat=_LAT + 0.05, lon=_LON + 0.05,
+                         elevation_m=600),
             ],
         ),
     ]

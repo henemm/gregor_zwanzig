@@ -19,6 +19,7 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone, timedelta
 from typing import Callable, List, Optional
+from zoneinfo import ZoneInfo
 
 logger = logging.getLogger("radar_service")
 
@@ -120,8 +121,42 @@ class RadarNowcastService:
 
         return self._derive_result(frames, source)
 
-    def format_now_text(self, result: NowcastResult) -> str:
-        """Format nowcast result as 2-3 line German text."""
+    # Human-readable source labels (single source of truth — used by
+    # format_now_text and by the body-builder in trip_alert.check_radar_alerts).
+    _SOURCE_LABELS: dict[str, str] = {
+        "radar": "Radar (DWD)",
+        "INCA": "INCA (GeoSphere AT)",
+        "AROME-FR": "Météo-France AROME (1,5 km)",
+        "ICON-D2": "DWD ICON-D2 (2 km)",
+        "minutely_15": "Open-Meteo (global)",
+    }
+
+    def source_label(self, source: str) -> str:
+        """Return human-readable label for a raw source key.
+
+        Falls back to the raw key if not found (forward-compatible).
+        Used by format_now_text and by external callers (e.g. trip_alert).
+        """
+        return self._SOURCE_LABELS.get(source, source)
+
+    def format_now_text(
+        self,
+        result: NowcastResult,
+        *,
+        tz: Optional[ZoneInfo] = None,
+        include_source: bool = True,
+    ) -> str:
+        """Format nowcast result as German text.
+
+        Issue #822: optionaler ``tz``-Parameter (Tour-Zeitzone aus tz_for_coords).
+        Wenn gesetzt, wird die Onset-Zeit in dieser TZ formatiert statt in der
+        Server-TZ. Default tz=None bewahrt das bisherige Verhalten.
+
+        ``include_source=False`` unterdrückt die „Quelle:"-Zeile — nützlich wenn
+        der Caller die Quelle selbst an anderer Stelle im Body platziert (z.B.
+        check_radar_alerts, um Duplizierung zu vermeiden). Default True = bisheriges
+        Verhalten, alle anderen Caller bleiben unberührt.
+        """
         lines: list[str] = []
 
         if result.onset_minutes is None:
@@ -130,17 +165,17 @@ class RadarNowcastService:
         else:
             now = datetime.now(tz=timezone.utc)
             onset_time = now + timedelta(minutes=result.onset_minutes)
-            time_str = onset_time.astimezone().strftime("%H:%M")
-            lines.append(f"{result.intensity_label} ab ca. {time_str} (in ~{result.onset_minutes} Min).")
+            if tz is not None:
+                time_str = onset_time.astimezone(tz).strftime("%H:%M")
+            else:
+                time_str = onset_time.astimezone().strftime("%H:%M")
+            lines.append(
+                f"{result.intensity_label} ab ca. {time_str}"
+                f" (in ~{result.onset_minutes} Min)."
+            )
 
-        source_label = {
-            "radar": "Radar (DWD)",
-            "INCA": "INCA (GeoSphere AT)",
-            "AROME-FR": "Météo-France AROME (1,5 km)",
-            "ICON-D2": "DWD ICON-D2 (2 km)",
-            "minutely_15": "Open-Meteo (global)",
-        }.get(result.source, result.source)
-        lines.append(f"Quelle: {source_label}.")
+        if include_source:
+            lines.append(f"Quelle: {self.source_label(result.source)}.")
 
         return "\n".join(lines)
 

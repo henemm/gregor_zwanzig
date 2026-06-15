@@ -55,6 +55,7 @@ class TripAlertService:
         throttle_hours: int = 2,
         user_id: str = "default",
         radar_service: Optional[object] = None,
+        mail_sink: Optional[object] = None,
     ) -> None:
         """
         Initialize the alert service.
@@ -64,6 +65,8 @@ class TripAlertService:
             throttle_hours: Minimum hours between alerts per trip (default: 2)
             user_id: User identifier for data scoping
             radar_service: Optional RadarNowcastService (DI seam; lazy default)
+            mail_sink: Optional callable(subject, body) — captures mail calls in tests
+                       (DI seam for AC-4/AC-6; replaces SMTP when set)
         """
         self._settings = settings if settings else Settings().with_user_profile(user_id)
         self._formatter = TripReportFormatter()
@@ -76,6 +79,8 @@ class TripAlertService:
         self._radar_service = radar_service
         self._RADAR_THROTTLE_FILE = Path(f"data/users/{user_id}/radar_alert_throttle.json")
         self._radar_throttle_times: dict[str, datetime] = self._load_radar_throttle()
+        # Mail-body capture seam for AC-4/AC-6 testing (replaces SMTP when set)
+        self._mail_sink = mail_sink
 
     def check_and_send_alerts(
         self,
@@ -544,32 +549,53 @@ class TripAlertService:
 
     def check_radar_alerts(self) -> int:
         """
-        Check all trips with a current stage for radar-based alerts.
+        Check all trips for radar-based alerts using segment-aware logic (Issue #822).
+
+        Wählt das aktive oder nächste Segment des Tages und prüft den Nowcast dort.
+        Kein Alert bei: leerer Segmentliste, alle Segmente zeitlich vorbei, Throttle
+        aktiv oder radar_alert_due=False.
 
         Sicherheits-Semantik (F001): alert_log + Throttle werden IMMER gesetzt,
         sobald ein Alert fällt und mindestens ein Kanal konfiguriert ist — unabhängig
-        davon, ob der Versand technisch gelingt. Transiente Kanal-Fehler (SMTP-Rate-
-        Limit, Netz-Timeout) dürfen einen Sicherheits-Alert nicht verschlucken.
-        Echte Zustellverifikation erfolgt separat im Staging-E2E.
+        davon, ob der Versand technisch gelingt.
 
         Returns the number of radar alerts triggered.
         """
         from datetime import date as date_type
+        from types import SimpleNamespace
         from app.loader import load_all_trips
+        from services.trip_segments import convert_trip_to_segments
+        from output.renderers.email.helpers import build_segment_label
 
         today = date_type.today()
+        now_utc = datetime.now(timezone.utc)
         sent = 0
 
         for trip in load_all_trips(user_id=self._user_id):
-            try:
-                stage = trip.get_stage_for_date(today)
-            except Exception:
-                stage = None
-            if not stage or not stage.waypoints:
+            # Segment-Auswahl (Issue #822 — ersetzt stage.waypoints[0])
+            segments = convert_trip_to_segments(trip, today)
+            if not segments:
                 continue
 
+            # Aktives Segment: erstes mit start_time <= now_utc <= end_time
+            active = None
+            for seg in segments:
+                if seg.start_time <= now_utc <= seg.end_time:
+                    active = seg
+                    break
+
+            if active is None:
+                if now_utc < segments[0].start_time:
+                    active = segments[0]   # vor allen Segmenten → erstes
+                else:
+                    # Alle Segmente zeitlich vorbei → kein Alert (Option Y der Spec)
+                    logger.debug(
+                        f"Radar alert skipped: alle Segmente vorbei fuer {trip.id}"
+                    )
+                    continue
+
             # QuietHours check (reuse existing)
-            if self._is_quiet_hours(trip, datetime.now(timezone.utc)):
+            if self._is_quiet_hours(trip, now_utc):
                 logger.debug(f"Radar alert suppressed (quiet hours) for trip {trip.id}")
                 continue
 
@@ -582,10 +608,13 @@ class TripAlertService:
                 logger.debug(f"Radar alert throttled for trip {trip.id}")
                 continue
 
-            wp = stage.waypoints[0]
+            # Genau EIN get_nowcast-Call pro Trip an Segment-Startpunkt
+            lat = active.start_point.lat
+            lon = active.start_point.lon
+            tz = tz_for_coords(lat, lon)
             try:
-                svc = self._get_radar_service()
-                result = svc.get_nowcast(wp.lat, wp.lon)
+                radar_svc = self._get_radar_service()
+                result = radar_svc.get_nowcast(lat, lon)
             except Exception as e:
                 logger.error(f"Radar nowcast failed for trip {trip.id}: {e}")
                 continue
@@ -600,35 +629,65 @@ class TripAlertService:
                 logger.warning(f"No channel configured; skipping radar alert for {trip.id}")
                 continue
 
-            # Best-Effort-Zustellung: Kanalfehler unterdrücken das Recording NICHT
-            radar_svc = self._get_radar_service()
-            body = radar_svc.format_now_text(result)
-            subject = (
-                f"[{trip.name}] ⚠️ Gewitter — Radar-Warnung"
-                if result.is_convective
-                else f"[{trip.name}] Radar-Warnung"
+            # Ort-Label aus build_segment_label (braucht Wrapper-Objekte mit .segment)
+            change_like = SimpleNamespace(segment_id=str(active.segment_id))
+            seg_wrappers = [SimpleNamespace(segment=s) for s in segments]
+            segment_label = build_segment_label(change_like, seg_wrappers, tz=tz)
+
+            # Cooldown-Anzeige
+            if cooldown_min % 60 == 0:
+                n = cooldown_min // 60
+                cooldown_display = f"{n} Stunde" if n == 1 else f"{n} Stunden"
+            else:
+                cooldown_display = f"{cooldown_min} Minuten"
+
+            # Mail-Body zusammenbauen — exakt Spec Implementation Detail D:
+            # <onset-satz>
+            # auf <segment_label>.
+            #
+            # Quelle: <human-label>.
+            # Du erhältst diese Warnung höchstens einmal in <cooldown_display>.
+            #
+            # include_source=False: format_now_text liefert nur den Onset-Satz
+            # ohne eigene Quelle-Zeile, damit genau EINE Quelle-Zeile im Body steht.
+            onset_text = radar_svc.format_now_text(result, tz=tz, include_source=False)
+            full_body = (
+                f"{onset_text}\n"
+                f"auf {segment_label}.\n\n"
+                f"Quelle: {radar_svc.source_label(result.source)}.\n"
+                f"Du erhältst diese Warnung höchstens einmal in {cooldown_display}."
             )
-            full_body = body + "\n\nDieser Alert wird nur einmal pro Cooldown-Fenster gesendet."
+
+            # Betreff
+            if result.is_convective:
+                subject = f"[{trip.name}] ⚠️ Gewitter – {segment_label}"
+            else:
+                subject = f"[{trip.name}] Regen zieht auf – {segment_label}"
+
             config = trip.report_config
 
+            # Best-Effort-Zustellung
             if can_email and (not config or getattr(config, "send_email", True)):
                 try:
-                    EmailOutput(self._settings).send(
-                        subject=subject,
-                        body=full_body,
-                        plain_text_body=full_body,
-                    )
+                    if self._mail_sink is not None:
+                        self._mail_sink(subject=subject, body=full_body)
+                    else:
+                        EmailOutput(self._settings).send(
+                            subject=subject,
+                            body=full_body,
+                            plain_text_body=full_body,
+                        )
                 except Exception as e:
                     logger.error(f"Radar alert email failed for {trip.id}: {e}")
 
             if can_telegram and config and getattr(config, "send_telegram", False):
                 try:
                     from outputs.telegram import TelegramOutput
-                    TelegramOutput(self._settings).send(subject=subject, body=body)
+                    TelegramOutput(self._settings).send(subject=subject, body=onset_text)
                 except Exception as e:
                     logger.error(f"Radar alert telegram failed for {trip.id}: {e}")
 
-            # Recording IMMER nach Best-Effort-Zustellung
+            # Recording IMMER nach Best-Effort-Zustellung (F001-Semantik)
             self._append_alert_log(trip.id, 1, "HIGH")
             self._radar_throttle_times[trip.id] = datetime.now(timezone.utc)
             self._save_radar_throttle()
