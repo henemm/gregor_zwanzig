@@ -25,7 +25,32 @@ python3 .claude/hooks/workflow_state_multi.py status
 
 ### 0. Workflow-Name pinnen (ZUERST — vor allem anderen!)
 
-**Noch bevor du irgendeinen anderen Befehl ausfuehrst**, lese den aktiven Workflow-Namen:
+**Wurde dieser Befehl mit einer Issue-Nummer aufgerufen** (z. B. `/5-implement #574` — typisch nach einem `/clear`)? Dann löse den Workflow-Namen von der Platte auf; der komplette State (Phase, Spec, RED-Tests, Verdict) überlebt jeden `/clear` und jeden Worktree:
+
+```bash
+ISSUE=574   # die übergebene Nummer (ohne #)
+python3 - "$ISSUE" <<'PY'
+import sys, json, glob, re, os
+issue = sys.argv[1].lstrip('#')
+pat = re.compile(rf'(^|[-_]){re.escape(issue)}([-_]|$)')
+hits = []
+for f in glob.glob('.claude/workflows/*.json'):
+    name = os.path.basename(f)[:-5]
+    if pat.search(name):
+        d = json.load(open(f))
+        hits.append((name, d.get('current_phase'), d.get('spec_approved'), d.get('adversary_verdict')))
+if not hits:
+    print(f'KEIN laufender Workflow fuer #{issue} (evtl. abgeschlossen -> .claude/workflows/_archive/).')
+else:
+    for name, ph, spec, verd in hits:
+        print(f'GEFUNDEN: {name} | Phase={ph} | Spec={spec} | Verdict={verd}')
+    print('\nexport GZ_ACTIVE_WORKFLOW=' + hits[0][0])
+PY
+```
+
+Setze `GZ_ACTIVE_WORKFLOW=<name>` aus der ausgegebenen Zeile und **fasse dem User in 2 Sätzen zusammen, wo der Workflow steht** (Phase, Spec, offene Punkte) — damit sichtbar ist, dass der `/clear` nichts Wesentliches verloren hat. Danach weiter wie unten.
+
+**Ohne Issue-Argument** (laufende Session): lese den aktiven Workflow-Namen direkt:
 
 ```bash
 python3 .claude/hooks/workflow.py status
@@ -288,14 +313,18 @@ Bei **PASS**: weiter zu Phase 7.
 
 ## Next Step
 
-Wenn Adversary VERIFIED (oder AMBIGUOUS mit User-OK): gib exakt folgendes als letzten Output aus — dann STOPP:
+Wenn Adversary VERIFIED (oder AMBIGUOUS mit User-OK): Stelle zuerst sicher, dass alles Wichtige auf der Platte liegt (geänderte Dateien committet/gespeichert, Adversary-Verdict im State, offene Nebenbefunde als Issue angelegt) — der nächste Schritt setzt den Gesprächskontext zurück. Gib dann exakt folgendes als letzten Output aus — dann STOPP:
 
 ---
 ✅ Phase 6 (Implementierung) abgeschlossen — Adversary VERIFIED.
 
-Nächster Schritt:
-1. `/compact` (nutzt automatisch die `# Compact instructions` aus CLAUDE.md — Workflow-Identität bleibt erhalten)
-2. `/6-validate`
+Workflow: `<name>` · Issue: **#<N>** · Verdict: VERIFIED
+
+Nächster Schritt — Kontext zurücksetzen spart Tokens (der Workflow-State liegt sicher auf der Platte):
+1. `/clear`
+2. `/6-validate #<N>`   (lädt Spec + State + Verdict automatisch von der Platte)
+
+_Bei kleinem Kontext optional — dann genügt direkt `/6-validate`._
 ---
 
 **NICHT** selbst mit der Validierung beginnen. Warte bis der User `/6-validate` tippt.

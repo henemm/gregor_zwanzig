@@ -2,6 +2,33 @@
 
 You are starting the **Validation Phase**.
 
+## Wiedereinstieg via Issue-Nummer (nach `/clear`)
+
+**Wurde dieser Befehl als `/6-validate #<N>` aufgerufen** (typisch nach einem `/clear`)? Dann löse zuerst den Workflow von der Platte auf — der komplette State überlebt jeden `/clear`/Worktree:
+
+```bash
+ISSUE=574   # die übergebene Nummer (ohne #)
+python3 - "$ISSUE" <<'PY'
+import sys, json, glob, re, os
+issue = sys.argv[1].lstrip('#')
+pat = re.compile(rf'(^|[-_]){re.escape(issue)}([-_]|$)')
+hits = []
+for f in glob.glob('.claude/workflows/*.json'):
+    name = os.path.basename(f)[:-5]
+    if pat.search(name):
+        d = json.load(open(f))
+        hits.append((name, d.get('current_phase'), d.get('spec_approved'), d.get('adversary_verdict')))
+if not hits:
+    print(f'KEIN laufender Workflow fuer #{issue} (evtl. abgeschlossen -> .claude/workflows/_archive/).')
+else:
+    for name, ph, spec, verd in hits:
+        print(f'GEFUNDEN: {name} | Phase={ph} | Spec={spec} | Verdict={verd}')
+    print('\nexport GZ_ACTIVE_WORKFLOW=' + hits[0][0])
+PY
+```
+
+Setze `GZ_ACTIVE_WORKFLOW=<name>`, fasse dem User in 2 Sätzen den Stand zusammen (Phase, Verdict) und fahre dann mit den Prerequisites fort.
+
 ## Prerequisites
 
 Check workflow status:

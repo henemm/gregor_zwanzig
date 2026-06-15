@@ -127,17 +127,21 @@ Before proceeding to implementation:
 
 ## Next Step
 
-Sobald der User **'go'** schreibt, gib exakt folgendes als letzten Output aus — dann STOPP:
+Sobald der User **'go'** schreibt: Stelle zuerst sicher, dass alles Wichtige auf der Platte liegt (Spec, RED-Testdateien, offene Nebenbefunde als Issue) — der nächste Schritt setzt den Gesprächskontext zurück. Gib dann exakt folgendes als letzten Output aus — dann STOPP:
 
 ---
 ✅ Phase 5 (TDD RED) abgeschlossen.
 
-Nächster Schritt:
-1. `/compact` (nutzt automatisch die `# Compact instructions` aus CLAUDE.md — Workflow-Identität bleibt erhalten)
-2. `/5-implement`
+Workflow: `<name>` · Issue: **#<N>** · Phase: `phase5_tdd_red` ✓
+
+Nächster Schritt — Kontext zurücksetzen spart Tokens (der Workflow-State liegt sicher auf der Platte):
+1. `/clear`
+2. `/5-implement #<N>`   (lädt Spec + RED-Tests + State automatisch von der Platte)
+
+_Bei kleinem Kontext optional — dann genügt direkt `/5-implement`._
 ---
 
-**NICHT** selbst mit der Implementierung beginnen. **NICHT** `/5-implement` inline ausführen. Warte bis der User `/5-implement` tippt.
+**NICHT** selbst mit der Implementierung beginnen. **NICHT** `/5-implement` inline ausführen. Warte bis der User die nächste Phase tippt.
 
 ## Common Mistakes
 
