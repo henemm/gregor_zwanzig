@@ -272,12 +272,6 @@ class TestAbsoluteThunderLevelDetection:
         assert changes[0].direction == "above"
         assert changes[0].severity == ChangeSeverity.MODERATE
 
-    @pytest.mark.xfail(
-        reason="#821: absolute Thunder-Regel feuert doppelt bei include_absolute=True "
-               "(#816 setdefault-Δ-Seed + Absolut-Pfad). Produktivpfad include_absolute=False "
-               "nicht betroffen. Pre-existing auf origin/main, kein #817-Scope.",
-        strict=False,
-    )
     def test_ac9_thunder_level_high_with_threshold_2_fires(self):
         """
         AC-9 (Folge): Schwelle 2.0 fasst HIGH (ordinal 2 >= 2.0), nicht MED.
@@ -331,3 +325,104 @@ class TestMixedKinds:
 
         assert "temp_max_c" in by_metric
         assert by_metric["temp_max_c"].severity == ChangeSeverity.MAJOR
+
+
+# --- Issue #821: Absolute/Δ-Dedup bei include_absolute=True ---------------
+
+class TestIssue821AbsoluteDeltaDedup:
+    """#821: Eine absolute Regel darf bei include_absolute=True denselben Sprung
+    NICHT doppelt melden (geseedeter Δ + Absolut-Pfad). Ein Sprung = ein Change.
+    """
+
+    def test_ac1_absolute_thunder_high_fires_once(self):
+        """AC-1: absolute THUNDER_LEVEL=2.0, NONE→HIGH, include_absolute=True →
+        genau EIN Change (Absolut-Pfad, severity MAJOR), kein doppelter Δ-Change."""
+        service = WeatherChangeDetectionService.from_alert_rules(
+            [_rule(AlertRuleKind.ABSOLUTE, AlertMetric.THUNDER_LEVEL, 2.0,
+                   severity=AlertSeverity.CRITICAL)]
+        )
+        changes = service.detect_changes(
+            _data(thunder_level_max=ThunderLevel.NONE),
+            _data(thunder_level_max=ThunderLevel.HIGH),
+        )
+        assert len(changes) == 1
+        assert changes[0].metric == "thunder_level_max"
+        assert changes[0].direction == "above"
+        assert changes[0].severity == ChangeSeverity.MAJOR
+
+    def test_ac2_absolute_thunder_below_threshold_no_fire(self):
+        """AC-2: absolute THUNDER_LEVEL=2.0, NONE→MED (1<2), include_absolute=True →
+        KEIN Change (auch der geseedete Δ darf nicht feuern)."""
+        service = WeatherChangeDetectionService.from_alert_rules(
+            [_rule(AlertRuleKind.ABSOLUTE, AlertMetric.THUNDER_LEVEL, 2.0,
+                   severity=AlertSeverity.CRITICAL)]
+        )
+        changes = service.detect_changes(
+            _data(thunder_level_max=ThunderLevel.NONE),
+            _data(thunder_level_max=ThunderLevel.MED),
+        )
+        assert changes == []
+
+    def test_ac3_seeded_delta_still_fires_on_alert_path(self):
+        """AC-3: absolute WIND_GUST=50, include_absolute=False (Forecast-Alert-Pfad),
+        Böen-Sprung 30→60 → der geseedete Δ-Change feuert weiterhin (genau einer)."""
+        service = WeatherChangeDetectionService.from_alert_rules(
+            [_rule(AlertRuleKind.ABSOLUTE, AlertMetric.WIND_GUST, 50.0,
+                   severity=AlertSeverity.WARNING)]
+        )
+        changes = service.detect_changes(
+            _data(gust_max_kmh=30.0),
+            _data(gust_max_kmh=60.0),
+            include_absolute=False,
+        )
+        assert len(changes) == 1
+        assert changes[0].metric == "gust_max_kmh"
+        # Δ-Pfad: direction increase/decrease (kein above/below)
+        assert changes[0].direction in ("increase", "decrease")
+
+    def test_ac4_explicit_delta_plus_absolute_both_fire(self):
+        """AC-4: explizite Δ-Regel TEMPERATURE_CHANGE=5 UND absolute TEMPERATURE_MAX=20
+        auf demselben Feld temp_max_c. Sprung 15→25 verletzt beide → BEIDE Changes
+        bleiben (explizit gesetzter Δ wird NIE unterdrückt)."""
+        rules = [
+            _rule(AlertRuleKind.DELTA, AlertMetric.TEMPERATURE_CHANGE, 5.0,
+                  severity=AlertSeverity.CRITICAL),
+            _rule(AlertRuleKind.ABSOLUTE, AlertMetric.TEMPERATURE_MAX, 20.0,
+                  severity=AlertSeverity.WARNING),
+        ]
+        service = WeatherChangeDetectionService.from_alert_rules(rules)
+        old = _data(temp_max_c=15.0, temp_min_c=10.0)
+        new = _data(temp_max_c=25.0, temp_min_c=10.0)
+
+        changes = service.detect_changes(old, new)  # include_absolute=True
+        temp_changes = [c for c in changes if c.metric == "temp_max_c"]
+        assert len(temp_changes) == 2
+        directions = {c.direction for c in temp_changes}
+        # Ein Δ-Change (increase) UND ein Absolut-Change (above)
+        assert directions == {"increase", "above"}
+
+    def test_ac4_explicit_delta_plus_absolute_reversed_order(self):
+        """AC-4 (Ordering): Regel-Reihenfolge umgekehrt (absolute zuerst) — explizit
+        gesetzter Δ darf trotzdem nicht als 'geseedet' gelten."""
+        rules = [
+            _rule(AlertRuleKind.ABSOLUTE, AlertMetric.TEMPERATURE_MAX, 20.0,
+                  severity=AlertSeverity.WARNING),
+            _rule(AlertRuleKind.DELTA, AlertMetric.TEMPERATURE_CHANGE, 5.0,
+                  severity=AlertSeverity.CRITICAL),
+        ]
+        service = WeatherChangeDetectionService.from_alert_rules(rules)
+        old = _data(temp_max_c=15.0, temp_min_c=10.0)
+        new = _data(temp_max_c=25.0, temp_min_c=10.0)
+
+        changes = service.detect_changes(old, new)
+        temp_changes = [c for c in changes if c.metric == "temp_max_c"]
+        assert len(temp_changes) == 2
+        assert {c.direction for c in temp_changes} == {"increase", "above"}
+
+    def test_ac5_threshold_map_unchanged_seed_preserved(self):
+        """AC-5: Dedup ändert die _thresholds-Map NICHT — Seed bleibt erhalten
+        (F222-A bleibt gültig: gust_max_kmh seeded mit Katalog-Default 20.0)."""
+        service = WeatherChangeDetectionService.from_alert_rules(
+            [_rule(AlertRuleKind.ABSOLUTE, AlertMetric.WIND_GUST, 50.0)]
+        )
+        assert service._thresholds == {"gust_max_kmh": 20.0}

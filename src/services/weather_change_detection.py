@@ -96,6 +96,7 @@ class WeatherChangeDetectionService:
         thresholds: Optional[dict[str, float]] = None,
         absolute_rules: Optional[list["AlertRule"]] = None,
         severity_overrides: Optional[dict[str, AlertSeverity]] = None,
+        absolute_seeded_fields: Optional[set[str]] = None,
     ):
         """
         Initialize with thresholds.
@@ -107,6 +108,11 @@ class WeatherChangeDetectionService:
                             Detected via comparison-direction (above/below) per metric.
             severity_overrides: Issue #222 — Maps summary-field → AlertSeverity for delta
                                 detection, so rule.severity wins over ratio-based classify.
+            absolute_seeded_fields: Issue #821 — Felder, deren Δ-Threshold ausschließlich
+                                    durch den #816-setdefault-Seed einer ABSOLUTE-Regel
+                                    entstanden ist (kein expliziter DELTA-Eintrag). Bei
+                                    include_absolute=True übernimmt der Absolut-Pfad das
+                                    Feld → Δ-Pfad wird übersprungen (kein Doppel-Change).
         """
         if thresholds is None:
             from app.metric_catalog import get_change_detection_map
@@ -117,6 +123,8 @@ class WeatherChangeDetectionService:
         self._severity_overrides: dict[str, AlertSeverity] = (
             dict(severity_overrides) if severity_overrides else {}
         )
+        # Issue #821: rein-geseedete Felder (ABSOLUTE-Seed ohne explizite DELTA-Regel)
+        self._absolute_seeded_fields: set[str] = set(absolute_seeded_fields or set())
 
     @classmethod
     def from_trip_config(cls, config: "TripReportConfig") -> "WeatherChangeDetectionService":
@@ -206,6 +214,9 @@ class WeatherChangeDetectionService:
         thresholds: dict[str, float] = {}
         absolute_rules: list["AlertRule"] = []
         severity_overrides: dict[str, AlertSeverity] = {}
+        # Issue #821: Set der rein-geseedeten Felder — gesetzt vom ABSOLUTE-Zweig,
+        # entfernt wenn eine explizite DELTA-Regel dasselbe Feld belegt.
+        absolute_seeded: set[str] = set()
 
         for rule in rules:
             if not rule.enabled:
@@ -220,6 +231,10 @@ class WeatherChangeDetectionService:
                 # Δ-Alerts mit denselben Schwellen wie der MetricCatalog-Default.
                 field_name = _ALERT_METRIC_TO_SUMMARY_FIELD.get(rule.metric)
                 if field_name and field_name in catalog_defaults:
+                    # Issue #821: Nur wenn das Feld wirklich NEU geseedet wird (nicht
+                    # bereits durch eine frühere Regel belegt), als rein-geseedet merken.
+                    if field_name not in thresholds:
+                        absolute_seeded.add(field_name)
                     thresholds.setdefault(field_name, catalog_defaults[field_name])
             elif rule.kind == AlertRuleKind.DELTA:
                 fields = _ALERT_DELTA_METRIC_TO_FIELDS.get(rule.metric)
@@ -239,11 +254,15 @@ class WeatherChangeDetectionService:
                 for field_name in fields:
                     thresholds[field_name] = rule.threshold
                     severity_overrides[field_name] = rule.severity
+                    # Issue #821: Explizite DELTA-Regel überschreibt Seed — das Feld
+                    # ist nicht mehr rein-geseedet, darf nicht unterdrückt werden.
+                    absolute_seeded.discard(field_name)
 
         return cls(
             thresholds=thresholds,
             absolute_rules=absolute_rules,
             severity_overrides=severity_overrides,
+            absolute_seeded_fields=absolute_seeded,
         )
 
     def detect_changes(
@@ -283,6 +302,12 @@ class WeatherChangeDetectionService:
 
         # Compare all numeric metrics
         for metric, threshold in self._thresholds.items():
+            # Issue #821: Rein-geseedetes Feld (ABSOLUTE-Seed via #816-setdefault) bei
+            # include_absolute=True überspringen — der Absolut-Pfad deckt es ab.
+            # Bei include_absolute=False ist der Δ-Pfad die einzige Quelle → nicht skippen.
+            if include_absolute and metric in self._absolute_seeded_fields:
+                continue
+
             # Get old and new values
             old_value = getattr(old_summary, metric, None)
             new_value = getattr(new_summary, metric, None)
