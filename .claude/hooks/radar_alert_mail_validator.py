@@ -165,10 +165,12 @@ def fetch_latest_message(max_scan: int = 50) -> Message:
 
     settings = Settings()
     imap_host = settings.imap_host or settings.smtp_host
-    imap_user = settings.imap_user or settings.smtp_user
-    imap_pass = settings.imap_pass or settings.smtp_pass
+    # Radar-Alert-Mails werden an gregor-test@henemm.com gesendet (Test-Postfach).
+    # Priorisiere GZ_TEST_IMAP_* Credentials, falle auf GZ_IMAP_* zurueck.
+    imap_user = settings.test_imap_user or settings.imap_user or settings.smtp_user
+    imap_pass = settings.test_imap_pass or settings.imap_pass or settings.smtp_pass
     if not imap_user or not imap_pass:
-        raise ValueError("IMAP nicht konfiguriert (GZ_IMAP_USER/GZ_IMAP_PASS)")
+        raise ValueError("IMAP nicht konfiguriert (GZ_TEST_IMAP_USER/GZ_IMAP_USER)")
 
     imap = imaplib.IMAP4_SSL(imap_host, settings.imap_port)
     try:
