@@ -60,6 +60,15 @@ def trigger_radar_alert(user_id: str = "default"):
     today = date_type.today()
     now_utc = datetime.now(timezone.utc)
     segments = convert_trip_to_segments(trip, today)
+    # Fallback: Trip-Etappen liegen evtl. in der Vergangenheit (Staging-Testdaten).
+    # Debug-Seam nutzt einfach die erste Etappe des Trips, egal welches Datum.
+    if not segments:
+        for stage in getattr(trip, "stages", []):
+            stage_date = getattr(stage, "date", None)
+            if stage_date:
+                segments = convert_trip_to_segments(trip, stage_date)
+                if segments:
+                    break
     if not segments:
         return JSONResponse({"status": "no_segment"})
 
