@@ -10,10 +10,11 @@ import (
 	"github.com/henemm/gregor-api/internal/model"
 )
 
-// TDD RED — Issue #701: PutTripWeatherConfigHandler soll nach dem Speichern
-// alert_rules automatisch synchronisieren. Noch nicht implementiert → Tests FAIL.
+// Issue #701: PutTripWeatherConfigHandler synchronisiert alert_rules nach dem Speichern.
+// Issue #817: alert_rules sind jetzt kind="delta" (statt "absolute").
 
-// AC-1 + AC-3: Speichern einer WeatherConfig mit aktiven Metriken → alert_rules automatisch befüllt
+// AC-1 + AC-3 (SUPERSEDED #817): Speichern einer WeatherConfig mit aktiven Metriken
+// → alert_rules automatisch als Delta-Regeln befüllt.
 func TestPutTripWeatherConfig_SyncsAlertRules(t *testing.T) {
 	s := newTestStore(t)
 	// Trip ohne alert_rules anlegen
@@ -54,8 +55,9 @@ func TestPutTripWeatherConfig_SyncsAlertRules(t *testing.T) {
 	metrics := map[model.AlertMetric]bool{}
 	for _, r := range saved.AlertRules {
 		metrics[r.Metric] = true
-		if r.Kind != model.AlertRuleKindAbsolute {
-			t.Errorf("rule %s: want kind=absolute, got %s", r.Metric, r.Kind)
+		// SUPERSEDED #817: war kind=absolute, jetzt kind=delta
+		if r.Kind != model.AlertRuleKindDelta {
+			t.Errorf("SUPERSEDED #817: rule %s: want kind=delta, got %s", r.Metric, r.Kind)
 		}
 		if !r.Enabled {
 			t.Errorf("rule %s: want enabled=true", r.Metric)
@@ -72,14 +74,12 @@ func TestPutTripWeatherConfig_SyncsAlertRules(t *testing.T) {
 	}
 }
 
-// AC-4: Bestehender Threshold bleibt erhalten UND neue Metrik wird angelegt (Sync hat stattgefunden)
-// Issue #809: display_config muss wind_gust als aktive Metrik enthalten, damit SaveTrip
-// die bestehende Regel preserved (SyncAlertRules Merge-Semantik). Ohne display_config
-// würde SyncAlertRules keine activeIDs finden → Regeln geleert.
+// AC-4 (SUPERSEDED #817): Absolute Regel wird zu Delta migriert; neue Metrik bekommt Delta-Default.
+// Issue #817: absoluter Threshold 70 war nie alert-wirksam → Migration auf Delta-Default kein Verlust.
 func TestPutTripWeatherConfig_PreservesExistingThreshold(t *testing.T) {
 	s := newTestStore(t)
-	// Trip mit bestehender wind_gust-Regel (Threshold nutzerseitig auf 70 gesetzt)
-	// + display_config mit wind_gust aktiv (damit SaveTrip die Regel preserved)
+	// Trip mit bestehender wind_gust-Regel (Threshold absolut 70, war nie alert-wirksam)
+	// + display_config mit wind_gust aktiv
 	trip := model.Trip{
 		ID:   "trip-preserve-test",
 		Name: "Preserve Threshold Trip",
@@ -114,9 +114,9 @@ func TestPutTripWeatherConfig_PreservesExistingThreshold(t *testing.T) {
 
 	saved, _ := s.LoadTrip("trip-preserve-test")
 
-	// Sync muss stattgefunden haben: 2 Regeln (wind_gust + snow_line)
+	// Sync muss stattgefunden haben: 2 Regeln (wind_gust migriert + snow_line neu)
 	if len(saved.AlertRules) != 2 {
-		t.Fatalf("want 2 rules after sync (wind_gust preserved + snow_line new), got %d", len(saved.AlertRules))
+		t.Fatalf("want 2 rules after sync (wind_gust migrated + snow_line new), got %d", len(saved.AlertRules))
 	}
 
 	var windRule *model.AlertRule
@@ -128,8 +128,15 @@ func TestPutTripWeatherConfig_PreservesExistingThreshold(t *testing.T) {
 	if windRule == nil {
 		t.Fatal("want wind_gust rule to still exist")
 	}
-	if windRule.Threshold != 70 {
-		t.Errorf("want threshold 70 preserved, got %f", windRule.Threshold)
+	// SUPERSEDED #817: absoluter Threshold 70 → Delta-Default 20. Threshold war nie wirksam.
+	deltaDefault := model.DefaultDeltaThreshold[model.AlertMetricWindGust].Threshold
+	if windRule.Threshold != deltaDefault {
+		t.Errorf("SUPERSEDED #817: want threshold=%v (Delta-Default; absolute 70 war nie wirksam), got %f",
+			deltaDefault, windRule.Threshold)
+	}
+	// ID muss erhalten bleiben
+	if windRule.ID != "existing-rule" {
+		t.Errorf("rule ID must be preserved: want existing-rule, got %s", windRule.ID)
 	}
 }
 

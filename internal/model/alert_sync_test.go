@@ -2,10 +2,12 @@ package model
 
 import "testing"
 
-// TDD RED — Issue #701: SyncAlertRules + DefaultAlertThreshold noch nicht implementiert.
-// Alle Tests schlagen mit "undefined: SyncAlertRules" fehl bis trip.go ergänzt ist.
+// Tests für SyncAlertRules und DefaultAlertThreshold.
+// Issue #817: auf Δ-Semantik umgestellt. Superseded-Tests wurden an die neue
+// Δ-Invariante angepasst (nicht gelöscht) und sind mit "SUPERSEDED #817" markiert.
 
-// AC-3: Neue Metriken aktiviert → Default-Regeln werden angelegt
+// AC-3 (Issue #701 / SUPERSEDED #817): Neue Metriken aktiviert → Delta-Regeln werden angelegt
+// Issue #817: SyncAlertRules erzeugt nun kind="delta" statt "absolute".
 func TestSyncAlertRules_NewMetrics(t *testing.T) {
 	result := SyncAlertRules(nil, []string{"wind_gust", "precipitation_sum"})
 	if len(result) != 2 {
@@ -14,8 +16,9 @@ func TestSyncAlertRules_NewMetrics(t *testing.T) {
 	found := map[AlertMetric]bool{}
 	for _, r := range result {
 		found[r.Metric] = true
-		if r.Kind != AlertRuleKindAbsolute {
-			t.Errorf("metric %s: want kind=absolute, got %s", r.Metric, r.Kind)
+		// SUPERSEDED #817: war "absolute", ist jetzt "delta"
+		if r.Kind != AlertRuleKindDelta {
+			t.Errorf("metric %s: want kind=delta (Issue #817), got %s", r.Metric, r.Kind)
 		}
 		if !r.Enabled {
 			t.Errorf("metric %s: want enabled=true", r.Metric)
@@ -32,7 +35,10 @@ func TestSyncAlertRules_NewMetrics(t *testing.T) {
 	}
 }
 
-// AC-4: Bestehender Threshold bleibt erhalten (kein Überschreiben durch Default)
+// AC-4 (Issue #701 / SUPERSEDED #817): Absolut-Regel wird migriert zu Delta mit DefaultDeltaThreshold
+// Issue #817: Absolute Regel mit custom threshold 70 → wird auf Delta-Default 20 gesetzt.
+// Hintergrund: absolute Threshold war nie alert-wirksam (from_alert_rules ignorierte ihn).
+// ID und Enabled bleiben erhalten (read-modify-write).
 func TestSyncAlertRules_PreservesExistingThreshold(t *testing.T) {
 	existing := []AlertRule{
 		{ID: "abc", Kind: AlertRuleKindAbsolute, Metric: AlertMetricWindGust, Threshold: 70, Unit: "km/h", Enabled: true},
@@ -41,11 +47,17 @@ func TestSyncAlertRules_PreservesExistingThreshold(t *testing.T) {
 	if len(result) != 1 {
 		t.Fatalf("want 1 rule, got %d", len(result))
 	}
-	if result[0].Threshold != 70 {
-		t.Errorf("want threshold 70 (preserved), got %f", result[0].Threshold)
+	// SUPERSEDED #817: war "threshold 70 preserved (absolute)", ist jetzt Delta-Default 20.
+	// Der absolute Threshold war nie alert-wirksam → kein Verlust durch Migration.
+	if result[0].Threshold != DefaultDeltaThreshold[AlertMetricWindGust].Threshold {
+		t.Errorf("SUPERSEDED #817: want threshold=%v (DefaultDeltaThreshold[wind_gust]), got %f",
+			DefaultDeltaThreshold[AlertMetricWindGust].Threshold, result[0].Threshold)
 	}
 	if result[0].ID != "abc" {
 		t.Errorf("want original ID 'abc', got %s", result[0].ID)
+	}
+	if result[0].Kind != AlertRuleKindDelta {
+		t.Errorf("SUPERSEDED #817: want kind=delta after migration, got %s", result[0].Kind)
 	}
 }
 
@@ -64,29 +76,49 @@ func TestSyncAlertRules_RemovesInactiveMetric(t *testing.T) {
 	}
 }
 
-// AC-2: Delta-only-Metriken erhalten keine absolute Regel
+// AC-2 (Issue #701 / SUPERSEDED #817): *_change-Metriken erhalten keine Regel;
+// thunder_level bekommt jetzt eine Delta-Regel (Issue #817).
 func TestSyncAlertRules_ExcludesDeltaOnlyMetrics(t *testing.T) {
-	result := SyncAlertRules(nil, []string{"temperature_change", "wind_change", "precipitation_change", "thunder_level"})
+	// *_change-Metriken sind konzeptionell redundant nach #817 (Folge-Issue pending)
+	// aber noch in AlertableMetrics ausgeschlossen.
+	result := SyncAlertRules(nil, []string{"temperature_change", "wind_change", "precipitation_change"})
 	if len(result) != 0 {
-		t.Errorf("want 0 rules for delta-only metrics, got %d", len(result))
+		t.Errorf("want 0 rules for *_change metrics, got %d", len(result))
+	}
+	// SUPERSEDED #817: thunder_level ist jetzt alertable (Delta-Regel mit Threshold=1)
+	resultWithThunder := SyncAlertRules(nil, []string{"thunder_level"})
+	if len(resultWithThunder) != 1 {
+		t.Errorf("SUPERSEDED #817: want 1 rule for thunder_level (delta), got %d", len(resultWithThunder))
+	}
+	if len(resultWithThunder) == 1 && resultWithThunder[0].Kind != AlertRuleKindDelta {
+		t.Errorf("SUPERSEDED #817: thunder_level rule should be kind=delta, got %s", resultWithThunder[0].Kind)
 	}
 }
 
-// AC-4: Bestehende Delta-Regeln werden beim Sync entfernt, absolute bleibt
+// AC-4 (Issue #701 / SUPERSEDED #817): Bestehende Delta-Regel wird NICHT entfernt;
+// bei Duplikat (delta+absolute für gleiche Metrik) gewinnt die ERSTE gefundene Regel.
+// Issue #817: Delta-Regeln werden erhalten (idempotent). Absolute → zu Delta migriert.
 func TestSyncAlertRules_RemovesDeltaRules(t *testing.T) {
+	// SUPERSEDED #817: früher "delta wird entfernt, absolute bleibt".
+	// Jetzt: beide indexiert, ERSTE gewinnt (delta), Threshold erhalten.
 	existing := []AlertRule{
 		{ID: "d1", Kind: AlertRuleKindDelta, Metric: AlertMetricWindGust, Threshold: 10},
 		{ID: "a1", Kind: AlertRuleKindAbsolute, Metric: AlertMetricWindGust, Threshold: 50},
 	}
 	result := SyncAlertRules(existing, []string{"wind_gust"})
 	if len(result) != 1 {
-		t.Fatalf("want 1 rule (delta removed), got %d", len(result))
+		t.Fatalf("want 1 rule (first match wins), got %d", len(result))
 	}
-	if result[0].Kind != AlertRuleKindAbsolute {
-		t.Errorf("want absolute, got %s", result[0].Kind)
+	// SUPERSEDED #817: war "absolute bleibt"; jetzt: erste Regel (delta d1) bleibt,
+	// Threshold 10 erhalten (bereits delta → kein Reset).
+	if result[0].Kind != AlertRuleKindDelta {
+		t.Errorf("SUPERSEDED #817: want delta (first rule wins), got %s", result[0].Kind)
 	}
-	if result[0].ID != "a1" {
-		t.Errorf("want existing absolute ID 'a1', got %s", result[0].ID)
+	if result[0].ID != "d1" {
+		t.Errorf("SUPERSEDED #817: want ID d1 (first rule wins), got %s", result[0].ID)
+	}
+	if result[0].Threshold != 10 {
+		t.Errorf("SUPERSEDED #817: delta threshold 10 must be preserved (idempotent), got %f", result[0].Threshold)
 	}
 }
 
@@ -117,18 +149,31 @@ func TestDefaultAlertThresholds_Coverage(t *testing.T) {
 	}
 }
 
-// AC-2: Nicht-alertable Metriken (thunder_level) werden nie aufgenommen
+// AC-2 (Issue #701 / SUPERSEDED #817): thunder_level ist jetzt alertable (delta).
+// Issue #817: thunder_level wurde zu AlertableMetrics hinzugefügt.
 func TestSyncAlertRules_ThunderLevelNotAlertable(t *testing.T) {
+	// SUPERSEDED #817: thunder_level ist jetzt in AlertableMetrics → bekommt Delta-Regel.
 	result := SyncAlertRules(nil, []string{"thunder_level", "wind_gust"})
-	if len(result) != 1 {
-		t.Fatalf("want 1 rule (only wind_gust), got %d", len(result))
+	if len(result) != 2 {
+		t.Fatalf("SUPERSEDED #817: want 2 rules (thunder_level + wind_gust, beide delta), got %d", len(result))
 	}
-	if result[0].Metric != AlertMetricWindGust {
-		t.Errorf("want wind_gust, got %s", result[0].Metric)
+	found := map[AlertMetric]bool{}
+	for _, r := range result {
+		found[r.Metric] = true
+		if r.Kind != AlertRuleKindDelta {
+			t.Errorf("SUPERSEDED #817: metric %s: want kind=delta, got %s", r.Metric, r.Kind)
+		}
+	}
+	if !found[AlertMetricThunderLevel] {
+		t.Error("SUPERSEDED #817: want thunder_level rule")
+	}
+	if !found[AlertMetricWindGust] {
+		t.Error("want wind_gust rule")
 	}
 }
 
-// AC-4: Mehrere aktive Metriken — unveränderte Metriken bleiben, neue bekommen Default
+// AC-4 (Issue #701 / SUPERSEDED #817): Mehrere aktive Metriken — absolute Regel wird
+// auf Delta-Default migriert, neue Metrik bekommt Delta-Default.
 func TestSyncAlertRules_MixedMerge(t *testing.T) {
 	existing := []AlertRule{
 		{ID: "x1", Kind: AlertRuleKindAbsolute, Metric: AlertMetricWindGust, Threshold: 75, Enabled: true},
@@ -138,8 +183,16 @@ func TestSyncAlertRules_MixedMerge(t *testing.T) {
 		t.Fatalf("want 2 rules, got %d", len(result))
 	}
 	for _, r := range result {
-		if r.Metric == AlertMetricWindGust && r.Threshold != 75 {
-			t.Errorf("wind_gust threshold should be preserved at 75, got %f", r.Threshold)
+		if r.Metric == AlertMetricWindGust {
+			// SUPERSEDED #817: war "threshold 75 preserved"; jetzt Delta-Default (20).
+			// Absolute Threshold war nie wirksam → Migration auf Delta-Default kein Verlust.
+			wantThreshold := DefaultDeltaThreshold[AlertMetricWindGust].Threshold
+			if r.Threshold != wantThreshold {
+				t.Errorf("SUPERSEDED #817: wind_gust: want threshold=%v (DefaultDeltaThreshold), got %f", wantThreshold, r.Threshold)
+			}
+			if r.Kind != AlertRuleKindDelta {
+				t.Errorf("SUPERSEDED #817: wind_gust: want kind=delta, got %s", r.Kind)
+			}
 		}
 		if r.Metric == AlertMetricSnowLine && r.Threshold == 0 {
 			t.Error("snow_line should have non-zero default threshold")

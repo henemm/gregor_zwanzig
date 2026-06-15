@@ -44,11 +44,9 @@ func TestLoadTrip_LegacyJSONCoercesNilAlertRulesToEmpty(t *testing.T) {
 	}
 }
 
-// AC-2: Existierende Rules für aktive alert-fähige Metriken werden NICHT überschrieben.
-// Issue #809: display_config.metrics muss aktive alert-fähige Metriken enthalten,
-// damit der Self-Heal die bestehenden Regeln preserved (SyncAlertRules Merge-Semantik).
-// Nicht-alertable Metriken (thunder_level, wind_change als delta) werden durch
-// SyncAlertRules korrekt herausgefiltert — das ist beabsichtigtes Verhalten seit #701.
+// AC-2 (SUPERSEDED #817): Existierende absolute Regeln werden auf delta migriert.
+// Issue #817: SyncAlertRules migriert absolute → delta + DefaultDeltaThreshold.
+// ID und Enabled werden erhalten (read-modify-write). Threshold wird auf Delta-Default gesetzt.
 func TestLoadTrip_PreservesExistingAlertRules(t *testing.T) {
 	tmpDir := t.TempDir()
 	s := New(tmpDir, "test")
@@ -58,7 +56,8 @@ func TestLoadTrip_PreservesExistingAlertRules(t *testing.T) {
 		t.Fatalf("mkdir: %v", err)
 	}
 	// display_config enthält wind_gust als aktive alert-fähige Metrik.
-	// Die bestehende absolute wind_gust-Regel (threshold=50) muss erhalten bleiben.
+	// SUPERSEDED #817: Die bestehende absolute wind_gust-Regel (threshold=50) wird
+	// auf kind=delta + DefaultDeltaThreshold (20) migriert. Threshold 50 war nie wirksam.
 	withRules := `{
 		"id": "with-rules",
 		"name": "Trip mit Rules",
@@ -80,15 +79,26 @@ func TestLoadTrip_PreservesExistingAlertRules(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadTrip: %v", err)
 	}
-	// Nach Self-Heal: genau 1 absolute wind_gust-Regel mit unverändertem Threshold.
+	// Nach Self-Heal: genau 1 wind_gust-Regel (migriert zu delta).
 	if len(loaded.AlertRules) != 1 {
 		t.Fatalf("Erwartet 1 Rule (wind_gust), got %d: %+v", len(loaded.AlertRules), loaded.AlertRules)
 	}
 	if loaded.AlertRules[0].Metric != model.AlertMetricWindGust {
 		t.Errorf("Rule 0 Metric falsch: %q", loaded.AlertRules[0].Metric)
 	}
-	if loaded.AlertRules[0].Threshold != 50 {
-		t.Errorf("Rule 0 Threshold falsch (soll 50 bleiben): %v", loaded.AlertRules[0].Threshold)
+	// SUPERSEDED #817: Threshold 50 (absolut) → Delta-Default 20 nach Migration.
+	deltaDefault := model.DefaultDeltaThreshold[model.AlertMetricWindGust].Threshold
+	if loaded.AlertRules[0].Threshold != deltaDefault {
+		t.Errorf("SUPERSEDED #817: Rule 0 Threshold nach Migration: want %v (Delta-Default), got %v",
+			deltaDefault, loaded.AlertRules[0].Threshold)
+	}
+	// kind muss delta sein nach Migration
+	if loaded.AlertRules[0].Kind != model.AlertRuleKindDelta {
+		t.Errorf("SUPERSEDED #817: Rule 0 Kind nach Migration: want delta, got %s", loaded.AlertRules[0].Kind)
+	}
+	// ID muss erhalten bleiben
+	if loaded.AlertRules[0].ID != "r1" {
+		t.Errorf("Rule 0 ID falsch (soll erhalten bleiben): %q", loaded.AlertRules[0].ID)
 	}
 }
 

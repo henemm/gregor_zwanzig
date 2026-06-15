@@ -105,14 +105,33 @@ type Trip struct {
 	ArchivedAt           *time.Time             `json:"archived_at,omitempty"`
 }
 
-// AlertableMetrics are metrics that can receive an absolute alert rule.
-// Excluded: *_change metrics (delta-only), thunder_level (no meaningful absolute threshold).
+// AlertableMetrics are metrics that can receive an alert rule (delta-based since #817).
+// Issue #817: thunder_level added — no meaningful absolute threshold, but
+// delta threshold (Δ≥1 level) is meaningful.
+// Excluded: *_change metrics (conceptually redundant after #817, Folge-Issue pending).
 var AlertableMetrics = map[AlertMetric]struct{}{
 	AlertMetricWindGust:         {},
 	AlertMetricPrecipitationSum: {},
 	AlertMetricTemperatureMin:   {},
 	AlertMetricTemperatureMax:   {},
 	AlertMetricSnowLine:         {},
+	AlertMetricThunderLevel:     {},
+}
+
+// DefaultDeltaThreshold spiegelt Python metric_catalog.default_change_threshold
+// (Cross-Lang-Wertekontrakt — Präzedenz: #802 naismith, Issue #817).
+// Einheit entspricht der jeweiligen AlertRule.Unit.
+var DefaultDeltaThreshold = map[AlertMetric]struct {
+	Threshold float64
+	Unit      string
+	Severity  AlertSeverity
+}{
+	AlertMetricWindGust:         {20, "km/h", AlertSeverityWarning},
+	AlertMetricPrecipitationSum: {10, "mm", AlertSeverityWarning},
+	AlertMetricTemperatureMin:   {5, "°C", AlertSeverityWarning},
+	AlertMetricTemperatureMax:   {5, "°C", AlertSeverityInfo},
+	AlertMetricThunderLevel:     {1, "", AlertSeverityWarning},
+	AlertMetricSnowLine:         {200, "m", AlertSeverityInfo},
 }
 
 // DefaultAlertThreshold contains default values for new absolute alert rules.
@@ -167,17 +186,26 @@ func ActiveAlertableMetricIDs(displayConfig map[string]interface{}) []string {
 }
 
 // SyncAlertRules synchronizes alert_rules with the active weather metrics.
-// Invariant: exactly one absolute rule per active alertable metric.
-// Existing absolute rules are preserved with their threshold (no default override).
-// Delta rules and rules for inactive metrics are removed.
+// Issue #817 — Invariant: exactly one kind="delta" rule per active alertable metric.
+//
+// Migration logic:
+//   - Existing delta rule → preserved as-is (incl. user-configured threshold, idempotent).
+//   - Existing absolute rule → migrated to kind="delta" with DefaultDeltaThreshold value;
+//     enabled/severity/channels/pair_id are preserved (read-modify-write, no replace).
+//   - No existing rule for a metric → new kind="delta" rule with DefaultDeltaThreshold.
+//   - Rules for inactive metrics → removed.
 func SyncAlertRules(existing []AlertRule, activeMetricIDs []string) []AlertRule {
-	// Index existing absolute rules per metric (first match wins)
+	// Index existing rules per metric.
+	// Issue #817 F003: wenn fuer dieselbe Metrik sowohl eine absolute ALS AUCH
+	// eine delta-Regel vorliegt (z.B. stale client state), gewinnt die delta-Regel
+	// — damit geht der nutzerkonfigurierte Δ-Threshold nicht verloren.
 	existingByMetric := map[AlertMetric]AlertRule{}
 	for _, r := range existing {
-		if r.Kind == AlertRuleKindAbsolute {
-			if _, seen := existingByMetric[r.Metric]; !seen {
-				existingByMetric[r.Metric] = r
-			}
+		cur, seen := existingByMetric[r.Metric]
+		if !seen {
+			existingByMetric[r.Metric] = r
+		} else if cur.Kind == AlertRuleKindAbsolute && r.Kind == AlertRuleKindDelta {
+			existingByMetric[r.Metric] = r // delta mit Custom-Threshold gewinnt
 		}
 	}
 
@@ -188,12 +216,20 @@ func SyncAlertRules(existing []AlertRule, activeMetricIDs []string) []AlertRule 
 			continue
 		}
 		if ex, ok := existingByMetric[m]; ok {
-			result = append(result, ex)
+			// Read-modify-write: migrate kind to delta, reset threshold only if was absolute.
+			rule := ex
+			rule.Kind = AlertRuleKindDelta
+			if ex.Kind == AlertRuleKindAbsolute {
+				def := DefaultDeltaThreshold[m]
+				rule.Threshold = def.Threshold
+				rule.Unit = def.Unit
+			}
+			result = append(result, rule)
 		} else {
-			def := DefaultAlertThreshold[m]
+			def := DefaultDeltaThreshold[m]
 			result = append(result, AlertRule{
 				ID:        shortID(),
-				Kind:      AlertRuleKindAbsolute,
+				Kind:      AlertRuleKindDelta,
 				Metric:    m,
 				Threshold: def.Threshold,
 				Unit:      def.Unit,

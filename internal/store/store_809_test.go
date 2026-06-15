@@ -98,13 +98,14 @@ func TestLoadTrip_SelfHeal_CreatesAlertRulesFromMetrics(t *testing.T) {
 	}
 }
 
-// --- AC-2: Bestehender angepasster Schwellwert bleibt erhalten ---
+// --- AC-2: Bestehender Schwellwert (SUPERSEDED #817): absolute Regel → Delta-Migration ---
 
-// TestSyncAlertRules_PreservesCustomThreshold prüft: Beim Self-Heal (SyncAlertRules)
-// wird ein angepasster Schwellwert (80 km/h statt Default 50) NICHT überschrieben.
+// TestSyncAlertRules_PreservesCustomThreshold (SUPERSEDED #817):
+// Issue #817: Absolute Regeln werden auf Delta-Default migriert.
+// Der absolute Threshold (80) war nie alert-wirksam → kein funktionaler Verlust.
+// Delta-Threshold für wind_gust ist DefaultDeltaThreshold[AlertMetricWindGust].Threshold = 20.
 func TestSyncAlertRules_PreservesCustomThreshold(t *testing.T) {
 	dataDir := t.TempDir()
-	customThreshold := 80.0
 	trip := model.Trip{
 		ID:   "trip-custom",
 		Name: "Custom Threshold Trip",
@@ -113,7 +114,7 @@ func TestSyncAlertRules_PreservesCustomThreshold(t *testing.T) {
 				ID:        "rule-1",
 				Kind:      model.AlertRuleKindAbsolute,
 				Metric:    model.AlertMetricWindGust,
-				Threshold: customThreshold, // angepasst, nicht Default (50)
+				Threshold: 80.0, // absoluter Threshold — war nie alert-wirksam
 				Unit:      "km/h",
 				Severity:  model.AlertSeverityWarning,
 				Enabled:   true,
@@ -132,12 +133,23 @@ func TestSyncAlertRules_PreservesCustomThreshold(t *testing.T) {
 	if len(loaded.AlertRules) == 0 {
 		t.Fatal("expected at least one alert rule")
 	}
+	// SUPERSEDED #817: absoluter Threshold 80 wird NICHT mehr erhalten.
+	// SyncAlertRules migriert auf kind=delta + DefaultDeltaThreshold = 20.
+	// Nutzer-ID und Enabled bleiben erhalten (read-modify-write).
+	deltaDefault := model.DefaultDeltaThreshold[model.AlertMetricWindGust].Threshold
 	found := false
 	for _, r := range loaded.AlertRules {
 		if r.Metric == model.AlertMetricWindGust {
 			found = true
-			if r.Threshold != customThreshold {
-				t.Errorf("custom threshold should be preserved: expected %.1f, got %.1f", customThreshold, r.Threshold)
+			if r.Kind != model.AlertRuleKindDelta {
+				t.Errorf("SUPERSEDED #817: want kind=delta after migration, got %s", r.Kind)
+			}
+			if r.Threshold != deltaDefault {
+				t.Errorf("SUPERSEDED #817: want Delta-Default %.1f (was absolute 80, not alert-wirksam), got %.1f",
+					deltaDefault, r.Threshold)
+			}
+			if r.ID != "rule-1" {
+				t.Errorf("ID must be preserved: want rule-1, got %s", r.ID)
 			}
 		}
 	}
@@ -325,26 +337,28 @@ func TestLoadTrip_SelfHeal_PreservesOtherFields(t *testing.T) {
 
 // --- model.ActiveAlertableMetricIDs Tests ---
 
-// TestActiveAlertableMetricIDs_FiltersNonAlertable prüft: Die Funktion gibt nur
-// IDs zurück, die in AlertableMetrics enthalten sind.
+// TestActiveAlertableMetricIDs_FiltersNonAlertable (SUPERSEDED #817):
+// Issue #817: thunder_level ist jetzt alertable (delta-Schwelle sinnvoll).
+// Nur *_change-Metriken bleiben nicht-alertable.
 func TestActiveAlertableMetricIDs_FiltersNonAlertable(t *testing.T) {
 	cfg := displayConfigWithMetrics([]string{
-		"wind_gust",       // alertable
-		"temperature_max", // alertable
-		"thunder_level",   // NICHT alertable (kein absoluter Threshold sinnvoll)
-		"wind_change",     // NICHT alertable (delta-only)
+		"wind_gust",       // alertable (delta)
+		"temperature_max", // alertable (delta)
+		"thunder_level",   // SUPERSEDED #817: jetzt alertable (delta-Schwelle 1 Level)
+		"wind_change",     // NICHT alertable (*_change konzeptionell redundant, Folge-Issue)
 	}, true)
 
 	ids := model.ActiveAlertableMetricIDs(cfg)
 
-	want := map[string]bool{"wind_gust": true, "temperature_max": true}
+	// SUPERSEDED #817: thunder_level ist jetzt alertable → 3 IDs statt 2
+	want := map[string]bool{"wind_gust": true, "temperature_max": true, "thunder_level": true}
 	for _, id := range ids {
 		if !want[id] {
 			t.Errorf("unexpected non-alertable metric in result: %s", id)
 		}
 	}
-	if len(ids) != 2 {
-		t.Errorf("expected 2 alertable IDs, got %d: %v", len(ids), ids)
+	if len(ids) != 3 {
+		t.Errorf("SUPERSEDED #817: expected 3 alertable IDs (incl. thunder_level), got %d: %v", len(ids), ids)
 	}
 }
 

@@ -16,8 +16,8 @@
 		rule = { ...rule, enabled: !rule.enabled };
 	}
 
-	// Label for metric · condition
-	const metricCondition = $derived(`${rule.metric} · ${rule.threshold} ${rule.unit ?? ''}`);
+	// Issue #817: Δ-Framing — zeigt "Δ ≥ threshold unit" statt "metric · threshold unit"
+	const metricCondition = $derived(`Δ ≥ ${rule.threshold} ${rule.unit ?? ''}`.trim());
 </script>
 
 <div
@@ -44,9 +44,9 @@
 		</button>
 	</div>
 
-	<!-- Threshold-Zeile (editierbar, Issue #701: Nutzer kann Schwellwert anpassen) -->
+	<!-- Threshold-Zeile (editierbar; Issue #817: Δ-Label statt absoluter "Schwelle:") -->
 	<div class="threshold-row">
-		<span class="threshold-label">Schwelle:</span>
+		<span class="threshold-label">Melde ab Änderung:</span>
 		<input
 			type="number"
 			class="threshold-input"

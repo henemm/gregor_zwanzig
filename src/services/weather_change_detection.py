@@ -222,10 +222,15 @@ class WeatherChangeDetectionService:
                 if field_name and field_name in catalog_defaults:
                     thresholds.setdefault(field_name, catalog_defaults[field_name])
             elif rule.kind == AlertRuleKind.DELTA:
-                fields = _ALERT_DELTA_METRIC_TO_FIELDS.get(rule.metric, ())
+                fields = _ALERT_DELTA_METRIC_TO_FIELDS.get(rule.metric)
                 if not fields:
-                    # Issue #222 F004: Surface unmapped delta-metrics instead of
-                    # silently dropping (e.g. WIND_GUST/TEMPERATURE_MIN as delta).
+                    # Issue #817: Basis-Metrik-Delta-Regeln (WIND_GUST, TEMPERATURE_MIN/MAX,
+                    # PRECIPITATION_SUM, THUNDER_LEVEL, SNOW_LINE) — seit #817 erzeugt
+                    # SyncAlertRules diese als kind="delta". Auf das einzelne Summary-Feld
+                    # aufloesen, sonst wuerde der Nutzer-Schwellenwert verworfen.
+                    base_field = _ALERT_METRIC_TO_SUMMARY_FIELD.get(rule.metric)
+                    fields = (base_field,) if base_field else ()
+                if not fields:
                     logger.warning(
                         "AlertRule kind=delta with unsupported metric %s (id=%s) — dropped",
                         rule.metric, rule.id,
