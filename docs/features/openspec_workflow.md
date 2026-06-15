@@ -122,6 +122,7 @@ Das Gregor Zwanzig Projekt nutzt den OpenSpec Framework Workflow, der aus 8 sequ
    - docs-updater/haiku aktualisiert betroffene Docs
 4. **Commit & Push:**
    - Änderungen werden auf `main` committed und gepushed
+   - Session-Stop-Hook `track_token_usage.py` erfasst automatisch den Token-Verbrauch in den Workflow-State
 5. **Inline Deployment (Issue #563):**
    - Staging-Deploy wird sofort getriggert
    - E2E-Verifikation gegen Staging läuft automatisch (staging-validator Agent)
@@ -129,7 +130,7 @@ Das Gregor Zwanzig Projekt nutzt den OpenSpec Framework Workflow, der aus 8 sequ
    - PO sagt `go` → Prod-Deploy läuft automatisch
    - **Post-Deploy-Selftest (Issue #564):** Automatische Nachverifikation gegen Produktion (Commit-Attestation, Health-Check, AC-HTTP-Probes)
    - Issue wird nur nach erfolgreichem Prod-Deploy + Selftest-PASS automatisch geschlossen
-6. **Output:** Validierungs-Report + workflow_state.json Update + Live-Deployment + Prod-Selftest-Report
+6. **Output:** Validierungs-Report + Execution-Log-YAML (mit token_usage) + workflow_state.json Update + Live-Deployment + Prod-Selftest-Report
 
 ## Model Selection Strategy
 

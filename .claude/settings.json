@@ -171,6 +171,11 @@
             "type": "command",
             "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/notify_sound.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/notify_sound.py\"; fi",
             "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/track_token_usage.py\"",
+            "timeout": 10
           }
         ]
       }

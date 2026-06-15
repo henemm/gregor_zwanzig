@@ -89,7 +89,12 @@ def _get_workflows_root() -> Path:
     """Return `.claude/workflows/` rooted at main repo (honours worktrees).
 
     Uses the existing worktree routing from Issue #112 (config_loader).
+    GZ_WORKFLOW_ROOT env override is supported for testing.
     """
+    override = os.environ.get("GZ_WORKFLOW_ROOT", "").strip()
+    if override:
+        return Path(override)
+
     # Ensure hooks/ is importable when run as a script
     hooks_dir = Path(__file__).resolve().parent
     if str(hooks_dir) not in sys.path:
@@ -1083,6 +1088,8 @@ def cmd_write_log(args: list[str]) -> None:
         "workflow_type": data.get("workflow_type", "feature"),
         # Gate-History: zeigt welche User-Gates korrekt durchlaufen wurden
         **dict(zip(["gate_history", "gate_anomalies"], _compute_gate_history(transitions))),
+        # Issue #829: kumulierter Token-Verbrauch über alle Sessions dieses Workflows
+        "token_usage": data.get("token_usage") or {},
     }
 
     date = datetime.now().strftime("%Y-%m-%d")
