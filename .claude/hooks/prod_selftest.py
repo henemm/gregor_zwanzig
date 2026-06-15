@@ -27,6 +27,7 @@ import http.client
 import json
 import os
 import re
+import subprocess
 import sys
 import urllib.error
 import urllib.request
@@ -43,6 +44,11 @@ PROD_BASE = "https://gregor20.henemm.com"
 HEALTH_URL = f"{PROD_BASE}/api/health"
 PROBE_TIMEOUT = 8
 MAX_WORKERS = 5
+
+# Sentinel-URL-Werte (case-insensitive, getrimmt) für Findings ohne echte Prod-URL
+# (Backend-/Mail-/interaktive ACs). Werden wie leere URL behandelt → kein HTTP-GET,
+# kein False-FAIL/PARTIAL (Issue #788).
+_URL_SENTINELS = {"n/a", "na", "-", "none", "—", "interaktiv", ""}
 
 
 def _log(msg: str, stream=sys.stdout) -> None:
@@ -143,8 +149,10 @@ def _probe_ac(finding: dict) -> dict:
             "prod_status": "ATTESTED_SKIPPED",
         }
 
-    raw_url = finding.get("url", "")
-    if not raw_url.strip():
+    raw_url = finding.get("url") or ""  # JSON null → "" (F001: kein None.strip()-Crash)
+    # Sentinel-URLs (n/a, -, interaktiv, leer …) → kein HTTP-GET, kein False-FAIL
+    # (Issue #788). Robust gegen jede Notation: getrimmt + case-insensitive.
+    if raw_url.strip().lower() in _URL_SENTINELS:
         return {
             **finding,
             "prod_url": "",
@@ -344,7 +352,65 @@ def _derive_verdict(probes: list[dict]) -> str:
     return "PASS"
 
 
-def run_selftest(e2e_path: Path, workflow: str) -> int:
+def _detect_committed_scope(repo_dir: Path = REPO_DIR) -> str:
+    """Klassifiziert den letzten Commit (HEAD~1..HEAD) in einen Scope.
+
+    Gespiegelt aus staging_gate._detect_committed_scope (Issue #786) — eigene
+    Scope-Erkennung, damit ein docs-only-/tooling-Deploy nicht an einer stale
+    Singleton-Attestation scheitert (False-FAIL).
+
+    Returns: docs-only | frontend-only | backend | full-stack
+    """
+    result = subprocess.run(
+        ["git", "diff", "--name-only", "HEAD~1", "HEAD"],
+        capture_output=True, text=True, cwd=str(repo_dir),
+    )
+    files = [f.strip() for f in result.stdout.splitlines() if f.strip()]
+    if not files:
+        return "docs-only"
+
+    has_frontend = False
+    has_backend = False
+    for path in files:
+        if path.startswith("frontend/"):
+            has_frontend = True
+        elif (
+            path.startswith("src/")
+            or path.startswith("api/")
+            or path.startswith("internal/")
+            or path.startswith("cmd/")
+        ):
+            has_backend = True
+        elif (
+            path.startswith("docs/")
+            or path.startswith(".claude/")
+            or path.endswith(".md")
+            or path.startswith("README")
+            or path == ".gitignore"
+            or path.startswith("tests/")
+        ):
+            pass
+        else:
+            has_backend = True
+
+    if has_frontend and has_backend:
+        return "full-stack"
+    if has_frontend:
+        return "frontend-only"
+    if has_backend:
+        return "backend"
+    return "docs-only"
+
+
+def run_selftest(e2e_path: Path, workflow: str, scope: str | None = None) -> int:
+    # Issue #786: docs-only/tooling-Deploy → kein Code in Prod → Selftest skippen,
+    # statt an stale Singleton-Attestation (Commit-Mismatch) zu scheitern.
+    if scope is None:
+        scope = _detect_committed_scope()
+    if scope == "docs-only":
+        _log("INFO: Scope docs-only — Selftest übersprungen (kein Code-Deploy).")
+        return 0
+
     report_path = REPO_DIR / "docs" / "artifacts" / workflow / "prod-selftest.md"
 
     # AC-5: e2e_verified.json fehlt → docs-only / kein Block

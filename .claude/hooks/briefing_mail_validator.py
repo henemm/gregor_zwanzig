@@ -23,6 +23,7 @@ import imaplib
 import os
 import re
 import sys
+from email.header import decode_header
 from email.message import Message
 from pathlib import Path
 
@@ -213,10 +214,60 @@ def validate_message(msg: Message, max_bytes: int = _MAX_BYTES_DEFAULT) -> tuple
 
 
 # --------------------------------------------------------------------------- #
+# Mail-Auswahl (Issue #780): gezielt die eigene Mail im geteilten Postfach finden
+# --------------------------------------------------------------------------- #
+def _decode_subject(raw: str | None) -> str:
+    """Dekodiert ein (ggf. RFC-2047-kodiertes) Subject zu lesbarem str.
+
+    Em-Dash/Umlaut-Subjects kommen per IMAP als `=?utf-8?b?...?=` zurueck. Wir
+    dekodieren Python-seitig (NICHT IMAP SEARCH SUBJECT — Stalwart matcht nicht
+    ueber Bindestriche, Lehre #731).
+    """
+    if not raw:
+        return ""
+    parts = []
+    for chunk, enc in decode_header(raw):
+        if isinstance(chunk, bytes):
+            parts.append(chunk.decode(enc or "utf-8", errors="replace"))
+        else:
+            parts.append(chunk)
+    return "".join(parts)
+
+
+def _message_matches(
+    headers: Message,
+    mail_type: str | None = None,
+    subject_contains: str | None = None,
+) -> bool:
+    """Praedikat: passt die Mail zu den Filtern? (testbar OHNE IMAP).
+
+    - mail_type gesetzt: X-GZ-Mail-Type muss exakt gleich sein.
+    - subject_contains gesetzt: dekodiertes Subject muss den Marker enthalten.
+    - beide None: True (rueckwaertskompatibel — neueste Mail).
+    """
+    if mail_type is not None and headers.get("X-GZ-Mail-Type") != mail_type:
+        return False
+    if subject_contains is not None:
+        subject = _decode_subject(headers.get("Subject"))
+        if subject_contains not in subject:
+            return False
+    return True
+
+
+# --------------------------------------------------------------------------- #
 # CLI / IMAP
 # --------------------------------------------------------------------------- #
-def fetch_latest_message() -> Message:
-    """Holt die neueste Mail aus dem Test-Postfach als vollstaendiges Message-Objekt."""
+def fetch_latest_message(
+    mail_type: str | None = None,
+    subject_contains: str | None = None,
+    max_scan: int = 50,
+) -> Message:
+    """Holt die passende Mail aus dem Test-Postfach als Message-Objekt.
+
+    Ohne Filter (beide None): neueste Mail (rueckwaertskompatibel, AC-8). Mit
+    Filter: scannt die Header der bis zu `max_scan` neuesten Mails (newest-first)
+    und liefert die erste, die `_message_matches` erfuellt (Issue #780).
+    """
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "src"))
     from app.config import Settings
 
@@ -235,8 +286,18 @@ def fetch_latest_message() -> Message:
         all_ids = data[0].split()
         if not all_ids:
             raise ValueError("Keine E-Mails gefunden")
-        _, msg_data = imap.fetch(all_ids[-1], "(RFC822)")
-        return email.message_from_bytes(msg_data[0][1])
+
+        for mid in reversed(all_ids[-max_scan:]):
+            _, hdr_data = imap.fetch(mid, "(BODY.PEEK[HEADER])")
+            headers = email.message_from_bytes(hdr_data[0][1])
+            if _message_matches(headers, mail_type, subject_contains):
+                _, msg_data = imap.fetch(mid, "(RFC822)")
+                return email.message_from_bytes(msg_data[0][1])
+
+        raise ValueError(
+            f"Keine passende Mail gefunden (mail_type={mail_type!r}, "
+            f"subject_contains={subject_contains!r}, scan={max_scan})"
+        )
     finally:
         try:
             imap.close()
@@ -245,9 +306,16 @@ def fetch_latest_message() -> Message:
             pass
 
 
-def run_validation(max_bytes: int = _MAX_BYTES_DEFAULT) -> tuple[bool, list[str]]:
-    """Holt die letzte Mail und validiert sie."""
-    msg = fetch_latest_message()
+def run_validation(
+    max_bytes: int = _MAX_BYTES_DEFAULT,
+    mail_type: str | None = None,
+    subject_contains: str | None = None,
+    max_scan: int = 50,
+) -> tuple[bool, list[str]]:
+    """Holt die (optional gefilterte) Mail und validiert sie."""
+    msg = fetch_latest_message(
+        mail_type=mail_type, subject_contains=subject_contains, max_scan=max_scan
+    )
     return validate_message(msg, max_bytes)
 
 
@@ -285,6 +353,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Briefing-Mail-Validator (#733)")
     parser.add_argument("--max-bytes", type=int, default=_MAX_BYTES_DEFAULT,
                         help="Byte-Limit fuer compact-Mails (default: 2048)")
+    parser.add_argument("--mail-type", default=None,
+                        help="Nur Mails mit diesem X-GZ-Mail-Type waehlen (#780)")
+    parser.add_argument("--subject-contains", default=None,
+                        help="Nur Mails waehlen, deren Subject diesen Marker enthaelt (#780)")
+    parser.add_argument("--max-scan", type=int, default=50,
+                        help="Wie viele neueste Mails maximal scannen (default: 50)")
     args = parser.parse_args()
 
     print("=" * 70)
@@ -293,7 +367,12 @@ def main() -> None:
     print()
 
     try:
-        success, errors = run_validation(args.max_bytes)
+        success, errors = run_validation(
+            args.max_bytes,
+            mail_type=args.mail_type,
+            subject_contains=args.subject_contains,
+            max_scan=args.max_scan,
+        )
     except Exception as e:  # IMAP / technischer Fehler
         print(f"⚠️  TECHNISCHER FEHLER: Mail konnte nicht geladen werden: {e}")
         _write_validation_log(success=False, errors=[str(e)])
