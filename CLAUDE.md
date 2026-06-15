@@ -172,86 +172,22 @@ Nach jedem Prod-Deploy erfolgt eine automatische Nachverifikation gegen Produkti
 
 **Schutzwirkung:** Issue-Close erfolgt nur bei Exit 0. Bei PARTIAL/FAIL wird der Bericht untersucht und ggf. Rollback eingeleitet, bevor das Issue geschlossen wird. Verhindert, dass Issues geschlossen werden obwohl der Deploy still fehlschlug oder der falsche Code-Stand deployed wurde. Siehe Spec Issue #564 für technische Details.
 
-## E-MAIL SPEC VALIDATOR — gilt für die Orts-Vergleich-Mail (ZWINGEND!)
+## Mail-Validatoren & Renderer-Gate (ZWINGEND)
 
-**Geltungsbereich (WICHTIG):** `email_spec_validator.py` prüft **ausschließlich** den
-**Orts-Vergleich-Mail**-Pfad. Er ist fest auf dessen Struktur verdrahtet: zwei Tabellen,
-die **Vergleichstabelle**, die **Winner-Box** (Empfehlung) und mindestens `--min-locations`
-Orte (Default 3). Eine **Trip-Briefing-Mail** (anderer Versandpfad, n Stundentabellen pro
-Etappe, keine Winner-Box) kann diesen Validator **strukturell nie** bestehen → Dauer-Exit-1.
-Den Validator dort anzuwenden ist ein Fehler (führt zu falschem „Feature kaputt" oder
-Gate-Erosion).
+Drei Mail-Pfade, drei Gates. **Den falschen Validator auf einen Pfad anzuwenden ist ein Fehler** (er kann strukturell nie bestehen → Dauer-Exit-1 → falsches „Feature kaputt"/Gate-Erosion). Dispatch:
 
-**PFLICHT vor "E2E Test bestanden" bei Orts-Vergleich-Mail-Features:**
+| Mail-Pfad | Validator (PFLICHT vor „E2E bestanden") | Marker-Header |
+|---|---|---|
+| **Orts-Vergleich** (2 Tabellen, Winner-Box, ≥3 Orte) | `uv run python3 .claude/hooks/email_spec_validator.py` | `X-GZ-Mail-Type: compare` |
+| **Trip-Briefing** (`full`/`compact`, Stundentabellen, keine Winner-Box) | `uv run python3 .claude/hooks/briefing_mail_validator.py` | `X-GZ-Mail-Type: trip-briefing` + `X-GZ-Format: full\|compact` |
 
-```bash
-uv run python3 .claude/hooks/email_spec_validator.py
-```
+**Regeln (beide Validatoren):**
+- Lauf gegen die **echt zugestellte Staging-Mail** aus dem Stalwart-Test-Postfach (`gregor-test@henemm.com`, Creds `GZ_IMAP_*` — nie im Klartext). **Kein Mock, kein Gmail.** Geprüft wird **Plausibilität**, nicht bloß String-Presence (einfache String-Checks beweisen NICHTS).
+- **Nur bei Exit 0** darfst du „E2E Test bestanden" sagen. Falscher Validator für den Pfad → sauberes No-Op (Exit 0); fehlender Marker-Header → Exit 1.
 
-Prueft: Struktur, Location-Anzahl, Plausibilitaet, Format, Vollstaendigkeit (der Orts-Vergleich-Mail).
+**Renderer-Commit-Gate (seit #811 — un-überspringbar, kein ENV/globaler Bypass):** `renderer_mail_gate.py` blockiert jeden `git commit`, der eine Mail-Inhalts-Datei staged (`src/output/renderers/email/*.py`, `src/formatters/*.py`, `src/outputs/email.py`), bis im aktiven Workflow **beide** Nachweise **frisch** vorliegen: (1) Modus-Matrix-Vertragstest `tests/tdd/test_issue_811_mode_matrix.py` grün (rendert `{full,compact}×{Einfach,Roh}×{briefing,alert}`, erzwingt Zahlen statt Ampel im Roh-Modus, deckt Briefing **und** Alert ab), (2) erfolgreicher `briefing_mail_validator.py`-Lauf. Anti-Stale bindet beide an sha256/`validated_at` → jede Renderer-Änderung erzwingt erneuten Lauf. **Abhilfe bei Blockade** (kein Override): beide laufen lassen — `uv run pytest tests/tdd/test_issue_811_mode_matrix.py` schreibt den Matrix-Nachweis automatisch, dann den Validator gegen die Staging-Mail grün bekommen.
 
-Laeuft in der Acceptance-Stage gegen die Staging-Mail: Test-Trip mit Empfaenger
-`gregor-test@henemm.com`, IMAP-Quelle ist das Stalwart-Test-Postfach (`mail.henemm.com`).
-Credentials kommen aus den Settings (`GZ_IMAP_*`) — niemals im Klartext hier. Kein Gmail.
-
-**Nur für den Orts-Vergleich-Mail-Pfad gilt:** Nur bei Exit 0 darfst du „E2E Test bestanden" sagen.
-
-Einfache String-Checks beweisen NICHTS - sie pruefen nicht ob Daten SINNVOLL sind!
-
-### BRIEFING-MAIL-VALIDATOR — gilt für die Trip-Briefing-Mail (seit #733)
-
-**Geltungsbereich:** `.claude/hooks/briefing_mail_validator.py` ist das kanonische
-Acceptance-Gate für **Trip-Briefing-Mails** (beide Formate: `full` HTML / `compact`
-Nur-Text seit #722). Er dispatcht deterministisch über zwei Marker-Header, die
-`build_mime_message()` setzt: `X-GZ-Mail-Type: trip-briefing|compare` und
-`X-GZ-Format: full|compact`.
-
-**PFLICHT vor „E2E Test bestanden" bei Trip-Briefing-Mail-Features:**
-
-```bash
-uv run python3 .claude/hooks/briefing_mail_validator.py
-```
-
-Prüft format-spezifisch auf **Plausibilität** (nicht bloß String-Presence) gegen die
-echt zugestellte Mail aus dem Stalwart-Test-Postfach (`GZ_IMAP_*`, kein Mock, kein Gmail):
-- **full:** `multipart/alternative`, je ein `text/html`- und `text/plain`-Part, ≥1
-  sequenzielle Stundentabelle (≥2 `HH:00`-Zeilen), Werte selbst-konsistent
-  (`temp_lo <= temp_hi`, Wind/Regen ≥ 0, nicht alle None/0), Subject nicht leer.
-- **compact:** single `text/plain`, 7bit (oder QP bei reinem ASCII), `isascii`, < 2 KB,
-  HART: Kopf + `== Metriken-Ueberblick ==` + Footer; Ausblick ist **optional** (der
-  Renderer lässt ihn legitim weg, wenn keine Stabilität/Trend-Daten vorliegen); **keine**
-  Stundentabelle.
-
-**Dispatch-Verhalten:** `compare`-getaggte Mail → sauberes No-Op (Exit 0, falscher
-Validator). Fehlender Marker-Header → Exit 1 (Mail nicht vom getaggten Renderer).
-Plausibilitäts-Schwellen sind bewusst weit kalibriert (gegen False-Positives, die
-Deploys fälschlich blockieren). **Nur bei Exit 0** darfst du „E2E Test bestanden" sagen.
-
-Der ergänzende `IMAP-MIME-Verhaltenstest` (seit #722, #721, #636) bleibt als
-Unit-/Integrationsbeweis gültig; der Validator kodifiziert genau dieses Muster als
-Gate. Der `email_spec_validator.py` ist für Trip-Briefing-Mails **nicht** zuständig.
-
-### RENDERER MAIL GATE — Commit-Gate für Mail-Renderer (seit #811)
-
-**`renderer_mail_gate.py`** (Commit-Hook, PreToolUse→Bash-Kette nach `pre_commit_gate.py`) macht die
-oben dokumentierte Validator-„PFLICHT" technisch un-überspringbar: Sobald ein `git commit` eine
-Mail-Inhalts-Datei staged (`src/output/renderers/email/*.py`, `src/formatters/*.py`,
-`src/outputs/email.py`), **blockiert der Commit (Exit 2)**, bis im aktiven Workflow beide Nachweise
-vorliegen:
-
-1. der **Modus-Matrix-Vertragstest** (`tests/tdd/test_issue_811_mode_matrix.py`) lief grün — er rendert
-   die echte Mail über `{full,compact}×{Einfach,Roh}×{briefing,alert}` und erzwingt, dass der Roh-Modus
-   Zahlen statt Ampelpunkte zeigt (deckt **Briefing- UND Alert/„Update"-Mail** ab, da gemeinsamer
-   `render_email`-Pfad);
-2. ein erfolgreicher **`briefing_mail_validator.py`**-Lauf (`*_briefing_validation.yaml` mit `passed: true`).
-
-Anti-Stale: Der Matrix-Nachweis bindet an einen sha256 der Mail-Dateien, der Validator-Nachweis an seine
-`validated_at`-Frische — jede neue Renderer-Änderung invalidiert beide → Test + Validator müssen erneut laufen.
-**Kein globaler/ENV-Bypass.** Verhindert stille Mail-Format-Defekte vor dem Merge (Issue #810-Klasse).
-
-**Abhilfe bei Blockade** (kein Override): Vertragstest laufen lassen (`uv run pytest
-tests/tdd/test_issue_811_mode_matrix.py` — der Lauf schreibt den Matrix-Nachweis automatisch) und den
-`briefing_mail_validator.py` gegen die zugestellte Staging-Mail grün bekommen.
+Vollständige Details (Plausibilitäts-Schwellen pro Format, Dispatch-Verhalten, Anti-Stale-Mechanik, Historie): **`docs/reference/mail_validators.md`**.
 
 ## Specs
 
