@@ -116,7 +116,7 @@ Verbindliche Modus-Tabelle aller 25 Metriken:
 | `cloud_low` | `("raw","symbol")` | `symbol` |
 | `cloud_mid` | `("raw","symbol")` | `symbol` |
 | `cloud_high` | `("raw","symbol")` | `symbol` |
-| `visibility` | `("raw","simplified")` | `simplified` |
+| `visibility` | `("raw",)` | `raw` |
 | `sunshine` | `("raw","symbol")` | `symbol` |
 | `uv_index` | `("raw",)` | `raw` |
 | `pressure` | `("raw",)` | `raw` |
@@ -162,7 +162,7 @@ und von `fmt_val` für den `simplified`-Pfad genutzt.
 Renderer-Mappings:
 - `mode="raw"` → numerisch mit Einheit (unverändertes heutiges Verhalten)
 - `mode="scale"` → Kompass-Punkte (nur `wind_direction`)
-- `mode="simplified"` → Adjektiv-Kürzel ohne Zahl in HTML-Tabelle (`wind`, `gust`, `precipitation`, `visibility`)
+- `mode="simplified"` → Adjektiv-Kürzel ohne Zahl in HTML-Tabelle (`wind`, `gust`, `precipitation`)
 - `mode="symbol"` → Emoji-Darstellung (`cloud_*`, `cape`, `sunshine`, `thunder`)
 
 Wind-Direction-Merge-Trigger: `wind_direction.format_mode == "scale"` (bisher `use_friendly_format=True`).
@@ -226,7 +226,7 @@ das Frontend zwischendurch in Bug-Zustand belassen (alle Modi außer raw → boo
 - **AC-2 — Wizard-Dropdown filtert auf erlaubte Modi:** Given Step3Weather lädt den Metrik-Katalog / When der User das Format-Dropdown einer Metrik öffnet (z.B. `temperature` mit `format_modes=["raw"]`) / Then werden NUR die im Katalog erlaubten Optionen angezeigt — keine „Symbol"-Option bei reinem Roh-Modus.
   - Test: (populated after /tdd-red)
 
-- **AC-3 — Bestandsdaten lesen ohne Verhaltensänderung:** Given eine bestehende Trip-Konfiguration mit `use_friendly_format=true` und ohne `format_mode` / When der Loader die Konfiguration liest / Then wird `format_mode` auf den `default_format_mode` der Metrik aus dem Katalog resolved (z.B. `cloud_total` → `symbol`, `wind_direction` → `scale`, `visibility` → `simplified`) und das gerenderte HTML/SMS ist bit-identisch zum heutigen Verhalten.
+- **AC-3 — Bestandsdaten lesen ohne Verhaltensänderung:** Given eine bestehende Trip-Konfiguration mit `use_friendly_format=true` und ohne `format_mode` / When der Loader die Konfiguration liest / Then wird `format_mode` auf den `default_format_mode` der Metrik aus dem Katalog resolved (z.B. `cloud_total` → `symbol`, `wind_direction` → `scale`, `visibility` → `raw`) und das gerenderte HTML/SMS ist bit-identisch zum heutigen Verhalten.
   - Test: (populated after /tdd-red)
 
 - **AC-4 — Schreib-Pfade speichern beide Felder parallel:** Given der User wählt im Wizard `format_mode='symbol'` für `cloud_total` / When der Trip gespeichert wird / Then enthält der persistierte `MetricConfig` sowohl `format_mode='symbol'` als auch `use_friendly_format=True` (Backward-Compat für alte Frontend-Versionen).

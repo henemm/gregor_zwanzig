@@ -392,7 +392,7 @@ See Changelog v1.0.
 ## Known Limitations
 
 - Toggle is per-metric, not per-report-type (morning/evening share same setting)
-- Only 6 metrics support friendly format (cloud x4, cape, visibility)
+- Only 5 metrics support friendly format (cloud x4, cape)
 - SMS formatter always uses compact format (unaffected by toggle)
 - Emoji rendering depends on email client font support
 

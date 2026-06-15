@@ -295,16 +295,14 @@ _METRICS: list[MetricDefinition] = [
         compact_label="V", col_key="visibility", col_label="Visib",
         providers={"openmeteo": True, "geosphere": False},
         default_enabled=False,
-        # Issue #814 AC-5: fmt_val-visibility-Zweig rendert IMMER km-Zahl (mode/use_friendly
-        # ignoriert). Katalog-Metadaten (#435) bleiben auf #811-Stand — kein Kollateralschaden.
-        friendly_label="good/fog",
+        # Issue #814 AC-5 / #819: Sicht ist numerisch-only (immer km-Zahl). Kein Einfach-Modus → has_friendly_format=False, nur Roh-Modus.
         display_unit="km",
         summary_fields={"min": "visibility_min_m"},
         default_change_threshold=1000,
         display_thresholds={"orange_lt": 500.0},
         risk_thresholds={"high_lt": 100.0},
-        format_modes=("raw", "simplified"),
-        default_format_mode="simplified",
+        format_modes=("raw",),
+        default_format_mode="raw",
     ),
     MetricDefinition(
         id="sunshine", label_de="Sonnenschein", unit="h",

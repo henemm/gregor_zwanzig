@@ -312,8 +312,9 @@ class TestMetricDefinitionHasFriendlyFormat:
         assert m.has_friendly_format is True
 
     def test_visibility_has_friendly_format(self):
+        # Issue #819: visibility ist numerisch-only → has_friendly_format False
         m = get_metric("visibility")
-        assert m.has_friendly_format is True
+        assert m.has_friendly_format is False
 
     def test_temperature_has_no_friendly_format(self):
         m = get_metric("temperature")

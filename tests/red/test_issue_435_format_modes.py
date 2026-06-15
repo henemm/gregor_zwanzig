@@ -238,10 +238,10 @@ class TestAC1CatalogFormatModes:
         assert tuple(wdir.format_modes) == ("raw", "scale")
         assert wdir.default_format_mode == "scale"
 
-        # Visibility → ("raw","simplified"), default simplified
+        # Visibility → ("raw",), default raw (Issue #819: numerisch-only, kein Einfach-Modus)
         vis = get_metric("visibility")
-        assert tuple(vis.format_modes) == ("raw", "simplified")
-        assert vis.default_format_mode == "simplified"
+        assert tuple(vis.format_modes) == ("raw",)
+        assert vis.default_format_mode == "raw"
 
         # Temperature → ("raw",), default raw (keine andere Option)
         temp = get_metric("temperature")
@@ -282,13 +282,13 @@ class TestAC3LoaderResolveFormatMode:
         )
         assert mode == "scale", f"wind_direction True → 'scale' erwartet, war '{mode}'"
 
-        # visibility → simplified
+        # visibility → raw (Issue #819: kein Einfach-Modus, Katalog-Default ist jetzt "raw")
         mode = loader._resolve_format_mode(
             {"metric_id": "visibility", "use_friendly_format": True},
             "visibility",
         )
-        assert mode == "simplified", (
-            f"visibility True → 'simplified' erwartet, war '{mode}'"
+        assert mode == "raw", (
+            f"visibility True → 'raw' erwartet (Issue #819), war '{mode}'"
         )
 
         # temperature (nur raw) → raw
