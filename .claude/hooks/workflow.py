@@ -1139,6 +1139,57 @@ def cmd_gates(args: list[str]) -> None:
         print("✓  Keine Anomalien.")
 
 
+def _check_verdict_before_complete(data: dict, name: str) -> None:
+    """AC-2 (#826): Blockiert workflow.py complete wenn phase6b lief aber Verdict fehlt/BROKEN.
+
+    Logik identisch mit pre_commit_gate._check_none_verdict_block und
+    _check_ambiguous_block — wiederverwendet statt dupliziert via lokalem Import.
+    Wenn pre_commit_gate nicht importierbar ist (z.B. in Tests mit minimalem Pfad),
+    faellt die Implementierung auf eine minimale Inline-Pruefung zurueck.
+    """
+    import time as _time
+
+    # Pruefe ob phase6b tatsaechlich in den Transitions lief
+    transitions = data.get("phase_transitions") or []
+    phase6b_ran = any(
+        isinstance(t, dict) and "phase6b" in (t.get("to") or "")
+        for t in transitions
+    )
+
+    # Tooling-/Doku-Workflow ohne phase6b: immer durchlassen (Issue #826 AC-2 Fall C)
+    if not phase6b_ran:
+        return
+
+    verdict = (data.get("adversary_verdict") or "").strip()
+    verdict_upper = verdict.upper()
+
+    # BROKEN oder fehlendes Verdict → blockieren
+    if not verdict_upper or verdict_upper.startswith("BROKEN"):
+        msg = (
+            f"BLOCKED: Adversary-Verdict ist '{verdict or 'None'}' fuer Workflow '{name}'.\n"
+            f"  Implementierung korrigieren und danach qa_gate.py aufrufen:\n"
+            f"  python3 .claude/hooks/qa_gate.py /tmp/test_output.txt"
+        )
+        print(msg, file=sys.stderr)
+        sys.exit(1)
+
+    # AMBIGUOUS: nur durchlassen wenn ein gueltiger Override-Token gesetzt ist
+    if verdict_upper.startswith("AMBIGUOUS"):
+        override = data.get("adversary_ambiguous_override") or {}
+        if isinstance(override, dict):
+            expires = override.get("expires_at", 0) or 0
+            if expires and _time.time() < expires:
+                return  # gueltiger Override → durchlassen
+        print(
+            f"BLOCKED: Adversary-Verdict ist AMBIGUOUS ohne gueltigen Override fuer '{name}'.\n"
+            f"  Fuehre aus: python3 .claude/hooks/workflow.py override-ambiguous '<Grund>' (TTL 1h)",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    # VERIFIED (oder anderes positives Verdict) → durchlassen
+
+
 def cmd_complete(args: list[str]) -> None:
     if args:
         name = args[0]
@@ -1164,6 +1215,13 @@ def cmd_complete(args: list[str]) -> None:
             file=sys.stderr,
         )
         sys.exit(1)
+
+    # AC-2 (#826): Verdict-Pflicht beim Abschluss — nur wenn phase6b tatsaechlich lief.
+    # Wiederverwendung der Pruef-Logik aus pre_commit_gate.py (_phase6b_was_run,
+    # _check_none_verdict_block, _check_ambiguous_block).
+    # Tooling-/Doku-Workflows ohne phase6b werden NIE blockiert.
+    _check_verdict_before_complete(data, name)
+
     data["current_phase"] = "phase8_complete"
     data["backlog_status"] = "done"
     data["last_updated"] = datetime.now().isoformat()
