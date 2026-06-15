@@ -38,7 +38,19 @@ _MAIL_PATTERNS = [
     re.compile(r"src/output/renderers/email/.*\.py$"),
     re.compile(r"src/formatters/.*\.py$"),
     re.compile(r"src/outputs/email\.py$"),
+    re.compile(r"src/outputs/radar_alert\.py$"),
+    re.compile(r"src/formatters/radar.*\.py$"),
 ]
+
+# Radar-Alert-spezifische Muster (Subset von _MAIL_PATTERNS)
+_RADAR_PATTERNS = [
+    re.compile(r"src/outputs/radar_alert\.py$"),
+    re.compile(r"src/formatters/radar.*\.py$"),
+]
+
+
+def _is_radar_file(name: str) -> bool:
+    return any(p.search(name) for p in _RADAR_PATTERNS)
 
 
 def _repo_root() -> Path:
@@ -178,6 +190,49 @@ def _validator_log_ok(shared: Path, name: str, repo: Path, staged: list[str]) ->
     return False
 
 
+def _radar_validator_log_ok(shared: Path, name: str, repo: Path, staged: list[str]) -> bool:
+    """Juengstes radar_alert_validation.yaml mit workflow_id == name, passed: true
+    UND validated_at FRISCHER als die letzte Radar-Datei-mtime (Freshness analog Briefing).
+    """
+    log_dir = shared / ".claude" / "workflows" / "_log"
+    if not log_dir.exists():
+        return False
+    logs = sorted(
+        log_dir.glob("*_radar_alert_validation.yaml"),
+        key=lambda p: p.stat().st_mtime, reverse=True,
+    )
+    radar_mtime = max(
+        ((repo / n).stat().st_mtime for n in staged if _is_radar_file(n)),
+        default=0.0,
+    )
+    for log in logs:
+        try:
+            text = log.read_text()
+        except OSError:
+            continue
+        wid = re.search(r"^workflow_id:\s*(\S+)", text, re.M)
+        if not wid or wid.group(1).strip().strip("'\"") != name:
+            continue
+        passed = re.search(r"^passed:\s*(\w+)", text, re.M)
+        if not (passed and passed.group(1).strip().lower() == "true"):
+            return False
+        vat = re.search(r"^validated_at:\s*'?([^'\n]+)'?", text, re.M)
+        if not vat:
+            return False
+        try:
+            vat_str = vat.group(1).strip().strip("'\"")
+            vat_dt = datetime.fromisoformat(vat_str)
+            if vat_dt.tzinfo is None:
+                vat_dt = vat_dt.replace(tzinfo=timezone.utc)
+            vat_ts = vat_dt.timestamp()
+        except (ValueError, TypeError):
+            return False
+        if vat_ts < radar_mtime:
+            return False
+        return True
+    return False
+
+
 def _block(msg: str) -> None:
     print("=" * 70, file=sys.stderr)
     print("BLOCKED - Renderer-Mail-Gate (#811)", file=sys.stderr)
@@ -232,17 +287,33 @@ def _do_hook(repo: Path, shared: Path, name: str) -> None:
     except (OSError, json.JSONDecodeError):
         _block(f"Workflow-State unlesbar: {path}")
 
-    matrix = (
-        state.get("gates", {}).get("renderer_mail", {}).get("matrix", {})
-    )
-    expected = _staged_mail_hash(repo, staged)
-    matrix_ok = (
-        matrix.get("passed") is True
-        and matrix.get("mail_files_hash") == expected
-    )
-    validator_ok = _validator_log_ok(shared, name, repo, staged)
+    radar_staged = [f for f in mail_staged if _is_radar_file(f)]
+    # Briefing-Mail-Dateien sind alle Mail-Inhalts-Dateien, die KEINE Radar-Dateien sind.
+    briefing_staged = [f for f in mail_staged if not _is_radar_file(f)]
 
-    if matrix_ok and validator_ok:
+    # Matrix-Test + Briefing-Validator nur erforderlich wenn Briefing-Mail-Dateien staged.
+    # Radar-only-Aenderungen brauchen keinen Briefing-Nachweis (kein Risiko fuer Briefing-Format).
+    if briefing_staged:
+        matrix = (
+            state.get("gates", {}).get("renderer_mail", {}).get("matrix", {})
+        )
+        expected = _staged_mail_hash(repo, staged)
+        matrix_ok = (
+            matrix.get("passed") is True
+            and matrix.get("mail_files_hash") == expected
+        )
+        validator_ok = _validator_log_ok(shared, name, repo, staged)
+    else:
+        matrix_ok = True
+        validator_ok = True
+
+    # Radar-Alert-Validator nur erforderlich wenn Radar-Dateien staged.
+    radar_ok = (
+        _radar_validator_log_ok(shared, name, repo, staged)
+        if radar_staged else True
+    )
+
+    if matrix_ok and validator_ok and radar_ok:
         sys.exit(0)
 
     missing = []
@@ -258,6 +329,12 @@ def _do_hook(repo: Path, shared: Path, name: str) -> None:
             "  - briefing_mail_validator.py-Erfolgsnachweis fehlt.\n"
             "    Abhilfe: uv run python3 .claude/hooks/briefing_mail_validator.py "
             "gegen die echt zugestellte Mail (Exit 0)."
+        )
+    if not radar_ok:
+        missing.append(
+            "  - radar_alert_mail_validator.py-Erfolgsnachweis fehlt.\n"
+            "    Abhilfe: uv run python3 .claude/hooks/radar_alert_mail_validator.py "
+            "gegen die echt zugestellte Radar-Alert-Mail (Exit 0)."
         )
     _block(
         "Mail-Inhalts-Datei(en) gestaged, aber Nachweise unvollstaendig:\n"

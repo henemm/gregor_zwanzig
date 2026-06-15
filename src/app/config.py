@@ -101,6 +101,9 @@ class Settings(BaseSettings):
     # Wenn True, blockiert EmailOutput jeden Versand über Resend (Production-Versanddienst).
     is_test_mode: bool = Field(default=False, description="Test-Modus: blockiert Resend-Versand")
 
+    # Deployment environment (GZ_ENV)
+    env: str = Field(default="production", description="Deployment environment (GZ_ENV)")
+
     # SMS settings (for sms channel)
     sms_gateway_url: str = Field(default="https://gateway.seven.io/api/sms", description="SMS gateway HTTP endpoint")
     seven_api_key: Optional[str] = Field(default=None, description="seven.io API key (env: GZ_SEVEN_API_KEY)")

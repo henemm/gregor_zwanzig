@@ -641,28 +641,18 @@ class TripAlertService:
             else:
                 cooldown_display = f"{cooldown_min} Minuten"
 
-            # Mail-Body zusammenbauen — exakt Spec Implementation Detail D:
-            # <onset-satz>
-            # auf <segment_label>.
-            #
-            # Quelle: <human-label>.
-            # Du erhältst diese Warnung höchstens einmal in <cooldown_display>.
-            #
+            # Mail-Body + Betreff via pure functions (Issue #830 -- Extraktion)
             # include_source=False: format_now_text liefert nur den Onset-Satz
             # ohne eigene Quelle-Zeile, damit genau EINE Quelle-Zeile im Body steht.
+            from outputs.radar_alert import build_radar_alert_body, build_radar_alert_subject
             onset_text = radar_svc.format_now_text(result, tz=tz, include_source=False)
-            full_body = (
-                f"{onset_text}\n"
-                f"auf {segment_label}.\n\n"
-                f"Quelle: {radar_svc.source_label(result.source)}.\n"
-                f"Du erhältst diese Warnung höchstens einmal in {cooldown_display}."
+            full_body = build_radar_alert_body(
+                onset_text=onset_text,
+                segment_label=segment_label,
+                cooldown_display=cooldown_display,
+                source=radar_svc.source_label(result.source),
             )
-
-            # Betreff
-            if result.is_convective:
-                subject = f"[{trip.name}] ⚠️ Gewitter – {segment_label}"
-            else:
-                subject = f"[{trip.name}] Regen zieht auf – {segment_label}"
+            subject = build_radar_alert_subject(trip.name, result, segment_label)
 
             config = trip.report_config
 
@@ -676,6 +666,7 @@ class TripAlertService:
                             subject=subject,
                             body=full_body,
                             plain_text_body=full_body,
+                            mail_type="radar-alert",
                         )
                 except Exception as e:
                     logger.error(f"Radar alert email failed for {trip.id}: {e}")

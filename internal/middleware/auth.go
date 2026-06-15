@@ -42,7 +42,8 @@ func AuthMiddleware(secret string) func(http.Handler) http.Handler {
 				r.URL.Path == "/api/auth/passkey/register/public/finish" ||
 				r.URL.Path == "/api/auth/passkey/discoverable/begin" || r.URL.Path == "/api/auth/passkey/discoverable/finish" ||
 				strings.HasPrefix(r.URL.Path, "/api/internal/") ||
-				strings.HasPrefix(r.URL.Path, "/api/webhooks/telegram/") {
+				strings.HasPrefix(r.URL.Path, "/api/webhooks/telegram/") ||
+				strings.HasPrefix(r.URL.Path, "/api/debug/") {
 				next.ServeHTTP(w, r)
 				return
 			}

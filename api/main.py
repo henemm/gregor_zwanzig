@@ -52,3 +52,8 @@ app.include_router(internal.router)
 app.include_router(preview.router)
 app.include_router(validator.router)
 app.include_router(webhook.router)
+
+import os
+if os.environ.get("GZ_ENV") == "staging":
+    from api.routers import debug as _debug_router
+    app.include_router(_debug_router.router)

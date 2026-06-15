@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -253,6 +254,11 @@ func main() {
 			"compare_subscriptions": sched.BuildCompareSubscriptionsStatus(userID),
 		})
 	})
+
+	// Issue #830 — Staging-only: Debug-Trigger-Endpoint fuer Radar-Alert-Mail-Tests
+	if os.Getenv("GZ_ENV") == "staging" {
+		r.Post("/api/debug/trigger-radar-alert", handler.ProxyPostHandler(cfg.PythonCoreURL, "/api/debug/trigger-radar-alert"))
+	}
 
 	// Scheduler trigger proxies (frontend → Go → Python)
 	r.Post("/api/scheduler/trip-reports", handler.ProxyPostHandler(cfg.PythonCoreURL, "/api/scheduler/trip-reports"))
