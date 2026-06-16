@@ -16,8 +16,11 @@ from __future__ import annotations
 
 import dataclasses
 from datetime import datetime, timezone
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 from zoneinfo import ZoneInfo
+
+if TYPE_CHECKING:
+    from services.day_comparison import DayComparison
 
 from utils.timezone import local_fmt, local_hour
 
@@ -67,6 +70,7 @@ class TripReportFormatter:
         profile: Optional[ActivityProfile] = None,
         stability_result: Optional[StabilityResult] = None,
         report_config: Optional[TripReportConfig] = None,
+        day_comparison: Optional["DayComparison"] = None,
     ) -> TripReport:
         """Format trip segments into HTML + plain-text email."""
         if not segments:
@@ -125,6 +129,10 @@ class TripReportFormatter:
         _daily_summary_metrics = report_config.daily_summary_metrics if report_config else None
         # Issue #664: Metriken-Überblick
         _show_metrics_summary = report_config.show_metrics_summary if report_config else False
+        # F001/F002 (#750/#752): Defense-in-Depth für den Vortag-Vergleich-Toggle.
+        # AC-3: show_yesterday_comparison=False → Sektion erscheint NICHT.
+        if report_config is not None and not report_config.show_yesterday_comparison:
+            day_comparison = None
         # Issue #623 AC-5: Sendezeit für das Kontext-Label im HTML-Trend-Block.
         _sent_at = datetime.now(timezone.utc)
         email_html, email_plain = render_email(
@@ -153,6 +161,7 @@ class TripReportFormatter:
             daily_summary_metrics=_daily_summary_metrics,
             sent_at=_sent_at,
             show_metrics_summary=_show_metrics_summary,
+            day_comparison=day_comparison,
         )
         first_agg = segments[0].aggregated
         email_subject = self._generate_subject(
