@@ -300,7 +300,7 @@ class TripReportFormatter:
         """Aggregate data points in a 2h night block into a single row."""
         h = local_hour(dps[0].ts, self._tz)
         block_hour = h - (h % interval)
-        row: dict = {"time": f"{block_hour:02d}"}
+        row: dict = {"time": f"{block_hour:02d}:00"}
         merge_wind_dir = self._should_merge_wind_dir(dc)
 
         for mc in dc.metrics:
@@ -382,7 +382,7 @@ class TripReportFormatter:
         and wind is also enabled, the compass direction is appended to the
         wind value (e.g. "20 NW") instead of creating a separate column.
         """
-        row: dict = {"time": f"{local_hour(dp.ts, self._tz):02d}"}
+        row: dict = {"time": f"{local_hour(dp.ts, self._tz):02d}:00"}
         merge_wind_dir = self._should_merge_wind_dir(dc)
         for mc in dc.metrics:
             if not mc.enabled:
