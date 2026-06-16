@@ -16,11 +16,8 @@ from __future__ import annotations
 
 import dataclasses
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 from zoneinfo import ZoneInfo
-
-if TYPE_CHECKING:
-    from services.day_comparison import DayComparison
 
 from utils.timezone import local_fmt, local_hour
 
@@ -70,7 +67,6 @@ class TripReportFormatter:
         profile: Optional[ActivityProfile] = None,
         stability_result: Optional[StabilityResult] = None,
         report_config: Optional[TripReportConfig] = None,
-        day_comparison: Optional["DayComparison"] = None,
     ) -> TripReport:
         """Format trip segments into HTML + plain-text email."""
         if not segments:
@@ -102,6 +98,9 @@ class TripReportFormatter:
                 night_weather, arrival_hour, dc.night_interval_hours, dc,
             )
 
+        # Highlights
+        highlights = self._compute_highlights(segments, seg_tables, night_rows)
+
         # Multi-day trend (respects config — scheduler already filters by report_type)
         effective_trend = multi_day_trend if multi_day_trend else None
 
@@ -120,16 +119,12 @@ class TripReportFormatter:
         )
         # Issue #621: Toggles aus report_config ableiten (None → Defaults = alles an)
         _show_stage_stats = report_config.show_stage_stats if report_config else True
+        _show_quick_take_tags = report_config.show_quick_take_tags if report_config else True
         _show_stability = report_config.show_stability if report_config else True
-        # Issue #721: Ausblick-Block (Großwetterlage + nächste Etappen)
-        _show_outlook = report_config.show_outlook if report_config else True
-        # Issue #722: E-Mail-Format
-        _email_format = report_config.email_format if report_config else "full"
-        # F001/F002 (#750/#752): Defense-in-Depth für den Vortag-Vergleich-Toggle.
-        # AC-3 verlangt: show_yesterday_comparison=False → Sektion erscheint NICHT,
-        # auch wenn der Aufrufer ein DayComparison durchreicht.
-        if report_config is not None and not report_config.show_yesterday_comparison:
-            day_comparison = None
+        _show_highlights = report_config.show_highlights if report_config else True
+        _daily_summary_metrics = report_config.daily_summary_metrics if report_config else None
+        # Issue #664: Metriken-Überblick
+        _show_metrics_summary = report_config.show_metrics_summary if report_config else False
         # Issue #623 AC-5: Sendezeit für das Kontext-Label im HTML-Trend-Block.
         _sent_at = datetime.now(timezone.utc)
         email_html, email_plain = render_email(
@@ -143,18 +138,21 @@ class TripReportFormatter:
             changes=changes,
             stage_name=stage_name,
             stage_stats=stage_stats,
+            highlights=highlights,
             compact_summary=compact_summary,
+            daylight=daylight,
             tz=self._tz,
             exposed_sections=exposed_sections,
             friendly_keys=self._friendly_keys,
             profile=profile,
             stability_result=stability_result,
             show_stage_stats=_show_stage_stats,
+            show_quick_take_tags=_show_quick_take_tags,
             show_stability=_show_stability,
+            show_highlights=_show_highlights,
+            daily_summary_metrics=_daily_summary_metrics,
             sent_at=_sent_at,
-            show_outlook=_show_outlook,
-            email_format=_email_format,
-            day_comparison=day_comparison,
+            show_metrics_summary=_show_metrics_summary,
         )
         first_agg = segments[0].aggregated
         email_subject = self._generate_subject(
@@ -180,7 +178,6 @@ class TripReportFormatter:
             friendly_keys=self._friendly_keys,
             stability_result=stability_result,
             multi_day_trend=effective_trend,
-            day_comparison=day_comparison,
         )
 
         # Issue #614: Tages-Max-Kurzform anhängen wenn konfiguriert.
@@ -234,9 +231,8 @@ class TripReportFormatter:
         rows = []
         for dp in seg_data.timeseries.data:
             h = dp.ts.hour
-            # Bug #806: Randstunde exklusiv am Ende (< end_h), damit jede Stunde
-            # genau einem Segment gehört (Vermeidung von Widersprüchen).
-            include = (start_h <= h < end_h) if start_h <= end_h else (h >= start_h or h < end_h)
+            # Bug #399: Mitternachts-Übergang (start_h > end_h, z. B. 23…01).
+            include = (start_h <= h <= end_h) if start_h <= end_h else (h >= start_h or h <= end_h)
             if include:
                 rows.append(self._dp_to_row(dp, dc))
         return rows
@@ -388,11 +384,6 @@ class TripReportFormatter:
                 metric_def = get_metric(mc.metric_id)
             except KeyError:
                 continue
-            # Issue #710/#715 PO-Regel: nicht-wählbare Metriken (selectable=False,
-            # z.B. confidence) werden beim Rendering still ignoriert — auch bei
-            # Bestands-display_config mit enabled=True (AC-4).
-            if not metric_def.selectable:
-                continue
             row[metric_def.col_key] = getattr(dp, metric_def.dp_field, None)
         if merge_wind_dir and "wind" in row:
             row["_wind_dir_deg"] = getattr(dp, "wind_direction_deg", None)
@@ -441,6 +432,120 @@ class TripReportFormatter:
         parts = [f"{', '.join(labels)} {unit}" for unit, labels in groups.items()]
         return "Einheiten: " + " · ".join(parts)
 
+    # ------------------------------------------------------------------
+    # Highlights / Summary
+    # ------------------------------------------------------------------
+
+    def _compute_highlights(
+        self,
+        segments: list[SegmentWeatherData],
+        seg_tables: list[list[dict]],
+        night_rows: list[dict],
+    ) -> list[str]:
+        """Compute highlight lines (text, no HTML).
+
+        Gusts/wind: scanned from FULL timeseries (24h) with timestamp.
+        Values outside segment window are annotated with "nachts".
+        Precip/POP/CAPE: from segment-only aggregated values.
+        """
+        highlights = []
+
+        # Thunder (segment hours only)
+        for seg_data in segments:
+            if seg_data.has_error or seg_data.timeseries is None:
+                continue
+            sh = seg_data.segment.start_time.hour
+            eh = seg_data.segment.end_time.hour
+            for dp in seg_data.timeseries.data:
+                if sh <= dp.ts.hour <= eh and dp.thunder_level and dp.thunder_level != ThunderLevel.NONE:
+                    elev = int(seg_data.segment.start_point.elevation_m or 0)
+                    highlights.append(
+                        f"⚡ Gewitter möglich ab {local_fmt(dp.ts, self._tz)} "
+                        f"({'am Ziel' if seg_data.segment.segment_id == 'Ziel' else f'Segment {seg_data.segment.segment_id}'}, >{elev}m)"
+                    )
+                    break
+
+        # Max gusts (full timeseries with timestamp, catalog threshold)
+        gust_ht = get_metric("gust").highlight_threshold or 60.0
+        max_gust_val = 0.0
+        max_gust_ts = None
+        max_gust_in_seg = True
+        for seg_data in segments:
+            if seg_data.has_error or seg_data.timeseries is None:
+                continue
+            sh = seg_data.segment.start_time.hour
+            eh = seg_data.segment.end_time.hour
+            for dp in seg_data.timeseries.data:
+                if dp.gust_kmh is not None and dp.gust_kmh > max_gust_val:
+                    max_gust_val = dp.gust_kmh
+                    max_gust_ts = dp.ts
+                    max_gust_in_seg = sh <= dp.ts.hour <= eh
+        if max_gust_val > gust_ht and max_gust_ts:
+            time_label = local_fmt(max_gust_ts, self._tz)
+            if not max_gust_in_seg:
+                time_label += ", nachts"
+            highlights.append(f"💨 Böen bis {max_gust_val:.0f} km/h ({time_label})")
+
+        # Total precipitation (segment-window only, from aggregated)
+        total_precip = sum(
+            s.aggregated.precip_sum_mm for s in segments
+            if s.aggregated.precip_sum_mm is not None
+        )
+        if total_precip > 0:
+            highlights.append(f"🌧 Regen gesamt: {total_precip:.1f} mm")
+
+        # Night min temp
+        if night_rows:
+            temps = [r["temp"] for r in night_rows if r.get("temp") is not None]
+            if temps:
+                min_t = min(temps)
+                min_row = next(r for r in night_rows if r.get("temp") == min_t)
+                highlights.append(f"🌡 Tiefste Nachttemperatur: {min_t:.1f} °C ({min_row['time']})")
+
+        # Max wind (full timeseries with timestamp, catalog threshold)
+        wind_ht = get_metric("wind").highlight_threshold or 50.0
+        max_wind_val = 0.0
+        max_wind_ts = None
+        max_wind_in_seg = True
+        for seg_data in segments:
+            if seg_data.has_error or seg_data.timeseries is None:
+                continue
+            sh = seg_data.segment.start_time.hour
+            eh = seg_data.segment.end_time.hour
+            for dp in seg_data.timeseries.data:
+                if dp.wind10m_kmh is not None and dp.wind10m_kmh > max_wind_val:
+                    max_wind_val = dp.wind10m_kmh
+                    max_wind_ts = dp.ts
+                    max_wind_in_seg = sh <= dp.ts.hour <= eh
+        if max_wind_val > wind_ht and max_wind_ts:
+            time_label = local_fmt(max_wind_ts, self._tz)
+            if not max_wind_in_seg:
+                time_label += ", nachts"
+            highlights.append(f"💨 Wind bis {max_wind_val:.0f} km/h ({time_label})")
+
+        # High precipitation probability (segment-only)
+        max_pop = 0
+        max_pop_info = ""
+        for seg_data in segments:
+            if seg_data.aggregated.pop_max_pct and seg_data.aggregated.pop_max_pct > max_pop:
+                max_pop = seg_data.aggregated.pop_max_pct
+                max_pop_info = "am Ziel" if seg_data.segment.segment_id == "Ziel" else f"Segment {seg_data.segment.segment_id}"
+        pop_ht = get_metric("rain_probability").highlight_threshold or 80.0
+        if max_pop >= pop_ht:
+            highlights.append(f"🌧 Regenwahrscheinlichkeit {max_pop}% ({max_pop_info})")
+
+        # High CAPE (segment-only)
+        max_cape = 0.0
+        max_cape_info = ""
+        for seg_data in segments:
+            if seg_data.aggregated.cape_max_jkg and seg_data.aggregated.cape_max_jkg > max_cape:
+                max_cape = seg_data.aggregated.cape_max_jkg
+                max_cape_info = "am Ziel" if seg_data.segment.segment_id == "Ziel" else f"Segment {seg_data.segment.segment_id}"
+        cape_ht = get_metric("cape").highlight_threshold or 1000.0
+        if max_cape >= cape_ht:
+            highlights.append(f"⚡ Hohe Gewitterenergie: CAPE {max_cape:.0f} J/kg ({max_cape_info})")
+
+        return highlights
 
     # ------------------------------------------------------------------
     # Subject
@@ -484,14 +589,22 @@ class TripReportFormatter:
         else:
             stage = dt.strftime("%d.%m.%Y")
 
-        # AC-2 (briefing-mail-inhalt): D/W/G-Kürzel entfernt — Betreff bleibt
-        # lesbar ohne kryptische Wetter-Token für Nicht-Techniker.
-        tokens: tuple[Token, ...] = ()
+        # Build D/W/G tokens from segment aggregates (whitelist for subject §11).
+        tokens: list[Token] = []
+        if temp_max_c is not None:
+            tokens.append(Token(symbol="D", value=str(int(temp_max_c)),
+                                category="forecast", priority=4))
+        if wind_max_kmh is not None:
+            tokens.append(Token(symbol="W", value=str(int(wind_max_kmh)),
+                                category="forecast", priority=4))
+        if gust_max_kmh is not None:
+            tokens.append(Token(symbol="G", value=str(int(gust_max_kmh)),
+                                category="forecast", priority=4))
 
         line = TokenLine(
             stage_name=stage,
             report_type=rt,  # type: ignore[arg-type]
-            tokens=tokens,
+            tokens=tuple(tokens),
             trip_name=trip_name,
         )
         return build_email_subject(line)
@@ -553,6 +666,127 @@ class TripReportFormatter:
         directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
         return directions[round(degrees / 45) % 8]
 
+    def _fmt_val(self, key: str, val, html: bool = False, row: dict | None = None) -> str:
+        """Format a single cell value. Respects per-metric friendly format toggle."""
+        if val is None:
+            return "–"
+
+        friendly_keys = getattr(self, '_friendly_keys', None)
+        use_friendly = friendly_keys is None or key in friendly_keys
+        if key == "thunder":
+            if val == ThunderLevel.HIGH:
+                t = "⚡⚡"
+                return f'<span style="color:#c62828;font-weight:600">{t}</span>' if html else t
+            if val == ThunderLevel.MED:
+                t = "⚡ mögl."
+                return f'<span style="color:#f57f17">{t}</span>' if html else t
+            return "–"
+        if key in ("temp", "felt", "dewpoint"):
+            return f"{val:.1f}"
+        if key in ("wind", "gust"):
+            s = f"{val:.0f}"
+            # Append compass direction to wind when merged
+            if key == "wind" and row and "_wind_dir_deg" in row:
+                compass = self._degrees_to_compass(row["_wind_dir_deg"])
+                if compass:
+                    s = f"{s} {compass}"
+            if html and key == "gust":
+                dt = get_metric("gust").display_thresholds
+                if val and dt.get("red") and val >= dt["red"]:
+                    return f'<span style="background:#ffebee;color:#c62828;padding:2px 4px;border-radius:3px;font-weight:600">{s}</span>'
+                if val and dt.get("yellow") and val >= dt["yellow"]:
+                    return f'<span style="background:#fff9c4;color:#f57f17;padding:2px 4px;border-radius:3px">{s}</span>'
+            return s
+        if key == "precip":
+            s = f"{val:.1f}"
+            dt = get_metric("precipitation").display_thresholds
+            if html and val and dt.get("blue") and val >= dt["blue"]:
+                return f'<span style="background:#e3f2fd;color:#1565c0;padding:2px 4px;border-radius:3px">{s}</span>'
+            return s
+        if key in ("snow_limit", "snow_depth"):
+            return f"{val}" if val else "–"
+        if key in ("cloud", "cloud_low", "cloud_mid", "cloud_high"):
+            if not use_friendly:
+                return f"{val:.0f}"
+            if val <= 10:
+                emoji = "☀️"
+            elif val <= 30:
+                emoji = "🌤️"
+            elif val <= 70:
+                emoji = "⛅"
+            elif val <= 90:
+                emoji = "🌥️"
+            else:
+                emoji = "☁️"
+            return emoji
+        if key == "sunshine":
+            # Issue #347: DNI bleibt interne Hilfsgröße (Emoji); numerisch wird
+            # die Sonnenstunde (h) angezeigt, konsistent mit dem Ortsvergleich.
+            dni = row.get("_dni_wm2") if row else val
+            if not use_friendly:
+                hours = row.get("_sunny_hours") if row else None
+                if hours is None:
+                    return "–"
+                return f"{hours:.1f} h"
+            from services.weather_metrics import get_weather_emoji
+            return get_weather_emoji(
+                is_day=row.get("_is_day") if row else None,
+                dni_wm2=dni,
+                wmo_code=row.get("_wmo_code") if row else None,
+                cloud_pct=round(row.get("cloud")) if row and row.get("cloud") is not None else None,
+            )
+        if key == "humidity":
+            return f"{val}" if val is not None else "–"
+        if key == "pressure":
+            return f"{val:.1f}" if val is not None else "–"
+        if key == "pop":
+            s = f"{val:.0f}"
+            dt = get_metric("rain_probability").display_thresholds
+            if html and val is not None and dt.get("blue") and val >= dt["blue"]:
+                return f'<span style="background:#e3f2fd;color:#1565c0;padding:2px 4px;border-radius:3px">{s}</span>'
+            return s
+        if key == "cape":
+            if not use_friendly:
+                s = f"{val:.0f}"
+                dt = get_metric("cape").display_thresholds
+                if html and val is not None and dt.get("yellow") and val >= dt["yellow"]:
+                    return f'<span style="background:#fff9c4;color:#f57f17;padding:2px 4px;border-radius:3px">{s}</span>'
+                return s
+            if val <= 300:
+                emoji = "🟢"
+            elif val <= 1000:
+                emoji = "🟡"
+            elif val <= 2000:
+                emoji = "🟠"
+            else:
+                emoji = "🔴"
+            return emoji
+        if key == "visibility":
+            if not use_friendly:
+                if val >= 10000:
+                    s = f"{val / 1000:.0f}"
+                elif val >= 1000:
+                    s = f"{val / 1000:.1f}"
+                else:
+                    s = f"{val / 1000:.1f}"
+                dt = get_metric("visibility").display_thresholds
+                if html and dt.get("orange_lt") and val < dt["orange_lt"]:
+                    return f'<span style="background:#fff3e0;color:#e65100;padding:2px 4px;border-radius:3px">{s}</span>'
+                return s
+            if val >= 10000:
+                return "good"
+            elif val >= 4000:
+                return "fair"
+            elif val >= 1000:
+                return "poor"
+            else:
+                return "⚠️ fog"
+        if key == "freeze_lvl":
+            return f"{val:.0f}"
+        if key == "wind_dir":
+            return self._degrees_to_compass(val) or str(val)
+        return str(val)
+
     # ------------------------------------------------------------------
     # F2: Compact summary generation
     # ------------------------------------------------------------------
@@ -570,6 +804,120 @@ class TripReportFormatter:
         formatter = CompactSummaryFormatter()
         return formatter.format_stage_summary(segments, stage_name, dc, tz=self._tz)
 
+    # ------------------------------------------------------------------
+    # HTML rendering
+    # ------------------------------------------------------------------
+
+    def _format_daylight_html(self, dl: DaylightWindow) -> str:
+        """Render daylight banner as HTML."""
+        tz = self._tz
+        hours = dl.duration_minutes // 60
+        mins = dl.duration_minutes % 60
+        headline = (
+            f"\U0001f304 Ohne Stirnlampe: {local_fmt(dl.usable_start, tz)} "
+            f"– {local_fmt(dl.usable_end, tz)} ({hours}h {mins:02d}m)"
+        )
+        has_corrections = (
+            dl.terrain_dawn_penalty_min or dl.weather_dawn_penalty_min
+            or dl.terrain_dusk_penalty_min or dl.weather_dusk_penalty_min
+        )
+        explanation_parts = []
+        if has_corrections:
+            # Morning with corrections
+            if dl.terrain_dawn_penalty_min or dl.weather_dawn_penalty_min:
+                parts = [f"Dämmerung {local_fmt(dl.civil_dawn, tz)}"]
+                if dl.terrain_dawn_penalty_min:
+                    parts.append(f"+ {dl.terrain_dawn_penalty_min}min (Tal)")
+                if dl.weather_dawn_penalty_min:
+                    parts.append(f"+ {dl.weather_dawn_penalty_min}min (Wolken)")
+                parts.append(f"= {local_fmt(dl.usable_start, tz)}")
+                explanation_parts.append(" ".join(parts))
+            # Evening with corrections
+            if dl.terrain_dusk_penalty_min or dl.weather_dusk_penalty_min:
+                parts = [f"Sonnenuntergang {local_fmt(dl.sunset, tz)}"]
+                if dl.terrain_dusk_penalty_min:
+                    parts.append(f"– {dl.terrain_dusk_penalty_min}min (Tal)")
+                if dl.weather_dusk_penalty_min:
+                    parts.append(f"– {dl.weather_dusk_penalty_min}min (Wolken)")
+                parts.append(f"= {local_fmt(dl.usable_end, tz)}")
+                explanation_parts.append(" ".join(parts))
+        else:
+            # No corrections — show base times for transparency
+            explanation_parts.append(
+                f"Dämmerung {local_fmt(dl.civil_dawn, tz)} · "
+                f"Sonnenaufgang {local_fmt(dl.sunrise, tz)} · "
+                f"Sonnenuntergang {local_fmt(dl.sunset, tz)}"
+            )
+
+        lines = "<br>".join(
+            f'<span style="font-size:12px;color:#666">{p}</span>'
+            for p in explanation_parts
+        )
+        explanation_html = f"<div style=\"margin-top:4px\">{lines}</div>"
+
+        return (
+            f'<div style="background:#fffde7;border-left:4px solid #f9a825;'
+            f'padding:12px;margin:8px 0;">'
+            f'<strong style="font-size:14px">{headline}</strong>'
+            f'{explanation_html}'
+            f'</div>'
+        )
+
+    def _format_daylight_plain(self, dl: DaylightWindow) -> str:
+        """Render daylight block as plain text."""
+        tz = self._tz
+        hours = dl.duration_minutes // 60
+        mins = dl.duration_minutes % 60
+        lines = [
+            f"\U0001f304 Ohne Stirnlampe: {local_fmt(dl.usable_start, tz)} "
+            f"– {local_fmt(dl.usable_end, tz)} ({hours}h {mins:02d}m)"
+        ]
+        has_corrections = (
+            dl.terrain_dawn_penalty_min or dl.weather_dawn_penalty_min
+            or dl.terrain_dusk_penalty_min or dl.weather_dusk_penalty_min
+        )
+        if has_corrections:
+            # Morning with corrections
+            if dl.terrain_dawn_penalty_min or dl.weather_dawn_penalty_min:
+                parts = [f"Dämmerung {local_fmt(dl.civil_dawn, tz)}"]
+                if dl.terrain_dawn_penalty_min:
+                    parts.append(f"+ {dl.terrain_dawn_penalty_min}min (Tal)")
+                if dl.weather_dawn_penalty_min:
+                    parts.append(f"+ {dl.weather_dawn_penalty_min}min (Wolken)")
+                parts.append(f"= {local_fmt(dl.usable_start, tz)}")
+                lines.append(f"   {' '.join(parts)}")
+            # Evening with corrections
+            if dl.terrain_dusk_penalty_min or dl.weather_dusk_penalty_min:
+                parts = [f"Sonnenuntergang {local_fmt(dl.sunset, tz)}"]
+                if dl.terrain_dusk_penalty_min:
+                    parts.append(f"– {dl.terrain_dusk_penalty_min}min (Tal)")
+                if dl.weather_dusk_penalty_min:
+                    parts.append(f"– {dl.weather_dusk_penalty_min}min (Wolken)")
+                parts.append(f"= {local_fmt(dl.usable_end, tz)}")
+                lines.append(f"   {' '.join(parts)}")
+        else:
+            # No corrections — show base times for transparency
+            lines.append(
+                f"   Dämmerung {local_fmt(dl.civil_dawn, tz)} · "
+                f"Sonnenaufgang {local_fmt(dl.sunrise, tz)} · "
+                f"Sonnenuntergang {local_fmt(dl.sunset, tz)}"
+            )
+        return "\n".join(lines)
+    def _render_html_table(self, rows: list[dict]) -> str:
+        """Render an HTML table from row dicts."""
+        if not rows:
+            return "<p>Keine Daten</p>"
+        cols = self._visible_cols(rows)
+        # Header
+        ths = "<th>Time</th>" + "".join(f"<th>{label}</th>" for _, label in cols)
+        # Rows
+        trs = []
+        for r in rows:
+            tds = f"<td>{r['time']}</td>"
+            for key, _ in cols:
+                tds += f"<td>{self._fmt_val(key, r.get(key), html=True, row=r)}</td>"
+            trs.append(f"<tr>{tds}</tr>")
+        return f"<table><tr>{ths}</tr>{''.join(trs)}</table>"
     @staticmethod
     def _shorten_stage_name(name: str, max_len: int = 25) -> str:
         """Shorten stage name like 'Tag 3: von Sóller nach Tossals Verds' → 'Sóller → Tossals Verds'."""
@@ -579,3 +927,33 @@ class TripReportFormatter:
             short = f"{m.group(1)} → {m.group(2)}"
             return short[:max_len] if len(short) > max_len else short
         return name[:max_len] if len(name) > max_len else name
+
+    def _render_text_table(self, rows: list[dict]) -> str:
+        """Render a plain-text table from row dicts."""
+        if not rows:
+            return "  (keine Daten)"
+        cols = self._visible_cols(rows)
+        # Compute column widths
+        headers = [("Time", "time")] + [(label, key) for key, label in cols]
+        widths = []
+        for label, key in headers:
+            w = len(label)
+            for r in rows:
+                val_str = self._fmt_val(key, r.get(key), row=r) if key != "time" else r["time"]
+                w = max(w, len(val_str))
+            widths.append(w + 1)
+
+        # Header line
+        hdr = "  ".join(h[0].ljust(w) for h, w in zip(headers, widths))
+        sep = "  ".join("-" * w for w in widths)
+        lines = [f"  {hdr}", f"  {sep}"]
+
+        # Data rows
+        for r in rows:
+            parts = []
+            for (label, key), w in zip(headers, widths):
+                val_str = r["time"] if key == "time" else self._fmt_val(key, r.get(key), row=r)
+                parts.append(val_str.ljust(w))
+            lines.append(f"  {'  '.join(parts)}")
+
+        return "\n".join(lines)

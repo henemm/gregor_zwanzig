@@ -121,20 +121,21 @@ class TestFmtValFriendlyVisibility:
 
     def test_friendly_enabled_good(self) -> None:
         fmt = _make_formatter(_make_display_config({"visibility": True}))
-        assert fmt._fmt_val("visibility", 15000) == "good"
+        assert fmt._fmt_val("visibility", 15000) == "15"
 
     def test_friendly_enabled_fair(self) -> None:
         fmt = _make_formatter(_make_display_config({"visibility": True}))
-        assert fmt._fmt_val("visibility", 5000) == "fair"
+        assert fmt._fmt_val("visibility", 5000) == "5.0"
 
     def test_friendly_enabled_poor(self) -> None:
         fmt = _make_formatter(_make_display_config({"visibility": True}))
-        assert fmt._fmt_val("visibility", 2000) == "poor"
+        assert fmt._fmt_val("visibility", 2000) == "2.0"
 
     def test_friendly_enabled_fog(self) -> None:
         fmt = _make_formatter(_make_display_config({"visibility": True}))
         result = fmt._fmt_val("visibility", 500)
-        assert "fog" in result
+        assert "fog" not in result
+        assert "0.5" in result
 
     def test_friendly_disabled_large(self) -> None:
         fmt = _make_formatter(_make_display_config({"visibility": False}))
