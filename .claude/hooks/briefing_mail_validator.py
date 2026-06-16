@@ -41,12 +41,28 @@ _MAX_BYTES_DEFAULT = 2048
 # --------------------------------------------------------------------------- #
 # Hilfsfunktionen
 # --------------------------------------------------------------------------- #
-def _distinct_hours(text: str) -> list[str]:
-    """Distinct HH:00-Treffer in Reihenfolge des ersten Auftretens."""
+def _distinct_hours(text: str, html: bool = False) -> list[str]:
+    """Distinct HH:00-Treffer in Reihenfolge des ersten Auftretens.
+
+    Fuer HTML (html=True) werden Pill-Zeiten (mitten im Text) ignoriert, indem
+    nur Treffer in <td> oder am Zeilenanfang (mobile <pre>) gewertet werden (#836).
+    """
     seen: list[str] = []
-    for m in _HOUR_RE.finditer(text):
-        if m.group(0) not in seen:
-            seen.append(m.group(0))
+    if html:
+        # Erfasst:
+        # 1. <td data-label="Time">HH:00</td>
+        # 2. <td>HH:00</td>
+        # 3. \n  HH:00   (mobile compact <pre>)
+        # 4. >HH:00 (Start einer Zelle ohne data-label, fail-soft)
+        pattern = re.compile(r'(?:data-label="Time">|<td>|>|(?:\n|^)\s*)([01]?\d|2[0-3]):00(?:\s|</td>|&nbsp;|<)')
+        for m in pattern.finditer(text):
+            h = f"{m.group(1)}:00"
+            if h not in seen:
+                seen.append(h)
+    else:
+        for m in _HOUR_RE.finditer(text):
+            if m.group(0) not in seen:
+                seen.append(m.group(0))
     return seen
 
 
@@ -55,7 +71,7 @@ def _has_hourly_table(text: str) -> bool:
 
     HTML (full): jede Zelle, daher der breite \\bHH:00\\b-Treffer.
     """
-    return len(_distinct_hours(text)) >= 2
+    return len(_distinct_hours(text, html=True)) >= 2
 
 
 def _has_hourly_table_plain(text: str) -> bool:
@@ -121,7 +137,7 @@ def _check_plausibility(html: str) -> list[str]:
         if lo > hi:
             errors.append(f"FULL: Temperatur-Range unplausibel ({lo}°C > {hi}°C)")
 
-    hours = _distinct_hours(html)
+    hours = _distinct_hours(html, html=True)
     for hour in hours:
         h = int(hour.split(":")[0])
         if h < 6 or h > 22:

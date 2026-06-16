@@ -161,13 +161,14 @@ class SegmentWeatherService:
         # segment hours. Unfiltered timeseries is kept for table display.
         seg_start_h = segment.start_time.hour
         seg_end_h = segment.end_time.hour
-        # Bug #399: Mitternachts-Übergang (start_h > end_h, z. B. 23…01) wrap-fähig.
+        # Bug #806: Randstunde exklusiv am Ende (< seg_end_h), damit jede Stunde
+        # genau einem Segment gehört (Vermeidung von Widersprüchen bei Start-Punkt-Sampling).
         filtered_data = [
             dp for dp in timeseries.data
             if (
-                (seg_start_h <= dp.ts.hour <= seg_end_h)
+                (seg_start_h <= dp.ts.hour < seg_end_h)
                 if seg_start_h <= seg_end_h
-                else (dp.ts.hour >= seg_start_h or dp.ts.hour <= seg_end_h)
+                else (dp.ts.hour >= seg_start_h or dp.ts.hour < seg_end_h)
             )
         ]
         from app.models import NormalizedTimeseries as NTS

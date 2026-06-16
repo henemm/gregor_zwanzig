@@ -233,10 +233,10 @@ class TestAC3HelperValues:
         # Erwartung: min=8°C, max=15°C; t2m_c-Maximum bei h=10 UTC → 12:00 CEST
         pills = build_metrics_summary_pills(segs, ["temperature"], {}, tz=TZ)
         texts = [t for t, _ in pills]
-        # Pille enthält Minimaltemperatur
+        # Pille enthält Minimaltemperatur: min(8, 9, 11, 12) = 8
         assert any("8" in t for t in texts), f"8°C (min) nicht in Pillen: {texts}"
-        # Pille enthält Maximaltemperatur
-        assert any("15" in t for t in texts), f"15°C (max) nicht in Pillen: {texts}"
+        # Pille enthält Maximaltemperatur: max(8, 9, 11, 12) = 12 (15 fällt weg, da 15 Uhr außerhalb des Fensters)
+        assert any("12" in t for t in texts), f"12°C (max) nicht in Pillen: {texts}"
 
     def test_temperature_tone_is_info(self):
         """Issue #795: temperature ist Klasse 2 (Bereich) → neutraler Tone.
@@ -256,12 +256,12 @@ class TestAC3HelperValues:
         )
 
     def test_precipitation_pill_with_rain(self):
-        """precipitation-Pille bei Regen: enthält Summe '6 mm'."""
+        """precipitation-Pille bei Regen: enthält Summe '4 mm'."""
         from output.renderers.email.helpers import build_metrics_summary_pills
         segs = _build_segments()
         pills = build_metrics_summary_pills(segs, ["precipitation"], {}, tz=TZ)
         texts = [t for t, _ in pills]
-        assert any("6" in t for t in texts), f"6 mm nicht in Pillen: {texts}"
+        assert any("4" in t for t in texts), f"4 mm nicht in Pillen: {texts}"
 
     def test_gust_pill_has_max_value(self):
         """gust-Pille: max Böe = 40 km/h muss enthalten sein."""

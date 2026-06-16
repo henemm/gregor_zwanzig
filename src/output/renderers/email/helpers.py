@@ -1202,10 +1202,19 @@ def build_metrics_summary_pills(
     """
     # Collect all data-points from all segments
     all_dps = []
-    for seg in segments:
-        ts = getattr(seg, "timeseries", None)
+    for seg_data in segments:
+        ts = getattr(seg_data, "timeseries", None)
         if ts is not None:
-            all_dps.extend(ts.data)
+            # Bug #807: Filter data points to segment window.
+            # Mirror Bug #806 logic (inclusive start, exclusive end).
+            s = seg_data.segment
+            s_h = s.start_time.hour
+            e_h = s.end_time.hour
+            for dp in ts.data:
+                h = dp.ts.hour
+                include = (s_h <= h < e_h) if s_h <= e_h else (h >= s_h or h < e_h)
+                if include:
+                    all_dps.append(dp)
 
     # Render in catalog order
     ids_set = set(metric_ids)

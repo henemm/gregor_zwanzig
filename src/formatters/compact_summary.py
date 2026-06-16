@@ -102,9 +102,18 @@ class CompactSummaryFormatter:
     @staticmethod
     def _collect_hourly_data(segments: list[SegmentWeatherData]) -> list[ForecastDataPoint]:
         points: list[ForecastDataPoint] = []
-        for seg in segments:
-            if seg.timeseries and seg.timeseries.data:
-                points.extend(seg.timeseries.data)
+        for seg_data in segments:
+            if seg_data.timeseries and seg_data.timeseries.data:
+                # Bug #807: Filter data points to segment window.
+                # Mirror Bug #806 logic (inclusive start, exclusive end).
+                s = seg_data.segment
+                s_h = s.start_time.hour
+                e_h = s.end_time.hour
+                for dp in seg_data.timeseries.data:
+                    h = dp.ts.hour
+                    include = (s_h <= h < e_h) if s_h <= e_h else (h >= s_h or h < e_h)
+                    if include:
+                        points.append(dp)
         points.sort(key=lambda dp: dp.ts)
         return points
 

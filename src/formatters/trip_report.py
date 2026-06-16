@@ -234,8 +234,9 @@ class TripReportFormatter:
         rows = []
         for dp in seg_data.timeseries.data:
             h = dp.ts.hour
-            # Bug #399: Mitternachts-Übergang (start_h > end_h, z. B. 23…01).
-            include = (start_h <= h <= end_h) if start_h <= end_h else (h >= start_h or h <= end_h)
+            # Bug #806: Randstunde exklusiv am Ende (< end_h), damit jede Stunde
+            # genau einem Segment gehört (Vermeidung von Widersprüchen).
+            include = (start_h <= h < end_h) if start_h <= end_h else (h >= start_h or h < end_h)
             if include:
                 rows.append(self._dp_to_row(dp, dc))
         return rows

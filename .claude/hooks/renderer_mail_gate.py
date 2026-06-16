@@ -113,7 +113,30 @@ def _staged_mail_hash(repo: Path, staged: list[str]) -> str:
     return h.hexdigest()
 
 
-def _active_workflow_name() -> str:
+def _active_workflow_name(shared: Path) -> str:
+    """Resolve the active workflow name for THIS session.
+
+    Order:
+    1. CLAUDE_CODE_SESSION_ID -> session_workflows.json (per-session, live)
+    2. GZ_ACTIVE_WORKFLOW env var (legacy/fallback)
+
+    Mirrors workflow.py._active_name and scope_guard.py._resolve_workflow_name.
+    """
+    sid = (os.environ.get("GZ_HOOK_SESSION_ID", "").strip()
+           or os.environ.get("CLAUDE_CODE_SESSION_ID", "").strip())
+    if sid:
+        try:
+            reg_file = shared / ".claude" / "session_workflows.json"
+            if reg_file.exists():
+                reg = json.loads(reg_file.read_text())
+                name = reg.get(sid)
+                if name and (
+                    (shared / ".claude" / "workflows" / f"{name}.json").exists()
+                    or (shared / ".claude" / "workflows" / "_archive" / f"{name}.json").exists()
+                ):
+                    return name
+        except (OSError, json.JSONDecodeError):
+            pass
     return os.environ.get("GZ_ACTIVE_WORKFLOW", "").strip()
 
 
@@ -122,17 +145,14 @@ def _state_path(repo: Path, name: str) -> Path:
 
 
 def _read_tool_input() -> dict:
-    raw = os.environ.get("CLAUDE_TOOL_INPUT", "")
+    raw = (os.environ.get("GZ_HOOK_TOOL_INPUT", "").strip()
+           or os.environ.get("CLAUDE_TOOL_INPUT", "").strip())
     if raw:
         try:
             return json.loads(raw)
         except json.JSONDecodeError:
             pass
-    try:
-        data = json.load(sys.stdin)
-        return data.get("tool_input", data)
-    except Exception:
-        return {}
+    return {}
 
 
 def _max_mail_mtime(repo: Path, staged: list[str]) -> float:
@@ -345,7 +365,23 @@ def _do_hook(repo: Path, shared: Path, name: str) -> None:
 def main() -> None:
     repo = _repo_root()
     shared = _shared_repo_root()
-    name = _active_workflow_name()
+
+    # Initialisiere session_id aus stdin falls vorhanden (AC-1)
+    if not os.environ.get("CLAUDE_TOOL_INPUT"):
+        try:
+            if not sys.stdin.isatty():
+                data = json.load(sys.stdin)
+                sid = (data.get("session_id") or "").strip()
+                if sid:
+                    os.environ["GZ_HOOK_SESSION_ID"] = sid
+                # Packe tool_input in env damit _read_tool_input es findet
+                ti = data.get("tool_input", data)
+                if ti:
+                    os.environ["GZ_HOOK_TOOL_INPUT"] = json.dumps(ti)
+        except (json.JSONDecodeError, EOFError, Exception):
+            pass
+
+    name = _active_workflow_name(shared)
     if len(sys.argv) > 1 and sys.argv[1] == "record-matrix":
         _do_record(repo, shared, name)
     else:

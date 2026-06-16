@@ -226,3 +226,5 @@ class EmailOutput:
                     # Last attempt failed
                     logger.error(f"Email send failed after {max_attempts} attempts: {e}")
                     raise OutputError("email", f"Connection error: {e}")
+
+# test
