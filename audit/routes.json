@@ -1,0 +1,26 @@
+{
+  "public": [
+    { "path": "/login", "slug": "login", "auth": false },
+    { "path": "/register", "slug": "register", "auth": false },
+    { "path": "/forgot-password", "slug": "forgot-password", "auth": false }
+  ],
+  "authenticated": [
+    { "path": "/", "slug": "home", "auth": true },
+    { "path": "/trips", "slug": "trips", "auth": true },
+    { "path": "/trips/new", "slug": "trips-new", "auth": true },
+    { "path": "/trips/gr221-mallorca", "slug": "trip-detail", "auth": true },
+    { "path": "/trips/gr221-mallorca/edit", "slug": "trip-edit", "auth": true },
+    { "path": "/compare", "slug": "compare", "auth": true },
+    { "path": "/locations", "slug": "locations", "auth": true },
+    { "path": "/account", "slug": "account", "auth": true },
+    { "path": "/subscriptions", "slug": "subscriptions", "auth": true },
+    { "path": "/weather", "slug": "weather", "auth": true },
+    { "path": "/gpx-upload", "slug": "gpx-upload", "auth": true }
+  ],
+  "viewports": [
+    { "name": "375x667", "width": 375, "height": 667, "label": "iPhone SE" },
+    { "name": "390x844", "width": 390, "height": 844, "label": "iPhone 14" },
+    { "name": "414x896", "width": 414, "height": 896, "label": "iPhone 11 Pro Max" },
+    { "name": "768x1024", "width": 768, "height": 1024, "label": "iPad mini" }
+  ]
+}

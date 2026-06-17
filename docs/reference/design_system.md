@@ -1,8 +1,35 @@
 # Design-System Gregor 20 — Referenz
 
-**Stand:** 2026-05-16 · **Quelle:** Anthropic-Artifact „Gregor 20 — Redesign v2.html" · **Status:** Referenz, synchron mit `frontend/src/app.css` (Issue #213)
+**Stand:** 2026-05-20 · **Quelle:** Anthropic-Artifact „Gregor 20 — Redesign v2.html" + „Gregor 20 — Mobile v1.html" · **Status:** Referenz, synchron mit `frontend/src/app.css` (Issue #213)
 
 Single Source of Truth für visuelle Sprache, Tokens und Komponenten-Verträge. Das Begleit-CSS liegt unter `design_system_tokens.css` und kann 1:1 in `frontend/src/app.css` übernommen werden (siehe Drift-Hinweise am Ende).
+
+## Mobile-Erweiterung v1
+
+**Quelle:** `docs/design/mobile/` (Handoff aus Claude Design, 2026-05-18)
+
+Die Mobile-Referenz erweitert dieses Design-System um 375-px-Primärdesigns für alle Hauptscreens. Sie ist **reine Erweiterung** — keine neuen Tokens, keine neue visuelle Sprache.
+
+| Datei | Inhalt |
+|---|---|
+| `docs/design/mobile/README.md` | Regeln, Breakpoints, SvelteKit-Übersetzungs-Schritte |
+| `docs/design/mobile/mobile-shell.jsx` | Pattern-Primitives: `TopAppBar`, `BottomNav`, `Drawer`, `BottomSheet`, `Toast`, `MInput`, `MBtn`, `MField`, `MSwitch`, `MTab` |
+| `docs/design/mobile/screen-*-mobile.jsx` | Mobile-Varianten aller 11 Screens |
+| `docs/design/mobile/Gregor 20 - Mobile v1.html` | Design-Canvas mit allen Screens auf einen Blick |
+| `docs/design/mobile/tokens-reference.css` | Identische Token-Quelle (Referenz, nicht produktiv) |
+
+**Breakpoints:**
+- `≤ 899 px` → Mobile (Primärziel 375, sekundär 414)
+- `600–899 px` → Mobile-Wide / kleine Tablets (768 px)
+- `≥ 900 px` → Desktop
+
+**Mobile-Komponenten-Konvention:**
+- Desktop-Atoms: `Card`, `Pill`, `Eyebrow`, `Btn`, `ElevSparkline`, `WIcon`, `Dot`
+- Mobile-Erweiterungen (M-Suffix): `MBtn`, `MInput`, `MField`, `MSwitch`, `MTab`, `MIcon`
+- Touch-Target-Mindestgröße: 44 × 44 px (`MBtn` Default `size="lg"` = 48 px)
+- Input-Body-Font: ≥ 16 px (iOS-Auto-Zoom-Schutz)
+
+**Offene Issues (Mobile-Audit 2026-05-20):** #267 (critical), #268–#270 (high), #271–#273 (medium), #274 (low)
 
 ---
 
