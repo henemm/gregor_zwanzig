@@ -20,11 +20,9 @@ import sys
 import re
 from pathlib import Path
 
-try:
-    from config_loader import load_config, get_project_root
-except ImportError:
-    sys.path.insert(0, str(Path(__file__).parent))
-    from config_loader import load_config, get_project_root
+sys.path.insert(0, str(Path(__file__).parent))
+import _bootstrap  # noqa: F401
+from config_loader import load_config, get_project_root
 
 
 def check_file_size():

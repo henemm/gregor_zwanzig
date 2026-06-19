@@ -18,15 +18,11 @@ import sys
 import re
 from pathlib import Path
 
-try:
-    from config_loader import (
-        load_config, get_project_root, get_specs_config, get_protected_paths
-    )
-except ImportError:
-    sys.path.insert(0, str(Path(__file__).parent))
-    from config_loader import (
-        load_config, get_project_root, get_specs_config, get_protected_paths
-    )
+sys.path.insert(0, str(Path(__file__).parent))
+import _bootstrap  # noqa: F401
+from config_loader import (
+    load_config, get_project_root, get_specs_config, get_protected_paths
+)
 
 
 def get_spec_type_for_path(file_path: str) -> str | None:
