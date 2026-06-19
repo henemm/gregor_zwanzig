@@ -206,7 +206,8 @@ def render_plain(
         if seg.segment_id == "Ziel":
             lines.append(f"━━ \U0001f3c1 Wetter am Ziel: {local_fmt(seg.start_time, tz)}–{local_fmt(seg.end_time, tz)} | {s_elev}m ━━")
         else:
-            lines.append(f"━━ Segment {seg.segment_id}: km {seg.start_point.distance_from_start_km:.1f}–{seg.end_point.distance_from_start_km:.1f} | {local_fmt(seg.start_time, tz)}–{local_fmt(seg.end_time, tz)} | ↑{s_elev}m → {e_elev}m ━━")
+            elev_arrow = "↑" if e_elev >= s_elev else "↓"
+            lines.append(f"━━ Segment {seg.segment_id}: km {seg.start_point.distance_from_start_km:.1f}–{seg.end_point.distance_from_start_km:.1f} | {local_fmt(seg.start_time, tz)}–{local_fmt(seg.end_time, tz)} | {elev_arrow}{s_elev}m → {e_elev}m ━━")
         lines.append(_render_text_table(rows, friendly_keys=friendly_keys, format_modes=format_modes))
         lines.append("")
 

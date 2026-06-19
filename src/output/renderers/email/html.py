@@ -333,12 +333,13 @@ def render_html(
                 + "</div>"
             )
         else:
+            elev_arrow = "↑" if e_elev >= s_elev else "↓"
             seg_header = (
                 "Segment " + str(seg.segment_id) + ": "
                 + f"km {seg.start_point.distance_from_start_km:.1f}–{seg.end_point.distance_from_start_km:.1f}"
                 + " | " + local_fmt(seg.start_time, tz)
                 + "–" + local_fmt(seg.end_time, tz)
-                + " | ↑" + str(s_elev) + "m → " + str(e_elev) + "m"
+                + " | " + elev_arrow + str(s_elev) + "m → " + str(e_elev) + "m"
             )
             desktop_div = (
                 '<div class="section desktop-only">'

@@ -1065,10 +1065,10 @@ def _pill_for_metric(
         return (f"UV bis {max_v}", _PILL_NEUTRAL_TONE)
 
     if metric_id == "sunshine":
-        total = sum(
-            (dp._sunny_hours if hasattr(dp, "_sunny_hours") else 0.0)
-            for dp in all_dps
-        )
+        from services.weather_metrics import WeatherMetricsService
+        total = WeatherMetricsService.calculate_sunny_hours(all_dps)
+        if not all_dps or total == 0:
+            return None
         return (f"Sonne {int(round(total * 60))} min", _PILL_NEUTRAL_TONE)
 
     # ---- Klasse 1 — Ereignis-Metriken (mit Uhrzeit, Ampel-gefaerbt) ----
