@@ -21,19 +21,28 @@ import re
 from pathlib import Path
 from datetime import datetime
 
-HOOKS_DIR = Path(__file__).resolve().parent
+def _find_plugin_hooks() -> Path:
+    """Find plugin's core/hooks dir (contains config_loader.py, workflow.py, etc.)."""
+    pr = os.environ.get("CLAUDE_PLUGIN_ROOT", "").strip().rstrip("/")
+    if pr:
+        candidate = Path(pr) / "core" / "hooks"
+        if candidate.exists():
+            return candidate
+    for known in [Path("/home/hem/agent-os-openspec/core/hooks")]:
+        if known.exists():
+            return known
+    return Path(__file__).resolve().parent
 
-try:
-    from config_loader import (
-        load_config, get_state_file_path, get_approval_phrases
-    )
-    from workflow_state_multi import load_state, save_state, set_phase
-except ImportError:
-    sys.path.insert(0, str(HOOKS_DIR))
-    from config_loader import (
-        load_config, get_state_file_path, get_approval_phrases
-    )
-    from workflow_state_multi import load_state, save_state, set_phase
+HOOKS_DIR = Path(__file__).resolve().parent
+_plugin_hooks = _find_plugin_hooks()
+for _p in [str(HOOKS_DIR), str(_plugin_hooks)]:
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
+
+from config_loader import (  # noqa: E402
+    load_config, get_state_file_path, get_approval_phrases
+)
+from workflow_state_multi import load_state, save_state, set_phase  # noqa: E402
 
 
 def _starts_with_command(message: str, phrases) -> bool:

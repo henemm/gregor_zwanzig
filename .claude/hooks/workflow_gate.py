@@ -22,23 +22,28 @@ import sys
 import re
 from pathlib import Path
 
-# Import shared config loader
-try:
-    from config_loader import (
-        load_config, get_state_file_path, get_project_root,
-        get_protected_paths, get_always_allowed,
-        get_ac_format_required_since,
-    )
-    from workflow_state_multi import load_state as _load_state_v3, read_active_workflow_fast
-except ImportError:
-    # Fallback for direct execution
-    sys.path.insert(0, str(Path(__file__).parent))
-    from config_loader import (
-        load_config, get_state_file_path, get_project_root,
-        get_protected_paths, get_always_allowed,
-        get_ac_format_required_since,
-    )
-    from workflow_state_multi import load_state as _load_state_v3, read_active_workflow_fast
+def _find_plugin_hooks() -> Path:
+    pr = os.environ.get("CLAUDE_PLUGIN_ROOT", "").strip().rstrip("/")
+    if pr:
+        candidate = Path(pr) / "core" / "hooks"
+        if candidate.exists():
+            return candidate
+    for known in [Path("/home/hem/agent-os-openspec/core/hooks")]:
+        if known.exists():
+            return known
+    return Path(__file__).resolve().parent
+
+_ph = _find_plugin_hooks()
+for _p in [str(Path(__file__).parent), str(_ph)]:
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
+
+from config_loader import (  # noqa: E402
+    load_config, get_state_file_path, get_project_root,
+    get_protected_paths, get_always_allowed,
+    get_ac_format_required_since,
+)
+from workflow_state_multi import load_state as _load_state_v3, read_active_workflow_fast  # noqa: E402
 
 
 def _spec_has_valid_ac_format(spec_path: Path, stichtag: str | None) -> tuple[bool, str]:

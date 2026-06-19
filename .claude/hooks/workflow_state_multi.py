@@ -21,8 +21,19 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-# Ensure sibling modules are importable
-_HOOKS_DIR = Path(__file__).resolve().parent
+def _find_plugin_hooks() -> Path:
+    """Find plugin's core/hooks dir (contains workflow.py, config_loader.py, etc.)."""
+    pr = os.environ.get("CLAUDE_PLUGIN_ROOT", "").strip().rstrip("/")
+    if pr:
+        candidate = Path(pr) / "core" / "hooks"
+        if candidate.exists():
+            return candidate
+    for known in [Path("/home/hem/agent-os-openspec/core/hooks")]:
+        if known.exists():
+            return known
+    return Path(__file__).resolve().parent
+
+_HOOKS_DIR = _find_plugin_hooks()
 if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
@@ -36,7 +47,7 @@ PHASES = _w.PHASES
 
 PHASE_NAMES = _w.PHASE_NAMES
 
-BACKLOG_STATUSES = _w.BACKLOG_STATUSES
+BACKLOG_STATUSES = getattr(_w, "BACKLOG_STATUSES", ["open", "spec_ready", "in_progress", "done", "blocked"])
 
 BACKLOG_STATUS_NAMES = {
     "open": "Open",
@@ -46,7 +57,13 @@ BACKLOG_STATUS_NAMES = {
     "blocked": "Blocked",
 }
 
-PHASE_TO_BACKLOG_STATUS = _w.PHASE_TO_BACKLOG_STATUS
+PHASE_TO_BACKLOG_STATUS = getattr(_w, "PHASE_TO_BACKLOG_STATUS", {
+    "phase0_idle": "open", "phase1_context": "open", "phase2_analyse": "open",
+    "phase3_spec": "open", "phase4_approved": "spec_ready",
+    "phase5_tdd_red": "in_progress", "phase6_implement": "in_progress",
+    "phase6b_adversary": "in_progress", "phase7_validate": "in_progress",
+    "phase8_complete": "done",
+})
 
 PAUSE_PHRASES = [
     "ich höre hier auf",
@@ -63,9 +80,11 @@ PAUSE_PHRASES = [
     "continue later",
 ]
 
-CODE_MODIFY_PHASES = _w.CODE_MODIFY_PHASES
+CODE_MODIFY_PHASES = getattr(_w, "CODE_MODIFY_PHASES",
+    ["phase6_implement", "phase6b_adversary", "phase7_validate", "phase8_complete"])
 
-TEST_REQUIRED_PHASES = _w.TEST_REQUIRED_PHASES
+TEST_REQUIRED_PHASES = getattr(_w, "TEST_REQUIRED_PHASES",
+    ["phase6_implement", "phase7_validate"])
 
 
 # --- Path helper (kept for callers that import it) ---------------------
