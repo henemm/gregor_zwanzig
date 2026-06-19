@@ -1,0 +1,31 @@
+RED-Nachweis Bug #626 — Compare-Listen-Menü-Aktionen
+node:test gegen compareActions() in subscriptionHelpers.ts
+Workflow: bug-626-compare-menu-actions
+========================================================
+
+VORHER (rot, 5 Failures von 14):
+
+not ok 2 - pause-Item hat label "Aktivieren" bei Status paused
+  compareActions("paused").pause.label muss "Aktivieren" sein, ist aber "Pausieren"
+
+not ok 1 - compareActions("active") enthält KEIN Item mit id="send"
+  compareActions("active") darf kein "send"-Item enthalten (verschoben nach #627)
+  actual: { id: 'send', label: 'Briefing jetzt senden' }
+
+not ok 2 - compareActions("paused") enthält KEIN Item mit id="send"
+  compareActions("paused") darf kein "send"-Item enthalten
+
+not ok 5 - compareActions("active") liefert genau 5 Einträge (ohne send)
+  6 !== 5
+
+not ok 6 - compareActions("paused") liefert genau 5 Einträge
+  6 !== 5
+
+# tests 14 / pass 9 / fail 5
+
+NACHHER (grün nach Implementierung):
+# tests 14 / pass 14 / fail 0
+Kombiniert mit #488-Tests: 42/42 pass, 0 fail.
+
+Beweist AC-2 (dynamisches Label) + AC-6 (send entfernt) rot-vor-Fix / grün-nach-Fix.
+Navigations-/Toggle-ACs (AC-1/3/4/5) werden per Playwright gegen Staging verifiziert.

@@ -1,0 +1,81 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+______________ TestEmailSubject.test_subject_is_wetter_vergleich _______________
+
+self = <tdd.test_sport_aware_scoring.TestEmailSubject object at 0x7c8d8b99e4e0>
+
+    def test_subject_is_wetter_vergleich(self):
+        """
+        GIVEN: run_comparison_for_subscription
+        WHEN: Generating email
+        THEN: Subject starts with 'Wetter-Vergleich' not 'Ski Resort'
+        """
+        from services.compare_subscription import run_comparison_for_subscription
+        from app.user import CompareSubscription, Schedule
+    
+        sub = CompareSubscription(
+            id="test-subject",
+            name="Test",
+            locations=[],
+            schedule=Schedule.DAILY_MORNING,
+        )
+>       subject, _, _, _ = run_comparison_for_subscription(sub)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sport_aware_scoring.py:308: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+sub = CompareSubscription(id='test-subject', name='Test', enabled=True, locations=[], forecast_hours=48, time_window_start=9...splay_config=None, activity_profile=None, recipients=[], last_run=None, last_status=None, top_ort_letzter_versand=None)
+all_locations = []
+
+    def run_comparison_for_subscription(
+        sub: "CompareSubscription",
+        all_locations: "List[SavedLocation] | None" = None,
+    ) -> tuple[str, str, str, str | None]:
+        """
+        Run a comparison for a subscription and generate email content.
+    
+        Uses ComparisonEngine (single processor) and both renderers
+        to ensure identical content in Web UI and Email.
+    
+        Args:
+            sub: CompareSubscription configuration
+            all_locations: Optional pre-loaded locations list
+    
+        Returns:
+            Tuple of (subject, html_body, text_body, winner_name) for the email.
+            winner_name is the location name of the top-ranked location (Issue #456),
+            or None if no unique winner could be determined.
+        """
+        from datetime import date, datetime, timedelta
+    
+        from app.loader import load_all_locations
+        from app.user import Schedule
+    
+        # Imports from extracted service modules (Epic #129 Phase A.1)
+        # Issue #253: HTML-Renderer kommt jetzt aus output.renderers.email.compare_html;
+        # Plain-Text-Renderer bleibt comparison_renderers.render_comparison_text.
+        from output.renderers.email.compare_html import (
+            _generate_winner_tags,
+            render_compare_html,
+        )
+        from services.comparison_engine import ComparisonEngine
+        from services.comparison_renderers import render_comparison_text
+    
+        # Load locations if not provided
+        if all_locations is None:
+            all_locations = load_all_locations()
+    
+        # Determine which locations to compare
+        if sub.locations == ["*"] or not sub.locations:
+            selected_locs = all_locations
+        else:
+            selected_locs = [loc for loc in all_locations if loc.id in sub.locations]
+    
+        if not selected_locs:
+>           raise ValueError("No locations found for subscription")
+E           ValueError: No locations found for subscription
+
+src/services/compare_subscription.py:62: ValueError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_sport_aware_scoring.py::TestEmailSubject::test_subject_is_wetter_vergleich

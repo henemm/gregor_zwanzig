@@ -1,0 +1,150 @@
+FFFF.                                                                    [100%]
+=================================== FAILURES ===================================
+____ TestMobileMonospaceGridAlignment.test_all_lines_equal_character_length ____
+
+self = <tdd.test_bug_636_mobile_email_monospace_grid.TestMobileMonospaceGridAlignment object at 0x7d976e3514f0>
+
+    def test_all_lines_equal_character_length(self):
+        """
+        AC-1 + AC-3: Im Monospace-Block haben Header- und ALLE Datenzeilen exakt
+        dieselbe Zeichenlänge → jede Spalte hat über alle Zeilen eine feste Breite
+        und fluchtet vertikal.
+    
+        GIVEN Rows mit unterschiedlich breiten Rohwerten (14.4 vs 8.1, "23 NE" vs "5")
+        WHEN _render_mobile_compact_rows(..., include_header=True) gerendert wird
+        THEN haben alle Text-Zeilen (Header + Daten) identische Zeichenlänge.
+        """
+        from output.renderers.email.html import _render_mobile_compact_rows
+    
+        result = _render_mobile_compact_rows(
+            _ROWS_VARYING_WIDTHS,
+            friendly_keys=set(),
+            include_header=True,
+        )
+        lines = _monospace_lines(result)
+>       assert len(lines) >= 4, (
+            f"Erwartet Header + 3 Datenzeilen, bekam {len(lines)} Zeilen:\n"
+            + "\n".join(repr(l) for l in lines)
+        )
+E       AssertionError: Erwartet Header + 3 Datenzeilen, bekam 1 Zeilen:
+E         'ZeitTemp · Wind · Rain0814.4 · 23 NE · 0.0098.1 · 51018.0 · 11 SE · 2.5'
+E       assert 1 >= 4
+E        +  where 1 = len(['ZeitTemp · Wind · Rain0814.4 · 23 NE · 0.0098.1 · 51018.0 · 11 SE · 2.5'])
+
+tests/tdd/test_bug_636_mobile_email_monospace_grid.py:112: AssertionError
+_ TestMobileMonospaceGridAlignment.test_empty_cell_renders_placeholder_no_left_shift _
+
+self = <tdd.test_bug_636_mobile_email_monospace_grid.TestMobileMonospaceGridAlignment object at 0x7d976ca8ccb0>
+
+    def test_empty_cell_renders_placeholder_no_left_shift(self):
+        """
+        AC-2: Die Row mit precip=None (leere Zelle) erzeugt einen Platzhalter auf
+        voller Spaltenbreite und wird NICHT gelöscht — kein Links-Shift.
+    
+        GIVEN Row 09 hat precip=None
+        WHEN gerendert wird
+        THEN ist die 09-Zeile genauso lang wie die 08-Zeile (kein Shift) UND
+             enthält den Platzhalter '–'.
+        """
+        from output.renderers.email.html import _render_mobile_compact_rows
+    
+        result = _render_mobile_compact_rows(
+            _ROWS_VARYING_WIDTHS,
+            friendly_keys=set(),
+            include_header=True,
+        )
+        lines = _monospace_lines(result)
+        line_08 = next((l for l in lines if "08" in l), None)
+        line_09 = next((l for l in lines if "09" in l), None)
+        assert line_08 is not None and line_09 is not None, (
+            f"Zeilen für 08/09 nicht gefunden:\n" + "\n".join(map(repr, lines))
+        )
+        assert len(line_08) == len(line_09), (
+            "FEHLER: Zeile mit leerer Zelle (09) ist anders lang als volle Zeile (08) "
+            f"→ Links-Shift. len(08)={len(line_08)} len(09)={len(line_09)}\n"
+            f"08: {line_08!r}\n09: {line_09!r}"
+        )
+>       assert "–" in line_09, (
+            f"FEHLER: Platzhalter '–' fehlt in der Zeile mit leerer Zelle: {line_09!r}"
+        )
+E       AssertionError: FEHLER: Platzhalter '–' fehlt in der Zeile mit leerer Zelle: 'ZeitTemp · Wind · Rain0814.4 · 23 NE · 0.0098.1 · 51018.0 · 11 SE · 2.5'
+E       assert '–' in 'ZeitTemp · Wind · Rain0814.4 · 23 NE · 0.0098.1 · 51018.0 · 11 SE · 2.5'
+
+tests/tdd/test_bug_636_mobile_email_monospace_grid.py:151: AssertionError
+______ TestMobileMonospaceGridAlignment.test_horizontal_scroll_container _______
+
+self = <tdd.test_bug_636_mobile_email_monospace_grid.TestMobileMonospaceGridAlignment object at 0x7d976ca8cc50>
+
+    def test_horizontal_scroll_container(self):
+        """
+        AC-4: Der Mobile-Block ist in einen horizontal scrollbaren Monospace-Container
+        gehüllt (overflow-x), damit viele Spalten nicht umbrechen.
+    
+        GIVEN der gerenderte Mobile-Block
+        WHEN das HTML untersucht wird
+        THEN enthält es einen overflow-x-Scroll-Container.
+        """
+        from output.renderers.email.html import _render_mobile_compact_rows
+    
+        result = _render_mobile_compact_rows(
+            _ROWS_VARYING_WIDTHS,
+            friendly_keys=set(),
+            include_header=True,
+        )
+>       assert "overflow-x" in result, (
+            "FEHLER: Kein horizontal scrollbarer Container (overflow-x) im "
+            f"Mobile-Block:\n{result[:400]!r}"
+        )
+E       AssertionError: FEHLER: Kein horizontal scrollbarer Container (overflow-x) im Mobile-Block:
+E         '<div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px solid #9c9a90;font-size:11px;font-weight:600;color:#5c5a52;"><span style="font-family:\'JetBrains Mono\', ui-monospace, \'SF Mono\', Menlo, Consolas, monospace;min-width:34px;flex-shrink:0">Zeit</span><span style="color:#1a1a18;">Temp · Wind · Rain</span></div><div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px solid #9c9a90'
+E       assert 'overflow-x' in '<div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px solid #9c9a90;font-size:11px;font-weight:600;color:#...x-shrink:0">10</span><span style="color:#1a1a18;line-height:1.5;word-break:break-word">18.0 · 11 SE · 2.5</span></div>'
+
+tests/tdd/test_bug_636_mobile_email_monospace_grid.py:171: AssertionError
+__________ TestMobileMonospaceGridAlignment.test_header_line_is_first __________
+
+self = <tdd.test_bug_636_mobile_email_monospace_grid.TestMobileMonospaceGridAlignment object at 0x7d976ca8ce60>
+
+    def test_header_line_is_first(self):
+        """
+        AC-1: Die Header-Zeile (mit Spalten-Labels) steht als erste Text-Zeile,
+        vor der ersten Datenzeile (08).
+    
+        GIVEN include_header=True
+        WHEN gerendert wird
+        THEN ist die erste Text-Zeile der Header (enthält KEINEN Stunden-Wert wie '08'),
+             die zweite Zeile beginnt die Daten.
+        """
+        from output.renderers.email.html import _render_mobile_compact_rows
+        from output.renderers.email.helpers import visible_cols
+    
+        result = _render_mobile_compact_rows(
+            _ROWS_VARYING_WIDTHS,
+            friendly_keys=set(),
+            include_header=True,
+        )
+        lines = _monospace_lines(result)
+        assert lines, "Kein Output"
+        header = lines[0]
+        cols = visible_cols(_ROWS_VARYING_WIDTHS)
+        labels = [lbl for _, lbl in cols]
+        assert labels, "visible_cols liefert keine Spalten"
+        for lbl in labels:
+            assert lbl in header, (
+                f"FEHLER: Header-Label '{lbl}' fehlt in der ersten Zeile: {header!r}"
+            )
+>       assert "08" not in header, (
+            f"FEHLER: Erste Zeile enthält bereits Daten (08) statt nur Header: {header!r}"
+        )
+E       AssertionError: FEHLER: Erste Zeile enthält bereits Daten (08) statt nur Header: 'ZeitTemp · Wind · Rain0814.4 · 23 NE · 0.0098.1 · 51018.0 · 11 SE · 2.5'
+E       assert '08' not in 'ZeitTemp · ... 11 SE · 2.5'
+E         
+E         '08' is contained here:
+E           ZeitTemp · Wind · Rain0814.4 · 23 NE · 0.0098.1 · 51018.0 · 11 SE · 2.5
+E         ?                       ++
+
+tests/tdd/test_bug_636_mobile_email_monospace_grid.py:204: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_bug_636_mobile_email_monospace_grid.py::TestMobileMonospaceGridAlignment::test_all_lines_equal_character_length
+FAILED tests/tdd/test_bug_636_mobile_email_monospace_grid.py::TestMobileMonospaceGridAlignment::test_empty_cell_renders_placeholder_no_left_shift
+FAILED tests/tdd/test_bug_636_mobile_email_monospace_grid.py::TestMobileMonospaceGridAlignment::test_horizontal_scroll_container
+FAILED tests/tdd/test_bug_636_mobile_email_monospace_grid.py::TestMobileMonospaceGridAlignment::test_header_line_is_first

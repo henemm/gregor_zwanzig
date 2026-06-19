@@ -1,0 +1,12 @@
+        """WeatherExtractor, dessen interner Snapshot-Service gegen tmp_path zeigt."""
+>       from services.weather_extractor import WeatherExtractor
+E       ModuleNotFoundError: No module named 'services.weather_extractor'
+
+tests/tdd/test_weather_extractor.py:95: ModuleNotFoundError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_weather_extractor.py::TestTimeline::test_timeline_one_point_per_waypoint
+FAILED tests/tdd/test_weather_extractor.py::TestDrilldown::test_drilldown_returns_hourly_series_of_single_metric
+FAILED tests/tdd/test_weather_extractor.py::TestDrilldown::test_drilldown_respects_hours_window
+FAILED tests/tdd/test_weather_extractor.py::TestEmptyState::test_timeline_missing_snapshot_returns_empty_state
+FAILED tests/tdd/test_weather_extractor.py::TestEmptyState::test_drilldown_without_hourly_returns_empty_state
+FAILED tests/tdd/test_weather_extractor.py::TestMultiUserIsolation::test_user_b_does_not_see_user_a_snapshot

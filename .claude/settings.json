@@ -143,7 +143,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/session_singleton_guard.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/session_singleton_guard.py\" guard; fi",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/core/hooks/session_singleton_guard.py guard",
             "timeout": 10
           }
         ]
@@ -158,7 +158,7 @@
           },
           {
             "type": "command",
-            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/session_singleton_guard.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/session_singleton_guard.py\" register; fi",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/core/hooks/session_singleton_guard.py register",
             "timeout": 10
           }
         ]

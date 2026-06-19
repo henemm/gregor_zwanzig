@@ -1,0 +1,374 @@
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF.....FFFFFFFFFFFFFF..FFFFF.FF..FFFF   [100%]
+=================================== FAILURES ===================================
+________________ TestFormatTrendTokens.test_function_importable ________________
+tests/tdd/test_issue_623_trend_channels.py:92: in test_function_importable
+    from src.output.renderers.email.helpers import format_trend_tokens  # noqa
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   ImportError: cannot import name 'format_trend_tokens' from 'src.output.renderers.email.helpers' (/home/hem/gregor_zwanzig/.claude/worktrees/idempotent-strolling-cray/src/output/renderers/email/helpers.py)
+__________________ TestFormatTrendTokens.test_temp_both_lo_hi __________________
+tests/tdd/test_issue_623_trend_channels.py:96: in test_temp_both_lo_hi
+    from src.output.renderers.email.helpers import format_trend_tokens
+E   ImportError: cannot import name 'format_trend_tokens' from 'src.output.renderers.email.helpers' (/home/hem/gregor_zwanzig/.claude/worktrees/idempotent-strolling-cray/src/output/renderers/email/helpers.py)
+___________________ TestFormatTrendTokens.test_temp_hi_only ____________________
+tests/tdd/test_issue_623_trend_channels.py:102: in test_temp_hi_only
+    from src.output.renderers.email.helpers import format_trend_tokens
+E   ImportError: cannot import name 'format_trend_tokens' from 'src.output.renderers.email.helpers' (/home/hem/gregor_zwanzig/.claude/worktrees/idempotent-strolling-cray/src/output/renderers/email/helpers.py)
+_____________________ TestFormatTrendTokens.test_temp_none _____________________
+tests/tdd/test_issue_623_trend_channels.py:108: in test_temp_none
+    from src.output.renderers.email.helpers import format_trend_tokens
+E   ImportError: cannot import name 'format_trend_tokens' from 'src.output.renderers.email.helpers' (/home/hem/gregor_zwanzig/.claude/worktrees/idempotent-strolling-cray/src/output/renderers/email/helpers.py)
+________________ TestFormatTrendTokens.test_precip_zero_is_dash ________________
+tests/tdd/test_issue_623_trend_channels.py:114: in test_precip_zero_is_dash
+    from src.output.renderers.email.helpers import format_trend_tokens
+E   ImportError: cannot import name 'format_trend_tokens' from 'src.output.renderers.email.helpers' (/home/hem/gregor_zwanzig/.claude/worktrees/idempotent-strolling-cray/src/output/renderers/email/helpers.py)
+__________________ TestFormatTrendTokens.test_precip_positive __________________
+tests/tdd/test_issue_623_trend_channels.py:120: in test_precip_positive
+    from src.output.renderers.email.helpers import format_trend_tokens
+E   ImportError: cannot import name 'format_trend_tokens' from 'src.output.renderers.email.helpers' (/home/hem/gregor_zwanzig/.claude/worktrees/idempotent-strolling-cray/src/output/renderers/email/helpers.py)
+____________ TestFormatTrendTokens.test_precip_highlight_above_1mm _____________
+tests/tdd/test_issue_623_trend_channels.py:126: in test_precip_highlight_above_1mm
+    from src.output.renderers.email.helpers import format_trend_tokens
+E   ImportError: cannot import name 'format_trend_tokens' from 'src.output.renderers.email.helpers' (/home/hem/gregor_zwanzig/.claude/worktrees/idempotent-strolling-cray/src/output/renderers/email/helpers.py)
+___________ TestFormatTrendTokens.test_precip_no_highlight_below_1mm ___________
+tests/tdd/test_issue_623_trend_channels.py:132: in test_precip_no_highlight_below_1mm
+    from src.output.renderers.email.helpers import format_trend_tokens
+E   ImportError: cannot import name 'format_trend_tokens' from 'src.output.renderers.email.helpers' (/home/hem/gregor_zwanzig/.claude/worktrees/idempotent-strolling-cray/src/output/renderers/email/helpers.py)
+______________ TestFormatTrendTokens.test_wind_highlight_above_30 ______________
+tests/tdd/test_issue_623_trend_channels.py:138: in test_wind_highlight_above_30
+    from src.output.renderers.email.helpers import format_trend_tokens
+E   ImportError: cannot import name 'format_trend_tokens' from 'src.output.renderers.email.helpers' (/home/hem/gregor_zwanzig/.claude/worktrees/idempotent-strolling-cray/src/output/renderers/email/helpers.py)
+______________ TestFormatTrendTokens.test_wind_no_highlight_at_30 ______________
+tests/tdd/test_issue_623_trend_channels.py:144: in test_wind_no_highlight_at_30
+    from src.output.renderers.email.helpers import format_trend_tokens
+E   ImportError: cannot import name 'format_trend_tokens' from 'src.output.renderers.email.helpers' (/home/hem/gregor_zwanzig/.claude/worktrees/idempotent-strolling-cray/src/output/renderers/email/helpers.py)
+_______________ TestFormatTrendTokens.test_wind_risk_flag_at_50 ________________
+tests/tdd/test_issue_623_trend_channels.py:150: in test_wind_risk_flag_at_50
+    from src.output.renderers.email.helpers import format_trend_tokens
+E   ImportError: cannot import name 'format_trend_tokens' from 'src.output.renderers.email.helpers' (/home/hem/gregor_zwanzig/.claude/worktrees/idempotent-strolling-cray/src/output/renderers/email/helpers.py)
+_______________ TestFormatTrendTokens.test_wind_no_risk_below_50 _______________
+tests/tdd/test_issue_623_trend_channels.py:156: in test_wind_no_risk_below_50
+    from src.output.renderers.email.helpers import format_trend_tokens
+E   ImportError: cannot import name 'format_trend_tokens' from 'src.output.renderers.email.helpers' (/home/hem/gregor_zwanzig/.claude/worktrees/idempotent-strolling-cray/src/output/renderers/email/helpers.py)
+_________________ TestFormatTrendTokens.test_thunder_none_word _________________
+tests/tdd/test_issue_623_trend_channels.py:163: in test_thunder_none_word
+    from src.output.renderers.email.helpers import format_trend_tokens
+E   ImportError: cannot import name 'format_trend_tokens' from 'src.output.renderers.email.helpers' (/home/hem/gregor_zwanzig/.claude/worktrees/idempotent-strolling-cray/src/output/renderers/email/helpers.py)
+_________________ TestFormatTrendTokens.test_thunder_med_word __________________
+tests/tdd/test_issue_623_trend_channels.py:169: in test_thunder_med_word
+    from src.output.renderers.email.helpers import format_trend_tokens
+E   ImportError: cannot import name 'format_trend_tokens' from 'src.output.renderers.email.helpers' (/home/hem/gregor_zwanzig/.claude/worktrees/idempotent-strolling-cray/src/output/renderers/email/helpers.py)
+_________________ TestFormatTrendTokens.test_thunder_high_word _________________
+tests/tdd/test_issue_623_trend_channels.py:175: in test_thunder_high_word
+    from src.output.renderers.email.helpers import format_trend_tokens
+E   ImportError: cannot import name 'format_trend_tokens' from 'src.output.renderers.email.helpers' (/home/hem/gregor_zwanzig/.claude/worktrees/idempotent-strolling-cray/src/output/renderers/email/helpers.py)
+____________ TestFormatTrendTokens.test_thunder_none_html_sq_color _____________
+tests/tdd/test_issue_623_trend_channels.py:181: in test_thunder_none_html_sq_color
+    from src.output.renderers.email.helpers import format_trend_tokens
+E   ImportError: cannot import name 'format_trend_tokens' from 'src.output.renderers.email.helpers' (/home/hem/gregor_zwanzig/.claude/worktrees/idempotent-strolling-cray/src/output/renderers/email/helpers.py)
+_____________ TestFormatTrendTokens.test_thunder_med_html_sq_color _____________
+tests/tdd/test_issue_623_trend_channels.py:187: in test_thunder_med_html_sq_color
+    from src.output.renderers.email.helpers import format_trend_tokens
+E   ImportError: cannot import name 'format_trend_tokens' from 'src.output.renderers.email.helpers' (/home/hem/gregor_zwanzig/.claude/worktrees/idempotent-strolling-cray/src/output/renderers/email/helpers.py)
+____________ TestFormatTrendTokens.test_thunder_high_html_sq_color _____________
+tests/tdd/test_issue_623_trend_channels.py:193: in test_thunder_high_html_sq_color
+    from src.output.renderers.email.helpers import format_trend_tokens
+E   ImportError: cannot import name 'format_trend_tokens' from 'src.output.renderers.email.helpers' (/home/hem/gregor_zwanzig/.claude/worktrees/idempotent-strolling-cray/src/output/renderers/email/helpers.py)
+______________ TestFormatTrendTokens.test_thunder_none_word_color ______________
+tests/tdd/test_issue_623_trend_channels.py:199: in test_thunder_none_word_color
+    from src.output.renderers.email.helpers import format_trend_tokens
+E   ImportError: cannot import name 'format_trend_tokens' from 'src.output.renderers.email.helpers' (/home/hem/gregor_zwanzig/.claude/worktrees/idempotent-strolling-cray/src/output/renderers/email/helpers.py)
+______________ TestFormatTrendTokens.test_thunder_med_word_color _______________
+tests/tdd/test_issue_623_trend_channels.py:205: in test_thunder_med_word_color
+    from src.output.renderers.email.helpers import format_trend_tokens
+E   ImportError: cannot import name 'format_trend_tokens' from 'src.output.renderers.email.helpers' (/home/hem/gregor_zwanzig/.claude/worktrees/idempotent-strolling-cray/src/output/renderers/email/helpers.py)
+______________ TestFormatTrendTokens.test_thunder_high_word_color ______________
+tests/tdd/test_issue_623_trend_channels.py:211: in test_thunder_high_word_color
+    from src.output.renderers.email.helpers import format_trend_tokens
+E   ImportError: cannot import name 'format_trend_tokens' from 'src.output.renderers.email.helpers' (/home/hem/gregor_zwanzig/.claude/worktrees/idempotent-strolling-cray/src/output/renderers/email/helpers.py)
+_____________ TestFormatTrendTokens.test_thunder_none_plain_token ______________
+tests/tdd/test_issue_623_trend_channels.py:217: in test_thunder_none_plain_token
+    from src.output.renderers.email.helpers import format_trend_tokens
+E   ImportError: cannot import name 'format_trend_tokens' from 'src.output.renderers.email.helpers' (/home/hem/gregor_zwanzig/.claude/worktrees/idempotent-strolling-cray/src/output/renderers/email/helpers.py)
+______________ TestFormatTrendTokens.test_thunder_med_plain_token ______________
+tests/tdd/test_issue_623_trend_channels.py:223: in test_thunder_med_plain_token
+    from src.output.renderers.email.helpers import format_trend_tokens
+E   ImportError: cannot import name 'format_trend_tokens' from 'src.output.renderers.email.helpers' (/home/hem/gregor_zwanzig/.claude/worktrees/idempotent-strolling-cray/src/output/renderers/email/helpers.py)
+_____________ TestFormatTrendTokens.test_thunder_high_plain_token ______________
+tests/tdd/test_issue_623_trend_channels.py:229: in test_thunder_high_plain_token
+    from src.output.renderers.email.helpers import format_trend_tokens
+E   ImportError: cannot import name 'format_trend_tokens' from 'src.output.renderers.email.helpers' (/home/hem/gregor_zwanzig/.claude/worktrees/idempotent-strolling-cray/src/output/renderers/email/helpers.py)
+___________ TestFormatTrendTokens.test_thunder_none_sms_token_absent ___________
+tests/tdd/test_issue_623_trend_channels.py:235: in test_thunder_none_sms_token_absent
+    from src.output.renderers.email.helpers import format_trend_tokens
+E   ImportError: cannot import name 'format_trend_tokens' from 'src.output.renderers.email.helpers' (/home/hem/gregor_zwanzig/.claude/worktrees/idempotent-strolling-cray/src/output/renderers/email/helpers.py)
+_______________ TestFormatTrendTokens.test_thunder_med_sms_token _______________
+tests/tdd/test_issue_623_trend_channels.py:241: in test_thunder_med_sms_token
+    from src.output.renderers.email.helpers import format_trend_tokens
+E   ImportError: cannot import name 'format_trend_tokens' from 'src.output.renderers.email.helpers' (/home/hem/gregor_zwanzig/.claude/worktrees/idempotent-strolling-cray/src/output/renderers/email/helpers.py)
+______________ TestFormatTrendTokens.test_thunder_high_sms_token _______________
+tests/tdd/test_issue_623_trend_channels.py:247: in test_thunder_high_sms_token
+    from src.output.renderers.email.helpers import format_trend_tokens
+E   ImportError: cannot import name 'format_trend_tokens' from 'src.output.renderers.email.helpers' (/home/hem/gregor_zwanzig/.claude/worktrees/idempotent-strolling-cray/src/output/renderers/email/helpers.py)
+___________________ TestFormatTrendTokens.test_no_low_level ____________________
+tests/tdd/test_issue_623_trend_channels.py:253: in test_no_low_level
+    from src.output.renderers.email.helpers import format_trend_tokens
+E   ImportError: cannot import name 'format_trend_tokens' from 'src.output.renderers.email.helpers' (/home/hem/gregor_zwanzig/.claude/worktrees/idempotent-strolling-cray/src/output/renderers/email/helpers.py)
+_______________ TestEmailTrendUnchanged.test_html_contains_temp ________________
+tests/tdd/test_issue_623_trend_channels.py:270: in test_html_contains_temp
+    html = _render_html([_trend_stage()])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/tdd/test_issue_623_trend_channels.py:41: in _render_html
+    return render_html(
+E   TypeError: render_html() got an unexpected keyword argument 'sent_at'
+_______ TestEmailTrendUnchanged.test_html_contains_precip_dash_for_zero ________
+tests/tdd/test_issue_623_trend_channels.py:275: in test_html_contains_precip_dash_for_zero
+    html = _render_html([_trend_stage(precip_mm=0)])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/tdd/test_issue_623_trend_channels.py:41: in _render_html
+    return render_html(
+E   TypeError: render_html() got an unexpected keyword argument 'sent_at'
+______ TestEmailTrendUnchanged.test_html_precip_highlight_color_above_1mm ______
+tests/tdd/test_issue_623_trend_channels.py:280: in test_html_precip_highlight_color_above_1mm
+    html = _render_html([_trend_stage(precip_mm=8.0)])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/tdd/test_issue_623_trend_channels.py:41: in _render_html
+    return render_html(
+E   TypeError: render_html() got an unexpected keyword argument 'sent_at'
+__________ TestEmailTrendUnchanged.test_html_wind_highlight_above_30 ___________
+tests/tdd/test_issue_623_trend_channels.py:285: in test_html_wind_highlight_above_30
+    html = _render_html([_trend_stage(wind_kmh=35)])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/tdd/test_issue_623_trend_channels.py:41: in _render_html
+    return render_html(
+E   TypeError: render_html() got an unexpected keyword argument 'sent_at'
+_____________ TestEmailTrendUnchanged.test_html_thunder_none_color _____________
+tests/tdd/test_issue_623_trend_channels.py:290: in test_html_thunder_none_color
+    html = _render_html([_trend_stage(thunder="NONE")])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/tdd/test_issue_623_trend_channels.py:41: in _render_html
+    return render_html(
+E   TypeError: render_html() got an unexpected keyword argument 'sent_at'
+____________ TestEmailTrendUnchanged.test_html_thunder_med_sq_color ____________
+tests/tdd/test_issue_623_trend_channels.py:295: in test_html_thunder_med_sq_color
+    html = _render_html([_trend_stage(thunder="MED")])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/tdd/test_issue_623_trend_channels.py:41: in _render_html
+    return render_html(
+E   TypeError: render_html() got an unexpected keyword argument 'sent_at'
+__________ TestEmailTrendUnchanged.test_html_nächste_etappen_heading ___________
+tests/tdd/test_issue_623_trend_channels.py:300: in test_html_nächste_etappen_heading
+    html = _render_html([_trend_stage()])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/tdd/test_issue_623_trend_channels.py:41: in _render_html
+    return render_html(
+E   TypeError: render_html() got an unexpected keyword argument 'sent_at'
+____________ TestTelegramTrend.test_telegram_with_trend_has_heading ____________
+tests/tdd/test_issue_623_trend_channels.py:338: in test_telegram_with_trend_has_heading
+    body = _render_narrow("telegram", trend=[_trend_stage()])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/tdd/test_issue_623_trend_channels.py:70: in _render_narrow
+    return render_narrow(
+E   TypeError: render_narrow() got an unexpected keyword argument 'multi_day_trend'
+____________ TestTelegramTrend.test_telegram_trend_contains_weekday ____________
+tests/tdd/test_issue_623_trend_channels.py:343: in test_telegram_trend_contains_weekday
+    body = _render_narrow("telegram", trend=[_trend_stage(weekday="Mo")])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/tdd/test_issue_623_trend_channels.py:70: in _render_narrow
+    return render_narrow(
+E   TypeError: render_narrow() got an unexpected keyword argument 'multi_day_trend'
+_____________ TestTelegramTrend.test_telegram_trend_contains_temp ______________
+tests/tdd/test_issue_623_trend_channels.py:348: in test_telegram_trend_contains_temp
+    body = _render_narrow("telegram", trend=[_trend_stage(temp_lo=8, temp_hi=16)])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/tdd/test_issue_623_trend_channels.py:70: in _render_narrow
+    return render_narrow(
+E   TypeError: render_narrow() got an unexpected keyword argument 'multi_day_trend'
+_________ TestTelegramTrend.test_telegram_trend_contains_thunder_plain _________
+tests/tdd/test_issue_623_trend_channels.py:353: in test_telegram_trend_contains_thunder_plain
+    body = _render_narrow("telegram", trend=[_trend_stage(thunder="NONE")])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/tdd/test_issue_623_trend_channels.py:70: in _render_narrow
+    return render_narrow(
+E   TypeError: render_narrow() got an unexpected keyword argument 'multi_day_trend'
+__________ TestTelegramTrend.test_telegram_trend_no_trend_no_heading ___________
+tests/tdd/test_issue_623_trend_channels.py:358: in test_telegram_trend_no_trend_no_heading
+    body = _render_narrow("telegram", trend=None)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/tdd/test_issue_623_trend_channels.py:70: in _render_narrow
+    return render_narrow(
+E   TypeError: render_narrow() got an unexpected keyword argument 'multi_day_trend'
+_______________ TestTelegramTrend.test_telegram_trend_line_width _______________
+tests/tdd/test_issue_623_trend_channels.py:363: in test_telegram_trend_line_width
+    body = _render_narrow("telegram", trend=[_trend_stage()])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/tdd/test_issue_623_trend_channels.py:70: in _render_narrow
+    return render_narrow(
+E   TypeError: render_narrow() got an unexpected keyword argument 'multi_day_trend'
+_____________ TestTelegramTrend.test_telegram_trend_note_indented ______________
+tests/tdd/test_issue_623_trend_channels.py:369: in test_telegram_trend_note_indented
+    body = _render_narrow("telegram", trend=[_trend_stage(note="Gewitter möglich.")])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/tdd/test_issue_623_trend_channels.py:70: in _render_narrow
+    return render_narrow(
+E   TypeError: render_narrow() got an unexpected keyword argument 'multi_day_trend'
+_________ TestTelegramTrend.test_telegram_trend_empty_list_no_heading __________
+tests/tdd/test_issue_623_trend_channels.py:374: in test_telegram_trend_empty_list_no_heading
+    body = _render_narrow("telegram", trend=[])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/tdd/test_issue_623_trend_channels.py:70: in _render_narrow
+    return render_narrow(
+E   TypeError: render_narrow() got an unexpected keyword argument 'multi_day_trend'
+______________ TestSmsTrend.test_sms_with_trend_has_trend_header _______________
+tests/tdd/test_issue_623_trend_channels.py:393: in test_sms_with_trend_has_trend_header
+    result = SMSTripFormatter().format_sms(
+E   TypeError: SMSTripFormatter.format_sms() got an unexpected keyword argument 'multi_day_trend'
+_________________ TestSmsTrend.test_sms_trend_contains_weekday _________________
+tests/tdd/test_issue_623_trend_channels.py:404: in test_sms_trend_contains_weekday
+    result = SMSTripFormatter().format_sms(
+E   TypeError: SMSTripFormatter.format_sms() got an unexpected keyword argument 'multi_day_trend'
+_______________ TestSmsTrend.test_sms_trend_contains_rain_token ________________
+tests/tdd/test_issue_623_trend_channels.py:414: in test_sms_trend_contains_rain_token
+    result = SMSTripFormatter().format_sms(
+E   TypeError: SMSTripFormatter.format_sms() got an unexpected keyword argument 'multi_day_trend'
+________________ TestSmsTrend.test_sms_trend_gew_token_for_med _________________
+tests/tdd/test_issue_623_trend_channels.py:424: in test_sms_trend_gew_token_for_med
+    result = SMSTripFormatter().format_sms(
+E   TypeError: SMSTripFormatter.format_sms() got an unexpected keyword argument 'multi_day_trend'
+_________________ TestSmsTrend.test_sms_trend_no_gew_for_none __________________
+tests/tdd/test_issue_623_trend_channels.py:434: in test_sms_trend_no_gew_for_none
+    result = SMSTripFormatter().format_sms(
+E   TypeError: SMSTripFormatter.format_sms() got an unexpected keyword argument 'multi_day_trend'
+_______________ TestSmsTrend.test_sms_trend_respects_max_length ________________
+tests/tdd/test_issue_623_trend_channels.py:444: in test_sms_trend_respects_max_length
+    result = SMSTripFormatter().format_sms(
+E   TypeError: SMSTripFormatter.format_sms() got an unexpected keyword argument 'multi_day_trend'
+____________ TestEmailContextLabel.test_label_present_when_sent_at _____________
+tests/tdd/test_issue_623_trend_channels.py:481: in test_label_present_when_sent_at
+    html = _render_html([_trend_stage()], sent_at=sent)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/tdd/test_issue_623_trend_channels.py:41: in _render_html
+    return render_html(
+E   TypeError: render_html() got an unexpected keyword argument 'sent_at'
+__________ TestEmailContextLabel.test_label_contains_gesendet_weekday __________
+tests/tdd/test_issue_623_trend_channels.py:489: in test_label_contains_gesendet_weekday
+    html = _render_html([_trend_stage()], sent_at=sent)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/tdd/test_issue_623_trend_channels.py:41: in _render_html
+    return render_html(
+E   TypeError: render_html() got an unexpected keyword argument 'sent_at'
+___________ TestEmailContextLabel.test_label_absent_without_sent_at ____________
+tests/tdd/test_issue_623_trend_channels.py:495: in test_label_absent_without_sent_at
+    html = _render_html([_trend_stage()])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/tdd/test_issue_623_trend_channels.py:41: in _render_html
+    return render_html(
+E   TypeError: render_html() got an unexpected keyword argument 'sent_at'
+_______________ TestDeadCodeRemoved.test_render_html_method_gone _______________
+tests/tdd/test_issue_623_trend_channels.py:510: in test_render_html_method_gone
+    assert not hasattr(TripReportFormatter, "_render_html"), \
+E   AssertionError: _render_html should have been removed
+E   assert not True
+E    +  where True = hasattr(<class 'src.formatters.trip_report.TripReportFormatter'>, '_render_html')
+______________ TestDeadCodeRemoved.test_render_plain_method_gone _______________
+tests/tdd/test_issue_623_trend_channels.py:516: in test_render_plain_method_gone
+    assert not hasattr(TripReportFormatter, "_render_plain"), \
+E   AssertionError: _render_plain should have been removed
+E   assert not True
+E    +  where True = hasattr(<class 'src.formatters.trip_report.TripReportFormatter'>, '_render_plain')
+______________ TestEmptyTrend.test_html_no_heading_on_none_trend _______________
+tests/tdd/test_issue_623_trend_channels.py:534: in test_html_no_heading_on_none_trend
+    html = _render_html(None)
+           ^^^^^^^^^^^^^^^^^^
+tests/tdd/test_issue_623_trend_channels.py:41: in _render_html
+    return render_html(
+E   TypeError: render_html() got an unexpected keyword argument 'sent_at'
+______________ TestEmptyTrend.test_html_no_heading_on_empty_list _______________
+tests/tdd/test_issue_623_trend_channels.py:538: in test_html_no_heading_on_empty_list
+    html = _render_html([])
+           ^^^^^^^^^^^^^^^^
+tests/tdd/test_issue_623_trend_channels.py:41: in _render_html
+    return render_html(
+E   TypeError: render_html() got an unexpected keyword argument 'sent_at'
+________________ TestSignalNoTrend.test_signal_no_trend_heading ________________
+tests/tdd/test_issue_623_trend_channels.py:559: in test_signal_no_trend_heading
+    body = _render_narrow("signal", trend=[_trend_stage()])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/tdd/test_issue_623_trend_channels.py:70: in _render_narrow
+    return render_narrow(
+E   TypeError: render_narrow() got an unexpected keyword argument 'multi_day_trend'
+________________ TestSignalNoTrend.test_signal_no_thunder_token ________________
+tests/tdd/test_issue_623_trend_channels.py:564: in test_signal_no_thunder_token
+    body = _render_narrow("signal", trend=[_trend_stage(thunder="MED")])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/tdd/test_issue_623_trend_channels.py:70: in _render_narrow
+    return render_narrow(
+E   TypeError: render_narrow() got an unexpected keyword argument 'multi_day_trend'
+_____________________ TestNoLowLevel.test_no_low_in_tokens _____________________
+tests/tdd/test_issue_623_trend_channels.py:578: in test_no_low_in_tokens
+    from src.output.renderers.email.helpers import format_trend_tokens
+E   ImportError: cannot import name 'format_trend_tokens' from 'src.output.renderers.email.helpers' (/home/hem/gregor_zwanzig/.claude/worktrees/idempotent-strolling-cray/src/output/renderers/email/helpers.py)
+________________ TestNoLowLevel.test_helpers_has_no_low_string _________________
+tests/tdd/test_issue_623_trend_channels.py:592: in test_helpers_has_no_low_string
+    from src.output.renderers.email.helpers import format_trend_tokens
+E   ImportError: cannot import name 'format_trend_tokens' from 'src.output.renderers.email.helpers' (/home/hem/gregor_zwanzig/.claude/worktrees/idempotent-strolling-cray/src/output/renderers/email/helpers.py)
+=========================== short test summary info ============================
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestFormatTrendTokens::test_function_importable
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestFormatTrendTokens::test_temp_both_lo_hi
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestFormatTrendTokens::test_temp_hi_only
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestFormatTrendTokens::test_temp_none
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestFormatTrendTokens::test_precip_zero_is_dash
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestFormatTrendTokens::test_precip_positive
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestFormatTrendTokens::test_precip_highlight_above_1mm
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestFormatTrendTokens::test_precip_no_highlight_below_1mm
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestFormatTrendTokens::test_wind_highlight_above_30
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestFormatTrendTokens::test_wind_no_highlight_at_30
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestFormatTrendTokens::test_wind_risk_flag_at_50
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestFormatTrendTokens::test_wind_no_risk_below_50
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestFormatTrendTokens::test_thunder_none_word
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestFormatTrendTokens::test_thunder_med_word
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestFormatTrendTokens::test_thunder_high_word
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestFormatTrendTokens::test_thunder_none_html_sq_color
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestFormatTrendTokens::test_thunder_med_html_sq_color
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestFormatTrendTokens::test_thunder_high_html_sq_color
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestFormatTrendTokens::test_thunder_none_word_color
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestFormatTrendTokens::test_thunder_med_word_color
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestFormatTrendTokens::test_thunder_high_word_color
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestFormatTrendTokens::test_thunder_none_plain_token
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestFormatTrendTokens::test_thunder_med_plain_token
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestFormatTrendTokens::test_thunder_high_plain_token
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestFormatTrendTokens::test_thunder_none_sms_token_absent
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestFormatTrendTokens::test_thunder_med_sms_token
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestFormatTrendTokens::test_thunder_high_sms_token
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestFormatTrendTokens::test_no_low_level
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestEmailTrendUnchanged::test_html_contains_temp
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestEmailTrendUnchanged::test_html_contains_precip_dash_for_zero
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestEmailTrendUnchanged::test_html_precip_highlight_color_above_1mm
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestEmailTrendUnchanged::test_html_wind_highlight_above_30
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestEmailTrendUnchanged::test_html_thunder_none_color
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestEmailTrendUnchanged::test_html_thunder_med_sq_color
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestEmailTrendUnchanged::test_html_nächste_etappen_heading
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestTelegramTrend::test_telegram_with_trend_has_heading
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestTelegramTrend::test_telegram_trend_contains_weekday
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestTelegramTrend::test_telegram_trend_contains_temp
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestTelegramTrend::test_telegram_trend_contains_thunder_plain
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestTelegramTrend::test_telegram_trend_no_trend_no_heading
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestTelegramTrend::test_telegram_trend_line_width
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestTelegramTrend::test_telegram_trend_note_indented
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestTelegramTrend::test_telegram_trend_empty_list_no_heading
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestSmsTrend::test_sms_with_trend_has_trend_header
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestSmsTrend::test_sms_trend_contains_weekday
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestSmsTrend::test_sms_trend_contains_rain_token
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestSmsTrend::test_sms_trend_gew_token_for_med
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestSmsTrend::test_sms_trend_no_gew_for_none
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestSmsTrend::test_sms_trend_respects_max_length
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestEmailContextLabel::test_label_present_when_sent_at
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestEmailContextLabel::test_label_contains_gesendet_weekday
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestEmailContextLabel::test_label_absent_without_sent_at
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestDeadCodeRemoved::test_render_html_method_gone
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestDeadCodeRemoved::test_render_plain_method_gone
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestEmptyTrend::test_html_no_heading_on_none_trend
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestEmptyTrend::test_html_no_heading_on_empty_list
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestSignalNoTrend::test_signal_no_trend_heading
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestSignalNoTrend::test_signal_no_thunder_token
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestNoLowLevel::test_no_low_in_tokens
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestNoLowLevel::test_helpers_has_no_low_string

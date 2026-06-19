@@ -1,0 +1,87 @@
+F..FFFFss                                                                [100%]
+=================================== FAILURES ===================================
+_________ test_send_with_reply_markup_puts_inline_keyboard_on_the_wire _________
+
+fake_bot = <tdd.test_issue_650_telegram_foundation._FakeBotState object at 0x75ac01a79d60>
+
+    def test_send_with_reply_markup_puts_inline_keyboard_on_the_wire(fake_bot):
+        """
+        GIVEN: eine Nachricht mit einem Inline-Keyboard (reply_markup)
+        WHEN: send(subject, body, reply_markup=...) gegen einen echten HTTP-Server läuft
+        THEN: der gesendete Payload enthält das reply_markup mit dem Button-Text.
+        """
+        output = TelegramOutput(_LOCAL_SETTINGS)
+    
+        # RED vor Fix: send() akzeptiert kein reply_markup-kwarg → TypeError.
+>       output.send("Test #650", "Body", reply_markup=_INLINE_KEYBOARD)
+E       TypeError: TelegramOutput.send() got an unexpected keyword argument 'reply_markup'
+
+tests/tdd/test_issue_650_telegram_foundation.py:133: TypeError
+___________________ test_set_then_get_my_commands_roundtrip ____________________
+
+fake_bot = <tdd.test_issue_650_telegram_foundation._FakeBotState object at 0x75ac01a7aae0>
+
+    def test_set_then_get_my_commands_roundtrip(fake_bot):
+        """
+        GIVEN: das Befehls-Setup
+        WHEN: set_my_commands() läuft und danach get_my_commands()
+        THEN: get_my_commands() liefert exakt dieselben Befehle in gleicher Reihenfolge.
+        """
+        output = TelegramOutput(_LOCAL_SETTINGS)
+    
+        # RED vor Fix: Methoden existieren nicht → AttributeError.
+>       output.set_my_commands()
+        ^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'TelegramOutput' object has no attribute 'set_my_commands'
+
+tests/tdd/test_issue_650_telegram_foundation.py:182: AttributeError
+__________________ test_set_my_commands_accepts_explicit_list __________________
+
+fake_bot = <tdd.test_issue_650_telegram_foundation._FakeBotState object at 0x75ac00cf3f50>
+
+    def test_set_my_commands_accepts_explicit_list(fake_bot):
+        """set_my_commands(commands) verwendet die übergebene Liste statt BOT_COMMANDS."""
+        output = TelegramOutput(_LOCAL_SETTINGS)
+        custom = [{"command": "ping", "description": "🏓 Test"}]
+    
+>       output.set_my_commands(custom)
+        ^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'TelegramOutput' object has no attribute 'set_my_commands'
+
+tests/tdd/test_issue_650_telegram_foundation.py:194: AttributeError
+__________ test_send_with_reply_markup_unreachable_raises_outputerror __________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x75ac00d42750>
+
+    def test_send_with_reply_markup_unreachable_raises_outputerror(monkeypatch):
+        """
+        GIVEN: ein unerreichbarer Bot-API-Endpoint
+        WHEN: send(..., reply_markup=...) aufgerufen wird
+        THEN: ein OutputError(channel="telegram") (KEIN TypeError) wird geworfen.
+        """
+        # Port 1 ist nicht bindbar → echte ConnectError (kein Mock).
+        monkeypatch.setattr(telegram_mod, "TELEGRAM_API_BASE", "http://127.0.0.1:1")
+        output = TelegramOutput(_LOCAL_SETTINGS)
+    
+        with pytest.raises(OutputError) as exc_info:
+>           output.send("Test #650", "Body", reply_markup=_INLINE_KEYBOARD)
+E           TypeError: TelegramOutput.send() got an unexpected keyword argument 'reply_markup'
+
+tests/tdd/test_issue_650_telegram_foundation.py:215: TypeError
+________________ test_bot_commands_structure_is_telegram_valid _________________
+
+    def test_bot_commands_structure_is_telegram_valid():
+        """
+        GIVEN: BOT_COMMANDS als einzige Quelle der Bot-Befehle
+        WHEN: die Struktur geprüft wird
+        THEN: jeder Eintrag erfüllt die Bot-API-Regeln
+              (command 1-32 Zeichen, [a-z0-9_]; description 1-256 Zeichen).
+        """
+        import re
+    
+>       commands = telegram_mod.BOT_COMMANDS
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'outputs.telegram' has no attribute 'BOT_COMMANDS'
+
+tests/tdd/test_issue_650_telegram_foundation.py:234: AttributeError
+5 failed, 2 passed, 2 skipped in 2.19s

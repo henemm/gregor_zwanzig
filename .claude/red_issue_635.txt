@@ -1,0 +1,298 @@
+F...FFFFF..FFFFFFFFFFFFF.....F                                           [100%]
+=================================== FAILURES ===================================
+_________ TestAC1NoTableNoAbbreviations.test_single_segment_line_count _________
+tests/tdd/test_issue_635_telegram_weather.py:164: in test_single_segment_line_count
+    assert "Zt " not in body, f"Stundentabellen-Header 'Zt' gefunden:\n{body}"
+E   AssertionError: Stundentabellen-Header 'Zt' gefunden:
+E     KHW 403
+E     Evening 07.06.2026
+E     Seg 1 10:00-12:00
+E     Zt T    W WD R   C
+E     08 13.0 4 NE 0.0 5
+E     09 14.0 4 NE 0.0 5
+E     
+E     Befehle: report morning, report evening,
+E     status, hilfe
+E   assert 'Zt ' not in 'KHW 403\nEv...tatus, hilfe'
+E     
+E     'Zt ' is contained here:
+E       :00-12:00
+E       Zt T    W WD R   C
+E     ? +++
+E       08 13.0 4 NE 0.0 5
+E       09 14.0 4 NE 0.0 5...
+E     
+E     ...Full output truncated (3 lines hidden), use '-vv' to show
+______ TestAC1NoTableNoAbbreviations.test_segment_line_has_bullet_format _______
+tests/tdd/test_issue_635_telegram_weather.py:199: in test_segment_line_has_bullet_format
+    assert len(content_lines) >= 1, f"Keine Zeile mit '·' gefunden:\n{body}"
+E   AssertionError: Keine Zeile mit '·' gefunden:
+E     KHW 403
+E     Evening 07.06.2026
+E     Seg 1 10:00-12:00
+E     Zt T    W WD R   C
+E     08 13.0 4 NE 0.0 5
+E     09 14.0 4 NE 0.0 5
+E     
+E     Befehle: report morning, report evening,
+E     status, hilfe
+E   assert 0 >= 1
+E    +  where 0 = len([])
+___________________ TestAC2Temperature.test_temp_range_arrow ___________________
+tests/tdd/test_issue_635_telegram_weather.py:217: in test_temp_range_arrow
+    assert "13→16" in body or "13→16°C" in body, f"Temp-Verlauf 13→16 nicht gefunden:\n{body}"
+E   AssertionError: Temp-Verlauf 13→16 nicht gefunden:
+E     KHW 403
+E     Evening 07.06.2026
+E     Seg 1 10:00-12:00
+E     Zt T    W WD R   C
+E     08 13.0 4 NE 0.0 5
+E     09 16.0 4 NE 0.0 5
+E     
+E     Befehle: report morning, report evening,
+E     status, hilfe
+E   assert ('13→16' in 'KHW 403\nEvening 07.06.2026\nSeg 1 10:00-12:00\nZt T    W WD R   C\n08 13.0 4 NE 0.0 5\n09 16.0 4 NE 0.0 5\n\nBefehle: report morning, report evening,\nstatus, hilfe' or '13→16°C' in 'KHW 403\nEvening 07.06.2026\nSeg 1 10:00-12:00\nZt T    W WD R   C\n08 13.0 4 NE 0.0 5\n09 16.0 4 NE 0.0 5\n\nBefehle: report morning, report evening,\nstatus, hilfe')
+_____________ TestAC2Temperature.test_temp_single_when_small_diff ______________
+tests/tdd/test_issue_635_telegram_weather.py:229: in test_temp_single_when_small_diff
+    assert "14°C" in body, f"Einzelwert 14°C nicht gefunden:\n{body}"
+E   AssertionError: Einzelwert 14°C nicht gefunden:
+E     KHW 403
+E     Evening 07.06.2026
+E     Seg 1 10:00-12:00
+E     Zt T    W WD R   C
+E     08 14.0 4 NE 0.0 5
+E     09 14.0 4 NE 0.0 5
+E     
+E     Befehle: report morning, report evening,
+E     status, hilfe
+E   assert '14°C' in 'KHW 403\nEvening 07.06.2026\nSeg 1 10:00-12:00\nZt T    W WD R   C\n08 14.0 4 NE 0.0 5\n09 14.0 4 NE 0.0 5\n\nBefehle: report morning, report evening,\nstatus, hilfe'
+______________ TestAC2Temperature.test_temp_fallback_when_no_rows ______________
+tests/tdd/test_issue_635_telegram_weather.py:237: in test_temp_fallback_when_no_rows
+    assert "13" in body or "16" in body, f"Fallback-Temp nicht gefunden:\n{body}"
+E   AssertionError: Fallback-Temp nicht gefunden:
+E     KHW 403
+E     Evening 07.06.2026
+E     Seg 1 10:00-12:00
+E     
+E     Befehle: report morning, report evening,
+E     status, hilfe
+E   assert ('13' in 'KHW 403\nEvening 07.06.2026\nSeg 1 10:00-12:00\n\nBefehle: report morning, report evening,\nstatus, hilfe' or '16' in 'KHW 403\nEvening 07.06.2026\nSeg 1 10:00-12:00\n\nBefehle: report morning, report evening,\nstatus, hilfe')
+______________________ TestAC3Wind.test_wind_range_shown _______________________
+tests/tdd/test_issue_635_telegram_weather.py:253: in test_wind_range_shown
+    assert "9–17" in body, f"Wind-Spanne 9–17 nicht gefunden:\n{body}"
+E   AssertionError: Wind-Spanne 9–17 nicht gefunden:
+E     KHW 403
+E     Evening 07.06.2026
+E     Seg 1 14:00-16:00
+E     Zt T    W  WD R   C
+E     12 15.0 9  S  0.0 70
+E     13 14.0 17 S  0.0 70
+E     
+E     Befehle: report morning, report evening,
+E     status, hilfe
+E   assert '9–17' in 'KHW 403\nEvening 07.06.2026\nSeg 1 14:00-16:00\nZt T    W  WD R   C\n12 15.0 9  S  0.0 70\n13 14.0 17 S  0.0 70\n\nBefehle: report morning, report evening,\nstatus, hilfe'
+_____________________ TestAC4Precipitation.test_dry_label ______________________
+tests/tdd/test_issue_635_telegram_weather.py:282: in test_dry_label
+    assert "trocken" in body, f"'trocken' nicht gefunden:\n{body}"
+E   AssertionError: 'trocken' nicht gefunden:
+E     KHW 403
+E     Evening 07.06.2026
+E     Seg 1 10:00-12:00
+E     Zt T    W WD R   C
+E     08 13.0 4 NE 0.0 5
+E     09 14.0 4 NE 0.0 5
+E     
+E     Befehle: report morning, report evening,
+E     status, hilfe
+E   assert 'trocken' in 'KHW 403\nEvening 07.06.2026\nSeg 1 10:00-12:00\nZt T    W WD R   C\n08 13.0 4 NE 0.0 5\n09 14.0 4 NE 0.0 5\n\nBefehle: report morning, report evening,\nstatus, hilfe'
+__________________ TestAC4Precipitation.test_some_rain_label ___________________
+tests/tdd/test_issue_635_telegram_weather.py:298: in test_some_rain_label
+    assert "etwas Regen" in body2, f"'etwas Regen' nicht gefunden:\n{body2}"
+E   AssertionError: 'etwas Regen' nicht gefunden:
+E     KHW 403
+E     Evening 07.06.2026
+E     Seg 1 14:00-16:00
+E     Zt T    W WD R   C
+E     12 15.0 9 S  0.5 80
+E     13 14.0 9 S  0.8 80
+E     
+E     Befehle: report morning, report evening,
+E     status, hilfe
+E   assert 'etwas Regen' in 'KHW 403\nEvening 07.06.2026\nSeg 1 14:00-16:00\nZt T    W WD R   C\n12 15.0 9 S  0.5 80\n13 14.0 9 S  0.8 80\n\nBefehle: report morning, report evening,\nstatus, hilfe'
+_____________________ TestAC4Precipitation.test_rain_label _____________________
+tests/tdd/test_issue_635_telegram_weather.py:307: in test_rain_label
+    assert "Regen" in body, f"'Regen' nicht gefunden:\n{body}"
+E   AssertionError: 'Regen' nicht gefunden:
+E     KHW 403
+E     Evening 07.06.2026
+E     Seg 1 18:00-20:00
+E     Zt T    W  WD R   C
+E     16 14.0 18 SW 1.2 95
+E     17 14.0 18 SW 1.2 95
+E     
+E     Befehle: report morning, report evening,
+E     status, hilfe
+E   assert 'Regen' in 'KHW 403\nEvening 07.06.2026\nSeg 1 18:00-20:00\nZt T    W  WD R   C\n16 14.0 18 SW 1.2 95\n17 14.0 18 SW 1.2 95\n\nBefehle: report morning, report evening,\nstatus, hilfe'
+___________________ TestAC4Precipitation.test_thunder_label ____________________
+tests/tdd/test_issue_635_telegram_weather.py:320: in test_thunder_label
+    assert "Gewitter" in body, f"'Gewitter' nicht gefunden:\n{body}"
+E   AssertionError: 'Gewitter' nicht gefunden:
+E     KHW 403
+E     Evening 07.06.2026
+E     Seg 1 16:00-18:00
+E     Zt T    W  WD R   C
+E     14 18.0 15 S  1.2 90
+E     15 17.0 20 S  1.3 90
+E     
+E     Befehle: report morning, report evening,
+E     status, hilfe
+E   assert 'Gewitter' in 'KHW 403\nEvening 07.06.2026\nSeg 1 16:00-18:00\nZt T    W  WD R   C\n14 18.0 15 S  1.2 90\n15 17.0 20 S  1.3 90\n\nBefehle: report morning, report evening,\nstatus, hilfe'
+________________________ TestAC5Emoji.test_sunny_emoji _________________________
+tests/tdd/test_issue_635_telegram_weather.py:333: in test_sunny_emoji
+    assert "☀️" in body, f"☀️ nicht gefunden:\n{body}"
+E   AssertionError: ☀️ nicht gefunden:
+E     KHW 403
+E     Evening 07.06.2026
+E     Seg 1 10:00-12:00
+E     Zt T    W WD R   C
+E     08 13.0 4 NE 0.0 5
+E     09 14.0 4 NE 0.0 5
+E     
+E     Befehle: report morning, report evening,
+E     status, hilfe
+E   assert '☀️' in 'KHW 403\nEvening 07.06.2026\nSeg 1 10:00-12:00\nZt T    W WD R   C\n08 13.0 4 NE 0.0 5\n09 14.0 4 NE 0.0 5\n\nBefehle: report morning, report evening,\nstatus, hilfe'
+_________________________ TestAC5Emoji.test_rain_emoji _________________________
+tests/tdd/test_issue_635_telegram_weather.py:342: in test_rain_emoji
+    assert "🌧️" in body, f"🌧️ nicht gefunden:\n{body}"
+E   AssertionError: 🌧️ nicht gefunden:
+E     KHW 403
+E     Evening 07.06.2026
+E     Seg 1 18:00-20:00
+E     Zt T    W  WD R   C
+E     16 14.0 18 SW 1.2 95
+E     17 14.0 18 SW 1.2 95
+E     
+E     Befehle: report morning, report evening,
+E     status, hilfe
+E   assert '🌧️' in 'KHW 403\nEvening 07.06.2026\nSeg 1 18:00-20:00\nZt T    W  WD R   C\n16 14.0 18 SW 1.2 95\n17 14.0 18 SW 1.2 95\n\nBefehle: report morning, report evening,\nstatus, hilfe'
+_______________________ TestAC5Emoji.test_overcast_emoji _______________________
+tests/tdd/test_issue_635_telegram_weather.py:354: in test_overcast_emoji
+    assert "☁️" in body, f"☁️ nicht gefunden:\n{body}"
+E   AssertionError: ☁️ nicht gefunden:
+E     KHW 403
+E     Evening 07.06.2026
+E     Seg 1 14:00-16:00
+E     Zt T    W WD R   C
+E     12 14.0 5 S  0.0 95
+E     13 14.0 5 S  0.0 95
+E     
+E     Befehle: report morning, report evening,
+E     status, hilfe
+E   assert '☁️' in 'KHW 403\nEvening 07.06.2026\nSeg 1 14:00-16:00\nZt T    W WD R   C\n12 14.0 5 S  0.0 95\n13 14.0 5 S  0.0 95\n\nBefehle: report morning, report evening,\nstatus, hilfe'
+_________________ TestAC5Emoji.test_cloud_none_fallback_emoji __________________
+tests/tdd/test_issue_635_telegram_weather.py:362: in test_cloud_none_fallback_emoji
+    assert "⛅" in body, f"⛅ Fallback nicht gefunden:\n{body}"
+E   AssertionError: ⛅ Fallback nicht gefunden:
+E     KHW 403
+E     Evening 07.06.2026
+E     Seg 1 10:00-12:00
+E     Zt T    W WD R   C
+E     08 14.0 5 E  0.0 –
+E     
+E     Befehle: report morning, report evening,
+E     status, hilfe
+E   assert '⛅' in 'KHW 403\nEvening 07.06.2026\nSeg 1 10:00-12:00\nZt T    W WD R   C\n08 14.0 5 E  0.0 –\n\nBefehle: report morning, report evening,\nstatus, hilfe'
+_____________________ TestAC6Footer.test_footer_no_thunder _____________________
+tests/tdd/test_issue_635_telegram_weather.py:375: in test_footer_no_thunder
+    assert "⚡ kein" in body, f"'⚡ kein' nicht gefunden:\n{body}"
+E   AssertionError: '⚡ kein' nicht gefunden:
+E     KHW 403
+E     Evening 07.06.2026
+E     Seg 1 10:00-12:00
+E     Zt T    W WD R   C
+E     08 13.0 4 NE 0.0 5
+E     09 14.0 4 NE 0.0 5
+E     
+E     Befehle: report morning, report evening,
+E     status, hilfe
+E   assert '⚡ kein' in 'KHW 403\nEvening 07.06.2026\nSeg 1 10:00-12:00\nZt T    W WD R   C\n08 13.0 4 NE 0.0 5\n09 14.0 4 NE 0.0 5\n\nBefehle: report morning, report evening,\nstatus, hilfe'
+____________________ TestAC6Footer.test_footer_thunder_med _____________________
+tests/tdd/test_issue_635_telegram_weather.py:386: in test_footer_thunder_med
+    assert "⚡ MED" in body, f"'⚡ MED' nicht gefunden:\n{body}"
+E   AssertionError: '⚡ MED' nicht gefunden:
+E     KHW 403
+E     Evening 07.06.2026
+E     Seg 1 10:00-12:00
+E     Zt T    W WD R   C
+E     08 13.0 4 NE 0.0 5
+E     09 14.0 4 NE 0.0 5
+E     
+E     Befehle: report morning, report evening,
+E     status, hilfe
+E   assert '⚡ MED' in 'KHW 403\nEvening 07.06.2026\nSeg 1 10:00-12:00\nZt T    W WD R   C\n08 13.0 4 NE 0.0 5\n09 14.0 4 NE 0.0 5\n\nBefehle: report morning, report evening,\nstatus, hilfe'
+_____________ TestAC6Footer.test_footer_missing_visibility_omitted _____________
+tests/tdd/test_issue_635_telegram_weather.py:396: in test_footer_missing_visibility_omitted
+    assert "0°C-Grenze 3300 m" in body
+E   AssertionError: assert '0°C-Grenze 3300 m' in 'KHW 403\nEvening 07.06.2026\nSeg 1 10:00-12:00\nZt T    W WD R   C\n08 13.0 4 NE 0.0 5\n09 14.0 4 NE 0.0 5\n\nBefehle: report morning, report evening,\nstatus, hilfe'
+___________ TestAC6Footer.test_footer_missing_freezing_level_omitted ___________
+tests/tdd/test_issue_635_telegram_weather.py:406: in test_footer_missing_freezing_level_omitted
+    assert "Sicht gut" in body
+E   AssertionError: assert 'Sicht gut' in 'KHW 403\nEvening 07.06.2026\nSeg 1 10:00-12:00\nZt T    W WD R   C\n08 13.0 4 NE 0.0 5\n09 14.0 4 NE 0.0 5\n\nBefehle: report morning, report evening,\nstatus, hilfe'
+___________________ TestAC6Footer.test_footer_bad_visibility ___________________
+tests/tdd/test_issue_635_telegram_weather.py:414: in test_footer_bad_visibility
+    assert "Sicht schlecht" in body, f"'Sicht schlecht' nicht gefunden:\n{body}"
+E   AssertionError: 'Sicht schlecht' nicht gefunden:
+E     KHW 403
+E     Evening 07.06.2026
+E     Seg 1 10:00-12:00
+E     Zt T    W WD R   C
+E     08 13.0 4 NE 0.0 5
+E     09 14.0 4 NE 0.0 5
+E     
+E     Befehle: report morning, report evening,
+E     status, hilfe
+E   assert 'Sicht schlecht' in 'KHW 403\nEvening 07.06.2026\nSeg 1 10:00-12:00\nZt T    W WD R   C\n08 13.0 4 NE 0.0 5\n09 14.0 4 NE 0.0 5\n\nBefehle: report morning, report evening,\nstatus, hilfe'
+______ TestAC8OtherChannelsUnchanged.test_multiple_segments_each_one_line ______
+tests/tdd/test_issue_635_telegram_weather.py:484: in test_multiple_segments_each_one_line
+    assert len(seg_lines) >= 3, f"Erwartete 3 Segment-Zeilen, gefunden {len(seg_lines)}:\n{body}"
+E   AssertionError: Erwartete 3 Segment-Zeilen, gefunden 0:
+E     KHW 403
+E     Evening 07.06.2026
+E     Seg 1 10:00-12:00
+E     Zt T    W WD R   C
+E     08 13.0 4 NE 0.0 5
+E     09 14.0 4 NE 0.0 5
+E     Seg 2 14:00-16:00
+E     Zt T    W  WD R   C
+E     12 15.0 9  S  0.0 70
+E     13 14.0 17 S  0.0 70
+E     Seg 3 18:00-20:00
+E     Zt T    W  WD R   C
+E     16 14.0 18 SW 1.2 95
+E     17 14.0 18 SW 1.2 95
+E     
+E     Befehle: report morning, report evening,
+E     status, hilfe
+E   assert 0 >= 3
+E    +  where 0 = len([])
+=========================== short test summary info ============================
+FAILED tests/tdd/test_issue_635_telegram_weather.py::TestAC1NoTableNoAbbreviations::test_single_segment_line_count
+FAILED tests/tdd/test_issue_635_telegram_weather.py::TestAC1NoTableNoAbbreviations::test_segment_line_has_bullet_format
+FAILED tests/tdd/test_issue_635_telegram_weather.py::TestAC2Temperature::test_temp_range_arrow
+FAILED tests/tdd/test_issue_635_telegram_weather.py::TestAC2Temperature::test_temp_single_when_small_diff
+FAILED tests/tdd/test_issue_635_telegram_weather.py::TestAC2Temperature::test_temp_fallback_when_no_rows
+FAILED tests/tdd/test_issue_635_telegram_weather.py::TestAC3Wind::test_wind_range_shown
+FAILED tests/tdd/test_issue_635_telegram_weather.py::TestAC4Precipitation::test_dry_label
+FAILED tests/tdd/test_issue_635_telegram_weather.py::TestAC4Precipitation::test_some_rain_label
+FAILED tests/tdd/test_issue_635_telegram_weather.py::TestAC4Precipitation::test_rain_label
+FAILED tests/tdd/test_issue_635_telegram_weather.py::TestAC4Precipitation::test_thunder_label
+FAILED tests/tdd/test_issue_635_telegram_weather.py::TestAC5Emoji::test_sunny_emoji
+FAILED tests/tdd/test_issue_635_telegram_weather.py::TestAC5Emoji::test_rain_emoji
+FAILED tests/tdd/test_issue_635_telegram_weather.py::TestAC5Emoji::test_overcast_emoji
+FAILED tests/tdd/test_issue_635_telegram_weather.py::TestAC5Emoji::test_cloud_none_fallback_emoji
+FAILED tests/tdd/test_issue_635_telegram_weather.py::TestAC6Footer::test_footer_no_thunder
+FAILED tests/tdd/test_issue_635_telegram_weather.py::TestAC6Footer::test_footer_thunder_med
+FAILED tests/tdd/test_issue_635_telegram_weather.py::TestAC6Footer::test_footer_missing_visibility_omitted
+FAILED tests/tdd/test_issue_635_telegram_weather.py::TestAC6Footer::test_footer_missing_freezing_level_omitted
+FAILED tests/tdd/test_issue_635_telegram_weather.py::TestAC6Footer::test_footer_bad_visibility
+FAILED tests/tdd/test_issue_635_telegram_weather.py::TestAC8OtherChannelsUnchanged::test_multiple_segments_each_one_line

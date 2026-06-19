@@ -1,0 +1,172 @@
+FFFFFFFFF...FFF                                                          [100%]
+=================================== FAILURES ===================================
+_____ TestAC1Pause.test_pause_sets_paused_until_and_excludes_from_schedule _____
+
+self = <tdd.test_issue_670_inbound_keywords.TestAC1Pause object at 0x748d50f16ed0>
+
+    def test_pause_sets_paused_until_and_excludes_from_schedule(self):
+        save_trip(_make_trip(), user_id=_USER_A)
+        # Pre: Trip ist aktiv
+        assert _TRIP_ID in _active_ids(_USER_A, "morning")
+    
+        result = TripCommandProcessor().process(_msg("PAUSE 2d", _USER_A))
+>       assert result.success is True
+E       AssertionError: assert False is True
+E        +  where False = CommandResult(success=False, command='unknown', confirmation_subject='Unbekannter Befehl', confirmation_body='Befehlsf...r: ruhetag, report, startdatum, abbruch, status, hilfe', trip_name='Issue670 Keywords', shifts=None, reply_markup=None).success
+
+tests/tdd/test_issue_670_inbound_keywords.py:113: AssertionError
+_______________ TestAC1Pause.test_pause_expired_resumes_schedule _______________
+
+self = <tdd.test_issue_670_inbound_keywords.TestAC1Pause object at 0x748d50ff2900>
+
+    def test_pause_expired_resumes_schedule(self):
+>       rc = TripReportConfig(
+            trip_id=_TRIP_ID, enabled=True,
+            paused_until=datetime.now(tz=timezone.utc) - timedelta(hours=1),
+        )
+E       TypeError: TripReportConfig.__init__() got an unexpected keyword argument 'paused_until'
+
+tests/tdd/test_issue_670_inbound_keywords.py:128: TypeError
+___________________ TestAC2Skip.test_skip_one_shot_consumed ____________________
+
+self = <tdd.test_issue_670_inbound_keywords.TestAC2Skip object at 0x748d50ff2c00>
+
+    def test_skip_one_shot_consumed(self):
+        save_trip(_make_trip(), user_id=_USER_A)
+    
+        result = TripCommandProcessor().process(_msg("SKIP", _USER_A))
+>       assert result.success is True
+E       AssertionError: assert False is True
+E        +  where False = CommandResult(success=False, command='unknown', confirmation_subject='Unbekannter Befehl', confirmation_body='Befehlsf...r: ruhetag, report, startdatum, abbruch, status, hilfe', trip_name='Issue670 Keywords', shifts=None, reply_markup=None).success
+
+tests/tdd/test_issue_670_inbound_keywords.py:146: AssertionError
+________________ TestAC3Stop.test_stop_disables_scheduled_sends ________________
+
+self = <tdd.test_issue_670_inbound_keywords.TestAC3Stop object at 0x748d50ff34a0>
+
+    def test_stop_disables_scheduled_sends(self):
+        save_trip(_make_trip(), user_id=_USER_A)
+        assert _TRIP_ID in _active_ids(_USER_A, "morning")
+    
+        result = TripCommandProcessor().process(_msg("STOP", _USER_A))
+>       assert result.success is True
+E       AssertionError: assert False is True
+E        +  where False = CommandResult(success=False, command='unknown', confirmation_subject='Unbekannter Befehl', confirmation_body='Befehlsf...r: ruhetag, report, startdatum, abbruch, status, hilfe', trip_name='Issue670 Keywords', shifts=None, reply_markup=None).success
+
+tests/tdd/test_issue_670_inbound_keywords.py:168: AssertionError
+_______________ TestAC4StatusHelpConfig.test_status_lists_stages _______________
+
+self = <tdd.test_issue_670_inbound_keywords.TestAC4StatusHelpConfig object at 0x748d50ff3650>
+
+    def test_status_lists_stages(self):
+        save_trip(_make_trip(), user_id=_USER_A)
+        result = TripCommandProcessor().process(_msg("STATUS", _USER_A))
+>       assert result.success is True
+E       AssertionError: assert False is True
+E        +  where False = CommandResult(success=False, command='unknown', confirmation_subject='Unbekannter Befehl', confirmation_body='Befehlsf...r: ruhetag, report, startdatum, abbruch, status, hilfe', trip_name='Issue670 Keywords', shifts=None, reply_markup=None).success
+
+tests/tdd/test_issue_670_inbound_keywords.py:183: AssertionError
+_____________ TestAC4StatusHelpConfig.test_help_lists_new_keywords _____________
+
+self = <tdd.test_issue_670_inbound_keywords.TestAC4StatusHelpConfig object at 0x748d50ff3860>
+
+    def test_help_lists_new_keywords(self):
+        result = TripCommandProcessor().process(_msg("HELP", _USER_A))
+>       assert result.success is True
+E       AssertionError: assert False is True
+E        +  where False = CommandResult(success=False, command='unknown', confirmation_subject='Unbekannter Befehl', confirmation_body='Befehlsf...r: ruhetag, report, startdatum, abbruch, status, hilfe', trip_name='Issue670 Keywords', shifts=None, reply_markup=None).success
+
+tests/tdd/test_issue_670_inbound_keywords.py:188: AssertionError
+_________ TestAC4StatusHelpConfig.test_config_returns_link_no_mutation _________
+
+self = <tdd.test_issue_670_inbound_keywords.TestAC4StatusHelpConfig object at 0x748d50ff39e0>
+
+    def test_config_returns_link_no_mutation(self):
+        save_trip(_make_trip(), user_id=_USER_A)
+        before = _load_trip(_USER_A).report_config
+    
+        result = TripCommandProcessor().process(_msg("CONFIG", _USER_A))
+>       assert result.success is True
+E       AssertionError: assert False is True
+E        +  where False = CommandResult(success=False, command='unknown', confirmation_subject='Unbekannter Befehl', confirmation_body='Befehlsf...r: ruhetag, report, startdatum, abbruch, status, hilfe', trip_name='Issue670 Keywords', shifts=None, reply_markup=None).success
+
+tests/tdd/test_issue_670_inbound_keywords.py:198: AssertionError
+_____________ TestAC5UserIsolation.test_pause_only_affects_sender ______________
+
+self = <tdd.test_issue_670_inbound_keywords.TestAC5UserIsolation object at 0x748d50ff3bf0>
+
+    def test_pause_only_affects_sender(self):
+        save_trip(_make_trip(), user_id=_USER_A)
+        save_trip(_make_trip(), user_id=_USER_B)
+    
+        result = TripCommandProcessor().process(_msg("PAUSE 2d", _USER_A))
+>       assert result.success is True
+E       AssertionError: assert False is True
+E        +  where False = CommandResult(success=False, command='unknown', confirmation_subject='Unbekannter Befehl', confirmation_body='Befehlsf...r: ruhetag, report, startdatum, abbruch, status, hilfe', trip_name='Issue670 Keywords', shifts=None, reply_markup=None).success
+
+tests/tdd/test_issue_670_inbound_keywords.py:217: AssertionError
+______________ TestAC5UserIsolation.test_stop_only_affects_sender ______________
+
+self = <tdd.test_issue_670_inbound_keywords.TestAC5UserIsolation object at 0x748d50ff3d70>
+
+    def test_stop_only_affects_sender(self):
+        save_trip(_make_trip(), user_id=_USER_A)
+        save_trip(_make_trip(), user_id=_USER_B)
+    
+        TripCommandProcessor().process(_msg("STOP", _USER_A))
+    
+>       assert _load_trip(_USER_A).report_config.enabled is False
+E       AssertionError: assert True is False
+E        +  where True = TripReportConfig(trip_id='issue670-keywords-trip', enabled=True, morning_time=datetime.time(7, 0), evening_time=dateti... show_metrics_summary=False, updated_at=datetime.datetime(2026, 6, 9, 7, 19, 37, 312398, tzinfo=datetime.timezone.utc)).enabled
+E        +    where TripReportConfig(trip_id='issue670-keywords-trip', enabled=True, morning_time=datetime.time(7, 0), evening_time=dateti... show_metrics_summary=False, updated_at=datetime.datetime(2026, 6, 9, 7, 19, 37, 312398, tzinfo=datetime.timezone.utc)) = Trip(id='issue670-keywords-trip', name='Issue670 Keywords', stages=[Stage(id='S1', name='Tag 1', date=datetime.date(20...zinfo=datetime.timezone.utc)), alert_rules=[], alert_cooldown_minutes=None, alert_quiet_from=None, alert_quiet_to=None).report_config
+E        +      where Trip(id='issue670-keywords-trip', name='Issue670 Keywords', stages=[Stage(id='S1', name='Tag 1', date=datetime.date(20...zinfo=datetime.timezone.utc)), alert_rules=[], alert_cooldown_minutes=None, alert_quiet_from=None, alert_quiet_to=None) = _load_trip('bug670usera')
+
+tests/tdd/test_issue_670_inbound_keywords.py:235: AssertionError
+_______________ TestAC7EmailBlock.test_block_lists_all_keywords ________________
+
+self = <tdd.test_issue_670_inbound_keywords.TestAC7EmailBlock object at 0x748d50e204d0>
+
+    def test_block_lists_all_keywords(self):
+        html = self._render()
+>       assert "Antwort-Kommandos" in html
+E       assert 'Antwort-Kommandos' in '<!DOCTYPE html>\n<html>\n<head>\n    <meta charset="utf-8">\n    <meta name="viewport" content="width=device-width, i...rt morning &middot; report evening &middot; status &middot; hilfe</span>\n        </div>\n    </div>\n</body>\n</html>'
+
+tests/tdd/test_issue_670_inbound_keywords.py:319: AssertionError
+______________ TestAC7EmailBlock.test_block_not_hidden_on_mobile _______________
+
+self = <tdd.test_issue_670_inbound_keywords.TestAC7EmailBlock object at 0x748d50e206b0>
+
+    def test_block_not_hidden_on_mobile(self):
+        """Der Block darf nicht in einem display:none-Mobile-Wrapper verschwinden."""
+        html = self._render()
+        idx = html.find("Antwort-Kommandos")
+>       assert idx != -1
+E       assert -1 != -1
+
+tests/tdd/test_issue_670_inbound_keywords.py:327: AssertionError
+________ TestAC8PauseInvalidDuration.test_invalid_duration_no_mutation _________
+
+self = <tdd.test_issue_670_inbound_keywords.TestAC8PauseInvalidDuration object at 0x748d50e20890>
+
+    def test_invalid_duration_no_mutation(self):
+        save_trip(_make_trip(), user_id=_USER_A)
+        result = TripCommandProcessor().process(_msg("PAUSE xyz", _USER_A))
+        assert result.success is False
+>       assert _load_trip(_USER_A).report_config.paused_until is None
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'TripReportConfig' object has no attribute 'paused_until'
+
+tests/tdd/test_issue_670_inbound_keywords.py:343: AttributeError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_issue_670_inbound_keywords.py::TestAC1Pause::test_pause_sets_paused_until_and_excludes_from_schedule
+FAILED tests/tdd/test_issue_670_inbound_keywords.py::TestAC1Pause::test_pause_expired_resumes_schedule
+FAILED tests/tdd/test_issue_670_inbound_keywords.py::TestAC2Skip::test_skip_one_shot_consumed
+FAILED tests/tdd/test_issue_670_inbound_keywords.py::TestAC3Stop::test_stop_disables_scheduled_sends
+FAILED tests/tdd/test_issue_670_inbound_keywords.py::TestAC4StatusHelpConfig::test_status_lists_stages
+FAILED tests/tdd/test_issue_670_inbound_keywords.py::TestAC4StatusHelpConfig::test_help_lists_new_keywords
+FAILED tests/tdd/test_issue_670_inbound_keywords.py::TestAC4StatusHelpConfig::test_config_returns_link_no_mutation
+FAILED tests/tdd/test_issue_670_inbound_keywords.py::TestAC5UserIsolation::test_pause_only_affects_sender
+FAILED tests/tdd/test_issue_670_inbound_keywords.py::TestAC5UserIsolation::test_stop_only_affects_sender
+FAILED tests/tdd/test_issue_670_inbound_keywords.py::TestAC7EmailBlock::test_block_lists_all_keywords
+FAILED tests/tdd/test_issue_670_inbound_keywords.py::TestAC7EmailBlock::test_block_not_hidden_on_mobile
+FAILED tests/tdd/test_issue_670_inbound_keywords.py::TestAC8PauseInvalidDuration::test_invalid_duration_no_mutation

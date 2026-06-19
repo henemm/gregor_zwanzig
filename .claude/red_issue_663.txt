@@ -1,0 +1,30 @@
+
+    def test_startdatum_isolated(self):
+        """AC-3: A verschiebt Startdatum → nur As Trip/Snapshot betroffen."""
+        save_trip(_make_trip(date.today()), user_id=_USER_A)
+        default_trip = _make_trip(date.today())
+        save_trip(default_trip, user_id=_USER_DEFAULT)
+        snap_default = _write_snapshot(_USER_DEFAULT, '{"user":"default"}')
+        default_first = default_trip.stages[0].date
+    
+        new_start = (date.today() + timedelta(days=10)).isoformat()
+        result = TripCommandProcessor().process(
+            _msg(f"### startdatum: {new_start}", _USER_A)
+        )
+        assert result.success is True
+    
+        a_loaded = next(t for t in load_all_trips(_USER_A) if t.id == _TRIP_ID)
+>       assert a_loaded.stages[0].date == date.today() + timedelta(days=10)
+E       AssertionError: assert datetime.date(2026, 6, 8) == (datetime.date(2026, 6, 8) + datetime.timedelta(days=10))
+E        +  where datetime.date(2026, 6, 8) = Stage(id='S1', name='Tag 1', date=datetime.date(2026, 6, 8), waypoints=[Waypoint(id='G1', name='Start', lat=39.71, lon...arrival_calculated=None, origin=None, confirmed=None, suggestion_reason=None, arrival_override=None)], start_time=None).date
+E        +  and   datetime.date(2026, 6, 8) = <built-in method today of type object at 0xa4fec0>()
+E        +    where <built-in method today of type object at 0xa4fec0> = date.today
+E        +  and   datetime.timedelta(days=10) = timedelta(days=10)
+
+tests/tdd/test_issue_663_command_user_isolation.py:145: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_issue_663_command_user_isolation.py::TestRuhetagUserIsolation::test_only_own_snapshot_deleted
+FAILED tests/tdd/test_issue_663_command_user_isolation.py::TestRuhetagUserIsolation::test_trip_saved_in_own_dir_not_default
+FAILED tests/tdd/test_issue_663_command_user_isolation.py::TestRuhetagUserIsolation::test_idempotency_log_per_user
+FAILED tests/tdd/test_issue_663_command_user_isolation.py::TestStartdatumUserIsolation::test_startdatum_isolated
+============================== 4 failed in 0.20s ===============================

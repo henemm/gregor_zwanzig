@@ -1,0 +1,116 @@
+FFFFFFFFFFFF.FFFFF....FFF..FFF.FF...F                                    [100%]
+=================================== FAILURES ===================================
+_________ TestFormatTrendTokensTimestamps.test_precip_token_key_exists _________
+tests/tdd/test_issue_640_trend_threshold_times.py:111: in test_precip_token_key_exists
+    assert "precip_token" in tok
+E   AssertionError: assert 'precip_token' in {'precip_highlight': False, 'precip_str': '0.5mm', 'temp_str': '12–15°C', 'thunder_plain': '⚡–', ...}
+__________ TestFormatTrendTokensTimestamps.test_wind_token_key_exists __________
+tests/tdd/test_issue_640_trend_threshold_times.py:120: in test_wind_token_key_exists
+    assert "wind_token" in tok
+E   AssertionError: assert 'wind_token' in {'precip_highlight': False, 'precip_str': '0.5mm', 'temp_str': '12–15°C', 'thunder_plain': '⚡–', ...}
+________ TestFormatTrendTokensTimestamps.test_thunder_token_key_exists _________
+tests/tdd/test_issue_640_trend_threshold_times.py:129: in test_thunder_token_key_exists
+    assert "thunder_token" in tok
+E   AssertionError: assert 'thunder_token' in {'precip_highlight': False, 'precip_str': '0.5mm', 'temp_str': '12–15°C', 'thunder_plain': '⚡–', ...}
+_______ TestFormatTrendTokensTimestamps.test_precip_token_erst_and_peak ________
+tests/tdd/test_issue_640_trend_threshold_times.py:140: in test_precip_token_erst_and_peak
+    assert "@10" in tok["precip_token"], f"Got: {tok['precip_token']}"
+                    ^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'precip_token'
+______ TestFormatTrendTokensTimestamps.test_precip_token_erst_equals_peak ______
+tests/tdd/test_issue_640_trend_threshold_times.py:151: in test_precip_token_erst_equals_peak
+    assert tok["precip_token"] == "2.0@12", f"Got: {tok['precip_token']}"
+           ^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'precip_token'
+__ TestFormatTrendTokensTimestamps.test_precip_token_never_exceeds_threshold ___
+tests/tdd/test_issue_640_trend_threshold_times.py:161: in test_precip_token_never_exceeds_threshold
+    assert tok["precip_token"] == "-"
+           ^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'precip_token'
+__________ TestFormatTrendTokensTimestamps.test_wind_token_with_times __________
+tests/tdd/test_issue_640_trend_threshold_times.py:171: in test_wind_token_with_times
+    assert tok["wind_token"] == "17@16", f"Got: {tok['wind_token']}"
+           ^^^^^^^^^^^^^^^^^
+E   KeyError: 'wind_token'
+___ TestFormatTrendTokensTimestamps.test_wind_token_never_exceeds_threshold ____
+tests/tdd/test_issue_640_trend_threshold_times.py:180: in test_wind_token_never_exceeds_threshold
+    assert tok["wind_token"] == "-"
+           ^^^^^^^^^^^^^^^^^
+E   KeyError: 'wind_token'
+______ TestFormatTrendTokensTimestamps.test_wind_token_exceeds_threshold _______
+tests/tdd/test_issue_640_trend_threshold_times.py:190: in test_wind_token_exceeds_threshold
+    assert "@14" in tok["wind_token"], f"Got: {tok['wind_token']}"
+                    ^^^^^^^^^^^^^^^^^
+E   KeyError: 'wind_token'
+___________ TestFormatTrendTokensTimestamps.test_thunder_token_level ___________
+tests/tdd/test_issue_640_trend_threshold_times.py:200: in test_thunder_token_level
+    assert "@14" in tok["thunder_token"], f"Got: {tok['thunder_token']}"
+                    ^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'thunder_token'
+_____ TestFormatTrendTokensTimestamps.test_thunder_token_none_returns_dash _____
+tests/tdd/test_issue_640_trend_threshold_times.py:211: in test_thunder_token_none_returns_dash
+    assert tok["thunder_token"] == "-"
+           ^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'thunder_token'
+______ TestFormatTrendTokensTimestamps.test_no_hourly_data_token_is_dash _______
+tests/tdd/test_issue_640_trend_threshold_times.py:218: in test_no_hourly_data_token_is_dash
+    assert tok["precip_token"] == "-"
+           ^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'precip_token'
+_______ TestThresholdSource.test_custom_threshold_changes_first_crossing _______
+tests/tdd/test_issue_640_trend_threshold_times.py:251: in test_custom_threshold_changes_first_crossing
+    assert "@12" in tok["precip_token"], f"Got: {tok['precip_token']}"
+                    ^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'precip_token'
+___________ TestThresholdSource.test_default_precip_threshold_is_0_5 ___________
+tests/tdd/test_issue_640_trend_threshold_times.py:262: in test_default_precip_threshold_is_0_5
+    assert "@10" in tok["precip_token"], f"Got: {tok['precip_token']}"
+                    ^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'precip_token'
+____________ TestThresholdSource.test_default_wind_threshold_is_30 _____________
+tests/tdd/test_issue_640_trend_threshold_times.py:272: in test_default_wind_threshold_is_30
+    assert "@12" in tok["wind_token"], f"Got: {tok['wind_token']}"
+                    ^^^^^^^^^^^^^^^^^
+E   KeyError: 'wind_token'
+__ TestTelegramInlineTokens.test_telegram_trend_line_has_at_token_for_precip ___
+tests/tdd/test_issue_640_trend_threshold_times.py:293: in test_telegram_trend_line_has_at_token_for_precip
+    assert "@" in body, f"No @ found in telegram body:\n{body}"
+E   AssertionError: No @ found in telegram body:
+E     Test-Trip
+E     Evening 11.07.2026
+E     ⛅ 10–14h  14→24°C · Wind 22 · trocken
+E     ⚡ kein
+E     
+E     Nächste Etappen
+E     Di  12–15°C  0.5mm  W17  ⚡–
+E     
+E     Befehle: report morning, report evening,
+E     status, hilfe
+E   assert '@' in 'Test-Trip\nEvening 11.07.2026\n⛅ 10–14h  14→24°C · Wind 22 · trocken\n⚡ kein\n\nNächste Etappen\nDi  12–15°C  0.5mm  W17  ⚡–\n\nBefehle: report morning, report evening,\nstatus, hilfe'
+___ TestTelegramInlineTokens.test_telegram_trend_line_format_with_at_tokens ____
+tests/tdd/test_issue_640_trend_threshold_times.py:305: in test_telegram_trend_line_format_with_at_tokens
+    assert "@10" in body or "@15" in body or "@16" in body, (
+E   AssertionError: No hour tokens found in:
+E     Test-Trip
+E     Evening 11.07.2026
+E     ⛅ 10–14h  14→24°C · Wind 22 · trocken
+E     ⚡ kein
+E     
+E     Nächste Etappen
+E     Di  12–15°C  0.5mm  W17  ⚡–
+E     
+E     Befehle: report morning, report evening,
+E     status, hilfe
+E   assert ('@10' in 'Test-Trip\nEvening 11.07.2026\n⛅ 10–14h  14→24°C · Wind 22 · trocken\n⚡ kein\n\nNächste Etappen\nDi  12–15°C  0.5mm  W17  ⚡–\n\nBefehle: report morning, report evening,\nstatus, hilfe' or '@15' in 'Test-Trip\nEvening 11.07.2026\n⛅ 10–14h  14→24°C · Wind 22 · trocken\n⚡ kein\n\nNächste Etappen\nDi  12–15°C  0.5mm  W17  ⚡–\n\nBefehle: report morning, report evening,\nstatus, hilfe' or '@16' in 'Test-Trip\nEvening 11.07.2026\n⛅ 10–14h  14→24°C · Wind 22 · trocken\n⚡ kein\n\nNächste Etappen\nDi  12–15°C  0.5mm  W17  ⚡–\n\nBefehle: report morning, report evening,\nstatus, hilfe')
+_________ TestEmailCellsWithTokens.test_email_precip_cell_has_at_token _________
+tests/tdd/test_issue_640_trend_threshold_times.py:390: in test_email_precip_cell_has_at_token
+    assert "@10" in html or "@15" in html, (
+E   AssertionError: No precip @ tokens in HTML trend cells
+E   assert ('@10' in '<!DOCTYPE html>\n<html>\n<head>\n    <meta charset="utf-8">\n    <meta name="viewport" content="width=device-width, i...rt morning &middot; report evening &middot; status &middot; hilfe</span>\n        </div>\n    </div>\n</body>\n</html>' or '@15' in '<!DOCTYPE html>\n<html>\n<head>\n    <meta charset="utf-8">\n    <meta name="viewport" content="width=device-width, i...rt morning &middot; report evening &middot; status &middot; hilfe</span>\n        </div>\n    </div>\n</body>\n</html>')
+__________ TestEmailCellsWithTokens.test_email_wind_cell_has_at_token __________
+tests/tdd/test_issue_640_trend_threshold_times.py:400: in test_email_wind_cell_has_at_token
+    assert "@16" in html, f"No wind @ token in HTML"
+E   AssertionError: No wind @ token in HTML
+E   assert '@16' in '<!DOCTYPE html>\n<html>\n<head>\n    <meta charset="utf-8">\n    <meta name="viewport" content="width=device-width, i...rt morning &middot; report evening &middot; status &middot; hilfe</span>\n        </div>\n    </div>\n</body>\n</html>'
+________ TestEmailCellsWithTokens.test_email_thunder_cell_has_at_token _________
+tests/tdd/test_issue_640_trend_threshold_times.py:409: in test_email_thunder_cell_has_at_token

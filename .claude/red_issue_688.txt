@@ -1,0 +1,9 @@
+# github.com/henemm/gregor-api/internal/handler [github.com/henemm/gregor-api/internal/handler.test]
+internal/handler/health_commit_test.go:22:29: too many arguments in call to HealthHandler
+	have (string, string)
+	want (string)
+internal/handler/health_commit_test.go:47:47: too many arguments in call to HealthHandler
+	have (string, string)
+	want (string)
+FAIL	github.com/henemm/gregor-api/internal/handler [build failed]
+FAIL

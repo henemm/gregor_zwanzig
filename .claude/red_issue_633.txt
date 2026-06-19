@@ -1,0 +1,78 @@
+FF.......                                                                [100%]
+=================================== FAILURES ===================================
+__________ TestTelegramTrendNoNames.test_telegram_trend_no_stage_name __________
+
+self = <tdd.test_issue_623_trend_channels.TestTelegramTrendNoNames object at 0x7a237d206540>
+
+    def test_telegram_trend_no_stage_name(self):
+        """AC-1: Given a long stage name, When telegram trend rendered,
+        Then neither the full name nor its distinctive fragment appears."""
+        body = _render_narrow(
+            "telegram",
+            trend=[_trend_stage(name=self.LONG_NAME)],
+        )
+        # Full name must not appear (even if split across lines, fragments must not be there)
+>       assert "KHW_07" not in body, (
+            f"Stage name fragment 'KHW_07' must not appear in telegram trend. Got:\n{body}"
+        )
+E       AssertionError: Stage name fragment 'KHW_07' must not appear in telegram trend. Got:
+E         Test-Trip
+E         Evening 11.07.2026
+E         Seg 1 10:00-14:00
+E         
+E         Nächste Etappen
+E         Mo  KHW_07: von Zollnersee Hütte nach
+E         Straniger Alm  8–16°C  3mm  W20  ⚡–
+E         
+E         Befehle: report morning, report evening,
+E         status, hilfe
+E       assert 'KHW_07' not in 'Test-Trip\n...tatus, hilfe'
+E         
+E         'KHW_07' is contained here:
+E           appen
+E           Mo  KHW_07: von Zollnersee Hütte nach
+E         ?     ++++++
+E           Straniger Alm  8–16°C  3mm  W20  ⚡–
+E           
+E           Befehle: report morning, report evening,
+E           status, hilfe
+
+tests/tdd/test_issue_623_trend_channels.py:820: AssertionError
+________ TestTelegramTrendNoNames.test_telegram_trend_no_name_fragment _________
+
+self = <tdd.test_issue_623_trend_channels.TestTelegramTrendNoNames object at 0x7a237bd31280>
+
+    def test_telegram_trend_no_name_fragment(self):
+        """AC-1: Even a distinctive fragment of the name must not appear."""
+        body = _render_narrow(
+            "telegram",
+            trend=[_trend_stage(name=self.LONG_NAME)],
+        )
+>       assert "Zollnersee" not in body, (
+            f"Name fragment 'Zollnersee' must not appear in telegram trend:\n{body}"
+        )
+E       AssertionError: Name fragment 'Zollnersee' must not appear in telegram trend:
+E         Test-Trip
+E         Evening 11.07.2026
+E         Seg 1 10:00-14:00
+E         
+E         Nächste Etappen
+E         Mo  KHW_07: von Zollnersee Hütte nach
+E         Straniger Alm  8–16°C  3mm  W20  ⚡–
+E         
+E         Befehle: report morning, report evening,
+E         status, hilfe
+E       assert 'Zollnersee' not in 'Test-Trip\n...tatus, hilfe'
+E         
+E         'Zollnersee' is contained here:
+E           W_07: von Zollnersee Hütte nach
+E         ?           ++++++++++
+E           Straniger Alm  8–16°C  3mm  W20  ⚡–
+E           
+E           Befehle: report morning, report evening,
+E           status, hilfe
+
+tests/tdd/test_issue_623_trend_channels.py:830: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestTelegramTrendNoNames::test_telegram_trend_no_stage_name
+FAILED tests/tdd/test_issue_623_trend_channels.py::TestTelegramTrendNoNames::test_telegram_trend_no_name_fragment

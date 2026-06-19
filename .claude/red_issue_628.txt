@@ -1,0 +1,246 @@
+FFFFF                                                                    [100%]
+=================================== FAILURES ===================================
+_________________ test_email_plain_golden_gr20_summer_evening __________________
+
+    def test_email_plain_golden_gr20_summer_evening():
+        """GR20 Sommer Evening: Korsika Sommer-Forecast, 2 Etappen."""
+        seg1 = _build_seg_weather(
+            1, 9, 12, day=11, temp_min=14.0, temp_max=24.0,
+            wind_max=18.0, gust_max=28.0, precip_total=2.5,
+        )
+        seg2 = _build_seg_weather(
+            2, 12, 16, day=11, temp_min=18.0, temp_max=26.0,
+            wind_max=22.0, gust_max=35.0, precip_total=0.0,
+        )
+        formatter = TripReportFormatter()
+        report = formatter.format_email(
+            [seg1, seg2], "GR20", "evening",
+            display_config=build_default_display_config(),
+            stage_name="GR20 E3",
+        )
+>       _assert_plain_matches_golden("gr20-summer-evening", report.email_plain)
+
+tests/golden/email/test_email_plain_golden.py:203: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+stem = 'gr20-summer-evening'
+plain = '◯ WETTER-BRIEFING\nGR20 - Evening Report\nGR20 E3\n11.07.2026\n\nGR20 E3: trocken, ⚡ möglich\n\n━━ Segment 1: km 0.0–...-----------------------------------------------------\nGenerated: 2026-04-28 12:00 UTC\nData: openmeteo (arome_france)'
+
+    def _assert_plain_matches_golden(stem: str, plain: str) -> None:
+        expected = _read_golden(stem)
+>       assert _normalize(plain) == _normalize(expected), (
+            f"Plain-Body-Drift in {stem}.\n"
+            f"Bit-Vergleich gegen tests/golden/email/{stem}-plain.txt fehlgeschlagen "
+            f"(Generated-Timestamp wird normalisiert).\n"
+            f"Spec §A7 verlangt bit-identischen Output vor und nach β3-Migration."
+        )
+E       AssertionError: Plain-Body-Drift in gr20-summer-evening.
+E         Bit-Vergleich gegen tests/golden/email/gr20-summer-evening-plain.txt fehlgeschlagen (Generated-Timestamp wird normalisiert).
+E         Spec §A7 verlangt bit-identischen Output vor und nach β3-Migration.
+E       assert '◯ WETTER-BRI...arome_france)' == '◯ WETTER-BRI...arome_france)'
+E         
+E         Skipping 1233 identical leading characters in diff, use -v to show
+E           : 2.5 mm
+E         + 
+E         + ━━ Tages-Summe ━━
+E         +   Regen gesamt: 2 mm
+E         +   Max Böe:      53 km/h...
+E         
+E         ...Full output truncated (7 lines hidden), use '-vv' to show
+
+tests/golden/email/test_email_plain_golden.py:179: AssertionError
+_________________ test_email_plain_golden_gr20_spring_morning __________________
+
+    def test_email_plain_golden_gr20_spring_morning():
+        """GR20 Frühjahr Morning: kalt + Niederschlag."""
+        seg = _build_seg_weather(
+            1, 6, 10, day=11, temp_min=2.0, temp_max=9.0,
+            wind_max=35.0, gust_max=70.0, precip_total=18.5,
+            thunder=ThunderLevel.MED,
+        )
+        formatter = TripReportFormatter()
+        report = formatter.format_email(
+            [seg], "GR20", "morning",
+            display_config=build_default_display_config(),
+            stage_name="GR20 E1",
+        )
+>       _assert_plain_matches_golden("gr20-spring-morning", report.email_plain)
+
+tests/golden/email/test_email_plain_golden.py:219: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+stem = 'gr20-spring-morning'
+plain = '◯ WETTER-BRIEFING\nGR20 - Morning Report\nGR20 E1\n11.07.2026\n\nGR20 E1: 2–9°C, 🌥️, trocken, Regen ab 6:00, mäßiger ...-----------------------------------------------------\nGenerated: 2026-04-28 12:00 UTC\nData: openmeteo (arome_france)'
+
+    def _assert_plain_matches_golden(stem: str, plain: str) -> None:
+        expected = _read_golden(stem)
+>       assert _normalize(plain) == _normalize(expected), (
+            f"Plain-Body-Drift in {stem}.\n"
+            f"Bit-Vergleich gegen tests/golden/email/{stem}-plain.txt fehlgeschlagen "
+            f"(Generated-Timestamp wird normalisiert).\n"
+            f"Spec §A7 verlangt bit-identischen Output vor und nach β3-Migration."
+        )
+E       AssertionError: Plain-Body-Drift in gr20-spring-morning.
+E         Bit-Vergleich gegen tests/golden/email/gr20-spring-morning-plain.txt fehlgeschlagen (Generated-Timestamp wird normalisiert).
+E         Spec §A7 verlangt bit-identischen Output vor und nach β3-Migration.
+E       assert '◯ WETTER-BRI...arome_france)' == '◯ WETTER-BRI...arome_france)'
+E         
+E         Skipping 882 identical leading characters in diff, use -v to show
+E            18.5 mm
+E         + 
+E         + ━━ Tages-Summe ━━
+E         +   Regen gesamt: 18 mm
+E         +   Max Böe:      70 km/h...
+E         
+E         ...Full output truncated (7 lines hidden), use '-vv' to show
+
+tests/golden/email/test_email_plain_golden.py:179: AssertionError
+________________ test_email_plain_golden_gr221_mallorca_evening ________________
+
+    def test_email_plain_golden_gr221_mallorca_evening():
+        """GR221 Mallorca Evening: warm, breezy, kein Regen."""
+        seg = _build_seg_weather(
+            1, 9, 14, day=11, temp_min=8.0, temp_max=15.0,
+            wind_max=25.0, gust_max=55.0, precip_total=0.0,
+            lat=39.71, lon=2.62, start_elev=200.0, end_elev=900.0,
+        )
+        formatter = TripReportFormatter()
+        report = formatter.format_email(
+            [seg], "GR221 Mallorca", "evening",
+            display_config=build_default_display_config(),
+            stage_name="GR221 Tag1",
+        )
+>       _assert_plain_matches_golden("gr221-mallorca-evening", report.email_plain)
+
+tests/golden/email/test_email_plain_golden.py:235: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+stem = 'gr221-mallorca-evening'
+plain = '◯ WETTER-BRIEFING\nGR221 Mallorca - Evening Report\nGR221 Tag1\n11.07.2026\n\nGR221 Tag1: 8–15°C, 🌥️, trocken, mäßige...-----------------------------------------------------\nGenerated: 2026-04-28 12:00 UTC\nData: openmeteo (arome_france)'
+
+    def _assert_plain_matches_golden(stem: str, plain: str) -> None:
+        expected = _read_golden(stem)
+>       assert _normalize(plain) == _normalize(expected), (
+            f"Plain-Body-Drift in {stem}.\n"
+            f"Bit-Vergleich gegen tests/golden/email/{stem}-plain.txt fehlgeschlagen "
+            f"(Generated-Timestamp wird normalisiert).\n"
+            f"Spec §A7 verlangt bit-identischen Output vor und nach β3-Migration."
+        )
+E       AssertionError: Plain-Body-Drift in gr221-mallorca-evening.
+E         Bit-Vergleich gegen tests/golden/email/gr221-mallorca-evening-plain.txt fehlgeschlagen (Generated-Timestamp wird normalisiert).
+E         Spec §A7 verlangt bit-identischen Output vor und nach β3-Migration.
+E       assert '◯ WETTER-BRI...arome_france)' == '◯ WETTER-BRI...arome_france)'
+E         
+E         Skipping 811 identical leading characters in diff, use -v to show
+E               –   
+E         + 
+E         + ━━ Tages-Summe ━━
+E         +   Regen gesamt: 0 mm
+E         +   Max Böe:      53 km/h...
+E         
+E         ...Full output truncated (7 lines hidden), use '-vv' to show
+
+tests/golden/email/test_email_plain_golden.py:179: AssertionError
+________________ test_email_plain_golden_arlberg_winter_morning ________________
+
+    def test_email_plain_golden_arlberg_winter_morning():
+        """Wintersport Arlberg Morning: profile=wintersport, Schnee/Lawine."""
+        seg = _build_seg_weather(
+            1, 8, 13, day=11,
+            temp_min=-12.0, temp_max=-4.0,
+            wind_max=45.0, gust_max=110.0,
+            precip_total=0.0,
+            snow_new_cm=25.0, freezing_level_m=1800,
+            lat=47.13, lon=10.20, start_elev=1500.0, end_elev=2300.0,
+        )
+        formatter = TripReportFormatter()
+        report = formatter.format_email(
+            [seg], "Arlberg Winter", "morning",
+            display_config=build_default_display_config(),
+            stage_name="Arlberg",
+        )
+>       _assert_plain_matches_golden("arlberg-winter-morning", report.email_plain)
+
+tests/golden/email/test_email_plain_golden.py:254: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+stem = 'arlberg-winter-morning'
+plain = '◯ WETTER-BRIEFING\nArlberg Winter - Morning Report\nArlberg\n11.07.2026\n\nArlberg: -12–-4°C, 🌥️, trocken, starker Wi...-----------------------------------------------------\nGenerated: 2026-04-28 12:00 UTC\nData: openmeteo (arome_france)'
+
+    def _assert_plain_matches_golden(stem: str, plain: str) -> None:
+        expected = _read_golden(stem)
+>       assert _normalize(plain) == _normalize(expected), (
+            f"Plain-Body-Drift in {stem}.\n"
+            f"Bit-Vergleich gegen tests/golden/email/{stem}-plain.txt fehlgeschlagen "
+            f"(Generated-Timestamp wird normalisiert).\n"
+            f"Spec §A7 verlangt bit-identischen Output vor und nach β3-Migration."
+        )
+E       AssertionError: Plain-Body-Drift in arlberg-winter-morning.
+E         Bit-Vergleich gegen tests/golden/email/arlberg-winter-morning-plain.txt fehlgeschlagen (Generated-Timestamp wird normalisiert).
+E         Spec §A7 verlangt bit-identischen Output vor und nach β3-Migration.
+E       assert '◯ WETTER-BRI...arome_france)' == '◯ WETTER-BRI...arome_france)'
+E         
+E         Skipping 862 identical leading characters in diff, use -v to show
+E            (08:00)
+E         + 
+E         + ━━ Tages-Summe ━━
+E         +   Regen gesamt: 0 mm
+E         +   Max Böe:      110 km/h...
+E         
+E         ...Full output truncated (7 lines hidden), use '-vv' to show
+
+tests/golden/email/test_email_plain_golden.py:179: AssertionError
+__________________ test_email_plain_golden_corsica_vigilance ___________________
+
+    def test_email_plain_golden_corsica_vigilance():
+        """Korsika Vigilance Update: MétéoFrance-Vigilance high + Update-Report."""
+        seg = _build_seg_weather(
+            1, 10, 15, day=11, temp_min=18.0, temp_max=32.0,
+            wind_max=30.0, gust_max=85.0, precip_total=8.0,
+            thunder=ThunderLevel.HIGH,
+            lat=42.20, lon=9.05,
+        )
+        formatter = TripReportFormatter()
+        report = formatter.format_email(
+            [seg], "Korsika Trail", "update",
+            display_config=build_default_display_config(),
+            stage_name="Corsica E5",
+            changes=[],
+        )
+>       _assert_plain_matches_golden("corsica-vigilance", report.email_plain)
+
+tests/golden/email/test_email_plain_golden.py:272: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+stem = 'corsica-vigilance'
+plain = '◯ WETTER-BRIEFING\nKorsika Trail - Update Report\nCorsica E5\n11.07.2026\n\nCorsica E5: 18–32°C, 🌥️, trocken, Regen a...-----------------------------------------------------\nGenerated: 2026-04-28 12:00 UTC\nData: openmeteo (arome_france)'
+
+    def _assert_plain_matches_golden(stem: str, plain: str) -> None:
+        expected = _read_golden(stem)
+>       assert _normalize(plain) == _normalize(expected), (
+            f"Plain-Body-Drift in {stem}.\n"
+            f"Bit-Vergleich gegen tests/golden/email/{stem}-plain.txt fehlgeschlagen "
+            f"(Generated-Timestamp wird normalisiert).\n"
+            f"Spec §A7 verlangt bit-identischen Output vor und nach β3-Migration."
+        )
+E       AssertionError: Plain-Body-Drift in corsica-vigilance.
+E         Bit-Vergleich gegen tests/golden/email/corsica-vigilance-plain.txt fehlgeschlagen (Generated-Timestamp wird normalisiert).
+E         Spec §A7 verlangt bit-identischen Output vor und nach β3-Migration.
+E       assert '◯ WETTER-BRI...arome_france)' == '◯ WETTER-BRI...arome_france)'
+E         
+E         Skipping 975 identical leading characters in diff, use -v to show
+E           : 8.0 mm
+E         + 
+E         + ━━ Tages-Summe ━━
+E         +   Regen gesamt: 8 mm
+E         +   Max Böe:      85 km/h...
+E         
+E         ...Full output truncated (7 lines hidden), use '-vv' to show
+
+tests/golden/email/test_email_plain_golden.py:179: AssertionError
+=========================== short test summary info ============================
+FAILED tests/golden/email/test_email_plain_golden.py::test_email_plain_golden_gr20_summer_evening
+FAILED tests/golden/email/test_email_plain_golden.py::test_email_plain_golden_gr20_spring_morning
+FAILED tests/golden/email/test_email_plain_golden.py::test_email_plain_golden_gr221_mallorca_evening
+FAILED tests/golden/email/test_email_plain_golden.py::test_email_plain_golden_arlberg_winter_morning
+FAILED tests/golden/email/test_email_plain_golden.py::test_email_plain_golden_corsica_vigilance
