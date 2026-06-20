@@ -192,7 +192,7 @@ _METRICS: list[MetricDefinition] = [
         id="thunder", label_de="Gewitter", unit="",
         dp_field="thunder_level", category="precipitation",
         default_aggregations=("max",),
-        compact_label="⚡", col_key="thunder", col_label="Thunder",
+        compact_label="⚡", col_key="thunder", col_label="Blitz",
         providers={"openmeteo": True, "geosphere": False},
         summary_fields={"max": "thunder_level_max"},
         default_change_threshold=1.0,
