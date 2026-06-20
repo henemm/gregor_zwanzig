@@ -227,7 +227,7 @@ def _allowed_col_keys_for_horizon(
             keys.add(get_metric(mc.metric_id).col_key)
         except KeyError:
             continue
-    return keys
+    return keys or None
 
 
 def render_html(
