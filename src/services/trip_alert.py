@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, time as time_type, timedelta, timezone
+from datetime import date, datetime, time as time_type, timedelta, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, List, Optional
 
@@ -284,7 +284,11 @@ class TripAlertService:
         """
         Get cached weather data for a trip from the weather snapshot.
 
-        Loads the persistent snapshot saved after the last report email.
+        Loads the dated snapshot for today first (written by morning briefing with
+        target_date=today). Falls back to the undated snapshot only when no dated
+        file exists yet (first-run / migration). This prevents alerts from using the
+        evening briefing snapshot, which has target_date=tomorrow and would cause the
+        alert to compare today's nowcast against tomorrow's stage. (Issue #823)
 
         Args:
             trip: Trip to get cached weather for
@@ -295,7 +299,13 @@ class TripAlertService:
         try:
             from services.weather_snapshot import WeatherSnapshotService
 
-            return WeatherSnapshotService(user_id=self._user_id).load(trip.id)
+            svc = WeatherSnapshotService(user_id=self._user_id)
+            today = date.today()
+            dated = svc.load_dated(trip.id, today)
+            if dated is not None:
+                return dated
+            # Fallback: undated snapshot (may be stale after evening briefing)
+            return svc.load(trip.id)
         except Exception as e:
             logger.debug(f"No cached weather for trip {trip.id}: {e}")
             return None
