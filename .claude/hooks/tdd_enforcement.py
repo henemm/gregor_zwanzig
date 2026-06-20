@@ -1,317 +1,185 @@
 #!/usr/bin/env python3
 """
-OpenSpec Framework - TDD Enforcement Hook
+TDD Enforcement Hook — PreToolUse Edit|Write|MultiEdit
 
-Enforces Test-Driven Development with REAL test artifacts.
-Blocks implementation until proper RED phase tests exist with actual data.
+Validiert RED-Phase-Artefakte tiefgehend bevor Code-Edits in phase6+
+erlaubt werden. Ergänzt edit_gate.py's einfache Boolean-Prüfung durch:
 
-REAL means:
-- Screenshots: Actual image files (png, jpg, gif) with content
-- Emails: Actual email content or .eml files
-- API responses: Actual JSON/XML responses saved to files
-- Log outputs: Actual log files or excerpts
-- Files: Actual generated/exported files
+- Existenz der Artefakt-Datei auf Disk
+- Mindestgröße (kein Platzhalter/leere Datei)
+- Frische (<24h alt)
+- Fehlerkeywords im Inhalt (echte Fehlermeldungen, nicht nur "failed")
+- Keine Platzhalter-Patterns im Inhalt
 
-NOT acceptable:
-- Placeholder text like "[Screenshot here]"
-- Empty files
-- Mock data without real test execution
-- TODO comments in test files
-
-Exit Codes:
-- 0: Allowed
-- 2: Blocked (stderr shown to Claude)
+Fail-safe: Bei Import-Fehlern oder Parse-Fehlern → exit(0), nie blockieren.
 """
 
-import json
 import os
+import re
 import sys
+import time
 from pathlib import Path
-from datetime import datetime, timedelta
 
-# Import multi-workflow state manager
-try:
-    from workflow_state_multi import (
-        load_state, get_active_workflow, PHASES,
-        PHASE_NAMES, TEST_REQUIRED_PHASES
+
+def _setup():
+    hooks_dir = str(Path(__file__).parent)
+    if hooks_dir not in sys.path:
+        sys.path.insert(0, hooks_dir)
+
+
+_setup()
+
+from hook_utils import get_tool_input, find_project_root, block, allow, get_active_workflow_name  # noqa: E402
+
+# Phasen in denen TDD-Enforcement gilt
+TEST_REQUIRED_PHASES = {"phase6_implement", "phase6b_adversary"}
+
+# Pfade die immer erlaubt sind (gespiegelt von edit_gate.py)
+_ALWAYS_ALLOWED = re.compile(
+    r"(\.claude[/\\]|[/\\]docs[/\\]|\.md$|\.gitignore|\.txt$|[/\\]specs[/\\]"
+    r"|[/\\]\.claude[/\\])"
+)
+
+# Mindestgröße eines gültigen Artefakts in Bytes
+_MIN_SIZE = 80
+
+# Maximales Alter in Sekunden (24h)
+_MAX_AGE_S = 86_400
+
+# Keywords die echte Test-Fehler belegen
+_FAILURE_RE = re.compile(
+    r"\b(FAILED|ERROR|error|failed|FAIL|assert|AssertionError"
+    r"|ImportError|ModuleNotFoundError|SyntaxError|TypeError"
+    r"|AttributeError|NameError|NotImplementedError"
+    r"|raise|Traceback|Exception|stderr)\b",
+    re.MULTILINE,
+)
+
+# Platzhalter-Patterns die auf gefälschte Artefakte hinweisen
+_PLACEHOLDER_RE = re.compile(
+    r"(TODO|PLACEHOLDER|FIXME|<test_output>|<your output>"
+    r"|insert output|copy output|example output)",
+    re.IGNORECASE,
+)
+
+
+def _validate_artifact(art: dict, project_root: Path) -> "str | None":
+    """Prüft ein einzelnes Artefakt. Gibt Fehlermeldung zurück oder None."""
+    art_type = art.get("type", "")
+    path_str = art.get("path", "")
+    description = art.get("description", "").strip()
+
+    if len(description) < 10:
+        return f"Beschreibung zu kurz ({len(description)} Zeichen): '{description}'"
+
+    if not path_str:
+        return None  # Kein Dateipfad → kann nicht weiter prüfen
+
+    artifact_path = (
+        Path(path_str) if Path(path_str).is_absolute() else project_root / path_str
     )
-    from config_loader import get_project_root
-except ImportError:
-    sys.path.insert(0, str(Path(__file__).parent))
-    from workflow_state_multi import (
-        load_state, get_active_workflow, PHASES,
-        PHASE_NAMES, TEST_REQUIRED_PHASES
-    )
-    from config_loader import get_project_root
 
-
-# Minimum requirements for TDD RED phase
-TDD_RED_REQUIREMENTS = {
-    "min_artifacts": 1,  # At least one test artifact
-    "max_artifact_age_hours": 24,  # Artifacts must be recent
-    "required_types": [],  # No specific type required by default
-}
-
-# Valid artifact types
-VALID_ARTIFACT_TYPES = [
-    "screenshot",
-    "email",
-    "api_response",
-    "log",
-    "file",
-    "test_output",
-    "video",
-    "audio",
-]
-
-# File extensions that prove REAL artifacts
-REAL_ARTIFACT_EXTENSIONS = {
-    "screenshot": [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"],
-    "email": [".eml", ".msg", ".txt"],
-    "api_response": [".json", ".xml", ".txt"],
-    "log": [".log", ".txt"],
-    "file": ["*"],  # Any extension
-    "test_output": [".txt", ".log", ".json"],
-    "video": [".mp4", ".mov", ".webm", ".gif"],
-    "audio": [".mp3", ".wav", ".m4a"],
-}
-
-# Minimum file sizes (bytes) to prove non-empty
-MIN_FILE_SIZES = {
-    "screenshot": 1000,  # Real screenshots are > 1KB
-    "email": 100,
-    "api_response": 10,
-    "log": 10,
-    "file": 1,
-    "test_output": 10,
-    "video": 10000,
-    "audio": 1000,
-}
-
-
-def validate_artifact(artifact: dict) -> tuple[bool, str]:
-    """
-    Validate a single test artifact.
-    Returns (valid, reason).
-    """
-    artifact_type = artifact.get("type")
-    path = artifact.get("path")
-    description = artifact.get("description", "")
-    created = artifact.get("created")
-
-    # Check type
-    if artifact_type not in VALID_ARTIFACT_TYPES:
-        return False, f"Invalid artifact type: {artifact_type}"
-
-    # Check path exists
-    if not path:
-        return False, "Artifact has no path"
-
-    # Resolve relative paths against the main repo root, not CWD.
-    # Hook may run from a worktree, but workflow_state.json (and its paths)
-    # is written relative to the main repo via config_loader.
-    artifact_path = Path(path)
-    if not artifact_path.is_absolute():
-        artifact_path = get_project_root() / artifact_path
     if not artifact_path.exists():
-        return False, f"Artifact file not found: {path}"
+        return f"Artefakt-Datei nicht gefunden: {path_str}"
 
-    # Check file extension
-    valid_extensions = REAL_ARTIFACT_EXTENSIONS.get(artifact_type, ["*"])
-    if "*" not in valid_extensions:
-        ext = artifact_path.suffix.lower()
-        if ext not in valid_extensions:
-            return False, f"Invalid extension {ext} for {artifact_type}. Expected: {valid_extensions}"
+    size = artifact_path.stat().st_size
+    if size < _MIN_SIZE:
+        return f"Artefakt-Datei zu klein ({size} Bytes < {_MIN_SIZE}): {path_str}"
 
-    # Check file size (not empty/placeholder)
-    min_size = MIN_FILE_SIZES.get(artifact_type, 1)
-    actual_size = artifact_path.stat().st_size
+    age_s = time.time() - artifact_path.stat().st_mtime
+    if age_s > _MAX_AGE_S:
+        return (
+            f"Artefakt-Datei zu alt ({age_s / 3600:.1f}h > 24h): {path_str}\n"
+            f"  → Neue RED-Tests ausführen und frische Artefakte registrieren."
+        )
 
-    if actual_size < min_size:
-        return False, f"Artifact too small ({actual_size} bytes). Minimum for {artifact_type}: {min_size} bytes. Is this a placeholder?"
-
-    # Check description
-    if not description or len(description) < 10:
-        return False, "Artifact needs a description (min 10 chars) explaining what it proves"
-
-    # Check placeholder patterns in description
-    placeholder_patterns = [
-        "[todo]", "[placeholder]", "[add later]", "[screenshot here]",
-        "tbd", "to be done", "will add", "need to add"
-    ]
-    desc_lower = description.lower()
-    for pattern in placeholder_patterns:
-        if pattern in desc_lower:
-            return False, f"Description contains placeholder pattern: '{pattern}'"
-
-    # Check artifact age
-    if created:
+    # Inhalt nur für test_output prüfen (nicht für Screenshots)
+    if art_type == "test_output":
         try:
-            created_dt = datetime.fromisoformat(created.replace('Z', '+00:00'))
-            max_age = timedelta(hours=TDD_RED_REQUIREMENTS["max_artifact_age_hours"])
-            if datetime.now(created_dt.tzinfo) - created_dt > max_age:
-                return False, f"Artifact is older than {TDD_RED_REQUIREMENTS['max_artifact_age_hours']} hours. Re-run tests with fresh data."
-        except (ValueError, TypeError):
-            pass  # Skip age check if date parsing fails
+            content = artifact_path.read_text(errors="replace")
+        except OSError:
+            return f"Artefakt-Datei nicht lesbar: {path_str}"
 
-    return True, "OK"
+        if _PLACEHOLDER_RE.search(content):
+            return (
+                f"Artefakt enthält Platzhalter-Text: {path_str}\n"
+                f"  → Echte Testausgabe eintragen, kein Copy-Paste-Beispiel."
+            )
 
+        if not _FAILURE_RE.search(content):
+            return (
+                f"RED-Artefakt zeigt keine Fehler-Evidenz: {path_str}\n"
+                f"  → Datei muss echte Fehlermeldungen enthalten (FAILED, ERROR, etc.).\n"
+                f"  → Artefakt scheint zu zeigen, dass Tests bestanden — das ist kein RED."
+            )
 
-def validate_red_phase(workflow: dict) -> tuple[bool, str]:
-    """
-    Validate that TDD RED phase is properly completed.
-    Returns (valid, reason).
-    """
-    artifacts = workflow.get("test_artifacts", [])
-
-    # Filter to RED phase artifacts
-    red_artifacts = [a for a in artifacts if a.get("phase") == "phase5_tdd_red"]
-
-    if len(red_artifacts) < TDD_RED_REQUIREMENTS["min_artifacts"]:
-        return False, f"""
-+======================================================================+
-|  TDD RED PHASE INCOMPLETE!                                           |
-+======================================================================+
-|  You have {len(red_artifacts)} test artifact(s), need at least {TDD_RED_REQUIREMENTS["min_artifacts"]}.           |
-|                                                                      |
-|  Before implementing, you MUST:                                      |
-|  1. Write tests that exercise the new/changed functionality          |
-|  2. Run the tests - they MUST FAIL (RED)                             |
-|  3. Capture REAL artifacts proving the test ran:                     |
-|     - Screenshots of failed test output                              |
-|     - Log files showing test execution                               |
-|     - API responses from test calls                                  |
-|                                                                      |
-|  Use /add-artifact to register test evidence.                        |
-+======================================================================+
-"""
-
-    # Validate each artifact
-    for artifact in red_artifacts:
-        valid, reason = validate_artifact(artifact)
-        if not valid:
-            return False, f"""
-+======================================================================+
-|  INVALID TEST ARTIFACT!                                              |
-+======================================================================+
-|  Artifact: {artifact.get('path', 'unknown')[:50]}
-|  Problem: {reason[:50]}
-|                                                                      |
-|  Test artifacts must be REAL, not placeholders:                      |
-|  - Actual screenshot files (PNG, JPG) with content                   |
-|  - Actual test output logs                                           |
-|  - Actual API responses                                              |
-|                                                                      |
-|  Fix the artifact or add a valid one with /add-artifact.             |
-+======================================================================+
-"""
-
-    # Check for test failure evidence (at least one artifact should show failure)
-    failure_indicators = ["fail", "error", "red", "not found", "exception", "assert"]
-    has_failure_evidence = False
-
-    for artifact in red_artifacts:
-        desc_lower = artifact.get("description", "").lower()
-        if any(indicator in desc_lower for indicator in failure_indicators):
-            has_failure_evidence = True
-            break
-
-    if not has_failure_evidence:
-        return False, f"""
-+======================================================================+
-|  NO FAILURE EVIDENCE!                                                |
-+======================================================================+
-|  TDD RED phase requires tests that FAIL.                             |
-|                                                                      |
-|  Your artifacts don't indicate test failures.                        |
-|  At least one artifact description should mention:                   |
-|  - "test failed"                                                     |
-|  - "assertion error"                                                 |
-|  - "expected X but got Y"                                            |
-|                                                                      |
-|  If tests pass already, you're not doing TDD - you're testing        |
-|  after the fact. Write tests for functionality that doesn't          |
-|  exist yet!                                                          |
-+======================================================================+
-"""
-
-    return True, "TDD RED phase validated"
+    return None
 
 
-def check_tdd_requirements(file_path: str) -> tuple[bool, str]:
-    """
-    Check if TDD requirements are met for modifying a file.
-    Returns (allowed, reason).
-    """
-    from workflow import read_active_workflow_fast
-    result = read_active_workflow_fast()
-    if result is None:
-        return True, "No active workflow, TDD check skipped"
-    _wf_name, workflow = result
-
-    phase = workflow.get("current_phase", "phase0_idle")
-
-    # Only enforce TDD for implementation phases
-    if phase not in TEST_REQUIRED_PHASES:
-        return True, f"Phase {phase} doesn't require TDD artifacts"
-
-    # Validate RED phase completion
-    return validate_red_phase(workflow)
-
-
-def main():
-    # Per-session workflow resolution (#325): capture session_id from the stdin
-    # payload (documented + reliable; env CLAUDE_CODE_SESSION_ID is not passed to
-    # hooks) and expose tool_input via CLAUDE_TOOL_INPUT so existing logic below is
-    # unchanged. Only reads stdin when CLAUDE_TOOL_INPUT is not already set.
-    if not os.environ.get("CLAUDE_TOOL_INPUT"):
-        try:
-            _raw = sys.stdin.read()
-            _payload = json.loads(_raw) if _raw.strip() else {}
-            _sid = (_payload.get("session_id") or "").strip()
-            if _sid:
-                os.environ["GZ_HOOK_SESSION_ID"] = _sid
-            os.environ["CLAUDE_TOOL_INPUT"] = json.dumps(_payload.get("tool_input", {}))
-        except Exception:
-            pass
-    """Main hook entry point."""
-    # Get tool input
-    tool_input = os.environ.get("CLAUDE_TOOL_INPUT", "")
-
-    if not tool_input:
-        try:
-            data = json.load(sys.stdin)
-            tool_input = json.dumps(data.get("tool_input", {}))
-        except (json.JSONDecodeError, Exception):
-            sys.exit(0)
-
+def main() -> None:
     try:
-        data = json.loads(tool_input) if isinstance(tool_input, str) else tool_input
-        file_path = data.get("file_path", "")
-    except json.JSONDecodeError:
-        file_path = ""
+        tool_input = get_tool_input()
+    except Exception:
+        allow()
 
-    if not file_path:
-        sys.exit(0)
+    file_path = tool_input.get("file_path", "")
 
-    # Skip for non-code files
-    code_extensions = [".py", ".js", ".ts", ".swift", ".kt", ".java", ".go", ".rs", ".cpp", ".c", ".h"]
-    if not any(file_path.endswith(ext) for ext in code_extensions):
-        sys.exit(0)
+    # Immer-Erlaubt-Pfade (Docs, Configs, Specs) — gleiche Logik wie edit_gate.py
+    if _ALWAYS_ALLOWED.search(file_path):
+        allow()
 
-    # Skip for test files (we want to allow writing tests!)
-    test_patterns = ["test_", "_test.", ".test.", "tests/", "spec/", "_spec."]
-    if any(pattern in file_path.lower() for pattern in test_patterns):
-        sys.exit(0)
+    # Workflow laden
+    try:
+        import workflow as _wf
+        result = _wf.read_active_workflow_fast()
+    except Exception:
+        allow()
 
-    # Check TDD requirements
-    allowed, reason = check_tdd_requirements(file_path)
+    if result is None:
+        allow()
 
-    if not allowed:
-        print(reason, file=sys.stderr)
-        sys.exit(2)
+    wf_name, workflow = result
+    current_phase = workflow.get("current_phase", "")
 
-    sys.exit(0)
+    if current_phase not in TEST_REQUIRED_PHASES:
+        allow()
+
+    project_root = find_project_root()
+
+    red_artifacts = [
+        a for a in workflow.get("test_artifacts", [])
+        if a.get("phase") == "phase5_tdd_red"
+    ]
+
+    if not red_artifacts:
+        # Kein Artefakt → erst hier blockieren wenn auch edit_gate's boolean-Flag fehlt
+        # (edit_gate.py blockiert schon, aber zur Sicherheit auch hier)
+        red_done = workflow.get("red_test_done", False) or workflow.get("ui_test_red_done", False)
+        if not red_done:
+            block(
+                f"BLOCKED [tdd_enforcement]: Keine RED-Test-Artefakte für '{wf_name}'.\n"
+                f"  Phase: {current_phase}\n"
+                f"→ Zuerst /40-tdd-red ausführen und Artefakte registrieren:\n"
+                f"  python3 .claude/hooks/workflow.py add-artifact test_output "
+                f"'pfad/zum/output.txt' 'Tests fehlgeschlagen: ...' phase5_tdd_red"
+            )
+        allow()
+
+    # Qualität der Artefakte prüfen
+    errors = []
+    for art in red_artifacts:
+        err = _validate_artifact(art, project_root)
+        if err:
+            errors.append(f"  [{art.get('path', '?')}] {err}")
+
+    if errors:
+        block(
+            f"BLOCKED [tdd_enforcement]: RED-Artefakte ungültig für '{wf_name}':\n"
+            + "\n".join(errors)
+            + "\n→ Echte fehlschlagende Tests ausführen und neue Artefakte registrieren."
+        )
+
+    allow()
 
 
 if __name__ == "__main__":

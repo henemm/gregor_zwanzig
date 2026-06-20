@@ -18,11 +18,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/worktree_write_guard.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/worktree_write_guard.py\"; fi",
-            "timeout": 5
-          },
-          {
-            "type": "command",
             "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/workflow_gate.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/workflow_gate.py\"; fi",
             "timeout": 5
           },
@@ -33,22 +28,7 @@
           },
           {
             "type": "command",
-            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/claude_md_protection.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/claude_md_protection.py\"; fi",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/tdd_enforcement.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/tdd_enforcement.py\"; fi",
-            "timeout": 5
-          },
-          {
-            "type": "command",
             "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/red_test_gate.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/red_test_gate.py\"; fi",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/post_implementation_gate.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/post_implementation_gate.py\"; fi",
             "timeout": 5
           },
           {
@@ -113,11 +93,6 @@
           },
           {
             "type": "command",
-            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/secrets_guard.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/secrets_guard.py\"; fi",
-            "timeout": 5
-          },
-          {
-            "type": "command",
             "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/e2e_commit_gate.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/e2e_commit_gate.py\"; fi",
             "timeout": 5
           },
@@ -125,16 +100,6 @@
             "type": "command",
             "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/pre_issue_close_design_gate.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/pre_issue_close_design_gate.py\"; fi",
             "timeout": 10
-          }
-        ]
-      },
-      {
-        "matcher": "Read",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/secrets_guard.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/secrets_guard.py\"; fi",
-            "timeout": 5
           }
         ]
       }
@@ -184,16 +149,6 @@
             "type": "command",
             "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/auto_restart_server.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/auto_restart_server.py\"; fi",
             "timeout": 30
-          }
-        ]
-      },
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/edit_verify.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/edit_verify.py\"; fi",
-            "timeout": 5
           }
         ]
       }

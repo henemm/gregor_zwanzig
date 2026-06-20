@@ -1,19 +1,20 @@
+#!/usr/bin/env python3
 """
-PostToolUse hook: edit_verify.py — Bug #569
+Edit Verify — PostToolUse Edit|Write|MultiEdit
 
-Verifies that an Edit or Write tool call actually landed on disk.
-On success: no output, exit 0.
-On failure: warning message to stdout, exit 0 (visibility, not blocking).
-Fail-open on any error.
+Prüft nach jedem Edit/Write, dass der neue Inhalt tatsächlich auf Disk
+gelandet ist. Gibt bei stiller Fehlfunktion eine Warnung aus.
+
+Fail-open: Jede Exception → exit(0). Blockiert nie.
 """
+
 import json
 import sys
 
 
 def main() -> None:
     try:
-        raw = sys.stdin.read()
-        payload = json.loads(raw)
+        payload = json.loads(sys.stdin.read())
     except Exception:
         sys.exit(0)
 
@@ -26,42 +27,32 @@ def main() -> None:
         if not file_path:
             sys.exit(0)
 
-        # Determine what string to look for
         tool_name = payload.get("tool_name", "")
         if tool_name == "Write":
-            content = tool_input.get("content")
-            if not content:
-                sys.exit(0)
-            search_string = content[:200]
+            search_string = tool_input.get("content")
         else:
-            # Edit tool
             search_string = tool_input.get("new_string")
-            if not search_string:
-                sys.exit(0)
 
-        # Read the file using the absolute path directly (AC-5: no path re-resolution)
+        if not search_string:
+            sys.exit(0)
+
         try:
             with open(file_path, "r", encoding="utf-8") as fh:
                 file_content = fh.read()
         except (OSError, UnicodeDecodeError):
-            # AC-4: fail-open for unreadable or binary files
-            sys.exit(0)
+            sys.exit(0)  # Binärdateien oder fehlende Rechte → kein Problem
 
-        # Check if expected string is present
-        if search_string in file_content:
-            # AC-1/AC-3: success, no output
-            sys.exit(0)
-
-        # AC-2: silent failure detected — output warning to stdout
-        print(
-            f"WARNING: Edit-Verify failed — new_string/content NOT FOUND in {file_path}\n"
-            f"Expected to find: {repr(search_string[:80])}"
-        )
-        sys.exit(0)
+        if search_string[:200] not in file_content:
+            print(
+                f"WARNUNG [edit_verify]: Inhalt nach Edit NICHT in {file_path} gefunden.\n"
+                f"  Erwartet: {repr(search_string[:80])}",
+                file=sys.stderr,
+            )
 
     except Exception:
-        # Fail-open for any unexpected error
-        sys.exit(0)
+        pass
+
+    sys.exit(0)
 
 
 if __name__ == "__main__":

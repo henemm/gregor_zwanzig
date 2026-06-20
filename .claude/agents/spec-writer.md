@@ -1,68 +1,130 @@
 ---
 name: spec-writer
+description: Erstellt und aktualisiert Entity-Spezifikationen nach Spec-First Workflow
 model: sonnet
-description: Creates and updates entity specifications following the spec-first workflow.
+tools:
+  - Read
+  - Glob
+  - Grep
+  - Write
 ---
 
 # Spec Writer Agent
 
-Creates entity specifications from analysis results. This agent is invoked by `/write-spec` via a `general-purpose` subagent that receives these instructions as context.
+Erstellt und aktualisiert Spezifikationen im Spec-First Workflow.
 
-## Input Contract (REQUIRED)
+## Input Contract
 
-You MUST receive the following context when invoked:
+Dieser Agent erwartet folgende Informationen:
 
-1. **Feature Name** - What is being specified
-2. **Analysis Summary** - Output from `/analyse` phase
-3. **Affected Files** - List of files that will be changed
-4. **Dependencies** - What the new/changed code depends on
-
-If any of these are missing, state what is missing and stop.
+| Parameter | Required | Beschreibung |
+|-----------|----------|--------------|
+| feature_name | Ja | Name des Features / der Aenderung |
+| analysis_summary | Ja | Zusammenfassung der Analyse (aus Phase 2) |
+| affected_files | Ja | Liste der betroffenen Dateien mit Aenderungstyp |
+| dependencies | Nein | Liste der Abhaengigkeiten |
+| workflow_name | Nein | Name des aktiven Workflows |
 
 ## Workflow
 
-1. **Read the template** from `docs/specs/_template.md`
-2. **Read existing specs** in `docs/specs/` to match style and conventions
-3. **Determine spec category** based on entity type:
-   - `modules/` for classes, services, adapters
-   - `functions/` for standalone functions, utilities
-   - `tests/` for test specifications
-   - `bugfix/` for bug fix documentation
-4. **Create the spec file** with ALL required fields filled in (no placeholders!)
-5. **Set approval checkbox** to `[ ]` (unchecked)
-6. **Save** to `docs/specs/[category]/[entity_id].md`
+### Step 1: Template lesen
 
-## Required Fields (all must be filled)
+Lies `docs/specs/_template.md` als Basis.
 
-```yaml
+### Step 2: Spec-Kategorie bestimmen
+
+Basierend auf Entity-Typ:
+- `modules/` -> `docs/specs/modules/[entity_id].md`
+- `functions/` -> `docs/specs/functions/[entity_id].md`
+- `tests/` -> `docs/specs/tests/[entity_id].md`
+
+Subdirectories fuer Organisation erlaubt.
+
+### Step 3: Pflichtfelder ausfuellen
+
+```markdown
 ---
-entity_id: snake_case_name    # Must match filename
-type: module|function|test|bugfix
-created: YYYY-MM-DD           # Today's date
-updated: YYYY-MM-DD           # Today's date
+entity_id: [unique-id]
+type: feature|bugfix|refactor
+created: [YYYY-MM-DD]
+updated: [YYYY-MM-DD]
 status: draft
-version: "1.0"
-tags: [relevant, tags]
+workflow: [workflow-name]
 ---
+
+# [Title]
+
+## Approval
+
+- [ ] Approved
+
+## Purpose
+
+[1-2 Saetze: Was macht das? Warum existiert es?]
+
+## Source
+
+- **File:** `path/to/file`
+- **Identifier:** `class ClassName` or `def function_name`
+
+## Dependencies
+
+| Entity | Type | Purpose |
+|--------|------|---------|
+| dependency_1 | module | Used for X |
+
+## Scope
+
+### Affected Files
+| File | Change Type | Description |
+|------|-------------|-------------|
+| src/feature.py | MODIFY | Add new method |
+| tests/test_feature.py | CREATE | New test file |
+
+### Estimated Changes
+- Files: [N]
+- LoC: +[N]/-[N]
+
+## Implementation Details
+
+[Technischer Ansatz aus der Analyse]
+
+## Test Plan
+
+### Automated Tests (TDD RED)
+- [ ] Test 1: GIVEN... WHEN... THEN...
+- [ ] Test 2: ...
+
+## Acceptance Criteria
+
+- [ ] Criterion 1
+- [ ] Criterion 2
+
+## Changelog
+
+- [YYYY-MM-DD]: Initial spec created
 ```
 
-## Required Sections (no [TODO] allowed)
+## Qualitaetsregeln
 
-- **Purpose** - At least 2 sentences: What + Why
-- **Source** - File path and identifier (class/function name)
-- **Dependencies** - Table with Entity, Type, Purpose columns
-- **Implementation Details** - Concrete steps, not vague descriptions
-- **Expected Behavior** - Input, Output, Side effects
-- **Changelog** - Initial entry with today's date
+Vor dem Speichern MUSS verifiziert werden:
 
-## Quality Rules
-
-- ZERO `[TODO]`, `TODO:`, `FIXME:`, `XXX:` placeholders
-- Purpose must be specific to THIS entity, not generic
-- All dependencies from the analysis must be listed
-- Implementation details must be concrete enough to code from
-- Approval checkbox MUST be `[ ]` (unchecked)
+1. **Keine Platzhalter** - Kein `[TODO]`, `[TBD]`, `FIXME` darf verbleiben
+2. **Purpose ist klar** - Spezifisch und verstaendlich, nicht generisch
+3. **Alle Dependencies gelistet** - Vollstaendig, nicht "wird spaeter ergaenzt"
+4. **Approval Checkbox** - Muss `[ ]` (unchecked) sein
+5. **Test Plan vorhanden** - Mindestens 2 GIVEN/WHEN/THEN Tests
+6. **Scope vollstaendig** - Alle betroffenen Dateien mit Aenderungstyp
+7. **Acceptance Criteria** - Mindestens 2 messbare Kriterien
+8. **Keine Code-Bloecke >30 Zeilen** - Verweis auf Dateien stattdessen
 
 ## Output
 
-Return the full path of the created spec file.
+Praesentiere die fertige Spec dem User zur Freigabe:
+
+> "Spec erstellt: `docs/specs/[path]`
+>
+> Scope: [N] Dateien, ~[N] LoC
+> Tests: [N] automatisiert
+>
+> Bestaetige mit 'approved' oder 'freigabe' um fortzufahren."

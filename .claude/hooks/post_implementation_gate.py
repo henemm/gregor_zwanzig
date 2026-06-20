@@ -1,347 +1,173 @@
 #!/usr/bin/env python3
 """
-OpenSpec Framework - Post-Implementation Gate
+Post-Implementation Gate — PreToolUse Edit|Write|MultiEdit
 
-Blocks further changes until USER (not Claude!) approves.
+Stellt sicher, dass der User die Implementierungsergebnisse begutachtet
+bevor weitere Code-Änderungen erlaubt werden.
 
-Key Principle: Claude cannot approve its own work.
-The user must explicitly validate and approve changes.
+Ablauf:
+1. Erster Code-Edit in phase6_implement → Lock-Datei erstellen (mit Timestamp)
+2. Innerhalb von 15 Minuten → weitere Edits erlaubt (Batch-Fenster)
+3. Nach 15 Minuten → BLOCKIERT bis User-Freigabe
+4. User sagt "go" / "freigabe" / "approved" → phase_listener erstellt Approval-Marker
+5. Approval-Marker vorhanden → entsperren + Lock löschen
 
-Features:
-- Batch Mode: Changes within N minutes are treated as one batch
-- User Approval: Only user can approve (via file marker or chat phrase)
-- Domain-Specific Validation: Different requirements per file type (configurable)
-- Per-Workflow Isolation: Lock and approval files are scoped to the active
-  workflow name so parallel workflows cannot accidentally unblock each other.
+Bypasses:
+- Adversary-Phase (phase6b_adversary) → immer erlaubt
+- Workflow abgeschlossen (phase7+) → immer erlaubt
+- User-Override-Token → immer erlaubt (wird von edit_gate.py geprüft)
+- Docs/Specs/Config-Dateien → immer erlaubt
 
-Lock File: .claude/pending_validation_<workflow>.json
-Approval:  .claude/user_approved_validation_<workflow>
-(Falls back to the un-suffixed names when no active workflow is detected.)
-
-Exit Codes:
-- 0: Allowed (no lock, user approved, or within batch window)
-- 2: Blocked (lock exists, batch expired, no user approval)
+Lock-Dateien:
+  .claude/pending_validation_<workflow>.json
+  .claude/user_approved_validation_<workflow>   (Marker, leer)
 """
 
 import json
-import sys
 import os
-from datetime import datetime, timedelta
+import re
+import sys
+import time
 from pathlib import Path
 
-# Try to import config loader + v3 state wrapper
-try:
-    from config_loader import get_project_root, load_config
-    from workflow_state_multi import load_state as _load_state_v3
-except ImportError:
-    sys.path.insert(0, str(Path(__file__).parent))
-    try:
-        from config_loader import get_project_root, load_config
-        from workflow_state_multi import load_state as _load_state_v3
-    except ImportError:
-        def get_project_root():
-            cwd = Path.cwd()
-            for parent in [cwd] + list(cwd.parents):
-                if (parent / ".git").exists():
-                    return parent
-            return cwd
-        def load_config():
-            return {}
-        def _load_state_v3():
-            return {"version": "2.0", "workflows": {}, "active_workflow": None}
+
+def _setup():
+    hooks_dir = str(Path(__file__).parent)
+    if hooks_dir not in sys.path:
+        sys.path.insert(0, hooks_dir)
 
 
-def get_active_workflow_name() -> str | None:
-    """Return the name of the currently active workflow, or None."""
-    try:
-        state = _load_state_v3()
-    except Exception:
-        return None
-    return state.get("active_workflow") or None
+_setup()
+
+from hook_utils import get_tool_input, find_project_root, block, allow, get_active_workflow_name  # noqa: E402
+
+# Batch-Fenster: innerhalb dieser Zeit nach dem ersten Edit kein Gate
+_BATCH_WINDOW_S = 15 * 60  # 15 Minuten
+
+# Phasen in denen das Gate gilt
+_GATED_PHASES = {"phase6_implement"}
+
+# Phasen in denen das Gate explizit NICHT gilt (Adversary + alles danach)
+_BYPASS_PHASES = {"phase6b_adversary", "phase7_validate", "phase8_complete", "phase0_idle"}
+
+# Pfade die immer erlaubt sind
+_ALWAYS_ALLOWED = re.compile(
+    r"(\.claude[/\\]|[/\\]docs[/\\]|\.md$|\.gitignore|\.txt$|[/\\]specs[/\\]"
+    r"|[/\\]\.claude[/\\])"
+)
 
 
-def get_lock_file() -> Path:
-    """Get path to the per-workflow lock file."""
-    name = get_active_workflow_name()
-    suffix = f"_{name}" if name else ""
-    return get_project_root() / ".claude" / f"pending_validation{suffix}.json"
+def _lock_path(project_root: Path, wf_name: str) -> Path:
+    return project_root / ".claude" / f"pending_validation_{wf_name}.json"
 
 
-def get_approval_file() -> Path:
-    """Get path to the per-workflow user approval marker file."""
-    name = get_active_workflow_name()
-    suffix = f"_{name}" if name else ""
-    return get_project_root() / ".claude" / f"user_approved_validation{suffix}"
+def _approval_path(project_root: Path, wf_name: str) -> Path:
+    return project_root / ".claude" / f"user_approved_validation_{wf_name}"
 
 
-# Default settings (can be overridden in config.yaml)
-BATCH_WINDOW_MINUTES = 15
-
-# Default protected paths (override in config.yaml)
-DEFAULT_PROTECTED_PATHS = [
-    r"src/",
-    r"lib/",
-    r"app/",
-]
-
-# Default exempt paths (override in config.yaml)
-DEFAULT_EXEMPT_PATHS = [
-    r"\.claude/",
-    r"docs/",
-    r"\.md$",
-    r"\.git/",
-    r"test",
-    r"spec",
-]
-
-
-def get_protected_paths() -> list:
-    """Get protected paths from config or defaults."""
-    config = load_config()
-    return config.get("post_implementation", {}).get("protected_paths", DEFAULT_PROTECTED_PATHS)
-
-
-def get_exempt_paths() -> list:
-    """Get exempt paths from config or defaults."""
-    config = load_config()
-    return config.get("post_implementation", {}).get("exempt_paths", DEFAULT_EXEMPT_PATHS)
-
-
-def get_batch_window() -> int:
-    """Get batch window in minutes from config or default."""
-    config = load_config()
-    return config.get("post_implementation", {}).get("batch_window_minutes", BATCH_WINDOW_MINUTES)
-
-
-def is_protected_file(file_path: str) -> bool:
-    """Check if file requires validation."""
-    import re
-
-    exempt_paths = get_exempt_paths()
-    protected_paths = get_protected_paths()
-
-    # Check exemptions first
-    for exempt in exempt_paths:
-        if re.search(exempt, file_path):
-            return False
-
-    # Then check protected paths
-    for protected in protected_paths:
-        if re.search(protected, file_path):
-            return True
-
-    return False
-
-
-def load_lock() -> dict | None:
-    """Load lock file if exists."""
-    lock_file = get_lock_file()
-    if not lock_file.exists():
+def _read_lock(lock_path: Path) -> "dict | None":
+    if not lock_path.exists():
         return None
     try:
-        with open(lock_file, 'r') as f:
-            return json.load(f)
-    except Exception:
+        return json.loads(lock_path.read_text())
+    except (OSError, json.JSONDecodeError):
         return None
 
 
-def save_lock(lock_data: dict):
-    """Save lock file."""
-    lock_file = get_lock_file()
-    lock_file.parent.mkdir(parents=True, exist_ok=True)
-    with open(lock_file, 'w') as f:
-        json.dump(lock_data, f, indent=2)
+def _write_lock(lock_path: Path, wf_name: str) -> None:
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    lock_path.write_text(json.dumps({
+        "workflow": wf_name,
+        "created": time.time(),
+        "created_iso": __import__("datetime").datetime.now().isoformat(),
+    }, indent=2))
 
 
-def clear_lock():
-    """Clear lock and approval files."""
-    lock_file = get_lock_file()
-    approval_file = get_approval_file()
-
-    if lock_file.exists():
-        lock_file.unlink()
-    if approval_file.exists():
-        approval_file.unlink()
-
-
-def check_user_approval() -> bool:
-    """
-    Check if user has approved.
-
-    Approval happens ONLY via:
-    1. Existence of approval marker file (user must create manually)
-    2. OR: User message contains approval phrase (handled by workflow_state_updater)
-
-    Claude MUST NOT create this file!
-    """
-    return get_approval_file().exists()
-
-
-def get_current_phase() -> str | None:
-    """Get the current workflow phase via the v3 state wrapper."""
-    try:
-        state = _load_state_v3()
-    except Exception:
-        return None
-    active = state.get("active_workflow")
-    if not active:
-        return None
-    workflow = state.get("workflows", {}).get(active, {})
-    return workflow.get("current_phase")
-
-
-def is_workflow_complete() -> bool:
-    """
-    Check if the active workflow has reached phase8_complete.
-
-    E2E verification + phase8_complete implies user validated the work,
-    so the lock should no longer block further edits.
-    """
-    return get_current_phase() == "phase8_complete"
-
-
-def is_adversary_fix_phase() -> bool:
-    """
-    Check if in phase6b_adversary where fixes are explicitly allowed.
-
-    In the external validator flow, the user starts a separate validator
-    session and comes back with "fix needed: [findings]". This user
-    instruction is the authorization for further edits. The batch window
-    should not block adversary-driven fixes.
-    """
-    return get_current_phase() == "phase6b_adversary"
-
-
-def is_within_batch_window(lock: dict) -> bool:
-    """Check if still within batch window."""
-    try:
-        last_change = datetime.fromisoformat(lock.get('last_change', lock.get('timestamp', '')))
-        batch_minutes = get_batch_window()
-        return datetime.now() - last_change < timedelta(minutes=batch_minutes)
-    except (ValueError, TypeError):
-        return False
-
-
-def main():
-    # Per-session workflow resolution (#325): capture session_id from the stdin
-    # payload (documented + reliable; env CLAUDE_CODE_SESSION_ID is not passed to
-    # hooks) and expose tool_input via CLAUDE_TOOL_INPUT so existing logic below is
-    # unchanged. Only reads stdin when CLAUDE_TOOL_INPUT is not already set.
-    if not os.environ.get("CLAUDE_TOOL_INPUT"):
+def _clear_lock(lock_path: Path, approval_path: Path) -> None:
+    for p in (lock_path, approval_path):
         try:
-            _raw = sys.stdin.read()
-            _payload = json.loads(_raw) if _raw.strip() else {}
-            _sid = (_payload.get("session_id") or "").strip()
-            if _sid:
-                os.environ["GZ_HOOK_SESSION_ID"] = _sid
-            os.environ["CLAUDE_TOOL_INPUT"] = json.dumps(_payload.get("tool_input", {}))
-        except Exception:
+            p.unlink(missing_ok=True)
+        except OSError:
             pass
-    # Get tool input
-    tool_input = os.environ.get("CLAUDE_TOOL_INPUT", "")
 
-    if not tool_input:
-        try:
-            data = json.load(sys.stdin)
-            tool_input = json.dumps(data.get("tool_input", {}))
-        except (json.JSONDecodeError, Exception):
-            sys.exit(0)
 
+def main() -> None:
     try:
-        data = json.loads(tool_input) if isinstance(tool_input, str) else tool_input
-        file_path = data.get("file_path", "")
-    except json.JSONDecodeError:
-        file_path = ""
+        tool_input = get_tool_input()
+    except Exception:
+        allow()
 
-    if not file_path:
-        sys.exit(0)
+    file_path = tool_input.get("file_path", "")
 
-    # Non-protected files pass through
-    if not is_protected_file(file_path):
-        sys.exit(0)
+    # Docs, Configs, Specs immer erlaubt
+    if _ALWAYS_ALLOWED.search(file_path):
+        allow()
 
-    # Check lock
-    lock = load_lock()
+    # Workflow laden
+    try:
+        import workflow as _wf
+        result = _wf.read_active_workflow_fast()
+    except Exception:
+        allow()
+
+    if result is None:
+        allow()
+
+    wf_name, workflow = result
+    current_phase = workflow.get("current_phase", "")
+
+    # Bypass-Phasen: Gate gilt nicht
+    if current_phase in _BYPASS_PHASES:
+        allow()
+
+    # Nicht in einer Gated-Phase → erlauben
+    if current_phase not in _GATED_PHASES:
+        allow()
+
+    project_root = find_project_root()
+    lock_path = _lock_path(project_root, wf_name)
+    approval_path = _approval_path(project_root, wf_name)
+
+    # User-Freigabe vorhanden → entsperren + Locks löschen
+    if approval_path.exists():
+        _clear_lock(lock_path, approval_path)
+        allow()
+
+    lock = _read_lock(lock_path)
 
     if lock is None:
-        # No lock - allow change, create new lock
-        now = datetime.now().isoformat()
-        new_lock = {
-            'files': [file_path],
-            'first_change': now,
-            'last_change': now,
-            'requires_validation': True,
-        }
-        save_lock(new_lock)
-        sys.exit(0)
+        # Erster Code-Edit in dieser Phase → Lock anlegen, Batch-Fenster starten
+        _write_lock(lock_path, wf_name)
+        allow()
 
-    # Lock exists - check if user approved
-    if check_user_approval():
-        # User approved - clear lock and allow
-        clear_lock()
-        sys.exit(0)
+    # Lock existiert → prüfen ob Batch-Fenster noch offen
+    age_s = time.time() - lock.get("created", 0)
 
-    # Lock exists - check if active workflow completed (E2E verified)
-    if is_workflow_complete():
-        clear_lock()
-        sys.exit(0)
+    if age_s <= _BATCH_WINDOW_S:
+        # Noch im 15-Minuten-Fenster → erlauben
+        remaining_min = (_BATCH_WINDOW_S - age_s) / 60
+        # Optional: kurze Info-Nachricht (kein block, nur stderr-Info)
+        print(
+            f"[post_implementation_gate] Batch-Fenster: noch {remaining_min:.0f} Min.",
+            file=sys.stderr,
+        )
+        allow()
 
-    # Lock exists - check if in adversary fix phase
-    # In phase6b_adversary, the external validator (started by user) found
-    # issues. The user's "fix needed" instruction authorizes further edits.
-    # Reset the batch window so the fix gets a fresh window.
-    if is_adversary_fix_phase():
-        files = lock.get('files', [])
-        if file_path not in files:
-            files.append(file_path)
-        lock['files'] = files
-        lock['last_change'] = datetime.now().isoformat()
-        save_lock(lock)
-        sys.exit(0)
-
-    # Lock exists - check if within batch window
-    if is_within_batch_window(lock):
-        # Still in batch window - add file and allow
-        files = lock.get('files', [])
-        if file_path not in files:
-            files.append(file_path)
-        lock['files'] = files
-        lock['last_change'] = datetime.now().isoformat()
-        save_lock(lock)
-        sys.exit(0)
-
-    # Lock exists, batch expired, no approval - BLOCK
-    files_list = lock.get('files', ['unknown'])
-    files_str = ', '.join(files_list[:3])
-    if len(files_list) > 3:
-        files_str += f" (+{len(files_list) - 3} more)"
-
-    batch_minutes = get_batch_window()
-    approval_file = get_approval_file()
-
-    print(f"""
-╔══════════════════════════════════════════════════════════════════╗
-║  BLOCKED: Pending User Validation                                ║
-╠══════════════════════════════════════════════════════════════════╣
-║  Previous changes have not been validated by USER!               ║
-║                                                                  ║
-║  Changed files: {files_str[:47]:<47}║
-║  Batch started: {lock.get('first_change', 'unknown')[:20]:<20}                        ║
-║  Batch window ({batch_minutes} min) expired.                                 ║
-║                                                                  ║
-║  NO further changes until USER approves:                         ║
-║                                                                  ║
-║  Option 1: Create approval file                                  ║
-║    touch {str(approval_file)[:52]:<52}║
-║                                                                  ║
-║  Option 2: Say in chat:                                          ║
-║    "approved" / "validated" / "test ok" / "freigabe"             ║
-║                                                                  ║
-║  IMPORTANT: Claude cannot approve its own work!                  ║
-╚══════════════════════════════════════════════════════════════════╝
-""", file=sys.stderr)
-    sys.exit(2)
+    # Batch-Fenster abgelaufen → auf User-Freigabe warten
+    elapsed_min = age_s / 60
+    block(
+        f"BLOCKED [post_implementation_gate]: Implementierung läuft seit {elapsed_min:.0f} Min.\n"
+        f"  Workflow: {wf_name} · Phase: {current_phase}\n"
+        f"\n"
+        f"  Bitte prüfe die bisherigen Änderungen bevor du weiterschreibst.\n"
+        f"\n"
+        f"  Freigabe-Optionen:\n"
+        f"  A) Sage 'go', 'freigabe' oder 'approved' → Freigabe per Chat\n"
+        f"  B) Bash: touch .claude/user_approved_validation_{wf_name}\n"
+        f"\n"
+        f"  Danach ist der nächste Edit automatisch erlaubt."
+    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

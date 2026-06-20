@@ -1,87 +1,104 @@
 #!/usr/bin/env python3
 """
-OpenSpec Framework - CLAUDE.md Protection Hook
+CLAUDE.md Protection — PreToolUse Edit|Write
 
-Prevents CLAUDE.md from becoming bloated with content that belongs elsewhere:
-- Solution attempts -> docs/project/solution_attempts.md
-- Feature documentation -> docs/features/
-- Long code examples -> docs/reference/
+Schützt CLAUDE.md vor:
+- Verbotenen Patterns (konfigurierbar via openspec.yaml)
+- Aufblähen mit Inhalt der in /docs/ gehört
 
-Also warns if CLAUDE.md exceeds configured line limit.
+Warnt wenn CLAUDE.md die konfigurierte Zeilenzahl überschreitet.
 
-Exit Codes:
-- 0: Allowed (but may print warnings)
-- 2: Blocked (forbidden pattern detected)
+Konfigurierbar via openspec.yaml:
+  claude_md:
+    max_lines: 600
+    forbidden_patterns:
+      - pattern: "## Solution Attempts"
+        message: "Lösungsversuche gehören nach docs/project/solution_attempts.md"
+
+Exit-Codes: 0 = erlaubt (mit möglicher Warnung), 2 = blockiert
 """
 
 import json
 import os
-import sys
 import re
+import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
-import _bootstrap  # noqa: F401
-from config_loader import load_config, get_project_root
+
+def _setup():
+    hooks_dir = str(Path(__file__).parent)
+    if hooks_dir not in sys.path:
+        sys.path.insert(0, hooks_dir)
 
 
-def check_file_size():
-    """Check if CLAUDE.md exceeds line limit."""
-    config = load_config()
-    max_lines = config.get("claude_md", {}).get("max_lines", 600)
+_setup()
 
-    claude_md = get_project_root() / "CLAUDE.md"
+from hook_utils import find_project_root  # noqa: E402
+
+try:
+    from config_loader import load_config
+except ImportError:
+    def load_config():
+        return {}
+
+
+def _check_length() -> None:
+    cfg = load_config().get("claude_md", {})
+    max_lines = cfg.get("max_lines", 600)
+    claude_md = find_project_root() / "CLAUDE.md"
     if not claude_md.exists():
         return
-
     try:
         lines = claude_md.read_text().splitlines()
         if len(lines) > max_lines:
-            print(f"WARNING: CLAUDE.md has {len(lines)} lines (max: {max_lines})")
-            print("Consider moving detailed content to /docs/")
-    except Exception:
+            print(
+                f"WARNUNG [claude_md_protection]: CLAUDE.md hat {len(lines)} Zeilen "
+                f"(Limit: {max_lines}).\n"
+                f"  Detaillierter Inhalt gehört nach /docs/",
+                file=sys.stderr,
+            )
+    except OSError:
         pass
 
 
-def check_content_patterns(content: str) -> tuple[bool, str]:
-    """Check content for forbidden patterns."""
-    config = load_config()
-    patterns = config.get("claude_md", {}).get("forbidden_patterns", [])
-
+def _check_patterns(content: str) -> "tuple[bool, str]":
+    patterns = load_config().get("claude_md", {}).get("forbidden_patterns", [])
     for item in patterns:
         pattern = item.get("pattern", "")
-        message = item.get("message", "Content belongs elsewhere")
-
+        message = item.get("message", "Inhalt gehört nach /docs/")
         if pattern and re.search(pattern, content, re.MULTILINE | re.IGNORECASE):
             return False, message
-
     return True, ""
 
 
-def main():
-    # This hook runs on Stop event - check file size
-    check_file_size()
+def main() -> None:
+    _check_length()
 
-    # Also handle PreToolUse for Edit/Write on CLAUDE.md
     try:
-        data = json.load(sys.stdin)
-    except (json.JSONDecodeError, Exception):
+        ti_env = os.environ.get("CLAUDE_TOOL_INPUT", "")
+        if ti_env:
+            tool_input = json.loads(ti_env)
+        else:
+            data = json.load(sys.stdin)
+            tool_input = data.get("tool_input", {})
+    except Exception:
         sys.exit(0)
 
-    tool_input = data.get('tool_input', {})
-    file_path = tool_input.get('file_path', '')
-
-    if 'CLAUDE.md' not in file_path:
+    file_path = tool_input.get("file_path", "")
+    if "CLAUDE.md" not in file_path:
         sys.exit(0)
 
-    content = tool_input.get('content', '') or tool_input.get('new_string', '')
+    content = tool_input.get("content", "") or tool_input.get("new_string", "")
     if not content:
         sys.exit(0)
 
-    allowed, message = check_content_patterns(content)
-    if not allowed:
-        print(f"BLOCKED: {message}", file=sys.stderr)
-        print("Write to the appropriate file in /docs/ instead!", file=sys.stderr)
+    ok, message = _check_patterns(content)
+    if not ok:
+        print(
+            f"BLOCKED [claude_md_protection]: {message}\n"
+            f"  Schreibe diesen Inhalt stattdessen in die passende /docs/-Datei.",
+            file=sys.stderr,
+        )
         sys.exit(2)
 
     sys.exit(0)

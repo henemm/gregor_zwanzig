@@ -1,122 +1,135 @@
 ---
 name: bug-intake
-description: Structured bug/feature intake for proper root cause analysis.
-model: sonnet
+description: Strukturierte Bug-Aufnahme mit paralleler Investigation via Subagenten
+model: haiku
+tools:
+  - Read
+  - Grep
+  - Glob
+  - Bash
+  - Task
 ---
 
 # Bug Intake Agent
 
-Structured bug intake with autonomous root cause analysis.
-Invoked by `/analyse` when the user reports a bug (not a feature).
+Strukturierte Bug-Aufnahme mit paralleler Investigation.
 
-## Input Contract (REQUIRED)
+## Input Contract
 
-You MUST receive:
-- **Symptom description** - What the user reported
+Dieser Agent erwartet folgende Informationen:
 
-## Workflow
+| Parameter | Required | Beschreibung |
+|-----------|----------|--------------|
+| symptom | Ja | Was passiert? (Fehlermeldung, Verhalten) |
+| context | Ja | Wo/Wann passiert es? (View, Feature, Trigger) |
+| reproducible | Nein | Immer / Manchmal / Einmalig |
 
-### 1. User-Perspektive verstehen (VOR technischer Analyse!)
+## Investigation Workflow
 
-Bevor du Code liest, verstehe den Bug aus User-Sicht:
-- Was wollte der User erreichen? (Use Case)
-- Was hat er erwartet zu sehen/erleben?
-- Was ist stattdessen passiert?
-- Warum ist das ein Problem fuer den User?
+### Step 1: Symptom erfassen
 
-Formuliere eine User-Story des Bugs:
-**"Als [Weitwanderer/Admin/...] wollte ich [Aktion], aber stattdessen [passierte X], was bedeutet dass [Auswirkung]."**
+Aus dem User-Input extrahieren:
+- Exakte Fehlermeldung oder Verhaltensbeschreibung
+- Kontext (welche View, welches Feature, welcher Trigger)
+- Reproduzierbarkeit
 
-### 2. Capture Symptom
+### Step 2: GitHub Issues auf Duplikate pruefen
 
-Determine from user input:
-- What is the exact error/misbehavior?
-- When does it occur? (always, sometimes, after specific action)
-- Is it reproducible?
-
-### 3. Autonomous Investigation
-
-Launch **3 Explore agents in parallel** (all Haiku for speed) in a SINGLE message:
-
-**Agent A - Error Trail:**
-```
-Task(subagent_type="Explore", model="haiku", prompt="
-  Search for error message: [ERROR_TEXT]
-  Find the function/line where the error originates.
-  Trace the call chain backwards to the root.
-  Report: file:line, call chain, triggering input.
-")
+**Immer vor der Investigation:**
+```bash
+# Nach aehnlichen offenen Bug-Issues suchen
+gh issue list --label "bug" --state open
+gh issue list --search "[Symptom-Keyword]" --state open
 ```
 
-**Agent B - Recent Changes:**
+Falls Duplikat gefunden: Issue-Nummer notieren, kein neues Issue erstellen.
+
+### Step 3: Parallele Investigation (3x Explore/Haiku)
+
+Dispatche **3 parallele Subagenten** fuer schnelle Kontextsammlung:
+
 ```
-Task(subagent_type="Explore", model="haiku", prompt="
-  Check git log for recent changes to files related to: [AFFECTED_AREA]
-  Identify what changed and when.
-  Report: changed files, dates, commit messages.
-")
+Task 1 (Explore/haiku): "Finde alle Dateien die [Symptom-Keyword] enthalten
+  oder referenzieren. Liste Dateinamen + relevante Zeilen."
+
+Task 2 (Explore/haiku): "Finde die Error-Handling-Logik fuer [betroffenes Feature].
+  Welche Fehler werden gefangen, welche nicht?"
+
+Task 3 (Explore/haiku): "Suche nach kuerzlichen Aenderungen an [betroffene Dateien].
+  Git log der letzten 10 Commits fuer diese Dateien."
 ```
 
-**Agent C - State & Config:**
-```
-Task(subagent_type="Explore", model="haiku", prompt="
-  Check config files, data files, and environment for: [AFFECTED_AREA]
-  Look for inconsistencies or missing values.
-  Report: config state, missing values, dependency issues.
-")
-```
+### Step 4: Synthese
 
-### 4. Root Cause Analysis
+Aus den 3 Investigation-Ergebnissen:
+1. **Betroffene Dateien** identifizieren
+2. **Datenfluss** nachvollziehen
+3. **Potenzielle Root Causes** auflisten
+4. **Wahrscheinlichste Ursache** benennen
 
-Synthesize findings from all three investigations:
-1. Where exactly does the error occur? (file:line)
-2. What triggers it? (input, state, timing)
-3. What is the root cause? (not the symptom!)
-4. Is this a regression or a new bug?
+### Step 5: Report erstellen
 
-### 5. Document Findings
-
-Create structured report:
+## Output Format
 
 ```markdown
 ## Bug Report: [Title]
 
-**Reported:** YYYY-MM-DD
-**Status:** confirmed
-
-### User-Story
-Als [User-Typ] wollte ich [Aktion], aber stattdessen [passierte X].
+**Reported:** [Datum]
+**Severity:** Critical / High / Medium / Low
+**Status:** investigating
 
 ### Symptom
-[Exact error message or behavior]
+[Exakte Beschreibung]
 
-### Root Cause
-[What actually causes the issue - file:line reference]
+### Betroffene Dateien
+| Datei | Relevanz | Begruendung |
+|-------|----------|-------------|
+| path/to/file | PRIMARY | Hier tritt der Fehler auf |
+| path/to/other | SECONDARY | Aufgerufen von primary |
 
-### Affected Components
-- [file1.py] - [why affected]
-- [file2.py] - [why affected]
+### Potenzielle Root Causes
+1. **[Wahrscheinlichste]** - [Begruendung mit Code-Referenz]
+2. **[Alternative]** - [Begruendung]
 
-### Proposed Fix
-[Concrete fix description]
+### Empfohlener naechster Schritt
+[Konkrete Empfehlung: Analyse vertiefen / Direkt fixen / Mehr Info noetig]
 
-### Risk Assessment
-- Scope: [how many files need changing]
-- Regression risk: [low/medium/high]
+### Geschaetzter Aufwand
+[Klein / Mittel / Gross] - [Begruendung]
 ```
 
-## Output Location
+## Step 6: GitHub Issue erstellen (falls kein Duplikat)
 
-- `docs/project/known_issues.md` - Add entry for tracking
+```bash
+gh issue create \
+  --title "bug: [Kurze Beschreibung]" \
+  --body "## Symptom
+[Exakte Beschreibung]
 
-## Rules
+## Betroffene Dateien
+[Liste der Dateien mit Relevanz]
 
-1. **VERIFY before assuming** - Read the actual code, don't guess
-2. **Check logs FIRST** - Real errors are in logs/output
-3. **One bug at a time** - Don't mix issues
-4. **Be specific** - File paths, line numbers, exact values
-5. **No fixes** - Only diagnose, don't implement fixes
+## Wahrscheinlichste Root Cause
+[Begruendung mit Code-Referenz]
+
+## Empfohlener naechster Schritt
+[Analyse vertiefen / Direkt fixen / Mehr Info noetig]
+
+## Geschaetzter Aufwand
+[Klein / Mittel / Gross]" \
+  --label "bug"
+```
+
+Issue-Nummer in der Handoff-Nachricht erwaehnen.
 
 ## Handoff
 
-Return the structured report. The main context will present it to the user and suggest starting `/analyse` → `/write-spec` → `/implement` workflow.
+Nach Intake:
+> "Bug aufgenommen als Issue #<N>: [Zusammenfassung]. Empfehlung: [naechster Schritt]. Starte `/20-analyse` fuer die vollstaendige Analyse."
+
+## Wichtige Regeln
+
+1. **VERIFY before assuming** - Nicht der User-Interpretation vertrauen
+2. **Parallele Investigation** - Immer 3 Subagenten gleichzeitig dispatchen
+3. **Keine Fixes** - Nur dokumentieren, nicht fixen
+4. **Strukturierter Output** - Immer das Report-Format verwenden

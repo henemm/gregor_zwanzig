@@ -1,44 +1,21 @@
 #!/usr/bin/env python3
 """
-OpenSpec Framework - Secrets Guard Hook
+Secrets Guard — PreToolUse Bash + Read
 
-Prevents accidental exposure of sensitive files.
+Blockiert Zugriffe auf sensible Dateien (.env, Credentials, Private Keys).
 
-Blocks commands/reads that would expose:
-- .env files (unless staging mode)
-- credentials.json, service accounts
-- Private keys (.pem, .key, _key, _secret)
+Staging-Modus erlaubt .env-Zugriff während der Entwicklung:
+  touch .claude/staging   oder   OPENSPEC_ENV=staging
 
-STAGING MODE:
-Allows .env file access during development. Enable via:
-1. Create .claude/staging file (touch .claude/staging)
-2. Or set environment: OPENSPEC_ENV=staging
+Immer blockiert (auch im Staging): credentials.json, Service-Accounts, .pem/.key
 
-Staging mode NEVER allows: credentials.json, keys, secrets
-
-Configuration (in config.yaml):
+Konfigurierbar via openspec.yaml:
   secrets_guard:
     enabled: true
-    staging_mode: false  # Or use marker file / env var
-    sensitive_patterns:
-      - "\\.env"
-      - "credentials\\.json"
-      - "service[_-]?account.*\\.json"
-      - "_key"
-      - "_secret"
-      - "\\.pem$"
-      - "\\.key$"
-    always_blocked:  # Even in staging mode
-      - "credentials\\.json"
-      - "service[_-]?account.*\\.json"
-      - "_key"
-      - "_secret"
-      - "\\.pem$"
-      - "\\.key$"
+    sensitive_patterns: [...]
+    always_blocked: [...]
 
-Exit Codes:
-- 0: Allowed
-- 2: Blocked (sensitive file access)
+Exit-Codes: 0 = erlaubt, 2 = blockiert
 """
 
 import json
@@ -47,222 +24,135 @@ import re
 import sys
 from pathlib import Path
 
-# Try to import config loader
+
+def _setup():
+    hooks_dir = str(Path(__file__).parent)
+    if hooks_dir not in sys.path:
+        sys.path.insert(0, hooks_dir)
+
+
+_setup()
+
+from hook_utils import find_project_root  # noqa: E402
+
 try:
-    from config_loader import load_config, get_project_root
+    from config_loader import load_config
 except ImportError:
-    sys.path.insert(0, str(Path(__file__).parent))
-    try:
-        from config_loader import load_config, get_project_root
-    except ImportError:
-        def load_config():
-            return {}
-        def get_project_root():
-            cwd = Path.cwd()
-            for parent in [cwd] + list(cwd.parents):
-                if (parent / ".git").exists():
-                    return parent
-            return cwd
+    def load_config():
+        return {}
 
-
-# Default patterns
-DEFAULT_SENSITIVE_PATTERNS = [
-    r'\.env',
-    r'credentials\.json',
-    r'service[_-]?account.*\.json',
-    r'private[_.]key',
-    r'[_.]secret\.',
-    r'\.pem$',
-    r'\.key$',
+# Standardmuster für sensible Dateien
+_DEFAULT_SENSITIVE = [
+    r"\.env",
+    r"credentials\.json",
+    r"service[_-]?account.*\.json",
+    r"private[_.]key",
+    r"[_.]secret\.",
+    r"\.pem$",
+    r"\.key$",
 ]
 
-# Patterns that are ALWAYS blocked (even in staging)
-# Note: patterns match against file paths and command strings.
-# Use word boundaries or file-extension anchors to avoid false positives
-# on Go struct field names like "signal_api_key" in commit messages.
-DEFAULT_ALWAYS_BLOCKED = [
-    r'credentials\.json',
-    r'service[_-]?account.*\.json',
-    r'private[_.]key',     # matches private_key, private.key (actual key files)
-    r'[_.]secret\.',       # matches .secret.json etc. (files with "secret" in name)
-    r'\.pem$',
-    r'\.key$',
+# Immer blockiert — auch im Staging-Modus
+_DEFAULT_ALWAYS_BLOCKED = [
+    r"credentials\.json",
+    r"service[_-]?account.*\.json",
+    r"private[_.]key",
+    r"[_.]secret\.",
+    r"\.pem$",
+    r"\.key$",
 ]
 
-# Commands that output file contents
-DANGEROUS_COMMANDS = [
-    r'\bcat\b',
-    r'\bhead\b',
-    r'\btail\b',
-    r'\bless\b',
-    r'\bmore\b',
-    r'\bsed\b.*-n.*p',
-    r'\bawk\b.*print',
-    r'\bgrep\b(?!.*-l)',  # grep without -l shows content
-]
+# Shell-Befehle die Dateiinhalt ausgeben (nicht grep -l)
+_DANGEROUS_CMD_RE = re.compile(
+    r"\b(cat|head|tail|less|more)\b"
+    r"|sed\s+.*-n.*p"
+    r"|awk\s+.*print"
+    r"|grep\b(?!.*\s-l)"
+)
 
 
-def get_secrets_config() -> dict:
-    """Get secrets guard configuration with defaults."""
-    config = load_config()
-    secrets_config = config.get("secrets_guard", {})
-
+def _get_config() -> dict:
+    cfg = load_config().get("secrets_guard", {})
     return {
-        "enabled": secrets_config.get("enabled", True),
-        "staging_mode": secrets_config.get("staging_mode", False),
-        "sensitive_patterns": secrets_config.get("sensitive_patterns", DEFAULT_SENSITIVE_PATTERNS),
-        "always_blocked": secrets_config.get("always_blocked", DEFAULT_ALWAYS_BLOCKED),
+        "enabled": cfg.get("enabled", True),
+        "sensitive_patterns": cfg.get("sensitive_patterns", _DEFAULT_SENSITIVE),
+        "always_blocked": cfg.get("always_blocked", _DEFAULT_ALWAYS_BLOCKED),
     }
 
 
-def is_staging_mode() -> bool:
-    """
-    Check if we're in staging/development mode.
-
-    Checks (in order):
-    1. .claude/staging marker file exists
-    2. OPENSPEC_ENV environment variable
-    3. Config file setting
-    """
-    project_root = get_project_root()
-
-    # Method 1: Check for .claude/staging marker file
-    staging_file = project_root / ".claude" / "staging"
-    if staging_file.exists():
+def _is_staging() -> bool:
+    if (find_project_root() / ".claude" / "staging").exists():
         return True
-
-    # Method 2: Check environment variable
-    env = os.environ.get("OPENSPEC_ENV", "").lower()
-    if env in ("staging", "development", "dev"):
-        return True
-
-    # Method 3: Check config
-    config = get_secrets_config()
-    return config.get("staging_mode", False)
+    return os.environ.get("OPENSPEC_ENV", "").lower() in ("staging", "development", "dev")
 
 
-def is_sensitive_file(path: str, patterns: list) -> bool:
-    """Check if path matches any sensitive pattern."""
-    for pattern in patterns:
-        if re.search(pattern, path, re.IGNORECASE):
-            return True
-    return False
+def _matches(text: str, patterns: list) -> bool:
+    return any(re.search(p, text, re.IGNORECASE) for p in patterns)
 
 
-def is_always_blocked(path: str, patterns: list) -> bool:
-    """Check if path matches always-blocked patterns (even in staging)."""
-    for pattern in patterns:
-        if re.search(pattern, path, re.IGNORECASE):
-            return True
-    return False
-
-
-def outputs_content(command: str) -> bool:
-    """Check if command would output file contents."""
-    for pattern in DANGEROUS_COMMANDS:
-        if re.search(pattern, command):
-            return True
-    return False
-
-
-def get_tool_input() -> tuple[str, dict]:
-    """Get tool name and input from stdin or environment."""
-    tool_input_str = os.environ.get("CLAUDE_TOOL_INPUT", "")
-    tool_name = os.environ.get("CLAUDE_TOOL_NAME", "")
-
-    if tool_input_str:
+def _read_payload() -> tuple[str, dict]:
+    """Gibt (tool_name, tool_input) zurück."""
+    ti_env = os.environ.get("CLAUDE_TOOL_INPUT", "")
+    tn_env = os.environ.get("CLAUDE_TOOL_NAME", "")
+    if ti_env and tn_env:
         try:
-            return tool_name, json.loads(tool_input_str)
+            return tn_env, json.loads(ti_env)
         except json.JSONDecodeError:
-            return tool_name, {}
-
+            return tn_env, {}
     try:
         data = json.load(sys.stdin)
         return data.get("tool_name", ""), data.get("tool_input", {})
-    except (json.JSONDecodeError, EOFError, Exception):
+    except Exception:
         return "", {}
 
 
-def main():
-    config = get_secrets_config()
-
-    # Check if enabled
-    if not config["enabled"]:
+def main() -> None:
+    cfg = _get_config()
+    if not cfg["enabled"]:
         sys.exit(0)
 
-    tool_name, tool_input = get_tool_input()
-    staging = is_staging_mode()
+    tool_name, tool_input = _read_payload()
+    sensitive = cfg["sensitive_patterns"]
+    always = cfg["always_blocked"]
+    staging = _is_staging()
 
-    sensitive_patterns = config["sensitive_patterns"]
-    always_blocked = config["always_blocked"]
-
-    # Check Bash commands
     if tool_name == "Bash":
-        command = tool_input.get("command", "")
-
-        if is_sensitive_file(command, sensitive_patterns) and outputs_content(command):
-            # Check if always blocked (even in staging)
-            if is_always_blocked(command, always_blocked):
-                print("=" * 70, file=sys.stderr)
-                print("BLOCKED - Secrets Guard", file=sys.stderr)
-                print("=" * 70, file=sys.stderr)
-                print(file=sys.stderr)
-                print("Command would expose sensitive credentials/keys.", file=sys.stderr)
-                print("These files are ALWAYS protected (even in staging).", file=sys.stderr)
-                print(file=sys.stderr)
-                print("Use 'grep -l' to find files or check existence", file=sys.stderr)
-                print("without reading contents.", file=sys.stderr)
-                print("=" * 70, file=sys.stderr)
+        cmd = tool_input.get("command", "")
+        if _matches(cmd, sensitive) and _DANGEROUS_CMD_RE.search(cmd):
+            if _matches(cmd, always):
+                print(
+                    "BLOCKED [secrets_guard]: Befehl würde geschützte Credentials/Keys ausgeben.\n"
+                    "  Diese Dateien sind immer geschützt (auch im Staging-Modus).\n"
+                    "  Tipp: 'grep -l' zeigt Dateipfade ohne Inhalt.",
+                    file=sys.stderr,
+                )
+                sys.exit(2)
+            if not staging:
+                print(
+                    "BLOCKED [secrets_guard]: Befehl würde sensible Datei ausgeben.\n"
+                    "  Für .env-Zugriff im Staging: touch .claude/staging\n"
+                    "  Oder: export OPENSPEC_ENV=staging",
+                    file=sys.stderr,
+                )
                 sys.exit(2)
 
-            # In staging mode, allow .env files
-            if staging:
-                sys.exit(0)
-
-            print("=" * 70, file=sys.stderr)
-            print("BLOCKED - Secrets Guard", file=sys.stderr)
-            print("=" * 70, file=sys.stderr)
-            print(file=sys.stderr)
-            print("Command would expose sensitive file contents.", file=sys.stderr)
-            print(file=sys.stderr)
-            print("Options:", file=sys.stderr)
-            print("  1. Use 'grep -l' to find files without reading", file=sys.stderr)
-            print("  2. Enable staging mode:", file=sys.stderr)
-            print("     touch .claude/staging", file=sys.stderr)
-            print("     # or: export OPENSPEC_ENV=staging", file=sys.stderr)
-            print("=" * 70, file=sys.stderr)
-            sys.exit(2)
-
-    # Check Read tool
     elif tool_name == "Read":
         file_path = tool_input.get("file_path", "")
-
-        if is_sensitive_file(file_path, sensitive_patterns):
-            # Check if always blocked
-            if is_always_blocked(file_path, always_blocked):
-                print("=" * 70, file=sys.stderr)
-                print("BLOCKED - Secrets Guard", file=sys.stderr)
-                print("=" * 70, file=sys.stderr)
-                print(file=sys.stderr)
-                print(f"Cannot read: {Path(file_path).name}", file=sys.stderr)
-                print("This file contains credentials/keys that must stay protected.", file=sys.stderr)
-                print("=" * 70, file=sys.stderr)
+        if _matches(file_path, sensitive):
+            if _matches(file_path, always):
+                print(
+                    f"BLOCKED [secrets_guard]: {Path(file_path).name} enthält Credentials/Keys.\n"
+                    "  Diese Datei ist immer geschützt.",
+                    file=sys.stderr,
+                )
                 sys.exit(2)
-
-            # In staging mode, allow .env files
-            if staging:
-                sys.exit(0)
-
-            print("=" * 70, file=sys.stderr)
-            print("BLOCKED - Secrets Guard", file=sys.stderr)
-            print("=" * 70, file=sys.stderr)
-            print(file=sys.stderr)
-            print(f"Cannot read sensitive file: {Path(file_path).name}", file=sys.stderr)
-            print(file=sys.stderr)
-            print("Enable staging mode to allow .env access:", file=sys.stderr)
-            print("  touch .claude/staging", file=sys.stderr)
-            print("=" * 70, file=sys.stderr)
-            sys.exit(2)
+            if not staging:
+                print(
+                    f"BLOCKED [secrets_guard]: Sensible Datei: {Path(file_path).name}\n"
+                    "  Für .env-Zugriff im Staging: touch .claude/staging",
+                    file=sys.stderr,
+                )
+                sys.exit(2)
 
     sys.exit(0)
 
