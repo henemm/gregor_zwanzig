@@ -100,29 +100,25 @@ class Stage:
     waypoints: List[Waypoint]
     start_time: Optional[time] = None  # Startzeit der Etappe (default: 08:00 in Business Logic)
 
-    def __post_init__(self) -> None:
-        if not self.waypoints:
-            raise ValueError("Stage must have at least one waypoint")
+    @property
+    def first_waypoint(self) -> Optional[Waypoint]:
+        """First waypoint (G1) - typically the start. None for pause stages."""
+        return self.waypoints[0] if self.waypoints else None
 
     @property
-    def first_waypoint(self) -> Waypoint:
-        """First waypoint (G1) - typically the start."""
-        return self.waypoints[0]
+    def last_waypoint(self) -> Optional[Waypoint]:
+        """Last waypoint (Gn) - typically the end. None for pause stages."""
+        return self.waypoints[-1] if self.waypoints else None
 
     @property
-    def last_waypoint(self) -> Waypoint:
-        """Last waypoint (Gn) - typically the end."""
-        return self.waypoints[-1]
+    def highest_waypoint(self) -> Optional[Waypoint]:
+        """Waypoint with highest elevation. None for pause stages."""
+        return max(self.waypoints, key=lambda w: w.elevation_m) if self.waypoints else None
 
     @property
-    def highest_waypoint(self) -> Waypoint:
-        """Waypoint with highest elevation."""
-        return max(self.waypoints, key=lambda w: w.elevation_m)
-
-    @property
-    def lowest_waypoint(self) -> Waypoint:
-        """Waypoint with lowest elevation."""
-        return min(self.waypoints, key=lambda w: w.elevation_m)
+    def lowest_waypoint(self) -> Optional[Waypoint]:
+        """Waypoint with lowest elevation. None for pause stages."""
+        return min(self.waypoints, key=lambda w: w.elevation_m) if self.waypoints else None
 
     def __str__(self) -> str:
         return f"{self.id} {self.name} ({self.date}): {len(self.waypoints)} waypoints"
@@ -199,6 +195,8 @@ class Trip:
     alert_quiet_to: Optional[str] = None  # Issue #181: quiet hours end "HH:MM"
     shortcode: str = ""  # Bug #775: GZ#XXXX — per-user eindeutig, ASCII, immun gegen Q-Encoding
     activity: str = ""  # Issue #802: Aktivitätstyp (z.B. "fahrrad_20") für Segment-Tempo
+    region: str = ""  # Issue #805: Go-Feld region (z.B. "GR20") — roundtrip-erhalten
+    archived_at: Optional[str] = None  # Issue #805: Go-Feld archived_at (ISO-String) — roundtrip-erhalten
 
     @property
     def start_date(self) -> date:

@@ -830,8 +830,13 @@ class TripReportSchedulerService:
         if not weather_data or not trip.stages:
             return
 
-        # 1. Last waypoint of last stage
-        last_wp = trip.stages[-1].last_waypoint
+        # 1. Last waypoint of last non-empty stage (Issue #805: pause stages have 0 waypoints)
+        last_wp = next(
+            (s.last_waypoint for s in reversed(trip.stages) if s.waypoints),
+            None,
+        )
+        if last_wp is None:
+            return
         location = Location(
             latitude=last_wp.lat,
             longitude=last_wp.lon,

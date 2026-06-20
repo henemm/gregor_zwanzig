@@ -82,6 +82,21 @@ def _friendly_from_mode(mode: str) -> bool:
     return mode != "raw"
 
 
+def _deep_merge_preserve_unknown(base: dict, overlay: dict) -> dict:
+    """Merge overlay into base. overlay wins on key conflicts; unknown keys in base are preserved.
+
+    Used in save_trip to preserve Go-written or legacy fields Python doesn't model (Issue #805).
+    Lists are replaced wholesale (not element-merged) — overlay wins.
+    """
+    result = dict(base)
+    for k, v in overlay.items():
+        if k in result and isinstance(result[k], dict) and isinstance(v, dict):
+            result[k] = _deep_merge_preserve_unknown(result[k], v)
+        else:
+            result[k] = v
+    return result
+
+
 def _metric_to_dict(mc) -> dict:
     """Issue #435: Serialize a MetricConfig to dict, writing format_mode and
     use_friendly_format in parallel (Backward-Compat for older readers).
@@ -116,6 +131,9 @@ def _metric_to_dict(mc) -> dict:
     # Issue #624: sms_threshold nur schreiben wenn gesetzt (additiv, kein Datenverlust).
     if mc.sms_threshold is not None:
         out["sms_threshold"] = mc.sms_threshold
+    # Issue #805: horizons roundtrip-erhalten
+    if mc.horizons is not None:
+        out["horizons"] = mc.horizons
     return out
 
 
@@ -381,6 +399,7 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
             show_metrics_summary=rc_data.get("show_metrics_summary", False),
             show_outlook=rc_data.get("show_outlook", True),
             email_format=rc_data.get("email_format", "full"),
+            show_yesterday_comparison=rc_data.get("show_yesterday_comparison", True),
             paused_until=datetime.fromisoformat(rc_data["paused_until"]) if rc_data.get("paused_until") else None,
             skip_next=rc_data.get("skip_next", False),
             updated_at=datetime.fromisoformat(rc_data["updated_at"]) if "updated_at" in rc_data else datetime.now(),
@@ -404,6 +423,8 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
         alert_quiet_to=data.get("alert_quiet_to"),
         shortcode=data.get("shortcode", ""),
         activity=data.get("activity", ""),  # Issue #802
+        region=data.get("region", ""),  # Issue #805
+        archived_at=data.get("archived_at"),  # Issue #805
     )
     return trip
 
@@ -1007,6 +1028,12 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
     if trip.activity:
         data["activity"] = trip.activity
 
+    if trip.region:
+        data["region"] = trip.region
+
+    if trip.archived_at:
+        data["archived_at"] = trip.archived_at
+
     # Serialize weather config (Feature 2.6 legacy, preserved for migration)
     if trip.weather_config:
         data["weather_config"] = {
@@ -1095,6 +1122,7 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             "show_metrics_summary": trip.report_config.show_metrics_summary,
             "show_outlook": trip.report_config.show_outlook,
             "email_format": trip.report_config.email_format,
+            "show_yesterday_comparison": trip.report_config.show_yesterday_comparison,
             "paused_until": trip.report_config.paused_until.isoformat() if trip.report_config.paused_until else None,
             "skip_next": trip.report_config.skip_next,
             "updated_at": trip.report_config.updated_at.isoformat(),
@@ -1142,7 +1170,18 @@ def save_trip(
     trips_dir.mkdir(parents=True, exist_ok=True)
 
     path = trips_dir / f"{trip.id}.json"
-    data = _trip_to_dict(trip)
+    python_data = _trip_to_dict(trip)
+
+    # Issue #805: RMW-Merge — vorhandene JSON laden und Python-bekannte Felder überlagern.
+    # Bewahrt Go-geschriebene und Legacy-Felder die Python nicht modelliert
+    # (z.B. display_config.channels, report_config.send_signal, multi_day_trend_morning/evening).
+    existing: dict = {}
+    if path.exists():
+        try:
+            existing = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    data = _deep_merge_preserve_unknown(existing, python_data)
 
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
