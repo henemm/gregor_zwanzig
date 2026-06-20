@@ -363,6 +363,52 @@ class TestAC7VortagOneLine:
         assert "Vortag: heute" in plain
         assert "Vortag-Vergleich" not in plain
 
+    def test_empty_metrics_list_falls_back_to_legacy(self):
+        """Bug #800: selected_metrics=[] darf NICHT 'ähnliches Wetter' liefern wenn echte Deltas existieren."""
+        from services.day_comparison import summarize_day_comparison
+        today = [_seg_for_compare(1, temp_min_c=14.0, temp_max_c=28.0,
+                                  wind_max_kmh=20.0, precip_sum_mm=0.0)]
+        yday = [_seg_for_compare(1, temp_min_c=4.0, temp_max_c=15.0,
+                                 wind_max_kmh=20.0, precip_sum_mm=18.0)]
+        comp = _comparison(today, yday)
+        line_empty = summarize_day_comparison(comp, selected_metrics=[])
+        line_none = summarize_day_comparison(comp, selected_metrics=None)
+        assert line_empty == line_none, (
+            f"Bug #800: [] muss identisch zu None sein — leere Liste gab: '{line_empty}'"
+        )
+        assert "ähnliches Wetter" not in line_empty, (
+            f"Bug #800: große Deltas aber Fallback liefert 'ähnliches Wetter': '{line_empty}'"
+        )
+
+
+# ===========================================================================
+# Bug #798: leere Metrik-Auswahl → Stundentabelle zeigt keine Spalten
+# ===========================================================================
+
+class TestBug798EmptyMetricsHourTable:
+
+    def test_allowed_col_keys_returns_none_when_no_metrics_enabled(self):
+        """Bug #798: _allowed_col_keys_for_horizon muss None (kein Filter) zurückgeben wenn metrics leer."""
+        from output.renderers.email.html import _allowed_col_keys_for_horizon
+        dc = _empty_metrics_dc()
+        result = _allowed_col_keys_for_horizon(dc, "short")
+        assert result is None, (
+            f"Bug #798: leere metrics → kein Filter erwartet (None), aber got {result!r}"
+        )
+
+    def test_html_table_has_columns_when_metrics_empty(self):
+        """Bug #798: render_html mit leeren Metriken darf nicht nur 'Zeit'-Spalte liefern."""
+        segs = _build_segments()
+        dc = _empty_metrics_dc()
+        html = _render_html(segs, dc=dc)
+        table_html = html[html.find('<table'):]
+        header_end = table_html.find('</tr>')
+        header = table_html[:header_end]
+        th_count = header.count('<th>')
+        assert th_count > 1, (
+            f"Bug #798: nur {th_count} <th>-Element(e) im Tabellen-Header — erwartet >1 (mehr als 'Zeit')"
+        )
+
 
 # ===========================================================================
 # AC-8: Regressionsschutz — erhaltene Blöcke

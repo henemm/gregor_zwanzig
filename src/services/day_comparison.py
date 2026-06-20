@@ -129,7 +129,7 @@ def summarize_day_comparison(
     if comparison is None or not comparison.entries:
         return ""
 
-    if selected_metrics is None:
+    if not selected_metrics:
         return _summarize_legacy(comparison)
 
     return _summarize_metric_driven(comparison, selected_metrics)
