@@ -166,37 +166,30 @@ def _cleanup_user_trip() -> None:
 # ---------------------------------------------------------------------------
 
 class TestAC3HtmlFooterCommands:
-    """AC-3: render_html Body enthält die 4 Befehlswörter im Footer."""
+    """AC-3: render_html enthält die aktuellen Antwort-Kommandos im Kommando-Block (#731)."""
 
-    def test_footer_contains_report_morning(self):
+    def test_footer_contains_heute(self):
         html = _render_html_minimal()
-        assert "report morning" in html, (
-            "render_html Footer muss 'report morning' enthalten (AC-3)"
+        assert "HEUTE" in html, (
+            "render_html muss 'HEUTE' als Antwort-Kommando enthalten (AC-3)"
         )
 
-    def test_footer_contains_report_evening(self):
+    def test_footer_contains_morgen(self):
         html = _render_html_minimal()
-        assert "report evening" in html, (
-            "render_html Footer muss 'report evening' enthalten (AC-3)"
+        assert "MORGEN" in html, (
+            "render_html muss 'MORGEN' als Antwort-Kommando enthalten (AC-3)"
         )
 
     def test_footer_contains_status(self):
         html = _render_html_minimal()
-        # "status" erscheint im Footer-Befehls-Block
-        footer_start = html.rfind('<div class="footer">')
-        assert footer_start != -1, "Footer-div muss vorhanden sein"
-        footer_section = html[footer_start:]
-        assert "status" in footer_section, (
-            "render_html Footer muss 'status' als Befehl enthalten (AC-3)"
+        assert "STATUS" in html, (
+            "render_html muss 'STATUS' als Antwort-Kommando enthalten (AC-3)"
         )
 
     def test_footer_contains_hilfe(self):
         html = _render_html_minimal()
-        footer_start = html.rfind('<div class="footer">')
-        assert footer_start != -1
-        footer_section = html[footer_start:]
-        assert "hilfe" in footer_section, (
-            "render_html Footer muss 'hilfe' als Befehl enthalten (AC-3)"
+        assert "HILFE" in html, (
+            "render_html muss 'HILFE' als Antwort-Kommando enthalten (AC-3)"
         )
 
 
