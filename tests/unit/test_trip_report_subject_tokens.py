@@ -86,8 +86,9 @@ def test_trip_report_subject_includes_dwg_tokens():
     """
     GIVEN: TripReportFormatter mit Segment, das aggregierte temp/wind/gust hat
     WHEN: format_email() wird aufgerufen
-    THEN: report.email_subject enthaelt Wetter-Tokens D{temp} W{wind} G{gust}
-          (Validator-Finding 2026-04-27 — mail_712.eml endete mit `Abend —`)
+    THEN: report.email_subject enthält trip_name + stage_name, kein D/W/G-Token
+          (D/W/G-Kürzel wurden durch #799 entfernt, #841 bestätigte Entfernung;
+          Validator-Finding 2026-04-27 — mail_712.eml endete mit `Abend —`)
     """
     seg = _segment_weather_with_aggregated(
         temp_max_c=21.0, wind_max_kmh=17.0, gust_max_kmh=38.0,
@@ -102,9 +103,11 @@ def test_trip_report_subject_includes_dwg_tokens():
 
     subj = report.email_subject
 
-    assert "D21" in subj, f"expected 'D21' in subject, got {subj!r}"
-    assert "W17" in subj, f"expected 'W17' in subject, got {subj!r}"
-    assert "G38" in subj, f"expected 'G38' in subject, got {subj!r}"
+    # D/W/G-Kürzel seit #799/#841 entfernt — dürfen nicht mehr erscheinen.
+    assert "D21" not in subj, f"D/W/G-Kürzel dürfen nicht im Betreff stehen, got {subj!r}"
+    assert "VALIDATOR β2 Test" in subj or "Tag 1" in subj, (
+        f"Betreff muss Trip- oder Etappen-Name enthalten, got {subj!r}"
+    )
     assert not subj.endswith(" —") and not subj.endswith("— "), (
-        f"subject must not end with dangling em-dash, got {subj!r}"
+        f"Betreff darf nicht mit hängendem em-dash enden, got {subj!r}"
     )

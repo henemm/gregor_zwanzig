@@ -137,6 +137,83 @@ class TestAC2OverviewAndOutlookNoHourly:
 # AC-10: compact ASCII-Schwerezeichen statt roher [AMPEL_*]/[TONE]-Marker
 # ---------------------------------------------------------------------------
 
+def _render_email_severity(email_format="compact"):
+    """Variant mit Segment 08:00–13:00 und kontrollierten Wind/Böen-Werten.
+
+    Böen bei 10:00 UTC = 53 km/h (Gelb: 50–64), Wind bei 08:00 UTC = 23 km/h
+    (Grün: < 30). Segment-Fenster 08–13 h (exclusive end #807), damit beide
+    Stunden 08 und 10 eingeschlossen sind (08 <= h < 13).
+    """
+    from datetime import datetime, timezone
+    from zoneinfo import ZoneInfo
+    from app.models import (
+        ForecastDataPoint, ForecastMeta, GPXPoint, NormalizedTimeseries,
+        Provider, SegmentWeatherData, SegmentWeatherSummary, ThunderLevel,
+        TripSegment,
+    )
+    from src.output.renderers.email import render_email
+    from tests.unit.test_renderers_email import _make_token_line, _common_kwargs
+
+    dps = [
+        ForecastDataPoint(
+            ts=datetime(2026, 7, 11, 8, 0, tzinfo=timezone.utc),
+            t2m_c=17.0, wind10m_kmh=23.0, gust_kmh=30.0,
+            precip_1h_mm=0.0, cloud_total_pct=50,
+            thunder_level=ThunderLevel.NONE,
+        ),
+        ForecastDataPoint(
+            ts=datetime(2026, 7, 11, 9, 0, tzinfo=timezone.utc),
+            t2m_c=18.0, wind10m_kmh=25.0, gust_kmh=53.0,
+            precip_1h_mm=0.0, cloud_total_pct=50,
+            thunder_level=ThunderLevel.NONE,
+        ),
+        ForecastDataPoint(
+            ts=datetime(2026, 7, 11, 10, 0, tzinfo=timezone.utc),
+            t2m_c=18.0, wind10m_kmh=27.0, gust_kmh=53.0,
+            precip_1h_mm=0.0, cloud_total_pct=50,
+            thunder_level=ThunderLevel.NONE,
+        ),
+    ]
+    seg = TripSegment(
+        segment_id=1,
+        start_point=GPXPoint(lat=42.20, lon=9.05, elevation_m=400.0),
+        end_point=GPXPoint(lat=42.25, lon=9.09, elevation_m=1200.0),
+        start_time=datetime(2026, 7, 11, 8, 0, tzinfo=timezone.utc),
+        end_time=datetime(2026, 7, 11, 11, 0, tzinfo=timezone.utc),
+        duration_hours=3.0, distance_km=8.0, ascent_m=800.0, descent_m=0.0,
+    )
+    meta = ForecastMeta(
+        provider=Provider.OPENMETEO, model="arome_france",
+        run=datetime(2026, 7, 11, 0, 0, tzinfo=timezone.utc), grid_res_km=1.3,
+    )
+    ts = NormalizedTimeseries(meta=meta, data=dps)
+    agg = SegmentWeatherSummary(
+        temp_min_c=17.0, temp_max_c=18.0, temp_avg_c=17.5,
+        wind_max_kmh=27.0, gust_max_kmh=53.0,
+        precip_sum_mm=0.0, cloud_avg_pct=50, humidity_avg_pct=55,
+        thunder_level_max=ThunderLevel.NONE,
+    )
+    seg_data = SegmentWeatherData(
+        segment=seg, timeseries=ts, aggregated=agg,
+        fetched_at=datetime.now(timezone.utc), provider="openmeteo",
+    )
+
+    kw = _common_kwargs()
+    kw["segments"] = [seg_data]
+    kw["seg_tables"] = [[]]
+    kw["multi_day_trend"] = [_trend_stage(name="Etappe 4"),
+                             _trend_stage(weekday="Do", name="Etappe 5",
+                                          thunder="HIGH", confidence_pct=45)]
+    kw["highlights"] = []
+    return render_email(
+        _make_token_line(),
+        **kw,
+        stability_result=_stability("WECHSELHAFT", 45),
+        show_highlights=True,
+        email_format=email_format,
+    )
+
+
 class TestAC10CompactAsciiSeverity:
     def test_no_raw_tone_markers(self):
         """Given compact / Then keine rohen [AMPEL_*]/[TONE]-Marker im Body."""
@@ -149,30 +226,29 @@ class TestAC10CompactAsciiSeverity:
             )
 
     def test_yellow_event_pill_has_bang_prefix(self):
-        """Given eine Ereignis-Pill ueber Gefahren-Gelbschwelle (Boeen 53 km/h,
-        Gelb-Schwelle 50) / Then traegt sie genau das `!`-Praefix und NICHT den
-        ausgeschriebenen Pill-Text verlieren."""
-        _html, plain = _render_email("compact")
+        """Given Böen 53 km/h im Segment-Fenster (Gelb-Schwelle 50) /
+        Then trägt die Böen-Pill genau das `!`-Präfix.
+        Nutzt _render_email_severity mit Daten im Fenster 08–11 UTC (#807)."""
+        _html, plain = _render_email_severity("compact")
         lines = [ln.strip() for ln in plain.splitlines()]
-        boeen = [ln for ln in lines if ln.endswith("km/h um 23:00")
-                 and "Boeen" in ln]
+        # Böen 53 km/h um 10:00 UTC = 12:00 Berliner Sommerzeit
+        boeen = [ln for ln in lines if "Boeen" in ln and "km/h" in ln]
         assert boeen, f"Boeen-Pill nicht gefunden — Body:\n{plain}"
         bln = boeen[0]
-        # Gelb (50 <= 53 < 65) -> genau ein '!'-Praefix, gruene Pills kein Praefix.
         assert bln.startswith("! "), (
             f"gelbe Ereignis-Pill muss '! '-Praefix tragen, got {bln!r}"
         )
-        assert "Boeen ab 00:00" in bln, (
+        assert "Boeen ab" in bln, (
             f"ausgeschriebener Pill-Text muss erhalten bleiben, got {bln!r}"
         )
 
     def test_green_event_pill_has_no_prefix(self):
-        """Given eine gruene Ereignis-Pill (Wind 23 km/h < Gelb 30) /
-        Then KEIN Schwerezeichen-Praefix."""
-        _html, plain = _render_email("compact")
+        """Given Wind 23 km/h im Segment-Fenster (Grün, < Gelb-Schwelle 30) /
+        Then kein `!`-Präfix auf der Wind-Pill.
+        Nutzt _render_email_severity mit Daten im Fenster 08–11 UTC (#807)."""
+        _html, plain = _render_email_severity("compact")
         lines = [ln.strip() for ln in plain.splitlines()]
-        wind = [ln for ln in lines
-                if ln.endswith("km/h um 23:00") and ln.startswith("Wind ab")]
+        wind = [ln for ln in lines if "Wind ab" in ln and "km/h" in ln]
         assert wind, f"Wind-Pill nicht gefunden — Body:\n{plain}"
         assert not wind[0].startswith("!"), (
             f"gruene Pill darf kein '!'-Praefix tragen, got {wind[0]!r}"

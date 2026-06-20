@@ -90,6 +90,9 @@ def _seg_with_hours(rows_spec):
         ))
     start_h = rows_spec[0]["hour"]
     end_h = rows_spec[-1]["hour"]
+    # end_time is exclusive (compact_summary uses s_h <= h < e_h since #807).
+    # Set end_time one hour past the last data point so all rows are included.
+    end_time_h = end_h + 1
     seg = TripSegment(
         segment_id=1,
         start_point=GPXPoint(lat=42.13, lon=9.13, elevation_m=400.0,
@@ -97,8 +100,8 @@ def _seg_with_hours(rows_spec):
         end_point=GPXPoint(lat=42.10, lon=9.18, elevation_m=1200.0,
                            distance_from_start_km=4.2),
         start_time=datetime(2026, 7, 11, start_h, 0, tzinfo=timezone.utc),
-        end_time=datetime(2026, 7, 11, end_h, 0, tzinfo=timezone.utc),
-        duration_hours=float(end_h - start_h),
+        end_time=datetime(2026, 7, 11, end_time_h, 0, tzinfo=timezone.utc),
+        duration_hours=float(end_time_h - start_h),
         distance_km=4.2, ascent_m=800.0, descent_m=0.0,
     )
     meta = ForecastMeta(provider=Provider.OPENMETEO, model="demo",

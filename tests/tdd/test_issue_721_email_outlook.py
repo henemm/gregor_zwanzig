@@ -166,8 +166,9 @@ class TestAC3TimesOnlyWhereHourly:
             weekday="Fr", name="Fern", thunder="NONE", confidence_pct=45,
         )
         html = _render([near, far], stability_result=_stability("WECHSELHAFT", 45))
-        # @14 / @14:00 muss für die nahe Etappe auftauchen
-        assert re.search(r"@\s*14", html), "Nahe Etappe ohne @-Zeitstempel trotz Stundendaten"
+        # "14:00" muss für die nahe Etappe auftauchen (Renderer schreibt
+        # "⚡ Gewitter möglich 14:00" seit #759/#669, nicht mehr "@14" roh).
+        assert re.search(r"14:00", html), "Nahe Etappe ohne Zeitstempel (14:00) trotz Stundendaten"
 
 
 # ---------------------------------------------------------------------------
