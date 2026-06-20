@@ -12,7 +12,13 @@ import dataclasses
 import json
 import logging
 import math
+import time as time_module
 from datetime import date, datetime, time, timedelta, timezone
+
+# Issue #766: Inter-Mail-Delay beim Sammelversand, um Rate-Limits (452) zu
+# vermeiden. Hinweis: `time` ist hier die datetime.time-Klasse — der echte
+# Zeit-Modul wird als `time_module` importiert.
+INTER_MAIL_DELAY_SECONDS = 2
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
@@ -180,53 +186,66 @@ class TripReportSchedulerService:
         logger.info(f"Found {len(active_trips)} active trips for {report_type} reports")
 
         sent_count = 0
-        for trip in active_trips:
+        for i, trip in enumerate(active_trips):
             try:
                 self._send_trip_report(trip, report_type)
                 sent_count += 1
+                # Issue #766: 2s Pause zwischen aufeinanderfolgenden Mails
+                # (nicht nach der letzten), um SMTP-Rate-Limits zu vermeiden.
+                if i < len(active_trips) - 1:
+                    time_module.sleep(INTER_MAIL_DELAY_SECONDS)
             except Exception as e:
                 logger.error(f"Failed to send report for trip {trip.id}: {e}")
 
         logger.info(f"Sent {sent_count}/{len(active_trips)} {report_type} reports")
         return sent_count
 
-    def send_reports_for_hour(self, current_hour: int) -> int:
+    def send_reports_for_hour(self, current_hour: int) -> Tuple[int, int]:
         """
         Send reports for trips whose configured time matches current_hour.
 
         Called hourly by the scheduler. Checks both morning and evening
         times per trip against the current hour.
 
+        Issue #766: Sammelt alle fälligen Mails, sendet sie mit 2s Pause
+        zwischen aufeinanderfolgenden Versendungen (Rate-Limit-Schutz) und
+        liefert ein (sent, failed)-Tuple zurück, damit der Status-Endpoint
+        Teilfehler sichtbar machen kann.
+
         Args:
             current_hour: Current hour (0-23) in Europe/Vienna
 
         Returns:
-            Number of reports successfully sent
+            Tuple (sent, failed): Anzahl erfolgreich versendeter und
+            fehlgeschlagener Reports.
         """
         if not self._settings.can_send_email():
-            return 0
+            return (0, 0)
 
-        sent = 0
-
-        # Check morning reports
+        # Sammle alle fälligen (trip, report_type)-Paare zuerst, damit das
+        # Inter-Mail-Delay über morning UND evening hinweg greift.
+        due: List[Tuple["Trip", str]] = []
         for trip in self._get_active_trips("morning"):
             if self._get_morning_hour(trip) == current_hour:
-                try:
-                    self._send_trip_report(trip, "morning")
-                    sent += 1
-                except Exception as e:
-                    logger.error(f"Failed morning report for {trip.id}: {e}")
-
-        # Check evening reports
+                due.append((trip, "morning"))
         for trip in self._get_active_trips("evening"):
             if self._get_evening_hour(trip) == current_hour:
-                try:
-                    self._send_trip_report(trip, "evening")
-                    sent += 1
-                except Exception as e:
-                    logger.error(f"Failed evening report for {trip.id}: {e}")
+                due.append((trip, "evening"))
 
-        return sent
+        sent = 0
+        failed = 0
+        for i, (trip, rtype) in enumerate(due):
+            try:
+                self._send_trip_report(trip, rtype)
+                sent += 1
+            except Exception as e:
+                failed += 1
+                logger.error(f"Failed {rtype} report for {trip.id}: {e}")
+            # 2s Pause zwischen aufeinanderfolgenden Mails (nicht nach der letzten).
+            if i < len(due) - 1:
+                time_module.sleep(INTER_MAIL_DELAY_SECONDS)
+
+        return (sent, failed)
 
     def _get_morning_hour(self, trip: "Trip") -> int:
         """Get configured morning hour for trip (default: 7)."""

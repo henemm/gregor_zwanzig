@@ -206,8 +206,39 @@ class EmailOutput:
                     logger.info(f"Email send succeeded after {attempt + 1} attempt(s)")
                 return
 
+            except smtplib.SMTPAuthenticationError as e:
+                # Auth failure (535 etc.) is permanent — never retry. Must be
+                # caught BEFORE SMTPResponseException (it's a subclass with a
+                # 5xx-ish code we still don't want to treat as transient).
+                raise OutputError("email", f"SMTP authentication error: {e}")
+
+            except smtplib.SMTPResponseException as e:
+                # Issue #766: distinguish temporary 4xx (rate-limit 452,
+                # service-busy 421) from permanent 5xx errors.
+                if e.smtp_code >= 500:
+                    raise OutputError(
+                        "email",
+                        f"SMTP permanent error {e.smtp_code}: {e.smtp_error}",
+                    )
+                # 4xx = temporary — retry with the same backoff schedule as OSError.
+                if attempt < max_attempts - 1:
+                    wait_multiplier = [1, 3, 6][attempt]
+                    wait = backoff_base * wait_multiplier
+                    logger.warning(
+                        f"SMTP temporary error {e.smtp_code} "
+                        f"(attempt {attempt + 1}/{max_attempts}): "
+                        f"{e.smtp_error}. Retrying in {wait}s..."
+                    )
+                    time.sleep(wait)
+                else:
+                    raise OutputError(
+                        "email",
+                        f"SMTP temporary error {e.smtp_code} after "
+                        f"{max_attempts} attempts: {e.smtp_error}",
+                    )
+
             except smtplib.SMTPException as e:
-                # Permanent error (Auth) - no retry
+                # Other SMTP errors (e.g. SMTPRecipientsRefused) - no retry
                 raise OutputError("email", f"SMTP error: {e}")
 
             except OSError as e:

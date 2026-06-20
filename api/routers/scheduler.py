@@ -33,8 +33,11 @@ def trigger_trip_reports(hour: Optional[int] = None, user_id: str = "default"):
     current_hour = hour if hour is not None else datetime.now(tz).hour
 
     service = TripReportSchedulerService(user_id=user_id)
-    count = service.send_reports_for_hour(current_hour)
-    return {"status": "ok", "count": count}
+    # Issue #766: (sent, failed) — bei Teilfehlern status="partial" zurückgeben,
+    # damit das externe Monitoring 452-Rate-Limit-Ausfälle erkennen kann.
+    sent, failed = service.send_reports_for_hour(current_hour)
+    status = "partial" if failed > 0 else "ok"
+    return {"status": status, "count": sent, "failed": failed}
 
 
 @router.post("/alert-checks")
