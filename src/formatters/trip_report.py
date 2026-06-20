@@ -71,6 +71,7 @@ class TripReportFormatter:
         stability_result: Optional[StabilityResult] = None,
         report_config: Optional[TripReportConfig] = None,
         day_comparison: Optional["DayComparison"] = None,
+        shortcode: Optional[str] = None,
     ) -> TripReport:
         """Format trip segments into HTML + plain-text email."""
         if not segments:
@@ -171,6 +172,7 @@ class TripReportFormatter:
             wind_max_kmh=first_agg.wind_max_kmh,
             gust_max_kmh=first_agg.gust_max_kmh,
             tz=self._tz,
+            shortcode=shortcode,
         )
 
         # Issue #360: kanal-bewusster Narrow-Body fuer Telegram.
@@ -571,6 +573,7 @@ class TripReportFormatter:
         wind_max_kmh: Optional[float] = None,
         gust_max_kmh: Optional[float] = None,
         tz: Optional[ZoneInfo] = None,
+        shortcode: Optional[str] = None,
     ) -> str:
         """Generate §11-konformes E-Mail-Subject via output.subject filter.
 
@@ -584,7 +587,7 @@ class TripReportFormatter:
         verwendet, damit Multi-Tag-Reports im Postfach unterscheidbar bleiben.
         """
         from output.subject import build_email_subject
-        from output.tokens.dto import Token, TokenLine
+        from output.tokens.dto import TokenLine
 
         # 'alert' wird auf 'update' gemappt — semantisch identisch (Wetteränderung).
         rt = "update" if report_type == "alert" else report_type
@@ -598,23 +601,14 @@ class TripReportFormatter:
         else:
             stage = dt.strftime("%d.%m.%Y")
 
-        # Build D/W/G tokens from segment aggregates (whitelist for subject §11).
-        tokens: list[Token] = []
-        if temp_max_c is not None:
-            tokens.append(Token(symbol="D", value=str(int(temp_max_c)),
-                                category="forecast", priority=4))
-        if wind_max_kmh is not None:
-            tokens.append(Token(symbol="W", value=str(int(wind_max_kmh)),
-                                category="forecast", priority=4))
-        if gust_max_kmh is not None:
-            tokens.append(Token(symbol="G", value=str(int(gust_max_kmh)),
-                                category="forecast", priority=4))
-
+        # AC-2 (#799): D/W/G-Kürzel nicht im E-Mail-Betreff — lesbar für Nicht-Techniker.
+        # Token-Whitelist bleibt für SMS aktiv (output/subject.py unverändert).
         line = TokenLine(
             stage_name=stage,
             report_type=rt,  # type: ignore[arg-type]
-            tokens=tuple(tokens),
+            tokens=(),
             trip_name=trip_name,
+            shortcode=shortcode or None,
         )
         return build_email_subject(line)
 
