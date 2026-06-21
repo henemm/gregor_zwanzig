@@ -161,3 +161,8 @@ tokenline
 normalizedforecast
 hourpoint
 dayaggregate
+
+# Bundle #791/#847/#844 Alert-Fixes (spec: docs/specs/modules/bundle_791_847_844_alert_fixes.md)
+ac1_radar_alert_onset_in_local_time
+ac2_ziel_segment_label_includes_stage
+ac3_no_fetch_for_future_segments
