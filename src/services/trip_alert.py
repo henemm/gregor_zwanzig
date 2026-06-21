@@ -721,8 +721,11 @@ class TripAlertService:
 
         fresh_weather = []
         for cached in cached_weather:
-            if cached.segment.start_time > now_utc:
-                continue  # Segment liegt noch in der Zukunft — nicht fetchen
+            today_utc = now_utc.date()
+            if cached.segment.end_time < now_utc:
+                continue  # Bereits absolviert — überspringen
+            if cached.segment.start_time.date() > today_utc:
+                continue  # Beginnt erst morgen oder später — überspringen
             try:
                 # Clear cache to force fresh fetch
                 service._cache.clear()

@@ -297,14 +297,12 @@ def test_ac2_ziel_segment_label_includes_stage():
 
 def test_ac3_no_fetch_for_future_segments():
     """
-    AC-3: Given Trip mit 2 Segmenten — Segment 3 (aktiv) und Segment 4 (future),
+    AC-3: Given Trip mit 2 Segmenten — Segment 3 (aktiv, heute) und Segment 4 (beginnt morgen),
           When _fetch_fresh_weather aufgerufen wird,
           Then enthält das Ergebnis kein Segment-4-Element.
 
-    RED-Kriterium: _fetch_fresh_weather hat keinen Zeitfilter → Segment 4
-    (start_time > now_utc) wird trotzdem gefetcht → segment_id "4" IS in result.
-    Nach Fix: Segment 4 wird übersprungen → "4" NOT in result.
-
+    Korrekte Logik: absolvierte Segmente UND Segmente an zukünftigen Tagen werden
+    übersprungen. Heutige Zukunftssegmente werden gefetcht (Alerts für den Rest des Tages).
     Echter Open-Meteo-API-Call für Segment 3 ist erlaubt und erwartet.
     """
     from services.trip_alert import TripAlertService
@@ -318,8 +316,8 @@ def test_ac3_no_fetch_for_future_segments():
         # Segment 3: begann vor 30 Minuten (aktiv/vergangen)
         seg3 = _make_segment(3, lat, lon, start_offset_min=-30)
 
-        # Segment 4: beginnt erst in 60 Minuten (zukünftig — soll übersprungen werden)
-        seg4 = _make_segment(4, lat + 0.1, lon + 0.1, start_offset_min=60)
+        # Segment 4: beginnt erst morgen (zukünftiger Tag — soll übersprungen werden)
+        seg4 = _make_segment(4, lat + 0.1, lon + 0.1, start_offset_min=60 * 24 + 60)  # morgen
 
         svc = TripAlertService(throttle_hours=0, user_id=uid)
 
@@ -329,16 +327,71 @@ def test_ac3_no_fetch_for_future_segments():
 
         # Kernbehauptung: Segment 4 darf nicht gefetcht worden sein
         assert "4" not in result_segment_ids, (
-            f"AC-3 FAIL: Segment 4 (start_time +60min) wurde gefetcht — "
-            f"_fetch_fresh_weather hat keinen Zeitfilter.\n"
+            f"AC-3 FAIL: Segment 4 (startet morgen) wurde gefetcht — "
+            f"_fetch_fresh_weather filtert zukünftige Tage nicht.\n"
             f"Gefundene segment_ids: {result_segment_ids}"
         )
 
-        # Zusatz-Plausibilitäts-Check: maximal 1 Segment kann im Ergebnis sein
-        assert len(result) <= 1, (
-            f"AC-3 FAIL: {len(result)} Segmente im Ergebnis — erwartet maximal 1 "
-            f"(nur vergangene/aktive Segmente).\n"
-            f"segment_ids: {result_segment_ids}"
+        # Positiv-Check: aktives Segment 3 muss gefetcht worden sein
+        assert "3" in result_segment_ids, (
+            f"AC-3 FAIL: Segment 3 (aktiv) wurde nicht gefetcht — "
+            f"API-Fehler oder Filter zu restriktiv.\n"
+            f"Gefundene segment_ids: {result_segment_ids}"
+        )
+
+    finally:
+        _clean_user(uid)
+
+
+# ---------------------------------------------------------------------------
+# AC-3b: #844 (Re-Open) — Vergangene Segmente werden nicht gefetcht
+# ---------------------------------------------------------------------------
+
+def test_ac3b_no_fetch_for_past_segments():
+    """
+    AC-3b: Given Trip mit 2 Segmenten — Segment X endete vor 60 Minuten (absolviert)
+           und Segment Y läuft aktuell (aktiv),
+           When _fetch_fresh_weather aufgerufen wird,
+           Then enthält das Ergebnis kein Segment-X-Element.
+
+    RED-Kriterium: Der bisherige Filter prüft nur `start_time > now_utc` (Zukunft).
+    Vergangene Segmente (end_time < now_utc) passieren diesen Filter —
+    sie werden gefetcht und lösen Alerts aus.
+    Nach korrektem Fix (`not (start <= now <= end)`): X wird übersprungen.
+
+    Echter Open-Meteo-API-Call für das aktive Segment Y ist erlaubt.
+    """
+    from services.trip_alert import TripAlertService
+
+    uid = f"tdd-844b-{uuid.uuid4().hex[:6]}"
+    _clean_user(uid)
+    try:
+        lat, lon = 42.387, 8.932
+
+        # Segment X: startete vor 2h, dauerte 60 Min → endete vor 60 Min (ABSOLVIERT)
+        seg_past = _make_segment("X", lat, lon, start_offset_min=-120, duration_min=60)
+
+        # Segment Y: startete vor 30 Min, dauert 90 Min → endet in 60 Min (AKTIV)
+        seg_active = _make_segment("Y", lat + 0.1, lon + 0.1, start_offset_min=-30, duration_min=90)
+
+        svc = TripAlertService(throttle_hours=0, user_id=uid)
+
+        result = svc._fetch_fresh_weather([seg_past, seg_active])
+
+        result_segment_ids = {str(w.segment.segment_id) for w in result}
+
+        # Kernbehauptung: Segment X (absolviert) darf nicht gefetcht worden sein
+        assert "X" not in result_segment_ids, (
+            f"AC-3b FAIL: Segment X (end_time vor 60 Min) wurde gefetcht — "
+            f"_fetch_fresh_weather filtert vergangene Segmente nicht.\n"
+            f"Gefundene segment_ids: {result_segment_ids}"
+        )
+
+        # Aktives Segment Y muss gefetcht worden sein
+        assert "Y" in result_segment_ids, (
+            f"AC-3b FAIL: Segment Y (aktiv) fehlt im Ergebnis — "
+            f"nur aktive Segmente sollen gefetcht werden.\n"
+            f"Gefundene segment_ids: {result_segment_ids}"
         )
 
     finally:
