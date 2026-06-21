@@ -171,6 +171,16 @@ scope_guard:
     - "/_log/"
     - "/\\.claude/workflows/"
 
+# Bash Gate — Projekt-spezifische Whitelist
+# Tools die legitimate Artefakte schreiben (nicht Workflow-State)
+# und daher nicht durch den State-Integrity-Check geblockt werden sollen.
+bash_gate:
+  whitelist:
+    - "staging_gate.py"
+    - "briefing_mail_validator.py"
+    - "prod_selftest.py"
+    - "email_spec_validator.py"
+
 # Hooks Configuration
 hooks:
   # Timeout in seconds for hook execution
