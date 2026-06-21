@@ -56,6 +56,8 @@ export interface MailElementUi {
 	show_outlook?: boolean;
 	/** Issue #722: E-Mail-Format. Default 'full'. */
 	email_format?: 'full' | 'compact';
+	/** Issue #785: Vortag-Vergleich im Briefing. Default true. */
+	show_yesterday_comparison?: boolean;
 }
 
 /**
@@ -117,6 +119,7 @@ export function countActiveContentModules(ui: MailElementUi): number {
 		ui.show_stage_stats,
 		ui.show_metrics_summary ?? false,
 		ui.show_outlook ?? true,
+		ui.show_yesterday_comparison ?? true,
 	].filter(Boolean).length;
 }
 
@@ -145,5 +148,9 @@ export const CONTENT_MODULE_DESCRIPTIONS: Record<string, { label: string; descri
 	show_highlights: {
 		label: 'Zusammenfassung',
 		description: 'Kurzer Fließtext mit den wichtigsten Wetter-Highlights des Tages.',
+	},
+	show_yesterday_comparison: {
+		label: 'Vortag-Vergleich',
+		description: 'Vergleich des heutigen Wetters mit dem Vortag als Kurzzeile im Briefing.',
 	},
 };

@@ -73,6 +73,9 @@
 	// Issue #722: E-Mail-Format
 	let email_format = $state<'full' | 'compact'>('full');
 
+	// Issue #785: Vortag-Vergleich
+	let show_yesterday_comparison = $state(true);
+
 	// --- Profile (Channel-Verfuegbarkeit) --------------------------------------
 	interface Profile {
 		mail_to?: string;
@@ -151,6 +154,9 @@
 			if (typeof c.show_outlook === 'boolean') show_outlook = c.show_outlook;
 			// Issue #722: E-Mail-Format
 			if (c.email_format === 'compact' || c.email_format === 'full') email_format = c.email_format;
+			// Issue #785: Vortag-Vergleich (Default true wenn Feld fehlt — Altdaten-Kompatibilität)
+			if (typeof c.show_yesterday_comparison === 'boolean')
+				show_yesterday_comparison = c.show_yesterday_comparison;
 		}
 
 		// Profile laden (Channel-Verfuegbarkeit). Fail-soft: bei Fehler bleiben
@@ -197,6 +203,8 @@
 			show_outlook,
 			// Issue #722: E-Mail-Format
 			email_format,
+			// Issue #785: Vortag-Vergleich
+			show_yesterday_comparison,
 		};
 
 		// Issue #617: verwaiste Kanäle (nicht Wetter-aktiv) auf false synchronisieren.
@@ -484,6 +492,18 @@
 						>{CONTENT_MODULE_DESCRIPTIONS.show_stage_stats.label}</Checkbox>
 					</span>
 					<p class="pl-6 text-xs text-muted-foreground mt-0.5">{CONTENT_MODULE_DESCRIPTIONS.show_stage_stats.description}</p>
+				</div>
+				<div class="text-sm">
+					<span data-testid="report-show-yesterday-comparison" class="inline-flex items-center gap-2">
+						<Checkbox
+							checked={show_yesterday_comparison}
+							disabled={email_format === 'compact'}
+							onchange={(e) => { show_yesterday_comparison = (e.target as HTMLInputElement).checked; }}
+						>{CONTENT_MODULE_DESCRIPTIONS.show_yesterday_comparison.label}</Checkbox>
+					</span>
+					<p class="pl-6 text-xs text-muted-foreground mt-0.5">
+						{CONTENT_MODULE_DESCRIPTIONS.show_yesterday_comparison.description}
+					</p>
 				</div>
 			</div>
 		</div>

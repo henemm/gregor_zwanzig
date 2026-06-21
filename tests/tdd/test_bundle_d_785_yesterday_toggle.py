@@ -90,7 +90,27 @@ class TestAC1CheckboxReflectsStoredFalse:
     Then Checkbox 'Vortag-Vergleich' ist unchecked.
     """
 
-    def test_ac1_checkbox_exists_and_is_unchecked(self, session_state):
+    def test_ac1_checkbox_exists_and_is_unchecked(self, session_state, api_cookie):
+        # Sicherstellen: Trip hat show_yesterday_comparison=false als Ausgangszustand
+        resp = httpx.put(
+            f"https://staging.gregor20.henemm.com/api/trips/{TRIP_ID_OFF}",
+            json={
+                "id": TRIP_ID_OFF,
+                "name": "TDD-785 Vortag-Toggle",
+                "activity_type": "wandern",
+                "stages": [],
+                "report_config": {
+                    "show_yesterday_comparison": False,
+                    "show_stage_stats": True,
+                    "show_metrics_summary": False,
+                    "show_outlook": True,
+                    "email_format": "full",
+                },
+            },
+            cookies={"gz_session": api_cookie},
+        )
+        assert resp.status_code == 200, f"Setup PUT fehlgeschlagen: {resp.text}"
+
         with sync_playwright() as pw:
             browser = pw.chromium.launch()
             ctx = browser.new_context(storage_state=session_state)
