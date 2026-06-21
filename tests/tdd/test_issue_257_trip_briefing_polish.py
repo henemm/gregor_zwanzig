@@ -184,7 +184,6 @@ def test_ac3_pill_html_good_tone():
     assert result.startswith("<span"), f"pill_html gibt kein <span> zurück: {result[:50]}"
     assert "var(--" not in result, "pill_html enthält CSS-Custom-Properties — Outlook-inkompatibel"
     bg, fg = _parse_pill_colors(result)
-    assert fg == "#ffffff", f"Schweregrad-Kapsel braucht weißen Text, fg={fg}"
     assert _contrast_ratio(bg, fg) >= 4.5, (
         f"Kontrast {round(_contrast_ratio(bg, fg), 2)}:1 < 4.5:1 (bg={bg}, fg={fg})"
     )
@@ -200,7 +199,7 @@ def test_ac3_pill_html_is_inline_span():
     """
     from src.output.renderers.email.helpers import pill_html
     result = pill_html("Test", "ampel_red")
-    assert "border-radius:99px" in result, "Pill hat keine Vollfarb-Kapselform (border-radius:99px)"
+    assert "border-radius:2px" in result, "Pill hat keine Outline-Tag-Form (border-radius:2px)"
     assert "padding" in result, "Pill hat kein padding"
 
 
@@ -219,11 +218,10 @@ def test_ac4_pill_html_tones(tone):
     """
     from src.output.renderers.email.helpers import pill_html
     result = pill_html("Label", tone)
-    assert "border-radius:99px" in result, (
-        f"Tone '{tone}': Vollfarb-Kapselform (border-radius:99px) fehlt: {result}"
+    assert "border-radius:2px" in result, (
+        f"Tone '{tone}': Outline-Tag-Form (border-radius:2px) fehlt: {result}"
     )
     bg, fg = _parse_pill_colors(result)
-    assert fg == "#ffffff", f"Tone '{tone}': Vollfarb-Kapsel braucht weißen Text, fg={fg}"
     assert _contrast_ratio(bg, fg) >= 4.5, (
         f"Tone '{tone}': Kontrast {round(_contrast_ratio(bg, fg), 2)}:1 < 4.5:1 "
         f"(bg={bg}, fg={fg})"
@@ -240,8 +238,8 @@ def test_ac4_pill_html_neutral_fallback():
     """
     from src.output.renderers.email.helpers import pill_html
     result = pill_html("X", "unknown")
-    assert "#edeae1" in result, f"Neutral-Fallback hat nicht #edeae1: {result}"
-    assert "#1a1a18" in result, f"Neutral-Fallback hat nicht #1a1a18 (dunkler Text): {result}"
+    assert "#dde8f3" in result, f"Info-Fallback hat nicht #dde8f3 (info bg): {result}"
+    assert "#1e3a5f" in result, f"Info-Fallback hat nicht #1e3a5f (info fg): {result}"
 
 
 # ---------------------------------------------------------------------------

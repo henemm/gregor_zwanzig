@@ -706,18 +706,18 @@ def render_html(
         {thunder_html}
         {trend_html}
 
-        <div style="background:{G_BOX_INFO_BG};border-left:4px solid {G_ACCENT};padding:12px;margin:8px 0">
-            <strong style="font-size:13px;">Antwort-Kommandos</strong>
-            <div style="margin-top:6px;font-size:12px;line-height:1.6;">
-                <b>HEUTE</b> &mdash; Wetter der heutigen Etappe<br>
-                <b>MORGEN</b> &mdash; Wetter der morgigen Etappe<br>
-                <b>JETZT</b> / <b>NOW</b> &mdash; Nowcast Regen/Gewitter nächste ~2h<br>
-                <b>GEWITTER</b> &mdash; Gewittergefahr heutige Etappe<br>
-                <b>RUHETAG [N]</b> &mdash; Etappen um N Tage verschieben<br>
-                <b>STATUS</b> &mdash; Heute und kommende Etappen<br>
-                <b>STOP</b> &mdash; Briefings dauerhaft deaktivieren<br>
-                <b>WEITER</b> &mdash; Briefings reaktivieren<br>
-                <b>HILFE</b> / <b>HELP</b> &mdash; Alle Befehle anzeigen
+        <div style="background:#1d1c1a;padding:12px 16px;margin:8px 0">
+            <div style="color:#ffffff;font-weight:600;font-size:12px;font-family:{FONT_DATA};letter-spacing:0.06em;margin-bottom:6px;">Antwort-Kommandos</div>
+            <div style="color:#9a978d;font-size:11px;font-family:{FONT_DATA};line-height:1.6;">
+                <b style="color:#ffffff">HEUTE</b> &mdash; Wetter der heutigen Etappe<br>
+                <b style="color:#ffffff">MORGEN</b> &mdash; Wetter der morgigen Etappe<br>
+                <b style="color:#ffffff">JETZT</b> / <b style="color:#ffffff">NOW</b> &mdash; Nowcast Regen/Gewitter nächste ~2h<br>
+                <b style="color:#ffffff">GEWITTER</b> &mdash; Gewittergefahr heutige Etappe<br>
+                <b style="color:#ffffff">RUHETAG [N]</b> &mdash; Etappen um N Tage verschieben<br>
+                <b style="color:#ffffff">STATUS</b> &mdash; Heute und kommende Etappen<br>
+                <b style="color:#ffffff">STOP</b> &mdash; Briefings dauerhaft deaktivieren<br>
+                <b style="color:#ffffff">WEITER</b> &mdash; Briefings reaktivieren<br>
+                <b style="color:#ffffff">HILFE</b> / <b style="color:#ffffff">HELP</b> &mdash; Alle Befehle anzeigen
             </div>
         </div>
 

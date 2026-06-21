@@ -28,6 +28,8 @@ from app.models import (
 )
 from utils.timezone import local_fmt, local_hour
 
+from src.output.renderers.email.design_tokens import FONT_DATA
+
 # Issue #121: German weekday names (0=Monday).
 _WEEKDAY_DE = [
     "Montag", "Dienstag", "Mittwoch", "Donnerstag",
@@ -882,27 +884,32 @@ def tone_symbol(tone: str) -> str:
     return ""
 
 
+_PILL_TAG_PALETTE = {
+    "ok":   {"bg": "#dcf2e1", "fg": "#14532d", "border": "#86c89a"},
+    "warn": {"bg": "#fde6cc", "fg": "#7c2d12", "border": "#f0a060"},
+    "risk": {"bg": "#fadcd6", "fg": "#7f1d1d", "border": "#e88472"},
+    "info": {"bg": "#dde8f3", "fg": "#1e3a5f", "border": "#8aacd0"},
+}
+
+_PILL_TONE_MAP = {
+    "ampel_green":  "ok",
+    "ampel_yellow": "warn",
+    "ampel_orange": "warn",
+    "ampel_red":    "risk",
+}
+
+
 def pill_html(label: str, tone: str) -> str:
-    """Outlook-kompatibler Pill/Tag-Baustein fuer Segment-Risk-Anzeigen.
-
-    Issue #795 (RC5): Vollfarb-Kapsel (#664) — vollflaechiger bg, weisser fg,
-    border-radius:99px. Die vier Ampelstufen-Vollfarben sind die WCAG-AA-
-    gedunkelten Entsprechungen von 🟢🟡🟠🔴 (SSoT _AMPEL_STAGE_COLORS).
-
-    Tone-Palette (hardkodierte Hex, keine CSS-Custom-Properties — Outlook
-    ignoriert CSS-Variablen). Nur die tatsaechlich erzeugten tones existieren
-    (SSoT _pill_for_metric → ampel-Stufen + neutral); keine toten Legacy-Farben:
-        ampel_green/yellow/orange/red -> 4-stufige Ampel-Vollfarben (#795)
-        else (insb. neutral)          -> BG #edeae1, Text #1a1a18 (neutral)
-    """
-    if tone in _AMPEL_STAGE_COLORS:
-        bg, fg = _AMPEL_STAGE_COLORS[tone]
-    else:
-        bg, fg = _PILL_NEUTRAL_COLORS
+    """Eckiger Outline-Tag für Segment-Risk-Anzeigen in HTML-E-Mails."""
+    tag_tone = _PILL_TONE_MAP.get(tone, "info")
+    p = _PILL_TAG_PALETTE[tag_tone]
     return (
-        f'<span style="background:{bg};color:{fg};border-radius:99px;'
-        f'padding:2px 8px;font-size:11px;font-weight:600;'
-        f'display:inline-block;line-height:1.4;">'
+        f'<span style="display:inline-flex;align-items:center;'
+        f'padding:4px 10px;border:1px solid {p["border"]};'
+        f'background:{p["bg"]};color:{p["fg"]};'
+        f'font-size:11px;font-weight:600;'
+        f'font-family:{FONT_DATA};letter-spacing:0.02em;'
+        f'border-radius:2px;">'
         f'{_html.escape(label)}</span>'
     )
 

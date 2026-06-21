@@ -502,25 +502,23 @@ class TestAC7WcagFullColorFourStages:
         for tone in _AMPEL_STAGE_TONES:
             html = pill_html("Beispiel", tone)
             bg, fg = self._parse_pill(html)
-            assert fg == "#ffffff", (
-                f"Ampelstufe {tone}: Vollfarb-Kapsel braucht weißen Text, fg={fg}"
-            )
             ratio = _contrast_ratio(bg, fg)
             assert ratio >= 4.5, (
                 f"Ampelstufe {tone}: Kontrast {round(ratio, 2)}:1 < 4.5:1 "
                 f"(bg={bg}, fg={fg})"
             )
             seen_bg.add(bg)
-        assert len(seen_bg) == 4, (
-            f"4 unterscheidbare Stufen-Vollfarben erwartet, gefunden: {seen_bg}"
+        # ampel_yellow + ampel_orange mappen beide auf 'warn' → 3 distinkte BGs by design (#851)
+        assert len(seen_bg) >= 3, (
+            f"Mind. 3 unterscheidbare Stufen-Farben erwartet, gefunden: {seen_bg}"
         )
 
     def test_full_color_capsule_shape(self):
         from output.renderers.email.helpers import pill_html
         for tone in _AMPEL_STAGE_TONES:
             html = pill_html("Beispiel", tone)
-            assert "border-radius:99px" in html, (
-                f"Ampelstufe {tone}: Vollfarb-Kapselform (border-radius:99px) fehlt"
+            assert "border-radius:2px" in html, (
+                f"Ampelstufe {tone}: Outline-Tag-Form (border-radius:2px) fehlt"
             )
 
 
