@@ -734,7 +734,7 @@ def _fmt_km(value: float) -> str:
     return f"{value:.1f}".rstrip("0").rstrip(".")
 
 
-def build_segment_label(change, segments, *, tz: ZoneInfo = ZoneInfo("UTC")) -> str:
+def build_segment_label(change, segments, *, tz: ZoneInfo = ZoneInfo("UTC"), stage_label: str | None = None) -> str:
     """
     Liefert 'Segment N (HH:MM–HH:MM)' oder '🏁 Ziel (HH:MM)' aus segment_id +
     segments-Liste. Fallback ohne Match: 'Segment N' oder 'Unbekannt'.
@@ -753,6 +753,8 @@ def build_segment_label(change, segments, *, tz: ZoneInfo = ZoneInfo("UTC")) -> 
             start = local_fmt(s.segment.start_time, tz)
             end = local_fmt(s.segment.end_time, tz)
             if str(s.segment.segment_id) == "Ziel":
+                if stage_label:
+                    return f"🏁 Ziel, {stage_label} ({start})"
                 return f"🏁 Ziel ({start})"
             start_km = getattr(s.segment.start_point, "distance_from_start_km", None)
             end_km = getattr(s.segment.end_point, "distance_from_start_km", None)

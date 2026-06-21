@@ -26,7 +26,7 @@ def _strength(change) -> float:
     return abs(change.delta) / threshold
 
 
-def _line(change, segments, *, tz) -> str:
+def _line(change, segments, *, tz, stage_label: str | None = None) -> str:
     """Eine Vorher→Jetzt-Zeile: 'Metrik  Vorher → Jetzt Einheit  (Segment-Label)'."""
     label_info = get_label_for_field(change.metric)
     if label_info:
@@ -37,7 +37,7 @@ def _line(change, segments, *, tz) -> str:
         name = change.metric
         old_fmt = f"{change.old_value:.1f}"
         new_fmt = f"{change.new_value:.1f}"
-    seg_label = build_segment_label(change, segments, tz=tz)
+    seg_label = build_segment_label(change, segments, tz=tz, stage_label=stage_label)
     return f"{name}  {old_fmt} → {new_fmt}  ({seg_label})"
 
 
@@ -62,12 +62,12 @@ def render_deviation_alert(
 
     plain_lines = [_HEADER, ""]
     for c in ordered:
-        plain_lines.append(_line(c, segments, tz=tz))
+        plain_lines.append(_line(c, segments, tz=tz, stage_label=stage_label))
     plain_lines.extend(["", footer])
     plain = "\n".join(plain_lines)
 
     html_rows = "".join(
-        f"<tr><td style=\"padding:4px 0;\">{_html_escape(_line(c, segments, tz=tz))}</td></tr>"
+        f"<tr><td style=\"padding:4px 0;\">{_html_escape(_line(c, segments, tz=tz, stage_label=stage_label))}</td></tr>"
         for c in ordered
     )
     html = (

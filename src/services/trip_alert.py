@@ -717,8 +717,12 @@ class TripAlertService:
 
         service = SegmentWeatherService(provider)
 
+        now_utc = datetime.now(timezone.utc)
+
         fresh_weather = []
         for cached in cached_weather:
+            if cached.segment.start_time > now_utc:
+                continue  # Segment liegt noch in der Zukunft — nicht fetchen
             try:
                 # Clear cache to force fresh fetch
                 service._cache.clear()
