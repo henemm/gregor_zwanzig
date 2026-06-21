@@ -143,7 +143,7 @@
 
 	function snapshot(
 		b: Buckets, f: Record<string, boolean>, h: Record<string, Horizons>,
-		tk: boolean, st: Record<string, string>, rc?: ReportConfig
+		tk: boolean, st: Record<string, string>, rc: ReportConfig | undefined
 	): string {
 		return JSON.stringify({ buckets: b, friendlyMap: f, horizonsMap: h, telegramKurzform: tk, smsThresholds: st, reportConfig: rc ?? {} });
 	}

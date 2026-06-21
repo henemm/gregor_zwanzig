@@ -50,7 +50,7 @@
 	let testBriefingTimer: ReturnType<typeof setTimeout> | undefined;
 	let testBriefingMenuOpen = $state(false);
 
-	async function sendStateUpdate(paused?: boolean, archived?: boolean): Promise<void> {
+	async function sendStateUpdate(paused: boolean | undefined, archived: boolean | undefined): Promise<void> {
 		const body: Record<string, boolean> = {};
 		if (paused !== undefined) body.paused = paused;
 		if (archived !== undefined) body.archived = archived;
