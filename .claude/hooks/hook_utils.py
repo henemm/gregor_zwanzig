@@ -155,25 +155,72 @@ def find_project_root() -> Path:
     return cwd
 
 
-def get_active_workflow_name() -> str:
-    """Return the active workflow name.
+def resolve_active_workflow() -> "tuple[str, str]":
+    """Return (name, source). source ∈ {'env', 'settings', 'file', 'none'}.
 
     Checks env var first (injected by Claude Code from settings.local.json at session
     start). Falls back to reading settings.local.json directly — necessary when
     workflow.py start/switch was called AFTER the current session started, because
     Claude Code only reads settings files at startup, not on every hook invocation.
+    Third fallback: .claude/active_workflow text file — robust against Claude Code
+    overwriting settings.local.json (which removes the env section).
     """
     name = os.environ.get("OPENSPEC_ACTIVE_WORKFLOW", "").strip()
     if name:
-        return name
+        return name, "env"
     try:
         settings_path = find_project_root() / ".claude" / "settings.local.json"
         if settings_path.exists():
             settings = json.loads(settings_path.read_text())
-            name = settings.get("env", {}).get("OPENSPEC_ACTIVE_WORKFLOW", "").strip()
+            name = (settings.get("env") or {}).get("OPENSPEC_ACTIVE_WORKFLOW", "").strip()
+            if name:
+                return name, "settings"
     except (OSError, json.JSONDecodeError, KeyError):
         pass
-    return name
+    try:
+        active_file = find_project_root() / ".claude" / "active_workflow"
+        if active_file.exists():
+            name = active_file.read_text().strip()
+            if name:
+                return name, "file"
+    except OSError:
+        pass
+    return "", "none"
+
+
+def get_active_workflow_name() -> str:
+    """Unverändertes Verhalten — delegiert an resolve_active_workflow()."""
+    return resolve_active_workflow()[0]
+
+
+def gate_diagnostics(workflow: "dict | None" = None, **extra) -> str:
+    """Bracketed diagnostics for block messages.
+
+    Beispiel: '[wf=feature-login (env) | token=keins | phase=phase6_implement]'
+    Fail-safe: jede Teilinfo, die nicht ermittelbar ist, wird zu '?' —
+    der Builder wirft nie.
+    """
+    try:
+        name, source = resolve_active_workflow()
+    except Exception:
+        name, source = "?", "?"
+    parts = [f"wf={name or '—'} ({source})"]
+    try:
+        from override_token import has_valid_token
+        parts.append("token=gültig" if has_valid_token(name or None) else "token=keins")
+    except Exception:
+        parts.append("token=?")
+    try:
+        if workflow:
+            parts.append(f"phase={workflow.get('current_phase', '?')}")
+    except Exception:
+        parts.append("phase=?")
+    try:
+        for key, value in extra.items():
+            parts.append(f"{key}={value}")
+    except Exception:
+        pass
+    return "[" + " | ".join(parts) + "]"
 
 
 def find_plugin_root() -> Path:
