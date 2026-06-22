@@ -3,27 +3,27 @@ Korsika Trail - Update Report
 Corsica E5
 11.07.2026
 
-Corsica E5: 18–32°C, 🌥️, trocken, Regen ab 10:00, mäßiger Wind 30 km/h, Böen bis 85 km/h ab 10:00, ⚡ möglich 0:00–24:00
+Corsica E5: 18–32°C, 🌥️, mäßiger Regen bis 10:00, trocken ab 11:00, mäßiger Wind 30 km/h, Böen bis 85 km/h ab 10:00, ⚡ möglich 10:00–15:00
 
 ━━ Metriken-Überblick ━━
-  Temperatur 15–22 °C
-  Gefühlt 10–15 °C
-  🟢 Wind ab 00:00 · Spitze 23 km/h um 23:00
-  🔴 Böen ab 00:00 · Spitze 85 km/h um 10:00
+  Temperatur 18–19 °C
+  Gefühlt 12–13 °C
+  🟢 Wind ab 10:00 · Spitze 19 km/h um 14:00
+  🔴 Böen ab 10:00 · 85 km/h
   🟠 Regen ab 10:00 · 8 mm gesamt, Spitze 10:00
-  🔴 Gewitter ab 00:00 · stärkste 00:00
+  🔴 Gewitter ab 10:00 · stärkste 10:00
   Bewölkung 50 %
-  Sonne 0 min
+  Sonne 150 min
 
 ━━ Segment 1: km 0.0–0.0 | 10:00–15:00 | ↑400m → 1200m ━━
-  Time   Temp   Feels   Wind   Gust   Rain   Thunder   SnowL   Cloud   Sun 
-  -----  -----  ------  -----  -----  -----  --------  ------  ------  ----
-  10     18.0   12.0    17     85     8.0    ⚡⚡        –       ⛅       –   
-  11     18.3   12.2    18     41     0.0    ⚡⚡        –       ⛅       –   
-  12     18.6   12.4    18     42     0.0    ⚡⚡        –       ⛅       –   
-  13     18.9   12.6    18     43     0.0    ⚡⚡        –       ⛅       –   
-  14     19.2   12.8    19     44     0.0    ⚡⚡        –       ⛅       –   
-  15     19.5   13.0    20     45     0.0    ⚡⚡        –       ⛅       –   
+  Time    Temp   Feels   Wind   Gust   Rain   Blitz   SnowL   Cloud   Sun 
+  ------  -----  ------  -----  -----  -----  ------  ------  ------  ----
+  10:00   18.0   12.0    17     85     8.0    ⚡⚡      –       ⛅       –   
+  11:00   18.3   12.2    18     41     0.0    ⚡⚡      –       ⛅       –   
+  12:00   18.6   12.4    18     42     0.0    ⚡⚡      –       ⛅       –   
+  13:00   18.9   12.6    18     43     0.0    ⚡⚡      –       ⛅       –   
+  14:00   19.2   12.8    19     44     0.0    ⚡⚡      –       ⛅       –   
+  15:00   19.5   13.0    20     45     0.0    ⚡⚡      –       ⛅       –   
 
 
 ── Antwort-Kommandos ──

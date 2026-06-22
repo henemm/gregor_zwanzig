@@ -3,26 +3,26 @@ GR20 - Morning Report
 GR20 E1
 11.07.2026
 
-GR20 E1: 2–9°C, 🌥️, trocken, Regen ab 6:00, mäßiger Wind 35 km/h, Böen bis 70 km/h ab 6:00, ⚡ möglich 0:00–24:00
+GR20 E1: 2–9°C, 🌥️, starker Regen bis 6:00, trocken ab 7:00, mäßiger Wind 35 km/h, Böen bis 70 km/h ab 6:00, ⚡ möglich 6:00–10:00
 
 ━━ Metriken-Überblick ━━
-  Temperatur 15–22 °C
-  Gefühlt 10–15 °C
-  🟢 Wind ab 00:00 · Spitze 23 km/h um 23:00
-  🟠 Böen ab 00:00 · Spitze 70 km/h um 06:00
+  Temperatur 17–18 °C
+  Gefühlt 11–12 °C
+  🟢 Wind ab 06:00 · Spitze 16 km/h um 09:00
+  🟠 Böen ab 06:00 · 70 km/h
   🔴 Regen ab 06:00 · 18 mm gesamt, Spitze 06:00
-  🔴 Gewitter ab 00:00 · stärkste 00:00
+  🔴 Gewitter ab 06:00 · stärkste 06:00
   Bewölkung 50 %
-  Sonne 0 min
+  Sonne 120 min
 
 ━━ Segment 1: km 0.0–0.0 | 06:00–10:00 | ↑400m → 1200m ━━
-  Time   Temp   Feels   Wind   Gust   Rain   Thunder   SnowL   Cloud   Sun 
-  -----  -----  ------  -----  -----  -----  --------  ------  ------  ----
-  06     16.8   11.2    15     70     18.5   ⚡ mögl.   –       ⛅       –   
-  07     17.1   11.4    16     37     0.0    ⚡ mögl.   –       ⛅       –   
-  08     17.4   11.6    16     38     0.0    ⚡ mögl.   –       ⛅       –   
-  09     17.7   11.8    16     39     0.0    ⚡ mögl.   –       ⛅       –   
-  10     18.0   12.0    17     40     0.0    ⚡ mögl.   –       ⛅       –   
+  Time    Temp   Feels   Wind   Gust   Rain   Blitz     SnowL   Cloud   Sun 
+  ------  -----  ------  -----  -----  -----  --------  ------  ------  ----
+  06:00   16.8   11.2    15     70     18.5   ⚡ mögl.   –       ⛅       –   
+  07:00   17.1   11.4    16     37     0.0    ⚡ mögl.   –       ⛅       –   
+  08:00   17.4   11.6    16     38     0.0    ⚡ mögl.   –       ⛅       –   
+  09:00   17.7   11.8    16     39     0.0    ⚡ mögl.   –       ⛅       –   
+  10:00   18.0   12.0    17     40     0.0    ⚡ mögl.   –       ⛅       –   
 
 
 ── Antwort-Kommandos ──
