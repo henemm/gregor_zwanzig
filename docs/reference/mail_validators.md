@@ -89,3 +89,24 @@ Bypass.** Verhindert stille Mail-Format-Defekte vor dem Merge (Issue #810-Klasse
 (`uv run pytest tests/tdd/test_issue_811_mode_matrix.py` — der Lauf schreibt den
 Matrix-Nachweis automatisch) und den `briefing_mail_validator.py` gegen die
 zugestellte Staging-Mail grün bekommen.
+
+## Strukturelle Render-Checks im briefing_mail_validator (Issue #833)
+
+Der Trip-Briefing-Validator prüft die `full`-Mail nicht mehr nur als MIME-String,
+sondern **rendert** den HTML-Part headless (Playwright/Chromium) bei **≤390px** und
+**≥1000px** und bewertet das gerenderte Artefakt. Fehlt Playwright/der Browser, wird
+**Exit 2** (technischer Fehler) signalisiert — **nie** Exit 1 (kein False-Negative).
+
+Erzwungene Invarianten (alle hart, Exit 1):
+
+| Check | Funktion | Was rot wird |
+|---|---|---|
+| **Viewport-Render** (AC-1) | `_check_rendered` | Bei einer Breite ist keine Wetter-Tabelle sichtbar **oder** der für die Breite falsche Block ist sichtbar (≤390px → `.desktop-only`; ≥1000px → `.mobile-compact`) — Dual-Render/#794-Klasse. Konditional: flache Tabellen ohne responsive Wrapper bleiben gültig. |
+| **Ebenen-Konsistenz** (AC-3) | `_check_layer_consistency` | Pill-Spitzenwert ≠ Tabellen-Spalten-Max (> ±3 km/h), Mapping über th-Spaltenindex (#807). |
+| **Metrik-Plausibilität** (AC-4) | `_check_metric_plausibility` | „Sonne X min" ≠ Σ Sonnenstunden·60 (±5 min, nur Roh-Tabelle); „kein Regen" bei Regensumme ≥ 0.1 mm (#808). |
+| **Lokalisierung** (AC-5) | `_check_localization` | Englische Spaltenköpfe (Gust/Rain/Sun/Feels/Cloud/Thunder/Visib/Humid) in der deutschen Mail; Homograph „Wind" ausgenommen (#94). |
+
+Der Mobile-Vertrag (#831) wird zusätzlich im Matrix-Test über `_data_cells_mobile()`
+in **beiden** Auflösungen geprüft. Selbsttest: `tests/tdd/test_issue_833_gate.py`
+füttert bewusst defekte Mails und beweist, dass das Gate sie rot meldet (kein Mock,
+echte MIME-Artefakte).

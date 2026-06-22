@@ -37,6 +37,16 @@ _HOUR_LINE_RE = re.compile(r"^\s*([01]?\d|2[0-3]):00(\s|$)", re.MULTILINE)
 _TEMP_RANGE_RE = re.compile(r"(-?\d{1,2})\s*[–-]\s*(-?\d{1,2})\s*°?C")
 _MAX_BYTES_DEFAULT = 2048
 
+# Issue #833 — eindeutig englische Metrik-Begriffe (AC-5). "Wind" ausgenommen
+# (Homograph DE=EN).
+_EN_BLACKLIST = ("Gust", "Rain", "Sun", "Feels", "Cloud", "Thunder", "Visib", "Humid")
+_WIND_TOL = 3       # km/h (AC-3)
+_SONNE_TOL_MIN = 5  # min (AC-4)
+
+
+class RenderUnavailable(Exception):
+    """Playwright/Browser fehlt → Exit 2, nicht Exit 1 (technischer Fehler, AC-1)."""
+
 
 # --------------------------------------------------------------------------- #
 # Hilfsfunktionen
@@ -97,6 +107,229 @@ def _part_text(part: Message) -> str:
         return payload.decode("utf-8", errors="replace")
 
 
+# Issue #833 — Parser-Helfer (HTML-Struktur statt String-Presence)
+_TH_RE = re.compile(r"<th[^>]*>(.*?)</th>", re.IGNORECASE | re.DOTALL)
+_ROW_RE = re.compile(r"<tr[^>]*>(.*?)</tr>", re.IGNORECASE | re.DOTALL)
+_TD_RE = re.compile(r"<td[^>]*>(.*?)</td>", re.IGNORECASE | re.DOTALL)
+_SPAN_RE = re.compile(r"<span[^>]*>(.*?)</span>", re.IGNORECASE | re.DOTALL)
+_MOBILE_PRE_RE = re.compile(
+    r'class="[^"]*mobile-compact[^"]*".*?<pre[^>]*>(.*?)</pre>',
+    re.IGNORECASE | re.DOTALL,
+)
+_TAG_RE = re.compile(r"<[^>]+>")
+
+
+def _strip_tags(s: str) -> str:
+    return _TAG_RE.sub("", s).strip()
+
+
+def _th_tokens(html: str) -> list[str]:
+    """Alle <th>-Inhalte (Tags gestrippt)."""
+    return [_strip_tags(m) for m in _TH_RE.findall(html)]
+
+
+def _mobile_header_tokens(html: str) -> list[str]:
+    """Erste nicht-leere Zeile im .mobile-compact-<pre>, per Whitespace gesplittet."""
+    m = _MOBILE_PRE_RE.search(html)
+    if not m:
+        return []
+    for line in _strip_tags(m.group(1)).splitlines():
+        if line.strip():
+            return line.split()
+    return []
+
+
+def _column_values(html: str, header_de: str) -> list[float]:
+    """Numerische Zellwerte der Spalte mit th-Text == header_de (über th-INDEX).
+
+    Mappt NICHT über data-label (kann englisch sein), nur über die Header-Reihe.
+    """
+    headers = _th_tokens(html)
+    try:
+        idx = headers.index(header_de)
+    except ValueError:
+        return []
+    values: list[float] = []
+    for row_html in _ROW_RE.findall(html):
+        cells = _TD_RE.findall(row_html)
+        if idx >= len(cells):
+            continue
+        num = re.search(r"-?\d+(?:\.\d+)?", _strip_tags(cells[idx]))
+        if num:
+            values.append(float(num.group(0)))
+    return values
+
+
+def _column_hours_sum(html: str, *header_names: str) -> float | None:
+    """Summe der ‚X.Y h'-Zellen der Spalte (Sonne). None, wenn keine ‚h'-Zahl."""
+    headers = _th_tokens(html)
+    idx = next((headers.index(h) for h in header_names if h in headers), None)
+    if idx is None:
+        return None
+    total = 0.0
+    found = False
+    for row_html in _ROW_RE.findall(html):
+        cells = _TD_RE.findall(row_html)
+        if idx >= len(cells):
+            continue
+        m = re.search(r"(\d+(?:\.\d+)?)\s*h\b", _strip_tags(cells[idx]))
+        if m:
+            total += float(m.group(1))
+            found = True
+    return total if found else None
+
+
+def _column_num_sum(html: str, *header_names: str) -> float | None:
+    """Summe numerischer Zellen der Spalte. None, wenn Spalte fehlt."""
+    headers = _th_tokens(html)
+    idx = next((headers.index(h) for h in header_names if h in headers), None)
+    if idx is None:
+        return None
+    return sum(_column_values(html, headers[idx]))
+
+
+def _pills(html: str) -> list[str]:
+    """Pill-Texte aus dem Metriken-Überblick (alle <span>-Inhalte)."""
+    return [_strip_tags(s) for s in _SPAN_RE.findall(html)]
+
+
+# Issue #833 — Neue Checks (AC-1..AC-5)
+def _check_localization(html: str) -> list[str]:
+    """AC-5: englische Spaltenköpfe/Mobile-Header gegen Blacklist (Wind ausgenommen)."""
+    errors: list[str] = []
+    tokens = _th_tokens(html) + _mobile_header_tokens(html)
+    for w in _EN_BLACKLIST:
+        if any(t == w or t.startswith(w) for t in tokens):
+            errors.append(f"FULL: englischer Spaltenkopf '{w}' (deutsche Mail)")
+    return errors
+
+
+def _check_layer_consistency(html: str) -> list[str]:
+    """AC-3: Pill-Spitzenwert vs. Tabellen-Spalten-Max (Toleranz _WIND_TOL)."""
+    errors: list[str] = []
+    pill_re = re.compile(
+        r"([A-Za-zÄÖÜäöüß]+)\s+ab\s+\d{1,2}:\d{2}.*?(\d+)\s*km/h"
+    )
+    for pill in _pills(html):
+        m = pill_re.search(pill)
+        if not m:
+            continue
+        label, value = m.group(1), float(m.group(2))
+        col = _column_values(html, label)
+        if not col:
+            continue
+        col_max = max(col)
+        if abs(value - col_max) > _WIND_TOL:
+            errors.append(
+                f"FULL: Ebenen-Widerspruch '{label}' — Pill {value:g} vs. "
+                f"Tabellen-Max {col_max:g} (km/h, > {_WIND_TOL})"
+            )
+    return errors
+
+
+def _check_metric_plausibility(html: str) -> list[str]:
+    """AC-4: Sonne-Pill vs. Σ Sonnenstunden; ‚kein Regen' vs. Regen-Summe."""
+    errors: list[str] = []
+    for pill in _pills(html):
+        m = re.search(r"Sonne\s+(\d+)\s*min", pill)
+        if not m:
+            continue
+        pill_min = int(m.group(1))
+        sun_h = _column_hours_sum(html, "Sonne", "Sun")
+        if sun_h is None:
+            continue  # Einfach-Modus (Emoji, keine Zahl) → überspringen
+        if abs(pill_min - sun_h * 60) > _SONNE_TOL_MIN:
+            errors.append(
+                f"FULL: Sonne-Widerspruch — Pill {pill_min} min vs. Tabelle "
+                f"{sun_h * 60:.0f} min (> {_SONNE_TOL_MIN})"
+            )
+
+    overview = " ".join(_pills(html))
+    if "kein Regen" in overview:
+        rain = _column_num_sum(html, "Regen", "Rain")
+        if rain is not None and rain >= 0.1:
+            errors.append(
+                f"FULL: ‚kein Regen' widerspricht Tabellen-Summe {rain:g} mm"
+            )
+    return errors
+
+
+def _data_visible(page) -> bool:
+    """True, wenn bei diesem Viewport eine Wetterdaten-Tabelle sichtbar ist.
+
+    Sichtbar = irgendeine `table.resp` ODER `.mobile-compact` mit offsetHeight>0
+    und display!='none'. Eine flache (nicht responsiv gewrappte) Tabelle ist bei
+    jeder Breite sichtbar; nur ein per @media versteckter Block ohne Gegenstueck
+    macht den Viewport leer (AC-1, #831-Klasse).
+    """
+    return page.evaluate(
+        "()=>{const els=document.querySelectorAll('table.resp,.mobile-compact');"
+        "for(const el of els){const s=getComputedStyle(el);"
+        "if(el.offsetHeight>0 && s.display!=='none') return true;} return false;}"
+    )
+
+
+def _selector_present_and_visible(page, selector: str) -> tuple[bool, bool]:
+    """(existiert, sichtbar) fuer einen Selektor im aktuellen Viewport."""
+    res = page.evaluate(
+        "(sel)=>{const el=document.querySelector(sel);"
+        "if(!el) return [false,false];const s=getComputedStyle(el);"
+        "return [true, el.offsetHeight>0 && s.display!=='none'];}",
+        selector,
+    )
+    return bool(res[0]), bool(res[1])
+
+
+def _check_rendered(html: str) -> list[str]:
+    """AC-1: headless Render bei 390px und 1000px; Daten muessen sichtbar bleiben.
+
+    Fehlt Playwright/Browser → RenderUnavailable (Exit 2), NICHT Exit 1.
+    """
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError as e:
+        raise RenderUnavailable(f"Playwright nicht installiert: {e}")
+    import tempfile
+
+    errors: list[str] = []
+    tmp = tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w")
+    try:
+        tmp.write(html)
+        tmp.close()
+        url = f"file://{tmp.name}"
+        try:
+            ctx = sync_playwright().start()
+            browser = ctx.chromium.launch(headless=True)
+        except Exception as e:
+            raise RenderUnavailable(f"Browser-Launch fehlgeschlagen: {e}")
+        try:
+            wrong = {390: ".desktop-only", 1000: ".mobile-compact"}
+            for w, lbl in ((390, "390px (mobil)"), (1000, "1000px (Desktop)")):
+                page = browser.new_page(viewport={"width": w, "height": 844})
+                page.goto(url, timeout=10000)
+                page.wait_for_load_state("networkidle")
+                if not _data_visible(page):
+                    errors.append(
+                        f"FULL: bei {lbl} ist keine Wetterdaten-Tabelle sichtbar "
+                        f"(Viewport leer — responsiver Block ohne Gegenstueck?)"
+                    )
+                exists, visible = _selector_present_and_visible(page, wrong[w])
+                if exists and visible:
+                    errors.append(
+                        f"FULL: bei {lbl} ist '{wrong[w]}' sichtbar — muss bei "
+                        f"dieser Breite versteckt sein (Dual-Render, #794)"
+                    )
+        finally:
+            browser.close()
+            ctx.stop()
+    finally:
+        try:
+            os.unlink(tmp.name)
+        except OSError:
+            pass
+    return errors
+
+
 # --------------------------------------------------------------------------- #
 # Format-spezifische Validierung
 # --------------------------------------------------------------------------- #
@@ -121,6 +354,12 @@ def _validate_full(msg: Message) -> tuple[bool, list[str]]:
         errors.append("FULL: keine sequenzielle Stundentabelle (>=2 HH:00-Zeilen) im HTML-Part")
 
     errors.extend(_check_plausibility(html))
+
+    if html:
+        errors.extend(_check_rendered(html))            # AC-1 (kann RenderUnavailable werfen)
+        errors.extend(_check_layer_consistency(html))   # AC-3
+        errors.extend(_check_metric_plausibility(html))  # AC-4
+        errors.extend(_check_localization(html))         # AC-5
 
     if not (msg["Subject"] or "").strip():
         errors.append("FULL: Subject ist leer")

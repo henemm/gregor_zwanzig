@@ -268,6 +268,70 @@ class TestAC1RenderViewport:
             for e in errors
         ), f"Fehlermeldung soll den fehlenden Mobile-Viewport benennen, bekam: {errors}"
 
+    def test_dual_render_desktop_visible_on_mobile_rejected(self):
+        """F001: Beide Blöcke vorhanden, aber OHNE jede @media-Regel → bei 390px
+        ist `.desktop-only` (mit der breiten Desktop-Tabelle) weiter sichtbar.
+        Das ist die #794-Klasse: Desktop-Tabelle aufs Handy, mobil unlesbar.
+        Die bloße String-Präsenz beider Blöcke täuscht ‚responsiv' vor; erst der
+        echte Render bei 390px deckt auf, dass der falsche Block sichtbar bleibt."""
+        mod = _load_validator()
+        # KEINE @media-Regel → kein Viewport-Switch. Beide Blöcke immer sichtbar.
+        html = (
+            '<div class="desktop-only">' + _CLEAN_TABLE + '</div>'
+            '<div class="mobile-compact"><pre>Zeit Böen\n10   55\n11   30</pre></div>'
+        )
+        msg = _build_full(html)
+        ok, errors = mod.validate_message(msg)
+        assert ok is False, (
+            "Dual-Render (Desktop-Block bei 390px sichtbar, kein @media-Switch) "
+            "muss das Gate rot machen (F001/#794-Klasse)"
+        )
+        joined = " ".join(errors).lower()
+        assert "desktop" in joined and "390" in joined and "versteckt" in joined, (
+            f"Fehler soll ‚desktop'/‚390'/‚versteckt' benennen, bekam: {errors}"
+        )
+
+    def test_render_unavailable_when_playwright_missing(self):
+        """F002: Fehlt Playwright beim Import, muss `_check_rendered` mit
+        RenderUnavailable abbrechen (Exit 2, NICHT Exit 1) — mock-frei via
+        Subprozess mit vorangestelltem Stub-`playwright`, das ImportError wirft."""
+        import os
+        import subprocess
+        import sys
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as d:
+            pkg = Path(d) / "playwright"
+            pkg.mkdir()
+            (pkg / "__init__.py").write_text("")
+            (pkg / "sync_api.py").write_text(
+                "raise ImportError('stub: playwright unavailable')\n"
+            )
+            code = (
+                "import importlib.util as u;"
+                f"s=u.spec_from_file_location('bmv', r'{VALIDATOR_PATH}');"
+                "m=u.module_from_spec(s);s.loader.exec_module(m);"
+                "import sys\n"
+                "try:\n"
+                "    m._check_rendered('<html><body>x</body></html>')\n"
+                "    print('NO_RAISE')\n"
+                "except m.RenderUnavailable as e:\n"
+                "    print('RENDER_UNAVAILABLE:' + str(e))\n"
+            )
+            env = dict(os.environ)
+            env["PYTHONPATH"] = d + os.pathsep + env.get("PYTHONPATH", "")
+            res = subprocess.run(
+                [sys.executable, "-c", code],
+                capture_output=True, text=True, env=env, cwd=str(REPO_ROOT),
+            )
+        out = res.stdout + res.stderr
+        assert "RENDER_UNAVAILABLE:" in out, (
+            f"Fehlendes Playwright muss RenderUnavailable auslösen, bekam: {out!r}"
+        )
+        assert "playwright" in out.lower(), (
+            f"Meldung soll ‚Playwright' benennen, bekam: {out!r}"
+        )
+
 
 # --------------------------------------------------------------------------- #
 # AC-6 — Selbsttest: konstruierte defekte Mails → validate_message liefert Exit-1

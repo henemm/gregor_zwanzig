@@ -523,6 +523,33 @@ def test_compact_ascii_no_emoji_no_hourly_table(raw, alert):
 # In der RED-Phase fehlt `_data_cells_mobile()` noch → klarer Fehlschlag.
 
 
+def _data_cells_mobile(html: str) -> list[str]:
+    """Datenzellen des `.mobile-compact`-Blocks (Roh: <pre>-Raster, Einfach: resp-Tabelle).
+
+    Roh: Tokens der Datenzeilen im <pre> (Header-Zeile 'Zeit ...' wird verworfen).
+    Einfach: <td data-label>-Zellen der eingebetteten <table class="resp">.
+    """
+    m = re.search(r'<div class="mobile-compact".*?(?=<div class="mobile-compact"|$)', html, re.S)
+    if not m:
+        return []
+    block = m.group(0)
+    # Einfach-Modus: eingebettete resp-Tabelle.
+    t = re.search(r'<table class="resp">.*?</table>', block, re.S)
+    if t:
+        return re.findall(r'<td data-label="[^"]*">(.*?)</td>', t.group(0), re.S)
+    # Roh-Modus: Monospace-<pre>. Header-Zeile (beginnt mit 'Zeit') verwerfen.
+    pre = re.search(r'<pre[^>]*>(.*?)</pre>', block, re.S)
+    if not pre:
+        return []
+    cells: list[str] = []
+    for line in pre.group(1).splitlines():
+        line = line.strip()
+        if not line or line.startswith("Zeit"):
+            continue
+        cells.extend(line.split())
+    return cells
+
+
 def _mobile_cells_fn():
     fn = globals().get("_data_cells_mobile")
     assert fn is not None, (
