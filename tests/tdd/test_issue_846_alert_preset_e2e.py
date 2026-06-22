@@ -171,12 +171,15 @@ def test_ac1_preset_dropdown_standard_no_number_inputs():
                 f"AC-1 FAIL: Preset-Dropdown zeigt nicht 'Standard', sondern '{value}'."
             )
 
-            # 2) KEIN Zahlen-Input im Alerts-Tab.
+            # 2) KEIN Schwellwert-Zahlen-Input im Alerts-Tab.
+            # Das Cooldown-Input (data-testid='alert-cooldown-input') ist legitim und bleibt.
             alerts_tab = page.locator("[data-testid='alerts-tab']")
-            number_inputs = alerts_tab.locator("input[type='number']")
-            assert number_inputs.count() == 0, (
-                f"AC-1 FAIL: {number_inputs.count()} <input type='number'> im Alerts-Tab — "
-                "das Preset-Modell darf keine Zahlen-Inputs mehr zeigen."
+            threshold_inputs = alerts_tab.locator(
+                "input[type='number']:not([data-testid='alert-cooldown-input'])"
+            )
+            assert threshold_inputs.count() == 0, (
+                f"AC-1 FAIL: {threshold_inputs.count()} Schwellwert-Zahlen-Inputs im Alerts-Tab — "
+                "das Preset-Modell darf keine manuellen Threshold-Inputs mehr zeigen."
             )
         finally:
             browser.close()
