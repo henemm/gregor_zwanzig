@@ -18,26 +18,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/workflow_gate.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/workflow_gate.py\"; fi",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/spec_enforcement.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/spec_enforcement.py\"; fi",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/red_test_gate.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/red_test_gate.py\"; fi",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/scope_guard.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/scope_guard.py\"; fi",
-            "timeout": 5
-          },
-          {
-            "type": "command",
             "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/plan_validator.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/plan_validator.py\"; fi",
             "timeout": 5
           },
@@ -58,11 +38,6 @@
           },
           {
             "type": "command",
-            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/track_changes.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/track_changes.py\"; fi",
-            "timeout": 5
-          },
-          {
-            "type": "command",
             "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/backlog_guard.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/backlog_guard.py\"; fi",
             "timeout": 5
           },
@@ -78,18 +53,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/pre_commit_gate.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/pre_commit_gate.py\"; fi",
-            "timeout": 5
-          },
-          {
-            "type": "command",
             "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/renderer_mail_gate.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/renderer_mail_gate.py\"; fi",
             "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/pre_commit_validation.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/pre_commit_validation.py\"; fi",
-            "timeout": 180
           },
           {
             "type": "command",
@@ -126,17 +91,6 @@
             "type": "command",
             "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/track_token_usage.py\"",
             "timeout": 10
-          }
-        ]
-      }
-    ],
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/workflow_state_updater.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/workflow_state_updater.py\"; fi",
-            "timeout": 5
           }
         ]
       }
