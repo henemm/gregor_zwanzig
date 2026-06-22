@@ -163,12 +163,18 @@ class SegmentWeatherService:
         seg_end_h = segment.end_time.hour
         # Bug #806: Randstunde exklusiv am Ende (< seg_end_h), damit jede Stunde
         # genau einem Segment gehört (Vermeidung von Widersprüchen bei Start-Punkt-Sampling).
+        # Bug #856: Wenn Start- und Endstunde identisch sind (Segment < 1h, gleiche UTC-Stunde),
+        # würde < seg_end_h immer False liefern → Fallback auf == seg_start_h.
         filtered_data = [
             dp for dp in timeseries.data
             if (
-                (seg_start_h <= dp.ts.hour < seg_end_h)
-                if seg_start_h <= seg_end_h
-                else (dp.ts.hour >= seg_start_h or dp.ts.hour < seg_end_h)
+                (dp.ts.hour == seg_start_h)
+                if seg_start_h == seg_end_h
+                else (
+                    (seg_start_h <= dp.ts.hour < seg_end_h)
+                    if seg_start_h < seg_end_h
+                    else (dp.ts.hour >= seg_start_h or dp.ts.hour < seg_end_h)
+                )
             )
         ]
         from app.models import NormalizedTimeseries as NTS
