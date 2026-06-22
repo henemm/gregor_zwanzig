@@ -746,7 +746,7 @@ def build_segment_label(change, segments, *, tz: ZoneInfo = ZoneInfo("UTC"), sta
 
     Issue #816: Liegt eine echte km-Angabe vor (start_km is not None and
     end_km is not None and (start_km > 0.0 or end_km > 0.0)), wird das Label
-    um den km-Bereich erweitert: 'Etappe N, km X–Y, HH:MM–HH:MM'.
+    um den km-Bereich erweitert: 'Segment N, km X–Y, HH:MM–HH:MM'.
     Tag-1-Start (start_km=0.0, end_km=6.0) zeigt 'km 0–6'.
     Beide=0.0 oder None bleibt 'Segment N (HH:MM–HH:MM)' (Briefing-Pfad).
     """
@@ -766,7 +766,7 @@ def build_segment_label(change, segments, *, tz: ZoneInfo = ZoneInfo("UTC"), sta
                 and (start_km > 0.0 or end_km > 0.0)
             ):
                 return (
-                    f"Etappe {s.segment.segment_id}, "
+                    f"Segment {s.segment.segment_id}, "
                     f"km {_fmt_km(start_km)}–{_fmt_km(end_km)}, {start}–{end}"
                 )
             return f"Segment {s.segment.segment_id} ({start}–{end})"

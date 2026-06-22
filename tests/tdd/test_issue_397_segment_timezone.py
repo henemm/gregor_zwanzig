@@ -209,3 +209,58 @@ def test_render_narrow_segment_header_local_time_cest():
         f"render_narrow-Output darf UTC-Zeit {_UTC_START!r} NICHT enthalten.\n"
         f"Tatsächlicher Output:\n{output}"
     )
+
+
+# ===========================================================================
+# Bug #832: km-Pfad in build_segment_label darf nicht "Etappe" sagen
+# ===========================================================================
+
+def test_build_segment_label_km_path_uses_segment_not_etappe():
+    """AC-1 (#832): build_segment_label mit km-Werten > 0 gibt 'Segment N, km ...' zurück,
+    nicht 'Etappe N, km ...' — konsistent mit dem Fallback-Pfad ohne km-Werte.
+    """
+    from datetime import datetime, timezone
+    from app.models import (
+        ChangeSeverity, ForecastDataPoint, ForecastMeta, GPXPoint,
+        NormalizedTimeseries, Provider, SegmentWeatherData,
+        SegmentWeatherSummary, TripSegment, WeatherChange,
+    )
+    from src.output.renderers.email.helpers import build_segment_label
+
+    start = datetime(2026, 7, 15, 7, 0, tzinfo=timezone.utc)
+    end   = datetime(2026, 7, 15, 9, 0, tzinfo=timezone.utc)
+    meta  = ForecastMeta(provider=Provider.OPENMETEO, model="icon_d2", run=start,
+                         grid_res_km=2.0, interp="nearest")
+    ts    = NormalizedTimeseries(meta=meta, data=[
+        ForecastDataPoint(ts=start, t2m_c=18.0, wind10m_kmh=20.0, gust_kmh=30.0,
+                          pop_pct=85, precip_1h_mm=0.5)
+    ])
+    segment = TripSegment(
+        segment_id=1,
+        start_point=GPXPoint(lat=42.3, lon=9.1, elevation_m=800, distance_from_start_km=0.0),
+        end_point=GPXPoint(lat=42.4, lon=9.15, elevation_m=1200, distance_from_start_km=5.9),
+        start_time=start,
+        end_time=end,
+        duration_hours=2.0,
+        distance_km=5.9,
+        ascent_m=400,
+        descent_m=0,
+    )
+    seg_data = SegmentWeatherData(segment=segment, timeseries=ts,
+                                  aggregated=SegmentWeatherSummary(),
+                                  fetched_at=start, provider="openmeteo")
+    change = WeatherChange(
+        metric="pop_pct", old_value=20.0, new_value=85.0, delta=65.0,
+        threshold=30.0, severity=ChangeSeverity.MAJOR,
+        direction="increase", segment_id="1",
+    )
+
+    label = build_segment_label(change, [seg_data])
+
+    assert label.startswith("Segment "), (
+        f"Label muss mit 'Segment ' beginnen, nicht 'Etappe ': {label!r}"
+    )
+    assert "Etappe" not in label, (
+        f"Label darf 'Etappe' nicht enthalten: {label!r}"
+    )
+    assert "km" in label, f"Label muss km-Bereich enthalten: {label!r}"
