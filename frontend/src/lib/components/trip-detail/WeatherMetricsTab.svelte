@@ -371,8 +371,9 @@
 			if (!createMode) {
 				await api.put(`/api/trips/${trip.id}/weather-config`, payload);
 				// Issue #776/#774: report_config separat persistieren (zweiter PUT, Read-Modify-Write im Backend).
-				await api.put(`/api/trips/${trip.id}`, { report_config: reportConfig });
-				onTripUpdate?.({ ...trip, display_config: payload, report_config: reportConfig });
+				// Issue #850: Server-Response enthält aktualisierte alert_rules (via SyncAlertRules) — nie manuell konstruieren.
+				const updated = await api.put<Trip>(`/api/trips/${trip.id}`, { report_config: reportConfig });
+				onTripUpdate?.(updated);
 			}
 			saveSuccess = true;
 			// Issue #736: channels aus snapshot entfernt (Conflict 4 entfällt).
@@ -392,8 +393,9 @@
 		const payload = buildWeatherPayload();
 		saveController.schedule(async () => {
 			await api.put(`/api/trips/${trip.id}/weather-config`, payload);
-			await api.put(`/api/trips/${trip.id}`, { report_config: reportConfig });
-			onTripUpdate?.({ ...trip, display_config: payload, report_config: reportConfig });
+			// Issue #850: Server-Response enthält aktualisierte alert_rules — nie manuell konstruieren.
+			const updated = await api.put<Trip>(`/api/trips/${trip.id}`, { report_config: reportConfig });
+			onTripUpdate?.(updated);
 			savedSnapshot = snapshot(buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, reportConfig);
 		});
 	}

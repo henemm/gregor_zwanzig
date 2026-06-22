@@ -46,10 +46,11 @@
 <div class="preview-card" data-testid="alert-preview-card">
 	{#if hasNoAlertableMetrics}
 		<!-- Issue #809: Kein alert_rules nach Self-Heal = keine alert-fähigen Metriken -->
+		<!-- Issue #850: Link direkt auf Inhalt-Tab -->
 		<p class="empty" data-testid="alert-preview-no-metrics">
 			Keine alert-fähigen Wetter-Metriken aktiv. Aktiviere zuerst
 			Wetter-Metriken (z.B. Windböen, Temperatur) im Tab
-			<strong>Wetter-Metriken</strong>.
+			<a href="?tab=weather" data-testid="alert-preview-no-metrics-link"><strong>Wetter-Metriken</strong></a>.
 		</p>
 	{:else if enabledRules.length === 0}
 		<p class="empty" data-testid="alert-preview-empty">
