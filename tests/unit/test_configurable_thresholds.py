@@ -43,9 +43,9 @@ class TestCatalogPopulation:
     """Threshold values must match previously hardcoded values exactly."""
 
     def test_gust_display_thresholds(self) -> None:
-        """Gust: yellow >= 50, red >= 80."""
+        """Gust: yellow >= 50, orange >= 65, red >= 80 (4-stufige Ampel seit #759)."""
         md = get_metric("gust")
-        assert md.display_thresholds == {"yellow": 50.0, "red": 80.0}
+        assert md.display_thresholds == {"yellow": 50.0, "orange": 65.0, "red": 80.0}
 
     def test_gust_highlight_threshold(self) -> None:
         """Gust highlight at > 60 km/h."""
@@ -68,9 +68,9 @@ class TestCatalogPopulation:
         assert md.risk_thresholds == {"medium": 50.0, "high": 70.0}
 
     def test_precipitation_display_thresholds(self) -> None:
-        """Precipitation: blue >= 5 mm."""
+        """Precipitation: yellow >= 1, orange >= 5, red >= 10 (4-stufige Ampel seit #759)."""
         md = get_metric("precipitation")
-        assert md.display_thresholds == {"blue": 5.0}
+        assert md.display_thresholds == {"yellow": 1.0, "orange": 5.0, "red": 10.0}
 
     def test_precipitation_risk_thresholds(self) -> None:
         """Precipitation risk: medium > 20 mm."""
@@ -78,9 +78,9 @@ class TestCatalogPopulation:
         assert md.risk_thresholds == {"medium": 20.0}
 
     def test_rain_probability_display_thresholds(self) -> None:
-        """Rain probability: blue >= 80%."""
+        """Rain probability: yellow >= 30, orange >= 60, red >= 80 (4-stufige Ampel seit #759)."""
         md = get_metric("rain_probability")
-        assert md.display_thresholds == {"blue": 80.0}
+        assert md.display_thresholds == {"yellow": 30.0, "orange": 60.0, "red": 80.0}
 
     def test_rain_probability_highlight(self) -> None:
         """Rain probability highlight at >= 80%."""

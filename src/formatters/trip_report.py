@@ -703,7 +703,7 @@ class TripReportFormatter:
         if key == "precip":
             s = f"{val:.1f}"
             dt = get_metric("precipitation").display_thresholds
-            if html and val and dt.get("blue") and val >= dt["blue"]:
+            if html and val and dt.get("orange") and val >= dt["orange"]:
                 return f'<span style="background:#e3f2fd;color:#1565c0;padding:2px 4px;border-radius:3px">{s}</span>'
             return s
         if key in ("snow_limit", "snow_depth"):
@@ -745,7 +745,7 @@ class TripReportFormatter:
         if key == "pop":
             s = f"{val:.0f}"
             dt = get_metric("rain_probability").display_thresholds
-            if html and val is not None and dt.get("blue") and val >= dt["blue"]:
+            if html and val is not None and dt.get("red") and val >= dt["red"]:
                 return f'<span style="background:#e3f2fd;color:#1565c0;padding:2px 4px;border-radius:3px">{s}</span>'
             return s
         if key == "cape":
