@@ -514,6 +514,54 @@ def test_compact_ascii_no_emoji_no_hourly_table(raw, alert):
 
 
 # ---------------------------------------------------------------------------
+# Issue #833 AC-2 — Roh/Einfach-Vertrag im Mobile-Viewport (.mobile-compact)
+# ---------------------------------------------------------------------------
+# `_data_cells` prueft nur die Desktop-Tabelle (class="resp"). Der Mobile-Block
+# (.mobile-compact: <pre> im Roh, resp-Tabelle im Einfach) blieb ungeprueft —
+# genau die Luecke, durch die #831 (Einfach mobil folgenlos) rutschte. Diese
+# Tests erzwingen die Vertragspruefung in BEIDEN Aufloesungen.
+# In der RED-Phase fehlt `_data_cells_mobile()` noch → klarer Fehlschlag.
+
+
+def _mobile_cells_fn():
+    fn = globals().get("_data_cells_mobile")
+    assert fn is not None, (
+        "_data_cells_mobile() ist noch nicht definiert — Issue #833 AC-2 "
+        "(RED erwartet, wird in der Implement-Phase ergaenzt)."
+    )
+    return fn
+
+
+@pytest.mark.parametrize("alert", [False, True], ids=["briefing", "alert"])
+def test_mobile_block_data_cells_roh(alert):
+    """AC-2: Roh+full → der .mobile-compact-Block liefert Datenzellen ohne Ampel."""
+    fn = _mobile_cells_fn()
+    html, _plain = _render(email_format="full", raw=True, alert=alert)
+    cells = fn(html)
+    assert cells, "Mobile-Block muss Stunden-Datenzellen liefern (Roh)"
+    ampel_cells = [c for c in cells if _has_ampel(c)]
+    assert not ampel_cells, (
+        f"AC-2: Roh-Mobile darf KEINE Ampel zeigen, fand: {ampel_cells!r}"
+    )
+
+
+def test_mobile_block_data_cells_einfach():
+    """AC-2: Einfach+full → der .mobile-compact-Block zeigt Symbole/Ampel mobil.
+
+    'Desktop gruen, Mobile leer/nur-Zahlen' ist KEIN Bestehen — sonst rutscht
+    die #831-Klasse (Einfach mobil folgenlos) wieder durch.
+    """
+    fn = _mobile_cells_fn()
+    html, _plain = _render_one_metric("gust", raw=False)
+    cells = fn(html)
+    assert cells, "Mobile-Block muss im Einfach-Modus Datenzellen liefern"
+    assert any(_has_ampel(c) for c in cells), (
+        "AC-2: Einfach-Modus muss mobil Ampel/Symbole zeigen (#831-Regressionsschutz). "
+        f"Mobile-Zellen: {cells!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
 # Issue #811 — Matrix-Nachweis-Recording (Komponente A → Gate-Nachweis)
 # ---------------------------------------------------------------------------
 
