@@ -11,6 +11,7 @@ import (
 )
 
 func TestLoadLocationsFromRealData(t *testing.T) {
+	t.Skip("Liest data/users/default/locations/ — gitignored, nur in befüllten Instanzen vorhanden")
 	// GIVEN: Real location files in data/users/default/locations/
 	// Find the repo root (two levels up from internal/store/)
 	repoRoot := filepath.Join("..", "..")

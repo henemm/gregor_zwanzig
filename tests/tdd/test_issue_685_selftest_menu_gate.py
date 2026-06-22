@@ -37,7 +37,7 @@ HOOKS_DIR = Path(".claude/hooks").resolve()
 PS_PATH = (HOOKS_DIR / "prod_selftest.py").resolve()
 
 EXPECTED_COMMANDS = [
-    "glance", "heute", "morgen", "heute_gewitter",
+    "glance", "heute", "morgen", "now", "heute_gewitter",
     "timeline_heute", "timeline_morgen", "hilfe",
 ]
 
