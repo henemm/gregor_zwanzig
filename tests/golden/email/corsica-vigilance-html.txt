@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;600&family=JetBrains+Mono:wght@400&display=swap">
+    <style>
+        body { font-family: 'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 16px; background: #f6f4ee; }
+        .container { max-width: 800px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .header { background: #f6f4ee; color: #1a1a18; padding: 20px; border-bottom: 1px solid #9c9a90; }
+        .header h1 { margin: 0 0 4px 0; font-size: 22px; }
+        .header h2 { margin: 0 0 4px 0; font-size: 16px; font-weight: 400; color: #5c5a52; }
+        .header p { margin: 2px 0; font-size: 13px; color: #5c5a52; }
+        .section { padding: 0 16px; }
+        .section h3 { color: #1a1a18; border-bottom: 2px solid #c45a2a; padding-bottom: 6px; margin-top: 16px; font-size: 14px; }
+        table { width: 100%; border-collapse: collapse; margin: 8px 0 16px 0; font-size: 13px; }
+        th { background: #edeae1; padding: 8px 6px; text-align: center; font-weight: 600; border-bottom: 2px solid #9c9a90; font-size: 12px; white-space: nowrap; }
+        td { padding: 6px; text-align: center; border-bottom: 1px solid #9c9a90; }
+        .metric-value, td.metric, code { font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }
+        .footer { background: #1a1a18; padding: 12px; text-align: center; color: #ffffff; font-size: 11px; }
+        ul { padding-left: 20px; }
+        li { margin: 4px 0; font-size: 14px; }
+        .desktop-only { display: none; }
+        .mobile-compact { display: block; }
+        @media (min-width:601px) {
+            body { padding:16px; }
+            .container { border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
+            .header h1 { font-size:22px; }
+            .header h2 { font-size:16px; }
+            .desktop-only { display: block !important; }
+            .mobile-compact { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="eyebrow" style="font-size:11px;letter-spacing:0.12em;color:#c45a2a;margin-bottom:6px;display:flex;align-items:center;gap:6px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" style="display:inline;vertical-align:middle" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" stroke="#6b675c" stroke-width="1.5" fill="none"/><polygon fill="#6b675c" points="7,2.5 8.5,7 7,8.5 5.5,7"/></svg> WETTER-BRIEFING</div>
+            <h1>Korsika Trail</h1>
+            <h2>Corsica E5</h2>
+            <p>Update Report – 11.07.2026</p>
+            
+        </div>
+
+        
+        
+            <div class="section" style="background:#dfe7f0;border-left:4px solid #c45a2a;padding:12px;margin:8px 0;">
+                <p style="margin:0;font-size:14px;line-height:1.6;">Corsica E5: 18–32°C, 🌥️, mäßiger Regen bis 10:00, trocken ab 11:00, mäßiger Wind 30 km/h, Böen bis 85 km/h ab 10:00, ⚡ möglich 10:00–15:00</p>
+            </div>
+        
+        <div style="padding:8px 16px;display:block"><p style="font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:#5c5a52;margin:0 0 6px 0">Metriken-Überblick</p><span style="display:inline-flex;align-items:center;padding:4px 10px;border:1px solid #8aacd0;background:#dde8f3;color:#1e3a5f;font-size:11px;font-weight:600;font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;letter-spacing:0.02em;border-radius:2px;">Temperatur 18–19 °C</span> <span style="display:inline-flex;align-items:center;padding:4px 10px;border:1px solid #8aacd0;background:#dde8f3;color:#1e3a5f;font-size:11px;font-weight:600;font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;letter-spacing:0.02em;border-radius:2px;">Gefühlt 12–13 °C</span> <span style="display:inline-flex;align-items:center;padding:4px 10px;border:1px solid #86c89a;background:#dcf2e1;color:#14532d;font-size:11px;font-weight:600;font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;letter-spacing:0.02em;border-radius:2px;">Wind ab 10:00 · Spitze 19 km/h um 14:00</span> <span style="display:inline-flex;align-items:center;padding:4px 10px;border:1px solid #e88472;background:#fadcd6;color:#7f1d1d;font-size:11px;font-weight:600;font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;letter-spacing:0.02em;border-radius:2px;">Böen ab 10:00 · 85 km/h</span> <span style="display:inline-flex;align-items:center;padding:4px 10px;border:1px solid #f0a060;background:#fde6cc;color:#7c2d12;font-size:11px;font-weight:600;font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;letter-spacing:0.02em;border-radius:2px;">Regen ab 10:00 · 8 mm gesamt, Spitze 10:00</span> <span style="display:inline-flex;align-items:center;padding:4px 10px;border:1px solid #e88472;background:#fadcd6;color:#7f1d1d;font-size:11px;font-weight:600;font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;letter-spacing:0.02em;border-radius:2px;">Gewitter ab 10:00 · stärkste 10:00</span> <span style="display:inline-flex;align-items:center;padding:4px 10px;border:1px solid #8aacd0;background:#dde8f3;color:#1e3a5f;font-size:11px;font-weight:600;font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;letter-spacing:0.02em;border-radius:2px;">Bewölkung 50 %</span> <span style="display:inline-flex;align-items:center;padding:4px 10px;border:1px solid #8aacd0;background:#dde8f3;color:#1e3a5f;font-size:11px;font-weight:600;font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;letter-spacing:0.02em;border-radius:2px;">Sonne 150 min</span></div>
+        
+        
+        <div class="section desktop-only"><h3>Segment 1: km 0.0–0.0 | 10:00–15:00 | ↑400m → 1200m</h3><table class="resp"><thead><tr><th>Time</th><th>Temp</th><th>Feels</th><th>Wind</th><th>Gust</th><th>Rain</th><th>Blitz</th><th>SnowL</th><th>Cloud</th><th>Sun</th></tr></thead><tbody><tr><td data-label="Time">10:00</td><td data-label="Temp">18.0</td><td data-label="Feels">12.0</td><td data-label="Wind">🟢</td><td data-label="Gust">🔴</td><td data-label="Rain">🟠</td><td data-label="Blitz"><span style="color:#c62828;font-weight:600">⚡⚡</span></td><td data-label="SnowL">–</td><td data-label="Cloud">⛅</td><td data-label="Sun">–</td></tr><tr><td data-label="Time">11:00</td><td data-label="Temp">18.3</td><td data-label="Feels">12.2</td><td data-label="Wind">🟢</td><td data-label="Gust">🟢</td><td data-label="Rain">🟢</td><td data-label="Blitz"><span style="color:#c62828;font-weight:600">⚡⚡</span></td><td data-label="SnowL">–</td><td data-label="Cloud">⛅</td><td data-label="Sun">–</td></tr><tr><td data-label="Time">12:00</td><td data-label="Temp">18.6</td><td data-label="Feels">12.4</td><td data-label="Wind">🟢</td><td data-label="Gust">🟢</td><td data-label="Rain">🟢</td><td data-label="Blitz"><span style="color:#c62828;font-weight:600">⚡⚡</span></td><td data-label="SnowL">–</td><td data-label="Cloud">⛅</td><td data-label="Sun">–</td></tr><tr><td data-label="Time">13:00</td><td data-label="Temp">18.9</td><td data-label="Feels">12.6</td><td data-label="Wind">🟢</td><td data-label="Gust">🟢</td><td data-label="Rain">🟢</td><td data-label="Blitz"><span style="color:#c62828;font-weight:600">⚡⚡</span></td><td data-label="SnowL">–</td><td data-label="Cloud">⛅</td><td data-label="Sun">–</td></tr><tr><td data-label="Time">14:00</td><td data-label="Temp">19.2</td><td data-label="Feels">12.8</td><td data-label="Wind">🟢</td><td data-label="Gust">🟢</td><td data-label="Rain">🟢</td><td data-label="Blitz"><span style="color:#c62828;font-weight:600">⚡⚡</span></td><td data-label="SnowL">–</td><td data-label="Cloud">⛅</td><td data-label="Sun">–</td></tr><tr><td data-label="Time">15:00</td><td data-label="Temp">19.5</td><td data-label="Feels">13.0</td><td data-label="Wind">🟢</td><td data-label="Gust">🟢</td><td data-label="Rain">🟢</td><td data-label="Blitz"><span style="color:#c62828;font-weight:600">⚡⚡</span></td><td data-label="SnowL">–</td><td data-label="Cloud">⛅</td><td data-label="Sun">–</td></tr></tbody></table></div><div class="mobile-compact" style="padding:0 16px"><div style="font-size:12px;font-weight:600;color:#1a1a18;border-bottom:2px solid #c45a2a;padding:10px 0 6px 0;margin-top:12px">Segment 1: km 0.0–0.0 | 10:00–15:00 | ↑400m → 1200m</div><table class="resp"><thead><tr><th>Time</th><th>Temp</th><th>Feels</th><th>Wind</th><th>Gust</th><th>Rain</th><th>Blitz</th><th>SnowL</th><th>Cloud</th><th>Sun</th></tr></thead><tbody><tr><td data-label="Time">10:00</td><td data-label="Temp">18.0</td><td data-label="Feels">12.0</td><td data-label="Wind">🟢</td><td data-label="Gust">🔴</td><td data-label="Rain">🟠</td><td data-label="Blitz"><span style="color:#c62828;font-weight:600">⚡⚡</span></td><td data-label="SnowL">–</td><td data-label="Cloud">⛅</td><td data-label="Sun">–</td></tr><tr><td data-label="Time">11:00</td><td data-label="Temp">18.3</td><td data-label="Feels">12.2</td><td data-label="Wind">🟢</td><td data-label="Gust">🟢</td><td data-label="Rain">🟢</td><td data-label="Blitz"><span style="color:#c62828;font-weight:600">⚡⚡</span></td><td data-label="SnowL">–</td><td data-label="Cloud">⛅</td><td data-label="Sun">–</td></tr><tr><td data-label="Time">12:00</td><td data-label="Temp">18.6</td><td data-label="Feels">12.4</td><td data-label="Wind">🟢</td><td data-label="Gust">🟢</td><td data-label="Rain">🟢</td><td data-label="Blitz"><span style="color:#c62828;font-weight:600">⚡⚡</span></td><td data-label="SnowL">–</td><td data-label="Cloud">⛅</td><td data-label="Sun">–</td></tr><tr><td data-label="Time">13:00</td><td data-label="Temp">18.9</td><td data-label="Feels">12.6</td><td data-label="Wind">🟢</td><td data-label="Gust">🟢</td><td data-label="Rain">🟢</td><td data-label="Blitz"><span style="color:#c62828;font-weight:600">⚡⚡</span></td><td data-label="SnowL">–</td><td data-label="Cloud">⛅</td><td data-label="Sun">–</td></tr><tr><td data-label="Time">14:00</td><td data-label="Temp">19.2</td><td data-label="Feels">12.8</td><td data-label="Wind">🟢</td><td data-label="Gust">🟢</td><td data-label="Rain">🟢</td><td data-label="Blitz"><span style="color:#c62828;font-weight:600">⚡⚡</span></td><td data-label="SnowL">–</td><td data-label="Cloud">⛅</td><td data-label="Sun">–</td></tr><tr><td data-label="Time">15:00</td><td data-label="Temp">19.5</td><td data-label="Feels">13.0</td><td data-label="Wind">🟢</td><td data-label="Gust">🟢</td><td data-label="Rain">🟢</td><td data-label="Blitz"><span style="color:#c62828;font-weight:600">⚡⚡</span></td><td data-label="SnowL">–</td><td data-label="Cloud">⛅</td><td data-label="Sun">–</td></tr></tbody></table></div>
+        
+        
+        
+
+        <div style="background:#1d1c1a;padding:12px 16px;margin:8px 0">
+            <div style="color:#ffffff;font-weight:600;font-size:12px;font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;letter-spacing:0.06em;margin-bottom:6px;">Antwort-Kommandos</div>
+            <div style="color:#9a978d;font-size:11px;font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;line-height:1.6;">
+                <b style="color:#ffffff">HEUTE</b> &mdash; Wetter der heutigen Etappe<br>
+                <b style="color:#ffffff">MORGEN</b> &mdash; Wetter der morgigen Etappe<br>
+                <b style="color:#ffffff">JETZT</b> / <b style="color:#ffffff">NOW</b> &mdash; Nowcast Regen/Gewitter nächste ~2h<br>
+                <b style="color:#ffffff">GEWITTER</b> &mdash; Gewittergefahr heutige Etappe<br>
+                <b style="color:#ffffff">RUHETAG [N]</b> &mdash; Etappen um N Tage verschieben<br>
+                <b style="color:#ffffff">STATUS</b> &mdash; Heute und kommende Etappen<br>
+                <b style="color:#ffffff">STOP</b> &mdash; Briefings dauerhaft deaktivieren<br>
+                <b style="color:#ffffff">WEITER</b> &mdash; Briefings reaktivieren<br>
+                <b style="color:#ffffff">HILFE</b> / <b style="color:#ffffff">HELP</b> &mdash; Alle Befehle anzeigen
+            </div>
+        </div>
+
+        <div class="footer">
+            Generated: 2026-04-28 12:00 UTC | Data: openmeteo (arome_france)
+            <br><span style="font-size:10px;color:rgba(255,255,255,0.6)">Einheiten: Temp, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun h</span>
+            <br><span style="font-size:10px;color:rgba(255,255,255,0.6)">🟢 unkritisch · 🟡 Achtung · 🟠 Warnung · 🔴 Gefahr</span>
+        </div>
+    </div>
+</body>
+</html>
