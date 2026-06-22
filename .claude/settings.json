@@ -12,63 +12,6 @@
     "ask": []
   },
   "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/plan_validator.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/plan_validator.py\"; fi",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/ui_screenshot_gate.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/ui_screenshot_gate.py\"; fi",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/domain_pattern_guard.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/domain_pattern_guard.py\"; fi",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/architecture_guard.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/architecture_guard.py\"; fi",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/backlog_guard.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/backlog_guard.py\"; fi",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/data_schema_backup.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/data_schema_backup.py\"; fi",
-            "timeout": 35
-          }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/renderer_mail_gate.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/renderer_mail_gate.py\"; fi",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/e2e_commit_gate.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/e2e_commit_gate.py\"; fi",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/pre_issue_close_design_gate.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/pre_issue_close_design_gate.py\"; fi",
-            "timeout": 10
-          }
-        ]
-      }
-    ],
     "SessionStart": [
       {
         "hooks": [
