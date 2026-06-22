@@ -670,10 +670,13 @@ def test_ac7_throttle_recording_unchanged():
     Erster Lauf → Alert → radar_alert_throttle.json gesetzt.
     Zweiter Lauf innerhalb Fenster → kein zweiter Alert.
 
+    #827-Update: Recording setzt Throttle nur bei tatsächlicher Zustellung.
+    Trip hat send_email=True + Settings mit SMTP, damit Zustellung erfolgt.
+
     Dieser Test kann vor #822-Implementierung grün sein (Guard-Funktion).
     """
     from services.trip_alert import TripAlertService
-    from app.loader import save_trip
+    from app.config import Settings
     from services.radar_service import RadarNowcastService
 
     uid = f"tdd-822-ac7-{uuid.uuid4().hex[:6]}"
@@ -682,8 +685,12 @@ def test_ac7_throttle_recording_unchanged():
         now = datetime.now(timezone.utc)
         today = now.date()
 
-        # Aktives Segment: [now-1h, now+1h] — UTC-Zone
-        lat, lon = 51.5, 0.0
+        # Aktives Segment: [now-1h, now+1h]
+        # Island (lat=64, lon=-22): UTC+0 ganzjährig (kein DST) → arrival_calculated
+        # als UTC-String direkt korrekt, kein Offset-Versatz.
+        # _save_trip_direct nötig: save_trip recomputes arrival_calculated via Naismith
+        # und würde die Zeiten überschreiben.
+        lat, lon = 64.0, -22.0
         wp0 = _make_waypoint("WP0", lat, lon,
                              (now - timedelta(hours=1)).strftime("%H:%M"))
         wp1 = _make_waypoint("WP1", lat + 0.05, lon + 0.05,
@@ -691,15 +698,26 @@ def test_ac7_throttle_recording_unchanged():
         stage = Stage(id="S1", name="Tag 1", date=today, waypoints=[wp0, wp1])
         trip_id = "tdd-822-ac7-trip"
         trip = Trip(id=trip_id, name="AC7 Trip", stages=[stage])
+        # #827: send_email=True damit Zustellung möglich → Recording + Throttle greifen
         trip.report_config = TripReportConfig(
-            trip_id=trip_id, send_email=False, send_telegram=False,
+            trip_id=trip_id, send_email=True, send_telegram=False,
             alert_on_changes=False,
         )
-        save_trip(trip, user_id=uid)
+        _save_trip_direct(trip, uid)
 
+        # Settings mit SMTP damit can_send_email()=True
+        settings = Settings(
+            smtp_host="smtp.test.invalid",
+            smtp_user="test@test.invalid",
+            smtp_pass="testpass",
+            mail_to="to@test.invalid",
+        )
+        mail_calls: list = []
         svc = TripAlertService(
+            settings=settings,
             throttle_hours=2, user_id=uid,
             radar_service=RadarNowcastService(frame_source=_wet_frames),
+            mail_sink=lambda subject, body: mail_calls.append((subject, body)),
         )
         svc.clear_radar_throttle(trip_id)
 
@@ -709,7 +727,7 @@ def test_ac7_throttle_recording_unchanged():
 
         assert count1 >= 1, (
             "AC-7: Erster Lauf muss mindestens einen Alert auslösen "
-            "(aktives Segment + nasse Frames)"
+            "(aktives Segment + nasse Frames + send_email=True)"
         )
         assert throttle_file.exists(), (
             "AC-7: radar_alert_throttle.json muss nach erstem Alert existieren"
@@ -717,8 +735,10 @@ def test_ac7_throttle_recording_unchanged():
 
         # Zweiter Lauf innerhalb Throttle-Fenster (KEIN clear_radar_throttle)
         svc2 = TripAlertService(
+            settings=settings,
             throttle_hours=2, user_id=uid,
             radar_service=RadarNowcastService(frame_source=_wet_frames),
+            mail_sink=lambda subject, body: mail_calls.append((subject, body)),
         )
         count2 = svc2.check_radar_alerts()
         assert count2 == 0, (

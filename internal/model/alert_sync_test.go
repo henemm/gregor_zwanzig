@@ -122,6 +122,32 @@ func TestSyncAlertRules_RemovesDeltaRules(t *testing.T) {
 	}
 }
 
+// Issue #812: ActiveAlertableMetricIDs dedupliziert Duplikat-metric_id
+func TestActiveAlertableMetricIDsDeduplicated(t *testing.T) {
+	displayConfig := map[string]interface{}{
+		"metrics": []interface{}{
+			map[string]interface{}{"metric_id": "wind_gust", "enabled": true},
+			map[string]interface{}{"metric_id": "wind_gust", "enabled": true}, // Duplikat
+			map[string]interface{}{"metric_id": "precipitation_sum", "enabled": true},
+		},
+	}
+	ids := ActiveAlertableMetricIDs(displayConfig)
+	if len(ids) != 2 {
+		t.Fatalf("want 2 unique IDs, got %d: %v", len(ids), ids)
+	}
+	rules := SyncAlertRules(nil, ids)
+	if len(rules) != 2 {
+		t.Fatalf("want 2 rules (one per unique metric), got %d", len(rules))
+	}
+	found := map[AlertMetric]int{}
+	for _, r := range rules {
+		found[r.Metric]++
+	}
+	if found[AlertMetricWindGust] != 1 {
+		t.Errorf("want exactly 1 wind_gust rule, got %d", found[AlertMetricWindGust])
+	}
+}
+
 // AC-3: Default-Thresholds korrekt definiert
 func TestDefaultAlertThresholds_Coverage(t *testing.T) {
 	cases := []struct {

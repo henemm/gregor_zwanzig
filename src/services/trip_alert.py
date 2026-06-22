@@ -565,9 +565,10 @@ class TripAlertService:
         Kein Alert bei: leerer Segmentliste, alle Segmente zeitlich vorbei, Throttle
         aktiv oder radar_alert_due=False.
 
-        Sicherheits-Semantik (F001): alert_log + Throttle werden IMMER gesetzt,
-        sobald ein Alert fällt und mindestens ein Kanal konfiguriert ist — unabhängig
-        davon, ob der Versand technisch gelingt.
+        Sicherheits-Semantik (F001): alert_log + Throttle werden gesetzt,
+        sobald mindestens ein Kanal-Zweig tatsächlich betreten wurde — unabhängig
+        davon, ob der Versand technisch gelingt. Sind alle Kanäle auf Trip-Ebene
+        deaktiviert, bleibt Recording aus (Issue #827).
 
         Returns the number of radar alerts triggered.
         """
@@ -666,8 +667,10 @@ class TripAlertService:
 
             config = trip.report_config
 
-            # Best-Effort-Zustellung
+            # Best-Effort-Zustellung; delivered=True wenn mindestens ein Kanal betreten (Issue #827)
+            delivered = False
             if can_email and (not config or getattr(config, "send_email", True)):
+                delivered = True
                 try:
                     if self._mail_sink is not None:
                         self._mail_sink(subject=subject, body=full_body)
@@ -682,13 +685,18 @@ class TripAlertService:
                     logger.error(f"Radar alert email failed for {trip.id}: {e}")
 
             if can_telegram and config and getattr(config, "send_telegram", False):
+                delivered = True
                 try:
                     from outputs.telegram import TelegramOutput
                     TelegramOutput(self._settings).send(subject=subject, body=onset_text)
                 except Exception as e:
                     logger.error(f"Radar alert telegram failed for {trip.id}: {e}")
 
-            # Recording IMMER nach Best-Effort-Zustellung (F001-Semantik)
+            if not delivered:
+                logger.info(f"Radar alert: alle Kanäle auf Trip-Ebene deaktiviert, kein Recording für {trip.id}")
+                continue
+
+            # Recording nach Best-Effort-Zustellung (F001-Semantik)
             self._append_alert_log(trip.id, 1, "HIGH")
             self._radar_throttle_times[trip.id] = datetime.now(timezone.utc)
             self._save_radar_throttle()

@@ -164,6 +164,7 @@ func ActiveAlertableMetricIDs(displayConfig map[string]interface{}) []string {
 	if !ok {
 		return nil
 	}
+	seen := map[string]bool{}
 	var ids []string
 	for _, m := range metrics {
 		mm, ok := m.(map[string]interface{})
@@ -178,7 +179,11 @@ func ActiveAlertableMetricIDs(displayConfig map[string]interface{}) []string {
 		if id == "" {
 			continue
 		}
+		if seen[id] {
+			continue
+		}
 		if _, alertable := AlertableMetrics[AlertMetric(id)]; alertable {
+			seen[id] = true
 			ids = append(ids, id)
 		}
 	}
