@@ -566,6 +566,10 @@ class UnifiedWeatherDisplayConfig:
     per_report_layouts: Optional[dict[str, dict[str, list[MetricConfig]]]] = None
     # Issue #614: optionale Kurzform (SMS-Tages-Max) als Anhang an Telegram-Briefings.
     telegram_kurzform: bool = False
+    # Issue #846: Preset-Name für Alert-Schwellen ("deaktiviert" | "entspannt" |
+    # "standard" | "sensibel"). None = kein Preset → Fallback auf alert_rules-Array.
+    # Frontend (AlertsTab) und trip_alert._select_change_detector lesen dieses Feld.
+    alert_preset: Optional[str] = None
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     def is_metric_enabled(self, metric_id: str) -> bool:
@@ -748,6 +752,7 @@ class AlertRuleKind(str, Enum):
     """Kind of alert rule: absolute threshold vs delta change."""
     ABSOLUTE = "absolute"
     DELTA = "delta"
+    THRESHOLD_CROSSING = "threshold_crossing"  # Issue #846: fires when value drops below threshold
 
 
 class AlertSeverity(str, Enum):
@@ -768,6 +773,11 @@ class AlertMetric(str, Enum):
     TEMPERATURE_CHANGE = "temperature_change"
     WIND_CHANGE = "wind_change"
     PRECIPITATION_CHANGE = "precipitation_change"
+    # Issue #846: 4 neue Metriken (Epic #813 Slice 3)
+    FRESH_SNOW = "fresh_snow"
+    CAPE = "cape"
+    VISIBILITY = "visibility"
+    HUMIDITY = "humidity"
 
 
 @dataclass

@@ -1,18 +1,23 @@
 <script lang="ts">
-	// Issue #638 — AlertsTab: Karten-Modell (JSX TE2_AlertsTab 1:1).
-	// Ersetzt Tabellen-Paradigma (AlertMetricTable + Modus-Picker) durch AlertCard pro Regel.
-	// Keine Severity-Auswahl mehr. Kanal-Chips pro Alert.
+	// Issue #846 — AlertsTab: Preset-Dropdown ersetzt Karten-Modell (Epic #813 Slice 3).
+	// Spec: docs/specs/modules/issue_846_alert_preset.md
 
-	import AlertCard from './AlertCard.svelte';
 	import AlertCooldownCard from './AlertCooldownCard.svelte';
 	import AlertQuietHoursCard from './AlertQuietHoursCard.svelte';
 	import AlertPreviewCard from './AlertPreviewCard.svelte';
+	import AlertPresetSelector from './AlertPresetSelector.svelte';
 	import { Eyebrow } from '$lib/components/atoms';
 	import { api } from '$lib/api';
 	import type { Trip, AlertRule } from '$lib/types';
+	import type { PresetName } from './alertMetricTable.ts';
 
 	let { trip }: { trip: Trip } = $props();
 
+	// Issue #846: Preset-Name aus display_config laden, Default "standard"
+	let alertPreset = $state<PresetName>(
+		(trip.display_config?.alert_preset as PresetName) ?? 'standard'
+	);
+	// alert_rules für AlertPreviewCard weiterhin laden (Backward Compat)
 	let alertRules = $state<AlertRule[]>(trip.alert_rules ?? []);
 	let cooldownMinutes = $state<number | undefined>(trip.alert_cooldown_minutes ?? undefined);
 	let quietFrom = $state<string | undefined>(trip.alert_quiet_from ?? undefined);
@@ -22,24 +27,22 @@
 	let saveSuccess = $state(false);
 	let saveError = $state<string | null>(null);
 
-	// Active briefing channels from report_config → Vorbelegung für Kanal-Chips.
-	// Svelte 5: $derived.by für Multi-Statement-Derivations (nicht $derived(() => ...)).
-	const activeChannels = $derived.by(() => {
-		const rc = trip.report_config;
-		const chs: string[] = [];
-		if (rc?.send_email) chs.push('email');
-		if (rc?.send_telegram) chs.push('telegram');
-		if (rc?.send_sms) chs.push('sms');
-		return chs;
-	});
+	function handlePresetChange(preset: PresetName) {
+		alertPreset = preset;
+	}
 
 	async function save() {
 		saving = true;
 		saveSuccess = false;
 		saveError = null;
 		try {
+			// Issue #846: Preset in display_config persistieren
+			const existingDisplayConfig = trip.display_config ?? {};
 			await api.put(`/api/trips/${trip.id}`, {
-				alert_rules: alertRules,
+				display_config: {
+					...existingDisplayConfig,
+					alert_preset: alertPreset,
+				},
 				alert_cooldown_minutes: cooldownMinutes ?? null,
 				alert_quiet_from: quietFrom || null,
 				alert_quiet_to: quietTo || null
@@ -59,28 +62,15 @@
 </script>
 
 <div class="alerts-tab" data-testid="alerts-tab">
-	<!-- Header (JSX TE2_AlertsTab) -->
+	<!-- Header -->
 	<Eyebrow>Alerts</Eyebrow>
 	<h2 class="alerts-h2" data-testid="alerts-tab-heading">Sofort-Meldung bei kritischen Werten</h2>
 
-	<!-- Infozeile (JSX) -->
-	<div class="info-row" data-testid="alerts-channel-info">
-		<span class="info-dot"></span>
-		Alert-Kanäle werden aus den <strong>Wetter-Metriken</strong>-Einstellungen übernommen.
+	<!-- Preset-Selector (Issue #846) -->
+	<div class="preset-section">
+		<label class="preset-label">Alert-Empfindlichkeit</label>
+		<AlertPresetSelector bind:value={alertPreset} onchange={handlePresetChange} />
 	</div>
-
-	<!-- Karten-Liste -->
-	<div class="cards-list" data-testid="alert-cards-list">
-		{#each alertRules as rule, idx}
-			<AlertCard
-				bind:rule={alertRules[idx]}
-				activeChannels={activeChannels}
-			/>
-		{/each}
-	</div>
-
-	<!-- Info: Alert-Regeln werden automatisch aus Metriken abgeleitet (Issue #701) -->
-	<p class="alerts-auto-info">Alert-Regeln werden automatisch aus den aktiven Wetter-Metriken abgeleitet.</p>
 
 	<div class="extra-cards">
 		<AlertCooldownCard bind:cooldown_minutes={cooldownMinutes} />
@@ -143,37 +133,22 @@
 		color: var(--g-ink);
 	}
 
-	.info-row {
-		padding: 9px 14px;
-		background: var(--g-card-alt);
-		border: 1px solid var(--g-rule-soft);
-		border-radius: var(--g-r-2);
-		font-size: 12.5px;
-		color: var(--g-ink-2);
-		margin-bottom: 20px;
-		display: flex;
-		align-items: center;
-		gap: 8px;
-	}
-
-	.info-dot {
-		width: 7px;
-		height: 7px;
-		border-radius: 50%;
-		background: var(--g-info);
-		flex-shrink: 0;
-	}
-
-	.cards-list {
+	.preset-section {
 		display: flex;
 		flex-direction: column;
-		gap: 14px;
+		gap: 8px;
+		padding: 16px;
+		background: var(--g-card, #fff);
+		border: 1px solid var(--g-rule, #e5e5e5);
+		border-radius: var(--g-r-2, 6px);
 	}
 
-	.alerts-auto-info {
-		font-size: 0.85rem;
-		color: var(--g-ink-3, #666);
-		margin: 0.5rem 0 1rem;
+	.preset-label {
+		font-size: 12.5px;
+		font-weight: 600;
+		color: var(--g-ink-2, #555);
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
 	}
 
 	.extra-cards {

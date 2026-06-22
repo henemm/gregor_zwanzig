@@ -45,6 +45,11 @@ _ALERT_METRIC_TO_SUMMARY_FIELD: dict[AlertMetric, str] = {
     AlertMetric.TEMPERATURE_MAX: "temp_max_c",
     AlertMetric.THUNDER_LEVEL: "thunder_level_max",
     AlertMetric.SNOW_LINE: "freezing_level_m",
+    # Issue #846: 4 neue Metriken
+    AlertMetric.FRESH_SNOW: "snow_new_sum_cm",
+    AlertMetric.CAPE: "cape_max_jkg",
+    AlertMetric.VISIBILITY: "visibility_min_m",
+    AlertMetric.HUMIDITY: "humidity_avg_pct",
 }
 
 # Delta-Rule metrics → tuple of summary fields (metric-aggregating)
@@ -62,6 +67,10 @@ _ALERT_METRIC_COMPARISON: dict[AlertMetric, str] = {
     AlertMetric.TEMPERATURE_MAX: "above",
     AlertMetric.THUNDER_LEVEL: "above",
     AlertMetric.SNOW_LINE: "above",
+    # Issue #846: neue Delta-Metriken (kein Eintrag für VISIBILITY — eigener Threshold-Crossing-Zweig)
+    AlertMetric.FRESH_SNOW: "above",
+    AlertMetric.CAPE: "above",
+    AlertMetric.HUMIDITY: "above",
 }
 
 # AlertSeverity (Issue #205) → ChangeSeverity (DTO for mail filter)
@@ -91,12 +100,16 @@ class WeatherChangeDetectionService:
         wind_max_kmh: +25.0 (major)
     """
 
+    # Issue #846: Metriken mit Threshold-Crossing-Semantik (feuert nur beim erstmaligen Unterschreiten)
+    _THRESHOLD_CROSSING_METRICS: frozenset = frozenset({AlertMetric.VISIBILITY})
+
     def __init__(
         self,
         thresholds: Optional[dict[str, float]] = None,
         absolute_rules: Optional[list["AlertRule"]] = None,
         severity_overrides: Optional[dict[str, AlertSeverity]] = None,
         absolute_seeded_fields: Optional[set[str]] = None,
+        threshold_crossing_rules: Optional[list["AlertRule"]] = None,
     ):
         """
         Initialize with thresholds.
@@ -125,6 +138,8 @@ class WeatherChangeDetectionService:
         )
         # Issue #821: rein-geseedete Felder (ABSOLUTE-Seed ohne explizite DELTA-Regel)
         self._absolute_seeded_fields: set[str] = set(absolute_seeded_fields or set())
+        # Issue #846: Threshold-Crossing-Regeln (Sichtweite: feuert nur beim erstmaligen Unterschreiten)
+        self._threshold_crossing_rules: list["AlertRule"] = list(threshold_crossing_rules) if threshold_crossing_rules else []
 
     @classmethod
     def from_trip_config(cls, config: "TripReportConfig") -> "WeatherChangeDetectionService":
@@ -217,9 +232,17 @@ class WeatherChangeDetectionService:
         # Issue #821: Set der rein-geseedeten Felder — gesetzt vom ABSOLUTE-Zweig,
         # entfernt wenn eine explizite DELTA-Regel dasselbe Feld belegt.
         absolute_seeded: set[str] = set()
+        # Issue #846: Threshold-Crossing-Regeln (Sichtweite: feuert nur beim erstmaligen Unterschreiten)
+        threshold_crossing_rules: list["AlertRule"] = []
 
         for rule in rules:
             if not rule.enabled:
+                continue
+            # Issue #846: Threshold-Crossing-Semantik für VISIBILITY-Metrik und
+            # explizit als THRESHOLD_CROSSING markierte Regeln.
+            if (rule.kind == AlertRuleKind.THRESHOLD_CROSSING
+                    or rule.metric in cls._THRESHOLD_CROSSING_METRICS):
+                threshold_crossing_rules.append(rule)
                 continue
             if rule.kind == AlertRuleKind.ABSOLUTE:
                 absolute_rules.append(rule)
@@ -263,6 +286,7 @@ class WeatherChangeDetectionService:
             absolute_rules=absolute_rules,
             severity_overrides=severity_overrides,
             absolute_seeded_fields=absolute_seeded,
+            threshold_crossing_rules=threshold_crossing_rules,
         )
 
     def detect_changes(
@@ -352,6 +376,12 @@ class WeatherChangeDetectionService:
         if include_absolute:
             changes.extend(self._detect_absolute_changes(new_summary, new_data))
 
+        # Issue #846: Threshold-Crossing-Erkennung (z.B. Sichtweite).
+        # Feuert genau dann wenn new_value erstmals unter den Schwellwert fällt
+        # (old_value >= threshold AND new_value < threshold). Läuft immer (unabhängig
+        # von include_absolute), da es weder Absolut- noch Delta-Logik ist.
+        changes.extend(self._detect_threshold_crossing_changes(old_summary, new_summary, new_data))
+
         return changes
 
     def _detect_absolute_changes(
@@ -406,6 +436,46 @@ class WeatherChangeDetectionService:
                     segment_id=str(new_data.segment.segment_id),
                 )
             )
+        return results
+
+    def _detect_threshold_crossing_changes(
+        self,
+        old_summary,
+        new_summary,
+        new_data: "SegmentWeatherData",
+    ) -> list[WeatherChange]:
+        """Issue #846: Threshold-Crossing-Erkennung.
+
+        Feuert genau dann, wenn new_value erstmals unter den Schwellwert fällt:
+            old_value >= threshold AND new_value < threshold
+
+        Kein erneutes Feuern wenn beide Werte bereits unter dem Schwellwert liegen.
+        """
+        results: list[WeatherChange] = []
+        for rule in self._threshold_crossing_rules:
+            field_name = _ALERT_METRIC_TO_SUMMARY_FIELD.get(rule.metric)
+            if not field_name:
+                continue
+            old_value = getattr(old_summary, field_name, None)
+            new_value = getattr(new_summary, field_name, None)
+            if old_value is None or new_value is None:
+                continue
+            old_f = float(old_value)
+            new_f = float(new_value)
+            threshold = float(rule.threshold)
+            # Threshold-Crossing: erstmaliges Unterschreiten
+            if old_f >= threshold and new_f < threshold:
+                severity = _RULE_SEVERITY_TO_CHANGE_SEVERITY[rule.severity]
+                results.append(WeatherChange(
+                    metric=field_name,
+                    old_value=old_f,
+                    new_value=new_f,
+                    delta=new_f - old_f,
+                    threshold=threshold,
+                    severity=severity,
+                    direction="below_threshold",
+                    segment_id=str(new_data.segment.segment_id),
+                ))
         return results
 
     def _classify_severity(self, delta: float, threshold: float) -> ChangeSeverity:

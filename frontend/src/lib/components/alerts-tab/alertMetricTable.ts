@@ -26,6 +26,67 @@ export const METRIC_DEFAULTS: Record<AlertMetric, number> = {
 	temperature_change: 10,
 	wind_change: 20,
 	precipitation_change: 5,
+	// Issue #846: 4 neue Metriken (Epic #813 Slice 3) — Fallback-Defaults
+	fresh_snow: 8,
+	cape: 600,
+	visibility: 1000,
+	humidity: 15,
+};
+
+// Issue #846: Preset-Schwellwert-Tabelle (alle 13 Metriken × 3 Presets).
+// Wert null = Metrik im Preset "deaktiviert" nicht aktiv.
+export type PresetName = 'deaktiviert' | 'entspannt' | 'standard' | 'sensibel';
+
+export const METRIC_PRESETS: Record<
+	PresetName,
+	Record<AlertMetric, number> | null
+> = {
+	deaktiviert: null,
+	entspannt: {
+		wind_gust: 35,
+		precipitation_sum: 20,
+		thunder_level: 1,
+		snow_line: 600,
+		temperature_min: 8,
+		temperature_max: 10,
+		temperature_change: 14,
+		wind_change: 35,
+		precipitation_change: 15,
+		fresh_snow: 20,
+		cape: 1200,
+		visibility: 500,
+		humidity: 25,
+	},
+	standard: {
+		wind_gust: 20,
+		precipitation_sum: 10,
+		thunder_level: 1,
+		snow_line: 400,
+		temperature_min: 5,
+		temperature_max: 6,
+		temperature_change: 10,
+		wind_change: 25,
+		precipitation_change: 7,
+		fresh_snow: 8,
+		cape: 600,
+		visibility: 1000,
+		humidity: 15,
+	},
+	sensibel: {
+		wind_gust: 12,
+		precipitation_sum: 5,
+		thunder_level: 1,
+		snow_line: 200,
+		temperature_min: 3,
+		temperature_max: 4,
+		temperature_change: 6,
+		wind_change: 15,
+		precipitation_change: 3,
+		fresh_snow: 2,
+		cape: 200,
+		visibility: 3000,
+		humidity: 10,
+	},
 };
 
 // Anzeige-Reihenfolge der Zeilen — siehe Spec §Reihenfolge.

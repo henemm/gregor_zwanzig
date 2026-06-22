@@ -16,6 +16,11 @@ export const METRIC_MAP: Record<AlertMetric, { metric: string; direction: string
 	temperature_change:   { metric: 'temp_min_c',        direction: 'increase' },
 	wind_change:          { metric: 'wind_max_kmh',      direction: 'increase' },
 	precipitation_change: { metric: 'precip_sum_mm',     direction: 'increase' },
+	// Issue #846: 4 neue Metriken
+	fresh_snow:           { metric: 'snow_new_sum_cm',   direction: 'above' },
+	cape:                 { metric: 'cape_max_jkg',      direction: 'above' },
+	visibility:           { metric: 'visibility_min_m',  direction: 'below_threshold' },
+	humidity:             { metric: 'humidity_avg_pct',  direction: 'above' },
 };
 
 export const SEVERITY_MAP: Record<string, string> = {

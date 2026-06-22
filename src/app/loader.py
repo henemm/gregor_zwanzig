@@ -574,6 +574,7 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
         per_channel_layouts=per_channel_layouts,
         per_report_layouts=per_report_layouts,
         telegram_kurzform=data.get("telegram_kurzform", False),
+        alert_preset=data.get("alert_preset"),  # Issue #846
         updated_at=_dt.fromisoformat(data["updated_at"]) if "updated_at" in data else _dt.now(),
     )
 

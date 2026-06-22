@@ -111,7 +111,14 @@ class TripAlertService:
 
         # 1b. Check if alerts are disabled for this trip (legacy report_config path only)
         # If alert_rules has active rules, those are source-of-truth (disable via rule.enabled=False)
-        has_active_rules = any(r.enabled for r in (trip.alert_rules or []))
+        # Issue #846: ein gesetztes (nicht-deaktiviertes) alert_preset zählt ebenso
+        # als aktive Quelle und darf nicht vom report_config-Disable verschluckt werden.
+        has_preset = bool(
+            trip.display_config
+            and trip.display_config.alert_preset
+            and trip.display_config.alert_preset != "deaktiviert"
+        )
+        has_active_rules = has_preset or any(r.enabled for r in (trip.alert_rules or []))
         if (
             not has_active_rules
             and trip.report_config
@@ -227,6 +234,12 @@ class TripAlertService:
         source for change-detection thresholds. Pure helper — directly unit-testable
         without SMTP setup.
         """
+        # Issue #846: Alert-Preset hat höchste Priorität — expandiert zu Regeln,
+        # die das alte alert_rules-Array überschreiben (Preset-Vorrang, AC-8).
+        if trip.display_config and trip.display_config.alert_preset:
+            from services.alert_preset import expand_preset
+            rules = expand_preset(trip.display_config.alert_preset)
+            return WeatherChangeDetectionService.from_alert_rules(rules)
         active_rules = [r for r in (trip.alert_rules or []) if r.enabled]
         if active_rules:
             return WeatherChangeDetectionService.from_alert_rules(active_rules)
@@ -256,7 +269,14 @@ class TripAlertService:
             # Issue #222 W1: Trips with active alert_rules must be checked even if
             # report_config is missing or alert_on_changes=False — alert_rules is the
             # new source-of-truth (disable via rule.enabled=False).
-            has_active_rules = any(r.enabled for r in (trip.alert_rules or []))
+            # Issue #846: ein gesetztes (nicht-deaktiviertes) alert_preset zählt
+            # ebenso als aktive Quelle und muss geprüft werden.
+            has_preset = bool(
+                trip.display_config
+                and trip.display_config.alert_preset
+                and trip.display_config.alert_preset != "deaktiviert"
+            )
+            has_active_rules = has_preset or any(r.enabled for r in (trip.alert_rules or []))
             if not has_active_rules and (
                 not trip.report_config or not trip.report_config.alert_on_changes
             ):

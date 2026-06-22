@@ -21,7 +21,12 @@ export const ALERT_METRIC_LABELS: Record<
 	temperature_max: { label_de: 'Höchsttemperatur', unit: '°C', comparison: '>' },
 	temperature_change: { label_de: 'Temperaturänderung', unit: '°C', comparison: '>' },
 	wind_change: { label_de: 'Windänderung', unit: 'km/h', comparison: '>' },
-	precipitation_change: { label_de: 'Niederschlagsänderung', unit: 'mm', comparison: '>' }
+	precipitation_change: { label_de: 'Niederschlagsänderung', unit: 'mm', comparison: '>' },
+	// Issue #846: 4 neue Metriken (Epic #813 Slice 3)
+	fresh_snow: { label_de: 'Neuschnee', unit: 'cm', comparison: '>' },
+	cape: { label_de: 'CAPE', unit: 'J/kg', comparison: '>' },
+	visibility: { label_de: 'Sichtweite', unit: 'm', comparison: '<' },
+	humidity: { label_de: 'Luftfeuchtigkeit', unit: '%', comparison: '>' },
 };
 
 export const ALERT_SEVERITY_TONE: Record<AlertSeverity, 'info' | 'warning' | 'danger'> = {

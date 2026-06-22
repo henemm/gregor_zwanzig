@@ -66,7 +66,7 @@ export interface Stage {
 }
 
 // Alert Rules (Issue #205) — typisierte Alarm-Regeln pro Trip
-export type AlertRuleKind = 'absolute' | 'delta';
+export type AlertRuleKind = 'absolute' | 'delta' | 'threshold_crossing';
 export type AlertSeverity = 'info' | 'warning' | 'critical';
 export type AlertMetric =
 	| 'wind_gust'
@@ -77,7 +77,12 @@ export type AlertMetric =
 	| 'snow_line'
 	| 'temperature_change'
 	| 'wind_change'
-	| 'precipitation_change';
+	| 'precipitation_change'
+	// Issue #846: 4 neue Metriken (Epic #813 Slice 3)
+	| 'fresh_snow'
+	| 'cape'
+	| 'visibility'
+	| 'humidity';
 
 export interface AlertRule {
 	id: string;
@@ -225,6 +230,7 @@ export interface DisplayConfig {
 	channel_layouts?: ChannelLayouts; // Issue #429
 	channel_layouts_per_report?: ChannelLayoutsPerReport; // Issue #434
 	telegram_kurzform?: boolean; // Issue #614: SMS-Kurzform als Tages-Max-Anhang
+	alert_preset?: string; // Issue #846: "deaktiviert" | "entspannt" | "standard" | "sensibel"
 }
 
 // Epic #138 Issue #177 — User-definierte Metric-Presets (Server-seitig persistiert).
