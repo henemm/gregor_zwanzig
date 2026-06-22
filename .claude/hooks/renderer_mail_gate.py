@@ -137,7 +137,7 @@ def _active_workflow_name(shared: Path) -> str:
                     return name
         except (OSError, json.JSONDecodeError):
             pass
-    return os.environ.get("GZ_ACTIVE_WORKFLOW", "").strip()
+    return os.environ.get("OPENSPEC_ACTIVE_WORKFLOW", "").strip()
 
 
 def _state_path(repo: Path, name: str) -> Path:

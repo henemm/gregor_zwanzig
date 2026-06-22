@@ -238,7 +238,7 @@ def _resolve_workflow_name() -> str:
                     return name
         except (OSError, json.JSONDecodeError):
             pass
-    return os.environ.get("GZ_ACTIVE_WORKFLOW", "").strip()
+    return os.environ.get("OPENSPEC_ACTIVE_WORKFLOW", "").strip()
 
 
 def _get_active_workflow_state() -> dict:

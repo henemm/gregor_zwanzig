@@ -50,7 +50,7 @@ def _write_validation_log(
             log_dir = project_root / ".claude" / "workflows" / "_log"
 
         if workflow_id is None:
-            workflow_id = os.environ.get("GZ_ACTIVE_WORKFLOW", "unknown")
+            workflow_id = os.environ.get("OPENSPEC_ACTIVE_WORKFLOW", "unknown")
 
         log_dir = Path(log_dir)
         log_dir.mkdir(parents=True, exist_ok=True)

@@ -546,7 +546,7 @@ def main() -> int:
 
     e2e_path = Path(args.e2e_path) if args.e2e_path else _default_e2e_path()
 
-    workflow = args.workflow or os.environ.get("GZ_ACTIVE_WORKFLOW")
+    workflow = args.workflow or os.environ.get("OPENSPEC_ACTIVE_WORKFLOW")
     if not workflow:
         _log(
             "WARN: GZ_ACTIVE_WORKFLOW nicht gesetzt — Bericht wird unter "

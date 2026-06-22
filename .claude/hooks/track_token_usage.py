@@ -60,7 +60,7 @@ def main() -> None:
     if not transcript_path.exists():
         sys.exit(0)
 
-    workflow_name = os.environ.get("GZ_ACTIVE_WORKFLOW", "").strip()
+    workflow_name = os.environ.get("OPENSPEC_ACTIVE_WORKFLOW", "").strip()
     if not workflow_name:
         sys.exit(0)
 

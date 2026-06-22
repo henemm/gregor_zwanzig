@@ -132,7 +132,7 @@ def _write_validation_log(success: bool, errors: list) -> None:
         hooks_dir = Path(__file__).resolve().parent
         log_dir = hooks_dir.parent / "workflows" / "_log"
         log_dir.mkdir(parents=True, exist_ok=True)
-        workflow_id = os.environ.get("GZ_ACTIVE_WORKFLOW", "unknown")
+        workflow_id = os.environ.get("OPENSPEC_ACTIVE_WORKFLOW", "unknown")
         date_str = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
         log_path = log_dir / f"{date_str}_{workflow_id}_radar_alert_validation.yaml"
 

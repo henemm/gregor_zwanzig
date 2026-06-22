@@ -47,7 +47,7 @@ def main() -> None:
         sys.exit(0)
 
     # Need active workflow to find artefacts
-    workflow = os.environ.get("GZ_ACTIVE_WORKFLOW", "")
+    workflow = os.environ.get("OPENSPEC_ACTIVE_WORKFLOW", "")
     if not workflow:
         sys.exit(0)  # fail-open when no active workflow
 
