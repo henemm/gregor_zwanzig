@@ -7,7 +7,7 @@ status: draft
 workflow: feat-872-threshold-ux
 ---
 
-# UX: Schwellwerte-Block — Label-Fix + Presets statt Freitext + Gewitter (MED/HIGH)
+# UX: Schwellwerte-Block — Label-Fix + Pro-Metrik-Stufen + Gewitter (MED/HIGH)
 
 ## Approval
 
@@ -15,7 +15,7 @@ workflow: feat-872-threshold-ux
 
 ## Purpose
 
-Verbessert den Schwellwerte-Abschnitt im Inhalt-Reiter (WeatherMetricsTab) in vier Teilschritten: korrektes Abschnitts-Label, korrigierter Beschreibungstext, Ablösung der vier Freitext-Inputs durch ein Preset-Dropdown (Sensibel / Standard / Robust), und Erweiterung um Gewitter als fünfte threshold-fähige Metrik mit einem MED/HIGH-Toggle.
+Verbessert den Schwellwerte-Abschnitt im Inhalt-Reiter (WeatherMetricsTab) in vier Schritten: korrektes Abschnitts-Label, präzisierter Beschreibungstext, Ablösung der vier Freitext-Inputs durch pro-Metrik Segmented-Controls (Sensibel / Standard / Robust — analog zum Alerts-Tab mit `AlertMetricLevelRow`), und Erweiterung um Gewitter als fünfte threshold-fähige Metrik mit einem MED/HIGH-Toggle.
 
 ## Source
 
@@ -26,12 +26,12 @@ Verbessert den Schwellwerte-Abschnitt im Inhalt-Reiter (WeatherMetricsTab) in vi
 
 | Entity | Type | Purpose |
 |--------|------|---------|
-| `frontend/src/lib/components/alerts-tab/AlertPresetSelector.svelte` | component | Vorlage für Dropdown + ℹ-Popover-Muster |
+| `frontend/src/lib/components/alerts-tab/AlertMetricLevelRow.svelte` | component | Vorlage für pro-Metrik Segmented-Control-Muster |
 | `src/output/tokens/builder.py` | module | Bereits korrekt (is_level=True, DEFAULTS["TH:"]=1.0) — kein Change nötig |
-| `src/formatters/sms_trip.py` | module | SMS_SYMBOL_BY_METRIC muss "thunder" -> "TH:" erhalten |
-| `src/services/trip_report_scheduler.py` | module | Trend-Dict muss sms_threshold_thunder aufnehmen |
+| `src/formatters/sms_trip.py` | module | ✅ Bereits deployed: SMS_SYMBOL_BY_METRIC["thunder"] = "TH:" |
+| `src/services/trip_report_scheduler.py` | module | ✅ Bereits deployed: sms_threshold_thunder im Trend-Dict |
 | `frontend/e2e/issue-736-tabs-reorg.spec.ts` | test | Bestehende E2E-Assertions für Schwellwerte-Abschnitt |
-| `tests/tdd/test_issue_624_metric_thresholds.py` | test | Bestehende Backend-Tests für SMS_SYMBOL_BY_METRIC |
+| `tests/tdd/test_issue_624_metric_thresholds.py` | test | ✅ Bereits grün: "thunder" in SMS_SYMBOL_BY_METRIC |
 
 ## Scope
 
@@ -39,17 +39,14 @@ Verbessert den Schwellwerte-Abschnitt im Inhalt-Reiter (WeatherMetricsTab) in vi
 
 | File | Change Type | Description |
 |------|-------------|-------------|
-| `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte` | MODIFY | Label-Fix Z.515, Beschreibungstext Z.516, SMS_THRESHOLD_METRIC_IDS Z.77 um 'thunder' erweitern, 4 Freitext-Inputs durch `<ThresholdPresetSelector>` + Gewitter-Toggle ersetzen |
-| `frontend/src/lib/components/trip-detail/ThresholdPresetSelector.svelte` | CREATE | Neue Komponente nach AlertPresetSelector-Muster: Dropdown (Sensibel/Standard/Robust) + ℹ-Popover mit Wertetabelle |
-| `src/formatters/sms_trip.py` | MODIFY | `SMS_SYMBOL_BY_METRIC["thunder"] = "TH:"` hinzufügen |
-| `src/services/trip_report_scheduler.py` | MODIFY | `"sms_threshold_thunder": _sms_thr.get("thunder")` im Trend-Dict ergänzen (~Z.1067) |
-| `frontend/e2e/issue-736-tabs-reorg.spec.ts` | MODIFY | Assertions für neues Label + Preset-Dropdown statt Freitext-Inputs |
-| `tests/tdd/test_issue_624_metric_thresholds.py` | MODIFY | Assert für "thunder" in SMS_SYMBOL_BY_METRIC ergänzen |
+| `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte` | MODIFY | Label-Fix Z.515, Beschreibungstext Z.516, SMS_THRESHOLD_METRIC_IDS Z.77 um 'thunder' erweitern, 4 Freitext-Inputs durch 5 ThresholdMetricRow-Komponenten ersetzen |
+| `frontend/src/lib/components/trip-detail/ThresholdMetricRow.svelte` | CREATE | Pro-Metrik Segmented-Control: [Metrik-Label] [Sensibel\|Standard\|Robust] [Wert] — analog zu AlertMetricLevelRow.svelte |
+| `frontend/e2e/issue-736-tabs-reorg.spec.ts` | MODIFY | Assertions für neues Label + Segmented-Controls statt Freitext-Inputs |
 
 ### Estimated Changes
 
-- Files: 6
-- LoC: +197/-62 (netto ~135; ThresholdPresetSelector ~120 neu, WeatherMetricsTab ~62 raus/~10 rein, Backend je 1, Tests je ~2–5)
+- Files: 3
+- LoC: +130/-62 (netto ~68; ThresholdMetricRow ~80 neu, WeatherMetricsTab ~62 raus / ~12 rein, E2E-Test ~20)
 
 ## Implementation Details
 
@@ -60,86 +57,94 @@ Vorher: <Eyebrow style="margin-bottom:8px">Schwellwerte</Eyebrow>
 Nachher: <Eyebrow style="margin-bottom:8px">04 — Schwellwerte</Eyebrow>
 ```
 
-Alle anderen Abschnitte tragen bereits Nummern (01 Metriken, 02 Inhaltsformat, 03 Telegram). Dieser fehlte.
-
-### Teiländerung 2 — Beschreibungstext (WeatherMetricsTab.svelte Z.516)
+### Teiländerung 2 — Beschreibungstext (WeatherMetricsTab.svelte Z.516–519)
 
 ```
 Vorher: "Gelten für E-Mail, Telegram und SMS"
-Nachher: "Gelten für SMS-Token, Telegram-Kurzform und E-Mail-Ausblick/Trend-Block"
+Nachher: "Gelten für SMS-Token, Telegram-Kurzform und den E-Mail-Ausblick/Trend-Block"
 ```
 
-Die Haupt-E-Mail-Tabelle wird von den Schwellwerten NICHT beeinflusst. Der alte Text war irreführend.
+Die Haupttabelle der E-Mail wird **nicht** beeinflusst; der Ausblick/Trend-Block und die SMS/Telegram-Kurzform-Token schon.
 
-### Teiländerung 3 — ThresholdPresetSelector.svelte (neue Komponente)
+### Teiländerung 3 — ThresholdMetricRow.svelte (neue Komponente)
 
-Struktur analog zu `AlertPresetSelector.svelte`:
-- Dropdown mit drei Optionen: Sensibel / Standard / Robust
-- ℹ-Button öffnet Popover mit Wertetabelle (5 Metriken × 3 Presets)
-- Bei Preset-Wahl: schreibt konkrete float-Werte via `onchange`-Callback in `smsThresholds`-State des Parent
-- Preset-Werte (PO-bestätigt):
+Struktur analog zu `AlertMetricLevelRow.svelte`. Jede Metrik bekommt eine eigene Zeile:
 
-| Stufe    | Wind    | Böen    | Regen   | Regenw. | Gewitter |
-|----------|---------|---------|---------|---------|---------|
-| Sensibel | 15 km/h | 30 km/h | 0,3 mm  | 25 %    | MED (1.0) |
-| Standard | 20 km/h | 40 km/h | 0,8 mm  | 40 %    | MED (1.0) |
-| Robust   | 30 km/h | 50 km/h | 1,5 mm  | 60 %    | HIGH (2.0) |
+```
+[Metrik-Label]   [Sensibel]  [Standard]  [Robust]   [aktueller Wert]
+Wind              ○           ●           ○           20 km/h
+Böen              ○           ●           ○           40 km/h
+Niederschlag      ●           ○           ○           0,3 mm
+Regenwahrsch.     ○           ●           ○           40 %
+Gewitter          [MED]       [HIGH]                  MED
+```
 
-Der Parent (WeatherMetricsTab) ersetzt die bisherigen 4 Freitext-Inputs (Z.521–580) durch `<ThresholdPresetSelector bind:value={selectedPreset} onchange={applyPreset} />`. Die bestehende Speicher-Logik (sms_threshold in MetricConfig, PATCH /api/trips/{id}) bleibt unverändert.
+**Preset-Werte (PO-bestätigt):**
 
-### Teiländerung 4 — Gewitter als neue threshold-fähige Metrik
+| Metrik | Sensibel | Standard | Robust |
+|--------|----------|----------|--------|
+| Wind | 15 km/h | 20 km/h | 30 km/h |
+| Böen | 30 km/h | 40 km/h | 50 km/h |
+| Niederschlag | 0,3 mm | 0,8 mm | 1,5 mm |
+| Regenwahrsch. | 25 % | 40 % | 60 % |
+| Gewitter | — | — | — |
 
-**Frontend:**
-- `SMS_THRESHOLD_METRIC_IDS` (Z.77) um `'thunder'` erweitern
-- Unterhalb des Preset-Dropdowns: 2-Option-Toggle "MED / HIGH" (schreibt 1.0 / 2.0 in `smsThresholds["thunder"]`)
-- data-testid: `sms-threshold-thunder-med` und `sms-threshold-thunder-high`
+Gewitter hat nur MED (1.0) und HIGH (2.0) — kein 3-Stufen-Schema.
 
-**Backend sms_trip.py:**
-```python
-SMS_SYMBOL_BY_METRIC: dict[str, str] = {
-    "precipitation": "R",
-    "rain_probability": "PR",
-    "wind": "W",
-    "gust": "G",
-    "thunder": "TH:",   # NEU
+**Props ThresholdMetricRow:**
+```typescript
+interface Props {
+  metricId: string;          // 'wind' | 'gust' | 'precipitation' | 'rain_probability' | 'thunder'
+  label: string;             // Anzeige-Label
+  levels: Level[];           // [{value: 'sensibel', label: 'Sensibel', float: 15}, ...]
+  currentFloat: number | null;
+  onChange: (metricId: string, float: number) => void;
 }
 ```
 
-**Backend trip_report_scheduler.py (~Z.1064–1069):**
-```python
-"sms_threshold_precip": _sms_thr.get("precipitation"),
-"sms_threshold_wind": _sms_thr.get("wind"),
-"sms_threshold_gust": _sms_thr.get("gust"),
-"sms_threshold_thunder": _sms_thr.get("thunder"),   # NEU
+**Reverse-Mapping (Laden):** Wenn `currentFloat` exakt einem Preset-Float entspricht → entsprechende Stufe aktiv. Kein Treffer → nächste Stufe anzeigen (kein Error-Zustand nötig, da initial nie benutzerdefinierte Werte existieren).
+
+**data-testids:**
+- `threshold-level-{metricId}-sensibel` / `-standard` / `-robust` (Buttons der 3-Stufen)
+- `threshold-level-thunder-med` / `-high` (Gewitter-Buttons)
+
+**Parent WeatherMetricsTab:** ersetzt den `<div class="sms-threshold-fields">` Block (Z.521–580) durch 5 `<ThresholdMetricRow>`-Instanzen. `smsThresholds`-State und die bestehende Speicher-Logik bleiben unverändert.
+
+### Teiländerung 4 — SMS_THRESHOLD_METRIC_IDS (WeatherMetricsTab.svelte Z.77)
+
+```javascript
+// Vorher:
+const SMS_THRESHOLD_METRIC_IDS = ['precipitation', 'rain_probability', 'wind', 'gust'];
+// Nachher:
+const SMS_THRESHOLD_METRIC_IDS = ['precipitation', 'rain_probability', 'wind', 'gust', 'thunder'];
 ```
 
-`builder.py` ist bereits korrekt (is_level=True, DEFAULTS["TH:"]=1.0) — keine Änderung nötig.
+Backend (AC-4 + AC-6) ist bereits deployed — keine weiteren Backend-Änderungen nötig.
 
 ## Acceptance Criteria
 
-- **AC-1:** Given ein eingeloggter Nutzer öffnet den Inhalt-Reiter eines Trips / When er den Schwellwerte-Block betrachtet / Then lautet die Eyebrow-Überschrift genau "04 — Schwellwerte" und der Hinweistext enthält "SMS-Token" und "Telegram-Kurzform" aber nicht "E-Mail, Telegram und SMS"
+- **AC-1:** Given ein eingeloggter Nutzer öffnet den Inhalt-Reiter eines Trips / When er den Schwellwerte-Block betrachtet / Then lautet die Eyebrow-Überschrift genau "04 — Schwellwerte" und der Hinweistext enthält "SMS-Token", "Telegram-Kurzform" und "E-Mail-Ausblick" — aber nicht mehr "Gelten für E-Mail, Telegram und SMS"
   - Test: Playwright gegen Staging; `page.locator('[data-testid="sms-thresholds"]').textContent()` prüfen; kein Mock
 
-- **AC-2:** Given der Schwellwerte-Block ist sichtbar / When der Nutzer das Preset-Dropdown öffnet / Then sieht er genau drei Optionen (Sensibel, Standard, Robust) und kein Freitext-Eingabefeld für Wind, Böen, Niederschlag oder Regenwahrscheinlichkeit mehr
-  - Test: Playwright gegen Staging; `page.locator('select[data-testid="threshold-preset-select"]')` hat 3 Optionen; kein `input[data-testid="sms-threshold-wind"]` mehr auffindbar
+- **AC-2:** Given der Schwellwerte-Block ist sichtbar / When der Nutzer die Metrik-Zeilen betrachtet / Then gibt es für jede der vier Metriken (Wind, Böen, Niederschlag, Regenwahrsch.) drei Buttons (Sensibel/Standard/Robust) statt eines Freitext-Eingabefelds — und für Gewitter zwei Buttons (MED/HIGH)
+  - Test: Playwright gegen Staging; `page.locator('[data-testid="threshold-level-wind-standard"]')` ist klickbar; kein `input[data-testid="sms-threshold-wind"]` mehr auffindbar; kein Mock
 
-- **AC-3:** Given der Nutzer wählt Preset "Sensibel" / When er speichert und der Trip neu geladen wird / Then enthält der gespeicherte display_config Werte wind=15, gust=30, precipitation=0.3, rain_probability=25 in den jeweiligen MetricConfig.sms_threshold-Feldern
-  - Test: Playwright wählt Preset, klickt Speichern, dann `GET /api/trips/{id}` und assert auf display_config-Felder; echter HTTP-Call, kein Mock
+- **AC-3:** Given der Nutzer klickt für alle vier Metriken auf "Sensibel" (Wind/Böen/Niederschlag/Regenwahrsch.) / When er speichert und der Trip neu geladen wird / Then enthält der gespeicherte display_config die Werte wind=15, gust=30, precipitation=0.3, rain_probability=25 in den jeweiligen MetricConfig.sms_threshold-Feldern
+  - Test: Playwright wählt Sensibel je Metrik, klickt Speichern, dann `GET /api/trips/{id}` und assert auf display_config-Felder; echter HTTP-Call, kein Mock
 
-- **AC-4:** Given ein Trip mit aktiviertem SMS-Kanal hat Gewitter-Schwellwert "HIGH" gesetzt / When der Scheduler einen SMS-Trend-Block aufbaut / Then enthält der Trend-Dict den Schlüssel `sms_threshold_thunder` mit Wert 2.0
-  - Test: Echter Scheduler-Run auf Staging mit Test-Trip; IMAP-Prüfung oder direkter API-Call auf `/api/trips/{id}` nach Scheduler-Lauf; kein Mock
+- **AC-4:** ✅ Bereits deployed (Backend-Teil; Scheduler-Trend-Dict enthält sms_threshold_thunder=2.0 bei Gewitter HIGH)
 
-- **AC-5:** Given der Nutzer klickt den ℹ-Button neben dem Preset-Dropdown / When das Popover erscheint / Then zeigt es eine Tabelle mit allen fünf Metriken (Wind, Böen, Niederschlag, Regenwahrsch., Gewitter) und den drei Preset-Spalten mit den PO-bestätigten Werten
-  - Test: Playwright gegen Staging; `page.locator('[data-testid="threshold-preset-popover"]')` ist sichtbar und enthält "15 km/h" (Sensibel/Wind) und "MED" (Sensibel/Gewitter); kein Mock
+- **AC-5:** Given der Nutzer wählt für Gewitter "HIGH" / When er speichert und der Trip neu geladen wird / Then ist der Gewitter-Button "HIGH" beim nächsten Laden aktiv (Reverse-Mapping float 2.0 → HIGH)
+  - Test: Playwright klickt HIGH, speichert, lädt Trip neu, prüft `data-testid="threshold-level-thunder-high"` hat aria-pressed="true" oder active-Klasse; kein Mock
 
-- **AC-6:** Given `SMS_SYMBOL_BY_METRIC` in `src/formatters/sms_trip.py` / When pytest `test_issue_624_metric_thresholds.py` läuft / Then ist der Schlüssel "thunder" mit Wert "TH:" im Dict vorhanden
-  - Test: Echter Import ohne Mock; pytest-Lauf muss grün sein
+- **AC-6:** ✅ Bereits deployed (Backend-Test; "thunder" in SMS_SYMBOL_BY_METRIC mit Wert "TH:")
 
 ## Known Limitations
 
-- Das Preset-Dropdown speichert keine "Preset-Bezeichnung" im Backend — es schreibt nur die konkreten float-Werte in die bestehenden MetricConfig.sms_threshold-Felder. Beim erneuten Öffnen kann daher kein Preset vorausgewählt werden (kein Reverse-Mapping).
-- Der Gewitter-Toggle (MED/HIGH) ist unabhängig vom Preset-Dropdown — ein nachträgliches Umschalten des Toggles überschreibt den vom Preset gesetzten thunder-Wert.
+- Kein "Benutzerdefiniert"-Zustand: wenn ein Trip aus alter Zeit einen Float-Wert hat der keinem Preset-Level entspricht, wird der nächste Standard-Button aktiv angezeigt. Beim Speichern wird dieser Standard-Wert übernommen (kein Datenverlust — nur Normalisierung auf Preset-Level).
+- Gewitter-MED und Standard/Sensibel sind für die numerischen Metriken unabhängige Achsen — es gibt keine "alles auf Standard"-Schaltfläche.
 
 ## Changelog
 
 - 2026-06-23: Initial spec created
+- 2026-06-23: Überarbeitung: pro-Metrik Segmented-Controls statt globalem Preset-Dropdown; Hinweistext präzisiert (E-Mail-Ausblick/Trend-Block explizit genannt); Backend-ACs als deployed markiert
