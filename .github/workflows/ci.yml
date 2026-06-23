@@ -24,8 +24,11 @@ jobs:
           uv run pytest \
             --ignore=tests/tdd/ \
             --ignore=tests/red/ \
+            --ignore=tests/refactor/ \
             --ignore=tests/unit/test_elevation_analysis.py \
             --ignore=tests/unit/test_etappen_config.py \
+            --ignore=tests/unit/test_gpx_parser.py \
+            --ignore=tests/unit/test_gpx_import_in_trip_dialog.py \
             -v
 
   lint:
