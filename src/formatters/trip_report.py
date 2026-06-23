@@ -206,6 +206,7 @@ class TripReportFormatter:
             tz=self._tz,
             max_length=160,
             thresholds=_sms_thr or None,
+            thunder_forecast=thunder_forecast,
         )
 
         # Issue #614: Tages-Max-Kurzform anhängen wenn konfiguriert.
@@ -217,6 +218,7 @@ class TripReportFormatter:
                 tz=self._tz,
                 max_length=4000,
                 thresholds=_sms_thr or None,
+                thunder_forecast=thunder_forecast,
             )
             telegram_text = f"{telegram_text}\n\nTages-Max:\n{kurzform}"
 

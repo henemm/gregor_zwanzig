@@ -14,8 +14,19 @@ _detect_risk() erhalten (§A4 - Alert-Pfad nicht migriert in β3).
 """
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, Optional
 from zoneinfo import ZoneInfo
+
+_ETAPPE_RE = re.compile(r'^Etappe\s+(\d+)', re.IGNORECASE)
+
+
+def _sms_stage_prefix(name: str) -> str:
+    """'Etappe N: subtitle' -> 'E{N}' for compact SMS prefix."""
+    m = _ETAPPE_RE.match(name or "")
+    if m:
+        return f"E{m.group(1)}"
+    return (name or "Etappe")[:10].rstrip(":")
 
 from app.models import ExposedSection, RiskLevel, RiskType, SegmentWeatherData
 from services.risk_engine import RiskEngine
@@ -122,6 +133,7 @@ class SMSTripFormatter:
         report_type: str = "evening",
         tz: ZoneInfo = ZoneInfo("UTC"),
         thresholds: Optional[dict[str, float]] = None,
+        thunder_forecast: Optional[dict] = None,
     ) -> str:
         """Generate v2.0 SMS via TokenLine pipeline.
 
@@ -148,6 +160,17 @@ class SMSTripFormatter:
         self._tz = tz
 
         forecast = _segments_to_normalized_forecast(segments, tz=tz)
+
+        # Bug #869: TH+ von thunder_forecast["+1"] in tomorrow-DailyForecast einbauen
+        if thunder_forecast and "+1" in thunder_forecast:
+            from app.models import ThunderLevel
+            _TH_VAL = {ThunderLevel.NONE: 0, ThunderLevel.MED: 1, ThunderLevel.HIGH: 2}
+            lvl = thunder_forecast["+1"].get("level")
+            lvl_val = _TH_VAL.get(lvl, 0)
+            tomorrow_thunder = (HourlyValue(12, float(lvl_val)),) if lvl_val > 0 else ()
+            if tomorrow_thunder:
+                tomorrow_day = DailyForecast(thunder_hourly=tomorrow_thunder)
+                forecast = NormalizedForecast(days=(forecast.days[0], tomorrow_day))
 
         # Worst-case WIND_EXPOSITION aus allen Segmenten bestimmen
         we_label: Optional[str] = None
@@ -194,7 +217,7 @@ class SMSTripFormatter:
             forecast,
             config if config else None,
             report_type=report_type,
-            stage_name=stage_name or "Etappe",
+            stage_name=_sms_stage_prefix(stage_name or "Etappe"),
         )
         return render_sms(token_line, max_length=max_length)
 

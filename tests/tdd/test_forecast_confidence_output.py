@@ -22,37 +22,44 @@ import pytest
 
 
 class TestConfidenceSymbolMapping:
-    """AC-9: Symbol thresholds 75/50."""
+    """AC-9: C-Token ist aus dem SMS-Format entfernt (Bug #869)."""
 
     def test_symbol_high_confidence_plus(self):
-        from output.tokens.builder import _confidence_symbol
-
-        assert _confidence_symbol(80) == "+"
-        assert _confidence_symbol(75) == "+"
-        assert _confidence_symbol(100) == "+"
+        # _confidence_symbol wurde entfernt (Bug #869 — C-Token aus SMS raus)
+        from output.tokens.builder import build_token_line
+        from output.tokens.dto import DailyForecast, NormalizedForecast
+        fc = NormalizedForecast(days=(DailyForecast(confidence_pct_min=80),))
+        line = build_token_line(fc, None, report_type="morning", stage_name="Stage")
+        c_tokens = [t for t in line.tokens if t.symbol == "C"]
+        assert len(c_tokens) == 0  # C-Token nicht mehr emittiert
 
     def test_symbol_medium_confidence_tilde(self):
-        from output.tokens.builder import _confidence_symbol
-
-        assert _confidence_symbol(74) == "~"
-        assert _confidence_symbol(60) == "~"
-        assert _confidence_symbol(50) == "~"
+        from output.tokens.builder import build_token_line
+        from output.tokens.dto import DailyForecast, NormalizedForecast
+        fc = NormalizedForecast(days=(DailyForecast(confidence_pct_min=60),))
+        line = build_token_line(fc, None, report_type="morning", stage_name="Stage")
+        c_tokens = [t for t in line.tokens if t.symbol == "C"]
+        assert len(c_tokens) == 0
 
     def test_symbol_low_confidence_question(self):
-        from output.tokens.builder import _confidence_symbol
-
-        assert _confidence_symbol(49) == "?"
-        assert _confidence_symbol(35) == "?"
-        assert _confidence_symbol(0) == "?"
+        from output.tokens.builder import build_token_line
+        from output.tokens.dto import DailyForecast, NormalizedForecast
+        fc = NormalizedForecast(days=(DailyForecast(confidence_pct_min=35),))
+        line = build_token_line(fc, None, report_type="morning", stage_name="Stage")
+        c_tokens = [t for t in line.tokens if t.symbol == "C"]
+        assert len(c_tokens) == 0
 
     def test_symbol_none_yields_none(self):
-        from output.tokens.builder import _confidence_symbol
-
-        assert _confidence_symbol(None) is None
+        from output.tokens.builder import build_token_line
+        from output.tokens.dto import DailyForecast, NormalizedForecast
+        fc = NormalizedForecast(days=(DailyForecast(confidence_pct_min=None),))
+        line = build_token_line(fc, None, report_type="morning", stage_name="Stage")
+        c_tokens = [t for t in line.tokens if t.symbol == "C"]
+        assert len(c_tokens) == 0
 
 
 class TestTokenBuilderConfidenceToken:
-    """AC-9: Builder integrates C-Token into TokenLine."""
+    """AC-9: C-Token wurde aus Builder entfernt (Bug #869)."""
 
     def _build_forecast(self, conf):
         from output.tokens.dto import DailyForecast, NormalizedForecast
@@ -65,31 +72,31 @@ class TestTokenBuilderConfidenceToken:
         return NormalizedForecast(days=(day,))
 
     def test_confidence_80_yields_C_plus_token(self):
+        """Bug #869: C-Token wird nicht mehr emittiert — kein C+ in SMS."""
         from output.tokens.builder import build_token_line
 
         fc = self._build_forecast(80)
         line = build_token_line(fc, None, report_type="morning", stage_name="Stage")
         c_tokens = [t for t in line.tokens if t.symbol == "C"]
-        assert len(c_tokens) == 1
-        assert c_tokens[0].value == "+"
+        assert len(c_tokens) == 0
 
     def test_confidence_60_yields_C_tilde_token(self):
+        """Bug #869: C-Token wird nicht mehr emittiert."""
         from output.tokens.builder import build_token_line
 
         fc = self._build_forecast(60)
         line = build_token_line(fc, None, report_type="morning", stage_name="Stage")
         c_tokens = [t for t in line.tokens if t.symbol == "C"]
-        assert len(c_tokens) == 1
-        assert c_tokens[0].value == "~"
+        assert len(c_tokens) == 0
 
     def test_confidence_35_yields_C_question_token(self):
+        """Bug #869: C-Token wird nicht mehr emittiert."""
         from output.tokens.builder import build_token_line
 
         fc = self._build_forecast(35)
         line = build_token_line(fc, None, report_type="morning", stage_name="Stage")
         c_tokens = [t for t in line.tokens if t.symbol == "C"]
-        assert len(c_tokens) == 1
-        assert c_tokens[0].value == "?"
+        assert len(c_tokens) == 0
 
     def test_confidence_none_yields_no_C_token(self):
         from output.tokens.builder import build_token_line

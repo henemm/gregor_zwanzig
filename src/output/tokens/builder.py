@@ -1,9 +1,4 @@
-"""Token builder per sms_format.md v2.3 §2/§3 (POSITIONAL).
-
-Issue #479: WL-Token wurde aus dem SMS-Format entfernt. Das C+/C~/C?
-Konfidenz-Symbol deckt den Stabilitäts-Use-Case in SMS ab; der farbige
-WL-Block bleibt nur in der E-Mail erhalten.
-"""
+"""Token builder per sms_format.md v2.3 §2/§3 (POSITIONAL)."""
 from __future__ import annotations
 
 from typing import Iterable, Optional
@@ -30,31 +25,13 @@ _UMLAUT = str.maketrans({
 
 def _sanitize_stage_name(name: str) -> str:
     """Replace Umlauts FIRST, then truncate to 10 chars (sms_format.md SSOT)."""
-    return name.translate(_UMLAUT)[:10].strip()
-
-
-def _confidence_symbol(pct: Optional[int]) -> Optional[str]:
-    """Issue #121 / AC-9: map confidence pct to single-char symbol.
-
-    Thresholds (sms_format.md v2.1):
-        pct >= 75 -> '+' (sicher)
-        50 <= pct < 75 -> '~' (mittel)
-        pct < 50 -> '?' (unsicher)
-        pct is None -> None (no token emitted)
-    """
-    if pct is None:
-        return None
-    if pct >= 75:
-        return "+"
-    if pct >= 50:
-        return "~"
-    return "?"
+    return name.translate(_UMLAUT)[:10].strip().rstrip(":")
 
 
 # Truncation priority §6: lower drops first.
 PRIORITY = {
     "DBG": 1, "WC": 2, "AV": 2, "SFL": 2, "SN24+": 2, "SN": 2,
-    "Z:": 3, "MAX": 3, "M:": 3, "C": 4, "PR": 5,
+    "Z:": 3, "MAX": 3, "M:": 3, "PR": 5,
     "D": 6, "N": 6, "R": 7,
     "W": 8, "G": 8, FORECAST_THP: 9, VIGI_HR: 10, FORECAST_TH: 10,
 }
@@ -64,7 +41,6 @@ POSITIONAL = [
     ("N", "forecast"), ("D", "forecast"), ("R", "forecast"),
     ("PR", "forecast"), ("W", "forecast"), ("G", "forecast"),
     (FORECAST_TH, "forecast"), (FORECAST_THP, "forecast"),
-    ("C", "forecast"),  # Issue #121: confidence symbol
     (VIGI_HR, "vigilance"), (VIGI_TH, "vigilance"),
     ("Z:", "fire"), ("MAX", "fire"), ("M:", "fire"),
     ("SN", "wintersport"), ("SN24+", "wintersport"),
@@ -217,20 +193,6 @@ def build_token_line(
                          report_type, is_level=True)
         if tok:
             tokens.append(tok)
-
-    # Issue #121 / AC-9: Confidence symbol (C+/C~/C?) based on daily min.
-    conf_symbol = _confidence_symbol(today.confidence_pct_min)
-    if conf_symbol is not None:
-        spec = by_sym.get("C")
-        if _visible(spec, report_type):
-            tokens.append(Token(
-                symbol="C",
-                value=conf_symbol,
-                category="forecast",
-                priority=PRIORITY["C"],
-                morning_visible=spec.morning_enabled if spec else True,
-                evening_visible=spec.evening_enabled if spec else True,
-            ))
 
     tokens.extend(_vigilance(forecast))
     tokens.extend(_fire(forecast))

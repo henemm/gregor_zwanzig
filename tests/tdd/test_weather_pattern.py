@@ -297,10 +297,10 @@ class TestSmsToken:
 # ---------------------------------------------------------------------------
 
 class TestSmsBudget:
-    """SMS bleibt ≤ 160 Zeichen ohne WL-Token (C+/C~/C? deckt den Bedarf)."""
+    """SMS bleibt ≤ 160 Zeichen — C-Token wurde entfernt (Bug #869)."""
 
     def test_sms_under_160_chars_with_confidence_token(self):
-        """SMS mit C+-Token bleibt unter 160 Zeichen."""
+        """Bug #869: C-Token entfernt — SMS ohne C+, trotzdem ≤ 160 Zeichen."""
         from output.renderers.sms import render_sms
         from output.tokens.builder import build_token_line
         from output.tokens.dto import NormalizedForecast, DailyForecast
@@ -323,7 +323,8 @@ class TestSmsBudget:
         assert len(sms_text) <= 160, (
             f"SMS zu lang: {len(sms_text)} Zeichen\n{sms_text!r}"
         )
-        assert "C+" in sms_text, f"C+ fehlt in SMS: {sms_text!r}"
+        # Bug #869: C-Token wird nicht mehr emittiert
+        assert "C+" not in sms_text, f"C+ darf nicht mehr in SMS sein: {sms_text!r}"
         assert "WL" not in sms_text, (
             f"WL darf nicht in SMS sein, ist aber drin: {sms_text!r}"
         )
