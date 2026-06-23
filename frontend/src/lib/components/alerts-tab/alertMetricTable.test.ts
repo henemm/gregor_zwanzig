@@ -23,11 +23,11 @@ import {
 import type { AlertRule, AlertMetric } from '../../types.ts';
 
 // =============================================================================
-// METRIC_DEFAULTS — 9 Eintraege mit korrekten Standardwerten (Spec §Implementation)
+// METRIC_DEFAULTS — 13 Eintraege mit korrekten Standardwerten (Spec §Implementation)
 // =============================================================================
 
-test('METRIC_DEFAULTS > hat genau 9 Eintraege', () => {
-	assert.equal(Object.keys(METRIC_DEFAULTS).length, 9);
+test('METRIC_DEFAULTS > hat genau 13 Eintraege', () => {
+	assert.equal(Object.keys(METRIC_DEFAULTS).length, 13);
 });
 
 test('METRIC_DEFAULTS > wind_gust default ist 50', () => {
