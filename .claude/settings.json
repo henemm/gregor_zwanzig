@@ -20,6 +20,27 @@
             "command": "bash /home/hem/claude-mq/check-messages.sh"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/session_singleton_guard.py\" register",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/session_singleton_guard.py\" guard",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "Stop": [
@@ -34,6 +55,11 @@
             "type": "command",
             "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/track_token_usage.py\"",
             "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/session_singleton_guard.py\" cleanup",
+            "timeout": 5
           }
         ]
       }
