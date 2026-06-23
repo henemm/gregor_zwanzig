@@ -78,6 +78,21 @@ jobs:
           [ "$HEALTH" = "200" ] || { echo "HEALTH $HEALTH != 200"; exit 1; }
           echo "Staging Smoke: OK"
 
+      - name: Staging-Verdict schreiben (CI smoke)
+        run: |
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > /tmp/deploy_key
+          chmod 600 /tmp/deploy_key
+          cat > /tmp/ci_e2e_findings.json << 'EOF'
+          [{"ac":"ROOT","status":"PASS","url":"/","evidence":"HTTP 200/302"},{"ac":"HEALTH","status":"PASS","url":"/api/health","evidence":"HTTP 200"}]
+          EOF
+          scp -i /tmp/deploy_key -o StrictHostKeyChecking=no \
+            /tmp/ci_e2e_findings.json \
+            ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/tmp/ci_e2e_findings.json
+          ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no -o ConnectTimeout=30 \
+            ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+            "cd /home/hem/gregor_zwanzig && git fetch origin 2>/dev/null && git reset --hard origin/main && python3 .claude/hooks/staging_gate.py --write-verdict 'VERIFIED: CI smoke test (ROOT+HEALTH) passed' --findings-json /tmp/ci_e2e_findings.json; rm -f /tmp/ci_e2e_findings.json"
+          rm -f /tmp/deploy_key /tmp/ci_e2e_findings.json
+
       - name: Deploy zu Produktion via SSH
         run: |
           echo "${{ secrets.DEPLOY_SSH_KEY }}" > /tmp/deploy_key
@@ -86,7 +101,7 @@ jobs:
             -o StrictHostKeyChecking=no \
             -o ConnectTimeout=10 \
             ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
-            "GZ_SKIP_E2E_GATE=1 bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh"
+            "bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh"
           EXIT=$?
           rm -f /tmp/deploy_key
           exit $EXIT
