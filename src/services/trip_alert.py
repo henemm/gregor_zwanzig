@@ -234,6 +234,11 @@ class TripAlertService:
         source for change-detection thresholds. Pure helper — directly unit-testable
         without SMTP setup.
         """
+        # Issue #864: Per-Metrik-Stufen haben höchste Priorität (vor globalem Preset).
+        if trip.display_config and getattr(trip.display_config, "metric_alert_levels", None):
+            from services.alert_preset import expand_per_metric_levels
+            rules = expand_per_metric_levels(trip.display_config.metric_alert_levels)
+            return WeatherChangeDetectionService.from_alert_rules(rules)
         # Issue #846: Alert-Preset hat höchste Priorität — expandiert zu Regeln,
         # die das alte alert_rules-Array überschreiben (Preset-Vorrang, AC-8).
         if trip.display_config and trip.display_config.alert_preset:

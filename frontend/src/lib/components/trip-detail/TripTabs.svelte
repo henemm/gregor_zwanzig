@@ -102,6 +102,11 @@
 	});
 
 	function handleValueChange(value: string): void {
+		// AC-10: Bestätigungsdialog wenn Alerts-Tab Auto-Save noch aussteht
+		if (activeTab === 'alerts' && value !== 'alerts' && saveController?.hasPending) {
+			const ok = window.confirm('Nicht gespeicherte Änderungen gehen verloren. Trotzdem wechseln?');
+			if (!ok) return;
+		}
 		activeTab = value;
 		// Issue #516: kanonisches URL-Modell — ?tab=<value> statt #hash.
 		// replaceState verhindert History-Spam; noScroll + keepFocus erhalten
@@ -124,7 +129,7 @@
 				{:else if tab.value === 'weather' && trip}
 					<WeatherMetricsTab {trip} {onTripUpdate} {saveController} />
 				{:else if tab.value === 'alerts' && trip}
-					<AlertsTab {trip} />
+					<AlertsTab {trip} {onTripUpdate} {saveController} />
 				{:else if tab.value === 'briefings' && trip}
 					<BriefingScheduleTab {trip} {onTripUpdate} {saveController} />
 				{:else if tab.value === 'preview' && trip}

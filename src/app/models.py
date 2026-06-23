@@ -570,6 +570,7 @@ class UnifiedWeatherDisplayConfig:
     # "standard" | "sensibel"). None = kein Preset → Fallback auf alert_rules-Array.
     # Frontend (AlertsTab) und trip_alert._select_change_detector lesen dieses Feld.
     alert_preset: Optional[str] = None
+    metric_alert_levels: Optional[dict[str, str]] = None  # metric → SensLevel (off|entspannt|standard|sensibel)
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     def is_metric_enabled(self, metric_id: str) -> bool:

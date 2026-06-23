@@ -12,7 +12,7 @@
 //  - alertRulesToRowState(): mappt persistierte AlertRule[] -> Row-State.
 //  - rowStateToAlertRules(): mappt Row-State -> AlertRule[] (Save-Pfad).
 
-import type { AlertMetric, AlertRule, AlertSeverity } from '../../types.ts';
+import type { AlertMetric, AlertRule, AlertSeverity, SensLevel } from '../../types.ts';
 import { DELTA_ONLY_METRICS } from '../alert-rules-editor/alertRuleDefaults.ts';
 import { ALERT_METRIC_LABELS } from '../../utils/alertMetricLabels.ts';
 
@@ -185,6 +185,133 @@ export function rowStateToAlertRules(
 		}
 	}
 	return result;
+}
+
+// ─── Issue #864/#859: Per-Metrik-Alert-Levels ─────────────────────────────
+
+export type { SensLevel }; // re-export from types.ts
+
+/** Alle 13 alertable Metriken in Anzeige-Reihenfolge. */
+export const ALERTABLE_METRICS: readonly AlertMetric[] = [
+	'wind_gust',
+	'precipitation_sum',
+	'thunder_level',
+	'snow_line',
+	'temperature_min',
+	'temperature_max',
+	'temperature_change',
+	'wind_change',
+	'precipitation_change',
+	'fresh_snow',
+	'cape',
+	'visibility',
+	'humidity',
+];
+
+/** Metriken die THRESHOLD_CROSSING verwenden (absoluter Schwellwert, nicht Delta). */
+export const THRESHOLD_CROSSING_METRICS: ReadonlySet<AlertMetric> = new Set<AlertMetric>([
+	'visibility',
+]);
+
+const _METRIC_UNITS: Record<AlertMetric, string> = {
+	wind_gust: 'km/h',
+	precipitation_sum: 'mm',
+	thunder_level: '',
+	snow_line: 'm',
+	temperature_min: '°C',
+	temperature_max: '°C',
+	temperature_change: '°C',
+	wind_change: 'km/h',
+	precipitation_change: 'mm',
+	fresh_snow: 'cm',
+	cape: 'J/kg',
+	visibility: 'm',
+	humidity: '%',
+};
+
+/**
+ * Gibt den Schwellwert-Text für Metrik+Stufe zurück.
+ * Delta-Metriken: "Δ ≥ X unit"; THRESHOLD_CROSSING: "< X unit"; off: null.
+ */
+export function levelToThreshold(metric: AlertMetric, level: SensLevel): string | null {
+	if (level === 'off') return null;
+	const presetData = METRIC_PRESETS[level as PresetName];
+	if (!presetData) return null;
+	const value = presetData[metric];
+	if (value === undefined) return null;
+	const unit = _METRIC_UNITS[metric] ?? '';
+	if (THRESHOLD_CROSSING_METRICS.has(metric)) {
+		return unit ? `< ${value} ${unit}` : `< ${value}`;
+	}
+	return unit ? `Δ ≥ ${value} ${unit}` : `Δ ≥ ${value}`;
+}
+
+/**
+ * Wandelt globalen Preset-String in per-Metrik SensLevel-Record um.
+ * "deaktiviert" → alle 'off'. Unbekannte Presets → 'standard'.
+ */
+export function migrateAlertPreset(
+	preset: string,
+	activeMetrics: readonly AlertMetric[],
+): Record<AlertMetric, SensLevel> {
+	const level: SensLevel =
+		preset === 'deaktiviert' ? 'off'
+		: preset === 'entspannt' ? 'entspannt'
+		: preset === 'sensibel' ? 'sensibel'
+		: 'standard';
+	return Object.fromEntries(
+		activeMetrics.map((m) => [m, level]),
+	) as Record<AlertMetric, SensLevel>;
+}
+
+// ─── Issue #864: Catalog-ID → AlertMetric Mapping ─────────────────────────
+
+import type { WeatherConfigMetric } from '../../types.ts';
+
+/** Catalog metric_id → AlertMetric(s) die davon aktiviert werden. */
+const CATALOG_TO_ALERT_METRICS: Record<string, readonly AlertMetric[]> = {
+	// Direkte Treffer (falls Catalog bereits AlertMetric-Namen nutzt)
+	wind_gust:            ['wind_gust'],
+	precipitation_sum:    ['precipitation_sum'],
+	precipitation_change: ['precipitation_change'],
+	wind_change:          ['wind_change'],
+	temperature_min:      ['temperature_min'],
+	temperature_max:      ['temperature_max'],
+	temperature_change:   ['temperature_change'],
+	fresh_snow:           ['fresh_snow'],
+	snow_line:            ['snow_line'],
+	cape:                 ['cape'],
+	visibility:           ['visibility'],
+	humidity:             ['humidity'],
+	thunder_level:        ['thunder_level'],
+	// Kurz-IDs aus dem Catalog
+	gust:          ['wind_gust'],
+	wind:          ['wind_change'],
+	precipitation: ['precipitation_sum', 'precipitation_change'],
+	thunder:       ['thunder_level'],
+	snowfall_limit: ['snow_line'],
+	temperature:   ['temperature_min', 'temperature_max', 'temperature_change'],
+};
+
+/**
+ * Gibt die alertable AlertMetrics zurück, die dem aktiven Wetter-Metriken-Set entsprechen.
+ * Fallback auf ALERTABLE_METRICS wenn keine Übereinstimmung.
+ */
+export function activeAlertableMetrics(
+	configMetrics: readonly WeatherConfigMetric[] | undefined | null,
+): readonly AlertMetric[] {
+	if (!configMetrics || configMetrics.length === 0) return ALERTABLE_METRICS;
+	const enabled = configMetrics.filter((m) => m.enabled);
+	if (enabled.length === 0) return ALERTABLE_METRICS;
+
+	const seen = new Set<AlertMetric>();
+	for (const m of enabled) {
+		const mapped = CATALOG_TO_ALERT_METRICS[m.metric_id];
+		if (mapped) mapped.forEach((a) => seen.add(a));
+	}
+	if (seen.size === 0) return ALERTABLE_METRICS;
+	// Reihenfolge aus ALERTABLE_METRICS beibehalten
+	return ALERTABLE_METRICS.filter((a) => seen.has(a));
 }
 
 // Issue #414 — Modus aus persistierten Rules ableiten.

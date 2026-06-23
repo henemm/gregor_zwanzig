@@ -67,6 +67,7 @@ export interface Stage {
 
 // Alert Rules (Issue #205) — typisierte Alarm-Regeln pro Trip
 export type AlertRuleKind = 'absolute' | 'delta' | 'threshold_crossing';
+export type SensLevel = 'off' | 'entspannt' | 'standard' | 'sensibel'; // Issue #864
 export type AlertSeverity = 'info' | 'warning' | 'critical';
 export type AlertMetric =
 	| 'wind_gust'
@@ -233,6 +234,7 @@ export interface DisplayConfig {
 	channel_layouts_per_report?: ChannelLayoutsPerReport; // Issue #434
 	telegram_kurzform?: boolean; // Issue #614: SMS-Kurzform als Tages-Max-Anhang
 	alert_preset?: string; // Issue #846: "deaktiviert" | "entspannt" | "standard" | "sensibel"
+	metric_alert_levels?: Record<string, SensLevel>; // Issue #864: metric → SensLevel
 }
 
 // Epic #138 Issue #177 — User-definierte Metric-Presets (Server-seitig persistiert).

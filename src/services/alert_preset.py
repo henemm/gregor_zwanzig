@@ -85,3 +85,36 @@ def expand_preset(name: str) -> list[AlertRule]:
             enabled=True,
         ))
     return rules
+
+
+def expand_per_metric_levels(levels: dict[str, str]) -> list[AlertRule]:
+    """Konvertiert metric_alert_levels (metric → SensLevel) in AlertRule-Liste.
+
+    Level 'off' wird übersprungen. Nutzt dieselbe _PRESET_TABLE wie expand_preset().
+    """
+    # Aufbau: metric.value (str) → (kind, entspannt, standard, sensibel)
+    metric_to_row: dict[str, tuple] = {
+        row[0].value: row for row in _PRESET_TABLE
+    }
+    rules: list[AlertRule] = []
+    for metric_str, level in levels.items():
+        if level == "off":
+            continue
+        col = _COL.get(level)
+        if col is None:
+            continue
+        row = metric_to_row.get(metric_str)
+        if row is None:
+            continue
+        _metric, kind, *thresholds = row
+        threshold = float(thresholds[col - 2])
+        # metric_str direkt speichern: str(rule.metric) == "wind_gust" (Test-Erwartung)
+        rules.append(AlertRule(
+            id=str(uuid.uuid4()),
+            kind=kind,
+            metric=metric_str,  # type: ignore[arg-type]
+            threshold=threshold,
+            severity=AlertSeverity.WARNING,
+            enabled=True,
+        ))
+    return rules
