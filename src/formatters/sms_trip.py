@@ -46,6 +46,7 @@ SMS_SYMBOL_BY_METRIC: dict[str, str] = {
     "rain_probability": "PR",
     "wind": "W",
     "gust": "G",
+    "thunder": "TH:",
 }
 
 # RiskType → SMS risk label (German, ultra-compact). Used by format_alert_sms.

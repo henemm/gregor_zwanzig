@@ -82,6 +82,7 @@ def test_ac1_metric_id_to_sms_symbol_mapping():
     assert SMS_SYMBOL_BY_METRIC["rain_probability"] == "PR"
     assert SMS_SYMBOL_BY_METRIC["wind"] == "W"
     assert SMS_SYMBOL_BY_METRIC["gust"] == "G"
+    assert SMS_SYMBOL_BY_METRIC["thunder"] == "TH:"
 
 
 def test_ac1_configured_threshold_shifts_first_crossing():

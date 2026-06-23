@@ -1065,6 +1065,7 @@ class TripReportSchedulerService:
                         "sms_threshold_precip": _sms_thr.get("precipitation"),
                         "sms_threshold_wind": _sms_thr.get("wind"),
                         "sms_threshold_gust": _sms_thr.get("gust"),
+                        "sms_threshold_thunder": _sms_thr.get("thunder"),
                         "confidence_pct": _conf_pct,
                     }.items() if v is not None},
                 ))
