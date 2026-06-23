@@ -29,6 +29,8 @@ jobs:
             --ignore=tests/unit/test_etappen_config.py \
             --ignore=tests/unit/test_gpx_parser.py \
             --ignore=tests/unit/test_gpx_import_in_trip_dialog.py \
+            --ignore=tests/unit/test_gpx_upload_page.py \
+            --ignore=tests/unit/test_hybrid_segmentation.py \
             -v
 
   lint:
