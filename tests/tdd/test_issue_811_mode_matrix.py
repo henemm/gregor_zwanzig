@@ -616,7 +616,8 @@ def _record_matrix_on_success():
     import sys
     from pathlib import Path
 
-    if not os.environ.get("GZ_ACTIVE_WORKFLOW", "").strip():
+    if not (os.environ.get("OPENSPEC_ACTIVE_WORKFLOW", "").strip()
+            or os.environ.get("GZ_ACTIVE_WORKFLOW", "").strip()):
         return
     gate = Path(__file__).resolve().parents[2] / ".claude" / "hooks" / "renderer_mail_gate.py"
     if not gate.exists():

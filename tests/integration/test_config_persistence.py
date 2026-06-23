@@ -355,7 +355,7 @@ class TestFriendlyFormatRespectsConfig:
         assert result != "good"
 
     def test_visibility_friendly_on_shows_label(self) -> None:
-        """visibility.use_friendly_format=True → 'good'."""
+        """visibility.has_friendly_format=False seit #819 → roher Zahlenwert, kein 'good'."""
         dc = build_default_display_config()
         new_metrics = [
             MetricConfig(
@@ -375,7 +375,7 @@ class TestFriendlyFormatRespectsConfig:
         from src.output.renderers.email.helpers import build_friendly_keys
         fmt._friendly_keys = build_friendly_keys(dc)
         result = fmt._fmt_val("visibility", 15000)
-        assert result == "good"
+        assert result in ("15", "15 km")
 
     def test_cloud_friendly_off_shows_numeric(self) -> None:
         """cloud_total.use_friendly_format=False → '50' not emoji."""
