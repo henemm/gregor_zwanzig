@@ -108,6 +108,8 @@ def _part_text(part: Message) -> str:
 _TH_RE = re.compile(r"<th[^>]*>(.*?)</th>", re.IGNORECASE | re.DOTALL)
 _ROW_RE = re.compile(r"<tr[^>]*>(.*?)</tr>", re.IGNORECASE | re.DOTALL)
 _TD_RE = re.compile(r"<td[^>]*>(.*?)</td>", re.IGNORECASE | re.DOTALL)
+# Issue #863 — nur tbody-Inhalt scannen (Trend-Tabelle hat kein tbody)
+_TBODY_RE = re.compile(r"<tbody[^>]*>(.*?)</tbody>", re.IGNORECASE | re.DOTALL)
 _SPAN_RE = re.compile(r"<span[^>]*>(.*?)</span>", re.IGNORECASE | re.DOTALL)
 _MOBILE_PRE_RE = re.compile(
     r'class="[^"]*mobile-compact[^"]*".*?<pre[^>]*>(.*?)</pre>',
@@ -140,14 +142,17 @@ def _column_values(html: str, header_de: str) -> list[float]:
     """Numerische Zellwerte der Spalte mit th-Text == header_de (über th-INDEX).
 
     Mappt NICHT über data-label (kann englisch sein), nur über die Header-Reihe.
+    Scannt ausschließlich <tbody>-Inhalte — Trend-/Stats-Tabellen ohne tbody
+    werden damit ignoriert (Issue #863).
     """
     headers = _th_tokens(html)
     try:
         idx = headers.index(header_de)
     except ValueError:
         return []
+    tbody_content = " ".join(m.group(1) for m in _TBODY_RE.finditer(html))
     values: list[float] = []
-    for row_html in _ROW_RE.findall(html):
+    for row_html in _ROW_RE.findall(tbody_content):
         cells = _TD_RE.findall(row_html)
         if idx >= len(cells):
             continue
