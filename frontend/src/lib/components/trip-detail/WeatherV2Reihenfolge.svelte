@@ -61,6 +61,9 @@
 						{#if m.unit}
 							<span class="metric-unit mono">{m.unit}</span>
 						{/if}
+						{#if m.col_label}
+							<span class="col-badge mono">{m.col_label}</span>
+						{/if}
 					{:else}
 						<span class="metric-label">{id}</span>
 					{/if}
@@ -185,6 +188,16 @@
 		color: var(--g-ink-4);
 		margin-left: 6px;
 		white-space: nowrap;
+	}
+	.col-badge {
+		font-size: 10px;
+		color: var(--g-ink-4);
+		background: var(--g-paper);
+		border: 1px solid var(--g-rule-soft);
+		border-radius: 3px;
+		padding: 0 4px;
+		margin-left: 6px;
+		line-height: 1.6;
 	}
 	.controls {
 		display: flex;

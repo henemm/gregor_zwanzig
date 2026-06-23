@@ -50,13 +50,14 @@ line-length = 88
 "src/services/wind_exposition.py" = ["F401", "F841"]
 
 [tool.pytest.ini_options]
-addopts = "-q -m 'not email and not live'"
+addopts = "-q -m 'not email and not live and not staging'"
 pythonpath = ["src", "."]
 testpaths = ["tests"]
 markers = [
     "tdd: TDD tests using external ground truth sources (may be slow)",
     "email: Tests that send real emails via SMTP (run with: pytest -m email)",
     "live: Tests that hit the real external weather API (excluded from default offline fixture mode)",
+    "staging: Tests that require the staging environment to be running",
 ]
 
 [tool.mypy]

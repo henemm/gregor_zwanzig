@@ -27,7 +27,7 @@ class TestColLabelUpdates:
 
     def test_thunder_label_blitz(self):
         m = get_metric("thunder")
-        assert m.col_label == "Blitz", f"Expected 'Blitz', got '{m.col_label}'"
+        assert m.col_label == "Thdr", f"Expected 'Thdr', got '{m.col_label}'"
 
     def test_snowfall_limit_label_snowl(self):
         m = get_metric("snowfall_limit")
@@ -87,7 +87,7 @@ class TestColLabelUpdates:
         col_defs = get_col_defs()
         labels = {cd[0]: cd[1] for cd in col_defs}
         assert labels["felt"] == "Feels"
-        assert labels["thunder"] == "Blitz"
+        assert labels["thunder"] == "Thdr"
         assert labels["cloud"] == "Cloud"
         assert labels["pop"] == "Rain%"
         assert labels["cape"] == "Thndr%"

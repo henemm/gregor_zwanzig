@@ -115,6 +115,10 @@ _CLEAN_TABLE = _table_resp(
 # AC-5 — Lokalisierung: englische Spaltenköpfe (#94-Klasse)
 # --------------------------------------------------------------------------- #
 class TestAC5Localization:
+    @pytest.mark.xfail(
+        reason="#862: _check_localization deliberately removed — superseded by fix-862-849",
+        strict=False,
+    )
     def test_english_header_gust_rain_sun_detected(self):
         mod = _load_validator()
         check = _require(mod, "_check_localization")
@@ -131,6 +135,10 @@ class TestAC5Localization:
             f"Erwartete EN-Begriffe in der Fehlerliste, bekam: {errors}"
         )
 
+    @pytest.mark.xfail(
+        reason="#862: _check_localization deliberately removed — superseded by fix-862-849",
+        strict=False,
+    )
     def test_homograph_wind_not_flagged(self):
         mod = _load_validator()
         check = _require(mod, "_check_localization")

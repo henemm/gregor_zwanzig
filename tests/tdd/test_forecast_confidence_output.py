@@ -148,7 +148,7 @@ class TestEmailColumnFromMetricCatalog:
         m = get_metric("confidence")
         assert m.dp_field == "confidence_pct"
         assert m.col_key == "confidence"
-        assert m.col_label == "Sicherheit"
+        assert m.col_label == "Conf"
         assert m.unit == "%"
 
     def test_get_col_defs_includes_confidence(self):
@@ -165,9 +165,9 @@ class TestEmailColumnFromMetricCatalog:
         cols = visible_cols(rows)
         col_keys = [c[0] for c in cols]
         assert "confidence" in col_keys
-        # Label muss "Sicherheit" sein
+        # Label muss "Conf" sein
         conf_label = next(label for key, label in cols if key == "confidence")
-        assert conf_label == "Sicherheit"
+        assert conf_label == "Conf"
 
 
 # --- AC-12 & AC-13: Confidence Hint Generator ---

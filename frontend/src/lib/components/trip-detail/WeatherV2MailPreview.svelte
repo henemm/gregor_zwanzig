@@ -68,7 +68,7 @@
 	function shortOf(id: string): string {
 		const m = metricById[id];
 		if (!m) return id.slice(0, 5);
-		return m.label.length > 6 ? m.label.slice(0, 6) : m.label;
+		return m.col_label ?? (m.label.length > 6 ? m.label.slice(0, 6) : m.label);
 	}
 
 	function labelOf(id: string): string {

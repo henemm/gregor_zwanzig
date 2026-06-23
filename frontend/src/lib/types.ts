@@ -152,6 +152,8 @@ export interface MetricEntry {
 	format_modes?: string[];
 	/** Issue #435: Default-Format-Modus dieser Metrik. */
 	default_format_mode?: string;
+	/** Issue #849: Kurzes Spaltenkürzel für E-Mail-Tabelle (z.B. "T", "Gust"). */
+	col_label?: string;
 }
 
 export interface WeatherConfigMetric {

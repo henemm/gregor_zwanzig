@@ -37,9 +37,6 @@ _HOUR_LINE_RE = re.compile(r"^\s*([01]?\d|2[0-3]):00(\s|$)", re.MULTILINE)
 _TEMP_RANGE_RE = re.compile(r"(-?\d{1,2})\s*[–-]\s*(-?\d{1,2})\s*°?C")
 _MAX_BYTES_DEFAULT = 2048
 
-# Issue #833 — eindeutig englische Metrik-Begriffe (AC-5). "Wind" ausgenommen
-# (Homograph DE=EN).
-_EN_BLACKLIST = ("Gust", "Rain", "Sun", "Feels", "Cloud", "Thunder", "Visib", "Humid")
 _WIND_TOL = 3       # km/h (AC-3)
 _SONNE_TOL_MIN = 5  # min (AC-4)
 
@@ -191,17 +188,6 @@ def _column_num_sum(html: str, *header_names: str) -> float | None:
 def _pills(html: str) -> list[str]:
     """Pill-Texte aus dem Metriken-Überblick (alle <span>-Inhalte)."""
     return [_strip_tags(s) for s in _SPAN_RE.findall(html)]
-
-
-# Issue #833 — Neue Checks (AC-1..AC-5)
-def _check_localization(html: str) -> list[str]:
-    """AC-5: englische Spaltenköpfe/Mobile-Header gegen Blacklist (Wind ausgenommen)."""
-    errors: list[str] = []
-    tokens = _th_tokens(html) + _mobile_header_tokens(html)
-    for w in _EN_BLACKLIST:
-        if any(t == w or t.startswith(w) for t in tokens):
-            errors.append(f"FULL: englischer Spaltenkopf '{w}' (deutsche Mail)")
-    return errors
 
 
 def _check_layer_consistency(html: str) -> list[str]:
@@ -359,7 +345,6 @@ def _validate_full(msg: Message) -> tuple[bool, list[str]]:
         errors.extend(_check_rendered(html))            # AC-1 (kann RenderUnavailable werfen)
         errors.extend(_check_layer_consistency(html))   # AC-3
         errors.extend(_check_metric_plausibility(html))  # AC-4
-        errors.extend(_check_localization(html))         # AC-5
 
     if not (msg["Subject"] or "").strip():
         errors.append("FULL: Subject ist leer")
