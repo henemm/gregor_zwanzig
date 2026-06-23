@@ -18,6 +18,15 @@ import re
 from typing import TYPE_CHECKING, Optional
 from zoneinfo import ZoneInfo
 
+from app.models import ExposedSection, RiskLevel, RiskType, SegmentWeatherData
+from services.risk_engine import RiskEngine
+from utils.timezone import local_fmt, local_hour
+from src.output.renderers.sms import render_sms
+from src.output.tokens.builder import build_token_line
+from src.output.tokens.dto import (
+    DailyForecast, HourlyValue, MetricSpec, NormalizedForecast,
+)
+
 _ETAPPE_RE = re.compile(r'^Etappe\s+(\d+)', re.IGNORECASE)
 
 
@@ -27,15 +36,6 @@ def _sms_stage_prefix(name: str) -> str:
     if m:
         return f"E{m.group(1)}"
     return (name or "Etappe")[:10].rstrip(":")
-
-from app.models import ExposedSection, RiskLevel, RiskType, SegmentWeatherData
-from services.risk_engine import RiskEngine
-from utils.timezone import local_fmt, local_hour
-from src.output.renderers.sms import render_sms
-from src.output.tokens.builder import build_token_line
-from src.output.tokens.dto import (
-    DailyForecast, HourlyValue, MetricSpec, NormalizedForecast,
-)
 
 if TYPE_CHECKING:
     from app.models import WeatherChange
