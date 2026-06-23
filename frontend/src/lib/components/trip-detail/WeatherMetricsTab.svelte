@@ -529,7 +529,7 @@
 										{ id: 'robust', label: 'Robust', float: 30 }
 									]}
 									currentFloat={smsThresholds['wind'] !== undefined && smsThresholds['wind'] !== '' ? parseFloat(smsThresholds['wind']) : null}
-									onChange={(id, f) => { smsThresholds = { ...smsThresholds, [id]: String(f) }; }}
+									onChange={(id, f) => { smsThresholds = { ...smsThresholds, [id]: String(f) }; scheduleAutoSave(); }}
 								/>
 								<ThresholdMetricRow
 									metricId="gust"
@@ -540,7 +540,7 @@
 										{ id: 'robust', label: 'Robust', float: 50 }
 									]}
 									currentFloat={smsThresholds['gust'] !== undefined && smsThresholds['gust'] !== '' ? parseFloat(smsThresholds['gust']) : null}
-									onChange={(id, f) => { smsThresholds = { ...smsThresholds, [id]: String(f) }; }}
+									onChange={(id, f) => { smsThresholds = { ...smsThresholds, [id]: String(f) }; scheduleAutoSave(); }}
 								/>
 								<ThresholdMetricRow
 									metricId="precipitation"
@@ -551,7 +551,7 @@
 										{ id: 'robust', label: 'Robust', float: 1.5 }
 									]}
 									currentFloat={smsThresholds['precipitation'] !== undefined && smsThresholds['precipitation'] !== '' ? parseFloat(smsThresholds['precipitation']) : null}
-									onChange={(id, f) => { smsThresholds = { ...smsThresholds, [id]: String(f) }; }}
+									onChange={(id, f) => { smsThresholds = { ...smsThresholds, [id]: String(f) }; scheduleAutoSave(); }}
 								/>
 								<ThresholdMetricRow
 									metricId="rain_probability"
@@ -562,7 +562,7 @@
 										{ id: 'robust', label: 'Robust', float: 60 }
 									]}
 									currentFloat={smsThresholds['rain_probability'] !== undefined && smsThresholds['rain_probability'] !== '' ? parseFloat(smsThresholds['rain_probability']) : null}
-									onChange={(id, f) => { smsThresholds = { ...smsThresholds, [id]: String(f) }; }}
+									onChange={(id, f) => { smsThresholds = { ...smsThresholds, [id]: String(f) }; scheduleAutoSave(); }}
 								/>
 								<ThresholdMetricRow
 									metricId="thunder"
@@ -572,7 +572,7 @@
 										{ id: 'high', label: 'HIGH', float: 2.0 }
 									]}
 									currentFloat={smsThresholds['thunder'] !== undefined && smsThresholds['thunder'] !== '' ? parseFloat(smsThresholds['thunder']) : null}
-									onChange={(id, f) => { smsThresholds = { ...smsThresholds, [id]: String(f) }; }}
+									onChange={(id, f) => { smsThresholds = { ...smsThresholds, [id]: String(f) }; scheduleAutoSave(); }}
 								/>
 							</tbody>
 						</table>
