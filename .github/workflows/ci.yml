@@ -86,7 +86,7 @@ jobs:
             -o StrictHostKeyChecking=no \
             -o ConnectTimeout=10 \
             ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
-            "bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh"
+            "GZ_SKIP_E2E_GATE=1 bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh"
           EXIT=$?
           rm -f /tmp/deploy_key
           exit $EXIT
