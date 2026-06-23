@@ -20,6 +20,7 @@
 	import WeatherV2Reihenfolge from './WeatherV2Reihenfolge.svelte';
 	// WeatherV2Kanaele entfernt in Issue #736 (Kanal-Config → Versand-Reiter)
 	import WeatherV2MailPreview from './WeatherV2MailPreview.svelte';
+	import ThresholdMetricRow from './ThresholdMetricRow.svelte';
 	import EditReportConfigSection from '$lib/components/edit/EditReportConfigSection.svelte';
 	import {
 		autoAssign, bucketsToColumns, move, buildWeatherConfigMetrics,
@@ -74,7 +75,7 @@
 	// Issue #614: Telegram Kurzform-Toggle (SMS-Tages-Max als Anhang).
 	let telegramKurzform = $state<boolean>(trip.display_config?.telegram_kurzform ?? false);
 	// Issue #624: konfigurierbare Schwellwerte pro Metrik (nur threshold-fähige).
-	const SMS_THRESHOLD_METRIC_IDS = ['precipitation', 'rain_probability', 'wind', 'gust'];
+	const SMS_THRESHOLD_METRIC_IDS = ['precipitation', 'rain_probability', 'wind', 'gust', 'thunder'];
 	let smsThresholds = $state<Record<string, string>>({});
 	let savedSnapshot = $state('');
 	let showSavePresetDialog = $state(false);
@@ -512,72 +513,69 @@
 
 				<!-- 04 Schwellwerte (Issue #624, umbenannt in #736) -->
 				<Card padding={18}>
-					<Eyebrow style="margin-bottom:8px">Schwellwerte</Eyebrow>
-					<p class="option-hint">Gelten für E-Mail, Telegram und SMS</p>
+					<Eyebrow style="margin-bottom:8px">04 — Schwellwerte</Eyebrow>
 					<p class="option-hint">
-						Ab welchem Wert gilt eine Metrik in der Kurzform als „erste Überschreitung"?
-						Leer = Standard-Schwellwert.
+						Gelten für SMS-Token, Telegram-Kurzform und den E-Mail-Ausblick/Trend-Block
 					</p>
 					<div class="sms-thresholds" data-testid="sms-thresholds">
-						<div class="sms-threshold-fields">
-							<div class="sms-threshold-row">
-								<label class="sms-threshold-label" for="sms-thr-wind">Wind (km/h)</label>
-								<input
-									id="sms-thr-wind"
-									data-testid="sms-threshold-wind"
-									type="number"
-									min="0"
-									step="1"
-									class="sms-threshold-input"
-									placeholder="Standard"
-									value={smsThresholds['wind'] ?? ''}
-									oninput={(e) => { smsThresholds = { ...smsThresholds, wind: (e.target as HTMLInputElement).value }; }}
+						<table class="threshold-table">
+							<tbody>
+								<ThresholdMetricRow
+									metricId="wind"
+									label="Wind (km/h)"
+									levels={[
+										{ id: 'sensibel', label: 'Sensibel', float: 15 },
+										{ id: 'standard', label: 'Standard', float: 20 },
+										{ id: 'robust', label: 'Robust', float: 30 }
+									]}
+									currentFloat={smsThresholds['wind'] !== undefined && smsThresholds['wind'] !== '' ? parseFloat(smsThresholds['wind']) : null}
+									onChange={(id, f) => { smsThresholds = { ...smsThresholds, [id]: String(f) }; }}
 								/>
-							</div>
-							<div class="sms-threshold-row">
-								<label class="sms-threshold-label" for="sms-thr-gust">Böen (km/h)</label>
-								<input
-									id="sms-thr-gust"
-									data-testid="sms-threshold-gust"
-									type="number"
-									min="0"
-									step="1"
-									class="sms-threshold-input"
-									placeholder="Standard"
-									value={smsThresholds['gust'] ?? ''}
-									oninput={(e) => { smsThresholds = { ...smsThresholds, gust: (e.target as HTMLInputElement).value }; }}
+								<ThresholdMetricRow
+									metricId="gust"
+									label="Böen (km/h)"
+									levels={[
+										{ id: 'sensibel', label: 'Sensibel', float: 30 },
+										{ id: 'standard', label: 'Standard', float: 40 },
+										{ id: 'robust', label: 'Robust', float: 50 }
+									]}
+									currentFloat={smsThresholds['gust'] !== undefined && smsThresholds['gust'] !== '' ? parseFloat(smsThresholds['gust']) : null}
+									onChange={(id, f) => { smsThresholds = { ...smsThresholds, [id]: String(f) }; }}
 								/>
-							</div>
-							<div class="sms-threshold-row">
-								<label class="sms-threshold-label" for="sms-thr-precip">Niederschlag (mm)</label>
-								<input
-									id="sms-thr-precip"
-									data-testid="sms-threshold-precipitation"
-									type="number"
-									min="0"
-									step="0.1"
-									class="sms-threshold-input"
-									placeholder="Standard"
-									value={smsThresholds['precipitation'] ?? ''}
-									oninput={(e) => { smsThresholds = { ...smsThresholds, precipitation: (e.target as HTMLInputElement).value }; }}
+								<ThresholdMetricRow
+									metricId="precipitation"
+									label="Niederschlag (mm)"
+									levels={[
+										{ id: 'sensibel', label: 'Sensibel', float: 0.3 },
+										{ id: 'standard', label: 'Standard', float: 0.8 },
+										{ id: 'robust', label: 'Robust', float: 1.5 }
+									]}
+									currentFloat={smsThresholds['precipitation'] !== undefined && smsThresholds['precipitation'] !== '' ? parseFloat(smsThresholds['precipitation']) : null}
+									onChange={(id, f) => { smsThresholds = { ...smsThresholds, [id]: String(f) }; }}
 								/>
-							</div>
-							<div class="sms-threshold-row">
-								<label class="sms-threshold-label" for="sms-thr-rain-prob">Regenw. (%)</label>
-								<input
-									id="sms-thr-rain-prob"
-									data-testid="sms-threshold-rain-probability"
-									type="number"
-									min="0"
-									max="100"
-									step="1"
-									class="sms-threshold-input"
-									placeholder="Standard"
-									value={smsThresholds['rain_probability'] ?? ''}
-									oninput={(e) => { smsThresholds = { ...smsThresholds, rain_probability: (e.target as HTMLInputElement).value }; }}
+								<ThresholdMetricRow
+									metricId="rain_probability"
+									label="Regenwahrsch. (%)"
+									levels={[
+										{ id: 'sensibel', label: 'Sensibel', float: 25 },
+										{ id: 'standard', label: 'Standard', float: 40 },
+										{ id: 'robust', label: 'Robust', float: 60 }
+									]}
+									currentFloat={smsThresholds['rain_probability'] !== undefined && smsThresholds['rain_probability'] !== '' ? parseFloat(smsThresholds['rain_probability']) : null}
+									onChange={(id, f) => { smsThresholds = { ...smsThresholds, [id]: String(f) }; }}
 								/>
-							</div>
-						</div>
+								<ThresholdMetricRow
+									metricId="thunder"
+									label="Gewitter"
+									levels={[
+										{ id: 'med', label: 'MED', float: 1.0 },
+										{ id: 'high', label: 'HIGH', float: 2.0 }
+									]}
+									currentFloat={smsThresholds['thunder'] !== undefined && smsThresholds['thunder'] !== '' ? parseFloat(smsThresholds['thunder']) : null}
+									onChange={(id, f) => { smsThresholds = { ...smsThresholds, [id]: String(f) }; }}
+								/>
+							</tbody>
+						</table>
 					</div>
 				</Card>
 
@@ -740,34 +738,9 @@
 		flex-direction: column;
 		gap: var(--g-s-2);
 	}
-	.sms-threshold-fields {
-		display: flex;
-		flex-direction: column;
-		gap: var(--g-s-2);
-	}
-	.sms-threshold-row {
-		display: flex;
-		align-items: center;
-		gap: var(--g-s-3);
-	}
-	.sms-threshold-label {
-		font-size: var(--g-text-sm);
-		color: var(--g-ink);
-		min-width: 160px;
-	}
-	.sms-threshold-input {
-		width: 100px;
-		padding: var(--g-s-1) var(--g-s-2);
-		font-size: var(--g-text-sm);
-		border: 1px solid var(--g-rule);
-		border-radius: var(--g-radius-sm);
-		background: var(--g-card);
-		color: var(--g-ink);
-	}
-	.sms-threshold-input:focus {
-		outline: 2px solid var(--g-accent);
-		outline-offset: 1px;
-		border-color: var(--g-accent);
+	.threshold-table {
+		width: 100%;
+		border-collapse: collapse;
 	}
 	@media (max-width: 899px) {
 		.v2-layout {

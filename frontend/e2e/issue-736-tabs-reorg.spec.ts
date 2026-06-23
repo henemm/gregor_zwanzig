@@ -210,13 +210,28 @@ test.describe('Issue #736: Reiter-Reorganisation "Inhalt" vs. "Versand"', () => 
 			// "SMS-Schwellwerte" darf NICHT vorkommen
 			await expect(page.getByText('SMS-Schwellwerte', { exact: false })).toHaveCount(0);
 
-			// "Schwellwerte" muss sichtbar sein
-			await expect(page.getByText('Schwellwerte', { exact: false })).toBeVisible();
+			// Issue #872: Eyebrow heißt "04 — Schwellwerte"
+			await expect(page.getByText('04 — Schwellwerte', { exact: false })).toBeVisible();
 
-			// Hinweis-Text muss sichtbar sein
+			// Issue #872: Hinweis-Text nennt SMS-Token; alter Text ist weg
+			const thresholdsText = await page
+				.locator('[data-testid="sms-thresholds"]')
+				.textContent();
 			await expect(
 				page.getByText('Gelten für E-Mail, Telegram und SMS', { exact: false })
+			).toHaveCount(0);
+			await expect(page.getByText('SMS-Token', { exact: false })).toBeVisible();
+			expect(thresholdsText).toContain('SMS-Token');
+
+			// Issue #872: Segmented-Control statt Freitext-Input
+			await expect(
+				page.locator('[data-testid="threshold-level-wind-standard"]')
 			).toBeVisible();
+			await expect(
+				page.locator('[data-testid="threshold-level-thunder-high"]')
+			).toBeVisible();
+			// Alter Freitext-Input ist weg
+			await expect(page.locator('[data-testid="sms-threshold-wind"]')).toHaveCount(0);
 		} finally {
 			await deleteTrip(request, id);
 		}
