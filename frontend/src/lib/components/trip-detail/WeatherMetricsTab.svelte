@@ -22,7 +22,7 @@
 	import WeatherV2MailPreview from './WeatherV2MailPreview.svelte';
 	import EditReportConfigSection from '$lib/components/edit/EditReportConfigSection.svelte';
 	import {
-		autoAssign, bucketsToColumns, move, reorder, buildWeatherConfigMetrics,
+		autoAssign, bucketsToColumns, move, buildWeatherConfigMetrics,
 		diffHighlight,
 		CATEGORY_LABELS, CATEGORY_ORDER, indicatorCapable,
 		type Buckets, type MetricEntry, type MetricCatalog, type Highlight, type WeatherSnapshot,
@@ -314,9 +314,15 @@
 		scheduleAutoSave();
 	}
 
-	// Reihenfolge ▲▼.
-	function onReorder(id: string, dir: -1 | 1) {
-		const newBuckets = reorder(buckets, 'primary', id, dir);
+	// Reihenfolge per Drag & Drop (#848).
+	function onDndReorder(fromId: string, toId: string) {
+		const list = [...buckets.primary];
+		const fromIdx = list.indexOf(fromId);
+		const toIdx = list.indexOf(toId);
+		if (fromIdx === -1 || toIdx === -1) return;
+		list.splice(fromIdx, 1);
+		list.splice(toIdx, 0, fromId);
+		const newBuckets = { ...buckets, primary: list };
 		applyDiff(newBuckets.primary, friendlyMap, selectedTemplate);
 		buckets = newBuckets;
 		scheduleAutoSave();
@@ -499,7 +505,7 @@
 						activeChannel="telegram"
 						{highlight}
 						onRemove={onRemove}
-						onReorder={onReorder}
+						onDndReorder={onDndReorder}
 						{onMode}
 					/>
 				</Card>

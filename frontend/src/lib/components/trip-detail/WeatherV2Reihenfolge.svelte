@@ -3,6 +3,7 @@
 	// 1:1 nach WM2_Reihenfolge / WM2_ReihenfolgeRow / WM2_CutLine aus JSX.
 	// Kein „→ Detail"-Knopf, keine Detail-Zeile (PO-Entscheidung 2026-06-06).
 	// Orange gestrichelte Schnittlinie nach Position 8 NUR wenn activeChannel=telegram.
+	// Issue #848 — Drag & Drop ersetzt Pfeiltasten.
 	import type { MetricEntry } from './metricsEditor.ts';
 	import { indicatorCapable, CHANNEL_COL_BUDGET } from './metricsEditor.ts';
 	import type { Highlight } from './metricsEditor.ts';
@@ -15,14 +16,17 @@
 		activeChannel: string;
 		highlight: Highlight | null;
 		onRemove: (id: string) => void;
-		onReorder: (id: string, dir: -1 | 1) => void;
+		onDndReorder: (fromId: string, toId: string) => void;
 		onMode: (id: string, useIndicator: boolean) => void;
 	}
 
-	let { primaryColumns, metricById, friendlyMap, activeChannel, highlight, onRemove, onReorder, onMode }: Props = $props();
+	let { primaryColumns, metricById, friendlyMap, activeChannel, highlight, onRemove, onDndReorder, onMode }: Props = $props();
 
 	const tgBudget = CHANNEL_COL_BUDGET.telegram;
 	const showCutLine = $derived(activeChannel === 'telegram');
+
+	let dragSourceId = $state<string | null>(null);
+	let dragOverId = $state<string | null>(null);
 </script>
 
 <div class="reihenfolge" data-testid="wm2-reihenfolge">
@@ -46,8 +50,22 @@
 			<div
 				class="row"
 				class:hl
+				class:drag-over={dragOverId === id && dragSourceId !== id}
+				class:dragging={dragSourceId === id}
+				draggable="true"
 				data-testid="wm2-reihenfolge-row"
 				data-metric-id={id}
+				ondragstart={() => { dragSourceId = id; }}
+				ondragover={(e) => { e.preventDefault(); dragOverId = id; }}
+				ondragleave={() => { if (dragOverId === id) dragOverId = null; }}
+				ondrop={() => {
+					if (dragSourceId && dragSourceId !== id) {
+						onDndReorder(dragSourceId, id);
+					}
+					dragSourceId = null;
+					dragOverId = null;
+				}}
+				ondragend={() => { dragSourceId = null; dragOverId = null; }}
 			>
 				<div class="pos mono">{i + 1}</div>
 				<svg class="drag-dots" width="10" height="14" viewBox="0 0 10 14" fill="var(--g-ink-4)" aria-hidden="true">
@@ -85,30 +103,6 @@
 					>
 						Aus
 					</button>
-					<div class="arrow-group">
-						<button
-							type="button"
-							class="arrow-btn"
-							disabled={i === 0}
-							onclick={() => onReorder(id, -1)}
-							aria-label="Nach oben"
-						>
-							<svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
-								<path d="M6 2.5L10 8H2Z"/>
-							</svg>
-						</button>
-						<button
-							type="button"
-							class="arrow-btn"
-							disabled={i === primaryColumns.length - 1}
-							onclick={() => onReorder(id, 1)}
-							aria-label="Nach unten"
-						>
-							<svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
-								<path d="M6 9.5L2 4H10Z"/>
-							</svg>
-						</button>
-					</div>
 				</div>
 			</div>
 		{/each}
@@ -152,12 +146,24 @@
 		gap: 10px;
 		padding: 10px 16px;
 		border-bottom: 1px solid var(--g-rule-soft);
+		border-top: 2px solid transparent;
 		align-items: center;
 		background: transparent;
-		transition: background 0.3s;
+		transition: background 0.15s;
+		cursor: grab;
+	}
+	.row:active {
+		cursor: grabbing;
 	}
 	.row.hl {
 		background: var(--g-accent-tint);
+	}
+	.row.dragging {
+		opacity: 0.4;
+	}
+	.row.drag-over {
+		border-top-color: var(--g-accent);
+		background: color-mix(in srgb, var(--g-accent) 5%, transparent);
 	}
 	.pos {
 		font-size: 11px;
@@ -220,28 +226,6 @@
 	}
 	.btn-aus:hover {
 		background: rgba(168, 50, 50, 0.06);
-	}
-	.arrow-group {
-		display: flex;
-		gap: 2px;
-	}
-	.arrow-btn {
-		width: 26px;
-		height: 26px;
-		border: 1px solid var(--g-rule);
-		border-radius: 3px;
-		background: var(--g-card);
-		color: var(--g-ink-2);
-		cursor: pointer;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		padding: 0;
-		transition: opacity 120ms;
-	}
-	.arrow-btn:disabled {
-		cursor: not-allowed;
-		opacity: 0.3;
 	}
 	.cut-line {
 		padding: 6px 16px;
