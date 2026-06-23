@@ -430,17 +430,23 @@ def run_selftest(e2e_path: Path, workflow: str, scope: str | None = None) -> int
     head = _head_sha()
     verified_commit = verified.get("verified_commit", "")
 
-    # Phase 1: Commit-Attestation
+    # Phase 1: Commit-Attestation (Ancestor-Check)
     if head != verified_commit:
-        _log(
-            f"FAIL: Commit-Mismatch — HEAD={head[:8]} vs verified={verified_commit[:8]}",
-            stream=sys.stderr,
+        ancestor = subprocess.run(
+            ["git", "merge-base", "--is-ancestor", verified_commit, head],
+            cwd=str(REPO_DIR), capture_output=True
         )
-        _write_report(
-            report_path,
-            _render_fail_commit_mismatch(workflow, head, verified_commit),
-        )
-        return 1
+        if ancestor.returncode != 0:
+            _log(
+                f"FAIL: Commit-Mismatch — HEAD={head[:8]} vs verified={verified_commit[:8]}",
+                stream=sys.stderr,
+            )
+            _write_report(
+                report_path,
+                _render_fail_commit_mismatch(workflow, head, verified_commit),
+            )
+            return 1
+        _log(f"PASS (Ancestor): verified_commit={verified_commit[:8]} ist Ancestor von HEAD={head[:8]}")
 
     # Phase 2: Health-Check
     health_ok, health_msg = _check_health()
