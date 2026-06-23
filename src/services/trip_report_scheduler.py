@@ -615,6 +615,17 @@ class TripReportSchedulerService:
                     mail_format="compact",
                 )
 
+        # 7b. Send SMS if configured (Issue #868: fehlender Versandblock)
+        if config and config.send_sms and self._settings.can_send_sms():
+            try:
+                from outputs.sms import SMSOutput
+                SMSOutput(self._settings).send(
+                    subject=report.email_subject,
+                    body=report.sms_text or report.email_plain,
+                )
+            except Exception as e:
+                logger.error(f"SMS send failed for {trip.name}: {e}")
+
         # 7c. Send Telegram if configured (Issue #360: kanal-bewusster Body)
         if config and config.send_telegram and self._settings.can_send_telegram():
             try:
@@ -631,6 +642,8 @@ class TripReportSchedulerService:
         sent_channels: List[str] = []
         if not config or config.send_email:
             sent_channels.append("email")
+        if config and config.send_sms and self._settings.can_send_sms():
+            sent_channels.append("sms")
         if config and config.send_telegram and self._settings.can_send_telegram():
             sent_channels.append("telegram")
         self._append_briefing_log(trip.id, report_type, sent_channels)
