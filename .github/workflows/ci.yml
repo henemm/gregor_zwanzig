@@ -1,4 +1,4 @@
-name: CI
+name: CI / Deploy
 
 on:
   push:
@@ -9,45 +9,92 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
-
       - name: Install uv
         uses: astral-sh/setup-uv@v4
         with:
           version: "latest"
-
       - name: Set up Python
         run: uv python install 3.12
-
       - name: Install dependencies
         run: uv sync --dev
-
       - name: Run tests
         run: uv run pytest --ignore=tests/tdd/ -v
 
   lint:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
-
       - name: Install uv
         uses: astral-sh/setup-uv@v4
         with:
           version: "latest"
-
       - name: Set up Python
         run: uv python install 3.12
-
       - name: Install dependencies
         run: uv sync --dev
-
       - name: Run ruff check
         run: uv run ruff check src/ tests/
 
-      # Format check disabled for now (47 files need reformatting)
-      # TODO: Enable after running `uv run ruff format src/ tests/`
-      # - name: Run ruff format check
-      #   run: uv run ruff format --check src/ tests/
+  deploy:
+    needs: [test, lint]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Warten bis Staging aktuellen Commit hat
+        run: |
+          EXPECTED="${{ github.sha }}"
+          BASE="https://staging.gregor20.henemm.com"
+          echo "Erwarte Commit ${EXPECTED:0:7} auf Staging..."
+          for i in $(seq 1 12); do
+            STAGING=$(curl -s "$BASE/api/health" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('commit','')[:7])" 2>/dev/null || echo "")
+            echo "Versuch $i/12: Staging=$STAGING Erwartet=${EXPECTED:0:7}"
+            [ "$STAGING" = "${EXPECTED:0:7}" ] && echo "Staging aktuell." && break
+            [ $i -eq 12 ] && echo "FEHLER: Staging nach 6 Min nicht aktuell." && exit 1
+            sleep 30
+          done
+
+      - name: Smoke-Test Staging
+        run: |
+          BASE="https://staging.gregor20.henemm.com"
+          ROOT=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/")
+          HEALTH=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/api/health")
+          echo "ROOT=$ROOT HEALTH=$HEALTH"
+          { [ "$ROOT" = "200" ] || [ "$ROOT" = "302" ]; } || { echo "ROOT $ROOT != 200/302"; exit 1; }
+          [ "$HEALTH" = "200" ] || { echo "HEALTH $HEALTH != 200"; exit 1; }
+          echo "Staging Smoke: OK"
+
+      - name: Deploy zu Produktion via SSH
+        run: |
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > /tmp/deploy_key
+          chmod 600 /tmp/deploy_key
+          ssh -i /tmp/deploy_key \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+            "bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh"
+          EXIT=$?
+          rm -f /tmp/deploy_key
+          exit $EXIT
+
+      - name: Telegram — Deploy erfolgreich
+        if: success()
+        run: |
+          SHA="${{ github.sha }}"
+          MSG="deployed: ${SHA:0:7} ${{ github.event.head_commit.message }}"
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d "{\"chat_id\":\"${{ secrets.TELEGRAM_CHAT_ID }}\",\"text\":\"gregor20 $MSG\"}" \
+            > /dev/null
+
+      - name: Telegram — Deploy fehlgeschlagen
+        if: failure()
+        run: |
+          SHA="${{ github.sha }}"
+          RUN="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          MSG="FEHLGESCHLAGEN: ${SHA:0:7} ${{ github.event.head_commit.message }} | $RUN"
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d "{\"chat_id\":\"${{ secrets.TELEGRAM_CHAT_ID }}\",\"text\":\"gregor20 $MSG\"}" \
+            > /dev/null
