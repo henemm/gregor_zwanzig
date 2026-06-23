@@ -144,12 +144,12 @@ class TestHourlyRows:
         )
         html = report.email_html
 
-        # Segment 1 should show hours 08, 09, 10 (hour-only format)
-        assert ">08<" in html or "08</td>" in html
-        assert ">09<" in html or "09</td>" in html
+        # Segment 1 should show hours 08, 09, 10
+        assert "08:00" in html
+        assert "09:00" in html
         # Segment 2 should show hours 10, 11, 12
-        assert ">11<" in html or "11</td>" in html
-        assert ">12<" in html or "12</td>" in html
+        assert "11:00" in html
+        assert "12:00" in html
 
     def test_hourly_temp_values_in_table(self):
         """GIVEN segment with timeseries, WHEN formatted,

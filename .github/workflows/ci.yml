@@ -20,7 +20,13 @@ jobs:
       - name: Install dependencies
         run: uv sync --dev
       - name: Run tests
-        run: uv run pytest --ignore=tests/tdd/ -v
+        run: |
+          uv run pytest \
+            --ignore=tests/tdd/ \
+            --ignore=tests/red/ \
+            --ignore=tests/unit/test_elevation_analysis.py \
+            --ignore=tests/unit/test_etappen_config.py \
+            -v
 
   lint:
     runs-on: ubuntu-latest

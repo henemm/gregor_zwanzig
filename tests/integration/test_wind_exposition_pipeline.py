@@ -138,6 +138,7 @@ class _FakeTrip:
     stages: list
     display_config: Optional[object] = None
     report_config: Optional[object] = None
+    activity: str = "hiking"
 
     def get_stage_for_date(self, target_date):
         for s in self.stages:

@@ -247,12 +247,16 @@ class TestEmailFriendlyVsRawFormatting:
         # Raw "50" should appear somewhere in the table
 
     def test_all_raw_cape_number_in_html(self):
-        """CAPE 800 J/kg → '800' when friendly OFF."""
+        """CAPE 800 J/kg → '800' when friendly OFF (kein CAPE-Emoji in Datenzellen)."""
+        import re
         dc = self._make_config(False, False, False)
         report = self._generate_report(dc, cape=800.0)
         html = report.email_html
-        assert "🟡" not in html
-        assert "🟢" not in html
+        # Rohwert muss erscheinen
+        assert "800" in html
+        # CAPE-Emoji (🟡 = moderat) darf nicht in Datenzellen erscheinen
+        # (🟡 in der Legende ist OK; 🟢 in Wind-Zellen ist ebenfalls OK)
+        assert not re.search(r'<td[^>]*>\s*🟡', html), "🟡 in Datenzelle bei CAPE raw"
 
     def test_all_raw_visibility_km_in_html(self):
         """Visibility 5000m → '5.0' (km) when friendly OFF."""
@@ -266,11 +270,12 @@ class TestEmailFriendlyVsRawFormatting:
 
     def test_mixed_cloud_friendly_cape_raw(self):
         """Cloud friendly ON + CAPE friendly OFF → emoji + number."""
+        import re
         dc = self._make_config(True, False, True)
         report = self._generate_report(dc, cloud=50.0, cape=800.0)
         html = report.email_html
         assert "⛅" in html       # Cloud friendly
-        assert "🟡" not in html    # CAPE raw (no emoji)
+        assert not re.search(r'<td[^>]*>\s*🟡', html), "🟡 in Datenzelle bei CAPE raw"
 
     def test_mixed_visibility_friendly_in_html(self):
         """Visibility friendly ON → immer km-Zahl, kein Wort (Issue #814 AC-5)."""

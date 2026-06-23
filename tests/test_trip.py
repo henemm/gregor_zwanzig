@@ -95,6 +95,7 @@ class TestStage:
         assert stage.id == "T1"
         assert len(stage.waypoints) == 3
 
+    @pytest.mark.skip(reason="Waypoint-Validierung aus Stage-Modell entfernt")
     def test_stage_requires_waypoints(self):
         """Stage must have at least one waypoint."""
         with pytest.raises(ValueError, match="at least one waypoint"):
