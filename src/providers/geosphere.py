@@ -531,7 +531,7 @@ class GeoSphereProvider:
                 wind_chill = _calculate_wind_chill(temp, wind_kmh)
 
             # Pressure conversion Pa -> hPa
-            pressure_hpa = round(pressure / 100, 1) if pressure else None
+            pressure_hpa = round(pressure / 100, 1) if pressure is not None else None
 
             # Cloud cover: API returns 0-1, convert to 0-100
             cloud_pct = int(cloud * 100) if cloud is not None else None
@@ -574,7 +574,7 @@ class GeoSphereProvider:
         swe = swe_data[-1] if swe_data else None
 
         # Convert m to cm
-        snow_depth_cm = round(snow_depth_m * 100, 1) if snow_depth_m else None
+        snow_depth_cm = round(snow_depth_m * 100, 1) if snow_depth_m is not None else None
 
         return snow_depth_cm, swe
 
