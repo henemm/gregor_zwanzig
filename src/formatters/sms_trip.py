@@ -162,16 +162,18 @@ class SMSTripFormatter:
 
         forecast = _segments_to_normalized_forecast(segments, tz=tz)
 
-        # Bug #869: TH+ von thunder_forecast["+1"] in tomorrow-DailyForecast einbauen
+        # Bug #874: TH+: immer als days[1] einbauen — TH+:- wenn kein Gewitter (Spec-Pflicht).
+        # Level-Mapping: NONE=0, MED=2, HIGH=3 (Builder-System: 1=L, 2=M, 3=H).
+        from app.models import ThunderLevel
+        _TH_VAL = {ThunderLevel.NONE: 0, ThunderLevel.MED: 2, ThunderLevel.HIGH: 3}
+        tomorrow_thunder: tuple = ()
         if thunder_forecast and "+1" in thunder_forecast:
-            from app.models import ThunderLevel
-            _TH_VAL = {ThunderLevel.NONE: 0, ThunderLevel.MED: 1, ThunderLevel.HIGH: 2}
             lvl = thunder_forecast["+1"].get("level")
             lvl_val = _TH_VAL.get(lvl, 0)
-            tomorrow_thunder = (HourlyValue(12, float(lvl_val)),) if lvl_val > 0 else ()
-            if tomorrow_thunder:
-                tomorrow_day = DailyForecast(thunder_hourly=tomorrow_thunder)
-                forecast = NormalizedForecast(days=(forecast.days[0], tomorrow_day))
+            if lvl_val > 0:
+                tomorrow_thunder = (HourlyValue(12, float(lvl_val)),)
+        tomorrow_day = DailyForecast(thunder_hourly=tomorrow_thunder)
+        forecast = NormalizedForecast(days=(forecast.days[0], tomorrow_day))
 
         # Worst-case WIND_EXPOSITION aus allen Segmenten bestimmen
         we_label: Optional[str] = None
