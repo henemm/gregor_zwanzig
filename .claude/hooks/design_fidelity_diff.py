@@ -124,8 +124,13 @@ SCREEN_PRE_ACTIONS: dict[str, list[tuple[str, str]]] = {
     # Mock-Daten, die nie zum Live-Testkonto passen. Fidelity wird stattdessen
     # per staging-validator (AC-Walk + Screenshots) verifiziert. Kein Pre-Action-
     # Eintrag hier, um Fake-Passes (Liste-vs-Hub-SOLL) zu vermeiden.
-    # Fix #622: Trip-Wizard-Tabs ansteuern (sonst Screenshot immer Route-Tab)
+    # Fix #622: Trip-Wizard-Tabs ansteuern (sonst Screenshot immer Route-Tab).
+    # step2: Etappen-Tab erst nach Name+Datum unlock navigierbar.
+    # Hinweis: Desktop-Date-Input hat kein data-testid → input[type="date"] nötig.
     "I-wizard-step2-etappen": [
+        ("fill", '[data-testid="trip-new-name-input"]', "Fidelity Test"),
+        ("fill", 'input[type="date"]', "2026-09-01"),
+        ("wait_ms", "400"),
         ("click", '[role="tab"]:has-text("Etappen & GPX")'),
         ("wait_selector", '[role="tab"][aria-selected="true"]:has-text("Etappen & GPX")'),
     ],
@@ -189,12 +194,35 @@ def take_screenshot(
                 print(f"Navigate warning (continuing): {e}", file=sys.stderr)
 
             if pre_actions:
-                for action_type, selector in pre_actions:
+                for action in pre_actions:
+                    action_type = action[0]
+                    selector = action[1] if len(action) > 1 else ""
+                    value = action[2] if len(action) > 2 else ""
                     try:
                         if action_type == "click":
                             page.click(selector, timeout=8000)
                         elif action_type == "wait_selector":
                             page.wait_for_selector(selector, timeout=8000)
+                        elif action_type == "fill":
+                            page.fill(selector, value, timeout=8000)
+                        elif action_type == "force_fill":
+                            # JS-based fill — works even when element is off-screen / hidden
+                            page.evaluate(
+                                "([sel, val]) => { const el = document.querySelector(sel); "
+                                "if (!el) return; el.value = val; "
+                                "el.dispatchEvent(new Event('input', {bubbles:true})); "
+                                "el.dispatchEvent(new Event('change', {bubbles:true})); }",
+                                [selector, value],
+                            )
+                        elif action_type == "dispatch_change":
+                            page.fill(selector, value, timeout=8000)
+                            page.evaluate(
+                                "(sel) => { const el = document.querySelector(sel); "
+                                "if (el) el.dispatchEvent(new Event('change', {bubbles:true})); }",
+                                selector,
+                            )
+                        elif action_type == "wait_ms":
+                            page.wait_for_timeout(int(selector))
                     except Exception as e:
                         print(f"Pre-action {action_type}({selector}) warning: {e}", file=sys.stderr)
                 # Modal-Render-Zeit
