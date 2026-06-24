@@ -13,7 +13,7 @@ def generate_shortcode(trip_name: str, user_id: str) -> str:
     Kollision: GZ#HERM → GZ#HERM2 → GZ#HERM3 usw.
     """
     base = re.sub(r"[^A-Z]", "", trip_name.upper())[:4] or "TRIP"
-    existing = {t.shortcode for t in load_all_trips(user_id) if t.shortcode}
+    existing = {t.shortcode for t in load_all_trips(user_id, include_archived=True) if t.shortcode}
     code = f"GZ#{base}"
     n = 2
     while code in existing:

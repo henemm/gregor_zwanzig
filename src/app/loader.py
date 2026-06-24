@@ -941,12 +941,17 @@ def delete_location(location_id: str, user_id: str = "default") -> None:
 # Trip CRUD
 # =============================================================================
 
-def load_all_trips(user_id: str = "default") -> List[Trip]:
+def load_all_trips(
+    user_id: str = "default",
+    include_archived: bool = False,
+) -> List[Trip]:
     """
     Load all trips for a user.
 
     Args:
         user_id: User identifier (default: "default")
+        include_archived: When False (default), trips with archived_at set are
+            excluded. Set True for shortcode deduplication (Bug #824).
 
     Returns:
         List of Trip objects
@@ -958,7 +963,10 @@ def load_all_trips(user_id: str = "default") -> List[Trip]:
     trips = []
     for path in trips_dir.glob("*.json"):
         try:
-            trips.append(load_trip(path))
+            trip = load_trip(path)
+            if not include_archived and trip.archived_at is not None:
+                continue
+            trips.append(trip)
         except Exception as e:
             # Issue #111 Validator-Finding: ein einzelner kaputter Trip darf
             # NICHT den gesamten Load fuer alle anderen Trips desselben Users
