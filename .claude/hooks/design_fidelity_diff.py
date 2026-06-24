@@ -124,6 +124,15 @@ SCREEN_PRE_ACTIONS: dict[str, list[tuple[str, str]]] = {
     # Mock-Daten, die nie zum Live-Testkonto passen. Fidelity wird stattdessen
     # per staging-validator (AC-Walk + Screenshots) verifiziert. Kein Pre-Action-
     # Eintrag hier, um Fake-Passes (Liste-vs-Hub-SOLL) zu vermeiden.
+    # Fix #622: Trip-Wizard-Tabs ansteuern (sonst Screenshot immer Route-Tab)
+    "I-wizard-step2-etappen": [
+        ("click", '[role="tab"]:has-text("Etappen & GPX")'),
+        ("wait_selector", '[role="tab"][aria-selected="true"]:has-text("Etappen & GPX")'),
+    ],
+    "I-wizard-step3-wetter": [
+        ("click", '[role="tab"]:has-text("Wegpunkte prüfen")'),
+        ("wait_selector", '[role="tab"][aria-selected="true"]:has-text("Wegpunkte prüfen")'),
+    ],
 }
 
 

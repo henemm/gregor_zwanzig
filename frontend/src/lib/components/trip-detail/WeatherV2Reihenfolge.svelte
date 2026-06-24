@@ -241,4 +241,19 @@
 	.cut-scissors {
 		flex-shrink: 0;
 	}
+	@media (max-width: 899px) {
+		.metric-label {
+			white-space: normal;
+			overflow: visible;
+			text-overflow: clip;
+		}
+		.label-cell {
+			flex-wrap: wrap;
+		}
+		.controls {
+			flex-direction: column;
+			align-items: flex-end;
+			gap: 4px;
+		}
+	}
 </style>
