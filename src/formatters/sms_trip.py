@@ -47,6 +47,8 @@ SMS_SYMBOL_BY_METRIC: dict[str, str] = {
     "wind": "W",
     "gust": "G",
     "thunder": "TH:",
+    "snow_depth": "SN",
+    "snowfall_limit": "SFL",
 }
 
 # RiskType → SMS risk label (German, ultra-compact). Used by format_alert_sms.

@@ -136,6 +136,14 @@ def _wintersport(day: DailyForecast, by_sym: dict[str, MetricSpec],
     for sym, val in pairs:
         if not _visible(by_sym.get(sym), rt) or val is None:
             continue
+        spec = by_sym.get(sym)
+        if spec and spec.threshold is not None:
+            if sym == "SFL":
+                if val > spec.threshold:
+                    continue
+            else:
+                if val < spec.threshold:
+                    continue
         out.append(Token(sym, render_int(val), "wintersport", PRIORITY[sym]))
     return out
 

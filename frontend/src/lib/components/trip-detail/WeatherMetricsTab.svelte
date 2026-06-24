@@ -75,7 +75,7 @@
 	// Issue #614: Telegram Kurzform-Toggle (SMS-Tages-Max als Anhang).
 	let telegramKurzform = $state<boolean>(trip.display_config?.telegram_kurzform ?? false);
 	// Issue #624: konfigurierbare Schwellwerte pro Metrik (nur threshold-fähige).
-	const SMS_THRESHOLD_METRIC_IDS = ['precipitation', 'rain_probability', 'wind', 'gust', 'thunder'];
+	const SMS_THRESHOLD_METRIC_IDS = ['precipitation', 'rain_probability', 'wind', 'gust', 'thunder', 'snow_depth', 'snowfall_limit'];
 	let smsThresholds = $state<Record<string, string>>({});
 	let savedSnapshot = $state('');
 	let showSavePresetDialog = $state(false);
@@ -573,6 +573,28 @@
 									]}
 									currentFloat={smsThresholds['thunder'] !== undefined && smsThresholds['thunder'] !== '' ? parseFloat(smsThresholds['thunder']) : null}
 									onChange={(id, f) => { smsThresholds = { ...smsThresholds, [id]: String(f) }; scheduleAutoSave(); }}
+								/>
+								<ThresholdMetricRow
+									metricId="snow_depth"
+									label="Schneehöhe (cm)"
+									levels={[
+										{ id: 'sensibel', label: 'Sensibel', float: 5 },
+										{ id: 'standard', label: 'Standard', float: 10 },
+										{ id: 'robust', label: 'Robust', float: 20 }
+									]}
+									currentFloat={smsThresholds['snow_depth'] !== undefined && smsThresholds['snow_depth'] !== '' ? parseFloat(smsThresholds['snow_depth']) : null}
+									onChange={(id, f) => { smsThresholds = { ...smsThresholds, ['snow_depth']: String(f) }; scheduleAutoSave(); }}
+								/>
+								<ThresholdMetricRow
+									metricId="snowfall_limit"
+									label="Schneefallgrenze (m)"
+									levels={[
+										{ id: 'sensibel', label: 'Sensibel', float: 2000 },
+										{ id: 'standard', label: 'Standard', float: 1500 },
+										{ id: 'robust', label: 'Robust', float: 1000 }
+									]}
+									currentFloat={smsThresholds['snowfall_limit'] !== undefined && smsThresholds['snowfall_limit'] !== '' ? parseFloat(smsThresholds['snowfall_limit']) : null}
+									onChange={(id, f) => { smsThresholds = { ...smsThresholds, ['snowfall_limit']: String(f) }; scheduleAutoSave(); }}
 								/>
 							</tbody>
 						</table>
