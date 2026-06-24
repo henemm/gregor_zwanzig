@@ -202,10 +202,10 @@
 	</div>
 </aside>
 
-<!-- MOBILE: Slide-in Drawer (kein Desktop, z-40 damit Backdrop z-50 davor liegt) -->
+<!-- MOBILE: Slide-in Drawer — z-[55] damit Drawer VOR Backdrop (z-50) liegt, TopAppBar z-[60] bleibt oben -->
 <nav
 	data-testid="mobile-drawer"
-	class="fixed z-40 h-full w-60 flex-col bg-sidebar text-sidebar-foreground p-4 transition-transform duration-200 desktop:hidden
+	class="fixed z-[55] h-full w-60 flex-col bg-sidebar text-sidebar-foreground p-4 transition-transform duration-200 desktop:hidden
 	{mobileMenuOpen ? 'flex translate-x-0' : 'hidden -translate-x-full'}"
 >
 	<div class="mb-6"><Wordmark size="md" /></div>
