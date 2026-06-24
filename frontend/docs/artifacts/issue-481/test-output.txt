@@ -1,0 +1,76 @@
+TAP version 13
+# Subtest: AC-1: TopAppBar enthält data-testid="top-app-bar-bell"
+ok 1 - AC-1: TopAppBar enthält data-testid="top-app-bar-bell"
+  ---
+  duration_ms: 0.874028
+  type: 'test'
+  ...
+# Subtest: AC-1: Bell-Button hat disabled-Attribut (Placeholder ohne Benachrichtigungssystem)
+ok 2 - AC-1: Bell-Button hat disabled-Attribut (Placeholder ohne Benachrichtigungssystem)
+  ---
+  duration_ms: 0.152039
+  type: 'test'
+  ...
+# Subtest: AC-1: Bell-Button nutzt MIcon mit kind="bell"
+ok 3 - AC-1: Bell-Button nutzt MIcon mit kind="bell"
+  ---
+  duration_ms: 0.223086
+  type: 'test'
+  ...
+# Subtest: AC-2: TopAppBar enthält data-testid="top-app-bar-new-trip"
+ok 4 - AC-2: TopAppBar enthält data-testid="top-app-bar-new-trip"
+  ---
+  duration_ms: 0.114032
+  type: 'test'
+  ...
+# Subtest: AC-2: Plus-Element hat href="/trips/new"
+ok 5 - AC-2: Plus-Element hat href="/trips/new"
+  ---
+  duration_ms: 0.183937
+  type: 'test'
+  ...
+# Subtest: AC-2: Plus-Element nutzt MIcon mit kind="plus"
+ok 6 - AC-2: Plus-Element nutzt MIcon mit kind="plus"
+  ---
+  duration_ms: 0.154092
+  type: 'test'
+  ...
+# Subtest: AC-3: MoonIcon-Import ist aus TopAppBar.svelte entfernt
+ok 7 - AC-3: MoonIcon-Import ist aus TopAppBar.svelte entfernt
+  ---
+  duration_ms: 0.09351
+  type: 'test'
+  ...
+# Subtest: AC-3: SunIcon-Import ist aus TopAppBar.svelte entfernt
+ok 8 - AC-3: SunIcon-Import ist aus TopAppBar.svelte entfernt
+  ---
+  duration_ms: 0.08576
+  type: 'test'
+  ...
+# Subtest: AC-4: darkMode-Prop bleibt im Interface von TopAppBar
+ok 9 - AC-4: darkMode-Prop bleibt im Interface von TopAppBar
+  ---
+  duration_ms: 0.290517
+  type: 'test'
+  ...
+# Subtest: AC-4: ontoggleDark-Prop bleibt im Interface von TopAppBar
+ok 10 - AC-4: ontoggleDark-Prop bleibt im Interface von TopAppBar
+  ---
+  duration_ms: 0.329075
+  type: 'test'
+  ...
+# Subtest: AC-5: Sidebar.svelte enthält weiterhin den Dark-Mode-Toggle (Desktop/Drawer)
+ok 11 - AC-5: Sidebar.svelte enthält weiterhin den Dark-Mode-Toggle (Desktop/Drawer)
+  ---
+  duration_ms: 0.173722
+  type: 'test'
+  ...
+1..11
+# tests 11
+# suites 0
+# pass 11
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 98.091112

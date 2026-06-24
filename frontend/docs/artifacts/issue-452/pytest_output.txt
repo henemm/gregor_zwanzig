@@ -1,0 +1,105 @@
+.ssssssssss............................................................. [  3%]
+........................................................................ [  7%]
+........................................................................ [ 10%]
+........................................................................ [ 14%]
+................................................F....................... [ 18%]
+........................................................................ [ 21%]
+........................................................................ [ 25%]
+........................................................................ [ 29%]
+...............................................................F........ [ 32%]
+........................................................................ [ 36%]
+........................................................................ [ 40%]
+........................................................................ [ 43%]
+........................................FF.............................. [ 47%]
+........................................F.....F.F....................... [ 51%]
+...............................................................F........ [ 54%]
+........................................................................ [ 58%]
+...........................................F............................ [ 62%]
+........................................................................ [ 65%]
+........................................................................ [ 69%]
+...............FF....................................................... [ 73%]
+........................................................................ [ 76%]
+........................................................................ [ 80%]
+.....................................................s.................. [ 84%]
+........................................................................ [ 87%]
+........................................................................ [ 91%]
+........................................................................ [ 95%]
+........................................................................ [ 98%]
+........................                                                 [100%]
+=================================== FAILURES ===================================
+_____________ test_append_alert_log_purges_entries_older_than_48h ______________
+/home/hem/gregor_zwanzig/tests/tdd/test_alert_log.py:132: in test_append_alert_log_purges_entries_older_than_48h
+    assert len(data["entries"]) == 2
+E   AssertionError: assert 3 == 2
+E    +  where 3 = len([{'changes_count': 1, 'sent_at': '2026-05-27T14:42:45.683546+00:00', 'severity': 'LOW', 'trip_id': 'trip-abc'}, {'chan...-abc'}, {'changes_count': 3, 'sent_at': '2026-05-29T15:42:45.683661+00:00', 'severity': 'HIGH', 'trip_id': 'trip-abc'}])
+________________________ test_env_playwright_vorhanden _________________________
+tests/tdd/test_epic_404_phase2_ist_screenshots.py:87: in test_env_playwright_vorhanden
+    assert env.exists(), f".env.playwright fehlt: {env}"
+E   AssertionError: .env.playwright fehlt: /home/hem/gregor_zwanzig/frontend/.env.playwright
+E   assert False
+E    +  where False = exists()
+E    +    where exists = PosixPath('/home/hem/gregor_zwanzig/frontend/.env.playwright').exists
+_______________ test_ac3_no_native_checkboxes_outside_component ________________
+tests/tdd/test_issue_278_form_controls.py:237: in test_ac3_no_native_checkboxes_outside_component
+    assert not non_component_files, (
+E   AssertionError: Noch 3 Datei(en) mit nativen Checkboxen außerhalb Checkbox.svelte:
+E       - frontend/src/lib/components/trip-wizard/steps/Step5Reports.svelte
+E       - frontend/src/lib/components/trip-wizard/steps/Step3Weather.svelte
+E       - frontend/src/lib/components/compare/steps/Step2Orte.svelte
+E   assert not [PosixPath('/home/hem/gregor_zwanzig/frontend/src/lib/components/trip-wizard/steps/Step5Reports.svelte'), PosixPath('/...tep3Weather.svelte'), PosixPath('/home/hem/gregor_zwanzig/frontend/src/lib/components/compare/steps/Step2Orte.svelte')]
+_________________ test_ac4_no_native_selects_outside_component _________________
+tests/tdd/test_issue_278_form_controls.py:272: in test_ac4_no_native_selects_outside_component
+    assert not non_component_files, (
+E   AssertionError: Noch 2 Datei(en) mit nativen Selects außerhalb Select.svelte:
+E       - frontend/src/lib/components/compare/steps/Step5Versand.svelte
+E       - frontend/src/lib/components/compare/steps/Step3Idealwerte.svelte
+E   assert not [PosixPath('/home/hem/gregor_zwanzig/frontend/src/lib/components/compare/steps/Step5Versand.svelte'), PosixPath('/home/hem/gregor_zwanzig/frontend/src/lib/components/compare/steps/Step3Idealwerte.svelte')]
+_______________ test_ac1_all_component_category_dirs_documented ________________
+tests/tdd/test_issue_316_docs_cleanup.py:67: in test_ac1_all_component_category_dirs_documented
+    assert not missing, f"Undokumentierte Komponenten-Kategorien: {missing}"
+E   AssertionError: Undokumentierte Komponenten-Kategorien: ['shared']
+E   assert not ['shared']
+_________________________ test_ac5_updated_date_bumped _________________________
+tests/tdd/test_issue_316_docs_cleanup.py:114: in test_ac5_updated_date_bumped
+    assert "**Updated:** 2026-05-25" in text, (
+E   AssertionError: Stand-Datum nicht auf 2026-05-25 aktualisiert.
+E   assert '**Updated:** 2026-05-25' in '# Frontend Components Reference\n\n**Updated:** 2026-05-29  \n**Version:** 1.6\n\n## Overview\n\nGregor Frontend uses...toms`.\n\n**Showcase:** `routes/_design-system/+page.svelte` rendert alle Bausteine in allen Varianten (Issue #374).\n'
+______________________ test_no_phantom_cockpit_components ______________________
+tests/tdd/test_issue_316_docs_cleanup.py:134: in test_no_phantom_cockpit_components
+    assert not present, f"Nicht mehr existierende Cockpit-Komponenten im Doc: {present}"
+E   AssertionError: Nicht mehr existierende Cockpit-Komponenten im Doc: ['StagePill']
+E   assert not ['StagePill']
+_________________ test_ac5_no_native_selects_outside_component _________________
+tests/tdd/test_issue_376_channel_preview_select.py:145: in test_ac5_no_native_selects_outside_component
+    assert not offenders, (
+E   AssertionError: Noch Datei(en) mit nativem <select> außerhalb Select.svelte:
+E         - /home/hem/gregor_zwanzig/frontend/src/lib/components/compare/steps/Step5Versand.svelte
+E         - /home/hem/gregor_zwanzig/frontend/src/lib/components/compare/steps/Step3Idealwerte.svelte
+E   assert not [PosixPath('/home/hem/gregor_zwanzig/frontend/src/lib/components/compare/steps/Step5Versand.svelte'), PosixPath('/home/hem/gregor_zwanzig/frontend/src/lib/components/compare/steps/Step3Idealwerte.svelte')]
+___________________ test_build_segment_label_local_time_cest ___________________
+tests/tdd/test_issue_397_segment_timezone.py:115: in test_build_segment_label_local_time_cest
+    label = build_segment_label(change, [seg_data], _CEST)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: build_segment_label() takes 2 positional arguments but 3 were given
+________________________ test_sidebar_uses_trips_label _________________________
+tests/tdd/test_trips_naming.py:47: in test_sidebar_uses_trips_label
+    assert "Meine Touren" in content, (
+E   AssertionError: Sidebar-Label 'Meine Touren' fehlt — kanonische deutsche UI-Bezeichnung (Code-Begriff bleibt Trip, URL /trips).
+E   assert 'Meine Touren' in '<script lang="ts">\n\timport LayoutDashboard from \'@lucide/svelte/icons/layout-dashboard\';\n\timport RouteIcon from...10">\n\t\t\t\t<LogOut class="size-4 opacity-70" />\n\t\t\t\tAbmelden\n\t\t\t</button>\n\t\t</form>\n\t</div>\n</nav>\n'
+_____________________ test_homepage_uses_trip_terminology ______________________
+tests/tdd/test_trips_naming.py:63: in test_homepage_uses_trip_terminology
+    assert "Meine Touren" in content, (
+E   AssertionError: Startseiten-Sektionstitel 'Meine Touren' fehlt — kanonische deutsche UI-Bezeichnung der Trips-Sektion.
+E   assert 'Meine Touren' in '<script lang="ts">\n\timport type { Trip, Subscription, StagesWeatherResponse, CockpitStatus } from \'$lib/types.js\'...@media (min-width: 1024px) {\n\t\t.kachel-grid {\n\t\t\tgrid-template-columns: repeat(3, 1fr);\n\t\t}\n\t}\n</style>\n'
+=========================== short test summary info ============================
+FAILED tests/tdd/test_alert_log.py::test_append_alert_log_purges_entries_older_than_48h
+FAILED tests/tdd/test_epic_404_phase2_ist_screenshots.py::test_env_playwright_vorhanden
+FAILED tests/tdd/test_issue_278_form_controls.py::test_ac3_no_native_checkboxes_outside_component
+FAILED tests/tdd/test_issue_278_form_controls.py::test_ac4_no_native_selects_outside_component
+FAILED tests/tdd/test_issue_316_docs_cleanup.py::test_ac1_all_component_category_dirs_documented
+FAILED tests/tdd/test_issue_316_docs_cleanup.py::test_ac5_updated_date_bumped
+FAILED tests/tdd/test_issue_316_docs_cleanup.py::test_no_phantom_cockpit_components
+FAILED tests/tdd/test_issue_376_channel_preview_select.py::test_ac5_no_native_selects_outside_component
+FAILED tests/tdd/test_issue_397_segment_timezone.py::test_build_segment_label_local_time_cest
+FAILED tests/tdd/test_trips_naming.py::test_sidebar_uses_trips_label - Assert...
+FAILED tests/tdd/test_trips_naming.py::test_homepage_uses_trip_terminology - ...

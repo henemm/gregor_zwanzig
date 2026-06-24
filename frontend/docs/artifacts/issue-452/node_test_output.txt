@@ -1,0 +1,71 @@
+TAP version 13
+# Subtest: Issue \#452 — Step2Orte Smart-Import Vervollständigung
+    # Subtest: AC-4: compare-step2-fallback-lat testid vorhanden
+    ok 1 - AC-4: compare-step2-fallback-lat testid vorhanden
+      ---
+      duration_ms: 0.666094
+      type: 'test'
+      ...
+    # Subtest: AC-4: compare-step2-fallback-lon testid vorhanden
+    ok 2 - AC-4: compare-step2-fallback-lon testid vorhanden
+      ---
+      duration_ms: 0.096996
+      type: 'test'
+      ...
+    # Subtest: AC-4: compare-step2-fallback-add-btn testid vorhanden
+    ok 3 - AC-4: compare-step2-fallback-add-btn testid vorhanden
+      ---
+      duration_ms: 0.077165
+      type: 'test'
+      ...
+    # Subtest: AC-4: addLocationFromFallback Funktion vorhanden
+    ok 4 - AC-4: addLocationFromFallback Funktion vorhanden
+      ---
+      duration_ms: 0.065299
+      type: 'test'
+      ...
+    # Subtest: AC-4: fallbackLat State vorhanden
+    ok 5 - AC-4: fallbackLat State vorhanden
+      ---
+      duration_ms: 0.070135
+      type: 'test'
+      ...
+    # Subtest: AC-4: fallbackLon State vorhanden
+    ok 6 - AC-4: fallbackLon State vorhanden
+      ---
+      duration_ms: 0.0666
+      type: 'test'
+      ...
+    # Subtest: AC-5: Höhe-Label im Preview sichtbar (elevation_m-Conditional)
+    ok 7 - AC-5: Höhe-Label im Preview sichtbar (elevation_m-Conditional)
+      ---
+      duration_ms: 0.06688
+      type: 'test'
+      ...
+    # Subtest: AC-5: Höhe-Text-Label vorhanden
+    ok 8 - AC-5: Höhe-Text-Label vorhanden
+      ---
+      duration_ms: 0.123565
+      type: 'test'
+      ...
+    # Subtest: AC-5: Zeitzone im Preview-Template (nicht nur API-Call)
+    ok 9 - AC-5: Zeitzone im Preview-Template (nicht nur API-Call)
+      ---
+      duration_ms: 0.224658
+      type: 'test'
+      ...
+    1..9
+ok 1 - Issue \#452 — Step2Orte Smart-Import Vervollständigung
+  ---
+  duration_ms: 2.4615
+  type: 'suite'
+  ...
+1..1
+# tests 9
+# suites 1
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 89.085019
