@@ -216,9 +216,17 @@ def _serialize_summary(summary: SegmentWeatherSummary) -> dict:
 
 
 def _deserialize_summary(data: dict) -> SegmentWeatherSummary:
-    """Deserialize dict to SegmentWeatherSummary, reconstructing Enums."""
+    """Deserialize dict to SegmentWeatherSummary, reconstructing Enums.
+
+    Unknown keys (e.g. legacy field names from old snapshots) are silently
+    ignored to keep deserialization forward- and backward-compatible.
+    """
+    import dataclasses
+    known_fields = {f.name for f in dataclasses.fields(SegmentWeatherSummary)}
     kwargs = {}
     for key, value in data.items():
+        if key not in known_fields:
+            continue
         if key in _ENUM_FIELDS and isinstance(value, str):
             kwargs[key] = _ENUM_FIELDS[key](value)
         else:

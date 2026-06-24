@@ -179,9 +179,10 @@ def test_ac1_briefing_announced_rain_suppresses_radar_alert():
         trip_id = f"tdd-818-ac1-{uuid.uuid4().hex[:6]}"
         _save_trip_direct(_make_active_trip(trip_id), uid)
 
-        # Briefing: 1.2 mm für aktuelle UTC-Stunde (angekündigt, nicht überraschend)
-        now_h = datetime.now(timezone.utc).hour
-        _write_snapshot(uid, trip_id, segment_id=1, hourly_precip={now_h: 1.2})
+        # Briefing: 1.2 mm für die Onset-UTC-Stunde (onset = now+5min aus _wet_frames)
+        # onset_h statt now_h vermeidet Race Condition bei XX:55-XX:59 UTC.
+        onset_h = (datetime.now(timezone.utc) + timedelta(minutes=5)).hour
+        _write_snapshot(uid, trip_id, segment_id=1, hourly_precip={onset_h: 1.2})
 
         captured: list = []
         svc = TripAlertService(
@@ -193,7 +194,7 @@ def test_ac1_briefing_announced_rain_suppresses_radar_alert():
         count = svc.check_radar_alerts()
 
         assert count == 0, (
-            f"AC-1: Briefing hatte 1.2 mm Regen für Stunde {now_h} UTC. "
+            f"AC-1: Briefing hatte 1.2 mm Regen für Stunde {onset_h} UTC. "
             f"Kein Alert erwartet (Regen angekündigt), aber count={count}. "
             f"RED: _briefing_precip_for_onset noch nicht implementiert."
         )

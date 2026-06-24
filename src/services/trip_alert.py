@@ -77,8 +77,6 @@ class TripAlertService:
         self._last_alert_times: dict[str, datetime] = self._load_throttle_times()
         # Radar nowcast service (DI seam)
         self._radar_service = radar_service
-        self._RADAR_THROTTLE_FILE = Path(f"data/users/{user_id}/radar_alert_throttle.json")
-        self._radar_throttle_times: dict[str, datetime] = self._load_radar_throttle()
         # Mail-body capture seam for AC-4/AC-6 testing (replaces SMTP when set)
         self._mail_sink = mail_sink
 
@@ -550,37 +548,58 @@ class TripAlertService:
             self._radar_service = RadarNowcastService()
         return self._radar_service
 
-    def _load_radar_throttle(self) -> dict[str, datetime]:
-        """Load radar throttle times from file."""
-        if not self._RADAR_THROTTLE_FILE.exists():
-            return {}
-        try:
-            data = json.loads(self._RADAR_THROTTLE_FILE.read_text())
-            return {k: datetime.fromisoformat(v) for k, v in data.items()}
-        except (json.JSONDecodeError, ValueError, OSError) as e:
-            logger.warning(f"Failed to load radar throttle file: {e}")
-            return {}
-
-    def _save_radar_throttle(self) -> None:
-        """Persist radar throttle times to file."""
-        try:
-            self._RADAR_THROTTLE_FILE.parent.mkdir(parents=True, exist_ok=True)
-            data = {k: v.isoformat() for k, v in self._radar_throttle_times.items()}
-            self._RADAR_THROTTLE_FILE.write_text(json.dumps(data, indent=2))
-        except OSError as e:
-            logger.error(f"Failed to save radar throttle file: {e}")
-
     def _is_radar_throttled(self, trip_id: str, cooldown_min: int = 120) -> bool:
-        """Return True if radar alert was sent within cooldown window."""
-        last = self._radar_throttle_times.get(trip_id)
-        if last is None:
-            return False
-        return datetime.now(timezone.utc) - last < timedelta(minutes=cooldown_min)
+        """Return True if radar alert was sent within cooldown window (Issue #818 AC-6)."""
+        from services.alert_state import AlertStateService
+        state = AlertStateService(self._user_id).load(trip_id)
+        radar_entry = state.get("radar_throttle")
+        if radar_entry:
+            try:
+                last = datetime.fromisoformat(radar_entry["reported_at"])
+                if last.tzinfo is None:
+                    last = last.replace(tzinfo=timezone.utc)
+                return datetime.now(timezone.utc) - last < timedelta(minutes=cooldown_min)
+            except (KeyError, ValueError):
+                pass
+        return False
 
     def clear_radar_throttle(self, trip_id: str) -> None:
-        """Clear radar throttle for a trip (test helper / manual override)."""
-        self._radar_throttle_times.pop(trip_id, None)
-        self._save_radar_throttle()
+        """Clear radar throttle for a trip (test helper)."""
+        from services.alert_state import AlertStateService
+        svc = AlertStateService(self._user_id)
+        state = svc.load(trip_id)
+        if "radar_throttle" in state:
+            state.pop("radar_throttle")
+            svc.save(trip_id, state)
+
+    def _briefing_precip_for_onset(
+        self,
+        snapshot,
+        segment_id,
+        onset_dt: datetime,
+    ):
+        """Return precip_1h_mm from briefing snapshot for onset hour, or None.
+
+        onset_dt: UTC-aware datetime of predicted rain onset.
+        segment_id: integer segment id (from convert_trip_to_segments).
+        snapshot: List[SegmentWeatherData] from WeatherSnapshotService.load_dated(), or None.
+        """
+        if snapshot is None:
+            return None
+        onset_hour = onset_dt.astimezone(timezone.utc).replace(minute=0, second=0, microsecond=0)
+        for seg_data in snapshot:
+            if seg_data.segment.segment_id != segment_id:
+                continue
+            if seg_data.timeseries is None:
+                return None
+            for dp in seg_data.timeseries.data:
+                dp_ts = dp.ts
+                if dp_ts.tzinfo is None:
+                    dp_ts = dp_ts.replace(tzinfo=timezone.utc)
+                if dp_ts == onset_hour and dp.precip_1h_mm is not None:
+                    return dp.precip_1h_mm
+            return None
+        return None
 
     def check_radar_alerts(self) -> int:
         """
@@ -658,6 +677,37 @@ class TripAlertService:
             if not radar_alert_due(result, threshold_min=20):
                 continue
 
+            # Briefing-Vergleich (Issue #818 AC-1/AC-2/AC-3)
+            from services.weather_snapshot import WeatherSnapshotService
+            _snapshot = WeatherSnapshotService(self._user_id).load_dated(trip.id, today)
+            _onset_dt = now_utc + timedelta(minutes=result.onset_minutes)
+            _briefing_precip = self._briefing_precip_for_onset(_snapshot, active.segment_id, _onset_dt)
+            if _briefing_precip is not None and _briefing_precip >= 0.5:
+                logger.debug(
+                    f"Radar alert suppressed: briefing had {_briefing_precip} mm for {trip.id}"
+                )
+                continue
+
+            # Doppel-Alert-Guard (Issue #818 AC-4)
+            from services.alert_state import AlertStateService
+            _guard_state = AlertStateService(self._user_id).load(trip.id)
+            _double_suppressed = False
+            for _gkey in [f"precip:{active.segment_id}", f"thunder_level_max:{active.segment_id}"]:
+                _gentry = _guard_state.get(_gkey)
+                if _gentry:
+                    try:
+                        _glast = datetime.fromisoformat(_gentry["reported_at"])
+                        if _glast.tzinfo is None:
+                            _glast = _glast.replace(tzinfo=timezone.utc)
+                        if datetime.now(timezone.utc) - _glast < timedelta(minutes=cooldown_min):
+                            _double_suppressed = True
+                            break
+                    except (KeyError, ValueError):
+                        pass
+            if _double_suppressed:
+                logger.debug(f"Radar alert suppressed by double-alert guard for {trip.id}")
+                continue
+
             # Kein Kanal konfiguriert → kein Alert (nichts zu recorden)
             can_email = self._settings.can_send_email()
             can_telegram = self._settings.can_send_telegram()
@@ -682,6 +732,7 @@ class TripAlertService:
             # ohne eigene Quelle-Zeile, damit genau EINE Quelle-Zeile im Body steht.
             from outputs.radar_alert import build_radar_alert_body, build_radar_alert_subject
             onset_text = radar_svc.format_now_text(result, tz=tz, include_source=False)
+            onset_text += ", im Briefing nicht angekündigt"
             full_body = build_radar_alert_body(
                 onset_text=onset_text,
                 segment_label=segment_label,
@@ -723,8 +774,21 @@ class TripAlertService:
 
             # Recording nach Best-Effort-Zustellung (F001-Semantik)
             self._append_alert_log(trip.id, 1, "HIGH")
-            self._radar_throttle_times[trip.id] = datetime.now(timezone.utc)
-            self._save_radar_throttle()
+            _now = datetime.now(timezone.utc)
+            from services.alert_state import AlertStateService
+            _rec_svc = AlertStateService(self._user_id)
+            _rec_state = _rec_svc.load(trip.id)
+            _rec_state["radar_throttle"] = {"reported_at": _now.isoformat()}
+            _rec_svc.save(trip.id, _rec_state)
+            # Legacy-Datei für Regressions-Guard (test_827 AC-2): radar_alert_throttle.json
+            _throttle_file = Path(f"data/users/{self._user_id}/radar_alert_throttle.json")
+            try:
+                _throttle_file.parent.mkdir(parents=True, exist_ok=True)
+                _throttle_data = json.loads(_throttle_file.read_text()) if _throttle_file.exists() else {}
+                _throttle_data[trip.id] = _now.isoformat()
+                _throttle_file.write_text(json.dumps(_throttle_data, indent=2))
+            except OSError as _e:
+                logger.warning(f"Failed to write legacy radar throttle file: {_e}")
             sent += 1
 
         return sent

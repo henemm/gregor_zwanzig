@@ -138,9 +138,11 @@ def test_ac1_no_recording_when_all_channels_disabled():
             "AC-1: mail_sink wurde aufgerufen, obwohl send_email=False"
         )
 
-        # trip_id darf nicht im Throttle-Dict landen
-        assert trip_id not in svc._radar_throttle_times, (
-            f"AC-1: trip_id wurde in _radar_throttle_times eingetragen, "
+        # alert_state['radar_throttle'] darf nicht geschrieben werden
+        from services.alert_state import AlertStateService
+        state = AlertStateService(uid).load(trip_id)
+        assert "radar_throttle" not in state, (
+            f"AC-1: alert_state['radar_throttle'] wurde eingetragen, "
             f"obwohl alle Kanäle deaktiviert (Issue #827)"
         )
 
