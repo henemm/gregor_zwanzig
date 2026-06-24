@@ -167,9 +167,6 @@
 					{daysLabel}
 				</span>
 				<TripStatusBadge {trip} {now} />
-				{#if saveController}
-					<SaveIndicator controller={saveController} />
-				{/if}
 			</div>
 
 			<div class="meta-line" data-testid="trip-detail-meta">
@@ -192,6 +189,11 @@
 		</div>
 	</div>
 
+	<!-- Issue #880: SaveIndicator als fixes Overlay (position:fixed) — außerhalb der
+	     status-line, damit es seitenbreit unten rechts erscheint statt inline. -->
+	{#if saveController}
+		<SaveIndicator controller={saveController} />
+	{/if}
 </header>
 
 <style>

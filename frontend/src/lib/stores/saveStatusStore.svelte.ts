@@ -17,6 +17,8 @@ export function extractMessage(e: unknown): string {
 export class SaveStatus {
 	state = $state<SaveState>('idle');
 	error = $state<string | null>(null);
+	// Issue #880: Zeitpunkt des letzten erfolgreichen Speicherns (HH:MM-Anzeige im Overlay).
+	savedAt: Date | null = $state(null);
 
 	// Debounce-Internals
 	private _timer: ReturnType<typeof setTimeout> | null = null;
@@ -28,6 +30,7 @@ export class SaveStatus {
 	}
 
 	setSaved(): void {
+		this.savedAt = new Date();
 		this.state = 'idle';
 		this.error = null;
 	}

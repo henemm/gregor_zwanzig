@@ -265,8 +265,7 @@
 			{#if isEdit}
 				<!-- Aktionsleiste im Edit-Modus (JSX Z. 657-664) -->
 				<div style:display="flex" style:gap="8px" style:align-items="center">
-					<!-- Issue #758: SaveIndicator ersetzt dirty-Pill -->
-					<SaveIndicator controller={compareSaveCtl} />
+					<!-- Issue #880: SaveIndicator ist jetzt fixes Overlay am Komponenten-Ende. -->
 					<!-- Status-Dot (AC-6): 7×7px, Farbe laut JSX Z. 660 -->
 					<span
 						data-testid="compare-editor-status-dot"
@@ -741,6 +740,12 @@
 		</div>
 	{/each}
 </Sheet>
+
+<!-- Issue #880: SaveIndicator als fixes Overlay (position:fixed) — außerhalb des
+     Editor-Kopfs, damit es seitenbreit unten rechts erscheint statt inline. -->
+{#if isEdit}
+	<SaveIndicator controller={compareSaveCtl} />
+{/if}
 </div>
 
 <!-- ConfirmDialog: Änderungen verwerfen (AC-4) -->

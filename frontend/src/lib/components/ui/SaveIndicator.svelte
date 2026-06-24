@@ -8,6 +8,13 @@
 		controller: SaveStatus;
 	}
 	let { controller }: Props = $props();
+
+	// Issue #880: SSR-sichere HH:MM-Formatierung (keine Locale-abhängigen Date-Methoden).
+	function formatTime(d: Date): string {
+		const h = d.getHours();
+		const m = d.getMinutes();
+		return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+	}
 </script>
 
 <span
@@ -22,6 +29,9 @@
 	{#if controller.state === 'idle'}
 		<span class="save-indicator__icon" aria-hidden="true">✓</span>
 		<span>Gespeichert</span>
+		{#if controller.savedAt}
+			<span class="save-time">{formatTime(controller.savedAt)}</span>
+		{/if}
 	{:else if controller.state === 'dirty'}
 		<span class="save-indicator__icon" aria-hidden="true">●</span>
 		<span>Nicht gespeichert</span>
@@ -35,7 +45,12 @@
 </span>
 
 <style>
+	/* Issue #880: fixes Overlay unten rechts statt inline in Statuszeile. */
 	.save-indicator {
+		position: fixed;
+		bottom: 16px;
+		right: 16px;
+		z-index: 40;
 		display: inline-flex;
 		align-items: center;
 		gap: 5px;
@@ -47,10 +62,30 @@
 		transition: background 200ms, color 200ms;
 		white-space: nowrap;
 		font-weight: 500;
+		opacity: 1;
 	}
+
+	/* Mobile: über BottomNav (64px Höhe + safe-area). */
+	@media (max-width: 899px) {
+		.save-indicator {
+			bottom: calc(64px + env(safe-area-inset-bottom) + 8px);
+		}
+	}
+
 	.save-indicator--idle {
 		color: var(--g-good, #2e7d32);
 		background: rgba(46, 125, 50, 0.08);
+		/* Issue #880: Idle-Dimming nach 3s Inaktivität — Opacity sinkt auf 0.5,
+		   nie display:none/visibility:hidden (Barrierefreiheit). */
+		animation: gz-save-fade 200ms ease-out 3s forwards;
+	}
+	@keyframes gz-save-fade {
+		to { opacity: 0.5; }
+	}
+	.save-time {
+		color: var(--g-ink-3, #6b6b68);
+		font-weight: 400;
+		opacity: 0.85;
 	}
 	.save-indicator--dirty {
 		color: var(--g-warn, #b87800);
@@ -60,9 +95,12 @@
 		color: var(--g-ink-3, #6b6b68);
 		background: var(--g-surface-2, #f0ede8);
 	}
+	/* Fehler-Zustand: keine Animation, opacity bleibt dauerhaft 1 (AC-4). */
 	.save-indicator--error {
 		color: var(--g-danger, #b34a2a);
 		background: rgba(179, 74, 42, 0.09);
+		animation: none;
+		opacity: 1;
 	}
 
 	.save-indicator__icon {
