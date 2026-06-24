@@ -4,71 +4,13 @@
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Btn } from '$lib/components/atoms';
 	import { api } from '$lib/api.js';
-	import { onMount } from 'svelte';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 	import CheckIcon from '@lucide/svelte/icons/check';
 	import XIcon from '@lucide/svelte/icons/x';
 	import type { MetricPreset } from '$lib/types';
 	import { metricCountLabel, showDefaultBadge, isValidRename, applyRename, removePreset, isEmpty } from '$lib/utils/presetCardHelpers';
-	import { isWebAuthnSupported, registerPasskey, deletePasskey } from '$lib/passkey';
-
 	let { data } = $props();
-
-	// Issue #450 — Passkey-Verwaltung
-	type PasskeyEntry = { id: string; label?: string; created_at: string; last_used_at?: string; authenticator_name?: string };
-	let passkeys = $state<PasskeyEntry[]>(data.profile?.passkeys ?? []);
-	let webAuthnSupported = $state(false);
-	let newPasskeyLabel = $state('');
-	let passkeyMsg = $state<string | null>(null);
-	let passkeyErr = $state<string | null>(null);
-	let passkeyBusy = $state(false);
-
-	onMount(() => {
-		webAuthnSupported = isWebAuthnSupported();
-	});
-
-	async function refreshPasskeys() {
-		try {
-			const profile = await api.get<{ passkeys?: PasskeyEntry[] }>('/api/auth/profile');
-			passkeys = profile?.passkeys ?? [];
-		} catch {
-			// keep stale list — UI shows a hint via the error message
-		}
-	}
-
-	async function addPasskey() {
-		passkeyMsg = null;
-		passkeyErr = null;
-		passkeyBusy = true;
-		try {
-			await registerPasskey(newPasskeyLabel.trim());
-			newPasskeyLabel = '';
-			passkeyMsg = 'Passkey hinzugefügt.';
-			await refreshPasskeys();
-			setTimeout(() => (passkeyMsg = null), 4000);
-		} catch (e: unknown) {
-			const err = e as { name?: string };
-			passkeyErr = err?.name === 'NotAllowedError'
-				? 'Vorgang abgebrochen.'
-				: 'Passkey konnte nicht hinzugefügt werden.';
-		} finally {
-			passkeyBusy = false;
-		}
-	}
-
-	async function removePasskey(id: string) {
-		passkeyMsg = null;
-		passkeyErr = null;
-		try {
-			await deletePasskey(id);
-			passkeys = passkeys.filter((p) => p.id !== id);
-			passkeyMsg = 'Passkey entfernt.';
-			setTimeout(() => (passkeyMsg = null), 4000);
-		} catch {
-			passkeyErr = 'Passkey konnte nicht entfernt werden.';
-		}
-	}
 
 	let displayName = $state(data.profile?.display_name ?? '');
 	let mailTo = $state(data.profile?.mail_to ?? '');
@@ -452,84 +394,6 @@
 			>
 				Speichern
 			</button>
-		</Card.Content>
-	</Card.Root>
-
-	<!-- Issue #450 — Passkey-Verwaltung -->
-	<Card.Root data-testid="passkeys-card">
-		<Card.Header>
-			<Card.Title>Passkeys</Card.Title>
-			<Card.Description>
-				Sichere Anmeldung ohne Passwort — z.B. mit Face ID, Touch ID oder Windows Hello.
-			</Card.Description>
-		</Card.Header>
-		<Card.Content class="space-y-4">
-			{#if passkeyMsg}
-				<div class="rounded-md border border-green-300 bg-green-50 p-3 text-sm text-green-800">
-					{passkeyMsg}
-				</div>
-			{/if}
-			{#if passkeyErr}
-				<div class="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
-					{passkeyErr}
-				</div>
-			{/if}
-
-			{#if passkeys.length === 0}
-				<p class="text-sm text-muted-foreground" data-testid="passkeys-empty">
-					Noch kein Passkey hinterlegt.
-				</p>
-			{:else}
-				<div class="space-y-2">
-					{#each passkeys as pk (pk.id)}
-						<div data-testid="passkey-row-{pk.id}" class="flex items-center justify-between gap-2 text-sm">
-							<div class="flex flex-col">
-								<span class="font-medium">{[pk.authenticator_name, pk.label].filter(Boolean).join(' · ') || 'Unbenanntes Gerät'}</span>
-								<span class="text-xs text-muted-foreground">
-									registriert {formatDate(pk.created_at)}{#if pk.last_used_at} · zuletzt verwendet {formatDate(pk.last_used_at)}{/if}
-								</span>
-							</div>
-							<button
-								data-testid="passkey-remove-{pk.id}"
-								aria-label="Passkey entfernen"
-								onclick={() => removePasskey(pk.id)}
-								class="inline-flex h-9 w-9 items-center justify-center rounded-md text-destructive hover:bg-destructive/10"
-							>
-								<Trash2Icon class="h-4 w-4" />
-							</button>
-						</div>
-					{/each}
-				</div>
-			{/if}
-
-			{#if webAuthnSupported}
-				<div class="space-y-2 border-t pt-4">
-					<label for="newPasskeyLabel" class="text-sm font-medium">
-						Neuen Passkey hinzufügen
-					</label>
-					<div class="flex items-center gap-2">
-						<input
-							id="newPasskeyLabel"
-							type="text"
-							bind:value={newPasskeyLabel}
-							placeholder="z.B. MacBook, iPhone"
-							class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-						/>
-						<button
-							data-testid="passkey-add-btn"
-							disabled={passkeyBusy}
-							onclick={addPasskey}
-							class="inline-flex h-10 shrink-0 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground ring-offset-background hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-						>
-							{passkeyBusy ? '…' : 'Hinzufügen'}
-						</button>
-					</div>
-				</div>
-			{:else}
-				<p class="text-xs text-muted-foreground">
-					Dieses Gerät unterstützt keine Passkeys.
-				</p>
-			{/if}
 		</Card.Content>
 	</Card.Root>
 
