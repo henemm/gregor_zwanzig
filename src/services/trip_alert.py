@@ -682,7 +682,11 @@ class TripAlertService:
             _snapshot = WeatherSnapshotService(self._user_id).load_dated(trip.id, today)
             _onset_dt = now_utc + timedelta(minutes=result.onset_minutes)
             _briefing_precip = self._briefing_precip_for_onset(_snapshot, active.segment_id, _onset_dt)
-            if _briefing_precip is not None and _briefing_precip >= 0.5:
+            _briefing_announced = (_briefing_precip is not None and _briefing_precip >= 0.5)
+            # Sicherheits-Override (Slice 4, #883): konvektive Gefahr (Gewitter/Hagel)
+            # durchbricht die Briefing-Unterdrückung. Normaler (nicht-konvektiver)
+            # angekündigter Regen bleibt unterdrückt (reines Δ-Modell).
+            if _briefing_announced and not result.is_convective:
                 logger.debug(
                     f"Radar alert suppressed: briefing had {_briefing_precip} mm for {trip.id}"
                 )
@@ -732,7 +736,10 @@ class TripAlertService:
             # ohne eigene Quelle-Zeile, damit genau EINE Quelle-Zeile im Body steht.
             from outputs.radar_alert import build_radar_alert_body, build_radar_alert_subject
             onset_text = radar_svc.format_now_text(result, tz=tz, include_source=False)
-            onset_text += ", im Briefing nicht angekündigt"
+            if _briefing_announced:
+                onset_text += ", jetzt akut"
+            else:
+                onset_text += ", im Briefing nicht angekündigt"
             full_body = build_radar_alert_body(
                 onset_text=onset_text,
                 segment_label=segment_label,
