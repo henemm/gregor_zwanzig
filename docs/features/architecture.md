@@ -165,6 +165,13 @@ Manuelle Verwaltung ist nur noch im Notfall nötig — siehe `docs/runbooks/tele
    - **Mail-Body:** Betreff mit Etappen-Label + Body mit Onset-Zeit, Segment-Label und dynamischem Cooldown-Text (z.B. „höchstens einmal in 2 Stunden")
    - **Throttle-Semantik unverändert** (Issue #773): `radar_alert_throttle.json` + `alert_log` auch bei Best-Effort-Versandfehlern
 
+6. **Konvektiver Sicherheits-Override (Issue #883, Epic #813 Slice 4)**
+   - Der Radar-Wächter unterdrückt einen Alert normalerweise, wenn das Briefing den Regen für die Onset-Stunde bereits angekündigt hatte (`_briefing_precip >= 0.5` → kein Alert).
+   - **Ausnahme:** Ist der Nowcast konvektiv (`NowcastResult.is_convective=True`, d.h. Gewitter/Hagel), durchbricht dieser Override die Briefing-Unterdrückung — ein aufziehendes Gewitter ist ein anderer Entscheidungsmoment als eine Briefing-Zeile vom Morgen.
+   - Normaler Regen, Quiet Hours, Cooldown/Throttle und der Doppel-Alert-Guard bleiben weiterhin wirksam.
+   - **Mail-Wording fallabhängig:** `"jetzt akut"` (Override, Regen war angekündigt) vs. `"im Briefing nicht angekündigt"` (normaler Nicht-Ankündigungsfall).
+   - **Scope:** Eingriff ausschließlich in `check_radar_alerts()` (~2 Zeilen); `check_and_send_alerts` (Δ-Pfad) bleibt strikt unverändert.
+
 **Datenfluss:**
 ```
 check_and_send_alerts(trip, cached_weather)
@@ -188,7 +195,7 @@ _send_briefing_report() [trip_report_scheduler.py]
 
 **Mandantentrennung:** `AlertStateService(user_id=...)`, `TripAlertService(user_id=...)` laden/speichern strikt unter `data/users/{user_id}/alert_state/` resp. `data/users/{user_id}/radar_alert_throttle.json`.
 
-Siehe: `docs/features/issue-816-alert-deviation-core.md`, `docs/specs/modules/issue_816_alert_deviation_core.md`, `docs/specs/modules/issue_822_radar_nowcast_segment.md`
+Siehe: `docs/features/issue-816-alert-deviation-core.md`, `docs/specs/modules/issue_816_alert_deviation_core.md`, `docs/specs/modules/issue_822_radar_nowcast_segment.md`, `docs/specs/modules/issue_883_acute_danger_override.md`
 
 ---
 

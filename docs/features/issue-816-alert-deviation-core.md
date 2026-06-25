@@ -191,10 +191,11 @@ _send_briefing_report(trip, ...)
 - **Change Detection:** `src/services/weather_change_detection.py`
 - **Trip Report Scheduler:** `src/services/trip_report_scheduler.py`
 - **Alert Rendering:** `src/output/renderers/email/alert_compact.py`
-- **Epic #813:** Alert-Rework (3 Slices)
+- **Epic #813:** Alert-Rework (4 Slices)
   - Slice 1: Deviation-Kern (#816) ✓
-  - Slice 2: Tab-Delta-Justierung (Folge-Issue)
-  - Slice 3: Radar-Nowcast-Alerts (Folge-Issue)
+  - Slice 2: Tab-Delta-Justierung (#817) ✓
+  - Slice 3: Radar-Briefing-Integration (#818) ✓
+  - Slice 4: Konvektiver Sicherheits-Override (#883) ✓ — konvektive Nowcast-Gefahr (Gewitter/Hagel) durchbricht die Briefing-Unterdrückung; normaler Regen, Quiet Hours und Cooldown bleiben aktiv
 
 ---
 
