@@ -591,7 +591,7 @@ def render_html(
     day_comparison_html = ""
     if _day_comparison_line:
         day_comparison_html = (
-            f'<div class="section" style="padding:8px 16px">'
+            f'<div class="section" style="padding:8px 20px">'
             f'<div style="background:{G_BOX_INFO_BG};border-left:4px solid {G_ACCENT};'
             f'padding:10px 12px;border-radius:4px">'
             f'<p style="margin:0;font-size:15px;font-weight:600;color:{G_INK};'
