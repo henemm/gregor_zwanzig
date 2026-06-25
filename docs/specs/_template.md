@@ -66,6 +66,11 @@ tags: []
 
 - [Any limitations or edge cases]
 
+## Architektur-Entscheidung (ADR)
+
+- **ADR-Nr.:** [ADR-NNNN oder "keine"]
+- **Rationale:** [kurz: warum diese Entscheidung bzw. warum keine noetig ist]
+
 ## Changelog
 
 - 2025-12-27: Initial spec created

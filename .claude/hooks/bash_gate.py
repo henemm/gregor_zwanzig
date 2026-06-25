@@ -261,6 +261,27 @@ def main():
                 if diff.stdout.strip():
                     block(f"BLOCKED: {req_file} has unstaged changes. Stage it first.")
 
+        # 5aa. ADR guard: Entscheidungsflaechen ohne ADR blockieren
+        try:
+            import importlib.util as _ilu
+            import pathlib as _pl
+            _ag_path = _pl.Path(__file__).parent / "adr_guard.py"
+            _ag_spec = _ilu.spec_from_file_location("adr_guard", _ag_path)
+            _ag_mod = _ilu.module_from_spec(_ag_spec)
+            _ag_spec.loader.exec_module(_ag_mod)
+            # F002: Commit-Message robust extrahieren.
+            # Statt nur -m/-message-Flags zu parsen, pruefen wir [no-adr] direkt im
+            # gesamten Kommando-String — das ist robuster gegen Quoting-Varianten
+            # (--message="…", --message '…', mehrere -m-Flags etc.) und verhindert
+            # false-blocks bei unguentigstem Quoting. Die Volltext-Suche liefert
+            # denselben Effekt wie das Zusammenfuegen aller -m-Werte.
+            _msg = command  # gesamten Befehl als "Nachricht" fuer [no-adr]-Check
+            _adr_err = _ag_mod.check(staged_list, _msg, config)
+            if _adr_err:
+                block(_adr_err)
+        except Exception:
+            pass  # fail-safe: ADR-Guard-Fehler blockieren Commit nicht hart
+
         # 5b. Rebase-Pflicht: Branch darf nicht hinter origin/main zurückliegen
         wf = _read_active_workflow()
         if wf:

@@ -365,6 +365,38 @@ def _validate_transition(data: dict, target: str) -> str | None:
             return "spec_file not set — run /write-spec first"
         if not data.get("spec_approved"):
             return "Spec not approved — user must say 'approved'"
+        # ADR-Pflichtfeld in Spec pruefen
+        # F001: Rueckwaertskompatibilitaet — Altspecs (created < 2026-06-25) sind
+        # grandgefathered und werden nicht geprueft (analog zum AC-N-Format-Gate).
+        spec_path = Path(data["spec_file"])
+        if spec_path.exists():
+            import re as _re
+            _spec_text_full = spec_path.read_text()
+            _created_match = _re.search(
+                r"^created:\s*(\d{4}-\d{2}-\d{2})", _spec_text_full, _re.MULTILINE
+            )
+            if _created_match:
+                _created_str = _created_match.group(1)
+                _is_new_spec = _created_str >= "2026-06-25"
+            else:
+                # Kein created-Feld → Altspec → grandfathered
+                _is_new_spec = False
+
+            if _is_new_spec:
+                spec_text = _spec_text_full
+                if "## Architektur-Entscheidung (ADR)" in spec_text:
+                    _adr_section = spec_text.split("## Architektur-Entscheidung (ADR)", 1)[1]
+                    # F004: Geklammerte Platzhalter-Texte entfernen bevor geprueft wird,
+                    # damit "[ADR-NNNN oder "keine"]" nicht als ausgefuellter Wert gilt.
+                    _adr_section_clean = _re.sub(r"\[[^\]]*\]", "", _adr_section)
+                    _has_adr = bool(_re.search(r"ADR-\d+", _adr_section_clean))
+                    _has_keine = bool(_re.search(r"\bkeine\b|\bnone\b", _adr_section_clean, _re.IGNORECASE))
+                    if not (_has_adr or _has_keine):
+                        return ("Spec ohne ausgefuelltes ADR-Feld -- "
+                                "'## Architektur-Entscheidung (ADR)' (ADR-Nr. oder 'keine')")
+                else:
+                    return ("Spec ohne ausgefuelltes ADR-Feld -- "
+                            "'## Architektur-Entscheidung (ADR)' (ADR-Nr. oder 'keine')")
 
     if tgt_idx >= PHASES.index("phase6_implement"):
         red_artifacts = [a for a in data.get("test_artifacts", [])
