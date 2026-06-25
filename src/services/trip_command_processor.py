@@ -70,11 +70,10 @@ class CommandResult:
 
 _COMMAND_PATTERN = re.compile(r"^###\s+(\S+?)(?:[:\s]\s*(.+))?$")
 
-_VALID_COMMANDS = {"ruhetag", "report", "startdatum", "abbruch", "status", "hilfe", "now", "weiter"}
+_VALID_COMMANDS = {"ruhetag", "report", "startdatum", "abbruch", "status", "hilfe", "now", "weiter", "pause", "skip"}
 
 # Bare-keyword mapping (case-insensitive): keyword → internal key
-# Kanalübergreifender Grundbefehlssatz (Issue #731): HEUTE/MORGEN/JETZT/GEWITTER/RUHETAG/STATUS/STOP/WEITER/HILFE
-# Entfernt: pause, skip, config
+# Kanalübergreifender Grundbefehlssatz (Issue #731): HEUTE/MORGEN/JETZT/GEWITTER/RUHETAG/STATUS/STOP/WEITER/HILFE/PAUSE/SKIP
 _BARE_KEYWORD_MAP = {
     "heute":    "heute",
     "morgen":   "morgen",
@@ -88,6 +87,8 @@ _BARE_KEYWORD_MAP = {
     "hilfe":    "hilfe",
     "help":     "hilfe",
     "glance":   "glance",
+    "pause":    "pause",
+    "skip":     "skip",
 }
 
 _PAUSE_DURATION_RE = re.compile(r"^(\d+)\s*([dh]?)$")
@@ -327,6 +328,10 @@ class TripCommandProcessor:
             return self._show_now(trip)
         elif key == "weiter":
             return self._resume_trip(trip, msg.user_id)
+        elif key == "pause":
+            return self._apply_pause(trip, value, msg.user_id)
+        elif key == "skip":
+            return self._apply_skip(trip, msg.user_id)
 
         # Should not reach here due to whitelist check above
         return CommandResult(
@@ -873,6 +878,8 @@ class TripCommandProcessor:
             "  GEWITTER              – Gewittergefahr heutige Etappe\n"
             "  RUHETAG [N]           – Etappen um N Tage verschieben (Standard: 1)\n"
             "  STATUS                – Heute und kommende Etappen\n"
+            "  PAUSE [2d / 12h]      – Briefings für Dauer unterbrechen\n"
+            "  SKIP                  – Nächstes Briefing überspringen\n"
             "  STOP                  – Briefings dauerhaft deaktivieren\n"
             "  WEITER                – Briefings reaktivieren\n"
             "  HILFE                 – Diese Hilfe anzeigen"

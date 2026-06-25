@@ -39,6 +39,8 @@ GR20 E3: trocken, ⚡ möglich
   GEWITTER             – Gewittergefahr heutige Etappe
   RUHETAG [N]          – Etappen um N Tage verschieben
   STATUS               – Heute und kommende Etappen
+  PAUSE [2d / 12h]     – Briefings für Dauer unterbrechen
+  SKIP                 – Nächstes Briefing überspringen
   STOP / WEITER        – Briefings deaktivieren / reaktivieren
   HILFE / HELP         – Alle Befehle anzeigen
 

@@ -32,6 +32,8 @@ Arlberg: -12–-4°C, 🌥️, trocken, starker Wind 45 km/h, Böen bis 110 km/h
   GEWITTER             – Gewittergefahr heutige Etappe
   RUHETAG [N]          – Etappen um N Tage verschieben
   STATUS               – Heute und kommende Etappen
+  PAUSE [2d / 12h]     – Briefings für Dauer unterbrechen
+  SKIP                 – Nächstes Briefing überspringen
   STOP / WEITER        – Briefings deaktivieren / reaktivieren
   HILFE / HELP         – Alle Befehle anzeigen
 

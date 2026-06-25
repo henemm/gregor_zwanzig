@@ -32,6 +32,8 @@ GR221 Tag1: 8–15°C, 🌥️, trocken, mäßiger Wind 25 km/h, Böen bis 55 km
   GEWITTER             – Gewittergefahr heutige Etappe
   RUHETAG [N]          – Etappen um N Tage verschieben
   STATUS               – Heute und kommende Etappen
+  PAUSE [2d / 12h]     – Briefings für Dauer unterbrechen
+  SKIP                 – Nächstes Briefing überspringen
   STOP / WEITER        – Briefings deaktivieren / reaktivieren
   HILFE / HELP         – Alle Befehle anzeigen
 

@@ -259,6 +259,8 @@ def render_plain(
     lines.append("  GEWITTER             – Gewittergefahr heutige Etappe")
     lines.append("  RUHETAG [N]          – Etappen um N Tage verschieben")
     lines.append("  STATUS               – Heute und kommende Etappen")
+    lines.append("  PAUSE [2d / 12h]     – Briefings für Dauer unterbrechen")
+    lines.append("  SKIP                 – Nächstes Briefing überspringen")
     lines.append("  STOP / WEITER        – Briefings deaktivieren / reaktivieren")
     lines.append("  HILFE / HELP         – Alle Befehle anzeigen")
     lines.append("")

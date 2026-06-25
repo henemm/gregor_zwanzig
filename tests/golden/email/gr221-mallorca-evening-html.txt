@@ -66,6 +66,8 @@
                 <b style="color:#ffffff">GEWITTER</b> &mdash; Gewittergefahr heutige Etappe<br>
                 <b style="color:#ffffff">RUHETAG [N]</b> &mdash; Etappen um N Tage verschieben<br>
                 <b style="color:#ffffff">STATUS</b> &mdash; Heute und kommende Etappen<br>
+                <b style="color:#ffffff">PAUSE [2d / 12h]</b> &mdash; Briefings für Dauer unterbrechen<br>
+                <b style="color:#ffffff">SKIP</b> &mdash; Nächstes Briefing überspringen<br>
                 <b style="color:#ffffff">STOP</b> &mdash; Briefings dauerhaft deaktivieren<br>
                 <b style="color:#ffffff">WEITER</b> &mdash; Briefings reaktivieren<br>
                 <b style="color:#ffffff">HILFE</b> / <b style="color:#ffffff">HELP</b> &mdash; Alle Befehle anzeigen

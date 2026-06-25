@@ -43,8 +43,8 @@ _TRIP_NAME = "Issue731 Unified"
 
 # Keywords, die der neue Befehlssatz garantiert enthalten MUSS
 _NEW_KEYWORDS = ["HEUTE", "MORGEN", "JETZT", "GEWITTER", "WEITER"]
-# Keywords, die ENTFERNT sein müssen
-_REMOVED_KEYWORDS = ["PAUSE", "SKIP", "CONFIG"]
+# Keywords, die ENTFERNT sein müssen (PAUSE/SKIP sind seit #882 wieder aktiv)
+_REMOVED_KEYWORDS = ["CONFIG"]
 
 
 # ---------------------------------------------------------------------------
@@ -290,19 +290,21 @@ class TestAC6StatusUpcomingOnly:
 # ===========================================================================
 
 class TestAC7RemovedCommands:
-    def test_pause_no_longer_mutates(self):
+    def test_pause_sets_paused_until(self):
+        # Since #882: PAUSE is re-enabled and must set paused_until
         save_trip(_make_trip(), user_id=_USER_A)
         TripCommandProcessor().process(_msg("PAUSE 12h", _USER_A))
         loaded = _load_trip(_USER_A)
-        assert loaded.report_config.paused_until is None, \
-            "PAUSE darf paused_until NICHT mehr setzen (AC-7)"
+        assert loaded.report_config.paused_until is not None, \
+            "PAUSE muss paused_until setzen (seit #882)"
 
-    def test_skip_no_longer_mutates(self):
+    def test_skip_sets_skip_next(self):
+        # Since #882: SKIP is re-enabled and must set skip_next=True
         save_trip(_make_trip(), user_id=_USER_A)
         TripCommandProcessor().process(_msg("SKIP", _USER_A))
         loaded = _load_trip(_USER_A)
-        assert not getattr(loaded.report_config, "skip_next", False), \
-            "SKIP darf skip_next NICHT mehr setzen (AC-7)"
+        assert getattr(loaded.report_config, "skip_next", False), \
+            "SKIP muss skip_next=True setzen (seit #882)"
 
     def test_config_treated_as_unknown(self):
         save_trip(_make_trip(), user_id=_USER_A)
