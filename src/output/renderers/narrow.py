@@ -266,6 +266,44 @@ def _temp_fallback(agg: SegmentWeatherSummary) -> str:
     return "?°C"
 
 
+def _col_label_str(metric_id: str) -> str:
+    try:
+        return get_metric(metric_id).col_label
+    except KeyError:
+        return metric_id[:4].upper()
+
+
+_TG_HEADER_METRIC_IDS = frozenset({"temperature", "wind", "wind_direction"})
+
+
+def _tg_extra_detail_line(
+    layout,
+    rows: list[dict],
+    fkeys: set[str],
+) -> Optional[str]:
+    """Config-gesteuerte Detail-Zeile für Telegram mit col_label."""
+    extra = [
+        mid for mid in layout.table_columns + layout.detail_metrics
+        if mid not in _TG_HEADER_METRIC_IDS
+    ]
+    if not extra or not rows:
+        return None
+    row = rows[0]
+    parts: list[str] = []
+    for mid in extra:
+        val = _cell(mid, row, fkeys)
+        if val and val != "–":
+            try:
+                unit = get_metric(mid).unit or ""
+            except KeyError:
+                unit = ""
+            sep = "" if unit == "%" else (" " if unit else "")
+            parts.append(f"{_col_label_str(mid)} {val}{sep}{unit}")
+    if not parts:
+        return None
+    return " · ".join(parts)
+
+
 def _tg_day_footer(segments: list[SegmentWeatherData]) -> Optional[str]:
     """Fußzeile mit Tageswerten (AC-6): ⚡ kein|MED|HIGH · Sicht gut|… · 0°C-Grenze N m."""
     max_thunder_sev = 0
@@ -419,6 +457,9 @@ def render_narrow(
             # Alpendaten (~46 Zeichen) ungeteilt bleiben; pathologisch lange Zeilen
             # werden trotzdem als Sicherheitsnetz umbrochen.
             lines.extend(_wrap(_tg_segment_line(seg_data, rows, tz), _TG_PROSE_WIDTH))
+            detail = _tg_extra_detail_line(layout, rows, fkeys)
+            if detail:
+                lines.append(detail)
         else:
             start = local_fmt(seg.start_time, tz)
             end = local_fmt(seg.end_time, tz)

@@ -71,7 +71,7 @@ Name-Truncation: bei >10 Zeichen abschneiden, Umlaute zuerst ersetzen.
 | `N{temp}` / `N-` | Nacht-Min °C, ganzzahlig — Wert AM letzten GEO-Punkt der Etappe (kein Min über mehrere Punkte) | `temp_min_c` aus DAILY_FORECAST des letzten Etappenpunkts | `N9` |
 | `D{temp}` / `D-` | Tag-Max °C, ganzzahlig | Alle GEO-Punkte der Etappe, MAX über `temp_max_c` | `D24` |
 | `R{mm}@{h}({max}@{h})` / `R-` | Regen Threshold@Stunde + Peak | Hourly `precip_1h_mm`, Threshold aus `config.rain_amount_threshold` | `R0.2@6(1.4@16)` |
-| `PR{p}%@{h}({max}%@{h})` / `PR-` | Regenwahrscheinlichkeit Threshold + Peak | Hourly `pop_pct`, Threshold aus `config.rain_probability_threshold` | `PR20%@11(100%@17)` |
+| `PR{p}%@{h}({max}%@{h})` / `PR-` | Regenwahrscheinlichkeit Threshold + Peak (Issue #887: auch SMS via `pop_hourly` aus `agg.pop_max_pct` synthetisiert) | Hourly `pop_pct`, Threshold aus `config.rain_probability_threshold` | `PR20%@11(100%@17)` |
 | `W{v}@{h}({max}@{h})` / `W-` | Wind km/h Threshold + Peak | Hourly `wind10m_kmh`, Threshold aus `config.wind_speed_threshold` | `W10@11(15@17)` |
 | `G{v}@{h}({max}@{h})` / `G-` | Böen km/h Threshold + Peak | Hourly `gust_kmh`, Threshold aus `config.wind_gust_threshold` | `G20@11(30@17)` |
 | `TH:{level}@{h}({max}@{h})` / `TH:-` | Gewitter-Forecast heute (L/M/H) | Hourly `thunder_level` | `TH:M@16(H@18)` |
@@ -350,6 +350,7 @@ Implementationen, die SMS-Text und E-Mail-Subject getrennt erzeugen, sind als **
 | 2.2 | 2026-05-31 | WL-Token für Großwetterlage (Issue #122) — `+`/`~`/`-` nach `C`, vor `HR:`; Truncation NACH `C` aber VOR `PR` |
 | 2.3 | 2026-05-31 | WL-Token aus SMS entfernt (Issue #479) — `C+/C~/C?` deckt den Stabilitäts-Use-Case ab; WL-Block bleibt nur in der E-Mail erhalten, jetzt aus `min(confidence_pct_min)` der Folge-Etappen abgeleitet statt aus Z500-Ensemble-API |
 | 2.4 | 2026-06-06 | Konfigurierbare Threshold pro Metrik (Issue #624) — `MetricConfig.sms_threshold` optional per Metrik in `display_config` (Trip-Editor), Fallback auf `DEFAULTS`; E-Mail-Tabelle bleibt separate Logik |
+| 2.5 | 2026-06-26 | SMS PR-Token-Befüllung (Issue #887) — `_segments_to_normalized_forecast()` in `sms_trip.py` erzeugt synthetisches `pop_hourly` aus `agg.pop_max_pct`, damit SMS-Token `PR{p}%` nicht mehr leer bleibt |
 
 **Quellen für v2.0:**
 - Vorgänger-Repo `henemm/weather_email_autobot`:

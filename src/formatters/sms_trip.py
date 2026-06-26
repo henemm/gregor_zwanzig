@@ -92,6 +92,7 @@ def _segments_to_normalized_forecast(
     rain_samples: list[HourlyValue] = []
     wind_samples: list[HourlyValue] = []
     gust_samples: list[HourlyValue] = []
+    pop_samples: list[HourlyValue] = []
     for seg in segments:
         agg = seg.aggregated
         # Bug #398: Synthetische Stunden-Token auf Ortszeit verankern.
@@ -102,6 +103,8 @@ def _segments_to_normalized_forecast(
             wind_samples.append(HourlyValue(hour, float(agg.wind_max_kmh)))
         if agg.gust_max_kmh is not None and agg.gust_max_kmh > 0:
             gust_samples.append(HourlyValue(hour, float(agg.gust_max_kmh)))
+        if agg.pop_max_pct is not None and agg.pop_max_pct > 0:
+            pop_samples.append(HourlyValue(hour, float(agg.pop_max_pct)))
 
     # Issue #121: worst-case daily confidence aggregation over segments.
     confs = [s.aggregated.confidence_pct_min for s in segments
@@ -112,6 +115,7 @@ def _segments_to_normalized_forecast(
         temp_min_c=day_min,
         temp_max_c=day_max,
         rain_hourly=tuple(rain_samples),
+        pop_hourly=tuple(pop_samples),
         wind_hourly=tuple(wind_samples),
         gust_hourly=tuple(gust_samples),
         confidence_pct_min=day_confidence,
