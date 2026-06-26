@@ -156,20 +156,23 @@ class TestAC2PillHtmlNeutralInfoPalette:
 # ─── AC-3: Antwort-Kommandos-Block im render_email() HTML-Output ─────────────
 
 class TestAC3AntwortKommandosBlockStyle:
-    """AC-3: Antwort-Kommandos-Block muss dunklen Footer-Stil haben."""
+    """AC-3: Antwort-Kommandos-Block hat hellen Stil (#fbfaf6) laut #884-Design."""
 
     def test_antwort_block_has_dark_background(self):
         """
         GIVEN: render_email() mit Minimal-Daten
         WHEN: HTML gerendert
-        THEN: Antwort-Kommandos-Block enthält background:#1d1c1a
+        THEN: Antwort-Kommandos-Block enthält background:#fbfaf6 (G_HEADER_BG, #884 design)
+
+        Note: #884 changed the Antwort-Kommandos-Block from dark (#1d1c1a) to light
+        (#fbfaf6, G_HEADER_BG). The dark background (#1d1c1a) moved to the footer.
         """
         html = _render_email_html()
         idx = html.find("Antwort-Kommandos")
         assert idx != -1, "Antwort-Kommandos nicht im HTML gefunden"
         block_context = html[max(0, idx - 300):idx + 300]
-        assert "background:#1d1c1a" in block_context, (
-            f"Erwartet background:#1d1c1a im Antwort-Block, nicht gefunden.\n"
+        assert "background:#fbfaf6" in block_context, (
+            f"Erwartet background:#fbfaf6 im Antwort-Block (#884 design, G_HEADER_BG), nicht gefunden.\n"
             f"Kontext: {block_context}"
         )
 

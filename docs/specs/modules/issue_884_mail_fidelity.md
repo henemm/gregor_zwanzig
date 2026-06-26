@@ -277,17 +277,21 @@ Hintergrund: transparent (ok), leicht warn-getönt wenn risk=watch (`rgba(194,65
 - Mobile: "Spalten ändern" entfällt
 - Alle als Plain Text ohne `href` (PO-Entscheidung — keine Deep-Link-URLs vorhanden)
 
+## Architektur-Entscheidung (ADR)
+
+keine — reiner Renderer-Fidelity-Fix, keine neuen Architektur-Entscheidungen
+
 ## Acceptance Criteria
 
 **AC-1:** Given eine gerenderte Briefing-HTML-Mail, When der Header betrachtet wird, Then enthält er eine `<table>`-Zweispaltenstruktur (links: Eyebrow `MORGEN-BRIEFING · {CODE}` in mono `#c45a2a` + Titel + Datum; rechts: `GREGOR ZWANZIG` + Tripname + Etappennummer) mit Hintergrund `#fbfaf6`, und darunter ein Stats-Grid mit 5 Kennzahlen (Distanz, Aufstieg, Abstieg, Max-Höhe, Segmente) mit `border-right:1px solid #e6e1d3` als Trennlinie.
 
 **AC-2:** Given eine gerenderte Briefing-Mail auf Mobile-Viewport (≤600px), When der Header betrachtet wird, Then zeigt das Stats-Grid 3 Spalten in Zeile 1 (Distanz · Aufstieg · Abstieg) und 2 Spalten in Zeile 2 (Max-Höhe · Segmente) ohne horizontalen Scroll.
 
-**AC-3:** Given eine gerenderte Briefing-Mail (Desktop), When die Stundentabelle betrachtet wird, Then enthält der `<thead>` zwei Zeilen: (1) Gruppen-Row (9px mono uppercase, Temp/Wind/Niederschlag/Sicht·UV/Höhe mit colspan) und (2) Einheiten-Row (11px, fontWeight 600). Datenzellen haben padding 8px 4px, mono, tabular-nums. Trennlinien sind `1px solid #f0ece1`.
+**AC-3:** ~~Zweistufiger Gruppen-Header (TEMP/WIND/NIEDERSCHLAG/Gw% etc.)~~ — aus Scope entfernt (PO-Entscheidung 2026-06-26: Spalten-Labels/-Kürzel sind kein Design-Scope).
 
 **AC-4:** Given eine gerenderte Briefing-Mail mit Stundenwert Wind=25 km/h (>20-Schwelle), When die Wind-Datenzelle betrachtet wird, Then ist sie `font-weight:700;color:#c2410c;`. Alle anderen nicht-kritischen Zellen sind `color:#1d1c1a;font-weight:500;`.
 
-**AC-5:** Given eine gerenderte Briefing-Mail auf Mobile-Viewport, When die Stundentabelle betrachtet wird, Then erscheint eine zweizeilige Stunden-Liste (`_render_mobile_hour_list`): Hauptzeile (Zeit · Glyph · Temp · gefühlte Temp · Risk-Dot) und Detailzeile (Wind · Regen · ggf. Gewitter · Sicht · UV · 0°-Linie). Kritische Werte sind fett + farbig. Kein horizontaler Scroll.
+**AC-5:** ~~Mobile EmailHourList zweizeilig (`_render_mobile_hour_list`)~~ — aus Scope entfernt (bricht #811-Mode-Matrix-Gate, da `format_modes`/`indicator_keys` ignoriert werden; separate Aufgabe nötig).
 
 **AC-6:** Given eine gerenderte Briefing-Mail mit Wetter-am-Ziel-Daten, When die Ziel-Sektion betrachtet wird, Then ist sie eine eigene abgesetzte Sektion mit bg `#fbfaf6`, `border-top:1px solid #e6e1d3`, accent-Eyebrow "ANKUNFT · WETTER AM ZIEL" (color `#c45a2a`), Zielname als Titel, und Datentabelle im gleichen Stil wie die Segment-Tabellen.
 

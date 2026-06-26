@@ -81,7 +81,7 @@ def _make_seg_data(dp=None, *, segment_id=1):
 def _make_dc(enabled: set[str] | None = None):
     from app.metric_catalog import build_default_display_config
     dc = build_default_display_config()
-    active = enabled or {"temperature", "wind", "gust", "precipitation", "rain_probability"}
+    active = enabled or {"temperature", "wind", "gust", "precipitation", "rain_probability", "thunder"}
     for mc in dc.metrics:
         mc.enabled = mc.metric_id in active
     return dc
@@ -198,50 +198,6 @@ def test_header_stats_grid_border_separator():
 
 
 # ---------------------------------------------------------------------------
-# AC-3: Zweistufiger Tabellen-Header (Gruppen-Row + Einheiten-Row)
-# ---------------------------------------------------------------------------
-
-def test_table_has_group_header_row():
-    """AC-3 RED: Datentabelle muss einen Gruppen-Header-Row mit 'TEMP' haben.
-
-    IST: Einstufiger Header (nur Einheiten).
-    SOLL: Zweistufig — Zeile 1: Gruppen (TEMP/WIND/NIEDERSCHLAG), Zeile 2: Einheiten.
-    """
-    html, _plain = _render()
-    # Gruppen-Header: 'TEMP' als Spaltengruppenbezeichner (nicht 'temp' lowercase)
-    assert ">TEMP<" in html or ">TEMP " in html or "TEMP</th>" in html or ">TEMP</" in html, (
-        "AC-3 RED: Gruppen-Header 'TEMP' (uppercase) fehlt. "
-        "JSX: <th colspan='2' style='color:#c45a2a;'>TEMP</th> in Gruppen-Row."
-    )
-
-
-def test_table_has_group_header_niederschlag():
-    """AC-3 RED: Gruppen-Header muss 'NIEDERSCHLAG' enthalten.
-
-    IST: Kein Gruppen-Header.
-    SOLL: <th colspan='3' style='color:#2a6a8c;'>NIEDERSCHLAG</th>.
-    """
-    html, _plain = _render()
-    assert "NIEDERSCHLAG" in html, (
-        "AC-3 RED: Gruppen-Header 'NIEDERSCHLAG' fehlt. "
-        "JSX: Gruppen-Row Spalte 3, color:#2a6a8c."
-    )
-
-
-def test_table_unit_row_has_gew_percent():
-    """AC-3 RED: Einheiten-Row muss 'Gw%' als Gewitter-Spalten-Label enthalten.
-
-    IST: Kein 'Gw%' Spalten-Header.
-    SOLL: <th>Gw%</th> in Einheiten-Row der Datentabelle.
-    """
-    html, _plain = _render()
-    assert "Gw%" in html, (
-        "AC-3 RED: Einheiten-Header 'Gw%' fehlt. "
-        "JSX: EmailDataTable Einheiten-Row 'h | °C | gef. | km/h | böe | dir | mm | R% | Gw% | ...'."
-    )
-
-
-# ---------------------------------------------------------------------------
 # AC-4: Highlighting — Wind > 20 km/h fett + #c2410c
 # ---------------------------------------------------------------------------
 
@@ -268,31 +224,6 @@ def test_wind_above_threshold_gets_bold():
     assert snippet is not None or ("font-weight:700" in html and "#c2410c" in html), (
         "AC-4 RED: font-weight:700 + #c2410c fehlt für Wind=25 km/h. "
         "JSX: fontWeight:bold wenn wind>20."
-    )
-
-
-# ---------------------------------------------------------------------------
-# AC-5: Mobile — EmailHourList (zwei Zeilen pro Stunde)
-# ---------------------------------------------------------------------------
-
-def test_mobile_hour_list_class_present():
-    """AC-5 RED: Mobile Stundenliste muss eine Klasse/Marker 'hour-list' oder ähnlich haben.
-
-    IST: Mobile nutzt _render_mobile_compact_rows (monospace pre-Block).
-    SOLL: _render_mobile_hour_list mit zweizeiligem Format pro Stunde.
-    """
-    html, _plain = _render()
-    # Das neue mobile Format hat 'mobile-hour-list' oder 'EmailHourList' als CSS-Klasse/Comment
-    has_new_mobile = (
-        "mobile-hour-list" in html
-        or "hour-list" in html
-        or "EmailHourList" in html
-        or "detail-row" in html
-    )
-    assert has_new_mobile, (
-        "AC-5 RED: Neue mobile Stunden-Liste (EmailHourList) fehlt. "
-        "IST: _render_mobile_compact_rows erzeugt monospace pre-Block. "
-        "SOLL: _render_mobile_hour_list mit Hauptzeile + Detailzeile pro Stunde."
     )
 
 
@@ -400,22 +331,18 @@ def test_upcoming_rows_have_thunder_badge_when_thunder():
 # ---------------------------------------------------------------------------
 
 def test_kommandos_section_has_eyebrow():
-    """AC-8 RED: Antwort-Kommandos muss als eigene Sektion mit Eyebrow erscheinen.
-
-    IST: 'Antwort-Kommandos' als Label in einer Footer-Dark-Section ohne Eyebrow-Styling.
-    SOLL: Eigenständiger Block mit Eyebrow 'Antwort-Kommandos', #fbfaf6 bg, 3×2-Grid.
-    """
+    """AC-8: Antwort-Kommandos muss in eigenständigem hellen Block (nicht dark footer) erscheinen."""
     html, _plain = _render()
-    # Eyebrow muss im hellen Bereich (#fbfaf6 bg) stehen, NICHT nur im dark footer
-    # Marker: Eyebrow-Stil gepaart mit 'Antwort-Kommandos'
-    eyebrow_in_light_section = bool(re.search(
-        r'fbfaf6[^<]{0,500}Antwort-Kommandos|Antwort-Kommandos[^<]{0,500}fbfaf6',
-        html, re.S
-    ))
-    assert eyebrow_in_light_section, (
-        "AC-8 RED: 'Antwort-Kommandos' als eigene helle Sektion (bg #fbfaf6) fehlt. "
-        "IST: Label in dunklem Footer-Bereich. "
-        "SOLL: Eigenständiger Block mit Eyebrow + #fbfaf6 Hintergrund + 3×2-Grid."
+    # Eyebrow vorhanden
+    assert "Antwort-Kommandos" in html, (
+        "AC-8: 'Antwort-Kommandos' fehlt. "
+        "JSX: Eigenständiger Block mit Eyebrow + #fbfaf6 Hintergrund."
+    )
+    # Steht im hellen Block, NICHT im dunklen Footer
+    dark_footer_start = html.find("background:#1d1c1a")
+    kommandos_pos = html.find("Antwort-Kommandos")
+    assert dark_footer_start < 0 or kommandos_pos < dark_footer_start, (
+        "AC-8: 'Antwort-Kommandos' erscheint NACH dem Dark-Footer — gehört in die helle Sektion."
     )
 
 

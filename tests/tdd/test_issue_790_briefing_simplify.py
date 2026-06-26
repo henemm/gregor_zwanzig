@@ -340,7 +340,10 @@ class TestAC7VortagOneLine:
         assert "Vortag-Vergleich" not in html, "alte Sektion noch da"
 
     def test_position_above_segments_html(self):
-        """Die Vortag-Zeile steht VOR den Stundentabellen (Segment-Köpfen)."""
+        """Die Vortag-Zeile steht VOR den Stundentabellen (Segment-Köpfen).
+
+        Note: #884 renamed segment headings from "Segment N" to "SEG N".
+        """
         today = [_seg_for_compare(1, temp_min_c=10.0, temp_max_c=20.0,
                                   wind_max_kmh=20.0, precip_sum_mm=1.0)]
         yday = [_seg_for_compare(1, temp_min_c=6.0, temp_max_c=15.0,
@@ -349,7 +352,8 @@ class TestAC7VortagOneLine:
         html = _render_html(_build_segments(), day_comparison=dc,
                             compact_summary="Wechselhaft.")
         pos_line = html.find("Vortag: heute")
-        pos_seg = html.find("Segment 1")
+        # #884: segment heading is now "SEG N" not "Segment N"
+        pos_seg = html.find("SEG 1")
         assert pos_line != -1 and pos_seg != -1
         assert pos_line < pos_seg, "Vortag-Zeile muss oben vor den Segmenten stehen"
 
@@ -397,11 +401,18 @@ class TestBug798EmptyMetricsHourTable:
         )
 
     def test_html_table_has_columns_when_metrics_empty(self):
-        """Bug #798: render_html mit leeren Metriken darf nicht nur 'Zeit'-Spalte liefern."""
+        """Bug #798: render_html mit leeren Metriken darf nicht nur 'Zeit'-Spalte liefern.
+
+        Note: #884 added header tables (stats-grid, two-column layout) before the data tables.
+        We search for the first data table with class="resp" (the hourly segment table).
+        """
         segs = _build_segments()
         dc = _empty_metrics_dc()
         html = _render_html(segs, dc=dc)
-        table_html = html[html.find('<table'):]
+        # Find first <table class="resp"> — that's the hourly data table
+        table_start = html.find('<table class="resp">')
+        assert table_start != -1, "Bug #798: Keine <table class=\"resp\"> im HTML gefunden"
+        table_html = html[table_start:]
         header_end = table_html.find('</tr>')
         header = table_html[:header_end]
         th_count = header.count('<th>')
@@ -438,12 +449,15 @@ class TestAC8RegressionPreserved:
         assert "Wetterlage: STABIL" in html
 
     def test_outlook_preserved_html(self):
+        # #884: Ausblick section heading changed from "Nächste Etappen" to "Ausblick · nächste 4 Tage"
         html = _render_html(_build_segments(), multi_day_trend=[_trend_stage()])
-        assert "Ausblick" in html and "Nächste Etappen" in html
+        assert "Ausblick" in html, "Ausblick section must be present"
+        # "Nächste Etappen" no longer used in #884 design; "Ausblick" is the new eyebrow
 
     def test_hourly_table_preserved_html(self):
+        # #884: segment heading changed from "Segment N" to "SEG N"
         html = _render_html(_build_segments())
-        assert "Segment 1" in html
+        assert "SEG 1" in html, "#884 design: segment heading is 'SEG 1' not 'Segment 1'"
 
     def test_thunder_forecast_preserved_html(self):
         from app.models import ThunderLevel

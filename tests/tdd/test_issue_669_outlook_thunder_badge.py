@@ -72,7 +72,11 @@ class TestThunderBadgeTimeWindow:
     """AC-7: Folge-Etappe mit Gewitter zeigt roter Badge mit Zeitfenster."""
 
     def test_issue669_thunder_badge_time_window(self):
-        """AC-7: MED@15(HIGH@16) → '⚡ Gewitter möglich 15:00–16:00' in HTML."""
+        """AC-7: MED@15(HIGH@16) → '⚡ Gewitter 15:00–16:00' in HTML.
+
+        Note: #884 design removed "möglich" from badge text. Badge is now
+        '⚡ Gewitter {zeit}' without "möglich".
+        """
         # MED at h15 (first), HIGH at h16 (peak)
         trend = [_trend_stage_with_hourly(
             weekday="Mi", name="Etappe 2",
@@ -81,10 +85,11 @@ class TestThunderBadgeTimeWindow:
         )]
         html = _render_html(trend)
 
-        # Badge-Text muss Zeitfenster enthalten
-        assert "⚡ Gewitter möglich 15:00" in html, (
-            f"Expected '⚡ Gewitter möglich 15:00' in HTML. GEWITTER-Spalte: "
-            f"{html[html.find('GEWITTER')-50:html.find('GEWITTER')+500] if 'GEWITTER' in html else 'GEWITTER not found'!r}"
+        # Badge-Text muss Zeitfenster enthalten (#884: kein "möglich" mehr)
+        assert "⚡ Gewitter 15:00" in html, (
+            f"Expected '⚡ Gewitter 15:00' in HTML (no 'möglich' per #884 design). "
+            f"Context around '15:00': "
+            f"{html[max(0,html.find('15:00')-100):html.find('15:00')+200] if '15:00' in html else 'not found'!r}"
         )
         assert "16:00" in html, f"Expected '16:00' in thunder badge, not found in HTML"
 
@@ -94,9 +99,9 @@ class TestThunderBadgeTimeWindow:
         badge_area = html
         assert "15:00" in badge_area and "16:00" in badge_area
 
-        # Roter Inline-Stil: G_WX_THUNDER oder G_DANGER (#c43a2a oder #b33a2a) muss am Badge-Element sein
-        assert "#c43a2a" in html or "#b33a2a" in html, (
-            "Thunder badge must have red inline color (G_WX_THUNDER or G_DANGER)"
+        # Roter Inline-Stil: #b91c1c muss am Badge-Element sein (#884 design)
+        assert "#b91c1c" in html, (
+            "Thunder badge must have red inline color #b91c1c (#884 design)"
         )
 
 
@@ -108,7 +113,10 @@ class TestThunderBadgeSingleHour:
     """AC-8: Folge-Etappe mit Gewitter nur in einer Stunde zeigt einzelnes Zeitfenster."""
 
     def test_issue669_thunder_badge_single_hour(self):
-        """AC-8: Single-Hour-Thunder → '⚡ Gewitter möglich 14:00' (kein –)."""
+        """AC-8: Single-Hour-Thunder → '⚡ Gewitter 14:00' (kein –, kein 'möglich').
+
+        Note: #884 design removed "möglich" from badge text.
+        """
         trend = [_trend_stage_with_hourly(
             weekday="Do", name="Etappe 3",
             thunder="MED",
@@ -116,8 +124,8 @@ class TestThunderBadgeSingleHour:
         )]
         html = _render_html(trend)
 
-        assert "⚡ Gewitter möglich 14:00" in html, (
-            f"Expected '⚡ Gewitter möglich 14:00'. "
+        assert "⚡ Gewitter 14:00" in html, (
+            f"Expected '⚡ Gewitter 14:00' (no 'möglich' per #884 design). "
             f"Context: {html[max(0,html.find('14:00')-100):html.find('14:00')+100] if '14:00' in html else 'not found'!r}"
         )
 
@@ -164,10 +172,16 @@ class TestNoBadgeWithoutThunder:
 # ---------------------------------------------------------------------------
 
 class TestOtherOutlookColumnsUnchanged:
-    """AC-10: TEMP/REGEN/WIND-Spalten des Ausblicks unveraendert."""
+    """AC-10: Ausblick-Sektion unveraendert (Etappenzeile vorhanden).
+
+    Note: #884 design removed the TEMP/REGEN/WIND/GEWITTER column headers from the
+    Ausblick section. The section now uses a row-per-stage layout (Wochentag · Code ·
+    Name+Badge · Temp-Range · Risk-Dot) without separate column headers. The section
+    heading changed from "Nächste Etappen" to "Ausblick · nächste 4 Tage".
+    """
 
     def test_issue669_other_outlook_columns_unchanged(self):
-        """AC-10: TEMP/REGEN/WIND-Zellen des Ausblicks vorhanden und korrekt."""
+        """AC-10: Ausblick-Block vorhanden, Etappenzeile enthält Wochentag und Name."""
         trend = [_trend_stage_with_hourly(
             weekday="Sa", name="Etappe 5",
             temp_lo=8, temp_hi=18,
@@ -177,17 +191,14 @@ class TestOtherOutlookColumnsUnchanged:
         )]
         html = _render_html(trend)
 
-        # Spaltenheader muessen unveraendert vorhanden sein
-        assert "TEMP" in html, "TEMP column header missing"
-        assert "REGEN" in html, "REGEN column header missing"
-        assert "WIND" in html, "WIND column header missing"
-        assert "GEWITTER" in html, "GEWITTER column header missing"
-
-        # Trend-Block muss generell vorhanden sein
-        assert "Nächste Etappen" in html, "Trend block heading missing"
+        # Trend-Block muss generell vorhanden sein (#884: Eyebrow "Ausblick")
+        assert "Ausblick" in html, "Trend block 'Ausblick' section missing"
 
         # Etappen-Wochentag und Name muessen vorhanden sein
         assert "Sa" in html or "Etappe 5" in html, "Stage name/weekday missing"
+
+        # Gewitter-Badge muss vorhanden sein (thunder="HIGH")
+        assert "⚡ Gewitter" in html, "Thunder badge missing for HIGH thunder"
 
 
 # ---------------------------------------------------------------------------
@@ -201,9 +212,11 @@ class TestBadgeNotDuplicatedWithForecast:
         """Regression F001: thunder_html-Variable-Kollision zwischen Forecast-Block und Loop.
 
         Wenn BEIDE uebergeben werden — thunder_forecast UND multi_day_trend mit
-        Gewitter-Etappe — muss 'Gewitter möglich' genau einmal vorkommen (im Badge
-        in der Ausblick-Tabelle) und der Forecast-Vorschau-Block muss separat vorhanden
-        sein.
+        Gewitter-Etappe — muss '⚡ Gewitter' genau einmal im Ausblick-Badge vorkommen
+        und der Forecast-Vorschau-Block muss separat vorhanden sein.
+
+        Note: #884 design changed badge text from 'Gewitter möglich' to '⚡ Gewitter {zeit}'.
+        We check for '⚡ Gewitter 15:00' (the badge) instead of 'Gewitter möglich'.
         """
         from app.models import ThunderLevel
         from src.output.renderers.email.html import render_html
@@ -214,7 +227,7 @@ class TestBadgeNotDuplicatedWithForecast:
             "+1": {
                 "date": "Mi",
                 "level": ThunderLevel.MED,
-                "text": "Stark bewölkt mit Schauern",  # kein 'Gewitter möglich' im Text
+                "text": "Stark bewölkt mit Schauern",  # kein Gewitter-Badge-Text im Forecast
             }
         }
 
@@ -235,20 +248,20 @@ class TestBadgeNotDuplicatedWithForecast:
             sent_at=None,
         )
 
-        # Badge muss genau einmal in der Ausblick-Tabelle vorkommen
-        count = html.count("Gewitter möglich")
+        # Badge muss genau einmal in der Ausblick-Tabelle vorkommen (#884: "⚡ Gewitter 15:00")
+        count = html.count("⚡ Gewitter 15:00")
         assert count == 1, (
-            f"'Gewitter möglich' must appear exactly once (badge in trend table), "
+            f"'⚡ Gewitter 15:00' must appear exactly once (badge in trend table), "
             f"got {count}. If >1: loop _thunder_cell_html overwrites outer thunder_html block."
         )
 
         # Der ⚡-Badge muss innerhalb eines <td>-Elements stehen (in der Tabelle)
         import re as _re2
         badge_in_td = _re2.search(
-            r'<td[^>]*>.*?Gewitter möglich.*?</td>', html, _re2.DOTALL
+            r'<td[^>]*>.*?⚡ Gewitter.*?</td>', html, _re2.DOTALL
         )
         assert badge_in_td is not None, (
-            "Badge 'Gewitter möglich' must be inside a <td> (trend table cell), "
+            "Badge '⚡ Gewitter' must be inside a <td> (trend table cell), "
             "not floating outside."
         )
 

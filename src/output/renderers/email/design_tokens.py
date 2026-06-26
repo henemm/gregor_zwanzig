@@ -11,6 +11,7 @@ QUELLE: docs/reference/design_system.md §1 + §2
 G_PAPER = '#f6f4ee'           # body background, leicht warmes Off-White
 G_SURFACE_1 = '#edeae1'        # erhoehte Surface (Card, Tabellen-Header)
 G_SURFACE_2 = '#e3dfd4'        # stark erhoehte Surface (Modal, Sticky-Bar)
+G_HEADER_BG = '#fbfaf6'        # Header + Section-Hintergrund (heller als G_PAPER)
 
 # --- Ink (Typografie) ---
 G_INK = '#1a1a18'              # Primaertext

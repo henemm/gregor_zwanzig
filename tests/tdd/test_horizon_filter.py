@@ -257,7 +257,10 @@ def test_render_html_filters_per_stage():
     temp_label = get_metric("temperature").col_label
 
     # Drei desktop-only Segment-Bloecke (1=heute, 2=morgen, 3=uebermorgen).
-    parts = html.split('<div class="section desktop-only">')
+    # Note: #884 added style attribute to segment divs:
+    #   '<div class="section desktop-only" style="padding:14px 28px 0;">'
+    # Split on the partial string (without closing >) to match both variants.
+    parts = html.split('<div class="section desktop-only"')
     assert len(parts) >= 4, f"Erwartet 3 Etappen-Bloecke, got {len(parts) - 1}"
     block_today, block_tomorrow, block_dayafter = parts[1], parts[2], parts[3]
 

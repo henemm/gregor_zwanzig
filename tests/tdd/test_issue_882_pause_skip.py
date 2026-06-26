@@ -78,14 +78,18 @@ def clean_user_dir():
 
 class TestAC1HtmlFooter:
     def test_pause_in_html_footer(self):  # doc-compliance-test
+        # Superseded by #884 design: PAUSE CMD is now "PAUSE 2d" (no bracket hint),
+        # description changed to "Briefings pausieren"
         source = (REPO_ROOT / "src/output/renderers/email/html.py").read_text()
         assert "PAUSE" in source, "HTML-Footer muss PAUSE enthalten (AC-1)"
-        assert "2d / 12h" in source, "HTML-Footer muss Dauer-Hint [2d / 12h] enthalten (AC-1)"
+        assert "PAUSE 2d" in source, "HTML-Kommandos-Block muss PAUSE 2d enthalten (AC-1/#884)"
 
     def test_skip_in_html_footer(self):  # doc-compliance-test
+        # Superseded by #884 design: SKIP description changed from "Nächstes Briefing überspringen"
+        # to "Nächstes überspringen"
         source = (REPO_ROOT / "src/output/renderers/email/html.py").read_text()
         assert "SKIP" in source, "HTML-Footer muss SKIP enthalten (AC-1)"
-        assert "Nächstes Briefing" in source, "HTML-Footer muss SKIP-Beschreibung enthalten (AC-1)"
+        assert "Nächstes überspringen" in source, "HTML-Kommandos-Block muss SKIP-Beschreibung 'Nächstes überspringen' enthalten (AC-1/#884)"
 
     def test_pause_in_plain_footer(self):  # doc-compliance-test
         source = (REPO_ROOT / "src/output/renderers/email/plain.py").read_text()

@@ -42,9 +42,17 @@ _TRIP_ID = "issue731-unified-trip"
 _TRIP_NAME = "Issue731 Unified"
 
 # Keywords, die der neue Befehlssatz garantiert enthalten MUSS
+# Note: Plain renderer still uses old #731 keywords; HTML changed with #884.
+# Shared subset for AC-2 (plain): HEUTE/MORGEN/JETZT/GEWITTER/WEITER still in plain.py
 _NEW_KEYWORDS = ["HEUTE", "MORGEN", "JETZT", "GEWITTER", "WEITER"]
 # Keywords, die ENTFERNT sein müssen (PAUSE/SKIP sind seit #882 wieder aktiv)
+# CONFIG was removed by #731 and is NOT in plain.py; HTML reintroduced it in #884.
 _REMOVED_KEYWORDS = ["CONFIG"]
+
+# HTML-specific keywords added by #884 design (Antwort-Kommandos 3x2-grid)
+_HTML_NEW_KEYWORDS = ["PAUSE", "SKIP", "STOP", "STATUS", "CONFIG", "HELP"]
+# Keywords removed from the HTML kommandos block by #884
+_HTML_REMOVED_KEYWORDS = ["HILFE"]
 
 
 # ---------------------------------------------------------------------------
@@ -187,15 +195,22 @@ def _is_unknown(result) -> bool:
 # ===========================================================================
 
 class TestAC1HtmlCommandBlock:
+    """AC-1: HTML Antwort-Kommandos block.
+
+    Updated for #884 design: the block now shows PAUSE 2d/SKIP/STOP/STATUS/CONFIG/HELP
+    in a dedicated 3x2-grid section with background #fbfaf6. Old #731 keywords
+    (HEUTE/MORGEN/JETZT/GEWITTER/WEITER) are no longer in the HTML kommandos block.
+    """
+
     def test_new_keywords_present(self):
         html = _render_html()
-        for kw in _NEW_KEYWORDS:
-            assert kw in html, f"HTML-Antwort-Kommandos müssen '{kw}' enthalten (AC-1)"
+        for kw in _HTML_NEW_KEYWORDS:
+            assert kw in html, f"HTML-Antwort-Kommandos müssen '{kw}' enthalten (AC-1/#884)"
 
     def test_old_keywords_removed(self):
         html = _render_html()
-        for kw in _REMOVED_KEYWORDS:
-            assert kw not in html, f"'{kw}' darf nicht mehr im HTML stehen (AC-1)"
+        for kw in _HTML_REMOVED_KEYWORDS:
+            assert kw not in html, f"'{kw}' darf nicht mehr im HTML stehen (AC-1/#884)"
 
 
 # ===========================================================================

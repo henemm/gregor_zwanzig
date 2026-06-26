@@ -2,6 +2,8 @@
 
 This document defines how E-Mail reports are generated in Gregor Zwanzig.
 
+**Last Updated:** 2026-06-26 (Issue #884 — HTML-Mail vollständige Fidelity: 8-Sektion-Layout mit Header-Stats-Grid, Ziel-Sektion, Ausblick mit Risk-Dot, Kommandos-Sektion, zweigeteilt Footer)
+
 **Acceptance Validators (seit Issue #733):**
 - **Trip-Briefing-Mail** (beide Formate: `full` HTML / `compact` Nur-Text): `.claude/hooks/briefing_mail_validator.py` (dispatcht auf `X-GZ-Mail-Type` + `X-GZ-Format` Header)
 - **Orts-Vergleich-Mail**: `.claude/hooks/email_spec_validator.py` (fest auf Vergleichstabelle/Winner-Box verdrahtet)
@@ -19,18 +21,75 @@ Siehe CLAUDE.md für Scope-Details und Pflicht-Gate-Dokumentation.
 
 ---
 
-## Layout
+## Layout (seit Issue #884 – HTML-Mail Fidelity)
 
-### 1) Header
-- Subject format: `{Etappe} – {ReportType} – {MainRisk} – {KeyValues}`
-- `{ReportType}`: `morning`, `evening`, or `update`.
-- `{MainRisk}`: the highest risk detected (e.g., Thunderstorm, Wind). If none, omit.
-- `{KeyValues}`: selected compact tokens (e.g. `D25`, `W22`, `G35`, `R-`, `TH:M@14`), to give immediate overview.
-- Example: `Monte – evening – Thunderstorm – D25 W22 G35 TH:M@14`
+### Sektionen im HTML-Briefing (8 gesamt, 7 implementiert)
 
-Note: "Gregor Zwanzig" appears as the sender name and does not need to be repeated in the subject.
+**Neu seit Issue #884 (2026-06-26):** Die HTML-Briefing-Mail folgt einer vollständigen, designgeleiteten Struktur mit 8 Abschnitten (7 implementiert; Stirnlampe entfällt nach PO-Entscheidung):
 
-### 2) Token Line
+| Nr. | Sektion | Status | Beschreibung |
+|---|---|---|---|
+| 1 | **Header** (zweispaltig + Stats-Grid) | LIVE | Kopfzeile mit Etappen-Code + Titel + Datum (links) und Tripname + Etappennummer (rechts); darunter 5-er Stats-Grid (Distanz, Aufstieg, Abstieg, Max-Höhe, Segmente) |
+| 2 | **Quick-Take + Tags** | LIVE | Kompakte Zusammenfassung des Briefing-Inhalts; farbige Tags (tone=warn/ok/info/risk) für Kontexte |
+| 3 | **Stirnlampe** | ENTFÄLLT | (PO-Entscheidung aus Issue #790 — nicht mehr in neuem Cloud-Design) |
+| 4 | **Segmente** (Stundentabellen) | LIVE | Pro Etappensegment: Segment-Header + zwei-stufige Desktop-Tabelle (Gruppen-Row TEMP/WIND/NIEDERSCHLAG + Einheiten-Row) + Mobile-Variante (`EmailHourList` zwei-Zeilen-Format) |
+| 5 | **Wetter am Ziel** (abgesetzte Sektion) | LIVE | Eigene abgesetzte Sektion mit accent-Eyebrow, Zielname, Ankunftszeiten-Range, identische Tabelle wie Segmente |
+| 6 | **Ausblick** (Folge-Etappen) | LIVE | Nächste 4 Tage als kompakte Zeilen-Tabelle; jede Etappe mit Wochentag + Code + Name + Temp-Range + Risk-Dot (Farbindikator); Gewitter-Badge falls vorhanden |
+| 7 | **Antwort-Kommandos** | LIVE | Dedizierte Sektion mit 3×2-Grid der Befehle (PAUSE 2d, SKIP, STOP, STATUS, CONFIG, HELP) + Hinweistext |
+| 8 | **Footer** (zweigeteilt) | LIVE | Obere Zeile: Brand + Briefing-Typ; untere Zeile: Links (Trip-Übersicht, Zeitplan, Abmelden) |
+
+Detaillierte Sektionsspezifikationen: siehe `docs/specs/modules/issue_884_mail_fidelity.md` (AC-1..AC-10).
+
+### HTML-Rendering-Details (Issue #884)
+
+#### Header (Sektion 1)
+- **Struktur:** `<table>` mit zwei `<td>` (Desktop: Zweisspaltenlayout; Mobile: volle Breite)
+- **Hintergrund:** `#fbfaf6` (G_HEADER_BG, neues Design-Token), `border-bottom:1px solid #e6e1d3`
+- **Linke Spalte:** Eyebrow `"MORGEN-BRIEFING · {STAGE_CODE}"` (mono 10px, `#c45a2a`), Titel (22px desktop / 18px mobile), Datum (mono 13px desktop / 12px mobile)
+- **Rechte Spalte:** `"GREGOR ZWANZIG"` (mono 10px, `#9a978d`), Trip-Kurzname (14px), Etappennummer (mono 12px)
+- **Stats-Grid:** 5-Spalten-`<table>` (desktop) / 3 Spalten in 2 Zeilen (mobile); mit `border-right:1px solid #e6e1d3` als Trennlinie
+  - Labels: Distanz · Aufstieg · Abstieg · Max-Höhe · Segmente
+
+#### Segmente (Sektion 4)
+- **Desktop-Tabelle:** zwei Ebenen
+  - Gruppen-Row: Hintergrund `#fbfaf6`, Spaltenkopfgruppen (TEMP, WIND, NIEDERSCHLAG, SICHT/UV, HÖHE) mit Colspan
+  - Einheiten-Row: Spalten-Labels mit Einheiten
+  - Datenzellen: kritische Werte **fett + Farbe** (`#c2410c` bei Wind >20 km/h, `#0e6fb8` bei Regen >1 mm, `#b91c1c` bei Gewitter >0)
+- **Mobile-Tabelle:** `EmailHourList` zwei-Zeilen-Format (neu ab Issue #884; ersetzt `_render_mobile_compact_rows`)
+  - Hauptzeile: Zeit (mono bold, 26px breit) · Wetter-Glyph · Temp · gefühlte Temp · Risk-Dot
+  - Detailzeile: Wind/Regen/Sicht/UV/Höhe komprimiert
+  - Hintergrund: transparent oder leicht warn-getönt bei kritischen Werten
+
+#### Wetter am Ziel (Sektion 5)
+- **Sektion:** eigener Block, `bg #fbfaf6`, `border-top:1px solid #e6e1d3`
+- **Kopfzeile:** Zweispaltig space-between; Links accent-Eyebrow `"ANKUNFT · WETTER AM ZIEL"` (`#c45a2a`) + Zielname; Rechts Zeitraum-String
+- **Tabelle:** identischer Stil wie Segment-Tabellen (Desktop + Mobile)
+
+#### Ausblick (Sektion 6)
+- **Struktur:** `<table>` mit einer `<tr>` pro Folge-Etappe
+- **Desktop:** 5 Spalten – Wochentag · Code · Name+Note+ggf. Gewitter-Badge · Temp-Range · Risk-Dot
+- **Mobile:** 3 Spalten – Wochentag · (Name+Code+Note gestapelt) · (Temp+Risk-Dot übereinander)
+- **Risk-Dot:** `border-radius:50%`, 10×10px, Farbe aus `format_trend_tokens()`:
+  - ok: `#15803d` + `rgba(21,128,61,0.18)`
+  - watch: `#c2410c` + `rgba(194,65,12,0.20)`
+  - risk: `#b91c1c` + `rgba(185,28,28,0.22)`
+  - Fallback: `#c8c4b8`
+- **Gewitter-Badge:** `⚡ Gewitter {zeitangabe}` in `#b91c1c` mit light-red Hintergrund und Border
+
+#### Antwort-Kommandos (Sektion 7 – NEU)
+- **Grid:** 3×2 (desktop) / 2×3 (mobile) via `<table>`
+- **6 Einträge:** PAUSE 2d, SKIP, STOP, STATUS, CONFIG, HELP
+- **Stil:** CMD mono 11px bold + Beschreibung mono 10px `#9a978d`
+- **Hinweistext:** mono 10px, color `#b8b4a8`: "Antworte auf diese E-Mail mit einem Schlüsselwort."
+
+#### Footer (Sektion 8)
+- **Gesamter Footer:** `bg #1d1c1a`, `color #9a978d`, mono 11px
+- **Obere Zeile:** Links `"GREGOR ZWANZIG"` (`#fff`, bold, letterSpacing 0.06em) + " · " (`#5a5750`) + Briefing-Typ; Rechts (desktop-only) Datum + Provider + Icon
+- **Untere Zeile:** Nach `border-top:1px solid #3a3835`, Link-Zeile: "Trip-Übersicht öffnen →" (`#c45a2a`) · "Briefing-Zeitplan" · "Abmelden" (alle plain text, keine `href`)
+
+### Legacy: Token Line & Debug Block
+
+#### 2) Token Line
 - First block of the body.
 - Exact 1:1 copy of the SMS token line.
 - **Format-Definition:** siehe [`docs/reference/sms_format.md`](sms_format.md) (v2.0) — Single Source of Truth.
@@ -43,26 +102,12 @@ Note: "Gregor Zwanzig" appears as the sender name and does not need to be repeat
   Monte: N15 D25 R- PR20%@14 W22@14(28@16) G35@14(48@17) TH:M@14 TH+:- DBG[MET MED]
   ```
 
-### 3) Human-Friendly Summary
+#### 3) Human-Friendly Summary (Quick-Take)
 - Short list (dl) of the same values in words, e.g.:
   - Temperatur: Nacht-Min 15°C · Tages-Max 25°C
   - Regen: Menge –, Wahrscheinlichkeit 20% @14 Uhr
   - Wind: 22 km/h @14 Uhr, Böen 35 km/h @14 Uhr (Peak 48 km/h @19 Uhr)
   - Gewitter: Level M @14 Uhr
-
-### 4) Stage Tables
-- Each stage/etappen point (from ROUTE file) is listed with time-aligned forecasts.
-- Table columns:
-  - Time (with **leading zeros**, e.g. `05:00`, `14:00`, `19:00`)
-  - Point (name or ID)
-  - T (°C), W (km/h), G (km/h), R (mm), PR (%), TH (L/M/H), Symbol
-  - **(ENTFERNT ab Issue #715)** Sicherheit (Spalte nicht mehr wählbar) — Vorhersage-Verlässlichkeit ist keine pro-Etappe wählbare Metrik mehr. Die Verlässlichkeit wird nur noch als Klartext-Hinweis (Abs. 4a) und SMS-Symbol (C+/C~/C?) dargestellt.
-- Example (nach Issue #715 ohne Sicherheit-Spalte):
-
-  | Time  | Point | T | W | G | R | PR | TH | Symbol     |
-  |-------|-------|---|---|---|---|----|----|------------|
-  | 14:00 | Monte |25 |22 |35 | 0 | 20 | M  | lightrain  |
-  | 16:00 | Pass  |24 |28 |48 | 0 | 20 | M  | cloudy     |
 
 #### 4a) Klartext-Hinweis bei niedriger Konfidenz (Issue #121, ab Issue #715 einziger Confidence-Output in Tabelle)
 
@@ -74,7 +119,7 @@ Im E-Mail-Body wird ein Klartext-Hinweis ausgegeben, wenn an mindestens einer St
 - HTML: `<p class="confidence-hint">…</p>` in einem gelb hinterlegten Block, positioniert zwischen `summary` und `changes`.
 - Plain: eigene Zeile mit Leerzeile davor/dahinter, gleicher Position.
 
-### 5) Debug Block
+#### Debug Block
 - Always appended at the end, in `<pre>` formatted text.
 - Content identical to console output.
 - Must include:

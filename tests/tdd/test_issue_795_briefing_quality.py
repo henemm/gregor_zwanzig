@@ -171,9 +171,10 @@ def _contrast_ratio(c1: str, c2: str) -> float:
 class TestAC1Hierarchy:
 
     def test_overview_before_segment_html(self):
+        # #884: segment heading changed from "Segment N" to "SEG N"
         html = _render_html(_build_segments())
         pos_overview = html.find("Metriken-Überblick")
-        pos_segment = html.find("Segment 1")
+        pos_segment = html.find("SEG 1")
         assert pos_overview != -1 and pos_segment != -1
         assert pos_overview < pos_segment, (
             "HTML: Metriken-Überblick muss VOR der ersten Segment-Tabelle stehen"
