@@ -405,9 +405,14 @@ def _validate_transition(data: dict, target: str) -> str | None:
             return "No RED test artifacts — run /tdd-red first"
 
     if tgt_idx >= PHASES.index("phase8_complete"):
-        verdict = data.get("adversary_verdict", "")
-        if not verdict or not str(verdict).startswith("VERIFIED"):
-            return "Adversary verdict missing or not VERIFIED"
+        # Express: Adversary nur bei Sampling-Pflicht erforderlich
+        wf_type = data.get("workflow_type", "feature")
+        if wf_type == "express" and not data.get("express_sampling_required"):
+            pass  # kein Verdict-Check ausser bei Sampling
+        else:
+            verdict = data.get("adversary_verdict", "")
+            if not verdict or not str(verdict).startswith("VERIFIED"):
+                return "Adversary verdict missing or not VERIFIED"
 
     return None
 
@@ -426,10 +431,10 @@ def cmd_start(args: list[str]) -> None:
             name_args.append(args[i])
             i += 1
     if not name_args:
-        print("Usage: workflow.py start <name> [--type feature|bug|feature-fast]", file=sys.stderr)
+        print("Usage: workflow.py start <name> [--type feature|bug|feature-fast|express]", file=sys.stderr)
         sys.exit(1)
-    if workflow_type not in ("feature", "bug", "feature-fast"):
-        print(f"Unknown workflow type: {workflow_type!r}. Valid: feature, bug, feature-fast", file=sys.stderr)
+    if workflow_type not in ("feature", "bug", "feature-fast", "express"):
+        print(f"Unknown workflow type: {workflow_type!r}. Valid: feature, bug, feature-fast, express", file=sys.stderr)
         sys.exit(1)
     name = name_args[0]
     wf_file = _workflow_file(name)
@@ -449,6 +454,12 @@ def cmd_start(args: list[str]) -> None:
         data["current_phase"] = "phase3_spec"
         data["red_test_done"] = True  # inline TDD during implementation
         _log_phase_transition(data, "phase3_spec")
+    elif workflow_type == "express":
+        # Express: keeps Spec+TDD-RED, skips Adversary. LoC-gate + Sampling-Counter.
+        data["current_phase"] = "phase3_spec"
+        data["express_loc_verified"] = False
+        data["express_sampling_required"] = False
+        _log_phase_transition(data, "phase3_spec")
     else:
         _log_phase_transition(data, "phase1_context")
     _atomic_write(wf_file, data)
@@ -457,6 +468,8 @@ def cmd_start(args: list[str]) -> None:
         type_note = " [BUG fast-track → phase6_implement]"
     elif workflow_type == "feature-fast":
         type_note = " [FEATURE fast-track → phase3_spec]"
+    elif workflow_type == "express":
+        type_note = " [EXPRESS → phase3_spec, kein Adversary]"
     else:
         type_note = ""
     print(f"Started workflow: {name}{type_note}")
@@ -535,6 +548,12 @@ def cmd_status(args: list[str]) -> None:
     print(f"Phase Transitions: {transitions}")
     print(f"LoC Delta: {loc_delta}")
     print(f"Execution Log: {'Written' if log_written else 'Pending — run write-log before complete'}")
+    # Issue #828: Express-Status
+    if data.get("workflow_type") == "express":
+        loc_ok = "yes" if data.get("express_loc_verified") else "no"
+        sampling_req = data.get("express_sampling_required", False)
+        sampling_str = "REQUIRED" if sampling_req else "no"
+        print(f"Express: LoC-verified={loc_ok}, Sampling={sampling_str}")
 
 
 def cmd_phase(args: list[str]) -> None:
@@ -579,8 +598,32 @@ def cmd_set_field(args: list[str]) -> None:
         value = False
     data, name = _read_active()
     data[key] = value
+    # F002: Express-Felder initialisieren wenn workflow_type auf express gesetzt wird
+    if key == "workflow_type" and value == "express":
+        if "express_loc_verified" not in data:
+            data["express_loc_verified"] = False
+        if "express_sampling_required" not in data:
+            data["express_sampling_required"] = False
     _save_active(data)
     print(f"Set {key} = {value} on workflow {name}")
+
+
+def cmd_set_type(args: list[str]) -> None:
+    """Issue #828: Setzt workflow_type im aktiven Workflow."""
+    valid = {"feature", "bug", "feature-fast", "express"}
+    if not args or args[0] not in valid:
+        print(f"Usage: workflow.py set-type <{chr(124).join(sorted(valid))}>", file=sys.stderr)
+        sys.exit(1)
+    data, name = _read_active()
+    data["workflow_type"] = args[0]
+    # F002: Express-Felder initialisieren wenn auf express gewechselt wird
+    if args[0] == "express":
+        if "express_loc_verified" not in data:
+            data["express_loc_verified"] = False
+        if "express_sampling_required" not in data:
+            data["express_sampling_required"] = False
+    _save_active(data)
+    print(f"workflow_type set to: {args[0]}")
 
 
 def cmd_set_affected_files(args: list[str]) -> None:
@@ -688,6 +731,29 @@ def cmd_override_ambiguous(args: list[str]) -> None:
     print(f"AMBIGUOUS override set for {name}: {reason}")
 
 
+
+def _get_express_counter_path() -> Path:
+    """Issue #828: Pfad zur globalen Express-Counter-Datei."""
+    return _workflows_dir() / "_express_counter.json"
+
+
+def _read_express_counter() -> int:
+    """Liest den aktuellen Express-Counter (0 wenn nicht vorhanden)."""
+    p = _get_express_counter_path()
+    if not p.exists():
+        return 0
+    try:
+        return json.loads(p.read_text()).get("count", 0)
+    except Exception:
+        return 0
+
+
+def _write_express_counter(count: int) -> None:
+    """Schreibt den Express-Counter atomar."""
+    p = _get_express_counter_path()
+    _atomic_write(p, {"count": count, "last_full_run": None})
+
+
 def cmd_complete(args: list[str]) -> None:
     data, name = _read_active()
     log_dir = find_project_root() / ".claude" / "workflows" / "_log"
@@ -695,6 +761,28 @@ def cmd_complete(args: list[str]) -> None:
         print(f"BLOCKED: No execution log for '{name}'. Run: workflow.py write-log [outcome]",
               file=sys.stderr)
         sys.exit(1)
+    # Issue #828: Express-Sampling-Counter
+    wf_type = data.get("workflow_type", "feature")
+    if wf_type == "express":
+        sampling_required = data.get("express_sampling_required", False)
+        if sampling_required:
+            # Sampling-Runde abgeschlossen (Verdict=VERIFIED, sonst blocked)
+            _write_express_counter(0)
+            print("Express-Sampling-Runde abgeschlossen. Counter zurueckgesetzt auf 0.")
+        else:
+            count = _read_express_counter() + 1
+            _write_express_counter(count)
+            if count % 5 == 0:
+                data["express_sampling_required"] = True
+                _atomic_write(_workflow_file(name), data)
+                print(
+                    f"EXPRESS SAMPLING REQUIRED: Jeder 5. Express-Workflow laeuft vollstaendig "
+                    f"(Stichprobe #{count // 5}). "
+                    f"Adversary-Verdict (VERIFIED) benoetigt, dann erneut complete aufrufen.",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+
     data["current_phase"] = "phase8_complete"
     archive = _archive_dir()
     archive.mkdir(parents=True, exist_ok=True)
@@ -949,6 +1037,7 @@ COMMANDS = {
     "phase": cmd_phase,
     "phase-log": cmd_phase_log,
     "set-field": cmd_set_field,
+    "set-type": cmd_set_type,
     "set-affected-files": cmd_set_affected_files,
     "add-artifact": cmd_add_artifact,
     "mark-red": cmd_mark_red,

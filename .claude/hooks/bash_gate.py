@@ -199,6 +199,27 @@ def _write_e2e_scope(wf: dict, scope: str) -> None:
 
 # --- Main ---
 
+
+def _check_express_commit_gate(workflow_data: dict, loc_delta: "int | None" = None) -> "tuple[bool, str]":
+    """Issue #828: Express-Commit-Gate. Extrahiert fuer Testbarkeit (bash_gate.py).
+
+    Returns (allowed, reason).
+    - Sampling required: blockiert immer
+    - loc_delta > 10: blockiert mit Typ-Wechsel-Hinweis
+    - loc_delta <= 10 oder None: erlaubt
+    """
+    if workflow_data.get("express_sampling_required"):
+        return False, (
+            "Express-Sampling erforderlich: voller Adversary-Lauf benoetigt. "
+            "Adversary-Verdict (VERIFIED) setzen und dann erneut committen."
+        )
+    if loc_delta is not None and loc_delta > 10:
+        return False, (
+            f"Express-Workflow ueberschreitet LoC-Limit ({loc_delta}/10). "
+            "Typ auf 'feature' wechseln: workflow.py set-field workflow_type feature"
+        )
+    return True, "express: LoC-Limit eingehalten"
+
 def main():
     tool_input = get_tool_input()
     command = tool_input.get("command", "")
@@ -312,6 +333,49 @@ def main():
                 # Bug + Feature fast-track: no adversary verdict required
                 if wf.get("workflow_type") in ("bug", "feature-fast"):
                     pass
+                elif wf.get("workflow_type") == "express":
+                    # Issue #828: Express-Commit-Gate — LoC ≤ 10, kein Adversary (ausser Sampling)
+                    if wf.get("express_sampling_required"):
+                        # Sampling-Runde: voller Adversary-Lauf nötig
+                        verdict = str(wf.get("adversary_verdict", "") or "")
+                        if not verdict.startswith("VERIFIED"):
+                            block("BLOCKED: Express-Sampling erfordert VERIFIED-Verdict. "
+                                  "Adversary-Lauf durchfuehren, dann erneut committen.")
+                    else:
+                        # LoC-Gate: Diff berechnen und prüfen
+                        try:
+                            import subprocess as _sp
+                            _diff = _sp.run(
+                                ["git", "diff", "--cached", "--numstat"],
+                                cwd=_root, capture_output=True, text=True, timeout=10
+                            )
+                            _loc = 0
+                            for _line in _diff.stdout.strip().splitlines():
+                                _parts = _line.split("\t")
+                                if len(_parts) >= 2 and _parts[0] != "-" and _parts[1] != "-":
+                                    try:
+                                        _loc += int(_parts[0]) + int(_parts[1])
+                                    except ValueError:
+                                        pass
+                            if _loc > 10:
+                                block(
+                                    f"BLOCKED: Express-Workflow ueberschreitet LoC-Limit "
+                                    f"({_loc}/10). Typ auf feature wechseln: "
+                                    f"workflow.py set-field workflow_type feature"
+                                )
+                            elif _loc > 0:
+                                # LoC OK: express_loc_verified setzen
+                                try:
+                                    import subprocess as _sp2
+                                    _sp2.run(
+                                        ["python3", str(Path(__file__).parent / "workflow.py"),
+                                         "set-field", "express_loc_verified", "true"],
+                                        cwd=_root, capture_output=True, text=True, timeout=10
+                                    )
+                                except Exception:
+                                    pass
+                        except Exception:
+                            pass  # fail-open: LoC nicht berechenbar → kein Block
                 else:
                     verdict = str(wf.get("adversary_verdict", "") or "")
                     if verdict.startswith("VERIFIED"):
