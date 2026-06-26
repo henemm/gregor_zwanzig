@@ -72,6 +72,7 @@ class TripReportFormatter:
         report_config: Optional[TripReportConfig] = None,
         day_comparison: Optional["DayComparison"] = None,
         shortcode: Optional[str] = None,
+        stage_total: Optional[int] = None,
     ) -> TripReport:
         """Format trip segments into HTML + plain-text email."""
         if not segments:
@@ -163,6 +164,7 @@ class TripReportFormatter:
             sent_at=_sent_at,
             show_metrics_summary=_show_metrics_summary,
             day_comparison=day_comparison,
+            stage_total=stage_total,
         )
         first_agg = segments[0].aggregated
         email_subject = self._generate_subject(

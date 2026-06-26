@@ -110,6 +110,38 @@ def _risk_dot(color: str) -> str:
     )
 
 
+def _safe_float(v, default: float = 0.0) -> float:
+    """Best-effort numeric coercion; non-numeric values (e.g. enums) → default."""
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return default
+
+
+def _row_risk(r: dict) -> str:
+    """Bestimmt Risk-Level pro Tabellenzeile aus Schwellwerten."""
+    thunder = _safe_float(r.get("thunder"))
+    if thunder > 20:
+        return "risk"
+    gust = _safe_float(r.get("gust"))
+    wind = _safe_float(r.get("wind"))
+    precip = _safe_float(r.get("precip"))
+    pop = _safe_float(r.get("pop"))
+    vis_raw = r.get("vis")
+    vis_num = _safe_float(vis_raw, 99.0)
+    vis = vis_num / 1000 if vis_num > 100 else vis_num
+    if thunder > 0 or gust > 30 or wind > 20 or precip > 1 or pop > 50 or vis < 2:
+        return "watch"
+    return "ok"
+
+
+_RISK_DOT_COLORS = {
+    "ok":    ("#15803d", "rgba(21,128,61,0.18)"),
+    "watch": ("#c2410c", "rgba(194,65,12,0.20)"),
+    "risk":  ("#b91c1c", "rgba(185,28,28,0.22)"),
+}
+
+
 def _render_email_stat(label: str, value: str, unit: str, *, last: bool = False) -> str:
     """JSX EmailStat — label+value+unit in stat-grid cell."""
     border = "none" if last else "border-right:1px solid #e6e1d3;"
@@ -414,6 +446,7 @@ def _render_html_table(
         cols = [(k, label) for (k, label) in cols if k in allowed_col_keys]
 
     ths = "<th>Time</th>" + "".join(f"<th>{label}</th>" for _, label in cols)
+    ths += '<th style="width:20px;padding:8px 4px;text-align:center;">·</th>'
     thead = f'<thead><tr>{ths}</tr></thead>'
 
     # Data rows with highlighting
@@ -477,6 +510,12 @@ def _render_html_table(
             if highlight_color:
                 cell = f'<span style="font-weight:700;color:{highlight_color};">{cell}</span>'
             tds += f'<td data-label="{label}">{cell}</td>'
+        # Issue #890 / AC-4: RiskDot-Spalte am Zeilenende.
+        _dot_color = _RISK_DOT_COLORS[_row_risk(r)][0]
+        tds += (
+            f'<td style="padding:8px 4px;text-align:center;">'
+            f'{_risk_dot(_dot_color)}</td>'
+        )
         trs.append(f"<tr>{tds}</tr>")
 
     return (
@@ -629,6 +668,7 @@ def render_html(
     sent_at: Optional[datetime] = None,
     show_outlook: bool = True,
     day_comparison: Optional["DayComparison"] = None,
+    stage_total: Optional[int] = None,
     **_ignored,
 ) -> str:
     """Render full HTML e-mail body. Pure function.
@@ -675,21 +715,61 @@ def render_html(
             f'<tr>{stat_tds}</tr></table>'
         )
 
+    # Issue #890 / AC-1: Stage-Name parsen → Etappen-Nr + Strecken-Titel.
+    _stage_num = ""
+    _route_title = stage_name or ""
+    if stage_name:
+        m = _re.match(r"Etappe\s+(\d+)(?::\s+(.+))?", stage_name)
+        if m:
+            _stage_num = m.group(1) or ""
+            _route_title = m.group(2) or stage_name
+
+    # Issue #890 / AC-2: Datum + Wochentag + Uhrzeit + Zeitzone.
+    _WEEKDAY_ABBR = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
+    if sent_at is not None:
+        local_dt = sent_at.astimezone(tz)
+        wd = _WEEKDAY_ABBR[local_dt.weekday()]
+        _date_str = (
+            f"{wd} · {local_dt.strftime('%d.%m.%Y')} · "
+            f"{local_dt.strftime('%H:%M')} MESZ"
+        )
+    else:
+        _date_str = report_date  # Rückwärtskompatibilität
+
     # Two-column header
+    _stage_label = (
+        f"Etappe {_stage_num}" if _stage_num
+        else (stage_name[:20] if stage_name else "–")
+    )
     left_col = (
         f'<td style="vertical-align:top;padding-bottom:14px;">'
-        + _eyebrow(f"{_rt_upper}-BRIEFING · {_stage_code}")
+        + _eyebrow(f"{_rt_upper}-BRIEFING · {_stage_label}")
         + f'<div style="font-size:22px;font-weight:600;letter-spacing:-0.015em;'
-        f'margin-top:4px;color:#1d1c1a;">{trip_name}</div>'
-        f'<div style="font-family:{FONT_DATA};font-size:13px;color:#6b6962;margin-top:4px;">'
-        f'{report_date}</div>'
-        f'</td>'
+        f'margin-top:4px;color:#1d1c1a;">{_route_title}</div>'
+        + f'<div style="font-family:{FONT_DATA};font-size:13px;color:#6b6962;margin-top:4px;">'
+        f'{_date_str}</div>'
+        + f'</td>'
     )
+
+    # Issue #890 / AC-3: Etappen-Zähler "Etappe N / total".
+    _stage_counter_html = ""
+    if _stage_num and stage_total is not None:
+        _stage_counter_html = (
+            f'<div style="font-family:{FONT_DATA};font-size:12px;color:#6b6962;margin-top:2px;">'
+            f'Etappe {_stage_num} / {stage_total}</div>'
+        )
+    elif _stage_num:
+        _stage_counter_html = (
+            f'<div style="font-family:{FONT_DATA};font-size:12px;color:#6b6962;margin-top:2px;">'
+            f'Etappe {_stage_num}</div>'
+        )
+
     right_col = (
         f'<td style="vertical-align:top;text-align:right;padding-bottom:14px;">'
         + _eyebrow("GREGOR ZWANZIG")
         + (f'<div style="font-size:14px;font-weight:600;margin-top:4px;color:#1d1c1a;">'
-           f'{sub_header}</div>' if sub_header else "")
+           f'{trip_name}</div>')
+        + _stage_counter_html
         + f'</td>'
     )
     header_html = (
@@ -1013,27 +1093,58 @@ def render_html(
         f'</div>'
     )
 
-    summary_html = ""
-    if compact_summary:
-        summary_html = f"""
-            <div class="section" style="background:{G_BOX_INFO_BG};border-left:4px solid {G_ACCENT};padding:12px;margin:8px 0;">
-                <p style="margin:0;font-size:14px;line-height:1.6;">{compact_summary}</p>
-            </div>"""
-
     # Issue #790/#795/RC4/AC-6: Vortag-Einordnung
     from services.day_comparison import summarize_day_comparison
     _day_comparison_line = summarize_day_comparison(
         day_comparison,
         selected_metrics=[mc.metric_id for mc in dc.metrics if mc.enabled],
     )
-    day_comparison_html = ""
-    if _day_comparison_line:
-        day_comparison_html = (
-            f'<div class="section" style="padding:8px 20px">'
-            f'<div style="background:{G_BOX_INFO_BG};border-left:4px solid {G_ACCENT};'
-            f'padding:10px 12px;border-radius:4px">'
-            f'<p style="margin:0;font-size:15px;font-weight:600;color:{G_INK};'
-            f'line-height:1.5">{_html.escape(_day_comparison_line)}</p></div></div>'
+
+    # Issue #890 / B1-B3 + AC-5/AC-6: Ein Tageslage-Lead statt zwei Kästen.
+    tageslage_html = ""
+    _has_summary = bool(compact_summary)
+    _has_vortag = bool(_day_comparison_line)
+
+    if _has_summary or _has_vortag:
+        # Trend-Glyph aus _day_comparison_line
+        _trend_glyph = "▬"
+        _trend_color = "#6b6962"
+        if _has_vortag:
+            if "besser" in _day_comparison_line:
+                _trend_glyph = "▲"
+                _trend_color = "#15803d"
+            elif "schlechter" in _day_comparison_line:
+                _trend_glyph = "▼"
+                _trend_color = "#c2410c"
+
+        _summary_div = ""
+        if _has_summary:
+            _summary_div = (
+                f'<div style="font-size:16px;font-weight:500;color:#1d1c1a;margin-top:6px;">'
+                f'{_html.escape(compact_summary)}</div>'
+            )
+
+        _vortag_div = ""
+        if _has_vortag:
+            _vortag_div = (
+                f'<div style="display:flex;gap:8px;align-items:baseline;margin-top:10px;'
+                f'padding-top:10px;border-top:1px solid #f0ece1;">'
+                f'<span style="font-family:{FONT_DATA};font-size:9px;color:#6b6962;'
+                f'text-transform:uppercase;letter-spacing:0.05em;">VS. GESTERN</span>'
+                f'<span style="color:{_trend_color};">{_trend_glyph}</span>'
+                f'<span style="font-size:12.5px;color:#3a3835;">'
+                f'{_html.escape(_day_comparison_line)}</span>'
+                f'</div>'
+            )
+
+        tageslage_html = (
+            f'<div style="padding:18px 28px 16px;">'
+            f'<div style="border-left:2px solid #c45a2a;padding-left:14px;">'
+            + _eyebrow("TAGESLAGE", accent=True)
+            + _summary_div
+            + _vortag_div
+            + f'</div>'
+            f'</div>'
         )
 
     # Issue #121 / AC-12 + AC-13: confidence hint
@@ -1127,8 +1238,7 @@ def render_html(
         {header_html}
 
         {stability_html}
-        {summary_html}
-        {day_comparison_html}
+        {tageslage_html}
         {metrics_summary_html}
         {confidence_hint_html}
         {changes_html}

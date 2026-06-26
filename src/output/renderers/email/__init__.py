@@ -53,6 +53,7 @@ def render_email(
     show_outlook: bool = True,
     email_format: str = "full",
     day_comparison: Optional["DayComparison"] = None,
+    stage_total: Optional[int] = None,
     **_ignored,
 ) -> tuple[str, str]:
     """Returns (html_body, plain_body). Pure function.
@@ -118,6 +119,7 @@ def render_email(
         sent_at=sent_at,
         show_outlook=show_outlook,
         day_comparison=day_comparison,
+        stage_total=stage_total,
     )
     plain_body = render_plain(
         segments=segments,

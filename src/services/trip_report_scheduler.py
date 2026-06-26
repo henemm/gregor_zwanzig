@@ -574,6 +574,7 @@ class TripReportSchedulerService:
             report_config=trip.report_config,
             day_comparison=day_comparison,
             shortcode=getattr(trip, 'shortcode', None) or None,
+            stage_total=len(trip.stages) if trip.stages else None,
         )
 
         # Issue #768 (AC-6): Test-Pfad kennzeichnen — [TEST]-Betreff + Hinweiszeile
