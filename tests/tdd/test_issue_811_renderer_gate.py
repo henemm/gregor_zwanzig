@@ -68,7 +68,7 @@ def _setup_repo(tmp_path: Path) -> Path:
     hooks.mkdir(parents=True)
     shutil.copy(_GATE_SRC, hooks / "renderer_mail_gate.py")
     # Helfer-Module, die der Gate evtl. importiert, mitkopieren (best-effort).
-    for helper in ("config_loader.py", "workflow.py", "workflow_state_multi.py"):
+    for helper in ("config_loader.py", "workflow.py", "workflow_state_multi.py", "hook_utils.py"):
         src = _REPO_ROOT / ".claude" / "hooks" / helper
         if src.exists():
             shutil.copy(src, hooks / helper)
@@ -87,6 +87,11 @@ def _setup_repo(tmp_path: Path) -> Path:
 
 def _run_gate(repo: Path, *args: str, stdin: str | None = None) -> subprocess.CompletedProcess:
     env = dict(os.environ)
+    # Der Gate resolved den Workflow-Namen ueber hook_utils.get_active_workflow_name()
+    # → OPENSPEC_ACTIVE_WORKFLOW (lebender Var-Name). GZ_ACTIVE_WORKFLOW ist Legacy
+    # und wird vom Resolver nicht gelesen; explizit setzen macht den Test hermetisch
+    # (unabhaengig von der ambienten Session-Env). Siehe #894.
+    env["OPENSPEC_ACTIVE_WORKFLOW"] = _WF_NAME
     env["GZ_ACTIVE_WORKFLOW"] = _WF_NAME
     return subprocess.run(
         [sys.executable, str(repo / ".claude" / "hooks" / "renderer_mail_gate.py"), *args],
@@ -318,6 +323,11 @@ def test_no_env_global_bypass(tmp_path):
     _git(repo, "add", _MAIL_FILE)
 
     env = dict(os.environ)
+    # Der Gate resolved den Workflow-Namen ueber hook_utils.get_active_workflow_name()
+    # → OPENSPEC_ACTIVE_WORKFLOW (lebender Var-Name). GZ_ACTIVE_WORKFLOW ist Legacy
+    # und wird vom Resolver nicht gelesen; explizit setzen macht den Test hermetisch
+    # (unabhaengig von der ambienten Session-Env). Siehe #894.
+    env["OPENSPEC_ACTIVE_WORKFLOW"] = _WF_NAME
     env["GZ_ACTIVE_WORKFLOW"] = _WF_NAME
     # Plausible Bypass-Versuche, die NICHT funktionieren duerfen.
     for bypass in ("RENDERER_MAIL_GATE_SKIP", "GZ_SKIP_GATES",
