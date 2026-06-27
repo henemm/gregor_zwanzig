@@ -55,7 +55,13 @@
             "type": "command",
             "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/track_token_usage.py\"",
             "timeout": 10
-          },
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
           {
             "type": "command",
             "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/session_singleton_guard.py\" cleanup",
