@@ -46,10 +46,16 @@ def get_tool_input() -> dict:
 
 
 def get_user_message() -> str:
-    """Parse user message from stdin (for UserPromptSubmit hooks)."""
+    """Parse user message from stdin (for UserPromptSubmit hooks).
+
+    Claude Code übergibt den Prompt im UserPromptSubmit-Payload im Feld
+    `prompt`. Ältere/abweichende Payloads nutzten `user_message` — beide werden
+    gelesen (prompt hat Vorrang), damit der Stichwort-Listener unabhängig von
+    der Claude-Code-Version funktioniert. Siehe Issue #892.
+    """
     try:
         data = json.load(sys.stdin)
-        return data.get("user_message", "")
+        return data.get("prompt") or data.get("user_message", "")
     except (json.JSONDecodeError, Exception):
         return ""
 

@@ -54,7 +54,9 @@ class TestAC1UserPromptSubmitFallback:
         backup = token_file.read_text() if token_file.exists() else None
 
         env = {**os.environ, "CLAUDE_PROJECT_DIR": str(ROOT)}
-        hook_input = json.dumps({"user_message": "override"})
+        # Echtes Claude-Code-Payload-Feld ist `prompt` (Issue #892), nicht
+        # `user_message`. Der frühere user_message-Test war grün gegen den Bug.
+        hook_input = json.dumps({"prompt": "override"})
 
         try:
             subprocess.run(
