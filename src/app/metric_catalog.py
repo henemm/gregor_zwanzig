@@ -79,7 +79,8 @@ _METRICS: list[MetricDefinition] = [
         compact_label="TF", col_key="felt", col_label="Feels",
         providers={"openmeteo": True, "geosphere": True},
         summary_fields={"min": "wind_chill_min_c"},
-        default_change_threshold=5.0,
+        # Issue #889 / ADR-0010: Vorboten-Metrik — kein Abweichungs-Alert.
+        default_change_threshold=None,
         risk_thresholds={"high_lt": -20.0},
     ),
     MetricDefinition(
@@ -90,7 +91,8 @@ _METRICS: list[MetricDefinition] = [
         providers={"openmeteo": True, "geosphere": True},
         default_enabled=False,
         summary_fields={"avg": "humidity_avg_pct"},
-        default_change_threshold=20,
+        # Issue #889 / ADR-0010: Vorboten-Metrik — kein Abweichungs-Alert.
+        default_change_threshold=None,
     ),
     MetricDefinition(
         id="dewpoint", label_de="Taupunkt", unit="°C",
@@ -100,7 +102,8 @@ _METRICS: list[MetricDefinition] = [
         providers={"openmeteo": True, "geosphere": True},
         default_enabled=False,
         summary_fields={"avg": "dewpoint_avg_c"},
-        default_change_threshold=5.0,
+        # Issue #889 / ADR-0010: Vorboten-Metrik — kein Abweichungs-Alert.
+        default_change_threshold=None,
     ),
     # === WIND ===
     MetricDefinition(
@@ -168,7 +171,8 @@ _METRICS: list[MetricDefinition] = [
         providers={"openmeteo": True, "geosphere": False},
         default_enabled=False,
         summary_fields={"max": "pop_max_pct"},
-        default_change_threshold=20,
+        # Issue #889 / ADR-0010: Vorboten-Metrik — kein Abweichungs-Alert.
+        default_change_threshold=None,
         display_thresholds={"yellow": 30.0, "orange": 60.0, "red": 80.0},
         highlight_threshold=80.0,
         risk_thresholds={"medium": 80},
@@ -248,7 +252,8 @@ _METRICS: list[MetricDefinition] = [
         providers={"openmeteo": True, "geosphere": True},
         friendly_label="\u2600\ufe0f\u26c5\u2601\ufe0f",
         summary_fields={"avg": "cloud_avg_pct"},
-        default_change_threshold=30,
+        # Issue #889 / ADR-0010: Vorboten-Metrik — kein Abweichungs-Alert.
+        default_change_threshold=None,
         format_modes=("raw", "symbol"),
         default_format_mode="symbol",
     ),
@@ -336,7 +341,8 @@ _METRICS: list[MetricDefinition] = [
         providers={"openmeteo": True, "geosphere": True},
         default_enabled=False,
         summary_fields={"avg": "pressure_avg_hpa"},
-        default_change_threshold=10.0,
+        # Issue #889 / ADR-0010: Vorboten-Metrik — kein Abweichungs-Alert.
+        default_change_threshold=None,
     ),
     # === WINTER ===
     MetricDefinition(

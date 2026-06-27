@@ -382,35 +382,33 @@ class TestWeatherChangeDetectionService:
 class TestMetricCatalogIntegration:
     """v2.0: Test catalog-driven thresholds and from_trip_config()."""
 
-    def test_get_change_detection_map_returns_19_entries(self):
+    def test_get_change_detection_map_returns_13_entries(self):
         """
-        GIVEN: MetricCatalog with 23 metrics (some threshold=None)
+        GIVEN: MetricCatalog mit threshold=None für die 6 Vorboten-Metriken
         WHEN: get_change_detection_map()
-        THEN: Returns exactly 19 entries (skips snowfall_limit, cloud_low/mid/high, wind_direction, precip_type)
+        THEN: Returns exactly 13 entries.
+
+        Issue #889 / ADR-0010: humidity, dewpoint, rain_probability, cloud_total,
+        pressure und wind_chill tragen default_change_threshold=None und fallen
+        damit aus der Change-Detection-Map (vormals 19 Einträge).
         """
         detection_map = get_change_detection_map()
-        assert len(detection_map) == 19
+        assert len(detection_map) == 13
 
     def test_get_change_detection_map_values_match_v2(self):
         """
         GIVEN: MetricCatalog with summary_fields + default_change_threshold
         WHEN: get_change_detection_map()
-        THEN: Produces v1.0 thresholds + 2 new metrics (uv_index_max, snow_new_sum_cm)
+        THEN: Produces thresholds ohne die 6 Vorboten-Metriken (Issue #889).
         """
         expected = {
             "temp_min_c": 5.0,
             "temp_max_c": 5.0,
             "temp_avg_c": 5.0,
-            "wind_chill_min_c": 5.0,
             "wind_max_kmh": 20.0,
             "gust_max_kmh": 20.0,
             "precip_sum_mm": 10.0,
-            "cloud_avg_pct": 30,
-            "humidity_avg_pct": 20,
-            "dewpoint_avg_c": 5.0,
-            "pressure_avg_hpa": 10.0,
             "visibility_min_m": 1000,
-            "pop_max_pct": 20,
             "cape_max_jkg": 500.0,
             "snow_depth_cm": 10.0,
             "freezing_level_m": 200,
@@ -445,8 +443,10 @@ class TestMetricCatalogIntegration:
         assert service._thresholds["temp_min_c"] == 3.0
         assert service._thresholds["temp_max_c"] == 3.0
         assert service._thresholds["temp_avg_c"] == 3.0
-        assert service._thresholds["wind_chill_min_c"] == 3.0
-        assert service._thresholds["dewpoint_avg_c"] == 3.0
+        # Issue #889: wind_chill und dewpoint sind Vorboten-Metriken ohne
+        # Change-Detection-Eintrag mehr — die Temp-Override-Schleife ist no-op.
+        assert "wind_chill_min_c" not in service._thresholds
+        assert "dewpoint_avg_c" not in service._thresholds
 
     def test_from_trip_config_overrides_wind(self):
         """
@@ -481,7 +481,10 @@ class TestMetricCatalogIntegration:
         """
         GIVEN: TripReportConfig with custom temp/wind/precip
         WHEN: from_trip_config(config)
-        THEN: cloud/humidity/pressure/cape/etc use catalog defaults
+        THEN: cape/visibility/snow/etc use catalog defaults
+
+        Issue #889 / ADR-0010: cloud/humidity/pressure/pop sind Vorboten-Metriken
+        und nicht mehr Teil der Change-Detection-Map.
         """
         config = TripReportConfig(
             trip_id="test",
@@ -493,11 +496,13 @@ class TestMetricCatalogIntegration:
         defaults = get_change_detection_map()
 
         # These should NOT be affected by TripReportConfig overrides
-        assert service._thresholds["cloud_avg_pct"] == defaults["cloud_avg_pct"]
-        assert service._thresholds["humidity_avg_pct"] == defaults["humidity_avg_pct"]
-        assert service._thresholds["pressure_avg_hpa"] == defaults["pressure_avg_hpa"]
         assert service._thresholds["cape_max_jkg"] == defaults["cape_max_jkg"]
         assert service._thresholds["visibility_min_m"] == defaults["visibility_min_m"]
         assert service._thresholds["snow_depth_cm"] == defaults["snow_depth_cm"]
         assert service._thresholds["freezing_level_m"] == defaults["freezing_level_m"]
-        assert service._thresholds["pop_max_pct"] == defaults["pop_max_pct"]
+
+        # Issue #889: Vorboten-Metriken fallen aus der Map.
+        for vorbote in (
+            "cloud_avg_pct", "humidity_avg_pct", "pressure_avg_hpa", "pop_max_pct"
+        ):
+            assert vorbote not in service._thresholds

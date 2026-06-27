@@ -195,16 +195,21 @@ def test_ac4_visibility_already_below_threshold_no_realert():
 
 
 # ═════════════════════════════ AC-6 ═════════════════════════════════════════
-# Preset "entspannt" → exakt 13 Regeln inkl. der 4 neuen Metriken.
+# Preset "entspannt" → exakt 12 Regeln inkl. der neuen Metriken.
+# Issue #889 / ADR-0010: HUMIDITY als Vorboten-Metrik aus dem Preset entfernt
+# (war zuvor 13 Regeln inkl. humidity).
 
 
-def test_ac6_entspannt_has_exactly_13_rules():
-    """AC-6: `expand_preset("entspannt")` liefert exakt 13 Regeln."""
+def test_ac6_entspannt_has_exactly_12_rules():
+    """AC-6: `expand_preset("entspannt")` liefert exakt 12 Regeln.
+
+    Issue #889: humidity entfernt → 12 statt vormals 13.
+    """
     from services.alert_preset import expand_preset
 
     rules = expand_preset("entspannt")
-    assert len(rules) == 13, (
-        f"Preset 'entspannt' muss exakt 13 Regeln liefern, erhielt: {len(rules)}"
+    assert len(rules) == 12, (
+        f"Preset 'entspannt' muss exakt 12 Regeln liefern, erhielt: {len(rules)}"
     )
 
 
@@ -251,14 +256,17 @@ def test_ac6_entspannt_visibility_threshold_500_crossing():
     )
 
 
-def test_ac6_entspannt_humidity_threshold_25_delta():
-    """AC-6: Luftfeuchtigkeit — threshold=25, kind=delta."""
+def test_ac6_entspannt_has_no_humidity_rule():
+    """Issue #889 / ADR-0010: Luftfeuchtigkeit ist Vorboten-Metrik —
+    das Preset darf keine HUMIDITY-Regel mehr liefern (ersetzt den vormaligen
+    #846-Vertrag threshold=25/delta)."""
     from services.alert_preset import expand_preset
 
-    rule = _rule_for(expand_preset("entspannt"), AlertMetric.HUMIDITY)
-    assert rule.threshold == 25, f"humidity threshold erwartet 25, war {rule.threshold}"
-    assert rule.kind == AlertRuleKind.DELTA, (
-        f"humidity kind erwartet delta, war {rule.kind}"
+    rules = expand_preset("entspannt")
+    humidity_rules = [r for r in rules if r.metric == AlertMetric.HUMIDITY]
+    assert humidity_rules == [], (
+        "Preset 'entspannt' darf keine HUMIDITY-Regel mehr enthalten, "
+        f"enthielt aber {len(humidity_rules)}."
     )
 
 

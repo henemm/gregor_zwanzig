@@ -22,7 +22,6 @@ Schwellwert-Tabelle:
     fresh_snow              delta ↑              20          8         2
     cape                    delta ↑            1200        600       200
     visibility   threshold_crossing ↓           500       1000      3000
-    humidity                delta ↑              25         15        10
 """
 from __future__ import annotations
 
@@ -47,7 +46,7 @@ _PRESET_TABLE: Final[list[tuple]] = [
     (AlertMetric.FRESH_SNOW,           AlertRuleKind.DELTA,              20,     8,     2),
     (AlertMetric.CAPE,                 AlertRuleKind.DELTA,            1200,   600,   200),
     (AlertMetric.VISIBILITY,           AlertRuleKind.THRESHOLD_CROSSING, 500,  1000,  3000),
-    (AlertMetric.HUMIDITY,             AlertRuleKind.DELTA,              25,    15,    10),
+    # Issue #889 / ADR-0010: HUMIDITY ist Vorboten-Metrik — kein Preset-Alert mehr.
 ]
 
 # Spaltenindex in _PRESET_TABLE (2=entspannt, 3=standard, 4=sensibel)

@@ -49,7 +49,8 @@ _ALERT_METRIC_TO_SUMMARY_FIELD: dict[AlertMetric, str] = {
     AlertMetric.FRESH_SNOW: "snow_new_sum_cm",
     AlertMetric.CAPE: "cape_max_jkg",
     AlertMetric.VISIBILITY: "visibility_min_m",
-    AlertMetric.HUMIDITY: "humidity_avg_pct",
+    # Issue #889 / ADR-0010: HUMIDITY ist Vorboten-Metrik — kein Field-Mapping mehr,
+    # damit auch alt-persistierte humidity-AlertRules keinen Change-Eintrag erzeugen.
 }
 
 # Delta-Rule metrics → tuple of summary fields (metric-aggregating)
@@ -70,7 +71,7 @@ _ALERT_METRIC_COMPARISON: dict[AlertMetric, str] = {
     # Issue #846: neue Delta-Metriken (kein Eintrag für VISIBILITY — eigener Threshold-Crossing-Zweig)
     AlertMetric.FRESH_SNOW: "above",
     AlertMetric.CAPE: "above",
-    AlertMetric.HUMIDITY: "above",
+    # Issue #889 / ADR-0010: HUMIDITY ist Vorboten-Metrik — keine Vergleichsrichtung mehr.
 }
 
 # AlertSeverity (Issue #205) → ChangeSeverity (DTO for mail filter)
