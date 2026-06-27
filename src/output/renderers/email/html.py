@@ -315,12 +315,15 @@ def _render_mobile_hour_list(
 def _render_kommandos_section() -> str:
     """JSX EmailPreview L185-200 — Antwort-Kommandos eigene Sektion (AC-8)."""
     cmds = [
+        ("HEUTE", "Wetter heutige Etappe"),
+        ("MORGEN", "Wetter morgige Etappe"),
+        ("JETZT / NOW", "Nowcast ~2h"),
         ("PAUSE 2d", "Briefings pausieren"),
         ("SKIP", "Nächstes überspringen"),
-        ("STOP", "Dauerhaft deaktivieren"),
+        ("STOP / WEITER", "Deaktivieren / reaktivieren"),
         ("STATUS", "Trip-Status abrufen"),
         ("CONFIG", "Spalten ändern"),
-        ("HELP", "Alle Kommandos"),
+        ("HILFE / HELP", "Alle Kommandos"),
     ]
     rows = []
     for i in range(0, len(cmds), 3):
