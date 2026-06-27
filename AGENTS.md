@@ -129,6 +129,89 @@ Im Zweifel `grep` auf das betroffene Symbol ausführen:
 
 Server-Code (Go vs. Python) und UI-Code (SvelteKit vs. Server-Templates) sind getrennt.
 
+## Deployment
+
+### Environments
+
+| Environment | Pfad auf Host | URL |
+|-------------|---------------|-----|
+| **Production** | `/home/hem/gregor_zwanzig` | `https://gregor20.henemm.com` |
+| **Staging** | `/home/hem/gregor_zwanzig_staging` | `https://staging.gregor20.henemm.com` |
+
+### Automatischer Deploy (CI)
+
+Bei Push auf `main` läuft `.github/workflows/ci.yml`:
+
+1. **Test + Lint** (`uv run pytest`, `uv run ruff check`)
+2. **Staging-Wait**: CI wartet max. 6 Minuten, bis Staging denselben Commit ausliefert.
+3. **Staging Smoke-Test**: `GET /` (200/302) und `GET /api/health` (200).
+4. **Staging-Verdict**: `staging_gate.py --write-verdict 'VERIFIED: CI smoke test ...'`
+5. **Production-Deploy**: `ssh ... bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh`
+6. **Telegram-Benachrichtigung** bei Erfolg oder Fehlschlag.
+
+### Staging-Auto-Deploy (Cron)
+
+Alle 5 Minuten läuft auf dem Host:
+
+```bash
+/home/hem/henemm-infra/scripts/auto-deploy-gregor-staging.sh
+```
+
+Das Script macht in `/home/hem/gregor_zwanzig_staging`:
+
+1. `git fetch origin` + Diff-Check
+2. `git pull origin main`
+3. `go build -o gregor-api ./cmd/server`
+4. `cd frontend && npm install && npm run build`
+5. `sudo systemctl restart gregor-python-staging`
+6. `sudo systemctl restart gregor-api-staging`
+7. `sudo systemctl restart gregor-frontend-staging`
+8. Smoke-Test gegen `https://staging.gregor20.henemm.com/`
+9. Heartbeat ping bei Erfolg
+
+### Manueller Production-Deploy
+
+Nur wenn CI nicht greift oder für Notfälle:
+
+```bash
+# Auf dem Production-Host (/home/hem/gregor_zwanzig)
+bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh
+```
+
+Das Script baut das Go-Binary und das Frontend neu und startet die Production-Services:
+
+- `gregor-python`
+- `gregor-api`
+- `gregor-frontend`
+
+### Lokale Entwicklung
+
+Python-Backend:
+
+```bash
+uv run uvicorn api.main:app --host 127.0.0.1 --port 8000
+```
+
+Frontend:
+
+```bash
+cd frontend && npm run dev
+```
+
+Go-API:
+
+```bash
+go build -o gregor-api ./cmd/server
+./gregor-api
+```
+
+### Post-Deploy-Checks
+
+- `https://gregor20.henemm.com/` → HTTP 200/302
+- `https://gregor20.henemm.com/api/health` → HTTP 200 (enthält Commit-Hash)
+- `systemctl status gregor-api gregor-python gregor-frontend`
+- Logs prüfen: `journalctl -u gregor-api -f`
+
 ## Wichtige Hinweise
 
 - `.claude/hooks/`, `.claude/commands/`, `.claude/agents/` und `.claude/settings.json` werden von Claude Code / dem OpenSpec-Plugin verwaltet. **Nicht ohne Rücksprache ändern.**
