@@ -144,7 +144,9 @@ _RISK_DOT_COLORS = {
 
 def _render_email_stat(label: str, value: str, unit: str, *, last: bool = False) -> str:
     """JSX EmailStat — label+value+unit in stat-grid cell."""
-    border = "none" if last else "border-right:1px solid #e6e1d3;"
+    # Issue #907: leerer String (nicht "none") — sonst entsteht durch die
+    # direkte Verkettung mit "padding:" ungültiges CSS ("nonepadding:...").
+    border = "" if last else "border-right:1px solid #e6e1d3;"
     return (
         f'<td style="{border}padding:0 12px 0 0;vertical-align:top;">'
         f'<div style="font-family:{FONT_DATA};font-size:9px;letter-spacing:0.1em;'
@@ -1034,12 +1036,17 @@ def render_html(
             weekday = stage.get("weekday", "")
             note = stage.get("note", "")
 
+            # Issue #906: temp_range geht durch pill_html (html.escape) → MUSS
+            # reiner Klartext sein, KEINE HTML-Entities. tok["temp_str"] ist
+            # bereits lesbar (echtes "–", z.B. "10–18°C"); nur Leerzeichen vor
+            # der Einheit. NICHT temp_html (enthält &#8211;/&thinsp; → würde von
+            # pill_html doppelt escaped → unleserlich).
             temp_min = stage.get("temp_min_c")
             temp_max = stage.get("temp_max_c")
             if temp_min is not None and temp_max is not None:
-                temp_range = f"{temp_min:.0f}–{temp_max:.0f}°C"
+                temp_range = f"{temp_min:.0f}–{temp_max:.0f} °C"
             else:
-                temp_range = temp_html
+                temp_range = tok["temp_str"].replace("°C", " °C")
 
             # AC-8 (#899): Stage-Namen (name-Feld) werden nicht mehr angezeigt
             # AC-7 (#899): Chip-Format via pill_html statt <tr>-Tabelle
