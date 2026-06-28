@@ -20,27 +20,6 @@
             "command": "bash /home/hem/claude-mq/check-messages.sh"
           }
         ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/session_singleton_guard.py\" register",
-            "timeout": 10
-          }
-        ]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/session_singleton_guard.py\" guard",
-            "timeout": 10
-          }
-        ]
       }
     ],
     "Stop": [
@@ -59,17 +38,6 @@
         ]
       }
     ],
-    "SessionEnd": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/session_singleton_guard.py\" cleanup",
-            "timeout": 5
-          }
-        ]
-      }
-    ],
     "PostToolUse": [
       {
         "matcher": "Bash",
@@ -78,17 +46,6 @@
             "type": "command",
             "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/auto_restart_server.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/auto_restart_server.py\"; fi",
             "timeout": 30
-          }
-        ]
-      }
-    ],
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/phase_listener.py\"",
-            "timeout": 5
           }
         ]
       }
