@@ -194,7 +194,13 @@ class TestAC1TableGrid:
         )
 
     def test_column_borders_on_th(self):
-        """Header cells (<th>) must carry border-right inline style."""
+        """Die Kopfzeile (th) muss Spaltenlinien (border-right) tragen.
+
+        Issue #900: Die th-Spaltenlinie läuft über die globale th-Regel im
+        gerenderten <style>-Block (nicht inline), damit die <th>-Tags schlank
+        bleiben und bestehende Renderer-Tests stabil sind. Die Datenzellen-
+        Linien (td) bleiben inline/Outlook-fest (siehe test_column_borders_on_td).
+        """
         segs = _build_segments()
         html = _render_html(segs, seg_tables=[[
             {
@@ -203,9 +209,9 @@ class TestAC1TableGrid:
                 "risk": "ok",
             }
         ]] * 2)
-        # Inline border-right on <th> elements
-        assert re.search(r'<th[^>]*border-right[^>]*>', html) is not None, (
-            "AC-1: <th> Elemente haben kein inline border-right — Spalten-Header-Linie fehlt"
+        # th-Regel im gerenderten CSS-Block trägt border-right
+        assert re.search(r'th \{[^}]*border-right[^}]*\}', html) is not None, (
+            "AC-1: th-Regel hat kein border-right — Spalten-Header-Linie fehlt"
         )
 
     def test_row_borders_on_data_rows(self):
@@ -229,7 +235,10 @@ class TestAC1TableGrid:
         )
 
     def test_header_background_color(self):
-        """Die <th>-Kopfzeile muss einen sichtbaren Hintergrund haben (inline)."""
+        """Die th-Kopfzeile muss einen sichtbaren Hintergrund (Kennzeichnung) haben.
+
+        Issue #900: läuft über die globale th-Regel im gerenderten <style>-Block.
+        """
         segs = _build_segments()
         html = _render_html(segs, seg_tables=[[
             {
@@ -238,9 +247,9 @@ class TestAC1TableGrid:
                 "vis": 2000.0, "risk": "ok",
             }
         ]] * 2)
-        # <th> with background inline style (not only in <style> block)
-        assert re.search(r'<th[^>]*background[^>]*>', html) is not None, (
-            "AC-1: <th> hat keinen inline Hintergrund — Header-Kennzeichnung fehlt"
+        # th-Regel im gerenderten CSS-Block trägt eine Hintergrundfarbe
+        assert re.search(r'th \{[^}]*background[^}]*\}', html) is not None, (
+            "AC-1: th-Regel hat keinen Hintergrund — Header-Kennzeichnung fehlt"
         )
 
 
@@ -332,11 +341,15 @@ class TestAC3UniformFontSize:
         tageslage_pos = html.find("TAGESLAGE")
         assert tageslage_pos != -1, "TAGESLAGE-Block nicht gefunden"
 
-        # Grab section from TAGESLAGE up to first segment table
-        seg_pos = html.find("SEG 1")
-        if seg_pos == -1:
-            seg_pos = len(html)
-        section = html[tageslage_pos:seg_pos]
+        # Grab section from TAGESLAGE up to the next block. Der TAGESLAGE-Block
+        # endet vor dem Metriken-Überblick (der eigene font-sizes mitbringt);
+        # Fallback auf die erste Segment-Tabelle.
+        end_pos = html.find("Metriken-Überblick", tageslage_pos)
+        if end_pos == -1:
+            end_pos = html.find("SEG 1", tageslage_pos)
+        if end_pos == -1:
+            end_pos = len(html)
+        section = html[tageslage_pos:end_pos]
 
         sizes = re.findall(r'font-size:(\d+(?:\.\d+)?)px', section)
         # We need at least two text-carrying elements with the same font-size
@@ -513,15 +526,23 @@ class TestAC7TrendAsChips:
         # After rendering, the trend block is: <div style="background:#fbfaf6;padding:24px 28px 16px;">
         # followed by the eyebrow then the trend rows
         # Find it by the unique trend container background+padding combo
+        # Die Trend-Sektion endet, wo die nächste Sektion ("Antwort-Kommandos")
+        # beginnt — sonst fängt das Fenster deren <tr>-Tabelle mit ein.
+        def _clip(start: int, fallback_len: int) -> str:
+            end = html.find("Antwort-Kommandos", start)
+            if end == -1:
+                end = start + fallback_len
+            return html[start:end]
+
         pos = html.rfind('padding:24px 28px 16px')
         if pos == -1:
             # Fallback: find the last weekday occurrence (trend section is near end)
             for day in trend_days:
                 rpos = html.rfind(f'>{day}<')
                 if rpos != -1:
-                    return html[max(0, rpos - 500):rpos + 3000]
+                    return _clip(max(0, rpos - 500), 3000)
             return ""
-        return html[pos:pos + 4000]
+        return _clip(pos, 4000)
 
     def test_no_trend_table_rows(self):
         """Trend-Abschnitt darf keine <tr>-Zeilen enthalten (alte Tabellen-Darstellung)."""

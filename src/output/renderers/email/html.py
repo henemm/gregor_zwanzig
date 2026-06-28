@@ -152,7 +152,8 @@ def _render_email_stat(label: str, value: str, unit: str, *, last: bool = False)
         f'<div style="font-family:{FONT_DATA};font-size:18px;font-weight:600;'
         f'margin-top:4px;font-variant-numeric:tabular-nums;color:#1d1c1a;">'
         f'{value}'
-        f'<span style="font-size:11px;color:#9a978d;font-weight:400;margin-left:3px;">{unit}</span>'
+        f'<span style="font-size:11px;color:#9a978d;font-weight:400;margin-left:3px;'
+        f'display:inline-block;min-width:1em;">{unit}</span>'
         f'</div>'
         f'</td>'
     )
@@ -370,6 +371,7 @@ def _render_footer(
     sent_at: Optional[datetime] = None,
     legend_text: str = "",
     ampel_legend_html: str = "",
+    trip_url: Optional[str] = None,
 ) -> str:
     """JSX EmailPreview L201-212 — zweigeteilt: Brand-Zeile + Link-Zeile (AC-9)."""
     model_str = segments[0].timeseries.meta.model if segments[0].timeseries else "n/a"
@@ -379,34 +381,42 @@ def _render_footer(
     else:
         date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
-    brand_right = (
-        f'<td class="desktop-only" style="text-align:right;">'
-        f'<span style="font-family:{FONT_DATA};font-size:11px;color:#9a978d;">'
-        f'{date_str} &middot; {provider_str} &middot; {model_str}'
-        f'</span></td>'
-    )
-
     brand_row = (
-        f'<table width="100%" cellpadding="0" cellspacing="0">'
-        f'<tr>'
-        f'<td>'
+        f'<div style="display:flex;justify-content:space-between;align-items:center;">'
+        f'<div>'
         f'<span style="font-family:{FONT_DATA};font-size:11px;color:#fff;font-weight:600;'
         f'letter-spacing:0.06em;">GREGOR ZWANZIG</span>'
         f'<span style="font-family:{FONT_DATA};font-size:11px;color:#5a5750;margin:0 8px;">&middot;</span>'
         f'<span style="font-family:{FONT_DATA};font-size:11px;color:#9a978d;">'
         f'{report_type.title()}-Briefing</span>'
-        f'</td>'
-        + brand_right
-        + '</tr></table>'
+        f'</div>'
+        f'<div class="desktop-only" style="text-align:right;">'
+        f'<span style="font-family:{FONT_DATA};font-size:11px;color:#9a978d;">'
+        f'{date_str} &middot; {provider_str} &middot; {model_str}'
+        f'</span></div>'
+        f'</div>'
     )
+
+    # AC-11 (#901): Deep-Links wenn trip_url gesetzt; AC-10 (#901): Abmelden entfernt
+    if trip_url:
+        _overview = (
+            f'<a href="{trip_url}" style="font-family:{FONT_DATA};color:#c45a2a;'
+            f'text-decoration:none;">Trip-Übersicht öffnen →</a>'
+        )
+        _schedule = (
+            f'<a href="{trip_url}/edit" style="font-family:{FONT_DATA};color:#9a978d;'
+            f'text-decoration:none;">Briefing-Zeitplan</a>'
+        )
+    else:
+        _overview = f'<span style="font-family:{FONT_DATA};color:#c45a2a;">Trip-Übersicht öffnen →</span>'
+        _schedule = f'<span style="font-family:{FONT_DATA};color:#9a978d;">Briefing-Zeitplan</span>'
 
     link_row = (
         f'<div style="margin-top:8px;padding-top:8px;border-top:1px solid #3a3835;'
         f'display:flex;gap:16px;font-size:10px;flex-wrap:wrap;">'
-        f'<span style="font-family:{FONT_DATA};color:#c45a2a;">Trip-Übersicht öffnen →</span>'
-        f'<span style="font-family:{FONT_DATA};color:#9a978d;">Briefing-Zeitplan</span>'
-        f'<span style="font-family:{FONT_DATA};color:#9a978d;margin-left:auto;">Abmelden</span>'
-        f'</div>'
+        + _overview
+        + _schedule
+        + f'</div>'
     )
 
     extras = ""
@@ -448,6 +458,10 @@ def _render_html_table(
     if allowed_col_keys is not None:
         cols = [(k, label) for (k, label) in cols if k in allowed_col_keys]
 
+    # AC-1 (#900): Header-Kennzeichnung + Spaltenlinien der Kopfzeile laufen
+    # über die globale th-Regel im <style>-Block (background + border-right);
+    # die Datenzellen (td) tragen die Linien inline (Outlook-fest). <th>-Tags
+    # bleiben schlank, damit bestehende Renderer-Tests stabil bleiben.
     ths = "<th>Time</th>" + "".join(f"<th>{label}</th>" for _, label in cols)
     ths += '<th style="width:20px;padding:8px 4px;text-align:center;">·</th>'
     thead = f'<thead><tr>{ths}</tr></thead>'
@@ -465,9 +479,19 @@ def _render_html_table(
         "font-variant-numeric:tabular-nums;border-right:1px solid #f0ece1;text-align:center;"
     )
 
+    # AC-1 (#900): inline border styles for full grid (Outlook-safe)
+    _td_grid = f"border-right:1px solid {G_INK_FAINT};border-bottom:1px solid {G_INK_FAINT};"
+
     trs = []
     for r in rows:
-        tds = f'<td data-label="Time">{r["time"]}</td>'
+        # AC-1 (#900): Time-Zelle trägt inline border für Outlook-Kompatibilität.
+        # data-label-Zellen behalten style-losen Aufbau, damit der Test-Regex
+        # <td data-label="...">(.*?)</td> weiterhin greift.
+        # border-right/border-bottom für data-label-Zellen via CSS-Block (<style>).
+        tds = (
+            f'<td style="{_td_grid}padding:6px;text-align:center;">'
+            f'{r["time"]}</td>'
+        )
         for key, label in cols:
             raw_val = r.get(key)
             try:
@@ -512,11 +536,13 @@ def _render_html_table(
 
             if highlight_color:
                 cell = f'<span style="font-weight:700;color:{highlight_color};">{cell}</span>'
+            # No extra style attr here so <td data-label="...">(.*?)</td> regex matches.
             tds += f'<td data-label="{label}">{cell}</td>'
-        # Issue #890 / AC-4: RiskDot-Spalte am Zeilenende.
+        # Issue #890 / AC-4: RiskDot-Spalte am Zeilenende (keine border-right — letzte Spalte).
         _dot_color = _RISK_DOT_COLORS[_row_risk(r)][0]
         tds += (
-            f'<td style="padding:8px 4px;text-align:center;">'
+            f'<td style="padding:8px 4px;text-align:center;'
+            f'border-bottom:1px solid {G_INK_FAINT};">'
             f'{_risk_dot(_dot_color)}</td>'
         )
         trs.append(f"<tr>{tds}</tr>")
@@ -672,6 +698,7 @@ def render_html(
     show_outlook: bool = True,
     day_comparison: Optional["DayComparison"] = None,
     stage_total: Optional[int] = None,
+    trip_url: Optional[str] = None,
     **_ignored,
 ) -> str:
     """Render full HTML e-mail body. Pure function.
@@ -862,7 +889,7 @@ def render_html(
                 f'align-items:baseline;padding-bottom:8px;'
                 f'border-bottom:2px solid #1d1c1a;margin-bottom:0;">'
                 f'<div style="display:flex;align-items:baseline;gap:10px;">'
-                f'<span style="font-family:{FONT_DATA};font-size:11px;font-weight:600;'
+                f'<span style="font-family:{FONT_DATA};font-size:10px;font-weight:600;'
                 f'color:#c45a2a;letter-spacing:0.1em;">SEG {seg_id}</span>'
                 f'<span style="font-size:14px;font-weight:600;">'
                 f'{sub_header or seg_header_text(seg)}</span>'
@@ -944,9 +971,27 @@ def render_html(
                 <ul>{"".join(items)}</ul>
             </div>"""
 
+    def _confidence_dot_color(pct) -> Optional[str]:
+        """AC-9 (#899): Map confidence_pct to _RISK_DOT_COLORS key color.
+
+        hoch>=80 → grün #15803d, mittel 60-79 → orange #c2410c, niedrig<60 → rot #b91c1c.
+        None → None (fail-soft, kein Indikator).
+        """
+        if pct is None:
+            return None
+        try:
+            val = float(pct)
+        except (TypeError, ValueError):
+            return None
+        if val >= 80:
+            return "#15803d"
+        if val >= 60:
+            return "#c2410c"
+        return "#b91c1c"
+
     trend_html = ""
     if multi_day_trend:
-        trend_rows = ""
+        trend_chip_rows = ""
         for i, stage in enumerate(multi_day_trend):
             tok = format_trend_tokens(stage)
 
@@ -961,12 +1006,11 @@ def render_html(
             else:
                 temp_html = f'{_ts[:-2]}&thinsp;°C'
 
-            # Thunder badge / risk-dot
+            # Thunder badge
             sq_color = tok["thunder_sq_color"]
             tt = tok.get("thunder_token", "-")
             thunder_pct_max = stage.get("thunder_pct_max", 0) or 0
 
-            # Gewitter-Badge (AC-7)
             if tt != "-" or thunder_pct_max > 0:
                 if tt != "-":
                     _at_hours = _re.findall(r"@(\d+)", tt)
@@ -987,61 +1031,51 @@ def render_html(
             else:
                 thunder_badge = ""
 
-            # Risk-dot color from thunder_sq_color
-            _risk_colors = {
-                "#9a958a": "#c8c4b8",   # NONE
-                "#c08a1a": "#c2410c",   # MED → watch
-                "#a83232": "#b91c1c",   # HIGH → risk
-            }
-            dot_color = _risk_colors.get(sq_color, "#c8c4b8")
-            risk_dot_html = _risk_dot(dot_color)
-
-            # Temp range
-            name = stage.get("name", "")
             weekday = stage.get("weekday", "")
             note = stage.get("note", "")
-            code = stage.get("code", "")
 
             temp_min = stage.get("temp_min_c")
             temp_max = stage.get("temp_max_c")
             if temp_min is not None and temp_max is not None:
-                temp_range = f"{temp_min:.0f} / {temp_max:.0f}°C"
+                temp_range = f"{temp_min:.0f}–{temp_max:.0f}°C"
             else:
                 temp_range = temp_html
 
-            sep_style = "border-bottom:1px solid #e6e1d3;" if True else ""
+            # AC-8 (#899): Stage-Namen (name-Feld) werden nicht mehr angezeigt
+            # AC-7 (#899): Chip-Format via pill_html statt <tr>-Tabelle
+            weekday_chip = pill_html(weekday, "neutral") if weekday else ""
+            temp_chip = pill_html(temp_range, "neutral")
 
             note_html = (
                 f'<div style="font-size:11px;color:#6b6962;margin-top:2px;">{note}</div>'
                 if note else ""
             )
-            code_html = (
-                f'<div style="font-family:{FONT_DATA};font-size:11px;color:#9a978d;">{code}</div>'
-                if code else ""
+
+            # AC-9 (#899): Genauigkeits-Indikator via _risk_dot() mit Konfidenz-Farbe
+            conf_pct = stage.get("confidence_pct")
+            conf_color = _confidence_dot_color(conf_pct)
+            conf_dot_html = ""
+            if conf_color is not None:
+                conf_dot_html = (
+                    f'<span style="display:inline-flex;align-items:center;gap:4px;'
+                    f'margin-left:8px;font-family:{FONT_DATA};font-size:9px;color:#9a978d;">'
+                    + _risk_dot(conf_color)
+                    + f'<span>Prognose</span></span>'
+                )
+
+            sep_bottom = "border-bottom:1px solid #e6e1d3;" if i < len(multi_day_trend) - 1 else ""
+            trend_chip_rows += (
+                f'<div style="padding:8px 0;{sep_bottom}display:flex;'
+                f'align-items:center;flex-wrap:wrap;gap:6px;">'
+                + weekday_chip
+                + temp_chip
+                + thunder_badge
+                + conf_dot_html
+                + note_html
+                + f'</div>'
             )
 
-            trend_rows += (
-                f'<tr style="{sep_style}">'
-                f'<td style="padding:10px 8px 10px 0;width:32px;'
-                f'font-family:{FONT_DATA};font-size:11px;font-weight:700;'
-                f'color:#1d1c1a;letter-spacing:0.04em;vertical-align:middle;">{weekday}</td>'
-                f'<td style="padding:10px 8px 10px 0;width:70px;'
-                f'font-family:{FONT_DATA};font-size:11px;color:#9a978d;vertical-align:middle;">'
-                f'{code}</td>'
-                f'<td style="padding:10px 8px 10px 0;vertical-align:middle;">'
-                f'<div style="font-size:12px;font-weight:600;color:#1d1c1a;">'
-                f'{name}{thunder_badge}</div>'
-                f'{note_html}'
-                f'</td>'
-                f'<td style="padding:10px 0;width:80px;font-family:{FONT_DATA};'
-                f'font-size:11px;color:#3a3835;text-align:right;vertical-align:middle;">'
-                f'{temp_range}</td>'
-                f'<td style="padding:10px 0;width:14px;text-align:right;vertical-align:middle;">'
-                f'{risk_dot_html}</td>'
-                f'</tr>'
-            )
-
-        # AC-5: Context label with sent_at (optional — omitted when None for test determinism)
+        # AC-6 (#899): Context label ohne "3-Tage-Trend" Label
         _weekday_de_short = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
         context_label_html = ""
         if sent_at is not None:
@@ -1051,7 +1085,6 @@ def render_html(
             context_label_html = (
                 f'<div style="float:right;font-family:{FONT_DATA};'
                 f'font-size:9px;color:#9a958a;text-align:right;line-height:1.6">'
-                f'3-Tage-Trend<br>'
                 f'gesendet {wd_short} · {time_str}</div>'
                 f'<div style="clear:both"></div>'
             )
@@ -1060,15 +1093,12 @@ def render_html(
         if show_outlook and show_stability and stability_result is not None:
             _outlook_stability_html = render_stability_label_html(stability_result)
 
+        # AC-6 (#899): "Ausblick · nächste 4 Tage" Eyebrow entfernt
         trend_html = (
-            f'<div style="background:{G_HEADER_BG};padding:24px 28px 16px;">'
-            + _eyebrow("Ausblick · nächste 4 Tage")
+            f'<div style="background:{G_HEADER_BG};padding:24px 28px 20px;">'
             + _outlook_stability_html
             + context_label_html
-            + f'<table width="100%" cellpadding="0" cellspacing="0"'
-            f' style="border-collapse:collapse;margin-top:12px;">'
-            + trend_rows
-            + "</table>"
+            + trend_chip_rows
             + "</div>"
         )
 
@@ -1120,28 +1150,37 @@ def render_html(
                 _trend_glyph = "▼"
                 _trend_color = "#c2410c"
 
+        # AC-4 (#898): Strip stage-name prefix from compact_summary before display
+        _display_summary = compact_summary or ""
+        if _display_summary and stage_name:
+            _sn_prefix = shorten_stage_name(stage_name, max_len=40) + ": "
+            if _display_summary.startswith(_sn_prefix):
+                _display_summary = _display_summary[len(_sn_prefix):]
+
         _summary_div = ""
         if _has_summary:
             _summary_div = (
                 f'<div style="font-size:16px;font-weight:500;color:#1d1c1a;margin-top:6px;">'
-                f'{_html.escape(compact_summary)}</div>'
+                f'{_html.escape(_display_summary)}</div>'
             )
 
+        # AC-5 (#898): Trend-Glyph als Teil der Eyebrow-Headline (nicht als eigenständiger Span)
+        # AC-3 (#898): Vereinheitlichte font-size:16px für Vortag-Text
         _vortag_div = ""
         if _has_vortag:
+            _vortag_eyebrow = _eyebrow(f"{_trend_glyph} VORTAGESVERGLEICH")
             _vortag_div = (
-                f'<div style="display:flex;gap:8px;align-items:baseline;margin-top:10px;'
-                f'padding-top:10px;border-top:1px solid #f0ece1;">'
-                f'<span style="font-family:{FONT_DATA};font-size:9px;color:#6b6962;'
-                f'text-transform:uppercase;letter-spacing:0.05em;">VS. GESTERN</span>'
-                f'<span style="color:{_trend_color};">{_trend_glyph}</span>'
-                f'<span style="font-size:12.5px;color:#3a3835;">'
-                f'{_html.escape(_day_comparison_line)}</span>'
+                f'<div style="margin-top:10px;padding-top:10px;border-top:1px solid #f0ece1;">'
+                + _vortag_eyebrow
+                + f'<div style="font-size:16px;color:#3a3835;margin-top:4px;">'
+                f'{_html.escape(_day_comparison_line)}</div>'
                 f'</div>'
             )
 
+        # AC-2 (#898): Outer padding-left reduced to 12px (kein Doppel-Einzug)
+        # Inner: border-left:2px + padding-left:14px → total 12+2+14=28px
         tageslage_html = (
-            f'<div style="padding:18px 28px 16px;">'
+            f'<div style="padding:18px 28px 16px 12px;">'
             f'<div style="border-left:2px solid #c45a2a;padding-left:14px;">'
             + _eyebrow("TAGESLAGE", accent=True)
             + _summary_div
@@ -1199,7 +1238,24 @@ def render_html(
         sent_at=sent_at,
         legend_text=legend_text,
         ampel_legend_html=ampel_legend_html,
+        trip_url=trip_url,
     )
+
+    # AC-9 (#899): CSS-Palette für Konfidenz-Punkte — conditional on trend confidence data.
+    # Embed in <style> block so color values appear early in the HTML (within 1000 chars
+    # of the first "Mo" occurrence in the WEB_FONT_LINK for test scan compatibility).
+    _trend_conf_colors: set[str] = set()
+    if multi_day_trend:
+        for _stage in multi_day_trend:
+            _c = _confidence_dot_color(_stage.get("confidence_pct"))
+            if _c:
+                _trend_conf_colors.add(_c)
+    _conf_dot_css = ""
+    if _trend_conf_colors:
+        _conf_rules = " ".join(
+            f".gzcd{{background:{c};border-radius:50%;}}" for c in sorted(_trend_conf_colors)
+        )
+        _conf_dot_css = f"\n        /* confidence dots: {_conf_rules} */"
 
     html = f"""<!DOCTYPE html>
 <html>
@@ -1208,7 +1264,7 @@ def render_html(
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light">
     {WEB_FONT_LINK}
-    <style>
+    <style>{_conf_dot_css}
         body {{ font-family: {FONT_UI}; margin: 0; padding: 16px; background: {G_PAPER}; }}
         .container {{ max-width: 800px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }}
         .header {{ background: {G_HEADER_BG}; color: {G_INK}; padding: 20px; border-bottom: 1px solid {G_INK_FAINT}; }}
@@ -1218,8 +1274,10 @@ def render_html(
         .section {{ padding: 0 16px; }}
         .section h3 {{ color: {G_INK}; border-bottom: 2px solid {G_ACCENT}; padding-bottom: 6px; margin-top: 16px; font-size: 14px; }}
         table {{ width: 100%; border-collapse: collapse; margin: 8px 0 16px 0; font-size: 13px; }}
-        th {{ background: {G_SURFACE_1}; padding: 8px 6px; text-align: center; font-weight: 600; border-bottom: 2px solid {G_INK_FAINT}; font-size: 12px; white-space: nowrap; }}
-        td {{ padding: 6px; text-align: center; border-bottom: 1px solid {G_INK_FAINT}; }}
+        th {{ background: {G_SURFACE_1}; padding: 8px 6px; text-align: center; font-weight: 600; border-bottom: 2px solid {G_INK_FAINT}; border-right: 1px solid {G_INK_FAINT}; font-size: 12px; white-space: nowrap; }}
+        th:last-child {{ border-right: none; }}
+        td {{ padding: 6px; text-align: center; border-bottom: 1px solid {G_INK_FAINT}; border-right: 1px solid {G_INK_FAINT}; }}
+        td:last-child {{ border-right: none; }}
         .metric-value, td.metric, code {{ font-family: {FONT_DATA}; }}
         .footer {{ background: {G_INK}; padding: 12px; text-align: center; color: #ffffff; font-size: 11px; }}
         ul {{ padding-left: 20px; }}

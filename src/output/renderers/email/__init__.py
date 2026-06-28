@@ -54,6 +54,7 @@ def render_email(
     email_format: str = "full",
     day_comparison: Optional["DayComparison"] = None,
     stage_total: Optional[int] = None,
+    trip_url: Optional[str] = None,
     **_ignored,
 ) -> tuple[str, str]:
     """Returns (html_body, plain_body). Pure function.
@@ -120,6 +121,7 @@ def render_email(
         show_outlook=show_outlook,
         day_comparison=day_comparison,
         stage_total=stage_total,
+        trip_url=trip_url,
     )
     plain_body = render_plain(
         segments=segments,

@@ -575,6 +575,7 @@ class TripReportSchedulerService:
             day_comparison=day_comparison,
             shortcode=getattr(trip, 'shortcode', None) or None,
             stage_total=len(trip.stages) if trip.stages else None,
+            trip_url=f"https://gregor20.henemm.com/trips/{trip.id}",
         )
 
         # Issue #768 (AC-6): Test-Pfad kennzeichnen — [TEST]-Betreff + Hinweiszeile

@@ -458,10 +458,14 @@ class TestAC6VortagProminence:
         pos = html.find("Vortag: heute")
         assert pos != -1
         box = html[max(0, pos - 250):pos + 50]
-        m = re.search(r"font-size:\s*(\d+)px", box)
-        assert m is not None, f"keine font-size in Vortag-Box:\n{box}"
-        assert int(m.group(1)) >= 14, (
-            f"Vortag-Box font-size {m.group(1)}px < 14px (zu schwach):\n{box}"
+        # Issue #898: Der Vortagesvergleich hat jetzt eine Eyebrow-Headline
+        # (10px) gefolgt vom eigentlichen Vergleichstext. Maßgeblich für die
+        # Prominenz ist das den Text unmittelbar umschließende Element — also
+        # die LETZTE font-size vor 'Vortag: heute', nicht die Eyebrow davor.
+        sizes = re.findall(r"font-size:\s*(\d+)px", box)
+        assert sizes, f"keine font-size in Vortag-Box:\n{box}"
+        assert int(sizes[-1]) >= 14, (
+            f"Vortag-Box font-size {sizes[-1]}px < 14px (zu schwach):\n{box}"
         )
 
     def test_exactly_one_vortag_line_plain(self):

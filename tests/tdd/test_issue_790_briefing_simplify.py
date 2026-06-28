@@ -415,7 +415,9 @@ class TestBug798EmptyMetricsHourTable:
         table_html = html[table_start:]
         header_end = table_html.find('</tr>')
         header = table_html[:header_end]
-        th_count = header.count('<th>')
+        # Issue #900: <th> tragen jetzt Inline-Styles (Header-Kennzeichnung +
+        # Gitterlinien), daher auf '<th' statt exakt '<th>' zählen.
+        th_count = header.count('<th')
         assert th_count > 1, (
             f"Bug #798: nur {th_count} <th>-Element(e) im Tabellen-Header — erwartet >1 (mehr als 'Zeit')"
         )
@@ -449,10 +451,13 @@ class TestAC8RegressionPreserved:
         assert "Wetterlage: STABIL" in html
 
     def test_outlook_preserved_html(self):
-        # #884: Ausblick section heading changed from "Nächste Etappen" to "Ausblick · nächste 4 Tage"
+        # Issue #899: Das "Ausblick · nächste 4 Tage"-Label wurde entfernt; der
+        # Trend-Bereich selbst (mehrtägige Vorschau) bleibt erhalten und wird als
+        # Chips pro Tag gerendert. Regressionsschutz: der Trend-Tag muss erscheinen.
         html = _render_html(_build_segments(), multi_day_trend=[_trend_stage()])
-        assert "Ausblick" in html, "Ausblick section must be present"
-        # "Nächste Etappen" no longer used in #884 design; "Ausblick" is the new eyebrow
+        assert "Mi" in html, "Trend-Vorschau (Wochentag des Trend-Tages) muss vorhanden sein"
+        # Issue #899 (Punkt 5): Etappenname erscheint NICHT mehr in der Trend-Zeile
+        assert "Nächste Etappe" not in html, "Etappenname darf in der Trend-Zeile nicht erscheinen"
 
     def test_hourly_table_preserved_html(self):
         # #884: segment heading changed from "Segment N" to "SEG N"

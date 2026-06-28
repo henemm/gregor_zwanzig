@@ -302,15 +302,19 @@ def test_ac5_vortag_mono_line():
     """
     GIVEN day_comparison_line = 'heute bessere Sicht als gestern'
     WHEN render_html() called
-    THEN enthält der Lead 'VS. GESTERN' und den Trend-Glyph ▲.
+    THEN enthält der Lead die Vortagesvergleich-Headline und den Trend-Glyph ▲.
+
+    Issue #898 (Punkt 4): Das frühere 'VS. GESTERN'-Label wurde durch die
+    Eyebrow-Headline 'VORTAGESVERGLEICH' ersetzt (gleiches Template wie
+    'TAGESLAGE'); der Trend-Glyph ist Teil dieser Headline.
     """
     dc_obj = _day_comparison_better_visibility()
     html = _render(
         compact_summary="Guter Wandertag mit leichtem Wind.",
         day_comparison=dc_obj,
     )
-    assert "VS. GESTERN" in html, (
-        "AC-5 FAIL: 'VS. GESTERN' nicht im Vortag-Bereich gefunden."
+    assert "VORTAGESVERGLEICH" in html, (
+        "AC-5 FAIL: 'VORTAGESVERGLEICH' nicht im Vortag-Bereich gefunden."
     )
     assert "▲" in html, (
         "AC-5 FAIL: Trend-Glyph ▲ nicht gefunden (Satz enthält 'besser')."
