@@ -91,6 +91,8 @@ class Settings(BaseSettings):
     imap_pass: Optional[str] = Field(default=None, description="IMAP password (default: smtp_pass)")
 
     # Test-Account-Credentials (gregor-test@henemm.com auf Stalwart)
+    test_smtp_host: str = Field(default="mail.henemm.com", description="Test SMTP host (Stalwart, GZ_TEST_SMTP_HOST)")
+    test_smtp_port: int = Field(default=587, description="Test SMTP port (GZ_TEST_SMTP_PORT)")
     test_smtp_user: Optional[str] = Field(default=None, description="Test SMTP username (GZ_TEST_SMTP_USER)")
     test_smtp_pass: Optional[str] = Field(default=None, description="Test SMTP password (GZ_TEST_SMTP_PASS)")
     test_mail_from: Optional[str] = Field(default=None, description="Test sender address (GZ_TEST_MAIL_FROM)")
@@ -137,14 +139,22 @@ class Settings(BaseSettings):
         return self.inbound_address or self.smtp_user
 
     def for_testing(self) -> "Settings":
-        """Return a copy with Stalwart test credentials for test email sending.
+        """Return a copy routed to the local Stalwart test host (away from Resend).
 
-        Falls back to is_test_mode=True only if test credentials are not configured.
-        smtp_host/imap_host bleiben unverändert — gleicher Stalwart-Server wie Produktion.
+        Lenkt smtp_host/-port immer auf test_smtp_host/-port (Default mail.henemm.com),
+        damit Test-/E2E-Mails NIE das Resend-Produktivkontingent belasten. Auch ohne
+        Test-Credentials wird der Host von Resend weggenommen.
         """
+        test_host = self.test_smtp_host or "mail.henemm.com"
         if not self.test_smtp_user or not self.test_smtp_pass:
-            return self.model_copy(update={"is_test_mode": True})
+            return self.model_copy(update={
+                "is_test_mode": True,
+                "smtp_host": test_host,
+                "smtp_port": self.test_smtp_port,
+            })
         return self.model_copy(update={
+            "smtp_host": test_host,
+            "smtp_port": self.test_smtp_port,
             "smtp_user": self.test_smtp_user,
             "smtp_pass": self.test_smtp_pass,
             "mail_from": self.test_mail_from or f"{self.test_smtp_user}@henemm.com",
@@ -171,8 +181,10 @@ class Settings(BaseSettings):
         import json
         from pathlib import Path
 
-        # Test users use Stalwart test account to avoid burning Resend quota
-        base = self.for_testing() if self._is_test_user(user_id) else self
+        # Test users AND staging always use the Stalwart test account: staging must
+        # never send real briefings over Resend to real recipients (burns prod quota).
+        force_test = (self.env or "").lower() == "staging" or self._is_test_user(user_id)
+        base = self.for_testing() if force_test else self
 
         profile_path = Path(f"data/users/{user_id}/user.json")
         if not profile_path.exists():
