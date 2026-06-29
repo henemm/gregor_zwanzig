@@ -263,6 +263,13 @@
 			activeWaypointId = waypointId;
 		};
 	}
+	function handleStageRename(stageId: string, currentName: string): void {
+		const newName = prompt('Etappenname:', currentName);
+		if (!newName?.trim()) return;
+		stages = stages.map((s) => (s.id !== stageId ? s : { ...s, name: newName.trim() }));
+		if (saveController) scheduleSave(); else void save();
+	}
+
 	function makeRenameHandler(stageId: string, waypointId: string) {
 		return function handleRename() {
 			const newName = prompt('Neuer Name:');
@@ -313,7 +320,15 @@
 			<div class="flex items-start justify-between gap-8">
 				<div class="min-w-0 flex-1">
 					<Eyebrow>Etappe · {activeStage.code ?? ''}</Eyebrow>
-					<p style="font-size:32px; font-weight:600; letter-spacing:-0.02em;" class="truncate">{activeStage.name}</p>
+					<div class="flex items-center gap-2">
+						<p style="font-size:32px; font-weight:600; letter-spacing:-0.02em;" class="truncate">{activeStage.name}</p>
+						<button
+							onclick={() => handleStageRename(activeStage!.id, activeStage!.name)}
+							style="flex-shrink:0; color:var(--g-ink-3); padding:4px; border-radius:4px; background:none; border:none; cursor:pointer; line-height:1;"
+							title="Etappenname ändern"
+							aria-label="Etappenname ändern"
+						><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+					</div>
 					<div style="font-size:14px; color:var(--g-ink-3); margin-top:4px; max-width:680px;">
 						Wegpunkte sind <strong style="color:var(--g-ink)">Wetterscheiden</strong> — Punkte, an denen sich Höhe, Exposition oder Geländekammer ändert. Aus der GPX sind {activeStage.waypoints.length} Wegpunkte entstanden — du kannst sie umbenennen, verschieben, löschen oder eigene ergänzen.
 					</div>
