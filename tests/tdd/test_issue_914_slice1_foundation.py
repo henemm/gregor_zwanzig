@@ -67,6 +67,18 @@ class TestAC1AlertMetricSMSCodes:
         assert by_id["snowfall_limit"].sms_code == "SL", "new code snowfall_limit→SL"
         assert by_id["visibility"].sms_code == "VS", "new code visibility→VS"
 
+        # --- F003 fix (#914): humidity=HU must be assertible via direct catalog lookup ---
+        # humidity is a precursor metric (is_precursor=True, excluded from alert_metrics
+        # filter above), but sms_code must still be set in the catalog as a Stammdatum.
+        from app.metric_catalog import get_sms_code, _METRICS_BY_ID
+        assert get_sms_code("humidity") == "HU", (
+            "humidity sms_code must be 'HU' even though it is a precursor metric "
+            "excluded from the alert-capable filter"
+        )
+        assert _METRICS_BY_ID["humidity"].sms_code == "HU", (
+            "humidity in _METRICS_BY_ID must carry sms_code='HU' (F003 coverage)"
+        )
+
 
 # ---------------------------------------------------------------------------
 # AC-2: Catalog provides comparison direction (cmp) and detection uses it
@@ -153,6 +165,130 @@ class TestAC2CatalogComparisionDirection:
         # confirms the detection is reading the catalog (not a stale 'above' dict that gives wrong label)
         assert wind_changes[0].direction == "increase", (
             "wind increase detected → matches cmp='über' (increase) from catalog"
+        )
+
+    def test_ac2_absolute_path_uses_catalog_cmp(self) -> None:
+        """
+        F002 fix (#914): The absolute-rule detection path uses catalog cmp as the
+        single source — NOT a stale hand-coded dict.
+
+        GIVEN: AlertRules with kind=ABSOLUTE for:
+          - gust (über) → fires when gust_max_kmh > threshold (direction='above')
+          - temp_min (unter) → fires when temp_min_c < threshold (direction='below')
+          - snow_line (unter per catalog/Issue-Registry) → fires when freezing_level_m <
+            threshold (direction='below')  ← this was 'above' in the old hand-coded dict
+        WHEN: detect_changes() is called with include_absolute=True and values that
+              cross each threshold on the expected side
+        THEN: each resulting WeatherChange.direction matches get_cmp() for that metric,
+              confirming the catalog is the single source for the absolute path.
+
+        This test was RED against the old hand-coded _ALERT_METRIC_COMPARISON where
+        SNOW_LINE had 'above' — and GREEN after the catalog-derived fix (#914/AC-2).
+        """
+        from app.metric_catalog import get_cmp
+        from app.models import (
+            AlertMetric,
+            AlertRuleKind,
+            AlertSeverity,
+            ForecastDataPoint,
+            ForecastMeta,
+            GPXPoint,
+            NormalizedTimeseries,
+            Provider,
+            SegmentWeatherData,
+            SegmentWeatherSummary,
+            TripSegment,
+        )
+        from services.weather_change_detection import WeatherChangeDetectionService
+
+        now = datetime.now(timezone.utc)
+        segment = TripSegment(
+            segment_id=1,
+            start_point=GPXPoint(lat=47.0, lon=11.0, elevation_m=1000.0),
+            end_point=GPXPoint(lat=47.1, lon=11.1, elevation_m=1100.0),
+            start_time=now,
+            end_time=now + timedelta(hours=6),
+            duration_hours=6.0,
+            distance_km=10.0,
+            ascent_m=200.0,
+            descent_m=50.0,
+        )
+        meta = ForecastMeta(
+            provider=Provider.OPENMETEO,
+            model="test",
+            run=now,
+            grid_res_km=1.0,
+            interp="point_grid",
+        )
+        ts = NormalizedTimeseries(
+            meta=meta,
+            data=[ForecastDataPoint(ts=now, t2m_c=10.0, wind10m_kmh=20.0)],
+        )
+
+        # Scenario: gust=90 (>50 threshold→above), temp_min=-8 (<-5 threshold→below),
+        # freezing_level=1500 (<2000 threshold→below, i.e. snow line has dropped)
+        summary = SegmentWeatherSummary(
+            gust_max_kmh=90.0,
+            temp_min_c=-8.0,
+            freezing_level_m=1500.0,
+        )
+        old_data = SegmentWeatherData(
+            segment=segment, timeseries=ts,
+            aggregated=SegmentWeatherSummary(),
+            fetched_at=now, provider="openmeteo",
+        )
+        new_data = SegmentWeatherData(
+            segment=segment, timeseries=ts,
+            aggregated=summary,
+            fetched_at=now, provider="openmeteo",
+        )
+
+        from app.models import AlertRule
+        rules = [
+            AlertRule(
+                id="r1", kind=AlertRuleKind.ABSOLUTE,
+                metric=AlertMetric.WIND_GUST, threshold=50.0,
+                severity=AlertSeverity.WARNING, enabled=True,
+            ),
+            AlertRule(
+                id="r2", kind=AlertRuleKind.ABSOLUTE,
+                metric=AlertMetric.TEMPERATURE_MIN, threshold=-5.0,
+                severity=AlertSeverity.WARNING, enabled=True,
+            ),
+            AlertRule(
+                id="r3", kind=AlertRuleKind.ABSOLUTE,
+                metric=AlertMetric.SNOW_LINE, threshold=2000.0,
+                severity=AlertSeverity.WARNING, enabled=True,
+            ),
+        ]
+        service = WeatherChangeDetectionService.from_alert_rules(rules)
+        changes = service.detect_changes(old_data, new_data, include_absolute=True)
+
+        by_metric = {c.metric: c for c in changes}
+
+        # gust: catalog cmp="über" → direction must be "above"
+        assert "gust_max_kmh" in by_metric, "gust ABSOLUTE rule must fire (90 > 50)"
+        assert by_metric["gust_max_kmh"].direction == "above", (
+            f"gust direction must be 'above' (catalog cmp={get_cmp('gust')!r}), "
+            f"got {by_metric['gust_max_kmh'].direction!r}"
+        )
+
+        # temp_min: catalog cmp (temperature_cold) = "unter" → direction must be "below"
+        assert "temp_min_c" in by_metric, "temp_min ABSOLUTE rule must fire (-8 < -5)"
+        assert by_metric["temp_min_c"].direction == "below", (
+            f"temp_min direction must be 'below' (cold alarm, cmp='unter'), "
+            f"got {by_metric['temp_min_c'].direction!r}"
+        )
+
+        # snow_line (freezing_level_m): catalog cmp (freezing_level) = "unter" → "below"
+        # This was 'above' in the old hand-coded dict — the latent bug corrected by #914.
+        assert "freezing_level_m" in by_metric, (
+            "snow_line ABSOLUTE rule must fire (freezing_level 1500 < 2000 threshold)"
+        )
+        assert by_metric["freezing_level_m"].direction == "below", (
+            f"freezing_level direction must be 'below' (tiefere Schneefallgrenze = mehr Gefahr; "
+            f"catalog cmp={get_cmp('freezing_level')!r}); got {by_metric['freezing_level_m'].direction!r}. "
+            f"NOTE: old hand-coded dict had 'above' — fixed by #914/AC-2 (Issue-Registry: 'unter')."
         )
 
 

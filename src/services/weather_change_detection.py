@@ -60,19 +60,49 @@ _ALERT_DELTA_METRIC_TO_FIELDS: dict[AlertMetric, tuple[str, ...]] = {
     AlertMetric.PRECIPITATION_CHANGE: ("precip_sum_mm",),
 }
 
-# Comparison direction per absolute-rule metric ("above" or "below")
-_ALERT_METRIC_COMPARISON: dict[AlertMetric, str] = {
-    AlertMetric.WIND_GUST: "above",
-    AlertMetric.PRECIPITATION_SUM: "above",
-    AlertMetric.TEMPERATURE_MIN: "below",  # Kältealarm
-    AlertMetric.TEMPERATURE_MAX: "above",
-    AlertMetric.THUNDER_LEVEL: "above",
-    AlertMetric.SNOW_LINE: "above",
-    # Issue #846: neue Delta-Metriken (kein Eintrag für VISIBILITY — eigener Threshold-Crossing-Zweig)
-    AlertMetric.FRESH_SNOW: "above",
-    AlertMetric.CAPE: "above",
-    # Issue #889 / ADR-0010: HUMIDITY ist Vorboten-Metrik — keine Vergleichsrichtung mehr.
+# Issue #914 / AC-2: Explicit AlertMetric → catalog metric_id bridge.
+# The catalog `cmp` ("über"/"unter") is the SINGLE SOURCE for comparison direction.
+# TEMPERATURE_MIN maps to "temperature_cold" (cmp="unter") because cold alarms fire
+# when temp_min_c FALLS BELOW threshold — a separate catalog entry is required since
+# the "temperature" entry carries cmp="über" for the warm direction.
+# VISIBILITY uses Threshold-Crossing logic, no entry here.
+_ALERT_METRIC_TO_CATALOG_ID: dict[AlertMetric, str] = {
+    AlertMetric.WIND_GUST: "gust",
+    AlertMetric.PRECIPITATION_SUM: "precipitation",
+    AlertMetric.TEMPERATURE_MIN: "temperature_cold",  # cmp="unter" (Kältealarm)
+    AlertMetric.TEMPERATURE_MAX: "temperature",        # cmp="über"
+    AlertMetric.THUNDER_LEVEL: "thunder",
+    AlertMetric.SNOW_LINE: "freezing_level",           # cmp="unter" (tiefere Grenze = mehr Gefahr)
+    AlertMetric.FRESH_SNOW: "fresh_snow",
+    AlertMetric.CAPE: "cape",
 }
+
+def _build_alert_metric_comparison() -> dict[AlertMetric, str]:
+    """Derive comparison direction from catalog cmp at module load.
+
+    Maps 'über' → 'above', 'unter' → 'below'.
+    This replaces the former hand-coded _ALERT_METRIC_COMPARISON dict
+    (Issue #914/AC-2: catalog is the single source).
+    """
+    from app.metric_catalog import get_cmp as _catalog_get_cmp
+    _cmp_map = {"über": "above", "unter": "below"}
+    result: dict[AlertMetric, str] = {}
+    for metric, catalog_id in _ALERT_METRIC_TO_CATALOG_ID.items():
+        catalog_cmp = _catalog_get_cmp(catalog_id)
+        direction = _cmp_map.get(catalog_cmp)
+        if direction is None:
+            raise ValueError(
+                f"AlertMetric.{metric.name} → catalog '{catalog_id}' has "
+                f"unexpected cmp={catalog_cmp!r}; expected 'über' or 'unter'"
+            )
+        result[metric] = direction
+    return result
+
+
+# Comparison direction per absolute-rule metric ("above" or "below").
+# Derived from catalog at module load — DO NOT hand-edit this dict.
+# To change a direction, update the catalog entry or _ALERT_METRIC_TO_CATALOG_ID.
+_ALERT_METRIC_COMPARISON: dict[AlertMetric, str] = _build_alert_metric_comparison()
 
 # AlertSeverity (Issue #205) → ChangeSeverity (DTO for mail filter)
 _RULE_SEVERITY_TO_CHANGE_SEVERITY: dict[AlertSeverity, ChangeSeverity] = {
@@ -80,6 +110,79 @@ _RULE_SEVERITY_TO_CHANGE_SEVERITY: dict[AlertSeverity, ChangeSeverity] = {
     AlertSeverity.WARNING: ChangeSeverity.MODERATE,
     AlertSeverity.CRITICAL: ChangeSeverity.MAJOR,
 }
+
+
+def _peak_occurred_at(
+    summary_field: str,
+    new_data: "SegmentWeatherData",
+) -> "str | None":
+    """Best-effort: find 'HH:MM' of the peak value for the given summary field.
+
+    Looks up the metric's dp_field and aggregation type from the catalog,
+    then scans the timeseries for the peak point within the segment window.
+    Returns None on any error — never raises.
+    """
+    try:
+        from app.metric_catalog import _METRICS
+        dp_field: str | None = None
+        agg: str | None = None
+        for m in _METRICS:
+            for a, sf in m.summary_fields.items():
+                if sf == summary_field:
+                    dp_field = m.dp_field
+                    agg = a
+                    break
+            if dp_field:
+                break
+        if not dp_field or not agg:
+            return None
+
+        seg = new_data.segment
+        points = new_data.timeseries.data
+        if not points:
+            return None
+
+        seg_start = seg.start_time
+        seg_end = seg.end_time
+
+        # Filter to points within the segment window
+        window = [
+            p for p in points
+            if p.ts is not None and seg_start <= p.ts <= seg_end
+        ]
+        if not window:
+            window = points  # fallback: use all points
+
+        # Find peak point based on aggregation type
+        best = None
+        best_val: float | None = None
+        for p in window:
+            raw = getattr(p, dp_field, None)
+            if raw is None:
+                continue
+            try:
+                val = float(raw)
+            except (TypeError, ValueError):
+                continue
+            if best_val is None:
+                best, best_val = p, val
+            elif agg in ("max", "sum") and val > best_val:
+                best, best_val = p, val
+            elif agg == "min" and val < best_val:
+                best, best_val = p, val
+            # avg: use last point as proxy (no running mean needed here)
+            elif agg == "avg":
+                best, best_val = p, val
+
+        if best is None or best.ts is None:
+            return None
+
+        ts = best.ts
+        if hasattr(ts, "hour"):
+            return f"{ts.hour:02d}:{ts.minute:02d}"
+        return None
+    except Exception:
+        return None
 
 
 class WeatherChangeDetectionService:
@@ -203,6 +306,10 @@ class WeatherChangeDetectionService:
                 continue
             if metric_def.default_change_threshold is None:
                 continue  # Enum metrics (thunder, precip_type) — skip
+            # Issue #889 / #914: Vorboten-Metriken (is_precursor=True) lösen
+            # keinen Abweichungs-Alert aus — auch wenn aktiviert im Display-Config.
+            if metric_def.is_precursor:
+                continue
             threshold = mc.alert_threshold if mc.alert_threshold is not None else metric_def.default_change_threshold
             for field in metric_def.summary_fields.values():
                 thresholds[field] = threshold
@@ -369,6 +476,7 @@ class WeatherChangeDetectionService:
                     severity=severity,
                     direction=direction,
                     segment_id=str(new_data.segment.segment_id),
+                    occurred_at=_peak_occurred_at(metric, new_data),
                 )
                 changes.append(change)
 

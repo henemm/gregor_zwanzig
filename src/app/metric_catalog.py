@@ -53,6 +53,14 @@ class MetricDefinition:
     # internal computation/aggregation (e.g. confidence for forecast hints).
     # PO-Regel (dauerhaft): confidence ist KEINE waehlbare Wetter-Metrik.
     selectable: bool = True
+    # Issue #914 Slice 1: Alert-Render-Stammdaten (Single Source of Truth)
+    sms_code: str = ""           # GSM-7-tauglicher Token (1–2 Großbuchstaben, ASCII), kollisionsfrei
+    decimals: Optional[int] = None  # Rundungsstellen für Darstellung; None => Einheit-Heuristik
+    cmp: str = ""                # "über" | "unter" — Seite, auf der die Schwelle alarmiert
+    # Issue #914 / ADR-0010: Vorboten-Metriken haben sms_code + default_change_threshold
+    # für Katalog-Vollständigkeit, lösen aber KEINEN Abweichungs-Alert aus.
+    # from_display_config() und from_alert_rules() ignorieren is_precursor=True.
+    is_precursor: bool = False
 
     @property
     def has_friendly_format(self) -> bool:
@@ -71,6 +79,21 @@ _METRICS: list[MetricDefinition] = [
         providers={"openmeteo": True, "geosphere": True},
         summary_fields={"min": "temp_min_c", "max": "temp_max_c", "avg": "temp_avg_c"},
         default_change_threshold=5.0,
+        sms_code="T", decimals=0, cmp="über",
+    ),
+    # Issue #914: Internal-only entry for AlertMetric.TEMPERATURE_MIN (Kältealarm).
+    # cmp="unter" because cold alarm fires when temp_min_c FALLS BELOW threshold.
+    # selectable=False: never shown in user catalog or /api/metrics.
+    # The "temperature" entry (above) covers the warm direction (cmp="über").
+    MetricDefinition(
+        id="temperature_cold", label_de="Tiefsttemperatur-Alarm", unit="°C",
+        dp_field="t2m_c", category="temperature",
+        default_aggregations=("min",),
+        compact_label="TN", col_key="temp_cold", col_label="TmpMin",
+        providers={"openmeteo": True, "geosphere": True},
+        summary_fields={"min": "temp_min_c"},
+        sms_code="TN", decimals=0, cmp="unter",
+        selectable=False,
     ),
     MetricDefinition(
         id="wind_chill", label_de="Gefühlte Temperatur", unit="°C",
@@ -80,6 +103,7 @@ _METRICS: list[MetricDefinition] = [
         providers={"openmeteo": True, "geosphere": True},
         summary_fields={"min": "wind_chill_min_c"},
         # Issue #889 / ADR-0010: Vorboten-Metrik — kein Abweichungs-Alert.
+        # is_precursor=True verhindert Alerts in from_display_config/from_alert_rules.
         default_change_threshold=None,
         risk_thresholds={"high_lt": -20.0},
     ),
@@ -92,7 +116,9 @@ _METRICS: list[MetricDefinition] = [
         default_enabled=False,
         summary_fields={"avg": "humidity_avg_pct"},
         # Issue #889 / ADR-0010: Vorboten-Metrik — kein Abweichungs-Alert.
+        # is_precursor=True verhindert Alerts in from_display_config/from_alert_rules.
         default_change_threshold=None,
+        sms_code="HU", decimals=0, cmp="über", is_precursor=True,
     ),
     MetricDefinition(
         id="dewpoint", label_de="Taupunkt", unit="°C",
@@ -120,6 +146,7 @@ _METRICS: list[MetricDefinition] = [
         exposition_risk_thresholds={"medium": 30, "high": 50},
         format_modes=("raw", "simplified"),
         default_format_mode="raw",
+        sms_code="W", decimals=0, cmp="über",
     ),
     MetricDefinition(
         id="gust", label_de="Böen", unit="km/h",
@@ -135,6 +162,7 @@ _METRICS: list[MetricDefinition] = [
         exposition_risk_thresholds={"medium": 40, "high": 60},
         format_modes=("raw", "simplified"),
         default_format_mode="raw",
+        sms_code="G", decimals=0, cmp="über",
     ),
     MetricDefinition(
         id="wind_direction", label_de="Windrichtung", unit="°",
@@ -162,6 +190,7 @@ _METRICS: list[MetricDefinition] = [
         risk_thresholds={"medium": 20.0},
         format_modes=("raw", "simplified"),
         default_format_mode="raw",
+        sms_code="R", decimals=1, cmp="über",
     ),
     MetricDefinition(
         id="rain_probability", label_de="Regenwahrscheinlichkeit", unit="%",
@@ -171,11 +200,14 @@ _METRICS: list[MetricDefinition] = [
         providers={"openmeteo": True, "geosphere": False},
         default_enabled=False,
         summary_fields={"max": "pop_max_pct"},
-        # Issue #889 / ADR-0010: Vorboten-Metrik — kein Abweichungs-Alert.
-        default_change_threshold=None,
+        # Issue #889 / ADR-0010: Vorboten-Metrik — kein Abweichungs-Alert über
+        # from_display_config (is_precursor=True). default_change_threshold gesetzt
+        # für Katalog-Vollständigkeit (sms_code PR).
+        default_change_threshold=20.0,
         display_thresholds={"yellow": 30.0, "orange": 60.0, "red": 80.0},
         highlight_threshold=80.0,
         risk_thresholds={"medium": 80},
+        sms_code="PR", decimals=0, cmp="über", is_precursor=True,
     ),
     # === FORECAST CONFIDENCE (Issue #121) ===
     # Issue #710/#715 PO-Regel (dauerhaft): confidence ist KEINE waehlbare
@@ -207,6 +239,7 @@ _METRICS: list[MetricDefinition] = [
         # raw+symbol). use_friendly_format=False-Pfad (loader.py:68) umgeht Validierung.
         format_modes=("raw", "symbol"),
         default_format_mode="symbol",
+        sms_code="TH", decimals=0, cmp="über",
     ),
     MetricDefinition(
         id="cape", label_de="Gewitterenergie (CAPE)", unit="J/kg",
@@ -224,6 +257,7 @@ _METRICS: list[MetricDefinition] = [
         risk_thresholds={"medium": 1000.0, "high": 2000.0},
         format_modes=("raw", "symbol"),
         default_format_mode="symbol",
+        sms_code="CP", decimals=0, cmp="über",
     ),
     MetricDefinition(
         id="snowfall_limit", label_de="Schneefallgrenze", unit="m",
@@ -232,6 +266,8 @@ _METRICS: list[MetricDefinition] = [
         compact_label="SG", col_key="snow_limit", col_label="SnowL",
         providers={"openmeteo": False, "geosphere": True},
         # No summary_fields: not on SegmentWeatherSummary
+        default_change_threshold=200.0,
+        sms_code="SL", decimals=0, cmp="unter",
     ),
     MetricDefinition(
         id="precip_type", label_de="Niederschlagsart", unit="",
@@ -308,6 +344,7 @@ _METRICS: list[MetricDefinition] = [
         risk_thresholds={"high_lt": 100.0},
         format_modes=("raw",),
         default_format_mode="raw",
+        sms_code="VS", decimals=1, cmp="unter",
     ),
     MetricDefinition(
         id="sunshine", label_de="Sonnenschein", unit="h",
@@ -332,6 +369,7 @@ _METRICS: list[MetricDefinition] = [
         default_enabled=False,
         summary_fields={"max": "uv_index_max"},
         default_change_threshold=3.0,
+        sms_code="UV", decimals=0, cmp="über",
     ),
     MetricDefinition(
         id="pressure", label_de="Luftdruck", unit="hPa",
@@ -355,6 +393,7 @@ _METRICS: list[MetricDefinition] = [
         # Single field on SegmentWeatherSummary (not min/max split)
         summary_fields={"min": "freezing_level_m"},
         default_change_threshold=200,
+        sms_code="NL", decimals=0, cmp="unter",
     ),
     MetricDefinition(
         id="snow_depth", label_de="Schneehöhe", unit="cm",
@@ -365,6 +404,7 @@ _METRICS: list[MetricDefinition] = [
         default_enabled=False,
         summary_fields={"max": "snow_depth_cm"},
         default_change_threshold=10.0,
+        sms_code="SD", decimals=0, cmp="über",
     ),
     MetricDefinition(
         id="fresh_snow", label_de="Neuschnee", unit="cm",
@@ -375,6 +415,7 @@ _METRICS: list[MetricDefinition] = [
         default_enabled=False,
         summary_fields={"sum": "snow_new_sum_cm"},
         default_change_threshold=5.0,
+        sms_code="SN", decimals=0, cmp="über",
     ),
 ]
 
@@ -553,6 +594,11 @@ def get_change_detection_map() -> dict[str, float]:
     for m in _METRICS:
         if m.default_change_threshold is None:
             continue
+        # Issue #889 / #914: Vorboten-Metriken (is_precursor=True) tragen
+        # default_change_threshold für Katalog-Vollständigkeit (sms_code),
+        # sind aber NICHT Teil der Change-Detection-Map.
+        if m.is_precursor:
+            continue
         for summary_field in m.summary_fields.values():
             result[summary_field] = m.default_change_threshold
     return result
@@ -592,6 +638,37 @@ def get_label_for_field(summary_field: str) -> tuple[str, str, str] | None:
             if field == summary_field:
                 return (m.label_de, agg, m.unit)
     return None
+
+
+# Issue #914 Slice 1: Helper lookups for alert render stammdaten.
+
+def get_sms_code(metric_id: str) -> str:
+    """Get the SMS token for a metric.
+
+    Returns empty string if metric not found or has no sms_code.
+    """
+    m = _METRICS_BY_ID.get(metric_id)
+    return m.sms_code if m is not None else ""
+
+
+def get_decimals(metric_id: str) -> int:
+    """Get the display decimal places for a metric.
+
+    Returns 0 if metric not found or decimals is None.
+    """
+    m = _METRICS_BY_ID.get(metric_id)
+    if m is None or m.decimals is None:
+        return 0
+    return m.decimals
+
+
+def get_cmp(metric_id: str) -> str:
+    """Get the comparison direction ('über' or 'unter') for a metric.
+
+    Returns empty string if metric not found or has no cmp set.
+    """
+    m = _METRICS_BY_ID.get(metric_id)
+    return m.cmp if m is not None else ""
 
 
 def _format_de_thousand(value: float) -> str:

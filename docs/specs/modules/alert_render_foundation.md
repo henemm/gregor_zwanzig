@@ -63,7 +63,7 @@ cmp: str = ""             # "über" | "unter" — Seite, auf der die Schwelle al
 ```
 
 - Für **alle alert-fähigen** Metriken werden `sms_code` + `cmp` gesetzt. Bestehende
-  Codes bleiben unverändert (`N D R PR W G TH`); neu vergeben: `cape=CP`, `snowfall=SN`,
+  Codes bleiben unverändert (`N D R PR W G TH`); neu vergeben: `cape=CP`, `fresh_snow=SN`,
   `snowfall_limit=SL`, `visibility=VS`, `humidity=HU`. `decimals` gemäß Issue-Tabelle
   (z. B. `precip=1`, `visibility=1`, sonst `0`).
 - **Single-Source-Regel:** SMS-Codes existieren ab jetzt nur hier. (Die doppelte
@@ -106,11 +106,13 @@ occurred_at: str | None = None   # "HH:MM" — Stunde des auslösenden (Peak-)We
 
 - **AC-1:** Given der Metrik-Katalog / When ich alle alert-fähigen Metriken abfrage /
   Then hat **jede** einen nicht-leeren, ASCII-only, kollisionsfreien `sms_code`
-  (inkl. `cape=CP`, `snowfall=SN`, `snowfall_limit=SL`, `visibility=VS`, `humidity=HU`)
+  (inkl. `cape=CP`, `fresh_snow=SN`, `snowfall_limit=SL`, `visibility=VS`, `humidity=HU`)
   und die etablierten Codes (`N D R PR W G TH`) sind unverändert.
   - Test: Echte Iteration über `get_all_metrics()` + alert-fähige Filterung; Assert auf
     Eindeutigkeit (kein Duplikat), ASCII, Nicht-Leere; Assert konkreter Werte für die
-    neuen und die etablierten Codes.
+    neuen und die etablierten Codes. Zusätzlich: `humidity=HU` via direktem Katalog-Lookup
+    (da `humidity` als Vorboten-Metrik aus dem Alert-Filter herausfällt, aber `sms_code`
+    trotzdem tragen muss — F003).
 
 - **AC-2:** Given eine alert-fähige Metrik / When ich ihre Vergleichsrichtung abfrage /
   Then liefert der Katalog `cmp` „über" bzw. „unter" passend zur Metrik (z. B.

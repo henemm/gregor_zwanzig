@@ -47,5 +47,9 @@ def get_metrics():
             "format_modes": list(m.format_modes),
             "default_format_mode": m.default_format_mode,
             "col_label": m.col_label,
+            # Issue #914 Slice 1: Alert-Render-Stammdaten
+            "sms_code": m.sms_code,
+            "decimals": m.decimals,
+            "cmp": m.cmp,
         })
     return result
