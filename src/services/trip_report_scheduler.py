@@ -1069,6 +1069,8 @@ class TripReportSchedulerService:
                         "sms_threshold_gust": _sms_thr.get("gust"),
                         "sms_threshold_thunder": _sms_thr.get("thunder"),
                         "confidence_pct": _conf_pct,
+                        # AC-13 (#911): Regenwahrscheinlichkeit für PR-Spalte in OutlookTable
+                        "rain_probability_pct": agg.pop_max_pct,
                     }.items() if v is not None},
                 ))
             except Exception as e:

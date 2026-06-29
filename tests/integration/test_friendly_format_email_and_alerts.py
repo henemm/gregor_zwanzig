@@ -223,9 +223,14 @@ class TestEmailFriendlyVsRawFormatting:
         # (but may appear in highlights, so just check emoji exists)
 
     def test_all_friendly_cape_emoji_in_html(self):
-        """CAPE 800 J/kg → 🟡 when friendly ON."""
+        """CAPE 1200 J/kg → 🟡 when friendly ON (≥ yellow-Schwelle 1000, < orange 2500).
+
+        #911 AC-11: Emoji-Ampel-Legende im Footer entfernt → dieser Test prüft jetzt
+        echt die Datenzelle. Vorheriger Wert 800 lag unter der gelben Schwelle (→ 🟢)
+        und bestand nur durch das 🟡 in der alten Legende (Falsch-Positiv).
+        """
         dc = self._make_config(True, True, True)
-        report = self._generate_report(dc, cape=800.0)
+        report = self._generate_report(dc, cape=1200.0)
         assert "🟡" in report.email_html
 
     def test_all_friendly_visibility_level_in_html(self):
@@ -296,9 +301,14 @@ class TestEmailFriendlyVsRawFormatting:
         assert "background" in html  # Has highlighting span
 
     def test_cape_extreme_friendly_shows_orange(self):
-        """CAPE 1500 → 🟠 when friendly ON."""
+        """CAPE 2600 → 🟠 when friendly ON (≥ orange-Schwelle 2500, < red 3500).
+
+        #911 AC-11: Emoji-Ampel-Legende im Footer entfernt → dieser Test prüft jetzt
+        echt die Datenzelle. Vorheriger Wert 1500 lag unter der orangen Schwelle (→ 🟡)
+        und bestand nur durch das 🟠 in der alten Legende (Falsch-Positiv).
+        """
         dc = self._make_config(False, True, False)
-        report = self._generate_report(dc, cape=1500.0)
+        report = self._generate_report(dc, cape=2600.0)
         assert "🟠" in report.email_html
 
     def test_visibility_fog_raw_html_highlighted(self):

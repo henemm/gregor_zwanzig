@@ -547,7 +547,7 @@ class UnifiedWeatherDisplayConfig:
 
     SPEC: docs/specs/modules/weather_config.md v2.0
     """
-    trip_id: str
+    trip_id: str = ""   # AC-3 (#911): Default "" erlaubt Konstruktion ohne trip_id in Tests
     metrics: list[MetricConfig] = field(default_factory=list)
     preset_name: Optional[str] = None   # Template-Key, z.B. "wandern"; None bei eigener Auswahl
     show_compact_summary: bool = True  # DEPRECATED: use TripReportConfig.show_compact_summary

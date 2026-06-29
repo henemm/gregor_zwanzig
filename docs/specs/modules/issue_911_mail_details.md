@@ -71,10 +71,11 @@ dunklen Footer — keine glänzenden Emoji-Kreise auf dem dunklen Footer.
 als **Tabelle** (Vorlage-`OutlookTable`) dargestellt: eine Zeile je Tag, Spalten Tag · N · D · R · PR · Wind ·
 Böen · Gew · ACC, Inhalte analog den SMS-Tokens, Zell-Hintergrund je Warn-Level, mit Code-Legende darunter.
 
-**AC-13:** Given die Ausblick-Tabelle benötigt PR (Regenwahrscheinlichkeit %@h) und Gewitter-% pro Folgetag,
-When der Trend-Builder die Folgetage aggregiert, Then werden diese Werte aus den vorhandenen Vorhersagedaten
-(Open-Meteo-Horizont) berechnet und in den Trend-Datensatz aufgenommen; liegt für einen Tag/Wert keine Vorhersage
-vor, zeigt die Zelle „–" (kein Fehler, kein Platzhalter-Müll).
+**AC-13:** Given die Ausblick-Tabelle benötigt PR (Regenwahrscheinlichkeit %) und Gewitter-Stufe pro Folgetag,
+When der Trend-Builder die Folgetage aggregiert, Then werden PR aus `pop_max_pct` und Gewitter-Stufe aus
+`thunder_level_max` in den Trend-Datensatz aufgenommen; die Gew-Spalte zeigt die laienverständliche Stufe
+(„mittel @HH" / „hoch @HH") — **kein Fake-%-Wert** (ForecastDataPoint hat kein thunder_pct-Feld); NONE → „–".
+Liegt kein Wert vor, zeigt die Zelle „–" (kein Fehler). **PO-Entscheidung 2026-06-29.**
 
 ## Invarianten (dürfen NICHT brechen)
 - Risk-Engine, Alert-Logik, Scheduler, Persistenz unverändert — nur Rendering.

@@ -116,12 +116,13 @@ class TestAC1OutlookHeadIsStability:
 
         pos_outlook = html.find("Ausblick")
         pos_label = html.find("WECHSELHAFT")
-        pos_table = html.find("Nächste Etappen")
-
+        # #911: Ausblick-Block ist jetzt OutlookTable; "N Nacht-Tief" ist eindeutige
+        # Legende-Signatur die erst NACH der Tabelle erscheint (einmaliger String)
+        pos_table = html.find("N Nacht-Tief")
         assert pos_outlook != -1, "Ausblick-Block fehlt"
         assert pos_label != -1, "Großwetterlage-Label fehlt im Output"
-        assert pos_table != -1, "Etappen-Tabelle fehlt"
-        # Reihenfolge: Ausblick-Marker → Wetterlage → Nächste Etappen
+        assert pos_table != -1, "Ausblick-Tabellen-Legende 'N Nacht-Tief' fehlt"
+        # Reihenfolge: Ausblick-Marker → Wetterlage → Tabellen-Legende
         assert pos_outlook < pos_label < pos_table, (
             f"Reihenfolge falsch: outlook={pos_outlook}, label={pos_label}, "
             f"table={pos_table} — Großwetterlage muss als Kopf IM Ausblick stehen"
@@ -140,8 +141,10 @@ class TestAC2ConfidencePerStage:
             _trend_stage(weekday="Mi", name="E2", confidence_pct=54),
         ]
         html = _render(trend, stability_result=_stability("WECHSELHAFT", 54))
-        assert "88%" in html, "Sicherheit der nahen Etappe (88%) fehlt"
-        assert "54%" in html, "Sicherheit der ferneren Etappe (54%) fehlt"
+        # #911: Confidence ist jetzt ACC-Dot (border-radius:50%), nicht NN%-Text
+        # Prüfe: ACC-Header vorhanden und border-radius:50% im Ausblick-Block
+        assert "ACC" in html, "ACC-Spalten-Kopf fehlt (Confidence-Dot-Spalte)"
+        assert "border-radius:50%" in html, "Confidence-Dot (border-radius:50%) fehlt im Ausblick"
 
     def test_missing_confidence_no_zero_percent(self):
         """Given Etappe OHNE confidence_pct / When gerendert / Then kein 'Sicherheit 0%'-Label."""
@@ -189,7 +192,8 @@ class TestAC4OutlookToggleOff:
         trend = [_trend_stage(weekday="Di", name="E1", confidence_pct=82)]
         html = _render(trend, stability_result=_stability("STABIL", 82),
                        show_outlook=True)
-        assert "Nächste Etappen" in html
+        # #911: Ausblick-Tabelle (OutlookTable) enthält "Ausblick" (Eyebrow) + "ACC" (Spalte)
+        assert "ACC" in html, "Ausblick-Block mit ACC-Spalte fehlt bei show_outlook=True"
 
 
 # ---------------------------------------------------------------------------
@@ -333,8 +337,9 @@ class TestF001ShowStabilityRespectedInTrendPath:
             "Stabilitäts-Label darf bei show_stability=False nicht erscheinen — "
             "auch nicht im Trend-Pfad (#621-Vertrag)"
         )
-        assert "Nächste Etappen" in html, (
-            "Etappen-Tabelle soll bei show_stability=False trotzdem erscheinen"
+        # #911: Ausblick-Tabelle enthält "ACC" (Spalten-Kopf der OutlookTable)
+        assert "ACC" in html, (
+            "Ausblick-Tabelle soll bei show_stability=False trotzdem erscheinen (ACC-Spalte)"
         )
 
     def test_show_stability_true_shows_label_with_trend(self):

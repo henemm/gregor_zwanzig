@@ -146,9 +146,10 @@ def _render_email_stat(label: str, value: str, unit: str, *, last: bool = False)
     """JSX EmailStat — label+value+unit in stat-grid cell."""
     # Issue #907: leerer String (nicht "none") — sonst entsteht durch die
     # direkte Verkettung mit "padding:" ungültiges CSS ("nonepadding:...").
+    # AC-6 (#911): padding-top:14px für Abstand zur Trennlinie
     border = "" if last else "border-right:1px solid #e6e1d3;"
     return (
-        f'<td style="{border}padding:0 12px 0 0;vertical-align:top;">'
+        f'<td style="{border}padding:14px 12px 0 0;vertical-align:top;">'
         f'<div style="font-family:{FONT_DATA};font-size:9px;letter-spacing:0.1em;'
         f'color:#9a978d;text-transform:uppercase;">{label}</div>'
         f'<div style="font-family:{FONT_DATA};font-size:18px;font-weight:600;'
@@ -451,6 +452,7 @@ def _render_html_table(
     allowed_col_keys: Optional[set[str]] = None,
     format_modes: Optional[dict[str, str]] = None,
     indicator_keys: Optional[set[str]] = None,
+    col_order: Optional[list[str]] = None,
 ) -> str:
     if not rows:
         # Empty rows: render a minimal table skeleton so callers can still
@@ -459,13 +461,28 @@ def _render_html_table(
     cols = visible_cols(rows)
     if allowed_col_keys is not None:
         cols = [(k, label) for (k, label) in cols if k in allowed_col_keys]
+    # AC-3 (#911): Spalten in konfigurierter Metrik-Reihenfolge (col_order aus dc.metrics).
+    # Zeit/Temp-Leitspalten bleiben vorn; col_order definiert nur die Metrik-Spalten-Reihenfolge.
+    if col_order:
+        col_map = {k: label for k, label in cols}
+        ordered = [(k, col_map[k]) for k in col_order if k in col_map]
+        remaining = [(k, label) for k, label in cols if k not in col_order]
+        cols = ordered + remaining
 
     # AC-1 (#900): Header-Kennzeichnung + Spaltenlinien der Kopfzeile laufen
     # über die globale th-Regel im <style>-Block (background + border-right);
     # die Datenzellen (td) tragen die Linien inline (Outlook-fest). <th>-Tags
     # bleiben schlank, damit bestehende Renderer-Tests stabil bleiben.
-    ths = "<th>Time</th>" + "".join(f"<th>{label}</th>" for _, label in cols)
-    ths += '<th style="width:20px;padding:8px 4px;text-align:center;">·</th>'
+    # AC-4 (#911): Header weißer BG, Text #3a3835 11px/600, Unterkante #e6e1d3.
+    # AC-5 (#911): Letzte Spalte "Risk" statt "·".
+    _hcell_style = (
+        f'style="background:#fff;border-bottom:1px solid #e6e1d3;'
+        f'padding:8px 4px;text-align:center;font-family:{FONT_DATA};'
+        f'font-size:11px;font-weight:600;color:#3a3835;white-space:nowrap;"'
+    )
+    ths = f'<th {_hcell_style}>Time</th>'
+    ths += "".join(f'<th {_hcell_style}>{label}</th>' for _, label in cols)
+    ths += f'<th {_hcell_style} style="background:#fff;border-bottom:1px solid #e6e1d3;padding:8px 4px;text-align:center;font-family:{FONT_DATA};font-size:11px;font-weight:600;color:#3a3835;width:32px;">Risk</th>'
     thead = f'<thead><tr>{ths}</tr></thead>'
 
     # Data rows with highlighting
@@ -482,7 +499,8 @@ def _render_html_table(
     )
 
     # AC-1 (#900): inline border styles for full grid (Outlook-safe)
-    _td_grid = f"border-right:1px solid {G_INK_FAINT};border-bottom:1px solid {G_INK_FAINT};"
+    # AC-4 (#911): Zell-Linien auf #f0ece1 (Vorlage EmailDataTable)
+    _td_grid = "border-right:1px solid #f0ece1;border-bottom:1px solid #f0ece1;"
 
     trs = []
     for r in rows:
@@ -504,6 +522,7 @@ def _render_html_table(
                 cell = str(raw_val) if raw_val is not None else "–"
 
             # Highlighting (AC-4): threshold-based color in a <span> inside the <td>.
+            # AC-10 (#911): getönte Zell-Hintergründe je Warn-Level (Vorlage RISK_CELL).
             # Suppressed only when the metric is in explicit raw mode
             # (use_friendly_format=False → key not in indicator_keys).
             # Default dc (use_friendly_format=True) and Einfach dc always highlight.
@@ -514,6 +533,7 @@ def _render_html_table(
                 and key not in indicator_keys
             )
             highlight_color = None
+            cell_bg = None  # AC-10 (#911): Zell-Hintergrundfarbe je Schweregrad
             if not explicitly_raw:
                 try:
                     numeric = float(raw_val) if raw_val is not None else None
@@ -521,30 +541,43 @@ def _render_html_table(
                     numeric = None
 
                 # col_keys from metric catalog (not metric_ids)
+                # AC-10: caution=#fbeeb8, warn=#fad6b8, danger=#f6c5bf
                 if key == "wind" and numeric is not None and numeric > _WIND_THRESHOLD:
                     highlight_color = "#c2410c"
+                    cell_bg = "#fad6b8" if numeric > 30 else "#fbeeb8"
                 elif key == "gust" and numeric is not None and numeric > _GUST_THRESHOLD:
                     highlight_color = "#c2410c"
+                    cell_bg = "#f6c5bf" if numeric > 60 else ("#fad6b8" if numeric > 45 else "#fbeeb8")
                 elif key == "precip" and numeric is not None and numeric > _PRECIP_THRESHOLD:
                     highlight_color = "#0e6fb8"
+                    cell_bg = "#f6c5bf" if numeric > 8 else ("#fad6b8" if numeric > 4 else "#fbeeb8")
                 elif key == "pop" and numeric is not None and numeric > _RAINP_THRESHOLD:
                     highlight_color = "#0e6fb8"
+                    cell_bg = "#f6c5bf" if numeric > 85 else ("#fad6b8" if numeric > 70 else "#fbeeb8")
                 elif key == "thunder" and numeric is not None and numeric > _THUNDER_THRESHOLD:
                     highlight_color = "#b91c1c"
+                    cell_bg = "#f6c5bf" if numeric > 30 else ("#fad6b8" if numeric > 20 else "#fbeeb8")
                 elif key == "vis" and numeric is not None:
                     vis_km = numeric / 1000 if numeric > 100 else numeric
                     if 0 < vis_km < _VIS_THRESHOLD:
                         highlight_color = "#c2410c"
+                        cell_bg = "#f6c5bf" if vis_km < 0.5 else ("#fad6b8" if vis_km < 1 else "#fbeeb8")
 
             if highlight_color:
                 cell = f'<span style="font-weight:700;color:{highlight_color};">{cell}</span>'
-            # No extra style attr here so <td data-label="...">(.*?)</td> regex matches.
+            # AC-10 (#911): Zell-Hintergrund als äußerer Wrapper im Zell-Content
+            # (nicht auf <td> style, da _data_cells-Regex data-label="..." direkt vor > erwartet).
+            if cell_bg:
+                cell = (
+                    f'<span style="display:block;background:{cell_bg};'
+                    f'margin:-6px -4px;padding:6px 4px;">{cell}</span>'
+                )
             tds += f'<td data-label="{label}">{cell}</td>'
         # Issue #890 / AC-4: RiskDot-Spalte am Zeilenende (keine border-right — letzte Spalte).
         _dot_color = _RISK_DOT_COLORS[_row_risk(r)][0]
         tds += (
             f'<td style="padding:8px 4px;text-align:center;'
-            f'border-bottom:1px solid {G_INK_FAINT};">'
+            f'border-bottom:1px solid #f0ece1;">'
             f'{_risk_dot(_dot_color)}</td>'
         )
         trs.append(f"<tr>{tds}</tr>")
@@ -565,6 +598,7 @@ def _render_mobile_compact_rows(
     format_modes: Optional[dict[str, str]] = None,
     include_header: bool = False,
     indicator_keys: Optional[set[str]] = None,
+    col_order: Optional[list[str]] = None,
 ) -> str:
     """Bug #636: Monospace fixed-width grid for the mobile compact email view.
 
@@ -573,15 +607,17 @@ def _render_mobile_compact_rows(
     Wrapped in overflow-x:auto for horizontal scroll on narrow screens.
 
     Bug #463: include_header=True renders a header row before the data rows.
+    AC-3 (#911): col_order durchgereicht für Einfach-Modus (F001).
     """
     if indicator_keys:
-        # Einfach-Modus: Desktop-HTML-Tabelle wiederverwenden
+        # Einfach-Modus: Desktop-HTML-Tabelle wiederverwenden (AC-3: col_order durchreichen)
         return _render_html_table(
             rows,
             friendly_keys=friendly_keys,
             allowed_col_keys=allowed_col_keys,
             format_modes=format_modes,
             indicator_keys=indicator_keys,
+            col_order=col_order,
         )
     cols = visible_cols(rows) if rows else []
     if allowed_col_keys is not None:
@@ -714,6 +750,19 @@ def render_html(
     report_date = local_fmt(segments[0].segment.start_time, tz, "%d.%m.%Y")
     # Issue #342: Tages-Basis für Pro-Metrik-Horizont-Filter.
     report_date_obj = segments[0].segment.start_time.date()
+
+    # AC-3 (#911): Spalten-Reihenfolge aus konfiguriertem dc.metrics (links→rechts).
+    # Zeit/Temp bleiben implizit vorn; col_order bestimmt nur Metrik-Spalten.
+    _col_order: list[str] = []
+    for _mc in dc.metrics:
+        if not _mc.enabled:
+            continue
+        try:
+            _mdef = get_metric(_mc.metric_id)
+            if _mdef.selectable:
+                _col_order.append(_mdef.col_key)
+        except KeyError:
+            continue
     sub_header = stage_name or ""
 
     # Issue #884 AC-1: zweispaltiger Header mit G_HEADER_BG + Stats-Grid
@@ -814,6 +863,16 @@ def render_html(
         + f'</div>'
     )
 
+    # Normalize seg_tables: allow both list[dict] and list[list[dict]] per entry.
+    # Tests may pass a flat list[dict] as a single-segment table (AC-10 #911).
+    _seg_tables_norm: list[list[dict]] = []
+    for _tbl in seg_tables:
+        if isinstance(_tbl, dict):
+            _seg_tables_norm.append([_tbl])
+        else:
+            _seg_tables_norm.append(list(_tbl))
+    seg_tables = _seg_tables_norm
+
     seg_html_parts = []
     for seg_data, rows in zip(segments, seg_tables):
         seg = seg_data.segment
@@ -857,6 +916,7 @@ def render_html(
                     allowed_col_keys=allowed_keys,
                     format_modes=format_modes,
                     indicator_keys=indicator_keys,
+                    col_order=_col_order,
                 )
                 + "</div>"
             )
@@ -866,6 +926,7 @@ def render_html(
                 format_modes=format_modes,
                 include_header=True,
                 indicator_keys=indicator_keys,
+                col_order=_col_order,
             )
             mobile_div = (
                 f'<div class="mobile-compact" style="padding:0 16px;">'
@@ -908,6 +969,7 @@ def render_html(
                     allowed_col_keys=allowed_keys,
                     format_modes=format_modes,
                     indicator_keys=indicator_keys,
+                    col_order=_col_order,
                 )
                 + "</div>"
             )
@@ -923,6 +985,7 @@ def render_html(
                 format_modes=format_modes,
                 include_header=True,
                 indicator_keys=indicator_keys,
+                col_order=_col_order,
             )
             mobile_div = (
                 f'<div class="mobile-compact" style="padding:0 16px;">'
@@ -941,13 +1004,13 @@ def render_html(
             night_hint = f'<p style="color:{G_INK_FAINT};font-size:11px;margin-top:4px">* Temperatur/Nullgradgrenze: Minimum im 2h-Block</p>'
         night_elev = int(last_seg.end_point.elevation_m or 0)
         night_header = f"🌙 Nacht am Ziel ({night_elev}m)"
-        night_compact = _render_mobile_compact_rows(night_rows, friendly_keys=friendly_keys, format_modes=format_modes, include_header=True, indicator_keys=indicator_keys)
+        night_compact = _render_mobile_compact_rows(night_rows, friendly_keys=friendly_keys, format_modes=format_modes, include_header=True, indicator_keys=indicator_keys, col_order=_col_order)
         night_html = (
             '<div class="section desktop-only">'
             "<h3>" + night_header + "</h3>"
             '<p style="color:' + G_INK_MUTED + ';font-size:13px">Ankunft '
             + local_fmt(last_seg.end_time, tz) + " → Morgen 06:00</p>"
-            + _render_html_table(night_rows, friendly_keys=friendly_keys, format_modes=format_modes, indicator_keys=indicator_keys)
+            + _render_html_table(night_rows, friendly_keys=friendly_keys, format_modes=format_modes, indicator_keys=indicator_keys, col_order=_col_order)
             + night_hint
             + "</div>"
             '<div class="mobile-compact" style="padding:0 16px">'
@@ -993,96 +1056,157 @@ def render_html(
 
     trend_html = ""
     if multi_day_trend:
-        trend_chip_rows = ""
-        for i, stage in enumerate(multi_day_trend):
-            tok = format_trend_tokens(stage)
+        # AC-8/9/12 (#911): Ausblick als OutlookTable (Tabelle statt Chips).
+        # Spalten: Tag · N · D · R · PR · Wind · Böen · Gew · ACC
+        # Zell-Hintergrund je Warn-Level; Code-Legende darunter.
 
-            # Temp HTML
-            _ts = tok["temp_str"]
-            if _ts == "–":
-                temp_html = '&ndash;'
-            elif "–" in _ts:
-                _lo, _rest = _ts.split("–", 1)
-                _hi = _rest.rstrip("°C")
-                temp_html = f'{_lo}&#8211;{_hi}&thinsp;°C'
-            else:
-                temp_html = f'{_ts[:-2]}&thinsp;°C'
+        def _outlook_cell_bg(val, thresholds: tuple) -> str:
+            """Bestimmt Zell-BG aus Schwellwert-Tupel (caution, warn, danger)."""
+            if val is None:
+                return ""
+            try:
+                v = float(val)
+            except (TypeError, ValueError):
+                return ""
+            c, w, d = thresholds
+            if d is not None and v >= d:
+                return "background:#f6c5bf;"
+            if w is not None and v >= w:
+                return "background:#fad6b8;"
+            if c is not None and v >= c:
+                return "background:#fbeeb8;"
+            return ""
 
-            # Thunder badge
-            sq_color = tok["thunder_sq_color"]
-            tt = tok.get("thunder_token", "-")
-            thunder_pct_max = stage.get("thunder_pct_max", 0) or 0
-
-            if tt != "-" or thunder_pct_max > 0:
-                if tt != "-":
-                    _at_hours = _re.findall(r"@(\d+)", tt)
-                    if len(_at_hours) >= 2:
-                        _time_window = f"{int(_at_hours[0]):02d}:00–{int(_at_hours[-1]):02d}:00"
-                    elif len(_at_hours) == 1:
-                        _time_window = f"{int(_at_hours[0]):02d}:00"
-                    else:
-                        _time_window = ""
-                else:
-                    _time_window = ""
-                thunder_badge = (
-                    f'<span style="font-family:{FONT_DATA};font-size:10px;font-weight:700;'
-                    f'color:#b91c1c;background:rgba(185,28,28,0.09);padding:2px 7px;'
-                    f'border:1px solid rgba(185,28,28,0.22);margin-left:6px;">'
-                    f'⚡ Gewitter {_time_window}</span>'
-                )
-            else:
-                thunder_badge = ""
-
-            weekday = stage.get("weekday", "")
-            note = stage.get("note", "")
-
-            # Issue #906: temp_range geht durch pill_html (html.escape) → MUSS
-            # reiner Klartext sein, KEINE HTML-Entities. tok["temp_str"] ist
-            # bereits lesbar (echtes "–", z.B. "10–18°C"); nur Leerzeichen vor
-            # der Einheit. NICHT temp_html (enthält &#8211;/&thinsp; → würde von
-            # pill_html doppelt escaped → unleserlich).
-            temp_min = stage.get("temp_min_c")
-            temp_max = stage.get("temp_max_c")
-            if temp_min is not None and temp_max is not None:
-                temp_range = f"{temp_min:.0f}–{temp_max:.0f} °C"
-            else:
-                temp_range = tok["temp_str"].replace("°C", " °C")
-
-            # AC-8 (#899): Stage-Namen (name-Feld) werden nicht mehr angezeigt
-            # AC-7 (#899): Chip-Format via pill_html statt <tr>-Tabelle
-            weekday_chip = pill_html(weekday, "neutral") if weekday else ""
-            temp_chip = pill_html(temp_range, "neutral")
-
-            note_html = (
-                f'<div style="font-size:11px;color:#6b6962;margin-top:2px;">{note}</div>'
-                if note else ""
+        def _otd(content: str, *, bg: str = "", align: str = "center") -> str:
+            """Outlook-Table-Datenzelle (kompakte inline-styles für Outlook)."""
+            return (
+                f'<td style="{bg}padding:6px 4px;text-align:{align};'
+                f'font-size:11px;border-right:1px solid #f0ece1;'
+                f'border-bottom:1px solid #f0ece1;">'
+                f'{content}</td>'
             )
 
-            # AC-9 (#899): Genauigkeits-Indikator via _risk_dot() mit Konfidenz-Farbe
+        # 4-stufiger ACC-Dot aus confidence_pct
+        # hoch>=80=ok, mittel>=60=caution, niedrig>=40=warn, sehr_niedrig<40=danger
+        def _acc_dot(conf_pct) -> str:
+            if conf_pct is None:
+                return "–"
+            try:
+                v = float(conf_pct)
+            except (TypeError, ValueError):
+                return "–"
+            if v >= 80:
+                color = "#2f8a3e"
+            elif v >= 60:
+                color = "#e3b008"
+            elif v >= 40:
+                color = "#e07b1a"
+            else:
+                color = "#c52a22"
+            return (
+                f'<span style="display:inline-block;width:10px;height:10px;'
+                f'border-radius:50%;background:{color};"></span>'
+            )
+
+        # thead
+        _oh_style = (
+            f'style="background:#fff;border-bottom:1px solid #e6e1d3;'
+            f'padding:6px 4px;text-align:center;font-family:{FONT_DATA};'
+            f'font-size:10px;font-weight:600;color:#3a3835;white-space:nowrap;"'
+        )
+        outlook_thead = (
+            f'<thead><tr>'
+            f'<th {_oh_style}>Tag</th>'
+            f'<th {_oh_style}>N</th>'
+            f'<th {_oh_style}>D</th>'
+            f'<th {_oh_style}>R</th>'
+            f'<th {_oh_style}>PR</th>'
+            f'<th {_oh_style}>Wind</th>'
+            f'<th {_oh_style}>Böen</th>'
+            f'<th {_oh_style}>Gew</th>'
+            f'<th {_oh_style}>ACC</th>'
+            f'</tr></thead>'
+        )
+
+        _THUNDER_LEVEL_LABEL = {"MED": "mittel", "HIGH": "hoch"}
+        _THUNDER_LEVEL_BG = {"MED": "background:#fad6b8;", "HIGH": "background:#f6c5bf;"}
+
+        outlook_rows = ""
+        for stage in multi_day_trend:
+            tokens = format_trend_tokens(stage)
+            weekday = stage.get("weekday", "–")
+            # F005 (#911): Scheduler schreibt temp_lo/temp_hi (trip_report_scheduler
+            # _build_stage_trend). temp_min_c/temp_max_c nur Fallback (Alt-Fixtures).
+            # Ohne temp_lo/temp_hi zeigten N/D in der echten Produktionsmail immer „–".
+            temp_min = stage.get("temp_lo", stage.get("temp_min_c"))
+            temp_max = stage.get("temp_hi", stage.get("temp_max_c"))
+            precip_mm = stage.get("precip_mm")
+            wind_kmh = stage.get("wind_kmh")
+            pr_pct = stage.get("rain_probability_pct")
             conf_pct = stage.get("confidence_pct")
-            conf_color = _confidence_dot_color(conf_pct)
-            conf_dot_html = ""
-            if conf_color is not None:
-                conf_dot_html = (
-                    f'<span style="display:inline-flex;align-items:center;gap:4px;'
-                    f'margin-left:8px;font-family:{FONT_DATA};font-size:9px;color:#9a978d;">'
-                    + _risk_dot(conf_color)
-                    + f'<span>Prognose</span></span>'
-                )
+            # Gust aus hourly_gust wenn vorhanden
+            hourly_gust = stage.get("hourly_gust") or ()
+            gust_kmh = max((float(g.value) if hasattr(g, "value") else float(g)
+                            for g in hourly_gust if g is not None), default=None)
+            # F002: Gew = Stufe + Uhrzeit (kein Fake-%), Hintergrund nach Level
+            thunder_level = (stage.get("thunder", "NONE") or "NONE").upper()
+            if thunder_level in ("MED", "HIGH"):
+                gew_str = _THUNDER_LEVEL_LABEL[thunder_level]
+                t_tok = tokens.get("thunder_token", "-")
+                _at = _re.search(r"@(\d+)", t_tok) if t_tok and t_tok != "-" else None
+                if _at:
+                    gew_str += f" @{_at.group(1)}"
+            else:
+                gew_str = "–"
 
-            sep_bottom = "border-bottom:1px solid #e6e1d3;" if i < len(multi_day_trend) - 1 else ""
-            trend_chip_rows += (
-                f'<div style="padding:8px 0;{sep_bottom}display:flex;'
-                f'align-items:center;flex-wrap:wrap;gap:6px;">'
-                + weekday_chip
-                + temp_chip
-                + thunder_badge
-                + conf_dot_html
-                + note_html
-                + f'</div>'
+            n_str = f"{temp_min:.0f}°" if temp_min is not None else "–"
+            d_str = f"{temp_max:.0f}°" if temp_max is not None else "–"
+            r_str = f"{precip_mm:.1f}" if precip_mm is not None else "–"
+            pr_str = f"{int(pr_pct)}%" if pr_pct is not None else "–"
+            wind_str = f"{wind_kmh:.0f}" if wind_kmh is not None else "–"
+            gust_str = f"{gust_kmh:.0f}" if gust_kmh is not None else "–"
+
+            tag_bg = ""
+            n_bg = ""
+            d_bg = ""
+            r_bg = _outlook_cell_bg(precip_mm, (2, 5, 8))
+            pr_bg = _outlook_cell_bg(pr_pct, (50, 70, 85))
+            wind_bg = _outlook_cell_bg(wind_kmh, (20, 30, None))
+            gust_bg = _outlook_cell_bg(gust_kmh, (30, 45, 60))
+            gew_bg = _THUNDER_LEVEL_BG.get(thunder_level, "")
+            acc_bg = ""
+
+            outlook_rows += (
+                f'<tr>'
+                + _otd(weekday, bg=tag_bg)
+                + _otd(n_str, bg=n_bg)
+                + _otd(d_str, bg=d_bg)
+                + _otd(r_str, bg=r_bg)
+                + _otd(pr_str, bg=pr_bg)
+                + _otd(wind_str, bg=wind_bg)
+                + _otd(gust_str, bg=gust_bg)
+                + _otd(gew_str, bg=gew_bg)
+                + _otd(_acc_dot(conf_pct), bg=acc_bg)
+                + f'</tr>'
             )
 
-        # AC-6 (#899): Context label ohne "3-Tage-Trend" Label
+        outlook_table = (
+            f'<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;">'
+            + outlook_thead
+            + f'<tbody>{outlook_rows}</tbody>'
+            + f'</table>'
+        )
+
+        # Code-Legende
+        outlook_legend = (
+            f'<div style="font-family:{FONT_DATA};font-size:9px;color:#9a978d;'
+            f'margin-top:6px;line-height:1.8;">'
+            f'N Nacht-Tief · D Tag-Hoch °C · R Regen mm · PR Regen-W. % · '
+            f'Wind/Böen km/h · Gew Gewitter-Stufe @h · ACC Prognose-Genauigkeit'
+            f'</div>'
+        )
+
+        # AC-6 (#899): Context label (gesendet-Zeitstempel) bleibt erhalten
         _weekday_de_short = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
         context_label_html = ""
         if sent_at is not None:
@@ -1100,12 +1224,17 @@ def render_html(
         if show_outlook and show_stability and stability_result is not None:
             _outlook_stability_html = render_stability_label_html(stability_result)
 
-        # AC-6 (#899): "Ausblick · nächste 4 Tage" Eyebrow entfernt
+        # AC-9 (#911): Eyebrow "Ausblick · nächste 3 Tage" über dem Ausblick-Block
+        # AC-9 (#911): Eyebrow ZUERST, dann Stabilitäts-Label, dann Tabelle
+        # (Reihenfolge: Ausblick-Eyebrow → Wetterlage → Etappen-Tabelle)
+        _outlook_eyebrow = _eyebrow("Ausblick · nächste 3 Tage")
         trend_html = (
             f'<div style="background:{G_HEADER_BG};padding:24px 28px 20px;">'
-            + _outlook_stability_html
             + context_label_html
-            + trend_chip_rows
+            + f'<div style="margin-bottom:8px;">{_outlook_eyebrow}</div>'
+            + _outlook_stability_html
+            + outlook_table
+            + outlook_legend
             + "</div>"
         )
 
@@ -1124,12 +1253,13 @@ def render_html(
     _pills = build_metrics_summary_pills(
         segments, _pill_metric_ids, _pill_thresholds, tz=tz
     )
-    _chips_html = " ".join(pill_html(lbl, tone) for lbl, tone in _pills)
+    # AC-7 (#911): Abstände laut Vorlage EmailMetricsSummary
+    _chips_html = "".join(pill_html(lbl, tone) for lbl, tone in _pills)
     metrics_summary_html = (
-        f'<div style="padding:8px 16px;display:block">'
+        f'<div style="padding:14px 28px 18px;background:#fdfcf8;border-bottom:1px solid #e6e1d3;">'
         f'<p style="font-size:9px;text-transform:uppercase;letter-spacing:0.08em;'
-        f'color:{G_INK_MUTED};margin:0 0 6px 0">Metriken-Überblick</p>'
-        f'{_chips_html}'
+        f'color:{G_INK_MUTED};margin:0">Metriken-Überblick</p>'
+        f'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">{_chips_html}</div>'
         f'</div>'
     )
 
@@ -1175,7 +1305,9 @@ def render_html(
         # AC-3 (#898): Vereinheitlichte font-size:16px für Vortag-Text
         _vortag_div = ""
         if _has_vortag:
-            _vortag_eyebrow = _eyebrow(f"{_trend_glyph} VORTAGESVERGLEICH")
+            # AC-1 (#911): accent=True → Orange #c45a2a wie TAGESLAGE
+            # AC-2 (#911): Glyph steht NACH der Headline (Reihenfolge: Text, dann Glyph)
+            _vortag_eyebrow = _eyebrow(f"VORTAGESVERGLEICH {_trend_glyph}", accent=True)
             _vortag_div = (
                 f'<div style="margin-top:10px;padding-top:10px;border-top:1px solid #f0ece1;">'
                 + _vortag_eyebrow
@@ -1234,9 +1366,30 @@ def render_html(
     all_rows = [r for tbl in seg_tables for r in tbl]
     legend_text = build_units_legend(all_rows) if all_rows else ""
 
-    ampel_legend_html = (
-        f'<br><span style="font-size:10px;color:rgba(255,255,255,0.6)">'
-        f'{AMPEL_LEGEND}</span>'
+    # AC-11 (#911): RISK-Legende als eigene Section vor dem Footer (helles #fbfaf6),
+    # RISK-Präfix + CSS-Dots (border-radius:50%) statt Emoji-Kreise im dunklen Footer.
+    _RISK_LEGEND_ITEMS = [
+        ("#2f8a3e", "unkritisch"),
+        ("#e3b008", "Achtung"),
+        ("#e07b1a", "Warnung"),
+        ("#c52a22", "Gefahr"),
+    ]
+    _risk_dot_legend_items = "".join(
+        f'<span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px;">'
+        f'<span style="display:inline-block;width:8px;height:8px;border-radius:50%;'
+        f'background:{color};flex-shrink:0;"></span>'
+        f'<span style="font-family:{FONT_DATA};font-size:10px;color:#5a5750;">{label}</span>'
+        f'</span>'
+        for color, label in _RISK_LEGEND_ITEMS
+    )
+    risk_legend_html = (
+        f'<div style="background:#fbfaf6;border-top:1px solid #e6e1d3;'
+        f'border-bottom:1px solid #e6e1d3;padding:10px 28px;">'
+        f'<span style="font-family:{FONT_DATA};font-size:9px;font-weight:600;'
+        f'letter-spacing:0.12em;color:#9a978d;text-transform:uppercase;'
+        f'margin-right:12px;">RISK</span>'
+        + _risk_dot_legend_items
+        + f'</div>'
     )
 
     footer_html = _render_footer(
@@ -1244,7 +1397,7 @@ def render_html(
         report_type=report_type,
         sent_at=sent_at,
         legend_text=legend_text,
-        ampel_legend_html=ampel_legend_html,
+        ampel_legend_html="",
         trip_url=trip_url,
     )
 
@@ -1317,6 +1470,7 @@ def render_html(
 
         {_render_kommandos_section()}
 
+        {risk_legend_html}
         {footer_html}
     </div>
 </body>

@@ -36,7 +36,9 @@ def _trend_stage(
     """Trend-Stage-dict — wie vom Scheduler gebaut."""
     stage = dict(
         weekday=weekday, name=name,
-        temp_min_c=temp_min_c, temp_max_c=temp_max_c,
+        # F005 (#911): echte Scheduler-Keys (temp_lo/temp_hi), nicht temp_min_c/temp_max_c —
+        # sonst testet die Fixture an der Produktion vorbei (N/D-Spalte zeigte „–").
+        temp_lo=temp_min_c, temp_hi=temp_max_c,
         precip_mm=precip_mm, wind_dir=wind_dir, wind_kmh=wind_kmh,
         thunder=thunder, note=note,
         hourly_precip=hourly_precip or (),
@@ -1004,25 +1006,29 @@ class TestAC13PipelineRainProbAndThunderPct:
             "Stage-dict hat rain_probability_pct=65, Renderer muss diesen Wert als PR zeigen."
         )
 
-    def test_aggregate_stage_computes_thunder_pct_max(self):
-        """aggregate_stage oder der Scheduler muss thunder_pct_max liefern."""
-        from services.weather_metrics import aggregate_stage
-        sw = self._make_seg_weather_with_pop_and_thunder(pop_max_pct=60, thunder_pct=28.0)
-        agg = aggregate_stage([sw])
-
-        # Das Feld thunder_pct_max muss in irgendeiner Form existieren
-        # Entweder in SegmentWeatherSummary oder separat berechnet
-        has_thunder_pct = (
-            hasattr(agg, "thunder_pct_max")
-            or hasattr(agg, "thunder_max_pct")
+    def test_gew_column_shows_level_for_med_thunder(self):
+        """F003: Gew-Spalte zeigt 'mittel' (nicht %) bei ThunderLevel.MED im Stage-dict."""
+        from src.app.models import ThunderLevel
+        from src.output.tokens.dto import HourlyValue
+        stage = _trend_stage(weekday="Mi", name="E-Gewitter", confidence_pct=70)
+        stage["thunder"] = "MED"
+        stage["hourly_thunder"] = (HourlyValue(hour=14, value=1.0),)
+        html = _render(trend=[stage])
+        assert "mittel" in html, (
+            "Gew-Spalte muss 'mittel' zeigen bei ThunderLevel.MED. "
+            "F002: Gew zeigt Stufe, keine Fake-%."
         )
-        if not has_thunder_pct:
-            # Kein Feld → Test rot (AC-13 verlangt dieses Feld im Pipeline-Output)
-            pytest.fail(
-                "SegmentWeatherSummary hat kein thunder_pct_max-Feld. "
-                "AC-13: Gewitter-% pro Folgetag muss aus Vorhersagedaten "
-                "berechnet und im Trend-Datensatz bereitgestellt werden."
-            )
+        assert "%" not in html.split("mittel")[0].split("Gew")[-1] if "Gew" in html else True, \
+            "Gew-Zelle darf kein %-Zeichen für Gewitter enthalten"
+
+    def test_gew_column_shows_dash_for_none_thunder(self):
+        """F003: Gew-Spalte zeigt '–' bei ThunderLevel.NONE."""
+        stage = _trend_stage(weekday="Do", name="E-klar", confidence_pct=85)
+        stage["thunder"] = "NONE"
+        html = _render(trend=[stage])
+        assert "PR" in html, "PR-Spalte muss vorhanden sein"
+        # Nach dem PR-Bereich muss eine Gew-Zelle mit '–' kommen
+        assert "–" in html, "Gew-Spalte muss '–' zeigen bei NONE"
 
     def test_trend_stage_dict_dash_when_no_data(self):
         """Wenn pop_max_pct=None, darf die Ausblick-Tabelle '–' zeigen (kein Fehler)."""
@@ -1067,3 +1073,24 @@ class TestAC13PipelineRainProbAndThunderPct:
         html = _render(trend=trend)
         # Kein Crash beim Rendern
         assert html, "render_html darf nicht abstürzen wenn PR-Daten fehlen"
+
+    def test_outlook_nd_columns_render_real_values_from_scheduler_keys(self):
+        """F005: N/D-Spalten zeigen echte Werte aus den Scheduler-Keys temp_lo/temp_hi.
+
+        Regression: Der Renderer las temp_min_c/temp_max_c, der Scheduler schreibt aber
+        temp_lo/temp_hi → N/D zeigten in der echten Produktionsmail immer '–'. Die Fixture
+        nutzt jetzt die Produktions-Keys (temp_lo/temp_hi); der Wert MUSS gerendert werden.
+        """
+        stage = _trend_stage(weekday="Do", name="E1", temp_min_c=-1, temp_max_c=13,
+                             confidence_pct=82)
+        assert stage["temp_lo"] == -1 and stage["temp_hi"] == 13, (
+            "Fixture muss Produktions-Keys temp_lo/temp_hi setzen (F005)"
+        )
+        html = _render(trend=[stage])
+        assert ("13°" in html), (
+            "Tag-Hoch (D=13°) fehlt in der Ausblick-Tabelle — N/D liest die "
+            "Scheduler-Keys temp_lo/temp_hi nicht (F005-Regression)."
+        )
+        assert ("-1°" in html or "−1°" in html), (
+            "Nacht-Tief (N=-1°) fehlt in der Ausblick-Tabelle (F005-Regression)."
+        )

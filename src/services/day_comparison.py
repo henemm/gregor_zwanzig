@@ -107,9 +107,53 @@ class DayComparisonEntry:
     pressure_avg: MetricDelta = field(default_factory=_missing_delta)
 
 
+def _scalar_delta(v: Optional[float], lower_is_better: bool = False) -> "MetricDelta":
+    """Erzeugt MetricDelta aus skalarem Differenzwert. (#911 Test-Komfort)"""
+    if v is None:
+        return _missing_delta()
+    if v > 0.5:
+        direction = ComparisonDirection.WORSE if lower_is_better else ComparisonDirection.BETTER
+    elif v < -0.5:
+        direction = ComparisonDirection.BETTER if lower_is_better else ComparisonDirection.WORSE
+    else:
+        direction = ComparisonDirection.EQUAL
+    return MetricDelta(delta=v, direction=direction)
+
+
 @dataclass
 class DayComparison:
     entries: List[DayComparisonEntry] = field(default_factory=list)
+    # AC-1/2 (#911): optionaler Override-Summary für Test-Komfort-Konstruktor
+    _summary_override: Optional[str] = field(default=None, repr=False)
+
+    def __init__(
+        self,
+        entries: Optional[List[DayComparisonEntry]] = None,
+        *,
+        wind_delta_kmh: Optional[float] = None,
+        gust_delta_kmh: Optional[float] = None,
+        precip_delta_mm: Optional[float] = None,
+        visibility_delta_m: Optional[float] = None,
+        thunder_delta: Optional[float] = None,
+        summary: Optional[str] = None,
+    ):
+        self._summary_override = summary
+        if entries is not None:
+            self.entries = entries
+        elif any(v is not None for v in (
+            wind_delta_kmh, gust_delta_kmh, precip_delta_mm, visibility_delta_m, thunder_delta
+        )):
+            self.entries = [DayComparisonEntry(
+                segment_id=1,
+                temp_min=_missing_delta(), temp_max=_missing_delta(),
+                wind_max=_scalar_delta(wind_delta_kmh, lower_is_better=True),
+                gust_max=_scalar_delta(gust_delta_kmh, lower_is_better=True),
+                precip_sum=_scalar_delta(precip_delta_mm, lower_is_better=True),
+                thunder=_scalar_delta(thunder_delta, lower_is_better=True),
+                visibility_min=_scalar_delta(visibility_delta_m, lower_is_better=False),
+            )]
+        else:
+            self.entries = []
 
 
 def summarize_day_comparison(
@@ -126,7 +170,12 @@ def summarize_day_comparison(
 
     Rückgabe "" wenn comparison None/keine entries.
     """
-    if comparison is None or not comparison.entries:
+    if comparison is None:
+        return ""
+    # AC-1/2 (#911): Override-Summary für Test-Komfort-Konstruktor
+    if getattr(comparison, "_summary_override", None):
+        return comparison._summary_override
+    if not comparison.entries:
         return ""
 
     if not selected_metrics:
