@@ -7,6 +7,7 @@ Replaces 15 separate hooks with 1. Sequential logic:
 1. Stop-Lock → BLOCK
 2. Git commands → ALLOW (fast path)
 3. State-Integrity: protected file + write indicator → BLOCK (whitelist)
+3a. Approval-/Erfolgs-Marker + write indicator → BLOCK (deny by default)
 4. Secrets: sensitive file + content output → BLOCK
 5. Git Commit gates (configurable required staged files, adversary verdict)
 6. ALLOW
@@ -22,6 +23,7 @@ setup_path()
 import json
 import os
 import re
+import shlex
 import sys
 from pathlib import Path
 
@@ -50,10 +52,26 @@ PROTECTED_FILE_PATTERNS = [
     r"\.claude/settings\.json",
 ]
 
+# Hinweis: "echo"/"printf" sind bewusst KEINE eigenständigen Write-Indicators.
+# Sie schreiben nur via Redirect (>, >>) oder Pipe-to-tee — beides wird separat
+# erfasst. Als Standalone erzeugen sie False Positives bei Lese-/Diagnosebefehlen.
 WRITE_INDICATORS = [
     r"json\.dump", r"open\(", r"write\(", r"sed\s+-i", r"mv\s", r"cp\s",
-    r"echo\s", r"printf\s", r"python3?\s+-c", r"tee\s", r"rm\s",
+    r"python3?\s+-c", r"tee\s", r"rm\s",
     r"touch\s", r"cat\s*<<", r"unlink", r"truncate",
+]
+
+# Approval-/Erfolgs-Marker: Dateien, deren blosse Existenz einen Freigabe-
+# oder Erfolgszustand BEHAUPTET. Diese darf der Agent NIEMALS selbst per Bash
+# erzeugen/aendern/loeschen — das waere "specification gaming" (der Agent
+# manipuliert den Verifier statt die Bedingung echt zu erfuellen). Der einzige
+# legitime Erzeuger ist phase_listener.py (UserPromptSubmit-Hook), der nur
+# feuert, wenn der echte User "go"/"freigabe"/"approved" tippt. Deny by default.
+APPROVAL_MARKER_PATTERNS = [
+    r"user_approved_",
+    r"pending_validation_",
+    r"adversary_verdict",
+    r"_verified\b",
 ]
 
 WHITELIST_COMMANDS = [
@@ -94,7 +112,12 @@ _root = find_project_root()
 
 
 def _is_stop_locked() -> bool:
-    lock = _root / ".claude" / "stop_lock.json"
+    try:
+        from hook_utils import _find_worktree_root
+        wt = _find_worktree_root()
+        lock = (wt / ".claude" / "stop_lock.json") if wt is not None else (_root / ".claude" / "stop_lock.json")
+    except Exception:
+        lock = _root / ".claude" / "stop_lock.json"
     if not lock.exists():
         return False
     try:
@@ -113,14 +136,46 @@ def _references_protected(command: str) -> bool:
     return any(re.search(p, command) for p in PROTECTED_FILE_PATTERNS)
 
 
-def _has_write_indicator(command: str) -> bool:
-    for p in WRITE_INDICATORS:
-        if re.search(p, command):
-            return True
+def _references_approval_marker(command: str) -> bool:
+    return any(re.search(p, command) for p in APPROVAL_MARKER_PATTERNS)
+
+
+def _raw_redirect(command: str) -> bool:
+    """Roher Redirect-Scan ueber den gesamten String (konservativ)."""
     for m in re.finditer(r"(?<!\d)>{1,2}\s*(\S+)", command):
         if m.group(1) != "/dev/null":
             return True
     return False
+
+
+def _has_real_redirect(command: str) -> bool:
+    """True wenn echter Shell-Redirect auf Ziel != /dev/null.
+
+    Nutzt shlex damit '>' in quoted Argument-Text (z.B. gh pr create --body "a > b")
+    NICHT als Redirect gilt. Bei verschachtelter Shell (sh -c, eval) oder Parse-Fehler
+    fällt die Prüfung auf den rohen Scan zurück.
+    """
+    if re.search(r"\b(?:ba|z|da|k)?sh\s+-c\b|\beval\b", command):
+        return _raw_redirect(command)
+    try:
+        tokens = shlex.split(command, posix=True)
+    except ValueError:
+        return _raw_redirect(command)
+    for i, tok in enumerate(tokens):
+        m = re.match(r"^\d*>{1,2}(.*)$", tok)
+        if not m:
+            continue
+        target = m.group(1) or (tokens[i + 1] if i + 1 < len(tokens) else "")
+        if target and target != "/dev/null":
+            return True
+    return False
+
+
+def _has_write_indicator(command: str) -> bool:
+    for p in WRITE_INDICATORS:
+        if re.search(p, command):
+            return True
+    return _has_real_redirect(command)
 
 
 def _is_sensitive(path: str, patterns: list) -> bool:
@@ -236,7 +291,27 @@ def main():
     if command.lstrip().startswith("git ") and "git commit" not in command:
         allow()
 
-    # 3. State-integrity: protected file + write indicator
+    # 3a. Approval-/Erfolgs-Marker: deny by default, kein Bash-Weg erlaubt.
+    #     "approve" ist eine High-Risk-Operation, die NUR ein Mensch ausloesen
+    #     darf (vgl. specification gaming / reward hacking bei Coding-Agenten).
+    #     git ist ausgenommen: eine Commit-Message oder Doku DARF die Marker-
+    #     Namen erwaehnen — das ist keine Datei-Manipulation.
+    is_git_command = command.lstrip().startswith("git ")
+    if not is_git_command and _references_approval_marker(command) and _has_write_indicator(command):
+        block(
+            "BLOCKED: Freigabe-/Erfolgs-Marker duerfen NICHT per Bash erzeugt, "
+            "geaendert oder geloescht werden.\n"
+            "\n"
+            "  Diese Datei behauptet eine Freigabe, die NUR der User erteilen kann.\n"
+            "  Du kannst dieses Gate nicht selbst oeffnen — das waere die Manipulation\n"
+            "  des Pruefpunkts statt der echten Erfuellung der Bedingung.\n"
+            "\n"
+            "  Der einzige legitime Weg:\n"
+            "  -> Lege dem User die Ergebnisse vor und WARTE auf sein 'go' / 'freigabe'\n"
+            "     / 'approved'. Der phase_listener-Hook setzt den Marker dann selbst."
+        )
+
+    # 3b. State-integrity: protected file + write indicator
     if _references_protected(command):
         if _is_whitelisted(command):
             allow()

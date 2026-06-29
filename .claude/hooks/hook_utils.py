@@ -139,6 +139,26 @@ def find_main_repo_from_worktree(start: Path) -> "Path | None":
     return None
 
 
+def _find_worktree_root() -> "Path | None":
+    """Return the root of the current git worktree if in one, else None.
+
+    Worktrees have a .git FILE (not dir). Walk up from CLAUDE_PROJECT_DIR or
+    CWD. Returns None when running in the main repo (where .git is a directory).
+    Used by bash_gate/_is_stop_locked for session-local stop-lock files.
+    """
+    env_dir = os.environ.get("CLAUDE_PROJECT_DIR", "")
+    start = Path(env_dir) if env_dir else Path.cwd()
+    current = start
+    while current != current.parent:
+        git_marker = current / ".git"
+        if git_marker.is_file():
+            return current
+        if git_marker.is_dir():
+            return None
+        current = current.parent
+    return None
+
+
 def find_project_root() -> Path:
     """Find project root. Resolves git worktrees to the main repo root.
 
