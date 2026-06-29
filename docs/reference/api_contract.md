@@ -992,6 +992,9 @@ Returns catalog of all available weather metrics with format mode options and de
 | metrics[].format_modes | string[] | Supported format modes for this metric (`raw`, `scale`, `simplified`, `symbol`) |
 | metrics[].default_format_mode | string | Recommended default format mode (must be in `format_modes`) |
 | metrics[].selectable | bool | Whether this metric appears in the user-facing selector (Wizard/Editor). Backend internal metric (`confidence`) has `selectable=false` (Issue #710) — these are never returned by `/api/metrics` but used internally for aggregation/forecast-hints |
+| metrics[].sms_code | string | GSM-7-safe short token for the metric in SMS/Subject/Telegram alert tokens (e.g., `W`, `G`, `R`, `PR`, `TH`, `CP`, `SL`, `VS`, `HU`). Single source for alert renderers (Issue #914 Slice 1); the metric catalog is the only place these are defined |
+| metrics[].decimals | int \| null | Rounding precision for display (e.g., `precipitation: 1`, `visibility: 1`, most metrics `0`). `null` ⇒ fall back to the unit-based heuristic in `format_metric_value()` |
+| metrics[].cmp | string | Threshold-alarm side: `"über"` (alert when value exceeds threshold) or `"unter"` (alert when value falls below). Single source for the comparison direction used by deviation/absolute alert detection (Issue #914 Slice 1) — replaces the former hand-coded `_ALERT_METRIC_COMPARISON` dict |
 
 **Format Mode Reference:**
 
