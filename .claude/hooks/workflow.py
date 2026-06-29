@@ -30,10 +30,26 @@ setup_path()
 
 import json
 import os
+import re as _re
 import sys
 import tempfile
 from datetime import datetime
 from pathlib import Path
+
+_NAME_RE = _re.compile(r'^[a-zA-Z0-9_-]{1,64}$')
+
+
+def _validate_name(name: str) -> None:
+    """Reject names that would escape the workflows dir or corrupt glob patterns."""
+    if not _NAME_RE.fullmatch(name):
+        print(
+            f"INVALID workflow name: {name!r}\n"
+            "Allowed: letters, digits, hyphens, underscores (1–64 chars).\n"
+            "Rejected: / .. * ? [ ] { }",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
 
 PHASES = [
     "phase0_idle",
@@ -437,6 +453,7 @@ def cmd_start(args: list[str]) -> None:
         print(f"Unknown workflow type: {workflow_type!r}. Valid: feature, bug, feature-fast, express", file=sys.stderr)
         sys.exit(1)
     name = name_args[0]
+    _validate_name(name)
     wf_file = _workflow_file(name)
     if wf_file.exists():
         print(f"Workflow {name} already exists. Use 'switch' to activate.", file=sys.stderr)
@@ -488,6 +505,7 @@ def cmd_switch(args: list[str]) -> None:
         print("Usage: workflow.py switch <name>", file=sys.stderr)
         sys.exit(1)
     name = args[0]
+    _validate_name(name)
     wf_file = _workflow_file(name)
     if not wf_file.exists():
         print(f"Workflow {name} not found.", file=sys.stderr)
@@ -546,7 +564,11 @@ def cmd_status(args: list[str]) -> None:
     print(f"Test Artifacts: {artifacts}")
     print(f"Fix-Loop Iterations: {fix_loops}")
     print(f"Phase Transitions: {transitions}")
-    print(f"LoC Delta: {loc_delta}")
+    loc_override = data.get("loc_limit_override")
+    if loc_override:
+        print(f"LoC Delta: {loc_delta}/{loc_override} (override)")
+    else:
+        print(f"LoC Delta: {loc_delta}")
     print(f"Execution Log: {'Written' if log_written else 'Pending — run write-log before complete'}")
     # Issue #828: Express-Status
     if data.get("workflow_type") == "express":
@@ -1030,6 +1052,36 @@ def cmd_retro(args: list[str]) -> None:
     print()
 
 
+def cmd_cleanup_stale_locks(args: list[str]) -> None:
+    """Remove pending_validation lock files for completed or archived workflows."""
+    claude_dir = find_project_root() / ".claude"
+    wf_dir = _workflows_dir()
+    removed = []
+    skipped = []
+    for lock in sorted(claude_dir.glob("pending_validation_*.json")):
+        wf_name = lock.stem.replace("pending_validation_", "", 1)
+        active_file = wf_dir / f"{wf_name}.json"
+        if active_file.exists():
+            try:
+                data = _read_workflow(active_file)
+                phase = data.get("current_phase", "")
+                if phase == "phase6_implement":
+                    skipped.append(f"  SKIPPED {wf_name} (aktiv in {phase})")
+                    continue
+            except Exception:
+                pass
+        lock.unlink(missing_ok=True)
+        approval = claude_dir / f"user_approved_validation_{wf_name}"
+        approval.unlink(missing_ok=True)
+        removed.append(f"  Removed: {lock.name}")
+    if removed:
+        print("\n".join(removed))
+    if skipped:
+        print("\n".join(skipped))
+    if not removed and not skipped:
+        print("Keine verwaisten Lock-Dateien gefunden.")
+
+
 COMMANDS = {
     "start": cmd_start,
     "switch": cmd_switch,
@@ -1048,6 +1100,7 @@ COMMANDS = {
     "list": cmd_list,
     "retro-list": cmd_retro_list,
     "retro": cmd_retro,
+    "cleanup-stale-locks": cmd_cleanup_stale_locks,
 }
 
 
