@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8"/>
+<title>Gregor 20 — Alert-Mail · Optimierungs-Vorschläge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  body { background: var(--g-paper); }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 56px 40px 100px; }
+  .eyebrow { font-family: var(--g-font-mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--g-accent); font-weight: 600; }
+  h1.page { font-size: 34px; font-weight: 600; letter-spacing: -.02em; margin: 8px 0 10px; }
+  p.lede { font-size: 16px; color: var(--g-ink-2); line-height: 1.55; max-width: 760px; margin: 0 0 8px; }
+
+  .sec-label { font-family: var(--g-font-mono); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; color: var(--g-ink-3); margin: 0 0 18px; display: flex; align-items: center; gap: 10px; }
+  .sec-label .num { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 999px; font-size: 12px; }
+  .tag-bad  { background: rgba(168,50,50,.12);  color: var(--g-bad); }
+  .tag-good { background: rgba(61,107,58,.14);   color: var(--g-good); }
+
+  hr.r { border: none; border-top: 1px solid var(--g-rule-soft); margin: 64px 0; }
+
+  /* ── Mail-Client-Mockup ── */
+  .mail { background: var(--g-card); border: 1px solid var(--g-rule); border-radius: var(--g-r-4); overflow: hidden; box-shadow: var(--g-shadow-2); }
+  .mail-head { padding: 22px 26px 18px; display: flex; gap: 14px; }
+  .ava { width: 40px; height: 40px; border-radius: 999px; flex: none; background: linear-gradient(160deg,#8b9bd4,#6f7fc0); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 17px; }
+  .from { font-weight: 700; font-size: 17px; color: var(--g-ink); margin-bottom: 3px; }
+  .subj { font-size: 15.5px; color: var(--g-ink); line-height: 1.35; }
+  .subj .brk { color: var(--g-ink-4); }
+  .meta { font-size: 13.5px; color: var(--g-ink-4); margin-top: 5px; }
+  .meta b { color: var(--g-ink-3); font-weight: 500; }
+  .mail-rule { border: none; border-top: 1px solid var(--g-rule-soft); margin: 0; }
+  .mail-body { padding: 26px 26px 30px; }
+  .body-h1 { font-size: 26px; font-weight: 700; letter-spacing: -.01em; margin: 0 0 18px; line-height: 1.2; }
+  .body-line { font-size: 15.5px; color: var(--g-ink); line-height: 1.5; margin: 0 0 14px; }
+  .body-foot { font-size: 13.5px; color: var(--g-ink-4); margin: 18px 0 0; }
+
+  /* Pins */
+  .pin { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 999px; background: var(--g-bad); color: #fff; font-size: 11px; font-weight: 700; font-family: var(--g-font-mono); vertical-align: middle; margin: 0 2px; }
+  .hl { background: rgba(168,50,50,.10); border-radius: 3px; padding: 0 3px; box-shadow: inset 0 -1px 0 rgba(168,50,50,.35); }
+
+  .two { display: grid; grid-template-columns: minmax(0,1fr) 360px; gap: 40px; align-items: start; }
+  @media (max-width: 980px){ .two { grid-template-columns: 1fr; } .chan-grid { grid-template-columns: 1fr !important; } }
+
+  .probs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+  .probs li { display: flex; gap: 12px; font-size: 14px; line-height: 1.5; color: var(--g-ink-2); }
+  .probs .pin { flex: none; margin-top: 1px; }
+  .probs b { color: var(--g-ink); font-weight: 600; }
+
+  /* Optimized callouts */
+  .good-h1 { color: var(--g-ink); }
+  .verdict { display: inline-flex; align-items: center; gap: 8px; font-family: var(--g-font-mono); font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; padding: 5px 11px; border-radius: 999px; background: rgba(61,107,58,.12); color: var(--g-good); margin-bottom: 16px; }
+  .datablock { border: 1px solid var(--g-rule); border-radius: var(--g-r-3); overflow: hidden; margin: 4px 0 18px; }
+  .datarow { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 13px 16px; font-size: 15px; }
+  .datarow + .datarow { border-top: 1px solid var(--g-rule-soft); }
+  .datarow .k { color: var(--g-ink-2); }
+  .datarow .v { font-family: var(--g-font-mono); font-weight: 600; color: var(--g-ink); }
+  .arrow-down { color: var(--g-good); font-weight: 700; }
+  .delta { font-family: var(--g-font-mono); font-size: 12.5px; font-weight: 600; padding: 2px 7px; border-radius: 999px; background: rgba(61,107,58,.14); color: var(--g-good); }
+  .means { font-size: 15px; color: var(--g-ink); line-height: 1.5; background: var(--g-card-alt); border-left: 3px solid var(--g-good); padding: 12px 16px; border-radius: 0 var(--g-r-2) var(--g-r-2) 0; margin: 0 0 4px; }
+  .means b { font-weight: 600; }
+
+  .lever { display: flex; flex-direction: column; gap: 0; border: 1px solid var(--g-rule); border-radius: var(--g-r-4); overflow: hidden; background: var(--g-card); }
+  .lever-item { padding: 18px 22px; }
+  .lever-item + .lever-item { border-top: 1px solid var(--g-rule-soft); }
+  .lever-item h3 { font-size: 15.5px; font-weight: 600; margin: 0 0 5px; display: flex; gap: 10px; align-items: baseline; }
+  .lever-item h3 .n { font-family: var(--g-font-mono); font-size: 12px; color: var(--g-accent); font-weight: 600; flex: none; }
+  .lever-item p { font-size: 13.5px; color: var(--g-ink-2); line-height: 1.55; margin: 0; }
+  .lever-item code { font-family: var(--g-font-mono); font-size: 12.5px; background: var(--g-card-alt); border: 1px solid var(--g-rule-soft); border-radius: 3px; padding: 1px 5px; color: var(--g-ink); }
+
+  /* Channel subject table */
+  .chan { display: flex; flex-direction: column; gap: 14px; }
+  .chan-row { border: 1px solid var(--g-rule); border-radius: var(--g-r-3); background: var(--g-card); padding: 16px 18px; }
+  .chan-row .ch-name { font-family: var(--g-font-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--g-ink-3); font-weight: 600; margin-bottom: 9px; display: flex; gap: 8px; align-items: center; }
+  .chan-row .ch-name .lim { color: var(--g-ink-4); font-weight: 500; letter-spacing: 0; text-transform: none; }
+  .chan-row .ch-text { font-family: var(--g-font-mono); font-size: 13.5px; color: var(--g-ink); line-height: 1.5; }
+  .chan-row .ch-text .brk { color: var(--g-ink-4); }
+  .note { font-size: 13px; color: var(--g-ink-3); margin-top: 8px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="eyebrow">Alert-Mail · Review</div>
+  <h1 class="page">Wie die Alert-Mail besser wird</h1>
+  <p class="lede">Der Alert sagt, <em>dass</em> sich etwas geändert hat — nicht <em>wie weit</em> und <em>in welche Richtung</em>. Sechs Hebel machen die Änderung sofort erfassbar. Reine Fakten: Richtung, Delta, Schwellwert-Bezug — die Interpretation machst du selbst.</p>
+
+  <hr class="r"/>
+
+  <!-- ── VORHER ── -->
+  <div class="sec-label"><span class="num tag-bad">✕</span> Vorher · aktueller Stand</div>
+  <div class="two">
+    <div class="mail">
+      <div class="mail-head">
+        <div class="ava">G</div>
+        <div>
+          <div class="from">gregor_zwanzig@henemm.com</div>
+          <div class="subj"><span class="brk">[KHW 403]</span> Wetter ändert sich seit dem Briefing <span class="pin">1</span></div>
+          <div class="meta"><b>An:</b> Henning Emmrich</div>
+          <div class="meta"><b>Antwort an:</b> gregor_zwanzig@henemm.com</div>
+        </div>
+      </div>
+      <hr class="mail-rule"/>
+      <div class="mail-body">
+        <div class="body-h1">Wetter ändert sich seit dem Briefing <span class="pin">2</span></div>
+        <div class="body-line">Gewitterenergie (CAPE) <span class="hl">1230.0 → 620.0</span> <span class="pin">3</span> (Segment 1, km 0–1.8, 08:00–09:37) <span class="pin">4</span></div>
+        <div class="body-foot">Stand: heute 09:30 · verglichen mit dem letzten Briefing</div>
+      </div>
+    </div>
+
+    <ul class="probs">
+      <li><span class="pin">1</span><span><b>Betreff sagt nichts.</b> Jeder Alert hat denselben Satz. Im Postfach-Stapel nicht unterscheidbar — die eine wichtige Info fehlt genau dort, wo du sie zuerst siehst.</span></li>
+      <li><span class="pin">2</span><span><b>Überschrift = Betreff.</b> Doppelt dieselbe Zeile. Die prominenteste Stelle der Mail trägt keine zusätzliche Information.</span></li>
+      <li><span class="pin">3</span><span><b>Keine Richtung, kein Schwellwert-Bezug.</b> <code style="font-family:var(--g-font-mono);font-size:12px">1230→620</code> ohne Pfeil und ohne Bezug zur konfigurierten Schwelle. Steht der Wert jetzt drüber oder drunter?</span></li>
+      <li><span class="pin">4</span><span><b>Roh-Zahlen &amp; Jargon.</b> <code style="font-family:var(--g-font-mono);font-size:12px">1230.0</code> — die <code style="font-family:var(--g-font-mono);font-size:12px">.0</code> ist Rauschen. Kein Bezug zur Alarm-Schwelle: bist du jetzt drüber oder drunter?</span></li>
+    </ul>
+  </div>
+
+  <hr class="r"/>
+
+  <!-- ── DIE HEBEL ── -->
+  <div class="sec-label">Die 6 Hebel</div>
+  <div class="lever">
+    <div class="lever-item">
+      <h3><span class="n">01</span> Wesentliche Info in den Betreff</h3>
+      <p>Trip + Ort + Richtung + Metrik + Wert, in dieser Reihenfolge. <code>[KHW 403] km 0–1.8 · ↓ CAPE: 1230→620</code></p>
+    </div>
+    <div class="lever-item">
+      <h3><span class="n">02</span> Überschrift nennt das Ergebnis</h3>
+      <p>Die H1 trägt die Änderung, nicht den Betreff nochmal. <code>CAPE seit dem Briefing halbiert.</code></p>
+    </div>
+    <div class="lever-item">
+      <h3><span class="n">03</span> Richtung &amp; Größe sichtbar</h3>
+      <p>Pfeil + Prozent zeigen Richtung und Ausmaß auf einen Blick. <code>1230 → 620</code> mit <code>−50 %</code>.</p>
+    </div>
+    <div class="lever-item">
+      <h3><span class="n">04</span> Schwellwert-Bezug</h3>
+      <p>Zeig, auf welcher Seite der konfigurierten Schwelle der Wert jetzt steht. <code>Schwelle 800 — jetzt darunter.</code></p>
+    </div>
+    <div class="lever-item">
+      <h3><span class="n">05</span> Zahlen runden</h3>
+      <p><code>1230</code> statt <code>1230.0</code> — die Nachkommastelle ist Rauschen.</p>
+    </div>
+    <div class="lever-item">
+      <h3><span class="n">06</span> Mehrere Werte → nach Schwere ordnen</h3>
+      <p>Kippen mehrere Metriken, führt die mit dem größten Schwellwert-Abstand; Rest folgt nach Schwere. Betreff nennt die Top-2–3. <code>↑ 3 Werte über Schwelle: Böen 52, Gewitter 55%, Niedersch 14</code></p>
+    </div>
+  </div>
+
+  <hr class="r"/>
+
+  <!-- ── NACHHER ── -->
+  <div class="sec-label"><span class="num tag-good">✓</span> Nachher · optimierter Vorschlag</div>
+  <div class="two">
+    <div class="mail">
+      <div class="mail-head">
+        <div class="ava">G</div>
+        <div>
+          <div class="from">gregor_zwanzig@henemm.com</div>
+          <div class="subj"><span class="brk">[KHW 403]</span> km 0–1.8 · ↓ CAPE: 1230→620</div>
+          <div class="meta"><b>An:</b> Henning Emmrich</div>
+          <div class="meta"><b>Antwort an:</b> gregor_zwanzig@henemm.com</div>
+        </div>
+      </div>
+      <hr class="mail-rule"/>
+      <div class="mail-body">
+        <div class="verdict">↓ −50 % · jetzt unter Schwelle 800</div>
+        <div class="body-h1 good-h1">CAPE seit dem Briefing halbiert.</div>
+
+        <div class="datablock">
+          <div class="datarow">
+            <span class="k">CAPE <span style="color:var(--g-ink-4);font-size:13px">· J/kg</span></span>
+            <span class="v">1230 <span class="arrow-down">→</span> 620 <span class="delta">−50 %</span></span>
+          </div>
+          <div class="datarow">
+            <span class="k">Alarm-Schwelle 800</span>
+            <span class="v" style="color:var(--g-good)">jetzt darunter ✓</span>
+          </div>
+          <div class="datarow">
+            <span class="k">Wo &amp; wann</span>
+            <span class="v" style="font-weight:500;color:var(--g-ink-2)">km 0–1.8 · 08:00–09:37</span>
+          </div>
+        </div>
+
+        <div class="body-foot">Stand: heute 09:30 · verglichen mit dem letzten Briefing</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="lever-item" style="border:1px solid var(--g-rule);border-radius:var(--g-r-4);background:var(--g-card);">
+        <h3 style="margin-bottom:8px">Warum das trägt</h3>
+        <p>Schon im Listing weißt du: <b>Trip, Metrik, Richtung, wo, wann.</b> Beim Öffnen liefert die H1 das Ergebnis, der Block die Werte mit Schwellwert-Bezug — zwei Lese-Tiefen, jede für sich vollständig. Die Bewertung bleibt bei dir.</p>
+      </div>
+    </div>
+  </div>
+
+  <hr class="r"/>
+
+  <!-- ── MEHRERE METRIKEN ── -->
+  <div class="sec-label"><span class="num tag-good">✓</span> Mehrere Metriken · derselbe Aufbau, nach Schwere geordnet</div>
+  <div class="two">
+    <div class="mail">
+      <div class="mail-head">
+        <div class="ava">G</div>
+        <div>
+          <div class="from">gregor_zwanzig@henemm.com</div>
+          <div class="subj"><span class="brk">[KHW 403]</span> km 0–4 · ↑ 3 über Schwelle: Böen 52, Gewitter 55%, Niedersch 14</div>
+          <div class="meta"><b>An:</b> Henning Emmrich</div>
+          <div class="meta"><b>Antwort an:</b> gregor_zwanzig@henemm.com</div>
+        </div>
+      </div>
+      <hr class="mail-rule"/>
+      <div class="mail-body">
+        <div class="verdict" style="background:rgba(168,50,50,.12);color:var(--g-bad)">↑ 3 Schwellen überschritten</div>
+        <div class="body-h1 good-h1">Drei Werte stehen seit dem Briefing über der Alarm-Schwelle.</div>
+
+        <div class="datablock">
+          <div class="datarow">
+            <span class="k">Böen <span style="color:var(--g-ink-4);font-size:13px">· Schwelle 50</span></span>
+            <span class="v">35 <span style="color:var(--g-bad);font-weight:700">↑</span> 52 km/h <span class="delta" style="background:rgba(168,50,50,.14);color:var(--g-bad)">über</span></span>
+          </div>
+          <div class="datarow">
+            <span class="k">Gewitter <span style="color:var(--g-ink-4);font-size:13px">· Schwelle 40 %</span></span>
+            <span class="v">30 <span style="color:var(--g-bad);font-weight:700">↑</span> 55 % <span class="delta" style="background:rgba(168,50,50,.14);color:var(--g-bad)">über</span></span>
+          </div>
+          <div class="datarow">
+            <span class="k">Niedersch <span style="color:var(--g-ink-4);font-size:13px">· Schwelle 10</span></span>
+            <span class="v">6 <span style="color:var(--g-bad);font-weight:700">↑</span> 14 mm/h <span class="delta" style="background:rgba(168,50,50,.14);color:var(--g-bad)">über</span></span>
+          </div>
+          <div class="datarow">
+            <span class="k" style="color:var(--g-ink-3)">Regen% <span style="color:var(--g-ink-4);font-size:13px">· unter Schwelle</span></span>
+            <span class="v" style="font-weight:500;color:var(--g-ink-3)">70 → 90 %</span>
+          </div>
+        </div>
+
+        <div class="body-foot">Stand: heute 14:30 · verglichen mit dem letzten Briefing · km 0–4</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="lever-item" style="border:1px solid var(--g-rule);border-radius:var(--g-r-4);background:var(--g-card);">
+        <h3 style="margin-bottom:8px">Reihenfolge = Schwere</h3>
+        <p>Der Betreff nennt die <b>Top-3</b> mit Wert. Im Body führt die kritischste Metrik; was nur knapp oder gar nicht über der Schwelle liegt, rutscht nach unten und wird gedämpft. So bleibt der Blick auf dem, was die Entscheidung trägt.</p>
+      </div>
+    </div>
+  </div>
+
+  <hr class="r"/>
+
+  <!-- ── BETREFF PRO KANAL ── -->
+  <div class="sec-label">Betreff / erste Zeile pro Kanal</div>
+  <p class="lede" style="margin-bottom:24px">Dasselbe Prinzip in allen drei Kanälen — nur die Länge schrumpft. SMS folgt dem etablierten Token-Format und bleibt ASCII (GSM-7), sonst kippt das Limit von 140 auf 70 Zeichen.</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;max-width:980px;" class="chan-grid">
+    <div class="chan">
+      <div style="font-size:13px;font-weight:600;color:var(--g-good);margin-bottom:4px">↓ Einzel-Metrik · Wert gefallen</div>
+      <div class="chan-row">
+        <div class="ch-name">Email <span class="lim">· ~70 Z. sichtbar</span></div>
+        <div class="ch-text"><span class="brk">[KHW 403]</span> km 0–1.8 · ↓ CAPE: 1230→620</div>
+      </div>
+      <div class="chan-row">
+        <div class="ch-name">Telegram <span class="lim">· fette erste Zeile</span></div>
+        <div class="ch-text"><b>KHW 403 · km 0–1.8 · ↓ CAPE</b><br>1230→620 (−50 %) · &lt; Schwelle 800</div>
+      </div>
+      <div class="chan-row">
+        <div class="ch-name">SMS <span class="lim">· 25 / 140 Z.</span></div>
+        <div class="ch-text">KHW403 km0-1.8: -CP620@09</div>
+        <div class="note" style="margin-top:6px">Neuer Code <code>CP</code> für CAPE (J/kg). Richtung über Vorzeichen: <code>-</code> gefallen, <code>+</code> gestiegen.</div>
+      </div>
+    </div>
+
+    <div class="chan">
+      <div style="font-size:13px;font-weight:600;color:var(--g-bad);margin-bottom:4px">↑ Mehrere Metriken · über Schwelle</div>
+      <div class="chan-row">
+        <div class="ch-name">Email <span class="lim">· ~70 Z. sichtbar</span></div>
+        <div class="ch-text"><span class="brk">[KHW 403]</span> km 0–4 · ↑ 3 über Schwelle: Böen 52, Gewitter 55%, Niedersch 14</div>
+      </div>
+      <div class="chan-row">
+        <div class="ch-name">Telegram <span class="lim">· fette erste Zeile</span></div>
+        <div class="ch-text"><b>KHW 403 · km 0–4 · ↑ 3 über Schwelle</b><br>Böen 35→52 · Gewitter 30→55% · Niedersch 6→14</div>
+      </div>
+      <div class="chan-row">
+        <div class="ch-name">SMS <span class="lim">· 46 / 140 Z.</span></div>
+        <div class="ch-text">KHW403 km0-4: +G52@15 +TH55%@15 +R14 +PR90%@14</div>
+        <div class="note" style="margin-top:6px">Standard-Token: <code>G</code> Böen, <code>TH</code> Gewitter, <code>R</code> Niedersch, <code>PR</code> Regen% · Wert<code>@</code>Stunde. Vorzeichen <code>+</code> gestiegen / <code>-</code> gefallen. Nur die Werte über Schwelle, nach Schwere.</div>
+      </div>
+    </div>
+  </div>
+  <p class="note" style="max-width:980px;margin-top:16px">Konvention: <b>Trip · Ort (km) · Richtung · Metrik</b> in dieser Reihenfolge. Pfeil (↓/↑) in Email &amp; Telegram; in SMS das Vorzeichen <code>+</code>/<code>-</code> (gestiegen / gefallen) als Token-Präfix. SMS bleibt ASCII/GSM-7 — keine Unicode-Pfeile (auch kein <code>^</code>, das zählt dort doppelt), sonst kippt das Limit von 140 auf 70 Zeichen.</p>
+
+</div>
+</body>
+</html>
