@@ -2,7 +2,6 @@
 	import { SectionH, Card, Btn, Eyebrow } from '$lib/components/atoms';
 	import FullProfile from './FullProfile.svelte';
 	import TripStageRow from './TripStageRow.svelte';
-	import MetricsPreview from './MetricsPreview.svelte';
 	import ReportLine from './ReportLine.svelte';
 	import ChannelDot from './ChannelDot.svelte';
 	import type { Trip } from '$lib/types';
@@ -59,16 +58,6 @@
 				onclick={makeStageSelectHandler(stage.id)}
 			/>
 		{/each}
-
-		<div style="margin-top: 32px;">
-			<SectionH eyebrow="Wetter-Metriken" title="Aktive Metriken">
-				{#snippet right()}
-					<Btn variant="ghost" size="sm" onclick={makeJumpHandler('weather')}>Bearbeiten →</Btn>
-				{/snippet}
-			</SectionH>
-
-			<MetricsPreview {trip} />
-		</div>
 	</div>
 
 	<!-- Right column -->
