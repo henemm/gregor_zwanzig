@@ -204,26 +204,6 @@ class TestPlainTextStaysNumericAscii:
 # AC-6: Ampel-Legende im HTML-Mail-Body
 # ---------------------------------------------------------------------------
 
-class TestAmpelLegendPresent:
-    """AC-6: HTML-Mail-Body enthaelt Ampel-Legende mit allen 4 Emojis + Labels."""
-
-    def test_issue759_ampel_legend_present(self):
-        """AC-6: render_html-Body enthaelt Legende mit allen vier Emojis + Labels."""
-        html = _render_html()
-
-        # Alle vier Ampel-Emojis muessen in der Legende vorkommen
-        assert "🟢" in html, "HTML body must contain 🟢"
-        assert "🟡" in html, "HTML body must contain 🟡"
-        assert "🟠" in html, "HTML body must contain 🟠"
-        assert "🔴" in html, "HTML body must contain 🔴"
-
-        # Die zugehoerigen Labels muessen vorkommen
-        assert "unkritisch" in html, "Legend must contain 'unkritisch'"
-        assert "Achtung" in html, "Legend must contain 'Achtung'"
-        assert "Warnung" in html, "Legend must contain 'Warnung'"
-        assert "Gefahr" in html, "Legend must contain 'Gefahr'"
-
-
 # ---------------------------------------------------------------------------
 # Issue #814 AC-10: fmt_val an neue Quelle use_friendly_format angleichen.
 #

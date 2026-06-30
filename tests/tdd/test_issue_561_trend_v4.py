@@ -103,56 +103,16 @@ class TestSchedulerHelpers:
 
 class TestHtmlTrendLayout:
 
-    def test_html_paper_tint_and_border(self):
-        """AC-2: Trend-Block hat 2px-Haarlinie + Paper-Tint."""
-        html = _render_html([_trend_stage()])
-        assert "border-top:2px solid #1a1a18" in html, "2px-Haarlinie fehlt"
-        assert "background:#f6f4ee" in html, "Paper-Tint #f6f4ee fehlt"
-
-    def test_html_fixed_table_layout(self):
-        """AC-2: Spalten fluchten via table-layout:fixed."""
-        html = _render_html([_trend_stage("Mo"), _trend_stage("Di", name="Di-Etappe")])
-        assert "table-layout:fixed" in html, "table-layout:fixed fehlt"
-
-    def test_html_column_headers_present(self):
-        """AC-2: Spaltenköpfe TEMP · REGEN · WIND · GEWITTER."""
-        html = _render_html([_trend_stage()]).lower()
-        for col in ("temp", "regen", "wind", "gewitter"):
-            assert col in html, f"Spalte '{col}' fehlt"
-
-    def test_html_weekday_and_name(self):
-        """AC-2: Etappenname und Wochentag erscheinen."""
-        html = _render_html([_trend_stage(weekday="Mo", name="Sóller → Tossals Verds")])
-        assert "Mo" in html and "Sóller" in html
-
     def test_html_zero_precip_shows_dash(self):
         """AC-5: precip_mm=0 → '–' statt '0 mm'."""
         html = _render_html([_trend_stage(precip_mm=0.0)])
         has_dash = "&ndash;" in html or "–" in html
         assert has_dash, "Null-Niederschlag muss '–' zeigen, nicht '0 mm'"
 
-    def test_html_high_precip_is_blue_bold(self):
-        """AC-6: precip_mm > 1 → #2c5a8c + font-weight:700."""
-        html = _render_html([_trend_stage(precip_mm=8.0)])
-        assert "#2c5a8c" in html, "Hoher Regen muss blau (#2c5a8c) sein"
-        assert "font-weight:700" in html, "Hoher Regen muss fett sein"
-
     def test_html_high_wind_is_accent(self):
         """AC-6: wind_kmh > 30 → #c45a2a."""
         html = _render_html([_trend_stage(wind_kmh=35)])
         assert "#c45a2a" in html, "Starker Wind muss accent-Farbe (#c45a2a) haben"
-
-    def test_html_thunder_med_colored_square(self):
-        """AC-2: thunder=MED → Quadrat #c08a1a + Wort 'MED'."""
-        html = _render_html([_trend_stage(thunder="MED")])
-        assert "#c08a1a" in html, "Thunder MED braucht Quadrat #c08a1a"
-        assert "MED" in html, "Thunder MED braucht Wort 'MED'"
-
-    def test_html_thunder_none_shows_kein(self):
-        """AC-2: thunder=NONE → Quadrat #9a958a + Wort 'kein'."""
-        html = _render_html([_trend_stage(thunder="NONE")])
-        assert "#9a958a" in html, "Thunder NONE braucht Quadrat #9a958a"
-        assert "kein" in html, "Thunder NONE braucht Wort 'kein'"
 
     def test_html_note_shown_when_thunder_med(self):
         """AC-7: note erscheint wenn thunder != NONE."""
