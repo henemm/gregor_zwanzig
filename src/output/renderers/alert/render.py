@@ -34,7 +34,7 @@ def _code(e: AlertEvent) -> str:
 
 def _km_str(msg: AlertMessage) -> str:
     a, b = km_span(msg.events)
-    return f"km {format_metric_value('km', a)}–{format_metric_value('km', b)}"
+    return f"km {int(round(a))}–{int(round(b))} km"
 
 
 def _render_subject_onset(msg: AlertMessage) -> str:
@@ -82,7 +82,7 @@ def _render_telegram_onset(msg: AlertMessage) -> str:
 def _render_sms_onset(msg: AlertMessage, limit: int = 140) -> str:
     e = msg.events[0]
     token = f"TH!{e.onset_minutes}" if e.is_convective else f"R!{e.onset_minutes}"
-    trip = _ascii(msg.trip_short)[:16]
+    trip = _ascii(msg.trip_short)[:16].rstrip(" (-_")
     a, b = int(round(e.km_from)), int(round(e.km_to))
     body = f"{trip} km{a}-{b}: {token}"
     return body if len(body) <= limit else body[:limit]
@@ -116,8 +116,8 @@ def _h1(msg: AlertMessage) -> str:
 
 def _email_line(e: AlertEvent) -> str:
     return (
-        f"{_code(e)} · Schwelle {_val(e, e.threshold)}   "
-        f"{_val(e, e.value_from)} {arrow(e)} {_val(e, e.value_to)}  "
+        f"{_code(e)} · Schwelle {_val(e, e.threshold)} · "
+        f"{_val(e, e.value_from)} {arrow(e)} {_val(e, e.value_to)} · "
         f"{side_label(e)}"
     )
 
@@ -178,7 +178,7 @@ def render_sms(msg: AlertMessage, limit: int = 140) -> str:
     if msg.source is not None:
         return _render_sms_onset(msg, limit)
     evs = _sorted(msg)
-    trip = _ascii(msg.trip_short)[:16]
+    trip = _ascii(msg.trip_short)[:16].rstrip(" (-_")
     a, b = km_span(msg.events)
     head = f"{trip} km{int(round(a))}-{int(round(b))}: "
     tokens = [_sms_token(e) for e in evs]
