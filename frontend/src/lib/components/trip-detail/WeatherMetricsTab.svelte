@@ -247,6 +247,29 @@
 		if (Object.keys(catalog).length === 0) load();
 	});
 
+	// Issue #932: Activity-Typ → Template vorauswählen (nur createMode, einmalig).
+	const ACTIVITY_TO_TEMPLATE: Record<string, string> = {
+		trekking: 'alpen-trekking',
+		hochtour: 'alpen-trekking',
+		klettersteig: 'alpen-trekking',
+		mountaineering: 'alpen-trekking',
+		ski_touring: 'skitouren',
+		skitour: 'skitouren',
+		hiking: 'wandern',
+		fahrrad_15: 'radtour',
+		fahrrad_20: 'radtour',
+		fahrrad_25: 'radtour',
+		mtb: 'radtour',
+	};
+
+	$effect(() => {
+		if (!createMode || !trip.activity || isDirty || templates.length === 0) return;
+		const tmplId = ACTIVITY_TO_TEMPLATE[trip.activity];
+		if (tmplId && templates.some(t => t.id === tmplId)) {
+			applyPreset(tmplId);
+		}
+	});
+
 	// Issue #622: Create-Modus — Kanal-Änderungen nach oben propagieren.
 	$effect(() => {
 		if (createMode && onChannelsChange) {
@@ -447,17 +470,17 @@
 	<div data-testid="weather-metrics-tab" class="metrics-tab">
 		<!-- Save-Bar (oben, schmal) — expliziter Button nur ohne saveController (#758) -->
 		<div class="save-bar">
-			{#if isDirty && !saveController}
+			{#if isDirty && !saveController && !createMode}
 				<Pill tone="warning" data-testid="weather-metrics-dirty-pill">Ungespeicherte Änderungen</Pill>
 				<Btn variant="ghost" size="sm" data-testid="weather-metrics-discard" onclick={handleDiscard}>Verwerfen</Btn>
 			{/if}
-			{#if saveSuccess && !saveController}
+			{#if saveSuccess && !saveController && !createMode}
 				<span data-testid="weather-metrics-tab-success" class="save-success">Gespeichert</span>
 			{/if}
-			{#if saveError && !saveController}
+			{#if saveError && !saveController && !createMode}
 				<span data-testid="weather-metrics-tab-error" class="save-error">{saveError}</span>
 			{/if}
-			{#if !saveController}
+			{#if !saveController && !createMode}
 				<Btn variant="primary" size="sm" data-testid="weather-metrics-tab-save" disabled={saving || !isDirty} onclick={handleSave}>
 					{saving ? 'Speichern…' : 'Speichern'}
 				</Btn>

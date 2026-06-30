@@ -7,6 +7,7 @@
 	// Design: docs/design-requests/trip-anlegen-2026-06-06/screen-trip-new-v2-mobile.jsx
 	// Factory-Pattern für alle Event-Handler (Safari-Closure-Schutz, CLAUDE.md).
 
+	import { onMount } from 'svelte';
 	import { goto, beforeNavigate } from '$app/navigation';
 	import { api } from '$lib/api.js';
 	import { Eyebrow, Btn, Input, TopoBg } from '$lib/components/atoms';
@@ -69,11 +70,24 @@
 
 	let activeTab = $state<TabId>('route');
 
+	// Issue #932 — Viewport-Flag, damit das Aktivitätstyp-Dropdown nur EINMAL
+	// im DOM existiert (desktop XOR mobile). Spiegelt die CSS-Breakpoint-Grenze
+	// (≤899px = mobile) der .tn-mobile/.tn-desktop-Umschaltung.
+	let isMobileViewport = $state(false);
+	onMount(() => {
+		const mq = window.matchMedia('(max-width: 899px)');
+		isMobileViewport = mq.matches;
+		const onChange = (e: MediaQueryListEvent) => { isMobileViewport = e.matches; };
+		mq.addEventListener('change', onChange);
+		return () => mq.removeEventListener('change', onChange);
+	});
+
 	// Stub-Trip für WeatherMetricsTab (createMode — kein PUT)
 	const stubTrip = $derived<Trip>({
 		id: '__new__',
 		name: name || 'Neue Tour',
 		stages: [],
+		activity: selectedActivity,
 		display_config: { channels, metrics: weatherMetrics } as unknown as Trip['display_config'],
 	});
 
@@ -526,6 +540,32 @@
 						{/if}
 					</div>
 
+					<!-- Issue #932 — Aktivitätstyp (verschoben aus Metriken-Tab). -->
+					<!-- Nur auf Desktop-Viewport rendern, damit das Dropdown nur einmal im DOM existiert. -->
+					{#if !isMobileViewport}
+					<div style="margin-bottom: 18px;">
+						<label style="display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--g-ink-3); margin-bottom: 6px;">
+							Aktivitätstyp
+							<span class="mono" style="font-size: 10px; color: var(--g-ink-4); text-transform: none; letter-spacing: normal; font-weight: 400; margin-left: 6px;">optional</span>
+						</label>
+						<Select data-testid="activity-dropdown"
+							value={selectedActivity ?? ''}
+							onchange={(e) => { selectedActivity = (e.target as HTMLSelectElement).value as ActivityType || undefined; }}
+							style="width: 100%; max-width: 320px;">
+							<option value="">Wandern (Standard)</option>
+							<option value="trekking">Alpen-Trekking</option>
+							<option value="hiking">Wandern</option>
+							<option value="ski_touring">Skitouren</option>
+							<option value="hochtour">Hochtour</option>
+							<option value="klettersteig">Klettersteig</option>
+							<option value="mtb">MTB</option>
+							<option value="fahrrad_15">Fahrrad (15 km/h)</option>
+							<option value="fahrrad_20">Fahrrad (20 km/h)</option>
+							<option value="fahrrad_25">Fahrrad (25 km/h)</option>
+						</Select>
+					</div>
+					{/if}
+
 					<div style="margin-top: 12px; padding: 12px 16px; border-radius: var(--g-r-2); background: var(--g-accent-tint); border: 1px solid var(--g-accent-rule);">
 						<div class="mono" style="font-size: 11px; color: var(--g-accent-deep); line-height: 1.6;">
 							GPX-Dateien lädst du im nächsten Schritt hoch — eine Datei pro Etappe.
@@ -721,23 +761,7 @@
 
 		{:else if activeTab === 'metriken'}
 			<!-- Wetter-Tab: reuse WeatherMetricsTab im createMode -->
-			<!-- Activity-Auswahl für korrekte Naismith-Ankunftszeiten (#674) -->
-			<div style="padding: 24px 40px 0;">
-				<label style="font-size: 13px; font-weight: 600; color: var(--g-ink-2); display: block; margin-bottom: 6px;">Aktivitätstyp</label>
-				<Select data-testid="activity-dropdown"
-					value={selectedActivity ?? ''}
-					onchange={(e) => { selectedActivity = (e.target as HTMLSelectElement).value as ActivityType || undefined; }}
-					style="width: 100%; max-width: 320px;">
-					<option value="">Wandern (4 km/h)</option>
-					<option value="fahrrad_15">Fahrrad (15 km/h)</option>
-					<option value="fahrrad_20">Fahrrad (20 km/h)</option>
-					<option value="fahrrad_25">Fahrrad (25 km/h)</option>
-					<option value="skitour">Skitour</option>
-					<option value="hochtour">Hochtour</option>
-					<option value="klettersteig">Klettersteig</option>
-					<option value="mtb">MTB</option>
-				</Select>
-			</div>
+			<!-- Issue #932 — Aktivitätstyp-Dropdown lebt jetzt im Route-Tab. -->
 			<WeatherMetricsTab trip={stubTrip} createMode={true} onChannelsChange={handleChannelsChange} />
 
 		{:else if activeTab === 'zeitplan'}
@@ -783,6 +807,28 @@
 							data-testid="trip-new-date-input"
 							style="display: block; width: 100%; box-sizing: border-box; background: var(--g-card); border: 1px solid var(--g-rule); border-radius: var(--g-r-3); padding: 12px 14px; font-size: 16px; font-family: var(--g-font-mono); color: var(--g-ink); outline: none; min-height: 48px; appearance: none; -webkit-appearance: none;" />
 					</MField>
+
+					<!-- Issue #932 — Aktivitätstyp (verschoben aus Metriken-Tab). -->
+					<!-- Nur auf Mobile-Viewport rendern, damit das Dropdown nur einmal im DOM existiert. -->
+					{#if isMobileViewport}
+					<MField label="Aktivitätstyp" sub="optional">
+						<Select data-testid="activity-dropdown"
+							value={selectedActivity ?? ''}
+							onchange={(e) => { selectedActivity = (e.target as HTMLSelectElement).value as ActivityType || undefined; }}
+							style="width: 100%;">
+							<option value="">Wandern (Standard)</option>
+							<option value="trekking">Alpen-Trekking</option>
+							<option value="hiking">Wandern</option>
+							<option value="ski_touring">Skitouren</option>
+							<option value="hochtour">Hochtour</option>
+							<option value="klettersteig">Klettersteig</option>
+							<option value="mtb">MTB</option>
+							<option value="fahrrad_15">Fahrrad (15 km/h)</option>
+							<option value="fahrrad_20">Fahrrad (20 km/h)</option>
+							<option value="fahrrad_25">Fahrrad (25 km/h)</option>
+						</Select>
+					</MField>
+					{/if}
 
 					<div style="padding: 12px 14px; border-radius: var(--g-r-2); background: var(--g-accent-tint); border: 1px solid var(--g-accent-rule); margin-bottom: 20px;">
 						<div class="mono" style="font-size: 11px; color: var(--g-accent-deep); line-height: 1.6;">
@@ -937,23 +983,7 @@
 
 			{:else if activeTab === 'metriken'}
 				<!-- Mobile Wetter-Tab: WeatherMetricsTab (bereits mobil, #618) -->
-				<!-- Activity-Auswahl für korrekte Naismith-Ankunftszeiten (#674) -->
-				<div style="padding: 16px 16px 0;">
-					<label style="font-size: 13px; font-weight: 600; color: var(--g-ink-2); display: block; margin-bottom: 6px;">Aktivitätstyp</label>
-					<Select data-testid="activity-dropdown"
-						value={selectedActivity ?? ''}
-						onchange={(e) => { selectedActivity = (e.target as HTMLSelectElement).value as ActivityType || undefined; }}
-						style="width: 100%;">
-						<option value="">Wandern (4 km/h)</option>
-						<option value="fahrrad_15">Fahrrad (15 km/h)</option>
-						<option value="fahrrad_20">Fahrrad (20 km/h)</option>
-						<option value="fahrrad_25">Fahrrad (25 km/h)</option>
-						<option value="skitour">Skitour</option>
-						<option value="hochtour">Hochtour</option>
-						<option value="klettersteig">Klettersteig</option>
-						<option value="mtb">MTB</option>
-					</Select>
-				</div>
+				<!-- Issue #932 — Aktivitätstyp-Dropdown lebt jetzt im Route-Tab. -->
 				<WeatherMetricsTab trip={stubTrip} createMode={true} onChannelsChange={handleChannelsChange} />
 
 			{:else if activeTab === 'zeitplan'}
