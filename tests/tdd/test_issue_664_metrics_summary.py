@@ -323,17 +323,17 @@ class TestAC4ThresholdCrossing:
         )
 
     def test_wind_crossing_text_contains_threshold(self):
-        """Issue #795: Über SMS-Schwelle (Böen ≥ 20) erscheint die Spitze.
+        """Issue #912: Über SMS-Schwelle erscheint 'max 40' (neues Format).
 
-        Fixture max gust=40 → ausgeschriebene Ereignis-Form mit der Spitze
-        (kein '>thr'-Token mehr). '40' (Spitzenwert) muss im Text stehen.
+        Fixture max gust=40 → neues Format '>thr ab HH:00 · max 40 (HH:00)'.
+        '40' (Spitzenwert) und 'max' müssen im Text stehen.
         """
         from output.renderers.email.helpers import build_metrics_summary_pills
         segs = _build_segments()
         pills = build_metrics_summary_pills(segs, ["gust"], {}, tz=TZ)
         texts = [t for t, _ in pills]
-        assert any("40" in t and "Spitze" in t for t in texts), (
-            f"Spitzenwert '40' (ausgeschrieben) muss im Text stehen: {texts}"
+        assert any("40" in t and "max" in t for t in texts), (
+            f"Spitzenwert '40' und 'max' müssen im Text stehen: {texts}"
         )
 
     def test_wind_crossing_text_contains_hour(self):
@@ -351,11 +351,11 @@ class TestAC4ThresholdCrossing:
         )
 
     def test_wind_no_crossing_tone_is_good(self):
-        """Issue #795: Böen durchweg unter SMS-Schwelle (20) → ruhige Form + grün.
+        """Issue #912: Böen durchweg unter SMS-Schwelle → max-Form + grün.
 
-        Die Erwähnungsschwelle ist seit #795 SMS-identisch (Böen ≥ 20), nicht
-        mehr User-konfigurierbar. Unter Schwelle → 'Böen ruhig', und da der
-        Spitzenwert klar unter der Ampel-Gelbschwelle (50) liegt → ampel_green.
+        Unter Schwelle → 'Böen max X km/h (HH:00)' (kein 'Böen ruhig' mehr),
+        und da der Spitzenwert klar unter der Ampel-Gelbschwelle (50) liegt →
+        ampel_green.
         """
         from output.renderers.email.helpers import (
             build_metrics_summary_pills,
@@ -368,8 +368,8 @@ class TestAC4ThresholdCrossing:
         pills = build_metrics_summary_pills(segs, ["gust"], {}, tz=TZ)
         texts = [t for t, _ in pills]
         tones = [tone for _, tone in pills]
-        assert any("Böen ruhig" in t for t in texts), (
-            f"ruhige Form 'Böen ruhig' erwartet: {texts}"
+        assert any("Böen max" in t for t in texts), (
+            f"max-Form 'Böen max X km/h (HH:00)' erwartet: {texts}"
         )
         assert any(tone == "ampel_green" for tone in tones), (
             f"ampel_green bei ruhiger Lage erwartet, got: {tones}"

@@ -989,6 +989,11 @@ def _event_with_peak(label: str, unit: str, first_hh: int, peak_val: float,
             f"um {peak_hh:02d}:00").replace("  ", " ")
 
 
+def _fmt_thousands(n: int) -> str:
+    """2310 → '2.310' (deutscher Tausenderpunkt, Issue #912)."""
+    return f"{n:,.0f}".replace(",", ".")
+
+
 def _range_pill(label: str, unit: str, min_v: int, max_v: int) -> str:
     """Issue #795/RC0: Klasse-2-Form „<Label> min–max <Einheit>".
 
@@ -1018,30 +1023,47 @@ def _pill_for_metric(
     from app.models import ThunderLevel
     severity = {ThunderLevel.NONE: 0, ThunderLevel.MED: 1, ThunderLevel.HIGH: 2}
 
-    # ---- Klasse 2 — Bereichs-/Kontext-Metriken (ohne Uhrzeit, neutral) ----
+    # ---- Klasse 2 — Bereichs-/Kontext-Metriken (mit Uhrzeit, neutral) ----
     if metric_id == "temperature":
-        vals = [dp.t2m_c for dp in all_dps if dp.t2m_c is not None]
-        if not vals:
+        # AC-1: "8–11°C · Max 15:00" — kein Label-Präfix, kein Leerzeichen vor °C
+        vals_ts = [(dp.t2m_c, dp.ts) for dp in all_dps if dp.t2m_c is not None]
+        if not vals_ts:
             return None
-        return (_range_pill("Temperatur", "°C",
-                            int(round(min(vals))), int(round(max(vals)))),
-                _PILL_NEUTRAL_TONE)
+        min_v = int(round(min(v for v, _ in vals_ts)))
+        max_v = int(round(max(v for v, _ in vals_ts)))
+        max_ts = max(vals_ts, key=lambda x: x[0])[1]
+        max_hh = local_hour(max_ts, tz)
+        if min_v == max_v:
+            text = f"{min_v}°C · Max {max_hh:02d}:00"
+        else:
+            text = f"{min_v}–{max_v}°C · Max {max_hh:02d}:00"
+        return (text, _PILL_NEUTRAL_TONE)
 
     if metric_id == "wind_chill":
-        vals = [getattr(dp, "wind_chill_c", None) for dp in all_dps]
-        vals = [v for v in vals if v is not None]
-        if not vals:
+        # AC-2: "gef. min 6.6°C · 13:00"
+        vals_ts = [(getattr(dp, "wind_chill_c", None), dp.ts) for dp in all_dps]
+        vals_ts = [(v, ts) for v, ts in vals_ts if v is not None]
+        if not vals_ts:
             return None
-        return (_range_pill("Gefühlt", "°C",
-                            int(round(min(vals))), int(round(max(vals)))),
-                _PILL_NEUTRAL_TONE)
+        min_val, min_ts = min(vals_ts, key=lambda x: x[0])
+        min_hh = local_hour(min_ts, tz)
+        return (f"gef. min {min_val:.1f}°C · {min_hh:02d}:00", _PILL_NEUTRAL_TONE)
 
     if metric_id == "cloud_total":
-        vals = [dp.cloud_total_pct for dp in all_dps if dp.cloud_total_pct is not None]
-        if not vals:
+        # AC-7: "60–95% bewölkt · Max 12:00" — kein Label-Präfix
+        vals_ts = [(dp.cloud_total_pct, dp.ts) for dp in all_dps
+                   if dp.cloud_total_pct is not None]
+        if not vals_ts:
             return None
-        return (_range_pill("Bewölkung", "%", int(min(vals)), int(max(vals))),
-                _PILL_NEUTRAL_TONE)
+        min_v = int(min(v for v, _ in vals_ts))
+        max_v = int(max(v for v, _ in vals_ts))
+        max_ts = max(vals_ts, key=lambda x: x[0])[1]
+        max_hh = local_hour(max_ts, tz)
+        if min_v == max_v:
+            text = f"{min_v}% bewölkt · Max {max_hh:02d}:00"
+        else:
+            text = f"{min_v}–{max_v}% bewölkt · Max {max_hh:02d}:00"
+        return (text, _PILL_NEUTRAL_TONE)
 
     if metric_id == "cloud_low":
         vals = [dp.cloud_low_pct for dp in all_dps if dp.cloud_low_pct is not None]
@@ -1051,27 +1073,41 @@ def _pill_for_metric(
                 _PILL_NEUTRAL_TONE)
 
     if metric_id == "freezing_level":
-        vals = [dp.freezing_level_m for dp in all_dps
-                if dp.freezing_level_m is not None]
-        if not vals:
+        # AC-9: "0°-Linie 2.310–2.550 m · Max 15:00" — Tausenderpunkt
+        vals_ts = [(dp.freezing_level_m, dp.ts) for dp in all_dps
+                   if dp.freezing_level_m is not None]
+        if not vals_ts:
             return None
-        return (_range_pill("0°-Grenze", "m", int(min(vals)), int(max(vals))),
-                _PILL_NEUTRAL_TONE)
+        min_v = int(min(v for v, _ in vals_ts))
+        max_v = int(max(v for v, _ in vals_ts))
+        max_ts = max(vals_ts, key=lambda x: x[0])[1]
+        max_hh = local_hour(max_ts, tz)
+        if min_v == max_v:
+            text = f"0°-Linie {_fmt_thousands(min_v)} m · Max {max_hh:02d}:00"
+        else:
+            text = (f"0°-Linie {_fmt_thousands(min_v)}–"
+                    f"{_fmt_thousands(max_v)} m · Max {max_hh:02d}:00")
+        return (text, _PILL_NEUTRAL_TONE)
 
     if metric_id == "dewpoint":
-        vals = [dp.dewpoint_c for dp in all_dps if dp.dewpoint_c is not None]
-        if not vals:
+        # AC-12: "Taupunkt min 5.8°C (08:00)"
+        vals_ts = [(dp.dewpoint_c, dp.ts) for dp in all_dps
+                   if dp.dewpoint_c is not None]
+        if not vals_ts:
             return None
-        return (_range_pill("Taupunkt", "°C",
-                            int(round(min(vals))), int(round(max(vals)))),
-                _PILL_NEUTRAL_TONE)
+        min_val, min_ts = min(vals_ts, key=lambda x: x[0])
+        min_hh = local_hour(min_ts, tz)
+        return (f"Taupunkt min {min_val:.1f}°C ({min_hh:02d}:00)", _PILL_NEUTRAL_TONE)
 
     if metric_id == "uv_index":
-        vals = [dp.uv_index for dp in all_dps if dp.uv_index is not None]
-        if not vals:
+        # AC-11: "UV max 2.4 (14:00)"
+        vals_ts = [(dp.uv_index, dp.ts) for dp in all_dps
+                   if dp.uv_index is not None]
+        if not vals_ts:
             return None
-        max_v = int(max(vals))
-        return (f"UV bis {max_v}", _PILL_NEUTRAL_TONE)
+        max_val, max_ts = max(vals_ts, key=lambda x: x[0])
+        max_hh = local_hour(max_ts, tz)
+        return (f"UV max {max_val:.1f} ({max_hh:02d}:00)", _PILL_NEUTRAL_TONE)
 
     if metric_id == "sunshine":
         from services.weather_metrics import WeatherMetricsService
@@ -1082,6 +1118,8 @@ def _pill_for_metric(
 
     # ---- Klasse 1 — Ereignis-Metriken (mit Uhrzeit, Ampel-gefaerbt) ----
     if metric_id in ("wind", "gust"):
+        # AC-3: ohne Schwelle: "Wind max X km/h (HH:00)"
+        # AC-4: mit Schwelle:  "Wind >thr km/h ab HH:00 · max X (HH:00)"
         field = "wind10m_kmh" if metric_id == "wind" else "gust_kmh"
         label = "Wind" if metric_id == "wind" else "Böen"
         vals = [(getattr(dp, field, None), dp.ts) for dp in all_dps]
@@ -1094,14 +1132,17 @@ def _pill_for_metric(
                                 get_metric(metric_id).display_thresholds)
         fp = _first_and_peak(vals, thr, tz=tz) if thr is not None else None
         if fp is not None:
-            first_hh, pv, peak_hh = fp
-            text = _event_with_peak(label, "km/h", first_hh, pv, peak_hh,
-                                    val_fmt=lambda x: f"{int(x)}")
+            first_hh, pv, pk_hh = fp
+            text = (f"{label} >{int(thr)} km/h ab {first_hh:02d}:00 · "
+                    f"max {int(pv)} ({pk_hh:02d}:00)")
             return (text, tone)
-        calm = "Wind ruhig" if metric_id == "wind" else "Böen ruhig"
-        return (calm, tone)
+        # Keine Schwellenüberschreitung: max-Form mit Uhrzeit
+        peak_ts = max(vals, key=lambda x: (x[0], -x[1].timestamp()))[1]
+        peak_hh = local_hour(peak_ts, tz)
+        return (f"{label} max {int(peak_val)} km/h ({peak_hh:02d}:00)", tone)
 
     if metric_id == "precipitation":
+        # AC-5: "Regen ab HH:00 · X mm" (kein 'gesamt, Spitze')
         vals = [(dp.precip_1h_mm or 0.0, dp.ts) for dp in all_dps]
         if not vals:
             return None
@@ -1112,12 +1153,13 @@ def _pill_for_metric(
                                 get_metric("precipitation").display_thresholds)
         fp = _first_and_peak(vals, thr, tz=tz) if thr is not None else None
         if fp is not None:
-            first_hh, _pv, peak_hh = fp
-            return (f"Regen ab {first_hh:02d}:00 · {total:.0f} mm gesamt, "
-                    f"Spitze {peak_hh:02d}:00", tone)
+            first_hh, _pv, _pk_hh = fp
+            total_str = f"{total:.1f}".rstrip("0").rstrip(".")
+            return (f"Regen ab {first_hh:02d}:00 · {total_str} mm", tone)
         return ("kein Regen", tone)
 
     if metric_id == "rain_probability":
+        # AC-6: Label "Regen-W.", Format ">thr% ab HH:00 · max X% (HH:00)"
         vals = [(float(dp.pop_pct), dp.ts) for dp in all_dps
                 if dp.pop_pct is not None]
         if not vals:
@@ -1129,10 +1171,13 @@ def _pill_for_metric(
         fp = _first_and_peak(vals, thr, tz=tz) if thr is not None else None
         if fp is not None:
             first_hh, pv, peak_hh = fp
-            text = _event_with_peak("Regenrisiko", "%", first_hh, pv, peak_hh,
-                                    val_fmt=lambda x: f"{int(x)}")
+            text = (f"Regen-W. >{int(thr)}% ab {first_hh:02d}:00 · "
+                    f"max {int(pv)}% ({peak_hh:02d}:00)")
             return (text, tone)
-        return ("geringes Regenrisiko", tone)
+        # Kein Schwellenüberschreitung: max-Form
+        peak_ts = max(vals, key=lambda x: (x[0], -x[1].timestamp()))[1]
+        max_hh = local_hour(peak_ts, tz)
+        return (f"Regen-W. max {int(peak_val)}% ({max_hh:02d}:00)", tone)
 
     if metric_id == "thunder":
         max_lvl = ThunderLevel.NONE
@@ -1155,13 +1200,16 @@ def _pill_for_metric(
         return ("kein Gewitter", "ampel_green")
 
     if metric_id == "visibility":
+        # AC-8: gut → "Sicht min X km (HH:00)" statt "gute Sicht"
+        # Schlecht: "Sicht <thr km ab HH:00 · min X km (HH:00)"
         vals = [(float(dp.visibility_m), dp.ts) for dp in all_dps
                 if dp.visibility_m is not None]
         if not vals:
             return None
         thr_km = _sms_mention_threshold("visibility")  # km
-        min_v = min(v for v, _ in vals)
+        min_v, min_ts_raw = min(vals, key=lambda x: x[0])
         min_km = min_v / 1000.0
+        min_hh = local_hour(min_ts_raw, tz)
         # Unterschreitung der Schwelle = Ereignis (orange/rot je nach Tiefe).
         below = [(v, ts) for v, ts in vals if v < thr_km * 1000.0]
         if below:
@@ -1169,26 +1217,31 @@ def _pill_for_metric(
             first_hh = local_hour(first_ts, tz)
             tone = ampel_stage_tone(
                 min_v, get_metric("visibility").display_thresholds)
-            return (f"Sicht ab {first_hh:02d}:00 unter {thr_km:.0f} km · "
-                    f"min {min_km:.1f} km", tone)
-        return ("gute Sicht", "ampel_green")
+            return (f"Sicht <{thr_km:.0f} km ab {first_hh:02d}:00 · "
+                    f"min {min_km:.1f} km ({min_hh:02d}:00)", tone)
+        return (f"Sicht min {min_km:.1f} km ({min_hh:02d}:00)", "ampel_green")
 
     if metric_id == "humidity":
+        # AC-10: unter Schwelle → "Feuchte X–Y% · Max HH:00" statt "Luft trocken"
+        # über Schwelle: "Feuchte >thr% ab HH:00 · max X% (HH:00)"
         vals = [(float(dp.humidity_pct), dp.ts) for dp in all_dps
                 if dp.humidity_pct is not None]
         if not vals:
             return None
         thr = _sms_mention_threshold("humidity")
         peak_val = max(v for v, _ in vals)
-        # Feuchte hat keine display_thresholds → Ereignis = Achtung (gelb),
-        # ruhig = gruen.
         fp = _first_and_peak(vals, thr, tz=tz) if thr is not None else None
         if fp is not None:
             first_hh, pv, peak_hh = fp
-            text = _event_with_peak("Feuchte", "%", first_hh, pv, peak_hh,
-                                    val_fmt=lambda x: f"{int(x)}")
+            text = (f"Feuchte >{int(thr)}% ab {first_hh:02d}:00 · "
+                    f"max {int(pv)}% ({peak_hh:02d}:00)")
             return (text, "ampel_yellow")
-        return ("Luft trocken", "ampel_green")
+        # Unter Schwelle: Bereich + Uhrzeit des Maximums
+        min_v = min(v for v, _ in vals)
+        max_ts = max(vals, key=lambda x: x[0])[1]
+        max_hh = local_hour(max_ts, tz)
+        return (f"Feuchte {min_v:.0f}–{peak_val:.0f}% · Max {max_hh:02d}:00",
+                "ampel_green")
 
     return None
 

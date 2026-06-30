@@ -245,7 +245,10 @@ class TestAC2AmpelEmojis:
 class TestAC3EventPills:
 
     def test_wind_threshold_matches_sms_default(self):
-        """Wind-Erwähnungsschwelle MUSS dem SMS-DEFAULT (10 km/h) entsprechen."""
+        """Wind-Erwähnungsschwelle MUSS dem SMS-DEFAULT (10 km/h) entsprechen.
+
+        Issue #912: Format '>10 km/h ab HH:00 · max X (HH:00)' statt 'ab HH:00'.
+        """
         from src.output.tokens.builder import DEFAULTS
         assert DEFAULTS["W"] == 10.0, "SMS-Wind-Default sollte 10 km/h sein"
         # Wind steigt von 6 → 12 → 18 km/h; Schwelle 10 wird in der 2. Stunde
@@ -257,15 +260,15 @@ class TestAC3EventPills:
         ])]
         html = _render_html(segs)
         block = _metrics_block_html(html)
-        # Schwelle 10 (SMS) → Wind muss als Ereignis erscheinen ("ab HH:00").
-        assert re.search(r"Wind ab \d{2}:00", block), (
-            "Wind ≥ 10 km/h (SMS-Schwelle) muss als 'Wind ab HH:00' erscheinen; "
+        # Schwelle 10 (SMS) → Wind als Ereignis mit >-Präfix-Format (Issue #912).
+        assert re.search(r"Wind.*10.*ab \d{2}:00", block), (
+            "Wind ≥ 10 km/h (SMS-Schwelle) muss als '...10...ab HH:00' erscheinen; "
             f"Block:\n{block}"
         )
 
     def test_wind_event_written_out_with_peak(self):
-        """Über Schwelle: ausgeschrieben 'ab HH:00 · Spitze X km/h um HH:00',
-        KEIN @-Token."""
+        """Über Schwelle: neues Format '>thr km/h ab HH:00 · max X (HH:00)',
+        KEIN @-Token, KEIN 'Spitze'."""
         segs = [_seg_with_hours([
             {"hour": 6, "temp": 12, "wind": 6, "gust": 8},
             {"hour": 7, "temp": 14, "wind": 12, "gust": 18},
@@ -274,15 +277,15 @@ class TestAC3EventPills:
         html = _render_html(segs)
         block = _metrics_block_html(html)
         assert "@" not in block, f"kryptisches @-Token im Pill-Block:\n{block}"
-        assert "Spitze" in block, (
-            f"ausgeschriebene Spitzen-Form 'Spitze … um HH:00' fehlt:\n{block}"
+        assert "Spitze" not in block, (
+            f"'Spitze' darf im neuen Format nicht erscheinen:\n{block}"
         )
-        assert re.search(r"Spitze\s+18\s*km/h\s+um\s+\d{2}:00", block), (
-            f"'Spitze 18 km/h um HH:00' fehlt:\n{block}"
+        assert re.search(r"max\s+18\s*\(\d{2}:00\)", block), (
+            f"'max 18 (HH:00)' fehlt im neuen Format:\n{block}"
         )
 
     def test_wind_below_threshold_calm_form(self):
-        """Wind durchweg < 10 km/h → ruhige Klartext-Form 'Wind ruhig'."""
+        """Wind durchweg < 10 km/h → neue max-Form 'Wind max X km/h (HH:00)'."""
         segs = [_seg_with_hours([
             {"hour": 6, "temp": 12, "wind": 3, "gust": 5},
             {"hour": 7, "temp": 14, "wind": 5, "gust": 7},
@@ -290,11 +293,11 @@ class TestAC3EventPills:
         ])]
         html = _render_html(segs)
         block = _metrics_block_html(html)
-        assert "Wind ruhig" in block, (
-            f"ruhige Klartext-Form 'Wind ruhig' fehlt (Wind < 10):\n{block}"
+        assert "Wind ruhig" not in block, (
+            f"'Wind ruhig' darf nicht mehr erscheinen (Issue #912):\n{block}"
         )
-        assert "max" not in block.split("Wind")[1][:30], (
-            f"unter Schwelle darf keine 'max'-Variante erscheinen:\n{block}"
+        assert re.search(r"Wind max \d+ km/h \(\d{2}:00\)", block), (
+            f"neue max-Form 'Wind max X km/h (HH:00)' fehlt:\n{block}"
         )
 
     def test_pill_color_follows_hazard_threshold_not_mention(self):
@@ -343,10 +346,10 @@ class TestAC3EventPills:
 class TestAC4RangePills:
 
     def test_temperature_range_no_time(self):
-        """Temperatur 7..18 → 'Temperatur 7–18 °C' OHNE 'Max HH:00'.
+        """Temperatur 7..18 → '7–18°C · Max HH:00' — Issue #912: Uhrzeit MUSS enthalten sein.
 
-        Der Temperatur-Pill ist eine Bereichs-Metrik (Klasse 2) und darf
-        KEINEN Zeitpunkt tragen — heute trägt er '°C · Max HH:00'.
+        Der Temperatur-Pill ist seit #912 eine Bereichs-Metrik MIT Uhrzeit.
+        Format: '{min}–{max}°C · Max {HH}:00' (kein Label-Präfix, kein Leerzeichen vor °C).
         """
         segs = [_seg_with_hours([
             {"hour": 6, "temp": 7, "wind": 3, "gust": 5},
@@ -355,17 +358,16 @@ class TestAC4RangePills:
         ])]
         html = _render_html(segs)
         block = _metrics_block_html(html)
-        # Isoliere den ersten Pill-Span (Temperatur steht in Katalog-Reihenfolge
-        # zuerst). Heute folgt dem '°C' ein ' · Max HH:00' — das ist verboten.
+        # Seit #912: Temperatur trägt '· Max HH:00' (Uhrzeit des Tageshöchstwerts).
         m = re.search(r"7\s*[–-]\s*18\s*°C([^<]*)", block)
-        assert m is not None, f"'7–18 °C' fehlt im Pill-Block:\n{block}"
+        assert m is not None, f"'7–18°C' fehlt im Pill-Block:\n{block}"
         tail = m.group(1)
-        assert "Max" not in tail and not re.search(r"\d{2}:00", tail), (
-            f"Temperatur-Pill darf KEIN 'Max HH:00' tragen, Rest war {tail!r}:\n{block}"
+        assert "Max" in tail and re.search(r"\d{2}:00", tail), (
+            f"Temperatur-Pill MUSS '· Max HH:00' tragen (Issue #912), Rest war {tail!r}:\n{block}"
         )
 
     def test_temperature_constant_single_value(self):
-        """Temperatur konstant 12 → Einzelwert 'Temperatur 12 °C' (kein Bereich)."""
+        """Temperatur konstant 12 → Einzelwert '12°C · Max HH:00' (kein '12–12')."""
         segs = [_seg_with_hours([
             {"hour": 6, "temp": 12, "wind": 3, "gust": 5},
             {"hour": 7, "temp": 12, "wind": 4, "gust": 6},
@@ -376,8 +378,9 @@ class TestAC4RangePills:
         assert "12–12" not in block and "12-12" not in block, (
             f"min==max muss Einzelwert ergeben, kein '12–12':\n{block}"
         )
-        assert re.search(r"Temperatur\s+12\s*°C", block), (
-            f"Einzelwert 'Temperatur 12 °C' fehlt:\n{block}"
+        # Seit #912: Einzelwert-Format '12°C · Max HH:00' (kein 'Temperatur'-Label-Präfix)
+        assert re.search(r"12\s*°C\s*·\s*Max\s+\d{2}:00", block), (
+            f"Einzelwert-Format '12°C · Max HH:00' fehlt:\n{block}"
         )
 
 
