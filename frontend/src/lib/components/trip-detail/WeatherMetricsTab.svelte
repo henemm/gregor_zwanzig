@@ -625,7 +625,10 @@
 				</Card>
 
 				<!-- Issue #736: E-Mail-Inhalt-Karte im Inhalt-Reiter, kein Kanal-Toggle -->
+				<!-- Issue #934: Im Anlegen-Modus ausgeblendet — Zeitplan-Tab ist der einzige Ort -->
+				{#if !createMode}
 				<EditReportConfigSection bind:reportConfig mode="edit" showMailContent={true} showChannels={false} />
+				{/if}
 			</div>
 
 			<!-- RECHTS: Live-Mail-Vorschau (sticky) -->
