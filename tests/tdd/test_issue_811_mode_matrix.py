@@ -138,7 +138,7 @@ def _render_one_metric(metric_id: str, *, raw: bool, alert: bool = False, dp=Non
 
 def _data_cells(html: str) -> list[str]:
     """Daten-Zellen der Stundentabelle (class="resp")."""
-    m = re.search(r'<table class="resp">.*?</table>', html, re.S)
+    m = re.search(r'<table[^>]*data-table="resp"[^>]*>.*?</table>', html, re.S)
     if not m:
         return []
     return re.findall(r'<td data-label="[^"]*">(.*?)</td>', m.group(0), re.S)
@@ -339,9 +339,13 @@ def test_visibility_numeric_km_no_english_word(raw):
 
 
 def test_visibility_roh_html_no_inline_style():
-    """AC-5/AC-8 RED: Sicht Roh-HTML (200m < orange_lt=500m) hat keinen Span.
+    """AC-5/AC-8: Sicht Roh-HTML trägt keine ALTE fmt_val-Ampel (#fff3e0) und keinen
+    Text-Farb-Span.
 
-    Heute: fmt_val gibt <span style='background:#fff3e0;...'> bei vis < 500m (FAIL).
+    fix-911-visual-table AC-2 (PO-Entscheidung): Die #911-Severity-Zell-Tönung
+    (`<span style="display:block;background:#fbeeb8|#fad6b8|#f6c5bf;...">`) ist erlaubt
+    — Schweregrad-Hintergrund gilt in BEIDEN Modi (visibility_m=200 → 0.2 km → danger).
+    Verboten bleibt jeder Text-`color:`-Span und jedes andere `background:`.
     """
     from app.models import ForecastDataPoint, ThunderLevel
 
@@ -353,10 +357,22 @@ def test_visibility_roh_html_no_inline_style():
     )
     html, _plain = _render_one_metric("visibility", raw=True, dp=dp_low_vis)
     cells = _data_cells(html)
+
+    def _strip_severity_wrapper(cell: str) -> str:
+        return re.sub(
+            r'<span style="display:block;background:#[0-9a-fA-F]{6};'
+            r'margin:-6px -4px;padding:6px 4px;">|</span>',
+            "", cell,
+        )
+
     for cell in cells:
-        assert "background" not in cell, (
-            f"AC-5/AC-8 RED: Sicht Roh-HTML darf KEINEN background-Style enthalten "
-            f"(visibility_m=200 < orange_lt=500). Zelle: {cell!r}"
+        stripped = _strip_severity_wrapper(cell)
+        assert "color:" not in stripped, (
+            f"Sicht Roh-HTML darf KEINEN Text-Farb-Span haben. Zelle: {cell!r}"
+        )
+        assert "background" not in stripped, (
+            f"Sicht Roh-HTML darf ausser der #911-Severity-Tönung KEIN background: "
+            f"haben (alte fmt_val-Ampel #fff3e0). Zelle: {cell!r}"
         )
 
 
@@ -477,22 +493,41 @@ def test_thunder_roh_none_german_word_kein():
 # ---------------------------------------------------------------------------
 
 def test_raw_full_html_no_inline_style_any_metric():
-    """AC-8 RED: Roh-HTML enthaelt in keiner Daten-Zelle inline background:/color:-Style.
+    """AC-8: Roh-HTML enthaelt in keiner Daten-Zelle einen inline Text-Farb-Span (color:).
 
-    Heute schlaegt dieser Test FEHL fuer CAPE:
-    fmt_val('cape', 1500, use_friendly=False, html=True) erzeugt
-    <span style='background:#fff9c4;color:#f57f17;...'> weil cape_jkg=1500 >= yellow=1000.
+    Der Wert selbst (aus fmt_val) darf im Roh-Modus keine Farb-/Ampel-Markierung
+    tragen (z.B. CAPE-Gelb-Span).
+
+    fix-911-table-jsx AC-2 (PO-Entscheidung): Die SEVERITY-Zell-Tönung des #911-
+    Renderers (`<span style="display:block;background:#fbeeb8|#fad6b8|#f6c5bf;...">`)
+    ist erlaubt — sie ist ein Schweregrad-Hintergrund, KEINE Ampel/Text-Farbe und
+    gilt in beiden Modi. Verboten bleibt jeder Text-`color:`-Span sowie ein
+    `background:` das NICHT der #911-Severity-Wrapper ist.
     """
     html, _plain = _render(email_format="full", raw=True, alert=False)
     cells = _data_cells(html)
     assert cells, "Roh+full muss Daten-Zellen haben"
-    styled_cells = [
+
+    def _strip_severity_wrapper(cell: str) -> str:
+        # #911-Severity-Tönung herausfiltern: nur den display:block-background-Wrapper.
+        return re.sub(
+            r'<span style="display:block;background:#[0-9a-fA-F]{6};'
+            r'margin:-6px -4px;padding:6px 4px;">|</span>',
+            "", cell,
+        )
+
+    color_cells = [c for c in cells if "color:" in c]
+    other_bg_cells = [
         c for c in cells
-        if "background" in c or ("<span" in c and "color" in c)
+        if "background" in _strip_severity_wrapper(c)
     ]
-    assert not styled_cells, (
-        f"AC-8 RED: Roh-HTML darf KEINE inline Farb-/Hintergrund-Markierung haben. "
-        f"Gefunden: {styled_cells!r}"
+    assert not color_cells, (
+        f"AC-8: Roh-HTML darf KEINEN Text-Farb-Span (color:) haben. "
+        f"Gefunden: {color_cells!r}"
+    )
+    assert not other_bg_cells, (
+        f"AC-8: Roh-HTML darf ausser der #911-Severity-Toenung KEIN background: haben. "
+        f"Gefunden: {other_bg_cells!r}"
     )
 
 
@@ -534,7 +569,7 @@ def _data_cells_mobile(html: str) -> list[str]:
         return []
     block = m.group(0)
     # Einfach-Modus: eingebettete resp-Tabelle.
-    t = re.search(r'<table class="resp">.*?</table>', block, re.S)
+    t = re.search(r'<table[^>]*data-table="resp"[^>]*>.*?</table>', block, re.S)
     if t:
         return re.findall(r'<td data-label="[^"]*">(.*?)</td>', t.group(0), re.S)
     # Roh-Modus: Monospace-<pre>. Header-Zeile (beginnt mit 'Zeit') verwerfen.

@@ -101,6 +101,23 @@ def _render(*, raw: bool, enabled: set[str] | None = None):
     )
 
 
+def _mobile_block_chunk(html: str, start: int) -> str:
+    """Inhalt eines .mobile-compact Divs bis zur nächsten Section-Grenze.
+
+    Robuster als ein fixes Zeichen-Fenster: Die Stundentabelle kann je nach
+    Spalten/Severity-Tönung beliebig lang werden (#911) — ein 2000-Zeichen-Fenster
+    würde das schließende </table> abschneiden. Grenze ist der nächste
+    .mobile-compact/.desktop-only-Block (oder Dokumentende).
+    """
+    bounds = [
+        html.find('class="mobile-compact"', start),
+        html.find('class="desktop-only"', start),
+    ]
+    ends = [b for b in bounds if b != -1]
+    end = min(ends) if ends else len(html)
+    return html[start:end]
+
+
 def _mobile_compact_inner(html: str) -> list[str]:
     """Extrahiert nur <pre>- oder <table>-Inhalte aus .mobile-compact Divs.
 
@@ -110,8 +127,7 @@ def _mobile_compact_inner(html: str) -> list[str]:
     """
     results = []
     for m in re.finditer(r'class="mobile-compact"[^>]*>', html):
-        start = m.end()
-        chunk = html[start:start + 2000]
+        chunk = _mobile_block_chunk(html, m.end())
         # Roh-Modus: <pre>-Block
         pre = re.search(r'<pre[^>]*>(.*?)</pre>', chunk, re.S)
         if pre:
@@ -131,8 +147,7 @@ def _has_ampel(text: str) -> bool:
 def _has_pre_block(html: str) -> bool:
     """Prueft ob ein .mobile-compact Div einen <pre>-Block enthaelt (Roh-Modus)."""
     for m in re.finditer(r'class="mobile-compact"[^>]*>', html):
-        start = m.end()
-        chunk = html[start:start + 2000]
+        chunk = _mobile_block_chunk(html, m.end())
         if re.search(r'<pre[^>]*>', chunk):
             return True
     return False
@@ -210,7 +225,7 @@ def test_no_viewport_mismatch_einfach(metric_id):
 
     # Desktop: alle <table class="resp"> im HTML (diese sind ausschliesslich in
     # .desktop-only Divs; .mobile-compact benutzt bis zum Fix <pre>-Bloecke)
-    desktop_tables = re.findall(r'<table class="resp">.*?</table>', html, re.S)
+    desktop_tables = re.findall(r'<table[^>]*data-table="resp"[^>]*>.*?</table>', html, re.S)
     desktop_combined = "\n".join(desktop_tables)
     desktop_has_ampel = _has_ampel(desktop_combined)
 
@@ -237,7 +252,7 @@ def test_no_viewport_mismatch_roh():
     """
     html, _plain = _render(raw=True, enabled={"temperature", "wind"})
 
-    desktop_tables = re.findall(r'<table class="resp">.*?</table>', html, re.S)
+    desktop_tables = re.findall(r'<table[^>]*data-table="resp"[^>]*>.*?</table>', html, re.S)
     desktop_combined = "\n".join(desktop_tables)
 
     mobile_inner = _mobile_compact_inner(html)

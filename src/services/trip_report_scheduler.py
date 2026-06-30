@@ -997,6 +997,12 @@ class TripReportSchedulerService:
                 if not seg_weather:
                     continue
 
+                # fix-911-visual-table AC-4: Ensemble-Confidence auch für die
+                # Trend-/Ausblick-Etappen berechnen (Hauptpfad macht das in
+                # _enrich_ensemble_for_trip; ohne diesen Schritt blieb
+                # confidence_pct_min None → ACC-Spalte zeigte „–").
+                self._enrich_ensemble_for_trip(trip, seg_weather)
+
                 agg = aggregate_stage(seg_weather)
 
                 temp_lo = int(agg.temp_min_c) if agg.temp_min_c is not None else None
