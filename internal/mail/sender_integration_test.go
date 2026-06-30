@@ -51,6 +51,98 @@ func TestPasswordResetMail_RealGmailRoundtrip(t *testing.T) {
 	}
 }
 
+// AC-3: SendWithFallback liefert Mail via Stalwart wenn Primary (127.0.0.1:1) nicht erreichbar.
+func TestSendWithFallback_AC3_DeliverViaStalwartFallback(t *testing.T) {
+	if os.Getenv("GZ_IMAP_HOST") == "" {
+		t.Skip("GZ_IMAP_HOST not set — integration test requires Stalwart config")
+	}
+	imap_user := os.Getenv("GZ_TEST_IMAP_USER")
+	if imap_user == "" {
+		imap_user = os.Getenv("GZ_IMAP_USER")
+	}
+	imap_pass := os.Getenv("GZ_TEST_IMAP_PASS")
+	if imap_pass == "" {
+		imap_pass = os.Getenv("GZ_IMAP_PASS")
+	}
+	if imap_user == "" || imap_pass == "" {
+		t.Skip("GZ_IMAP_USER/PASS not set")
+	}
+
+	primaryCfg := MailConfig{Host: "127.0.0.1", Port: 1, User: "resend", Pass: "fake"}
+	fallbackCfg := MailConfig{
+		Host: os.Getenv("GZ_IMAP_HOST"), Port: 587,
+		User: imap_user, Pass: imap_pass,
+		From: "gregor_zwanzig@henemm.com",
+	}
+	token := "ac3-fallback-" + time.Now().Format("20060102150405")
+	recipient := imap_user + "@henemm.com"
+	msg := BuildResetMail("https://gregor20.henemm.com", "test-ac3", token)
+
+	if err := SendWithFallback(primaryCfg, fallbackCfg, recipient, msg); err != nil {
+		t.Fatalf("SendWithFallback returned error: %v", err)
+	}
+	if !waitForResetMailInInbox(t, token, 60*time.Second) {
+		t.Fatalf("AC-3: Mail mit Token %q nicht im IMAP-Postfach nach 60s", token)
+	}
+}
+
+// AC-4: Auth-Fehler (535) → sofortiger Abbruch, Fallback wird NICHT versucht.
+// Test-Strategie: Primary = Stalwart mit falschem Passwort (→ echte 535-Antwort).
+// Fallback = Stalwart mit korrekten Creds (würde Mail liefern wenn 535-Guard kaputt wäre).
+// Nachweis: SendWithFallback gibt Fehler zurück → kein IMAP-Fund → 535-Guard hat gegriffen.
+func TestSendWithFallback_AC4_NoFallbackOnAuthError(t *testing.T) {
+	if os.Getenv("GZ_IMAP_HOST") == "" {
+		t.Skip("GZ_IMAP_HOST not set — integration test requires Stalwart config")
+	}
+	imapUser := os.Getenv("GZ_TEST_IMAP_USER")
+	if imapUser == "" {
+		imapUser = os.Getenv("GZ_IMAP_USER")
+	}
+	imapPass := os.Getenv("GZ_TEST_IMAP_PASS")
+	if imapPass == "" {
+		imapPass = os.Getenv("GZ_IMAP_PASS")
+	}
+	if imapUser == "" || imapPass == "" {
+		t.Skip("GZ_IMAP_USER/PASS not set")
+	}
+
+	imapHost := os.Getenv("GZ_IMAP_HOST")
+
+	// Primary: echte Stalwart-Verbindung mit FALSCHEM Passwort → 535 Auth-Fehler
+	primaryCfg := MailConfig{
+		Host: imapHost, Port: 587,
+		User: imapUser, Pass: "DELIBERATELY-WRONG-PASSWORD-AC4-TEST",
+		From: "gregor_zwanzig@henemm.com",
+	}
+	// Fallback: korrekte Creds — würde Mail zustellen wenn 535-Guard nicht greift
+	fallbackCfg := MailConfig{
+		Host: imapHost, Port: 587,
+		User: imapUser, Pass: imapPass,
+		From: "gregor_zwanzig@henemm.com",
+	}
+
+	token := "ac4-no-fallback-" + time.Now().Format("20060102150405")
+	recipient := imapUser + "@henemm.com"
+	msg := BuildResetMail("https://gregor20.henemm.com", "test-ac4", token)
+
+	err := SendWithFallback(primaryCfg, fallbackCfg, recipient, msg)
+
+	// 535 Guard muss greifen: SendWithFallback gibt Fehler zurück
+	if err == nil {
+		t.Fatal("AC-4: SendWithFallback muss bei Auth-Fehler (535) einen Fehler zurückgeben")
+	}
+	// Fehler-String muss 535 enthalten (Auth-Fehler-Nachweis)
+	if !strings.Contains(err.Error(), "535") {
+		t.Fatalf("AC-4: Fehler-String muss '535' enthalten, got: %v", err)
+	}
+	// Wichtigste Assertion: kein Fallback-Mail zugestellt
+	// Wenn Fallback trotzdem lief, würde die Mail im Postfach landen
+	found := waitForResetMailInInbox(t, token, 15*time.Second)
+	if found {
+		t.Fatal("AC-4: Mail wurde trotz 535-Auth-Fehler zugestellt — 535-Guard hat NICHT gegriffen!")
+	}
+}
+
 // waitForResetMailInInbox polls the Stalwart INBOX every 3s for UNSEEN messages
 // containing the expected link substring. Once found, the message is marked
 // \Seen + \Deleted and expunged to keep the inbox clean.

@@ -105,18 +105,22 @@ func MagicLinkRequestHandler(s *store.Store, cfg *config.Config) http.HandlerFun
 				From: cfg.SMTPFrom,
 			}
 			msg := mail.BuildMagicLinkMail(code)
-			go func(to string, m mail.Mail, c mail.MailConfig) {
+			fallbackCfg := mail.MailConfig{
+				Host: cfg.FallbackSMTPHost, Port: 587,
+				User: cfg.FallbackSMTPUser, Pass: cfg.FallbackSMTPPass,
+			}
+			go func(to string, m mail.Mail, c, fb mail.MailConfig) {
 				done := make(chan error, 1)
-				go func() { done <- mail.Send(c, to, m) }()
+				go func() { done <- mail.SendWithFallback(c, fb, to, m) }()
 				select {
 				case err := <-done:
 					if err != nil {
 						log.Printf("magic-link: mail send failed for %s: %v", to, err)
 					}
-				case <-time.After(10 * time.Second):
-					log.Printf("magic-link: mail send timeout (10s) for %s", to)
+				case <-time.After(20 * time.Second):
+					log.Printf("magic-link: mail send timeout (20s) for %s", to)
 				}
-			}(normalizedEmail, msg, mailCfg)
+			}(normalizedEmail, msg, mailCfg, fallbackCfg)
 		}
 
 		w.Write([]byte(`{"status":"ok"}`))

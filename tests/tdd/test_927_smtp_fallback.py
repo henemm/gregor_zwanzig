@@ -45,6 +45,9 @@ def _make_settings_without_imap_fallback() -> Settings:
         smtp_pass="re_fake",
         mail_to="nobody@example.com",
         mail_from="gregor_zwanzig@henemm.com",
+        imap_host=None,
+        imap_user=None,
+        imap_pass=None,
     )
 
 
@@ -136,6 +139,59 @@ class TestAC2NoFallbackOnAuthError:
         assert hasattr(output, "_fallback_host"), "Voraussetzung: Fallback initialisiert"
         # AC-2 Volltest: Auth-Fehler-Szenario ohne echte Resend-Verbindung
         # Wird in TDD GREEN via @pytest.mark.email vollständig geprüft
+
+
+@pytest.mark.email
+class TestAC2NoFallbackOnAuthErrorBehavioral:
+    """AC-2 Verhaltenstest: SMTPAuthenticationError → sofort OutputError, kein Fallback."""
+
+    def test_stalwart_auth_error_does_not_trigger_fallback(self, caplog):
+        """
+        GIVEN: Primary-SMTP = Stalwart mit FALSCHEM Passwort (→ echte 535-Antwort),
+               Fallback konfiguriert mit korrekten Stalwart-Creds
+        WHEN:  EmailOutput.send() aufgerufen
+        THEN:  OutputError sofort geworfen, "[SMTP-FALLBACK]" NICHT im Log
+        Beweis: Wenn Fallback trotzdem greift, kommt keine OutputError → Test scheitert
+        """
+        import logging
+
+        imap_host = os.environ.get("GZ_IMAP_HOST", "mail.henemm.com")
+        imap_user = os.environ.get("GZ_TEST_IMAP_USER") or os.environ.get("GZ_IMAP_USER")
+        imap_pass = os.environ.get("GZ_TEST_IMAP_PASS") or os.environ.get("GZ_IMAP_PASS")
+
+        if not imap_user or not imap_pass:
+            pytest.skip("GZ_IMAP_USER/PASS nicht gesetzt — Integration-Test übersprungen")
+
+        # Stalwart als Primary mit FALSCHEM Passwort → echte SMTPAuthenticationError (535)
+        settings = Settings(
+            smtp_host=imap_host,
+            smtp_port=587,
+            smtp_user=imap_user,
+            smtp_pass="DELIBERATELY-WRONG-PASSWORD-AC2-TEST",
+            mail_to=imap_user + "@henemm.com",
+            mail_from="gregor_zwanzig@henemm.com",
+            imap_host=imap_host,   # Fallback = korrekte Creds — würde geliefert wenn Fallback greift
+            imap_user=imap_user,
+            imap_pass=imap_pass,
+        )
+
+        output = EmailOutput(settings)
+
+        with caplog.at_level(logging.INFO, logger="outputs.email"):
+            with pytest.raises(OutputError) as exc_info:
+                output.send(
+                    "AC2-Auth-Fehler-Test",
+                    "<p>Darf nicht zugestellt werden</p>",
+                    html=True,
+                )
+
+        # Kern-Assertion: kein Fallback-Versuch
+        assert "[SMTP-FALLBACK]" not in caplog.text, (
+            "SMTPAuthenticationError darf KEINEN Fallback auslösen — "
+            "aber '[SMTP-FALLBACK]' wurde im Log gefunden!"
+        )
+        # Sekundär: Fehler-String zeigt Auth-Problem
+        assert "authentication" in str(exc_info.value).lower() or "535" in str(exc_info.value)
 
 
 # ---------------------------------------------------------------------------

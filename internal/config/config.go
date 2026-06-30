@@ -27,6 +27,9 @@ type Config struct {
 	GoogleSMTPPort    int    `envconfig:"GOOGLE_SMTP_PORT" default:"587"`
 	GoogleSMTPUser    string `envconfig:"GOOGLE_SMTP_USER" default:""`
 	GoogleSMTPPass    string `envconfig:"GOOGLE_SMTP_PASS" default:""`
+	FallbackSMTPHost string `envconfig:"FALLBACK_SMTP_HOST" default:""`
+	FallbackSMTPUser string `envconfig:"FALLBACK_SMTP_USER" default:""`
+	FallbackSMTPPass string `envconfig:"FALLBACK_SMTP_PASS" default:""`
 	GoogleClientID     string `envconfig:"GOOGLE_CLIENT_ID" default:""`
 	GoogleClientSecret string `envconfig:"GOOGLE_CLIENT_SECRET" default:""`
 	GoogleRedirectURL  string `envconfig:"GOOGLE_REDIRECT_URL" default:""`

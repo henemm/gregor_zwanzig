@@ -132,6 +132,9 @@ class EmailOutput:
         self._to = settings.mail_to
         self._from = settings.mail_from or settings.smtp_user
         self._reply_to = settings.get_inbound_address()
+        self._fallback_host = getattr(settings, 'imap_host', None)
+        self._fallback_user = getattr(settings, 'imap_user', None)
+        self._fallback_pass = getattr(settings, 'imap_pass', None)
 
     @property
     def name(self) -> str:
@@ -240,6 +243,23 @@ class EmailOutput:
                     )
                     time.sleep(wait)
                 else:
+                    if self._fallback_host:
+                        try:
+                            with smtplib.SMTP(self._fallback_host, 587) as fb_server:
+                                fb_server.starttls()
+                                fb_server.login(self._fallback_user, self._fallback_pass)
+                                if len(recipients) == 1:
+                                    fb_server.sendmail(from_addr, recipients, msg.as_string())
+                                else:
+                                    for recipient in recipients:
+                                        fb_server.sendmail(from_addr, [recipient], msg.as_string())
+                            logger.info("[SMTP-FALLBACK] sent via fallback SMTP")
+                            return
+                        except Exception as fb_err:
+                            raise OutputError(
+                                "email",
+                                f"SMTP temporary error {e.smtp_code} after {max_attempts} attempts (fallback also failed: {fb_err})",
+                            )
                     raise OutputError(
                         "email",
                         f"SMTP temporary error {e.smtp_code} after "
@@ -263,8 +283,22 @@ class EmailOutput:
                     )
                     time.sleep(wait)
                 else:
-                    # Last attempt failed
+                    # Last attempt failed — try fallback SMTP if configured
                     logger.error(f"Email send failed after {max_attempts} attempts: {e}")
+                    if self._fallback_host:
+                        try:
+                            with smtplib.SMTP(self._fallback_host, 587) as fb_server:
+                                fb_server.starttls()
+                                fb_server.login(self._fallback_user, self._fallback_pass)
+                                if len(recipients) == 1:
+                                    fb_server.sendmail(from_addr, recipients, msg.as_string())
+                                else:
+                                    for recipient in recipients:
+                                        fb_server.sendmail(from_addr, [recipient], msg.as_string())
+                            logger.info("[SMTP-FALLBACK] sent via fallback SMTP")
+                            return
+                        except Exception as fb_err:
+                            raise OutputError("email", f"Connection error: {e} (fallback also failed: {fb_err})")
                     raise OutputError("email", f"Connection error: {e}")
 
 # test

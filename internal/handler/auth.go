@@ -248,18 +248,22 @@ func ForgotPasswordHandler(s *store.Store, bcryptCost int, cfg config.Config) ht
 		msg := mail.BuildResetMail(cfg.PublicHost, req.Username, token)
 
 		// Goroutine with timeout — endpoint must not block on SMTP.
-		go func(to string, msg mail.Mail, c mail.MailConfig, username string) {
+		fallbackCfg := mail.MailConfig{
+			Host: cfg.FallbackSMTPHost, Port: 587,
+			User: cfg.FallbackSMTPUser, Pass: cfg.FallbackSMTPPass,
+		}
+		go func(to string, msg mail.Mail, c, fb mail.MailConfig, username string) {
 			done := make(chan error, 1)
-			go func() { done <- mail.Send(c, to, msg) }()
+			go func() { done <- mail.SendWithFallback(c, fb, to, msg) }()
 			select {
 			case err := <-done:
 				if err != nil {
 					log.Printf("password reset: mail send failed for %s: %v", username, err)
 				}
-			case <-time.After(10 * time.Second):
-				log.Printf("password reset: mail send timeout (10s) for %s", username)
+			case <-time.After(20 * time.Second):
+				log.Printf("password reset: mail send timeout (20s) for %s", username)
 			}
-		}(recipient, msg, mailCfg, req.Username)
+		}(recipient, msg, mailCfg, fallbackCfg, req.Username)
 
 		w.Write([]byte(`{"status":"ok"}`))
 	}

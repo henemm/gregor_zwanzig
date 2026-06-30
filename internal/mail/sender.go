@@ -5,6 +5,7 @@ package mail
 
 import (
 	"fmt"
+	"log"
 	"mime"
 	"net/smtp"
 	"strings"
@@ -89,5 +90,28 @@ func Send(cfg MailConfig, to string, msg Mail) error {
 	if err := smtp.SendMail(addr, auth, from, []string{to}, payload); err != nil {
 		return fmt.Errorf("mail.Send: %w", err)
 	}
+	return nil
+}
+
+// SendWithFallback versucht zuerst primaryCfg, dann bei Netzwerk-/Temp-Fehlern
+// fallbackCfg. Auth-Fehler (535 im Fehler-String) → sofortiger Abbruch, kein Fallback.
+// Erfolgreicher Fallback loggt: [SMTP-FALLBACK] sent via fallback SMTP
+func SendWithFallback(primaryCfg, fallbackCfg MailConfig, to string, msg Mail) error {
+	err := Send(primaryCfg, to, msg)
+	if err == nil {
+		return nil
+	}
+	// Auth-Fehler sind permanent — kein Fallback
+	if strings.Contains(err.Error(), "535") {
+		return err
+	}
+	if fallbackCfg.Host == "" {
+		return err
+	}
+	log.Printf("[SMTP-FALLBACK] Primary failed: %v — trying fallback SMTP", err)
+	if fbErr := Send(fallbackCfg, to, msg); fbErr != nil {
+		return fmt.Errorf("primary: %w; fallback: %v", err, fbErr)
+	}
+	log.Printf("[SMTP-FALLBACK] sent via fallback SMTP")
 	return nil
 }
