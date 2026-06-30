@@ -874,7 +874,7 @@ class TripAlertService:
         # Issue #917 (Slice 2): kanonischer Alert-Renderer (dynamischer Betreff).
         from output.renderers.alert.project import to_alert_message
         from output.renderers.alert.render import (
-            render_email, render_subject, render_telegram,
+            render_email, render_subject, render_telegram, render_sms,
         )
 
         stand_at = local_fmt(datetime.now(timezone.utc), alert_tz)
@@ -884,11 +884,13 @@ class TripAlertService:
         subject = render_subject(msg)
         html, plain = render_email(msg)
         telegram_body = render_telegram(msg)
+        sms_body = render_sms(msg)
 
         # Issue #638: Effective channels — per-alert override beats briefing channels.
         effective_channels = self._effective_alert_channels(trip)
         send_email = "email" in effective_channels
         send_telegram = "telegram" in effective_channels
+        send_sms = "sms" in effective_channels
 
         deliverable_any = False
 
@@ -917,8 +919,17 @@ class TripAlertService:
             except Exception as e:
                 logger.error(f"Telegram alert failed for {trip.name}: {e}")
 
-        # F003: Nicht-zustellbare Kanäle (sms, unbekannte) still protokollieren.
-        known_channels = {"email", "telegram"}
+        # SMS (Issue #914 Slice 4): kanonischer Alert-Renderer, seven.io-Versand.
+        if send_sms and self._settings.can_send_sms():
+            deliverable_any = True
+            try:
+                from outputs.sms import SMSOutput
+                SMSOutput(self._settings).send(subject=subject, body=sms_body)
+            except Exception as e:
+                logger.error(f"SMS alert failed for {trip.name}: {e}")
+
+        # F003: Nicht-zustellbare Kanäle (unbekannte) still protokollieren.
+        known_channels = {"email", "telegram", "sms"}
         undeliverable = effective_channels - known_channels
         if undeliverable:
             logger.debug(
